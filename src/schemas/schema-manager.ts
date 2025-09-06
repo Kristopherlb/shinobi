@@ -1,14 +1,32 @@
 import { logger } from '../utils/logger';
+import * as fs from 'fs/promises';
+import * as path from 'path';
 
 export class SchemaManager {
   /**
    * Get the master schema for manifest validation (AC-P2.2)
-   * Dynamically composed from base schema and component schemas
+   * Loads the authoritative JSON schema with $ref support for distributed environments
    */
   async getMasterSchema(): Promise<any> {
-    logger.debug('Building master schema');
+    logger.debug('Loading authoritative service manifest schema');
 
-    // Base schema for top-level manifest structure
+    // Load the authoritative JSON schema
+    const schemaPath = path.resolve(__dirname, 'service-manifest.schema.json');
+    const schemaContent = await fs.readFile(schemaPath, 'utf8');
+    const masterSchema = JSON.parse(schemaContent);
+
+    logger.debug('Authoritative schema loaded successfully with $ref support');
+    return masterSchema;
+  }
+
+  /**
+   * Legacy method for backward compatibility
+   * @deprecated Use getMasterSchema() instead
+   */
+  async getLegacySchema(): Promise<any> {
+    logger.debug('Building legacy schema (deprecated)');
+
+    // Legacy base schema for top-level manifest structure
     const baseSchema = {
       type: 'object',
       properties: {
@@ -190,7 +208,7 @@ export class SchemaManager {
     // In a full implementation, this would merge with component-specific schemas
     // loaded from the registry. For Phase 1, we use the base schema.
     
-    logger.debug('Master schema built successfully');
+    logger.debug('Legacy schema built successfully');
     return baseSchema;
   }
 }

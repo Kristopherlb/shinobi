@@ -27,8 +27,12 @@ describe('ContextHydrator $ref Processing', () => {
       success: jest.fn(),
       warn: jest.fn(),
       error: jest.fn(),
-      getLogs: jest.fn()
-    } as jest.Mocked<Logger>;
+      getLogs: jest.fn(),
+      config: {},
+      logs: [],
+      getLevelNumber: jest.fn().mockReturnValue(2),
+      addToLogs: jest.fn()
+    } as any;
 
     testDir = '/mock/test/directory';
     contextHydrator = new ContextHydrator({

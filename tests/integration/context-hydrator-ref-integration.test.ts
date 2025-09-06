@@ -266,7 +266,7 @@ describe('ContextHydrator $ref Integration Tests', () => {
       const devRdsResources = Object.entries(devOutput.Resources || {})
         .filter(([_, resource]: [string, any]) => resource.Type === 'AWS::RDS::DBInstance');
 
-      const [_, devRds] = devRdsResources[0] as [string, any];
+      const [devResourceId, devRds] = devRdsResources[0] as [string, any];
       expect(devRds.Properties.DBInstanceClass).toBe('db.t3.medium');
 
       // Assert: Prod environment uses inline config
@@ -274,7 +274,7 @@ describe('ContextHydrator $ref Integration Tests', () => {
       const prodRdsResources = Object.entries(prodOutput.Resources || {})
         .filter(([_, resource]: [string, any]) => resource.Type === 'AWS::RDS::DBInstance');
 
-      const [_, prodRds] = prodRdsResources[0] as [string, any];
+      const [prodResourceId, prodRds] = prodRdsResources[0] as [string, any];
       expect(prodRds.Properties.DBInstanceClass).toBe('db.r5.large');
     });
 
@@ -477,14 +477,14 @@ describe('ContextHydrator $ref Integration Tests', () => {
       const usProdOutput = JSON.parse(usProdPlan);
       const usRdsResources = Object.entries(usProdOutput.Resources || {})
         .filter(([_, resource]: [string, any]) => resource.Type === 'AWS::RDS::DBInstance');
-      const [_, usRds] = usRdsResources[0] as [string, any];
+      const [usResourceId, usRds] = usRdsResources[0] as [string, any];
       expect(usRds.Properties.DBInstanceClass).toBe('db.r5.large');
 
       // Assert: EU production uses region-specific override
       const euProdOutput = JSON.parse(euProdPlan);
       const euRdsResources = Object.entries(euProdOutput.Resources || {})
         .filter(([_, resource]: [string, any]) => resource.Type === 'AWS::RDS::DBInstance');
-      const [_, euRds] = euRdsResources[0] as [string, any];
+      const [euResourceId, euRds] = euRdsResources[0] as [string, any];
       expect(euRds.Properties.DBInstanceClass).toBe('db.r5.xlarge');
     });
   });
