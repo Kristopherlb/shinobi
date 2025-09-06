@@ -168,10 +168,7 @@ export class LambdaToRdsBinderStrategy extends BinderStrategy {
 
     // 5. Return environment variables (the main output now that constructs are wired directly)
     return {
-      iamPolicies: [], // No longer needed - CDK handles this
-      securityGroupRules: [], // No longer needed - CDK handles this
-      environmentVariables: this.buildEnvironmentVariables(target, directive, rdsConstruct),
-      additionalConfig: {} // No longer needed - CDK handles configuration directly
+      environmentVariables: this.buildEnvironmentVariables(target, directive, rdsConstruct)
     };
   }
 
@@ -398,10 +395,7 @@ export class LambdaToS3BucketBinderStrategy extends BinderStrategy {
 
     // 5. Return environment variables (the main output now that constructs are wired directly)
     return {
-      iamPolicies: [], // No longer needed - CDK handles this
-      securityGroupRules: [], // No longer needed - CDK handles this  
-      environmentVariables: this.buildS3EnvironmentVariables(directive, s3Construct),
-      additionalConfig: {} // No longer needed - CDK handles configuration directly
+      environmentVariables: this.buildS3EnvironmentVariables(directive, s3Construct)
     };
   }
 

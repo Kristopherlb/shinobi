@@ -26,21 +26,9 @@ export interface BindingContext {
 }
 
 export interface BindingResult {
-  iamPolicies: Array<{
-    effect: 'Allow' | 'Deny';
-    actions: string[];
-    resources: string[];
-    conditions?: Record<string, any>;
-  }>;
   environmentVariables: Record<string, string>;
-  securityGroupRules?: Array<{
-    type: 'ingress' | 'egress';
-    protocol: string;
-    port: number;
-    source?: string;
-    description: string;
-  }>;
-  additionalConfig?: Record<string, any>;
+  // Note: iamPolicies, securityGroupRules, and additionalConfig removed since CDK L2 constructs
+  // handle IAM permissions, security group connections, and configuration directly during binding
 }
 
 /**
@@ -51,7 +39,7 @@ export abstract class BinderStrategy {
   abstract bind(context: BindingContext): BindingResult;
   
   protected generateSecureDescription(context: BindingContext): string {
-    return `${context.source.getType()}-${context.source.spec.name} -> ${context.target.getType()}-${context.target.spec.name} (${context.directive.capability})`;
+    return `${context.source.getType()}-${context.source.getId()} -> ${context.target.getType()}-${context.target.getId()} (${context.directive.capability})`;
   }
 }
 
@@ -68,18 +56,13 @@ export class LambdaToSqsBinderStrategy extends BinderStrategy {
     const sqsCapability = targetCapabilities['queue:sqs'];
     
     if (!sqsCapability) {
-      throw new Error(`Target component ${context.target.spec.name} does not provide queue:sqs capability`);
+      throw new Error(`Target component ${context.target.getId()} does not provide queue:sqs capability`);
     }
 
     const actions = this.getActionsForAccess(context.directive.access);
     
+    // TODO: Refactor this strategy to use CDK L2 constructs like RDS and S3 binders
     return {
-      iamPolicies: [{
-        effect: 'Allow',
-        actions,
-        resources: [sqsCapability.queueArn],
-        conditions: this.buildConditions(context)
-      }],
       environmentVariables: {
         [context.directive.env?.queueUrl || 'QUEUE_URL']: sqsCapability.queueUrl,
         [context.directive.env?.queueArn || 'QUEUE_ARN']: sqsCapability.queueArn
@@ -133,40 +116,16 @@ export class LambdaToRdsBinderStrategy extends BinderStrategy {
     const dbCapability = targetCapabilities['db:postgres'];
     
     if (!dbCapability) {
-      throw new Error(`Target component ${context.target.spec.name} does not provide db:postgres capability`);
+      throw new Error(`Target component ${context.target.getId()} does not provide db:postgres capability`);
     }
 
+    // TODO: Refactor this strategy to use CDK L2 constructs like the concrete binders
     return {
-      iamPolicies: [{
-        effect: 'Allow',
-        actions: ['secretsmanager:GetSecretValue'],
-        resources: [dbCapability.secretArn],
-        conditions: {
-          'StringEquals': {
-            'aws:SecureTransport': 'true'
-          }
-        }
-      }],
       environmentVariables: {
         [context.directive.env?.host || 'DB_HOST']: dbCapability.host,
         [context.directive.env?.port || 'DB_PORT']: dbCapability.port.toString(),
         [context.directive.env?.dbName || 'DB_NAME']: dbCapability.dbName,
         [context.directive.env?.secretArn || 'DB_SECRET_ARN']: dbCapability.secretArn
-      },
-      securityGroupRules: [{
-        type: 'egress',
-        protocol: 'tcp',
-        port: dbCapability.port,
-        source: dbCapability.sgId,
-        description: this.generateSecureDescription(context)
-      }],
-      additionalConfig: {
-        vpcConfig: context.directive.options?.iamAuth ? {
-          subnetIds: context.complianceFramework.startsWith('fedramp') ? 
-            ['subnet-private-1', 'subnet-private-2'] : // Use private subnets for FedRAMP
-            ['subnet-default-1', 'subnet-default-2'],
-          securityGroupIds: [dbCapability.sgId]
-        } : undefined
       }
     };
   }
@@ -185,28 +144,13 @@ export class LambdaToS3BucketBinderStrategy extends BinderStrategy {
     const s3Capability = targetCapabilities['bucket:s3'];
     
     if (!s3Capability) {
-      throw new Error(`Target component ${context.target.spec.name} does not provide bucket:s3 capability`);
+      throw new Error(`Target component ${context.target.getId()} does not provide bucket:s3 capability`);
     }
 
     const actions = this.getS3ActionsForAccess(context.directive.access);
 
+    // TODO: Refactor this strategy to use CDK L2 constructs like the concrete binders
     return {
-      iamPolicies: [{
-        effect: 'Allow',
-        actions,
-        resources: [
-          s3Capability.bucketArn,
-          `${s3Capability.bucketArn}/*`
-        ],
-        conditions: {
-          'StringEquals': {
-            'aws:SecureTransport': 'true'
-          },
-          'StringLike': context.complianceFramework.startsWith('fedramp') ? {
-            's3:x-amz-server-side-encryption': 'aws:kms'
-          } : undefined
-        }
-      }],
       environmentVariables: {
         [context.directive.env?.bucketName || 'BUCKET_NAME']: s3Capability.bucketName,
         [context.directive.env?.bucketArn || 'BUCKET_ARN']: s3Capability.bucketArn
