@@ -6,6 +6,7 @@
 import { Component, ComponentSpec, ComponentContext, ComponentCreator, ComponentCapabilities } from './component-factory';
 import * as lambda from 'aws-cdk-lib/aws-lambda';
 import * as rds from 'aws-cdk-lib/aws-rds';
+import * as sqs from 'aws-cdk-lib/aws-sqs';
 import * as ec2 from 'aws-cdk-lib/aws-ec2';
 import * as cdk from 'aws-cdk-lib';
 
@@ -286,29 +287,37 @@ export class SqsQueueComponent extends Component {
     return 'sqs-queue';
   }
 
-  synth(): any {
-    return {
-      type: 'AWS::SQS::Queue',
-      properties: {
-        queueName: `${this.context.serviceName}-${this.spec.name}`,
-        fifoQueue: this.spec.config.fifo || false,
-        visibilityTimeoutSeconds: this.spec.config.visibilityTimeout || 300,
-        messageRetentionPeriod: this.getRetentionPeriod(),
-        kmsMasterKeyId: this.getKmsKeyId(),
-        deadLetterTargetArn: this.getDeadLetterQueueArn(),
-        maxReceiveCount: this.getMaxReceiveCount()
-      }
+  synth(): void {
+    // Step 1: Assemble final properties for the SQS queue
+    const finalQueueProps: sqs.QueueProps = {
+      queueName: this.buildQueueName(),
+      fifo: this.spec.config.fifo || false,
+      visibilityTimeout: cdk.Duration.seconds(this.spec.config.visibilityTimeout || 300),
+      retentionPeriod: cdk.Duration.seconds(this.getRetentionPeriod()),
+      encryption: this.getEncryptionConfig(),
+      deadLetterQueue: this.getDeadLetterQueueConfig()
     };
+
+    // Step 2: Instantiate the NATIVE CDK L2 construct
+    const queue = new sqs.Queue(this.context.scope, `${this.spec.name}-queue`, finalQueueProps);
+
+    // Step 3: Store handle to the REAL construct object
+    this.constructs.set('sqs.Queue', queue);
+    this.constructs.set('main', queue);
+
+    // Step 4: Set capabilities with REAL tokenized outputs from the construct
+    this.setCapabilities({
+      'queue:sqs': {
+        queueUrl: queue.queueUrl, // Deploy-time token
+        queueArn: queue.queueArn, // Deploy-time token
+        queueName: queue.queueName
+      }
+    });
   }
 
   getCapabilities(): ComponentCapabilities {
-    const queueName = `${this.context.serviceName}-${this.spec.name}`;
-    return {
-      'queue:sqs': {
-        queueUrl: `https://sqs.region.amazonaws.com/account/${queueName}`,
-        queueArn: `arn:aws:sqs:region:account:${queueName}`
-      }
-    };
+    this.ensureSynthesized();
+    return this.capabilities;
   }
 
   private getRetentionPeriod(): number {
@@ -316,15 +325,56 @@ export class SqsQueueComponent extends Component {
     return this.context.complianceFramework.startsWith('fedramp') ? 1209600 : 345600;
   }
 
-  private getKmsKeyId(): string | undefined {
+  private getEncryptionConfig(): sqs.QueueEncryption {
     // Encryption required for FedRAMP
-    return this.context.complianceFramework.startsWith('fedramp') ? 'alias/aws/sqs' : undefined;
+    return this.context.complianceFramework.startsWith('fedramp') 
+      ? sqs.QueueEncryption.KMS_MANAGED 
+      : sqs.QueueEncryption.UNENCRYPTED;
   }
 
-  private getDeadLetterQueueArn(): string | undefined {
-    return this.spec.overrides?.queue?.deadLetter ? 
-           `arn:aws:sqs:region:account:${this.spec.name}-dlq` : 
-           undefined;
+  private getDeadLetterQueueConfig(): sqs.DeadLetterQueue | undefined {
+    if (!this.spec.overrides?.queue?.deadLetter) {
+      return undefined;
+    }
+
+    // Create dead letter queue with CDK L2 construct
+    const dlqProps: sqs.QueueProps = {
+      queueName: this.buildDLQName(),
+      fifo: this.spec.config.fifo || false,
+      encryption: this.getEncryptionConfig(),
+      retentionPeriod: cdk.Duration.seconds(1209600) // 14 days for DLQ
+    };
+
+    const dlq = new sqs.Queue(this.context.scope, `${this.spec.name}-dlq`, dlqProps);
+    
+    return {
+      queue: dlq,
+      maxReceiveCount: this.getMaxReceiveCount()
+    };
+  }
+
+  private buildQueueName(): string {
+    const baseName = `${this.context.serviceName}-${this.spec.name}`;
+    const isFifo = this.spec.config.fifo || false;
+    
+    // FIFO queues must end with .fifo suffix
+    if (isFifo && !baseName.endsWith('.fifo')) {
+      return `${baseName}.fifo`;
+    }
+    
+    return baseName;
+  }
+
+  private buildDLQName(): string {
+    const baseName = `${this.context.serviceName}-${this.spec.name}-dlq`;
+    const isFifo = this.spec.config.fifo || false;
+    
+    // FIFO DLQ must also end with .fifo suffix
+    if (isFifo && !baseName.endsWith('.fifo')) {
+      return `${baseName}.fifo`;
+    }
+    
+    return baseName;
   }
 
   private getMaxReceiveCount(): number {

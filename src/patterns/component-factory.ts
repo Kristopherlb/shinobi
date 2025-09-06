@@ -74,6 +74,13 @@ export abstract class Component {
   public hasConstruct(handle: string): boolean {
     return this.constructs.has(handle);
   }
+
+  /**
+   * Get the component name
+   */
+  public getName(): string {
+    return this.spec.name;
+  }
 }
 
 export interface ComponentContext {

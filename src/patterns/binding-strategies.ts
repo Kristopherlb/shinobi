@@ -39,7 +39,7 @@ export abstract class BinderStrategy {
   abstract bind(context: BindingContext): BindingResult;
   
   protected generateSecureDescription(context: BindingContext): string {
-    return `${context.source.getType()}-${context.source.getId()} -> ${context.target.getType()}-${context.target.getId()} (${context.directive.capability})`;
+    return `${context.source.getType()}-${context.source.getName()} -> ${context.target.getType()}-${context.target.getName()} (${context.directive.capability})`;
   }
 }
 
@@ -56,7 +56,7 @@ export class LambdaToSqsBinderStrategy extends BinderStrategy {
     const sqsCapability = targetCapabilities['queue:sqs'];
     
     if (!sqsCapability) {
-      throw new Error(`Target component ${context.target.getId()} does not provide queue:sqs capability`);
+      throw new Error(`Target component ${context.target.getName()} does not provide queue:sqs capability`);
     }
 
     const actions = this.getActionsForAccess(context.directive.access);
@@ -116,7 +116,7 @@ export class LambdaToRdsBinderStrategy extends BinderStrategy {
     const dbCapability = targetCapabilities['db:postgres'];
     
     if (!dbCapability) {
-      throw new Error(`Target component ${context.target.getId()} does not provide db:postgres capability`);
+      throw new Error(`Target component ${context.target.getName()} does not provide db:postgres capability`);
     }
 
     // TODO: Refactor this strategy to use CDK L2 constructs like the concrete binders
@@ -144,7 +144,7 @@ export class LambdaToS3BucketBinderStrategy extends BinderStrategy {
     const s3Capability = targetCapabilities['bucket:s3'];
     
     if (!s3Capability) {
-      throw new Error(`Target component ${context.target.getId()} does not provide bucket:s3 capability`);
+      throw new Error(`Target component ${context.target.getName()} does not provide bucket:s3 capability`);
     }
 
     const actions = this.getS3ActionsForAccess(context.directive.access);
