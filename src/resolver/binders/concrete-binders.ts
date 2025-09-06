@@ -25,104 +25,143 @@ export class LambdaToSqsBinderStrategy extends BinderStrategy {
   }
 
   bind(context: BindingContext): BindingResult {
-    const targetCapabilities = context.target.getCapabilities();
-    const sqsCapability = targetCapabilities['queue:sqs'];
-    
-    if (!sqsCapability) {
-      throw new Error(`Target component ${context.target.spec.name} does not provide queue:sqs capability`);
+    const { source, target, directive } = context;
+
+    // 1. Get the REAL L2 construct handles from the component instances
+    const lambdaConstruct = source.getConstruct('main') as lambda.Function;
+    const sqsQueueConstruct = target.getConstruct('main') as sqs.IQueue;
+
+    if (!lambdaConstruct || !sqsQueueConstruct) {
+      throw new Error(`Could not retrieve construct handles for binding ${source.getName()} -> ${target.getName()}`);
     }
 
-    const actions = this.getActionsForAccess(context.directive.access);
-    const conditions = this.buildSecurityConditions(context);
-    
+    // 2. Use high-level L2 methods to apply IAM permissions directly
+    this.grantSQSAccess(sqsQueueConstruct, lambdaConstruct, directive.access);
+
+    // 3. Apply compliance-specific security enhancements
+    if (context.complianceFramework.startsWith('fedramp')) {
+      this.applyFedRAMPSecurityEnhancements(sqsQueueConstruct, lambdaConstruct, context);
+    }
+
+    // 4. Handle advanced options like dead letter queue
+    if (directive.options?.deadLetterQueue) {
+      this.configureDeadLetterQueue(sqsQueueConstruct, lambdaConstruct, context);
+    }
+
+    // 5. Return environment variables from the REAL construct
     return {
-      iamPolicies: [{
-        effect: 'Allow',
-        actions,
-        resources: [sqsCapability.queueArn],
-        conditions
-      }],
       environmentVariables: {
-        [context.directive.env?.queueUrl || 'QUEUE_URL']: sqsCapability.queueUrl,
-        [context.directive.env?.queueArn || 'QUEUE_ARN']: sqsCapability.queueArn
-      },
-      additionalConfig: this.buildAdditionalConfig(context)
+        [directive.env?.queueUrl || 'QUEUE_URL']: sqsQueueConstruct.queueUrl,
+        [directive.env?.queueArn || 'QUEUE_ARN']: sqsQueueConstruct.queueArn
+      }
     };
   }
 
-  private getActionsForAccess(access: string): string[] {
+
+  /**
+   * Grant Lambda access to SQS queue using CDK L2 methods
+   */
+  private grantSQSAccess(
+    sqsQueueConstruct: sqs.IQueue, 
+    lambdaConstruct: lambda.Function, 
+    access: string
+  ): void {
     switch (access) {
       case 'read':
-        return [
-          'sqs:ReceiveMessage',
-          'sqs:DeleteMessage', 
-          'sqs:GetQueueAttributes',
-          'sqs:GetQueueUrl'
-        ];
+        sqsQueueConstruct.grantConsumeMessages(lambdaConstruct);
+        break;
       case 'write':
-        return [
-          'sqs:SendMessage',
-          'sqs:GetQueueAttributes',
-          'sqs:GetQueueUrl'
-        ];
+        sqsQueueConstruct.grantSendMessages(lambdaConstruct);
+        break;
       case 'readwrite':
-        return [
-          'sqs:ReceiveMessage',
-          'sqs:DeleteMessage',
-          'sqs:SendMessage',
-          'sqs:GetQueueAttributes',
-          'sqs:GetQueueUrl',
-          'sqs:ChangeMessageVisibility'
-        ];
+        sqsQueueConstruct.grantConsumeMessages(lambdaConstruct);
+        sqsQueueConstruct.grantSendMessages(lambdaConstruct);
+        break;
       case 'admin':
-        return ['sqs:*'];
+        sqsQueueConstruct.grantConsumeMessages(lambdaConstruct);
+        sqsQueueConstruct.grantSendMessages(lambdaConstruct);
+        sqsQueueConstruct.grantPurge(lambdaConstruct);
+        break;
       default:
         throw new Error(`Invalid access level: ${access}. Valid values: read, write, readwrite, admin`);
     }
   }
 
-  private buildSecurityConditions(context: BindingContext): Record<string, any> {
-    const conditions: Record<string, any> = {
-      'StringEquals': {
-        'aws:SecureTransport': 'true'
-      }
-    };
+  /**
+   * Apply FedRAMP-specific security enhancements using CDK
+   */
+  private applyFedRAMPSecurityEnhancements(
+    sqsQueueConstruct: sqs.IQueue,
+    lambdaConstruct: lambda.Function,
+    context: BindingContext
+  ): void {
+    // Add enhanced SQS monitoring permissions for FedRAMP compliance
+    lambdaConstruct.addToRolePolicy(
+      new iam.PolicyStatement({
+        effect: iam.Effect.ALLOW,
+        actions: [
+          'sqs:GetQueueAttributes',
+          'sqs:ListQueues',
+          'sqs:ListQueueTags'
+        ],
+        resources: [sqsQueueConstruct.queueArn],
+        conditions: {
+          'StringEquals': {
+            'aws:RequestedRegion': process.env.AWS_REGION || 'us-east-1',
+            'aws:SecureTransport': 'true'
+          }
+        }
+      })
+    );
 
-    // FedRAMP-specific conditions
-    if (context.complianceFramework.startsWith('fedramp')) {
-      conditions['StringEquals']['aws:RequestedRegion'] = process.env.AWS_REGION || 'us-east-1';
-      
-      if (context.complianceFramework === 'fedramp-high') {
-        // Restrict to VPC endpoints for FedRAMP High
-        conditions['StringEquals']['aws:SourceVpce'] = context.directive.options?.vpcEndpoint || 'vpce-*';
-      }
+    // Additional FedRAMP High restrictions
+    if (context.complianceFramework === 'fedramp-high') {
+      // Restrict to VPC endpoints for FedRAMP High
+      lambdaConstruct.addToRolePolicy(
+        new iam.PolicyStatement({
+          effect: iam.Effect.DENY,
+          actions: ['sqs:*'],
+          resources: ['*'],
+          conditions: {
+            'StringNotEquals': {
+              'aws:SourceVpce': context.directive.options?.vpcEndpoint || 'vpce-*'
+            }
+          }
+        })
+      );
     }
-
-    return conditions;
   }
 
-  private buildAdditionalConfig(context: BindingContext): Record<string, any> {
-    const config: Record<string, any> = {};
-
-    // Dead letter queue configuration
-    if (context.directive.options?.deadLetterQueue) {
-      config.deadLetterQueue = {
-        enabled: true,
-        maxReceiveCount: context.directive.options.deadLetterQueue.maxReceiveCount || 3,
-        retentionPeriod: context.directive.options.deadLetterQueue.retentionPeriod || 1209600 // 14 days
-      };
-    }
-
-    // Batch processing configuration for workers
+  /**
+   * Configure dead letter queue integration using CDK
+   */
+  private configureDeadLetterQueue(
+    sqsQueueConstruct: sqs.IQueue,
+    lambdaConstruct: lambda.Function,
+    context: BindingContext
+  ): void {
+    // For Lambda workers, configure event source mapping with DLQ settings
     if (context.source.getType() === 'lambda-worker') {
-      config.eventSourceMapping = {
-        batchSize: context.directive.options?.batchSize || 10,
-        maximumBatchingWindowInSeconds: context.directive.options?.batchingWindow || 5,
-        parallelizationFactor: context.directive.options?.parallelization || 1
-      };
+      // Event source mapping configuration is handled by CDK construct integration
+      // The queue's dead letter queue is already configured at the construct level
+      
+      // Grant additional permissions for DLQ processing
+      lambdaConstruct.addToRolePolicy(
+        new iam.PolicyStatement({
+          effect: iam.Effect.ALLOW,
+          actions: [
+            'sqs:GetQueueAttributes',
+            'sqs:ChangeMessageVisibility'
+          ],
+          resources: [sqsQueueConstruct.queueArn],
+          conditions: {
+            'StringEquals': {
+              'aws:SecureTransport': 'true'
+            }
+          }
+        })
+      );
     }
-
-    return config;
   }
 }
 
