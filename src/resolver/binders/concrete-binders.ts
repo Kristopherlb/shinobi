@@ -8,6 +8,12 @@ import {
   BindingContext, 
   BindingResult 
 } from '../../patterns/binding-strategies';
+import * as lambda from 'aws-cdk-lib/aws-lambda';
+import * as rds from 'aws-cdk-lib/aws-rds';
+import * as s3 from 'aws-cdk-lib/aws-s3';
+import * as sqs from 'aws-cdk-lib/aws-sqs';
+import * as ec2 from 'aws-cdk-lib/aws-ec2';
+import * as iam from 'aws-cdk-lib/aws-iam';
 
 /**
  * Enhanced Lambda to SQS binding with enterprise security
@@ -130,26 +136,42 @@ export class LambdaToRdsBinderStrategy extends BinderStrategy {
   }
 
   bind(context: BindingContext): BindingResult {
-    const targetCapabilities = context.target.getCapabilities();
-    const dbCapability = targetCapabilities['db:postgres'];
+    const { source, target, directive } = context;
+
+    // 1. Get the REAL L2 construct handles from the component instances
+    const lambdaConstruct = source.getConstruct('main') as lambda.Function;
+    const rdsConstruct = target.getConstruct('main') as rds.DatabaseInstance;
+
+    if (!lambdaConstruct || !rdsConstruct) {
+      throw new Error(`Could not retrieve construct handles for binding ${source.spec.name} -> ${target.spec.name}`);
+    }
     
-    if (!dbCapability) {
-      throw new Error(`Target component ${context.target.spec.name} does not provide db:postgres capability`);
+    // 2. Use high-level L2 methods to apply wiring directly
+    // Allow Lambda to connect to RDS on the default PostgreSQL port
+    rdsConstruct.connections.allowDefaultPortFrom(
+      lambdaConstruct, 
+      `Allow connection from Lambda ${source.spec.name}`
+    );
+
+    // Grant Lambda access to connect to the database and read secrets
+    this.grantDatabaseAccess(rdsConstruct, lambdaConstruct, directive.access);
+
+    // 3. Handle advanced options like IAM Auth
+    if (directive.options?.iamAuth) {
+      this.enableIamDatabaseAuth(rdsConstruct, lambdaConstruct, context);
     }
 
-    const iamPolicies = this.buildDatabaseIAMPolicies(context, dbCapability);
-    const securityGroupRules = this.buildSecurityGroupRules(context, dbCapability);
-    
+    // 4. Apply compliance-specific security enhancements
+    if (context.complianceFramework.startsWith('fedramp')) {
+      this.applyFedRAMPSecurityEnhancements(rdsConstruct, lambdaConstruct, context);
+    }
+
+    // 5. Return environment variables (the main output now that constructs are wired directly)
     return {
-      iamPolicies,
-      environmentVariables: {
-        [context.directive.env?.host || 'DB_HOST']: dbCapability.host,
-        [context.directive.env?.port || 'DB_PORT']: dbCapability.port.toString(),
-        [context.directive.env?.dbName || 'DB_NAME']: dbCapability.dbName,
-        [context.directive.env?.secretArn || 'DB_SECRET_ARN']: dbCapability.secretArn
-      },
-      securityGroupRules,
-      additionalConfig: this.buildVPCConfig(context, dbCapability)
+      iamPolicies: [], // No longer needed - CDK handles this
+      securityGroupRules: [], // No longer needed - CDK handles this
+      environmentVariables: this.buildEnvironmentVariables(target, directive, rdsConstruct),
+      additionalConfig: {} // No longer needed - CDK handles configuration directly
     };
   }
 
@@ -241,6 +263,103 @@ export class LambdaToRdsBinderStrategy extends BinderStrategy {
     };
 
     return vpcConfig;
+  }
+
+  /**
+   * Grant Lambda access to the database using CDK L2 methods
+   */
+  private grantDatabaseAccess(
+    rdsConstruct: rds.DatabaseInstance, 
+    lambdaConstruct: lambda.Function, 
+    access: string
+  ): void {
+    switch (access) {
+      case 'read':
+      case 'readwrite': // Both read and readwrite need secret access
+        // Grant Lambda permission to read database credentials from Secrets Manager
+        rdsConstruct.secret?.grantRead(lambdaConstruct);
+        break;
+      case 'write':
+        // Write operations still need credential access
+        rdsConstruct.secret?.grantRead(lambdaConstruct);
+        break;
+      case 'admin':
+        // Full access including secret management
+        rdsConstruct.secret?.grantRead(lambdaConstruct);
+        rdsConstruct.secret?.grantWrite(lambdaConstruct);
+        break;
+      default:
+        throw new Error(`Invalid access level: ${access}. Valid values: read, write, readwrite, admin`);
+    }
+  }
+
+  /**
+   * Enable IAM database authentication using CDK methods
+   */
+  private enableIamDatabaseAuth(
+    rdsConstruct: rds.DatabaseInstance,
+    lambdaConstruct: lambda.Function,
+    context: BindingContext
+  ): void {
+    // Grant RDS connect permission for IAM database authentication
+    lambdaConstruct.addToRolePolicy(
+      new iam.PolicyStatement({
+        effect: iam.Effect.ALLOW,
+        actions: ['rds-db:connect'],
+        resources: [
+          `arn:aws:rds-db:*:*:dbuser:${(rdsConstruct.node.defaultChild as rds.CfnDBInstance).attrDbiResourceId}/${context.directive.options?.iamAuth?.username || 'lambda_user'}`
+        ],
+        conditions: {
+          'StringEquals': {
+            'aws:SecureTransport': 'true'
+          }
+        }
+      })
+    );
+  }
+
+  /**
+   * Apply FedRAMP-specific security enhancements using CDK
+   */
+  private applyFedRAMPSecurityEnhancements(
+    rdsConstruct: rds.DatabaseInstance,
+    lambdaConstruct: lambda.Function,
+    context: BindingContext
+  ): void {
+    // Add enhanced monitoring permissions for FedRAMP compliance
+    lambdaConstruct.addToRolePolicy(
+      new iam.PolicyStatement({
+        effect: iam.Effect.ALLOW,
+        actions: [
+          'rds:DescribeDBInstances',
+          'rds:DescribeDBClusters',
+          'rds:ListTagsForResource'
+        ],
+        resources: ['*'], // Describe actions require wildcard resource
+        conditions: {
+          'StringEquals': {
+            'aws:RequestedRegion': process.env.AWS_REGION || 'us-east-1',
+            'aws:SecureTransport': 'true'
+          }
+        }
+      })
+    );
+  }
+
+  /**
+   * Build environment variables with tokenized values directly from CDK constructs
+   */
+  private buildEnvironmentVariables(
+    target: any,
+    directive: any,
+    rdsConstruct: rds.DatabaseInstance
+  ): Record<string, string> {
+    return {
+      [directive.env?.host || 'DB_HOST']: rdsConstruct.instanceEndpoint.hostname,
+      [directive.env?.port || 'DB_PORT']: rdsConstruct.instanceEndpoint.port.toString(),
+      [directive.env?.dbName || 'DB_NAME']: target.spec.config.dbName,
+      [directive.env?.secretArn || 'DB_SECRET_ARN']: rdsConstruct.secret!.secretArn
+    };
   }
 }
 
