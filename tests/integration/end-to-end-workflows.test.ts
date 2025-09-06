@@ -175,6 +175,285 @@ components:
     });
   });
 
+  describe('Framework-Specific Policy Validation', () => {
+    it('should reject FedRAMP High manifest with insecure configuration', async () => {
+      await fs.writeFile('service.yml', `
+service: insecure-fedramp-service
+owner: security-team
+runtime: nodejs20
+complianceFramework: fedramp-high
+components:
+  - name: api
+    type: lambda-api
+    config:
+      routes:
+        - method: GET
+          path: /data
+          handler: src/handler.getData
+    binds:
+      - to: storage
+        capability: bucket:s3
+        access: write
+
+  - name: storage
+    type: s3-bucket
+    config:
+      versioning: false
+      encryption: none
+      publicAccess: true
+      lifecycleRules: []
+      `);
+
+      // FedRAMP High should enforce strict security policies
+      await expect(execAsync(`node ${cliPath} validate`)).rejects.toMatchObject({
+        code: 2,
+        stderr: expect.stringMatching(/FedRAMP High requires|encryption|security policy/i)
+      });
+    });
+
+    it('should enforce FedRAMP policy violations in plan stage', async () => {
+      await fs.writeFile('service.yml', `
+service: policy-violation-service
+owner: security-team
+runtime: nodejs20
+complianceFramework: fedramp-moderate
+components:
+  - name: db
+    type: rds-postgres
+    config:
+      dbName: testdb
+      encrypted: false
+      backupRetentionDays: 3
+      multiAz: false
+      `);
+
+      await expect(execAsync(`node ${cliPath} plan --env prod`)).rejects.toMatchObject({
+        code: 2,
+        stderr: expect.stringMatching(/FedRAMP.*encryption.*backup.*policy/i)
+      });
+    });
+  });
+
+  describe('Escape Hatch Validation', () => {
+    it('should detect and report patches.ts usage in plan output', async () => {
+      // Initialize service with patches file
+      await execAsync(
+        `node ${cliPath} init --name patched-service --owner dev-team --framework commercial --pattern lambda-api-with-db`
+      );
+
+      // Modify patches.ts to include actual patches
+      await fs.writeFile('patches.ts', `
+/**
+ * Platform Patches File
+ * Custom CDK modifications for patched-service
+ */
+import { Construct } from 'constructs';
+import * as lambda from 'aws-cdk-lib/aws-lambda';
+
+export function applyPatches(scope: Construct): void {
+  // Custom patch: Override Lambda runtime to use ARM architecture
+  const lambdaFunction = scope.node.findChild('api') as lambda.Function;
+  if (lambdaFunction) {
+    lambdaFunction.addEnvironment('CUSTOM_PATCH', 'arm64-runtime');
+  }
+  
+  console.log('Applied custom patches for enhanced performance');
+}
+
+export const patchInfo = {
+  version: '1.0.0',
+  description: 'ARM architecture optimization patch',
+  author: 'dev-team',
+  appliedAt: new Date().toISOString()
+};
+      `);
+
+      // Plan should detect and report the patches
+      const { stdout: planOutput } = await execAsync(`node ${cliPath} plan --env dev`);
+      
+      expect(planOutput).toContain('Patch Report');
+      expect(planOutput).toContain('patches.ts detected');
+      expect(planOutput).toContain('arm64-runtime');
+      expect(planOutput).toMatch(/custom patches|escape hatch|platform override/i);
+    });
+
+    it('should warn about patches in validation stage', async () => {
+      await fs.writeFile('service.yml', `
+service: patch-warning-service
+owner: dev-team
+runtime: nodejs20
+components:
+  - name: api
+    type: lambda-api
+    config:
+      routes:
+        - method: GET
+          path: /test
+          handler: src/handler.test
+      `);
+
+      await fs.writeFile('patches.ts', `
+export function applyPatches(scope: any): void {
+  // Custom security group modifications
+  console.log('Applying security group patches');
+}
+      `);
+
+      const { stdout: validateOutput } = await execAsync(`node ${cliPath} validate`);
+      
+      expect(validateOutput).toContain('validation completed successfully');
+      expect(validateOutput).toMatch(/patches\.ts.*detected|escape hatch.*found/i);
+    });
+  });
+
+  describe('Template Scaffolding Validation', () => {
+    it('should scaffold lambda-api-with-db template correctly', async () => {
+      const { stdout: initOutput } = await execAsync(
+        `node ${cliPath} init --name e-commerce --owner team-backend --framework commercial --pattern lambda-api-with-db`
+      );
+      
+      expect(initOutput).toContain('initialized successfully');
+
+      // Verify expected files were created
+      await expect(fs.access('service.yml')).resolves.not.toThrow();
+      await expect(fs.access('.gitignore')).resolves.not.toThrow();
+      await expect(fs.access('patches.ts')).resolves.not.toThrow();
+      await expect(fs.access('src')).resolves.not.toThrow();
+      
+      // Check service.yml content matches template
+      const serviceYml = await fs.readFile('service.yml', 'utf8');
+      expect(serviceYml).toContain('service: e-commerce');
+      expect(serviceYml).toContain('owner: team-backend');
+      expect(serviceYml).toContain('complianceFramework: commercial');
+      
+      // Should contain lambda-api component
+      expect(serviceYml).toContain('type: lambda-api');
+      expect(serviceYml).toMatch(/routes:\s*-\s*method:/);
+      
+      // Should contain database component
+      expect(serviceYml).toContain('type: rds-postgres');
+      expect(serviceYml).toMatch(/dbName:/);
+      
+      // Should contain binding between api and database
+      expect(serviceYml).toMatch(/binds:\s*-\s*to:.*db/);
+      expect(serviceYml).toContain('capability: db:postgres');
+      
+      // Check src directory structure
+      const srcFiles = await fs.readdir('src');
+      expect(srcFiles).toContain('api.ts');
+      
+      const apiFile = await fs.readFile('src/api.ts', 'utf8');
+      expect(apiFile).toMatch(/export.*handler|async.*event/);
+    });
+
+    it('should scaffold empty template with minimal structure', async () => {
+      await execAsync(
+        `node ${cliPath} init --name minimal-service --owner team-ops --framework fedramp-moderate --pattern empty`
+      );
+
+      const serviceYml = await fs.readFile('service.yml', 'utf8');
+      expect(serviceYml).toContain('service: minimal-service');
+      expect(serviceYml).toContain('owner: team-ops');
+      expect(serviceYml).toContain('complianceFramework: fedramp-moderate');
+      expect(serviceYml).toContain('components: []');
+      
+      // Should still create essential files
+      await expect(fs.access('.gitignore')).resolves.not.toThrow();
+      await expect(fs.access('patches.ts')).resolves.not.toThrow();
+      await expect(fs.access('src')).resolves.not.toThrow();
+    });
+
+    it('should apply framework-specific template customizations', async () => {
+      await execAsync(
+        `node ${cliPath} init --name secure-api --owner security-team --framework fedramp-high --pattern lambda-api-with-db`
+      );
+
+      const serviceYml = await fs.readFile('service.yml', 'utf8');
+      expect(serviceYml).toContain('complianceFramework: fedramp-high');
+      
+      // FedRAMP High should include enhanced security settings
+      expect(serviceYml).toMatch(/classification:\s*(controlled|restricted)/);
+      expect(serviceYml).toMatch(/auditLevel:\s*detailed/);
+      expect(serviceYml).toMatch(/backupRetentionDays:\s*(35|30)/);
+      
+      // Should include governance section for FedRAMP
+      expect(serviceYml).toMatch(/governance:/);
+      expect(serviceYml).toMatch(/cdkNag:/);
+    });
+  });
+
+  describe('Governance Policy Validation', () => {
+    it('should reject manifest with expired CDK-nag suppressions', async () => {
+      await fs.writeFile('service.yml', `
+service: expired-suppression-service
+owner: compliance-team
+runtime: nodejs20
+complianceFramework: commercial
+
+governance:
+  cdkNag:
+    suppress:
+      - id: AwsSolutions-IAM5
+        justification: "Required for S3 cross-account access"
+        owner: "compliance-team"
+        expiresOn: "2023-06-15"
+        appliesTo:
+          - component: api
+      - id: AwsSolutions-S3-1
+        justification: "Public read access required for static assets"
+        owner: "frontend-team"
+        expiresOn: "2024-12-31"
+        appliesTo:
+          - component: assets
+
+components:
+  - name: api
+    type: lambda-api
+    config:
+      routes:
+        - method: GET
+          path: /data
+          handler: src/handler.getData
+      `);
+
+      await expect(execAsync(`node ${cliPath} validate`)).rejects.toMatchObject({
+        code: 2,
+        stderr: expect.stringMatching(/suppression.*expired|AwsSolutions-IAM5.*2023-06-15/i)
+      });
+    });
+
+    it('should validate governance suppression format and required fields', async () => {
+      await fs.writeFile('service.yml', `
+service: invalid-governance-service
+owner: compliance-team
+runtime: nodejs20
+governance:
+  cdkNag:
+    suppress:
+      - id: AwsSolutions-IAM5
+        justification: "Required for cross-account access"
+        # Missing owner field
+        # Missing expiresOn field
+        appliesTo:
+          - component: api
+      - justification: "Public access required"
+        owner: "team"
+        expiresOn: "invalid-date-format"
+        # Missing id field
+components:
+  - name: api
+    type: lambda-api
+    config:
+      routes: []
+      `);
+
+      await expect(execAsync(`node ${cliPath} validate`)).rejects.toMatchObject({
+        code: 2,
+        stderr: expect.stringMatching(/Missing.*owner.*expiresOn|Invalid.*date.*format|Missing.*id/i)
+      });
+    });
+  });
+
   describe('Complex Manifest Validation', () => {
     it('should validate complex shipping service manifest', async () => {
       await fs.writeFile('service.yml', `
