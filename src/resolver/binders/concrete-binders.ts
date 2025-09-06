@@ -373,31 +373,35 @@ export class LambdaToS3BucketBinderStrategy extends BinderStrategy {
   }
 
   bind(context: BindingContext): BindingResult {
-    const targetCapabilities = context.target.getCapabilities();
-    const s3Capability = targetCapabilities['bucket:s3'];
+    const { source, target, directive } = context;
+
+    // 1. Get the REAL L2 construct handles from the component instances
+    const lambdaConstruct = source.getConstruct('main') as lambda.Function;
+    const s3Construct = target.getConstruct('main') as s3.Bucket;
+
+    if (!lambdaConstruct || !s3Construct) {
+      throw new Error(`Could not retrieve construct handles for binding ${source.spec.name} -> ${target.spec.name}`);
+    }
     
-    if (!s3Capability) {
-      throw new Error(`Target component ${context.target.spec.name} does not provide bucket:s3 capability`);
+    // 2. Use high-level L2 methods to grant S3 access directly
+    this.grantS3Access(s3Construct, lambdaConstruct, directive.access);
+
+    // 3. Handle advanced options like KMS encryption
+    if (directive.options?.kmsEncryption) {
+      this.enableKMSEncryption(s3Construct, lambdaConstruct, context);
     }
 
-    const actions = this.getS3ActionsForAccess(context.directive.access);
-    const conditions = this.buildS3SecurityConditions(context);
+    // 4. Apply compliance-specific security enhancements
+    if (context.complianceFramework.startsWith('fedramp')) {
+      this.applyS3FedRAMPSecurityEnhancements(s3Construct, lambdaConstruct, context);
+    }
 
+    // 5. Return environment variables (the main output now that constructs are wired directly)
     return {
-      iamPolicies: [{
-        effect: 'Allow',
-        actions,
-        resources: [
-          s3Capability.bucketArn,
-          `${s3Capability.bucketArn}/*`
-        ],
-        conditions
-      }],
-      environmentVariables: {
-        [context.directive.env?.bucketName || 'BUCKET_NAME']: s3Capability.bucketName,
-        [context.directive.env?.bucketArn || 'BUCKET_ARN']: s3Capability.bucketArn
-      },
-      additionalConfig: this.buildS3AdditionalConfig(context, s3Capability)
+      iamPolicies: [], // No longer needed - CDK handles this
+      securityGroupRules: [], // No longer needed - CDK handles this  
+      environmentVariables: this.buildS3EnvironmentVariables(directive, s3Construct),
+      additionalConfig: {} // No longer needed - CDK handles configuration directly
     };
   }
 
@@ -498,5 +502,143 @@ export class LambdaToS3BucketBinderStrategy extends BinderStrategy {
     }
 
     return config;
+  }
+
+  /**
+   * Grant Lambda access to S3 bucket using CDK L2 methods
+   */
+  private grantS3Access(
+    s3Construct: s3.Bucket, 
+    lambdaConstruct: lambda.Function, 
+    access: string
+  ): void {
+    switch (access) {
+      case 'read':
+        // Grant Lambda permission to read objects from S3 bucket
+        s3Construct.grantRead(lambdaConstruct);
+        break;
+      case 'write':
+        // Grant Lambda permission to write objects to S3 bucket
+        s3Construct.grantWrite(lambdaConstruct);
+        break;
+      case 'readwrite':
+        // Grant Lambda full read/write access to S3 bucket
+        s3Construct.grantReadWrite(lambdaConstruct);
+        break;
+      case 'admin':
+        // Grant Lambda administrative access to S3 bucket
+        s3Construct.grantReadWrite(lambdaConstruct);
+        // Additional admin permissions for bucket management
+        lambdaConstruct.addToRolePolicy(
+          new iam.PolicyStatement({
+            effect: iam.Effect.ALLOW,
+            actions: [
+              's3:GetBucketVersioning',
+              's3:PutBucketVersioning',
+              's3:GetBucketPolicy',
+              's3:PutBucketPolicy',
+              's3:GetBucketLocation'
+            ],
+            resources: [s3Construct.bucketArn]
+          })
+        );
+        break;
+      default:
+        throw new Error(`Invalid access level: ${access}. Valid values: read, write, readwrite, admin`);
+    }
+  }
+
+  /**
+   * Enable KMS encryption for S3 operations using CDK methods
+   */
+  private enableKMSEncryption(
+    s3Construct: s3.Bucket,
+    lambdaConstruct: lambda.Function,
+    context: BindingContext
+  ): void {
+    // Grant Lambda permission to use KMS key for S3 encryption
+    const kmsKeyArn = context.directive.options?.kmsKeyId || 'alias/aws/s3';
+    
+    lambdaConstruct.addToRolePolicy(
+      new iam.PolicyStatement({
+        effect: iam.Effect.ALLOW,
+        actions: [
+          'kms:Decrypt',
+          'kms:DescribeKey',
+          'kms:Encrypt',
+          'kms:GenerateDataKey',
+          'kms:GenerateDataKeyWithoutPlaintext',
+          'kms:ReEncryptFrom',
+          'kms:ReEncryptTo'
+        ],
+        resources: [kmsKeyArn],
+        conditions: {
+          'StringEquals': {
+            'kms:ViaService': `s3.${process.env.AWS_REGION || 'us-east-1'}.amazonaws.com`
+          }
+        }
+      })
+    );
+  }
+
+  /**
+   * Apply FedRAMP-specific security enhancements for S3 using CDK
+   */
+  private applyS3FedRAMPSecurityEnhancements(
+    s3Construct: s3.Bucket,
+    lambdaConstruct: lambda.Function,
+    context: BindingContext
+  ): void {
+    // Add enhanced S3 monitoring permissions for FedRAMP compliance
+    lambdaConstruct.addToRolePolicy(
+      new iam.PolicyStatement({
+        effect: iam.Effect.ALLOW,
+        actions: [
+          's3:GetBucketLogging',
+          's3:GetBucketNotification',
+          's3:GetBucketVersioning',
+          's3:ListAllMyBuckets'
+        ],
+        resources: ['*'], // These actions require wildcard resource
+        conditions: {
+          'StringEquals': {
+            'aws:RequestedRegion': process.env.AWS_REGION || 'us-east-1',
+            'aws:SecureTransport': 'true'
+          }
+        }
+      })
+    );
+
+    // Additional FedRAMP High restrictions
+    if (context.complianceFramework === 'fedramp-high') {
+      // Restrict to specific object prefix
+      const allowedPrefix = context.directive.options?.objectPrefix || `${context.source.spec.name}/*`;
+      
+      lambdaConstruct.addToRolePolicy(
+        new iam.PolicyStatement({
+          effect: iam.Effect.DENY,
+          actions: ['s3:*'],
+          resources: [`${s3Construct.bucketArn}/*`],
+          conditions: {
+            'StringNotLike': {
+              's3:prefix': allowedPrefix
+            }
+          }
+        })
+      );
+    }
+  }
+
+  /**
+   * Build environment variables with tokenized values directly from CDK constructs
+   */
+  private buildS3EnvironmentVariables(
+    directive: any,
+    s3Construct: s3.Bucket
+  ): Record<string, string> {
+    return {
+      [directive.env?.bucketName || 'BUCKET_NAME']: s3Construct.bucketName,
+      [directive.env?.bucketArn || 'BUCKET_ARN']: s3Construct.bucketArn
+    };
   }
 }
