@@ -57,8 +57,8 @@ export class ValidationPipeline {
     // Stages 1-2: Parse and validate
     const validationResult = await this.validate(manifestPath);
     
-    // Stage 3: Context Hydration (AC-P3.1, AC-P3.2, AC-P3.3)
-    const hydratedManifest = await this.hydrateContext(validationResult.manifest, environment);
+    // Stage 3: Context Hydration (AC-P3.1, AC-P3.2, AC-P3.3) with $ref support
+    const hydratedManifest = await this.hydrateContext(validationResult.manifest, environment, manifestPath);
 
     // Stage 4: Semantic & Reference Validation (AC-P4.1, AC-P4.2, AC-P4.3)
     await this.validateReferences(hydratedManifest);
@@ -130,27 +130,17 @@ export class ValidationPipeline {
     this.dependencies.logger.debug('Schema validation completed successfully');
   }
 
-  private async hydrateContext(manifest: Record<string, any>, environment: string): Promise<Record<string, any>> {
+  private async hydrateContext(manifest: Record<string, any>, environment: string, manifestPath?: string): Promise<Record<string, any>> {
     this.dependencies.logger.debug(`Hydrating context for environment: ${environment}`);
 
-    // Deep clone the manifest to avoid mutations
-    const hydrated = JSON.parse(JSON.stringify(manifest));
+    // Use dedicated ContextHydrator service for enhanced functionality
+    const { ContextHydrator } = await import('../services/context-hydrator');
+    const contextHydrator = new ContextHydrator({
+      logger: this.dependencies.logger,
+      manifestPath: manifestPath
+    });
 
-    // Set defaults for complianceFramework if not specified
-    if (!hydrated.complianceFramework) {
-      hydrated.complianceFramework = 'commercial';
-    }
-
-    // Process environment-specific values
-    if (hydrated.environments && hydrated.environments[environment]) {
-      const envDefaults = hydrated.environments[environment].defaults || {};
-      
-      // Apply environment interpolation throughout the manifest
-      this.interpolateEnvironmentValues(hydrated, envDefaults, environment);
-    }
-
-    this.dependencies.logger.debug('Context hydration completed');
-    return hydrated;
+    return await contextHydrator.hydrateContext(manifest, environment);
   }
 
   private interpolateEnvironmentValues(obj: any, envDefaults: Record<string, any>, environment: string): void {
