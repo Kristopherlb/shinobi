@@ -1,0 +1,344 @@
+import * as fs from 'fs/promises';
+import * as path from 'path';
+import * as os from 'os';
+import { exec } from 'child_process';
+import { promisify } from 'util';
+
+const execAsync = promisify(exec);
+
+describe('End-to-End CLI Workflows', () => {
+  const cliPath = path.join(__dirname, '../../dist/cli.js');
+  let testDir: string;
+
+  beforeEach(async () => {
+    testDir = await fs.mkdtemp(path.join(os.tmpdir(), 'svc-e2e-'));
+    process.chdir(testDir);
+
+    // Build the CLI first
+    try {
+      await execAsync('npm run build', { cwd: path.join(__dirname, '../..') });
+    } catch (error) {
+      // CLI might already be built, continue
+    }
+  });
+
+  describe('Complete Development Workflow', () => {
+    it('should complete full workflow: init -> validate -> plan', async () => {
+      // Step 1: Initialize service
+      const { stdout: initOutput } = await execAsync(
+        `node ${cliPath} init --name shipping --owner team-fulfillment --framework commercial --pattern lambda-api-with-db`
+      );
+      expect(initOutput).toContain('initialized successfully');
+
+      // Verify files were created
+      await expect(fs.access('service.yml')).resolves.not.toThrow();
+      await expect(fs.access('.gitignore')).resolves.not.toThrow();
+      await expect(fs.access('src')).resolves.not.toThrow();
+      await expect(fs.access('patches.ts')).resolves.not.toThrow();
+
+      // Step 2: Validate the generated manifest
+      const { stdout: validateOutput } = await execAsync(`node ${cliPath} validate`);
+      expect(validateOutput).toContain('validation completed successfully');
+      expect(validateOutput).toContain('Service: shipping');
+      expect(validateOutput).toContain('Owner: team-fulfillment');
+      expect(validateOutput).toContain('Compliance Framework: commercial');
+
+      // Step 3: Plan for different environments
+      const { stdout: devPlanOutput } = await execAsync(`node ${cliPath} plan --env dev`);
+      expect(devPlanOutput).toContain('Active Framework: commercial');
+      expect(devPlanOutput).toContain('Planning deployment for environment: dev');
+      expect(devPlanOutput).toContain('Resolved Configuration:');
+
+      const { stdout: prodPlanOutput } = await execAsync(`node ${cliPath} plan --env prod`);
+      expect(prodPlanOutput).toContain('Active Framework: commercial');
+      expect(prodPlanOutput).toContain('Planning deployment for environment: prod');
+    });
+
+    it('should handle FedRAMP workflow with enhanced security', async () => {
+      // Initialize FedRAMP High service
+      await execAsync(
+        `node ${cliPath} init --name secure-service --owner security-team --framework fedramp-high --pattern lambda-api-with-db`
+      );
+
+      const serviceYml = await fs.readFile('service.yml', 'utf8');
+      expect(serviceYml).toContain('complianceFramework: fedramp-high');
+      expect(serviceYml).toContain('classification: controlled');
+      expect(serviceYml).toContain('backupRetentionDays: 35');
+
+      // Validate FedRAMP service
+      const { stdout: validateOutput } = await execAsync(`node ${cliPath} validate`);
+      expect(validateOutput).toContain('Compliance Framework: fedramp-high');
+
+      // Plan should show framework-specific settings
+      const { stdout: planOutput } = await execAsync(`node ${cliPath} plan --env prod`);
+      expect(planOutput).toContain('Active Framework: fedramp-high');
+      
+      // Parse JSON output to verify framework-specific settings
+      const jsonStartIndex = planOutput.indexOf('{');
+      if (jsonStartIndex !== -1) {
+        const jsonOutput = planOutput.substring(jsonStartIndex);
+        const config = JSON.parse(jsonOutput);
+        expect(config.complianceFramework).toBe('fedramp-high');
+      }
+    });
+  });
+
+  describe('Error Handling Workflows', () => {
+    it('should provide actionable errors for missing required fields', async () => {
+      // Create invalid manifest
+      await fs.writeFile('service.yml', `
+owner: test-team
+runtime: nodejs20
+components: []
+      `);
+
+      await expect(execAsync(`node ${cliPath} validate`)).rejects.toMatchObject({
+        code: 2,
+        stderr: expect.stringContaining('service')
+      });
+    });
+
+    it('should handle file discovery errors gracefully', async () => {
+      // No service.yml in directory
+      await expect(execAsync(`node ${cliPath} validate`)).rejects.toMatchObject({
+        code: 2,
+        stderr: expect.stringContaining('No service.yml found')
+      });
+    });
+
+    it('should validate bind references and provide clear errors', async () => {
+      await fs.writeFile('service.yml', `
+service: test-service
+owner: test-team
+runtime: nodejs20
+components:
+  - name: api
+    type: lambda-api
+    config:
+      routes: []
+    binds:
+      - to: nonexistent-db
+        capability: db:postgres
+        access: read
+      `);
+
+      await expect(execAsync(`node ${cliPath} plan --env dev`)).rejects.toMatchObject({
+        code: 2,
+        stderr: expect.stringContaining('nonexistent-db')
+      });
+    });
+  });
+
+  describe('Output Mode Validation', () => {
+    beforeEach(async () => {
+      await fs.writeFile('service.yml', `
+service: output-test
+owner: test-team
+runtime: nodejs20
+complianceFramework: commercial
+components:
+  - name: api
+    type: lambda-api
+    config:
+      routes:
+        - method: GET
+          path: /test
+          handler: src/handler.test
+      `);
+    });
+
+    it('should provide human-readable output by default', async () => {
+      const { stdout } = await execAsync(`node ${cliPath} validate`);
+      
+      // Should contain human-readable elements
+      expect(stdout).toMatch(/✓|ℹ|Service:/);
+      expect(stdout).toContain('validation completed successfully');
+    });
+
+    it('should provide structured JSON output in CI mode', async () => {
+      const { stdout } = await execAsync(`node ${cliPath} validate --ci`);
+      
+      // In CI mode, each log line should be valid JSON
+      const lines = stdout.trim().split('\\n').filter(line => line.trim());
+      lines.forEach(line => {
+        if (line.trim()) {
+          expect(() => JSON.parse(line)).not.toThrow();
+        }
+      });
+    });
+
+    it('should provide verbose debug output', async () => {
+      const { stdout } = await execAsync(`node ${cliPath} validate --verbose`);
+      
+      // Should contain debug information
+      expect(stdout).toMatch(/debug|🔍|DEBUG/i);
+    });
+  });
+
+  describe('Complex Manifest Validation', () => {
+    it('should validate complex shipping service manifest', async () => {
+      await fs.writeFile('service.yml', `
+service: complex-shipping
+owner: team-fulfillment
+runtime: nodejs20
+complianceFramework: fedramp-moderate
+labels:
+  domain: logistics
+  pii: medium
+  criticality: high
+
+environments:
+  dev:
+    defaults:
+      lambdaMemory: 512
+      logLevel: debug
+      enableTracing: true
+  prod:
+    defaults:
+      lambdaMemory: 1024
+      logLevel: info
+      enableTracing: false
+
+governance:
+  cdkNag:
+    suppress:
+      - id: AwsSolutions-IAM5
+        justification: "Required for cross-account S3 access"
+        owner: "team-fulfillment"
+        expiresOn: "2025-12-31"
+        appliesTo:
+          - component: api
+
+components:
+  - name: api
+    type: lambda-api
+    config:
+      routes:
+        - method: POST
+          path: /shipments
+          handler: src/api.createShipment
+        - method: GET
+          path: /shipments/{id}
+          handler: src/api.getShipment
+      logLevel: \${env:logLevel}
+      tracing: \${env:enableTracing}
+    binds:
+      - to: events-queue
+        capability: queue:sqs
+        access: write
+      - to: audit-bucket
+        capability: bucket:s3
+        access: write
+        env:
+          bucketName: AUDIT_BUCKET
+    labels:
+      tier: standard
+      exposure: internal
+    overrides:
+      function:
+        memorySize: \${env:lambdaMemory}
+        timeout: 30
+        reservedConcurrency: 100
+
+  - name: events-queue
+    type: sqs-queue
+    config:
+      fifo: true
+      visibilityTimeout: 300
+      messageRetentionPeriod: 1209600
+    overrides:
+      queue:
+        deadLetter:
+          maxReceiveCount: 3
+
+  - name: processor
+    type: lambda-worker
+    config:
+      handler: src/processor.handleEvent
+      batchSize: 5
+    binds:
+      - to: events-queue
+        capability: queue:sqs
+        access: read
+      - to: rates-db
+        capability: db:postgres
+        access: write
+        options:
+          iamAuth: true
+      - to: cache
+        capability: cache:redis
+        access: readwrite
+
+  - name: rates-db
+    type: rds-postgres
+    config:
+      dbName: shipping_rates
+      multiAz: \${envIs:prod}
+      backupRetentionDays:
+        dev: 7
+        prod: 30
+      encrypted: true
+
+  - name: cache
+    type: elasticache-redis
+    config:
+      nodeType:
+        dev: cache.t3.micro
+        prod: cache.r6g.large
+      numCacheNodes: 1
+
+  - name: audit-bucket
+    type: s3-bucket
+    config:
+      versioning: true
+      encryption: AES256
+      publicAccess: false
+      lifecycleRules:
+        - id: archive-old-logs
+          status: Enabled
+          transitions:
+            - days: 90
+              storageClass: GLACIER
+      `);
+
+      // Validate the complex manifest
+      const { stdout: validateOutput } = await execAsync(`node ${cliPath} validate`);
+      expect(validateOutput).toContain('validation completed successfully');
+      expect(validateOutput).toContain('Components: 5');
+
+      // Plan for both environments
+      const { stdout: devPlan } = await execAsync(`node ${cliPath} plan --env dev`);
+      const { stdout: prodPlan } = await execAsync(`node ${cliPath} plan --env prod`);
+
+      expect(devPlan).toContain('Active Framework: fedramp-moderate');
+      expect(prodPlan).toContain('Active Framework: fedramp-moderate');
+
+      // Verify environment-specific resolution in JSON output
+      const devJsonStart = devPlan.indexOf('{');
+      const prodJsonStart = prodPlan.indexOf('{');
+      
+      if (devJsonStart !== -1 && prodJsonStart !== -1) {
+        const devConfig = JSON.parse(devPlan.substring(devJsonStart));
+        const prodConfig = JSON.parse(prodPlan.substring(prodJsonStart));
+
+        // Check environment-specific values
+        const devApi = devConfig.components.find(c => c.name === 'api');
+        const prodApi = prodConfig.components.find(c => c.name === 'api');
+
+        expect(devApi?.config?.logLevel).toBe('debug');
+        expect(prodApi?.config?.logLevel).toBe('info');
+        expect(devApi?.config?.tracing).toBe(true);
+        expect(prodApi?.config?.tracing).toBe(false);
+      }
+    });
+  });
+
+  afterEach(async () => {
+    try {
+      process.chdir('/tmp');
+      await fs.rm(testDir, { recursive: true, force: true });
+    } catch {
+      // Ignore cleanup errors
+    }
+  });
+});

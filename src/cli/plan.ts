@@ -7,6 +7,11 @@ export interface PlanOptions {
   env?: string;
 }
 
+export interface PlanResult {
+  resolvedManifest: any;
+  warnings: string[];
+}
+
 export class PlanCommand {
   private pipeline: ValidationPipeline;
 
@@ -14,7 +19,7 @@ export class PlanCommand {
     this.pipeline = new ValidationPipeline();
   }
 
-  async execute(options: PlanOptions): Promise<void> {
+  async execute(options: PlanOptions): Promise<PlanResult> {
     logger.debug('Starting plan command', options);
 
     // Discover manifest file
@@ -56,6 +61,11 @@ export class PlanCommand {
       logger.info(`  Service: ${result.resolvedManifest.service}`);
       logger.info(`  Environment: ${env}`);
       logger.info(`  Components: ${result.resolvedManifest.components?.length || 0}`);
+
+      return {
+        resolvedManifest: result.resolvedManifest,
+        warnings: result.warnings || []
+      };
 
     } catch (error) {
       if (error instanceof Error) {

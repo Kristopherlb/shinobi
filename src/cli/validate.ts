@@ -6,6 +6,11 @@ export interface ValidateOptions {
   file?: string;
 }
 
+export interface ValidateResult {
+  manifest: any;
+  warnings: string[];
+}
+
 export class ValidateCommand {
   private pipeline: ValidationPipeline;
 
@@ -13,7 +18,7 @@ export class ValidateCommand {
     this.pipeline = new ValidationPipeline();
   }
 
-  async execute(options: ValidateOptions): Promise<void> {
+  async execute(options: ValidateOptions): Promise<ValidateResult> {
     logger.debug('Starting validate command', options);
 
     // Discover manifest file
@@ -47,6 +52,11 @@ export class ValidateCommand {
       logger.info(`  Owner: ${result.manifest.owner}`);
       logger.info(`  Compliance Framework: ${result.manifest.complianceFramework || 'commercial'}`);
       logger.info(`  Components: ${result.manifest.components?.length || 0}`);
+
+      return {
+        manifest: result.manifest,
+        warnings: result.warnings || []
+      };
 
     } catch (error) {
       if (error instanceof Error) {
