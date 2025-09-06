@@ -143,7 +143,7 @@ export class MigrationValidator {
       if (error.stdout) {
         // Parse stdout for specific validation errors
         const lines = error.stdout.split('\n');
-        const errorLines = lines.filter(line => 
+        const errorLines = lines.filter((line: string) => 
           line.includes('ERROR') || line.includes('FAILED') || line.includes('Invalid')
         );
         errors.push(...errorLines);
@@ -355,7 +355,7 @@ export class MigrationValidator {
     ];
 
     const diffLines = diffOutput.split('\n');
-    const functionalChanges = diffLines.filter(line => {
+    const functionalChanges = diffLines.filter((line: string) => {
       if (!line.startsWith('+') && !line.startsWith('-')) {
         return false; // Not a change line
       }

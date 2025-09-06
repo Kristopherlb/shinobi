@@ -164,7 +164,7 @@ async function getInteractiveOptions(options: any, logger: Logger): Promise<Migr
     });
   }
 
-  const answers = await inquirer.prompt(questions);
+  const answers = await inquirer.prompt(questions as any);
 
   return {
     cdkProjectPath: options.cdkProject || answers.cdkProjectPath,
