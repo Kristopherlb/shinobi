@@ -13,6 +13,8 @@ export class Logger {
   }
 
   info(message: string, data?: any) {
+    this.addToLogs('info', message, data);
+    
     if (this.config.ci) {
       console.log(JSON.stringify({
         level: 'info',
@@ -29,6 +31,8 @@ export class Logger {
   }
 
   success(message: string, data?: any) {
+    this.addToLogs('success', message, data);
+    
     if (this.config.ci) {
       console.log(JSON.stringify({
         level: 'success',
@@ -45,6 +49,8 @@ export class Logger {
   }
 
   warn(message: string, data?: any) {
+    this.addToLogs('warn', message, data);
+    
     if (this.config.ci) {
       console.log(JSON.stringify({
         level: 'warn',
@@ -64,6 +70,8 @@ export class Logger {
     const errorData = error instanceof Error 
       ? { message: error.message, stack: error.stack }
       : error;
+
+    this.addToLogs('error', message, errorData);
 
     if (this.config.ci) {
       console.error(JSON.stringify({
@@ -96,6 +104,38 @@ export class Logger {
         console.log(chalk.gray(JSON.stringify(data, null, 2)));
       }
     }
+  }
+
+  // Enhanced methods for migration tool
+  private logs: Array<{ level: string; message: string; data?: any; timestamp: string }> = [];
+
+  getLogs(): Array<{ level: number; message: string; data?: any; timestamp: string }> {
+    return this.logs.map(log => ({
+      level: this.getLevelNumber(log.level),
+      message: log.message,
+      data: log.data,
+      timestamp: log.timestamp
+    }));
+  }
+
+  private getLevelNumber(level: string): number {
+    const levels: Record<string, number> = {
+      'debug': 0,
+      'info': 1,
+      'warn': 2,
+      'error': 3,
+      'success': 4
+    };
+    return levels[level] || 1;
+  }
+
+  private addToLogs(level: string, message: string, data?: any): void {
+    this.logs.push({
+      level,
+      message,
+      data,
+      timestamp: new Date().toISOString()
+    });
   }
 }
 
