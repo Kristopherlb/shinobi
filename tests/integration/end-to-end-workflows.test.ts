@@ -612,6 +612,123 @@ components:
     });
   });
 
+  describe('FedRAMP Workflows', () => {
+    it('should enforce FedRAMP Moderate security policies and show enhanced defaults', async () => {
+      // Copy FedRAMP Moderate test fixture
+      const fixtureContent = await fs.readFile(
+        path.join(__dirname, '../fixtures/fedramp-moderate-manifest.yml'),
+        'utf8'
+      );
+      await fs.writeFile('service.yml', fixtureContent);
+
+      // Validate should pass for compliant FedRAMP manifest
+      const { stdout: validateOutput } = await execAsync(`node ${cliPath} validate`);
+      expect(validateOutput).toContain('validation completed successfully');
+      expect(validateOutput).toContain('Compliance Framework: fedramp-moderate');
+
+      // Plan should show FedRAMP-specific enhanced defaults
+      const { stdout: planOutput } = await execAsync(`node ${cliPath} plan --env prod`);
+      expect(planOutput).toContain('Active Framework: fedramp-moderate');
+
+      // Parse and verify enhanced FedRAMP security configurations
+      const jsonStartIndex = planOutput.indexOf('{');
+      if (jsonStartIndex !== -1) {
+        const jsonOutput = planOutput.substring(jsonStartIndex);
+        const config = JSON.parse(jsonOutput);
+        
+        // Verify FedRAMP-specific settings
+        expect(config.complianceFramework).toBe('fedramp-moderate');
+        expect(config.classification).toBe('controlled');
+        expect(config.auditLevel).toBe('detailed');
+
+        // Check database has enhanced security
+        const paymentsDb = config.components.find(c => c.name === 'payments-db');
+        expect(paymentsDb?.config?.encrypted).toBe(true);
+        expect(paymentsDb?.config?.performanceInsights).toBe(true);
+        expect(paymentsDb?.config?.backupRetentionDays?.prod).toBe(30);
+
+        // Check S3 has encryption
+        const auditBucket = config.components.find(c => c.name === 'audit-bucket');
+        expect(auditBucket?.config?.encryption).toBe('aws:kms');
+        expect(auditBucket?.config?.versioning).toBe(true);
+      }
+    });
+
+    it('should reject manifest that violates FedRAMP Moderate policies', async () => {
+      // Copy test fixture with FedRAMP violations
+      const fixtureContent = await fs.readFile(
+        path.join(__dirname, '../fixtures/commercial-to-fedramp-violation-manifest.yml'),
+        'utf8'
+      );
+      await fs.writeFile('service.yml', fixtureContent);
+
+      // Plan should fail with specific FedRAMP policy violations
+      await expect(execAsync(`node ${cliPath} plan --env prod`)).rejects.toMatchObject({
+        code: 2,
+        stderr: expect.stringMatching(/FedRAMP.*requires.*encryption|storage.*encrypted.*false|backup.*retention.*insufficient/i)
+      });
+    });
+
+    it('should show FedRAMP High enhanced security requirements', async () => {
+      await execAsync(
+        `node ${cliPath} init --name fedramp-high-service --owner security-team --framework fedramp-high --pattern lambda-api-with-db`
+      );
+
+      const serviceYml = await fs.readFile('service.yml', 'utf8');
+      
+      // Verify FedRAMP High specific settings
+      expect(serviceYml).toContain('complianceFramework: fedramp-high');
+      expect(serviceYml).toContain('classification: controlled');
+      expect(serviceYml).toContain('auditLevel: detailed');
+      
+      // Should have stricter backup retention
+      expect(serviceYml).toMatch(/backupRetentionDays:\s*(35|30)/);
+      
+      // Should include governance controls
+      expect(serviceYml).toMatch(/governance:/);
+      expect(serviceYml).toMatch(/cdkNag:/);
+      expect(serviceYml).toMatch(/suppress:/);
+
+      // Plan should succeed and show enhanced controls
+      const { stdout: planOutput } = await execAsync(`node ${cliPath} plan --env prod`);
+      expect(planOutput).toContain('Active Framework: fedramp-high');
+      expect(planOutput).toMatch(/enhanced.*security.*controls|FedRAMP.*High.*requirements/i);
+    });
+
+    it('should detect expired FedRAMP governance suppressions', async () => {
+      await fs.writeFile('service.yml', `
+service: expired-fedramp-service
+owner: compliance-team
+runtime: nodejs20
+complianceFramework: fedramp-moderate
+
+governance:
+  cdkNag:
+    suppress:
+      - id: AwsSolutions-RDS2
+        justification: "Temporary exemption for migration period"
+        owner: "dba-team"
+        expiresOn: "2023-06-01"
+        appliesTo:
+          - component: secure-db
+
+components:
+  - name: secure-db
+    type: rds-postgres
+    config:
+      dbName: secure_data
+      encrypted: true
+      backupRetentionDays: 30
+      `);
+
+      // Should fail validation due to expired suppression
+      await expect(execAsync(`node ${cliPath} validate`)).rejects.toMatchObject({
+        code: 2,
+        stderr: expect.stringMatching(/suppression.*expired.*2023-06-01|AwsSolutions-RDS2.*expired/i)
+      });
+    });
+  });
+
   afterEach(async () => {
     try {
       process.chdir('/tmp');

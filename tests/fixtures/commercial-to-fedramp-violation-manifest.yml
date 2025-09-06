@@ -1,0 +1,37 @@
+service: insecure-service  
+owner: dev-team
+runtime: nodejs20
+complianceFramework: fedramp-moderate
+
+components:
+  - name: web-api
+    type: lambda-api
+    config:
+      routes:
+        - method: GET
+          path: /data
+          handler: src/handler.getData
+    binds:
+      - to: storage-bucket
+        capability: bucket:s3
+        access: write
+      - to: user-db  
+        capability: db:postgres
+        access: readwrite
+
+  - name: storage-bucket
+    type: s3-bucket
+    config:
+      versioning: false
+      encryption: none
+      publicAccess: true
+      lifecycleRules: []
+
+  - name: user-db
+    type: rds-postgres
+    config:
+      dbName: userdata
+      encrypted: false
+      backupRetentionDays: 3
+      multiAz: false
+      performanceInsights: false

@@ -61,15 +61,47 @@ export class PlanCommand {
         binderRegistry
       });
       
-      // Synthesize infrastructure using ResolverEngine
+      // Synthesize infrastructure using ResolverEngine  
       this.dependencies.logger.info('Synthesizing infrastructure components...');
       const synthesisResult = await resolverEngine.synthesize(validationResult.resolvedManifest);
       
+      // Perform CDK diff analysis
+      this.dependencies.logger.info('Analyzing infrastructure changes...');
+      const cdkDiff = await this.performCdkDiff(synthesisResult);
+      
+      // Format and display comprehensive plan output
+      const { PlanOutputFormatter } = await import('../services/plan-output-formatter');
+      const outputFormatter = new PlanOutputFormatter({
+        logger: this.dependencies.logger
+      });
+      
+      const formattedOutput = outputFormatter.formatPlanOutput({
+        synthesisResult,
+        cdkDiff,
+        environment: env,
+        complianceFramework: validationResult.resolvedManifest.complianceFramework || 'commercial'
+      });
+      
       this.dependencies.logger.success('Plan generation completed successfully');
       
-      // Display synthesis report
-      const report = resolverEngine.getSynthesisReport(synthesisResult);
-      this.dependencies.logger.info('\n' + report);
+      // Display formatted output
+      this.dependencies.logger.info('\n' + formattedOutput.userFriendlySummary);
+      
+      // Display recommendations
+      if (formattedOutput.recommendations.length > 0) {
+        this.dependencies.logger.info('\n--- Recommendations ---');
+        formattedOutput.recommendations.forEach(rec => {
+          this.dependencies.logger.info(`  ${rec}`);
+        });
+      }
+      
+      // Display warnings
+      if (formattedOutput.warnings.length > 0) {
+        this.dependencies.logger.warn('\n--- Warnings ---');
+        formattedOutput.warnings.forEach(warning => {
+          this.dependencies.logger.warn(`  ${warning}`);
+        });
+      }
       
       // Display active compliance framework (AC-E3)
       this.dependencies.logger.info(`Active Framework: ${validationResult.resolvedManifest.complianceFramework || 'commercial'}`);
@@ -90,7 +122,8 @@ export class PlanCommand {
         data: {
           resolvedManifest: validationResult.resolvedManifest,
           warnings: validationResult.warnings || [],
-          synthesisResult: synthesisResult
+          synthesisResult: synthesisResult,
+          formattedOutput: formattedOutput
         }
       };
 

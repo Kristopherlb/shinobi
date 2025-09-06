@@ -14,8 +14,8 @@ export class LambdaApiComponent extends Component {
   }
 
   synth(): any {
-    // This would normally create CDK constructs
-    return {
+    // Create the Lambda function construct properties
+    const lambdaProps = {
       type: 'AWS::Lambda::Function',
       properties: {
         functionName: `${this.context.serviceName}-${this.spec.name}`,
@@ -31,6 +31,12 @@ export class LambdaApiComponent extends Component {
         timeout: this.spec.overrides?.function?.timeout || this.getDefaultTimeout()
       }
     };
+
+    // Store construct for later access by binding and patching phases
+    this.constructs.set('lambda.Function', lambdaProps);
+    this.constructs.set('main', lambdaProps); // Primary construct reference
+
+    return lambdaProps;
   }
 
   getCapabilities(): ComponentCapabilities {
@@ -113,7 +119,8 @@ export class RdsPostgresComponent extends Component {
   }
 
   synth(): any {
-    return {
+    // Create the RDS instance construct properties
+    const rdsProps = {
       type: 'AWS::RDS::DBInstance',
       properties: {
         dbInstanceIdentifier: `${this.context.serviceName}-${this.spec.name}`,
@@ -130,6 +137,23 @@ export class RdsPostgresComponent extends Component {
         deletionProtection: this.isDeletionProtectionEnabled()
       }
     };
+
+    // Store constructs for later access by binding and patching phases
+    this.constructs.set('rds.DatabaseInstance', rdsProps);
+    this.constructs.set('main', rdsProps); // Primary construct reference
+
+    // Create associated security group
+    const securityGroup = {
+      type: 'AWS::EC2::SecurityGroup',
+      properties: {
+        groupDescription: `Security group for ${this.context.serviceName}-${this.spec.name} RDS instance`,
+        vpcId: '${vpc.ref}',
+        securityGroupIngress: [] // Will be populated by binders
+      }
+    };
+    this.constructs.set('rds.SecurityGroup', securityGroup);
+
+    return rdsProps;
   }
 
   getCapabilities(): ComponentCapabilities {

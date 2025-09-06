@@ -5,6 +5,73 @@
 
 import { Logger } from '../utils/logger';
 
+/**
+ * Structured validation error with context for robust CLI and auditable CI process
+ */
+export class ValidationError extends Error {
+  constructor(
+    public readonly message: string,
+    public readonly stage: string, // e.g., 'parsing', 'schema-validation', 'context-hydration', 'semantic-validation'
+    public readonly filePath?: string,
+    public readonly lineNumber?: number,
+    public readonly details?: Record<string, any>
+  ) {
+    super(message);
+    this.name = 'ValidationError';
+  }
+
+  /**
+   * Create structured error report for CLI output
+   */
+  toStructuredReport(): {
+    error: string;
+    stage: string;
+    location?: {
+      file: string;
+      line?: number;
+    };
+    details?: Record<string, any>;
+  } {
+    const report: any = {
+      error: this.message,
+      stage: this.stage
+    };
+
+    if (this.filePath) {
+      report.location = {
+        file: this.filePath,
+        ...(this.lineNumber && { line: this.lineNumber })
+      };
+    }
+
+    if (this.details) {
+      report.details = this.details;
+    }
+
+    return report;
+  }
+
+  /**
+   * Create user-friendly error message for console output
+   */
+  toUserFriendlyMessage(): string {
+    let message = `[${this.stage.toUpperCase()}] ${this.message}`;
+    
+    if (this.filePath) {
+      message += `\n  File: ${this.filePath}`;
+      if (this.lineNumber) {
+        message += `:${this.lineNumber}`;
+      }
+    }
+
+    if (this.details && Object.keys(this.details).length > 0) {
+      message += `\n  Details: ${JSON.stringify(this.details, null, 2)}`;
+    }
+
+    return message;
+  }
+}
+
 export interface ValidationRequest {
   manifestPath: string;
   environment?: string;

@@ -1,0 +1,101 @@
+service: secure-payments
+owner: security-team
+runtime: nodejs20
+complianceFramework: fedramp-moderate
+classification: controlled
+auditLevel: detailed
+
+labels:
+  domain: payments
+  pii: high
+  criticality: high
+
+environments:
+  dev:
+    defaults:
+      lambdaMemory: 768
+      logLevel: debug
+      enableTracing: true
+  prod:
+    defaults:
+      lambdaMemory: 1024
+      logLevel: info
+      enableTracing: true
+      encryptionRequired: true
+
+governance:
+  cdkNag:
+    suppress:
+      - id: AwsSolutions-IAM5
+        justification: "Required for cross-account S3 access in FedRAMP environment"
+        owner: "security-team"
+        expiresOn: "2025-12-31"
+        appliesTo:
+          - component: api
+
+components:
+  - name: api
+    type: lambda-api
+    config:
+      routes:
+        - method: POST
+          path: /payments
+          handler: src/api.createPayment
+        - method: GET
+          path: /payments/{id}
+          handler: src/api.getPayment
+      logLevel: ${env:logLevel}
+      tracing: ${env:enableTracing}
+    binds:
+      - to: payments-db
+        capability: db:postgres
+        access: readwrite
+        options:
+          iamAuth: true
+      - to: audit-bucket
+        capability: bucket:s3
+        access: write
+        env:
+          bucketName: AUDIT_BUCKET
+    labels:
+      tier: critical
+      exposure: internal
+    overrides:
+      function:
+        memorySize: ${env:lambdaMemory}
+        timeout: 30
+        reservedConcurrency: 100
+
+  - name: payments-db
+    type: rds-postgres
+    config:
+      dbName: secure_payments
+      multiAz: ${envIs:prod}
+      backupRetentionDays:
+        dev: 14
+        prod: 30
+      encrypted: true
+      performanceInsights: true
+    overrides:
+      instance:
+        class:
+          dev: db.r5.medium
+          prod: db.r5.large
+        storageGb:
+          dev: 50
+          prod: 200
+
+  - name: audit-bucket
+    type: s3-bucket
+    config:
+      versioning: true
+      encryption: aws:kms
+      publicAccess: false
+      lifecycleRules:
+        - id: archive-audit-logs
+          status: Enabled
+          transitions:
+            - days: 30
+              storageClass: STANDARD_IA
+            - days: 90
+              storageClass: GLACIER

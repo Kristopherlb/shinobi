@@ -24,6 +24,8 @@ export interface ComponentCapabilities {
  * Implements the Factory Method pattern's Product interface
  */
 export abstract class Component {
+  protected readonly constructs: Map<string, any> = new Map();
+
   constructor(
     protected spec: ComponentSpec,
     protected context: ComponentContext
@@ -32,6 +34,27 @@ export abstract class Component {
   abstract synth(): any;
   abstract getCapabilities(): ComponentCapabilities;
   abstract getType(): string;
+
+  /**
+   * Get a specific CDK construct by handle
+   */
+  public getConstruct(handle: string): any | undefined {
+    return this.constructs.get(handle);
+  }
+
+  /**
+   * Get all registered constructs
+   */
+  public getAllConstructs(): Map<string, any> {
+    return new Map(this.constructs);
+  }
+
+  /**
+   * Check if a construct handle exists
+   */
+  public hasConstruct(handle: string): boolean {
+    return this.constructs.has(handle);
+  }
 }
 
 export interface ComponentContext {
