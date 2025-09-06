@@ -254,8 +254,10 @@ export class ResolverEngine {
       return outputsMap.get(bindDirective.to);
     }
 
-    // Selector-based resolution
+    // Selector-based resolution with ambiguity checking
     if (bindDirective.select) {
+      const matchingComponents: any[] = [];
+      
       for (const [componentName, output] of outputsMap.entries()) {
         const component = output.component;
         
@@ -267,13 +269,27 @@ export class ResolverEngine {
               ([key, value]) => component.spec.labels?.[key] === value
             );
             if (matchesLabels) {
-              return output;
+              matchingComponents.push(output);
             }
           } else {
-            return output; // Type match without label requirements
+            matchingComponents.push(output); // Type match without label requirements
           }
         }
       }
+      
+      // Validate selector results
+      if (matchingComponents.length === 0) {
+        const selectorDesc = JSON.stringify(bindDirective.select);
+        throw new Error(`Selector found no matching components for: ${selectorDesc}`);
+      }
+      
+      if (matchingComponents.length > 1) {
+        const componentNames = matchingComponents.map(output => output.component.spec.name).join(', ');
+        const selectorDesc = JSON.stringify(bindDirective.select);
+        throw new Error(`Ambiguous selector: Found ${matchingComponents.length} components matching ${selectorDesc}: [${componentNames}]. Please make selector more specific.`);
+      }
+      
+      return matchingComponents[0];
     }
 
     return null;
@@ -341,11 +357,12 @@ export class ResolverEngine {
     const constructsMap: Record<string, any> = {};
     
     for (const component of components) {
-      try {
-        const synthesized = component.synth();
-        constructsMap[component.spec.name] = synthesized;
-      } catch (error) {
-        this.dependencies.logger.warn(`Could not include ${component.spec.name} in constructs map:`, error);
+      // Retrieve the main construct handle stored during the REAL synthesis phase
+      const mainConstruct = component.getConstruct('main');
+      if (mainConstruct) {
+        constructsMap[component.getName()] = mainConstruct;
+      } else {
+        this.dependencies.logger.warn(`Component ${component.getName()} has no 'main' construct handle`);
       }
     }
     

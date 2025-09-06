@@ -3,6 +3,9 @@
  * Enables extensible plugin architecture for component creation
  */
 
+import { Construct, IConstruct } from 'constructs';
+import { IVpc } from 'aws-cdk-lib/aws-ec2';
+
 export interface ComponentSpec {
   name: string;
   type: string;
@@ -24,7 +27,7 @@ export interface ComponentCapabilities {
  * Implements the Factory Method pattern's Product interface
  */
 export abstract class Component {
-  protected readonly constructs: Map<string, any> = new Map();
+  protected readonly constructs: Map<string, IConstruct> = new Map();
   protected capabilities: ComponentCapabilities = {};
   private synthesized: boolean = false;
 
@@ -57,14 +60,14 @@ export abstract class Component {
   /**
    * Get a specific CDK construct by handle
    */
-  public getConstruct(handle: string): any | undefined {
+  public getConstruct(handle: string): IConstruct | undefined {
     return this.constructs.get(handle);
   }
 
   /**
    * Get all registered constructs
    */
-  public getAllConstructs(): Map<string, any> {
+  public getAllConstructs(): Map<string, IConstruct> {
     return new Map(this.constructs);
   }
 
@@ -87,8 +90,8 @@ export interface ComponentContext {
   serviceName: string;
   environment: string;
   complianceFramework: 'commercial' | 'fedramp-moderate' | 'fedramp-high';
-  scope: any; // CDK Construct scope
-  vpc?: any; // VPC construct for components that need it
+  scope: Construct; // CDK Construct scope - strongly typed
+  vpc?: IVpc; // VPC construct for components that need it - strongly typed
   region?: string;
   accountId?: string;
 }
