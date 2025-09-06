@@ -13,6 +13,7 @@ export interface PlanResult {
   data?: {
     resolvedManifest: any;
     warnings: string[];
+    synthesisResult?: any;
   };
   error?: string;
 }
@@ -48,31 +49,48 @@ export class PlanCommand {
       this.dependencies.logger.info(`Using manifest: ${manifestPath}`);
 
       // Run full validation pipeline (all 4 stages)
-      const result = await this.dependencies.pipeline.plan(manifestPath, env);
+      const validationResult = await this.dependencies.pipeline.plan(manifestPath, env);
+      
+      // Initialize ResolverEngine for synthesis
+      const { ResolverEngine } = await import('../resolver/resolver-engine');
+      const { ResolverBinderRegistry } = await import('../resolver/binder-registry');
+      
+      const binderRegistry = new ResolverBinderRegistry();
+      const resolverEngine = new ResolverEngine({
+        logger: this.dependencies.logger,
+        binderRegistry
+      });
+      
+      // Synthesize infrastructure using ResolverEngine
+      this.dependencies.logger.info('Synthesizing infrastructure components...');
+      const synthesisResult = await resolverEngine.synthesize(validationResult.resolvedManifest);
       
       this.dependencies.logger.success('Plan generation completed successfully');
       
-      // Display active compliance framework (AC-E3)
-      this.dependencies.logger.info(`Active Framework: ${result.resolvedManifest.complianceFramework || 'commercial'}`);
+      // Display synthesis report
+      const report = resolverEngine.getSynthesisReport(synthesisResult);
+      this.dependencies.logger.info('\n' + report);
       
-      if (result.warnings && result.warnings.length > 0) {
-        this.dependencies.logger.warn(`Found ${result.warnings.length} warning(s):`);
-        result.warnings.forEach(warning => {
+      // Display active compliance framework (AC-E3)
+      this.dependencies.logger.info(`Active Framework: ${validationResult.resolvedManifest.complianceFramework || 'commercial'}`);
+      
+      if (validationResult.warnings && validationResult.warnings.length > 0) {
+        this.dependencies.logger.warn(`Found ${validationResult.warnings.length} warning(s):`);
+        validationResult.warnings.forEach(warning => {
           this.dependencies.logger.warn(`  - ${warning}`);
         });
       }
 
-      this.dependencies.logger.info('\nPlan summary:');
-      this.dependencies.logger.info(`  Service: ${result.resolvedManifest.service}`);
-      this.dependencies.logger.info(`  Environment: ${env}`);
-      this.dependencies.logger.info(`  Components: ${result.resolvedManifest.components?.length || 0}`);
+      this.dependencies.logger.info('\nResolved Configuration:');
+      this.dependencies.logger.info(JSON.stringify(validationResult.resolvedManifest, null, 2));
 
       return {
         success: true,
         exitCode: 0,
         data: {
-          resolvedManifest: result.resolvedManifest,
-          warnings: result.warnings || []
+          resolvedManifest: validationResult.resolvedManifest,
+          warnings: validationResult.warnings || [],
+          synthesisResult: synthesisResult
         }
       };
 

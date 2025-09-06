@@ -1,0 +1,45 @@
+You are absolutely correct. My apologies. Acknowledging a // TODO: is not a complete review; a complete review should address the logic that fulfills that TODO. It's my responsibility to analyze the full intended workflow for correctness, not just validate the existing structure. Thank you for holding the process to a higher standard.
+Let's address that gap immediately. The // TODO: in plan.ts represents the handoff to the most critical part of the platform's backend: the Resolver & Synthesis Engine. This engine is responsible for translating the validated user intent into actual CDK constructs.
+Here is the engineering specification for the component that will replace that // TODO:.
+Engineering Specification: The Resolver & Synthesis Engine
+Objective: To create a robust engine that takes a fully validated and hydrated configuration object and orchestrates the complete, two-phase process of synthesizing and binding all components into a deployable CDK App.
+1. Purpose and Role in the Platform
+This engine is the heart of the platform's infrastructure generation logic. It is invoked by the plan.ts command after the ValidationOrchestrator has successfully completed. Its sole responsibility is to manage the in-memory construction of the entire CDK construct tree.
+2. Core Responsibilities & Workflow
+The engine MUST execute the following phases in strict sequential order:
+Phase 1: Component Instantiation
+ * AC-RS1.1: The engine receives the validatedConfig object.
+ * AC-RS1.2: It uses the ComponentFactoryProvider (with the correct complianceFramework) to create the appropriate ComponentRegistry.
+ * AC-RS1.3: It iterates through the components array in the configuration and uses the ComponentRegistry's Factory Method to instantiate all the required Component objects (e.g., RdsPostgresComponent, LambdaApiComponent). These objects are held in memory.
+Phase 2: Synthesis
+ * AC-RS2.1: The engine iterates through the in-memory list of Component instances.
+ * AC-RS2.2: For each component, it calls the .synth() method. This triggers the Builder pattern within each component to assemble its configuration and create the underlying L2/L1 CDK constructs.
+ * AC-RS2.3: During this phase, the engine collects the provides capability outputs from each component and stores them in a central "outputs map" for the next phase.
+Phase 3: Binding
+ * AC-RS3.1: The engine iterates through the Component instances again.
+ * AC-RS3.2: For each component that has a binds directive, the engine performs the wiring:
+   * It resolves the target component (either by name or by selector).
+   * It selects the correct binder from the BinderRegistry using the Strategy Pattern.
+   * It executes the binder, which applies the necessary IAM Policies, Security Group rules, and Environment Variables to the source component's constructs.
+Phase 4: Patching
+ * AC-RS4.1: After all automated synthesis and binding are complete, the engine checks for the existence of a patches.ts file.
+ * AC-RS4.2: If the file exists and is registered in the manifest, the engine invokes the specified patch functions, passing the necessary context (the CDK Stack, construct handles, etc.) to allow for manual, programmatic modifications.
+Phase 5: Final Assembly
+ * AC-RS5.1: The engine returns the fully constructed and finalized CDK App object, which now contains the complete, synthesized infrastructure tree. This object is then ready to be passed to the CDK Toolkit for diffing or deployment.
+3. Input & Output Contracts
+ * Input: A ValidatedConfig object (the successful output of the ValidationOrchestrator).
+ * Output: A fully synthesized cdk.App instance.
+4. Proposed File Structure
+To encapsulate this logic, we will introduce a new directory:
+src/
+├── cli/
+├── resolver/
+│   ├── resolver-engine.ts      # The main orchestrator class for this engine
+│   ├── binder-registry.ts      # Registers all the binding strategies
+│   └── binders/                # Directory for concrete binder implementations
+│       ├── lambda-to-sqs.binder.ts
+│       └── lambda-to-rds.binder.ts
+└── services/
+    └── ...
+
+This structure ensures that all the logic for translating the plan into CDK constructs is co-located and decoupled from the validation and CLI layers.
