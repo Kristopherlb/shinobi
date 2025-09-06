@@ -2,7 +2,7 @@ import * as fs from 'fs/promises';
 import * as YAML from 'yaml';
 import Ajv from 'ajv';
 import addFormats from 'ajv-formats';
-import { logger } from '../utils/logger';
+import { Logger } from '../utils/logger';
 import { SchemaManager } from '../schemas/schema-manager';
 
 export interface ValidationResult {
@@ -15,21 +15,24 @@ export interface PlanResult {
   warnings: string[];
 }
 
+interface ValidationPipelineDependencies {
+  schemaManager: SchemaManager;
+  logger: Logger;
+}
+
 export class ValidationPipeline {
   private ajv: Ajv;
-  private schemaManager: SchemaManager;
 
-  constructor() {
+  constructor(private dependencies: ValidationPipelineDependencies) {
     this.ajv = new Ajv({ allErrors: true, verbose: true });
     addFormats(this.ajv);
-    this.schemaManager = new SchemaManager();
   }
 
   /**
    * Stage 1-2: Parse and validate manifest (AC-P1.1, AC-P1.2, AC-P2.1, AC-P2.2, AC-P2.3)
    */
   async validate(manifestPath: string): Promise<ValidationResult> {
-    logger.debug('Starting validation pipeline');
+    this.dependencies.logger.debug('Starting validation pipeline');
 
     // Stage 1: Parsing (AC-P1.1, AC-P1.2)
     const manifest = await this.parseManifest(manifestPath);
@@ -49,7 +52,7 @@ export class ValidationPipeline {
    * Full pipeline: Parse, validate, hydrate, and resolve references (all 4 stages)
    */
   async plan(manifestPath: string, environment: string): Promise<PlanResult> {
-    logger.debug('Starting full plan pipeline');
+    this.dependencies.logger.debug('Starting full plan pipeline');
 
     // Stages 1-2: Parse and validate
     const validationResult = await this.validate(manifestPath);
@@ -67,7 +70,7 @@ export class ValidationPipeline {
   }
 
   private async parseManifest(manifestPath: string): Promise<any> {
-    logger.debug(`Parsing manifest: ${manifestPath}`);
+    this.dependencies.logger.debug(`Parsing manifest: ${manifestPath}`);
 
     try {
       const fileContent = await fs.readFile(manifestPath, 'utf8');
@@ -77,7 +80,7 @@ export class ValidationPipeline {
         throw new Error('Invalid YAML: manifest must be an object');
       }
 
-      logger.debug('Manifest parsed successfully');
+      this.dependencies.logger.debug('Manifest parsed successfully');
       return manifest;
 
     } catch (error) {
@@ -92,10 +95,10 @@ export class ValidationPipeline {
   }
 
   private async validateSchema(manifest: any): Promise<void> {
-    logger.debug('Validating manifest schema');
+    this.dependencies.logger.debug('Validating manifest schema');
 
     // Get the master schema (dynamically composed)
-    const schema = await this.schemaManager.getMasterSchema();
+    const schema = await this.dependencies.schemaManager.getMasterSchema();
     
     const validate = this.ajv.compile(schema);
     const valid = validate(manifest);
@@ -110,7 +113,7 @@ export class ValidationPipeline {
       });
 
       const errorMsg = `Schema validation failed:\n${errorMessages.join('\n')}`;
-      logger.debug('Schema validation errors', errors);
+      this.dependencies.logger.debug('Schema validation errors', errors);
       throw new Error(errorMsg);
     }
 
@@ -124,11 +127,11 @@ export class ValidationPipeline {
       throw new Error('Missing required field: owner');
     }
 
-    logger.debug('Schema validation completed successfully');
+    this.dependencies.logger.debug('Schema validation completed successfully');
   }
 
   private async hydrateContext(manifest: Record<string, any>, environment: string): Promise<Record<string, any>> {
-    logger.debug(`Hydrating context for environment: ${environment}`);
+    this.dependencies.logger.debug(`Hydrating context for environment: ${environment}`);
 
     // Deep clone the manifest to avoid mutations
     const hydrated = JSON.parse(JSON.stringify(manifest));
@@ -146,7 +149,7 @@ export class ValidationPipeline {
       this.interpolateEnvironmentValues(hydrated, envDefaults, environment);
     }
 
-    logger.debug('Context hydration completed');
+    this.dependencies.logger.debug('Context hydration completed');
     return hydrated;
   }
 
@@ -196,7 +199,7 @@ export class ValidationPipeline {
   }
 
   private async validateReferences(manifest: any): Promise<void> {
-    logger.debug('Validating references and semantic rules');
+    this.dependencies.logger.debug('Validating references and semantic rules');
 
     // Build component name index
     const componentNames = new Set<string>();
@@ -238,7 +241,7 @@ export class ValidationPipeline {
       });
     }
 
-    logger.debug('Reference validation completed');
+    this.dependencies.logger.debug('Reference validation completed');
   }
 }
 

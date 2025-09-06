@@ -1,5 +1,5 @@
 import inquirer from 'inquirer';
-import { logger } from '../utils/logger';
+import { Logger } from '../utils/logger';
 import { FileDiscovery } from '../utils/file-discovery';
 import { TemplateEngine } from '../templates/template-engine';
 
@@ -10,38 +10,66 @@ export interface InitOptions {
   pattern?: 'empty' | 'lambda-api-with-db' | 'worker-with-queue';
 }
 
+export interface InitResult {
+  success: boolean;
+  exitCode: number;
+  error?: string;
+}
+
+interface InitDependencies {
+  templateEngine: TemplateEngine;
+  fileDiscovery: FileDiscovery;
+  logger: Logger;
+  prompter: typeof inquirer;
+}
+
 export class InitCommand {
-  private templateEngine: TemplateEngine;
+  constructor(private dependencies: InitDependencies) {}
 
-  constructor() {
-    this.templateEngine = new TemplateEngine();
-  }
+  async execute(options: InitOptions): Promise<InitResult> {
+    this.dependencies.logger.debug('Starting init command', options);
 
-  async execute(options: InitOptions): Promise<void> {
-    logger.debug('Starting init command', options);
+    try {
+      // Check if service.yml already exists
+      const existingManifest = await this.dependencies.fileDiscovery.findManifest('.');
 
-    // Check if service.yml already exists
-    const fileDiscovery = new FileDiscovery();
-    const existingManifest = await fileDiscovery.findManifest('.');
+      if (existingManifest) {
+        return {
+          success: false,
+          exitCode: 1,
+          error: `Service manifest already exists at: ${existingManifest}`
+        };
+      }
 
-    if (existingManifest) {
-      logger.error(`Service manifest already exists at: ${existingManifest}`);
-      throw new Error('Service already initialized');
+      // Gather inputs through interactive prompts or use provided options
+      const inputs = await this.gatherInputs(options);
+      
+      this.dependencies.logger.info('Generating service files...');
+      
+      // Generate files using template engine
+      await this.dependencies.templateEngine.generateProject(inputs);
+      
+      this.dependencies.logger.success(`Service '${inputs.name}' initialized successfully!`);
+      this.dependencies.logger.info('Next steps:');
+      this.dependencies.logger.info('  1. Edit service.yml to customize your service');
+      this.dependencies.logger.info('  2. Run "svc validate" to check your configuration');
+      this.dependencies.logger.info('  3. Run "svc plan" to see resolved configuration');
+      
+      return {
+        success: true,
+        exitCode: 0
+      };
+      
+    } catch (error) {
+      const errorMessage = error instanceof Error ? error.message : 'Unknown error occurred';
+      this.dependencies.logger.error('Failed to initialize service:', error);
+      
+      return {
+        success: false,
+        exitCode: 1,
+        error: errorMessage
+      };
     }
-
-    // Gather inputs through interactive prompts or use provided options
-    const inputs = await this.gatherInputs(options);
-    
-    logger.info('Generating service files...');
-    
-    // Generate files using template engine
-    await this.templateEngine.generateProject(inputs);
-    
-    logger.success(`Service '${inputs.name}' initialized successfully!`);
-    logger.info('Next steps:');
-    logger.info('  1. Edit service.yml to customize your service');
-    logger.info('  2. Run "svc validate" to check your configuration');
-    logger.info('  3. Run "svc plan" to see resolved configuration');
   }
 
   private async gatherInputs(options: InitOptions): Promise<Required<InitOptions>> {
@@ -99,7 +127,7 @@ export class InitCommand {
       });
     }
 
-    const answers = questions.length > 0 ? await inquirer.prompt(questions as any[]) : {};
+    const answers = questions.length > 0 ? await this.dependencies.prompter.prompt(questions as any[]) : {};
 
     return {
       name: options.name || answers.name,

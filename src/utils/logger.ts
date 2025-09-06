@@ -5,7 +5,7 @@ export interface LoggerConfig {
   ci: boolean;
 }
 
-class Logger {
+export class Logger {
   private config: LoggerConfig = { verbose: false, ci: false };
 
   configure(config: LoggerConfig) {
@@ -99,4 +99,5 @@ class Logger {
   }
 }
 
+// Legacy singleton export - deprecated, use dependency injection instead
 export const logger = new Logger();

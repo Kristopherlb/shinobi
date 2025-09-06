@@ -1,5 +1,5 @@
-import { logger } from '../utils/logger';
-import { ValidationPipeline } from '../validation/pipeline';
+import { Logger } from '../utils/logger';
+import { ValidationOrchestrator } from '../services/validation-orchestrator';
 import { FileDiscovery } from '../utils/file-discovery';
 
 export interface PlanOptions {
@@ -8,70 +8,83 @@ export interface PlanOptions {
 }
 
 export interface PlanResult {
-  resolvedManifest: any;
-  warnings: string[];
+  success: boolean;
+  exitCode: number;
+  data?: {
+    resolvedManifest: any;
+    warnings: string[];
+  };
+  error?: string;
+}
+
+interface PlanDependencies {
+  pipeline: ValidationOrchestrator;
+  fileDiscovery: FileDiscovery;
+  logger: Logger;
 }
 
 export class PlanCommand {
-  private pipeline: ValidationPipeline;
-
-  constructor() {
-    this.pipeline = new ValidationPipeline();
-  }
+  constructor(private dependencies: PlanDependencies) {}
 
   async execute(options: PlanOptions): Promise<PlanResult> {
-    logger.debug('Starting plan command', options);
-
-    // Discover manifest file
-    const fileDiscovery = new FileDiscovery();
-    const manifestPath = options.file 
-      ? options.file 
-      : await fileDiscovery.findManifest('.');
-
-    if (!manifestPath) {
-      logger.error('Error: No service.yml found in this directory or any parent directories.');
-      throw new Error('Manifest not found');
-    }
-
-    const env = options.env || 'dev';
-    logger.info(`Planning deployment for environment: ${env}`);
-    logger.info(`Using manifest: ${manifestPath}`);
+    this.dependencies.logger.debug('Starting plan command', options);
 
     try {
+      // Discover manifest file
+      const manifestPath = options.file 
+        ? options.file 
+        : await this.dependencies.fileDiscovery.findManifest('.');
+
+      if (!manifestPath) {
+        return {
+          success: false,
+          exitCode: 2,
+          error: 'No service.yml found in this directory or any parent directories.'
+        };
+      }
+
+      const env = options.env || 'dev';
+      this.dependencies.logger.info(`Planning deployment for environment: ${env}`);
+      this.dependencies.logger.info(`Using manifest: ${manifestPath}`);
+
       // Run full validation pipeline (all 4 stages)
-      const result = await this.pipeline.plan(manifestPath, env);
+      const result = await this.dependencies.pipeline.plan(manifestPath, env);
       
-      logger.success('Plan generation completed successfully');
+      this.dependencies.logger.success('Plan generation completed successfully');
       
       // Display active compliance framework (AC-E3)
-      logger.info(`Active Framework: ${result.resolvedManifest.complianceFramework || 'commercial'}`);
+      this.dependencies.logger.info(`Active Framework: ${result.resolvedManifest.complianceFramework || 'commercial'}`);
       
       if (result.warnings && result.warnings.length > 0) {
-        logger.warn(`Found ${result.warnings.length} warning(s):`);
+        this.dependencies.logger.warn(`Found ${result.warnings.length} warning(s):`);
         result.warnings.forEach(warning => {
-          logger.warn(`  - ${warning}`);
+          this.dependencies.logger.warn(`  - ${warning}`);
         });
       }
 
-      // Output the fully resolved configuration JSON
-      logger.info('\nResolved Configuration:');
-      console.log(JSON.stringify(result.resolvedManifest, null, 2));
-
-      logger.info('\nPlan summary:');
-      logger.info(`  Service: ${result.resolvedManifest.service}`);
-      logger.info(`  Environment: ${env}`);
-      logger.info(`  Components: ${result.resolvedManifest.components?.length || 0}`);
+      this.dependencies.logger.info('\nPlan summary:');
+      this.dependencies.logger.info(`  Service: ${result.resolvedManifest.service}`);
+      this.dependencies.logger.info(`  Environment: ${env}`);
+      this.dependencies.logger.info(`  Components: ${result.resolvedManifest.components?.length || 0}`);
 
       return {
-        resolvedManifest: result.resolvedManifest,
-        warnings: result.warnings || []
+        success: true,
+        exitCode: 0,
+        data: {
+          resolvedManifest: result.resolvedManifest,
+          warnings: result.warnings || []
+        }
       };
 
     } catch (error) {
-      if (error instanceof Error) {
-        logger.error('Plan failed:', error);
-      }
-      throw error;
+      const errorMessage = error instanceof Error ? error.message : 'Unknown error occurred';
+      this.dependencies.logger.error('Plan failed:', error);
+      
+      return {
+        success: false,
+        exitCode: 2,
+        error: errorMessage
+      };
     }
   }
 }

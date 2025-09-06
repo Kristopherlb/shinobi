@@ -1,5 +1,5 @@
-import { logger } from '../utils/logger';
-import { ValidationPipeline } from '../validation/pipeline';
+import { Logger } from '../utils/logger';
+import { ValidationOrchestrator } from '../services/validation-orchestrator';
 import { FileDiscovery } from '../utils/file-discovery';
 
 export interface ValidateOptions {
@@ -7,62 +7,79 @@ export interface ValidateOptions {
 }
 
 export interface ValidateResult {
-  manifest: any;
-  warnings: string[];
+  success: boolean;
+  exitCode: number;
+  data?: {
+    manifest: any;
+    warnings: string[];
+  };
+  error?: string;
+}
+
+interface ValidateDependencies {
+  pipeline: ValidationOrchestrator;
+  fileDiscovery: FileDiscovery;
+  logger: Logger;
 }
 
 export class ValidateCommand {
-  private pipeline: ValidationPipeline;
-
-  constructor() {
-    this.pipeline = new ValidationPipeline();
-  }
+  constructor(private dependencies: ValidateDependencies) {}
 
   async execute(options: ValidateOptions): Promise<ValidateResult> {
-    logger.debug('Starting validate command', options);
-
-    // Discover manifest file
-    const fileDiscovery = new FileDiscovery();
-    const manifestPath = options.file 
-      ? options.file 
-      : await fileDiscovery.findManifest('.');
-
-    if (!manifestPath) {
-      logger.error('Error: No service.yml found in this directory or any parent directories.');
-      throw new Error('Manifest not found');
-    }
-
-    logger.info(`Validating manifest: ${manifestPath}`);
+    this.dependencies.logger.debug('Starting validate command', options);
 
     try {
+      // Discover manifest file
+      const manifestPath = options.file 
+        ? options.file 
+        : await this.dependencies.fileDiscovery.findManifest('.');
+
+      if (!manifestPath) {
+        return {
+          success: false,
+          exitCode: 2,
+          error: 'No service.yml found in this directory or any parent directories.'
+        };
+      }
+
+      this.dependencies.logger.info(`Validating manifest: ${manifestPath}`);
+
       // Run validation pipeline (stages 1-2: parsing and schema validation)
-      const result = await this.pipeline.validate(manifestPath);
+      const result = await this.dependencies.pipeline.validate(manifestPath);
       
-      logger.success('Manifest validation completed successfully');
+      this.dependencies.logger.success('Manifest validation completed successfully');
       
       if (result.warnings && result.warnings.length > 0) {
-        logger.warn(`Found ${result.warnings.length} warning(s):`);
+        this.dependencies.logger.warn(`Found ${result.warnings.length} warning(s):`);
         result.warnings.forEach(warning => {
-          logger.warn(`  - ${warning}`);
+          this.dependencies.logger.warn(`  - ${warning}`);
         });
       }
 
-      logger.info('Validation summary:');
-      logger.info(`  Service: ${result.manifest.service}`);
-      logger.info(`  Owner: ${result.manifest.owner}`);
-      logger.info(`  Compliance Framework: ${result.manifest.complianceFramework || 'commercial'}`);
-      logger.info(`  Components: ${result.manifest.components?.length || 0}`);
+      this.dependencies.logger.info('Validation summary:');
+      this.dependencies.logger.info(`  Service: ${result.manifest.service}`);
+      this.dependencies.logger.info(`  Owner: ${result.manifest.owner}`);
+      this.dependencies.logger.info(`  Compliance Framework: ${result.manifest.complianceFramework || 'commercial'}`);
+      this.dependencies.logger.info(`  Components: ${result.manifest.components?.length || 0}`);
 
       return {
-        manifest: result.manifest,
-        warnings: result.warnings || []
+        success: true,
+        exitCode: 0,
+        data: {
+          manifest: result.manifest,
+          warnings: result.warnings || []
+        }
       };
 
     } catch (error) {
-      if (error instanceof Error) {
-        logger.error('Validation failed:', error);
-      }
-      throw error;
+      const errorMessage = error instanceof Error ? error.message : 'Unknown error occurred';
+      this.dependencies.logger.error('Validation failed:', error);
+      
+      return {
+        success: false,
+        exitCode: 2,
+        error: errorMessage
+      };
     }
   }
 }
