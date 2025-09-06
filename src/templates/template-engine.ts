@@ -8,7 +8,7 @@ export interface ProjectInputs {
   name: string;
   owner: string;
   framework: 'commercial' | 'fedramp-moderate' | 'fedramp-high';
-  pattern: 'empty' | 'lambda-api-with-db' | 'worker-with-queue';
+  pattern: string; // Now accepts any dynamically discovered template
 }
 
 interface TemplateEngineDependencies {

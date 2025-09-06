@@ -25,15 +25,34 @@ export interface ComponentCapabilities {
  */
 export abstract class Component {
   protected readonly constructs: Map<string, any> = new Map();
+  protected capabilities: ComponentCapabilities = {};
+  private synthesized: boolean = false;
 
   constructor(
     protected spec: ComponentSpec,
     protected context: ComponentContext
   ) {}
 
-  abstract synth(): any;
+  abstract synth(): void;
   abstract getCapabilities(): ComponentCapabilities;
   abstract getType(): string;
+
+  /**
+   * Protected helper to set capabilities with type safety
+   */
+  protected setCapabilities(capabilities: ComponentCapabilities): void {
+    this.capabilities = capabilities;
+    this.synthesized = true;
+  }
+
+  /**
+   * Ensure synth() has been called before accessing capabilities
+   */
+  protected ensureSynthesized(): void {
+    if (!this.synthesized) {
+      throw new Error(`Component '${this.spec.name}' must be synthesized before accessing capabilities. Call synth() first.`);
+    }
+  }
 
   /**
    * Get a specific CDK construct by handle
@@ -62,6 +81,9 @@ export interface ComponentContext {
   environment: string;
   complianceFramework: 'commercial' | 'fedramp-moderate' | 'fedramp-high';
   scope: any; // CDK Construct scope
+  vpc?: any; // VPC construct for components that need it
+  region?: string;
+  accountId?: string;
 }
 
 /**

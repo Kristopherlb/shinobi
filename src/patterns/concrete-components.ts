@@ -4,6 +4,10 @@
  */
 
 import { Component, ComponentSpec, ComponentContext, ComponentCreator, ComponentCapabilities } from './component-factory';
+import * as lambda from 'aws-cdk-lib/aws-lambda';
+import * as rds from 'aws-cdk-lib/aws-rds';
+import * as ec2 from 'aws-cdk-lib/aws-ec2';
+import * as cdk from 'aws-cdk-lib';
 
 /**
  * Lambda API Component - Concrete Product
@@ -13,42 +17,38 @@ export class LambdaApiComponent extends Component {
     return 'lambda-api';
   }
 
-  synth(): any {
-    // Create the Lambda function construct properties
-    const lambdaProps = {
-      type: 'AWS::Lambda::Function',
-      properties: {
-        functionName: `${this.context.serviceName}-${this.spec.name}`,
-        runtime: 'nodejs20.x',
-        handler: 'index.handler',
-        code: {
-          zipFile: this.generateHandlerCode()
-        },
-        environment: {
-          variables: this.buildEnvironmentVariables()
-        },
-        memorySize: this.spec.overrides?.function?.memorySize || this.getDefaultMemorySize(),
-        timeout: this.spec.overrides?.function?.timeout || this.getDefaultTimeout()
-      }
+  synth(): void {
+    // Step 1: Assemble final properties for the Lambda function
+    const finalLambdaProps: lambda.FunctionProps = {
+      functionName: `${this.context.serviceName}-${this.spec.name}`,
+      runtime: lambda.Runtime.NODEJS_20_X,
+      handler: 'index.handler',
+      code: lambda.Code.fromInline(this.generateHandlerCode()),
+      environment: this.buildEnvironmentVariables(),
+      memorySize: this.spec.overrides?.function?.memorySize || this.getDefaultMemorySize(),
+      timeout: cdk.Duration.seconds(this.spec.overrides?.function?.timeout || this.getDefaultTimeout())
     };
 
-    // Store construct for later access by binding and patching phases
-    this.constructs.set('lambda.Function', lambdaProps);
-    this.constructs.set('main', lambdaProps); // Primary construct reference
+    // Step 2: Instantiate the NATIVE CDK L2 construct
+    const lambdaFunction = new lambda.Function(this.context.scope, `${this.spec.name}-function`, finalLambdaProps);
 
-    return lambdaProps;
+    // Step 3: Store handle to the REAL construct object
+    this.constructs.set('lambda.Function', lambdaFunction);
+    this.constructs.set('main', lambdaFunction);
+
+    // Step 4: Set capabilities with REAL tokenized outputs from the construct
+    this.setCapabilities({
+      'api:rest': {
+        functionArn: lambdaFunction.functionArn,
+        functionName: lambdaFunction.functionName,
+        roleArn: lambdaFunction.role?.roleArn
+      }
+    });
   }
 
   getCapabilities(): ComponentCapabilities {
-    return {
-      'api:rest': {
-        endpoint: `https://api.${this.context.serviceName}.aws.com`,
-        stage: this.context.environment
-      },
-      'net:security-group': {
-        sgId: `sg-${this.spec.name}-lambda`
-      }
-    };
+    this.ensureSynthesized();
+    return this.capabilities;
   }
 
   private generateHandlerCode(): string {
@@ -118,59 +118,93 @@ export class RdsPostgresComponent extends Component {
     return 'rds-postgres';
   }
 
-  synth(): any {
-    // Create the RDS instance construct properties
-    const rdsProps = {
-      type: 'AWS::RDS::DBInstance',
-      properties: {
-        dbInstanceIdentifier: `${this.context.serviceName}-${this.spec.name}`,
-        dbName: this.spec.config.dbName,
-        engine: 'postgres',
-        engineVersion: this.getEngineVersion(),
-        dbInstanceClass: this.getInstanceClass(),
-        allocatedStorage: this.getAllocatedStorage(),
-        storageEncrypted: this.isEncryptionRequired(),
-        backupRetentionPeriod: this.getBackupRetentionDays(),
-        multiAZ: this.isMultiAZRequired(),
-        storageType: 'gp3',
-        performanceInsights: this.isPerformanceInsightsEnabled(),
-        deletionProtection: this.isDeletionProtectionEnabled()
-      }
+  synth(): void {
+    // Step 1: Use private helpers to assemble final properties for the L2 construct
+    const finalRdsProps: rds.DatabaseInstanceProps = {
+      vpc: this.getRequiredVpc(),
+      engine: rds.DatabaseInstanceEngine.postgres({
+        version: this.getPostgresVersion()
+      }),
+      instanceType: this.parseInstanceType(),
+      allocatedStorage: this.getAllocatedStorage(),
+      storageEncrypted: this.isEncryptionRequired(),
+      backupRetention: cdk.Duration.days(this.getBackupRetentionDays()),
+      multiAz: this.isMultiAZRequired(),
+      storageType: rds.StorageType.GP3,
+      enablePerformanceInsights: this.isPerformanceInsightsEnabled(),
+      performanceInsightRetention: this.isPerformanceInsightsEnabled() 
+        ? rds.PerformanceInsightRetention.DEFAULT 
+        : undefined,
+      deletionProtection: this.isDeletionProtectionEnabled(),
+      databaseName: this.spec.config.dbName,
+      credentials: rds.Credentials.fromGeneratedSecret('postgres')
     };
 
-    // Store constructs for later access by binding and patching phases
-    this.constructs.set('rds.DatabaseInstance', rdsProps);
-    this.constructs.set('main', rdsProps); // Primary construct reference
+    // Step 2: Instantiate the NATIVE CDK L2 construct
+    const rdsInstance = new rds.DatabaseInstance(
+      this.context.scope,
+      `${this.spec.name}-db`,
+      finalRdsProps
+    );
 
-    // Create associated security group
-    const securityGroup = {
-      type: 'AWS::EC2::SecurityGroup',
-      properties: {
-        groupDescription: `Security group for ${this.context.serviceName}-${this.spec.name} RDS instance`,
-        vpcId: '${vpc.ref}',
-        securityGroupIngress: [] // Will be populated by binders
+    // Step 3: Store handle to the REAL construct object
+    this.constructs.set('rds.DatabaseInstance', rdsInstance);
+    this.constructs.set('main', rdsInstance);
+
+    // Step 4: Set capabilities with REAL tokenized outputs from the construct
+    this.setCapabilities({
+      'db:postgres': {
+        host: rdsInstance.instanceEndpoint.hostname,
+        port: rdsInstance.instanceEndpoint.port,
+        secretArn: rdsInstance.secret!.secretArn, // Deploy-time token
+        sgId: rdsInstance.connections.securityGroups[0].securityGroupId,
+        instanceArn: rdsInstance.instanceArn
       }
-    };
-    this.constructs.set('rds.SecurityGroup', securityGroup);
-
-    return rdsProps;
+    });
   }
 
   getCapabilities(): ComponentCapabilities {
-    return {
-      'db:postgres': {
-        host: `${this.spec.name}.${this.context.serviceName}.rds.amazonaws.com`,
-        port: 5432,
-        dbName: this.spec.config.dbName,
-        secretArn: `arn:aws:secretsmanager:region:account:secret:${this.spec.name}-secret`,
-        sgId: `sg-${this.spec.name}-rds`
-      }
-    };
+    this.ensureSynthesized();
+    return this.capabilities;
   }
 
   private getEngineVersion(): string {
     // Framework-specific version requirements
     return this.context.complianceFramework.startsWith('fedramp') ? '15.4' : '15.3';
+  }
+
+  private getPostgresVersion(): rds.PostgresEngineVersion {
+    // Use proper CDK constants for engine versions
+    const version = this.getEngineVersion();
+    switch (version) {
+      case '15.4':
+        return rds.PostgresEngineVersion.VER_15_4;
+      case '15.3':
+        return rds.PostgresEngineVersion.VER_15_3;
+      default:
+        return rds.PostgresEngineVersion.VER_15_4; // Safe fallback
+    }
+  }
+
+  private getRequiredVpc(): ec2.IVpc {
+    if (!this.context.vpc) {
+      throw new Error(`VPC is required for RDS component '${this.spec.name}'. Please provide vpc in ComponentContext.`);
+    }
+    return this.context.vpc;
+  }
+
+  private parseInstanceType(): ec2.InstanceType {
+    const instanceClass = this.getInstanceClass();
+    const [db, family, size] = instanceClass.split('.');
+    
+    // Map family and size to proper CDK enums
+    const instanceClassEnum = family.toUpperCase() as keyof typeof ec2.InstanceClass;
+    const instanceSizeEnum = size.toUpperCase() as keyof typeof ec2.InstanceSize;
+    
+    return ec2.InstanceType.of(
+      ec2.InstanceClass[instanceClassEnum],
+      ec2.InstanceSize[instanceSizeEnum]
+    );
   }
 
   private getInstanceClass(): string {
