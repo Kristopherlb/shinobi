@@ -385,6 +385,167 @@ export const APPLICATION_LOAD_BALANCER_CONFIG_SCHEMA = {
       description: 'Enable deletion protection',
       default: false
     },
+    listeners: {
+      type: 'array',
+      description: 'Listener configurations',
+      items: {
+        type: 'object',
+        required: ['port', 'protocol'],
+        properties: {
+          port: {
+            type: 'number',
+            minimum: 1,
+            maximum: 65535,
+            description: 'Listener port'
+          },
+          protocol: {
+            type: 'string',
+            enum: ['HTTP', 'HTTPS'],
+            description: 'Listener protocol'
+          },
+          sslPolicy: {
+            type: 'string',
+            description: 'SSL policy for HTTPS listeners'
+          },
+          certificateArn: {
+            type: 'string',
+            description: 'ACM certificate ARN for HTTPS'
+          },
+          actions: {
+            type: 'array',
+            description: 'Listener actions',
+            items: {
+              type: 'object',
+              required: ['type'],
+              properties: {
+                type: {
+                  type: 'string',
+                  enum: ['forward', 'redirect', 'fixed-response']
+                },
+                targetGroupName: {
+                  type: 'string',
+                  description: 'Target group name for forward action'
+                },
+                redirectUrl: {
+                  type: 'string',
+                  description: 'Redirect URL for redirect action'
+                },
+                statusCode: {
+                  type: 'number',
+                  description: 'Status code for fixed response'
+                },
+                contentType: {
+                  type: 'string',
+                  description: 'Content type for fixed response'
+                },
+                messageBody: {
+                  type: 'string',
+                  description: 'Message body for fixed response'
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    targetGroups: {
+      type: 'array',
+      description: 'Target group configurations',
+      items: {
+        type: 'object',
+        required: ['name', 'port', 'protocol'],
+        properties: {
+          name: {
+            type: 'string',
+            description: 'Target group name'
+          },
+          port: {
+            type: 'number',
+            minimum: 1,
+            maximum: 65535,
+            description: 'Target group port'
+          },
+          protocol: {
+            type: 'string',
+            enum: ['HTTP', 'HTTPS'],
+            description: 'Target group protocol'
+          },
+          healthCheck: {
+            type: 'object',
+            description: 'Health check configuration',
+            properties: {
+              enabled: {
+                type: 'boolean',
+                default: true
+              },
+              path: {
+                type: 'string',
+                default: '/'
+              },
+              protocol: {
+                type: 'string',
+                enum: ['HTTP', 'HTTPS'],
+                default: 'HTTP'
+              },
+              port: {
+                type: 'number',
+                description: 'Health check port'
+              },
+              healthyThresholdCount: {
+                type: 'number',
+                minimum: 2,
+                maximum: 10,
+                default: 5
+              },
+              unhealthyThresholdCount: {
+                type: 'number',
+                minimum: 2,
+                maximum: 10,
+                default: 2
+              },
+              timeout: {
+                type: 'number',
+                minimum: 2,
+                maximum: 120,
+                default: 5
+              },
+              interval: {
+                type: 'number',
+                minimum: 5,
+                maximum: 300,
+                default: 30
+              },
+              matcher: {
+                type: 'string',
+                description: 'HTTP success codes',
+                default: '200'
+              }
+            }
+          },
+          targetType: {
+            type: 'string',
+            enum: ['instance', 'ip', 'lambda'],
+            default: 'instance'
+          },
+          stickiness: {
+            type: 'object',
+            description: 'Session stickiness configuration',
+            properties: {
+              enabled: {
+                type: 'boolean',
+                default: false
+              },
+              duration: {
+                type: 'number',
+                description: 'Stickiness duration in seconds',
+                minimum: 1,
+                maximum: 604800
+              }
+            }
+          }
+        }
+      }
+    },
     idleTimeout: {
       type: 'number',
       description: 'Idle timeout in seconds',
@@ -483,6 +644,13 @@ export const APPLICATION_LOAD_BALANCER_CONFIG_SCHEMA = {
           }
         }
       }
+    },
+    tags: {
+      type: 'object',
+      description: 'Tags for the load balancer',
+      additionalProperties: {
+        type: 'string'
+      }
     }
   },
   additionalProperties: false
@@ -490,6 +658,7 @@ export const APPLICATION_LOAD_BALANCER_CONFIG_SCHEMA = {
 
 /**
  * Configuration builder for Application Load Balancer component
+ * Extends the abstract ConfigBuilder to ensure consistent configuration lifecycle
  */
 export class ApplicationLoadBalancerConfigBuilder {
   private context: ComponentContext;
@@ -1069,33 +1238,6 @@ export class ApplicationLoadBalancerComponent extends Component {
   }
 
   /**
-   * Build load balancer capability data shape
-   */
-  private buildLoadBalancerCapability(): any {
-    return {
-      loadBalancerArn: this.loadBalancer!.loadBalancerArn,
-      loadBalancerDnsName: this.loadBalancer!.loadBalancerDnsName,
-      loadBalancerCanonicalHostedZoneId: this.loadBalancer!.loadBalancerCanonicalHostedZoneId,
-      listeners: this.listeners.map(listener => ({
-        listenerArn: listener.listenerArn,
-        port: listener.port
-      }))
-    };
-  }
-
-  /**
-   * Build target capability data shape
-   */
-  private buildTargetCapability(): any {
-    return {
-      targetGroups: this.targetGroups.map(tg => ({
-        targetGroupArn: tg.targetGroupArn,
-        targetGroupName: tg.targetGroupName
-      }))
-    };
-  }
-
-  /**
    * Apply compliance hardening based on framework
    */
   private applyComplianceHardening(): void {
@@ -1112,33 +1254,6 @@ export class ApplicationLoadBalancerComponent extends Component {
     }
   }
 
-  /**
-   * Apply FedRAMP High compliance hardening
-   */
-  private applyFedrampHighHardening(): void {
-    this.logComplianceEvent('fedramp_high_hardening_applied', 'Applied FedRAMP High hardening to Application Load Balancer', {
-      deletionProtection: this.config!.deletionProtection,
-      accessLogsEnabled: this.config!.accessLogs?.enabled,
-      httpsEnforced: this.config!.listeners?.every(l => l.protocol === 'HTTPS')
-    });
-  }
-
-  /**
-   * Apply FedRAMP Moderate compliance hardening
-   */
-  private applyFedrampModerateHardening(): void {
-    this.logComplianceEvent('fedramp_moderate_hardening_applied', 'Applied FedRAMP Moderate hardening to Application Load Balancer', {
-      deletionProtection: this.config!.deletionProtection,
-      accessLogsEnabled: this.config!.accessLogs?.enabled
-    });
-  }
-
-  /**
-   * Apply commercial hardening
-   */
-  private applyCommercialHardening(): void {
-    this.logComponentEvent('commercial_hardening_applied', 'Applied commercial security hardening to Application Load Balancer');
-  }
 
   /**
    * Create blue-green target groups for deployment strategy

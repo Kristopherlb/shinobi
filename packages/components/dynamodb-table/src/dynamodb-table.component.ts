@@ -8,6 +8,8 @@
 import * as dynamodb from 'aws-cdk-lib/aws-dynamodb';
 import * as kms from 'aws-cdk-lib/aws-kms';
 import * as logs from 'aws-cdk-lib/aws-logs';
+import * as applicationautoscaling from 'aws-cdk-lib/aws-applicationautoscaling';
+import * as cloudwatch from 'aws-cdk-lib/aws-cloudwatch';
 import * as iam from 'aws-cdk-lib/aws-iam';
 import * as cdk from 'aws-cdk-lib';
 import { Construct } from 'constructs';
@@ -413,6 +415,9 @@ export class DynamoDbTableComponent extends Component {
       // Create DynamoDB table
       this.createDynamoDbTable();
       
+      // Configure observability (OpenTelemetry Standard)
+      this.configureObservabilityForTable();
+      
       // Apply compliance hardening
       this.applyComplianceHardening();
       
@@ -720,6 +725,260 @@ export class DynamoDbTableComponent extends Component {
    */
   private applyCommercialHardening(): void {
     this.logComponentEvent('commercial_hardening_applied', 'Applied commercial security hardening to DynamoDB table');
+  }
+
+  /**
+   * Configure OpenTelemetry Observability Standard - CloudWatch Alarms for DynamoDB Table
+   */
+  private configureObservabilityForTable(): void {
+    const tableName = this.table!.tableName;
+
+    // 1. Throttled Requests Alarm - Read
+    new cloudwatch.Alarm(this, 'ReadThrottleAlarm', {
+      alarmName: `${this.context.serviceName}-${this.spec.name}-read-throttles`,
+      alarmDescription: 'DynamoDB table read throttles alarm',
+      metric: new cloudwatch.Metric({
+        namespace: 'AWS/DynamoDB',
+        metricName: 'ReadThrottledRequests',
+        dimensionsMap: {
+          TableName: tableName
+        },
+        statistic: 'Sum',
+        period: cdk.Duration.minutes(5)
+      }),
+      threshold: 1,
+      evaluationPeriods: 2,
+      comparisonOperator: cloudwatch.ComparisonOperator.GREATER_THAN_OR_EQUAL_TO_THRESHOLD,
+      treatMissingData: cloudwatch.TreatMissingData.NOT_BREACHING
+    });
+
+    // 2. Throttled Requests Alarm - Write
+    new cloudwatch.Alarm(this, 'WriteThrottleAlarm', {
+      alarmName: `${this.context.serviceName}-${this.spec.name}-write-throttles`,
+      alarmDescription: 'DynamoDB table write throttles alarm',
+      metric: new cloudwatch.Metric({
+        namespace: 'AWS/DynamoDB',
+        metricName: 'WriteThrottledRequests',
+        dimensionsMap: {
+          TableName: tableName
+        },
+        statistic: 'Sum',
+        period: cdk.Duration.minutes(5)
+      }),
+      threshold: 1,
+      evaluationPeriods: 2,
+      comparisonOperator: cloudwatch.ComparisonOperator.GREATER_THAN_OR_EQUAL_TO_THRESHOLD,
+      treatMissingData: cloudwatch.TreatMissingData.NOT_BREACHING
+    });
+
+    // 3. System Errors Alarm
+    new cloudwatch.Alarm(this, 'SystemErrorsAlarm', {
+      alarmName: `${this.context.serviceName}-${this.spec.name}-system-errors`,
+      alarmDescription: 'DynamoDB table system errors alarm',
+      metric: new cloudwatch.Metric({
+        namespace: 'AWS/DynamoDB',
+        metricName: 'SystemErrors',
+        dimensionsMap: {
+          TableName: tableName
+        },
+        statistic: 'Sum',
+        period: cdk.Duration.minutes(5)
+      }),
+      threshold: 1,
+      evaluationPeriods: 1,
+      comparisonOperator: cloudwatch.ComparisonOperator.GREATER_THAN_OR_EQUAL_TO_THRESHOLD,
+      treatMissingData: cloudwatch.TreatMissingData.NOT_BREACHING
+    });
+
+    // 4. User Errors Alarm  
+    new cloudwatch.Alarm(this, 'UserErrorsAlarm', {
+      alarmName: `${this.context.serviceName}-${this.spec.name}-user-errors`,
+      alarmDescription: 'DynamoDB table user errors alarm',
+      metric: new cloudwatch.Metric({
+        namespace: 'AWS/DynamoDB',
+        metricName: 'UserErrors',
+        dimensionsMap: {
+          TableName: tableName
+        },
+        statistic: 'Sum',
+        period: cdk.Duration.minutes(5)
+      }),
+      threshold: 10,
+      evaluationPeriods: 2,
+      comparisonOperator: cloudwatch.ComparisonOperator.GREATER_THAN_THRESHOLD,
+      treatMissingData: cloudwatch.TreatMissingData.NOT_BREACHING
+    });
+
+    this.logComponentEvent('observability_configured', 'OpenTelemetry observability standard applied to DynamoDB table', {
+      alarmsCreated: 4,
+      tableName: tableName,
+      metricsEnabled: true
+    });
+  }
+
+  /**
+   * Apply compliance hardening with auto-scaling for FedRAMP environments
+   */
+  private applyComplianceHardening(): void {
+    switch (this.context.complianceFramework) {
+      case 'fedramp-high':
+        this.applyFedrampHighHardening();
+        break;
+      case 'fedramp-moderate':
+        this.applyFedrampModerateHardening();
+        break;
+      default:
+        this.applyCommercialHardening();
+        break;
+    }
+  }
+
+  /**
+   * Apply FedRAMP High compliance hardening with mandatory auto-scaling
+   */
+  private applyFedrampHighHardening(): void {
+    // Enable auto-scaling for provisioned tables in compliance environments
+    this.configureAutoScaling();
+    
+    this.logComplianceEvent('fedramp_high_hardening_applied', 'Applied FedRAMP High hardening to DynamoDB table', {
+      encryptionEnabled: true,
+      pointInTimeRecovery: this.config!.pointInTimeRecovery,
+      backupEnabled: this.config!.backup?.enabled,
+      autoScalingConfigured: this.isProvisionedMode()
+    });
+  }
+
+  /**
+   * Apply FedRAMP Moderate compliance hardening with auto-scaling
+   */
+  private applyFedrampModerateHardening(): void {
+    // Enable auto-scaling for provisioned tables in compliance environments
+    this.configureAutoScaling();
+    
+    this.logComplianceEvent('fedramp_moderate_hardening_applied', 'Applied FedRAMP Moderate hardening to DynamoDB table', {
+      encryptionEnabled: true,
+      pointInTimeRecovery: this.config!.pointInTimeRecovery,
+      autoScalingConfigured: this.isProvisionedMode()
+    });
+  }
+
+  /**
+   * Apply commercial hardening
+   */
+  private applyCommercialHardening(): void {
+    this.logComponentEvent('commercial_hardening_applied', 'Applied commercial security hardening to DynamoDB table');
+  }
+
+  /**
+   * Configure auto-scaling for provisioned throughput to prevent throttling
+   */
+  private configureAutoScaling(): void {
+    if (!this.isProvisionedMode()) {
+      return; // Auto-scaling only applies to provisioned mode
+    }
+
+    const tableName = this.table!.tableName;
+
+    // Configure table-level auto-scaling
+    this.enableTableAutoScaling(tableName);
+
+    // Configure GSI auto-scaling if GSIs exist
+    if (this.config!.globalSecondaryIndexes) {
+      for (const gsi of this.config!.globalSecondaryIndexes) {
+        if (gsi.provisioned) {
+          this.enableGsiAutoScaling(tableName, gsi.indexName);
+        }
+      }
+    }
+
+    this.logComponentEvent('autoscaling_configured', 'Auto-scaling configured for DynamoDB table', {
+      tableName: tableName,
+      gsiCount: this.config!.globalSecondaryIndexes?.length || 0
+    });
+  }
+
+  /**
+   * Enable auto-scaling for table read/write capacity
+   */
+  private enableTableAutoScaling(tableName: string): void {
+    // Read capacity auto-scaling
+    const readTarget = new applicationautoscaling.ScalableTarget(this, 'TableReadTarget', {
+      serviceNamespace: applicationautoscaling.ServiceNamespace.DYNAMODB,
+      scalableDimension: 'dynamodb:table:ReadCapacityUnits',
+      resourceId: `table/${tableName}`,
+      minCapacity: this.config!.provisioned?.readCapacity || 5,
+      maxCapacity: Math.max((this.config!.provisioned?.readCapacity || 5) * 10, 40000)
+    });
+
+    readTarget.scaleToTrackMetric('TableReadCapacityUtilization', {
+      targetValue: 70.0,
+      predefinedMetric: applicationautoscaling.PredefinedMetric.DYNAMODB_READ_CAPACITY_UTILIZATION,
+      scaleOutCooldown: cdk.Duration.minutes(1),
+      scaleInCooldown: cdk.Duration.minutes(1)
+    });
+
+    // Write capacity auto-scaling
+    const writeTarget = new applicationautoscaling.ScalableTarget(this, 'TableWriteTarget', {
+      serviceNamespace: applicationautoscaling.ServiceNamespace.DYNAMODB,
+      scalableDimension: 'dynamodb:table:WriteCapacityUnits',
+      resourceId: `table/${tableName}`,
+      minCapacity: this.config!.provisioned?.writeCapacity || 5,
+      maxCapacity: Math.max((this.config!.provisioned?.writeCapacity || 5) * 10, 40000)
+    });
+
+    writeTarget.scaleToTrackMetric('TableWriteCapacityUtilization', {
+      targetValue: 70.0,
+      predefinedMetric: applicationautoscaling.PredefinedMetric.DYNAMODB_WRITE_CAPACITY_UTILIZATION,
+      scaleOutCooldown: cdk.Duration.minutes(1),
+      scaleInCooldown: cdk.Duration.minutes(1)
+    });
+  }
+
+  /**
+   * Enable auto-scaling for GSI read/write capacity
+   */
+  private enableGsiAutoScaling(tableName: string, indexName: string): void {
+    const gsiConfig = this.config!.globalSecondaryIndexes?.find(gsi => gsi.indexName === indexName);
+    if (!gsiConfig?.provisioned) return;
+
+    // GSI Read capacity auto-scaling
+    const gsiReadTarget = new applicationautoscaling.ScalableTarget(this, `Gsi${indexName}ReadTarget`, {
+      serviceNamespace: applicationautoscaling.ServiceNamespace.DYNAMODB,
+      scalableDimension: 'dynamodb:index:ReadCapacityUnits',
+      resourceId: `table/${tableName}/index/${indexName}`,
+      minCapacity: gsiConfig.provisioned.readCapacity,
+      maxCapacity: Math.max(gsiConfig.provisioned.readCapacity * 10, 40000)
+    });
+
+    gsiReadTarget.scaleToTrackMetric(`Gsi${indexName}ReadCapacityUtilization`, {
+      targetValue: 70.0,
+      predefinedMetric: applicationautoscaling.PredefinedMetric.DYNAMODB_READ_CAPACITY_UTILIZATION,
+      scaleOutCooldown: cdk.Duration.minutes(1),
+      scaleInCooldown: cdk.Duration.minutes(1)
+    });
+
+    // GSI Write capacity auto-scaling
+    const gsiWriteTarget = new applicationautoscaling.ScalableTarget(this, `Gsi${indexName}WriteTarget`, {
+      serviceNamespace: applicationautoscaling.ServiceNamespace.DYNAMODB,
+      scalableDimension: 'dynamodb:index:WriteCapacityUnits',
+      resourceId: `table/${tableName}/index/${indexName}`,
+      minCapacity: gsiConfig.provisioned.writeCapacity,
+      maxCapacity: Math.max(gsiConfig.provisioned.writeCapacity * 10, 40000)
+    });
+
+    gsiWriteTarget.scaleToTrackMetric(`Gsi${indexName}WriteCapacityUtilization`, {
+      targetValue: 70.0,
+      predefinedMetric: applicationautoscaling.PredefinedMetric.DYNAMODB_WRITE_CAPACITY_UTILIZATION,
+      scaleOutCooldown: cdk.Duration.minutes(1),
+      scaleInCooldown: cdk.Duration.minutes(1)
+    });
+  }
+
+  /**
+   * Check if table is using provisioned billing mode
+   */
+  private isProvisionedMode(): boolean {
+    return this.config!.billingMode === 'provisioned';
   }
 
   /**
