@@ -459,14 +459,18 @@ export class LambdaWorkerComponent extends Component {
    * Synthesis phase - Create Lambda function for background processing
    */
   public synth(): void {
-    // Build configuration
-    this.config = this.buildConfigSync();
+    // Build configuration using ConfigBuilder
+    const configBuilder = new LambdaWorkerConfigBuilder(this.context, this.spec);
+    this.config = configBuilder.buildSync();
     
     // Create KMS key for encryption if needed
     this.createKmsKeyIfNeeded();
     
     // Create Lambda function
     this.createLambdaFunction();
+    
+    // Configure observability
+    this.configureObservabilityForLambda();
     
     // Apply compliance hardening
     this.applyComplianceHardening();
@@ -614,7 +618,7 @@ export class LambdaWorkerComponent extends Component {
   /**
    * Build Lambda function capability data shape
    */
-  private buildLambdaCapability(): LambdaFunctionCapability {
+  private buildLambdaCapability(): any {
     return {
       functionArn: this.lambdaFunction!.functionArn,
       functionName: this.lambdaFunction!.functionName,
@@ -646,20 +650,58 @@ export class LambdaWorkerComponent extends Component {
   }
 
   /**
-   * Simplified config building for demo purposes
+   * Configure OpenTelemetry observability for the Lambda function
    */
-  private buildConfigSync(): LambdaWorkerConfig {
-    const config: LambdaWorkerConfig = {
-      handler: this.spec.config?.handler || 'worker.handler',
-      runtime: this.spec.config?.runtime || 'nodejs20.x',
-      memory: this.spec.config?.memory || 256,
-      timeout: this.spec.config?.timeout || 300,
-      codePath: this.spec.config?.codePath || './src',
-      environmentVariables: this.spec.config?.environmentVariables || {},
-      reservedConcurrency: this.spec.config?.reservedConcurrency,
-      security: this.spec.config?.security || {}
-    };
+  private configureObservabilityForLambda(): void {
+    if (!this.lambdaFunction) {
+      return;
+    }
 
-    return config;
+    // Add OpenTelemetry environment variables
+    this.lambdaFunction.addEnvironment('OTEL_PROPAGATORS', 'tracecontext,b3,b3multi,xray');
+    this.lambdaFunction.addEnvironment('OTEL_TRACES_EXPORTER', 'xray');
+    this.lambdaFunction.addEnvironment('OTEL_METRICS_EXPORTER', 'none');
+    this.lambdaFunction.addEnvironment('OTEL_LOGS_EXPORTER', 'none');
+    this.lambdaFunction.addEnvironment('OTEL_RESOURCE_ATTRIBUTES', `service.name=${this.spec.name},service.version=1.0.0`);
+    
+    // Add OpenTelemetry instrumentation layer based on runtime
+    this.addOtelInstrumentationLayer();
+  }
+
+  /**
+   * Add OpenTelemetry instrumentation layer based on Lambda runtime
+   */
+  private addOtelInstrumentationLayer(): void {
+    if (!this.lambdaFunction) {
+      return;
+    }
+
+    const runtime = this.config?.runtime || 'nodejs20.x';
+    
+    // Get the appropriate AWS-managed OTEL layer ARN for the runtime
+    const layerArn = this.getOtelLayerArn(runtime);
+    
+    if (layerArn) {
+      this.lambdaFunction.addLayers(
+        lambda.LayerVersion.fromLayerVersionArn(this, 'OtelLayer', layerArn)
+      );
+    }
+  }
+
+  /**
+   * Get OpenTelemetry layer ARN for specific runtime
+   */
+  private getOtelLayerArn(runtime: string): string | null {
+    // AWS-managed OpenTelemetry layer ARNs (example for us-west-2)
+    // In production, these would be sourced from a configuration service
+    const layerMap: Record<string, string> = {
+      'nodejs18.x': 'arn:aws:lambda:us-west-2:901920570463:layer:aws-otel-nodejs-amd64-ver-1-18-1:4',
+      'nodejs20.x': 'arn:aws:lambda:us-west-2:901920570463:layer:aws-otel-nodejs-amd64-ver-1-18-1:4',
+      'python3.9': 'arn:aws:lambda:us-west-2:901920570463:layer:aws-otel-python-amd64-ver-1-20-0:3',
+      'python3.10': 'arn:aws:lambda:us-west-2:901920570463:layer:aws-otel-python-amd64-ver-1-20-0:3',
+      'python3.11': 'arn:aws:lambda:us-west-2:901920570463:layer:aws-otel-python-amd64-ver-1-20-0:3'
+    };
+    
+    return layerMap[runtime] || null;
   }
 }
