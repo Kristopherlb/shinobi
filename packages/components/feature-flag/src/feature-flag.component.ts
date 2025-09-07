@@ -13,7 +13,6 @@ import {
   ComponentSpec,
   ComponentContext,
   ComponentCapabilities,
-  ComponentConfigSchema,
   FeatureFlagCapability
 } from '@platform/contracts';
 
@@ -81,7 +80,7 @@ export interface FeatureFlagConfig {
 /**
  * Configuration schema for Feature Flag component
  */
-export const FEATURE_FLAG_CONFIG_SCHEMA: ComponentConfigSchema = {
+export const FEATURE_FLAG_CONFIG_SCHEMA = {
   type: 'object',
   title: 'Feature Flag Configuration',
   description: 'Configuration for creating individual feature flags',
@@ -167,7 +166,7 @@ export class FeatureFlagComponent extends Component {
       
       this.logComponentEvent('synthesis_complete', 'Feature Flag component synthesis completed successfully', {
         flagKey: this.config.flagKey,
-        resourcesCreated: Object.keys(this.constructs).size
+        resourcesCreated: Object.keys(this.constructs).length
       });
       
     } catch (error) {
@@ -356,7 +355,7 @@ export class FeatureFlagComponent extends Component {
    */
   private resolveDependentResource(componentType: string, resourceKey: string): string {
     // This would typically resolve bound component resources
-    // For now, we'll use a placeholder that would be resolved at synthesis time
+    // This would be resolved during platform synthesis with actual bound component ARNs
     return `\${${componentType}.${resourceKey}}`;
   }
 
