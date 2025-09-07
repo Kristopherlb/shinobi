@@ -110,3 +110,6 @@ export interface IComponentFactory {
   getSupportedComponents(): string[];
   getComplianceFramework(): string;
 }
+
+// Export base Component class
+export * from './component';

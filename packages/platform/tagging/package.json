@@ -1,7 +1,7 @@
 {
-  "name": "@platform/rds-postgres",
+  "name": "@platform/tagging",
   "version": "1.0.0",
-  "description": "Enterprise RDS PostgreSQL component with FedRAMP compliance support",
+  "description": "Platform Tagging Standard with automatic governance and compliance tagging",
   "main": "dist/index.js",
   "types": "dist/index.d.ts",
   "scripts": {
@@ -10,22 +10,17 @@
     "clean": "rm -rf dist"
   },
   "keywords": [
-    "cdk",
+    "tagging",
+    "governance",
+    "compliance",
+    "metadata",
     "aws",
-    "rds",
-    "postgresql",
-    "database",
-    "fedramp",
-    "enterprise"
+    "cost-tracking",
+    "platform"
   ],
   "author": "Platform Team",
   "license": "MIT",
-  "dependencies": {
-    "@platform/contracts": "^1.0.0",
-    "@platform/logger": "^1.0.0",
-    "@platform/tagging": "^1.0.0",
-    "@platform/observability": "^1.0.0"
-  },
+  "dependencies": {},
   "peerDependencies": {
     "aws-cdk-lib": "^2.0.0",
     "constructs": "^10.0.0"

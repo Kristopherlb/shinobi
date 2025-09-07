@@ -21,7 +21,10 @@
   "author": "Platform Team",
   "license": "MIT",
   "dependencies": {
-    "@platform/contracts": "^1.0.0"
+    "@platform/contracts": "^1.0.0",
+    "@platform/logger": "^1.0.0",
+    "@platform/tagging": "^1.0.0",
+    "@platform/observability": "^1.0.0"
   },
   "peerDependencies": {
     "aws-cdk-lib": "^2.0.0",

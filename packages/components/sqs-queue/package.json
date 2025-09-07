@@ -1,7 +1,7 @@
 {
-  "name": "@platform/rds-postgres",
+  "name": "@platform/sqs-queue",
   "version": "1.0.0",
-  "description": "Enterprise RDS PostgreSQL component with FedRAMP compliance support",
+  "description": "Enterprise SQS queue component with DLQ, FIFO support, and compliance features",
   "main": "dist/index.js",
   "types": "dist/index.d.ts",
   "scripts": {
@@ -12,10 +12,11 @@
   "keywords": [
     "cdk",
     "aws",
-    "rds",
-    "postgresql",
-    "database",
-    "fedramp",
+    "sqs",
+    "queue",
+    "messaging",
+    "fifo",
+    "dlq",
     "enterprise"
   ],
   "author": "Platform Team",

@@ -1,7 +1,7 @@
 {
-  "name": "@platform/rds-postgres",
+  "name": "@platform/logger",
   "version": "1.0.0",
-  "description": "Enterprise RDS PostgreSQL component with FedRAMP compliance support",
+  "description": "Platform Structured Logging Standard with automatic correlation and compliance features",
   "main": "dist/index.js",
   "types": "dist/index.d.ts",
   "scripts": {
@@ -10,22 +10,18 @@
     "clean": "rm -rf dist"
   },
   "keywords": [
-    "cdk",
-    "aws",
-    "rds",
-    "postgresql",
-    "database",
-    "fedramp",
-    "enterprise"
+    "logging",
+    "observability",
+    "structured-logging",
+    "json",
+    "correlation",
+    "compliance",
+    "audit",
+    "platform"
   ],
   "author": "Platform Team",
   "license": "MIT",
-  "dependencies": {
-    "@platform/contracts": "^1.0.0",
-    "@platform/logger": "^1.0.0",
-    "@platform/tagging": "^1.0.0",
-    "@platform/observability": "^1.0.0"
-  },
+  "dependencies": {},
   "peerDependencies": {
     "aws-cdk-lib": "^2.0.0",
     "constructs": "^10.0.0"
