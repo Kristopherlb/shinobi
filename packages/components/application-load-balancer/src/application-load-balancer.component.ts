@@ -386,6 +386,79 @@ export const APPLICATION_LOAD_BALANCER_CONFIG_SCHEMA = {
       default: false
     },
     accessLogs: {
+      type: 'object',
+      description: 'Access logging configuration',
+      properties: {
+        enabled: {
+          type: 'boolean',
+          description: 'Enable access logging',
+          default: false
+        },
+        bucket: {
+          type: 'string',
+          description: 'S3 bucket for access logs'
+        },
+        prefix: {
+          type: 'string',
+          description: 'S3 prefix for access logs'
+        }
+      }
+    },
+    securityGroups: {
+      type: 'object',
+      description: 'Security group configuration',
+      properties: {
+        create: {
+          type: 'boolean',
+          description: 'Create a new security group',
+          default: true
+        },
+        securityGroupIds: {
+          type: 'array',
+          description: 'Existing security group IDs',
+          items: {
+            type: 'string',
+            pattern: '^sg-[a-f0-9]+$'
+          }
+        },
+        ingress: {
+          type: 'array',
+          description: 'Ingress rules for the security group',
+          items: {
+            type: 'object',
+            required: ['port', 'protocol'],
+            properties: {
+              port: {
+                type: 'number',
+                description: 'Port number',
+                minimum: 1,
+                maximum: 65535
+              },
+              protocol: {
+                type: 'string',
+                description: 'Protocol',
+                enum: ['tcp', 'udp', 'icmp']
+              },
+              cidr: {
+                type: 'string',
+                description: 'CIDR block',
+                default: '0.0.0.0/0'
+              },
+              description: {
+                type: 'string',
+                description: 'Rule description'
+              }
+            }
+          }
+        }
+      }
+    },
+    deletionProtection: {
+      type: 'boolean',
+      description: 'Enable deletion protection',
+      default: false
+    },
+    targetGroups: {
       type: 'array',
       description: 'Target group configurations',
       items: {
