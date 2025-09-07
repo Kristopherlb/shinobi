@@ -908,11 +908,15 @@ export class Ec2InstanceComponent extends Component {
   /**
    * Build instance capability data shape
    */
-  private buildInstanceCapability(): ComputeEc2Capability {
+  private buildInstanceCapability(): any {
+    this.validateSynthesized();
     return {
       instanceId: this.instance!.instanceId,
       privateIp: this.instance!.instancePrivateIp,
-      roleArn: this.role!.roleArn
+      publicIp: this.instance!.instancePublicIp,
+      roleArn: this.role!.roleArn,
+      securityGroupId: this.securityGroup!.securityGroupId,
+      availabilityZone: this.instance!.instanceAvailabilityZone
     };
   }
 
