@@ -412,14 +412,11 @@ export class AutoScalingGroupComponent extends Component {
   }
 
   public synth(): void {
-    const configBuilder = new AutoScalingGroupConfigBuilder({
-      spec: this.spec,
-      context: this.context,
-      // These would be populated by the resolver in a real scenario
-      environmentConfig: {}, 
-      complianceDefaults: {}
-    });
-    this.config = configBuilder.buildSync();
+    this.logComponentEvent('synthesis_start', 'Starting Auto Scaling Group synthesis');
+    
+    try {
+      const configBuilder = new AutoScalingGroupConfigBuilder(this.context, this.spec);
+      this.config = configBuilder.buildSync();
 
     this.createKmsKeyIfNeeded();
     this.createInstanceRole();
@@ -436,11 +433,17 @@ export class AutoScalingGroupComponent extends Component {
       this.registerConstruct('kmsKey', this.kmsKey);
     }
 
-    this.registerCapability('compute:asg', this.buildAutoScalingGroupCapability());
+      this.registerCapability('compute:asg', this.buildAutoScalingGroupCapability());
+      
+      this.logComponentEvent('synthesis_complete', 'Auto Scaling Group synthesis completed successfully');
+    } catch (error) {
+      this.logError(error as Error, 'Auto Scaling Group synthesis');
+      throw error;
+    }
   }
 
   public getCapabilities(): ComponentCapabilities {
-    this.ensureSynthesized();
+    this.validateSynthesized();
     return this.capabilities;
   }
 
@@ -509,7 +512,6 @@ export class AutoScalingGroupComponent extends Component {
       maxCapacity: this.config!.autoScaling?.maxCapacity,
       desiredCapacity: this.config!.autoScaling?.desiredCapacity,
       healthCheck: this.getHealthCheckType(),
-      healthCheckGracePeriod: cdk.Duration.seconds(this.config!.healthCheck?.gracePeriod!),
       terminationPolicies: this.getTerminationPolicies(),
       updatePolicy: this.getUpdatePolicy()
     });
@@ -582,13 +584,15 @@ export class AutoScalingGroupComponent extends Component {
     // ... add other mandatory tags
   }
 
-  private buildAutoScalingGroupCapability(): ComputeAsgCapability {
-    this.ensureSynthesized();
+  private buildAutoScalingGroupCapability(): any {
+    this.validateSynthesized();
     return {
       asgArn: this.autoScalingGroup!.autoScalingGroupArn,
       asgName: this.autoScalingGroup!.autoScalingGroupName,
       roleArn: this.role!.roleArn,
-      securityGroupId: this.securityGroup!.securityGroupId
+      securityGroupId: this.securityGroup!.securityGroupId,
+      launchTemplateId: this.launchTemplate!.launchTemplateId,
+      launchTemplateName: this.launchTemplate!.launchTemplateName
     };
   }
 
