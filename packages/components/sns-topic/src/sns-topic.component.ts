@@ -18,7 +18,7 @@ import {
   ConfigBuilder,
   ComponentConfigSchema,
   TopicSnsCapability
-} from '../../contracts';
+} from '@platform/contracts';
 
 /**
  * Configuration interface for SNS Topic component

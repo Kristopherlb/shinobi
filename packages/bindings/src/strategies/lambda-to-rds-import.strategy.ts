@@ -6,21 +6,12 @@
 import * as lambda from 'aws-cdk-lib/aws-lambda';
 import * as iam from 'aws-cdk-lib/aws-iam';
 import * as ec2 from 'aws-cdk-lib/aws-ec2';
-import { BaseComponent } from '../../components/base/base-component';
-import { RdsPostgresImportComponent } from '../../components/import/rds-postgres-import.component';
-import { Logger } from '../../utils/logger';
-
-export interface BindingContext {
-  sourceComponent: BaseComponent;
-  targetComponent: BaseComponent;
-  capability: string;
-  access: 'read' | 'write' | 'readwrite' | 'admin';
-  customEnvVars?: Record<string, string>;
-  options?: Record<string, any>;
-}
+import { Component, BindingContext } from '@platform/contracts';
+import { RdsPostgresComponent } from '@platform/rds-postgres';
+import { StructuredLogger } from '@platform/logger';
 
 export interface LambdaToRdsImportStrategyDependencies {
-  logger: Logger;
+  logger: StructuredLogger;
 }
 
 /**
@@ -36,7 +27,7 @@ export class LambdaToRdsImportStrategy {
   canHandle(context: BindingContext): boolean {
     // Check if source is Lambda-based component and target is RDS import
     const isLambdaSource = this.isLambdaComponent(context.sourceComponent);
-    const isRdsImportTarget = context.targetComponent instanceof RdsPostgresImportComponent;
+    const isRdsImportTarget = context.targetComponent instanceof RdsPostgresComponent;
     const isDbCapability = context.capability === 'db:postgres';
 
     return isLambdaSource && isRdsImportTarget && isDbCapability;
@@ -49,7 +40,7 @@ export class LambdaToRdsImportStrategy {
     this.dependencies.logger.debug(`Applying Lambda to RDS import binding: ${context.access} access`);
 
     const lambdaFunction = this.extractLambdaFunction(context.sourceComponent);
-    const rdsImport = context.targetComponent as RdsPostgresImportComponent;
+    const rdsImport = context.targetComponent as RdsPostgresComponent;
 
     if (!lambdaFunction) {
       throw new Error('Could not extract Lambda function from source component');
@@ -72,7 +63,7 @@ export class LambdaToRdsImportStrategy {
    */
   private async configureNetworkAccess(
     lambdaFunction: lambda.IFunction,
-    rdsImport: RdsPostgresImportComponent
+    rdsImport: RdsPostgresComponent
   ): Promise<void> {
     this.dependencies.logger.debug('Configuring network access for Lambda to RDS');
 
@@ -99,7 +90,7 @@ export class LambdaToRdsImportStrategy {
    */
   private async grantSecretAccess(
     lambdaFunction: lambda.IFunction,
-    rdsImport: RdsPostgresImportComponent,
+    rdsImport: RdsPostgresComponent,
     access: string
   ): Promise<void> {
     this.dependencies.logger.debug(`Granting secret access: ${access}`);
@@ -121,7 +112,7 @@ export class LambdaToRdsImportStrategy {
    */
   private async setEnvironmentVariables(
     lambdaFunction: lambda.IFunction,
-    rdsImport: RdsPostgresImportComponent,
+    rdsImport: RdsPostgresComponent,
     context: BindingContext
   ): Promise<void> {
     this.dependencies.logger.debug('Setting database environment variables');
@@ -167,7 +158,7 @@ export class LambdaToRdsImportStrategy {
   /**
    * Check if a component contains or is a Lambda function
    */
-  private isLambdaComponent(component: BaseComponent): boolean {
+  private isLambdaComponent(component: Component): boolean {
     // This would check if the component type is lambda-api, lambda-worker, etc.
     // For now, we'll use a simple heuristic
     const resourceRefs = component.getResourceReferences();
@@ -179,7 +170,7 @@ export class LambdaToRdsImportStrategy {
   /**
    * Extract the Lambda function from a component
    */
-  private extractLambdaFunction(component: BaseComponent): lambda.IFunction | null {
+  private extractLambdaFunction(component: Component): lambda.IFunction | null {
     const resourceRefs = component.getResourceReferences();
     
     // Try different property names that might contain the Lambda function

@@ -5,21 +5,12 @@
 
 import * as lambda from 'aws-cdk-lib/aws-lambda';
 import * as iam from 'aws-cdk-lib/aws-iam';
-import { BaseComponent } from '../../components/base/base-component';
-import { SnsTopicImportComponent } from '../../components/import/sns-topic-import.component';
-import { Logger } from '../../utils/logger';
-
-export interface BindingContext {
-  sourceComponent: BaseComponent;
-  targetComponent: BaseComponent;
-  capability: string;
-  access: 'read' | 'write' | 'readwrite' | 'admin';
-  customEnvVars?: Record<string, string>;
-  options?: Record<string, any>;
-}
+import { Component, BindingContext } from '@platform/contracts';
+import { SnsTopicComponent } from '@platform/sns-topic';
+import { StructuredLogger } from '@platform/logger';
 
 export interface LambdaToSnsImportStrategyDependencies {
-  logger: Logger;
+  logger: StructuredLogger;
 }
 
 /**
@@ -35,7 +26,7 @@ export class LambdaToSnsImportStrategy {
   canHandle(context: BindingContext): boolean {
     // Check if source is Lambda-based component and target is SNS import
     const isLambdaSource = this.isLambdaComponent(context.sourceComponent);
-    const isSnsImportTarget = context.targetComponent instanceof SnsTopicImportComponent;
+    const isSnsImportTarget = context.targetComponent instanceof SnsTopicComponent;
     const isSnsCapability = context.capability === 'topic:sns';
 
     return isLambdaSource && isSnsImportTarget && isSnsCapability;
@@ -48,7 +39,7 @@ export class LambdaToSnsImportStrategy {
     this.dependencies.logger.debug(`Applying Lambda to SNS import binding: ${context.access} access`);
 
     const lambdaFunction = this.extractLambdaFunction(context.sourceComponent);
-    const snsImport = context.targetComponent as SnsTopicImportComponent;
+    const snsImport = context.targetComponent as SnsTopicComponent;
 
     if (!lambdaFunction) {
       throw new Error('Could not extract Lambda function from source component');
@@ -73,7 +64,7 @@ export class LambdaToSnsImportStrategy {
    */
   private async grantTopicAccess(
     lambdaFunction: lambda.IFunction,
-    snsImport: SnsTopicImportComponent,
+    snsImport: SnsTopicComponent,
     access: string
   ): Promise<void> {
     this.dependencies.logger.debug(`Granting SNS topic access: ${access}`);
@@ -138,7 +129,7 @@ export class LambdaToSnsImportStrategy {
    */
   private async setEnvironmentVariables(
     lambdaFunction: lambda.IFunction,
-    snsImport: SnsTopicImportComponent,
+    snsImport: SnsTopicComponent,
     context: BindingContext
   ): Promise<void> {
     this.dependencies.logger.debug('Setting SNS topic environment variables');
@@ -180,7 +171,7 @@ export class LambdaToSnsImportStrategy {
    */
   private async configureSubscription(
     lambdaFunction: lambda.IFunction,
-    snsImport: SnsTopicImportComponent,
+    snsImport: SnsTopicComponent,
     context: BindingContext
   ): Promise<void> {
     this.dependencies.logger.debug('Configuring SNS subscription for Lambda');
@@ -201,7 +192,7 @@ export class LambdaToSnsImportStrategy {
   /**
    * Check if a component contains or is a Lambda function
    */
-  private isLambdaComponent(component: BaseComponent): boolean {
+  private isLambdaComponent(component: Component): boolean {
     // This would check if the component type is lambda-api, lambda-worker, etc.
     const resourceRefs = component.getResourceReferences();
     return resourceRefs.lambdaFunction !== undefined || 
@@ -212,7 +203,7 @@ export class LambdaToSnsImportStrategy {
   /**
    * Extract the Lambda function from a component
    */
-  private extractLambdaFunction(component: BaseComponent): lambda.IFunction | null {
+  private extractLambdaFunction(component: Component): lambda.IFunction | null {
     const resourceRefs = component.getResourceReferences();
     
     // Try different property names that might contain the Lambda function

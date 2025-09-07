@@ -21,7 +21,7 @@ import {
   ConfigBuilder,
   ComponentConfigSchema,
   DbPostgresCapability
-} from '../../contracts';
+} from '@platform/contracts';
 
 /**
  * Configuration interface for RDS PostgreSQL component
