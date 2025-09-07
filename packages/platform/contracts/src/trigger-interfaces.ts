@@ -22,7 +22,7 @@ export abstract class TriggerStrategy implements ITriggerStrategy {
   abstract getCompatibilityMatrix(): TriggerCompatibilityEntry[];
   
   protected generateSecureDescription(context: TriggerContext): string {
-    return `${context.source.getType()}-${context.source.getName()} -> ${context.target.getType()}-${context.target.getName()} (${context.directive.eventType})`;
+    return `${context.source.getType()}-${context.source.node.id} -> ${context.target.getType()}-${context.target.node.id} (${context.directive.eventType})`;
   }
   
   protected validateAccess(access: AccessLevel): boolean {
