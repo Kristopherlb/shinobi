@@ -1,0 +1,111 @@
+Short take: good coverage, not production-grade yet.
+
+What’s solid
+
+Verifies core Lambda props, role assume policy, log group.
+
+VPC config + ENI IAM perms check.
+
+Env vars + layers.
+
+FedRAMP knobs (tracing, retention, KMS).
+
+DLQ + provisioned concurrency path.
+
+Capability + outputs.
+
+Basic CFN sanity + managed policy.
+
+
+Gaps that matter (fix these to trust the component)
+
+1. Missing platform tags
+
+Assert platform:* tags on the Lambda and LogGroup (Tagging Standard v1.0).
+
+Without this, policy/chargeback guardrails can slip.
+
+
+
+2. OpenTelemetry enforcement not tested
+
+Per your OTel standard, assert the function has:
+
+OTEL_EXPORTER_OTLP_ENDPOINT, OTEL_SERVICE_NAME, OTEL_RESOURCE_ATTRIBUTES
+
+ADOT layer attached (or equivalent agent wiring)
+
+Tracing Active for fedramp* (you check tracing only under moderate).
+
+
+
+
+3. API Gateway is untested
+
+For a lambda-api component, you should see API Gateway resources:
+
+AWS::ApiGateway::RestApi, Resource, Method, Deployment, Stage
+
+Access logging/metrics, execution logging, throttling defaults
+
+WAF/logging hardening in fedramp*
+
+
+Right now you’re only testing the Lambda half.
+
+
+
+4. Provisioned concurrency test is invalid
+
+AWS::Lambda::ProvisionedConcurrencyConfig cannot use '$LATEST'. It must target a version or alias (Qualifier). Your assertion (and likely implementation) should use an alias like live/current or a published version.
+
+
+
+5. FedRAMP High “mandatory VPC” check is fragile
+
+You’re asserting VpcConfig exists, but not that subnets are private and SG egress is least-privileged. Add checks (or at least that it references the platform VPC IDs from context).
+
+
+
+6. IAM checks should allow both patterns
+
+You assert inline EC2 ENI permissions. Many implementations attach the managed policy AWSLambdaVPCAccessExecutionRole instead. Keep the test permissive: either inline with those actions or the managed policy ARN.
+
+
+
+7. Log retention values
+
+You test 365 and 3653 days—great. Also assert commercial uses the platform’s default (you check 14d) and that overrides are honored via overrides block if that’s a feature.
+
+
+
+8. Error assertions
+
+Two error tests just use toThrow() with no message. Make them specific (e.g., /invalid runtime/i, /timeout must be <= 900/i) so regressions are obvious.
+
+
+
+9. Outputs / names are brittle
+
+You assert specific output names and function name strings. If naming gains prefixes/suffixes, these will flap. Prefer shape/regex or assert via capabilities for names, and CFN shapes (Fn::GetAtt, Ref) for outputs.
+
+
+
+10. Security extras (nice-to-have)
+
+
+
+Assert env-encryption KMS key alias or “customer-managed vs AWS-managed” when fedramp-high.
+
+Assert DeadLetterConfig uses correct service principal permissions (SQS/SNS invoke).
+
+
+Verdict
+
+Quality of the file as-is: good foundation, but not enough for “confident it will succeed at work.”
+
+Must-add before ship: tags, OTel envs/layer, API Gateway resources & logging, fix provisioned concurrency qualifier, tighten IAM/VPC assertions, and make error messages specific.
+
+
+Tighten those, and this component test will actually catch the real-world failures that burn teams later.
+
