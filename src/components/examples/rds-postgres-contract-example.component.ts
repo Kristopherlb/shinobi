@@ -9,6 +9,7 @@
 import * as rds from 'aws-cdk-lib/aws-rds';
 import * as ec2 from 'aws-cdk-lib/aws-ec2';
 import * as secretsmanager from 'aws-cdk-lib/aws-secretsmanager';
+import * as cdk from 'aws-cdk-lib';
 import { Construct } from 'constructs';
 import { 
   Component, 
@@ -272,7 +273,7 @@ export class RdsPostgresComponent extends Component {
       allocatedStorage: this.config!.allocatedStorage,
       storageEncrypted: this.config!.encryptionEnabled,
       backupRetention: this.config!.backupEnabled ? 
-        rds.RetentionDays.SEVEN : rds.RetentionDays.ONE_DAY,
+        cdk.Duration.days(7) : cdk.Duration.days(1),
       deleteAutomatedBackups: false,
       deletionProtection: this.context.complianceFramework !== 'commercial'
     });

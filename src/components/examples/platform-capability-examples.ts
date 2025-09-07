@@ -7,6 +7,7 @@
 
 import { Component, ComponentSpec, ComponentContext, ComponentCapabilities } from '../../contracts';
 import * as rds from 'aws-cdk-lib/aws-rds';
+import * as ec2 from 'aws-cdk-lib/aws-ec2';
 import * as elasticache from 'aws-cdk-lib/aws-elasticache';
 import * as s3 from 'aws-cdk-lib/aws-s3';
 import * as kinesis from 'aws-cdk-lib/aws-kinesis';
@@ -26,14 +27,18 @@ export class RdsPostgresExampleComponent extends Component {
   }
 
   public synth(): void {
+    // Create VPC for the database (simplified for example)
+    const vpc = new ec2.Vpc(this, 'Vpc', { maxAzs: 2 });
+    
     // Create RDS instance (simplified for example)
     this.database = new rds.DatabaseInstance(this, 'Database', {
       engine: rds.DatabaseInstanceEngine.postgres({
         version: rds.PostgresEngineVersion.VER_15_4
       }),
-      instanceType: rds.InstanceType.of(rds.InstanceClass.BURSTABLE3, rds.InstanceSize.MICRO),
+      instanceType: ec2.InstanceType.of(ec2.InstanceClass.BURSTABLE3, ec2.InstanceSize.MICRO),
       credentials: rds.Credentials.fromGeneratedSecret('postgres'),
-      databaseName: this.spec.config?.dbName || 'defaultdb'
+      databaseName: this.spec.config?.dbName || 'defaultdb',
+      vpc
     });
 
     // Register construct for external access
@@ -75,7 +80,7 @@ export class ElastiCacheRedisExampleComponent extends Component {
   public synth(): void {
     // Create Redis replication group (simplified for example)
     this.replicationGroup = new elasticache.CfnReplicationGroup(this, 'RedisCluster', {
-      description: 'Redis cluster for caching',
+      replicationGroupDescription: 'Redis cluster for caching',
       numCacheClusters: 2,
       cacheNodeType: 'cache.t3.micro',
       engine: 'redis'
