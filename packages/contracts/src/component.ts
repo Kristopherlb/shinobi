@@ -218,7 +218,7 @@ export abstract class Component extends Construct {
       
       // Environment & Deployment Tags
       'environment': this.context.environment,
-      'region': this.context.region,
+      'region': this.context.region || 'us-east-1',
       'deployed-by': `platform-v1.0.0`,
       'deployment-id': deploymentId,
       
@@ -324,7 +324,7 @@ export abstract class Component extends Construct {
       serviceName: options.serviceName || this.spec.name,
       serviceVersion: this.context.serviceLabels?.version || '1.0.0',
       environment: this.context.environment,
-      region: this.context.region,
+      region: this.context.region || 'us-east-1',
       complianceFramework: this.context.complianceFramework,
       tracesSampling: options.tracesSampling ?? this.getTracesSamplingRate(),
       metricsInterval: options.metricsInterval ?? this.getMetricsCollectionInterval(),
