@@ -498,6 +498,7 @@ export class Ec2InstanceComponent extends Component {
   private role?: iam.Role;
   private kmsKey?: kms.Key;
   private config?: Ec2InstanceConfig;
+  private configBuilder?: Ec2InstanceConfigBuilder;
 
   constructor(scope: Construct, id: string, context: ComponentContext, spec: ComponentSpec) {
     super(scope, id, context, spec);
@@ -507,8 +508,12 @@ export class Ec2InstanceComponent extends Component {
    * Synthesis phase - Create EC2 instance with compliance hardening
    */
   public synth(): void {
-    // Build configuration
-    this.config = this.buildConfigSync();
+    // Build configuration using ConfigBuilder
+    this.configBuilder = new Ec2InstanceConfigBuilder({
+      context: this.context,
+      spec: this.spec
+    });
+    this.config = this.configBuilder.buildSync();
     
     // Create KMS key for EBS encryption if needed
     this.createKmsKeyIfNeeded();
@@ -975,35 +980,4 @@ export class Ec2InstanceComponent extends Component {
     }
   }
 
-  /**
-   * Simplified config building for demo purposes
-   */
-  private buildConfigSync(): Ec2InstanceConfig {
-    const config: Ec2InstanceConfig = {
-      instanceType: this.spec.config?.instanceType || 't3.micro',
-      ami: this.spec.config?.ami || {
-        namePattern: 'amzn2-ami-hvm-*-x86_64-gp2',
-        owner: 'amazon'
-      },
-      vpc: this.spec.config?.vpc,
-      userData: this.spec.config?.userData,
-      keyPair: this.spec.config?.keyPair,
-      storage: {
-        rootVolumeSize: this.spec.config?.storage?.rootVolumeSize || 20,
-        rootVolumeType: this.spec.config?.storage?.rootVolumeType || 'gp3',
-        encrypted: this.shouldEnableEbsEncryption(),
-        deleteOnTermination: this.spec.config?.storage?.deleteOnTermination !== false
-      },
-      monitoring: {
-        detailed: this.shouldEnableDetailedMonitoring(),
-        cloudWatchAgent: this.isComplianceFramework()
-      },
-      security: {
-        requireImdsv2: !!this.shouldRequireImdsv2(),
-        httpTokens: this.shouldRequireImdsv2() ? 'required' : 'optional'
-      }
-    };
-
-    return config;
-  }
 }
