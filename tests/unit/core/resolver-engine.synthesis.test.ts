@@ -253,7 +253,11 @@ describe('ResolverEngine - Core Synthesis', () => {
 
   describe('Performance Validation', () => {
     test('should synthesize service with multiple components efficiently', async () => {
-      const components = [];
+      const components: Array<{
+        name: string;
+        type: string;
+        config: Record<string, any>;
+      }> = [];
       
       // Create moderate-sized service for performance testing
       for (let i = 0; i < 5; i++) {

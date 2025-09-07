@@ -250,7 +250,7 @@ describe('S3BucketComponent - CloudFormation Synthesis', () => {
       // Basic CloudFormation structure validation
       expect(cfnTemplate).toHaveProperty('AWSTemplateFormatVersion', '2010-09-09');
       expect(cfnTemplate).toHaveProperty('Resources');
-      expect(Object.keys(cfnTemplate.Resources)).toHaveLength(expect.any(Number));
+      expect(Object.keys(cfnTemplate.Resources).length).toBeGreaterThan(0);
 
       // Ensure all resources have required properties
       Object.entries(cfnTemplate.Resources).forEach(([logicalId, resource]: [string, any]) => {
