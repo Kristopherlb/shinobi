@@ -20,20 +20,40 @@ export type {
   ComponentPolicy
 } from './interfaces';
 
-// Standard Capability Vocabulary
+// Platform Capability Naming Standard v1.0
 export type {
+  // Database Capabilities
   DbPostgresCapability,
+  DbMysqlCapability,
   DbDynamoDbCapability,
+  
+  // Caching Capabilities
+  CacheRedisCapability,
+  CacheMemcachedCapability,
+  
+  // Storage Capabilities
+  BucketS3Capability,
+  
+  // Messaging & Streaming Capabilities
   QueueSqsCapability,
   TopicSnsCapability,
-  BucketS3Capability,
+  StreamKinesisCapability,
+  BusEventBridgeCapability,
+  
+  // API & Compute Capabilities
   ApiRestCapability,
   LambdaFunctionCapability,
+  
+  // Networking Capabilities
   NetVpcCapability,
   NetLoadBalancerTargetCapability,
   NetSshAccessCapability,
+  
+  // Service Integration Capabilities
   ServiceConnectCapability,
   EventTriggerCapability,
+  
+  // Union Types
   StandardCapabilityData,
   StandardCapabilityKey
 } from './capabilities';

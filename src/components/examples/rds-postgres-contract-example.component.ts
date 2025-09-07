@@ -279,7 +279,10 @@ export class RdsPostgresComponent extends Component {
   }
 
   /**
-   * Build the database capability data shape
+   * Build the database capability data shape according to Platform Capability Naming Standard v1.0
+   * 
+   * Provides real, tokenized values from underlying CDK constructs for automated binding
+   * following the mandatory data shape for `db:postgres` capability.
    */
   private buildDatabaseCapability(): DbPostgresCapability {
     return {
@@ -288,8 +291,7 @@ export class RdsPostgresComponent extends Component {
       dbName: this.config!.dbName,
       secretArn: this.secret!.secretArn,
       sgId: this.securityGroup!.securityGroupId,
-      instanceArn: this.database!.instanceArn,
-      connectionString: `postgresql://\${username}:\${password}@${this.database!.instanceEndpoint.hostname}:${this.database!.instanceEndpoint.port}/${this.config!.dbName}`
+      instanceArn: this.database!.instanceArn
     };
   }
 
