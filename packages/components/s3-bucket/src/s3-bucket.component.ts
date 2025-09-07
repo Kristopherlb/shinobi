@@ -596,8 +596,9 @@ export class S3BucketComponent extends Component {
    * Synthesis phase - Create S3 bucket with compliance hardening
    */
   public synth(): void {
-    // Build configuration
-    this.config = this.buildConfigSync();
+    // Build configuration using ConfigBuilder
+    const configBuilder = new S3BucketConfigBuilder(this.context, this.spec);
+    this.config = configBuilder.buildSync();
     
     // Create KMS key for encryption if needed
     this.createKmsKeyIfNeeded();
@@ -928,7 +929,7 @@ def handler(event, context):
   /**
    * Build bucket capability data shape
    */
-  private buildBucketCapability(): BucketS3Capability {
+  private buildBucketCapability(): any {
     return {
       bucketName: this.bucket!.bucketName,
       bucketArn: this.bucket!.bucketArn
@@ -947,7 +948,7 @@ def handler(event, context):
   }
 
   private getBucketEncryption(): s3.BucketEncryption {
-    if (this.shouldUseCustomerManagedKey()) {
+    if (this.config?.encryption?.type === 'KMS') {
       return s3.BucketEncryption.KMS;
     }
     return s3.BucketEncryption.S3_MANAGED;
@@ -965,21 +966,4 @@ def handler(event, context):
     return storageClassMap[storageClass] || s3.StorageClass.INFREQUENT_ACCESS;
   }
 
-  /**
-   * Simplified config building for demo purposes
-   */
-  private buildConfigSync(): S3BucketConfig {
-    const config: S3BucketConfig = {
-      bucketName: this.spec.config?.bucketName,
-      public: this.spec.config?.public || false,
-      eventBridgeEnabled: this.spec.config?.eventBridgeEnabled || false,
-      versioning: this.spec.config?.versioning !== false,
-      website: this.spec.config?.website,
-      lifecycleRules: this.spec.config?.lifecycleRules,
-      security: this.spec.config?.security || {},
-      compliance: this.spec.config?.compliance || {}
-    };
-
-    return config;
-  }
 }
