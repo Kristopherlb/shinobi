@@ -3,7 +3,7 @@
  * Implements the complete MCP Server Specification v1.0 API endpoints
  */
 
-import express from 'express';
+import express, { Request, Response } from 'express';
 import { PlatformEndpointsService } from '../services/platform-endpoints';
 import { ServiceEndpointsService } from '../services/service-endpoints';
 import { GenerativeEndpointsService } from '../services/generative-endpoints';
@@ -53,7 +53,7 @@ export function createApiRouter(config: McpServerConfig): express.Router {
   router.get('/platform/components', 
     requireReadAccess(),
     auditLog('list_components'),
-    async (req: AuthenticatedRequest, res) => {
+    async (req: AuthenticatedRequest, res: Response) => {
       try {
         const components = await platformService.getComponents();
         res.json(components);
@@ -73,7 +73,7 @@ export function createApiRouter(config: McpServerConfig): express.Router {
   router.get('/platform/components/:type/schema',
     requireReadAccess(),
     auditLog('get_component_schema'),
-    async (req: AuthenticatedRequest, res) => {
+    async (req: AuthenticatedRequest, res: Response) => {
       try {
         const schema = await platformService.getComponentSchema(req.params.type);
         res.json(schema);
@@ -100,7 +100,7 @@ export function createApiRouter(config: McpServerConfig): express.Router {
   router.get('/platform/capabilities',
     requireReadAccess(),
     auditLog('list_capabilities'),
-    async (req: AuthenticatedRequest, res) => {
+    async (req: AuthenticatedRequest, res: Response) => {
       try {
         const capabilities = await platformService.getCapabilities();
         res.json(capabilities);
@@ -120,7 +120,7 @@ export function createApiRouter(config: McpServerConfig): express.Router {
   router.get('/platform/bindings',
     requireReadAccess(),
     auditLog('list_bindings'),
-    async (req: AuthenticatedRequest, res) => {
+    async (req: AuthenticatedRequest, res: Response) => {
       try {
         const bindings = await platformService.getBindings();
         res.json(bindings);
@@ -140,7 +140,7 @@ export function createApiRouter(config: McpServerConfig): express.Router {
   router.post('/platform/validate',
     requireReadAccess(),
     auditLog('validate_manifest'),
-    async (req: AuthenticatedRequest, res) => {
+    async (req: AuthenticatedRequest, res: Response) => {
       try {
         const manifest = req.body;
         const validationResult = await platformService.validateManifest(manifest);
@@ -165,7 +165,7 @@ export function createApiRouter(config: McpServerConfig): express.Router {
   router.get('/services',
     requireReadAccess(),
     auditLog('list_services'),
-    async (req: AuthenticatedRequest, res) => {
+    async (req: AuthenticatedRequest, res: Response) => {
       try {
         const services = await serviceService.getServices();
         res.json(services);
@@ -185,7 +185,7 @@ export function createApiRouter(config: McpServerConfig): express.Router {
   router.get('/services/:name',
     requireReadAccess(),
     auditLog('get_service'),
-    async (req: AuthenticatedRequest, res) => {
+    async (req: AuthenticatedRequest, res: Response) => {
       try {
         const service = await serviceService.getService(req.params.name);
         res.json(service);
@@ -212,7 +212,7 @@ export function createApiRouter(config: McpServerConfig): express.Router {
   router.get('/services/:name/manifest',
     requireReadAccess(),
     auditLog('get_service_manifest'),
-    async (req: AuthenticatedRequest, res) => {
+    async (req: AuthenticatedRequest, res: Response) => {
       try {
         const manifest = await serviceService.getServiceManifest(req.params.name);
         res.json(manifest);
@@ -239,7 +239,7 @@ export function createApiRouter(config: McpServerConfig): express.Router {
   router.get('/services/:name/status',
     requireReadAccess(),
     auditLog('get_service_status'),
-    async (req: AuthenticatedRequest, res) => {
+    async (req: AuthenticatedRequest, res: Response) => {
       try {
         const status = await serviceService.getServiceStatus(req.params.name);
         res.json(status);
@@ -266,7 +266,7 @@ export function createApiRouter(config: McpServerConfig): express.Router {
   router.get('/services/:name/logs',
     requireReadAccess(),
     auditLog('get_service_logs'),
-    async (req: AuthenticatedRequest, res) => {
+    async (req: AuthenticatedRequest, res: Response) => {
       try {
         const limit = parseInt(req.query.limit as string) || 100;
         const startTime = req.query.startTime as string;
@@ -293,7 +293,7 @@ export function createApiRouter(config: McpServerConfig): express.Router {
   router.post('/platform/generate/component',
     requireGenerativeAccess(),
     auditLog('generate_component'),
-    async (req: AuthenticatedRequest, res) => {
+    async (req: AuthenticatedRequest, res: Response) => {
       try {
         const request = req.body;
         
@@ -334,7 +334,7 @@ export function createApiRouter(config: McpServerConfig): express.Router {
   router.get('/admin/health',
     requireAdmin(),
     auditLog('admin_health_check'),
-    async (req: AuthenticatedRequest, res) => {
+    async (req: AuthenticatedRequest, res: Response) => {
       try {
         const health = await adminService.getHealth();
         
@@ -360,7 +360,7 @@ export function createApiRouter(config: McpServerConfig): express.Router {
   router.post('/admin/registry/reload',
     requireAdmin(),
     auditLog('admin_reload_registry'),
-    async (req: AuthenticatedRequest, res) => {
+    async (req: AuthenticatedRequest, res: Response) => {
       try {
         const result = await adminService.reloadRegistry();
         
@@ -383,7 +383,7 @@ export function createApiRouter(config: McpServerConfig): express.Router {
   router.get('/admin/audit',
     requireAdmin(),
     auditLog('admin_query_audit'),
-    async (req: AuthenticatedRequest, res) => {
+    async (req: AuthenticatedRequest, res: Response) => {
       try {
         const queryParams = {
           service: req.query.service as string,
@@ -415,7 +415,7 @@ export function createApiRouter(config: McpServerConfig): express.Router {
   router.get('/admin/dependencies',
     requireAdmin(),
     auditLog('admin_get_dependencies'),
-    async (req: AuthenticatedRequest, res) => {
+    async (req: AuthenticatedRequest, res: Response) => {
       try {
         const componentFilter = req.query.component as string;
         const dependencies = await adminService.getDependencies(componentFilter);
@@ -436,7 +436,7 @@ export function createApiRouter(config: McpServerConfig): express.Router {
   router.get('/admin/drift',
     requireAdmin(),
     auditLog('admin_detect_drift'),
-    async (req: AuthenticatedRequest, res) => {
+    async (req: AuthenticatedRequest, res: Response) => {
       try {
         const serviceName = req.query.service as string;
         const driftResults = await adminService.detectDrift(serviceName);
@@ -457,7 +457,7 @@ export function createApiRouter(config: McpServerConfig): express.Router {
   /**
    * GET /health (Basic health check for load balancer)
    */
-  router.get('/health', (req, res) => {
+  router.get('/health', (req: Request, res: Response) => {
     res.status(200).json({ 
       status: 'ok',
       timestamp: new Date().toISOString(),
