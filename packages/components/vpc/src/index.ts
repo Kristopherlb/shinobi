@@ -3,4 +3,9 @@
  * VPC with security groups, NAT gateways, and compliance features
  */
 
-export { VpcComponent } from './vpc.component';
+export { 
+  VpcComponent,
+  VPC_CONFIG_SCHEMA,
+  VpcConfig,
+  VpcConfigBuilder
+} from './vpc.component';
