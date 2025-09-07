@@ -15,8 +15,7 @@ import {
   Component,
   ComponentSpec,
   ComponentContext,
-  ComponentCapabilities,
-  ComponentConfigSchema
+  ComponentCapabilities
 } from '../../../platform/contracts/src';
 
 /**
@@ -109,7 +108,7 @@ export interface DynamoDbTableConfig {
 /**
  * Configuration schema for DynamoDB Table component
  */
-export const DYNAMODB_TABLE_CONFIG_SCHEMA: ComponentConfigSchema = {
+export const DYNAMODB_TABLE_CONFIG_SCHEMA = {
   type: 'object',
   title: 'DynamoDB Table Configuration',
   description: 'Configuration for creating a DynamoDB table',
