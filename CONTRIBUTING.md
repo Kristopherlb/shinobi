@@ -27,10 +27,168 @@ packages/components/your-component/
 │   └── your-component.creator.ts   # Component factory (optional)
 ├── package.json                    # Package configuration
 ├── tsconfig.json                   # TypeScript configuration
-└── README.md                       # Component documentation
+└── README.md                       # Component documentation (REQUIRED)
 ```
 
-#### 2. Component Implementation
+#### 2. Component Documentation (REQUIRED)
+
+**Every component MUST include a comprehensive README.md file** that follows the platform documentation standards. This requirement is mandatory for all new components and existing components must be updated to include READMEs.
+
+##### README Structure Requirements
+
+Your README.md must include the following sections:
+
+1. **Title and Description**: Component name and enterprise-grade overview
+2. **Overview**: Key features and capabilities with bullet points
+3. **Capabilities**: What capabilities the component provides (e.g., `storage:s3`)
+4. **Configuration**: Complete YAML configuration examples
+5. **Binding Examples**: How other components can bind to this component
+6. **Compliance Features**: Differences between Commercial/FedRAMP Moderate/FedRAMP High
+7. **Advanced Configuration**: Complex use cases and patterns
+8. **Monitoring and Observability**: What monitoring is automatically configured
+9. **Security Features**: Security aspects and best practices
+10. **Troubleshooting**: Common issues and debug guidance
+11. **Examples**: References to complete service templates
+12. **API Reference**: Component class methods and interfaces
+13. **Development**: How to contribute to the component
+14. **License**: MIT License reference
+
+##### README Template
+
+Use this template structure for all component READMEs:
+
+```markdown
+# Your Component Name
+
+Enterprise-grade [AWS Service] component with [key features] and comprehensive compliance controls.
+
+## Overview
+
+This component provides a fully managed [service description] with:
+
+- **Key Feature 1**: Description of primary capability
+- **Key Feature 2**: Description of secondary capability  
+- **Security Integration**: Encryption, access controls, etc.
+- **Compliance Hardening**: Three-tier compliance support (Commercial/FedRAMP Moderate/FedRAMP High)
+- **Advanced Features**: Monitoring, cost optimization, etc.
+
+## Capabilities
+
+- **your:capability**: Provides [description] for [use cases]
+
+## Configuration
+
+```yaml
+components:
+  - name: example-component
+    type: your-component
+    config:
+      # Show realistic, complete configuration example
+      setting1: value1
+      setting2: value2
+```
+
+## Binding Examples
+
+### Integration with Common Components
+
+```yaml
+components:
+  - name: related-service
+    type: lambda-api
+    config:
+      handler: src/handler.main
+    binds:
+      - to: example-component
+        capability: your:capability
+        access: read-write
+```
+
+## Compliance Features
+
+### Commercial
+- Basic security and monitoring
+- Cost-optimized settings
+
+### FedRAMP Moderate  
+- Enhanced security controls
+- Comprehensive audit logging
+- Extended retention periods
+
+### FedRAMP High
+- Maximum security hardening
+- Strict compliance requirements
+- Advanced threat detection
+
+## Advanced Configuration
+
+[Complex configuration patterns and use cases]
+
+## Monitoring and Observability
+
+The component automatically configures:
+- CloudWatch Metrics: [specific metrics]
+- CloudWatch Logs: [log types and retention]
+- CloudWatch Alarms: [monitoring alerts]
+
+## Security Features
+
+[Security capabilities and best practices]
+
+## Troubleshooting
+
+### Common Issues
+1. **Issue Name**: Description and resolution
+2. **Another Issue**: Description and resolution
+
+### Debug Mode
+[How to enable detailed logging]
+
+## Examples
+
+See the [`examples/`](../../examples/) directory for complete service templates.
+
+## API Reference
+
+### YourComponentComponent
+
+Main component class that extends `Component`.
+
+#### Methods
+- `synth()`: Creates AWS resources
+- `getCapabilities()`: Returns capabilities
+- `getType()`: Returns component type
+
+## Development
+
+To contribute to this component:
+
+1. Make changes to the source code
+2. Run tests: `npm test`
+3. Build: `npm run build`
+4. Follow the [Contributing Guide](../../../CONTRIBUTING.md)
+
+## License
+
+MIT License - see LICENSE file for details.
+```
+
+##### README Quality Standards
+
+- **Comprehensive**: Cover all major use cases and configuration options
+- **Practical**: Include realistic, working configuration examples
+- **Compliance-Aware**: Document differences between compliance tiers
+- **Troubleshooting**: Address common issues users will encounter
+- **Current**: Keep examples and API references up to date
+
+##### Enforcement
+
+- All pull requests MUST include README updates for modified components
+- New components will not be merged without comprehensive READMEs
+- README quality is part of the code review process
+- Existing components without READMEs should be updated during maintenance
+
+#### 3. Component Implementation
 
 All components must extend the `Component` abstract class from `@platform/contracts`:
 
