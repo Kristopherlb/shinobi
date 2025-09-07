@@ -398,7 +398,7 @@ export class VpcComponent extends Component {
     // Allow HTTPS outbound
     privateNacl.addEntry('AllowHttpsOutbound', {
       ruleNumber: 100,
-      cidr: ec2.AcmeCertificate.fromString('0.0.0.0/0'),
+      cidr: ec2.AclCidr.anyIpv4(),
       traffic: ec2.AclTraffic.tcpPort(443),
       direction: ec2.TrafficDirection.EGRESS,
       ruleAction: ec2.Action.ALLOW
@@ -407,7 +407,7 @@ export class VpcComponent extends Component {
     // Allow ephemeral ports inbound for responses
     privateNacl.addEntry('AllowEphemeralInbound', {
       ruleNumber: 100,
-      cidr: ec2.AcmeCertificate.fromString('0.0.0.0/0'),
+      cidr: ec2.AclCidr.anyIpv4(),
       traffic: ec2.AclTraffic.tcpPortRange(1024, 65535),
       direction: ec2.TrafficDirection.INGRESS,
       ruleAction: ec2.Action.ALLOW

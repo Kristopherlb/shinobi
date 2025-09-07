@@ -222,8 +222,9 @@ export class SqsQueueComponent extends Component {
       // Configure FIFO DLQ if main queue is FIFO
       if (this.config!.fifo?.enabled) {
         dlqProps.fifo = true;
-        dlqProps.queueName = dlqProps.queueName ? 
-          `${dlqProps.queueName}.fifo` : undefined;
+        // Configure FIFO queue name
+        const baseName = dlqProps.queueName || `${this.context.serviceName}-${this.spec.name}-dlq`;
+        dlqProps.queueName = `${baseName}.fifo`;
       }
 
       this.deadLetterQueue = new sqs.Queue(this, 'DeadLetterQueue', dlqProps);
@@ -262,12 +263,16 @@ export class SqsQueueComponent extends Component {
 
     // Configure FIFO queue if enabled
     if (this.config!.fifo?.enabled) {
-      queueProps.fifo = true;
-      queueProps.contentBasedDeduplication = this.config!.fifo.contentBasedDeduplication;
-      queueProps.deduplicationScope = this.config!.fifo.deduplicationScope === 'messageGroup' ?
-        sqs.DeduplicationScope.MESSAGE_GROUP : sqs.DeduplicationScope.QUEUE;
-      queueProps.fifoThroughputLimit = this.config!.fifo.fifoThroughputLimit === 'perMessageGroupId' ?
-        sqs.FifoThroughputLimit.PER_MESSAGE_GROUP_ID : sqs.FifoThroughputLimit.PER_QUEUE;
+      // Create separate FIFO props
+      const fifoProps = {
+        fifo: true,
+        contentBasedDeduplication: this.config!.fifo.contentBasedDeduplication,
+        deduplicationScope: this.config!.fifo.deduplicationScope === 'messageGroup' ?
+          sqs.DeduplicationScope.MESSAGE_GROUP : sqs.DeduplicationScope.QUEUE,
+        fifoThroughputLimit: this.config!.fifo.fifoThroughputLimit === 'perMessageGroupId' ?
+          sqs.FifoThroughputLimit.PER_MESSAGE_GROUP_ID : sqs.FifoThroughputLimit.PER_QUEUE
+      };
+      Object.assign(queueProps, fifoProps);
     }
 
     this.queue = new sqs.Queue(this, 'Queue', queueProps);

@@ -378,9 +378,7 @@ export class AutoScalingGroupComponent extends Component {
       this.autoScalingGroup.applyCloudFormationInit(
         ec2.CloudFormationInit.fromElements(),
         {
-          configSets: {
-            'default': ['install']
-          },
+          configSets: ['install'],
           printLog: true,
           ignoreFailures: false
         }

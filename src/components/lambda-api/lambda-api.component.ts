@@ -162,7 +162,7 @@ export class LambdaApiConfigBuilder extends ConfigBuilder<LambdaApiConfig> {
     return { ...complianceDefaults, ...config };
   }
 
-  private getComplianceDefaults(): Record<string, any> {
+  protected getComplianceDefaults(): Record<string, any> {
     switch (this.context.context.complianceFramework) {
       case 'fedramp-moderate':
         return {
