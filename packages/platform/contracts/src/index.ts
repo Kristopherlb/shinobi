@@ -16,5 +16,8 @@ export * from './platform-binding-trigger-spec';
 // Export trigger system interfaces
 export * from './trigger-interfaces';
 
+// Export binder matrix implementation
+export * from './binder-matrix';
+
 // Export OpenFeature standard interfaces
 export * from './openfeature-interfaces';
