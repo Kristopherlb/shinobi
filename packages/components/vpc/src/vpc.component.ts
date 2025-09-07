@@ -789,8 +789,8 @@ export class VpcComponent extends Component {
       this.vpc!.vpcDefaultSecurityGroup
     );
 
-    // Add explicit deny rules (this is a placeholder - actual implementation would
-    // require custom resources to modify the default security group)
+    // Note: Default security group rule modification requires custom resources
+    // and should be implemented through compliance-specific security group policies
   }
 
   /**
