@@ -8,7 +8,7 @@
 
 import * as cdk from 'aws-cdk-lib';
 import { Construct, IConstruct } from 'constructs';
-import { ComponentSpec, ComponentContext, ComponentCapabilities } from './interfaces';
+import { ComponentSpec, ComponentContext, ComponentCapabilities } from './index';
 
 /**
  * Options for configuring observability on components

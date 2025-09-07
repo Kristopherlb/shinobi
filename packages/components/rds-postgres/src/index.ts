@@ -4,5 +4,3 @@
  */
 
 export { RdsPostgresComponent, RdsPostgresConfig } from './rds-postgres.component';
-export { RdsPostgresCreator } from './rds-postgres.creator';
-export { LambdaToRdsBinderStrategy } from './lambda-to-rds.binder';
