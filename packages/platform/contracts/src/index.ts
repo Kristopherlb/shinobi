@@ -10,5 +10,11 @@ export * from './component-interfaces';
 // Export binding contracts
 export * from './binding-context';
 
+// Export Platform Binding & Trigger Specification v1.0
+export * from './platform-binding-trigger-spec';
+
+// Export trigger system interfaces
+export * from './trigger-interfaces';
+
 // Export OpenFeature standard interfaces
 export * from './openfeature-interfaces';
