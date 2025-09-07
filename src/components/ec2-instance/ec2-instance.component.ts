@@ -19,7 +19,8 @@ import {
   ComponentCapabilities,
   ConfigBuilder,
   ComponentConfigSchema,
-  ComputeEc2Capability
+  ComputeEc2Capability,
+  ConfigBuilderContext
 } from '../../contracts';
 
 /**
@@ -138,6 +139,202 @@ export const EC2_INSTANCE_CONFIG_SCHEMA: ComponentConfigSchema = {
     }
   }
 };
+
+/**
+ * Ec2InstanceConfigBuilder - Handles configuration building and defaults for EC2 Instance
+ */
+export class Ec2InstanceConfigBuilder extends ConfigBuilder<Ec2InstanceConfig> {
+  
+  constructor(context: ConfigBuilderContext) {
+    super(context, EC2_INSTANCE_CONFIG_SCHEMA);
+  }
+
+  /**
+   * Builds the final configuration by applying platform defaults, compliance frameworks, and user overrides
+   */
+  public async build(): Promise<Ec2InstanceConfig> {
+    return this.buildSync();
+  }
+
+  /**
+   * Synchronous version of build for use in synth() method
+   */
+  public buildSync(): Ec2InstanceConfig {
+    // Start with platform defaults
+    const platformDefaults = this.getPlatformDefaults();
+    
+    // Apply compliance framework defaults
+    const complianceDefaults = this.getComplianceFrameworkDefaults();
+    
+    // Merge user configuration from spec
+    const userConfig = this.context.spec.config || {};
+    
+    // Merge configurations (user config takes precedence)
+    const mergedConfig = this.mergeConfigs(
+      this.mergeConfigs(platformDefaults, complianceDefaults),
+      userConfig
+    );
+    
+    // Resolve environment interpolations (sync version)
+    const resolvedConfig = this.resolveEnvironmentInterpolationsSync(mergedConfig);
+    
+    // Validate against schema
+    const validationResult = this.validateConfiguration(resolvedConfig);
+    if (!validationResult.valid) {
+      throw new Error(`EC2 Instance configuration validation failed: ${JSON.stringify(validationResult.errors)}`);
+    }
+    
+    return validationResult.validatedConfig as Ec2InstanceConfig;
+  }
+
+  /**
+   * Synchronous version of environment interpolation resolution
+   */
+  private resolveEnvironmentInterpolationsSync(config: Record<string, any>): Record<string, any> {
+    // For now, return config as-is since we don't have environment config in sync context
+    // In a real implementation, this would resolve ${env:key} patterns
+    return config;
+  }
+
+  /**
+   * Simple merge utility for combining configuration objects
+   */
+  private mergeConfigs(target: Record<string, any>, source: Record<string, any>): Record<string, any> {
+    const result = { ...target };
+    
+    for (const key in source) {
+      if (source[key] && typeof source[key] === 'object' && !Array.isArray(source[key])) {
+        result[key] = this.mergeConfigs(result[key] || {}, source[key]);
+      } else {
+        result[key] = source[key];
+      }
+    }
+    
+    return result;
+  }
+
+  /**
+   * Get platform-wide defaults for EC2 Instance
+   */
+  private getPlatformDefaults(): Record<string, any> {
+    return {
+      instanceType: this.getDefaultInstanceType(),
+      ami: {
+        namePattern: 'amzn2-ami-hvm-*-x86_64-gp2',
+        owner: 'amazon'
+      },
+      storage: {
+        rootVolumeSize: this.getDefaultVolumeSize(),
+        rootVolumeType: this.getDefaultVolumeType(),
+        encrypted: false,
+        deleteOnTermination: true
+      },
+      monitoring: {
+        detailed: false,
+        cloudWatchAgent: false
+      },
+      security: {
+        requireImdsv2: false,
+        httpTokens: 'optional',
+        nitroEnclaves: false
+      }
+    };
+  }
+
+  /**
+   * Get compliance framework specific defaults
+   */
+  private getComplianceFrameworkDefaults(): Record<string, any> {
+    const framework = this.context.context.complianceFramework;
+    
+    switch (framework) {
+      case 'fedramp-moderate':
+        return {
+          instanceType: this.getInstanceClass('fedramp-moderate'),
+          storage: {
+            rootVolumeSize: 50, // Larger for compliance logging
+            encrypted: true
+          },
+          monitoring: {
+            detailed: true,
+            cloudWatchAgent: true
+          },
+          security: {
+            requireImdsv2: true,
+            httpTokens: 'required'
+          }
+        };
+        
+      case 'fedramp-high':
+        return {
+          instanceType: this.getInstanceClass('fedramp-high'),
+          storage: {
+            rootVolumeSize: 100, // Even larger for enhanced logging
+            rootVolumeType: 'gp3', // Better performance for compliance workloads
+            encrypted: true
+          },
+          monitoring: {
+            detailed: true,
+            cloudWatchAgent: true
+          },
+          security: {
+            requireImdsv2: true,
+            httpTokens: 'required',
+            nitroEnclaves: true
+          }
+        };
+        
+      default: // commercial
+        return {
+          storage: {
+            encrypted: false // Optional for commercial
+          }
+        };
+    }
+  }
+
+  /**
+   * Get instance class based on compliance framework
+   */
+  private getInstanceClass(framework: string): string {
+    switch (framework) {
+      case 'fedramp-high':
+        return 'm5.large'; // More powerful for enhanced logging/monitoring
+      case 'fedramp-moderate':
+        return 't3.medium'; // Moderate performance requirements
+      default:
+        return 't3.micro'; // Cost-optimized for commercial
+    }
+  }
+
+  /**
+   * Get default instance type for platform
+   */
+  private getDefaultInstanceType(): string {
+    return this.getInstanceClass(this.context.context.complianceFramework);
+  }
+
+  /**
+   * Get default volume size based on compliance framework
+   */
+  private getDefaultVolumeSize(): number {
+    switch (this.context.context.complianceFramework) {
+      case 'fedramp-high':
+        return 100;
+      case 'fedramp-moderate':
+        return 50;
+      default:
+        return 20;
+    }
+  }
+
+  /**
+   * Get default volume type
+   */
+  private getDefaultVolumeType(): string {
+    return this.context.context.complianceFramework === 'fedramp-high' ? 'gp3' : 'gp3';
+  }
+}
 
 /**
  * EC2 Instance Component implementing Component API Contract v1.0
