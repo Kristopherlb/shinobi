@@ -373,6 +373,9 @@ export class RdsPostgresComponent extends Component {
       'multi-az': (!!this.config!.multiAz).toString(),
       'backup-retention-days': this.getBackupRetentionDays().toString()
     });
+    
+    // Configure observability for database monitoring
+    this.configureObservabilityForDatabase();
   }
 
   /**
@@ -530,5 +533,79 @@ export class RdsPostgresComponent extends Component {
     };
 
     return config;
+  }
+
+  /**
+   * Configure OpenTelemetry observability for database monitoring according to Platform Observability Standard
+   */
+  private configureObservabilityForDatabase(): void {
+    if (!this.database) return;
+
+    // Get standardized observability configuration for databases
+    const otelConfig = this.configureObservability(this.database, {
+      customAttributes: {
+        'database.engine': 'postgres',
+        'database.version': '15.4',
+        'database.name': this.config!.dbName,
+        'database.instance.class': this.config!.instanceClass || 'db.t3.micro',
+        'database.multi.az': (!!this.config!.multiAz).toString(),
+        'database.backup.retention': this.getBackupRetentionDays().toString(),
+        'database.performance.insights': this.shouldEnableDatabasePerformanceInsights().toString()
+      }
+    });
+
+    // Enable Performance Insights based on compliance framework
+    if (this.shouldEnableDatabasePerformanceInsights()) {
+      const cfnInstance = this.database.node.defaultChild as rds.CfnDBInstance;
+      cfnInstance.performanceInsightsEnabled = true;
+      cfnInstance.performanceInsightsRetentionPeriod = this.getPerformanceInsightsRetentionDays();
+      
+      // Use customer-managed KMS key for Performance Insights in compliance environments
+      if (this.kmsKey) {
+        cfnInstance.performanceInsightsKmsKeyId = this.kmsKey.keyArn;
+      }
+    }
+
+    // Configure enhanced monitoring for detailed system metrics
+    const cfnInstance = this.database.node.defaultChild as rds.CfnDBInstance;
+    cfnInstance.monitoringInterval = this.getDatabaseMonitoringInterval();
+    
+    // Enable CloudWatch Logs exports for PostgreSQL
+    cfnInstance.enableCloudwatchLogsExports = ['postgresql'];
+  }
+
+  /**
+   * Determine if Performance Insights should be enabled based on compliance framework
+   */
+  private shouldEnableDatabasePerformanceInsights(): boolean {
+    return this.context.complianceFramework !== 'commercial';
+  }
+
+  /**
+   * Get Performance Insights retention period based on compliance framework
+   */
+  private getPerformanceInsightsRetentionDays(): number {
+    switch (this.context.complianceFramework) {
+      case 'fedramp-high':
+        return 2555; // 7 years for FedRAMP High
+      case 'fedramp-moderate':
+        return 1095; // 3 years for FedRAMP Moderate
+      default:
+        return 7; // Default minimum for commercial
+    }
+  }
+
+  /**
+   * Get enhanced monitoring interval based on compliance requirements
+   */
+  private getDatabaseMonitoringInterval(): number {
+    switch (this.context.complianceFramework) {
+      case 'fedramp-high':
+        return 1; // 1 second for high-frequency monitoring
+      case 'fedramp-moderate':
+        return 5; // 5 seconds for standard monitoring
+      default:
+        return 60; // 1 minute for cost-effective monitoring
+    }
   }
 }
