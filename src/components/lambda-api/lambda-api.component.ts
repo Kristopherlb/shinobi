@@ -539,8 +539,7 @@ export class LambdaApiComponent extends Component {
    * Get architecture string for Lambda layer ARN
    */
   private getArchString(): string {
-    // Default to x86_64 architecture if not specified in config
-    const architecture = this.config!.architecture || lambda.Architecture.X86_64;
-    return architecture === lambda.Architecture.ARM_64 ? 'arm64' : 'amd64';
+    // Default to amd64 for x86_64 architecture since config doesn't specify architecture
+    return 'amd64';
   }
 }

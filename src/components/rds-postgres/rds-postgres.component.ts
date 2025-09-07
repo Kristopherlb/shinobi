@@ -355,7 +355,7 @@ export class RdsPostgresComponent extends Component {
       multiAz: this.shouldEnableMultiAz(),
       parameterGroup: this.parameterGroup,
       monitoringInterval: this.getEnhancedMonitoringInterval(),
-      enablePerformanceInsights: this.shouldEnablePerformanceInsights(),
+      enablePerformanceInsights: this.shouldEnableRdsPerformanceInsights(),
       performanceInsightRetention: this.getPerformanceInsightsRetention(),
       performanceInsightEncryptionKey: this.kmsKey,
       removalPolicy: this.isComplianceFramework() ? 
@@ -481,7 +481,7 @@ export class RdsPostgresComponent extends Component {
     return this.context.complianceFramework !== 'commercial' || !!this.config!.multiAz;
   }
 
-  private shouldEnablePerformanceInsights(): boolean {
+  private shouldEnableRdsPerformanceInsights(): boolean {
     return ['fedramp-moderate', 'fedramp-high'].includes(this.context.complianceFramework);
   }
 
@@ -550,14 +550,14 @@ export class RdsPostgresComponent extends Component {
         'database.instance.class': this.config!.instanceClass || 'db.t3.micro',
         'database.multi.az': (!!this.config!.multiAz).toString(),
         'database.backup.retention': this.getBackupRetentionDays().toString(),
-        'database.performance.insights': this.shouldEnableDatabasePerformanceInsights().toString()
+        'database.performance.insights': this.shouldEnableRdsPerformanceInsights().toString()
       }
     });
 
     // Enable Performance Insights based on compliance framework
-    if (this.shouldEnableDatabasePerformanceInsights()) {
+    if (this.shouldEnableRdsPerformanceInsights()) {
       const cfnInstance = this.database.node.defaultChild as rds.CfnDBInstance;
-      cfnInstance.performanceInsightsEnabled = true;
+      cfnInstance.enablePerformanceInsights = true;
       cfnInstance.performanceInsightsRetentionPeriod = this.getPerformanceInsightsRetentionDays();
       
       // Use customer-managed KMS key for Performance Insights in compliance environments
@@ -574,12 +574,6 @@ export class RdsPostgresComponent extends Component {
     cfnInstance.enableCloudwatchLogsExports = ['postgresql'];
   }
 
-  /**
-   * Determine if Performance Insights should be enabled based on compliance framework
-   */
-  private shouldEnableDatabasePerformanceInsights(): boolean {
-    return this.context.complianceFramework !== 'commercial';
-  }
 
   /**
    * Get Performance Insights retention period based on compliance framework
