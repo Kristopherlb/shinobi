@@ -3,4 +3,9 @@
  * SNS topic with encryption and monitoring features
  */
 
-export { SnsTopicComponent } from './sns-topic.component';
+export { 
+  SnsTopicComponent,
+  SNS_TOPIC_CONFIG_SCHEMA,
+  SnsTopicConfig,
+  SnsTopicConfigBuilder
+} from './sns-topic.component';

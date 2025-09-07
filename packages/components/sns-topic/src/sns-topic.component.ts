@@ -434,8 +434,9 @@ export class SnsTopicComponent extends Component {
    * Synthesis phase - Create SNS topic with compliance hardening
    */
   public synth(): void {
-    // Build configuration
-    this.config = this.buildConfigSync();
+    // Build configuration using ConfigBuilder
+    const configBuilder = new SnsTopicConfigBuilder(this.context, this.spec);
+    this.config = configBuilder.buildSync();
     
     // Create KMS key for encryption if needed
     this.createKmsKeyIfNeeded();
@@ -650,7 +651,7 @@ export class SnsTopicComponent extends Component {
   /**
    * Build topic capability data shape
    */
-  private buildTopicCapability(): TopicSnsCapability {
+  private buildTopicCapability(): any {
     return {
       topicArn: this.topic!.topicArn
     };
@@ -660,8 +661,7 @@ export class SnsTopicComponent extends Component {
    * Helper methods for compliance decisions
    */
   private shouldUseCustomerManagedKey(): boolean {
-    return ['fedramp-moderate', 'fedramp-high'].includes(this.context.complianceFramework) ||
-           this.config!.encryption?.enabled === true;
+    return this.config!.encryption?.enabled === true;
   }
 
   private buildTopicName(): string | undefined {
@@ -681,22 +681,4 @@ export class SnsTopicComponent extends Component {
     return name;
   }
 
-  /**
-   * Simplified config building for demo purposes
-   */
-  private buildConfigSync(): SnsTopicConfig {
-    const config: SnsTopicConfig = {
-      topicName: this.spec.config?.topicName,
-      displayName: this.spec.config?.displayName,
-      fifo: this.spec.config?.fifo || { enabled: false },
-      encryption: this.spec.config?.encryption || { enabled: this.shouldUseCustomerManagedKey() },
-      deliveryPolicy: this.spec.config?.deliveryPolicy,
-      messageFilterPolicy: this.spec.config?.messageFilterPolicy,
-      tracingConfig: {
-        enabled: ['fedramp-moderate', 'fedramp-high'].includes(this.context.complianceFramework)
-      }
-    };
-
-    return config;
-  }
 }
