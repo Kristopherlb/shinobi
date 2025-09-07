@@ -336,7 +336,7 @@ export class RdsPostgresComponent extends Component {
       deletionProtection: this.isComplianceFramework(),
       multiAz: this.shouldEnableMultiAz(),
       parameterGroup: this.parameterGroup,
-      enhancedMonitoringInterval: this.getEnhancedMonitoringInterval(),
+      monitoringInterval: this.getEnhancedMonitoringInterval(),
       enablePerformanceInsights: this.shouldEnablePerformanceInsights(),
       performanceInsightRetention: this.getPerformanceInsightsRetention(),
       performanceInsightEncryptionKey: this.kmsKey,

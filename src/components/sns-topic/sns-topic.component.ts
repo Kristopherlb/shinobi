@@ -201,14 +201,15 @@ export class SnsTopicComponent extends Component {
       topicName: this.buildTopicName(),
       displayName: this.config!.displayName,
       masterKey: this.kmsKey,
-      tracing: this.config!.tracingConfig?.enabled ? 
-        sns.Tracing.ACTIVE : sns.Tracing.PASS_THROUGH
+      // Tracing not supported in SNS TopicProps - would be configured at subscription level
     };
 
     // Configure FIFO topic if enabled
     if (this.config!.fifo?.enabled) {
-      topicProps.fifo = true;
-      topicProps.contentBasedDeduplication = this.config!.fifo.contentBasedDeduplication;
+      Object.assign(topicProps, {
+        fifo: true,
+        contentBasedDeduplication: this.config!.fifo.contentBasedDeduplication
+      });
     }
 
     this.topic = new sns.Topic(this, 'Topic', topicProps);

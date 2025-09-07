@@ -373,7 +373,7 @@ export class S3BucketComponent extends Component {
     // Note: This requires CLI/API configuration, not CDK
     this.bucket!.addToResourcePolicy(new iam.PolicyStatement({
       sid: 'RequireMFAForDelete',
-      effect: iam.Effect.Deny,
+      effect: iam.Effect.DENY,
       principals: [new iam.AnyPrincipal()],
       actions: ['s3:DeleteObject', 's3:DeleteObjectVersion'],
       resources: [`${this.bucket!.bucketArn}/*`],
@@ -498,14 +498,14 @@ def handler(event, context):
 
   private getStorageClass(storageClass: string): s3.StorageClass {
     const storageClassMap: Record<string, s3.StorageClass> = {
-      'STANDARD_IA': s3.StorageClass.STANDARD_INFREQUENT_ACCESS,
+      'STANDARD_IA': s3.StorageClass.INFREQUENT_ACCESS,
       'ONEZONE_IA': s3.StorageClass.ONE_ZONE_INFREQUENT_ACCESS,
       'GLACIER': s3.StorageClass.GLACIER,
       'DEEP_ARCHIVE': s3.StorageClass.DEEP_ARCHIVE,
       'GLACIER_IR': s3.StorageClass.GLACIER_INSTANT_RETRIEVAL
     };
     
-    return storageClassMap[storageClass] || s3.StorageClass.STANDARD_INFREQUENT_ACCESS;
+    return storageClassMap[storageClass] || s3.StorageClass.INFREQUENT_ACCESS;
   }
 
   /**

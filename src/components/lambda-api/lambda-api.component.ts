@@ -157,60 +157,7 @@ export class LambdaApiConfigBuilder extends ConfigBuilder<LambdaApiConfig> {
     return config as LambdaApiConfig;
   }
 
-  protected applyComplianceDefaults(config: Record<string, any>): Record<string, any> {
-    const complianceDefaults = this.getComplianceDefaults();
-    return { ...complianceDefaults, ...config };
-  }
-
-  protected getComplianceDefaults(): Record<string, any> {
-    switch (this.context.context.complianceFramework) {
-      case 'fedramp-moderate':
-        return {
-          encryption: { 
-            enabled: true,
-            kmsKeyArn: 'customer-managed' // Will be resolved during synthesis
-          },
-          vpc: { enabled: true }, // Deploy in VPC
-          xrayTracing: true,
-          monitoring: { 
-            enabled: true,
-            logRetentionDays: 90
-          }
-        };
-      
-      case 'fedramp-high':
-        return {
-          encryption: { 
-            enabled: true,
-            kmsKeyArn: 'customer-managed',
-            keyRotation: true
-          },
-          vpc: { 
-            enabled: true,
-            privateSubnetsOnly: true // No public internet access
-          },
-          xrayTracing: true,
-          monitoring: { 
-            enabled: true,
-            logRetentionDays: 365,
-            detailedMetrics: true
-          },
-          stig: { compliance: true }
-        };
-      
-      default: // commercial
-        return {
-          encryption: { 
-            enabled: true,
-            awsManaged: true // AWS-managed KMS key
-          },
-          monitoring: { 
-            enabled: true,
-            logRetentionDays: 30
-          }
-        };
-    }
-  }
+  // Using inherited applyComplianceDefaults from ConfigBuilder base class
 }
 
 /**
