@@ -659,6 +659,13 @@ export class S3BucketComponent extends Component {
         keySpec: kms.KeySpec.SYMMETRIC_DEFAULT
       });
 
+      // Apply standard tags
+      this.applyStandardTags(this.kmsKey, {
+        'encryption-type': 'customer-managed',
+        'key-rotation': (this.context.complianceFramework === 'fedramp-high').toString(),
+        'resource-type': 's3-bucket-encryption'
+      });
+
       // Grant S3 service access to the key
       this.kmsKey.addToResourcePolicy(new iam.PolicyStatement({
         sid: 'AllowS3Service',
@@ -701,6 +708,14 @@ export class S3BucketComponent extends Component {
           expiration: cdk.Duration.days(this.context.complianceFramework === 'fedramp-high' ? 2555 : 1095) // 7 or 3 years
         }],
         removalPolicy: cdk.RemovalPolicy.RETAIN
+      });
+
+      // Apply standard tags
+      this.applyStandardTags(this.auditBucket, {
+        'bucket-type': 'audit',
+        'versioning': 'enabled',
+        'encryption': 'kms',
+        'retention-years': (this.context.complianceFramework === 'fedramp-high' ? '7' : '3')
       });
 
       // Apply Object Lock for immutable audit logs in FedRAMP High
@@ -761,6 +776,15 @@ export class S3BucketComponent extends Component {
     }
 
     this.bucket = new s3.Bucket(this, 'Bucket', bucketProps);
+
+    // Apply standard tags
+    this.applyStandardTags(this.bucket, {
+      'bucket-type': 'main',
+      'public-access': (!!this.config!.public).toString(),
+      'versioning': (this.config!.versioning !== false).toString(),
+      'website-enabled': (!!this.config!.website?.enabled).toString(),
+      'eventbridge-enabled': (!!this.config!.eventBridgeEnabled).toString()
+    });
   }
 
   /**
@@ -921,6 +945,13 @@ def handler(event, context):
       memorySize: 1024
     });
 
+    // Apply standard tags
+    this.applyStandardTags(this.virusScanLambda, {
+      'function-type': 'virus-scan',
+      'runtime': 'python3.11',
+      'security-tool': 'clamav'
+    });
+
     // Add S3 notification to trigger virus scan
     if (this.bucket) {
       this.bucket.addObjectCreatedNotification(new s3n.LambdaDestination(this.virusScanLambda));
@@ -982,7 +1013,7 @@ def handler(event, context):
     const bucketName = this.bucket!.bucketName;
 
     // 1. S3 Request Errors Alarm (4xx errors)
-    new cloudwatch.Alarm(this, 'S3RequestErrorsAlarm', {
+    const requestErrorsAlarm = new cloudwatch.Alarm(this, 'S3RequestErrorsAlarm', {
       alarmName: `${this.context.serviceName}-${this.spec.name}-request-errors`,
       alarmDescription: 'S3 bucket request errors alarm',
       metric: new cloudwatch.Metric({
@@ -1000,8 +1031,15 @@ def handler(event, context):
       treatMissingData: cloudwatch.TreatMissingData.NOT_BREACHING
     });
 
+    // Apply standard tags
+    this.applyStandardTags(requestErrorsAlarm, {
+      'alarm-type': 'request-errors',
+      'metric-type': 'client-errors',
+      'threshold': '10'
+    });
+
     // 2. S3 Server Errors Alarm (5xx errors)
-    new cloudwatch.Alarm(this, 'S3ServerErrorsAlarm', {
+    const serverErrorsAlarm = new cloudwatch.Alarm(this, 'S3ServerErrorsAlarm', {
       alarmName: `${this.context.serviceName}-${this.spec.name}-server-errors`,
       alarmDescription: 'S3 bucket server errors alarm',
       metric: new cloudwatch.Metric({
@@ -1017,6 +1055,13 @@ def handler(event, context):
       evaluationPeriods: 1,
       comparisonOperator: cloudwatch.ComparisonOperator.GREATER_THAN_OR_EQUAL_TO_THRESHOLD,
       treatMissingData: cloudwatch.TreatMissingData.NOT_BREACHING
+    });
+
+    // Apply standard tags
+    this.applyStandardTags(serverErrorsAlarm, {
+      'alarm-type': 'server-errors',
+      'metric-type': 'server-errors',
+      'threshold': '1'
     });
 
     this.logComponentEvent('observability_configured', 'OpenTelemetry observability standard applied to S3 bucket', {
