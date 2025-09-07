@@ -1,19 +1,17 @@
 {
-  "extends": "../../tsconfig.base.json",
+  "extends": "../../../tsconfig.base.json",
   "compilerOptions": {
-    "outDir": "./lib",
-    "rootDir": "./src",
-    "baseUrl": ".",
-    "paths": {
-      "@platform/contracts": ["../../platform/contracts/src"]
-    }
+    "outDir": "./dist",
+    "rootDir": "../../../",
+    "declaration": true,
+    "declarationMap": true,
+    "sourceMap": true
   },
   "include": [
     "src/**/*"
   ],
-  "references": [
-    {
-      "path": "../../platform/contracts"
-    }
+  "exclude": [
+    "dist",
+    "node_modules"
   ]
 }
