@@ -3,4 +3,9 @@
  * Auto Scaling Group with compliance and monitoring features
  */
 
-export { AutoScalingGroupComponent } from './auto-scaling-group.component';
+export { 
+  AutoScalingGroupComponent, 
+  AUTO_SCALING_GROUP_CONFIG_SCHEMA,
+  AutoScalingGroupConfig,
+  AutoScalingGroupConfigBuilder
+} from './auto-scaling-group.component';
