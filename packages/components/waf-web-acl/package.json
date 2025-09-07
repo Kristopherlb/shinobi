@@ -1,0 +1,26 @@
+{
+  "name": "@platform/waf-web-acl",
+  "version": "1.0.0",
+  "description": "WAF Web ACL Component for Platform Binding & Trigger Specification v1.0",
+  "main": "lib/index.js",
+  "types": "lib/index.d.ts",
+  "scripts": {
+    "build": "tsc",
+    "watch": "tsc -w",
+    "test": "jest",
+    "test:watch": "jest --watch"
+  },
+  "dependencies": {
+    "aws-cdk-lib": "^2.100.0",
+    "constructs": "^10.0.0",
+    "@platform/contracts": "workspace:*"
+  },
+  "devDependencies": {
+    "@types/jest": "^29.5.0",
+    "jest": "^29.5.0",
+    "typescript": "^5.0.0"
+  },
+  "files": [
+    "lib/"
+  ]
+}
