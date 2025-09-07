@@ -511,6 +511,12 @@ export class LambdaWorkerComponent extends Component {
         keyUsage: kms.KeyUsage.ENCRYPT_DECRYPT,
         keySpec: kms.KeySpec.SYMMETRIC_DEFAULT
       });
+
+      // Apply standard tags
+      this.applyStandardTags(this.kmsKey, {
+        'encryption-type': 'customer-managed',
+        'key-rotation': (this.context.complianceFramework === 'fedramp-high').toString()
+      });
     }
   }
 
@@ -537,6 +543,14 @@ export class LambdaWorkerComponent extends Component {
     }
 
     this.lambdaFunction = new lambda.Function(this, 'LambdaFunction', props);
+
+    // Apply standard tags
+    this.applyStandardTags(this.lambdaFunction, {
+      'function-type': 'worker',
+      'runtime': this.getLambdaRuntime().name,
+      'memory': (this.config!.memory || 256).toString(),
+      'timeout': (this.config!.timeout || 300).toString()
+    });
   }
 
   /**
@@ -558,19 +572,32 @@ export class LambdaWorkerComponent extends Component {
 
   private applyCommercialHardening(): void {
     // Basic CloudWatch logging
-    new logs.LogGroup(this, 'LogGroup', {
+    const logGroup = new logs.LogGroup(this, 'LogGroup', {
       logGroupName: `/aws/lambda/${this.lambdaFunction!.functionName}`,
       retention: logs.RetentionDays.ONE_MONTH,
       removalPolicy: cdk.RemovalPolicy.DESTROY
+    });
+
+    // Apply standard tags
+    this.applyStandardTags(logGroup, {
+      'log-type': 'lambda-execution',
+      'retention': '1-month'
     });
   }
 
   private applyFedrampModerateHardening(): void {
     // Enhanced logging with longer retention
-    new logs.LogGroup(this, 'LogGroup', {
+    const logGroup = new logs.LogGroup(this, 'LogGroup', {
       logGroupName: `/aws/lambda/${this.lambdaFunction!.functionName}`,
       retention: logs.RetentionDays.THREE_MONTHS,
       removalPolicy: cdk.RemovalPolicy.RETAIN
+    });
+
+    // Apply standard tags
+    this.applyStandardTags(logGroup, {
+      'log-type': 'lambda-execution',
+      'retention': '3-months',
+      'compliance': 'fedramp-moderate'
     });
 
     // Enable X-Ray tracing for auditability
@@ -589,10 +616,17 @@ export class LambdaWorkerComponent extends Component {
     this.applyFedrampModerateHardening();
 
     // Extended log retention for audit purposes
-    new logs.LogGroup(this, 'AuditLogGroup', {
+    const auditLogGroup = new logs.LogGroup(this, 'AuditLogGroup', {
       logGroupName: `/aws/lambda/${this.lambdaFunction!.functionName}/audit`,
       retention: logs.RetentionDays.ONE_YEAR,
       removalPolicy: cdk.RemovalPolicy.RETAIN
+    });
+
+    // Apply standard tags
+    this.applyStandardTags(auditLogGroup, {
+      'log-type': 'audit',
+      'retention': '1-year',
+      'compliance': 'fedramp-high'
     });
 
     // Add STIG compliance configuration
