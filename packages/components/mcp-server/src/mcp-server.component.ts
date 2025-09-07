@@ -19,11 +19,7 @@ import {
   Component,
   ComponentSpec,
   ComponentContext,
-  ComponentCapabilities,
-  ConfigBuilder,
-  ComponentConfigSchema,
-  ApiRestCapability,
-  ContainerCapability
+  ComponentCapabilities
 } from '@platform/contracts';
 
 /**
@@ -110,7 +106,7 @@ export interface McpServerConfig {
 /**
  * Configuration schema for MCP Server component
  */
-export const MCP_SERVER_CONFIG_SCHEMA: ComponentConfigSchema = {
+export const MCP_SERVER_CONFIG_SCHEMA = {
   type: 'object',
   title: 'MCP Server Configuration',
   description: 'Configuration for Model Context Protocol Server',
@@ -399,7 +395,6 @@ export class McpServerComponent extends Component {
       taskDefinition: this.taskDefinition!,
       serviceName: `${this.context.serviceName}-mcp-server`,
       desiredCount: this.config!.taskCount,
-      enableLogging: true,
       platformVersion: ecs.FargatePlatformVersion.LATEST,
       enableExecuteCommand: this.context.complianceFramework !== 'fedramp-high',
       assignPublicIp: false
@@ -489,7 +484,7 @@ export class McpServerComponent extends Component {
     this.logResourceCreation('application-load-balancer', this.loadBalancer.loadBalancerName);
   }
 
-  private buildApiCapability(): ApiRestCapability {
+  private buildApiCapability(): any {
     const endpoint = this.loadBalancer ? 
       `https://${this.config!.loadBalancer?.domainName || this.loadBalancer.loadBalancerDnsName}` :
       `http://internal:${this.config!.containerPort}`;
@@ -512,7 +507,7 @@ export class McpServerComponent extends Component {
     };
   }
 
-  private buildContainerCapability(): ContainerCapability {
+  private buildContainerCapability(): any {
     return {
       clusterArn: this.cluster!.clusterArn,
       serviceArn: this.service!.serviceArn,
