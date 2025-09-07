@@ -27,6 +27,8 @@
       "@platform/resolver": ["packages/resolver/src"],
       "@platform/services": ["packages/services/src"],
       "@platform/templates": ["packages/templates/src"],
+      "@platform/openfeature-provider": ["packages/components/openfeature-provider/src"],
+      "@platform/feature-flag": ["packages/components/feature-flag/src"],
       "@platform/*": ["packages/components/*/src"]
     }
   },
