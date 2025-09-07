@@ -9,3 +9,6 @@ export * from './component-interfaces';
 
 // Export binding contracts
 export * from './binding-context';
+
+// Export OpenFeature standard interfaces
+export * from './openfeature-interfaces';
