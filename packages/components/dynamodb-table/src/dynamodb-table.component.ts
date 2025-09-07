@@ -681,51 +681,6 @@ export class DynamoDbTableComponent extends Component {
     };
   }
 
-  /**
-   * Apply compliance hardening based on framework
-   */
-  private applyComplianceHardening(): void {
-    switch (this.context.complianceFramework) {
-      case 'fedramp-high':
-        this.applyFedrampHighHardening();
-        break;
-      case 'fedramp-moderate':
-        this.applyFedrampModerateHardening();
-        break;
-      default:
-        this.applyCommercialHardening();
-        break;
-    }
-  }
-
-  /**
-   * Apply FedRAMP High compliance hardening
-   */
-  private applyFedrampHighHardening(): void {
-    this.logComplianceEvent('fedramp_high_hardening_applied', 'Applied FedRAMP High hardening to DynamoDB table', {
-      pointInTimeRecovery: this.config!.pointInTimeRecovery,
-      encryptionType: this.config!.encryption?.type,
-      backupRetention: this.config!.backup?.retentionPeriod
-    });
-  }
-
-  /**
-   * Apply FedRAMP Moderate compliance hardening
-   */
-  private applyFedrampModerateHardening(): void {
-    this.logComplianceEvent('fedramp_moderate_hardening_applied', 'Applied FedRAMP Moderate hardening to DynamoDB table', {
-      pointInTimeRecovery: this.config!.pointInTimeRecovery,
-      encryptionType: this.config!.encryption?.type,
-      backupRetention: this.config!.backup?.retentionPeriod
-    });
-  }
-
-  /**
-   * Apply commercial hardening
-   */
-  private applyCommercialHardening(): void {
-    this.logComponentEvent('commercial_hardening_applied', 'Applied commercial security hardening to DynamoDB table');
-  }
 
   /**
    * Configure OpenTelemetry Observability Standard - CloudWatch Alarms for DynamoDB Table
