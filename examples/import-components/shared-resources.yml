@@ -1,0 +1,56 @@
+# Shared Resources Configuration
+# Distributed environment configuration for import components
+# Managed by Platform Team - contains ARNs for shared AWS resources
+
+# QA Environment - Shared resources for testing
+qa-us-east-1:
+  defaults:
+    # Shared PostgreSQL database managed by Data Platform Team
+    sharedDbArn: arn:aws:rds:us-east-1:123456789012:db:shared-qa-database-cluster
+    dbSecurityGroupId: sg-0a1b2c3d4e5f6g7h8
+    dbSecretArn: arn:aws:secretsmanager:us-east-1:123456789012:secret:shared-qa-db-credentials-AbCdEf
+    
+    # Company-wide notification topic managed by Platform Team  
+    notificationTopicArn: arn:aws:sns:us-east-1:123456789012:company-order-events-qa
+    
+    # Additional shared resources
+    sharedRedisClusterEndpoint: shared-qa-redis.abc123.cache.amazonaws.com
+    complianceLogsBucketArn: arn:aws:s3:::company-compliance-logs-qa
+
+# Staging Environment - Pre-production shared resources
+staging-us-east-1:
+  defaults:
+    sharedDbArn: arn:aws:rds:us-east-1:123456789012:db:shared-staging-database-cluster
+    dbSecurityGroupId: sg-9h8g7f6e5d4c3b2a1
+    dbSecretArn: arn:aws:secretsmanager:us-east-1:123456789012:secret:shared-staging-db-credentials-XyZ789
+    
+    notificationTopicArn: arn:aws:sns:us-east-1:123456789012:company-order-events-staging
+    
+    sharedRedisClusterEndpoint: shared-staging-redis.xyz789.cache.amazonaws.com
+    complianceLogsBucketArn: arn:aws:s3:::company-compliance-logs-staging
+
+# Production Environment - Live shared resources
+prod-us-east-1:
+  defaults:
+    # Production database with high availability
+    sharedDbArn: arn:aws:rds:us-east-1:987654321098:db:shared-prod-database-cluster
+    dbSecurityGroupId: sg-prod1a2b3c4d5e6f7g8h
+    dbSecretArn: arn:aws:secretsmanager:us-east-1:987654321098:secret:shared-prod-db-credentials-Secure123
+    
+    # Production notification topic with DLQ
+    notificationTopicArn: arn:aws:sns:us-east-1:987654321098:company-order-events-prod
+    
+    sharedRedisClusterEndpoint: shared-prod-redis.secure123.cache.amazonaws.com
+    complianceLogsBucketArn: arn:aws:s3:::company-compliance-logs-prod
+
+# Multi-region support - EU production
+prod-eu-central-1:
+  defaults:
+    sharedDbArn: arn:aws:rds:eu-central-1:987654321098:db:shared-eu-database-cluster
+    dbSecurityGroupId: sg-eu-prod1a2b3c4d5e6f7g8h
+    dbSecretArn: arn:aws:secretsmanager:eu-central-1:987654321098:secret:shared-eu-db-credentials-Euro456
+    
+    notificationTopicArn: arn:aws:sns:eu-central-1:987654321098:company-order-events-eu-prod
+    
+    sharedRedisClusterEndpoint: shared-eu-redis.euro456.cache.amazonaws.com
+    complianceLogsBucketArn: arn:aws:s3:::company-compliance-logs-eu-prod

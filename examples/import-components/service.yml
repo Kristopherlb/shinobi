@@ -1,0 +1,80 @@
+# Example service using Import Components
+# Connects to existing shared AWS resources managed by other teams
+
+service: order-processor
+owner: team-fulfillment
+complianceFramework: fedramp-moderate
+runtime: nodejs20
+
+# Import environment-specific shared resource ARNs
+environments:
+  $ref: './shared-resources.yml'
+
+components:
+  # Import existing shared QA database
+  - name: shared-qa-db
+    type: rds-postgres-import
+    config:
+      instanceArn: '${env:sharedDbArn}'
+      securityGroupId: '${env:dbSecurityGroupId}' 
+      secretArn: '${env:dbSecretArn}'
+    labels:
+      managed-by: data-platform-team
+      shared: true
+
+  # Import existing company-wide notification topic
+  - name: order-notifications
+    type: sns-topic-import
+    config:
+      topicArn: '${env:notificationTopicArn}'
+      topicName: 'Company Order Events'
+    labels:
+      managed-by: platform-team
+      global: true
+
+  # Lambda API that uses both imported resources
+  - name: api
+    type: lambda-api
+    config:
+      handler: src/api.handler
+      memory: 512
+      timeout: 30
+    binds:
+      # Connect to shared database with read/write access
+      - to: shared-qa-db
+        capability: db:postgres
+        access: readwrite
+        env:
+          DATABASE_URL: ORDERS_DATABASE_URL
+          DB_HOST: ORDERS_DB_HOST
+      
+      # Publish order events to company-wide topic
+      - to: order-notifications
+        capability: topic:sns
+        access: write
+        options:
+          messageAttributes:
+            - service: order-processor
+            - team: fulfillment
+
+  # Background worker that processes orders
+  - name: worker
+    type: lambda-worker
+    config:
+      handler: src/worker.handler
+      memory: 1024
+      timeout: 300
+    binds:
+      # Worker needs read access to database
+      - to: shared-qa-db
+        capability: db:postgres
+        access: read
+      
+      # Subscribe to order events for processing
+      - to: order-notifications
+        capability: topic:sns
+        access: read
+        options:
+          filterPolicy:
+            eventType: ['order.created', 'order.updated']
+          batchSize: 10
