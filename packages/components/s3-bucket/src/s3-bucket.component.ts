@@ -16,10 +16,7 @@ import {
   Component,
   ComponentSpec,
   ComponentContext,
-  ComponentCapabilities,
-  ConfigBuilder,
-  ComponentConfigSchema,
-  BucketS3Capability
+  ComponentCapabilities
 } from '@platform/contracts';
 
 /**
@@ -85,7 +82,7 @@ export interface S3BucketConfig {
 /**
  * Configuration schema for S3 Bucket component
  */
-export const S3_BUCKET_CONFIG_SCHEMA: ComponentConfigSchema = {
+export const S3_BUCKET_CONFIG_SCHEMA = {
   type: 'object',
   title: 'S3 Bucket Configuration',
   description: 'Configuration for creating an S3 bucket for object storage',
@@ -102,6 +99,33 @@ export const S3_BUCKET_CONFIG_SCHEMA: ComponentConfigSchema = {
       description: 'Whether to allow public access to the bucket',
       default: false
     },
+    website: {
+      type: 'object',
+      description: 'Static website hosting configuration',
+      properties: {
+        enabled: {
+          type: 'boolean',
+          description: 'Enable static website hosting',
+          default: false
+        },
+        indexDocument: {
+          type: 'string',
+          description: 'Index document for website hosting',
+          default: 'index.html'
+        },
+        errorDocument: {
+          type: 'string',
+          description: 'Error document for website hosting',
+          default: 'error.html'
+        }
+      },
+      additionalProperties: false,
+      default: {
+        enabled: false,
+        indexDocument: 'index.html',
+        errorDocument: 'error.html'
+      }
+    },
     eventBridgeEnabled: {
       type: 'boolean',
       description: 'Enable EventBridge notifications for object events',
@@ -111,15 +135,448 @@ export const S3_BUCKET_CONFIG_SCHEMA: ComponentConfigSchema = {
       type: 'boolean',
       description: 'Enable object versioning',
       default: true
+    },
+    encryption: {
+      type: 'object',
+      description: 'Encryption configuration',
+      properties: {
+        type: {
+          type: 'string',
+          description: 'Encryption type',
+          enum: ['AES256', 'KMS'],
+          default: 'AES256'
+        },
+        kmsKeyArn: {
+          type: 'string',
+          description: 'KMS key ARN for encryption (required when type is KMS)',
+          pattern: '^arn:aws:kms:[a-z0-9-]+:[0-9]{12}:key/[a-f0-9-]{36}$'
+        }
+      },
+      additionalProperties: false,
+      default: {
+        type: 'AES256'
+      }
+    },
+    lifecycleRules: {
+      type: 'array',
+      description: 'Lifecycle rules for object management',
+      items: {
+        type: 'object',
+        properties: {
+          id: {
+            type: 'string',
+            description: 'Unique identifier for the lifecycle rule'
+          },
+          enabled: {
+            type: 'boolean',
+            description: 'Whether the lifecycle rule is enabled',
+            default: true
+          },
+          transitions: {
+            type: 'array',
+            description: 'Storage class transitions',
+            items: {
+              type: 'object',
+              properties: {
+                storageClass: {
+                  type: 'string',
+                  description: 'Target storage class',
+                  enum: ['STANDARD_IA', 'ONEZONE_IA', 'GLACIER', 'DEEP_ARCHIVE', 'GLACIER_IR']
+                },
+                transitionAfter: {
+                  type: 'number',
+                  description: 'Number of days after creation to transition',
+                  minimum: 1
+                }
+              },
+              required: ['storageClass', 'transitionAfter'],
+              additionalProperties: false
+            }
+          },
+          expiration: {
+            type: 'object',
+            description: 'Object expiration configuration',
+            properties: {
+              days: {
+                type: 'number',
+                description: 'Number of days after creation to expire objects',
+                minimum: 1
+              }
+            },
+            required: ['days'],
+            additionalProperties: false
+          }
+        },
+        required: ['id', 'enabled'],
+        additionalProperties: false
+      },
+      default: []
+    },
+    security: {
+      type: 'object',
+      description: 'Security tooling configuration',
+      properties: {
+        tools: {
+          type: 'object',
+          description: 'Security tools configuration',
+          properties: {
+            clamavScan: {
+              type: 'boolean',
+              description: 'Enable ClamAV virus scanning for uploaded objects',
+              default: false
+            }
+          },
+          additionalProperties: false,
+          default: {
+            clamavScan: false
+          }
+        }
+      },
+      additionalProperties: false,
+      default: {
+        tools: {
+          clamavScan: false
+        }
+      }
+    },
+    compliance: {
+      type: 'object',
+      description: 'Backup and compliance settings',
+      properties: {
+        objectLock: {
+          type: 'object',
+          description: 'Object Lock configuration for compliance',
+          properties: {
+            enabled: {
+              type: 'boolean',
+              description: 'Enable Object Lock',
+              default: false
+            },
+            mode: {
+              type: 'string',
+              description: 'Object Lock retention mode',
+              enum: ['GOVERNANCE', 'COMPLIANCE'],
+              default: 'COMPLIANCE'
+            },
+            retentionDays: {
+              type: 'number',
+              description: 'Default retention period in days',
+              minimum: 1,
+              maximum: 36500,
+              default: 395
+            }
+          },
+          additionalProperties: false,
+          default: {
+            enabled: false,
+            mode: 'COMPLIANCE',
+            retentionDays: 395
+          }
+        },
+        auditLogging: {
+          type: 'boolean',
+          description: 'Enable audit logging to centralized audit bucket',
+          default: false
+        }
+      },
+      additionalProperties: false,
+      default: {
+        objectLock: {
+          enabled: false,
+          mode: 'COMPLIANCE',
+          retentionDays: 395
+        },
+        auditLogging: false
+      }
     }
   },
   additionalProperties: false,
   defaults: {
     public: false,
+    website: {
+      enabled: false,
+      indexDocument: 'index.html',
+      errorDocument: 'error.html'
+    },
     eventBridgeEnabled: false,
-    versioning: true
+    versioning: true,
+    encryption: {
+      type: 'AES256'
+    },
+    lifecycleRules: [],
+    security: {
+      tools: {
+        clamavScan: false
+      }
+    },
+    compliance: {
+      objectLock: {
+        enabled: false,
+        mode: 'COMPLIANCE',
+        retentionDays: 395
+      },
+      auditLogging: false
+    }
   }
 };
+
+/**
+ * Configuration builder for S3 Bucket component
+ */
+export class S3BucketConfigBuilder {
+  private context: ComponentContext;
+  private spec: ComponentSpec;
+  
+  constructor(context: ComponentContext, spec: ComponentSpec) {
+    this.context = context;
+    this.spec = spec;
+  }
+
+  /**
+   * Builds the final configuration by applying platform defaults, compliance frameworks, and user overrides
+   */
+  public async build(): Promise<S3BucketConfig> {
+    return this.buildSync();
+  }
+
+  /**
+   * Synchronous version of build for use in synth() method
+   */
+  public buildSync(): S3BucketConfig {
+    // Start with platform defaults
+    const platformDefaults = this.getPlatformDefaults();
+    
+    // Apply compliance framework defaults
+    const complianceDefaults = this.getComplianceFrameworkDefaults();
+    
+    // Merge user configuration from spec
+    const userConfig = this.spec.config || {};
+    
+    // Merge configurations (user config takes precedence)
+    const mergedConfig = this.mergeConfigs(
+      this.mergeConfigs(platformDefaults, complianceDefaults),
+      userConfig
+    );
+    
+    return mergedConfig as S3BucketConfig;
+  }
+
+  /**
+   * Simple merge utility for combining configuration objects
+   */
+  private mergeConfigs(target: Record<string, any>, source: Record<string, any>): Record<string, any> {
+    const result = { ...target };
+    
+    for (const key in source) {
+      if (source[key] && typeof source[key] === 'object' && !Array.isArray(source[key])) {
+        result[key] = this.mergeConfigs(result[key] || {}, source[key]);
+      } else {
+        result[key] = source[key];
+      }
+    }
+    
+    return result;
+  }
+
+  /**
+   * Get platform-wide defaults for S3 Bucket
+   */
+  private getPlatformDefaults(): Record<string, any> {
+    return {
+      public: false,
+      versioning: this.getDefaultVersioning(),
+      eventBridgeEnabled: false,
+      encryption: {
+        type: this.getDefaultEncryptionType()
+      },
+      website: {
+        enabled: false,
+        indexDocument: 'index.html',
+        errorDocument: 'error.html'
+      },
+      lifecycleRules: this.getDefaultLifecycleRules(),
+      security: {
+        tools: {
+          clamavScan: this.getDefaultClamAVEnabled()
+        }
+      },
+      compliance: {
+        objectLock: {
+          enabled: this.getDefaultObjectLockEnabled(),
+          mode: 'COMPLIANCE',
+          retentionDays: this.getDefaultRetentionDays()
+        },
+        auditLogging: this.getDefaultAuditLogging()
+      }
+    };
+  }
+
+  /**
+   * Get compliance framework specific defaults
+   */
+  private getComplianceFrameworkDefaults(): Record<string, any> {
+    const framework = this.context.complianceFramework;
+    
+    switch (framework) {
+      case 'fedramp-moderate':
+        return {
+          versioning: true, // Required for compliance
+          encryption: {
+            type: 'KMS' // Customer-managed keys required
+          },
+          security: {
+            tools: {
+              clamavScan: true // Security scanning required
+            }
+          },
+          compliance: {
+            objectLock: {
+              enabled: false, // Not required for moderate
+              mode: 'GOVERNANCE',
+              retentionDays: 1095 // 3 years
+            },
+            auditLogging: true // Enhanced logging required
+          },
+          lifecycleRules: [
+            {
+              id: 'compliance-archival',
+              enabled: true,
+              transitions: [
+                {
+                  storageClass: 'GLACIER',
+                  transitionAfter: 90
+                },
+                {
+                  storageClass: 'DEEP_ARCHIVE',
+                  transitionAfter: 365
+                }
+              ]
+            }
+          ]
+        };
+        
+      case 'fedramp-high':
+        return {
+          versioning: true, // Required for compliance
+          encryption: {
+            type: 'KMS' // Customer-managed keys required
+          },
+          security: {
+            tools: {
+              clamavScan: true // Security scanning required
+            }
+          },
+          compliance: {
+            objectLock: {
+              enabled: true, // Required for immutable backups
+              mode: 'COMPLIANCE',
+              retentionDays: 2555 // 7 years
+            },
+            auditLogging: true // Enhanced logging required
+          },
+          lifecycleRules: [
+            {
+              id: 'fedramp-high-archival',
+              enabled: true,
+              transitions: [
+                {
+                  storageClass: 'GLACIER',
+                  transitionAfter: 90
+                },
+                {
+                  storageClass: 'DEEP_ARCHIVE',
+                  transitionAfter: 365
+                }
+              ],
+              expiration: {
+                days: 2555 // 7 years maximum retention
+              }
+            }
+          ]
+        };
+        
+      default: // commercial
+        return {};
+    }
+  }
+
+  /**
+   * Get default versioning setting based on compliance framework
+   */
+  private getDefaultVersioning(): boolean {
+    return ['fedramp-moderate', 'fedramp-high'].includes(this.context.complianceFramework);
+  }
+
+  /**
+   * Get default encryption type based on compliance framework
+   */
+  private getDefaultEncryptionType(): string {
+    return ['fedramp-moderate', 'fedramp-high'].includes(this.context.complianceFramework) ? 'KMS' : 'AES256';
+  }
+
+  /**
+   * Get default ClamAV scanning setting
+   */
+  private getDefaultClamAVEnabled(): boolean {
+    return ['fedramp-moderate', 'fedramp-high'].includes(this.context.complianceFramework);
+  }
+
+  /**
+   * Get default Object Lock setting
+   */
+  private getDefaultObjectLockEnabled(): boolean {
+    return this.context.complianceFramework === 'fedramp-high';
+  }
+
+  /**
+   * Get default retention days based on compliance framework
+   */
+  private getDefaultRetentionDays(): number {
+    switch (this.context.complianceFramework) {
+      case 'fedramp-high':
+        return 2555; // 7 years for high compliance
+      case 'fedramp-moderate':
+        return 1095; // 3 years for moderate compliance
+      default:
+        return 395; // ~1 year for commercial
+    }
+  }
+
+  /**
+   * Get default audit logging setting
+   */
+  private getDefaultAuditLogging(): boolean {
+    return ['fedramp-moderate', 'fedramp-high'].includes(this.context.complianceFramework);
+  }
+
+  /**
+   * Get default lifecycle rules based on compliance framework
+   */
+  private getDefaultLifecycleRules(): Array<any> {
+    const framework = this.context.complianceFramework;
+    
+    if (framework === 'fedramp-high' || framework === 'fedramp-moderate') {
+      return [
+        {
+          id: 'compliance-archival',
+          enabled: true,
+          transitions: [
+            {
+              storageClass: 'GLACIER',
+              transitionAfter: 90
+            },
+            {
+              storageClass: 'DEEP_ARCHIVE',
+              transitionAfter: 365
+            }
+          ]
+        }
+      ];
+    }
+    
+    return [];
+  }
+}
 
 /**
  * S3 Bucket Component implementing Component API Contract v1.0
