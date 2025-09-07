@@ -1,8 +1,8 @@
 import { describe, test, expect, beforeEach } from '@jest/globals';
 import { Template } from 'aws-cdk-lib/assertions';
 import * as cdk from 'aws-cdk-lib';
-import { LambdaApiComponent } from '../../../packages/components/lambda-api/src/lambda-api.component';
-import { ComponentContext, ComponentSpec } from '../../../packages/platform/contracts/src/component-interfaces';
+import { LambdaApiComponent } from '../src/lambda-api.component';
+import { ComponentContext, ComponentSpec } from '../../../platform/contracts/src/component-interfaces';
 
 describe('LambdaApiComponent - CloudFormation Synthesis', () => {
   let app: cdk.App;
