@@ -14,10 +14,7 @@ import {
   Component,
   ComponentSpec,
   ComponentContext,
-  ComponentCapabilities,
-  ConfigBuilder,
-  ComponentConfigSchema,
-  TopicSnsCapability
+  ComponentCapabilities
 } from '@platform/contracts';
 
 /**
@@ -74,7 +71,7 @@ export interface SnsTopicConfig {
 /**
  * Configuration schema for SNS Topic component
  */
-export const SNS_TOPIC_CONFIG_SCHEMA: ComponentConfigSchema = {
+export const SNS_TOPIC_CONFIG_SCHEMA = {
   type: 'object',
   title: 'SNS Topic Configuration',
   description: 'Configuration for creating an SNS pub/sub topic',
@@ -82,7 +79,7 @@ export const SNS_TOPIC_CONFIG_SCHEMA: ComponentConfigSchema = {
     topicName: {
       type: 'string',
       description: 'Topic name (will be auto-generated if not provided)',
-      pattern: '^[a-zA-Z0-9_-]+$',
+      pattern: '^[a-zA-Z0-9_-]+(\.fifo)?$',
       minLength: 1,
       maxLength: 256
     },
@@ -105,14 +102,321 @@ export const SNS_TOPIC_CONFIG_SCHEMA: ComponentConfigSchema = {
           description: 'Enable content-based deduplication',
           default: false
         }
+      },
+      additionalProperties: false,
+      default: {
+        enabled: false,
+        contentBasedDeduplication: false
+      }
+    },
+    encryption: {
+      type: 'object',
+      description: 'Encryption configuration',
+      properties: {
+        enabled: {
+          type: 'boolean',
+          description: 'Enable server-side encryption',
+          default: false
+        },
+        kmsKeyArn: {
+          type: 'string',
+          description: 'KMS key ARN for encryption',
+          pattern: '^arn:aws:kms:[a-z0-9-]+:[0-9]{12}:key/[a-f0-9-]{36}$'
+        }
+      },
+      additionalProperties: false,
+      default: {
+        enabled: false
+      }
+    },
+    deliveryPolicy: {
+      type: 'object',
+      description: 'Delivery policy configuration',
+      properties: {
+        http: {
+          type: 'object',
+          description: 'HTTP delivery retry policy',
+          properties: {
+            defaultHealthyRetryPolicy: {
+              type: 'object',
+              description: 'Default healthy retry policy for HTTP endpoints',
+              properties: {
+                numRetries: {
+                  type: 'number',
+                  description: 'Number of retries',
+                  minimum: 0,
+                  maximum: 100,
+                  default: 3
+                },
+                numMinDelayRetries: {
+                  type: 'number',
+                  description: 'Number of minimum delay retries',
+                  minimum: 0,
+                  maximum: 20,
+                  default: 0
+                },
+                minDelayTarget: {
+                  type: 'number',
+                  description: 'Minimum delay target in seconds',
+                  minimum: 1,
+                  maximum: 3600,
+                  default: 20
+                },
+                maxDelayTarget: {
+                  type: 'number',
+                  description: 'Maximum delay target in seconds',
+                  minimum: 1,
+                  maximum: 3600,
+                  default: 20
+                },
+                numMaxDelayRetries: {
+                  type: 'number',
+                  description: 'Number of maximum delay retries',
+                  minimum: 0,
+                  maximum: 20,
+                  default: 0
+                },
+                backoffFunction: {
+                  type: 'string',
+                  description: 'Backoff function type',
+                  enum: ['linear', 'arithmetic', 'geometric', 'exponential'],
+                  default: 'linear'
+                }
+              },
+              additionalProperties: false,
+              default: {
+                numRetries: 3,
+                numMinDelayRetries: 0,
+                minDelayTarget: 20,
+                maxDelayTarget: 20,
+                numMaxDelayRetries: 0,
+                backoffFunction: 'linear'
+              }
+            }
+          },
+          additionalProperties: false
+        }
+      },
+      additionalProperties: false
+    },
+    messageFilterPolicy: {
+      type: 'object',
+      description: 'Message filtering policy (arbitrary key-value pairs)',
+      additionalProperties: true
+    },
+    tracingConfig: {
+      type: 'object',
+      description: 'X-Ray tracing configuration',
+      properties: {
+        enabled: {
+          type: 'boolean',
+          description: 'Enable X-Ray tracing',
+          default: false
+        }
+      },
+      additionalProperties: false,
+      default: {
+        enabled: false
       }
     }
   },
   additionalProperties: false,
   defaults: {
-    fifo: { enabled: false }
+    fifo: {
+      enabled: false,
+      contentBasedDeduplication: false
+    },
+    encryption: {
+      enabled: false
+    },
+    tracingConfig: {
+      enabled: false
+    }
   }
 };
+
+/**
+ * Configuration builder for SNS Topic component
+ */
+export class SnsTopicConfigBuilder {
+  private context: ComponentContext;
+  private spec: ComponentSpec;
+  
+  constructor(context: ComponentContext, spec: ComponentSpec) {
+    this.context = context;
+    this.spec = spec;
+  }
+
+  /**
+   * Builds the final configuration by applying platform defaults, compliance frameworks, and user overrides
+   */
+  public async build(): Promise<SnsTopicConfig> {
+    return this.buildSync();
+  }
+
+  /**
+   * Synchronous version of build for use in synth() method
+   */
+  public buildSync(): SnsTopicConfig {
+    // Start with platform defaults
+    const platformDefaults = this.getPlatformDefaults();
+    
+    // Apply compliance framework defaults
+    const complianceDefaults = this.getComplianceFrameworkDefaults();
+    
+    // Merge user configuration from spec
+    const userConfig = this.spec.config || {};
+    
+    // Merge configurations (user config takes precedence)
+    const mergedConfig = this.mergeConfigs(
+      this.mergeConfigs(platformDefaults, complianceDefaults),
+      userConfig
+    );
+    
+    return mergedConfig as SnsTopicConfig;
+  }
+
+  /**
+   * Simple merge utility for combining configuration objects
+   */
+  private mergeConfigs(target: Record<string, any>, source: Record<string, any>): Record<string, any> {
+    const result = { ...target };
+    
+    for (const key in source) {
+      if (source[key] && typeof source[key] === 'object' && !Array.isArray(source[key])) {
+        result[key] = this.mergeConfigs(result[key] || {}, source[key]);
+      } else {
+        result[key] = source[key];
+      }
+    }
+    
+    return result;
+  }
+
+  /**
+   * Get platform-wide defaults for SNS Topic
+   */
+  private getPlatformDefaults(): Record<string, any> {
+    return {
+      fifo: {
+        enabled: false,
+        contentBasedDeduplication: false
+      },
+      encryption: {
+        enabled: this.getDefaultEncryptionEnabled()
+      },
+      tracingConfig: {
+        enabled: this.getDefaultTracingEnabled()
+      },
+      deliveryPolicy: this.getDefaultDeliveryPolicy()
+    };
+  }
+
+  /**
+   * Get compliance framework specific defaults
+   */
+  private getComplianceFrameworkDefaults(): Record<string, any> {
+    const framework = this.context.complianceFramework;
+    
+    switch (framework) {
+      case 'fedramp-moderate':
+        return {
+          encryption: {
+            enabled: true // Encryption required for compliance
+          },
+          tracingConfig: {
+            enabled: true // Enhanced monitoring required
+          },
+          deliveryPolicy: {
+            http: {
+              defaultHealthyRetryPolicy: {
+                numRetries: 5, // Increased retries for reliability
+                numMinDelayRetries: 2,
+                minDelayTarget: 30,
+                maxDelayTarget: 120,
+                numMaxDelayRetries: 2,
+                backoffFunction: 'exponential' // Better for compliance
+              }
+            }
+          }
+        };
+        
+      case 'fedramp-high':
+        return {
+          encryption: {
+            enabled: true // Mandatory encryption
+          },
+          tracingConfig: {
+            enabled: true // Required for audit trails
+          },
+          deliveryPolicy: {
+            http: {
+              defaultHealthyRetryPolicy: {
+                numRetries: 10, // Maximum retries for high compliance
+                numMinDelayRetries: 3,
+                minDelayTarget: 60,
+                maxDelayTarget: 300,
+                numMaxDelayRetries: 3,
+                backoffFunction: 'exponential' // Exponential backoff for reliability
+              }
+            }
+          }
+        };
+        
+      default: // commercial
+        return {};
+    }
+  }
+
+  /**
+   * Get default encryption enabled setting
+   */
+  private getDefaultEncryptionEnabled(): boolean {
+    return ['fedramp-moderate', 'fedramp-high'].includes(this.context.complianceFramework);
+  }
+
+  /**
+   * Get default tracing enabled setting
+   */
+  private getDefaultTracingEnabled(): boolean {
+    return ['fedramp-moderate', 'fedramp-high'].includes(this.context.complianceFramework);
+  }
+
+  /**
+   * Get default delivery policy based on compliance framework
+   */
+  private getDefaultDeliveryPolicy(): any {
+    const framework = this.context.complianceFramework;
+    
+    if (framework === 'fedramp-high' || framework === 'fedramp-moderate') {
+      return {
+        http: {
+          defaultHealthyRetryPolicy: {
+            numRetries: framework === 'fedramp-high' ? 10 : 5,
+            numMinDelayRetries: framework === 'fedramp-high' ? 3 : 2,
+            minDelayTarget: framework === 'fedramp-high' ? 60 : 30,
+            maxDelayTarget: framework === 'fedramp-high' ? 300 : 120,
+            numMaxDelayRetries: framework === 'fedramp-high' ? 3 : 2,
+            backoffFunction: 'exponential'
+          }
+        }
+      };
+    }
+    
+    return {
+      http: {
+        defaultHealthyRetryPolicy: {
+          numRetries: 3,
+          numMinDelayRetries: 0,
+          minDelayTarget: 20,
+          maxDelayTarget: 20,
+          numMaxDelayRetries: 0,
+          backoffFunction: 'linear'
+        }
+      }
+    };
+  }
+}
 
 /**
  * SNS Topic Component implementing Component API Contract v1.0
