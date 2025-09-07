@@ -6,6 +6,7 @@
  * every component is a predictable, secure, and composable building block.
  */
 
+import * as cdk from 'aws-cdk-lib';
 import { Construct, IConstruct } from 'constructs';
 import { ComponentSpec, ComponentContext, ComponentCapabilities } from './interfaces';
 
@@ -162,5 +163,105 @@ export abstract class Component extends Construct {
    */
   protected registerCapability(capabilityKey: string, capabilityData: any): void {
     this.capabilities[capabilityKey] = capabilityData;
+  }
+
+  /**
+   * Builds standardized tags according to the Platform Tagging Standard v1.0.
+   * 
+   * This method creates the complete set of mandatory tags that must be applied
+   * to all AWS resources created by platform components.
+   * 
+   * @returns Record of tag keys to tag values
+   */
+  protected buildStandardTags(): Record<string, string> {
+    const now = new Date();
+    const deploymentId = `deploy-${now.getFullYear()}${(now.getMonth() + 1).toString().padStart(2, '0')}${now.getDate().toString().padStart(2, '0')}-${now.getHours().toString().padStart(2, '0')}${now.getMinutes().toString().padStart(2, '0')}${now.getSeconds().toString().padStart(2, '0')}`;
+    
+    return {
+      // Core Service Tags
+      'service-name': this.context.serviceName,
+      'service-version': this.context.serviceLabels?.version || '1.0.0',
+      'component-name': this.spec.name,
+      'component-type': this.getType(),
+      
+      // Environment & Deployment Tags
+      'environment': this.context.environment,
+      'region': this.context.region,
+      'deployed-by': `platform-v1.0.0`,
+      'deployment-id': deploymentId,
+      
+      // Governance & Compliance Tags
+      'compliance-framework': this.context.complianceFramework,
+      'data-classification': this.spec.labels?.['data-classification'] || 'internal',
+      'backup-required': this.getBackupRequirement().toString(),
+      'monitoring-level': this.getMonitoringLevel(),
+      
+      // Cost Management Tags
+      'cost-center': this.context.serviceLabels?.['cost-center'] || 'engineering',
+      'billing-project': this.context.serviceLabels?.['billing-project'] || this.context.serviceName,
+      'resource-owner': this.context.serviceLabels?.['resource-owner'] || 'platform-team'
+    };
+  }
+
+  /**
+   * Applies standard tags to any CDK construct that supports tagging.
+   * 
+   * This method should be called for every taggable resource created by the component
+   * to ensure compliance with the Platform Tagging Standard.
+   * 
+   * @param resource The CDK construct to tag (must support Tags.of())
+   * @param additionalTags Optional component-specific tags to add
+   */
+  protected applyStandardTags(resource: IConstruct, additionalTags?: Record<string, string>): void {
+    const standardTags = this.buildStandardTags();
+    
+    // Apply all standard tags
+    Object.entries(standardTags).forEach(([key, value]) => {
+      cdk.Tags.of(resource).add(key, value);
+    });
+    
+    // Apply any additional component-specific tags
+    if (additionalTags) {
+      Object.entries(additionalTags).forEach(([key, value]) => {
+        cdk.Tags.of(resource).add(key, value);
+      });
+    }
+  }
+
+  /**
+   * Determines backup requirement based on compliance framework and component policy
+   */
+  private getBackupRequirement(): boolean {
+    // Check component policy first
+    if (this.spec.policy?.backup?.enabled !== undefined) {
+      return this.spec.policy.backup.enabled;
+    }
+    
+    // Default based on compliance framework
+    switch (this.context.complianceFramework) {
+      case 'fedramp-high':
+      case 'fedramp-moderate':
+        return true;
+      default:
+        return false;
+    }
+  }
+
+  /**
+   * Determines monitoring level based on compliance framework and component policy
+   */
+  private getMonitoringLevel(): string {
+    if (this.spec.policy?.monitoring?.metricsEnabled) {
+      return this.context.complianceFramework === 'fedramp-high' ? 'comprehensive' : 'enhanced';
+    }
+    
+    switch (this.context.complianceFramework) {
+      case 'fedramp-high':
+        return 'comprehensive';
+      case 'fedramp-moderate':
+        return 'enhanced';
+      default:
+        return 'basic';
+    }
   }
 }
