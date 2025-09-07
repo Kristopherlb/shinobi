@@ -16,10 +16,7 @@ import {
   Component,
   ComponentSpec,
   ComponentContext,
-  ComponentCapabilities,
-  ConfigBuilder,
-  ComponentConfigSchema,
-  LambdaFunctionCapability
+  ComponentCapabilities
 } from '@platform/contracts';
 
 /**
@@ -76,7 +73,7 @@ export interface LambdaWorkerConfig {
 /**
  * Configuration schema for Lambda Worker component
  */
-export const LAMBDA_WORKER_CONFIG_SCHEMA: ComponentConfigSchema = {
+export const LAMBDA_WORKER_CONFIG_SCHEMA = {
   type: 'object',
   title: 'Lambda Worker Configuration',
   description: 'Configuration for creating a Lambda function for background processing',
@@ -107,11 +104,116 @@ export const LAMBDA_WORKER_CONFIG_SCHEMA: ComponentConfigSchema = {
       maximum: 900,
       default: 300
     },
+    codePath: {
+      type: 'string',
+      description: 'Path to Lambda function code',
+      default: './src'
+    },
+    environmentVariables: {
+      type: 'object',
+      description: 'Environment variables for the Lambda function',
+      additionalProperties: {
+        type: 'string'
+      },
+      default: {}
+    },
     reservedConcurrency: {
       type: 'number',
       description: 'Reserved concurrency for the function',
       minimum: 0,
       maximum: 1000
+    },
+    deadLetterQueue: {
+      type: 'object',
+      description: 'Dead letter queue configuration for failed invocations',
+      properties: {
+        enabled: {
+          type: 'boolean',
+          description: 'Enable dead letter queue',
+          default: false
+        },
+        maxReceiveCount: {
+          type: 'number',
+          description: 'Maximum receive count before sending to DLQ',
+          minimum: 1,
+          maximum: 1000,
+          default: 3
+        }
+      },
+      additionalProperties: false,
+      default: {
+        enabled: false,
+        maxReceiveCount: 3
+      }
+    },
+    vpc: {
+      type: 'object',
+      description: 'VPC configuration for FedRAMP deployments',
+      properties: {
+        vpcId: {
+          type: 'string',
+          description: 'VPC ID for Lambda deployment',
+          pattern: '^vpc-[a-f0-9]{8,17}$'
+        },
+        subnetIds: {
+          type: 'array',
+          description: 'Subnet IDs for Lambda deployment',
+          items: {
+            type: 'string',
+            pattern: '^subnet-[a-f0-9]{8,17}$'
+          },
+          maxItems: 16
+        },
+        securityGroupIds: {
+          type: 'array',
+          description: 'Security group IDs for Lambda',
+          items: {
+            type: 'string',
+            pattern: '^sg-[a-f0-9]{8,17}$'
+          },
+          maxItems: 5
+        }
+      },
+      additionalProperties: false
+    },
+    encryption: {
+      type: 'object',
+      description: 'Encryption configuration',
+      properties: {
+        kmsKeyArn: {
+          type: 'string',
+          description: 'KMS key ARN for environment variable encryption',
+          pattern: '^arn:aws:kms:[a-z0-9-]+:[0-9]{12}:key/[a-f0-9-]{36}$'
+        }
+      },
+      additionalProperties: false
+    },
+    security: {
+      type: 'object',
+      description: 'Security tooling configuration',
+      properties: {
+        tools: {
+          type: 'object',
+          description: 'Security tools configuration',
+          properties: {
+            falco: {
+              type: 'boolean',
+              description: 'Enable Falco security monitoring',
+              default: false
+            }
+          },
+          additionalProperties: false,
+          default: {
+            falco: false
+          }
+        }
+      },
+      additionalProperties: false,
+      default: {
+        tools: {
+          falco: false
+        }
+      }
     }
   },
   additionalProperties: false,
@@ -119,9 +221,227 @@ export const LAMBDA_WORKER_CONFIG_SCHEMA: ComponentConfigSchema = {
     runtime: 'nodejs20.x',
     memory: 256,
     timeout: 300,
-    codePath: './src'
+    codePath: './src',
+    environmentVariables: {},
+    deadLetterQueue: {
+      enabled: false,
+      maxReceiveCount: 3
+    },
+    security: {
+      tools: {
+        falco: false
+      }
+    }
   }
 };
+
+/**
+ * Configuration builder for Lambda Worker component
+ */
+export class LambdaWorkerConfigBuilder {
+  private context: ComponentContext;
+  private spec: ComponentSpec;
+  
+  constructor(context: ComponentContext, spec: ComponentSpec) {
+    this.context = context;
+    this.spec = spec;
+  }
+
+  /**
+   * Builds the final configuration by applying platform defaults, compliance frameworks, and user overrides
+   */
+  public async build(): Promise<LambdaWorkerConfig> {
+    return this.buildSync();
+  }
+
+  /**
+   * Synchronous version of build for use in synth() method
+   */
+  public buildSync(): LambdaWorkerConfig {
+    // Start with platform defaults
+    const platformDefaults = this.getPlatformDefaults();
+    
+    // Apply compliance framework defaults
+    const complianceDefaults = this.getComplianceFrameworkDefaults();
+    
+    // Merge user configuration from spec
+    const userConfig = this.spec.config || {};
+    
+    // Merge configurations (user config takes precedence)
+    const mergedConfig = this.mergeConfigs(
+      this.mergeConfigs(platformDefaults, complianceDefaults),
+      userConfig
+    );
+    
+    // Resolve environment interpolations (sync version)
+    const resolvedConfig = this.resolveEnvironmentInterpolationsSync(mergedConfig);
+    
+    return resolvedConfig as LambdaWorkerConfig;
+  }
+
+  /**
+   * Synchronous version of environment interpolation resolution
+   */
+  private resolveEnvironmentInterpolationsSync(config: Record<string, any>): Record<string, any> {
+    // For now, return config as-is since we don't have environment config in sync context
+    // In a real implementation, this would resolve ${env:key} patterns
+    return config;
+  }
+
+  /**
+   * Simple merge utility for combining configuration objects
+   */
+  private mergeConfigs(target: Record<string, any>, source: Record<string, any>): Record<string, any> {
+    const result = { ...target };
+    
+    for (const key in source) {
+      if (source[key] && typeof source[key] === 'object' && !Array.isArray(source[key])) {
+        result[key] = this.mergeConfigs(result[key] || {}, source[key]);
+      } else {
+        result[key] = source[key];
+      }
+    }
+    
+    return result;
+  }
+
+  /**
+   * Get platform-wide defaults for Lambda Worker
+   */
+  private getPlatformDefaults(): Record<string, any> {
+    return {
+      runtime: this.getDefaultRuntime(),
+      memory: this.getDefaultMemorySize(),
+      timeout: this.getDefaultTimeout(),
+      codePath: './src',
+      environmentVariables: {},
+      deadLetterQueue: {
+        enabled: false,
+        maxReceiveCount: 3
+      },
+      security: {
+        tools: {
+          falco: false
+        }
+      }
+    };
+  }
+
+  /**
+   * Get compliance framework specific defaults
+   */
+  private getComplianceFrameworkDefaults(): Record<string, any> {
+    const framework = this.context.complianceFramework;
+    
+    switch (framework) {
+      case 'fedramp-moderate':
+        return {
+          memory: this.getComplianceMemorySize('fedramp-moderate'),
+          timeout: this.getComplianceTimeout('fedramp-moderate'),
+          deadLetterQueue: {
+            enabled: true, // Required for audit trail
+            maxReceiveCount: 1 // Immediate DLQ for compliance
+          },
+          vpc: {
+            // VPC deployment required for compliance
+          },
+          security: {
+            tools: {
+              falco: true // Enable security monitoring
+            }
+          }
+        };
+        
+      case 'fedramp-high':
+        return {
+          memory: this.getComplianceMemorySize('fedramp-high'),
+          timeout: this.getComplianceTimeout('fedramp-high'),
+          deadLetterQueue: {
+            enabled: true,
+            maxReceiveCount: 1
+          },
+          vpc: {
+            // VPC deployment required for compliance
+          },
+          encryption: {
+            // Customer-managed KMS key required
+          },
+          security: {
+            tools: {
+              falco: true
+            }
+          }
+        };
+        
+      default: // commercial
+        return {};
+    }
+  }
+
+  /**
+   * Get default runtime based on compliance framework
+   */
+  private getDefaultRuntime(): string {
+    // Use latest stable runtime for all frameworks
+    return 'nodejs20.x';
+  }
+
+  /**
+   * Get default memory size based on compliance framework
+   */
+  private getDefaultMemorySize(): number {
+    switch (this.context.complianceFramework) {
+      case 'fedramp-high':
+        return 512; // More memory for enhanced logging/monitoring
+      case 'fedramp-moderate':
+        return 384; // Moderate increase for compliance overhead
+      default:
+        return 256; // Cost-optimized for commercial
+    }
+  }
+
+  /**
+   * Get compliance-specific memory size
+   */
+  private getComplianceMemorySize(framework: string): number {
+    switch (framework) {
+      case 'fedramp-high':
+        return 512;
+      case 'fedramp-moderate':
+        return 384;
+      default:
+        return 256;
+    }
+  }
+
+  /**
+   * Get default timeout based on compliance framework
+   */
+  private getDefaultTimeout(): number {
+    switch (this.context.complianceFramework) {
+      case 'fedramp-high':
+        return 600; // Longer timeout for compliance logging
+      case 'fedramp-moderate':
+        return 450; // Moderate increase
+      default:
+        return 300; // Standard timeout for background processing
+    }
+  }
+
+  /**
+   * Get compliance-specific timeout
+   */
+  private getComplianceTimeout(framework: string): number {
+    switch (framework) {
+      case 'fedramp-high':
+        return 600;
+      case 'fedramp-moderate':
+        return 450;
+      default:
+        return 300;
+    }
+  }
+}
 
 /**
  * Lambda Worker Component implementing Component API Contract v1.0
