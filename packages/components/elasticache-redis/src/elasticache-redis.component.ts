@@ -772,7 +772,7 @@ export class ElastiCacheRedisComponent extends Component {
     
     this.replicationGroup = new elasticache.CfnReplicationGroup(this, 'ReplicationGroup', {
       replicationGroupId: clusterName,
-      description: `Redis cluster for ${this.context.serviceName}-${this.spec.name}`,
+      replicationGroupDescription: `Redis cluster for ${this.context.serviceName}-${this.spec.name}`,
       
       // Engine configuration
       engine: 'redis',

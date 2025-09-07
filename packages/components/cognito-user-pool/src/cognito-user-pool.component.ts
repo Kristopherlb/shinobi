@@ -10,6 +10,7 @@ import * as lambda from 'aws-cdk-lib/aws-lambda';
 import * as logs from 'aws-cdk-lib/aws-logs';
 import * as kms from 'aws-cdk-lib/aws-kms';
 import * as iam from 'aws-cdk-lib/aws-iam';
+import * as acm from 'aws-cdk-lib/aws-certificatemanager';
 import * as cdk from 'aws-cdk-lib';
 import { Construct } from 'constructs';
 import {
@@ -809,7 +810,7 @@ export class CognitoUserPoolComponent extends Component {
    * Build MFA second factor configuration
    */
   private buildMfaSecondFactor(): cognito.MfaSecondFactor {
-    const mfaConfig = this.config!.mfa || {};
+    const mfaConfig = this.config!.mfa || { enableSms: true, enableTotp: true };
     
     return {
       sms: mfaConfig.enableSms !== false,
@@ -828,7 +829,7 @@ export class CognitoUserPoolComponent extends Component {
     } else if (recovery.email) {
       return cognito.AccountRecovery.EMAIL_ONLY;
     } else if (recovery.phone) {
-      return cognito.AccountRecovery.PHONE_WITHOUT_MFA;
+      return cognito.AccountRecovery.PHONE_ONLY_WITHOUT_MFA;
     } else {
       return cognito.AccountRecovery.EMAIL_ONLY;
     }
@@ -869,6 +870,8 @@ export class CognitoUserPoolComponent extends Component {
   private buildLambdaTriggers(): cognito.UserPoolTriggers | undefined {
     const triggers = this.config!.triggers;
     if (!triggers) return undefined;
+    
+    const lambdaTriggers: cognito.UserPoolTriggers = {};
     
     const lambdaTriggers: cognito.UserPoolTriggers = {};
     
@@ -1061,7 +1064,7 @@ export class CognitoUserPoolComponent extends Component {
       this.userPoolDomain = this.userPool!.addDomain('Domain', {
         customDomain: {
           domainName: domainConfig.customDomain.domainName,
-          certificate: cognito.ICertificate.fromCertificateArn(this, 'DomainCert', domainConfig.customDomain.certificateArn)
+          certificate: acm.Certificate.fromCertificateArn(this, 'DomainCert', domainConfig.customDomain.certificateArn)
         }
       });
     } else if (domainConfig.domainPrefix) {

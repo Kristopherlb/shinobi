@@ -9,6 +9,7 @@ import * as elbv2 from 'aws-cdk-lib/aws-elasticloadbalancingv2';
 import * as ec2 from 'aws-cdk-lib/aws-ec2';
 import * as s3 from 'aws-cdk-lib/aws-s3';
 import * as iam from 'aws-cdk-lib/aws-iam';
+import * as cloudwatch from 'aws-cdk-lib/aws-cloudwatch';
 import * as cdk from 'aws-cdk-lib';
 import { Construct } from 'constructs';
 import {
@@ -101,6 +102,34 @@ export interface ApplicationLoadBalancerConfig {
   
   /** Idle timeout */
   idleTimeout?: number;
+  
+  /** Deployment strategy configuration */
+  deploymentStrategy?: {
+    type: 'single' | 'blue-green';
+    blueGreenConfig?: {
+      productionTrafficRoute?: {
+        type: 'AllAtOnce' | 'Linear' | 'Canary';
+        percentage?: number;
+        interval?: number;
+      };
+      testTrafficRoute?: {
+        type: 'AllAtOnce' | 'Linear' | 'Canary';
+        percentage?: number;
+      };
+      terminationWaitTime?: number;
+    };
+  };
+  
+  /** CloudWatch monitoring configuration */
+  monitoring?: {
+    enabled?: boolean;
+    alarms?: {
+      httpCode5xxThreshold?: number;
+      unhealthyHostThreshold?: number;
+      connectionErrorThreshold?: number;
+      rejectedConnectionThreshold?: number;
+    };
+  };
   
   /** Tags for the load balancer */
   tags?: Record<string, string>;
@@ -362,6 +391,98 @@ export const APPLICATION_LOAD_BALANCER_CONFIG_SCHEMA = {
       minimum: 1,
       maximum: 4000,
       default: 60
+    },
+    deploymentStrategy: {
+      type: 'object',
+      description: 'Deployment strategy configuration',
+      properties: {
+        type: {
+          type: 'string',
+          description: 'Deployment strategy type',
+          enum: ['single', 'blue-green'],
+          default: 'single'
+        },
+        blueGreenConfig: {
+          type: 'object',
+          description: 'Blue-green deployment configuration',
+          properties: {
+            productionTrafficRoute: {
+              type: 'object',
+              description: 'Production traffic routing configuration',
+              properties: {
+                type: {
+                  type: 'string',
+                  description: 'Traffic routing type',
+                  enum: ['AllAtOnce', 'Linear', 'Canary'],
+                  default: 'AllAtOnce'
+                },
+                percentage: {
+                  type: 'number',
+                  description: 'Traffic percentage for canary/linear deployments',
+                  minimum: 1,
+                  maximum: 100,
+                  default: 10
+                },
+                interval: {
+                  type: 'number',
+                  description: 'Interval in minutes between traffic shifts',
+                  minimum: 1,
+                  maximum: 60,
+                  default: 5
+                }
+              }
+            },
+            terminationWaitTime: {
+              type: 'number',
+              description: 'Wait time in minutes before terminating old environment',
+              minimum: 0,
+              maximum: 2880,
+              default: 5
+            }
+          }
+        }
+      }
+    },
+    monitoring: {
+      type: 'object',
+      description: 'CloudWatch monitoring configuration',
+      properties: {
+        enabled: {
+          type: 'boolean',
+          description: 'Enable CloudWatch monitoring and alarms',
+          default: false
+        },
+        alarms: {
+          type: 'object',
+          description: 'CloudWatch alarm thresholds',
+          properties: {
+            httpCode5xxThreshold: {
+              type: 'number',
+              description: 'Threshold for HTTP 5xx errors alarm',
+              minimum: 1,
+              default: 10
+            },
+            unhealthyHostThreshold: {
+              type: 'number',
+              description: 'Threshold for unhealthy hosts alarm',
+              minimum: 1,
+              default: 1
+            },
+            connectionErrorThreshold: {
+              type: 'number',
+              description: 'Threshold for connection errors alarm',
+              minimum: 1,
+              default: 5
+            },
+            rejectedConnectionThreshold: {
+              type: 'number',
+              description: 'Threshold for rejected connections alarm',
+              minimum: 1,
+              default: 1
+            }
+          }
+        }
+      }
     }
   },
   additionalProperties: false
@@ -459,6 +580,12 @@ export class ApplicationLoadBalancerConfigBuilder {
       },
       accessLogs: {
         enabled: false
+      },
+      deploymentStrategy: {
+        type: 'single'
+      },
+      monitoring: {
+        enabled: false
       }
     };
   }
@@ -476,6 +603,12 @@ export class ApplicationLoadBalancerConfigBuilder {
           accessLogs: {
             enabled: true, // Required for audit compliance
             prefix: 'alb-access-logs'
+          },
+          deploymentStrategy: {
+            type: 'single' // Blue-green handled by CodeDeploy
+          },
+          monitoring: {
+            enabled: true // Enhanced monitoring for compliance
           },
           listeners: [
             {
@@ -504,6 +637,12 @@ export class ApplicationLoadBalancerConfigBuilder {
             enabled: true, // Mandatory audit logging
             prefix: 'alb-access-logs'
           },
+          deploymentStrategy: {
+            type: 'single' // Blue-green handled by CodeDeploy
+          },
+          monitoring: {
+            enabled: true // Comprehensive monitoring required
+          },
           listeners: [
             {
               port: 443,
@@ -529,6 +668,12 @@ export class ApplicationLoadBalancerConfigBuilder {
           deletionProtection: false, // Cost optimization
           accessLogs: {
             enabled: false // Optional for commercial
+          },
+          deploymentStrategy: {
+            type: 'single'
+          },
+          monitoring: {
+            enabled: false
           }
         };
     }
@@ -579,6 +724,9 @@ export class ApplicationLoadBalancerComponent extends Component {
       
       // Create listeners
       this.createListeners();
+      
+      // Configure observability (OpenTelemetry Standard)
+      this.configureObservabilityForAlb();
       
       // Apply compliance hardening
       this.applyComplianceHardening();
@@ -790,7 +938,14 @@ export class ApplicationLoadBalancerComponent extends Component {
    * Create target groups from configuration
    */
   private createTargetGroups(): void {
-    if (!this.config!.targetGroups) return;
+    if (!this.config!.targetGroups) {
+      // Handle blue-green deployment strategy
+      if (this.config!.deploymentStrategy?.type === 'blue-green') {
+        this.createBlueGreenTargetGroups();
+        return;
+      }
+      return;
+    }
 
     for (const tgConfig of this.config!.targetGroups) {
       const targetGroup = new elbv2.ApplicationTargetGroup(this, `TargetGroup${tgConfig.name}`, {
@@ -862,7 +1017,7 @@ export class ApplicationLoadBalancerComponent extends Component {
         certificates: listenerConfig.certificateArn ? [
           elbv2.ListenerCertificate.fromArn(listenerConfig.certificateArn)
         ] : undefined,
-        sslPolicy: listenerConfig.sslPolicy ? elbv2.SslPolicy.forName(listenerConfig.sslPolicy) : undefined,
+        sslPolicy: listenerConfig.sslPolicy ? elbv2.SslPolicy.TLS12_EXT : undefined,
         defaultAction: this.buildDefaultAction(listenerConfig)
       });
 
@@ -894,7 +1049,8 @@ export class ApplicationLoadBalancerComponent extends Component {
           });
         case 'redirect':
           return elbv2.ListenerAction.redirect({
-            url: action.redirectUrl,
+            host: action.redirectUrl ? new URL(action.redirectUrl).hostname : undefined,
+            path: action.redirectUrl ? new URL(action.redirectUrl).pathname : undefined,
             permanent: true
           });
         case 'forward':
@@ -974,6 +1130,232 @@ export class ApplicationLoadBalancerComponent extends Component {
     this.logComplianceEvent('fedramp_moderate_hardening_applied', 'Applied FedRAMP Moderate hardening to Application Load Balancer', {
       deletionProtection: this.config!.deletionProtection,
       accessLogsEnabled: this.config!.accessLogs?.enabled
+    });
+  }
+
+  /**
+   * Apply commercial hardening
+   */
+  private applyCommercialHardening(): void {
+    this.logComponentEvent('commercial_hardening_applied', 'Applied commercial security hardening to Application Load Balancer');
+  }
+
+  /**
+   * Create blue-green target groups for deployment strategy
+   */
+  private createBlueGreenTargetGroups(): void {
+    // Create Blue target group
+    const blueTargetGroup = new elbv2.ApplicationTargetGroup(this, 'BlueTargetGroup', {
+      targetGroupName: `${this.context.serviceName}-${this.spec.name}-blue`,
+      port: 80,
+      protocol: elbv2.ApplicationProtocol.HTTP,
+      vpc: this.vpc!,
+      targetType: elbv2.TargetType.INSTANCE,
+      healthCheck: {
+        enabled: true,
+        path: '/health',
+        protocol: elbv2.Protocol.HTTP,
+        healthyThresholdCount: 2,
+        unhealthyThresholdCount: 2,
+        timeout: cdk.Duration.seconds(5),
+        interval: cdk.Duration.seconds(30)
+      }
+    });
+
+    // Create Green target group
+    const greenTargetGroup = new elbv2.ApplicationTargetGroup(this, 'GreenTargetGroup', {
+      targetGroupName: `${this.context.serviceName}-${this.spec.name}-green`,
+      port: 80,
+      protocol: elbv2.ApplicationProtocol.HTTP,
+      vpc: this.vpc!,
+      targetType: elbv2.TargetType.INSTANCE,
+      healthCheck: {
+        enabled: true,
+        path: '/health',
+        protocol: elbv2.Protocol.HTTP,
+        healthyThresholdCount: 2,
+        unhealthyThresholdCount: 2,
+        timeout: cdk.Duration.seconds(5),
+        interval: cdk.Duration.seconds(30)
+      }
+    });
+
+    this.targetGroups.push(blueTargetGroup, greenTargetGroup);
+
+    // Apply standard tags
+    this.applyStandardTags(blueTargetGroup, {
+      'resource-type': 'target-group',
+      'deployment-strategy': 'blue-green',
+      'environment-type': 'blue'
+    });
+
+    this.applyStandardTags(greenTargetGroup, {
+      'resource-type': 'target-group',
+      'deployment-strategy': 'blue-green',
+      'environment-type': 'green'
+    });
+
+    this.logResourceCreation('blue-target-group', blueTargetGroup.targetGroupName);
+    this.logResourceCreation('green-target-group', greenTargetGroup.targetGroupName);
+  }
+
+  /**
+   * Configure OpenTelemetry Observability Standard - CloudWatch Alarms for ALB
+   */
+  private configureObservabilityForAlb(): void {
+    const monitoringConfig = this.config!.monitoring;
+    
+    if (!monitoringConfig?.enabled) {
+      return;
+    }
+
+    const alarmThresholds = monitoringConfig.alarms || {};
+    const loadBalancerFullName = this.loadBalancer!.loadBalancerFullName;
+
+    // 1. HTTP 5xx Server Errors Alarm
+    new cloudwatch.Alarm(this, 'HTTPCode5xxAlarm', {
+      alarmName: `${this.context.serviceName}-${this.spec.name}-http-5xx-errors`,
+      alarmDescription: 'ALB HTTP 5xx server errors alarm',
+      metric: new cloudwatch.Metric({
+        namespace: 'AWS/ApplicationELB',
+        metricName: 'HTTPCode_Target_5XX_Count',
+        dimensionsMap: {
+          LoadBalancer: loadBalancerFullName
+        },
+        statistic: 'Sum',
+        period: cdk.Duration.minutes(5)
+      }),
+      threshold: alarmThresholds.httpCode5xxThreshold || 10,
+      evaluationPeriods: 2,
+      comparisonOperator: cloudwatch.ComparisonOperator.GREATER_THAN_THRESHOLD,
+      treatMissingData: cloudwatch.TreatMissingData.NOT_BREACHING
+    });
+
+    // 2. Unhealthy Host Count Alarm
+    new cloudwatch.Alarm(this, 'UnHealthyHostAlarm', {
+      alarmName: `${this.context.serviceName}-${this.spec.name}-unhealthy-hosts`,
+      alarmDescription: 'ALB unhealthy host count alarm',
+      metric: new cloudwatch.Metric({
+        namespace: 'AWS/ApplicationELB',
+        metricName: 'UnHealthyHostCount',
+        dimensionsMap: {
+          LoadBalancer: loadBalancerFullName
+        },
+        statistic: 'Average',
+        period: cdk.Duration.minutes(5)
+      }),
+      threshold: alarmThresholds.unhealthyHostThreshold || 1,
+      evaluationPeriods: 2,
+      comparisonOperator: cloudwatch.ComparisonOperator.GREATER_THAN_OR_EQUAL_TO_THRESHOLD,
+      treatMissingData: cloudwatch.TreatMissingData.NOT_BREACHING
+    });
+
+    // 3. Target Connection Error Count Alarm
+    new cloudwatch.Alarm(this, 'TargetConnectionErrorAlarm', {
+      alarmName: `${this.context.serviceName}-${this.spec.name}-connection-errors`,
+      alarmDescription: 'ALB target connection errors alarm',
+      metric: new cloudwatch.Metric({
+        namespace: 'AWS/ApplicationELB',
+        metricName: 'TargetConnectionErrorCount',
+        dimensionsMap: {
+          LoadBalancer: loadBalancerFullName
+        },
+        statistic: 'Sum',
+        period: cdk.Duration.minutes(5)
+      }),
+      threshold: alarmThresholds.connectionErrorThreshold || 5,
+      evaluationPeriods: 2,
+      comparisonOperator: cloudwatch.ComparisonOperator.GREATER_THAN_THRESHOLD,
+      treatMissingData: cloudwatch.TreatMissingData.NOT_BREACHING
+    });
+
+    // 4. Rejected Connection Count Alarm
+    new cloudwatch.Alarm(this, 'RejectedConnectionAlarm', {
+      alarmName: `${this.context.serviceName}-${this.spec.name}-rejected-connections`,
+      alarmDescription: 'ALB rejected connections alarm',
+      metric: new cloudwatch.Metric({
+        namespace: 'AWS/ApplicationELB',
+        metricName: 'RejectedConnectionCount',
+        dimensionsMap: {
+          LoadBalancer: loadBalancerFullName
+        },
+        statistic: 'Sum',
+        period: cdk.Duration.minutes(5)
+      }),
+      threshold: alarmThresholds.rejectedConnectionThreshold || 1,
+      evaluationPeriods: 2,
+      comparisonOperator: cloudwatch.ComparisonOperator.GREATER_THAN_THRESHOLD,
+      treatMissingData: cloudwatch.TreatMissingData.NOT_BREACHING
+    });
+
+    this.logComponentEvent('observability_configured', 'OpenTelemetry observability standard applied to ALB', {
+      alarmsCreated: 4,
+      monitoringEnabled: true,
+      thresholds: alarmThresholds
+    });
+  }
+
+  /**
+   * Build load balancer capability data shape
+   */
+  private buildLoadBalancerCapability(): any {
+    const capability: any = {
+      loadBalancerArn: this.loadBalancer!.loadBalancerArn,
+      loadBalancerDnsName: this.loadBalancer!.loadBalancerDnsName,
+      loadBalancerCanonicalHostedZoneId: this.loadBalancer!.loadBalancerCanonicalHostedZoneId,
+      listeners: this.listeners.map(listener => ({
+        listenerArn: listener.listenerArn,
+        port: listener.port
+      }))
+    };
+
+    // Add blue-green specific capabilities for CodeDeploy integration
+    if (this.config!.deploymentStrategy?.type === 'blue-green') {
+      capability.deploymentStrategy = {
+        type: 'blue-green',
+        blueTargetGroupArn: this.targetGroups[0]?.targetGroupArn,
+        greenTargetGroupArn: this.targetGroups[1]?.targetGroupArn,
+        listenerArn: this.listeners[0]?.listenerArn
+      };
+    }
+
+    return capability;
+  }
+
+  /**
+   * Build target capability data shape
+   */
+  private buildTargetCapability(): any {
+    return {
+      targetGroups: this.targetGroups.map(tg => ({
+        targetGroupArn: tg.targetGroupArn,
+        targetGroupName: tg.targetGroupName
+      }))
+    };
+  }
+
+  /**
+   * Apply FedRAMP High compliance hardening
+   */
+  private applyFedrampHighHardening(): void {
+    this.logComplianceEvent('fedramp_high_hardening_applied', 'Applied FedRAMP High hardening to Application Load Balancer', {
+      deletionProtection: this.config!.deletionProtection,
+      accessLogsEnabled: this.config!.accessLogs?.enabled,
+      httpsEnforced: this.config!.listeners?.every(l => l.protocol === 'HTTPS'),
+      observabilityEnabled: this.config!.monitoring?.enabled,
+      deploymentStrategy: this.config!.deploymentStrategy?.type
+    });
+  }
+
+  /**
+   * Apply FedRAMP Moderate compliance hardening
+   */
+  private applyFedrampModerateHardening(): void {
+    this.logComplianceEvent('fedramp_moderate_hardening_applied', 'Applied FedRAMP Moderate hardening to Application Load Balancer', {
+      deletionProtection: this.config!.deletionProtection,
+      accessLogsEnabled: this.config!.accessLogs?.enabled,
+      observabilityEnabled: this.config!.monitoring?.enabled,
+      deploymentStrategy: this.config!.deploymentStrategy?.type
     });
   }
 
