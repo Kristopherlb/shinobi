@@ -11,6 +11,7 @@ import * as kms from 'aws-cdk-lib/aws-kms';
 import * as secretsmanager from 'aws-cdk-lib/aws-secretsmanager';
 import * as logs from 'aws-cdk-lib/aws-logs';
 import * as iam from 'aws-cdk-lib/aws-iam';
+import * as cloudwatch from 'aws-cdk-lib/aws-cloudwatch';
 import * as cdk from 'aws-cdk-lib';
 import { Construct } from 'constructs';
 import {
@@ -544,6 +545,9 @@ export class RdsPostgresComponent extends Component {
     // Apply compliance hardening
     this.applyComplianceHardening();
     
+    // Configure observability
+    this.configureObservabilityForRds();
+    
     // Register constructs
     this.registerConstruct('database', this.database!);
     this.registerConstruct('secret', this.secret!);
@@ -974,5 +978,80 @@ export class RdsPostgresComponent extends Component {
       default:
         return 60; // 1 minute for cost-effective monitoring
     }
+  }
+
+  /**
+   * Configure CloudWatch observability for RDS PostgreSQL
+   */
+  private configureObservabilityForRds(): void {
+    // Enable monitoring for compliance frameworks only
+    if (this.context.complianceFramework === 'commercial') {
+      return;
+    }
+
+    const dbIdentifier = this.database!.instanceIdentifier;
+
+    // 1. Database Connection Count Alarm
+    new cloudwatch.Alarm(this, 'DatabaseConnectionsAlarm', {
+      alarmName: `${this.context.serviceName}-${this.spec.name}-db-connections`,
+      alarmDescription: 'RDS PostgreSQL database connections alarm',
+      metric: new cloudwatch.Metric({
+        namespace: 'AWS/RDS',
+        metricName: 'DatabaseConnections',
+        dimensionsMap: {
+          DBInstanceIdentifier: dbIdentifier
+        },
+        statistic: 'Average',
+        period: cdk.Duration.minutes(5)
+      }),
+      threshold: 80,
+      evaluationPeriods: 2,
+      comparisonOperator: cloudwatch.ComparisonOperator.GREATER_THAN_THRESHOLD,
+      treatMissingData: cloudwatch.TreatMissingData.NOT_BREACHING
+    });
+
+    // 2. CPU Utilization Alarm
+    new cloudwatch.Alarm(this, 'DatabaseCPUAlarm', {
+      alarmName: `${this.context.serviceName}-${this.spec.name}-db-cpu`,
+      alarmDescription: 'RDS PostgreSQL CPU utilization alarm',
+      metric: new cloudwatch.Metric({
+        namespace: 'AWS/RDS',
+        metricName: 'CPUUtilization',
+        dimensionsMap: {
+          DBInstanceIdentifier: dbIdentifier
+        },
+        statistic: 'Average',
+        period: cdk.Duration.minutes(5)
+      }),
+      threshold: 80,
+      evaluationPeriods: 3,
+      comparisonOperator: cloudwatch.ComparisonOperator.GREATER_THAN_THRESHOLD,
+      treatMissingData: cloudwatch.TreatMissingData.NOT_BREACHING
+    });
+
+    // 3. Free Storage Space Alarm
+    new cloudwatch.Alarm(this, 'DatabaseStorageAlarm', {
+      alarmName: `${this.context.serviceName}-${this.spec.name}-db-storage`,
+      alarmDescription: 'RDS PostgreSQL free storage space alarm',
+      metric: new cloudwatch.Metric({
+        namespace: 'AWS/RDS',
+        metricName: 'FreeStorageSpace',
+        dimensionsMap: {
+          DBInstanceIdentifier: dbIdentifier
+        },
+        statistic: 'Average',
+        period: cdk.Duration.minutes(5)
+      }),
+      threshold: 2000000000, // 2GB in bytes
+      evaluationPeriods: 2,
+      comparisonOperator: cloudwatch.ComparisonOperator.LESS_THAN_THRESHOLD,
+      treatMissingData: cloudwatch.TreatMissingData.NOT_BREACHING
+    });
+
+    this.logComponentEvent('observability_configured', 'OpenTelemetry observability standard applied to RDS PostgreSQL', {
+      alarmsCreated: 3,
+      dbIdentifier: dbIdentifier,
+      monitoringEnabled: true
+    });
   }
 }

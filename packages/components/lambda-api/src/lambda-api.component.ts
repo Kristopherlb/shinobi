@@ -12,6 +12,7 @@ import * as kms from 'aws-cdk-lib/aws-kms';
 import * as logs from 'aws-cdk-lib/aws-logs';
 import * as xray from 'aws-cdk-lib/aws-xray';
 import * as iam from 'aws-cdk-lib/aws-iam';
+import * as cloudwatch from 'aws-cdk-lib/aws-cloudwatch';
 import * as cdk from 'aws-cdk-lib';
 import { Construct } from 'constructs';
 import {
@@ -487,6 +488,9 @@ export class LambdaApiComponent extends Component {
     // Apply compliance hardening
     this.applyComplianceHardening();
     
+    // Configure observability
+    this.configureObservabilityForLambda();
+    
     // Register constructs
     this.registerConstruct('lambdaFunction', this.lambdaFunction!);
     this.registerConstruct('api', this.api!);
@@ -856,5 +860,80 @@ export class LambdaApiComponent extends Component {
   private getArchString(): string {
     // Default to amd64 for x86_64 architecture since config doesn't specify architecture
     return 'amd64';
+  }
+
+  /**
+   * Configure CloudWatch observability for Lambda API
+   */
+  private configureObservabilityForLambda(): void {
+    // Enable monitoring for compliance frameworks only
+    if (this.context.complianceFramework === 'commercial') {
+      return;
+    }
+
+    const functionName = this.lambdaFunction!.functionName;
+
+    // 1. Lambda Error Rate Alarm
+    new cloudwatch.Alarm(this, 'LambdaErrorsAlarm', {
+      alarmName: `${this.context.serviceName}-${this.spec.name}-lambda-errors`,
+      alarmDescription: 'Lambda function errors alarm',
+      metric: new cloudwatch.Metric({
+        namespace: 'AWS/Lambda',
+        metricName: 'Errors',
+        dimensionsMap: {
+          FunctionName: functionName
+        },
+        statistic: 'Sum',
+        period: cdk.Duration.minutes(5)
+      }),
+      threshold: 5,
+      evaluationPeriods: 2,
+      comparisonOperator: cloudwatch.ComparisonOperator.GREATER_THAN_THRESHOLD,
+      treatMissingData: cloudwatch.TreatMissingData.NOT_BREACHING
+    });
+
+    // 2. Lambda Duration Alarm
+    new cloudwatch.Alarm(this, 'LambdaDurationAlarm', {
+      alarmName: `${this.context.serviceName}-${this.spec.name}-lambda-duration`,
+      alarmDescription: 'Lambda function duration alarm',
+      metric: new cloudwatch.Metric({
+        namespace: 'AWS/Lambda',
+        metricName: 'Duration',
+        dimensionsMap: {
+          FunctionName: functionName
+        },
+        statistic: 'Average',
+        period: cdk.Duration.minutes(5)
+      }),
+      threshold: (this.config!.timeout || 30) * 1000 * 0.8, // 80% of timeout in milliseconds
+      evaluationPeriods: 3,
+      comparisonOperator: cloudwatch.ComparisonOperator.GREATER_THAN_THRESHOLD,
+      treatMissingData: cloudwatch.TreatMissingData.NOT_BREACHING
+    });
+
+    // 3. Lambda Throttles Alarm
+    new cloudwatch.Alarm(this, 'LambdaThrottlesAlarm', {
+      alarmName: `${this.context.serviceName}-${this.spec.name}-lambda-throttles`,
+      alarmDescription: 'Lambda function throttles alarm',
+      metric: new cloudwatch.Metric({
+        namespace: 'AWS/Lambda',
+        metricName: 'Throttles',
+        dimensionsMap: {
+          FunctionName: functionName
+        },
+        statistic: 'Sum',
+        period: cdk.Duration.minutes(5)
+      }),
+      threshold: 1,
+      evaluationPeriods: 1,
+      comparisonOperator: cloudwatch.ComparisonOperator.GREATER_THAN_OR_EQUAL_TO_THRESHOLD,
+      treatMissingData: cloudwatch.TreatMissingData.NOT_BREACHING
+    });
+
+    this.logComponentEvent('observability_configured', 'OpenTelemetry observability standard applied to Lambda API', {
+      alarmsCreated: 3,
+      functionName: functionName,
+      monitoringEnabled: true
+    });
   }
 }

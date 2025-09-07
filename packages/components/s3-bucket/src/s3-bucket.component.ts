@@ -10,6 +10,7 @@ import * as kms from 'aws-cdk-lib/aws-kms';
 import * as lambda from 'aws-cdk-lib/aws-lambda';
 import * as s3n from 'aws-cdk-lib/aws-s3-notifications';
 import * as iam from 'aws-cdk-lib/aws-iam';
+import * as cloudwatch from 'aws-cdk-lib/aws-cloudwatch';
 import * as cdk from 'aws-cdk-lib';
 import { Construct } from 'constructs';
 import {
@@ -615,6 +616,9 @@ export class S3BucketComponent extends Component {
     // Configure security tooling
     this.configureSecurityTooling();
     
+    // Configure observability
+    this.configureObservabilityForS3();
+    
     // Register constructs
     this.registerConstruct('bucket', this.bucket!);
     if (this.kmsKey) {
@@ -964,6 +968,62 @@ def handler(event, context):
     };
     
     return storageClassMap[storageClass] || s3.StorageClass.INFREQUENT_ACCESS;
+  }
+
+  /**
+   * Configure CloudWatch observability for S3 Bucket
+   */
+  private configureObservabilityForS3(): void {
+    // Enable monitoring for compliance frameworks only
+    if (this.context.complianceFramework === 'commercial') {
+      return;
+    }
+
+    const bucketName = this.bucket!.bucketName;
+
+    // 1. S3 Request Errors Alarm (4xx errors)
+    new cloudwatch.Alarm(this, 'S3RequestErrorsAlarm', {
+      alarmName: `${this.context.serviceName}-${this.spec.name}-request-errors`,
+      alarmDescription: 'S3 bucket request errors alarm',
+      metric: new cloudwatch.Metric({
+        namespace: 'AWS/S3',
+        metricName: 'ClientErrors',
+        dimensionsMap: {
+          BucketName: bucketName
+        },
+        statistic: 'Sum',
+        period: cdk.Duration.minutes(5)
+      }),
+      threshold: 10,
+      evaluationPeriods: 2,
+      comparisonOperator: cloudwatch.ComparisonOperator.GREATER_THAN_THRESHOLD,
+      treatMissingData: cloudwatch.TreatMissingData.NOT_BREACHING
+    });
+
+    // 2. S3 Server Errors Alarm (5xx errors)
+    new cloudwatch.Alarm(this, 'S3ServerErrorsAlarm', {
+      alarmName: `${this.context.serviceName}-${this.spec.name}-server-errors`,
+      alarmDescription: 'S3 bucket server errors alarm',
+      metric: new cloudwatch.Metric({
+        namespace: 'AWS/S3',
+        metricName: 'ServerErrors',
+        dimensionsMap: {
+          BucketName: bucketName
+        },
+        statistic: 'Sum',
+        period: cdk.Duration.minutes(5)
+      }),
+      threshold: 1,
+      evaluationPeriods: 1,
+      comparisonOperator: cloudwatch.ComparisonOperator.GREATER_THAN_OR_EQUAL_TO_THRESHOLD,
+      treatMissingData: cloudwatch.TreatMissingData.NOT_BREACHING
+    });
+
+    this.logComponentEvent('observability_configured', 'OpenTelemetry observability standard applied to S3 bucket', {
+      alarmsCreated: 2,
+      bucketName: bucketName,
+      monitoringEnabled: true
+    });
   }
 
 }

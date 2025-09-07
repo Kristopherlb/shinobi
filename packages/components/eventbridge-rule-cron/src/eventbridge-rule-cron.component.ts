@@ -10,6 +10,7 @@ import * as targets from 'aws-cdk-lib/aws-events-targets';
 import * as lambda from 'aws-cdk-lib/aws-lambda';
 import * as iam from 'aws-cdk-lib/aws-iam';
 import * as logs from 'aws-cdk-lib/aws-logs';
+import * as cloudwatch from 'aws-cdk-lib/aws-cloudwatch';
 import * as cdk from 'aws-cdk-lib';
 import { Construct } from 'constructs';
 import {
@@ -415,6 +416,9 @@ export class EventBridgeRuleCronComponent extends Component {
       // Apply compliance hardening
       this.applyComplianceHardening();
       
+      // Configure observability
+      this.configureObservabilityForEventBridge();
+      
       // Register constructs
       this.registerConstruct('rule', this.rule!);
       if (this.logGroup) {
@@ -671,6 +675,63 @@ export class EventBridgeRuleCronComponent extends Component {
    */
   private applyCommercialHardening(): void {
     this.logComponentEvent('commercial_hardening_applied', 'Applied commercial security hardening to EventBridge rule');
+  }
+
+  /**
+   * Configure CloudWatch observability for EventBridge Rule
+   */
+  private configureObservabilityForEventBridge(): void {
+    const monitoringConfig = this.config!.monitoring;
+    
+    if (!monitoringConfig?.enabled) {
+      return;
+    }
+
+    const ruleName = this.config!.ruleName || this.spec.name;
+
+    // 1. Failed Invocations Alarm
+    new cloudwatch.Alarm(this, 'FailedInvocationsAlarm', {
+      alarmName: `${this.context.serviceName}-${this.spec.name}-failed-invocations`,
+      alarmDescription: 'EventBridge rule failed invocations alarm',
+      metric: new cloudwatch.Metric({
+        namespace: 'AWS/Events',
+        metricName: 'FailedInvocations',
+        dimensionsMap: {
+          RuleName: ruleName
+        },
+        statistic: 'Sum',
+        period: cdk.Duration.minutes(5)
+      }),
+      threshold: 1,
+      evaluationPeriods: 1,
+      comparisonOperator: cloudwatch.ComparisonOperator.GREATER_THAN_OR_EQUAL_TO_THRESHOLD,
+      treatMissingData: cloudwatch.TreatMissingData.NOT_BREACHING
+    });
+
+    // 2. Invocation Rate Alarm (too many invocations could indicate issues)
+    new cloudwatch.Alarm(this, 'InvocationRateAlarm', {
+      alarmName: `${this.context.serviceName}-${this.spec.name}-invocation-rate`,
+      alarmDescription: 'EventBridge rule high invocation rate alarm',
+      metric: new cloudwatch.Metric({
+        namespace: 'AWS/Events',
+        metricName: 'Invocations',
+        dimensionsMap: {
+          RuleName: ruleName
+        },
+        statistic: 'Sum',
+        period: cdk.Duration.minutes(5)
+      }),
+      threshold: 1000,
+      evaluationPeriods: 2,
+      comparisonOperator: cloudwatch.ComparisonOperator.GREATER_THAN_THRESHOLD,
+      treatMissingData: cloudwatch.TreatMissingData.NOT_BREACHING
+    });
+
+    this.logComponentEvent('observability_configured', 'OpenTelemetry observability standard applied to EventBridge rule', {
+      alarmsCreated: 2,
+      ruleName: ruleName,
+      monitoringEnabled: true
+    });
   }
 
   /**

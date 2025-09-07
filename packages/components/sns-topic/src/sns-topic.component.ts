@@ -8,6 +8,7 @@
 import * as sns from 'aws-cdk-lib/aws-sns';
 import * as kms from 'aws-cdk-lib/aws-kms';
 import * as iam from 'aws-cdk-lib/aws-iam';
+import * as cloudwatch from 'aws-cdk-lib/aws-cloudwatch';
 import * as cdk from 'aws-cdk-lib';
 import { Construct } from 'constructs';
 import {
@@ -447,6 +448,9 @@ export class SnsTopicComponent extends Component {
     // Apply compliance hardening
     this.applyComplianceHardening();
     
+    // Configure observability
+    this.configureObservabilityForSns();
+    
     // Register constructs
     this.registerConstruct('topic', this.topic!);
     if (this.kmsKey) {
@@ -679,6 +683,62 @@ export class SnsTopicComponent extends Component {
       name += '.fifo';
     }
     return name;
+  }
+
+  /**
+   * Configure CloudWatch observability for SNS Topic
+   */
+  private configureObservabilityForSns(): void {
+    // Check if monitoring is enabled through compliance framework or explicitly configured
+    if (this.context.complianceFramework === 'commercial') {
+      return;
+    }
+
+    const topicName = this.buildTopicName() || this.spec.name;
+
+    // 1. Failed Notifications Alarm
+    new cloudwatch.Alarm(this, 'FailedNotificationsAlarm', {
+      alarmName: `${this.context.serviceName}-${this.spec.name}-failed-notifications`,
+      alarmDescription: 'SNS topic failed notifications alarm',
+      metric: new cloudwatch.Metric({
+        namespace: 'AWS/SNS',
+        metricName: 'NumberOfNotificationsFailed',
+        dimensionsMap: {
+          TopicName: topicName
+        },
+        statistic: 'Sum',
+        period: cdk.Duration.minutes(5)
+      }),
+      threshold: 1,
+      evaluationPeriods: 1,
+      comparisonOperator: cloudwatch.ComparisonOperator.GREATER_THAN_OR_EQUAL_TO_THRESHOLD,
+      treatMissingData: cloudwatch.TreatMissingData.NOT_BREACHING
+    });
+
+    // 2. Message Publishing Rate Alarm
+    new cloudwatch.Alarm(this, 'MessagePublishingRateAlarm', {
+      alarmName: `${this.context.serviceName}-${this.spec.name}-message-rate`,
+      alarmDescription: 'SNS topic high message publishing rate alarm',
+      metric: new cloudwatch.Metric({
+        namespace: 'AWS/SNS',
+        metricName: 'NumberOfMessagesPublished',
+        dimensionsMap: {
+          TopicName: topicName
+        },
+        statistic: 'Sum',
+        period: cdk.Duration.minutes(5)
+      }),
+      threshold: 10000,
+      evaluationPeriods: 2,
+      comparisonOperator: cloudwatch.ComparisonOperator.GREATER_THAN_THRESHOLD,
+      treatMissingData: cloudwatch.TreatMissingData.NOT_BREACHING
+    });
+
+    this.logComponentEvent('observability_configured', 'OpenTelemetry observability standard applied to SNS topic', {
+      alarmsCreated: 2,
+      topicName: topicName,
+      monitoringEnabled: true
+    });
   }
 
 }

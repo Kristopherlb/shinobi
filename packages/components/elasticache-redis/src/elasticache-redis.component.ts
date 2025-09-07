@@ -9,6 +9,7 @@ import * as elasticache from 'aws-cdk-lib/aws-elasticache';
 import * as ec2 from 'aws-cdk-lib/aws-ec2';
 import * as logs from 'aws-cdk-lib/aws-logs';
 import * as secretsmanager from 'aws-cdk-lib/aws-secretsmanager';
+import * as cloudwatch from 'aws-cdk-lib/aws-cloudwatch';
 import * as cdk from 'aws-cdk-lib';
 import { Construct } from 'constructs';
 import {
@@ -591,6 +592,9 @@ export class ElastiCacheRedisComponent extends Component {
       // Apply compliance hardening
       this.applyComplianceHardening();
       
+      // Configure observability
+      this.configureObservabilityForRedis();
+      
       // Register constructs
       this.registerConstruct('replicationGroup', this.replicationGroup!);
       if (this.securityGroup) {
@@ -924,6 +928,101 @@ export class ElastiCacheRedisComponent extends Component {
    */
   private applyCommercialHardening(): void {
     this.logComponentEvent('commercial_hardening_applied', 'Applied commercial security hardening to Redis cluster');
+  }
+
+  /**
+   * Configure CloudWatch observability for ElastiCache Redis
+   */
+  private configureObservabilityForRedis(): void {
+    const monitoringConfig = this.config!.monitoring;
+    
+    if (!monitoringConfig?.enabled) {
+      return;
+    }
+
+    const clusterName = this.config!.clusterName || this.spec.name;
+
+    // 1. CPU Utilization Alarm
+    new cloudwatch.Alarm(this, 'CPUUtilizationAlarm', {
+      alarmName: `${this.context.serviceName}-${this.spec.name}-cpu-utilization`,
+      alarmDescription: 'ElastiCache Redis CPU utilization alarm',
+      metric: new cloudwatch.Metric({
+        namespace: 'AWS/ElastiCache',
+        metricName: 'CPUUtilization',
+        dimensionsMap: {
+          CacheClusterId: clusterName
+        },
+        statistic: 'Average',
+        period: cdk.Duration.minutes(5)
+      }),
+      threshold: 80,
+      evaluationPeriods: 2,
+      comparisonOperator: cloudwatch.ComparisonOperator.GREATER_THAN_THRESHOLD,
+      treatMissingData: cloudwatch.TreatMissingData.NOT_BREACHING
+    });
+
+    // 2. Cache Misses Alarm
+    new cloudwatch.Alarm(this, 'CacheMissesAlarm', {
+      alarmName: `${this.context.serviceName}-${this.spec.name}-cache-misses`,
+      alarmDescription: 'ElastiCache Redis cache misses alarm',
+      metric: new cloudwatch.Metric({
+        namespace: 'AWS/ElastiCache',
+        metricName: 'CacheMisses',
+        dimensionsMap: {
+          CacheClusterId: clusterName
+        },
+        statistic: 'Sum',
+        period: cdk.Duration.minutes(5)
+      }),
+      threshold: 1000,
+      evaluationPeriods: 2,
+      comparisonOperator: cloudwatch.ComparisonOperator.GREATER_THAN_THRESHOLD,
+      treatMissingData: cloudwatch.TreatMissingData.NOT_BREACHING
+    });
+
+    // 3. Evictions Alarm
+    new cloudwatch.Alarm(this, 'EvictionsAlarm', {
+      alarmName: `${this.context.serviceName}-${this.spec.name}-evictions`,
+      alarmDescription: 'ElastiCache Redis evictions alarm',
+      metric: new cloudwatch.Metric({
+        namespace: 'AWS/ElastiCache',
+        metricName: 'Evictions',
+        dimensionsMap: {
+          CacheClusterId: clusterName
+        },
+        statistic: 'Sum',
+        period: cdk.Duration.minutes(5)
+      }),
+      threshold: 10,
+      evaluationPeriods: 2,
+      comparisonOperator: cloudwatch.ComparisonOperator.GREATER_THAN_THRESHOLD,
+      treatMissingData: cloudwatch.TreatMissingData.NOT_BREACHING
+    });
+
+    // 4. Connection Count Alarm
+    new cloudwatch.Alarm(this, 'CurrConnectionsAlarm', {
+      alarmName: `${this.context.serviceName}-${this.spec.name}-connections`,
+      alarmDescription: 'ElastiCache Redis connection count alarm',
+      metric: new cloudwatch.Metric({
+        namespace: 'AWS/ElastiCache',
+        metricName: 'CurrConnections',
+        dimensionsMap: {
+          CacheClusterId: clusterName
+        },
+        statistic: 'Average',
+        period: cdk.Duration.minutes(5)
+      }),
+      threshold: 500,
+      evaluationPeriods: 2,
+      comparisonOperator: cloudwatch.ComparisonOperator.GREATER_THAN_THRESHOLD,
+      treatMissingData: cloudwatch.TreatMissingData.NOT_BREACHING
+    });
+
+    this.logComponentEvent('observability_configured', 'OpenTelemetry observability standard applied to ElastiCache Redis', {
+      alarmsCreated: 4,
+      clusterName: clusterName,
+      monitoringEnabled: true
+    });
   }
 
   /**
