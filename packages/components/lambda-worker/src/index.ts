@@ -3,4 +3,9 @@
  * Lambda worker for asynchronous processing with observability
  */
 
-export { LambdaWorkerComponent } from './lambda-worker.component';
+export { 
+  LambdaWorkerComponent,
+  LAMBDA_WORKER_CONFIG_SCHEMA,
+  LambdaWorkerConfig,
+  LambdaWorkerConfigBuilder
+} from './lambda-worker.component';
