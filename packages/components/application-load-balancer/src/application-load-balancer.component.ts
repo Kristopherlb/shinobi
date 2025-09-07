@@ -385,77 +385,7 @@ export const APPLICATION_LOAD_BALANCER_CONFIG_SCHEMA = {
       description: 'Enable deletion protection',
       default: false
     },
-    idleTimeout: {
-      type: 'number',
-      description: 'Idle timeout in seconds',
-      minimum: 1,
-      maximum: 4000,
-      default: 60
-    },
-    deploymentStrategy: {
-      type: 'object',
-      description: 'Deployment strategy configuration',
-      items: {
-        type: 'object',
-        required: ['port', 'protocol'],
-        properties: {
-          port: {
-            type: 'number',
-            minimum: 1,
-            maximum: 65535,
-            description: 'Listener port'
-          },
-          protocol: {
-            type: 'string',
-            enum: ['HTTP', 'HTTPS'],
-            description: 'Listener protocol'
-          },
-          sslPolicy: {
-            type: 'string',
-            description: 'SSL policy for HTTPS listeners'
-          },
-          certificateArn: {
-            type: 'string',
-            description: 'ACM certificate ARN for HTTPS'
-          },
-          actions: {
-            type: 'array',
-            description: 'Listener actions',
-            items: {
-              type: 'object',
-              required: ['type'],
-              properties: {
-                type: {
-                  type: 'string',
-                  enum: ['forward', 'redirect', 'fixed-response']
-                },
-                targetGroupName: {
-                  type: 'string',
-                  description: 'Target group name for forward action'
-                },
-                redirectUrl: {
-                  type: 'string',
-                  description: 'Redirect URL for redirect action'
-                },
-                statusCode: {
-                  type: 'number',
-                  description: 'Status code for fixed response'
-                },
-                contentType: {
-                  type: 'string',
-                  description: 'Content type for fixed response'
-                },
-                messageBody: {
-                  type: 'string',
-                  description: 'Message body for fixed response'
-                }
-              }
-            }
-          }
-        }
-      }
-    },
-    targetGroups: {
+    accessLogs: {
       type: 'array',
       description: 'Target group configurations',
       items: {
