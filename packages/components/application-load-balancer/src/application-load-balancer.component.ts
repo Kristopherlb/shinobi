@@ -453,11 +453,6 @@ export const APPLICATION_LOAD_BALANCER_CONFIG_SCHEMA = {
         }
       }
     },
-    deletionProtection: {
-      type: 'boolean',
-      description: 'Enable deletion protection',
-      default: false
-    },
     targetGroups: {
       type: 'array',
       description: 'Target group configurations',
