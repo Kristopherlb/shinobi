@@ -471,4 +471,223 @@ export abstract class Component extends Construct {
     const framework = this.context.complianceFramework;
     return framework === 'fedramp-moderate' || framework === 'fedramp-high';
   }
+
+  /**
+   * Get platform logger instance configured for this component.
+   * 
+   * This method implements the Platform Structured Logging Standard v1.0 by providing
+   * a pre-configured logger with automatic service context and trace correlation.
+   * 
+   * @param loggerName Optional specific logger name, defaults to component name
+   * @returns Platform logger instance with automatic context injection
+   */
+  protected getLogger(loggerName?: string): any {
+    // Import Logger dynamically to avoid circular dependencies
+    const { Logger } = require('../platform/logger');
+    
+    const name = loggerName || `${this.context.serviceName}.${this.spec.name}`;
+    const logger = Logger.getLogger(name);
+    
+    // Set global context for this component's logs
+    Logger.setGlobalContext({
+      service: {
+        name: this.context.serviceName,
+        version: this.context.serviceLabels?.version || '1.0.0',
+        instance: this.getServiceInstance()
+      },
+      environment: {
+        name: this.context.environment,
+        region: this.context.region,
+        compliance: this.context.complianceFramework
+      },
+      context: {
+        component: this.getType(),
+        resource: this.spec.name
+      }
+    });
+    
+    return logger;
+  }
+
+  /**
+   * Log component lifecycle events with standardized format.
+   */
+  protected logComponentEvent(event: string, message: string, data?: any): void {
+    const logger = this.getLogger();
+    
+    logger.info(message, {
+      context: {
+        action: 'component_lifecycle',
+        resource: this.spec.name,
+        component: this.getType(),
+        operationId: `${event}_${this.spec.name}`
+      },
+      data: {
+        event,
+        componentName: this.spec.name,
+        componentType: this.getType(),
+        ...data
+      },
+      security: {
+        classification: this.getLogDataClassification(),
+        auditRequired: this.isAuditLoggingRequired()
+      }
+    });
+  }
+
+  /**
+   * Log compliance-related events with automatic security classification.
+   */
+  protected logComplianceEvent(event: string, message: string, data?: any): void {
+    const logger = this.getLogger();
+    
+    logger.info(message, {
+      context: {
+        action: 'compliance_event',
+        resource: this.spec.name,
+        component: this.getType(),
+        operationId: `compliance_${event}_${this.spec.name}`
+      },
+      data: {
+        complianceFramework: this.context.complianceFramework,
+        event,
+        ...data
+      },
+      security: {
+        classification: 'cui',
+        auditRequired: true,
+        securityEvent: 'compliance_action'
+      }
+    });
+  }
+
+  /**
+   * Log resource creation events with resource-specific context.
+   */
+  protected logResourceCreation(resourceType: string, resourceId: string, properties?: any): void {
+    const logger = this.getLogger();
+    
+    logger.info(`${resourceType} created successfully`, {
+      context: {
+        action: 'resource_creation',
+        resource: resourceType,
+        component: this.getType(),
+        operationId: `create_${resourceType}_${resourceId}`
+      },
+      data: {
+        resourceType,
+        resourceId,
+        componentName: this.spec.name,
+        properties: this.sanitizeResourceProperties(properties)
+      },
+      security: {
+        classification: this.getLogDataClassification(),
+        auditRequired: this.isAuditLoggingRequired()
+      }
+    });
+  }
+
+  /**
+   * Log error events with automatic error context and stack traces.
+   */
+  protected logError(error: Error, context: string, additionalData?: any): void {
+    const logger = this.getLogger();
+    
+    logger.error(`Error in ${context}`, error, {
+      context: {
+        action: 'error_event',
+        resource: this.spec.name,
+        component: this.getType(),
+        operationId: `error_${this.spec.name}_${Date.now()}`
+      },
+      data: {
+        errorContext: context,
+        componentName: this.spec.name,
+        componentType: this.getType(),
+        ...additionalData
+      },
+      security: {
+        classification: this.getLogDataClassification(),
+        auditRequired: true,
+        securityEvent: 'system_error'
+      }
+    });
+  }
+
+  /**
+   * Log performance metrics for component operations.
+   */
+  protected logPerformanceMetric(operation: string, duration: number, additionalMetrics?: any): void {
+    const logger = this.getLogger();
+    
+    logger.info(`Performance metric: ${operation}`, {
+      context: {
+        action: 'performance_measurement',
+        resource: this.spec.name,
+        component: this.getType(),
+        operationId: `perf_${operation}_${this.spec.name}`
+      },
+      data: {
+        operation,
+        componentName: this.spec.name
+      },
+      performance: {
+        duration,
+        ...additionalMetrics
+      },
+      security: {
+        classification: 'internal',
+        auditRequired: false
+      }
+    });
+  }
+
+  /**
+   * Determine data classification for logging based on compliance framework.
+   */
+  private getLogDataClassification(): string {
+    switch (this.context.complianceFramework) {
+      case 'fedramp-high':
+      case 'fedramp-moderate':
+        return 'cui';
+      default:
+        return 'internal';
+    }
+  }
+
+  /**
+   * Determine if audit logging is required based on compliance framework.
+   */
+  private isAuditLoggingRequired(): boolean {
+    return ['fedramp-moderate', 'fedramp-high'].includes(this.context.complianceFramework);
+  }
+
+  /**
+   * Sanitize resource properties to remove sensitive information from logs.
+   */
+  private sanitizeResourceProperties(properties?: any): any {
+    if (!properties) return {};
+    
+    const sanitized = { ...properties };
+    
+    // Remove sensitive properties that should not be logged
+    const sensitiveKeys = ['password', 'secret', 'key', 'token', 'credential'];
+    
+    for (const key of sensitiveKeys) {
+      if (key in sanitized) {
+        sanitized[key] = '[REDACTED]';
+      }
+    }
+    
+    return sanitized;
+  }
+
+  /**
+   * Get service instance identifier for logging context.
+   */
+  private getServiceInstance(): string {
+    return process.env.HOSTNAME || 
+           process.env.AWS_LAMBDA_FUNCTION_NAME || 
+           `${this.context.serviceName}-instance`;
+  }
 }
