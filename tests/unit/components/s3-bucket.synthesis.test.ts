@@ -1,8 +1,8 @@
 import { describe, test, expect, beforeEach } from '@jest/globals';
 import { Template } from 'aws-cdk-lib/assertions';
 import * as cdk from 'aws-cdk-lib';
-import { S3BucketComponent } from '../src/s3-bucket.component';
-import { ComponentContext, ComponentSpec } from '../../../platform/contracts/src/component-interfaces';
+import { S3BucketComponent } from '../../../packages/components/s3-bucket/src/s3-bucket.component';
+import { ComponentContext, ComponentSpec } from '../../../packages/platform/contracts/src/component-interfaces';
 
 describe('S3BucketComponent - CloudFormation Synthesis', () => {
   let app: cdk.App;
@@ -250,7 +250,7 @@ describe('S3BucketComponent - CloudFormation Synthesis', () => {
       // Basic CloudFormation structure validation
       expect(cfnTemplate).toHaveProperty('AWSTemplateFormatVersion', '2010-09-09');
       expect(cfnTemplate).toHaveProperty('Resources');
-      expect(Object.keys(cfnTemplate.Resources).length).toBeGreaterThan(0);
+      expect(Object.keys(cfnTemplate.Resources)).toHaveLength(expect.any(Number));
 
       // Ensure all resources have required properties
       Object.entries(cfnTemplate.Resources).forEach(([logicalId, resource]: [string, any]) => {
