@@ -187,7 +187,7 @@ export const APPLICATION_LOAD_BALANCER_CONFIG_SCHEMA = {
         }
       }
     },
-    listeners: {
+    listenerConfigs: {
       type: 'array',
       description: 'Listener configurations',
       items: {
@@ -385,9 +385,16 @@ export const APPLICATION_LOAD_BALANCER_CONFIG_SCHEMA = {
       description: 'Enable deletion protection',
       default: false
     },
-    listeners: {
-      type: 'array',
-      description: 'Listener configurations',
+    idleTimeout: {
+      type: 'number',
+      description: 'Idle timeout in seconds',
+      minimum: 1,
+      maximum: 4000,
+      default: 60
+    },
+    deploymentStrategy: {
+      type: 'object',
+      description: 'Deployment strategy configuration',
       items: {
         type: 'object',
         required: ['port', 'protocol'],
