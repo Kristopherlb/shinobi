@@ -8,6 +8,7 @@
 import * as sqs from 'aws-cdk-lib/aws-sqs';
 import * as kms from 'aws-cdk-lib/aws-kms';
 import * as iam from 'aws-cdk-lib/aws-iam';
+import * as cloudwatch from 'aws-cdk-lib/aws-cloudwatch';
 import * as cdk from 'aws-cdk-lib';
 import { Construct } from 'constructs';
 import {
@@ -523,7 +524,7 @@ export class SqsQueueComponent extends Component {
 
     // Queue depth alarm - critical for preventing message backlog
     new cloudwatch.Alarm(this, 'QueueDepthAlarm', {
-      metric: this.queue.metricApproximateNumberOfMessages(),
+      metric: this.queue.metricApproximateNumberOfMessagesVisible(),
       threshold: alarmThresholds.queueDepth,
       evaluationPeriods: 2,
       treatMissingData: cloudwatch.TreatMissingData.NOT_BREACHING,
@@ -542,7 +543,7 @@ export class SqsQueueComponent extends Component {
     // Dead letter queue alarm (if DLQ is enabled)
     if (this.deadLetterQueue) {
       new cloudwatch.Alarm(this, 'DeadLetterQueueAlarm', {
-        metric: this.deadLetterQueue.metricApproximateNumberOfMessages(),
+        metric: this.deadLetterQueue.metricApproximateNumberOfMessagesVisible(),
         threshold: 1, // Any message in DLQ should trigger alarm
         evaluationPeriods: 1,
         treatMissingData: cloudwatch.TreatMissingData.NOT_BREACHING,
