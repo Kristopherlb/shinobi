@@ -223,7 +223,7 @@ export class S3BucketComponent extends Component {
         encryption: s3.BucketEncryption.KMS,
         encryptionKey: this.kmsKey,
         publicReadAccess: false,
-        publicWriteAccess: false,
+        // publicWriteAccess removed - use blockPublicAccess instead"
         blockPublicAccess: s3.BlockPublicAccess.BLOCK_ALL,
         lifecycleRules: [{
           id: 'audit-retention',
@@ -268,7 +268,7 @@ export class S3BucketComponent extends Component {
       encryption: this.getBucketEncryption(),
       encryptionKey: this.kmsKey,
       publicReadAccess: this.config!.public === true,
-      publicWriteAccess: false, // Never allow public write
+      // Public write access is controlled by blockPublicAccess
       blockPublicAccess: this.config!.public === true ? 
         undefined : s3.BlockPublicAccess.BLOCK_ALL,
       eventBridgeEnabled: this.config!.eventBridgeEnabled,
@@ -278,13 +278,15 @@ export class S3BucketComponent extends Component {
 
     // Add website configuration if enabled
     if (this.config!.website?.enabled) {
-      bucketProps.websiteIndexDocument = this.config!.website.indexDocument || 'index.html';
-      bucketProps.websiteErrorDocument = this.config!.website.errorDocument || 'error.html';
+      Object.assign(bucketProps, {
+        websiteIndexDocument: this.config!.website.indexDocument || 'index.html',
+        websiteErrorDocument: this.config!.website.errorDocument || 'error.html'
+      });
     }
 
     // Add lifecycle rules if configured
     if (this.config!.lifecycleRules) {
-      bucketProps.lifecycleRules = this.config!.lifecycleRules.map(rule => ({
+      const lifecycleRules = this.config!.lifecycleRules.map(rule => ({
         id: rule.id,
         enabled: rule.enabled,
         transitions: rule.transitions?.map(t => ({
@@ -293,6 +295,7 @@ export class S3BucketComponent extends Component {
         })),
         expiration: rule.expiration ? cdk.Duration.days(rule.expiration.days) : undefined
       }));
+      Object.assign(bucketProps, { lifecycleRules });
     }
 
     this.bucket = new s3.Bucket(this, 'Bucket', bucketProps);
@@ -354,7 +357,7 @@ export class S3BucketComponent extends Component {
       // Enable object-level API logging
       this.bucket.addToResourcePolicy(new iam.PolicyStatement({
         sid: 'RequireSSLRequestsOnly',
-        effect: iam.Effect.Deny,
+        effect: iam.Effect.DENY,
         principals: [new iam.AnyPrincipal()],
         actions: ['s3:*'],
         resources: [this.bucket.bucketArn, `${this.bucket.bucketArn}/*`],
@@ -403,7 +406,7 @@ export class S3BucketComponent extends Component {
       // Explicit deny for delete actions to ensure immutability
       this.bucket.addToResourcePolicy(new iam.PolicyStatement({
         sid: 'DenyDeleteActions',
-        effect: iam.Effect.Deny,
+        effect: iam.Effect.DENY,
         principals: [new iam.AnyPrincipal()],
         actions: [
           's3:DeleteBucket',

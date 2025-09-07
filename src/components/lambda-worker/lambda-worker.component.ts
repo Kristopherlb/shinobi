@@ -209,7 +209,7 @@ export class LambdaWorkerComponent extends Component {
 
     // Apply encryption for environment variables
     if (this.kmsKey) {
-      props.environmentEncryption = this.kmsKey;
+      Object.assign(props, { environmentEncryption: this.kmsKey });
     }
 
     this.lambdaFunction = new lambda.Function(this, 'LambdaFunction', props);

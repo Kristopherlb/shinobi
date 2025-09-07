@@ -304,14 +304,14 @@ export class LambdaApiComponent extends Component {
 
     // Apply encryption for environment variables
     if (this.kmsKey) {
-      props.environmentEncryption = this.kmsKey;
+      Object.assign(props, { environmentEncryption: this.kmsKey });
     }
 
     // Apply VPC configuration for FedRAMP deployments
     if (this.shouldDeployInVpc()) {
       // In real implementation, this would lookup VPC and subnets
       // For now, we'll indicate VPC deployment is required
-      props.description += ' (VPC deployment required)';
+      Object.assign(props, { description: props.description + ' (VPC deployment required)' });
     }
 
     this.lambdaFunction = new lambda.Function(this, 'LambdaFunction', props);

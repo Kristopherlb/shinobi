@@ -330,7 +330,7 @@ export class RdsPostgresComponent extends Component {
       allocatedStorage: this.config!.allocatedStorage || 20,
       maxAllocatedStorage: this.config!.maxAllocatedStorage,
       storageEncrypted: this.shouldEnableEncryption(),
-      kmsKey: this.kmsKey,
+      storageEncryptionKey: this.kmsKey,
       backupRetention: cdk.Duration.days(this.getBackupRetentionDays()),
       deleteAutomatedBackups: false,
       deletionProtection: this.isComplianceFramework(),
