@@ -11,6 +11,38 @@ import { Construct, IConstruct } from 'constructs';
 import { ComponentSpec, ComponentContext, ComponentCapabilities } from './interfaces';
 
 /**
+ * Options for configuring observability on components
+ */
+export interface ObservabilityOptions {
+  collectorEndpoint?: string;
+  serviceName?: string;
+  tracesSampling?: number;
+  metricsInterval?: number;
+  logsRetention?: number;
+  enablePerformanceInsights?: boolean;
+  enableXRayTracing?: boolean;
+  customAttributes?: Record<string, string>;
+}
+
+/**
+ * Complete observability configuration for a component
+ */
+export interface ObservabilityConfig {
+  collectorEndpoint: string;
+  serviceName: string;
+  serviceVersion: string;
+  environment: string;
+  region: string;
+  complianceFramework: string;
+  tracesSampling: number;
+  metricsInterval: number;
+  logsRetention: number;
+  enablePerformanceInsights: boolean;
+  enableXRayTracing: boolean;
+  customAttributes: Record<string, string>;
+}
+
+/**
  * Abstract base class that all platform components MUST extend.
  * 
  * This class enforces the implementation of a standard interface that ensures
@@ -263,5 +295,180 @@ export abstract class Component extends Construct {
       default:
         return 'basic';
     }
+  }
+
+  /**
+   * Apply standardized OpenTelemetry observability configuration to any compute resource.
+   * 
+   * This method implements the Platform OpenTelemetry Observability Standard v1.0 by automatically
+   * configuring telemetry collection (traces, metrics, logs) based on compliance framework requirements.
+   * 
+   * @param resource The AWS CDK construct to configure observability for
+   * @param options Optional observability configuration overrides
+   * @returns Environment variables for OpenTelemetry instrumentation
+   */
+  protected configureObservability(resource: IConstruct, options: ObservabilityOptions = {}): Record<string, string> {
+    const otelConfig = this.buildObservabilityConfig(options);
+    return this.buildOtelEnvironmentVariables(otelConfig);
+  }
+
+  /**
+   * Build observability configuration based on compliance framework and component requirements.
+   * 
+   * @param options Component-specific observability options
+   * @returns Complete observability configuration conforming to Platform OpenTelemetry Standard v1.0
+   */
+  private buildObservabilityConfig(options: ObservabilityOptions = {}): ObservabilityConfig {
+    return {
+      collectorEndpoint: options.collectorEndpoint || this.getCollectorEndpoint(),
+      serviceName: options.serviceName || this.spec.name,
+      serviceVersion: this.context.serviceLabels?.version || '1.0.0',
+      environment: this.context.environment,
+      region: this.context.region,
+      complianceFramework: this.context.complianceFramework,
+      tracesSampling: options.tracesSampling ?? this.getTracesSamplingRate(),
+      metricsInterval: options.metricsInterval ?? this.getMetricsCollectionInterval(),
+      logsRetention: options.logsRetention ?? this.getLogsRetentionPeriod(),
+      enablePerformanceInsights: options.enablePerformanceInsights ?? this.shouldEnablePerformanceInsights(),
+      enableXRayTracing: options.enableXRayTracing ?? this.shouldEnableXRayTracing(),
+      customAttributes: options.customAttributes || {}
+    };
+  }
+
+  /**
+   * Build OpenTelemetry environment variables for automatic instrumentation.
+   */
+  private buildOtelEnvironmentVariables(config: ObservabilityConfig): Record<string, string> {
+    const resourceAttributes = [
+      `service.name=${config.serviceName}`,
+      `service.version=${config.serviceVersion}`,
+      `deployment.environment=${config.environment}`,
+      `cloud.provider=aws`,
+      `cloud.region=${config.region}`,
+      `compliance.framework=${config.complianceFramework}`,
+      `component.name=${this.spec.name}`,
+      `component.type=${this.getType()}`
+    ];
+
+    // Add custom attributes
+    Object.entries(config.customAttributes).forEach(([key, value]) => {
+      resourceAttributes.push(`${key}=${value}`);
+    });
+
+    const envVars: Record<string, string> = {
+      'OTEL_EXPORTER_OTLP_ENDPOINT': config.collectorEndpoint,
+      'OTEL_EXPORTER_OTLP_HEADERS': `authorization=Bearer \${OTEL_COLLECTOR_AUTH_TOKEN}`,
+      'OTEL_SERVICE_NAME': config.serviceName,
+      'OTEL_SERVICE_VERSION': config.serviceVersion,
+      'OTEL_RESOURCE_ATTRIBUTES': resourceAttributes.join(','),
+      'OTEL_TRACES_SAMPLER': this.getTracesSampler(config.tracesSampling),
+      'OTEL_METRICS_EXPORTER': 'otlp',
+      'OTEL_LOGS_EXPORTER': 'otlp',
+      'OTEL_PROPAGATORS': 'tracecontext,baggage,xray',
+      'OTEL_INSTRUMENTATION_COMMON_DEFAULT_ENABLED': 'true'
+    };
+
+    // Add X-Ray tracing if enabled
+    if (config.enableXRayTracing) {
+      envVars['_X_AMZN_TRACE_ID'] = 'Root=1-\${AWS_X_RAY_TRACE_ID}';
+      envVars['OTEL_INSTRUMENTATION_AWS_LAMBDA_ENABLED'] = 'true';
+      envVars['OTEL_INSTRUMENTATION_AWS_LAMBDA_FLUSH_TIMEOUT'] = '30000';
+    }
+
+    return envVars;
+  }
+
+  /**
+   * Get OpenTelemetry collector endpoint based on compliance framework and region.
+   */
+  private getCollectorEndpoint(): string {
+    const framework = this.context.complianceFramework;
+    const region = this.context.region;
+    
+    switch (framework) {
+      case 'fedramp-high':
+        return `https://otel-collector.fedramp-high.${region}.platform.local:4317`;
+      case 'fedramp-moderate':
+        return `https://otel-collector.fedramp-moderate.${region}.platform.local:4317`;
+      default:
+        return `https://otel-collector.commercial.${region}.platform.local:4317`;
+    }
+  }
+
+  /**
+   * Get trace sampling rate based on compliance framework requirements.
+   */
+  private getTracesSamplingRate(): number {
+    const framework = this.context.complianceFramework;
+    
+    switch (framework) {
+      case 'fedramp-high':
+        return 1.0; // 100% sampling for complete audit trail
+      case 'fedramp-moderate':
+        return 0.25; // 25% sampling for enhanced monitoring
+      default:
+        return 0.1; // 10% sampling for cost optimization
+    }
+  }
+
+  /**
+   * Get trace sampler configuration string.
+   */
+  private getTracesSampler(samplingRate: number): string {
+    if (samplingRate >= 1.0) {
+      return 'always_on';
+    } else if (samplingRate <= 0.0) {
+      return 'always_off';
+    } else {
+      return `traceidratio:${samplingRate}`;
+    }
+  }
+
+  /**
+   * Get metrics collection interval based on compliance requirements.
+   */
+  private getMetricsCollectionInterval(): number {
+    const framework = this.context.complianceFramework;
+    
+    switch (framework) {
+      case 'fedramp-high':
+        return 30; // 30 seconds for high-frequency monitoring
+      case 'fedramp-moderate':
+        return 60; // 1 minute for standard monitoring
+      default:
+        return 300; // 5 minutes for cost-effective monitoring
+    }
+  }
+
+  /**
+   * Get logs retention period in days based on compliance framework.
+   */
+  private getLogsRetentionPeriod(): number {
+    const framework = this.context.complianceFramework;
+    
+    switch (framework) {
+      case 'fedramp-high':
+        return 2555; // 7 years (approximately)
+      case 'fedramp-moderate':
+        return 1095; // 3 years
+      default:
+        return 365; // 1 year
+    }
+  }
+
+  /**
+   * Determine if Performance Insights should be enabled for database components.
+   */
+  private shouldEnablePerformanceInsights(): boolean {
+    const framework = this.context.complianceFramework;
+    return framework !== 'commercial'; // Enable for all compliance frameworks
+  }
+
+  /**
+   * Determine if X-Ray tracing should be enabled.
+   */
+  private shouldEnableXRayTracing(): boolean {
+    const framework = this.context.complianceFramework;
+    return framework === 'fedramp-moderate' || framework === 'fedramp-high';
   }
 }
