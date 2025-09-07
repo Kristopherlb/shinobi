@@ -16,11 +16,7 @@ import {
   Component,
   ComponentSpec,
   ComponentContext,
-  ComponentCapabilities,
-  ConfigBuilder,
-  ComponentConfigSchema,
-  ComputeEc2Capability,
-  ConfigBuilderContext
+  ComponentCapabilities
 } from '@platform/contracts';
 
 /**
@@ -100,7 +96,7 @@ export interface Ec2InstanceConfig {
 /**
  * Configuration schema for EC2 Instance component
  */
-export const EC2_INSTANCE_CONFIG_SCHEMA: ComponentConfigSchema = {
+export const EC2_INSTANCE_CONFIG_SCHEMA = {
   type: 'object',
   title: 'EC2 Instance Configuration',
   description: 'Configuration for creating an EC2 compute instance with compliance hardening',
@@ -295,10 +291,13 @@ export const EC2_INSTANCE_CONFIG_SCHEMA: ComponentConfigSchema = {
 /**
  * Ec2InstanceConfigBuilder - Handles configuration building and defaults for EC2 Instance
  */
-export class Ec2InstanceConfigBuilder extends ConfigBuilder<Ec2InstanceConfig> {
+export class Ec2InstanceConfigBuilder {
+  private context: ComponentContext;
+  private spec: ComponentSpec;
   
-  constructor(context: ConfigBuilderContext) {
-    super(context, EC2_INSTANCE_CONFIG_SCHEMA);
+  constructor(context: ComponentContext, spec: ComponentSpec) {
+    this.context = context;
+    this.spec = spec;
   }
 
   /**
@@ -319,7 +318,7 @@ export class Ec2InstanceConfigBuilder extends ConfigBuilder<Ec2InstanceConfig> {
     const complianceDefaults = this.getComplianceFrameworkDefaults();
     
     // Merge user configuration from spec
-    const userConfig = this.context.spec.config || {};
+    const userConfig = this.spec.config || {};
     
     // Merge configurations (user config takes precedence)
     const mergedConfig = this.mergeConfigs(
@@ -330,13 +329,7 @@ export class Ec2InstanceConfigBuilder extends ConfigBuilder<Ec2InstanceConfig> {
     // Resolve environment interpolations (sync version)
     const resolvedConfig = this.resolveEnvironmentInterpolationsSync(mergedConfig);
     
-    // Validate against schema
-    const validationResult = this.validateConfiguration(resolvedConfig);
-    if (!validationResult.valid) {
-      throw new Error(`EC2 Instance configuration validation failed: ${JSON.stringify(validationResult.errors)}`);
-    }
-    
-    return validationResult.validatedConfig as Ec2InstanceConfig;
+    return resolvedConfig as Ec2InstanceConfig;
   }
 
   /**
@@ -397,7 +390,7 @@ export class Ec2InstanceConfigBuilder extends ConfigBuilder<Ec2InstanceConfig> {
    * Get compliance framework specific defaults
    */
   private getComplianceFrameworkDefaults(): Record<string, any> {
-    const framework = this.context.context.complianceFramework;
+    const framework = this.context.complianceFramework;
     
     switch (framework) {
       case 'fedramp-moderate':
@@ -463,14 +456,14 @@ export class Ec2InstanceConfigBuilder extends ConfigBuilder<Ec2InstanceConfig> {
    * Get default instance type for platform
    */
   private getDefaultInstanceType(): string {
-    return this.getInstanceClass(this.context.context.complianceFramework);
+    return this.getInstanceClass(this.context.complianceFramework);
   }
 
   /**
    * Get default volume size based on compliance framework
    */
   private getDefaultVolumeSize(): number {
-    switch (this.context.context.complianceFramework) {
+    switch (this.context.complianceFramework) {
       case 'fedramp-high':
         return 100;
       case 'fedramp-moderate':
@@ -484,7 +477,7 @@ export class Ec2InstanceConfigBuilder extends ConfigBuilder<Ec2InstanceConfig> {
    * Get default volume type
    */
   private getDefaultVolumeType(): string {
-    return this.context.context.complianceFramework === 'fedramp-high' ? 'gp3' : 'gp3';
+    return this.context.complianceFramework === 'fedramp-high' ? 'gp3' : 'gp3';
   }
 }
 
@@ -508,12 +501,12 @@ export class Ec2InstanceComponent extends Component {
    * Synthesis phase - Create EC2 instance with compliance hardening
    */
   public synth(): void {
-    // Build configuration using ConfigBuilder
-    this.configBuilder = new Ec2InstanceConfigBuilder({
-      context: this.context,
-      spec: this.spec
-    });
-    this.config = this.configBuilder.buildSync();
+    this.logComponentEvent('synthesis_start', 'Starting EC2 Instance synthesis');
+    
+    try {
+      // Build configuration using ConfigBuilder
+      this.configBuilder = new Ec2InstanceConfigBuilder(this.context, this.spec);
+      this.config = this.configBuilder.buildSync();
     
     // Create KMS key for EBS encryption if needed
     this.createKmsKeyIfNeeded();
@@ -538,8 +531,14 @@ export class Ec2InstanceComponent extends Component {
       this.registerConstruct('kmsKey', this.kmsKey);
     }
     
-    // Register capabilities
-    this.registerCapability('compute:ec2', this.buildInstanceCapability());
+      // Register capabilities
+      this.registerCapability('compute:ec2', this.buildInstanceCapability());
+      
+      this.logComponentEvent('synthesis_complete', 'EC2 Instance synthesis completed successfully');
+    } catch (error) {
+      this.logError(error as Error, 'EC2 Instance synthesis');
+      throw error;
+    }
   }
 
   /**
@@ -942,7 +941,9 @@ export class Ec2InstanceComponent extends Component {
 
   private getInstanceAmi(): ec2.IMachineImage {
     if (this.config!.ami?.amiId) {
-      return ec2.MachineImage.genericLinux({ [this.context.region]: this.config!.ami.amiId });
+      const amiMap: { [key: string]: string } = {};
+      amiMap[this.context.region || 'us-east-1'] = this.config!.ami!.amiId!;
+      return ec2.MachineImage.genericLinux(amiMap);
     }
 
     // Use lookup for latest AMI
