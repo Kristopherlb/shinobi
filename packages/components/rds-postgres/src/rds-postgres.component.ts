@@ -515,8 +515,9 @@ export class RdsPostgresComponent extends Component {
     const startTime = Date.now();
     
     try {
-      // Build configuration
-      this.config = this.buildConfigSync();
+      // Build configuration using ConfigBuilder
+      const configBuilder = new RdsPostgresConfigBuilder(this.context, this.spec);
+      this.config = configBuilder.buildSync();
       
       // Log configuration built
       this.logComponentEvent('config_built', 'RDS Postgres configuration built successfully', {
@@ -848,7 +849,7 @@ export class RdsPostgresComponent extends Component {
   /**
    * Build database capability data shape
    */
-  private buildDatabaseCapability(): DbPostgresCapability {
+  private buildDatabaseCapability(): any {
     return {
       host: this.database!.instanceEndpoint.hostname,
       port: this.database!.instanceEndpoint.port,
@@ -883,49 +884,28 @@ export class RdsPostgresComponent extends Component {
   }
 
   private getBackupRetentionDays(): number {
-    switch (this.context.complianceFramework) {
-      case 'fedramp-moderate':
-        return 30;
-      case 'fedramp-high':
-        return 90;
-      default:
-        return this.config!.backupRetentionDays || 7;
-    }
+    return this.config!.backupRetentionDays || 7;
   }
 
   private getEnhancedMonitoringInterval(): cdk.Duration | undefined {
-    if (['fedramp-moderate', 'fedramp-high'].includes(this.context.complianceFramework)) {
-      return cdk.Duration.seconds(60);
+    if (this.config!.enhancedMonitoring?.enabled) {
+      return cdk.Duration.seconds(this.config!.enhancedMonitoring.interval || 60);
     }
     return undefined;
   }
 
   private getPerformanceInsightsRetention(): rds.PerformanceInsightRetention | undefined {
-    if (this.context.complianceFramework === 'fedramp-high') {
+    if (!this.config!.performanceInsights?.enabled) {
+      return undefined;
+    }
+    
+    const days = this.config!.performanceInsights.retentionPeriod || 7;
+    if (days >= 2555) {
       return rds.PerformanceInsightRetention.LONG_TERM;
-    } else if (this.context.complianceFramework === 'fedramp-moderate') {
+    } else if (days >= 93) {
       return rds.PerformanceInsightRetention.DEFAULT;
     }
-    return undefined;
-  }
-
-  /**
-   * Simplified config building for demo purposes
-   */
-  private buildConfigSync(): RdsPostgresConfig {
-    const config: RdsPostgresConfig = {
-      dbName: this.spec.config?.dbName || 'defaultdb',
-      username: this.spec.config?.username || 'postgres',
-      instanceClass: this.spec.config?.instanceClass || 'db.t3.micro',
-      allocatedStorage: this.spec.config?.allocatedStorage || 20,
-      maxAllocatedStorage: this.spec.config?.maxAllocatedStorage,
-      multiAz: this.spec.config?.multiAz,
-      backupRetentionDays: this.spec.config?.backupRetentionDays || 7,
-      encryptionEnabled: this.spec.config?.encryptionEnabled,
-      kmsKeyArn: this.spec.config?.kmsKeyArn
-    };
-
-    return config;
+    return rds.PerformanceInsightRetention.DEFAULT;
   }
 
   /**
