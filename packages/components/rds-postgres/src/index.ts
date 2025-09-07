@@ -3,4 +3,9 @@
  * Self-contained component package with creator and binder strategy
  */
 
-export { RdsPostgresComponent, RdsPostgresConfig } from './rds-postgres.component';
+export { 
+  RdsPostgresComponent,
+  RDS_POSTGRES_CONFIG_SCHEMA,
+  RdsPostgresConfig,
+  RdsPostgresConfigBuilder
+} from './rds-postgres.component';
