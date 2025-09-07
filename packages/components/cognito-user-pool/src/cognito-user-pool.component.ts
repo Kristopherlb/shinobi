@@ -873,40 +873,18 @@ export class CognitoUserPoolComponent extends Component {
     
     const lambdaTriggers: cognito.UserPoolTriggers = {};
     
-    const lambdaTriggers: cognito.UserPoolTriggers = {};
-    
-    if (triggers.preSignUp) {
-      lambdaTriggers.preSignUp = lambda.Function.fromFunctionArn(this, 'PreSignUpTrigger', triggers.preSignUp);
-    }
-    if (triggers.postConfirmation) {
-      lambdaTriggers.postConfirmation = lambda.Function.fromFunctionArn(this, 'PostConfirmationTrigger', triggers.postConfirmation);
-    }
-    if (triggers.preAuthentication) {
-      lambdaTriggers.preAuthentication = lambda.Function.fromFunctionArn(this, 'PreAuthenticationTrigger', triggers.preAuthentication);
-    }
-    if (triggers.postAuthentication) {
-      lambdaTriggers.postAuthentication = lambda.Function.fromFunctionArn(this, 'PostAuthenticationTrigger', triggers.postAuthentication);
-    }
-    if (triggers.preTokenGeneration) {
-      lambdaTriggers.preTokenGeneration = lambda.Function.fromFunctionArn(this, 'PreTokenGenerationTrigger', triggers.preTokenGeneration);
-    }
-    if (triggers.userMigration) {
-      lambdaTriggers.userMigration = lambda.Function.fromFunctionArn(this, 'UserMigrationTrigger', triggers.userMigration);
-    }
-    if (triggers.customMessage) {
-      lambdaTriggers.customMessage = lambda.Function.fromFunctionArn(this, 'CustomMessageTrigger', triggers.customMessage);
-    }
-    if (triggers.defineAuthChallenge) {
-      lambdaTriggers.defineAuthChallenge = lambda.Function.fromFunctionArn(this, 'DefineAuthChallengeTrigger', triggers.defineAuthChallenge);
-    }
-    if (triggers.createAuthChallenge) {
-      lambdaTriggers.createAuthChallenge = lambda.Function.fromFunctionArn(this, 'CreateAuthChallengeTrigger', triggers.createAuthChallenge);
-    }
-    if (triggers.verifyAuthChallengeResponse) {
-      lambdaTriggers.verifyAuthChallengeResponse = lambda.Function.fromFunctionArn(this, 'VerifyAuthChallengeResponseTrigger', triggers.verifyAuthChallengeResponse);
-    }
-    
-    return lambdaTriggers;
+    return {
+      preSignUp: triggers.preSignUp ? lambda.Function.fromFunctionArn(this, 'PreSignUpTrigger', triggers.preSignUp) : undefined,
+      postConfirmation: triggers.postConfirmation ? lambda.Function.fromFunctionArn(this, 'PostConfirmationTrigger', triggers.postConfirmation) : undefined,
+      preAuthentication: triggers.preAuthentication ? lambda.Function.fromFunctionArn(this, 'PreAuthenticationTrigger', triggers.preAuthentication) : undefined,
+      postAuthentication: triggers.postAuthentication ? lambda.Function.fromFunctionArn(this, 'PostAuthenticationTrigger', triggers.postAuthentication) : undefined,
+      preTokenGeneration: triggers.preTokenGeneration ? lambda.Function.fromFunctionArn(this, 'PreTokenGenerationTrigger', triggers.preTokenGeneration) : undefined,
+      userMigration: triggers.userMigration ? lambda.Function.fromFunctionArn(this, 'UserMigrationTrigger', triggers.userMigration) : undefined,
+      customMessage: triggers.customMessage ? lambda.Function.fromFunctionArn(this, 'CustomMessageTrigger', triggers.customMessage) : undefined,
+      defineAuthChallenge: triggers.defineAuthChallenge ? lambda.Function.fromFunctionArn(this, 'DefineAuthChallengeTrigger', triggers.defineAuthChallenge) : undefined,
+      createAuthChallenge: triggers.createAuthChallenge ? lambda.Function.fromFunctionArn(this, 'CreateAuthChallengeTrigger', triggers.createAuthChallenge) : undefined,
+      verifyAuthChallengeResponse: triggers.verifyAuthChallengeResponse ? lambda.Function.fromFunctionArn(this, 'VerifyAuthChallengeResponseTrigger', triggers.verifyAuthChallengeResponse) : undefined
+    };
   }
 
   /**
