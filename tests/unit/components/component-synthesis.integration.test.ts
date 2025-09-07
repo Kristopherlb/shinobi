@@ -85,9 +85,8 @@ describe('Component Synthesis Integration Tests', () => {
       expect(result.bindings).toHaveLength(2);
       
       // Extract CloudFormation template
-      const template = Template.fromStack(
-        result.app.synth().getStackByName('web-app-integration-stack')
-      );
+      const cfnTemplate = result.app.synth().getStackByName('web-app-integration-stack').template;
+      const template = Template.fromJSON(cfnTemplate);
 
       // Verify Lambda function exists
       template.hasResourceProperties('AWS::Lambda::Function', {
@@ -178,9 +177,8 @@ describe('Component Synthesis Integration Tests', () => {
 
       const result = await resolverEngine.synthesize(manifest);
       
-      const template = Template.fromStack(
-        result.app.synth().getStackByName('reference-test-stack')
-      );
+      const cfnTemplate = result.app.synth().getStackByName('reference-test-stack').template;
+      const template = Template.fromJSON(cfnTemplate);
 
       // Verify SQS queue exists
       template.hasResourceProperties('AWS::SQS::Queue', {
@@ -258,9 +256,8 @@ describe('Component Synthesis Integration Tests', () => {
 
       const result = await resolverEngine.synthesize(manifest);
       
-      const template = Template.fromStack(
-        result.app.synth().getStackByName('fedramp-service-stack')
-      );
+      const cfnTemplate = result.app.synth().getStackByName('fedramp-service-stack').template;
+      const template = Template.fromJSON(cfnTemplate);
 
       // Verify Lambda has enhanced security (VPC, X-Ray, KMS)
       template.hasResourceProperties('AWS::Lambda::Function', {
@@ -350,9 +347,8 @@ describe('Component Synthesis Integration Tests', () => {
 
       const result = await resolverEngine.synthesize(manifest);
       
-      const template = Template.fromStack(
-        result.app.synth().getStackByName('binding-test-stack')
-      );
+      const cfnTemplate = result.app.synth().getStackByName('binding-test-stack').template;
+      const template = Template.fromJSON(cfnTemplate);
 
       // Verify Lambda execution role exists
       template.hasResourceProperties('AWS::IAM::Role', {
@@ -569,7 +565,7 @@ describe('Component Synthesis Integration Tests', () => {
               zipFile: `./dist/lambda${i}.zip`
             }
           }
-        });
+        } as ComponentSpec);
       }
 
       const manifest = {
@@ -587,9 +583,8 @@ describe('Component Synthesis Integration Tests', () => {
       expect(duration).toBeLessThan(30000);
 
       // Verify all components were synthesized
-      const template = Template.fromStack(
-        result.app.synth().getStackByName('large-service-test-stack')
-      );
+      const cfnTemplate = result.app.synth().getStackByName('large-service-test-stack').template;
+      const template = Template.fromJSON(cfnTemplate);
 
       const lambdaFunctions = template.findResources('AWS::Lambda::Function');
       expect(Object.keys(lambdaFunctions)).toHaveLength(20);
