@@ -488,6 +488,13 @@ export class SnsTopicComponent extends Component {
         keySpec: kms.KeySpec.SYMMETRIC_DEFAULT
       });
 
+      // Apply standard tags
+      this.applyStandardTags(this.kmsKey, {
+        'encryption-type': 'customer-managed',
+        'key-rotation': (this.context.complianceFramework === 'fedramp-high').toString(),
+        'resource-type': 'sns-topic-encryption'
+      });
+
       // Grant SNS service access to the key
       this.kmsKey.addToResourcePolicy(new iam.PolicyStatement({
         sid: 'AllowSNSService',
@@ -522,6 +529,14 @@ export class SnsTopicComponent extends Component {
     }
 
     this.topic = new sns.Topic(this, 'Topic', topicProps);
+
+    // Apply standard tags
+    this.applyStandardTags(this.topic, {
+      'topic-type': 'main',
+      'fifo-enabled': (!!this.config!.fifo?.enabled).toString(),
+      'encryption-enabled': (!!this.kmsKey).toString(),
+      'content-based-deduplication': (!!this.config!.fifo?.contentBasedDeduplication).toString()
+    });
 
     // Apply delivery policy if configured
     if (this.config!.deliveryPolicy) {
@@ -697,7 +712,7 @@ export class SnsTopicComponent extends Component {
     const topicName = this.buildTopicName() || this.spec.name;
 
     // 1. Failed Notifications Alarm
-    new cloudwatch.Alarm(this, 'FailedNotificationsAlarm', {
+    const failedNotificationsAlarm = new cloudwatch.Alarm(this, 'FailedNotificationsAlarm', {
       alarmName: `${this.context.serviceName}-${this.spec.name}-failed-notifications`,
       alarmDescription: 'SNS topic failed notifications alarm',
       metric: new cloudwatch.Metric({
@@ -715,8 +730,15 @@ export class SnsTopicComponent extends Component {
       treatMissingData: cloudwatch.TreatMissingData.NOT_BREACHING
     });
 
+    // Apply standard tags
+    this.applyStandardTags(failedNotificationsAlarm, {
+      'alarm-type': 'failed-notifications',
+      'metric-type': 'failure-rate',
+      'threshold': '1'
+    });
+
     // 2. Message Publishing Rate Alarm
-    new cloudwatch.Alarm(this, 'MessagePublishingRateAlarm', {
+    const messageRateAlarm = new cloudwatch.Alarm(this, 'MessagePublishingRateAlarm', {
       alarmName: `${this.context.serviceName}-${this.spec.name}-message-rate`,
       alarmDescription: 'SNS topic high message publishing rate alarm',
       metric: new cloudwatch.Metric({
@@ -732,6 +754,13 @@ export class SnsTopicComponent extends Component {
       evaluationPeriods: 2,
       comparisonOperator: cloudwatch.ComparisonOperator.GREATER_THAN_THRESHOLD,
       treatMissingData: cloudwatch.TreatMissingData.NOT_BREACHING
+    });
+
+    // Apply standard tags
+    this.applyStandardTags(messageRateAlarm, {
+      'alarm-type': 'message-rate',
+      'metric-type': 'throughput',
+      'threshold': '10000'
     });
 
     this.logComponentEvent('observability_configured', 'OpenTelemetry observability standard applied to SNS topic', {
