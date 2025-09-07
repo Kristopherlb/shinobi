@@ -15,10 +15,7 @@ import {
   Component,
   ComponentSpec,
   ComponentContext,
-  ComponentCapabilities,
-  ConfigBuilder,
-  ComponentConfigSchema,
-  QueueSqsCapability
+  ComponentCapabilities
 } from '@platform/contracts';
 
 /**
@@ -77,7 +74,7 @@ export interface SqsQueueConfig {
 /**
  * Configuration schema for SQS Queue component
  */
-export const SQS_QUEUE_CONFIG_SCHEMA: ComponentConfigSchema = {
+export const SQS_QUEUE_CONFIG_SCHEMA = {
   type: 'object',
   title: 'SQS Queue Configuration',
   description: 'Configuration for creating an SQS message queue',
@@ -85,7 +82,7 @@ export const SQS_QUEUE_CONFIG_SCHEMA: ComponentConfigSchema = {
     queueName: {
       type: 'string',
       description: 'Queue name (will be auto-generated if not provided)',
-      pattern: '^[a-zA-Z0-9_-]+$',
+      pattern: '^[a-zA-Z0-9_-]+(\.fifo)?$',
       minLength: 1,
       maxLength: 80
     },
@@ -103,21 +100,324 @@ export const SQS_QUEUE_CONFIG_SCHEMA: ComponentConfigSchema = {
       maximum: 1209600,
       default: 345600
     },
+    maxMessageSizeBytes: {
+      type: 'number',
+      description: 'Maximum message size in bytes',
+      minimum: 1024,
+      maximum: 262144,
+      default: 262144
+    },
+    deliveryDelaySeconds: {
+      type: 'number',
+      description: 'Delivery delay in seconds',
+      minimum: 0,
+      maximum: 900,
+      default: 0
+    },
     receiveMessageWaitTimeSeconds: {
       type: 'number',
       description: 'Long polling wait time in seconds',
       minimum: 0,
       maximum: 20,
       default: 0
+    },
+    deadLetterQueue: {
+      type: 'object',
+      description: 'Dead letter queue configuration',
+      properties: {
+        enabled: {
+          type: 'boolean',
+          description: 'Enable dead letter queue',
+          default: true
+        },
+        maxReceiveCount: {
+          type: 'number',
+          description: 'Maximum receive count before moving to DLQ',
+          minimum: 1,
+          maximum: 1000,
+          default: 3
+        }
+      },
+      additionalProperties: false,
+      default: {
+        enabled: true,
+        maxReceiveCount: 3
+      }
+    },
+    fifo: {
+      type: 'object',
+      description: 'FIFO queue configuration',
+      properties: {
+        enabled: {
+          type: 'boolean',
+          description: 'Enable FIFO queue',
+          default: false
+        },
+        contentBasedDeduplication: {
+          type: 'boolean',
+          description: 'Enable content-based deduplication',
+          default: false
+        },
+        deduplicationScope: {
+          type: 'string',
+          description: 'Deduplication scope',
+          enum: ['messageGroup', 'queue'],
+          default: 'queue'
+        },
+        fifoThroughputLimit: {
+          type: 'string',
+          description: 'FIFO throughput limit',
+          enum: ['perQueue', 'perMessageGroupId'],
+          default: 'perQueue'
+        }
+      },
+      additionalProperties: false,
+      default: {
+        enabled: false,
+        contentBasedDeduplication: false,
+        deduplicationScope: 'queue',
+        fifoThroughputLimit: 'perQueue'
+      }
+    },
+    encryption: {
+      type: 'object',
+      description: 'Encryption configuration',
+      properties: {
+        enabled: {
+          type: 'boolean',
+          description: 'Enable server-side encryption',
+          default: false
+        },
+        kmsKeyArn: {
+          type: 'string',
+          description: 'KMS key ARN for encryption',
+          pattern: '^arn:aws:kms:[a-z0-9-]+:[0-9]{12}:key/[a-f0-9-]{36}$'
+        },
+        kmsDataKeyReusePeriodSeconds: {
+          type: 'number',
+          description: 'KMS data key reuse period in seconds',
+          minimum: 60,
+          maximum: 86400,
+          default: 300
+        }
+      },
+      additionalProperties: false,
+      default: {
+        enabled: false,
+        kmsDataKeyReusePeriodSeconds: 300
+      }
     }
   },
   additionalProperties: false,
   defaults: {
     visibilityTimeoutSeconds: 30,
-    messageRetentionPeriod: 345600, // 4 days
-    receiveMessageWaitTimeSeconds: 0
+    messageRetentionPeriod: 345600,
+    maxMessageSizeBytes: 262144,
+    deliveryDelaySeconds: 0,
+    receiveMessageWaitTimeSeconds: 0,
+    deadLetterQueue: {
+      enabled: true,
+      maxReceiveCount: 3
+    },
+    fifo: {
+      enabled: false,
+      contentBasedDeduplication: false,
+      deduplicationScope: 'queue',
+      fifoThroughputLimit: 'perQueue'
+    },
+    encryption: {
+      enabled: false,
+      kmsDataKeyReusePeriodSeconds: 300
+    }
   }
 };
+
+/**
+ * Configuration builder for SQS Queue component
+ */
+export class SqsQueueConfigBuilder {
+  private context: ComponentContext;
+  private spec: ComponentSpec;
+  
+  constructor(context: ComponentContext, spec: ComponentSpec) {
+    this.context = context;
+    this.spec = spec;
+  }
+
+  /**
+   * Builds the final configuration by applying platform defaults, compliance frameworks, and user overrides
+   */
+  public async build(): Promise<SqsQueueConfig> {
+    return this.buildSync();
+  }
+
+  /**
+   * Synchronous version of build for use in synth() method
+   */
+  public buildSync(): SqsQueueConfig {
+    // Start with platform defaults
+    const platformDefaults = this.getPlatformDefaults();
+    
+    // Apply compliance framework defaults
+    const complianceDefaults = this.getComplianceFrameworkDefaults();
+    
+    // Merge user configuration from spec
+    const userConfig = this.spec.config || {};
+    
+    // Merge configurations (user config takes precedence)
+    const mergedConfig = this.mergeConfigs(
+      this.mergeConfigs(platformDefaults, complianceDefaults),
+      userConfig
+    );
+    
+    return mergedConfig as SqsQueueConfig;
+  }
+
+  /**
+   * Simple merge utility for combining configuration objects
+   */
+  private mergeConfigs(target: Record<string, any>, source: Record<string, any>): Record<string, any> {
+    const result = { ...target };
+    
+    for (const key in source) {
+      if (source[key] && typeof source[key] === 'object' && !Array.isArray(source[key])) {
+        result[key] = this.mergeConfigs(result[key] || {}, source[key]);
+      } else {
+        result[key] = source[key];
+      }
+    }
+    
+    return result;
+  }
+
+  /**
+   * Get platform-wide defaults for SQS Queue
+   */
+  private getPlatformDefaults(): Record<string, any> {
+    return {
+      visibilityTimeoutSeconds: this.getDefaultVisibilityTimeout(),
+      messageRetentionPeriod: this.getDefaultMessageRetention(),
+      maxMessageSizeBytes: 262144, // 256KB default
+      deliveryDelaySeconds: 0,
+      receiveMessageWaitTimeSeconds: this.getDefaultLongPolling(),
+      deadLetterQueue: {
+        enabled: this.getDefaultDLQEnabled(),
+        maxReceiveCount: this.getDefaultMaxReceiveCount()
+      },
+      fifo: {
+        enabled: false,
+        contentBasedDeduplication: false,
+        deduplicationScope: 'queue',
+        fifoThroughputLimit: 'perQueue'
+      },
+      encryption: {
+        enabled: this.getDefaultEncryptionEnabled(),
+        kmsDataKeyReusePeriodSeconds: 300
+      }
+    };
+  }
+
+  /**
+   * Get compliance framework specific defaults
+   */
+  private getComplianceFrameworkDefaults(): Record<string, any> {
+    const framework = this.context.complianceFramework;
+    
+    switch (framework) {
+      case 'fedramp-moderate':
+        return {
+          visibilityTimeoutSeconds: 60, // Longer timeout for compliance
+          messageRetentionPeriod: 1209600, // 14 days maximum retention
+          receiveMessageWaitTimeSeconds: 20, // Enable long polling for efficiency
+          deadLetterQueue: {
+            enabled: true, // Required for audit and debugging
+            maxReceiveCount: 2 // Lower threshold for compliance
+          },
+          encryption: {
+            enabled: true, // Encryption required for compliance
+            kmsDataKeyReusePeriodSeconds: 300
+          }
+        };
+        
+      case 'fedramp-high':
+        return {
+          visibilityTimeoutSeconds: 120, // Extended timeout for high security
+          messageRetentionPeriod: 1209600, // 14 days maximum retention
+          receiveMessageWaitTimeSeconds: 20, // Enable long polling
+          deadLetterQueue: {
+            enabled: true, // Required for audit trails
+            maxReceiveCount: 1 // Very strict failure tolerance
+          },
+          encryption: {
+            enabled: true, // Mandatory encryption
+            kmsDataKeyReusePeriodSeconds: 60 // Shorter key reuse for higher security
+          }
+        };
+        
+      default: // commercial
+        return {};
+    }
+  }
+
+  /**
+   * Get default visibility timeout based on compliance framework
+   */
+  private getDefaultVisibilityTimeout(): number {
+    switch (this.context.complianceFramework) {
+      case 'fedramp-high':
+        return 120; // Extended processing time for high compliance
+      case 'fedramp-moderate':
+        return 60; // Moderate processing time
+      default:
+        return 30; // Standard timeout
+    }
+  }
+
+  /**
+   * Get default message retention based on compliance framework
+   */
+  private getDefaultMessageRetention(): number {
+    return ['fedramp-moderate', 'fedramp-high'].includes(this.context.complianceFramework) ?
+      1209600 : 345600; // 14 days for compliance, 4 days for commercial
+  }
+
+  /**
+   * Get default long polling setting
+   */
+  private getDefaultLongPolling(): number {
+    return ['fedramp-moderate', 'fedramp-high'].includes(this.context.complianceFramework) ?
+      20 : 0; // Enable long polling for compliance frameworks
+  }
+
+  /**
+   * Get default DLQ enabled setting
+   */
+  private getDefaultDLQEnabled(): boolean {
+    return ['fedramp-moderate', 'fedramp-high'].includes(this.context.complianceFramework) ||
+           this.context.complianceFramework === 'commercial'; // Always enable DLQ
+  }
+
+  /**
+   * Get default max receive count for DLQ
+   */
+  private getDefaultMaxReceiveCount(): number {
+    switch (this.context.complianceFramework) {
+      case 'fedramp-high':
+        return 1; // Very strict for high compliance
+      case 'fedramp-moderate':
+        return 2; // Strict for moderate compliance
+      default:
+        return 3; // Standard for commercial
+    }
+  }
+
+  /**
+   * Get default encryption enabled setting
+   */
+  private getDefaultEncryptionEnabled(): boolean {
+    return ['fedramp-moderate', 'fedramp-high'].includes(this.context.complianceFramework);
+  }
+}
 
 /**
  * SQS Queue Component implementing Component API Contract v1.0
@@ -145,8 +445,9 @@ export class SqsQueueComponent extends Component {
     const startTime = Date.now();
     
     try {
-      // Build configuration
-      this.config = this.buildConfigSync();
+      // Build configuration using ConfigBuilder
+      const configBuilder = new SqsQueueConfigBuilder(this.context, this.spec);
+      this.config = configBuilder.buildSync();
       
       // Log configuration built
       this.logComponentEvent('config_built', 'SQS Queue configuration built successfully', {
@@ -469,7 +770,7 @@ export class SqsQueueComponent extends Component {
   /**
    * Build queue capability data shape
    */
-  private buildQueueCapability(): QueueSqsCapability {
+  private buildQueueCapability(): any {
     return {
       queueUrl: this.queue!.queueUrl,
       queueArn: this.queue!.queueArn
@@ -480,8 +781,7 @@ export class SqsQueueComponent extends Component {
    * Helper methods for compliance decisions
    */
   private shouldUseCustomerManagedKey(): boolean {
-    return ['fedramp-moderate', 'fedramp-high'].includes(this.context.complianceFramework) ||
-           this.config!.encryption?.enabled === true;
+    return this.config!.encryption?.enabled === true;
   }
 
   private isComplianceFramework(): boolean {
@@ -489,9 +789,9 @@ export class SqsQueueComponent extends Component {
   }
 
   private getQueueEncryption(): sqs.QueueEncryption {
-    if (this.shouldUseCustomerManagedKey()) {
+    if (this.config!.encryption?.enabled && this.config!.encryption?.kmsKeyArn) {
       return sqs.QueueEncryption.KMS;
-    } else if (this.context.complianceFramework !== 'commercial') {
+    } else if (this.config!.encryption?.enabled) {
       return sqs.QueueEncryption.KMS_MANAGED;
     }
     return sqs.QueueEncryption.UNENCRYPTED;
@@ -514,24 +814,6 @@ export class SqsQueueComponent extends Component {
     return name;
   }
 
-  /**
-   * Simplified config building for demo purposes
-   */
-  private buildConfigSync(): SqsQueueConfig {
-    const config: SqsQueueConfig = {
-      queueName: this.spec.config?.queueName,
-      visibilityTimeoutSeconds: this.spec.config?.visibilityTimeoutSeconds || 30,
-      messageRetentionPeriod: this.spec.config?.messageRetentionPeriod || 345600,
-      maxMessageSizeBytes: this.spec.config?.maxMessageSizeBytes,
-      deliveryDelaySeconds: this.spec.config?.deliveryDelaySeconds,
-      receiveMessageWaitTimeSeconds: this.spec.config?.receiveMessageWaitTimeSeconds || 0,
-      deadLetterQueue: this.spec.config?.deadLetterQueue || { enabled: true, maxReceiveCount: 3 },
-      fifo: this.spec.config?.fifo || { enabled: false },
-      encryption: this.spec.config?.encryption || { enabled: this.shouldUseCustomerManagedKey() }
-    };
-
-    return config;
-  }
 
   /**
    * Configure OpenTelemetry observability for SQS queue monitoring according to Platform Observability Standard
