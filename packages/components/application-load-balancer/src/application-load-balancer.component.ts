@@ -529,10 +529,13 @@ export class ApplicationLoadBalancerConfigBuilder {
     const userConfig = this.spec.config || {};
     
     // Merge configurations (user config takes precedence)
-    const mergedConfig = this.mergeConfigs(
+    let mergedConfig = this.mergeConfigs(
       this.mergeConfigs(platformDefaults, complianceDefaults),
       userConfig
     );
+    
+    // Apply feature flag-driven configuration overrides
+    mergedConfig = this.applyFeatureFlagOverrides(mergedConfig);
     
     return mergedConfig as ApplicationLoadBalancerConfig;
   }
@@ -685,6 +688,65 @@ export class ApplicationLoadBalancerConfigBuilder {
           }
         };
     }
+  }
+
+  /**
+   * Apply feature flag-driven configuration overrides
+   */
+  private applyFeatureFlagOverrides(config: Record<string, any>): Record<string, any> {
+    const result = { ...config };
+
+    // Evaluate feature flags for deployment strategy
+    if (this.evaluateFeatureFlag('enable-blue-green-deployment', false)) {
+      result.deploymentStrategy = {
+        type: 'blue-green',
+        blueGreenConfig: {
+          productionTrafficRoute: {
+            type: 'Linear',
+            percentage: 10,
+            interval: 5
+          },
+          terminationWaitTime: 5
+        }
+      };
+    }
+
+    // Evaluate feature flags for enhanced monitoring
+    if (this.evaluateFeatureFlag('enable-enhanced-monitoring', false)) {
+      result.monitoring = {
+        enabled: true,
+        alarms: {
+          httpCode5xxThreshold: 5, // More sensitive when enhanced monitoring is enabled
+          unhealthyHostThreshold: 1,
+          connectionErrorThreshold: 3,
+          rejectedConnectionThreshold: 1
+        }
+      };
+    }
+
+    // Evaluate feature flags for deletion protection override
+    if (this.evaluateFeatureFlag('force-deletion-protection', false)) {
+      result.deletionProtection = true;
+    }
+
+    return result;
+  }
+
+  /**
+   * Evaluate a feature flag with fallback to default value
+   */
+  private evaluateFeatureFlag(flagKey: string, defaultValue: boolean): boolean {
+    // In a real implementation, this would:
+    // 1. Connect to the bound OpenFeature provider component
+    // 2. Evaluate the flag using the provider's client
+    // 3. Return the result with proper error handling
+    
+    // For now, return enhanced behavior for compliance frameworks
+    if (this.context.complianceFramework !== 'commercial') {
+      return true; // Enable enhanced features for compliance frameworks
+    }
+    
+    return defaultValue;
   }
 }
 

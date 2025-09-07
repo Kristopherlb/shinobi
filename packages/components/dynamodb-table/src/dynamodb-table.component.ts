@@ -302,10 +302,13 @@ export class DynamoDbTableConfigBuilder {
     const userConfig = this.spec.config || {};
     
     // Merge configurations (user config takes precedence)
-    const mergedConfig = this.mergeConfigs(
+    let mergedConfig = this.mergeConfigs(
       this.mergeConfigs(platformDefaults, complianceDefaults),
       userConfig
     );
+    
+    // Apply feature flag-driven configuration overrides
+    mergedConfig = this.applyFeatureFlagOverrides(mergedConfig);
     
     return mergedConfig as DynamoDbTableConfig;
   }
@@ -383,6 +386,52 @@ export class DynamoDbTableConfigBuilder {
           }
         };
     }
+  }
+
+  /**
+   * Apply feature flag-driven configuration overrides
+   */
+  private applyFeatureFlagOverrides(config: Record<string, any>): Record<string, any> {
+    const result = { ...config };
+
+    // Evaluate feature flags for enhanced backup strategy
+    if (this.evaluateFeatureFlag('enable-enhanced-backup', false)) {
+      result.backupRetention = Math.max(result.backupRetention || 7, 30); // At least 30 days
+      result.pointInTimeRecovery = true;
+    }
+
+    // Evaluate feature flags for performance mode
+    if (this.evaluateFeatureFlag('enable-performance-mode', false)) {
+      result.billingMode = 'provisioned';
+      result.readCapacity = Math.max(result.readCapacity || 5, 20);
+      result.writeCapacity = Math.max(result.writeCapacity || 5, 20);
+    }
+
+    // Evaluate feature flags for enhanced encryption
+    if (this.evaluateFeatureFlag('force-customer-managed-encryption', false)) {
+      result.encryption = {
+        type: 'customer-managed'
+      };
+    }
+
+    return result;
+  }
+
+  /**
+   * Evaluate a feature flag with fallback to default value
+   */
+  private evaluateFeatureFlag(flagKey: string, defaultValue: boolean): boolean {
+    // In a real implementation, this would:
+    // 1. Connect to the bound OpenFeature provider component
+    // 2. Evaluate the flag using the provider's client
+    // 3. Return the result with proper error handling
+    
+    // For now, return enhanced behavior for compliance frameworks
+    if (this.context.complianceFramework !== 'commercial') {
+      return true; // Enable enhanced features for compliance frameworks
+    }
+    
+    return defaultValue;
   }
 }
 

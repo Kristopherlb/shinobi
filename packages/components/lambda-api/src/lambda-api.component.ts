@@ -595,7 +595,7 @@ export class LambdaApiComponent extends Component {
     });
     
     // Configure automatic OpenTelemetry observability
-    this.configureObservabilityForLambda();
+    this.configureOpenTelemetryForLambda();
     
     // Log Lambda function creation
     this.logResourceCreation('lambda-function', this.lambdaFunction.functionName, {
@@ -799,7 +799,7 @@ export class LambdaApiComponent extends Component {
   /**
    * Configure OpenTelemetry observability for Lambda function according to Platform Observability Standard
    */
-  private configureObservabilityForLambda(): void {
+  private configureOpenTelemetryForLambda(): void {
     if (!this.lambdaFunction) return;
 
     // Get standardized OpenTelemetry environment variables
