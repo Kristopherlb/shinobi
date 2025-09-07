@@ -1,0 +1,23 @@
+{
+  "name": "@platform/dependency-analyzer",
+  "version": "1.0.0",
+  "description": "Dependency analysis engine for platform automated deprecation standard",
+  "main": "dist/index.js",
+  "types": "dist/index.d.ts",
+  "scripts": {
+    "build": "tsc",
+    "clean": "rm -rf dist",
+    "test": "jest"
+  },
+  "dependencies": {
+    "axios": "^1.6.0",
+    "graphlib": "^2.1.8",
+    "@types/graphlib": "^2.1.8"
+  },
+  "peerDependencies": {
+    "@platform/contracts": "1.0.0",
+    "@platform/logger": "1.0.0"
+  },
+  "keywords": ["platform", "dependency", "analysis", "mcp", "deprecation"],
+  "license": "MIT"
+}

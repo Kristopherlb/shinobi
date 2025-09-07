@@ -1,0 +1,23 @@
+{
+  "name": "@platform/deprecation-manager",
+  "version": "1.0.0",
+  "description": "Deprecation lifecycle management for platform components and services",
+  "main": "dist/index.js",
+  "types": "dist/index.d.ts",
+  "scripts": {
+    "build": "tsc",
+    "clean": "rm -rf dist",
+    "test": "jest"
+  },
+  "dependencies": {
+    "semver": "^7.5.4",
+    "yaml": "^2.8.1"
+  },
+  "peerDependencies": {
+    "@platform/contracts": "1.0.0",
+    "@platform/logger": "1.0.0",
+    "@platform/dependency-analyzer": "1.0.0"
+  },
+  "keywords": ["platform", "deprecation", "lifecycle", "management"],
+  "license": "MIT"
+}
