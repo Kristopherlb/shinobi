@@ -1,0 +1,356 @@
+"use strict";
+/**
+ * EC2 Instance Component - Comprehensive Test Suite
+ * Tests all functionality including configuration, synthesis, compliance, and capabilities
+ */
+var __createBinding = (this && this.__createBinding) || (Object.create ? (function(o, m, k, k2) {
+    if (k2 === undefined) k2 = k;
+    var desc = Object.getOwnPropertyDescriptor(m, k);
+    if (!desc || ("get" in desc ? !m.__esModule : desc.writable || desc.configurable)) {
+      desc = { enumerable: true, get: function() { return m[k]; } };
+    }
+    Object.defineProperty(o, k2, desc);
+}) : (function(o, m, k, k2) {
+    if (k2 === undefined) k2 = k;
+    o[k2] = m[k];
+}));
+var __setModuleDefault = (this && this.__setModuleDefault) || (Object.create ? (function(o, v) {
+    Object.defineProperty(o, "default", { enumerable: true, value: v });
+}) : function(o, v) {
+    o["default"] = v;
+});
+var __importStar = (this && this.__importStar) || (function () {
+    var ownKeys = function(o) {
+        ownKeys = Object.getOwnPropertyNames || function (o) {
+            var ar = [];
+            for (var k in o) if (Object.prototype.hasOwnProperty.call(o, k)) ar[ar.length] = k;
+            return ar;
+        };
+        return ownKeys(o);
+    };
+    return function (mod) {
+        if (mod && mod.__esModule) return mod;
+        var result = {};
+        if (mod != null) for (var k = ownKeys(mod), i = 0; i < k.length; i++) if (k[i] !== "default") __createBinding(result, mod, k[i]);
+        __setModuleDefault(result, mod);
+        return result;
+    };
+})();
+Object.defineProperty(exports, "__esModule", { value: true });
+const cdk = __importStar(require("aws-cdk-lib"));
+const assertions_1 = require("aws-cdk-lib/assertions");
+const constructs_1 = require("constructs");
+const ec2_instance_component_1 = require("./ec2-instance.component");
+describe('EC2 Instance Component', () => {
+    let app;
+    let stack;
+    let component;
+    const mockContext = {
+        serviceName: 'test-service',
+        environment: 'test',
+        region: 'us-east-1',
+        complianceFramework: 'commercial',
+        scope: new constructs_1.Construct(app, 'TestScope')
+    };
+    const baseSpec = {
+        name: 'test-instance',
+        type: 'ec2-instance',
+        config: {}
+    };
+    beforeEach(() => {
+        app = new cdk.App();
+        stack = new cdk.Stack(app, 'TestStack');
+    });
+    describe('Configuration Builder', () => {
+        it('should build basic configuration with platform defaults', () => {
+            const builder = new ec2_instance_component_1.Ec2InstanceConfigBuilder(mockContext, baseSpec);
+            const config = builder.buildSync();
+            expect(config.instanceType).toBe('t3.micro');
+            expect(config.ami?.namePattern).toBe('amzn2-ami-hvm-*-x86_64-gp2');
+            expect(config.ami?.owner).toBe('amazon');
+            expect(config.storage?.rootVolumeSize).toBe(20);
+            expect(config.storage?.rootVolumeType).toBe('gp3');
+            expect(config.storage?.encrypted).toBe(false);
+        });
+        it('should apply FedRAMP Moderate compliance defaults', () => {
+            const fedrampContext = { ...mockContext, complianceFramework: 'fedramp-moderate' };
+            const builder = new ec2_instance_component_1.Ec2InstanceConfigBuilder(fedrampContext, baseSpec);
+            const config = builder.buildSync();
+            expect(config.instanceType).toBe('t3.medium');
+            expect(config.storage?.rootVolumeSize).toBe(50);
+            expect(config.storage?.encrypted).toBe(true);
+            expect(config.monitoring?.detailed).toBe(true);
+            expect(config.monitoring?.cloudWatchAgent).toBe(true);
+            expect(config.security?.requireImdsv2).toBe(true);
+            expect(config.security?.httpTokens).toBe('required');
+        });
+        it('should apply FedRAMP High compliance defaults', () => {
+            const fedrampHighContext = { ...mockContext, complianceFramework: 'fedramp-high' };
+            const builder = new ec2_instance_component_1.Ec2InstanceConfigBuilder(fedrampHighContext, baseSpec);
+            const config = builder.buildSync();
+            expect(config.instanceType).toBe('m5.large');
+            expect(config.storage?.rootVolumeSize).toBe(100);
+            expect(config.storage?.rootVolumeType).toBe('gp3');
+            expect(config.storage?.encrypted).toBe(true);
+            expect(config.security?.nitroEnclaves).toBe(true);
+        });
+        it('should merge user configuration with platform defaults', () => {
+            const userSpec = {
+                ...baseSpec,
+                config: {
+                    instanceType: 'c5.large',
+                    storage: {
+                        rootVolumeSize: 100,
+                        encrypted: true
+                    }
+                }
+            };
+            const builder = new ec2_instance_component_1.Ec2InstanceConfigBuilder(mockContext, userSpec);
+            const config = builder.buildSync();
+            expect(config.instanceType).toBe('c5.large'); // User override
+            expect(config.storage?.rootVolumeSize).toBe(100); // User override
+            expect(config.storage?.encrypted).toBe(true); // User override
+            expect(config.ami?.owner).toBe('amazon'); // Platform default
+        });
+    });
+    describe('Component Synthesis', () => {
+        it('should synthesize basic EC2 instance in commercial mode', () => {
+            component = new ec2_instance_component_1.Ec2InstanceComponent(stack, 'TestInstance', mockContext, baseSpec);
+            component.synth();
+            const template = assertions_1.Template.fromStack(stack);
+            // Verify EC2 instance is created
+            template.hasResourceProperties('AWS::EC2::Instance', {
+                InstanceType: 't3.micro',
+                IamInstanceProfile: assertions_1.Match.anyValue(),
+                SecurityGroupIds: [assertions_1.Match.anyValue()],
+                BlockDeviceMappings: assertions_1.Match.arrayWith([
+                    assertions_1.Match.objectLike({
+                        DeviceName: '/dev/xvda',
+                        Ebs: assertions_1.Match.objectLike({
+                            VolumeSize: 20,
+                            VolumeType: 'gp3',
+                            DeleteOnTermination: true
+                        })
+                    })
+                ])
+            });
+            // Verify IAM role is created
+            template.hasResourceProperties('AWS::IAM::Role', {
+                AssumeRolePolicyDocument: assertions_1.Match.objectLike({
+                    Statement: assertions_1.Match.arrayWith([
+                        assertions_1.Match.objectLike({
+                            Principal: { Service: 'ec2.amazonaws.com' }
+                        })
+                    ])
+                })
+            });
+            // Verify security group is created
+            template.hasResourceProperties('AWS::EC2::SecurityGroup', {
+                GroupDescription: assertions_1.Match.stringLikeRegexp('Security group for.*EC2 instance')
+            });
+        });
+        it('should create KMS key for FedRAMP compliance', () => {
+            const fedrampContext = { ...mockContext, complianceFramework: 'fedramp-moderate' };
+            component = new ec2_instance_component_1.Ec2InstanceComponent(stack, 'TestInstance', fedrampContext, baseSpec);
+            component.synth();
+            const template = assertions_1.Template.fromStack(stack);
+            // Verify KMS key is created
+            template.hasResourceProperties('AWS::KMS::Key', {
+                Description: assertions_1.Match.stringLikeRegexp('EBS encryption key for.*EC2 instance'),
+                EnableKeyRotation: false
+            });
+            // Verify EBS encryption uses the key
+            template.hasResourceProperties('AWS::EC2::Instance', {
+                BlockDeviceMappings: assertions_1.Match.arrayWith([
+                    assertions_1.Match.objectLike({
+                        Ebs: assertions_1.Match.objectLike({
+                            Encrypted: true,
+                            KmsKeyId: assertions_1.Match.anyValue()
+                        })
+                    })
+                ])
+            });
+        });
+        it('should enable key rotation for FedRAMP High', () => {
+            const fedrampHighContext = { ...mockContext, complianceFramework: 'fedramp-high' };
+            component = new ec2_instance_component_1.Ec2InstanceComponent(stack, 'TestInstance', fedrampHighContext, baseSpec);
+            component.synth();
+            const template = assertions_1.Template.fromStack(stack);
+            template.hasResourceProperties('AWS::KMS::Key', {
+                EnableKeyRotation: true
+            });
+        });
+        it('should configure instance for compliance monitoring', () => {
+            const fedrampContext = { ...mockContext, complianceFramework: 'fedramp-moderate' };
+            component = new ec2_instance_component_1.Ec2InstanceComponent(stack, 'TestInstance', fedrampContext, baseSpec);
+            component.synth();
+            const template = assertions_1.Template.fromStack(stack);
+            // Verify detailed monitoring is enabled
+            template.hasResourceProperties('AWS::EC2::Instance', {
+                Monitoring: true,
+                MetadataOptions: assertions_1.Match.objectLike({
+                    HttpTokens: 'required'
+                })
+            });
+            // Verify SSM managed policy is attached
+            template.hasResourceProperties('AWS::IAM::Role', {
+                ManagedPolicyArns: assertions_1.Match.arrayWith([
+                    assertions_1.Match.stringLikeRegexp('.*AmazonSSMManagedInstanceCore.*')
+                ])
+            });
+        });
+        it('should restrict security group for compliance frameworks', () => {
+            const fedrampContext = { ...mockContext, complianceFramework: 'fedramp-moderate' };
+            component = new ec2_instance_component_1.Ec2InstanceComponent(stack, 'TestInstance', fedrampContext, baseSpec);
+            component.synth();
+            const template = assertions_1.Template.fromStack(stack);
+            // Security group should not have all outbound traffic allowed
+            template.hasResourceProperties('AWS::EC2::SecurityGroup', {
+                SecurityGroupEgress: assertions_1.Match.absent()
+            });
+        });
+    });
+    describe('Capabilities', () => {
+        beforeEach(() => {
+            component = new ec2_instance_component_1.Ec2InstanceComponent(stack, 'TestInstance', mockContext, baseSpec);
+            component.synth();
+        });
+        it('should provide compute:ec2 capability', () => {
+            const capabilities = component.getCapabilities();
+            expect(capabilities['compute:ec2']).toBeDefined();
+        });
+        it('should include required capability properties', () => {
+            const capabilities = component.getCapabilities();
+            const ec2Capability = capabilities['compute:ec2'];
+            expect(ec2Capability.instanceId).toBeDefined();
+            expect(ec2Capability.privateIp).toBeDefined();
+            expect(ec2Capability.roleArn).toBeDefined();
+            expect(ec2Capability.securityGroupId).toBeDefined();
+            expect(ec2Capability.availabilityZone).toBeDefined();
+        });
+        it('should return correct component type', () => {
+            expect(component.getType()).toBe('ec2-instance');
+        });
+    });
+    describe('Configuration Validation', () => {
+        it('should handle custom AMI configuration', () => {
+            const customAmiSpec = {
+                ...baseSpec,
+                config: {
+                    ami: {
+                        amiId: 'ami-12345678'
+                    }
+                }
+            };
+            const builder = new ec2_instance_component_1.Ec2InstanceConfigBuilder(mockContext, customAmiSpec);
+            const config = builder.buildSync();
+            expect(config.ami?.amiId).toBe('ami-12345678');
+        });
+        it('should handle VPC configuration', () => {
+            const vpcSpec = {
+                ...baseSpec,
+                config: {
+                    vpc: {
+                        vpcId: 'vpc-12345678',
+                        subnetId: 'subnet-12345678',
+                        securityGroupIds: ['sg-12345678']
+                    }
+                }
+            };
+            const builder = new ec2_instance_component_1.Ec2InstanceConfigBuilder(mockContext, vpcSpec);
+            const config = builder.buildSync();
+            expect(config.vpc?.vpcId).toBe('vpc-12345678');
+            expect(config.vpc?.subnetId).toBe('subnet-12345678');
+            expect(config.vpc?.securityGroupIds).toEqual(['sg-12345678']);
+        });
+        it('should handle user data configuration', () => {
+            const userDataSpec = {
+                ...baseSpec,
+                config: {
+                    userData: {
+                        script: '#!/bin/bash\necho "Hello World"'
+                    }
+                }
+            };
+            const builder = new ec2_instance_component_1.Ec2InstanceConfigBuilder(mockContext, userDataSpec);
+            const config = builder.buildSync();
+            expect(config.userData?.script).toBe('#!/bin/bash\necho "Hello World"');
+        });
+        it('should handle key pair configuration', () => {
+            const keyPairSpec = {
+                ...baseSpec,
+                config: {
+                    keyPair: {
+                        keyName: 'my-key-pair'
+                    }
+                }
+            };
+            const builder = new ec2_instance_component_1.Ec2InstanceConfigBuilder(mockContext, keyPairSpec);
+            const config = builder.buildSync();
+            expect(config.keyPair?.keyName).toBe('my-key-pair');
+        });
+    });
+    describe('Error Handling', () => {
+        it('should throw error when accessing capabilities before synthesis', () => {
+            component = new ec2_instance_component_1.Ec2InstanceComponent(stack, 'TestInstance', mockContext, baseSpec);
+            expect(() => component.getCapabilities()).toThrow();
+        });
+        it('should handle synthesis errors gracefully', () => {
+            const invalidSpec = {
+                ...baseSpec,
+                config: {
+                    instanceType: 'invalid.type'
+                }
+            };
+            component = new ec2_instance_component_1.Ec2InstanceComponent(stack, 'TestInstance', mockContext, invalidSpec);
+            // Component should handle invalid configuration gracefully
+            expect(() => component.synth()).not.toThrow();
+        });
+    });
+    describe('Compliance Hardening', () => {
+        it('should apply commercial hardening', () => {
+            component = new ec2_instance_component_1.Ec2InstanceComponent(stack, 'TestInstance', mockContext, baseSpec);
+            component.synth();
+            const template = assertions_1.Template.fromStack(stack);
+            // Should include CloudWatch agent policy
+            template.hasResourceProperties('AWS::IAM::Role', {
+                ManagedPolicyArns: assertions_1.Match.arrayWith([
+                    assertions_1.Match.stringLikeRegexp('.*CloudWatchAgentServerPolicy.*')
+                ])
+            });
+        });
+        it('should apply FedRAMP Moderate hardening', () => {
+            const fedrampContext = { ...mockContext, complianceFramework: 'fedramp-moderate' };
+            component = new ec2_instance_component_1.Ec2InstanceComponent(stack, 'TestInstance', fedrampContext, baseSpec);
+            component.synth();
+            const template = assertions_1.Template.fromStack(stack);
+            // Should include SSM and CloudWatch policies
+            template.hasResourceProperties('AWS::IAM::Role', {
+                ManagedPolicyArns: assertions_1.Match.arrayWith([
+                    assertions_1.Match.stringLikeRegexp('.*AmazonSSMManagedInstanceCore.*'),
+                    assertions_1.Match.stringLikeRegexp('.*CloudWatchAgentServerPolicy.*')
+                ])
+            });
+        });
+        it('should apply FedRAMP High hardening with additional security', () => {
+            const fedrampHighContext = { ...mockContext, complianceFramework: 'fedramp-high' };
+            component = new ec2_instance_component_1.Ec2InstanceComponent(stack, 'TestInstance', fedrampHighContext, baseSpec);
+            component.synth();
+            const template = assertions_1.Template.fromStack(stack);
+            // Should have STIG compliance tags
+            template.hasResourceProperties('AWS::EC2::Instance', {
+                Tags: assertions_1.Match.arrayWith([
+                    assertions_1.Match.objectLike({
+                        Key: 'STIGCompliant',
+                        Value: 'true'
+                    }),
+                    assertions_1.Match.objectLike({
+                        Key: 'ImmutableInfrastructure',
+                        Value: 'true'
+                    })
+                ])
+            });
+        });
+    });
+});
+//# sourceMappingURL=ec2-instance.test.js.map

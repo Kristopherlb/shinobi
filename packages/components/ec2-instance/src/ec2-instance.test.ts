@@ -22,12 +22,7 @@ describe('EC2 Instance Component', () => {
   let stack: cdk.Stack;
   let component: Ec2InstanceComponent;
 
-  const mockContext: ComponentContext = {
-    serviceName: 'test-service',
-    environment: 'test',
-    region: 'us-east-1',
-    complianceFramework: 'commercial'
-  };
+  let mockContext: ComponentContext;
 
   const baseSpec: ComponentSpec = {
     name: 'test-instance',
@@ -38,6 +33,14 @@ describe('EC2 Instance Component', () => {
   beforeEach(() => {
     app = new cdk.App();
     stack = new cdk.Stack(app, 'TestStack');
+    
+    mockContext = {
+      serviceName: 'test-service',
+      environment: 'test',
+      region: 'us-east-1',
+      complianceFramework: 'commercial' as 'commercial',
+      scope: stack
+    };
   });
 
   describe('Configuration Builder', () => {
@@ -54,7 +57,7 @@ describe('EC2 Instance Component', () => {
     });
 
     it('should apply FedRAMP Moderate compliance defaults', () => {
-      const fedrampContext = { ...mockContext, complianceFramework: 'fedramp-moderate' };
+      const fedrampContext = { ...mockContext, complianceFramework: 'fedramp-moderate' as 'fedramp-moderate' };
       const builder = new Ec2InstanceConfigBuilder(fedrampContext, baseSpec);
       const config = builder.buildSync();
 
@@ -68,7 +71,7 @@ describe('EC2 Instance Component', () => {
     });
 
     it('should apply FedRAMP High compliance defaults', () => {
-      const fedrampHighContext = { ...mockContext, complianceFramework: 'fedramp-high' };
+      const fedrampHighContext = { ...mockContext, complianceFramework: 'fedramp-high' as 'fedramp-high' };
       const builder = new Ec2InstanceConfigBuilder(fedrampHighContext, baseSpec);
       const config = builder.buildSync();
 
@@ -143,7 +146,7 @@ describe('EC2 Instance Component', () => {
     });
 
     it('should create KMS key for FedRAMP compliance', () => {
-      const fedrampContext = { ...mockContext, complianceFramework: 'fedramp-moderate' };
+      const fedrampContext = { ...mockContext, complianceFramework: 'fedramp-moderate' as 'fedramp-moderate' };
       component = new Ec2InstanceComponent(stack, 'TestInstance', fedrampContext, baseSpec);
       component.synth();
 
@@ -169,7 +172,7 @@ describe('EC2 Instance Component', () => {
     });
 
     it('should enable key rotation for FedRAMP High', () => {
-      const fedrampHighContext = { ...mockContext, complianceFramework: 'fedramp-high' };
+      const fedrampHighContext = { ...mockContext, complianceFramework: 'fedramp-high' as 'fedramp-high' };
       component = new Ec2InstanceComponent(stack, 'TestInstance', fedrampHighContext, baseSpec);
       component.synth();
 
@@ -181,7 +184,7 @@ describe('EC2 Instance Component', () => {
     });
 
     it('should configure instance for compliance monitoring', () => {
-      const fedrampContext = { ...mockContext, complianceFramework: 'fedramp-moderate' };
+      const fedrampContext = { ...mockContext, complianceFramework: 'fedramp-moderate' as 'fedramp-moderate' };
       component = new Ec2InstanceComponent(stack, 'TestInstance', fedrampContext, baseSpec);
       component.synth();
 
@@ -204,7 +207,7 @@ describe('EC2 Instance Component', () => {
     });
 
     it('should restrict security group for compliance frameworks', () => {
-      const fedrampContext = { ...mockContext, complianceFramework: 'fedramp-moderate' };
+      const fedrampContext = { ...mockContext, complianceFramework: 'fedramp-moderate' as 'fedramp-moderate' };
       component = new Ec2InstanceComponent(stack, 'TestInstance', fedrampContext, baseSpec);
       component.synth();
 
@@ -351,7 +354,7 @@ describe('EC2 Instance Component', () => {
     });
 
     it('should apply FedRAMP Moderate hardening', () => {
-      const fedrampContext = { ...mockContext, complianceFramework: 'fedramp-moderate' };
+      const fedrampContext = { ...mockContext, complianceFramework: 'fedramp-moderate' as 'fedramp-moderate' };
       component = new Ec2InstanceComponent(stack, 'TestInstance', fedrampContext, baseSpec);
       component.synth();
 
@@ -367,7 +370,7 @@ describe('EC2 Instance Component', () => {
     });
 
     it('should apply FedRAMP High hardening with additional security', () => {
-      const fedrampHighContext = { ...mockContext, complianceFramework: 'fedramp-high' };
+      const fedrampHighContext = { ...mockContext, complianceFramework: 'fedramp-high' as 'fedramp-high' };
       component = new Ec2InstanceComponent(stack, 'TestInstance', fedrampHighContext, baseSpec);
       component.synth();
 

@@ -3,4 +3,9 @@
  * Enterprise Lambda function with API Gateway integration and compliance features
  */
 
-export * from './lambda-api.component';
+export { 
+  LambdaApiComponent,
+  LAMBDA_API_CONFIG_SCHEMA,
+  LambdaApiConfig,
+  LambdaApiConfigBuilder
+} from './lambda-api.component';

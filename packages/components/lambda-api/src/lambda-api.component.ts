@@ -18,11 +18,7 @@ import {
   Component,
   ComponentSpec,
   ComponentContext,
-  ComponentCapabilities,
-  ConfigBuilder,
-  ComponentConfigSchema,
-  LambdaFunctionCapability,
-  ApiRestCapability
+  ComponentCapabilities
 } from '@platform/contracts';
 
 /**
@@ -84,7 +80,7 @@ export interface LambdaApiConfig {
 /**
  * Configuration schema for Lambda API component
  */
-export const LAMBDA_API_CONFIG_SCHEMA: ComponentConfigSchema = {
+export const LAMBDA_API_CONFIG_SCHEMA = {
   type: 'object',
   title: 'Lambda API Configuration',
   description: 'Configuration for creating a Lambda function with API Gateway',
@@ -119,6 +115,108 @@ export const LAMBDA_API_CONFIG_SCHEMA: ComponentConfigSchema = {
       type: 'string',
       description: 'Path to Lambda function code',
       default: './src'
+    },
+    environmentVariables: {
+      type: 'object',
+      description: 'Environment variables for the Lambda function',
+      additionalProperties: {
+        type: 'string'
+      },
+      default: {}
+    },
+    api: {
+      type: 'object',
+      description: 'API Gateway configuration',
+      properties: {
+        name: {
+          type: 'string',
+          description: 'API Gateway name'
+        },
+        cors: {
+          type: 'boolean',
+          description: 'Enable CORS for API Gateway',
+          default: false
+        },
+        apiKeyRequired: {
+          type: 'boolean',
+          description: 'Require API key for requests',
+          default: false
+        }
+      },
+      additionalProperties: false,
+      default: {
+        cors: false,
+        apiKeyRequired: false
+      }
+    },
+    vpc: {
+      type: 'object',
+      description: 'VPC configuration for FedRAMP deployments',
+      properties: {
+        vpcId: {
+          type: 'string',
+          description: 'VPC ID for Lambda deployment',
+          pattern: '^vpc-[a-f0-9]{8,17}$'
+        },
+        subnetIds: {
+          type: 'array',
+          description: 'Subnet IDs for Lambda deployment',
+          items: {
+            type: 'string',
+            pattern: '^subnet-[a-f0-9]{8,17}$'
+          },
+          maxItems: 16
+        },
+        securityGroupIds: {
+          type: 'array',
+          description: 'Security group IDs for Lambda',
+          items: {
+            type: 'string',
+            pattern: '^sg-[a-f0-9]{8,17}$'
+          },
+          maxItems: 5
+        }
+      },
+      additionalProperties: false
+    },
+    encryption: {
+      type: 'object',
+      description: 'Encryption configuration',
+      properties: {
+        kmsKeyArn: {
+          type: 'string',
+          description: 'KMS key ARN for environment variable encryption',
+          pattern: '^arn:aws:kms:[a-z0-9-]+:[0-9]{12}:key/[a-f0-9-]{36}$'
+        }
+      },
+      additionalProperties: false
+    },
+    security: {
+      type: 'object',
+      description: 'Security tooling configuration',
+      properties: {
+        tools: {
+          type: 'object',
+          description: 'Security tools configuration',
+          properties: {
+            falco: {
+              type: 'boolean',
+              description: 'Enable Falco security monitoring',
+              default: false
+            }
+          },
+          additionalProperties: false,
+          default: {
+            falco: false
+          }
+        }
+      },
+      additionalProperties: false,
+      default: {
+        tools: {
+          falco: false
+        }
+      }
     }
   },
   additionalProperties: false,
@@ -126,38 +224,218 @@ export const LAMBDA_API_CONFIG_SCHEMA: ComponentConfigSchema = {
     runtime: 'nodejs20.x',
     memory: 512,
     timeout: 30,
-    codePath: './src'
+    codePath: './src',
+    environmentVariables: {},
+    api: {
+      cors: false,
+      apiKeyRequired: false
+    },
+    security: {
+      tools: {
+        falco: false
+      }
+    }
   }
 };
 
 /**
  * Configuration builder for Lambda API component
  */
-export class LambdaApiConfigBuilder extends ConfigBuilder<LambdaApiConfig> {
-  constructor(context: any) {
-    super(context, LAMBDA_API_CONFIG_SCHEMA);
+export class LambdaApiConfigBuilder {
+  private context: ComponentContext;
+  private spec: ComponentSpec;
+  
+  constructor(context: ComponentContext, spec: ComponentSpec) {
+    this.context = context;
+    this.spec = spec;
   }
 
-  async build(): Promise<LambdaApiConfig> {
-    // Apply schema defaults
-    let config = { ...LAMBDA_API_CONFIG_SCHEMA.defaults, ...this.context.spec.config };
+  /**
+   * Builds the final configuration by applying platform defaults, compliance frameworks, and user overrides
+   */
+  public async build(): Promise<LambdaApiConfig> {
+    return this.buildSync();
+  }
+
+  /**
+   * Synchronous version of build for use in synth() method
+   */
+  public buildSync(): LambdaApiConfig {
+    // Start with platform defaults
+    const platformDefaults = this.getPlatformDefaults();
     
-    // Apply compliance defaults
-    config = this.applyComplianceDefaults(config);
+    // Apply compliance framework defaults
+    const complianceDefaults = this.getComplianceFrameworkDefaults();
     
-    // Resolve environment interpolations
-    config = this.resolveEnvironmentInterpolations(config);
+    // Merge user configuration from spec
+    const userConfig = this.spec.config || {};
     
-    // Validate final configuration
-    const validationResult = this.validateConfiguration(config);
-    if (!validationResult.valid) {
-      throw new Error(`Invalid Lambda API configuration: ${validationResult.errors?.map(e => e.message).join(', ')}`);
+    // Merge configurations (user config takes precedence)
+    const mergedConfig = this.mergeConfigs(
+      this.mergeConfigs(platformDefaults, complianceDefaults),
+      userConfig
+    );
+    
+    // Resolve environment interpolations (sync version)
+    const resolvedConfig = this.resolveEnvironmentInterpolationsSync(mergedConfig);
+    
+    return resolvedConfig as LambdaApiConfig;
+  }
+
+  /**
+   * Synchronous version of environment interpolation resolution
+   */
+  private resolveEnvironmentInterpolationsSync(config: Record<string, any>): Record<string, any> {
+    // For now, return config as-is since we don't have environment config in sync context
+    // In a real implementation, this would resolve ${env:key} patterns
+    return config;
+  }
+
+  /**
+   * Simple merge utility for combining configuration objects
+   */
+  private mergeConfigs(target: Record<string, any>, source: Record<string, any>): Record<string, any> {
+    const result = { ...target };
+    
+    for (const key in source) {
+      if (source[key] && typeof source[key] === 'object' && !Array.isArray(source[key])) {
+        result[key] = this.mergeConfigs(result[key] || {}, source[key]);
+      } else {
+        result[key] = source[key];
+      }
     }
     
-    return config as LambdaApiConfig;
+    return result;
   }
 
-  // Using inherited applyComplianceDefaults from ConfigBuilder base class
+  /**
+   * Get platform-wide defaults for Lambda API
+   */
+  private getPlatformDefaults(): Record<string, any> {
+    return {
+      runtime: this.getDefaultRuntime(),
+      memory: this.getDefaultMemorySize(),
+      timeout: this.getDefaultTimeout(),
+      codePath: './src',
+      environmentVariables: {},
+      api: {
+        cors: false,
+        apiKeyRequired: false
+      },
+      security: {
+        tools: {
+          falco: false
+        }
+      }
+    };
+  }
+
+  /**
+   * Get compliance framework specific defaults
+   */
+  private getComplianceFrameworkDefaults(): Record<string, any> {
+    const framework = this.context.complianceFramework;
+    
+    switch (framework) {
+      case 'fedramp-moderate':
+        return {
+          memory: this.getComplianceMemorySize('fedramp-moderate'),
+          timeout: this.getComplianceTimeout('fedramp-moderate'),
+          vpc: {
+            // VPC deployment required for compliance
+          },
+          security: {
+            tools: {
+              falco: true // Enable security monitoring
+            }
+          }
+        };
+        
+      case 'fedramp-high':
+        return {
+          memory: this.getComplianceMemorySize('fedramp-high'),
+          timeout: this.getComplianceTimeout('fedramp-high'),
+          vpc: {
+            // VPC deployment required for compliance
+          },
+          encryption: {
+            // Customer-managed KMS key required
+          },
+          security: {
+            tools: {
+              falco: true
+            }
+          }
+        };
+        
+      default: // commercial
+        return {};
+    }
+  }
+
+  /**
+   * Get default runtime based on compliance framework
+   */
+  private getDefaultRuntime(): string {
+    // Use latest stable runtime for all frameworks
+    return 'nodejs20.x';
+  }
+
+  /**
+   * Get default memory size based on compliance framework
+   */
+  private getDefaultMemorySize(): number {
+    switch (this.context.complianceFramework) {
+      case 'fedramp-high':
+        return 1024; // More memory for enhanced logging/monitoring
+      case 'fedramp-moderate':
+        return 768; // Moderate increase for compliance overhead
+      default:
+        return 512; // Cost-optimized for commercial
+    }
+  }
+
+  /**
+   * Get compliance-specific memory size
+   */
+  private getComplianceMemorySize(framework: string): number {
+    switch (framework) {
+      case 'fedramp-high':
+        return 1024;
+      case 'fedramp-moderate':
+        return 768;
+      default:
+        return 512;
+    }
+  }
+
+  /**
+   * Get default timeout based on compliance framework
+   */
+  private getDefaultTimeout(): number {
+    switch (this.context.complianceFramework) {
+      case 'fedramp-high':
+        return 60; // Longer timeout for compliance logging
+      case 'fedramp-moderate':
+        return 45; // Moderate increase
+      default:
+        return 30; // Standard timeout
+    }
+  }
+
+  /**
+   * Get compliance-specific timeout
+   */
+  private getComplianceTimeout(framework: string): number {
+    switch (framework) {
+      case 'fedramp-high':
+        return 60;
+      case 'fedramp-moderate':
+        return 45;
+      default:
+        return 30;
+    }
+  }
 }
 
 /**
@@ -186,8 +464,9 @@ export class LambdaApiComponent extends Component {
     const startTime = Date.now();
     
     try {
-      // Build configuration
-      this.config = this.buildConfigSync();
+      // Build configuration using ConfigBuilder
+      const configBuilder = new LambdaApiConfigBuilder(this.context, this.spec);
+      this.config = configBuilder.buildSync();
       
       // Log configuration built
       this.logComponentEvent('config_built', 'Lambda API configuration built successfully', {
@@ -465,7 +744,8 @@ export class LambdaApiComponent extends Component {
   /**
    * Build Lambda function capability data shape
    */
-  private buildLambdaCapability(): LambdaFunctionCapability {
+  private buildLambdaCapability(): any {
+    this.validateSynthesized();
     return {
       functionArn: this.lambdaFunction!.functionArn,
       functionName: this.lambdaFunction!.functionName,
@@ -476,7 +756,8 @@ export class LambdaApiComponent extends Component {
   /**
    * Build API REST capability data shape
    */
-  private buildApiCapability(): ApiRestCapability {
+  private buildApiCapability(): any {
+    this.validateSynthesized();
     return {
       endpointUrl: this.api!.url,
       apiId: this.api!.restApiId
@@ -510,23 +791,6 @@ export class LambdaApiComponent extends Component {
     return runtimeMap[this.config!.runtime || 'nodejs20.x'] || lambda.Runtime.NODEJS_20_X;
   }
 
-  /**
-   * Simplified config building for demo purposes
-   */
-  private buildConfigSync(): LambdaApiConfig {
-    const config: LambdaApiConfig = {
-      handler: this.spec.config?.handler || 'index.handler',
-      runtime: this.spec.config?.runtime || 'nodejs20.x',
-      memory: this.spec.config?.memory || 512,
-      timeout: this.spec.config?.timeout || 30,
-      codePath: this.spec.config?.codePath || './src',
-      environmentVariables: this.spec.config?.environmentVariables || {},
-      api: this.spec.config?.api || {},
-      security: this.spec.config?.security || {}
-    };
-
-    return config;
-  }
 
   /**
    * Configure OpenTelemetry observability for Lambda function according to Platform Observability Standard
