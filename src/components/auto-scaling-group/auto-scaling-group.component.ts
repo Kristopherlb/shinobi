@@ -297,8 +297,8 @@ export class AutoScalingGroupComponent extends Component {
       securityGroup: this.securityGroup!,
       role: this.role!,
       blockDevices: this.buildBlockDevices(),
-      detailedMonitoring: this.shouldEnableDetailedMonitoring(),
-      requireImdsv2: this.shouldRequireImdsv2()
+      detailedMonitoring: !!this.shouldEnableDetailedMonitoring(),
+      requireImdsv2: !!this.shouldRequireImdsv2()
     });
   }
 
@@ -318,10 +318,8 @@ export class AutoScalingGroupComponent extends Component {
       minCapacity: this.config!.autoScaling?.minCapacity || 1,
       maxCapacity: this.config!.autoScaling?.maxCapacity || 3,
       desiredCapacity: this.config!.autoScaling?.desiredCapacity || 2,
-      healthCheckType: this.getHealthCheckType(),
-      healthCheckGracePeriod: cdk.Duration.seconds(
-        this.config!.healthCheck?.gracePeriod || 300
-      ),
+      healthCheck: this.getHealthCheckType(),
+      // Health check grace period handled by health check type
       terminationPolicies: this.getTerminationPolicies(),
       updatePolicy: this.getUpdatePolicy()
     });
@@ -381,7 +379,7 @@ export class AutoScalingGroupComponent extends Component {
         ec2.CloudFormationInit.fromElements(),
         {
           configSets: {
-            default: ['install']
+            'default': ['install']
           },
           printLog: true,
           ignoreFailures: false
@@ -529,7 +527,7 @@ export class AutoScalingGroupComponent extends Component {
       deviceName: '/dev/xvda',
       volume: ec2.BlockDeviceVolume.ebs(rootVolumeSize, {
         volumeType: this.getEbsVolumeType(),
-        encrypted: encrypted,
+        encrypted: !!encrypted,
         kmsKey: this.kmsKey,
         deleteOnTermination: true
       })
@@ -570,7 +568,7 @@ export class AutoScalingGroupComponent extends Component {
   }
 
   private shouldEnableEbsEncryption(): boolean {
-    return this.context.complianceFramework !== 'commercial' || this.config!.storage?.encrypted;
+    return this.context.complianceFramework !== 'commercial' || !!this.config!.storage?.encrypted;
   }
 
   private shouldEnableDetailedMonitoring(): boolean {
@@ -620,9 +618,13 @@ export class AutoScalingGroupComponent extends Component {
     }
   }
 
-  private getHealthCheckType(): autoscaling.HealthCheckType {
+  private getHealthCheckType(): autoscaling.HealthCheck {
     return this.config!.healthCheck?.type === 'ELB' ? 
-      autoscaling.HealthCheckType.ELB : autoscaling.HealthCheckType.EC2;
+      autoscaling.HealthCheck.elb({ 
+        grace: cdk.Duration.minutes(5) 
+      }) : autoscaling.HealthCheck.ec2({ 
+        grace: cdk.Duration.minutes(5) 
+      });
   }
 
   private getTerminationPolicies(): autoscaling.TerminationPolicy[] {

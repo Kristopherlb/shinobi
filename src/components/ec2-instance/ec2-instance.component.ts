@@ -293,8 +293,8 @@ export class Ec2InstanceComponent extends Component {
       userData: userData,
       keyName: this.config!.keyPair?.keyName,
       blockDevices: this.buildBlockDevices(),
-      detailedMonitoring: this.shouldEnableDetailedMonitoring(),
-      requireImdsv2: this.shouldRequireImdsv2(),
+      detailedMonitoring: !!this.shouldEnableDetailedMonitoring(),
+      requireImdsv2: !!this.shouldRequireImdsv2(),
       sourceDestCheck: !this.isComplianceFramework() // Disable for NAT instances in compliance
     };
 
@@ -530,7 +530,7 @@ export class Ec2InstanceComponent extends Component {
       deviceName: '/dev/xvda',
       volume: ec2.BlockDeviceVolume.ebs(rootVolumeSize, {
         volumeType: this.getEbsVolumeType(),
-        encrypted: encrypted,
+        encrypted: !!encrypted,
         kmsKey: this.kmsKey,
         deleteOnTermination: this.config!.storage?.deleteOnTermination !== false
       })
@@ -571,11 +571,11 @@ export class Ec2InstanceComponent extends Component {
   }
 
   private shouldEnableEbsEncryption(): boolean {
-    return this.context.complianceFramework !== 'commercial' || this.config!.storage?.encrypted;
+    return this.context.complianceFramework !== 'commercial' || !!this.config!.storage?.encrypted;
   }
 
   private shouldEnableDetailedMonitoring(): boolean {
-    return this.isComplianceFramework() || this.config!.monitoring?.detailed;
+    return this.isComplianceFramework() || !!this.config!.monitoring?.detailed;
   }
 
   private shouldRequireImdsv2(): boolean {
@@ -650,7 +650,7 @@ export class Ec2InstanceComponent extends Component {
         cloudWatchAgent: this.isComplianceFramework()
       },
       security: {
-        requireImdsv2: this.shouldRequireImdsv2(),
+        requireImdsv2: !!this.shouldRequireImdsv2(),
         httpTokens: this.shouldRequireImdsv2() ? 'required' : 'optional'
       }
     };

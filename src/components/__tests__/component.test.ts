@@ -35,6 +35,7 @@ class TestUtils {
   static createMockSpec(componentName: string, config: any = {}): ComponentSpec {
     return {
       name: componentName,
+      type: componentName,
       config
     };
   }

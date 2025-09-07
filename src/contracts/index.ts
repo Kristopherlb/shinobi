@@ -43,6 +43,8 @@ export type {
   // API & Compute Capabilities
   ApiRestCapability,
   LambdaFunctionCapability,
+  ComputeEc2Capability,
+  ComputeAsgCapability,
   
   // Networking Capabilities
   NetVpcCapability,

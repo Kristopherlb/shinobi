@@ -226,6 +226,40 @@ export interface LambdaFunctionCapability {
   roleArn: string;
 }
 
+/**
+ * EC2 compute instance capability data shape.
+ * Provided by components like 'ec2-instance'
+ * 
+ * Capability Key: `compute:ec2`
+ */
+export interface ComputeEc2Capability {
+  /** EC2 instance ID */
+  instanceId: string;
+  
+  /** Private IP address of the instance */
+  privateIp: string;
+  
+  /** IAM role ARN used by the instance */
+  roleArn: string;
+}
+
+/**
+ * Auto Scaling Group capability data shape.
+ * Provided by components like 'auto-scaling-group'
+ * 
+ * Capability Key: `compute:asg`
+ */
+export interface ComputeAsgCapability {
+  /** Auto Scaling Group ARN */
+  asgArn: string;
+  
+  /** Auto Scaling Group name */
+  asgName: string;
+  
+  /** IAM role ARN used by instances in the ASG */
+  roleArn: string;
+}
+
 // ============================================================================
 // Networking Capabilities
 // ============================================================================
@@ -322,6 +356,8 @@ export type StandardCapabilityData =
   | BusEventBridgeCapability
   | ApiRestCapability
   | LambdaFunctionCapability
+  | ComputeEc2Capability
+  | ComputeAsgCapability
   | NetVpcCapability
   | NetLoadBalancerTargetCapability
   | NetSshAccessCapability
@@ -363,6 +399,8 @@ export const STANDARD_CAPABILITIES = {
   // API & Compute Capabilities
   'api:rest': 'ApiRestCapability',
   'lambda:function': 'LambdaFunctionCapability',
+  'compute:ec2': 'ComputeEc2Capability',
+  'compute:asg': 'ComputeAsgCapability',
   
   // Networking Capabilities
   'net:vpc': 'NetVpcCapability',
