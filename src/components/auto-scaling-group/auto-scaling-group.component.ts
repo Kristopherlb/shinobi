@@ -665,7 +665,7 @@ export class AutoScalingGroupComponent extends Component {
     this.securityGroup = new ec2.SecurityGroup(this, 'InstanceSecurityGroup', {
       vpc,
       description: `Security group for ${this.spec.name} Auto Scaling Group`,
-      allowAllOutbound: !this.isComplianceFramework()
+      allowAllOutbound: !['fedramp-moderate', 'fedramp-high'].includes(this.context.complianceFramework)
     });
 
     // Apply security group rules
@@ -792,7 +792,7 @@ export class AutoScalingGroupComponent extends Component {
   private getBaseManagedPolicies(): iam.IManagedPolicy[] {
     const policies = [];
 
-    if (this.isComplianceFramework()) {
+    if (['fedramp-moderate', 'fedramp-high'].includes(this.context.complianceFramework)) {
       policies.push(
         iam.ManagedPolicy.fromAwsManagedPolicyName('AmazonSSMManagedInstanceCore'),
         iam.ManagedPolicy.fromAwsManagedPolicyName('CloudWatchAgentServerPolicy')
@@ -850,7 +850,7 @@ export class AutoScalingGroupComponent extends Component {
       'HTTPS from internet'
     );
 
-    if (this.isComplianceFramework()) {
+    if (['fedramp-moderate', 'fedramp-high'].includes(this.context.complianceFramework)) {
       // Restrict SSH to VPC only
       const vpcCidr = this.config!.vpc?.vpcId ? '10.0.0.0/16' : '172.31.0.0/16';
       this.securityGroup!.addIngressRule(
@@ -880,7 +880,7 @@ export class AutoScalingGroupComponent extends Component {
     }
 
     // Add compliance-specific setup
-    if (this.isComplianceFramework()) {
+    if (['fedramp-moderate', 'fedramp-high'].includes(this.context.complianceFramework)) {
       userData.addCommands(
         '#!/bin/bash',
         'yum update -y',
