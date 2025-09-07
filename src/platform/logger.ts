@@ -93,6 +93,7 @@ export interface LoggerOptions {
   user?: LogUser;
   request?: LogRequest;
   performance?: LogPerformance;
+  error?: LogError;
 }
 
 export interface Timer {
@@ -274,7 +275,7 @@ export class Logger {
     // Add security context with automatic classification
     if (options?.security) {
       logEvent.security = {
-        classification: this.determineDataClassification(logEvent),
+        classification: this.determineDataClassification(logEvent) as LogSecurity['classification'],
         piiPresent: this.detectPII(logEvent),
         auditRequired: this.isAuditRequired(level),
         ...options.security
@@ -286,7 +287,7 @@ export class Logger {
       logEvent.performance = options.performance;
     }
 
-    // Add error information
+    // Add error information  
     if (options?.error) {
       logEvent.error = options.error;
     }

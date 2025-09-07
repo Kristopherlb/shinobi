@@ -160,11 +160,27 @@ export class RdsPostgresComponent extends Component {
    * Synthesis phase - Create RDS PostgreSQL database with compliance hardening
    */
   public synth(): void {
-    // Build configuration
-    this.config = this.buildConfigSync();
+    // Log component synthesis start
+    this.logComponentEvent('synthesis_start', 'Starting RDS Postgres component synthesis', {
+      dbName: this.spec.config?.dbName,
+      instanceClass: this.spec.config?.instanceClass
+    });
     
-    // Create KMS key for encryption if needed
-    this.createKmsKeyIfNeeded();
+    const startTime = Date.now();
+    
+    try {
+      // Build configuration
+      this.config = this.buildConfigSync();
+      
+      // Log configuration built
+      this.logComponentEvent('config_built', 'RDS Postgres configuration built successfully', {
+        dbName: this.config.dbName,
+        instanceClass: this.config.instanceClass,
+        multiAz: this.config.multiAz
+      });
+      
+      // Create KMS key for encryption if needed
+      this.createKmsKeyIfNeeded();
     
     // Create database secret
     this.createDatabaseSecret();
@@ -194,6 +210,27 @@ export class RdsPostgresComponent extends Component {
     
     // Register capabilities
     this.registerCapability('db:postgres', this.buildDatabaseCapability());
+    
+    // Log successful synthesis completion
+    const duration = Date.now() - startTime;
+    this.logPerformanceMetric('component_synthesis', duration, {
+      resourcesCreated: Object.keys(this.capabilities).length
+    });
+    
+    this.logComponentEvent('synthesis_complete', 'RDS Postgres component synthesis completed successfully', {
+      databaseCreated: 1,
+      secretCreated: 1,
+      kmsKeyCreated: !!this.kmsKey,
+      securityGroupCreated: !!this.securityGroup
+    });
+    
+    } catch (error) {
+      this.logError(error as Error, 'component synthesis', {
+        componentType: 'rds-postgres',
+        stage: 'synthesis'
+      });
+      throw error;
+    }
   }
 
   /**
@@ -376,6 +413,16 @@ export class RdsPostgresComponent extends Component {
     
     // Configure observability for database monitoring
     this.configureObservabilityForDatabase();
+    
+    // Log database creation
+    this.logResourceCreation('rds-postgres-instance', this.database.instanceIdentifier, {
+      dbName: this.config!.dbName,
+      engine: 'postgres',
+      instanceClass: this.config!.instanceClass,
+      multiAz: !!this.config!.multiAz,
+      encryptionEnabled: this.shouldEnableEncryption(),
+      performanceInsightsEnabled: this.shouldEnableRdsPerformanceInsights()
+    });
   }
 
   /**

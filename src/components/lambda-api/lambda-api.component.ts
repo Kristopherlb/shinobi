@@ -177,11 +177,27 @@ export class LambdaApiComponent extends Component {
    * Synthesis phase - Create Lambda function and API Gateway
    */
   public synth(): void {
-    // Build configuration
-    this.config = this.buildConfigSync();
+    // Log component synthesis start
+    this.logComponentEvent('synthesis_start', 'Starting Lambda API component synthesis', {
+      runtime: this.spec.config?.runtime,
+      handler: this.spec.config?.handler
+    });
     
-    // Create KMS key for encryption if needed
-    this.createKmsKeyIfNeeded();
+    const startTime = Date.now();
+    
+    try {
+      // Build configuration
+      this.config = this.buildConfigSync();
+      
+      // Log configuration built
+      this.logComponentEvent('config_built', 'Lambda API configuration built successfully', {
+        runtime: this.config.runtime,
+        memory: this.config.memory,
+        timeout: this.config.timeout
+      });
+      
+      // Create KMS key for encryption if needed
+      this.createKmsKeyIfNeeded();
     
     // Create Lambda function
     this.createLambdaFunction();
@@ -202,6 +218,26 @@ export class LambdaApiComponent extends Component {
     // Register capabilities
     this.registerCapability('lambda:function', this.buildLambdaCapability());
     this.registerCapability('api:rest', this.buildApiCapability());
+    
+    // Log successful synthesis completion
+    const duration = Date.now() - startTime;
+    this.logPerformanceMetric('component_synthesis', duration, {
+      resourcesCreated: Object.keys(this.capabilities).length
+    });
+    
+    this.logComponentEvent('synthesis_complete', 'Lambda API component synthesis completed successfully', {
+      functionsCreated: 1,
+      apiCreated: 1,
+      kmsKeyCreated: !!this.kmsKey
+    });
+    
+    } catch (error) {
+      this.logError(error as Error, 'component synthesis', {
+        componentType: 'lambda-api',
+        stage: 'synthesis'
+      });
+      throw error;
+    }
   }
 
   /**
@@ -277,6 +313,14 @@ export class LambdaApiComponent extends Component {
     
     // Configure automatic OpenTelemetry observability
     this.configureObservabilityForLambda();
+    
+    // Log Lambda function creation
+    this.logResourceCreation('lambda-function', this.lambdaFunction.functionName, {
+      runtime: this.config!.runtime,
+      memory: this.config!.memory,
+      timeout: this.config!.timeout,
+      hasKmsKey: !!this.kmsKey
+    });
   }
 
   /**
@@ -308,6 +352,13 @@ export class LambdaApiComponent extends Component {
     this.applyStandardTags(this.api, {
       'api-type': 'rest',
       'api-cors-enabled': (!!this.config!.api?.cors).toString()
+    });
+    
+    // Log API Gateway creation
+    this.logResourceCreation('api-gateway', this.api.restApiId, {
+      type: 'rest',
+      corsEnabled: !!this.config!.api?.cors,
+      endpointUrl: this.api.url
     });
   }
 
