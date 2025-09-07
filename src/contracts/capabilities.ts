@@ -1,14 +1,22 @@
 /**
- * Standard Capability Vocabulary
+ * Platform Capability Naming Standard v1.0
  * 
- * This file defines the standardized capability keys and their expected
- * data shapes. This vocabulary ensures consistent binding interfaces
- * across all components in the platform.
+ * This file defines the official vocabulary of capability keys and their mandatory
+ * data shapes. All capability keys follow the `category:service` format and provide
+ * real, tokenized values from underlying CDK constructs for automated binding.
+ * 
+ * Adherence to this standard is mandatory for all components in the platform library.
  */
+
+// ============================================================================
+// Database Capabilities
+// ============================================================================
 
 /**
  * PostgreSQL database capability data shape.
  * Provided by components like 'rds-postgres', 'rds-postgres-import'
+ * 
+ * Capability Key: `db:postgres`
  */
 export interface DbPostgresCapability {
   /** Database hostname */
@@ -28,20 +36,39 @@ export interface DbPostgresCapability {
   
   /** RDS instance ARN for direct AWS API access */
   instanceArn: string;
-  
-  /** Optional: Connection string template */
-  connectionString?: string;
-  
-  /** Optional: Read replica endpoints for read scaling */
-  readReplicas?: {
-    host: string;
-    port: number;
-  }[];
 }
 
 /**
- * DynamoDB table capability data shape.
+ * MySQL database capability data shape.
+ * Provided by components like 'rds-mysql', 'rds-mysql-import'
+ * 
+ * Capability Key: `db:mysql`
+ */
+export interface DbMysqlCapability {
+  /** Database hostname */
+  host: string;
+  
+  /** Database port */
+  port: number;
+  
+  /** Database name */
+  dbName: string;
+  
+  /** ARN of the secret containing database credentials */
+  secretArn: string;
+  
+  /** Security group ID for network access */
+  sgId: string;
+  
+  /** RDS instance ARN for direct AWS API access */
+  instanceArn: string;
+}
+
+/**
+ * DynamoDB NoSQL table capability data shape.
  * Provided by components like 'dynamodb-table'
+ * 
+ * Capability Key: `db:dynamodb`
  */
 export interface DbDynamoDbCapability {
   /** DynamoDB table name */
@@ -49,59 +76,55 @@ export interface DbDynamoDbCapability {
   
   /** DynamoDB table ARN */
   tableArn: string;
-  
-  /** Optional: Global secondary index names */
-  globalSecondaryIndexes?: string[];
-  
-  /** Optional: Local secondary index names */
-  localSecondaryIndexes?: string[];
-  
-  /** Optional: Stream ARN if DynamoDB Streams is enabled */
-  streamArn?: string;
 }
 
+// ============================================================================
+// Caching Capabilities
+// ============================================================================
+
 /**
- * SQS queue capability data shape.
- * Provided by components like 'sqs-queue'
+ * Redis in-memory cache capability data shape.
+ * Provided by components like 'elasticache-redis'
+ * 
+ * Capability Key: `cache:redis`
  */
-export interface QueueSqsCapability {
-  /** SQS queue URL */
-  queueUrl: string;
+export interface CacheRedisCapability {
+  /** Redis endpoint hostname */
+  host: string;
   
-  /** SQS queue ARN */
-  queueArn: string;
+  /** Redis port */
+  port: number;
   
-  /** Optional: Dead letter queue URL */
-  deadLetterQueueUrl?: string;
-  
-  /** Optional: Dead letter queue ARN */
-  deadLetterQueueArn?: string;
-  
-  /** Optional: Visibility timeout in seconds */
-  visibilityTimeoutSeconds?: number;
+  /** Security group ID for network access */
+  sgId: string;
 }
 
 /**
- * SNS topic capability data shape.
- * Provided by components like 'sns-topic', 'sns-topic-import'
+ * Memcached in-memory cache capability data shape.
+ * Provided by components like 'elasticache-memcached'
+ * 
+ * Capability Key: `cache:memcached`
  */
-export interface TopicSnsCapability {
-  /** SNS topic ARN */
-  topicArn: string;
+export interface CacheMemcachedCapability {
+  /** Memcached endpoint hostname */
+  host: string;
   
-  /** Optional: Topic display name */
-  displayName?: string;
+  /** Memcached port */
+  port: number;
   
-  /** Optional: Subscription ARNs if subscriptions are managed by this component */
-  subscriptionArns?: string[];
-  
-  /** Optional: Dead letter queue for failed deliveries */
-  deadLetterQueueArn?: string;
+  /** Security group ID for network access */
+  sgId: string;
 }
 
+// ============================================================================
+// Storage Capabilities
+// ============================================================================
+
 /**
- * S3 bucket capability data shape.
+ * S3 object storage bucket capability data shape.
  * Provided by components like 's3-bucket'
+ * 
+ * Capability Key: `bucket:s3`
  */
 export interface BucketS3Capability {
   /** S3 bucket name */
@@ -109,20 +132,74 @@ export interface BucketS3Capability {
   
   /** S3 bucket ARN */
   bucketArn: string;
+}
+
+// ============================================================================
+// Messaging & Streaming Capabilities
+// ============================================================================
+
+/**
+ * SQS message queue capability data shape.
+ * Provided by components like 'sqs-queue'
+ * 
+ * Capability Key: `queue:sqs`
+ */
+export interface QueueSqsCapability {
+  /** SQS queue URL */
+  queueUrl: string;
   
-  /** S3 bucket domain name */
-  bucketDomainName: string;
-  
-  /** Optional: CloudFront distribution domain if CDN is enabled */
-  cloudFrontDomainName?: string;
-  
-  /** Optional: Bucket website endpoint if static website hosting is enabled */
-  websiteUrl?: string;
+  /** SQS queue ARN */
+  queueArn: string;
 }
 
 /**
- * REST API capability data shape.
+ * SNS pub/sub topic capability data shape.
+ * Provided by components like 'sns-topic', 'sns-topic-import'
+ * 
+ * Capability Key: `topic:sns`
+ */
+export interface TopicSnsCapability {
+  /** SNS topic ARN */
+  topicArn: string;
+}
+
+/**
+ * Kinesis data stream capability data shape.
+ * Provided by components like 'kinesis-stream'
+ * 
+ * Capability Key: `stream:kinesis`
+ */
+export interface StreamKinesisCapability {
+  /** Kinesis stream name */
+  streamName: string;
+  
+  /** Kinesis stream ARN */
+  streamArn: string;
+}
+
+/**
+ * EventBridge event bus capability data shape.
+ * Provided by components like 'eventbridge-bus'
+ * 
+ * Capability Key: `bus:eventbridge`
+ */
+export interface BusEventBridgeCapability {
+  /** EventBridge event bus name */
+  busName: string;
+  
+  /** EventBridge event bus ARN */
+  busArn: string;
+}
+
+// ============================================================================
+// API & Compute Capabilities
+// ============================================================================
+
+/**
+ * REST API endpoint capability data shape.
  * Provided by components like 'lambda-api', 'api-gateway'
+ * 
+ * Capability Key: `api:rest`
  */
 export interface ApiRestCapability {
   /** API endpoint URL */
@@ -130,20 +207,13 @@ export interface ApiRestCapability {
   
   /** API Gateway REST API ID */
   apiId: string;
-  
-  /** API Gateway stage name */
-  stageName: string;
-  
-  /** Optional: Custom domain name */
-  customDomainName?: string;
-  
-  /** Optional: API key for secured endpoints */
-  apiKeyId?: string;
 }
 
 /**
  * Lambda function capability data shape.
  * Provided by components like 'lambda-api', 'lambda-worker'
+ * 
+ * Capability Key: `lambda:function`
  */
 export interface LambdaFunctionCapability {
   /** Lambda function ARN */
@@ -154,17 +224,17 @@ export interface LambdaFunctionCapability {
   
   /** IAM role ARN used by the Lambda function */
   roleArn: string;
-  
-  /** Optional: Lambda layer ARNs if custom layers are used */
-  layerArns?: string[];
-  
-  /** Optional: Environment variables that can be modified by bindings */
-  environmentVariables?: Record<string, string>;
 }
 
+// ============================================================================
+// Networking Capabilities
+// ============================================================================
+
 /**
- * VPC network capability data shape.
+ * Virtual Private Cloud network capability data shape.
  * Provided by components like 'vpc'
+ * 
+ * Capability Key: `net:vpc`
  */
 export interface NetVpcCapability {
   /** VPC ID */
@@ -175,20 +245,13 @@ export interface NetVpcCapability {
   
   /** Private subnet IDs */
   privateSubnetIds: string[];
-  
-  /** Optional: Database subnet IDs */
-  databaseSubnetIds?: string[];
-  
-  /** Optional: Internet gateway ID */
-  internetGatewayId?: string;
-  
-  /** Optional: NAT gateway IDs */
-  natGatewayIds?: string[];
 }
 
 /**
  * Load balancer target capability data shape.
  * Provided by components like 'auto-scaling-group', 'ecs-fargate-service'
+ * 
+ * Capability Key: `net:load-balancer-target`
  */
 export interface NetLoadBalancerTargetCapability {
   /** Target group ARN for load balancer registration */
@@ -196,35 +259,28 @@ export interface NetLoadBalancerTargetCapability {
   
   /** Security group ID that allows traffic from the load balancer */
   sgId: string;
-  
-  /** Port number for health checks and traffic */
-  port: number;
-  
-  /** Optional: Health check path for HTTP targets */
-  healthCheckPath?: string;
 }
 
 /**
  * SSH access capability data shape.
  * Provided by components like 'ec2-instance'
+ * 
+ * Capability Key: `net:ssh-access`
  */
 export interface NetSshAccessCapability {
   /** Security group ID that allows SSH access */
   sgId: string;
-  
-  /** SSH port (typically 22) */
-  port: number;
-  
-  /** Optional: Key pair name for SSH authentication */
-  keyPairName?: string;
-  
-  /** Optional: Instance ID for direct connection */
-  instanceId?: string;
 }
+
+// ============================================================================
+// Service Integration Capabilities
+// ============================================================================
 
 /**
  * ECS Service Connect endpoint capability data shape.
  * Provided by components like 'ecs-fargate-service'
+ * 
+ * Capability Key: `service:connect`
  */
 export interface ServiceConnectCapability {
   /** Service Connect namespace */
@@ -232,31 +288,22 @@ export interface ServiceConnectCapability {
   
   /** Service name within the namespace */
   serviceName: string;
-  
-  /** Port number for service communication */
-  port: number;
-  
-  /** Optional: Custom DNS name */
-  dnsName?: string;
 }
 
 /**
- * EventBridge rule target capability data shape.
+ * Event rule target capability data shape.
  * Provided by components like 'eventbridge-rule'
+ * 
+ * Capability Key: `event:trigger`
  */
 export interface EventTriggerCapability {
   /** EventBridge rule ARN */
   ruleArn: string;
-  
-  /** EventBridge event bus name */
-  eventBusName: string;
-  
-  /** Event pattern that triggers this rule */
-  eventPattern: Record<string, any>;
-  
-  /** Optional: Schedule expression if this is a scheduled rule */
-  scheduleExpression?: string;
 }
+
+// ============================================================================
+// Union Types & Registry
+// ============================================================================
 
 /**
  * Union type of all standard capability data shapes.
@@ -264,10 +311,15 @@ export interface EventTriggerCapability {
  */
 export type StandardCapabilityData = 
   | DbPostgresCapability
+  | DbMysqlCapability
   | DbDynamoDbCapability
+  | CacheRedisCapability
+  | CacheMemcachedCapability
+  | BucketS3Capability
   | QueueSqsCapability
   | TopicSnsCapability
-  | BucketS3Capability
+  | StreamKinesisCapability
+  | BusEventBridgeCapability
   | ApiRestCapability
   | LambdaFunctionCapability
   | NetVpcCapability
@@ -277,26 +329,47 @@ export type StandardCapabilityData =
   | EventTriggerCapability;
 
 /**
- * Standard Capability Vocabulary Registry
+ * Platform Capability Naming Standard Registry v1.0
  * 
- * This constant defines the mapping between capability keys and their
- * corresponding TypeScript interfaces. This registry is used by:
- * - Component validation
- * - Binding strategy selection
- * - Documentation generation
- * - IDE IntelliSense support
+ * This registry defines the complete mapping between capability keys and their
+ * mandatory data shape interfaces. All capability keys follow `category:service`
+ * format and provide real, tokenized values from underlying CDK constructs.
+ * 
+ * Used by:
+ * - Component validation and type checking
+ * - Binding strategy selection and routing
+ * - Automated documentation generation
+ * - IDE IntelliSense and code completion
  */
 export const STANDARD_CAPABILITIES = {
+  // Database Capabilities
   'db:postgres': 'DbPostgresCapability',
+  'db:mysql': 'DbMysqlCapability',
   'db:dynamodb': 'DbDynamoDbCapability',
-  'queue:sqs': 'QueueSqsCapability', 
-  'topic:sns': 'TopicSnsCapability',
+  
+  // Caching Capabilities
+  'cache:redis': 'CacheRedisCapability',
+  'cache:memcached': 'CacheMemcachedCapability',
+  
+  // Storage Capabilities
   'bucket:s3': 'BucketS3Capability',
+  
+  // Messaging & Streaming Capabilities
+  'queue:sqs': 'QueueSqsCapability',
+  'topic:sns': 'TopicSnsCapability',
+  'stream:kinesis': 'StreamKinesisCapability',
+  'bus:eventbridge': 'BusEventBridgeCapability',
+  
+  // API & Compute Capabilities
   'api:rest': 'ApiRestCapability',
   'lambda:function': 'LambdaFunctionCapability',
+  
+  // Networking Capabilities
   'net:vpc': 'NetVpcCapability',
   'net:load-balancer-target': 'NetLoadBalancerTargetCapability',
   'net:ssh-access': 'NetSshAccessCapability',
+  
+  // Service Integration Capabilities
   'service:connect': 'ServiceConnectCapability',
   'event:trigger': 'EventTriggerCapability'
 } as const;
