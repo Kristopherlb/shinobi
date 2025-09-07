@@ -2,7 +2,7 @@
   "extends": "../../../tsconfig.base.json",
   "compilerOptions": {
     "outDir": "./dist",
-    "rootDir": "./src",
+    "rootDir": "../../../",
     "declaration": true,
     "declarationMap": true,
     "sourceMap": true
@@ -12,6 +12,7 @@
   ],
   "exclude": [
     "dist",
-    "node_modules"
+    "node_modules",
+    "src/**/*.test.ts"
   ]
 }

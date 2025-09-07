@@ -17,10 +17,7 @@ import {
   Component,
   ComponentSpec,
   ComponentContext,
-  ComponentCapabilities,
-  ConfigBuilder,
-  ComponentConfigSchema,
-  DbPostgresCapability
+  ComponentCapabilities
 } from '@platform/contracts';
 
 /**
@@ -83,7 +80,7 @@ export interface RdsPostgresConfig {
 /**
  * Configuration schema for RDS PostgreSQL component
  */
-export const RDS_POSTGRES_CONFIG_SCHEMA: ComponentConfigSchema = {
+export const RDS_POSTGRES_CONFIG_SCHEMA = {
   type: 'object',
   title: 'RDS PostgreSQL Configuration',
   description: 'Configuration for creating an RDS PostgreSQL database instance',
@@ -108,7 +105,7 @@ export const RDS_POSTGRES_CONFIG_SCHEMA: ComponentConfigSchema = {
       type: 'string',
       description: 'The EC2 instance class for the database',
       enum: ['db.t3.micro', 'db.t3.small', 'db.t3.medium', 'db.t3.large', 
-             'db.r5.large', 'db.r5.xlarge', 'db.r5.2xlarge'],
+             'db.r5.large', 'db.r5.xlarge', 'db.r5.2xlarge', 'db.r5.4xlarge'],
       default: 'db.t3.micro'
     },
     allocatedStorage: {
@@ -118,6 +115,17 @@ export const RDS_POSTGRES_CONFIG_SCHEMA: ComponentConfigSchema = {
       maximum: 65536,
       default: 20
     },
+    maxAllocatedStorage: {
+      type: 'number',
+      description: 'Maximum storage allocation for auto-scaling in GB',
+      minimum: 20,
+      maximum: 65536
+    },
+    multiAz: {
+      type: 'boolean',
+      description: 'Enable Multi-AZ deployment for high availability',
+      default: false
+    },
     backupRetentionDays: {
       type: 'number',
       description: 'Number of days to retain backups',
@@ -125,10 +133,100 @@ export const RDS_POSTGRES_CONFIG_SCHEMA: ComponentConfigSchema = {
       maximum: 35,
       default: 7
     },
-    multiAz: {
+    backupWindow: {
+      type: 'string',
+      description: 'Daily backup window in UTC (HH:mm-HH:mm format)',
+      pattern: '^([0-1]?[0-9]|2[0-3]):[0-5][0-9]-([0-1]?[0-9]|2[0-3]):[0-5][0-9]$'
+    },
+    maintenanceWindow: {
+      type: 'string',
+      description: 'Weekly maintenance window (ddd:HH:mm-ddd:HH:mm format)',
+      pattern: '^(sun|mon|tue|wed|thu|fri|sat):[0-2][0-9]:[0-5][0-9]-(sun|mon|tue|wed|thu|fri|sat):[0-2][0-9]:[0-5][0-9]$'
+    },
+    encryptionEnabled: {
       type: 'boolean',
-      description: 'Enable Multi-AZ deployment for high availability',
+      description: 'Enable encryption at rest for the database',
       default: false
+    },
+    kmsKeyArn: {
+      type: 'string',
+      description: 'KMS key ARN for encryption (if not provided, AWS managed key is used)',
+      pattern: '^arn:aws:kms:[a-z0-9-]+:[0-9]{12}:key/[a-f0-9-]{36}$'
+    },
+    vpc: {
+      type: 'object',
+      description: 'VPC configuration for database deployment',
+      properties: {
+        vpcId: {
+          type: 'string',
+          description: 'VPC ID for database deployment',
+          pattern: '^vpc-[a-f0-9]{8,17}$'
+        },
+        subnetIds: {
+          type: 'array',
+          description: 'Subnet IDs for database subnet group',
+          items: {
+            type: 'string',
+            pattern: '^subnet-[a-f0-9]{8,17}$'
+          },
+          minItems: 2,
+          maxItems: 6
+        },
+        securityGroupIds: {
+          type: 'array',
+          description: 'Security group IDs for database access',
+          items: {
+            type: 'string',
+            pattern: '^sg-[a-f0-9]{8,17}$'
+          },
+          maxItems: 5
+        }
+      },
+      additionalProperties: false
+    },
+    performanceInsights: {
+      type: 'object',
+      description: 'Performance Insights configuration',
+      properties: {
+        enabled: {
+          type: 'boolean',
+          description: 'Enable Performance Insights',
+          default: false
+        },
+        retentionPeriod: {
+          type: 'number',
+          description: 'Performance Insights retention period in days',
+          enum: [7, 31, 93, 186, 372, 731, 1095, 1827, 2555],
+          default: 7
+        }
+      },
+      additionalProperties: false,
+      default: {
+        enabled: false,
+        retentionPeriod: 7
+      }
+    },
+    enhancedMonitoring: {
+      type: 'object',
+      description: 'Enhanced monitoring configuration',
+      properties: {
+        enabled: {
+          type: 'boolean',
+          description: 'Enable enhanced monitoring',
+          default: false
+        },
+        interval: {
+          type: 'number',
+          description: 'Monitoring interval in seconds',
+          enum: [1, 5, 10, 15, 30, 60],
+          default: 60
+        }
+      },
+      additionalProperties: false,
+      default: {
+        enabled: false,
+        interval: 60
+      }
     }
   },
   additionalProperties: false,
@@ -137,9 +235,257 @@ export const RDS_POSTGRES_CONFIG_SCHEMA: ComponentConfigSchema = {
     instanceClass: 'db.t3.micro',
     allocatedStorage: 20,
     backupRetentionDays: 7,
-    multiAz: false
+    multiAz: false,
+    encryptionEnabled: false,
+    performanceInsights: {
+      enabled: false,
+      retentionPeriod: 7
+    },
+    enhancedMonitoring: {
+      enabled: false,
+      interval: 60
+    }
   }
 };
+
+/**
+ * Configuration builder for RDS PostgreSQL component
+ */
+export class RdsPostgresConfigBuilder {
+  private context: ComponentContext;
+  private spec: ComponentSpec;
+  
+  constructor(context: ComponentContext, spec: ComponentSpec) {
+    this.context = context;
+    this.spec = spec;
+  }
+
+  /**
+   * Builds the final configuration by applying platform defaults, compliance frameworks, and user overrides
+   */
+  public async build(): Promise<RdsPostgresConfig> {
+    return this.buildSync();
+  }
+
+  /**
+   * Synchronous version of build for use in synth() method
+   */
+  public buildSync(): RdsPostgresConfig {
+    // Start with platform defaults
+    const platformDefaults = this.getPlatformDefaults();
+    
+    // Apply compliance framework defaults
+    const complianceDefaults = this.getComplianceFrameworkDefaults();
+    
+    // Merge user configuration from spec
+    const userConfig = this.spec.config || {};
+    
+    // Merge configurations (user config takes precedence)
+    const mergedConfig = this.mergeConfigs(
+      this.mergeConfigs(platformDefaults, complianceDefaults),
+      userConfig
+    );
+    
+    return mergedConfig as RdsPostgresConfig;
+  }
+
+  /**
+   * Simple merge utility for combining configuration objects
+   */
+  private mergeConfigs(target: Record<string, any>, source: Record<string, any>): Record<string, any> {
+    const result = { ...target };
+    
+    for (const key in source) {
+      if (source[key] && typeof source[key] === 'object' && !Array.isArray(source[key])) {
+        result[key] = this.mergeConfigs(result[key] || {}, source[key]);
+      } else {
+        result[key] = source[key];
+      }
+    }
+    
+    return result;
+  }
+
+  /**
+   * Get platform-wide defaults for RDS PostgreSQL
+   */
+  private getPlatformDefaults(): Record<string, any> {
+    return {
+      username: 'postgres',
+      instanceClass: this.getDefaultInstanceClass(),
+      allocatedStorage: this.getDefaultAllocatedStorage(),
+      backupRetentionDays: this.getDefaultBackupRetentionDays(),
+      multiAz: this.getDefaultMultiAz(),
+      encryptionEnabled: this.getDefaultEncryptionEnabled(),
+      performanceInsights: {
+        enabled: this.getDefaultPerformanceInsightsEnabled(),
+        retentionPeriod: this.getDefaultPerformanceInsightsRetention()
+      },
+      enhancedMonitoring: {
+        enabled: this.getDefaultEnhancedMonitoringEnabled(),
+        interval: this.getDefaultEnhancedMonitoringInterval()
+      }
+    };
+  }
+
+  /**
+   * Get compliance framework specific defaults
+   */
+  private getComplianceFrameworkDefaults(): Record<string, any> {
+    const framework = this.context.complianceFramework;
+    
+    switch (framework) {
+      case 'fedramp-moderate':
+        return {
+          instanceClass: this.getComplianceInstanceClass('fedramp-moderate'),
+          allocatedStorage: Math.max(this.getDefaultAllocatedStorage(), 100), // Larger storage for compliance
+          backupRetentionDays: 30, // Extended backup retention
+          multiAz: true, // Required for high availability
+          encryptionEnabled: true, // Required encryption
+          performanceInsights: {
+            enabled: true, // Enhanced monitoring required
+            retentionPeriod: 1095 // 3 years retention
+          },
+          enhancedMonitoring: {
+            enabled: true,
+            interval: 5 // More frequent monitoring
+          }
+        };
+        
+      case 'fedramp-high':
+        return {
+          instanceClass: this.getComplianceInstanceClass('fedramp-high'),
+          allocatedStorage: Math.max(this.getDefaultAllocatedStorage(), 200), // Even larger storage
+          backupRetentionDays: 90, // Maximum backup retention
+          multiAz: true, // Required for high availability
+          encryptionEnabled: true, // Required encryption with CMK
+          performanceInsights: {
+            enabled: true, // Enhanced monitoring required
+            retentionPeriod: 2555 // 7 years retention
+          },
+          enhancedMonitoring: {
+            enabled: true,
+            interval: 1 // High-frequency monitoring
+          }
+        };
+        
+      default: // commercial
+        return {};
+    }
+  }
+
+  /**
+   * Get default instance class based on compliance framework
+   */
+  private getDefaultInstanceClass(): string {
+    switch (this.context.complianceFramework) {
+      case 'fedramp-high':
+        return 'db.r5.xlarge'; // High-performance instances for compliance
+      case 'fedramp-moderate':
+        return 'db.r5.large'; // Enhanced performance for moderate compliance
+      default:
+        return 'db.t3.micro'; // Cost-optimized for commercial
+    }
+  }
+
+  /**
+   * Get compliance-specific instance class
+   */
+  private getComplianceInstanceClass(framework: string): string {
+    switch (framework) {
+      case 'fedramp-high':
+        return 'db.r5.xlarge';
+      case 'fedramp-moderate':
+        return 'db.r5.large';
+      default:
+        return 'db.t3.micro';
+    }
+  }
+
+  /**
+   * Get default allocated storage based on compliance framework
+   */
+  private getDefaultAllocatedStorage(): number {
+    switch (this.context.complianceFramework) {
+      case 'fedramp-high':
+        return 200; // Larger storage for compliance logging
+      case 'fedramp-moderate':
+        return 100; // Moderate increase for compliance
+      default:
+        return 20; // Minimum for cost optimization
+    }
+  }
+
+  /**
+   * Get default backup retention days
+   */
+  private getDefaultBackupRetentionDays(): number {
+    switch (this.context.complianceFramework) {
+      case 'fedramp-high':
+        return 90; // Maximum retention for high compliance
+      case 'fedramp-moderate':
+        return 30; // Extended retention for moderate compliance
+      default:
+        return 7; // Standard retention for commercial
+    }
+  }
+
+  /**
+   * Get default Multi-AZ setting
+   */
+  private getDefaultMultiAz(): boolean {
+    return ['fedramp-moderate', 'fedramp-high'].includes(this.context.complianceFramework);
+  }
+
+  /**
+   * Get default encryption setting
+   */
+  private getDefaultEncryptionEnabled(): boolean {
+    return ['fedramp-moderate', 'fedramp-high'].includes(this.context.complianceFramework);
+  }
+
+  /**
+   * Get default Performance Insights enabled setting
+   */
+  private getDefaultPerformanceInsightsEnabled(): boolean {
+    return ['fedramp-moderate', 'fedramp-high'].includes(this.context.complianceFramework);
+  }
+
+  /**
+   * Get default Performance Insights retention
+   */
+  private getDefaultPerformanceInsightsRetention(): number {
+    switch (this.context.complianceFramework) {
+      case 'fedramp-high':
+        return 2555; // 7 years for high compliance
+      case 'fedramp-moderate':
+        return 1095; // 3 years for moderate compliance
+      default:
+        return 7; // Minimum for commercial
+    }
+  }
+
+  /**
+   * Get default Enhanced Monitoring enabled setting
+   */
+  private getDefaultEnhancedMonitoringEnabled(): boolean {
+    return ['fedramp-moderate', 'fedramp-high'].includes(this.context.complianceFramework);
+  }
+
+  /**
+   * Get default Enhanced Monitoring interval
+   */
+  private getDefaultEnhancedMonitoringInterval(): number {
+    switch (this.context.complianceFramework) {
+      case 'fedramp-high':
+        return 1; // 1 second for high-frequency monitoring
+      case 'fedramp-moderate':
+        return 5; // 5 seconds for standard monitoring
+      default:
+        return 60; // 1 minute for cost-effective monitoring
+    }
+  }
+}
 
 /**
  * RDS PostgreSQL Component implementing Component API Contract v1.0

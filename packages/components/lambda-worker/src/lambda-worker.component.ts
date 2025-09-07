@@ -527,7 +527,7 @@ export class LambdaWorkerComponent extends Component {
       timeout: cdk.Duration.seconds(this.config!.timeout || 300),
       environment: this.config!.environmentVariables || {},
       description: `Lambda worker function for ${this.spec.name}`,
-      tracing: this.shouldEnableXRayTracing() ? lambda.Tracing.ACTIVE : lambda.Tracing.DISABLED,
+      tracing: ['fedramp-moderate', 'fedramp-high'].includes(this.context.complianceFramework) ? lambda.Tracing.ACTIVE : lambda.Tracing.DISABLED,
       reservedConcurrentExecutions: this.config!.reservedConcurrency
     };
 
@@ -633,9 +633,6 @@ export class LambdaWorkerComponent extends Component {
     return ['fedramp-moderate', 'fedramp-high'].includes(this.context.complianceFramework);
   }
 
-  private shouldEnableXRayTracing(): boolean {
-    return ['fedramp-moderate', 'fedramp-high'].includes(this.context.complianceFramework);
-  }
 
   private getLambdaRuntime(): lambda.Runtime {
     const runtimeMap: Record<string, lambda.Runtime> = {
