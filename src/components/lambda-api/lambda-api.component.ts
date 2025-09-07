@@ -252,7 +252,7 @@ export class LambdaApiComponent extends Component {
       timeout: cdk.Duration.seconds(this.config!.timeout || 30),
       environment: this.config!.environmentVariables || {},
       description: `Lambda API function for ${this.spec.name}`,
-      tracing: this.shouldEnableXRayTracing() ? lambda.Tracing.ACTIVE : lambda.Tracing.DISABLED
+      tracing: this.shouldEnableLambdaXRayTracing() ? lambda.Tracing.ACTIVE : lambda.Tracing.DISABLED
     };
 
     // Apply encryption for environment variables
@@ -274,6 +274,9 @@ export class LambdaApiComponent extends Component {
       'function-runtime': this.config!.runtime || 'nodejs20.x',
       'function-handler': this.config!.handler
     });
+    
+    // Configure automatic OpenTelemetry observability
+    this.configureObservabilityForLambda();
   }
 
   /**
@@ -436,7 +439,7 @@ export class LambdaApiComponent extends Component {
     return ['fedramp-moderate', 'fedramp-high'].includes(this.context.complianceFramework);
   }
 
-  private shouldEnableXRayTracing(): boolean {
+  private shouldEnableLambdaXRayTracing(): boolean {
     return ['fedramp-moderate', 'fedramp-high'].includes(this.context.complianceFramework);
   }
 
@@ -472,5 +475,71 @@ export class LambdaApiComponent extends Component {
     };
 
     return config;
+  }
+
+  /**
+   * Configure OpenTelemetry observability for Lambda function according to Platform Observability Standard
+   */
+  private configureObservabilityForLambda(): void {
+    if (!this.lambdaFunction) return;
+
+    // Get standardized OpenTelemetry environment variables
+    const otelEnvVars = this.configureObservability(this.lambdaFunction, {
+      customAttributes: {
+        'lambda.runtime': this.config!.runtime || 'nodejs20.x',
+        'lambda.handler': this.config!.handler,
+        'api.type': 'rest',
+        'api.cors.enabled': (!!this.config!.api?.cors).toString()
+      }
+    });
+
+    // Apply all OpenTelemetry environment variables to Lambda
+    Object.entries(otelEnvVars).forEach(([key, value]) => {
+      this.lambdaFunction!.addEnvironment(key, value);
+    });
+
+    // Add runtime-specific OpenTelemetry layer for automatic instrumentation
+    this.addOtelInstrumentationLayer();
+  }
+
+  /**
+   * Add OpenTelemetry instrumentation layer based on Lambda runtime
+   */
+  private addOtelInstrumentationLayer(): void {
+    if (!this.lambdaFunction) return;
+
+    const runtime = this.config!.runtime || 'nodejs20.x';
+    let layerArn: string;
+
+    // Use AWS-managed OpenTelemetry layers for automatic instrumentation
+    switch (runtime) {
+      case 'nodejs18.x':
+      case 'nodejs20.x':
+        layerArn = `arn:aws:lambda:${this.context.region}:901920570463:layer:aws-otel-nodejs-${this.getArchString()}:7`;
+        break;
+      case 'python3.9':
+      case 'python3.10':
+      case 'python3.11':
+        layerArn = `arn:aws:lambda:${this.context.region}:901920570463:layer:aws-otel-python-${this.getArchString()}:2`;
+        break;
+      case 'java11':
+      case 'java17':
+        layerArn = `arn:aws:lambda:${this.context.region}:901920570463:layer:aws-otel-java-wrapper-${this.getArchString()}:2`;
+        break;
+      default:
+        // For unsupported runtimes, skip layer but keep environment variables
+        return;
+    }
+
+    // Add the OpenTelemetry layer for automatic instrumentation
+    this.lambdaFunction.addLayers(lambda.LayerVersion.fromLayerVersionArn(this, 'OtelLayer', layerArn));
+  }
+
+  /**
+   * Get architecture string for Lambda layer ARN
+   */
+  private getArchString(): string {
+    const architecture = this.config!.architecture;
+    return architecture === lambda.Architecture.ARM_64 ? 'arm64' : 'amd64';
   }
 }
