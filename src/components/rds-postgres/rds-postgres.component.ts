@@ -427,11 +427,11 @@ export class RdsPostgresComponent extends Component {
   }
 
   private shouldEnableEncryption(): boolean {
-    return this.context.complianceFramework !== 'commercial' || this.config!.encryptionEnabled;
+    return this.context.complianceFramework !== 'commercial' || !!this.config!.encryptionEnabled;
   }
 
   private shouldEnableMultiAz(): boolean {
-    return this.context.complianceFramework !== 'commercial' || this.config!.multiAz;
+    return this.context.complianceFramework !== 'commercial' || !!this.config!.multiAz;
   }
 
   private shouldEnablePerformanceInsights(): boolean {

@@ -18,7 +18,8 @@ import {
   ComponentCapabilities,
   ConfigBuilder,
   ComponentConfigSchema,
-  ComputeAsgCapability
+  ComputeAsgCapability,
+  ConfigBuilderContext
 } from '../../contracts';
 
 /**
@@ -143,6 +144,196 @@ export const AUTO_SCALING_GROUP_CONFIG_SCHEMA: ComponentConfigSchema = {
     autoScaling: { minCapacity: 1, maxCapacity: 3, desiredCapacity: 2 }
   }
 };
+
+/**
+ * AutoScalingGroupConfigBuilder - Handles configuration building and defaults for AutoScalingGroup
+ */
+export class AutoScalingGroupConfigBuilder extends ConfigBuilder<AutoScalingGroupConfig> {
+  
+  constructor(context: ConfigBuilderContext) {
+    super(context, AUTO_SCALING_GROUP_CONFIG_SCHEMA);
+  }
+
+  /**
+   * Builds the final configuration by applying platform defaults, compliance frameworks, and user overrides
+   */
+  public async build(): Promise<AutoScalingGroupConfig> {
+    // Start with platform defaults
+    const platformDefaults = this.getPlatformDefaults();
+    
+    // Apply compliance framework defaults
+    const complianceDefaults = this.getComplianceFrameworkDefaults();
+    
+    // Merge user configuration from spec
+    const userConfig = this.context.spec.config || {};
+    
+    // Merge configurations (user config takes precedence)
+    const mergedConfig = this.mergeConfigs(
+      this.mergeConfigs(platformDefaults, complianceDefaults),
+      userConfig
+    );
+    
+    // Resolve environment interpolations
+    const resolvedConfig = this.resolveEnvironmentInterpolations(mergedConfig);
+    
+    // Validate against schema
+    const validationResult = this.validateConfiguration(resolvedConfig);
+    if (!validationResult.valid) {
+      throw new Error(`AutoScalingGroup configuration validation failed: ${JSON.stringify(validationResult.errors)}`);
+    }
+    
+    return validationResult.validatedConfig as AutoScalingGroupConfig;
+  }
+
+  /**
+   * Simple merge utility for combining configuration objects
+   */
+  private mergeConfigs(target: Record<string, any>, source: Record<string, any>): Record<string, any> {
+    const result = { ...target };
+    
+    for (const key in source) {
+      if (source[key] && typeof source[key] === 'object' && !Array.isArray(source[key])) {
+        result[key] = this.mergeConfigs(result[key] || {}, source[key]);
+      } else {
+        result[key] = source[key];
+      }
+    }
+    
+    return result;
+  }
+
+  /**
+   * Get platform-wide defaults for AutoScalingGroup
+   */
+  private getPlatformDefaults(): Record<string, any> {
+    return {
+      launchTemplate: {
+        instanceType: this.getDefaultInstanceType(),
+        ami: {
+          namePattern: 'amzn2-ami-hvm-*-x86_64-gp2',
+          owner: 'amazon'
+        }
+      },
+      autoScaling: {
+        minCapacity: 1,
+        maxCapacity: 3,
+        desiredCapacity: 2
+      },
+      storage: {
+        rootVolumeSize: this.getDefaultVolumeSize(),
+        rootVolumeType: this.getDefaultVolumeType(),
+        encrypted: false
+      },
+      healthCheck: {
+        type: 'EC2',
+        gracePeriod: this.getDefaultGracePeriod()
+      },
+      terminationPolicies: ['Default']
+    };
+  }
+
+  /**
+   * Get compliance framework specific defaults
+   */
+  private getComplianceFrameworkDefaults(): Record<string, any> {
+    const framework = this.context.context.complianceFramework;
+    
+    switch (framework) {
+      case 'fedramp-moderate':
+        return {
+          launchTemplate: {
+            instanceType: this.getInstanceClass('fedramp-moderate')
+          },
+          storage: {
+            rootVolumeSize: 50, // Larger for compliance logging
+            encrypted: true
+          },
+          healthCheck: {
+            gracePeriod: 180 // Faster recovery
+          }
+        };
+        
+      case 'fedramp-high':
+        return {
+          launchTemplate: {
+            instanceType: this.getInstanceClass('fedramp-high')
+          },
+          storage: {
+            rootVolumeSize: 100, // Even larger for enhanced logging
+            rootVolumeType: 'gp3', // Better performance for compliance workloads
+            encrypted: true
+          },
+          healthCheck: {
+            gracePeriod: 120 // Even faster recovery
+          }
+        };
+        
+      default: // commercial
+        return {
+          storage: {
+            encrypted: false // Optional for commercial
+          }
+        };
+    }
+  }
+
+  /**
+   * Get instance class based on compliance framework
+   */
+  private getInstanceClass(framework: string): string {
+    switch (framework) {
+      case 'fedramp-high':
+        return 'm5.large'; // More powerful for enhanced logging/monitoring
+      case 'fedramp-moderate':
+        return 't3.medium'; // Moderate performance requirements
+      default:
+        return 't3.micro'; // Cost-optimized for commercial
+    }
+  }
+
+  /**
+   * Get default instance type for platform
+   */
+  private getDefaultInstanceType(): string {
+    return this.getInstanceClass(this.context.context.complianceFramework);
+  }
+
+  /**
+   * Get default volume size based on compliance framework
+   */
+  private getDefaultVolumeSize(): number {
+    switch (this.context.context.complianceFramework) {
+      case 'fedramp-high':
+        return 100;
+      case 'fedramp-moderate':
+        return 50;
+      default:
+        return 20;
+    }
+  }
+
+  /**
+   * Get default volume type
+   */
+  private getDefaultVolumeType(): string {
+    return this.context.context.complianceFramework === 'fedramp-high' ? 'gp3' : 'gp3';
+  }
+
+  /**
+   * Get default health check grace period
+   */
+  private getDefaultGracePeriod(): number {
+    switch (this.context.context.complianceFramework) {
+      case 'fedramp-high':
+        return 120;
+      case 'fedramp-moderate':
+        return 180;
+      default:
+        return 300;
+    }
+  }
+
+}
 
 /**
  * Auto Scaling Group Component implementing Component API Contract v1.0
