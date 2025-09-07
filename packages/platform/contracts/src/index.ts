@@ -5,6 +5,7 @@
 
 // Export component contracts
 export * from './component';
+export * from './component-interfaces';
 
 // Export binding contracts
 export * from './binding-context';

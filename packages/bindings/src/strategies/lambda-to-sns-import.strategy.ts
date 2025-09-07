@@ -69,7 +69,7 @@ export class LambdaToSnsImportStrategy {
   ): Promise<void> {
     this.dependencies.logger.debug(`Granting SNS topic access: ${access}`);
 
-    const topic = snsImport.getTopic();
+    const topic = snsImport.getConstruct('topic');
 
     switch (access) {
       case 'read':
@@ -134,7 +134,7 @@ export class LambdaToSnsImportStrategy {
   ): Promise<void> {
     this.dependencies.logger.debug('Setting SNS topic environment variables');
 
-    const topic = snsImport.getTopic();
+    const topic = snsImport.getConstruct('topic');
     const resourceRefs = snsImport.getResourceReferences();
 
     // Build environment variables for SNS interaction
@@ -176,7 +176,7 @@ export class LambdaToSnsImportStrategy {
   ): Promise<void> {
     this.dependencies.logger.debug('Configuring SNS subscription for Lambda');
 
-    const topic = snsImport.getTopic();
+    const topic = snsImport.getConstruct('topic');
 
     // Create a subscription from the imported topic to the Lambda function
     // This allows the Lambda to receive messages when they are published to the topic

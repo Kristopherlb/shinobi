@@ -18,7 +18,7 @@ import {
   ConfigBuilder,
   ComponentConfigSchema,
   NetVpcCapability
-} from '../../contracts';
+} from '@platform/contracts';
 
 /**
  * Configuration interface for VPC component

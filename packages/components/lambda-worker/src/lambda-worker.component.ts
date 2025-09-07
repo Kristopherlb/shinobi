@@ -20,7 +20,7 @@ import {
   ConfigBuilder,
   ComponentConfigSchema,
   LambdaFunctionCapability
-} from '../../contracts';
+} from '@platform/contracts';
 
 /**
  * Configuration interface for Lambda Worker component

@@ -7,7 +7,7 @@ import {
   BinderStrategy, 
   BindingContext, 
   BindingResult 
-} from '../../patterns/binding-strategies';
+} from '@platform/contracts';
 import * as lambda from 'aws-cdk-lib/aws-lambda';
 import * as rds from 'aws-cdk-lib/aws-rds';
 import * as s3 from 'aws-cdk-lib/aws-s3';

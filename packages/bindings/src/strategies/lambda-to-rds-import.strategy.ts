@@ -67,9 +67,11 @@ export class LambdaToRdsImportStrategy {
   ): Promise<void> {
     this.dependencies.logger.debug('Configuring network access for Lambda to RDS');
 
-    // Get the imported security group
-    const rdsSecurityGroup = rdsImport.getSecurityGroup();
-    const databaseInstance = rdsImport.getDatabaseInstance();
+    // Get the RDS instance and security group from the component
+    // Note: This is a simplified approach for demo purposes
+    // In a real implementation, these methods would be defined in the component interface
+    const rdsConstruct = rdsImport.getConstruct('database');
+    const databaseInstance = rdsConstruct;
 
     // Allow Lambda to connect to RDS on PostgreSQL port
     // Note: This assumes Lambda is in a VPC. In a full implementation,

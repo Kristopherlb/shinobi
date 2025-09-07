@@ -20,7 +20,7 @@ import {
   ConfigBuilder,
   ComponentConfigSchema,
   BucketS3Capability
-} from '../../contracts';
+} from '@platform/contracts';
 
 /**
  * Configuration interface for S3 Bucket component

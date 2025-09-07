@@ -20,7 +20,7 @@ import {
   ComponentConfigSchema,
   ComputeAsgCapability,
   ConfigBuilderContext
-} from '../../contracts';
+} from '@platform/contracts';
 
 /**
  * Configuration interface for Auto Scaling Group component

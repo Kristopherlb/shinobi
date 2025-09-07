@@ -19,7 +19,7 @@ import {
   ConfigBuilder,
   ComponentConfigSchema,
   QueueSqsCapability
-} from '../../contracts';
+} from '@platform/contracts';
 
 /**
  * Configuration interface for SQS Queue component

@@ -21,7 +21,7 @@ import {
   ComponentConfigSchema,
   ComputeEc2Capability,
   ConfigBuilderContext
-} from '../../contracts';
+} from '@platform/contracts';
 
 /**
  * Configuration interface for EC2 Instance component
