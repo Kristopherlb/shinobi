@@ -89,6 +89,107 @@ export const YOUR_COMPONENT_CONFIG_SCHEMA: ComponentConfigSchema = {
 };
 
 /**
+ * Configuration builder for your component
+ * REQUIRED: Every component MUST implement a dedicated ConfigBuilder class
+ */
+export class YourComponentConfigBuilder {
+  private context: ComponentContext;
+  private spec: ComponentSpec;
+  
+  constructor(context: ComponentContext, spec: ComponentSpec) {
+    this.context = context;
+    this.spec = spec;
+  }
+
+  /**
+   * Builds the final configuration by applying platform defaults, compliance frameworks, and user overrides
+   */
+  public async build(): Promise<YourComponentConfig> {
+    return this.buildSync();
+  }
+
+  /**
+   * Synchronous version of build for use in synth() method
+   */
+  public buildSync(): YourComponentConfig {
+    // Start with platform defaults
+    const platformDefaults = this.getPlatformDefaults();
+    
+    // Apply compliance framework defaults
+    const complianceDefaults = this.getComplianceFrameworkDefaults();
+    
+    // Merge user configuration from spec
+    const userConfig = this.spec.config || {};
+    
+    // Merge configurations (user config takes precedence)
+    const mergedConfig = this.mergeConfigs(
+      this.mergeConfigs(platformDefaults, complianceDefaults),
+      userConfig
+    );
+    
+    return mergedConfig as YourComponentConfig;
+  }
+
+  /**
+   * Simple merge utility for combining configuration objects
+   */
+  private mergeConfigs(target: Record<string, any>, source: Record<string, any>): Record<string, any> {
+    const result = { ...target };
+    
+    for (const key in source) {
+      if (source[key] && typeof source[key] === 'object' && !Array.isArray(source[key])) {
+        result[key] = this.mergeConfigs(result[key] || {}, source[key]);
+      } else {
+        result[key] = source[key];
+      }
+    }
+    
+    return result;
+  }
+
+  /**
+   * Get platform-wide defaults for your component
+   */
+  private getPlatformDefaults(): Record<string, any> {
+    return {
+      optionalProperty: 'default-value',
+      advanced: {
+        setting1: false,
+        setting2: 100
+      }
+    };
+  }
+
+  /**
+   * Get compliance framework specific defaults
+   */
+  private getComplianceFrameworkDefaults(): Record<string, any> {
+    const framework = this.context.complianceFramework;
+    
+    switch (framework) {
+      case 'fedramp-moderate':
+        return {
+          advanced: {
+            setting1: true, // Enhanced security for compliance
+            setting2: 200   // Increased limits for reliability
+          }
+        };
+        
+      case 'fedramp-high':
+        return {
+          advanced: {
+            setting1: true, // Mandatory security features
+            setting2: 300   // Maximum limits for high compliance
+          }
+        };
+        
+      default: // commercial
+        return {};
+    }
+  }
+}
+
+/**
  * Your Component implementation
  */
 export class YourComponent extends Component {
@@ -106,8 +207,9 @@ export class YourComponent extends Component {
     this.logComponentEvent('synthesis_start', 'Starting your component synthesis');
     
     try {
-      // Build configuration
-      this.config = this.buildConfigSync();
+      // Build configuration using ConfigBuilder (REQUIRED)
+      const configBuilder = new YourComponentConfigBuilder(this.context, this.spec);
+      this.config = configBuilder.buildSync();
       
       // Create AWS resources
       this.createYourResource();
@@ -143,13 +245,6 @@ export class YourComponent extends Component {
     return 'your-component';
   }
 
-  private buildConfigSync(): YourComponentConfig {
-    // Apply schema defaults and validation
-    const config = { ...YOUR_COMPONENT_CONFIG_SCHEMA.defaults, ...this.spec.config };
-    
-    // Apply compliance-specific defaults
-    return this.applyComplianceDefaults(config);
-  }
 
   private createYourResource(): void {
     const props = {
@@ -160,12 +255,12 @@ export class YourComponent extends Component {
 
     this.yourResource = new YourAwsResource(this, 'YourResource', props);
     
-    // Apply standard tags
+    // Apply standard tags (see Platform Tagging Standard v1.0)
     this.applyStandardTags(this.yourResource, {
       'resource-type': 'your-resource-type'
     });
     
-    // Configure observability
+    // Configure observability (see Platform OpenTelemetry Observability Standard v1.0)
     this.configureObservability(this.yourResource);
     
     this.logResourceCreation('your-resource', this.yourResource.resourceId);
@@ -609,8 +704,10 @@ npm test -- --testPathPattern=e2e
 1. **TypeScript Compliance**: All code must be properly typed with no `any` types
 2. **ESLint Compliance**: Follow platform ESLint configuration
 3. **Documentation**: Comprehensive JSDoc for all public APIs
-4. **Error Handling**: Proper error handling with structured logging
+4. **Error Handling**: Proper error handling with structured logging (see [Platform Structured Logging Standard v1.0](./docs/standards/structured-logging-standard-v1.0.md))
 5. **Security**: No hardcoded secrets, proper sanitization
+6. **Observability**: All components must implement standard observability patterns (see [Platform OpenTelemetry Observability Standard v1.0](./docs/standards/observability-standard-v1.0.md))
+7. **Tagging**: All resources must follow standard tagging conventions (see [Platform Tagging Standard v1.0](./docs/standards/tagging-standard-v1.0.md))
 
 ### Compliance Requirements
 
@@ -656,6 +753,119 @@ private applyFedrampHighHardening(): void {
     'audit-required': 'true'
   });
 }
+```
+
+## Working in the Monorepo
+
+### Monorepo Tooling
+
+This platform uses a monorepo structure managed with modern tooling to ensure efficient development across multiple packages.
+
+#### Essential Commands
+
+```bash
+# Scaffold a new component package
+npm run scaffold:component -- --name your-component --type aws-resource
+
+# Install dependencies for all packages
+npm install
+
+# Build all packages
+npm run build
+
+# Build a specific package
+npm run build --workspace=@platform/your-component
+
+# Run tests for a single package
+npm test --workspace=@platform/your-component
+
+# Run tests for all affected packages (based on git changes)
+npm run test:affected
+
+# Run all tests across the monorepo
+npm run test:all
+
+# Lint all packages
+npm run lint
+
+# Clean build artifacts
+npm run clean
+```
+
+#### Managing Dependencies
+
+```bash
+# Add a dependency to a specific package
+npm install lodash --workspace=@platform/your-component
+
+# Add a dev dependency to a specific package
+npm install --save-dev @types/lodash --workspace=@platform/your-component
+
+# Add a dependency to the root (shared across all packages)
+npm install typescript --save-dev
+
+# Update dependencies across all packages
+npm update
+```
+
+#### Development Workflow
+
+```bash
+# Start development mode (watches for changes)
+npm run dev
+
+# Watch and rebuild a specific component
+npm run dev --workspace=@platform/your-component
+
+# Run integration tests
+npm run test:integration
+
+# Generate code coverage report
+npm run test:coverage
+
+# Check for circular dependencies
+npm run check:circular
+```
+
+#### Package Structure Validation
+
+```bash
+# Validate package.json structure across all packages
+npm run validate:packages
+
+# Check for missing exports
+npm run check:exports
+
+# Verify TypeScript configurations
+npm run check:typescript
+```
+
+### Working with Component Dependencies
+
+When your component depends on other platform components:
+
+```bash
+# Add a platform component as a dependency
+npm install @platform/contracts --workspace=@platform/your-component
+
+# Update to latest version of platform contracts
+npm install @platform/contracts@latest --workspace=@platform/your-component
+```
+
+### Troubleshooting
+
+```bash
+# Clear all node_modules and reinstall
+npm run clean:all && npm install
+
+# Reset TypeScript cache
+npm run clean:typescript
+
+# Check package dependency graph
+npm run deps:graph
+
+# Find duplicate dependencies
+npm run deps:check
 ```
 
 ## Platform Integration
@@ -733,10 +943,20 @@ Component authors are responsible for:
 
 ## Additional Resources
 
+### Core Platform Specifications
 - [Platform Binding & Trigger Specification v1.0](./packages/platform/contracts/src/platform-binding-trigger-spec.ts)
 - [Component API Contract](./packages/platform/contracts/src/component.ts)
 - [Configuration Schema Guide](./packages/platform/contracts/src/component-interfaces.ts)
+
+### Platform Standards
+- [Platform Tagging Standard v1.0](./docs/standards/tagging-standard-v1.0.md)
+- [Platform OpenTelemetry Observability Standard v1.0](./docs/standards/observability-standard-v1.0.md)
+- [Platform Structured Logging Standard v1.0](./docs/standards/structured-logging-standard-v1.0.md)
+
+### Development Resources
 - [Testing Patterns](./tests/)
 - [Compliance Requirements](./docs/compliance/)
+- [Monorepo Development Guide](./docs/development/monorepo-guide.md)
+- [Component Examples](./packages/components/)
 
 For questions or support, contact the Platform Team or create an issue in the project repository.
