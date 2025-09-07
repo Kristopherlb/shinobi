@@ -18,8 +18,7 @@ import {
   Component,
   ComponentSpec,
   ComponentContext,
-  ComponentCapabilities,
-  ConfigBuilder
+  ComponentCapabilities
 } from '../../../platform/contracts/src';
 
 /**
@@ -235,10 +234,8 @@ export const EVENTBRIDGE_RULE_PATTERN_CONFIG_SCHEMA = {
 /**
  * ConfigBuilder for EventBridge Rule Pattern component
  */
-export class EventBridgeRulePatternConfigBuilder extends ConfigBuilder<EventBridgeRulePatternConfig> {
-  constructor(context: ComponentContext, spec: ComponentSpec) {
-    super(context, spec);
-  }
+export class EventBridgeRulePatternConfigBuilder {
+  constructor(private context: ComponentContext, private spec: ComponentSpec) {}
 
   /**
    * Asynchronous build method - delegates to synchronous implementation
@@ -289,7 +286,7 @@ export class EventBridgeRulePatternConfigBuilder extends ConfigBuilder<EventBrid
   }
 
   /**
-   * Get platform-wide defaults
+   * Get platform-wide defaults with intelligent configuration
    */
   private getPlatformDefaults(): Partial<EventBridgeRulePatternConfig> {
     return {
@@ -298,16 +295,16 @@ export class EventBridgeRulePatternConfigBuilder extends ConfigBuilder<EventBrid
       monitoring: {
         enabled: true,
         alarmOnFailure: true,
-        failureThreshold: 5,
+        failureThreshold: this.getDefaultFailureThreshold(),
         cloudWatchLogs: {
           enabled: true,
-          retentionInDays: 30
+          retentionInDays: this.getDefaultLogRetention()
         }
       },
       deadLetterQueue: {
-        enabled: false,
-        maxRetryAttempts: 3,
-        retentionPeriod: 14
+        enabled: this.shouldEnableDeadLetterQueue(),
+        maxRetryAttempts: this.getDefaultRetryAttempts(),
+        retentionPeriod: this.getDefaultDlqRetention()
       }
     };
   }
@@ -365,6 +362,62 @@ export class EventBridgeRulePatternConfigBuilder extends ConfigBuilder<EventBrid
         };
     }
   }
+
+  /**
+   * Get default failure threshold based on compliance framework
+   */
+  private getDefaultFailureThreshold(): number {
+    switch (this.context.complianceFramework) {
+      case 'fedramp-high':
+        return 1; // Most sensitive
+      case 'fedramp-moderate':
+        return 3; // Moderate sensitivity
+      default:
+        return 5; // Cost-optimized
+    }
+  }
+
+  /**
+   * Get default log retention based on compliance framework
+   */
+  private getDefaultLogRetention(): number {
+    switch (this.context.complianceFramework) {
+      case 'fedramp-high':
+        return 365; // One year
+      case 'fedramp-moderate':
+        return 90; // 90 days
+      default:
+        return 30; // One month
+    }
+  }
+
+  /**
+   * Determine if dead letter queue should be enabled by default
+   */
+  private shouldEnableDeadLetterQueue(): boolean {
+    return ['fedramp-moderate', 'fedramp-high'].includes(this.context.complianceFramework);
+  }
+
+  /**
+   * Get default retry attempts based on compliance framework
+   */
+  private getDefaultRetryAttempts(): number {
+    switch (this.context.complianceFramework) {
+      case 'fedramp-high':
+        return 5; // More resilient
+      case 'fedramp-moderate':
+        return 3; // Standard resilience
+      default:
+        return 3; // Basic resilience
+    }
+  }
+
+  /**
+   * Get default dead letter queue retention period
+   */
+  private getDefaultDlqRetention(): number {
+    return 14; // Standard 14 days across all frameworks
+  }
 }
 
 /**
@@ -404,7 +457,10 @@ export class EventBridgeRulePatternComponent extends Component {
       this.createEventBridgeRule();
       
       // Configure observability
-      this.configureObservability();
+      this.configureObservabilityForEventBridge();
+      
+      // Configure rule-specific monitoring alarms
+      this.configureEventBridgeAlarms();
       
       // Apply compliance hardening
       this.applyComplianceHardening();
@@ -517,7 +573,7 @@ export class EventBridgeRulePatternComponent extends Component {
     this.rule = new events.Rule(this, 'EventBridgeRule', {
       ruleName,
       description: this.config!.description,
-      eventPattern: this.config!.eventPattern,
+      eventPattern: this.buildCdkEventPattern(),
       enabled: this.config!.state === 'enabled',
       eventBus: this.config!.eventBus?.busName ? 
         events.EventBus.fromEventBusName(this, 'EventBus', this.config!.eventBus.busName) : 
@@ -540,7 +596,7 @@ export class EventBridgeRulePatternComponent extends Component {
   /**
    * Configure CloudWatch observability for EventBridge rule
    */
-  private configureObservability(): void {
+  private configureObservabilityForEventBridge(): void {
     if (!this.config!.monitoring?.enabled) {
       return;
     }
@@ -570,6 +626,82 @@ export class EventBridgeRulePatternComponent extends Component {
       alarmsCreated: 1,
       ruleName: ruleName,
       monitoringEnabled: true
+    });
+  }
+
+  /**
+   * Configure comprehensive CloudWatch alarms for EventBridge rule monitoring
+   */
+  private configureEventBridgeAlarms(): void {
+    if (!this.config!.monitoring?.enabled) {
+      return;
+    }
+
+    const ruleName = this.rule!.ruleName;
+
+    // 1. Invocation Count Alarm (detect traffic drops/spikes)
+    new cloudwatch.Alarm(this, 'InvocationCountAlarm', {
+      alarmName: `${this.context.serviceName}-${this.spec.name}-invocation-count`,
+      alarmDescription: 'EventBridge rule invocation count monitoring',
+      metric: new cloudwatch.Metric({
+        namespace: 'AWS/Events',
+        metricName: 'Invocations',
+        dimensionsMap: {
+          RuleName: ruleName
+        },
+        statistic: 'Sum',
+        period: cdk.Duration.minutes(5)
+      }),
+      threshold: 0,
+      evaluationPeriods: 3,
+      comparisonOperator: cloudwatch.ComparisonOperator.LESS_THAN_OR_EQUAL_TO_THRESHOLD,
+      treatMissingData: cloudwatch.TreatMissingData.BREACHING
+    });
+
+    // 2. Matched Events Alarm (detect pattern matching issues)
+    new cloudwatch.Alarm(this, 'MatchedEventsAlarm', {
+      alarmName: `${this.context.serviceName}-${this.spec.name}-matched-events`,
+      alarmDescription: 'EventBridge rule matched events monitoring',
+      metric: new cloudwatch.Metric({
+        namespace: 'AWS/Events',
+        metricName: 'MatchedEvents',
+        dimensionsMap: {
+          RuleName: ruleName
+        },
+        statistic: 'Sum',
+        period: cdk.Duration.minutes(5)
+      }),
+      threshold: 0,
+      evaluationPeriods: 6, // 30 minutes of no matched events
+      comparisonOperator: cloudwatch.ComparisonOperator.LESS_THAN_OR_EQUAL_TO_THRESHOLD,
+      treatMissingData: cloudwatch.TreatMissingData.BREACHING
+    });
+
+    // 3. Dead Letter Queue Messages Alarm (if DLQ is enabled)
+    if (this.deadLetterQueue) {
+      new cloudwatch.Alarm(this, 'DlqMessagesAlarm', {
+        alarmName: `${this.context.serviceName}-${this.spec.name}-dlq-messages`,
+        alarmDescription: 'Dead letter queue messages alarm',
+        metric: new cloudwatch.Metric({
+          namespace: 'AWS/SQS',
+          metricName: 'ApproximateNumberOfVisibleMessages',
+          dimensionsMap: {
+            QueueName: this.deadLetterQueue.queueName
+          },
+          statistic: 'Average',
+          period: cdk.Duration.minutes(5)
+        }),
+        threshold: 1,
+        evaluationPeriods: 1,
+        comparisonOperator: cloudwatch.ComparisonOperator.GREATER_THAN_OR_EQUAL_TO_THRESHOLD,
+        treatMissingData: cloudwatch.TreatMissingData.NOT_BREACHING
+      });
+    }
+
+    this.logComponentEvent('comprehensive_alarms_configured', 'Comprehensive CloudWatch alarms configured for EventBridge rule', {
+      alarmsCreated: this.deadLetterQueue ? 4 : 3, // Including the original FailedInvocations alarm
+      ruleName: ruleName,
+      dlqMonitoring: !!this.deadLetterQueue
     });
   }
 
@@ -644,5 +776,22 @@ export class EventBridgeRulePatternComponent extends Component {
     };
     
     return retentionMap[retentionDays] || logs.RetentionDays.ONE_MONTH;
+  }
+
+  /**
+   * Build CDK-compatible event pattern from config
+   */
+  private buildCdkEventPattern(): events.EventPattern {
+    const pattern = this.config!.eventPattern;
+    
+    return {
+      source: pattern.source,
+      detailType: pattern.detailType,
+      account: pattern.account,
+      region: pattern.region,
+      detail: pattern.detail,
+      resources: pattern.resources,
+      time: pattern.time?.numeric?.map(n => `${n.operator}:${n.value}`)
+    };
   }
 }
