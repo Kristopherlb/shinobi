@@ -222,6 +222,12 @@ export class RdsPostgresComponent extends Component {
         keyUsage: kms.KeyUsage.ENCRYPT_DECRYPT,
         keySpec: kms.KeySpec.SYMMETRIC_DEFAULT
       });
+      
+      // Apply standard tags to KMS key
+      this.applyStandardTags(this.kmsKey, {
+        'key-usage': 'rds-encryption',
+        'key-rotation-enabled': (this.context.complianceFramework === 'fedramp-high').toString()
+      });
 
       // Grant RDS service access to the key
       this.kmsKey.addToResourcePolicy(new iam.PolicyStatement({
@@ -253,6 +259,12 @@ export class RdsPostgresComponent extends Component {
         passwordLength: 32
       },
       encryptionKey: this.kmsKey
+    });
+    
+    // Apply standard tags to secret
+    this.applyStandardTags(this.secret, {
+      'secret-type': 'database-credentials',
+      'database-name': this.config!.dbName
     });
   }
 
@@ -300,6 +312,12 @@ export class RdsPostgresComponent extends Component {
       description: `Security group for ${this.config!.dbName} PostgreSQL database`,
       allowAllOutbound: false
     });
+    
+    // Apply standard tags to security group
+    this.applyStandardTags(this.securityGroup, {
+      'security-group-type': 'database',
+      'database-engine': 'postgres'
+    });
 
     // Add ingress rule for PostgreSQL port (will be refined by binding strategies)
     this.securityGroup.addIngressRule(
@@ -345,6 +363,16 @@ export class RdsPostgresComponent extends Component {
     };
 
     this.database = new rds.DatabaseInstance(this, 'Database', props);
+    
+    // Apply standard tags to database instance
+    this.applyStandardTags(this.database, {
+      'database-name': this.config!.dbName,
+      'database-engine': 'postgres',
+      'database-version': '15.4',
+      'instance-class': this.config!.instanceClass || 'db.t3.micro',
+      'multi-az': (!!this.config!.multiAz).toString(),
+      'backup-retention-days': this.getBackupRetentionDays().toString()
+    });
   }
 
   /**
@@ -374,10 +402,18 @@ export class RdsPostgresComponent extends Component {
 
   private applyFedrampModerateHardening(): void {
     // Enhanced monitoring and logging
-    new logs.LogGroup(this, 'DatabaseLogGroup', {
+    const dbLogGroup = new logs.LogGroup(this, 'DatabaseLogGroup', {
       logGroupName: `/aws/rds/instance/${this.database!.instanceIdentifier}/postgresql`,
       retention: logs.RetentionDays.THREE_MONTHS,
       removalPolicy: cdk.RemovalPolicy.RETAIN
+    });
+    
+    // Apply standard tags to database log group
+    this.applyStandardTags(dbLogGroup, {
+      'log-type': 'database',
+      'database-engine': 'postgres',
+      'retention-period': 'three-months',
+      'compliance-logging': 'fedramp-moderate'
     });
 
     // Enable automated backups with longer retention
@@ -389,10 +425,18 @@ export class RdsPostgresComponent extends Component {
     this.applyFedrampModerateHardening();
 
     // Extended audit logging
-    new logs.LogGroup(this, 'AuditLogGroup', {
+    const auditLogGroup = new logs.LogGroup(this, 'AuditLogGroup', {
       logGroupName: `/aws/rds/instance/${this.database!.instanceIdentifier}/audit`,
       retention: logs.RetentionDays.ONE_YEAR,
       removalPolicy: cdk.RemovalPolicy.RETAIN
+    });
+    
+    // Apply standard tags to audit log group
+    this.applyStandardTags(auditLogGroup, {
+      'log-type': 'audit',
+      'database-engine': 'postgres',
+      'retention-period': 'one-year',
+      'compliance-logging': 'fedramp-high'
     });
 
     // Enable IAM database authentication

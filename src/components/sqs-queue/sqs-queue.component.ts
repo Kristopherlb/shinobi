@@ -189,6 +189,12 @@ export class SqsQueueComponent extends Component {
         keyUsage: kms.KeyUsage.ENCRYPT_DECRYPT,
         keySpec: kms.KeySpec.SYMMETRIC_DEFAULT
       });
+      
+      // Apply standard tags to KMS key
+      this.applyStandardTags(this.kmsKey, {
+        'key-usage': 'sqs-encryption',
+        'key-rotation-enabled': (this.context.complianceFramework === 'fedramp-high').toString()
+      });
 
       // Grant SQS service access to the key
       this.kmsKey.addToResourcePolicy(new iam.PolicyStatement({
@@ -229,6 +235,13 @@ export class SqsQueueComponent extends Component {
       }
 
       this.deadLetterQueue = new sqs.Queue(this, 'DeadLetterQueue', dlqProps);
+      
+      // Apply standard tags to dead letter queue
+      this.applyStandardTags(this.deadLetterQueue, {
+        'queue-type': 'dead-letter',
+        'fifo-enabled': (!!this.config!.fifo?.enabled).toString(),
+        'retention-period': '14-days'
+      });
     }
   }
 
@@ -277,6 +290,15 @@ export class SqsQueueComponent extends Component {
     }
 
     this.queue = new sqs.Queue(this, 'Queue', queueProps);
+    
+    // Apply standard tags to main queue
+    this.applyStandardTags(this.queue, {
+      'queue-type': 'main',
+      'fifo-enabled': (!!this.config!.fifo?.enabled).toString(),
+      'dlq-enabled': (!!this.config!.deadLetterQueue?.enabled).toString(),
+      'visibility-timeout': (this.config!.visibilityTimeoutSeconds || 30).toString(),
+      'long-polling': (!!this.config!.receiveMessageWaitTimeSeconds).toString()
+    });
   }
 
   /**
