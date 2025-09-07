@@ -11,6 +11,7 @@ import * as logs from 'aws-cdk-lib/aws-logs';
 import * as kms from 'aws-cdk-lib/aws-kms';
 import * as iam from 'aws-cdk-lib/aws-iam';
 import * as acm from 'aws-cdk-lib/aws-certificatemanager';
+import * as cloudwatch from 'aws-cdk-lib/aws-cloudwatch';
 import * as cdk from 'aws-cdk-lib';
 import { Construct } from 'constructs';
 import {
@@ -331,6 +332,134 @@ export const COGNITO_USER_POOL_CONFIG_SCHEMA = {
         }
       }
     },
+    customAttributes: {
+      type: 'object',
+      description: 'Custom user attributes',
+      additionalProperties: {
+        type: 'object',
+        required: ['type'],
+        properties: {
+          type: {
+            type: 'string',
+            enum: ['string', 'number', 'datetime', 'boolean']
+          },
+          mutable: {
+            type: 'boolean',
+            default: true
+          },
+          minLength: {
+            type: 'number',
+            minimum: 0
+          },
+          maxLength: {
+            type: 'number',
+            minimum: 1
+          }
+        }
+      }
+    },
+    email: {
+      type: 'object',
+      description: 'Email configuration',
+      properties: {
+        fromEmail: {
+          type: 'string',
+          description: 'From email address'
+        },
+        fromName: {
+          type: 'string',
+          description: 'From name'
+        },
+        replyToEmail: {
+          type: 'string',
+          description: 'Reply-to email address'
+        },
+        sesRegion: {
+          type: 'string',
+          description: 'SES region'
+        },
+        sesVerifiedDomain: {
+          type: 'string',
+          description: 'SES verified domain'
+        }
+      }
+    },
+    sms: {
+      type: 'object',
+      description: 'SMS configuration',
+      properties: {
+        snsCallerArn: {
+          type: 'string',
+          description: 'SNS caller ARN for SMS'
+        },
+        externalId: {
+          type: 'string',
+          description: 'External ID for SMS role'
+        }
+      }
+    },
+    triggers: {
+      type: 'object',
+      description: 'Lambda trigger configuration',
+      properties: {
+        preSignUp: {
+          type: 'string',
+          description: 'Pre sign-up Lambda function ARN'
+        },
+        postConfirmation: {
+          type: 'string',
+          description: 'Post confirmation Lambda function ARN'
+        },
+        preAuthentication: {
+          type: 'string',
+          description: 'Pre authentication Lambda function ARN'
+        },
+        postAuthentication: {
+          type: 'string',
+          description: 'Post authentication Lambda function ARN'
+        },
+        preTokenGeneration: {
+          type: 'string',
+          description: 'Pre token generation Lambda function ARN'
+        },
+        userMigration: {
+          type: 'string',
+          description: 'User migration Lambda function ARN'
+        },
+        customMessage: {
+          type: 'string',
+          description: 'Custom message Lambda function ARN'
+        },
+        defineAuthChallenge: {
+          type: 'string',
+          description: 'Define auth challenge Lambda function ARN'
+        },
+        createAuthChallenge: {
+          type: 'string',
+          description: 'Create auth challenge Lambda function ARN'
+        },
+        verifyAuthChallengeResponse: {
+          type: 'string',
+          description: 'Verify auth challenge response Lambda function ARN'
+        }
+      }
+    },
+    deviceTracking: {
+      type: 'object',
+      description: 'Device tracking configuration',
+      properties: {
+        challengeRequiredOnNewDevice: {
+          type: 'boolean',
+          description: 'Require challenge on new device',
+          default: false
+        },
+        deviceOnlyRememberedOnUserPrompt: {
+          type: 'boolean',
+          description: 'Device only remembered on user prompt',
+          default: true
+        }
+      }
+    },
     advancedSecurityMode: {
       type: 'string',
       description: 'Advanced security features mode',
@@ -611,6 +740,9 @@ export class CognitoUserPoolComponent extends Component {
       
       // Create domain if configured
       this.createDomainIfNeeded();
+      
+      // Configure observability (OpenTelemetry Standard)
+      this.configureObservabilityForUserPool();
       
       // Apply compliance hardening
       this.applyComplianceHardening();
@@ -1132,6 +1264,126 @@ export class CognitoUserPoolComponent extends Component {
    */
   private applyCommercialHardening(): void {
     this.logComponentEvent('commercial_hardening_applied', 'Applied commercial security hardening to Cognito User Pool');
+  }
+
+  /**
+   * Configure OpenTelemetry Observability Standard - CloudWatch Alarms for Cognito User Pool
+   */
+  private configureObservabilityForUserPool(): void {
+    // Cognito metrics are only available when advanced security mode is enabled
+    if (this.config!.advancedSecurityMode === 'off') {
+      return;
+    }
+
+    const userPoolId = this.userPool!.userPoolId;
+
+    // 1. Sign In Success Rate Alarm
+    new cloudwatch.Alarm(this, 'SignInSuccessAlarm', {
+      alarmName: `${this.context.serviceName}-${this.spec.name}-signin-success-rate`,
+      alarmDescription: 'Cognito User Pool sign-in success rate alarm',
+      metric: new cloudwatch.Metric({
+        namespace: 'AWS/Cognito',
+        metricName: 'SignInSuccesses',
+        dimensionsMap: {
+          UserPool: userPoolId,
+          UserPoolClient: 'ALL_USER_POOL_CLIENTS'
+        },
+        statistic: 'Sum',
+        period: cdk.Duration.minutes(5)
+      }),
+      threshold: 1,
+      evaluationPeriods: 3,
+      comparisonOperator: cloudwatch.ComparisonOperator.LESS_THAN_THRESHOLD,
+      treatMissingData: cloudwatch.TreatMissingData.BREACHING
+    });
+
+    // 2. Sign In Throttles Alarm
+    new cloudwatch.Alarm(this, 'SignInThrottleAlarm', {
+      alarmName: `${this.context.serviceName}-${this.spec.name}-signin-throttles`,
+      alarmDescription: 'Cognito User Pool sign-in throttles alarm',
+      metric: new cloudwatch.Metric({
+        namespace: 'AWS/Cognito',
+        metricName: 'SignInThrottles',
+        dimensionsMap: {
+          UserPool: userPoolId,
+          UserPoolClient: 'ALL_USER_POOL_CLIENTS'
+        },
+        statistic: 'Sum',
+        period: cdk.Duration.minutes(5)
+      }),
+      threshold: 10,
+      evaluationPeriods: 2,
+      comparisonOperator: cloudwatch.ComparisonOperator.GREATER_THAN_THRESHOLD,
+      treatMissingData: cloudwatch.TreatMissingData.NOT_BREACHING
+    });
+
+    // 3. Sign Up Success Rate Alarm
+    new cloudwatch.Alarm(this, 'SignUpSuccessAlarm', {
+      alarmName: `${this.context.serviceName}-${this.spec.name}-signup-success-rate`,
+      alarmDescription: 'Cognito User Pool sign-up success rate alarm',
+      metric: new cloudwatch.Metric({
+        namespace: 'AWS/Cognito',
+        metricName: 'SignUpSuccesses',
+        dimensionsMap: {
+          UserPool: userPoolId,
+          UserPoolClient: 'ALL_USER_POOL_CLIENTS'
+        },
+        statistic: 'Sum',
+        period: cdk.Duration.minutes(5)
+      }),
+      threshold: 1,
+      evaluationPeriods: 3,
+      comparisonOperator: cloudwatch.ComparisonOperator.LESS_THAN_THRESHOLD,
+      treatMissingData: cloudwatch.TreatMissingData.NOT_BREACHING
+    });
+
+    // 4. Sign Up Throttles Alarm
+    new cloudwatch.Alarm(this, 'SignUpThrottleAlarm', {
+      alarmName: `${this.context.serviceName}-${this.spec.name}-signup-throttles`,
+      alarmDescription: 'Cognito User Pool sign-up throttles alarm',
+      metric: new cloudwatch.Metric({
+        namespace: 'AWS/Cognito',
+        metricName: 'SignUpThrottles',
+        dimensionsMap: {
+          UserPool: userPoolId,
+          UserPoolClient: 'ALL_USER_POOL_CLIENTS'
+        },
+        statistic: 'Sum',
+        period: cdk.Duration.minutes(5)
+      }),
+      threshold: 5,
+      evaluationPeriods: 2,
+      comparisonOperator: cloudwatch.ComparisonOperator.GREATER_THAN_THRESHOLD,
+      treatMissingData: cloudwatch.TreatMissingData.NOT_BREACHING
+    });
+
+    // 5. High Risk Events Alarm (only when advanced security is enforced)
+    if (this.config!.advancedSecurityMode === 'enforced') {
+      new cloudwatch.Alarm(this, 'RiskLevelHighAlarm', {
+        alarmName: `${this.context.serviceName}-${this.spec.name}-risk-level-high`,
+        alarmDescription: 'Cognito User Pool high risk events alarm',
+        metric: new cloudwatch.Metric({
+          namespace: 'AWS/Cognito',
+          metricName: 'RiskLevelHigh',
+          dimensionsMap: {
+            UserPool: userPoolId,
+            UserPoolClient: 'ALL_USER_POOL_CLIENTS'
+          },
+          statistic: 'Sum',
+          period: cdk.Duration.minutes(5)
+        }),
+        threshold: 1,
+        evaluationPeriods: 1,
+        comparisonOperator: cloudwatch.ComparisonOperator.GREATER_THAN_OR_EQUAL_TO_THRESHOLD,
+        treatMissingData: cloudwatch.TreatMissingData.NOT_BREACHING
+      });
+    }
+
+    this.logComponentEvent('observability_configured', 'OpenTelemetry observability standard applied to Cognito User Pool', {
+      alarmsCreated: this.config!.advancedSecurityMode === 'enforced' ? 5 : 4,
+      advancedSecurityMode: this.config!.advancedSecurityMode,
+      userPoolId: userPoolId
+    });
   }
 
   /**
