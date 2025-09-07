@@ -217,7 +217,8 @@ export class SnsTopicComponent extends Component {
     // Apply delivery policy if configured
     if (this.config!.deliveryPolicy) {
       const cfnTopic = this.topic.node.defaultChild as sns.CfnTopic;
-      cfnTopic.deliveryPolicy = this.config!.deliveryPolicy;
+      // Set delivery policy through CFN properties
+      cfnTopic.addPropertyOverride('DeliveryPolicy', this.config!.deliveryPolicy);
     }
   }
 

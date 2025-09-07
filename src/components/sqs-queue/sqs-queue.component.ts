@@ -221,10 +221,11 @@ export class SqsQueueComponent extends Component {
 
       // Configure FIFO DLQ if main queue is FIFO
       if (this.config!.fifo?.enabled) {
-        dlqProps.fifo = true;
-        // Configure FIFO queue name
         const baseName = dlqProps.queueName || `${this.context.serviceName}-${this.spec.name}-dlq`;
-        dlqProps.queueName = `${baseName}.fifo`;
+        Object.assign(dlqProps, {
+          fifo: true,
+          queueName: `${baseName}.fifo`
+        });
       }
 
       this.deadLetterQueue = new sqs.Queue(this, 'DeadLetterQueue', dlqProps);
