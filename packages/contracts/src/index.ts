@@ -43,6 +43,7 @@ export interface ComponentContext {
   vpc?: IVpc; // VPC construct for components that need it - strongly typed
   region?: string;
   accountId?: string;
+  serviceLabels?: Record<string, string>;
 }
 
 /**
