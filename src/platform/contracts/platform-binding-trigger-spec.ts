@@ -146,14 +146,12 @@ export interface TriggerContext {
 
 /**
  * Result of binding operations
+ * 
+ * Updated to follow Direct Composition pattern - binders now modify 
+ * CDK constructs directly instead of returning configuration objects.
  */
 export interface BindingResult {
   environmentVariables: Record<string, string>;
-  iamPolicies?: string[];
-  networkConfiguration?: {
-    securityGroups?: string[];
-    subnets?: string[];
-  };
   metadata?: Record<string, any>;
 }
 

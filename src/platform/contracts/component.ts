@@ -8,7 +8,7 @@
 
 import * as cdk from 'aws-cdk-lib';
 import { Construct, IConstruct } from 'constructs';
-import { ComponentSpec, ComponentContext, ComponentCapabilities } from './component-interfaces';
+import { ComponentSpec, ComponentContext, ComponentCapabilities, IComponent } from './component-interfaces';
 
 /**
  * Options for configuring observability on components
@@ -43,20 +43,22 @@ export interface ObservabilityConfig {
 }
 
 /**
- * Abstract base class that all platform components MUST extend.
+ * Abstract base class that all platform components MUST extend - The Implementation Helper
  * 
- * This class enforces the implementation of a standard interface that ensures
- * components are:
+ * This rich class implements IComponent and provides shared functionality for:
  * - Predictable: Standard lifecycle methods (synth, getCapabilities)
- * - Secure: Proper construct encapsulation and capability exposure
+ * - Secure: Standard tagging, logging, and observability integration
  * - Composable: Standard binding interface through capabilities
+ * 
+ * Implements Interface Segregation Principle by providing concrete implementations
+ * of common component functionality while maintaining the lean IComponent contract.
  */
-export abstract class Component extends Construct {
+export abstract class BaseComponent extends Construct implements IComponent {
   /** The component's specification from the service manifest. */
-  protected readonly spec: ComponentSpec;
+  public readonly spec: ComponentSpec;
   
   /** The context of the service this component belongs to. */
-  protected readonly context: ComponentContext;
+  public readonly context: ComponentContext;
   
   /** A map of handles to the real, synthesized CDK constructs. */
   protected readonly constructs: Map<string, IConstruct> = new Map();
@@ -690,4 +692,71 @@ export abstract class Component extends Construct {
            process.env.AWS_LAMBDA_FUNCTION_NAME || 
            `${this.context.serviceName}-instance`;
   }
+
+  /**
+   * Get security group handle from this component for binding operations.
+   * This is a standardized helper method for all binder strategies.
+   * 
+   * @param role - Whether this component is the 'source' or 'target' in the binding
+   * @returns The security group construct or throws error if not found
+   */
+  public _getSecurityGroupHandle(role: 'source' | 'target'): any {
+    const componentType = this.getType();
+    let securityGroup: any = null;
+
+    try {
+      switch (componentType) {
+        case 'lambda-api':
+        case 'lambda-worker':
+          // Lambda functions can have VPC configuration with security groups
+          const lambdaFunction = this.getConstruct('function');
+          securityGroup = (lambdaFunction as any)?.connections?.securityGroups?.[0];
+          break;
+        
+        case 'ecs-fargate-service':
+        case 'ecs-ec2-service':
+          // ECS services have security groups
+          const service = this.getConstruct('service');
+          securityGroup = (service as any)?.connections?.securityGroups?.[0];
+          break;
+        
+        case 'ec2-instance':
+          // EC2 instances have security groups
+          const instance = this.getConstruct('instance');
+          securityGroup = (instance as any)?.connections?.securityGroups?.[0];
+          break;
+        
+        case 'alb':
+        case 'application-load-balancer':
+          // ALBs have security groups
+          const loadBalancer = this.getConstruct('loadBalancer');
+          securityGroup = (loadBalancer as any)?.connections?.securityGroups?.[0];
+          break;
+        
+        case 'rds-database':
+          // RDS instances have security groups
+          const database = this.getConstruct('database');
+          securityGroup = (database as any)?.connections?.securityGroups?.[0];
+          break;
+        
+        default:
+          throw new Error(`Component type '${componentType}' does not have a known security group pattern`);
+      }
+
+      if (!securityGroup) {
+        throw new Error(`No security group found for ${componentType} component '${this.node.id}'`);
+      }
+
+      return securityGroup;
+
+    } catch (error) {
+      const errorMessage = error instanceof Error ? error.message : 'Unknown error';
+      throw new Error(
+        `Failed to get security group from ${role} component '${this.node.id}' of type '${componentType}': ${errorMessage}`
+      );
+    }
+  }
 }
+
+// Backwards compatibility export - maintains existing import patterns
+export const Component = BaseComponent;

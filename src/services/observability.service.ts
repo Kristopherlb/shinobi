@@ -25,7 +25,7 @@ import {
   PlatformServiceContext, 
   PlatformServiceResult 
 } from '../platform/contracts/platform-services';
-import { Component } from '../platform/contracts/component';
+import { IComponent } from '../platform/contracts/component-interfaces';
 
 /**
  * OpenTelemetry configuration for different compliance frameworks
@@ -192,7 +192,7 @@ export class ObservabilityService implements IPlatformService {
    * - Creates compliance-aware CloudWatch alarms
    * - Sets up proper retention and sampling
    */
-  public apply(component: Component): void {
+  public apply(component: IComponent): void {
     const startTime = Date.now();
     const componentType = component.getType();
     const componentName = component.node.id;
@@ -299,7 +299,7 @@ export class ObservabilityService implements IPlatformService {
    * Apply Lambda-specific OpenTelemetry instrumentation
    * Implements Platform OpenTelemetry Observability Standard v1.0 Section 5.1
    */
-  private applyLambdaOTelInstrumentation(component: Component): boolean {
+  private applyLambdaOTelInstrumentation(component: IComponent): boolean {
     const lambdaFunction = component.getConstruct('function') as lambda.Function | undefined;
     if (!lambdaFunction) {
       this.context.logger.warn('Lambda component has no function construct registered', { service: this.name, componentType: 'lambda', componentName: component.node.id });
@@ -350,7 +350,7 @@ export class ObservabilityService implements IPlatformService {
    * Apply RDS-specific OpenTelemetry instrumentation
    * Implements Platform OpenTelemetry Observability Standard v1.0 Section 5.2
    */
-  private applyRdsOTelInstrumentation(component: Component): boolean {
+  private applyRdsOTelInstrumentation(component: IComponent): boolean {
     const database = component.getConstruct('database') as rds.DatabaseInstance | undefined;
     if (!database) {
       this.context.logger.warn('RDS component has no database construct registered', { service: this.name, componentType: 'rds', componentName: component.node.id });
@@ -387,7 +387,7 @@ export class ObservabilityService implements IPlatformService {
    * Apply EC2-specific OpenTelemetry instrumentation
    * Implements Platform OpenTelemetry Observability Standard v1.0 Section 5.4
    */
-  private applyEc2OTelInstrumentation(component: Component): boolean {
+  private applyEc2OTelInstrumentation(component: IComponent): boolean {
     const instance = component.getConstruct('instance') as ec2.Instance | undefined;
     if (!instance) {
       this.context.logger.warn('EC2 component has no instance construct registered', { service: this.name, componentType: 'ec2-instance', componentName: component.node.id });
@@ -454,7 +454,7 @@ export class ObservabilityService implements IPlatformService {
   /**
    * Apply SQS-specific OpenTelemetry instrumentation
    */
-  private applySqsOTelInstrumentation(component: Component): boolean {
+  private applySqsOTelInstrumentation(component: IComponent): boolean {
     // SQS instrumentation is primarily handled by the applications that use the queue
     // The queue itself needs message attribute configuration for trace propagation
     this.context.logger.info('SQS trace propagation configured', { service: this.name, componentType: 'sqs', componentName: component.node.id });
@@ -488,7 +488,7 @@ export class ObservabilityService implements IPlatformService {
   /**
    * Apply VPC-specific observability (NAT Gateway alarms)
    */
-  private applyVpcObservability(component: Component): number {
+  private applyVpcObservability(component: IComponent): number {
     const vpc = component.getConstruct('vpc') as ec2.Vpc | undefined;
     if (!vpc) {
       this.context.logger.warn( 'VPC component has no vpc construct registered', { service: this.name });
@@ -515,7 +515,7 @@ export class ObservabilityService implements IPlatformService {
   /**
    * Create NAT Gateway specific alarms
    */
-  private createNatGatewayAlarms(component: Component, natGatewayCount: number): number {
+  private createNatGatewayAlarms(component: IComponent, natGatewayCount: number): number {
     let alarmCount = 0;
 
     // NAT Gateway Error Port Allocation alarm
@@ -560,7 +560,7 @@ export class ObservabilityService implements IPlatformService {
   /**
    * Apply EC2 Instance specific observability
    */
-  private applyEc2InstanceObservability(component: Component): number {
+  private applyEc2InstanceObservability(component: IComponent): number {
     const instance = component.getConstruct('instance');
     if (!instance) {
       this.context.logger.warn( 'EC2 Instance component has no instance construct registered', { service: this.name });
@@ -594,7 +594,7 @@ export class ObservabilityService implements IPlatformService {
   /**
    * Apply Lambda specific observability
    */
-  private applyLambdaObservability(component: Component): number {
+  private applyLambdaObservability(component: IComponent): number {
     const lambdaFunction = component.getConstruct('function');
     if (!lambdaFunction) {
       this.context.logger.warn( 'Lambda component has no function construct registered', { service: this.name });
@@ -628,7 +628,7 @@ export class ObservabilityService implements IPlatformService {
   /**
    * Apply RDS specific observability
    */
-  private applyRdsObservability(component: Component): number {
+  private applyRdsObservability(component: IComponent): number {
     const database = component.getConstruct('database');
     if (!database) {
       this.context.logger.warn( 'RDS component has no database construct registered', { service: this.name });
@@ -663,7 +663,7 @@ export class ObservabilityService implements IPlatformService {
    * Apply Application Load Balancer specific observability
    * Creates alarms for response time, unhealthy targets, and HTTP errors
    */
-  private applyAlbObservability(component: Component): number {
+  private applyAlbObservability(component: IComponent): number {
     const loadBalancer = component.getConstruct('loadBalancer');
     if (!loadBalancer) {
       this.context.logger.warn( 'ALB component has no loadBalancer construct registered', { service: this.name });
@@ -738,7 +738,7 @@ export class ObservabilityService implements IPlatformService {
    * Apply SQS Queue specific observability
    * Creates alarms for queue depth, message age, and dead letter queue metrics
    */
-  private applySqsObservability(component: Component): number {
+  private applySqsObservability(component: IComponent): number {
     const queue = component.getConstruct('queue');
     if (!queue) {
       this.context.logger.warn( 'SQS component has no queue construct registered', { service: this.name });
@@ -795,7 +795,7 @@ export class ObservabilityService implements IPlatformService {
    * Apply ECS Cluster specific observability
    * Creates alarms for cluster capacity and resource utilization
    */
-  private applyEcsClusterObservability(component: Component): number {
+  private applyEcsClusterObservability(component: IComponent): number {
     const cluster = component.getConstruct('cluster');
     if (!cluster) {
       this.context.logger.warn( 'ECS Cluster component has no cluster construct registered', { service: this.name });
@@ -852,7 +852,7 @@ export class ObservabilityService implements IPlatformService {
    * Apply ECS Service OpenTelemetry instrumentation
    * Configures container-level OTel environment variables and monitoring
    */
-  private applyEcsServiceOTelInstrumentation(component: Component): boolean {
+  private applyEcsServiceOTelInstrumentation(component: IComponent): boolean {
     const taskDefinition = component.getConstruct('taskDefinition');
     if (!taskDefinition) {
       this.context.logger.warn( 'ECS Service component has no taskDefinition construct registered', { service: this.name });
@@ -889,7 +889,7 @@ export class ObservabilityService implements IPlatformService {
    * Apply ECS Service specific observability
    * Creates alarms for service health, scaling, and performance
    */
-  private applyEcsServiceObservability(component: Component): number {
+  private applyEcsServiceObservability(component: IComponent): number {
     const service = component.getConstruct('service');
     if (!service) {
       this.context.logger.warn( 'ECS Service component has no service construct registered', { service: this.name });

@@ -10,7 +10,7 @@ import * as logs from 'aws-cdk-lib/aws-logs';
 import * as iam from 'aws-cdk-lib/aws-iam';
 import * as cdk from 'aws-cdk-lib';
 import { Construct } from 'constructs';
-import { Component } from '../../platform/contracts/component';
+import { BaseComponent } from '../../platform/contracts/component';
 import { ComponentSpec, ComponentContext, ComponentCapabilities } from '../../platform/contracts/component-interfaces';
 
 /**
@@ -441,7 +441,7 @@ export class VpcConfigBuilder {
 /**
  * VPC Component implementing Component API Contract v1.0
  */
-export class VpcComponent extends Component {
+export class VpcComponent extends BaseComponent {
   private vpc?: ec2.Vpc;
   private flowLogGroup?: logs.LogGroup;
   private flowLogRole?: iam.Role;

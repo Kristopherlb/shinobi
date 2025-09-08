@@ -46,19 +46,6 @@ export interface ComponentContext {
   serviceLabels?: Record<string, string>;
 }
 
-/**
- * Base component interface that all concrete components must implement
- */
-export interface IComponent {
-  spec: ComponentSpec;
-  synth(): void;
-  getCapabilities(): ComponentCapabilities;
-  getType(): string;
-  getConstruct(handle: string): IConstruct | undefined;
-  getAllConstructs(): Map<string, IConstruct>;
-  hasConstruct(handle: string): boolean;
-  getName(): string;
-}
 
 /**
  * Binding context for component connections
@@ -69,6 +56,33 @@ export interface BindingContext {
   directive: any;
   environment: string;
   complianceFramework: string;
+}
+
+/**
+ * Core component interface - The Public Contract
+ * 
+ * This is the lean, minimal contract that defines what it means to be a component.
+ * The ResolverEngine, Binder strategies, and Platform Services depend on this interface.
+ * Implements Interface Segregation Principle by separating contract from implementation.
+ */
+export interface IComponent extends IConstruct {
+  /** The component's specification from the service manifest */
+  readonly spec: ComponentSpec;
+  
+  /** The context of the service this component belongs to */
+  readonly context: ComponentContext;
+
+  /** The core synthesis method - creates AWS resources */
+  synth(): void;
+
+  /** Returns the machine-readable capabilities of the component */
+  getCapabilities(): ComponentCapabilities;
+
+  /** Returns the component's unique type identifier */
+  getType(): string;
+
+  /** Retrieves a handle to a synthesized CDK construct */
+  getConstruct(handle: string): IConstruct | undefined;
 }
 
 /**
@@ -112,5 +126,5 @@ export interface IComponentFactory {
   getComplianceFramework(): string;
 }
 
-// Export base Component class
+// Export base component classes and interfaces
 export * from './component';
