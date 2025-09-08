@@ -7,7 +7,7 @@
  * Last Updated: September 6, 2025
  */
 
-import { Component } from './component';
+import { IComponent } from './component-interfaces';
 
 /**
  * Fundamental interaction types in the platform
@@ -126,8 +126,8 @@ export interface ExtendedComponentSpec {
  * Context for binding operations
  */
 export interface BindingContext {
-  source: Component;
-  target: Component;
+  source: IComponent;
+  target: IComponent;
   directive: BindingDirective;
   environment: string;
   complianceFramework: string;
@@ -137,8 +137,8 @@ export interface BindingContext {
  * Context for trigger operations
  */
 export interface TriggerContext {
-  source: Component;
-  target: Component;
+  source: IComponent;
+  target: IComponent;
   directive: TriggerDirective;
   environment: string;
   complianceFramework: string;

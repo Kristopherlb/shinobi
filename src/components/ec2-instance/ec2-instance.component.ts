@@ -13,15 +13,15 @@ import * as kms from 'aws-cdk-lib/aws-kms';
 import * as cdk from 'aws-cdk-lib';
 import { Construct } from 'constructs';
 // File system operations are now handled by the abstract ConfigBuilder base class
+import { BaseComponent } from '../../platform/contracts/component';
 import {
-  Component,
   ComponentSpec,
   ComponentContext,
   ComponentCapabilities,
   ConfigBuilder,
   ConfigBuilderContext,
   ComponentConfigSchema
-} from '@platform/contracts';
+} from '../../platform/contracts';
 
 /**
  * Configuration interface for EC2 Instance component
@@ -352,7 +352,7 @@ export class Ec2InstanceConfigBuilder extends ConfigBuilder<Ec2InstanceConfig> {
 /**
  * EC2 Instance Component implementing Component API Contract v1.0
  */
-export class Ec2InstanceComponent extends Component {
+export class Ec2InstanceComponent extends BaseComponent {
   private instance?: ec2.Instance;
   private securityGroup?: ec2.SecurityGroup;
   private instanceProfile?: iam.InstanceProfile;

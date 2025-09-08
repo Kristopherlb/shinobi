@@ -33,7 +33,7 @@ export class LambdaLoggingHandler implements ILoggingHandler {
   /**
    * Apply comprehensive logging infrastructure to a Lambda function
    */
-  public apply(component: Component, context: PlatformServiceContext): LoggingHandlerResult {
+  public apply(component: IComponent, context: PlatformServiceContext): LoggingHandlerResult {
     try {
       // Get the Lambda function from the component
       const lambdaFunction = component.getConstruct('function') as lambda.Function | undefined;
@@ -99,7 +99,7 @@ export class LambdaLoggingHandler implements ILoggingHandler {
    * Create CloudWatch Log Group for Lambda function
    */
   private createLambdaLogGroup(
-    component: Component, 
+    component: IComponent, 
     logGroupName: string, 
     context: PlatformServiceContext
   ): logs.LogGroup {

@@ -15,7 +15,7 @@ import * as ec2 from 'aws-cdk-lib/aws-ec2';
 import * as logs from 'aws-cdk-lib/aws-logs';
 import * as iam from 'aws-cdk-lib/aws-iam';
 import * as cdk from 'aws-cdk-lib';
-import { Component } from '../../platform/contracts/component';
+import { IComponent } from '../../platform/contracts/component-interfaces';
 import { PlatformServiceContext } from '../../platform/contracts/platform-services';
 import { 
   ILoggingHandler, 
@@ -32,7 +32,7 @@ export class VpcLoggingHandler implements ILoggingHandler {
   /**
    * Apply VPC Flow Logs configuration with compliance-aware settings
    */
-  public apply(component: Component, context: PlatformServiceContext): LoggingHandlerResult {
+  public apply(component: IComponent, context: PlatformServiceContext): LoggingHandlerResult {
     try {
       // Get the VPC from the component
       const vpc = component.getConstruct('vpc') as ec2.IVpc | undefined;
@@ -95,7 +95,7 @@ export class VpcLoggingHandler implements ILoggingHandler {
    * Create CloudWatch Log Group for VPC Flow Logs
    */
   private createVpcFlowLogGroup(
-    component: Component, 
+    component: IComponent, 
     logGroupName: string, 
     context: PlatformServiceContext
   ): logs.LogGroup {
@@ -120,7 +120,7 @@ export class VpcLoggingHandler implements ILoggingHandler {
   /**
    * Create IAM role for VPC Flow Logs to write to CloudWatch
    */
-  private createFlowLogRole(component: Component, logGroup: logs.LogGroup): iam.Role {
+  private createFlowLogRole(component: IComponent, logGroup: logs.LogGroup): iam.Role {
     const role = new iam.Role(component, 'VpcFlowLogRole', {
       assumedBy: new iam.ServicePrincipal('vpc-flow-logs.amazonaws.com'),
       description: 'Role for VPC Flow Logs to write to CloudWatch',
@@ -153,7 +153,7 @@ export class VpcLoggingHandler implements ILoggingHandler {
    * Configure VPC Flow Logs with structured format
    */
   private configureVpcFlowLogs(
-    component: Component,
+    component: IComponent,
     vpc: ec2.IVpc,
     logGroup: logs.LogGroup,
     role: iam.Role,
@@ -181,7 +181,7 @@ export class VpcLoggingHandler implements ILoggingHandler {
    * Apply security monitoring configuration
    */
   private applySecurityMonitoring(
-    component: Component,
+    component: IComponent,
     logGroup: logs.LogGroup,
     context: PlatformServiceContext
   ): void {

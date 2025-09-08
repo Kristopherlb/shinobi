@@ -15,7 +15,7 @@
 import * as ecs from 'aws-cdk-lib/aws-ecs';
 import * as logs from 'aws-cdk-lib/aws-logs';
 import * as cdk from 'aws-cdk-lib';
-import { Component } from '../../platform/contracts/component';
+import { IComponent } from '../../platform/contracts/component-interfaces';
 import { PlatformServiceContext } from '../../platform/contracts/platform-services';
 import { 
   ILoggingHandler, 
@@ -33,7 +33,7 @@ export class EcsLoggingHandler implements ILoggingHandler {
   /**
    * Apply comprehensive logging infrastructure to ECS services
    */
-  public apply(component: Component, context: PlatformServiceContext): LoggingHandlerResult {
+  public apply(component: IComponent, context: PlatformServiceContext): LoggingHandlerResult {
     try {
       const componentType = component.getType();
       
@@ -67,7 +67,7 @@ export class EcsLoggingHandler implements ILoggingHandler {
   /**
    * Apply logging configuration to ECS services (Fargate/EC2)
    */
-  private applyServiceLogging(component: Component, context: PlatformServiceContext): LoggingHandlerResult {
+  private applyServiceLogging(component: IComponent, context: PlatformServiceContext): LoggingHandlerResult {
     // Get task definition from the component
     const taskDefinition = component.getConstruct('taskDefinition') as ecs.TaskDefinition | undefined;
     if (!taskDefinition) {
@@ -121,7 +121,7 @@ export class EcsLoggingHandler implements ILoggingHandler {
   /**
    * Apply logging configuration to ECS clusters
    */
-  private applyClusterLogging(component: Component, context: PlatformServiceContext): LoggingHandlerResult {
+  private applyClusterLogging(component: IComponent, context: PlatformServiceContext): LoggingHandlerResult {
     const cluster = component.getConstruct('cluster') as ecs.Cluster | undefined;
     if (!cluster) {
       return {
@@ -163,7 +163,7 @@ export class EcsLoggingHandler implements ILoggingHandler {
    * Create CloudWatch Log Group for ECS components
    */
   private createEcsLogGroup(
-    component: Component, 
+    component: IComponent, 
     logGroupName: string, 
     context: PlatformServiceContext
   ): logs.LogGroup {

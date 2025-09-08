@@ -83,6 +83,9 @@ export interface IComponent extends IConstruct {
 
   /** Retrieves a handle to a synthesized CDK construct */
   getConstruct(handle: string): IConstruct | undefined;
+
+  /** Get security group handle for binding operations */
+  _getSecurityGroupHandle(role: 'source' | 'target'): any;
 }
 
 /**

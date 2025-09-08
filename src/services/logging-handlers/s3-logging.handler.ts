@@ -14,7 +14,7 @@
 import * as s3 from 'aws-cdk-lib/aws-s3';
 import * as logs from 'aws-cdk-lib/aws-logs';
 import * as cdk from 'aws-cdk-lib';
-import { Component } from '../../platform/contracts/component';
+import { IComponent } from '../../platform/contracts/component-interfaces';
 import { PlatformServiceContext } from '../../platform/contracts/platform-services';
 import { 
   ILoggingHandler, 
@@ -31,7 +31,7 @@ export class S3LoggingHandler implements ILoggingHandler {
   /**
    * Apply S3 logging configuration with compliance-aware settings
    */
-  public apply(component: Component, context: PlatformServiceContext): LoggingHandlerResult {
+  public apply(component: IComponent, context: PlatformServiceContext): LoggingHandlerResult {
     try {
       // Get the S3 bucket from the component
       const bucket = component.getConstruct('bucket') as s3.IBucket | undefined;
@@ -89,7 +89,7 @@ export class S3LoggingHandler implements ILoggingHandler {
   /**
    * Create dedicated bucket for S3 access logs
    */
-  private createAccessLogsBucket(component: Component, context: PlatformServiceContext): s3.Bucket {
+  private createAccessLogsBucket(component: IComponent, context: PlatformServiceContext): s3.Bucket {
     const bucketName = `${context.serviceName}-s3-access-logs-${context.region}`;
     
     return new s3.Bucket(component, 'S3AccessLogsBucket', {
@@ -121,7 +121,7 @@ export class S3LoggingHandler implements ILoggingHandler {
    * Create CloudWatch Log Group for S3 CloudTrail integration
    */
   private createS3LogGroup(
-    component: Component, 
+    component: IComponent, 
     logGroupName: string, 
     context: PlatformServiceContext
   ): logs.LogGroup {

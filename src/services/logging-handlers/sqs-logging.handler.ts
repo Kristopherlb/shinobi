@@ -15,7 +15,7 @@ import * as sqs from 'aws-cdk-lib/aws-sqs';
 import * as logs from 'aws-cdk-lib/aws-logs';
 import * as cloudtrail from 'aws-cdk-lib/aws-cloudtrail';
 import * as cdk from 'aws-cdk-lib';
-import { Component } from '../../platform/contracts/component';
+import { IComponent } from '../../platform/contracts/component-interfaces';
 import { PlatformServiceContext } from '../../platform/contracts/platform-services';
 import { 
   ILoggingHandler, 
@@ -32,7 +32,7 @@ export class SqsLoggingHandler implements ILoggingHandler {
   /**
    * Apply SQS logging configuration with compliance-aware settings
    */
-  public apply(component: Component, context: PlatformServiceContext): LoggingHandlerResult {
+  public apply(component: IComponent, context: PlatformServiceContext): LoggingHandlerResult {
     try {
       // Get the SQS queue from the component
       const queue = component.getConstruct('queue') as sqs.IQueue | undefined;
@@ -94,7 +94,7 @@ export class SqsLoggingHandler implements ILoggingHandler {
    * Create CloudWatch Log Group for SQS API operations
    */
   private createSqsLogGroup(
-    component: Component, 
+    component: IComponent, 
     logGroupName: string, 
     context: PlatformServiceContext
   ): logs.LogGroup {
@@ -120,7 +120,7 @@ export class SqsLoggingHandler implements ILoggingHandler {
    * Configure CloudTrail logging for SQS API operations
    */
   private configureCloudTrailLogging(
-    component: Component,
+    component: IComponent,
     queue: sqs.IQueue,
     logGroup: logs.LogGroup,
     context: PlatformServiceContext
@@ -145,7 +145,7 @@ export class SqsLoggingHandler implements ILoggingHandler {
    * Configure message-level audit logging for compliance frameworks
    */
   private configureMessageAuditLogging(
-    component: Component,
+    component: IComponent,
     queue: sqs.IQueue,
     context: PlatformServiceContext
   ): void {
@@ -180,7 +180,7 @@ export class SqsLoggingHandler implements ILoggingHandler {
    * Configure dead letter queue monitoring
    */
   private configureDlqMonitoring(
-    component: Component,
+    component: IComponent,
     queue: sqs.IQueue,
     context: PlatformServiceContext
   ): void {

@@ -14,7 +14,7 @@
 import * as rds from 'aws-cdk-lib/aws-rds';
 import * as logs from 'aws-cdk-lib/aws-logs';
 import * as cdk from 'aws-cdk-lib';
-import { Component } from '../../platform/contracts/component';
+import { IComponent } from '../../platform/contracts/component-interfaces';
 import { PlatformServiceContext } from '../../platform/contracts/platform-services';
 import { 
   ILoggingHandler, 
@@ -31,7 +31,7 @@ export class RdsLoggingHandler implements ILoggingHandler {
   /**
    * Apply RDS logging configuration with compliance-aware settings
    */
-  public apply(component: Component, context: PlatformServiceContext): LoggingHandlerResult {
+  public apply(component: IComponent, context: PlatformServiceContext): LoggingHandlerResult {
     try {
       // Get the RDS instance from the component
       const database = component.getConstruct('database') as rds.IDatabaseInstance | undefined;
@@ -87,7 +87,7 @@ export class RdsLoggingHandler implements ILoggingHandler {
   /**
    * Create CloudWatch Log Groups for different RDS log types
    */
-  private createRdsLogGroups(component: Component, context: PlatformServiceContext): {
+  private createRdsLogGroups(component: IComponent, context: PlatformServiceContext): {
     error: logs.LogGroup;
     general: logs.LogGroup;
     slowQuery: logs.LogGroup;

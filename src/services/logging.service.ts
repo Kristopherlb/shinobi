@@ -209,7 +209,7 @@ export class LoggingService implements IPlatformService {
    * Create a standardized CloudWatch Log Group with compliance-appropriate configuration
    */
   public createLogGroup(
-    scope: Component, 
+    scope: IComponent, 
     logGroupName: string, 
     classification: LogSecurityConfig['classification'] = 'internal'
   ): { logGroup: logs.LogGroup; result: LoggingHandlerResult } {
