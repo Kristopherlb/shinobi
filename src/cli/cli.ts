@@ -2,12 +2,13 @@
 
 import { Command } from 'commander';
 import chalk from 'chalk';
-import { InitCommand } from './init';
-import { ValidateCommand } from './validate';
-import { PlanCommand } from './plan';
 import { registerInventoryCommand } from './inventory';
+import { CompositionRoot } from './composition-root';
 
 const program = new Command();
+
+// Initialize composition root
+const compositionRoot = new CompositionRoot();
 
 program
   .name('svc')
@@ -18,10 +19,12 @@ program
   .hook('preAction', (thisCommand) => {
     // Configure logger based on global options
     const opts = thisCommand.opts();
-    logger.configure({
+    const dependencies = compositionRoot.createDependencies({
       verbose: opts.verbose || false,
       ci: opts.ci || false
     });
+    // Store dependencies on the command for access in actions
+    (thisCommand as any).dependencies = dependencies;
   });
 
 // svc init command
@@ -32,13 +35,15 @@ program
   .option('--owner <owner>', 'Service owner/team')
   .option('--framework <framework>', 'Compliance framework', 'commercial')
   .option('--pattern <pattern>', 'Initial pattern', 'empty')
-  .action(async (options) => {
+  .action(async (options, cmd) => {
     try {
-      const initCommand = new InitCommand();
+      const dependencies = (cmd as any).dependencies;
+      const initCommand = compositionRoot.createInitCommand(dependencies);
       await initCommand.execute(options);
       process.exit(0);
     } catch (error) {
-      logger.error('Failed to initialize service', error);
+      const dependencies = (cmd as any).dependencies;
+      dependencies.logger.error('Failed to initialize service', error);
       process.exit(1);
     }
   });
@@ -48,13 +53,15 @@ program
   .command('validate')
   .description('Parse and validate the service.yml without connecting to AWS')
   .option('--file, -f <file>', 'Path to service.yml file')
-  .action(async (options) => {
+  .action(async (options, cmd) => {
     try {
-      const validateCommand = new ValidateCommand();
+      const dependencies = (cmd as any).dependencies;
+      const validateCommand = compositionRoot.createValidateCommand(dependencies);
       await validateCommand.execute(options);
       process.exit(0);
     } catch (error) {
-      logger.error('Validation failed', error);
+      const dependencies = (cmd as any).dependencies;
+      dependencies.logger.error('Validation failed', error);
       process.exit(2);
     }
   });
@@ -65,13 +72,15 @@ program
   .description('Perform full validation and output resolved configuration')
   .option('--file, -f <file>', 'Path to service.yml file')
   .option('--env <env>', 'Target environment', 'dev')
-  .action(async (options) => {
+  .action(async (options, cmd) => {
     try {
-      const planCommand = new PlanCommand();
+      const dependencies = (cmd as any).dependencies;
+      const planCommand = compositionRoot.createPlanCommand(dependencies);
       await planCommand.execute(options);
       process.exit(0);
     } catch (error) {
-      logger.error('Plan failed', error);
+      const dependencies = (cmd as any).dependencies;
+      dependencies.logger.error('Plan failed', error);
       process.exit(2);
     }
   });
@@ -81,12 +90,12 @@ registerInventoryCommand(program);
 
 // Global error handler
 process.on('uncaughtException', (error) => {
-  logger.error('Uncaught exception', error);
+  console.error('Uncaught exception:', error);
   process.exit(1);
 });
 
 process.on('unhandledRejection', (reason) => {
-  logger.error('Unhandled rejection', reason);
+  console.error('Unhandled rejection:', reason);
   process.exit(1);
 });
 

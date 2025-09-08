@@ -10,7 +10,7 @@ import { Project, Node, SyntaxKind, NewExpression, ImportDeclaration } from 'ts-
 import * as fs from 'fs';
 import * as path from 'path';
 import chalk from 'chalk';
-import { logger } from '../utils/logger';
+import { logger } from '../services/logger';
 
 interface ConstructUsage {
   type: string;
@@ -29,6 +29,9 @@ interface PatternCandidate {
   priority: 'High' | 'Medium' | 'Low';
   files: string[];
   recommendation: string;
+  architecturalValue: number; // 0-100 score
+  complexityReduction: number; // Estimated lines of code that could be abstracted
+  relatedPatterns: string[]; // Similar patterns that could be consolidated
 }
 
 interface InventoryAnalysis {
@@ -50,7 +53,7 @@ interface InventoryAnalysis {
 
 export class InventoryCommand {
   private project: Project;
-  private targetDirectory: string;
+  private targetDirectory: string = '';
   private analysis: InventoryAnalysis;
 
   constructor() {
@@ -109,6 +112,11 @@ export class InventoryCommand {
     this.analysis.summary.totalFiles = tsFiles.length;
     logger.info(chalk.gray(`Found ${tsFiles.length} TypeScript files`));
     
+    // Show first few files if verbose
+    if (this.analysis.summary.totalFiles <= 20) {
+      logger.debug(`Files to analyze: ${tsFiles.map(f => path.relative(this.targetDirectory, f)).join(', ')}`);
+    }
+    
     // Analyze each source file
     for (const sourceFile of this.project.getSourceFiles()) {
       await this.analyzeSourceFile(sourceFile);
@@ -147,27 +155,52 @@ export class InventoryCommand {
    */
   private getCdkImports(sourceFile: any): Set<string> {
     const cdkImports = new Set<string>();
+    const filePath = sourceFile.getFilePath();
+    const relativePath = path.relative(this.targetDirectory, filePath);
     
     const importDeclarations = sourceFile.getImportDeclarations();
+    
+    // Debug import processing if needed
+    logger.debug(`Processing imports in ${relativePath}: found ${importDeclarations.length} declarations`);
     
     for (const importDecl of importDeclarations) {
       const moduleSpecifier = importDecl.getModuleSpecifierValue();
       
-      // Look for imports from aws-cdk-lib or aws-cdk-lib/aws-*
-      if (moduleSpecifier.startsWith('aws-cdk-lib/aws-') || moduleSpecifier === 'aws-cdk-lib') {
+      // Look for imports from aws-cdk-lib/aws-* (specific AWS services)
+      if (moduleSpecifier.startsWith('aws-cdk-lib/aws-')) {
         const importClause = importDecl.getImportClause();
         if (importClause) {
           const namedImports = importClause.getNamedImports();
           if (namedImports) {
-            for (const namedImport of namedImports.getElements()) {
-              cdkImports.add(namedImport.getName());
+            try {
+              // Treat namedImports as array-like object
+              for (let i = 0; i < namedImports.length; i++) {
+                const namedImport = namedImports[i];
+                if (namedImport && typeof namedImport.getName === 'function') {
+                  cdkImports.add(namedImport.getName());
+                }
+              }
+            } catch (error) {
+              logger.debug(`Error accessing namedImports in ${relativePath}:`, error);
             }
           }
           
           // Handle namespace imports like "* as ec2"
           const namespaceImport = importClause.getNamespaceImport();
           if (namespaceImport) {
-            cdkImports.add(namespaceImport.getName());
+            try {
+              if (typeof namespaceImport.getText === 'function') {
+                const name = namespaceImport.getText();
+                cdkImports.add(name);
+              } else if (typeof namespaceImport.getName === 'function') {
+                const name = namespaceImport.getName();
+                cdkImports.add(name);
+              } else if (namespaceImport.name) {
+                cdkImports.add(namespaceImport.name);
+              }
+            } catch (error) {
+              logger.debug(`Error accessing namespaceImport in ${relativePath}:`, error);
+            }
           }
         }
       }
@@ -228,7 +261,7 @@ export class InventoryCommand {
       usage.locations.push({
         file: filePath,
         line: newExpr.getStartLineNumber(),
-        column: newExpr.getStartColumnNumber()
+        column: newExpr.getStart()
       });
       
       this.analysis.rawInventory.set(constructType, usage);
@@ -265,7 +298,7 @@ export class InventoryCommand {
   }
 
   /**
-   * Phase 2: Analyze patterns of co-located constructs
+   * Phase 2: Analyze patterns of co-located constructs with enhanced algorithms
    */
   private async analyzePatterns(): Promise<void> {
     logger.info(chalk.yellow('🔍 Phase 2: Analyzing construct patterns...'));
@@ -281,77 +314,280 @@ export class InventoryCommand {
       }
     }
     
-    // Identify common patterns
+    // Enhanced pattern analysis with multiple algorithms
+    const patterns = new Map<string, PatternCandidate>();
+    
+    // Algorithm 1: Co-location patterns (original)
+    await this.analyzeCoLocationPatterns(fileConstructs, patterns);
+    
+    // Algorithm 2: Semantic architecture patterns
+    await this.analyzeSemanticPatterns(fileConstructs, patterns);
+    
+    // Algorithm 3: Dependency chain patterns
+    await this.analyzeDependencyPatterns(fileConstructs, patterns);
+    
+    // Algorithm 4: Anti-pattern detection
+    await this.analyzeAntiPatterns(fileConstructs, patterns);
+    
+    // Convert to array and sort by architectural value
+    this.analysis.patterns = Array.from(patterns.values())
+      .filter(pattern => pattern.frequency >= 2)
+      .sort((a, b) => {
+        // Sort by architectural value first, then frequency
+        if (a.architecturalValue !== b.architecturalValue) {
+          return b.architecturalValue - a.architecturalValue;
+        }
+        return b.frequency - a.frequency;
+      });
+    
+    // Identify related patterns and consolidation opportunities
+    this.identifyRelatedPatterns();
+    
+    this.analysis.summary.patternsFound = this.analysis.patterns.length;
+    logger.info(chalk.green(`✅ Identified ${this.analysis.patterns.length} recurring patterns with enhanced analysis`));
+  }
+
+  /**
+   * Algorithm 1: Co-location pattern analysis (enhanced)
+   */
+  private async analyzeCoLocationPatterns(
+    fileConstructs: Map<string, string[]>, 
+    patterns: Map<string, PatternCandidate>
+  ): Promise<void> {
     const patternCounts = new Map<string, { count: number; files: string[] }>();
     
     for (const [file, constructs] of fileConstructs) {
-      if (constructs.length < 2) continue; // Need at least 2 constructs for a pattern
+      if (constructs.length < 2) continue;
       
-      // Sort constructs to normalize pattern
-      const pattern = constructs.sort().join(' -> ');
-      const existing = patternCounts.get(pattern) || { count: 0, files: [] };
-      existing.count++;
-      existing.files.push(file);
-      patternCounts.set(pattern, existing);
+      // Generate all meaningful construct combinations, not just full file patterns
+      const combinations = this.generateConstructCombinations(constructs);
+      
+      for (const combination of combinations) {
+        const pattern = combination.sort().join(' → ');
+        const existing = patternCounts.get(pattern) || { count: 0, files: [] };
+        existing.count++;
+        if (!existing.files.includes(file)) {
+          existing.files.push(file);
+        }
+        patternCounts.set(pattern, existing);
+      }
     }
     
     // Convert to pattern candidates
     for (const [pattern, data] of patternCounts) {
-      if (data.count >= 2) { // Only patterns that appear at least twice
+      if (data.count >= 2) {
         const candidate = this.classifyPattern(pattern, data);
-        this.analysis.patterns.push(candidate);
+        patterns.set(pattern, candidate);
       }
     }
-    
-    // Sort patterns by frequency (highest first)
-    this.analysis.patterns.sort((a, b) => b.frequency - a.frequency);
-    
-    this.analysis.summary.patternsFound = this.analysis.patterns.length;
-    logger.info(chalk.green(`✅ Identified ${this.analysis.patterns.length} recurring patterns`));
   }
 
   /**
-   * Classify and prioritize a pattern
+   * Algorithm 2: Semantic architecture pattern recognition
+   */
+  private async analyzeSemanticPatterns(
+    fileConstructs: Map<string, string[]>, 
+    patterns: Map<string, PatternCandidate>
+  ): Promise<void> {
+    const architecturalPatterns = this.getKnownArchitecturalPatterns();
+    
+    for (const [file, constructs] of fileConstructs) {
+      for (const archPattern of architecturalPatterns) {
+        if (this.matchesArchitecturalPattern(constructs, archPattern)) {
+          const patternKey = archPattern.constructs.sort().join(' → ');
+          const existing = patterns.get(patternKey);
+          
+          if (existing) {
+            existing.frequency++;
+            existing.files.push(file);
+            existing.architecturalValue = Math.max(existing.architecturalValue, archPattern.value);
+          } else {
+            patterns.set(patternKey, {
+              name: archPattern.name,
+              pattern: archPattern.constructs.sort(),
+              frequency: 1,
+              priority: archPattern.priority,
+              files: [file],
+              recommendation: archPattern.recommendation,
+              architecturalValue: archPattern.value,
+              complexityReduction: this.estimateComplexityReduction(archPattern.constructs),
+              relatedPatterns: []
+            });
+          }
+        }
+      }
+    }
+  }
+
+  /**
+   * Algorithm 3: Dependency chain pattern analysis
+   */
+  private async analyzeDependencyPatterns(
+    fileConstructs: Map<string, string[]>, 
+    patterns: Map<string, PatternCandidate>
+  ): Promise<void> {
+    const dependencyChains = this.identifyDependencyChains();
+    
+    for (const chain of dependencyChains) {
+      let chainFrequency = 0;
+      const chainFiles: string[] = [];
+      
+      for (const [file, constructs] of fileConstructs) {
+        if (this.containsChain(constructs, chain)) {
+          chainFrequency++;
+          chainFiles.push(file);
+        }
+      }
+      
+      if (chainFrequency >= 2) {
+        const patternKey = chain.join(' → ');
+        patterns.set(`dependency-${patternKey}`, {
+          name: `${chain[0].toLowerCase()}-to-${chain[chain.length - 1].toLowerCase()}-pipeline`,
+          pattern: chain,
+          frequency: chainFrequency,
+          priority: this.prioritizeDependencyChain(chain),
+          files: chainFiles,
+          recommendation: `Consider creating a pipeline component that encapsulates the ${chain[0]} → ${chain[chain.length - 1]} data flow pattern.`,
+          architecturalValue: this.calculateDependencyChainValue(chain),
+          complexityReduction: this.estimateComplexityReduction(chain),
+          relatedPatterns: []
+        });
+      }
+    }
+  }
+
+  /**
+   * Algorithm 4: Anti-pattern detection
+   */
+  private async analyzeAntiPatterns(
+    fileConstructs: Map<string, string[]>, 
+    patterns: Map<string, PatternCandidate>
+  ): Promise<void> {
+    const antiPatterns = this.getKnownAntiPatterns();
+    
+    for (const [file, constructs] of fileConstructs) {
+      for (const antiPattern of antiPatterns) {
+        if (this.matchesAntiPattern(constructs, antiPattern)) {
+          const patternKey = `antipattern-${antiPattern.name}`;
+          const existing = patterns.get(patternKey);
+          
+          if (existing) {
+            existing.frequency++;
+            existing.files.push(file);
+          } else {
+            patterns.set(patternKey, {
+              name: `⚠️ ${antiPattern.name}`,
+              pattern: antiPattern.constructs,
+              frequency: 1,
+              priority: 'High', // Anti-patterns are high priority to fix
+              files: [file],
+              recommendation: `${antiPattern.warning} ${antiPattern.solution}`,
+              architecturalValue: -10, // Negative value for anti-patterns
+              complexityReduction: 0,
+              relatedPatterns: []
+            });
+          }
+        }
+      }
+    }
+  }
+
+  /**
+   * Identify related patterns and consolidation opportunities
+   */
+  private identifyRelatedPatterns(): void {
+    for (let i = 0; i < this.analysis.patterns.length; i++) {
+      for (let j = i + 1; j < this.analysis.patterns.length; j++) {
+        const pattern1 = this.analysis.patterns[i];
+        const pattern2 = this.analysis.patterns[j];
+        
+        const similarity = this.calculatePatternSimilarity(pattern1.pattern, pattern2.pattern);
+        if (similarity > 0.6) { // 60% similarity threshold
+          pattern1.relatedPatterns.push(pattern2.name);
+          pattern2.relatedPatterns.push(pattern1.name);
+        }
+      }
+    }
+  }
+
+  /**
+   * Classify and prioritize a pattern (enhanced with architectural scoring)
    */
   private classifyPattern(pattern: string, data: { count: number; files: string[] }): PatternCandidate {
-    const constructs = pattern.split(' -> ');
+    const constructs = pattern.split(' → ');
     
-    // High-value patterns (common microservice patterns)
-    const highValuePatterns = [
-      ['apigateway.RestApi', 'lambda.Function', 'dynamodb.Table'],
-      ['lambda.Function', 's3.Bucket', 'sqs.Queue'],
-      ['ec2.Vpc', 'rds.DatabaseInstance', 'ec2.SecurityGroup'],
-      ['ecs.Cluster', 'elbv2.ApplicationLoadBalancer', 'ec2.Vpc']
-    ];
-    
-    // Check if this matches a high-value pattern
+    // Calculate architectural value based on construct types and combinations
+    let architecturalValue = this.calculateArchitecturalValue(constructs);
     let priority: 'High' | 'Medium' | 'Low' = 'Low';
     let name = 'unknown-pattern';
     let recommendation = 'Consider creating a reusable component for this pattern.';
     
+    // High-value patterns (common microservice patterns)
+    const highValuePatterns = [
+      {
+        constructs: ['apigateway.RestApi', 'lambda.Function', 'dynamodb.Table'],
+        name: 'serverless-api',
+        recommendation: 'Strong candidate for a lambda-api component. This pattern would significantly reduce API development boilerplate.',
+        value: 95
+      },
+      {
+        constructs: ['lambda.Function', 's3.Bucket', 'sqs.Queue'],
+        name: 'event-processor',
+        recommendation: 'Good candidate for an s3-triggered-worker or event-processing component.',
+        value: 80
+      },
+      {
+        constructs: ['ecs.Cluster', 'elbv2.ApplicationLoadBalancer', 'ec2.Vpc'],
+        name: 'containerized-service',
+        recommendation: 'Excellent candidate for a containerized-web-service component.',
+        value: 85
+      },
+      {
+        constructs: ['ec2.Vpc', 'rds.DatabaseInstance', 'ec2.SecurityGroup'],
+        name: 'database-service',
+        recommendation: 'Good candidate for a database-with-vpc component.',
+        value: 85
+      }
+    ];
+    
+    // Check for exact matches first
     for (const hvPattern of highValuePatterns) {
-      if (this.arraysEqual(constructs.sort(), hvPattern.sort())) {
+      if (this.arraysEqual(constructs.sort(), hvPattern.constructs.sort())) {
         priority = 'High';
-        if (hvPattern.includes('apigateway.RestApi') && hvPattern.includes('lambda.Function')) {
-          name = 'serverless-api';
-          recommendation = 'Strong candidate for a lambda-api component. This pattern would significantly reduce API development boilerplate.';
-        } else if (hvPattern.includes('s3.Bucket') && hvPattern.includes('sqs.Queue') && hvPattern.includes('lambda.Function')) {
-          name = 'event-processor';
-          recommendation = 'Good candidate for an s3-triggered-worker or event-processing component.';
-        } else if (hvPattern.includes('ecs.Cluster') && hvPattern.includes('elbv2.ApplicationLoadBalancer')) {
-          name = 'containerized-service';
-          recommendation = 'Excellent candidate for a containerized-web-service component.';
-        } else if (hvPattern.includes('ec2.Vpc') && hvPattern.includes('rds.DatabaseInstance')) {
-          name = 'database-service';
-          recommendation = 'Good candidate for a database-with-vpc component.';
-        }
+        name = hvPattern.name;
+        recommendation = hvPattern.recommendation;
+        architecturalValue = hvPattern.value;
         break;
       }
     }
     
-    // Medium priority if frequency is high
-    if (priority === 'Low' && data.count >= 4) {
-      priority = 'Medium';
+    // Check for partial matches (subset patterns)
+    if (priority === 'Low') {
+      for (const hvPattern of highValuePatterns) {
+        const matchCount = constructs.filter(c => hvPattern.constructs.includes(c)).length;
+        const matchRatio = matchCount / hvPattern.constructs.length;
+        
+        if (matchRatio >= 0.6) { // 60% match
+          priority = matchRatio >= 0.8 ? 'Medium' : 'Low';
+          name = `partial-${hvPattern.name}`;
+          recommendation = `Consider extending this pattern to include missing components for a complete ${hvPattern.name} solution.`;
+          architecturalValue = Math.floor(hvPattern.value * matchRatio);
+          break;
+        }
+      }
+    }
+    
+    // Frequency-based priority boost
+    if (data.count >= 5) {
+      priority = priority === 'Low' ? 'Medium' : 'High';
+      architecturalValue += 10;
+    } else if (data.count >= 3) {
+      architecturalValue += 5;
+    }
+    
+    // Generate meaningful name if still unknown
+    if (name === 'unknown-pattern') {
+      name = this.generatePatternName(constructs);
     }
     
     return {
@@ -360,12 +596,336 @@ export class InventoryCommand {
       frequency: data.count,
       priority,
       files: data.files,
-      recommendation
+      recommendation,
+      architecturalValue,
+      complexityReduction: this.estimateComplexityReduction(constructs),
+      relatedPatterns: [] // Will be filled later by identifyRelatedPatterns
     };
+  }
+
+  /**
+   * Calculate architectural value of a construct pattern
+   */
+  private calculateArchitecturalValue(constructs: string[]): number {
+    let value = 30; // Base value
+    
+    // Value per construct
+    value += constructs.length * 8;
+    
+    // Bonus for high-value constructs
+    const highValueConstructs = {
+      'lambda.Function': 15,
+      'apigateway.RestApi': 12,
+      'apigatewayv2.HttpApi': 12,
+      'dynamodb.Table': 10,
+      'rds.DatabaseInstance': 10,
+      'ecs.FargateService': 10,
+      's3.Bucket': 8,
+      'elbv2.ApplicationLoadBalancer': 8,
+      'cloudwatch.Alarm': 5
+    };
+    
+    for (const construct of constructs) {
+      for (const [hvConstruct, bonus] of Object.entries(highValueConstructs)) {
+        if (construct.includes(hvConstruct)) {
+          value += bonus;
+          break;
+        }
+      }
+    }
+    
+    // Bonus for architectural coherence (related constructs)
+    const coherenceBonus = this.calculateCoherenceBonus(constructs);
+    value += coherenceBonus;
+    
+    return Math.min(value, 100); // Cap at 100
+  }
+
+  /**
+   * Calculate coherence bonus for related constructs
+   */
+  private calculateCoherenceBonus(constructs: string[]): number {
+    const services = constructs.map(c => c.split('.')[0]).filter((v, i, a) => a.indexOf(v) === i);
+    
+    // Bonus for using multiple services from the same architectural tier
+    const computeServices = ['lambda', 'ecs', 'ec2'];
+    const dataServices = ['dynamodb', 'rds', 's3'];
+    const networkServices = ['apigateway', 'apigatewayv2', 'elbv2', 'cloudfront'];
+    
+    let bonus = 0;
+    if (services.filter(s => computeServices.includes(s)).length >= 2) bonus += 10;
+    if (services.filter(s => dataServices.includes(s)).length >= 2) bonus += 10;
+    if (services.filter(s => networkServices.includes(s)).length >= 2) bonus += 10;
+    
+    return bonus;
+  }
+
+  /**
+   * Generate a meaningful name for unknown patterns
+   */
+  private generatePatternName(constructs: string[]): string {
+    const services = constructs.map(c => c.split('.')[0]);
+    const uniqueServices = [...new Set(services)];
+    
+    if (uniqueServices.length <= 2) {
+      return uniqueServices.join('-') + '-pattern';
+    } else {
+      return `${uniqueServices[0]}-${uniqueServices[uniqueServices.length - 1]}-stack`;
+    }
   }
 
   private arraysEqual(a: string[], b: string[]): boolean {
     return a.length === b.length && a.every((val, i) => val === b[i]);
+  }
+
+  /**
+   * Generate meaningful construct combinations from a file
+   */
+  private generateConstructCombinations(constructs: string[]): string[][] {
+    const combinations: string[][] = [];
+    
+    // Add pairs, triples, and meaningful larger combinations
+    for (let size = 2; size <= Math.min(constructs.length, 5); size++) {
+      const combos = this.getCombinations(constructs, size);
+      combinations.push(...combos);
+    }
+    
+    return combinations;
+  }
+
+  private getCombinations<T>(array: T[], size: number): T[][] {
+    if (size > array.length) return [];
+    if (size === 1) return array.map(x => [x]);
+    if (size === array.length) return [array];
+    
+    const combinations: T[][] = [];
+    for (let i = 0; i <= array.length - size; i++) {
+      const head = array[i];
+      const tail = this.getCombinations(array.slice(i + 1), size - 1);
+      for (const combo of tail) {
+        combinations.push([head, ...combo]);
+      }
+    }
+    return combinations;
+  }
+
+  /**
+   * Known architectural patterns with their values
+   */
+  private getKnownArchitecturalPatterns(): Array<{
+    name: string;
+    constructs: string[];
+    value: number;
+    priority: 'High' | 'Medium' | 'Low';
+    recommendation: string;
+  }> {
+    return [
+      {
+        name: 'serverless-api',
+        constructs: ['apigateway.RestApi', 'lambda.Function', 'dynamodb.Table'],
+        value: 95,
+        priority: 'High',
+        recommendation: 'Create a serverless API component combining API Gateway, Lambda, and DynamoDB for REST APIs.'
+      },
+      {
+        name: 'serverless-web-app',
+        constructs: ['s3.Bucket', 'cloudfront.Distribution', 'lambda.Function', 'apigateway.RestApi'],
+        value: 90,
+        priority: 'High',
+        recommendation: 'Build a serverless web application component with S3, CloudFront, Lambda, and API Gateway.'
+      },
+      {
+        name: 'container-service',
+        constructs: ['ecs.Cluster', 'ecs.FargateService', 'elbv2.ApplicationLoadBalancer'],
+        value: 85,
+        priority: 'High',
+        recommendation: 'Develop a containerized service component with ECS Fargate and ALB.'
+      },
+      {
+        name: 'data-pipeline',
+        constructs: ['s3.Bucket', 'lambda.Function', 'sqs.Queue'],
+        value: 80,
+        priority: 'High',
+        recommendation: 'Create a data processing pipeline component with S3, Lambda, and SQS.'
+      },
+      {
+        name: 'secure-storage',
+        constructs: ['s3.Bucket', 'kms.Key', 'iam.Role'],
+        value: 75,
+        priority: 'Medium',
+        recommendation: 'Build a secure storage component with encryption and proper IAM roles.'
+      },
+      {
+        name: 'monitoring-stack',
+        constructs: ['cloudwatch.Alarm', 'cloudwatch.Metric', 'sns.Topic'],
+        value: 70,
+        priority: 'Medium',
+        recommendation: 'Develop a monitoring component with CloudWatch alarms and SNS notifications.'
+      },
+      {
+        name: 'database-service',
+        constructs: ['rds.DatabaseInstance', 'ec2.SecurityGroup', 'secretsmanager.Secret'],
+        value: 85,
+        priority: 'High',
+        recommendation: 'Create a secure database service component with RDS, security groups, and secrets management.'
+      }
+    ];
+  }
+
+  /**
+   * Check if constructs match an architectural pattern
+   */
+  private matchesArchitecturalPattern(constructs: string[], pattern: any): boolean {
+    return pattern.constructs.every((construct: string) => constructs.includes(construct));
+  }
+
+  /**
+   * Estimate complexity reduction (lines of code that could be abstracted)
+   */
+  private estimateComplexityReduction(constructs: string[]): number {
+    const baseComplexity = constructs.length * 15; // Base lines per construct
+    const integrationComplexity = constructs.length * (constructs.length - 1) * 5; // Integration complexity
+    const configurationComplexity = constructs.length * 10; // Configuration and customization
+    
+    return baseComplexity + integrationComplexity + configurationComplexity;
+  }
+
+  /**
+   * Identify common dependency chains in AWS architectures
+   */
+  private identifyDependencyChains(): string[][] {
+    return [
+      // Data flow chains
+      ['s3.Bucket', 'lambda.Function', 'dynamodb.Table'],
+      ['s3.Bucket', 'sqs.Queue', 'lambda.Function'],
+      ['apigateway.RestApi', 'lambda.Function', 'rds.DatabaseInstance'],
+      ['apigatewayv2.HttpApi', 'lambda.Function', 'dynamodb.Table'],
+      
+      // Processing chains
+      ['events.Rule', 'lambda.Function', 's3.Bucket'],
+      ['kinesis.Stream', 'lambda.Function', 'elasticsearch.Domain'],
+      
+      // Security chains
+      ['secretsmanager.Secret', 'lambda.Function', 'rds.DatabaseInstance'],
+      ['kms.Key', 's3.Bucket', 'lambda.Function'],
+      
+      // Monitoring chains
+      ['cloudwatch.Metric', 'cloudwatch.Alarm', 'sns.Topic'],
+      ['logs.LogGroup', 'lambda.Function', 'cloudwatch.Alarm']
+    ];
+  }
+
+  /**
+   * Check if constructs contain a dependency chain
+   */
+  private containsChain(constructs: string[], chain: string[]): boolean {
+    return chain.every(construct => constructs.includes(construct));
+  }
+
+  /**
+   * Prioritize dependency chains based on architectural value
+   */
+  private prioritizeDependencyChain(chain: string[]): 'High' | 'Medium' | 'Low' {
+    // High-value chains involving APIs and data
+    const highValueKeywords = ['api', 'lambda', 'dynamodb', 'rds'];
+    const mediumValueKeywords = ['s3', 'sqs', 'sns', 'cloudwatch'];
+    
+    const chainText = chain.join(' ').toLowerCase();
+    
+    if (highValueKeywords.some(keyword => chainText.includes(keyword))) {
+      return 'High';
+    } else if (mediumValueKeywords.some(keyword => chainText.includes(keyword))) {
+      return 'Medium';
+    }
+    return 'Low';
+  }
+
+  /**
+   * Calculate architectural value of a dependency chain
+   */
+  private calculateDependencyChainValue(chain: string[]): number {
+    let value = 50; // Base value
+    
+    // Add value based on chain length (longer chains are more valuable to abstract)
+    value += chain.length * 10;
+    
+    // Add value for high-value constructs
+    const highValueConstructs = ['lambda.Function', 'apigateway.RestApi', 'dynamodb.Table', 'rds.DatabaseInstance'];
+    const highValueCount = chain.filter(construct => 
+      highValueConstructs.some(hv => construct.includes(hv.split('.')[1]))
+    ).length;
+    value += highValueCount * 15;
+    
+    return Math.min(value, 100); // Cap at 100
+  }
+
+  /**
+   * Known anti-patterns to detect and warn about
+   */
+  private getKnownAntiPatterns(): Array<{
+    name: string;
+    constructs: string[];
+    warning: string;
+    solution: string;
+  }> {
+    return [
+      {
+        name: 'unencrypted-storage',
+        constructs: ['s3.Bucket', 'rds.DatabaseInstance'],
+        warning: 'Storage resources without encryption detected.',
+        solution: 'Always encrypt storage resources using KMS keys or default encryption.'
+      },
+      {
+        name: 'single-point-failure',
+        constructs: ['rds.DatabaseInstance'],
+        warning: 'Single database instance detected without high availability.',
+        solution: 'Consider using RDS Multi-AZ deployment for production workloads.'
+      },
+      {
+        name: 'unmonitored-lambda',
+        constructs: ['lambda.Function'],
+        warning: 'Lambda functions without CloudWatch alarms detected.',
+        solution: 'Add CloudWatch alarms for error rates, duration, and throttles.'
+      },
+      {
+        name: 'public-resources',
+        constructs: ['s3.Bucket', 'rds.DatabaseInstance'],
+        warning: 'Potentially public resources detected.',
+        solution: 'Ensure resources are properly secured and not publicly accessible.'
+      }
+    ];
+  }
+
+  /**
+   * Check if constructs match an anti-pattern
+   */
+  private matchesAntiPattern(constructs: string[], antiPattern: any): boolean {
+    // Simple heuristic: if all anti-pattern constructs are present without security constructs
+    const hasAntiPatternConstructs = antiPattern.constructs.some((construct: string) => 
+      constructs.includes(construct)
+    );
+    
+    if (!hasAntiPatternConstructs) return false;
+    
+    // Check for missing security constructs that would mitigate the anti-pattern
+    const securityConstructs = ['kms.Key', 'iam.Role', 'ec2.SecurityGroup', 'cloudwatch.Alarm'];
+    const hasSecurityMitigation = securityConstructs.some(sc => constructs.includes(sc));
+    
+    // Anti-pattern detected if we have the problematic constructs but lack security mitigations
+    return !hasSecurityMitigation;
+  }
+
+  /**
+   * Calculate similarity between two patterns using Jaccard similarity
+   */
+  private calculatePatternSimilarity(pattern1: string[], pattern2: string[]): number {
+    const set1 = new Set(pattern1);
+    const set2 = new Set(pattern2);
+    
+    const intersection = new Set([...set1].filter(x => set2.has(x)));
+    const union = new Set([...set1, ...set2]);
+    
+    return intersection.size / union.size;
   }
 
   /**
@@ -405,21 +965,48 @@ export class InventoryCommand {
     
     // Section 2: Identified Patterns & Component Candidates
     report += `\n## 2. Identified Patterns & Component Candidates\n\n`;
-    report += `This section identifies frequently co-located constructs that are strong candidates for being encapsulated into a new, reusable L3 platform component.\n\n`;
+    report += `This section identifies frequently co-located constructs that are strong candidates for being encapsulated into a new, reusable L3 platform component. Patterns are ranked by architectural value and potential impact.\n\n`;
     
     if (this.analysis.patterns.length === 0) {
       report += `*No recurring patterns found. This could indicate either a well-abstracted codebase or a small codebase with unique infrastructure needs.*\n\n`;
     } else {
-      for (const pattern of this.analysis.patterns) {
-        report += `### Candidate: ${pattern.name} (${pattern.priority} Priority)\n\n`;
-        report += `**Pattern:** ${pattern.pattern.join(' → ')}\n\n`;
-        report += `**Frequency:** Detected ${pattern.frequency} times across the codebase.\n\n`;
-        report += `**Recommendation:** ${pattern.recommendation}\n\n`;
-        report += `**Found In:**\n`;
-        for (const file of pattern.files) {
-          report += `- \`${file}\`\n`;
+      // Separate patterns by type
+      const highValuePatterns = this.analysis.patterns.filter(p => p.architecturalValue >= 70 && !p.name.startsWith('⚠️'));
+      const mediumValuePatterns = this.analysis.patterns.filter(p => p.architecturalValue >= 40 && p.architecturalValue < 70 && !p.name.startsWith('⚠️'));
+      const antiPatterns = this.analysis.patterns.filter(p => p.name.startsWith('⚠️'));
+      const otherPatterns = this.analysis.patterns.filter(p => p.architecturalValue < 40 && !p.name.startsWith('⚠️'));
+
+      // High-value patterns
+      if (highValuePatterns.length > 0) {
+        report += `### 🚀 High-Value Component Opportunities\n\n`;
+        for (const pattern of highValuePatterns) {
+          report += this.formatPatternSection(pattern);
         }
-        report += `\n`;
+      }
+
+      // Medium-value patterns
+      if (mediumValuePatterns.length > 0) {
+        report += `### 📈 Medium-Value Component Opportunities\n\n`;
+        for (const pattern of mediumValuePatterns) {
+          report += this.formatPatternSection(pattern);
+        }
+      }
+
+      // Anti-patterns
+      if (antiPatterns.length > 0) {
+        report += `### ⚠️ Anti-Patterns Detected\n\n`;
+        report += `These patterns indicate potential architectural or security issues that should be addressed.\n\n`;
+        for (const pattern of antiPatterns) {
+          report += this.formatPatternSection(pattern);
+        }
+      }
+
+      // Other patterns
+      if (otherPatterns.length > 0) {
+        report += `### 📋 Other Patterns\n\n`;
+        for (const pattern of otherPatterns) {
+          report += this.formatPatternSection(pattern);
+        }
       }
     }
     
@@ -456,15 +1043,131 @@ export class InventoryCommand {
       report += `\n`;
     }
     
-    report += `### Platform Development Impact\n\n`;
-    const totalPotentialSavings = this.analysis.patterns.reduce((total, pattern) => total + pattern.frequency, 0);
-    report += `By implementing the identified high-priority patterns, the platform could potentially eliminate **${totalPotentialSavings} instances** of repeated infrastructure code, significantly improving developer productivity.\n\n`;
+    report += `### Enhanced Platform Development Impact Analysis\n\n`;
+    
+    // Calculate enhanced metrics
+    const highValuePatterns = this.analysis.patterns.filter(p => p.architecturalValue >= 70);
+    const totalComplexityReduction = this.analysis.patterns.reduce((total, pattern) => total + pattern.complexityReduction, 0);
+    const totalOccurrences = this.analysis.patterns.reduce((total, pattern) => total + pattern.frequency, 0);
+    const avgArchitecturalValue = this.analysis.patterns.length > 0 
+      ? Math.round(this.analysis.patterns.reduce((total, pattern) => total + pattern.architecturalValue, 0) / this.analysis.patterns.length)
+      : 0;
+    
+    report += `**Summary Metrics:**\n`;
+    report += `- **Total Pattern Occurrences:** ${totalOccurrences} instances across the codebase\n`;
+    report += `- **High-Value Patterns:** ${highValuePatterns.length} patterns with 70+ architectural value\n`;
+    report += `- **Estimated Code Reduction:** ~${totalComplexityReduction.toLocaleString()} lines of infrastructure code\n`;
+    report += `- **Average Architectural Value:** ${avgArchitecturalValue}/100\n\n`;
+    
+    // ROI Analysis
+    report += `**Return on Investment (ROI) Analysis:**\n`;
+    if (highValuePatterns.length > 0) {
+      const highValueComplexity = highValuePatterns.reduce((total, pattern) => total + pattern.complexityReduction, 0);
+      const highValueOccurrences = highValuePatterns.reduce((total, pattern) => total + pattern.frequency, 0);
+      
+      report += `- Implementing the **${highValuePatterns.length} highest-value patterns** would:\n`;
+      report += `  - Eliminate **${highValueOccurrences} instances** of repeated infrastructure\n`;
+      report += `  - Reduce maintenance burden by ~**${highValueComplexity.toLocaleString()} lines** of code\n`;
+      report += `  - Improve consistency across **${highValuePatterns.reduce((total, p) => total + p.files.length, 0)} files**\n\n`;
+    }
+    
+    // Development velocity impact
+    if (totalOccurrences > 0) {
+      const weeklyDeveloperHoursSaved = Math.round((totalComplexityReduction / 50) * 2); // Assuming 50 lines per hour, 2x efficiency gain
+      report += `**Developer Velocity Impact:**\n`;
+      report += `- **Estimated time savings:** ~${weeklyDeveloperHoursSaved} developer hours per sprint\n`;
+      report += `- **Reduced cognitive load:** Fewer infrastructure decisions for application teams\n`;
+      report += `- **Faster onboarding:** New developers can use proven patterns immediately\n\n`;
+    }
+    
+    // Priority recommendations
+    report += `**Recommended Implementation Priority:**\n`;
+    const topPatterns = this.analysis.patterns
+      .filter(p => !p.name.startsWith('⚠️'))
+      .slice(0, 3)
+      .map((p, i) => `${i + 1}. **${p.name}** (${p.frequency} occurrences, ${p.architecturalValue}/100 value)`);
+    
+    if (topPatterns.length > 0) {
+      report += topPatterns.join('\n') + '\n\n';
+    } else {
+      report += `*No high-impact patterns identified. This suggests either a well-abstracted codebase or limited infrastructure complexity.*\n\n`;
+    }
     
     report += `---\n\n`;
     report += `*Generated by Platform Inventory Tool v1.0*\n`;
     
     // Write the report
     await fs.promises.writeFile(reportPath, report, 'utf8');
+  }
+
+  /**
+   * Format a pattern section for the report
+   */
+  private formatPatternSection(pattern: PatternCandidate): string {
+    let section = `#### ${pattern.name}\n\n`;
+    
+    // Pattern details
+    section += `**Pattern:** ${pattern.pattern.join(' → ')}\n\n`;
+    section += `**Frequency:** ${pattern.frequency} occurrences\n\n`;
+    section += `**Priority:** ${pattern.priority}\n\n`;
+    section += `**Architectural Value:** ${pattern.architecturalValue}/100\n\n`;
+    section += `**Estimated Complexity Reduction:** ~${pattern.complexityReduction} lines of code\n\n`;
+    
+    // Related patterns
+    if (pattern.relatedPatterns.length > 0) {
+      section += `**Related Patterns:** ${pattern.relatedPatterns.join(', ')}\n\n`;
+    }
+    
+    // Recommendation
+    section += `**Recommendation:** ${pattern.recommendation}\n\n`;
+    
+    // Impact analysis
+    const impact = this.calculateImpactAnalysis(pattern);
+    section += `**Potential Impact:**\n`;
+    section += `- Developer productivity: ${impact.productivity}\n`;
+    section += `- Maintenance reduction: ${impact.maintenance}\n`;
+    section += `- Consistency improvement: ${impact.consistency}\n\n`;
+    
+    // Files where pattern is found
+    section += `**Found In:**\n`;
+    for (const file of pattern.files.slice(0, 10)) { // Limit to 10 files for readability
+      section += `- \`${file}\`\n`;
+    }
+    if (pattern.files.length > 10) {
+      section += `- *...and ${pattern.files.length - 10} more files*\n`;
+    }
+    section += `\n`;
+    
+    return section;
+  }
+
+  /**
+   * Calculate impact analysis for a pattern
+   */
+  private calculateImpactAnalysis(pattern: PatternCandidate): {
+    productivity: string;
+    maintenance: string;
+    consistency: string;
+  } {
+    const frequency = pattern.frequency;
+    const architecturalValue = pattern.architecturalValue;
+    
+    // Productivity impact
+    let productivity = 'Low';
+    if (frequency >= 5 && architecturalValue >= 70) productivity = 'High';
+    else if (frequency >= 3 && architecturalValue >= 50) productivity = 'Medium';
+    
+    // Maintenance impact
+    let maintenance = 'Low';
+    if (frequency >= 4 && pattern.complexityReduction > 100) maintenance = 'High';
+    else if (frequency >= 2 && pattern.complexityReduction > 50) maintenance = 'Medium';
+    
+    // Consistency impact
+    let consistency = 'Low';
+    if (frequency >= 3) consistency = 'High';
+    else if (frequency >= 2) consistency = 'Medium';
+    
+    return { productivity, maintenance, consistency };
   }
 
   /**
@@ -484,7 +1187,7 @@ export class InventoryCommand {
           if (!['node_modules', '.git', 'dist', 'build', 'coverage'].includes(item.name)) {
             traverseDirectory(itemPath);
           }
-        } else if (item.isFile() && item.name.endsWith('.ts') && !item.name.endsWith('.d.ts')) {
+        } else if (item.isFile() && item.name.endsWith('.ts') && !item.name.endsWith('.d.ts') && !item.name.includes('.test.') && !item.name.includes('.spec.')) {
           files.push(itemPath);
         }
       }
