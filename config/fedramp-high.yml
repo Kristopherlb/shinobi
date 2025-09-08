@@ -1,35 +1,112 @@
-# Platform Configuration for FedRAMP High Cloud Deployments
-# Version: 1.0  
-# Compliance Framework: FedRAMP High
+# Platform Configuration - FedRAMP High Compliance Framework
+# Platform Configuration Standard v1.0 - Layer 2: Segregated Platform Configuration
+# 
+# This file defines platform-wide, centrally-managed defaults for FedRAMP High deployments.
+# Compliance Level: HIGH
+# Managed by: Platform Engineering Team + Compliance Team + Security Team
+# Review Cycle: Weekly
+# Approval Required: CISO + Compliance Officer
 
-# API Gateway Configuration Defaults
-api-gateway-rest:
-  cors:
-    allowOrigins: [] # NO cross-origin requests allowed by default - must be explicitly configured per service
-    allowMethods: ["GET", "POST", "OPTIONS"] # Minimal methods only
-    allowHeaders:
-      - "Content-Type"
-      - "Authorization"
-    allowCredentials: false # Always disabled for highest security
-    maxAge: 60 # Very short cache
-  throttling:
-    burstLimit: 200 # Very restrictive
-    rateLimit: 100
-  tracing:
-    xrayEnabled: true # Mandatory for compliance
-
-api-gateway-http:
-  cors:
-    allowOrigins: [] # NO cross-origin requests allowed by default
-    allowMethods: ["GET", "POST", "OPTIONS"] # Minimal methods only
-    allowHeaders:
-      - "Content-Type"
-      - "Authorization"
-    allowCredentials: false
-    maxAge: 60
-  throttling:
-    burstLimit: 300 # Still very restrictive  
-    rateLimit: 150
-  accessLogging:
-    enabled: true # Mandatory comprehensive logging
-    format: '{"timestamp":"$context.requestTime","requestId":"$context.requestId","sourceIp":"$context.identity.sourceIp","method":"$context.httpMethod","path":"$context.routeKey","protocol":"$context.protocol","status":"$context.status","error":"$context.error.message","responseLength":"$context.responseLength","responseTime":"$context.responseLatency","userAgent":"$context.identity.userAgent","requestHeaders":"$context.requestHeaders"}'
+defaults:
+  # RDS PostgreSQL Configuration for FedRAMP High Framework
+  rds-postgres:
+    # High-performance instances required for critical workloads
+    instanceClass: "db.r5.xlarge"     # High-performance instances mandatory
+    allocatedStorage: 200             # Large storage for extensive compliance logging
+    maxAllocatedStorage: 1000         # High auto-scaling limit
+    backupRetentionDays: 90           # Maximum backup retention (90 days)
+    multiAz: true                     # Multi-AZ mandatory for high availability
+    encryptionEnabled: true           # Encryption at rest mandatory
+    deletionProtection: true          # Deletion protection mandatory
+    
+    # Maximum monitoring for highest compliance level
+    performanceInsights:
+      enabled: true                   # Mandatory for compliance monitoring
+      retentionPeriod: 2555          # 7 years retention required (maximum)
+      
+    enhancedMonitoring:
+      enabled: true                   # Mandatory for detailed metrics
+      interval: 1                    # 1 second high-frequency monitoring
+      
+    # Maximum observability for highest compliance (Platform Observability Standard v1.0)
+    logExports:
+      postgresql: true               # Mandatory for comprehensive audit trail
+      slowQuery: true                # Mandatory for performance analysis
+      errorLog: true                 # Mandatory for security monitoring
+      
+    connectionMonitoring:
+      enabled: true                  # Mandatory for security monitoring
+      deadlockDetection: true        # Mandatory for performance analysis
+      connectionPoolMetrics: true    # Mandatory for capacity planning
+      
+    # Strict security and compliance settings
+    network:
+      requireVpcConfig: true          # Explicit VPC configuration mandatory
+      requirePrivateSubnets: true     # Private subnets mandatory
+      requireDedicatedTenancy: true   # Dedicated tenancy for isolation
+      defaultPort: 5432              # PostgreSQL standard port
+      
+    backup:
+      preferredWindow: "02:00-03:00"  # Low-traffic backup window
+      retentionPeriod: 90            # 90 days maximum retention
+      crossRegionBackup: true        # Cross-region backup for DR
+      
+    security:
+      requireCustomerManagedKMS: true # Customer-managed KMS keys required
+      requireIAMAuth: true           # IAM database authentication required
+      requireSSL: true               # SSL connections mandatory
+      auditLogging: true             # Comprehensive audit logging
+      
+  # API Gateway REST Configuration for FedRAMP High
+  api-gateway-rest:
+    throttling:
+      burstLimit: 50                # Strict burst limit for highest security
+      rateLimit: 25                 # Strict rate limit for highest security
+    cors:
+      allowOrigins: []              # Empty - forces explicit configuration
+      allowMethods: ["GET", "POST", "OPTIONS"]  # Minimal safe methods
+      allowHeaders: ["Content-Type", "Authorization"]  # Minimal safe headers
+      allowCredentials: false       # Never allow credentials by default
+    xrayTracing: true               # X-Ray tracing mandatory
+    accessLogging: true             # Access logging mandatory
+    wafIntegration: true            # WAF integration required
+    
+  # API Gateway HTTP Configuration for FedRAMP High
+  api-gateway-http:
+    throttling:
+      burstLimit: 50                # Strict burst limit for highest security
+      rateLimit: 25                 # Strict rate limit for highest security
+    cors:
+      allowOrigins: []              # Empty - forces explicit configuration
+      allowMethods: ["GET", "POST", "OPTIONS"]  # Minimal safe methods
+      allowHeaders: ["Content-Type", "Authorization"]  # Minimal safe headers
+      allowCredentials: false       # Never allow credentials by default
+    accessLogging: true             # Access logging mandatory
+    wafIntegration: true            # WAF integration required
+    
+  # Application Load Balancer Configuration for FedRAMP High  
+  application-load-balancer:
+    # Maximum security for highest compliance level
+    scheme: "internet-facing"       # Default to public-facing
+    ipAddressType: "ipv4"          # IPv4 standard
+    deletionProtection: true       # Mandatory for high compliance
+    idleTimeout: 60                # Standard idle timeout
+    accessLogs:
+      enabled: true                # Mandatory audit logging
+      prefix: "alb-access-logs"    # Standard audit prefix
+    listeners:
+      - port: 443                  # HTTPS listener mandatory
+        protocol: "HTTPS"
+        sslPolicy: "ELBSecurityPolicy-TLS-1-2-Ext-2018-06"  # More secure TLS policy
+    securityGroups:
+      create: true                 # Auto-create security groups
+      ingress: []                  # Empty - forces explicit configuration per Platform Configuration Standard v1.0 Section 3.1  
+    monitoring:
+      enabled: true                # Comprehensive monitoring required
+      alarms:
+        httpCode5xxThreshold: 5    # Stricter server error monitoring
+        unhealthyHostThreshold: 1  # Monitor target health
+        connectionErrorThreshold: 3  # Stricter connection monitoring
+        rejectedConnectionThreshold: 1  # Monitor capacity issues
+    deploymentStrategy:
+      type: "single"               # Blue-green handled by CodeDeploy

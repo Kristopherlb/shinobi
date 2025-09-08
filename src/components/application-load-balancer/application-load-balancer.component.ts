@@ -3,85 +3,69 @@
  * 
  * A managed layer 7 load balancer for distributing HTTP/HTTPS traffic across targets.
  * Implements three-tiered compliance model (Commercial/FedRAMP Moderate/FedRAMP High).
+ * 
+ * @platform/component Compliant with Platform Standards v1.0:
+ * - Extends BaseComponent for shared functionality
+ * - Uses ConfigBuilder for 5-layer configuration precedence
+ * - Integrates with ObservabilityService via Service Injector Pattern
+ * - Integrates with LoggingService for structured logging
+ * - Simplified developer experience as per n-components-spec.md
  */
 
 import * as elbv2 from 'aws-cdk-lib/aws-elasticloadbalancingv2';
 import * as ec2 from 'aws-cdk-lib/aws-ec2';
 import * as s3 from 'aws-cdk-lib/aws-s3';
 import * as iam from 'aws-cdk-lib/aws-iam';
-import * as cloudwatch from 'aws-cdk-lib/aws-cloudwatch';
 import * as cdk from 'aws-cdk-lib';
 import { Construct } from 'constructs';
-import { BaseComponent } from '../../platform/contracts/component';
-import { ComponentSpec, ComponentContext, ComponentCapabilities } from '../../platform/contracts/component-interfaces';
+import {
+  BaseComponent,
+  ComponentSpec,
+  ComponentContext,
+  ComponentCapabilities,
+  ConfigBuilder
+} from '../../platform/contracts';
 
 /**
  * Configuration interface for Application Load Balancer component
+ * Simplified developer experience as specified in n-components-spec.md
  */
 export interface ApplicationLoadBalancerConfig {
-  /** Load balancer name (optional, defaults to component name) */
-  loadBalancerName?: string;
-  
-  /** Load balancer scheme */
-  scheme?: 'internet-facing' | 'internal';
-  
-  /** IP address type */
-  ipAddressType?: 'ipv4' | 'dualstack';
-  
-  /** VPC configuration */
-  vpc?: {
-    vpcId?: string;
-    subnetIds?: string[];
-    subnetType?: 'public' | 'private';
-  };
-  
-  /** Listeners configuration */
+  /** Listeners configuration - main developer input */
   listeners?: Array<{
     port: number;
     protocol: 'HTTP' | 'HTTPS';
     certificateArn?: string;
     sslPolicy?: string;
-    redirectToHttps?: boolean;
-    defaultAction?: {
-      type: 'fixed-response' | 'redirect' | 'forward';
-      statusCode?: number;
-      contentType?: string;
-      messageBody?: string;
-      redirectUrl?: string;
-    };
   }>;
   
-  /** Target groups configuration */
-  targetGroups?: Array<{
-    name: string;
-    port: number;
-    protocol: 'HTTP' | 'HTTPS';
-    targetType: 'instance' | 'ip' | 'lambda';
-    healthCheck?: {
-      enabled?: boolean;
-      path?: string;
-      protocol?: 'HTTP' | 'HTTPS';
-      port?: number;
-      healthyThresholdCount?: number;
-      unhealthyThresholdCount?: number;
-      timeout?: number;
-      interval?: number;
-      matcher?: string;
-    };
-    stickiness?: {
-      enabled?: boolean;
-      duration?: number;
-    };
-  }>;
-  
-  /** Access logging configuration */
+  /** Internal configuration managed by platform (compliance-aware) */
+  loadBalancerName?: string;
+  scheme?: 'internet-facing' | 'internal';
+  ipAddressType?: 'ipv4' | 'dualstack';
+  deletionProtection?: boolean;
+  idleTimeout?: number;
   accessLogs?: {
     enabled?: boolean;
     bucket?: string;
     prefix?: string;
   };
-  
-  /** Security groups */
+  deploymentStrategy?: {
+    type: 'single' | 'blue-green';
+    blueGreenConfig?: {
+      productionTrafficRoute?: {
+        type: 'AllAtOnce' | 'Linear' | 'Canary';
+        percentage?: number;
+        interval?: number;
+      };
+      terminationWaitTime?: number;
+    };
+  };
+  vpc?: {
+    vpcId?: string;
+    subnetIds?: string[];
+    subnetType?: 'public' | 'private';
+  };
   securityGroups?: {
     create?: boolean;
     securityGroupIds?: string[];
@@ -92,31 +76,6 @@ export interface ApplicationLoadBalancerConfig {
       description?: string;
     }>;
   };
-  
-  /** Deletion protection */
-  deletionProtection?: boolean;
-  
-  /** Idle timeout */
-  idleTimeout?: number;
-  
-  /** Deployment strategy configuration */
-  deploymentStrategy?: {
-    type: 'single' | 'blue-green';
-    blueGreenConfig?: {
-      productionTrafficRoute?: {
-        type: 'AllAtOnce' | 'Linear' | 'Canary';
-        percentage?: number;
-        interval?: number;
-      };
-      testTrafficRoute?: {
-        type: 'AllAtOnce' | 'Linear' | 'Canary';
-        percentage?: number;
-      };
-      terminationWaitTime?: number;
-    };
-  };
-  
-  /** CloudWatch monitoring configuration */
   monitoring?: {
     enabled?: boolean;
     alarms?: {
@@ -126,8 +85,30 @@ export interface ApplicationLoadBalancerConfig {
       rejectedConnectionThreshold?: number;
     };
   };
-  
-  /** Tags for the load balancer */
+  targetGroups?: Array<{
+    name?: string;
+    port?: number;
+    protocol?: 'HTTP' | 'HTTPS';
+    targetType?: 'instance' | 'ip' | 'lambda';
+    healthCheck?: {
+      enabled?: boolean;
+      path?: string;
+      protocol?: 'HTTP' | 'HTTPS';
+      port?: string;
+      intervalSeconds?: number;
+      timeoutSeconds?: number;
+      timeout?: number;
+      interval?: number;
+      healthyThresholdCount?: number;
+      unhealthyThresholdCount?: number;
+      matcher?: string;
+    };
+    stickiness?: {
+      enabled?: boolean;
+      type?: string;
+      duration?: number;
+    };
+  }>;
   tags?: Record<string, string>;
 }
 
@@ -495,196 +476,47 @@ export const APPLICATION_LOAD_BALANCER_CONFIG_SCHEMA = {
  * Configuration builder for Application Load Balancer component
  * Extends the abstract ConfigBuilder to ensure consistent configuration lifecycle
  */
-export class ApplicationLoadBalancerConfigBuilder {
-  private context: ComponentContext;
-  private spec: ComponentSpec;
-  
+export class ApplicationLoadBalancerConfigBuilder extends ConfigBuilder<ApplicationLoadBalancerConfig> {
   constructor(context: ComponentContext, spec: ComponentSpec) {
-    this.context = context;
-    this.spec = spec;
+    super({ context, spec }, APPLICATION_LOAD_BALANCER_CONFIG_SCHEMA);
   }
 
   /**
-   * Builds the final configuration by applying platform defaults, compliance frameworks, and user overrides
+   * Get hardcoded fallbacks for ALB (security-first, minimal defaults)
    */
-  public async build(): Promise<ApplicationLoadBalancerConfig> {
-    return this.buildSync();
-  }
-
-  /**
-   * Synchronous version of build for use in synth() method
-   */
-  public buildSync(): ApplicationLoadBalancerConfig {
-    // Start with platform defaults
-    const platformDefaults = this.getPlatformDefaults();
-    
-    // Apply compliance framework defaults
-    const complianceDefaults = this.getComplianceFrameworkDefaults();
-    
-    // Merge user configuration from spec
-    const userConfig = this.spec.config || {};
-    
-    // Merge configurations (user config takes precedence)
-    let mergedConfig = this.mergeConfigs(
-      this.mergeConfigs(platformDefaults, complianceDefaults),
-      userConfig
-    );
-    
-    // Apply feature flag-driven configuration overrides
-    mergedConfig = this.applyFeatureFlagOverrides(mergedConfig);
-    
-    return mergedConfig as ApplicationLoadBalancerConfig;
-  }
-
-  /**
-   * Simple merge utility for combining configuration objects
-   */
-  private mergeConfigs(target: Record<string, any>, source: Record<string, any>): Record<string, any> {
-    const result = { ...target };
-    
-    for (const key in source) {
-      if (source[key] && typeof source[key] === 'object' && !Array.isArray(source[key])) {
-        result[key] = this.mergeConfigs(result[key] || {}, source[key]);
-      } else {
-        result[key] = source[key];
-      }
-    }
-    
-    return result;
-  }
-
-  /**
-   * Get platform-wide defaults for Application Load Balancer
-   */
-  private getPlatformDefaults(): Record<string, any> {
+  protected getHardcodedFallbacks(): ApplicationLoadBalancerConfig {
+    // Security-safe hardcoded fallbacks per Platform Configuration Standard v1.0 Section 3.1
     return {
-      scheme: 'internet-facing',
+      loadBalancerName: '', // Forces explicit configuration
+      scheme: 'internal',   // Most restrictive default for security
       ipAddressType: 'ipv4',
-      deletionProtection: false,
+      deletionProtection: true, // Safest default
       idleTimeout: 60,
-      listeners: [
-        {
-          port: 80,
-          protocol: 'HTTP'
-        }
-      ],
-      securityGroups: {
-        create: true,
-        ingress: [
-          {
-            port: 80,
-            protocol: 'tcp',
-            cidr: '0.0.0.0/0',
-            description: 'HTTP access from internet'
-          },
-          {
-            port: 443,
-            protocol: 'tcp',
-            cidr: '0.0.0.0/0',
-            description: 'HTTPS access from internet'
-          }
-        ]
-      },
+      listeners: [],        // Empty - forces explicit configuration
       accessLogs: {
-        enabled: false
+        enabled: false,     // Cost-optimized default
+        prefix: 'alb-access-logs'
       },
       deploymentStrategy: {
-        type: 'single'
+        type: 'single'      // Simplest strategy
+      },
+      securityGroups: {
+        create: true,
+        ingress: []         // Empty - forces explicit security configuration per Section 3.1
+      },
+      vpc: {
+        vpcId: '',          // Forces explicit VPC configuration - no default VPC
+        subnetType: 'private' // Most secure subnet type default
       },
       monitoring: {
-        enabled: false
+        enabled: false      // Cost-optimized default
       }
     };
   }
 
-  /**
-   * Get compliance framework specific defaults
-   */
-  private getComplianceFrameworkDefaults(): Record<string, any> {
-    const framework = this.context.complianceFramework;
-    
-    switch (framework) {
-      case 'fedramp-moderate':
-        return {
-          deletionProtection: true, // Prevent accidental deletion
-          accessLogs: {
-            enabled: true, // Required for audit compliance
-            prefix: 'alb-access-logs'
-          },
-          deploymentStrategy: {
-            type: 'single' // Blue-green handled by CodeDeploy
-          },
-          monitoring: {
-            enabled: true // Enhanced monitoring for compliance
-          },
-          listeners: [
-            {
-              port: 443,
-              protocol: 'HTTPS',
-              sslPolicy: 'ELBSecurityPolicy-TLS-1-2-2017-01'
-            }
-          ],
-          securityGroups: {
-            create: true,
-            ingress: [
-              {
-                port: 443,
-                protocol: 'tcp',
-                cidr: '0.0.0.0/0',
-                description: 'HTTPS access from internet'
-              }
-            ]
-          }
-        };
-        
-      case 'fedramp-high':
-        return {
-          deletionProtection: true, // Mandatory for high compliance
-          accessLogs: {
-            enabled: true, // Mandatory audit logging
-            prefix: 'alb-access-logs'
-          },
-          deploymentStrategy: {
-            type: 'single' // Blue-green handled by CodeDeploy
-          },
-          monitoring: {
-            enabled: true // Comprehensive monitoring required
-          },
-          listeners: [
-            {
-              port: 443,
-              protocol: 'HTTPS',
-              sslPolicy: 'ELBSecurityPolicy-TLS-1-2-Ext-2018-06' // More secure TLS policy
-            }
-          ],
-          securityGroups: {
-            create: true,
-            ingress: [
-              {
-                port: 443,
-                protocol: 'tcp',
-                cidr: '0.0.0.0/0',
-                description: 'HTTPS access from internet'
-              }
-            ]
-          }
-        };
-        
-      default: // commercial
-        return {
-          deletionProtection: false, // Cost optimization
-          accessLogs: {
-            enabled: false // Optional for commercial
-          },
-          deploymentStrategy: {
-            type: 'single'
-          },
-          monitoring: {
-            enabled: false
-          }
-        };
-    }
-  }
+ 
+  // The base ConfigBuilder._loadPlatformConfiguration() handles all platform defaults
+  // and compliance-specific configuration automatically.
 
   /**
    * Apply feature flag-driven configuration overrides
@@ -738,7 +570,7 @@ export class ApplicationLoadBalancerConfigBuilder {
     // 3. Return the result with proper error handling
     
     // For now, return enhanced behavior for compliance frameworks
-    if (this.context.complianceFramework !== 'commercial') {
+    if (this.builderContext.context.complianceFramework !== 'commercial') {
       return true; // Enable enhanced features for compliance frameworks
     }
     
@@ -755,7 +587,6 @@ export class ApplicationLoadBalancerComponent extends BaseComponent {
   private listeners: elbv2.ApplicationListener[] = [];
   private securityGroup?: ec2.SecurityGroup;
   private vpc?: ec2.IVpc;
-  private accessLogsBucket?: s3.IBucket;
   private config?: ApplicationLoadBalancerConfig;
 
   constructor(scope: Construct, id: string, context: ComponentContext, spec: ComponentSpec) {
@@ -766,7 +597,21 @@ export class ApplicationLoadBalancerComponent extends BaseComponent {
    * Synthesis phase - Create Application Load Balancer with compliance hardening
    */
   public synth(): void {
-    this.logComponentEvent('synthesis_start', 'Starting Application Load Balancer synthesis');
+    const logger = this.getLogger();
+    const timer = logger.startTimer();
+    
+    logger.info('Starting Application Load Balancer synthesis', {
+      context: { 
+        action: 'component_synthesis', 
+        resource: 'application_load_balancer',
+        component: 'application-load-balancer'
+      },
+      data: { 
+        loadBalancerName: this.spec.config?.loadBalancerName,
+        scheme: this.spec.config?.scheme,
+        complianceFramework: this.context.complianceFramework
+      }
+    });
     
     try {
       // Build configuration using ConfigBuilder
@@ -779,8 +624,7 @@ export class ApplicationLoadBalancerComponent extends BaseComponent {
       // Create security group if needed
       this.createSecurityGroupIfNeeded();
       
-      // Create access logs bucket if needed
-      this.createAccessLogsBucketIfNeeded();
+      // Access logs are now managed by LoggingService via Service Injector Pattern
       
       // Create Application Load Balancer
       this.createApplicationLoadBalancer();
@@ -791,8 +635,7 @@ export class ApplicationLoadBalancerComponent extends BaseComponent {
       // Create listeners
       this.createListeners();
       
-      // Configure observability (OpenTelemetry Standard)
-      this.configureObservabilityForAlb();
+      // Observability is now configured by ObservabilityService via Service Injector Pattern
       
       // Apply compliance hardening
       this.applyComplianceHardening();
@@ -810,9 +653,41 @@ export class ApplicationLoadBalancerComponent extends BaseComponent {
       this.registerCapability('net:load-balancer', this.buildLoadBalancerCapability());
       this.registerCapability('net:load-balancer-target', this.buildTargetCapability());
       
-      this.logComponentEvent('synthesis_complete', 'Application Load Balancer synthesis completed successfully');
+      timer.finish('Application Load Balancer synthesis completed successfully', {
+        context: { 
+          action: 'synthesis_success', 
+          resource: 'application_load_balancer',
+          component: 'application-load-balancer'
+        },
+        data: { 
+          loadBalancerArn: this.loadBalancer!.loadBalancerArn,
+          scheme: this.config!.scheme,
+          accessLogsEnabled: this.config!.accessLogs?.enabled,
+          listenersCount: this.config!.listeners?.length || 0
+        },
+        security: {
+          classification: 'cui',
+          auditRequired: true,
+          securityEvent: 'load_balancer_created'
+        }
+      });
     } catch (error) {
-      this.logError(error as Error, 'Application Load Balancer synthesis');
+      logger.error('Application Load Balancer synthesis failed', error, {
+        context: { 
+          action: 'synthesis_error', 
+          resource: 'application_load_balancer',
+          component: 'application-load-balancer'
+        },
+        data: { 
+          loadBalancerName: this.config?.loadBalancerName,
+          complianceFramework: this.context.complianceFramework
+        },
+        security: {
+          classification: 'cui',
+          auditRequired: true,
+          securityEvent: 'load_balancer_creation_failed'
+        }
+      });
       throw error;
     }
   }
@@ -836,18 +711,47 @@ export class ApplicationLoadBalancerComponent extends BaseComponent {
    * Lookup VPC from configuration or use default
    */
   private lookupVpc(): void {
+    const logger = this.getLogger();
     const vpcConfig = this.config!.vpc;
     
-    if (vpcConfig?.vpcId) {
-      this.vpc = ec2.Vpc.fromLookup(this, 'Vpc', {
-        vpcId: vpcConfig.vpcId
+    // VPC configuration must be explicitly provided - no default VPC assumptions
+    // Compliant with Platform Configuration Standard v1.0 Section 3.1
+    if (!vpcConfig?.vpcId) {
+      const error = new Error('VPC configuration is required for ALB deployment - cannot use default VPC for security compliance');
+      logger.error('VPC configuration missing', error, {
+        context: { 
+          action: 'vpc_lookup_failed', 
+          resource: 'application_load_balancer',
+          component: 'application-load-balancer'
+        },
+        security: {
+          classification: 'cui',
+          auditRequired: true,
+          securityEvent: 'vpc_config_missing'
+        }
       });
-    } else {
-      // Use default VPC
-      this.vpc = ec2.Vpc.fromLookup(this, 'DefaultVpc', {
-        isDefault: true
-      });
+      throw error;
     }
+    
+    logger.info('Looking up VPC with explicit configuration', {
+      context: { 
+        action: 'vpc_lookup', 
+        resource: 'application_load_balancer',
+        component: 'application-load-balancer'
+      },
+      data: {
+        vpcId: vpcConfig.vpcId
+      },
+      security: {
+        classification: 'cui',
+        auditRequired: true,
+        securityEvent: 'vpc_lookup_explicit'
+      }
+    });
+    
+    this.vpc = ec2.Vpc.fromLookup(this, 'Vpc', {
+      vpcId: vpcConfig.vpcId
+    });
   }
 
   /**
@@ -863,14 +767,47 @@ export class ApplicationLoadBalancerComponent extends BaseComponent {
         allowAllOutbound: true
       });
 
-      // Add ingress rules
+      // Add ingress rules - no hardcoded CIDR defaults per Platform Configuration Standard v1.0
       if (sgConfig.ingress) {
+        const logger = this.getLogger();
         for (const rule of sgConfig.ingress) {
+          if (!rule.cidr) {
+            const error = new Error(`Security group ingress rule must specify explicit CIDR - hardcoded defaults prohibited by Platform Configuration Standard v1.0 Section 3.1`);
+            logger.error('Missing CIDR in security group rule', error, {
+              context: { 
+                action: 'security_group_rule_validation', 
+                resource: 'application_load_balancer',
+                component: 'application-load-balancer'
+              },
+              data: { port: rule.port, protocol: rule.protocol },
+              security: {
+                classification: 'cui',
+                auditRequired: true,
+                securityEvent: 'hardcoded_security_violation'
+              }
+            });
+            throw error;
+          }
+          
           this.securityGroup.addIngressRule(
-            ec2.Peer.ipv4(rule.cidr || '0.0.0.0/0'),
+            ec2.Peer.ipv4(rule.cidr),
             ec2.Port.tcp(rule.port),
             rule.description || `Allow ${rule.protocol} on port ${rule.port}`
           );
+          
+          logger.debug('Added security group ingress rule', {
+            context: { 
+              action: 'security_group_rule_added', 
+              resource: 'application_load_balancer',
+              component: 'application-load-balancer'
+            },
+            data: { 
+              port: rule.port, 
+              protocol: rule.protocol, 
+              cidr: rule.cidr,
+              description: rule.description
+            }
+          });
         }
       }
 
@@ -880,44 +817,27 @@ export class ApplicationLoadBalancerComponent extends BaseComponent {
         'alb-name': this.config!.loadBalancerName || `${this.context.serviceName}-${this.spec.name}`
       });
 
-      this.logResourceCreation('security-group', this.securityGroup.securityGroupId);
+      const logger = this.getLogger();
+      logger.info('Created Application Load Balancer security group', {
+        context: { 
+          action: 'security_group_created', 
+          resource: 'application_load_balancer',
+          component: 'application-load-balancer'
+        },
+        data: { 
+          securityGroupId: this.securityGroup.securityGroupId,
+          rulesCount: sgConfig.ingress?.length || 0
+        },
+        security: {
+          classification: 'cui',
+          auditRequired: true,
+          securityEvent: 'security_group_created'
+        }
+      });
     }
   }
 
-  /**
-   * Create S3 bucket for access logs if needed
-   */
-  private createAccessLogsBucketIfNeeded(): void {
-    const accessLogsConfig = this.config!.accessLogs;
-    
-    if (accessLogsConfig?.enabled && !accessLogsConfig.bucket) {
-      // Create access logs bucket
-      const bucketName = `${this.context.serviceName}-${this.spec.name}-access-logs`;
-      
-      this.accessLogsBucket = new s3.Bucket(this, 'AccessLogsBucket', {
-        bucketName,
-        blockPublicAccess: s3.BlockPublicAccess.BLOCK_ALL,
-        encryption: s3.BucketEncryption.S3_MANAGED,
-        enforceSSL: true,
-        lifecycleRules: [
-          {
-            id: 'DeleteOldLogs',
-            enabled: true,
-            expiration: cdk.Duration.days(this.isComplianceFramework() ? 90 : 30)
-          }
-        ],
-        removalPolicy: this.isComplianceFramework() ? cdk.RemovalPolicy.RETAIN : cdk.RemovalPolicy.DESTROY
-      });
-
-      // Apply standard tags
-      this.applyStandardTags(this.accessLogsBucket, {
-        'resource-type': 's3-bucket',
-        'purpose': 'alb-access-logs'
-      });
-
-      this.logResourceCreation('s3-bucket', bucketName);
-    }
-  }
+  // REMOVED: createAccessLogsBucketIfNeeded() - access logging now managed by LoggingService via Service Injector Pattern
 
   /**
    * Create Application Load Balancer
@@ -944,11 +864,7 @@ export class ApplicationLoadBalancerComponent extends BaseComponent {
       idleTimeout: cdk.Duration.seconds(this.config!.idleTimeout || 60)
     });
 
-    // Enable access logs if configured
-    if (this.config!.accessLogs?.enabled) {
-      const bucket = this.accessLogsBucket || s3.Bucket.fromBucketName(this, 'ExistingAccessLogsBucket', this.config!.accessLogs.bucket!);
-      this.loadBalancer.logAccessLogs(bucket, this.config!.accessLogs.prefix);
-    }
+    // Access logging is now configured by LoggingService via Service Injector Pattern
 
     // Apply standard tags
     this.applyStandardTags(this.loadBalancer, {
@@ -1019,7 +935,7 @@ export class ApplicationLoadBalancerComponent extends BaseComponent {
         port: tgConfig.port,
         protocol: tgConfig.protocol === 'HTTPS' ? elbv2.ApplicationProtocol.HTTPS : elbv2.ApplicationProtocol.HTTP,
         vpc: this.vpc!,
-        targetType: this.mapTargetType(tgConfig.targetType),
+        targetType: this.mapTargetType(tgConfig.targetType || 'instance'),
         healthCheck: tgConfig.healthCheck ? {
           enabled: tgConfig.healthCheck.enabled,
           path: tgConfig.healthCheck.path,
@@ -1047,7 +963,7 @@ export class ApplicationLoadBalancerComponent extends BaseComponent {
       // Apply standard tags
       this.applyStandardTags(targetGroup, {
         'resource-type': 'target-group',
-        'target-type': tgConfig.targetType
+        'target-type': tgConfig.targetType || 'instance'
       });
 
       this.logResourceCreation('target-group', targetGroup.targetGroupName);
@@ -1211,101 +1127,10 @@ export class ApplicationLoadBalancerComponent extends BaseComponent {
     this.logResourceCreation('green-target-group', greenTargetGroup.targetGroupName);
   }
 
-  /**
-   * Configure OpenTelemetry Observability Standard - CloudWatch Alarms for ALB
-   */
-  private configureObservabilityForAlb(): void {
-    const monitoringConfig = this.config!.monitoring;
-    
-    if (!monitoringConfig?.enabled) {
-      return;
-    }
-
-    const alarmThresholds = monitoringConfig.alarms || {};
-    const loadBalancerFullName = this.loadBalancer!.loadBalancerFullName;
-
-    // 1. HTTP 5xx Server Errors Alarm
-    new cloudwatch.Alarm(this, 'HTTPCode5xxAlarm', {
-      alarmName: `${this.context.serviceName}-${this.spec.name}-http-5xx-errors`,
-      alarmDescription: 'ALB HTTP 5xx server errors alarm',
-      metric: new cloudwatch.Metric({
-        namespace: 'AWS/ApplicationELB',
-        metricName: 'HTTPCode_Target_5XX_Count',
-        dimensionsMap: {
-          LoadBalancer: loadBalancerFullName
-        },
-        statistic: 'Sum',
-        period: cdk.Duration.minutes(5)
-      }),
-      threshold: alarmThresholds.httpCode5xxThreshold || 10,
-      evaluationPeriods: 2,
-      comparisonOperator: cloudwatch.ComparisonOperator.GREATER_THAN_THRESHOLD,
-      treatMissingData: cloudwatch.TreatMissingData.NOT_BREACHING
-    });
-
-    // 2. Unhealthy Host Count Alarm
-    new cloudwatch.Alarm(this, 'UnHealthyHostAlarm', {
-      alarmName: `${this.context.serviceName}-${this.spec.name}-unhealthy-hosts`,
-      alarmDescription: 'ALB unhealthy host count alarm',
-      metric: new cloudwatch.Metric({
-        namespace: 'AWS/ApplicationELB',
-        metricName: 'UnHealthyHostCount',
-        dimensionsMap: {
-          LoadBalancer: loadBalancerFullName
-        },
-        statistic: 'Average',
-        period: cdk.Duration.minutes(5)
-      }),
-      threshold: alarmThresholds.unhealthyHostThreshold || 1,
-      evaluationPeriods: 2,
-      comparisonOperator: cloudwatch.ComparisonOperator.GREATER_THAN_OR_EQUAL_TO_THRESHOLD,
-      treatMissingData: cloudwatch.TreatMissingData.NOT_BREACHING
-    });
-
-    // 3. Target Connection Error Count Alarm
-    new cloudwatch.Alarm(this, 'TargetConnectionErrorAlarm', {
-      alarmName: `${this.context.serviceName}-${this.spec.name}-connection-errors`,
-      alarmDescription: 'ALB target connection errors alarm',
-      metric: new cloudwatch.Metric({
-        namespace: 'AWS/ApplicationELB',
-        metricName: 'TargetConnectionErrorCount',
-        dimensionsMap: {
-          LoadBalancer: loadBalancerFullName
-        },
-        statistic: 'Sum',
-        period: cdk.Duration.minutes(5)
-      }),
-      threshold: alarmThresholds.connectionErrorThreshold || 5,
-      evaluationPeriods: 2,
-      comparisonOperator: cloudwatch.ComparisonOperator.GREATER_THAN_THRESHOLD,
-      treatMissingData: cloudwatch.TreatMissingData.NOT_BREACHING
-    });
-
-    // 4. Rejected Connection Count Alarm
-    new cloudwatch.Alarm(this, 'RejectedConnectionAlarm', {
-      alarmName: `${this.context.serviceName}-${this.spec.name}-rejected-connections`,
-      alarmDescription: 'ALB rejected connections alarm',
-      metric: new cloudwatch.Metric({
-        namespace: 'AWS/ApplicationELB',
-        metricName: 'RejectedConnectionCount',
-        dimensionsMap: {
-          LoadBalancer: loadBalancerFullName
-        },
-        statistic: 'Sum',
-        period: cdk.Duration.minutes(5)
-      }),
-      threshold: alarmThresholds.rejectedConnectionThreshold || 1,
-      evaluationPeriods: 2,
-      comparisonOperator: cloudwatch.ComparisonOperator.GREATER_THAN_THRESHOLD,
-      treatMissingData: cloudwatch.TreatMissingData.NOT_BREACHING
-    });
-
-    this.logComponentEvent('observability_configured', 'OpenTelemetry observability standard applied to ALB', {
-      alarmsCreated: 4,
-      monitoringEnabled: true,
-      thresholds: alarmThresholds
-    });
-  }
+  // REMOVED: configureObservabilityForAlb() method violates Service Injector Pattern
+  // Per Platform OpenTelemetry Observability Standard v1.0, all observability logic  
+  // is externalized to the ObservabilityService and applied by the ResolverEngine
+  // after component synthesis. Components should NOT create CloudWatch alarms internally.
 
   /**
    * Build load balancer capability data shape
@@ -1375,7 +1200,23 @@ export class ApplicationLoadBalancerComponent extends BaseComponent {
    * Apply commercial hardening
    */
   private applyCommercialHardening(): void {
-    this.logComponentEvent('commercial_hardening_applied', 'Applied commercial security hardening to Application Load Balancer');
+    const logger = this.getLogger();
+    logger.info('Applied commercial security hardening to Application Load Balancer', {
+      context: { 
+        action: 'commercial_hardening_applied', 
+        resource: 'application_load_balancer',
+        component: 'application-load-balancer'
+      },
+      data: {
+        complianceFramework: 'commercial',
+        hardeningApplied: true
+      },
+      security: {
+        classification: 'cui',
+        auditRequired: true,
+        securityEvent: 'commercial_hardening_applied'
+      }
+    });
   }
 
   /**

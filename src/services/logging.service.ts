@@ -35,6 +35,7 @@ import { EcsLoggingHandler } from './logging-handlers/ecs-logging.handler';
 import { S3LoggingHandler } from './logging-handlers/s3-logging.handler';
 import { RdsLoggingHandler } from './logging-handlers/rds-logging.handler';
 import { SqsLoggingHandler } from './logging-handlers/sqs-logging.handler';
+import { AlbLoggingHandler } from './logging-handlers/alb-logging.handler';
 
 /**
  * Platform Logging Service implementing Platform Service Injector Standard v1.0
@@ -128,7 +129,8 @@ export class LoggingService implements IPlatformService {
       new EcsLoggingHandler(),
       new S3LoggingHandler(),
       new RdsLoggingHandler(),
-      new SqsLoggingHandler()
+      new SqsLoggingHandler(),
+      new AlbLoggingHandler()
     ];
 
     handlers.forEach(handler => {

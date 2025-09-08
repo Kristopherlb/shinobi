@@ -245,7 +245,9 @@ if (require.main === module) {
   const validator = new TestMetadataValidator();
   const testFiles = [
     'src/components/api-gateway-rest/api-gateway-rest.component.test.ts',
-    'src/components/api-gateway-http/api-gateway-http.component.test.ts'
+    'src/components/api-gateway-http/api-gateway-http.component.test.ts',
+    'tests/unit/components/rds-postgres.component.test.ts',
+    'tests/unit/components/application-load-balancer.component.test.ts'
   ];
 
   console.log('🔍 Platform Testing Standard v1.0 Compliance Validation\n');

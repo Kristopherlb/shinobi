@@ -1,43 +1,101 @@
-# Platform Configuration for FedRAMP Moderate Cloud Deployments  
-# Version: 1.0
-# Compliance Framework: FedRAMP Moderate
+# Platform Configuration - FedRAMP Moderate Compliance Framework
+# Platform Configuration Standard v1.0 - Layer 2: Segregated Platform Configuration
+# 
+# This file defines platform-wide, centrally-managed defaults for FedRAMP Moderate deployments.
+# Compliance Level: MODERATE
+# Managed by: Platform Engineering Team + Compliance Team
+# Review Cycle: Monthly
 
-# API Gateway Configuration Defaults
-api-gateway-rest:
-  cors:
-    allowOrigins:
-      - "https://*.gov"
-      - "https://*.mil" 
-      - "https://admin.agency.gov"
-    allowMethods: ["GET", "POST", "PUT", "DELETE", "OPTIONS"] # No PATCH for compliance
-    allowHeaders:
-      - "Content-Type"
-      - "Authorization"
-      - "X-Requested-With"
-    allowCredentials: false # Disabled for government security
-    maxAge: 300 # Short cache for security
-  throttling:
-    burstLimit: 1000 # Conservative limits
-    rateLimit: 500
-  tracing:
-    xrayEnabled: true # Mandatory for compliance
-
-api-gateway-http:
-  cors:
-    allowOrigins:
-      - "https://*.gov"
-      - "https://*.mil"
-      - "https://admin.agency.gov"
-    allowMethods: ["GET", "POST", "PUT", "DELETE", "OPTIONS"]
-    allowHeaders:
-      - "Content-Type" 
-      - "Authorization"
-      - "X-Requested-With"
-    allowCredentials: false
-    maxAge: 300
-  throttling:
-    burstLimit: 1500
-    rateLimit: 750
-  accessLogging:
-    enabled: true # Mandatory for compliance
-    format: '{"requestId":"$context.requestId","ip":"$context.identity.sourceIp","requestTime":"$context.requestTime","httpMethod":"$context.httpMethod","routeKey":"$context.routeKey","status":"$context.status","responseLength":"$context.responseLength","userAgent":"$context.identity.userAgent"}'
+defaults:
+  # RDS PostgreSQL Configuration for FedRAMP Moderate Framework
+  rds-postgres:
+    # Enhanced performance for moderate compliance
+    instanceClass: "db.r5.large"      # Enhanced performance instances required
+    allocatedStorage: 100             # Larger storage for compliance logging
+    maxAllocatedStorage: 500          # Auto-scaling limit
+    backupRetentionDays: 30           # Extended backup retention (30 days minimum)
+    multiAz: true                     # Multi-AZ required for high availability
+    encryptionEnabled: true           # Encryption at rest required
+    deletionProtection: true          # Deletion protection required
+    
+    # Enhanced monitoring for compliance
+    performanceInsights:
+      enabled: true                   # Required for compliance monitoring
+      retentionPeriod: 1095          # 3 years retention required
+      
+    enhancedMonitoring:
+      enabled: true                   # Required for detailed metrics
+      interval: 5                    # 5 seconds monitoring interval
+      
+    # Observability for compliance (Platform Observability Standard v1.0)
+    logExports:
+      postgresql: true               # Required for compliance monitoring
+      slowQuery: true                # Required for performance analysis
+      errorLog: true                 # Required for audit trail
+      
+    connectionMonitoring:
+      enabled: true                  # Required for compliance monitoring
+      deadlockDetection: true        # Required for performance analysis
+      connectionPoolMetrics: true    # Required for capacity planning
+      
+    # Security and compliance settings
+    network:
+      requireVpcConfig: true          # Explicit VPC configuration mandatory
+      requirePrivateSubnets: true     # Private subnets required
+      defaultPort: 5432              # PostgreSQL standard port
+      
+    backup:
+      preferredWindow: "03:00-04:00"  # Low-traffic backup window
+      retentionPeriod: 30            # 30 days minimum
+      
+  # API Gateway REST Configuration for FedRAMP Moderate
+  api-gateway-rest:
+    throttling:
+      burstLimit: 100               # Reduced burst limit for compliance
+      rateLimit: 50                 # Reduced rate limit for compliance
+    cors:
+      allowOrigins: []              # Empty - forces explicit configuration
+      allowMethods: ["GET", "POST", "OPTIONS"]  # Minimal safe methods
+      allowHeaders: ["Content-Type", "Authorization"]  # Minimal safe headers
+      allowCredentials: false       # Never allow credentials by default
+    xrayTracing: true               # X-Ray tracing required for compliance
+    accessLogging: true             # Access logging required
+    
+  # API Gateway HTTP Configuration for FedRAMP Moderate
+  api-gateway-http:
+    throttling:
+      burstLimit: 100               # Reduced burst limit for compliance
+      rateLimit: 50                 # Reduced rate limit for compliance
+    cors:
+      allowOrigins: []              # Empty - forces explicit configuration
+      allowMethods: ["GET", "POST", "OPTIONS"]  # Minimal safe methods
+      allowHeaders: ["Content-Type", "Authorization"]  # Minimal safe headers
+      allowCredentials: false       # Never allow credentials by default
+    accessLogging: true             # Access logging mandatory for compliance
+    
+  # Application Load Balancer Configuration for FedRAMP Moderate
+  application-load-balancer:
+    # Enhanced security for moderate compliance  
+    scheme: "internet-facing"       # Default to public-facing
+    ipAddressType: "ipv4"          # IPv4 standard
+    deletionProtection: true       # Prevent accidental deletion
+    idleTimeout: 60                # Standard idle timeout
+    accessLogs:
+      enabled: true                # Required for audit compliance
+      prefix: "alb-access-logs"    # Standard audit prefix
+    listeners:
+      - port: 443                  # HTTPS listener required
+        protocol: "HTTPS"
+        sslPolicy: "ELBSecurityPolicy-TLS-1-2-2017-01"  # Standard secure policy
+    securityGroups:
+      create: true                 # Auto-create security groups
+      ingress: []                  # Empty - forces explicit configuration per Platform Configuration Standard v1.0 Section 3.1
+    monitoring:
+      enabled: true                # Enhanced monitoring for compliance
+      alarms:
+        httpCode5xxThreshold: 10   # Monitor server errors
+        unhealthyHostThreshold: 1  # Monitor target health
+        connectionErrorThreshold: 5  # Monitor connection issues
+        rejectedConnectionThreshold: 1  # Monitor capacity issues
+    deploymentStrategy:
+      type: "single"               # Blue-green handled by CodeDeploy

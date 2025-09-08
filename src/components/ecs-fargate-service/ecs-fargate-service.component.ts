@@ -501,7 +501,22 @@ export class EcsFargateServiceComponent extends BaseComponent {
    * Synthesis phase - Create ECS Fargate Service with Service Connect
    */
   public synth(): void {
-    this.logComponentEvent('synthesis_start', 'Starting ECS Fargate Service synthesis');
+    const logger = this.getLogger();
+    const timer = logger.startTimer();
+    
+    logger.info('Starting ECS Fargate Service synthesis', {
+      context: { 
+        action: 'component_synthesis', 
+        resource: 'ecs_fargate_service',
+        component: 'ecs-fargate-service'
+      },
+      data: { 
+        serviceName: this.spec.config?.serviceName,
+        cpu: this.spec.config?.cpu,
+        memory: this.spec.config?.memory,
+        complianceFramework: this.context.complianceFramework
+      }
+    });
     
     try {
       // Build configuration using ConfigBuilder
@@ -538,9 +553,42 @@ export class EcsFargateServiceComponent extends BaseComponent {
       // Register service:connect capability
       this.registerCapability('service:connect', this.buildServiceConnectCapability());
       
-      this.logComponentEvent('synthesis_complete', 'ECS Fargate Service synthesis completed successfully');
+      timer.finish('ECS Fargate Service synthesis completed successfully', {
+        context: { 
+          action: 'synthesis_success', 
+          resource: 'ecs_fargate_service',
+          component: 'ecs-fargate-service'
+        },
+        data: { 
+          serviceName: this.service!.serviceName,
+          serviceArn: this.service!.serviceArn,
+          taskDefinitionArn: this.taskDefinition!.taskDefinitionArn,
+          cpu: this.config!.cpu,
+          memory: this.config!.memory
+        },
+        security: {
+          classification: 'cui',
+          auditRequired: true,
+          securityEvent: 'ecs_fargate_service_created'
+        }
+      });
     } catch (error) {
-      this.logError(error as Error, 'ECS Fargate Service synthesis');
+      logger.error('ECS Fargate Service synthesis failed', error, {
+        context: { 
+          action: 'synthesis_error', 
+          resource: 'ecs_fargate_service',
+          component: 'ecs-fargate-service'
+        },
+        data: { 
+          componentName: this.spec.name,
+          complianceFramework: this.context.complianceFramework
+        },
+        security: {
+          classification: 'cui',
+          auditRequired: true,
+          securityEvent: 'ecs_fargate_creation_failed'
+        }
+      });
       throw error;
     }
   }
@@ -641,7 +689,17 @@ export class EcsFargateServiceComponent extends BaseComponent {
     if (this.config!.healthCheck) {
       // Health check is configured through container logging and task definition
       // The actual health check command would be applied during container creation
-      this.logComponentEvent('health_check_configured', 'Health check configured for container');
+      const logger = this.getLogger();
+      logger.debug('Health check configured for container', {
+        context: { 
+          action: 'health_check_configured', 
+          resource: 'ecs_fargate_service',
+          component: 'ecs-fargate-service'
+        },
+        data: {
+          healthCheckEnabled: true
+        }
+      });
     }
 
     this.logResourceCreation('fargate-task-definition', this.taskDefinition.family);
@@ -758,8 +816,19 @@ export class EcsFargateServiceComponent extends BaseComponent {
       });
     }
 
-    this.logComponentEvent('autoscaling_configured', 
-      `Auto scaling configured: ${autoScalingConfig.minCapacity}-${autoScalingConfig.maxCapacity} tasks`);
+    const logger = this.getLogger();
+    logger.info('Auto scaling configured for ECS Fargate service', {
+      context: { 
+        action: 'autoscaling_configured', 
+        resource: 'ecs_fargate_service',
+        component: 'ecs-fargate-service'
+      },
+      data: {
+        minCapacity: autoScalingConfig.minCapacity,
+        maxCapacity: autoScalingConfig.maxCapacity,
+        targetUtilization: autoScalingConfig.targetCpuUtilization
+      }
+    });
   }
 
   /**
@@ -992,7 +1061,7 @@ export class EcsFargateServiceComponent extends BaseComponent {
           ClusterName: clusterName
         }
       }),
-      threshold: minCapacity,
+      threshold: minCapacity || 1,
       evaluationPeriods: 2,
       comparisonOperator: cloudwatch.ComparisonOperator.LESS_THAN_THRESHOLD
     });
@@ -1006,8 +1075,24 @@ export class EcsFargateServiceComponent extends BaseComponent {
       });
     });
 
-    this.logComponentEvent('observability_configured', 
-      `Created 3 CloudWatch alarms for ECS Fargate service monitoring`);
+    const logger = this.getLogger();
+    logger.info('OpenTelemetry observability standard applied to ECS Fargate service', {
+      context: { 
+        action: 'observability_configured', 
+        resource: 'ecs_fargate_service',
+        component: 'ecs-fargate-service'
+      },
+      data: {
+        alarmsCreated: 3,
+        monitoringEnabled: true,
+        serviceName: this.service!.serviceName
+      },
+      security: {
+        classification: 'cui',
+        auditRequired: true,
+        securityEvent: 'observability_configured'
+      }
+    });
   }
 
   /**
@@ -1095,13 +1180,13 @@ export class EcsFargateServiceComponent extends BaseComponent {
 
     // Create production listener
     const productionListener = alb.addListener('ProductionListener', {
-      port: loadBalancerConfig.productionPort,
+      port: loadBalancerConfig?.productionPort || 80,
       protocol: elbv2.ApplicationProtocol.HTTP,
       defaultAction: elbv2.ListenerAction.forward([productionTargetGroup])
     });
 
     // Create test listener (for canary testing)
-    const testPort = loadBalancerConfig.testPort || (loadBalancerConfig.productionPort + 1);
+    const testPort = loadBalancerConfig?.testPort || ((loadBalancerConfig?.productionPort || 80) + 1);
     const testListener = alb.addListener('TestListener', {
       port: testPort,
       protocol: elbv2.ApplicationProtocol.HTTP,
@@ -1125,8 +1210,19 @@ export class EcsFargateServiceComponent extends BaseComponent {
       });
     });
 
-    this.logComponentEvent('blue_green_configured', 
-      `Configured blue-green deployment with ALB and target groups`);
+    const logger = this.getLogger();
+    logger.info('Blue-green deployment configured for ECS Fargate service', {
+      context: { 
+        action: 'blue_green_configured', 
+        resource: 'ecs_fargate_service',
+        component: 'ecs-fargate-service'
+      },
+      data: {
+        deploymentConfigured: true,
+        albIntegration: true,
+        targetGroupsCreated: 2
+      }
+    });
   }
 
   /**

@@ -1,43 +1,88 @@
-# Platform Configuration for Commercial Cloud Deployments
-# Version: 1.0
-# Compliance Framework: Commercial
+# Platform Configuration - Commercial Compliance Framework
+# Platform Configuration Standard v1.0 - Layer 2: Segregated Platform Configuration
+# 
+# This file defines platform-wide, centrally-managed defaults for commercial deployments.
+# Managed by: Platform Engineering Team
+# Review Cycle: Quarterly
 
-# API Gateway Configuration Defaults
-api-gateway-rest:
-  cors:
-    allowOrigins:
-      - "https://*.yourdomain.com"
-      - "https://admin.yourdomain.com"
-    allowMethods: ["GET", "POST", "PUT", "DELETE", "PATCH", "OPTIONS"]
-    allowHeaders: 
-      - "Content-Type"
-      - "Authorization" 
-      - "X-Api-Key"
-      - "X-Requested-With"
-      - "Accept"
-    allowCredentials: true
-    maxAge: 86400
-  throttling:
-    burstLimit: 5000
-    rateLimit: 2000
-  tracing:
-    xrayEnabled: false # Optional for commercial
-
-api-gateway-http:
-  cors:
-    allowOrigins:
-      - "https://*.yourdomain.com"
-      - "https://admin.yourdomain.com"
-    allowMethods: ["GET", "POST", "PUT", "DELETE", "PATCH", "OPTIONS"]
-    allowHeaders:
-      - "Content-Type"
-      - "Authorization"
-      - "X-Api-Key"
-      - "X-Requested-With"
-    allowCredentials: true
-    maxAge: 86400
-  throttling:
-    burstLimit: 8000  # HTTP API can handle more
-    rateLimit: 3000
-  accessLogging:
-    enabled: false # Optional for commercial
+defaults:
+  # RDS PostgreSQL Configuration for Commercial Framework
+  rds-postgres:
+    # Cost-optimized defaults for commercial deployments
+    instanceClass: "db.t3.micro"      # Smallest available instance - cost-optimized
+    allocatedStorage: 20              # Minimum storage allocation
+    backupRetentionDays: 7            # Standard backup retention
+    multiAz: false                    # Single-AZ for cost optimization
+    encryptionEnabled: false          # Optional encryption (can be enabled per service)
+    deletionProtection: false         # Flexible for development
+    
+    # Performance monitoring defaults
+    performanceInsights:
+      enabled: false                  # Cost-optimized - disabled by default
+      retentionPeriod: 7             # Minimum retention when enabled
+      
+    enhancedMonitoring:
+      enabled: false                  # Cost-optimized - disabled by default
+      interval: 60                   # 1 minute interval when enabled
+      
+    # Observability defaults (Platform Observability Standard v1.0)
+    logExports:
+      postgresql: false              # Cost-optimized - disabled by default
+      slowQuery: false               # Cost-optimized - disabled by default
+      errorLog: false                # Cost-optimized - disabled by default
+      
+    connectionMonitoring:
+      enabled: false                 # Cost-optimized - disabled by default
+      deadlockDetection: false       # Cost-optimized - disabled by default
+      connectionPoolMetrics: false   # Cost-optimized - disabled by default
+      
+    # Network and security defaults
+    network:
+      requireVpcConfig: true          # Explicit VPC configuration required
+      defaultPort: 5432              # PostgreSQL standard port
+      
+  # API Gateway REST Configuration for Commercial Framework  
+  api-gateway-rest:
+    throttling:
+      burstLimit: 200               # Conservative burst limit
+      rateLimit: 100                # Conservative rate limit
+    cors:
+      allowOrigins: []              # Empty - forces explicit configuration
+      allowMethods: ["GET", "POST", "OPTIONS"]  # Minimal safe methods
+      allowHeaders: ["Content-Type", "Authorization"]  # Minimal safe headers
+      allowCredentials: false       # Never allow credentials by default
+    xrayTracing: false              # Optional tracing for commercial
+    
+  # API Gateway HTTP Configuration for Commercial Framework
+  api-gateway-http:
+    throttling:
+      burstLimit: 200               # Conservative burst limit  
+      rateLimit: 100                # Conservative rate limit
+    cors:
+      allowOrigins: []              # Empty - forces explicit configuration
+      allowMethods: ["GET", "POST", "OPTIONS"]  # Minimal safe methods
+      allowHeaders: ["Content-Type", "Authorization"]  # Minimal safe headers
+      allowCredentials: false       # Never allow credentials by default
+    accessLogging: false            # Optional access logging for commercial
+    
+  # Application Load Balancer Configuration for Commercial Framework
+  application-load-balancer:
+    # Cost-optimized defaults for commercial deployments
+    scheme: "internet-facing"       # Default to public-facing
+    ipAddressType: "ipv4"          # IPv4 only for cost optimization
+    deletionProtection: false      # Flexible for development
+    idleTimeout: 60                # Standard idle timeout
+    accessLogs:
+      enabled: false               # Cost-optimized - disabled by default
+      prefix: "alb-access-logs"    # Standard prefix when enabled
+    listeners:
+      - port: 80                   # HTTP listener
+        protocol: "HTTP"
+        sslPolicy: "ELBSecurityPolicy-TLS-1-2-2017-01"
+    securityGroups:
+      create: true                 # Auto-create security groups
+      ingress: []                  # Empty - forces explicit configuration per Platform Configuration Standard v1.0 Section 3.1
+    monitoring:
+      enabled: false               # Cost-optimized - disabled by default
+    deploymentStrategy:
+      type: "single"               # Simple deployment strategy

@@ -1064,10 +1064,23 @@ def handler(event, context):
       'threshold': '1'
     });
 
-    this.logComponentEvent('observability_configured', 'OpenTelemetry observability standard applied to S3 bucket', {
-      alarmsCreated: 2,
-      bucketName: bucketName,
-      monitoringEnabled: true
+    const logger = this.getLogger();
+    logger.info('OpenTelemetry observability standard applied to S3 bucket', {
+      context: { 
+        action: 'observability_configured', 
+        resource: 's3_bucket',
+        component: 's3-bucket'
+      },
+      data: {
+        alarmsCreated: 2,
+        bucketName: bucketName,
+        monitoringEnabled: true
+      },
+      security: {
+        classification: 'cui',
+        auditRequired: true,
+        securityEvent: 'observability_configured'
+      }
     });
   }
 

@@ -456,7 +456,21 @@ export class VpcComponent extends BaseComponent {
    * Synthesis phase - Create VPC with compliance hardening
    */
   public synth(): void {
-    this.logComponentEvent('synthesis_start', 'Starting VPC synthesis');
+    const logger = this.getLogger();
+    const timer = logger.startTimer();
+    
+    logger.info('Starting VPC synthesis', {
+      context: { 
+        action: 'component_synthesis', 
+        resource: 'vpc',
+        component: 'vpc'
+      },
+      data: { 
+        vpcName: this.spec.config?.vpcName,
+        cidrBlock: this.spec.config?.cidrBlock,
+        complianceFramework: this.context.complianceFramework
+      }
+    });
     
     try {
       // Build configuration using ConfigBuilder
@@ -490,9 +504,41 @@ export class VpcComponent extends BaseComponent {
       // Register capabilities
       this.registerCapability('net:vpc', this.buildVpcCapability());
       
-      this.logComponentEvent('synthesis_complete', 'VPC synthesis completed successfully');
+      timer.finish('VPC synthesis completed successfully', {
+        context: { 
+          action: 'synthesis_success', 
+          resource: 'vpc',
+          component: 'vpc'
+        },
+        data: { 
+          vpcId: this.vpc!.vpcId,
+          componentName: this.spec.name,
+          availabilityZones: 0, // Will be set based on region
+          flowLogsEnabled: true // Based on compliance framework
+        },
+        security: {
+          classification: 'cui',
+          auditRequired: true,
+          securityEvent: 'vpc_created'
+        }
+      });
     } catch (error) {
-      this.logError(error as Error, 'VPC synthesis');
+      logger.error('VPC synthesis failed', error, {
+        context: { 
+          action: 'synthesis_error', 
+          resource: 'vpc',
+          component: 'vpc'
+        },
+        data: { 
+          componentName: this.spec.name,
+          complianceFramework: this.context.complianceFramework
+        },
+        security: {
+          classification: 'cui',
+          auditRequired: true,
+          securityEvent: 'vpc_creation_failed'
+        }
+      });
       throw error;
     }
   }

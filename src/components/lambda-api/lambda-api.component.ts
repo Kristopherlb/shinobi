@@ -456,24 +456,38 @@ export class LambdaApiComponent extends Component {
    * Synthesis phase - Create Lambda function and API Gateway
    */
   public synth(): void {
-    // Log component synthesis start
-    this.logComponentEvent('synthesis_start', 'Starting Lambda API component synthesis', {
-      runtime: this.spec.config?.runtime,
-      handler: this.spec.config?.handler
-    });
+    const logger = this.getLogger();
+    const timer = logger.startTimer();
     
-    const startTime = Date.now();
+    logger.info('Starting Lambda API component synthesis', {
+      context: { 
+        action: 'component_synthesis', 
+        resource: 'lambda_function',
+        component: 'lambda-api'
+      },
+      data: { 
+        runtime: this.spec.config?.runtime,
+        handler: this.spec.config?.handler,
+        complianceFramework: this.context.complianceFramework
+      }
+    });
     
     try {
       // Build configuration using ConfigBuilder
       const configBuilder = new LambdaApiConfigBuilder(this.context, this.spec);
       this.config = configBuilder.buildSync();
       
-      // Log configuration built
-      this.logComponentEvent('config_built', 'Lambda API configuration built successfully', {
-        runtime: this.config.runtime,
-        memory: this.config.memory,
-        timeout: this.config.timeout
+      logger.debug('Lambda API configuration built successfully', {
+        context: { 
+          action: 'config_built', 
+          resource: 'lambda_function',
+          component: 'lambda-api'
+        },
+        data: {
+          runtime: this.config.runtime,
+          memory: this.config.memory,
+          timeout: this.config.timeout
+        }
       });
       
       // Create KMS key for encryption if needed
@@ -502,22 +516,42 @@ export class LambdaApiComponent extends Component {
     this.registerCapability('lambda:function', this.buildLambdaCapability());
     this.registerCapability('api:rest', this.buildApiCapability());
     
-    // Log successful synthesis completion
-    const duration = Date.now() - startTime;
-    this.logPerformanceMetric('component_synthesis', duration, {
-      resourcesCreated: Object.keys(this.capabilities).length
-    });
-    
-    this.logComponentEvent('synthesis_complete', 'Lambda API component synthesis completed successfully', {
-      functionsCreated: 1,
-      apiCreated: 1,
-      kmsKeyCreated: !!this.kmsKey
+    timer.finish('Lambda API component synthesis completed successfully', {
+      context: { 
+        action: 'synthesis_success', 
+        resource: 'lambda_function',
+        component: 'lambda-api'
+      },
+      data: { 
+        functionName: this.lambdaFunction!.functionName,
+        functionArn: this.lambdaFunction!.functionArn,
+        apiId: this.apiGateway!.restApiId,
+        kmsKeyCreated: !!this.kmsKey,
+        resourcesCreated: Object.keys(this.capabilities).length
+      },
+      security: {
+        classification: 'cui',
+        auditRequired: true,
+        securityEvent: 'lambda_function_created'
+      }
     });
     
     } catch (error) {
-      this.logError(error as Error, 'component synthesis', {
-        componentType: 'lambda-api',
-        stage: 'synthesis'
+      logger.error('Lambda API component synthesis failed', error, {
+        context: { 
+          action: 'synthesis_error', 
+          resource: 'lambda_function',
+          component: 'lambda-api'
+        },
+        data: { 
+          runtime: this.config?.runtime,
+          complianceFramework: this.context.complianceFramework
+        },
+        security: {
+          classification: 'cui',
+          auditRequired: true,
+          securityEvent: 'lambda_creation_failed'
+        }
       });
       throw error;
     }
@@ -930,10 +964,23 @@ export class LambdaApiComponent extends Component {
       treatMissingData: cloudwatch.TreatMissingData.NOT_BREACHING
     });
 
-    this.logComponentEvent('observability_configured', 'OpenTelemetry observability standard applied to Lambda API', {
-      alarmsCreated: 3,
-      functionName: functionName,
-      monitoringEnabled: true
+    const logger = this.getLogger();
+    logger.info('OpenTelemetry observability standard applied to Lambda API', {
+      context: { 
+        action: 'observability_configured', 
+        resource: 'lambda_function',
+        component: 'lambda-api'
+      },
+      data: {
+        alarmsCreated: 3,
+        functionName: functionName,
+        monitoringEnabled: true
+      },
+      security: {
+        classification: 'cui',
+        auditRequired: true,
+        securityEvent: 'observability_configured'
+      }
     });
   }
 }

@@ -436,24 +436,38 @@ export class SqsQueueComponent extends Component {
    * Synthesis phase - Create SQS queue with compliance hardening
    */
   public synth(): void {
-    // Log component synthesis start
-    this.logComponentEvent('synthesis_start', 'Starting SQS Queue component synthesis', {
-      fifoEnabled: this.spec.config?.fifo?.enabled,
-      dlqEnabled: this.spec.config?.deadLetterQueue?.enabled
-    });
+    const logger = this.getLogger();
+    const timer = logger.startTimer();
     
-    const startTime = Date.now();
+    logger.info('Starting SQS Queue component synthesis', {
+      context: { 
+        action: 'component_synthesis', 
+        resource: 'sqs_queue',
+        component: 'sqs-queue'
+      },
+      data: { 
+        fifoEnabled: this.spec.config?.fifo?.enabled,
+        dlqEnabled: this.spec.config?.deadLetterQueue?.enabled,
+        complianceFramework: this.context.complianceFramework
+      }
+    });
     
     try {
       // Build configuration using ConfigBuilder
       const configBuilder = new SqsQueueConfigBuilder(this.context, this.spec);
       this.config = configBuilder.buildSync();
       
-      // Log configuration built
-      this.logComponentEvent('config_built', 'SQS Queue configuration built successfully', {
-        fifoEnabled: this.config.fifo?.enabled,
-        dlqEnabled: this.config.deadLetterQueue?.enabled,
-        visibilityTimeout: this.config.visibilityTimeoutSeconds
+      logger.debug('SQS Queue configuration built successfully', {
+        context: { 
+          action: 'config_built', 
+          resource: 'sqs_queue',
+          component: 'sqs-queue'
+        },
+        data: {
+          fifoEnabled: this.config.fifo?.enabled,
+          dlqEnabled: this.config.deadLetterQueue?.enabled,
+          visibilityTimeout: this.config.visibilityTimeoutSeconds
+        }
       });
       
       // Create KMS key for encryption if needed
@@ -480,23 +494,43 @@ export class SqsQueueComponent extends Component {
     // Register capabilities
     this.registerCapability('queue:sqs', this.buildQueueCapability());
     
-    // Log successful synthesis completion
-    const duration = Date.now() - startTime;
-    this.logPerformanceMetric('component_synthesis', duration, {
-      resourcesCreated: Object.keys(this.capabilities).length
-    });
-    
-    this.logComponentEvent('synthesis_complete', 'SQS Queue component synthesis completed successfully', {
-      mainQueueCreated: 1,
-      dlqCreated: !!this.deadLetterQueue,
-      kmsKeyCreated: !!this.kmsKey,
-      alarmsCreated: 3 // Queue depth, message age, DLQ alarms
+    timer.finish('SQS Queue component synthesis completed successfully', {
+      context: { 
+        action: 'synthesis_success', 
+        resource: 'sqs_queue',
+        component: 'sqs-queue'
+      },
+      data: { 
+        queueUrl: this.queue!.queueUrl,
+        queueArn: this.queue!.queueArn,
+        dlqCreated: !!this.deadLetterQueue,
+        kmsKeyCreated: !!this.kmsKey,
+        alarmsCreated: 3,
+        resourcesCreated: Object.keys(this.capabilities).length
+      },
+      security: {
+        classification: 'cui',
+        auditRequired: true,
+        securityEvent: 'sqs_queue_created'
+      }
     });
     
     } catch (error) {
-      this.logError(error as Error, 'component synthesis', {
-        componentType: 'sqs-queue',
-        stage: 'synthesis'
+      logger.error('SQS Queue component synthesis failed', error, {
+        context: { 
+          action: 'synthesis_error', 
+          resource: 'sqs_queue',
+          component: 'sqs-queue'
+        },
+        data: { 
+          fifoEnabled: this.config?.fifo?.enabled,
+          complianceFramework: this.context.complianceFramework
+        },
+        security: {
+          classification: 'cui',
+          auditRequired: true,
+          securityEvent: 'sqs_queue_creation_failed'
+        }
       });
       throw error;
     }
@@ -643,11 +677,20 @@ export class SqsQueueComponent extends Component {
     this.configureObservabilityForQueue();
     
     // Log main queue creation
-    this.logResourceCreation('sqs-queue', this.queue.queueName, {
-      fifoEnabled: !!this.config!.fifo?.enabled,
-      dlqEnabled: !!this.deadLetterQueue,
-      visibilityTimeout: this.config!.visibilityTimeoutSeconds,
-      encryptionEnabled: this.shouldUseCustomerManagedKey()
+    const logger = this.getLogger();
+    logger.debug('SQS queue resource created successfully', {
+      context: { 
+        action: 'resource_created', 
+        resource: 'sqs_queue',
+        component: 'sqs-queue'
+      },
+      data: {
+        queueName: this.queue.queueName,
+        fifoEnabled: !!this.config!.fifo?.enabled,
+        dlqEnabled: !!this.deadLetterQueue,
+        visibilityTimeout: this.config!.visibilityTimeoutSeconds,
+        encryptionEnabled: this.shouldUseCustomerManagedKey()
+      }
     });
   }
 
