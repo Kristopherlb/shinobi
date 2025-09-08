@@ -1,5 +1,4 @@
-import * as fs from 'fs';
-import * as path from 'path';
+import * as cdk from 'aws-cdk-lib';
 import { 
   Ec2InstanceConfigBuilder,
   EC2_INSTANCE_CONFIG_SCHEMA,
@@ -8,11 +7,22 @@ import {
 import { ComponentContext, ComponentSpec } from '../../../src/platform/contracts/component-interfaces';
 
 describe('EC2 Configuration Precedence Chain', () => {
+  let app: cdk.App;
+  let stack: cdk.Stack;
   let mockContext: ComponentContext;
   let baseSpec: ComponentSpec;
 
   beforeEach(() => {
+    app = new cdk.App();
+    stack = new cdk.Stack(app, 'TestStack', {
+      env: {
+        account: '123456789012',
+        region: 'us-east-1'
+      }
+    });
+    
     mockContext = {
+      scope: stack,
       serviceName: 'test-service',
       environment: 'test',
       region: 'us-east-1',

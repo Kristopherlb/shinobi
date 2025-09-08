@@ -12,11 +12,15 @@ import * as logs from 'aws-cdk-lib/aws-logs';
 import * as kms from 'aws-cdk-lib/aws-kms';
 import * as cdk from 'aws-cdk-lib';
 import { Construct } from 'constructs';
+// File system operations are now handled by the abstract ConfigBuilder base class
 import {
   Component,
   ComponentSpec,
   ComponentContext,
-  ComponentCapabilities
+  ComponentCapabilities,
+  ConfigBuilder,
+  ConfigBuilderContext,
+  ComponentConfigSchema
 } from '@platform/contracts';
 
 /**
@@ -66,6 +70,8 @@ export interface Ec2InstanceConfig {
     rootVolumeSize?: number;
     /** Root volume type */
     rootVolumeType?: string;
+    /** IOPS for io1/io2 volume types */
+    iops?: number;
     /** Enable encryption */
     encrypted?: boolean;
     /** KMS key ARN */
@@ -289,88 +295,40 @@ export const EC2_INSTANCE_CONFIG_SCHEMA = {
 };
 
 /**
- * Ec2InstanceConfigBuilder - Handles configuration building and defaults for EC2 Instance
+ * Ec2InstanceConfigBuilder - Simplified config builder extending the abstract ConfigBuilder base class
+ * 
+ * This builder now leverages the centralized 5-layer precedence engine from the abstract base class.
+ * Its only responsibility is to provide EC2-specific hardcoded fallbacks - all orchestration,
+ * loading, merging, and validation is handled automatically by the base class.
  */
-export class Ec2InstanceConfigBuilder {
-  private context: ComponentContext;
-  private spec: ComponentSpec;
+export class Ec2InstanceConfigBuilder extends ConfigBuilder<Ec2InstanceConfig> {
   
   constructor(context: ComponentContext, spec: ComponentSpec) {
-    this.context = context;
-    this.spec = spec;
+    const builderContext: ConfigBuilderContext = { context, spec };
+    super(builderContext, EC2_INSTANCE_CONFIG_SCHEMA);
   }
 
   /**
-   * Builds the final configuration by applying platform defaults, compliance frameworks, and user overrides
+   * Builds the final configuration using the centralized 5-layer precedence engine
    */
   public async build(): Promise<Ec2InstanceConfig> {
     return this.buildSync();
   }
 
   /**
-   * Synchronous version of build for use in synth() method
+   * Provide EC2-specific hardcoded fallbacks (Layer 1: Lowest Priority)
+   * These serve as ultra-safe defaults when no other configuration is available.
    */
-  public buildSync(): Ec2InstanceConfig {
-    // Start with platform defaults
-    const platformDefaults = this.getPlatformDefaults();
-    
-    // Apply compliance framework defaults
-    const complianceDefaults = this.getComplianceFrameworkDefaults();
-    
-    // Merge user configuration from spec
-    const userConfig = this.spec.config || {};
-    
-    // Merge configurations (user config takes precedence)
-    const mergedConfig = this.mergeConfigs(
-      this.mergeConfigs(platformDefaults, complianceDefaults),
-      userConfig
-    );
-    
-    // Resolve environment interpolations (sync version)
-    const resolvedConfig = this.resolveEnvironmentInterpolationsSync(mergedConfig);
-    
-    return resolvedConfig as Ec2InstanceConfig;
-  }
-
-  /**
-   * Synchronous version of environment interpolation resolution
-   */
-  private resolveEnvironmentInterpolationsSync(config: Record<string, any>): Record<string, any> {
-    // For now, return config as-is since we don't have environment config in sync context
-    // In a real implementation, this would resolve ${env:key} patterns
-    return config;
-  }
-
-  /**
-   * Simple merge utility for combining configuration objects
-   */
-  private mergeConfigs(target: Record<string, any>, source: Record<string, any>): Record<string, any> {
-    const result = { ...target };
-    
-    for (const key in source) {
-      if (source[key] && typeof source[key] === 'object' && !Array.isArray(source[key])) {
-        result[key] = this.mergeConfigs(result[key] || {}, source[key]);
-      } else {
-        result[key] = source[key];
-      }
-    }
-    
-    return result;
-  }
-
-  /**
-   * Get platform-wide defaults for EC2 Instance
-   */
-  private getPlatformDefaults(): Record<string, any> {
+  protected getHardcodedFallbacks(): Record<string, any> {
     return {
-      instanceType: this.getDefaultInstanceType(),
+      instanceType: 't3.micro',  // Ultra-safe default
       ami: {
-        namePattern: 'amzn2-ami-hvm-*-x86_64-gp2',
+        namePattern: 'al2023-ami-*-x86_64',
         owner: 'amazon'
       },
       storage: {
-        rootVolumeSize: this.getDefaultVolumeSize(),
-        rootVolumeType: this.getDefaultVolumeType(),
+        rootVolumeSize: 20,
+        rootVolumeType: 'gp3', 
         encrypted: false,
         deleteOnTermination: true
       },
@@ -382,109 +340,12 @@ export class Ec2InstanceConfigBuilder {
         requireImdsv2: false,
         httpTokens: 'optional',
         nitroEnclaves: false
+      },
+      networking: {
+        associatePublicIpAddress: false,
+        sourceDestCheck: true
       }
     };
-  }
-
-  /**
-   * Get compliance framework specific defaults
-   */
-  private getComplianceFrameworkDefaults(): Record<string, any> {
-    const framework = this.context.complianceFramework;
-    
-    switch (framework) {
-      case 'fedramp-moderate':
-        return {
-          instanceType: this.getInstanceClass('fedramp-moderate'),
-          storage: {
-            rootVolumeSize: 50, // Larger for compliance logging
-            encrypted: true
-          },
-          monitoring: {
-            detailed: true,
-            cloudWatchAgent: true
-          },
-          security: {
-            requireImdsv2: true,
-            httpTokens: 'required'
-          }
-        };
-        
-      case 'fedramp-high':
-        return {
-          instanceType: this.getInstanceClass('fedramp-high'),
-          storage: {
-            rootVolumeSize: 100, // Even larger for enhanced logging
-            rootVolumeType: 'gp3', // Better performance for compliance workloads
-            encrypted: true
-          },
-          monitoring: {
-            detailed: true,
-            cloudWatchAgent: true
-          },
-          security: {
-            requireImdsv2: true,
-            httpTokens: 'required',
-            nitroEnclaves: true
-          }
-        };
-        
-      default: // commercial
-        return {
-          storage: {
-            encrypted: false // Optional for commercial
-          }
-        };
-    }
-  }
-
-  /**
-   * Get instance class based on compliance framework
-   */
-  private getInstanceClass(framework: string): string {
-    switch (framework) {
-      case 'fedramp-high':
-        return 'm5.large'; // More powerful for enhanced logging/monitoring
-      case 'fedramp-moderate':
-        return 't3.medium'; // Moderate performance requirements
-      default:
-        return 't3.micro'; // Cost-optimized for commercial
-    }
-  }
-
-  /**
-   * Get default instance type for platform
-   */
-  private getDefaultInstanceType(): string {
-    return this.getInstanceClass(this.context.complianceFramework);
-  }
-
-  /**
-   * Get default volume size based on compliance framework
-   */
-  private getDefaultVolumeSize(): number {
-    switch (this.context.complianceFramework) {
-      case 'fedramp-high':
-        return 100;
-      case 'fedramp-moderate':
-        return 50;
-      default:
-        return 20;
-    }
-  }
-
-  /**
-   * Get default volume type based on compliance framework
-   */
-  private getDefaultVolumeType(): string {
-    switch (this.context.complianceFramework) {
-      case 'fedramp-high':
-        return 'io2'; // High performance for FedRAMP High compliance
-      case 'fedramp-moderate': 
-        return 'gp3'; // Standard performance for FedRAMP Moderate
-      default:
-        return 'gp3'; // Default for commercial
-    }
   }
 }
 
@@ -672,7 +533,7 @@ export class Ec2InstanceComponent extends Component {
 
     this.instance = new ec2.Instance(this, 'Instance', instanceProps);
 
-    // Apply additional tags  
+    // Apply additional tags
     this.applyInstanceTags();
   }
 
@@ -895,15 +756,24 @@ export class Ec2InstanceComponent extends Component {
 
     const rootVolumeSize = this.config!.storage?.rootVolumeSize || 20;
     const encrypted = this.shouldEnableEbsEncryption();
+    const volumeType = this.getEbsVolumeType();
+    
+    // Build EBS options
+    const ebsOptions: any = {
+      volumeType: volumeType,
+      encrypted: !!encrypted,
+      kmsKey: this.kmsKey,
+      deleteOnTermination: this.config!.storage?.deleteOnTermination !== false
+    };
+    
+    // Add IOPS if specified and required for volume type
+    if (this.config!.storage?.iops && (volumeType === ec2.EbsDeviceVolumeType.IO1 || volumeType === ec2.EbsDeviceVolumeType.IO2)) {
+      ebsOptions.iops = this.config!.storage.iops;
+    }
 
     devices.push({
       deviceName: '/dev/xvda',
-      volume: ec2.BlockDeviceVolume.ebs(rootVolumeSize, {
-        volumeType: this.getEbsVolumeType(),
-        encrypted: !!encrypted,
-        kmsKey: this.kmsKey,
-        deleteOnTermination: this.config!.storage?.deleteOnTermination !== false
-      })
+      volume: ec2.BlockDeviceVolume.ebs(rootVolumeSize, ebsOptions)
     });
 
     return devices;

@@ -54,7 +54,7 @@ describe('EC2 Instance Component', () => {
       const config = builder.buildSync();
 
       expect(config.instanceType).toBe('t3.micro');
-      expect(config.ami?.namePattern).toBe('amzn2-ami-hvm-*-x86_64-gp2');
+      expect(config.ami?.namePattern).toBe('al2023-ami-*-x86_64');
       expect(config.ami?.owner).toBe('amazon');
       expect(config.storage?.rootVolumeSize).toBe(20);
       expect(config.storage?.rootVolumeType).toBe('gp3');
@@ -66,7 +66,7 @@ describe('EC2 Instance Component', () => {
       const builder = new Ec2InstanceConfigBuilder(fedrampContext, baseSpec);
       const config = builder.buildSync();
 
-      expect(config.instanceType).toBe('t3.medium');
+      expect(config.instanceType).toBe('m5.large');
       expect(config.storage?.rootVolumeSize).toBe(50);
       expect(config.storage?.encrypted).toBe(true);
       expect(config.monitoring?.detailed).toBe(true);
@@ -80,9 +80,10 @@ describe('EC2 Instance Component', () => {
       const builder = new Ec2InstanceConfigBuilder(fedrampHighContext, baseSpec);
       const config = builder.buildSync();
 
-      expect(config.instanceType).toBe('m5.large');
+      expect(config.instanceType).toBe('m5.xlarge');
       expect(config.storage?.rootVolumeSize).toBe(100);
-      expect(config.storage?.rootVolumeType).toBe('gp3');
+      expect(config.storage?.rootVolumeType).toBe('io2');
+      expect(config.storage?.iops).toBe(1000);
       expect(config.storage?.encrypted).toBe(true);
       expect(config.security?.nitroEnclaves).toBe(true);
     });
@@ -288,19 +289,20 @@ describe('EC2 Instance Component', () => {
 
   describe('Configuration Validation', () => {
     it('should return different volume types based on compliance framework', () => {
-      // Test commercial framework (should be gp3)
+      // Test commercial framework (should be gp3 from configuration)
       const commercialBuilder = new Ec2InstanceConfigBuilder(mockContext, baseSpec);
-      const commercialVolumeType = (commercialBuilder as any).getDefaultVolumeType();
-      expect(commercialVolumeType).toBe('gp3');
+      const commercialConfig = commercialBuilder.buildSync();
+      expect(commercialConfig.storage?.rootVolumeType).toBe('gp3');
 
-      // Test FedRAMP High framework (should be different, likely io2 for performance)
+      // Test FedRAMP High framework (should be io2 for performance)
       const fedrampHighContext = { ...mockContext, complianceFramework: 'fedramp-high' as 'fedramp-high' };
       const fedrampBuilder = new Ec2InstanceConfigBuilder(fedrampHighContext, baseSpec);
-      const fedrampVolumeType = (fedrampBuilder as any).getDefaultVolumeType();
+      const fedrampConfig = fedrampBuilder.buildSync();
       
-      // This should be different from commercial - testing will expose the bug
-      expect(fedrampVolumeType).not.toBe(commercialVolumeType);
-      expect(fedrampVolumeType).toBe('io2'); // Higher performance for FedRAMP High
+      // This should be different from commercial - io2 for high performance
+      expect(fedrampConfig.storage?.rootVolumeType).not.toBe(commercialConfig.storage?.rootVolumeType);
+      expect(fedrampConfig.storage?.rootVolumeType).toBe('io2'); // Higher performance for FedRAMP High
+      expect(fedrampConfig.storage?.iops).toBe(1000); // IOPS should be configured for io2
     });
 
     it('should handle custom AMI configuration', () => {

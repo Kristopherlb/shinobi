@@ -13,6 +13,7 @@ defaults:
     storage:
       rootVolumeSize: 100  # Larger for enhanced logging and compliance
       rootVolumeType: "io2"  # High performance storage for FedRAMP High
+      iops: 1000  # Required for io2 volume type
       encrypted: true  # Encryption required
       deleteOnTermination: true
     networking:

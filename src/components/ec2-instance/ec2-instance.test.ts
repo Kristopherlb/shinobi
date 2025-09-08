@@ -54,7 +54,7 @@ describe('EC2 Instance Component', () => {
       const config = builder.buildSync();
 
       expect(config.instanceType).toBe('t3.micro');
-      expect(config.ami?.namePattern).toBe('amzn2-ami-hvm-*-x86_64-gp2');
+      expect(config.ami?.namePattern).toBe('al2023-ami-*-x86_64');
       expect(config.ami?.owner).toBe('amazon');
       expect(config.storage?.rootVolumeSize).toBe(20);
       expect(config.storage?.rootVolumeType).toBe('gp3');
@@ -66,7 +66,7 @@ describe('EC2 Instance Component', () => {
       const builder = new Ec2InstanceConfigBuilder(fedrampContext, baseSpec);
       const config = builder.buildSync();
 
-      expect(config.instanceType).toBe('t3.medium');
+      expect(config.instanceType).toBe('m5.large');
       expect(config.storage?.rootVolumeSize).toBe(50);
       expect(config.storage?.encrypted).toBe(true);
       expect(config.monitoring?.detailed).toBe(true);
@@ -80,9 +80,10 @@ describe('EC2 Instance Component', () => {
       const builder = new Ec2InstanceConfigBuilder(fedrampHighContext, baseSpec);
       const config = builder.buildSync();
 
-      expect(config.instanceType).toBe('m5.large');
+      expect(config.instanceType).toBe('m5.xlarge');
       expect(config.storage?.rootVolumeSize).toBe(100);
-      expect(config.storage?.rootVolumeType).toBe('gp3');
+      expect(config.storage?.rootVolumeType).toBe('io2');
+      expect(config.storage?.iops).toBe(1000);
       expect(config.storage?.encrypted).toBe(true);
       expect(config.security?.nitroEnclaves).toBe(true);
     });
@@ -197,16 +198,28 @@ describe('EC2 Instance Component', () => {
 
       // Verify detailed monitoring is enabled
       template.hasResourceProperties('AWS::EC2::Instance', {
-        Monitoring: true,
-        MetadataOptions: Match.objectLike({
-          HttpTokens: 'required'
+        Monitoring: true
+      });
+
+      // Verify IMDSv2 is enabled via LaunchTemplate
+      template.hasResourceProperties('AWS::EC2::LaunchTemplate', {
+        LaunchTemplateData: Match.objectLike({
+          MetadataOptions: Match.objectLike({
+            HttpTokens: 'required'
+          })
         })
       });
 
       // Verify SSM managed policy is attached
       template.hasResourceProperties('AWS::IAM::Role', {
         ManagedPolicyArns: Match.arrayWith([
-          Match.stringLikeRegexp('.*AmazonSSMManagedInstanceCore.*')
+          Match.objectLike({
+            'Fn::Join': Match.arrayWith([
+              Match.arrayWith([
+                Match.stringLikeRegexp('.*:iam::aws:policy\\/AmazonSSMManagedInstanceCore.*')
+              ])
+            ])
+          })
         ])
       });
     });
@@ -373,7 +386,13 @@ describe('EC2 Instance Component', () => {
       // Should include CloudWatch agent policy
       template.hasResourceProperties('AWS::IAM::Role', {
         ManagedPolicyArns: Match.arrayWith([
-          Match.stringLikeRegexp('.*CloudWatchAgentServerPolicy.*')
+          Match.objectLike({
+            'Fn::Join': Match.arrayWith([
+              Match.arrayWith([
+                Match.stringLikeRegexp('.*:iam::aws:policy\\/CloudWatchAgentServerPolicy.*')
+              ])
+            ])
+          })
         ])
       });
     });
@@ -388,8 +407,20 @@ describe('EC2 Instance Component', () => {
       // Should include SSM and CloudWatch policies
       template.hasResourceProperties('AWS::IAM::Role', {
         ManagedPolicyArns: Match.arrayWith([
-          Match.stringLikeRegexp('.*AmazonSSMManagedInstanceCore.*'),
-          Match.stringLikeRegexp('.*CloudWatchAgentServerPolicy.*')
+          Match.objectLike({
+            'Fn::Join': Match.arrayWith([
+              Match.arrayWith([
+                Match.stringLikeRegexp('.*:iam::aws:policy\\/AmazonSSMManagedInstanceCore.*')
+              ])
+            ])
+          }),
+          Match.objectLike({
+            'Fn::Join': Match.arrayWith([
+              Match.arrayWith([
+                Match.stringLikeRegexp('.*:iam::aws:policy\\/CloudWatchAgentServerPolicy.*')
+              ])
+            ])
+          })
         ])
       });
     });
@@ -407,7 +438,12 @@ describe('EC2 Instance Component', () => {
           Match.objectLike({
             Key: 'STIGCompliant',
             Value: 'true'
-          }),
+          })
+        ])
+      });
+
+      template.hasResourceProperties('AWS::EC2::Instance', {
+        Tags: Match.arrayWith([
           Match.objectLike({
             Key: 'ImmutableInfrastructure',
             Value: 'true'

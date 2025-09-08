@@ -8,6 +8,15 @@ This document defines the specification for the platform's configuration managem
 
 The vision of this standard is to provide a layered, deterministic configuration system that is both powerful for experts and maintainable by developers who are not Infrastructure-as-Code specialists. By establishing a clear and predictable Configuration Precedence Chain, we ensure that deployments are repeatable, auditable, and that the final state of any resource is the result of a deliberate and transparent merge of platform-wide standards, compliance rules, and application-specific settings. This aligns with the principles of deterministic, static configuration management discussed in "The CDK Book" [cite: 101-102, 106-107].
 
+1.1. Non-Goals
+To provide clarity on the scope of this standard, the following are explicitly considered non-goals:
+
+Application Runtime Logic: This standard does not govern the application code that runs within the provisioned infrastructure (e.g., the logic inside a Lambda function). It only governs the configuration of the infrastructure itself and the runtime environment variables provided to it.
+
+Infrastructure State Management: This standard does not manage the state of deployed resources. The platform is stateless and relies on AWS CloudFormation as the authoritative backend for state management.
+
+Dynamic Runtime Lookups: The primary deployment workflow is deterministic. This standard does not support dynamic lookups to external services during the core svc plan or svc up synthesis process.
+
 2. Guiding Principles
 Declarative: All configuration MUST be defined declaratively in version-controlled YAML or JSON files. There is no imperative or runtime configuration logic.
 
@@ -212,23 +221,77 @@ app-config-profile: For managing more complex, dynamic configuration sets, often
 
 Consumption Pattern: A compute component (e.g., lambda-api) consumes these values via the binds directive. The corresponding binder grants the necessary IAM permissions (ssm:GetParameter, appconfig:GetLatestConfiguration) and injects the parameter name or AppConfig profile ARN as an environment variable. The application code then uses the AWS SDK to fetch the configuration value at runtime.
 
-Example Manifest:
+8.1.1. Choosing the Right Configuration Store: SSM Parameter Store vs. AWS AppConfig
+While both services can store configuration data, they are designed for different use cases. Choosing the correct tool is essential for building a robust and maintainable application.
+
+Feature
+
+SSM Parameter Store
+
+AWS AppConfig
+
+Best For
+
+Simple, static key-value data. (e.g., third-party API endpoints, tuning numbers, ARNs of shared resources).
+
+Complex configuration sets and dynamic feature flags. (e.g., a JSON document containing multiple flags, logging levels, and algorithm settings).
+
+Validation
+
+Basic (String, StringList, SecureString).
+
+Rich JSON Schema validation. AppConfig can validate new configuration against a schema before deployment, preventing invalid configurations from reaching production.
+
+Deployment
+
+Changes are immediate. A PutParameter call instantly updates the value for all consumers.
+
+Safe, validated deployments. AppConfig supports deployment strategies (Canary, Linear) that gradually roll out a configuration change while monitoring for alarms, with an automatic rollback capability.
+
+Platform Recommendation
+
+Use ssm-parameter for simple, non-critical configuration that changes infrequently.
+
+Use app-config-profile for all feature flags and any operational configuration that requires safe, controlled rollouts and validation.
+
+Example: ssm-parameter for a Static Value
 
 components:
-  - name: timeout-setting
+  - name: external-service-endpoint
     type: ssm-parameter
     config:
-      name: "/${env:serviceName}/api/timeout"
-      value: "5000"
+      # Parameter name is scoped to the service and environment
+      name: "/${env:serviceName}/${env:environment}/endpoints/billing-service"
+      value: "[https://billing.prod.api.example.com](https://billing.prod.api.example.com)"
       
   - name: api
     type: lambda-api
     binds:
-      - to: timeout-setting
+      - to: external-service-endpoint
         capability: config:ssm-parameter
         access: read
         env:
-          timeoutParamName: API_TIMEOUT_PARAM_NAME
+          endpointParamName: BILLING_ENDPOINT_PARAM_NAME
+
+Example: app-config-profile for Feature Flags
+
+components:
+  - name: my-feature-flags
+    type: app-config-profile
+    config:
+      name: "CheckoutFeatureFlags"
+      schema: # Inline JSON schema for validation
+        type: object
+        properties:
+          enableNewPaymentFlow:
+            type: boolean
+          
+  - name: api
+    type: lambda-api
+    binds:
+      - to: my-feature-flags
+        capability: config:app-config-profile
+        access: read
 
 8.2. Secrets Management
 Best Practice: Secrets (e.g., API keys, database passwords, tokens) MUST NEVER be stored in version control. They must be managed in AWS Secrets Manager. The platform's role is to provision the secret container and provide a secure workflow for developers to manage the value.

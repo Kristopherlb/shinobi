@@ -15,6 +15,9 @@ export {
   IComponentFactory
 } from './component-interfaces';
 
+// Export configuration builder contracts
+export * from './config-builder';
+
 // Export Platform Binding & Trigger Specification v1.0 (canonical binding interfaces)
 export * from './platform-binding-trigger-spec';
 
