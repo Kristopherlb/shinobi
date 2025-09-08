@@ -1,5 +1,5 @@
 import { describe, test, expect, beforeEach } from '@jest/globals';
-import { AutoScalingGroupComponent } from './auto-scaling-group.component';
+import { AutoScalingGroupComponent } from '../../../src/components/auto-scaling-group/auto-scaling-group.component';
 import { ComponentContext, ComponentSpec } from '@platform/contracts';
 import * as cdk from 'aws-cdk-lib';
 import * as ec2 from 'aws-cdk-lib/aws-ec2';
@@ -13,7 +13,12 @@ describe('AutoScalingGroupComponent', () => {
 
   beforeEach(() => {
     app = new cdk.App();
-    stack = new cdk.Stack(app, 'TestStack');
+    stack = new cdk.Stack(app, 'TestStack', {
+      env: {
+        account: '123456789012',
+        region: 'us-east-1'
+      }
+    });
 
     mockContext = {
       serviceName: 'test-service',

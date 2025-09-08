@@ -5,7 +5,7 @@
 
 export { 
   VpcComponent,
-  VPC_CONFIG_SCHEMA,
   VpcConfig,
-  VpcConfigBuilder
+  VpcConfigBuilder,
+  VPC_CONFIG_SCHEMA
 } from './vpc.component';

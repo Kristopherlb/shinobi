@@ -5,6 +5,7 @@
  */
 
 import * as autoscaling from 'aws-cdk-lib/aws-autoscaling';
+import * as cloudwatch from 'aws-cdk-lib/aws-cloudwatch';
 import * as ec2 from 'aws-cdk-lib/aws-ec2';
 import * as iam from 'aws-cdk-lib/aws-iam';
 import * as kms from 'aws-cdk-lib/aws-kms';
@@ -424,6 +425,7 @@ export class AutoScalingGroupComponent extends Component {
     this.createLaunchTemplate();
     this.createAutoScalingGroup();
     this.applyComplianceHardening();
+    this.configureObservabilityForAsg();
 
     this.registerConstruct('autoScalingGroup', this.autoScalingGroup!);
     this.registerConstruct('launchTemplate', this.launchTemplate!);
@@ -664,5 +666,55 @@ export class AutoScalingGroupComponent extends Component {
           });
       }
       return autoscaling.UpdatePolicy.rollingUpdate();
+  }
+
+  /**
+   * Configure observability for Auto Scaling Group following OpenTelemetry standards
+   * Creates standard CloudWatch alarms for essential ASG metrics
+   */
+  private configureObservabilityForAsg(): void {
+    // CPU Utilization Alarm - Aggregated across all instances
+    const cpuAlarm = new cloudwatch.Alarm(this, 'CpuUtilizationAlarm', {
+      metric: new cloudwatch.Metric({
+        namespace: 'AWS/AutoScaling',
+        metricName: 'CPUUtilization',
+        dimensionsMap: {
+          AutoScalingGroupName: this.autoScalingGroup!.autoScalingGroupName
+        },
+        statistic: 'Average',
+        period: cdk.Duration.minutes(5)
+      }),
+      threshold: 80,
+      evaluationPeriods: 2,
+      treatMissingData: cloudwatch.TreatMissingData.NOT_BREACHING,
+      alarmDescription: `CPU utilization high for Auto Scaling Group ${this.spec.name}`,
+      alarmName: `${this.context.serviceName}-${this.spec.name}-cpu-high`
+    });
+
+    // In-Service Instances Alarm - Ensures minimum capacity is maintained
+    const instancesAlarm = new cloudwatch.Alarm(this, 'InServiceInstancesAlarm', {
+      metric: new cloudwatch.Metric({
+        namespace: 'AWS/AutoScaling',
+        metricName: 'GroupInServiceInstances',
+        dimensionsMap: {
+          AutoScalingGroupName: this.autoScalingGroup!.autoScalingGroupName
+        },
+        statistic: 'Average',
+        period: cdk.Duration.minutes(1)
+      }),
+      threshold: this.config?.autoScaling?.minCapacity || 1,
+      evaluationPeriods: 2,
+      comparisonOperator: cloudwatch.ComparisonOperator.LESS_THAN_THRESHOLD,
+      treatMissingData: cloudwatch.TreatMissingData.BREACHING,
+      alarmDescription: `In-service instances below minimum capacity for Auto Scaling Group ${this.spec.name}`,
+      alarmName: `${this.context.serviceName}-${this.spec.name}-instances-low`
+    });
+
+    // Register the alarms as constructs
+    this.registerConstruct('cpuAlarm', cpuAlarm);
+    this.registerConstruct('instancesAlarm', instancesAlarm);
+
+    this.logComponentEvent('observability_configured', 
+      `Configured 2 CloudWatch alarms for ${this.context.complianceFramework} compliance`);
   }
 }
