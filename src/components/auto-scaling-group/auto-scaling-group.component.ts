@@ -437,6 +437,9 @@ export class AutoScalingGroupComponent extends Component {
 
       this.registerCapability('compute:asg', this.buildAutoScalingGroupCapability());
       
+      // Validate that synthesis was successful
+      this.validateSynthesized();
+      
       this.logComponentEvent('synthesis_complete', 'Auto Scaling Group synthesis completed successfully');
     } catch (error) {
       this.logError(error as Error, 'Auto Scaling Group synthesis');
@@ -587,7 +590,6 @@ export class AutoScalingGroupComponent extends Component {
   }
 
   private buildAutoScalingGroupCapability(): any {
-    this.validateSynthesized();
     return {
       asgArn: this.autoScalingGroup!.autoScalingGroupArn,
       asgName: this.autoScalingGroup!.autoScalingGroupName,

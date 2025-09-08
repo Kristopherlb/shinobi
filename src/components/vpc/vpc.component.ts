@@ -64,7 +64,203 @@ export interface VpcConfig {
 }
 
 /**
- * VpcConfigBuilder - Handles configuration building and defaults for VPC
+ * Configuration schema for VPC component
+ */
+export const VPC_CONFIG_SCHEMA = {
+  type: 'object',
+  title: 'VPC Configuration',
+  description: 'Configuration for creating a Virtual Private Cloud',
+  properties: {
+    cidr: {
+      type: 'string',
+      description: 'CIDR block for the VPC',
+      pattern: '^(?:[0-9]{1,3}\\.){3}[0-9]{1,3}/[0-9]{1,2}$',
+      default: '10.0.0.0/16'
+    },
+    maxAzs: {
+      type: 'number',
+      description: 'Maximum number of Availability Zones',
+      minimum: 2,
+      maximum: 6,
+      default: 2
+    },
+    natGateways: {
+      type: 'number',
+      description: 'Number of NAT gateways',
+      minimum: 0,
+      maximum: 6,
+      default: 1
+    },
+    flowLogsEnabled: {
+      type: 'boolean',
+      description: 'Enable VPC Flow Logs',
+      default: true
+    },
+    subnets: {
+      type: 'object',
+      description: 'Subnet configuration for different tiers',
+      properties: {
+        public: {
+          type: 'object',
+          description: 'Public subnet configuration',
+          properties: {
+            cidrMask: {
+              type: 'number',
+              description: 'CIDR mask for public subnets',
+              minimum: 16,
+              maximum: 28,
+              default: 24
+            },
+            name: {
+              type: 'string',
+              description: 'Name prefix for public subnets',
+              maxLength: 50,
+              default: 'Public'
+            }
+          },
+          additionalProperties: false,
+          default: {
+            cidrMask: 24,
+            name: 'Public'
+          }
+        },
+        private: {
+          type: 'object',
+          description: 'Private subnet configuration',
+          properties: {
+            cidrMask: {
+              type: 'number',
+              description: 'CIDR mask for private subnets',
+              minimum: 16,
+              maximum: 28,
+              default: 24
+            },
+            name: {
+              type: 'string',
+              description: 'Name prefix for private subnets',
+              maxLength: 50,
+              default: 'Private'
+            }
+          },
+          additionalProperties: false,
+          default: {
+            cidrMask: 24,
+            name: 'Private'
+          }
+        },
+        database: {
+          type: 'object',
+          description: 'Database subnet configuration (isolated)',
+          properties: {
+            cidrMask: {
+              type: 'number',
+              description: 'CIDR mask for database subnets',
+              minimum: 16,
+              maximum: 28,
+              default: 28
+            },
+            name: {
+              type: 'string',
+              description: 'Name prefix for database subnets',
+              maxLength: 50,
+              default: 'Database'
+            }
+          },
+          additionalProperties: false,
+          default: {
+            cidrMask: 28,
+            name: 'Database'
+          }
+        }
+      },
+      additionalProperties: false,
+      default: {
+        public: { cidrMask: 24, name: 'Public' },
+        private: { cidrMask: 24, name: 'Private' },
+        database: { cidrMask: 28, name: 'Database' }
+      }
+    },
+    vpcEndpoints: {
+      type: 'object',
+      description: 'VPC Endpoints configuration for AWS services',
+      properties: {
+        s3: {
+          type: 'boolean',
+          description: 'Enable S3 VPC Gateway Endpoint',
+          default: false
+        },
+        dynamodb: {
+          type: 'boolean',
+          description: 'Enable DynamoDB VPC Gateway Endpoint',
+          default: false
+        },
+        secretsManager: {
+          type: 'boolean',
+          description: 'Enable Secrets Manager VPC Interface Endpoint',
+          default: false
+        },
+        kms: {
+          type: 'boolean',
+          description: 'Enable KMS VPC Interface Endpoint',
+          default: false
+        }
+      },
+      additionalProperties: false,
+      default: {
+        s3: false,
+        dynamodb: false,
+        secretsManager: false,
+        kms: false
+      }
+    },
+    dns: {
+      type: 'object',
+      description: 'DNS configuration for the VPC',
+      properties: {
+        enableDnsHostnames: {
+          type: 'boolean',
+          description: 'Enable DNS hostnames in the VPC',
+          default: true
+        },
+        enableDnsSupport: {
+          type: 'boolean',
+          description: 'Enable DNS support in the VPC',
+          default: true
+        }
+      },
+      additionalProperties: false,
+      default: {
+        enableDnsHostnames: true,
+        enableDnsSupport: true
+      }
+    }
+  },
+  additionalProperties: false,
+  defaults: {
+    cidr: '10.0.0.0/16',
+    maxAzs: 2,
+    natGateways: 1,
+    flowLogsEnabled: true,
+    subnets: {
+      public: { cidrMask: 24, name: 'Public' },
+      private: { cidrMask: 24, name: 'Private' },
+      database: { cidrMask: 28, name: 'Database' }
+    },
+    vpcEndpoints: {
+      s3: false,
+      dynamodb: false,
+      secretsManager: false,
+      kms: false
+    },
+    dns: {
+      enableDnsHostnames: true,
+      enableDnsSupport: true
+    }
+  }
+};
+
+/**
+ * Configuration builder for VPC component
  */
 export class VpcConfigBuilder {
   private context: ComponentContext;
