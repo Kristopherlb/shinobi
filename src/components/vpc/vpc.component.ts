@@ -8,7 +8,6 @@
 import * as ec2 from 'aws-cdk-lib/aws-ec2';
 import * as logs from 'aws-cdk-lib/aws-logs';
 import * as iam from 'aws-cdk-lib/aws-iam';
-import * as cloudwatch from 'aws-cdk-lib/aws-cloudwatch';
 import * as cdk from 'aws-cdk-lib';
 import { Construct } from 'constructs';
 import { Component } from '../../platform/contracts/component';
@@ -476,9 +475,6 @@ export class VpcComponent extends Component {
       // Apply compliance hardening
       this.applyComplianceHardening();
       
-      // Configure observability monitoring
-      this.configureObservabilityForVpc();
-      
       // Apply standard platform tags
       this.applyVpcTags();
       
@@ -868,65 +864,6 @@ export class VpcComponent extends Component {
     return logs.RetentionDays.TEN_YEARS;
   }
 
-  /**
-   * Configure observability for VPC following OpenTelemetry standards
-   * Creates standard CloudWatch alarms for essential VPC operational metrics
-   */
-  private configureObservabilityForVpc(): void {
-    // Only create NAT Gateway alarms if NAT gateways exist
-    const natGatewayCount = this.config?.natGateways || 0;
-    if (natGatewayCount === 0) {
-      this.logComponentEvent('observability_configured', 
-        'No NAT gateways configured - skipping NAT Gateway observability alarms');
-      return;
-    }
-
-    // NAT Gateway Error Port Allocation Alarm
-    const natGatewayErrorAlarm = new cloudwatch.Alarm(this, 'NatGatewayErrorPortAllocationAlarm', {
-      metric: new cloudwatch.Metric({
-        namespace: 'AWS/NatGateway',
-        metricName: 'ErrorPortAllocation',
-        dimensionsMap: {
-          NatGatewayId: '*' // Monitor all NAT gateways in this VPC
-        },
-        statistic: 'Sum',
-        period: cdk.Duration.minutes(5)
-      }),
-      threshold: 1,
-      evaluationPeriods: 2,
-      treatMissingData: cloudwatch.TreatMissingData.NOT_BREACHING,
-      alarmDescription: `NAT Gateway port allocation errors for VPC ${this.spec.name}`,
-      alarmName: `${this.context.serviceName}-${this.spec.name}-natgw-port-errors`,
-      comparisonOperator: cloudwatch.ComparisonOperator.GREATER_THAN_OR_EQUAL_TO_THRESHOLD
-    });
-
-    // NAT Gateway Packets Dropped Alarm
-    const natGatewayDroppedAlarm = new cloudwatch.Alarm(this, 'NatGatewayPacketsDroppedAlarm', {
-      metric: new cloudwatch.Metric({
-        namespace: 'AWS/NatGateway',
-        metricName: 'PacketsDropCount',
-        dimensionsMap: {
-          NatGatewayId: '*' // Monitor all NAT gateways in this VPC
-        },
-        statistic: 'Sum',
-        period: cdk.Duration.minutes(5)
-      }),
-      threshold: 10,
-      evaluationPeriods: 3,
-      treatMissingData: cloudwatch.TreatMissingData.NOT_BREACHING,
-      alarmDescription: `NAT Gateway packets dropped for VPC ${this.spec.name}`,
-      alarmName: `${this.context.serviceName}-${this.spec.name}-natgw-dropped-packets`,
-      comparisonOperator: cloudwatch.ComparisonOperator.GREATER_THAN_THRESHOLD
-    });
-
-    // Register the alarms as constructs
-    this.registerConstruct('natGatewayErrorAlarm', natGatewayErrorAlarm);
-    this.registerConstruct('natGatewayDroppedAlarm', natGatewayDroppedAlarm);
-
-    const alarmCount = natGatewayCount > 0 ? 2 : 0;
-    this.logComponentEvent('observability_configured', 
-      `Configured ${alarmCount} CloudWatch alarms for ${this.context.complianceFramework} compliance`);
-  }
 
   /**
    * Apply standard platform tags to VPC and related resources

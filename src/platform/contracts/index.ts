@@ -29,3 +29,6 @@ export * from './binder-matrix';
 
 // Export OpenFeature standard interfaces
 export * from './openfeature-interfaces';
+
+// Export platform services interfaces
+export * from './platform-services';

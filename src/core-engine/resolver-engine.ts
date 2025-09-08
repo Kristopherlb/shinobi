@@ -13,11 +13,15 @@ import {
   IComponentFactory,
   IComponentRegistry,
   BindingContext,
-  IBinderStrategy 
+  IBinderStrategy,
+  IPlatformService,
+  PlatformServiceContext,
+  PlatformServiceRegistry
 } from '@platform/contracts';
 import { Logger } from './logger';
 import { ComponentFactoryProvider } from './component-factory-provider';
 import { ComponentBinder, BinderRegistry } from './binding-strategies';
+import { ObservabilityService } from '../services/observability.service';
 
 export interface ResolverEngineDependencies {
   logger: Logger;
@@ -81,6 +85,9 @@ export class ResolverEngine {
       
       // Phase 2: Synthesis
       const outputsMap = await this.synthesizeComponents(components);
+      
+      // Phase 2.5: Platform Services Application
+      await this.applyPlatformServices(components, validatedConfig);
       
       // Phase 3: Binding
       const bindings = await this.bindComponents(components, outputsMap, validatedConfig);
@@ -183,6 +190,61 @@ export class ResolverEngine {
 
     this.dependencies.logger.info(`Synthesized ${components.length} components with capabilities`);
     return outputsMap;
+  }
+
+  /**
+   * Phase 2.5: Platform Services Application
+   * Apply cross-cutting concerns like observability, security scanning, etc.
+   */
+  private async applyPlatformServices(components: IComponent[], validatedConfig: any): Promise<void> {
+    this.dependencies.logger.debug('Phase 2.5: Platform Services Application');
+
+    // Create platform service context
+    const serviceContext: PlatformServiceContext = {
+      serviceName: validatedConfig.service,
+      environment: process.env.NODE_ENV || 'dev',
+      complianceFramework: validatedConfig.complianceFramework || 'commercial',
+      region: process.env.CDK_DEFAULT_REGION || 'us-east-1',
+      serviceLabels: validatedConfig.labels || {},
+      serviceRegistry: {
+        observability: { enabled: true }, // Always enable observability for now
+        costManagement: { enabled: false }, // TODO: Implement in future
+        securityScanning: { enabled: false }, // TODO: Implement in future
+        backupRecovery: { enabled: false }, // TODO: Implement in future
+        performanceOptimization: { enabled: false } // TODO: Implement in future
+      }
+    };
+
+    // Initialize platform services
+    const enabledServices: IPlatformService[] = [];
+    
+    // Add observability service if enabled
+    if (serviceContext.serviceRegistry.observability?.enabled) {
+      enabledServices.push(new ObservabilityService(serviceContext));
+    }
+
+    // Apply each service to all components
+    for (const service of enabledServices) {
+      this.dependencies.logger.debug(`Applying ${service.name} to components`);
+      
+      let processedCount = 0;
+
+      for (const component of components) {
+        try {
+          service.apply(component);
+          processedCount++;
+        } catch (error) {
+          this.dependencies.logger.warn(
+            `Failed to apply ${service.name} to component ${component.spec.name}: ${error instanceof Error ? error.message : 'Unknown error'}`
+          );
+          // Continue with other components rather than failing the entire process
+        }
+      }
+
+      this.dependencies.logger.info(`${service.name}: Processed ${processedCount} components`);
+    }
+
+    this.dependencies.logger.info(`Applied ${enabledServices.length} platform services`);
   }
 
   /**

@@ -17,18 +17,17 @@ This guide explains how to contribute new components, stacks, and capabilities t
 
 #### 1. Project Structure
 
-Each component follows a standardized package structure:
+Each component follows a standardized structure within the monorepo:
 
 ```
-packages/components/your-component/
-├── src/
-│   ├── index.ts                    # Main export file
-│   ├── your-component.component.ts # Component implementation
-│   └── your-component.creator.ts   # Component factory (optional)
-├── package.json                    # Package configuration
-├── tsconfig.json                   # TypeScript configuration
-└── README.md                       # Component documentation (REQUIRED)
+src/components/your-component/
+├── your-component.component.ts     # Component implementation
+├── your-component.test.ts          # Component tests
+├── index.ts                        # Main export file
+└── your-component.creator.ts       # Component factory (optional)
 ```
+
+Note: Individual components don't have separate `package.json` files - they're part of the unified monorepo structure.
 
 #### 2. Component Documentation (REQUIRED)
 
@@ -200,7 +199,9 @@ import {
   ComponentSpec,
   ComponentContext,
   ComponentCapabilities,
-  ComponentConfigSchema
+  ComponentConfigSchema,
+  ConfigBuilder,
+  ConfigBuilderContext
 } from '@platform/contracts';
 
 /**
@@ -249,8 +250,42 @@ export const YOUR_COMPONENT_CONFIG_SCHEMA: ComponentConfigSchema = {
 /**
  * Configuration builder for your component
  * REQUIRED: Every component MUST implement a dedicated ConfigBuilder class
+ * 
+ * Two patterns are supported:
  */
-export class YourComponentConfigBuilder {
+
+// RECOMMENDED: Modern Pattern (extends abstract ConfigBuilder)
+export class YourComponentConfigBuilder extends ConfigBuilder<YourComponentConfig> {
+  
+  constructor(context: ComponentContext, spec: ComponentSpec) {
+    const builderContext: ConfigBuilderContext = { context, spec };
+    super(builderContext, YOUR_COMPONENT_CONFIG_SCHEMA);
+  }
+
+  /**
+   * Builds the final configuration using the centralized 5-layer precedence engine
+   */
+  public async build(): Promise<YourComponentConfig> {
+    return this.buildSync();
+  }
+
+  /**
+   * Provide component-specific hardcoded fallbacks (Layer 1: Lowest Priority)
+   * These serve as ultra-safe defaults when no other configuration is available.
+   */
+  protected getHardcodedFallbacks(): Record<string, any> {
+    return {
+      optionalProperty: 'default-value',
+      advanced: {
+        setting1: false,
+        setting2: 100
+      }
+    };
+  }
+}
+
+// LEGACY: Manual Pattern (still supported, but prefer modern pattern above)
+export class YourComponentConfigBuilderLegacy {
   private context: ComponentContext;
   private spec: ComponentSpec;
   
@@ -448,62 +483,19 @@ export class YourComponent extends Component {
 }
 ```
 
-#### 3. Package Configuration
+#### 3. Export Configuration
 
-Create `package.json` for your component:
+Create `index.ts` for your component exports:
 
-```json
-{
-  "name": "@platform/your-component",
-  "version": "1.0.0",
-  "description": "Description of your component",
-  "main": "dist/index.js",
-  "types": "dist/index.d.ts",
-  "scripts": {
-    "build": "tsc",
-    "test": "jest",
-    "clean": "rm -rf dist"
-  },
-  "keywords": ["cdk", "aws", "your-service"],
-  "author": "Platform Team",
-  "license": "MIT",
-  "dependencies": {
-    "@platform/contracts": "^1.0.0",
-    "@platform/logger": "^1.0.0",
-    "@platform/tagging": "^1.0.0",
-    "@platform/observability": "^1.0.0"
-  },
-  "peerDependencies": {
-    "aws-cdk-lib": "^2.0.0",
-    "constructs": "^10.0.0"
-  },
-  "devDependencies": {
-    "typescript": "^5.0.0",
-    "@types/node": "^18.0.0",
-    "jest": "^29.0.0",
-    "@types/jest": "^29.0.0"
-  }
-}
+```typescript
+// src/components/your-component/index.ts
+export { YourComponent } from './your-component.component';
+export { YourComponentConfigBuilder } from './your-component.component';
+export { YOUR_COMPONENT_CONFIG_SCHEMA } from './your-component.component';
+export type { YourComponentConfig } from './your-component.component';
 ```
 
-#### 4. TypeScript Configuration
-
-Create `tsconfig.json`:
-
-```json
-{
-  "extends": "../../../tsconfig.base.json",
-  "compilerOptions": {
-    "outDir": "./dist",
-    "rootDir": "./src",
-    "declaration": true,
-    "declarationMap": true,
-    "sourceMap": true
-  },
-  "include": ["src/**/*"],
-  "exclude": ["dist", "node_modules"]
-}
-```
+Note: Individual components don't need separate `package.json` or `tsconfig.json` files. They inherit from the monorepo's root configuration.
 
 ## Configuration Management
 
@@ -922,58 +914,57 @@ This platform uses a monorepo structure managed with modern tooling to ensure ef
 #### Essential Commands
 
 ```bash
-# Scaffold a new component package
-npm run scaffold:component -- --name your-component --type aws-resource
-
-# Install dependencies for all packages
+# Install dependencies
 npm install
 
-# Build all packages
-npm run build
+# Run all tests
+npm test
 
-# Build a specific package
-npm run build --workspace=@platform/your-component
+# Run unit tests only
+npm run test:unit
 
-# Run tests for a single package
-npm test --workspace=@platform/your-component
+# Run integration tests only
+npm run test:integration
 
-# Run tests for all affected packages (based on git changes)
-npm run test:affected
+# Run end-to-end tests only
+npm run test:e2e
 
-# Run all tests across the monorepo
-npm run test:all
+# Run tests in watch mode
+npm run test:watch
 
-# Lint all packages
-npm run lint
+# Generate test coverage report
+npm run test:coverage
+
+# Build TypeScript (manual compilation)
+npx tsc
 
 # Clean build artifacts
-npm run clean
+rm -rf dist
 ```
 
 #### Managing Dependencies
 
 ```bash
-# Add a dependency to a specific package
-npm install lodash --workspace=@platform/your-component
+# Add a production dependency (shared across all components)
+npm install lodash
 
-# Add a dev dependency to a specific package
-npm install --save-dev @types/lodash --workspace=@platform/your-component
+# Add a development dependency
+npm install --save-dev @types/lodash
 
-# Add a dependency to the root (shared across all packages)
-npm install typescript --save-dev
-
-# Update dependencies across all packages
+# Update all dependencies
 npm update
+
+# Install dependencies after checkout
+npm ci
 ```
+
+Note: This is a unified monorepo - all dependencies are managed at the root level and shared across components.
 
 #### Development Workflow
 
 ```bash
-# Start development mode (watches for changes)
-npm run dev
-
-# Watch and rebuild a specific component
-npm run dev --workspace=@platform/your-component
+# Watch tests during development
+npm run test:watch
 
 # Run integration tests
 npm run test:integration
@@ -981,49 +972,58 @@ npm run test:integration
 # Generate code coverage report
 npm run test:coverage
 
-# Check for circular dependencies
-npm run check:circular
+# Compile TypeScript and watch for changes
+npx tsc --watch
+
+# Run a specific test file
+npm test -- tests/unit/components/your-component.test.ts
 ```
 
-#### Package Structure Validation
+#### Validation and Linting
 
 ```bash
-# Validate package.json structure across all packages
-npm run validate:packages
+# Check TypeScript compilation
+npx tsc --noEmit
 
-# Check for missing exports
-npm run check:exports
+# Run ESLint (if configured)
+npx eslint src/
 
-# Verify TypeScript configurations
-npm run check:typescript
+# Validate component schemas
+npm test -- --testPathPatterns=schema
 ```
 
 ### Working with Component Dependencies
 
-When your component depends on other platform components:
+Components access platform packages through TypeScript path mapping:
 
-```bash
-# Add a platform component as a dependency
-npm install @platform/contracts --workspace=@platform/your-component
+```typescript
+// Import platform contracts
+import { Component, ComponentSpec } from '@platform/contracts';
 
-# Update to latest version of platform contracts
-npm install @platform/contracts@latest --workspace=@platform/your-component
+// Import platform services
+import { Logger } from '@platform/logger';
+import { applyStandardTags } from '@platform/tagging';
+
+// Path mappings are defined in tsconfig.base.json
 ```
 
 ### Troubleshooting
 
 ```bash
 # Clear all node_modules and reinstall
-npm run clean:all && npm install
+rm -rf node_modules && npm install
 
-# Reset TypeScript cache
-npm run clean:typescript
+# Clear TypeScript build cache
+npx tsc --build --clean
 
-# Check package dependency graph
-npm run deps:graph
+# Run tests to verify setup
+npm test
 
-# Find duplicate dependencies
-npm run deps:check
+# Check for TypeScript errors
+npx tsc --noEmit
+
+# Debug specific test failures
+npm test -- --verbose tests/unit/components/your-component.test.ts
 ```
 
 ## Platform Integration
@@ -1040,23 +1040,21 @@ Register your component with the platform:
 ### Example Registration
 
 ```typescript
-// In packages/components/index.ts
-export { YourComponent } from './your-component/src';
+// In src/components/your-component/index.ts
+export { YourComponent } from './your-component.component';
+export { YOUR_COMPONENT_CONFIG_SCHEMA } from './your-component.component';
 
-// In packages/core-engine/src/component-registry.ts
-import { YourComponent } from '@platform/your-component';
+// Component registration happens in src/core-engine/resolver-engine.ts
+// Components are dynamically imported based on type
+import { YourComponent } from '../components/your-component';
 
-componentRegistry.register('your-component', {
-  createComponent: (spec, context) => new YourComponent(context.scope, spec.name, context, spec),
-  configSchema: YOUR_COMPONENT_CONFIG_SCHEMA,
-  supportedFrameworks: ['commercial', 'fedramp-moderate', 'fedramp-high']
-});
+// Components are registered through the component factory provider
 ```
 
 ### Service Template Integration
 
 ```yaml
-# In packages/templates/src/patterns/your-pattern/service.yml
+# In src/templates/patterns/your-pattern/service.yml
 service: '{{serviceName}}'
 owner: '{{owner}}'
 complianceFramework: '{{complianceFramework}}'
