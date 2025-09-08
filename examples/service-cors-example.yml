@@ -1,0 +1,84 @@
+# Example: How to configure CORS per environment in service.yml
+# This shows the power of the 5-layer Platform Configuration Standard
+
+service: ecommerce-api
+owner: frontend-team
+complianceFramework: commercial
+
+# Layer 3: Environment-specific CORS configuration
+environments:
+  dev-us-west-2:
+    defaults:
+      # Development allows localhost and dev domains
+      apiCorsOrigins:
+        - "http://localhost:3000"
+        - "http://localhost:8080" 
+        - "https://dev-app.yourdomain.com"
+        - "https://dev-admin.yourdomain.com"
+      apiCorsCredentials: true
+      
+  staging-us-west-2:
+    defaults:
+      # Staging mirrors production domains but in staging
+      apiCorsOrigins:
+        - "https://staging-app.yourdomain.com"
+        - "https://staging-admin.yourdomain.com"
+        - "https://qa.yourdomain.com"
+      apiCorsCredentials: true
+      
+  prod-us-west-2:
+    defaults:
+      # Production only allows verified production domains
+      apiCorsOrigins:
+        - "https://app.yourdomain.com"
+        - "https://admin.yourdomain.com"
+        - "https://www.yourdomain.com"
+      apiCorsCredentials: true
+      # Tighter throttling for production
+      apiThrottleBurst: 10000
+      apiThrottleRate: 5000
+
+components:
+  - name: main-api
+    type: api-gateway-rest
+    # Layer 2: Component-specific overrides using environment interpolation
+    overrides:
+      cors:
+        allowOrigins: ${env:apiCorsOrigins}
+        allowCredentials: ${env:apiCorsCredentials}
+        allowMethods: ["GET", "POST", "PUT", "DELETE", "OPTIONS"]
+        maxAge: 3600
+      throttling:
+        burstLimit: ${env:apiThrottleBurst}
+        rateLimit: ${env:apiThrottleRate}
+    
+  - name: admin-api  
+    type: api-gateway-http
+    # Layer 2: More restrictive CORS for admin API
+    overrides:
+      cors:
+        allowOrigins:
+          - "https://admin.yourdomain.com" # Admin only allows admin domain
+        allowCredentials: true
+        allowMethods: ["GET", "POST", "PUT", "DELETE", "OPTIONS"]
+        maxAge: 1800 # Shorter cache for admin
+      throttling:
+        burstLimit: 2000 # Lower limits for admin API
+        rateLimit: 1000
+
+  - name: public-api
+    type: api-gateway-http  
+    # Layer 2: Public API with specific CORS needs
+    overrides:
+      cors:
+        allowOrigins: ["*"] # Public API allows all origins
+        allowCredentials: false # No credentials for public
+        allowMethods: ["GET", "OPTIONS"] # Read-only public API
+        maxAge: 86400 # Long cache for public data
+      
+    # Layer 5: Policy override example (for development only)
+    policy:
+      overrides:
+        cors:
+          allowOrigins: ["*"] # Allow all for development
+      justification: "Public API needs to be accessible from any domain for third-party integrations. JIRA: ECOM-1234"

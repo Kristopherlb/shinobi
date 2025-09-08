@@ -62,3 +62,241 @@ The plan command output is the fully resolved JSON of the manifest. Full CDK syn
 A versioned JSON Schema package (@platform/schemas) is published internally.
 Confluence documentation for the service.yml manifest structure and the three initial CLI commands.
 Unit and integration test coverage for the CLI framework and each stage of the validation pipeline exceeds 90%.
+
+
+-------
+New CLI standard
+______
+
+Platform CLI Utilities Standard
+Version: 1.0
+Status: Published
+Last Updated: September 8, 2025
+
+1. Overview & Vision
+This document defines the complete specification for the platform's command-line interface (CLI), invoked via the svc command. A world-class CLI is the cornerstone of a world-class developer experience. It must be more than just a deployment tool; it must be a complete, intuitive toolkit for the entire development lifecycle, from local testing to production debugging and architectural analysis.
+
+The vision is to provide a single, consistent, and powerful interface that shortens the feedback loop, provides deep visibility, and automates the tedious tasks developers face every day. This is achieved by providing a suite of well-designed commands and by integrating best-in-class open-source tools for visualization and cost analysis.
+
+2. Guiding Principles & Core Requirements
+2.1. Guiding Principles
+Single Entry Point: The svc command MUST be the single, unified entry point for all platform interactions.
+
+Declarative & Intent-Based: Commands MUST operate on the developer's declared intent in the service.yml manifest.
+
+Fast Feedback Loop: Local commands (plan --local, test, graph) MUST be optimized for speed, providing near-instantaneous feedback.
+
+Consistency: All commands MUST follow a consistent naming convention and flag structure (e.g., --env for environment selection, --manifest for the manifest file).
+
+Self-Documenting: The CLI MUST provide comprehensive --help text for all commands and sub-commands, powered by the Commander.js library.
+
+2.2. Core CLI Functional Requirements
+FR-CLI-1 (Command Structure): The CLI will be invoked as svc and support a documented set of commands and sub-commands. All commands MUST respond to a --help flag.
+
+FR-CLI-2 (Configuration Discovery): The CLI MUST automatically discover the service.yml file by searching upwards from the current directory. An optional --manifest / -m flag MUST be supported to specify an explicit path.
+
+FR-CLI-3 (Output & Logging): The CLI MUST support both human-readable text output (default) and structured JSON output (via a --ci flag). A --verbose / -v flag MUST enable DEBUG level logging.
+
+FR-CLI-4 (Error Handling): The CLI MUST use standard POSIX exit codes (0 for success, non-zero for failures) and provide clear, actionable error messages, referencing line numbers in the manifest where possible.
+
+3. The CLI Command Suite
+This section details the full suite of commands available to developers and platform engineers.
+
+3.1. Project Initialization & Validation
+svc init
+Purpose: Scaffolds a new, compliant service from a pre-defined template, creating the foundational files for a developer to get started in minutes.
+
+Acceptance Criteria:
+
+AC-SI-1 (Interactive Prompting): Running svc init MUST launch an interactive survey that prompts the user for Service Name, Owner, Compliance Framework, and an Initial Pattern (e.g., lambda-api-with-db).
+
+AC-SI-2 (Template Generation): Based on the survey answers, the command MUST generate a complete project structure including a pre-filled service.yml, boilerplate application code in src/, a .gitignore, and a patches.ts stub.
+
+svc validate
+Purpose: Performs a fast, local-only validation of the service.yml manifest syntax and schema without needing AWS credentials or network access.
+
+Implementation Detail: This command executes only the "Parsing" and "Schema Validation" stages of the Manifest Validation Pipeline.
+
+3.2. Local Development & Testing
+The Goal: Create a fast, high-fidelity inner development loop.
+
+Command
+
+Purpose & How It Works
+
+Example Usage
+
+svc local up
+
+Starts a local, ephemeral cloud environment. As defined in the "Ephemeral Environment Standard," this command reads the localstack-environment component from the manifest, dynamically generates a docker-compose.yml, and starts a LocalStack container with all the required emulated AWS services.
+
+svc local up
+
+svc test
+
+Runs application tests with an auto-configured environment. This command is a smart wrapper around the native test runner (e.g., jest). Before running the tests, it first reads the service.yml and automatically injects all the necessary mock environment variables that the application code would expect.
+
+svc test
+
+3.3. Introspection & Visualization
+The Goal: Provide deep, actionable insight into the service's architecture and cost before deployment.
+
+Command
+
+Purpose & How It Works
+
+Example Usage
+
+svc graph
+
+Generates a visual architecture diagram. This command integrates the open-source cdk-dia tool. It first runs a local synthesis (svc plan --local) to generate the cloud assembly. It then runs cdk-dia against this directory to produce a high-quality visual diagram of all components and their relationships.
+
+svc graph --output-file arch.png
+
+svc cost
+
+Provides a pre-deployment cost estimate. This command integrates the open-source infracost tool. It first runs svc plan to generate the final CloudFormation template. It then runs infracost breakdown --path template.json to produce a detailed, itemized cost report.
+
+svc cost --env prod-us-west-2
+
+3.4. Deployment & Operations
+svc plan
+Purpose: To perform a full validation and synthesis of the service manifest, providing a comprehensive preview of the proposed changes before deployment.
+
+Acceptance Criteria (The Manifest Validation Pipeline):
+
+Stage 1 (Parsing): The pipeline MUST ingest the service.yml file and correctly reject files with invalid YAML syntax.
+
+Stage 2 (Schema Validation): The pipeline MUST validate the parsed object against a master JSON Schema dynamically composed from the base schema and the schemas of all registered components.
+
+Stage 3 (Context Hydration): The pipeline MUST identify the target environment and compliance framework, then correctly resolve all ${env:...} variables according to the established configuration precedence chain.
+
+Stage 4 (Semantic Validation): The pipeline MUST verify that all binds and ${ref:...} directives point to valid components within the manifest.
+
+Command
+
+Purpose & How It Works
+
+Example Usage
+
+svc up
+
+Deploys the service to a specified environment. This command first runs the full svc plan logic internally. In a CI/CD context, it deploys from a pre-planned, versioned artifact to ensure deterministic deployments.
+
+svc up --env dev-us-east-1
+
+svc outputs
+
+Displays the outputs of a deployed service. After a successful svc up, this command queries the deployed CloudFormation stack for its Outputs section and displays them in a clean, human-readable format.
+
+svc outputs --env prod-us-east-1
+
+svc logs
+
+Tails the logs for a specific component. This command uses the service and component name to look up the correct CloudWatch Log Group and provides a real-time, streaming tail of the logs directly in the developer's terminal.
+
+svc logs api --env dev --since 1h
+
+svc exec
+
+Opens a shell session into a running container. A user-friendly wrapper around aws ecs execute-command that automatically looks up the necessary cluster, service, and task IDs.
+
+svc exec worker --env dev
+
+svc down
+
+Tears down a deployed service environment. A safe wrapper around cdk destroy that always prompts for confirmation, especially when targeting a production environment.
+
+svc down --env feature-branch-xyz
+
+3.5. Platform Contribution & Governance
+Command
+
+Purpose & How It Works
+
+Example Usage
+
+svc audit
+
+Runs on-demand compliance and best-practice checks. This is the user-facing entry point for our "Aspirational Standards," with subcommands like svc audit iam and svc audit dependencies.
+
+svc audit iam --service my-api
+
+svc generate
+
+Scaffolds new entities. This command has subcommands for platform contributors, such as svc generate component, which provides an interactive survey to generate a complete, best-practice package for a new component.
+
+svc generate component
+
+svc inventory
+
+Analyzes an existing CDK codebase to find reusable patterns. This command uses ts-morph to parse a codebase, count L2 construct usage, and identify common groupings that are strong candidates for new platform components.
+
+svc inventory --directory ../legacy-service
+
+svc migrate
+
+Safely converts a traditional CDK app to a platform manifest. This command synthesizes an existing CDK stack, reverse-engineers it into a service.yml manifest, and creates a logical-id-map.json to ensure a non-destructive migration.
+
+svc migrate --stack MyOldApiStack
+
+3.5. Platform Contribution & Governance
+The Goal: Empower platform engineers and developers to safely audit, extend, and manage the platform's ecosystem.
+
+Command
+
+Purpose & How It Works
+
+Example Usage
+
+svc audit
+
+Runs on-demand compliance and best-practice checks. This is the user-facing entry point for our "Aspirational Standards." It has subcommands that developers and security teams can run against a deployed service: <br> - svc audit iam: Runs the automated least-privilege IAM audit. <br> - svc audit dependencies: Runs the dependency analysis for deprecation planning.
+
+svc audit iam --service my-api
+
+svc generate
+
+Scaffolds new entities. This command has subcommands for platform contributors, such as svc generate component, which provides an interactive survey that generates a complete, best-practice package for a new component according to our "Component Scaffolding Standard."
+
+svc generate component
+
+svc inventory
+
+Analyzes an existing CDK codebase to find reusable patterns. This command uses ts-morph to parse a target codebase, count the frequency of L2 construct usage, and identify common groupings that are strong candidates for new, high-value platform components.
+
+svc inventory --directory ../legacy-service
+
+svc migrate
+
+Safely converts a traditional CDK app to a platform manifest. This command synthesizes an existing CDK stack, reverse-engineers its resources into a service.yml manifest, and creates a logical-id-map.json to ensure a non-destructive migration that preserves the state of existing resources.
+
+svc migrate --stack MyOldApiStack
+
+4.0 Platform & Environment Management Utilities
+The Goal: Provide safe, auditable, and user-friendly commands for managing the platform's configuration, secrets, and the CLI tool itself.
+
+Command
+
+Purpose & How It Works
+
+Example Usage
+
+svc env
+
+Manages the platform's environment configurations. This command group interacts with the segregated /config/{framework}.yml files. <br> - svc env list: Shows all configured environments. <br> - svc env show: Displays the detailed configuration for a specific environment. <br> - svc env bootstrap: The on-demand tool for SREs to discover and refresh the static infrastructure map (environments.json) by querying live AWS accounts.
+
+svc env show prod-us-west-2
+
+svc secret
+
+Manages the runtime values of secrets. This is a safe wrapper around the aws secretsmanager CLI that is scoped to a specific service. It reads the manifest to find the correct secret ARN. <br> - svc secret set <key> <value>: Sets a secret value. <br> - svc secret get <key>: Retrieves a secret value. <br> - svc secret list: Lists all secrets managed by the service. <br> - svc secret delete <key>: Deletes a secret value.
+
+svc secret set DB_PASSWORD "..." --env dev
+
+svc platform
+
+Provides meta-commands for the CLI tool itself. This group of commands helps users manage their installation of the platform tooling. <br> - svc platform version: Shows the current version of the @platform/core-engine. <br> - svc platform update: Checks for and installs new versions of the core engine and component packages. <br> - svc platform doctor: Runs a series of diagnostic checks to ensure the user's environment is correctly configured (e.g., AWS credentials, Docker, cdk-dia installed).
+
+svc platform update
+

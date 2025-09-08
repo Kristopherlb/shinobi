@@ -2,10 +2,10 @@
 
 import { Command } from 'commander';
 import chalk from 'chalk';
-import { InitCommand } from './cli/init';
-import { ValidateCommand } from './cli/validate';
-import { PlanCommand } from './cli/plan';
-import { logger } from './utils/logger';
+import { InitCommand } from './init';
+import { ValidateCommand } from './validate';
+import { PlanCommand } from './plan';
+import { registerInventoryCommand } from './inventory';
 
 const program = new Command();
 
@@ -75,6 +75,9 @@ program
       process.exit(2);
     }
   });
+
+// svc inventory command
+registerInventoryCommand(program);
 
 // Global error handler
 process.on('uncaughtException', (error) => {

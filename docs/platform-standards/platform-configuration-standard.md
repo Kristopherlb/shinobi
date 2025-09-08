@@ -29,12 +29,37 @@ Deterministic: The platform MUST produce the exact same synthesized output for t
 3. The Configuration Precedence Chain
 The final configuration for any component is assembled by the component's ConfigBuilder. The builder merges the following five layers in a strict order of precedence, from lowest (most general) to highest (most specific).
 
+3.1. Security-Sensitive Configuration Requirements
+The following types of configuration values MUST NOT be hardcoded in Layer 1 (Hardcoded Fallbacks) and MUST be configured through Layers 2-5:
+
+**Prohibited Hardcoded Values:**
+- **CORS Origins**: `allowOrigins` must never contain `['*']` or specific domains - these vary by environment
+- **External Access Patterns**: Database connection strings, API endpoints, external service URLs
+- **Network Access Rules**: Security group rules, CIDR blocks, port ranges that vary by environment
+- **Authentication/Authorization**: OAuth scopes, JWT audiences, API keys, role mappings  
+- **Environment-Specific Domains**: DNS names, certificate ARNs, load balancer endpoints
+- **Resource Limits**: Production vs development instance sizes, storage capacities, connection pools
+- **Compliance-Sensitive Settings**: Encryption policies, audit logging levels, retention periods
+
+**Required Security-Safe Hardcoded Fallbacks:**
+- **CORS Origins**: Empty array `[]` (forces explicit configuration)
+- **CORS Methods**: Minimal safe methods only (`['GET', 'POST', 'OPTIONS']`)
+- **CORS Headers**: Minimal safe headers only (`['Content-Type', 'Authorization']`)
+- **CORS Credentials**: Always `false` (never allow credentials by default)
+- **Instance Sizes**: Smallest available size (e.g., `db.t3.micro`, `t3.nano`)
+- **Network Access**: Most restrictive settings (no public access, minimal ports)
+- **Throttling**: Conservative limits (low burst/rate limits)
+
+**Rationale**: Security-sensitive values that vary by deployment context create security vulnerabilities when hardcoded. Empty/minimal defaults force explicit configuration while maintaining safety.
+
 Layer 1: Hardcoded Fallbacks (Lowest Priority)
 Priority: 5
 
 Source of Truth: The getPlatformDefaults() method within a component's concrete ConfigBuilder class (e.g., RdsPostgresConfigBuilder).
 
 Purpose & Scope: To provide a safe, "works-out-of-the-box" default for every single property, ensuring that a component can always be synthesized even with a minimal configuration. This is the ultimate fallback and is managed by the Platform Engineering team.
+
+**CRITICAL SECURITY REQUIREMENT**: Hardcoded fallbacks MUST NOT contain security-sensitive values that vary by environment or deployment context. See Section 3.1 for prohibited hardcoded values.
 
 Example: The RdsPostgresConfigBuilder might default instanceClass to db.t3.micro.
 
@@ -341,3 +366,48 @@ components:
         access: read
         env:
           stripeSecretArn: STRIPE_API_KEY_SECRET_ARN
+
+## 9. Configuration Security Enforcement
+
+### 9.1. Automated Validation
+The platform MUST implement automated validation during the component synthesis phase to enforce Section 3.1 requirements:
+
+**Pre-Synthesis Validation:**
+- Scan all `getHardcodedFallbacks()` implementations for prohibited security-sensitive values
+- Validate that CORS `allowOrigins` in hardcoded fallbacks is empty array `[]`
+- Check that no hardcoded domain names, IP addresses, or external URLs exist in fallbacks
+- Ensure compliance-sensitive settings are not hardcoded
+
+**Synthesis-Time Validation:**
+- Verify final merged configuration contains explicitly configured values for security-sensitive settings
+- Validate CORS origins are environment-appropriate (no `['*']` in production unless explicitly justified)
+- Confirm compliance framework requirements are met
+
+**Validation Failure Actions:**
+- **ERROR**: Halt synthesis if prohibited hardcoded values are detected
+- **WARNING**: Alert if potentially unsafe configuration patterns are found
+- **AUDIT**: Log all configuration sources and final merged values for compliance
+
+### 9.2. Code Review Requirements
+All changes to `ConfigBuilder` implementations MUST be reviewed by the Platform Engineering team to ensure compliance with Section 3.1.
+
+**Review Checklist:**
+- [ ] No security-sensitive values hardcoded in `getHardcodedFallbacks()`
+- [ ] CORS configuration follows security-safe patterns
+- [ ] Resource limits use conservative fallbacks
+- [ ] Network access defaults to most restrictive settings
+- [ ] All environment-varying values configured through Layers 2-5
+
+### 9.3. Migration Strategy
+Existing components with non-compliant hardcoded values MUST be updated:
+
+**Immediate (Breaking):** Components with `allowOrigins: ['*']` hardcoded
+**Priority 1 (Security Risk):** Components with hardcoded external domains or credentials  
+**Priority 2 (Best Practice):** Components with hardcoded resource limits or compliance settings
+
+**Migration Process:**
+1. Identify non-compliant hardcoded values
+2. Move values to appropriate platform configuration files (`/config/*.yml`)
+3. Update hardcoded fallbacks to security-safe defaults
+4. Test across all compliance frameworks
+5. Deploy with configuration validation enabled
