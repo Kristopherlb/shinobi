@@ -8,6 +8,7 @@
 import * as ec2 from 'aws-cdk-lib/aws-ec2';
 import * as logs from 'aws-cdk-lib/aws-logs';
 import * as iam from 'aws-cdk-lib/aws-iam';
+import * as cloudwatch from 'aws-cdk-lib/aws-cloudwatch';
 import * as cdk from 'aws-cdk-lib';
 import { Construct } from 'constructs';
 import { Component } from '../../platform/contracts/component';
@@ -28,6 +29,9 @@ export interface VpcConfig {
   
   /** Enable VPC Flow Logs */
   flowLogsEnabled?: boolean;
+  
+  /** VPC Flow Logs retention period in days */
+  flowLogRetentionDays?: number;
   
   /** Subnet configuration */
   subnets?: {
@@ -95,6 +99,13 @@ export const VPC_CONFIG_SCHEMA = {
       type: 'boolean',
       description: 'Enable VPC Flow Logs',
       default: true
+    },
+    flowLogRetentionDays: {
+      type: 'number',
+      description: 'VPC Flow Logs retention period in days',
+      minimum: 1,
+      maximum: 3653,
+      default: 30
     },
     subnets: {
       type: 'object',
@@ -241,6 +252,7 @@ export const VPC_CONFIG_SCHEMA = {
     maxAzs: 2,
     natGateways: 1,
     flowLogsEnabled: true,
+    flowLogRetentionDays: 30,
     subnets: {
       public: { cidrMask: 24, name: 'Public' },
       private: { cidrMask: 24, name: 'Private' },
@@ -326,6 +338,7 @@ export class VpcConfigBuilder {
       maxAzs: 2,
       natGateways: 1,
       flowLogsEnabled: true,
+      flowLogRetentionDays: 30, // 1 month default
       subnets: {
         public: {
           cidrMask: 24,
@@ -363,6 +376,7 @@ export class VpcConfigBuilder {
       case 'fedramp-moderate':
         return {
           flowLogsEnabled: true, // Mandatory flow logs
+          flowLogRetentionDays: 90, // 3 months retention for FedRAMP Moderate
           natGateways: 2, // High availability NAT gateways
           maxAzs: 3, // Multi-AZ deployment for compliance
           vpcEndpoints: {
@@ -387,6 +401,7 @@ export class VpcConfigBuilder {
       case 'fedramp-high':
         return {
           flowLogsEnabled: true, // Mandatory enhanced monitoring
+          flowLogRetentionDays: 365, // 1 year retention for FedRAMP High
           natGateways: 3, // Maximum availability for high compliance
           maxAzs: 3, // Required multi-AZ for high compliance
           vpcEndpoints: {
@@ -410,6 +425,7 @@ export class VpcConfigBuilder {
         
       default: // commercial
         return {
+          flowLogRetentionDays: 30, // 1 month retention for commercial
           natGateways: 1, // Cost optimization for commercial
           maxAzs: 2, // Standard availability
           vpcEndpoints: {
@@ -459,6 +475,12 @@ export class VpcComponent extends Component {
       
       // Apply compliance hardening
       this.applyComplianceHardening();
+      
+      // Configure observability monitoring
+      this.configureObservabilityForVpc();
+      
+      // Apply standard platform tags
+      this.applyVpcTags();
       
       // Register constructs
       this.registerConstruct('vpc', this.vpc!);
@@ -532,7 +554,7 @@ export class VpcComponent extends Component {
       // Create log group for VPC Flow Logs
       this.flowLogGroup = new logs.LogGroup(this, 'VpcFlowLogGroup', {
         logGroupName: `/aws/vpc/flowlogs/${this.vpc!.vpcId}`,
-        retention: this.getFlowLogRetention(),
+        retention: this.mapDaysToRetention(this.config!.flowLogRetentionDays || 30),
         removalPolicy: this.isComplianceFramework() ? 
           cdk.RemovalPolicy.RETAIN : cdk.RemovalPolicy.DESTROY
       });
@@ -823,14 +845,119 @@ export class VpcComponent extends Component {
     return ['fedramp-moderate', 'fedramp-high'].includes(this.context.complianceFramework);
   }
 
-  private getFlowLogRetention(): logs.RetentionDays {
-    switch (this.context.complianceFramework) {
-      case 'fedramp-moderate':
-        return logs.RetentionDays.THREE_MONTHS;
-      case 'fedramp-high':
-        return logs.RetentionDays.ONE_YEAR;
-      default:
-        return logs.RetentionDays.ONE_MONTH;
+  /**
+   * Maps days to CloudWatch Logs retention enum
+   */
+  private mapDaysToRetention(days: number): logs.RetentionDays {
+    if (days <= 1) return logs.RetentionDays.ONE_DAY;
+    if (days <= 3) return logs.RetentionDays.THREE_DAYS;
+    if (days <= 5) return logs.RetentionDays.FIVE_DAYS;
+    if (days <= 7) return logs.RetentionDays.ONE_WEEK;
+    if (days <= 14) return logs.RetentionDays.TWO_WEEKS;
+    if (days <= 30) return logs.RetentionDays.ONE_MONTH;
+    if (days <= 60) return logs.RetentionDays.TWO_MONTHS;
+    if (days <= 90) return logs.RetentionDays.THREE_MONTHS;
+    if (days <= 120) return logs.RetentionDays.FOUR_MONTHS;
+    if (days <= 150) return logs.RetentionDays.FIVE_MONTHS;
+    if (days <= 180) return logs.RetentionDays.SIX_MONTHS;
+    if (days <= 365) return logs.RetentionDays.ONE_YEAR;
+    if (days <= 400) return logs.RetentionDays.THIRTEEN_MONTHS;
+    if (days <= 545) return logs.RetentionDays.EIGHTEEN_MONTHS;
+    if (days <= 730) return logs.RetentionDays.TWO_YEARS;
+    if (days <= 1827) return logs.RetentionDays.FIVE_YEARS;
+    return logs.RetentionDays.TEN_YEARS;
+  }
+
+  /**
+   * Configure observability for VPC following OpenTelemetry standards
+   * Creates standard CloudWatch alarms for essential VPC operational metrics
+   */
+  private configureObservabilityForVpc(): void {
+    // Only create NAT Gateway alarms if NAT gateways exist
+    const natGatewayCount = this.config?.natGateways || 0;
+    if (natGatewayCount === 0) {
+      this.logComponentEvent('observability_configured', 
+        'No NAT gateways configured - skipping NAT Gateway observability alarms');
+      return;
+    }
+
+    // NAT Gateway Error Port Allocation Alarm
+    const natGatewayErrorAlarm = new cloudwatch.Alarm(this, 'NatGatewayErrorPortAllocationAlarm', {
+      metric: new cloudwatch.Metric({
+        namespace: 'AWS/NatGateway',
+        metricName: 'ErrorPortAllocation',
+        dimensionsMap: {
+          NatGatewayId: '*' // Monitor all NAT gateways in this VPC
+        },
+        statistic: 'Sum',
+        period: cdk.Duration.minutes(5)
+      }),
+      threshold: 1,
+      evaluationPeriods: 2,
+      treatMissingData: cloudwatch.TreatMissingData.NOT_BREACHING,
+      alarmDescription: `NAT Gateway port allocation errors for VPC ${this.spec.name}`,
+      alarmName: `${this.context.serviceName}-${this.spec.name}-natgw-port-errors`,
+      comparisonOperator: cloudwatch.ComparisonOperator.GREATER_THAN_OR_EQUAL_TO_THRESHOLD
+    });
+
+    // NAT Gateway Packets Dropped Alarm
+    const natGatewayDroppedAlarm = new cloudwatch.Alarm(this, 'NatGatewayPacketsDroppedAlarm', {
+      metric: new cloudwatch.Metric({
+        namespace: 'AWS/NatGateway',
+        metricName: 'PacketsDropCount',
+        dimensionsMap: {
+          NatGatewayId: '*' // Monitor all NAT gateways in this VPC
+        },
+        statistic: 'Sum',
+        period: cdk.Duration.minutes(5)
+      }),
+      threshold: 10,
+      evaluationPeriods: 3,
+      treatMissingData: cloudwatch.TreatMissingData.NOT_BREACHING,
+      alarmDescription: `NAT Gateway packets dropped for VPC ${this.spec.name}`,
+      alarmName: `${this.context.serviceName}-${this.spec.name}-natgw-dropped-packets`,
+      comparisonOperator: cloudwatch.ComparisonOperator.GREATER_THAN_THRESHOLD
+    });
+
+    // Register the alarms as constructs
+    this.registerConstruct('natGatewayErrorAlarm', natGatewayErrorAlarm);
+    this.registerConstruct('natGatewayDroppedAlarm', natGatewayDroppedAlarm);
+
+    const alarmCount = natGatewayCount > 0 ? 2 : 0;
+    this.logComponentEvent('observability_configured', 
+      `Configured ${alarmCount} CloudWatch alarms for ${this.context.complianceFramework} compliance`);
+  }
+
+  /**
+   * Apply standard platform tags to VPC and related resources
+   */
+  private applyVpcTags(): void {
+    if (this.vpc) {
+      // Apply standard platform tags to VPC
+      this.applyStandardTags(this.vpc);
+      
+      // Apply standard tags to subnets
+      this.vpc.publicSubnets.forEach((subnet) => {
+        this.applyStandardTags(subnet, { 'subnet-type': 'public' });
+      });
+
+      this.vpc.privateSubnets.forEach((subnet) => {
+        this.applyStandardTags(subnet, { 'subnet-type': 'private' });
+      });
+
+      this.vpc.isolatedSubnets.forEach((subnet) => {
+        this.applyStandardTags(subnet, { 'subnet-type': 'isolated' });
+      });
+    }
+
+    // Apply tags to flow log group if it exists
+    if (this.flowLogGroup) {
+      this.applyStandardTags(this.flowLogGroup);
+    }
+
+    // Apply tags to flow log role if it exists
+    if (this.flowLogRole) {
+      this.applyStandardTags(this.flowLogRole);
     }
   }
 }

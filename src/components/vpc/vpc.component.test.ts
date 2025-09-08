@@ -4,7 +4,7 @@
 
 import * as cdk from 'aws-cdk-lib';
 import * as ec2 from 'aws-cdk-lib/aws-ec2';
-import { Template } from 'aws-cdk-lib/assertions';
+import { Template, Match } from 'aws-cdk-lib/assertions';
 import { VpcComponent, VpcConfigBuilder } from './vpc.component';
 import { ComponentContext, ComponentSpec } from '../../platform/contracts/component-interfaces';
 
@@ -163,6 +163,42 @@ describe('VPC Component', () => {
       expect(config.maxAzs).toBe(3);
       expect(config.vpcEndpoints?.dynamodb).toBe(true);
       expect(config.vpcEndpoints?.kms).toBe(true);
+    });
+
+    it('should set flow log retention based on compliance framework', () => {
+      // Commercial framework - 30 days
+      const commercialBuilder = new VpcConfigBuilder(mockContext, baseSpec);
+      const commercialConfig = commercialBuilder.buildSync();
+      expect(commercialConfig.flowLogRetentionDays).toBe(30);
+
+      // FedRAMP Moderate - 90 days
+      const fedrampModerateContext = { ...mockContext, complianceFramework: 'fedramp-moderate' as 'fedramp-moderate' };
+      const moderateBuilder = new VpcConfigBuilder(fedrampModerateContext, baseSpec);
+      const moderateConfig = moderateBuilder.buildSync();
+      expect(moderateConfig.flowLogRetentionDays).toBe(90);
+
+      // FedRAMP High - 365 days
+      const fedrampHighContext = { ...mockContext, complianceFramework: 'fedramp-high' as 'fedramp-high' };
+      const highBuilder = new VpcConfigBuilder(fedrampHighContext, baseSpec);
+      const highConfig = highBuilder.buildSync();
+      expect(highConfig.flowLogRetentionDays).toBe(365);
+    });
+
+    it('should allow user override of flow log retention', () => {
+      const fedrampHighContext = { ...mockContext, complianceFramework: 'fedramp-high' as 'fedramp-high' };
+      const customSpec = {
+        ...baseSpec,
+        config: {
+          flowLogRetentionDays: 180 // Override FedRAMP High default of 365
+        }
+      };
+
+      const builder = new VpcConfigBuilder(fedrampHighContext, customSpec);
+      const config = builder.buildSync();
+
+      expect(config.flowLogRetentionDays).toBe(180);
+      // Should still get other FedRAMP High defaults
+      expect(config.maxAzs).toBe(3);
     });
   });
 
@@ -559,6 +595,139 @@ describe('VPC Component', () => {
             ]
           ]
         }
+      });
+    });
+  });
+
+  describe('Platform Standards Compliance', () => {
+    it('should apply all mandatory platform tags', () => {
+      const component = new VpcComponent(stack, 'TestVpc', mockContext, baseSpec);
+      component.synth();
+
+      const template = Template.fromStack(stack);
+      const resources = template.toJSON().Resources;
+      const vpc = Object.values(resources).find((r: any) => r.Type === 'AWS::EC2::VPC') as any;
+      
+
+      // Verify VPC has core mandatory platform tags (checking for presence, not strict order)
+      const tags = vpc.Properties.Tags;
+      const tagKeys = tags.map((tag: any) => tag.Key);
+      const tagMap = tags.reduce((acc: any, tag: any) => ({ ...acc, [tag.Key]: tag.Value }), {});
+
+      // Check for required platform tags
+      expect(tagKeys).toContain('service-name');
+      expect(tagKeys).toContain('environment');
+      expect(tagKeys).toContain('compliance-framework');
+      expect(tagKeys).toContain('component-type');
+      expect(tagKeys).toContain('component-name');
+      expect(tagKeys).toContain('region');
+
+      // Verify tag values
+      expect(tagMap['service-name']).toBe('test-service');
+      expect(tagMap['environment']).toBe('test');
+      expect(tagMap['compliance-framework']).toBe('commercial');
+      expect(tagMap['component-type']).toBe('vpc');
+      expect(tagMap['component-name']).toBe('test-vpc');
+      expect(tagMap['region']).toBe('us-east-1');
+    });
+
+    it('should ignore or warn on unsupported triggers block', () => {
+      const specWithTriggers = {
+        ...baseSpec,
+        triggers: [
+          {
+            name: 'example-trigger',
+            type: 'schedule',
+            schedule: 'rate(1 hour)'
+          }
+        ]
+      };
+
+      const component = new VpcComponent(stack, 'TestVpc', mockContext, specWithTriggers);
+      
+      // Should synthesize without error despite unsupported triggers block
+      expect(() => component.synth()).not.toThrow();
+      
+      // Component should still be fully functional
+      const capabilities = component.getCapabilities();
+      expect(capabilities['net:vpc']).toBeDefined();
+    });
+
+    it('should create standard CloudWatch alarms for operational monitoring', () => {
+      // Create spec with NAT gateways to trigger alarm creation
+      const specWithNatGateways = {
+        ...baseSpec,
+        config: {
+          natGateways: 2
+        }
+      };
+
+      const component = new VpcComponent(stack, 'TestVpc', mockContext, specWithNatGateways);
+      component.synth();
+
+      const template = Template.fromStack(stack);
+
+      // Should create NAT Gateway Error Port Allocation alarm
+      template.hasResourceProperties('AWS::CloudWatch::Alarm', {
+        AlarmName: 'test-service-test-vpc-natgw-port-errors',
+        MetricName: 'ErrorPortAllocation',
+        Namespace: 'AWS/NatGateway',
+        Statistic: 'Sum',
+        Threshold: 1,
+        ComparisonOperator: 'GreaterThanOrEqualToThreshold',
+        EvaluationPeriods: 2
+      });
+
+      // Should create NAT Gateway Packets Dropped alarm
+      template.hasResourceProperties('AWS::CloudWatch::Alarm', {
+        AlarmName: 'test-service-test-vpc-natgw-dropped-packets',
+        MetricName: 'PacketsDropCount',
+        Namespace: 'AWS/NatGateway',
+        Statistic: 'Sum',
+        Threshold: 10,
+        ComparisonOperator: 'GreaterThanThreshold',
+        EvaluationPeriods: 3
+      });
+
+      // Should create exactly 2 CloudWatch alarms
+      template.resourceCountIs('AWS::CloudWatch::Alarm', 2);
+    });
+
+    it('should skip NAT Gateway alarms when no NAT gateways configured', () => {
+      // Create spec with no NAT gateways
+      const specWithoutNatGateways = {
+        ...baseSpec,
+        config: {
+          natGateways: 0
+        }
+      };
+
+      const component = new VpcComponent(stack, 'TestVpc', mockContext, specWithoutNatGateways);
+      component.synth();
+
+      const template = Template.fromStack(stack);
+
+      // Should not create any CloudWatch alarms
+      template.resourceCountIs('AWS::CloudWatch::Alarm', 0);
+    });
+
+    it('should use configured flow log retention days', () => {
+      // Test custom retention configuration
+      const customSpec = {
+        ...baseSpec,
+        config: {
+          flowLogRetentionDays: 180 // 6 months
+        }
+      };
+
+      const component = new VpcComponent(stack, 'TestVpc', mockContext, customSpec);
+      component.synth();
+
+      const template = Template.fromStack(stack);
+
+      // Should create flow logs with custom retention
+      template.hasResourceProperties('AWS::Logs::LogGroup', {
+        RetentionInDays: 180
       });
     });
   });
