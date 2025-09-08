@@ -1,0 +1,43 @@
+# Platform Configuration - FedRAMP High Framework
+# Version: 1.0  
+# Purpose: Default configuration values for FedRAMP High compliance deployments
+# Managed by: Platform Engineering Team
+
+defaults:
+  # EC2 Instance defaults for FedRAMP High
+  ec2-instance:
+    instanceType: "m5.xlarge"  # Even larger instances for high compliance
+    ami:
+      namePattern: "al2023-ami-*-x86_64"
+      owner: "amazon"
+    storage:
+      rootVolumeSize: 100  # Larger for enhanced logging and compliance
+      rootVolumeType: "io2"  # High performance storage for FedRAMP High
+      encrypted: true  # Encryption required
+      deleteOnTermination: true
+    networking:
+      associatePublicIpAddress: false
+      sourceDestCheck: false  # May be used for NAT instances
+    monitoring:
+      detailed: true  # Enhanced monitoring required
+      cloudWatchAgent: true
+    security:
+      requireImdsv2: true  # IMDSv2 strictly required
+      httpTokens: "required"
+      nitroEnclaves: true  # Enhanced security for FedRAMP High
+    keyPair:
+      keyName: null  # Managed through SSM/Secrets Manager
+    
+  # RDS defaults for FedRAMP High
+  rds-postgres:
+    instanceClass: "db.r5.xlarge"  # High performance for strict compliance
+    allocatedStorage: 200
+    storageType: "io2"  # High performance storage
+    storageEncrypted: true  # Required
+    
+  # Lambda defaults for FedRAMP High  
+  lambda-api:
+    runtime: "nodejs18.x"
+    timeout: 120  # Longer timeout for enhanced compliance processing
+    memorySize: 1024  # More memory for intensive compliance workloads
+    reservedConcurrency: 25

@@ -1,0 +1,43 @@
+# Platform Configuration - Commercial Framework
+# Version: 1.0
+# Purpose: Default configuration values for commercial cloud deployments
+# Managed by: Platform Engineering Team
+
+defaults:
+  # EC2 Instance defaults for commercial framework
+  ec2-instance:
+    instanceType: "t3.micro"
+    ami:
+      namePattern: "al2023-ami-*-x86_64"
+      owner: "amazon"
+    storage:
+      rootVolumeSize: 20
+      rootVolumeType: "gp3"
+      encrypted: false
+      deleteOnTermination: true
+    networking:
+      associatePublicIpAddress: false
+      sourceDestCheck: true
+    monitoring:
+      detailed: false
+      cloudWatchAgent: true
+    security:
+      requireImdsv2: false  # Recommended but not required for commercial
+      httpTokens: "optional"
+      nitroEnclaves: false
+    keyPair:
+      keyName: null  # No default key pair for commercial
+    
+  # RDS defaults for commercial
+  rds-postgres:
+    instanceClass: "db.t3.micro"
+    allocatedStorage: 20
+    storageType: "gp3"
+    storageEncrypted: false
+    
+  # Lambda defaults for commercial  
+  lambda-api:
+    runtime: "nodejs18.x"
+    timeout: 30
+    memorySize: 256
+    reservedConcurrency: null

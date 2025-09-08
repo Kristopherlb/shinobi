@@ -2,7 +2,7 @@ import { describe, test, expect, beforeEach } from '@jest/globals';
 import { Template } from 'aws-cdk-lib/assertions';
 import * as cdk from 'aws-cdk-lib';
 import { VpcComponent } from './src/vpc.component';
-import { ComponentContext, ComponentSpec } from '../../platform/contracts/src/component-interfaces';
+import { ComponentContext, ComponentSpec } from '@platform/global-contracts';
 
 describe('VpcComponent - CloudFormation Synthesis', () => {
   let app: cdk.App;

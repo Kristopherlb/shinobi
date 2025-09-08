@@ -1,0 +1,43 @@
+# Platform Configuration - FedRAMP Moderate Framework  
+# Version: 1.0
+# Purpose: Default configuration values for FedRAMP Moderate compliance deployments
+# Managed by: Platform Engineering Team
+
+defaults:
+  # EC2 Instance defaults for FedRAMP Moderate
+  ec2-instance:
+    instanceType: "m5.large"  # Larger instances for compliance workloads
+    ami:
+      namePattern: "al2023-ami-*-x86_64"
+      owner: "amazon"
+    storage:
+      rootVolumeSize: 50  # Larger for compliance logging
+      rootVolumeType: "gp3"
+      encrypted: true  # Encryption required for FedRAMP
+      deleteOnTermination: true
+    networking:
+      associatePublicIpAddress: false
+      sourceDestCheck: false  # May be used for NAT instances
+    monitoring:
+      detailed: true  # Enhanced monitoring required
+      cloudWatchAgent: true
+    security:
+      requireImdsv2: true  # IMDSv2 required for FedRAMP
+      httpTokens: "required"
+      nitroEnclaves: false
+    keyPair:
+      keyName: null  # Managed through SSM/Secrets Manager
+    
+  # RDS defaults for FedRAMP Moderate
+  rds-postgres:
+    instanceClass: "db.r5.large"  # More performant for compliance
+    allocatedStorage: 100
+    storageType: "gp3"
+    storageEncrypted: true  # Required
+    
+  # Lambda defaults for FedRAMP Moderate
+  lambda-api:
+    runtime: "nodejs18.x"
+    timeout: 60  # Longer timeout for compliance processing
+    memorySize: 512  # More memory for compliance workloads
+    reservedConcurrency: 10
