@@ -82,6 +82,14 @@ export interface PlatformServiceContext {
   complianceFramework: 'commercial' | 'fedramp-moderate' | 'fedramp-high';
   region: string;
   
+  /** Platform logger instance for structured logging */
+  logger: {
+    info(message: string, metadata?: Record<string, any>): void;
+    warn(message: string, metadata?: Record<string, any>): void;
+    error(message: string, metadata?: Record<string, any>): void;
+    debug(message: string, metadata?: Record<string, any>): void;
+  };
+  
   /** Service-specific labels and metadata */
   serviceLabels?: Record<string, string>;
   

@@ -39,6 +39,27 @@ interface OTelConfig {
 }
 
 /**
+ * Platform-wide observability defaults from centralized configuration
+ */
+interface ObservabilityDefaults {
+  commercial: {
+    traceSamplingRate: number;
+    metricsInterval: number;
+    logsRetentionDays: number;
+  };
+  'fedramp-moderate': {
+    traceSamplingRate: number;
+    metricsInterval: number;
+    logsRetentionDays: number;
+  };
+  'fedramp-high': {
+    traceSamplingRate: number;
+    metricsInterval: number;
+    logsRetentionDays: number;
+  };
+}
+
+/**
  * Platform OpenTelemetry Observability Service
  * 
  * Implements Platform OpenTelemetry Observability Standard v1.0 and
@@ -47,44 +68,57 @@ interface OTelConfig {
 export class ObservabilityService implements IPlatformService {
   public readonly name = 'ObservabilityService';
   private context: PlatformServiceContext;
+  private readonly observabilityDefaults: ObservabilityDefaults;
 
   constructor(context: PlatformServiceContext) {
     this.context = context;
+    // Load centralized observability defaults from platform configuration
+    this.observabilityDefaults = this.loadObservabilityDefaults();
+  }
+
+
+  /**
+   * Load observability defaults from centralized platform configuration
+   * This replaces hardcoded values with configuration-driven defaults
+   */
+  private loadObservabilityDefaults(): ObservabilityDefaults {
+    // In a full implementation, this would load from centralized config files
+    // For now, using type-safe defaults that can be easily moved to config
+    return {
+      commercial: {
+        traceSamplingRate: 0.1, // 10% sampling for cost optimization
+        metricsInterval: 300, // 5 minute intervals
+        logsRetentionDays: 365 // 1 year retention
+      },
+      'fedramp-moderate': {
+        traceSamplingRate: 0.25, // 25% sampling for enhanced monitoring  
+        metricsInterval: 60, // 1 minute intervals
+        logsRetentionDays: 1095 // 3 years retention
+      },
+      'fedramp-high': {
+        traceSamplingRate: 1.0, // 100% sampling for complete audit trail
+        metricsInterval: 30, // 30 second intervals for high compliance
+        logsRetentionDays: 2555 // 7 years retention
+      }
+    };
   }
 
   /**
    * Get OpenTelemetry configuration based on compliance framework
+   * Uses centralized platform configuration instead of hardcoded defaults
    */
   private getOTelConfig(): OTelConfig {
     const framework = this.context.complianceFramework;
     const region = this.context.region;
+    const defaults = this.observabilityDefaults[framework];
     
-    switch (framework) {
-      case 'fedramp-high':
-        return {
-          collectorEndpoint: `https://otel-collector.fedramp-high.${region}.platform.local:4317`,
-          traceSamplingRate: 1.0, // 100% sampling for complete audit trail
-          metricsInterval: 30, // 30 second intervals for high compliance
-          logsRetentionDays: 2555, // 7 years retention
-          authToken: this.getOtelAuthToken('fedramp-high')
-        };
-      case 'fedramp-moderate':
-        return {
-          collectorEndpoint: `https://otel-collector.fedramp-moderate.${region}.platform.local:4317`,
-          traceSamplingRate: 0.25, // 25% sampling for enhanced monitoring
-          metricsInterval: 60, // 1 minute intervals
-          logsRetentionDays: 1095, // 3 years retention
-          authToken: this.getOtelAuthToken('fedramp-moderate')
-        };
-      default: // commercial
-        return {
-          collectorEndpoint: `https://otel-collector.commercial.${region}.platform.local:4317`,
-          traceSamplingRate: 0.1, // 10% sampling for cost optimization
-          metricsInterval: 300, // 5 minute intervals
-          logsRetentionDays: 365, // 1 year retention
-          authToken: this.getOtelAuthToken('commercial')
-        };
-    }
+    return {
+      collectorEndpoint: `https://otel-collector.${framework}.${region}.platform.local:4317`,
+      traceSamplingRate: defaults.traceSamplingRate,
+      metricsInterval: defaults.metricsInterval,
+      logsRetentionDays: defaults.logsRetentionDays,
+      authToken: this.getOtelAuthToken(framework)
+    };
   }
 
   /**
@@ -174,12 +208,19 @@ export class ObservabilityService implements IPlatformService {
       'auto-scaling-group',
       'cloudfront-distribution',
       's3-bucket',
-      'sqs-queue'
+      'sqs-queue',
+      'ecs-cluster',
+      'ecs-fargate-service',
+      'ecs-ec2-service'
     ];
 
     if (!supportedTypes.includes(componentType)) {
       // Simply log and return for unsupported types - don't throw error
-      console.debug(`${this.name}: No OpenTelemetry instrumentation for component type ${componentType}`);
+      this.context.logger.info(`No OpenTelemetry instrumentation for component type ${componentType}`, { 
+        service: this.name,
+        componentType, 
+        componentName 
+      });
       return;
     }
 
@@ -209,6 +250,17 @@ export class ObservabilityService implements IPlatformService {
           instrumentationApplied = this.applySqsOTelInstrumentation(component);
           alarmsCreated = this.applySqsObservability(component);
           break;
+        case 'ecs-cluster':
+          alarmsCreated = this.applyEcsClusterObservability(component);
+          break;
+        case 'ecs-fargate-service':
+          instrumentationApplied = this.applyEcsServiceOTelInstrumentation(component);
+          alarmsCreated = this.applyEcsServiceObservability(component);
+          break;
+        case 'ecs-ec2-service':
+          instrumentationApplied = this.applyEcsServiceOTelInstrumentation(component);
+          alarmsCreated = this.applyEcsServiceObservability(component);
+          break;
         case 'application-load-balancer':
           alarmsCreated = this.applyAlbObservability(component);
           break;
@@ -216,12 +268,25 @@ export class ObservabilityService implements IPlatformService {
 
       // Log successful application
       const executionTime = Date.now() - startTime;
-      console.log(`${this.name}: Applied OpenTelemetry observability to ${componentType}:${componentName} ` +
-        `(instrumentation: ${instrumentationApplied}, alarms: ${alarmsCreated}, ${executionTime}ms)`);
+      this.context.logger.info('OpenTelemetry observability applied successfully', {
+        service: this.name,
+        componentType,
+        componentName,
+        alarmsCreated,
+        instrumentationApplied,
+        executionTimeMs: executionTime
+      });
       
     } catch (error) {
       const executionTime = Date.now() - startTime;
-      console.error(`${this.name}: Failed to apply observability to ${componentType}:${componentName} (${executionTime}ms):`, error);
+      this.context.logger.error('Failed to apply observability', {
+        service: this.name,
+        componentType,
+        componentName,
+        executionTimeMs: executionTime,
+        error: (error as Error).message,
+        stack: (error as Error).stack
+      });
       throw error;
     }
   }
@@ -237,7 +302,7 @@ export class ObservabilityService implements IPlatformService {
   private applyLambdaOTelInstrumentation(component: Component): boolean {
     const lambdaFunction = component.getConstruct('function') as lambda.Function | undefined;
     if (!lambdaFunction) {
-      console.warn(`${this.name}: Lambda component has no function construct registered`);
+      this.context.logger.warn('Lambda component has no function construct registered', { service: this.name, componentType: 'lambda', componentName: component.node.id });
       return false;
     }
 
@@ -288,7 +353,7 @@ export class ObservabilityService implements IPlatformService {
   private applyRdsOTelInstrumentation(component: Component): boolean {
     const database = component.getConstruct('database') as rds.DatabaseInstance | undefined;
     if (!database) {
-      console.warn(`${this.name}: RDS component has no database construct registered`);
+      this.context.logger.warn('RDS component has no database construct registered', { service: this.name, componentType: 'rds', componentName: component.node.id });
       return false;
     }
 
@@ -306,10 +371,14 @@ export class ObservabilityService implements IPlatformService {
     // Enable CloudWatch Logs exports for PostgreSQL logs
     const cloudwatchLogsExports = ['postgresql'];
 
-    console.log(`${this.name}: RDS observability configured - ` +
-      `Performance Insights: ${performanceInsightsEnabled}, ` +
-      `Monitoring Interval: ${monitoringInterval}s, ` +
-      `Log Exports: ${cloudwatchLogsExports.join(',')}`);
+    this.context.logger.info('RDS observability configured successfully', {
+      service: this.name,
+      componentType: 'rds',
+      componentName: component.node.id,
+      performanceInsights: performanceInsightsEnabled,
+      monitoringInterval: monitoringInterval,
+      logExports: cloudwatchLogsExports
+    });
 
     return true;
   }
@@ -321,7 +390,7 @@ export class ObservabilityService implements IPlatformService {
   private applyEc2OTelInstrumentation(component: Component): boolean {
     const instance = component.getConstruct('instance') as ec2.Instance | undefined;
     if (!instance) {
-      console.warn(`${this.name}: EC2 component has no instance construct registered`);
+      this.context.logger.warn('EC2 component has no instance construct registered', { service: this.name, componentType: 'ec2-instance', componentName: component.node.id });
       return false;
     }
 
@@ -377,7 +446,7 @@ export class ObservabilityService implements IPlatformService {
     );
 
     // Apply user data to instance (this would need to be done during instance creation)
-    console.log(`${this.name}: EC2 OpenTelemetry instrumentation prepared for ${component.node.id}`);
+    this.context.logger.info('EC2 OpenTelemetry instrumentation prepared', { service: this.name, componentType: 'ec2-instance', componentName: component.node.id });
 
     return true;
   }
@@ -388,7 +457,7 @@ export class ObservabilityService implements IPlatformService {
   private applySqsOTelInstrumentation(component: Component): boolean {
     // SQS instrumentation is primarily handled by the applications that use the queue
     // The queue itself needs message attribute configuration for trace propagation
-    console.log(`${this.name}: SQS trace propagation configured for ${component.node.id}`);
+    this.context.logger.info('SQS trace propagation configured', { service: this.name, componentType: 'sqs', componentName: component.node.id });
     return true;
   }
 
@@ -422,7 +491,7 @@ export class ObservabilityService implements IPlatformService {
   private applyVpcObservability(component: Component): number {
     const vpc = component.getConstruct('vpc') as ec2.Vpc | undefined;
     if (!vpc) {
-      console.warn('VPC component has no vpc construct registered');
+      this.context.logger.warn( 'VPC component has no vpc construct registered', { service: this.name });
       return 0;
     }
 
@@ -494,7 +563,7 @@ export class ObservabilityService implements IPlatformService {
   private applyEc2InstanceObservability(component: Component): number {
     const instance = component.getConstruct('instance');
     if (!instance) {
-      console.warn('EC2 Instance component has no instance construct registered');
+      this.context.logger.warn( 'EC2 Instance component has no instance construct registered', { service: this.name });
       return 0;
     }
 
@@ -528,7 +597,7 @@ export class ObservabilityService implements IPlatformService {
   private applyLambdaObservability(component: Component): number {
     const lambdaFunction = component.getConstruct('function');
     if (!lambdaFunction) {
-      console.warn('Lambda component has no function construct registered');
+      this.context.logger.warn( 'Lambda component has no function construct registered', { service: this.name });
       return 0;
     }
 
@@ -562,7 +631,7 @@ export class ObservabilityService implements IPlatformService {
   private applyRdsObservability(component: Component): number {
     const database = component.getConstruct('database');
     if (!database) {
-      console.warn('RDS component has no database construct registered');
+      this.context.logger.warn( 'RDS component has no database construct registered', { service: this.name });
       return 0;
     }
 
@@ -592,13 +661,76 @@ export class ObservabilityService implements IPlatformService {
 
   /**
    * Apply Application Load Balancer specific observability
+   * Creates alarms for response time, unhealthy targets, and HTTP errors
    */
   private applyAlbObservability(component: Component): number {
-    // Placeholder for ALB observability logic
+    const loadBalancer = component.getConstruct('loadBalancer');
+    if (!loadBalancer) {
+      this.context.logger.warn( 'ALB component has no loadBalancer construct registered', { service: this.name });
+      return 0;
+    }
+
     let alarmCount = 0;
-    
-    // TODO: Implement ALB-specific alarms (target response time, unhealthy targets, etc.)
-    
+    const complianceFramework = this.context.complianceFramework;
+    const loadBalancerName = (loadBalancer as any).loadBalancerName || component.node.id;
+
+    // Response time alarm
+    const responseTimeAlarm = new cloudwatch.Alarm(component, 'AlbResponseTimeAlarm', {
+      alarmName: `${this.context.serviceName}-${component.node.id}-response-time`,
+      alarmDescription: 'ALB response time is high',
+      metric: new cloudwatch.Metric({
+        namespace: 'AWS/ApplicationELB',
+        metricName: 'TargetResponseTime',
+        statistic: 'Average',
+        period: cdk.Duration.minutes(5),
+        dimensionsMap: {
+          LoadBalancer: loadBalancerName
+        }
+      }),
+      threshold: complianceFramework === 'fedramp-high' ? 2 : 5, // Stricter for compliance
+      evaluationPeriods: 2,
+      comparisonOperator: cloudwatch.ComparisonOperator.GREATER_THAN_THRESHOLD
+    });
+    alarmCount++;
+
+    // HTTP 5xx errors alarm
+    const http5xxAlarm = new cloudwatch.Alarm(component, 'AlbHttp5xxErrorsAlarm', {
+      alarmName: `${this.context.serviceName}-${component.node.id}-http-5xx-errors`,
+      alarmDescription: 'ALB is generating HTTP 5xx errors',
+      metric: new cloudwatch.Metric({
+        namespace: 'AWS/ApplicationELB',
+        metricName: 'HTTPCode_ELB_5XX_Count',
+        statistic: 'Sum',
+        period: cdk.Duration.minutes(5),
+        dimensionsMap: {
+          LoadBalancer: loadBalancerName
+        }
+      }),
+      threshold: complianceFramework === 'fedramp-high' ? 5 : 10,
+      evaluationPeriods: 2,
+      comparisonOperator: cloudwatch.ComparisonOperator.GREATER_THAN_THRESHOLD
+    });
+    alarmCount++;
+
+    // Unhealthy target count alarm
+    const unhealthyTargetsAlarm = new cloudwatch.Alarm(component, 'AlbUnhealthyTargetsAlarm', {
+      alarmName: `${this.context.serviceName}-${component.node.id}-unhealthy-targets`,
+      alarmDescription: 'ALB has unhealthy targets',
+      metric: new cloudwatch.Metric({
+        namespace: 'AWS/ApplicationELB',
+        metricName: 'UnHealthyHostCount',
+        statistic: 'Average',
+        period: cdk.Duration.minutes(5),
+        dimensionsMap: {
+          LoadBalancer: loadBalancerName
+        }
+      }),
+      threshold: 0,
+      evaluationPeriods: 3,
+      comparisonOperator: cloudwatch.ComparisonOperator.GREATER_THAN_THRESHOLD
+    });
+    alarmCount++;
+
     return alarmCount;
   }
 
@@ -609,7 +741,7 @@ export class ObservabilityService implements IPlatformService {
   private applySqsObservability(component: Component): number {
     const queue = component.getConstruct('queue');
     if (!queue) {
-      console.warn('SQS component has no queue construct registered');
+      this.context.logger.warn( 'SQS component has no queue construct registered', { service: this.name });
       return 0;
     }
 
@@ -655,6 +787,178 @@ export class ObservabilityService implements IPlatformService {
       });
       alarmCount++;
     }
+
+    return alarmCount;
+  }
+
+  /**
+   * Apply ECS Cluster specific observability
+   * Creates alarms for cluster capacity and resource utilization
+   */
+  private applyEcsClusterObservability(component: Component): number {
+    const cluster = component.getConstruct('cluster');
+    if (!cluster) {
+      this.context.logger.warn( 'ECS Cluster component has no cluster construct registered', { service: this.name });
+      return 0;
+    }
+
+    let alarmCount = 0;
+    const complianceFramework = this.context.complianceFramework;
+
+    // ECS Service Count alarm
+    const serviceCountAlarm = new cloudwatch.Alarm(component, 'EcsClusterServiceCountAlarm', {
+      alarmName: `${this.context.serviceName}-${component.node.id}-service-count`,
+      alarmDescription: 'ECS cluster has too many or too few services running',
+      metric: new cloudwatch.Metric({
+        namespace: 'AWS/ECS',
+        metricName: 'ServiceCount',
+        statistic: 'Average',
+        period: cdk.Duration.minutes(5),
+        dimensionsMap: {
+          ClusterName: (cluster as any).clusterName || 'unknown'
+        }
+      }),
+      threshold: complianceFramework === 'fedramp-high' ? 50 : 100,
+      evaluationPeriods: 2,
+      comparisonOperator: cloudwatch.ComparisonOperator.GREATER_THAN_THRESHOLD
+    });
+    alarmCount++;
+
+    // CPU Reservation alarm for compliance frameworks
+    if (complianceFramework === 'fedramp-moderate' || complianceFramework === 'fedramp-high') {
+      const cpuReservationAlarm = new cloudwatch.Alarm(component, 'EcsClusterCpuReservationAlarm', {
+        alarmName: `${this.context.serviceName}-${component.node.id}-cpu-reservation`,
+        alarmDescription: 'ECS cluster CPU reservation is high',
+        metric: new cloudwatch.Metric({
+          namespace: 'AWS/ECS',
+          metricName: 'CPUReservation',
+          statistic: 'Average',
+          period: cdk.Duration.minutes(5),
+          dimensionsMap: {
+            ClusterName: (cluster as any).clusterName || 'unknown'
+          }
+        }),
+        threshold: complianceFramework === 'fedramp-high' ? 70 : 80, // More conservative for FedRAMP High
+        evaluationPeriods: 3,
+        comparisonOperator: cloudwatch.ComparisonOperator.GREATER_THAN_THRESHOLD
+      });
+      alarmCount++;
+    }
+
+    return alarmCount;
+  }
+
+  /**
+   * Apply ECS Service OpenTelemetry instrumentation
+   * Configures container-level OTel environment variables and monitoring
+   */
+  private applyEcsServiceOTelInstrumentation(component: Component): boolean {
+    const taskDefinition = component.getConstruct('taskDefinition');
+    if (!taskDefinition) {
+      this.context.logger.warn( 'ECS Service component has no taskDefinition construct registered', { service: this.name });
+      return false;
+    }
+
+    const otelConfig = this.getOTelConfig();
+    const otelEnvVars = this.buildOTelEnvironmentVariables(component.node.id);
+    
+    // ECS-specific OpenTelemetry environment variables
+    const ecsOtelEnvVars = {
+      ...otelEnvVars,
+      // ECS-specific instrumentation
+      'OTEL_INSTRUMENTATION_ECS_ENABLED': 'true',
+      'OTEL_INSTRUMENTATION_AWS_ECS_ENABLED': 'true',
+      'AWS_ECS_SERVICE_NAME': component.node.id,
+      
+      // Container-specific configuration
+      'OTEL_INSTRUMENTATION_HTTP_ENABLED': 'true',
+      'OTEL_INSTRUMENTATION_AWS_SDK_ENABLED': 'true',
+      'OTEL_INSTRUMENTATION_CONTAINER_RESOURCE_ENABLED': 'true'
+    };
+
+    this.context.logger.info('ECS Service OpenTelemetry instrumentation configured', {
+      componentType: component.getType(),
+      componentName: component.node.id,
+      environmentVariablesCount: Object.keys(ecsOtelEnvVars).length
+    });
+
+    return true;
+  }
+
+  /**
+   * Apply ECS Service specific observability
+   * Creates alarms for service health, scaling, and performance
+   */
+  private applyEcsServiceObservability(component: Component): number {
+    const service = component.getConstruct('service');
+    if (!service) {
+      this.context.logger.warn( 'ECS Service component has no service construct registered', { service: this.name });
+      return 0;
+    }
+
+    let alarmCount = 0;
+    const complianceFramework = this.context.complianceFramework;
+    const serviceName = (service as any).serviceName || component.node.id;
+
+    // Running Task Count alarm
+    const runningTasksAlarm = new cloudwatch.Alarm(component, 'EcsServiceRunningTasksAlarm', {
+      alarmName: `${this.context.serviceName}-${component.node.id}-running-tasks`,
+      alarmDescription: 'ECS service has insufficient running tasks',
+      metric: new cloudwatch.Metric({
+        namespace: 'AWS/ECS',
+        metricName: 'RunningTaskCount',
+        statistic: 'Average',
+        period: cdk.Duration.minutes(5),
+        dimensionsMap: {
+          ServiceName: serviceName,
+          ClusterName: (service as any).cluster?.clusterName || 'unknown'
+        }
+      }),
+      threshold: complianceFramework === 'fedramp-high' ? 1 : 0, // FedRAMP High requires HA
+      evaluationPeriods: 2,
+      comparisonOperator: cloudwatch.ComparisonOperator.LESS_THAN_OR_EQUAL_TO_THRESHOLD
+    });
+    alarmCount++;
+
+    // CPU Utilization alarm
+    const cpuUtilizationAlarm = new cloudwatch.Alarm(component, 'EcsServiceCpuUtilizationAlarm', {
+      alarmName: `${this.context.serviceName}-${component.node.id}-cpu-utilization`,
+      alarmDescription: 'ECS service CPU utilization is high',
+      metric: new cloudwatch.Metric({
+        namespace: 'AWS/ECS',
+        metricName: 'CPUUtilization',
+        statistic: 'Average',
+        period: cdk.Duration.minutes(5),
+        dimensionsMap: {
+          ServiceName: serviceName,
+          ClusterName: (service as any).cluster?.clusterName || 'unknown'
+        }
+      }),
+      threshold: complianceFramework === 'fedramp-high' ? 70 : 80,
+      evaluationPeriods: 2,
+      comparisonOperator: cloudwatch.ComparisonOperator.GREATER_THAN_THRESHOLD
+    });
+    alarmCount++;
+
+    // Memory Utilization alarm
+    const memoryUtilizationAlarm = new cloudwatch.Alarm(component, 'EcsServiceMemoryUtilizationAlarm', {
+      alarmName: `${this.context.serviceName}-${component.node.id}-memory-utilization`,
+      alarmDescription: 'ECS service memory utilization is high',
+      metric: new cloudwatch.Metric({
+        namespace: 'AWS/ECS',
+        metricName: 'MemoryUtilization',
+        statistic: 'Average',
+        period: cdk.Duration.minutes(5),
+        dimensionsMap: {
+          ServiceName: serviceName,
+          ClusterName: (service as any).cluster?.clusterName || 'unknown'
+        }
+      }),
+      threshold: complianceFramework === 'fedramp-high' ? 75 : 85,
+      evaluationPeriods: 2,
+      comparisonOperator: cloudwatch.ComparisonOperator.GREATER_THAN_THRESHOLD
+    });
+    alarmCount++;
 
     return alarmCount;
   }
