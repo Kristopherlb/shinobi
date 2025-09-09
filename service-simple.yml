@@ -1,0 +1,66 @@
+service: simple-web-app-localstack
+owner: platform-team
+complianceFramework: commercial
+
+components:
+  # LocalStack development environment
+  - name: local-dev-env
+    type: localstack-environment
+    config:
+      services:
+        - ec2
+        - s3
+        - secretsmanager
+        - iam
+        - cloudwatch
+        - kms
+        - ssm
+      localstackPro: false
+      environment:
+        DEBUG: 1
+        SERVICES: ec2,s3,secretsmanager,iam,cloudwatch,kms,ssm
+        DATA_DIR: /tmp/localstack/data
+      docker:
+        image: localstack/localstack:latest
+        ports:
+          - "4566:4566"
+
+  # Web application server
+  - name: web-server
+    type: ec2-instance
+    config:
+      instanceType: t3.micro
+      ami:
+        amiId: ami-12345678  # LocalStack uses dummy AMI IDs
+      userData:
+        script: |
+          #!/bin/bash
+          echo "Setting up web server for LocalStack testing"
+          yum update -y
+          echo "Web server setup complete" > /tmp/setup.log
+      storage:
+        rootVolumeSize: 20
+        encrypted: false
+      monitoring:
+        detailed: false
+    binds:
+      - to: app-storage
+        capability: bucket:s3
+        access: readwrite
+        env:
+          bucketName: STORAGE_BUCKET_NAME
+          bucketArn: STORAGE_BUCKET_ARN
+
+  # S3 storage bucket
+  - name: app-storage
+    type: s3-bucket
+    config:
+      bucketName: web-app-storage-localstack
+      versioning: false
+      encryption:
+        enabled: false
+      publicAccess:
+        blockPublicAcls: true
+        blockPublicPolicy: true
+        ignorePublicAcls: true
+        restrictPublicBuckets: true

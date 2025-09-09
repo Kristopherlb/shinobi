@@ -1,0 +1,21 @@
+version: '3.8'
+services:
+  localstack:
+    container_name: localstack-main
+    image: localstack/localstack:latest
+    ports:
+      - '4566:4566'
+    environment:
+      SERVICES: ec2,rds,elasticache,secretsmanager,iam,cloudwatch,kms,ssm
+      EDGE_PORT: 4566
+      HOST_TMP_FOLDER: ${TMPDIR:-/tmp/}localstack
+      DOCKER_HOST: unix:///var/run/docker.sock
+    volumes:
+      - /var/run/docker.sock:/var/run/docker.sock
+      - ${TMPDIR:-/tmp/}localstack:/var/lib/localstack
+      - ${PWD}:/workspace
+    networks:
+      - localstack-network
+networks:
+  localstack-network:
+    driver: bridge

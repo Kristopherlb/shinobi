@@ -1,0 +1,104 @@
+service: web-app-with-database-cache
+owner: platform-team
+complianceFramework: commercial
+
+components:
+  # Web application server
+  - name: web-server
+    type: ec2-instance
+    config:
+      instanceType: t3.small
+      ami:
+        namePattern: 'al2023-ami-*-x86_64'
+        owner: 'amazon'
+      vpc:
+        vpcId: vpc-12345678  # Replace with actual VPC ID
+        subnetId: subnet-12345678  # Replace with actual subnet ID
+      userData:
+        script: |
+          #!/bin/bash
+          yum update -y
+          yum install -y postgresql15 redis6
+          
+          # Install application dependencies
+          yum install -y python3 python3-pip
+          pip3 install psycopg2-binary redis
+          
+          # Create application user
+          useradd -m appuser
+          
+          echo "Web server setup complete" > /tmp/setup.log
+      storage:
+        rootVolumeSize: 30
+        encrypted: true
+      monitoring:
+        detailed: true
+        cloudWatchAgent: true
+      security:
+        requireImdsv2: true
+        httpTokens: required
+    binds:
+      - to: app-database
+        capability: db:postgres
+        access: readwrite
+        env:
+          host: DATABASE_HOST
+          port: DATABASE_PORT
+          dbName: DATABASE_NAME
+          secretArn: DATABASE_SECRET_ARN
+        options:
+          iamAuth: false
+      - to: session-cache
+        capability: cache:redis
+        access: readwrite
+        env:
+          host: REDIS_HOST
+          port: REDIS_PORT
+          authSecretArn: REDIS_AUTH_SECRET_ARN
+
+  # PostgreSQL database
+  - name: app-database
+    type: rds-postgres
+    config:
+      dbName: webapp
+      instanceClass: db.t3.micro
+      allocatedStorage: 20
+      vpc:
+        vpcId: vpc-12345678  # Replace with actual VPC ID
+        subnetIds:
+          - subnet-12345678  # Replace with actual subnet ID
+          - subnet-87654321  # Replace with actual subnet ID
+      securityGroups:
+        ingress: []  # Will be configured by binding
+      backup:
+        retentionPeriod: 7
+        window: '03:00-04:00'
+      maintenance:
+        window: 'sun:04:00-sun:05:00'
+      monitoring:
+        performanceInsights: true
+        enhancedMonitoring: true
+
+  # Redis cache
+  - name: session-cache
+    type: elasticache-redis
+    config:
+      nodeType: cache.t3.micro
+      numCacheNodes: 1
+      port: 6379
+      vpc:
+        vpcId: vpc-12345678  # Replace with actual VPC ID
+        subnetIds:
+          - subnet-12345678  # Replace with actual subnet ID
+          - subnet-87654321  # Replace with actual subnet ID
+      securityGroups:
+        create: true
+        allowedCidrs: []  # Will be configured by binding
+      encryption:
+        atRest: true
+        inTransit: true
+        authTokenEnabled: true
+      backup:
+        enabled: true
+        retentionPeriod: 5
+        window: '02:00-03:00'

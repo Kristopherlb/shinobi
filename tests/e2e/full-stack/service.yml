@@ -1,0 +1,80 @@
+service: full-stack-test
+owner: platform-team
+runtime: none
+complianceFramework: commercial
+
+environments:
+  dev:
+    defaults:
+      region: us-east-1
+
+components:
+  # VPC for our infrastructure
+  - name: test-vpc
+    type: vpc
+    config:
+      vpcCidr: "10.0.0.0/16"
+      availabilityZones:
+        - us-east-1a
+        - us-east-1b
+      enableNatGateway: false  # Keep costs down
+      enableVpcFlowLogs: false
+
+  # PostgreSQL Database
+  - name: test-database
+    type: rds-postgres
+    config:
+      dbName: appdb
+      allocatedStorage: 20
+      instanceClass: db.t3.micro
+      vpc:
+        vpcId: ""  # Will be bound
+      securityGroups:
+        ingress: []  # Will be configured
+    binds:
+      - to: test-vpc
+        capability: network:vpc
+        access: use
+
+  # Redis Cache
+  - name: test-cache
+    type: elasticache-redis
+    config:
+      nodeType: cache.t3.micro
+      numCacheNodes: 1
+      port: 6379
+      vpc:
+        vpcId: ""  # Will be bound
+      securityGroups:
+        create: true
+        allowedCidrs: []  # Will be configured
+    binds:
+      - to: test-vpc
+        capability: network:vpc
+        access: use
+
+  # EC2 Application Server
+  - name: test-app-server
+    type: ec2-instance
+    config:
+      instanceType: t3.micro
+      imageId: ami-0c02fb55956c7d316  # Amazon Linux 2
+      userData: |
+        #!/bin/bash
+        yum update -y
+        yum install -y postgresql redis
+        echo "App server with DB and Redis clients ready" > /tmp/test-output.txt
+        # Test database connectivity
+        echo "Testing database connection..." >> /tmp/test-output.txt
+        # Test Redis connectivity  
+        echo "Testing Redis connection..." >> /tmp/test-output.txt
+    binds:
+      - to: test-vpc
+        capability: network:vpc
+        access: use
+      - to: test-database
+        capability: db:postgres
+        access: readwrite
+      - to: test-cache
+        capability: cache:redis
+        access: readwrite

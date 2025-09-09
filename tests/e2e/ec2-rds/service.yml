@@ -1,0 +1,56 @@
+service: ec2-rds-test
+owner: platform-team
+runtime: none
+complianceFramework: commercial
+
+environments:
+  dev:
+    defaults:
+      region: us-east-1
+
+components:
+  # VPC for our infrastructure
+  - name: test-vpc
+    type: vpc
+    config:
+      vpcCidr: "10.0.0.0/16"
+      availabilityZones:
+        - us-east-1a
+        - us-east-1b
+      enableNatGateway: false  # Keep it simple
+      enableVpcFlowLogs: false
+
+  # PostgreSQL Database
+  - name: test-database
+    type: rds-postgres
+    config:
+      dbName: testdb
+      allocatedStorage: 20
+      instanceClass: db.t3.micro  # Smallest/cheapest
+      vpc:
+        vpcId: ""  # Will be bound from VPC component
+      securityGroups:
+        ingress: []  # Will be configured by binding
+    binds:
+      - to: test-vpc
+        capability: network:vpc
+        access: use
+
+  # EC2 instance that will connect to RDS
+  - name: test-ec2
+    type: ec2-instance
+    config:
+      instanceType: t3.micro
+      imageId: ami-0c02fb55956c7d316  # Amazon Linux 2
+      userData: |
+        #!/bin/bash
+        yum update -y
+        yum install -y postgresql
+        echo "EC2 with PostgreSQL client ready" > /tmp/test-output.txt
+    binds:
+      - to: test-vpc
+        capability: network:vpc
+        access: use
+      - to: test-database
+        capability: db:postgres
+        access: read
