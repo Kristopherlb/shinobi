@@ -12,487 +12,61 @@ import * as cdk from 'aws-cdk-lib';
 import { Construct } from 'constructs';
 import { BaseComponent } from '../../platform/contracts/component';
 import { ComponentSpec, ComponentContext, ComponentCapabilities } from '../../platform/contracts/component-interfaces';
+import { ConfigBuilderContext } from '../../platform/contracts/config-builder';
+import { VpcConfig, VpcConfigBuilder, VPC_CONFIG_SCHEMA } from './vpc.builder';
+
 
 /**
- * Configuration interface for VPC component
- */
-export interface VpcConfig {
-  /** CIDR block for the VPC */
-  cidr?: string;
-  
-  /** Maximum number of Availability Zones */
-  maxAzs?: number;
-  
-  /** Enable NAT gateways for private subnets */
-  natGateways?: number;
-  
-  /** Enable VPC Flow Logs */
-  flowLogsEnabled?: boolean;
-  
-  /** VPC Flow Logs retention period in days */
-  flowLogRetentionDays?: number;
-  
-  /** Subnet configuration */
-  subnets?: {
-    /** Public subnet configuration */
-    public?: {
-      cidrMask?: number;
-      name?: string;
-    };
-    /** Private subnet configuration */
-    private?: {
-      cidrMask?: number;
-      name?: string;
-    };
-    /** Database subnet configuration */
-    database?: {
-      cidrMask?: number;
-      name?: string;
-    };
-  };
-  
-  /** VPC Endpoints configuration */
-  vpcEndpoints?: {
-    s3?: boolean;
-    dynamodb?: boolean;
-    secretsManager?: boolean;
-    kms?: boolean;
-  };
-  
-  /** DNS configuration */
-  dns?: {
-    enableDnsHostnames?: boolean;
-    enableDnsSupport?: boolean;
-  };
-}
-
-/**
- * Configuration schema for VPC component
- */
-export const VPC_CONFIG_SCHEMA = {
-  type: 'object',
-  title: 'VPC Configuration',
-  description: 'Configuration for creating a Virtual Private Cloud',
-  properties: {
-    cidr: {
-      type: 'string',
-      description: 'CIDR block for the VPC',
-      pattern: '^(?:[0-9]{1,3}\\.){3}[0-9]{1,3}/[0-9]{1,2}$',
-      default: '10.0.0.0/16'
-    },
-    maxAzs: {
-      type: 'number',
-      description: 'Maximum number of Availability Zones',
-      minimum: 2,
-      maximum: 6,
-      default: 2
-    },
-    natGateways: {
-      type: 'number',
-      description: 'Number of NAT gateways',
-      minimum: 0,
-      maximum: 6,
-      default: 1
-    },
-    flowLogsEnabled: {
-      type: 'boolean',
-      description: 'Enable VPC Flow Logs',
-      default: true
-    },
-    flowLogRetentionDays: {
-      type: 'number',
-      description: 'VPC Flow Logs retention period in days',
-      minimum: 1,
-      maximum: 3653,
-      default: 30
-    },
-    subnets: {
-      type: 'object',
-      description: 'Subnet configuration for different tiers',
-      properties: {
-        public: {
-          type: 'object',
-          description: 'Public subnet configuration',
-          properties: {
-            cidrMask: {
-              type: 'number',
-              description: 'CIDR mask for public subnets',
-              minimum: 16,
-              maximum: 28,
-              default: 24
-            },
-            name: {
-              type: 'string',
-              description: 'Name prefix for public subnets',
-              maxLength: 50,
-              default: 'Public'
-            }
-          },
-          additionalProperties: false,
-          default: {
-            cidrMask: 24,
-            name: 'Public'
-          }
-        },
-        private: {
-          type: 'object',
-          description: 'Private subnet configuration',
-          properties: {
-            cidrMask: {
-              type: 'number',
-              description: 'CIDR mask for private subnets',
-              minimum: 16,
-              maximum: 28,
-              default: 24
-            },
-            name: {
-              type: 'string',
-              description: 'Name prefix for private subnets',
-              maxLength: 50,
-              default: 'Private'
-            }
-          },
-          additionalProperties: false,
-          default: {
-            cidrMask: 24,
-            name: 'Private'
-          }
-        },
-        database: {
-          type: 'object',
-          description: 'Database subnet configuration (isolated)',
-          properties: {
-            cidrMask: {
-              type: 'number',
-              description: 'CIDR mask for database subnets',
-              minimum: 16,
-              maximum: 28,
-              default: 28
-            },
-            name: {
-              type: 'string',
-              description: 'Name prefix for database subnets',
-              maxLength: 50,
-              default: 'Database'
-            }
-          },
-          additionalProperties: false,
-          default: {
-            cidrMask: 28,
-            name: 'Database'
-          }
-        }
-      },
-      additionalProperties: false,
-      default: {
-        public: { cidrMask: 24, name: 'Public' },
-        private: { cidrMask: 24, name: 'Private' },
-        database: { cidrMask: 28, name: 'Database' }
-      }
-    },
-    vpcEndpoints: {
-      type: 'object',
-      description: 'VPC Endpoints configuration for AWS services',
-      properties: {
-        s3: {
-          type: 'boolean',
-          description: 'Enable S3 VPC Gateway Endpoint',
-          default: false
-        },
-        dynamodb: {
-          type: 'boolean',
-          description: 'Enable DynamoDB VPC Gateway Endpoint',
-          default: false
-        },
-        secretsManager: {
-          type: 'boolean',
-          description: 'Enable Secrets Manager VPC Interface Endpoint',
-          default: false
-        },
-        kms: {
-          type: 'boolean',
-          description: 'Enable KMS VPC Interface Endpoint',
-          default: false
-        }
-      },
-      additionalProperties: false,
-      default: {
-        s3: false,
-        dynamodb: false,
-        secretsManager: false,
-        kms: false
-      }
-    },
-    dns: {
-      type: 'object',
-      description: 'DNS configuration for the VPC',
-      properties: {
-        enableDnsHostnames: {
-          type: 'boolean',
-          description: 'Enable DNS hostnames in the VPC',
-          default: true
-        },
-        enableDnsSupport: {
-          type: 'boolean',
-          description: 'Enable DNS support in the VPC',
-          default: true
-        }
-      },
-      additionalProperties: false,
-      default: {
-        enableDnsHostnames: true,
-        enableDnsSupport: true
-      }
-    }
-  },
-  additionalProperties: false,
-  defaults: {
-    cidr: '10.0.0.0/16',
-    maxAzs: 2,
-    natGateways: 1,
-    flowLogsEnabled: true,
-    flowLogRetentionDays: 30,
-    subnets: {
-      public: { cidrMask: 24, name: 'Public' },
-      private: { cidrMask: 24, name: 'Private' },
-      database: { cidrMask: 28, name: 'Database' }
-    },
-    vpcEndpoints: {
-      s3: false,
-      dynamodb: false,
-      secretsManager: false,
-      kms: false
-    },
-    dns: {
-      enableDnsHostnames: true,
-      enableDnsSupport: true
-    }
-  }
-};
-
-/**
- * Configuration builder for VPC component
- */
-export class VpcConfigBuilder {
-  private context: ComponentContext;
-  private spec: ComponentSpec;
-  
-  constructor(context: ComponentContext, spec: ComponentSpec) {
-    this.context = context;
-    this.spec = spec;
-  }
-
-  /**
-   * Builds the final configuration by applying platform defaults, compliance frameworks, and user overrides
-   */
-  public async build(): Promise<VpcConfig> {
-    return this.buildSync();
-  }
-
-  /**
-   * Synchronous version of build for use in synth() method
-   */
-  public buildSync(): VpcConfig {
-    // Start with platform defaults
-    const platformDefaults = this.getPlatformDefaults();
-    
-    // Apply compliance framework defaults
-    const complianceDefaults = this.getComplianceFrameworkDefaults();
-    
-    // Merge user configuration from spec
-    const userConfig = this.spec.config || {};
-    
-    // Merge configurations (user config takes precedence)
-    const mergedConfig = this.mergeConfigs(
-      this.mergeConfigs(platformDefaults, complianceDefaults),
-      userConfig
-    );
-    
-    return mergedConfig as VpcConfig;
-  }
-
-  /**
-   * Simple merge utility for combining configuration objects
-   */
-  private mergeConfigs(target: Record<string, any>, source: Record<string, any>): Record<string, any> {
-    const result = { ...target };
-    
-    for (const key in source) {
-      if (source[key] && typeof source[key] === 'object' && !Array.isArray(source[key])) {
-        result[key] = this.mergeConfigs(result[key] || {}, source[key]);
-      } else {
-        result[key] = source[key];
-      }
-    }
-    
-    return result;
-  }
-
-  /**
-   * Get platform-wide defaults for VPC
-   */
-  private getPlatformDefaults(): Record<string, any> {
-    return {
-      cidr: '10.0.0.0/16',
-      maxAzs: 2,
-      natGateways: 1,
-      flowLogsEnabled: true,
-      flowLogRetentionDays: 30, // 1 month default
-      subnets: {
-        public: {
-          cidrMask: 24,
-          name: 'Public'
-        },
-        private: {
-          cidrMask: 24,
-          name: 'Private'
-        },
-        database: {
-          cidrMask: 28,
-          name: 'Database'
-        }
-      },
-      vpcEndpoints: {
-        s3: false,
-        dynamodb: false,
-        secretsManager: false,
-        kms: false
-      },
-      dns: {
-        enableDnsHostnames: true,
-        enableDnsSupport: true
-      }
-    };
-  }
-
-  /**
-   * Get compliance framework specific defaults
-   */
-  private getComplianceFrameworkDefaults(): Record<string, any> {
-    const framework = this.context.complianceFramework;
-    
-    switch (framework) {
-      case 'fedramp-moderate':
-        return {
-          flowLogsEnabled: true, // Mandatory flow logs
-          flowLogRetentionDays: 90, // 3 months retention for FedRAMP Moderate
-          natGateways: 2, // High availability NAT gateways
-          maxAzs: 3, // Multi-AZ deployment for compliance
-          vpcEndpoints: {
-            s3: true, // Required VPC endpoints
-            dynamodb: true,
-            secretsManager: false, // Interface endpoints not required for moderate
-            kms: false
-          },
-          subnets: {
-            public: {
-              cidrMask: 26 // Smaller public subnets for tighter control
-            },
-            private: {
-              cidrMask: 24 // Standard private subnet size
-            },
-            database: {
-              cidrMask: 28 // Small isolated database subnets
-            }
-          }
-        };
-        
-      case 'fedramp-high':
-        return {
-          flowLogsEnabled: true, // Mandatory enhanced monitoring
-          flowLogRetentionDays: 365, // 1 year retention for FedRAMP High
-          natGateways: 3, // Maximum availability for high compliance
-          maxAzs: 3, // Required multi-AZ for high compliance
-          vpcEndpoints: {
-            s3: true, // All VPC endpoints required
-            dynamodb: true,
-            secretsManager: true, // Interface endpoints required for high compliance
-            kms: true
-          },
-          subnets: {
-            public: {
-              cidrMask: 27 // Very small public subnets
-            },
-            private: {
-              cidrMask: 25 // Larger private subnets for workloads
-            },
-            database: {
-              cidrMask: 28 // Isolated and small database subnets
-            }
-          }
-        };
-        
-      default: // commercial
-        return {
-          flowLogRetentionDays: 30, // 1 month retention for commercial
-          natGateways: 1, // Cost optimization for commercial
-          maxAzs: 2, // Standard availability
-          vpcEndpoints: {
-            s3: false, // VPC endpoints optional for commercial
-            dynamodb: false,
-            secretsManager: false,
-            kms: false
-          }
-        };
-    }
-  }
-}
-
-/**
- * VPC Component implementing Component API Contract v1.0
+ * VPC Component implementing Component API Contract v1.1
  */
 export class VpcComponent extends BaseComponent {
   private vpc?: ec2.Vpc;
   private flowLogGroup?: logs.LogGroup;
   private flowLogRole?: iam.Role;
-  private config?: VpcConfig;
-  private configBuilder?: VpcConfigBuilder;
+  private config!: VpcConfig;
+  private logger: any; // Platform logger instance
 
   constructor(scope: Construct, id: string, context: ComponentContext, spec: ComponentSpec) {
     super(scope, id, context, spec);
+    this.logger = this.getLogger();
   }
 
   /**
    * Synthesis phase - Create VPC with compliance hardening
+   * Follows the 6-step synthesis process defined in Platform Component API Contract v1.1
    */
   public synth(): void {
-    this.logComponentEvent('synthesis_start', 'Starting VPC synthesis');
+    this.logger.info(`Synthesizing VPC component: ${this.spec.name}`);
     
     try {
-      // Build configuration using ConfigBuilder
-      this.configBuilder = new VpcConfigBuilder(this.context, this.spec);
-      this.config = this.configBuilder.buildSync();
-      
-      // Create VPC
+      // Step 1: Build configuration using ConfigBuilder
+      const builderContext: ConfigBuilderContext = {
+        context: this.context,
+        spec: this.spec,
+      };
+      const builder = new VpcConfigBuilder(builderContext, VPC_CONFIG_SCHEMA);
+      this.config = builder.buildSync();
+
+      // Step 2: Create core AWS CDK constructs first
       this.createVpc();
-      
-      // Create VPC Flow Logs
       this.createVpcFlowLogsIfEnabled();
-      
-      // Create VPC Endpoints for compliance frameworks
       this.createVpcEndpointsIfNeeded();
       
-      // Apply compliance hardening
+      // Step 3: Apply compliance hardening (after VPC exists)
       this.applyComplianceHardening();
       
-      // Apply standard platform tags
-      this.applyVpcTags();
+      // Step 4: Apply standard tags to all taggable resources
+      this.applyStandardTagsToResources();
+
+      // Step 5: Register constructs for patches.ts access
+      this.registerConstructs();
+
+      // Step 6: Register capabilities for binding
+      this.registerCapabilities();
       
-      // Register constructs
-      this.registerConstruct('vpc', this.vpc!);
-      if (this.flowLogGroup) {
-        this.registerConstruct('flowLogGroup', this.flowLogGroup);
-      }
-      if (this.flowLogRole) {
-        this.registerConstruct('flowLogRole', this.flowLogRole);
-      }
-      
-      // Register capabilities
-      this.registerCapability('net:vpc', this.buildVpcCapability());
-      
-      this.logComponentEvent('synthesis_complete', 'VPC synthesis completed successfully');
+      this.logger.info(`VPC component ${this.spec.name} synthesized successfully.`);
     } catch (error) {
-      this.logError(error as Error, 'VPC synthesis');
+      this.logger.error('VPC synthesis failed', { error: error instanceof Error ? error.message : error });
       throw error;
     }
   }
@@ -896,5 +470,91 @@ export class VpcComponent extends BaseComponent {
     if (this.flowLogRole) {
       this.applyStandardTags(this.flowLogRole);
     }
+  }
+
+
+  /**
+   * Apply standard tags to all taggable resources
+   */
+  private applyStandardTagsToResources(): void {
+    if (this.vpc) {
+      this.applyStandardTags(this.vpc, {
+        'vpc-cidr': this.config.cidr || '10.0.0.0/16',
+        'nat-gateways': String(this.config.natGateways ?? 1),
+        'max-azs': String(this.config.maxAzs || 2),
+        'flow-logs-enabled': String(this.config.flowLogsEnabled ?? true)
+      });
+    }
+
+    if (this.flowLogGroup) {
+      this.applyStandardTags(this.flowLogGroup, {
+        'log-type': 'vpc-flow-logs',
+        'retention-days': String(this.config.flowLogRetentionDays || 365)
+      });
+    }
+
+    if (this.flowLogRole) {
+      this.applyStandardTags(this.flowLogRole, {
+        'role-type': 'vpc-flow-logs'
+      });
+    }
+  }
+
+  /**
+   * Register constructs for patches.ts access
+   */
+  private registerConstructs(): void {
+    this.registerConstruct('main', this.vpc!); // 'main' handle is mandatory
+    this.registerConstruct('vpc', this.vpc!);
+    
+    if (this.flowLogGroup) {
+      this.registerConstruct('flowLogGroup', this.flowLogGroup);
+    }
+    
+    if (this.flowLogRole) {
+      this.registerConstruct('flowLogRole', this.flowLogRole);
+    }
+  }
+
+  /**
+   * Register capabilities for binding
+   */
+  private registerCapabilities(): void {
+    const capabilities: ComponentCapabilities = {};
+
+    // Core VPC capability
+    capabilities['net:vpc'] = {
+      vpcId: this.vpc!.vpcId,
+      vpcArn: this.vpc!.vpcArn,
+      cidr: this.vpc!.vpcCidrBlock,
+      availabilityZones: this.vpc!.availabilityZones,
+      publicSubnetIds: this.vpc!.publicSubnets.map(subnet => subnet.subnetId),
+      privateSubnetIds: this.vpc!.privateSubnets.map(subnet => subnet.subnetId),
+      isolatedSubnetIds: this.vpc!.isolatedSubnets.map(subnet => subnet.subnetId),
+      natGatewayIds: [] // NAT gateway IDs are not directly accessible from VPC construct
+    };
+
+    // Networking capability
+    capabilities['networking:vpc'] = {
+      vpcId: this.vpc!.vpcId,
+      region: this.context.region || 'us-east-1',
+      availabilityZones: this.vpc!.availabilityZones.length,
+      hasPublicSubnets: this.vpc!.publicSubnets.length > 0,
+      hasPrivateSubnets: this.vpc!.privateSubnets.length > 0,
+      hasIsolatedSubnets: this.vpc!.isolatedSubnets.length > 0
+    };
+
+    // Security capability
+    capabilities['security:network-isolation'] = {
+      vpcId: this.vpc!.vpcId,
+      flowLogsEnabled: this.config.flowLogsEnabled ?? true,
+      vpcEndpointsEnabled: Object.values(this.config.vpcEndpoints || {}).some(enabled => enabled),
+      complianceFramework: this.context.complianceFramework
+    };
+
+    // Register all capabilities
+    Object.entries(capabilities).forEach(([key, data]) => {
+      this.registerCapability(key, data);
+    });
   }
 }

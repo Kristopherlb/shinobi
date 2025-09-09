@@ -11,11 +11,11 @@ import {
   ComponentContext, 
   IComponentCreator 
 } from '../../platform/contracts/component-interfaces';
-import { StepFunctionsStateMachineComponentComponent } from './step-functions-statemachine.component';
+import { StepFunctionsStateMachineComponent } from './step-functions-statemachine.component';
 import { StepFunctionsStateMachineConfig, STEP_FUNCTIONS_STATEMACHINE_CONFIG_SCHEMA } from './step-functions-statemachine.builder';
 
 /**
- * Creator class for StepFunctionsStateMachineComponent component
+ * Creator class for Step Functions State Machine component
  * 
  * Responsible for:
  * - Component factory creation
@@ -23,7 +23,7 @@ import { StepFunctionsStateMachineConfig, STEP_FUNCTIONS_STATEMACHINE_CONFIG_SCH
  * - Schema definition and validation
  * - Component type identification
  */
-export class StepFunctionsStateMachineComponentCreator implements IComponentCreator {
+export class StepFunctionsStateMachineCreator implements IComponentCreator {
   
   /**
    * Component type identifier
@@ -33,12 +33,12 @@ export class StepFunctionsStateMachineComponentCreator implements IComponentCrea
   /**
    * Component display name
    */
-  public readonly displayName = 'Step Functions State Machine Component';
+  public readonly displayName = 'Step Functions State Machine';
   
   /**
    * Component description
    */
-  public readonly description = 'Step Functions State Machine Component';
+  public readonly description = 'AWS Step Functions State Machine for serverless workflow orchestration with compliance-aware configuration';
   
   /**
    * Component category for organization
@@ -48,16 +48,16 @@ export class StepFunctionsStateMachineComponentCreator implements IComponentCrea
   /**
    * AWS service this component manages
    */
-  public readonly awsService = 'STEPFUNCTIONS';
+  public readonly awsService = 'Step Functions';
   
   /**
    * Component tags for discovery
    */
   public readonly tags = [
-    'step-functions-statemachine',
+    'step-functions',
     'workflow',
-    'aws',
-    'stepfunctions'
+    'orchestration',
+    'serverless'
   ];
   
   /**
@@ -72,8 +72,8 @@ export class StepFunctionsStateMachineComponentCreator implements IComponentCrea
     scope: Construct, 
     spec: ComponentSpec, 
     context: ComponentContext
-  ): StepFunctionsStateMachineComponentComponent {
-    return new StepFunctionsStateMachineComponentComponent(scope, spec, context);
+  ): StepFunctionsStateMachineComponent {
+    return new StepFunctionsStateMachineComponent(scope, spec.name, context, spec);
   }
   
   /**
@@ -93,15 +93,30 @@ export class StepFunctionsStateMachineComponentCreator implements IComponentCrea
       errors.push('Component name must start with a letter and contain only alphanumeric characters, hyphens, and underscores');
     }
     
-    // TODO: Add component-specific validations here
-    
-    // Environment-specific validations
-    if (context.environment === 'prod') {
-      if (!config?.monitoring?.enabled) {
-        errors.push('Monitoring must be enabled in production environment');
+    // Validate state machine definition is provided
+    if (!config?.definition) {
+      errors.push('State machine definition is required');
+    } else {
+      if (!config.definition.definition && !config.definition.definitionString) {
+        errors.push('State machine definition must provide either definition object or definitionString');
       }
-      
-      // TODO: Add production-specific validations
+    }
+    
+    // Validate timeout if provided
+    if (config?.timeout?.seconds && (config.timeout.seconds < 1 || config.timeout.seconds > 31536000)) {
+      errors.push('Timeout must be between 1 second and 1 year (31536000 seconds)');
+    }
+    
+    // Production environment validations
+    if (context.environment === 'prod') {
+      if (context.complianceFramework === 'fedramp-moderate' || context.complianceFramework === 'fedramp-high') {
+        if (config?.loggingConfiguration?.enabled === false) {
+          errors.push('Logging must be enabled in FedRAMP environments');
+        }
+        if (config?.tracingConfiguration?.enabled === false) {
+          errors.push('X-Ray tracing must be enabled in FedRAMP environments');
+        }
+      }
     }
     
     return {
@@ -115,8 +130,7 @@ export class StepFunctionsStateMachineComponentCreator implements IComponentCrea
    */
   public getProvidedCapabilities(): string[] {
     return [
-      'workflow:step-functions-statemachine',
-      'monitoring:step-functions-statemachine'
+      'workflow:step-functions'
     ];
   }
   
@@ -125,7 +139,8 @@ export class StepFunctionsStateMachineComponentCreator implements IComponentCrea
    */
   public getRequiredCapabilities(): string[] {
     return [
-      // TODO: Define required capabilities
+      // Step Functions components are typically self-contained
+      // but may require IAM roles or logging resources
     ];
   }
   
@@ -134,8 +149,8 @@ export class StepFunctionsStateMachineComponentCreator implements IComponentCrea
    */
   public getConstructHandles(): string[] {
     return [
-      'main'
-      // TODO: Add additional construct handles if needed
+      'main',
+      'stateMachine'
     ];
   }
 }

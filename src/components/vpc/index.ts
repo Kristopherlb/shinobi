@@ -1,17 +1,17 @@
 /**
- * @platform/vpc - VpcComponent Component
- * VPC Component
+ * @platform/vpc - VPC Component
+ * AWS Virtual Private Cloud component for network isolation with compliance-aware configurations
  */
 
 // Component exports
-export { VpcComponentComponent } from './vpc.component';
+export { VpcComponent } from './vpc.component';
 
 // Configuration exports
 export { 
   VpcConfig,
-  VpcComponentConfigBuilder,
+  VpcConfigBuilder,
   VPC_CONFIG_SCHEMA
 } from './vpc.builder';
 
 // Creator exports
-export { VpcComponentCreator } from './vpc.creator';
+export { VpcCreator } from './vpc.creator';

@@ -68,6 +68,56 @@ defaults:
       enabled: true
       detailedMetrics: true # Mandatory for FedRAMP
       alarms:
-        blockedRequestsThreshold: 100 # Stricter threshold
-        allowedRequestsThreshold: 2000 # Stricter threshold
-        sampledRequestsEnabled: true
+      blockedRequestsThreshold: 100 # Stricter threshold
+      allowedRequestsThreshold: 2000 # Stricter threshold
+      sampledRequestsEnabled: true
+
+  # VPC Configuration Defaults
+  vpc:
+    cidr: 10.0.0.0/16
+    maxAzs: 3 # Multi-AZ required for high compliance
+    natGateways: 2 # Redundancy required
+    flowLogsEnabled: true
+    flowLogRetentionDays: 2555 # 7 years for FedRAMP high
+    subnets:
+      public:
+        cidrMask: 27 # Very small public subnets
+        name: Public
+      private:
+        cidrMask: 25 # Larger private subnets
+        name: Private
+      database:
+        cidrMask: 28
+        name: Database
+    vpcEndpoints:
+      s3: true # All endpoints required
+      dynamodb: true
+      secretsManager: true
+      kms: true
+    dns:
+      enableDnsHostnames: true
+      enableDnsSupport: true
+    monitoring:
+      enabled: true
+      detailedMetrics: true # Required for compliance
+      alarms:
+        natGatewayPacketDropThreshold: 250 # Most sensitive
+        vpcFlowLogDeliveryFailures: 3
+
+  # Step Functions State Machine Configuration
+  step-functions-statemachine:
+    stateMachineType: "STANDARD"
+    loggingConfiguration:
+      enabled: true # Mandatory for FedRAMP High
+      level: "ALL"
+      includeExecutionData: true # Required for detailed audit
+    tracingConfiguration:
+      enabled: true # Mandatory for high security
+    timeout:
+      seconds: 1800 # Shorter timeout for security (30 minutes)
+    tags:
+      service-type: "workflow"
+      compliance-framework: "fedramp-high"
+      logging-level: "comprehensive"
+      audit-trail: "enabled"
+      security-level: "high"

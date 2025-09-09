@@ -76,6 +76,55 @@ defaults:
       enabled: true
       detailedMetrics: true # Mandatory for FedRAMP
       alarms:
-        blockedRequestsThreshold: 250
-        allowedRequestsThreshold: 3000
-        sampledRequestsEnabled: true
+      blockedRequestsThreshold: 250
+      allowedRequestsThreshold: 3000
+      sampledRequestsEnabled: true
+
+  # VPC Configuration Defaults
+  vpc:
+    cidr: 10.0.0.0/16
+    maxAzs: 2
+    natGateways: 2 # Redundancy for compliance
+    flowLogsEnabled: true
+    flowLogRetentionDays: 1827 # 5 years for FedRAMP moderate
+    subnets:
+      public:
+        cidrMask: 26 # Smaller for tighter control
+        name: Public
+      private:
+        cidrMask: 24
+        name: Private
+      database:
+        cidrMask: 28
+        name: Database
+    vpcEndpoints:
+      s3: true # Required for secure access
+      dynamodb: true
+      secretsManager: true
+      kms: true
+    dns:
+      enableDnsHostnames: true
+      enableDnsSupport: true
+    monitoring:
+      enabled: true
+      detailedMetrics: true # Required for compliance
+      alarms:
+        natGatewayPacketDropThreshold: 500
+        vpcFlowLogDeliveryFailures: 5
+
+  # Step Functions State Machine Configuration
+  step-functions-statemachine:
+    stateMachineType: "STANDARD"
+    loggingConfiguration:
+      enabled: true # Mandatory for FedRAMP
+      level: "ALL"
+      includeExecutionData: true # Required for audit trail
+    tracingConfiguration:
+      enabled: true # Required for compliance monitoring
+    timeout:
+      seconds: 3600 # 1 hour
+    tags:
+      service-type: "workflow"
+      compliance-framework: "fedramp-moderate"
+      logging-level: "comprehensive"
+      audit-trail: "enabled"

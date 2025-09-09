@@ -4,14 +4,14 @@
  */
 
 // Component exports
-export { StepFunctionsStateMachineComponentComponent } from './step-functions-statemachine.component';
+export { StepFunctionsStateMachineComponent } from './step-functions-statemachine.component';
 
 // Configuration exports
 export { 
   StepFunctionsStateMachineConfig,
-  StepFunctionsStateMachineComponentConfigBuilder,
+  StepFunctionsStateMachineConfigBuilder,
   STEP_FUNCTIONS_STATEMACHINE_CONFIG_SCHEMA
 } from './step-functions-statemachine.builder';
 
 // Creator exports
-export { StepFunctionsStateMachineComponentCreator } from './step-functions-statemachine.creator';
+export { StepFunctionsStateMachineCreator } from './step-functions-statemachine.creator';

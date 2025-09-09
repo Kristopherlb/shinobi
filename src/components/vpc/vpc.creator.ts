@@ -1,5 +1,5 @@
 /**
- * Creator for VpcComponent Component
+ * Creator for VPC Component
  * 
  * Implements the ComponentCreator pattern as defined in the Platform Component API Contract.
  * Makes the component discoverable by the platform and provides factory methods.
@@ -11,11 +11,11 @@ import {
   ComponentContext, 
   IComponentCreator 
 } from '../../platform/contracts/component-interfaces';
-import { VpcComponentComponent } from './vpc.component';
+import { VpcComponent } from './vpc.component';
 import { VpcConfig, VPC_CONFIG_SCHEMA } from './vpc.builder';
 
 /**
- * Creator class for VpcComponent component
+ * Creator class for VPC component
  * 
  * Responsible for:
  * - Component factory creation
@@ -23,7 +23,7 @@ import { VpcConfig, VPC_CONFIG_SCHEMA } from './vpc.builder';
  * - Schema definition and validation
  * - Component type identification
  */
-export class VpcComponentCreator implements IComponentCreator {
+export class VpcCreator implements IComponentCreator {
   
   /**
    * Component type identifier
@@ -33,12 +33,12 @@ export class VpcComponentCreator implements IComponentCreator {
   /**
    * Component display name
    */
-  public readonly displayName = 'Vpc Component';
+  public readonly displayName = 'VPC';
   
   /**
    * Component description
    */
-  public readonly description = 'VPC Component';
+  public readonly description = 'AWS Virtual Private Cloud (VPC) component for network isolation with compliance-aware configurations.';
   
   /**
    * Component category for organization
@@ -57,7 +57,11 @@ export class VpcComponentCreator implements IComponentCreator {
     'vpc',
     'networking',
     'aws',
-    'ec2'
+    'ec2',
+    'virtual-private-cloud',
+    'subnets',
+    'nat-gateways',
+    'flow-logs'
   ];
   
   /**
@@ -72,8 +76,8 @@ export class VpcComponentCreator implements IComponentCreator {
     scope: Construct, 
     spec: ComponentSpec, 
     context: ComponentContext
-  ): VpcComponentComponent {
-    return new VpcComponentComponent(scope, spec, context);
+  ): VpcComponent {
+    return new VpcComponent(scope, spec.name, context, spec);
   }
   
   /**
@@ -93,7 +97,22 @@ export class VpcComponentCreator implements IComponentCreator {
       errors.push('Component name must start with a letter and contain only alphanumeric characters, hyphens, and underscores');
     }
     
-    // TODO: Add component-specific validations here
+    // VPC-specific validations
+    if (config?.cidr && !this.isValidCidr(config.cidr)) {
+      errors.push('Invalid CIDR block format');
+    }
+    
+    if (config?.maxAzs && (config.maxAzs < 2 || config.maxAzs > 6)) {
+      errors.push('maxAzs must be between 2 and 6');
+    }
+    
+    if (config?.natGateways && config.natGateways < 0) {
+      errors.push('natGateways cannot be negative');
+    }
+    
+    if (config?.flowLogRetentionDays && !this.isValidLogRetention(config.flowLogRetentionDays)) {
+      errors.push('Invalid flow log retention period');
+    }
     
     // Environment-specific validations
     if (context.environment === 'prod') {
@@ -115,8 +134,9 @@ export class VpcComponentCreator implements IComponentCreator {
    */
   public getProvidedCapabilities(): string[] {
     return [
+      'net:vpc',
       'networking:vpc',
-      'monitoring:vpc'
+      'security:network-isolation'
     ];
   }
   
@@ -125,7 +145,7 @@ export class VpcComponentCreator implements IComponentCreator {
    */
   public getRequiredCapabilities(): string[] {
     return [
-      // TODO: Define required capabilities
+      // VPC component has no required capabilities - it provides fundamental networking
     ];
   }
   
@@ -134,8 +154,36 @@ export class VpcComponentCreator implements IComponentCreator {
    */
   public getConstructHandles(): string[] {
     return [
-      'main'
-      // TODO: Add additional construct handles if needed
+      'main',
+      'vpc',
+      'flowLogGroup',
+      'flowLogRole'
     ];
+  }
+
+  /**
+   * Validates CIDR block format
+   */
+  private isValidCidr(cidr: string): boolean {
+    const cidrRegex = /^(?:[0-9]{1,3}\.){3}[0-9]{1,3}\/[0-9]{1,2}$/;
+    if (!cidrRegex.test(cidr)) return false;
+    
+    const [ip, prefix] = cidr.split('/');
+    const prefixNum = parseInt(prefix, 10);
+    
+    // Validate prefix length
+    if (prefixNum < 16 || prefixNum > 28) return false;
+    
+    // Validate IP octets
+    const octets = ip.split('.').map(Number);
+    return octets.every(octet => octet >= 0 && octet <= 255);
+  }
+
+  /**
+   * Validates log retention days
+   */
+  private isValidLogRetention(days: number): boolean {
+    const validRetentionDays = [1, 3, 5, 7, 14, 30, 60, 90, 120, 150, 180, 365, 400, 545, 731, 1827, 3653];
+    return validRetentionDays.includes(days);
   }
 }

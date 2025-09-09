@@ -8,76 +8,167 @@
 import { ConfigBuilder, ConfigBuilderContext } from '../../platform/contracts/config-builder';
 
 /**
- * Configuration interface for StepFunctionsStateMachineComponent component
+ * Configuration interface for Step Functions State Machine component
  */
 export interface StepFunctionsStateMachineConfig {
-  /** Component name (optional, will be auto-generated) */
-  name?: string;
+  /** State machine name (optional, will be auto-generated) */
+  stateMachineName?: string;
   
-  /** Component description */
-  description?: string;
+  /** State machine type */
+  stateMachineType?: 'STANDARD' | 'EXPRESS';
   
-  /** Enable detailed monitoring */
-  monitoring?: {
-    enabled?: boolean;
-    detailedMetrics?: boolean;
-    alarms?: {
-      // TODO: Define component-specific alarm thresholds
-    };
+  /** State machine definition */
+  definition?: {
+    /** JSON definition as object */
+    definition?: any;
+    /** Definition from JSON string */
+    definitionString?: string;
+    /** Definition substitutions */
+    definitionSubstitutions?: Record<string, string>;
   };
   
-  /** Tagging configuration */
-  tags?: Record<string, string>;
+  /** State machine role ARN (optional, will create if not provided) */
+  roleArn?: string;
   
-  // TODO: Add component-specific configuration properties
+  /** Logging configuration */
+  loggingConfiguration?: {
+    /** Enable logging */
+    enabled?: boolean;
+    /** Log level */
+    level?: 'ALL' | 'ERROR' | 'FATAL' | 'OFF';
+    /** Include execution data */
+    includeExecutionData?: boolean;
+  };
+  
+  /** Tracing configuration */
+  tracingConfiguration?: {
+    /** Enable X-Ray tracing */
+    enabled?: boolean;
+  };
+  
+  /** Timeout for state machine execution */
+  timeout?: {
+    /** Timeout in seconds */
+    seconds?: number;
+  };
+  
+  /** Additional resource tags */
+  tags?: Record<string, string>;
 }
 
 /**
- * JSON Schema for StepFunctionsStateMachineComponent configuration validation
+ * JSON Schema for Step Functions State Machine configuration validation
  */
 export const STEP_FUNCTIONS_STATEMACHINE_CONFIG_SCHEMA = {
   type: 'object',
+  title: 'Step Functions State Machine Configuration',
+  description: 'Configuration for creating a Step Functions State Machine',
   properties: {
-    name: {
+    stateMachineName: {
       type: 'string',
-      description: 'Component name (optional, will be auto-generated from component name)',
-      pattern: '^[a-zA-Z][a-zA-Z0-9-_]*$',
-      maxLength: 128
+      description: 'Name of the state machine (will be auto-generated if not provided)',
+      pattern: '^[a-zA-Z0-9_-]+$',
+      maxLength: 80
     },
-    description: {
+    stateMachineType: {
       type: 'string',
-      description: 'Component description for documentation',
-      maxLength: 1024
+      description: 'Type of state machine',
+      enum: ['STANDARD', 'EXPRESS'],
+      default: 'STANDARD'
     },
-    monitoring: {
+    definition: {
       type: 'object',
-      description: 'Monitoring and observability configuration',
+      description: 'State machine definition',
+      properties: {
+        definition: {
+          type: 'object',
+          description: 'State machine definition as JSON object'
+        },
+        definitionString: {
+          type: 'string',
+          description: 'State machine definition as JSON string'
+        },
+        definitionSubstitutions: {
+          type: 'object',
+          description: 'Definition substitutions',
+          additionalProperties: { type: 'string' },
+          default: {}
+        }
+      },
+      additionalProperties: false,
+      anyOf: [
+        { required: ['definition'] },
+        { required: ['definitionString'] }
+      ]
+    },
+    roleArn: {
+      type: 'string',
+      description: 'IAM role ARN for state machine execution'
+    },
+    loggingConfiguration: {
+      type: 'object',
+      description: 'Logging configuration',
       properties: {
         enabled: {
           type: 'boolean',
-          default: true,
-          description: 'Enable monitoring'
+          description: 'Enable logging',
+          default: false
         },
-        detailedMetrics: {
+        level: {
+          type: 'string',
+          description: 'Log level',
+          enum: ['ALL', 'ERROR', 'FATAL', 'OFF'],
+          default: 'ERROR'
+        },
+        includeExecutionData: {
           type: 'boolean',
-          default: false,
-          description: 'Enable detailed CloudWatch metrics'
+          description: 'Include execution data in logs',
+          default: false
+        }
+      },
+      additionalProperties: false,
+      default: { enabled: false, level: 'ERROR', includeExecutionData: false }
+    },
+    tracingConfiguration: {
+      type: 'object',
+      description: 'X-Ray tracing configuration',
+      properties: {
+        enabled: {
+          type: 'boolean',
+          description: 'Enable X-Ray tracing',
+          default: false
+        }
+      },
+      additionalProperties: false,
+      default: { enabled: false }
+    },
+    timeout: {
+      type: 'object',
+      description: 'Execution timeout configuration',
+      properties: {
+        seconds: {
+          type: 'number',
+          description: 'Timeout in seconds',
+          minimum: 1,
+          maximum: 31536000, // 1 year
+          default: 3600
         }
       },
       additionalProperties: false
     },
     tags: {
       type: 'object',
-      description: 'Additional resource tags',
-      additionalProperties: { type: 'string' }
+      description: 'Tags for the state machine',
+      additionalProperties: { type: 'string' },
+      default: {}
     }
-    // TODO: Add component-specific schema properties
   },
-  additionalProperties: false
+  additionalProperties: false,
+  required: ['definition']
 };
 
 /**
- * ConfigBuilder for StepFunctionsStateMachineComponent component
+ * ConfigBuilder for Step Functions State Machine component
  * 
  * Implements the 5-layer configuration precedence chain:
  * 1. Hardcoded Fallbacks (ultra-safe baseline)
@@ -86,20 +177,31 @@ export const STEP_FUNCTIONS_STATEMACHINE_CONFIG_SCHEMA = {
  * 4. Component Overrides (from service.yml)
  * 5. Policy Overrides (from governance policies)
  */
-export class StepFunctionsStateMachineComponentConfigBuilder extends ConfigBuilder<StepFunctionsStateMachineConfig> {
+export class StepFunctionsStateMachineConfigBuilder extends ConfigBuilder<StepFunctionsStateMachineConfig> {
   
+  constructor(builderContext: ConfigBuilderContext) {
+    super(builderContext, STEP_FUNCTIONS_STATEMACHINE_CONFIG_SCHEMA);
+  }
+
   /**
    * Layer 1: Hardcoded Fallbacks
    * Ultra-safe baseline configuration that works in any environment
    */
   protected getHardcodedFallbacks(): Partial<StepFunctionsStateMachineConfig> {
     return {
-      monitoring: {
-        enabled: true,
-        detailedMetrics: false
+      stateMachineType: 'STANDARD',
+      loggingConfiguration: {
+        enabled: false,
+        level: 'ERROR',
+        includeExecutionData: false
+      },
+      tracingConfiguration: {
+        enabled: false
+      },
+      timeout: {
+        seconds: 3600 // 1 hour default
       },
       tags: {}
-      // TODO: Add component-specific hardcoded fallbacks
     };
   }
   
@@ -108,27 +210,58 @@ export class StepFunctionsStateMachineComponentConfigBuilder extends ConfigBuild
    * Security and compliance-specific configurations
    */
   protected getComplianceFrameworkDefaults(): Partial<StepFunctionsStateMachineConfig> {
-    const framework = this.context.complianceFramework;
+    const framework = this.builderContext.context.complianceFramework;
     
-    const baseCompliance: Partial<StepFunctionsStateMachineConfig> = {
-      monitoring: {
-        enabled: true,
-        detailedMetrics: true
-      }
-    };
-    
-    if (framework === 'fedramp-moderate' || framework === 'fedramp-high') {
-      return {
-        ...baseCompliance,
-        monitoring: {
-          ...baseCompliance.monitoring,
-          detailedMetrics: true // Mandatory for FedRAMP
-        }
-        // TODO: Add FedRAMP-specific compliance defaults
-      };
+    switch (framework) {
+      case 'fedramp-moderate':
+        return {
+          loggingConfiguration: {
+            enabled: true, // Mandatory logging for compliance
+            level: 'ALL',
+            includeExecutionData: true // Required for audit trail
+          },
+          tracingConfiguration: {
+            enabled: true // Required for compliance monitoring
+          },
+          tags: {
+            'compliance-framework': 'fedramp-moderate',
+            'logging-level': 'comprehensive',
+            'audit-trail': 'enabled'
+          }
+        };
+        
+      case 'fedramp-high':
+        return {
+          loggingConfiguration: {
+            enabled: true, // Mandatory
+            level: 'ALL',
+            includeExecutionData: true // Required for detailed audit
+          },
+          tracingConfiguration: {
+            enabled: true // Mandatory for high security
+          },
+          timeout: {
+            seconds: 1800 // Shorter timeout for security
+          },
+          tags: {
+            'compliance-framework': 'fedramp-high',
+            'logging-level': 'comprehensive',
+            'audit-trail': 'enabled',
+            'security-level': 'high'
+          }
+        };
+        
+      default: // commercial
+        return {
+          loggingConfiguration: {
+            enabled: false,
+            level: 'ERROR'
+          },
+          tracingConfiguration: {
+            enabled: false
+          }
+        };
     }
-    
-    return baseCompliance;
   }
   
   /**

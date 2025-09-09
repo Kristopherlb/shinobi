@@ -65,3 +65,49 @@ defaults:
       blockedRequestsThreshold: 1000
       allowedRequestsThreshold: 10000
       sampledRequestsEnabled: true
+
+  # VPC Configuration Defaults
+  vpc:
+    cidr: 10.0.0.0/16
+    maxAzs: 2
+    natGateways: 1
+    flowLogsEnabled: true
+    flowLogRetentionDays: 365
+    subnets:
+      public:
+        cidrMask: 24
+        name: Public
+      private:
+        cidrMask: 24
+        name: Private
+      database:
+        cidrMask: 28
+        name: Database
+    vpcEndpoints:
+      s3: false
+      dynamodb: false
+      secretsManager: false
+      kms: false
+    dns:
+      enableDnsHostnames: true
+      enableDnsSupport: true
+    monitoring:
+      enabled: true
+      detailedMetrics: false
+      alarms:
+        natGatewayPacketDropThreshold: 1000
+        vpcFlowLogDeliveryFailures: 10
+
+  # Step Functions State Machine Configuration
+  step-functions-statemachine:
+    stateMachineType: "STANDARD"
+    loggingConfiguration:
+      enabled: false
+      level: "ERROR"
+      includeExecutionData: false
+    tracingConfiguration:
+      enabled: false
+    timeout:
+      seconds: 3600 # 1 hour
+    tags:
+      service-type: "workflow"
