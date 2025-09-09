@@ -1,12 +1,17 @@
 /**
- * WAF Web ACL Component - Entry Point
- * 
- * Exports all public interfaces and implementations for the WAF Web ACL component.
+ * @platform/waf-web-acl - WAF Web ACL Component
+ * AWS WAF Web Application Firewall with comprehensive security rules and compliance hardening
  */
 
-export {
-  WafWebAclComponent,
+// Component exports
+export { WafWebAclComponent } from './waf-web-acl.component';
+
+// Configuration exports
+export { 
   WafWebAclConfig,
   WafWebAclConfigBuilder,
   WAF_WEB_ACL_CONFIG_SCHEMA
-} from './waf-web-acl.component';
+} from './waf-web-acl.builder';
+
+// Creator exports
+export { WafWebAclCreator } from './waf-web-acl.creator';

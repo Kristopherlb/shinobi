@@ -1,11 +1,17 @@
 /**
- * @platform/route53-hosted-zone - AWS Route53 Hosted Zone Component
- * DNS management with compliance features and query logging
+ * @platform/route53-hosted-zone - Route53HostedZoneComponent Component
+ * Route53 Hosted Zone Component
  */
 
+// Component exports
+export { Route53HostedZoneComponentComponent } from './route53-hosted-zone.component';
+
+// Configuration exports
 export { 
-  Route53HostedZoneComponent,
-  ROUTE53_HOSTED_ZONE_CONFIG_SCHEMA,
   Route53HostedZoneConfig,
-  Route53HostedZoneConfigBuilder
-} from './route53-hosted-zone.component';
+  Route53HostedZoneComponentConfigBuilder,
+  ROUTE53_HOSTED_ZONE_CONFIG_SCHEMA
+} from './route53-hosted-zone.builder';
+
+// Creator exports
+export { Route53HostedZoneComponentCreator } from './route53-hosted-zone.creator';

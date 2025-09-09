@@ -1,11 +1,17 @@
 /**
- * @platform/secrets-manager - AWS Secrets Manager Component
- * Enterprise secret storage with compliance features and automatic rotation
+ * @platform/secrets-manager - SecretsManagerComponent Component
+ * Secrets Manager Component
  */
 
+// Component exports
+export { SecretsManagerComponentComponent } from './secrets-manager.component';
+
+// Configuration exports
 export { 
-  SecretsManagerComponent,
-  SECRETS_MANAGER_CONFIG_SCHEMA,
   SecretsManagerConfig,
-  SecretsManagerConfigBuilder
-} from './secrets-manager.component';
+  SecretsManagerComponentConfigBuilder,
+  SECRETS_MANAGER_CONFIG_SCHEMA
+} from './secrets-manager.builder';
+
+// Creator exports
+export { SecretsManagerComponentCreator } from './secrets-manager.creator';

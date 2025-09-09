@@ -1,11 +1,17 @@
 /**
- * @platform/iam-role - AWS IAM Role Component
- * Secure role creation with least privilege patterns and compliance features
+ * @platform/iam-role - IamRoleComponent Component
+ * IAM Role Component
  */
 
+// Component exports
+export { IamRoleComponentComponent } from './iam-role.component';
+
+// Configuration exports
 export { 
-  IamRoleComponent,
-  IAM_ROLE_CONFIG_SCHEMA,
   IamRoleConfig,
-  IamRoleConfigBuilder
-} from './iam-role.component';
+  IamRoleComponentConfigBuilder,
+  IAM_ROLE_CONFIG_SCHEMA
+} from './iam-role.builder';
+
+// Creator exports
+export { IamRoleComponentCreator } from './iam-role.creator';

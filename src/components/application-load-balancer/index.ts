@@ -1,11 +1,17 @@
 /**
- * @platform/application-load-balancer - Enterprise Application Load Balancer Component
- * Layer 7 load balancer with comprehensive compliance hardening and observability
+ * @platform/application-load-balancer - ApplicationLoadBalancerComponent Component
+ * Application Load Balancer Component implementing Component API Contract v1.0
  */
 
+// Component exports
+export { ApplicationLoadBalancerComponentComponent } from './application-load-balancer.component';
+
+// Configuration exports
 export { 
-  ApplicationLoadBalancerComponent,
-  APPLICATION_LOAD_BALANCER_CONFIG_SCHEMA,
   ApplicationLoadBalancerConfig,
-  ApplicationLoadBalancerConfigBuilder
-} from './application-load-balancer.component';
+  ApplicationLoadBalancerComponentConfigBuilder,
+  APPLICATION_LOAD_BALANCER_CONFIG_SCHEMA
+} from './application-load-balancer.builder';
+
+// Creator exports
+export { ApplicationLoadBalancerComponentCreator } from './application-load-balancer.creator';

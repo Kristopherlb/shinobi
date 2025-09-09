@@ -1,11 +1,17 @@
 /**
- * @platform/vpc - Enterprise VPC Component
- * VPC with security groups, NAT gateways, and compliance features
+ * @platform/vpc - VpcComponent Component
+ * VPC Component
  */
 
+// Component exports
+export { VpcComponentComponent } from './vpc.component';
+
+// Configuration exports
 export { 
-  VpcComponent,
   VpcConfig,
-  VpcConfigBuilder,
+  VpcComponentConfigBuilder,
   VPC_CONFIG_SCHEMA
-} from './vpc.component';
+} from './vpc.builder';
+
+// Creator exports
+export { VpcComponentCreator } from './vpc.creator';

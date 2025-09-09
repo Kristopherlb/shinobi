@@ -1,6 +1,17 @@
 /**
- * @platform/feature-flag - Individual Feature Flag Component
- * Defines individual feature flags within OpenFeature providers
+ * @platform/feature-flag - FeatureFlagComponent Component
+ * Feature Flag Component
  */
 
-export { FeatureFlagComponent, FeatureFlagConfig, FEATURE_FLAG_CONFIG_SCHEMA } from './feature-flag.component';
+// Component exports
+export { FeatureFlagComponentComponent } from './feature-flag.component';
+
+// Configuration exports
+export { 
+  FeatureFlagConfig,
+  FeatureFlagComponentConfigBuilder,
+  FEATURE_FLAG_CONFIG_SCHEMA
+} from './feature-flag.builder';
+
+// Creator exports
+export { FeatureFlagComponentCreator } from './feature-flag.creator';

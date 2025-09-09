@@ -1,11 +1,17 @@
 /**
- * @platform/iam-policy - AWS IAM Policy Component
- * Granular access control with security best practices and compliance templates
+ * @platform/iam-policy - IamPolicyComponent Component
+ * IAM Policy Component
  */
 
+// Component exports
+export { IamPolicyComponentComponent } from './iam-policy.component';
+
+// Configuration exports
 export { 
-  IamPolicyComponent,
-  IAM_POLICY_CONFIG_SCHEMA,
   IamPolicyConfig,
-  IamPolicyConfigBuilder
-} from './iam-policy.component';
+  IamPolicyComponentConfigBuilder,
+  IAM_POLICY_CONFIG_SCHEMA
+} from './iam-policy.builder';
+
+// Creator exports
+export { IamPolicyComponentCreator } from './iam-policy.creator';

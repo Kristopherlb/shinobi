@@ -1,11 +1,17 @@
 /**
- * @platform/efs-filesystem - AWS EFS Filesystem Component
- * Scalable shared storage with encryption and compliance features
+ * @platform/efs-filesystem - EfsFilesystemComponent Component
+ * EFS Filesystem Component
  */
 
+// Component exports
+export { EfsFilesystemComponentComponent } from './efs-filesystem.component';
+
+// Configuration exports
 export { 
-  EfsFilesystemComponent,
-  EFS_FILESYSTEM_CONFIG_SCHEMA,
   EfsFilesystemConfig,
-  EfsFilesystemConfigBuilder
-} from './efs-filesystem.component';
+  EfsFilesystemComponentConfigBuilder,
+  EFS_FILESYSTEM_CONFIG_SCHEMA
+} from './efs-filesystem.builder';
+
+// Creator exports
+export { EfsFilesystemComponentCreator } from './efs-filesystem.creator';

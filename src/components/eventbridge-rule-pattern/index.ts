@@ -1,12 +1,17 @@
 /**
- * EventBridge Rule Pattern Component - Entry Point
- * 
- * Exports all public interfaces and implementations for the EventBridge Rule Pattern component.
+ * @platform/eventbridge-rule-pattern - EventBridgeRulePatternComponent Component
+ * EventBridge Rule Pattern Component implementing Component API Contract v1.0
  */
 
-export {
-  EventBridgeRulePatternComponent,
+// Component exports
+export { EventBridgeRulePatternComponentComponent } from './eventbridge-rule-pattern.component';
+
+// Configuration exports
+export { 
   EventBridgeRulePatternConfig,
-  EventBridgeRulePatternConfigBuilder,
+  EventBridgeRulePatternComponentConfigBuilder,
   EVENTBRIDGE_RULE_PATTERN_CONFIG_SCHEMA
-} from './eventbridge-rule-pattern.component';
+} from './eventbridge-rule-pattern.builder';
+
+// Creator exports
+export { EventBridgeRulePatternComponentCreator } from './eventbridge-rule-pattern.creator';

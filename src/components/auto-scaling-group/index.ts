@@ -1,11 +1,17 @@
 /**
- * @platform/auto-scaling-group - Enterprise Auto Scaling Group Component
- * Auto Scaling Group with compliance and monitoring features
+ * @platform/auto-scaling-group - AutoScalingGroupComponent Component
+ * Auto Scaling Group Component
  */
 
+// Component exports
+export { AutoScalingGroupComponentComponent } from './auto-scaling-group.component';
+
+// Configuration exports
 export { 
-  AutoScalingGroupComponent, 
-  AUTO_SCALING_GROUP_CONFIG_SCHEMA,
   AutoScalingGroupConfig,
-  AutoScalingGroupConfigBuilder
-} from './auto-scaling-group.component';
+  AutoScalingGroupComponentConfigBuilder,
+  AUTO_SCALING_GROUP_CONFIG_SCHEMA
+} from './auto-scaling-group.builder';
+
+// Creator exports
+export { AutoScalingGroupComponentCreator } from './auto-scaling-group.creator';

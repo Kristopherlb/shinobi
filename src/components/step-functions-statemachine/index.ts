@@ -1,11 +1,17 @@
 /**
- * @platform/step-functions-statemachine - AWS Step Functions State Machine Component
- * Serverless workflow orchestration with enterprise compliance and monitoring
+ * @platform/step-functions-statemachine - StepFunctionsStateMachineComponent Component
+ * Step Functions State Machine Component
  */
 
+// Component exports
+export { StepFunctionsStateMachineComponentComponent } from './step-functions-statemachine.component';
+
+// Configuration exports
 export { 
-  StepFunctionsStateMachineComponent,
-  STEP_FUNCTIONS_STATEMACHINE_CONFIG_SCHEMA,
   StepFunctionsStateMachineConfig,
-  StepFunctionsStateMachineConfigBuilder
-} from './step-functions-statemachine.component';
+  StepFunctionsStateMachineComponentConfigBuilder,
+  STEP_FUNCTIONS_STATEMACHINE_CONFIG_SCHEMA
+} from './step-functions-statemachine.builder';
+
+// Creator exports
+export { StepFunctionsStateMachineComponentCreator } from './step-functions-statemachine.creator';

@@ -1,11 +1,17 @@
 /**
- * @platform/rds-postgres - Enterprise RDS PostgreSQL Component
- * Self-contained component package with creator and binder strategy
+ * @platform/rds-postgres - RdsPostgresComponent Component
+ * RDS PostgreSQL Component
  */
 
+// Component exports
+export { RdsPostgresComponentComponent } from './rds-postgres.component';
+
+// Configuration exports
 export { 
-  RdsPostgresComponent,
-  RDS_POSTGRES_CONFIG_SCHEMA,
   RdsPostgresConfig,
-  RdsPostgresConfigBuilder
-} from './rds-postgres.component';
+  RdsPostgresComponentConfigBuilder,
+  RDS_POSTGRES_CONFIG_SCHEMA
+} from './rds-postgres.builder';
+
+// Creator exports
+export { RdsPostgresComponentCreator } from './rds-postgres.creator';

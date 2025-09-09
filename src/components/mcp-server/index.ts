@@ -1,14 +1,17 @@
-export { McpServerComponent, MCP_SERVER_CONFIG_SCHEMA } from './mcp-server.component';
-export { PlatformEndpointsService } from './services/platform-endpoints';
-export { ServiceEndpointsService } from './services/service-endpoints';
-export { GenerativeEndpointsService } from './services/generative-endpoints';
-export { AdminEndpointsService } from './services/admin-endpoints';
-export { createApiRouter } from './api/router';
+/**
+ * @platform/mcp-server - McpServerComponent Component
+ * MCP Server Component
+ */
+
+// Component exports
+export { McpServerComponentComponent } from './mcp-server.component';
+
+// Configuration exports
 export { 
-  authenticateToken, 
-  requireScopes, 
-  requireAdmin,
-  requireReadAccess,
-  requireGenerativeAccess,
-  auditLog 
-} from './middleware/auth-middleware';
+  McpServerConfig,
+  McpServerComponentConfigBuilder,
+  MCP_SERVER_CONFIG_SCHEMA
+} from './mcp-server.builder';
+
+// Creator exports
+export { McpServerComponentCreator } from './mcp-server.creator';

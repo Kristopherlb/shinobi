@@ -1,11 +1,17 @@
 /**
- * @platform/lambda-worker - Enterprise Lambda Worker Component
- * Lambda worker for asynchronous processing with observability
+ * @platform/lambda-worker - LambdaWorkerComponent Component
+ * Lambda Worker Component
  */
 
+// Component exports
+export { LambdaWorkerComponentComponent } from './lambda-worker.component';
+
+// Configuration exports
 export { 
-  LambdaWorkerComponent,
-  LAMBDA_WORKER_CONFIG_SCHEMA,
   LambdaWorkerConfig,
-  LambdaWorkerConfigBuilder
-} from './lambda-worker.component';
+  LambdaWorkerComponentConfigBuilder,
+  LAMBDA_WORKER_CONFIG_SCHEMA
+} from './lambda-worker.builder';
+
+// Creator exports
+export { LambdaWorkerComponentCreator } from './lambda-worker.creator';

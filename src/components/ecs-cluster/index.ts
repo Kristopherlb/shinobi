@@ -1,11 +1,17 @@
 /**
- * ECS Cluster Component Exports
- * 
- * Foundational component for ECS Service Connect that creates clusters
- * with optional EC2 capacity and Service Connect namespaces.
+ * @platform/ecs-cluster - EcsClusterComponent Component
+ * ECS Cluster Component
  */
 
-export { EcsClusterComponent } from './ecs-cluster.component';
-export { EcsClusterConfigBuilder } from './ecs-cluster.component';
-export { ECS_CLUSTER_CONFIG_SCHEMA } from './ecs-cluster.component';
-export type { EcsClusterConfig } from './ecs-cluster.component';
+// Component exports
+export { EcsClusterComponentComponent } from './ecs-cluster.component';
+
+// Configuration exports
+export { 
+  EcsClusterConfig,
+  EcsClusterComponentConfigBuilder,
+  ECS_CLUSTER_CONFIG_SCHEMA
+} from './ecs-cluster.builder';
+
+// Creator exports
+export { EcsClusterComponentCreator } from './ecs-cluster.creator';

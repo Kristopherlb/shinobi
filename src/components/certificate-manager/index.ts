@@ -1,11 +1,17 @@
 /**
- * @platform/certificate-manager - AWS Certificate Manager Component
- * SSL/TLS certificate provisioning with compliance features and lifecycle management
+ * @platform/certificate-manager - CertificateManagerComponent Component
+ * Certificate Manager Component
  */
 
+// Component exports
+export { CertificateManagerComponentComponent } from './certificate-manager.component';
+
+// Configuration exports
 export { 
-  CertificateManagerComponent,
-  CERTIFICATE_MANAGER_CONFIG_SCHEMA,
   CertificateManagerConfig,
-  CertificateManagerConfigBuilder
-} from './certificate-manager.component';
+  CertificateManagerComponentConfigBuilder,
+  CERTIFICATE_MANAGER_CONFIG_SCHEMA
+} from './certificate-manager.builder';
+
+// Creator exports
+export { CertificateManagerComponentCreator } from './certificate-manager.creator';

@@ -1,11 +1,17 @@
 /**
- * @platform/dynamodb-table - Enterprise DynamoDB Table Component
- * NoSQL database with comprehensive compliance hardening and observability
+ * @platform/dynamodb-table - DynamoDbTableComponent Component
+ * DynamoDB Table Component implementing Component API Contract v1.0
  */
 
+// Component exports
+export { DynamoDbTableComponentComponent } from './dynamodb-table.component';
+
+// Configuration exports
 export { 
-  DynamoDbTableComponent,
-  DYNAMODB_TABLE_CONFIG_SCHEMA,
   DynamoDbTableConfig,
-  DynamoDbTableConfigBuilder
-} from './dynamodb-table.component';
+  DynamoDbTableComponentConfigBuilder,
+  DYNAMODB_TABLE_CONFIG_SCHEMA
+} from './dynamodb-table.builder';
+
+// Creator exports
+export { DynamoDbTableComponentCreator } from './dynamodb-table.creator';

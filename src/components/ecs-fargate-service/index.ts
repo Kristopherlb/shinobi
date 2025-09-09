@@ -1,10 +1,17 @@
 /**
- * ECS Fargate Service Component Exports
- * 
- * Serverless containerized service component with Service Connect integration.
+ * @platform/ecs-fargate-service - EcsFargateServiceComponent Component
+ * ECS Fargate Service Component
  */
 
-export { EcsFargateServiceComponent } from './ecs-fargate-service.component';
-export { EcsFargateServiceConfigBuilder } from './ecs-fargate-service.component';
-export { ECS_FARGATE_SERVICE_CONFIG_SCHEMA } from './ecs-fargate-service.component';
-export type { EcsFargateServiceConfig } from './ecs-fargate-service.component';
+// Component exports
+export { EcsFargateServiceComponentComponent } from './ecs-fargate-service.component';
+
+// Configuration exports
+export { 
+  EcsFargateServiceConfig,
+  EcsFargateServiceComponentConfigBuilder,
+  ECS_FARGATE_SERVICE_CONFIG_SCHEMA
+} from './ecs-fargate-service.builder';
+
+// Creator exports
+export { EcsFargateServiceComponentCreator } from './ecs-fargate-service.creator';

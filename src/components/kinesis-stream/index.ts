@@ -1,12 +1,17 @@
 /**
- * Kinesis Stream Component - Entry Point
- * 
- * Exports all public interfaces and implementations for the Kinesis Stream component.
+ * @platform/kinesis-stream - KinesisStreamComponent Component
+ * Kinesis Stream Component implementing Component API Contract v1.0
  */
 
-export {
-  KinesisStreamComponent,
+// Component exports
+export { KinesisStreamComponentComponent } from './kinesis-stream.component';
+
+// Configuration exports
+export { 
   KinesisStreamConfig,
-  KinesisStreamConfigBuilder,
+  KinesisStreamComponentConfigBuilder,
   KINESIS_STREAM_CONFIG_SCHEMA
-} from './kinesis-stream.component';
+} from './kinesis-stream.builder';
+
+// Creator exports
+export { KinesisStreamComponentCreator } from './kinesis-stream.creator';

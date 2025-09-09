@@ -1,11 +1,17 @@
 /**
- * @platform/glue-job - AWS Glue Job Component
- * Serverless ETL data processing with enterprise security and monitoring
+ * @platform/glue-job - GlueJobComponent Component
+ * Glue Job Component
  */
 
+// Component exports
+export { GlueJobComponentComponent } from './glue-job.component';
+
+// Configuration exports
 export { 
-  GlueJobComponent,
-  GLUE_JOB_CONFIG_SCHEMA,
   GlueJobConfig,
-  GlueJobConfigBuilder
-} from './glue-job.component';
+  GlueJobComponentConfigBuilder,
+  GLUE_JOB_CONFIG_SCHEMA
+} from './glue-job.builder';
+
+// Creator exports
+export { GlueJobComponentCreator } from './glue-job.creator';

@@ -1,11 +1,17 @@
 /**
- * @platform/ssm-parameter - AWS Systems Manager Parameter Store Component
- * Configuration management with compliance features and encryption support
+ * @platform/ssm-parameter - SsmParameterComponent Component
+ * SSM Parameter Component
  */
 
+// Component exports
+export { SsmParameterComponentComponent } from './ssm-parameter.component';
+
+// Configuration exports
 export { 
-  SsmParameterComponent,
-  SSM_PARAMETER_CONFIG_SCHEMA,
   SsmParameterConfig,
-  SsmParameterConfigBuilder
-} from './ssm-parameter.component';
+  SsmParameterComponentConfigBuilder,
+  SSM_PARAMETER_CONFIG_SCHEMA
+} from './ssm-parameter.builder';
+
+// Creator exports
+export { SsmParameterComponentCreator } from './ssm-parameter.creator';

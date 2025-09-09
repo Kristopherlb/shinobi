@@ -1,11 +1,17 @@
 /**
- * @platform/ec2-instance - Enterprise EC2 Instance Component
- * EC2 instance with security and compliance features
+ * @platform/ec2-instance - Ec2InstanceComponent Component
+ * EC2 Instance Component
  */
 
+// Component exports
+export { Ec2InstanceComponentComponent } from './ec2-instance.component';
+
+// Configuration exports
 export { 
-  Ec2InstanceComponent,
-  EC2_INSTANCE_CONFIG_SCHEMA,
   Ec2InstanceConfig,
-  Ec2InstanceConfigBuilder
-} from './ec2-instance.component';
+  Ec2InstanceComponentConfigBuilder,
+  EC2_INSTANCE_CONFIG_SCHEMA
+} from './ec2-instance.builder';
+
+// Creator exports
+export { Ec2InstanceComponentCreator } from './ec2-instance.creator';

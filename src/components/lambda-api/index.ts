@@ -1,11 +1,17 @@
 /**
- * @platform/lambda-api - Serverless HTTP API Component
- * Enterprise Lambda function with API Gateway integration and compliance features
+ * @platform/lambda-api - LambdaApiComponent Component
+ * Lambda API Component
  */
 
+// Component exports
+export { LambdaApiComponentComponent } from './lambda-api.component';
+
+// Configuration exports
 export { 
-  LambdaApiComponent,
-  LAMBDA_API_CONFIG_SCHEMA,
   LambdaApiConfig,
-  LambdaApiConfigBuilder
-} from './lambda-api.component';
+  LambdaApiComponentConfigBuilder,
+  LAMBDA_API_CONFIG_SCHEMA
+} from './lambda-api.builder';
+
+// Creator exports
+export { LambdaApiComponentCreator } from './lambda-api.creator';

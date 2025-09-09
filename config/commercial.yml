@@ -2,42 +2,66 @@
 # Version: 1.0
 # Compliance Framework: Commercial
 
-# API Gateway Configuration Defaults
-api-gateway-rest:
-  cors:
-    allowOrigins:
-      - "https://*.yourdomain.com"
-      - "https://admin.yourdomain.com"
-    allowMethods: ["GET", "POST", "PUT", "DELETE", "PATCH", "OPTIONS"]
-    allowHeaders: 
-      - "Content-Type"
-      - "Authorization" 
-      - "X-Api-Key"
-      - "X-Requested-With"
-      - "Accept"
-    allowCredentials: true
-    maxAge: 86400
-  throttling:
-    burstLimit: 5000
-    rateLimit: 2000
-  tracing:
-    xrayEnabled: false # Optional for commercial
+defaults:
+  # API Gateway Configuration Defaults
+  api-gateway-rest:
+    cors:
+      allowOrigins:
+        - "https://*.yourdomain.com"
+        - "https://admin.yourdomain.com"
+      allowMethods: ["GET", "POST", "PUT", "DELETE", "PATCH", "OPTIONS"]
+      allowHeaders: 
+        - "Content-Type"
+        - "Authorization" 
+        - "X-Api-Key"
+        - "X-Requested-With"
+        - "Accept"
+      allowCredentials: true
+      maxAge: 86400
+    throttling:
+      burstLimit: 5000
+      rateLimit: 2000
+    tracing:
+      xrayEnabled: false # Optional for commercial
 
-api-gateway-http:
-  cors:
-    allowOrigins:
-      - "https://*.yourdomain.com"
-      - "https://admin.yourdomain.com"
-    allowMethods: ["GET", "POST", "PUT", "DELETE", "PATCH", "OPTIONS"]
-    allowHeaders:
-      - "Content-Type"
-      - "Authorization"
-      - "X-Api-Key"
-      - "X-Requested-With"
-    allowCredentials: true
-    maxAge: 86400
-  throttling:
-    burstLimit: 8000  # HTTP API can handle more
-    rateLimit: 3000
-  accessLogging:
-    enabled: false # Optional for commercial
+  api-gateway-http:
+    cors:
+      allowOrigins:
+        - "https://*.yourdomain.com"
+        - "https://admin.yourdomain.com"
+      allowMethods: ["GET", "POST", "PUT", "DELETE", "PATCH", "OPTIONS"]
+      allowHeaders:
+        - "Content-Type"
+        - "Authorization"
+        - "X-Api-Key"
+        - "X-Requested-With"
+      allowCredentials: true
+      maxAge: 86400
+    throttling:
+      burstLimit: 8000  # HTTP API can handle more
+      rateLimit: 3000
+    accessLogging:
+      enabled: false # Optional for commercial
+
+  # WAF Web ACL Configuration Defaults
+  waf-web-acl:
+    scope: REGIONAL
+    defaultAction: allow
+    managedRuleGroups:
+      - name: AWSManagedRulesCommonRuleSet
+        vendorName: AWS
+        priority: 1
+        overrideAction: none
+      - name: AWSManagedRulesKnownBadInputsRuleSet
+        vendorName: AWS
+        priority: 2
+        overrideAction: none
+    logging:
+      enabled: true
+      logDestinationType: cloudwatch
+  monitoring:
+    enabled: true
+    alarms:
+      blockedRequestsThreshold: 1000
+      allowedRequestsThreshold: 10000
+      sampledRequestsEnabled: true

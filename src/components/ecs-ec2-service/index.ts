@@ -1,10 +1,17 @@
 /**
- * ECS EC2 Service Component Exports
- * 
- * EC2-based containerized service component with Service Connect integration.
+ * @platform/ecs-ec2-service - EcsEc2ServiceComponent Component
+ * ECS EC2 Service Component
  */
 
-export { EcsEc2ServiceComponent } from './ecs-ec2-service.component';
-export { EcsEc2ServiceConfigBuilder } from './ecs-ec2-service.component';
-export { ECS_EC2_SERVICE_CONFIG_SCHEMA } from './ecs-ec2-service.component';
-export type { EcsEc2ServiceConfig } from './ecs-ec2-service.component';
+// Component exports
+export { EcsEc2ServiceComponentComponent } from './ecs-ec2-service.component';
+
+// Configuration exports
+export { 
+  EcsEc2ServiceConfig,
+  EcsEc2ServiceComponentConfigBuilder,
+  ECS_EC2_SERVICE_CONFIG_SCHEMA
+} from './ecs-ec2-service.builder';
+
+// Creator exports
+export { EcsEc2ServiceComponentCreator } from './ecs-ec2-service.creator';

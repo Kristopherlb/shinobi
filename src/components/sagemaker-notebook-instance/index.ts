@@ -1,11 +1,17 @@
 /**
- * @platform/sagemaker-notebook-instance - AWS SageMaker Notebook Instance Component
- * Managed Jupyter notebook environment for machine learning development and experimentation
+ * @platform/sagemaker-notebook-instance - SageMakerNotebookInstanceComponent Component
+ * SageMaker Notebook Instance Component
  */
 
+// Component exports
+export { SageMakerNotebookInstanceComponentComponent } from './sagemaker-notebook-instance.component';
+
+// Configuration exports
 export { 
-  SageMakerNotebookInstanceComponent,
-  SAGEMAKER_NOTEBOOK_INSTANCE_CONFIG_SCHEMA,
   SageMakerNotebookInstanceConfig,
-  SageMakerNotebookInstanceConfigBuilder
-} from './sagemaker-notebook-instance.component';
+  SageMakerNotebookInstanceComponentConfigBuilder,
+  SAGEMAKER_NOTEBOOK_INSTANCE_CONFIG_SCHEMA
+} from './sagemaker-notebook-instance.builder';
+
+// Creator exports
+export { SageMakerNotebookInstanceComponentCreator } from './sagemaker-notebook-instance.creator';

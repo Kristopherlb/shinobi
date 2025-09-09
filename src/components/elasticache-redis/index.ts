@@ -1,11 +1,17 @@
 /**
- * @platform/elasticache-redis - Enterprise ElastiCache Redis Component
- * High-performance in-memory cache with comprehensive compliance hardening
+ * @platform/elasticache-redis - ElastiCacheRedisComponent Component
+ * ElastiCache Redis Component implementing Component API Contract v1.0
  */
 
+// Component exports
+export { ElastiCacheRedisComponentComponent } from './elasticache-redis.component';
+
+// Configuration exports
 export { 
-  ElastiCacheRedisComponent,
-  ELASTICACHE_REDIS_CONFIG_SCHEMA,
   ElastiCacheRedisConfig,
-  ElastiCacheRedisConfigBuilder
-} from './elasticache-redis.component';
+  ElastiCacheRedisComponentConfigBuilder,
+  ELASTICACHE_REDIS_CONFIG_SCHEMA
+} from './elasticache-redis.builder';
+
+// Creator exports
+export { ElastiCacheRedisComponentCreator } from './elasticache-redis.creator';
