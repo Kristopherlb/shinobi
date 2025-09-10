@@ -21,17 +21,17 @@ import {
   IPlatformService, 
   PlatformServiceContext, 
   PlatformServiceResult 
-} from '../platform/contracts/platform-services';
-import { BaseComponent } from '../platform/contracts/component';
-import { IObservabilityHandler, ObservabilityConfig } from './observability-handlers/observability-handler.interface';
-import { LambdaObservabilityHandler } from './observability-handlers/lambda-observability.handler';
-import { VpcObservabilityHandler } from './observability-handlers/vpc-observability.handler';
-import { AlbObservabilityHandler } from './observability-handlers/alb-observability.handler';
-import { RdsObservabilityHandler } from './observability-handlers/rds-observability.handler';
-import { Ec2ObservabilityHandler } from './observability-handlers/ec2-observability.handler';
-import { SqsObservabilityHandler } from './observability-handlers/sqs-observability.handler';
-import { EcsObservabilityHandler } from './observability-handlers/ecs-observability.handler';
-import { ITaggingService, defaultTaggingService } from './tagging.service';
+} from '@cdk-lib/platform-contracts';
+import { BaseComponent } from '@cdk-lib/platform-contracts';
+import { IObservabilityHandler, ObservabilityConfig } from '../observability-handlers/observability-handlers/observability-handler.interface';
+import { LambdaObservabilityHandler } from '../observability-handlers/observability-handlers/lambda-observability.handler';
+import { VpcObservabilityHandler } from '../observability-handlers/observability-handlers/vpc-observability.handler';
+import { AlbObservabilityHandler } from '../observability-handlers/observability-handlers/alb-observability.handler';
+import { RdsObservabilityHandler } from '../observability-handlers/observability-handlers/rds-observability.handler';
+import { Ec2ObservabilityHandler } from '../observability-handlers/observability-handlers/ec2-observability.handler';
+import { SqsObservabilityHandler } from '../observability-handlers/observability-handlers/sqs-observability.handler';
+import { EcsObservabilityHandler } from '../observability-handlers/observability-handlers/ecs-observability.handler';
+import { ITaggingService, defaultTaggingService } from '@cdk-lib/tagging-service';
 
 
 /**

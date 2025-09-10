@@ -6,7 +6,7 @@
  * and CloudWatch alarms for a specific component type.
  */
 
-import { BaseComponent } from '../../platform/contracts/component';
+import { BaseComponent } from '@cdk-lib/platform-contracts/component';
 
 export interface ObservabilityHandlerResult {
   instrumentationApplied: boolean;

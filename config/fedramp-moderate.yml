@@ -170,6 +170,9 @@ defaults:
         cpuUtilization: 75
         memoryUtilization: 75
         taskCount: 0
+      vpc:
+        natGatewayPacketDropThreshold: 500
+        natGatewayPortAllocationErrors: 1
     
     # OTel environment variables template
     otelEnvironmentTemplate:

@@ -10,10 +10,10 @@ import * as lambda from 'aws-cdk-lib/aws-lambda';
 import * as iam from 'aws-cdk-lib/aws-iam';
 import * as cdk from 'aws-cdk-lib';
 import { IConstruct } from 'constructs';
-import { BaseComponent } from '../../platform/contracts/component';
+import { BaseComponent } from '@cdk-lib/platform-contracts/component';
 import { IObservabilityHandler, ObservabilityHandlerResult, ObservabilityConfig } from './observability-handler.interface';
-import { PlatformServiceContext } from '../../platform/contracts/platform-services';
-import { ITaggingService, TaggingContext, defaultTaggingService } from '../tagging.service';
+import { PlatformServiceContext } from '@cdk-lib/platform-contracts/platform-services';
+import { ITaggingService, TaggingContext, defaultTaggingService } from '@cdk-lib/tagging-service';
 
 /**
  * Handler for Lambda component observability
