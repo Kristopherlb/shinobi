@@ -1,5 +1,5 @@
 /**
- * Configuration Builder for SsmParameterComponent Component
+ * Configuration Builder for SSM Parameter Component
  * 
  * Implements the ConfigBuilder pattern as defined in the Platform Component API Contract.
  * Provides 5-layer configuration precedence chain and compliance-aware defaults.
@@ -8,76 +8,113 @@
 import { ConfigBuilder, ConfigBuilderContext } from '../../platform/contracts/config-builder';
 
 /**
- * Configuration interface for SsmParameterComponent component
+ * Configuration interface for SSM Parameter component
  */
 export interface SsmParameterConfig {
-  /** Component name (optional, will be auto-generated) */
-  name?: string;
+  /** Parameter name (required) */
+  parameterName: string;
   
-  /** Component description */
+  /** Parameter description */
   description?: string;
   
-  /** Enable detailed monitoring */
-  monitoring?: {
-    enabled?: boolean;
-    detailedMetrics?: boolean;
-    alarms?: {
-      // TODO: Define component-specific alarm thresholds
-    };
+  /** Parameter type - platform abstraction for common use cases */
+  parameterType?: 'configuration' | 'secret' | 'feature-flag' | 'connection-string';
+  
+  /** Parameter value */
+  value?: string;
+  
+  /** Parameter sensitivity level - determines encryption and access patterns */
+  sensitivityLevel?: 'public' | 'internal' | 'confidential';
+  
+  /** Value validation pattern - platform-managed patterns for common types */
+  validationPattern?: 'url' | 'email' | 'json' | 'base64' | 'custom';
+  
+  /** Custom validation regex (only when validationPattern is 'custom') */
+  customValidationPattern?: string;
+  
+  /** Encryption configuration for SecureString parameters */
+  encryption?: {
+    /** KMS key ARN for encryption */
+    kmsKeyArn?: string;
   };
   
-  /** Tagging configuration */
+  /** Tags for the parameter */
   tags?: Record<string, string>;
-  
-  // TODO: Add component-specific configuration properties
 }
 
 /**
- * JSON Schema for SsmParameterComponent configuration validation
+ * JSON Schema for SSM Parameter configuration validation
  */
 export const SSM_PARAMETER_CONFIG_SCHEMA = {
   type: 'object',
+  title: 'SSM Parameter Configuration',
+  description: 'Configuration for creating an SSM Parameter Store parameter with platform abstractions',
+  required: ['parameterName'],
   properties: {
-    name: {
+    parameterName: {
       type: 'string',
-      description: 'Component name (optional, will be auto-generated from component name)',
-      pattern: '^[a-zA-Z][a-zA-Z0-9-_]*$',
-      maxLength: 128
+      description: 'Name of the parameter (must start with /)',
+      pattern: '^/[a-zA-Z0-9_.-/]+$',
+      minLength: 1,
+      maxLength: 2048
     },
     description: {
       type: 'string',
-      description: 'Component description for documentation',
+      description: 'Description of the parameter',
       maxLength: 1024
     },
-    monitoring: {
+    parameterType: {
+      type: 'string',
+      description: 'Parameter type - platform abstraction for common use cases',
+      enum: ['configuration', 'secret', 'feature-flag', 'connection-string'],
+      default: 'configuration'
+    },
+    value: {
+      type: 'string',
+      description: 'Parameter value',
+      maxLength: 4096
+    },
+    sensitivityLevel: {
+      type: 'string',
+      description: 'Parameter sensitivity level - determines encryption and access patterns',
+      enum: ['public', 'internal', 'confidential'],
+      default: 'internal'
+    },
+    validationPattern: {
+      type: 'string',
+      description: 'Value validation pattern - platform-managed patterns for common types',
+      enum: ['url', 'email', 'json', 'base64', 'custom'],
+      default: 'custom'
+    },
+    customValidationPattern: {
+      type: 'string',
+      description: 'Custom validation regex (only when validationPattern is custom)'
+    },
+    encryption: {
       type: 'object',
-      description: 'Monitoring and observability configuration',
+      description: 'Encryption configuration',
       properties: {
-        enabled: {
-          type: 'boolean',
-          default: true,
-          description: 'Enable monitoring'
-        },
-        detailedMetrics: {
-          type: 'boolean',
-          default: false,
-          description: 'Enable detailed CloudWatch metrics'
+        kmsKeyArn: {
+          type: 'string',
+          description: 'KMS key ARN for SecureString encryption'
         }
       },
       additionalProperties: false
     },
     tags: {
       type: 'object',
-      description: 'Additional resource tags',
-      additionalProperties: { type: 'string' }
+      description: 'Tags for the parameter',
+      additionalProperties: {
+        type: 'string'
+      },
+      default: {}
     }
-    // TODO: Add component-specific schema properties
   },
   additionalProperties: false
 };
 
 /**
- * ConfigBuilder for SsmParameterComponent component
+ * ConfigBuilder for SSM Parameter component
  * 
  * Implements the 5-layer configuration precedence chain:
  * 1. Hardcoded Fallbacks (ultra-safe baseline)
@@ -86,7 +123,11 @@ export const SSM_PARAMETER_CONFIG_SCHEMA = {
  * 4. Component Overrides (from service.yml)
  * 5. Policy Overrides (from governance policies)
  */
-export class SsmParameterComponentConfigBuilder extends ConfigBuilder<SsmParameterConfig> {
+export class SsmParameterConfigBuilder extends ConfigBuilder<SsmParameterConfig> {
+  
+  constructor(builderContext: ConfigBuilderContext) {
+    super(builderContext, SSM_PARAMETER_CONFIG_SCHEMA);
+  }
   
   /**
    * Layer 1: Hardcoded Fallbacks
@@ -94,41 +135,23 @@ export class SsmParameterComponentConfigBuilder extends ConfigBuilder<SsmParamet
    */
   protected getHardcodedFallbacks(): Partial<SsmParameterConfig> {
     return {
-      monitoring: {
-        enabled: true,
-        detailedMetrics: false
-      },
-      tags: {}
-      // TODO: Add component-specific hardcoded fallbacks
+      parameterType: 'configuration',
+      sensitivityLevel: 'internal',
+      validationPattern: 'custom',
+      tags: {
+        'platform-managed': 'true'
+      }
     };
   }
   
   /**
    * Layer 2: Compliance Framework Defaults
-   * Security and compliance-specific configurations
+   * Security and compliance-specific configurations loaded from platform config files
    */
   protected getComplianceFrameworkDefaults(): Partial<SsmParameterConfig> {
-    const framework = this.context.complianceFramework;
-    
-    const baseCompliance: Partial<SsmParameterConfig> = {
-      monitoring: {
-        enabled: true,
-        detailedMetrics: true
-      }
-    };
-    
-    if (framework === 'fedramp-moderate' || framework === 'fedramp-high') {
-      return {
-        ...baseCompliance,
-        monitoring: {
-          ...baseCompliance.monitoring,
-          detailedMetrics: true // Mandatory for FedRAMP
-        }
-        // TODO: Add FedRAMP-specific compliance defaults
-      };
-    }
-    
-    return baseCompliance;
+    // All compliance framework defaults are now managed via segregated platform 
+    // configuration files (/config/*.yml) following "Configuration over Code" principle
+    return {};
   }
   
   /**

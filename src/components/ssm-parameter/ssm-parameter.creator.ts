@@ -1,5 +1,5 @@
 /**
- * Creator for SsmParameterComponent Component
+ * Creator for SSM Parameter Component
  * 
  * Implements the ComponentCreator pattern as defined in the Platform Component API Contract.
  * Makes the component discoverable by the platform and provides factory methods.
@@ -11,11 +11,11 @@ import {
   ComponentContext, 
   IComponentCreator 
 } from '../../platform/contracts/component-interfaces';
-import { SsmParameterComponentComponent } from './ssm-parameter.component';
+import { SsmParameterComponent } from './ssm-parameter.component';
 import { SsmParameterConfig, SSM_PARAMETER_CONFIG_SCHEMA } from './ssm-parameter.builder';
 
 /**
- * Creator class for SsmParameterComponent component
+ * Creator class for SSM Parameter component
  * 
  * Responsible for:
  * - Component factory creation
@@ -23,7 +23,7 @@ import { SsmParameterConfig, SSM_PARAMETER_CONFIG_SCHEMA } from './ssm-parameter
  * - Schema definition and validation
  * - Component type identification
  */
-export class SsmParameterComponentCreator implements IComponentCreator {
+export class SsmParameterCreator implements IComponentCreator {
   
   /**
    * Component type identifier
@@ -33,12 +33,12 @@ export class SsmParameterComponentCreator implements IComponentCreator {
   /**
    * Component display name
    */
-  public readonly displayName = 'Ssm Parameter Component';
+  public readonly displayName = 'SSM Parameter';
   
   /**
    * Component description
    */
-  public readonly description = 'SSM Parameter Component';
+  public readonly description = 'AWS Systems Manager Parameter Store for configuration management and application parameters with compliance-aware encryption';
   
   /**
    * Component category for organization
@@ -56,8 +56,8 @@ export class SsmParameterComponentCreator implements IComponentCreator {
   public readonly tags = [
     'ssm-parameter',
     'configuration',
-    'aws',
-    'ssm'
+    'parameter-store',
+    'secrets-management'
   ];
   
   /**
@@ -72,8 +72,8 @@ export class SsmParameterComponentCreator implements IComponentCreator {
     scope: Construct, 
     spec: ComponentSpec, 
     context: ComponentContext
-  ): SsmParameterComponentComponent {
-    return new SsmParameterComponentComponent(scope, spec, context);
+  ): SsmParameterComponent {
+    return new SsmParameterComponent(scope, spec.name, context, spec);
   }
   
   /**
@@ -93,15 +93,46 @@ export class SsmParameterComponentCreator implements IComponentCreator {
       errors.push('Component name must start with a letter and contain only alphanumeric characters, hyphens, and underscores');
     }
     
-    // TODO: Add component-specific validations here
+    // Validate parameter name
+    if (!config?.parameterName) {
+      errors.push('Parameter name is required');
+    } else if (!config.parameterName.startsWith('/')) {
+      errors.push('Parameter name must start with /');
+    } else if (config.parameterName.length > 2048) {
+      errors.push('Parameter name cannot exceed 2048 characters');
+    }
     
-    // Environment-specific validations
+    // Validate parameter value length
+    if (config?.value && config.value.length > 4096) {
+      errors.push('Parameter value cannot exceed 4096 characters for Standard tier (platform will auto-upgrade to Advanced if needed)');
+    }
+    
+    // Validate parameter type and sensitivity alignment
+    if (config?.parameterType === 'secret' && config?.sensitivityLevel === 'public') {
+      errors.push('Secret parameter type cannot have public sensitivity level');
+    }
+    
+    // Validate custom validation pattern
+    if (config?.validationPattern === 'custom' && !config?.customValidationPattern) {
+      errors.push('Custom validation pattern is required when validationPattern is custom');
+    }
+    
+    // Production environment validations
     if (context.environment === 'prod') {
-      if (!config?.monitoring?.enabled) {
-        errors.push('Monitoring must be enabled in production environment');
+      if (config?.sensitivityLevel === 'public' && context.complianceFramework !== 'commercial') {
+        errors.push('Public sensitivity level is not recommended for production in compliance environments');
+      }
+    }
+    
+    // FedRAMP compliance validations - these should now come from platform config but validate consistency
+    if (context.complianceFramework === 'fedramp-moderate' || context.complianceFramework === 'fedramp-high') {
+      if (config?.sensitivityLevel === 'public') {
+        errors.push('Public sensitivity level is not allowed in FedRAMP compliance environments');
       }
       
-      // TODO: Add production-specific validations
+      if (config?.parameterType === 'configuration' && config?.sensitivityLevel !== 'confidential') {
+        errors.push('Configuration parameters in FedRAMP environments should use confidential sensitivity level');
+      }
     }
     
     return {
@@ -115,8 +146,8 @@ export class SsmParameterComponentCreator implements IComponentCreator {
    */
   public getProvidedCapabilities(): string[] {
     return [
-      'configuration:ssm-parameter',
-      'monitoring:ssm-parameter'
+      'configuration:parameter',
+      'secrets:parameter'
     ];
   }
   
@@ -124,9 +155,7 @@ export class SsmParameterComponentCreator implements IComponentCreator {
    * Returns the capabilities this component requires from other components
    */
   public getRequiredCapabilities(): string[] {
-    return [
-      // TODO: Define required capabilities
-    ];
+    return [];
   }
   
   /**
@@ -134,8 +163,9 @@ export class SsmParameterComponentCreator implements IComponentCreator {
    */
   public getConstructHandles(): string[] {
     return [
-      'main'
-      // TODO: Add additional construct handles if needed
+      'main',
+      'parameter',
+      'kmsKey'
     ];
   }
 }

@@ -1,17 +1,17 @@
 /**
- * @platform/ssm-parameter - SsmParameterComponent Component
- * SSM Parameter Component
+ * @platform/ssm-parameter - SSM Parameter Component
+ * AWS Systems Manager Parameter Store for configuration management
  */
 
 // Component exports
-export { SsmParameterComponentComponent } from './ssm-parameter.component';
+export { SsmParameterComponent } from './ssm-parameter.component';
 
 // Configuration exports
 export { 
   SsmParameterConfig,
-  SsmParameterComponentConfigBuilder,
+  SsmParameterConfigBuilder,
   SSM_PARAMETER_CONFIG_SCHEMA
 } from './ssm-parameter.builder';
 
 // Creator exports
-export { SsmParameterComponentCreator } from './ssm-parameter.creator';
+export { SsmParameterCreator } from './ssm-parameter.creator';
