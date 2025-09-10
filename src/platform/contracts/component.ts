@@ -9,6 +9,7 @@
 import * as cdk from 'aws-cdk-lib';
 import { Construct, IConstruct } from 'constructs';
 import { ComponentSpec, ComponentContext, ComponentCapabilities, IComponent } from './component-interfaces';
+import { ITaggingService, TaggingContext, defaultTaggingService } from '../../services/tagging.service';
 
 /**
  * Options for configuring observability on components
@@ -65,6 +66,9 @@ export abstract class BaseComponent extends Construct implements IComponent {
   
   /** A map of the capabilities this component provides after synthesis. */
   protected capabilities: ComponentCapabilities = {};
+  
+  /** Tagging service for applying standard tags */
+  protected readonly taggingService: ITaggingService;
 
   /**
    * Constructor for all platform components.
@@ -78,11 +82,13 @@ export abstract class BaseComponent extends Construct implements IComponent {
     scope: Construct,
     id: string,
     context: ComponentContext,
-    spec: ComponentSpec
+    spec: ComponentSpec,
+    taggingService: ITaggingService = defaultTaggingService
   ) {
     super(scope, id);
     this.context = context;
     this.spec = spec;
+    this.taggingService = taggingService;
   }
 
   /**
@@ -199,43 +205,6 @@ export abstract class BaseComponent extends Construct implements IComponent {
     this.capabilities[capabilityKey] = capabilityData;
   }
 
-  /**
-   * Builds standardized tags according to the Platform Tagging Standard v1.0.
-   * 
-   * This method creates the complete set of mandatory tags that must be applied
-   * to all AWS resources created by platform components.
-   * 
-   * @returns Record of tag keys to tag values
-   */
-  protected buildStandardTags(): Record<string, string> {
-    const now = new Date();
-    const deploymentId = `deploy-${now.getFullYear()}${(now.getMonth() + 1).toString().padStart(2, '0')}${now.getDate().toString().padStart(2, '0')}-${now.getHours().toString().padStart(2, '0')}${now.getMinutes().toString().padStart(2, '0')}${now.getSeconds().toString().padStart(2, '0')}`;
-    
-    return {
-      // Core Service Tags
-      'service-name': this.context.serviceName,
-      'service-version': this.context.serviceLabels?.version || '1.0.0',
-      'component-name': this.spec.name,
-      'component-type': this.getType(),
-      
-      // Environment & Deployment Tags
-      'environment': this.context.environment,
-      'region': this.context.region || 'us-east-1',
-      'deployed-by': `platform-v1.0.0`,
-      'deployment-id': deploymentId,
-      
-      // Governance & Compliance Tags
-      'compliance-framework': this.context.complianceFramework,
-      'data-classification': this.spec.labels?.['data-classification'] || 'internal',
-      'backup-required': this.getBackupRequirement().toString(),
-      'monitoring-level': this.getMonitoringLevel(),
-      
-      // Cost Management Tags
-      'cost-center': this.context.serviceLabels?.['cost-center'] || 'engineering',
-      'billing-project': this.context.serviceLabels?.['billing-project'] || this.context.serviceName,
-      'resource-owner': this.context.serviceLabels?.['resource-owner'] || 'platform-team'
-    };
-  }
 
   /**
    * Applies standard tags to any CDK construct that supports tagging.
@@ -247,19 +216,18 @@ export abstract class BaseComponent extends Construct implements IComponent {
    * @param additionalTags Optional component-specific tags to add
    */
   protected applyStandardTags(resource: IConstruct, additionalTags?: Record<string, string>): void {
-    const standardTags = this.buildStandardTags();
+    const taggingContext: TaggingContext = {
+      serviceName: this.context.serviceName,
+      serviceLabels: this.context.serviceLabels,
+      componentName: this.spec.name,
+      componentType: this.getType(),
+      environment: this.context.environment,
+      complianceFramework: this.context.complianceFramework,
+      region: this.context.region,
+      accountId: this.context.accountId
+    };
     
-    // Apply all standard tags
-    Object.entries(standardTags).forEach(([key, value]) => {
-      cdk.Tags.of(resource).add(key, value);
-    });
-    
-    // Apply any additional component-specific tags
-    if (additionalTags) {
-      Object.entries(additionalTags).forEach(([key, value]) => {
-        cdk.Tags.of(resource).add(key, value);
-      });
-    }
+    this.taggingService.applyStandardTags(resource, taggingContext, additionalTags);
   }
 
   /**

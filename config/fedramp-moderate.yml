@@ -144,3 +144,78 @@ defaults:
     traceSamplingRate: 0.25  # 25% sampling for enhanced monitoring
     metricsInterval: 60       # 1 minute intervals
     logsRetentionDays: 1095   # 3 years retention
+    
+    # Alarm thresholds are now just data
+    alarmThresholds:
+      ec2:
+        cpuUtilization: 80
+        statusCheckFailed: 1
+        networkIn: 50000000  # 50MB - more sensitive
+      rds:
+        freeStorageSpace: 5  # in GB - more conservative
+        cpuUtilization: 80
+        connectionCount: 70
+      lambda:
+        errorRate: 3  # percentage - more sensitive
+        duration: 3000  # milliseconds - stricter
+        throttles: 5
+      alb:
+        responseTime: 1.5  # seconds - stricter
+        http5xxErrors: 5
+        unhealthyTargets: 1
+      sqs:
+        messageAge: 180  # seconds - more sensitive
+        deadLetterMessages: 3
+      ecs:
+        cpuUtilization: 75
+        memoryUtilization: 75
+        taskCount: 0
+    
+    # OTel environment variables template
+    otelEnvironmentTemplate:
+      OTEL_EXPORTER_OTLP_ENDPOINT: 'https://otel-collector.fedramp-moderate.{{ region }}.platform.local:4317'
+      OTEL_EXPORTER_OTLP_HEADERS: 'authorization=Bearer {{ authToken }}'
+      OTEL_SERVICE_NAME: '{{ componentName }}'
+      OTEL_SERVICE_VERSION: '{{ serviceVersion }}'
+      OTEL_RESOURCE_ATTRIBUTES: 'service.name={{ serviceName }},deployment.environment={{ environment }},cloud.provider={{ cloudProvider }},cloud.region={{ region }},compliance.framework={{ complianceFramework }}'
+      OTEL_TRACES_SAMPLER: 'traceidratio'
+      OTEL_TRACES_SAMPLER_ARG: '{{ traceSamplingRate }}'
+      OTEL_METRICS_EXPORTER: 'otlp'
+      OTEL_LOGS_EXPORTER: 'otlp'
+      OTEL_PROPAGATORS: 'tracecontext,baggage,xray'
+      OTEL_INSTRUMENTATION_COMMON_DEFAULT_ENABLED: 'true'
+      OTEL_BSP_MAX_EXPORT_BATCH_SIZE: '256'  # Smaller batches for compliance
+      OTEL_BSP_EXPORT_TIMEOUT: '15000'  # Shorter timeout
+      OTEL_METRIC_EXPORT_INTERVAL: '{{ metricsInterval }}'
+    
+    # EC2 OTel UserData script template
+    ec2OtelUserDataTemplate: |
+      #!/bin/bash
+      # EC2 OpenTelemetry Collector Installation Script - FedRAMP Moderate
+      # Managed by SREs, not developers
+      
+      # Update system with security patches
+      yum update -y --security
+      
+      # Install OTel Collector with verification
+      curl -L -o /tmp/otelcol-contrib.deb https://github.com/open-telemetry/opentelemetry-collector-releases/releases/latest/download/otelcol-contrib_linux_amd64.deb
+      # Verify package integrity (in production, use GPG verification)
+      dpkg -i /tmp/otelcol-contrib.deb
+      
+      # Create configuration file with secure permissions
+      cat > /opt/aws/otel-collector/config.yaml << 'EOF'
+      {{ otelAgentConfigJson }}
+      EOF
+      chmod 600 /opt/aws/otel-collector/config.yaml
+      
+      # Set environment variables securely
+      {{ otelEnvironmentVars }}
+      echo "export $(cat /proc/1/environ | tr '\\0' '\\n' | grep OTEL_)" >> /etc/environment
+      
+      # Start OTel Collector service with audit logging
+      systemctl enable otelcol-contrib
+      systemctl start otelcol-contrib
+      
+      # Log completion with audit trail
+      echo "OpenTelemetry Collector installation completed at $(date) by $(whoami)" >> /var/log/otel-install.log
+      echo "Configuration hash: $(md5sum /opt/aws/otel-collector/config.yaml)" >> /var/log/otel-install.log

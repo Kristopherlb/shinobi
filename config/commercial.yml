@@ -125,3 +125,75 @@ defaults:
     traceSamplingRate: 0.1  # 10% sampling for cost optimization
     metricsInterval: 300    # 5 minute intervals
     logsRetentionDays: 365  # 1 year retention
+    
+    # Alarm thresholds are now just data
+    alarmThresholds:
+      ec2:
+        cpuUtilization: 85
+        statusCheckFailed: 1
+        networkIn: 100000000  # 100MB
+      rds:
+        freeStorageSpace: 10  # in GB
+        cpuUtilization: 85
+        connectionCount: 80
+      lambda:
+        errorRate: 5  # percentage
+        duration: 5000  # milliseconds
+        throttles: 10
+      alb:
+        responseTime: 2  # seconds
+        http5xxErrors: 10
+        unhealthyTargets: 1
+      sqs:
+        messageAge: 300  # seconds
+        deadLetterMessages: 5
+      ecs:
+        cpuUtilization: 80
+        memoryUtilization: 80
+        taskCount: 0
+    
+    # OTel environment variables template
+    otelEnvironmentTemplate:
+      OTEL_EXPORTER_OTLP_ENDPOINT: 'https://otel-collector.commercial.{{ region }}.platform.local:4317'
+      OTEL_EXPORTER_OTLP_HEADERS: 'authorization=Bearer {{ authToken }}'
+      OTEL_SERVICE_NAME: '{{ componentName }}'
+      OTEL_SERVICE_VERSION: '{{ serviceVersion }}'
+      OTEL_RESOURCE_ATTRIBUTES: 'service.name={{ serviceName }},deployment.environment={{ environment }},cloud.provider={{ cloudProvider }},cloud.region={{ region }},compliance.framework={{ complianceFramework }}'
+      OTEL_TRACES_SAMPLER: 'traceidratio'
+      OTEL_TRACES_SAMPLER_ARG: '{{ traceSamplingRate }}'
+      OTEL_METRICS_EXPORTER: 'otlp'
+      OTEL_LOGS_EXPORTER: 'otlp'
+      OTEL_PROPAGATORS: 'tracecontext,baggage,xray'
+      OTEL_INSTRUMENTATION_COMMON_DEFAULT_ENABLED: 'true'
+      OTEL_BSP_MAX_EXPORT_BATCH_SIZE: '512'
+      OTEL_BSP_EXPORT_TIMEOUT: '30000'
+      OTEL_METRIC_EXPORT_INTERVAL: '{{ metricsInterval }}'
+    
+    # EC2 OTel UserData script template
+    ec2OtelUserDataTemplate: |
+      #!/bin/bash
+      # EC2 OpenTelemetry Collector Installation Script
+      # Managed by SREs, not developers
+      
+      # Update system
+      yum update -y
+      
+      # Install OTel Collector
+      curl -L -o /tmp/otelcol-contrib.deb https://github.com/open-telemetry/opentelemetry-collector-releases/releases/latest/download/otelcol-contrib_linux_amd64.deb
+      dpkg -i /tmp/otelcol-contrib.deb
+      
+      # Create configuration file
+      cat > /opt/aws/otel-collector/config.yaml << 'EOF'
+      {{ otelAgentConfigJson }}
+      EOF
+      
+      # Set environment variables
+      {{ otelEnvironmentVars }}
+      echo "export $(cat /proc/1/environ | tr '\\0' '\\n' | grep OTEL_)" >> /etc/environment
+      
+      # Start OTel Collector service
+      systemctl enable otelcol-contrib
+      systemctl start otelcol-contrib
+      
+      # Log completion
+      echo "OpenTelemetry Collector installation completed at $(date)" >> /var/log/otel-install.log

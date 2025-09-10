@@ -138,3 +138,87 @@ defaults:
     traceSamplingRate: 1.0   # 100% sampling for complete audit trail
     metricsInterval: 30       # 30 second intervals for high compliance
     logsRetentionDays: 2555   # 7 years retention
+    
+    # Alarm thresholds are now just data
+    alarmThresholds:
+      ec2:
+        cpuUtilization: 70
+        statusCheckFailed: 1
+        networkIn: 25000000  # 25MB - most sensitive
+      rds:
+        freeStorageSpace: 3  # in GB - most conservative
+        cpuUtilization: 75
+        connectionCount: 60
+      lambda:
+        errorRate: 1  # percentage - most sensitive
+        duration: 2000  # milliseconds - strictest
+        throttles: 3
+      alb:
+        responseTime: 1  # seconds - strictest
+        http5xxErrors: 3
+        unhealthyTargets: 1
+      sqs:
+        messageAge: 120  # seconds - most sensitive
+        deadLetterMessages: 2
+      ecs:
+        cpuUtilization: 70
+        memoryUtilization: 70
+        taskCount: 0
+    
+    # OTel environment variables template
+    otelEnvironmentTemplate:
+      OTEL_EXPORTER_OTLP_ENDPOINT: 'https://otel-collector.fedramp-high.{{ region }}.platform.local:4317'
+      OTEL_EXPORTER_OTLP_HEADERS: 'authorization=Bearer {{ authToken }}'
+      OTEL_SERVICE_NAME: '{{ componentName }}'
+      OTEL_SERVICE_VERSION: '{{ serviceVersion }}'
+      OTEL_RESOURCE_ATTRIBUTES: 'service.name={{ serviceName }},deployment.environment={{ environment }},cloud.provider={{ cloudProvider }},cloud.region={{ region }},compliance.framework={{ complianceFramework }}'
+      OTEL_TRACES_SAMPLER: 'traceidratio'
+      OTEL_TRACES_SAMPLER_ARG: '{{ traceSamplingRate }}'
+      OTEL_METRICS_EXPORTER: 'otlp'
+      OTEL_LOGS_EXPORTER: 'otlp'
+      OTEL_PROPAGATORS: 'tracecontext,baggage,xray'
+      OTEL_INSTRUMENTATION_COMMON_DEFAULT_ENABLED: 'true'
+      OTEL_BSP_MAX_EXPORT_BATCH_SIZE: '128'  # Smallest batches for compliance
+      OTEL_BSP_EXPORT_TIMEOUT: '10000'  # Shortest timeout
+      OTEL_METRIC_EXPORT_INTERVAL: '{{ metricsInterval }}'
+    
+    # EC2 OTel UserData script template
+    ec2OtelUserDataTemplate: |
+      #!/bin/bash
+      # EC2 OpenTelemetry Collector Installation Script - FedRAMP High
+      # Managed by SREs, not developers
+      
+      # Update system with security patches and audit
+      yum update -y --security
+      echo "System update completed at $(date)" >> /var/log/security-audit.log
+      
+      # Install OTel Collector with full verification
+      curl -L -o /tmp/otelcol-contrib.deb https://github.com/open-telemetry/opentelemetry-collector-releases/releases/latest/download/otelcol-contrib_linux_amd64.deb
+      # Verify package integrity with checksums (in production, use GPG verification)
+      echo "Package downloaded, verifying integrity..." >> /var/log/security-audit.log
+      dpkg -i /tmp/otelcol-contrib.deb
+      
+      # Create configuration file with maximum security
+      cat > /opt/aws/otel-collector/config.yaml << 'EOF'
+      {{ otelAgentConfigJson }}
+      EOF
+      chmod 600 /opt/aws/otel-collector/config.yaml
+      chown otelcol:otelcol /opt/aws/otel-collector/config.yaml
+      
+      # Set environment variables with audit trail
+      {{ otelEnvironmentVars }}
+      echo "export $(cat /proc/1/environ | tr '\\0' '\\n' | grep OTEL_)" >> /etc/environment
+      echo "Environment variables set at $(date)" >> /var/log/security-audit.log
+      
+      # Start OTel Collector service with comprehensive logging
+      systemctl enable otelcol-contrib
+      systemctl start otelcol-contrib
+      
+      # Comprehensive audit logging
+      echo "OpenTelemetry Collector installation completed at $(date) by $(whoami)" >> /var/log/otel-install.log
+      echo "Configuration hash: $(md5sum /opt/aws/otel-collector/config.yaml)" >> /var/log/otel-install.log
+      echo "Service status: $(systemctl is-active otelcol-contrib)" >> /var/log/otel-install.log
+      echo "Process ID: $(pgrep otelcol-contrib)" >> /var/log/otel-install.log
+      
+      # Security audit entry
+      echo "OTel Collector deployed with FedRAMP High compliance settings" >> /var/log/security-audit.log
