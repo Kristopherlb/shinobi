@@ -23,6 +23,7 @@ You will receive exactly two inputs in XML format:
 ```xml
 <guide>
 [Platform Contribution and Governance Guide content]
+Default to docs/platform-standards/platform-governance-and-contribution-guideline.md
 </guide>
 ```
 

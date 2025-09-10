@@ -1,5 +1,5 @@
 /**
- * Configuration Builder for StaticWebsiteComponent Component
+ * Configuration Builder for Static Website Component
  * 
  * Implements the ConfigBuilder pattern as defined in the Platform Component API Contract.
  * Provides 5-layer configuration precedence chain and compliance-aware defaults.
@@ -8,76 +8,231 @@
 import { ConfigBuilder, ConfigBuilderContext } from '../../platform/contracts/config-builder';
 
 /**
- * Configuration interface for StaticWebsiteComponent component
+ * Configuration interface for Static Website component
  */
 export interface StaticWebsiteConfig {
-  /** Component name (optional, will be auto-generated) */
-  name?: string;
+  /** Website name (used for resource naming) */
+  websiteName?: string;
   
-  /** Component description */
-  description?: string;
-  
-  /** Enable detailed monitoring */
-  monitoring?: {
-    enabled?: boolean;
-    detailedMetrics?: boolean;
-    alarms?: {
-      // TODO: Define component-specific alarm thresholds
-    };
+  /** Domain configuration */
+  domain?: {
+    /** Primary domain name */
+    domainName: string;
+    /** Alternative domain names */
+    alternativeDomainNames?: string[];
+    /** Certificate ARN for SSL/TLS */
+    certificateArn?: string;
+    /** Hosted zone ID for DNS */
+    hostedZoneId?: string;
   };
   
-  /** Tagging configuration */
-  tags?: Record<string, string>;
+  /** S3 bucket configuration */
+  bucket?: {
+    /** Website index document */
+    indexDocument?: string;
+    /** Website error document */
+    errorDocument?: string;
+    /** Enable versioning */
+    versioning?: boolean;
+    /** Enable access logging */
+    accessLogging?: boolean;
+  };
   
-  // TODO: Add component-specific configuration properties
+  /** CloudFront distribution configuration */
+  distribution?: {
+    /** Enable distribution */
+    enabled?: boolean;
+    /** Enable access logging */
+    enableLogging?: boolean;
+    /** Log file prefix */
+    logFilePrefix?: string;
+  };
+  
+  /** Deployment configuration */
+  deployment?: {
+    /** Source path for website files */
+    sourcePath?: string;
+    /** Enable automatic deployment */
+    enabled?: boolean;
+    /** Deployment retention policy */
+    retainOnDelete?: boolean;
+  };
+  
+  /** Security configuration */
+  security?: {
+    /** Block public access */
+    blockPublicAccess?: boolean;
+    /** Enable encryption */
+    encryption?: boolean;
+    /** Enforce HTTPS */
+    enforceHTTPS?: boolean;
+  };
+  
+  /** Tags for resources */
+  tags?: Record<string, string>;
 }
 
 /**
- * JSON Schema for StaticWebsiteComponent configuration validation
+ * JSON Schema for Static Website configuration validation
  */
 export const STATIC_WEBSITE_CONFIG_SCHEMA = {
   type: 'object',
+  title: 'Static Website Configuration',
+  description: 'Configuration for creating a static website with S3 and CloudFront',
   properties: {
-    name: {
+    websiteName: {
       type: 'string',
-      description: 'Component name (optional, will be auto-generated from component name)',
-      pattern: '^[a-zA-Z][a-zA-Z0-9-_]*$',
-      maxLength: 128
+      description: 'Name of the website (used for resource naming)',
+      pattern: '^[a-z0-9-]+$',
+      maxLength: 63
     },
-    description: {
-      type: 'string',
-      description: 'Component description for documentation',
-      maxLength: 1024
-    },
-    monitoring: {
+    domain: {
       type: 'object',
-      description: 'Monitoring and observability configuration',
+      description: 'Domain configuration',
+      properties: {
+        domainName: {
+          type: 'string',
+          description: 'Primary domain name for the website'
+        },
+        alternativeDomainNames: {
+          type: 'array',
+          description: 'Alternative domain names',
+          items: { type: 'string' },
+          default: []
+        },
+        certificateArn: {
+          type: 'string',
+          description: 'ACM certificate ARN for SSL/TLS'
+        },
+        hostedZoneId: {
+          type: 'string',
+          description: 'Route53 hosted zone ID'
+        }
+      },
+      required: ['domainName'],
+      additionalProperties: false
+    },
+    bucket: {
+      type: 'object',
+      description: 'S3 bucket configuration',
+      properties: {
+        indexDocument: {
+          type: 'string',
+          description: 'Index document for website',
+          default: 'index.html'
+        },
+        errorDocument: {
+          type: 'string',
+          description: 'Error document for website',
+          default: 'error.html'
+        },
+        versioning: {
+          type: 'boolean',
+          description: 'Enable S3 versioning',
+          default: false
+        },
+        accessLogging: {
+          type: 'boolean',
+          description: 'Enable S3 access logging',
+          default: false
+        }
+      },
+      additionalProperties: false,
+      default: { 
+        indexDocument: 'index.html', 
+        errorDocument: 'error.html', 
+        versioning: false, 
+        accessLogging: false 
+      }
+    },
+    distribution: {
+      type: 'object',
+      description: 'CloudFront distribution configuration',
       properties: {
         enabled: {
           type: 'boolean',
-          default: true,
-          description: 'Enable monitoring'
+          description: 'Enable CloudFront distribution',
+          default: true
         },
-        detailedMetrics: {
+        enableLogging: {
           type: 'boolean',
-          default: false,
-          description: 'Enable detailed CloudWatch metrics'
+          description: 'Enable CloudFront access logging',
+          default: false
+        },
+        logFilePrefix: {
+          type: 'string',
+          description: 'CloudFront log file prefix',
+          default: 'cloudfront/'
         }
       },
-      additionalProperties: false
+      additionalProperties: false,
+      default: { 
+        enabled: true, 
+        enableLogging: false, 
+        logFilePrefix: 'cloudfront/' 
+      }
+    },
+    deployment: {
+      type: 'object',
+      description: 'Deployment configuration',
+      properties: {
+        sourcePath: {
+          type: 'string',
+          description: 'Source path for website files'
+        },
+        enabled: {
+          type: 'boolean',
+          description: 'Enable automatic deployment',
+          default: false
+        },
+        retainOnDelete: {
+          type: 'boolean',
+          description: 'Retain deployment on stack deletion',
+          default: false
+        }
+      },
+      additionalProperties: false,
+      default: { enabled: false, retainOnDelete: false }
+    },
+    security: {
+      type: 'object',
+      description: 'Security configuration',
+      properties: {
+        blockPublicAccess: {
+          type: 'boolean',
+          description: 'Block S3 public access (uses CloudFront only)',
+          default: true
+        },
+        encryption: {
+          type: 'boolean',
+          description: 'Enable S3 encryption',
+          default: true
+        },
+        enforceHTTPS: {
+          type: 'boolean',
+          description: 'Enforce HTTPS connections',
+          default: true
+        }
+      },
+      additionalProperties: false,
+      default: { 
+        blockPublicAccess: true, 
+        encryption: true, 
+        enforceHTTPS: true 
+      }
     },
     tags: {
       type: 'object',
-      description: 'Additional resource tags',
-      additionalProperties: { type: 'string' }
+      description: 'Tags for resources',
+      additionalProperties: { type: 'string' },
+      default: {}
     }
-    // TODO: Add component-specific schema properties
   },
   additionalProperties: false
 };
 
 /**
- * ConfigBuilder for StaticWebsiteComponent component
+ * ConfigBuilder for Static Website component
  * 
  * Implements the 5-layer configuration precedence chain:
  * 1. Hardcoded Fallbacks (ultra-safe baseline)
@@ -86,7 +241,11 @@ export const STATIC_WEBSITE_CONFIG_SCHEMA = {
  * 4. Component Overrides (from service.yml)
  * 5. Policy Overrides (from governance policies)
  */
-export class StaticWebsiteComponentConfigBuilder extends ConfigBuilder<StaticWebsiteConfig> {
+export class StaticWebsiteConfigBuilder extends ConfigBuilder<StaticWebsiteConfig> {
+  
+  constructor(builderContext: ConfigBuilderContext) {
+    super(builderContext, STATIC_WEBSITE_CONFIG_SCHEMA);
+  }
   
   /**
    * Layer 1: Hardcoded Fallbacks
@@ -94,12 +253,27 @@ export class StaticWebsiteComponentConfigBuilder extends ConfigBuilder<StaticWeb
    */
   protected getHardcodedFallbacks(): Partial<StaticWebsiteConfig> {
     return {
-      monitoring: {
+      bucket: {
+        indexDocument: 'index.html',
+        errorDocument: 'error.html',
+        versioning: false,
+        accessLogging: false
+      },
+      distribution: {
         enabled: true,
-        detailedMetrics: false
+        enableLogging: false,
+        logFilePrefix: 'cloudfront/'
+      },
+      deployment: {
+        enabled: false,
+        retainOnDelete: false
+      },
+      security: {
+        blockPublicAccess: true,
+        encryption: true,
+        enforceHTTPS: true
       },
       tags: {}
-      // TODO: Add component-specific hardcoded fallbacks
     };
   }
   
@@ -108,23 +282,41 @@ export class StaticWebsiteComponentConfigBuilder extends ConfigBuilder<StaticWeb
    * Security and compliance-specific configurations
    */
   protected getComplianceFrameworkDefaults(): Partial<StaticWebsiteConfig> {
-    const framework = this.context.complianceFramework;
+    const framework = this.builderContext.context.complianceFramework;
     
     const baseCompliance: Partial<StaticWebsiteConfig> = {
-      monitoring: {
-        enabled: true,
-        detailedMetrics: true
+      security: {
+        blockPublicAccess: true,
+        encryption: true,
+        enforceHTTPS: true
       }
     };
     
-    if (framework === 'fedramp-moderate' || framework === 'fedramp-high') {
+    if (framework === 'fedramp-moderate') {
       return {
         ...baseCompliance,
-        monitoring: {
-          ...baseCompliance.monitoring,
-          detailedMetrics: true // Mandatory for FedRAMP
+        bucket: {
+          versioning: true, // Required for compliance
+          accessLogging: true // Mandatory logging
+        },
+        distribution: {
+          enabled: true,
+          enableLogging: true // Required logging
         }
-        // TODO: Add FedRAMP-specific compliance defaults
+      };
+    }
+    
+    if (framework === 'fedramp-high') {
+      return {
+        ...baseCompliance,
+        bucket: {
+          versioning: true, // Mandatory
+          accessLogging: true // Mandatory comprehensive logging
+        },
+        distribution: {
+          enabled: true,
+          enableLogging: true // Mandatory
+        }
       };
     }
     

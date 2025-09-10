@@ -128,3 +128,13 @@ defaults:
       compliance-framework: "fedramp-moderate"
       logging-level: "comprehensive"
       audit-trail: "enabled"
+
+  # SSM Parameter Configuration
+  ssm-parameter:
+    parameterType: "secret" # Required for sensitive configuration
+    sensitivityLevel: "confidential" # Advanced features for compliance
+    validationPattern: "custom"
+    tags:
+      service-type: "configuration"
+      compliance-framework: "fedramp-moderate"
+      data-classification: "sensitive"

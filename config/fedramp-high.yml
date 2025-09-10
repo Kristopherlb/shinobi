@@ -121,3 +121,14 @@ defaults:
       logging-level: "comprehensive"
       audit-trail: "enabled"
       security-level: "high"
+
+  # SSM Parameter Configuration
+  ssm-parameter:
+    parameterType: "secret" # Mandatory for high compliance
+    sensitivityLevel: "confidential" # Required features
+    validationPattern: "custom"
+    tags:
+      service-type: "configuration"
+      compliance-framework: "fedramp-high"
+      data-classification: "confidential"
+      retention-period: "indefinite"

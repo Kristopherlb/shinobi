@@ -1,17 +1,17 @@
 /**
- * @platform/static-website - StaticWebsiteComponent Component
- * Static Website Component
+ * @platform/static-website - Static Website Component
+ * Static website hosting with S3 and CloudFront CDN
  */
 
 // Component exports
-export { StaticWebsiteComponentComponent } from './static-website.component';
+export { StaticWebsiteComponent } from './static-website.component';
 
 // Configuration exports
 export { 
   StaticWebsiteConfig,
-  StaticWebsiteComponentConfigBuilder,
+  StaticWebsiteConfigBuilder,
   STATIC_WEBSITE_CONFIG_SCHEMA
 } from './static-website.builder';
 
 // Creator exports
-export { StaticWebsiteComponentCreator } from './static-website.creator';
+export { StaticWebsiteCreator } from './static-website.creator';

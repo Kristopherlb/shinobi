@@ -1,5 +1,5 @@
 /**
- * Creator for StaticWebsiteComponent Component
+ * Creator for Static Website Component
  * 
  * Implements the ComponentCreator pattern as defined in the Platform Component API Contract.
  * Makes the component discoverable by the platform and provides factory methods.
@@ -11,11 +11,11 @@ import {
   ComponentContext, 
   IComponentCreator 
 } from '../../platform/contracts/component-interfaces';
-import { StaticWebsiteComponentComponent } from './static-website.component';
+import { StaticWebsiteComponent } from './static-website.component';
 import { StaticWebsiteConfig, STATIC_WEBSITE_CONFIG_SCHEMA } from './static-website.builder';
 
 /**
- * Creator class for StaticWebsiteComponent component
+ * Creator class for Static Website component
  * 
  * Responsible for:
  * - Component factory creation
@@ -23,7 +23,7 @@ import { StaticWebsiteConfig, STATIC_WEBSITE_CONFIG_SCHEMA } from './static-webs
  * - Schema definition and validation
  * - Component type identification
  */
-export class StaticWebsiteComponentCreator implements IComponentCreator {
+export class StaticWebsiteCreator implements IComponentCreator {
   
   /**
    * Component type identifier
@@ -33,31 +33,32 @@ export class StaticWebsiteComponentCreator implements IComponentCreator {
   /**
    * Component display name
    */
-  public readonly displayName = 'Static Website Component';
+  public readonly displayName = 'Static Website';
   
   /**
    * Component description
    */
-  public readonly description = 'Static Website Component';
+  public readonly description = 'Static website hosting with S3 and CloudFront CDN for global performance with compliance-aware configuration';
   
   /**
    * Component category for organization
    */
-  public readonly category = 'development';
+  public readonly category = 'hosting';
   
   /**
    * AWS service this component manages
    */
-  public readonly awsService = 'S3';
+  public readonly awsService = 'S3, CloudFront';
   
   /**
    * Component tags for discovery
    */
   public readonly tags = [
     'static-website',
-    'development',
-    'aws',
-    's3'
+    'hosting',
+    's3',
+    'cloudfront',
+    'cdn'
   ];
   
   /**
@@ -72,8 +73,8 @@ export class StaticWebsiteComponentCreator implements IComponentCreator {
     scope: Construct, 
     spec: ComponentSpec, 
     context: ComponentContext
-  ): StaticWebsiteComponentComponent {
-    return new StaticWebsiteComponentComponent(scope, spec, context);
+  ): StaticWebsiteComponent {
+    return new StaticWebsiteComponent(scope, spec.name, context, spec);
   }
   
   /**
@@ -93,15 +94,40 @@ export class StaticWebsiteComponentCreator implements IComponentCreator {
       errors.push('Component name must start with a letter and contain only alphanumeric characters, hyphens, and underscores');
     }
     
-    // TODO: Add component-specific validations here
+    // Validate domain configuration
+    if (config?.domain && !config.domain.domainName) {
+      errors.push('Domain name is required when domain configuration is provided');
+    }
     
-    // Environment-specific validations
+    // Validate deployment configuration
+    if (config?.deployment?.enabled && !config.deployment.sourcePath) {
+      errors.push('Source path is required when deployment is enabled');
+    }
+    
+    // Production environment validations
     if (context.environment === 'prod') {
-      if (!config?.monitoring?.enabled) {
-        errors.push('Monitoring must be enabled in production environment');
+      if (config?.security?.enforceHTTPS === false) {
+        errors.push('HTTPS must be enforced in production environment');
       }
       
-      // TODO: Add production-specific validations
+      if (config?.security?.encryption === false) {
+        errors.push('Encryption must be enabled in production environment');
+      }
+    }
+    
+    // FedRAMP compliance validations
+    if (context.complianceFramework === 'fedramp-moderate' || context.complianceFramework === 'fedramp-high') {
+      if (config?.bucket?.versioning === false) {
+        errors.push('S3 versioning is mandatory for FedRAMP compliance');
+      }
+      
+      if (config?.bucket?.accessLogging === false) {
+        errors.push('S3 access logging is mandatory for FedRAMP compliance');
+      }
+      
+      if (config?.distribution?.enableLogging === false) {
+        errors.push('CloudFront logging is mandatory for FedRAMP compliance');
+      }
     }
     
     return {
@@ -115,8 +141,8 @@ export class StaticWebsiteComponentCreator implements IComponentCreator {
    */
   public getProvidedCapabilities(): string[] {
     return [
-      'development:static-website',
-      'monitoring:static-website'
+      'hosting:static',
+      'web:static'
     ];
   }
   
@@ -124,9 +150,7 @@ export class StaticWebsiteComponentCreator implements IComponentCreator {
    * Returns the capabilities this component requires from other components
    */
   public getRequiredCapabilities(): string[] {
-    return [
-      // TODO: Define required capabilities
-    ];
+    return [];
   }
   
   /**
@@ -134,8 +158,10 @@ export class StaticWebsiteComponentCreator implements IComponentCreator {
    */
   public getConstructHandles(): string[] {
     return [
-      'main'
-      // TODO: Add additional construct handles if needed
+      'main',
+      'bucket',
+      'distribution',
+      'deployment'
     ];
   }
 }

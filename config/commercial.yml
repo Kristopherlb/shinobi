@@ -111,3 +111,11 @@ defaults:
       seconds: 3600 # 1 hour
     tags:
       service-type: "workflow"
+
+  # SSM Parameter Configuration
+  ssm-parameter:
+    parameterType: "configuration"
+    sensitivityLevel: "internal"
+    validationPattern: "custom"
+    tags:
+      service-type: "configuration"
