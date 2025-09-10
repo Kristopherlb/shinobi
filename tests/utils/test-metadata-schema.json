@@ -1,0 +1,123 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "$id": "https://platform.internal/schemas/test-metadata.json",
+  "title": "Platform Testing Standard Metadata Schema",
+  "description": "Validation schema for test metadata as defined in Platform Testing Standard v1.0",
+  "type": "object",
+  "required": [
+    "id",
+    "level", 
+    "capability",
+    "oracle",
+    "invariants",
+    "fixtures",
+    "inputs",
+    "risks",
+    "dependencies",
+    "evidence",
+    "compliance_refs",
+    "ai_generated",
+    "human_reviewed_by"
+  ],
+  "properties": {
+    "id": {
+      "type": "string",
+      "pattern": "^TP-[a-z0-9-]+-[a-z0-9-]+-\\d{3}$",
+      "description": "Test ID in format TP-<service>-<feature>-<NNN>"
+    },
+    "level": {
+      "type": "string",
+      "enum": ["unit", "integration", "e2e"],
+      "description": "Test level classification"
+    },
+    "capability": {
+      "type": "string",
+      "minLength": 1,
+      "description": "Short behavior description being tested"
+    },
+    "oracle": {
+      "type": "string", 
+      "enum": ["exact", "snapshot", "property", "contract", "metamorphic", "trace"],
+      "description": "Primary oracle mechanism for pass/fail determination"
+    },
+    "invariants": {
+      "type": "array",
+      "items": {
+        "type": "string"
+      },
+      "description": "Properties that must always hold during test execution"
+    },
+    "fixtures": {
+      "type": "array", 
+      "items": {
+        "type": "string"
+      },
+      "description": "Stable setup/teardown components used for determinism"
+    },
+    "inputs": {
+      "type": "object",
+      "required": ["shape", "notes"],
+      "properties": {
+        "shape": {
+          "type": "string",
+          "minLength": 1,
+          "description": "Domain summary of input data shape"
+        },
+        "notes": {
+          "type": "string",
+          "description": "Additional notes about inputs, masks, or special considerations"
+        }
+      },
+      "description": "Description of test input characteristics"
+    },
+    "risks": {
+      "type": "array",
+      "items": {
+        "type": "string"
+      },
+      "description": "Potential risks or failure modes this test addresses"
+    },
+    "dependencies": {
+      "type": "array",
+      "items": {
+        "type": "string"
+      },
+      "description": "External dependencies required for test execution"
+    },
+    "evidence": {
+      "type": "array",
+      "items": {
+        "type": "string"
+      },
+      "description": "Types of evidence produced by test execution"
+    },
+    "compliance_refs": {
+      "type": "array",
+      "items": {
+        "type": "string"
+      },
+      "description": "References to compliance standards validated by this test"
+    },
+    "ai_generated": {
+      "type": "boolean",
+      "description": "Whether this test was authored by AI"
+    },
+    "human_reviewed_by": {
+      "type": "string",
+      "description": "Name or group of human reviewer (required when ai_generated=true)"
+    }
+  },
+  "if": {
+    "properties": {
+      "ai_generated": { "const": true }
+    }
+  },
+  "then": {
+    "properties": {
+      "human_reviewed_by": {
+        "minLength": 1
+      }
+    }
+  },
+  "additionalProperties": false
+}

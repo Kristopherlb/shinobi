@@ -13,8 +13,14 @@ import {
 
 /**
  * Implementation of the Binder Matrix - Central registry for all supported component interactions
+ * Optimized with Map-based lookups for O(1) performance
  */
 export class BinderMatrix implements IBinderMatrix {
+  // Map-based storage for O(1) lookups by sourceType
+  private bindingStrategyMap = new Map<string, IBinderStrategy[]>();
+  private triggerStrategyMap = new Map<string, ITriggerStrategy[]>();
+  
+  // Keep arrays for backward compatibility and full matrix operations
   private bindingStrategies: IBinderStrategy[] = [];
   private triggerStrategies: ITriggerStrategy[] = [];
   
@@ -22,41 +28,100 @@ export class BinderMatrix implements IBinderMatrix {
    * Register a binding strategy
    */
   registerBindingStrategy(strategy: IBinderStrategy): void {
+    // Add to legacy array for backward compatibility
     this.bindingStrategies.push(strategy);
+    
+    // Add to optimized map structure for fast lookups
+    const compatibility = strategy.getCompatibilityMatrix();
+    if (compatibility.length === 0) {
+      console.warn(`Warning: Binding strategy '${strategy.constructor.name}' was registered but has an empty compatibility matrix.`);
+      return;
+    }
+    
+    // A single strategy can handle multiple source types
+    const sourceTypes = new Set(compatibility.map(entry => entry.sourceType));
+    
+    sourceTypes.forEach(sourceType => {
+      if (!this.bindingStrategyMap.has(sourceType)) {
+        this.bindingStrategyMap.set(sourceType, []);
+      }
+      this.bindingStrategyMap.get(sourceType)!.push(strategy);
+    });
   }
   
   /**
    * Register a trigger strategy
    */
   registerTriggerStrategy(strategy: ITriggerStrategy): void {
+    // Add to legacy array for backward compatibility
     this.triggerStrategies.push(strategy);
+    
+    // Add to optimized map structure for fast lookups
+    const compatibility = strategy.getCompatibilityMatrix();
+    if (compatibility.length === 0) {
+      console.warn(`Warning: Trigger strategy '${strategy.constructor.name}' was registered but has an empty compatibility matrix.`);
+      return;
+    }
+    
+    // A single strategy can handle multiple source types
+    const sourceTypes = new Set(compatibility.map(entry => entry.sourceType));
+    
+    sourceTypes.forEach(sourceType => {
+      if (!this.triggerStrategyMap.has(sourceType)) {
+        this.triggerStrategyMap.set(sourceType, []);
+      }
+      this.triggerStrategyMap.get(sourceType)!.push(strategy);
+    });
   }
   
   /**
-   * Find compatible binding strategy
+   * Find compatible binding strategy - O(1) optimized lookup
    */
   findBindingStrategy(sourceType: string, targetCapability: string): IBinderStrategy | null {
-    return this.bindingStrategies.find(strategy =>
+    // Get the small, pre-filtered list of strategies for this source type
+    const potentialStrategies = this.bindingStrategyMap.get(sourceType);
+    
+    if (!potentialStrategies) {
+      return null; // No strategies can handle this source at all
+    }
+    
+    // Now iterate over the much smaller, pre-filtered list
+    return potentialStrategies.find(strategy =>
       strategy.canHandle(sourceType, targetCapability)
     ) || null;
   }
   
   /**
-   * Find compatible trigger strategy
+   * Find compatible trigger strategy - O(1) optimized lookup
    */
   findTriggerStrategy(sourceType: string, targetType: string, eventType: string): ITriggerStrategy | null {
-    return this.triggerStrategies.find(strategy =>
+    // Get the small, pre-filtered list of strategies for this source type
+    const potentialStrategies = this.triggerStrategyMap.get(sourceType);
+    
+    if (!potentialStrategies) {
+      return null; // No strategies can handle this source at all
+    }
+    
+    // Now iterate over the much smaller, pre-filtered list
+    return potentialStrategies.find(strategy =>
       strategy.canHandle(sourceType, targetType, eventType)
     ) || null;
   }
   
   /**
-   * Get all supported bindings for a source type
+   * Get all supported bindings for a source type - O(1) optimized lookup
    */
   getSupportedBindings(sourceType: string): CompatibilityEntry[] {
     const supportedBindings: CompatibilityEntry[] = [];
     
-    for (const strategy of this.bindingStrategies) {
+    // Use optimized map lookup to get only relevant strategies
+    const potentialStrategies = this.bindingStrategyMap.get(sourceType);
+    
+    if (!potentialStrategies) {
+      return []; // No strategies support this source type
+    }
+    
+    for (const strategy of potentialStrategies) {
       const matrix = strategy.getCompatibilityMatrix();
       supportedBindings.push(...matrix.filter(entry => entry.sourceType === sourceType));
     }
@@ -65,12 +130,19 @@ export class BinderMatrix implements IBinderMatrix {
   }
   
   /**
-   * Get all supported triggers for a source type
+   * Get all supported triggers for a source type - O(1) optimized lookup
    */
   getSupportedTriggers(sourceType: string): TriggerCompatibilityEntry[] {
     const supportedTriggers: TriggerCompatibilityEntry[] = [];
     
-    for (const strategy of this.triggerStrategies) {
+    // Use optimized map lookup to get only relevant strategies
+    const potentialStrategies = this.triggerStrategyMap.get(sourceType);
+    
+    if (!potentialStrategies) {
+      return []; // No strategies support this source type
+    }
+    
+    for (const strategy of potentialStrategies) {
       const matrix = strategy.getCompatibilityMatrix();
       supportedTriggers.push(...matrix.filter(entry => entry.sourceType === sourceType));
     }
@@ -207,6 +279,60 @@ export class BinderMatrix implements IBinderMatrix {
       }
     };
   }
+  
+  /**
+   * Get performance diagnostics for the optimized lookup system
+   */
+  getPerformanceDiagnostics(): {
+    totalStrategies: number;
+    mapEfficiency: {
+      bindingSourceTypes: number;
+      triggerSourceTypes: number;
+      avgStrategiesPerBindingSource: number;
+      avgStrategiesPerTriggerSource: number;
+    };
+    lookupOptimization: {
+      worstCaseArrayScan: number;
+      bestCaseMapLookup: number;
+      optimizationRatio: string;
+    };
+  } {
+    const bindingSourceTypes = this.bindingStrategyMap.size;
+    const triggerSourceTypes = this.triggerStrategyMap.size;
+    
+    const totalBindingMappings = Array.from(this.bindingStrategyMap.values())
+      .reduce((sum, strategies) => sum + strategies.length, 0);
+    const totalTriggerMappings = Array.from(this.triggerStrategyMap.values())
+      .reduce((sum, strategies) => sum + strategies.length, 0);
+    
+    const avgStrategiesPerBindingSource = bindingSourceTypes > 0 
+      ? totalBindingMappings / bindingSourceTypes 
+      : 0;
+    const avgStrategiesPerTriggerSource = triggerSourceTypes > 0 
+      ? totalTriggerMappings / triggerSourceTypes 
+      : 0;
+    
+    const worstCaseArrayScan = this.bindingStrategies.length + this.triggerStrategies.length;
+    const bestCaseMapLookup = Math.max(avgStrategiesPerBindingSource, avgStrategiesPerTriggerSource);
+    const optimizationRatio = worstCaseArrayScan > 0 
+      ? `${(worstCaseArrayScan / Math.max(bestCaseMapLookup, 1)).toFixed(1)}x faster`
+      : 'N/A';
+    
+    return {
+      totalStrategies: worstCaseArrayScan,
+      mapEfficiency: {
+        bindingSourceTypes,
+        triggerSourceTypes,
+        avgStrategiesPerBindingSource: Math.round(avgStrategiesPerBindingSource * 100) / 100,
+        avgStrategiesPerTriggerSource: Math.round(avgStrategiesPerTriggerSource * 100) / 100
+      },
+      lookupOptimization: {
+        worstCaseArrayScan,
+        bestCaseMapLookup: Math.round(bestCaseMapLookup * 100) / 100,
+        optimizationRatio
+      }
+    };
+  }
 }
 
 /**
@@ -252,22 +378,22 @@ export class BinderMatrixUtils {
     report += 'BINDING COMPATIBILITY\n';
     report += '====================\n';
     
-    for (const [sourceType, entries] of bindingsBySource) {
+    bindingsBySource.forEach((entries, sourceType) => {
       report += `\n${sourceType}:\n`;
       entries.forEach(entry => {
         report += `  → ${entry.targetType} (${entry.capability}): ${entry.description}\n`;
       });
-    }
+    });
     
     report += '\n\nTRIGGER COMPATIBILITY\n';
     report += '====================\n';
     
-    for (const [sourceType, entries] of triggersBySource) {
+    triggersBySource.forEach((entries, sourceType) => {
       report += `\n${sourceType}:\n`;
       entries.forEach(entry => {
         report += `  → ${entry.targetType} (${entry.eventType}): ${entry.description}\n`;
       });
-    }
+    });
     
     return report;
   }

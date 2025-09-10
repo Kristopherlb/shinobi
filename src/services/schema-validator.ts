@@ -4,8 +4,9 @@
  */
 import Ajv from 'ajv';
 import addFormats from 'ajv-formats';
-import { Logger } from '../utils/logger';
+import { Logger } from '../platform/logger/src/index';
 import { SchemaManager } from '../schemas/schema-manager';
+import { SchemaErrorFormatter } from './schema-error-formatter';
 
 export interface SchemaValidatorDependencies {
   logger: Logger;
@@ -27,24 +28,24 @@ export class SchemaValidator {
   async validateSchema(manifest: any): Promise<void> {
     this.dependencies.logger.debug('Validating manifest schema');
 
-    // Get the master schema (dynamically composed)
-    const schema = await this.dependencies.schemaManager.getMasterSchema();
+    // Get the base schema (dynamically composed)
+    const schema = await this.dependencies.schemaManager.getBaseSchema();
     
     const validate = this.ajv.compile(schema);
     const valid = validate(manifest);
 
     if (!valid) {
       const errors = validate.errors || [];
-      const errorMessages = errors.map(error => {
-        const path = error.instancePath || error.schemaPath || 'root';
-        const message = error.message || 'validation failed';
-        const data = error.data !== undefined ? ` (found: ${JSON.stringify(error.data)})` : '';
-        return `  ${path}: ${message}${data}`;
+      
+      // Use the enhanced error formatter for better developer experience
+      const errorReport = SchemaErrorFormatter.generateErrorReport(errors);
+      
+      this.dependencies.logger.error('Schema validation failed', {
+        errors: errors,
+        formattedReport: errorReport
       });
-
-      const errorMsg = `Schema validation failed:\n${errorMessages.join('\n')}`;
-      this.dependencies.logger.debug('Schema validation errors', errors);
-      throw new Error(errorMsg);
+      
+      throw new Error(errorReport);
     }
 
     // Validate required fields for AC-E1 (missing complianceFramework, etc.)

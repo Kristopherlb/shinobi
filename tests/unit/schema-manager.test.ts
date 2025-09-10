@@ -4,7 +4,7 @@
  */
 
 import { describe, test, expect, beforeEach } from '@jest/globals';
-import { SchemaManager } from '../../src/schemas/schema-manager';
+import { SchemaManager } from '../../src/services/schema-manager';
 import Ajv from 'ajv';
 import addFormats from 'ajv-formats';
 
@@ -20,7 +20,7 @@ describe('SchemaManager', () => {
 
   describe('Authoritative Schema Loading', () => {
     test('should load the complete JSON schema successfully', async () => {
-      const schema = await schemaManager.getMasterSchema();
+      const schema = await schemaManager.getBaseSchema();
       
       expect(schema).toBeDefined();
       expect(schema.title).toBe('Platform Service Manifest');
@@ -31,7 +31,7 @@ describe('SchemaManager', () => {
     });
 
     test('should include $ref support in environment configuration', async () => {
-      const schema = await schemaManager.getMasterSchema();
+      const schema = await schemaManager.getBaseSchema();
       
       const environmentDef = schema.$defs.environmentConfiguration;
       expect(environmentDef).toBeDefined();
@@ -44,7 +44,7 @@ describe('SchemaManager', () => {
     });
 
     test('should validate complete service manifest with all features', async () => {
-      const schema = await schemaManager.getMasterSchema();
+      const schema = await schemaManager.getBaseSchema();
       const validate = ajv.compile(schema);
 
       const validManifest = {
@@ -111,7 +111,7 @@ describe('SchemaManager', () => {
     });
 
     test('should validate component bindings with selectors', async () => {
-      const schema = await schemaManager.getMasterSchema();
+      const schema = await schemaManager.getBaseSchema();
       const validate = ajv.compile(schema);
 
       const manifestWithSelectors = {
@@ -146,7 +146,7 @@ describe('SchemaManager', () => {
     });
 
     test('should reject invalid service names', async () => {
-      const schema = await schemaManager.getMasterSchema();
+      const schema = await schemaManager.getBaseSchema();
       const validate = ajv.compile(schema);
 
       const invalidManifest = {
@@ -167,7 +167,7 @@ describe('SchemaManager', () => {
     });
 
     test('should require minimum justification length for patches', async () => {
-      const schema = await schemaManager.getMasterSchema();
+      const schema = await schemaManager.getBaseSchema();
       const validate = ajv.compile(schema);
 
       const manifestWithShortJustification = {
@@ -198,7 +198,7 @@ describe('SchemaManager', () => {
     });
 
     test('should validate date format for patch expiration', async () => {
-      const schema = await schemaManager.getMasterSchema();
+      const schema = await schemaManager.getBaseSchema();
       const validate = ajv.compile(schema);
 
       const manifestWithInvalidDate = {
@@ -229,7 +229,7 @@ describe('SchemaManager', () => {
     });
 
     test('should validate binding access levels', async () => {
-      const schema = await schemaManager.getMasterSchema();
+      const schema = await schemaManager.getBaseSchema();
       const validate = ajv.compile(schema);
 
       const manifestWithInvalidAccess = {
@@ -260,7 +260,7 @@ describe('SchemaManager', () => {
     });
 
     test('should support readwrite access level', async () => {
-      const schema = await schemaManager.getMasterSchema();
+      const schema = await schemaManager.getBaseSchema();
       const validate = ajv.compile(schema);
 
       const manifestWithReadwriteAccess = {
@@ -286,7 +286,7 @@ describe('SchemaManager', () => {
     });
 
     test('should validate compliance framework enum', async () => {
-      const schema = await schemaManager.getMasterSchema();
+      const schema = await schemaManager.getBaseSchema();
       const validate = ajv.compile(schema);
 
       const manifestWithInvalidCompliance = {
@@ -305,7 +305,7 @@ describe('SchemaManager', () => {
 
   describe('Schema Completeness', () => {
     test('should include all required top-level properties', async () => {
-      const schema = await schemaManager.getMasterSchema();
+      const schema = await schemaManager.getBaseSchema();
       
       expect(schema.properties.service).toBeDefined();
       expect(schema.properties.owner).toBeDefined();
@@ -318,7 +318,7 @@ describe('SchemaManager', () => {
     });
 
     test('should include all component definition properties', async () => {
-      const schema = await schemaManager.getMasterSchema();
+      const schema = await schemaManager.getBaseSchema();
       const componentDef = schema.$defs.component;
       
       expect(componentDef.properties.name).toBeDefined();
@@ -331,7 +331,7 @@ describe('SchemaManager', () => {
     });
 
     test('should include all binding definition properties', async () => {
-      const schema = await schemaManager.getMasterSchema();
+      const schema = await schemaManager.getBaseSchema();
       const bindingDef = schema.$defs.binding;
       
       expect(bindingDef.properties.to).toBeDefined();

@@ -105,6 +105,13 @@
             "$ref": "#/$defs/binding"
           }
         },
+        "triggers": {
+          "type": "array",
+          "description": "Declarative, event-driven invocations from this component to a target.",
+          "items": {
+            "$ref": "#/$defs/trigger"
+          }
+        },
         "labels": {
           "type": "object",
           "description": "A map of key-value pairs for this specific component instance.",
@@ -127,6 +134,10 @@
       "required": [
         "capability",
         "access"
+      ],
+      "oneOf": [
+        { "required": ["to"] },
+        { "required": ["select"] }
       ],
       "properties": {
         "to": {
@@ -157,6 +168,20 @@
         "options": {
           "type": "object",
           "description": "Advanced, binder-specific options (e.g., 'iamAuth: true')."
+        }
+      }
+    },
+    "trigger": {
+      "type": "object",
+      "required": ["event", "target"],
+      "properties": {
+        "event": {
+          "type": "string",
+          "description": "The event on the source component that triggers the action (e.g., 'objectCreated')."
+        },
+        "target": {
+          "type": "string",
+          "description": "The name of the target component to be invoked."
         }
       }
     },

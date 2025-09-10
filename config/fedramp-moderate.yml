@@ -138,3 +138,9 @@ defaults:
       service-type: "configuration"
       compliance-framework: "fedramp-moderate"
       data-classification: "sensitive"
+
+  # Observability Configuration Defaults
+  observability:
+    traceSamplingRate: 0.25  # 25% sampling for enhanced monitoring
+    metricsInterval: 60       # 1 minute intervals
+    logsRetentionDays: 1095   # 3 years retention

@@ -16,8 +16,10 @@ export * from './config-loader';
 
 // Export utility services
 export * from './file-discovery';
-export * from './logger';
 export * from './plan-output-formatter';
+
+// Export infrastructure services
+export * from './infrastructure-logging.service';
 
 // Export schema management
 export * from './schema-manager';

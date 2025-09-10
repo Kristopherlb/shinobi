@@ -2,7 +2,7 @@
  * Validation Orchestrator - Command pattern implementation
  * Implements Principle 7: Clear Class Roles - This is a "Service/Manager" for orchestration
  */
-import { Logger } from '../utils/logger';
+import { Logger } from '../platform/logger/src/index';
 import { ManifestParser } from './manifest-parser';
 import { SchemaValidator } from './schema-validator';
 import { ContextHydrator } from './context-hydrator';

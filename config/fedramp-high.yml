@@ -132,3 +132,9 @@ defaults:
       compliance-framework: "fedramp-high"
       data-classification: "confidential"
       retention-period: "indefinite"
+
+  # Observability Configuration Defaults
+  observability:
+    traceSamplingRate: 1.0   # 100% sampling for complete audit trail
+    metricsInterval: 30       # 30 second intervals for high compliance
+    logsRetentionDays: 2555   # 7 years retention

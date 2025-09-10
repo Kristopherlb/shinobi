@@ -3,4 +3,4 @@
  * This maintains backward compatibility for CLI commands
  */
 
-export { Logger, logger, LoggerConfig } from '../../services/logger';
+export { Logger, logger, LoggerConfig } from '../console-logger';

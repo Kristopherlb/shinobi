@@ -119,3 +119,9 @@ defaults:
     validationPattern: "custom"
     tags:
       service-type: "configuration"
+
+  # Observability Configuration Defaults
+  observability:
+    traceSamplingRate: 0.1  # 10% sampling for cost optimization
+    metricsInterval: 300    # 5 minute intervals
+    logsRetentionDays: 365  # 1 year retention
