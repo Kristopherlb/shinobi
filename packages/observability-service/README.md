@@ -10,6 +10,8 @@ Centralized observability service for CDK-Lib platform components. Provides Open
 - **OpenTelemetry Integration**: Automatic instrumentation with configurable sampling and export settings
 - **CloudWatch Alarms**: Framework-appropriate monitoring thresholds and alerting
 - **Template Substitution**: Dynamic environment variable generation with placeholders
+- **Performance Optimized**: In-memory configuration caching and efficient template processing
+- **Type Safety**: Strongly typed interfaces and configuration objects
 
 ## Installation
 
@@ -79,6 +81,24 @@ defaults:
 - **SQS Queues**: Message age, queue depth, dead letter messages
 - **ECS Services**: CPU/memory utilization, task counts
 
+## Performance Optimizations
+
+The service includes several performance optimizations for high-throughput scenarios:
+
+### Configuration Caching
+- **In-Memory Cache**: Configuration files are cached after first load to eliminate repeated file I/O
+- **Cache Management**: Use `ObservabilityServiceUtils.clearConfigCache()` to clear cache when config files change
+- **Cache Monitoring**: Use `ObservabilityServiceUtils.getCacheStats()` to monitor cache performance
+
+### Template Processing
+- **Pre-computed Substitutions**: Environment variable templates use pre-computed substitution values
+- **Efficient String Replacement**: Optimized regex-based template processing
+- **Single-Pass Processing**: All template substitutions applied in a single traversal
+
+### Handler Pattern
+- **Lazy Loading**: Handlers are instantiated only when needed
+- **Type-Safe Delegation**: Direct handler lookup without reflection overhead
+
 ## API Reference
 
 ### ObservabilityService
@@ -94,8 +114,18 @@ constructor(context: PlatformServiceContext, taggingService?: ITaggingService)
 #### Methods
 
 - `apply(component: BaseComponent): void` - Apply observability to a component
-- `getObservabilityConfig(): ObservabilityConfig` - Get current configuration
+- `getObservabilityConfig(): Readonly<ObservabilityConfig>` - Get current configuration
 - `buildOTelEnvironmentVariables(componentName: string): Record<string, string>` - Build OTel env vars
+- `getHandlerInfo(): { supportedTypes: string[]; handlerCount: number }` - Get handler information
+
+### ObservabilityServiceUtils
+
+Utility functions for cache management and monitoring.
+
+#### Methods
+
+- `clearConfigCache(): void` - Clear the configuration cache
+- `getCacheStats(): { size: number; keys: string[] }` - Get cache statistics
 
 ## Compliance Frameworks
 

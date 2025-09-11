@@ -10,9 +10,9 @@ import * as ec2 from 'aws-cdk-lib/aws-ec2';
 import * as iam from 'aws-cdk-lib/aws-iam';
 import { Template, Match } from 'aws-cdk-lib/assertions';
 import { ComputeToServiceConnectBinder } from './compute-to-service-connect.strategy';
-import { EcsFargateServiceComponent } from '../../components/ecs-fargate-service/ecs-fargate-service.component';
-import { EcsEc2ServiceComponent } from '../../components/ecs-ec2-service/ecs-ec2-service.component';
-import { EcsClusterComponent } from '../../components/ecs-cluster/ecs-cluster.component';
+import { EcsFargateServiceComponent } from '../../../packages/components/ecs-fargate-service/ecs-fargate-service.component';
+import { EcsEc2ServiceComponent } from '../../../packages/components/ecs-ec2-service/ecs-ec2-service.component';
+import { EcsClusterComponent } from '../../../packages/components/ecs-cluster/ecs-cluster.component';
 import { ComponentContext, ComponentSpec } from '../../platform/contracts/component-interfaces';
 import { BindingDirective } from '../../platform/contracts/platform-binding-trigger-spec';
 import { 
@@ -20,7 +20,7 @@ import {
   TestAssertions,
   TEST_CONTEXTS,
   TEST_SPECS 
-} from '../../components/ecs-cluster/test-fixtures';
+} from '../../../packages/components/ecs-cluster/test-fixtures';
 
 // Mock Lambda component for testing compute-to-service binding
 class MockLambdaComponent {

@@ -2,8 +2,8 @@ import * as fs from 'fs/promises';
 import * as YAML from 'yaml';
 import Ajv from 'ajv';
 import addFormats from 'ajv-formats';
-import { Logger } from '../utils/logger';
-import { SchemaManager } from '../schemas/schema-manager';
+import { Logger } from '../cli/utils/logger';
+import { SchemaManager } from './schema-manager';
 
 export interface ValidationResult {
   manifest: any;
@@ -117,15 +117,8 @@ export class ValidationPipeline {
       throw new Error(errorMsg);
     }
 
-    // Validate required fields for AC-E1 (missing complianceFramework, etc.)
-    const manifestObj = manifest as Record<string, any>;
-    if (!manifestObj.service) {
-      throw new Error('Missing required field: service');
-    }
-
-    if (!manifestObj.owner) {
-      throw new Error('Missing required field: owner');
-    }
+    // Schema validation handles all required field checks
+    // Manual field validation removed - JSON Schema is the single source of truth
 
     this.dependencies.logger.debug('Schema validation completed successfully');
   }
@@ -143,50 +136,6 @@ export class ValidationPipeline {
     return await contextHydrator.hydrateContext(manifest, environment);
   }
 
-  private interpolateEnvironmentValues(obj: any, envDefaults: Record<string, any>, environment: string): void {
-    if (typeof obj === 'string') {
-      return; // Strings are processed by reference in parent object
-    }
-
-    if (Array.isArray(obj)) {
-      obj.forEach(item => this.interpolateEnvironmentValues(item, envDefaults, environment));
-      return;
-    }
-
-    if (obj && typeof obj === 'object') {
-      for (const [key, value] of Object.entries(obj)) {
-        if (typeof value === 'string') {
-          // Process ${env:key} interpolation
-          const envMatch = value.match(/\\$\\{env:([^}]+)\\}/g);
-          if (envMatch) {
-            let interpolated = value;
-            envMatch.forEach(match => {
-              const envKey = match.slice(6, -1); // Remove ${env: and }
-              if (envDefaults[envKey] !== undefined) {
-                interpolated = interpolated.replace(match, String(envDefaults[envKey]));
-              }
-            });
-            obj[key] = interpolated;
-          }
-
-          // Process ${envIs:env} boolean interpolation
-          const envIsMatch = value.match(/\\$\\{envIs:([^}]+)\\}/);
-          if (envIsMatch) {
-            const targetEnv = envIsMatch[1];
-            obj[key] = environment === targetEnv;
-          }
-        } else if (value && typeof value === 'object') {
-          // Handle per-environment maps
-          const envValue = (value as Record<string, any>)[environment];
-          if (envValue !== undefined) {
-            obj[key] = envValue;
-          } else {
-            this.interpolateEnvironmentValues(value, envDefaults, environment);
-          }
-        }
-      }
-    }
-  }
 
   private async validateReferences(manifest: any): Promise<void> {
     this.dependencies.logger.debug('Validating references and semantic rules');

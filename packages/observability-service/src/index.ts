@@ -15,3 +15,9 @@ export type {
   ObservabilityHandlerResult, 
   ObservabilityConfig 
 } from '@cdk-lib/observability-handlers';
+
+// Export cache management utilities
+export const ObservabilityServiceUtils = {
+  clearConfigCache: () => ObservabilityService.clearConfigCache(),
+  getCacheStats: () => ObservabilityService.getCacheStats()
+};

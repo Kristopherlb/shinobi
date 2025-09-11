@@ -12,7 +12,7 @@ import * as fs from 'fs';
 import * as path from 'path';
 import * as yaml from 'js-yaml';
 import * as os from 'os';
-import { ServiceManifest } from '../../src/components/mcp-server/services/service-endpoints';
+import { ServiceManifest } from '../../packages/components/mcp-server/services/service-endpoints';
 
 describe('E2E: Simple EC2 via CLI', () => {
   let tempDir: string;

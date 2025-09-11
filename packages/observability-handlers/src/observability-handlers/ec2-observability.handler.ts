@@ -11,7 +11,7 @@ import * as cdk from 'aws-cdk-lib';
 import { IConstruct } from 'constructs';
 import { BaseComponent } from '@cdk-lib/platform-contracts';
 import { IObservabilityHandler, ObservabilityHandlerResult, ObservabilityConfig } from './observability-handler.interface';
-import { ITaggingService, TaggingContext, defaultTaggingService } from '@cdk-l@cdk-lib/tagging-service';
+import { ITaggingService, TaggingContext, defaultTaggingService } from '@cdk-lib/tagging-service';
 import { PlatformServiceContext } from '@cdk-lib/platform-contracts';
 
 /**

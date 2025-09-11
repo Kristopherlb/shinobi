@@ -9,9 +9,9 @@ import * as cdk from 'aws-cdk-lib';
 import * as cloudwatch from 'aws-cdk-lib/aws-cloudwatch';
 import { Template, Match } from 'aws-cdk-lib/assertions';
 import { ObservabilityService } from './observability.service';
-import { EcsClusterComponent } from '../components/ecs-cluster/ecs-cluster.component';
-import { EcsFargateServiceComponent } from '../components/ecs-fargate-service/ecs-fargate-service.component';
-import { EcsEc2ServiceComponent } from '../components/ecs-ec2-service/ecs-ec2-service.component';
+import { EcsClusterComponent } from '../../packages/components/ecs-cluster/ecs-cluster.component';
+import { EcsFargateServiceComponent } from '../../packages/components/ecs-fargate-service/ecs-fargate-service.component';
+import { EcsEc2ServiceComponent } from '../../packages/components/ecs-ec2-service/ecs-ec2-service.component';
 import { ComponentContext } from '../platform/contracts/component-interfaces';
 import { PlatformServiceContext } from '../platform/contracts/platform-services';
 import { 
@@ -19,7 +19,7 @@ import {
   PerformanceTestHelpers,
   TEST_CONTEXTS,
   TEST_SPECS 
-} from '../components/ecs-cluster/test-fixtures';
+} from '../../packages/components/ecs-cluster/test-fixtures';
 
 /*
  * Test Metadata: TP-OBSERVABILITY-ECS-001

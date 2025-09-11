@@ -48,15 +48,8 @@ export class SchemaValidator {
       throw new Error(errorReport);
     }
 
-    // Validate required fields for AC-E1 (missing complianceFramework, etc.)
-    const manifestObj = manifest as Record<string, any>;
-    if (!manifestObj.service) {
-      throw new Error('Missing required field: service');
-    }
-
-    if (!manifestObj.owner) {
-      throw new Error('Missing required field: owner');
-    }
+    // Schema validation handles all required field checks
+    // Manual field validation removed - JSON Schema is the single source of truth
 
     this.dependencies.logger.debug('Schema validation completed successfully');
   }

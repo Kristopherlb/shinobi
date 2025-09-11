@@ -46,6 +46,9 @@ export class ObservabilityService implements IPlatformService {
   private readonly observabilityConfig: ObservabilityConfig;
   private readonly handlers: Map<string, IObservabilityHandler>;
   private readonly taggingService: ITaggingService;
+  
+  // Performance optimization: In-memory cache for configuration files
+  private static readonly configCache = new Map<string, ObservabilityConfig>();
 
   constructor(context: PlatformServiceContext, taggingService: ITaggingService = defaultTaggingService) {
     this.context = context;
@@ -82,10 +85,22 @@ export class ObservabilityService implements IPlatformService {
   /**
    * Load observability configuration from centralized platform configuration
    * Implements Platform Configuration Standard v1.0 Layer 2
+   * Performance optimized with in-memory caching
    */
   private loadObservabilityConfig(): ObservabilityConfig {
     const framework = this.context.complianceFramework;
     const configPath = this.getPlatformConfigPath(framework);
+    
+    // Performance optimization: Check cache first
+    const cacheKey = `${framework}:${configPath}`;
+    if (ObservabilityService.configCache.has(cacheKey)) {
+      this.context.logger.debug('Using cached observability configuration', {
+        service: this.name,
+        framework,
+        cacheKey
+      });
+      return ObservabilityService.configCache.get(cacheKey)!;
+    }
     
     try {
       if (!fs.existsSync(configPath)) {
@@ -94,7 +109,10 @@ export class ObservabilityService implements IPlatformService {
           framework,
           configPath
         });
-        return this.getFallbackConfig();
+        const fallbackConfig = this.getFallbackConfig();
+        // Cache the fallback config to avoid repeated file system checks
+        ObservabilityService.configCache.set(cacheKey, fallbackConfig);
+        return fallbackConfig;
       }
       
       const fileContents = fs.readFileSync(configPath, 'utf8');
@@ -103,7 +121,7 @@ export class ObservabilityService implements IPlatformService {
       // Extract observability configuration for this compliance framework
       if (platformConfig?.defaults?.observability) {
         const config = platformConfig.defaults.observability;
-    return {
+        const loadedConfig: ObservabilityConfig = {
           traceSamplingRate: config.traceSamplingRate || 0.1,
           metricsInterval: config.metricsInterval || 300,
           logsRetentionDays: config.logsRetentionDays || 365,
@@ -111,6 +129,10 @@ export class ObservabilityService implements IPlatformService {
           otelEnvironmentTemplate: config.otelEnvironmentTemplate || this.getFallbackConfig().otelEnvironmentTemplate,
           ec2OtelUserDataTemplate: config.ec2OtelUserDataTemplate || this.getFallbackConfig().ec2OtelUserDataTemplate
         };
+        
+        // Performance optimization: Cache the loaded configuration
+        ObservabilityService.configCache.set(cacheKey, loadedConfig);
+        return loadedConfig;
       }
       
       this.context.logger.warn(`No observability configuration found in ${configPath}, using fallback defaults`, {
@@ -118,7 +140,10 @@ export class ObservabilityService implements IPlatformService {
         framework,
         configPath
       });
-      return this.getFallbackConfig();
+      const fallbackConfig = this.getFallbackConfig();
+      // Cache the fallback config
+      ObservabilityService.configCache.set(cacheKey, fallbackConfig);
+      return fallbackConfig;
       
     } catch (error) {
       this.context.logger.error(`Failed to load platform configuration for framework '${framework}': ${(error as Error).message}`, {
@@ -127,7 +152,10 @@ export class ObservabilityService implements IPlatformService {
         configPath,
         error: (error as Error).message
       });
-      return this.getFallbackConfig();
+      const fallbackConfig = this.getFallbackConfig();
+      // Cache the fallback config even in error cases
+      ObservabilityService.configCache.set(cacheKey, fallbackConfig);
+      return fallbackConfig;
     }
   }
 
@@ -137,6 +165,24 @@ export class ObservabilityService implements IPlatformService {
   private getPlatformConfigPath(framework: string): string {
     const configDir = path.join(process.cwd(), 'config');
     return path.join(configDir, `${framework}.yml`);
+  }
+
+  /**
+   * Clear the configuration cache
+   * Useful for testing or when configuration files change at runtime
+   */
+  public static clearConfigCache(): void {
+    ObservabilityService.configCache.clear();
+  }
+
+  /**
+   * Get cache statistics for monitoring and debugging
+   */
+  public static getCacheStats(): { size: number; keys: string[] } {
+    return {
+      size: ObservabilityService.configCache.size,
+      keys: Array.from(ObservabilityService.configCache.keys())
+    };
   }
 
   /**
@@ -268,26 +314,36 @@ export class ObservabilityService implements IPlatformService {
   /**
    * Build OpenTelemetry environment variables from template
    * Performs string substitution on the template with actual values
+   * Performance optimized with pre-computed substitution values
    */
   public buildOTelEnvironmentVariables(componentName: string): Record<string, string> {
     const template = this.observabilityConfig.otelEnvironmentTemplate;
     const envVars: Record<string, string> = {};
     
-    // Determine cloud provider - this is an AWS CDK library, so always AWS
-    const cloudProvider = 'aws';
+    // Performance optimization: Pre-compute all substitution values
+    const substitutions = {
+      '{{ region }}': this.context.region,
+      '{{ authToken }}': this.getOtelAuthToken(),
+      '{{ componentName }}': componentName,
+      '{{ serviceVersion }}': this.context.serviceLabels?.version || '1.0.0',
+      '{{ serviceName }}': this.context.serviceName,
+      '{{ environment }}': this.context.environment,
+      '{{ cloudProvider }}': 'aws', // Fixed value for AWS CDK library
+      '{{ complianceFramework }}': this.context.complianceFramework,
+      '{{ traceSamplingRate }}': this.observabilityConfig.traceSamplingRate.toString(),
+      '{{ metricsInterval }}': this.observabilityConfig.metricsInterval.toString()
+    };
     
+    // Performance optimization: Use Object.entries for better performance
     for (const [key, value] of Object.entries(template)) {
-      envVars[key] = value
-        .replace('{{ region }}', this.context.region)
-        .replace('{{ authToken }}', this.getOtelAuthToken())
-        .replace('{{ componentName }}', componentName)
-        .replace('{{ serviceVersion }}', this.context.serviceLabels?.version || '1.0.0')
-        .replace('{{ serviceName }}', this.context.serviceName)
-        .replace('{{ environment }}', this.context.environment)
-        .replace('{{ cloudProvider }}', cloudProvider)
-        .replace('{{ complianceFramework }}', this.context.complianceFramework)
-        .replace('{{ traceSamplingRate }}', this.observabilityConfig.traceSamplingRate.toString())
-        .replace('{{ metricsInterval }}', this.observabilityConfig.metricsInterval.toString());
+      let processedValue = value;
+      
+      // Apply all substitutions in a single pass
+      for (const [placeholder, replacement] of Object.entries(substitutions)) {
+        processedValue = processedValue.replace(new RegExp(placeholder.replace(/[{}]/g, '\\$&'), 'g'), replacement);
+      }
+      
+      envVars[key] = processedValue;
     }
     
     return envVars;
@@ -299,6 +355,24 @@ export class ObservabilityService implements IPlatformService {
   private getOtelAuthToken(): string {
     // In production, this would retrieve from AWS Secrets Manager or Parameter Store
     return `otel-token-${this.context.complianceFramework}-${this.context.environment}`;
+  }
+
+  /**
+   * Get the current observability configuration
+   * Provides type-safe access to the loaded configuration
+   */
+  public getObservabilityConfig(): Readonly<ObservabilityConfig> {
+    return this.observabilityConfig;
+  }
+
+  /**
+   * Get handler information for debugging and monitoring
+   */
+  public getHandlerInfo(): { supportedTypes: string[]; handlerCount: number } {
+    return {
+      supportedTypes: Array.from(this.handlers.keys()),
+      handlerCount: this.handlers.size
+    };
   }
 
   /**

@@ -31,7 +31,7 @@ import { RdsObservabilityHandler } from './observability-handlers/rds-observabil
 import { Ec2ObservabilityHandler } from './observability-handlers/ec2-observability.handler';
 import { SqsObservabilityHandler } from './observability-handlers/sqs-observability.handler';
 import { EcsObservabilityHandler } from './observability-handlers/ecs-observability.handler';
-import { ITaggingService, defaultTaggingService } from './tagging.service';
+import { ITaggingService, defaultTaggingService } from '../../packages/tagging-service/tagging.service';
 
 
 /**

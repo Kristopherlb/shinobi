@@ -1,14 +1,43 @@
 import * as fs from 'fs/promises';
 import * as path from 'path';
 import * as os from 'os';
-import { ValidationPipeline } from '../../src/validation/pipeline';
+import { ValidationPipeline } from '../../src/services/pipeline';
+import { SchemaManager } from '../../src/services/schema-manager';
+import { Logger } from '../../src/cli/utils/logger';
 
 describe('ValidationPipeline', () => {
   let pipeline: ValidationPipeline;
   let testDir: string;
+  let mockLogger: Logger;
+  let mockSchemaManager: SchemaManager;
 
   beforeEach(async () => {
-    pipeline = new ValidationPipeline();
+    // Create mock dependencies
+    mockLogger = {
+      debug: jest.fn(),
+      info: jest.fn(),
+      warn: jest.fn(),
+      error: jest.fn()
+    } as any;
+
+    mockSchemaManager = {
+      getMasterSchema: jest.fn().mockResolvedValue({
+        type: 'object',
+        properties: {
+          service: { type: 'string' },
+          owner: { type: 'string' },
+          runtime: { type: 'string' },
+          components: { type: 'array' }
+        },
+        required: ['service', 'owner']
+      })
+    } as any;
+
+    pipeline = new ValidationPipeline({
+      logger: mockLogger,
+      schemaManager: mockSchemaManager
+    });
+    
     testDir = await fs.mkdtemp(path.join(os.tmpdir(), 'svc-test-'));
   });
 
@@ -312,7 +341,7 @@ components:
 
       const result = await pipeline.plan(manifestPath, 'dev');
       expect(result.resolvedManifest.components).toHaveLength(2);
-      const apiComponent = result.resolvedManifest.components.find(c => c.name === 'api');
+      const apiComponent = result.resolvedManifest.components.find((c: any) => c.name === 'api');
       expect(apiComponent?.binds).toHaveLength(1);
       expect(apiComponent?.binds?.[0].to).toBe('database');
     });
@@ -349,7 +378,7 @@ components:
       `);
 
       const result = await pipeline.plan(manifestPath, 'dev');
-      const apiComponent = result.resolvedManifest.components.find(c => c.name === 'api');
+      const apiComponent = result.resolvedManifest.components.find((c: any) => c.name === 'api');
       expect(apiComponent?.binds).toHaveLength(2);
     });
 

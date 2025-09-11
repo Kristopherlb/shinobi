@@ -9,7 +9,7 @@
 import * as cdk from 'aws-cdk-lib';
 import { Construct, IConstruct } from 'constructs';
 import { ComponentSpec, ComponentContext, ComponentCapabilities, IComponent } from './component-interfaces';
-import { ITaggingService, TaggingContext, defaultTaggingService } from '../../services/tagging.service';
+import { ITaggingService, TaggingContext, defaultTaggingService } from '../../../packages/tagging-service/tagging.service';
 
 /**
  * Options for configuring observability on components

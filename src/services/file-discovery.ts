@@ -36,16 +36,9 @@ export class FileDiscovery {
       currentDir = path.dirname(currentDir);
     }
 
-    // Check the final directory (git root or filesystem root)
-    const manifestPath = path.join(currentDir, 'service.yml');
-    try {
-      await fs.access(manifestPath);
-      logger.debug(`Found manifest at: ${manifestPath}`);
-      return manifestPath;
-    } catch {
-      logger.debug('No service.yml found in directory tree');
-      return null;
-    }
+    // If the loop finishes, no manifest was found up to the root
+    logger.debug('No service.yml found in directory tree');
+    return null;
   }
 
   /**

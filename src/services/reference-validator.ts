@@ -41,6 +41,9 @@ export class ReferenceValidator {
       });
     }
 
+    // Validate ${ref:...} references (AC-P4.1) - Critical enhancement
+    this.validateRefExpressions(manifest, componentNames);
+
     // Validate governance suppressions (AC-P4.3)
     if (manifest.governance?.cdkNag?.suppress) {
       manifest.governance.cdkNag.suppress.forEach((suppression: any, index: number) => {
@@ -61,8 +64,48 @@ export class ReferenceValidator {
     this.dependencies.logger.debug('Reference validation completed');
   }
 
+  /**
+   * Recursively validate ${ref:...} expressions throughout the manifest
+   * Implements AC-P4.1: Complete cross-component reference validation
+   */
+  private validateRefExpressions(obj: any, componentNames: Set<string>, path: string = 'root'): void {
+    if (typeof obj === 'string') {
+      // Check for ${ref:componentName.capability.attribute} pattern
+      const refMatches = obj.match(/\$\{ref:([^}]+)\}/g);
+      if (refMatches) {
+        refMatches.forEach(match => {
+          const refContent = match.slice(6, -1); // Remove ${ref: and }
+          const componentName = refContent.split('.')[0]; // Extract component name
+          
+          if (!componentNames.has(componentName)) {
+            throw new Error(`Reference to non-existent component '${componentName}' in ${refContent} at ${path}`);
+          }
+        });
+      }
+      return;
+    }
+
+    if (Array.isArray(obj)) {
+      obj.forEach((item, index) => {
+        this.validateRefExpressions(item, componentNames, `${path}[${index}]`);
+      });
+      return;
+    }
+
+    if (obj && typeof obj === 'object') {
+      for (const [key, value] of Object.entries(obj)) {
+        this.validateRefExpressions(value, componentNames, `${path}.${key}`);
+      }
+    }
+  }
+
   private isValidDate(dateString: string): boolean {
+    // Enhanced date validation with strict ISO 8601 format
+    const isoDateRegex = /^\d{4}-\d{2}-\d{2}$/;
+    if (!isoDateRegex.test(dateString)) {
+      return false;
+    }
     const date = new Date(dateString);
-    return date instanceof Date && !isNaN(date.getTime());
+    return !isNaN(date.getTime());
   }
 }
