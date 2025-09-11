@@ -292,3 +292,42 @@ defaults:
       Component: "iam-role"
       ManagedBy: "platform"
       ComplianceFramework: "fedramp-high"
+
+  # MCP Server Configuration Defaults
+  mcp-server:
+    container:
+      imageTag: "latest"
+      cpu: 1024
+      memory: 2048
+      taskCount: 3
+      containerPort: 3000
+    loadBalancer:
+      enabled: true
+      certificateArn: ""
+      domainName: ""
+    authentication:
+      jwtSecret: ""
+      tokenExpiration: "15m" # Very short for FedRAMP High
+    dataSources:
+      git:
+        repositoryUrls: []
+        accessTokenArn: ""
+      aws:
+        crossAccountRoles: []
+        regions: ["us-east-1"]
+      templates:
+        repositoryUrl: ""
+        branch: "main"
+    vpc:
+      vpcId: ""
+      subnetIds: []
+      securityGroupIds: []
+    logging:
+      retentionDays: 2555 # 7 years for FedRAMP High
+    monitoring:
+      enabled: true
+      detailedMetrics: true # Required for FedRAMP High
+    tags:
+      Component: "mcp-server"
+      ManagedBy: "platform"
+      ComplianceFramework: "fedramp-high"

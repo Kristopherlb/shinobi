@@ -250,15 +250,53 @@ defaults:
       Component: "route53-record"
       ManagedBy: "platform"
 
-  # IAM Role Configuration Defaults
-  iam-role:
-    role:
-      maxSessionDuration: 3600
-      path: "/"
-    compliance:
-      permissionsBoundary: false
-      leastPrivilege: true
-      requireMfa: false
-    tags:
-      Component: "iam-role"
-      ManagedBy: "platform"
+# IAM Role Configuration Defaults
+iam-role:
+  role:
+    maxSessionDuration: 3600
+    path: "/"
+  compliance:
+    permissionsBoundary: false
+    leastPrivilege: true
+    requireMfa: false
+  tags:
+    Component: "iam-role"
+    ManagedBy: "platform"
+
+# MCP Server Configuration Defaults
+mcp-server:
+  container:
+    imageTag: "latest"
+    cpu: 256
+    memory: 512
+    taskCount: 1
+    containerPort: 3000
+  loadBalancer:
+    enabled: true
+    certificateArn: ""
+    domainName: ""
+  authentication:
+    jwtSecret: ""
+    tokenExpiration: "1h"
+  dataSources:
+    git:
+      repositoryUrls: []
+      accessTokenArn: ""
+    aws:
+      crossAccountRoles: []
+      regions: ["us-east-1"]
+    templates:
+      repositoryUrl: ""
+      branch: "main"
+  vpc:
+    vpcId: ""
+    subnetIds: []
+    securityGroupIds: []
+  logging:
+    retentionDays: 30
+  monitoring:
+    enabled: true
+    detailedMetrics: false
+  tags:
+    Component: "mcp-server"
+    ManagedBy: "platform"
