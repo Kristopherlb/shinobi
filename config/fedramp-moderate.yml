@@ -265,3 +265,27 @@ defaults:
       - "userId"
       - "sessionId"
       - "operationId"
+
+  # Route 53 Record Configuration Defaults
+  route53-record:
+    record:
+      ttl: 300
+      evaluateTargetHealth: false
+    tags:
+      Component: "route53-record"
+      ManagedBy: "platform"
+      ComplianceFramework: "fedramp-moderate"
+
+  # IAM Role Configuration Defaults
+  iam-role:
+    role:
+      maxSessionDuration: 3600
+      path: "/"
+    compliance:
+      permissionsBoundary: true
+      leastPrivilege: true
+      requireMfa: true
+    tags:
+      Component: "iam-role"
+      ManagedBy: "platform"
+      ComplianceFramework: "fedramp-moderate"

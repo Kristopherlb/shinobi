@@ -1,0 +1,175 @@
+"use strict";
+/**
+ * Tagging Service
+ *
+ * Provides standardized tagging functionality for platform components and services.
+ * Implements the Platform Tagging Standard v1.0.
+ */
+var __createBinding = (this && this.__createBinding) || (Object.create ? (function(o, m, k, k2) {
+    if (k2 === undefined) k2 = k;
+    var desc = Object.getOwnPropertyDescriptor(m, k);
+    if (!desc || ("get" in desc ? !m.__esModule : desc.writable || desc.configurable)) {
+      desc = { enumerable: true, get: function() { return m[k]; } };
+    }
+    Object.defineProperty(o, k2, desc);
+}) : (function(o, m, k, k2) {
+    if (k2 === undefined) k2 = k;
+    o[k2] = m[k];
+}));
+var __setModuleDefault = (this && this.__setModuleDefault) || (Object.create ? (function(o, v) {
+    Object.defineProperty(o, "default", { enumerable: true, value: v });
+}) : function(o, v) {
+    o["default"] = v;
+});
+var __importStar = (this && this.__importStar) || (function () {
+    var ownKeys = function(o) {
+        ownKeys = Object.getOwnPropertyNames || function (o) {
+            var ar = [];
+            for (var k in o) if (Object.prototype.hasOwnProperty.call(o, k)) ar[ar.length] = k;
+            return ar;
+        };
+        return ownKeys(o);
+    };
+    return function (mod) {
+        if (mod && mod.__esModule) return mod;
+        var result = {};
+        if (mod != null) for (var k = ownKeys(mod), i = 0; i < k.length; i++) if (k[i] !== "default") __createBinding(result, mod, k[i]);
+        __setModuleDefault(result, mod);
+        return result;
+    };
+})();
+Object.defineProperty(exports, "__esModule", { value: true });
+exports.defaultTaggingService = exports.TaggingService = void 0;
+const cdk = __importStar(require("aws-cdk-lib"));
+/**
+ * Standard tagging service implementation
+ */
+class TaggingService {
+    /**
+     * Build standard tags based on context
+     * Implements Platform Tagging Standard v1.0
+     */
+    buildStandardTags(context) {
+        const now = new Date();
+        const deploymentId = `deploy-${now.getFullYear()}${(now.getMonth() + 1).toString().padStart(2, '0')}${now.getDate().toString().padStart(2, '0')}-${now.getHours().toString().padStart(2, '0')}${now.getMinutes().toString().padStart(2, '0')}${now.getSeconds().toString().padStart(2, '0')}`;
+        return {
+            // Core Service Tags
+            'service-name': context.serviceName,
+            'service-version': context.serviceLabels?.version || '1.0.0',
+            'component-name': context.componentName,
+            'component-type': context.componentType,
+            // Environment Tags
+            'environment': context.environment,
+            'deployment-id': deploymentId,
+            'compliance-framework': context.complianceFramework,
+            // AWS Tags
+            'cloud-provider': 'aws',
+            'cloud-region': context.region || 'us-east-1',
+            'cloud-account': context.accountId || 'unknown',
+            // Platform Tags
+            'platform': 'cdk-lib',
+            'platform-version': '1.0.0',
+            'managed-by': 'platform-engineering',
+            // Cost Management Tags
+            'cost-center': 'platform',
+            'project': context.serviceName,
+            'owner': 'platform-engineering',
+            // Security Tags
+            'data-classification': this.getDataClassification(context.complianceFramework),
+            'encryption-required': this.getEncryptionRequired(context.complianceFramework),
+            // Operational Tags
+            'backup-required': this.getBackupRequired(context.complianceFramework),
+            'monitoring-level': this.getMonitoringLevel(context.complianceFramework),
+            'retention-period': this.getRetentionPeriod(context.complianceFramework)
+        };
+    }
+    /**
+     * Apply standard tags to a CDK construct
+     */
+    applyStandardTags(resource, context, additionalTags) {
+        const standardTags = this.buildStandardTags(context);
+        // Apply all standard tags
+        Object.entries(standardTags).forEach(([key, value]) => {
+            cdk.Tags.of(resource).add(key, value);
+        });
+        // Apply any additional component-specific tags
+        if (additionalTags) {
+            Object.entries(additionalTags).forEach(([key, value]) => {
+                cdk.Tags.of(resource).add(key, value);
+            });
+        }
+    }
+    /**
+     * Get data classification based on compliance framework
+     */
+    getDataClassification(framework) {
+        switch (framework) {
+            case 'fedramp-high':
+                return 'confidential';
+            case 'fedramp-moderate':
+                return 'internal';
+            case 'commercial':
+            default:
+                return 'public';
+        }
+    }
+    /**
+     * Get encryption requirement based on compliance framework
+     */
+    getEncryptionRequired(framework) {
+        switch (framework) {
+            case 'fedramp-high':
+            case 'fedramp-moderate':
+                return 'required';
+            case 'commercial':
+            default:
+                return 'recommended';
+        }
+    }
+    /**
+     * Get backup requirement based on compliance framework
+     */
+    getBackupRequired(framework) {
+        switch (framework) {
+            case 'fedramp-high':
+            case 'fedramp-moderate':
+                return 'required';
+            case 'commercial':
+            default:
+                return 'recommended';
+        }
+    }
+    /**
+     * Get monitoring level based on compliance framework
+     */
+    getMonitoringLevel(framework) {
+        switch (framework) {
+            case 'fedramp-high':
+                return 'enhanced';
+            case 'fedramp-moderate':
+                return 'standard';
+            case 'commercial':
+            default:
+                return 'basic';
+        }
+    }
+    /**
+     * Get retention period based on compliance framework
+     */
+    getRetentionPeriod(framework) {
+        switch (framework) {
+            case 'fedramp-high':
+                return '7-years';
+            case 'fedramp-moderate':
+                return '3-years';
+            case 'commercial':
+            default:
+                return '1-year';
+        }
+    }
+}
+exports.TaggingService = TaggingService;
+/**
+ * Default tagging service instance
+ */
+exports.defaultTaggingService = new TaggingService();

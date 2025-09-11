@@ -5,27 +5,29 @@
 
 import { Template, Match } from 'aws-cdk-lib/assertions';
 import { App, Stack } from 'aws-cdk-lib';
-import { IamRoleComponentComponent } from '../iam-role.component';
-import { IamRoleConfig } from '../iam-role.builder';
-import { ComponentContext, ComponentSpec } from '../../../platform/contracts/component-interfaces';
+import { IamRoleComponent } from '../src/iam-role.component';
+import { IamRoleConfig } from '../src/iam-role.builder';
+import { ComponentContext, ComponentSpec } from '../../../../src/platform/contracts/component-interfaces';
 
 const createMockContext = (
-  complianceFramework: string = 'commercial',
+  complianceFramework: 'commercial' | 'fedramp-moderate' | 'fedramp-high' = 'commercial',
   environment: string = 'dev'
-): ComponentContext => ({
-  serviceName: 'test-service',
-  owner: 'test-team',
-  environment,
-  complianceFramework,
-  region: 'us-east-1',
-  account: '123456789012',
-  tags: {
-    'service-name': 'test-service',
-    'owner': 'test-team',
-    'environment': environment,
-    'compliance-framework': complianceFramework
-  }
-});
+): ComponentContext => {
+  const stack = new Stack();
+  return {
+    serviceName: 'test-service',
+    environment,
+    complianceFramework,
+    scope: stack,
+    region: 'us-east-1',
+    accountId: '123456789012',
+    serviceLabels: {
+      'service-name': 'test-service',
+      'environment': environment,
+      'compliance-framework': complianceFramework
+    }
+  };
+};
 
 const createMockSpec = (config: Partial<IamRoleConfig> = {}): ComponentSpec => ({
   name: 'test-iam-role',
@@ -36,18 +38,18 @@ const createMockSpec = (config: Partial<IamRoleConfig> = {}): ComponentSpec => (
 const synthesizeComponent = (
   context: ComponentContext,
   spec: ComponentSpec
-): { component: IamRoleComponentComponent; template: Template } => {
+): { component: IamRoleComponent; template: Template } => {
   const app = new App();
   const stack = new Stack(app, 'TestStack');
   
-  const component = new IamRoleComponentComponent(stack, spec, context);
+  const component = new IamRoleComponent(stack, spec.name, context, spec);
   component.synth();
   
   const template = Template.fromStack(stack);
   return { component, template };
 };
 
-describe('IamRoleComponentComponent Synthesis', () => {
+describe('IamRoleComponent Synthesis', () => {
   
   describe('Default Happy Path Synthesis', () => {
     

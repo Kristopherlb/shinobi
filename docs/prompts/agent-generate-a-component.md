@@ -40,6 +40,18 @@ packages/components/<component-name>/
 
 ### Step 2: Component Class Implementation
 
+Must comply with the folowing:
+- [Feature Flagging](../platform-standards/feature-flagging-canary-deployment-v1.0.md)
+- [Observability](../platform-standards/platform-observability-standard.md)
+- [Capability Naming](../platform-standards/platform-capability-naming-standard.md)
+- [Component API](../platform-standards/platform-component-api-spec.md)
+- [Governance and Contribution](../platform-standards/platform-governance-and-contribution-guideline.md)
+- [Logging](../platform-standards/platform-logging-standard.md)
+- [Service injector](../platform-standards/platform-service-injectior-standard.md)
+- [Tagging](../platform-standards/platform-tagging-standard.md)
+- [Testing](../platform-standards/platform-testing-standard.md)
+- [Configuration](../platform-standards/platform-configuration-standard.md)
+
 **File**: `<component-name>.component.ts`
 
 **Requirements**:
@@ -68,7 +80,7 @@ public synth(): void {
 }
 ```
 
-### Step 3: Configuration Builder & Schema
+### Step 3: Configuration Builder & Schema to the following: [BUilder](./agent-generate-a-builder.md)
 
 **File**: `<component-name>.builder.ts`
 
@@ -92,14 +104,15 @@ public synth(): void {
 2. **Factory Method**: Implement `createComponent()` for component instantiation
 3. **Validation**: Implement `validateSpec()` for early validation beyond JSON Schema
 
-### Step 5: Comprehensive Unit Testing
+### Step 5: Comprehensive Unit Testing Use [The Testing Standard](../platform-standards/platform-testing-standard.md)
 
 **Coverage Requirement**: Minimum 90% code coverage
 
-**Builder Tests** (`builder.test.ts`):
+**Builder Tests** (`builder.test.ts`)
 - Test each compliance framework (commercial, fedramp-moderate, fedramp-high)
 - Validate 5-layer precedence chain: Component Override > Environment > Platform > Compliance > Hardcoded
 - Verify configuration merging logic
+- Builder must comply with the [standard](../spec/)
 
 **Component Tests** (`component.test.ts`):
 - Default "happy path" synthesis test
@@ -108,6 +121,10 @@ public synth(): void {
 - CloudFormation template structure verification
 
 **Testing Framework**: Use `Template.fromStack()` for CloudFormation resource validation
+
+### Step 6: Logging
+Implement Logging according to [The Spec](../platform-standards/platform-logging-standard.md)
+
 
 ### Step 6: Documentation Generation
 
@@ -120,14 +137,23 @@ public synth(): void {
 4. **Capabilities**: List of provided capabilities for component binding
 5. **Construct Handles**: Available handles for patches.ts escape hatch
 
+
 ## Quality Standards
 
 **Mandatory Requirements**:
-- All components must be production-ready
-- Complete adherence to platform architectural patterns
+Use the [Audit Prompt](./agent-platform-code-auditor.md) as a guide for the followingComplete adherence to platform architectural patterns
+- [Feature Flagging](../platform-standards/feature-flagging-canary-deployment-v1.0.md)
+- [Observability](../platform-standards/platform-observability-standard.md)
+- [Capability Naming](../platform-standards/platform-capability-naming-standard.md)
+- [Component API](../platform-standards/platform-component-api-spec.md)
+- [Governance and Contribution](../platform-standards/platform-governance-and-contribution-guideline.md)
+- [Logging](../platform-standards/platform-logging-standard.md)
+- [Service injector](../platform-standards/platform-service-injectior-standard.md)
+- [Tagging](../platform-standards/platform-tagging-standard.md)
+- [Testing](../platform-standards/platform-testing-standard.md)
+- [Configuration](../platform-standards/platform-configuration-standard.md)
 - Comprehensive error handling and validation
 - Full compliance with security and governance standards
-- Extensive testing coverage with multiple scenarios
 
 ## Success Criteria
 
@@ -138,5 +164,6 @@ A component is considered complete when:
 - [ ] Component follows platform naming conventions
 - [ ] CloudFormation synthesis produces valid templates
 - [ ] Compliance frameworks are properly supported
+- [ ] No Todos or stubbs
 
 

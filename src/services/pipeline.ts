@@ -98,7 +98,7 @@ export class ValidationPipeline {
     this.dependencies.logger.debug('Validating manifest schema');
 
     // Get the master schema (dynamically composed)
-    const schema = await this.dependencies.schemaManager.getMasterSchema();
+    const schema = await this.dependencies.schemaManager.getBaseSchema();
     
     const validate = this.ajv.compile(schema);
     const valid = validate(manifest);

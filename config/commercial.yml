@@ -240,6 +240,25 @@ defaults:
       - "userId"
       - "sessionId"
       - "operationId"
-      
-      # Log completion
-      echo "OpenTelemetry Collector installation completed at $(date)" >> /var/log/otel-install.log
+
+  # Route 53 Record Configuration Defaults
+  route53-record:
+    record:
+      ttl: 300
+      evaluateTargetHealth: false
+    tags:
+      Component: "route53-record"
+      ManagedBy: "platform"
+
+  # IAM Role Configuration Defaults
+  iam-role:
+    role:
+      maxSessionDuration: 3600
+      path: "/"
+    compliance:
+      permissionsBoundary: false
+      leastPrivilege: true
+      requireMfa: false
+    tags:
+      Component: "iam-role"
+      ManagedBy: "platform"
