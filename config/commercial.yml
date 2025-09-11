@@ -300,3 +300,94 @@ mcp-server:
   tags:
     Component: "mcp-server"
     ManagedBy: "platform"
+
+# Shinobi Platform Intelligence Brain Configuration Defaults
+shinobi:
+  compute:
+    mode: "ecs"
+    cpu: 512
+    memory: 1024
+    taskCount: 1
+    containerPort: 3000
+  dataStore:
+    type: "dynamodb"
+    dynamodb:
+      billingMode: "PAY_PER_REQUEST"
+  api:
+    exposure: "internal"
+    loadBalancer:
+      enabled: true
+    version: "1.0"
+    rateLimit:
+      requestsPerMinute: 1000
+      burstCapacity: 2000
+  featureFlags:
+    enabled: true
+    provider: "aws-appconfig"
+    defaults:
+      "shinobi.advanced-analytics": false
+      "shinobi.ai-insights": false
+      "shinobi.auto-remediation": false
+      "shinobi.predictive-scaling": false
+      "shinobi.cost-optimization": true
+      "shinobi.security-scanning": true
+      "shinobi.compliance-monitoring": true
+      "shinobi.performance-profiling": true
+      "shinobi.dependency-analysis": true
+      "shinobi.change-impact": true
+  dataSources:
+    components: true
+    services: true
+    dependencies: true
+    compliance: true
+    cost: false
+    security: false
+    performance: false
+  observability:
+    provider: "cloudwatch"
+    dashboards: ["reliability", "performance"]
+    alerts:
+      enabled: true
+      thresholds:
+        cpuUtilization: 80
+        memoryUtilization: 80
+        responseTime: 2
+  compliance:
+    securityLevel: "standard"
+    auditLogging: false
+  localDev:
+    enabled: false
+    seedData:
+      sampleComponents: true
+      sampleServices: true
+      sampleMetrics: true
+    mockServices: true
+  logging:
+    retentionDays: 30
+    logLevel: "info"
+    structuredLogging: true
+  tags:
+    Component: "shinobi"
+    ManagedBy: "platform"
+
+  # SageMaker Notebook Instance Configuration Defaults
+  sagemaker-notebook-instance:
+    instanceType: "ml.t3.medium"
+    rootAccess: "Enabled"
+    directInternetAccess: "Enabled"
+    volumeSizeInGB: 20
+    platformIdentifier: "notebook-al2-v2"
+    instanceMetadataServiceConfiguration:
+      minimumInstanceMetadataServiceVersion: "2"
+    monitoring:
+      enabled: true
+      detailedMetrics: false
+    security:
+      kmsEncryption: false
+      vpcOnly: false
+    compliance:
+      auditLogging: false
+      retentionDays: 90
+    tags:
+      Component: "sagemaker-notebook-instance"
+      ManagedBy: "platform"

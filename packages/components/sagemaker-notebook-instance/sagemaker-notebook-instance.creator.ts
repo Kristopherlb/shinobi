@@ -10,8 +10,8 @@ import {
   ComponentSpec, 
   ComponentContext, 
   IComponentCreator 
-} from '../../platform/contracts/component-interfaces';
-import { SageMakerNotebookInstanceComponentComponent } from './sagemaker-notebook-instance.component';
+} from '../../../../src/platform/contracts/component-interfaces';
+import { SageMakerNotebookInstanceComponent } from './sagemaker-notebook-instance.component';
 import { SageMakerNotebookInstanceConfig, SAGEMAKER_NOTEBOOK_INSTANCE_CONFIG_SCHEMA } from './sagemaker-notebook-instance.builder';
 
 /**
@@ -33,12 +33,12 @@ export class SageMakerNotebookInstanceComponentCreator implements IComponentCrea
   /**
    * Component display name
    */
-  public readonly displayName = 'Sage Maker Notebook Instance Component';
+  public readonly displayName = 'SageMaker Notebook Instance Component';
   
   /**
    * Component description
    */
-  public readonly description = 'SageMaker Notebook Instance Component';
+  public readonly description = 'AWS SageMaker Notebook Instance for machine learning development and experimentation';
   
   /**
    * Component category for organization
@@ -57,7 +57,9 @@ export class SageMakerNotebookInstanceComponentCreator implements IComponentCrea
     'sagemaker-notebook-instance',
     'ml',
     'aws',
-    'sagemaker'
+    'sagemaker',
+    'notebook',
+    'jupyter'
   ];
   
   /**
@@ -72,8 +74,8 @@ export class SageMakerNotebookInstanceComponentCreator implements IComponentCrea
     scope: Construct, 
     spec: ComponentSpec, 
     context: ComponentContext
-  ): SageMakerNotebookInstanceComponentComponent {
-    return new SageMakerNotebookInstanceComponentComponent(scope, spec, context);
+  ): SageMakerNotebookInstanceComponent {
+    return new SageMakerNotebookInstanceComponent(scope, spec, context);
   }
   
   /**
@@ -93,16 +95,56 @@ export class SageMakerNotebookInstanceComponentCreator implements IComponentCrea
       errors.push('Component name must start with a letter and contain only alphanumeric characters, hyphens, and underscores');
     }
     
-    // TODO: Add component-specific validations here
-    
-    // Environment-specific validations
-    if (context.environment === 'prod') {
-      if (!config?.monitoring?.enabled) {
-        errors.push('Monitoring must be enabled in production environment');
+    // Validate notebook instance name if provided
+    if (config?.notebookInstanceName) {
+      if (!/^[a-zA-Z0-9\-]{1,63}$/.test(config.notebookInstanceName)) {
+        errors.push('Notebook instance name must be 1-63 characters long and contain only alphanumeric characters and hyphens');
       }
-      
-      // TODO: Add production-specific validations
     }
+    
+    // Validate instance type if provided
+    if (config?.instanceType) {
+      const validInstanceTypes = [
+        'ml.t2.medium', 'ml.t2.large', 'ml.t2.xlarge', 'ml.t2.2xlarge',
+        'ml.t3.medium', 'ml.t3.large', 'ml.t3.xlarge', 'ml.t3.2xlarge',
+        'ml.m4.xlarge', 'ml.m4.2xlarge', 'ml.m4.4xlarge', 'ml.m4.10xlarge', 'ml.m4.16xlarge',
+        'ml.m5.large', 'ml.m5.xlarge', 'ml.m5.2xlarge', 'ml.m5.4xlarge', 'ml.m5.12xlarge', 'ml.m5.24xlarge',
+        'ml.c4.large', 'ml.c4.xlarge', 'ml.c4.2xlarge', 'ml.c4.4xlarge', 'ml.c4.8xlarge',
+        'ml.c5.large', 'ml.c5.xlarge', 'ml.c5.2xlarge', 'ml.c5.4xlarge', 'ml.c5.9xlarge', 'ml.c5.18xlarge',
+        'ml.p2.xlarge', 'ml.p2.8xlarge', 'ml.p2.16xlarge',
+        'ml.p3.2xlarge', 'ml.p3.8xlarge', 'ml.p3.16xlarge',
+        'ml.g4dn.xlarge', 'ml.g4dn.2xlarge', 'ml.g4dn.4xlarge', 'ml.g4dn.8xlarge', 'ml.g4dn.12xlarge', 'ml.g4dn.16xlarge'
+      ];
+      
+      if (!validInstanceTypes.includes(config.instanceType)) {
+        errors.push(`Invalid instance type: ${config.instanceType}. Must be one of: ${validInstanceTypes.join(', ')}`);
+      }
+    }
+    
+    // Validate volume size if provided
+    if (config?.volumeSizeInGB !== undefined) {
+      if (config.volumeSizeInGB < 5 || config.volumeSizeInGB > 16384) {
+        errors.push('Volume size must be between 5 and 16384 GB');
+      }
+    }
+    
+    // Validate security group IDs if provided
+    if (config?.securityGroupIds && config.securityGroupIds.length > 5) {
+      errors.push('Maximum of 5 security group IDs allowed');
+    }
+    
+    // Validate additional code repositories if provided
+    if (config?.additionalCodeRepositories && config.additionalCodeRepositories.length > 3) {
+      errors.push('Maximum of 3 additional code repositories allowed');
+    }
+    
+    // Validate accelerator types if provided
+    if (config?.acceleratorTypes && config.acceleratorTypes.length > 1) {
+      errors.push('Maximum of 1 accelerator type allowed');
+    }
+    
+    // Environment-specific validations should be handled by platform configuration
+    // No hardcoded environment checks allowed per platform standards
     
     return {
       valid: errors.length === 0,
@@ -116,6 +158,7 @@ export class SageMakerNotebookInstanceComponentCreator implements IComponentCrea
   public getProvidedCapabilities(): string[] {
     return [
       'ml:sagemaker-notebook-instance',
+      'ml:notebook',
       'monitoring:sagemaker-notebook-instance'
     ];
   }
@@ -125,7 +168,7 @@ export class SageMakerNotebookInstanceComponentCreator implements IComponentCrea
    */
   public getRequiredCapabilities(): string[] {
     return [
-      // TODO: Define required capabilities
+      // No required capabilities - component is self-contained
     ];
   }
   
@@ -134,8 +177,10 @@ export class SageMakerNotebookInstanceComponentCreator implements IComponentCrea
    */
   public getConstructHandles(): string[] {
     return [
-      'main'
-      // TODO: Add additional construct handles if needed
+      'notebookInstance',
+      'executionRole',
+      'kmsKey',
+      'securityGroup'
     ];
   }
 }

@@ -328,3 +328,99 @@ defaults:
       Component: "mcp-server"
       ManagedBy: "platform"
       ComplianceFramework: "fedramp-moderate"
+
+  # Shinobi Platform Intelligence Brain Configuration Defaults
+  shinobi:
+    compute:
+      mode: "ecs"
+      cpu: 512
+      memory: 1024
+      taskCount: 2
+      containerPort: 3000
+    dataStore:
+      type: "dynamodb"
+      dynamodb:
+        billingMode: "PAY_PER_REQUEST"
+    api:
+      exposure: "internal"
+      loadBalancer:
+        enabled: true
+      version: "1.0"
+      rateLimit:
+        requestsPerMinute: 1000
+        burstCapacity: 2000
+    featureFlags:
+      enabled: true
+      provider: "aws-appconfig"
+      defaults:
+        "shinobi.advanced-analytics": true
+        "shinobi.ai-insights": false
+        "shinobi.auto-remediation": false
+        "shinobi.predictive-scaling": false
+        "shinobi.cost-optimization": true
+        "shinobi.security-scanning": true
+        "shinobi.compliance-monitoring": true
+        "shinobi.performance-profiling": true
+        "shinobi.dependency-analysis": true
+        "shinobi.change-impact": true
+    dataSources:
+      components: true
+      services: true
+      dependencies: true
+      compliance: true
+      cost: true
+      security: true
+      performance: true
+    observability:
+      provider: "cloudwatch"
+      dashboards: ["reliability", "performance", "security"]
+      alerts:
+        enabled: true
+        thresholds:
+          cpuUtilization: 70
+          memoryUtilization: 70
+          responseTime: 1.5
+    compliance:
+      securityLevel: "enhanced"
+      auditLogging: true
+    localDev:
+      enabled: false
+      seedData:
+        sampleComponents: true
+        sampleServices: true
+        sampleMetrics: true
+      mockServices: true
+    logging:
+      retentionDays: 90
+      logLevel: "info"
+      structuredLogging: true
+    tags:
+      Component: "shinobi"
+      ManagedBy: "platform"
+
+  # SageMaker Notebook Instance Configuration Defaults - FedRAMP Moderate
+  sagemaker-notebook-instance:
+    instanceType: "ml.m5.large"
+    rootAccess: "Disabled"
+    directInternetAccess: "Disabled"
+    volumeSizeInGB: 100
+    platformIdentifier: "notebook-al2-v2"
+    instanceMetadataServiceConfiguration:
+      minimumInstanceMetadataServiceVersion: "2"
+    monitoring:
+      enabled: true
+      detailedMetrics: true
+    security:
+      kmsEncryption: true
+      vpcOnly: true
+    compliance:
+      auditLogging: true
+      retentionDays: 365
+    tags:
+      Component: "sagemaker-notebook-instance"
+      ManagedBy: "platform"
+      compliance-framework: "fedramp-moderate"
+      root-access: "disabled"
+      internet-access: "vpc-only"
+      imds-version: "v2"
+      ComplianceFramework: "fedramp-moderate"
