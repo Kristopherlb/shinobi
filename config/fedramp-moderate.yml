@@ -222,3 +222,46 @@ defaults:
       # Log completion with audit trail
       echo "OpenTelemetry Collector installation completed at $(date) by $(whoami)" >> /var/log/otel-install.log
       echo "Configuration hash: $(md5sum /opt/aws/otel-collector/config.yaml)" >> /var/log/otel-install.log
+
+  # Logging Configuration Defaults - FedRAMP Moderate
+  logging:
+    retentionPolicies:
+      default:
+        retentionDays: 1095  # 3 years
+        immutable: true
+        encryptionLevel: "enhanced"
+        auditRequired: true
+        maxSamplingRate: 1.0
+    securityClassifications:
+      default: "confidential"
+      lambda: "confidential"
+      ecs: "confidential"
+      rds: "confidential"
+      s3: "confidential"
+      sqs: "confidential"
+      vpc: "confidential"
+    samplingRates:
+      ERROR: 1.0
+      WARN: 1.0
+      INFO: 1.0
+      DEBUG: 0.1
+      TRACE: 0.01
+    logLevels:
+      default: "DEBUG"
+      lambda: "DEBUG"
+      ecs: "DEBUG"
+      rds: "DEBUG"
+      s3: "DEBUG"
+      sqs: "DEBUG"
+      vpc: "DEBUG"
+    redactionRules:
+      base: ["email", "ssn", "creditCard", "phoneNumber"]
+      phi: ["medicalRecordNumber", "insuranceId", "prescriptionData", "diagnosticData"]
+      cui: ["governmentId", "securityClearance", "contractorInfo"]
+    correlationFields:
+      - "traceId"
+      - "spanId"
+      - "requestId"
+      - "userId"
+      - "sessionId"
+      - "operationId"

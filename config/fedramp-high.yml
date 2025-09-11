@@ -225,3 +225,46 @@ defaults:
       
       # Security audit entry
       echo "OTel Collector deployed with FedRAMP High compliance settings" >> /var/log/security-audit.log
+
+  # Logging Configuration Defaults - FedRAMP High
+  logging:
+    retentionPolicies:
+      default:
+        retentionDays: 2555  # 7 years
+        immutable: true
+        encryptionLevel: "customer-managed"
+        auditRequired: true
+        maxSamplingRate: 1.0
+    securityClassifications:
+      default: "cui"
+      lambda: "cui"
+      ecs: "cui"
+      rds: "cui"
+      s3: "cui"
+      sqs: "cui"
+      vpc: "cui"
+    samplingRates:
+      ERROR: 1.0
+      WARN: 1.0
+      INFO: 1.0
+      DEBUG: 0.1
+      TRACE: 0.01
+    logLevels:
+      default: "DEBUG"
+      lambda: "DEBUG"
+      ecs: "DEBUG"
+      rds: "DEBUG"
+      s3: "DEBUG"
+      sqs: "DEBUG"
+      vpc: "DEBUG"
+    redactionRules:
+      base: ["email", "ssn", "creditCard", "phoneNumber"]
+      phi: ["medicalRecordNumber", "insuranceId", "prescriptionData", "diagnosticData"]
+      cui: ["governmentId", "securityClearance", "contractorInfo"]
+    correlationFields:
+      - "traceId"
+      - "spanId"
+      - "requestId"
+      - "userId"
+      - "sessionId"
+      - "operationId"

@@ -197,6 +197,49 @@ defaults:
       # Start OTel Collector service
       systemctl enable otelcol-contrib
       systemctl start otelcol-contrib
+
+  # Logging Configuration Defaults
+  logging:
+    retentionPolicies:
+      default:
+        retentionDays: 365
+        immutable: false
+        encryptionLevel: "standard"
+        auditRequired: false
+        maxSamplingRate: 0.1
+    securityClassifications:
+      default: "internal"
+      lambda: "internal"
+      ecs: "internal"
+      rds: "internal"
+      s3: "internal"
+      sqs: "internal"
+      vpc: "internal"
+    samplingRates:
+      ERROR: 1.0
+      WARN: 1.0
+      INFO: 0.1
+      DEBUG: 0.01
+      TRACE: 0.001
+    logLevels:
+      default: "INFO"
+      lambda: "INFO"
+      ecs: "INFO"
+      rds: "INFO"
+      s3: "INFO"
+      sqs: "INFO"
+      vpc: "INFO"
+    redactionRules:
+      base: ["email", "ssn", "creditCard", "phoneNumber"]
+      phi: ["medicalRecordNumber", "insuranceId", "prescriptionData", "diagnosticData"]
+      cui: ["governmentId", "securityClearance", "contractorInfo"]
+    correlationFields:
+      - "traceId"
+      - "spanId"
+      - "requestId"
+      - "userId"
+      - "sessionId"
+      - "operationId"
       
       # Log completion
       echo "OpenTelemetry Collector installation completed at $(date)" >> /var/log/otel-install.log
