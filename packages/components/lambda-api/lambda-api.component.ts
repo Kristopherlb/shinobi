@@ -1,8 +1,8 @@
 /**
  * Lambda API Component
  * 
- * A Lambda function for synchronous API workloads with API Gateway integration.
- * Implements three-tiered compliance model (Commercial/FedRAMP Moderate/FedRAMP High).
+ * AWS Lambda function with API Gateway integration for synchronous API workloads.
+ * Implements platform standards with configuration-driven compliance.
  */
 
 import * as lambda from 'aws-cdk-lib/aws-lambda';
@@ -15,505 +15,66 @@ import * as iam from 'aws-cdk-lib/aws-iam';
 import * as cloudwatch from 'aws-cdk-lib/aws-cloudwatch';
 import * as cdk from 'aws-cdk-lib';
 import { Construct } from 'constructs';
-import {
-  Component,
-  ComponentSpec,
-  ComponentContext,
-  ComponentCapabilities
-} from '@platform/contracts';
+import { BaseComponent } from '../../../src/platform/contracts';
+import { ComponentSpec, ComponentContext, ComponentCapabilities } from '../../../src/platform/contracts/component-interfaces';
+import { LambdaApiConfig, LambdaApiComponentConfigBuilder, LAMBDA_API_CONFIG_SCHEMA } from './lambda-api.builder';
 
-/**
- * Configuration interface for Lambda API component
- */
-export interface LambdaApiConfig {
-  /** Lambda function handler (required) */
-  handler: string;
-  
-  /** Runtime environment */
-  runtime?: string;
-  
-  /** Memory allocation in MB */
-  memory?: number;
-  
-  /** Timeout in seconds */
-  timeout?: number;
-  
-  /** Code path for Lambda function */
-  codePath?: string;
-  
-  /** Environment variables */
-  environmentVariables?: Record<string, string>;
-  
-  /** API Gateway configuration */
-  api?: {
-    /** API name */
-    name?: string;
-    /** CORS configuration */
-    cors?: boolean;
-    /** API key required */
-    apiKeyRequired?: boolean;
-  };
-  
-  /** VPC configuration for FedRAMP deployments */
-  vpc?: {
-    /** VPC ID */
-    vpcId?: string;
-    /** Subnet IDs */
-    subnetIds?: string[];
-    /** Security group IDs */
-    securityGroupIds?: string[];
-  };
-  
-  /** Encryption configuration */
-  encryption?: {
-    /** KMS key ARN for environment variables */
-    kmsKeyArn?: string;
-  };
-  
-  /** Security tooling configuration */
-  security?: {
-    tools?: {
-      falco?: boolean;
-    };
-  };
-}
-
-/**
- * Configuration schema for Lambda API component
- */
-export const LAMBDA_API_CONFIG_SCHEMA = {
-  type: 'object',
-  title: 'Lambda API Configuration',
-  description: 'Configuration for creating a Lambda function with API Gateway',
-  required: ['handler'],
-  properties: {
-    handler: {
-      type: 'string',
-      description: 'Lambda function handler (e.g., "index.handler")',
-      pattern: '^[a-zA-Z0-9_.-]+\\.[a-zA-Z0-9_-]+$'
-    },
-    runtime: {
-      type: 'string',
-      description: 'Lambda runtime environment',
-      enum: ['nodejs18.x', 'nodejs20.x', 'python3.9', 'python3.10', 'python3.11'],
-      default: 'nodejs20.x'
-    },
-    memory: {
-      type: 'number',
-      description: 'Memory allocation in MB',
-      minimum: 128,
-      maximum: 10240,
-      default: 512
-    },
-    timeout: {
-      type: 'number',
-      description: 'Function timeout in seconds',
-      minimum: 1,
-      maximum: 900,
-      default: 30
-    },
-    codePath: {
-      type: 'string',
-      description: 'Path to Lambda function code',
-      default: './src'
-    },
-    environmentVariables: {
-      type: 'object',
-      description: 'Environment variables for the Lambda function',
-      additionalProperties: {
-        type: 'string'
-      },
-      default: {}
-    },
-    api: {
-      type: 'object',
-      description: 'API Gateway configuration',
-      properties: {
-        name: {
-          type: 'string',
-          description: 'API Gateway name'
-        },
-        cors: {
-          type: 'boolean',
-          description: 'Enable CORS for API Gateway',
-          default: false
-        },
-        apiKeyRequired: {
-          type: 'boolean',
-          description: 'Require API key for requests',
-          default: false
-        }
-      },
-      additionalProperties: false,
-      default: {
-        cors: false,
-        apiKeyRequired: false
-      }
-    },
-    vpc: {
-      type: 'object',
-      description: 'VPC configuration for FedRAMP deployments',
-      properties: {
-        vpcId: {
-          type: 'string',
-          description: 'VPC ID for Lambda deployment',
-          pattern: '^vpc-[a-f0-9]{8,17}$'
-        },
-        subnetIds: {
-          type: 'array',
-          description: 'Subnet IDs for Lambda deployment',
-          items: {
-            type: 'string',
-            pattern: '^subnet-[a-f0-9]{8,17}$'
-          },
-          maxItems: 16
-        },
-        securityGroupIds: {
-          type: 'array',
-          description: 'Security group IDs for Lambda',
-          items: {
-            type: 'string',
-            pattern: '^sg-[a-f0-9]{8,17}$'
-          },
-          maxItems: 5
-        }
-      },
-      additionalProperties: false
-    },
-    encryption: {
-      type: 'object',
-      description: 'Encryption configuration',
-      properties: {
-        kmsKeyArn: {
-          type: 'string',
-          description: 'KMS key ARN for environment variable encryption',
-          pattern: '^arn:aws:kms:[a-z0-9-]+:[0-9]{12}:key/[a-f0-9-]{36}$'
-        }
-      },
-      additionalProperties: false
-    },
-    security: {
-      type: 'object',
-      description: 'Security tooling configuration',
-      properties: {
-        tools: {
-          type: 'object',
-          description: 'Security tools configuration',
-          properties: {
-            falco: {
-              type: 'boolean',
-              description: 'Enable Falco security monitoring',
-              default: false
-            }
-          },
-          additionalProperties: false,
-          default: {
-            falco: false
-          }
-        }
-      },
-      additionalProperties: false,
-      default: {
-        tools: {
-          falco: false
-        }
-      }
-    }
-  },
-  additionalProperties: false,
-  defaults: {
-    runtime: 'nodejs20.x',
-    memory: 512,
-    timeout: 30,
-    codePath: './src',
-    environmentVariables: {},
-    api: {
-      cors: false,
-      apiKeyRequired: false
-    },
-    security: {
-      tools: {
-        falco: false
-      }
-    }
-  }
-};
-
-/**
- * Configuration builder for Lambda API component
- */
-export class LambdaApiConfigBuilder {
-  private context: ComponentContext;
-  private spec: ComponentSpec;
-  
-  constructor(context: ComponentContext, spec: ComponentSpec) {
-    this.context = context;
-    this.spec = spec;
-  }
-
-  /**
-   * Builds the final configuration by applying platform defaults, compliance frameworks, and user overrides
-   */
-  public async build(): Promise<LambdaApiConfig> {
-    return this.buildSync();
-  }
-
-  /**
-   * Synchronous version of build for use in synth() method
-   */
-  public buildSync(): LambdaApiConfig {
-    // Start with platform defaults
-    const platformDefaults = this.getPlatformDefaults();
-    
-    // Apply compliance framework defaults
-    const complianceDefaults = this.getComplianceFrameworkDefaults();
-    
-    // Merge user configuration from spec
-    const userConfig = this.spec.config || {};
-    
-    // Merge configurations (user config takes precedence)
-    const mergedConfig = this.mergeConfigs(
-      this.mergeConfigs(platformDefaults, complianceDefaults),
-      userConfig
-    );
-    
-    // Resolve environment interpolations (sync version)
-    const resolvedConfig = this.resolveEnvironmentInterpolationsSync(mergedConfig);
-    
-    return resolvedConfig as LambdaApiConfig;
-  }
-
-  /**
-   * Synchronous version of environment interpolation resolution
-   */
-  private resolveEnvironmentInterpolationsSync(config: Record<string, any>): Record<string, any> {
-    // For now, return config as-is since we don't have environment config in sync context
-    // In a real implementation, this would resolve ${env:key} patterns
-    return config;
-  }
-
-  /**
-   * Simple merge utility for combining configuration objects
-   */
-  private mergeConfigs(target: Record<string, any>, source: Record<string, any>): Record<string, any> {
-    const result = { ...target };
-    
-    for (const key in source) {
-      if (source[key] && typeof source[key] === 'object' && !Array.isArray(source[key])) {
-        result[key] = this.mergeConfigs(result[key] || {}, source[key]);
-      } else {
-        result[key] = source[key];
-      }
-    }
-    
-    return result;
-  }
-
-  /**
-   * Get platform-wide defaults for Lambda API
-   */
-  private getPlatformDefaults(): Record<string, any> {
-    return {
-      runtime: this.getDefaultRuntime(),
-      memory: this.getDefaultMemorySize(),
-      timeout: this.getDefaultTimeout(),
-      codePath: './src',
-      environmentVariables: {},
-      api: {
-        cors: false,
-        apiKeyRequired: false
-      },
-      security: {
-        tools: {
-          falco: false
-        }
-      }
-    };
-  }
-
-  /**
-   * Get compliance framework specific defaults
-   */
-  private getComplianceFrameworkDefaults(): Record<string, any> {
-    const framework = this.context.complianceFramework;
-    
-    switch (framework) {
-      case 'fedramp-moderate':
-        return {
-          memory: this.getComplianceMemorySize('fedramp-moderate'),
-          timeout: this.getComplianceTimeout('fedramp-moderate'),
-          vpc: {
-            // VPC deployment required for compliance
-          },
-          security: {
-            tools: {
-              falco: true // Enable security monitoring
-            }
-          }
-        };
-        
-      case 'fedramp-high':
-        return {
-          memory: this.getComplianceMemorySize('fedramp-high'),
-          timeout: this.getComplianceTimeout('fedramp-high'),
-          vpc: {
-            // VPC deployment required for compliance
-          },
-          encryption: {
-            // Customer-managed KMS key required
-          },
-          security: {
-            tools: {
-              falco: true
-            }
-          }
-        };
-        
-      default: // commercial
-        return {};
-    }
-  }
-
-  /**
-   * Get default runtime based on compliance framework
-   */
-  private getDefaultRuntime(): string {
-    // Use latest stable runtime for all frameworks
-    return 'nodejs20.x';
-  }
-
-  /**
-   * Get default memory size based on compliance framework
-   */
-  private getDefaultMemorySize(): number {
-    switch (this.context.complianceFramework) {
-      case 'fedramp-high':
-        return 1024; // More memory for enhanced logging/monitoring
-      case 'fedramp-moderate':
-        return 768; // Moderate increase for compliance overhead
-      default:
-        return 512; // Cost-optimized for commercial
-    }
-  }
-
-  /**
-   * Get compliance-specific memory size
-   */
-  private getComplianceMemorySize(framework: string): number {
-    switch (framework) {
-      case 'fedramp-high':
-        return 1024;
-      case 'fedramp-moderate':
-        return 768;
-      default:
-        return 512;
-    }
-  }
-
-  /**
-   * Get default timeout based on compliance framework
-   */
-  private getDefaultTimeout(): number {
-    switch (this.context.complianceFramework) {
-      case 'fedramp-high':
-        return 60; // Longer timeout for compliance logging
-      case 'fedramp-moderate':
-        return 45; // Moderate increase
-      default:
-        return 30; // Standard timeout
-    }
-  }
-
-  /**
-   * Get compliance-specific timeout
-   */
-  private getComplianceTimeout(framework: string): number {
-    switch (framework) {
-      case 'fedramp-high':
-        return 60;
-      case 'fedramp-moderate':
-        return 45;
-      default:
-        return 30;
-    }
-  }
-}
 
 /**
  * Lambda API Component implementing Component API Contract v1.0
  */
-export class LambdaApiComponent extends Component {
+export class LambdaApiComponent extends BaseComponent {
   private lambdaFunction?: lambda.Function;
   private api?: apigateway.RestApi;
   private kmsKey?: kms.Key;
-  private config?: LambdaApiConfig;
+  private readonly config: LambdaApiConfig;
 
   constructor(scope: Construct, id: string, context: ComponentContext, spec: ComponentSpec) {
     super(scope, id, context, spec);
+    
+    // Build configuration only - no synthesis in constructor
+    const configBuilder = new LambdaApiComponentConfigBuilder({ context, spec });
+    this.config = configBuilder.buildSync();
   }
 
   /**
    * Synthesis phase - Create Lambda function and API Gateway
    */
   public synth(): void {
-    // Log component synthesis start
     this.logComponentEvent('synthesis_start', 'Starting Lambda API component synthesis', {
-      runtime: this.spec.config?.runtime,
-      handler: this.spec.config?.handler
+      runtime: this.config.runtime,
+      handler: this.config.handler
     });
     
     const startTime = Date.now();
     
     try {
-      // Build configuration using ConfigBuilder
-      const configBuilder = new LambdaApiConfigBuilder(this.context, this.spec);
-      this.config = configBuilder.buildSync();
-      
-      // Log configuration built
-      this.logComponentEvent('config_built', 'Lambda API configuration built successfully', {
-        runtime: this.config.runtime,
-        memory: this.config.memory,
-        timeout: this.config.timeout
+      this.createKmsKeyIfNeeded();
+      this.createLambdaFunction();
+      this.createApiGateway();
+      this.applyComplianceHardening();
+      this.configureObservabilityForLambda();
+    
+      this.registerConstruct('lambdaFunction', this.lambdaFunction!);
+      this.registerConstruct('api', this.api!);
+      if (this.kmsKey) {
+        this.registerConstruct('kmsKey', this.kmsKey);
+      }
+    
+      this.registerCapability('lambda:function', this.buildLambdaCapability());
+      this.registerCapability('api:rest', this.buildApiCapability());
+    
+      const duration = Date.now() - startTime;
+      this.logPerformanceMetric('component_synthesis', duration, {
+        resourcesCreated: Object.keys(this.capabilities).length
+      });
+    
+      this.logComponentEvent('synthesis_complete', 'Lambda API component synthesis completed successfully', {
+        functionsCreated: 1,
+        apiCreated: 1,
+        kmsKeyCreated: !!this.kmsKey
       });
       
-      // Create KMS key for encryption if needed
-      this.createKmsKeyIfNeeded();
-    
-    // Create Lambda function
-    this.createLambdaFunction();
-    
-    // Create API Gateway
-    this.createApiGateway();
-    
-    // Apply compliance hardening
-    this.applyComplianceHardening();
-    
-    // Configure observability
-    this.configureObservabilityForLambda();
-    
-    // Register constructs
-    this.registerConstruct('lambdaFunction', this.lambdaFunction!);
-    this.registerConstruct('api', this.api!);
-    if (this.kmsKey) {
-      this.registerConstruct('kmsKey', this.kmsKey);
-    }
-    
-    // Register capabilities
-    this.registerCapability('lambda:function', this.buildLambdaCapability());
-    this.registerCapability('api:rest', this.buildApiCapability());
-    
-    // Log successful synthesis completion
-    const duration = Date.now() - startTime;
-    this.logPerformanceMetric('component_synthesis', duration, {
-      resourcesCreated: Object.keys(this.capabilities).length
-    });
-    
-    this.logComponentEvent('synthesis_complete', 'Lambda API component synthesis completed successfully', {
-      functionsCreated: 1,
-      apiCreated: 1,
-      kmsKeyCreated: !!this.kmsKey
-    });
-    
     } catch (error) {
       this.logError(error as Error, 'component synthesis', {
         componentType: 'lambda-api',
@@ -694,7 +255,8 @@ export class LambdaApiComponent extends Component {
 
     // Enable X-Ray tracing
     if (this.lambdaFunction) {
-      this.lambdaFunction.addEnvironment('_X_AMZN_TRACE_ID', 'Root=1-67890123-456789abcdef012345678901');
+      // Note: _X_AMZN_TRACE_ID is reserved by Lambda runtime and cannot be set manually
+      // X-Ray tracing is enabled via the tracing property on the Lambda function
     }
 
     // Security tooling integration
@@ -749,7 +311,6 @@ export class LambdaApiComponent extends Component {
    * Build Lambda function capability data shape
    */
   private buildLambdaCapability(): any {
-    this.validateSynthesized();
     return {
       functionArn: this.lambdaFunction!.functionArn,
       functionName: this.lambdaFunction!.functionName,
@@ -761,7 +322,6 @@ export class LambdaApiComponent extends Component {
    * Build API REST capability data shape
    */
   private buildApiCapability(): any {
-    this.validateSynthesized();
     return {
       endpointUrl: this.api!.url,
       apiId: this.api!.restApiId

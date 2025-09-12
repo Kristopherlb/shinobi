@@ -426,6 +426,36 @@ defaults:
       security-level: "high"
       ComplianceFramework: "fedramp-high"
 
+  # Lambda API Configuration Defaults - FedRAMP High
+  lambda-api:
+    runtime: "nodejs20.x"
+    memory: 1024 # Maximum for compliance overhead
+    timeout: 60 # Extended for compliance logging
+    codePath: "./src"
+    environmentVariables: {}
+    api:
+      cors: false # Disabled for government security
+      apiKeyRequired: true # Required for FedRAMP
+    security:
+      tools:
+        falco: true # Required for FedRAMP
+    monitoring:
+      enabled: true
+      detailedMetrics: true # Required for FedRAMP
+      alarms:
+        errorRateThreshold: 1 # Most strict for FedRAMP High
+        durationThreshold: 70 # Most strict for FedRAMP High
+        throttleThreshold: 1
+    compliance:
+      retentionPolicy: "retain" # Required for FedRAMP
+      auditLogging: true # Required for FedRAMP
+    tags:
+      Component: "lambda-api"
+      ManagedBy: "platform"
+      compliance-framework: "fedramp-high"
+      security-level: "high"
+      ComplianceFramework: "fedramp-high"
+
   # SageMaker Notebook Instance Configuration Defaults - FedRAMP High
   sagemaker-notebook-instance:
     instanceType: "ml.m5.xlarge"

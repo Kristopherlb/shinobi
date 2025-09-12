@@ -1,0 +1,62 @@
+{
+  "name": "@platform/components-lambda-api",
+  "version": "1.0.0",
+  "description": "AWS Lambda function with API Gateway integration for synchronous API workloads",
+  "main": "index.ts",
+  "types": "index.ts",
+  "scripts": {
+    "build": "tsc",
+    "test": "jest",
+    "test:watch": "jest --watch",
+    "test:coverage": "jest --coverage",
+    "lint": "eslint . --ext .ts",
+    "lint:fix": "eslint . --ext .ts --fix"
+  },
+  "keywords": [
+    "aws",
+    "lambda",
+    "api-gateway",
+    "cdk",
+    "platform",
+    "component",
+    "serverless",
+    "compliance",
+    "fedramp"
+  ],
+  "author": "Platform Team",
+  "license": "MIT",
+  "dependencies": {
+    "aws-cdk-lib": "^2.100.0",
+    "constructs": "^10.3.0"
+  },
+  "devDependencies": {
+    "@types/jest": "^29.5.0",
+    "@types/node": "^20.0.0",
+    "jest": "^29.5.0",
+    "ts-jest": "^29.1.0",
+    "typescript": "^5.0.0",
+    "eslint": "^8.0.0",
+    "@typescript-eslint/eslint-plugin": "^6.0.0",
+    "@typescript-eslint/parser": "^6.0.0"
+  },
+  "peerDependencies": {
+    "@platform/contracts": "^1.0.0"
+  },
+  "files": [
+    "src/",
+    "audit/",
+    "observability/",
+    "tests/",
+    "README.md",
+    "package.json"
+  ],
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/company/platform.git",
+    "directory": "packages/components/lambda-api"
+  },
+  "bugs": {
+    "url": "https://github.com/company/platform/issues"
+  },
+  "homepage": "https://github.com/company/platform/tree/main/packages/components/lambda-api#readme"
+}

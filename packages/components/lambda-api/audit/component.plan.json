@@ -1,0 +1,308 @@
+{
+  "componentName": "lambda-api",
+  "version": "1.0.0",
+  "description": "AWS Lambda function with API Gateway integration for synchronous API workloads",
+  "lastUpdated": "2024-01-15T00:00:00Z",
+  "declaredConfiguration": {
+    "required": [
+      {
+        "property": "handler",
+        "type": "string",
+        "description": "Lambda function handler (e.g., 'index.handler')",
+        "pattern": "^[a-zA-Z0-9_.-]+\\.[a-zA-Z0-9_-]+$"
+      }
+    ],
+    "optional": [
+      {
+        "property": "runtime",
+        "type": "string",
+        "description": "Lambda runtime environment",
+        "enum": ["nodejs18.x", "nodejs20.x", "python3.9", "python3.10", "python3.11"],
+        "default": "nodejs20.x"
+      },
+      {
+        "property": "memory",
+        "type": "number",
+        "description": "Memory allocation in MB",
+        "range": [128, 10240],
+        "default": 512
+      },
+      {
+        "property": "timeout",
+        "type": "number",
+        "description": "Function timeout in seconds",
+        "range": [1, 900],
+        "default": 30
+      },
+      {
+        "property": "codePath",
+        "type": "string",
+        "description": "Path to Lambda function code",
+        "default": "./src"
+      },
+      {
+        "property": "environmentVariables",
+        "type": "object",
+        "description": "Environment variables for the Lambda function",
+        "default": {}
+      },
+      {
+        "property": "api",
+        "type": "object",
+        "description": "API Gateway configuration",
+        "properties": {
+          "name": "string",
+          "cors": "boolean",
+          "apiKeyRequired": "boolean"
+        },
+        "default": {
+          "cors": false,
+          "apiKeyRequired": false
+        }
+      },
+      {
+        "property": "vpc",
+        "type": "object",
+        "description": "VPC configuration for FedRAMP deployments",
+        "properties": {
+          "vpcId": "string",
+          "subnetIds": "array",
+          "securityGroupIds": "array"
+        }
+      },
+      {
+        "property": "encryption",
+        "type": "object",
+        "description": "Encryption configuration",
+        "properties": {
+          "kmsKeyArn": "string"
+        }
+      },
+      {
+        "property": "security",
+        "type": "object",
+        "description": "Security tooling configuration",
+        "properties": {
+          "tools": {
+            "falco": "boolean"
+          }
+        },
+        "default": {
+          "tools": {
+            "falco": false
+          }
+        }
+      },
+      {
+        "property": "monitoring",
+        "type": "object",
+        "description": "Monitoring and observability configuration",
+        "properties": {
+          "enabled": "boolean",
+          "detailedMetrics": "boolean",
+          "alarms": {
+            "errorRateThreshold": "number",
+            "durationThreshold": "number",
+            "throttleThreshold": "number"
+          }
+        },
+        "default": {
+          "enabled": true,
+          "detailedMetrics": false,
+          "alarms": {
+            "errorRateThreshold": 5,
+            "durationThreshold": 80,
+            "throttleThreshold": 1
+          }
+        }
+      },
+      {
+        "property": "tags",
+        "type": "object",
+        "description": "Additional resource tags",
+        "default": {}
+      }
+    ]
+  },
+  "capabilitiesProvided": [
+    {
+      "capability": "lambda:function",
+      "description": "Lambda function capability providing function ARN, name, and role ARN",
+      "dataShape": {
+        "functionArn": "string",
+        "functionName": "string",
+        "roleArn": "string"
+      }
+    },
+    {
+      "capability": "api:rest",
+      "description": "REST API capability providing endpoint URL and API ID",
+      "dataShape": {
+        "endpointUrl": "string",
+        "apiId": "string"
+      }
+    }
+  ],
+  "environmentAssumptions": [
+    {
+      "assumption": "AWS Account Access",
+      "description": "Component assumes deployment in a valid AWS account with appropriate permissions"
+    },
+    {
+      "assumption": "Code Asset Availability",
+      "description": "Lambda function code must be available at the specified codePath during deployment"
+    },
+    {
+      "assumption": "VPC Resources (FedRAMP)",
+      "description": "For FedRAMP deployments, VPC, subnets, and security groups must be pre-existing and accessible"
+    },
+    {
+      "assumption": "KMS Key Access (FedRAMP High)",
+      "description": "For FedRAMP High deployments, customer-managed KMS key must be accessible for environment variable encryption"
+    }
+  ],
+  "complianceFrameworks": [
+    {
+      "framework": "commercial",
+      "description": "Standard commercial deployment with cost-optimized defaults",
+      "features": [
+        "Basic CloudWatch logging",
+        "Standard memory allocation (512MB)",
+        "Standard timeout (30s)",
+        "Optional CORS and API key requirements"
+      ]
+    },
+    {
+      "framework": "fedramp-moderate",
+      "description": "FedRAMP Moderate compliance with enhanced security and monitoring",
+      "features": [
+        "Enhanced CloudWatch logging with 3-month retention",
+        "Increased memory allocation (768MB)",
+        "Extended timeout (45s)",
+        "X-Ray tracing enabled",
+        "Falco security monitoring",
+        "VPC deployment required"
+      ]
+    },
+    {
+      "framework": "fedramp-high",
+      "description": "FedRAMP High compliance with maximum security and audit capabilities",
+      "features": [
+        "Comprehensive CloudWatch logging with 1-year audit retention",
+        "Maximum memory allocation (1024MB)",
+        "Extended timeout (60s)",
+        "Customer-managed KMS encryption",
+        "STIG compliance configuration",
+        "VPC deployment with restricted internet access",
+        "Enhanced security monitoring"
+      ]
+    }
+  ],
+  "securityComplianceFeatures": [
+    {
+      "feature": "Encryption at Rest",
+      "description": "Environment variables encrypted using AWS KMS (customer-managed for FedRAMP High)",
+      "implementation": "KMS key creation and environment variable encryption"
+    },
+    {
+      "feature": "Encryption in Transit",
+      "description": "API Gateway enforces HTTPS for all requests",
+      "implementation": "API Gateway default behavior with TLS termination"
+    },
+    {
+      "feature": "Logging and Monitoring",
+      "description": "Comprehensive CloudWatch logging with compliance-aware retention",
+      "implementation": "CloudWatch Log Groups with framework-specific retention policies"
+    },
+    {
+      "feature": "Tracing and Observability",
+      "description": "X-Ray tracing for FedRAMP deployments, OpenTelemetry integration",
+      "implementation": "X-Ray tracing configuration and OTel environment variables"
+    },
+    {
+      "feature": "Security Monitoring",
+      "description": "Falco security monitoring for FedRAMP deployments",
+      "implementation": "Falco layer attachment and security environment variables"
+    },
+    {
+      "feature": "Network Security",
+      "description": "VPC deployment for FedRAMP with restricted network access",
+      "implementation": "VPC configuration and security group management"
+    }
+  ],
+  "relevantStandardsControls": [
+    {
+      "standard": "AWS Foundational Security Best Practices",
+      "controls": [
+        "Lambda.1 - Lambda function policies should not allow public access",
+        "Lambda.2 - Lambda functions should use supported runtimes",
+        "Lambda.3 - Lambda functions should not have unrestricted access to Amazon S3",
+        "Lambda.4 - Lambda functions should not have unrestricted access to Amazon DynamoDB",
+        "Lambda.5 - Lambda functions should not have unrestricted access to Amazon Kinesis"
+      ]
+    },
+    {
+      "standard": "FedRAMP Moderate Controls",
+      "controls": [
+        "AC-2 - Account Management",
+        "AC-3 - Access Enforcement", 
+        "AC-6 - Least Privilege",
+        "AU-2 - Audit Events",
+        "AU-3 - Content of Audit Records",
+        "AU-6 - Audit Review, Analysis, and Reporting",
+        "SC-7 - Boundary Protection",
+        "SC-13 - Cryptographic Protection"
+      ]
+    },
+    {
+      "standard": "FedRAMP High Controls",
+      "controls": [
+        "All FedRAMP Moderate controls plus:",
+        "AC-2(4) - Automated Account Management",
+        "AU-2(3) - Centralized Management and Analysis",
+        "SC-7(3) - Access Points",
+        "SC-13(1) - FIPS-Validated Cryptography"
+      ]
+    }
+  ],
+  "constructHandles": [
+    {
+      "handle": "lambdaFunction",
+      "description": "Main Lambda function construct",
+      "type": "aws-cdk-lib/aws-lambda.Function"
+    },
+    {
+      "handle": "api",
+      "description": "API Gateway REST API construct",
+      "type": "aws-cdk-lib/aws-apigateway.RestApi"
+    },
+    {
+      "handle": "kmsKey",
+      "description": "KMS key for encryption (FedRAMP High only)",
+      "type": "aws-cdk-lib/aws-kms.Key",
+      "conditional": true
+    }
+  ],
+  "dependencies": [
+    {
+      "dependency": "AWS CDK Core",
+      "version": "^2.0.0",
+      "description": "Core CDK constructs and utilities"
+    },
+    {
+      "dependency": "AWS Lambda CDK",
+      "version": "^2.0.0",
+      "description": "Lambda-specific CDK constructs"
+    },
+    {
+      "dependency": "AWS API Gateway CDK",
+      "version": "^2.0.0",
+      "description": "API Gateway CDK constructs"
+    },
+    {
+      "dependency": "Platform Contracts",
+      "version": "^1.0.0",
+      "description": "Platform component interfaces and base classes"
+    }
+  ]
+}

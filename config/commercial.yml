@@ -272,6 +272,33 @@ defaults:
       Component: "ecr-repository"
       ManagedBy: "platform"
 
+  # Lambda API Configuration Defaults
+  lambda-api:
+    runtime: "nodejs20.x"
+    memory: 512
+    timeout: 30
+    codePath: "./src"
+    environmentVariables: {}
+    api:
+      cors: false
+      apiKeyRequired: false
+    security:
+      tools:
+        falco: false
+    monitoring:
+      enabled: true
+      detailedMetrics: false
+      alarms:
+        errorRateThreshold: 5
+        durationThreshold: 80
+        throttleThreshold: 1
+    compliance:
+      retentionPolicy: "destroy"
+      auditLogging: false
+    tags:
+      Component: "lambda-api"
+      ManagedBy: "platform"
+
 # IAM Role Configuration Defaults
 iam-role:
   role:

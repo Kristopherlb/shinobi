@@ -64,6 +64,7 @@ public synth(): void {
   const config = new ComponentConfigBuilder(this.context, this.spec).buildSync();
   
   // Step 2: Create helper resources (if needed)
+  //example resource
   const kmsKey = this._createKmsKeyIfNeeded('purpose');
   
   // Step 3: Instantiate AWS CDK L2 constructs

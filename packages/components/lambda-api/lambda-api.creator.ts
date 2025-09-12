@@ -10,8 +10,8 @@ import {
   ComponentSpec, 
   ComponentContext, 
   IComponentCreator 
-} from '../../platform/contracts/component-interfaces';
-import { LambdaApiComponentComponent } from './lambda-api.component';
+} from '../../../src/platform/contracts/component-interfaces';
+import { LambdaApiComponent } from './lambda-api.component';
 import { LambdaApiConfig, LAMBDA_API_CONFIG_SCHEMA } from './lambda-api.builder';
 
 /**
@@ -70,10 +70,11 @@ export class LambdaApiComponentCreator implements IComponentCreator {
    */
   public createComponent(
     scope: Construct, 
-    spec: ComponentSpec, 
-    context: ComponentContext
-  ): LambdaApiComponentComponent {
-    return new LambdaApiComponentComponent(scope, spec, context);
+    id: string,
+    context: ComponentContext, 
+    spec: ComponentSpec
+  ): LambdaApiComponent {
+    return new LambdaApiComponent(scope, id, context, spec);
   }
   
   /**

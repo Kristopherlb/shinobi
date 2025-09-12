@@ -340,7 +340,8 @@ export abstract class BaseComponent extends Construct implements IComponent {
 
     // Add X-Ray tracing if enabled
     if (config.enableXRayTracing) {
-      envVars['_X_AMZN_TRACE_ID'] = 'Root=1-\${AWS_X_RAY_TRACE_ID}';
+      // Note: _X_AMZN_TRACE_ID is reserved by Lambda runtime and cannot be set manually
+      // X-Ray tracing is enabled via the tracing property on the Lambda function
       envVars['OTEL_INSTRUMENTATION_AWS_LAMBDA_ENABLED'] = 'true';
       envVars['OTEL_INSTRUMENTATION_AWS_LAMBDA_FLUSH_TIMEOUT'] = '30000';
     }

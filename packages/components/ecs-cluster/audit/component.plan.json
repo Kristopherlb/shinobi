@@ -1,0 +1,251 @@
+{
+  "componentDefinition": {
+    "name": "ecs-cluster",
+    "version": "1.0.0",
+    "description": "ECS Cluster component for the Platform - provides ECS clusters with Service Connect capability",
+    "type": "infrastructure",
+    "category": "compute",
+    "awsService": "ECS"
+  },
+  "declaredConfiguration": {
+    "serviceConnect": {
+      "type": "object",
+      "required": true,
+      "description": "Service Connect configuration for microservice discovery",
+      "properties": {
+        "namespace": {
+          "type": "string",
+          "required": true,
+          "description": "Cloud Map namespace for service discovery",
+          "pattern": "^[a-zA-Z][a-zA-Z0-9.-]*$",
+          "examples": ["internal", "my-app.internal", "services"]
+        }
+      }
+    },
+    "capacity": {
+      "type": "object",
+      "required": false,
+      "description": "Optional EC2 capacity configuration. If omitted, cluster is Fargate-only",
+      "properties": {
+        "instanceType": {
+          "type": "string",
+          "required": true,
+          "description": "EC2 instance type for cluster instances",
+          "pattern": "^[a-z][0-9]*[a-z]*\\.[a-z0-9]+$",
+          "examples": ["t3.medium", "m5.large", "c5.xlarge"]
+        },
+        "minSize": {
+          "type": "number",
+          "required": true,
+          "description": "Minimum number of instances in Auto Scaling Group",
+          "minimum": 0,
+          "maximum": 1000
+        },
+        "maxSize": {
+          "type": "number",
+          "required": true,
+          "description": "Maximum number of instances in Auto Scaling Group",
+          "minimum": 1,
+          "maximum": 1000
+        },
+        "desiredSize": {
+          "type": "number",
+          "required": false,
+          "description": "Desired number of instances (defaults to minSize)",
+          "minimum": 0,
+          "maximum": 1000
+        },
+        "keyName": {
+          "type": "string",
+          "required": false,
+          "description": "EC2 key pair name for SSH access"
+        },
+        "enableMonitoring": {
+          "type": "boolean",
+          "required": false,
+          "description": "Enable detailed CloudWatch monitoring for instances",
+          "default": false
+        }
+      }
+    },
+    "containerInsights": {
+      "type": "boolean",
+      "required": false,
+      "description": "Enable Container Insights for advanced monitoring",
+      "default": true
+    },
+    "clusterName": {
+      "type": "string",
+      "required": false,
+      "description": "Override for cluster name (auto-generated if not provided)",
+      "pattern": "^[a-zA-Z][a-zA-Z0-9-]*$",
+      "minLength": 1,
+      "maxLength": 255
+    },
+    "monitoring": {
+      "type": "object",
+      "required": false,
+      "description": "Monitoring and observability configuration",
+      "properties": {
+        "enabled": {
+          "type": "boolean",
+          "default": true,
+          "description": "Enable monitoring"
+        },
+        "detailedMetrics": {
+          "type": "boolean",
+          "default": false,
+          "description": "Enable detailed CloudWatch metrics"
+        },
+        "alarms": {
+          "type": "object",
+          "description": "Component-specific alarm thresholds",
+          "additionalProperties": true
+        }
+      }
+    },
+    "tags": {
+      "type": "object",
+      "required": false,
+      "description": "Additional resource tags",
+      "additionalProperties": { "type": "string" }
+    }
+  },
+  "capabilitiesProvided": [
+    {
+      "name": "ecs:cluster",
+      "description": "ECS Cluster capability providing cluster metadata and Service Connect information",
+      "dataShape": {
+        "clusterName": "string",
+        "clusterArn": "string",
+        "vpcId": "string",
+        "serviceConnectNamespace": "string",
+        "namespaceArn": "string",
+        "namespaceId": "string",
+        "hasEc2Capacity": "boolean",
+        "capacityProviders": "string[]"
+      }
+    }
+  ],
+  "environmentAssumptions": [
+    {
+      "assumption": "VPC availability",
+      "description": "Component assumes a VPC is available for Service Connect namespace creation",
+      "requirement": "VPC must be accessible via context or default VPC lookup"
+    },
+    {
+      "assumption": "ECS service availability",
+      "description": "Component assumes ECS service is available in the target region",
+      "requirement": "AWS ECS service must be enabled in the target region"
+    },
+    {
+      "assumption": "Service Discovery availability",
+      "description": "Component assumes AWS Cloud Map service is available for Service Connect",
+      "requirement": "AWS Cloud Map service must be enabled in the target region"
+    }
+  ],
+  "complianceFramework": {
+    "supportedFrameworks": ["commercial", "fedramp-moderate", "fedramp-high"],
+    "defaultFramework": "commercial",
+    "frameworkSpecificDefaults": {
+      "commercial": {
+        "containerInsights": true,
+        "monitoring": { "enabled": true, "detailedMetrics": false },
+        "capacity": { "enableMonitoring": false, "instanceType": "t3.small" }
+      },
+      "fedramp-moderate": {
+        "containerInsights": true,
+        "monitoring": { "enabled": true, "detailedMetrics": true },
+        "capacity": { "enableMonitoring": true, "instanceType": "t3.medium" }
+      },
+      "fedramp-high": {
+        "containerInsights": true,
+        "monitoring": { "enabled": true, "detailedMetrics": true },
+        "capacity": { "enableMonitoring": true, "instanceType": "m5.large", "minSize": 2 }
+      }
+    }
+  },
+  "securityComplianceFeatures": [
+    {
+      "feature": "encryption",
+      "description": "ECS cluster supports encryption at rest for container images and logs",
+      "implementation": "Uses AWS managed encryption for ECS resources"
+    },
+    {
+      "feature": "network isolation",
+      "description": "Service Connect namespace provides network isolation for microservices",
+      "implementation": "Private DNS namespace within VPC boundaries"
+    },
+    {
+      "feature": "monitoring",
+      "description": "Comprehensive monitoring and observability capabilities",
+      "implementation": "Container Insights, CloudWatch metrics, and custom alarms"
+    },
+    {
+      "feature": "tagging",
+      "description": "Automatic application of platform standard tags",
+      "implementation": "All resources tagged with service, environment, and compliance metadata"
+    }
+  ],
+  "relevantStandardsControls": [
+    {
+      "standard": "AWS Foundational Security Best Practices",
+      "controls": ["ECS.1", "ECS.2", "ECS.3", "ECS.4", "ECS.5"],
+      "description": "ECS cluster security and monitoring best practices"
+    },
+    {
+      "standard": "CIS AWS Foundations Benchmark",
+      "controls": ["2.1", "2.2", "2.3"],
+      "description": "Logging and monitoring requirements"
+    },
+    {
+      "standard": "FedRAMP Moderate",
+      "controls": ["AC-2", "AC-3", "SC-7", "SC-13", "SI-4"],
+      "description": "Access control, network security, encryption, and monitoring"
+    },
+    {
+      "standard": "FedRAMP High",
+      "controls": ["AC-2", "AC-3", "SC-7", "SC-13", "SI-4", "SC-28"],
+      "description": "Enhanced security requirements for high-impact systems"
+    }
+  ],
+  "constructHandles": [
+    {
+      "handle": "cluster",
+      "description": "Primary ECS Cluster construct",
+      "type": "aws-cdk-lib/aws-ecs.Cluster"
+    },
+    {
+      "handle": "namespace",
+      "description": "Service Connect Cloud Map namespace",
+      "type": "aws-cdk-lib/aws-servicediscovery.PrivateDnsNamespace"
+    },
+    {
+      "handle": "autoScalingGroup",
+      "description": "Auto Scaling Group for EC2 capacity (if configured)",
+      "type": "aws-cdk-lib/aws-autoscaling.AutoScalingGroup"
+    }
+  ],
+  "dependencies": [
+    {
+      "service": "AWS ECS",
+      "description": "Elastic Container Service for cluster management",
+      "required": true
+    },
+    {
+      "service": "AWS Cloud Map",
+      "description": "Service Discovery for Service Connect namespace",
+      "required": true
+    },
+    {
+      "service": "AWS Auto Scaling",
+      "description": "Auto Scaling for EC2 capacity (if configured)",
+      "required": false
+    },
+    {
+      "service": "AWS CloudWatch",
+      "description": "Monitoring and logging for observability",
+      "required": true
+    }
+  ]
+}

@@ -11,7 +11,7 @@ import {
   ComponentContext, 
   IComponentCreator 
 } from '../../../src/platform/contracts/component-interfaces';
-import { EcsClusterComponentComponent } from './ecs-cluster.component';
+import { EcsClusterComponent } from './ecs-cluster.component';
 import { EcsClusterConfig, ECS_CLUSTER_CONFIG_SCHEMA } from './ecs-cluster.builder';
 
 /**
@@ -70,10 +70,11 @@ export class EcsClusterComponentCreator implements IComponentCreator {
    */
   public createComponent(
     scope: Construct, 
-    spec: ComponentSpec, 
-    context: ComponentContext
-  ): EcsClusterComponentComponent {
-    return new EcsClusterComponentComponent(scope, spec, context);
+    id: string,
+    context: ComponentContext, 
+    spec: ComponentSpec
+  ): EcsClusterComponent {
+    return new EcsClusterComponent(scope, id, context, spec);
   }
   
   /**
