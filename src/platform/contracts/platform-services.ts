@@ -6,7 +6,7 @@
  * concerns like observability, security scanning, cost management, etc.
  */
 
-import { Component } from './component';
+import type { BaseComponent } from './component';
 
 /**
  * Standard interface for all platform services that operate on components
@@ -25,7 +25,7 @@ export interface IPlatformService {
    * after it has been fully synthesized.
    * @param component The fully synthesized component instance.
    */
-  apply(component: Component): void;
+  apply(component: BaseComponent): void;
 }
 
 /**
