@@ -398,6 +398,30 @@ defaults:
       Component: "shinobi"
       ManagedBy: "platform"
 
+  # ECR Repository Configuration Defaults - FedRAMP Moderate
+  ecr-repository:
+    imageScanningConfiguration:
+      scanOnPush: true # Required for FedRAMP
+    imageTagMutability: "IMMUTABLE" # Required for FedRAMP
+    encryption:
+      encryptionType: "KMS" # Required for FedRAMP
+    lifecyclePolicy:
+      maxImageCount: 5 # More restrictive for FedRAMP
+      maxImageAge: 14 # Shorter retention for FedRAMP
+      untaggedImageRetentionDays: 1
+    monitoring:
+      enabled: true
+      detailedMetrics: true # Required for FedRAMP
+      logRetentionDays: 365 # 1 year for FedRAMP
+    compliance:
+      retentionPolicy: "retain" # Required for FedRAMP
+      auditLogging: true # Required for FedRAMP
+    tags:
+      Component: "ecr-repository"
+      ManagedBy: "platform"
+      compliance-framework: "fedramp-moderate"
+      ComplianceFramework: "fedramp-moderate"
+
   # SageMaker Notebook Instance Configuration Defaults - FedRAMP Moderate
   sagemaker-notebook-instance:
     instanceType: "ml.m5.large"

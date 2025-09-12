@@ -250,6 +250,28 @@ defaults:
       Component: "route53-record"
       ManagedBy: "platform"
 
+  # ECR Repository Configuration Defaults
+  ecr-repository:
+    imageScanningConfiguration:
+      scanOnPush: false
+    imageTagMutability: "MUTABLE"
+    encryption:
+      encryptionType: "AES256"
+    lifecyclePolicy:
+      maxImageCount: 10
+      maxImageAge: 30
+      untaggedImageRetentionDays: 1
+    monitoring:
+      enabled: true
+      detailedMetrics: false
+      logRetentionDays: 90
+    compliance:
+      retentionPolicy: "destroy"
+      auditLogging: false
+    tags:
+      Component: "ecr-repository"
+      ManagedBy: "platform"
+
 # IAM Role Configuration Defaults
 iam-role:
   role:
