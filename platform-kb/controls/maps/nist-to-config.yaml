@@ -7,6 +7,7 @@ mappings:
   SC-28:
     - s3-bucket-server-side-encryption-enabled
     - rds-storage-encrypted
+    - ebs-encryption-by-default
   AU-2:
     - s3-bucket-logging-enabled
     - apigw-execution-logging-enabled
@@ -20,3 +21,8 @@ mappings:
     - lambda-log-retention-days
   SC-8:
     - apigw-min-tls-version
+  AU-12:
+    - apigw-execution-logging-enabled
+    - vpc-flow-logs-enabled
+    - cloudtrail-enabled-and-multi-region
+    - s3-bucket-logging-enabled

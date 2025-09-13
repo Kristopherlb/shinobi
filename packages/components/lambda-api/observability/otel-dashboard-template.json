@@ -1,0 +1,386 @@
+{
+  "dashboardName": "Lambda API Component Dashboard",
+  "description": "Comprehensive monitoring dashboard for Lambda API components",
+  "version": "1.0.0",
+  "lastUpdated": "2024-01-15T00:00:00Z",
+  "panels": [
+    {
+      "id": "lambda-invocations",
+      "title": "Lambda Invocations",
+      "type": "graph",
+      "description": "Total number of Lambda function invocations over time",
+      "metrics": [
+        {
+          "namespace": "AWS/Lambda",
+          "metricName": "Invocations",
+          "dimensions": {
+            "FunctionName": "${function_name}"
+          },
+          "statistic": "Sum",
+          "period": 300
+        }
+      ],
+      "yAxis": {
+        "left": {
+          "min": 0,
+          "label": "Invocations"
+        }
+      },
+      "thresholds": [
+        {
+          "value": 1000,
+          "color": "yellow",
+          "description": "High invocation rate"
+        },
+        {
+          "value": 5000,
+          "color": "red",
+          "description": "Very high invocation rate"
+        }
+      ]
+    },
+    {
+      "id": "lambda-errors",
+      "title": "Lambda Errors",
+      "type": "graph",
+      "description": "Lambda function error rate and count",
+      "metrics": [
+        {
+          "namespace": "AWS/Lambda",
+          "metricName": "Errors",
+          "dimensions": {
+            "FunctionName": "${function_name}"
+          },
+          "statistic": "Sum",
+          "period": 300
+        }
+      ],
+      "yAxis": {
+        "left": {
+          "min": 0,
+          "label": "Errors"
+        }
+      },
+      "thresholds": [
+        {
+          "value": 5,
+          "color": "yellow",
+          "description": "Error threshold"
+        },
+        {
+          "value": 10,
+          "color": "red",
+          "description": "High error rate"
+        }
+      ]
+    },
+    {
+      "id": "lambda-duration",
+      "title": "Lambda Duration",
+      "type": "graph",
+      "description": "Lambda function execution duration",
+      "metrics": [
+        {
+          "namespace": "AWS/Lambda",
+          "metricName": "Duration",
+          "dimensions": {
+            "FunctionName": "${function_name}"
+          },
+          "statistic": "Average",
+          "period": 300
+        }
+      ],
+      "yAxis": {
+        "left": {
+          "min": 0,
+          "label": "Duration (ms)"
+        }
+      },
+      "thresholds": [
+        {
+          "value": "${timeout_threshold}",
+          "color": "yellow",
+          "description": "80% of timeout threshold"
+        },
+        {
+          "value": "${timeout_threshold} * 0.9",
+          "color": "red",
+          "description": "90% of timeout threshold"
+        }
+      ]
+    },
+    {
+      "id": "lambda-throttles",
+      "title": "Lambda Throttles",
+      "type": "graph",
+      "description": "Lambda function throttling events",
+      "metrics": [
+        {
+          "namespace": "AWS/Lambda",
+          "metricName": "Throttles",
+          "dimensions": {
+            "FunctionName": "${function_name}"
+          },
+          "statistic": "Sum",
+          "period": 300
+        }
+      ],
+      "yAxis": {
+        "left": {
+          "min": 0,
+          "label": "Throttles"
+        }
+      },
+      "thresholds": [
+        {
+          "value": 1,
+          "color": "yellow",
+          "description": "Throttling detected"
+        },
+        {
+          "value": 5,
+          "color": "red",
+          "description": "High throttling rate"
+        }
+      ]
+    },
+    {
+      "id": "lambda-concurrent-executions",
+      "title": "Concurrent Executions",
+      "type": "graph",
+      "description": "Number of concurrent Lambda function executions",
+      "metrics": [
+        {
+          "namespace": "AWS/Lambda",
+          "metricName": "ConcurrentExecutions",
+          "dimensions": {
+            "FunctionName": "${function_name}"
+          },
+          "statistic": "Maximum",
+          "period": 300
+        }
+      ],
+      "yAxis": {
+        "left": {
+          "min": 0,
+          "label": "Concurrent Executions"
+        }
+      },
+      "thresholds": [
+        {
+          "value": 100,
+          "color": "yellow",
+          "description": "High concurrency"
+        },
+        {
+          "value": 500,
+          "color": "red",
+          "description": "Very high concurrency"
+        }
+      ]
+    },
+    {
+      "id": "api-gateway-requests",
+      "title": "API Gateway Requests",
+      "type": "graph",
+      "description": "API Gateway request count and patterns",
+      "metrics": [
+        {
+          "namespace": "AWS/ApiGateway",
+          "metricName": "Count",
+          "dimensions": {
+            "ApiName": "${api_name}"
+          },
+          "statistic": "Sum",
+          "period": 300
+        }
+      ],
+      "yAxis": {
+        "left": {
+          "min": 0,
+          "label": "Requests"
+        }
+      }
+    },
+    {
+      "id": "api-gateway-4xx-errors",
+      "title": "API Gateway 4xx Errors",
+      "type": "graph",
+      "description": "Client error responses from API Gateway",
+      "metrics": [
+        {
+          "namespace": "AWS/ApiGateway",
+          "metricName": "4XXError",
+          "dimensions": {
+            "ApiName": "${api_name}"
+          },
+          "statistic": "Sum",
+          "period": 300
+        }
+      ],
+      "yAxis": {
+        "left": {
+          "min": 0,
+          "label": "4xx Errors"
+        }
+      },
+      "thresholds": [
+        {
+          "value": 10,
+          "color": "yellow",
+          "description": "Client error threshold"
+        },
+        {
+          "value": 50,
+          "color": "red",
+          "description": "High client error rate"
+        }
+      ]
+    },
+    {
+      "id": "api-gateway-5xx-errors",
+      "title": "API Gateway 5xx Errors",
+      "type": "graph",
+      "description": "Server error responses from API Gateway",
+      "metrics": [
+        {
+          "namespace": "AWS/ApiGateway",
+          "metricName": "5XXError",
+          "dimensions": {
+            "ApiName": "${api_name}"
+          },
+          "statistic": "Sum",
+          "period": 300
+        }
+      ],
+      "yAxis": {
+        "left": {
+          "min": 0,
+          "label": "5xx Errors"
+        }
+      },
+      "thresholds": [
+        {
+          "value": 1,
+          "color": "yellow",
+          "description": "Server error threshold"
+        },
+        {
+          "value": 5,
+          "color": "red",
+          "description": "High server error rate"
+        }
+      ]
+    },
+    {
+      "id": "api-gateway-latency",
+      "title": "API Gateway Latency",
+      "type": "graph",
+      "description": "API Gateway response latency",
+      "metrics": [
+        {
+          "namespace": "AWS/ApiGateway",
+          "metricName": "Latency",
+          "dimensions": {
+            "ApiName": "${api_name}"
+          },
+          "statistic": "Average",
+          "period": 300
+        }
+      ],
+      "yAxis": {
+        "left": {
+          "min": 0,
+          "label": "Latency (ms)"
+        }
+      },
+      "thresholds": [
+        {
+          "value": 1000,
+          "color": "yellow",
+          "description": "High latency threshold"
+        },
+        {
+          "value": 3000,
+          "color": "red",
+          "description": "Very high latency"
+        }
+      ]
+    },
+    {
+      "id": "custom-metrics",
+      "title": "Custom Application Metrics",
+      "type": "graph",
+      "description": "Custom metrics emitted by the Lambda function",
+      "metrics": [
+        {
+          "namespace": "Custom/Lambda",
+          "metricName": "BusinessLogicErrors",
+          "dimensions": {
+            "FunctionName": "${function_name}"
+          },
+          "statistic": "Sum",
+          "period": 300
+        },
+        {
+          "namespace": "Custom/Lambda",
+          "metricName": "ProcessingTime",
+          "dimensions": {
+            "FunctionName": "${function_name}"
+          },
+          "statistic": "Average",
+          "period": 300
+        }
+      ],
+      "yAxis": {
+        "left": {
+          "min": 0,
+          "label": "Custom Metrics"
+        }
+      }
+    }
+  ],
+  "variables": [
+    {
+      "name": "function_name",
+      "description": "Lambda function name",
+      "type": "text",
+      "defaultValue": "my-lambda-function"
+    },
+    {
+      "name": "api_name",
+      "description": "API Gateway name",
+      "type": "text",
+      "defaultValue": "my-api"
+    },
+    {
+      "name": "timeout_threshold",
+      "description": "Lambda function timeout threshold in milliseconds",
+      "type": "number",
+      "defaultValue": 30000
+    }
+  ],
+  "annotations": [
+    {
+      "name": "Deployments",
+      "description": "Mark deployment events on the dashboard",
+      "type": "deployment"
+    },
+    {
+      "name": "Alerts",
+      "description": "Mark alert events and incidents",
+      "type": "alert"
+    }
+  ],
+  "refresh": "30s",
+  "timeRange": {
+    "from": "now-1h",
+    "to": "now"
+  },
+  "complianceNotes": [
+    "This dashboard supports FedRAMP Moderate and High compliance requirements",
+    "All metrics are collected with appropriate retention periods",
+    "Thresholds are configurable based on compliance framework",
+    "Custom metrics should be implemented in the Lambda function code"
+  ]
+}

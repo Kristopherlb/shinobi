@@ -451,6 +451,33 @@ defaults:
       compliance-framework: "fedramp-moderate"
       ComplianceFramework: "fedramp-moderate"
 
+  # ECS Cluster Configuration Defaults - FedRAMP Moderate
+  ecs-cluster:
+    serviceConnect:
+      namespace: "internal"
+    containerInsights: true # Required for FedRAMP
+    monitoring:
+      enabled: true
+      detailedMetrics: true # Required for FedRAMP
+      alarms:
+        cpuUtilizationThreshold: 75 # Stricter for FedRAMP
+        memoryUtilizationThreshold: 80 # Stricter for FedRAMP
+        taskFailureThreshold: 3 # Stricter for FedRAMP
+        serviceErrorThreshold: 2 # Stricter for FedRAMP
+    capacity:
+      enableMonitoring: true # Required for FedRAMP
+      instanceType: "t3.medium" # Cost-balanced instances
+      minSize: 1
+      maxSize: 5
+    compliance:
+      retentionPolicy: "retain" # Required for FedRAMP
+      auditLogging: true # Required for FedRAMP
+    tags:
+      Component: "ecs-cluster"
+      ManagedBy: "platform"
+      compliance-framework: "fedramp-moderate"
+      ComplianceFramework: "fedramp-moderate"
+
   # SageMaker Notebook Instance Configuration Defaults - FedRAMP Moderate
   sagemaker-notebook-instance:
     instanceType: "ml.m5.large"

@@ -1,0 +1,173 @@
+{
+  "componentDefinition": {
+    "systemName": "ECS Cluster Component",
+    "description": "ECS Cluster component for the Platform - provides ECS clusters with Service Connect capability",
+    "version": "1.0.0",
+    "type": "infrastructure",
+    "category": "compute",
+    "awsService": "ECS",
+    "controls": [
+      {
+        "controlId": "AC-2",
+        "status": "planned",
+        "implementationStatement": "TODO: Describe how ECS cluster implements access control for user accounts and authentication",
+        "responsibleRoles": ["platform-team", "security-team"],
+        "controlOrigins": ["fedramp-moderate", "fedramp-high"],
+        "controlEnhancements": ["AC-2(4)"],
+        "evidence": [
+          "ECS cluster IAM roles and policies",
+          "Service Connect namespace access controls",
+          "Auto Scaling Group IAM permissions"
+        ]
+      },
+      {
+        "controlId": "AC-3",
+        "status": "planned",
+        "implementationStatement": "TODO: Describe how ECS cluster implements access enforcement and authorization controls",
+        "responsibleRoles": ["platform-team", "security-team"],
+        "controlOrigins": ["fedramp-moderate", "fedramp-high"],
+        "controlEnhancements": ["AC-3(1)", "AC-3(2)"],
+        "evidence": [
+          "ECS task execution roles",
+          "Service Connect namespace permissions",
+          "CloudWatch logs access controls"
+        ]
+      },
+      {
+        "controlId": "SC-7",
+        "status": "planned",
+        "implementationStatement": "TODO: Describe how ECS cluster implements network boundary protection and segmentation",
+        "responsibleRoles": ["platform-team", "network-team"],
+        "controlOrigins": ["fedramp-moderate", "fedramp-high"],
+        "controlEnhancements": ["SC-7(3)", "SC-7(4)", "SC-7(5)"],
+        "evidence": [
+          "VPC configuration for Service Connect namespace",
+          "Security group rules for ECS tasks",
+          "Network ACLs and routing tables"
+        ]
+      },
+      {
+        "controlId": "SC-13",
+        "status": "planned",
+        "implementationStatement": "TODO: Describe how ECS cluster implements cryptographic protection for data at rest and in transit",
+        "responsibleRoles": ["platform-team", "security-team"],
+        "controlOrigins": ["fedramp-moderate", "fedramp-high"],
+        "controlEnhancements": ["SC-13(1)", "SC-13(2)"],
+        "evidence": [
+          "ECS cluster encryption settings",
+          "Container image encryption",
+          "Service Connect namespace encryption"
+        ]
+      },
+      {
+        "controlId": "SI-4",
+        "status": "planned",
+        "implementationStatement": "TODO: Describe how ECS cluster implements information system monitoring and detection capabilities",
+        "responsibleRoles": ["platform-team", "security-team"],
+        "controlOrigins": ["fedramp-moderate", "fedramp-high"],
+        "controlEnhancements": ["SI-4(1)", "SI-4(2)", "SI-4(4)"],
+        "evidence": [
+          "Container Insights configuration",
+          "CloudWatch alarms and metrics",
+          "Service Connect monitoring"
+        ]
+      },
+      {
+        "controlId": "SC-28",
+        "status": "planned",
+        "implementationStatement": "TODO: Describe how ECS cluster implements data protection and privacy controls (FedRAMP High only)",
+        "responsibleRoles": ["platform-team", "security-team"],
+        "controlOrigins": ["fedramp-high"],
+        "controlEnhancements": ["SC-28(1)"],
+        "evidence": [
+          "Data classification and handling procedures",
+          "Encryption key management",
+          "Data retention and disposal policies"
+        ]
+      }
+    ],
+    "capabilities": [
+      {
+        "name": "ecs:cluster",
+        "description": "ECS Cluster capability providing cluster metadata and Service Connect information",
+        "securityImpact": "medium",
+        "dataClassification": "internal",
+        "accessControls": ["AC-2", "AC-3"],
+        "networkControls": ["SC-7"],
+        "encryptionControls": ["SC-13"],
+        "monitoringControls": ["SI-4"]
+      }
+    ],
+    "dependencies": [
+      {
+        "service": "AWS ECS",
+        "description": "Elastic Container Service for cluster management",
+        "securityControls": ["AC-2", "AC-3", "SC-7", "SC-13", "SI-4"],
+        "complianceStatus": "compliant"
+      },
+      {
+        "service": "AWS Cloud Map",
+        "description": "Service Discovery for Service Connect namespace",
+        "securityControls": ["AC-2", "AC-3", "SC-7", "SC-13"],
+        "complianceStatus": "compliant"
+      },
+      {
+        "service": "AWS Auto Scaling",
+        "description": "Auto Scaling for EC2 capacity (if configured)",
+        "securityControls": ["AC-2", "AC-3", "SC-7"],
+        "complianceStatus": "compliant"
+      },
+      {
+        "service": "AWS CloudWatch",
+        "description": "Monitoring and logging for observability",
+        "securityControls": ["SI-4"],
+        "complianceStatus": "compliant"
+      }
+    ],
+    "riskAssessment": {
+      "overallRisk": "medium",
+      "riskFactors": [
+        {
+          "factor": "Network exposure",
+          "risk": "medium",
+          "mitigation": "Service Connect namespace provides network isolation"
+        },
+        {
+          "factor": "Data encryption",
+          "risk": "low",
+          "mitigation": "AWS managed encryption for ECS resources"
+        },
+        {
+          "factor": "Access control",
+          "risk": "medium",
+          "mitigation": "IAM roles and policies with least privilege"
+        },
+        {
+          "factor": "Monitoring",
+          "risk": "low",
+          "mitigation": "Container Insights and CloudWatch monitoring"
+        }
+      ]
+    },
+    "complianceStatus": {
+      "fedramp_moderate": "planned",
+      "fedramp_high": "planned",
+      "commercial": "compliant"
+    },
+    "auditTrail": {
+      "lastAudit": "2024-01-01T00:00:00Z",
+      "nextAudit": "2024-07-01T00:00:00Z",
+      "auditor": "Platform Team",
+      "findings": [],
+      "recommendations": []
+    }
+  },
+  "metadata": {
+    "component": "ecs-cluster",
+    "version": "1.0.0",
+    "created": "2024-01-01T00:00:00Z",
+    "updated": "2024-01-01T00:00:00Z",
+    "author": "Platform Team",
+    "description": "OSCAL readiness placeholder for ECS Cluster component compliance documentation"
+  }
+}

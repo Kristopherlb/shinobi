@@ -1,12 +1,27 @@
 $schema: platform-kb/config-service-map@v1
 mappings:
-  s3-bucket-server-side-encryption-enabled: ["s3-bucket"]
-  s3-bucket-logging-enabled: ["s3-bucket"]
-  apigw-execution-logging-enabled: ["apigw"]
-  apigw-min-tls-version: ["apigw"]
-  rds-storage-encrypted: ["rds-postgres","rds-mysql"]
-  rds-logs-exported: ["rds-postgres","rds-mysql"]
-  cloudtrail-enabled-and-multi-region: ["account-global"]
-  vpc-flow-logs-enabled: ["vpc"]
-  lambda-log-retention-days: ["lambda-api","lambda-worker"]
-  ebs-encryption-by-default: ["ec2"]
+  s3-bucket-server-side-encryption-enabled:
+    - s3-bucket
+  s3-bucket-logging-enabled:
+    - s3-bucket
+  apigw-execution-logging-enabled:
+    - apigw
+  apigw-min-tls-version:
+    - apigw
+  rds-storage-encrypted:
+    - rds-postgres
+    - rds-mysql
+  rds-logs-exported:
+    - rds-postgres
+    - rds-mysql
+  cloudtrail-enabled-and-multi-region:
+    - account-global
+  vpc-flow-logs-enabled:
+    - vpc
+  lambda-log-retention-days:
+    - lambda-api
+    - lambda-worker
+  ebs-encryption-by-default:
+    - ec2
+  golden-signal-alarms-present:
+    - "*"
