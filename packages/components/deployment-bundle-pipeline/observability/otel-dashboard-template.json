@@ -1,0 +1,259 @@
+{
+  "dashboard": {
+    "title": "Deployment Bundle Pipeline - Monitoring Dashboard",
+    "description": "Comprehensive monitoring dashboard for deployment bundle pipeline operations",
+    "version": "1.0.0",
+    "panels": [
+      {
+        "id": "bundle_creation_rate",
+        "title": "Bundle Creation Rate",
+        "type": "graph",
+        "targets": [
+          {
+            "expr": "rate(deployment_bundle_created_total[5m])",
+            "legendFormat": "Bundles/min"
+          }
+        ],
+        "yAxes": [
+          {
+            "label": "Bundles per minute"
+          }
+        ]
+      },
+      {
+        "id": "bundle_creation_duration",
+        "title": "Bundle Creation Duration",
+        "type": "graph",
+        "targets": [
+          {
+            "expr": "histogram_quantile(0.95, rate(deployment_bundle_creation_duration_seconds_bucket[5m]))",
+            "legendFormat": "95th percentile"
+          },
+          {
+            "expr": "histogram_quantile(0.50, rate(deployment_bundle_creation_duration_seconds_bucket[5m]))",
+            "legendFormat": "50th percentile"
+          }
+        ],
+        "yAxes": [
+          {
+            "label": "Duration (seconds)"
+          }
+        ]
+      },
+      {
+        "id": "signing_success_rate",
+        "title": "Signing Success Rate",
+        "type": "singlestat",
+        "targets": [
+          {
+            "expr": "rate(deployment_bundle_signed_total[5m]) / rate(deployment_bundle_created_total[5m]) * 100",
+            "legendFormat": "Success Rate %"
+          }
+        ],
+        "thresholds": [
+          {
+            "value": 95,
+            "color": "red"
+          },
+          {
+            "value": 99,
+            "color": "yellow"
+          },
+          {
+            "value": 99.9,
+            "color": "green"
+          }
+        ]
+      },
+      {
+        "id": "vulnerability_scan_results",
+        "title": "Vulnerability Scan Results",
+        "type": "graph",
+        "targets": [
+          {
+            "expr": "deployment_bundle_vulnerabilities_total{severity=\"critical\"}",
+            "legendFormat": "Critical"
+          },
+          {
+            "expr": "deployment_bundle_vulnerabilities_total{severity=\"high\"}",
+            "legendFormat": "High"
+          },
+          {
+            "expr": "deployment_bundle_vulnerabilities_total{severity=\"medium\"}",
+            "legendFormat": "Medium"
+          },
+          {
+            "expr": "deployment_bundle_vulnerabilities_total{severity=\"low\"}",
+            "legendFormat": "Low"
+          }
+        ],
+        "yAxes": [
+          {
+            "label": "Vulnerability Count"
+          }
+        ]
+      },
+      {
+        "id": "compliance_status",
+        "title": "Compliance Status",
+        "type": "table",
+        "targets": [
+          {
+            "expr": "deployment_bundle_compliance_status{framework=~\".*\"}",
+            "legendFormat": "{{framework}} - {{status}}"
+          }
+        ]
+      },
+      {
+        "id": "sbom_generation_duration",
+        "title": "SBOM Generation Duration",
+        "type": "graph",
+        "targets": [
+          {
+            "expr": "histogram_quantile(0.95, rate(deployment_bundle_sbom_generation_duration_seconds_bucket[5m]))",
+            "legendFormat": "95th percentile"
+          },
+          {
+            "expr": "histogram_quantile(0.50, rate(deployment_bundle_sbom_generation_duration_seconds_bucket[5m]))",
+            "legendFormat": "50th percentile"
+          }
+        ],
+        "yAxes": [
+          {
+            "label": "Duration (seconds)"
+          }
+        ]
+      },
+      {
+        "id": "bundle_size_distribution",
+        "title": "Bundle Size Distribution",
+        "type": "graph",
+        "targets": [
+          {
+            "expr": "histogram_quantile(0.95, deployment_bundle_size_bytes_bucket)",
+            "legendFormat": "95th percentile"
+          },
+          {
+            "expr": "histogram_quantile(0.50, deployment_bundle_size_bytes_bucket)",
+            "legendFormat": "50th percentile"
+          }
+        ],
+        "yAxes": [
+          {
+            "label": "Size (bytes)"
+          }
+        ]
+      },
+      {
+        "id": "error_rate_by_stage",
+        "title": "Error Rate by Pipeline Stage",
+        "type": "graph",
+        "targets": [
+          {
+            "expr": "rate(deployment_bundle_errors_total{stage=\"build\"}[5m])",
+            "legendFormat": "Build"
+          },
+          {
+            "expr": "rate(deployment_bundle_errors_total{stage=\"test\"}[5m])",
+            "legendFormat": "Test"
+          },
+          {
+            "expr": "rate(deployment_bundle_errors_total{stage=\"sbom\"}[5m])",
+            "legendFormat": "SBOM"
+          },
+          {
+            "expr": "rate(deployment_bundle_errors_total{stage=\"vuln_scan\"}[5m])",
+            "legendFormat": "Vuln Scan"
+          },
+          {
+            "expr": "rate(deployment_bundle_errors_total{stage=\"signing\"}[5m])",
+            "legendFormat": "Signing"
+          },
+          {
+            "expr": "rate(deployment_bundle_errors_total{stage=\"attestation\"}[5m])",
+            "legendFormat": "Attestation"
+          }
+        ],
+        "yAxes": [
+          {
+            "label": "Errors per second"
+          }
+        ]
+      },
+      {
+        "id": "bundle_promotion_status",
+        "title": "Bundle Promotion Status",
+        "type": "table",
+        "targets": [
+          {
+            "expr": "deployment_bundle_promotion_status{environment=~\".*\"}",
+            "legendFormat": "{{environment}} - {{status}}"
+          }
+        ]
+      },
+      {
+        "id": "registry_storage_usage",
+        "title": "Registry Storage Usage",
+        "type": "graph",
+        "targets": [
+          {
+            "expr": "deployment_bundle_registry_storage_bytes",
+            "legendFormat": "Storage Used (bytes)"
+          }
+        ],
+        "yAxes": [
+          {
+            "label": "Storage (bytes)"
+          }
+        ]
+      }
+    ],
+    "time": {
+      "from": "now-1h",
+      "to": "now"
+    },
+    "refresh": "30s",
+    "annotations": [
+      {
+        "name": "Deployments",
+        "datasource": "prometheus",
+        "expr": "deployment_bundle_promoted_total",
+        "iconColor": "blue"
+      },
+      {
+        "name": "Security Incidents",
+        "datasource": "prometheus",
+        "expr": "deployment_bundle_security_incidents_total",
+        "iconColor": "red"
+      }
+    ],
+    "templating": {
+      "list": [
+        {
+          "name": "service",
+          "type": "query",
+          "query": "label_values(deployment_bundle_created_total, service)",
+          "refresh": 1,
+          "includeAll": true,
+          "multi": true
+        },
+        {
+          "name": "environment",
+          "type": "query",
+          "query": "label_values(deployment_bundle_created_total, environment)",
+          "refresh": 1,
+          "includeAll": true,
+          "multi": true
+        },
+        {
+          "name": "compliance_framework",
+          "type": "query",
+          "query": "label_values(deployment_bundle_created_total, compliance_framework)",
+          "refresh": 1,
+          "includeAll": true,
+          "multi": true
+        }
+      ]
+    }
+  }
+}

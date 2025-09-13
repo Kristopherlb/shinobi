@@ -1,0 +1,252 @@
+{
+  "componentName": "deployment-bundle-pipeline",
+  "version": "1.0.0",
+  "description": "Production-ready deployment bundle pipeline with comprehensive compliance artifacts",
+  "declaredConfiguration": {
+    "service": {
+      "type": "string",
+      "required": true,
+      "description": "Service name for the bundle",
+      "pattern": "^[a-z0-9-]+$"
+    },
+    "environment": {
+      "type": "string",
+      "required": false,
+      "default": "dev",
+      "description": "Environment (dev, staging, prod)",
+      "enum": [
+        "dev",
+        "staging",
+        "prod"
+      ]
+    },
+    "versionTag": {
+      "type": "string",
+      "required": true,
+      "description": "Version tag (semver or build-id)",
+      "pattern": "^[a-zA-Z0-9._-]+$"
+    },
+    "artifactoryHost": {
+      "type": "string",
+      "required": true,
+      "description": "Artifactory host URL"
+    },
+    "ociRepoBundles": {
+      "type": "string",
+      "required": true,
+      "description": "OCI repository for bundles"
+    },
+    "ociRepoImages": {
+      "type": "string",
+      "required": false,
+      "description": "OCI repository for container images"
+    },
+    "complianceFramework": {
+      "type": "string",
+      "required": false,
+      "default": "commercial",
+      "description": "Compliance framework",
+      "enum": [
+        "commercial",
+        "fedramp-moderate",
+        "fedramp-high",
+        "iso27001",
+        "soc2"
+      ]
+    },
+    "signing": {
+      "type": "object",
+      "required": false,
+      "description": "Signing configuration",
+      "properties": {
+        "keyless": {
+          "type": "boolean",
+          "description": "Use keyless signing (OIDC)"
+        },
+        "kmsKeyId": {
+          "type": "string",
+          "description": "KMS key for keyed signing",
+          "pattern": "^kms://"
+        },
+        "fulcioUrl": {
+          "type": "string",
+          "description": "Fulcio URL for keyless signing"
+        },
+        "rekorUrl": {
+          "type": "string",
+          "description": "Rekor URL for transparency log"
+        }
+      }
+    },
+    "security": {
+      "type": "object",
+      "required": false,
+      "description": "Security scanning configuration",
+      "properties": {
+        "failOnCritical": {
+          "type": "boolean",
+          "default": true,
+          "description": "Fail on critical vulnerabilities"
+        },
+        "onlyFixed": {
+          "type": "boolean",
+          "default": false,
+          "description": "Only report fixed vulnerabilities"
+        },
+        "addCpesIfNone": {
+          "type": "boolean",
+          "default": true,
+          "description": "Add CPEs if none found"
+        }
+      }
+    },
+    "bundle": {
+      "type": "object",
+      "required": false,
+      "description": "Bundle contents configuration",
+      "properties": {
+        "includeCdkOutput": {
+          "type": "boolean",
+          "default": true,
+          "description": "Include CDK output"
+        },
+        "includeTestReports": {
+          "type": "boolean",
+          "default": true,
+          "description": "Include test reports"
+        },
+        "includeCoverage": {
+          "type": "boolean",
+          "default": true,
+          "description": "Include coverage reports"
+        },
+        "includePolicyReports": {
+          "type": "boolean",
+          "default": true,
+          "description": "Include policy reports"
+        }
+      }
+    },
+    "runner": {
+      "type": "object",
+      "required": false,
+      "description": "Runner image configuration",
+      "properties": {
+        "image": {
+          "type": "string",
+          "default": "registry/org/platform-runner:1.5.0",
+          "description": "Base runner image"
+        },
+        "nodeVersion": {
+          "type": "string",
+          "default": "20.12.2",
+          "description": "Node.js version"
+        },
+        "fipsMode": {
+          "type": "boolean",
+          "default": false,
+          "description": "Enable FIPS mode"
+        }
+      }
+    }
+  },
+  "capabilitiesProvided": [
+    "bundle:digest",
+    "bundle:reference",
+    "bundle:manifest",
+    "bundle:signature",
+    "bundle:attestation",
+    "bundle:sbom",
+    "bundle:compliance-report",
+    "bundle:security-report"
+  ],
+  "environmentAssumptions": [
+    "Requires access to Artifactory OCI registry",
+    "Requires cosign, oras, syft, grype, skopeo, jq tools",
+    "Requires Git repository access for commit/branch information",
+    "Requires AWS KMS access for keyed signing (if configured)",
+    "Requires OIDC identity for keyless signing (if configured)",
+    "Requires network access to Fulcio/Rekor (for keyless signing)",
+    "Assumes FIPS-enabled runner image for regulated environments"
+  ],
+  "complianceFramework": {
+    "supportedFrameworks": [
+      "commercial",
+      "fedramp-moderate",
+      "fedramp-high",
+      "iso27001",
+      "soc2"
+    ],
+    "defaultFramework": "commercial",
+    "frameworkSpecificDefaults": {
+      "fedramp-moderate": {
+        "signing": "KMS-based with FIPS validation",
+        "security": "Strict vulnerability scanning",
+        "runner": "FIPS-enabled base image"
+      },
+      "fedramp-high": {
+        "signing": "KMS-based with FIPS validation",
+        "security": "Strict vulnerability scanning with only fixed vulnerabilities",
+        "runner": "FIPS-enabled base image"
+      },
+      "iso27001": {
+        "signing": "KMS-based",
+        "security": "Comprehensive vulnerability scanning"
+      },
+      "soc2": {
+        "signing": "KMS-based",
+        "security": "Comprehensive vulnerability scanning"
+      }
+    }
+  },
+  "securityAndComplianceFeatures": [
+    "Encryption: All artifacts encrypted in transit and at rest",
+    "Signing: Cosign-based signing with keyless (OIDC) or KMS options",
+    "Attestation: SLSA provenance attestations for build integrity",
+    "SBOM: Comprehensive software bill of materials for all components",
+    "Vulnerability Scanning: Grype-based scanning with policy gates",
+    "Compliance Reporting: Framework-specific compliance validation",
+    "Audit Trail: Complete build and deployment audit trail",
+    "Immutability: Content-addressed artifacts with digest-based references",
+    "Transparency: Rekor transparency log integration (keyless signing)",
+    "Least Privilege: Minimal required permissions for all operations"
+  ],
+  "relevantStandardsAndControls": [
+    "AWS Foundational Security Best Practices",
+    "NIST SP 800-53 (FedRAMP controls)",
+    "ISO 27001 (Information Security Management)",
+    "SOC 2 Type II (Security, Availability, Processing Integrity)",
+    "SLSA (Supply-chain Levels for Software Artifacts)",
+    "in-toto (Framework for securing software supply chains)",
+    "SPDX (Software Package Data Exchange)",
+    "CycloneDX (Software Bill of Materials standard)"
+  ],
+  "buildProcess": {
+    "stages": [
+      "Build and Test",
+      "SBOM Generation",
+      "Vulnerability Scanning",
+      "Compliance Reporting",
+      "Bundle Creation",
+      "Signing and Attestation",
+      "Verification and Promotion"
+    ],
+    "artifacts": [
+      "CDK synthesis output",
+      "Infrastructure plan",
+      "Test reports and coverage",
+      "SBOM files (SPDX format)",
+      "Vulnerability scan reports",
+      "Compliance reports",
+      "SLSA provenance attestations",
+      "Bundle manifest"
+    ]
+  },
+  "deploymentRequirements": [
+    "Deploy by digest only (immutable references)",
+    "Signature verification before deployment",
+    "Provenance verification before deployment",
+    "SBOM validation before deployment",
+    "Compliance policy validation before deployment"
+  ]
+}
