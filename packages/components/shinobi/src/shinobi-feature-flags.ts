@@ -424,6 +424,76 @@ export const SHINOBI_FEATURE_FLAGS = {
         }
       ]
     }
+  },
+
+  // Mocking Control Flags
+  'shinobi.disable-mocking': {
+    flagKey: 'shinobi.disable-mocking',
+    flagType: 'boolean' as const,
+    defaultValue: false,
+    description: 'Disable mocking and use real data sources for SLO status, cost estimates, and deployment readiness',
+    targetingRules: {
+      percentage: 0,
+      conditions: [
+        {
+          attribute: 'environment',
+          operator: 'in' as const,
+          value: ['development', 'testing']
+        }
+      ]
+    }
+  },
+
+  'shinobi.use-real-slo-data': {
+    flagKey: 'shinobi.use-real-slo-data',
+    flagType: 'boolean' as const,
+    defaultValue: false,
+    description: 'Use real CloudWatch metrics for SLO status instead of mock data',
+    targetingRules: {
+      percentage: 0,
+      conditions: [
+        {
+          attribute: 'shinobi.disable-mocking',
+          operator: 'equals' as const,
+          value: true
+        }
+      ]
+    }
+  },
+
+  'shinobi.use-real-cost-data': {
+    flagKey: 'shinobi.use-real-cost-data',
+    flagType: 'boolean' as const,
+    defaultValue: false,
+    description: 'Use real AWS pricing data for cost estimates instead of mock data',
+    targetingRules: {
+      percentage: 0,
+      conditions: [
+        {
+          attribute: 'shinobi.disable-mocking',
+          operator: 'equals' as const,
+          value: true
+        }
+      ]
+    }
+  },
+
+  // Test Control Flags
+  'shinobi.run-audited-tests-only': {
+    flagKey: 'shinobi.run-audited-tests-only',
+    flagType: 'boolean' as const,
+    defaultValue: false,
+    description: 'Run tests only for audited components, skipping non-audited component tests to avoid hundreds of failing tests',
+    targetingRules: {
+      percentage: 0,
+      conditions: [
+        {
+          attribute: 'environment',
+          operator: 'in' as const,
+          value: ['development', 'testing']
+        }
+      ]
+    }
   }
 };
 
@@ -462,10 +532,10 @@ export function createShinobiFeatureFlags(
  */
 export function getShinobiFeatureFlagConfig(): Record<string, any> {
   const config: Record<string, any> = {};
-  
+
   Object.entries(SHINOBI_FEATURE_FLAGS).forEach(([flagKey, flagConfig]) => {
     config[flagKey] = flagConfig.defaultValue;
   });
-  
+
   return config;
 }

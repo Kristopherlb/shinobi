@@ -1,0 +1,285 @@
+{
+  "dashboard": {
+    "name": "EC2 Instance - Operational Dashboard",
+    "description": "Comprehensive monitoring dashboard for EC2 instances with compliance-aware metrics",
+    "version": "1.0.0",
+    "lastUpdated": "2025-01-08T00:00:00Z"
+  },
+  "panels": [
+    {
+      "id": "cpu-utilization",
+      "title": "CPU Utilization",
+      "type": "graph",
+      "targets": [
+        {
+          "expr": "avg(aws_ec2_cpuutilization_average{instance_id=\"$instance_id\"})",
+          "legendFormat": "CPU Utilization %",
+          "refId": "A"
+        }
+      ],
+      "thresholds": [
+        {
+          "value": 80,
+          "colorMode": "critical",
+          "op": "gt"
+        },
+        {
+          "value": 60,
+          "colorMode": "warning",
+          "op": "gt"
+        }
+      ],
+      "yAxes": [
+        {
+          "min": 0,
+          "max": 100,
+          "unit": "percent"
+        }
+      ],
+      "description": "Monitors CPU utilization with compliance-aware thresholds"
+    },
+    {
+      "id": "memory-utilization",
+      "title": "Memory Utilization",
+      "type": "graph",
+      "targets": [
+        {
+          "expr": "avg(aws_ec2_memoryutilization_average{instance_id=\"$instance_id\"})",
+          "legendFormat": "Memory Utilization %",
+          "refId": "A"
+        }
+      ],
+      "thresholds": [
+        {
+          "value": 85,
+          "colorMode": "critical",
+          "op": "gt"
+        },
+        {
+          "value": 70,
+          "colorMode": "warning",
+          "op": "gt"
+        }
+      ],
+      "description": "Monitors memory usage with alerting thresholds"
+    },
+    {
+      "id": "disk-utilization",
+      "title": "Disk Utilization",
+      "type": "graph",
+      "targets": [
+        {
+          "expr": "avg(aws_ec2_diskutilization_average{instance_id=\"$instance_id\",device=\"/dev/xvda1\"})",
+          "legendFormat": "Root Volume %",
+          "refId": "A"
+        }
+      ],
+      "thresholds": [
+        {
+          "value": 90,
+          "colorMode": "critical",
+          "op": "gt"
+        },
+        {
+          "value": 80,
+          "colorMode": "warning",
+          "op": "gt"
+        }
+      ],
+      "description": "Monitors disk space usage across all volumes"
+    },
+    {
+      "id": "network-traffic",
+      "title": "Network Traffic",
+      "type": "graph",
+      "targets": [
+        {
+          "expr": "rate(aws_ec2_networkin_sum{instance_id=\"$instance_id\"}[5m])",
+          "legendFormat": "Network In",
+          "refId": "A"
+        },
+        {
+          "expr": "rate(aws_ec2_networkout_sum{instance_id=\"$instance_id\"}[5m])",
+          "legendFormat": "Network Out",
+          "refId": "B"
+        }
+      ],
+      "yAxes": [
+        {
+          "unit": "bytes/sec"
+        }
+      ],
+      "description": "Monitors network traffic patterns"
+    },
+    {
+      "id": "status-checks",
+      "title": "Status Check Failures",
+      "type": "stat",
+      "targets": [
+        {
+          "expr": "aws_ec2_statuscheckfailed_system{instance_id=\"$instance_id\"}",
+          "legendFormat": "System Check",
+          "refId": "A"
+        },
+        {
+          "expr": "aws_ec2_statuscheckfailed_instance{instance_id=\"$instance_id\"}",
+          "legendFormat": "Instance Check",
+          "refId": "B"
+        }
+      ],
+      "thresholds": [
+        {
+          "value": 1,
+          "colorMode": "critical",
+          "op": "eq"
+        }
+      ],
+      "description": "Critical status check failures requiring immediate attention"
+    },
+    {
+      "id": "security-events",
+      "title": "Security Events",
+      "type": "logs",
+      "targets": [
+        {
+          "expr": "{instance_id=\"$instance_id\"} |= \"security\" | json",
+          "refId": "A"
+        }
+      ],
+      "description": "Security-related log events and alerts"
+    },
+    {
+      "id": "compliance-status",
+      "title": "Compliance Status",
+      "type": "stat",
+      "targets": [
+        {
+          "expr": "aws_ec2_compliance_status{instance_id=\"$instance_id\"}",
+          "legendFormat": "Compliance Score",
+          "refId": "A"
+        }
+      ],
+      "thresholds": [
+        {
+          "value": 100,
+          "colorMode": "success",
+          "op": "eq"
+        },
+        {
+          "value": 90,
+          "colorMode": "warning",
+          "op": "lt"
+        },
+        {
+          "value": 80,
+          "colorMode": "critical",
+          "op": "lt"
+        }
+      ],
+      "description": "Real-time compliance posture monitoring"
+    },
+    {
+      "id": "ssm-agent-status",
+      "title": "SSM Agent Status",
+      "type": "stat",
+      "targets": [
+        {
+          "expr": "aws_ssm_agent_status{instance_id=\"$instance_id\"}",
+          "legendFormat": "SSM Agent Online",
+          "refId": "A"
+        }
+      ],
+      "thresholds": [
+        {
+          "value": 1,
+          "colorMode": "success",
+          "op": "eq"
+        },
+        {
+          "value": 0,
+          "colorMode": "critical",
+          "op": "eq"
+        }
+      ],
+      "description": "SSM agent connectivity status for compliance frameworks"
+    }
+  ],
+  "templating": {
+    "list": [
+      {
+        "name": "instance_id",
+        "type": "query",
+        "query": "aws_ec2_instance_id",
+        "refresh": 1,
+        "includeAll": false,
+        "multi": false
+      },
+      {
+        "name": "compliance_framework",
+        "type": "query",
+        "query": "aws_ec2_compliance_framework",
+        "refresh": 1,
+        "includeAll": true,
+        "multi": true
+      }
+    ]
+  },
+  "annotations": {
+    "list": [
+      {
+        "name": "Deployment Events",
+        "datasource": "CloudWatch Logs",
+        "expr": "{log_group=\"/aws/ec2/deployments\"} |= \"deployment\"",
+        "iconColor": "blue"
+      },
+      {
+        "name": "Security Events",
+        "datasource": "CloudWatch Logs",
+        "expr": "{log_group=\"/aws/ec2/security\"} |= \"security\"",
+        "iconColor": "red"
+      }
+    ]
+  },
+  "time": {
+    "from": "now-1h",
+    "to": "now"
+  },
+  "refresh": "30s",
+  "schemaVersion": 27,
+  "version": 1,
+  "links": [
+    {
+      "title": "EC2 Console",
+      "url": "https://console.aws.amazon.com/ec2/v2/home?region=${region}#Instances:instanceId=${instance_id}",
+      "type": "link"
+    },
+    {
+      "title": "CloudWatch Logs",
+      "url": "https://console.aws.amazon.com/cloudwatch/home?region=${region}#logsV2:log-groups/log-group/$252Faws$252Fec2$252F${instance_id}",
+      "type": "link"
+    },
+    {
+      "title": "SSM Console",
+      "url": "https://console.aws.amazon.com/systems-manager/managed-instances/${instance_id}",
+      "type": "link"
+    }
+  ],
+  "complianceNotes": {
+    "fedramp-moderate": {
+      "requirements": [
+        "All panels meet FedRAMP Moderate monitoring requirements",
+        "Security events panel provides audit trail compliance",
+        "SSM agent status ensures compliance with AC-2 access control",
+        "Retention period: 3 years for audit logs"
+      ]
+    },
+    "fedramp-high": {
+      "requirements": [
+        "Enhanced security monitoring with real-time alerting",
+        "Compliance status panel provides continuous monitoring",
+        "All metrics meet STIG compliance requirements",
+        "Retention period: 7 years for audit logs"
+      ]
+    }
+  }
+}

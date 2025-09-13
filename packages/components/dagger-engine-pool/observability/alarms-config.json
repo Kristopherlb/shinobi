@@ -1,0 +1,230 @@
+{
+  "alarms": [
+    {
+      "alarmName": "DaggerEnginePool-HighCPUUtilization",
+      "description": "Alert when CPU utilization exceeds 80% for 5 minutes",
+      "metricName": "CPUUtilization",
+      "namespace": "AWS/EC2",
+      "statistic": "Average",
+      "period": 300,
+      "evaluationPeriods": 3,
+      "threshold": 80,
+      "comparisonOperator": "GreaterThanThreshold",
+      "treatMissingData": "breaching",
+      "dimensions": [
+        {
+          "name": "AutoScalingGroupName",
+          "value": "${ASG_NAME}"
+        }
+      ],
+      "alarmActions": [
+        "${SNSTopicArn}"
+      ],
+      "okActions": [
+        "${SNSTopicArn}"
+      ],
+      "tags": {
+        "Component": "dagger-engine-pool",
+        "Service": "${SERVICE_NAME}",
+        "Environment": "${ENVIRONMENT}"
+      }
+    },
+    {
+      "alarmName": "DaggerEnginePool-HighMemoryUtilization",
+      "description": "Alert when memory utilization exceeds 85% for 5 minutes",
+      "metricName": "MemoryUtilization",
+      "namespace": "AWS/EC2",
+      "statistic": "Average",
+      "period": 300,
+      "evaluationPeriods": 3,
+      "threshold": 85,
+      "comparisonOperator": "GreaterThanThreshold",
+      "treatMissingData": "breaching",
+      "dimensions": [
+        {
+          "name": "AutoScalingGroupName",
+          "value": "${ASG_NAME}"
+        }
+      ],
+      "alarmActions": [
+        "${SNSTopicArn}"
+      ],
+      "okActions": [
+        "${SNSTopicArn}"
+      ],
+      "tags": {
+        "Component": "dagger-engine-pool",
+        "Service": "${SERVICE_NAME}",
+        "Environment": "${ENVIRONMENT}"
+      }
+    },
+    {
+      "alarmName": "DaggerEnginePool-NoHealthyHosts",
+      "description": "Alert when no healthy hosts are available in the load balancer",
+      "metricName": "HealthyHostCount",
+      "namespace": "AWS/NetworkELB",
+      "statistic": "Average",
+      "period": 60,
+      "evaluationPeriods": 2,
+      "threshold": 1,
+      "comparisonOperator": "LessThanThreshold",
+      "treatMissingData": "breaching",
+      "dimensions": [
+        {
+          "name": "LoadBalancer",
+          "value": "${NLB_ARN}"
+        }
+      ],
+      "alarmActions": [
+        "${SNSTopicArn}"
+      ],
+      "okActions": [
+        "${SNSTopicArn}"
+      ],
+      "tags": {
+        "Component": "dagger-engine-pool",
+        "Service": "${SERVICE_NAME}",
+        "Environment": "${ENVIRONMENT}"
+      }
+    },
+    {
+      "alarmName": "DaggerEnginePool-HighErrorRate",
+      "description": "Alert when error rate exceeds 1% for 2 minutes",
+      "metricName": "dagger_engine_errors_total",
+      "namespace": "Custom/DaggerEngine",
+      "statistic": "Sum",
+      "period": 120,
+      "evaluationPeriods": 2,
+      "threshold": 10,
+      "comparisonOperator": "GreaterThanThreshold",
+      "treatMissingData": "notBreaching",
+      "alarmActions": [
+        "${SNSTopicArn}"
+      ],
+      "okActions": [
+        "${SNSTopicArn}"
+      ],
+      "tags": {
+        "Component": "dagger-engine-pool",
+        "Service": "${SERVICE_NAME}",
+        "Environment": "${ENVIRONMENT}"
+      }
+    },
+    {
+      "alarmName": "DaggerEnginePool-ArtifactStorageFull",
+      "description": "Alert when artifact storage exceeds 90% of capacity",
+      "metricName": "BucketSizeBytes",
+      "namespace": "AWS/S3",
+      "statistic": "Average",
+      "period": 86400,
+      "evaluationPeriods": 1,
+      "threshold": 900000000000,
+      "comparisonOperator": "GreaterThanThreshold",
+      "treatMissingData": "notBreaching",
+      "dimensions": [
+        {
+          "name": "BucketName",
+          "value": "${ARTIFACT_BUCKET_NAME}"
+        },
+        {
+          "name": "StorageType",
+          "value": "StandardStorage"
+        }
+      ],
+      "alarmActions": [
+        "${SNSTopicArn}"
+      ],
+      "okActions": [
+        "${SNSTopicArn}"
+      ],
+      "tags": {
+        "Component": "dagger-engine-pool",
+        "Service": "${SERVICE_NAME}",
+        "Environment": "${ENVIRONMENT}"
+      }
+    },
+    {
+      "alarmName": "DaggerEnginePool-KMSKeyUsageHigh",
+      "description": "Alert when KMS key usage exceeds 1000 requests per minute",
+      "metricName": "Sum",
+      "namespace": "AWS/KMS",
+      "statistic": "Sum",
+      "period": 60,
+      "evaluationPeriods": 5,
+      "threshold": 1000,
+      "comparisonOperator": "GreaterThanThreshold",
+      "treatMissingData": "notBreaching",
+      "dimensions": [
+        {
+          "name": "KeyId",
+          "value": "${KMS_KEY_ID}"
+        }
+      ],
+      "alarmActions": [
+        "${SNSTopicArn}"
+      ],
+      "okActions": [
+        "${SNSTopicArn}"
+      ],
+      "tags": {
+        "Component": "dagger-engine-pool",
+        "Service": "${SERVICE_NAME}",
+        "Environment": "${ENVIRONMENT}"
+      }
+    },
+    {
+      "alarmName": "DaggerEnginePool-LogVolumeAnomaly",
+      "description": "Alert when log volume deviates significantly from baseline",
+      "metricName": "IncomingLogEvents",
+      "namespace": "AWS/Logs",
+      "statistic": "Sum",
+      "period": 300,
+      "evaluationPeriods": 3,
+      "threshold": 10000,
+      "comparisonOperator": "GreaterThanThreshold",
+      "treatMissingData": "notBreaching",
+      "dimensions": [
+        {
+          "name": "LogGroupName",
+          "value": "${LOG_GROUP_NAME}"
+        }
+      ],
+      "alarmActions": [
+        "${SNSTopicArn}"
+      ],
+      "okActions": [
+        "${SNSTopicArn}"
+      ],
+      "tags": {
+        "Component": "dagger-engine-pool",
+        "Service": "${SERVICE_NAME}",
+        "Environment": "${ENVIRONMENT}"
+      }
+    }
+  ],
+  "variables": {
+    "SERVICE_NAME": "${SERVICE_NAME}",
+    "ENVIRONMENT": "${ENVIRONMENT}",
+    "ASG_NAME": "${ASG_NAME}",
+    "NLB_ARN": "${NLB_ARN}",
+    "ARTIFACT_BUCKET_NAME": "${ARTIFACT_BUCKET_NAME}",
+    "KMS_KEY_ID": "${KMS_KEY_ID}",
+    "LOG_GROUP_NAME": "${LOG_GROUP_NAME}",
+    "SNSTopicArn": "${SNS_TOPIC_ARN}"
+  },
+  "metadata": {
+    "description": "CloudWatch alarms for Dagger Engine Pool component monitoring",
+    "version": "1.0.0",
+    "framework": "commercial",
+    "nist_controls": [
+      "AU-2",
+      "CM-6"
+    ],
+    "review_notes": [
+      "Thresholds are suggested defaults and should be adjusted based on actual usage patterns",
+      "SNS topic ARN should be provided by the platform's notification service",
+      "Consider adding composite alarms for complex conditions",
+      "Review alarm actions based on organizational incident response procedures"
+    ]
+  }
+}

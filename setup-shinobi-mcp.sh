@@ -1,52 +1,69 @@
 #!/bin/bash
 
-# Shinobi MCP Server Setup Script for Cursor
-echo "🥷🏻 Setting up Shinobi MCP Server for Cursor..."
+# Shinobi MCP Server Setup Script
+# One-command setup for new developers
 
-# Navigate to the MCP server directory
-cd packages/components/shinobi/mcp-server
+set -e
+
+echo "🥷 Setting up Shinobi MCP Server..."
+
+# Check if we're in the right directory
+if [ ! -f "package.json" ]; then
+    echo "❌ Please run this script from the project root directory"
+    exit 1
+fi
 
 # Install dependencies
 echo "📦 Installing dependencies..."
 npm install
 
-# Build the server
+# Build the MCP server
 echo "🔨 Building MCP server..."
+cd packages/components/shinobi/mcp-server
+npm install
 npm run build
 
-# Test the server
-echo "🧪 Testing MCP server..."
-if [ -f "dist/index.js" ]; then
-    echo "✅ Shinobi MCP Server is ready!"
-    echo ""
-    echo "📋 Next steps:"
-    echo "1. Add the MCP server to your Cursor settings:"
-    echo "   - Open Cursor settings"
-    echo "   - Go to MCP Servers"
-    echo "   - Add new server with:"
-    echo "     Command: node"
-    echo "     Args: $(pwd)/dist/index.js"
-    echo ""
-    echo "2. Or use the provided mcp-config.json file"
-    echo ""
-    echo "3. Restart Cursor to activate the MCP server"
-    echo ""
-    echo "🎯 Available tools:"
-    echo "   - get_component_catalog"
-    echo "   - get_component_schema" 
-    echo "   - generate_manifest"
-    echo "   - get_slo_status"
-    echo "   - provision_dashboard"
-    echo "   - analyze_change_impact"
-    echo "   - estimate_cost"
-    echo "   - check_deployment_readiness"
-    echo ""
-    echo "📚 Available resources:"
-    echo "   - shinobi://components"
-    echo "   - shinobi://services"
-    echo "   - shinobi://dependencies"
-    echo "   - shinobi://compliance"
-else
-    echo "❌ MCP server test failed. Please check the build output."
-    exit 1
-fi
+# Create a global symlink for easy access
+echo "🔗 Creating global symlink..."
+cd ../../..
+npm link packages/components/shinobi/mcp-server
+
+# Create a simple start script
+echo "📝 Creating start script..."
+cat > start-shinobi-mcp.sh << 'EOF'
+#!/bin/bash
+cd packages/components/shinobi/mcp-server
+node dist/index.js
+EOF
+
+chmod +x start-shinobi-mcp.sh
+
+# Create Cursor MCP config template
+echo "⚙️ Creating Cursor MCP config template..."
+cat > mcp-config-template.json << EOF
+{
+  "mcpServers": {
+    "shinobi": {
+      "command": "node",
+      "args": [
+        "$(pwd)/packages/components/shinobi/mcp-server/dist/index.js"
+      ],
+      "env": {
+        "NODE_ENV": "development"
+      }
+    }
+  }
+}
+EOF
+
+echo "✅ Setup complete!"
+echo ""
+echo "To use the Shinobi MCP server:"
+echo "1. Copy the config to your Cursor MCP settings:"
+echo "   cp mcp-config-template.json ~/.cursor/mcp.json"
+echo ""
+echo "2. Or run the server directly:"
+echo "   ./start-shinobi-mcp.sh"
+echo ""
+echo "3. Or use the global command:"
+echo "   shinobi-mcp-server"

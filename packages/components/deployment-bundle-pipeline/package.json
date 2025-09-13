@@ -1,0 +1,63 @@
+{
+  "name": "@platform/components-deployment-bundle-pipeline",
+  "version": "1.0.0",
+  "description": "Production-ready deployment bundle pipeline with comprehensive compliance artifacts",
+  "main": "dist/index.js",
+  "types": "dist/index.d.ts",
+  "scripts": {
+    "build": "tsc",
+    "test": "jest",
+    "test:watch": "jest --watch",
+    "test:coverage": "jest --coverage",
+    "lint": "eslint src/**/*.ts",
+    "lint:fix": "eslint src/**/*.ts --fix",
+    "type-check": "tsc --noEmit"
+  },
+  "keywords": [
+    "deployment",
+    "bundle",
+    "pipeline",
+    "compliance",
+    "security",
+    "sbom",
+    "cosign",
+    "slsa",
+    "artifactory",
+    "oci",
+    "platform"
+  ],
+  "author": "Platform Engineering Team",
+  "license": "MIT",
+  "dependencies": {
+    "@platform/core": "^1.0.0",
+    "@platform/logger": "^1.0.0",
+    "aws-cdk-lib": "^2.100.0",
+    "constructs": "^10.0.0"
+  },
+  "devDependencies": {
+    "@types/jest": "^29.5.0",
+    "@types/node": "^20.0.0",
+    "@typescript-eslint/eslint-plugin": "^6.0.0",
+    "@typescript-eslint/parser": "^6.0.0",
+    "eslint": "^8.0.0",
+    "jest": "^29.5.0",
+    "ts-jest": "^29.1.0",
+    "typescript": "^5.0.0"
+  },
+  "peerDependencies": {
+    "aws-cdk-lib": "^2.100.0",
+    "constructs": "^10.0.0"
+  },
+  "engines": {
+    "node": ">=18.0.0"
+  },
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/company/platform.git",
+    "directory": "packages/components/deployment-bundle-pipeline"
+  },
+  "bugs": {
+    "url": "https://github.com/company/platform/issues"
+  },
+  "homepage": "https://github.com/company/platform/tree/main/packages/components/deployment-bundle-pipeline#readme"
+}

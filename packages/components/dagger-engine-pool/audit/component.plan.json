@@ -1,0 +1,124 @@
+{
+  "component": "dagger-engine-pool",
+  "service_type": "dagger-engine",
+  "framework": "commercial",
+  "packs": [
+    "aws.foundational.security",
+    "aws.compute.ec2",
+    "aws.networking.elb",
+    "aws.storage.s3",
+    "aws.storage.ebs",
+    "aws.security.kms"
+  ],
+  "rules": [
+    {
+      "id": "sc-13",
+      "title": "Cryptographic Protection",
+      "description": "Ensure all data at rest is encrypted using AWS KMS",
+      "severity": "high",
+      "nist_controls": [
+        "SC-13"
+      ]
+    },
+    {
+      "id": "sc-7",
+      "title": "Boundary Protection",
+      "description": "Ensure network access controls are properly configured",
+      "severity": "high",
+      "nist_controls": [
+        "SC-7"
+      ]
+    },
+    {
+      "id": "ac-2",
+      "title": "Account Management",
+      "description": "Ensure proper access controls and IAM policies",
+      "severity": "medium",
+      "nist_controls": [
+        "AC-2"
+      ]
+    },
+    {
+      "id": "au-2",
+      "title": "Audit Events",
+      "description": "Ensure comprehensive logging and monitoring",
+      "severity": "medium",
+      "nist_controls": [
+        "AU-2"
+      ]
+    },
+    {
+      "id": "cm-6",
+      "title": "Configuration Settings",
+      "description": "Ensure secure configuration defaults",
+      "severity": "medium",
+      "nist_controls": [
+        "CM-6"
+      ]
+    }
+  ],
+  "nist_controls": [
+    "SC-13",
+    "SC-7",
+    "AC-2",
+    "AU-2",
+    "CM-6"
+  ],
+  "capabilities": [
+    "dagger:endpoint",
+    "storage:artifacts",
+    "security:kms",
+    "logging:cloudwatch"
+  ],
+  "environment_assumptions": [
+    "Deployed in private subnets with egress to internet",
+    "Requires VPC with DNS resolution and hostnames enabled",
+    "Assumes existing ACM PCA for mTLS certificate management",
+    "Requires IAM permissions for EC2, ELB, S3, KMS, CloudWatch",
+    "Expects platform tagging service to be available"
+  ],
+  "security_features": [
+    "Encryption at rest using AWS KMS with key rotation",
+    "Encryption in transit via mTLS on port 8443",
+    "Private network exposure only (no public endpoints)",
+    "IMDSv2 enforcement on EC2 instances",
+    "STIG-hardened AMI support (RHEL8, UBI9, Ubuntu-20)",
+    "FIPS 140-2 compliance mode",
+    "Least privilege IAM policies",
+    "VPC flow logs and CloudTrail integration",
+    "Structured JSON logging with correlation IDs"
+  ],
+  "compliance_frameworks": [
+    "commercial",
+    "fedramp-moderate",
+    "fedramp-high"
+  ],
+  "configuration_surface": {
+    "required": [
+      "capacity",
+      "fipsMode"
+    ],
+    "optional": [
+      "service",
+      "env",
+      "owner",
+      "stigBaseline",
+      "instanceType",
+      "endpoint.hostname",
+      "endpoint.mtls.acmPcaArn",
+      "storage.cache",
+      "storage.ebsGiB",
+      "storage.s3ArtifactsBucketRef",
+      "observability.otlpEndpoint",
+      "observability.logRetentionDays",
+      "featureFlags.sharedCacheEfs",
+      "featureFlags.enableEcrMirror",
+      "compliance.forbidPublicExposure",
+      "compliance.forbidNonFipsAmi",
+      "compliance.forbidNoKms"
+    ]
+  },
+  "gaps": [],
+  "timestamp": "2025-01-13T07:45:00.000Z",
+  "version": "1.0.0"
+}

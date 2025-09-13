@@ -1,0 +1,193 @@
+apiVersion: v1
+kind: Service
+metadata:
+  name: shinobi-backstage-portal
+  labels:
+    app.kubernetes.io/name: shinobi-backstage-portal
+    app.kubernetes.io/version: "1.0.0"
+    platform.shinobi.io/service: backstage-portal
+    platform.shinobi.io/component: developer-portal
+spec:
+  serviceName: backstage-portal
+  version: "1.0.0"
+  environment: dev
+  complianceFramework: commercial
+  
+  # Service configuration
+  config:
+    # Backstage portal configuration
+    portal:
+      name: "Shinobi Developer Portal"
+      organization: "Shinobi Platform"
+      description: "Developer portal for Shinobi platform components and services"
+      
+    # Database configuration (will use Shinobi RDS component)
+    database:
+      type: postgresql
+      host: "${RDS_ENDPOINT}"
+      port: 5432
+      database: backstage
+      username: "${RDS_USERNAME}"
+      password: "${RDS_PASSWORD}"
+      
+    # Authentication configuration
+    auth:
+      provider: github
+      github:
+        clientId: "${GITHUB_CLIENT_ID}"
+        clientSecret: "${GITHUB_CLIENT_SECRET}"
+        
+    # Catalog configuration
+    catalog:
+      providers:
+        github:
+          - id: shinobi-platform
+            org: shinobi-platform
+            catalogPath: /catalog-info.yaml
+            
+  # Components that make up this service
+  components:
+    # Backend API component
+    - name: backstage-backend
+      type: lambda-api
+      config:
+        runtime: nodejs18.x
+        handler: packages/backend/dist/index.js
+        environment:
+          NODE_ENV: production
+          DATABASE_URL: "${RDS_CONNECTION_STRING}"
+          GITHUB_CLIENT_ID: "${GITHUB_CLIENT_ID}"
+          GITHUB_CLIENT_SECRET: "${GITHUB_CLIENT_SECRET}"
+        memory: 1024
+        timeout: 30
+        
+    # Frontend component
+    - name: backstage-frontend
+      type: static-website
+      config:
+        domain: backstage.shinobi.local
+        buildCommand: "yarn workspace app build"
+        outputDirectory: "packages/app/dist"
+        
+    # Database component
+    - name: backstage-database
+      type: rds-postgres
+      config:
+        instanceClass: db.t3.micro
+        allocatedStorage: 20
+        databaseName: backstage
+        masterUsername: backstage
+        masterPassword: "${RDS_MASTER_PASSWORD}"
+        backupRetentionPeriod: 7
+        multiAz: false
+        
+    # ECR repository for container images
+    - name: backstage-images
+      type: ecr-repository
+      config:
+        imageScanningConfiguration:
+          scanOnPush: true
+        imageTagMutability: MUTABLE
+        
+    # S3 bucket for static assets
+    - name: backstage-assets
+      type: s3-bucket
+      config:
+        versioning:
+          enabled: true
+        publicReadAccess: false
+        cors:
+          - allowedOrigins: ["https://backstage.shinobi.local"]
+            allowedMethods: ["GET", "HEAD"]
+            allowedHeaders: ["*"]
+            
+  # Bindings between components
+  bindings:
+    - source: backstage-backend
+      target: backstage-database
+      type: database-connection
+      
+    - source: backstage-frontend
+      target: backstage-assets
+      type: static-assets
+      
+    - source: backstage-backend
+      target: backstage-images
+      type: container-registry
+      
+  # Observability configuration
+  observability:
+    logging:
+      level: info
+      destinations:
+        - cloudwatch
+    metrics:
+      enabled: true
+      customMetrics:
+        - name: backstage_requests_total
+          type: counter
+          description: "Total number of Backstage requests"
+        - name: backstage_response_time
+          type: histogram
+          description: "Backstage response time"
+    tracing:
+      enabled: true
+      samplingRate: 0.1
+      
+  # Security configuration
+  security:
+    encryption:
+      atRest: true
+      inTransit: true
+    networkSecurity:
+      vpc: true
+      securityGroups:
+        - name: backstage-backend-sg
+          rules:
+            - type: ingress
+              fromPort: 7007
+              toPort: 7007
+              protocol: tcp
+              source: backstage-frontend-sg
+        - name: backstage-frontend-sg
+          rules:
+            - type: ingress
+              fromPort: 80
+              toPort: 80
+              protocol: tcp
+              source: 0.0.0.0/0
+            - type: ingress
+              fromPort: 443
+              toPort: 443
+              protocol: tcp
+              source: 0.0.0.0/0
+              
+  # Compliance and governance
+  compliance:
+    framework: commercial
+    dataClassification: internal
+    auditLogging: true
+    backupRequired: true
+    
+  # Deployment configuration
+  deployment:
+    strategy: rolling
+    replicas: 2
+    resources:
+      requests:
+        memory: "512Mi"
+        cpu: "250m"
+      limits:
+        memory: "1Gi"
+        cpu: "500m"
+    healthChecks:
+      liveness:
+        path: /health
+        port: 7007
+        initialDelaySeconds: 30
+        periodSeconds: 10
+      readiness:
+        path: /health/ready
+        port: 7007
+        initialDelaySeconds: 5
+        periodSeconds: 5

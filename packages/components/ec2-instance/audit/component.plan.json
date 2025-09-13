@@ -1,0 +1,234 @@
+{
+  "componentDefinition": {
+    "systemName": "ec2-instance",
+    "version": "1.0.0",
+    "description": "AWS EC2 compute instance with compliance hardening and automatic monitoring",
+    "lastUpdated": "2025-01-08T00:00:00Z"
+  },
+  "declaredConfiguration": {
+    "instanceType": {
+      "type": "string",
+      "description": "EC2 instance type (t3.micro, t3.small, m5.large, etc.)",
+      "default": "t3.micro",
+      "required": false
+    },
+    "ami": {
+      "type": "object",
+      "description": "AMI configuration with ID, name pattern, or owner",
+      "default": {
+        "namePattern": "al2023-ami-*-x86_64",
+        "owner": "amazon"
+      }
+    },
+    "vpc": {
+      "type": "object",
+      "description": "VPC configuration including VPC ID, subnet ID, and security groups",
+      "required": false
+    },
+    "storage": {
+      "type": "object",
+      "description": "EBS storage configuration with encryption, size, and type",
+      "default": {
+        "rootVolumeSize": 20,
+        "rootVolumeType": "gp3",
+        "encrypted": false,
+        "deleteOnTermination": true
+      }
+    },
+    "monitoring": {
+      "type": "object",
+      "description": "CloudWatch monitoring configuration",
+      "default": {
+        "detailed": false,
+        "cloudWatchAgent": false
+      }
+    },
+    "security": {
+      "type": "object",
+      "description": "Security hardening configuration including IMDSv2",
+      "default": {
+        "requireImdsv2": false,
+        "httpTokens": "optional",
+        "nitroEnclaves": false
+      }
+    },
+    "userData": {
+      "type": "object",
+      "description": "User data script configuration",
+      "required": false
+    },
+    "keyPair": {
+      "type": "object",
+      "description": "EC2 key pair for SSH access",
+      "required": false
+    }
+  },
+  "capabilitiesProvided": [
+    {
+      "capability": "compute:ec2",
+      "description": "EC2 compute instance with network connectivity",
+      "dataShape": {
+        "instanceId": "string",
+        "privateIp": "string",
+        "publicIp": "string",
+        "roleArn": "string",
+        "securityGroupId": "string",
+        "availabilityZone": "string"
+      }
+    }
+  ],
+  "environmentAssumptions": [
+    "Assumes AWS CDK deployment context with region and account ID",
+    "Requires IAM permissions to create EC2 instances, security groups, and IAM roles",
+    "May require existing VPC if vpcId is specified in configuration",
+    "Requires outbound internet connectivity for package updates and CloudWatch agent",
+    "Assumes Amazon Linux 2023 AMI availability in target region"
+  ],
+  "complianceFramework": {
+    "supported": [
+      "commercial",
+      "fedramp-moderate",
+      "fedramp-high"
+    ],
+    "default": "commercial",
+    "requirements": {
+      "commercial": {
+        "encryption": "Optional EBS encryption",
+        "monitoring": "Basic CloudWatch monitoring",
+        "networking": "Standard security groups",
+        "logging": "Basic instance logging"
+      },
+      "fedramp-moderate": {
+        "encryption": "Customer-managed KMS for EBS encryption",
+        "monitoring": "Enhanced CloudWatch monitoring with SSM agent",
+        "networking": "VPC-only access with restricted security groups",
+        "logging": "Structured logging with 3-year retention",
+        "hardening": "IMDSv2 enforcement and security agent installation"
+      },
+      "fedramp-high": {
+        "encryption": "Customer-managed KMS with key rotation",
+        "monitoring": "Comprehensive monitoring with STIG compliance",
+        "networking": "Maximum network isolation",
+        "logging": "Comprehensive audit logging with 7-year retention",
+        "hardening": "Full STIG compliance with security agents and auditd"
+      }
+    }
+  },
+  "securityComplianceFeatures": [
+    {
+      "feature": "Encryption at Rest",
+      "description": "EBS volumes encrypted using AWS KMS (customer-managed for compliance)",
+      "implementation": "KMS key creation and EBS volume encryption configuration"
+    },
+    {
+      "feature": "Network Security",
+      "description": "Security groups with least-privilege access rules",
+      "implementation": "VPC-aware security group configuration with compliance-specific rules"
+    },
+    {
+      "feature": "Identity and Access Management",
+      "description": "IAM role with least-privilege permissions",
+      "implementation": "Automatic IAM role creation with compliance-specific policies"
+    },
+    {
+      "feature": "Logging and Monitoring",
+      "description": "CloudWatch logging with compliance-aware retention",
+      "implementation": "CloudWatch agent installation and log group configuration"
+    },
+    {
+      "feature": "Compliance Hardening",
+      "description": "Automatic security hardening based on compliance framework",
+      "implementation": "User data scripts for STIG compliance and security agent installation"
+    },
+    {
+      "feature": "Observability",
+      "description": "CloudWatch alarms for operational monitoring",
+      "implementation": "Automatic alarm creation for CPU, system status, and instance status"
+    }
+  ],
+  "relevantStandardsControls": [
+    {
+      "standard": "AWS Foundational Security Best Practices",
+      "controls": [
+        "EC2.1",
+        "EC2.2",
+        "EC2.3",
+        "EC2.4",
+        "EC2.5"
+      ],
+      "description": "EC2 instance security and monitoring best practices"
+    },
+    {
+      "standard": "CIS AWS Foundations Benchmark",
+      "controls": [
+        "2.1",
+        "2.2",
+        "2.3",
+        "2.4"
+      ],
+      "description": "Logging and monitoring requirements for EC2 instances"
+    },
+    {
+      "standard": "FedRAMP Moderate",
+      "controls": [
+        "AC-2",
+        "AC-3",
+        "SC-7",
+        "SC-13",
+        "SI-4",
+        "AU-2"
+      ],
+      "description": "Access control, network security, encryption, monitoring, and audit logging"
+    },
+    {
+      "standard": "FedRAMP High",
+      "controls": [
+        "AC-2",
+        "AC-3",
+        "SC-7",
+        "SC-13",
+        "SI-4",
+        "AU-2",
+        "SC-28"
+      ],
+      "description": "Enhanced security requirements for high-impact systems including STIG compliance"
+    }
+  ],
+  "constructHandles": [
+    {
+      "handle": "instance",
+      "description": "The primary EC2 instance construct",
+      "constructType": "aws-cdk-lib/aws-ec2.Instance"
+    },
+    {
+      "handle": "securityGroup",
+      "description": "Security group for the EC2 instance",
+      "constructType": "aws-cdk-lib/aws-ec2.SecurityGroup"
+    },
+    {
+      "handle": "role",
+      "description": "IAM role for the EC2 instance",
+      "constructType": "aws-cdk-lib/aws-iam.Role"
+    },
+    {
+      "handle": "kmsKey",
+      "description": "KMS key for EBS encryption (if customer-managed encryption is enabled)",
+      "constructType": "aws-cdk-lib/aws-kms.Key"
+    },
+    {
+      "handle": "cpuAlarm",
+      "description": "CloudWatch alarm for high CPU utilization",
+      "constructType": "aws-cdk-lib/aws-cloudwatch.Alarm"
+    },
+    {
+      "handle": "systemCheckAlarm",
+      "description": "CloudWatch alarm for system status check failures",
+      "constructType": "aws-cdk-lib/aws-cloudwatch.Alarm"
+    },
+    {
+      "handle": "instanceCheckAlarm",
+      "description": "CloudWatch alarm for instance status check failures",
+      "constructType": "aws-cdk-lib/aws-cloudwatch.Alarm"
+    }
+  ]
+}

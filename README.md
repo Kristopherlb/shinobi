@@ -1,4 +1,4 @@
-# Auditable FedRAMP-Aware CDK Platform
+# CDK Platform
 
 An enterprise-grade Internal Developer Platform (IDP) that abstracts AWS CDK complexity while enforcing compliance guardrails and security best practices.
 

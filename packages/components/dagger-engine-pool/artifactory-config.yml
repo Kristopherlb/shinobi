@@ -1,0 +1,171 @@
+# Artifactory Configuration for Dagger Engine Pool DBL
+# OCI Registry configuration for deployment bundles
+
+artifactory:
+  # Primary Artifactory instance
+  host: "artifactory.company.com"
+  port: 443
+  protocol: "https"
+
+  # Authentication
+  auth:
+    type: "oidc" # or "api-key"
+    oidc:
+      issuer: "https://github.com"
+      subject: "repo:org/repo:ref:refs/heads/main"
+    api-key:
+      user: "platform-ci"
+      token: "${ARTIFACTORY_TOKEN}"
+
+  # Repository configuration
+  repositories:
+    bundles:
+      name: "platform/bundles"
+      type: "docker"
+      features:
+        - "oci-artifacts"
+        - "oci-referrers"
+        - "immutable-tags"
+      retention:
+        policy: "worm" # Write Once, Read Many
+        period: "7y" # 7 years retention
+
+    images:
+      name: "platform/images"
+      type: "docker"
+      features:
+        - "vulnerability-scanning"
+        - "immutable-tags"
+      retention:
+        policy: "delete"
+        period: "90d" # 90 days retention
+
+  # Security policies
+  security:
+    # Vulnerability scanning
+    vulnerability-scanning:
+      enabled: true
+      fail-on-high: true
+      fail-on-critical: true
+      auto-quarantine: true
+
+    # Content trust
+    content-trust:
+      enabled: true
+      required-signatures: 1
+      allowed-signers:
+        - "kms://aws-kms/alias/dagger-signing-key"
+        - "oidc://github.com/org/repo"
+
+    # Access control
+    access-control:
+      read:
+        - "platform-devs"
+        - "platform-ops"
+      write:
+        - "platform-ci"
+        - "platform-ops"
+      admin:
+        - "platform-ops"
+
+  # Promotion channels
+  promotion:
+    channels:
+      dev:
+        tag: "dev-ready"
+        auto-promote: true
+        conditions:
+          - "tests-pass"
+          - "security-scan-pass"
+
+      qa:
+        tag: "qa-ready"
+        auto-promote: false
+        conditions:
+          - "tests-pass"
+          - "security-scan-pass"
+          - "compliance-check-pass"
+          - "manual-approval"
+
+      prod:
+        tag: "prod-ready"
+        auto-promote: false
+        conditions:
+          - "tests-pass"
+          - "security-scan-pass"
+          - "compliance-check-pass"
+          - "fips-validation-pass"
+          - "stig-validation-pass"
+          - "manual-approval"
+
+  # Monitoring and alerting
+  monitoring:
+    metrics:
+      - "bundle-size"
+      - "scan-duration"
+      - "promotion-time"
+      - "vulnerability-count"
+
+    alerts:
+      - condition: "vulnerability-count > 0"
+        action: "block-promotion"
+        severity: "high"
+
+      - condition: "bundle-size > 1GB"
+        action: "warn"
+        severity: "medium"
+
+      - condition: "scan-duration > 300s"
+        action: "warn"
+        severity: "low"
+
+# Deployment bundle metadata schema
+bundle-schema:
+  version: "v1"
+  required-fields:
+    - "service"
+    - "version"
+    - "environment"
+    - "compliance_framework"
+    - "fips_mode"
+    - "build_timestamp"
+
+  optional-fields:
+    - "git_commit"
+    - "git_branch"
+    - "build_id"
+    - "runner_version"
+    - "dependencies"
+    - "notes"
+
+# Compliance frameworks
+compliance:
+  frameworks:
+    commercial:
+      requirements:
+        - "encryption-at-rest"
+        - "encryption-in-transit"
+        - "access-logging"
+        - "vulnerability-scanning"
+
+    fedramp-moderate:
+      requirements:
+        - "encryption-at-rest"
+        - "encryption-in-transit"
+        - "access-logging"
+        - "vulnerability-scanning"
+        - "fips-140-2"
+        - "audit-trails"
+        - "access-controls"
+
+    fedramp-high:
+      requirements:
+        - "encryption-at-rest"
+        - "encryption-in-transit"
+        - "access-logging"
+        - "vulnerability-scanning"
+        - "fips-140-2"
+        - "audit-trails"
+        - "access-controls"
+        - "stig-compliance"
+        - "continuous-monitoring"

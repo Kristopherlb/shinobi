@@ -1,0 +1,179 @@
+{
+  "componentDefinition": {
+    "systemName": "Deployment Bundle Pipeline",
+    "description": "Production-ready deployment bundle pipeline with comprehensive compliance artifacts for secure software supply chain",
+    "version": "1.0.0",
+    "controls": [
+      {
+        "controlId": "AC-2",
+        "status": "planned",
+        "implementationStatement": "TODO: Access control is implemented through IAM policies and OIDC authentication for keyless signing. Access to deployment bundles is controlled through Artifactory permissions and KMS key policies."
+      },
+      {
+        "controlId": "AC-3",
+        "status": "planned",
+        "implementationStatement": "TODO: Access controls are enforced through least-privilege IAM policies, encrypted storage, and audit logging. All access to deployment bundles is logged and monitored."
+      },
+      {
+        "controlId": "AU-2",
+        "status": "planned",
+        "implementationStatement": "TODO: Comprehensive audit trail is maintained including build timestamps, git commits, builder versions, and all security scan results. Audit logs are immutable and tamper-evident."
+      },
+      {
+        "controlId": "AU-3",
+        "status": "planned",
+        "implementationStatement": "TODO: Audit logs include all security events, access attempts, and compliance validation results. Logs are stored in immutable format with cryptographic integrity protection."
+      },
+      {
+        "controlId": "CA-2",
+        "status": "planned",
+        "implementationStatement": "TODO: Security assessments are performed through automated vulnerability scanning with grype, compliance reporting, and policy validation. All assessments are documented and tracked."
+      },
+      {
+        "controlId": "CM-2",
+        "status": "planned",
+        "implementationStatement": "TODO: Configuration management is enforced through immutable deployment bundles with content-addressed references. All changes are tracked through git commits and build provenance."
+      },
+      {
+        "controlId": "CP-9",
+        "status": "planned",
+        "implementationStatement": "TODO: Backup and recovery is ensured through immutable artifact storage in Artifactory with configurable retention policies. All deployment bundles are versioned and recoverable."
+      },
+      {
+        "controlId": "IR-4",
+        "status": "planned",
+        "implementationStatement": "TODO: Incident response capabilities are supported through comprehensive audit trails, vulnerability scanning results, and rollback capabilities using immutable bundle references."
+      },
+      {
+        "controlId": "RA-5",
+        "status": "planned",
+        "implementationStatement": "TODO: Vulnerability scanning is performed using grype with configurable severity thresholds. All vulnerabilities are tracked and reported with remediation guidance."
+      },
+      {
+        "controlId": "SA-11",
+        "status": "planned",
+        "implementationStatement": "TODO: Developer security testing is enforced through mandatory vulnerability scanning, SBOM generation, and SLSA provenance attestations. All security controls are validated before deployment."
+      },
+      {
+        "controlId": "SA-12",
+        "status": "planned",
+        "implementationStatement": "TODO: Supply chain protection is implemented through SBOM generation, SLSA provenance attestations, and signature verification. All dependencies are tracked and validated."
+      },
+      {
+        "controlId": "SC-7",
+        "status": "planned",
+        "implementationStatement": "TODO: Boundary protection is implemented through network security controls, encrypted communication, and secure artifact storage. All network access is monitored and logged."
+      },
+      {
+        "controlId": "SC-13",
+        "status": "planned",
+        "implementationStatement": "TODO: Cryptographic protection is implemented using FIPS-validated algorithms, KMS-based key management, and cosign for artifact signing. All cryptographic operations use approved algorithms."
+      },
+      {
+        "controlId": "SC-28",
+        "status": "planned",
+        "implementationStatement": "TODO: Information at rest protection is implemented through encryption of all stored artifacts, immutable storage, and access controls. All data is encrypted using approved algorithms."
+      },
+      {
+        "controlId": "SI-2",
+        "status": "planned",
+        "implementationStatement": "TODO: Flaw remediation is enforced through mandatory vulnerability scanning with policy gates. Critical vulnerabilities must be resolved before deployment. All vulnerabilities are tracked and reported."
+      },
+      {
+        "controlId": "SI-3",
+        "status": "planned",
+        "implementationStatement": "TODO: Malicious code protection is implemented through vulnerability scanning, SBOM validation, and signature verification. All code is scanned and validated before deployment."
+      },
+      {
+        "controlId": "SI-4",
+        "status": "planned",
+        "implementationStatement": "TODO: Information system monitoring is implemented through comprehensive logging, audit trails, and security event monitoring. All activities are logged and monitored for security events."
+      }
+    ],
+    "parameters": [
+      {
+        "paramId": "compliance_framework",
+        "description": "Compliance framework to apply (commercial, fedramp-moderate, fedramp-high, iso27001, soc2)",
+        "values": [
+          "commercial",
+          "fedramp-moderate",
+          "fedramp-high",
+          "iso27001",
+          "soc2"
+        ]
+      },
+      {
+        "paramId": "signing_method",
+        "description": "Signing method to use (keyless, kms)",
+        "values": [
+          "keyless",
+          "kms"
+        ]
+      },
+      {
+        "paramId": "vulnerability_threshold",
+        "description": "Maximum allowed critical vulnerabilities",
+        "values": [
+          "0",
+          "1",
+          "5"
+        ]
+      },
+      {
+        "paramId": "retention_period",
+        "description": "Artifact retention period in days",
+        "values": [
+          "30",
+          "90",
+          "365",
+          "2555"
+        ] // 7 years for FedRAMP
+      }
+    ],
+    "responsibleRoles": [
+      {
+        "roleId": "platform_engineer",
+        "description": "Platform engineer responsible for component development and maintenance"
+      },
+      {
+        "roleId": "security_engineer",
+        "description": "Security engineer responsible for security controls and compliance validation"
+      },
+      {
+        "roleId": "compliance_officer",
+        "description": "Compliance officer responsible for regulatory compliance and audit oversight"
+      },
+      {
+        "roleId": "devops_engineer",
+        "description": "DevOps engineer responsible for deployment and operational aspects"
+      }
+    ],
+    "evidence": [
+      {
+        "evidenceId": "security_scan_reports",
+        "description": "Vulnerability scan reports from grype",
+        "location": "artifacts/security/"
+      },
+      {
+        "evidenceId": "sbom_files",
+        "description": "Software bill of materials in SPDX format",
+        "location": "artifacts/sbom/"
+      },
+      {
+        "evidenceId": "compliance_reports",
+        "description": "Compliance validation reports",
+        "location": "artifacts/compliance/"
+      },
+      {
+        "evidenceId": "provenance_attestations",
+        "description": "SLSA provenance attestations",
+        "location": "artifacts/attestations/"
+      },
+      {
+        "evidenceId": "audit_logs",
+        "description": "Build and deployment audit logs",
+        "location": "artifacts/audit/"
+      }
+    ]
+  }
+}

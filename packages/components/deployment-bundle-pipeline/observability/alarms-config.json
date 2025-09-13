@@ -1,0 +1,287 @@
+{
+  "alarms": [
+    {
+      "alarmName": "DeploymentBundleCreationFailure",
+      "description": "Alert when bundle creation fails",
+      "metricName": "deployment_bundle_creation_failures_total",
+      "namespace": "Platform/DeploymentBundle",
+      "statistic": "Sum",
+      "period": 300,
+      "evaluationPeriods": 2,
+      "threshold": 1,
+      "comparisonOperator": "GreaterThanOrEqualToThreshold",
+      "treatMissingData": "breaching",
+      "alarmActions": [
+        "arn:aws:sns:region:account:platform-alerts"
+      ],
+      "okActions": [
+        "arn:aws:sns:region:account:platform-alerts"
+      ],
+      "insufficientDataActions": [
+        "arn:aws:sns:region:account:platform-alerts"
+      ]
+    },
+    {
+      "alarmName": "DeploymentBundleSigningFailure",
+      "description": "Alert when bundle signing fails",
+      "metricName": "deployment_bundle_signing_failures_total",
+      "namespace": "Platform/DeploymentBundle",
+      "statistic": "Sum",
+      "period": 300,
+      "evaluationPeriods": 2,
+      "threshold": 1,
+      "comparisonOperator": "GreaterThanOrEqualToThreshold",
+      "treatMissingData": "breaching",
+      "alarmActions": [
+        "arn:aws:sns:region:account:platform-alerts"
+      ],
+      "okActions": [
+        "arn:aws:sns:region:account:platform-alerts"
+      ],
+      "insufficientDataActions": [
+        "arn:aws:sns:region:account:platform-alerts"
+      ]
+    },
+    {
+      "alarmName": "DeploymentBundleHighVulnerabilityCount",
+      "description": "Alert when critical vulnerabilities are found",
+      "metricName": "deployment_bundle_vulnerabilities_total",
+      "namespace": "Platform/DeploymentBundle",
+      "statistic": "Sum",
+      "period": 300,
+      "evaluationPeriods": 1,
+      "threshold": 0,
+      "comparisonOperator": "GreaterThanThreshold",
+      "treatMissingData": "notBreaching",
+      "alarmActions": [
+        "arn:aws:sns:region:account:security-alerts"
+      ],
+      "okActions": [
+        "arn:aws:sns:region:account:security-alerts"
+      ],
+      "insufficientDataActions": [
+        "arn:aws:sns:region:account:security-alerts"
+      ],
+      "dimensions": [
+        {
+          "name": "severity",
+          "value": "critical"
+        }
+      ]
+    },
+    {
+      "alarmName": "DeploymentBundleComplianceFailure",
+      "description": "Alert when compliance validation fails",
+      "metricName": "deployment_bundle_compliance_failures_total",
+      "namespace": "Platform/DeploymentBundle",
+      "statistic": "Sum",
+      "period": 300,
+      "evaluationPeriods": 1,
+      "threshold": 1,
+      "comparisonOperator": "GreaterThanOrEqualToThreshold",
+      "treatMissingData": "breaching",
+      "alarmActions": [
+        "arn:aws:sns:region:account:compliance-alerts"
+      ],
+      "okActions": [
+        "arn:aws:sns:region:account:compliance-alerts"
+      ],
+      "insufficientDataActions": [
+        "arn:aws:sns:region:account:compliance-alerts"
+      ]
+    },
+    {
+      "alarmName": "DeploymentBundleCreationDurationHigh",
+      "description": "Alert when bundle creation takes too long",
+      "metricName": "deployment_bundle_creation_duration_seconds",
+      "namespace": "Platform/DeploymentBundle",
+      "statistic": "Average",
+      "period": 300,
+      "evaluationPeriods": 3,
+      "threshold": 1800,
+      "comparisonOperator": "GreaterThanThreshold",
+      "treatMissingData": "notBreaching",
+      "alarmActions": [
+        "arn:aws:sns:region:account:performance-alerts"
+      ],
+      "okActions": [
+        "arn:aws:sns:region:account:performance-alerts"
+      ],
+      "insufficientDataActions": [
+        "arn:aws:sns:region:account:performance-alerts"
+      ]
+    },
+    {
+      "alarmName": "DeploymentBundleSBOMGenerationFailure",
+      "description": "Alert when SBOM generation fails",
+      "metricName": "deployment_bundle_sbom_generation_failures_total",
+      "namespace": "Platform/DeploymentBundle",
+      "statistic": "Sum",
+      "period": 300,
+      "evaluationPeriods": 2,
+      "threshold": 1,
+      "comparisonOperator": "GreaterThanOrEqualToThreshold",
+      "treatMissingData": "breaching",
+      "alarmActions": [
+        "arn:aws:sns:region:account:platform-alerts"
+      ],
+      "okActions": [
+        "arn:aws:sns:region:account:platform-alerts"
+      ],
+      "insufficientDataActions": [
+        "arn:aws:sns:region:account:platform-alerts"
+      ]
+    },
+    {
+      "alarmName": "DeploymentBundleAttestationFailure",
+      "description": "Alert when attestation creation fails",
+      "metricName": "deployment_bundle_attestation_failures_total",
+      "namespace": "Platform/DeploymentBundle",
+      "statistic": "Sum",
+      "period": 300,
+      "evaluationPeriods": 2,
+      "threshold": 1,
+      "comparisonOperator": "GreaterThanOrEqualToThreshold",
+      "treatMissingData": "breaching",
+      "alarmActions": [
+        "arn:aws:sns:region:account:platform-alerts"
+      ],
+      "okActions": [
+        "arn:aws:sns:region:account:platform-alerts"
+      ],
+      "insufficientDataActions": [
+        "arn:aws:sns:region:account:platform-alerts"
+      ]
+    },
+    {
+      "alarmName": "DeploymentBundleRegistryStorageHigh",
+      "description": "Alert when registry storage usage is high",
+      "metricName": "deployment_bundle_registry_storage_bytes",
+      "namespace": "Platform/DeploymentBundle",
+      "statistic": "Average",
+      "period": 300,
+      "evaluationPeriods": 2,
+      "threshold": 1000000000000,
+      "comparisonOperator": "GreaterThanThreshold",
+      "treatMissingData": "notBreaching",
+      "alarmActions": [
+        "arn:aws:sns:region:account:storage-alerts"
+      ],
+      "okActions": [
+        "arn:aws:sns:region:account:storage-alerts"
+      ],
+      "insufficientDataActions": [
+        "arn:aws:sns:region:account:storage-alerts"
+      ]
+    },
+    {
+      "alarmName": "DeploymentBundlePromotionFailure",
+      "description": "Alert when bundle promotion fails",
+      "metricName": "deployment_bundle_promotion_failures_total",
+      "namespace": "Platform/DeploymentBundle",
+      "statistic": "Sum",
+      "period": 300,
+      "evaluationPeriods": 2,
+      "threshold": 1,
+      "comparisonOperator": "GreaterThanOrEqualToThreshold",
+      "treatMissingData": "breaching",
+      "alarmActions": [
+        "arn:aws:sns:region:account:platform-alerts"
+      ],
+      "okActions": [
+        "arn:aws:sns:region:account:platform-alerts"
+      ],
+      "insufficientDataActions": [
+        "arn:aws:sns:region:account:platform-alerts"
+      ]
+    },
+    {
+      "alarmName": "DeploymentBundleErrorRateHigh",
+      "description": "Alert when error rate is high",
+      "metricName": "deployment_bundle_error_rate",
+      "namespace": "Platform/DeploymentBundle",
+      "statistic": "Average",
+      "period": 300,
+      "evaluationPeriods": 3,
+      "threshold": 0.05,
+      "comparisonOperator": "GreaterThanThreshold",
+      "treatMissingData": "notBreaching",
+      "alarmActions": [
+        "arn:aws:sns:region:account:platform-alerts"
+      ],
+      "okActions": [
+        "arn:aws:sns:region:account:platform-alerts"
+      ],
+      "insufficientDataActions": [
+        "arn:aws:sns:region:account:platform-alerts"
+      ]
+    }
+  ],
+  "compositeAlarms": [
+    {
+      "alarmName": "DeploymentBundleCriticalIssues",
+      "description": "Composite alarm for critical deployment bundle issues",
+      "alarmRule": "ALARM(DeploymentBundleCreationFailure) OR ALARM(DeploymentBundleSigningFailure) OR ALARM(DeploymentBundleHighVulnerabilityCount) OR ALARM(DeploymentBundleComplianceFailure)",
+      "alarmActions": [
+        "arn:aws:sns:region:account:critical-alerts"
+      ],
+      "okActions": [
+        "arn:aws:sns:region:account:critical-alerts"
+      ],
+      "insufficientDataActions": [
+        "arn:aws:sns:region:account:critical-alerts"
+      ]
+    }
+  ],
+  "snsTopics": [
+    {
+      "topicName": "platform-alerts",
+      "description": "General platform alerts",
+      "protocols": [
+        "email",
+        "sms"
+      ]
+    },
+    {
+      "topicName": "security-alerts",
+      "description": "Security-related alerts",
+      "protocols": [
+        "email",
+        "sms",
+        "slack"
+      ]
+    },
+    {
+      "topicName": "compliance-alerts",
+      "description": "Compliance-related alerts",
+      "protocols": [
+        "email",
+        "slack"
+      ]
+    },
+    {
+      "topicName": "performance-alerts",
+      "description": "Performance-related alerts",
+      "protocols": [
+        "email"
+      ]
+    },
+    {
+      "topicName": "storage-alerts",
+      "description": "Storage-related alerts",
+      "protocols": [
+        "email"
+      ]
+    },
+    {
+      "topicName": "critical-alerts",
+      "description": "Critical system alerts",
+      "protocols": [
+        "email",
+        "sms",
+        "slack",
+        "pagerduty"
+      ]
+    }
+  ]
+}
