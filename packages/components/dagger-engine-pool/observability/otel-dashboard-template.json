@@ -1,0 +1,241 @@
+{
+  "dashboard": {
+    "name": "Dagger Engine Pool - {service_name}",
+    "description": "Comprehensive monitoring dashboard for Dagger Engine Pool component",
+    "panels": [
+      {
+        "title": "Engine Pool Health",
+        "type": "stat",
+        "targets": [
+          {
+            "query": "dagger_engine_pool_healthy_instances",
+            "legend": "Healthy Instances"
+          }
+        ],
+        "thresholds": [
+          {
+            "value": 1,
+            "color": "red",
+            "state": "critical"
+          },
+          {
+            "value": 2,
+            "color": "yellow",
+            "state": "warning"
+          }
+        ]
+      },
+      {
+        "title": "CPU Utilization",
+        "type": "timeseries",
+        "targets": [
+          {
+            "query": "AWS/EC2/CPUUtilization",
+            "dimensions": {
+              "AutoScalingGroupName": "{asg_name}"
+            },
+            "legend": "CPU %"
+          }
+        ],
+        "yAxes": [
+          {
+            "min": 0,
+            "max": 100,
+            "unit": "percent"
+          }
+        ],
+        "thresholds": [
+          {
+            "value": 80,
+            "color": "red",
+            "state": "critical"
+          },
+          {
+            "value": 70,
+            "color": "yellow",
+            "state": "warning"
+          }
+        ]
+      },
+      {
+        "title": "Memory Utilization",
+        "type": "timeseries",
+        "targets": [
+          {
+            "query": "AWS/EC2/MemoryUtilization",
+            "dimensions": {
+              "AutoScalingGroupName": "{asg_name}"
+            },
+            "legend": "Memory %"
+          }
+        ],
+        "yAxes": [
+          {
+            "min": 0,
+            "max": 100,
+            "unit": "percent"
+          }
+        ]
+      },
+      {
+        "title": "Network Load Balancer Metrics",
+        "type": "timeseries",
+        "targets": [
+          {
+            "query": "AWS/NetworkELB/HealthyHostCount",
+            "dimensions": {
+              "LoadBalancer": "{nlb_arn}"
+            },
+            "legend": "Healthy Hosts"
+          },
+          {
+            "query": "AWS/NetworkELB/UnHealthyHostCount",
+            "dimensions": {
+              "LoadBalancer": "{nlb_arn}"
+            },
+            "legend": "Unhealthy Hosts"
+          }
+        ]
+      },
+      {
+        "title": "Dagger Engine Request Rate",
+        "type": "timeseries",
+        "targets": [
+          {
+            "query": "dagger_engine_requests_total",
+            "legend": "Requests/sec"
+          }
+        ]
+      },
+      {
+        "title": "Dagger Engine Error Rate",
+        "type": "timeseries",
+        "targets": [
+          {
+            "query": "dagger_engine_errors_total",
+            "legend": "Errors/sec"
+          }
+        ],
+        "yAxes": [
+          {
+            "min": 0,
+            "unit": "short"
+          }
+        ]
+      },
+      {
+        "title": "Artifact Storage Usage",
+        "type": "timeseries",
+        "targets": [
+          {
+            "query": "AWS/S3/BucketSizeBytes",
+            "dimensions": {
+              "BucketName": "{artifact_bucket_name}",
+              "StorageType": "StandardStorage"
+            },
+            "legend": "Storage Size (GB)"
+          }
+        ],
+        "yAxes": [
+          {
+            "unit": "bytes"
+          }
+        ]
+      },
+      {
+        "title": "KMS Key Usage",
+        "type": "timeseries",
+        "targets": [
+          {
+            "query": "AWS/KMS/Sum",
+            "dimensions": {
+              "KeyId": "{kms_key_id}"
+            },
+            "legend": "API Calls"
+          }
+        ]
+      },
+      {
+        "title": "Log Volume",
+        "type": "timeseries",
+        "targets": [
+          {
+            "query": "AWS/Logs/IncomingLogEvents",
+            "dimensions": {
+              "LogGroupName": "{log_group_name}"
+            },
+            "legend": "Log Events/min"
+          }
+        ]
+      }
+    ],
+    "timeRange": {
+      "from": "now-1h",
+      "to": "now"
+    },
+    "refresh": "30s"
+  },
+  "variables": [
+    {
+      "name": "service_name",
+      "description": "Service name from component context",
+      "type": "custom",
+      "value": "${SERVICE_NAME}"
+    },
+    {
+      "name": "asg_name",
+      "description": "Auto Scaling Group name",
+      "type": "custom",
+      "value": "${ASG_NAME}"
+    },
+    {
+      "name": "nlb_arn",
+      "description": "Network Load Balancer ARN",
+      "type": "custom",
+      "value": "${NLB_ARN}"
+    },
+    {
+      "name": "artifact_bucket_name",
+      "description": "S3 artifact bucket name",
+      "type": "custom",
+      "value": "${ARTIFACT_BUCKET_NAME}"
+    },
+    {
+      "name": "kms_key_id",
+      "description": "KMS key ID for encryption",
+      "type": "custom",
+      "value": "${KMS_KEY_ID}"
+    },
+    {
+      "name": "log_group_name",
+      "description": "CloudWatch Log Group name",
+      "type": "custom",
+      "value": "${LOG_GROUP_NAME}"
+    }
+  ],
+  "annotations": [
+    {
+      "name": "Deployments",
+      "query": "dagger_engine_deployment_event",
+      "description": "Component deployment events"
+    }
+  ],
+  "templating": {
+    "list": [
+      {
+        "name": "environment",
+        "type": "custom",
+        "options": [
+          {
+            "text": "All",
+            "value": "$__all"
+          }
+        ],
+        "current": {
+          "text": "All",
+          "value": "$__all"
+        }
+      }
+    ]
+  }
+}

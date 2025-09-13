@@ -1,0 +1,62 @@
+{
+  "name": "@platform/dagger-engine-pool",
+  "version": "1.0.0",
+  "description": "Dagger Engine Pool component for private, FIPS/STIG-friendly CI/CD infrastructure",
+  "license": "Apache-2.0",
+  "type": "module",
+  "main": "dist/index.js",
+  "types": "dist/index.d.ts",
+  "scripts": {
+    "build": "tsc -p tsconfig.json",
+    "test": "jest --runInBand --config jest.config.cjs",
+    "test:watch": "jest --watch --config jest.config.cjs",
+    "test:coverage": "jest --coverage --config jest.config.cjs",
+    "lint": "eslint src/**/*.ts tests/**/*.ts",
+    "lint:fix": "eslint src/**/*.ts tests/**/*.ts --fix"
+  },
+  "keywords": [
+    "aws-cdk",
+    "dagger",
+    "cicd",
+    "infrastructure",
+    "compliance",
+    "fedramp",
+    "fips",
+    "stig"
+  ],
+  "author": "Platform Engineering Team",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/company/shinobi.git",
+    "directory": "packages/components/dagger-engine-pool"
+  },
+  "peerDependencies": {
+    "aws-cdk-lib": "^2.143.0",
+    "constructs": "^10.3.0"
+  },
+  "devDependencies": {
+    "@types/jest": "^29.5.12",
+    "@types/node": "^20.10.0",
+    "aws-cdk-lib": "^2.143.0",
+    "constructs": "^10.3.0",
+    "eslint": "^8.55.0",
+    "@typescript-eslint/eslint-plugin": "^6.14.0",
+    "@typescript-eslint/parser": "^6.14.0",
+    "jest": "^29.7.0",
+    "ts-jest": "^29.1.2",
+    "typescript": "^5.3.0"
+  },
+  "engines": {
+    "node": ">=18.0.0"
+  },
+  "files": [
+    "dist/**/*",
+    "src/**/*",
+    "audit/**/*",
+    "observability/**/*",
+    "tests/**/*",
+    "README.md",
+    "package.json",
+    "tsconfig.json"
+  ]
+}

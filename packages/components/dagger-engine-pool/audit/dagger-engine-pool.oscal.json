@@ -1,0 +1,249 @@
+{
+  "componentDefinition": {
+    "uuid": "dagger-engine-pool-v1",
+    "metadata": {
+      "title": "Dagger Engine Pool Component",
+      "description": "A private, FIPS/STIG-friendly fleet that exposes a remote Dagger engine via mTLS for deterministic CI/CD pipelines",
+      "version": "1.0.0",
+      "oscalVersion": "1.0.4",
+      "lastModified": "2025-01-13T07:45:00.000Z",
+      "roles": [
+        {
+          "id": "component-owner",
+          "title": "Component Owner",
+          "description": "Platform team responsible for component maintenance"
+        },
+        {
+          "id": "security-reviewer",
+          "title": "Security Reviewer",
+          "description": "Security team member who reviews compliance controls"
+        }
+      ],
+      "parties": [
+        {
+          "uuid": "platform-team",
+          "type": "organization",
+          "name": "Platform Engineering Team",
+          "emailAddresses": [
+            "platform-team@company.com"
+          ]
+        }
+      ]
+    },
+    "components": [
+      {
+        "uuid": "dagger-engine-pool-component",
+        "type": "software",
+        "title": "Dagger Engine Pool",
+        "description": "AWS CDK component that provisions a private Dagger engine fleet with mTLS endpoint",
+        "status": "operational",
+        "props": [
+          {
+            "name": "component-type",
+            "value": "dagger-engine-pool"
+          },
+          {
+            "name": "compliance-framework",
+            "value": "commercial,fedramp-moderate,fedramp-high"
+          },
+          {
+            "name": "security-classification",
+            "value": "internal"
+          }
+        ],
+        "controls": [
+          {
+            "controlId": "SC-13",
+            "description": "Cryptographic Protection",
+            "status": "implemented",
+            "implementationStatus": {
+              "state": "implemented",
+              "remarks": "All data at rest is encrypted using AWS KMS with key rotation enabled. S3 buckets, EBS volumes, and EFS filesystems all use KMS encryption."
+            },
+            "byComponents": [
+              {
+                "componentUuid": "dagger-engine-pool-component",
+                "description": "Component enforces KMS encryption on all storage resources"
+              }
+            ],
+            "setParameters": [
+              {
+                "paramId": "encryption-algorithm",
+                "values": [
+                  "AES-256"
+                ]
+              }
+            ]
+          },
+          {
+            "controlId": "SC-7",
+            "description": "Boundary Protection",
+            "status": "implemented",
+            "implementationStatus": {
+              "state": "implemented",
+              "remarks": "Network Load Balancer is configured as internal-only. Security groups restrict access to port 8443 for mTLS connections. No public endpoints are exposed."
+            },
+            "byComponents": [
+              {
+                "componentUuid": "dagger-engine-pool-component",
+                "description": "Component enforces private network exposure with security group restrictions"
+              }
+            ]
+          },
+          {
+            "controlId": "AC-2",
+            "description": "Account Management",
+            "status": "implemented",
+            "implementationStatus": {
+              "state": "implemented",
+              "remarks": "IAM roles and policies follow least privilege principles. KMS key policies restrict access to specific principals."
+            },
+            "byComponents": [
+              {
+                "componentUuid": "dagger-engine-pool-component",
+                "description": "Component generates least-privilege IAM policies and restrictive KMS key policies"
+              }
+            ]
+          },
+          {
+            "controlId": "AU-2",
+            "description": "Audit Events",
+            "status": "implemented",
+            "implementationStatus": {
+              "state": "implemented",
+              "remarks": "CloudWatch Log Groups are created for comprehensive logging. Structured JSON logging with correlation IDs is enforced."
+            },
+            "byComponents": [
+              {
+                "componentUuid": "dagger-engine-pool-component",
+                "description": "Component creates CloudWatch Log Groups and enforces structured logging"
+              }
+            ]
+          },
+          {
+            "controlId": "CM-6",
+            "description": "Configuration Settings",
+            "status": "implemented",
+            "implementationStatus": {
+              "state": "implemented",
+              "remarks": "Component enforces secure configuration defaults including FIPS mode, STIG baselines, and compliance guardrails."
+            },
+            "byComponents": [
+              {
+                "componentUuid": "dagger-engine-pool-component",
+                "description": "Component applies secure defaults and validates configuration compliance"
+              }
+            ]
+          }
+        ],
+        "remarks": "This component provides a secure, compliant Dagger engine pool for CI/CD pipelines. All compliance controls are implemented through infrastructure-as-code with automated validation."
+      }
+    ],
+    "capabilities": [
+      {
+        "uuid": "dagger-endpoint-capability",
+        "name": "Dagger Engine Endpoint",
+        "description": "Provides mTLS-secured endpoint for Dagger engine connections",
+        "controlImplementations": [
+          {
+            "description": "Endpoint security implementation",
+            "implementedRequirements": [
+              {
+                "controlId": "SC-7",
+                "description": "Boundary protection for endpoint"
+              }
+            ]
+          }
+        ]
+      },
+      {
+        "uuid": "artifact-storage-capability",
+        "name": "Artifact Storage",
+        "description": "Provides encrypted S3 storage for deployment bundles and SBOMs",
+        "controlImplementations": [
+          {
+            "description": "Storage security implementation",
+            "implementedRequirements": [
+              {
+                "controlId": "SC-13",
+                "description": "Encryption at rest for artifacts"
+              }
+            ]
+          }
+        ]
+      }
+    ]
+  },
+  "systemSecurityPlan": {
+    "uuid": "dagger-engine-pool-ssp",
+    "metadata": {
+      "title": "Dagger Engine Pool Security System Plan",
+      "version": "1.0.0",
+      "oscalVersion": "1.0.4"
+    },
+    "systemCharacteristics": {
+      "systemName": "Dagger Engine Pool",
+      "systemNameShort": "DaggerPool",
+      "description": "Private Dagger engine fleet for secure CI/CD pipelines",
+      "systemIds": [
+        {
+          "identifier": "dagger-engine-pool",
+          "identifierType": "component-type"
+        }
+      ],
+      "systemInformation": {
+        "informationTypes": [
+          {
+            "title": "Build Artifacts",
+            "description": "Deployment bundles, SBOMs, and provenance data",
+            "confidentialityImpact": "moderate",
+            "integrityImpact": "high",
+            "availabilityImpact": "moderate"
+          },
+          {
+            "title": "CI/CD Pipeline Data",
+            "description": "Build logs, test results, and deployment metadata",
+            "confidentialityImpact": "low",
+            "integrityImpact": "high",
+            "availabilityImpact": "moderate"
+          }
+        ]
+      }
+    },
+    "controlImplementation": {
+      "description": "Control implementation for Dagger Engine Pool component",
+      "implementedRequirements": [
+        {
+          "uuid": "sc-13-impl",
+          "controlId": "SC-13",
+          "description": "Cryptographic Protection Implementation",
+          "props": [
+            {
+              "name": "implementation-status",
+              "value": "implemented"
+            }
+          ],
+          "statements": [
+            {
+              "uuid": "sc-13-stmt",
+              "description": "Encryption at rest using AWS KMS",
+              "byComponents": [
+                {
+                  "componentUuid": "dagger-engine-pool-component",
+                  "description": "S3 bucket encryption, EBS volume encryption, EFS encryption"
+                }
+              ]
+            }
+          ]
+        }
+      ]
+    }
+  },
+  "reviewNotes": [
+    "REVIEW: This OSCAL document is a placeholder and requires completion by compliance experts",
+    "REVIEW: Control implementation statements need detailed technical descriptions",
+    "REVIEW: Risk assessments and control assessments should be added",
+    "REVIEW: Evidence artifacts (test results, audit logs) should be referenced",
+    "REVIEW: Responsible roles and parties need to be updated with actual team information"
+  ]
+}

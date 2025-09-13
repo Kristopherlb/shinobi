@@ -1,0 +1,82 @@
+{
+  "$id": "https://platform/components/dagger-engine-pool/Config.schema.json",
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "title": "DaggerEnginePool Config",
+  "type": "object",
+  "required": ["capacity", "fipsMode"],
+  "properties": {
+    "service": { "type": "string" },
+    "env": { "type": "string" },
+    "owner": { "type": "string" },
+
+    "stigBaseline": { "type": "string", "enum": ["RHEL8", "UBI9", "UBUNTU-20"], "default": "UBI9" },
+    "fipsMode": { "type": "boolean", "default": true },
+
+    "capacity": {
+      "type": "object",
+      "required": ["min", "max"],
+      "properties": {
+        "min": { "type": "integer", "minimum": 1 },
+        "max": { "type": "integer", "minimum": 1 }
+      }
+    },
+
+    "instanceType": { "type": "string", "default": "c7i.large" },
+
+    "endpoint": {
+      "type": "object",
+      "properties": {
+        "nlbInternal": { "type": "boolean", "default": true },
+        "hostname": { "type": "string" },
+        "mtls": {
+          "type": "object",
+          "required": ["acmPcaArn"],
+          "properties": {
+            "acmPcaArn": { "type": "string" },
+            "allowedClientArns": { "type": "array", "items": { "type": "string" }, "default": [] }
+          }
+        },
+        "allowedCidrs": { "type": "array", "items": { "type": "string" }, "default": [] }
+      }
+    },
+
+    "storage": {
+      "type": "object",
+      "properties": {
+        "cache": { "type": "string", "enum": ["EBS", "EFS", "DISK"], "default": "EBS" },
+        "ebsGiB": { "type": "integer", "default": 200 },
+        "efs": {
+          "type": "object",
+          "properties": { "performance": { "type": "string", "enum": ["general", "maxIO"], "default": "general" } }
+        },
+        "s3ArtifactsBucketRef": { "type": "string" },
+        "kmsKeyRef": { "type": "string" }
+      }
+    },
+
+    "observability": {
+      "type": "object",
+      "properties": {
+        "otlpEndpoint": { "type": "string" },
+        "logRetentionDays": { "type": "integer", "default": 365 }
+      }
+    },
+
+    "featureFlags": {
+      "type": "object",
+      "properties": {
+        "sharedCacheEfs": { "type": "boolean", "default": false },
+        "enableEcrMirror": { "type": "boolean", "default": false }
+      }
+    },
+
+    "compliance": {
+      "type": "object",
+      "properties": {
+        "forbidPublicExposure": { "type": "boolean", "default": true },
+        "forbidNonFipsAmi": { "type": "boolean", "default": true },
+        "forbidNoKms": { "type": "boolean", "default": true }
+      }
+    }
+  }
+}
