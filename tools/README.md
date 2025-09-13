@@ -15,6 +15,49 @@ node tools/kb-load.mjs platform-kb s3-bucket fedramp-moderate
 node tools/kb-load.mjs platform-kb s3-bucket fedramp-moderate aws.global.logging aws.service.s3
 ```
 
+### `agent-scaffold.mjs`
+KB-driven component scaffolding tool that creates component package structure with audit plan and observability stubs.
+
+```bash
+# Scaffold a new component
+node tools/agent-scaffold.mjs \
+  --component s3-bucket \
+  --service-type s3-bucket \
+  --framework fedramp-moderate \
+  --packs /tmp/packs.json \
+  --controls "AC-2(3),AT-4(b)"
+```
+
+### `gen-tests-from-plan.mjs`
+Generates unit tests based on component plan compliance requirements.
+
+```bash
+# Generate tests for a component
+node tools/gen-tests-from-plan.mjs s3-bucket
+```
+
+### `gen-rego-from-plan.mjs`
+Generates REGO policies based on component plan compliance requirements.
+
+```bash
+# Generate REGO policies for a component
+node tools/gen-rego-from-plan.mjs s3-bucket
+```
+
+### `compliance-qa.mjs`
+Answers questions about component compliance based on component plan.
+
+```bash
+# Ask about packs
+node tools/compliance-qa.mjs s3-bucket "which packs are selected?"
+
+# Ask about NIST controls
+node tools/compliance-qa.mjs lambda-api "which nist controls are enforced?"
+
+# Get compliance summary
+node tools/compliance-qa.mjs ecs-cluster "provide a compliance summary"
+```
+
 ### `shinobi-generate.mjs`
 CLI wrapper for the Shinobi MCP agent to generate components from CI or command line.
 
@@ -107,6 +150,21 @@ Generated components include:
 - ✅ **Observability configs** with framework-specific retention
 - ✅ **Comprehensive test suite** with 90%+ coverage target
 - ✅ **NIST control mapping** including custom `extraControlTags`
+
+## MCP Integration
+
+These tools are integrated into the Shinobi MCP server and can be called via MCP tools:
+
+- `kb.selectPacks` → calls `kb-load.mjs`
+- `component.scaffold` → calls `agent-scaffold.mjs`
+- `component.generateTests` → calls `gen-tests-from-plan.mjs`
+- `component.generateRego` → calls `gen-rego-from-plan.mjs`
+- `audit.static` → calls `svc-audit-static.mjs`
+- `qa.component` → calls `compliance-qa.mjs`
+
+## Cursor Integration
+
+Use the system prompt in `docs/prompts/cursor-kb-aware-component-builder.md` and user prompt templates in `docs/prompts/cursor-user-prompt-template.md` for Cursor integration.
 
 ## CI Integration
 

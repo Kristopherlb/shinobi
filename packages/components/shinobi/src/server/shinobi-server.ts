@@ -354,7 +354,7 @@ export class ${className} extends BaseComponent {
       environment: this.context.environment,
       costCenter: this.context.costCenter
     });
-    ${this.generateAdditionalTagging(serviceType, componentName)}
+    ${this.generateAdditionalTagging(serviceType, componentName, framework, compliancePlan)}
 
     // Step 5: Register constructs for platform access
     this._registerConstruct('main', this.mainConstruct);
@@ -785,7 +785,7 @@ See \`observability/\` directory for:
     }
   }
 
-  private generateAdditionalTagging(serviceType: string, componentName: string): string {
+  private generateAdditionalTagging(serviceType: string, componentName: string, framework: string, compliancePlan: any): string {
     // Generate additional tagging for helper resources
     switch (serviceType) {
       case 's3-bucket':
@@ -1611,6 +1611,89 @@ describe('${className} Observability', () => {
             }
           },
           {
+            name: 'kb.selectPacks',
+            description: 'Select packs and flatten rules for a service/framework',
+            inputSchema: {
+              type: 'object',
+              properties: {
+                serviceType: {
+                  type: 'string',
+                  description: 'Service type (e.g., s3-bucket, lambda-api)'
+                },
+                framework: {
+                  type: 'string',
+                  enum: ['commercial', 'fedramp-low', 'fedramp-moderate', 'fedramp-high'],
+                  description: 'Target compliance framework'
+                },
+                explicitPackIds: {
+                  type: 'array',
+                  items: { type: 'string' },
+                  nullable: true,
+                  description: 'Explicit pack IDs to use instead of auto-selection'
+                }
+              },
+              required: ['serviceType', 'framework']
+            }
+          },
+          {
+            name: 'component.scaffold',
+            description: 'Create component package + audit plan + obs stubs from packs',
+            inputSchema: {
+              type: 'object',
+              properties: {
+                componentName: { type: 'string', description: 'Component name' },
+                serviceType: { type: 'string', description: 'Service type' },
+                framework: { type: 'string', description: 'Compliance framework' },
+                packs: { type: 'array', items: { type: 'string' }, description: 'Selected pack IDs' },
+                extraControls: { type: 'array', items: { type: 'string' }, default: [], description: 'Extra NIST control tags' }
+              },
+              required: ['componentName', 'serviceType', 'framework', 'packs']
+            }
+          },
+          {
+            name: 'component.generateTests',
+            description: 'Generate unit tests from audit plan',
+            inputSchema: {
+              type: 'object',
+              properties: {
+                componentName: { type: 'string', description: 'Component name' }
+              },
+              required: ['componentName']
+            }
+          },
+          {
+            name: 'component.generateRego',
+            description: 'Generate REGO policies from audit plan',
+            inputSchema: {
+              type: 'object',
+              properties: {
+                componentName: { type: 'string', description: 'Component name' }
+              },
+              required: ['componentName']
+            }
+          },
+          {
+            name: 'audit.static',
+            description: 'Run synth + (nag|guard|conftest) over the repo',
+            inputSchema: {
+              type: 'object',
+              properties: {},
+              additionalProperties: false
+            }
+          },
+          {
+            name: 'qa.component',
+            description: 'Answer packs/controls/rules for a component from its plan',
+            inputSchema: {
+              type: 'object',
+              properties: {
+                componentName: { type: 'string', description: 'Component name' },
+                question: { type: 'string', description: 'Question about the component' }
+              },
+              required: ['componentName', 'question']
+            }
+          },
+          {
             name: 'component_wizard',
             description: 'Interactive wizard for guided component generation with step-by-step guidance',
             inputSchema: {
@@ -2255,7 +2338,7 @@ describe('${className} Observability', () => {
     });
 
     // Read resources
-    this.server.setRequestHandler(ReadResourceRequestSchema, async (request) => {
+    this.server.setRequestHandler(ReadResourceRequestSchema, async (request: any) => {
       const { uri } = request.params;
 
       switch (uri) {
@@ -2265,7 +2348,7 @@ describe('${className} Observability', () => {
               {
                 uri,
                 mimeType: 'application/json',
-                text: JSON.stringify(await this.getComponentCatalog(), null, 2)
+                text: JSON.stringify(await this.getComponentCatalog({}), null, 2)
               }
             ]
           };
@@ -2342,7 +2425,7 @@ describe('${className} Observability', () => {
     });
 
     // Handle tool calls
-    this.server.setRequestHandler(CallToolRequestSchema, async (request) => {
+    this.server.setRequestHandler(CallToolRequestSchema, async (request: any) => {
       const { name, arguments: args } = request.params;
 
       try {
@@ -2379,6 +2462,24 @@ describe('${className} Observability', () => {
 
           case 'generate_component':
             return await this.generateComponent(args);
+
+          case 'kb.selectPacks':
+            return await this.kbSelectPacks(args);
+
+          case 'component.scaffold':
+            return await this.componentScaffold(args);
+
+          case 'component.generateTests':
+            return await this.componentGenerateTests(args);
+
+          case 'component.generateRego':
+            return await this.componentGenerateRego(args);
+
+          case 'audit.static':
+            return await this.auditStatic(args);
+
+          case 'qa.component':
+            return await this.qaComponent(args);
 
           case 'component_wizard':
             return await this.componentWizard(args);
@@ -2963,6 +3064,330 @@ describe('${className} Observability', () => {
         description: 'Generated compliance plan with packs, rules, and controls'
       }
     };
+  }
+
+  /**
+   * Execute shell command helper
+   */
+  private sh(cmd: string, args: string[], opts: any = {}): string {
+    const { spawnSync } = require('child_process');
+    const res = spawnSync(cmd, args, {
+      stdio: 'pipe',
+      encoding: 'utf-8',
+      ...opts
+    });
+
+    if (res.status !== 0) {
+      throw new Error(res.stderr || `Command failed: ${cmd} ${args.join(' ')}`);
+    }
+
+    return res.stdout.trim();
+  }
+
+  /**
+   * KB-aware component builder tool handlers
+   */
+
+  /**
+   * Select packs and flatten rules for a service/framework
+   */
+  private async kbSelectPacks(args: any): Promise<any> {
+    const { serviceType, framework, explicitPackIds } = args;
+
+    try {
+      // Use kb-load script to select packs
+      const out = this.sh('node', ['tools/kb-load.mjs', 'platform-kb', serviceType, framework]);
+      const data = JSON.parse(out);
+
+      return {
+        content: [
+          {
+            type: 'text',
+            text: JSON.stringify({
+              packs: (data.chosen || []).map((c: any) => c.meta?.id ?? c.id).filter(Boolean),
+              rules: (data.chosen || []).flatMap((c: any) => c.pack?.rules || []),
+              nist_controls: Array.from(new Set(
+                (data.chosen || []).flatMap((c: any) => c.pack?.rules || []).flatMap((r: any) => r.nist_controls || [])
+              )),
+              serviceType,
+              framework
+            }, null, 2)
+          }
+        ]
+      };
+    } catch (error) {
+      return {
+        content: [
+          {
+            type: 'text',
+            text: JSON.stringify({
+              error: error instanceof Error ? error.message : String(error),
+              serviceType,
+              framework
+            }, null, 2)
+          }
+        ]
+      };
+    }
+  }
+
+  /**
+   * Create component package + audit plan + obs stubs from packs
+   */
+  private async componentScaffold(args: any): Promise<any> {
+    const { componentName, serviceType, framework, packs, extraControls = [] } = args;
+
+    try {
+      // Create temporary packs file for scaffold script
+      const tmpFile = `.tmp.packs.${Date.now()}.json`;
+      const packsData = {
+        chosen: packs.map((id: string) => ({ meta: { id } }))
+      };
+
+      fs.writeFileSync(tmpFile, JSON.stringify(packsData, null, 2));
+
+      // Run scaffold script
+      this.sh('node', [
+        'tools/agent-scaffold.mjs',
+        '--component', componentName,
+        '--service-type', serviceType,
+        '--framework', framework,
+        '--packs', tmpFile,
+        '--controls', extraControls.join(',')
+      ]);
+
+      // Clean up temp file
+      fs.unlinkSync(tmpFile);
+
+      return {
+        content: [
+          {
+            type: 'text',
+            text: JSON.stringify({
+              success: true,
+              componentName,
+              serviceType,
+              framework,
+              packs,
+              extraControls,
+              path: `packages/components/${componentName}`,
+              artifacts: [
+                'Component package structure',
+                'audit/component.plan.json',
+                'Observability stubs',
+                'Test scaffolding'
+              ]
+            }, null, 2)
+          }
+        ]
+      };
+    } catch (error) {
+      return {
+        content: [
+          {
+            type: 'text',
+            text: JSON.stringify({
+              error: error instanceof Error ? error.message : String(error),
+              componentName,
+              serviceType,
+              framework
+            }, null, 2)
+          }
+        ]
+      };
+    }
+  }
+
+  /**
+   * Generate unit tests from audit plan
+   */
+  private async componentGenerateTests(args: any): Promise<any> {
+    const { componentName } = args;
+
+    try {
+      this.sh('node', ['tools/gen-tests-from-plan.mjs', componentName]);
+
+      return {
+        content: [
+          {
+            type: 'text',
+            text: JSON.stringify({
+              success: true,
+              componentName,
+              action: 'Generated unit tests from audit plan',
+              testFiles: [
+                `packages/components/${componentName}/tests/unit/builder.test.ts`,
+                `packages/components/${componentName}/tests/unit/component.test.ts`,
+                `packages/components/${componentName}/tests/compliance.test.ts`,
+                `packages/components/${componentName}/tests/observability.test.ts`
+              ]
+            }, null, 2)
+          }
+        ]
+      };
+    } catch (error) {
+      return {
+        content: [
+          {
+            type: 'text',
+            text: JSON.stringify({
+              error: error instanceof Error ? error.message : String(error),
+              componentName
+            }, null, 2)
+          }
+        ]
+      };
+    }
+  }
+
+  /**
+   * Generate REGO policies from audit plan
+   */
+  private async componentGenerateRego(args: any): Promise<any> {
+    const { componentName } = args;
+
+    try {
+      this.sh('node', ['tools/gen-rego-from-plan.mjs', componentName]);
+
+      return {
+        content: [
+          {
+            type: 'text',
+            text: JSON.stringify({
+              success: true,
+              componentName,
+              action: 'Generated REGO policies from audit plan',
+              regoFiles: `packages/components/${componentName}/audit/rego/*.rego`
+            }, null, 2)
+          }
+        ]
+      };
+    } catch (error) {
+      return {
+        content: [
+          {
+            type: 'text',
+            text: JSON.stringify({
+              error: error instanceof Error ? error.message : String(error),
+              componentName
+            }, null, 2)
+          }
+        ]
+      };
+    }
+  }
+
+  /**
+   * Run static audit over the repo
+   */
+  private async auditStatic(args: any): Promise<any> {
+    try {
+      this.sh('node', ['tools/svc-audit-static.mjs'], { env: process.env });
+
+      return {
+        content: [
+          {
+            type: 'text',
+            text: JSON.stringify({
+              success: true,
+              action: 'Static compliance audit completed',
+              checks: [
+                'File structure validation',
+                'Compliance plan validation',
+                'Code pattern verification',
+                'Builder pattern validation'
+              ]
+            }, null, 2)
+          }
+        ]
+      };
+    } catch (error) {
+      return {
+        content: [
+          {
+            type: 'text',
+            text: JSON.stringify({
+              error: error instanceof Error ? error.message : String(error),
+              action: 'Static compliance audit failed'
+            }, null, 2)
+          }
+        ]
+      };
+    }
+  }
+
+  /**
+   * Answer packs/controls/rules for a component from its plan
+   */
+  private async qaComponent(args: any): Promise<any> {
+    const { componentName, question } = args;
+
+    try {
+      // Try to use compliance-qa script if it exists
+      try {
+        const out = this.sh('node', ['tools/compliance-qa.mjs', componentName, question]);
+        return {
+          content: [
+            {
+              type: 'text',
+              text: JSON.stringify({
+                success: true,
+                componentName,
+                question,
+                answer: out
+              }, null, 2)
+            }
+          ]
+        };
+      } catch {
+        // Fallback: read component plan and provide basic answers
+        const planPath = `packages/components/${componentName}/audit/component.plan.json`;
+
+        if (fs.existsSync(planPath)) {
+          const plan = JSON.parse(fs.readFileSync(planPath, 'utf8'));
+
+          let answer = '';
+          if (question.toLowerCase().includes('packs')) {
+            answer = `Selected packs: ${plan.packs?.join(', ') || 'none'}`;
+          } else if (question.toLowerCase().includes('controls') || question.toLowerCase().includes('nist')) {
+            answer = `NIST controls: ${plan.nist_controls?.join(', ') || 'none'}`;
+          } else if (question.toLowerCase().includes('rules')) {
+            answer = `Rules enforced: ${plan.rules?.length || 0} rules from ${plan.packs?.length || 0} packs`;
+          } else {
+            answer = JSON.stringify(plan, null, 2);
+          }
+
+          return {
+            content: [
+              {
+                type: 'text',
+                text: JSON.stringify({
+                  success: true,
+                  componentName,
+                  question,
+                  answer
+                }, null, 2)
+              }
+            ]
+          };
+        } else {
+          throw new Error(`Component plan not found at ${planPath}`);
+        }
+      }
+    } catch (error) {
+      return {
+        content: [
+          {
+            type: 'text',
+            text: JSON.stringify({
+              error: error instanceof Error ? error.message : String(error),
+              componentName,
+              question
+            }, null, 2)
+          }
+        ]
+      };
+    }
   }
 
   /**
