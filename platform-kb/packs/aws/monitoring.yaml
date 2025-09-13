@@ -1,0 +1,14 @@
+$schema: platform-kb/pack@v1
+pack:
+  id: aws.global.monitoring
+  version: "2025-09-01"
+  description: "Monitoring operational best practices"
+rules:
+  - id: CFG_DEFAULT_ALARMS_DEFINED
+    title: "Golden-signal alarms defined"
+    severity: low
+    nist_controls: ["AU-6"]
+    services: ["*"]
+    check:
+      type: "internal-check"
+      name: "golden-signal-alarms-present"

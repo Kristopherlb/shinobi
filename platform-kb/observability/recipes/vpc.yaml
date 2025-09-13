@@ -1,0 +1,16 @@
+$schema: ../schema/recipe.schema.json
+service_type: "vpc"
+telemetry:
+  logs:
+    - name: "VPC Flow Logs"
+      required: true
+      retention_days:
+        commercial: 30
+        fedramp-low: 60
+        fedramp-moderate: 90
+        fedramp-high: 365
+  metrics: []
+  tracing:
+    applicable: false
+  alarms: []
+dashboards: []

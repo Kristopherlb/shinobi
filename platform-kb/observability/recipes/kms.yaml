@@ -1,0 +1,18 @@
+$schema: ../schema/recipe.schema.json
+service_type: "kms"
+telemetry:
+  logs: []
+  metrics:
+    - name: "KMS Metrics"
+      items: ["KMSRequests","KMSRequestErrors"]
+  tracing:
+    applicable: false
+  alarms:
+    - name: "KMSRequestErrors"
+      metric: "KMSRequestErrors"
+      threshold: 1
+      period: 300
+      eval_periods: 3
+dashboards:
+  - name: "KMS Operational"
+    widgets: ["Requests","Errors"]

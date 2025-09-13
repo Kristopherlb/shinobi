@@ -1,0 +1,14 @@
+$schema: platform-kb/pack@v1
+pack:
+  id: aws.fedramp.high.part1
+  version: "2025-09-01"
+  description: "FedRAMP High Part 1 - starter subset"
+rules:
+  - id: CFG_VPC_FLOW_LOGS
+    title: "VPC Flow Logs enabled"
+    severity: medium
+    nist_controls: ["AU-2","AU-12"]
+    services: ["vpc"]
+    check:
+      type: "aws-config-rule"
+      name: "vpc-flow-logs-enabled"

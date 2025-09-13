@@ -1,0 +1,14 @@
+$schema: platform-kb/pack@v1
+pack:
+  id: aws.service.ec2
+  version: "2025-09-01"
+  description: "Operational Best Practices for Amazon EC2"
+rules:
+  - id: CFG_EBS_ENCRYPTION_BY_DEFAULT
+    title: "EBS encryption by default"
+    severity: high
+    nist_controls: ["SC-13","SC-28"]
+    services: ["ec2"]
+    check:
+      type: "aws-config-rule"
+      name: "ebs-encryption-by-default"

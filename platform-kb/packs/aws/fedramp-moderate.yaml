@@ -1,0 +1,22 @@
+$schema: platform-kb/pack@v1
+pack:
+  id: aws.fedramp.moderate
+  version: "2025-09-01"
+  description: "FedRAMP Moderate - subset for starter rules"
+rules:
+  - id: CFG_RDS_STORAGE_ENCRYPTED
+    title: "RDS storage must be encrypted (CMK)"
+    severity: high
+    nist_controls: ["SC-13","SC-28"]
+    services: ["rds-postgres","rds-mysql"]
+    check:
+      type: "aws-config-rule"
+      name: "rds-storage-encrypted"
+  - id: CFG_APIGW_EXECUTION_LOGGING
+    title: "API Gateway execution logging enabled"
+    severity: medium
+    nist_controls: ["AU-2","AU-12"]
+    services: ["apigw"]
+    check:
+      type: "aws-config-rule"
+      name: "apigw-execution-logging-enabled"

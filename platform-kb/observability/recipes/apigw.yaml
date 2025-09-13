@@ -1,0 +1,26 @@
+$schema: ../schema/recipe.schema.json
+service_type: "apigw"
+telemetry:
+  logs:
+    - name: "Execution logs to CloudWatch"
+      required: true
+      retention_days:
+        commercial: 14
+        fedramp-low: 30
+        fedramp-moderate: 90
+        fedramp-high: 365
+  metrics:
+    - name: "GoldenSignals"
+      items: ["Count","4XXError","5XXError","Latency","IntegrationLatency"]
+  tracing:
+    applicable: true
+    xray_enabled: true
+  alarms:
+    - name: "High5xxErrors"
+      metric: "5XXError"
+      threshold: 1
+      period: 300
+      eval_periods: 3
+dashboards:
+  - name: "API Gateway Operational"
+    widgets: ["Count","4XX","5XX","Latency"]

@@ -1,0 +1,22 @@
+$schema: platform-kb/pack@v1
+pack:
+  id: aws.service.rds
+  version: "2025-09-01"
+  description: "Operational Best Practices for Amazon RDS"
+rules:
+  - id: CFG_RDS_STORAGE_ENCRYPTED
+    title: "RDS storage must be encrypted"
+    severity: high
+    nist_controls: ["SC-13","SC-28"]
+    services: ["rds-postgres","rds-mysql"]
+    check:
+      type: "aws-config-rule"
+      name: "rds-storage-encrypted"
+  - id: CFG_RDS_AUDIT_LOGGING
+    title: "RDS audit/error logs exported to CloudWatch"
+    severity: medium
+    nist_controls: ["AU-2","AU-6"]
+    services: ["rds-postgres","rds-mysql"]
+    check:
+      type: "internal-check"
+      name: "rds-logs-exported"

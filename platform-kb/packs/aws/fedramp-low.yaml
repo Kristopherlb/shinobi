@@ -1,0 +1,14 @@
+$schema: platform-kb/pack@v1
+pack:
+  id: aws.fedramp.low
+  version: "2025-09-01"
+  description: "FedRAMP Low - focused subset"
+rules:
+  - id: CFG_CLOUDTRAIL_ENABLED
+    title: "CloudTrail must be enabled"
+    severity: high
+    nist_controls: ["AU-2","AU-12"]
+    services: ["account-global"]
+    check:
+      type: "aws-config-rule"
+      name: "cloudtrail-enabled-and-multi-region"

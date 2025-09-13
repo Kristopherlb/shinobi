@@ -1,0 +1,22 @@
+$schema: platform-kb/nist-config-map@v1
+mappings:
+  SC-13:
+    - s3-bucket-server-side-encryption-enabled
+    - rds-storage-encrypted
+    - ebs-encryption-by-default
+  SC-28:
+    - s3-bucket-server-side-encryption-enabled
+    - rds-storage-encrypted
+  AU-2:
+    - s3-bucket-logging-enabled
+    - apigw-execution-logging-enabled
+    - cloudtrail-enabled-and-multi-region
+    - vpc-flow-logs-enabled
+    - rds-logs-exported
+  AU-6:
+    - rds-logs-exported
+    - golden-signal-alarms-present
+  AU-11:
+    - lambda-log-retention-days
+  SC-8:
+    - apigw-min-tls-version

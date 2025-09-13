@@ -1,0 +1,27 @@
+$schema: ../schema/recipe.schema.json
+service_type: "lambda"
+telemetry:
+  logs:
+    - name: "CloudWatch function logs"
+      required: true
+      retention_days:
+        commercial: 14
+        fedramp-low: 30
+        fedramp-moderate: 90
+        fedramp-high: 365
+  metrics:
+    - name: "GoldenSignals"
+      items: ["Invocations","Errors","Duration","Throttles","ConcurrentExecutions"]
+  tracing:
+    applicable: true
+    adot_layer: "auto"
+    xray_enabled: true
+  alarms:
+    - name: "HighErrorRate"
+      metric: "Errors"
+      threshold_pct: 1.0
+      period: 300
+      eval_periods: 3
+dashboards:
+  - name: "Lambda Operational"
+    widgets: ["Invocations","Errors","Duration p95","Throttles"]

@@ -1,0 +1,39 @@
+name: Sync Conformance Packs
+
+on:
+  schedule:
+    - cron: "0 5 * * 1" # Mondays 05:00 UTC
+  workflow_dispatch: {}
+
+jobs:
+  sync:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Setup Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+
+      - name: Install tools
+        run: |
+          npm i yaml -g
+
+      - name: Import AWS Packs
+        run: |
+          node tools/import-aws-packs.mjs --in ./vendor/aws-packs --out ./platform-kb/packs/aws --index ./platform-kb/packs/index.yaml --id-prefix aws.imported --scope compliance
+
+      - name: Generate Mappings
+        run: |
+          node tools/generate-mappings.mjs ./platform-kb/packs/aws
+
+      - name: Validate KB
+        run: |
+          node tools/svc-kb-validate.mjs
+
+      - name: Commit changes
+        uses: stefanzweifel/git-auto-commit-action@v5
+        with:
+          commit_message: "chore(kb): sync conformance packs & refresh mappings"
+          branch: ${{ github.head_ref || github.ref_name }}

@@ -1,0 +1,25 @@
+$schema: ../schema/recipe.schema.json
+service_type: "rds"
+telemetry:
+  logs:
+    - name: "Audit & error logs exported to CloudWatch"
+      required: true
+      retention_days:
+        commercial: 30
+        fedramp-low: 60
+        fedramp-moderate: 90
+        fedramp-high: 365
+  metrics:
+    - name: "GoldenSignals-ish"
+      items: ["CPUUtilization","FreeableMemory","ReadLatency","WriteLatency","FreeStorageSpace"]
+  tracing:
+    applicable: false
+  alarms:
+    - name: "HighCPUUtilization"
+      metric: "CPUUtilization"
+      threshold: 80
+      period: 300
+      eval_periods: 3
+dashboards:
+  - name: "RDS Operational"
+    widgets: ["CPU","Connections","Latency","FreeStorage"]

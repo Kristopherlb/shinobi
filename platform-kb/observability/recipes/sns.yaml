@@ -1,0 +1,18 @@
+$schema: ../schema/recipe.schema.json
+service_type: "sns"
+telemetry:
+  logs: []
+  metrics:
+    - name: "Topic Metrics"
+      items: ["NumberOfMessagesPublished","NumberOfNotificationsDelivered","NumberOfNotificationsFailed"]
+  tracing:
+    applicable: false
+  alarms:
+    - name: "NotificationFailures"
+      metric: "NumberOfNotificationsFailed"
+      threshold: 1
+      period: 300
+      eval_periods: 3
+dashboards:
+  - name: "SNS Operational"
+    widgets: ["Published","Delivered","Failed"]

@@ -1,0 +1,18 @@
+$schema: ../schema/recipe.schema.json
+service_type: "dynamodb"
+telemetry:
+  logs: []
+  metrics:
+    - name: "Table Metrics"
+      items: ["ConsumedReadCapacityUnits","ConsumedWriteCapacityUnits","ReadThrottleEvents","WriteThrottleEvents","UserErrors","SystemErrors"]
+  tracing:
+    applicable: false
+  alarms:
+    - name: "HighThrottleEvents"
+      metric: "ReadThrottleEvents"
+      threshold: 1
+      period: 300
+      eval_periods: 3
+dashboards:
+  - name: "DynamoDB Operational"
+    widgets: ["RCU","WCU","Throttles","Errors"]

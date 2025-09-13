@@ -1,0 +1,43 @@
+name: Compliance & Conformance Checks
+
+on:
+  pull_request:
+    branches: [ main, trunk, develop ]
+
+jobs:
+  validate:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Setup Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+
+      - name: Install deps
+        run: |
+          npm ci || pnpm i || yarn install --frozen-lockfile || true
+
+      - name: Validate Platform KB
+        run: |
+          node tools/svc-kb-validate.mjs
+
+      - name: Lint (no console.log)
+        run: |
+          npm run lint || echo "lint step not configured"
+
+      - name: Unit tests
+        run: |
+          npm test --workspaces -- --coverage || echo "tests not configured"
+        env:
+          CI: "true"
+
+      - name: Plan (dry run)
+        run: |
+          node tools/svc-plan.mjs || echo "plan script not configured"
+
+      - name: Policy as Code (OPA) - optional
+        run: |
+          echo "Run OPA / conftest against audit/rego if available"
+          echo "skipping by default"

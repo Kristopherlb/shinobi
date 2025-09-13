@@ -1,0 +1,6 @@
+package platform.${component}.compliance
+deny[msg] {
+  input.resource.type == "AWS::RDS::DBInstance"
+  not input.resource.properties.StorageEncrypted
+  msg := sprintf("RDS storage encryption disabled on %s", [input.resource.logicalId])
+}

@@ -1,0 +1,22 @@
+$schema: platform-kb/pack@v1
+pack:
+  id: aws.service.apigw
+  version: "2025-09-01"
+  description: "Operational Best Practices for Amazon API Gateway"
+rules:
+  - id: CFG_APIGW_EXECUTION_LOGGING
+    title: "API Gateway execution logging enabled"
+    severity: medium
+    nist_controls: ["AU-2","AU-12"]
+    services: ["apigw"]
+    check:
+      type: "aws-config-rule"
+      name: "apigw-execution-logging-enabled"
+  - id: CFG_APIGW_TLS_1_2_MINIMUM
+    title: "Enforce TLS 1.2 or higher for custom domains"
+    severity: high
+    nist_controls: ["SC-8"]
+    services: ["apigw"]
+    check:
+      type: "internal-check"
+      name: "apigw-min-tls-version"
