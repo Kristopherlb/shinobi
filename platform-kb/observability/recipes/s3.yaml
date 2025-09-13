@@ -1,0 +1,25 @@
+$schema: ../schema/recipe.schema.json
+service_type: "s3-bucket"
+telemetry:
+  logs:
+    - name: "S3 access logs or CloudTrail data events"
+      required: true
+      retention_days:
+        commercial: 30
+        fedramp-low: 60
+        fedramp-moderate: 90
+        fedramp-high: 365
+  metrics:
+    - name: "Requests & Errors"
+      items: ["AllRequests","4xxErrors","5xxErrors"]
+  tracing:
+    applicable: false
+  alarms:
+    - name: "High5xxErrors"
+      metric: "5xxErrors"
+      threshold: 1
+      period: 300
+      eval_periods: 3
+dashboards:
+  - name: "S3 Operational"
+    widgets: ["Requests","4xx","5xx"]

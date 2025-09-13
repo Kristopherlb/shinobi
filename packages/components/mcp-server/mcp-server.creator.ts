@@ -115,6 +115,8 @@ export class McpServerComponentCreator implements IComponentCreator {
    */
   public getProvidedCapabilities(): string[] {
     return [
+      'api:rest',
+      'container:ecs',
       'integration:mcp-server',
       'monitoring:mcp-server'
     ];
@@ -125,7 +127,8 @@ export class McpServerComponentCreator implements IComponentCreator {
    */
   public getRequiredCapabilities(): string[] {
     return [
-      // TODO: Define required capabilities
+      'vpc:network',
+      'security:groups'
     ];
   }
   
@@ -134,8 +137,12 @@ export class McpServerComponentCreator implements IComponentCreator {
    */
   public getConstructHandles(): string[] {
     return [
-      'main'
-      // TODO: Add additional construct handles if needed
+      'main',
+      'cluster',
+      'service',
+      'taskDefinition',
+      'repository',
+      'loadBalancer'
     ];
   }
 }

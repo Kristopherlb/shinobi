@@ -289,3 +289,191 @@ defaults:
       Component: "iam-role"
       ManagedBy: "platform"
       ComplianceFramework: "fedramp-moderate"
+
+  # MCP Server Configuration Defaults
+  mcp-server:
+    container:
+      imageTag: "latest"
+      cpu: 512
+      memory: 1024
+      taskCount: 2
+      containerPort: 3000
+    loadBalancer:
+      enabled: true
+      certificateArn: ""
+      domainName: ""
+    authentication:
+      jwtSecret: ""
+      tokenExpiration: "30m" # Shorter for FedRAMP
+    dataSources:
+      git:
+        repositoryUrls: []
+        accessTokenArn: ""
+      aws:
+        crossAccountRoles: []
+        regions: ["us-east-1"]
+      templates:
+        repositoryUrl: ""
+        branch: "main"
+    vpc:
+      vpcId: ""
+      subnetIds: []
+      securityGroupIds: []
+    logging:
+      retentionDays: 90 # Longer retention for FedRAMP
+    monitoring:
+      enabled: true
+      detailedMetrics: true # Required for FedRAMP
+    tags:
+      Component: "mcp-server"
+      ManagedBy: "platform"
+      ComplianceFramework: "fedramp-moderate"
+
+  # Shinobi Platform Intelligence Brain Configuration Defaults
+  shinobi:
+    compute:
+      mode: "ecs"
+      cpu: 512
+      memory: 1024
+      taskCount: 2
+      containerPort: 3000
+    dataStore:
+      type: "dynamodb"
+      dynamodb:
+        billingMode: "PAY_PER_REQUEST"
+    api:
+      exposure: "internal"
+      loadBalancer:
+        enabled: true
+      version: "1.0"
+      rateLimit:
+        requestsPerMinute: 1000
+        burstCapacity: 2000
+    featureFlags:
+      enabled: true
+      provider: "aws-appconfig"
+      defaults:
+        "shinobi.advanced-analytics": true
+        "shinobi.ai-insights": false
+        "shinobi.auto-remediation": false
+        "shinobi.predictive-scaling": false
+        "shinobi.cost-optimization": true
+        "shinobi.security-scanning": true
+        "shinobi.compliance-monitoring": true
+        "shinobi.performance-profiling": true
+        "shinobi.dependency-analysis": true
+        "shinobi.change-impact": true
+    dataSources:
+      components: true
+      services: true
+      dependencies: true
+      compliance: true
+      cost: true
+      security: true
+      performance: true
+    observability:
+      provider: "cloudwatch"
+      dashboards: ["reliability", "performance", "security"]
+      alerts:
+        enabled: true
+        thresholds:
+          cpuUtilization: 70
+          memoryUtilization: 70
+          responseTime: 1.5
+    compliance:
+      securityLevel: "enhanced"
+      auditLogging: true
+    localDev:
+      enabled: false
+      seedData:
+        sampleComponents: true
+        sampleServices: true
+        sampleMetrics: true
+      mockServices: true
+    logging:
+      retentionDays: 90
+      logLevel: "info"
+      structuredLogging: true
+    tags:
+      Component: "shinobi"
+      ManagedBy: "platform"
+
+  # ECR Repository Configuration Defaults - FedRAMP Moderate
+  ecr-repository:
+    imageScanningConfiguration:
+      scanOnPush: true # Required for FedRAMP
+    imageTagMutability: "IMMUTABLE" # Required for FedRAMP
+    encryption:
+      encryptionType: "KMS" # Required for FedRAMP
+    lifecyclePolicy:
+      maxImageCount: 5 # More restrictive for FedRAMP
+      maxImageAge: 14 # Shorter retention for FedRAMP
+      untaggedImageRetentionDays: 1
+    monitoring:
+      enabled: true
+      detailedMetrics: true # Required for FedRAMP
+      logRetentionDays: 365 # 1 year for FedRAMP
+    compliance:
+      retentionPolicy: "retain" # Required for FedRAMP
+      auditLogging: true # Required for FedRAMP
+    tags:
+      Component: "ecr-repository"
+      ManagedBy: "platform"
+      compliance-framework: "fedramp-moderate"
+      ComplianceFramework: "fedramp-moderate"
+
+  # Lambda API Configuration Defaults - FedRAMP Moderate
+  lambda-api:
+    runtime: "nodejs20.x"
+    memory: 768 # Increased for compliance overhead
+    timeout: 45 # Extended for compliance logging
+    codePath: "./src"
+    environmentVariables: {}
+    api:
+      cors: false # Disabled for government security
+      apiKeyRequired: true # Required for FedRAMP
+    security:
+      tools:
+        falco: true # Required for FedRAMP
+    monitoring:
+      enabled: true
+      detailedMetrics: true # Required for FedRAMP
+      alarms:
+        errorRateThreshold: 3 # Stricter for FedRAMP
+        durationThreshold: 75 # Stricter for FedRAMP
+        throttleThreshold: 1
+    compliance:
+      retentionPolicy: "retain" # Required for FedRAMP
+      auditLogging: true # Required for FedRAMP
+    tags:
+      Component: "lambda-api"
+      ManagedBy: "platform"
+      compliance-framework: "fedramp-moderate"
+      ComplianceFramework: "fedramp-moderate"
+
+  # SageMaker Notebook Instance Configuration Defaults - FedRAMP Moderate
+  sagemaker-notebook-instance:
+    instanceType: "ml.m5.large"
+    rootAccess: "Disabled"
+    directInternetAccess: "Disabled"
+    volumeSizeInGB: 100
+    platformIdentifier: "notebook-al2-v2"
+    instanceMetadataServiceConfiguration:
+      minimumInstanceMetadataServiceVersion: "2"
+    monitoring:
+      enabled: true
+      detailedMetrics: true
+    security:
+      kmsEncryption: true
+      vpcOnly: true
+    compliance:
+      auditLogging: true
+      retentionDays: 365
+    tags:
+      Component: "sagemaker-notebook-instance"
+      ManagedBy: "platform"
+      compliance-framework: "fedramp-moderate"
+      root-access: "disabled"
+      internet-access: "vpc-only"
+      imds-version: "v2"
+      ComplianceFramework: "fedramp-moderate"

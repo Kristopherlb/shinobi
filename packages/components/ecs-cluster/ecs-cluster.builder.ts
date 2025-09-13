@@ -8,7 +8,7 @@
 import { ConfigBuilder, ConfigBuilderContext } from '../../../src/platform/contracts/config-builder';
 
 /**
- * Configuration interface for EcsClusterComponent component
+ * Configuration interface for ECS Cluster component
  */
 export interface EcsClusterConfig {
   /** Component name (optional, will be auto-generated) */
@@ -16,6 +16,34 @@ export interface EcsClusterConfig {
   
   /** Component description */
   description?: string;
+  
+  /** Service Connect configuration for microservice discovery */
+  serviceConnect: {
+    /** Cloud Map namespace for service discovery (e.g., "internal", "my-app.internal") */
+    namespace: string;
+  };
+  
+  /** Optional EC2 capacity configuration. If omitted, cluster is Fargate-only */
+  capacity?: {
+    /** EC2 instance type for the cluster */
+    instanceType: string;
+    /** Minimum number of instances in the Auto Scaling Group */
+    minSize: number;
+    /** Maximum number of instances in the Auto Scaling Group */
+    maxSize: number;
+    /** Desired number of instances (optional, defaults to minSize) */
+    desiredSize?: number;
+    /** Key pair name for SSH access (optional) */
+    keyName?: string;
+    /** Enable detailed CloudWatch monitoring (optional, defaults to false) */
+    enableMonitoring?: boolean;
+  };
+  
+  /** Container Insights configuration (optional, defaults based on compliance) */
+  containerInsights?: boolean;
+  
+  /** Cluster name override (optional, auto-generated from service and component name) */
+  clusterName?: string;
   
   /** Enable detailed monitoring */
   monitoring?: {
@@ -28,15 +56,16 @@ export interface EcsClusterConfig {
   
   /** Tagging configuration */
   tags?: Record<string, string>;
-  
-  // TODO: Add component-specific configuration properties
 }
 
 /**
- * JSON Schema for EcsClusterComponent configuration validation
+ * JSON Schema for ECS Cluster configuration validation
  */
 export const ECS_CLUSTER_CONFIG_SCHEMA = {
   type: 'object',
+  title: 'ECS Cluster Configuration',
+  description: 'Configuration for creating an ECS Cluster with Service Connect',
+  required: ['serviceConnect'],
   properties: {
     name: {
       type: 'string',
@@ -48,6 +77,78 @@ export const ECS_CLUSTER_CONFIG_SCHEMA = {
       type: 'string',
       description: 'Component description for documentation',
       maxLength: 1024
+    },
+    serviceConnect: {
+      type: 'object',
+      title: 'Service Connect Configuration', 
+      description: 'Configuration for ECS Service Connect and service discovery',
+      required: ['namespace'],
+      properties: {
+        namespace: {
+          type: 'string',
+          description: 'Cloud Map namespace for service discovery',
+          pattern: '^[a-zA-Z][a-zA-Z0-9.-]*$',
+          minLength: 1,
+          maxLength: 64,
+          examples: ['internal', 'my-app.internal', 'services']
+        }
+      },
+      additionalProperties: false
+    },
+    capacity: {
+      type: 'object',
+      title: 'EC2 Capacity Configuration',
+      description: 'Optional EC2 capacity for the cluster. If omitted, cluster is Fargate-only',
+      required: ['instanceType', 'minSize', 'maxSize'],
+      properties: {
+        instanceType: {
+          type: 'string',
+          description: 'EC2 instance type for cluster instances',
+          pattern: '^[a-z][0-9]*[a-z]*\\.[a-z0-9]+$',
+          examples: ['t3.medium', 'm5.large', 'c5.xlarge']
+        },
+        minSize: {
+          type: 'number',
+          description: 'Minimum number of instances in Auto Scaling Group',
+          minimum: 0,
+          maximum: 1000
+        },
+        maxSize: {
+          type: 'number',
+          description: 'Maximum number of instances in Auto Scaling Group', 
+          minimum: 1,
+          maximum: 1000
+        },
+        desiredSize: {
+          type: 'number',
+          description: 'Desired number of instances (defaults to minSize)',
+          minimum: 0,
+          maximum: 1000
+        },
+        keyName: {
+          type: 'string',
+          description: 'EC2 key pair name for SSH access',
+          pattern: '^[a-zA-Z][a-zA-Z0-9_-]*$'
+        },
+        enableMonitoring: {
+          type: 'boolean',
+          description: 'Enable detailed CloudWatch monitoring for instances',
+          default: false
+        }
+      },
+      additionalProperties: false
+    },
+    containerInsights: {
+      type: 'boolean',
+      description: 'Enable Container Insights for advanced monitoring',
+      default: true
+    },
+    clusterName: {
+      type: 'string',
+      description: 'Override for cluster name (auto-generated if not provided)',
+      pattern: '^[a-zA-Z][a-zA-Z0-9-]*$',
+      minLength: 1,
+      maxLength: 255
     },
     monitoring: {
       type: 'object',
@@ -62,6 +163,11 @@ export const ECS_CLUSTER_CONFIG_SCHEMA = {
           type: 'boolean',
           default: false,
           description: 'Enable detailed CloudWatch metrics'
+        },
+        alarms: {
+          type: 'object',
+          description: 'Component-specific alarm thresholds',
+          additionalProperties: true
         }
       },
       additionalProperties: false
@@ -71,13 +177,12 @@ export const ECS_CLUSTER_CONFIG_SCHEMA = {
       description: 'Additional resource tags',
       additionalProperties: { type: 'string' }
     }
-    // TODO: Add component-specific schema properties
   },
   additionalProperties: false
 };
 
 /**
- * ConfigBuilder for EcsClusterComponent component
+ * ConfigBuilder for ECS Cluster component
  * 
  * Implements the 5-layer configuration precedence chain:
  * 1. Hardcoded Fallbacks (ultra-safe baseline)
@@ -88,18 +193,25 @@ export const ECS_CLUSTER_CONFIG_SCHEMA = {
  */
 export class EcsClusterComponentConfigBuilder extends ConfigBuilder<EcsClusterConfig> {
   
+  constructor(context: ConfigBuilderContext) {
+    super(context, ECS_CLUSTER_CONFIG_SCHEMA);
+  }
+  
   /**
    * Layer 1: Hardcoded Fallbacks
    * Ultra-safe baseline configuration that works in any environment
    */
   protected getHardcodedFallbacks(): Partial<EcsClusterConfig> {
     return {
+      serviceConnect: {
+        namespace: 'internal' // Safe default namespace
+      },
+      containerInsights: true, // Enable observability by default
       monitoring: {
         enabled: true,
         detailedMetrics: false
       },
       tags: {}
-      // TODO: Add component-specific hardcoded fallbacks
     };
   }
   
@@ -110,31 +222,51 @@ export class EcsClusterComponentConfigBuilder extends ConfigBuilder<EcsClusterCo
   protected getComplianceFrameworkDefaults(): Partial<EcsClusterConfig> {
     const framework = this.context.complianceFramework;
     
-    const baseCompliance: Partial<EcsClusterConfig> = {
-      monitoring: {
-        enabled: true,
-        detailedMetrics: true
-      }
-    };
-    
-    if (framework === 'fedramp-moderate' || framework === 'fedramp-high') {
-      return {
-        ...baseCompliance,
-        monitoring: {
-          ...baseCompliance.monitoring,
-          detailedMetrics: true // Mandatory for FedRAMP
-        }
-        // TODO: Add FedRAMP-specific compliance defaults
-      };
+    switch (framework) {
+      case 'fedramp-high':
+        return {
+          containerInsights: true, // Mandatory for high compliance
+          monitoring: {
+            enabled: true,
+            detailedMetrics: true
+          },
+          capacity: {
+            enableMonitoring: true, // Enhanced monitoring required
+            instanceType: 'm5.large', // Larger instances for compliance workloads
+            minSize: 2, // High availability
+            maxSize: 10 // Reasonable scale for compliance
+          }
+        };
+        
+      case 'fedramp-moderate':
+        return {
+          containerInsights: true, // Required for compliance
+          monitoring: {
+            enabled: true,
+            detailedMetrics: true
+          },
+          capacity: {
+            enableMonitoring: true, // Enhanced monitoring
+            instanceType: 't3.medium', // Cost-balanced instances
+            minSize: 1,
+            maxSize: 5
+          }
+        };
+        
+      default: // commercial
+        return {
+          containerInsights: true, // Good practice for commercial
+          monitoring: {
+            enabled: true,
+            detailedMetrics: false
+          },
+          capacity: {
+            enableMonitoring: false, // Cost optimization
+            instanceType: 't3.small', // Cost-optimized instances
+            minSize: 1,
+            maxSize: 3
+          }
+        };
     }
-    
-    return baseCompliance;
-  }
-  
-  /**
-   * Get the JSON Schema for validation
-   */
-  public getSchema(): any {
-    return ECS_CLUSTER_CONFIG_SCHEMA;
   }
 }

@@ -1,0 +1,273 @@
+{
+  "componentDefinition": {
+    "systemName": "Lambda API Component",
+    "version": "1.0.0",
+    "description": "AWS Lambda function with API Gateway integration for synchronous API workloads",
+    "lastUpdated": "2024-01-15T00:00:00Z",
+    "componentType": "compute",
+    "awsService": "LAMBDA",
+    "controls": [
+      {
+        "controlId": "AC-2",
+        "title": "Account Management",
+        "status": "planned",
+        "implementationStatement": "TODO: Describe how the component implements account management controls through IAM roles and policies",
+        "evidence": [
+          "IAM role creation with least privilege principles",
+          "Component-specific service labels and tagging"
+        ],
+        "fedrampModerate": true,
+        "fedrampHigh": true
+      },
+      {
+        "controlId": "AC-2(4)",
+        "title": "Automated Account Management",
+        "status": "planned",
+        "implementationStatement": "TODO: Describe automated account management features for FedRAMP High",
+        "evidence": [
+          "Automated IAM role creation and management",
+          "Dynamic policy attachment based on compliance framework"
+        ],
+        "fedrampModerate": false,
+        "fedrampHigh": true
+      },
+      {
+        "controlId": "AC-3",
+        "title": "Access Enforcement",
+        "status": "planned",
+        "implementationStatement": "TODO: Describe how access enforcement is implemented through IAM policies and API Gateway configuration",
+        "evidence": [
+          "Lambda execution role with minimal required permissions",
+          "API Gateway resource policies and access controls"
+        ],
+        "fedrampModerate": true,
+        "fedrampHigh": true
+      },
+      {
+        "controlId": "AC-6",
+        "title": "Least Privilege",
+        "status": "planned",
+        "implementationStatement": "TODO: Describe least privilege implementation in IAM policies and resource access",
+        "evidence": [
+          "Minimal IAM permissions for Lambda execution",
+          "No wildcard resource permissions unless necessary",
+          "Principle of least privilege in all access controls"
+        ],
+        "fedrampModerate": true,
+        "fedrampHigh": true
+      },
+      {
+        "controlId": "AU-2",
+        "title": "Audit Events",
+        "status": "planned",
+        "implementationStatement": "TODO: Describe audit event generation and logging for Lambda functions and API Gateway",
+        "evidence": [
+          "CloudWatch Logs integration for Lambda functions",
+          "API Gateway access logging configuration",
+          "CloudTrail integration for API calls"
+        ],
+        "fedrampModerate": true,
+        "fedrampHigh": true
+      },
+      {
+        "controlId": "AU-2(3)",
+        "title": "Centralized Management and Analysis",
+        "status": "planned",
+        "implementationStatement": "TODO: Describe centralized audit management for FedRAMP High",
+        "evidence": [
+          "Centralized CloudWatch Logs collection",
+          "Structured logging with consistent format",
+          "Centralized monitoring and alerting"
+        ],
+        "fedrampModerate": false,
+        "fedrampHigh": true
+      },
+      {
+        "controlId": "AU-3",
+        "title": "Content of Audit Records",
+        "status": "planned",
+        "implementationStatement": "TODO: Describe audit record content and structure for compliance",
+        "evidence": [
+          "Structured JSON logging format",
+          "Comprehensive audit trail for all operations",
+          "Timestamp and source identification in logs"
+        ],
+        "fedrampModerate": true,
+        "fedrampHigh": true
+      },
+      {
+        "controlId": "AU-6",
+        "title": "Audit Review, Analysis, and Reporting",
+        "status": "planned",
+        "implementationStatement": "TODO: Describe audit review and analysis capabilities",
+        "evidence": [
+          "CloudWatch dashboards for audit analysis",
+          "Automated compliance reporting",
+          "Audit log retention policies"
+        ],
+        "fedrampModerate": true,
+        "fedrampHigh": true
+      },
+      {
+        "controlId": "SC-7",
+        "title": "Boundary Protection",
+        "status": "planned",
+        "implementationStatement": "TODO: Describe boundary protection implementation through VPC configuration and security groups",
+        "evidence": [
+          "VPC deployment for FedRAMP environments",
+          "Security group configuration with least privilege",
+          "Network isolation and segmentation"
+        ],
+        "fedrampModerate": true,
+        "fedrampHigh": true
+      },
+      {
+        "controlId": "SC-7(3)",
+        "title": "Access Points",
+        "status": "planned",
+        "implementationStatement": "TODO: Describe access point management for FedRAMP High",
+        "evidence": [
+          "Controlled API Gateway endpoints",
+          "VPC endpoint configuration",
+          "Restricted internet access for FedRAMP High"
+        ],
+        "fedrampModerate": false,
+        "fedrampHigh": true
+      },
+      {
+        "controlId": "SC-13",
+        "title": "Cryptographic Protection",
+        "status": "planned",
+        "implementationStatement": "TODO: Describe cryptographic protection implementation for data at rest and in transit",
+        "evidence": [
+          "KMS encryption for environment variables",
+          "TLS encryption for API Gateway communications",
+          "Customer-managed KMS keys for FedRAMP High"
+        ],
+        "fedrampModerate": true,
+        "fedrampHigh": true
+      },
+      {
+        "controlId": "SC-13(1)",
+        "title": "FIPS-Validated Cryptography",
+        "status": "planned",
+        "implementationStatement": "TODO: Describe FIPS-validated cryptographic implementation for FedRAMP High",
+        "evidence": [
+          "FIPS-validated KMS encryption",
+          "FIPS-compliant TLS configurations",
+          "Cryptographic module validation"
+        ],
+        "fedrampModerate": false,
+        "fedrampHigh": true
+      }
+    ],
+    "parameters": [
+      {
+        "parameterId": "lambda-handler",
+        "description": "Lambda function handler",
+        "type": "string",
+        "required": true,
+        "constraints": {
+          "pattern": "^[a-zA-Z0-9_.-]+\\.[a-zA-Z0-9_-]+$"
+        }
+      },
+      {
+        "parameterId": "compliance-framework",
+        "description": "Compliance framework (commercial, fedramp-moderate, fedramp-high)",
+        "type": "string",
+        "required": true,
+        "constraints": {
+          "enum": ["commercial", "fedramp-moderate", "fedramp-high"]
+        }
+      },
+      {
+        "parameterId": "data-classification",
+        "description": "Data classification level",
+        "type": "string",
+        "required": true,
+        "constraints": {
+          "enum": ["Public", "PII", "CUI"]
+        }
+      },
+      {
+        "parameterId": "vpc-id",
+        "description": "VPC ID for FedRAMP deployments",
+        "type": "string",
+        "required": false,
+        "constraints": {
+          "pattern": "^vpc-[a-f0-9]{8,17}$"
+        }
+      },
+      {
+        "parameterId": "kms-key-arn",
+        "description": "KMS key ARN for encryption (FedRAMP High)",
+        "type": "string",
+        "required": false,
+        "constraints": {
+          "pattern": "^arn:aws:kms:[a-z0-9-]+:[0-9]{12}:key/[a-f0-9-]{36}$"
+        }
+      }
+    ],
+    "responsibleRoles": [
+      {
+        "roleId": "component-owner",
+        "title": "Component Owner",
+        "description": "Responsible for component design and implementation",
+        "assignedTo": "platform-team"
+      },
+      {
+        "roleId": "security-officer",
+        "title": "Security Officer",
+        "description": "Responsible for security controls and compliance validation",
+        "assignedTo": "security-team"
+      },
+      {
+        "roleId": "compliance-officer",
+        "title": "Compliance Officer",
+        "description": "Responsible for compliance framework adherence",
+        "assignedTo": "compliance-team"
+      },
+      {
+        "roleId": "system-administrator",
+        "title": "System Administrator",
+        "description": "Responsible for operational deployment and maintenance",
+        "assignedTo": "operations-team"
+      }
+    ],
+    "implementationStatus": {
+      "overall": "planned",
+      "commercial": "implemented",
+      "fedrampModerate": "planned",
+      "fedrampHigh": "planned"
+    },
+    "complianceNotes": [
+      "This component supports multiple compliance frameworks with framework-specific configurations",
+      "FedRAMP Moderate and High implementations require additional security controls",
+      "All controls are implemented through AWS native services and platform standards",
+      "Compliance validation is performed through automated testing and policy enforcement",
+      "Regular compliance reviews and updates are required to maintain certification"
+    ],
+    "references": [
+      {
+        "type": "documentation",
+        "title": "Platform Component Standards",
+        "url": "https://platform.company.com/docs/standards/components"
+      },
+      {
+        "type": "policy",
+        "title": "AWS Security Best Practices",
+        "url": "https://docs.aws.amazon.com/security/"
+      },
+      {
+        "type": "standard",
+        "title": "FedRAMP Security Controls",
+        "url": "https://www.fedramp.gov/security-controls/"
+      },
+      {
+        "type": "test",
+        "title": "Component Test Suite",
+        "url": "https://github.com/company/platform/tree/main/packages/components/lambda-api/tests"
+      }
+    ]
+  }
+}

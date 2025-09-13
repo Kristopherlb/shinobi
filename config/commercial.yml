@@ -250,15 +250,193 @@ defaults:
       Component: "route53-record"
       ManagedBy: "platform"
 
-  # IAM Role Configuration Defaults
-  iam-role:
-    role:
-      maxSessionDuration: 3600
-      path: "/"
+  # ECR Repository Configuration Defaults
+  ecr-repository:
+    imageScanningConfiguration:
+      scanOnPush: false
+    imageTagMutability: "MUTABLE"
+    encryption:
+      encryptionType: "AES256"
+    lifecyclePolicy:
+      maxImageCount: 10
+      maxImageAge: 30
+      untaggedImageRetentionDays: 1
+    monitoring:
+      enabled: true
+      detailedMetrics: false
+      logRetentionDays: 90
     compliance:
-      permissionsBoundary: false
-      leastPrivilege: true
-      requireMfa: false
+      retentionPolicy: "destroy"
+      auditLogging: false
     tags:
-      Component: "iam-role"
+      Component: "ecr-repository"
+      ManagedBy: "platform"
+
+  # Lambda API Configuration Defaults
+  lambda-api:
+    runtime: "nodejs20.x"
+    memory: 512
+    timeout: 30
+    codePath: "./src"
+    environmentVariables: {}
+    api:
+      cors: false
+      apiKeyRequired: false
+    security:
+      tools:
+        falco: false
+    monitoring:
+      enabled: true
+      detailedMetrics: false
+      alarms:
+        errorRateThreshold: 5
+        durationThreshold: 80
+        throttleThreshold: 1
+    compliance:
+      retentionPolicy: "destroy"
+      auditLogging: false
+    tags:
+      Component: "lambda-api"
+      ManagedBy: "platform"
+
+# IAM Role Configuration Defaults
+iam-role:
+  role:
+    maxSessionDuration: 3600
+    path: "/"
+  compliance:
+    permissionsBoundary: false
+    leastPrivilege: true
+    requireMfa: false
+  tags:
+    Component: "iam-role"
+    ManagedBy: "platform"
+
+# MCP Server Configuration Defaults
+mcp-server:
+  container:
+    imageTag: "latest"
+    cpu: 256
+    memory: 512
+    taskCount: 1
+    containerPort: 3000
+  loadBalancer:
+    enabled: true
+    certificateArn: ""
+    domainName: ""
+  authentication:
+    jwtSecret: ""
+    tokenExpiration: "1h"
+  dataSources:
+    git:
+      repositoryUrls: []
+      accessTokenArn: ""
+    aws:
+      crossAccountRoles: []
+      regions: ["us-east-1"]
+    templates:
+      repositoryUrl: ""
+      branch: "main"
+  vpc:
+    vpcId: ""
+    subnetIds: []
+    securityGroupIds: []
+  logging:
+    retentionDays: 30
+  monitoring:
+    enabled: true
+    detailedMetrics: false
+  tags:
+    Component: "mcp-server"
+    ManagedBy: "platform"
+
+# Shinobi Platform Intelligence Brain Configuration Defaults
+shinobi:
+  compute:
+    mode: "ecs"
+    cpu: 512
+    memory: 1024
+    taskCount: 1
+    containerPort: 3000
+  dataStore:
+    type: "dynamodb"
+    dynamodb:
+      billingMode: "PAY_PER_REQUEST"
+  api:
+    exposure: "internal"
+    loadBalancer:
+      enabled: true
+    version: "1.0"
+    rateLimit:
+      requestsPerMinute: 1000
+      burstCapacity: 2000
+  featureFlags:
+    enabled: true
+    provider: "aws-appconfig"
+    defaults:
+      "shinobi.advanced-analytics": false
+      "shinobi.ai-insights": false
+      "shinobi.auto-remediation": false
+      "shinobi.predictive-scaling": false
+      "shinobi.cost-optimization": true
+      "shinobi.security-scanning": true
+      "shinobi.compliance-monitoring": true
+      "shinobi.performance-profiling": true
+      "shinobi.dependency-analysis": true
+      "shinobi.change-impact": true
+  dataSources:
+    components: true
+    services: true
+    dependencies: true
+    compliance: true
+    cost: false
+    security: false
+    performance: false
+  observability:
+    provider: "cloudwatch"
+    dashboards: ["reliability", "performance"]
+    alerts:
+      enabled: true
+      thresholds:
+        cpuUtilization: 80
+        memoryUtilization: 80
+        responseTime: 2
+  compliance:
+    securityLevel: "standard"
+    auditLogging: false
+  localDev:
+    enabled: false
+    seedData:
+      sampleComponents: true
+      sampleServices: true
+      sampleMetrics: true
+    mockServices: true
+  logging:
+    retentionDays: 30
+    logLevel: "info"
+    structuredLogging: true
+  tags:
+    Component: "shinobi"
+    ManagedBy: "platform"
+
+  # SageMaker Notebook Instance Configuration Defaults
+  sagemaker-notebook-instance:
+    instanceType: "ml.t3.medium"
+    rootAccess: "Enabled"
+    directInternetAccess: "Enabled"
+    volumeSizeInGB: 20
+    platformIdentifier: "notebook-al2-v2"
+    instanceMetadataServiceConfiguration:
+      minimumInstanceMetadataServiceVersion: "2"
+    monitoring:
+      enabled: true
+      detailedMetrics: false
+    security:
+      kmsEncryption: false
+      vpcOnly: false
+    compliance:
+      auditLogging: false
+      retentionDays: 90
+    tags:
+      Component: "sagemaker-notebook-instance"
       ManagedBy: "platform"

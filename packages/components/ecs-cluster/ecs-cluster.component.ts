@@ -14,218 +14,8 @@ import * as cdk from 'aws-cdk-lib';
 import { Construct } from 'constructs';
 import { BaseComponent } from '../../../src/platform/contracts/component';
 import { ComponentSpec, ComponentContext, ComponentCapabilities } from '../../../src/platform/contracts/component-interfaces';
-import { ConfigBuilder, ConfigBuilderContext } from '../../../src/platform/contracts/config-builder';
+import { EcsClusterConfig, EcsClusterComponentConfigBuilder } from './ecs-cluster.builder';
 
-/**
- * Configuration interface for ECS Cluster component
- */
-export interface EcsClusterConfig {
-  /** Service Connect configuration for microservice discovery */
-  serviceConnect: {
-    /** Cloud Map namespace for service discovery (e.g., "internal", "my-app.internal") */
-    namespace: string;
-  };
-  
-  /** Optional EC2 capacity configuration. If omitted, cluster is Fargate-only */
-  capacity?: {
-    /** EC2 instance type for the cluster */
-    instanceType: string;
-    /** Minimum number of instances in the Auto Scaling Group */
-    minSize: number;
-    /** Maximum number of instances in the Auto Scaling Group */
-    maxSize: number;
-    /** Desired number of instances (optional, defaults to minSize) */
-      desiredSize?: number;
-    /** Key pair name for SSH access (optional) */
-    keyName?: string;
-    /** Enable detailed CloudWatch monitoring (optional, defaults to false) */
-    enableMonitoring?: boolean;
-  };
-  
-  /** Container Insights configuration (optional, defaults based on compliance) */
-  containerInsights?: boolean;
-  
-  /** Cluster name override (optional, auto-generated from service and component name) */
-  clusterName?: string;
-  
-  /** Tags to apply to cluster resources */
-  tags?: Record<string, string>;
-}
-
-/**
- * Configuration schema for ECS Cluster component
- */
-export const ECS_CLUSTER_CONFIG_SCHEMA = {
-  type: 'object',
-  title: 'ECS Cluster Configuration',
-  description: 'Configuration for creating an ECS Cluster with Service Connect',
-  required: ['serviceConnect'],
-  properties: {
-    serviceConnect: {
-      type: 'object',
-      title: 'Service Connect Configuration', 
-      description: 'Configuration for ECS Service Connect and service discovery',
-      required: ['namespace'],
-      properties: {
-        namespace: {
-          type: 'string',
-          description: 'Cloud Map namespace for service discovery',
-          pattern: '^[a-zA-Z][a-zA-Z0-9.-]*$',
-          minLength: 1,
-          maxLength: 64,
-          examples: ['internal', 'my-app.internal', 'services']
-        }
-      },
-      additionalProperties: false
-    },
-    capacity: {
-        type: 'object',
-      title: 'EC2 Capacity Configuration',
-      description: 'Optional EC2 capacity for the cluster. If omitted, cluster is Fargate-only',
-      required: ['instanceType', 'minSize', 'maxSize'],
-            properties: {
-              instanceType: {
-                type: 'string',
-          description: 'EC2 instance type for cluster instances',
-          pattern: '^[a-z][0-9]*[a-z]*\\.[a-z0-9]+$',
-          examples: ['t3.medium', 'm5.large', 'c5.xlarge']
-              },
-              minSize: {
-                type: 'number',
-          description: 'Minimum number of instances in Auto Scaling Group',
-                minimum: 0,
-          maximum: 1000
-              },
-              maxSize: {
-                type: 'number',
-          description: 'Maximum number of instances in Auto Scaling Group', 
-                minimum: 1,
-          maximum: 1000
-              },
-              desiredSize: {
-                type: 'number',
-          description: 'Desired number of instances (defaults to minSize)',
-                minimum: 0,
-          maximum: 1000
-        },
-        keyName: {
-          type: 'string',
-          description: 'EC2 key pair name for SSH access',
-          pattern: '^[a-zA-Z][a-zA-Z0-9_-]*$'
-        },
-        enableMonitoring: {
-                    type: 'boolean',
-          description: 'Enable detailed CloudWatch monitoring for instances',
-                    default: false
-              }
-            },
-            additionalProperties: false
-    },
-    containerInsights: {
-      type: 'boolean',
-      description: 'Enable Container Insights for advanced monitoring',
-      default: true
-    },
-    clusterName: {
-          type: 'string',
-      description: 'Override for cluster name (auto-generated if not provided)',
-      pattern: '^[a-zA-Z][a-zA-Z0-9-]*$',
-      minLength: 1,
-      maxLength: 255
-    },
-    tags: {
-      type: 'object',
-      description: 'Additional tags to apply to cluster resources',
-      additionalProperties: {
-        type: 'string'
-      }
-    }
-  },
-  additionalProperties: false,
-
-  // Default values
-  defaults: {
-    containerInsights: true,
-    capacity: {
-      enableMonitoring: false
-    }
-  }
-};
-
-/**
- * ECS Cluster Configuration Builder
- * Implements the centralized 5-layer precedence engine for ECS cluster configuration
- */
-export class EcsClusterConfigBuilder extends ConfigBuilder<EcsClusterConfig> {
-  
-  constructor(context: ComponentContext, spec: ComponentSpec) {
-    const builderContext: ConfigBuilderContext = { context, spec };
-    super(builderContext, ECS_CLUSTER_CONFIG_SCHEMA);
-  }
-
-  /**
-   * Builds the final configuration using the centralized 5-layer precedence engine
-   */
-  public async build(): Promise<EcsClusterConfig> {
-    return this.buildSync();
-  }
-
-  /**
-   * Provide ECS cluster-specific hardcoded fallbacks (Layer 1: Lowest Priority)
-   * These serve as ultra-safe defaults when no other configuration is available.
-   */
-  protected getHardcodedFallbacks(): Record<string, any> {
-    return {
-      serviceConnect: {
-        namespace: 'internal' // Safe default namespace
-      },
-      containerInsights: true, // Enable observability by default
-      // No capacity defaults - cluster is Fargate-only unless explicitly configured
-    };
-  }
-
-  /**
-   * Get compliance framework specific defaults
-   */
-  protected getComplianceFrameworkDefaults(): Record<string, any> {
-    const framework = this.builderContext.context.complianceFramework;
-    
-    switch (framework) {
-      case 'fedramp-high':
-        return {
-          containerInsights: true, // Mandatory for high compliance
-          capacity: {
-            enableMonitoring: true, // Enhanced monitoring required
-            instanceType: 'm5.large', // Larger instances for compliance workloads
-            minSize: 2, // High availability
-            maxSize: 10 // Reasonable scale for compliance
-          }
-        };
-        
-      case 'fedramp-moderate':
-        return {
-          containerInsights: true, // Required for compliance
-          capacity: {
-            enableMonitoring: true, // Enhanced monitoring
-            instanceType: 't3.medium', // Cost-balanced instances
-            minSize: 1,
-            maxSize: 5
-          }
-        };
-        
-      default: // commercial
-        return {
-          containerInsights: true, // Good practice for commercial
-          capacity: {
-            enableMonitoring: false, // Cost optimization
-            instanceType: 't3.small', // Cost-optimized instances
-            minSize: 1,
-            maxSize: 3
-          }
-        };
-    }
-  }
-}
 
 /**
  * ECS Cluster Component implementing Component API Contract v1.0 and
@@ -235,11 +25,14 @@ export class EcsClusterComponent extends BaseComponent {
   private cluster?: ecs.Cluster;
   private namespace?: servicediscovery.PrivateDnsNamespace;
   private autoScalingGroup?: autoscaling.AutoScalingGroup;
-  private config?: EcsClusterConfig;
-  private configBuilder?: EcsClusterConfigBuilder;
+  private readonly config: EcsClusterConfig;
 
   constructor(scope: Construct, id: string, context: ComponentContext, spec: ComponentSpec) {
     super(scope, id, context, spec);
+    
+    // Build configuration only - no synthesis in constructor
+    const configBuilder = new EcsClusterComponentConfigBuilder({ context, spec });
+    this.config = configBuilder.buildSync();
   }
 
   /**
@@ -248,11 +41,9 @@ export class EcsClusterComponent extends BaseComponent {
   public synth(): void {
     this.logComponentEvent('synthesis_start', 'Starting ECS Cluster synthesis');
     
+    const startTime = Date.now();
+    
     try {
-      // Build configuration using ConfigBuilder
-      this.configBuilder = new EcsClusterConfigBuilder(this.context, this.spec);
-      this.config = this.configBuilder.buildSync();
-      
       // Create ECS Cluster
       this.createEcsCluster();
       
@@ -278,9 +69,22 @@ export class EcsClusterComponent extends BaseComponent {
       // Register ecs:cluster capability
       this.registerCapability('ecs:cluster', this.buildEcsClusterCapability());
       
-      this.logComponentEvent('synthesis_complete', 'ECS Cluster synthesis completed successfully');
+      const duration = Date.now() - startTime;
+      this.logPerformanceMetric('component_synthesis', duration, {
+        resourcesCreated: Object.keys(this.capabilities).length
+      });
+      
+      this.logComponentEvent('synthesis_complete', 'ECS Cluster synthesis completed successfully', {
+        clusterCreated: 1,
+        namespaceCreated: 1,
+        capacityCreated: !!this.autoScalingGroup
+      });
+      
     } catch (error) {
-      this.logError(error as Error, 'ECS Cluster synthesis');
+      this.logError(error as Error, 'component synthesis', {
+        componentType: 'ecs-cluster',
+        stage: 'synthesis'
+      });
       throw error;
     }
   }
@@ -304,12 +108,12 @@ export class EcsClusterComponent extends BaseComponent {
    * Create the ECS Cluster
    */
   private createEcsCluster(): void {
-    const clusterName = this.config!.clusterName || 
+    const clusterName = this.config.clusterName || 
       `${this.context.serviceName}-${this.spec.name}`;
 
     this.cluster = new ecs.Cluster(this, 'Cluster', {
       clusterName,
-      containerInsights: this.config!.containerInsights,
+      containerInsights: this.config.containerInsights,
       enableFargateCapacityProviders: true, // Always enable Fargate
       // Service Connect namespace will be configured after namespace creation
     });
@@ -330,31 +134,31 @@ export class EcsClusterComponent extends BaseComponent {
 
     // Create private DNS namespace for Service Connect
     this.namespace = new servicediscovery.PrivateDnsNamespace(this, 'ServiceConnectNamespace', {
-      name: this.config!.serviceConnect.namespace,
+      name: this.config.serviceConnect.namespace,
       vpc: vpc,
       description: `Service Connect namespace for ${this.context.serviceName}`,
     });
 
     // Configure the cluster's default Cloud Map namespace
     this.cluster.addDefaultCloudMapNamespace({
-      name: this.config!.serviceConnect.namespace,
+      name: this.config.serviceConnect.namespace,
       type: servicediscovery.NamespaceType.DNS_PRIVATE,
       vpc: vpc
     });
 
-    this.logResourceCreation('service-connect-namespace', this.config!.serviceConnect.namespace);
+    this.logResourceCreation('service-connect-namespace', this.config.serviceConnect.namespace);
   }
 
   /**
    * Create optional EC2 capacity for the cluster
    */
   private createEc2CapacityIfNeeded(): void {
-    if (!this.config!.capacity || !this.cluster) {
+    if (!this.config.capacity || !this.cluster) {
       this.logComponentEvent('ec2_capacity_skipped', 'No EC2 capacity configured - cluster is Fargate-only');
       return;
     }
 
-    const capacityConfig = this.config!.capacity;
+    const capacityConfig = this.config.capacity;
     const vpc = this.getVpcFromContext();
 
     // Create Auto Scaling Group for ECS instances
@@ -432,7 +236,7 @@ export class EcsClusterComponent extends BaseComponent {
     if (this.cluster) {
       this.applyStandardTags(this.cluster, {
         'component-type': 'ecs-cluster',
-        'service-connect-namespace': this.config!.serviceConnect.namespace
+        'service-connect-namespace': this.config.serviceConnect.namespace
       });
     }
 
@@ -445,13 +249,13 @@ export class EcsClusterComponent extends BaseComponent {
     if (this.autoScalingGroup) {
       this.applyStandardTags(this.autoScalingGroup, {
         'component-type': 'ecs-asg',
-        'instance-type': this.config!.capacity?.instanceType || 'unknown'
+        'instance-type': this.config.capacity?.instanceType || 'unknown'
       });
     }
 
     // Apply user-defined tags
-    if (this.config!.tags) {
-      Object.entries(this.config!.tags).forEach(([key, value]) => {
+    if (this.config.tags) {
+      Object.entries(this.config.tags).forEach(([key, value]) => {
     if (this.cluster) {
           cdk.Tags.of(this.cluster).add(key, value);
         }
@@ -469,11 +273,11 @@ export class EcsClusterComponent extends BaseComponent {
       clusterName: this.cluster!.clusterName,
       clusterArn: this.cluster!.clusterArn,
       vpcId: vpc.vpcId,
-      serviceConnectNamespace: this.config!.serviceConnect.namespace,
+      serviceConnectNamespace: this.config.serviceConnect.namespace,
       namespaceArn: this.namespace!.namespaceArn,
       namespaceId: this.namespace!.namespaceId,
-      hasEc2Capacity: !!this.config!.capacity,
-      capacityProviders: this.config!.capacity ? ['EC2', 'FARGATE'] : ['FARGATE']
+      hasEc2Capacity: !!this.config.capacity,
+      capacityProviders: this.config.capacity ? ['EC2', 'FARGATE'] : ['FARGATE']
     };
   }
 

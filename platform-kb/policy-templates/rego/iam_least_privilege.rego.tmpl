@@ -1,0 +1,7 @@
+package platform.${component}.compliance
+deny[msg] {
+  input.resource.type == "AWS::IAM::Policy"
+  some s
+  input.resource.properties.PolicyDocument.Statement[s].Action == "*"
+  msg := sprintf("IAM policy %s uses wildcard Action '*'", [input.resource.logicalId])
+}

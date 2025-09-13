@@ -1,0 +1,16 @@
+$schema: platform-kb/service-otel-map@v1
+mappings:
+  lambda-api: ["lambda"]
+  lambda-worker: ["lambda"]
+  apigw: ["apigw"]
+  s3-bucket: ["s3"]
+  rds-postgres: ["rds"]
+  rds-mysql: ["rds"]
+  ecs-fargate-service: ["ecs"]
+  ec2: ["ec2"]
+  vpc: ["vpc"]
+  dynamodb-table: ["dynamodb"]
+  sns-topic: ["sns"]
+  sqs-queue: ["sqs"]
+  kms-key: ["kms"]
+  cloudfront-distribution: ["cloudfront"]

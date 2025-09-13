@@ -10,8 +10,8 @@ import {
   ComponentSpec, 
   ComponentContext, 
   IComponentCreator 
-} from '../../platform/contracts/component-interfaces';
-import { EcrRepositoryComponentComponent } from './ecr-repository.component';
+} from '../../../src/platform/contracts/component-interfaces';
+import { EcrRepositoryComponent } from './ecr-repository.component';
 import { EcrRepositoryConfig, ECR_REPOSITORY_CONFIG_SCHEMA } from './ecr-repository.builder';
 
 /**
@@ -72,8 +72,8 @@ export class EcrRepositoryComponentCreator implements IComponentCreator {
     scope: Construct, 
     spec: ComponentSpec, 
     context: ComponentContext
-  ): EcrRepositoryComponentComponent {
-    return new EcrRepositoryComponentComponent(scope, spec, context);
+  ): EcrRepositoryComponent {
+    return new EcrRepositoryComponent(scope, spec.name, context, spec);
   }
   
   /**

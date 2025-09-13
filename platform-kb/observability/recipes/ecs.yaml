@@ -1,0 +1,26 @@
+$schema: ../schema/recipe.schema.json
+service_type: "ecs"
+telemetry:
+  logs:
+    - name: "Container stdout/stderr to CloudWatch"
+      required: true
+      retention_days:
+        commercial: 14
+        fedramp-low: 30
+        fedramp-moderate: 90
+        fedramp-high: 365
+  metrics:
+    - name: "Service Metrics"
+      items: ["CPUUtilization","MemoryUtilization","RunningTaskCount"]
+  tracing:
+    applicable: true
+    adot_sidecar: true
+  alarms:
+    - name: "HighErrorRateProxy"
+      metric: "HTTP5xxCount"
+      threshold: 1
+      period: 300
+      eval_periods: 3
+dashboards:
+  - name: "ECS Operational"
+    widgets: ["CPU","Memory","Tasks"]

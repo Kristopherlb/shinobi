@@ -1,0 +1,18 @@
+$schema: ../schema/recipe.schema.json
+service_type: "sqs"
+telemetry:
+  logs: []
+  metrics:
+    - name: "Queue Metrics"
+      items: ["ApproximateNumberOfMessagesVisible","ApproximateAgeOfOldestMessage","NumberOfMessagesDeleted","NumberOfMessagesReceived"]
+  tracing:
+    applicable: false
+  alarms:
+    - name: "BacklogGrowing"
+      metric: "ApproximateAgeOfOldestMessage"
+      threshold: 300
+      period: 300
+      eval_periods: 3
+dashboards:
+  - name: "SQS Operational"
+    widgets: ["Visible","OldestAge","Received","Deleted"]

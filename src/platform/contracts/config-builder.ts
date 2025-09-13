@@ -125,7 +125,7 @@ export abstract class ConfigBuilder<T = Record<string, any>> {
    * Get the file path for platform configuration based on compliance framework
    */
   private _getPlatformConfigPath(framework: string): string {
-    const configDir = path.resolve(__dirname, '../../../config');
+    const configDir = path.resolve(process.cwd(), 'config');
     
     switch (framework) {
       case 'commercial':

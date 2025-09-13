@@ -1,0 +1,6 @@
+package platform.${component}.compliance
+deny[msg] {
+  input.resource.type == "AWS::S3::Bucket"
+  not input.resource.properties.BucketEncryption
+  msg := sprintf("S3 default encryption disabled on %s", [input.resource.logicalId])
+}

@@ -1,0 +1,25 @@
+$schema: ../schema/recipe.schema.json
+service_type: "cloudfront"
+telemetry:
+  logs:
+    - name: "CloudFront standard logs"
+      required: true
+      retention_days:
+        commercial: 30
+        fedramp-low: 60
+        fedramp-moderate: 90
+        fedramp-high: 365
+  metrics:
+    - name: "Distribution Metrics"
+      items: ["Requests","BytesDownloaded","4xxErrorRate","5xxErrorRate","TotalErrorRate"]
+  tracing:
+    applicable: false
+  alarms:
+    - name: "High5xxErrorRate"
+      metric: "5xxErrorRate"
+      threshold: 1
+      period: 300
+      eval_periods: 3
+dashboards:
+  - name: "CloudFront Operational"
+    widgets: ["Requests","Bytes","4xx","5xx"]

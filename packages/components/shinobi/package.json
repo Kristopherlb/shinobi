@@ -1,0 +1,74 @@
+{
+  "name": "@platform/shinobi",
+  "version": "1.0.0",
+  "description": "Shinobi Component - The Platform Intelligence Brain. A production-grade Ops MCP Server that becomes the brain for SRE/DevOps/DPE/Developers and leadership.",
+  "main": "src/index.ts",
+  "types": "src/index.ts",
+  "scripts": {
+    "build": "tsc",
+    "test": "jest",
+    "test:watch": "jest --watch",
+    "test:coverage": "jest --coverage",
+    "lint": "eslint src/**/*.ts",
+    "lint:fix": "eslint src/**/*.ts --fix",
+    "start:mcp": "node dist/server/index.js",
+    "dev:mcp": "ts-node src/server/index.ts",
+    "build:server": "tsc --project tsconfig.server.json"
+  },
+  "keywords": [
+    "shinobi",
+    "intelligence",
+    "mcp-server",
+    "platform-brain",
+    "ops",
+    "sre",
+    "devops",
+    "dpe",
+    "observability",
+    "compliance",
+    "security",
+    "qa",
+    "executive",
+    "aws",
+    "ecs",
+    "dynamodb",
+    "feature-flags",
+    "cdk",
+    "infrastructure",
+    "platform"
+  ],
+  "author": "Platform Team",
+  "license": "MIT",
+  "dependencies": {
+    "aws-cdk-lib": "^2.100.0",
+    "constructs": "^10.0.0",
+    "@modelcontextprotocol/sdk": "^0.4.0"
+  },
+  "devDependencies": {
+    "@types/jest": "^29.5.0",
+    "@types/node": "^20.0.0",
+    "jest": "^29.5.0",
+    "ts-jest": "^29.1.0",
+    "typescript": "^5.0.0",
+    "eslint": "^8.0.0",
+    "@typescript-eslint/eslint-plugin": "^6.0.0",
+    "@typescript-eslint/parser": "^6.0.0"
+  },
+  "peerDependencies": {
+    "@platform/contracts": "*",
+    "@platform/feature-flag": "*"
+  },
+  "files": [
+    "src/**/*",
+    "README.md",
+    "package.json"
+  ],
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/platform/shinobi.git"
+  },
+  "bugs": {
+    "url": "https://github.com/platform/shinobi/issues"
+  },
+  "homepage": "https://github.com/platform/shinobi#readme"
+}

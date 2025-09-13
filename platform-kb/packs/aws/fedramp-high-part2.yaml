@@ -1,0 +1,14 @@
+$schema: platform-kb/pack@v1
+pack:
+  id: aws.fedramp.high.part2
+  version: "2025-09-01"
+  description: "FedRAMP High Part 2 - starter subset"
+rules:
+  - id: CFG_LAMBDA_LOG_RETENTION
+    title: "Lambda log retention meets framework minimums"
+    severity: medium
+    nist_controls: ["AU-11"]
+    services: ["lambda-api","lambda-worker"]
+    check:
+      type: "internal-check"
+      name: "lambda-log-retention-days"

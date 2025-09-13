@@ -1,0 +1,315 @@
+{
+  "alarmConfiguration": {
+    "componentName": "lambda-api",
+    "version": "1.0.0",
+    "description": "CloudWatch alarms configuration for Lambda API component",
+    "lastUpdated": "2024-01-15T00:00:00Z",
+    "alarms": [
+      {
+        "alarmName": "LambdaHighErrorRate",
+        "description": "Lambda function error rate exceeds threshold",
+        "metricName": "Errors",
+        "namespace": "AWS/Lambda",
+        "dimensions": {
+          "FunctionName": "${function_name}"
+        },
+        "statistic": "Sum",
+        "period": 300,
+        "evaluationPeriods": 2,
+        "threshold": 5,
+        "comparisonOperator": "GreaterThanThreshold",
+        "treatMissingData": "notBreaching",
+        "severity": "high",
+        "complianceFrameworks": ["commercial", "fedramp-moderate", "fedramp-high"],
+        "actions": {
+          "alarmActions": ["arn:aws:sns:${region}:${account}:lambda-alerts"],
+          "okActions": ["arn:aws:sns:${region}:${account}:lambda-alerts"],
+          "insufficientDataActions": []
+        }
+      },
+      {
+        "alarmName": "LambdaHighDuration",
+        "description": "Lambda function duration exceeds 80% of timeout",
+        "metricName": "Duration",
+        "namespace": "AWS/Lambda",
+        "dimensions": {
+          "FunctionName": "${function_name}"
+        },
+        "statistic": "Average",
+        "period": 300,
+        "evaluationPeriods": 3,
+        "threshold": "${timeout_threshold_ms}",
+        "comparisonOperator": "GreaterThanThreshold",
+        "treatMissingData": "notBreaching",
+        "severity": "medium",
+        "complianceFrameworks": ["commercial", "fedramp-moderate", "fedramp-high"],
+        "actions": {
+          "alarmActions": ["arn:aws:sns:${region}:${account}:lambda-performance-alerts"],
+          "okActions": ["arn:aws:sns:${region}:${account}:lambda-performance-alerts"],
+          "insufficientDataActions": []
+        }
+      },
+      {
+        "alarmName": "LambdaThrottles",
+        "description": "Lambda function throttling detected",
+        "metricName": "Throttles",
+        "namespace": "AWS/Lambda",
+        "dimensions": {
+          "FunctionName": "${function_name}"
+        },
+        "statistic": "Sum",
+        "period": 300,
+        "evaluationPeriods": 1,
+        "threshold": 1,
+        "comparisonOperator": "GreaterThanOrEqualToThreshold",
+        "treatMissingData": "notBreaching",
+        "severity": "high",
+        "complianceFrameworks": ["commercial", "fedramp-moderate", "fedramp-high"],
+        "actions": {
+          "alarmActions": ["arn:aws:sns:${region}:${account}:lambda-capacity-alerts"],
+          "okActions": ["arn:aws:sns:${region}:${account}:lambda-capacity-alerts"],
+          "insufficientDataActions": []
+        }
+      },
+      {
+        "alarmName": "LambdaHighConcurrency",
+        "description": "Lambda function concurrent executions exceed threshold",
+        "metricName": "ConcurrentExecutions",
+        "namespace": "AWS/Lambda",
+        "dimensions": {
+          "FunctionName": "${function_name}"
+        },
+        "statistic": "Maximum",
+        "period": 300,
+        "evaluationPeriods": 2,
+        "threshold": 100,
+        "comparisonOperator": "GreaterThanThreshold",
+        "treatMissingData": "notBreaching",
+        "severity": "medium",
+        "complianceFrameworks": ["commercial", "fedramp-moderate", "fedramp-high"],
+        "actions": {
+          "alarmActions": ["arn:aws:sns:${region}:${account}:lambda-capacity-alerts"],
+          "okActions": ["arn:aws:sns:${region}:${account}:lambda-capacity-alerts"],
+          "insufficientDataActions": []
+        }
+      },
+      {
+        "alarmName": "APIGatewayHigh4xxErrors",
+        "description": "API Gateway 4xx client errors exceed threshold",
+        "metricName": "4XXError",
+        "namespace": "AWS/ApiGateway",
+        "dimensions": {
+          "ApiName": "${api_name}"
+        },
+        "statistic": "Sum",
+        "period": 300,
+        "evaluationPeriods": 2,
+        "threshold": 10,
+        "comparisonOperator": "GreaterThanThreshold",
+        "treatMissingData": "notBreaching",
+        "severity": "medium",
+        "complianceFrameworks": ["commercial", "fedramp-moderate", "fedramp-high"],
+        "actions": {
+          "alarmActions": ["arn:aws:sns:${region}:${account}:api-client-errors"],
+          "okActions": ["arn:aws:sns:${region}:${account}:api-client-errors"],
+          "insufficientDataActions": []
+        }
+      },
+      {
+        "alarmName": "APIGatewayHigh5xxErrors",
+        "description": "API Gateway 5xx server errors exceed threshold",
+        "metricName": "5XXError",
+        "namespace": "AWS/ApiGateway",
+        "dimensions": {
+          "ApiName": "${api_name}"
+        },
+        "statistic": "Sum",
+        "period": 300,
+        "evaluationPeriods": 1,
+        "threshold": 1,
+        "comparisonOperator": "GreaterThanOrEqualToThreshold",
+        "treatMissingData": "notBreaching",
+        "severity": "high",
+        "complianceFrameworks": ["commercial", "fedramp-moderate", "fedramp-high"],
+        "actions": {
+          "alarmActions": ["arn:aws:sns:${region}:${account}:api-server-errors"],
+          "okActions": ["arn:aws:sns:${region}:${account}:api-server-errors"],
+          "insufficientDataActions": []
+        }
+      },
+      {
+        "alarmName": "APIGatewayHighLatency",
+        "description": "API Gateway latency exceeds threshold",
+        "metricName": "Latency",
+        "namespace": "AWS/ApiGateway",
+        "dimensions": {
+          "ApiName": "${api_name}"
+        },
+        "statistic": "Average",
+        "period": 300,
+        "evaluationPeriods": 3,
+        "threshold": 3000,
+        "comparisonOperator": "GreaterThanThreshold",
+        "treatMissingData": "notBreaching",
+        "severity": "medium",
+        "complianceFrameworks": ["commercial", "fedramp-moderate", "fedramp-high"],
+        "actions": {
+          "alarmActions": ["arn:aws:sns:${region}:${account}:api-performance-alerts"],
+          "okActions": ["arn:aws:sns:${region}:${account}:api-performance-alerts"],
+          "insufficientDataActions": []
+        }
+      },
+      {
+        "alarmName": "LambdaMemoryUtilization",
+        "description": "Lambda function memory utilization exceeds 90%",
+        "metricName": "MemoryUtilization",
+        "namespace": "AWS/Lambda",
+        "dimensions": {
+          "FunctionName": "${function_name}"
+        },
+        "statistic": "Average",
+        "period": 300,
+        "evaluationPeriods": 2,
+        "threshold": 90,
+        "comparisonOperator": "GreaterThanThreshold",
+        "treatMissingData": "notBreaching",
+        "severity": "medium",
+        "complianceFrameworks": ["commercial", "fedramp-moderate", "fedramp-high"],
+        "actions": {
+          "alarmActions": ["arn:aws:sns:${region}:${account}:lambda-performance-alerts"],
+          "okActions": ["arn:aws:sns:${region}:${account}:lambda-performance-alerts"],
+          "insufficientDataActions": []
+        }
+      }
+    ],
+    "fedrampSpecificAlarms": [
+      {
+        "alarmName": "FedRAMPComplianceCheck",
+        "description": "FedRAMP compliance monitoring check",
+        "metricName": "ComplianceCheck",
+        "namespace": "Custom/FedRAMP",
+        "dimensions": {
+          "FunctionName": "${function_name}",
+          "ComplianceFramework": "${compliance_framework}"
+        },
+        "statistic": "Sum",
+        "period": 3600,
+        "evaluationPeriods": 1,
+        "threshold": 0,
+        "comparisonOperator": "LessThanThreshold",
+        "treatMissingData": "breaching",
+        "severity": "critical",
+        "complianceFrameworks": ["fedramp-moderate", "fedramp-high"],
+        "actions": {
+          "alarmActions": ["arn:aws:sns:${region}:${account}:fedramp-compliance-alerts"],
+          "okActions": ["arn:aws:sns:${region}:${account}:fedramp-compliance-alerts"],
+          "insufficientDataActions": ["arn:aws:sns:${region}:${account}:fedramp-compliance-alerts"]
+        }
+      },
+      {
+        "alarmName": "FedRAMPVPCConnectivity",
+        "description": "VPC connectivity check for FedRAMP deployments",
+        "metricName": "VPCConnectivity",
+        "namespace": "Custom/FedRAMP",
+        "dimensions": {
+          "FunctionName": "${function_name}",
+          "VPCId": "${vpc_id}"
+        },
+        "statistic": "Average",
+        "period": 300,
+        "evaluationPeriods": 2,
+        "threshold": 95,
+        "comparisonOperator": "LessThanThreshold",
+        "treatMissingData": "breaching",
+        "severity": "high",
+        "complianceFrameworks": ["fedramp-moderate", "fedramp-high"],
+        "actions": {
+          "alarmActions": ["arn:aws:sns:${region}:${account}:fedramp-network-alerts"],
+          "okActions": ["arn:aws:sns:${region}:${account}:fedramp-network-alerts"],
+          "insufficientDataActions": ["arn:aws:sns:${region}:${account}:fedramp-network-alerts"]
+        }
+      }
+    ],
+    "variables": [
+      {
+        "name": "function_name",
+        "description": "Lambda function name",
+        "type": "string",
+        "required": true
+      },
+      {
+        "name": "api_name",
+        "description": "API Gateway name",
+        "type": "string",
+        "required": true
+      },
+      {
+        "name": "timeout_threshold_ms",
+        "description": "Lambda function timeout in milliseconds",
+        "type": "number",
+        "defaultValue": 30000
+      },
+      {
+        "name": "compliance_framework",
+        "description": "Compliance framework (fedramp-moderate, fedramp-high)",
+        "type": "string",
+        "defaultValue": "commercial"
+      },
+      {
+        "name": "vpc_id",
+        "description": "VPC ID for FedRAMP deployments",
+        "type": "string",
+        "required": false
+      }
+    ],
+    "notificationChannels": [
+      {
+        "name": "lambda-alerts",
+        "type": "SNS",
+        "description": "Critical Lambda function alerts",
+        "topics": [
+          "arn:aws:sns:${region}:${account}:lambda-alerts"
+        ]
+      },
+      {
+        "name": "lambda-performance-alerts",
+        "type": "SNS",
+        "description": "Lambda performance and capacity alerts",
+        "topics": [
+          "arn:aws:sns:${region}:${account}:lambda-performance-alerts"
+        ]
+      },
+      {
+        "name": "api-client-errors",
+        "type": "SNS",
+        "description": "API Gateway client error alerts",
+        "topics": [
+          "arn:aws:sns:${region}:${account}:api-client-errors"
+        ]
+      },
+      {
+        "name": "api-server-errors",
+        "type": "SNS",
+        "description": "API Gateway server error alerts",
+        "topics": [
+          "arn:aws:sns:${region}:${account}:api-server-errors"
+        ]
+      },
+      {
+        "name": "fedramp-compliance-alerts",
+        "type": "SNS",
+        "description": "FedRAMP compliance alerts",
+        "topics": [
+          "arn:aws:sns:${region}:${account}:fedramp-compliance-alerts"
+        ]
+      }
+    ],
+    "complianceNotes": [
+      "All alarms support FedRAMP Moderate and High compliance requirements",
+      "FedRAMP-specific alarms are only created for FedRAMP deployments",
+      "Alarm thresholds can be adjusted based on compliance framework requirements",
+      "Notification channels must be pre-configured in the AWS account",
+      "Custom metrics for FedRAMP compliance checks must be implemented in the Lambda function"
+    ]
+  }
+}

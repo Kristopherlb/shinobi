@@ -1,0 +1,14 @@
+{
+  "version": "2025-09-01",
+  "packs": [
+    "packs/index.yaml"
+  ],
+  "nist_catalog": "controls/catalogs/nist-800-53r5.min.json",
+  "maps": {
+    "nist_to_config": "controls/maps/nist-to-config.yaml",
+    "config_to_service": "controls/maps/config-to-service.yaml",
+    "service_to_otel": "controls/maps/service-to-otel.yaml"
+  },
+  "observability_recipes_dir": "observability/recipes",
+  "rego_templates_dir": "policy-templates/rego"
+}

@@ -14,6 +14,7 @@ import * as ecr from 'aws-cdk-lib/aws-ecr';
 import * as logs from 'aws-cdk-lib/aws-logs';
 import * as secretsmanager from 'aws-cdk-lib/aws-secretsmanager';
 import * as cdk from 'aws-cdk-lib';
+import * as cloudwatch from 'aws-cdk-lib/aws-cloudwatch';
 import { Construct } from 'constructs';
 import {
   Component,
@@ -212,6 +213,9 @@ export class McpServerComponent extends Component {
       // Register capabilities
       this.registerCapability('api:rest', this.buildApiCapability());
       this.registerCapability('container:ecs', this.buildContainerCapability());
+      
+      // Configure observability
+      this._configureObservabilityForMcpServer();
       
       this.logComponentEvent('synthesis_complete', 'MCP Server synthesis completed successfully');
     } catch (error) {
@@ -516,6 +520,55 @@ export class McpServerComponent extends Component {
       imageTag: this.config!.imageTag!,
       containerPort: this.config!.containerPort!
     };
+  }
+
+  /**
+   * Configure observability for MCP Server
+   */
+  private _configureObservabilityForMcpServer(): void {
+    if (!this.config?.monitoring?.enabled) {
+      return;
+    }
+
+    // Create CloudWatch alarms for ECS service
+    if (this.service) {
+      // CPU utilization alarm
+      new cloudwatch.Alarm(this, 'CpuUtilizationAlarm', {
+        metric: this.service.metricCpuUtilization(),
+        threshold: 80,
+        evaluationPeriods: 2,
+        alarmDescription: 'MCP Server CPU utilization is high'
+      });
+
+      // Memory utilization alarm
+      new cloudwatch.Alarm(this, 'MemoryUtilizationAlarm', {
+        metric: this.service.metricMemoryUtilization(),
+        threshold: 80,
+        evaluationPeriods: 2,
+        alarmDescription: 'MCP Server memory utilization is high'
+      });
+
+      // Task count alarm
+      new cloudwatch.Alarm(this, 'TaskCountAlarm', {
+        metric: this.service.metricRunningTaskCount(),
+        threshold: 1,
+        evaluationPeriods: 1,
+        comparisonOperator: cloudwatch.ComparisonOperator.LESS_THAN_THRESHOLD,
+        alarmDescription: 'MCP Server has no running tasks'
+      });
+    }
+
+    // Create API response time alarm if load balancer is enabled
+    if (this.loadBalancer) {
+      new cloudwatch.Alarm(this, 'ResponseTimeAlarm', {
+        metric: this.loadBalancer.metricTargetResponseTime(),
+        threshold: 2, // 2 seconds
+        evaluationPeriods: 2,
+        alarmDescription: 'MCP Server API response time is high'
+      });
+    }
+
+    this.logComponentEvent('observability_configured', 'MCP Server observability configured successfully');
   }
 
   private applyComplianceDefaults(config: McpServerConfig): McpServerConfig {

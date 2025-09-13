@@ -1,0 +1,52 @@
+$schema: platform-kb/packs-index@v1
+packs:
+  - id: aws.fedramp.low
+    title: "Operational Best Practices for FedRAMP (Low)"
+    version: "2025-09-01"
+    scope: ["compliance"]
+    file: "aws/fedramp-low.yaml"
+  - id: aws.fedramp.moderate
+    title: "Operational Best Practices for FedRAMP (Moderate)"
+    version: "2025-09-01"
+    scope: ["compliance"]
+    file: "aws/fedramp-moderate.yaml"
+  - id: aws.fedramp.high.part1
+    title: "Operational Best Practices for FedRAMP (High Part 1)"
+    version: "2025-09-01"
+    scope: ["compliance"]
+    file: "aws/fedramp-high-part1.yaml"
+  - id: aws.fedramp.high.part2
+    title: "Operational Best Practices for FedRAMP (High Part 2)"
+    version: "2025-09-01"
+    scope: ["compliance"]
+    file: "aws/fedramp-high-part2.yaml"
+  - id: aws.global.logging
+    title: "Operational Best Practices for Logging"
+    version: "2025-09-01"
+    scope: ["global"]
+    file: "aws/logging.yaml"
+  - id: aws.global.monitoring
+    title: "Operational Best Practices for Monitoring"
+    version: "2025-09-01"
+    scope: ["global"]
+    file: "aws/monitoring.yaml"
+  - id: aws.service.s3
+    title: "Operational Best Practices for Amazon S3"
+    version: "2025-09-01"
+    scope: ["service"]
+    file: "aws/s3.yaml"
+  - id: aws.service.apigw
+    title: "Operational Best Practices for Amazon API Gateway"
+    version: "2025-09-01"
+    scope: ["service"]
+    file: "aws/apigw.yaml"
+  - id: aws.service.rds
+    title: "Operational Best Practices for Amazon RDS"
+    version: "2025-09-01"
+    scope: ["service"]
+    file: "aws/rds.yaml"
+  - id: aws.service.ec2
+    title: "Operational Best Practices for EC2"
+    version: "2025-09-01"
+    scope: ["service"]
+    file: "aws/ec2.yaml"

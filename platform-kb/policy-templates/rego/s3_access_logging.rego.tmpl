@@ -1,0 +1,6 @@
+package platform.${component}.compliance
+deny[msg] {
+  input.resource.type == "AWS::S3::Bucket"
+  not input.resource.properties.LoggingConfiguration
+  msg := sprintf("S3 access logging not configured on %s", [input.resource.logicalId])
+}
