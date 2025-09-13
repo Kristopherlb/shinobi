@@ -10,6 +10,7 @@
 import fs from 'fs';
 import path from 'path';
 import { fileURLToPath } from 'url';
+import { buildPlan, writePlan } from './lib/kb.mjs';
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 const ROOT = path.resolve(__dirname, '..');
@@ -292,15 +293,34 @@ function main() {
   log(`Framework: ${framework}`);
   log(`Extra controls: ${extraControls.join(', ')}`);
 
-  // Load packs if provided
+  // Load packs if provided, or use KB library to select them
   let packs = [];
   if (packsFile && fs.existsSync(packsFile)) {
     try {
       const packsData = JSON.parse(fs.readFileSync(packsFile, 'utf8'));
       packs = (packsData.chosen || []).map(p => p.meta?.id || p.id).filter(Boolean);
-      log(`Loaded packs: ${packs.join(', ')}`);
+      log(`Loaded packs from file: ${packs.join(', ')}`);
     } catch (err) {
       error(`Failed to load packs from ${packsFile}:`, err.message);
+    }
+  }
+
+  // If no packs loaded, use KB library to select them
+  if (packs.length === 0) {
+    try {
+      const plan = buildPlan({
+        component: componentName,
+        serviceType: serviceType,
+        framework: framework,
+        extraControls: extraControls,
+        kbRoot: path.join(ROOT, 'platform-kb')
+      });
+      packs = plan.packs;
+      log(`Selected packs from KB: ${packs.join(', ')}`);
+    } catch (err) {
+      error(`Failed to select packs from KB:`, err.message);
+      // Fallback to basic packs
+      packs = ['aws.global.logging', 'aws.global.monitoring'];
     }
   }
 
@@ -315,12 +335,28 @@ function main() {
     ensureDir(path.join(componentDir, 'audit', 'rego'));
     ensureDir(path.join(componentDir, 'observability'));
 
-    // Generate component plan
-    const componentPlan = generateComponentPlan(componentName, serviceType, framework, packs, extraControls);
-    writeFile(
-      path.join(componentDir, 'audit', 'component.plan.json'),
-      JSON.stringify(componentPlan, null, 2)
-    );
+    // Generate component plan using KB library
+    try {
+      const componentPlan = buildPlan({
+        component: componentName,
+        serviceType: serviceType,
+        framework: framework,
+        extraControls: extraControls,
+        explicitPackIds: packs,
+        kbRoot: path.join(ROOT, 'platform-kb')
+      });
+
+      writePlan(componentPlan, componentDir);
+      log(`Generated component plan with ${componentPlan.packs.length} packs and ${componentPlan.nist_controls.length} controls`);
+    } catch (err) {
+      error(`Failed to generate component plan:`, err.message);
+      // Fallback to basic plan
+      const fallbackPlan = generateComponentPlan(componentName, serviceType, framework, packs, extraControls);
+      writeFile(
+        path.join(componentDir, 'audit', 'component.plan.json'),
+        JSON.stringify(fallbackPlan, null, 2)
+      );
+    }
 
     // Generate package.json
     writeFile(

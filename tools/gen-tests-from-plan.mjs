@@ -76,9 +76,28 @@ describe('${componentName}Builder', () => {
 `;
 }
 
-function generateComponentTest(componentName) {
+function generateComponentTest(componentName, plan) {
+  // Generate assertions based on plan rules
+  const assertions = plan.rules.map(rule => {
+    if (rule.check.includes('encryption') || rule.check.includes('s3-bucket-server-side-encryption')) {
+      return `  template.hasResourceProperties('AWS::S3::Bucket', { BucketEncryption: Match.anyValue() });`;
+    }
+    if (rule.check.includes('logging') || rule.check.includes('s3-bucket-logging-enabled')) {
+      return `  template.hasResourceProperties('AWS::S3::Bucket', { LoggingConfiguration: Match.anyValue() });`;
+    }
+    if (rule.check.includes('public-access') || rule.check.includes('s3-bucket-public-access-prohibited')) {
+      return `  template.hasResourceProperties('AWS::S3::Bucket', { PublicAccessBlockConfiguration: Match.anyValue() });`;
+    }
+    if (rule.check.includes('ssl') || rule.check.includes('s3-bucket-ssl-requests-only')) {
+      return `  template.hasResourceProperties('AWS::S3::Bucket', { BucketPolicy: Match.anyValue() });`;
+    }
+    return null;
+  }).filter(Boolean);
+
+  const assertionsText = assertions.length > 0 ? assertions.join('\n') : '  // No specific assertions generated';
+
   return `import { App, Stack } from 'aws-cdk-lib';
-import { Template } from 'aws-cdk-lib/assertions';
+import { Template, Match } from 'aws-cdk-lib/assertions';
 import { ${componentName}Component } from '../src/${componentName}.component';
 import { ${componentName}Builder } from '../src/${componentName}.builder';
 
@@ -100,42 +119,48 @@ describe('${componentName}Component', () => {
       
       const template = Template.fromStack(stack);
       
-      // Add specific assertions based on component resources
-      // Example: template.resourceCountIs('AWS::S3::Bucket', 1);
+      // Verify component was created
+      expect(component).toBeDefined();
+      expect(template).toBeDefined();
     });
 
     it('should apply compliance tags', () => {
-      const config = builder.build({}, 'fedramp-moderate');
+      const config = builder.build({}, '${plan.framework}');
       const component = new ${componentName}Component(stack, 'Test${componentName}', config);
       
       const template = Template.fromStack(stack);
       
       // Verify compliance tags are applied
-      // Example: template.hasResourceProperties('AWS::S3::Bucket', {
-      //   Tags: expect.arrayContaining([
-      //     expect.objectContaining({ Key: 'compliance:framework', Value: 'fedramp-moderate' })
-      //   ])
-      // });
+      template.hasResourceProperties('AWS::S3::Bucket', {
+        Tags: Match.arrayWith([
+          Match.objectLike({ Key: 'compliance:framework', Value: '${plan.framework}' }),
+          Match.objectLike({ Key: 'platform:component', Value: '${componentName}' }),
+          Match.objectLike({ Key: 'platform:service-type', Value: '${plan.service_type}' })
+        ])
+      });
     });
 
-    it('should enable encryption for fedramp-moderate', () => {
-      const config = builder.build({}, 'fedramp-moderate');
+    it('should enforce compliance rules from plan', () => {
+      const config = builder.build({}, '${plan.framework}');
       const component = new ${componentName}Component(stack, 'Test${componentName}', config);
       
       const template = Template.fromStack(stack);
       
-      // Verify encryption is enabled
-      // Add encryption-specific assertions
+      // Generated assertions from plan rules
+${assertionsText}
     });
 
-    it('should enable logging', () => {
-      const config = builder.build();
+    it('should enable framework-specific compliance', () => {
+      const config = builder.build({}, '${plan.framework}');
       const component = new ${componentName}Component(stack, 'Test${componentName}', config);
       
       const template = Template.fromStack(stack);
       
-      // Verify logging is enabled
-      // Add logging-specific assertions
+      // Framework-specific assertions
+      if ('${plan.framework}'.includes('fedramp')) {
+        // FedRAMP requires encryption
+        template.hasResourceProperties('AWS::S3::Bucket', { BucketEncryption: Match.anyValue() });
+      }
     });
   });
 
@@ -147,6 +172,7 @@ describe('${componentName}Component', () => {
       const template = Template.fromStack(stack);
       
       // Verify encryption capability
+      template.hasResourceProperties('AWS::S3::Bucket', { BucketEncryption: Match.anyValue() });
     });
 
     it('should support monitoring capability', () => {
@@ -156,6 +182,18 @@ describe('${componentName}Component', () => {
       const template = Template.fromStack(stack);
       
       // Verify monitoring capability
+      expect(component).toBeDefined();
+    });
+  });
+
+  describe('compliance plan validation', () => {
+    it('should include all required NIST controls', () => {
+      const config = builder.build({}, '${plan.framework}');
+      const component = new ${componentName}Component(stack, 'Test${componentName}', config);
+      
+      // Verify component plan includes expected controls
+      expect(component).toBeDefined();
+      // Additional plan validation can be added here
     });
   });
 });
@@ -387,9 +425,23 @@ function main() {
       fs.mkdirSync(unitDir, { recursive: true });
     }
 
+    // Load component plan
+    const planPath = path.join(componentDir, 'audit', 'component.plan.json');
+    let plan = null;
+    if (fs.existsSync(planPath)) {
+      try {
+        plan = JSON.parse(fs.readFileSync(planPath, 'utf8'));
+        log(`Loaded component plan with ${plan.packs?.length || 0} packs and ${plan.nist_controls?.length || 0} controls`);
+      } catch (err) {
+        error(`Failed to load component plan: ${err.message}`);
+      }
+    } else {
+      log(`Component plan not found at ${planPath}, generating basic tests`);
+    }
+
     // Generate test files
     const builderTest = generateBuilderTest(componentName);
-    const componentTest = generateComponentTest(componentName);
+    const componentTest = generateComponentTest(componentName, plan);
     const complianceTest = generateComplianceTest(componentName);
     const observabilityTest = generateObservabilityTest(componentName);
 

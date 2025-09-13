@@ -1,0 +1,18 @@
+{
+  "component": "test-s3-bucket",
+  "service_type": "s3-bucket",
+  "framework": "fedramp-moderate",
+  "packs": [
+    "aws.imported.fedramp-moderate",
+    "aws.imported.logging",
+    "aws.imported.monitoring"
+  ],
+  "rules": [],
+  "nist_controls": [
+    "AC-2(3)",
+    "AT-4(b)"
+  ],
+  "gaps": [],
+  "timestamp": "2025-09-13T07:27:34.459Z",
+  "version": "1.0.0"
+}

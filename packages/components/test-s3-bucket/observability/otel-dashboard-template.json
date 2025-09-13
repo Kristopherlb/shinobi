@@ -1,0 +1,24 @@
+{
+  "dashboard": {
+    "name": "test-s3-bucket-dashboard",
+    "widgets": [
+      {
+        "type": "metric",
+        "properties": {
+          "metrics": [
+            [
+              "AWS/CloudWatch",
+              "HealthCheck",
+              "Component",
+              "test-s3-bucket"
+            ]
+          ],
+          "period": 300,
+          "stat": "Average",
+          "region": "us-east-1",
+          "title": "test-s3-bucket Health"
+        }
+      }
+    ]
+  }
+}

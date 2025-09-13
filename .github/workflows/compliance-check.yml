@@ -63,6 +63,15 @@ jobs:
         
         echo "✅ Component generation completed"
         
+    - name: Generate tests and REGO from plan
+      run: |
+        SERVICE_TYPE=${SERVICE_TYPE:-"s3-bucket"}
+        echo "🧪 Generating tests from component plan..."
+        node tools/gen-tests-from-plan.mjs $SERVICE_TYPE
+        echo "📋 Generating REGO policies from component plan..."
+        node tools/gen-rego-from-plan.mjs $SERVICE_TYPE
+        echo "✅ Test and policy generation completed"
+        
     - name: Static compliance (nag/opa/guard)
       run: |
         # Check if svc-audit-static.mjs exists and run it

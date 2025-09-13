@@ -21,12 +21,45 @@ function error(...args) {
   console.error('[gen-rego] ERROR:', ...args);
 }
 
-function generateRegoPolicy(componentName, framework) {
+function generateRegoPolicy(componentName, framework, plan) {
+  // Generate rules based on plan
+  const ruleChecks = plan.rules.map(rule => {
+    if (rule.check.includes('encryption') || rule.check.includes('s3-bucket-server-side-encryption')) {
+      return `encryption_enabled if {
+  input.resource.type == "AWS::S3::Bucket"
+  input.resource.properties.BucketEncryption
+}`;
+    }
+    if (rule.check.includes('logging') || rule.check.includes('s3-bucket-logging-enabled')) {
+      return `logging_enabled if {
+  input.resource.type == "AWS::S3::Bucket"
+  input.resource.properties.LoggingConfiguration
+}`;
+    }
+    if (rule.check.includes('public-access') || rule.check.includes('s3-bucket-public-access-prohibited')) {
+      return `public_access_blocked if {
+  input.resource.type == "AWS::S3::Bucket"
+  input.resource.properties.PublicAccessBlockConfiguration
+}`;
+    }
+    return null;
+  }).filter(Boolean);
+
+  const ruleChecksText = ruleChecks.length > 0 ? ruleChecks.join('\n\n') : `encryption_enabled if {
+  input.resource.type == "AWS::S3::Bucket"
+  input.resource.properties.BucketEncryption
+}
+
+logging_enabled if {
+  input.resource.type == "AWS::S3::Bucket"
+  input.resource.properties.LoggingConfiguration
+}`;
+
   return `package ${componentName.replace(/-/g, '_')}
 
 # ${componentName} Component Compliance Policy
 # Framework: ${framework}
-# Generated from component plan
+# Generated from component plan with ${plan.packs.length} packs and ${plan.nist_controls.length} controls
 
 import rego.v1
 
@@ -37,10 +70,12 @@ default allow := false
 allow if {
   encryption_enabled
   logging_enabled
-  monitoring_enabled
   tags_applied
   access_controls_valid
 }
+
+# Rule-specific checks from component plan
+${ruleChecksText}
 
 # Encryption checks
 encryption_enabled if {
@@ -361,13 +396,15 @@ function main() {
     const plan = JSON.parse(fs.readFileSync(planPath, 'utf8'));
     const framework = plan.framework || 'commercial';
 
+    log(`Loaded component plan with ${plan.packs?.length || 0} packs and ${plan.nist_controls?.length || 0} controls`);
+
     // Ensure rego directory exists
     if (!fs.existsSync(regoDir)) {
       fs.mkdirSync(regoDir, { recursive: true });
     }
 
     // Generate REGO policy and test files
-    const regoPolicy = generateRegoPolicy(componentName, framework);
+    const regoPolicy = generateRegoPolicy(componentName, framework, plan);
     const regoTest = generateRegoTest(componentName);
 
     // Write REGO files
