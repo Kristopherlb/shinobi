@@ -456,6 +456,34 @@ defaults:
       security-level: "high"
       ComplianceFramework: "fedramp-high"
 
+  # ECS Cluster Configuration Defaults - FedRAMP High
+  ecs-cluster:
+    serviceConnect:
+      namespace: "internal"
+    containerInsights: true # Required for FedRAMP
+    monitoring:
+      enabled: true
+      detailedMetrics: true # Required for FedRAMP
+      alarms:
+        cpuUtilizationThreshold: 70 # Most strict for FedRAMP High
+        memoryUtilizationThreshold: 75 # Most strict for FedRAMP High
+        taskFailureThreshold: 2 # Most strict for FedRAMP High
+        serviceErrorThreshold: 1 # Most strict for FedRAMP High
+    capacity:
+      enableMonitoring: true # Required for FedRAMP
+      instanceType: "m5.large" # Larger instances for compliance workloads
+      minSize: 2 # High availability
+      maxSize: 10 # Reasonable scale for compliance
+    compliance:
+      retentionPolicy: "retain" # Required for FedRAMP
+      auditLogging: true # Required for FedRAMP
+    tags:
+      Component: "ecs-cluster"
+      ManagedBy: "platform"
+      compliance-framework: "fedramp-high"
+      security-level: "high"
+      ComplianceFramework: "fedramp-high"
+
   # SageMaker Notebook Instance Configuration Defaults - FedRAMP High
   sagemaker-notebook-instance:
     instanceType: "ml.m5.xlarge"

@@ -42,7 +42,10 @@
   "dependencies": {
     "aws-cdk-lib": "^2.100.0",
     "constructs": "^10.0.0",
-    "@modelcontextprotocol/sdk": "^0.4.0"
+    "@modelcontextprotocol/sdk": "^0.4.0",
+    "@platform/contracts": "workspace:^",
+    "@platform/feature-flag": "workspace:^",
+    "ts-node": "^10.9.0"
   },
   "devDependencies": {
     "@types/jest": "^29.5.0",
@@ -53,10 +56,6 @@
     "eslint": "^8.0.0",
     "@typescript-eslint/eslint-plugin": "^6.0.0",
     "@typescript-eslint/parser": "^6.0.0"
-  },
-  "peerDependencies": {
-    "@platform/contracts": "*",
-    "@platform/feature-flag": "*"
   },
   "files": [
     "src/**/*",

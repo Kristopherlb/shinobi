@@ -220,7 +220,7 @@ export class EcsClusterComponentConfigBuilder extends ConfigBuilder<EcsClusterCo
    * Security and compliance-specific configurations
    */
   protected getComplianceFrameworkDefaults(): Partial<EcsClusterConfig> {
-    const framework = this.context.complianceFramework;
+    const framework = this.builderContext.context.complianceFramework;
     
     switch (framework) {
       case 'fedramp-high':

@@ -299,6 +299,31 @@ defaults:
       Component: "lambda-api"
       ManagedBy: "platform"
 
+  # ECS Cluster Configuration Defaults
+  ecs-cluster:
+    serviceConnect:
+      namespace: "internal"
+    containerInsights: true
+    monitoring:
+      enabled: true
+      detailedMetrics: false
+      alarms:
+        cpuUtilizationThreshold: 80
+        memoryUtilizationThreshold: 85
+        taskFailureThreshold: 5
+        serviceErrorThreshold: 3
+    capacity:
+      enableMonitoring: false
+      instanceType: "t3.small"
+      minSize: 1
+      maxSize: 3
+    compliance:
+      retentionPolicy: "destroy"
+      auditLogging: false
+    tags:
+      Component: "ecs-cluster"
+      ManagedBy: "platform"
+
 # IAM Role Configuration Defaults
 iam-role:
   role:

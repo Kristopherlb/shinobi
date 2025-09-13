@@ -1,0 +1,236 @@
+{
+  "dashboard": {
+    "name": "ECS Cluster - Service Connect Monitoring",
+    "description": "Comprehensive monitoring dashboard for ECS clusters with Service Connect capability",
+    "version": "1.0.0",
+    "panels": [
+      {
+        "id": "cluster-overview",
+        "title": "Cluster Overview",
+        "type": "stat",
+        "description": "High-level cluster metrics and status",
+        "queries": [
+          {
+            "name": "Active Services",
+            "query": "aws_ecs_service_count{cluster_name=\"$cluster_name\"}",
+            "description": "Number of active services in the cluster"
+          },
+          {
+            "name": "Running Tasks",
+            "query": "aws_ecs_task_count{cluster_name=\"$cluster_name\",desired_status=\"RUNNING\"}",
+            "description": "Number of running tasks in the cluster"
+          },
+          {
+            "name": "Pending Tasks",
+            "query": "aws_ecs_task_count{cluster_name=\"$cluster_name\",desired_status=\"PENDING\"}",
+            "description": "Number of pending tasks in the cluster"
+          },
+          {
+            "name": "Stopped Tasks",
+            "query": "aws_ecs_task_count{cluster_name=\"$cluster_name\",desired_status=\"STOPPED\"}",
+            "description": "Number of stopped tasks in the cluster"
+          }
+        ]
+      },
+      {
+        "id": "service-connect-metrics",
+        "title": "Service Connect Metrics",
+        "type": "graph",
+        "description": "Service Connect namespace and discovery metrics",
+        "queries": [
+          {
+            "name": "Service Discovery Queries",
+            "query": "aws_servicediscovery_queries_total{namespace=\"$namespace\"}",
+            "description": "Total number of service discovery queries"
+          },
+          {
+            "name": "Service Discovery Errors",
+            "query": "aws_servicediscovery_errors_total{namespace=\"$namespace\"}",
+            "description": "Total number of service discovery errors"
+          },
+          {
+            "name": "Service Connect Connections",
+            "query": "aws_ecs_service_connect_connections{cluster_name=\"$cluster_name\"}",
+            "description": "Active Service Connect connections"
+          }
+        ]
+      },
+      {
+        "id": "cluster-performance",
+        "title": "Cluster Performance",
+        "type": "graph",
+        "description": "Cluster performance metrics including CPU, memory, and network",
+        "queries": [
+          {
+            "name": "CPU Utilization",
+            "query": "aws_ecs_cluster_cpu_utilization{cluster_name=\"$cluster_name\"}",
+            "description": "Cluster CPU utilization percentage"
+          },
+          {
+            "name": "Memory Utilization",
+            "query": "aws_ecs_cluster_memory_utilization{cluster_name=\"$cluster_name\"}",
+            "description": "Cluster memory utilization percentage"
+          },
+          {
+            "name": "Network In",
+            "query": "aws_ecs_cluster_network_in{cluster_name=\"$cluster_name\"}",
+            "description": "Cluster network inbound traffic"
+          },
+          {
+            "name": "Network Out",
+            "query": "aws_ecs_cluster_network_out{cluster_name=\"$cluster_name\"}",
+            "description": "Cluster network outbound traffic"
+          }
+        ]
+      },
+      {
+        "id": "task-metrics",
+        "title": "Task Metrics",
+        "type": "graph",
+        "description": "Individual task performance and health metrics",
+        "queries": [
+          {
+            "name": "Task CPU Utilization",
+            "query": "aws_ecs_task_cpu_utilization{cluster_name=\"$cluster_name\"}",
+            "description": "CPU utilization per task"
+          },
+          {
+            "name": "Task Memory Utilization",
+            "query": "aws_ecs_task_memory_utilization{cluster_name=\"$cluster_name\"}",
+            "description": "Memory utilization per task"
+          },
+          {
+            "name": "Task Duration",
+            "query": "aws_ecs_task_duration_seconds{cluster_name=\"$cluster_name\"}",
+            "description": "Task execution duration"
+          },
+          {
+            "name": "Task Restart Count",
+            "query": "aws_ecs_task_restart_count{cluster_name=\"$cluster_name\"}",
+            "description": "Number of task restarts"
+          }
+        ]
+      },
+      {
+        "id": "capacity-provider-metrics",
+        "title": "Capacity Provider Metrics",
+        "type": "graph",
+        "description": "Capacity provider performance and scaling metrics",
+        "queries": [
+          {
+            "name": "Fargate Capacity",
+            "query": "aws_ecs_capacity_provider_available_capacity{cluster_name=\"$cluster_name\",capacity_provider=\"FARGATE\"}",
+            "description": "Available Fargate capacity"
+          },
+          {
+            "name": "Fargate Spot Capacity",
+            "query": "aws_ecs_capacity_provider_available_capacity{cluster_name=\"$cluster_name\",capacity_provider=\"FARGATE_SPOT\"}",
+            "description": "Available Fargate Spot capacity"
+          },
+          {
+            "name": "EC2 Capacity",
+            "query": "aws_ecs_capacity_provider_available_capacity{cluster_name=\"$cluster_name\",capacity_provider=\"EC2\"}",
+            "description": "Available EC2 capacity"
+          },
+          {
+            "name": "Capacity Provider Utilization",
+            "query": "aws_ecs_capacity_provider_utilization{cluster_name=\"$cluster_name\"}",
+            "description": "Capacity provider utilization percentage"
+          }
+        ]
+      },
+      {
+        "id": "error-metrics",
+        "title": "Error Metrics",
+        "type": "graph",
+        "description": "Error rates and failure metrics",
+        "queries": [
+          {
+            "name": "Task Failures",
+            "query": "aws_ecs_task_failures_total{cluster_name=\"$cluster_name\"}",
+            "description": "Total number of task failures"
+          },
+          {
+            "name": "Service Errors",
+            "query": "aws_ecs_service_errors_total{cluster_name=\"$cluster_name\"}",
+            "description": "Total number of service errors"
+          },
+          {
+            "name": "Container Insights Errors",
+            "query": "aws_ecs_container_insights_errors_total{cluster_name=\"$cluster_name\"}",
+            "description": "Container Insights error count"
+          }
+        ]
+      },
+      {
+        "id": "cost-metrics",
+        "title": "Cost Metrics",
+        "type": "graph",
+        "description": "Cost optimization and resource usage metrics",
+        "queries": [
+          {
+            "name": "Fargate Cost",
+            "query": "aws_ecs_fargate_cost{cluster_name=\"$cluster_name\"}",
+            "description": "Fargate usage cost"
+          },
+          {
+            "name": "EC2 Cost",
+            "query": "aws_ecs_ec2_cost{cluster_name=\"$cluster_name\"}",
+            "description": "EC2 usage cost"
+          },
+          {
+            "name": "Resource Efficiency",
+            "query": "aws_ecs_resource_efficiency{cluster_name=\"$cluster_name\"}",
+            "description": "Resource utilization efficiency"
+          }
+        ]
+      }
+    ],
+    "variables": [
+      {
+        "name": "cluster_name",
+        "type": "text",
+        "description": "ECS Cluster name",
+        "default": ".*"
+      },
+      {
+        "name": "namespace",
+        "type": "text",
+        "description": "Service Connect namespace",
+        "default": ".*"
+      },
+      {
+        "name": "time_range",
+        "type": "select",
+        "description": "Time range for metrics",
+        "options": ["5m", "15m", "1h", "6h", "24h", "7d"],
+        "default": "1h"
+      }
+    ],
+    "annotations": [
+      {
+        "name": "Deployments",
+        "query": "aws_ecs_deployment_events{cluster_name=\"$cluster_name\"}",
+        "description": "ECS deployment events"
+      },
+      {
+        "name": "Alerts",
+        "query": "aws_ecs_alerts{cluster_name=\"$cluster_name\"}",
+        "description": "ECS cluster alerts"
+      }
+    ],
+    "refresh": "30s",
+    "timeRange": {
+      "from": "now-1h",
+      "to": "now"
+    }
+  },
+  "metadata": {
+    "component": "ecs-cluster",
+    "version": "1.0.0",
+    "created": "2024-01-01T00:00:00Z",
+    "updated": "2024-01-01T00:00:00Z",
+    "author": "Platform Team",
+    "description": "OpenTelemetry dashboard template for ECS Cluster component monitoring"
+  }
+}

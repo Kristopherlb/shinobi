@@ -1,0 +1,238 @@
+{
+  "alarms": {
+    "ecs_cluster_high_cpu_utilization": {
+      "alarmName": "ECS-Cluster-High-CPU-Utilization",
+      "alarmDescription": "ECS cluster CPU utilization is above threshold",
+      "metricName": "CPUUtilization",
+      "namespace": "AWS/ECS",
+      "statistic": "Average",
+      "period": 300,
+      "evaluationPeriods": 2,
+      "threshold": 80,
+      "comparisonOperator": "GreaterThanThreshold",
+      "treatMissingData": "breaching",
+      "alarmActions": ["arn:aws:sns:us-east-1:123456789012:ecs-alerts"],
+      "okActions": ["arn:aws:sns:us-east-1:123456789012:ecs-alerts"],
+      "dimensions": {
+        "ClusterName": "${cluster_name}"
+      },
+      "tags": {
+        "Component": "ecs-cluster",
+        "Severity": "warning",
+        "Environment": "${environment}"
+      }
+    },
+    "ecs_cluster_high_memory_utilization": {
+      "alarmName": "ECS-Cluster-High-Memory-Utilization",
+      "alarmDescription": "ECS cluster memory utilization is above threshold",
+      "metricName": "MemoryUtilization",
+      "namespace": "AWS/ECS",
+      "statistic": "Average",
+      "period": 300,
+      "evaluationPeriods": 2,
+      "threshold": 85,
+      "comparisonOperator": "GreaterThanThreshold",
+      "treatMissingData": "breaching",
+      "alarmActions": ["arn:aws:sns:us-east-1:123456789012:ecs-alerts"],
+      "okActions": ["arn:aws:sns:us-east-1:123456789012:ecs-alerts"],
+      "dimensions": {
+        "ClusterName": "${cluster_name}"
+      },
+      "tags": {
+        "Component": "ecs-cluster",
+        "Severity": "warning",
+        "Environment": "${environment}"
+      }
+    },
+    "ecs_cluster_task_failures": {
+      "alarmName": "ECS-Cluster-Task-Failures",
+      "alarmDescription": "ECS cluster has high task failure rate",
+      "metricName": "TaskFailures",
+      "namespace": "AWS/ECS",
+      "statistic": "Sum",
+      "period": 300,
+      "evaluationPeriods": 1,
+      "threshold": 5,
+      "comparisonOperator": "GreaterThanThreshold",
+      "treatMissingData": "notBreaching",
+      "alarmActions": ["arn:aws:sns:us-east-1:123456789012:ecs-alerts"],
+      "okActions": ["arn:aws:sns:us-east-1:123456789012:ecs-alerts"],
+      "dimensions": {
+        "ClusterName": "${cluster_name}"
+      },
+      "tags": {
+        "Component": "ecs-cluster",
+        "Severity": "critical",
+        "Environment": "${environment}"
+      }
+    },
+    "ecs_cluster_service_errors": {
+      "alarmName": "ECS-Cluster-Service-Errors",
+      "alarmDescription": "ECS cluster has high service error rate",
+      "metricName": "ServiceErrors",
+      "namespace": "AWS/ECS",
+      "statistic": "Sum",
+      "period": 300,
+      "evaluationPeriods": 1,
+      "threshold": 3,
+      "comparisonOperator": "GreaterThanThreshold",
+      "treatMissingData": "notBreaching",
+      "alarmActions": ["arn:aws:sns:us-east-1:123456789012:ecs-alerts"],
+      "okActions": ["arn:aws:sns:us-east-1:123456789012:ecs-alerts"],
+      "dimensions": {
+        "ClusterName": "${cluster_name}"
+      },
+      "tags": {
+        "Component": "ecs-cluster",
+        "Severity": "critical",
+        "Environment": "${environment}"
+      }
+    },
+    "ecs_cluster_capacity_provider_utilization": {
+      "alarmName": "ECS-Cluster-Capacity-Provider-Utilization",
+      "alarmDescription": "ECS cluster capacity provider utilization is high",
+      "metricName": "CapacityProviderUtilization",
+      "namespace": "AWS/ECS",
+      "statistic": "Average",
+      "period": 300,
+      "evaluationPeriods": 2,
+      "threshold": 90,
+      "comparisonOperator": "GreaterThanThreshold",
+      "treatMissingData": "breaching",
+      "alarmActions": ["arn:aws:sns:us-east-1:123456789012:ecs-alerts"],
+      "okActions": ["arn:aws:sns:us-east-1:123456789012:ecs-alerts"],
+      "dimensions": {
+        "ClusterName": "${cluster_name}"
+      },
+      "tags": {
+        "Component": "ecs-cluster",
+        "Severity": "warning",
+        "Environment": "${environment}"
+      }
+    },
+    "ecs_cluster_service_connect_errors": {
+      "alarmName": "ECS-Cluster-Service-Connect-Errors",
+      "alarmDescription": "ECS cluster Service Connect has errors",
+      "metricName": "ServiceConnectErrors",
+      "namespace": "AWS/ECS",
+      "statistic": "Sum",
+      "period": 300,
+      "evaluationPeriods": 1,
+      "threshold": 1,
+      "comparisonOperator": "GreaterThanThreshold",
+      "treatMissingData": "notBreaching",
+      "alarmActions": ["arn:aws:sns:us-east-1:123456789012:ecs-alerts"],
+      "okActions": ["arn:aws:sns:us-east-1:123456789012:ecs-alerts"],
+      "dimensions": {
+        "ClusterName": "${cluster_name}"
+      },
+      "tags": {
+        "Component": "ecs-cluster",
+        "Severity": "critical",
+        "Environment": "${environment}"
+      }
+    },
+    "ecs_cluster_container_insights_errors": {
+      "alarmName": "ECS-Cluster-Container-Insights-Errors",
+      "alarmDescription": "ECS cluster Container Insights has errors",
+      "metricName": "ContainerInsightsErrors",
+      "namespace": "AWS/ECS",
+      "statistic": "Sum",
+      "period": 300,
+      "evaluationPeriods": 1,
+      "threshold": 1,
+      "comparisonOperator": "GreaterThanThreshold",
+      "treatMissingData": "notBreaching",
+      "alarmActions": ["arn:aws:sns:us-east-1:123456789012:ecs-alerts"],
+      "okActions": ["arn:aws:sns:us-east-1:123456789012:ecs-alerts"],
+      "dimensions": {
+        "ClusterName": "${cluster_name}"
+      },
+      "tags": {
+        "Component": "ecs-cluster",
+        "Severity": "warning",
+        "Environment": "${environment}"
+      }
+    },
+    "ecs_cluster_auto_scaling_errors": {
+      "alarmName": "ECS-Cluster-Auto-Scaling-Errors",
+      "alarmDescription": "ECS cluster Auto Scaling has errors",
+      "metricName": "AutoScalingErrors",
+      "namespace": "AWS/ECS",
+      "statistic": "Sum",
+      "period": 300,
+      "evaluationPeriods": 1,
+      "threshold": 1,
+      "comparisonOperator": "GreaterThanThreshold",
+      "treatMissingData": "notBreaching",
+      "alarmActions": ["arn:aws:sns:us-east-1:123456789012:ecs-alerts"],
+      "okActions": ["arn:aws:sns:us-east-1:123456789012:ecs-alerts"],
+      "dimensions": {
+        "ClusterName": "${cluster_name}"
+      },
+      "tags": {
+        "Component": "ecs-cluster",
+        "Severity": "warning",
+        "Environment": "${environment}"
+      }
+    }
+  },
+  "compliance_frameworks": {
+    "commercial": {
+      "thresholds": {
+        "cpu_utilization": 80,
+        "memory_utilization": 85,
+        "task_failures": 5,
+        "service_errors": 3,
+        "capacity_provider_utilization": 90
+      },
+      "evaluation_periods": {
+        "cpu_utilization": 2,
+        "memory_utilization": 2,
+        "task_failures": 1,
+        "service_errors": 1,
+        "capacity_provider_utilization": 2
+      }
+    },
+    "fedramp_moderate": {
+      "thresholds": {
+        "cpu_utilization": 75,
+        "memory_utilization": 80,
+        "task_failures": 3,
+        "service_errors": 2,
+        "capacity_provider_utilization": 85
+      },
+      "evaluation_periods": {
+        "cpu_utilization": 2,
+        "memory_utilization": 2,
+        "task_failures": 1,
+        "service_errors": 1,
+        "capacity_provider_utilization": 2
+      }
+    },
+    "fedramp_high": {
+      "thresholds": {
+        "cpu_utilization": 70,
+        "memory_utilization": 75,
+        "task_failures": 2,
+        "service_errors": 1,
+        "capacity_provider_utilization": 80
+      },
+      "evaluation_periods": {
+        "cpu_utilization": 2,
+        "memory_utilization": 2,
+        "task_failures": 1,
+        "service_errors": 1,
+        "capacity_provider_utilization": 2
+      }
+    }
+  },
+  "metadata": {
+    "component": "ecs-cluster",
+    "version": "1.0.0",
+    "created": "2024-01-01T00:00:00Z",
+    "updated": "2024-01-01T00:00:00Z",
+    "author": "Platform Team",
+    "description": "CloudWatch alarms configuration for ECS Cluster component monitoring"
+  }
+}

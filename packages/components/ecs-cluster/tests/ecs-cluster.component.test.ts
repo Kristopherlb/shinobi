@@ -10,15 +10,16 @@ import * as ecs from 'aws-cdk-lib/aws-ecs';
 import * as ec2 from 'aws-cdk-lib/aws-ec2';
 import * as servicediscovery from 'aws-cdk-lib/aws-servicediscovery';
 import { Template, Match } from 'aws-cdk-lib/assertions';
-import { EcsClusterComponent, EcsClusterConfigBuilder } from './ecs-cluster.component';
-import { ComponentContext, ComponentSpec } from '../../platform/contracts/component-interfaces';
+import { EcsClusterComponent } from '../ecs-cluster.component';
+import { EcsClusterComponentConfigBuilder } from '../ecs-cluster.builder';
+import { ComponentContext, ComponentSpec } from '../../../../src/platform/contracts/component-interfaces';
 import { 
   TestFixtureFactory, 
   TestAssertions, 
   PerformanceTestHelpers,
   TEST_CONTEXTS,
   TEST_SPECS 
-} from './test-fixtures';
+} from '../test-fixtures';
 
 /*
  * Test Metadata: TP-ECS-CLUSTER-001
@@ -50,10 +51,13 @@ describe('EcsClusterConfigBuilder__PrecedenceChain__ConfigurationMerging', () =>
   });
 
   it('ConfigBuilder__MinimalConfiguration__UsesHardcodedFallbacks', async () => {
-    const builder = new EcsClusterConfigBuilder(testEnv.contexts.commercial, {
-      name: 'minimal-cluster',
-      type: 'ecs-cluster',
-      config: {}
+    const builder = new EcsClusterComponentConfigBuilder({ 
+      context: testEnv.contexts.commercial, 
+      spec: {
+        name: 'minimal-cluster',
+        type: 'ecs-cluster',
+        config: {}
+      }
     });
 
     const config = builder.buildSync();
@@ -68,7 +72,10 @@ describe('EcsClusterConfigBuilder__PrecedenceChain__ConfigurationMerging', () =>
     const frameworks: Array<keyof typeof TEST_CONTEXTS> = ['commercial', 'fedrampModerate', 'fedrampHigh'];
 
     for (const framework of frameworks) {
-      const builder = new EcsClusterConfigBuilder(testEnv.contexts[framework], testEnv.specs.minimalCluster);
+      const builder = new EcsClusterComponentConfigBuilder({ 
+        context: testEnv.contexts[framework], 
+        spec: testEnv.specs.minimalCluster
+      });
       const config = builder.buildSync();
 
       TestAssertions.assertComplianceConfiguration(config, testEnv.contexts[framework].complianceFramework);
@@ -103,7 +110,10 @@ describe('EcsClusterConfigBuilder__PrecedenceChain__ConfigurationMerging', () =>
       }
     };
 
-    const builder = new EcsClusterConfigBuilder(testEnv.contexts.commercial, customSpec);
+    const builder = new EcsClusterComponentConfigBuilder({ 
+      context: testEnv.contexts.commercial, 
+      spec: customSpec
+    });
     const config = builder.buildSync();
 
     // User configuration should take precedence
@@ -227,12 +237,12 @@ describe('EcsClusterComponent__ResourceSynthesis__CloudFormationGeneration', () 
     const frameworks: Array<keyof typeof TEST_CONTEXTS> = ['commercial', 'fedrampModerate', 'fedrampHigh'];
     
     for (const framework of frameworks) {
-      const frameworkStack = new cdk.Stack(testEnv.app, `TestStack-${framework}`);
+      const frameworkStack = new cdk.Stack(testEnv.app, `TestStack-${String(framework)}`);
       const context = { ...testEnv.contexts[framework], scope: frameworkStack };
       
       const component = new EcsClusterComponent(
         frameworkStack,
-        `TestCluster-${framework}`,
+        `TestCluster-${String(framework)}`,
         context,
         testEnv.specs.ec2Cluster
       );
@@ -481,7 +491,10 @@ describe('EcsClusterComponent__ErrorHandling__ValidationFailures', () => {
     };
 
     expect(() => {
-      const builder = new EcsClusterConfigBuilder(testEnv.contexts.commercial, invalidSpec);
+      const builder = new EcsClusterComponentConfigBuilder({ 
+        context: testEnv.contexts.commercial, 
+        spec: invalidSpec
+      });
       builder.buildSync(); // Should throw on validation
     }).toThrow();
   });

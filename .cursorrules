@@ -1,0 +1,30 @@
+# Cursor Rules for CDK-Lib Platform
+
+## MCP Server Configuration
+# The Shinobi MCP Server provides platform intelligence capabilities
+# It's available at: packages/components/shinobi/mcp-server/dist/index.js
+
+## Available MCP Tools
+# - get_component_catalog: Get all platform components
+# - get_component_schema: Get component schemas with examples
+# - generate_manifest: Generate production-ready manifests
+# - get_slo_status: Check service SLO status
+# - provision_dashboard: Create monitoring dashboards
+# - analyze_change_impact: Analyze deployment impact
+# - estimate_cost: Estimate deployment costs
+# - check_deployment_readiness: Check deployment readiness
+
+## Available MCP Resources
+# - shinobi://components: Component catalog
+# - shinobi://services: Service registry
+# - shinobi://dependencies: Dependency graph
+# - shinobi://compliance: Compliance status
+
+## Usage
+# When working with platform components, use the MCP tools to:
+# 1. Get component information and schemas
+# 2. Generate manifests from descriptions
+# 3. Check deployment readiness
+# 4. Analyze change impact
+# 5. Estimate costs
+# 6. Monitor SLO status
