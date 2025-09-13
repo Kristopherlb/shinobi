@@ -3,6 +3,9 @@
   "version": "1.0.0",
   "description": "Standalone Shinobi MCP Server for Cursor integration",
   "main": "dist/index.js",
+  "bin": {
+    "shinobi-mcp-server": "dist/index.js"
+  },
   "type": "module",
   "scripts": {
     "build": "tsc",

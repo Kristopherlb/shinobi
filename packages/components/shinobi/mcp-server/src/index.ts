@@ -16,6 +16,9 @@ import {
   ReadResourceRequestSchema,
 } from '@modelcontextprotocol/sdk/types.js';
 
+// Feature flag to show only audited components
+const SHOW_AUDITED_ONLY = process.env.SHINOBI_SHOW_AUDITED_ONLY === 'true';
+
 // Mock data for demonstration
 const COMPONENT_CATALOG = [
   {
@@ -29,7 +32,7 @@ const COMPONENT_CATALOG = [
   },
   {
     name: 'ecs-cluster',
-    type: 'ecs-cluster', 
+    type: 'ecs-cluster',
     version: '1.0.0',
     description: 'AWS ECS Cluster with Service Connect capabilities',
     capabilities: ['compute', 'orchestration'],
@@ -39,7 +42,7 @@ const COMPONENT_CATALOG = [
   {
     name: 'ecr-repository',
     type: 'ecr-repository',
-    version: '1.0.0', 
+    version: '1.0.0',
     description: 'AWS Elastic Container Registry for secure container storage',
     capabilities: ['storage', 'security'],
     stability: 'stable',
@@ -255,28 +258,28 @@ class ShinobiMcpServer {
       switch (name) {
         case 'get_component_catalog':
           return this.handleGetComponentCatalog(args);
-        
+
         case 'get_component_schema':
           return this.handleGetComponentSchema(args);
-        
+
         case 'generate_manifest':
           return this.handleGenerateManifest(args);
-        
+
         case 'get_slo_status':
           return this.handleGetSloStatus(args);
-        
+
         case 'provision_dashboard':
           return this.handleProvisionDashboard(args);
-        
+
         case 'analyze_change_impact':
           return this.handleAnalyzeChangeImpact(args);
-        
+
         case 'estimate_cost':
           return this.handleEstimateCost(args);
-        
+
         case 'check_deployment_readiness':
           return this.handleCheckDeploymentReadiness(args);
-        
+
         default:
           throw new Error(`Unknown tool: ${name}`);
       }
@@ -329,7 +332,7 @@ class ShinobiMcpServer {
               }
             ]
           };
-        
+
         case 'shinobi://services':
           return {
             contents: [
@@ -340,7 +343,7 @@ class ShinobiMcpServer {
               }
             ]
           };
-        
+
         case 'shinobi://dependencies':
           return {
             contents: [
@@ -359,7 +362,7 @@ class ShinobiMcpServer {
               }
             ]
           };
-        
+
         case 'shinobi://compliance':
           return {
             contents: [
@@ -376,7 +379,7 @@ class ShinobiMcpServer {
               }
             ]
           };
-        
+
         default:
           throw new Error(`Unknown resource: ${uri}`);
       }
@@ -385,10 +388,15 @@ class ShinobiMcpServer {
 
   private async handleGetComponentCatalog(args: any) {
     let catalog = COMPONENT_CATALOG;
-    
+
+    // Apply feature flag to show only audited components
+    if (SHOW_AUDITED_ONLY) {
+      catalog = catalog.slice(0, 4); // Only show the first 4 audited components
+    }
+
     if (args.filter) {
       const filter = args.filter.toLowerCase();
-      catalog = catalog.filter(component => 
+      catalog = catalog.filter(component =>
         component.name.toLowerCase().includes(filter) ||
         component.type.toLowerCase().includes(filter)
       );
@@ -406,7 +414,7 @@ class ShinobiMcpServer {
 
   private async handleGetComponentSchema(args: any) {
     const { componentType } = args;
-    
+
     // Mock schema for demonstration
     const schema = {
       type: 'object',
@@ -447,7 +455,7 @@ class ShinobiMcpServer {
 
   private async handleGenerateManifest(args: any) {
     const { prompt, includeRationale = true } = args;
-    
+
     // Mock manifest generation
     const manifest = {
       name: 'generated-service',
@@ -463,7 +471,7 @@ class ShinobiMcpServer {
     };
 
     let response = `Generated manifest for: "${prompt}"\n\n${JSON.stringify(manifest, null, 2)}`;
-    
+
     if (includeRationale) {
       response += `\n\n## Rationale\n`;
       response += `- Selected lambda-api component for serverless API needs\n`;
@@ -484,7 +492,7 @@ class ShinobiMcpServer {
 
   private async handleGetSloStatus(args: any) {
     const { service, timeRange = '24h' } = args;
-    
+
     // Mock SLO status
     const sloStatus = {
       service,
@@ -521,7 +529,7 @@ class ShinobiMcpServer {
 
   private async handleProvisionDashboard(args: any) {
     const { service, provider = 'cloudwatch', dashboardType = 'reliability' } = args;
-    
+
     const dashboard = {
       service,
       provider,
@@ -533,7 +541,7 @@ class ShinobiMcpServer {
           metrics: [`AWS/Lambda`, 'Duration', 'FunctionName', service]
         },
         {
-          type: 'metric', 
+          type: 'metric',
           title: `${service} - Error Rate`,
           metrics: [`AWS/Lambda`, 'Errors', 'FunctionName', service]
         }
@@ -554,7 +562,7 @@ class ShinobiMcpServer {
 
   private async handleAnalyzeChangeImpact(args: any) {
     const { manifestDiff, includeCostImpact = true } = args;
-    
+
     const impact = {
       changeSummary: 'Added new Lambda function with API Gateway',
       blastRadius: 'low',
@@ -589,7 +597,7 @@ class ShinobiMcpServer {
 
   private async handleEstimateCost(args: any) {
     const { manifest, environment = 'prod' } = args;
-    
+
     const costEstimate = {
       environment,
       estimatedMonthlyCost: '$45.20',
@@ -601,7 +609,7 @@ class ShinobiMcpServer {
       },
       sensitivity: {
         low: '$35.20',
-        medium: '$45.20', 
+        medium: '$45.20',
         high: '$65.20'
       },
       assumptions: [
@@ -624,7 +632,7 @@ class ShinobiMcpServer {
 
   private async handleCheckDeploymentReadiness(args: any) {
     const { manifest, environment = 'prod' } = args;
-    
+
     const readiness = {
       environment,
       ready: true,
