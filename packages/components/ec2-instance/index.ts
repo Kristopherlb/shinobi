@@ -4,10 +4,10 @@
  */
 
 // Component exports
-export { Ec2InstanceComponentComponent } from './ec2-instance.component';
+export { Ec2InstanceComponent } from './ec2-instance.component';
 
 // Configuration exports
-export { 
+export {
   Ec2InstanceConfig,
   Ec2InstanceComponentConfigBuilder,
   EC2_INSTANCE_CONFIG_SCHEMA

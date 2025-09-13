@@ -24,9 +24,6 @@
   "author": "Platform Engineering",
   "license": "MIT",
   "dependencies": {
-    "@cdk-lib/observability-handlers": "^1.0.0",
-    "@cdk-lib/platform-contracts": "^1.0.0",
-    "@cdk-lib/tagging-service": "^1.0.0",
     "aws-cdk-lib": "^2.214.0",
     "constructs": "^10.0.0",
     "js-yaml": "^4.1.0"

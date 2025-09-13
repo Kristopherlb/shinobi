@@ -33,6 +33,5 @@
     "typescript": "^5.0.0"
   },
   "peerDependencies": {
-    "@cdk-lib/platform-core": "^1.0.0"
   }
 }

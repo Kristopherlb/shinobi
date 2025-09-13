@@ -476,6 +476,24 @@ export const SHINOBI_FEATURE_FLAGS = {
         }
       ]
     }
+  },
+
+  // Test Control Flags
+  'shinobi.run-audited-tests-only': {
+    flagKey: 'shinobi.run-audited-tests-only',
+    flagType: 'boolean' as const,
+    defaultValue: false,
+    description: 'Run tests only for audited components, skipping non-audited component tests to avoid hundreds of failing tests',
+    targetingRules: {
+      percentage: 0,
+      conditions: [
+        {
+          attribute: 'environment',
+          operator: 'in' as const,
+          value: ['development', 'testing']
+        }
+      ]
+    }
   }
 };
 

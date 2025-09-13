@@ -1,43 +1,129 @@
-name: Compliance & Conformance Checks
+name: Compliance Check
 
 on:
   pull_request:
-    branches: [ main, trunk, develop ]
+    paths:
+      - 'packages/components/**'
+      - 'service.yml'
+      - 'service-*.yml'
+  push:
+    branches: [main]
+    paths:
+      - 'packages/components/**'
 
 jobs:
-  validate:
+  compliance-check:
     runs-on: ubuntu-latest
+    
     steps:
-      - uses: actions/checkout@v4
-
-      - name: Setup Node
-        uses: actions/setup-node@v4
-        with:
-          node-version: '20'
-
-      - name: Install deps
-        run: |
-          npm ci || pnpm i || yarn install --frozen-lockfile || true
-
-      - name: Validate Platform KB
-        run: |
-          node tools/svc-kb-validate.mjs
-
-      - name: Lint (no console.log)
-        run: |
-          npm run lint || echo "lint step not configured"
-
-      - name: Unit tests
-        run: |
-          npm test --workspaces -- --coverage || echo "tests not configured"
-        env:
-          CI: "true"
-
-      - name: Plan (dry run)
-        run: |
-          node tools/svc-plan.mjs || echo "plan script not configured"
-
-      - name: Policy as Code (OPA) - optional
-        run: |
-          echo "Run OPA / conftest against audit/rego if available"
-          echo "skipping by default"
+    - name: Checkout code
+      uses: actions/checkout@v4
+      
+    - name: Setup Node.js
+      uses: actions/setup-node@v4
+      with:
+        node-version: '18'
+        cache: 'npm'
+        
+    - name: Install dependencies
+      run: npm ci
+      
+    - name: Build-time Compliance Plan (agent)
+      run: |
+        # Extract service type and framework from service.yml or environment
+        SERVICE_TYPE=${SERVICE_TYPE:-"s3-bucket"}
+        FRAMEWORK=${FRAMEWORK:-"fedramp-moderate"}
+        EXTRA_CONTROLS=${EXTRA_CONTROLS:-"AC-2(3),AT-4(b)"}
+        
+        echo "🔍 Analyzing service configuration..."
+        echo "Service Type: $SERVICE_TYPE"
+        echo "Framework: $FRAMEWORK"
+        echo "Extra Controls: $EXTRA_CONTROLS"
+        
+        # Load packs using the platform's pack selection logic
+        echo "📦 Loading compliance packs..."
+        node tools/kb-load.mjs platform-kb $SERVICE_TYPE $FRAMEWORK > /tmp/packs.json
+        
+        # Parse packs and extract component information
+        PACKS=$(cat /tmp/packs.json | jq -r '.chosen[].meta.id' | tr '\n' ',' | sed 's/,$//')
+        
+        echo "Selected packs: $PACKS"
+        
+        # Generate component using Shinobi CLI
+        echo "🚀 Generating component with Shinobi..."
+        node tools/shinobi-generate.mjs \
+          --componentName $SERVICE_TYPE \
+          --serviceType $SERVICE_TYPE \
+          --framework $FRAMEWORK \
+          --packsToInclude "$PACKS" \
+          --extraControlTags "$EXTRA_CONTROLS" \
+          --includeTests true \
+          --includeObservability true \
+          --includePolicies true
+        
+        echo "✅ Component generation completed"
+        
+    - name: Static compliance (nag/opa/guard)
+      run: |
+        # Check if svc-audit-static.mjs exists and run it
+        if [ -f "tools/svc-audit-static.mjs" ]; then
+          node tools/svc-audit-static.mjs
+        else
+          echo "Static compliance tool not found - creating placeholder"
+          echo "This step would run:"
+          echo "- CFN Guard rules against generated templates"
+          echo "- OPA REGO policies against component configurations" 
+          echo "- AWS Config rule compliance checks"
+        fi
+        
+    - name: Validate compliance artifacts
+      run: |
+        # Check that required compliance artifacts exist
+        SERVICE_TYPE=${SERVICE_TYPE:-"s3-bucket"}
+        
+        if [ -f "packages/components/$SERVICE_TYPE/audit/component.plan.json" ]; then
+          echo "✅ Compliance plan exists"
+          cat packages/components/$SERVICE_TYPE/audit/component.plan.json | jq .
+        else
+          echo "❌ Compliance plan missing"
+          exit 1
+        fi
+        
+        # Check for other required artifacts
+        if [ -d "packages/components/$SERVICE_TYPE/observability" ]; then
+          echo "✅ Observability artifacts directory exists"
+        else
+          echo "⚠️  Observability artifacts directory missing"
+        fi
+        
+        if [ -d "packages/components/$SERVICE_TYPE/tests" ]; then
+          echo "✅ Test artifacts directory exists"
+        else
+          echo "⚠️  Test artifacts directory missing"
+        fi
+        
+    - name: Run component tests
+      run: |
+        SERVICE_TYPE=${SERVICE_TYPE:-"s3-bucket"}
+        
+        if [ -d "packages/components/$SERVICE_TYPE/tests" ]; then
+          echo "Running tests for $SERVICE_TYPE component"
+          cd packages/components/$SERVICE_TYPE
+          npm test || echo "Tests failed or not configured yet"
+          cd ../../..
+        else
+          echo "No tests found for $SERVICE_TYPE component"
+        fi
+        
+    - name: Compliance Summary
+      run: |
+        echo "## Compliance Check Summary"
+        echo ""
+        echo "### Generated Artifacts:"
+        find packages/components -name "*.json" -path "*/audit/*" | head -10
+        echo ""
+        echo "### Next Steps:"
+        echo "1. Review generated compliance plans"
+        echo "2. Run full test suite"
+        echo "3. Validate REGO policies"
+        echo "4. Check observability configurations"

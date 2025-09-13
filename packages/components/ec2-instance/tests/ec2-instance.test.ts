@@ -9,12 +9,12 @@ import * as iam from 'aws-cdk-lib/aws-iam';
 import * as kms from 'aws-cdk-lib/aws-kms';
 import { Template, Match } from 'aws-cdk-lib/assertions';
 import { Construct } from 'constructs';
+import { Ec2InstanceComponent } from '../ec2-instance.component';
 import {
-  Ec2InstanceComponent,
-  Ec2InstanceConfigBuilder,
+  Ec2InstanceComponentConfigBuilder,
   EC2_INSTANCE_CONFIG_SCHEMA,
   Ec2InstanceConfig
-} from './ec2-instance.component';
+} from '../ec2-instance.builder';
 import { ComponentContext, ComponentSpec } from '@platform/contracts';
 
 describe('EC2 Instance Component', () => {
@@ -38,7 +38,7 @@ describe('EC2 Instance Component', () => {
         region: 'us-east-1'
       }
     });
-    
+
     mockContext = {
       serviceName: 'test-service',
       environment: 'test',
@@ -246,11 +246,11 @@ describe('EC2 Instance Component', () => {
       // Verify egress rules are restricted (should only have HTTPS, not all protocols)
       const securityGroups = template.findResources('AWS::EC2::SecurityGroup');
       const sgValues = Object.values(securityGroups);
-      
+
       // Check that no security group has unrestricted egress (IpProtocol: -1)
       sgValues.forEach((sg: any) => {
         const egressRules = sg.Properties.SecurityGroupEgress || [];
-        const hasUnrestrictedEgress = egressRules.some((rule: any) => 
+        const hasUnrestrictedEgress = egressRules.some((rule: any) =>
           rule.IpProtocol === '-1' && rule.CidrIp === '0.0.0.0/0'
         );
         expect(hasUnrestrictedEgress).toBe(false);
@@ -370,7 +370,7 @@ describe('EC2 Instance Component', () => {
       };
 
       component = new Ec2InstanceComponent(stack, 'TestInstance', mockContext, invalidSpec);
-      
+
       // Component should validate configuration and throw on invalid instance types
       expect(() => component.synth()).toThrow();
     });

@@ -1,0 +1,335 @@
+{
+  "alarms": {
+    "name": "EC2 Instance Alarms Configuration",
+    "description": "CloudWatch alarms for EC2 instance operational monitoring and compliance",
+    "version": "1.0.0",
+    "lastUpdated": "2025-01-08T00:00:00Z",
+    "complianceFrameworks": {
+      "commercial": {
+        "alarms": [
+          {
+            "alarmName": "HighCPUUtilization",
+            "metricName": "CPUUtilization",
+            "namespace": "AWS/EC2",
+            "statistic": "Average",
+            "threshold": 80,
+            "comparisonOperator": "GreaterThanThreshold",
+            "evaluationPeriods": 3,
+            "period": 300,
+            "treatMissingData": "notBreaching",
+            "alarmDescription": "CPU utilization is above 80% for 15 minutes",
+            "severity": "warning"
+          },
+          {
+            "alarmName": "SystemStatusCheckFailed",
+            "metricName": "StatusCheckFailed_System",
+            "namespace": "AWS/EC2",
+            "statistic": "Maximum",
+            "threshold": 1,
+            "comparisonOperator": "GreaterThanOrEqualToThreshold",
+            "evaluationPeriods": 2,
+            "period": 60,
+            "treatMissingData": "notBreaching",
+            "alarmDescription": "System status check has failed",
+            "severity": "critical"
+          },
+          {
+            "alarmName": "InstanceStatusCheckFailed",
+            "metricName": "StatusCheckFailed_Instance",
+            "namespace": "AWS/EC2",
+            "statistic": "Maximum",
+            "threshold": 1,
+            "comparisonOperator": "GreaterThanOrEqualToThreshold",
+            "evaluationPeriods": 2,
+            "period": 60,
+            "treatMissingData": "notBreaching",
+            "alarmDescription": "Instance status check has failed",
+            "severity": "critical"
+          }
+        ]
+      },
+      "fedramp-moderate": {
+        "alarms": [
+          {
+            "alarmName": "HighCPUUtilization",
+            "metricName": "CPUUtilization",
+            "namespace": "AWS/EC2",
+            "statistic": "Average",
+            "threshold": 70,
+            "comparisonOperator": "GreaterThanThreshold",
+            "evaluationPeriods": 2,
+            "period": 300,
+            "treatMissingData": "breaching",
+            "alarmDescription": "CPU utilization is above 70% for 10 minutes - FedRAMP Moderate threshold",
+            "severity": "critical",
+            "alarmActions": [
+              "arn:aws:sns:${region}:${account}:fedramp-moderate-alerts"
+            ]
+          },
+          {
+            "alarmName": "HighMemoryUtilization",
+            "metricName": "MemoryUtilization",
+            "namespace": "CWAgent",
+            "statistic": "Average",
+            "threshold": 85,
+            "comparisonOperator": "GreaterThanThreshold",
+            "evaluationPeriods": 2,
+            "period": 300,
+            "treatMissingData": "breaching",
+            "alarmDescription": "Memory utilization is above 85% for 10 minutes",
+            "severity": "warning",
+            "alarmActions": [
+              "arn:aws:sns:${region}:${account}:fedramp-moderate-alerts"
+            ]
+          },
+          {
+            "alarmName": "SystemStatusCheckFailed",
+            "metricName": "StatusCheckFailed_System",
+            "namespace": "AWS/EC2",
+            "statistic": "Maximum",
+            "threshold": 1,
+            "comparisonOperator": "GreaterThanOrEqualToThreshold",
+            "evaluationPeriods": 1,
+            "period": 60,
+            "treatMissingData": "breaching",
+            "alarmDescription": "System status check has failed - immediate response required",
+            "severity": "critical",
+            "alarmActions": [
+              "arn:aws:sns:${region}:${account}:fedramp-moderate-alerts",
+              "arn:aws:automate:${region}:ec2:reboot"
+            ]
+          },
+          {
+            "alarmName": "InstanceStatusCheckFailed",
+            "metricName": "StatusCheckFailed_Instance",
+            "namespace": "AWS/EC2",
+            "statistic": "Maximum",
+            "threshold": 1,
+            "comparisonOperator": "GreaterThanOrEqualToThreshold",
+            "evaluationPeriods": 1,
+            "period": 60,
+            "treatMissingData": "breaching",
+            "alarmDescription": "Instance status check has failed - immediate response required",
+            "severity": "critical",
+            "alarmActions": [
+              "arn:aws:sns:${region}:${account}:fedramp-moderate-alerts"
+            ]
+          },
+          {
+            "alarmName": "SSMAgentOffline",
+            "metricName": "SSMAgentOffline",
+            "namespace": "AWS/SSM",
+            "statistic": "Maximum",
+            "threshold": 1,
+            "comparisonOperator": "GreaterThanOrEqualToThreshold",
+            "evaluationPeriods": 2,
+            "period": 300,
+            "treatMissingData": "breaching",
+            "alarmDescription": "SSM agent is offline - compliance violation",
+            "severity": "critical",
+            "alarmActions": [
+              "arn:aws:sns:${region}:${account}:fedramp-moderate-alerts"
+            ]
+          },
+          {
+            "alarmName": "SecurityGroupChanged",
+            "metricName": "SecurityGroupChanged",
+            "namespace": "AWS/EC2",
+            "statistic": "Sum",
+            "threshold": 1,
+            "comparisonOperator": "GreaterThanOrEqualToThreshold",
+            "evaluationPeriods": 1,
+            "period": 300,
+            "treatMissingData": "notBreaching",
+            "alarmDescription": "Security group configuration has changed",
+            "severity": "warning",
+            "alarmActions": [
+              "arn:aws:sns:${region}:${account}:fedramp-moderate-alerts"
+            ]
+          }
+        ]
+      },
+      "fedramp-high": {
+        "alarms": [
+          {
+            "alarmName": "HighCPUUtilization",
+            "metricName": "CPUUtilization",
+            "namespace": "AWS/EC2",
+            "statistic": "Average",
+            "threshold": 60,
+            "comparisonOperator": "GreaterThanThreshold",
+            "evaluationPeriods": 2,
+            "period": 300,
+            "treatMissingData": "breaching",
+            "alarmDescription": "CPU utilization is above 60% for 10 minutes - FedRAMP High threshold",
+            "severity": "critical",
+            "alarmActions": [
+              "arn:aws:sns:${region}:${account}:fedramp-high-alerts",
+              "arn:aws:automate:${region}:ec2:stop"
+            ]
+          },
+          {
+            "alarmName": "HighMemoryUtilization",
+            "metricName": "MemoryUtilization",
+            "namespace": "CWAgent",
+            "statistic": "Average",
+            "threshold": 75,
+            "comparisonOperator": "GreaterThanThreshold",
+            "evaluationPeriods": 2,
+            "period": 300,
+            "treatMissingData": "breaching",
+            "alarmDescription": "Memory utilization is above 75% for 10 minutes",
+            "severity": "critical",
+            "alarmActions": [
+              "arn:aws:sns:${region}:${account}:fedramp-high-alerts"
+            ]
+          },
+          {
+            "alarmName": "SystemStatusCheckFailed",
+            "metricName": "StatusCheckFailed_System",
+            "namespace": "AWS/EC2",
+            "statistic": "Maximum",
+            "threshold": 1,
+            "comparisonOperator": "GreaterThanOrEqualToThreshold",
+            "evaluationPeriods": 1,
+            "period": 60,
+            "treatMissingData": "breaching",
+            "alarmDescription": "System status check has failed - immediate response required",
+            "severity": "critical",
+            "alarmActions": [
+              "arn:aws:sns:${region}:${account}:fedramp-high-alerts",
+              "arn:aws:automate:${region}:ec2:reboot"
+            ]
+          },
+          {
+            "alarmName": "InstanceStatusCheckFailed",
+            "metricName": "StatusCheckFailed_Instance",
+            "namespace": "AWS/EC2",
+            "statistic": "Maximum",
+            "threshold": 1,
+            "comparisonOperator": "GreaterThanOrEqualToThreshold",
+            "evaluationPeriods": 1,
+            "period": 60,
+            "treatMissingData": "breaching",
+            "alarmDescription": "Instance status check has failed - immediate response required",
+            "severity": "critical",
+            "alarmActions": [
+              "arn:aws:sns:${region}:${account}:fedramp-high-alerts"
+            ]
+          },
+          {
+            "alarmName": "SSMAgentOffline",
+            "metricName": "SSMAgentOffline",
+            "namespace": "AWS/SSM",
+            "statistic": "Maximum",
+            "threshold": 1,
+            "comparisonOperator": "GreaterThanOrEqualToThreshold",
+            "evaluationPeriods": 1,
+            "period": 300,
+            "treatMissingData": "breaching",
+            "alarmDescription": "SSM agent is offline - compliance violation",
+            "severity": "critical",
+            "alarmActions": [
+              "arn:aws:sns:${region}:${account}:fedramp-high-alerts"
+            ]
+          },
+          {
+            "alarmName": "SecurityGroupChanged",
+            "metricName": "SecurityGroupChanged",
+            "namespace": "AWS/EC2",
+            "statistic": "Sum",
+            "threshold": 1,
+            "comparisonOperator": "GreaterThanOrEqualToThreshold",
+            "evaluationPeriods": 1,
+            "period": 300,
+            "treatMissingData": "breaching",
+            "alarmDescription": "Security group configuration has changed - audit required",
+            "severity": "critical",
+            "alarmActions": [
+              "arn:aws:sns:${region}:${account}:fedramp-high-alerts"
+            ]
+          },
+          {
+            "alarmName": "STIGComplianceViolation",
+            "metricName": "STIGComplianceViolation",
+            "namespace": "AWS/EC2/Compliance",
+            "statistic": "Sum",
+            "threshold": 1,
+            "comparisonOperator": "GreaterThanOrEqualToThreshold",
+            "evaluationPeriods": 1,
+            "period": 300,
+            "treatMissingData": "breaching",
+            "alarmDescription": "STIG compliance violation detected",
+            "severity": "critical",
+            "alarmActions": [
+              "arn:aws:sns:${region}:${account}:fedramp-high-alerts"
+            ]
+          },
+          {
+            "alarmName": "AuditLogFailure",
+            "metricName": "AuditLogFailure",
+            "namespace": "AWS/EC2/Compliance",
+            "statistic": "Sum",
+            "threshold": 1,
+            "comparisonOperator": "GreaterThanOrEqualToThreshold",
+            "evaluationPeriods": 1,
+            "period": 300,
+            "treatMissingData": "breaching",
+            "alarmDescription": "Audit logging failure detected",
+            "severity": "critical",
+            "alarmActions": [
+              "arn:aws:sns:${region}:${account}:fedramp-high-alerts"
+            ]
+          }
+        ]
+      }
+    }
+  },
+  "notificationChannels": {
+    "commercial": [
+      "arn:aws:sns:${region}:${account}:ops-alerts"
+    ],
+    "fedramp-moderate": [
+      "arn:aws:sns:${region}:${account}:fedramp-moderate-alerts",
+      "arn:aws:sns:${region}:${account}:security-team"
+    ],
+    "fedramp-high": [
+      "arn:aws:sns:${region}:${account}:fedramp-high-alerts",
+      "arn:aws:sns:${region}:${account}:security-team",
+      "arn:aws:sns:${region}:${account}:compliance-team"
+    ]
+  },
+  "autoRemediation": {
+    "enabled": true,
+    "actions": [
+      {
+        "alarmName": "HighCPUUtilization",
+        "action": "scale-up",
+        "description": "Automatically scale up instance if CPU is consistently high"
+      },
+      {
+        "alarmName": "SystemStatusCheckFailed",
+        "action": "reboot",
+        "description": "Automatically reboot instance if system status check fails"
+      }
+    ]
+  },
+  "complianceNotes": {
+    "fedramp-moderate": {
+      "requirements": [
+        "All alarms meet FedRAMP Moderate monitoring requirements (SI-4)",
+        "SSM agent monitoring ensures compliance with AC-2 access control",
+        "Security group change monitoring provides audit trail (AU-2)",
+        "Enhanced thresholds provide early warning for compliance issues"
+      ]
+    },
+    "fedramp-high": {
+      "requirements": [
+        "Aggressive thresholds meet FedRAMP High monitoring requirements",
+        "STIG compliance monitoring ensures continuous compliance",
+        "Audit log failure monitoring provides comprehensive audit coverage",
+        "Enhanced notification channels ensure immediate response to issues"
+      ]
+    }
+  }
+}

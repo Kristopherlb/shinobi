@@ -1,0 +1,299 @@
+{
+  "component-definition": {
+    "uuid": "550e8400-e29b-41d4-a716-446655440000",
+    "metadata": {
+      "title": "EC2 Instance Component Definition",
+      "version": "1.0.0",
+      "oscal-version": "1.0.4",
+      "last-modified": "2025-01-08T00:00:00Z",
+      "published": "2025-01-08T00:00:00Z",
+      "roles": [
+        {
+          "id": "platform-owner",
+          "title": "Platform Owner",
+          "description": "Responsible for platform component development and maintenance"
+        },
+        {
+          "id": "security-owner",
+          "title": "Security Owner",
+          "description": "Responsible for security compliance and audit requirements"
+        },
+        {
+          "id": "compliance-owner",
+          "title": "Compliance Owner",
+          "description": "Responsible for FedRAMP compliance and documentation"
+        }
+      ],
+      "parties": [
+        {
+          "uuid": "550e8400-e29b-41d4-a716-446655440001",
+          "type": "organization",
+          "name": "Platform Engineering Team",
+          "roles": [
+            "platform-owner"
+          ]
+        }
+      ]
+    },
+    "components": [
+      {
+        "uuid": "550e8400-e29b-41d4-a716-446655440002",
+        "type": "service",
+        "title": "EC2 Instance Component",
+        "description": "AWS EC2 compute instance with compliance hardening and automatic monitoring",
+        "purpose": "Provides secure, compliant compute infrastructure with automatic monitoring and compliance validation",
+        "props": [
+          {
+            "name": "compliance-framework",
+            "value": "fedramp-moderate",
+            "class": "compliance"
+          },
+          {
+            "name": "data-classification",
+            "value": "confidential",
+            "class": "security"
+          },
+          {
+            "name": "encryption-required",
+            "value": "true",
+            "class": "security"
+          }
+        ],
+        "control-implementations": [
+          {
+            "uuid": "550e8400-e29b-41d4-a716-446655440003",
+            "source": "https://fedramp.gov/fedramp-releases-control-baselines/",
+            "description": "FedRAMP Moderate Control Implementation",
+            "implemented-requirements": [
+              {
+                "uuid": "550e8400-e29b-41d4-a716-446655440004",
+                "control-id": "AC-2",
+                "description": "Account Management",
+                "statements": [
+                  {
+                    "statement-id": "AC-2",
+                    "description": "The organization manages information system accounts, including establishing, activating, modifying, disabling, and removing accounts.",
+                    "by-components": [
+                      {
+                        "component-uuid": "550e8400-e29b-41d4-a716-446655440002",
+                        "implementation-status": {
+                          "state": "implemented"
+                        },
+                        "remarks": "EC2 instance uses IAM roles for access management. SSM agent provides centralized account management and access control."
+                      }
+                    ]
+                  }
+                ]
+              },
+              {
+                "uuid": "550e8400-e29b-41d4-a716-446655440005",
+                "control-id": "AC-3",
+                "description": "Access Enforcement",
+                "statements": [
+                  {
+                    "statement-id": "AC-3",
+                    "description": "The information system enforces approved authorizations for logical access to information and system resources.",
+                    "by-components": [
+                      {
+                        "component-uuid": "550e8400-e29b-41d4-a716-446655440002",
+                        "implementation-status": {
+                          "state": "implemented"
+                        },
+                        "remarks": "Security groups enforce network access controls. IAM roles enforce least-privilege access to AWS resources."
+                      }
+                    ]
+                  }
+                ]
+              },
+              {
+                "uuid": "550e8400-e29b-41d4-a716-446655440006",
+                "control-id": "SC-7",
+                "description": "Boundary Protection",
+                "statements": [
+                  {
+                    "statement-id": "SC-7",
+                    "description": "The information system monitors and controls communications at the external boundary of the information system and at key internal boundaries within the system.",
+                    "by-components": [
+                      {
+                        "component-uuid": "550e8400-e29b-41d4-a716-446655440002",
+                        "implementation-status": {
+                          "state": "implemented"
+                        },
+                        "remarks": "Security groups provide network boundary protection. VPC deployment ensures network isolation. Network ACLs provide additional boundary controls."
+                      }
+                    ]
+                  }
+                ]
+              },
+              {
+                "uuid": "550e8400-e29b-41d4-a716-446655440007",
+                "control-id": "SC-13",
+                "description": "Cryptographic Protection",
+                "statements": [
+                  {
+                    "statement-id": "SC-13",
+                    "description": "The information system implements cryptographic mechanisms to protect the confidentiality and integrity of information.",
+                    "by-components": [
+                      {
+                        "component-uuid": "550e8400-e29b-41d4-a716-446655440002",
+                        "implementation-status": {
+                          "state": "implemented"
+                        },
+                        "remarks": "EBS volumes are encrypted using customer-managed KMS keys. All data at rest is encrypted with AES-256."
+                      }
+                    ]
+                  }
+                ]
+              },
+              {
+                "uuid": "550e8400-e29b-41d4-a716-446655440008",
+                "control-id": "SI-4",
+                "description": "Information System Monitoring",
+                "statements": [
+                  {
+                    "statement-id": "SI-4",
+                    "description": "The organization monitors the information system to identify inappropriate or unusual activity.",
+                    "by-components": [
+                      {
+                        "component-uuid": "550e8400-e29b-41d4-a716-446655440002",
+                        "implementation-status": {
+                          "state": "implemented"
+                        },
+                        "remarks": "CloudWatch monitoring provides continuous system monitoring. CloudWatch alarms alert on unusual activity. SSM agent provides additional monitoring capabilities."
+                      }
+                    ]
+                  }
+                ]
+              },
+              {
+                "uuid": "550e8400-e29b-41d4-a716-446655440009",
+                "control-id": "AU-2",
+                "description": "Audit Events",
+                "statements": [
+                  {
+                    "statement-id": "AU-2",
+                    "description": "The information system generates audit records for defined auditable events.",
+                    "by-components": [
+                      {
+                        "component-uuid": "550e8400-e29b-41d4-a716-446655440002",
+                        "implementation-status": {
+                          "state": "implemented"
+                        },
+                        "remarks": "CloudWatch Logs capture all system events. SSM agent provides audit logging. User data scripts configure auditd for comprehensive logging."
+                      }
+                    ]
+                  }
+                ]
+              }
+            ]
+          }
+        ],
+        "assessment-plan": {
+          "uuid": "550e8400-e29b-41d4-a716-446655440010",
+          "metadata": {
+            "title": "EC2 Instance Assessment Plan",
+            "version": "1.0.0",
+            "last-modified": "2025-01-08T00:00:00Z"
+          },
+          "assessment-subjects": [
+            {
+              "uuid": "550e8400-e29b-41d4-a716-446655440011",
+              "title": "EC2 Instance Component",
+              "description": "Assessment of EC2 instance component compliance",
+              "props": [
+                {
+                  "name": "assessment-type",
+                  "value": "continuous",
+                  "class": "assessment"
+                }
+              ]
+            }
+          ],
+          "assessment-activities": [
+            {
+              "uuid": "550e8400-e29b-41d4-a716-446655440012",
+              "title": "Automated Compliance Validation",
+              "description": "Continuous validation of compliance controls through automated testing",
+              "assessment-subjects": [
+                {
+                  "subject-reference": "550e8400-e29b-41d4-a716-446655440011"
+                }
+              ],
+              "responsible-roles": [
+                {
+                  "role-id": "platform-owner"
+                }
+              ],
+              "steps": [
+                {
+                  "uuid": "550e8400-e29b-41d4-a716-446655440013",
+                  "title": "Run Compliance Tests",
+                  "description": "Execute automated compliance validation tests",
+                  "reviewed-controls": [
+                    {
+                      "control-selections": [
+                        {
+                          "include-controls": [
+                            {
+                              "control-id": "AC-2",
+                              "statement-ids": [
+                                "AC-2"
+                              ]
+                            },
+                            {
+                              "control-id": "AC-3",
+                              "statement-ids": [
+                                "AC-3"
+                              ]
+                            },
+                            {
+                              "control-id": "SC-7",
+                              "statement-ids": [
+                                "SC-7"
+                              ]
+                            },
+                            {
+                              "control-id": "SC-13",
+                              "statement-ids": [
+                                "SC-13"
+                              ]
+                            },
+                            {
+                              "control-id": "SI-4",
+                              "statement-ids": [
+                                "SI-4"
+                              ]
+                            },
+                            {
+                              "control-id": "AU-2",
+                              "statement-ids": [
+                                "AU-2"
+                              ]
+                            }
+                          ]
+                        }
+                      ]
+                    }
+                  ]
+                }
+              ]
+            }
+          ]
+        }
+      }
+    ]
+  },
+  "implementationNotes": {
+    "complianceFramework": "fedramp-moderate",
+    "dataClassification": "confidential",
+    "encryptionRequirements": "customer-managed-kms",
+    "monitoringRequirements": "continuous",
+    "auditRequirements": "3-year-retention",
+    "reviewNotes": [
+      "TODO: Complete implementation statements for each control",
+      "TODO: Add specific evidence references for control validation",
+      "TODO: Include risk assessment for each control implementation",
+      "TODO: Document residual risks and mitigation strategies"
+    ]
+  }
+}
