@@ -1,3 +1,10 @@
+Status: Deprecated (superseded by v2)
+
+Reason: Platform added tier isolation, PaC/Wiz gates, Dagger, typed capabilities
+
+Date: 9-14-2025
+Add the new spec as docs/specs/svc-migrate-v2.md
+
 Engineering Specification: The Platform Migration Tool (svc migrate)
 1. Product Vision & Goals
 Vision: To provide a semi-automated, safe, and deterministic tool that accelerates the refactoring of existing AWS CDK codebases into our platform's declarative service.yml manifest format.

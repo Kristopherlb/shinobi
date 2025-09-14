@@ -41,9 +41,6 @@ module.exports = {
   roots: ['<rootDir>/src', '<rootDir>/tests', '<rootDir>/packages'],
   testMatch: ['**/__tests__/**/*.ts', '**/?(*.)+(spec|test).ts'],
   testPathIgnorePatterns,
-  transform: {
-    '^.+\\.ts$': 'ts-jest',
-  },
   moduleNameMapper: {
     '^@platform/contracts$': '<rootDir>/src/platform/contracts/index.ts',
     '^@platform/logger$': '<rootDir>/src/platform/logger/src/index.ts',
@@ -56,7 +53,35 @@ module.exports = {
     '^@platform/resolver$': '<rootDir>/src/resolver/index.ts',
     '^@platform/services$': '<rootDir>/src/services/index.ts',
     '^@platform/templates$': '<rootDir>/src/templates/index.ts',
-    '^@platform/(.*)$': '<rootDir>/src/components/$1/index.ts'
+    '^@platform/(.*)$': '<rootDir>/src/components/$1/index.ts',
+    '^@binders/registry/(.*)$': '<rootDir>/src/platform/binders/registry/$1',
+    '^@binders/(.*)$': '<rootDir>/src/platform/binders/strategies/$1'
+  },
+  transform: {
+    '^.+\\.ts$': ['ts-jest', {
+      tsconfig: {
+        moduleResolution: 'node',
+        baseUrl: '.',
+        paths: {
+          '@platform/contracts': ['src/platform/contracts'],
+          '@platform/logger': ['src/platform/logger'],
+          '@platform/tagging': ['src/platform/tagging'],
+          '@platform/observability': ['src/platform/observability'],
+          '@platform/core-engine': ['src/core-engine'],
+          '@platform/bindings': ['src/bindings'],
+          '@platform/cli': ['src/cli'],
+          '@platform/migration': ['src/migration'],
+          '@platform/resolver': ['src/resolver'],
+          '@platform/services': ['src/services'],
+          '@platform/templates': ['src/templates'],
+          '@platform/openfeature-provider': ['src/components/openfeature-provider'],
+          '@platform/feature-flag': ['src/components/feature-flag'],
+          '@platform/*': ['src/components/*'],
+          '@binders/*': ['src/platform/binders/strategies/*'],
+          '@binders/registry/*': ['src/platform/binders/registry/*']
+        }
+      }
+    }],
   },
   collectCoverageFrom: [
     'src/**/*.ts',
