@@ -12,75 +12,85 @@ spec:
   version: "1.0.0"
   environment: dev
   complianceFramework: commercial
-  
-  # Service configuration
-  config:
-    # Backstage portal configuration
-    portal:
-      name: "Shinobi Developer Portal"
-      organization: "Shinobi Platform"
-      description: "Developer portal for Shinobi platform components and services"
-      
-    # Database configuration (will use Shinobi RDS component)
-    database:
-      type: postgresql
-      host: "${RDS_ENDPOINT}"
-      port: 5432
-      database: backstage
-      username: "${RDS_USERNAME}"
-      password: "${RDS_PASSWORD}"
-      
-    # Authentication configuration
-    auth:
-      provider: github
-      github:
-        clientId: "${GITHUB_CLIENT_ID}"
-        clientSecret: "${GITHUB_CLIENT_SECRET}"
-        
-    # Catalog configuration
-    catalog:
-      providers:
-        github:
-          - id: shinobi-platform
-            org: shinobi-platform
-            catalogPath: /catalog-info.yaml
-            
+
   # Components that make up this service
   components:
-    # Backend API component
-    - name: backstage-backend
-      type: lambda-api
+    # Main Backstage Portal component
+    - name: backstage-portal
+      type: backstage-portal
       config:
-        runtime: nodejs18.x
-        handler: packages/backend/dist/index.js
-        environment:
-          NODE_ENV: production
-          DATABASE_URL: "${RDS_CONNECTION_STRING}"
-          GITHUB_CLIENT_ID: "${GITHUB_CLIENT_ID}"
-          GITHUB_CLIENT_SECRET: "${GITHUB_CLIENT_SECRET}"
-        memory: 1024
-        timeout: 30
-        
-    # Frontend component
-    - name: backstage-frontend
-      type: static-website
-      config:
-        domain: backstage.shinobi.local
-        buildCommand: "yarn workspace app build"
-        outputDirectory: "packages/app/dist"
-        
-    # Database component
+        portal:
+          name: "Shinobi Developer Portal"
+          organization: "Shinobi Platform"
+          description: "Developer portal for Shinobi platform components and services"
+          baseUrl: "https://backstage.shinobi.local"
+
+        database:
+          instanceClass: "db.t3.micro"
+          allocatedStorage: 20
+          maxAllocatedStorage: 100
+          backupRetentionDays: 7
+          multiAz: false
+          deletionProtection: true
+
+        backend:
+          desiredCount: 2
+          cpu: 512
+          memory: 1024
+          healthCheckPath: "/health"
+          healthCheckInterval: 30
+
+        frontend:
+          desiredCount: 2
+          cpu: 256
+          memory: 512
+          healthCheckPath: "/"
+          healthCheckInterval: 30
+
+        ecr:
+          maxImageCount: 10
+          imageScanOnPush: true
+
+        observability:
+          logRetentionDays: 30
+          cpuThreshold: 80
+          memoryThreshold: 85
+          enableTracing: true
+          enableMetrics: true
+
+        security:
+          enableEncryption: true
+          enableVpcFlowLogs: true
+          enableWaf: false
+
+        auth:
+          provider: github
+          github:
+            clientId: "${GITHUB_CLIENT_ID}"
+            clientSecret: "${GITHUB_CLIENT_SECRET}"
+            organization: "shinobi-platform"
+
+        catalog:
+          providers:
+            - type: github
+              id: shinobi-platform
+              org: shinobi-platform
+              catalogPath: /catalog-info.yaml
+
+    # PostgreSQL database component
     - name: backstage-database
       type: rds-postgres
       config:
-        instanceClass: db.t3.micro
+        instanceClass: "db.t3.micro"
         allocatedStorage: 20
+        maxAllocatedStorage: 100
         databaseName: backstage
         masterUsername: backstage
         masterPassword: "${RDS_MASTER_PASSWORD}"
         backupRetentionPeriod: 7
         multiAz: false
-        
+        deletionProtection: true
+
     # ECR repository for container images
     - name: backstage-images
       type: ecr-repository
@@ -88,7 +98,7 @@ spec:
         imageScanningConfiguration:
           scanOnPush: true
         imageTagMutability: MUTABLE
-        
+
     # S3 bucket for static assets
     - name: backstage-assets
       type: s3-bucket
@@ -100,21 +110,21 @@ spec:
           - allowedOrigins: ["https://backstage.shinobi.local"]
             allowedMethods: ["GET", "HEAD"]
             allowedHeaders: ["*"]
-            
+
   # Bindings between components
   bindings:
-    - source: backstage-backend
+    - source: backstage-portal
       target: backstage-database
       type: database-connection
-      
-    - source: backstage-frontend
+
+    - source: backstage-portal
       target: backstage-assets
       type: static-assets
-      
-    - source: backstage-backend
+
+    - source: backstage-portal
       target: backstage-images
       type: container-registry
-      
+
   # Observability configuration
   observability:
     logging:
@@ -133,7 +143,7 @@ spec:
     tracing:
       enabled: true
       samplingRate: 0.1
-      
+
   # Security configuration
   security:
     encryption:
@@ -161,14 +171,14 @@ spec:
               toPort: 443
               protocol: tcp
               source: 0.0.0.0/0
-              
+
   # Compliance and governance
   compliance:
     framework: commercial
     dataClassification: internal
     auditLogging: true
     backupRequired: true
-    
+
   # Deployment configuration
   deployment:
     strategy: rolling

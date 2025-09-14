@@ -1,0 +1,66 @@
+version: '3.8'
+
+services:
+  # PostgreSQL database for Backstage
+  postgres:
+    image: postgres:15
+    container_name: backstage-postgres
+    environment:
+      POSTGRES_DB: backstage
+      POSTGRES_USER: backstage
+      POSTGRES_PASSWORD: backstage
+    ports:
+      - "5432:5432"
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U backstage -d backstage"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  # Backstage backend
+  backstage-backend:
+    build:
+      context: .
+      dockerfile: Dockerfile.backend
+    container_name: backstage-backend
+    environment:
+      NODE_ENV: development
+      PORT: 7007
+      DATABASE_URL: postgresql://backstage:backstage@postgres:5432/backstage
+      GITHUB_CLIENT_ID: ${GITHUB_CLIENT_ID:-}
+      GITHUB_CLIENT_SECRET: ${GITHUB_CLIENT_SECRET:-}
+      BACKEND_URL: http://localhost:7007
+      FRONTEND_URL: http://localhost:3000
+    ports:
+      - "7007:7007"
+    depends_on:
+      postgres:
+        condition: service_healthy
+    volumes:
+      - ./packages/backend:/app/packages/backend
+      - ./packages/app:/app/packages/app
+    command: ["yarn", "workspace", "backend", "dev"]
+
+  # Backstage frontend
+  backstage-frontend:
+    build:
+      context: .
+      dockerfile: Dockerfile.frontend
+    container_name: backstage-frontend
+    environment:
+      NODE_ENV: development
+      PORT: 3000
+      BACKEND_URL: http://backstage-backend:7007
+      FRONTEND_URL: http://localhost:3000
+    ports:
+      - "3000:3000"
+    depends_on:
+      - backstage-backend
+    volumes:
+      - ./packages/app:/app/packages/app
+    command: ["yarn", "workspace", "app", "dev"]
+
+volumes:
+  postgres_data:

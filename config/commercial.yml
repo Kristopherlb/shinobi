@@ -1,0 +1,32 @@
+defaults:
+  logging:
+    enabled: true
+    retention_days: 365
+  monitoring:
+    enabled: true
+    alarms:
+      enabled: true
+  security:
+    encryption:
+      enabled: true
+    access_control:
+      least_privilege: true
+  waf-web-acl:
+    scope: REGIONAL
+    defaultAction: allow
+    managedRuleGroups:
+      - name: AWSManagedRulesCommonRuleSet
+        vendorName: AWS
+        priority: 1
+        overrideAction: none
+      - name: AWSManagedRulesKnownBadInputsRuleSet
+        vendorName: AWS
+        priority: 2
+        overrideAction: none
+    logging:
+      enabled: true
+      logDestinationType: cloudwatch
+    monitoring:
+      enabled: true
+      alarms:
+        blockedRequestsThreshold: 1000

@@ -14,16 +14,16 @@ import { ComponentContext, ComponentSpec } from '../../../src/platform/contracts
 export interface WafWebAclConfig {
   /** Web ACL name (optional, defaults to component name) */
   name?: string;
-  
+
   /** Web ACL description */
   description?: string;
-  
+
   /** Scope of the Web ACL */
   scope?: 'REGIONAL' | 'CLOUDFRONT';
-  
+
   /** Default action for requests that don't match any rules */
   defaultAction?: 'allow' | 'block';
-  
+
   /** AWS Managed Rule Groups */
   managedRuleGroups?: Array<{
     name: string;
@@ -32,7 +32,7 @@ export interface WafWebAclConfig {
     overrideAction?: 'none' | 'count';
     excludedRules?: string[];
   }>;
-  
+
   /** Custom rules */
   customRules?: Array<{
     name: string;
@@ -53,7 +53,7 @@ export interface WafWebAclConfig {
       }>;
     };
   }>;
-  
+
   /** Logging configuration */
   logging?: {
     enabled?: boolean;
@@ -64,7 +64,7 @@ export interface WafWebAclConfig {
       name?: string;
     }>;
   };
-  
+
   /** Monitoring configuration */
   monitoring?: {
     enabled?: boolean;
@@ -75,7 +75,7 @@ export interface WafWebAclConfig {
       sampledRequestsEnabled?: boolean;
     };
   };
-  
+
   /** Tags for the Web ACL */
   tags?: Record<string, string>;
 }
@@ -219,7 +219,7 @@ export const WAF_WEB_ACL_CONFIG_SCHEMA = {
  * 5. Policy Overrides (from governance policies)
  */
 export class WafWebAclConfigBuilder extends ConfigBuilder<WafWebAclConfig> {
-  
+
   constructor(context: ComponentContext, spec: ComponentSpec) {
     const builderContext: ConfigBuilderContext = {
       context,
@@ -227,13 +227,16 @@ export class WafWebAclConfigBuilder extends ConfigBuilder<WafWebAclConfig> {
     };
     super(builderContext, WAF_WEB_ACL_CONFIG_SCHEMA);
   }
-  
+
   /**
    * Layer 1: Hardcoded Fallbacks
    * Ultra-safe baseline configuration that works in any environment
    */
   protected getHardcodedFallbacks(): Partial<WafWebAclConfig> {
-    return {
+    const framework = this.builderContext.context.complianceFramework;
+
+    // Base fallbacks that work for all environments
+    const baseFallbacks: Partial<WafWebAclConfig> = {
       scope: 'REGIONAL',
       defaultAction: 'allow',
       managedRuleGroups: [
@@ -267,15 +270,62 @@ export class WafWebAclConfigBuilder extends ConfigBuilder<WafWebAclConfig> {
       },
       tags: {}
     };
+
+    // Apply compliance framework-specific enhancements
+    if (framework === 'commercial') {
+      return {
+        ...baseFallbacks,
+        monitoring: {
+          ...baseFallbacks.monitoring,
+          detailedMetrics: true,
+          alarms: {
+            ...baseFallbacks.monitoring!.alarms,
+            blockedRequestsThreshold: 500
+          }
+        }
+      };
+    }
+
+    if (framework === 'fedramp-moderate' || framework === 'fedramp-high') {
+      return {
+        ...baseFallbacks,
+        defaultAction: 'block',
+        managedRuleGroups: [
+          ...baseFallbacks.managedRuleGroups!,
+          {
+            name: 'AWSManagedRulesLinuxRuleSet',
+            vendorName: 'AWS',
+            priority: 4,
+            overrideAction: 'none'
+          },
+          {
+            name: 'AWSManagedRulesUnixRuleSet',
+            vendorName: 'AWS',
+            priority: 5,
+            overrideAction: 'none'
+          }
+        ],
+        monitoring: {
+          ...baseFallbacks.monitoring,
+          detailedMetrics: true,
+          alarms: {
+            ...baseFallbacks.monitoring!.alarms,
+            blockedRequestsThreshold: framework === 'fedramp-high' ? 100 : 250
+          }
+        }
+      };
+    }
+
+    return baseFallbacks;
   }
-  
+
   /**
    * Layer 2: Compliance Framework Defaults
    * Security and compliance-specific configurations
    */
   protected getComplianceFrameworkDefaults(): Partial<WafWebAclConfig> {
     const framework = this.builderContext.context.complianceFramework;
-    
+
     // For commercial, we rely more on platform config, but add some enhancements
     const baseCompliance: Partial<WafWebAclConfig> = {
       monitoring: {
@@ -288,7 +338,7 @@ export class WafWebAclConfigBuilder extends ConfigBuilder<WafWebAclConfig> {
         }
       }
     };
-    
+
     if (framework === 'fedramp-moderate' || framework === 'fedramp-high') {
       return {
         ...baseCompliance,
@@ -323,10 +373,10 @@ export class WafWebAclConfigBuilder extends ConfigBuilder<WafWebAclConfig> {
         }
       };
     }
-    
+
     return baseCompliance;
   }
-  
+
   /**
    * Get the JSON Schema for validation
    */
