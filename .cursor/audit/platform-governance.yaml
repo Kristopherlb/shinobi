@@ -2,10 +2,10 @@
 # Enforces architectural patterns, security standards, and compliance requirements
 
 defaults:
-  meta_sidecar_suffixes: ['.meta.json', '.meta.yaml', '.meta.yml']
-  test_globs: ['**/*.test.ts', '**/*.spec.ts', '**/tests/**/*.ts']
-  component_globs: ['packages/components/**/*.ts', 'src/components/**/*.ts']
-  config_globs: ['**/*.config.*', '**/config/**/*']
+  meta_sidecar_suffixes: [".meta.json", ".meta.yaml", ".meta.yml"]
+  test_globs: ["**/*.test.ts", "**/*.spec.ts", "**/tests/**/*.ts"]
+  component_globs: ["packages/components/**/*.ts", "src/components/**/*.ts"]
+  config_globs: ["**/*.config.*", "**/config/**/*"]
 
 rules:
   - id: "GOV-001"
@@ -78,9 +78,9 @@ rules:
     must_exist:
       - "Config.schema.json"
     must_match:
-      - pattern: "\"type\".*\"object\""
+      - pattern: '"type".*"object"'
         file: "Config.schema.json"
-      - pattern: "\"properties\""
+      - pattern: '"properties"'
         file: "Config.schema.json"
 
   - id: "GOV-007"
@@ -134,8 +134,8 @@ rules:
     must_exist:
       - "package.json"
     must_match:
-      - pattern: "\"dependencies\"|\"devDependencies\""
+      - pattern: '"dependencies"|"devDependencies"'
         file: "package.json"
     must_not_match:
-      - pattern: "\"version\".*\"latest\""
+      - pattern: '"version".*"latest"'
         file: "package.json"
