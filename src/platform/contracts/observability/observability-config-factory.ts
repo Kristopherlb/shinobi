@@ -33,7 +33,7 @@ export class ObservabilityConfigFactory {
 
   static createConfig(framework: ComplianceFramework): ObservabilityConfig {
     const tier = this.mapFrameworkToTier(framework);
-    
+
     return {
       framework,
       tier,
@@ -71,7 +71,7 @@ export class ObservabilityConfigFactory {
             'tier': 'standard'
           }
         };
-      
+
       case 'fedramp-moderate':
         return {
           enabled: true,
@@ -85,7 +85,7 @@ export class ObservabilityConfigFactory {
             'compliance': 'moderate'
           }
         };
-      
+
       case 'fedramp-high':
         return {
           enabled: true,
@@ -119,7 +119,7 @@ export class ObservabilityConfigFactory {
             'tier': 'commercial'
           }
         };
-      
+
       case 'fedramp-moderate':
         return {
           enabled: true,
@@ -136,7 +136,7 @@ export class ObservabilityConfigFactory {
             'audit': 'enabled'
           }
         };
-      
+
       case 'fedramp-high':
         return {
           enabled: true,
@@ -172,7 +172,7 @@ export class ObservabilityConfigFactory {
             'Service': 'shinobi'
           }
         };
-      
+
       case 'fedramp-moderate':
         return {
           enabled: true,
@@ -186,7 +186,7 @@ export class ObservabilityConfigFactory {
             'Compliance': 'moderate'
           }
         };
-      
+
       case 'fedramp-high':
         return {
           enabled: true,
@@ -215,7 +215,7 @@ export class ObservabilityConfigFactory {
           auditTrail: false,
           accessLogging: true
         };
-      
+
       case 'fedramp-moderate':
         return {
           fipsCompliant: false,
@@ -226,7 +226,7 @@ export class ObservabilityConfigFactory {
           accessLogging: true,
           allowedEndpoints: this.FEDRAMP_ENDPOINTS['fedramp-moderate']
         };
-      
+
       case 'fedramp-high':
         return {
           fipsCompliant: true,
@@ -261,7 +261,7 @@ export class ObservabilityConfigFactory {
   }
 
   static getComplianceEndpoints(tier: ObservabilityTier): string[] {
-    return this.FEDRAMP_ENDPOINTS[tier] || [];
+    return this.FEDRAMP_ENDPOINTS[tier as keyof typeof this.FEDRAMP_ENDPOINTS] || [];
   }
 
   static isFipsRequired(tier: ObservabilityTier): boolean {

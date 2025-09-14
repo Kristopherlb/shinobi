@@ -1,45 +1,44 @@
-// src/platform/contracts/observability/strategies/lambda-observability-strategy.ts
-// ADOT Lambda instrumentation strategy with compliance-aware configuration
+// src/platform/contracts/observability/strategies/container-observability-strategy.ts
+// Container sidecar collector injection strategy with compliance-aware configuration
 
 import { PolicyStatement, Effect } from 'aws-cdk-lib/aws-iam';
 import { LogGroup, RetentionDays } from 'aws-cdk-lib/aws-logs';
-import { Function } from 'aws-cdk-lib/aws-lambda';
 import { RemovalPolicy } from 'aws-cdk-lib';
 import { ComplianceFramework } from '../../bindings';
 import {
   ObservabilityConfig,
-  ObservabilityBindingResult,
-  ComponentObservabilityCapability
+  ObservabilityBindingResult
 } from '../observability-types';
 import { ObservabilityConfigFactory } from '../observability-config-factory';
 
-export interface LambdaObservabilityContext {
-  function: Function;
-  componentName: string;
+export interface ContainerObservabilityContext {
+  serviceName: string;
+  clusterName: string;
+  taskDefinitionArn: string;
   environment: string;
   region: string;
   complianceFramework: string;
-  existingEnvVars?: Record<string, string>;
+  existingContainers?: Array<{
+    name: string;
+    image: string;
+    environment?: Record<string, string>;
+    volumes?: Array<{ name: string; mountPath: string }>;
+  }>;
   existingPolicies?: PolicyStatement[];
 }
 
-export class LambdaObservabilityStrategy {
+export class ContainerObservabilityStrategy {
   private config: ObservabilityConfig;
 
   constructor(complianceFramework: string) {
     this.config = ObservabilityConfigFactory.createConfig(complianceFramework as any);
   }
 
-  async instrumentLambda(context: LambdaObservabilityContext): Promise<ObservabilityBindingResult> {
-    const { function: lambdaFunction, componentName, environment, region } = context;
+  async instrumentContainer(context: ContainerObservabilityContext): Promise<ObservabilityBindingResult> {
+    const { serviceName, environment, region } = context;
 
-    // Create CloudWatch log group with compliance-aware retention
-    const logGroup = this.createLogGroup(lambdaFunction, componentName, environment);
-
-    // Add ADOT layer for OpenTelemetry
-    const adotLayerArn = ObservabilityConfigFactory.getAdotLayerArn(region, this.config.tier);
-    // Note: In real implementation, you would need to import the layer properly
-    // lambdaFunction.addLayers(LayerVersion.fromLayerVersionArn(lambdaFunction, 'AdotLayer', adotLayerArn));
+    // Create CloudWatch log group for the service
+    const logGroup = this.createLogGroup(serviceName, environment);
 
     // Configure environment variables for observability
     const environmentVariables = this.createEnvironmentVariables(context, logGroup);
@@ -50,8 +49,8 @@ export class LambdaObservabilityStrategy {
     // Configure X-Ray tracing
     const xrayConfigurations = this.createXrayConfigurations(context);
 
-    // Create ADOT-specific configurations
-    const adotConfigurations = this.createAdotConfigurations(context, logGroup);
+    // Create sidecar collector configurations
+    const sidecarConfigurations = this.createSidecarConfigurations(context, logGroup);
 
     // Generate compliance actions
     const complianceActions = this.createComplianceActions(context).map(action => ({
@@ -66,18 +65,18 @@ export class LambdaObservabilityStrategy {
         logGroupName: logGroup.logGroupName,
         retentionDays: this.config.logging.retentionDays,
         encryptionKey: this.config.security.encryptionAtRest ? 'alias/aws/logs' : undefined,
-        tags: this.createLogGroupTags(componentName, environment)
+        tags: this.createLogGroupTags(serviceName, environment)
       }],
       xrayConfigurations,
-      adotConfigurations: adotConfigurations || [],
-      sidecarConfigurations: [], // Not applicable for Lambda
-      agentConfigurations: [], // Not applicable for Lambda
+      adotConfigurations: [], // Not applicable for containers
+      sidecarConfigurations,
+      agentConfigurations: [], // Not applicable for containers
       complianceActions
     };
   }
 
-  private createLogGroup(lambdaFunction: Function, componentName: string, environment: string): LogGroup {
-    const logGroupName = `/aws/lambda/${lambdaFunction.functionName}`;
+  private createLogGroup(serviceName: string, environment: string): LogGroup {
+    const logGroupName = `/aws/ecs/${serviceName}-${environment}`;
 
     // In a real implementation, this would create the actual LogGroup
     // For testing purposes, we'll return a mock object with the required properties
@@ -88,12 +87,12 @@ export class LambdaObservabilityStrategy {
   }
 
   private createEnvironmentVariables(
-    context: LambdaObservabilityContext,
+    context: ContainerObservabilityContext,
     logGroup: LogGroup
   ): Record<string, string> {
     const envVars: Record<string, string> = {
-      // ADOT configuration
-      'OTEL_SERVICE_NAME': context.componentName,
+      // OpenTelemetry configuration
+      'OTEL_SERVICE_NAME': context.serviceName,
       'OTEL_SERVICE_VERSION': '1.0.0',
       'OTEL_RESOURCE_ATTRIBUTES': this.createResourceAttributes(context),
       'OTEL_EXPORTER_OTLP_ENDPOINT': this.getOtlpEndpoint(),
@@ -102,14 +101,18 @@ export class LambdaObservabilityStrategy {
       'OTEL_LOGS_EXPORTER': 'otlp',
 
       // X-Ray configuration
-      'AWS_XRAY_TRACING_NAME': context.componentName,
+      'AWS_XRAY_TRACING_NAME': context.serviceName,
       'AWS_XRAY_CONTEXT_MISSING': 'LOG_ERROR',
-      'AWS_XRAY_DAEMON_ADDRESS': '169.254.79.2:2000',
+      'AWS_XRAY_DAEMON_ADDRESS': 'localhost:2000', // Sidecar collector
 
       // Logging configuration
       'LOG_LEVEL': this.config.logging.level.toUpperCase(),
       'LOG_FORMAT': this.config.logging.format,
       'CLOUDWATCH_LOG_GROUP': logGroup.logGroupName,
+
+      // Container-specific configuration
+      'OTEL_EXPORTER_OTLP_INSECURE': this.config.tier === 'commercial' ? 'true' : 'false',
+      'OTEL_PROPAGATORS': 'tracecontext,baggage,xray',
 
       // Compliance-specific variables
       ...this.createComplianceEnvVars(context)
@@ -126,7 +129,7 @@ export class LambdaObservabilityStrategy {
   }
 
   private createIamPolicies(
-    context: LambdaObservabilityContext,
+    context: ContainerObservabilityContext,
     logGroup: LogGroup
   ): Array<{ statement: PolicyStatement; description: string; complianceRequirement: string }> {
     const policies: Array<{ statement: PolicyStatement; description: string; complianceRequirement: string }> = [];
@@ -144,7 +147,7 @@ export class LambdaObservabilityStrategy {
         ],
         resources: [logGroup.logGroupArn, `${logGroup.logGroupArn}:*`]
       }),
-      description: 'CloudWatch Logs access for observability',
+      description: 'CloudWatch Logs access for container observability',
       complianceRequirement: `${this.config.framework}-LOGS-001`
     });
 
@@ -159,7 +162,7 @@ export class LambdaObservabilityStrategy {
           ],
           resources: ['*']
         }),
-        description: 'X-Ray tracing permissions',
+        description: 'X-Ray tracing permissions for container',
         complianceRequirement: `${this.config.framework}-XRAY-001`
       });
     }
@@ -176,10 +179,25 @@ export class LambdaObservabilityStrategy {
           ],
           resources: ['*']
         }),
-        description: 'CloudWatch Metrics access',
+        description: 'CloudWatch Metrics access for container',
         complianceRequirement: `${this.config.framework}-METRICS-001`
       });
     }
+
+    // ECS-specific permissions
+    policies.push({
+      statement: new PolicyStatement({
+        effect: Effect.ALLOW,
+        actions: [
+          'ecs:DescribeTasks',
+          'ecs:DescribeTaskDefinition',
+          'ecs:ListTasks'
+        ],
+        resources: ['*']
+      }),
+      description: 'ECS access for container observability',
+      complianceRequirement: `${this.config.framework}-ECS-001`
+    });
 
     // FedRAMP-specific permissions
     if (this.config.tier !== 'commercial') {
@@ -204,7 +222,7 @@ export class LambdaObservabilityStrategy {
     return policies;
   }
 
-  private createXrayConfigurations(context: LambdaObservabilityContext): Array<{
+  private createXrayConfigurations(context: ContainerObservabilityContext): Array<{
     serviceName: string;
     samplingRules: any[];
     customAnnotations?: Record<string, string>;
@@ -215,12 +233,12 @@ export class LambdaObservabilityStrategy {
 
     const samplingRules = [
       {
-        RuleName: `${context.componentName}-sampling-rule`,
+        RuleName: `${context.serviceName}-sampling-rule`,
         Priority: 1,
         FixedRate: this.config.tracing.samplingRate,
         ReservoirSize: 1000,
-        ServiceName: context.componentName,
-        ServiceType: 'AWS::Lambda::Function',
+        ServiceName: context.serviceName,
+        ServiceType: 'AWS::ECS::Service',
         Host: '*',
         HTTPMethod: '*',
         URLPath: '*',
@@ -230,42 +248,83 @@ export class LambdaObservabilityStrategy {
     ];
 
     return [{
-      serviceName: context.componentName,
+      serviceName: context.serviceName,
       samplingRules,
       customAnnotations: {
         'compliance.tier': this.config.tier,
         'compliance.framework': this.config.framework,
         'environment': context.environment,
-        'component.type': 'lambda'
+        'component.type': 'container',
+        'cluster.name': context.clusterName
       }
     }];
   }
 
-  private createAdotConfigurations(
-    context: LambdaObservabilityContext,
+  private createSidecarConfigurations(
+    context: ContainerObservabilityContext,
     logGroup: LogGroup
   ): Array<{
-    layerArn: string;
+    image: string;
     environmentVariables: Record<string, string>;
-    configurationFile?: string;
+    volumeMounts?: Array<{ name: string; mountPath: string }>;
+    resources?: any;
   }> {
-    const region = context.region;
-    const layerArn = ObservabilityConfigFactory.getAdotLayerArn(region, this.config.tier);
+    const sidecars: Array<{
+      image: string;
+      environmentVariables: Record<string, string>;
+      volumeMounts?: Array<{ name: string; mountPath: string }>;
+      resources?: any;
+    }> = [];
 
-    return [{
-      layerArn,
+    // OpenTelemetry Collector sidecar
+    const collectorImage = this.getCollectorImage();
+    sidecars.push({
+      image: collectorImage,
       environmentVariables: {
-        'OTEL_CONFIG_FILE': '/opt/aws-otel-lambda/config.yaml',
-        'OTEL_PROPAGATORS': 'tracecontext,baggage,xray',
-        'OTEL_LAMBDA_LOG_LEVEL': this.config.logging.level.toUpperCase(),
-        'OTEL_LAMBDA_TRACE_ENABLED': this.config.tracing.enabled.toString(),
-        'OTEL_LAMBDA_METRIC_ENABLED': this.config.metrics.enabled.toString()
+        'OTEL_CONFIG': '/etc/otel-collector/config.yaml',
+        'AWS_REGION': context.region,
+        'LOG_LEVEL': this.config.logging.level.toLowerCase()
       },
-      configurationFile: this.generateAdotConfig()
-    }];
+      volumeMounts: [
+        { name: 'otel-config', mountPath: '/etc/otel-collector' }
+      ],
+      resources: {
+        limits: {
+          cpu: '200m',
+          memory: '256Mi'
+        },
+        requests: {
+          cpu: '100m',
+          memory: '128Mi'
+        }
+      }
+    });
+
+    // X-Ray daemon sidecar for FedRAMP environments
+    if (this.config.tier !== 'commercial') {
+      sidecars.push({
+        image: 'amazon/aws-xray-daemon:latest',
+        environmentVariables: {
+          'AWS_REGION': context.region,
+          'AWS_XRAY_DAEMON_ADDRESS': '0.0.0.0:2000'
+        },
+        resources: {
+          limits: {
+            cpu: '100m',
+            memory: '128Mi'
+          },
+          requests: {
+            cpu: '50m',
+            memory: '64Mi'
+          }
+        }
+      });
+    }
+
+    return sidecars;
   }
 
-  private createComplianceActions(context: LambdaObservabilityContext): Array<{
+  private createComplianceActions(context: ContainerObservabilityContext): Array<{
     action: string;
     description: string;
     framework: string;
@@ -283,6 +342,13 @@ export class LambdaObservabilityStrategy {
       actions.push({
         action: 'ENHANCED_AUDIT_LOGGING',
         description: 'Enhanced audit logging enabled for FedRAMP Moderate compliance',
+        framework: this.config.framework,
+        severity: 'info'
+      });
+
+      actions.push({
+        action: 'XRAY_DAEMON_SIDECAR',
+        description: 'X-Ray daemon sidecar deployed for enhanced tracing',
         framework: this.config.framework,
         severity: 'info'
       });
@@ -309,20 +375,29 @@ export class LambdaObservabilityStrategy {
         framework: this.config.framework,
         severity: 'info'
       });
+
+      actions.push({
+        action: 'XRAY_DAEMON_SIDECAR',
+        description: 'X-Ray daemon sidecar deployed for high-security tracing',
+        framework: this.config.framework,
+        severity: 'info'
+      });
     }
 
     return actions;
   }
 
-  private createResourceAttributes(context: LambdaObservabilityContext): string {
+  private createResourceAttributes(context: ContainerObservabilityContext): string {
     const attributes = [
-      `service.name=${context.componentName}`,
+      `service.name=${context.serviceName}`,
       `service.version=1.0.0`,
       `deployment.environment=${context.environment}`,
       `compliance.framework=${this.config.framework}`,
       `compliance.tier=${this.config.tier}`,
       `cloud.provider=aws`,
-      `cloud.region=${context.region}`
+      `cloud.region=${context.region}`,
+      `container.runtime=ecs`,
+      `k8s.cluster.name=${context.clusterName}`
     ];
 
     return attributes.join(',');
@@ -339,7 +414,17 @@ export class LambdaObservabilityStrategy {
     return 'https://api.honeycomb.io/v1/traces';
   }
 
-  private createComplianceEnvVars(context: LambdaObservabilityContext): Record<string, string> {
+  private getCollectorImage(): string {
+    // Use FIPS-compliant image for FedRAMP High
+    if (this.config.tier === 'fedramp-high') {
+      // TODO: Use FIPS-compliant OpenTelemetry Collector image when available
+      console.warn('FIPS-compliant OpenTelemetry Collector image not yet available, using standard image');
+    }
+
+    return 'otel/opentelemetry-collector-contrib:0.88.0';
+  }
+
+  private createComplianceEnvVars(context: ContainerObservabilityContext): Record<string, string> {
     const envVars: Record<string, string> = {};
 
     if (this.config.tier === 'fedramp-moderate' || this.config.tier === 'fedramp-high') {
@@ -358,7 +443,7 @@ export class LambdaObservabilityStrategy {
   }
 
   private mapRetentionDays(days: number): RetentionDays {
-    // Map retention days to CDK RetentionDays enum
+    // Map retention days to CDK RetentionDays enum (same as Lambda strategy)
     if (days <= 1) return RetentionDays.ONE_DAY;
     if (days <= 3) return RetentionDays.THREE_DAYS;
     if (days <= 5) return RetentionDays.FIVE_DAYS;
@@ -382,56 +467,15 @@ export class LambdaObservabilityStrategy {
     return RetentionDays.THREE_YEARS; // Use available option
   }
 
-  private createLogGroupTags(componentName: string, environment: string): Record<string, string> {
+  private createLogGroupTags(serviceName: string, environment: string): Record<string, string> {
     return {
-      'Component': componentName,
+      'Service': serviceName,
       'Environment': environment,
       'Compliance': this.config.framework,
       'Tier': this.config.tier,
       'ManagedBy': 'Shinobi',
-      'Observability': 'enabled'
+      'Observability': 'enabled',
+      'Type': 'container'
     };
-  }
-
-  private generateAdotConfig(): string {
-    return `
-receivers:
-  otlp:
-    protocols:
-      grpc:
-        endpoint: 0.0.0.0:4317
-      http:
-        endpoint: 0.0.0.0:4318
-
-processors:
-  batch:
-    timeout: 1s
-    send_batch_size: 1024
-  memory_limiter:
-    limit_mib: 512
-
-exporters:
-  otlp:
-    endpoint: ${this.getOtlpEndpoint()}
-    tls:
-      insecure: ${this.config.tier === 'commercial' ? 'true' : 'false'}
-  logging:
-    loglevel: ${this.config.logging.level}
-
-service:
-  pipelines:
-    traces:
-      receivers: [otlp]
-      processors: [memory_limiter, batch]
-      exporters: [otlp, logging]
-    metrics:
-      receivers: [otlp]
-      processors: [memory_limiter, batch]
-      exporters: [otlp, logging]
-    logs:
-      receivers: [otlp]
-      processors: [memory_limiter, batch]
-      exporters: [otlp, logging]
-`.trim();
   }
 }
