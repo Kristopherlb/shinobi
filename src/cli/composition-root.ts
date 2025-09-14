@@ -14,6 +14,8 @@ import { ManifestParser } from './services/manifest-parser';
 import { SchemaValidator } from './services/schema-validator';
 import { ContextHydrator } from './services/context-hydrator';
 import { ReferenceValidator } from './services/reference-validator';
+import { ManifestSchemaComposer } from './services/manifest-schema-composer';
+import { EnhancedSchemaValidator } from './services/enhanced-schema-validator';
 import inquirer from 'inquirer';
 
 export interface ApplicationDependencies {
@@ -26,6 +28,8 @@ export interface ApplicationDependencies {
   schemaValidator: SchemaValidator;
   contextHydrator: ContextHydrator;
   referenceValidator: ReferenceValidator;
+  schemaComposer: ManifestSchemaComposer;
+  enhancedValidator: EnhancedSchemaValidator;
 }
 
 export class CompositionRoot {
@@ -47,9 +51,21 @@ export class CompositionRoot {
     const schemaManager = new SchemaManager();
     const templateEngine = new TemplateEngine({ logger });
 
+    // Create enhanced schema validation services
+    const schemaComposer = new ManifestSchemaComposer({ logger });
+    const enhancedValidator = new EnhancedSchemaValidator({
+      logger,
+      schemaComposer
+    });
+
     // Create focused services (single responsibility)
     const manifestParser = new ManifestParser({ logger });
-    const schemaValidator = new SchemaValidator({ logger, schemaManager });
+    const schemaValidator = new SchemaValidator({
+      logger,
+      schemaManager,
+      enhancedValidator,
+      schemaComposer
+    });
     const contextHydrator = new ContextHydrator({ logger });
     const referenceValidator = new ReferenceValidator({ logger });
 
@@ -71,7 +87,9 @@ export class CompositionRoot {
       manifestParser,
       schemaValidator,
       contextHydrator,
-      referenceValidator
+      referenceValidator,
+      schemaComposer,
+      enhancedValidator
     };
 
     return this._dependencies;

@@ -1,0 +1,318 @@
+# Platform Governance Audit Rules
+# Enforces architectural patterns, compliance requirements, and quality standards
+
+rules:
+  # =============================================================================
+  # ARCHITECTURAL PATTERNS
+  # =============================================================================
+
+  - id: "arch-patterns-001"
+    title: "Component Structure Compliance"
+    severity: "error"
+    scope_glob: "packages/components/*/"
+    must_exist:
+      - "src/*.component.ts"
+      - "src/*.builder.ts"
+      - "tests/unit/*.test.ts"
+      - "README.md"
+    message: "Components must follow standard structure with component, builder, tests, and docs"
+
+  - id: "arch-patterns-002"
+    title: "BaseComponent Inheritance"
+    severity: "error"
+    scope_glob: "packages/components/*/src/*.component.ts"
+    must_match:
+      - pattern: "extends BaseComponent"
+        file: "*.component.ts"
+    message: "All components must extend BaseComponent for consistency"
+
+  - id: "arch-patterns-003"
+    title: "ConfigBuilder Pattern"
+    severity: "error"
+    scope_glob: "packages/components/*/src/*.builder.ts"
+    must_match:
+      - pattern: "extends ConfigBuilder"
+        file: "*.builder.ts"
+    message: "All builders must extend ConfigBuilder for environment handling"
+
+  - id: "arch-patterns-004"
+    title: "Primary Construct Count"
+    severity: "error"
+    scope_glob: "packages/components/*/"
+    count:
+      primary_constructs:
+        pattern: "new (s3\\.Bucket|rds\\.DatabaseInstance|lambda\\.Function|ecs\\.Cluster|ec2\\.Instance)"
+        max_per_component_dir: 1
+    message: "Components should have exactly one primary AWS construct"
+
+  # =============================================================================
+  # COMPLIANCE & SECURITY
+  # =============================================================================
+
+  - id: "compliance-001"
+    title: "FedRAMP High VPC Endpoints"
+    severity: "error"
+    scope_glob: "packages/components/*/src/*.ts"
+    conditional:
+      requires_pattern: "s3\\.Bucket|secretsmanager|kms"
+    must_match:
+      - pattern: "vpcEndpoint.*s3|vpcEndpoint.*secretsmanager|vpcEndpoint.*kms"
+        file: "*.ts"
+    message: "FedRAMP High requires VPC endpoints for S3, Secrets Manager, and KMS"
+
+  - id: "compliance-002"
+    title: "Encryption at Rest"
+    severity: "error"
+    scope_glob: "packages/components/*/src/*.ts"
+    conditional:
+      requires_pattern: "s3\\.Bucket|rds\\.DatabaseInstance|dynamodb\\.Table"
+    must_match:
+      - pattern: "encryption.*true|encryption.*enabled|encryptionAtRest.*true"
+        file: "*.ts"
+    message: "All storage services must have encryption at rest enabled"
+
+  - id: "compliance-003"
+    title: "TLS/SSL Requirements"
+    severity: "error"
+    scope_glob: "packages/components/*/src/*.ts"
+    conditional:
+      requires_pattern: "apiGateway|alb|nlb"
+    must_match:
+      - pattern: "sslPolicy|tls|https|secure"
+        file: "*.ts"
+    message: "All load balancers and API gateways must enforce TLS/SSL"
+
+  - id: "compliance-004"
+    title: "No Hardcoded Secrets"
+    severity: "error"
+    scope_glob: "packages/components/*/src/*.ts"
+    must_not_match:
+      - pattern: 'password.*=.*[''"][^''"]{8,}[''"]'
+        file: "*.ts"
+      - pattern: 'secret.*=.*[''"][^''"]{8,}[''"]'
+        file: "*.ts"
+      - pattern: 'key.*=.*[''"][^''"]{8,}[''"]'
+        file: "*.ts"
+    message: "No hardcoded secrets allowed - use Secrets Manager or parameter store"
+
+  - id: "compliance-005"
+    title: "IAM Least Privilege"
+    severity: "warn"
+    scope_glob: "packages/components/*/src/*.ts"
+    must_not_match:
+      - pattern: "Effect.*Allow.*Action.*\\*"
+        file: "*.ts"
+    message: "Avoid wildcard IAM permissions - use specific actions"
+
+  # =============================================================================
+  # BINDER STRATEGY COMPLIANCE
+  # =============================================================================
+
+  - id: "binder-001"
+    title: "Async Binder Strategy Contract"
+    severity: "error"
+    scope_glob: "src/platform/contracts/binders/*.ts"
+    must_match:
+      - pattern: "async bind\\(context: EnhancedBindingContext\\): Promise<EnhancedBindingResult>"
+        file: "*.ts"
+    message: "All binder strategies must implement async bind contract"
+
+  - id: "binder-002"
+    title: "Compliance Framework Support"
+    severity: "error"
+    scope_glob: "src/platform/contracts/binders/*.ts"
+    must_match:
+      - pattern: "fedramp-high|fedramp-moderate|commercial"
+        file: "*.ts"
+    message: "Binder strategies must support compliance frameworks"
+
+  - id: "binder-003"
+    title: "Structured Logging"
+    severity: "error"
+    scope_glob: "src/platform/contracts/binders/*.ts"
+    must_not_match:
+      - pattern: "console\\.(log|warn|error|info)"
+        file: "*.ts"
+    message: "Use structured logger instead of console methods"
+
+  - id: "binder-004"
+    title: "Immutable Results"
+    severity: "error"
+    scope_glob: "src/platform/contracts/binders/*.ts"
+    must_match:
+      - pattern: "Object\\.freeze|readonly"
+        file: "*.ts"
+    message: "Binding results must be immutable for audit compliance"
+
+  # =============================================================================
+  # TYPE SAFETY & CDK COMPLIANCE
+  # =============================================================================
+
+  - id: "types-001"
+    title: "No Any Types in CDK"
+    severity: "error"
+    scope_glob: "packages/components/*/src/*.ts"
+    must_not_match:
+      - pattern: ": any"
+        file: "*.ts"
+    message: "Avoid 'any' types - use proper CDK types"
+
+  - id: "types-002"
+    title: "PolicyStatement Usage"
+    severity: "error"
+    scope_glob: "src/platform/contracts/**/*.ts"
+    conditional:
+      requires_pattern: "iam\\.PolicyStatement|PolicyStatement"
+    must_match:
+      - pattern: "import.*PolicyStatement.*from.*aws-cdk-lib/aws-iam"
+        file: "*.ts"
+    message: "Use PolicyStatement from aws-cdk-lib/aws-iam, not any"
+
+  - id: "types-003"
+    title: "Capability Type Safety"
+    severity: "error"
+    scope_glob: "src/platform/contracts/**/*.ts"
+    must_match:
+      - pattern: "DbCapability|StorageCapability|QueueCapability|Capability"
+        file: "*.ts"
+    message: "Use typed capability enums instead of string literals"
+
+  # =============================================================================
+  # TESTING STANDARDS
+  # =============================================================================
+
+  - id: "test-001"
+    title: "Test Coverage Requirements"
+    severity: "warn"
+    scope_glob: "packages/components/*/"
+    must_exist:
+      - "tests/unit/*.test.ts"
+    message: "All components must have unit tests"
+
+  - id: "test-002"
+    title: "Test Naming Convention"
+    severity: "error"
+    scope_glob: "packages/components/*/tests/unit/*.test.ts"
+    must_match:
+      - pattern: "describe\\(.*Component.*\\)|describe\\(.*Builder.*\\)"
+        file: "*.test.ts"
+    message: "Tests must follow naming convention with describe blocks"
+
+  - id: "test-003"
+    title: "Async Test Support"
+    severity: "error"
+    scope_glob: "src/platform/contracts/tests/*.test.ts"
+    must_match:
+      - pattern: "async.*test\\(|await.*bind\\(|Promise<"
+        file: "*.test.ts"
+    message: "Tests must support async binder strategy operations"
+
+  # =============================================================================
+  # DOCUMENTATION STANDARDS
+  # =============================================================================
+
+  - id: "docs-001"
+    title: "Component Documentation"
+    severity: "warn"
+    scope_glob: "packages/components/*/"
+    must_exist:
+      - "README.md"
+    message: "All components must have README documentation"
+
+  - id: "docs-002"
+    title: "API Documentation"
+    severity: "warn"
+    scope_glob: "packages/components/*/src/*.ts"
+    must_match:
+      - pattern: "/\\*\\*[\\s\\S]*?\\*/"
+        file: "*.ts"
+    message: "Public methods should have JSDoc documentation"
+
+  # =============================================================================
+  # DIFF-BASED CHECKS
+  # =============================================================================
+
+  - id: "diff-001"
+    title: "Schema Version Updates"
+    severity: "error"
+    scope_glob: "src/platform/contracts/**/*.ts"
+    diff_checks:
+      changed_files_match_any:
+        - "*.ts"
+      require_files_match:
+        - "bindings.ts": "SCHEMA_VERSION|schemaVersion"
+    message: "When contracts change, schema version must be updated"
+
+  - id: "diff-002"
+    title: "Breaking Changes Documentation"
+    severity: "warn"
+    scope_glob: "src/platform/contracts/**/*.ts"
+    diff_checks:
+      changed_files_match_any:
+        - "*.ts"
+      require_files_match:
+        - "CHANGELOG.md": "BREAKING|breaking"
+    message: "Breaking changes should be documented in CHANGELOG"
+
+  # =============================================================================
+  # PERFORMANCE & OPTIMIZATION
+  # =============================================================================
+
+  - id: "perf-001"
+    title: "Cache Implementation"
+    severity: "warn"
+    scope_glob: "src/platform/contracts/**/*.ts"
+    conditional:
+      requires_pattern: "registry|binder"
+    must_match:
+      - pattern: "cache|Cache"
+        file: "*.ts"
+    message: "Registry and binder systems should implement caching"
+
+  - id: "perf-002"
+    title: "Metrics Collection"
+    severity: "warn"
+    scope_glob: "src/platform/contracts/**/*.ts"
+    conditional:
+      requires_pattern: "registry|binder"
+    must_match:
+      - pattern: "metrics|Metrics|telemetry"
+        file: "*.ts"
+    message: "Registry and binder systems should collect metrics"
+
+  # =============================================================================
+  # SECURITY HARDENING
+  # =============================================================================
+
+  - id: "security-001"
+    title: "No Public Resources"
+    severity: "error"
+    scope_glob: "packages/components/*/src/*.ts"
+    conditional:
+      requires_pattern: "s3\\.Bucket|rds\\.DatabaseInstance"
+    must_not_match:
+      - pattern: "publicReadAccess.*true|publiclyAccessible.*true"
+        file: "*.ts"
+    message: "No public access to S3 buckets or RDS instances"
+
+  - id: "security-002"
+    title: "Security Group Rules"
+    severity: "error"
+    scope_glob: "packages/components/*/src/*.ts"
+    conditional:
+      requires_pattern: "ec2\\.SecurityGroup|ec2\\.SecurityGroupRule"
+    must_match:
+      - pattern: "port.*443|port.*80|port.*22"
+        file: "*.ts"
+    message: "Security group rules should specify explicit ports"
+
+  - id: "security-003"
+    title: "Network Isolation"
+    severity: "warn"
+    scope_glob: "packages/components/*/src/*.ts"
+    conditional:
+      requires_pattern: "vpc\\.Vpc|ec2\\.Vpc"
+    must_match:
+      - pattern: "privateSubnets|isolatedSubnets"
+        file: "*.ts"
+    message: "VPC configurations should use private/isolated subnets"
