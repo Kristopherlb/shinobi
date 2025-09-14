@@ -1,0 +1,137 @@
+version: 1
+name: Platform Tagging — Audit Rules (PTS‑TAG v1.1)
+owner: platform-engineering
+last_updated: 2025-09-14
+
+defaults:
+  tag_keys:
+    - service-name
+    - service-version
+    - component-name
+    - component-type
+    - environment
+    - region
+    - deployed-by
+    - deployment-id
+    - compliance-framework
+    - data-classification
+    - backup-required
+    - monitoring-level
+    - cost-center
+    - billing-project
+    - resource-owner
+  k8s_label_prefix: "n1.io/"
+  k8s_anno_prefix: "tags.n1.io/"
+
+rules:
+  # Presence of standard tags in code/manifests (heuristics)
+  - id: TAG-001
+    title: Standard tag helper is used (CDK/TS)
+    severity: warn
+    scope_glob: "packages/**/src/**/*.{ts,tsx,js,jsx}"
+    must_match_any:
+      - pattern: "Tags\\.of\\(.*\\)\\.add\\("
+      - pattern: "applyStandardTags\\("
+    message: "Components should use the shared helper to apply tags."
+
+  - id: TAG-002
+    title: Terraform resources include tags block with core keys
+    severity: error
+    scope_glob: "**/*.tf"
+    must_match_any:
+      - pattern: 'tags\\s*=\\s*{[\\s\\S]*service-name[\\s\\S]*}'
+    message: "Terraform resources must include a tags block with core keys."
+
+  - id: TAG-003
+    title: Kubernetes manifests include normalized tags
+    severity: warn
+    scope_glob: "k8s/**/*.y?(a)ml,deploy/**/*.y?(a)ml"
+    must_match_any:
+      - pattern: "metadata:\\s*[\\s\\S]*labels:\\s*[\\s\\S]*n1\\.io/service-name"
+      - pattern: "metadata:\\s*[\\s\\S]*annotations:\\s*[\\s\\S]*tags\\.n1\\.io/component-name"
+    message: "K8s resources should carry normalized labels/annotations."
+
+  # Core key immutability & formatting
+  - id: TAG-010
+    title: Do not set provider-reserved prefixes (e.g., aws:)
+    severity: error
+    scope_glob: "**/*.{yml,yaml,json,tf,ts,tsx}"
+    must_not_match:
+      - pattern: '"aws:'
+      - pattern: "\\baws:\\w+"
+    message: "Provider-reserved tag prefixes are prohibited."
+
+  - id: TAG-011
+    title: Keys must be kebab-case; no spaces/colons
+    severity: warn
+    scope_glob: "**/*.{yml,yaml,json,tf}"
+    must_not_match:
+      - pattern: "\\b[A-Za-z0-9]+_[A-Za-z0-9_]+\\s*:"
+      - pattern: "\\b[A-Za-z0-9]+\\s+[A-Za-z0-9]+\\s*:"
+      - pattern: "\\b[A-Za-z0-9]+:[A-Za-z0-9]+\\s*:" # nested colon in key
+    message: "Use kebab-case keys; avoid underscores/spaces/extra colons."
+
+  # PII/secrets & high-cardinality guard
+  - id: TAG-020
+    title: No secrets/PII in tags
+    severity: error
+    scope_glob: "**/*.{yml,yaml,json,tf}"
+    must_not_match:
+      - pattern: "[\\w.-]+@[\\w.-]+" # emails
+      - pattern: "\\b(ak|sk|token|apikey|api_key|password)\\b\\s*[:=]\\s*['\"][^'\"]+['\"]"
+      - pattern: "\\b\\d{1,3}(?:\\.\\d{1,3}){3}\\b" # IPv4
+      - pattern: "-----BEGIN (RSA|EC|OPENSSH) PRIVATE KEY-----"
+    message: "Tags must not contain PII or secrets."
+
+  - id: TAG-021
+    title: Avoid per-user/session values in tags (heuristic)
+    severity: warn
+    scope_glob: "**/*.{yml,yaml,json,tf}"
+    must_not_match:
+      - pattern: "(user|email|session|request|trace|span)[-_]?id\\s*:"
+    message: "High-cardinality tag keys are discouraged."
+
+  # FinOps required keys
+  - id: TAG-030
+    title: FinOps keys present where tags are declared
+    severity: error
+    scope_glob: "**/*.{tf,yml,yaml,json}"
+    must_match_any:
+      - pattern: "cost-center"
+      - pattern: "billing-project"
+    message: "cost-center and billing-project are required for chargeback."
+
+  # Attempted manual overrides of platform-managed keys
+  - id: TAG-040
+    title: Do not hardcode platform-managed keys in component code
+    severity: error
+    scope_glob: "packages/**/src/**/*.{ts,tsx,js,jsx}"
+    must_not_match:
+      - pattern: "['\"](service-name|component-type|environment|compliance-framework)['\"]\\s*,"
+    message: "Core keys are set by the engine; do not hardcode in components."
+
+  # GCP/K8s normalization hints
+  - id: TAG-050
+    title: GCP label normalization present (dash→underscore)
+    severity: warn
+    scope_glob: "**/*.tf"
+    must_match_any:
+      - pattern: "replace\\(var\\.service_name, \"-\", \"_\"\\)"
+      - pattern: "lower\\("
+    message: "Normalize labels for GCP (lowercase and '-'→'_')."
+
+  - id: TAG-051
+    title: K8s long/complex values go to annotations
+    severity: warn
+    scope_glob: "k8s/**/*.y?(a)ml,deploy/**/*.y?(a)ml"
+    must_match_any:
+      - pattern: "annotations:\\s*[\\s\\S]*tags\\.n1\\.io/"
+    message: "Use annotations for complex/long values; labels for selectors."
+
+mappings:
+  "Presence": ["TAG-001", "TAG-002", "TAG-003"]
+  "Formatting": ["TAG-010", "TAG-011"]
+  "Hygiene": ["TAG-020", "TAG-021"]
+  "FinOps": ["TAG-030"]
+  "Immutability": ["TAG-040"]
+  "Normalization": ["TAG-050", "TAG-051"]
