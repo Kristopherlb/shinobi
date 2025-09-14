@@ -1,0 +1,24 @@
+{
+  "dashboard": {
+    "name": "vpc-dashboard",
+    "widgets": [
+      {
+        "type": "metric",
+        "properties": {
+          "metrics": [
+            [
+              "AWS/CloudWatch",
+              "HealthCheck",
+              "Component",
+              "vpc"
+            ]
+          ],
+          "period": 300,
+          "stat": "Average",
+          "region": "us-east-1",
+          "title": "vpc Health"
+        }
+      }
+    ]
+  }
+}

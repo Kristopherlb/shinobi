@@ -44,3 +44,22 @@ defaults:
       enabled: true
       alarms:
         blockedRequestsThreshold: 250
+
+  vpc:
+    cidr: 10.0.0.0/16
+    maxAzs: 3
+    natGateways: 2
+    flowLogsEnabled: true
+    flowLogRetentionDays: 1095
+    vpcEndpoints:
+      s3: true
+      dynamodb: true
+      secretsManager: true
+      kms: true
+    subnets:
+      public:
+        cidrMask: 24
+      private:
+        cidrMask: 24
+      database:
+        cidrMask: 28

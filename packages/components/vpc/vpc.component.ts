@@ -37,7 +37,7 @@ export class VpcComponent extends BaseComponent {
    */
   public synth(): void {
     this.logger.info(`Synthesizing VPC component: ${this.spec.name}`);
-    
+
     try {
       // Step 1: Build configuration using ConfigBuilder
       const builderContext: ConfigBuilderContext = {
@@ -51,10 +51,10 @@ export class VpcComponent extends BaseComponent {
       this.createVpc();
       this.createVpcFlowLogsIfEnabled();
       this.createVpcEndpointsIfNeeded();
-      
+
       // Step 3: Apply compliance hardening (after VPC exists)
       this.applyComplianceHardening();
-      
+
       // Step 4: Apply standard tags to all taggable resources
       this.applyStandardTagsToResources();
 
@@ -63,7 +63,7 @@ export class VpcComponent extends BaseComponent {
 
       // Step 6: Register capabilities for binding
       this.registerCapabilities();
-      
+
       this.logger.info(`VPC component ${this.spec.name} synthesized successfully.`);
     } catch (error) {
       this.logger.error('VPC synthesis failed', { error: error instanceof Error ? error.message : error });
@@ -125,7 +125,7 @@ export class VpcComponent extends BaseComponent {
       this.flowLogGroup = new logs.LogGroup(this, 'VpcFlowLogGroup', {
         logGroupName: `/aws/vpc/flowlogs/${this.vpc!.vpcId}`,
         retention: this.mapDaysToRetention(this.config!.flowLogRetentionDays || 30),
-        removalPolicy: this.isComplianceFramework() ? 
+        removalPolicy: this.isComplianceFramework() ?
           cdk.RemovalPolicy.RETAIN : cdk.RemovalPolicy.DESTROY
       });
 
@@ -164,7 +164,7 @@ export class VpcComponent extends BaseComponent {
    */
   private createVpcEndpointsIfNeeded(): void {
     const endpoints = this.config!.vpcEndpoints;
-    
+
     // S3 Gateway Endpoint (no cost) - enabled by config or compliance framework
     if (endpoints?.s3 || this.isComplianceFramework()) {
       this.vpc!.addGatewayEndpoint('S3Endpoint', {
@@ -357,8 +357,8 @@ export class VpcComponent extends BaseComponent {
   private restrictDefaultSecurityGroup(): void {
     // Remove all rules from default security group
     const defaultSg = ec2.SecurityGroup.fromSecurityGroupId(
-      this, 
-      'DefaultSg', 
+      this,
+      'DefaultSg',
       this.vpc!.vpcDefaultSecurityGroup
     );
 
@@ -446,7 +446,7 @@ export class VpcComponent extends BaseComponent {
     if (this.vpc) {
       // Apply standard platform tags to VPC
       this.applyStandardTags(this.vpc);
-      
+
       // Apply standard tags to subnets
       this.vpc.publicSubnets.forEach((subnet) => {
         this.applyStandardTags(subnet, { 'subnet-type': 'public' });
@@ -482,20 +482,24 @@ export class VpcComponent extends BaseComponent {
         'vpc-cidr': this.config.cidr || '10.0.0.0/16',
         'nat-gateways': String(this.config.natGateways ?? 1),
         'max-azs': String(this.config.maxAzs || 2),
-        'flow-logs-enabled': String(this.config.flowLogsEnabled ?? true)
+        'flow-logs-enabled': String(this.config.flowLogsEnabled ?? true),
+        'compliance:framework': this.context.complianceFramework,
+        'compliance:nist-controls': 'AC-2(3),AT-4(b)'
       });
     }
 
     if (this.flowLogGroup) {
       this.applyStandardTags(this.flowLogGroup, {
         'log-type': 'vpc-flow-logs',
-        'retention-days': String(this.config.flowLogRetentionDays || 365)
+        'retention-days': String(this.config.flowLogRetentionDays || 365),
+        'compliance:framework': this.context.complianceFramework
       });
     }
 
     if (this.flowLogRole) {
       this.applyStandardTags(this.flowLogRole, {
-        'role-type': 'vpc-flow-logs'
+        'role-type': 'vpc-flow-logs',
+        'compliance:framework': this.context.complianceFramework
       });
     }
   }
@@ -506,11 +510,11 @@ export class VpcComponent extends BaseComponent {
   private registerConstructs(): void {
     this.registerConstruct('main', this.vpc!); // 'main' handle is mandatory
     this.registerConstruct('vpc', this.vpc!);
-    
+
     if (this.flowLogGroup) {
       this.registerConstruct('flowLogGroup', this.flowLogGroup);
     }
-    
+
     if (this.flowLogRole) {
       this.registerConstruct('flowLogRole', this.flowLogRole);
     }

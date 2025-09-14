@@ -1,0 +1,13 @@
+{
+  "alarms": [
+    {
+      "name": "vpc-health-check",
+      "description": "Component health check alarm",
+      "metric": "health_check",
+      "threshold": 1,
+      "comparison": "LessThanThreshold",
+      "period": 300,
+      "evaluation_periods": 2
+    }
+  ]
+}

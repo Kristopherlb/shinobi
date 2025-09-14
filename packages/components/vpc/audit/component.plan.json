@@ -1,0 +1,18 @@
+{
+  "component": "vpc",
+  "service_type": "vpc",
+  "framework": "fedramp-moderate",
+  "packs": [
+    "aws.imported.fedramp-moderate",
+    "aws.imported.logging",
+    "aws.imported.monitoring"
+  ],
+  "rules": [],
+  "nist_controls": [
+    "AC-2(3)",
+    "AT-4(b)"
+  ],
+  "gaps": [],
+  "timestamp": "2025-09-14T04:34:40.155Z",
+  "version": "1.0.0"
+}
