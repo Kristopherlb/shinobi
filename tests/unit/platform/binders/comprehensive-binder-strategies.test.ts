@@ -2,7 +2,7 @@
  * Comprehensive tests for all binder strategies
  */
 
-import { ComprehensiveBinderRegistry } from '../../../src/platform/binders/registry/comprehensive-binder-registry';
+import { ComprehensiveBinderRegistry } from '@binders/registry/comprehensive-binder-registry';
 
 describe('Comprehensive Binder Strategies', () => {
   let registry: ComprehensiveBinderRegistry;
