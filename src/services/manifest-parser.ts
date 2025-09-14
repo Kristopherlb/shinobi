@@ -4,7 +4,7 @@
  */
 import * as fs from 'fs/promises';
 import * as YAML from 'yaml';
-import { Logger } from '../utils/logger';
+import { Logger } from '../core-engine/logger';
 
 export interface ManifestParserDependencies {
   logger: Logger;
@@ -15,7 +15,7 @@ export interface ManifestParserDependencies {
  * Responsibility: Stage 1 - Parsing (AC-P1.1, AC-P1.2)
  */
 export class ManifestParser {
-  constructor(private dependencies: ManifestParserDependencies) {}
+  constructor(private dependencies: ManifestParserDependencies) { }
 
   async parseManifest(manifestPath: string): Promise<any> {
     this.dependencies.logger.debug(`Parsing manifest: ${manifestPath}`);
@@ -23,7 +23,7 @@ export class ManifestParser {
     try {
       const fileContent = await fs.readFile(manifestPath, 'utf8');
       const manifest = YAML.parse(fileContent);
-      
+
       if (!manifest || typeof manifest !== 'object') {
         throw new Error('Invalid YAML: manifest must be an object');
       }

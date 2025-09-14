@@ -1,9 +1,12 @@
 // src/platform/contracts/components/base-component.ts
 // Abstract base component class for all Shinobi components
 
-import { IComponent, CapabilityData, ComplianceFramework } from '../bindings';
+import { IComponent, CapabilityData, ComplianceFramework, ComponentType } from '../bindings';
 import { ComponentContext } from './component-context';
 import { ComponentConfigBuilder } from './component-config-builder';
+import { ComplianceControlMappingService, CompliancePlan } from '../../services/compliance-control-mapping';
+import { TaggingEnforcementService, TaggingConfig } from '../../services/tagging-enforcement';
+import { CompliancePlanGenerator, CompliancePlanConfig } from '../../services/compliance-plan-generator';
 
 /**
  * Abstract base component class
@@ -13,11 +16,18 @@ export abstract class BaseComponent implements IComponent {
   protected config: Record<string, any>;
   protected context: ComponentContext;
   protected configBuilder: ComponentConfigBuilder;
+  protected complianceMappingService: ComplianceControlMappingService;
+  protected taggingService: TaggingEnforcementService;
+  protected compliancePlanGenerator: CompliancePlanGenerator;
+  protected compliancePlan?: CompliancePlan;
 
   constructor(config: Record<string, any>, context: ComponentContext) {
     this.config = config;
     this.context = context;
     this.configBuilder = new ComponentConfigBuilder();
+    this.complianceMappingService = new ComplianceControlMappingService();
+    this.taggingService = new TaggingEnforcementService();
+    this.compliancePlanGenerator = new CompliancePlanGenerator();
   }
 
   /**
@@ -95,18 +105,24 @@ export abstract class BaseComponent implements IComponent {
   }
 
   /**
-   * Get component tags
+   * Get component tags with compliance enforcement
    */
   getTags(): Record<string, string> {
-    const baseTags = {
-      Service: this.context.serviceName,
-      Environment: this.context.environment,
-      ManagedBy: 'Shinobi',
-      Component: this.getType()
+    const taggingConfig: TaggingConfig = {
+      service: this.context.serviceName,
+      environment: this.context.environment,
+      owner: this.context.owner || 'unknown',
+      complianceFramework: this.context.complianceFramework,
+      dataClassification: this.config.labels?.dataClassification,
+      sspId: this.config.sspId,
+      customTags: this.context.tags
     };
 
-    // Merge with context tags
-    return { ...baseTags, ...this.context.tags };
+    return this.taggingService.applyComplianceTags(
+      this.getType() as any,
+      this.getId(),
+      taggingConfig
+    );
   }
 
   /**
@@ -243,5 +259,145 @@ export abstract class BaseComponent implements IComponent {
     }
 
     return true;
+  }
+
+  /**
+   * Generate compliance plan for this component
+   */
+  async generateCompliancePlan(outputDir: string = './.shinobi/compliance'): Promise<CompliancePlan> {
+    const config: CompliancePlanConfig = {
+      outputDir,
+      includeAuditTrail: true,
+      includeControlDetails: true,
+      includeTaggingPolicy: true
+    };
+
+    this.compliancePlan = await this.compliancePlanGenerator.generateCompliancePlan(
+      this.getId(),
+      this.getType() as any,
+      this.getComplianceFramework(),
+      this.getConfig(),
+      config
+    );
+
+    return this.compliancePlan;
+  }
+
+  /**
+   * Get compliance plan (generates if not exists)
+   */
+  async getCompliancePlan(): Promise<CompliancePlan> {
+    if (!this.compliancePlan) {
+      return await this.generateCompliancePlan();
+    }
+    return this.compliancePlan;
+  }
+
+  /**
+   * Validate component compliance
+   */
+  validateCompliance(): {
+    valid: boolean;
+    errors: string[];
+    warnings: string[];
+  } {
+    return this.complianceMappingService.validateCompliance(
+      {
+        type: this.getType(),
+        config: this.getConfig()
+      },
+      this.getComplianceFramework()
+    );
+  }
+
+  /**
+   * Check if data classification is required
+   */
+  isDataClassificationRequired(): boolean {
+    return this.taggingService.isDataClassificationRequired(this.getType() as any);
+  }
+
+  /**
+   * Validate data classification
+   */
+  validateDataClassification(): {
+    valid: boolean;
+    error?: string;
+  } {
+    if (!this.isDataClassificationRequired()) {
+      return { valid: true };
+    }
+
+    const dataClassification = this.config.labels?.dataClassification;
+    if (!dataClassification) {
+      return {
+        valid: false,
+        error: `Data classification is required for ${this.getType()} components`
+      };
+    }
+
+    if (!this.taggingService.validateDataClassification(dataClassification)) {
+      return {
+        valid: false,
+        error: `Invalid data classification: ${dataClassification}. Must be one of: ${this.taggingService.getValidDataClassifications().join(', ')}`
+      };
+    }
+
+    return { valid: true };
+  }
+
+  /**
+   * Get compliance controls for this component
+   */
+  getComplianceControls(): string[] {
+    const mapping = this.complianceMappingService.getControlMapping(this.getType() as any);
+    return mapping?.controls || [];
+  }
+
+  /**
+   * Get NIST control details
+   */
+  getNISTControlDetails(controlId: string) {
+    return this.complianceMappingService.getNISTControl(controlId);
+  }
+
+  /**
+   * Enhanced validation that includes compliance checks
+   */
+  public validateConfigWithCompliance(): void {
+    // Run basic validation
+    this.validateConfig();
+
+    // Validate data classification
+    const dataClassificationValidation = this.validateDataClassification();
+    if (!dataClassificationValidation.valid) {
+      throw new Error(dataClassificationValidation.error);
+    }
+
+    // Validate compliance
+    const complianceValidation = this.validateCompliance();
+    if (!complianceValidation.valid) {
+      const errorMessage = `Compliance validation failed:\n${complianceValidation.errors.join('\n')}`;
+      throw new Error(errorMessage);
+    }
+
+    // Log warnings if any
+    if (complianceValidation.warnings.length > 0) {
+      console.warn(`Compliance warnings for ${this.getId()}:\n${complianceValidation.warnings.join('\n')}`);
+    }
+  }
+
+  /**
+   * Enhanced synthesis that includes compliance plan generation
+   */
+  async synthWithCompliance(): Promise<void> {
+    // Validate configuration with compliance
+    this.validateConfigWithCompliance();
+
+    // Generate compliance plan
+    await this.generateCompliancePlan();
+
+    // Run normal synthesis
+    this.synth();
   }
 }

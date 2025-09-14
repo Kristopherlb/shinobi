@@ -11,6 +11,8 @@ import { PolicyStatement } from 'aws-cdk-lib/aws-iam';
 
 export type ComplianceFramework = 'commercial' | 'fedramp-moderate' | 'fedramp-high';
 
+export type ComponentType = 's3-bucket' | 'lambda-api' | 'rds-postgres' | 'ec2-instance' | 'dynamodb-table' | 'sqs-queue' | 'sns-topic';
+
 export type Tier<T extends ComplianceFramework> = T;
 
 // =============================================================================

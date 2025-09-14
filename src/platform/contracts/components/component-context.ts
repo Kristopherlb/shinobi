@@ -33,6 +33,11 @@ export interface ComponentContext {
   accountId: string;
 
   /**
+   * Service owner
+   */
+  owner?: string;
+
+  /**
    * Component-specific metadata
    */
   metadata?: Record<string, any>;
@@ -91,6 +96,14 @@ export class ComponentContextBuilder {
    */
   accountId(accountId: string): this {
     this.context.accountId = accountId;
+    return this;
+  }
+
+  /**
+   * Set service owner
+   */
+  owner(owner: string): this {
+    this.context.owner = owner;
     return this;
   }
 
