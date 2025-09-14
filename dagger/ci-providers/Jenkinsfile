@@ -1,0 +1,387 @@
+#!/usr/bin/env groovy
+/**
+ * Shinobi Platform Pipeline for Jenkins
+ * 
+ * Provides a comprehensive CI/CD pipeline with Dagger integration
+ * for consistent execution across different environments.
+ */
+
+pipeline {
+    agent any
+    
+    parameters {
+        choice(
+            name: 'ENVIRONMENT',
+            choices: ['dev', 'staging', 'prod'],
+            description: 'Target environment'
+        )
+        choice(
+            name: 'COMPLIANCE_FRAMEWORK',
+            choices: ['commercial', 'fedramp-moderate', 'fedramp-high'],
+            description: 'Compliance framework'
+        )
+        booleanParam(
+            name: 'SKIP_DEPLOY',
+            defaultValue: false,
+            description: 'Skip deployment step'
+        )
+        booleanParam(
+            name: 'ENABLE_MTLS',
+            defaultValue: false,
+            description: 'Enable mTLS for Dagger Engine Pool'
+        )
+        booleanParam(
+            name: 'FIPS_COMPLIANCE',
+            defaultValue: false,
+            description: 'Use FIPS-compliant base images'
+        )
+    }
+    
+    environment {
+        DAGGER_VERSION = '0.9.0'
+        NODE_VERSION = '20'
+        OUTPUT_FORMAT = 'json'
+        PIPELINE_RESULTS_DIR = "${WORKSPACE}/pipeline-results"
+    }
+    
+    stages {
+        stage('Setup') {
+            steps {
+                script {
+                    echo "🥷 Starting Shinobi Platform Pipeline"
+                    echo "Environment: ${params.ENVIRONMENT}"
+                    echo "Compliance Framework: ${params.COMPLIANCE_FRAMEWORK}"
+                    echo "Skip Deploy: ${params.SKIP_DEPLOY}"
+                    
+                    // Create results directory
+                    sh "mkdir -p ${PIPELINE_RESULTS_DIR}"
+                }
+            }
+        }
+        
+        stage('Checkout & Setup') {
+            steps {
+                checkout scm
+                
+                script {
+                    // Setup Node.js
+                    sh """
+                        node --version
+                        npm --version
+                    """
+                    
+                    // Install Dagger CLI
+                    sh """
+                        cd /tmp
+                        curl -L https://dl.dagger.io/dagger/install.sh | sh
+                        sudo mv /tmp/.local/bin/dagger /usr/local/bin/
+                        dagger version
+                    """
+                    
+                    // Initialize Dagger project
+                    sh """
+                        dagger project init --name=shinobi-platform
+                    """
+                }
+            }
+        }
+        
+        stage('Validation') {
+            steps {
+                script {
+                    echo "🔍 Running platform validation..."
+                    
+                    sh """
+                        tsx dagger/pipelines/platform-pipeline.ts \
+                            --skip-test \
+                            --skip-audit \
+                            --skip-plan \
+                            --skip-deploy \
+                            --env ${params.ENVIRONMENT} \
+                            --compliance-framework ${params.COMPLIANCE_FRAMEWORK} \
+                            --output-format ${OUTPUT_FORMAT} \
+                            --results-dir ${PIPELINE_RESULTS_DIR}
+                    """
+                }
+            }
+            post {
+                always {
+                    archiveArtifacts artifacts: '.shinobi/validate/*', allowEmptyArchive: true
+                    publishTestResults testResultsPattern: '.shinobi/validate/*.xml'
+                }
+            }
+        }
+        
+        stage('Testing') {
+            parallel {
+                stage('Unit Tests') {
+                    steps {
+                        script {
+                            echo "🧪 Running unit tests..."
+                            
+                            sh """
+                                tsx dagger/pipelines/platform-pipeline.ts \
+                                    --skip-validate \
+                                    --skip-audit \
+                                    --skip-plan \
+                                    --skip-deploy \
+                                    --env ${params.ENVIRONMENT} \
+                                    --compliance-framework ${params.COMPLIANCE_FRAMEWORK} \
+                                    --output-format ${OUTPUT_FORMAT} \
+                                    --results-dir ${PIPELINE_RESULTS_DIR}
+                            """
+                        }
+                    }
+                    post {
+                        always {
+                            publishTestResults testResultsPattern: 'junit.xml'
+                            publishCoverage adapters: [
+                                coberturaAdapter('coverage/cobertura-coverage.xml')
+                            ], sourceFileResolver: sourceFiles('STORE_LAST_BUILD')
+                        }
+                    }
+                }
+                
+                stage('Integration Tests') {
+                    steps {
+                        script {
+                            echo "🔗 Running integration tests..."
+                            
+                            sh """
+                                tsx dagger/pipelines/platform-pipeline.ts \
+                                    --skip-validate \
+                                    --skip-audit \
+                                    --skip-plan \
+                                    --skip-deploy \
+                                    --env ${params.ENVIRONMENT} \
+                                    --compliance-framework ${params.COMPLIANCE_FRAMEWORK} \
+                                    --output-format ${OUTPUT_FORMAT} \
+                                    --results-dir ${PIPELINE_RESULTS_DIR} \
+                                    --integration-tests
+                            """
+                        }
+                    }
+                    post {
+                        always {
+                            publishTestResults testResultsPattern: '.shinobi/integration/*.xml'
+                        }
+                    }
+                }
+            }
+        }
+        
+        stage('Audit') {
+            steps {
+                script {
+                    echo "🔒 Running compliance audit..."
+                    
+                    sh """
+                        tsx dagger/pipelines/platform-pipeline.ts \
+                            --skip-validate \
+                            --skip-test \
+                            --skip-plan \
+                            --skip-deploy \
+                            --env ${params.ENVIRONMENT} \
+                            --compliance-framework ${params.COMPLIANCE_FRAMEWORK} \
+                            --output-format ${OUTPUT_FORMAT} \
+                            --results-dir ${PIPELINE_RESULTS_DIR}
+                    """
+                }
+            }
+            post {
+                always {
+                    archiveArtifacts artifacts: '.shinobi/audit/*', allowEmptyArchive: true
+                }
+            }
+        }
+        
+        stage('Security Scan') {
+            steps {
+                script {
+                    echo "🛡️ Running security scan..."
+                    
+                    // Run Trivy security scan
+                    sh """
+                        docker run --rm -v \${PWD}:/workspace \
+                            aquasec/trivy:latest fs \
+                            --format sarif \
+                            --output /workspace/trivy-results.sarif \
+                            /workspace
+                    """
+                }
+            }
+            post {
+                always {
+                    archiveArtifacts artifacts: 'trivy-results.sarif', allowEmptyArchive: true
+                }
+            }
+        }
+        
+        stage('Planning') {
+            steps {
+                script {
+                    echo "📋 Generating deployment plan..."
+                    
+                    sh """
+                        tsx dagger/pipelines/platform-pipeline.ts \
+                            --skip-validate \
+                            --skip-test \
+                            --skip-audit \
+                            --skip-deploy \
+                            --env ${params.ENVIRONMENT} \
+                            --compliance-framework ${params.COMPLIANCE_FRAMEWORK} \
+                            --output-format ${OUTPUT_FORMAT} \
+                            --results-dir ${PIPELINE_RESULTS_DIR}
+                    """
+                }
+            }
+            post {
+                always {
+                    archiveArtifacts artifacts: '.shinobi/plan/*', allowEmptyArchive: true
+                }
+            }
+        }
+        
+        stage('Deployment') {
+            when {
+                not { params.SKIP_DEPLOY }
+                anyOf {
+                    branch 'main'
+                    branch 'develop'
+                    branch pattern: 'release/.*', comparator: 'REGEXP'
+                }
+            }
+            steps {
+                script {
+                    echo "🚀 Running deployment..."
+                    
+                    // Validate AWS credentials
+                    withCredentials([
+                        string(credentialsId: 'aws-access-key-id', variable: 'AWS_ACCESS_KEY_ID'),
+                        string(credentialsId: 'aws-secret-access-key', variable: 'AWS_SECRET_ACCESS_KEY'),
+                        string(credentialsId: 'aws-default-region', variable: 'AWS_DEFAULT_REGION', defaultValue: 'us-east-1')
+                    ]) {
+                        sh """
+                            tsx dagger/pipelines/platform-pipeline.ts \
+                                --env ${params.ENVIRONMENT} \
+                                --compliance-framework ${params.COMPLIANCE_FRAMEWORK} \
+                                --output-format ${OUTPUT_FORMAT} \
+                                --results-dir ${PIPELINE_RESULTS_DIR}
+                        """
+                    }
+                }
+            }
+            post {
+                always {
+                    archiveArtifacts artifacts: '.shinobi/deploy/*', allowEmptyArchive: true
+                }
+            }
+        }
+        
+        stage('Compliance Validation') {
+            when {
+                anyOf {
+                    equals expected: 'fedramp-moderate', actual: "${params.COMPLIANCE_FRAMEWORK}"
+                    equals expected: 'fedramp-high', actual: "${params.COMPLIANCE_FRAMEWORK}"
+                }
+            }
+            steps {
+                script {
+                    echo "📋 Running compliance validation..."
+                    
+                    sh """
+                        npm ci
+                        npm run audit:all:strict -- --format json > compliance-results.json
+                        
+                        # Check for compliance errors
+                        COMPLIANCE_ERRORS=\$(cat compliance-results.json | jq '.errors | length')
+                        if [ "\$COMPLIANCE_ERRORS" -gt 0 ]; then
+                            echo "❌ Compliance validation failed with \$COMPLIANCE_ERRORS errors"
+                            cat compliance-results.json | jq '.errors'
+                            exit 1
+                        else
+                            echo "✅ Compliance validation passed"
+                        fi
+                    """
+                }
+            }
+            post {
+                always {
+                    archiveArtifacts artifacts: 'compliance-results.json', allowEmptyArchive: true
+                }
+            }
+        }
+    }
+    
+    post {
+        always {
+            script {
+                echo "📊 Pipeline completed with status: ${currentBuild.result ?: 'SUCCESS'}"
+                
+                // Archive all results
+                archiveArtifacts artifacts: "${PIPELINE_RESULTS_DIR}/**/*", allowEmptyArchive: true
+                
+                // Generate pipeline summary
+                def summary = """
+                    ## 🥷 Shinobi Platform Pipeline Results
+                    
+                    **Environment:** ${params.ENVIRONMENT}
+                    **Compliance Framework:** ${params.COMPLIANCE_FRAMEWORK}
+                    **Status:** ${currentBuild.result ?: 'SUCCESS'}
+                    **Build:** ${env.BUILD_NUMBER}
+                    **Commit:** ${env.GIT_COMMIT}
+                    
+                    ### 📋 Pipeline Steps
+                    - ✅ Validation: ${currentBuild.result ?: 'SUCCESS'}
+                    - ✅ Testing: ${currentBuild.result ?: 'SUCCESS'}
+                    - ✅ Audit: ${currentBuild.result ?: 'SUCCESS'}
+                    - ✅ Planning: ${currentBuild.result ?: 'SUCCESS'}
+                    ${!params.SKIP_DEPLOY ? '- ✅ Deployment: ' + (currentBuild.result ?: 'SUCCESS') : '- ⏭️ Deployment: SKIPPED'}
+                """
+                
+                // Write summary to file
+                writeFile file: 'pipeline-summary.md', text: summary
+                archiveArtifacts artifacts: 'pipeline-summary.md'
+            }
+        }
+        
+        success {
+            script {
+                echo "✅ Pipeline completed successfully!"
+                
+                // Send success notification
+                emailext (
+                    subject: "✅ Shinobi Platform Pipeline SUCCESS - ${env.JOB_NAME} - ${env.BUILD_NUMBER}",
+                    body: """
+                        Pipeline completed successfully!
+                        
+                        Environment: ${params.ENVIRONMENT}
+                        Compliance Framework: ${params.COMPLIANCE_FRAMEWORK}
+                        Build: ${env.BUILD_URL}
+                    """,
+                    to: "${env.CHANGE_AUTHOR_EMAIL ?: 'devops@company.com'}"
+                )
+            }
+        }
+        
+        failure {
+            script {
+                echo "❌ Pipeline failed!"
+                
+                // Send failure notification
+                emailext (
+                    subject: "❌ Shinobi Platform Pipeline FAILURE - ${env.JOB_NAME} - ${env.BUILD_NUMBER}",
+                    body: """
+                        Pipeline failed!
+                        
+                        Environment: ${params.ENVIRONMENT}
+                        Compliance Framework: ${params.COMPLIANCE_FRAMEWORK}
+                        Build: ${env.BUILD_URL}
+                        Console: ${env.BUILD_URL}console
+                    """,
+                    to: "${env.CHANGE_AUTHOR_EMAIL ?: 'devops@company.com'}"
+                )
+            }
+        }
+    }
+}

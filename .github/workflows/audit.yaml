@@ -1,0 +1,40 @@
+name: platform-audit
+on:
+  pull_request:
+    branches: [ main ]
+  push:
+    branches: [ main ]
+jobs:
+  audit:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0  # Fetch full history for diff checks
+      
+      - uses: actions/setup-node@v4
+        with: 
+          node-version: '20'
+          cache: 'npm'
+      
+      - name: Install ripgrep
+        run: sudo apt-get update && sudo apt-get install -y ripgrep
+      
+      - name: Install dependencies
+        run: npm ci
+      
+      - name: Run governance audit
+        run: npm run audit:gov
+      
+      - name: Run testing audit
+        run: npm run audit:test
+      
+      - name: Run observability audit
+        run: npm run audit:otel
+      
+      - name: Run comprehensive audit
+        run: npm run audit:all -- --base origin/main --format pretty
+      
+      - name: Run strict audit (warnings as errors)
+        run: npm run audit:all:strict -- --base origin/main --format pretty
+        continue-on-error: true

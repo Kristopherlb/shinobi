@@ -1,0 +1,71 @@
+{
+  "name": "shinobi-dagger-pipelines",
+  "version": "1.0.0",
+  "description": "Dagger CI/CD pipelines for the Shinobi platform",
+  "main": "index.js",
+  "scripts": {
+    "pipeline:dev": "tsx pipelines/platform-pipeline.ts --env dev --compliance commercial",
+    "pipeline:staging": "tsx pipelines/platform-pipeline.ts --env staging --compliance fedramp-moderate --fips-compliance",
+    "pipeline:prod": "tsx pipelines/platform-pipeline.ts --env prod --compliance fedramp-high --fips-compliance --mtls-enabled",
+    "pipeline:validate": "tsx pipelines/platform-pipeline.ts --skip-test --skip-audit --skip-plan --skip-deploy",
+    "pipeline:test": "tsx pipelines/platform-pipeline.ts --skip-validate --skip-audit --skip-plan --skip-deploy",
+    "pipeline:audit": "tsx pipelines/platform-pipeline.ts --skip-validate --skip-test --skip-plan --skip-deploy",
+    "pipeline:plan": "tsx pipelines/platform-pipeline.ts --skip-validate --skip-test --skip-audit --skip-deploy",
+    "pipeline:deploy": "tsx pipelines/platform-pipeline.ts --skip-validate --skip-test --skip-audit --skip-plan",
+    "engine-pool:validate": "tsx pipelines/engine-pool-integration.ts --validate-connection",
+    "engine-pool:test": "tsx pipelines/engine-pool-integration.ts --test-connectivity",
+    "ci:github": "cp ci-providers/github-actions.yml ../../.github/workflows/platform-pipeline.yml",
+    "ci:gitlab": "cp ci-providers/gitlab-ci.yml ../../.gitlab-ci.yml",
+    "ci:jenkins": "cp ci-providers/Jenkinsfile ../../Jenkinsfile",
+    "ci:setup": "npm run ci:github && npm run ci:gitlab && npm run ci:jenkins",
+    "test": "jest",
+    "test:watch": "jest --watch",
+    "lint": "eslint . --ext .ts,.js",
+    "lint:fix": "eslint . --ext .ts,.js --fix",
+    "format": "prettier --write .",
+    "build": "tsc",
+    "clean": "rm -rf dist node_modules/.cache"
+  },
+  "keywords": [
+    "dagger",
+    "cicd",
+    "pipeline",
+    "shinobi",
+    "platform",
+    "devops",
+    "compliance",
+    "security"
+  ],
+  "author": "Shinobi Platform Team",
+  "license": "MIT",
+  "dependencies": {
+    "@dagger.io/dagger": "^0.9.0"
+  },
+  "devDependencies": {
+    "@types/node": "^20.0.0",
+    "@types/jest": "^29.0.0",
+    "@typescript-eslint/eslint-plugin": "^6.0.0",
+    "@typescript-eslint/parser": "^6.0.0",
+    "eslint": "^8.0.0",
+    "eslint-config-prettier": "^9.0.0",
+    "eslint-plugin-prettier": "^5.0.0",
+    "jest": "^29.0.0",
+    "prettier": "^3.0.0",
+    "ts-jest": "^29.0.0",
+    "tsx": "^4.0.0",
+    "typescript": "^5.0.0"
+  },
+  "engines": {
+    "node": ">=20.0.0",
+    "npm": ">=9.0.0"
+  },
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/your-org/shinobi.git",
+    "directory": "dagger"
+  },
+  "bugs": {
+    "url": "https://github.com/your-org/shinobi/issues"
+  },
+  "homepage": "https://github.com/your-org/shinobi#readme"
+}
