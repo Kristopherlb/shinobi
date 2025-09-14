@@ -1,0 +1,268 @@
+/**
+ * Manifest Schema Composer - Dynamically composes master schema from base manifest and component schemas
+ * Implements comprehensive JSON Schema validation with component-specific configuration validation
+ */
+
+import { Logger } from '../platform/logger/src/index';
+import * as fs from 'fs/promises';
+import * as path from 'path';
+import { glob } from 'glob';
+
+export interface ComponentSchemaInfo {
+  componentType: string;
+  schemaPath: string;
+  schema: any;
+}
+
+export interface ManifestSchemaComposerDependencies {
+  logger: Logger;
+}
+
+/**
+ * Composes a master JSON Schema by merging the base manifest schema with component-specific schemas
+ * This enables validation of component configurations against their individual Config.schema.json files
+ */
+export class ManifestSchemaComposer {
+  private componentSchemas: Map<string, ComponentSchemaInfo> = new Map();
+  private baseSchema: any = null;
+
+  constructor(private dependencies: ManifestSchemaComposerDependencies) { }
+
+  /**
+   * Load and compose the master schema from base manifest schema and all component schemas
+   */
+  async composeMasterSchema(): Promise<any> {
+    this.dependencies.logger.debug('Starting master schema composition');
+
+    // Load base manifest schema
+    this.baseSchema = await this.loadBaseSchema();
+
+    // Load all component schemas
+    await this.loadComponentSchemas();
+
+    // Compose the master schema with dynamic component config validation
+    const masterSchema = this.composeSchema();
+
+    this.dependencies.logger.debug('Master schema composition completed');
+
+    return masterSchema;
+  }
+
+  /**
+   * Load the base service manifest schema
+   */
+  private async loadBaseSchema(): Promise<any> {
+    const schemaPath = path.resolve(__dirname, 'service-manifest.schema.json');
+    const schemaContent = await fs.readFile(schemaPath, 'utf8');
+    return JSON.parse(schemaContent);
+  }
+
+  /**
+   * Discover and load all component Config.schema.json files
+   */
+  private async loadComponentSchemas(): Promise<void> {
+    this.dependencies.logger.debug('Discovering component schemas');
+
+    const patterns = [
+      'packages/components/**/Config.schema.json',
+      'packages/components/**/src/schema/Config.schema.json'
+    ];
+    const files = new Set<string>();
+
+    try {
+      for (const pattern of patterns) {
+        for (const file of await glob(pattern, { cwd: process.cwd(), posix: true })) {
+          files.add(file);
+        }
+      }
+
+      this.dependencies.logger.debug(`Found ${files.size} component schema files`);
+
+      for (const schemaFile of files) {
+        await this.loadComponentSchema(schemaFile);
+      }
+
+    } catch (error) {
+      this.dependencies.logger.warn('Error discovering component schemas');
+      // Continue with base schema only if component schema discovery fails
+    }
+  }
+
+  /**
+   * Load a single component schema file
+   */
+  private async loadComponentSchema(schemaFilePath: string): Promise<void> {
+    try {
+      const fullPath = path.resolve(process.cwd(), schemaFilePath);
+      const schemaContent = await fs.readFile(fullPath, 'utf8');
+      const schema = JSON.parse(schemaContent);
+
+      // Try to get componentType from path first (most reliable), then fallback to schema metadata
+      const componentType = 
+        this.deriveComponentTypeFromPath(schemaFilePath) ||
+        schema['x-component-type'] ||
+        schema.info?.['x-component-type'];
+
+      if (!componentType) {
+        this.dependencies.logger.warn(`Cannot infer component type for schema: ${fullPath}`);
+        return;
+      }
+
+      if (this.componentSchemas.has(componentType)) {
+        this.dependencies.logger.warn(`Duplicate schema for component type "${componentType}". Using first loaded: ${this.componentSchemas.get(componentType)!.schemaPath}`);
+        return;
+      }
+
+      this.componentSchemas.set(componentType, {
+        componentType,
+        schemaPath: fullPath,
+        schema
+      });
+
+      this.dependencies.logger.debug(`Loaded schema for component type: ${componentType}`);
+
+    } catch (error) {
+      this.dependencies.logger.warn(`Failed to load component schema: ${schemaFilePath}`);
+    }
+  }
+
+  /**
+   * Derive component type from file path
+   */
+  private deriveComponentTypeFromPath(filePath: string): string | undefined {
+    const parts = path.normalize(filePath).split(path.sep);
+    const idx = parts.indexOf('components');
+    return idx >= 0 ? parts[idx + 1] : undefined;
+  }
+
+  /**
+   * Compose the master schema by merging base schema with component-specific validation
+   */
+  private composeSchema(): any {
+    if (!this.baseSchema) {
+      throw new Error('Base schema not loaded');
+    }
+
+    // Create a deep copy of the base schema to avoid mutations
+    const masterSchema = JSON.parse(JSON.stringify(this.baseSchema));
+
+    // Enhance the component definition to include dynamic config validation
+    this.enhanceComponentDefinition(masterSchema);
+
+    return masterSchema;
+  }
+
+  /**
+   * Enhance the component definition in the schema to include dynamic config validation
+   */
+  private enhanceComponentDefinition(schema: any): void {
+    const componentDef = this.resolveComponentDefinition(schema);
+    if (!componentDef) {
+      this.dependencies.logger.warn('Component definition not found in base schema');
+      return;
+    }
+
+    // Put every component config schema into $defs for clean refs
+    schema.$defs = schema.$defs || {};
+    const allTypes = Array.from(this.componentSchemas.keys());
+
+    for (const [componentType, info] of this.componentSchemas) {
+      const defKey = `component.${componentType}.config`;
+      schema.$defs[defKey] = info.schema;
+    }
+
+    // Strengthen `type` to the loaded component types
+    if (componentDef.properties?.type) {
+      componentDef.properties.type = {
+        type: 'string',
+        enum: allTypes,
+        description: `The type of component to create. Must be one of: ${allTypes.join(', ')}`
+      };
+    }
+
+    // Add conditionals that bind type -> config
+    const conditionals = allTypes.map((componentType) => ({
+      if: {
+        properties: { type: { const: componentType } },
+        required: ['type']
+      },
+      then: {
+        properties: {
+          config: { $ref: `#/$defs/component.${componentType}.config` }
+        },
+        required: ['config']
+      }
+    }));
+
+    // Merge with existing allOf (if any)
+    componentDef.allOf = [...(componentDef.allOf || []), ...conditionals];
+
+    this.dependencies.logger.debug(`Enhanced component config validation with ${allTypes.length} component types`);
+  }
+
+  /**
+   * Resolve the component definition from the schema, handling $refs
+   */
+  private resolveComponentDefinition(schema: any): any | null {
+    // 1) Direct $defs.component
+    if (schema.$defs?.component && typeof schema.$defs.component === 'object') {
+      return schema.$defs.component;
+    }
+
+    // 2) items.$ref path (e.g., components.items.$ref)
+    const items = schema.properties?.components?.items;
+    if (items?.$ref && typeof items.$ref === 'string') {
+      const ref = items.$ref; // e.g. "#/$defs/component"
+      const match = ref.match(/^#\/(\$defs)\/(.+)$/);
+      if (match) {
+        const [, defsKey, defName] = match;
+        return schema[defsKey]?.[defName] || null;
+      }
+    }
+
+    // 3) items as inline object
+    if (items && typeof items === 'object') {
+      return items;
+    }
+
+    return null;
+  }
+
+
+  /**
+   * Check if a component type has a schema
+   */
+  hasComponentSchema(componentType: string): boolean {
+    return this.componentSchemas.has(componentType);
+  }
+
+  /**
+   * Get component schema for a specific component type
+   */
+  getComponentSchema(componentType: string): ComponentSchemaInfo | undefined {
+    return this.componentSchemas.get(componentType);
+  }
+
+  /**
+   * Get all loaded component types
+   */
+  getLoadedComponentTypes(): string[] {
+    return Array.from(this.componentSchemas.keys());
+  }
+
+
+  /**
+   * Get schema loading statistics
+   */
+  getSchemaStats(): {
+    baseSchemaLoaded: boolean;
+    componentSchemasLoaded: number;
+    componentTypes: string[];
+  } {
+    return {
+      baseSchemaLoaded: this.baseSchema !== null,
+      componentSchemasLoaded: this.componentSchemas.size,
+      componentTypes: Array.from(this.componentSchemas.keys())
+    };
+  }
+}

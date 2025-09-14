@@ -1,0 +1,141 @@
+# Platform Governance Audit Rules
+# Enforces architectural patterns, security standards, and compliance requirements
+
+defaults:
+  meta_sidecar_suffixes: [".meta.json", ".meta.yaml", ".meta.yml"]
+  test_globs: ["**/*.test.ts", "**/*.spec.ts", "**/tests/**/*.ts"]
+  component_globs: ["packages/components/**/*.ts", "src/components/**/*.ts"]
+  config_globs: ["**/*.config.*", "**/config/**/*"]
+
+rules:
+  - id: "GOV-001"
+    title: "Component Architecture Compliance"
+    message: "Components must follow BaseComponent pattern and implement required interfaces"
+    severity: "error"
+    scope_glob: "${defaults.component_globs}"
+    must_match:
+      - pattern: "extends BaseComponent"
+        file: "*.ts"
+      - pattern: "implements IComponent"
+        file: "*.ts"
+    must_exist:
+      - "Config.schema.json"
+      - "README.md"
+
+  - id: "GOV-002"
+    title: "Security Configuration Standards"
+    message: "Security configurations must be properly defined and validated"
+    severity: "error"
+    scope_glob: "packages/components/**/*.ts"
+    must_match:
+      - pattern: "encryption.*enabled.*true"
+        file: "*.ts"
+      - pattern: "publicAccess.*false"
+        file: "*.ts"
+    must_not_match:
+      - pattern: "wildcard.*\\*"
+        file: "*.ts"
+
+  - id: "GOV-003"
+    title: "Compliance Framework Support"
+    message: "Components must support compliance framework configuration"
+    severity: "error"
+    scope_glob: "packages/components/**/*.ts"
+    must_match:
+      - pattern: "complianceFramework.*ComplianceFramework"
+        file: "*.ts"
+      - pattern: "fedramp.*moderate|high"
+        file: "*.ts"
+
+  - id: "GOV-004"
+    title: "Resource Tagging Requirements"
+    message: "All resources must have proper tagging configuration"
+    severity: "warn"
+    scope_glob: "packages/components/**/*.ts"
+    must_match:
+      - pattern: "tags.*Service.*Environment.*Owner"
+        file: "*.ts"
+    allow_if_metadata_includes:
+      key: "exemptions"
+      any: ["no-tags-required"]
+
+  - id: "GOV-005"
+    title: "IAM Policy Validation"
+    message: "IAM policies must follow least privilege principles"
+    severity: "error"
+    scope_glob: "packages/components/**/*.ts"
+    must_not_match:
+      - pattern: "Effect.*Allow.*Action.*\\*.*Resource.*\\*"
+        file: "*.ts"
+      - pattern: "Principal.*\\*"
+        file: "*.ts"
+
+  - id: "GOV-006"
+    title: "Configuration Schema Validation"
+    message: "Components must have valid JSON Schema definitions"
+    severity: "error"
+    scope_glob: "packages/components/**/*"
+    must_exist:
+      - "Config.schema.json"
+    must_match:
+      - pattern: '"type".*"object"'
+        file: "Config.schema.json"
+      - pattern: '"properties"'
+        file: "Config.schema.json"
+
+  - id: "GOV-007"
+    title: "Documentation Requirements"
+    message: "Components must have comprehensive documentation"
+    severity: "warn"
+    scope_glob: "packages/components/**/*"
+    must_exist:
+      - "README.md"
+    must_match:
+      - pattern: "## Overview"
+        file: "README.md"
+      - pattern: "## Configuration"
+        file: "README.md"
+      - pattern: "## Examples"
+        file: "README.md"
+
+  - id: "GOV-008"
+    title: "TypeScript Strict Mode"
+    message: "TypeScript files must use strict mode and proper typing"
+    severity: "error"
+    scope_glob: "packages/components/**/*.ts"
+    must_match:
+      - pattern: "strict.*true"
+        file: "tsconfig.json"
+    must_not_match:
+      - pattern: "any.*="
+        file: "*.ts"
+    conditional:
+      requires_pattern: "packages/components/.*\\.ts$"
+
+  - id: "GOV-009"
+    title: "Error Handling Standards"
+    message: "Components must implement proper error handling"
+    severity: "warn"
+    scope_glob: "packages/components/**/*.ts"
+    must_match:
+      - pattern: "try.*catch|throw.*Error"
+        file: "*.ts"
+    must_not_match:
+      - pattern: "console\\.log.*error|console\\.error"
+        file: "*.ts"
+    conditional:
+      requires_pattern: "packages/components/.*\\.ts$"
+
+  - id: "GOV-010"
+    title: "Dependency Management"
+    message: "Dependencies must be properly declared and managed"
+    severity: "error"
+    scope_glob: "packages/components/**/*"
+    must_exist:
+      - "package.json"
+    must_match:
+      - pattern: '"dependencies"|"devDependencies"'
+        file: "package.json"
+    must_not_match:
+      - pattern: '"version".*"latest"'
+        file: "package.json"

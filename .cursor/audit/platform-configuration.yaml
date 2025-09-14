@@ -1,0 +1,212 @@
+version: 1
+name: Platform Configuration — Agent Audit (PCS v1.0)
+owner: platform-engineering
+last_updated: 2025-09-14
+
+rules:
+
+  # ─────────────────────────────────────────
+  # 1) Framework files & segregation
+  # ─────────────────────────────────────────
+  - id: CFG-001
+    title: Framework config files exist
+    severity: error
+    scope_glob: "config/"
+    must_exist:
+      - commercial.yml
+      - fedramp-moderate.yml
+      - fedramp-high.yml
+    message: "Missing one or more /config/{framework}.yml files."
+
+  - id: CFG-002
+    title: service.yml must not hardwire framework file paths
+    severity: error
+    scope_glob: "**/service.yml"
+    must_not_match:
+      - pattern: "/config/(commercial|fedramp-[^/]+)\\.yml"
+    message: "Do not reference framework files directly; engine selects the correct one."
+
+  # ─────────────────────────────────────────
+  # 2) Layer 1 fallback guardrails (getPlatformDefaults / getHardcodedFallbacks)
+  # ─────────────────────────────────────────
+  - id: CFG-010
+    title: No security-sensitive values in Layer 1 fallbacks (getPlatformDefaults)
+    severity: error
+    scope_glob: "packages/**/src/**/*.{ts,tsx,js,jsx}"
+    conditional:
+      requires_pattern: "\\bgetPlatformDefaults\\s*\\("
+    must_not_match:
+      - pattern: 'allowOrigins\\s*:\\s*\\[\\s*["'"]\\*["'"]\\s*\\]'
+      - pattern: 'https?://'
+      - pattern: '\\b\\d{1,3}(?:\\.\\d{1,3}){3}\\b'              # IPv4
+      - pattern: '([0-9a-f]{0,4}:){2,7}[0-9a-f]{0,4}'            # IPv6 (loose)
+      - pattern: '\\b(\\d{1,2}|1\\d|2\\d|3[0-2])\\b\\s*/\\s*\\d{1,2}' # CIDRish
+      - pattern: '(Audience|audience|scope|Scopes|jwt|JWKS|clientSecret|clientId)'
+      - pattern: '(postgres(ql)?|mysql|mongodb)://'
+      - pattern: '(certificateArn|kmsKeyArn|domainName)\\s*:\\s*["''][^"']+["'']'
+      - pattern: '\\binstance(Class|Size)\\s*:\\s*db\\.[tr]\\d'   # env-sized hardcodes
+    message: "Layer 1 fallbacks must be minimal/safe; env-sensitive values belong in Layers 2–5."
+
+  - id: CFG-011
+    title: No security-sensitive values in Layer 1 fallbacks (getHardcodedFallbacks)
+    severity: error
+    scope_glob: "packages/**/src/**/*.{ts,tsx,js,jsx}"
+    conditional:
+      requires_pattern: "\\bgetHardcodedFallbacks\\s*\\("
+    must_not_match:
+      - pattern: 'allowOrigins\\s*:\\s*\\[\\s*["'"]\\*["'"]\\s*\\]'
+      - pattern: 'https?://'
+      - pattern: '\\b\\d{1,3}(?:\\.\\d{1,3}){3}\\b'
+      - pattern: '([0-9a-f]{0,4}:){2,7}[0-9a-f]{0,4}'
+      - pattern: '\\b(\\d{1,2}|1\\d|2\\d|3[0-2])\\b\\s*/\\s*\\d{1,2}'
+      - pattern: '(Audience|audience|scope|Scopes|jwt|JWKS|clientSecret|clientId)'
+      - pattern: '(postgres(ql)?|mysql|mongodb)://'
+      - pattern: '(certificateArn|kmsKeyArn|domainName)\\s*:\\s*["''][^"']+["'']'
+      - pattern: '\\binstance(Class|Size)\\s*:\\s*db\\.[tr]\\d'
+    message: "Same rule as CFG-010, for builders using getHardcodedFallbacks()."
+
+  - id: CFG-012
+    title: CORS fallbacks are safe by default
+    severity: error
+    scope_glob: "packages/**/src/**/*.{ts,tsx,js,jsx}"
+    conditional:
+      requires_pattern: "allowOrigins|cors\\s*:"
+    must_match_any:
+      - pattern: 'allowOrigins\\s*:\\s*\\[\\s*\\]'
+    must_match_any_2:
+      - pattern: 'credentials\\s*:\\s*false'
+    message: "Fallback CORS must use allowOrigins: [] and credentials:false."
+
+  # ─────────────────────────────────────────
+  # 3) service.yml hygiene (layers 3–5)
+  # ─────────────────────────────────────────
+  - id: CFG-020
+    title: Policy overrides require justification (and are non-prod only)
+    severity: error
+    scope_glob: "**/service.yml"
+    must_match:
+      - pattern: "policy:\\s*\\n\\s*overrides:"
+        implies:
+          - pattern: "justification:\\s*\"?.+\"?"
+    message: "policy.overrides must include a justification (ticket/why). Restrict application to non-prod in engine."
+
+  - id: CFG-021
+    title: No unresolved tokens in resolved artifacts
+    severity: warn
+    scope_glob: "artifacts/**/*.{json,yml,yaml},out/**/*.{json,yml,yaml},dist/**/*.{json,yml,yaml}"
+    must_not_match:
+      - pattern: "\\$\\{env:[^}]+\\}"
+      - pattern: "\\$\\{ref:[^}]+\\}"
+    message: "Resolved artifacts should not contain ${env:...} or ${ref:...}. Resolve during synth."
+
+  - id: CFG-022
+    title: Avoid YAML anchor merges (array semantics)
+    severity: warn
+    scope_glob: "**/*.y?(a)ml"
+    must_not_match:
+      - pattern: '<<:\\s*\\*\\w+'
+    message: "Avoid YAML anchor merges; arrays replace by default per PCS."
+
+  # ─────────────────────────────────────────
+  # 4) App config vs secrets (SSM, AppConfig, Secrets Manager)
+  # ─────────────────────────────────────────
+  - id: CFG-030
+    title: ssm-parameter values must not look like secrets
+    severity: error
+    scope_glob: "**/service.yml"
+    conditional:
+      requires_pattern: "type:\\s*ssm-parameter"
+    must_not_match:
+      - pattern: 'value\\s*:\\s*["''].*(sk_live|sk_test|secret|password|token|apikey).*["'']'
+    message: "Sensitive values belong in Secrets Manager, not SSM Parameter Store."
+
+  - id: CFG-031
+    title: app-config-profile includes schema (validation)
+    severity: warn
+    scope_glob: "**/service.yml"
+    conditional:
+      requires_pattern: "type:\\s*app-config-profile"
+    must_match_any:
+      - pattern: "\\bschema\\s*:"
+    message: "AppConfig profiles should include a validation schema."
+
+  - id: CFG-032
+    title: Secrets bind is read-only
+    severity: error
+    scope_glob: "**/service.yml"
+    conditional:
+      requires_pattern: "capability:\\s*config:secret"
+    must_match:
+      - pattern: "access\\s*:\\s*read"
+    message: "Secrets are read-only at runtime; 'access: read' is required."
+
+  # ─────────────────────────────────────────
+  # 5) Secrets & tokens never in repo
+  # ─────────────────────────────────────────
+  - id: CFG-040
+    title: No secrets in config or code
+    severity: error
+    scope_glob: "**/*"
+    must_not_match:
+      - pattern: '(?<![A-Z_])AWS_SECRET_ACCESS_KEY\\b'
+      - pattern: '\\bAKIA[0-9A-Z]{16}\\b'
+      - pattern: '-----BEGIN (RSA|EC|OPENSSH) PRIVATE KEY-----'
+      - pattern: 'password\\s*[:=]\\s*["''][^"']+["'']'
+      - pattern: '\\b(secret|token|apikey|api_key)\\s*[:=]\\s*["''][^"']+["'']'
+    message: "Secrets must live in Secrets Manager; config holds names/ARNs only."
+
+  # ─────────────────────────────────────────
+  # 6) Determinism (no dynamic lookups in synth)
+  # ─────────────────────────────────────────
+  - id: CFG-050
+    title: ConfigBuilder must not fetch from network/CLIs at synth
+    severity: error
+    scope_glob: "packages/**/src/**/*.{ts,tsx,js,jsx}"
+    conditional:
+      requires_pattern: "class\\s+\\w*ConfigBuilder\\b"
+    must_not_match:
+      - pattern: '\\b(fetch|axios|got|superagent|node-fetch)\\('
+      - pattern: '\\bexec(Sync)?\\(.*\\b(aws|az|gcloud)\\b'
+    message: "Synthesis is deterministic; no live calls or shell-outs in ConfigBuilders."
+
+  # ─────────────────────────────────────────
+  # 7) Framework file hygiene
+  # ─────────────────────────────────────────
+  - id: CFG-060
+    title: Framework files contain top-level defaults
+    severity: error
+    scope_glob: "config/*.y?(a)ml"
+    must_match_any:
+      - pattern: '^defaults:\\s*$'
+    message: "/config/{framework}.yml must define a top-level 'defaults:' block."
+
+  - id: CFG-061
+    title: Framework files contain no secrets or endpoints
+    severity: error
+    scope_glob: "config/*.y?(a)ml"
+    must_not_match:
+      - pattern: 'https?://'
+      - pattern: '\\b(password|secret|token|apikey|api_key)\\b\\s*:\\s*["''][^"']+["'']'
+    message: "Framework defaults are governance, not live endpoints or secrets."
+
+  # ─────────────────────────────────────────
+  # 8) Evidence/provenance (optional but encouraged)
+  # ─────────────────────────────────────────
+  - id: CFG-070
+    title: Synth emits provenance (optional)
+    severity: info
+    scope_glob: "artifacts/**/*.{json,log}"
+    must_match_any:
+      - pattern: '"provenance":\\s*\\{'
+      - pattern: '\\bconfig_provenance\\b'
+    message: "Include provenance of merged keys per layer in synth artifacts."
+
+mappings:
+  "Framework & Segregation": ["CFG-001","CFG-002"]
+  "Fallback Guardrails": ["CFG-010","CFG-011","CFG-012"]
+  "service.yml Hygiene": ["CFG-020","CFG-021","CFG-022"]
+  "App Config vs Secrets": ["CFG-030","CFG-031","CFG-032"]
+  "Secrets Hygiene": ["CFG-040"]
+  "Determinism": ["CFG-050"]
+  "Framework Hygiene": ["CFG-060","CFG-061"]
+  "Evidence": ["CFG-070"]

@@ -12,9 +12,9 @@ import {
   ComponentContext,
   ComponentCapabilities
 } from '../../../src/platform/contracts/component-interfaces';
-import { 
-  WafWebAclConfig, 
-  WafWebAclConfigBuilder 
+import {
+  WafWebAclConfig,
+  WafWebAclConfigBuilder
 } from './waf-web-acl.builder';
 
 // AWS CDK imports
@@ -29,33 +29,33 @@ import * as cdk from 'aws-cdk-lib';
  * Extends BaseComponent and implements the Platform Component API Contract.
  */
 export class WafWebAclComponent extends BaseComponent {
-  
+
   /** Final resolved configuration */
   private config!: WafWebAclConfig;
-  
+
   /** Main WAF Web ACL construct */
   private webAcl!: wafv2.CfnWebACL;
-  
+
   /** CloudWatch Log Group for WAF logs */
   private logGroup?: logs.LogGroup;
-  
+
   /** WAF logging configuration */
   private loggingConfiguration?: wafv2.CfnLoggingConfiguration;
-  
+
   /**
    * Constructor
    */
   constructor(scope: Construct, spec: ComponentSpec, context: ComponentContext) {
     super(scope, spec.name, context, spec);
   }
-  
+
   /**
    * Component type identifier
    */
   public getType(): string {
     return 'waf-web-acl';
   }
-  
+
   /**
    * Main synthesis method following Platform Component API Contract
    */
@@ -63,7 +63,7 @@ export class WafWebAclComponent extends BaseComponent {
     // Step 1: Build configuration using ConfigBuilder
     const configBuilder = new WafWebAclConfigBuilder(this.context, this.spec);
     this.config = configBuilder.buildSync();
-    
+
     // Step 2: Get logger from BaseComponent
     const logger = this.getLogger();
     logger.info('Starting WAF Web ACL synthesis', {
@@ -74,22 +74,22 @@ export class WafWebAclComponent extends BaseComponent {
         defaultAction: this.config.defaultAction
       }
     });
-    
+
     // Step 3: Create AWS resources
     this.createLogGroup();
     this.createWebAcl();
     this.createLoggingConfiguration();
     this.createMonitoringAlarms();
-    
+
     // Step 4: Apply standard tags
     this.applyResourceTags();
-    
+
     // Step 5: Register constructs
     this.registerConstructs();
-    
+
     // Step 6: Register capabilities
     this.registerCapabilities();
-    
+
     logger.info('WAF Web ACL synthesis completed', {
       context: {
         componentName: this.spec.name,
@@ -97,26 +97,26 @@ export class WafWebAclComponent extends BaseComponent {
       }
     });
   }
-  
+
   /**
    * Creates CloudWatch log group if logging is enabled
    */
   private createLogGroup(): void {
     if (!this.config.logging?.enabled) return;
-    
+
     this.logGroup = new logs.LogGroup(this, 'WafLogGroup', {
       logGroupName: `/aws/wafv2/${this.spec.name}`,
       retention: this.getLogRetentionDays(),
       removalPolicy: this.getRemovalPolicy()
     });
   }
-  
+
   /**
    * Creates the main WAF Web ACL with rules
    */
   private createWebAcl(): void {
     const rules: wafv2.CfnWebACL.RuleProperty[] = [];
-    
+
     // Add managed rule groups
     if (this.config.managedRuleGroups) {
       this.config.managedRuleGroups.forEach(group => {
@@ -141,7 +141,7 @@ export class WafWebAclComponent extends BaseComponent {
         });
       });
     }
-    
+
     // Add custom rules
     if (this.config.customRules) {
       this.config.customRules.forEach(rule => {
@@ -160,7 +160,7 @@ export class WafWebAclComponent extends BaseComponent {
         });
       });
     }
-    
+
     // Create the Web ACL
     this.webAcl = new wafv2.CfnWebACL(this, 'WebAcl', {
       name: this.config.name || this.spec.name,
@@ -177,13 +177,13 @@ export class WafWebAclComponent extends BaseComponent {
       }
     });
   }
-  
+
   /**
    * Creates WAF logging configuration
    */
   private createLoggingConfiguration(): void {
     if (!this.config.logging?.enabled || !this.webAcl || !this.logGroup) return;
-    
+
     this.loggingConfiguration = new wafv2.CfnLoggingConfiguration(this, 'LoggingConfig', {
       resourceArn: this.webAcl.attrArn,
       logDestinationConfigs: [this.logGroup.logGroupArn],
@@ -192,16 +192,16 @@ export class WafWebAclComponent extends BaseComponent {
       }))
     });
   }
-  
+
   /**
    * Creates CloudWatch monitoring alarms
    */
   private createMonitoringAlarms(): void {
     if (!this.config.monitoring?.enabled || !this.webAcl) return;
-    
+
     const alarmConfig = this.config.monitoring.alarms;
     if (!alarmConfig) return;
-    
+
     // Blocked requests alarm
     if (alarmConfig.blockedRequestsThreshold) {
       new cloudwatch.Alarm(this, 'BlockedRequestsAlarm', {
@@ -228,13 +228,21 @@ export class WafWebAclComponent extends BaseComponent {
     const additionalTags = {
       'component-type': this.getType(),
       'waf-scope': this.config.scope || 'REGIONAL',
-      'default-action': this.config.defaultAction || 'allow'
+      'default-action': this.config.defaultAction || 'allow',
+      'compliance:framework': this.context.complianceFramework,
+      'compliance:nist-controls': 'AC-2(3),AT-4(b)',
+      'platform:component': 'waf-web-acl',
+      'platform:service-type': this.context.serviceName
     };
-    
+
     this.applyStandardTags(this.webAcl, additionalTags);
-    
+
     if (this.logGroup) {
-      this.applyStandardTags(this.logGroup, { 'log-type': 'waf-logs' });
+      this.applyStandardTags(this.logGroup, {
+        'log-type': 'waf-logs',
+        'compliance:framework': this.context.complianceFramework,
+        'compliance:nist-controls': 'AC-2(3),AT-4(b)'
+      });
     }
   }
 
@@ -244,11 +252,11 @@ export class WafWebAclComponent extends BaseComponent {
   private registerConstructs(): void {
     this.registerConstruct('main', this.webAcl);
     this.registerConstruct('webAcl', this.webAcl);
-    
+
     if (this.logGroup) {
       this.registerConstruct('logGroup', this.logGroup);
     }
-    
+
     if (this.loggingConfiguration) {
       this.registerConstruct('loggingConfiguration', this.loggingConfiguration);
     }
@@ -259,7 +267,7 @@ export class WafWebAclComponent extends BaseComponent {
    */
   private registerCapabilities(): void {
     const capabilities: ComponentCapabilities = {};
-    
+
     // Main WAF capability
     capabilities['security:waf-web-acl'] = {
       webAclId: this.webAcl.attrId,
@@ -267,13 +275,13 @@ export class WafWebAclComponent extends BaseComponent {
       webAclName: this.webAcl.name,
       scope: this.config.scope
     };
-    
+
     // Monitoring capability
     capabilities['monitoring:waf-web-acl'] = {
       metricsNamespace: 'AWS/WAFV2',
       webAclName: this.webAcl.name
     };
-    
+
     // WAF-specific capability
     capabilities['waf:web-acl'] = {
       id: this.webAcl.attrId,
@@ -282,7 +290,7 @@ export class WafWebAclComponent extends BaseComponent {
       scope: this.config.scope,
       defaultAction: this.config.defaultAction
     };
-    
+
     // Protection capability
     capabilities['protection:web-application'] = {
       type: 'waf-web-acl',
@@ -290,7 +298,7 @@ export class WafWebAclComponent extends BaseComponent {
       rulesCount: (this.config.managedRuleGroups?.length || 0) + (this.config.customRules?.length || 0),
       loggingEnabled: this.config.logging?.enabled || false
     };
-    
+
     // Register all capabilities
     Object.entries(capabilities).forEach(([key, data]) => {
       this.registerCapability(key, data);
@@ -303,9 +311,9 @@ export class WafWebAclComponent extends BaseComponent {
   public getCapabilities(): ComponentCapabilities {
     return this.capabilities || {};
   }
-  
+
   // Helper methods
-  
+
   /**
    * Builds a custom rule statement based on configuration
    */
@@ -336,7 +344,7 @@ export class WafWebAclComponent extends BaseComponent {
         throw new Error(`Unsupported custom rule statement type: ${statement.type}`);
     }
   }
-  
+
   /**
    * Gets log retention days based on compliance framework
    */
@@ -355,8 +363,8 @@ export class WafWebAclComponent extends BaseComponent {
    * Gets removal policy based on compliance framework
    */
   private getRemovalPolicy(): cdk.RemovalPolicy {
-    return ['fedramp-moderate', 'fedramp-high'].includes(this.context.complianceFramework) 
-      ? cdk.RemovalPolicy.RETAIN 
+    return ['fedramp-moderate', 'fedramp-high'].includes(this.context.complianceFramework)
+      ? cdk.RemovalPolicy.RETAIN
       : cdk.RemovalPolicy.DESTROY;
   }
 }

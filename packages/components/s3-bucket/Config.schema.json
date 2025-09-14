@@ -1,0 +1,151 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "title": "S3 Bucket Config",
+  "description": "Configuration for creating an S3 bucket",
+  "type": "object",
+  "required": [
+    "bucketName"
+  ],
+  "properties": {
+    "bucketName": {
+      "type": "string",
+      "description": "S3 bucket name",
+      "pattern": "^[a-z0-9.-]{3,63}$",
+      "minLength": 3,
+      "maxLength": 63
+    },
+    "versioning": {
+      "type": "object",
+      "description": "Versioning configuration",
+      "properties": {
+        "enabled": {
+          "type": "boolean",
+          "default": false
+        }
+      }
+    },
+    "encryption": {
+      "type": "object",
+      "description": "Encryption configuration",
+      "properties": {
+        "enabled": {
+          "type": "boolean",
+          "default": true
+        },
+        "algorithm": {
+          "type": "string",
+          "enum": [
+            "AES256",
+            "aws:kms"
+          ],
+          "default": "AES256"
+        },
+        "kmsKeyId": {
+          "type": "string",
+          "description": "KMS key ID for encryption (required when algorithm is aws:kms)"
+        }
+      }
+    },
+    "publicAccess": {
+      "type": "object",
+      "description": "Public access block configuration",
+      "properties": {
+        "blockPublicAcls": {
+          "type": "boolean",
+          "default": true
+        },
+        "blockPublicPolicy": {
+          "type": "boolean",
+          "default": true
+        },
+        "ignorePublicAcls": {
+          "type": "boolean",
+          "default": true
+        },
+        "restrictPublicBuckets": {
+          "type": "boolean",
+          "default": true
+        }
+      }
+    },
+    "lifecycle": {
+      "type": "object",
+      "description": "Lifecycle configuration",
+      "properties": {
+        "enabled": {
+          "type": "boolean",
+          "default": false
+        },
+        "rules": {
+          "type": "array",
+          "description": "Lifecycle rules",
+          "items": {
+            "type": "object",
+            "required": [
+              "id"
+            ],
+            "properties": {
+              "id": {
+                "type": "string",
+                "description": "Unique identifier for the rule"
+              },
+              "status": {
+                "type": "string",
+                "enum": [
+                  "Enabled",
+                  "Disabled"
+                ],
+                "default": "Enabled"
+              },
+              "transitions": {
+                "type": "array",
+                "description": "Storage class transitions",
+                "items": {
+                  "type": "object",
+                  "required": [
+                    "storageClass"
+                  ],
+                  "properties": {
+                    "storageClass": {
+                      "type": "string",
+                      "enum": [
+                        "STANDARD_IA",
+                        "ONEZONE_IA",
+                        "INTELLIGENT_TIERING",
+                        "GLACIER",
+                        "DEEP_ARCHIVE"
+                      ]
+                    },
+                    "days": {
+                      "type": "integer",
+                      "minimum": 0
+                    }
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "logging": {
+      "type": "object",
+      "description": "Access logging configuration",
+      "properties": {
+        "enabled": {
+          "type": "boolean",
+          "default": false
+        },
+        "targetBucket": {
+          "type": "string",
+          "description": "Target bucket for access logs"
+        },
+        "targetPrefix": {
+          "type": "string",
+          "description": "Prefix for access log objects",
+          "default": "access-logs/"
+        }
+      }
+    }
+  }
+}

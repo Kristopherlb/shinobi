@@ -1,0 +1,19 @@
+{
+  "oscal-version": "1.0.4",
+  "system-security-plan": {
+    "uuid": "component-waf-web-acl-1757820643432",
+    "metadata": {
+      "title": "waf-web-acl Component Security Plan",
+      "last-modified": "2025-09-14T03:30:43.432Z",
+      "version": "1.0.0"
+    },
+    "import-profile": {
+      "href": "https://raw.githubusercontent.com/usnistgov/OSCAL/main/content/nist.gov/SP800-53/rev5/xml/NIST_SP-800-53_rev5_HIGH-baseline_profile.xml"
+    },
+    "system-characteristics": {
+      "system-name": "waf-web-acl",
+      "system-name-short": "waf-web-acl",
+      "description": "CDK L3 component for waf-web-acl with fedramp-moderate compliance"
+    }
+  }
+}

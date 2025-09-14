@@ -1,0 +1,196 @@
+# Shinobi Platform Pipeline for GitLab CI
+stages:
+  - validate
+  - test
+  - audit
+  - plan
+  - deploy
+  - security
+
+variables:
+  DAGGER_VERSION: "0.9.0"
+  NODE_VERSION: "20"
+  DOCKER_DRIVER: overlay2
+  DOCKER_TLS_CERTDIR: "/certs"
+
+# Base image with Dagger CLI
+.dagger_base:
+  image: node:20-alpine
+  before_script:
+    - apk add --no-cache git curl jq yq
+    - cd /usr/local && curl -L https://dl.dagger.io/dagger/install.sh | sh
+    - export PATH="$PATH:/usr/local/.local/bin"
+    - dagger version
+    - dagger project init --name=shinobi-platform
+  artifacts:
+    reports:
+      junit: junit.xml
+      coverage: coverage/cobertura-coverage.xml
+    paths:
+      - .shinobi/plan/
+      - .shinobi/audit/
+      - coverage/
+    expire_in: 30 days
+
+# Validation stage
+validate:
+  extends: .dagger_base
+  stage: validate
+  script:
+    - |
+      tsx dagger/pipelines/platform-pipeline.ts \
+        --skip-test \
+        --skip-audit \
+        --skip-plan \
+        --skip-deploy \
+        --env $CI_ENVIRONMENT_NAME \
+        --compliance-framework $COMPLIANCE_FRAMEWORK \
+        --output-format json
+  rules:
+    - if: $CI_PIPELINE_SOURCE == "merge_request_event"
+    - if: $CI_COMMIT_BRANCH == $CI_DEFAULT_BRANCH
+    - if: $CI_COMMIT_BRANCH =~ /^release\/.*/
+
+# Test stage
+test:
+  extends: .dagger_base
+  stage: test
+  script:
+    - |
+      tsx dagger/pipelines/platform-pipeline.ts \
+        --skip-validate \
+        --skip-audit \
+        --skip-plan \
+        --skip-deploy \
+        --env $CI_ENVIRONMENT_NAME \
+        --compliance-framework $COMPLIANCE_FRAMEWORK \
+        --output-format json
+  coverage: '/Lines\s*:\s*(\d+\.\d+)%/'
+  rules:
+    - if: $CI_PIPELINE_SOURCE == "merge_request_event"
+    - if: $CI_COMMIT_BRANCH == $CI_DEFAULT_BRANCH
+
+# Audit stage
+audit:
+  extends: .dagger_base
+  stage: audit
+  script:
+    - |
+      tsx dagger/pipelines/platform-pipeline.ts \
+        --skip-validate \
+        --skip-test \
+        --skip-plan \
+        --skip-deploy \
+        --env $CI_ENVIRONMENT_NAME \
+        --compliance-framework $COMPLIANCE_FRAMEWORK \
+        --output-format json
+  rules:
+    - if: $CI_PIPELINE_SOURCE == "merge_request_event"
+    - if: $CI_COMMIT_BRANCH == $CI_DEFAULT_BRANCH
+    - if: $CI_COMMIT_BRANCH =~ /^release\/.*/
+
+# Plan stage
+plan:
+  extends: .dagger_base
+  stage: plan
+  script:
+    - |
+      tsx dagger/pipelines/platform-pipeline.ts \
+        --skip-validate \
+        --skip-test \
+        --skip-audit \
+        --skip-deploy \
+        --env $CI_ENVIRONMENT_NAME \
+        --compliance-framework $COMPLIANCE_FRAMEWORK \
+        --output-format json
+  rules:
+    - if: $CI_PIPELINE_SOURCE == "merge_request_event"
+    - if: $CI_COMMIT_BRANCH == $CI_DEFAULT_BRANCH
+    - if: $CI_COMMIT_BRANCH =~ /^release\/.*/
+
+# Deploy stage (only for main branch and releases)
+deploy:
+  extends: .dagger_base
+  stage: deploy
+  script:
+    - |
+      tsx dagger/pipelines/platform-pipeline.ts \
+        --env $CI_ENVIRONMENT_NAME \
+        --compliance-framework $COMPLIANCE_FRAMEWORK \
+        --output-format json
+  environment:
+    name: $CI_ENVIRONMENT_NAME
+    url: $CI_ENVIRONMENT_URL
+  rules:
+    - if: $CI_COMMIT_BRANCH == $CI_DEFAULT_BRANCH
+      when: manual
+    - if: $CI_COMMIT_BRANCH =~ /^release\/.*/
+      when: manual
+  dependencies:
+    - validate
+    - test
+    - audit
+    - plan
+
+# Security scanning
+security_scan:
+  image: aquasec/trivy:latest
+  stage: security
+  script:
+    - trivy fs --format sarif --output trivy-results.sarif .
+  artifacts:
+    reports:
+      sast: trivy-results.sarif
+    paths:
+      - trivy-results.sarif
+    expire_in: 30 days
+  rules:
+    - if: $CI_PIPELINE_SOURCE == "merge_request_event"
+    - if: $CI_COMMIT_BRANCH == $CI_DEFAULT_BRANCH
+
+# Compliance validation for FedRAMP environments
+compliance_validation:
+  extends: .dagger_base
+  stage: audit
+  script:
+    - |
+      if [ "$COMPLIANCE_FRAMEWORK" != "commercial" ]; then
+        npm ci
+        npm run audit:all:strict -- --format json > compliance-results.json
+        cat compliance-results.json | jq '.errors | length' > compliance-errors.txt
+        if [ $(cat compliance-errors.txt) -gt 0 ]; then
+          echo "Compliance validation failed with $(cat compliance-errors.txt) errors"
+          exit 1
+        fi
+      fi
+  artifacts:
+    paths:
+      - compliance-results.json
+    expire_in: 90 days
+  rules:
+    - if: $COMPLIANCE_FRAMEWORK != "commercial"
+    - if: $CI_PIPELINE_SOURCE == "merge_request_event"
+
+# Performance testing
+performance_test:
+  extends: .dagger_base
+  stage: test
+  script:
+    - |
+      tsx dagger/pipelines/platform-pipeline.ts \
+        --skip-validate \
+        --skip-audit \
+        --skip-plan \
+        --skip-deploy \
+        --env $CI_ENVIRONMENT_NAME \
+        --compliance-framework $COMPLIANCE_FRAMEWORK \
+        --output-format json \
+        --performance-test
+  artifacts:
+    paths:
+      - performance-results.json
+    expire_in: 30 days
+  rules:
+    - if: $CI_COMMIT_BRANCH == $CI_DEFAULT_BRANCH
+    - if: $CI_COMMIT_BRANCH =~ /^release\/.*/
+  allow_failure: true

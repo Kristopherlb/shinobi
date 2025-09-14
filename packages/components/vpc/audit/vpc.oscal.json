@@ -1,0 +1,19 @@
+{
+  "oscal-version": "1.0.4",
+  "system-security-plan": {
+    "uuid": "component-vpc-1757824480157",
+    "metadata": {
+      "title": "vpc Component Security Plan",
+      "last-modified": "2025-09-14T04:34:40.157Z",
+      "version": "1.0.0"
+    },
+    "import-profile": {
+      "href": "https://raw.githubusercontent.com/usnistgov/OSCAL/main/content/nist.gov/SP800-53/rev5/xml/NIST_SP-800-53_rev5_HIGH-baseline_profile.xml"
+    },
+    "system-characteristics": {
+      "system-name": "vpc",
+      "system-name-short": "vpc",
+      "description": "CDK L3 component for vpc with fedramp-moderate compliance"
+    }
+  }
+}

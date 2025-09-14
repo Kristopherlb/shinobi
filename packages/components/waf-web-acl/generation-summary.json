@@ -1,0 +1,26 @@
+{
+  "componentName": "waf-web-acl",
+  "serviceType": "waf-web-acl",
+  "framework": "fedramp-moderate",
+  "packsToInclude": [],
+  "extraControlTags": [
+    "AC-2(3)",
+    "AT-4(b)"
+  ],
+  "estimatedFiles": {
+    "component": 4,
+    "tests": 4,
+    "compliance": 2,
+    "rego": "variable",
+    "observability": 2,
+    "documentation": 1
+  },
+  "complianceFeatures": [
+    "6-step synth() pattern",
+    "ConfigBuilder with 5-layer precedence",
+    "Compliance tagging",
+    "REGO policies",
+    "Observability configs",
+    "Comprehensive test suite"
+  ]
+}

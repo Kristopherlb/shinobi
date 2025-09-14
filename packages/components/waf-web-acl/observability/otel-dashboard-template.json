@@ -1,0 +1,24 @@
+{
+  "dashboard": {
+    "name": "waf-web-acl-dashboard",
+    "widgets": [
+      {
+        "type": "metric",
+        "properties": {
+          "metrics": [
+            [
+              "AWS/CloudWatch",
+              "HealthCheck",
+              "Component",
+              "waf-web-acl"
+            ]
+          ],
+          "period": 300,
+          "stat": "Average",
+          "region": "us-east-1",
+          "title": "waf-web-acl Health"
+        }
+      }
+    ]
+  }
+}

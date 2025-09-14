@@ -1,0 +1,65 @@
+defaults:
+  logging:
+    enabled: true
+    retention_days: 1095
+    audit_logging: true
+  monitoring:
+    enabled: true
+    alarms:
+      enabled: true
+      detailed_metrics: true
+  security:
+    encryption:
+      enabled: true
+      encryption_at_rest: true
+      encryption_in_transit: true
+    access_control:
+      least_privilege: true
+      multi_factor_auth: true
+
+  waf-web-acl:
+    scope: REGIONAL
+    defaultAction: block
+    managedRuleGroups:
+      - name: AWSManagedRulesCommonRuleSet
+        vendorName: AWS
+        priority: 1
+        overrideAction: none
+      - name: AWSManagedRulesKnownBadInputsRuleSet
+        vendorName: AWS
+        priority: 2
+        overrideAction: none
+      - name: AWSManagedRulesLinuxRuleSet
+        vendorName: AWS
+        priority: 4
+        overrideAction: none
+      - name: AWSManagedRulesUnixRuleSet
+        vendorName: AWS
+        priority: 5
+        overrideAction: none
+    logging:
+      enabled: true
+      logDestinationType: cloudwatch
+    monitoring:
+      enabled: true
+      alarms:
+        blockedRequestsThreshold: 250
+
+  vpc:
+    cidr: 10.0.0.0/16
+    maxAzs: 3
+    natGateways: 2
+    flowLogsEnabled: true
+    flowLogRetentionDays: 1095
+    vpcEndpoints:
+      s3: true
+      dynamodb: true
+      secretsManager: true
+      kms: true
+    subnets:
+      public:
+        cidrMask: 24
+      private:
+        cidrMask: 24
+      database:
+        cidrMask: 28

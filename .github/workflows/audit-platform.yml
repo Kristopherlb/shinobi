@@ -1,0 +1,52 @@
+name: Platform Governance Audit
+
+on:
+  pull_request:
+    branches: [ main, develop ]
+  push:
+    branches: [ main, develop ]
+  workflow_dispatch:
+
+jobs:
+  audit:
+    name: Platform Governance Audit
+    runs-on: ubuntu-latest
+    
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0  # Need full history for diff checks
+          
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+          cache: 'npm'
+          
+      - name: Install system dependencies
+        run: |
+          echo "Installing ripgrep (required for platform audit CLI)..."
+          sudo apt-get update
+          sudo apt-get install -y ripgrep
+          echo "Verifying ripgrep installation..."
+          rg --version
+          
+      - name: Install dependencies
+        run: npm ci
+        
+      - name: Check system dependencies
+        run: npm run check:deps
+        
+      - name: Run platform audit
+        run: npm run audit:platform:strict
+        
+      - name: Upload audit results
+        if: failure()
+        uses: actions/upload-artifact@v4
+        with:
+          name: audit-results
+          path: |
+            .cursor/audit/
+            scripts/audit-platform.mjs
+          retention-days: 30
