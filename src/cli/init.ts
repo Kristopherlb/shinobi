@@ -1,6 +1,6 @@
 import inquirer from 'inquirer';
-import { Logger } from '../utils/logger';
-import { FileDiscovery } from '../utils/file-discovery';
+import { Logger } from './utils/logger';
+import { FileDiscovery } from './utils/file-discovery';
 import { TemplateEngine } from '../templates/template-engine';
 
 export interface InitOptions {
@@ -25,7 +25,7 @@ interface InitDependencies {
 }
 
 export class InitCommand {
-  constructor(private dependencies: InitDependencies, private options?: InitOptions) {}
+  constructor(private dependencies: InitDependencies, private options?: InitOptions) { }
 
   async execute(options: InitOptions): Promise<InitResult> {
     // Store options for force flag access
@@ -55,27 +55,27 @@ export class InitCommand {
 
       // Gather inputs through interactive prompts or use provided options
       const inputs = await this.gatherInputs(options, availableTemplates);
-      
+
       this.dependencies.logger.info('Generating service files...');
-      
+
       // Generate files using template engine
       await this.dependencies.templateEngine.generateProject(inputs);
-      
+
       this.dependencies.logger.success(`Service '${inputs.name}' initialized successfully!`);
       this.dependencies.logger.info('Next steps:');
       this.dependencies.logger.info('  1. Edit service.yml to customize your service');
       this.dependencies.logger.info('  2. Run "svc validate" to check your configuration');
       this.dependencies.logger.info('  3. Run "svc plan" to see resolved configuration');
-      
+
       return {
         success: true,
         exitCode: 0
       };
-      
+
     } catch (error) {
       const errorMessage = error instanceof Error ? error.message : 'Unknown error occurred';
       this.dependencies.logger.error('Failed to initialize service:', error);
-      
+
       return {
         success: false,
         exitCode: 1,
@@ -119,16 +119,16 @@ export class InitCommand {
     try {
       const fs = await import('fs/promises');
       const files = await fs.readdir('.');
-      
+
       // Filter out common hidden files that are safe to ignore
       const ignoredFiles = new Set(['.git', '.gitignore', '.DS_Store', '.npmrc', '.nvmrc', '.editorconfig', '.env.example']);
-      const significantFiles = files.filter(file => 
+      const significantFiles = files.filter(file =>
         !ignoredFiles.has(file) && !file.startsWith('.')
       );
 
       if (significantFiles.length > 0) {
         this.dependencies.logger.warn(`Current directory is not empty. Found ${significantFiles.length} files/directories.`);
-        
+
         // Check for --force flag to skip confirmation
         if ((this as any).options?.force) {
           this.dependencies.logger.info('--force flag detected, proceeding with initialization in non-empty directory');
@@ -199,7 +199,7 @@ export class InitCommand {
     try {
       const fs = await import('fs/promises');
       const path = await import('path');
-      
+
       // Robust path resolution for templates directory
       const possiblePaths = [
         path.resolve(process.cwd(), 'src/templates/patterns'),
@@ -207,7 +207,7 @@ export class InitCommand {
         path.resolve(__dirname, '../templates/patterns'),
         path.resolve(__dirname, '../../src/templates/patterns')
       ];
-      
+
       let templatesDir = '';
       for (const possiblePath of possiblePaths) {
         try {
@@ -218,12 +218,12 @@ export class InitCommand {
           // Continue to next path
         }
       }
-      
+
       if (!templatesDir) {
         this.dependencies.logger.debug('No templates directory found in standard locations');
         throw new Error('Templates directory not found');
       }
-      
+
       try {
         const templateDirs = await fs.readdir(templatesDir, { withFileTypes: true });
         const templates = [];
@@ -231,7 +231,7 @@ export class InitCommand {
         for (const entry of templateDirs) {
           if (entry.isDirectory()) {
             const templateName = entry.name;
-            
+
             // Try to read template metadata
             const metadataPath = path.join(templatesDir, templateName, 'metadata.json');
             let displayName = templateName;
@@ -272,7 +272,7 @@ export class InitCommand {
 
     } catch (error) {
       this.dependencies.logger.debug('Failed to discover templates, using fallback:', error);
-      
+
       // Return fallback templates
       return [
         { name: 'Empty (minimal setup)', value: 'empty' },
@@ -283,7 +283,7 @@ export class InitCommand {
   }
 
   private async gatherInputs(
-    options: InitOptions, 
+    options: InitOptions,
     availableTemplates: Array<{ name: string; value: string; description?: string }>
   ): Promise<Required<InitOptions>> {
     const questions = [];

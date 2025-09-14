@@ -1,0 +1,411 @@
+Dagger Pipeline for Portable Signed Deployment Bundle (BDL)
+Introduction
+We need to build a Dagger-based CI/CD pipeline in TypeScript that produces a portable, signed deployment bundle (BDL) containing all key build artifacts and supply-chain metadata. The goal is to ensure hermetic, reproducible builds and strong supply-chain security – the platform’s CI must output a self-contained bundle that is cryptographically signed and includes SBOMs and provenance attestations
+GitHub
+GitHub
+. This bundle will be an OCI-compliant artifact (essentially a Docker/OCI image) that can be pushed to an artifact registry and later retrieved for deployment. The pipeline will run in both local (developer) and CI environments, packaging everything – from CloudFormation templates to test results – into one content-addressed image. In the following sections, we design this pipeline step-by-step, including required tools, pipeline code structure, and how to meet signing and metadata standards (SLSA, SBOM, etc.) as well as platform tagging conventions.
+Pipeline Overview
+The deployment bundle (BDL) produced by this pipeline will include the following artifacts:
+CDK Synthesis Output: The AWS CDK generates CloudFormation templates for the infrastructure. The pipeline will run cdk synth and bundle the resulting template(s) (e.g. in the cdk.out folder). These define the infrastructure to deploy.
+Infrastructure Plan Diff: A diff of infrastructure changes (via cdk diff) to show what will change compared to the last deployment. This text report helps with change review and is included in the bundle. (If AWS access is unavailable in a local run, this step can be skipped or done against a saved template.)
+SBOM (Software Bill of Materials): A comprehensive SBOM listing all software components in the build and bundle, generated with Anchore Syft. Syft scans the project’s files/dependencies and produces an SBOM in a standard format (e.g. CycloneDX or SPDX)
+jit.io
+. This SBOM gives transparency into the contents of the bundle (source code modules, libraries, etc.).
+Vulnerability Report: A security scan report generated with Anchore Grype, which finds known CVEs in the components listed in the SBOM
+jit.io
+. This report (e.g. as a JSON file) details any vulnerabilities (with severity levels) present in the bundle’s contents. The pipeline can enforce policy by failing if high-severity issues are found
+GitHub
+.
+Test Results and Coverage: Results from running the project’s test suite (unit/integration tests) and code coverage data. These are collected (e.g. as JUnit XML, coverage lcov reports, etc.) and included for audit. Ensuring all tests pass is a gating condition (the bundle won’t be produced/tagged “ready” unless tests-pass condition is met)
+GitHub
+GitHub
+.
+SLSA Provenance Attestation: An in-toto attestation document recording how the build was carried out (adhering to SLSA standards). This provenance file captures the builder information, source repo and commit, timestamps, and the digest of the output artifact, asserting the bundle’s integrity and build process. Attestations allow attaching verifiable metadata like build provenance to an OCI artifact
+edu.chainguard.dev
+.
+Cosign Signature: A cryptographic signature on the final bundle image, using Sigstore Cosign. The pipeline will support keyless signing (OIDC-backed, e.g. using GitHub Actions identity) as well as AWS KMS signing (using a designated KMS key). The organization’s content trust policy requires each bundle to be signed by either the platform’s KMS key or an authorized OIDC identity
+GitHub
+, so our pipeline will produce a Cosign signature to meet this.
+Bundle Manifest and Metadata: A manifest file (e.g. bundle-manifest.json) describing the bundle and its contents. It will include metadata fields such as service name, version, target environment, compliance framework, whether FIPS mode is enabled, build timestamp, etc., as mandated by the platform’s schema
+GitHub
+. It will also list each artifact file in the bundle with its digest (hash) for integrity. This manifest helps consumers verify and catalog the bundle’s contents and context.
+The output of the pipeline is an OCI image containing all the above files. The image’s digest serves as a content-addressed identifier (ensuring immutability), and it can be pushed to a registry (Artifactory in production, or a local/dev registry when testing) for storage and later retrieval.
+Tools and Dependencies
+Implementing this pipeline involves several tools and libraries, orchestrated via Dagger:
+Dagger TypeScript SDK (@dagger.io/dagger) – Allows us to define the pipeline in Node.js/TypeScript and run it in a containerized, portable manner. Dagger provides a client that can run container steps, mount files, and produce images. The pipeline code itself will use this SDK (Node 18+ runtime required).
+AWS CDK v2 CLI – Used for synthesizing and diffing AWS infrastructure (CloudFormation templates). We will use cdk synth and cdk diff. The CDK CLI can be invoked via npx (if the project’s devDependencies include AWS CDK) or by installing it in the build container.
+Node.js & npm – The application and infrastructure code (e.g. AWS CDK app and any tests) are assumed to be a Node.js project. We use Node 18 as the base runtime for running tests and CDK commands. Dependencies will be installed via npm ci for a reproducible lockfile-driven install.
+Syft (by Anchore) – An open-source SBOM generator. Syft will scan the project files (and potentially the built image) to produce a Software Bill of Materials listing all components, in formats like CycloneDX or SPDX
+jit.io
+. We can use the official Syft CLI container image (to avoid installing it manually), ensuring consistency across environments.
+Grype (by Anchore) – An open-source vulnerability scanner that takes an SBOM or image and reports known vulnerabilities in the components
+jit.io
+. We will use Grype (via its CLI container) to generate a JSON report of CVEs. This helps enforce that no critical vulnerabilities slip through (the pipeline or registry can block promotion if any high/critical issues are found
+GitHub
+).
+Cosign (Sigstore) – The tool for signing and verifying OCI artifacts and for attaching attestations. Cosign will be used in two ways: (1) to sign the final bundle image (producing a signature stored in the OCI registry’s signatures, satisfying the content trust requirement), and (2) potentially to attach the SLSA provenance attestation as an OCI attestation object. Cosign supports keyless signing (using an OIDC token from the CI environment to get a Sigstore certificate) and KMS signing (using an AWS KMS key via its URI). We will accommodate both modes. For example, in GitHub Actions the pipeline can use OIDC keyless signing, whereas in other environments an AWS KMS key (aws-kms://...) can be used
+GitHub
+.
+Additional tools: The pipeline may use small auxiliary tools/commands as needed – e.g. Unix shell (sh) for redirecting output to files, tar if we choose to export images locally, etc. All such commands will be run inside containers to keep the pipeline self-contained. We will also leverage Dagger’s caching where possible (for npm modules, etc.) to speed up repeated runs without compromising determinism.
+(Optional) Go: While the main pipeline logic is in TypeScript, certain steps could leverage Go if beneficial. Dagger is polyglot, so one could implement a subtask (for example, a heavy file processing or use of a Go-based library for SLSA generation) as a small Go program or Dagger pipeline and invoke it from the TS pipeline. In practice, however, using the CLI tools (Syft, Grype, Cosign) via containers is sufficient. The pipeline remains portable and language-agnostic in execution since all actions happen in containers.
+With these dependencies, we ensure the pipeline can run on any system with Node and Docker/Dagger engine, without requiring direct installation of CDK, Syft, etc., on the host. Next, we outline the implementation steps.
+Implementation Steps
+1. Initialize Dagger Client and Inputs
+First, we set up the Dagger client and define the pipeline inputs. The pipeline will accept parameters for things like service name, version, environment, etc. (or derive them from the repo). In a CI context, these might come from environment variables or CI metadata (e.g. git branch, commit). For example:
+SERVICE_NAME – Name of the service or project (used in tagging and manifest).
+ENVIRONMENT – Deployment environment (e.g. “dev”, “qa”, “prod”) for which this bundle is built. This can influence config and tagging.
+VERSION – Version or build ID for this bundle (could be a semantic version or a git commit SHA).
+COMPLIANCE_MODE – (Optional) compliance framework target (e.g. “fedramp-high”, “commercial”) if it affects build (or we can infer from ENVIRONMENT).
+Credentials/Secrets: e.g. AWS credentials (if cdk diff or KMS signing is used), Artifactory credentials or token, etc., provided via environment or Dagger secrets.
+Using the Dagger SDK, we connect to the Dagger Engine and mount our source code into the pipeline’s context. For example, in the TypeScript code:
+import { connect } from "@dagger.io/dagger";
+
+const client = await connect({ logOutput: process.stdout });
+// Mount source code from host into Dagger
+const srcDir = client.host().directory(".", { exclude: ["node_modules", "cdk.out", "coverage"] });
+Here we exclude certain paths to avoid copying cached build artifacts from host. This srcDir now represents our project files inside the pipeline. We’ll reuse srcDir for multiple steps to ensure all containers operate on the same codebase state. We also set up any required environment variables in the Dagger context. For instance, if AWS credentials are present on host, we pass them through to containers (AWS_ACCESS_KEY_ID, AWS_SECRET_ACCESS_KEY, AWS_REGION). Similarly, if using an Artifactory API token, we’ll pass it, and if using OIDC, the pipeline might expect some token exchange or JWT to occur (for simplicity, we assume using an API token in the pipeline example, since OIDC auth may be handled outside or via a separate step). The Dagger SDK allows marking secrets so they aren’t printed in logs.
+2. Install Dependencies & Run Tests
+Next, the pipeline will perform the build and testing of the project. We create a Node.js 18 container to run our build commands:
+// Start from Node 18 image with needed tools (using an image with git if needed)
+let buildCtr = client.container().from("node:18-bullseye")  
+  .withMountedDirectory("/src", srcDir)
+  .withWorkdir("/src")
+  .withEnvVariable("NODE_ENV", "production");
+We use a full Node 18 base (Debian bullseye in this case) so that we have the Node runtime and can also install AWS CDK if needed. We mount our source at /src and set it as working directory. Now, we install npm dependencies in this container to get a reproducible build environment:
+buildCtr = await buildCtr.withExec(["npm", "ci"]);
+This uses the lockfile (package-lock.json) to install exact versions, ensuring reproducibility. (We could cache the npm cache directory across runs to speed this up using Dagger cache volumes, but the output will be the same each time given the lockfile.) After dependencies are installed, we run the tests:
+const testCtr = await buildCtr.withExec(["npm", "run", "test", "--", "--reporter=junit", "--coverage"]);
+This assumes the project’s package.json has a test script (which could run something like Jest or Mocha). We pass flags to output results in a machine-readable format (e.g. JUnit XML for results, plus coverage data). The tests exercise the application/CDK code and produce output files (for example, JUnit XML might be under reports/junit.xml and coverage under coverage/ folder). Dagger will execute this step inside the container. If tests fail, the npm test command will exit non-zero and Dagger will throw an error, aborting the pipeline (thus ensuring we only produce a bundle if tests-pass, aligning with the promotion policy
+GitHub
+). We then collect test artifacts from the container. Using Dagger’s filesystem APIs, we can grab directories or files from the container’s filesystem:
+const reportsDir = await testCtr.directory("/src/reports");
+const coverageDir = await testCtr.directory("/src/coverage");
+Now reportsDir and coverageDir are Dagger Directory objects representing those output files. We will later add these to our bundle. (If tests produce other artifacts like coverage/lcov.info or HTML reports, those will be included as well.) Note: By reusing the same buildCtr (which already had npm ci run) for the test step (withExec returns a new container state based on the previous), we avoid reinstalling dependencies again. This container also carries our compiled code (if any) and node modules that might be needed for synthesis.
+3. CDK Synthesis (Infrastructure as Code)
+With a passing test run, we proceed to generate the infrastructure definitions. We use the AWS CDK CLI to synthesize the CloudFormation templates for our CDK app. Assuming our project’s CDK app is defined (perhaps in bin/*.ts or app.ts), we run:
+const synthCtr = await buildCtr.withExec(["npx", "cdk", "synth", "--output", "cdk.out"]);
+This will run the CDK CLI in the container (using npx to use the version from our project’s dependencies) and output CloudFormation JSON/YAML into the cdk.out/ directory. We specify the output directory explicitly. The pipeline can also pass context values to the CDK if required (for example, --context service=${SERVICE_NAME} or --context env=${ENVIRONMENT}) to ensure the synthesized templates include proper tags or naming conventions for the platform’s standards. (The existing CDK structure likely uses context or environment variables to name stacks and tag resources appropriately, so we ensure those are provided. For instance, if the CDK app reads a context key for environment to apply tags, we include --context environment=$ENVIRONMENT in the command.) After synthesis, we collect the generated templates:
+const cdkOutDir = await synthCtr.directory("/src/cdk.out");
+This directory contains the CloudFormation templates (e.g. MyStack.template.json or similar) and any assets CDK might produce. We will include this entire directory in the bundle for deployment usage. (If the CDK output is large, ensure to exclude any unnecessary files; usually it’s just templates and metadata).
+4. Infrastructure Diff (Plan Comparison)
+An important part of the bundle is a diff of infrastructure changes. The cdk diff command compares the synthesized template with the currently deployed stack to show what would change. By default, cdk diff will call AWS CloudFormation APIs to fetch the last deployed template
+stackoverflow.com
+, so this requires AWS credentials and network access. In a CI context, we assume AWS credentials for the target account are available (as read-only) to perform the diff. We run:
+let diffFile;
+if (process.env.AWS_ACCESS_KEY_ID) {
+  const diffCtr = await buildCtr.withEnvVariable("AWS_REGION", targetRegion)
+    .withExec(["sh", "-c", "npx cdk diff > cdk.diff || true"]);
+  diffFile = await diffCtr.file("/src/cdk.diff");
+}
+Here we execute cdk diff inside a shell and redirect output to a file cdk.diff. We add || true to ensure the command doesn’t fail the pipeline if it finds differences (cdk diff’s exit code is 1 when differences are present). The resulting cdk.diff file contains a human-readable list of changes (resource additions, modifications, etc., similar to a terraform plan diff). We capture that file for the bundle. If AWS credentials are not available (e.g. a developer running the pipeline locally without AWS access), the pipeline can either skip this step or use an alternative. One alternative is to do a local diff against a saved baseline template (if one is provided to the pipeline). But in our design, we’ll focus on the standard case (CI with AWS access). We make the diff optional based on env vars, so local runs can proceed without it. (At this point, our pipeline container (buildCtr) has run tests, synth, and diff in sequence. Dagger ensures each command ran in order on the same filesystem state. We’ve gathered outputs in Dagger directory objects: test reports, coverage, cdk.out, and diff.)
+5. Generate SBOM with Syft
+Next, we address the supply-chain metadata requirements. We generate an SBOM for the bundle contents using Syft. The SBOM will enumerate all software components, dependencies, packages, and files of interest. There are a few choices for what to scan: we can scan the project directory (source + build outputs) to list application dependencies, or scan the final bundle image. Scanning the project directory (which contains our code and node_modules from the install) will yield a list of application libraries and their versions, which is likely what we want. (If the bundle were a container with OS packages, we’d scan the image to include OS packages as well, but our bundle will mostly contain files and possibly some Node modules for the pipeline logic.) We use the official Syft container to avoid installing Syft manually. For example:
+const sbomCtr = client.container().from("anchore/syft:latest")
+  .withDirectory("/target", srcDir)       // mount our source code
+  .withWorkdir("/target")
+  .withExec(["syft", "--output", "cyclonedx-json", "--file", "sbom.json", "."]);
+const sbomFile = await sbomCtr.file("/target/sbom.json");
+This runs Syft to scan the current directory (.) and output a CycloneDX SBOM to sbom.json. (We choose CycloneDX JSON format as it’s a widely used standard for SBOMs.) Syft will detect things like the Node.js project dependencies (by reading package-lock.json), any OS packages (if we had a Dockerfile, but here likely none), etc., and produce a JSON file. As noted in documentation, Syft supports multiple formats (JSON, CycloneDX, SPDX, etc.)
+jit.io
+; CycloneDX JSON is a good choice for interoperability. The resulting sbomFile (e.g. sbom.json) is then available for bundling. We’ve now satisfied the requirement to include an SBOM in the bundle.
+6. Vulnerability Scanning with Grype
+Using the SBOM, we perform a vulnerability scan with Grype. Grype will read the SBOM and identify any known vulnerabilities in the listed components
+jit.io
+. We again use the official Grype container:
+const grypeCtr = client.container().from("anchore/grype:latest")
+  .withFile("/target/sbom.json", sbomFile)
+  .withWorkdir("/target")
+  .withExec(["grype", "sbom:./sbom.json", "-o", "json", "--file", "vuln-report.json"]);
+const vulnReport = await grypeCtr.file("/target/vuln-report.json");
+Here we supply the SBOM to Grype (sbom:./sbom.json tells Grype to use that SBOM as input) and output results in JSON format to vuln-report.json. The vulnerability report will contain a list of vulnerabilities (if any), each with details like CVE IDs, severity, and fix availability. This file is included in the bundle for security review and compliance. To enforce quality gates, the pipeline can inspect the Grype output. For example, we could parse the JSON to see if any vulnerability has severity "High" or "Critical" and, if so, decide to fail the pipeline (preventing an unsigned bundle from being published). This can be done with a quick JSON parse in Node, or by using Grype’s exit codes/policy flags. (According to enterprise policy, high/critical vulns should fail or quarantine the build
+GitHub
+. The Artifactory is also configured to block promotion if any vulnerability is present
+GitHub
+, but it’s best to catch it in CI early). For brevity, we assume successful scan (or acceptable vulnerabilities) in proceeding; in practice, you’d add a check:
+// Pseudo-code: check vulnerabilities count/severity
+const vulnData = JSON.parse(await vulnReport.contents());
+if (vulnData.matches.some(m => ["High","Critical"].includes(m.vulnerability.severity))) {
+    throw new Error("High-severity vulnerabilities detected, failing build.");
+}
+This ensures only bundles that pass security scanning are produced (others stop before signing).
+7. SLSA Provenance Attestation
+Now we create the SLSA provenance attestation for the bundle. This is essentially a JSON document following the in-toto attestation format, with a SLSA Provenance predicate. It will describe what we built, how we built it, and from what sources. We can construct this in the pipeline code since we have all needed info. For example, a simplified provenance (SLSA Level 2/3) might include:
+Builder: Identify the system that performed the build. For instance, "builder": { "id": "urn:dagger:engine:sha256:..."} or a custom ID like "github://Org/Pipeline@v1" if we consider our CI pipeline as the builder.
+Build Type: A descriptor for the build process, e.g. https://dagger.io/TypeScriptPipeline@v1 or simply "generic" – this can be a URI that both builder and consumers agree on.
+Invocation Parameters: The inputs to the pipeline – e.g., environment = "dev", service = "my-service", commit SHA, etc. These show what was requested.
+Build Start/End Time: Timestamps for record.
+Materials: The inputs to the build. Typically, this includes the source repository with a digest. For instance, the Git commit of the source is the primary material ("uri": "git+https://github.com/org/repo.git@<commit>", with a SHA256). If there were base images involved, those image digests could also be listed as materials.
+Outputs (Subject): The output artifact’s digest. In SLSA provenance, the attestation usually is stored outside the artifact, so it names the artifact (by digest) it refers to. In our case, after we build the OCI bundle image we will know its digest, and we can include that in the attestation. For now, we can prepare the attestation minus the image digest, and fill it in once we have it (or attach the attestation via cosign separately, as described later).
+We create a JSON object for the attestation. For example (pseudo-code structure):
+const provenance = {
+  "_type": "https://in-toto.io/Statement/v1",
+  "predicateType": "https://slsa.dev/provenance/v0.2", 
+  "subject": [{
+      "name": bundleImageName, 
+      "digest": { "sha256": "<to-be-filled>" }
+  }],
+  "predicate": {
+    "builder": { "id": "urn:dagger:component:ci-pipeline:1.0" },
+    "buildType": "custom:dagger-ts-oci-bundle",
+    "buildConfig": {
+       "service": SERVICE_NAME,
+       "environment": ENVIRONMENT,
+       "version": VERSION,
+       "compliance": COMPLIANCE_MODE
+    },
+    "materials": [
+       { "uri": sourceRepoURL, "digest": { "sha1": gitCommit } }
+    ],
+    "metadata": { "buildStarted": startTime, "buildFinished": endTime }
+  }
+};
+We will convert this object to JSON and save it as provenance.json. This file will be included in the bundle. By having this attestation inside the bundle, we ensure even offline or after-the-fact, one can inspect how the bundle was produced. (Additionally, we can use Cosign to store this attestation externally in the registry with a signature, which is often done so that verifiers can retrieve provenance without pulling the entire image. Attaching metadata like SBOMs or SLSA attestations to OCI images is a common practice
+edu.chainguard.dev
+, and our platform’s registry supports OCI referrers for this
+GitHub
+. In our pipeline, we’ll at least include the file internally, and optionally we’ll use Cosign to attach it as a signed attestation in Step 10.) Note: If implementing at SLSA Level 3 or higher, we would want this build to be isolated (which Dagger’s ephemeral engine provides) and the provenance to be signed. We handle signing via Cosign in the next steps.
+8. Prepare Bundle Manifest and Metadata
+Before packaging everything into an OCI image, we create the bundle manifest (and gather all files into one place). The manifest (bundle-manifest.json) is a small JSON that follows the schema required by our platform
+GitHub
+. According to the config, we must include at least:
+service – e.g. "my-service"
+version – e.g. "1.2.3" or a build number
+environment – e.g. "dev"
+compliance_framework – e.g. "fedramp-moderate" (if relevant)
+fips_mode – boolean (true/false if built in FIPS mode; this might be an input or derived from compliance level)
+build_timestamp – ISO timestamp of the build.
+We’ll fill those from our inputs and current time. We also add optional fields if available, like git_commit, git_branch, build_id (CI build number or ID), runner_version (maybe the version of our pipeline or Dagger engine), etc.
+GitHub
+GitHub
+. For completeness, we might also include a list of high-level dependencies or notes. Importantly, we include checksums of the main artifacts in the bundle for integrity. For each file (template, SBOM, report, etc.), we can compute a SHA256 hash and list it in the manifest. This way, someone with the bundle can verify that the files match the manifest and the manifest matches the signed image (since the manifest is inside the image and covered by its signature). We do not include the image’s own digest in the manifest (because that would be self-referential and not possible to know before image creation). Instead, the image digest will be obtained upon push and used externally (e.g. in the attestation and for verifying signature). We gather all artifact files from previous steps and stage them for the image. Using Dagger’s directory API, we can construct a bundle directory that contains everything in a nice structure. For example:
+// Start an empty directory and add artifacts
+let bundleDir = client.directory();
+bundleDir = bundleDir.withDirectory("cdk.out", cdkOutDir);
+if (diffFile) bundleDir = bundleDir.withFile("cdk-diff.txt", diffFile);
+bundleDir = bundleDir.withFile("sbom.json", sbomFile)
+                     .withFile("vuln-report.json", vulnReport)
+                     .withDirectory("tests", reportsDir)        // e.g. tests/junit.xml
+                     .withDirectory("coverage", coverageDir)
+                     .withFile("provenance.json", provFile);
+We also include the pipeline logic itself: for transparency, package the source code (or compiled code) of the Dagger pipeline. This could be as simple as adding the pipeline script file. For instance, if our pipeline code is in ci/pipeline.ts, we can do:
+const pipeSource = client.host().file("ci/pipeline.ts");
+bundleDir = bundleDir.withFile("pipeline/pipeline.ts", pipeSource);
+And if there are additional scripts or config that are part of the CI logic, include them too. By packaging the pipeline code, anyone inspecting the bundle can see how it was built (which is a great aid for compliance audits and provenance verification). It’s essentially embedding “build recipe” inside the artifact. Next, we create the manifest file as a new file in bundleDir:
+const manifestData = {
+  service: SERVICE_NAME,
+  version: VERSION,
+  environment: ENVIRONMENT,
+  compliance_framework: COMPLIANCE_MODE || "none",
+  fips_mode: !!FIPS_MODE,               // assume we determine if FIPS was on
+  build_timestamp: new Date().toISOString(),
+  git_commit: GIT_COMMIT,
+  git_branch: GIT_BRANCH,
+  build_id: CI_BUILD_ID,
+  // ... other fields as needed
+  files: {}
+};
+for (const [path, file] of [["sbom.json", sbomFile], ["vuln-report.json", vulnReport], /*...*/]) {
+   const digest = await file.digest("sha256");
+   manifestData.files[path] = { sha256: digest };
+}
+bundleDir = bundleDir.withNewFile("bundle-manifest.json", JSON.stringify(manifestData, null, 2));
+The above conceptually adds a bundle-manifest.json with all metadata and a list of file hashes. (The Dagger API provides a way to compute file digest – in practice we might also compute outside, but Dagger’s file.digest() is convenient if available. If not, we could exec sha256sum in a container and capture output.) Now bundleDir contains everything we want to ship. We have structured it with subfolders for clarity: for example, cdk.out/ contains templates, other files at top-level (or in logical subfolders). This is ready to be turned into an OCI image.
+9. Package the Bundle as an OCI Image
+To create the OCI-compliant bundle image, we use Dagger to construct a container image from our bundleDir. We don’t actually need a runtime environment inside this image (it’s just data), so we can use a minimal base (or even scratch). We’ll use a scratch image to avoid any extra bloat:
+let bundleImage = client.container().from("scratch")
+  .withDirectory("/", bundleDir);
+Using scratch means the image will have no base OS – just the files we added at the root. This keeps the bundle as small and clean as possible (only our artifacts). If scratch is not directly usable, an alternative is to use a tiny base like alpine and add files, but then we’d carry Alpine’s filesystem too. Dagger supports scratch as an empty base for adding files. We might also add some OCI metadata labels to the image, to describe it. For example:
+bundleImage = bundleImage
+  .withLabel("org.opencontainers.image.title", `${SERVICE_NAME} ${ENVIRONMENT} bundle`)
+  .withLabel("org.opencontainers.image.description", "Infrastructure deployment bundle with templates, SBOM, tests, etc.")
+  .withLabel("org.opencontainers.image.created", new Date().toISOString())
+  .withLabel("com.company.ci.build_id", CI_BUILD_ID || "")
+  .withLabel("com.company.ci.pipeline", "Dagger-OCI-Bundle-TS");
+These labels are optional, but can encode useful metadata accessible without pulling the whole image (just via registry manifest inspection). They might duplicate info in the manifest file, but that’s fine for quick reference. Now we have a container definition ready. Next, we tag and push this image to the registry. The image name (including registry and repository path) should follow our platform conventions. The Artifactory config indicates an OCI registry at something like artifactory.company.com under platform/bundles repository
+GitHub
+. Likely the naming scheme is platform/bundles/<service> as the repository, and the tag might include version and environment. For example, if service = payments and version = 1.2.3, environment = dev, we could use:
+artifactory.company.com/platform/bundles/payments:1.2.3-dev
+This includes environment in the tag. Alternatively, we tag by version or commit and use Artifactory’s promotion tags (dev-ready, qa-ready) separately
+GitHub
+. One approach is to push the bundle with a unique tag (like the git commit SHA or version number), then also add a tag like dev-ready if appropriate. Given the config’s auto-promotion for dev, the pipeline might directly tag it as dev-ready if tests and scans passed, signaling it’s ready for deployment to dev. For clarity, we’ll tag with a unique identifier (like version and commit) and leave promotion tags to a promotion process or an additional tag push. So, let’s form the image reference and push:
+const imageRepo = "artifactory.company.com/platform/bundles/" + SERVICE_NAME;
+const imageTag = `${VERSION}-${ENVIRONMENT}`;  // e.g. "1.2.3-dev" or "abcd123-dev" 
+// Authenticate to registry (if using API key)
+bundleImage = bundleImage.withRegistryAuth("artifactory.company.com", ARTIFACTORY_USER, ARTIFACTORY_TOKEN);
+const publishedRef = await bundleImage.publish(`${imageRepo}:${imageTag}`);
+Here, withRegistryAuth supplies credentials for the push (in CI, we might use a service account API key stored in ARTIFACTORY_TOKEN secret, or if using OIDC, we might not need explicit auth here if the environment provides a short-lived token). The publish method builds the image and pushes it to the given registry URL. It returns the fully qualified reference of the image including its digest. For example, publishedRef might be:
+artifactory.company.com/platform/bundles/payments@sha256:abc123... 
+(with the digest). Dagger ensures the image is pushed in an OCI-compliant manner with all files. If we are in a development (local) context and we don’t want to push to a remote registry, we have a few options to “mock” this step: we could spin up a temporary local registry (using the registry:2 Docker image) within Dagger and push to it, or use Dagger’s ability to export the image to a tarball or to the host Docker daemon. For simplicity, the pipeline could detect a “DEV” mode (e.g. an env var) and instead of .publish, do:
+await bundleImage.export("/path/on/host/bundle.tar");
+This would output a tar archive of the OCI image that a developer can load with Docker if needed. Alternatively, Dagger could push to localhost:5000/test-bundles:dev if a local registry is running. In summary, in CI we push to Artifactory, in local runs we avoid external push but still produce the image (tar or local). The core artifacts are the same. At this point, our bundle is built and stored. Next, we handle signing.
+10. Sign the Bundle with Cosign
+After publishing, we have the image’s canonical reference (including digest). Now we perform the Cosign signature. The signature will ensure the bundle cannot be tampered with and meets the platform’s content trust requirements
+GitHub
+. We will use Cosign in a container to sign the image we just pushed. Cosign needs access to credentials depending on the signing method:
+Keyless OIDC (Sigstore): If we’re in CI (e.g. GitHub Actions), we can use OIDC token to sign. This requires COSIGN_EXPERIMENTAL=1 and typically setting environment like COSIGN_OIDC_PROVIDER and COSIGN_OIDC_CLIENT_ID (for GitHub, Cosign by default knows how to use the GitHub OIDC token). The GitHub Actions runner OIDC token can be fetched and Cosign will use it to get a code signing certificate from Fulcio. For our pipeline, if keyless is enabled, we ensure the environment variables and identity token are present. Cosign will then sign the image reference. No private key needed – the private key is ephemeral and certificate issued by Fulcio ties it to the OIDC identity (e.g. the GitHub workflow).
+AWS KMS: If a KMS key is configured (e.g. AWS_KMS_KEY_ID provided), the pipeline can use that. Cosign supports KMS URIs, e.g. aws-kms:///<region>/<keyId_or_alias>. We would ensure AWS credentials are present with permission to Sign using that KMS key.
+In the Artifactory config, allowed signers are either the specific KMS key or the OIDC identity of our repo
+GitHub
+. So we will attempt one of these. Signing implementation: We can use the Cosign container (e.g. gcr.io/projectsigstore/cosign or the latest from GitHub Container Registry). For instance:
+const cosignEnv = {};
+if (USE_KEYLESS) {
+  cosignEnv["COSIGN_EXPERIMENTAL"] = "1";
+  // Possibly set COSIGN_OIDC_PROVIDER/CLIENT_ID if needed, or rely on defaults for GitHub.
+} else if (KMS_KEY) {
+  cosignEnv["AWS_REGION"] = AWS_REGION;
+  // AWS creds already set in env for KMS
+}
+let cosignArgs = ["cosign", "sign"];
+if (KMS_KEY) {
+  cosignArgs.push("--key", `aws-kms://${KMS_KEY}`);
+}
+cosignArgs.push(publishedRef);  // image reference with tag (Cosign will resolve digest)
+
+await client.container().from("sigstore/cosign:v2.1.0")  // example image tag
+    .withEnvVariable("COSIGN_EXPERIMENTAL", "1")
+    .withEnvVariable("AWS_REGION", AWS_REGION)
+    .withEnvVariable("AWS_ACCESS_KEY_ID", process.env.AWS_ACCESS_KEY_ID)
+    .withEnvVariable("AWS_SECRET_ACCESS_KEY", process.env.AWS_SECRET_ACCESS_KEY)
+    .withExec(cosignArgs);
+This will invoke Cosign to sign the image. If using keyless, Cosign will detect the OIDC environment (for GitHub Actions, the OIDC token is usually accessible via ACTIONS_ID_TOKEN_REQUEST_TOKEN and cosign handles that flow internally when COSIGN_EXPERIMENTAL=1 is on). If using KMS, Cosign will call AWS KMS to create a signature. In both cases, Cosign will push the signature object to the OCI registry (because the image reference is on Artifactory, and Artifactory supports OCI signatures and referrers
+GitHub
+). This means after this step, Artifactory will have a signature associated with our bundle image. The signature can later be verified using Cosign (and the trust policy might automatically verify it on pull). We should also consider signing the provenance attestation (SLSA) and/or SBOM. Cosign has a subcommand cosign attest to upload an attestation. For example, we could do:
+await client.container().from("sigstore/cosign:v2.1.0")
+  .withFile("/workspace/provenance.json", provFile)
+  .withEnvVariable(...same auth...)
+  .withExec(["cosign", "attest", 
+             "--predicate", "/workspace/provenance.json", 
+             "--predicate-type", "slsa-provenance", 
+             publishedRef]);
+This would attach our provenance.json to the image in the registry as an attestation. Likewise, we could attach the SBOM (--predicate sbom.json --type spdx for example). Attaching these via cosign is beneficial because they’re then stored as first-class signed metadata in the registry, and tools can query them. However, since we have already included these files inside the image and the image is signed, one might consider that sufficient. Attaching them externally is an optional enhancement (one the platform seems set up to support, given oci-artifacts and oci-referrers are enabled
+GitHub
+). We mention this as an option – the pipeline can do it if we want complete supply-chain coverage. Finally, once cosign completes, our bundle is fully signed and ready. The pipeline can log the final image digest and location for reference:
+Bundle image pushed: artifactory.company.com/platform/bundles/payments:1.2.3-dev  
+Bundle digest: sha256:abc123...  
+Signature: Attached via Cosign (keyless=${USE_KEYLESS})  
+This lets downstream steps or users know how to pull/verify the bundle.
+11. CI Integration (Inputs/Outputs)
+The pipeline is designed to be CI-friendly. It can be invoked from a CI workflow (like a GitHub Actions job, Jenkins stage, etc.) with the necessary inputs provided as environment variables or parameters. To integrate, one would do something like: node ci/pipeline.js --env=dev --version=1.2.3 (or call the JS API). Key inputs and their expected sources:
+Source Code: The pipeline operates on the repository’s code (ensured by mounting the working directory in Dagger). So the CI must check out the code before running the pipeline.
+Service Name: Could be derived from the repository name or provided. (For example, if each repo corresponds to a service, use repo name; or have it in a config file.)
+Environment: Passed in (CI might run this pipeline separately for dev, qa, prod or include it as a parameter).
+Version/Build ID: Could come from CI (e.g. a version number for a release, or use the git commit SHA or tag). This will be used for tagging the bundle and in metadata.
+AWS Credentials: In CI, supply AWS IAM credentials with least privilege: enough to perform cdk diff (CloudFormation describe) and to use KMS signing if needed. Typically, you’d provide AWS_ACCESS_KEY_ID, AWS_SECRET_ACCESS_KEY, and AWS_REGION (and possibly a session token or role via OIDC if using that approach).
+Artifactory Credentials: If not using OIDC auth, provide an API key/token and user. In our pipeline, we referenced ARTIFACTORY_TOKEN and possibly a ARTIFACTORY_USER (or the user might be fixed like platform-ci as in config). These should be stored as secrets in CI. If using Artifactory’s OIDC trust (e.g. via GitHub Actions OIDC), the pipeline might instead retrieve a token from Artifactory using the JWT – that would require an HTTP request to exchange OIDC for a token, possibly outside the Dagger pipeline. Simpler is using an API key in CI.
+Signing Config: Decide whether to use keyless or KMS. For example, if running in GitHub Actions, one might choose keyless: then ensure environment variable COSIGN_EXPERIMENTAL=1 and that the OIDC token is accessible. If using KMS, ensure KMS_KEY_ID is set and AWS creds are present. The pipeline could choose mode automatically: e.g. if KMS_KEY_ID provided use KMS, else use keyless. Or explicitly have a flag.
+Outputs: The primary output is the OCI image pushed to the registry. CI can record the image reference (e.g. write it to a file or output variable). Additionally, for immediate CI feedback, some artifacts can be exposed: e.g., the JUnit test results could be uploaded to CI testing dashboards, coverage could be published, etc. This can be done by either having the pipeline export those to the host or by pulling from the bundle. One approach: after pipeline success, run docker pull artifactory...:1.2.3-dev && docker container create ... && docker cp to extract reports. But that’s cumbersome; instead, we could directly export certain results during the pipeline for CI usage. For example, use reportsDir.export("./reports") to copy test reports to the host, where the CI runner can pick them up. This doesn’t affect the bundle (we still include them there), it’s just for convenience. We can incorporate that as needed. In summary, the CI contract could be:
+Requires: Docker engine (to run Dagger), Node 18, network access to AWS and Artifactory, secrets (AWS creds, Artifactory token).
+Invocation: Run the Node script (or compiled JS) that defines this pipeline.
+Outputs: On success, it will push the bundle image and print or record the image reference (including digest). It may also produce local files like bundle-manifest.json or test results if configured to export for CI. The CI pipeline can use the exit code to determine success/failure, and use the printed digest for further steps (like deploying the bundle or verifying it).
+The environment requirements for running the pipeline include: a host with Node.js 18+ and Dagger installed (the Dagger CLI or Engine needs Docker). The Node script can be run via ts-node or precompiled to JS. Internet connectivity is needed to pull base images (Node, Syft, etc.) and to contact external services (AWS APIs for diff, Sigstore for signing, Artifactory for push). The pipeline itself is otherwise self-contained – all heavy lifting is inside containers, making it portable and OS-agnostic (you could run it on a Mac, Linux, etc., as long as Dagger/Docker is available).
+Environment & Reproducibility Considerations
+This pipeline is designed to be portable and reproducible. Because it uses Dagger with pinned environments, running it locally or in CI yields the same results given the same inputs. Important practices include:
+Deterministic installs: Using npm ci with a lockfile, specific versions of CDK, etc., ensures the infrastructure templates and test outcomes are consistent.
+Pinned tool versions: We should pin the versions of Syft, Grype, and Cosign images (instead of :latest as in examples). For instance, use anchore/syft:0.xx.y, anchore/grype:0.zz.w, and sigstore/cosign:v2.0.0 to avoid unexpected changes. This adds to build reproducibility.
+Hermetic environment: All commands run in isolated containers. The pipeline does not rely on any host-installed tools (no need to have CDK, Syft, etc., on the machine). This aligns with best practices and SLSA level 3 requirements. In fact, the Dagger Engine itself provides a sandbox for execution, and our use of scratch base for the final image means minimal attack surface in the artifact.
+Content-addressable output: The bundle is identified by a cryptographic digest. Any change in contents (templates, SBOM, etc.) would change the digest, so it’s tamper-evident. The manifest inside lists each file’s digest as well, providing an internal checksum reference.
+Signing and Verification: By signing the image, we ensure authenticity. The platform’s Artifactory is set to require at least one valid signature for a bundle
+GitHub
+. Our pipeline produces that signature (either via KMS or OIDC). Downstream, during deployment, the signature can be verified (Cosign can be used to verify against Fulcio’s root CA or the KMS public key). The SLSA provenance we include can also be verified (if attached via Cosign attest, one can verify it was signed by the same identity).
+Finally, this pipeline fulfills the platform’s needs: it produces a signed deployment bundle with SBOMs and SLSA attestation for supply-chain integrity
+GitHub
+. It’s compatible with the existing CDK project structure and tagging (we pass context for tags and use proper naming for the image). The bundle can be pushed to the secured Artifactory registry (or a dev stub registry) and includes all information needed for auditing and deploying the release. By incorporating testing, security scanning, and metadata generation, the pipeline ensures that only quality, secure releases are packaged, and all evidence is captured within the bundle. Sources: The design draws on enterprise best practices for CI/CD and supply chain security, using tools like Syft and Grype for SBOM and vulnerability scanning
+jit.io
+jit.io
+, and in-toto/SLSA standards for provenance attestation
+edu.chainguard.dev
+. The platform’s configuration was referenced to align the pipeline outputs with required metadata and trust policies
+GitHub
+GitHub
+. The AWS CDK diff behavior was noted to require cloud access for comparing deployed stacks
+stackoverflow.com
+, which the pipeline handles via conditional execution. Overall, this solution provides a comprehensive, traceable, and secure build pipeline for deployment bundles, implemented in TypeScript for seamless integration with our Node.js infrastructure code.
+Citations
+GitHub
+README.md
+
+https://github.com/Kristopherlb/shinobi/blob/3b586541e56ff42fb82fe7cb0d4bb57e641b3b75/packages/components/dagger-engine-pool/README.md#L2-L5
+GitHub
+README.md
+
+https://github.com/Kristopherlb/shinobi/blob/3b586541e56ff42fb82fe7cb0d4bb57e641b3b75/packages/components/dagger-engine-pool/README.md#L7-L14
+
+A Guide to Generating SBOM with Syft and Grype | Jit
+
+https://www.jit.io/resources/appsec-tools/a-guide-to-generating-sbom-with-syft-and-grype
+
+A Guide to Generating SBOM with Syft and Grype | Jit
+
+https://www.jit.io/resources/appsec-tools/a-guide-to-generating-sbom-with-syft-and-grype
+GitHub
+artifactory-config.yml
+
+https://github.com/Kristopherlb/shinobi/blob/3b586541e56ff42fb82fe7cb0d4bb57e641b3b75/packages/components/dagger-engine-pool/artifactory-config.yml#L46-L50
+GitHub
+artifactory-config.yml
+
+https://github.com/Kristopherlb/shinobi/blob/3b586541e56ff42fb82fe7cb0d4bb57e641b3b75/packages/components/dagger-engine-pool/artifactory-config.yml#L74-L82
+GitHub
+artifactory-config.yml
+
+https://github.com/Kristopherlb/shinobi/blob/3b586541e56ff42fb82fe7cb0d4bb57e641b3b75/packages/components/dagger-engine-pool/artifactory-config.yml#L78-L86
+
+How to Sign an SBOM with Cosign — Chainguard Academy
+
+https://edu.chainguard.dev/open-source/sigstore/cosign/how-to-sign-an-sbom-with-cosign/
+GitHub
+artifactory-config.yml
+
+https://github.com/Kristopherlb/shinobi/blob/3b586541e56ff42fb82fe7cb0d4bb57e641b3b75/packages/components/dagger-engine-pool/artifactory-config.yml#L53-L60
+GitHub
+artifactory-config.yml
+
+https://github.com/Kristopherlb/shinobi/blob/3b586541e56ff42fb82fe7cb0d4bb57e641b3b75/packages/components/dagger-engine-pool/artifactory-config.yml#L124-L132
+GitHub
+artifactory-config.yml
+
+https://github.com/Kristopherlb/shinobi/blob/3b586541e56ff42fb82fe7cb0d4bb57e641b3b75/packages/components/dagger-engine-pool/artifactory-config.yml#L46-L54
+
+amazon web services - Does cdk diff comment actually read from AWS to compare with file generated in cdk.out? - Stack Overflow
+
+https://stackoverflow.com/questions/74822847/does-cdk-diff-comment-actually-read-from-aws-to-compare-with-file-generated-in-c
+
+A Guide to Generating SBOM with Syft and Grype | Jit
+
+https://www.jit.io/resources/appsec-tools/a-guide-to-generating-sbom-with-syft-and-grype
+GitHub
+artifactory-config.yml
+
+https://github.com/Kristopherlb/shinobi/blob/3b586541e56ff42fb82fe7cb0d4bb57e641b3b75/packages/components/dagger-engine-pool/artifactory-config.yml#L109-L116
+GitHub
+artifactory-config.yml
+
+https://github.com/Kristopherlb/shinobi/blob/3b586541e56ff42fb82fe7cb0d4bb57e641b3b75/packages/components/dagger-engine-pool/artifactory-config.yml#L24-L28
+GitHub
+artifactory-config.yml
+
+https://github.com/Kristopherlb/shinobi/blob/3b586541e56ff42fb82fe7cb0d4bb57e641b3b75/packages/components/dagger-engine-pool/artifactory-config.yml#L126-L135
+GitHub
+artifactory-config.yml
+
+https://github.com/Kristopherlb/shinobi/blob/3b586541e56ff42fb82fe7cb0d4bb57e641b3b75/packages/components/dagger-engine-pool/artifactory-config.yml#L136-L140
+GitHub
+artifactory-config.yml
+
+https://github.com/Kristopherlb/shinobi/blob/3b586541e56ff42fb82fe7cb0d4bb57e641b3b75/packages/components/dagger-engine-pool/artifactory-config.yml#L22-L29
+GitHub
+artifactory-config.yml
+
+https://github.com/Kristopherlb/shinobi/blob/3b586541e56ff42fb82fe7cb0d4bb57e641b3b75/packages/components/dagger-engine-pool/artifactory-config.yml#L74-L82
+GitHub
+artifactory-config.yml
+
+https://github.com/Kristopherlb/shinobi/blob/3b586541e56ff42fb82fe7cb0d4bb57e641b3b75/packages/components/dagger-engine-pool/artifactory-config.yml#L56-L60
+GitHub
+artifactory-config.yml
+
+https://github.com/Kristopherlb/shinobi/blob/3b586541e56ff42fb82fe7cb0d4bb57e641b3b75/packages/components/dagger-engine-pool/artifactory-config.yml#L24-L29
+GitHub
+artifactory-config.yml
+
+https://github.com/Kristopherlb/shinobi/blob/3b586541e56ff42fb82fe7cb0d4bb57e641b3b75/packages/components/dagger-engine-pool/artifactory-config.yml#L126-L132
