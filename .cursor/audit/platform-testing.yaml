@@ -167,9 +167,9 @@ rules:
     severity: warn
     scope_glob: ${defaults.test_globs}
     must_not_match_combo:
-      - ['toMatchSnapshot', '(ajv|zod|yup)\\.(validate|safeParse)(']   # snapshot + contract
+      - ['toMatchSnapshot', '(ajv|zod|yup)\\.(validate|safeParse)\\(']   # snapshot + contract
       - ['toMatchSnapshot', '\\b(fc|fast-check)\\b']                     # snapshot + property
-      - ['\\b(fc|fast-check)\\b', '(ajv|zod|yup)\\.(validate|safeParse)(']  # property + contract
+      - ['\\b(fc|fast-check)\\b', '(ajv|zod|yup)\\.(validate|safeParse)\\(']  # property + contract
     message: "Keep one primary oracle per test case; mixing in same file is a smell."
 
   - id: PTS-402
