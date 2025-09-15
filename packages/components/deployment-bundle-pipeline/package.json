@@ -29,8 +29,8 @@
   "author": "Platform Engineering Team",
   "license": "MIT",
   "dependencies": {
-    "@platform/core": "^1.0.0",
-    "@platform/logger": "^1.0.0",
+    "@platform/core-engine": "workspace:*",
+    "@platform/contracts": "workspace:*",
     "aws-cdk-lib": "^2.100.0",
     "constructs": "^10.0.0"
   },

@@ -1,0 +1,44 @@
+openapi: 3.0.0
+info:
+  title: Shinobi CLI API
+  description: Command-line interface for Shinobi platform
+  version: 1.0.0
+  contact:
+    name: Platform Engineering
+    email: platform-engineering@project42.com
+servers:
+  - url: https://cli.shinobi.platform
+    description: Shinobi CLI server
+paths:
+  /commands:
+    get:
+      summary: List available commands
+      description: Get list of all available CLI commands
+      responses:
+        "200":
+          description: List of commands
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  commands:
+                    type: array
+                    items:
+                      type: object
+                      properties:
+                        name:
+                          type: string
+                        description:
+                          type: string
+                        options:
+                          type: array
+                          items:
+                            type: object
+                            properties:
+                              name:
+                                type: string
+                              description:
+                                type: string
+                              required:
+                                type: boolean

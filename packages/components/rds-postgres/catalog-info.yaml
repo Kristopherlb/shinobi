@@ -1,0 +1,14 @@
+apiVersion: backstage.io/v1alpha1
+kind: Component
+metadata:
+  name: shinobi-rds-postgres
+  description: RDS Postgres component for managed database
+  tags: [component, typescript, aws, rds, postgres, database]
+  annotations:
+    github.com/project-slug: project42/shinobi
+    backstage.io/techdocs-ref: dir:.
+spec:
+  type: library
+  lifecycle: production
+  owner: group:default/platform-engineering
+  system: system:default/shinobi

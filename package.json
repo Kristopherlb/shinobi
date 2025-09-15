@@ -65,6 +65,8 @@
   },
   "devDependencies": {
     "fast-glob": "^3.3.3",
-    "yaml": "^2.8.1"
+    "yaml": "^2.8.1",
+    "nx": "^16.0.0",
+    "eslint": "^8.0.0"
   }
 }

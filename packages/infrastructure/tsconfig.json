@@ -1,0 +1,23 @@
+{
+  "extends": "../../tsconfig.base.json",
+  "compilerOptions": {
+    "outDir": "../../dist/packages/infrastructure"
+  },
+  "include": [
+    "src/**/*"
+  ],
+  "references": [
+    {
+      "path": "../core-engine"
+    },
+    {
+      "path": "../components/lambda-api"
+    },
+    {
+      "path": "../components/rds-postgres"
+    },
+    {
+      "path": "../components/sqs-queue"
+    }
+  ]
+}

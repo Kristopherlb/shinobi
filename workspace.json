@@ -1,0 +1,181 @@
+{
+  "$schema": "./node_modules/nx/schemas/workspace-schema.json",
+  "version": 2,
+  "projects": {
+    "core-engine": {
+      "root": "packages/core-engine",
+      "sourceRoot": "packages/core-engine/src",
+      "projectType": "library",
+      "targets": {
+        "build": {
+          "executor": "nx:run-commands",
+          "options": {
+            "command": "tsc -p packages/core-engine/tsconfig.json"
+          }
+        },
+        "test": {
+          "executor": "nx:run-commands",
+          "options": {
+            "command": "jest --passWithNoTests --config=jest.config.js packages/core-engine"
+          }
+        },
+        "lint": {
+          "executor": "nx:run-commands",
+          "options": {
+            "command": "eslint packages/core-engine --ext .ts"
+          }
+        }
+      }
+    },
+    "contracts": {
+      "root": "packages/contracts",
+      "sourceRoot": "packages/contracts/src",
+      "projectType": "library",
+      "targets": {
+        "build": {
+          "executor": "nx:run-commands",
+          "options": {
+            "command": "tsc -p packages/contracts/tsconfig.json"
+          }
+        },
+        "test": {
+          "executor": "nx:run-commands",
+          "options": {
+            "command": "jest --passWithNoTests --config=jest.config.js packages/contracts"
+          }
+        },
+        "lint": {
+          "executor": "nx:run-commands",
+          "options": {
+            "command": "eslint packages/contracts --ext .ts"
+          }
+        }
+      }
+    },
+    "lambda-api": {
+      "root": "packages/components/lambda-api",
+      "sourceRoot": "packages/components/lambda-api/src",
+      "projectType": "library",
+      "targets": {
+        "build": {
+          "executor": "nx:run-commands",
+          "options": {
+            "command": "tsc -p packages/components/lambda-api/tsconfig.json"
+          }
+        },
+        "test": {
+          "executor": "nx:run-commands",
+          "options": {
+            "command": "jest --passWithNoTests --config=jest.config.js packages/components/lambda-api"
+          }
+        },
+        "lint": {
+          "executor": "nx:run-commands",
+          "options": {
+            "command": "eslint packages/components/lambda-api --ext .ts"
+          }
+        }
+      }
+    },
+    "rds-postgres": {
+      "root": "packages/components/rds-postgres",
+      "sourceRoot": "packages/components/rds-postgres/src",
+      "projectType": "library",
+      "targets": {
+        "build": {
+          "executor": "nx:run-commands",
+          "options": {
+            "command": "tsc -p packages/components/rds-postgres/tsconfig.json"
+          }
+        },
+        "test": {
+          "executor": "nx:run-commands",
+          "options": {
+            "command": "jest --passWithNoTests --config=jest.config.js packages/components/rds-postgres"
+          }
+        },
+        "lint": {
+          "executor": "nx:run-commands",
+          "options": {
+            "command": "eslint packages/components/rds-postgres --ext .ts"
+          }
+        }
+      }
+    },
+    "sqs-queue": {
+      "root": "packages/components/sqs-queue",
+      "sourceRoot": "packages/components/sqs-queue/src",
+      "projectType": "library",
+      "targets": {
+        "build": {
+          "executor": "nx:run-commands",
+          "options": {
+            "command": "tsc -p packages/components/sqs-queue/tsconfig.json"
+          }
+        },
+        "test": {
+          "executor": "nx:run-commands",
+          "options": {
+            "command": "jest --passWithNoTests --config=jest.config.js packages/components/sqs-queue"
+          }
+        },
+        "lint": {
+          "executor": "nx:run-commands",
+          "options": {
+            "command": "eslint packages/components/sqs-queue --ext .ts"
+          }
+        }
+      }
+    },
+    "infrastructure": {
+      "root": "packages/infrastructure",
+      "sourceRoot": "packages/infrastructure/src",
+      "projectType": "application",
+      "targets": {
+        "build": {
+          "executor": "nx:run-commands",
+          "options": {
+            "command": "tsc -p packages/infrastructure/tsconfig.json"
+          }
+        },
+        "test": {
+          "executor": "nx:run-commands",
+          "options": {
+            "command": "jest --passWithNoTests --config=jest.config.js packages/infrastructure"
+          }
+        },
+        "lint": {
+          "executor": "nx:run-commands",
+          "options": {
+            "command": "eslint packages/infrastructure --ext .ts"
+          }
+        }
+      }
+    },
+    "test-scaffolding": {
+      "root": "packages/test-scaffolding",
+      "sourceRoot": "packages/test-scaffolding/src",
+      "projectType": "application",
+      "targets": {
+        "build": {
+          "executor": "nx:run-commands",
+          "options": {
+            "command": "tsc -p packages/test-scaffolding/tsconfig.json"
+          }
+        },
+        "test": {
+          "executor": "nx:run-commands",
+          "options": {
+            "command": "jest --passWithNoTests --config=jest.config.js packages/test-scaffolding"
+          }
+        },
+        "lint": {
+          "executor": "nx:run-commands",
+          "options": {
+            "command": "eslint packages/test-scaffolding --ext .ts"
+          }
+        }
+      }
+    }
+  }
+}

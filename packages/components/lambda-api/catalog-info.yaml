@@ -1,0 +1,14 @@
+apiVersion: backstage.io/v1alpha1
+kind: Component
+metadata:
+  name: shinobi-lambda-api
+  description: Lambda API component for serverless API endpoints
+  tags: [component, typescript, aws, lambda, api]
+  annotations:
+    github.com/project-slug: project42/shinobi
+    backstage.io/techdocs-ref: dir:.
+spec:
+  type: library
+  lifecycle: production
+  owner: group:default/platform-engineering
+  system: system:default/shinobi

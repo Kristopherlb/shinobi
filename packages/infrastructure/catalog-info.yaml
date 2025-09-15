@@ -1,0 +1,18 @@
+apiVersion: backstage.io/v1alpha1
+kind: Component
+metadata:
+  name: shinobi-infrastructure
+  description: Infrastructure entrypoint for Shinobi platform
+  tags: [service, typescript, cdk, infrastructure]
+  annotations:
+    github.com/project-slug: project42/shinobi
+    backstage.io/techdocs-ref: dir:.
+    backstage.io/kubernetes-id: shinobi-infrastructure
+spec:
+  type: service
+  lifecycle: production
+  owner: group:default/platform-engineering
+  system: system:default/shinobi
+  dependsOn:
+    - component:default/shinobi-core-engine
+    - component:default/shinobi-contracts
