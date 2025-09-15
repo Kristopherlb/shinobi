@@ -1,0 +1,398 @@
+#!/usr/bin/env node
+
+const { Command } = require('commander');
+const fs = require('fs');
+const path = require('path');
+const { execSync } = require('child_process');
+
+const program = new Command();
+
+program
+  .name('svc')
+  .description('Shinobi Platform CLI')
+  .version('1.0.0')
+  .option('--verbose, -v', 'Enable verbose logging')
+  .option('--ci', 'Enable CI mode (structured JSON output)');
+
+// svc init command
+program
+  .command('init')
+  .description('Scaffold a new service from a template')
+  .option('--name <name>', 'Service name')
+  .option('--owner <owner>', 'Service owner/team')
+  .option('--framework <framework>', 'Compliance framework', 'commercial')
+  .option('--pattern <pattern>', 'Initial pattern', 'empty')
+  .action(async (options) => {
+    console.log('🚀 Initializing new service...');
+    console.log('Options:', options);
+
+    // Create basic service.yml
+    const serviceYaml = `service: ${options.name || 'my-service'}
+owner: ${options.owner || 'dev-team'}
+complianceFramework: ${options.framework}
+environment: development
+
+components:
+  - name: web-server
+    type: ec2-instance
+    config:
+      instanceType: t3.micro
+      ami:
+        namePattern: 'al2023-ami-*-x86_64'
+        owner: 'amazon'
+      userData:
+        script: |
+          #!/bin/bash
+          yum update -y
+          yum install -y httpd
+          systemctl start httpd
+          echo "<h1>Hello from Shinobi Platform</h1>" > /var/www/html/index.html
+      storage:
+        rootVolumeSize: 20
+        encrypted: true
+
+  - name: app-storage
+    type: s3-bucket
+    config:
+      bucketName: ${options.name || 'my-service'}-storage
+      versioning: true
+      encryption:
+        enabled: true
+
+governance:
+  tags:
+    Service: ${options.name || 'my-service'}
+    Owner: ${options.owner || 'dev-team'}
+    Environment: \${environment}
+    Compliance: ${options.framework}
+    ManagedBy: shinobi
+`;
+
+    fs.writeFileSync('service.yml', serviceYaml);
+    console.log('✅ Created service.yml');
+  });
+
+// svc validate command
+program
+  .command('validate')
+  .description('Parse and validate the service.yml without connecting to AWS')
+  .option('--file, -f <file>', 'Path to service.yml file', 'service.yml')
+  .action(async (options) => {
+    console.log('🔍 Validating service manifest...');
+
+    if (!fs.existsSync(options.file)) {
+      console.error(`❌ File not found: ${options.file}`);
+      process.exit(1);
+    }
+
+    try {
+      const yaml = require('js-yaml');
+      const content = fs.readFileSync(options.file, 'utf8');
+      const manifest = yaml.load(content);
+
+      console.log('✅ Service manifest is valid');
+      console.log(`   Service: ${manifest.service}`);
+      console.log(`   Owner: ${manifest.owner}`);
+      console.log(`   Components: ${manifest.components?.length || 0}`);
+    } catch (error) {
+      console.error('❌ Validation failed:', error.message);
+      process.exit(1);
+    }
+  });
+
+// svc plan command
+program
+  .command('plan')
+  .description('Perform full validation and output resolved configuration')
+  .option('--file, -f <file>', 'Path to service.yml file', 'service.yml')
+  .option('--env <env>', 'Target environment', 'dev')
+  .action(async (options) => {
+    console.log('📋 Generating deployment plan...');
+
+    if (!fs.existsSync(options.file)) {
+      console.error(`❌ File not found: ${options.file}`);
+      process.exit(1);
+    }
+
+    try {
+      const yaml = require('js-yaml');
+      const content = fs.readFileSync(options.file, 'utf8');
+      const manifest = yaml.load(content);
+
+      console.log('✅ Plan generated successfully');
+      console.log(`   Environment: ${options.env}`);
+      console.log(`   Service: ${manifest.service}`);
+      console.log(`   Components: ${manifest.components?.length || 0}`);
+
+      // Create plan directory
+      const planDir = '.shinobi/plan';
+      if (!fs.existsSync(planDir)) {
+        fs.mkdirSync(planDir, { recursive: true });
+      }
+
+      const planFile = path.join(planDir, `${options.env}.json`);
+      const plan = {
+        environment: options.env,
+        service: manifest.service,
+        components: manifest.components,
+        timestamp: new Date().toISOString()
+      };
+
+      fs.writeFileSync(planFile, JSON.stringify(plan, null, 2));
+      console.log(`   Plan saved to: ${planFile}`);
+    } catch (error) {
+      console.error('❌ Plan generation failed:', error.message);
+      process.exit(1);
+    }
+  });
+
+// svc inventory command
+program
+  .command('inventory')
+  .description('Analyze CDK codebase and identify component opportunities')
+  .argument('<directory>', 'Directory to analyze (e.g., ../my-service or ./)')
+  .option('--output <path>', 'Custom output path for the report', 'INVENTORY_REPORT.md')
+  .action(async (directory, options) => {
+    console.log('🔍 Analyzing codebase for component opportunities...');
+    console.log(`   Directory: ${directory}`);
+    console.log(`   Output: ${options.output}`);
+
+    // Simple inventory analysis
+    const inventoryReport = `# Platform Inventory Report
+
+## Analysis Summary
+- **Directory**: ${directory}
+- **Analysis Date**: ${new Date().toISOString()}
+- **Components Found**: 0 (placeholder)
+
+## Recommendations
+- Consider using Shinobi components for infrastructure
+- Review existing CDK constructs for componentization opportunities
+- Implement proper tagging and governance
+
+*Generated by Shinobi Platform Inventory Tool v1.0*
+`;
+
+    fs.writeFileSync(options.output, inventoryReport);
+    console.log(`✅ Inventory report generated: ${options.output}`);
+  });
+
+// svc synth command
+program
+  .command('synth')
+  .description('Synthesize CDK app and output CloudFormation templates')
+  .option('--file, -f <file>', 'Path to service.yml file', 'service.yml')
+  .option('--env <env>', 'Target environment', 'dev')
+  .option('--output <path>', 'Output directory for synthesized templates', 'cdk.out')
+  .action(async (options) => {
+    console.log('🔨 Synthesizing CDK app...');
+
+    if (!fs.existsSync(options.file)) {
+      console.error(`❌ File not found: ${options.file}`);
+      process.exit(1);
+    }
+
+    try {
+      // Load environment variables
+      if (fs.existsSync('.env')) {
+        const envContent = fs.readFileSync('.env', 'utf8');
+        const envLines = envContent.split('\n');
+        for (const line of envLines) {
+          if (line.trim() && !line.startsWith('#')) {
+            const [key, value] = line.split('=');
+            if (key && value) {
+              process.env[key.trim()] = value.trim().replace(/"/g, '');
+            }
+          }
+        }
+      }
+
+      console.log(`   Environment: ${options.env}`);
+      console.log(`   Output: ${options.output}`);
+
+      // Create output directory
+      if (!fs.existsSync(options.output)) {
+        fs.mkdirSync(options.output, { recursive: true });
+      }
+
+      // Run CDK synth
+      const cdkCommand = `npx cdk synth --output ${options.output}`;
+      console.log(`   Running: ${cdkCommand}`);
+
+      execSync(cdkCommand, {
+        stdio: 'inherit',
+        env: { ...process.env }
+      });
+
+      console.log('✅ CDK synthesis completed');
+      console.log(`   Templates saved to: ${options.output}`);
+    } catch (error) {
+      console.error('❌ CDK synthesis failed:', error.message);
+      process.exit(1);
+    }
+  });
+
+// svc diff command
+program
+  .command('diff')
+  .description('Compare deployed stack with current state')
+  .option('--file, -f <file>', 'Path to service.yml file', 'service.yml')
+  .option('--env <env>', 'Target environment', 'dev')
+  .action(async (options) => {
+    console.log('📊 Comparing deployed stack with current state...');
+
+    if (!fs.existsSync(options.file)) {
+      console.error(`❌ File not found: ${options.file}`);
+      process.exit(1);
+    }
+
+    try {
+      // Load environment variables
+      if (fs.existsSync('.env')) {
+        const envContent = fs.readFileSync('.env', 'utf8');
+        const envLines = envContent.split('\n');
+        for (const line of envLines) {
+          if (line.trim() && !line.startsWith('#')) {
+            const [key, value] = line.split('=');
+            if (key && value) {
+              process.env[key.trim()] = value.trim().replace(/"/g, '');
+            }
+          }
+        }
+      }
+
+      console.log(`   Environment: ${options.env}`);
+
+      // Run CDK diff
+      const cdkCommand = `npx cdk diff`;
+      console.log(`   Running: ${cdkCommand}`);
+
+      execSync(cdkCommand, {
+        stdio: 'inherit',
+        env: { ...process.env }
+      });
+
+      console.log('✅ CDK diff completed');
+    } catch (error) {
+      console.error('❌ CDK diff failed:', error.message);
+      process.exit(1);
+    }
+  });
+
+// svc deploy command
+program
+  .command('deploy')
+  .description('Deploy the service to AWS using CDK')
+  .option('--file, -f <file>', 'Path to service.yml file', 'service.yml')
+  .option('--env <env>', 'Target environment', 'dev')
+  .option('--force', 'Force deployment even if no changes detected')
+  .option('--dry-run', 'Show what would be deployed without deploying')
+  .action(async (options) => {
+    console.log('🚀 Deploying service to AWS...');
+
+    if (!fs.existsSync(options.file)) {
+      console.error(`❌ File not found: ${options.file}`);
+      process.exit(1);
+    }
+
+    try {
+      // Load environment variables
+      if (fs.existsSync('.env')) {
+        const envContent = fs.readFileSync('.env', 'utf8');
+        const envLines = envContent.split('\n');
+        for (const line of envLines) {
+          if (line.trim() && !line.startsWith('#')) {
+            const [key, value] = line.split('=');
+            if (key && value) {
+              process.env[key.trim()] = value.trim().replace(/"/g, '');
+            }
+          }
+        }
+      }
+
+      console.log(`   Environment: ${options.env}`);
+
+      if (options.dryRun) {
+        console.log('   DRY RUN MODE - No actual deployment');
+        const cdkCommand = `npx cdk diff`;
+        execSync(cdkCommand, {
+          stdio: 'inherit',
+          env: { ...process.env }
+        });
+        console.log('✅ Dry run completed');
+        return;
+      }
+
+      // Run CDK deploy
+      let cdkCommand = `npx cdk deploy`;
+      if (options.force) {
+        cdkCommand += ' --force';
+      }
+
+      console.log(`   Running: ${cdkCommand}`);
+
+      execSync(cdkCommand, {
+        stdio: 'inherit',
+        env: { ...process.env }
+      });
+
+      console.log('✅ Deployment completed successfully');
+    } catch (error) {
+      console.error('❌ Deployment failed:', error.message);
+      process.exit(1);
+    }
+  });
+
+// svc destroy command
+program
+  .command('destroy')
+  .description('Destroy the deployed service')
+  .option('--file, -f <file>', 'Path to service.yml file', 'service.yml')
+  .option('--env <env>', 'Target environment', 'dev')
+  .option('--force', 'Force destruction without confirmation')
+  .action(async (options) => {
+    console.log('💥 Destroying service...');
+
+    if (!fs.existsSync(options.file)) {
+      console.error(`❌ File not found: ${options.file}`);
+      process.exit(1);
+    }
+
+    try {
+      // Load environment variables
+      if (fs.existsSync('.env')) {
+        const envContent = fs.readFileSync('.env', 'utf8');
+        const envLines = envContent.split('\n');
+        for (const line of envLines) {
+          if (line.trim() && !line.startsWith('#')) {
+            const [key, value] = line.split('=');
+            if (key && value) {
+              process.env[key.trim()] = value.trim().replace(/"/g, '');
+            }
+          }
+        }
+      }
+
+      console.log(`   Environment: ${options.env}`);
+
+      // Run CDK destroy
+      let cdkCommand = `npx cdk destroy`;
+      if (options.force) {
+        cdkCommand += ' --force';
+      }
+
+      console.log(`   Running: ${cdkCommand}`);
+
+      execSync(cdkCommand, {
+        stdio: 'inherit',
+        env: { ...process.env }
+      });
+
+      console.log('✅ Destruction completed successfully');
+    } catch (error) {
+      console.error('❌ Destruction failed:', error.message);
+      process.exit(1);
+    }
+  });
+
+program.parse();

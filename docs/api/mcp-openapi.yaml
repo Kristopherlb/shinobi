@@ -1,0 +1,61 @@
+openapi: 3.0.0
+info:
+  title: Shinobi MCP Server API
+  description: Model Context Protocol server for Shinobi platform intelligence
+  version: 1.0.0
+  contact:
+    name: Platform Engineering
+    email: platform-engineering@project42.com
+servers:
+  - url: https://mcp.shinobi.platform
+    description: Shinobi MCP server
+paths:
+  /tools:
+    get:
+      summary: List available MCP tools
+      description: Get list of all available MCP tools
+      responses:
+        "200":
+          description: List of tools
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  tools:
+                    type: array
+                    items:
+                      type: object
+                      properties:
+                        name:
+                          type: string
+                        description:
+                          type: string
+                        parameters:
+                          type: object
+  /tools/{toolName}:
+    post:
+      summary: Execute MCP tool
+      description: Execute a specific MCP tool
+      parameters:
+        - name: toolName
+          in: path
+          required: true
+          schema:
+            type: string
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                arguments:
+                  type: object
+      responses:
+        "200":
+          description: Tool execution result
+          content:
+            application/json:
+              schema:
+                type: object

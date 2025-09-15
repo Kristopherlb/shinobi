@@ -1,0 +1,18 @@
+{
+  "extends": "../../tsconfig.base.json",
+  "compilerOptions": {
+    "outDir": "../../dist/packages/test-scaffolding"
+  },
+  "include": [
+    "src/**/*",
+    "tests/**/*"
+  ],
+  "references": [
+    {
+      "path": "../core-engine"
+    },
+    {
+      "path": "../components/lambda-api"
+    }
+  ]
+}

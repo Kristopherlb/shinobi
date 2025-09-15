@@ -31,7 +31,7 @@
     "typescript": "^5.0.0"
   },
   "peerDependencies": {
-    "@platform/core": "workspace:*"
+    "@platform/core-engine": "workspace:*"
   },
   "files": [
     "dist/",

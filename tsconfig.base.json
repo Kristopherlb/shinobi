@@ -1,40 +1,32 @@
 {
   "compilerOptions": {
-    "target": "ES2022",
-    "lib": ["es2022"],
+    "target": "ES2020",
     "module": "commonjs",
-    "moduleResolution": "node",
+    "rootDir": ".",
+    "composite": true,
     "declaration": true,
-    "outDir": "./dist",
+    "sourceMap": true,
+    "outDir": "dist",
     "strict": true,
     "esModuleInterop": true,
     "skipLibCheck": true,
     "forceConsistentCasingInFileNames": true,
-    "resolveJsonModule": true,
-    "experimentalDecorators": true,
-    "emitDecoratorMetadata": true,
+    "moduleResolution": "node",
     "baseUrl": ".",
     "paths": {
-      "@platform/contracts": ["src/platform/contracts"],
-      "@platform/logger": ["src/platform/logger"],
-      "@platform/tagging": ["src/platform/tagging"],
-      "@platform/observability": ["src/platform/observability"],
-      "@platform/core-engine": ["src/core-engine"],
-      "@platform/bindings": ["src/bindings"],
-      "@platform/cli": ["src/cli"],
-      "@platform/migration": ["src/migration"],
-      "@platform/resolver": ["src/resolver"],
-      "@platform/services": ["src/services"],
-      "@platform/templates": ["src/templates"],
-      "@platform/openfeature-provider": ["src/components/openfeature-provider"],
-      "@platform/feature-flag": ["src/components/feature-flag"],
-      "@platform/*": ["src/components/*"]
+      "@platform/contracts": [
+        "packages/contracts/src/index.ts"
+      ],
+      "@platform/core-engine": [
+        "packages/core-engine/src/index.ts"
+      ],
+      "@platform/*": [
+        "packages/components/*/src/index.ts"
+      ]
     }
   },
   "exclude": [
     "node_modules",
-    "dist",
-    "**/*.test.ts",
-    "**/*.spec.ts"
+    "dist"
   ]
 }

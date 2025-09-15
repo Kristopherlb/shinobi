@@ -1,0 +1,25 @@
+{
+  "root": true,
+  "ignorePatterns": [
+    "dist",
+    "node_modules"
+  ],
+  "plugins": [],
+  "extends": [
+    "eslint:recommended"
+  ],
+  "overrides": [
+    {
+      "files": [
+        "*.ts"
+      ],
+      "parserOptions": {
+        "project": [
+          "./tsconfig.base.json"
+        ],
+        "sourceType": "module"
+      },
+      "rules": {}
+    }
+  ]
+}

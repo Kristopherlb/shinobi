@@ -1,0 +1,16 @@
+{
+  "name": "@platform/core-engine",
+  "version": "0.0.1",
+  "private": true,
+  "main": "dist/packages/core-engine/index.js",
+  "types": "dist/packages/core-engine/index.d.ts",
+  "scripts": {
+    "build": "tsc -p tsconfig.json",
+    "test": "jest",
+    "lint": "eslint --ext .ts ."
+  },
+  "dependencies": {
+    "@platform/contracts": "workspace:*"
+  },
+  "devDependencies": {}
+}

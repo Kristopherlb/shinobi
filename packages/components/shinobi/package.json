@@ -43,8 +43,8 @@
     "aws-cdk-lib": "^2.100.0",
     "constructs": "^10.0.0",
     "@modelcontextprotocol/sdk": "^0.4.0",
-    "@platform/contracts": "workspace:^",
-    "@platform/feature-flag": "workspace:^",
+    "@platform/contracts": "workspace:*",
+    "@platform/core-engine": "workspace:*",
     "ts-node": "^10.9.0"
   },
   "devDependencies": {
