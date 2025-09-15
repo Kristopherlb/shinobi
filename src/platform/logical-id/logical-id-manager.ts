@@ -9,55 +9,38 @@ import { IConstruct } from 'constructs';
 import * as fs from 'fs';
 import * as path from 'path';
 import { Logger } from '@platform/logger';
+import {
+  LogicalIdMapping,
+  LogicalIdMapTable,
+  LogicalIdMap,
+  LogicalIdMapEntry,
+  DriftAvoidanceConfig,
+  ValidationResult
+} from './types';
 
-export interface LogicalIdMapEntry {
-  originalId: string;
-  newId: string;
-  resourceType: string;
-  componentName: string;
-  componentType: string;
-  preservationStrategy: 'exact-match' | 'hash-suffix' | 'naming-convention' | 'deterministic';
-  metadata?: {
-    stackName?: string;
-    environment?: string;
-    createdAt: string;
-    updatedAt: string;
-  };
-}
+// Re-export types for external use
+export type {
+  LogicalIdMapping,
+  LogicalIdMapTable,
+  LogicalIdMap,
+  LogicalIdMapEntry,
+  DriftAvoidanceConfig,
+  ValidationResult
+} from './types';
 
-export interface LogicalIdMap {
-  version: string;
-  stackName: string;
-  environment?: string;
-  createdAt: string;
-  updatedAt: string;
-  mappings: Record<string, LogicalIdMapEntry>;
-  driftAvoidanceConfig: {
-    enableDeterministicNaming: boolean;
-    preserveResourceOrder: boolean;
-    validateBeforeApply: boolean;
-  };
-}
-
-export interface DriftAvoidanceConfig {
-  enableDeterministicNaming: boolean;
-  preserveResourceOrder: boolean;
-  validateBeforeApply: boolean;
-  allowedResourceTypes: string[];
-  blockedResourceTypes: string[];
-}
+// Types are now imported from './types'
 
 /**
  * Enhanced CDK Aspect for Logical ID Preservation with drift avoidance
  */
 export class LogicalIdPreservationAspect implements cdk.IAspect {
-  private readonly logicalIdMap: Record<string, string>;
+  private readonly logicalIdMap: LogicalIdMapping;
   private readonly driftAvoidanceConfig: DriftAvoidanceConfig;
   private readonly logger: Logger;
   private readonly appliedMappings: Set<string> = new Set();
 
   constructor(
-    logicalIdMap: Record<string, string>,
+    logicalIdMap: LogicalIdMapping,
     driftAvoidanceConfig: DriftAvoidanceConfig,
     logger: Logger
   ) {
@@ -168,9 +151,9 @@ export class LogicalIdPreservationAspect implements cdk.IAspect {
     const path: string[] = [];
     let current: IConstruct | undefined = node;
 
-    while (current && current.node.id !== 'Default') {
+    while (current && !cdk.Stack.isStack(current)) {
       path.unshift(current.node.id);
-      current = current.node.scope;
+      current = current.node.scope as IConstruct | undefined;
     }
 
     return path.join('/');
@@ -307,10 +290,10 @@ export class LogicalIdManager {
     target: cdk.App | cdk.Stack,
     logicalIdMap: LogicalIdMap
   ): LogicalIdPreservationAspect {
-    // Convert the mapping format for the aspect
-    const aspectMapping: Record<string, string> = {};
-    for (const [newId, entry] of Object.entries(logicalIdMap.mappings)) {
-      aspectMapping[newId] = entry.originalId;
+    // Convert the mapping format for the aspect: currentId -> originalId
+    const aspectMapping: LogicalIdMapping = {};
+    for (const [currentId, entry] of Object.entries(logicalIdMap.mappings)) {
+      aspectMapping[currentId] = entry.originalId;
     }
 
     const aspect = new LogicalIdPreservationAspect(
@@ -345,7 +328,9 @@ export class LogicalIdManager {
       driftAvoidanceConfig: {
         enableDeterministicNaming: this.driftAvoidanceConfig.enableDeterministicNaming,
         preserveResourceOrder: this.driftAvoidanceConfig.preserveResourceOrder,
-        validateBeforeApply: this.driftAvoidanceConfig.validateBeforeApply
+        validateBeforeApply: this.driftAvoidanceConfig.validateBeforeApply,
+        allowedResourceTypes: this.driftAvoidanceConfig.allowedResourceTypes,
+        blockedResourceTypes: this.driftAvoidanceConfig.blockedResourceTypes
       }
     };
   }
@@ -375,6 +360,21 @@ export class LogicalIdManager {
       if (entry.newId !== newId) {
         return { valid: false, reason: `Mapping key mismatch for ${newId}` };
       }
+
+      // Validate logical ID format (CloudFormation rules)
+      if (!/^[A-Za-z][A-Za-z0-9]*$/.test(entry.originalId)) {
+        return { valid: false, reason: `Invalid originalId format for ${newId}: must start with letter and contain only alphanumeric characters` };
+      }
+
+      if (entry.originalId.length > 255) {
+        return { valid: false, reason: `OriginalId too long for ${newId}: maximum 255 characters` };
+      }
+    }
+
+    // Check for bijective mapping violations (one-to-one mapping)
+    const conflicts = this.detectConflicts(logicalIdMap);
+    if (conflicts.length > 0) {
+      return { valid: false, reason: `Bijective mapping violation: ${conflicts.join('; ')}` };
     }
 
     return { valid: true };
@@ -421,13 +421,13 @@ export class LogicalIdManager {
       deterministicNaming: boolean;
     };
     details: {
-      preservationStrategies: Record<string, number>;
+      preservationStrategies: Record<LogicalIdMapEntry['preservationStrategy'], number>;
       resourceTypeBreakdown: Record<string, number>;
       conflicts: string[];
     };
     recommendations: string[];
   } {
-    const preservationStrategies: Record<string, number> = {};
+    const preservationStrategies: Record<LogicalIdMapEntry['preservationStrategy'], number> = {} as Record<LogicalIdMapEntry['preservationStrategy'], number>;
     const resourceTypeBreakdown: Record<string, number> = {};
 
     for (const entry of Object.values(logicalIdMap.mappings)) {

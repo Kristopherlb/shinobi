@@ -126,7 +126,9 @@ describe('Enhanced Logical ID Preservation System', () => {
         driftAvoidanceConfig: {
           enableDeterministicNaming: true,
           preserveResourceOrder: true,
-          validateBeforeApply: true
+          validateBeforeApply: true,
+          allowedResourceTypes: ['AWS::Lambda::Function', 'AWS::S3::Bucket'],
+          blockedResourceTypes: ['AWS::CDK::Metadata']
         }
       };
 
@@ -188,7 +190,9 @@ describe('Enhanced Logical ID Preservation System', () => {
         driftAvoidanceConfig: {
           enableDeterministicNaming: true,
           preserveResourceOrder: true,
-          validateBeforeApply: true
+          validateBeforeApply: true,
+          allowedResourceTypes: ['AWS::Lambda::Function', 'AWS::S3::Bucket'],
+          blockedResourceTypes: ['AWS::CDK::Metadata']
         }
       };
 
@@ -240,7 +244,9 @@ describe('Enhanced Logical ID Preservation System', () => {
         driftAvoidanceConfig: {
           enableDeterministicNaming: true,
           preserveResourceOrder: true,
-          validateBeforeApply: true
+          validateBeforeApply: true,
+          allowedResourceTypes: ['AWS::Lambda::Function', 'AWS::S3::Bucket'],
+          blockedResourceTypes: ['AWS::CDK::Metadata']
         }
       };
 
@@ -350,7 +356,9 @@ describe('Enhanced Logical ID Preservation System', () => {
         driftAvoidanceConfig: {
           enableDeterministicNaming: true,
           preserveResourceOrder: true,
-          validateBeforeApply: true
+          validateBeforeApply: true,
+          allowedResourceTypes: ['AWS::Lambda::Function', 'AWS::S3::Bucket'],
+          blockedResourceTypes: ['AWS::CDK::Metadata']
         }
       };
 
@@ -382,7 +390,9 @@ describe('Enhanced Logical ID Preservation System', () => {
         driftAvoidanceConfig: {
           enableDeterministicNaming: true,
           preserveResourceOrder: true,
-          validateBeforeApply: true
+          validateBeforeApply: true,
+          allowedResourceTypes: ['AWS::Lambda::Function', 'AWS::S3::Bucket'],
+          blockedResourceTypes: ['AWS::CDK::Metadata']
         }
       };
 
@@ -419,7 +429,9 @@ describe('Enhanced Logical ID Preservation System', () => {
         driftAvoidanceConfig: {
           enableDeterministicNaming: true,
           preserveResourceOrder: true,
-          validateBeforeApply: true
+          validateBeforeApply: true,
+          allowedResourceTypes: ['AWS::Lambda::Function', 'AWS::S3::Bucket'],
+          blockedResourceTypes: ['AWS::CDK::Metadata']
         }
       };
 
@@ -501,7 +513,9 @@ describe('Enhanced Logical ID Preservation System', () => {
         driftAvoidanceConfig: {
           enableDeterministicNaming: true,
           preserveResourceOrder: true,
-          validateBeforeApply: true
+          validateBeforeApply: true,
+          allowedResourceTypes: ['AWS::Lambda::Function', 'AWS::S3::Bucket'],
+          blockedResourceTypes: ['AWS::CDK::Metadata']
         }
       };
 
@@ -621,7 +635,9 @@ describe('Enhanced Logical ID Preservation System', () => {
         driftAvoidanceConfig: {
           enableDeterministicNaming: true,
           preserveResourceOrder: true,
-          validateBeforeApply: true
+          validateBeforeApply: true,
+          allowedResourceTypes: ['AWS::Lambda::Function', 'AWS::S3::Bucket'],
+          blockedResourceTypes: ['AWS::CDK::Metadata']
         }
       };
 
@@ -659,7 +675,9 @@ describe('Enhanced Logical ID Preservation System', () => {
         driftAvoidanceConfig: {
           enableDeterministicNaming: true,
           preserveResourceOrder: true,
-          validateBeforeApply: true
+          validateBeforeApply: true,
+          allowedResourceTypes: ['AWS::Lambda::Function', 'AWS::S3::Bucket'],
+          blockedResourceTypes: ['AWS::CDK::Metadata']
         }
       };
 
@@ -727,7 +745,9 @@ describe('Enhanced Logical ID Preservation System', () => {
         driftAvoidanceConfig: {
           enableDeterministicNaming: true,
           preserveResourceOrder: true,
-          validateBeforeApply: true
+          validateBeforeApply: true,
+          allowedResourceTypes: ['AWS::Lambda::Function', 'AWS::S3::Bucket'],
+          blockedResourceTypes: ['AWS::CDK::Metadata']
         }
       };
 
