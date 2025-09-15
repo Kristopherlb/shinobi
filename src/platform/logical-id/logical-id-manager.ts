@@ -8,7 +8,7 @@ import * as cdk from 'aws-cdk-lib';
 import { IConstruct } from 'constructs';
 import * as fs from 'fs';
 import * as path from 'path';
-import { Logger } from '../utils/logger';
+import { Logger } from '@platform/logger';
 
 export interface LogicalIdMapEntry {
   originalId: string;
@@ -68,9 +68,15 @@ export class LogicalIdPreservationAspect implements cdk.IAspect {
 
   visit(node: IConstruct): void {
     if (cdk.CfnResource.isCfnResource(node)) {
-      const currentLogicalId = node.logicalId;
+      const stack = cdk.Stack.of(node);
       const resourceType = node.cfnResourceType;
-      
+
+      // Use CDK's canonical default logical ID for this resource
+      const defaultId = stack.getLogicalId(node);
+
+      // Debug: Log all resources being visited
+      this.logger.debug(`Visiting resource: ${defaultId} (${resourceType})`);
+
       // Check if resource type is allowed for preservation
       if (!this.isResourceTypeAllowed(resourceType)) {
         this.logger.debug(`Skipping logical ID preservation for blocked resource type: ${resourceType}`);
@@ -78,29 +84,37 @@ export class LogicalIdPreservationAspect implements cdk.IAspect {
       }
 
       // Check if we have a preserved ID for this resource
-      if (this.logicalIdMap[currentLogicalId]) {
-        const preservedId = this.logicalIdMap[currentLogicalId];
-        
+      if (this.logicalIdMap[defaultId]) {
+        const preservedId = this.logicalIdMap[defaultId];
+
+        // Debug: Log mapping found
+        this.logger.debug(`Found mapping for ${defaultId} -> ${preservedId}`);
+
         // Validate before applying if configured
         if (this.driftAvoidanceConfig.validateBeforeApply) {
-          const validationResult = this.validateLogicalIdMapping(currentLogicalId, preservedId, resourceType);
+          const validationResult = this.validateLogicalIdMapping(defaultId, preservedId, resourceType);
           if (!validationResult.valid) {
             this.logger.warn(`Validation failed for logical ID mapping: ${validationResult.reason}`);
             return;
           }
         }
-        
+
         // Override the logical ID to match the original
         node.overrideLogicalId(preservedId);
-        this.appliedMappings.add(`${currentLogicalId} -> ${preservedId}`);
-        
-        this.logger.debug(`Preserved logical ID: ${currentLogicalId} -> ${preservedId} (${resourceType})`);
-      } else if (this.driftAvoidanceConfig.enableDeterministicNaming) {
-        // Apply deterministic naming for unmapped resources
-        const deterministicId = this.generateDeterministicLogicalId(node, resourceType);
-        if (deterministicId !== currentLogicalId) {
-          node.overrideLogicalId(deterministicId);
-          this.logger.debug(`Applied deterministic naming: ${currentLogicalId} -> ${deterministicId} (${resourceType})`);
+        this.appliedMappings.add(`${defaultId} -> ${preservedId}`);
+
+        this.logger.debug(`Preserved logical ID: ${defaultId} -> ${preservedId} (${resourceType})`);
+      } else {
+        // Debug: Log when no mapping found
+        this.logger.debug(`No mapping found for ${defaultId}`);
+
+        if (this.driftAvoidanceConfig.enableDeterministicNaming) {
+          // Apply deterministic naming for unmapped resources
+          const deterministicId = this.generateDeterministicLogicalId(node, resourceType);
+          if (deterministicId !== defaultId) {
+            node.overrideLogicalId(deterministicId);
+            this.logger.debug(`Applied deterministic naming: ${defaultId} -> ${deterministicId} (${resourceType})`);
+          }
         }
       }
     }
@@ -110,11 +124,11 @@ export class LogicalIdPreservationAspect implements cdk.IAspect {
     if (this.driftAvoidanceConfig.blockedResourceTypes.includes(resourceType)) {
       return false;
     }
-    
+
     if (this.driftAvoidanceConfig.allowedResourceTypes.length > 0) {
       return this.driftAvoidanceConfig.allowedResourceTypes.includes(resourceType);
     }
-    
+
     return true;
   }
 
@@ -127,16 +141,16 @@ export class LogicalIdPreservationAspect implements cdk.IAspect {
     if (!preservedId || preservedId.length === 0) {
       return { valid: false, reason: 'Preserved ID is empty' };
     }
-    
+
     if (preservedId.length > 255) {
       return { valid: false, reason: 'Preserved ID exceeds CloudFormation limit (255 characters)' };
     }
-    
+
     // Validate CloudFormation logical ID format
     if (!/^[A-Za-z][A-Za-z0-9]*$/.test(preservedId)) {
       return { valid: false, reason: 'Preserved ID contains invalid characters' };
     }
-    
+
     return { valid: true };
   }
 
@@ -144,7 +158,7 @@ export class LogicalIdPreservationAspect implements cdk.IAspect {
     // Generate deterministic logical ID based on resource properties
     const constructPath = this.getConstructPath(node);
     const resourceSuffix = this.getResourceTypeSuffix(resourceType);
-    
+
     // Create a deterministic ID based on construct path and resource type
     const baseId = constructPath.replace(/[^A-Za-z0-9]/g, '');
     return `${baseId}${resourceSuffix}`;
@@ -153,13 +167,13 @@ export class LogicalIdPreservationAspect implements cdk.IAspect {
   private getConstructPath(node: IConstruct): string {
     const path: string[] = [];
     let current: IConstruct | undefined = node;
-    
+
     while (current && current.node.id !== 'Default') {
       path.unshift(current.node.id);
       current = current.node.scope;
     }
-    
-    return path.join('');
+
+    return path.join('/');
   }
 
   private getResourceTypeSuffix(resourceType: string): string {
@@ -179,7 +193,7 @@ export class LogicalIdPreservationAspect implements cdk.IAspect {
       'AWS::EFS::FileSystem': 'FileSystem',
       'AWS::SecretsManager::Secret': 'Secret'
     };
-    
+
     return suffixMap[resourceType] || 'Resource';
   }
 
@@ -191,8 +205,28 @@ export class LogicalIdPreservationAspect implements cdk.IAspect {
     const total = Object.keys(this.logicalIdMap).length;
     const applied = this.appliedMappings.size;
     const skipped = total - applied;
-    
+
     return { total, applied, skipped };
+  }
+
+  private generateExpectedLogicalId(constructPath: string, resourceType: string): string {
+    // Generate the expected logical ID that CDK would create
+    // This is based on the CDK naming convention
+    const parts = constructPath.split('/');
+    const stackName = parts[0] || 'Stack';
+
+    // For CDK constructs, the pattern is typically:
+    // StackName + ConstructId + ResourceType
+    // For nested constructs: StackName + ParentId + ... + ConstructId + ResourceType
+
+    // Extract the main construct IDs and create the expected logical ID
+    const logicalIdParts = [...parts]; // Include stack name and all parts
+
+    // Add appropriate suffix based on resource type
+    const suffix = this.getResourceTypeSuffix(resourceType);
+    logicalIdParts.push(suffix);
+
+    return logicalIdParts.join('');
   }
 }
 
@@ -230,7 +264,7 @@ export class LogicalIdManager {
 
       const mapContent = fs.readFileSync(mapPath, 'utf8');
       const logicalIdMap = JSON.parse(mapContent) as LogicalIdMap;
-      
+
       // Validate the loaded map
       const validationResult = this.validateLogicalIdMap(logicalIdMap);
       if (!validationResult.valid) {
@@ -258,7 +292,7 @@ export class LogicalIdManager {
 
       logicalIdMap.updatedAt = new Date().toISOString();
       fs.writeFileSync(mapPath, JSON.stringify(logicalIdMap, null, 2));
-      
+
       this.logger.info(`Saved logical ID map to: ${mapPath}`);
     } catch (error) {
       this.logger.error(`Failed to save logical ID map: ${error}`);
@@ -287,7 +321,7 @@ export class LogicalIdManager {
 
     cdk.Aspects.of(target).add(aspect);
     this.logger.info(`Applied logical ID preservation aspect to ${target.constructor.name}`);
-    
+
     return aspect;
   }
 
@@ -300,7 +334,7 @@ export class LogicalIdManager {
     existingMappings?: Record<string, LogicalIdMapEntry>
   ): LogicalIdMap {
     const now = new Date().toISOString();
-    
+
     return {
       version: '1.0.0',
       stackName,
@@ -395,26 +429,26 @@ export class LogicalIdManager {
   } {
     const preservationStrategies: Record<string, number> = {};
     const resourceTypeBreakdown: Record<string, number> = {};
-    
+
     for (const entry of Object.values(logicalIdMap.mappings)) {
-      preservationStrategies[entry.preservationStrategy] = 
+      preservationStrategies[entry.preservationStrategy] =
         (preservationStrategies[entry.preservationStrategy] || 0) + 1;
-      
-      resourceTypeBreakdown[entry.resourceType] = 
+
+      resourceTypeBreakdown[entry.resourceType] =
         (resourceTypeBreakdown[entry.resourceType] || 0) + 1;
     }
 
     const conflicts = this.detectConflicts(logicalIdMap);
-    
+
     const recommendations: string[] = [];
     if (conflicts.length > 0) {
       recommendations.push('Resolve logical ID conflicts before deployment');
     }
-    
+
     if (appliedMappings.length < Object.keys(logicalIdMap.mappings).length) {
       recommendations.push('Review skipped mappings to ensure they are intentional');
     }
-    
+
     if (!this.driftAvoidanceConfig.enableDeterministicNaming) {
       recommendations.push('Consider enabling deterministic naming for better drift avoidance');
     }

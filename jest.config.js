@@ -42,8 +42,12 @@ module.exports = {
   testMatch: ['**/__tests__/**/*.ts', '**/?(*.)+(spec|test).ts'],
   testPathIgnorePatterns,
   moduleNameMapper: {
+    // Most specific first to avoid greedy matching
+    '^@binders/registry/(.*)$': '<rootDir>/src/platform/binders/registry/$1',
+    '^@binders/(.*)$': '<rootDir>/src/platform/binders/strategies/$1',
+    '^@platform/logical-id/(.*)$': '<rootDir>/src/platform/logical-id/$1',
+    '^@platform/logger$': '<rootDir>/src/core-engine/logger.ts',
     '^@platform/contracts$': '<rootDir>/src/platform/contracts/index.ts',
-    '^@platform/logger$': '<rootDir>/src/platform/logger/src/index.ts',
     '^@platform/tagging$': '<rootDir>/src/platform/tagging/src/index.ts',
     '^@platform/observability$': '<rootDir>/src/platform/observability/src/index.ts',
     '^@platform/core-engine$': '<rootDir>/src/core-engine/index.ts',
@@ -53,9 +57,7 @@ module.exports = {
     '^@platform/resolver$': '<rootDir>/src/resolver/index.ts',
     '^@platform/services$': '<rootDir>/src/services/index.ts',
     '^@platform/templates$': '<rootDir>/src/templates/index.ts',
-    '^@platform/(.*)$': '<rootDir>/src/components/$1/index.ts',
-    '^@binders/registry/(.*)$': '<rootDir>/src/platform/binders/registry/$1',
-    '^@binders/(.*)$': '<rootDir>/src/platform/binders/strategies/$1'
+    '^@platform/(.*)$': '<rootDir>/src/components/$1/index.ts'
   },
   transform: {
     '^.+\\.ts$': ['ts-jest', {
@@ -63,8 +65,12 @@ module.exports = {
         moduleResolution: 'node',
         baseUrl: '.',
         paths: {
+          // Most specific first to avoid greedy matching
+          '@binders/registry/*': ['src/platform/binders/registry/*'],
+          '@binders/*': ['src/platform/binders/strategies/*'],
+          '@platform/logical-id/*': ['src/platform/logical-id/*'],
+          '@platform/logger': ['src/core-engine/logger'],
           '@platform/contracts': ['src/platform/contracts'],
-          '@platform/logger': ['src/platform/logger'],
           '@platform/tagging': ['src/platform/tagging'],
           '@platform/observability': ['src/platform/observability'],
           '@platform/core-engine': ['src/core-engine'],
@@ -76,9 +82,7 @@ module.exports = {
           '@platform/templates': ['src/templates'],
           '@platform/openfeature-provider': ['src/components/openfeature-provider'],
           '@platform/feature-flag': ['src/components/feature-flag'],
-          '@platform/*': ['src/components/*'],
-          '@binders/*': ['src/platform/binders/strategies/*'],
-          '@binders/registry/*': ['src/platform/binders/registry/*']
+          '@platform/*': ['src/components/*']
         }
       }
     }],
