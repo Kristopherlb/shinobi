@@ -64,13 +64,19 @@ export class PlanCommand {
       const cdkDiff = await this.performCdkDiff(synthesisResult);
 
       // Format and display comprehensive plan output
+      console.log('DEBUG: About to import PlanOutputFormatter');
       const { PlanOutputFormatter } = await import('../services/plan-output-formatter');
+      console.log('DEBUG: PlanOutputFormatter imported successfully');
       const outputFormatter = new PlanOutputFormatter({
         logger: this.dependencies.logger
       });
+      console.log('DEBUG: PlanOutputFormatter created successfully');
 
       const formattedOutput = outputFormatter.formatPlanOutput({
-        synthesisResult,
+        synthesisResult: {
+          ...synthesisResult,
+          resolvedManifest: validationResult.resolvedManifest
+        },
         cdkDiff,
         environment: env,
         complianceFramework: validationResult.resolvedManifest.complianceFramework || 'commercial'

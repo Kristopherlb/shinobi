@@ -1,4 +1,4 @@
-service: my-service
+service: test-service
 owner: dev-team
 complianceFramework: commercial
 environment: development
@@ -9,11 +9,8 @@ components:
     config:
       instanceType: t3.micro
       ami:
-        namePattern: "al2023-ami-*-x86_64"
-        owner: "amazon"
-      vpc:
-        vpcId: vpc-0129efa01cc394f87 # Your existing VPC ID
-        subnetId: subnet-87654321
+        namePattern: 'al2023-ami-*-x86_64'
+        owner: 'amazon'
       userData:
         script: |
           #!/bin/bash
@@ -28,14 +25,14 @@ components:
   - name: app-storage
     type: s3-bucket
     config:
-      bucketName: my-service-storage
+      bucketName: test-service-storage
       versioning: true
       encryption:
         enabled: true
 
 governance:
   tags:
-    Service: my-service
+    Service: test-service
     Owner: dev-team
     Environment: ${environment}
     Compliance: commercial

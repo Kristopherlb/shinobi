@@ -3,7 +3,7 @@
  * Responsible for rendering synthesis results into user-friendly summaries
  */
 
-import { Logger } from '../utils/logger';
+import { Logger } from '../cli/simple-console-logger';
 
 export interface PlanOutputFormatterDependencies {
   logger: Logger;
@@ -29,23 +29,27 @@ export interface FormattedOutput {
  * Service for formatting and rendering plan outputs
  */
 export class PlanOutputFormatter {
-  constructor(private dependencies: PlanOutputFormatterDependencies) {}
+  constructor(private dependencies: PlanOutputFormatterDependencies) { }
 
   /**
    * Format synthesis results into comprehensive user-friendly output
    */
   formatPlanOutput(input: FormatterInput): FormattedOutput {
     const { synthesisResult, cdkDiff, environment, complianceFramework } = input;
-    
+
+    // Debug logging
+    console.log('DEBUG: synthesisResult.resolvedManifest:', synthesisResult.resolvedManifest);
+    console.log('DEBUG: components:', synthesisResult.resolvedManifest?.components);
+
     // Build user-friendly summary
     const summary = this.buildUserFriendlySummary(synthesisResult, cdkDiff, environment, complianceFramework);
-    
+
     // Extract structured data for programmatic access
     const structuredData = this.buildStructuredData(synthesisResult, cdkDiff);
-    
+
     // Generate recommendations based on analysis
     const recommendations = this.generateRecommendations(synthesisResult, complianceFramework);
-    
+
     // Collect warnings from various sources
     const warnings = this.collectWarnings(synthesisResult, cdkDiff);
 
@@ -61,9 +65,9 @@ export class PlanOutputFormatter {
    * Build comprehensive user-friendly summary
    */
   private buildUserFriendlySummary(
-    synthesisResult: any, 
-    cdkDiff: any, 
-    environment: string, 
+    synthesisResult: any,
+    cdkDiff: any,
+    environment: string,
     complianceFramework: string
   ): string {
     const lines = [
@@ -77,20 +81,20 @@ export class PlanOutputFormatter {
 
     // Component summary
     lines.push('--- Components ---');
-    if (synthesisResult.components && synthesisResult.components.length > 0) {
-      synthesisResult.components.forEach((component: any) => {
-        lines.push(`  • ${component.spec.name} (${component.getType()})`);
-        
-        const capabilities = Object.keys(component.getCapabilities());
-        if (capabilities.length > 0) {
-          lines.push(`    Capabilities: ${capabilities.join(', ')}`);
+    if (synthesisResult.resolvedManifest?.components && synthesisResult.resolvedManifest.components.length > 0) {
+      synthesisResult.resolvedManifest.components.forEach((component: any) => {
+        lines.push(`  • ${component.name} (${component.type})`);
+
+        if (component.config) {
+          const configKeys = Object.keys(component.config);
+          if (configKeys.length > 0) {
+            lines.push(`    Config: ${configKeys.join(', ')}`);
+          }
         }
 
-        // Show construct handles
-        const constructs = component.getAllConstructs();
-        if (constructs.size > 0) {
-          const handles = Array.from(constructs.keys());
-          lines.push(`    Constructs: ${handles.join(', ')}`);
+        if (component.tags) {
+          const tagCount = Object.keys(component.tags).length;
+          lines.push(`    Tags: ${tagCount} applied`);
         }
       });
     } else {
@@ -99,14 +103,9 @@ export class PlanOutputFormatter {
 
     // Bindings summary
     lines.push('', '--- Component Bindings ---');
-    if (synthesisResult.bindings && synthesisResult.bindings.length > 0) {
-      synthesisResult.bindings.forEach((binding: any) => {
-        lines.push(`  • ${binding.source} → ${binding.target} (${binding.capability})`);
-        
-        if (binding.result.iamPolicies && binding.result.iamPolicies.length > 0) {
-          const actions = binding.result.iamPolicies[0].actions;
-          lines.push(`    IAM Actions: ${actions.slice(0, 3).join(', ')}${actions.length > 3 ? '...' : ''}`);
-        }
+    if (synthesisResult.resolvedManifest?.binds && synthesisResult.resolvedManifest.binds.length > 0) {
+      synthesisResult.resolvedManifest.binds.forEach((binding: any) => {
+        lines.push(`  • ${binding.from} → ${binding.to} (${binding.capability})`);
       });
     } else {
       lines.push('  No component bindings defined');
@@ -126,11 +125,32 @@ export class PlanOutputFormatter {
 
         if (added > 0) {
           lines.push('', '  New Resources:');
-          Object.keys(cdkDiff.resources.added || {}).slice(0, 5).forEach(resource => {
-            lines.push(`    + ${resource}`);
+          const resources = Object.keys(cdkDiff.resources.added || {});
+
+          // Group resources by component
+          const groupedResources = this.groupResourcesByComponent(resources, synthesisResult.resolvedManifest?.components || []);
+
+          groupedResources.forEach(group => {
+            lines.push(`    + ${group.component}:`);
+            group.resources.slice(0, 3).forEach(resource => {
+              lines.push(`      • ${resource}`);
+            });
+            if (group.resources.length > 3) {
+              lines.push(`      ... and ${group.resources.length - 3} more`);
+            }
           });
         }
       }
+    }
+
+    // Cost estimation
+    const costEstimate = this.estimateCosts(synthesisResult.resolvedManifest?.components || []);
+    if (costEstimate.total > 0) {
+      lines.push('', '--- Cost Estimation ---');
+      lines.push(`  Monthly Cost: ~$${costEstimate.total.toFixed(2)}`);
+      costEstimate.breakdown.forEach(item => {
+        lines.push(`  ${item.component}: $${item.cost.toFixed(2)}`);
+      });
     }
 
     // Patches summary
@@ -170,7 +190,7 @@ export class PlanOutputFormatter {
 
     if (complianceFramework.startsWith('fedramp')) {
       recommendations.push('✓ FedRAMP compliance framework detected - enhanced security controls applied');
-      
+
       if (complianceFramework === 'fedramp-high') {
         recommendations.push('🔒 FedRAMP High requires additional network isolation - verify VPC configuration');
       }
@@ -217,6 +237,99 @@ export class PlanOutputFormatter {
   }
 
   /**
+   * Group resources by component for better display
+   */
+  private groupResourcesByComponent(resources: string[], components: any[]): Array<{ component: string, resources: string[] }> {
+    const groups: { [key: string]: string[] } = {};
+
+    // Initialize groups for each component
+    components.forEach(component => {
+      const componentName = component.name.toLowerCase().replace(/[^a-z0-9]/g, '');
+      groups[component.name] = [];
+    });
+
+    // Group resources by component name pattern
+    resources.forEach(resource => {
+      let assigned = false;
+      for (const component of components) {
+        const componentName = component.name.toLowerCase().replace(/[^a-z0-9]/g, '');
+        if (resource.toLowerCase().includes(componentName)) {
+          groups[component.name].push(resource);
+          assigned = true;
+          break;
+        }
+      }
+
+      // If no component match, put in "Other" group
+      if (!assigned) {
+        if (!groups['Other']) groups['Other'] = [];
+        groups['Other'].push(resource);
+      }
+    });
+
+    // Convert to array format
+    return Object.entries(groups)
+      .filter(([_, resources]) => resources.length > 0)
+      .map(([component, resources]) => ({ component, resources }));
+  }
+
+  /**
+   * Estimate costs for components
+   */
+  private estimateCosts(components: any[]): { total: number, breakdown: Array<{ component: string, cost: number }> } {
+    const breakdown: Array<{ component: string, cost: number }> = [];
+    let total = 0;
+
+    components.forEach(component => {
+      let cost = 0;
+
+      switch (component.type) {
+        case 'ec2-instance':
+          const instanceType = component.config?.instanceType || 't3.micro';
+          cost = this.getEC2Cost(instanceType);
+          break;
+        case 's3-bucket':
+          cost = 2.30; // S3 standard storage
+          break;
+        case 'rds-postgres':
+          cost = 15.00; // RDS t3.micro
+          break;
+        case 'lambda-api':
+          cost = 1.00; // Lambda execution
+          break;
+        case 'elasticache-redis':
+          cost = 8.00; // ElastiCache t3.micro
+          break;
+        default:
+          cost = 5.00; // Default estimate
+      }
+
+      if (cost > 0) {
+        breakdown.push({ component: component.name, cost });
+        total += cost;
+      }
+    });
+
+    return { total, breakdown };
+  }
+
+  /**
+   * Get EC2 instance cost based on type
+   */
+  private getEC2Cost(instanceType: string): number {
+    const costs: { [key: string]: number } = {
+      't3.micro': 8.50,
+      't3.small': 17.00,
+      't3.medium': 34.00,
+      't3.large': 68.00,
+      'm5.large': 77.00,
+      'm5.xlarge': 154.00
+    };
+
+    return costs[instanceType] || 10.00;
+  }
+
+  /**
    * Check for resources that should be encrypted in compliance frameworks
    */
   private checkForUnencryptedResources(synthesisResult: any): boolean {
@@ -225,12 +338,12 @@ export class PlanOutputFormatter {
     return synthesisResult.components.some((component: any) => {
       const constructs = component.getAllConstructs();
       for (const [handle, construct] of constructs) {
-        if (handle.includes('rds.DatabaseInstance') && 
-            construct.properties?.storageEncrypted === false) {
+        if (handle.includes('rds.DatabaseInstance') &&
+          construct.properties?.storageEncrypted === false) {
           return true;
         }
-        if (handle.includes('s3.Bucket') && 
-            !construct.properties?.encryptionConfiguration) {
+        if (handle.includes('s3.Bucket') &&
+          !construct.properties?.encryptionConfiguration) {
           return true;
         }
       }

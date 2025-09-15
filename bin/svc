@@ -301,6 +301,9 @@ program
         process.exit(result.exitCode);
       }
 
+      // Debug the result structure
+      console.log('DEBUG: result:', JSON.stringify(result, null, 2));
+
       // Output results
       if (opts.ci) {
         const plan = {
@@ -316,28 +319,26 @@ program
         };
         console.log(JSON.stringify(plan, null, 2));
       } else {
-        console.log('✅ Plan generated successfully');
-        console.log(`   Environment: ${options.env}`);
-        console.log(`   Service: ${result.data.resolvedManifest.service}`);
-        console.log(`   Components: ${result.data.resolvedManifest.components?.length || 0}`);
-        console.log(`   Binds: ${result.data.resolvedManifest.binds?.length || 0}`);
+        // Use the formatter to display the plan
+        const { PlanOutputFormatter } = require('../dist/services/plan-output-formatter.js');
+        const outputFormatter = new PlanOutputFormatter({
+          logger: { info: console.log, error: console.error, success: console.log }
+        });
 
-        if (result.data.cdkDiff && result.data.cdkDiff.hasChanges) {
-          console.log(`\nInfrastructure Changes:`);
-          console.log(`  Added: ${result.data.cdkDiff.changes.added} resources`);
-          console.log(`  Modified: ${result.data.cdkDiff.changes.modified} resources`);
-          console.log(`  Removed: ${result.data.cdkDiff.changes.removed} resources`);
+        console.log('DEBUG: result.data:', JSON.stringify(result.data, null, 2));
+        console.log('DEBUG: result.data.resolvedManifest:', JSON.stringify(result.data.resolvedManifest, null, 2));
 
-          if (Object.keys(result.data.cdkDiff.resources.added).length > 0) {
-            console.log(`\nResources to be created:`);
-            Object.keys(result.data.cdkDiff.resources.added).forEach(resourceName => {
-              const resource = result.data.cdkDiff.resources.added[resourceName];
-              console.log(`  + ${resourceName} (${resource.type})`);
-            });
-          }
-        } else {
-          console.log(`No infrastructure changes detected`);
-        }
+        const formattedOutput = outputFormatter.formatPlanOutput({
+          synthesisResult: {
+            ...result.data.synthesisResult,
+            resolvedManifest: result.data.resolvedManifest
+          },
+          cdkDiff: result.data.cdkDiff,
+          environment: options.env,
+          complianceFramework: result.data.resolvedManifest.complianceFramework || 'commercial'
+        });
+
+        console.log('\n' + formattedOutput.userFriendlySummary);
       }
 
       process.exit(0);
