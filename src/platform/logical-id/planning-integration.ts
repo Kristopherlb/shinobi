@@ -4,7 +4,7 @@
  */
 
 import * as cdk from 'aws-cdk-lib';
-import { Logger } from '../utils/logger';
+import { Logger } from '@platform/logger';
 import { LogicalIdManager, LogicalIdMap, LogicalIdPreservationAspect } from './logical-id-manager';
 import { ComponentContext } from '../contracts/component-interfaces';
 
@@ -91,7 +91,7 @@ export class PlanningLogicalIdIntegration {
       // Synthesize the stack to apply aspects
       const app = stack.node.root as cdk.App;
       const synthesizedStack = app.synth().getStackByName(stack.stackName);
-      
+
       if (synthesizedStack) {
         result.template = synthesizedStack.template;
         result.appliedMappings = aspect.getAppliedMappings();
@@ -133,14 +133,14 @@ export class PlanningLogicalIdIntegration {
    */
   generatePlanningReport(planningResult: PlanningResult): string {
     const report: string[] = [];
-    
+
     report.push('=== Logical ID Preservation Planning Report ===');
     report.push('');
-    
+
     if (planningResult.success) {
       report.push('✅ Logical ID preservation applied successfully');
       report.push(`📊 Applied ${planningResult.appliedMappings.length} logical ID mappings`);
-      
+
       if (planningResult.driftAvoidanceReport) {
         const summary = planningResult.driftAvoidanceReport.summary;
         report.push('');
@@ -149,19 +149,19 @@ export class PlanningLogicalIdIntegration {
         report.push(`   • Applied mappings: ${summary.appliedMappings}`);
         report.push(`   • Skipped mappings: ${summary.skippedMappings}`);
         report.push(`   • Deterministic naming: ${summary.deterministicNaming ? 'enabled' : 'disabled'}`);
-        
+
         if (planningResult.driftAvoidanceReport.details.conflicts.length > 0) {
           report.push('');
           report.push('⚠️  Conflicts detected:');
-          planningResult.driftAvoidanceReport.details.conflicts.forEach(conflict => {
+          planningResult.driftAvoidanceReport.details.conflicts.forEach((conflict: string) => {
             report.push(`   • ${conflict}`);
           });
         }
-        
+
         if (planningResult.driftAvoidanceReport.recommendations.length > 0) {
           report.push('');
           report.push('💡 Recommendations:');
-          planningResult.driftAvoidanceReport.recommendations.forEach(rec => {
+          planningResult.driftAvoidanceReport.recommendations.forEach((rec: string) => {
             report.push(`   • ${rec}`);
           });
         }
@@ -174,7 +174,7 @@ export class PlanningLogicalIdIntegration {
         report.push(`   • ${error}`);
       });
     }
-    
+
     if (planningResult.warnings.length > 0) {
       report.push('');
       report.push('⚠️  Warnings:');
@@ -182,7 +182,7 @@ export class PlanningLogicalIdIntegration {
         report.push(`   • ${warning}`);
       });
     }
-    
+
     if (planningResult.appliedMappings.length > 0) {
       report.push('');
       report.push('🔗 Applied Mappings:');
@@ -190,7 +190,7 @@ export class PlanningLogicalIdIntegration {
         report.push(`   • ${mapping}`);
       });
     }
-    
+
     return report.join('\n');
   }
 
@@ -255,7 +255,7 @@ export class PlanningLogicalIdIntegration {
     // Generate template without preservation
     const appWithoutPreservation = new cdk.App();
     const stackWithoutPreservation = new cdk.Stack(appWithoutPreservation, 'ComparisonStack');
-    
+
     // Copy constructs from original stack (simplified - in real implementation, you'd need to deep copy)
     // This is a placeholder for the actual implementation
     const templateWithoutPreservation = appWithoutPreservation.synth().getStackByName('ComparisonStack').template;
