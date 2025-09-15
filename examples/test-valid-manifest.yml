@@ -1,0 +1,17 @@
+service: test-api
+owner: test-team
+complianceFramework: commercial
+components:
+  - name: test-s3-bucket
+    type: s3-bucket
+    config:
+      versioning: true
+      encryption:
+        enabled: true
+  - name: test-ec2-instance
+    type: ec2-instance
+    config:
+      instanceType: t3.micro
+      storage:
+        rootVolumeSize: 20
+        encrypted: true
