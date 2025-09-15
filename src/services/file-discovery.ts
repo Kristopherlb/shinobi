@@ -1,6 +1,8 @@
 import * as fs from 'fs/promises';
 import * as path from 'path';
-import { logger } from './logger';
+import { Logger } from '../utils/logger';
+
+const logger = new Logger('file-discovery');
 
 export class FileDiscovery {
   /**
@@ -15,7 +17,7 @@ export class FileDiscovery {
 
     while (currentDir !== root) {
       const manifestPath = path.join(currentDir, 'service.yml');
-      
+
       try {
         await fs.access(manifestPath);
         logger.debug(`Found manifest at: ${manifestPath}`);

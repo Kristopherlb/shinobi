@@ -1,0 +1,19 @@
+service: test-compliance
+owner: test-team
+complianceFramework: commercial
+components:
+  - name: test-s3-bucket-no-encryption
+    type: s3-bucket
+    config:
+      versioning: true
+      # Missing encryption - should trigger warning
+  - name: test-rds-no-backup
+    type: rds-postgres
+    config:
+      instanceType: t3.micro
+      # Missing backupRetentionDays - should trigger warning
+  - name: test-lambda-no-env
+    type: lambda-api
+    config:
+      memory: 128
+      # Missing environment - should trigger warning
