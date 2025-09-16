@@ -7,6 +7,101 @@ const { execSync } = require('child_process');
 
 const program = new Command();
 
+function normalizeDiffMap(diffMap) {
+  const stacks = [];
+  const totals = { added: 0, modified: 0, removed: 0, total: 0 };
+  let hasChanges = false;
+
+  if (!diffMap) {
+    return { stacks, totals, hasChanges };
+  }
+
+  Object.entries(diffMap).forEach(([stackName, diff]) => {
+    if (!diff) {
+      return;
+    }
+
+    const resources = {
+      added: (diff.resources && diff.resources.added) || {},
+      modified: (diff.resources && diff.resources.modified) || {},
+      removed: (diff.resources && diff.resources.removed) || {}
+    };
+
+    const added = (diff.changes && diff.changes.added) ?? Object.keys(resources.added).length;
+    const modified = (diff.changes && diff.changes.modified) ?? Object.keys(resources.modified).length;
+    const removed = (diff.changes && diff.changes.removed) ?? Object.keys(resources.removed).length;
+    const total = (diff.changes && diff.changes.total) ?? added + modified + removed;
+    const stackHasChanges = (diff.hasChanges !== undefined ? diff.hasChanges : total > 0);
+
+    stacks.push({
+      stackName,
+      hasChanges: stackHasChanges,
+      changes: { added, modified, removed, total },
+      resources
+    });
+
+    totals.added += added;
+    totals.modified += modified;
+    totals.removed += removed;
+    hasChanges = hasChanges || stackHasChanges;
+  });
+
+  totals.total = totals.added + totals.modified + totals.removed;
+
+  return { stacks, totals, hasChanges };
+}
+
+function logDiffDetails(logger, diffMap, indent = '   ') {
+  const summary = normalizeDiffMap(diffMap);
+
+  if (summary.stacks.length === 0) {
+    logger.info(`${indent}No infrastructure changes detected`);
+    return summary;
+  }
+
+  summary.stacks.forEach(stack => {
+    logger.info(`${indent}Stack: ${stack.stackName}`);
+    logger.info(`${indent}Changes: ${stack.changes.added} added, ${stack.changes.modified} modified, ${stack.changes.removed} removed`);
+
+    if (stack.hasChanges) {
+      const resources = stack.resources;
+
+      if (Object.keys(resources.added).length > 0) {
+        logger.info(`${indent}Resources to be created:`);
+        Object.entries(resources.added).forEach(([resourceName, resource]) => {
+          logger.info(`${indent}  + ${resourceName} (${resource.type})`);
+        });
+      }
+
+      if (Object.keys(resources.modified).length > 0) {
+        logger.info(`${indent}Resources to be modified:`);
+        Object.entries(resources.modified).forEach(([resourceName, resource]) => {
+          logger.info(`${indent}  ~ ${resourceName} (${resource.type})`);
+        });
+      }
+
+      if (Object.keys(resources.removed).length > 0) {
+        logger.info(`${indent}Resources to be removed:`);
+        Object.entries(resources.removed).forEach(([resourceName, resource]) => {
+          logger.info(`${indent}  - ${resourceName} (${resource.type})`);
+        });
+      }
+
+      if (
+        Object.keys(resources.added).length === 0 &&
+        Object.keys(resources.modified).length === 0 &&
+        Object.keys(resources.removed).length === 0
+      ) {
+        logger.info(`${indent}No resource-level changes detected for this stack`);
+      }
+    } else {
+      logger.info(`${indent}No infrastructure changes detected for this stack`);
+    }
+  });
+
+  return summary;
+}
+
 program
   .name('svc')
   .description('Shinobi Platform CLI')
@@ -306,6 +401,7 @@ program
 
       // Output results
       if (opts.ci) {
+        const diffSummary = normalizeDiffMap(result.data.cdkDiff);
         const plan = {
           service: result.data.resolvedManifest.service,
           environment: options.env,
@@ -314,7 +410,9 @@ program
           binds: result.data.resolvedManifest.binds || [],
           governance: result.data.resolvedManifest.governance || {},
           cdkDiff: result.data.cdkDiff,
+          cdkDiffSummary: diffSummary,
           cloudFormationTemplate: result.data.cloudFormationTemplate,
+          cloudFormationTemplates: result.data.cloudFormationTemplates,
           timestamp: new Date().toISOString()
         };
         console.log(JSON.stringify(plan, null, 2));
@@ -637,50 +735,29 @@ program
 
       // Display diff results
       const cdkDiff = result.data.cdkDiff;
+      const diffSummary = normalizeDiffMap(cdkDiff);
 
       if (opts.ci) {
         console.log(JSON.stringify({
           level: 'info',
           message: 'Diff analysis completed',
-          stackName: cdkDiff.stackName,
-          changes: cdkDiff.changes,
-          hasChanges: cdkDiff.hasChanges,
-          resources: cdkDiff.resources,
+          hasChanges: diffSummary.hasChanges,
+          totals: diffSummary.totals,
+          stacks: diffSummary.stacks,
           timestamp: new Date().toISOString()
         }));
       } else {
         logger.info('📊 Diff analysis completed');
-        logger.info(`   Stack: ${cdkDiff.stackName}`);
-        logger.info(`   Changes: ${cdkDiff.changes.added} added, ${cdkDiff.changes.modified} modified, ${cdkDiff.changes.removed} removed`);
 
-        if (cdkDiff.hasChanges) {
-          logger.info('\n--- Infrastructure Changes ---');
-
-          if (Object.keys(cdkDiff.resources.added).length > 0) {
-            logger.info('\nResources to be created:');
-            Object.keys(cdkDiff.resources.added).forEach(resourceName => {
-              const resource = cdkDiff.resources.added[resourceName];
-              logger.info(`  + ${resourceName} (${resource.type})`);
-            });
-          }
-
-          if (Object.keys(cdkDiff.resources.modified).length > 0) {
-            logger.info('\nResources to be modified:');
-            Object.keys(cdkDiff.resources.modified).forEach(resourceName => {
-              const resource = cdkDiff.resources.modified[resourceName];
-              logger.info(`  ~ ${resourceName} (${resource.type})`);
-            });
-          }
-
-          if (Object.keys(cdkDiff.resources.removed).length > 0) {
-            logger.info('\nResources to be removed:');
-            Object.keys(cdkDiff.resources.removed).forEach(resourceName => {
-              const resource = cdkDiff.resources.removed[resourceName];
-              logger.info(`  - ${resourceName} (${resource.type})`);
-            });
-          }
-        } else {
+        if (diffSummary.stacks.length === 0) {
           logger.info('   No infrastructure changes detected');
+        } else {
+          logger.info('\n--- Infrastructure Changes ---');
+          logDiffDetails(logger, cdkDiff);
+
+          if (diffSummary.stacks.length > 1) {
+            logger.info(`\n   Total across stacks: ${diffSummary.totals.added} added, ${diffSummary.totals.modified} modified, ${diffSummary.totals.removed} removed`);
+          }
         }
       }
 
@@ -801,69 +878,47 @@ program
       }
 
       const cdkDiff = result.data.cdkDiff;
+      const diffSummary = normalizeDiffMap(cdkDiff);
       const stackName = `${result.data.resolvedManifest.service}-stack`;
+      const stackNames = diffSummary.stacks.map(stack => stack.stackName);
+      const stackDisplayName = stackNames.length > 0 ? stackNames.join(', ') : stackName;
 
       if (options.dryRun) {
         if (opts.ci) {
           console.log(JSON.stringify({
             level: 'info',
             message: 'Dry run completed',
-            stackName: stackName,
-            changes: cdkDiff.changes,
-            hasChanges: cdkDiff.hasChanges,
-            resources: cdkDiff.resources,
+            stackNames,
+            diffSummary,
             timestamp: new Date().toISOString()
           }));
         } else {
           logger.info('🔍 DRY RUN MODE - No actual deployment');
-          logger.info(`   Stack: ${stackName}`);
-          logger.info(`   Changes: ${cdkDiff.changes.added} added, ${cdkDiff.changes.modified} modified, ${cdkDiff.changes.removed} removed`);
+          logger.info(`   Stacks: ${stackDisplayName}`);
+          logger.info(`   Total changes: ${diffSummary.totals.added} added, ${diffSummary.totals.modified} modified, ${diffSummary.totals.removed} removed`);
 
-          if (cdkDiff.hasChanges) {
-            logger.info('\n--- Infrastructure Changes ---');
-
-            if (Object.keys(cdkDiff.resources.added).length > 0) {
-              logger.info('\nResources to be created:');
-              Object.keys(cdkDiff.resources.added).forEach(resourceName => {
-                const resource = cdkDiff.resources.added[resourceName];
-                logger.info(`  + ${resourceName} (${resource.type})`);
-              });
-            }
-
-            if (Object.keys(cdkDiff.resources.modified).length > 0) {
-              logger.info('\nResources to be modified:');
-              Object.keys(cdkDiff.resources.modified).forEach(resourceName => {
-                const resource = cdkDiff.resources.modified[resourceName];
-                logger.info(`  ~ ${resourceName} (${resource.type})`);
-              });
-            }
-
-            if (Object.keys(cdkDiff.resources.removed).length > 0) {
-              logger.info('\nResources to be removed:');
-              Object.keys(cdkDiff.resources.removed).forEach(resourceName => {
-                const resource = cdkDiff.resources.removed[resourceName];
-                logger.info(`  - ${resourceName} (${resource.type})`);
-              });
-            }
-          } else {
+          if (diffSummary.stacks.length === 0) {
             logger.info('   No infrastructure changes detected');
+          } else {
+            logger.info('\n--- Infrastructure Changes ---');
+            logDiffDetails(logger, cdkDiff);
           }
         }
         process.exit(0);
       }
 
       // Check if there are changes to deploy
-      if (!cdkDiff.hasChanges && !options.force) {
+      if (!diffSummary.hasChanges && !options.force) {
         if (opts.ci) {
           console.log(JSON.stringify({
             level: 'info',
             message: 'No changes to deploy',
-            stackName: stackName,
+            stackNames,
             timestamp: new Date().toISOString()
           }));
         } else {
           logger.info('ℹ️  No changes to deploy');
-          logger.info(`   Stack: ${stackName}`);
+          logger.info(`   Stacks: ${stackDisplayName}`);
           logger.info('   Use --force to deploy anyway');
         }
         process.exit(0);
@@ -881,16 +936,16 @@ program
         console.log(JSON.stringify({
           level: 'info',
           message: 'Starting deployment',
-          stackName: stackName,
+          stackNames,
           command: cdkCommand,
-          changes: cdkDiff.changes,
+          diffSummary,
           timestamp: new Date().toISOString()
         }));
       } else {
         logger.info('🚀 Starting deployment');
-        logger.info(`   Stack: ${stackName}`);
+        logger.info(`   Stacks: ${stackDisplayName}`);
         logger.info(`   Command: ${cdkCommand}`);
-        logger.info(`   Changes: ${cdkDiff.changes.added} added, ${cdkDiff.changes.modified} modified, ${cdkDiff.changes.removed} removed`);
+        logger.info(`   Total changes: ${diffSummary.totals.added} added, ${diffSummary.totals.modified} modified, ${diffSummary.totals.removed} removed`);
       }
 
       execSync(cdkCommand, {
@@ -902,12 +957,12 @@ program
         console.log(JSON.stringify({
           level: 'info',
           message: 'Deployment completed successfully',
-          stackName: stackName,
+          stackNames,
           timestamp: new Date().toISOString()
         }));
       } else {
         logger.info('✅ Deployment completed successfully');
-        logger.info(`   Stack: ${stackName}`);
+        logger.info(`   Stacks: ${stackDisplayName}`);
       }
 
       process.exit(0);
@@ -1027,69 +1082,47 @@ program
       }
 
       const cdkDiff = result.data.cdkDiff;
+      const diffSummary = normalizeDiffMap(cdkDiff);
       const stackName = `${result.data.resolvedManifest.service}-stack`;
+      const stackNames = diffSummary.stacks.map(stack => stack.stackName);
+      const stackDisplayName = stackNames.length > 0 ? stackNames.join(', ') : stackName;
 
       if (options.dryRun) {
         if (opts.ci) {
           console.log(JSON.stringify({
             level: 'info',
             message: 'Dry run completed',
-            stackName: stackName,
-            changes: cdkDiff.changes,
-            hasChanges: cdkDiff.hasChanges,
-            resources: cdkDiff.resources,
+            stackNames,
+            diffSummary,
             timestamp: new Date().toISOString()
           }));
         } else {
           logger.info('🔍 DRY RUN MODE - No actual deployment');
-          logger.info(`   Stack: ${stackName}`);
-          logger.info(`   Changes: ${cdkDiff.changes.added} added, ${cdkDiff.changes.modified} modified, ${cdkDiff.changes.removed} removed`);
+          logger.info(`   Stacks: ${stackDisplayName}`);
+          logger.info(`   Total changes: ${diffSummary.totals.added} added, ${diffSummary.totals.modified} modified, ${diffSummary.totals.removed} removed`);
 
-          if (cdkDiff.hasChanges) {
-            logger.info('\n--- Infrastructure Changes ---');
-
-            if (Object.keys(cdkDiff.resources.added).length > 0) {
-              logger.info('\nResources to be created:');
-              Object.keys(cdkDiff.resources.added).forEach(resourceName => {
-                const resource = cdkDiff.resources.added[resourceName];
-                logger.info(`  + ${resourceName} (${resource.type})`);
-              });
-            }
-
-            if (Object.keys(cdkDiff.resources.modified).length > 0) {
-              logger.info('\nResources to be modified:');
-              Object.keys(cdkDiff.resources.modified).forEach(resourceName => {
-                const resource = cdkDiff.resources.modified[resourceName];
-                logger.info(`  ~ ${resourceName} (${resource.type})`);
-              });
-            }
-
-            if (Object.keys(cdkDiff.resources.removed).length > 0) {
-              logger.info('\nResources to be removed:');
-              Object.keys(cdkDiff.resources.removed).forEach(resourceName => {
-                const resource = cdkDiff.resources.removed[resourceName];
-                logger.info(`  - ${resourceName} (${resource.type})`);
-              });
-            }
-          } else {
+          if (diffSummary.stacks.length === 0) {
             logger.info('   No infrastructure changes detected');
+          } else {
+            logger.info('\n--- Infrastructure Changes ---');
+            logDiffDetails(logger, cdkDiff);
           }
         }
         process.exit(0);
       }
 
       // Check if there are changes to deploy
-      if (!cdkDiff.hasChanges && !options.force) {
+      if (!diffSummary.hasChanges && !options.force) {
         if (opts.ci) {
           console.log(JSON.stringify({
             level: 'info',
             message: 'No changes to deploy',
-            stackName: stackName,
+            stackNames,
             timestamp: new Date().toISOString()
           }));
         } else {
           logger.info('ℹ️  No changes to deploy');
-          logger.info(`   Stack: ${stackName}`);
+          logger.info(`   Stacks: ${stackDisplayName}`);
           logger.info('   Use --force to deploy anyway');
         }
         process.exit(0);
@@ -1099,10 +1132,27 @@ program
       logger.info('🔧 Using real CDK synthesis...');
 
       const synthesisResult = result.data.synthesisResult;
+      const synthesizedStacks = synthesisResult.synthesizedStacks || (synthesisResult.synthesizedStack ? [synthesisResult.synthesizedStack] : []);
+      const synthesizedStackNames = synthesizedStacks.map(stack => stack.stackName);
+      const resourcesByStack = synthesizedStacks.reduce((acc, stack) => {
+        acc[stack.stackName] = {
+          resourceCount: Object.keys(stack.template.Resources || {}).length
+        };
+        return acc;
+      }, {});
 
       logger.info(`✅ CDK synthesis completed`);
-      logger.info(`   Stack: ${synthesisResult.synthesizedStack.stackName}`);
-      logger.info(`   Resources: ${Object.keys(synthesisResult.synthesizedStack.template.Resources || {}).length}`);
+      if (synthesizedStackNames.length > 0) {
+        logger.info(`   Stacks synthesized: ${synthesizedStackNames.join(', ')}`);
+        synthesizedStacks.forEach(stack => {
+          logger.info(`   Resources (${stack.stackName}): ${Object.keys(stack.template.Resources || {}).length}`);
+        });
+      } else if (synthesisResult.synthesizedStack) {
+        logger.info(`   Stack: ${synthesisResult.synthesizedStack.stackName}`);
+        logger.info(`   Resources: ${Object.keys(synthesisResult.synthesizedStack.template.Resources || {}).length}`);
+      } else {
+        logger.info('   No synthesized stack details available');
+      }
 
       // For now, we'll use CDK CLI for actual deployment
       // TODO: Implement real CDK deployment using AWS SDK
@@ -1116,18 +1166,22 @@ program
         console.log(JSON.stringify({
           level: 'info',
           message: 'Starting deployment with ResolverEngine',
-          stackName: stackName,
+          stackNames,
           command: cdkCommand,
-          changes: cdkDiff.changes,
-          resources: Object.keys(synthesisResult.synthesizedStack.template.Resources || {}).length,
+          diffSummary,
+          resourcesByStack,
           timestamp: new Date().toISOString()
         }));
       } else {
         logger.info('🚀 Starting deployment with ResolverEngine');
-        logger.info(`   Stack: ${stackName}`);
+        logger.info(`   Stacks: ${stackDisplayName}`);
         logger.info(`   Command: ${cdkCommand}`);
-        logger.info(`   Changes: ${cdkDiff.changes.added} added, ${cdkDiff.changes.modified} modified, ${cdkDiff.changes.removed} removed`);
-        logger.info(`   Resources: ${Object.keys(synthesisResult.synthesizedStack.template.Resources || {}).length}`);
+        logger.info(`   Total changes: ${diffSummary.totals.added} added, ${diffSummary.totals.modified} modified, ${diffSummary.totals.removed} removed`);
+        if (synthesizedStackNames.length > 0) {
+          synthesizedStacks.forEach(stack => {
+            logger.info(`   Resources (${stack.stackName}): ${Object.keys(stack.template.Resources || {}).length}`);
+          });
+        }
       }
 
       execSync(cdkCommand, {
@@ -1139,14 +1193,19 @@ program
         console.log(JSON.stringify({
           level: 'info',
           message: 'Deployment completed successfully with real CDK synthesis',
-          stackName: stackName,
-          resources: Object.keys(synthesisResult.synthesizedStack.template.Resources || {}).length,
+          stackNames,
+          diffSummary,
+          resourcesByStack,
           timestamp: new Date().toISOString()
         }));
       } else {
         logger.info('✅ Deployment completed successfully with real CDK synthesis');
-        logger.info(`   Stack: ${stackName}`);
-        logger.info(`   Resources: ${Object.keys(synthesisResult.synthesizedStack.template.Resources || {}).length}`);
+        logger.info(`   Stacks: ${stackDisplayName}`);
+        if (synthesizedStackNames.length > 0) {
+          synthesizedStacks.forEach(stack => {
+            logger.info(`   Resources (${stack.stackName}): ${Object.keys(stack.template.Resources || {}).length}`);
+          });
+        }
       }
 
       process.exit(0);

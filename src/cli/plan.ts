@@ -17,8 +17,9 @@ export interface PlanResult {
     resolvedManifest: any;
     warnings: string[];
     synthesisResult?: any;
-    cdkDiff?: any;
+    cdkDiff?: Record<string, any>;
     cloudFormationTemplate?: any;
+    cloudFormationTemplates?: Record<string, any>;
   };
   error?: string;
 }
@@ -67,6 +68,12 @@ export class PlanCommand {
         validationResult.resolvedManifest,
         env
       );
+
+      const templatesByStackName = synthesisResult.templatesByStackName || {};
+      const firstTemplateKey = Object.keys(templatesByStackName)[0];
+      const primaryTemplate = firstTemplateKey
+        ? templatesByStackName[firstTemplateKey]
+        : synthesisResult.template;
 
       // Perform CDK diff analysis
       this.dependencies.logger.info('Analyzing infrastructure changes...');
@@ -133,7 +140,8 @@ export class PlanCommand {
           warnings: validationResult.warnings || [],
           synthesisResult: synthesisResult,
           cdkDiff: cdkDiff,
-          cloudFormationTemplate: synthesisResult.app.synth().stacks[0].template
+          cloudFormationTemplate: primaryTemplate,
+          cloudFormationTemplates: templatesByStackName
         }
       };
 
@@ -211,17 +219,28 @@ export class PlanCommand {
       }
 
       // Synthesize the app
-      const synthesizedStacks = app.synth().stacks;
-      const synthesizedStack = synthesizedStacks[0];
+      const assembly = app.synth();
+      const synthesizedStacks = assembly.stacks;
 
-      this.dependencies.logger.info(`Synthesized stack: ${synthesizedStack.stackName}`);
-      this.dependencies.logger.debug(`Resources: ${Object.keys(synthesizedStack.template.Resources || {}).length}`);
+      const templatesByStackName = synthesizedStacks.reduce((acc: Record<string, any>, current) => {
+        acc[current.stackName] = current.template;
+        return acc;
+      }, {} as Record<string, any>);
+
+      const primarySynthesizedStack = synthesizedStacks[0];
+
+      synthesizedStacks.forEach(synthesizedStack => {
+        this.dependencies.logger.info(`Synthesized stack: ${synthesizedStack.stackName}`);
+        this.dependencies.logger.debug(`Resources: ${Object.keys(synthesizedStack.template.Resources || {}).length}`);
+      });
 
       return {
         app,
         stacks: [stack],
-        synthesizedStack,
-        template: synthesizedStack.template
+        synthesizedStacks,
+        synthesizedStack: primarySynthesizedStack,
+        template: primarySynthesizedStack?.template,
+        templatesByStackName
       };
 
     } catch (error) {
@@ -482,35 +501,37 @@ export class PlanCommand {
     try {
       this.dependencies.logger.debug('Starting CDK diff analysis');
 
-      // Synthesize the CDK app to get CloudFormation templates
-      const synthesizedStacks = synthesisResult.app.synth().stacks;
-      const stack = synthesizedStacks[0];
-      const stackName = stack.stackName;
-      const newTemplate = stack.template;
+      const synthesizedStacks = synthesisResult.synthesizedStacks || synthesisResult.app.synth().stacks;
+      const diffByStack: Record<string, any> = {};
 
-      this.dependencies.logger.debug(`Analyzing stack: ${stackName}`);
+      for (const stack of synthesizedStacks) {
+        const stackName = stack.stackName;
+        const newTemplate = stack.template;
 
-      // Check if stack exists in AWS
-      const existingTemplate = await this.getExistingStackTemplate(stackName);
+        this.dependencies.logger.debug(`Analyzing stack: ${stackName}`);
 
-      if (!existingTemplate) {
-        // New stack - all resources will be added
-        this.dependencies.logger.info('New stack detected - all resources will be created');
-        return this.analyzeNewStack(newTemplate, stackName);
-      } else {
-        // Existing stack - compare templates
-        this.dependencies.logger.info('Existing stack detected - comparing templates');
-        return this.compareTemplates(existingTemplate, newTemplate, stackName);
+        const existingTemplate = await this.getExistingStackTemplate(stackName);
+
+        if (!existingTemplate) {
+          this.dependencies.logger.info(`New stack detected - all resources will be created (${stackName})`);
+          diffByStack[stackName] = this.analyzeNewStack(newTemplate, stackName);
+        } else {
+          this.dependencies.logger.info(`Existing stack detected - comparing templates (${stackName})`);
+          diffByStack[stackName] = this.compareTemplates(existingTemplate, newTemplate, stackName);
+        }
       }
+
+      return diffByStack;
 
     } catch (error) {
       this.dependencies.logger.warn('CDK diff analysis failed, showing new stack analysis only');
       this.dependencies.logger.debug('Diff error:', error);
 
-      // Fallback to new stack analysis
-      const synthesizedStacks = synthesisResult.app.synth().stacks;
-      const stack = synthesizedStacks[0];
-      return this.analyzeNewStack(stack.template, stack.stackName);
+      const synthesizedStacks = synthesisResult.synthesizedStacks || synthesisResult.app.synth().stacks;
+      return synthesizedStacks.reduce((acc: Record<string, any>, stack: any) => {
+        acc[stack.stackName] = this.analyzeNewStack(stack.template, stack.stackName);
+        return acc;
+      }, {} as Record<string, any>);
     }
   }
 
