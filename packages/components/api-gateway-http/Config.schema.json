@@ -263,6 +263,25 @@
       },
       "additionalProperties": false
     },
+    "throttling": {
+      "type": "object",
+      "description": "API throttling configuration",
+      "properties": {
+        "rateLimit": {
+          "type": "integer",
+          "minimum": 1,
+          "maximum": 10000,
+          "description": "Rate limit (requests per second)"
+        },
+        "burstLimit": {
+          "type": "integer",
+          "minimum": 1,
+          "maximum": 20000,
+          "description": "Burst limit (requests per second)"
+        }
+      },
+      "additionalProperties": false
+    },
     "observability": {
       "type": "object",
       "description": "OpenTelemetry observability configuration",

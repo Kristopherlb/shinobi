@@ -82,6 +82,7 @@ export class ApiGatewayHttpComponent extends BaseComponent {
   }
 
   public getCapabilities(): ComponentCapabilities {
+    this.validateSynthesized();
     return this.capabilities;
   }
 
