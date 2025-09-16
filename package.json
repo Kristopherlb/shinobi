@@ -46,13 +46,13 @@
   "license": "ISC",
   "description": "",
   "dependencies": {
+    "@aws-sdk/client-cloudformation": "^3.637.0",
     "@types/inquirer": "^9.0.9",
     "@types/jest": "^30.0.0",
     "@types/js-yaml": "^4.0.9",
     "@types/json-schema": "^7.0.15",
     "@types/mustache": "^4.2.6",
     "@types/node": "^24.3.1",
-    "@aws-sdk/client-cloudformation": "^3.637.0",
     "ajv": "^8.17.1",
     "ajv-formats": "^3.0.1",
     "aws-cdk-lib": "^2.214.0",
@@ -70,10 +70,14 @@
     "typescript": "^5.9.2"
   },
   "devDependencies": {
+    "@nx/eslint": "^21.5.2",
+    "@nx/jest": "^21.5.2",
+    "@nx/js": "^21.5.2",
+    "@nx/node": "^21.5.2",
+    "eslint": "^8.0.0",
     "fast-glob": "^3.3.3",
-    "yaml": "^2.8.1",
-    "nx": "^16.0.0",
-    "eslint": "^8.0.0"
+    "nx": "^21.5.2",
+    "yaml": "^2.8.1"
   },
   "engines": {
     "node": ">=20"

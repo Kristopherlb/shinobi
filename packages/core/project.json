@@ -11,7 +11,8 @@
       "executor": "@nx/js:tsc",
       "options": {
         "outputPath": "dist/packages/core",
-        "tsConfig": "packages/core/tsconfig.lib.json"
+        "tsConfig": "packages/core/tsconfig.lib.json",
+        "main": "packages/core/src/index.ts"
       }
     },
     "test": {

@@ -1,0 +1,7 @@
+> nx run @platform/contracts:build
+
+[43m[30m WARN [39m[49m Cannot switch to pnpm@9: "9" is not a valid version
+
+> @platform/contracts@0.0.1 build /Users/kristopherbowles/project42/shinobi/packages/contracts
+> tsc -p tsconfig.json
+
