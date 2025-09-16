@@ -1,0 +1,49 @@
+# Bindings & Triggers Matrix
+
+## Binding Types
+- **Data Bindings**: `s3:read|write`, `rds:read|write`, `dynamodb:read|write`
+- **Service Bindings**: `api:invoke`, `lambda:invoke`, `sqs:send|receive`
+- **Event Bindings**: `sns:publish`, `eventbridge:put-events`, `kinesis:put-records`
+
+## Trigger Types
+- **HTTP Triggers**: API Gateway → Lambda, ALB → ECS
+- **Event Triggers**: S3 → Lambda, SNS → Lambda, EventBridge → Lambda
+- **Schedule Triggers**: EventBridge Rules → Lambda, ECS Scheduled Tasks
+
+## MCP Validation
+- Query `/platform/bindings` to confirm capability support
+- Validate binding contracts at plan time
+- Generate IAM policies from binding requirements
+- Document capability matrix in component schemas
+
+## Common Binding Patterns
+```yaml
+binds:
+  - from: "api-lambda"
+    to: "user-data-s3"
+    capability: "s3:read|write"
+  - from: "api-lambda"
+    to: "user-db"
+    capability: "rds:read|write"
+  - from: "user-s3"
+    to: "processing-lambda"
+    capability: "s3:trigger"
+```
+
+## IAM Policy Generation
+- **Principle of least privilege**: Only required permissions
+- **Resource scoping**: Specific ARNs, no wildcards
+- **Condition-based**: Environment and service context
+- **Audit trail**: All permissions logged and monitored
+
+## Event-Driven Architecture
+- **Async processing**: SQS, SNS, EventBridge for decoupling
+- **Error handling**: DLQs for failed message processing
+- **Monitoring**: CloudWatch metrics for message flow
+- **Retry logic**: Exponential backoff with jitter
+
+## Validation Rules
+- Binding targets must exist in component list
+- Capability contracts must be supported by target component
+- IAM policies must be scoped to specific resources
+- Event triggers must have proper error handling

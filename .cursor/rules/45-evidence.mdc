@@ -1,0 +1,5 @@
+---
+description: "Evidence Bundle — OSCAL + tests + logs + dashboards + tags"
+---
+- Assemble a single auditor-ready bundle (Markdown index + JSON artifacts).
+- Source of truth only (service.yml, MCP, CI outputs). No binaries.

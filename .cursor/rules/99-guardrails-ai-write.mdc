@@ -1,0 +1,8 @@
+---
+description: "AI Write Guard — respect ai-policy & flags"
+alwaysApply: true
+---
+- Before proposing code changes:
+  1) Read platform-kb/ai-policy.yaml and feature-flags/flags.yaml.
+  2) If `ai.write.enabled=false` OR target path is not explicitly allowed OR PR lacks `${requiredLabel}`, **do not modify code**. Provide review notes only.
+- Always allow read/explanation. For write attempts, output: "Write-locked by policy. Add label 'ai-change-approved' and enable package flag to proceed."

@@ -1,0 +1,98 @@
+---
+description: Global persona prompt orchestrator
+globs: []
+alwaysApply: true
+---
+
+# Global Persona Prompt Orchestrator
+
+This orchestrator introduces a **persona-aware prompting framework** that dynamically injects specialized prompt packs and rules based on the context (e.g. QA, Security, DevOps). It infers relevant _personas_ from file paths or content, supports multiple integration modes, and merges persona instructions to guide the AI’s behavior throughout the SDLC. If no specific persona is detected, it safely falls back to a default developer persona. The goal is to provide consistent, auditable AI guidance tailored to each role (QA, Product, Security, etc.), improving development ergonomics and adherence to standards.
+
+## 1. Persona Context Inference
+
+The system **automatically infers personas** by examining file names, paths, and content patterns in the active context:
+
+- **File Path & Naming Heuristics:** Specific directories or filenames trigger personas. For example:
+  - Files under `**/__tests__/**` or named `*.spec.ts` → **QA persona** (testing focus).
+  - Infrastructure files like `Dockerfile` or `terraform/*.tf` → **DevOps persona** (deployment focus).
+  - Security policy files such as `policies/*.rego` → **Security persona** (security focus).
+  - Service catalog config like `catalog-info.yaml` → **Platform/PlatformEng persona** (platform standards).
+  - Documentation like `docs/**.md` → **Product/Docs persona** (user-focused tone).
+- **Content Cues:** The orchestrator can scan file content for keywords or annotations that imply a persona. For instance, presence of performance test code (e.g. classes named `LoadTest`) might activate the **Non-functional QA** subdomain persona, while comments about “security audit” might cue the **Security** persona.
+- **In-File Override Annotations:** Developers can override inference by adding a special comment directive in the file, e.g. `@use persona: QA`. If such an annotation is present (in a comment at the top of the file or a designated place), the orchestrator will **force-select the specified persona** regardless of other signals. This manual override ensures edge cases or mixed contexts can be handled explicitly by the author.
+
+The inference step may select **multiple personas** if the context warrants it. For example, a test file under a `security/` folder could trigger both QA and Security personas simultaneously. In such cases, the orchestrator enables all relevant personas (see _Merge Strategy_ below). If no persona cues are found, the orchestrator defaults to the Dev (developer) persona (see _Fallback Behavior_).
+
+## 2. Integration for Cursor & External Tools
+
+The orchestration system is designed to work both within Cursor (using project rules) and in other environments (via MCP for IDE/CLI):
+
+- **Cursor .cursor/rules Loading:** In a Cursor editor context, each persona has a corresponding **prompt pack** defined as a project rule (e.g. `qa.mdc`, `security.mdc`, etc.) under the `.cursor/rules` directory. The **Persona Orchestrator** itself is an always-active rule (`persona-orchestrator.mdc`) that contains the logic or references to include persona packs. The orchestrator rule can leverage Cursor’s glob matching to auto-attach persona rules: for example, the QA rule file could specify a glob like `**/__tests__/**` so it’s auto-included when test files are in context:contentReference[oaicite:0]{index=0}:contentReference[oaicite:1]{index=1}. Similarly, a Security persona rule could attach on `policies/*.rego` references, etc. This way, as the developer works on different parts of the codebase, the relevant persona rules are pulled in automatically. (For instance, teams have created custom persona rule files such as `pm.mdc` for product management guidance and set them to **Always** apply or auto-attach by scope:contentReference[oaicite:2]{index=2}.)
+- **MCP Agent for IDE/CLI:** For integrations outside of Cursor (other IDEs or command-line AI assistants), the orchestrator is exposed via the **Model Context Protocol (MCP)**. We implement a lightweight MCP server (or extension) that replicates the persona selection logic. On each AI request, this MCP agent examines the context (e.g. the opened file path or command context) and determines applicable personas exactly as Cursor would. It then injects the corresponding persona prompt packs into the request. This could happen by the MCP server reading a shared configuration (like the persona registry JSON) to know which prompts to include. For example, a VS Code extension or a CLI tool can query the MCP orchestrator to get “active persona prompts” for the current file. The MCP integration ensures that even outside the Cursor app, the same persona-aware rules apply for consistency. (Cursor’s MCP design allows connecting such external data to the AI’s context:contentReference[oaicite:3]{index=3}:contentReference[oaicite:4]{index=4}, so we leverage that to feed persona prompts as an external tool.)
+
+By supporting both modes, the persona orchestration is **unified across development environments**. Cursor users benefit from project rules injection, while other environments use the MCP-based service – but both draw from the same underlying persona prompt packs and inference logic. This maximizes portability of the AI guidance and keeps persona behavior consistent no matter where code is written or reviewed.
+
+## 3. Multi-Persona Activation & Merge Strategy
+
+The orchestrator allows **multiple personas to be active simultaneously** when the context overlaps domains. In such cases, it must merge the prompt packs in a clear, non-conflicting way:
+
+- **Concurrent Activation:** If the inference logic flags more than one persona, the orchestrator will include **all relevant persona rule sets**. For example, editing a test file for security features could trigger both **QA** and **Security** personas – bringing in testing guidance and security best-practice rules together.
+- **Merge Order:** To maintain clarity, persona prompts are merged in a deterministic order (e.g. alphabetical by persona name or a predefined priority). A stable ordering (perhaps DevOps, Product, QA, Security, then Dev as default last) ensures the combined system prompt is reproducible. One strategy is to **sectionalize** the merged content, for instance:
+  - Begin with cross-persona general instructions (if any),
+  - Then include **[QA Guidelines]** followed by **[Security Guidelines]**, etc., each under a heading or delineation in the prompt. This labeling (even if commented out to the AI) can help the model understand the context of each segment.
+- **Conflict Resolution:** The prompt packs are designed to be additive, focusing on their domain, to minimize contradictory advice. If two personas ever provide conflicting instructions, the orchestrator should have a rule for resolution – e.g. the more restrictive rule takes precedence (security guidance would override a general coding style if there’s conflict). Generally, personas address different concerns (quality, security, ops), so direct conflicts are rare. The orchestrator can also be configured to **omit or modify overlapping instructions** if, say, both QA and Security persona packs have similar advice (to avoid repetition).
+- **Unified Output:** After merging, the orchestrator produces one combined persona-aware system prompt that the AI will see. This merged prompt explicitly covers each active persona’s directives. The AI thus “knows” to act as, for example, a QA **and** Security reviewer, combining both perspectives. The unified prompt might read (to the AI) as: _“You are an AI assistant with the following roles active: QA tester and Security analyst. Follow all guidelines for software testing and security below…”_ and then list the rules from each persona pack.
+
+This clear merge strategy ensures that **multiple perspectives are injected without confusion**. The AI gets a structured prompt containing all relevant role instructions, leading to answers that satisfy all active persona requirements (for instance, generating code that is well-tested (QA) and also compliant with security standards (Security)). The merge logic is carefully managed by the orchestrator to maintain prompt length limits and avoid diluting important instructions.
+
+## 4. Fallback and Default Persona Behavior
+
+To handle cases where no specific persona cues are present, the orchestrator uses a **fallback persona**:
+
+- **Default to Dev Persona:** If the context does not match any persona triggers and no override is set, the system assumes a general **Developer (Dev) persona**. This default persona represents the standard coding assistant behavior (focused on development, without specialty biases). It ensures the AI still has a consistent base of instructions for style and best practices even when no specialized role is inferred.
+- **Dev Persona Content:** The Dev persona prompt pack might include general coding guidelines, company code style rules, and basic architecture principles that apply to all code. It serves as a baseline rule set (for example, “follow our coding standards, write clean and well-documented code, etc.”). This way, the AI never operates without **some** persona context – at minimum it’s always acting as a helpful developer assistant.
+- **Implicit Fallback Mechanism:** The orchestrator can implement this by marking the Dev persona rule as `alwaysApply: true` but with a very low priority, or by programming the MCP agent to inject Dev persona unless it is superseded by others. In `.cursor/rules`, the Dev persona could be an always-on rule (so it’s included for all prompts) – but when other persona rules join, their more specific instructions augment or override the general Dev guidance. Alternatively, the orchestrator rule could conditionally include the Dev pack only if no other personas were added.
+- **Consistent Experience:** The fallback ensures a **consistent user experience**. A developer working in an area with no special markers will still get the Dev persona’s assistance. This prevents the AI from behaving unpredictably or lacking instruction in those cases. Essentially, the Dev persona is the safety net that guarantees the AI always adheres to core development practices when no other persona is in effect.
+
+By providing a sane default (Dev persona), the system avoids situations where the AI is unguided. It also makes the system extensible – new persona packs can be added over time, and anything not covered by them will naturally use the Dev baseline until specialized rules are introduced.
+
+## 5. Orchestrator Implementation (.mdc Logic)
+
+The orchestrator’s logic is codified in a **Markdown Content (MDC)** file (and supporting assets) that drive the persona selection. This file, e.g. `.cursor/rules/persona-orchestrator.mdc`, defines how to map context to personas and how to load/merge prompts. Key aspects of the implementation:
+
+- **Always-Active Rule:** The orchestrator `.mdc` itself is set as an `Always` rule (global in scope) so that it can inspect every AI query context. In the YAML front-matter, `alwaysApply: true` ensures the orchestrator is always considered:contentReference[oaicite:5]{index=5}. (If using Cursor’s UI, we would mark this rule as always on. In other environments, the orchestration logic is always invoked by the MCP agent.)
+- **Context Inspection Logic:** Inside the orchestrator rule content, we describe the logic (in pseudocode or guidelines for the agent) to perform persona inference. For example, the rule content might include a list of file patterns and corresponding persona names. Since the `.mdc` format itself doesn’t support conditional scripting, the orchestrator can be implemented by a combination of rule metadata and external logic:
+  - We leverage **glob patterns** in individual persona rules (as described in section 2) for auto-inclusion. The orchestrator file can document these mappings for clarity. For instance: “`__tests__/ -> @QA.mdc`, `policies/*.rego -> @Security.mdc`” as references. The presence of a relevant file in the prompt context will cause Cursor to attach those rules:contentReference[oaicite:6]{index=6}.
+  - The orchestrator `.mdc` could also act as a central documentation of the mappings and include references to persona packs. It might not directly “execute” logic, but serves as a hub: by referencing all persona rule files with the `@filename` syntax, it ensures they are considered in context when applicable:contentReference[oaicite:7]{index=7}:contentReference[oaicite:8]{index=8}. 
+  - In an advanced setup, an **MCP server script** (external) actually does the condition checks and then uses the prompt registry (see next section) to fetch and assemble the persona prompts. The orchestrator `.mdc` would then be more of a declarative config or a stub that calls out to that MCP tool.
+- **Output Construction:** The orchestrator rule, when triggered, will assemble the final prompt. Practically, this could mean the orchestrator `.mdc` file contains placeholders or comments that the MCP agent replaces with actual content from persona files. In Cursor, if multiple rules match, the platform itself concatenates their contents in the system context. Hence, our orchestrator might simply rely on that mechanism: each persona has its own rule file (with domain-specific instructions), and the orchestrator ensures they all attach as needed. The “merge” as described in section 3 can be achieved by ordering the rules or by the orchestrator inserting headings.
+- **Auditability:** All persona rules and the orchestrator logic are in markdown files tracked in the repo, making them auditable and version-controlled. The `.cursor/rules/persona-orchestrator.mdc` file itself can serve as **documentation** of how personas are chosen and combined. It should clearly list the mapping rules, the override syntax, and any special handling. Team members can review this file to understand or modify the persona injection behavior, which fosters transparency.
+- **Example (Pseudo-Content):** For illustration, the orchestrator file might contain content like:
+  ```markdown
+  - If file path matches `**/__tests__/**` or contains `@use persona: QA`, then **attach QA prompt pack**.
+  - If file path matches `policies/*.rego` or contains `@use persona: Security`, then **attach Security prompt pack**.
+  - (… and so on for other personas …)
+  - Else, **attach Dev prompt pack** by default.
+---
+description: "Persona Orchestrator — Advisory Reviewers & Merge Rules"
+alwaysApply: true
+---
+
+# Persona Orchestration (Advisory Reviewers)
+- Infer personas by path:
+  - UI/UX/DX (front-end): `apps/**/app/**/*.{tsx,jsx}`, `apps/**/components/**/*.{tsx,jsx}`, `packages/ui/**/*.{tsx,jsx}`, `frontend/**/*.{tsx,jsx}` → attach:
+    - @ui-shadcn.mdc
+    - @ui-a11y-shadcn.mdc
+    - @dx-ui-kit.mdc
+- Manual override: `@use persona: UI|UX|DX` forces attachment.
+- Merge strategy: advisory reviewers append **one** JSON block each labeled by `persona`.
+- **No loops:** Reviewers output once per response. Dev/QA personas decide whether to apply; reviewers do not re-invoke themselves until next edit or prompt.
+- Priority: Security/Compliance > QA > UI/UX/DX > Dev baseline. (Security may harden advice; UI/UX/DX remain non-blocking).
+
+# Review Section Assembly
+- Append a `### UX/DX/UI Review` section containing any JSON blocks emitted by reviewers.
+- If no findings: do not append the section.
+
+# Dev/QA Consumption
+- Dev persona: treat `actionItems` as optional refactors.
+- QA persona: where possible, convert A11y and state items into tests (Axe, visual snapshots).

@@ -1,0 +1,1290 @@
+{
+  "prompts": [
+    {
+      "description": "Scaffold component (triad-ready) with Config.schema.json, Solutions Constructs, manifest patch (with binds/triggers), Backstage, OTel/logging, dashboards, OSCAL, Rego, baseline tests, and Dagger TS pipeline.",
+      "inputExample": "Component={\"name\":\"cache-redis\",\"capability\":\"cache:redis\",\"service\":\"orders-api\",\"owner\":\"team-fulfillment\",\"frameworks\":[\"fedramp-low\",\"fedramp-moderate\",\"fedramp-high\"],\"language\":\"ts\"}",
+      "outputFormat": {
+        "type": "object",
+        "properties": {
+          "files": {
+            "type": "array",
+            "items": {
+              "type": "object",
+              "properties": {
+                "path": {
+                  "type": "string"
+                },
+                "purpose": {
+                  "type": "string"
+                },
+                "contents": {
+                  "type": "string"
+                }
+              },
+              "required": [
+                "path",
+                "purpose",
+                "contents"
+              ]
+            }
+          },
+          "manifestPatch": {
+            "type": "object",
+            "properties": {
+              "service": {
+                "type": "string"
+              },
+              "owner": {
+                "type": "string"
+              },
+              "complianceFramework": {
+                "type": "string"
+              },
+              "components": {
+                "type": "array",
+                "items": {
+                  "type": "object"
+                }
+              },
+              "environments": {
+                "type": "object"
+              }
+            },
+            "required": [
+              "components"
+            ]
+          },
+          "connectionContract": {
+            "type": "object",
+            "properties": {
+              "sourceType": {
+                "type": "string"
+              },
+              "capability": {
+                "type": "string"
+              },
+              "access": {
+                "type": "string",
+                "enum": [
+                  "read",
+                  "write",
+                  "readwrite"
+                ]
+              },
+              "validatedByMCP": {
+                "type": "boolean"
+              }
+            },
+            "required": [
+              "sourceType",
+              "capability",
+              "access",
+              "validatedByMCP"
+            ]
+          },
+          "artifacts": {
+            "type": "object",
+            "properties": {
+              "configSchema": {
+                "type": "string"
+              },
+              "oscal": {
+                "type": "string"
+              },
+              "rego": {
+                "type": "array",
+                "items": {
+                  "type": "object",
+                  "properties": {
+                    "path": {
+                      "type": "string"
+                    },
+                    "contents": {
+                      "type": "string"
+                    }
+                  },
+                  "required": [
+                    "path",
+                    "contents"
+                  ]
+                }
+              },
+              "dashboards": {
+                "type": "array",
+                "items": {
+                  "type": "object",
+                  "properties": {
+                    "path": {
+                      "type": "string"
+                    },
+                    "contents": {
+                      "type": "string"
+                    }
+                  },
+                  "required": [
+                    "path",
+                    "contents"
+                  ]
+                }
+              }
+            },
+            "required": [
+              "configSchema",
+              "oscal"
+            ]
+          },
+          "backstage": {
+            "type": "object",
+            "properties": {
+              "path": {
+                "type": "string"
+              },
+              "contents": {
+                "type": "string"
+              }
+            },
+            "required": [
+              "path",
+              "contents"
+            ]
+          },
+          "qaChecklist": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            }
+          }
+        },
+        "required": [
+          "files",
+          "manifestPatch",
+          "connectionContract",
+          "artifacts",
+          "backstage",
+          "qaChecklist"
+        ]
+      },
+      "enforcedBehavior": [
+        "Scaffold under packages/components/<name> with src/, tests/, README.md, Config.schema.json.:contentReference[oaicite:38]{index=38}",
+        "Support frameworks: fedramp-low/moderate/high via builder defaults; low is baseline; deltas via triad packs; apply precedence chain.:contentReference[oaicite:39]{index=39}:contentReference[oaicite:40]{index=40}",
+        "Use Solutions Constructs when it simplifies secure-by-default infra; keep IAM/SG via binders only.",
+        "Emit binds/triggers and validate via MCP /platform/bindings before writing.:contentReference[oaicite:41]{index=41}",
+        "Apply mandatory + compliance + control tags; require data-classification on storage; mirror to Backstage tags.:contentReference[oaicite:42]{index=42}",
+        "Inject OTel envs + ADOT; use structured logger (trace/span, redaction); no console.log.:contentReference[oaicite:43]{index=43}:contentReference[oaicite:44]{index=44}",
+        "Generate dashboards/alarms from KB recipes (tighten thresholds by framework).:contentReference[oaicite:45]{index=45}",
+        "Produce OSCAL control mappings + Rego posture checks + unit tests.",
+        "Dagger TS pipeline functions: build, svcValidate(env), unit, snapshot, localUp(env), packageArtifacts, techdocs (pnpm/svc only).",
+        "QA uses `svc validate`, `svc local up`, `pnpm test` only; no one-off scripts.:contentReference[oaicite:46]{index=46}:contentReference[oaicite:47]{index=47}",
+        "Respect AI policy & feature flags: if ai write-locked or feature disabled → do not modify; emit review-only notes."
+      ],
+      "metadata": {
+        "version": "1.3.0",
+        "tags": [
+          "scaffold",
+          "triad",
+          "schema",
+          "bindings",
+          "otep",
+          "logging",
+          "dashboards",
+          "oscal",
+          "rego",
+          "backstage",
+          "dagger"
+        ]
+      }
+    },
+    {
+      "description": "KB selection & compilation (WA + service + framework + observability) → defaults, controls, OSCAL, Rego, dashboards.",
+      "inputExample": "service=orders-api component=s3-bucket frameworks=[\"fedramp-low\",\"fedramp-moderate\",\"fedramp-high\"] env=qa-us-east-1",
+      "outputFormat": {
+        "type": "object",
+        "properties": {
+          "packsSelected": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            }
+          },
+          "defaults": {
+            "type": "object"
+          },
+          "controls": {
+            "type": "object"
+          },
+          "oscal": {
+            "type": "string"
+          },
+          "rego": {
+            "type": "array",
+            "items": {
+              "type": "object",
+              "properties": {
+                "path": {
+                  "type": "string"
+                },
+                "contents": {
+                  "type": "string"
+                }
+              },
+              "required": [
+                "path",
+                "contents"
+              ]
+            }
+          },
+          "dashboards": {
+            "type": "array",
+            "items": {
+              "type": "object",
+              "properties": {
+                "path": {
+                  "type": "string"
+                },
+                "contents": {
+                  "type": "string"
+                }
+              },
+              "required": [
+                "path",
+                "contents"
+              ]
+            }
+          }
+        },
+        "required": [
+          "packsSelected",
+          "defaults",
+          "oscal"
+        ]
+      },
+      "enforcedBehavior": [
+        "Fetch MCP schemas/bindings first; abort if missing.:contentReference[oaicite:48]{index=48}",
+        "Merge defaults using precedence chain; ensure S3/Lambda/RDS align to platform best practices (enc, private, versioning, DLQ, tracing).:contentReference[oaicite:49]{index=49}:contentReference[oaicite:50]{index=50}",
+        "Emit OSCAL mappings + control tags; Rego for residual posture; dashboards from recipes.:contentReference[oaicite:51]{index=51}:contentReference[oaicite:52]{index=52}:contentReference[oaicite:53]{index=53}"
+      ],
+      "metadata": {
+        "version": "1.0",
+        "tags": [
+          "kb",
+          "wa",
+          "service-guides",
+          "framework",
+          "observability"
+        ]
+      }
+    },
+    {
+      "description": "Bindings & triggers (matrix-validated) with least-privilege IAM via binder strategies.",
+      "inputExample": "source=lambda-api target=cache-redis capability=cache:redis access=readwrite",
+      "outputFormat": {
+        "type": "object",
+        "properties": {
+          "binds": {
+            "type": "array",
+            "items": {
+              "type": "object"
+            }
+          },
+          "validatedByMCP": {
+            "type": "boolean"
+          }
+        },
+        "required": [
+          "binds",
+          "validatedByMCP"
+        ]
+      },
+      "enforcedBehavior": [
+        "Confirm support via MCP /platform/bindings; reject unknown combos.:contentReference[oaicite:54]{index=54}",
+        "No inline IAM; binders own IAM/SG.",
+        "Emit tests asserting minimal IAM via snapshot.:contentReference[oaicite:55]{index=55}"
+      ],
+      "metadata": {
+        "version": "1.0",
+        "tags": [
+          "bindings",
+          "triggers",
+          "iam"
+        ]
+      }
+    },
+    {
+      "description": "Observability & structured logging (OTel envs/agents; dashboards/alarms).",
+      "inputExample": "component=lambda-api framework=fedramp-moderate env=qa-us-east-1",
+      "outputFormat": {
+        "type": "object",
+        "properties": {
+          "env": {
+            "type": "object"
+          },
+          "dashboards": {
+            "type": "array",
+            "items": {
+              "type": "object",
+              "properties": {
+                "path": {
+                  "type": "string"
+                },
+                "contents": {
+                  "type": "string"
+                }
+              },
+              "required": [
+                "path",
+                "contents"
+              ]
+            }
+          }
+        },
+        "required": [
+          "env"
+        ]
+      },
+      "enforcedBehavior": [
+        "Set OTEL_* from env config; attach ADOT; logger must be @platform/logger (trace/span, redaction).:contentReference[oaicite:56]{index=56}:contentReference[oaicite:57]{index=57}",
+        "Emit alarms for errors, latency, DLQs, CPU, storage—tightened by framework.:contentReference[oaicite:58]{index=58}"
+      ],
+      "metadata": {
+        "version": "1.0",
+        "tags": [
+          "otel",
+          "logging",
+          "dashboards"
+        ]
+      }
+    },
+    {
+      "description": "Tagging & control tagging (incl. data-classification, Backstage propagation).",
+      "inputExample": "service=orders-api owner=team-fulfillment framework=fedramp-high component=dynamodb-table",
+      "outputFormat": {
+        "type": "object",
+        "properties": {
+          "tags": {
+            "type": "object"
+          }
+        },
+        "required": [
+          "tags"
+        ]
+      },
+      "enforcedBehavior": [
+        "Apply platform:* + compliance:* + control tags; block missing data-classification on storage.:contentReference[oaicite:59]{index=59}",
+        "Mirror key tags into Backstage metadata.tags."
+      ],
+      "metadata": {
+        "version": "1.0",
+        "tags": [
+          "tagging",
+          "compliance",
+          "backstage"
+        ]
+      }
+    },
+    {
+      "description": "OSCAL & Rego generation (controls mapped + posture checks).",
+      "inputExample": "component=s3-bucket frameworks=[\"fedramp-low\",\"fedramp-moderate\",\"fedramp-high\"]",
+      "outputFormat": {
+        "type": "object",
+        "properties": {
+          "oscal": {
+            "type": "string"
+          },
+          "rego": {
+            "type": "array",
+            "items": {
+              "type": "object",
+              "properties": {
+                "path": {
+                  "type": "string"
+                },
+                "contents": {
+                  "type": "string"
+                }
+              },
+              "required": [
+                "path",
+                "contents"
+              ]
+            }
+          }
+        },
+        "required": [
+          "oscal"
+        ]
+      },
+      "enforcedBehavior": [
+        "Map implemented requirements per framework; link to control tags & config.",
+        "Add unit tests for every Rego rule; verify via `svc validate`/tests."
+      ],
+      "metadata": {
+        "version": "1.0",
+        "tags": [
+          "oscal",
+          "rego",
+          "controls"
+        ]
+      }
+    },
+    {
+      "description": "Backstage catalog authoring (Service/Component with MCP deep links).",
+      "inputExample": "service=orders-api framework=fedramp-moderate",
+      "outputFormat": {
+        "type": "object",
+        "properties": {
+          "path": {
+            "type": "string"
+          },
+          "contents": {
+            "type": "string"
+          }
+        },
+        "required": [
+          "path",
+          "contents"
+        ]
+      },
+      "enforcedBehavior": [
+        "Include annotations to MCP manifest/status/logs; techdocs ref dir:.:contentReference[oaicite:60]{index=60}",
+        "Propagate platform/compliance/control tags.:contentReference[oaicite:61]{index=61}"
+      ],
+      "metadata": {
+        "version": "1.0",
+        "tags": [
+          "backstage",
+          "catalog"
+        ]
+      }
+    },
+    {
+      "description": "Tests & QA workflow (unit/snapshot/integration + CLI-only QA).",
+      "inputExample": "component=cache-redis frameworks=[\"fedramp-low\",\"fedramp-moderate\",\"fedramp-high\"]",
+      "outputFormat": {
+        "type": "object",
+        "properties": {
+          "tests": {
+            "type": "array",
+            "items": {
+              "type": "object"
+            }
+          },
+          "qaChecklist": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            }
+          }
+        },
+        "required": [
+          "tests",
+          "qaChecklist"
+        ]
+      },
+      "enforcedBehavior": [
+        "Assert encryption/tagging/alarms/IAM via snapshots; run `pnpm test`.",
+        "Include `svc validate` and (if applicable) `svc local up` in QA steps.:contentReference[oaicite:62]{index=62}"
+      ],
+      "metadata": {
+        "version": "1.0",
+        "tags": [
+          "tests",
+          "qa"
+        ]
+      }
+    },
+    {
+      "description": "Dagger pipeline (TypeScript) mirroring official flows (safe for CI/local).",
+      "inputExample": "service=orders-api workspaceRoot=.",
+      "outputFormat": {
+        "type": "object",
+        "properties": {
+          "files": {
+            "type": "array",
+            "items": {
+              "type": "object",
+              "properties": {
+                "path": {
+                  "type": "string"
+                },
+                "contents": {
+                  "type": "string"
+                }
+              },
+              "required": [
+                "path",
+                "contents"
+              ]
+            }
+          },
+          "tasks": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            }
+          }
+        },
+        "required": [
+          "files",
+          "tasks"
+        ]
+      },
+      "enforcedBehavior": [
+        "Implement TS Dagger modules: build(), svcValidate(env), unit(), snapshot(), localUp(env), packageArtifacts(), techdocs().",
+        "Only call `pnpm` & `svc`; never direct AWS calls.",
+        "Emit CI-friendly logs/outputs."
+      ],
+      "metadata": {
+        "version": "1.0",
+        "tags": [
+          "dagger",
+          "ci",
+          "ts"
+        ]
+      }
+    },
+    [
+      {
+        "description": "Produce an auditor-ready Evidence Bundle (OSCAL, Rego results, unit/snapshot outputs, OTel/logging config, dashboards JSON, tag dumps) for the change.",
+        "inputExample": "service=orders-api; components=[\"s3-bucket\",\"cache-redis\"]; frameworks=[\"fedramp-low\",\"fedramp-moderate\",\"fedramp-high\"]",
+        "outputFormat": {
+          "type": "object",
+          "properties": {
+            "files": {
+              "type": "array",
+              "items": {
+                "type": "object",
+                "properties": {
+                  "path": {
+                    "type": "string"
+                  },
+                  "contents": {
+                    "type": "string"
+                  }
+                },
+                "required": [
+                  "path",
+                  "contents"
+                ]
+              }
+            },
+            "index": {
+              "type": "string"
+            }
+          },
+          "required": [
+            "files",
+            "index"
+          ]
+        },
+        "enforcedBehavior": [
+          "Gather from source of truth: service.yml, MCP manifest/status, test reports, OSCAL, Rego, dashboards, tagging.",
+          "No binaries; JSON/Markdown only; include a README with how to verify locally.",
+          "Respect AI write locks; output read-only diffs if locked."
+        ],
+        "metadata": {
+          "version": "1.0",
+          "tags": [
+            "evidence",
+            "oscal",
+            "audit",
+            "rego",
+            "dashboards",
+            "tags"
+          ]
+        }
+      },
+      {
+        "description": "Generate Backstage Scorecards (DX & Compliance): tags present, OTel wired, binds validated, triad tests passing, coverage≥X%.",
+        "inputExample": "service=orders-api; coverageThreshold=80",
+        "outputFormat": {
+          "type": "object",
+          "properties": {
+            "path": {
+              "type": "string"
+            },
+            "contents": {
+              "type": "string"
+            }
+          },
+          "required": [
+            "path",
+            "contents"
+          ]
+        },
+        "enforcedBehavior": [
+          "Emit scorecard YAML compatible with Backstage; include pass/fail rules and badges.",
+          "Data must come from CI artifacts (tests, lints) and MCP validate."
+        ],
+        "metadata": {
+          "version": "1.0",
+          "tags": [
+            "backstage",
+            "scorecards",
+            "dx",
+            "compliance"
+          ]
+        }
+      },
+      {
+        "description": "Secrets & KMS Hardening: scaffold Secrets Manager/SSM usage, rotation, CMK policies; enforce least-privilege.",
+        "inputExample": "component=lambda-api; needsSecret=db-password",
+        "outputFormat": {
+          "type": "object",
+          "properties": {
+            "manifestPatch": {
+              "type": "object"
+            },
+            "tests": {
+              "type": "array",
+              "items": {
+                "type": "object"
+              }
+            }
+          },
+          "required": [
+            "manifestPatch"
+          ]
+        },
+        "enforcedBehavior": [
+          "No secrets in env; reference secret ARNs; CMK required for triad; rotation policy recommended.",
+          "Emit tests verifying encryption and no plaintext exposure."
+        ],
+        "metadata": {
+          "version": "1.0",
+          "tags": [
+            "secrets",
+            "kms",
+            "security"
+          ]
+        }
+      },
+      {
+        "description": "Network Egress Guardrails: default-deny, VPC endpoints, allow-lists; prove no public paths in tests.",
+        "inputExample": "service=orders-api; needsEgress=[\"sts.amazonaws.com\"]",
+        "outputFormat": {
+          "type": "object",
+          "properties": {
+            "manifestPatch": {
+              "type": "object"
+            },
+            "tests": {
+              "type": "array",
+              "items": {
+                "type": "object"
+              }
+            }
+          },
+          "required": [
+            "manifestPatch",
+            "tests"
+          ]
+        },
+        "enforcedBehavior": [
+          "Block 0.0.0.0/0; use interface/gateway endpoints; explicit allow-list only.",
+          "Snapshot SGs/NACLs; fail if any public egress without justification."
+        ],
+        "metadata": {
+          "version": "1.0",
+          "tags": [
+            "egress",
+            "network",
+            "security"
+          ]
+        }
+      },
+      {
+        "description": "SBOM & License Compliance: generate SBOM, run license policy, attach results to PR/evidence.",
+        "inputExample": "workspace=.",
+        "outputFormat": {
+          "type": "object",
+          "properties": {
+            "files": {
+              "type": "array",
+              "items": {
+                "type": "object",
+                "properties": {
+                  "path": {
+                    "type": "string"
+                  },
+                  "contents": {
+                    "type": "string"
+                  }
+                },
+                "required": [
+                  "path",
+                  "contents"
+                ]
+              }
+            }
+          },
+          "required": [
+            "files"
+          ]
+        },
+        "enforcedBehavior": [
+          "Use OSS tooling (e.g., syft/cyclonedx) via Dagger; no external network beyond registry.",
+          "Fail policy on disallowed licenses; write findings to evidence bundle."
+        ],
+        "metadata": {
+          "version": "1.0",
+          "tags": [
+            "sbom",
+            "license",
+            "supply-chain"
+          ]
+        }
+      },
+      {
+        "description": "Build Provenance & Release Attestation (SLSA-like) via Dagger: provenance.json + signature, artifact checksums.",
+        "inputExample": "service=orders-api; artifactTarget=dist/",
+        "outputFormat": {
+          "type": "object",
+          "properties": {
+            "files": {
+              "type": "array",
+              "items": {
+                "type": "object",
+                "properties": {
+                  "path": {
+                    "type": "string"
+                  },
+                  "contents": {
+                    "type": "string"
+                  }
+                },
+                "required": [
+                  "path",
+                  "contents"
+                ]
+              }
+            }
+          },
+          "required": [
+            "files"
+          ]
+        },
+        "enforcedBehavior": [
+          "Record build inputs, toolchain, checksums; sign provenance; store alongside artifacts.",
+          "No direct cloud calls; hermetic build container."
+        ],
+        "metadata": {
+          "version": "1.0",
+          "tags": [
+            "provenance",
+            "supply-chain",
+            "slsa",
+            "dagger"
+          ]
+        }
+      },
+      {
+        "description": "Feature Flags Scaffolder (OpenFeature): per-package enable/kill switch + rollout; tests.",
+        "inputExample": "package=packages/components/cache-redis; flagBase=components.cache-redis",
+        "outputFormat": {
+          "type": "object",
+          "properties": {
+            "files": {
+              "type": "array",
+              "items": {
+                "type": "object",
+                "properties": {
+                  "path": {
+                    "type": "string"
+                  },
+                  "contents": {
+                    "type": "string"
+                  }
+                },
+                "required": [
+                  "path",
+                  "contents"
+                ]
+              }
+            }
+          },
+          "required": [
+            "files"
+          ]
+        },
+        "enforcedBehavior": [
+          "Emit flags.yaml + usage snippet in builder; gate synth by <flag>.enabled.",
+          "Add unit test to assert disabled= no resources synthesized."
+        ],
+        "metadata": {
+          "version": "1.0",
+          "tags": [
+            "feature-flags",
+            "openfeature"
+          ]
+        }
+      },
+      {
+        "description": "AI Write Unlock Flow: generate PR checklist to enable ai-policy and timebox writing.",
+        "inputExample": "package=packages/components/cache-redis; duration=7d",
+        "outputFormat": {
+          "type": "object",
+          "properties": {
+            "prChecklist": {
+              "type": "string"
+            }
+          },
+          "required": [
+            "prChecklist"
+          ]
+        },
+        "enforcedBehavior": [
+          "Require label (e.g., ai-change-approved), flip ai.write.enabled for package only, set expiry, include rollback.",
+          "Advise tests/validate before merging."
+        ],
+        "metadata": {
+          "version": "1.0",
+          "tags": [
+            "ai-policy",
+            "governance"
+          ]
+        }
+      },
+      {
+        "description": "Affected Tests Only: wire Nx/graph to run impacted packages/tests for faster QA.",
+        "inputExample": "changeScope=packages/components/cache-redis",
+        "outputFormat": {
+          "type": "object",
+          "properties": {
+            "commands": {
+              "type": "array",
+              "items": {
+                "type": "string"
+              }
+            }
+          },
+          "required": [
+            "commands"
+          ]
+        },
+        "enforcedBehavior": [
+          "Output pnpm/nx commands to run affected build/test/lint only.",
+          "Never skip compliance/audit steps."
+        ],
+        "metadata": {
+          "version": "1.0",
+          "tags": [
+            "tests",
+            "dx",
+            "nx"
+          ]
+        }
+      },
+      {
+        "description": "Dagger Cache & Hermeticity: add persistent pnpm store cache, toolchain pinning, reproducibility checks.",
+        "inputExample": "workspace=.",
+        "outputFormat": {
+          "type": "object",
+          "properties": {
+            "patch": {
+              "type": "string"
+            }
+          },
+          "required": [
+            "patch"
+          ]
+        },
+        "enforcedBehavior": [
+          "Mount pnpm store, cache node_modules by lockfile hash; pin images and tool versions.",
+          "Emit a reproducibility report (hashes match)."
+        ],
+        "metadata": {
+          "version": "1.0",
+          "tags": [
+            "dagger",
+            "cache",
+            "hermetic"
+          ]
+        }
+      },
+      {
+        "description": "PR Hygiene: CODEOWNERS, PR template, review checklist (security, observability, tags, triad, tests, docs).",
+        "inputExample": "owners=[\"@platform-team\",\"@security-team\"]",
+        "outputFormat": {
+          "type": "object",
+          "properties": {
+            "files": {
+              "type": "array",
+              "items": {
+                "type": "object",
+                "properties": {
+                  "path": {
+                    "type": "string"
+                  },
+                  "contents": {
+                    "type": "string"
+                  }
+                },
+                "required": [
+                  "path",
+                  "contents"
+                ]
+              }
+            }
+          },
+          "required": [
+            "files"
+          ]
+        },
+        "enforcedBehavior": [
+          "Conventional commits; enforce checklist; block merge on missing items.",
+          "Include links to evidence bundle and Backstage scorecards."
+        ],
+        "metadata": {
+          "version": "1.0",
+          "tags": [
+            "pr",
+            "governance",
+            "dx"
+          ]
+        }
+      },
+      {
+        "description": "SLOs & Error Budgets: define SLOs per service, generate SLO dashboards & burn alerts, document policies.",
+        "inputExample": "service=orders-api; slos={\"availability\": \"99.9%\"}",
+        "outputFormat": {
+          "type": "object",
+          "properties": {
+            "dashboards": {
+              "type": "array",
+              "items": {
+                "type": "object"
+              }
+            },
+            "policy": {
+              "type": "string"
+            }
+          },
+          "required": [
+            "policy"
+          ]
+        },
+        "enforcedBehavior": [
+          "Emit clear SLI/SLO definitions, alert rules and burn policy; tie to triad thresholds when applicable."
+        ],
+        "metadata": {
+          "version": "1.0",
+          "tags": [
+            "sre",
+            "slo",
+            "alerts"
+          ]
+        }
+      },
+      {
+        "description": "Resilience/DR Drills: fault injection playbook, backup/restore checks, RTO/RPO assertions.",
+        "inputExample": "component=rds-postgres; rto=1h; rpo=5m",
+        "outputFormat": {
+          "type": "object",
+          "properties": {
+            "playbook": {
+              "type": "string"
+            },
+            "tests": {
+              "type": "array",
+              "items": {
+                "type": "object"
+              }
+            }
+          },
+          "required": [
+            "playbook"
+          ]
+        },
+        "enforcedBehavior": [
+          "Document drill steps; generate tests that simulate failover/restore paths.",
+          "Attach to evidence bundle."
+        ],
+        "metadata": {
+          "version": "1.0",
+          "tags": [
+            "resilience",
+            "dr",
+            "chaos"
+          ]
+        }
+      },
+      {
+        "description": "Cost Guardrails: budgets, anomaly alerts, tag-based allocation; README cost notes.",
+        "inputExample": "service=orders-api; monthlyBudgetUSD=500",
+        "outputFormat": {
+          "type": "object",
+          "properties": {
+            "manifestPatch": {
+              "type": "object"
+            },
+            "dashboards": {
+              "type": "array",
+              "items": {
+                "type": "object"
+              }
+            }
+          },
+          "required": [
+            "manifestPatch"
+          ]
+        },
+        "enforcedBehavior": [
+          "Emit budget + anomaly detection; include cost allocation tags; add doc snippet."
+        ],
+        "metadata": {
+          "version": "1.0",
+          "tags": [
+            "cost",
+            "budgets",
+            "tags"
+          ]
+        }
+      },
+      {
+        "description": "Load/Perf Tests: scaffold k6/Artillery tests with thresholds per framework; add CI task; attach results.",
+        "inputExample": "endpoint=https://api.example.com/orders; vus=25; duration=5m",
+        "outputFormat": {
+          "type": "object",
+          "properties": {
+            "files": {
+              "type": "array",
+              "items": {
+                "type": "object"
+              }
+            },
+            "commands": {
+              "type": "array",
+              "items": {
+                "type": "string"
+              }
+            }
+          },
+          "required": [
+            "files",
+            "commands"
+          ]
+        },
+        "enforcedBehavior": [
+          "Local-only execution; no prod load; thresholds tighten by triad; publish report to evidence."
+        ],
+        "metadata": {
+          "version": "1.0",
+          "tags": [
+            "performance",
+            "k6",
+            "artillery"
+          ]
+        }
+      },
+      {
+        "description": "API Contract Tests & Mocks: generate OpenAPI contract tests and mock server for QA.",
+        "inputExample": "openapi=./apis/orders.yaml",
+        "outputFormat": {
+          "type": "object",
+          "properties": {
+            "tests": {
+              "type": "array",
+              "items": {
+                "type": "object"
+              }
+            },
+            "mock": {
+              "type": "object"
+            }
+          },
+          "required": [
+            "tests"
+          ]
+        },
+        "enforcedBehavior": [
+          "Validate endpoints/schemas; spin mock for integration; no external writes."
+        ],
+        "metadata": {
+          "version": "1.0",
+          "tags": [
+            "api",
+            "openapi",
+            "mocks"
+          ]
+        }
+      },
+      {
+        "description": "Patch/Escape-Hatch Tests: enforce registration/justification; snapshot resources added via patches.ts.",
+        "inputExample": "service=orders-api; patchesFile=patches.ts",
+        "outputFormat": {
+          "type": "object",
+          "properties": {
+            "tests": {
+              "type": "array",
+              "items": {
+                "type": "object"
+              }
+            }
+          },
+          "required": [
+            "tests"
+          ]
+        },
+        "enforcedBehavior": [
+          "Fail if patch missing registration/justification; assert diff is limited to declared resources."
+        ],
+        "metadata": {
+          "version": "1.0",
+          "tags": [
+            "patches",
+            "escape-hatch",
+            "tests"
+          ]
+        }
+      },
+      {
+        "description": "Triad Matrix Tests: run golden config tests for low/mod/high across each component.",
+        "inputExample": "component=s3-bucket",
+        "outputFormat": {
+          "type": "object",
+          "properties": {
+            "commands": {
+              "type": "array",
+              "items": {
+                "type": "string"
+              }
+            }
+          },
+          "required": [
+            "commands"
+          ]
+        },
+        "enforcedBehavior": [
+          "Produce matrix commands (e.g., pnpm test --env=...); attach reports."
+        ],
+        "metadata": {
+          "version": "1.0",
+          "tags": [
+            "triad",
+            "matrix",
+            "tests"
+          ]
+        }
+      },
+      {
+        "description": "Docs Lint & Diagram Validation: link checker, Mermaid/PlantUML lint, ADR index update.",
+        "inputExample": "workspace=.",
+        "outputFormat": {
+          "type": "object",
+          "properties": {
+            "commands": {
+              "type": "array",
+              "items": {
+                "type": "string"
+              }
+            }
+          },
+          "required": [
+            "commands"
+          ]
+        },
+        "enforcedBehavior": [
+          "No binary images; diagrams-as-code only; fail on dead links or diagram parse errors."
+        ],
+        "metadata": {
+          "version": "1.0",
+          "tags": [
+            "docs",
+            "lint",
+            "diagrams",
+            "adr"
+          ]
+        }
+      },
+      {
+        "description": "Runbooks & On-call SOP: generate runbook per component with alarms→actions, dashboards, logs, common faults.",
+        "inputExample": "component=lambda-api",
+        "outputFormat": {
+          "type": "object",
+          "properties": {
+            "path": {
+              "type": "string"
+            },
+            "contents": {
+              "type": "string"
+            }
+          },
+          "required": [
+            "path",
+            "contents"
+          ]
+        },
+        "enforcedBehavior": [
+          "Link exact dashboards/queries; include severity & escalation; store in docs & Backstage links."
+        ],
+        "metadata": {
+          "version": "1.0",
+          "tags": [
+            "runbook",
+            "sre",
+            "oncall"
+          ]
+        }
+      },
+      {
+        "description": "Backstage Badges: publish DX/compliance badges on the entity page (triad-ready, tags complete, OTel enabled, tests pass).",
+        "inputExample": "service=orders-api",
+        "outputFormat": {
+          "type": "object",
+          "properties": {
+            "patch": {
+              "type": "string"
+            }
+          },
+          "required": [
+            "patch"
+          ]
+        },
+        "enforcedBehavior": [
+          "Update catalog annotations or techdocs to surface badges; data sourced from CI artifacts/scorecards."
+        ],
+        "metadata": {
+          "version": "1.0",
+          "tags": [
+            "backstage",
+            "badges",
+            "scorecards"
+          ]
+        }
+      },
+      {
+        "description": "Desired vs Actual Drift Check (MCP): compare manifest to deployed state and suggest manifest-first remediations.",
+        "inputExample": "service=orders-api; env=qa-us-east-1",
+        "outputFormat": {
+          "type": "object",
+          "properties": {
+            "report": {
+              "type": "string"
+            },
+            "suggestions": {
+              "type": "array",
+              "items": {
+                "type": "string"
+              }
+            }
+          },
+          "required": [
+            "report"
+          ]
+        },
+        "enforcedBehavior": [
+          "Read MCP manifest/status; never modify cloud directly; suggest manifest patches and tests.",
+          "Keep disabled in CI by default for dev→QA scope; provide local usage."
+        ],
+        "metadata": {
+          "version": "1.0",
+          "tags": [
+            "drift",
+            "mcp",
+            "validate"
+          ]
+        }
+      }
+    ]
+  ]
+}

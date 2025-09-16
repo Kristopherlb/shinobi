@@ -1,0 +1,8 @@
+---
+description: "Golden Path Generator — minimal input → complete, deploy-ready output"
+---
+- Prefer **few inputs**, many outputs: manifest patch, code, tests, dashboards, Backstage, docs.
+- **Zero-wait validation**: immediately run `svc validate` and propose fixes inline.
+- **Self-document**: every scaffold adds README with controls + how to test locally.
+- **Sane defaults** > endless options: expose schema enums; relegate edge-cases to overrides or flags.
+- **One terminal flow**: suggest a single copy-paste block for QA (pnpm build → svc validate → pnpm test → svc local up).:contentReference[oaicite:36]{index=36}:contentReference[oaicite:37]{index=37}

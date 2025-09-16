@@ -1,0 +1,57 @@
+# Tagging & Compliance Standards
+
+## Mandatory Tags
+All resources must include these tags:
+- **Service**: Name of the service/application
+- **Environment**: dev, staging, prod
+- **Owner**: Team or individual responsible
+- **ManagedBy**: Always "Shinobi"
+- **CostCenter**: Business unit for cost allocation
+
+## Compliance Tags
+- **compliance:framework**: "fedramp-low" | "fedramp-moderate" | "fedramp-high"
+- **compliance:ssp-id**: System Security Plan identifier
+- **compliance:data-classification**: "public" | "internal" | "confidential" | "restricted"
+- **compliance:retention**: Data retention period in days
+- **compliance:encryption**: "required" | "optional" | "none"
+
+## Data Classification Requirements
+- **Storage Resources**: S3, RDS, DynamoDB must have data-classification
+- **Public Data**: No encryption required, can be publicly accessible
+- **Internal Data**: Encryption at rest required, VPC-only access
+- **Confidential Data**: Encryption at rest and in transit, audit logging
+- **Restricted Data**: FIPS 140-2 encryption, dedicated infrastructure
+
+## Framework-Specific Requirements
+
+### Commercial (fedramp-low)
+- Basic encryption (AES-256)
+- Standard monitoring and logging
+- Basic access controls
+- Standard backup retention (7 days)
+
+### FedRAMP Moderate
+- Enhanced encryption (AWS KMS with customer-managed keys)
+- Comprehensive monitoring and alerting
+- Multi-factor authentication
+- Extended backup retention (30 days)
+- Network segmentation
+
+### FedRAMP High
+- FIPS 140-2 Level 3 encryption
+- Continuous monitoring and SIEM integration
+- Hardware security modules (HSM)
+- Extended backup retention (90 days)
+- Dedicated infrastructure with air-gapped networks
+
+## Tag Enforcement
+- **Deployment-time validation**: Tags validated before resource creation
+- **Policy enforcement**: OPA/Rego policies check tag compliance
+- **Cost allocation**: Tags used for detailed cost reporting
+- **Compliance reporting**: Automated compliance dashboards
+
+## Tag Management
+- **Centralized tagging**: Tags defined in service.yml manifest
+- **Environment inheritance**: Base tags with environment-specific overrides
+- **Tag policies**: SCPs prevent untagged resource creation
+- **Tag remediation**: Automated tagging of existing resources

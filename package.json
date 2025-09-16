@@ -9,6 +9,7 @@
     "svc": "./bin/svc"
   },
   "scripts": {
+    "build": "tsc",
     "svc": "node bin/svc",
     "test": "jest",
     "test:unit": "jest tests/unit",

@@ -1,0 +1,66 @@
+{
+  "personas": [
+    {
+      "persona": "QA",
+      "subdomain": "Functional",
+      "scope": "unit/integration/contract tests",
+      "version": "1.0",
+      "ruleFile": "qa-functional.mdc"
+    },
+    {
+      "persona": "QA",
+      "subdomain": "NonFunctional",
+      "scope": "performance/load/resilience tests",
+      "version": "1.0",
+      "ruleFile": "qa-nonfunctional.mdc"
+    },
+    {
+      "persona": "Security",
+      "subdomain": "InfraPolicies",
+      "scope": "OPA rego policies",
+      "version": "2.3",
+      "ruleFile": "security-policies.mdc"
+    },
+    {
+      "persona": "DevOps",
+      "subdomain": "CI/CD",
+      "scope": "pipeline and deployment scripts",
+      "version": "1.5",
+      "ruleFile": "devops-cicd.mdc"
+    },
+    {
+      "persona": "UI",
+      "subdomain": "Visual-shadcn",
+      "scope": "web ui surfaces",
+      "version": "1.0",
+      "ruleFile": "ui-shadcn.mdc",
+      "knowledgeBases": [
+        "shadcn/ui docs (components, theming, tokens, accessibility)",
+        "WCAG 2.1 AA",
+        "Axe-core checks"
+      ]
+    },
+    {
+      "persona": "UI",
+      "subdomain": "A11y-shadcn",
+      "scope": "web ui surfaces",
+      "version": "1.0",
+      "ruleFile": "ui-a11y-shadcn.mdc",
+      "knowledgeBases": [
+        "WCAG 2.1",
+        "shadcn/ui accessibility notes"
+      ]
+    },
+    {
+      "persona": "DX",
+      "subdomain": "DevTools-UI-Kit",
+      "scope": "front-end dev ergonomics",
+      "version": "1.0",
+      "ruleFile": "dx-ui-kit.mdc",
+      "knowledgeBases": [
+        "shadcn/ui CLI & file layout",
+        "Design tokens usage"
+      ]
+    }
+  ]
+}

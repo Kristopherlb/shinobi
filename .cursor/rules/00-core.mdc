@@ -1,0 +1,23 @@
+---
+description: "Shinobi Core — Golden Path, KB & MCP first, CLI-only, Compliance Triad"
+alwaysApply: true
+---
+**Golden Path**: Prefer the simplest, fast path. Use platform defaults, minimize knobs, and emit working code+tests+docs in one pass. No bespoke scripts.:contentReference[oaicite:22]{index=22}
+
+**Before generating anything:**
+1) Fetch MCP context → **schemas**, **bindings**, **validate**; never guess fields/capabilities.:contentReference[oaicite:23]{index=23}
+2) Load KB packs → **well-architected**, **service best-practices** (e.g., s3), **observability recipes**, **framework triad**. Compile into defaults (schema), dashboards, and controls.:contentReference[oaicite:24]{index=24}:contentReference[oaicite:25]{index=25}:contentReference[oaicite:26]{index=26}
+3) Apply **Configuration Precedence Chain** (platform→framework→env→overrides).:contentReference[oaicite:27]{index=27}
+
+**During generation:**
+- **Manifest-driven infra** only (service.yml). Use `patches.ts` as escape hatch last. Validate with `svc validate`.:contentReference[oaicite:28]{index=28}
+- **Compliance triad**: every component must support **fedramp-low/moderate/high**. Low is minimum baseline globally. Use builder `getComplianceFrameworkDefaults()` for deltas.:contentReference[oaicite:29]{index=29}
+- **Binds/Triggers**: must be present and **matrix-validated** via MCP; fail on unknown capability/access. No inline IAM; binders create least-privilege.:contentReference[oaicite:30]{index=30}
+- **OTel & logging**: inject OTEL_* envs, attach ADOT layer/sidecar; structured JSON logger with trace_id/span_id; redact PII. No `console.log`.:contentReference[oaicite:31]{index=31}:contentReference[oaicite:32]{index=32}
+- **Tagging**: apply mandatory + compliance + control tags; require `data-classification` on storage. Mirror key tags in Backstage metadata.tags.:contentReference[oaicite:33]{index=33}
+- **Dashboards/Alarms**: derive from KB recipes (tighten thresholds by framework).:contentReference[oaicite:34]{index=34}
+- **Tests & QA**: generate unit/snapshot/integration per Platform Test Plan; QA uses `pnpm test`, `svc validate`, `svc local up` only.:contentReference[oaicite:35]{index=35}
+
+**Safety & Governance:**
+- **Feature flags**: every package behind OpenFeature gate. AI must respect `ai-policy.yaml`: *read ok*, **write forbidden** unless `ai.write.enabled=true` and PR has approval label.
+- **No one-off scripts / direct cloud calls / local absolute paths.**

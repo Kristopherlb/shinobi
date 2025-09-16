@@ -1,0 +1,4 @@
+---
+description: "API Contracts & Mocks"
+---
+- OpenAPI tests & mock server for QA; no external writes.

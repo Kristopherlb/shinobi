@@ -1,0 +1,72 @@
+# Manifest Authoring Guide
+
+## service.yml Structure
+```yaml
+manifestVersion: "2024-01"
+service:
+  name: string
+  owner: string
+  description: string
+  tags:
+    compliance:framework: "fedramp-low" | "fedramp-moderate" | "fedramp-high"
+    data-classification: "public" | "internal" | "confidential" | "restricted"
+environments:
+  dev:
+    overrides: {}
+  prod:
+    overrides: {}
+components:
+  - type: string
+    name: string
+    properties: {}
+binds:
+  - from: string
+    to: string
+    capability: string
+governance:
+  suppressions: []
+```
+
+## Precedence Chain
+1. **Component defaults** (from KB)
+2. **Environment overrides** (environment-specific)
+3. **Component properties** (explicit configuration)
+4. **Bindings** (runtime relationships)
+5. **Patches** (escape hatch overrides)
+
+## Schema Validation Tips
+- Use `svc validate --env <env>` to check specific environment
+- JSON Schema generated from TypeScript definitions
+- IDE autocomplete via JSON Schema validation
+- Runtime validation with detailed error messages
+
+## Common Patterns
+- **Lambda API**: `lambda-api` component with API Gateway integration
+- **Data Storage**: `s3-bucket` + `rds-postgres` with encryption
+- **Container Service**: `ecs-cluster` + `ecr-repository` + `alb`
+- **ML Pipeline**: `sagemaker-notebook` + `s3-bucket` + `lambda`
+
+## Environment Overrides
+```yaml
+environments:
+  dev:
+    overrides:
+      components:
+        - name: "api"
+          properties:
+            memorySize: 256
+            timeout: 30
+  prod:
+    overrides:
+      components:
+        - name: "api"
+          properties:
+            memorySize: 1024
+            timeout: 300
+```
+
+## Best Practices
+- Keep environments minimal - only override what's different
+- Use semantic versioning for manifestVersion
+- Document non-obvious component properties
+- Validate early and often during development

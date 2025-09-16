@@ -1,0 +1,4 @@
+---
+description: "Network Egress Guardrails"
+---
+- Default-deny; VPC endpoints; explicit allow-list; prove in tests (no public paths).
