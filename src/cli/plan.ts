@@ -57,6 +57,7 @@ export class PlanCommand {
 
       // Perform basic CDK synthesis (simplified for now)
       this.dependencies.logger.info('Synthesizing infrastructure components...');
+
       const synthesisResult = await this.performBasicCdkSynthesis(
         validationResult.resolvedManifest,
         env
@@ -150,6 +151,7 @@ export class PlanCommand {
     try {
       this.dependencies.logger.debug('Starting basic CDK synthesis');
 
+
       // Create CDK App
       const app = new cdk.App({
         context: {
@@ -168,6 +170,11 @@ export class PlanCommand {
         }
       });
 
+      // Apply stack context for downstream consumers
+      stack.node.setContext('environment', environment);
+
+      // Apply platform-standard tags that propagate to all resources
+
       stack.node.setContext('serviceName', manifest.service);
       stack.node.setContext('owner', manifest.owner);
       stack.node.setContext('complianceFramework', manifest.complianceFramework || 'commercial');
@@ -181,6 +188,7 @@ export class PlanCommand {
         'platform:service-name': manifest.service,
         'platform:owner': manifest.owner,
         'platform:environment': environment,
+        'platform:managed-by': 'platform-cdk'
         'platform:managed-by': 'shinobi'
       };
 
@@ -220,6 +228,7 @@ export class PlanCommand {
   /**
    * Create AWS resources using the real component factory
    */
+
   private async createBasicAwsResource(
     stack: cdk.Stack,
     component: any,
