@@ -66,7 +66,7 @@ export class PlanOutputFormatter {
    */
   private buildUserFriendlySummary(
     synthesisResult: any,
-    cdkDiff: any,
+    cdkDiff: Record<string, any> | undefined,
     environment: string,
     complianceFramework: string
   ): string {
@@ -112,35 +112,42 @@ export class PlanOutputFormatter {
     }
 
     // CDK diff summary
-    if (cdkDiff) {
+    const diffSummary = this.summarizeDiffMap(cdkDiff);
+    if (diffSummary.stacks.length > 0) {
       lines.push('', '--- Infrastructure Changes ---');
-      if (cdkDiff.resources) {
-        const added = Object.keys(cdkDiff.resources.added || {}).length;
-        const modified = Object.keys(cdkDiff.resources.modified || {}).length;
-        const removed = Object.keys(cdkDiff.resources.removed || {}).length;
+      lines.push(`  Total resources to add: ${diffSummary.totals.added}`);
+      lines.push(`  Total resources to modify: ${diffSummary.totals.modified}`);
+      lines.push(`  Total resources to remove: ${diffSummary.totals.removed}`);
 
-        lines.push(`  Resources to add: ${added}`);
-        lines.push(`  Resources to modify: ${modified}`);
-        lines.push(`  Resources to remove: ${removed}`);
+      diffSummary.stacks.forEach(stackDiff => {
+        lines.push('', `  Stack: ${stackDiff.stackName}`);
+        lines.push(`    Resources to add: ${stackDiff.changes.added}`);
+        lines.push(`    Resources to modify: ${stackDiff.changes.modified}`);
+        lines.push(`    Resources to remove: ${stackDiff.changes.removed}`);
 
-        if (added > 0) {
-          lines.push('', '  New Resources:');
-          const resources = Object.keys(cdkDiff.resources.added || {});
-
-          // Group resources by component
-          const groupedResources = this.groupResourcesByComponent(resources, synthesisResult.resolvedManifest?.components || []);
+        if (stackDiff.changes.added > 0) {
+          lines.push('    New Resources:');
+          const resources = Object.keys(stackDiff.resources.added || {});
+          const groupedResources = this.groupResourcesByComponent(
+            resources,
+            synthesisResult.resolvedManifest?.components || []
+          );
 
           groupedResources.forEach(group => {
-            lines.push(`    + ${group.component}:`);
+            lines.push(`      + ${group.component}:`);
             group.resources.slice(0, 3).forEach(resource => {
-              lines.push(`      • ${resource}`);
+              lines.push(`        • ${resource}`);
             });
             if (group.resources.length > 3) {
-              lines.push(`      ... and ${group.resources.length - 3} more`);
+              lines.push(`        ... and ${group.resources.length - 3} more`);
             }
           });
         }
-      }
+
+        if (!stackDiff.hasChanges) {
+          lines.push('    No infrastructure changes detected for this stack');
+        }
+      });
     }
 
     // Cost estimation
@@ -166,7 +173,8 @@ export class PlanOutputFormatter {
   /**
    * Build structured data for programmatic access
    */
-  private buildStructuredData(synthesisResult: any, cdkDiff: any): any {
+  private buildStructuredData(synthesisResult: any, cdkDiff: Record<string, any> | undefined): any {
+    const diffSummary = this.summarizeDiffMap(cdkDiff);
     return {
       components: synthesisResult.components?.map((component: any) => ({
         name: component.spec.name,
@@ -175,7 +183,8 @@ export class PlanOutputFormatter {
         constructs: Object.fromEntries(component.getAllConstructs())
       })) || [],
       bindings: synthesisResult.bindings || [],
-      changes: cdkDiff || {},
+      changes: diffSummary,
+      changesByStack: cdkDiff || {},
       stacks: synthesisResult.stacks?.map((stack: any) => stack.stackName) || [],
       patchesApplied: synthesisResult.patchesApplied,
       synthesisTime: synthesisResult.synthesisTime
@@ -220,7 +229,7 @@ export class PlanOutputFormatter {
   /**
    * Collect warnings from various sources
    */
-  private collectWarnings(synthesisResult: any, cdkDiff: any): string[] {
+  private collectWarnings(synthesisResult: any, cdkDiff: Record<string, any> | undefined): string[] {
     const warnings: string[] = [];
 
     // Check for potential issues in synthesis
@@ -229,11 +238,73 @@ export class PlanOutputFormatter {
     }
 
     // Check CDK diff warnings
-    if (cdkDiff?.security?.warnings) {
-      warnings.push(...cdkDiff.security.warnings);
+    if (cdkDiff) {
+      Object.values(cdkDiff).forEach(diff => {
+        if (diff?.security?.warnings) {
+          warnings.push(...diff.security.warnings);
+        }
+      });
     }
 
     return warnings;
+  }
+
+  private summarizeDiffMap(cdkDiff: Record<string, any> | undefined): {
+    stacks: Array<{
+      stackName: string;
+      hasChanges: boolean;
+      changes: { added: number; modified: number; removed: number; total: number };
+      resources: { added: Record<string, any>; modified: Record<string, any>; removed: Record<string, any> };
+    }>;
+    totals: { added: number; modified: number; removed: number; total: number };
+    hasChanges: boolean;
+  } {
+    const stacks: Array<{
+      stackName: string;
+      hasChanges: boolean;
+      changes: { added: number; modified: number; removed: number; total: number };
+      resources: { added: Record<string, any>; modified: Record<string, any>; removed: Record<string, any> };
+    }> = [];
+    const totals = { added: 0, modified: 0, removed: 0, total: 0 };
+    let hasChanges = false;
+
+    if (!cdkDiff) {
+      return { stacks, totals, hasChanges };
+    }
+
+    Object.entries(cdkDiff).forEach(([stackName, diff]) => {
+      if (!diff) {
+        return;
+      }
+
+      const resources = {
+        added: diff.resources?.added || {},
+        modified: diff.resources?.modified || {},
+        removed: diff.resources?.removed || {}
+      };
+
+      const added = diff.changes?.added ?? Object.keys(resources.added).length;
+      const modified = diff.changes?.modified ?? Object.keys(resources.modified).length;
+      const removed = diff.changes?.removed ?? Object.keys(resources.removed).length;
+      const total = diff.changes?.total ?? added + modified + removed;
+      const stackHasChanges = diff.hasChanges ?? total > 0;
+
+      stacks.push({
+        stackName,
+        hasChanges: stackHasChanges,
+        changes: { added, modified, removed, total },
+        resources
+      });
+
+      totals.added += added;
+      totals.modified += modified;
+      totals.removed += removed;
+      hasChanges = hasChanges || stackHasChanges;
+    });
+
+    totals.total = totals.added + totals.modified + totals.removed;
+
+    return { stacks, totals, hasChanges };
   }
 
   /**
