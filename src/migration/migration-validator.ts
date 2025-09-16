@@ -240,70 +240,231 @@ export class MigrationValidator {
   private compareResources(original: any, migrated: any): string[] {
     const differences: string[] = [];
 
-    // Compare resource type
     if (original.Type !== migrated.Type) {
       differences.push(`Type changed: ${original.Type} -> ${migrated.Type}`);
     }
 
-    // Compare properties (deep comparison)
-    const propertyDiffs = this.compareObjects(
-      original.Properties || {}, 
-      migrated.Properties || {},
-      'Properties'
-    );
-    differences.push(...propertyDiffs);
+    const originalKeys = Object.keys(original).filter(key => key !== 'Type');
+    const migratedKeys = Object.keys(migrated).filter(key => key !== 'Type');
+    const allKeys = Array.from(new Set([...originalKeys, ...migratedKeys])).sort();
 
-    // Compare metadata if present
-    if (original.Metadata || migrated.Metadata) {
-      const metadataDiffs = this.compareObjects(
-        original.Metadata || {},
-        migrated.Metadata || {},
-        'Metadata'
-      );
-      differences.push(...metadataDiffs);
+    for (const key of allKeys) {
+      const hasOriginal = Object.prototype.hasOwnProperty.call(original, key);
+      const hasMigrated = Object.prototype.hasOwnProperty.call(migrated, key);
+
+      if (!hasMigrated) {
+        differences.push(`${key} removed`);
+        continue;
+      }
+
+      if (!hasOriginal) {
+        differences.push(`${key} added`);
+        continue;
+      }
+
+      differences.push(...this.diffValues(original[key], migrated[key], key));
     }
 
     return differences;
   }
 
-  private compareObjects(obj1: any, obj2: any, path: string): string[] {
-    const differences: string[] = [];
-
-    const keys1 = new Set(Object.keys(obj1));
-    const keys2 = new Set(Object.keys(obj2));
-
-    // Check for missing keys
-    for (const key of keys1) {
-      if (!keys2.has(key)) {
-        differences.push(`${path}.${key} removed`);
-      }
+  private diffValues(original: any, migrated: any, path: string): string[] {
+    // Handle identical primitive values (including undefined/null)
+    if (this.isPrimitive(original) && this.isPrimitive(migrated)) {
+      return Object.is(original, migrated)
+        ? []
+        : [`${path} value changed: ${this.formatValue(original)} -> ${this.formatValue(migrated)}`];
     }
 
-    // Check for added keys
-    for (const key of keys2) {
-      if (!keys1.has(key)) {
-        differences.push(`${path}.${key} added`);
-      }
+    // Handle arrays with stable ordering
+    if (Array.isArray(original) && Array.isArray(migrated)) {
+      return this.diffArrays(original, migrated, path);
     }
 
-    // Check for modified values
-    for (const key of keys1) {
-      if (keys2.has(key)) {
-        const val1 = obj1[key];
-        const val2 = obj2[key];
+    // Handle plain objects
+    if (this.isPlainObject(original) && this.isPlainObject(migrated)) {
+      const differences: string[] = [];
+      const keys = Array.from(new Set([...Object.keys(original), ...Object.keys(migrated)])).sort();
 
-        if (typeof val1 !== typeof val2) {
-          differences.push(`${path}.${key} type changed: ${typeof val1} -> ${typeof val2}`);
-        } else if (typeof val1 === 'object' && val1 !== null && val2 !== null) {
-          const subDiffs = this.compareObjects(val1, val2, `${path}.${key}`);
-          differences.push(...subDiffs);
-        } else if (val1 !== val2) {
-          differences.push(`${path}.${key} value changed: ${JSON.stringify(val1)} -> ${JSON.stringify(val2)}`);
+      for (const key of keys) {
+        const nextPath = path ? `${path}.${key}` : key;
+        const hasOriginal = Object.prototype.hasOwnProperty.call(original, key);
+        const hasMigrated = Object.prototype.hasOwnProperty.call(migrated, key);
+
+        if (!hasMigrated) {
+          differences.push(`${nextPath} removed`);
+          continue;
         }
+
+        if (!hasOriginal) {
+          differences.push(`${nextPath} added`);
+          continue;
+        }
+
+        differences.push(...this.diffValues(original[key], migrated[key], nextPath));
       }
+
+      return differences;
+    }
+
+    // Different types or structures
+    if (Array.isArray(original) !== Array.isArray(migrated)) {
+      return [`${path} type changed: ${this.describeType(original)} -> ${this.describeType(migrated)}`];
+    }
+
+    if (this.isPlainObject(original) !== this.isPlainObject(migrated)) {
+      return [`${path} type changed: ${this.describeType(original)} -> ${this.describeType(migrated)}`];
+    }
+
+    // Fallback comparison for other complex values
+    return Object.is(original, migrated)
+      ? []
+      : [`${path} value changed: ${this.formatValue(original)} -> ${this.formatValue(migrated)}`];
+  }
+
+  private diffArrays(original: any[], migrated: any[], path: string): string[] {
+    const differences: string[] = [];
+    const sortedOriginal = [...original].sort((a, b) => this.compareByStableString(a, b));
+    const sortedMigrated = [...migrated].sort((a, b) => this.compareByStableString(a, b));
+
+    if (sortedOriginal.length === sortedMigrated.length) {
+      const elementDiffs: string[] = [];
+
+      for (let index = 0; index < sortedOriginal.length; index++) {
+        const entryPath = `${path}[${index}]`;
+        elementDiffs.push(...this.diffValues(sortedOriginal[index], sortedMigrated[index], entryPath));
+      }
+
+      if (elementDiffs.length === 0) {
+        return [];
+      }
+
+      return elementDiffs;
+    }
+
+    const originalCounts = this.buildValueCounts(sortedOriginal);
+    const migratedCounts = this.buildValueCounts(sortedMigrated);
+
+    for (const [repr, count] of originalCounts.entries()) {
+      const migratedCount = migratedCounts.get(repr) ?? 0;
+
+      if (migratedCount === 0) {
+        const suffix = count > 1 ? ` (x${count})` : '';
+        differences.push(`${path} entry removed${suffix}: ${repr}`);
+      } else if (count !== migratedCount) {
+        differences.push(`${path} entry count changed for ${repr}: ${count} -> ${migratedCount}`);
+      }
+
+      migratedCounts.delete(repr);
+    }
+
+    for (const [repr, count] of migratedCounts.entries()) {
+      const suffix = count > 1 ? ` (x${count})` : '';
+      differences.push(`${path} entry added${suffix}: ${repr}`);
     }
 
     return differences;
+  }
+
+  private isPrimitive(value: any): boolean {
+    return (
+      value === null ||
+      value === undefined ||
+      typeof value === 'string' ||
+      typeof value === 'number' ||
+      typeof value === 'boolean' ||
+      typeof value === 'bigint' ||
+      typeof value === 'symbol'
+    );
+  }
+
+  private isPlainObject(value: any): value is Record<string, any> {
+    return value !== null && typeof value === 'object' && !Array.isArray(value);
+  }
+
+  private describeType(value: any): string {
+    if (Array.isArray(value)) {
+      return 'array';
+    }
+
+    if (value === null) {
+      return 'null';
+    }
+
+    return typeof value;
+  }
+
+  private compareByStableString(a: any, b: any): number {
+    const aStr = this.stableStringify(a);
+    const bStr = this.stableStringify(b);
+
+    if (aStr < bStr) {
+      return -1;
+    }
+
+    if (aStr > bStr) {
+      return 1;
+    }
+
+    return 0;
+  }
+
+  private buildValueCounts(values: any[]): Map<string, number> {
+    const counts = new Map<string, number>();
+
+    for (const value of values) {
+      const repr = this.stableStringify(value);
+      counts.set(repr, (counts.get(repr) ?? 0) + 1);
+    }
+
+    return counts;
+  }
+
+  private stableStringify(value: any): string {
+    if (value === undefined) {
+      return 'undefined';
+    }
+
+    if (value === null) {
+      return 'null';
+    }
+
+    if (typeof value === 'string') {
+      return JSON.stringify(value);
+    }
+
+    if (typeof value === 'number' || typeof value === 'boolean') {
+      return JSON.stringify(value);
+    }
+
+    if (typeof value === 'bigint') {
+      return `${value.toString()}n`;
+    }
+
+    if (typeof value === 'symbol') {
+      return value.description ? `Symbol(${value.description})` : 'Symbol()';
+    }
+
+    if (Array.isArray(value)) {
+      const items = value.map(item => this.stableStringify(item)).sort();
+      return `[${items.join(',')}]`;
+    }
+
+    if (this.isPlainObject(value)) {
+      const keys = Object.keys(value).sort();
+      const entries = keys.map(key => `${JSON.stringify(key)}:${this.stableStringify(value[key])}`);
+      return `{${entries.join(',')}}`;
+    }
+
+    try {
+      return JSON.stringify(value);
+    } catch {
+      return String(value);
+    }
+  }
+
+  private formatValue(value: any): string {
+    return this.stableStringify(value);
   }
 
   private async runCdkDiff(originalPath: string, migratedPath: string): Promise<string> {
