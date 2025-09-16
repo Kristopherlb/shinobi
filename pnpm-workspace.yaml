@@ -1,6 +1,5 @@
 packages:
-  - "packages/core-engine"
-  - "packages/contracts"
-  - "packages/components/*"
-  - "packages/infrastructure"
-  - "packages/test-scaffolding"
+  - "apps/*"
+  - "packages/*"
+  - "packages/*/*"
+  - "tools/*"

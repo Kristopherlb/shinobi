@@ -1,5 +1,5 @@
 {
-  "npmScope": "platform",
+  "npmScope": "shinobi",
   "affected": {
     "defaultBase": "main"
   },
@@ -16,11 +16,36 @@
       }
     }
   },
+  "pluginsConfig": {
+    "@nx/js": {
+      "analyzeSourceFiles": true
+    }
+  },
+  "namedInputs": {
+    "default": [
+      "{projectRoot}/**/*",
+      "!{projectRoot}/**/*.test.*"
+    ],
+    "production": [
+      "default",
+      "!{projectRoot}/**/*.spec.*",
+      "!{projectRoot}/**/*.test.*"
+    ]
+  },
   "targetDefaults": {
     "build": {
       "dependsOn": [
         "^build"
+      ],
+      "inputs": [
+        "production",
+        "^production"
       ]
     }
+  },
+  "implicitDependencies": {},
+  "workspaceLayout": {
+    "appsDir": "apps",
+    "libsDir": "packages"
   }
 }

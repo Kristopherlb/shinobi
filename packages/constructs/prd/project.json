@@ -1,0 +1,32 @@
+{
+  "name": "constructs-prd",
+  "sourceRoot": "packages/constructs/prd/src",
+  "projectType": "library",
+  "tags": [
+    "type:lib",
+    "scope:constructs"
+  ],
+  "targets": {
+    "build": {
+      "executor": "@nx/js:tsc",
+      "options": {
+        "outputPath": "dist/packages/constructs/prd",
+        "tsConfig": "packages/constructs/prd/tsconfig.lib.json"
+      }
+    },
+    "test": {
+      "executor": "@nx/jest:jest",
+      "options": {
+        "jestConfig": "packages/constructs/prd/jest.config.ts"
+      }
+    },
+    "lint": {
+      "executor": "@nx/eslint:lint",
+      "options": {
+        "lintFilePatterns": [
+          "packages/constructs/prd/src/**/*.ts"
+        ]
+      }
+    }
+  }
+}
