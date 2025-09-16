@@ -57,7 +57,10 @@ export class PlanCommand {
 
       // Perform basic CDK synthesis (simplified for now)
       this.dependencies.logger.info('Synthesizing infrastructure components...');
-      const synthesisResult = await this.performBasicCdkSynthesis(validationResult.resolvedManifest);
+      const synthesisResult = await this.performBasicCdkSynthesis(
+        validationResult.resolvedManifest,
+        env
+      );
 
       // Perform CDK diff analysis
       this.dependencies.logger.info('Analyzing infrastructure changes...');
@@ -143,31 +146,54 @@ export class PlanCommand {
   /**
    * Perform basic CDK synthesis using AWS CDK
    */
-  private async performBasicCdkSynthesis(manifest: any): Promise<any> {
+  private async performBasicCdkSynthesis(manifest: any, environment: string): Promise<any> {
     try {
       this.dependencies.logger.debug('Starting basic CDK synthesis');
 
       // Create CDK App
-      const app = new cdk.App();
+      const app = new cdk.App({
+        context: {
+          serviceName: manifest.service,
+          owner: manifest.owner,
+          environment,
+          complianceFramework: manifest.complianceFramework || 'commercial'
+        }
+      });
 
       // Create stack
       const stack = new cdk.Stack(app, `${manifest.service}-stack`, {
         env: {
           account: process.env.CDK_DEFAULT_ACCOUNT || process.env.AWS_ACCOUNT_ID || '123456789012',
           region: process.env.CDK_DEFAULT_REGION || process.env.AWS_DEFAULT_REGION || 'us-east-1'
-        },
-        tags: {
-          Service: manifest.service,
-          Owner: manifest.owner,
-          ComplianceFramework: manifest.complianceFramework || 'commercial',
-          Environment: process.env.NODE_ENV || 'dev'
+        }
+      });
+
+      stack.node.setContext('serviceName', manifest.service);
+      stack.node.setContext('owner', manifest.owner);
+      stack.node.setContext('complianceFramework', manifest.complianceFramework || 'commercial');
+      stack.node.setContext('environment', environment);
+      stack.node.setContext('platform:service-name', manifest.service);
+      stack.node.setContext('platform:owner', manifest.owner);
+      stack.node.setContext('platform:environment', environment);
+      stack.node.setContext('platform:managed-by', 'shinobi');
+
+      const stackTags: Record<string, string | undefined> = {
+        'platform:service-name': manifest.service,
+        'platform:owner': manifest.owner,
+        'platform:environment': environment,
+        'platform:managed-by': 'shinobi'
+      };
+
+      Object.entries(stackTags).forEach(([key, value]) => {
+        if (value) {
+          cdk.Tags.of(stack).add(key, value);
         }
       });
 
       // Create basic AWS resources based on components
       if (manifest.components && Array.isArray(manifest.components)) {
         for (const component of manifest.components) {
-          await this.createBasicAwsResource(stack, component, manifest);
+          await this.createBasicAwsResource(stack, component, manifest, environment);
         }
       }
 
@@ -194,7 +220,12 @@ export class PlanCommand {
   /**
    * Create AWS resources using the real component factory
    */
-  private async createBasicAwsResource(stack: cdk.Stack, component: any, manifest: any): Promise<void> {
+  private async createBasicAwsResource(
+    stack: cdk.Stack,
+    component: any,
+    manifest: any,
+    environment: string
+  ): Promise<void> {
     // Get supported component types from the component factory
     const supportedTypes = this.getSupportedComponentTypes();
 
@@ -216,7 +247,7 @@ export class PlanCommand {
       // Create component context
       const context = {
         serviceName: manifest.service,
-        environment: process.env.NODE_ENV || 'dev',
+        environment,
         owner: manifest.owner,
         complianceFramework: manifest.complianceFramework || 'commercial',
         region: process.env.AWS_DEFAULT_REGION || 'us-east-1'
