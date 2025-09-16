@@ -71,3 +71,32 @@ defaults:
         cidrMask: 24
       database:
         cidrMask: 28
+
+  api-gateway-http:
+    cors:
+      allowOrigins: []
+      allowHeaders:
+        ["Content-Type", "Authorization", "X-Requested-With", "X-CSRF-Token"]
+      allowMethods: ["GET", "POST", "PUT", "DELETE", "OPTIONS"]
+      allowCredentials: false
+      maxAge: 86400
+    throttling:
+      rateLimit: 25
+      burstLimit: 50
+    accessLogging:
+      enabled: true
+      retentionInDays: 365
+      includeExecutionData: true
+      includeRequestResponseData: true
+    monitoring:
+      detailedMetrics: true
+      tracingEnabled: true
+      alarms:
+        errorRate4xx: 1.0
+        errorRate5xx: 0.1
+        highLatency: 2000
+        lowThroughput: 2
+    security:
+      enableWaf: true
+      enableApiKey: true
+      requireAuthorization: true

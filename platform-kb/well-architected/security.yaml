@@ -1,0 +1,112 @@
+# AWS Well-Architected Security Pillar
+# Compiled into platform defaults and validation rules
+
+security_principles:
+  - principle: "Implement a strong identity foundation"
+    description: "Use least privilege access and separation of duties"
+    controls:
+      - iam_policies_least_privilege: true
+      - mfa_enabled: true
+      - role_based_access: true
+      - service_accounts_isolated: true
+
+  - principle: "Apply security at all layers"
+    description: "Defense in depth across all layers"
+    controls:
+      - network_segmentation: true
+      - encryption_at_rest: true
+      - encryption_in_transit: true
+      - application_security: true
+
+  - principle: "Enable traceability"
+    description: "Monitor, alert, and audit actions and changes"
+    controls:
+      - cloudtrail_enabled: true
+      - config_rules_enabled: true
+      - log_aggregation: true
+      - audit_logging: true
+
+  - principle: "Automate security best practices"
+    description: "Automated security controls and responses"
+    controls:
+      - infrastructure_as_code: true
+      - automated_patching: true
+      - security_scanning: true
+      - incident_response: true
+
+compliance_frameworks:
+  commercial:
+    baseline_controls:
+      - encryption_at_rest: "AES-256"
+      - encryption_in_transit: "TLS 1.2+"
+      - backup_retention: "7_days"
+      - monitoring: "basic"
+      - access_control: "standard"
+
+  fedramp_moderate:
+    additional_controls:
+      - encryption_at_rest: "AWS KMS customer-managed keys"
+      - encryption_in_transit: "TLS 1.3"
+      - backup_retention: "30_days"
+      - monitoring: "comprehensive"
+      - access_control: "enhanced"
+      - network_isolation: true
+      - data_classification: true
+
+  fedramp_high:
+    additional_controls:
+      - encryption_at_rest: "FIPS 140-2 Level 3"
+      - encryption_in_transit: "FIPS 140-2 TLS 1.3"
+      - backup_retention: "90_days"
+      - monitoring: "continuous"
+      - access_control: "strict"
+      - network_isolation: "dedicated"
+      - data_classification: "mandatory"
+      - hardware_security_modules: true
+
+default_security_configurations:
+  s3_buckets:
+    encryption: "AES-256"
+    public_access_block: true
+    versioning: true
+    access_logging: false
+    ssl_requests_only: true
+
+  rds_instances:
+    encryption: true
+    publicly_accessible: false
+    backup_retention: 7
+    deletion_protection: true
+    multi_az: false
+
+  lambda_functions:
+    vpc_config: false
+    dead_letter_queue: false
+    tracing: "PassThrough"
+    environment_encryption: false
+
+  ecs_services:
+    task_execution_role: "minimal"
+    network_mode: "awsvpc"
+    platform_version: "LATEST"
+    service_discovery: false
+
+security_monitoring:
+  required_metrics:
+    - failed_authentication_attempts
+    - unauthorized_api_calls
+    - configuration_changes
+    - data_access_patterns
+
+  alerting_thresholds:
+    failed_logins: 10
+    unauthorized_access: 5
+    config_drift: 1
+    data_exfiltration: 1
+
+  response_actions:
+    - isolate_compromised_resources
+    - revoke_suspicious_access
+    - notify_security_team
+    - generate_incident_report
+

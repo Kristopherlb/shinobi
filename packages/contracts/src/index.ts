@@ -1,6 +1,27 @@
+export interface ComponentContext {
+  serviceName: string;
+  service?: string; // Legacy property for backward compatibility
+  environment: string;
+  complianceFramework: 'commercial' | 'fedramp-moderate' | 'fedramp-high';
+  compliance?: string; // Legacy property for backward compatibility
+  owner?: string;
+  accountId?: string;
+  account?: string; // Legacy property for backward compatibility
+  region?: string;
+  scope: any; // CDK Construct scope - required
+  observability?: {
+    collectorEndpoint?: string;
+  };
+  tags?: Record<string, string>;
+}
+
 export interface ComponentSpec {
+  type: string;
   name: string;
-  // Define common component interface (properties, methods, etc.)
+  config: any;
+  binds?: any[];
+  triggers?: any[];
+  policy?: any;
 }
 
 export interface ComponentConfig {
@@ -18,4 +39,12 @@ export interface ComponentMetadata {
   description?: string;
   tags?: string[];
   compliance?: string[];
+}
+
+export interface ComponentCapabilities {
+  [key: string]: any;
+}
+
+export interface BaseComponent {
+  synth(): void;
 }

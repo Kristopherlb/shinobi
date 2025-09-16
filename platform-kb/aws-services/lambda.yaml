@@ -1,0 +1,196 @@
+# Lambda Best Practices Pack
+# Used to derive defaults, dashboards, and alarms
+
+default_configurations:
+  tracing:
+    commercial: "PassThrough"
+    fedramp_moderate: "Active"
+    fedramp_high: "Active"
+
+  log_retention:
+    commercial: 7
+    fedramp_moderate: 30
+    fedramp_high: 90
+
+  dead_letter_queue:
+    commercial: false
+    fedramp_moderate: true
+    fedramp_high: true
+
+  vpc_config:
+    commercial: false
+    fedramp_moderate: true
+    fedramp_high: true
+
+  environment_encryption:
+    commercial: false
+    fedramp_moderate: true
+    fedramp_high: true
+
+security_controls:
+  - control: "tracing_enabled"
+    requirement: "X-Ray tracing enabled for monitoring and debugging"
+    validation: "Check tracing configuration"
+
+  - control: "structured_logging"
+    requirement: "Use structured logging with trace/span IDs"
+    validation: "Verify log format includes trace context"
+
+  - control: "least_privilege_iam"
+    requirement: "IAM role follows least privilege principle"
+    validation: "Check IAM policy permissions"
+
+  - control: "dead_letter_queue"
+    requirement: "DLQ configured for error handling"
+    validation: "Verify DLQ configuration"
+
+monitoring_and_alerting:
+  required_metrics:
+    - Invocations
+    - Errors
+    - Duration
+    - Throttles
+    - ConcurrentExecutions
+    - UnreservedConcurrency
+    - DeadLetterErrors
+
+  alarms:
+    - name: "LambdaHighErrorRate"
+      metric: "Errors"
+      threshold: 10
+      comparison: "GreaterThanThreshold"
+      period: "300"
+      evaluation_periods: 2
+
+    - name: "LambdaHighDuration"
+      metric: "Duration"
+      threshold: 5000
+      comparison: "GreaterThanThreshold"
+      period: "300"
+      evaluation_periods: 2
+
+    - name: "LambdaThrottles"
+      metric: "Throttles"
+      threshold: 5
+      comparison: "GreaterThanThreshold"
+      period: "300"
+      evaluation_periods: 2
+
+    - name: "LambdaDeadLetterErrors"
+      metric: "DeadLetterErrors"
+      threshold: 1
+      comparison: "GreaterThanThreshold"
+      period: "300"
+      evaluation_periods: 1
+
+dashboard_widgets:
+  - type: "line"
+    title: "Lambda Invocations"
+    metrics: ["Invocations"]
+    period: "1h"
+
+  - type: "line"
+    title: "Lambda Errors"
+    metrics: ["Errors"]
+    period: "1h"
+
+  - type: "line"
+    title: "Lambda Duration"
+    metrics: ["Duration"]
+    period: "1h"
+
+  - type: "single_value"
+    title: "Lambda Throttles"
+    metrics: ["Throttles"]
+    period: "1h"
+
+  - type: "line"
+    title: "Lambda Concurrent Executions"
+    metrics: ["ConcurrentExecutions"]
+    period: "1h"
+
+performance_optimization:
+  memory_sizing:
+    commercial:
+      default: 256
+      range: [128, 3008]
+      step: 64
+
+    fedramp_moderate:
+      default: 512
+      range: [256, 3008]
+      step: 64
+
+    fedramp_high:
+      default: 1024
+      range: [512, 3008]
+      step: 64
+
+  timeout_settings:
+    commercial:
+      default: 30
+      max: 900
+
+    fedramp_moderate:
+      default: 60
+      max: 900
+
+    fedramp_high:
+      default: 120
+      max: 900
+
+  concurrency_limits:
+    commercial:
+      reserved_concurrency: null
+      provisioned_concurrency: 0
+
+    fedramp_moderate:
+      reserved_concurrency: 100
+      provisioned_concurrency: 10
+
+    fedramp_high:
+      reserved_concurrency: 50
+      provisioned_concurrency: 20
+
+observability_requirements:
+  structured_logging:
+    required_fields:
+      - timestamp
+      - level
+      - message
+      - trace_id
+      - span_id
+      - service_name
+      - function_name
+
+    optional_fields:
+      - user_id
+      - request_id
+      - duration_ms
+      - error_code
+
+  x_ray_tracing:
+    required_segments:
+      - function_initialization
+      - business_logic
+      - external_calls
+      - database_operations
+
+    custom_annotations:
+      - user_id
+      - request_type
+      - data_classification
+
+  custom_metrics:
+    business_metrics:
+      - user_registrations
+      - api_calls
+      - data_processed
+      - errors_by_type
+
+    performance_metrics:
+      - cache_hit_rate
+      - database_query_time
+      - external_api_latency
+      - memory_utilization
+

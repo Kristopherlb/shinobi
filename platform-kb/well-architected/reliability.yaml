@@ -1,0 +1,125 @@
+# AWS Well-Architected Reliability Pillar
+# Compiled into platform defaults and validation rules
+
+reliability_principles:
+  - principle: "Test recovery procedures"
+    description: "Regular testing of disaster recovery and backup procedures"
+    controls:
+      - backup_testing: true
+      - disaster_recovery_drills: true
+      - failover_testing: true
+      - chaos_engineering: true
+
+  - principle: "Automatically recover from failure"
+    description: "Automated failure detection and recovery"
+    controls:
+      - health_checks: true
+      - auto_scaling: true
+      - circuit_breakers: true
+      - retry_logic: true
+
+  - principle: "Scale horizontally to increase system availability"
+    description: "Distribute load across multiple resources"
+    controls:
+      - load_balancing: true
+      - auto_scaling_groups: true
+      - database_read_replicas: true
+      - cdn_distribution: true
+
+  - principle: "Stop guessing capacity"
+    description: "Monitor and scale based on actual demand"
+    controls:
+      - capacity_planning: true
+      - performance_monitoring: true
+      - predictive_scaling: true
+      - cost_optimization: true
+
+availability_targets:
+  commercial:
+    sla: "99.9%"
+    rto: "4_hours"
+    rpo: "1_hour"
+    max_downtime_monthly: "43.2_minutes"
+
+  fedramp_moderate:
+    sla: "99.95%"
+    rto: "2_hours"
+    rpo: "30_minutes"
+    max_downtime_monthly: "21.6_minutes"
+
+  fedramp_high:
+    sla: "99.99%"
+    rto: "1_hour"
+    rpo: "15_minutes"
+    max_downtime_monthly: "4.32_minutes"
+
+default_reliability_configurations:
+  lambda_functions:
+    reserved_concurrency: null
+    provisioned_concurrency: 0
+    dead_letter_queue: false
+    retry_attempts: 2
+    timeout: 30
+
+  rds_instances:
+    multi_az: false
+    read_replicas: 0
+    backup_retention: 7
+    automated_backups: true
+    maintenance_window: "sun:03:00-sun:04:00"
+
+  ecs_services:
+    desired_count: 1
+    deployment_configuration:
+      maximum_percent: 200
+      minimum_healthy_percent: 50
+    health_check_grace_period: 60
+
+  s3_buckets:
+    cross_region_replication: false
+    lifecycle_rules: []
+    intelligent_tiering: false
+
+monitoring_and_alerting:
+  required_slos:
+    - availability: "99.9%"
+    - latency_p95: "500ms"
+    - error_rate: "0.1%"
+    - throughput: "baseline"
+
+  health_checks:
+    - application_health_endpoint
+    - database_connectivity
+    - external_service_dependencies
+    - resource_utilization
+
+  auto_scaling_triggers:
+    cpu_utilization: 70
+    memory_utilization: 80
+    request_count: 1000
+    error_rate: 5
+
+  circuit_breakers:
+    failure_threshold: 5
+    timeout: 30
+    recovery_timeout: 60
+
+disaster_recovery:
+  backup_strategies:
+    automated_backups: true
+    cross_region_backups: false
+    point_in_time_recovery: true
+    snapshot_retention: 7
+
+  failover_procedures:
+    automated_failover: false
+    manual_failover_time: "15_minutes"
+    data_consistency_checks: true
+    rollback_procedures: true
+
+  testing_schedule:
+    backup_restoration: "monthly"
+    failover_testing: "quarterly"
+    disaster_recovery_drills: "annually"
+    chaos_engineering: "continuous"
+

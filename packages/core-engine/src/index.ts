@@ -48,3 +48,26 @@ export class BinderRegistry {
     return [...this.bindings];
   }
 }
+
+export class ConfigBuilder<T> {
+  protected context: ComponentContext;
+  protected spec: ComponentSpec;
+
+  constructor(context: ComponentContext, spec: ComponentSpec) {
+    this.context = context;
+    this.spec = spec;
+  }
+
+  buildSync(): T {
+    // Default implementation - should be overridden by subclasses
+    throw new Error('buildSync method must be implemented by subclass');
+  }
+
+  getComplianceFrameworkDefaults(framework: string): Partial<T> {
+    // Default implementation - should be overridden by subclasses
+    return {};
+  }
+}
+
+// Re-export ComponentContext and ComponentSpec from contracts for convenience
+export { ComponentContext, ComponentSpec } from '@platform/contracts';

@@ -18,6 +18,7 @@ export interface ComponentSpec {
   type: string;
   config: Record<string, any>;
   binds?: Array<any>;
+  triggers?: Array<any>;
   labels?: Record<string, string>;
   overrides?: Record<string, any>;
   policy?: Record<string, any>;
@@ -68,7 +69,7 @@ export interface BindingContext {
 export interface IComponent extends IConstruct {
   /** The component's specification from the service manifest */
   readonly spec: ComponentSpec;
-  
+
   /** The context of the service this component belongs to */
   readonly context: ComponentContext;
 

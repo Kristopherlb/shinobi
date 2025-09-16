@@ -8,16 +8,16 @@
 
 import { Template, Match } from 'aws-cdk-lib/assertions';
 import { App, Stack } from 'aws-cdk-lib';
-import { ApiGatewayHttpComponent } from './api-gateway-http.component';
-import { ApiGatewayHttpConfig } from './api-gateway-http.builder';
-import { ComponentContext, ComponentSpec } from '../../platform/contracts/component-interfaces';
+import { ApiGatewayHttpComponent } from '../api-gateway-http.component';
+import { ApiGatewayHttpConfig } from '../api-gateway-http.builder';
+import { ComponentContext, ComponentSpec } from '@platform/contracts';
 
 // Test Metadata as per Platform Testing Standard v1.0 Section 11
 const TEST_METADATA = {
   component: 'api-gateway-http',
   level: 'unit',
   type: 'synthesis',
-  framework: 'jest', 
+  framework: 'jest',
   deterministic: true,
   fixtures: ['mockComponentContext', 'mockComponentSpec', 'deterministicClock'],
   compliance_refs: ['std://platform-configuration', 'std://platform-tagging', 'std://service-injector-pattern'],
@@ -36,9 +36,11 @@ const createMockContext = (
   serviceName: 'test-service',
   owner: 'test-team',
   environment,
-  complianceFramework,
+  complianceFramework: complianceFramework as 'commercial' | 'fedramp-moderate' | 'fedramp-high',
   region: 'us-east-1',
+  accountId: '123456789012',
   account: '123456789012',
+  scope: {} as any, // Mock CDK scope
   tags: {
     'service-name': 'test-service',
     'owner': 'test-team',
@@ -61,34 +63,34 @@ const synthesizeComponent = (
 ): { component: ApiGatewayHttpComponent; template: Template } => {
   const app = new App();
   const stack = new Stack(app, 'TestStack');
-  
-  const component = new ApiGatewayHttpComponent(stack, spec, context);
+
+  const component = new ApiGatewayHttpComponent(stack, 'TestHttpApi', context, spec);
   component.synth();
-  
+
   const template = Template.fromStack(stack);
   return { component, template };
 };
 
 describe('ApiGatewayHttpComponent Synthesis', () => {
-  
+
   // Freeze time for deterministic tests
   beforeAll(() => {
     jest.useFakeTimers();
     jest.setSystemTime(DETERMINISTIC_TIMESTAMP);
   });
-  
+
   afterAll(() => {
     jest.useRealTimers();
   });
-  
+
   describe('Default Happy Path Synthesis', () => {
-    
+
     it('should synthesize basic HTTP API with commercial compliance', () => {
       const context = createMockContext('commercial');
       const spec = createMockSpec();
-      
+
       const { template } = synthesizeComponent(context, spec);
-      
+
       // Verify HTTP API creation
       template.hasResourceProperties('AWS::ApiGatewayV2::Api', {
         Name: 'test-api-api',
@@ -101,20 +103,20 @@ describe('ApiGatewayHttpComponent Synthesis', () => {
           MaxAge: 86400
         }
       });
-      
+
       // Verify Stage creation
       template.hasResourceProperties('AWS::ApiGatewayV2::Stage', {
         ApiId: { Ref: Match.anyValue() },
         StageName: 'dev',
         AutoDeploy: true
       });
-      
+
       // Verify access logging is enabled for commercial compliance
       template.hasResourceProperties('AWS::Logs::LogGroup', {
         LogGroupName: '/aws/apigateway/test-api-http-api',
         RetentionInDays: 30
       });
-      
+
       // Verify IAM role for API Gateway logging
       template.hasResourceProperties('AWS::IAM::Role', {
         AssumeRolePolicyDocument: {
@@ -129,13 +131,13 @@ describe('ApiGatewayHttpComponent Synthesis', () => {
         ]
       });
     });
-    
+
     it('should apply standard platform tags', () => {
       const context = createMockContext('commercial');
       const spec = createMockSpec();
-      
+
       const { template } = synthesizeComponent(context, spec);
-      
+
       // Verify standard tags on HTTP API
       template.hasResourceProperties('AWS::ApiGatewayV2::Api', {
         Tags: {
@@ -148,7 +150,7 @@ describe('ApiGatewayHttpComponent Synthesis', () => {
           'protocol': 'http'
         }
       });
-      
+
       // Verify standard tags on Stage
       template.hasResourceProperties('AWS::ApiGatewayV2::Stage', {
         Tags: {
@@ -159,11 +161,11 @@ describe('ApiGatewayHttpComponent Synthesis', () => {
         }
       });
     });
-    
+
   });
-  
+
   describe('FedRAMP Moderate Compliance Hardening', () => {
-    
+
     it('should apply FedRAMP Moderate security hardening', () => {
       const context = createMockContext('fedramp-moderate');
       const spec = createMockSpec({
@@ -171,9 +173,9 @@ describe('ApiGatewayHttpComponent Synthesis', () => {
           allowOrigins: ['https://secure.example.com'] // Explicit origins required
         }
       });
-      
+
       const { template } = synthesizeComponent(context, spec);
-      
+
       // Verify stricter CORS configuration
       template.hasResourceProperties('AWS::ApiGatewayV2::Api', {
         CorsConfiguration: {
@@ -185,19 +187,19 @@ describe('ApiGatewayHttpComponent Synthesis', () => {
         },
         DisableExecuteApiEndpoint: true // Security requirement
       });
-      
+
       // Verify extended log retention for audit trail
       template.hasResourceProperties('AWS::Logs::LogGroup', {
         RetentionInDays: 90 // FedRAMP Moderate requirement
       });
-      
+
       // Verify X-Ray tracing is enabled
       template.hasResourceProperties('AWS::ApiGatewayV2::Stage', {
         TracingConfig: {
           TracingEnabled: true
         }
       });
-      
+
       // Verify stricter throttling limits
       template.hasResourceProperties('AWS::ApiGatewayV2::Stage', {
         ThrottleSettings: {
@@ -206,7 +208,7 @@ describe('ApiGatewayHttpComponent Synthesis', () => {
         }
       });
     });
-    
+
     it('should create CloudWatch alarms for FedRAMP monitoring', () => {
       const context = createMockContext('fedramp-moderate');
       const spec = createMockSpec({
@@ -214,9 +216,9 @@ describe('ApiGatewayHttpComponent Synthesis', () => {
           allowOrigins: ['https://secure.example.com']
         }
       });
-      
+
       const { template } = synthesizeComponent(context, spec);
-      
+
       // Verify 4xx error alarm with stricter threshold
       template.hasResourceProperties('AWS::CloudWatch::Alarm', {
         AlarmName: 'test-api-api-4xx-errors',
@@ -227,7 +229,7 @@ describe('ApiGatewayHttpComponent Synthesis', () => {
         ComparisonOperator: 'GreaterThanThreshold',
         EvaluationPeriods: 2
       });
-      
+
       // Verify 5xx error alarm with stricter threshold
       template.hasResourceProperties('AWS::CloudWatch::Alarm', {
         AlarmName: 'test-api-api-5xx-errors',
@@ -238,7 +240,7 @@ describe('ApiGatewayHttpComponent Synthesis', () => {
         ComparisonOperator: 'GreaterThanThreshold',
         EvaluationPeriods: 2
       });
-      
+
       // Verify high latency alarm
       template.hasResourceProperties('AWS::CloudWatch::Alarm', {
         AlarmName: 'test-api-api-high-latency',
@@ -250,11 +252,11 @@ describe('ApiGatewayHttpComponent Synthesis', () => {
         EvaluationPeriods: 3
       });
     });
-    
+
   });
-  
+
   describe('FedRAMP High Compliance Hardening', () => {
-    
+
     it('should apply FedRAMP High security hardening', () => {
       const context = createMockContext('fedramp-high');
       const spec = createMockSpec({
@@ -262,35 +264,35 @@ describe('ApiGatewayHttpComponent Synthesis', () => {
           allowOrigins: ['https://topsecret.gov.example.com']
         }
       });
-      
+
       const { template } = synthesizeComponent(context, spec);
-      
+
       // Verify maximum log retention for audit trail
       template.hasResourceProperties('AWS::Logs::LogGroup', {
         RetentionInDays: 365 // FedRAMP High requirement
       });
-      
+
       // Verify execute API endpoint is disabled
       template.hasResourceProperties('AWS::ApiGatewayV2::Api', {
         DisableExecuteApiEndpoint: true
       });
-      
+
       // Same monitoring requirements as FedRAMP Moderate
       template.hasResourceProperties('AWS::CloudWatch::Alarm', {
         AlarmName: 'test-api-api-4xx-errors',
         Threshold: 2.0
       });
-      
+
       template.hasResourceProperties('AWS::CloudWatch::Alarm', {
         AlarmName: 'test-api-api-5xx-errors',
         Threshold: 0.5
       });
     });
-    
+
   });
-  
+
   describe('Custom Domain Configuration', () => {
-    
+
     it('should create custom domain with existing certificate', () => {
       const context = createMockContext('commercial');
       const spec = createMockSpec({
@@ -301,9 +303,9 @@ describe('ApiGatewayHttpComponent Synthesis', () => {
           securityPolicy: 'TLS_1_2'
         }
       });
-      
+
       const { template } = synthesizeComponent(context, spec);
-      
+
       // Verify custom domain creation
       template.hasResourceProperties('AWS::ApiGatewayV2::DomainName', {
         DomainName: 'api.example.com',
@@ -313,7 +315,7 @@ describe('ApiGatewayHttpComponent Synthesis', () => {
           SecurityPolicy: 'TLS_1_2'
         }]
       });
-      
+
       // Verify API mapping
       template.hasResourceProperties('AWS::ApiGatewayV2::ApiMapping', {
         DomainName: 'api.example.com',
@@ -321,7 +323,7 @@ describe('ApiGatewayHttpComponent Synthesis', () => {
         Stage: 'dev'
       });
     });
-    
+
     it('should create custom domain with auto-generated certificate', () => {
       const context = createMockContext('commercial');
       const spec = createMockSpec({
@@ -333,26 +335,26 @@ describe('ApiGatewayHttpComponent Synthesis', () => {
           securityPolicy: 'TLS_1_2'
         }
       });
-      
+
       const { template } = synthesizeComponent(context, spec);
-      
+
       // Verify certificate creation
       template.hasResourceProperties('AWS::CertificateManager::Certificate', {
         DomainName: 'api.example.com',
         ValidationMethod: 'DNS'
       });
-      
+
       // Verify Route 53 record creation
       template.hasResourceProperties('AWS::Route53::RecordSet', {
         Name: 'api.example.com',
         Type: 'A'
       });
     });
-    
+
   });
-  
+
   describe('Access Logging Configuration', () => {
-    
+
     it('should disable access logging when configured', () => {
       const context = createMockContext('commercial');
       const spec = createMockSpec({
@@ -360,16 +362,16 @@ describe('ApiGatewayHttpComponent Synthesis', () => {
           enabled: false
         }
       });
-      
+
       const { template } = synthesizeComponent(context, spec);
-      
+
       // Verify no log group is created
       template.resourceCountIs('AWS::Logs::LogGroup', 0);
-      
+
       // Verify no IAM role for logging
       template.resourceCountIs('AWS::IAM::Role', 0);
     });
-    
+
     it('should configure custom log format and retention', () => {
       const context = createMockContext('commercial');
       const spec = createMockSpec({
@@ -380,20 +382,20 @@ describe('ApiGatewayHttpComponent Synthesis', () => {
           format: '$requestId $requestTime $status'
         }
       });
-      
+
       const { template } = synthesizeComponent(context, spec);
-      
+
       // Verify custom log group configuration
       template.hasResourceProperties('AWS::Logs::LogGroup', {
         LogGroupName: '/custom/api/logs',
         RetentionInDays: 180
       });
     });
-    
+
   });
-  
+
   describe('Monitoring and Observability', () => {
-    
+
     it('should enable X-Ray tracing when configured', () => {
       const context = createMockContext('commercial');
       const spec = createMockSpec({
@@ -401,9 +403,9 @@ describe('ApiGatewayHttpComponent Synthesis', () => {
           tracingEnabled: true
         }
       });
-      
+
       const { template } = synthesizeComponent(context, spec);
-      
+
       // Verify X-Ray tracing configuration
       template.hasResourceProperties('AWS::ApiGatewayV2::Stage', {
         TracingConfig: {
@@ -411,7 +413,7 @@ describe('ApiGatewayHttpComponent Synthesis', () => {
         }
       });
     });
-    
+
     it('should create custom CloudWatch alarms', () => {
       const context = createMockContext('commercial');
       const spec = createMockSpec({
@@ -423,67 +425,67 @@ describe('ApiGatewayHttpComponent Synthesis', () => {
           }
         }
       });
-      
+
       const { template } = synthesizeComponent(context, spec);
-      
+
       // Verify custom alarm thresholds
       template.hasResourceProperties('AWS::CloudWatch::Alarm', {
         AlarmName: 'test-api-api-4xx-errors',
         Threshold: 15.0
       });
-      
+
       template.hasResourceProperties('AWS::CloudWatch::Alarm', {
         AlarmName: 'test-api-api-5xx-errors',
         Threshold: 2.0
       });
-      
+
       template.hasResourceProperties('AWS::CloudWatch::Alarm', {
         AlarmName: 'test-api-api-high-latency',
         Threshold: 8000
       });
     });
-    
+
   });
-  
+
   describe('Component Capabilities and Constructs', () => {
-    
+
     it('should register correct capabilities after synthesis', () => {
       const context = createMockContext('commercial');
       const spec = createMockSpec();
-      
+
       const { component } = synthesizeComponent(context, spec);
-      
+
       const capabilities = component.getCapabilities();
-      
+
       // Verify HTTP API capability
       expect(capabilities['api:http']).toBeDefined();
       expect(capabilities['api:http'].apiId).toBeDefined();
       expect(capabilities['api:http'].apiEndpoint).toBeDefined();
       expect(capabilities['api:http'].stageName).toBe('dev');
-      
+
       // Verify monitoring capability
       expect(capabilities['monitoring:api']).toBeDefined();
       expect(capabilities['monitoring:api'].detailedMetrics).toBe(true);
       expect(capabilities['monitoring:api'].tracingEnabled).toBe(true);
-      
+
       // Verify logging capability
       expect(capabilities['logging:access']).toBeDefined();
       expect(capabilities['logging:access'].logGroupName).toBe('/aws/apigateway/test-api-http-api');
     });
-    
+
     it('should register construct handles for patches.ts access', () => {
       const context = createMockContext('commercial');
       const spec = createMockSpec();
-      
+
       const { component } = synthesizeComponent(context, spec);
-      
+
       // Verify main constructs are registered
       expect(component.getConstruct('main')).toBeDefined();
       expect(component.getConstruct('api')).toBeDefined();
       expect(component.getConstruct('stage')).toBeDefined();
       expect(component.getConstruct('logGroup')).toBeDefined();
     });
-    
+
     it('should register custom domain constructs when configured', () => {
       const context = createMockContext('commercial');
       const spec = createMockSpec({
@@ -492,53 +494,53 @@ describe('ApiGatewayHttpComponent Synthesis', () => {
           certificateArn: 'arn:aws:acm:us-east-1:123456789012:certificate/test-cert-id'
         }
       });
-      
+
       const { component } = synthesizeComponent(context, spec);
-      
+
       // Verify custom domain constructs are registered
       expect(component.getConstruct('customDomain')).toBeDefined();
-      
+
       // Verify custom domain capability
       const capabilities = component.getCapabilities();
       expect(capabilities['api:custom-domain']).toBeDefined();
       expect(capabilities['api:custom-domain'].domainName).toBe('api.example.com');
       expect(capabilities['api:custom-domain'].domainEndpoint).toBe('https://api.example.com');
     });
-    
+
   });
-  
+
   describe('Error Handling and Edge Cases', () => {
-    
+
     it('should handle missing configuration gracefully', () => {
       const context = createMockContext('commercial');
       const spec = createMockSpec({}); // Empty config
-      
+
       expect(() => {
         synthesizeComponent(context, spec);
       }).not.toThrow();
     });
-    
+
     it('should validate component type', () => {
       const context = createMockContext('commercial');
       const spec = createMockSpec();
-      
+
       const { component } = synthesizeComponent(context, spec);
-      
+
       expect(component.getType()).toBe('api-gateway-http');
     });
-    
+
     it('should handle WebSocket protocol configuration', () => {
       const context = createMockContext('commercial');
       const spec = createMockSpec({
         protocolType: 'WEBSOCKET'
       });
-      
+
       const { component } = synthesizeComponent(context, spec);
-      
+
       const capabilities = component.getCapabilities();
       expect(capabilities['api:websocket']).toBeDefined();
     });
-    
+
   });
-  
+
 });

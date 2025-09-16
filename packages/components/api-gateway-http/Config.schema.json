@@ -1,0 +1,365 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "$id": "https://platform.shinobi.dev/schemas/components/api-gateway-http/Config.schema.json",
+  "title": "API Gateway HTTP Configuration Schema",
+  "description": "Configuration schema for AWS API Gateway v2 HTTP API component with compliance, observability, and security features",
+  "type": "object",
+  "properties": {
+    "apiName": {
+      "type": "string",
+      "description": "Name of the API (will be auto-generated if not provided)",
+      "maxLength": 128,
+      "pattern": "^[a-zA-Z0-9-_]+$"
+    },
+    "description": {
+      "type": "string",
+      "description": "Description of the API",
+      "maxLength": 1024
+    },
+    "protocolType": {
+      "type": "string",
+      "enum": [
+        "HTTP",
+        "WEBSOCKET"
+      ],
+      "default": "HTTP",
+      "description": "Protocol type for the API"
+    },
+    "cors": {
+      "type": "object",
+      "description": "CORS configuration for the API",
+      "properties": {
+        "allowOrigins": {
+          "type": "array",
+          "items": {
+            "type": "string",
+            "format": "uri"
+          },
+          "description": "List of allowed origins for CORS",
+          "minItems": 0
+        },
+        "allowHeaders": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          },
+          "description": "List of allowed headers for CORS",
+          "default": [
+            "Content-Type",
+            "Authorization",
+            "X-Requested-With",
+            "X-CSRF-Token"
+          ]
+        },
+        "allowMethods": {
+          "type": "array",
+          "items": {
+            "type": "string",
+            "enum": [
+              "GET",
+              "POST",
+              "PUT",
+              "DELETE",
+              "PATCH",
+              "HEAD",
+              "OPTIONS"
+            ]
+          },
+          "description": "List of allowed HTTP methods for CORS",
+          "default": [
+            "GET",
+            "POST",
+            "PUT",
+            "DELETE",
+            "OPTIONS"
+          ]
+        },
+        "allowCredentials": {
+          "type": "boolean",
+          "default": false,
+          "description": "Whether to allow credentials in CORS requests"
+        },
+        "exposeHeaders": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          },
+          "description": "List of headers to expose in CORS responses"
+        },
+        "maxAge": {
+          "type": "integer",
+          "minimum": 0,
+          "maximum": 86400,
+          "default": 86400,
+          "description": "Maximum age for preflight requests in seconds"
+        }
+      },
+      "additionalProperties": false
+    },
+    "customDomain": {
+      "type": "object",
+      "description": "Custom domain configuration",
+      "properties": {
+        "domainName": {
+          "type": "string",
+          "format": "hostname",
+          "description": "Custom domain name for the API"
+        },
+        "certificateArn": {
+          "type": "string",
+          "pattern": "^arn:aws:acm:",
+          "description": "ARN of the SSL certificate"
+        },
+        "hostedZoneId": {
+          "type": "string",
+          "pattern": "^Z[A-Z0-9]{16,32}$",
+          "description": "Route 53 hosted zone ID for DNS management"
+        },
+        "basePath": {
+          "type": "string",
+          "pattern": "^[a-zA-Z0-9/_\\-]+$",
+          "description": "Base path mapping for the domain"
+        }
+      },
+      "required": [
+        "domainName"
+      ],
+      "additionalProperties": false
+    },
+    "stage": {
+      "type": "object",
+      "description": "API Gateway stage configuration",
+      "properties": {
+        "stageName": {
+          "type": "string",
+          "pattern": "^[a-zA-Z0-9_-]+$",
+          "default": "prod",
+          "description": "Name of the API Gateway stage"
+        },
+        "autoDeploy": {
+          "type": "boolean",
+          "default": true,
+          "description": "Whether to auto-deploy changes to the stage"
+        },
+        "throttling": {
+          "type": "object",
+          "description": "Throttling configuration for the stage",
+          "properties": {
+            "rateLimit": {
+              "type": "integer",
+              "minimum": 1,
+              "maximum": 10000,
+              "description": "Rate limit (requests per second)"
+            },
+            "burstLimit": {
+              "type": "integer",
+              "minimum": 1,
+              "maximum": 20000,
+              "description": "Burst limit (requests per second)"
+            }
+          },
+          "additionalProperties": false
+        }
+      },
+      "additionalProperties": false
+    },
+    "monitoring": {
+      "type": "object",
+      "description": "Monitoring and observability configuration",
+      "properties": {
+        "detailedMetrics": {
+          "type": "boolean",
+          "default": true,
+          "description": "Enable detailed CloudWatch metrics"
+        },
+        "tracingEnabled": {
+          "type": "boolean",
+          "default": true,
+          "description": "Enable X-Ray tracing"
+        },
+        "alarms": {
+          "type": "object",
+          "description": "CloudWatch alarms configuration",
+          "properties": {
+            "errorRate4xx": {
+              "type": "number",
+              "minimum": 0,
+              "maximum": 100,
+              "description": "4xx error rate threshold (%)"
+            },
+            "errorRate5xx": {
+              "type": "number",
+              "minimum": 0,
+              "maximum": 100,
+              "description": "5xx error rate threshold (%)"
+            },
+            "highLatency": {
+              "type": "number",
+              "minimum": 100,
+              "description": "High latency threshold (milliseconds)"
+            },
+            "lowThroughput": {
+              "type": "number",
+              "minimum": 1,
+              "description": "Low throughput threshold (requests per minute)"
+            }
+          },
+          "additionalProperties": false
+        }
+      },
+      "additionalProperties": false
+    },
+    "accessLogging": {
+      "type": "object",
+      "description": "Access logging configuration",
+      "properties": {
+        "enabled": {
+          "type": "boolean",
+          "default": true,
+          "description": "Enable access logging"
+        },
+        "retentionInDays": {
+          "type": "integer",
+          "minimum": 1,
+          "maximum": 3653,
+          "description": "Log retention period in days"
+        },
+        "includeExecutionData": {
+          "type": "boolean",
+          "default": false,
+          "description": "Include execution data in logs"
+        },
+        "includeRequestResponseData": {
+          "type": "boolean",
+          "default": false,
+          "description": "Include request/response data in logs"
+        },
+        "format": {
+          "type": "string",
+          "description": "Custom log format string"
+        }
+      },
+      "additionalProperties": false
+    },
+    "security": {
+      "type": "object",
+      "description": "Security configuration",
+      "properties": {
+        "enableWaf": {
+          "type": "boolean",
+          "default": false,
+          "description": "Enable AWS WAF protection"
+        },
+        "enableApiKey": {
+          "type": "boolean",
+          "default": false,
+          "description": "Enable API key authentication"
+        },
+        "requireAuthorization": {
+          "type": "boolean",
+          "default": true,
+          "description": "Require authorization for API access"
+        }
+      },
+      "additionalProperties": false
+    },
+    "observability": {
+      "type": "object",
+      "description": "OpenTelemetry observability configuration",
+      "properties": {
+        "tracingEnabled": {
+          "type": "boolean",
+          "default": true,
+          "description": "Enable OpenTelemetry tracing"
+        },
+        "otlpEndpoint": {
+          "type": "string",
+          "format": "uri",
+          "description": "OTLP endpoint for traces and metrics"
+        },
+        "serviceName": {
+          "type": "string",
+          "pattern": "^[a-zA-Z0-9_-]+$",
+          "description": "Service name for OpenTelemetry"
+        },
+        "resourceAttributes": {
+          "type": "object",
+          "description": "Additional resource attributes for OpenTelemetry",
+          "additionalProperties": {
+            "type": "string"
+          }
+        },
+        "metricsEnabled": {
+          "type": "boolean",
+          "default": true,
+          "description": "Enable OpenTelemetry metrics export"
+        },
+        "logsEnabled": {
+          "type": "boolean",
+          "default": true,
+          "description": "Enable OpenTelemetry logs export"
+        }
+      },
+      "additionalProperties": false
+    },
+    "tags": {
+      "type": "object",
+      "description": "Additional tags for the API",
+      "additionalProperties": {
+        "type": "string"
+      }
+    }
+  },
+  "additionalProperties": false,
+  "required": [],
+  "examples": [
+    {
+      "description": "Basic HTTP API configuration",
+      "apiName": "user-api",
+      "description": "User management HTTP API",
+      "cors": {
+        "allowOrigins": [
+          "https://myapp.com"
+        ],
+        "allowMethods": [
+          "GET",
+          "POST",
+          "PUT",
+          "DELETE"
+        ],
+        "allowHeaders": [
+          "Content-Type",
+          "Authorization"
+        ]
+      },
+      "monitoring": {
+        "detailedMetrics": true,
+        "tracingEnabled": true
+      }
+    },
+    {
+      "description": "FedRAMP Moderate configuration",
+      "apiName": "secure-api",
+      "description": "Secure API for FedRAMP Moderate compliance",
+      "cors": {
+        "allowOrigins": [
+          "https://secure.myapp.com"
+        ],
+        "allowCredentials": false
+      },
+      "security": {
+        "enableWaf": true,
+        "enableApiKey": true,
+        "requireAuthorization": true
+      },
+      "accessLogging": {
+        "enabled": true,
+        "retentionInDays": 90
+      },
+      "observability": {
+        "tracingEnabled": true,
+        "serviceName": "secure-api-gateway"
+      }
+    }
+  ]
+}

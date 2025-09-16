@@ -1,0 +1,196 @@
+# Lambda API Observability Recipe
+# ADOT layers, OTEL envs, alarms for errors/latency
+
+otel_configuration:
+  environment_variables:
+    OTEL_SERVICE_NAME: "${SERVICE_NAME}"
+    OTEL_RESOURCE_ATTRIBUTES: "service.name=${SERVICE_NAME},service.version=${SERVICE_VERSION},deployment.environment=${ENVIRONMENT}"
+    OTEL_EXPORTER_OTLP_ENDPOINT: "http://adot-collector:4317"
+    OTEL_EXPORTER_OTLP_HEADERS: "x-api-key=${OTEL_API_KEY}"
+    OTEL_TRACES_EXPORTER: "otlp"
+    OTEL_METRICS_EXPORTER: "otlp"
+    OTEL_LOGS_EXPORTER: "otlp"
+    OTEL_PYTHON_LOG_CORRELATION: "true"
+    OTEL_PYTHON_LOG_FORMAT: "json"
+
+  adot_layers:
+    python: "arn:aws:lambda:${REGION}:901920570463:layer:aws-otel-python-amd64-ver-1-18-1:1"
+    nodejs: "arn:aws:lambda:${REGION}:901920570463:layer:aws-otel-nodejs-amd64-ver-1-18-1:1"
+    java: "arn:aws:lambda:${REGION}:901920570463:layer:aws-otel-java-wrapper-amd64-ver-1-32-1:1"
+
+structured_logging:
+  log_format: "json"
+  required_fields:
+    - timestamp: "ISO 8601 format"
+    - level: "DEBUG|INFO|WARN|ERROR"
+    - message: "Human readable message"
+    - trace_id: "OpenTelemetry trace ID"
+    - span_id: "OpenTelemetry span ID"
+    - service: "Service name"
+    - function: "Lambda function name"
+    - request_id: "AWS Lambda request ID"
+
+  optional_fields:
+    - user_id: "Authenticated user identifier"
+    - correlation_id: "Request correlation identifier"
+    - duration_ms: "Function execution time in milliseconds"
+    - memory_used_mb: "Memory consumption in MB"
+    - error_code: "Application error code"
+    - error_details: "Detailed error information"
+
+custom_metrics:
+  business_metrics:
+    - name: "UserRegistrations"
+      description: "Number of user registrations processed"
+      unit: "Count"
+      dimensions: ["Environment", "Service"]
+
+    - name: "APIRequests"
+      description: "Number of API requests processed"
+      unit: "Count"
+      dimensions: ["Environment", "Service", "Endpoint"]
+
+    - name: "DataProcessed"
+      description: "Amount of data processed in bytes"
+      unit: "Bytes"
+      dimensions: ["Environment", "Service", "DataType"]
+
+  performance_metrics:
+    - name: "CacheHitRate"
+      description: "Percentage of cache hits"
+      unit: "Percent"
+      dimensions: ["Environment", "Service", "CacheType"]
+
+    - name: "DatabaseQueryTime"
+      description: "Database query execution time"
+      unit: "Milliseconds"
+      dimensions: ["Environment", "Service", "QueryType"]
+
+    - name: "ExternalAPILatency"
+      description: "External API call latency"
+      unit: "Milliseconds"
+      dimensions: ["Environment", "Service", "ExternalService"]
+
+alarms:
+  error_rate:
+    - name: "LambdaAPIHighErrorRate"
+      description: "Lambda API error rate exceeds threshold"
+      metric: "Errors"
+      threshold: 10
+      comparison: "GreaterThanThreshold"
+      period: "300"
+      evaluation_periods: 2
+      treat_missing_data: "breaching"
+
+    - name: "LambdaAPIErrorRatePercent"
+      description: "Lambda API error rate percentage exceeds threshold"
+      metric: "ErrorRate"
+      threshold: 5
+      comparison: "GreaterThanThreshold"
+      period: "300"
+      evaluation_periods: 2
+      treat_missing_data: "breaching"
+
+  latency:
+    - name: "LambdaAPIHighLatency"
+      description: "Lambda API latency exceeds threshold"
+      metric: "Duration"
+      threshold: 5000
+      comparison: "GreaterThanThreshold"
+      period: "300"
+      evaluation_periods: 2
+      treat_missing_data: "breaching"
+
+    - name: "LambdaAPIP95Latency"
+      description: "Lambda API P95 latency exceeds threshold"
+      metric: "Duration"
+      statistic: "p95"
+      threshold: 3000
+      comparison: "GreaterThanThreshold"
+      period: "300"
+      evaluation_periods: 2
+      treat_missing_data: "breaching"
+
+  throughput:
+    - name: "LambdaAPIHighThrottles"
+      description: "Lambda API throttles exceed threshold"
+      metric: "Throttles"
+      threshold: 5
+      comparison: "GreaterThanThreshold"
+      period: "300"
+      evaluation_periods: 2
+      treat_missing_data: "breaching"
+
+    - name: "LambdaAPILowInvocations"
+      description: "Lambda API invocations below expected threshold"
+      metric: "Invocations"
+      threshold: 1
+      comparison: "LessThanThreshold"
+      period: "900"
+      evaluation_periods: 1
+      treat_missing_data: "breaching"
+
+dashboard_widgets:
+  - type: "line"
+    title: "Lambda API Invocations"
+    metrics:
+      - ["Invocations", "Service", "LambdaAPI"]
+    period: "1h"
+    y_axis:
+      left:
+        min: 0
+
+  - type: "line"
+    title: "Lambda API Errors"
+    metrics:
+      - ["Errors", "Service", "LambdaAPI"]
+    period: "1h"
+    y_axis:
+      left:
+        min: 0
+
+  - type: "line"
+    title: "Lambda API Duration"
+    metrics:
+      - ["Duration", "Service", "LambdaAPI"]
+    period: "1h"
+    y_axis:
+      left:
+        min: 0
+        max: 10000
+
+  - type: "single_value"
+    title: "Lambda API Throttles"
+    metrics:
+      - ["Throttles", "Service", "LambdaAPI"]
+    period: "1h"
+
+  - type: "line"
+    title: "Lambda API Concurrent Executions"
+    metrics:
+      - ["ConcurrentExecutions", "Service", "LambdaAPI"]
+    period: "1h"
+    y_axis:
+      left:
+        min: 0
+
+slo_targets:
+  availability:
+    commercial: "99.9%"
+    fedramp_moderate: "99.95%"
+    fedramp_high: "99.99%"
+
+  latency_p95:
+    commercial: "500ms"
+    fedramp_moderate: "300ms"
+    fedramp_high: "200ms"
+
+  error_rate:
+    commercial: "0.1%"
+    fedramp_moderate: "0.05%"
+    fedramp_high: "0.01%"
+
+  throughput:
+    commercial: "1000 requests/minute"
+    fedramp_moderate: "2000 requests/minute"
+    fedramp_high: "5000 requests/minute"

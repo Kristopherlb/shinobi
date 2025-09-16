@@ -1,0 +1,19 @@
+defaults:
+  encryption: true
+  blockPublicAccess: true
+  versioning: true
+  accessLogs: enabled
+dashboards:
+  - id: s3-core
+    alarms:
+      - name: S3PutErrorsHigh
+        metric: 5xxErrors
+        threshold:
+          fedramp-low: 5
+          fedramp-moderate: 2
+          fedramp-high: 1
+controls:
+  - id: "SC-13"
+    requires: ["encryption"]
+  - id: "AU-2"
+    requires: ["accessLogs"]

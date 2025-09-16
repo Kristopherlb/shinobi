@@ -9,7 +9,7 @@ module.exports = {
       tsconfig: 'tsconfig.jest.json'
     }]
   },
-  moduleNameMapping: {
+  moduleNameMapper: {
     '^@platform/(.*)$': '<rootDir>/packages/$1/src'
   },
   collectCoverageFrom: [

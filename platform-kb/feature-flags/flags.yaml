@@ -1,0 +1,5 @@
+flags:
+  components.cache-redis.enabled: true
+  components.cache-redis.publicExposure: false
+  ai.write.enabled: false # global
+  ai.read.enabled: true
