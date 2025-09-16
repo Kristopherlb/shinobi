@@ -1,0 +1,56 @@
+description: >
+  Review and refactor an existing Shinobi platform component to ensure it conforms to
+  platform standards, FedRAMP/commercial compliance, and developer experience best practices.
+
+inputExample: |
+  Path: packages/components/rds-postgres/src/rds-postgres.component.ts
+
+instructions:
+  - Load and analyze the target component file(s) and associated schema/tests/docs.
+  - Refactor the component so it conforms to the following **mandatory standards**:
+      * **Schema-driven validation**:
+        - All configs must reference `Config.schema.json` from the component registry.
+        - Validate overrides and precedence using the Configuration Precedence Chain:contentReference[oaicite:0]{index=0}.
+      * **Compliance frameworks**:
+        - Support all three compliance levels: `commercial` (FedRAMP Low baseline), `fedramp-moderate`, and `fedramp-high`:contentReference[oaicite:1]{index=1}:contentReference[oaicite:2]{index=2}.
+        - Apply framework-specific defaults (e.g., encryption, CMKs, FIPS endpoints, logging).
+      * **Bindings & triggers**:
+        - Require at least one valid `binds` or `triggers` entry where applicable:contentReference[oaicite:3]{index=3}.
+        - Validate against the Binder Matrix in `/platform/bindings` and confirm via MCP:contentReference[oaicite:4]{index=4}.
+      * **Tagging**:
+        - Enforce mandatory and compliance-specific tags (`platform:*`, `compliance:*`, `data-classification`):contentReference[oaicite:5]{index=5}.
+      * **Observability**:
+        - Auto-instrument with ADOT layers, sidecars, or agents per the OpenTelemetry standard:contentReference[oaicite:6]{index=6}.
+        - Inject OTEL env vars (`OTEL_EXPORTER_OTLP_ENDPOINT`, `OTEL_SERVICE_NAME`, `OTEL_RESOURCE_ATTRIBUTES`).
+      * **Logging**:
+        - Replace console.log with `@platform/logger`, emitting structured JSON logs with trace/span IDs:contentReference[oaicite:7]{index=7}.
+        - Redact PII using the provided helpers.
+      * **IAM & security**:
+        - Enforce least-privilege IAM bindings, validated via `svc audit iam`:contentReference[oaicite:8]{index=8}.
+      * **Feature flags**:
+        - Every component package must register behind a feature flag for rollout, gating, or AI-write prevention.
+      * **Deprecation hooks**:
+        - Ensure deprecation warnings and MCP dependency checks are in place:contentReference[oaicite:9]{index=9}.
+      * **Tests**:
+        - Update/add unit, snapshot, integration, and governance tests as per the Test Plan:contentReference[oaicite:10]{index=10}.
+        - Include coverage for FedRAMP control enforcement, tagging, bindings, and observability.
+      * **Docs**:
+        - Update `README.md` and package-level docs.
+        - Ensure the component is included in the “Living Docs Portal” and Backstage catalog entry.
+
+outputFormat:
+  - Updated TypeScript component code (with compliance-aware synth).
+  - Updated `Config.schema.json`.
+  - Updated/added test files (unit, snapshot, integration).
+  - Updated README.md.
+  - Backstage catalog YAML entry if missing.
+  - Inline comments explaining refactor decisions.
+
+enforcedBehavior:
+  - Do not generate one-off scripts; only use `svc` CLI commands, existing test runners, and documented workflows.
+  - Reject incomplete refactors: all standards above must be addressed.
+  - Ensure output is production-ready, auditable, and aligned with the golden-path developer experience:contentReference[oaicite:11]{index=11}.
+
+metadata:
+  version: 1.0
+  tags: [refactor, compliance, auditability, component, shinobi]

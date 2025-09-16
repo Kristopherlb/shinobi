@@ -1,0 +1,20 @@
+apiVersion: backstage.io/v1alpha1
+kind: Service
+metadata:
+  name: orders-api
+  description: Orders API (Shinobi golden-path)
+  tags:
+    [
+      platform:orders-api,
+      owner:team-fulfillment,
+      compliance:fedramp-low,
+      control:ac-2,
+    ]
+  annotations:
+    backstage.io/techdocs-ref: dir:.
+    shinobi/mcp.service-manifest: https://mcp.internal/services/orders-api/manifest # desired state:contentReference[oaicite:65]{index=65}
+    shinobi/mcp.service-status: https://mcp.internal/services/orders-api/status # actual state:contentReference[oaicite:66]{index=66}
+spec:
+  type: service
+  owner: group:team-fulfillment
+  lifecycle: experimental

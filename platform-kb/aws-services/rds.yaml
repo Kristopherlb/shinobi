@@ -1,0 +1,172 @@
+# RDS Best Practices Pack
+# Used to derive defaults, dashboards, and alarms
+
+default_configurations:
+  encryption:
+    commercial: "AES-256"
+    fedramp_moderate: "AWS KMS customer-managed keys"
+    fedramp_high: "FIPS 140-2 Level 3"
+
+  publicly_accessible:
+    commercial: false
+    fedramp_moderate: false
+    fedramp_high: false
+
+  backup_retention:
+    commercial: 7
+    fedramp_moderate: 30
+    fedramp_high: 90
+
+  deletion_protection:
+    commercial: true
+    fedramp_moderate: true
+    fedramp_high: true
+
+  multi_az:
+    commercial: false
+    fedramp_moderate: true
+    fedramp_high: true
+
+  vpc_security_groups:
+    commercial: "default"
+    fedramp_moderate: "restricted"
+    fedramp_high: "strict"
+
+security_controls:
+  - control: "encryption_at_rest"
+    requirement: "All RDS instances must have encryption enabled"
+    validation: "Check storage encryption configuration"
+
+  - control: "public_access_block"
+    requirement: "RDS instances must not be publicly accessible"
+    validation: "Verify publicly accessible setting is false"
+
+  - control: "vpc_isolation"
+    requirement: "RDS instances must be in VPC with security groups"
+    validation: "Check VPC and security group configuration"
+
+  - control: "backup_encryption"
+    requirement: "Automated backups must be encrypted"
+    validation: "Verify backup encryption configuration"
+
+monitoring_and_alerting:
+  required_metrics:
+    - CPUUtilization
+    - DatabaseConnections
+    - FreeableMemory
+    - FreeStorageSpace
+    - ReadLatency
+    - WriteLatency
+    - ReadIOPS
+    - WriteIOPS
+    - ReadThroughput
+    - WriteThroughput
+
+  alarms:
+    - name: "RDSHighCPU"
+      metric: "CPUUtilization"
+      threshold: 80
+      comparison: "GreaterThanThreshold"
+      period: "300"
+      evaluation_periods: 2
+
+    - name: "RDSLowFreeStorage"
+      metric: "FreeStorageSpace"
+      threshold: "1GB"
+      comparison: "LessThanThreshold"
+      period: "300"
+      evaluation_periods: 2
+
+    - name: "RDSHighConnections"
+      metric: "DatabaseConnections"
+      threshold: 80
+      comparison: "GreaterThanThreshold"
+      period: "300"
+      evaluation_periods: 2
+
+    - name: "RDSHighLatency"
+      metric: "ReadLatency"
+      threshold: 1000
+      comparison: "GreaterThanThreshold"
+      period: "300"
+      evaluation_periods: 2
+
+dashboard_widgets:
+  - type: "line"
+    title: "RDS CPU Utilization"
+    metrics: ["CPUUtilization"]
+    period: "1h"
+
+  - type: "line"
+    title: "RDS Connections"
+    metrics: ["DatabaseConnections"]
+    period: "1h"
+
+  - type: "line"
+    title: "RDS Latency"
+    metrics: ["ReadLatency", "WriteLatency"]
+    period: "1h"
+
+  - type: "single_value"
+    title: "Free Storage Space"
+    metrics: ["FreeStorageSpace"]
+    period: "1h"
+
+  - type: "line"
+    title: "RDS IOPS"
+    metrics: ["ReadIOPS", "WriteIOPS"]
+    period: "1h"
+
+performance_optimization:
+  parameter_groups:
+    commercial:
+      shared_preload_libraries: "pg_stat_statements"
+      log_statement: "all"
+      log_min_duration_statement: 1000
+
+    fedramp_moderate:
+      shared_preload_libraries: "pg_stat_statements"
+      log_statement: "all"
+      log_min_duration_statement: 1000
+      log_connections: true
+      log_disconnections: true
+
+    fedramp_high:
+      shared_preload_libraries: "pg_stat_statements"
+      log_statement: "all"
+      log_min_duration_statement: 1000
+      log_connections: true
+      log_disconnections: true
+      log_hostname: true
+
+  read_replicas:
+    commercial: 0
+    fedramp_moderate: 1
+    fedramp_high: 2
+
+  maintenance_windows:
+    commercial: "sun:03:00-sun:04:00"
+    fedramp_moderate: "sun:02:00-sun:03:00"
+    fedramp_high: "sun:01:00-sun:02:00"
+
+backup_and_recovery:
+  automated_backups:
+    commercial: true
+    fedramp_moderate: true
+    fedramp_high: true
+
+  backup_window:
+    commercial: "03:00-04:00"
+    fedramp_moderate: "02:00-03:00"
+    fedramp_high: "01:00-02:00"
+
+  point_in_time_recovery:
+    commercial: true
+    fedramp_moderate: true
+    fedramp_high: true
+
+  cross_region_backups:
+    commercial: false
+    fedramp_moderate: true
+    fedramp_high: true
+

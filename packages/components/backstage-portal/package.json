@@ -39,10 +39,7 @@
   "license": "MIT",
   "dependencies": {
     "@platform/contracts": "workspace:*",
-    "@platform/core": "workspace:*",
-    "@platform/logger": "workspace:*",
-    "@platform/tagging": "workspace:*",
-    "@platform/observability": "workspace:*",
+    "@platform/core-engine": "workspace:*",
     "aws-cdk-lib": "^2.100.0",
     "constructs": "^10.3.0"
   },

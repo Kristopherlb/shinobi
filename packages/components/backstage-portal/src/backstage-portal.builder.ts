@@ -5,8 +5,7 @@
  * Component override > Environment > Platform > Compliance > Hardcoded defaults
  */
 
-import { ConfigBuilder } from '@platform/core';
-import { ComponentContext, ComponentSpec } from '@platform/contracts';
+import { ConfigBuilder, ComponentContext, ComponentSpec } from '@platform/core-engine';
 
 /**
  * Configuration interface for Backstage Portal Component
@@ -19,7 +18,7 @@ export interface BackstagePortalConfig {
     description: string;
     baseUrl: string;
   };
-  
+
   // Database configuration
   database: {
     instanceClass: string;
@@ -29,7 +28,7 @@ export interface BackstagePortalConfig {
     multiAz: boolean;
     deletionProtection: boolean;
   };
-  
+
   // Backend service configuration
   backend: {
     desiredCount: number;
@@ -38,7 +37,7 @@ export interface BackstagePortalConfig {
     healthCheckPath: string;
     healthCheckInterval: number;
   };
-  
+
   // Frontend service configuration
   frontend: {
     desiredCount: number;
@@ -47,13 +46,13 @@ export interface BackstagePortalConfig {
     healthCheckPath: string;
     healthCheckInterval: number;
   };
-  
+
   // ECR configuration
   ecr: {
     maxImageCount: number;
     imageScanOnPush: boolean;
   };
-  
+
   // Observability configuration
   observability: {
     logRetentionDays: number;
@@ -62,14 +61,14 @@ export interface BackstagePortalConfig {
     enableTracing: boolean;
     enableMetrics: boolean;
   };
-  
+
   // Security configuration
   security: {
     enableEncryption: boolean;
     enableVpcFlowLogs: boolean;
     enableWaf: boolean;
   };
-  
+
   // Authentication configuration
   auth: {
     provider: 'github' | 'google' | 'microsoft';
@@ -79,7 +78,7 @@ export interface BackstagePortalConfig {
       organization: string;
     };
   };
-  
+
   // Catalog configuration
   catalog: {
     providers: Array<{
@@ -394,9 +393,9 @@ export const BACKSTAGE_PORTAL_CONFIG_SCHEMA = {
  * Configuration builder for Backstage Portal Component
  */
 export class BackstagePortalConfigBuilder extends ConfigBuilder<BackstagePortalConfig> {
-  
-  constructor(builderContext: any, schema: any) {
-    super(builderContext, schema);
+
+  constructor(context: ComponentContext, spec: ComponentSpec) {
+    super(context, spec);
   }
 
   /**
@@ -472,7 +471,7 @@ export class BackstagePortalConfigBuilder extends ConfigBuilder<BackstagePortalC
    */
   protected getComplianceFrameworkDefaults(): Record<string, Partial<BackstagePortalConfig>> {
     const framework = this.builderContext.context.complianceFramework || 'commercial';
-    
+
     const frameworkDefaults: Record<string, Partial<BackstagePortalConfig>> = {
       'commercial': {
         security: {
@@ -573,8 +572,8 @@ export class BackstagePortalConfigBuilder extends ConfigBuilder<BackstagePortalC
    * Get environment-specific defaults (Layer 3)
    */
   protected getEnvironmentDefaults(): Record<string, Partial<BackstagePortalConfig>> {
-    const env = this.builderContext.context.environment || 'dev';
-    
+    const env = this.context.environment || 'dev';
+
     const envDefaults: Record<string, Partial<BackstagePortalConfig>> = {
       dev: {
         backend: {

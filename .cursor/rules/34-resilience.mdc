@@ -1,0 +1,4 @@
+---
+description: "Resilience & DR"
+---
+- Fault injection playbooks; backup/restore drills; RTO/RPO tests.

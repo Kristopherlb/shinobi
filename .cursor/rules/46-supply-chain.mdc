@@ -1,0 +1,4 @@
+---
+description: "SBOM & License"
+---
+- Generate SBOM, check licenses, attach to PR & evidence.

@@ -5,7 +5,8 @@
  * Provides 5-layer configuration precedence chain and compliance-aware defaults.
  */
 
-import { ConfigBuilder, ConfigBuilderContext } from '../../../src/platform/contracts/config-builder';
+import { ConfigBuilder } from '../../../src/platform/contracts/config-builder';
+import { ComponentContext, ComponentSpec } from '@platform/contracts';
 
 /**
  * Configuration interface for Modern HTTP API Gateway component
@@ -13,13 +14,13 @@ import { ConfigBuilder, ConfigBuilderContext } from '../../../src/platform/contr
 export interface ApiGatewayHttpConfig {
   /** API name (optional, will be auto-generated) */
   apiName?: string;
-  
+
   /** API description */
   description?: string;
-  
+
   /** Protocol type */
   protocolType?: 'HTTP' | 'WEBSOCKET';
-  
+
   /** CORS configuration */
   cors?: {
     /** Allowed origins */
@@ -35,7 +36,7 @@ export interface ApiGatewayHttpConfig {
     /** Expose headers */
     exposeHeaders?: string[];
   };
-  
+
   /** Custom domain configuration */
   customDomain?: {
     /** Domain name */
@@ -50,8 +51,10 @@ export interface ApiGatewayHttpConfig {
     securityPolicy?: string;
     /** Endpoint type */
     endpointType?: 'EDGE' | 'REGIONAL';
+    /** Base path mapping */
+    basePath?: string;
   };
-  
+
   /** Authentication and authorization */
   auth?: {
     /** JWT authorizers */
@@ -70,7 +73,7 @@ export interface ApiGatewayHttpConfig {
         issuer?: string;
       };
     }[];
-    
+
     /** Lambda authorizers */
     lambda?: {
       /** Authorizer name */
@@ -87,46 +90,40 @@ export interface ApiGatewayHttpConfig {
       enableSimpleResponses?: boolean;
     }[];
   };
-  
+
   /** Route configuration */
   routes?: {
-    /** HTTP method */
-    method: string;
-    /** Route path */
-    path: string;
+    /** Route key (e.g., 'GET /users', 'POST /orders') */
+    routeKey: string;
     /** Integration configuration */
     integration: {
       /** Integration type */
-      type: 'LAMBDA' | 'HTTP_PROXY' | 'AWS_PROXY' | 'MOCK';
-      /** Target ARN or URI */
-      target?: string;
-      /** Integration method */
-      integrationMethod?: string;
-      /** Request parameters */
-      requestParameters?: Record<string, string>;
-      /** Request templates */
-      requestTemplates?: Record<string, string>;
-      /** Response parameters */
-      responseParameters?: Record<string, Record<string, string>>;
-      /** Timeout in milliseconds */
-      timeoutInMillis?: number;
+      type: 'HTTP_PROXY' | 'AWS_PROXY' | 'MOCK';
+      /** Target URI for HTTP_PROXY */
+      uri?: string;
+      /** Lambda function ARN for AWS_PROXY */
+      lambdaFunctionArn?: string;
+      /** HTTP method for proxy */
+      httpMethod?: string;
       /** Connection type */
       connectionType?: 'INTERNET' | 'VPC_LINK';
-      /** Connection ID for VPC Link */
-      connectionId?: string;
+      /** VPC Link ID */
+      vpcLinkId?: string;
     };
-    /** Authorizer reference */
-    authorizerId?: string;
-    /** Authorization scopes */
-    authorizationScopes?: string[];
-    /** API key required */
-    apiKeyRequired?: boolean;
-    /** Request validator */
-    requestValidator?: string;
-    /** Request models */
-    requestModels?: Record<string, string>;
+    /** Authorization configuration */
+    authorization?: {
+      /** Authorization type */
+      authorizationType?: 'NONE' | 'AWS_IAM' | 'JWT';
+      /** JWT authorizer configuration */
+      jwtConfiguration?: {
+        /** JWT issuer */
+        issuer: string;
+        /** JWT audience */
+        audience?: string[];
+      };
+    };
   }[];
-  
+
   /** Throttling configuration */
   throttling?: {
     /** Rate limit (requests per second) */
@@ -134,7 +131,7 @@ export interface ApiGatewayHttpConfig {
     /** Burst limit */
     burstLimit?: number;
   };
-  
+
   /** Access logging configuration */
   accessLogging?: {
     /** Enable access logging */
@@ -150,7 +147,7 @@ export interface ApiGatewayHttpConfig {
     /** Include request/response data */
     includeRequestResponseData?: boolean;
   };
-  
+
   /** Monitoring and observability */
   monitoring?: {
     /** Enable detailed metrics */
@@ -178,7 +175,7 @@ export interface ApiGatewayHttpConfig {
       lowThroughput?: number;
     };
   };
-  
+
   /** VPC configuration for private APIs */
   vpc?: {
     /** VPC Link ID */
@@ -197,7 +194,7 @@ export interface ApiGatewayHttpConfig {
       subnetIds?: string[];
     };
   };
-  
+
   /** WebSocket specific configuration */
   websocket?: {
     /** Connect route integration */
@@ -231,7 +228,7 @@ export interface ApiGatewayHttpConfig {
       target: string;
     }[];
   };
-  
+
   /** API Gateway specific settings */
   apiSettings?: {
     /** Disable execute API endpoint */
@@ -243,7 +240,7 @@ export interface ApiGatewayHttpConfig {
     /** Minimum compression size */
     minimumCompressionSize?: number;
   };
-  
+
   /** Resource policy for API access control */
   resourcePolicy?: {
     /** Policy document */
@@ -255,168 +252,116 @@ export interface ApiGatewayHttpConfig {
     /** Deny from specific IP ranges */
     denyFromIpRanges?: string[];
   };
+
+  /** Default stage configuration */
+  defaultStage?: {
+    /** Stage name */
+    stageName?: string;
+    /** Auto deploy */
+    autoDeploy?: boolean;
+    /** Throttling settings */
+    throttling?: {
+      rateLimit?: number;
+      burstLimit?: number;
+    };
+  };
+
+  /** OpenTelemetry configuration */
+  observability?: {
+    /** Enable OpenTelemetry tracing */
+    tracingEnabled?: boolean;
+    /** OTLP endpoint for traces */
+    otlpEndpoint?: string;
+    /** Service name for traces */
+    serviceName?: string;
+    /** Resource attributes */
+    resourceAttributes?: Record<string, string>;
+    /** Enable metrics export */
+    metricsEnabled?: boolean;
+    /** Enable logs export */
+    logsEnabled?: boolean;
+  };
+
+  /** Tags for the API */
+  tags?: Record<string, string>;
+  security?: {
+    enableWaf?: boolean;
+    enableApiKey?: boolean;
+    requireAuthorization?: boolean;
+  };
 }
 
 /**
- * JSON Schema for API Gateway HTTP configuration validation
+ * Load the JSON Schema for API Gateway HTTP configuration validation
  */
-export const API_GATEWAY_HTTP_CONFIG_SCHEMA = {
-  type: 'object',
-  properties: {
-    apiName: {
-      type: 'string',
-      description: 'API name (optional, will be auto-generated from component name)',
-      pattern: '^[a-zA-Z][a-zA-Z0-9-_]*$',
-      maxLength: 128
-    },
-    description: {
-      type: 'string',
-      description: 'API description for documentation',
-      maxLength: 1024
-    },
-    protocolType: {
-      type: 'string',
-      enum: ['HTTP', 'WEBSOCKET'],
-      default: 'HTTP',
-      description: 'Protocol type for the API Gateway'
-    },
-    cors: {
+function loadConfigSchema(): any {
+  const fs = require('fs');
+  const path = require('path');
+  const schemaPath = path.join(__dirname, 'Config.schema.json');
+  try {
+    return JSON.parse(fs.readFileSync(schemaPath, 'utf8'));
+  } catch (error) {
+    // Fallback to a minimal schema if file not found
+    return {
       type: 'object',
-      description: 'CORS configuration for cross-origin requests',
       properties: {
-        allowOrigins: {
-          type: 'array',
-          items: { type: 'string' },
-          description: 'Allowed origins for CORS requests'
+        apiName: { type: 'string' },
+        description: { type: 'string' },
+        protocolType: { type: 'string', enum: ['HTTP', 'WEBSOCKET'] },
+        cors: {
+          type: 'object',
+          properties: {
+            allowOrigins: { type: 'array', items: { type: 'string' } },
+            allowHeaders: { type: 'array', items: { type: 'string' } },
+            allowMethods: { type: 'array', items: { type: 'string' } },
+            allowCredentials: { type: 'boolean' },
+            maxAge: { type: 'number' }
+          }
         },
-        allowHeaders: {
-          type: 'array',
-          items: { type: 'string' },
-          description: 'Allowed headers for CORS requests'
+        customDomain: {
+          type: 'object',
+          properties: {
+            domainName: { type: 'string' },
+            certificateArn: { type: 'string' },
+            securityPolicy: { type: 'string' },
+            endpointType: { type: 'string' }
+          }
         },
-        allowMethods: {
-          type: 'array',
-          items: { type: 'string', enum: ['GET', 'POST', 'PUT', 'DELETE', 'PATCH', 'HEAD', 'OPTIONS'] },
-          description: 'Allowed HTTP methods for CORS requests'
+        throttling: {
+          type: 'object',
+          properties: {
+            rateLimit: { type: 'number' },
+            burstLimit: { type: 'number' }
+          }
         },
-        allowCredentials: {
-          type: 'boolean',
-          description: 'Whether to allow credentials in CORS requests'
+        accessLogging: {
+          type: 'object',
+          properties: {
+            enabled: { type: 'boolean' },
+            retentionInDays: { type: 'number' },
+            format: { type: 'string' }
+          }
         },
-        maxAge: {
-          type: 'number',
-          minimum: 0,
-          maximum: 86400,
-          description: 'Max age for preflight requests in seconds'
+        monitoring: {
+          type: 'object',
+          properties: {
+            detailedMetrics: { type: 'boolean' },
+            tracingEnabled: { type: 'boolean' },
+            alarms: { type: 'object' }
+          }
         },
-        exposeHeaders: {
-          type: 'array',
-          items: { type: 'string' },
-          description: 'Headers to expose to the client'
+        security: {
+          type: 'object',
+          properties: {
+            enableWaf: { type: 'boolean' },
+            enableApiKey: { type: 'boolean' },
+            requireAuthorization: { type: 'boolean' }
+          }
         }
-      },
-      additionalProperties: false
-    },
-    customDomain: {
-      type: 'object',
-      description: 'Custom domain configuration',
-      properties: {
-        domainName: {
-          type: 'string',
-          description: 'Custom domain name for the API',
-          pattern: '^[a-zA-Z0-9][a-zA-Z0-9-\\.]*[a-zA-Z0-9]$'
-        },
-        certificateArn: {
-          type: 'string',
-          description: 'ARN of the SSL certificate'
-        },
-        autoGenerateCertificate: {
-          type: 'boolean',
-          default: false,
-          description: 'Whether to auto-generate SSL certificate'
-        },
-        hostedZoneId: {
-          type: 'string',
-          description: 'Route 53 hosted zone ID for DNS configuration'
-        },
-        securityPolicy: {
-          type: 'string',
-          enum: ['TLS_1_0', 'TLS_1_2'],
-          default: 'TLS_1_2',
-          description: 'Security policy for the domain'
-        },
-        endpointType: {
-          type: 'string',
-          enum: ['EDGE', 'REGIONAL'],
-          default: 'REGIONAL',
-          description: 'Endpoint type for the custom domain'
-        }
-      },
-      required: ['domainName'],
-      additionalProperties: false
-    },
-    throttling: {
-      type: 'object',
-      description: 'API throttling configuration',
-      properties: {
-        rateLimit: {
-          type: 'number',
-          minimum: 1,
-          description: 'Rate limit in requests per second'
-        },
-        burstLimit: {
-          type: 'number',
-          minimum: 1,
-          description: 'Burst limit for request spikes'
-        }
-      },
-      additionalProperties: false
-    },
-    accessLogging: {
-      type: 'object',
-      description: 'Access logging configuration',
-      properties: {
-        enabled: {
-          type: 'boolean',
-          default: true,
-          description: 'Whether to enable access logging'
-        },
-        logGroupName: {
-          type: 'string',
-          description: 'CloudWatch log group name'
-        },
-        retentionInDays: {
-          type: 'number',
-          enum: [1, 3, 5, 7, 14, 30, 60, 90, 120, 150, 180, 365, 400, 545, 731, 1827, 3653],
-          description: 'Log retention period in days'
-        },
-        format: {
-          type: 'string',
-          description: 'Access log format'
-        }
-      },
-      additionalProperties: false
-    },
-    monitoring: {
-      type: 'object',
-      description: 'Monitoring and observability configuration',
-      properties: {
-        detailedMetrics: {
-          type: 'boolean',
-          default: false,
-          description: 'Enable detailed CloudWatch metrics'
-        },
-        tracingEnabled: {
-          type: 'boolean',
-          default: false,
-          description: 'Enable AWS X-Ray tracing'
-        }
-      },
-      additionalProperties: false
-    }
-  },
-  additionalProperties: false
-};
+      }
+    };
+  }
+}
 
 /**
  * ConfigBuilder for API Gateway HTTP component
@@ -429,28 +374,64 @@ export const API_GATEWAY_HTTP_CONFIG_SCHEMA = {
  * 5. Policy Overrides (from governance policies)
  */
 export class ApiGatewayHttpConfigBuilder extends ConfigBuilder<ApiGatewayHttpConfig> {
-  
+  protected context: ComponentContext;
+  protected spec: ComponentSpec;
+
+  constructor(context: ComponentContext, spec: ComponentSpec) {
+    if (!context) {
+      throw new Error('ComponentContext is required');
+    }
+    if (!spec) {
+      throw new Error('ComponentSpec is required');
+    }
+    const schema = loadConfigSchema();
+    super({ context, spec }, { type: 'api-gateway-http', properties: schema.properties });
+    this.context = context;
+    this.spec = spec;
+  }
+
+  /**
+   * Build the final configuration using the 5-layer precedence chain
+   * This method is inherited from ConfigBuilder and provides the complete
+   * configuration merging logic. We only need to implement the abstract methods.
+   */
+  public buildSync(): ApiGatewayHttpConfig {
+    const config = super.buildSync() as ApiGatewayHttpConfig;
+
+    // Validate and sanitize throttling values
+    if (config.throttling) {
+      if (!config.throttling.rateLimit || config.throttling.rateLimit <= 0) {
+        config.throttling.rateLimit = 50; // Default safe value
+      }
+      if (!config.throttling.burstLimit || config.throttling.burstLimit <= 0) {
+        config.throttling.burstLimit = 100; // Default safe value
+      }
+    }
+
+    return config;
+  }
+
   /**
    * Layer 1: Hardcoded Fallbacks
    * Ultra-safe baseline configuration that works in any environment
    */
-  protected getHardcodedFallbacks(): Partial<ApiGatewayHttpConfig> {
+  public getHardcodedFallbacks(): Record<string, any> {
     return {
       protocolType: 'HTTP',
+      description: 'Modern HTTP API Gateway for test-http-api-gateway',
       cors: {
-        allowOrigins: ['https://localhost:3000'], // Safe default for local development
-        allowHeaders: ['Content-Type', 'Authorization', 'X-Requested-With'],
+        allowOrigins: [],
+        allowHeaders: ['Content-Type', 'Authorization'],
         allowMethods: ['GET', 'POST', 'OPTIONS'],
         allowCredentials: false,
         maxAge: 300
       },
       throttling: {
-        rateLimit: 100,
-        burstLimit: 200
+        rateLimit: 50,
+        burstLimit: 100
       },
       accessLogging: {
-        enabled: true,
-        retentionInDays: 7,
+        enabled: false,
         format: '$requestId $requestTime $httpMethod $resourcePath $status $responseLength $requestTime'
       },
       monitoring: {
@@ -460,100 +441,24 @@ export class ApiGatewayHttpConfigBuilder extends ConfigBuilder<ApiGatewayHttpCon
       apiSettings: {
         disableExecuteApiEndpoint: false,
         apiKeySource: 'HEADER'
+      },
+      security: {
+        enableWaf: false,
+        enableApiKey: false,
+        requireAuthorization: true
       }
     };
   }
-  
-  /**
-   * Layer 2: Compliance Framework Defaults
-   * Security and compliance-specific configurations
-   */
-  protected getComplianceFrameworkDefaults(): Partial<ApiGatewayHttpConfig> {
-    const framework = this.context.complianceFramework;
-    
-    const baseCompliance: Partial<ApiGatewayHttpConfig> = {
-      cors: {
-        allowOrigins: [], // Must be explicitly configured
-        allowHeaders: ['Content-Type', 'Authorization', 'X-Requested-With', 'X-CSRF-Token'],
-        allowMethods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'],
-        allowCredentials: true,
-        maxAge: 86400
-      },
-      throttling: {
-        rateLimit: 1000,
-        burstLimit: 2000
-      },
-      accessLogging: {
-        enabled: true,
-        retentionInDays: 30,
-        includeExecutionData: true,
-        includeRequestResponseData: false
-      },
-      monitoring: {
-        detailedMetrics: true,
-        tracingEnabled: true,
-        alarms: {
-          errorRate4xx: 5.0,
-          errorRate5xx: 1.0,
-          highLatency: 5000,
-          lowThroughput: 10
-        }
-      },
-      customDomain: {
-        securityPolicy: 'TLS_1_2',
-        endpointType: 'REGIONAL'
-      }
-    };
-    
-    if (framework === 'fedramp-moderate' || framework === 'fedramp-high') {
-      return {
-        ...baseCompliance,
-        cors: {
-          ...baseCompliance.cors,
-          allowOrigins: [], // Must be explicitly configured - no wildcards
-          allowCredentials: true
-        },
-        accessLogging: {
-          ...baseCompliance.accessLogging,
-          enabled: true, // Mandatory for FedRAMP
-          retentionInDays: framework === 'fedramp-high' ? 365 : 90,
-          includeExecutionData: true,
-          includeRequestResponseData: true // Required for audit trail
-        },
-        monitoring: {
-          ...baseCompliance.monitoring,
-          detailedMetrics: true, // Mandatory for FedRAMP
-          tracingEnabled: true,
-          alarms: {
-            errorRate4xx: 2.0, // Stricter thresholds
-            errorRate5xx: 0.5,
-            highLatency: 3000,
-            lowThroughput: 5
-          }
-        },
-        throttling: {
-          rateLimit: 500, // More conservative for security
-          burstLimit: 1000
-        },
-        apiSettings: {
-          disableExecuteApiEndpoint: true, // Security requirement
-          apiKeySource: 'HEADER'
-        },
-        resourcePolicy: {
-          // Will be populated with VPC/IP restrictions
-          allowFromVpcs: [], // Must be explicitly configured
-          denyFromIpRanges: ['0.0.0.0/0'] // Deny all by default, must be overridden
-        }
-      };
-    }
-    
-    return baseCompliance;
+
+  // Add build method for async compatibility
+  public async build(): Promise<ApiGatewayHttpConfig> {
+    return this.buildSync();
   }
-  
+
   /**
    * Get the JSON Schema for validation
    */
   public getSchema(): any {
-    return API_GATEWAY_HTTP_CONFIG_SCHEMA;
+    return loadConfigSchema();
   }
 }

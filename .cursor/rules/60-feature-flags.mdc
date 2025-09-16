@@ -1,0 +1,2 @@
+- Gate every new package behind OpenFeature: on synth, check `components.<name>.enabled` flag; if false → do not provision (emit warning & testable event).
+- Provide manifest-level opt-in via `environments.*.features` mapping that toggles flags in `svc validate/up`.

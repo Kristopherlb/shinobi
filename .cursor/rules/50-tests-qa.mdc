@@ -1,0 +1,63 @@
+# Testing & Quality Assurance
+
+## Test Pyramid
+- **Unit Tests**: Component logic, business rules, utilities
+- **Integration Tests**: Component interactions, database operations
+- **End-to-End Tests**: Full user workflows, API contracts
+- **Compliance Tests**: Policy validation, security controls
+
+## Test Execution
+- **Local Development**: `pnpm test` for unit and integration tests
+- **CI/CD Pipeline**: Full test suite with coverage reporting
+- **Pre-deployment**: `svc validate` for manifest and policy validation
+- **Post-deployment**: `svc local up` for smoke testing
+
+## Test Coverage Requirements
+- **Unit Tests**: 90% code coverage minimum
+- **Integration Tests**: All critical paths covered
+- **API Tests**: All endpoints with success and error scenarios
+- **Security Tests**: All security controls validated
+
+## Quality Gates
+- **Build**: TypeScript compilation, linting, formatting
+- **Test**: Unit tests, integration tests, coverage thresholds
+- **Security**: SAST, dependency scanning, policy validation
+- **Performance**: Load testing, latency benchmarks
+
+## Test Categories
+
+### Unit Tests
+- Component business logic
+- Utility functions
+- Data transformations
+- Error handling
+
+### Integration Tests
+- Database operations
+- External API calls
+- Message queue processing
+- File system operations
+
+### End-to-End Tests
+- User registration flow
+- API authentication
+- Data processing pipelines
+- Error recovery scenarios
+
+### Compliance Tests
+- Policy rule validation
+- Security control verification
+- Data classification enforcement
+- Audit logging validation
+
+## Test Data Management
+- **Fixtures**: Reusable test data sets
+- **Mocking**: External dependencies and APIs
+- **Isolation**: Tests don't affect each other
+- **Cleanup**: Automatic test data cleanup
+
+## Continuous Quality
+- **Code Reviews**: All changes reviewed by peers
+- **Automated Testing**: Tests run on every commit
+- **Quality Metrics**: Track test coverage, performance, security
+- **Feedback Loops**: Fast feedback on code quality issues

@@ -1,0 +1,4 @@
+---
+description: "PR Hygiene"
+---
+- CODEOWNERS, PR template, checklist (security, obs, tags, triad, tests, docs).

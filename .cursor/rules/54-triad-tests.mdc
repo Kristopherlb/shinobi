@@ -1,0 +1,4 @@
+---
+description: "Triad Matrix Tests"
+---
+- Run low/mod/high configs for each component; publish matrix results.

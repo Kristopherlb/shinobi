@@ -1,0 +1,56 @@
+# Observability & Logging Requirements
+
+## OpenTelemetry (OTel) Integration
+- **ADOT Collector**: Deploy ADOT collector for metrics and traces
+- **OTel Environment Variables**: Standardized across all services
+  ```bash
+  OTEL_SERVICE_NAME=service-name
+  OTEL_RESOURCE_ATTRIBUTES=service.name=service-name,service.version=1.0.0
+  OTEL_EXPORTER_OTLP_ENDPOINT=http://adot-collector:4317
+  ```
+- **Auto-instrumentation**: Use ADOT Lambda layers for automatic tracing
+- **Custom spans**: Add business logic spans for critical operations
+
+## Structured Logging
+- **JSON Format**: All logs in structured JSON format
+- **Trace Context**: Include trace_id and span_id in all log entries
+- **Log Levels**: DEBUG, INFO, WARN, ERROR with appropriate usage
+- **No console.log**: Use structured logging library instead
+
+## Logging Standards
+```json
+{
+  "timestamp": "2024-01-15T10:30:00Z",
+  "level": "INFO",
+  "trace_id": "1234567890abcdef",
+  "span_id": "abcdef1234567890",
+  "service": "user-api",
+  "message": "User created successfully",
+  "user_id": "user-123",
+  "duration_ms": 150
+}
+```
+
+## Monitoring Requirements
+- **CloudWatch Logs**: Centralized log aggregation
+- **Log Retention**: 30 days for dev, 90 days for prod
+- **Log Groups**: One per service with standardized naming
+- **Log Streams**: One per Lambda execution or ECS task
+
+## Metrics & Alarms
+- **Custom Metrics**: Business metrics (user registrations, API calls)
+- **Infrastructure Metrics**: CPU, memory, disk, network utilization
+- **Error Rates**: 4xx/5xx HTTP errors, Lambda errors, ECS task failures
+- **Latency**: P50, P95, P99 response times
+
+## Dashboard Generation
+- **Service Dashboards**: Auto-generated from KB recipes
+- **Framework-specific**: Different thresholds for commercial vs fedramp
+- **Cost Monitoring**: Resource utilization and cost attribution
+- **Security Monitoring**: Failed authentication, suspicious activity
+
+## Alerting
+- **SLO-based**: Error rate < 0.1%, latency P95 < 500ms
+- **Escalation**: Email → Slack → PagerDuty based on severity
+- **Runbooks**: Automated remediation for common issues
+- **Post-incident**: Automatic postmortem generation

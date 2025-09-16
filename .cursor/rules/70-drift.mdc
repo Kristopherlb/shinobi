@@ -1,0 +1,4 @@
+---
+description: "Drift Check (MCP)"
+---
+- Compare desired vs actual; suggest manifest-first remediation; local-only by default.

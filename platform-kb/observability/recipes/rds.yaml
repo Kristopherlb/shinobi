@@ -1,25 +1,244 @@
-$schema: ../schema/recipe.schema.json
-service_type: "rds"
-telemetry:
-  logs:
-    - name: "Audit & error logs exported to CloudWatch"
-      required: true
-      retention_days:
-        commercial: 30
-        fedramp-low: 60
-        fedramp-moderate: 90
-        fedramp-high: 365
-  metrics:
-    - name: "GoldenSignals-ish"
-      items: ["CPUUtilization","FreeableMemory","ReadLatency","WriteLatency","FreeStorageSpace"]
-  tracing:
-    applicable: false
-  alarms:
-    - name: "HighCPUUtilization"
+# RDS Observability Recipe
+# Monitoring, alerting, and performance optimization
+
+monitoring_configuration:
+  enhanced_monitoring:
+    commercial: false
+    fedramp_moderate: true
+    fedramp_high: true
+
+  performance_insights:
+    commercial: false
+    fedramp_moderate: true
+    fedramp_high: true
+
+  log_exports:
+    commercial: ["error"]
+    fedramp_moderate: ["error", "general", "slow-query"]
+    fedramp_high: ["error", "general", "slow-query", "postgresql"]
+
+required_metrics:
+  instance_metrics:
+    - CPUUtilization
+    - DatabaseConnections
+    - FreeableMemory
+    - FreeStorageSpace
+    - ReadLatency
+    - WriteLatency
+    - ReadIOPS
+    - WriteIOPS
+    - ReadThroughput
+    - WriteThroughput
+    - NetworkReceiveThroughput
+    - NetworkTransmitThroughput
+
+  enhanced_monitoring_metrics:
+    - os.cpu.percent
+    - os.memory.percent
+    - os.disk.percent
+    - os.network.rx_bytes
+    - os.network.tx_bytes
+    - os.processes.count
+    - os.load.1m
+    - os.load.5m
+    - os.load.15m
+
+alarms:
+  performance:
+    - name: "RDSHighCPU"
+      description: "RDS CPU utilization exceeds threshold"
       metric: "CPUUtilization"
       threshold: 80
-      period: 300
-      eval_periods: 3
-dashboards:
-  - name: "RDS Operational"
-    widgets: ["CPU","Connections","Latency","FreeStorage"]
+      comparison: "GreaterThanThreshold"
+      period: "300"
+      evaluation_periods: 2
+      treat_missing_data: "breaching"
+
+    - name: "RDSLowFreeStorage"
+      description: "RDS free storage space below threshold"
+      metric: "FreeStorageSpace"
+      threshold: 1000000000 # 1GB in bytes
+      comparison: "LessThanThreshold"
+      period: "300"
+      evaluation_periods: 2
+      treat_missing_data: "breaching"
+
+    - name: "RDSHighConnections"
+      description: "RDS database connections exceed threshold"
+      metric: "DatabaseConnections"
+      threshold: 80
+      comparison: "GreaterThanThreshold"
+      period: "300"
+      evaluation_periods: 2
+      treat_missing_data: "breaching"
+
+    - name: "RDSHighLatency"
+      description: "RDS read latency exceeds threshold"
+      metric: "ReadLatency"
+      threshold: 1000 # 1 second
+      comparison: "GreaterThanThreshold"
+      period: "300"
+      evaluation_periods: 2
+      treat_missing_data: "breaching"
+
+  availability:
+    - name: "RDSInstanceDown"
+      description: "RDS instance is down"
+      metric: "DatabaseConnections"
+      threshold: 0
+      comparison: "LessThanThreshold"
+      period: "300"
+      evaluation_periods: 1
+      treat_missing_data: "breaching"
+
+    - name: "RDSFailover"
+      description: "RDS failover detected"
+      metric: "FailoverCount"
+      threshold: 1
+      comparison: "GreaterThanThreshold"
+      period: "300"
+      evaluation_periods: 1
+      treat_missing_data: "notBreaching"
+
+dashboard_widgets:
+  - type: "line"
+    title: "RDS CPU Utilization"
+    metrics:
+      - ["CPUUtilization", "DBInstanceIdentifier", "my-db-instance"]
+    period: "1h"
+    y_axis:
+      left:
+        min: 0
+        max: 100
+
+  - type: "line"
+    title: "RDS Connections"
+    metrics:
+      - ["DatabaseConnections", "DBInstanceIdentifier", "my-db-instance"]
+    period: "1h"
+    y_axis:
+      left:
+        min: 0
+
+  - type: "line"
+    title: "RDS Latency"
+    metrics:
+      - ["ReadLatency", "DBInstanceIdentifier", "my-db-instance"]
+      - ["WriteLatency", "DBInstanceIdentifier", "my-db-instance"]
+    period: "1h"
+    y_axis:
+      left:
+        min: 0
+        max: 5000
+
+  - type: "single_value"
+    title: "Free Storage Space"
+    metrics:
+      - ["FreeStorageSpace", "DBInstanceIdentifier", "my-db-instance"]
+    period: "1h"
+    y_axis:
+      left:
+        min: 0
+
+  - type: "line"
+    title: "RDS IOPS"
+    metrics:
+      - ["ReadIOPS", "DBInstanceIdentifier", "my-db-instance"]
+      - ["WriteIOPS", "DBInstanceIdentifier", "my-db-instance"]
+    period: "1h"
+    y_axis:
+      left:
+        min: 0
+
+  - type: "line"
+    title: "RDS Throughput"
+    metrics:
+      - ["ReadThroughput", "DBInstanceIdentifier", "my-db-instance"]
+      - ["WriteThroughput", "DBInstanceIdentifier", "my-db-instance"]
+    period: "1h"
+    y_axis:
+      left:
+        min: 0
+
+performance_insights:
+  retention_period:
+    commercial: 7
+    fedramp_moderate: 30
+    fedramp_high: 90
+
+  top_sql_statements:
+    limit: 20
+    time_range: "1h"
+
+  top_wait_events:
+    limit: 10
+    time_range: "1h"
+
+  database_load:
+    time_range: "1h"
+    dimensions:
+      - "db.sql_tokenized"
+      - "db.wait_event"
+      - "db.wait_event_type"
+
+log_monitoring:
+  error_logs:
+    - name: "RDSErrorLog"
+      description: "RDS error log monitoring"
+      log_group: "/aws/rds/instance/my-db-instance/error"
+      filter_pattern: "ERROR"
+      metric_transformations:
+        - name: "RDSErrorCount"
+          value: "1"
+          default_value: "0"
+
+  slow_query_logs:
+    - name: "RDSSlowQueryLog"
+      description: "RDS slow query log monitoring"
+      log_group: "/aws/rds/instance/my-db-instance/slowquery"
+      filter_pattern: "duration"
+      metric_transformations:
+        - name: "RDSSlowQueryCount"
+          value: "1"
+          default_value: "0"
+
+backup_monitoring:
+  backup_alarms:
+    - name: "RDSBackupFailed"
+      description: "RDS backup failed"
+      metric: "BackupRetentionPeriodStorageUsed"
+      threshold: 0
+      comparison: "LessThanThreshold"
+      period: "3600"
+      evaluation_periods: 1
+      treat_missing_data: "breaching"
+
+    - name: "RDSBackupStorageHigh"
+      description: "RDS backup storage usage high"
+      metric: "BackupRetentionPeriodStorageUsed"
+      threshold: 100000000000 # 100GB
+      comparison: "GreaterThanThreshold"
+      period: "3600"
+      evaluation_periods: 2
+      treat_missing_data: "breaching"
+
+slo_targets:
+  availability:
+    commercial: "99.9%"
+    fedramp_moderate: "99.95%"
+    fedramp_high: "99.99%"
+
+  latency_p95:
+    commercial: "100ms"
+    fedramp_moderate: "50ms"
+    fedramp_high: "25ms"
+
+  connection_pool_utilization:
+    commercial: "80%"
+    fedramp_moderate: "70%"
+    fedramp_high: "60%"
+
+  backup_success_rate:
+    commercial: "99%"
+    fedramp_moderate: "99.5%"
+    fedramp_high: "99.9%"

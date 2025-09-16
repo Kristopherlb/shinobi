@@ -1,0 +1,109 @@
+apiVersion: backstage.io/v1alpha1
+kind: Component
+metadata:
+  name: api-gateway-http
+  title: API Gateway HTTP Component
+  description: Modern AWS API Gateway v2 (HTTP API) component with compliance, observability, and security features
+  annotations:
+    backstage.io/managed-by-location: file:./catalog-info.yaml
+    backstage.io/techdocs-ref: dir:.
+    platform.shinobi.dev/component-type: api-gateway-http
+    platform.shinobi.dev/compliance-frameworks: commercial,fedramp-moderate,fedramp-high
+    platform.shinobi.dev/observability: opentelemetry,xray,cloudwatch
+    platform.shinobi.dev/security: waf,api-key,cors
+    platform.shinobi.dev/performance: high-performance,cost-optimized
+  tags:
+    - api-gateway
+    - http-api
+    - aws
+    - serverless
+    - microservices
+    - compliance
+    - fedramp
+    - observability
+    - security
+    - platform
+    - component
+spec:
+  type: service
+  lifecycle: production
+  owner: platform-engineering-team
+  system: shinobi-platform
+  providesApis:
+    - api-gateway-http
+  consumesApis:
+    - lambda-api
+    - cognito-auth
+    - cloudwatch-metrics
+  dependsOn:
+    - component:aws-cdk
+    - component:constructs
+  links:
+    - title: Documentation
+      url: https://github.com/shinobi-platform/shinobi/tree/main/packages/components/api-gateway-http
+    - title: Schema Reference
+      url: https://platform.shinobi.dev/schemas/components/api-gateway-http/Config.schema.json
+    - title: Tests
+      url: https://github.com/shinobi-platform/shinobi/tree/main/packages/components/api-gateway-http/tests
+  metadata:
+    platform:
+      componentType: api-gateway-http
+      version: 1.0.0
+      complianceFrameworks:
+        - commercial
+        - fedramp-moderate
+        - fedramp-high
+      capabilities:
+        - api:http
+        - api:websocket
+        - api:gateway
+        - api:custom-domain
+        - auth:jwt
+        - auth:lambda
+        - monitoring:api
+        - logging:access
+      bindings:
+        - lambda:invoke
+        - cognito:authorize
+        - route53:manage
+        - cloudwatch:metrics
+        - waf:protect
+        - certificate:validate
+      observability:
+        tracing: true
+        metrics: true
+        logs: true
+        sampling:
+          commercial: 1.0
+          fedramp-moderate: 0.5
+          fedramp-high: 0.1
+      security:
+        waf: true
+        apiKey: true
+        cors: true
+        authorization: true
+      performance:
+        costOptimization: true
+        latencyOptimization: true
+        throughputOptimization: true
+      tags:
+        required:
+          - platform:component
+          - platform:service
+          - platform:environment
+          - platform:owner
+          - platform:managed-by
+          - platform:compliance-framework
+        compliance:
+          commercial:
+            - compliance:framework=fedramp-low
+            - compliance:level=commercial
+          fedramp-moderate:
+            - compliance:framework=fedramp-moderate
+            - compliance:level=moderate
+            - compliance:data-classification=confidential
+          fedramp-high:
+            - compliance:framework=fedramp-high
+            - compliance:level=high
+            - compliance:data-classification=secret
+

@@ -1,0 +1,278 @@
+# FedRAMP Moderate Compliance Framework
+# Enhanced compliance requirements for moderate impact systems
+
+framework_info:
+  name: "FedRAMP Moderate"
+  version: "2024-01"
+  description: "Enhanced compliance requirements for moderate impact systems"
+  inherits_from: "fedramp-low"
+
+security_controls:
+  access_control:
+    - control_id: "AC-1"
+      title: "Access Control Policy and Procedures"
+      requirement: "Enhanced access control policy with regular reviews"
+      implementation: "automated"
+      enhancements:
+        - "AC-1(1): Automated policy updates"
+        - "AC-1(2): Policy compliance monitoring"
+
+    - control_id: "AC-2"
+      title: "Account Management"
+      requirement: "Enhanced account management with automated provisioning"
+      implementation: "automated"
+      enhancements:
+        - "AC-2(1): Automated account provisioning"
+        - "AC-2(2): Account monitoring"
+        - "AC-2(3): Disable inactive accounts"
+
+    - control_id: "AC-3"
+      title: "Access Enforcement"
+      requirement: "Enhanced access enforcement with attribute-based controls"
+      implementation: "automated"
+      enhancements:
+        - "AC-3(1): Attribute-based access control"
+        - "AC-3(2): Mandatory access control"
+
+  audit_and_accountability:
+    - control_id: "AU-1"
+      title: "Audit and Accountability Policy"
+      requirement: "Enhanced audit policy with continuous monitoring"
+      implementation: "automated"
+      enhancements:
+        - "AU-1(1): Continuous audit monitoring"
+        - "AU-1(2): Audit policy compliance"
+
+    - control_id: "AU-2"
+      title: "Audit Events"
+      requirement: "Enhanced audit events with real-time monitoring"
+      implementation: "automated"
+      enhancements:
+        - "AU-2(1): Real-time audit monitoring"
+        - "AU-2(2): Audit event correlation"
+
+    - control_id: "AU-3"
+      title: "Content of Audit Records"
+      requirement: "Enhanced audit records with additional context"
+      implementation: "automated"
+      enhancements:
+        - "AU-3(1): Additional audit information"
+        - "AU-3(2): Centralized audit management"
+
+  system_and_communications_protection:
+    - control_id: "SC-1"
+      title: "System and Communications Protection Policy"
+      requirement: "Enhanced protection policy with network segmentation"
+      implementation: "automated"
+      enhancements:
+        - "SC-1(1): Network segmentation"
+        - "SC-1(2): Traffic monitoring"
+
+    - control_id: "SC-7"
+      title: "Boundary Protection"
+      requirement: "Enhanced boundary protection with intrusion detection"
+      implementation: "automated"
+      enhancements:
+        - "SC-7(1): Intrusion detection systems"
+        - "SC-7(2): Network monitoring"
+        - "SC-7(3): Access point restrictions"
+
+    - control_id: "SC-8"
+      title: "Transmission Confidentiality and Integrity"
+      requirement: "Enhanced transmission protection with perfect forward secrecy"
+      implementation: "automated"
+      enhancements:
+        - "SC-8(1): Perfect forward secrecy"
+        - "SC-8(2): Cryptographic key management"
+
+data_protection:
+  encryption_at_rest:
+    standard: "AWS KMS customer-managed keys"
+    key_management: "Customer-managed keys with automatic rotation"
+    scope: "All persistent data"
+    enhancements:
+      - "Key rotation every 90 days"
+      - "Hardware security modules (HSM) for key storage"
+      - "Multi-region key replication"
+
+  encryption_in_transit:
+    standard: "TLS 1.3"
+    certificate_management: "AWS Certificate Manager with private CA"
+    scope: "All network communications"
+    enhancements:
+      - "Perfect forward secrecy"
+      - "Certificate pinning"
+      - "End-to-end encryption"
+
+  data_classification:
+    levels: ["public", "internal", "confidential", "restricted"]
+    handling_requirements:
+      public: "No special handling required"
+      internal: "Encryption at rest and in transit, access logging"
+      confidential: "Encryption at rest and in transit, access logging, audit trail"
+      restricted: "FIPS 140-2 encryption, dedicated infrastructure, continuous monitoring"
+
+monitoring_and_logging:
+  audit_logging:
+    retention_period: 30
+    log_aggregation: "CloudWatch Logs with Kinesis"
+    log_analysis: "CloudWatch Insights with ML"
+    enhancements:
+      - "Real-time log analysis"
+      - "Automated threat detection"
+      - "Log integrity protection"
+
+  monitoring:
+    real_time_monitoring: true
+    alerting: "comprehensive"
+    incident_response: "automated"
+    enhancements:
+      - "SIEM integration"
+      - "Behavioral analytics"
+      - "Automated response"
+
+  compliance_reporting:
+    frequency: "weekly"
+    automation_level: "automated"
+    enhancements:
+      - "Real-time compliance dashboards"
+      - "Automated evidence collection"
+      - "Continuous compliance monitoring"
+
+backup_and_recovery:
+  backup_retention:
+    standard: 30
+    critical_data: 90
+    automated: true
+    enhancements:
+      - "Cross-region backup replication"
+      - "Backup encryption with customer keys"
+      - "Automated backup testing"
+
+  recovery_time_objective:
+    standard: "2 hours"
+    critical: "1 hour"
+    enhancements:
+      - "Automated failover"
+      - "Multi-AZ deployment"
+      - "Load balancing"
+
+  recovery_point_objective:
+    standard: "30 minutes"
+    critical: "15 minutes"
+    enhancements:
+      - "Continuous backup"
+      - "Point-in-time recovery"
+      - "Transaction log backup"
+
+network_security:
+  network_segmentation:
+    level: "enhanced"
+    vpc_required: true
+    security_groups: "restricted"
+    enhancements:
+      - "Network ACLs"
+      - "Subnet isolation"
+      - "Traffic monitoring"
+
+  access_controls:
+    public_access: "restricted"
+    internet_gateway: "conditional"
+    nat_gateway: "required"
+    enhancements:
+      - "VPN access only"
+      - "Bastion hosts"
+      - "Jump servers"
+
+  dns_security:
+    dns_filtering: true
+    dns_logging: true
+    enhancements:
+      - "DNS over HTTPS"
+      - "DNS monitoring"
+      - "DNS firewall"
+
+identity_and_access_management:
+  authentication:
+    multi_factor: "required"
+    password_policy: "enhanced"
+    session_management: "enhanced"
+    enhancements:
+      - "Hardware tokens"
+      - "Biometric authentication"
+      - "Risk-based authentication"
+
+  authorization:
+    principle: "least privilege"
+    role_based: true
+    attribute_based: true
+    enhancements:
+      - "Dynamic authorization"
+      - "Context-aware access"
+      - "Just-in-time access"
+
+  account_management:
+    lifecycle: "automated"
+    provisioning: "automated"
+    deprovisioning: "automated"
+    enhancements:
+      - "Automated account reviews"
+      - "Privileged access management"
+      - "Service account management"
+
+incident_response:
+  detection:
+    automated: true
+    manual: true
+    monitoring: "comprehensive"
+    enhancements:
+      - "Automated threat detection"
+      - "Behavioral analysis"
+      - "Threat intelligence integration"
+
+  response:
+    automation: "extensive"
+    escalation: "automated"
+    communication: "multi-channel"
+    enhancements:
+      - "Automated containment"
+      - "Incident playbooks"
+      - "Communication automation"
+
+  recovery:
+    procedures: "automated"
+    testing: "monthly"
+    lessons_learned: "required"
+    enhancements:
+      - "Automated recovery"
+      - "Chaos engineering"
+      - "Post-incident automation"
+
+continuous_monitoring:
+  vulnerability_management:
+    scanning: "weekly"
+    remediation: "30 days"
+    reporting: "weekly"
+    enhancements:
+      - "Automated vulnerability scanning"
+      - "Risk-based prioritization"
+      - "Automated patching"
+
+  configuration_management:
+    baseline: "automated"
+    drift_detection: "real-time"
+    remediation: "automated"
+    enhancements:
+      - "Infrastructure as code"
+      - "Automated compliance checks"
+      - "Self-healing infrastructure"
+
+  patch_management:
+    critical: "7 days"
+    standard: "30 days"
+    testing: "automated"
+    enhancements:
+      - "Automated patching"
+      - "Canary deployments"
+      - "Rollback automation"
+

@@ -13,6 +13,9 @@ The API Gateway HTTP component provides:
 - **VPC Link support** for private integrations
 - **Streamlined configuration** for microservices
 - **Comprehensive compliance** (Commercial, FedRAMP Moderate/High)
+- **OpenTelemetry integration** with structured logging and tracing
+- **Platform tagging standard** with compliance-specific tags
+- **Bindings and triggers validation** with matrix-based capability checking
 
 Use this component for modern microservices, serverless APIs, and cost-sensitive applications. For complex enterprise features like request validation and SDK generation, use `api-gateway-rest` instead.
 
@@ -276,6 +279,109 @@ The following construct handles are available for use in `patches.ts`:
 - `authorizers` - Map of configured authorizers
 - `routes` - Map of configured routes
 - `integrations` - Map of configured integrations
+
+## OpenTelemetry Integration
+
+The API Gateway HTTP component includes comprehensive OpenTelemetry integration for observability:
+
+### Automatic Configuration
+
+- **OTEL Environment Variables**: Automatically configured based on compliance framework
+- **X-Ray Tracing**: Integrated with AWS X-Ray for distributed tracing
+- **Service Naming**: Automatic service name generation with compliance context
+- **Resource Attributes**: Platform and compliance metadata included in traces
+
+### Compliance-Specific Settings
+
+```yaml
+# Commercial/Dev Environment
+observability:
+  serviceName: "api-gateway-myapp"
+  tracingEnabled: true
+  samplingRate: 1.0  # Sample all traces
+
+# FedRAMP Moderate
+observability:
+  serviceName: "api-gateway-secure"
+  tracingEnabled: true
+  samplingRate: 0.5  # 50% sampling
+  otlpEndpoint: "https://otlp.us-east-1.amazonaws.com"
+
+# FedRAMP High
+observability:
+  serviceName: "api-gateway-high-security"
+  tracingEnabled: true
+  samplingRate: 0.1  # 10% sampling
+  otlpEndpoint: "https://otlp.us-east-1.amazonaws.com"
+```
+
+## Platform Tagging Standard
+
+All resources are automatically tagged according to the Shinobi Platform Tagging Standard:
+
+### Standard Tags
+
+- `platform:component` - Component type identifier
+- `platform:service` - Service name
+- `platform:environment` - Environment (dev, staging, prod)
+- `platform:owner` - Service owner/team
+- `platform:managed-by` - Always "shinobi"
+- `platform:compliance-framework` - Compliance framework
+- `platform:data-classification` - Data classification level
+
+### Compliance-Specific Tags
+
+**Commercial:**
+- `compliance:framework=fedramp-low`
+- `compliance:level=commercial`
+
+**FedRAMP Moderate:**
+- `compliance:framework=fedramp-moderate`
+- `compliance:level=moderate`
+- `compliance:data-classification=confidential`
+
+**FedRAMP High:**
+- `compliance:framework=fedramp-high`
+- `compliance:level=high`
+- `compliance:data-classification=secret`
+
+## Bindings and Triggers
+
+The component validates bindings and triggers according to the Platform Bindings Standard:
+
+### Valid Binding Capabilities
+
+- `lambda:invoke` - Lambda function integration
+- `cognito:authorize` - Cognito user pool authorization
+- `route53:manage` - DNS management
+- `cloudwatch:metrics` - Metrics collection
+- `waf:protect` - Web Application Firewall
+- `certificate:validate` - SSL certificate validation
+
+### Valid Trigger Capabilities
+
+- `http:request` - HTTP request handling
+- `websocket:connect` - WebSocket connection
+- `websocket:disconnect` - WebSocket disconnection
+- `websocket:message` - WebSocket message handling
+
+### Example Configuration
+
+```yaml
+components:
+  - name: secure-api
+    type: api-gateway-http
+    binds:
+      - capability: lambda:invoke
+        target: "arn:aws:lambda:us-east-1:123456789012:function:api-handler"
+      - capability: cloudwatch:metrics
+        target: "api-metrics"
+      - capability: waf:protect
+        target: "security-waf"
+    triggers:
+      - capability: http:request
+      - capability: websocket:connect
+```
 
 ## Compliance Frameworks
 

@@ -1,0 +1,5 @@
+---
+description: "Backstage Scorecards & Badges"
+---
+- Define pass/fail checks (tags, OTel, binds validate, triad tests, coverage).
+- Publish badges and link to evidence.

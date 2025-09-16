@@ -1,0 +1,9 @@
+overrides:
+  s3:
+    encryptionKmsKey: "cmk-managed-by-platform"
+    accessLogs: required
+  rds:
+    kmsKey: "cmk-managed-by-platform"
+    enforceFips: true
+tagging:
+  add: ["compliance:framework=fedramp-high"]

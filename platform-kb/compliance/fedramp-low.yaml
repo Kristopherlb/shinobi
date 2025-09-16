@@ -1,0 +1,168 @@
+# FedRAMP Low (Commercial) Compliance Framework
+# Baseline compliance requirements for commercial environments
+
+framework_info:
+  name: "FedRAMP Low (Commercial)"
+  version: "2024-01"
+  description: "Baseline compliance requirements for commercial environments"
+  equivalent_to: "commercial"
+
+security_controls:
+  access_control:
+    - control_id: "AC-1"
+      title: "Access Control Policy and Procedures"
+      requirement: "Develop, document, and disseminate access control policy and procedures"
+      implementation: "automated"
+
+    - control_id: "AC-2"
+      title: "Account Management"
+      requirement: "Create, enable, modify, disable, and remove user accounts"
+      implementation: "automated"
+
+    - control_id: "AC-3"
+      title: "Access Enforcement"
+      requirement: "Enforce approved authorizations for logical access"
+      implementation: "automated"
+
+  audit_and_accountability:
+    - control_id: "AU-1"
+      title: "Audit and Accountability Policy and Procedures"
+      requirement: "Develop, document, and disseminate audit and accountability policy"
+      implementation: "automated"
+
+    - control_id: "AU-2"
+      title: "Audit Events"
+      requirement: "Define audit events for information systems"
+      implementation: "automated"
+
+    - control_id: "AU-3"
+      title: "Content of Audit Records"
+      requirement: "Generate audit records containing information to establish what, where, when, who"
+      implementation: "automated"
+
+  system_and_communications_protection:
+    - control_id: "SC-1"
+      title: "System and Communications Protection Policy"
+      requirement: "Develop, document, and disseminate system and communications protection policy"
+      implementation: "automated"
+
+    - control_id: "SC-7"
+      title: "Boundary Protection"
+      requirement: "Monitor and control communications at external boundaries"
+      implementation: "automated"
+
+    - control_id: "SC-8"
+      title: "Transmission Confidentiality and Integrity"
+      requirement: "Protect the confidentiality and integrity of transmitted information"
+      implementation: "automated"
+
+data_protection:
+  encryption_at_rest:
+    standard: "AES-256"
+    key_management: "AWS KMS (AWS managed keys)"
+    scope: "All persistent data"
+
+  encryption_in_transit:
+    standard: "TLS 1.2+"
+    certificate_management: "AWS Certificate Manager"
+    scope: "All network communications"
+
+  data_classification:
+    levels: ["public", "internal", "confidential"]
+    handling_requirements:
+      public: "No special handling required"
+      internal: "Encryption at rest and in transit"
+      confidential: "Encryption at rest and in transit, access logging"
+
+monitoring_and_logging:
+  audit_logging:
+    retention_period: 7
+    log_aggregation: "CloudWatch Logs"
+    log_analysis: "CloudWatch Insights"
+
+  monitoring:
+    real_time_monitoring: false
+    alerting: "basic"
+    incident_response: "manual"
+
+  compliance_reporting:
+    frequency: "monthly"
+    automation_level: "semi-automated"
+
+backup_and_recovery:
+  backup_retention:
+    standard: 7
+    critical_data: 30
+    automated: true
+
+  recovery_time_objective:
+    standard: "4 hours"
+    critical: "2 hours"
+
+  recovery_point_objective:
+    standard: "1 hour"
+    critical: "30 minutes"
+
+network_security:
+  network_segmentation:
+    level: "basic"
+    vpc_required: false
+    security_groups: "standard"
+
+  access_controls:
+    public_access: "limited"
+    internet_gateway: "optional"
+    nat_gateway: "optional"
+
+  dns_security:
+    dns_filtering: false
+    dns_logging: false
+
+identity_and_access_management:
+  authentication:
+    multi_factor: "optional"
+    password_policy: "basic"
+    session_management: "standard"
+
+  authorization:
+    principle: "least privilege"
+    role_based: true
+    attribute_based: false
+
+  account_management:
+    lifecycle: "automated"
+    provisioning: "automated"
+    deprovisioning: "automated"
+
+incident_response:
+  detection:
+    automated: false
+    manual: true
+    monitoring: "basic"
+
+  response:
+    automation: "limited"
+    escalation: "manual"
+    communication: "email"
+
+  recovery:
+    procedures: "documented"
+    testing: "quarterly"
+    lessons_learned: "required"
+
+continuous_monitoring:
+  vulnerability_management:
+    scanning: "monthly"
+    remediation: "90 days"
+    reporting: "monthly"
+
+  configuration_management:
+    baseline: "documented"
+    drift_detection: "monthly"
+    remediation: "manual"
+
+  patch_management:
+    critical: "30 days"
+    standard: "90 days"
+    testing: "required"
+
