@@ -1,8 +1,9 @@
 import { Logger } from '../utils/logger';
 import { ValidationOrchestrator } from '../services/validation-orchestrator';
 import { FileDiscovery } from './utils/file-discovery';
+import { CloudFormationClient, GetTemplateCommand } from '@aws-sdk/client-cloudformation';
 import * as cdk from 'aws-cdk-lib';
-import { execSync } from 'child_process';
+import { load as loadYaml } from 'js-yaml';
 
 export interface PlanOptions {
   file?: string;
@@ -29,7 +30,11 @@ interface PlanDependencies {
 }
 
 export class PlanCommand {
-  constructor(private dependencies: PlanDependencies) { }
+  private cloudFormationClient: CloudFormationClient;
+
+  constructor(private dependencies: PlanDependencies) {
+    this.cloudFormationClient = new CloudFormationClient({});
+  }
 
   async execute(options: PlanOptions): Promise<PlanResult> {
     this.dependencies.logger.debug('Starting plan command', options);
@@ -57,7 +62,11 @@ export class PlanCommand {
 
       // Perform basic CDK synthesis (simplified for now)
       this.dependencies.logger.info('Synthesizing infrastructure components...');
-      const synthesisResult = await this.performBasicCdkSynthesis(validationResult.resolvedManifest);
+
+      const synthesisResult = await this.performBasicCdkSynthesis(
+        validationResult.resolvedManifest,
+        env
+      );
 
       // Perform CDK diff analysis
       this.dependencies.logger.info('Analyzing infrastructure changes...');
@@ -143,31 +152,61 @@ export class PlanCommand {
   /**
    * Perform basic CDK synthesis using AWS CDK
    */
-  private async performBasicCdkSynthesis(manifest: any): Promise<any> {
+  private async performBasicCdkSynthesis(manifest: any, environment: string): Promise<any> {
     try {
       this.dependencies.logger.debug('Starting basic CDK synthesis');
 
+
       // Create CDK App
-      const app = new cdk.App();
+      const app = new cdk.App({
+        context: {
+          serviceName: manifest.service,
+          owner: manifest.owner,
+          environment,
+          complianceFramework: manifest.complianceFramework || 'commercial'
+        }
+      });
 
       // Create stack
       const stack = new cdk.Stack(app, `${manifest.service}-stack`, {
         env: {
           account: process.env.CDK_DEFAULT_ACCOUNT || process.env.AWS_ACCOUNT_ID || '123456789012',
           region: process.env.CDK_DEFAULT_REGION || process.env.AWS_DEFAULT_REGION || 'us-east-1'
-        },
-        tags: {
-          Service: manifest.service,
-          Owner: manifest.owner,
-          ComplianceFramework: manifest.complianceFramework || 'commercial',
-          Environment: process.env.NODE_ENV || 'dev'
+        }
+      });
+
+      // Apply stack context for downstream consumers
+      stack.node.setContext('environment', environment);
+
+      // Apply platform-standard tags that propagate to all resources
+
+      stack.node.setContext('serviceName', manifest.service);
+      stack.node.setContext('owner', manifest.owner);
+      stack.node.setContext('complianceFramework', manifest.complianceFramework || 'commercial');
+      stack.node.setContext('environment', environment);
+      stack.node.setContext('platform:service-name', manifest.service);
+      stack.node.setContext('platform:owner', manifest.owner);
+      stack.node.setContext('platform:environment', environment);
+      stack.node.setContext('platform:managed-by', 'shinobi');
+
+      const stackTags: Record<string, string | undefined> = {
+        'platform:service-name': manifest.service,
+        'platform:owner': manifest.owner,
+        'platform:environment': environment,
+        'platform:managed-by': 'platform-cdk'
+        'platform:managed-by': 'shinobi'
+      };
+
+      Object.entries(stackTags).forEach(([key, value]) => {
+        if (value) {
+          cdk.Tags.of(stack).add(key, value);
         }
       });
 
       // Create basic AWS resources based on components
       if (manifest.components && Array.isArray(manifest.components)) {
         for (const component of manifest.components) {
-          await this.createBasicAwsResource(stack, component, manifest);
+          await this.createBasicAwsResource(stack, component, manifest, environment);
         }
       }
 
@@ -194,7 +233,13 @@ export class PlanCommand {
   /**
    * Create AWS resources using the real component factory
    */
-  private async createBasicAwsResource(stack: cdk.Stack, component: any, manifest: any): Promise<void> {
+
+  private async createBasicAwsResource(
+    stack: cdk.Stack,
+    component: any,
+    manifest: any,
+    environment: string
+  ): Promise<void> {
     // Get supported component types from the component factory
     const supportedTypes = this.getSupportedComponentTypes();
 
@@ -216,7 +261,7 @@ export class PlanCommand {
       // Create component context
       const context = {
         serviceName: manifest.service,
-        environment: process.env.NODE_ENV || 'dev',
+        environment,
         owner: manifest.owner,
         complianceFramework: manifest.complianceFramework || 'commercial',
         region: process.env.AWS_DEFAULT_REGION || 'us-east-1'
@@ -474,34 +519,89 @@ export class PlanCommand {
    */
   private async getExistingStackTemplate(stackName: string): Promise<any | null> {
     try {
-      // Check if AWS credentials are available
-      if (!process.env.AWS_ACCESS_KEY_ID && !process.env.AWS_PROFILE) {
-        this.dependencies.logger.debug('No AWS credentials found - treating as new stack');
+      const response = await this.cloudFormationClient.send(new GetTemplateCommand({
+        StackName: stackName
+      }));
+
+      const templateBody = response.TemplateBody;
+      if (!templateBody) {
+        this.dependencies.logger.debug(`No template body returned for stack ${stackName}`);
         return null;
       }
 
-      // Use AWS CLI to get stack template
-      const command = `aws cloudformation get-template --stack-name ${stackName} --query 'TemplateBody' --output text`;
-
       try {
-        const result = execSync(command, {
-          encoding: 'utf8',
-          stdio: 'pipe',
-          timeout: 10000 // 10 second timeout
-        });
-
-        return JSON.parse(result.trim());
-      } catch (error: any) {
-        if (error.message.includes('does not exist') || error.message.includes('Stack with id') && error.message.includes('does not exist')) {
-          this.dependencies.logger.debug(`Stack ${stackName} does not exist in AWS`);
+        return JSON.parse(templateBody);
+      } catch (jsonError) {
+        try {
+          const yamlTemplate = loadYaml(templateBody);
+          return yamlTemplate === undefined ? null : yamlTemplate;
+        } catch (yamlError) {
+          this.dependencies.logger.debug('Failed to parse stack template body as JSON or YAML', {
+            jsonError,
+            yamlError
+          });
           return null;
         }
-        throw error;
       }
-    } catch (error) {
+    } catch (error: any) {
+      if (this.isStackDoesNotExistError(error)) {
+        this.dependencies.logger.debug(`Stack ${stackName} does not exist in AWS`);
+        return null;
+      }
+
+      if (this.isAccessOrCredentialError(error)) {
+        const message = error?.message ?? 'Access denied retrieving stack template';
+        this.dependencies.logger.warn(`Unable to retrieve existing stack template for ${stackName}: ${message}`);
+        this.dependencies.logger.debug('Access error details:', error);
+        return null;
+      }
+
       this.dependencies.logger.debug('Failed to get existing stack template:', error);
       return null;
     }
+  }
+
+  private isStackDoesNotExistError(error: any): boolean {
+    const message = (error?.message ?? '').toString().toLowerCase();
+    return message.includes('does not exist');
+  }
+
+  private isAccessOrCredentialError(error: any): boolean {
+    const code = (error?.name ?? error?.code ?? '').toString().toLowerCase();
+    const statusCode = error?.$metadata?.httpStatusCode;
+    if (statusCode === 403) {
+      return true;
+    }
+
+    const accessErrorCodes = [
+      'accessdenied',
+      'accessdeniedexception',
+      'unrecognizedclient',
+      'unrecognizedclientexception',
+      'invalidclienttokenid',
+      'expiredtoken',
+      'expiredtokenexception',
+      'credentialsprovidererror'
+    ];
+
+    if (code && accessErrorCodes.some(errorCode => code.includes(errorCode))) {
+      return true;
+    }
+
+    const message = (error?.message ?? '').toString().toLowerCase();
+    const accessKeywords = [
+      'not authorized',
+      'access denied',
+      'unable to locate credentials',
+      'missing credentials',
+      'could not load credentials',
+      'unrecognized client',
+      'invalid client token',
+      'security token included in the request is expired',
+      'expired token'
+    ];
+
+    return accessKeywords.some(keyword => message.includes(keyword));
   }
 
   /**
