@@ -6,7 +6,7 @@
  * and CloudWatch alarms for a specific component type.
  */
 
-import { BaseComponent } from '@cdk-lib/platform-contracts/component';
+import { BaseComponent } from '@shinobi/core';
 
 export interface ObservabilityHandlerResult {
   instrumentationApplied: boolean;

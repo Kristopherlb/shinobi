@@ -9,13 +9,14 @@
 import * as ec2 from 'aws-cdk-lib/aws-ec2';
 import * as lambda from 'aws-cdk-lib/aws-lambda';
 import * as ecs from 'aws-cdk-lib/aws-ecs';
-import { 
+import * as iam from 'aws-cdk-lib/aws-iam';
+import {
   IBinderStrategy,
   BindingContext,
   BindingResult,
-  CompatibilityEntry
-} from '../../platform/contracts/platform-binding-trigger-spec';
-import { IComponent } from '../../platform/contracts/component-interfaces';
+  CompatibilityEntry,
+  IComponent
+} from '@shinobi/core';
 
 /**
  * ComputeToSecurityGroupImportBinder
@@ -41,7 +42,7 @@ export class ComputeToSecurityGroupImportBinder implements IBinderStrategy {
    */
   bind(context: BindingContext): BindingResult {
     const { source, target, directive, environment, complianceFramework } = context;
-    
+
     try {
       // Get security group import capability information from target
       const sgCapability = target.getCapabilities()['security-group:import'];
@@ -113,19 +114,19 @@ export class ComputeToSecurityGroupImportBinder implements IBinderStrategy {
 
     // Lambda functions need to be in a VPC to use security groups
     // Add the security group to the Lambda's VPC configuration
-    if (lambdaFunction.isBoundToVpc()) {
+    if (lambdaFunction.isBoundToVpc) {
       lambdaFunction.connections.addSecurityGroup(securityGroup);
     } else {
       // If Lambda is not in a VPC, we need to configure it to be in the same VPC as the security group
-      if (securityGroup.vpc) {
-        lambdaFunction.addToRolePolicy(new lambda.PolicyStatement({
-          effect: lambda.Effect.ALLOW,
+      if (securityGroup.connections) {
+        lambdaFunction.addToRolePolicy(new iam.PolicyStatement({
+          effect: iam.Effect.ALLOW,
           actions: [
             'ec2:CreateNetworkInterface',
             'ec2:DescribeNetworkInterfaces',
             'ec2:DeleteNetworkInterface'
           ],
-          resources: [`arn:aws:ec2:${context.region}:${context.account}:vpc/${securityGroup.vpc.vpcId}`]
+          resources: [`arn:aws:ec2:${context.region}:${context.account}:vpc/*`]
         }));
       }
     }
@@ -136,8 +137,8 @@ export class ComputeToSecurityGroupImportBinder implements IBinderStrategy {
       metadata: {
         bindingType: 'lambda-to-security-group-import',
         securityGroupId: securityGroup.securityGroupId,
-        vpcId: securityGroup.vpc?.vpcId,
-        requiresVpc: !lambdaFunction.isBoundToVpc()
+        vpcId: undefined, // Security group VPC not accessible via ISecurityGroup interface
+        requiresVpc: !lambdaFunction.isBoundToVpc
       }
     };
   }

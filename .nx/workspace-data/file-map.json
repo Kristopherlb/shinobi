@@ -221,7 +221,7 @@
       },
       {
         "file": ".gitignore",
-        "hash": "16647813092177518547"
+        "hash": "8538269989523781772"
       },
       {
         "file": ".npmrc",
@@ -234,6 +234,10 @@
       {
         "file": "Audit/agent-audit-sagemaker-notebook-instance.md",
         "hash": "8305221659535885406"
+      },
+      {
+        "file": "BUG_TICKET_TYPESCRIPT_COMPILATION_ISSUES.md",
+        "hash": "8607230397230364456"
       },
       {
         "file": "CONTRIBUTING.md",
@@ -857,7 +861,7 @@
       },
       {
         "file": "package.json",
-        "hash": "13139518042161145065"
+        "hash": "2142056069867380266"
       },
       {
         "file": "packages/components/_lib/observability.ts",
@@ -2005,7 +2009,7 @@
       },
       {
         "file": "pnpm-lock.yaml",
-        "hash": "1301877618786578133"
+        "hash": "1907930327653372963"
       },
       {
         "file": "pnpm-workspace.yaml",
@@ -2086,6 +2090,14 @@
       {
         "file": "src/templates/template-engine.ts",
         "hash": "11922052831933262391"
+      },
+      {
+        "file": "test-cache-binder.js",
+        "hash": "3244421341483603138"
+      },
+      {
+        "file": "test-redis-url.ts",
+        "hash": "3244421341483603138"
       },
       {
         "file": "tests/e2e/README.md",
@@ -2233,7 +2245,7 @@
       },
       {
         "file": "tests/unit/components/dynamodb-table.synthesis.test.ts",
-        "hash": "6494440417583596935"
+        "hash": "12365610429107084216"
       },
       {
         "file": "tests/unit/components/ec2-configuration-precedence.test.ts",
@@ -2253,11 +2265,11 @@
       },
       {
         "file": "tests/unit/components/rds-postgres.synthesis.test.ts",
-        "hash": "12182146429760401140"
+        "hash": "2463295155404005338"
       },
       {
         "file": "tests/unit/components/s3-bucket.synthesis.test.ts",
-        "hash": "12233014094931291849"
+        "hash": "7500205332694581735"
       },
       {
         "file": "tests/unit/components/service-manifest-parser.test.ts",
@@ -2489,7 +2501,7 @@
       },
       {
         "file": "tsconfig.base.json",
-        "hash": "14704206981001924156"
+        "hash": "5499462146021194517"
       },
       {
         "file": "tsconfig.jest.json",
@@ -2505,308 +2517,6 @@
       }
     ],
     "projectFileMap": {
-      "@platform/api-gateway-http": [
-        {
-          "file": "packages/components/api-gateway-http/Config.schema.json",
-          "hash": "15896977287079812988"
-        },
-        {
-          "file": "packages/components/api-gateway-http/README.md",
-          "hash": "4100645914046560575"
-        },
-        {
-          "file": "packages/components/api-gateway-http/api-gateway-http.builder.ts",
-          "hash": "4747549058266377113",
-          "deps": [
-            "@platform/contracts"
-          ]
-        },
-        {
-          "file": "packages/components/api-gateway-http/api-gateway-http.component.ts",
-          "hash": "5818390651344963497",
-          "deps": [
-            "npm:aws-cdk-lib",
-            "npm:constructs",
-            "@platform/contracts"
-          ]
-        },
-        {
-          "file": "packages/components/api-gateway-http/api-gateway-http.creator.ts",
-          "hash": "13915173715344268240",
-          "deps": [
-            "npm:constructs",
-            "@platform/contracts"
-          ]
-        },
-        {
-          "file": "packages/components/api-gateway-http/catalog-info.yaml",
-          "hash": "15060507522821356185"
-        },
-        {
-          "file": "packages/components/api-gateway-http/index.ts",
-          "hash": "428419197447611397"
-        },
-        {
-          "file": "packages/components/api-gateway-http/package.json",
-          "hash": "8049002768884357254",
-          "deps": [
-            "npm:aws-cdk-lib",
-            "npm:constructs",
-            "npm:@types/jest@29.5.14",
-            "npm:@types/node@20.19.14",
-            "npm:@typescript-eslint/eslint-plugin",
-            "npm:@typescript-eslint/parser",
-            "npm:eslint",
-            "npm:jest@29.7.0",
-            "npm:ts-jest",
-            "npm:typescript",
-            "@platform/contracts",
-            "@platform/core-engine"
-          ]
-        },
-        {
-          "file": "packages/components/api-gateway-http/tests/api-gateway-http.builder.test.ts",
-          "hash": "999307411287950051",
-          "deps": [
-            "@platform/contracts"
-          ]
-        },
-        {
-          "file": "packages/components/api-gateway-http/tests/api-gateway-http.component.synthesis.test.ts",
-          "hash": "12885725491186572499",
-          "deps": [
-            "npm:aws-cdk-lib",
-            "@platform/contracts"
-          ]
-        },
-        {
-          "file": "packages/components/api-gateway-http/tests/api-gateway-http.component.test.ts",
-          "hash": "13181969816438842353",
-          "deps": [
-            "npm:aws-cdk-lib",
-            "@platform/contracts"
-          ]
-        },
-        {
-          "file": "packages/components/api-gateway-http/tsconfig.json",
-          "hash": "2601391265962747273"
-        }
-      ],
-      "@platform/components-deployment-bundle-pipeline": [
-        {
-          "file": "packages/components/deployment-bundle-pipeline/README.md",
-          "hash": "13878995460923611435"
-        },
-        {
-          "file": "packages/components/deployment-bundle-pipeline/audit/component.plan.json",
-          "hash": "16787725895637861291"
-        },
-        {
-          "file": "packages/components/deployment-bundle-pipeline/audit/deployment-bundle-pipeline.oscal.json",
-          "hash": "17646327668684797317"
-        },
-        {
-          "file": "packages/components/deployment-bundle-pipeline/audit/rego/bundle_security_policies.rego",
-          "hash": "16161582798300545449"
-        },
-        {
-          "file": "packages/components/deployment-bundle-pipeline/dagger.ts",
-          "hash": "8477345662149291955"
-        },
-        {
-          "file": "packages/components/deployment-bundle-pipeline/jest.config.js",
-          "hash": "16174409094751740907"
-        },
-        {
-          "file": "packages/components/deployment-bundle-pipeline/observability/alarms-config.json",
-          "hash": "18270987230754750055"
-        },
-        {
-          "file": "packages/components/deployment-bundle-pipeline/observability/otel-dashboard-template.json",
-          "hash": "1517350791177335245"
-        },
-        {
-          "file": "packages/components/deployment-bundle-pipeline/package.json",
-          "hash": "11762208609345315320",
-          "deps": [
-            "npm:aws-cdk-lib",
-            "npm:constructs",
-            "npm:@types/jest@29.5.14",
-            "npm:@types/node@20.19.14",
-            "npm:@typescript-eslint/eslint-plugin",
-            "npm:@typescript-eslint/parser",
-            "npm:eslint",
-            "npm:jest@29.7.0",
-            "npm:ts-jest",
-            "npm:typescript",
-            "@platform/core-engine",
-            "@platform/contracts"
-          ]
-        },
-        {
-          "file": "packages/components/deployment-bundle-pipeline/scripts/gen-provenance.sh",
-          "hash": "11792887095119311477"
-        },
-        {
-          "file": "packages/components/deployment-bundle-pipeline/src/deployment-bundle-pipeline.builder.ts",
-          "hash": "12701639863134911742"
-        },
-        {
-          "file": "packages/components/deployment-bundle-pipeline/src/deployment-bundle-pipeline.component.ts",
-          "hash": "6955649166442358862"
-        },
-        {
-          "file": "packages/components/deployment-bundle-pipeline/src/deployment-bundle-pipeline.creator.ts",
-          "hash": "1470025511806899686"
-        },
-        {
-          "file": "packages/components/deployment-bundle-pipeline/src/index.ts",
-          "hash": "5974657487635288014"
-        },
-        {
-          "file": "packages/components/deployment-bundle-pipeline/src/types.ts",
-          "hash": "6076368853284652266"
-        },
-        {
-          "file": "packages/components/deployment-bundle-pipeline/tests/setup.ts",
-          "hash": "13712925196876119842"
-        },
-        {
-          "file": "packages/components/deployment-bundle-pipeline/tests/simple.test.ts",
-          "hash": "6991431107637804510"
-        },
-        {
-          "file": "packages/components/deployment-bundle-pipeline/tests/unit/builder.test.ts",
-          "hash": "91214594767232889"
-        },
-        {
-          "file": "packages/components/deployment-bundle-pipeline/tests/unit/component.test.ts",
-          "hash": "8751873657856482411",
-          "deps": [
-            "npm:aws-cdk-lib"
-          ]
-        }
-      ],
-      "@platform/sqs-queue": [
-        {
-          "file": "packages/components/sqs-queue/README.md",
-          "hash": "9733795423599130915"
-        },
-        {
-          "file": "packages/components/sqs-queue/index.ts",
-          "hash": "7808616212344776076"
-        },
-        {
-          "file": "packages/components/sqs-queue/package.json",
-          "hash": "5134414201242472872",
-          "deps": [
-            "@platform/core-engine",
-            "@platform/contracts"
-          ]
-        },
-        {
-          "file": "packages/components/sqs-queue/sqs-queue.builder.ts",
-          "hash": "6453869290730610805"
-        },
-        {
-          "file": "packages/components/sqs-queue/sqs-queue.component.ts",
-          "hash": "6608638317469215564",
-          "deps": [
-            "npm:constructs"
-          ]
-        },
-        {
-          "file": "packages/components/sqs-queue/sqs-queue.creator.ts",
-          "hash": "1012329583018216750",
-          "deps": [
-            "npm:constructs"
-          ]
-        },
-        {
-          "file": "packages/components/sqs-queue/src/index.ts",
-          "hash": "4278295809996988374"
-        },
-        {
-          "file": "packages/components/sqs-queue/src/sqs-queue.builder.ts",
-          "hash": "13633362278467887341"
-        },
-        {
-          "file": "packages/components/sqs-queue/src/sqs-queue.ts",
-          "hash": "15932321534885017322",
-          "deps": [
-            "@platform/contracts"
-          ]
-        },
-        {
-          "file": "packages/components/sqs-queue/tests/sqs-queue.builder.test.ts",
-          "hash": "7778016531980127335"
-        },
-        {
-          "file": "packages/components/sqs-queue/tests/sqs-queue.component.synthesis.test.ts",
-          "hash": "1120452757508618688",
-          "deps": [
-            "npm:aws-cdk-lib"
-          ]
-        },
-        {
-          "file": "packages/components/sqs-queue/tests/sqs-queue.test.ts",
-          "hash": "11086619260875896889"
-        },
-        {
-          "file": "packages/components/sqs-queue/tsconfig.json",
-          "hash": "4796780823213029049"
-        }
-      ],
-      "@platform/components-container-application": [
-        {
-          "file": "packages/components/container-application/package.json",
-          "hash": "5063921494724820499",
-          "deps": [
-            "npm:aws-cdk-lib",
-            "npm:constructs",
-            "npm:@types/jest@29.5.14",
-            "npm:@types/node@20.19.14",
-            "npm:@typescript-eslint/eslint-plugin",
-            "npm:@typescript-eslint/parser",
-            "npm:eslint",
-            "npm:jest@29.7.0",
-            "npm:ts-jest",
-            "npm:typescript",
-            "@platform/contracts",
-            "@platform/core-engine"
-          ]
-        },
-        {
-          "file": "packages/components/container-application/src/container-application.builder.ts",
-          "hash": "4708335185500006773",
-          "deps": [
-            "@platform/contracts"
-          ]
-        },
-        {
-          "file": "packages/components/container-application/src/container-application.component.ts",
-          "hash": "16225585997234048283",
-          "deps": [
-            "npm:aws-cdk-lib",
-            "npm:constructs",
-            "@platform/contracts"
-          ]
-        },
-        {
-          "file": "packages/components/container-application/src/container-application.creator.ts",
-          "hash": "2326517139878986357",
-          "deps": [
-            "npm:constructs"
-          ]
-        },
-        {
-          "file": "packages/components/container-application/src/index.ts",
-          "hash": "8193930565131220180",
-          "deps": [
-            "@platform/contracts"
-          ]
-        }
-      ],
       "@platform/lambda-api": [
         {
           "file": "packages/components/lambda-api/README.md",
@@ -2916,14 +2626,14 @@
           "hash": "13061676739970566293"
         }
       ],
-      "standards-deprecation": [
+      "standards-iam-audit": [
         {
-          "file": "packages/standards/deprecation/jest.config.ts",
-          "hash": "14908822425355342593"
+          "file": "packages/standards/iam-audit/jest.config.ts",
+          "hash": "17376543197423877982"
         },
         {
-          "file": "packages/standards/deprecation/package.json",
-          "hash": "5024915981973030009",
+          "file": "packages/standards/iam-audit/package.json",
+          "hash": "9666128690917301319",
           "deps": [
             "npm:@types/jest",
             "npm:@types/node",
@@ -2934,156 +2644,19 @@
           ]
         },
         {
-          "file": "packages/standards/deprecation/project.json",
-          "hash": "14557095603496790845"
+          "file": "packages/standards/iam-audit/project.json",
+          "hash": "14930067881558315151"
         },
         {
-          "file": "packages/standards/deprecation/src/index.ts",
-          "hash": "6679164348460821020"
+          "file": "packages/standards/iam-audit/src/index.ts",
+          "hash": "4071809394949347885"
         },
         {
-          "file": "packages/standards/deprecation/tsconfig.lib.json",
+          "file": "packages/standards/iam-audit/tsconfig.lib.json",
           "hash": "4006877950016446411"
         },
         {
-          "file": "packages/standards/deprecation/tsconfig.spec.json",
-          "hash": "4933087548142887878"
-        }
-      ],
-      "@platform/rds-postgres": [
-        {
-          "file": "packages/components/rds-postgres/README.md",
-          "hash": "8759288169756959386"
-        },
-        {
-          "file": "packages/components/rds-postgres/catalog-info.yaml",
-          "hash": "10439544403880839816"
-        },
-        {
-          "file": "packages/components/rds-postgres/index.ts",
-          "hash": "15502698355078739822"
-        },
-        {
-          "file": "packages/components/rds-postgres/lambda-to-rds.binder.ts",
-          "hash": "3935080995599300467",
-          "deps": [
-            "@platform/contracts",
-            "npm:aws-cdk-lib"
-          ]
-        },
-        {
-          "file": "packages/components/rds-postgres/package.json",
-          "hash": "6905696251653525424",
-          "deps": [
-            "@platform/core-engine",
-            "@platform/contracts"
-          ]
-        },
-        {
-          "file": "packages/components/rds-postgres/rds-postgres.builder.ts",
-          "hash": "7920052047321603194"
-        },
-        {
-          "file": "packages/components/rds-postgres/rds-postgres.component.ts",
-          "hash": "11205714353457515016",
-          "deps": [
-            "npm:aws-cdk-lib",
-            "npm:constructs",
-            "@platform/contracts"
-          ]
-        },
-        {
-          "file": "packages/components/rds-postgres/rds-postgres.creator.ts",
-          "hash": "18240099973498744035",
-          "deps": [
-            "@platform/contracts"
-          ]
-        },
-        {
-          "file": "packages/components/rds-postgres/src/index.ts",
-          "hash": "6987571137554338213"
-        },
-        {
-          "file": "packages/components/rds-postgres/src/rds-postgres.builder.ts",
-          "hash": "8678746731244034821"
-        },
-        {
-          "file": "packages/components/rds-postgres/src/rds-postgres.ts",
-          "hash": "9920915642484978454",
-          "deps": [
-            "@platform/contracts"
-          ]
-        },
-        {
-          "file": "packages/components/rds-postgres/tests/rds-postgres.builder.test.ts",
-          "hash": "428790112298671325"
-        },
-        {
-          "file": "packages/components/rds-postgres/tests/rds-postgres.component.synthesis.test.ts",
-          "hash": "814480808830408659",
-          "deps": [
-            "npm:aws-cdk-lib"
-          ]
-        },
-        {
-          "file": "packages/components/rds-postgres/tests/rds-postgres.test.ts",
-          "hash": "16226239482375038440"
-        },
-        {
-          "file": "packages/components/rds-postgres/tsconfig.json",
-          "hash": "3803076836316330929"
-        }
-      ],
-      "mcp-server": [
-        {
-          "file": "packages/mcp/server/jest.config.ts",
-          "hash": "7662061424955689041"
-        },
-        {
-          "file": "packages/mcp/server/mcp-server/package-lock.json",
-          "hash": "6877202686507413097"
-        },
-        {
-          "file": "packages/mcp/server/mcp-server/package.json",
-          "hash": "7948729148702269209"
-        },
-        {
-          "file": "packages/mcp/server/mcp-server/src/index.ts",
-          "hash": "12101638018650849266",
-          "deps": [
-            "npm:@modelcontextprotocol/sdk"
-          ]
-        },
-        {
-          "file": "packages/mcp/server/mcp-server/tsconfig.json",
-          "hash": "5599065727704449325"
-        },
-        {
-          "file": "packages/mcp/server/package.json",
-          "hash": "16858635039255016490",
-          "deps": [
-            "npm:@types/jest",
-            "npm:@types/node",
-            "npm:jest",
-            "npm:ts-jest",
-            "npm:typescript",
-            "core"
-          ]
-        },
-        {
-          "file": "packages/mcp/server/project.json",
-          "hash": "7718167712427444311"
-        },
-        {
-          "file": "packages/mcp/server/src/index.ts",
-          "hash": "1159992869243563360"
-        },
-        {
-          "file": "packages/mcp/server/tsconfig.lib.json",
-          "hash": "4006877950016446411"
-        },
-        {
-          "file": "packages/mcp/server/tsconfig.spec.json",
+          "file": "packages/standards/iam-audit/tsconfig.spec.json",
           "hash": "4933087548142887878"
         }
       ],
@@ -3106,70 +2679,87 @@
         },
         {
           "file": "packages/standards/otel/observability-handlers/package.json",
-          "hash": "11458240953123350768"
+          "hash": "11001703709877924320"
         },
         {
           "file": "packages/standards/otel/observability-handlers/src/index.ts",
-          "hash": "6863428648985576534"
+          "hash": "14157258903363968085"
         },
         {
           "file": "packages/standards/otel/observability-handlers/src/observability-handlers/alb-observability.handler.ts",
-          "hash": "6415953094185762678",
+          "hash": "13037109722196961622",
           "deps": [
             "npm:aws-cdk-lib",
-            "npm:constructs"
+            "npm:constructs",
+            "core",
+            "standards-tagging"
           ]
         },
         {
           "file": "packages/standards/otel/observability-handlers/src/observability-handlers/ec2-observability.handler.ts",
-          "hash": "7297630085782471014",
+          "hash": "8740670410844121554",
           "deps": [
             "npm:aws-cdk-lib",
-            "npm:constructs"
+            "npm:constructs",
+            "core",
+            "standards-tagging"
           ]
         },
         {
           "file": "packages/standards/otel/observability-handlers/src/observability-handlers/ecs-observability.handler.ts",
-          "hash": "298082341183485202",
+          "hash": "7704250732032170510",
           "deps": [
             "npm:aws-cdk-lib",
-            "npm:constructs"
+            "npm:constructs",
+            "core",
+            "standards-tagging"
           ]
         },
         {
           "file": "packages/standards/otel/observability-handlers/src/observability-handlers/lambda-observability.handler.ts",
-          "hash": "16544388477384630639",
+          "hash": "65199636401898549",
           "deps": [
             "npm:aws-cdk-lib",
-            "npm:constructs"
+            "npm:constructs",
+            "core",
+            "standards-tagging"
           ]
         },
         {
           "file": "packages/standards/otel/observability-handlers/src/observability-handlers/observability-handler.interface.ts",
-          "hash": "5263074031408497746"
+          "hash": "8277778655671834191",
+          "deps": [
+            "core"
+          ]
         },
         {
           "file": "packages/standards/otel/observability-handlers/src/observability-handlers/rds-observability.handler.ts",
-          "hash": "1193619991664206833",
+          "hash": "6996258714616989255",
           "deps": [
             "npm:aws-cdk-lib",
-            "npm:constructs"
+            "npm:constructs",
+            "core",
+            "standards-tagging"
           ]
         },
         {
           "file": "packages/standards/otel/observability-handlers/src/observability-handlers/sqs-observability.handler.ts",
-          "hash": "10905941426633806665",
+          "hash": "16605700550003496204",
           "deps": [
             "npm:aws-cdk-lib",
-            "npm:constructs"
+            "npm:constructs",
+            "core",
+            "standards-tagging"
           ]
         },
         {
           "file": "packages/standards/otel/observability-handlers/src/observability-handlers/vpc-observability.handler.ts",
-          "hash": "251411216790569230",
+          "hash": "13547783474756583451",
           "deps": [
             "npm:aws-cdk-lib",
-            "npm:constructs"
+            "npm:constructs",
+            "core",
+            "standards-tagging"
           ]
         },
         {
@@ -3253,7 +2843,10 @@
         },
         {
           "file": "packages/standards/otel/observability-service/src/index.ts",
-          "hash": "13471760644666214565"
+          "hash": "14576853449568551689",
+          "deps": [
+            "core"
+          ]
         },
         {
           "file": "packages/standards/otel/observability-service/src/observability-ecs-integration.test.ts",
@@ -3264,9 +2857,11 @@
         },
         {
           "file": "packages/standards/otel/observability-service/src/observability.service.ts",
-          "hash": "5318798396184346925",
+          "hash": "5404755849175764500",
           "deps": [
-            "npm:js-yaml"
+            "npm:js-yaml",
+            "core",
+            "standards-tagging"
           ]
         },
         {
@@ -3313,50 +2908,50 @@
           "hash": "4933087548142887878"
         }
       ],
-      "@cdk-lib/vpc": [
+      "@shinobi/waf-web-acl": [
         {
-          "file": "packages/components/vpc/README.md",
-          "hash": "8875819887397071593"
+          "file": "packages/components/waf-web-acl/README.md",
+          "hash": "17008738479240580462"
         },
         {
-          "file": "packages/components/vpc/audit/component.plan.json",
-          "hash": "12000413060616824162"
+          "file": "packages/components/waf-web-acl/audit/component.plan.json",
+          "hash": "3788771416989704294"
         },
         {
-          "file": "packages/components/vpc/audit/rego/vpc.rego",
-          "hash": "8533818154920924019"
+          "file": "packages/components/waf-web-acl/audit/rego/waf-web-acl.rego",
+          "hash": "4549901112313703409"
         },
         {
-          "file": "packages/components/vpc/audit/rego/vpc_test.rego",
-          "hash": "12810827227442909778"
+          "file": "packages/components/waf-web-acl/audit/rego/waf-web-acl_test.rego",
+          "hash": "1361618906301371191"
         },
         {
-          "file": "packages/components/vpc/audit/vpc.oscal.json",
-          "hash": "18022597759662346645"
+          "file": "packages/components/waf-web-acl/audit/waf-web-acl.oscal.json",
+          "hash": "16277330243353922880"
         },
         {
-          "file": "packages/components/vpc/generation-summary.json",
-          "hash": "897740523218728149"
+          "file": "packages/components/waf-web-acl/generation-summary.json",
+          "hash": "14849119580553636282"
         },
         {
-          "file": "packages/components/vpc/index.ts",
-          "hash": "4065872702002909585"
+          "file": "packages/components/waf-web-acl/index.ts",
+          "hash": "4731666954053614571"
         },
         {
-          "file": "packages/components/vpc/jest.config.js",
+          "file": "packages/components/waf-web-acl/jest.config.js",
           "hash": "9876185703598838263"
         },
         {
-          "file": "packages/components/vpc/observability/alarms-config.json",
-          "hash": "10768305995109260950"
+          "file": "packages/components/waf-web-acl/observability/alarms-config.json",
+          "hash": "4152041008491441549"
         },
         {
-          "file": "packages/components/vpc/observability/otel-dashboard-template.json",
-          "hash": "4576313993253791197"
+          "file": "packages/components/waf-web-acl/observability/otel-dashboard-template.json",
+          "hash": "2992940375170622884"
         },
         {
-          "file": "packages/components/vpc/package.json",
-          "hash": "17361902138951604889",
+          "file": "packages/components/waf-web-acl/package.json",
+          "hash": "4260300768035706498",
           "deps": [
             "npm:aws-cdk-lib",
             "npm:constructs",
@@ -3371,69 +2966,169 @@
           ]
         },
         {
-          "file": "packages/components/vpc/test-simple.ts",
-          "hash": "909108858185588679",
+          "file": "packages/components/waf-web-acl/test-simple.ts",
+          "hash": "5136964639576209382",
           "deps": [
             "npm:aws-cdk-lib"
           ]
         },
         {
-          "file": "packages/components/vpc/tests/compliance.test.ts",
-          "hash": "3053902171632405232",
+          "file": "packages/components/waf-web-acl/tests/compliance.test.ts",
+          "hash": "5647549887242323296",
           "deps": [
             "npm:aws-cdk-lib"
           ]
         },
         {
-          "file": "packages/components/vpc/tests/observability.test.ts",
-          "hash": "9392671795301397368",
+          "file": "packages/components/waf-web-acl/tests/observability.test.ts",
+          "hash": "16901353383645345596",
           "deps": [
             "npm:aws-cdk-lib"
           ]
         },
         {
-          "file": "packages/components/vpc/tests/unit/builder.test.ts",
-          "hash": "12519849711213784901"
+          "file": "packages/components/waf-web-acl/tests/unit/builder.test.ts",
+          "hash": "7053145320088816150"
         },
         {
-          "file": "packages/components/vpc/tests/unit/component.test.ts",
-          "hash": "5942211991237852784",
+          "file": "packages/components/waf-web-acl/tests/unit/component.test.ts",
+          "hash": "12370473514984648205",
           "deps": [
             "npm:aws-cdk-lib"
           ]
         },
         {
-          "file": "packages/components/vpc/tests/vpc.builder.test.ts",
-          "hash": "4012717958027362008"
+          "file": "packages/components/waf-web-acl/tests/waf-web-acl.builder.test.ts",
+          "hash": "10424695884945106098"
         },
         {
-          "file": "packages/components/vpc/tests/vpc.component.synthesis.test.ts",
-          "hash": "17165583504273358829",
+          "file": "packages/components/waf-web-acl/tests/waf-web-acl.component.synthesis.test.ts",
+          "hash": "7893294639799327433",
           "deps": [
             "npm:aws-cdk-lib"
           ]
         },
         {
-          "file": "packages/components/vpc/tsconfig.json",
+          "file": "packages/components/waf-web-acl/tsconfig.json",
           "hash": "17199098717519277380"
         },
         {
-          "file": "packages/components/vpc/vpc.builder.ts",
-          "hash": "11213271852805247841"
+          "file": "packages/components/waf-web-acl/waf-web-acl.builder.ts",
+          "hash": "9839599123294211283"
         },
         {
-          "file": "packages/components/vpc/vpc.component.ts",
-          "hash": "10562567076080033799",
+          "file": "packages/components/waf-web-acl/waf-web-acl.component.ts",
+          "hash": "9040301899747735610",
+          "deps": [
+            "npm:constructs",
+            "npm:aws-cdk-lib"
+          ]
+        },
+        {
+          "file": "packages/components/waf-web-acl/waf-web-acl.creator.ts",
+          "hash": "16378867316660102374",
+          "deps": [
+            "npm:constructs"
+          ]
+        }
+      ],
+      "@platform/test-scaffolding": [
+        {
+          "file": "packages/test-scaffolding/catalog-info.yaml",
+          "hash": "8284313283764872719"
+        },
+        {
+          "file": "packages/test-scaffolding/package.json",
+          "hash": "8168191612582447540",
+          "deps": [
+            "@platform/core-engine",
+            "@platform/lambda-api"
+          ]
+        },
+        {
+          "file": "packages/test-scaffolding/src/index.ts",
+          "hash": "16368101225447287238"
+        },
+        {
+          "file": "packages/test-scaffolding/tests/e2e.test.ts",
+          "hash": "4886770293315683095",
+          "deps": [
+            "@platform/core-engine",
+            "@platform/lambda-api"
+          ]
+        },
+        {
+          "file": "packages/test-scaffolding/tsconfig.json",
+          "hash": "8932654266176729782"
+        }
+      ],
+      "@shinobi/security-group-import": [
+        {
+          "file": "packages/components/security-group-import/README.md",
+          "hash": "273431918763071674"
+        },
+        {
+          "file": "packages/components/security-group-import/jest.config.js",
+          "hash": "8343720672312670553"
+        },
+        {
+          "file": "packages/components/security-group-import/package.json",
+          "hash": "9638066587619587099",
+          "deps": [
+            "npm:@types/jest@29.5.14",
+            "npm:@types/node@18.14.6",
+            "npm:jest@29.7.0",
+            "npm:ts-jest",
+            "npm:typescript",
+            "npm:aws-cdk-lib",
+            "npm:constructs"
+          ]
+        },
+        {
+          "file": "packages/components/security-group-import/src/index.ts",
+          "hash": "10123222668553338881"
+        },
+        {
+          "file": "packages/components/security-group-import/src/security-group-import.builder.ts",
+          "hash": "15123707293401423574",
+          "deps": [
+            "core"
+          ]
+        },
+        {
+          "file": "packages/components/security-group-import/src/security-group-import.component.ts",
+          "hash": "9530118946115419817",
+          "deps": [
+            "npm:aws-cdk-lib",
+            "npm:constructs",
+            "core"
+          ]
+        },
+        {
+          "file": "packages/components/security-group-import/src/security-group-import.creator.ts",
+          "hash": "5536159513668618620",
           "deps": [
             "npm:aws-cdk-lib",
             "npm:constructs"
           ]
         },
         {
-          "file": "packages/components/vpc/vpc.creator.ts",
-          "hash": "10119006679148726255",
+          "file": "packages/components/security-group-import/tests/setup.ts",
+          "hash": "13877667062396986234"
+        },
+        {
+          "file": "packages/components/security-group-import/tests/unit/security-group-import.builder.test.ts",
+          "hash": "15784722267121515113",
           "deps": [
-            "npm:constructs"
+            "core"
+          ]
+        },
+        {
+          "file": "packages/components/security-group-import/tests/unit/security-group-import.component.test.ts",
+          "hash": "15068786556781032809",
+          "deps": [
+            "npm:aws-cdk-lib",
+            "core"
           ]
         }
       ],
@@ -3512,6 +3207,1626 @@
         {
           "file": "packages/components/ecs-cluster/tests/ecs-cluster.component.test.ts",
           "hash": "16202472981137872812",
+          "deps": [
+            "npm:aws-cdk-lib"
+          ]
+        }
+      ],
+      "mcp-server": [
+        {
+          "file": "packages/mcp/server/jest.config.ts",
+          "hash": "7662061424955689041"
+        },
+        {
+          "file": "packages/mcp/server/mcp-server/package-lock.json",
+          "hash": "6877202686507413097"
+        },
+        {
+          "file": "packages/mcp/server/mcp-server/package.json",
+          "hash": "7948729148702269209"
+        },
+        {
+          "file": "packages/mcp/server/mcp-server/src/index.ts",
+          "hash": "12101638018650849266",
+          "deps": [
+            "npm:@modelcontextprotocol/sdk"
+          ]
+        },
+        {
+          "file": "packages/mcp/server/mcp-server/tsconfig.json",
+          "hash": "5599065727704449325"
+        },
+        {
+          "file": "packages/mcp/server/package.json",
+          "hash": "16858635039255016490",
+          "deps": [
+            "npm:@types/jest",
+            "npm:@types/node",
+            "npm:jest",
+            "npm:ts-jest",
+            "npm:typescript",
+            "core"
+          ]
+        },
+        {
+          "file": "packages/mcp/server/project.json",
+          "hash": "7718167712427444311"
+        },
+        {
+          "file": "packages/mcp/server/src/index.ts",
+          "hash": "1159992869243563360"
+        },
+        {
+          "file": "packages/mcp/server/tsconfig.lib.json",
+          "hash": "4006877950016446411"
+        },
+        {
+          "file": "packages/mcp/server/tsconfig.spec.json",
+          "hash": "4933087548142887878"
+        }
+      ],
+      "@shinobi/route53-record": [
+        {
+          "file": "packages/components/route53-record/README.md",
+          "hash": "12227641330370076317"
+        },
+        {
+          "file": "packages/components/route53-record/jest.config.js",
+          "hash": "8872577854924552600"
+        },
+        {
+          "file": "packages/components/route53-record/package.json",
+          "hash": "9319254705289320503",
+          "deps": [
+            "npm:@types/jest@29.5.14",
+            "npm:@types/node@18.14.6",
+            "npm:jest@29.7.0",
+            "npm:ts-jest",
+            "npm:typescript",
+            "npm:aws-cdk-lib",
+            "npm:constructs"
+          ]
+        },
+        {
+          "file": "packages/components/route53-record/src/index.ts",
+          "hash": "6699374738505384649"
+        },
+        {
+          "file": "packages/components/route53-record/src/route53-record.builder.ts",
+          "hash": "13536580926389542465"
+        },
+        {
+          "file": "packages/components/route53-record/src/route53-record.component.ts",
+          "hash": "7825024219622912135",
+          "deps": [
+            "npm:aws-cdk-lib",
+            "npm:constructs"
+          ]
+        },
+        {
+          "file": "packages/components/route53-record/src/route53-record.creator.ts",
+          "hash": "16561946231068905396",
+          "deps": [
+            "npm:aws-cdk-lib",
+            "npm:constructs"
+          ]
+        },
+        {
+          "file": "packages/components/route53-record/tests/setup.ts",
+          "hash": "18413757483339146050"
+        },
+        {
+          "file": "packages/components/route53-record/tests/unit/route53-record.builder.test.ts",
+          "hash": "9879376328810605208"
+        },
+        {
+          "file": "packages/components/route53-record/tests/unit/route53-record.component.test.ts",
+          "hash": "17296820352463261960",
+          "deps": [
+            "npm:aws-cdk-lib"
+          ]
+        }
+      ],
+      "@shinobi/iam-role": [
+        {
+          "file": "packages/components/iam-role/README.md",
+          "hash": "7071355276627829512"
+        },
+        {
+          "file": "packages/components/iam-role/iam-role.builder.ts",
+          "hash": "6707384248016723074"
+        },
+        {
+          "file": "packages/components/iam-role/iam-role.component.ts",
+          "hash": "12298196756404030350",
+          "deps": [
+            "npm:aws-cdk-lib",
+            "npm:constructs",
+            "@platform/contracts"
+          ]
+        },
+        {
+          "file": "packages/components/iam-role/iam-role.creator.ts",
+          "hash": "15557093242912559569",
+          "deps": [
+            "npm:constructs"
+          ]
+        },
+        {
+          "file": "packages/components/iam-role/index.ts",
+          "hash": "14368404982965057882"
+        },
+        {
+          "file": "packages/components/iam-role/jest.config.js",
+          "hash": "8872577854924552600"
+        },
+        {
+          "file": "packages/components/iam-role/package.json",
+          "hash": "14779663558035812880",
+          "deps": [
+            "npm:@types/jest@29.5.14",
+            "npm:@types/node@18.14.6",
+            "npm:jest@29.7.0",
+            "npm:ts-jest",
+            "npm:typescript",
+            "npm:aws-cdk-lib",
+            "npm:constructs"
+          ]
+        },
+        {
+          "file": "packages/components/iam-role/src/iam-role.builder.ts",
+          "hash": "13026019905667719822"
+        },
+        {
+          "file": "packages/components/iam-role/src/iam-role.component.ts",
+          "hash": "10902960519453146380",
+          "deps": [
+            "npm:aws-cdk-lib",
+            "npm:constructs"
+          ]
+        },
+        {
+          "file": "packages/components/iam-role/src/iam-role.creator.ts",
+          "hash": "12278729811654738898",
+          "deps": [
+            "npm:aws-cdk-lib",
+            "npm:constructs"
+          ]
+        },
+        {
+          "file": "packages/components/iam-role/src/index.ts",
+          "hash": "15767283160446062351"
+        },
+        {
+          "file": "packages/components/iam-role/tests/iam-role.builder.test.ts",
+          "hash": "2397482134037065033",
+          "deps": [
+            "npm:aws-cdk-lib"
+          ]
+        },
+        {
+          "file": "packages/components/iam-role/tests/iam-role.component.synthesis.test.ts",
+          "hash": "8161760620205208218",
+          "deps": [
+            "npm:aws-cdk-lib"
+          ]
+        },
+        {
+          "file": "packages/components/iam-role/tests/setup.ts",
+          "hash": "4837194134954504577"
+        },
+        {
+          "file": "packages/components/iam-role/tests/unit/iam-role.builder.test.ts",
+          "hash": "16401924134188795461",
+          "deps": [
+            "npm:aws-cdk-lib"
+          ]
+        },
+        {
+          "file": "packages/components/iam-role/tests/unit/iam-role.component.test.ts",
+          "hash": "6535920510812439819",
+          "deps": [
+            "npm:aws-cdk-lib"
+          ]
+        }
+      ],
+      "@platform/core-engine": [
+        {
+          "file": "packages/core-engine/catalog-info.yaml",
+          "hash": "12406042930707765105"
+        },
+        {
+          "file": "packages/core-engine/package.json",
+          "hash": "429654548695076195",
+          "deps": [
+            "@platform/contracts"
+          ]
+        },
+        {
+          "file": "packages/core-engine/src/index.ts",
+          "hash": "966081879783914188",
+          "deps": [
+            "@platform/contracts"
+          ]
+        },
+        {
+          "file": "packages/core-engine/tests/core-engine.test.ts",
+          "hash": "14406557928951961792",
+          "deps": [
+            "@platform/contracts"
+          ]
+        },
+        {
+          "file": "packages/core-engine/tsconfig.json",
+          "hash": "6977085707718287595"
+        }
+      ],
+      "@platform/contracts": [
+        {
+          "file": "packages/contracts/catalog-info.yaml",
+          "hash": "6722023884612272139"
+        },
+        {
+          "file": "packages/contracts/package.json",
+          "hash": "7201279124937578234"
+        },
+        {
+          "file": "packages/contracts/src/index.ts",
+          "hash": "10421938192840342744"
+        },
+        {
+          "file": "packages/contracts/tests/contracts.test.ts",
+          "hash": "11828386972221381019"
+        },
+        {
+          "file": "packages/contracts/tsconfig.json",
+          "hash": "8656178427616574977"
+        }
+      ],
+      "core": [
+        {
+          "file": "packages/core/_temp-problematic-files/bindings/index.ts",
+          "hash": "1835320745208112087"
+        },
+        {
+          "file": "packages/core/_temp-problematic-files/bindings/strategies/compute-to-iam-role.strategy.test.ts",
+          "hash": "16712964617021436237",
+          "deps": [
+            "npm:aws-cdk-lib"
+          ]
+        },
+        {
+          "file": "packages/core/_temp-problematic-files/bindings/strategies/compute-to-iam-role.strategy.ts",
+          "hash": "1134548488589169105",
+          "deps": [
+            "npm:aws-cdk-lib"
+          ]
+        },
+        {
+          "file": "packages/core/_temp-problematic-files/bindings/strategies/compute-to-openfeature.strategy.ts",
+          "hash": "647814289857694041",
+          "deps": [
+            "npm:aws-cdk-lib"
+          ]
+        },
+        {
+          "file": "packages/core/_temp-problematic-files/bindings/strategies/compute-to-security-group-import.strategy.ts",
+          "hash": "12994418661247845999",
+          "deps": [
+            "npm:aws-cdk-lib"
+          ]
+        },
+        {
+          "file": "packages/core/_temp-problematic-files/bindings/strategies/compute-to-service-connect.strategy.test.ts",
+          "hash": "3547506598352998079",
+          "deps": [
+            "npm:aws-cdk-lib"
+          ]
+        },
+        {
+          "file": "packages/core/_temp-problematic-files/bindings/strategies/compute-to-service-connect.strategy.ts",
+          "hash": "2713422729868608278",
+          "deps": [
+            "npm:aws-cdk-lib",
+            [
+              "npm:aws-cdk-lib",
+              "dynamic"
+            ]
+          ]
+        },
+        {
+          "file": "packages/core/_temp-problematic-files/core-engine/binding-strategies.ts",
+          "hash": "8054860620174522459"
+        },
+        {
+          "file": "packages/core/_temp-problematic-files/core-engine/component-factory-provider.ts",
+          "hash": "1149413393650077296"
+        },
+        {
+          "file": "packages/core/_temp-problematic-files/core-engine/index.ts",
+          "hash": "6813259504054689308"
+        },
+        {
+          "file": "packages/core/_temp-problematic-files/core-engine/logger.ts",
+          "hash": "16609754233489427571"
+        },
+        {
+          "file": "packages/core/_temp-problematic-files/core-engine/resolver-engine.ts",
+          "hash": "7933196329203078261",
+          "deps": [
+            "npm:aws-cdk-lib"
+          ]
+        },
+        {
+          "file": "packages/core/_temp-problematic-files/migration/cloudformation-analyzer.ts",
+          "hash": "7381547947717757043"
+        },
+        {
+          "file": "packages/core/_temp-problematic-files/migration/index.ts",
+          "hash": "11545706884804390893"
+        },
+        {
+          "file": "packages/core/_temp-problematic-files/migration/logical-id-preserver.ts",
+          "hash": "12267115443843382811"
+        },
+        {
+          "file": "packages/core/_temp-problematic-files/migration/migration-engine.ts",
+          "hash": "13396860465162902999",
+          "deps": [
+            "npm:yaml"
+          ]
+        },
+        {
+          "file": "packages/core/_temp-problematic-files/migration/migration-reporter.ts",
+          "hash": "6964905639447386063"
+        },
+        {
+          "file": "packages/core/_temp-problematic-files/migration/migration-validator.ts",
+          "hash": "18259746861458002535"
+        },
+        {
+          "file": "packages/core/_temp-problematic-files/migration/resource-mapper.ts",
+          "hash": "13947499432820276146"
+        },
+        {
+          "file": "packages/core/_temp-problematic-files/resolver/binder-registry.ts",
+          "hash": "297664545714038115"
+        },
+        {
+          "file": "packages/core/_temp-problematic-files/resolver/binders/concrete-binders.ts",
+          "hash": "5147490420076587439",
+          "deps": [
+            "npm:aws-cdk-lib"
+          ]
+        },
+        {
+          "file": "packages/core/_temp-problematic-files/resolver/index.ts",
+          "hash": "15689188147786926354"
+        },
+        {
+          "file": "packages/core/_temp-problematic-files/resolver/resolver-engine.ts",
+          "hash": "8039149934469017086",
+          "deps": [
+            "npm:aws-cdk-lib"
+          ]
+        },
+        {
+          "file": "packages/core/_temp-problematic-platform/binder-example.ts",
+          "hash": "5966311231676593137"
+        },
+        {
+          "file": "packages/core/_temp-problematic-platform/binder-integration.ts",
+          "hash": "10727535431775813290"
+        },
+        {
+          "file": "packages/core/_temp-problematic-platform/binders/api-gateway-binder-strategy.ts",
+          "hash": "6333980513660280297",
+          "deps": [
+            "npm:aws-cdk-lib"
+          ]
+        },
+        {
+          "file": "packages/core/_temp-problematic-platform/binders/cache-binder-strategy.ts",
+          "hash": "2022889447061461760",
+          "deps": [
+            "npm:aws-cdk-lib"
+          ]
+        },
+        {
+          "file": "packages/core/_temp-problematic-platform/binders/database-binder-strategy.ts",
+          "hash": "10294643715137780610",
+          "deps": [
+            "npm:aws-cdk-lib"
+          ]
+        },
+        {
+          "file": "packages/core/_temp-problematic-platform/binders/lambda-binder-strategy.ts",
+          "hash": "14275183463499125336",
+          "deps": [
+            "npm:aws-cdk-lib"
+          ]
+        },
+        {
+          "file": "packages/core/_temp-problematic-platform/binders/queue-binder-strategy.ts",
+          "hash": "4336821288865375805",
+          "deps": [
+            "npm:aws-cdk-lib"
+          ]
+        },
+        {
+          "file": "packages/core/_temp-problematic-platform/binders/storage-binder-strategy.ts",
+          "hash": "12434294473897574544",
+          "deps": [
+            "npm:aws-cdk-lib"
+          ]
+        },
+        {
+          "file": "packages/core/_temp-problematic-platform/cache/binding-cache.ts",
+          "hash": "13626186657638932640"
+        },
+        {
+          "file": "packages/core/_temp-problematic-platform/compliance-enforcer.ts",
+          "hash": "12375425479306625768",
+          "deps": [
+            "npm:aws-cdk-lib"
+          ]
+        },
+        {
+          "file": "packages/core/_temp-problematic-platform/component.ts",
+          "hash": "11164472626058150328",
+          "deps": [
+            "npm:aws-cdk-lib",
+            "npm:constructs"
+          ]
+        },
+        {
+          "file": "packages/core/_temp-problematic-platform/enhanced-binder-example.ts",
+          "hash": "6208044471114303755"
+        },
+        {
+          "file": "packages/core/_temp-problematic-platform/enhanced-binder-registry.ts",
+          "hash": "5393298414716356679"
+        },
+        {
+          "file": "packages/core/_temp-problematic-platform/enhanced-binder-strategy.ts",
+          "hash": "6071078540519634917",
+          "deps": [
+            "npm:aws-cdk-lib"
+          ]
+        },
+        {
+          "file": "packages/core/_temp-problematic-platform/logical-id/README.md",
+          "hash": "3763619943631699236"
+        },
+        {
+          "file": "packages/core/_temp-problematic-platform/logical-id/cli-integration.ts",
+          "hash": "13865562678360108547"
+        },
+        {
+          "file": "packages/core/_temp-problematic-platform/logical-id/drift-avoidance.ts",
+          "hash": "14868006499435046386",
+          "deps": [
+            "npm:aws-cdk-lib",
+            "npm:constructs"
+          ]
+        },
+        {
+          "file": "packages/core/_temp-problematic-platform/logical-id/index.ts",
+          "hash": "13800517814827062225"
+        },
+        {
+          "file": "packages/core/_temp-problematic-platform/logical-id/logical-id-manager.ts",
+          "hash": "6994041239356467087",
+          "deps": [
+            "npm:aws-cdk-lib",
+            "npm:constructs"
+          ]
+        },
+        {
+          "file": "packages/core/_temp-problematic-platform/logical-id/planning-integration.ts",
+          "hash": "7873373445629447528",
+          "deps": [
+            "npm:aws-cdk-lib"
+          ]
+        },
+        {
+          "file": "packages/core/_temp-problematic-platform/monitoring/binding-metrics.ts",
+          "hash": "14256620160023192921"
+        },
+        {
+          "file": "packages/core/_temp-problematic-platform/observability.service.ts",
+          "hash": "3255783635248412390",
+          "deps": [
+            "npm:js-yaml"
+          ]
+        },
+        {
+          "file": "packages/core/_temp-problematic-platform/observability/base-component-observability.ts",
+          "hash": "16912281695437843651",
+          "deps": [
+            "npm:constructs",
+            "npm:aws-cdk-lib"
+          ]
+        },
+        {
+          "file": "packages/core/_temp-problematic-platform/observability/observability-binder-strategy.ts",
+          "hash": "10466977479581143789",
+          "deps": [
+            "npm:aws-cdk-lib"
+          ]
+        },
+        {
+          "file": "packages/core/_temp-problematic-platform/observability/observability-config-factory.ts",
+          "hash": "9618591648415441157"
+        },
+        {
+          "file": "packages/core/_temp-problematic-platform/observability/observability-example.ts",
+          "hash": "14457769381032219795",
+          "deps": [
+            "npm:constructs"
+          ]
+        },
+        {
+          "file": "packages/core/_temp-problematic-platform/observability/observability-types.ts",
+          "hash": "16680172838779554754"
+        },
+        {
+          "file": "packages/core/_temp-problematic-platform/observability/strategies/container-observability-strategy.ts",
+          "hash": "14528611700724440219",
+          "deps": [
+            "npm:aws-cdk-lib"
+          ]
+        },
+        {
+          "file": "packages/core/_temp-problematic-platform/observability/strategies/lambda-observability-strategy.ts",
+          "hash": "10325794267143180679",
+          "deps": [
+            "npm:aws-cdk-lib"
+          ]
+        },
+        {
+          "file": "packages/core/_temp-problematic-platform/observability/strategies/vm-observability-strategy.ts",
+          "hash": "18156692746017214006",
+          "deps": [
+            "npm:aws-cdk-lib"
+          ]
+        },
+        {
+          "file": "packages/core/jest.config.ts",
+          "hash": "12985117730907846231"
+        },
+        {
+          "file": "packages/core/package.json",
+          "hash": "14292455500540762565",
+          "deps": [
+            "npm:@types/inquirer",
+            "npm:@types/jest",
+            "npm:@types/js-yaml",
+            "npm:@types/json-schema",
+            "npm:@types/mustache",
+            "npm:@types/node",
+            "npm:jest",
+            "npm:ts-jest",
+            "npm:@aws-sdk/client-cloudformation",
+            "npm:ajv",
+            "npm:ajv-formats",
+            "npm:aws-cdk-lib",
+            "npm:chalk",
+            "npm:commander",
+            "npm:constructs",
+            "npm:glob",
+            "npm:inquirer",
+            "npm:js-yaml",
+            "npm:mustache",
+            "npm:ts-morph",
+            "npm:ts-node",
+            "npm:typescript"
+          ]
+        },
+        {
+          "file": "packages/core/project.json",
+          "hash": "9653229306227130500"
+        },
+        {
+          "file": "packages/core/src/bindings/index.ts",
+          "hash": "17877411159591957870"
+        },
+        {
+          "file": "packages/core/src/bindings/strategies/compute-to-iam-role.strategy.test.ts",
+          "hash": "12848262155393181651",
+          "deps": [
+            "npm:aws-cdk-lib",
+            "npm:constructs"
+          ]
+        },
+        {
+          "file": "packages/core/src/bindings/strategies/compute-to-iam-role.strategy.ts",
+          "hash": "6473180019519175758",
+          "deps": [
+            "npm:aws-cdk-lib"
+          ]
+        },
+        {
+          "file": "packages/core/src/bindings/strategies/compute-to-openfeature.strategy.ts",
+          "hash": "10094136637883031127",
+          "deps": [
+            "npm:aws-cdk-lib"
+          ]
+        },
+        {
+          "file": "packages/core/src/bindings/strategies/compute-to-security-group-import.strategy.ts",
+          "hash": "8084672307930324556",
+          "deps": [
+            "npm:aws-cdk-lib"
+          ]
+        },
+        {
+          "file": "packages/core/src/bindings/strategies/compute-to-service-connect.strategy.test.ts",
+          "hash": "10853006690686834352",
+          "deps": [
+            "npm:aws-cdk-lib"
+          ]
+        },
+        {
+          "file": "packages/core/src/bindings/strategies/compute-to-service-connect.strategy.ts",
+          "hash": "2929942835005670994",
+          "deps": [
+            "npm:aws-cdk-lib",
+            [
+              "npm:aws-cdk-lib",
+              "dynamic"
+            ]
+          ]
+        },
+        {
+          "file": "packages/core/src/core-engine/binding-strategies.ts",
+          "hash": "798216412803112928"
+        },
+        {
+          "file": "packages/core/src/core-engine/component-factory-provider.ts",
+          "hash": "15226991380207796276"
+        },
+        {
+          "file": "packages/core/src/core-engine/index.ts",
+          "hash": "6813259504054689308"
+        },
+        {
+          "file": "packages/core/src/core-engine/logger.ts",
+          "hash": "16609754233489427571"
+        },
+        {
+          "file": "packages/core/src/core-engine/resolver-engine.ts",
+          "hash": "7933196329203078261",
+          "deps": [
+            "npm:aws-cdk-lib"
+          ]
+        },
+        {
+          "file": "packages/core/src/index.ts",
+          "hash": "4660359812238474392"
+        },
+        {
+          "file": "packages/core/src/migration/cloudformation-analyzer.ts",
+          "hash": "7381547947717757043"
+        },
+        {
+          "file": "packages/core/src/migration/index.ts",
+          "hash": "11545706884804390893"
+        },
+        {
+          "file": "packages/core/src/migration/logical-id-preserver.ts",
+          "hash": "12267115443843382811"
+        },
+        {
+          "file": "packages/core/src/migration/migration-engine.ts",
+          "hash": "13396860465162902999",
+          "deps": [
+            "npm:yaml"
+          ]
+        },
+        {
+          "file": "packages/core/src/migration/migration-reporter.ts",
+          "hash": "6964905639447386063"
+        },
+        {
+          "file": "packages/core/src/migration/migration-validator.ts",
+          "hash": "18259746861458002535"
+        },
+        {
+          "file": "packages/core/src/migration/resource-mapper.ts",
+          "hash": "13947499432820276146"
+        },
+        {
+          "file": "packages/core/src/platform/binders/binding-context.ts",
+          "hash": "11839514834235932891"
+        },
+        {
+          "file": "packages/core/src/platform/binders/component-binding.ts",
+          "hash": "2093830137834424414"
+        },
+        {
+          "file": "packages/core/src/platform/binders/registry/comprehensive-binder-registry.ts",
+          "hash": "14359040943642473277"
+        },
+        {
+          "file": "packages/core/src/platform/binders/strategies/analytics/emr-binder-strategy.ts",
+          "hash": "2206889651362161512"
+        },
+        {
+          "file": "packages/core/src/platform/binders/strategies/analytics/kinesis-binder-strategy.ts",
+          "hash": "9103367455656288916"
+        },
+        {
+          "file": "packages/core/src/platform/binders/strategies/binder-strategy.ts",
+          "hash": "15995080514118099196"
+        },
+        {
+          "file": "packages/core/src/platform/binders/strategies/cdn/cloudfront-binder-strategy.ts",
+          "hash": "1630233939080954019"
+        },
+        {
+          "file": "packages/core/src/platform/binders/strategies/compute/app-runner-binder-strategy.ts",
+          "hash": "17074341650031543220"
+        },
+        {
+          "file": "packages/core/src/platform/binders/strategies/compute/batch-binder-strategy.ts",
+          "hash": "16508159121469870741"
+        },
+        {
+          "file": "packages/core/src/platform/binders/strategies/compute/ecs-fargate-binder-strategy.ts",
+          "hash": "11548475708774852566"
+        },
+        {
+          "file": "packages/core/src/platform/binders/strategies/compute/eks-binder-strategy.ts",
+          "hash": "14886119208899512801"
+        },
+        {
+          "file": "packages/core/src/platform/binders/strategies/compute/elastic-beanstalk-binder-strategy.ts",
+          "hash": "10189035191034230246"
+        },
+        {
+          "file": "packages/core/src/platform/binders/strategies/compute/lightsail-binder-strategy.ts",
+          "hash": "1840328182261259195"
+        },
+        {
+          "file": "packages/core/src/platform/binders/strategies/database/dynamodb-binder-strategy.ts",
+          "hash": "13060118781095165333"
+        },
+        {
+          "file": "packages/core/src/platform/binders/strategies/database/neptune-binder-strategy.ts",
+          "hash": "15021050495602771794"
+        },
+        {
+          "file": "packages/core/src/platform/binders/strategies/iot/iot-core-binder-strategy.ts",
+          "hash": "8272054058574776266"
+        },
+        {
+          "file": "packages/core/src/platform/binders/strategies/messaging/eventbridge-binder-strategy.ts",
+          "hash": "1963250988772479931"
+        },
+        {
+          "file": "packages/core/src/platform/binders/strategies/messaging/step-functions-binder-strategy.ts",
+          "hash": "10187819557311821723"
+        },
+        {
+          "file": "packages/core/src/platform/binders/strategies/ml/sagemaker-binder-strategy.ts",
+          "hash": "16175524605223072850"
+        },
+        {
+          "file": "packages/core/src/platform/binders/strategies/mobile/amplify-binder-strategy.ts",
+          "hash": "7033842035427275475"
+        },
+        {
+          "file": "packages/core/src/platform/binders/strategies/networking/vpc-binder-strategy.ts",
+          "hash": "9372157608465150439"
+        },
+        {
+          "file": "packages/core/src/platform/binders/strategies/security/kms-binder-strategy.ts",
+          "hash": "848908344061536106"
+        },
+        {
+          "file": "packages/core/src/platform/binders/strategies/security/secrets-manager-binder-strategy.ts",
+          "hash": "5203281728861875286"
+        },
+        {
+          "file": "packages/core/src/platform/binders/strategies/storage/efs-binder-strategy.ts",
+          "hash": "11570062713211125524"
+        },
+        {
+          "file": "packages/core/src/platform/compliance/compliance-framework.ts",
+          "hash": "2248713872581233235"
+        },
+        {
+          "file": "packages/core/src/platform/contracts/artifacts.ts",
+          "hash": "10744409750646400182"
+        },
+        {
+          "file": "packages/core/src/platform/contracts/binder-example.ts",
+          "hash": "5966311231676593137"
+        },
+        {
+          "file": "packages/core/src/platform/contracts/binder-integration.ts",
+          "hash": "10727535431775813290"
+        },
+        {
+          "file": "packages/core/src/platform/contracts/binder-matrix.ts",
+          "hash": "16966820026257235386"
+        },
+        {
+          "file": "packages/core/src/platform/contracts/binders/api-gateway-binder-strategy.ts",
+          "hash": "6333980513660280297",
+          "deps": [
+            "npm:aws-cdk-lib"
+          ]
+        },
+        {
+          "file": "packages/core/src/platform/contracts/binders/cache-binder-strategy.ts",
+          "hash": "6425625503627899134",
+          "deps": [
+            "npm:aws-cdk-lib"
+          ]
+        },
+        {
+          "file": "packages/core/src/platform/contracts/binders/database-binder-strategy.ts",
+          "hash": "10294643715137780610",
+          "deps": [
+            "npm:aws-cdk-lib"
+          ]
+        },
+        {
+          "file": "packages/core/src/platform/contracts/binders/lambda-binder-strategy.ts",
+          "hash": "14275183463499125336",
+          "deps": [
+            "npm:aws-cdk-lib"
+          ]
+        },
+        {
+          "file": "packages/core/src/platform/contracts/binders/queue-binder-strategy.ts",
+          "hash": "4336821288865375805",
+          "deps": [
+            "npm:aws-cdk-lib"
+          ]
+        },
+        {
+          "file": "packages/core/src/platform/contracts/binders/storage-binder-strategy.ts",
+          "hash": "11402517245545033990",
+          "deps": [
+            "npm:aws-cdk-lib"
+          ]
+        },
+        {
+          "file": "packages/core/src/platform/contracts/binding-context.ts",
+          "hash": "12591974519587874728"
+        },
+        {
+          "file": "packages/core/src/platform/contracts/bindings.ts",
+          "hash": "8522592098005948338",
+          "deps": [
+            "npm:aws-cdk-lib"
+          ]
+        },
+        {
+          "file": "packages/core/src/platform/contracts/cache/binding-cache.ts",
+          "hash": "13626186657638932640"
+        },
+        {
+          "file": "packages/core/src/platform/contracts/compliance-enforcer.ts",
+          "hash": "12375425479306625768",
+          "deps": [
+            "npm:aws-cdk-lib"
+          ]
+        },
+        {
+          "file": "packages/core/src/platform/contracts/compliance/compliance-enforcer.ts",
+          "hash": "16569888132051091137"
+        },
+        {
+          "file": "packages/core/src/platform/contracts/component-interfaces.d.ts",
+          "hash": "8457000502239560808",
+          "deps": [
+            "npm:constructs",
+            "npm:aws-cdk-lib"
+          ]
+        },
+        {
+          "file": "packages/core/src/platform/contracts/component-interfaces.js",
+          "hash": "11373359849213675696",
+          "deps": [
+            "npm:constructs"
+          ]
+        },
+        {
+          "file": "packages/core/src/platform/contracts/component-interfaces.ts",
+          "hash": "15529458665471594628",
+          "deps": [
+            "npm:constructs",
+            "npm:aws-cdk-lib"
+          ]
+        },
+        {
+          "file": "packages/core/src/platform/contracts/component.d.ts",
+          "hash": "13004236173999957119",
+          "deps": [
+            "npm:constructs"
+          ]
+        },
+        {
+          "file": "packages/core/src/platform/contracts/component.js",
+          "hash": "12324450473658556790",
+          "deps": [
+            "npm:constructs"
+          ]
+        },
+        {
+          "file": "packages/core/src/platform/contracts/component.ts",
+          "hash": "1829839780460135642",
+          "deps": [
+            "npm:aws-cdk-lib",
+            "npm:constructs"
+          ]
+        },
+        {
+          "file": "packages/core/src/platform/contracts/components/base-component.ts",
+          "hash": "10524104297632703261"
+        },
+        {
+          "file": "packages/core/src/platform/contracts/components/component-config-builder.ts",
+          "hash": "12085993099396127771"
+        },
+        {
+          "file": "packages/core/src/platform/contracts/components/component-context.ts",
+          "hash": "4209877459337339945"
+        },
+        {
+          "file": "packages/core/src/platform/contracts/components/component-factory.ts",
+          "hash": "11238744213673531705"
+        },
+        {
+          "file": "packages/core/src/platform/contracts/components/component-registry.ts",
+          "hash": "7927209307391846882"
+        },
+        {
+          "file": "packages/core/src/platform/contracts/components/component-spec.ts",
+          "hash": "2625347125808790660"
+        },
+        {
+          "file": "packages/core/src/platform/contracts/components/example-s3-bucket-component.ts",
+          "hash": "17873972679843123447"
+        },
+        {
+          "file": "packages/core/src/platform/contracts/components/index.ts",
+          "hash": "11192099807383389073"
+        },
+        {
+          "file": "packages/core/src/platform/contracts/components/service-manifest-parser.ts",
+          "hash": "11900585090293372897"
+        },
+        {
+          "file": "packages/core/src/platform/contracts/config-builder.ts",
+          "hash": "10709824307818331353",
+          "deps": [
+            "npm:js-yaml"
+          ]
+        },
+        {
+          "file": "packages/core/src/platform/contracts/deprecation-interfaces.ts",
+          "hash": "15538796267030393389"
+        },
+        {
+          "file": "packages/core/src/platform/contracts/enhanced-binder-example.ts",
+          "hash": "6208044471114303755"
+        },
+        {
+          "file": "packages/core/src/platform/contracts/enhanced-binder-registry.ts",
+          "hash": "8967170553987368920"
+        },
+        {
+          "file": "packages/core/src/platform/contracts/enhanced-binder-strategy.ts",
+          "hash": "6071078540519634917",
+          "deps": [
+            "npm:aws-cdk-lib"
+          ]
+        },
+        {
+          "file": "packages/core/src/platform/contracts/index.ts",
+          "hash": "17598185183384731357"
+        },
+        {
+          "file": "packages/core/src/platform/contracts/logging-interfaces.ts",
+          "hash": "11805229386562199861"
+        },
+        {
+          "file": "packages/core/src/platform/contracts/monitoring/binding-metrics.ts",
+          "hash": "14256620160023192921"
+        },
+        {
+          "file": "packages/core/src/platform/contracts/observability/base-component-observability.ts",
+          "hash": "16912281695437843651",
+          "deps": [
+            "npm:constructs",
+            "npm:aws-cdk-lib"
+          ]
+        },
+        {
+          "file": "packages/core/src/platform/contracts/observability/observability-binder-strategy.ts",
+          "hash": "10466977479581143789",
+          "deps": [
+            "npm:aws-cdk-lib"
+          ]
+        },
+        {
+          "file": "packages/core/src/platform/contracts/observability/observability-config-factory.ts",
+          "hash": "9618591648415441157"
+        },
+        {
+          "file": "packages/core/src/platform/contracts/observability/observability-example.ts",
+          "hash": "14457769381032219795",
+          "deps": [
+            "npm:constructs"
+          ]
+        },
+        {
+          "file": "packages/core/src/platform/contracts/observability/observability-types.ts",
+          "hash": "16680172838779554754"
+        },
+        {
+          "file": "packages/core/src/platform/contracts/observability/strategies/container-observability-strategy.ts",
+          "hash": "14528611700724440219",
+          "deps": [
+            "npm:aws-cdk-lib"
+          ]
+        },
+        {
+          "file": "packages/core/src/platform/contracts/observability/strategies/lambda-observability-strategy.ts",
+          "hash": "10325794267143180679",
+          "deps": [
+            "npm:aws-cdk-lib"
+          ]
+        },
+        {
+          "file": "packages/core/src/platform/contracts/observability/strategies/vm-observability-strategy.ts",
+          "hash": "18156692746017214006",
+          "deps": [
+            "npm:aws-cdk-lib"
+          ]
+        },
+        {
+          "file": "packages/core/src/platform/contracts/openfeature-interfaces.ts",
+          "hash": "4135767592486594989"
+        },
+        {
+          "file": "packages/core/src/platform/contracts/performance/binding-benchmark.ts",
+          "hash": "2996089936158201295"
+        },
+        {
+          "file": "packages/core/src/platform/contracts/performance/binding-cache.ts",
+          "hash": "4622808571846475260"
+        },
+        {
+          "file": "packages/core/src/platform/contracts/performance/binding-metrics-collector.ts",
+          "hash": "10578648009177972537"
+        },
+        {
+          "file": "packages/core/src/platform/contracts/platform-binding-trigger-spec.ts",
+          "hash": "3931877034009235050"
+        },
+        {
+          "file": "packages/core/src/platform/contracts/platform-services.ts",
+          "hash": "8309727174974798511"
+        },
+        {
+          "file": "packages/core/src/platform/contracts/tests/database-binder-strategy.test.ts",
+          "hash": "999545243624178976"
+        },
+        {
+          "file": "packages/core/src/platform/contracts/tests/enhanced-binder-registry.test.ts",
+          "hash": "18076073779000413371"
+        },
+        {
+          "file": "packages/core/src/platform/contracts/tests/simple-registry.test.ts",
+          "hash": "2601366444076255932"
+        },
+        {
+          "file": "packages/core/src/platform/contracts/trigger-interfaces.ts",
+          "hash": "13408246900350164216"
+        },
+        {
+          "file": "packages/core/src/platform/logger/package.json",
+          "hash": "2353761653439579863"
+        },
+        {
+          "file": "packages/core/src/platform/logger/src/index.ts",
+          "hash": "5019778572094692923"
+        },
+        {
+          "file": "packages/core/src/platform/logger/tsconfig.json",
+          "hash": "7906342881400571713"
+        },
+        {
+          "file": "packages/core/src/platform/logical-id/cli-integration.ts",
+          "hash": "13865562678360108547"
+        },
+        {
+          "file": "packages/core/src/platform/logical-id/drift-avoidance.ts",
+          "hash": "14868006499435046386",
+          "deps": [
+            "npm:aws-cdk-lib",
+            "npm:constructs"
+          ]
+        },
+        {
+          "file": "packages/core/src/platform/logical-id/index.ts",
+          "hash": "13800517814827062225"
+        },
+        {
+          "file": "packages/core/src/platform/logical-id/logical-id-manager.ts",
+          "hash": "6994041239356467087",
+          "deps": [
+            "npm:aws-cdk-lib",
+            "npm:constructs"
+          ]
+        },
+        {
+          "file": "packages/core/src/platform/logical-id/planning-integration.ts",
+          "hash": "7873373445629447528",
+          "deps": [
+            "npm:aws-cdk-lib"
+          ]
+        },
+        {
+          "file": "packages/core/src/platform/observability/package.json",
+          "hash": "16246497355531989619"
+        },
+        {
+          "file": "packages/core/src/platform/observability/src/index.ts",
+          "hash": "3437338741989105720"
+        },
+        {
+          "file": "packages/core/src/platform/observability/tsconfig.json",
+          "hash": "7906342881400571713"
+        },
+        {
+          "file": "packages/core/src/platform/services/artifact-serializer.ts",
+          "hash": "11755441534388721687",
+          "deps": [
+            "npm:yaml"
+          ]
+        },
+        {
+          "file": "packages/core/src/platform/services/artifact-writer.ts",
+          "hash": "14115179836725768382"
+        },
+        {
+          "file": "packages/core/src/platform/services/compliance-control-mapping.ts",
+          "hash": "1983015672471649792"
+        },
+        {
+          "file": "packages/core/src/platform/services/compliance-plan-generator.ts",
+          "hash": "17754505987956952226"
+        },
+        {
+          "file": "packages/core/src/platform/services/tagging-enforcement.ts",
+          "hash": "15119286056700745659"
+        },
+        {
+          "file": "packages/core/src/platform/services/tagging-service/tagging.service.d.ts",
+          "hash": "7203087500097985379",
+          "deps": [
+            "npm:constructs"
+          ]
+        },
+        {
+          "file": "packages/core/src/platform/services/tagging-service/tagging.service.js",
+          "hash": "15812850634719577064",
+          "deps": [
+            "npm:aws-cdk-lib"
+          ]
+        },
+        {
+          "file": "packages/core/src/platform/services/tagging-service/tagging.service.ts",
+          "hash": "806566449185703956",
+          "deps": [
+            "npm:aws-cdk-lib",
+            "npm:constructs"
+          ]
+        },
+        {
+          "file": "packages/core/src/platform/tagging/package.json",
+          "hash": "4756140822891974428"
+        },
+        {
+          "file": "packages/core/src/platform/tagging/src/index.ts",
+          "hash": "7944531859060758261"
+        },
+        {
+          "file": "packages/core/src/platform/tagging/tsconfig.json",
+          "hash": "7906342881400571713"
+        },
+        {
+          "file": "packages/core/src/resolver/binder-registry.ts",
+          "hash": "297664545714038115"
+        },
+        {
+          "file": "packages/core/src/resolver/binders/concrete-binders.ts",
+          "hash": "97849517000646899",
+          "deps": [
+            "npm:aws-cdk-lib"
+          ]
+        },
+        {
+          "file": "packages/core/src/resolver/index.ts",
+          "hash": "15689188147786926354"
+        },
+        {
+          "file": "packages/core/src/resolver/resolver-engine.ts",
+          "hash": "8039149934469017086",
+          "deps": [
+            "npm:aws-cdk-lib"
+          ]
+        },
+        {
+          "file": "packages/core/src/services/README.md",
+          "hash": "1265350708260302368"
+        },
+        {
+          "file": "packages/core/src/services/config-loader.ts",
+          "hash": "6000247017961854481",
+          "deps": [
+            "npm:yaml"
+          ]
+        },
+        {
+          "file": "packages/core/src/services/context-hydrator.ts",
+          "hash": "14085022982232476007",
+          "deps": [
+            "npm:yaml"
+          ]
+        },
+        {
+          "file": "packages/core/src/services/enhanced-schema-validator.ts",
+          "hash": "127631180268563400",
+          "deps": [
+            "npm:ajv",
+            "npm:ajv-formats"
+          ]
+        },
+        {
+          "file": "packages/core/src/services/file-discovery.ts",
+          "hash": "3599644971888966012"
+        },
+        {
+          "file": "packages/core/src/services/index.ts",
+          "hash": "13359442491004126764"
+        },
+        {
+          "file": "packages/core/src/services/manifest-parser.ts",
+          "hash": "14218332129464093278",
+          "deps": [
+            "npm:yaml"
+          ]
+        },
+        {
+          "file": "packages/core/src/services/manifest-schema-composer.ts",
+          "hash": "2464769486556994521",
+          "deps": [
+            "npm:glob"
+          ]
+        },
+        {
+          "file": "packages/core/src/services/observability-ecs-integration.test.ts",
+          "hash": "2664487478177403003",
+          "deps": [
+            "npm:aws-cdk-lib"
+          ]
+        },
+        {
+          "file": "packages/core/src/services/observability.service.md",
+          "hash": "9331883081779256781"
+        },
+        {
+          "file": "packages/core/src/services/observability.service.ts",
+          "hash": "2652474719817209235",
+          "deps": [
+            "npm:js-yaml"
+          ]
+        },
+        {
+          "file": "packages/core/src/services/pipeline.ts",
+          "hash": "13852153565424257724",
+          "deps": [
+            "npm:yaml",
+            "npm:ajv",
+            "npm:ajv-formats"
+          ]
+        },
+        {
+          "file": "packages/core/src/services/plan-output-formatter.ts",
+          "hash": "12699345288312569190"
+        },
+        {
+          "file": "packages/core/src/services/reference-validator.ts",
+          "hash": "9111920991176867279"
+        },
+        {
+          "file": "packages/core/src/services/schema-error-formatter.ts",
+          "hash": "11851648520167995991",
+          "deps": [
+            "npm:ajv"
+          ]
+        },
+        {
+          "file": "packages/core/src/services/schema-manager.ts",
+          "hash": "10505667062963748757"
+        },
+        {
+          "file": "packages/core/src/services/schema-validator.ts",
+          "hash": "8733904232370743528",
+          "deps": [
+            "npm:ajv",
+            "npm:ajv-formats"
+          ]
+        },
+        {
+          "file": "packages/core/src/services/service-manifest.schema.json",
+          "hash": "6184690457704694748"
+        },
+        {
+          "file": "packages/core/src/services/tests/enhanced-schema-validator.test.ts",
+          "hash": "17941113913731694660"
+        },
+        {
+          "file": "packages/core/src/services/tests/manifest-schema-composer.test.ts",
+          "hash": "1464331634796375792"
+        },
+        {
+          "file": "packages/core/src/services/tests/schema-validator.test.ts",
+          "hash": "9522200620490568441"
+        },
+        {
+          "file": "packages/core/src/services/tests/test-metadata-schema.json",
+          "hash": "6645042913665085038"
+        },
+        {
+          "file": "packages/core/src/services/tests/test-metadata-validator.ts",
+          "hash": "9572380900383798283",
+          "deps": [
+            "npm:ajv",
+            "npm:ajv-formats"
+          ]
+        },
+        {
+          "file": "packages/core/src/services/validation-orchestrator.ts",
+          "hash": "13221449355996354454"
+        },
+        {
+          "file": "packages/core/tsconfig.lib.json",
+          "hash": "4802414217585551482"
+        },
+        {
+          "file": "packages/core/tsconfig.spec.json",
+          "hash": "8727841706476593207"
+        }
+      ],
+      "standards-tagging": [
+        {
+          "file": "packages/standards/tagging/jest.config.ts",
+          "hash": "11173089299829010346"
+        },
+        {
+          "file": "packages/standards/tagging/package.json",
+          "hash": "5111549344473245502",
+          "deps": [
+            "npm:@types/jest",
+            "npm:@types/node",
+            "npm:jest",
+            "npm:ts-jest",
+            "npm:typescript",
+            "core"
+          ]
+        },
+        {
+          "file": "packages/standards/tagging/project.json",
+          "hash": "5211435454898070980"
+        },
+        {
+          "file": "packages/standards/tagging/src/index.ts",
+          "hash": "3757243954293906837"
+        },
+        {
+          "file": "packages/standards/tagging/tagging-service/tagging.service.d.ts",
+          "hash": "7203087500097985379",
+          "deps": [
+            "npm:constructs"
+          ]
+        },
+        {
+          "file": "packages/standards/tagging/tagging-service/tagging.service.js",
+          "hash": "15812850634719577064",
+          "deps": [
+            "npm:aws-cdk-lib"
+          ]
+        },
+        {
+          "file": "packages/standards/tagging/tagging-service/tagging.service.ts",
+          "hash": "806566449185703956",
+          "deps": [
+            "npm:aws-cdk-lib",
+            "npm:constructs"
+          ]
+        },
+        {
+          "file": "packages/standards/tagging/tsconfig.lib.json",
+          "hash": "4006877950016446411"
+        },
+        {
+          "file": "packages/standards/tagging/tsconfig.spec.json",
+          "hash": "4933087548142887878"
+        }
+      ],
+      "@platform/components-backstage-portal": [
+        {
+          "file": "packages/components/backstage-portal/README.md",
+          "hash": "13401725786107978350"
+        },
+        {
+          "file": "packages/components/backstage-portal/jest.config.js",
+          "hash": "16174409094751740907"
+        },
+        {
+          "file": "packages/components/backstage-portal/package.json",
+          "hash": "1053607785845476143",
+          "deps": [
+            "npm:aws-cdk-lib",
+            "npm:constructs",
+            "npm:@types/jest@29.5.14",
+            "npm:@types/node@20.19.14",
+            "npm:@typescript-eslint/eslint-plugin",
+            "npm:@typescript-eslint/parser",
+            "npm:eslint",
+            "npm:jest@29.7.0",
+            "npm:ts-jest",
+            "npm:typescript",
+            "@platform/contracts",
+            "@platform/core-engine"
+          ]
+        },
+        {
+          "file": "packages/components/backstage-portal/src/backstage-portal.builder.ts",
+          "hash": "9095048430022174763",
+          "deps": [
+            "@platform/core-engine"
+          ]
+        },
+        {
+          "file": "packages/components/backstage-portal/src/backstage-portal.component.ts",
+          "hash": "6984016234971356749",
+          "deps": [
+            "npm:aws-cdk-lib",
+            "npm:constructs",
+            "@platform/contracts"
+          ]
+        },
+        {
+          "file": "packages/components/backstage-portal/src/backstage-portal.creator.ts",
+          "hash": "10152187690079739350",
+          "deps": [
+            "npm:constructs"
+          ]
+        },
+        {
+          "file": "packages/components/backstage-portal/src/index.ts",
+          "hash": "4768647305018394308",
+          "deps": [
+            "@platform/contracts"
+          ]
+        },
+        {
+          "file": "packages/components/backstage-portal/tests/setup.ts",
+          "hash": "8455921414252171857"
+        },
+        {
+          "file": "packages/components/backstage-portal/tests/simple.test.ts",
+          "hash": "1296221866313916238"
+        },
+        {
+          "file": "packages/components/backstage-portal/tests/unit/builder.test.ts",
+          "hash": "2594837662630678673"
+        },
+        {
+          "file": "packages/components/backstage-portal/tests/unit/component.test.ts",
+          "hash": "5525663129715303864"
+        }
+      ],
+      "@platform/components-deployment-bundle-pipeline": [
+        {
+          "file": "packages/components/deployment-bundle-pipeline/README.md",
+          "hash": "13878995460923611435"
+        },
+        {
+          "file": "packages/components/deployment-bundle-pipeline/audit/component.plan.json",
+          "hash": "16787725895637861291"
+        },
+        {
+          "file": "packages/components/deployment-bundle-pipeline/audit/deployment-bundle-pipeline.oscal.json",
+          "hash": "17646327668684797317"
+        },
+        {
+          "file": "packages/components/deployment-bundle-pipeline/audit/rego/bundle_security_policies.rego",
+          "hash": "16161582798300545449"
+        },
+        {
+          "file": "packages/components/deployment-bundle-pipeline/dagger.ts",
+          "hash": "8477345662149291955"
+        },
+        {
+          "file": "packages/components/deployment-bundle-pipeline/jest.config.js",
+          "hash": "16174409094751740907"
+        },
+        {
+          "file": "packages/components/deployment-bundle-pipeline/observability/alarms-config.json",
+          "hash": "18270987230754750055"
+        },
+        {
+          "file": "packages/components/deployment-bundle-pipeline/observability/otel-dashboard-template.json",
+          "hash": "1517350791177335245"
+        },
+        {
+          "file": "packages/components/deployment-bundle-pipeline/package.json",
+          "hash": "11762208609345315320",
+          "deps": [
+            "npm:aws-cdk-lib",
+            "npm:constructs",
+            "npm:@types/jest@29.5.14",
+            "npm:@types/node@20.19.14",
+            "npm:@typescript-eslint/eslint-plugin",
+            "npm:@typescript-eslint/parser",
+            "npm:eslint",
+            "npm:jest@29.7.0",
+            "npm:ts-jest",
+            "npm:typescript",
+            "@platform/core-engine",
+            "@platform/contracts"
+          ]
+        },
+        {
+          "file": "packages/components/deployment-bundle-pipeline/scripts/gen-provenance.sh",
+          "hash": "11792887095119311477"
+        },
+        {
+          "file": "packages/components/deployment-bundle-pipeline/src/deployment-bundle-pipeline.builder.ts",
+          "hash": "12701639863134911742"
+        },
+        {
+          "file": "packages/components/deployment-bundle-pipeline/src/deployment-bundle-pipeline.component.ts",
+          "hash": "6955649166442358862"
+        },
+        {
+          "file": "packages/components/deployment-bundle-pipeline/src/deployment-bundle-pipeline.creator.ts",
+          "hash": "1470025511806899686"
+        },
+        {
+          "file": "packages/components/deployment-bundle-pipeline/src/index.ts",
+          "hash": "5974657487635288014"
+        },
+        {
+          "file": "packages/components/deployment-bundle-pipeline/src/types.ts",
+          "hash": "6076368853284652266"
+        },
+        {
+          "file": "packages/components/deployment-bundle-pipeline/tests/setup.ts",
+          "hash": "13712925196876119842"
+        },
+        {
+          "file": "packages/components/deployment-bundle-pipeline/tests/simple.test.ts",
+          "hash": "6991431107637804510"
+        },
+        {
+          "file": "packages/components/deployment-bundle-pipeline/tests/unit/builder.test.ts",
+          "hash": "91214594767232889"
+        },
+        {
+          "file": "packages/components/deployment-bundle-pipeline/tests/unit/component.test.ts",
+          "hash": "8751873657856482411",
           "deps": [
             "npm:aws-cdk-lib"
           ]
@@ -3673,817 +4988,336 @@
           "hash": "13453859391622790998"
         }
       ],
-      "core": [
+      "@shinobi/vpc": [
         {
-          "file": "packages/core/jest.config.ts",
-          "hash": "5468989376483040868"
+          "file": "packages/components/vpc/README.md",
+          "hash": "8875819887397071593"
         },
         {
-          "file": "packages/core/package.json",
-          "hash": "14292455500540762565",
+          "file": "packages/components/vpc/audit/component.plan.json",
+          "hash": "12000413060616824162"
+        },
+        {
+          "file": "packages/components/vpc/audit/rego/vpc.rego",
+          "hash": "8533818154920924019"
+        },
+        {
+          "file": "packages/components/vpc/audit/rego/vpc_test.rego",
+          "hash": "12810827227442909778"
+        },
+        {
+          "file": "packages/components/vpc/audit/vpc.oscal.json",
+          "hash": "18022597759662346645"
+        },
+        {
+          "file": "packages/components/vpc/generation-summary.json",
+          "hash": "897740523218728149"
+        },
+        {
+          "file": "packages/components/vpc/index.ts",
+          "hash": "4065872702002909585"
+        },
+        {
+          "file": "packages/components/vpc/jest.config.js",
+          "hash": "9876185703598838263"
+        },
+        {
+          "file": "packages/components/vpc/observability/alarms-config.json",
+          "hash": "10768305995109260950"
+        },
+        {
+          "file": "packages/components/vpc/observability/otel-dashboard-template.json",
+          "hash": "4576313993253791197"
+        },
+        {
+          "file": "packages/components/vpc/package.json",
+          "hash": "4433943797058200473",
           "deps": [
-            "npm:@types/inquirer",
-            "npm:@types/jest",
-            "npm:@types/js-yaml",
-            "npm:@types/json-schema",
-            "npm:@types/mustache",
-            "npm:@types/node",
-            "npm:jest",
+            "npm:aws-cdk-lib",
+            "npm:constructs",
+            "npm:@types/node@20.19.14",
+            "npm:typescript",
+            "npm:jest@29.7.0",
             "npm:ts-jest",
-            "npm:@aws-sdk/client-cloudformation",
-            "npm:ajv",
-            "npm:ajv-formats",
+            "npm:@types/jest@29.5.14",
+            "npm:eslint",
+            "npm:@typescript-eslint/eslint-plugin",
+            "npm:@typescript-eslint/parser"
+          ]
+        },
+        {
+          "file": "packages/components/vpc/test-simple.ts",
+          "hash": "909108858185588679",
+          "deps": [
+            "npm:aws-cdk-lib"
+          ]
+        },
+        {
+          "file": "packages/components/vpc/tests/compliance.test.ts",
+          "hash": "3053902171632405232",
+          "deps": [
+            "npm:aws-cdk-lib"
+          ]
+        },
+        {
+          "file": "packages/components/vpc/tests/observability.test.ts",
+          "hash": "9392671795301397368",
+          "deps": [
+            "npm:aws-cdk-lib"
+          ]
+        },
+        {
+          "file": "packages/components/vpc/tests/unit/builder.test.ts",
+          "hash": "12519849711213784901"
+        },
+        {
+          "file": "packages/components/vpc/tests/unit/component.test.ts",
+          "hash": "5942211991237852784",
+          "deps": [
+            "npm:aws-cdk-lib"
+          ]
+        },
+        {
+          "file": "packages/components/vpc/tests/vpc.builder.test.ts",
+          "hash": "4012717958027362008"
+        },
+        {
+          "file": "packages/components/vpc/tests/vpc.component.synthesis.test.ts",
+          "hash": "17165583504273358829",
+          "deps": [
+            "npm:aws-cdk-lib"
+          ]
+        },
+        {
+          "file": "packages/components/vpc/tsconfig.json",
+          "hash": "17199098717519277380"
+        },
+        {
+          "file": "packages/components/vpc/vpc.builder.ts",
+          "hash": "11213271852805247841"
+        },
+        {
+          "file": "packages/components/vpc/vpc.component.ts",
+          "hash": "10562567076080033799",
+          "deps": [
             "npm:aws-cdk-lib",
-            "npm:chalk",
-            "npm:commander",
+            "npm:constructs"
+          ]
+        },
+        {
+          "file": "packages/components/vpc/vpc.creator.ts",
+          "hash": "10119006679148726255",
+          "deps": [
+            "npm:constructs"
+          ]
+        }
+      ],
+      "@platform/shinobi": [
+        {
+          "file": "packages/components/shinobi/MCP_SERVER_README.md",
+          "hash": "6459763790868124426"
+        },
+        {
+          "file": "packages/components/shinobi/README.md",
+          "hash": "7152864019549833671"
+        },
+        {
+          "file": "packages/components/shinobi/SHINOBI_SUMMARY.md",
+          "hash": "59767366379295371"
+        },
+        {
+          "file": "packages/components/shinobi/examples/basic-usage.ts",
+          "hash": "13408313125355963233",
+          "deps": [
+            "npm:aws-cdk-lib"
+          ]
+        },
+        {
+          "file": "packages/components/shinobi/package.json",
+          "hash": "5441731817767429332",
+          "deps": [
+            "npm:@types/jest@29.5.14",
+            "npm:@types/node@20.19.14",
+            "npm:jest@29.7.0",
+            "npm:ts-jest",
+            "npm:typescript",
+            "npm:eslint",
+            "npm:@typescript-eslint/eslint-plugin",
+            "npm:@typescript-eslint/parser",
+            "npm:aws-cdk-lib",
             "npm:constructs",
-            "npm:glob",
-            "npm:inquirer",
-            "npm:js-yaml",
-            "npm:mustache",
-            "npm:ts-morph",
-            "npm:ts-node",
-            "npm:typescript"
-          ]
-        },
-        {
-          "file": "packages/core/project.json",
-          "hash": "4118420222959881122"
-        },
-        {
-          "file": "packages/core/src/bindings/index.ts",
-          "hash": "3397555454604675277",
-          "deps": [
-            "@platform/contracts"
-          ]
-        },
-        {
-          "file": "packages/core/src/bindings/strategies/compute-to-iam-role.strategy.test.ts",
-          "hash": "16712964617021436237",
-          "deps": [
-            "npm:aws-cdk-lib"
-          ]
-        },
-        {
-          "file": "packages/core/src/bindings/strategies/compute-to-iam-role.strategy.ts",
-          "hash": "1134548488589169105",
-          "deps": [
-            "npm:aws-cdk-lib"
-          ]
-        },
-        {
-          "file": "packages/core/src/bindings/strategies/compute-to-openfeature.strategy.ts",
-          "hash": "15108786415777006118",
-          "deps": [
-            "npm:aws-cdk-lib",
-            "@platform/contracts"
-          ]
-        },
-        {
-          "file": "packages/core/src/bindings/strategies/compute-to-security-group-import.strategy.ts",
-          "hash": "12994418661247845999",
-          "deps": [
-            "npm:aws-cdk-lib"
-          ]
-        },
-        {
-          "file": "packages/core/src/bindings/strategies/compute-to-service-connect.strategy.test.ts",
-          "hash": "425649808194709128",
-          "deps": [
-            "npm:aws-cdk-lib"
-          ]
-        },
-        {
-          "file": "packages/core/src/bindings/strategies/compute-to-service-connect.strategy.ts",
-          "hash": "2713422729868608278",
-          "deps": [
-            "npm:aws-cdk-lib",
-            [
-              "npm:aws-cdk-lib",
-              "dynamic"
-            ]
-          ]
-        },
-        {
-          "file": "packages/core/src/core-engine/binding-strategies.ts",
-          "hash": "7131803403469251675",
-          "deps": [
-            "@platform/contracts"
-          ]
-        },
-        {
-          "file": "packages/core/src/core-engine/component-factory-provider.ts",
-          "hash": "17702677035616215194",
-          "deps": [
-            "@platform/contracts"
-          ]
-        },
-        {
-          "file": "packages/core/src/core-engine/index.ts",
-          "hash": "5506037545541738525",
-          "deps": [
-            "@platform/contracts"
-          ]
-        },
-        {
-          "file": "packages/core/src/core-engine/logger.ts",
-          "hash": "16609754233489427571"
-        },
-        {
-          "file": "packages/core/src/core-engine/resolver-engine.ts",
-          "hash": "12043128886345528014",
-          "deps": [
-            "npm:aws-cdk-lib",
-            "@platform/contracts"
-          ]
-        },
-        {
-          "file": "packages/core/src/index.ts",
-          "hash": "325192631192222586"
-        },
-        {
-          "file": "packages/core/src/migration/cloudformation-analyzer.ts",
-          "hash": "5586415558427935585"
-        },
-        {
-          "file": "packages/core/src/migration/index.ts",
-          "hash": "11545706884804390893"
-        },
-        {
-          "file": "packages/core/src/migration/logical-id-preserver.ts",
-          "hash": "7193729352786431460"
-        },
-        {
-          "file": "packages/core/src/migration/migration-engine.ts",
-          "hash": "11535865578357569612",
-          "deps": [
-            "npm:yaml"
-          ]
-        },
-        {
-          "file": "packages/core/src/migration/migration-reporter.ts",
-          "hash": "1209696889650775850"
-        },
-        {
-          "file": "packages/core/src/migration/migration-validator.ts",
-          "hash": "1262974639552439390"
-        },
-        {
-          "file": "packages/core/src/migration/resource-mapper.ts",
-          "hash": "8063717391963671232"
-        },
-        {
-          "file": "packages/core/src/platform/binders/binding-context.ts",
-          "hash": "11839514834235932891"
-        },
-        {
-          "file": "packages/core/src/platform/binders/component-binding.ts",
-          "hash": "2093830137834424414"
-        },
-        {
-          "file": "packages/core/src/platform/binders/registry/comprehensive-binder-registry.ts",
-          "hash": "14359040943642473277"
-        },
-        {
-          "file": "packages/core/src/platform/binders/strategies/analytics/emr-binder-strategy.ts",
-          "hash": "2206889651362161512"
-        },
-        {
-          "file": "packages/core/src/platform/binders/strategies/analytics/kinesis-binder-strategy.ts",
-          "hash": "9103367455656288916"
-        },
-        {
-          "file": "packages/core/src/platform/binders/strategies/binder-strategy.ts",
-          "hash": "15995080514118099196"
-        },
-        {
-          "file": "packages/core/src/platform/binders/strategies/cdn/cloudfront-binder-strategy.ts",
-          "hash": "1630233939080954019"
-        },
-        {
-          "file": "packages/core/src/platform/binders/strategies/compute/app-runner-binder-strategy.ts",
-          "hash": "17074341650031543220"
-        },
-        {
-          "file": "packages/core/src/platform/binders/strategies/compute/batch-binder-strategy.ts",
-          "hash": "16508159121469870741"
-        },
-        {
-          "file": "packages/core/src/platform/binders/strategies/compute/ecs-fargate-binder-strategy.ts",
-          "hash": "11548475708774852566"
-        },
-        {
-          "file": "packages/core/src/platform/binders/strategies/compute/eks-binder-strategy.ts",
-          "hash": "14886119208899512801"
-        },
-        {
-          "file": "packages/core/src/platform/binders/strategies/compute/elastic-beanstalk-binder-strategy.ts",
-          "hash": "10189035191034230246"
-        },
-        {
-          "file": "packages/core/src/platform/binders/strategies/compute/lightsail-binder-strategy.ts",
-          "hash": "1840328182261259195"
-        },
-        {
-          "file": "packages/core/src/platform/binders/strategies/database/dynamodb-binder-strategy.ts",
-          "hash": "13060118781095165333"
-        },
-        {
-          "file": "packages/core/src/platform/binders/strategies/database/neptune-binder-strategy.ts",
-          "hash": "15021050495602771794"
-        },
-        {
-          "file": "packages/core/src/platform/binders/strategies/iot/iot-core-binder-strategy.ts",
-          "hash": "8272054058574776266"
-        },
-        {
-          "file": "packages/core/src/platform/binders/strategies/messaging/eventbridge-binder-strategy.ts",
-          "hash": "1963250988772479931"
-        },
-        {
-          "file": "packages/core/src/platform/binders/strategies/messaging/step-functions-binder-strategy.ts",
-          "hash": "10187819557311821723"
-        },
-        {
-          "file": "packages/core/src/platform/binders/strategies/ml/sagemaker-binder-strategy.ts",
-          "hash": "16175524605223072850"
-        },
-        {
-          "file": "packages/core/src/platform/binders/strategies/mobile/amplify-binder-strategy.ts",
-          "hash": "7033842035427275475"
-        },
-        {
-          "file": "packages/core/src/platform/binders/strategies/networking/vpc-binder-strategy.ts",
-          "hash": "9372157608465150439"
-        },
-        {
-          "file": "packages/core/src/platform/binders/strategies/security/kms-binder-strategy.ts",
-          "hash": "848908344061536106"
-        },
-        {
-          "file": "packages/core/src/platform/binders/strategies/security/secrets-manager-binder-strategy.ts",
-          "hash": "5203281728861875286"
-        },
-        {
-          "file": "packages/core/src/platform/binders/strategies/storage/efs-binder-strategy.ts",
-          "hash": "11570062713211125524"
-        },
-        {
-          "file": "packages/core/src/platform/compliance/compliance-framework.ts",
-          "hash": "2248713872581233235"
-        },
-        {
-          "file": "packages/core/src/platform/contracts/artifacts.ts",
-          "hash": "10744409750646400182"
-        },
-        {
-          "file": "packages/core/src/platform/contracts/binder-example.ts",
-          "hash": "5966311231676593137"
-        },
-        {
-          "file": "packages/core/src/platform/contracts/binder-integration.ts",
-          "hash": "10727535431775813290"
-        },
-        {
-          "file": "packages/core/src/platform/contracts/binder-matrix.ts",
-          "hash": "16966820026257235386"
-        },
-        {
-          "file": "packages/core/src/platform/contracts/binders/api-gateway-binder-strategy.ts",
-          "hash": "15330726392223371707",
-          "deps": [
-            "npm:aws-cdk-lib"
-          ]
-        },
-        {
-          "file": "packages/core/src/platform/contracts/binders/cache-binder-strategy.ts",
-          "hash": "18133426681083262167",
-          "deps": [
-            "npm:aws-cdk-lib"
-          ]
-        },
-        {
-          "file": "packages/core/src/platform/contracts/binders/database-binder-strategy.ts",
-          "hash": "10294643715137780610",
-          "deps": [
-            "npm:aws-cdk-lib"
-          ]
-        },
-        {
-          "file": "packages/core/src/platform/contracts/binders/lambda-binder-strategy.ts",
-          "hash": "15503245783616539807",
-          "deps": [
-            "npm:aws-cdk-lib"
-          ]
-        },
-        {
-          "file": "packages/core/src/platform/contracts/binders/queue-binder-strategy.ts",
-          "hash": "7776686014944240774",
-          "deps": [
-            "npm:aws-cdk-lib"
-          ]
-        },
-        {
-          "file": "packages/core/src/platform/contracts/binders/storage-binder-strategy.ts",
-          "hash": "12434294473897574544",
-          "deps": [
-            "npm:aws-cdk-lib"
-          ]
-        },
-        {
-          "file": "packages/core/src/platform/contracts/binding-context.ts",
-          "hash": "10898176612148764145"
-        },
-        {
-          "file": "packages/core/src/platform/contracts/bindings.ts",
-          "hash": "13364589850832639177",
-          "deps": [
-            "npm:aws-cdk-lib"
-          ]
-        },
-        {
-          "file": "packages/core/src/platform/contracts/cache/binding-cache.ts",
-          "hash": "4264960796639344638"
-        },
-        {
-          "file": "packages/core/src/platform/contracts/compliance-enforcer.ts",
-          "hash": "12375425479306625768",
-          "deps": [
-            "npm:aws-cdk-lib"
-          ]
-        },
-        {
-          "file": "packages/core/src/platform/contracts/compliance/compliance-enforcer.ts",
-          "hash": "16569888132051091137"
-        },
-        {
-          "file": "packages/core/src/platform/contracts/component-interfaces.d.ts",
-          "hash": "8457000502239560808",
-          "deps": [
-            "npm:constructs",
-            "npm:aws-cdk-lib"
-          ]
-        },
-        {
-          "file": "packages/core/src/platform/contracts/component-interfaces.js",
-          "hash": "11373359849213675696",
-          "deps": [
-            "npm:constructs"
-          ]
-        },
-        {
-          "file": "packages/core/src/platform/contracts/component-interfaces.ts",
-          "hash": "10129034276088432318",
-          "deps": [
-            "npm:constructs",
-            "npm:aws-cdk-lib"
-          ]
-        },
-        {
-          "file": "packages/core/src/platform/contracts/component.d.ts",
-          "hash": "13004236173999957119",
-          "deps": [
-            "npm:constructs"
-          ]
-        },
-        {
-          "file": "packages/core/src/platform/contracts/component.js",
-          "hash": "12324450473658556790",
-          "deps": [
-            "npm:constructs"
-          ]
-        },
-        {
-          "file": "packages/core/src/platform/contracts/component.ts",
-          "hash": "14169850680170215937",
-          "deps": [
-            "npm:aws-cdk-lib",
-            "npm:constructs"
-          ]
-        },
-        {
-          "file": "packages/core/src/platform/contracts/components/base-component.ts",
-          "hash": "16399041215171503289"
-        },
-        {
-          "file": "packages/core/src/platform/contracts/components/component-config-builder.ts",
-          "hash": "12085993099396127771"
-        },
-        {
-          "file": "packages/core/src/platform/contracts/components/component-context.ts",
-          "hash": "4209877459337339945"
-        },
-        {
-          "file": "packages/core/src/platform/contracts/components/component-factory.ts",
-          "hash": "11238744213673531705"
-        },
-        {
-          "file": "packages/core/src/platform/contracts/components/component-registry.ts",
-          "hash": "7927209307391846882"
-        },
-        {
-          "file": "packages/core/src/platform/contracts/components/component-spec.ts",
-          "hash": "2625347125808790660"
-        },
-        {
-          "file": "packages/core/src/platform/contracts/components/example-s3-bucket-component.ts",
-          "hash": "17873972679843123447"
-        },
-        {
-          "file": "packages/core/src/platform/contracts/components/index.ts",
-          "hash": "11192099807383389073"
-        },
-        {
-          "file": "packages/core/src/platform/contracts/components/service-manifest-parser.ts",
-          "hash": "11900585090293372897"
-        },
-        {
-          "file": "packages/core/src/platform/contracts/config-builder.ts",
-          "hash": "10709824307818331353",
-          "deps": [
-            "npm:js-yaml"
-          ]
-        },
-        {
-          "file": "packages/core/src/platform/contracts/deprecation-interfaces.ts",
-          "hash": "15538796267030393389"
-        },
-        {
-          "file": "packages/core/src/platform/contracts/enhanced-binder-example.ts",
-          "hash": "6208044471114303755"
-        },
-        {
-          "file": "packages/core/src/platform/contracts/enhanced-binder-registry.ts",
-          "hash": "5393298414716356679"
-        },
-        {
-          "file": "packages/core/src/platform/contracts/enhanced-binder-strategy.ts",
-          "hash": "6071078540519634917",
-          "deps": [
-            "npm:aws-cdk-lib"
-          ]
-        },
-        {
-          "file": "packages/core/src/platform/contracts/index.ts",
-          "hash": "17598185183384731357"
-        },
-        {
-          "file": "packages/core/src/platform/contracts/logging-interfaces.ts",
-          "hash": "11805229386562199861"
-        },
-        {
-          "file": "packages/core/src/platform/contracts/monitoring/binding-metrics.ts",
-          "hash": "3341464129387352079"
-        },
-        {
-          "file": "packages/core/src/platform/contracts/observability/base-component-observability.ts",
-          "hash": "16912281695437843651",
-          "deps": [
-            "npm:constructs",
-            "npm:aws-cdk-lib"
-          ]
-        },
-        {
-          "file": "packages/core/src/platform/contracts/observability/observability-binder-strategy.ts",
-          "hash": "10466977479581143789",
-          "deps": [
-            "npm:aws-cdk-lib"
-          ]
-        },
-        {
-          "file": "packages/core/src/platform/contracts/observability/observability-config-factory.ts",
-          "hash": "9618591648415441157"
-        },
-        {
-          "file": "packages/core/src/platform/contracts/observability/observability-example.ts",
-          "hash": "14457769381032219795",
-          "deps": [
-            "npm:constructs"
-          ]
-        },
-        {
-          "file": "packages/core/src/platform/contracts/observability/observability-types.ts",
-          "hash": "16680172838779554754"
-        },
-        {
-          "file": "packages/core/src/platform/contracts/observability/strategies/container-observability-strategy.ts",
-          "hash": "14528611700724440219",
-          "deps": [
-            "npm:aws-cdk-lib"
-          ]
-        },
-        {
-          "file": "packages/core/src/platform/contracts/observability/strategies/lambda-observability-strategy.ts",
-          "hash": "10325794267143180679",
-          "deps": [
-            "npm:aws-cdk-lib"
-          ]
-        },
-        {
-          "file": "packages/core/src/platform/contracts/observability/strategies/vm-observability-strategy.ts",
-          "hash": "18156692746017214006",
-          "deps": [
-            "npm:aws-cdk-lib"
-          ]
-        },
-        {
-          "file": "packages/core/src/platform/contracts/openfeature-interfaces.ts",
-          "hash": "4135767592486594989"
-        },
-        {
-          "file": "packages/core/src/platform/contracts/performance/binding-benchmark.ts",
-          "hash": "2996089936158201295"
-        },
-        {
-          "file": "packages/core/src/platform/contracts/performance/binding-cache.ts",
-          "hash": "4622808571846475260"
-        },
-        {
-          "file": "packages/core/src/platform/contracts/performance/binding-metrics-collector.ts",
-          "hash": "10578648009177972537"
-        },
-        {
-          "file": "packages/core/src/platform/contracts/platform-binding-trigger-spec.ts",
-          "hash": "3931877034009235050"
-        },
-        {
-          "file": "packages/core/src/platform/contracts/platform-services.ts",
-          "hash": "8309727174974798511"
-        },
-        {
-          "file": "packages/core/src/platform/contracts/tests/database-binder-strategy.test.ts",
-          "hash": "2975354549221531040"
-        },
-        {
-          "file": "packages/core/src/platform/contracts/tests/enhanced-binder-registry.test.ts",
-          "hash": "18076073779000413371"
-        },
-        {
-          "file": "packages/core/src/platform/contracts/tests/simple-registry.test.ts",
-          "hash": "17004560242225365711"
-        },
-        {
-          "file": "packages/core/src/platform/contracts/trigger-interfaces.ts",
-          "hash": "13408246900350164216"
-        },
-        {
-          "file": "packages/core/src/platform/logger/package.json",
-          "hash": "2353761653439579863"
-        },
-        {
-          "file": "packages/core/src/platform/logger/src/index.ts",
-          "hash": "5019778572094692923"
-        },
-        {
-          "file": "packages/core/src/platform/logger/tsconfig.json",
-          "hash": "7906342881400571713"
-        },
-        {
-          "file": "packages/core/src/platform/logical-id/README.md",
-          "hash": "3763619943631699236"
-        },
-        {
-          "file": "packages/core/src/platform/logical-id/cli-integration.ts",
-          "hash": "10496112473043406818"
-        },
-        {
-          "file": "packages/core/src/platform/logical-id/drift-avoidance.ts",
-          "hash": "4630935771517519652",
-          "deps": [
-            "npm:aws-cdk-lib",
-            "npm:constructs"
-          ]
-        },
-        {
-          "file": "packages/core/src/platform/logical-id/index.ts",
-          "hash": "13800517814827062225"
-        },
-        {
-          "file": "packages/core/src/platform/logical-id/logical-id-manager.ts",
-          "hash": "18368332407326945628",
-          "deps": [
-            "npm:aws-cdk-lib",
-            "npm:constructs"
-          ]
-        },
-        {
-          "file": "packages/core/src/platform/logical-id/planning-integration.ts",
-          "hash": "13459675549712787960",
-          "deps": [
-            "npm:aws-cdk-lib"
-          ]
-        },
-        {
-          "file": "packages/core/src/platform/observability/package.json",
-          "hash": "16246497355531989619"
-        },
-        {
-          "file": "packages/core/src/platform/observability/src/index.ts",
-          "hash": "3437338741989105720"
-        },
-        {
-          "file": "packages/core/src/platform/observability/tsconfig.json",
-          "hash": "7906342881400571713"
-        },
-        {
-          "file": "packages/core/src/platform/services/artifact-serializer.ts",
-          "hash": "11755441534388721687",
-          "deps": [
-            "npm:yaml"
-          ]
-        },
-        {
-          "file": "packages/core/src/platform/services/artifact-writer.ts",
-          "hash": "14115179836725768382"
-        },
-        {
-          "file": "packages/core/src/platform/services/compliance-control-mapping.ts",
-          "hash": "1983015672471649792"
-        },
-        {
-          "file": "packages/core/src/platform/services/compliance-plan-generator.ts",
-          "hash": "17754505987956952226"
-        },
-        {
-          "file": "packages/core/src/platform/services/tagging-enforcement.ts",
-          "hash": "15119286056700745659"
-        },
-        {
-          "file": "packages/core/src/platform/tagging/package.json",
-          "hash": "4756140822891974428"
-        },
-        {
-          "file": "packages/core/src/platform/tagging/src/index.ts",
-          "hash": "7944531859060758261"
-        },
-        {
-          "file": "packages/core/src/platform/tagging/tsconfig.json",
-          "hash": "7906342881400571713"
-        },
-        {
-          "file": "packages/core/src/resolver/binder-registry.ts",
-          "hash": "15253659737988716219"
-        },
-        {
-          "file": "packages/core/src/resolver/binders/concrete-binders.ts",
-          "hash": "18083454295103599802",
-          "deps": [
+            "npm:@modelcontextprotocol/sdk",
             "@platform/contracts",
-            "npm:aws-cdk-lib"
+            "@platform/core-engine",
+            "npm:ts-node"
           ]
         },
         {
-          "file": "packages/core/src/resolver/index.ts",
-          "hash": "15689188147786926354"
+          "file": "packages/components/shinobi/src/index.ts",
+          "hash": "10769049332265089796"
         },
         {
-          "file": "packages/core/src/resolver/resolver-engine.ts",
-          "hash": "17258766040350209572",
+          "file": "packages/components/shinobi/src/server/Dockerfile",
+          "hash": "11448454393328977296"
+        },
+        {
+          "file": "packages/components/shinobi/src/server/index.ts",
+          "hash": "5891648825243447708"
+        },
+        {
+          "file": "packages/components/shinobi/src/server/shinobi-server.ts",
+          "hash": "17461991709149714167",
           "deps": [
-            "npm:aws-cdk-lib"
-          ]
-        },
-        {
-          "file": "packages/core/src/services/README.md",
-          "hash": "1265350708260302368"
-        },
-        {
-          "file": "packages/core/src/services/config-loader.ts",
-          "hash": "6000247017961854481",
-          "deps": [
+            "npm:@modelcontextprotocol/sdk",
             "npm:yaml"
           ]
         },
         {
-          "file": "packages/core/src/services/context-hydrator.ts",
-          "hash": "6230659519712702068",
+          "file": "packages/components/shinobi/src/shinobi-feature-flags.d.ts",
+          "hash": "17114174420381852242",
           "deps": [
-            "npm:yaml"
+            "npm:constructs"
           ]
         },
         {
-          "file": "packages/core/src/services/enhanced-schema-validator.ts",
-          "hash": "127631180268563400",
+          "file": "packages/components/shinobi/src/shinobi-feature-flags.js",
+          "hash": "4282063208346686125"
+        },
+        {
+          "file": "packages/components/shinobi/src/shinobi-feature-flags.ts",
+          "hash": "14921346832874750914",
           "deps": [
-            "npm:ajv",
-            "npm:ajv-formats"
+            "npm:constructs"
           ]
         },
         {
-          "file": "packages/core/src/services/file-discovery.ts",
-          "hash": "18266217660740094160"
+          "file": "packages/components/shinobi/src/shinobi.builder.ts",
+          "hash": "10862203041976285208"
         },
         {
-          "file": "packages/core/src/services/index.ts",
-          "hash": "15579875045780397420"
-        },
-        {
-          "file": "packages/core/src/services/manifest-parser.ts",
-          "hash": "9120156981839031327",
+          "file": "packages/components/shinobi/src/shinobi.component.ts",
+          "hash": "16393217938141915462",
           "deps": [
-            "npm:yaml"
+            "npm:aws-cdk-lib",
+            "npm:constructs",
+            "@platform/contracts"
           ]
         },
         {
-          "file": "packages/core/src/services/manifest-schema-composer.ts",
-          "hash": "8957871877342803392",
+          "file": "packages/components/shinobi/src/shinobi.creator.ts",
+          "hash": "446152092422279017",
           "deps": [
-            "npm:glob"
+            "npm:constructs"
           ]
         },
         {
-          "file": "packages/core/src/services/observability-ecs-integration.test.ts",
-          "hash": "368687831171337068",
+          "file": "packages/components/shinobi/tests/shinobi-feature-flags.test.ts",
+          "hash": "12658648825897813797",
           "deps": [
             "npm:aws-cdk-lib"
           ]
         },
         {
-          "file": "packages/core/src/services/observability.service.md",
-          "hash": "9331883081779256781"
+          "file": "packages/components/shinobi/tests/shinobi.builder.test.ts",
+          "hash": "4729943776137609677"
         },
         {
-          "file": "packages/core/src/services/observability.service.ts",
-          "hash": "16412065583503312741",
+          "file": "packages/components/shinobi/tests/shinobi.component.synthesis.test.ts",
+          "hash": "14108253921081575877",
           "deps": [
-            "npm:js-yaml"
+            "npm:aws-cdk-lib"
           ]
         },
         {
-          "file": "packages/core/src/services/pipeline.ts",
-          "hash": "1184132555896471028",
+          "file": "packages/components/shinobi/tsconfig.server.json",
+          "hash": "10896337934498905975"
+        }
+      ],
+      "@platform/api-gateway-http": [
+        {
+          "file": "packages/components/api-gateway-http/Config.schema.json",
+          "hash": "15896977287079812988"
+        },
+        {
+          "file": "packages/components/api-gateway-http/README.md",
+          "hash": "4100645914046560575"
+        },
+        {
+          "file": "packages/components/api-gateway-http/api-gateway-http.builder.ts",
+          "hash": "4747549058266377113",
           "deps": [
-            "npm:yaml",
-            "npm:ajv",
-            "npm:ajv-formats"
+            "@platform/contracts"
           ]
         },
         {
-          "file": "packages/core/src/services/plan-output-formatter.ts",
-          "hash": "13033290823455312146"
-        },
-        {
-          "file": "packages/core/src/services/reference-validator.ts",
-          "hash": "15939163363199787862"
-        },
-        {
-          "file": "packages/core/src/services/schema-error-formatter.ts",
-          "hash": "11851648520167995991",
+          "file": "packages/components/api-gateway-http/api-gateway-http.component.ts",
+          "hash": "5818390651344963497",
           "deps": [
-            "npm:ajv"
+            "npm:aws-cdk-lib",
+            "npm:constructs",
+            "@platform/contracts"
           ]
         },
         {
-          "file": "packages/core/src/services/schema-manager.ts",
-          "hash": "10505667062963748757"
-        },
-        {
-          "file": "packages/core/src/services/schema-validator.ts",
-          "hash": "8733904232370743528",
+          "file": "packages/components/api-gateway-http/api-gateway-http.creator.ts",
+          "hash": "13915173715344268240",
           "deps": [
-            "npm:ajv",
-            "npm:ajv-formats"
+            "npm:constructs",
+            "@platform/contracts"
           ]
         },
         {
-          "file": "packages/core/src/services/service-manifest.schema.json",
-          "hash": "6184690457704694748"
+          "file": "packages/components/api-gateway-http/catalog-info.yaml",
+          "hash": "15060507522821356185"
         },
         {
-          "file": "packages/core/src/services/tests/enhanced-schema-validator.test.ts",
-          "hash": "17941113913731694660"
+          "file": "packages/components/api-gateway-http/index.ts",
+          "hash": "428419197447611397"
         },
         {
-          "file": "packages/core/src/services/tests/manifest-schema-composer.test.ts",
-          "hash": "15712631411748206824"
-        },
-        {
-          "file": "packages/core/src/services/tests/schema-validator.test.ts",
-          "hash": "9522200620490568441"
-        },
-        {
-          "file": "packages/core/src/services/tests/test-metadata-schema.json",
-          "hash": "6645042913665085038"
-        },
-        {
-          "file": "packages/core/src/services/tests/test-metadata-validator.ts",
-          "hash": "9572380900383798283",
+          "file": "packages/components/api-gateway-http/package.json",
+          "hash": "8049002768884357254",
           "deps": [
-            "npm:ajv",
-            "npm:ajv-formats"
+            "npm:aws-cdk-lib",
+            "npm:constructs",
+            "npm:@types/jest@29.5.14",
+            "npm:@types/node@20.19.14",
+            "npm:@typescript-eslint/eslint-plugin",
+            "npm:@typescript-eslint/parser",
+            "npm:eslint",
+            "npm:jest@29.7.0",
+            "npm:ts-jest",
+            "npm:typescript",
+            "@platform/contracts",
+            "@platform/core-engine"
           ]
         },
         {
-          "file": "packages/core/src/services/validation-orchestrator.ts",
-          "hash": "13221449355996354454"
+          "file": "packages/components/api-gateway-http/tests/api-gateway-http.builder.test.ts",
+          "hash": "999307411287950051",
+          "deps": [
+            "@platform/contracts"
+          ]
         },
         {
-          "file": "packages/core/tsconfig.lib.json",
-          "hash": "10803975914918463136"
+          "file": "packages/components/api-gateway-http/tests/api-gateway-http.component.synthesis.test.ts",
+          "hash": "12885725491186572499",
+          "deps": [
+            "npm:aws-cdk-lib",
+            "@platform/contracts"
+          ]
         },
         {
-          "file": "packages/core/tsconfig.spec.json",
-          "hash": "8727841706476593207"
+          "file": "packages/components/api-gateway-http/tests/api-gateway-http.component.test.ts",
+          "hash": "13181969816438842353",
+          "deps": [
+            "npm:aws-cdk-lib",
+            "@platform/contracts"
+          ]
+        },
+        {
+          "file": "packages/components/api-gateway-http/tsconfig.json",
+          "hash": "2601391265962747273"
         }
       ],
       "@platform/dagger-engine-pool": [
@@ -4662,225 +5496,110 @@
           "hash": "7047125115490644294"
         }
       ],
-      "@platform/core-engine": [
+      "constructs-prd": [
         {
-          "file": "packages/core-engine/catalog-info.yaml",
-          "hash": "12406042930707765105"
+          "file": "packages/constructs/prd/infrastructure/catalog-info.yaml",
+          "hash": "2422457067429494017"
         },
         {
-          "file": "packages/core-engine/package.json",
-          "hash": "429654548695076195",
+          "file": "packages/constructs/prd/infrastructure/package.json",
+          "hash": "2791711716308872494"
+        },
+        {
+          "file": "packages/constructs/prd/infrastructure/src/app.ts",
+          "hash": "1747817340691154262",
           "deps": [
-            "@platform/contracts"
+            "@platform/core-engine",
+            "@platform/lambda-api",
+            "@platform/rds-postgres",
+            "@platform/sqs-queue"
           ]
         },
         {
-          "file": "packages/core-engine/src/index.ts",
-          "hash": "966081879783914188",
+          "file": "packages/constructs/prd/infrastructure/tests/infrastructure.test.ts",
+          "hash": "10519204466383240064",
           "deps": [
-            "@platform/contracts"
+            [
+              "core",
+              "dynamic"
+            ]
           ]
         },
         {
-          "file": "packages/core-engine/tests/core-engine.test.ts",
-          "hash": "14406557928951961792",
+          "file": "packages/constructs/prd/infrastructure/tsconfig.json",
+          "hash": "8690522403544838164"
+        },
+        {
+          "file": "packages/constructs/prd/jest.config.ts",
+          "hash": "12725421230875213953"
+        },
+        {
+          "file": "packages/constructs/prd/package.json",
+          "hash": "1385521602886594778",
           "deps": [
-            "@platform/contracts"
-          ]
-        },
-        {
-          "file": "packages/core-engine/tsconfig.json",
-          "hash": "6977085707718287595"
-        }
-      ],
-      "@cdk-lib/iam-role": [
-        {
-          "file": "packages/components/iam-role/README.md",
-          "hash": "7071355276627829512"
-        },
-        {
-          "file": "packages/components/iam-role/iam-role.builder.ts",
-          "hash": "6707384248016723074"
-        },
-        {
-          "file": "packages/components/iam-role/iam-role.component.ts",
-          "hash": "12298196756404030350",
-          "deps": [
-            "npm:aws-cdk-lib",
-            "npm:constructs",
-            "@platform/contracts"
-          ]
-        },
-        {
-          "file": "packages/components/iam-role/iam-role.creator.ts",
-          "hash": "15557093242912559569",
-          "deps": [
-            "npm:constructs"
-          ]
-        },
-        {
-          "file": "packages/components/iam-role/index.ts",
-          "hash": "14368404982965057882"
-        },
-        {
-          "file": "packages/components/iam-role/jest.config.js",
-          "hash": "8872577854924552600"
-        },
-        {
-          "file": "packages/components/iam-role/package.json",
-          "hash": "18206838112492537233",
-          "deps": [
-            "npm:@types/jest@29.5.14",
-            "npm:@types/node@18.14.6",
-            "npm:jest@29.7.0",
+            "npm:@types/jest",
+            "npm:@types/node",
+            "npm:jest",
             "npm:ts-jest",
             "npm:typescript",
+            "core",
             "npm:aws-cdk-lib",
             "npm:constructs"
           ]
         },
         {
-          "file": "packages/components/iam-role/src/iam-role.builder.ts",
-          "hash": "13026019905667719822"
+          "file": "packages/constructs/prd/project.json",
+          "hash": "7729634818246254872"
         },
         {
-          "file": "packages/components/iam-role/src/iam-role.component.ts",
-          "hash": "10902960519453146380",
-          "deps": [
-            "npm:aws-cdk-lib",
-            "npm:constructs"
-          ]
+          "file": "packages/constructs/prd/src/index.ts",
+          "hash": "14721177349526847501"
         },
         {
-          "file": "packages/components/iam-role/src/iam-role.creator.ts",
-          "hash": "12278729811654738898",
-          "deps": [
-            "npm:aws-cdk-lib",
-            "npm:constructs"
-          ]
+          "file": "packages/constructs/prd/tsconfig.lib.json",
+          "hash": "4006877950016446411"
         },
         {
-          "file": "packages/components/iam-role/src/index.ts",
-          "hash": "15767283160446062351"
-        },
-        {
-          "file": "packages/components/iam-role/tests/iam-role.builder.test.ts",
-          "hash": "2397482134037065033",
-          "deps": [
-            "npm:aws-cdk-lib"
-          ]
-        },
-        {
-          "file": "packages/components/iam-role/tests/iam-role.component.synthesis.test.ts",
-          "hash": "8161760620205208218",
-          "deps": [
-            "npm:aws-cdk-lib"
-          ]
-        },
-        {
-          "file": "packages/components/iam-role/tests/setup.ts",
-          "hash": "4837194134954504577"
-        },
-        {
-          "file": "packages/components/iam-role/tests/unit/iam-role.builder.test.ts",
-          "hash": "16401924134188795461",
-          "deps": [
-            "npm:aws-cdk-lib"
-          ]
-        },
-        {
-          "file": "packages/components/iam-role/tests/unit/iam-role.component.test.ts",
-          "hash": "6535920510812439819",
-          "deps": [
-            "npm:aws-cdk-lib"
-          ]
+          "file": "packages/constructs/prd/tsconfig.spec.json",
+          "hash": "4933087548142887878"
         }
       ],
-      "@platform/shinobi": [
+      "@platform/rds-postgres": [
         {
-          "file": "packages/components/shinobi/MCP_SERVER_README.md",
-          "hash": "6459763790868124426"
+          "file": "packages/components/rds-postgres/README.md",
+          "hash": "8759288169756959386"
         },
         {
-          "file": "packages/components/shinobi/README.md",
-          "hash": "7152864019549833671"
+          "file": "packages/components/rds-postgres/catalog-info.yaml",
+          "hash": "10439544403880839816"
         },
         {
-          "file": "packages/components/shinobi/SHINOBI_SUMMARY.md",
-          "hash": "59767366379295371"
+          "file": "packages/components/rds-postgres/index.ts",
+          "hash": "15502698355078739822"
         },
         {
-          "file": "packages/components/shinobi/examples/basic-usage.ts",
-          "hash": "13408313125355963233",
+          "file": "packages/components/rds-postgres/lambda-to-rds.binder.ts",
+          "hash": "3935080995599300467",
           "deps": [
-            "npm:aws-cdk-lib"
-          ]
-        },
-        {
-          "file": "packages/components/shinobi/package.json",
-          "hash": "5441731817767429332",
-          "deps": [
-            "npm:@types/jest@29.5.14",
-            "npm:@types/node@20.19.14",
-            "npm:jest@29.7.0",
-            "npm:ts-jest",
-            "npm:typescript",
-            "npm:eslint",
-            "npm:@typescript-eslint/eslint-plugin",
-            "npm:@typescript-eslint/parser",
-            "npm:aws-cdk-lib",
-            "npm:constructs",
-            "npm:@modelcontextprotocol/sdk",
             "@platform/contracts",
+            "npm:aws-cdk-lib"
+          ]
+        },
+        {
+          "file": "packages/components/rds-postgres/package.json",
+          "hash": "6905696251653525424",
+          "deps": [
             "@platform/core-engine",
-            "npm:ts-node"
+            "@platform/contracts"
           ]
         },
         {
-          "file": "packages/components/shinobi/src/index.ts",
-          "hash": "10769049332265089796"
+          "file": "packages/components/rds-postgres/rds-postgres.builder.ts",
+          "hash": "7920052047321603194"
         },
         {
-          "file": "packages/components/shinobi/src/server/Dockerfile",
-          "hash": "11448454393328977296"
-        },
-        {
-          "file": "packages/components/shinobi/src/server/index.ts",
-          "hash": "5891648825243447708"
-        },
-        {
-          "file": "packages/components/shinobi/src/server/shinobi-server.ts",
-          "hash": "17461991709149714167",
-          "deps": [
-            "npm:@modelcontextprotocol/sdk",
-            "npm:yaml"
-          ]
-        },
-        {
-          "file": "packages/components/shinobi/src/shinobi-feature-flags.d.ts",
-          "hash": "17114174420381852242",
-          "deps": [
-            "npm:constructs"
-          ]
-        },
-        {
-          "file": "packages/components/shinobi/src/shinobi-feature-flags.js",
-          "hash": "4282063208346686125"
-        },
-        {
-          "file": "packages/components/shinobi/src/shinobi-feature-flags.ts",
-          "hash": "14921346832874750914",
-          "deps": [
-            "npm:constructs"
-          ]
-        },
-        {
-          "file": "packages/components/shinobi/src/shinobi.builder.ts",
-          "hash": "10862203041976285208"
-        },
-        {
-          "file": "packages/components/shinobi/src/shinobi.component.ts",
-          "hash": "16393217938141915462",
+          "file": "packages/components/rds-postgres/rds-postgres.component.ts",
+          "hash": "11205714353457515016",
           "deps": [
             "npm:aws-cdk-lib",
             "npm:constructs",
@@ -4888,125 +5607,115 @@
           ]
         },
         {
-          "file": "packages/components/shinobi/src/shinobi.creator.ts",
-          "hash": "446152092422279017",
+          "file": "packages/components/rds-postgres/rds-postgres.creator.ts",
+          "hash": "18240099973498744035",
           "deps": [
-            "npm:constructs"
+            "@platform/contracts"
           ]
         },
         {
-          "file": "packages/components/shinobi/tests/shinobi-feature-flags.test.ts",
-          "hash": "12658648825897813797",
+          "file": "packages/components/rds-postgres/src/index.ts",
+          "hash": "6987571137554338213"
+        },
+        {
+          "file": "packages/components/rds-postgres/src/rds-postgres.builder.ts",
+          "hash": "8678746731244034821"
+        },
+        {
+          "file": "packages/components/rds-postgres/src/rds-postgres.ts",
+          "hash": "9920915642484978454",
+          "deps": [
+            "@platform/contracts"
+          ]
+        },
+        {
+          "file": "packages/components/rds-postgres/tests/rds-postgres.builder.test.ts",
+          "hash": "428790112298671325"
+        },
+        {
+          "file": "packages/components/rds-postgres/tests/rds-postgres.component.synthesis.test.ts",
+          "hash": "814480808830408659",
           "deps": [
             "npm:aws-cdk-lib"
           ]
         },
         {
-          "file": "packages/components/shinobi/tests/shinobi.builder.test.ts",
-          "hash": "4729943776137609677"
+          "file": "packages/components/rds-postgres/tests/rds-postgres.test.ts",
+          "hash": "16226239482375038440"
         },
         {
-          "file": "packages/components/shinobi/tests/shinobi.component.synthesis.test.ts",
-          "hash": "14108253921081575877",
-          "deps": [
-            "npm:aws-cdk-lib"
-          ]
-        },
-        {
-          "file": "packages/components/shinobi/tsconfig.server.json",
-          "hash": "10896337934498905975"
+          "file": "packages/components/rds-postgres/tsconfig.json",
+          "hash": "3803076836316330929"
         }
       ],
-      "@platform/test-scaffolding": [
+      "@platform/sqs-queue": [
         {
-          "file": "packages/test-scaffolding/catalog-info.yaml",
-          "hash": "8284313283764872719"
+          "file": "packages/components/sqs-queue/README.md",
+          "hash": "9733795423599130915"
         },
         {
-          "file": "packages/test-scaffolding/package.json",
-          "hash": "8168191612582447540",
+          "file": "packages/components/sqs-queue/index.ts",
+          "hash": "7808616212344776076"
+        },
+        {
+          "file": "packages/components/sqs-queue/package.json",
+          "hash": "5134414201242472872",
           "deps": [
             "@platform/core-engine",
-            "@platform/lambda-api"
+            "@platform/contracts"
           ]
         },
         {
-          "file": "packages/test-scaffolding/src/index.ts",
-          "hash": "16368101225447287238"
+          "file": "packages/components/sqs-queue/sqs-queue.builder.ts",
+          "hash": "6453869290730610805"
         },
         {
-          "file": "packages/test-scaffolding/tests/e2e.test.ts",
-          "hash": "4886770293315683095",
+          "file": "packages/components/sqs-queue/sqs-queue.component.ts",
+          "hash": "6608638317469215564",
           "deps": [
-            "@platform/core-engine",
-            "@platform/lambda-api"
-          ]
-        },
-        {
-          "file": "packages/test-scaffolding/tsconfig.json",
-          "hash": "8932654266176729782"
-        }
-      ],
-      "@cdk-lib/security-group-import": [
-        {
-          "file": "packages/components/security-group-import/README.md",
-          "hash": "273431918763071674"
-        },
-        {
-          "file": "packages/components/security-group-import/jest.config.js",
-          "hash": "8343720672312670553"
-        },
-        {
-          "file": "packages/components/security-group-import/package.json",
-          "hash": "3578881956639993589",
-          "deps": [
-            "npm:@types/jest@29.5.14",
-            "npm:@types/node@18.14.6",
-            "npm:jest@29.7.0",
-            "npm:ts-jest",
-            "npm:typescript",
-            "npm:aws-cdk-lib",
             "npm:constructs"
           ]
         },
         {
-          "file": "packages/components/security-group-import/src/index.ts",
-          "hash": "10123222668553338881"
-        },
-        {
-          "file": "packages/components/security-group-import/src/security-group-import.builder.ts",
-          "hash": "6555787134036649341"
-        },
-        {
-          "file": "packages/components/security-group-import/src/security-group-import.component.ts",
-          "hash": "7085146988335260334",
+          "file": "packages/components/sqs-queue/sqs-queue.creator.ts",
+          "hash": "1012329583018216750",
           "deps": [
-            "npm:aws-cdk-lib",
             "npm:constructs"
           ]
         },
         {
-          "file": "packages/components/security-group-import/src/security-group-import.creator.ts",
-          "hash": "5536159513668618620",
+          "file": "packages/components/sqs-queue/src/index.ts",
+          "hash": "4278295809996988374"
+        },
+        {
+          "file": "packages/components/sqs-queue/src/sqs-queue.builder.ts",
+          "hash": "13633362278467887341"
+        },
+        {
+          "file": "packages/components/sqs-queue/src/sqs-queue.ts",
+          "hash": "15932321534885017322",
           "deps": [
-            "npm:aws-cdk-lib",
-            "npm:constructs"
+            "@platform/contracts"
           ]
         },
         {
-          "file": "packages/components/security-group-import/tests/setup.ts",
-          "hash": "13877667062396986234"
+          "file": "packages/components/sqs-queue/tests/sqs-queue.builder.test.ts",
+          "hash": "7778016531980127335"
         },
         {
-          "file": "packages/components/security-group-import/tests/unit/security-group-import.builder.test.ts",
-          "hash": "7800766005207297472"
-        },
-        {
-          "file": "packages/components/security-group-import/tests/unit/security-group-import.component.test.ts",
-          "hash": "16368096072729773570",
+          "file": "packages/components/sqs-queue/tests/sqs-queue.component.synthesis.test.ts",
+          "hash": "1120452757508618688",
           "deps": [
             "npm:aws-cdk-lib"
           ]
+        },
+        {
+          "file": "packages/components/sqs-queue/tests/sqs-queue.test.ts",
+          "hash": "11086619260875896889"
+        },
+        {
+          "file": "packages/components/sqs-queue/tsconfig.json",
+          "hash": "4796780823213029049"
         }
       ],
       "standards-logging": [
@@ -5105,138 +5814,14 @@
           "hash": "905612802202146129"
         }
       ],
-      "@cdk-lib/waf-web-acl": [
+      "standards-deprecation": [
         {
-          "file": "packages/components/waf-web-acl/README.md",
-          "hash": "17008738479240580462"
+          "file": "packages/standards/deprecation/jest.config.ts",
+          "hash": "14908822425355342593"
         },
         {
-          "file": "packages/components/waf-web-acl/audit/component.plan.json",
-          "hash": "3788771416989704294"
-        },
-        {
-          "file": "packages/components/waf-web-acl/audit/rego/waf-web-acl.rego",
-          "hash": "4549901112313703409"
-        },
-        {
-          "file": "packages/components/waf-web-acl/audit/rego/waf-web-acl_test.rego",
-          "hash": "1361618906301371191"
-        },
-        {
-          "file": "packages/components/waf-web-acl/audit/waf-web-acl.oscal.json",
-          "hash": "16277330243353922880"
-        },
-        {
-          "file": "packages/components/waf-web-acl/generation-summary.json",
-          "hash": "14849119580553636282"
-        },
-        {
-          "file": "packages/components/waf-web-acl/index.ts",
-          "hash": "4731666954053614571"
-        },
-        {
-          "file": "packages/components/waf-web-acl/jest.config.js",
-          "hash": "9876185703598838263"
-        },
-        {
-          "file": "packages/components/waf-web-acl/observability/alarms-config.json",
-          "hash": "4152041008491441549"
-        },
-        {
-          "file": "packages/components/waf-web-acl/observability/otel-dashboard-template.json",
-          "hash": "2992940375170622884"
-        },
-        {
-          "file": "packages/components/waf-web-acl/package.json",
-          "hash": "3654670995348655066",
-          "deps": [
-            "npm:aws-cdk-lib",
-            "npm:constructs",
-            "npm:@types/node@20.19.14",
-            "npm:typescript",
-            "npm:jest@29.7.0",
-            "npm:ts-jest",
-            "npm:@types/jest@29.5.14",
-            "npm:eslint",
-            "npm:@typescript-eslint/eslint-plugin",
-            "npm:@typescript-eslint/parser"
-          ]
-        },
-        {
-          "file": "packages/components/waf-web-acl/test-simple.ts",
-          "hash": "5136964639576209382",
-          "deps": [
-            "npm:aws-cdk-lib"
-          ]
-        },
-        {
-          "file": "packages/components/waf-web-acl/tests/compliance.test.ts",
-          "hash": "5647549887242323296",
-          "deps": [
-            "npm:aws-cdk-lib"
-          ]
-        },
-        {
-          "file": "packages/components/waf-web-acl/tests/observability.test.ts",
-          "hash": "16901353383645345596",
-          "deps": [
-            "npm:aws-cdk-lib"
-          ]
-        },
-        {
-          "file": "packages/components/waf-web-acl/tests/unit/builder.test.ts",
-          "hash": "7053145320088816150"
-        },
-        {
-          "file": "packages/components/waf-web-acl/tests/unit/component.test.ts",
-          "hash": "12370473514984648205",
-          "deps": [
-            "npm:aws-cdk-lib"
-          ]
-        },
-        {
-          "file": "packages/components/waf-web-acl/tests/waf-web-acl.builder.test.ts",
-          "hash": "10424695884945106098"
-        },
-        {
-          "file": "packages/components/waf-web-acl/tests/waf-web-acl.component.synthesis.test.ts",
-          "hash": "7893294639799327433",
-          "deps": [
-            "npm:aws-cdk-lib"
-          ]
-        },
-        {
-          "file": "packages/components/waf-web-acl/tsconfig.json",
-          "hash": "17199098717519277380"
-        },
-        {
-          "file": "packages/components/waf-web-acl/waf-web-acl.builder.ts",
-          "hash": "9839599123294211283"
-        },
-        {
-          "file": "packages/components/waf-web-acl/waf-web-acl.component.ts",
-          "hash": "9040301899747735610",
-          "deps": [
-            "npm:constructs",
-            "npm:aws-cdk-lib"
-          ]
-        },
-        {
-          "file": "packages/components/waf-web-acl/waf-web-acl.creator.ts",
-          "hash": "16378867316660102374",
-          "deps": [
-            "npm:constructs"
-          ]
-        }
-      ],
-      "standards-iam-audit": [
-        {
-          "file": "packages/standards/iam-audit/jest.config.ts",
-          "hash": "17376543197423877982"
-        },
-        {
-          "file": "packages/standards/iam-audit/package.json",
-          "hash": "9666128690917301319",
+          "file": "packages/standards/deprecation/package.json",
+          "hash": "5024915981973030009",
           "deps": [
             "npm:@types/jest",
             "npm:@types/node",
@@ -5247,254 +5832,26 @@
           ]
         },
         {
-          "file": "packages/standards/iam-audit/project.json",
-          "hash": "14930067881558315151"
+          "file": "packages/standards/deprecation/project.json",
+          "hash": "14557095603496790845"
         },
         {
-          "file": "packages/standards/iam-audit/src/index.ts",
-          "hash": "4071809394949347885"
+          "file": "packages/standards/deprecation/src/index.ts",
+          "hash": "6679164348460821020"
         },
         {
-          "file": "packages/standards/iam-audit/tsconfig.lib.json",
+          "file": "packages/standards/deprecation/tsconfig.lib.json",
           "hash": "4006877950016446411"
         },
         {
-          "file": "packages/standards/iam-audit/tsconfig.spec.json",
+          "file": "packages/standards/deprecation/tsconfig.spec.json",
           "hash": "4933087548142887878"
         }
       ],
-      "@cdk-lib/route53-record": [
+      "@platform/components-container-application": [
         {
-          "file": "packages/components/route53-record/README.md",
-          "hash": "12227641330370076317"
-        },
-        {
-          "file": "packages/components/route53-record/jest.config.js",
-          "hash": "8872577854924552600"
-        },
-        {
-          "file": "packages/components/route53-record/package.json",
-          "hash": "18155692217918212514",
-          "deps": [
-            "npm:@types/jest@29.5.14",
-            "npm:@types/node@18.14.6",
-            "npm:jest@29.7.0",
-            "npm:ts-jest",
-            "npm:typescript",
-            "npm:aws-cdk-lib",
-            "npm:constructs"
-          ]
-        },
-        {
-          "file": "packages/components/route53-record/src/index.ts",
-          "hash": "6699374738505384649"
-        },
-        {
-          "file": "packages/components/route53-record/src/route53-record.builder.ts",
-          "hash": "13536580926389542465"
-        },
-        {
-          "file": "packages/components/route53-record/src/route53-record.component.ts",
-          "hash": "7825024219622912135",
-          "deps": [
-            "npm:aws-cdk-lib",
-            "npm:constructs"
-          ]
-        },
-        {
-          "file": "packages/components/route53-record/src/route53-record.creator.ts",
-          "hash": "16561946231068905396",
-          "deps": [
-            "npm:aws-cdk-lib",
-            "npm:constructs"
-          ]
-        },
-        {
-          "file": "packages/components/route53-record/tests/setup.ts",
-          "hash": "18413757483339146050"
-        },
-        {
-          "file": "packages/components/route53-record/tests/unit/route53-record.builder.test.ts",
-          "hash": "9879376328810605208"
-        },
-        {
-          "file": "packages/components/route53-record/tests/unit/route53-record.component.test.ts",
-          "hash": "17296820352463261960",
-          "deps": [
-            "npm:aws-cdk-lib"
-          ]
-        }
-      ],
-      "constructs-prd": [
-        {
-          "file": "packages/constructs/prd/infrastructure/catalog-info.yaml",
-          "hash": "2422457067429494017"
-        },
-        {
-          "file": "packages/constructs/prd/infrastructure/package.json",
-          "hash": "2791711716308872494"
-        },
-        {
-          "file": "packages/constructs/prd/infrastructure/src/app.ts",
-          "hash": "1747817340691154262",
-          "deps": [
-            "@platform/core-engine",
-            "@platform/lambda-api",
-            "@platform/rds-postgres",
-            "@platform/sqs-queue"
-          ]
-        },
-        {
-          "file": "packages/constructs/prd/infrastructure/tests/infrastructure.test.ts",
-          "hash": "6543953730862184000",
-          "deps": [
-            [
-              "@platform/core-engine",
-              "dynamic"
-            ],
-            [
-              "@platform/lambda-api",
-              "dynamic"
-            ],
-            [
-              "@platform/rds-postgres",
-              "dynamic"
-            ],
-            [
-              "@platform/sqs-queue",
-              "dynamic"
-            ]
-          ]
-        },
-        {
-          "file": "packages/constructs/prd/infrastructure/tsconfig.json",
-          "hash": "8690522403544838164"
-        },
-        {
-          "file": "packages/constructs/prd/jest.config.ts",
-          "hash": "6303785017634172968"
-        },
-        {
-          "file": "packages/constructs/prd/package.json",
-          "hash": "1385521602886594778",
-          "deps": [
-            "npm:@types/jest",
-            "npm:@types/node",
-            "npm:jest",
-            "npm:ts-jest",
-            "npm:typescript",
-            "core",
-            "npm:aws-cdk-lib",
-            "npm:constructs"
-          ]
-        },
-        {
-          "file": "packages/constructs/prd/project.json",
-          "hash": "7729634818246254872"
-        },
-        {
-          "file": "packages/constructs/prd/src/index.ts",
-          "hash": "14721177349526847501"
-        },
-        {
-          "file": "packages/constructs/prd/tsconfig.lib.json",
-          "hash": "4006877950016446411"
-        },
-        {
-          "file": "packages/constructs/prd/tsconfig.spec.json",
-          "hash": "4933087548142887878"
-        }
-      ],
-      "standards-tagging": [
-        {
-          "file": "packages/standards/tagging/jest.config.ts",
-          "hash": "11173089299829010346"
-        },
-        {
-          "file": "packages/standards/tagging/package.json",
-          "hash": "5111549344473245502",
-          "deps": [
-            "npm:@types/jest",
-            "npm:@types/node",
-            "npm:jest",
-            "npm:ts-jest",
-            "npm:typescript",
-            "core"
-          ]
-        },
-        {
-          "file": "packages/standards/tagging/project.json",
-          "hash": "5211435454898070980"
-        },
-        {
-          "file": "packages/standards/tagging/src/index.ts",
-          "hash": "10783001643962023576"
-        },
-        {
-          "file": "packages/standards/tagging/tagging-service/tagging.service.d.ts",
-          "hash": "7203087500097985379",
-          "deps": [
-            "npm:constructs"
-          ]
-        },
-        {
-          "file": "packages/standards/tagging/tagging-service/tagging.service.js",
-          "hash": "15812850634719577064",
-          "deps": [
-            "npm:aws-cdk-lib"
-          ]
-        },
-        {
-          "file": "packages/standards/tagging/tagging-service/tagging.service.ts",
-          "hash": "806566449185703956",
-          "deps": [
-            "npm:aws-cdk-lib",
-            "npm:constructs"
-          ]
-        },
-        {
-          "file": "packages/standards/tagging/tsconfig.lib.json",
-          "hash": "4006877950016446411"
-        },
-        {
-          "file": "packages/standards/tagging/tsconfig.spec.json",
-          "hash": "4933087548142887878"
-        }
-      ],
-      "@platform/contracts": [
-        {
-          "file": "packages/contracts/catalog-info.yaml",
-          "hash": "6722023884612272139"
-        },
-        {
-          "file": "packages/contracts/package.json",
-          "hash": "7201279124937578234"
-        },
-        {
-          "file": "packages/contracts/src/index.ts",
-          "hash": "10421938192840342744"
-        },
-        {
-          "file": "packages/contracts/tests/contracts.test.ts",
-          "hash": "11828386972221381019"
-        },
-        {
-          "file": "packages/contracts/tsconfig.json",
-          "hash": "8656178427616574977"
-        }
-      ],
-      "@platform/components-backstage-portal": [
-        {
-          "file": "packages/components/backstage-portal/README.md",
-          "hash": "13401725786107978350"
-        },
-        {
-          "file": "packages/components/backstage-portal/jest.config.js",
-          "hash": "16174409094751740907"
-        },
-        {
-          "file": "packages/components/backstage-portal/package.json",
-          "hash": "1053607785845476143",
+          "file": "packages/components/container-application/package.json",
+          "hash": "5063921494724820499",
           "deps": [
             "npm:aws-cdk-lib",
             "npm:constructs",
@@ -5511,15 +5868,15 @@
           ]
         },
         {
-          "file": "packages/components/backstage-portal/src/backstage-portal.builder.ts",
-          "hash": "9095048430022174763",
+          "file": "packages/components/container-application/src/container-application.builder.ts",
+          "hash": "4708335185500006773",
           "deps": [
-            "@platform/core-engine"
+            "@platform/contracts"
           ]
         },
         {
-          "file": "packages/components/backstage-portal/src/backstage-portal.component.ts",
-          "hash": "6984016234971356749",
+          "file": "packages/components/container-application/src/container-application.component.ts",
+          "hash": "16225585997234048283",
           "deps": [
             "npm:aws-cdk-lib",
             "npm:constructs",
@@ -5527,34 +5884,18 @@
           ]
         },
         {
-          "file": "packages/components/backstage-portal/src/backstage-portal.creator.ts",
-          "hash": "10152187690079739350",
+          "file": "packages/components/container-application/src/container-application.creator.ts",
+          "hash": "2326517139878986357",
           "deps": [
             "npm:constructs"
           ]
         },
         {
-          "file": "packages/components/backstage-portal/src/index.ts",
-          "hash": "4768647305018394308",
+          "file": "packages/components/container-application/src/index.ts",
+          "hash": "8193930565131220180",
           "deps": [
             "@platform/contracts"
           ]
-        },
-        {
-          "file": "packages/components/backstage-portal/tests/setup.ts",
-          "hash": "8455921414252171857"
-        },
-        {
-          "file": "packages/components/backstage-portal/tests/simple.test.ts",
-          "hash": "1296221866313916238"
-        },
-        {
-          "file": "packages/components/backstage-portal/tests/unit/builder.test.ts",
-          "hash": "2594837662630678673"
-        },
-        {
-          "file": "packages/components/backstage-portal/tests/unit/component.test.ts",
-          "hash": "5525663129715303864"
         }
       ]
     }

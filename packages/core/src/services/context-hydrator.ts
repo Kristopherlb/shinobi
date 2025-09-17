@@ -2,7 +2,7 @@
  * Context Hydrator Service - Single responsibility for environment resolution
  * Implements Principle 4: Single Responsibility Principle
  */
-import { Logger } from '../utils/logger';
+import { Logger } from '../platform/logger/src';
 import * as fs from 'fs/promises';
 import * as path from 'path';
 import * as YAML from 'yaml';
@@ -17,7 +17,7 @@ export interface ContextHydratorDependencies {
  * Responsibility: Stage 3 - Context Hydration (AC-P3.1, AC-P3.2, AC-P3.3)
  */
 export class ContextHydrator {
-  constructor(private dependencies: ContextHydratorDependencies) {}
+  constructor(private dependencies: ContextHydratorDependencies) { }
 
   async hydrateContext(manifest: Record<string, any>, environment: string): Promise<Record<string, any>> {
     this.dependencies.logger.debug(`Hydrating context for environment: ${environment}`);
@@ -38,7 +38,7 @@ export class ContextHydrator {
     // Process environment-specific values
     if (hydrated.environments && hydrated.environments[environment]) {
       const envDefaults = hydrated.environments[environment].defaults || {};
-      
+
       // Apply environment interpolation throughout the manifest
       this.interpolateEnvironmentValues(hydrated, envDefaults, environment);
     }
@@ -104,7 +104,7 @@ export class ContextHydrator {
     if (environments.$ref) {
       this.dependencies.logger.debug(`Resolving top-level environments $ref: ${environments.$ref}`);
       const referencedConfig = await this.loadReferencedFile(environments.$ref, resolvedRefs);
-      
+
       // Replace entire environments block with referenced content
       manifest.environments = this.deepMerge({}, referencedConfig);
       return;
@@ -115,7 +115,7 @@ export class ContextHydrator {
       if (envConfig && typeof envConfig === 'object' && (envConfig as any).$ref) {
         this.dependencies.logger.debug(`Resolving environment-specific $ref for ${envName}: ${(envConfig as any).$ref}`);
         const referencedConfig = await this.loadReferencedFile((envConfig as any).$ref, resolvedRefs);
-        
+
         // Replace specific environment with referenced content
         manifest.environments[envName] = this.deepMerge({}, referencedConfig);
       }
@@ -129,7 +129,7 @@ export class ContextHydrator {
   private async loadReferencedFile(refPath: string, resolvedRefs: Set<string>): Promise<Record<string, any>> {
     // Security: Validate and normalize path to prevent traversal attacks
     const secureResolvedPath = this.resolveSecurePath(refPath);
-    
+
     // Circular dependency detection
     if (resolvedRefs.has(secureResolvedPath)) {
       throw new Error(`Circular reference detected: ${refPath} has already been resolved in this chain`);
@@ -139,7 +139,7 @@ export class ContextHydrator {
     try {
       this.dependencies.logger.debug(`Loading referenced file: ${secureResolvedPath}`);
       const fileContent = await fs.readFile(secureResolvedPath, 'utf8');
-      
+
       // Parse based on file extension
       if (secureResolvedPath.endsWith('.json')) {
         return JSON.parse(fileContent);
@@ -162,19 +162,19 @@ export class ContextHydrator {
    */
   private resolveSecurePath(refPath: string): string {
     // Get the base directory (where service.yml is located)
-    const manifestDir = this.dependencies.manifestPath 
+    const manifestDir = this.dependencies.manifestPath
       ? path.dirname(this.dependencies.manifestPath)
       : process.cwd();
 
     // Resolve the reference path relative to manifest directory
     const resolvedPath = path.resolve(manifestDir, refPath);
-    
+
     // Security check: Ensure resolved path is within the manifest directory tree
     const normalizedManifestDir = path.normalize(manifestDir);
     const normalizedResolvedPath = path.normalize(resolvedPath);
-    
-    if (!normalizedResolvedPath.startsWith(normalizedManifestDir + path.sep) && 
-        normalizedResolvedPath !== normalizedManifestDir) {
+
+    if (!normalizedResolvedPath.startsWith(normalizedManifestDir + path.sep) &&
+      normalizedResolvedPath !== normalizedManifestDir) {
       throw new Error(`Security violation: $ref path "${refPath}" attempts to access files outside the service repository. Path traversal is not allowed.`);
     }
 

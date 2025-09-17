@@ -6,7 +6,7 @@
 
 import * as lambda from 'aws-cdk-lib/aws-lambda';
 import * as iam from 'aws-cdk-lib/aws-iam';
-import { Component, BindingContext, StructuredLogger } from '@platform/contracts';
+import { Component, BindingContext, StructuredLogger } from '@shinobi/core';
 
 export interface ComputeToOpenFeatureStrategyDependencies {
   logger: StructuredLogger;
@@ -17,7 +17,7 @@ export interface ComputeToOpenFeatureStrategyDependencies {
  * Configures environment variables for OpenFeature SDK auto-configuration
  */
 export class ComputeToOpenFeatureStrategy {
-  constructor(private dependencies: ComputeToOpenFeatureStrategyDependencies) {}
+  constructor(private dependencies: ComputeToOpenFeatureStrategyDependencies) { }
 
   /**
    * Check if this strategy can handle the given binding
@@ -96,7 +96,7 @@ export class ComputeToOpenFeatureStrategy {
   ): Promise<void> {
     // Grant AppConfig permissions based on access level
     const actions = this.getAppConfigActions(access);
-    
+
     computeFunction.addToRolePolicy(new iam.PolicyStatement({
       effect: iam.Effect.ALLOW,
       actions: actions,
@@ -152,12 +152,12 @@ export class ComputeToOpenFeatureStrategy {
     const environmentVariables: Record<string, string> = {
       // OpenFeature provider configuration
       ...providerCapability.environmentVariables,
-      
+
       // Feature flag service metadata
       FEATURE_FLAG_SERVICE: context.targetComponent.getName(),
       FEATURE_FLAG_ENVIRONMENT: context.environment || 'production',
       FEATURE_FLAG_ACCESS_LEVEL: context.access,
-      
+
       // Observability configuration
       OPENFEATURE_TELEMETRY_ENABLED: 'true',
       OPENFEATURE_HOOKS_ENABLED: 'true'
@@ -214,11 +214,11 @@ export class ComputeToOpenFeatureStrategy {
     const observabilityEnvVars: Record<string, string> = {
       // OpenTelemetry tracing for feature flag evaluations
       OTEL_RESOURCE_ATTRIBUTES: `service.name=feature-flags,feature.provider=${providerCapability.providerType}`,
-      
+
       // Feature flag metrics
       FEATURE_FLAG_METRICS_ENABLED: 'true',
       FEATURE_FLAG_METRICS_NAMESPACE: 'FeatureFlags',
-      
+
       // Audit logging
       FEATURE_FLAG_AUDIT_LOGGING: 'true'
     };
@@ -249,14 +249,14 @@ export class ComputeToOpenFeatureStrategy {
    */
   private extractComputeFunction(component: Component): lambda.IFunction | null {
     // Try to get the main compute construct
-    const computeConstruct = component.getConstruct('main') || 
-                           component.getConstruct('function') || 
-                           component.getConstruct('lambdaFunction');
-    
+    const computeConstruct = component.getConstruct('main') ||
+      component.getConstruct('function') ||
+      component.getConstruct('lambdaFunction');
+
     if (computeConstruct && 'addToRolePolicy' in computeConstruct) {
       return computeConstruct as lambda.IFunction;
     }
-    
+
     return null;
   }
 
@@ -278,7 +278,7 @@ export class ComputeToOpenFeatureStrategy {
     // In a real implementation, this would be handled during Lambda construction
     // or through CDK's environment variable APIs
     this.dependencies.logger.debug(`Would set ${Object.keys(variables).length} environment variables on compute function`);
-    
+
     // Log the variables for debugging (without sensitive values)
     for (const [key, value] of Object.entries(variables)) {
       const logValue = key.toLowerCase().includes('key') || key.toLowerCase().includes('secret') ? '[HIDDEN]' : value;

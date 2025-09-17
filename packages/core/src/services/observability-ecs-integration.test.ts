@@ -9,17 +9,13 @@ import * as cdk from 'aws-cdk-lib';
 import * as cloudwatch from 'aws-cdk-lib/aws-cloudwatch';
 import { Template, Match } from 'aws-cdk-lib/assertions';
 import { ObservabilityService } from './observability.service';
-import { EcsClusterComponent } from '../../packages/components/ecs-cluster/ecs-cluster.component';
-import { EcsFargateServiceComponent } from '../../packages/components/ecs-fargate-service/ecs-fargate-service.component';
-import { EcsEc2ServiceComponent } from '../../packages/components/ecs-ec2-service/ecs-ec2-service.component';
-import { ComponentContext } from '../platform/contracts/component-interfaces';
-import { PlatformServiceContext } from '../platform/contracts/platform-services';
-import { 
+import { ComponentContext, ComponentSpec, PlatformServiceContext, BaseComponent } from '@shinobi/core';
+import {
   TestFixtureFactory,
   PerformanceTestHelpers,
   TEST_CONTEXTS,
-  TEST_SPECS 
-} from '../../packages/components/ecs-cluster/test-fixtures';
+  TEST_SPECS
+} from '../@shinobi/components/ecs-cluster/test-fixtures';
 
 /*
  * Test Metadata: TP-OBSERVABILITY-ECS-001
@@ -39,6 +35,113 @@ import {
  *   "humanReviewedBy": "platform-team"
  * }
  */
+// Mock logger
+const mockLogger = {
+  info: jest.fn(),
+  warn: jest.fn(),
+  error: jest.fn(),
+  debug: jest.fn()
+};
+
+// Mock ECS components for testing
+class EcsClusterComponent extends BaseComponent {
+  constructor(
+    public stack: cdk.Stack,
+    id: string,
+    context: ComponentContext,
+    spec: ComponentSpec
+  ) {
+    super(stack, id, context, spec);
+  }
+
+  synth(): void {
+    // Mock implementation - populate constructs and capabilities maps
+    (this as any).constructs.set('cluster', { clusterArn: 'arn:aws:ecs:us-east-1:123456789012:cluster/test-cluster' });
+    (this as any).constructs.set('securityGroup', { securityGroupId: 'sg-cluster-123' });
+    (this as any).capabilities = {
+      'ecs:cluster': {
+        clusterName: 'test-cluster',
+        vpcId: 'vpc-123',
+        serviceConnectNamespace: 'test-cluster.internal'
+      }
+    };
+  }
+
+  getType(): string {
+    return 'ecs-cluster';
+  }
+
+  getCapabilities(): Record<string, any> {
+    return (this as any).capabilities;
+  }
+}
+
+class EcsFargateServiceComponent extends BaseComponent {
+  constructor(
+    public stack: cdk.Stack,
+    id: string,
+    context: ComponentContext,
+    spec: ComponentSpec
+  ) {
+    super(stack, id, context, spec);
+  }
+
+  synth(): void {
+    // Mock implementation - populate constructs and capabilities maps
+    (this as any).constructs.set('service', { serviceArn: 'arn:aws:ecs:us-east-1:123456789012:service/test-cluster/fargate-service' });
+    (this as any).constructs.set('securityGroup', { securityGroupId: 'sg-fargate-123' });
+    (this as any).capabilities = {
+      'service:connect': {
+        serviceName: 'fargate-service',
+        dnsName: 'fargate-service.internal',
+        internalEndpoint: 'fargate-service.internal:80',
+        port: 80
+      }
+    };
+  }
+
+  getType(): string {
+    return 'ecs-fargate-service';
+  }
+
+  getCapabilities(): Record<string, any> {
+    return (this as any).capabilities;
+  }
+}
+
+class EcsEc2ServiceComponent extends BaseComponent {
+  constructor(
+    public stack: cdk.Stack,
+    id: string,
+    context: ComponentContext,
+    spec: ComponentSpec
+  ) {
+    super(stack, id, context, spec);
+  }
+
+  synth(): void {
+    // Mock implementation - populate constructs and capabilities maps
+    (this as any).constructs.set('service', { serviceArn: 'arn:aws:ecs:us-east-1:123456789012:service/test-cluster/ec2-service' });
+    (this as any).constructs.set('securityGroup', { securityGroupId: 'sg-ec2-123' });
+    (this as any).capabilities = {
+      'service:connect': {
+        serviceName: 'ec2-service',
+        dnsName: 'ec2-service.internal',
+        internalEndpoint: 'ec2-service.internal:80',
+        port: 80
+      }
+    };
+  }
+
+  getType(): string {
+    return 'ecs-ec2-service';
+  }
+
+  getCapabilities(): Record<string, any> {
+    return (this as any).capabilities;
+  }
+}
+
 describe('ObservabilityService__EcsComponentSupport__ServiceInjectorPattern', () => {
   let testEnv: ReturnType<typeof TestFixtureFactory.createTestEnvironment>;
   let observabilityService: ObservabilityService;
@@ -46,13 +149,14 @@ describe('ObservabilityService__EcsComponentSupport__ServiceInjectorPattern', ()
 
   beforeEach(() => {
     testEnv = TestFixtureFactory.createTestEnvironment();
-    
+
     serviceContext = {
       serviceName: 'test-service',
       environment: 'test',
       complianceFramework: 'commercial',
       region: 'us-east-1',
-      serviceRegistry: {} as any // Mock registry for testing
+      serviceRegistry: {} as any, // Mock registry for testing
+      logger: mockLogger
     };
 
     observabilityService = new ObservabilityService(serviceContext);
@@ -78,7 +182,7 @@ describe('ObservabilityService__EcsComponentSupport__ServiceInjectorPattern', ()
     observabilityService.apply(clusterComponent);
 
     // Verify the component type was recognized (no debug message about unsupported type)
-    const debugCalls = consoleDebugSpy.mock.calls.filter(call => 
+    const debugCalls = consoleDebugSpy.mock.calls.filter(call =>
       call.some(arg => typeof arg === 'string' && arg.includes('No OpenTelemetry instrumentation'))
     );
     expect(debugCalls).toHaveLength(0);
@@ -109,7 +213,7 @@ describe('ObservabilityService__EcsComponentSupport__ServiceInjectorPattern', ()
     observabilityService.apply(fargateComponent);
 
     // Verify no unsupported type messages
-    const debugCalls = consoleDebugSpy.mock.calls.filter(call => 
+    const debugCalls = consoleDebugSpy.mock.calls.filter(call =>
       call.some(arg => typeof arg === 'string' && arg.includes('No OpenTelemetry instrumentation'))
     );
     expect(debugCalls).toHaveLength(0);
@@ -140,7 +244,7 @@ describe('ObservabilityService__EcsComponentSupport__ServiceInjectorPattern', ()
     observabilityService.apply(ec2Component);
 
     // Verify no unsupported type messages
-    const debugCalls = consoleDebugSpy.mock.calls.filter(call => 
+    const debugCalls = consoleDebugSpy.mock.calls.filter(call =>
       call.some(arg => typeof arg === 'string' && arg.includes('No OpenTelemetry instrumentation'))
     );
     expect(debugCalls).toHaveLength(0);
@@ -173,13 +277,14 @@ describe('ObservabilityService__EcsClusterMonitoring__CloudWatchAlarms', () => {
 
   beforeEach(() => {
     testEnv = TestFixtureFactory.createTestEnvironment();
-    
+
     const serviceContext: PlatformServiceContext = {
       serviceName: 'test-service',
       environment: 'test',
       complianceFramework: 'commercial',
       region: 'us-east-1',
-      serviceRegistry: {} as any
+      serviceRegistry: {} as any,
+      logger: mockLogger
     };
 
     observabilityService = new ObservabilityService(serviceContext);
@@ -199,7 +304,7 @@ describe('ObservabilityService__EcsClusterMonitoring__CloudWatchAlarms', () => {
     clusterComponent.synth();
 
     observabilityService.apply(clusterComponent);
-    
+
     const template = Template.fromStack(testEnv.stack);
 
     // Verify ECS Service Count alarm is created
@@ -216,16 +321,18 @@ describe('ObservabilityService__EcsClusterMonitoring__CloudWatchAlarms', () => {
 
   it('ClusterMonitoring__ComplianceFrameworks__AppliesCorrectThresholds', async () => {
     const frameworks: Array<keyof typeof TEST_CONTEXTS> = ['commercial', 'fedrampModerate', 'fedrampHigh'];
-    
+
     for (const framework of frameworks) {
-      const frameworkStack = new cdk.Stack(testEnv.app, `ObsTestStack-${framework}`);
+      const frameworkStack = new cdk.Stack(testEnv.app, `ObsTestStack-${String(framework)}`);
       const context = { ...testEnv.contexts[framework], scope: frameworkStack };
-      
+
       const serviceContext: PlatformServiceContext = {
         serviceName: 'test-service',
         environment: 'test',
         complianceFramework: context.complianceFramework,
-        region: 'us-east-1'
+        region: 'us-east-1',
+        serviceRegistry: {} as any,
+        logger: mockLogger
       };
 
       const frameworkObservabilityService = new ObservabilityService(serviceContext);
@@ -239,7 +346,7 @@ describe('ObservabilityService__EcsClusterMonitoring__CloudWatchAlarms', () => {
       clusterComponent.synth();
 
       frameworkObservabilityService.apply(clusterComponent);
-      
+
       const template = Template.fromStack(frameworkStack);
 
       // Check service count threshold based on compliance framework
@@ -286,13 +393,14 @@ describe('ObservabilityService__EcsServiceMonitoring__OpenTelemetryAndAlarms', (
 
   beforeEach(() => {
     testEnv = TestFixtureFactory.createTestEnvironment();
-    
+
     const serviceContext: PlatformServiceContext = {
       serviceName: 'test-service',
       environment: 'test',
       complianceFramework: 'commercial',
       region: 'us-east-1',
-      serviceRegistry: {} as any
+      serviceRegistry: {} as any,
+      logger: mockLogger
     };
 
     observabilityService = new ObservabilityService(serviceContext);
@@ -348,7 +456,7 @@ describe('ObservabilityService__EcsServiceMonitoring__OpenTelemetryAndAlarms', (
     });
 
     // Verify OTel instrumentation logging
-    const logCalls = consoleLogSpy.mock.calls.filter(call => 
+    const logCalls = consoleLogSpy.mock.calls.filter(call =>
       call.some(arg => typeof arg === 'string' && arg.includes('ECS Service OpenTelemetry instrumentation'))
     );
     expect(logCalls.length).toBeGreaterThan(0);
@@ -397,7 +505,7 @@ describe('ObservabilityService__EcsServiceMonitoring__OpenTelemetryAndAlarms', (
     });
 
     // Verify OTel instrumentation is also applied to EC2 services
-    const logCalls = consoleLogSpy.mock.calls.filter(call => 
+    const logCalls = consoleLogSpy.mock.calls.filter(call =>
       call.some(arg => typeof arg === 'string' && arg.includes('ECS Service OpenTelemetry instrumentation'))
     );
     expect(logCalls.length).toBeGreaterThan(0);
@@ -411,7 +519,8 @@ describe('ObservabilityService__EcsServiceMonitoring__OpenTelemetryAndAlarms', (
       environment: 'production',
       complianceFramework: 'fedramp-high',
       region: 'us-gov-east-1',
-      serviceRegistry: {} as any
+      serviceRegistry: {} as any,
+      logger: mockLogger
     };
 
     const fedrampObservabilityService = new ObservabilityService(fedrampHighContext);
@@ -481,12 +590,14 @@ describe('ObservabilityService__Performance__EcsIntegration', () => {
 
   beforeEach(() => {
     testEnv = TestFixtureFactory.createTestEnvironment();
-    
+
     const serviceContext: PlatformServiceContext = {
       serviceName: 'performance-test-service',
       environment: 'test',
       complianceFramework: 'commercial',
-      region: 'us-east-1'
+      region: 'us-east-1',
+      serviceRegistry: {} as any,
+      logger: mockLogger
     };
 
     observabilityService = new ObservabilityService(serviceContext);
@@ -581,7 +692,7 @@ describe('ObservabilityService__Performance__EcsIntegration', () => {
     observabilityService.apply(clusterComponent);
 
     // Verify structured logging output
-    const logCalls = consoleLogSpy.mock.calls.filter(call => 
+    const logCalls = consoleLogSpy.mock.calls.filter(call =>
       call.some(arg => typeof arg === 'string' && arg.includes('Applied OpenTelemetry observability'))
     );
 

@@ -3,7 +3,7 @@
  * Responsible for rendering synthesis results into user-friendly summaries
  */
 
-import { Logger } from '../cli/simple-console-logger';
+import { Logger } from '../platform/logger/src';
 
 export interface PlanOutputFormatterDependencies {
   logger: Logger;

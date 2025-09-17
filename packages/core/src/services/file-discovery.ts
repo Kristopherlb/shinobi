@@ -1,8 +1,8 @@
 import * as fs from 'fs/promises';
 import * as path from 'path';
-import { Logger } from '../utils/logger';
+import { Logger } from '../platform/logger/src';
 
-const logger = new Logger('file-discovery');
+const logger = Logger.getLogger('file-discovery');
 
 export class FileDiscovery {
   /**

@@ -1,5 +1,5 @@
 /**
- * @cdk-lib/observability-handlers
+ * @shinobi/observability-handlers
  * 
  * Component-specific observability handlers for CDK-Lib platform.
  * Provides OpenTelemetry instrumentation and CloudWatch alarms for individual component types.
@@ -20,6 +20,15 @@ export { AlbObservabilityHandler } from './observability-handlers/alb-observabil
 export { RdsObservabilityHandler } from './observability-handlers/rds-observability.handler';
 export { SqsObservabilityHandler } from './observability-handlers/sqs-observability.handler';
 export { EcsObservabilityHandler } from './observability-handlers/ecs-observability.handler';
+
+// Import handlers for registry
+import { Ec2ObservabilityHandler } from './observability-handlers/ec2-observability.handler';
+import { LambdaObservabilityHandler } from './observability-handlers/lambda-observability.handler';
+import { VpcObservabilityHandler } from './observability-handlers/vpc-observability.handler';
+import { AlbObservabilityHandler } from './observability-handlers/alb-observability.handler';
+import { RdsObservabilityHandler } from './observability-handlers/rds-observability.handler';
+import { SqsObservabilityHandler } from './observability-handlers/sqs-observability.handler';
+import { EcsObservabilityHandler } from './observability-handlers/ecs-observability.handler';
 
 // Handler registry for easy access
 export const OBSERVABILITY_HANDLERS = {

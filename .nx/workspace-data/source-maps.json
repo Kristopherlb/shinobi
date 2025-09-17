@@ -4600,6 +4600,10 @@
       "packages/core/project.json",
       "nx/core/project-json"
     ],
+    "targets.test.options.passWithNoTests": [
+      "packages/core/project.json",
+      "nx/core/project-json"
+    ],
     "targets.lint": [
       "packages/core/project.json",
       "nx/core/project-json"

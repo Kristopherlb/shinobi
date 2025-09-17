@@ -3,11 +3,11 @@
  * Enterprise-grade binding logic for different component combinations
  */
 
-import { 
-  BinderStrategy, 
-  BindingContext, 
-  BindingResult 
-} from '@platform/contracts';
+import {
+  BinderStrategy,
+  BindingContext,
+  BindingResult
+} from '@shinobi/core';
 import * as lambda from 'aws-cdk-lib/aws-lambda';
 import * as rds from 'aws-cdk-lib/aws-rds';
 import * as s3 from 'aws-cdk-lib/aws-s3';
@@ -20,8 +20,8 @@ import * as iam from 'aws-cdk-lib/aws-iam';
  */
 export class LambdaToSqsBinderStrategy extends BinderStrategy {
   canHandle(sourceType: string, targetCapability: string): boolean {
-    return (sourceType === 'lambda-api' || sourceType === 'lambda-worker') && 
-           targetCapability === 'queue:sqs';
+    return (sourceType === 'lambda-api' || sourceType === 'lambda-worker') &&
+      targetCapability === 'queue:sqs';
   }
 
   bind(context: BindingContext): BindingResult {
@@ -62,8 +62,8 @@ export class LambdaToSqsBinderStrategy extends BinderStrategy {
    * Grant Lambda access to SQS queue using CDK L2 methods
    */
   private grantSQSAccess(
-    sqsQueueConstruct: sqs.IQueue, 
-    lambdaConstruct: lambda.Function, 
+    sqsQueueConstruct: sqs.IQueue,
+    lambdaConstruct: lambda.Function,
     access: string
   ): void {
     switch (access) {
@@ -144,7 +144,7 @@ export class LambdaToSqsBinderStrategy extends BinderStrategy {
     if (context.source.getType() === 'lambda-worker') {
       // Event source mapping configuration is handled by CDK construct integration
       // The queue's dead letter queue is already configured at the construct level
-      
+
       // Grant additional permissions for DLQ processing
       lambdaConstruct.addToRolePolicy(
         new iam.PolicyStatement({
@@ -170,8 +170,8 @@ export class LambdaToSqsBinderStrategy extends BinderStrategy {
  */
 export class LambdaToRdsBinderStrategy extends BinderStrategy {
   canHandle(sourceType: string, targetCapability: string): boolean {
-    return (sourceType === 'lambda-api' || sourceType === 'lambda-worker') && 
-           targetCapability === 'db:postgres';
+    return (sourceType === 'lambda-api' || sourceType === 'lambda-worker') &&
+      targetCapability === 'db:postgres';
   }
 
   bind(context: BindingContext): BindingResult {
@@ -184,11 +184,11 @@ export class LambdaToRdsBinderStrategy extends BinderStrategy {
     if (!lambdaConstruct || !rdsConstruct) {
       throw new Error(`Could not retrieve construct handles for binding ${source.spec.name} -> ${target.spec.name}`);
     }
-    
+
     // 2. Use high-level L2 methods to apply wiring directly
     // Allow Lambda to connect to RDS on the default PostgreSQL port
     rdsConstruct.connections.allowDefaultPortFrom(
-      lambdaConstruct, 
+      lambdaConstruct,
       `Allow connection from Lambda ${source.spec.name}`
     );
 
@@ -218,8 +218,8 @@ export class LambdaToRdsBinderStrategy extends BinderStrategy {
    * Grant Lambda access to the database using CDK L2 methods
    */
   private grantDatabaseAccess(
-    rdsConstruct: rds.DatabaseInstance, 
-    lambdaConstruct: lambda.Function, 
+    rdsConstruct: rds.DatabaseInstance,
+    lambdaConstruct: lambda.Function,
     access: string
   ): void {
     switch (access) {
@@ -317,8 +317,8 @@ export class LambdaToRdsBinderStrategy extends BinderStrategy {
  */
 export class LambdaToS3BucketBinderStrategy extends BinderStrategy {
   canHandle(sourceType: string, targetCapability: string): boolean {
-    return (sourceType === 'lambda-api' || sourceType === 'lambda-worker') && 
-           targetCapability === 'bucket:s3';
+    return (sourceType === 'lambda-api' || sourceType === 'lambda-worker') &&
+      targetCapability === 'bucket:s3';
   }
 
   bind(context: BindingContext): BindingResult {
@@ -331,7 +331,7 @@ export class LambdaToS3BucketBinderStrategy extends BinderStrategy {
     if (!lambdaConstruct || !s3Construct) {
       throw new Error(`Could not retrieve construct handles for binding ${source.spec.name} -> ${target.spec.name}`);
     }
-    
+
     // 2. Use high-level L2 methods to grant S3 access directly
     this.grantS3Access(s3Construct, lambdaConstruct, directive.access);
 
@@ -358,8 +358,8 @@ export class LambdaToS3BucketBinderStrategy extends BinderStrategy {
    * Grant Lambda access to S3 bucket using CDK L2 methods
    */
   private grantS3Access(
-    s3Construct: s3.Bucket, 
-    lambdaConstruct: lambda.Function, 
+    s3Construct: s3.Bucket,
+    lambdaConstruct: lambda.Function,
     access: string
   ): void {
     switch (access) {
@@ -408,7 +408,7 @@ export class LambdaToS3BucketBinderStrategy extends BinderStrategy {
   ): void {
     // Grant Lambda permission to use KMS key for S3 encryption
     const kmsKeyArn = context.directive.options?.kmsKeyId || 'alias/aws/s3';
-    
+
     lambdaConstruct.addToRolePolicy(
       new iam.PolicyStatement({
         effect: iam.Effect.ALLOW,
@@ -463,7 +463,7 @@ export class LambdaToS3BucketBinderStrategy extends BinderStrategy {
     if (context.complianceFramework === 'fedramp-high') {
       // Restrict to specific object prefix
       const allowedPrefix = context.directive.options?.objectPrefix || `${context.source.spec.name}/*`;
-      
+
       lambdaConstruct.addToRolePolicy(
         new iam.PolicyStatement({
           effect: iam.Effect.DENY,

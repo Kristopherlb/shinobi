@@ -57,7 +57,7 @@ export class EnhancedBinderRegistry {
    * Find a strategy that can handle the binding
    */
   findStrategy(sourceType: string, capability: Capability): EnhancedBinderStrategy | null {
-    for (const strategy of this.strategies.values()) {
+    for (const strategy of Array.from(this.strategies.values())) {
       if (strategy.canHandle(sourceType, capability)) {
         return strategy;
       }

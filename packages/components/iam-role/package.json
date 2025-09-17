@@ -1,5 +1,5 @@
 {
-  "name": "@cdk-lib/iam-role",
+  "name": "@shinobi/iam-role",
   "version": "1.0.0",
   "description": "Platform component for AWS IAM Role management with compliance-aware configuration",
   "main": "dist/index.js",

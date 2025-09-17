@@ -3,15 +3,15 @@
  * Basic test to verify the enhanced binder registry works
  */
 
-import { EnhancedBinderRegistry } from '../enhanced-binder-registry';
-import { DatabaseBinderStrategy } from '../binders/database-binder-strategy';
 import {
+  EnhancedBinderRegistry,
+  DatabaseBinderStrategy,
   EnhancedBindingContext,
   BindingDirective,
   Capability,
   ComplianceFramework,
   PostgresCapabilityData
-} from '../bindings';
+} from '@shinobi/core';
 
 // Mock logger
 const mockLogger = {
@@ -58,7 +58,8 @@ describe('Simple Registry Test', () => {
       target: mockComponent,
       directive: {
         capability: 'db:postgres' as Capability,
-        access: 'read'
+        access: 'read',
+        env: {}
       } as BindingDirective,
       environment: 'test',
       complianceFramework: 'commercial' as ComplianceFramework,

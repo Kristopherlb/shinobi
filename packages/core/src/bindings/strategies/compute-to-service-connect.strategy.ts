@@ -8,13 +8,12 @@
 
 import * as ec2 from 'aws-cdk-lib/aws-ec2';
 import * as iam from 'aws-cdk-lib/aws-iam';
-import { 
+import {
   IBinderStrategy,
   BindingContext,
   BindingResult,
   CompatibilityEntry
-} from '../../platform/contracts/platform-binding-trigger-spec';
-import { IComponent } from '../../platform/contracts/component-interfaces';
+} from '@shinobi/core';
 
 /**
  * ComputeToServiceConnectBinder
@@ -40,7 +39,7 @@ export class ComputeToServiceConnectBinder implements IBinderStrategy {
    */
   bind(context: BindingContext): BindingResult {
     const { source, target, directive, environment, complianceFramework } = context;
-    
+
     try {
       // Get Service Connect capability information from target
       const serviceConnectCapability = target.getCapabilities()['service:connect'];
@@ -91,8 +90,7 @@ export class ComputeToServiceConnectBinder implements IBinderStrategy {
 
     } catch (error) {
       throw new Error(
-        `Failed to bind ${source.node.id} to Service Connect service ${target.node.id}: ${
-          error instanceof Error ? error.message : 'Unknown error'
+        `Failed to bind ${source.node.id} to Service Connect service ${target.node.id}: ${error instanceof Error ? error.message : 'Unknown error'
         }`
       );
     }
@@ -311,7 +309,7 @@ export class ComputeToServiceConnectBinder implements IBinderStrategy {
    */
   private validateAccess(access: string, serviceConnectCapability: any): void {
     const supportedAccess = ['read', 'write'];
-    
+
     if (!supportedAccess.includes(access)) {
       throw new Error(
         `Unsupported access level '${access}' for service:connect capability. ` +
@@ -338,7 +336,7 @@ export class ComputeToServiceConnectBinder implements IBinderStrategy {
     const endpoint = serviceConnectCapability.internalEndpoint;
 
     return `Service Connect binding: ${sourceType}:${source.node.id} -> ${targetType}:${target.node.id} ` +
-           `(service: ${serviceName}, endpoint: ${endpoint}, env vars: ${Object.keys(result.environmentVariables || {}).length})`;
+      `(service: ${serviceName}, endpoint: ${endpoint}, env vars: ${Object.keys(result.environmentVariables || {}).length})`;
   }
 
   /**
@@ -352,13 +350,13 @@ export class ComputeToServiceConnectBinder implements IBinderStrategy {
           // Lambda functions have an execution role
           const lambdaFunction = component.getConstruct('function');
           return (lambdaFunction as any)?.role || null;
-        
+
         case 'ecs-fargate-service':
         case 'ecs-ec2-service':
           // ECS services have a task role
           const taskDefinition = component.getConstruct('taskDefinition');
           return (taskDefinition as any)?.taskRole || null;
-        
+
         default:
           // Other component types might not have IAM roles
           return null;
@@ -372,12 +370,12 @@ export class ComputeToServiceConnectBinder implements IBinderStrategy {
    * Configure Lambda-specific Service Connect permissions
    */
   private configureLambdaServiceConnectPermissions(
-    role: import('aws-cdk-lib/aws-iam').IRole, 
+    role: import('aws-cdk-lib/aws-iam').IRole,
     complianceFramework?: string
   ): void {
     // Lambda functions in VPC need ENI permissions for Service Connect
     const iam = require('aws-cdk-lib/aws-iam');
-    
+
     const vpcPermissions = new iam.PolicyStatement({
       effect: iam.Effect.ALLOW,
       actions: [

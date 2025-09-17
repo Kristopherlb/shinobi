@@ -145,108 +145,6 @@
         "implicitDependencies": []
       }
     },
-    "@cdk-lib/security-group-import": {
-      "name": "@cdk-lib/security-group-import",
-      "type": "lib",
-      "data": {
-        "root": "packages/components/security-group-import",
-        "name": "@cdk-lib/security-group-import",
-        "projectType": "library",
-        "tags": [
-          "npm:public",
-          "npm:aws",
-          "npm:cdk",
-          "npm:security-group",
-          "npm:import",
-          "npm:ssm",
-          "npm:platform",
-          "npm:component"
-        ],
-        "metadata": {
-          "targetGroups": {
-            "NPM Scripts": [
-              "build",
-              "test",
-              "test:watch",
-              "test:coverage"
-            ]
-          },
-          "description": "Platform component for importing existing AWS Security Groups via SSM parameters",
-          "js": {
-            "packageName": "@cdk-lib/security-group-import",
-            "packageMain": "dist/index.js",
-            "isInPackageManagerWorkspaces": true
-          }
-        },
-        "targets": {
-          "build": {
-            "executor": "nx:run-script",
-            "options": {
-              "script": "build"
-            },
-            "metadata": {
-              "scriptContent": "tsc",
-              "runCommand": "pnpm run build"
-            },
-            "configurations": {},
-            "parallelism": true,
-            "dependsOn": [
-              "^build"
-            ],
-            "inputs": [
-              "production",
-              "^production"
-            ]
-          },
-          "test": {
-            "executor": "nx:run-script",
-            "options": {
-              "script": "test"
-            },
-            "metadata": {
-              "scriptContent": "jest",
-              "runCommand": "pnpm run test"
-            },
-            "configurations": {},
-            "parallelism": true
-          },
-          "test:watch": {
-            "executor": "nx:run-script",
-            "options": {
-              "script": "test:watch"
-            },
-            "metadata": {
-              "scriptContent": "jest --watch",
-              "runCommand": "pnpm run test:watch"
-            },
-            "configurations": {},
-            "parallelism": true
-          },
-          "test:coverage": {
-            "executor": "nx:run-script",
-            "options": {
-              "script": "test:coverage"
-            },
-            "metadata": {
-              "scriptContent": "jest --coverage",
-              "runCommand": "pnpm run test:coverage"
-            },
-            "configurations": {},
-            "parallelism": true
-          },
-          "nx-release-publish": {
-            "executor": "@nx/js:release-publish",
-            "dependsOn": [
-              "^nx-release-publish"
-            ],
-            "options": {},
-            "configurations": {},
-            "parallelism": true
-          }
-        },
-        "implicitDependencies": []
-      }
-    },
     "@platform/components-container-application": {
       "name": "@platform/components-container-application",
       "type": "lib",
@@ -379,6 +277,108 @@
             "metadata": {
               "scriptContent": "rm -rf dist coverage",
               "runCommand": "pnpm run clean"
+            },
+            "configurations": {},
+            "parallelism": true
+          },
+          "nx-release-publish": {
+            "executor": "@nx/js:release-publish",
+            "dependsOn": [
+              "^nx-release-publish"
+            ],
+            "options": {},
+            "configurations": {},
+            "parallelism": true
+          }
+        },
+        "implicitDependencies": []
+      }
+    },
+    "@shinobi/security-group-import": {
+      "name": "@shinobi/security-group-import",
+      "type": "lib",
+      "data": {
+        "root": "packages/components/security-group-import",
+        "name": "@shinobi/security-group-import",
+        "projectType": "library",
+        "tags": [
+          "npm:public",
+          "npm:aws",
+          "npm:cdk",
+          "npm:security-group",
+          "npm:import",
+          "npm:ssm",
+          "npm:platform",
+          "npm:component"
+        ],
+        "metadata": {
+          "targetGroups": {
+            "NPM Scripts": [
+              "build",
+              "test",
+              "test:watch",
+              "test:coverage"
+            ]
+          },
+          "description": "Platform component for importing existing AWS Security Groups via SSM parameters",
+          "js": {
+            "packageName": "@shinobi/security-group-import",
+            "packageMain": "dist/index.js",
+            "isInPackageManagerWorkspaces": true
+          }
+        },
+        "targets": {
+          "build": {
+            "executor": "nx:run-script",
+            "options": {
+              "script": "build"
+            },
+            "metadata": {
+              "scriptContent": "tsc",
+              "runCommand": "pnpm run build"
+            },
+            "configurations": {},
+            "parallelism": true,
+            "dependsOn": [
+              "^build"
+            ],
+            "inputs": [
+              "production",
+              "^production"
+            ]
+          },
+          "test": {
+            "executor": "nx:run-script",
+            "options": {
+              "script": "test"
+            },
+            "metadata": {
+              "scriptContent": "jest",
+              "runCommand": "pnpm run test"
+            },
+            "configurations": {},
+            "parallelism": true
+          },
+          "test:watch": {
+            "executor": "nx:run-script",
+            "options": {
+              "script": "test:watch"
+            },
+            "metadata": {
+              "scriptContent": "jest --watch",
+              "runCommand": "pnpm run test:watch"
+            },
+            "configurations": {},
+            "parallelism": true
+          },
+          "test:coverage": {
+            "executor": "nx:run-script",
+            "options": {
+              "script": "test:coverage"
+            },
+            "metadata": {
+              "scriptContent": "jest --coverage",
+              "runCommand": "pnpm run test:coverage"
             },
             "configurations": {},
             "parallelism": true
@@ -816,12 +816,12 @@
         "implicitDependencies": []
       }
     },
-    "@cdk-lib/route53-record": {
-      "name": "@cdk-lib/route53-record",
+    "@shinobi/route53-record": {
+      "name": "@shinobi/route53-record",
       "type": "lib",
       "data": {
         "root": "packages/components/route53-record",
-        "name": "@cdk-lib/route53-record",
+        "name": "@shinobi/route53-record",
         "projectType": "library",
         "tags": [
           "npm:public",
@@ -844,7 +844,7 @@
           },
           "description": "Platform component for AWS Route 53 DNS record management with reference resolution",
           "js": {
-            "packageName": "@cdk-lib/route53-record",
+            "packageName": "@shinobi/route53-record",
             "packageMain": "dist/index.js",
             "isInPackageManagerWorkspaces": true
           }
@@ -977,118 +977,6 @@
         "implicitDependencies": []
       }
     },
-    "@cdk-lib/waf-web-acl": {
-      "name": "@cdk-lib/waf-web-acl",
-      "type": "lib",
-      "data": {
-        "root": "packages/components/waf-web-acl",
-        "name": "@cdk-lib/waf-web-acl",
-        "projectType": "library",
-        "tags": [
-          "npm:public",
-          "npm:aws",
-          "npm:cdk",
-          "npm:infrastructure",
-          "npm:component"
-        ],
-        "metadata": {
-          "targetGroups": {
-            "NPM Scripts": [
-              "build",
-              "test",
-              "test:watch",
-              "lint",
-              "lint:fix"
-            ]
-          },
-          "description": "CDK L3 component for waf-web-acl",
-          "js": {
-            "packageName": "@cdk-lib/waf-web-acl",
-            "packageMain": "dist/index.js",
-            "isInPackageManagerWorkspaces": true
-          }
-        },
-        "targets": {
-          "build": {
-            "executor": "nx:run-script",
-            "options": {
-              "script": "build"
-            },
-            "metadata": {
-              "scriptContent": "tsc",
-              "runCommand": "pnpm run build"
-            },
-            "configurations": {},
-            "parallelism": true,
-            "dependsOn": [
-              "^build"
-            ],
-            "inputs": [
-              "production",
-              "^production"
-            ]
-          },
-          "test": {
-            "executor": "nx:run-script",
-            "options": {
-              "script": "test"
-            },
-            "metadata": {
-              "scriptContent": "jest",
-              "runCommand": "pnpm run test"
-            },
-            "configurations": {},
-            "parallelism": true
-          },
-          "test:watch": {
-            "executor": "nx:run-script",
-            "options": {
-              "script": "test:watch"
-            },
-            "metadata": {
-              "scriptContent": "jest --watch",
-              "runCommand": "pnpm run test:watch"
-            },
-            "configurations": {},
-            "parallelism": true
-          },
-          "lint": {
-            "executor": "nx:run-script",
-            "options": {
-              "script": "lint"
-            },
-            "metadata": {
-              "scriptContent": "eslint src/**/*.ts",
-              "runCommand": "pnpm run lint"
-            },
-            "configurations": {},
-            "parallelism": true
-          },
-          "lint:fix": {
-            "executor": "nx:run-script",
-            "options": {
-              "script": "lint:fix"
-            },
-            "metadata": {
-              "scriptContent": "eslint src/**/*.ts --fix",
-              "runCommand": "pnpm run lint:fix"
-            },
-            "configurations": {},
-            "parallelism": true
-          },
-          "nx-release-publish": {
-            "executor": "@nx/js:release-publish",
-            "dependsOn": [
-              "^nx-release-publish"
-            ],
-            "options": {},
-            "configurations": {},
-            "parallelism": true
-          }
-        },
-        "implicitDependencies": []
-      }
-    },
     "@platform/components-ecs-cluster": {
       "name": "@platform/components-ecs-cluster",
       "type": "lib",
@@ -1173,6 +1061,118 @@
             "metadata": {
               "scriptContent": "rm -rf dist",
               "runCommand": "pnpm run clean"
+            },
+            "configurations": {},
+            "parallelism": true
+          },
+          "nx-release-publish": {
+            "executor": "@nx/js:release-publish",
+            "dependsOn": [
+              "^nx-release-publish"
+            ],
+            "options": {},
+            "configurations": {},
+            "parallelism": true
+          }
+        },
+        "implicitDependencies": []
+      }
+    },
+    "@shinobi/waf-web-acl": {
+      "name": "@shinobi/waf-web-acl",
+      "type": "lib",
+      "data": {
+        "root": "packages/components/waf-web-acl",
+        "name": "@shinobi/waf-web-acl",
+        "projectType": "library",
+        "tags": [
+          "npm:public",
+          "npm:aws",
+          "npm:cdk",
+          "npm:infrastructure",
+          "npm:component"
+        ],
+        "metadata": {
+          "targetGroups": {
+            "NPM Scripts": [
+              "build",
+              "test",
+              "test:watch",
+              "lint",
+              "lint:fix"
+            ]
+          },
+          "description": "CDK L3 component for waf-web-acl",
+          "js": {
+            "packageName": "@shinobi/waf-web-acl",
+            "packageMain": "dist/index.js",
+            "isInPackageManagerWorkspaces": true
+          }
+        },
+        "targets": {
+          "build": {
+            "executor": "nx:run-script",
+            "options": {
+              "script": "build"
+            },
+            "metadata": {
+              "scriptContent": "tsc",
+              "runCommand": "pnpm run build"
+            },
+            "configurations": {},
+            "parallelism": true,
+            "dependsOn": [
+              "^build"
+            ],
+            "inputs": [
+              "production",
+              "^production"
+            ]
+          },
+          "test": {
+            "executor": "nx:run-script",
+            "options": {
+              "script": "test"
+            },
+            "metadata": {
+              "scriptContent": "jest",
+              "runCommand": "pnpm run test"
+            },
+            "configurations": {},
+            "parallelism": true
+          },
+          "test:watch": {
+            "executor": "nx:run-script",
+            "options": {
+              "script": "test:watch"
+            },
+            "metadata": {
+              "scriptContent": "jest --watch",
+              "runCommand": "pnpm run test:watch"
+            },
+            "configurations": {},
+            "parallelism": true
+          },
+          "lint": {
+            "executor": "nx:run-script",
+            "options": {
+              "script": "lint"
+            },
+            "metadata": {
+              "scriptContent": "eslint src/**/*.ts",
+              "runCommand": "pnpm run lint"
+            },
+            "configurations": {},
+            "parallelism": true
+          },
+          "lint:fix": {
+            "executor": "nx:run-script",
+            "options": {
+              "script": "lint:fix"
+            },
+            "metadata": {
+              "scriptContent": "eslint src/**/*.ts --fix",
+              "runCommand": "pnpm run lint:fix"
             },
             "configurations": {},
             "parallelism": true
@@ -1377,12 +1377,12 @@
         "implicitDependencies": []
       }
     },
-    "@cdk-lib/iam-role": {
-      "name": "@cdk-lib/iam-role",
+    "@shinobi/iam-role": {
+      "name": "@shinobi/iam-role",
       "type": "lib",
       "data": {
         "root": "packages/components/iam-role",
-        "name": "@cdk-lib/iam-role",
+        "name": "@shinobi/iam-role",
         "projectType": "library",
         "tags": [
           "npm:public",
@@ -1404,7 +1404,7 @@
           },
           "description": "Platform component for AWS IAM Role management with compliance-aware configuration",
           "js": {
-            "packageName": "@cdk-lib/iam-role",
+            "packageName": "@shinobi/iam-role",
             "packageMain": "dist/index.js",
             "isInPackageManagerWorkspaces": true
           }
@@ -1924,12 +1924,12 @@
         "implicitDependencies": []
       }
     },
-    "@cdk-lib/vpc": {
-      "name": "@cdk-lib/vpc",
+    "@shinobi/vpc": {
+      "name": "@shinobi/vpc",
       "type": "lib",
       "data": {
         "root": "packages/components/vpc",
-        "name": "@cdk-lib/vpc",
+        "name": "@shinobi/vpc",
         "projectType": "library",
         "tags": [
           "npm:public",
@@ -1950,7 +1950,7 @@
           },
           "description": "CDK L3 component for vpc",
           "js": {
-            "packageName": "@cdk-lib/vpc",
+            "packageName": "@shinobi/vpc",
             "packageMain": "dist/index.js",
             "isInPackageManagerWorkspaces": true
           }
@@ -2424,7 +2424,8 @@
           "test": {
             "executor": "@nx/jest:jest",
             "options": {
-              "jestConfig": "packages/core/jest.config.ts"
+              "jestConfig": "packages/core/jest.config.ts",
+              "passWithNoTests": true
             },
             "configurations": {},
             "parallelism": true
@@ -10136,43 +10137,6 @@
         "type": "static"
       }
     ],
-    "@cdk-lib/security-group-import": [
-      {
-        "source": "@cdk-lib/security-group-import",
-        "target": "npm:@types/jest@29.5.14",
-        "type": "static"
-      },
-      {
-        "source": "@cdk-lib/security-group-import",
-        "target": "npm:@types/node@18.14.6",
-        "type": "static"
-      },
-      {
-        "source": "@cdk-lib/security-group-import",
-        "target": "npm:jest@29.7.0",
-        "type": "static"
-      },
-      {
-        "source": "@cdk-lib/security-group-import",
-        "target": "npm:ts-jest",
-        "type": "static"
-      },
-      {
-        "source": "@cdk-lib/security-group-import",
-        "target": "npm:typescript",
-        "type": "static"
-      },
-      {
-        "source": "@cdk-lib/security-group-import",
-        "target": "npm:aws-cdk-lib",
-        "type": "static"
-      },
-      {
-        "source": "@cdk-lib/security-group-import",
-        "target": "npm:constructs",
-        "type": "static"
-      }
-    ],
     "@platform/components-container-application": [
       {
         "source": "@platform/components-container-application",
@@ -10232,6 +10196,48 @@
       {
         "source": "@platform/components-container-application",
         "target": "@platform/core-engine",
+        "type": "static"
+      }
+    ],
+    "@shinobi/security-group-import": [
+      {
+        "source": "@shinobi/security-group-import",
+        "target": "npm:@types/jest@29.5.14",
+        "type": "static"
+      },
+      {
+        "source": "@shinobi/security-group-import",
+        "target": "npm:@types/node@18.14.6",
+        "type": "static"
+      },
+      {
+        "source": "@shinobi/security-group-import",
+        "target": "npm:jest@29.7.0",
+        "type": "static"
+      },
+      {
+        "source": "@shinobi/security-group-import",
+        "target": "npm:ts-jest",
+        "type": "static"
+      },
+      {
+        "source": "@shinobi/security-group-import",
+        "target": "npm:typescript",
+        "type": "static"
+      },
+      {
+        "source": "@shinobi/security-group-import",
+        "target": "npm:aws-cdk-lib",
+        "type": "static"
+      },
+      {
+        "source": "@shinobi/security-group-import",
+        "target": "npm:constructs",
+        "type": "static"
+      },
+      {
+        "source": "@shinobi/security-group-import",
+        "target": "core",
         "type": "static"
       }
     ],
@@ -10426,39 +10432,39 @@
         "type": "static"
       }
     ],
-    "@cdk-lib/route53-record": [
+    "@shinobi/route53-record": [
       {
-        "source": "@cdk-lib/route53-record",
+        "source": "@shinobi/route53-record",
         "target": "npm:@types/jest@29.5.14",
         "type": "static"
       },
       {
-        "source": "@cdk-lib/route53-record",
+        "source": "@shinobi/route53-record",
         "target": "npm:@types/node@18.14.6",
         "type": "static"
       },
       {
-        "source": "@cdk-lib/route53-record",
+        "source": "@shinobi/route53-record",
         "target": "npm:jest@29.7.0",
         "type": "static"
       },
       {
-        "source": "@cdk-lib/route53-record",
+        "source": "@shinobi/route53-record",
         "target": "npm:ts-jest",
         "type": "static"
       },
       {
-        "source": "@cdk-lib/route53-record",
+        "source": "@shinobi/route53-record",
         "target": "npm:typescript",
         "type": "static"
       },
       {
-        "source": "@cdk-lib/route53-record",
+        "source": "@shinobi/route53-record",
         "target": "npm:aws-cdk-lib",
         "type": "static"
       },
       {
-        "source": "@cdk-lib/route53-record",
+        "source": "@shinobi/route53-record",
         "target": "npm:constructs",
         "type": "static"
       }
@@ -10482,58 +10488,6 @@
       {
         "source": "@platform/rds-postgres",
         "target": "npm:constructs",
-        "type": "static"
-      }
-    ],
-    "@cdk-lib/waf-web-acl": [
-      {
-        "source": "@cdk-lib/waf-web-acl",
-        "target": "npm:aws-cdk-lib",
-        "type": "static"
-      },
-      {
-        "source": "@cdk-lib/waf-web-acl",
-        "target": "npm:constructs",
-        "type": "static"
-      },
-      {
-        "source": "@cdk-lib/waf-web-acl",
-        "target": "npm:@types/node@20.19.14",
-        "type": "static"
-      },
-      {
-        "source": "@cdk-lib/waf-web-acl",
-        "target": "npm:typescript",
-        "type": "static"
-      },
-      {
-        "source": "@cdk-lib/waf-web-acl",
-        "target": "npm:jest@29.7.0",
-        "type": "static"
-      },
-      {
-        "source": "@cdk-lib/waf-web-acl",
-        "target": "npm:ts-jest",
-        "type": "static"
-      },
-      {
-        "source": "@cdk-lib/waf-web-acl",
-        "target": "npm:@types/jest@29.5.14",
-        "type": "static"
-      },
-      {
-        "source": "@cdk-lib/waf-web-acl",
-        "target": "npm:eslint",
-        "type": "static"
-      },
-      {
-        "source": "@cdk-lib/waf-web-acl",
-        "target": "npm:@typescript-eslint/eslint-plugin",
-        "type": "static"
-      },
-      {
-        "source": "@cdk-lib/waf-web-acl",
-        "target": "npm:@typescript-eslint/parser",
         "type": "static"
       }
     ],
@@ -10571,6 +10525,58 @@
       {
         "source": "@platform/components-ecs-cluster",
         "target": "npm:typescript",
+        "type": "static"
+      }
+    ],
+    "@shinobi/waf-web-acl": [
+      {
+        "source": "@shinobi/waf-web-acl",
+        "target": "npm:aws-cdk-lib",
+        "type": "static"
+      },
+      {
+        "source": "@shinobi/waf-web-acl",
+        "target": "npm:constructs",
+        "type": "static"
+      },
+      {
+        "source": "@shinobi/waf-web-acl",
+        "target": "npm:@types/node@20.19.14",
+        "type": "static"
+      },
+      {
+        "source": "@shinobi/waf-web-acl",
+        "target": "npm:typescript",
+        "type": "static"
+      },
+      {
+        "source": "@shinobi/waf-web-acl",
+        "target": "npm:jest@29.7.0",
+        "type": "static"
+      },
+      {
+        "source": "@shinobi/waf-web-acl",
+        "target": "npm:ts-jest",
+        "type": "static"
+      },
+      {
+        "source": "@shinobi/waf-web-acl",
+        "target": "npm:@types/jest@29.5.14",
+        "type": "static"
+      },
+      {
+        "source": "@shinobi/waf-web-acl",
+        "target": "npm:eslint",
+        "type": "static"
+      },
+      {
+        "source": "@shinobi/waf-web-acl",
+        "target": "npm:@typescript-eslint/eslint-plugin",
+        "type": "static"
+      },
+      {
+        "source": "@shinobi/waf-web-acl",
+        "target": "npm:@typescript-eslint/parser",
         "type": "static"
       }
     ],
@@ -10655,44 +10661,44 @@
         "type": "static"
       }
     ],
-    "@cdk-lib/iam-role": [
+    "@shinobi/iam-role": [
       {
-        "source": "@cdk-lib/iam-role",
+        "source": "@shinobi/iam-role",
         "target": "npm:aws-cdk-lib",
         "type": "static"
       },
       {
-        "source": "@cdk-lib/iam-role",
+        "source": "@shinobi/iam-role",
         "target": "npm:constructs",
         "type": "static"
       },
       {
-        "source": "@cdk-lib/iam-role",
+        "source": "@shinobi/iam-role",
         "target": "@platform/contracts",
         "type": "static"
       },
       {
-        "source": "@cdk-lib/iam-role",
+        "source": "@shinobi/iam-role",
         "target": "npm:@types/jest@29.5.14",
         "type": "static"
       },
       {
-        "source": "@cdk-lib/iam-role",
+        "source": "@shinobi/iam-role",
         "target": "npm:@types/node@18.14.6",
         "type": "static"
       },
       {
-        "source": "@cdk-lib/iam-role",
+        "source": "@shinobi/iam-role",
         "target": "npm:jest@29.7.0",
         "type": "static"
       },
       {
-        "source": "@cdk-lib/iam-role",
+        "source": "@shinobi/iam-role",
         "target": "npm:ts-jest",
         "type": "static"
       },
       {
-        "source": "@cdk-lib/iam-role",
+        "source": "@shinobi/iam-role",
         "target": "npm:typescript",
         "type": "static"
       }
@@ -10902,54 +10908,54 @@
         "type": "static"
       }
     ],
-    "@cdk-lib/vpc": [
+    "@shinobi/vpc": [
       {
-        "source": "@cdk-lib/vpc",
+        "source": "@shinobi/vpc",
         "target": "npm:aws-cdk-lib",
         "type": "static"
       },
       {
-        "source": "@cdk-lib/vpc",
+        "source": "@shinobi/vpc",
         "target": "npm:constructs",
         "type": "static"
       },
       {
-        "source": "@cdk-lib/vpc",
+        "source": "@shinobi/vpc",
         "target": "npm:@types/node@20.19.14",
         "type": "static"
       },
       {
-        "source": "@cdk-lib/vpc",
+        "source": "@shinobi/vpc",
         "target": "npm:typescript",
         "type": "static"
       },
       {
-        "source": "@cdk-lib/vpc",
+        "source": "@shinobi/vpc",
         "target": "npm:jest@29.7.0",
         "type": "static"
       },
       {
-        "source": "@cdk-lib/vpc",
+        "source": "@shinobi/vpc",
         "target": "npm:ts-jest",
         "type": "static"
       },
       {
-        "source": "@cdk-lib/vpc",
+        "source": "@shinobi/vpc",
         "target": "npm:@types/jest@29.5.14",
         "type": "static"
       },
       {
-        "source": "@cdk-lib/vpc",
+        "source": "@shinobi/vpc",
         "target": "npm:eslint",
         "type": "static"
       },
       {
-        "source": "@cdk-lib/vpc",
+        "source": "@shinobi/vpc",
         "target": "npm:@typescript-eslint/eslint-plugin",
         "type": "static"
       },
       {
-        "source": "@cdk-lib/vpc",
+        "source": "@shinobi/vpc",
         "target": "npm:@typescript-eslint/parser",
         "type": "static"
       }
@@ -10962,18 +10968,8 @@
       },
       {
         "source": "constructs-prd",
-        "target": "@platform/core-engine",
-        "type": "dynamic"
-      },
-      {
-        "source": "constructs-prd",
         "target": "@platform/lambda-api",
         "type": "static"
-      },
-      {
-        "source": "constructs-prd",
-        "target": "@platform/lambda-api",
-        "type": "dynamic"
       },
       {
         "source": "constructs-prd",
@@ -10982,18 +10978,18 @@
       },
       {
         "source": "constructs-prd",
-        "target": "@platform/rds-postgres",
-        "type": "dynamic"
-      },
-      {
-        "source": "constructs-prd",
         "target": "@platform/sqs-queue",
         "type": "static"
       },
       {
         "source": "constructs-prd",
-        "target": "@platform/sqs-queue",
+        "target": "core",
         "type": "dynamic"
+      },
+      {
+        "source": "constructs-prd",
+        "target": "core",
+        "type": "static"
       },
       {
         "source": "constructs-prd",
@@ -11022,11 +11018,6 @@
       },
       {
         "source": "constructs-prd",
-        "target": "core",
-        "type": "static"
-      },
-      {
-        "source": "constructs-prd",
         "target": "npm:aws-cdk-lib",
         "type": "static"
       },
@@ -11045,6 +11036,16 @@
       {
         "source": "standards-otel",
         "target": "npm:constructs",
+        "type": "static"
+      },
+      {
+        "source": "standards-otel",
+        "target": "core",
+        "type": "static"
+      },
+      {
+        "source": "standards-otel",
+        "target": "standards-tagging",
         "type": "static"
       },
       {
@@ -11080,11 +11081,6 @@
       {
         "source": "standards-otel",
         "target": "npm:typescript",
-        "type": "static"
-      },
-      {
-        "source": "standards-otel",
-        "target": "core",
         "type": "static"
       }
     ],
@@ -11134,6 +11130,31 @@
     ],
     "@platform/contracts": [],
     "core": [
+      {
+        "source": "core",
+        "target": "npm:aws-cdk-lib",
+        "type": "static"
+      },
+      {
+        "source": "core",
+        "target": "npm:aws-cdk-lib",
+        "type": "dynamic"
+      },
+      {
+        "source": "core",
+        "target": "npm:yaml",
+        "type": "static"
+      },
+      {
+        "source": "core",
+        "target": "npm:constructs",
+        "type": "static"
+      },
+      {
+        "source": "core",
+        "target": "npm:js-yaml",
+        "type": "static"
+      },
       {
         "source": "core",
         "target": "npm:@types/inquirer",
@@ -11191,16 +11212,6 @@
       },
       {
         "source": "core",
-        "target": "npm:aws-cdk-lib",
-        "type": "static"
-      },
-      {
-        "source": "core",
-        "target": "npm:aws-cdk-lib",
-        "type": "dynamic"
-      },
-      {
-        "source": "core",
         "target": "npm:chalk",
         "type": "static"
       },
@@ -11211,22 +11222,12 @@
       },
       {
         "source": "core",
-        "target": "npm:constructs",
-        "type": "static"
-      },
-      {
-        "source": "core",
         "target": "npm:glob",
         "type": "static"
       },
       {
         "source": "core",
         "target": "npm:inquirer",
-        "type": "static"
-      },
-      {
-        "source": "core",
-        "target": "npm:js-yaml",
         "type": "static"
       },
       {
@@ -11247,16 +11248,6 @@
       {
         "source": "core",
         "target": "npm:typescript",
-        "type": "static"
-      },
-      {
-        "source": "core",
-        "target": "@platform/contracts",
-        "type": "static"
-      },
-      {
-        "source": "core",
-        "target": "npm:yaml",
         "type": "static"
       }
     ],
@@ -24101,5 +24092,5 @@
   },
   "version": "6.0",
   "errors": [],
-  "computedAt": 1758063810770
+  "computedAt": 1758143278874
 }

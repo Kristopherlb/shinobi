@@ -1,5 +1,5 @@
 {
-  "name": "@cdk-lib/route53-record",
+  "name": "@shinobi/route53-record",
   "version": "1.0.0",
   "description": "Platform component for AWS Route 53 DNS record management with reference resolution",
   "main": "dist/index.js",

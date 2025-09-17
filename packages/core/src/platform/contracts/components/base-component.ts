@@ -4,9 +4,9 @@
 import { IComponent, CapabilityData, ComplianceFramework, ComponentType } from '../bindings';
 import { ComponentContext } from './component-context';
 import { ComponentConfigBuilder } from './component-config-builder';
-import { ComplianceControlMappingService, CompliancePlan } from '../../services/compliance-control-mapping';
-import { TaggingEnforcementService, TaggingConfig } from '../../services/tagging-enforcement';
-import { CompliancePlanGenerator, CompliancePlanConfig } from '../../services/compliance-plan-generator';
+import { ComplianceControlMappingService, CompliancePlan } from '@shinobi/core';
+import { TaggingEnforcementService, TaggingConfig } from '@shinobi/core';
+import { CompliancePlanGenerator, CompliancePlanConfig } from '@shinobi/core';
 
 /**
  * Abstract base component class

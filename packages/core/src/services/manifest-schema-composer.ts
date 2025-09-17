@@ -78,7 +78,7 @@ export class ManifestSchemaComposer {
 
       this.dependencies.logger.debug(`Found ${files.size} component schema files`);
 
-      for (const schemaFile of files) {
+      for (const schemaFile of Array.from(files)) {
         await this.loadComponentSchema(schemaFile);
       }
 
@@ -98,7 +98,7 @@ export class ManifestSchemaComposer {
       const schema = JSON.parse(schemaContent);
 
       // Try to get componentType from path first (most reliable), then fallback to schema metadata
-      const componentType = 
+      const componentType =
         this.deriveComponentTypeFromPath(schemaFilePath) ||
         schema['x-component-type'] ||
         schema.info?.['x-component-type'];
@@ -166,7 +166,7 @@ export class ManifestSchemaComposer {
     schema.$defs = schema.$defs || {};
     const allTypes = Array.from(this.componentSchemas.keys());
 
-    for (const [componentType, info] of this.componentSchemas) {
+    for (const [componentType, info] of Array.from(this.componentSchemas.entries())) {
       const defKey = `component.${componentType}.config`;
       schema.$defs[defKey] = info.schema;
     }

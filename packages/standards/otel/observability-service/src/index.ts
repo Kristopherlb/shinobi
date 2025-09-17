@@ -6,8 +6,8 @@
  */
 
 export { ObservabilityService } from './observability.service';
-export type { IPlatformService } from '@cdk-lib/platform-contracts';
-export type { PlatformServiceContext } from '@cdk-lib/platform-contracts';
+export type { IPlatformService } from '@shinobi/core';
+export type { PlatformServiceContext } from '@shinobi/core';
 
 // Re-export handler interfaces for convenience
 export type { 

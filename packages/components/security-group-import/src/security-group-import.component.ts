@@ -9,8 +9,7 @@ import * as cdk from 'aws-cdk-lib';
 import * as ec2 from 'aws-cdk-lib/aws-ec2';
 import * as ssm from 'aws-cdk-lib/aws-ssm';
 import { Construct } from 'constructs';
-import { BaseComponent } from '../../../../src/platform/contracts/component';
-import { ComponentContext, ComponentSpec } from '../../../../src/platform/contracts/component-interfaces';
+import { BaseComponent, ComponentContext, ComponentSpec } from '@shinobi/core';
 import { SecurityGroupImportConfig, SecurityGroupImportConfigBuilder } from './security-group-import.builder';
 
 /**

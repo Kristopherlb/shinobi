@@ -1,8 +1,8 @@
 import { describe, test, expect, beforeEach } from '@jest/globals';
 import { Template } from 'aws-cdk-lib/assertions';
 import * as cdk from 'aws-cdk-lib';
-import { S3BucketComponent } from '../../../packages/components/s3-bucket/src/s3-bucket.component';
-import { ComponentContext, ComponentSpec } from '../../../packages/platform/contracts/src/component-interfaces';
+import { S3BucketComponent } from '@shinobi/components/s3-bucket/src/s3-bucket.component';
+import { ComponentContext, ComponentSpec } from '@shinobi/core/contracts/src/component-interfaces';
 
 describe('S3BucketComponent - CloudFormation Synthesis', () => {
   let app: cdk.App;

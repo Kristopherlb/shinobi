@@ -9,7 +9,7 @@
 import * as cdk from 'aws-cdk-lib';
 import { Construct, IConstruct } from 'constructs';
 import { ComponentSpec, ComponentContext, ComponentCapabilities, IComponent } from './component-interfaces';
-import { ITaggingService, TaggingContext, defaultTaggingService } from '../../../packages/tagging-service/tagging.service';
+import { ITaggingService, TaggingContext, defaultTaggingService } from '../services/tagging-service/tagging.service';
 
 /**
  * Options for configuring observability on components
@@ -57,16 +57,16 @@ export interface ObservabilityConfig {
 export abstract class BaseComponent extends Construct implements IComponent {
   /** The component's specification from the service manifest. */
   public readonly spec: ComponentSpec;
-  
+
   /** The context of the service this component belongs to. */
   public readonly context: ComponentContext;
-  
+
   /** A map of handles to the real, synthesized CDK constructs. */
   protected readonly constructs: Map<string, IConstruct> = new Map();
-  
+
   /** A map of the capabilities this component provides after synthesis. */
   protected capabilities: ComponentCapabilities = {};
-  
+
   /** Tagging service for applying standard tags */
   protected readonly taggingService: ITaggingService;
 
@@ -130,6 +130,34 @@ export abstract class BaseComponent extends Construct implements IComponent {
   public abstract getType(): string;
 
   /**
+   * Returns the component name.
+   */
+  public getName(): string {
+    return this.spec.name;
+  }
+
+  /**
+   * Returns the component ID.
+   */
+  public getId(): string {
+    return this.node.id;
+  }
+
+  /**
+   * Returns the service name this component belongs to.
+   */
+  public getServiceName(): string {
+    return this.context.serviceName;
+  }
+
+  /**
+   * Returns the capability data for this component.
+   */
+  public getCapabilityData(): any {
+    return this.getCapabilities();
+  }
+
+  /**
    * Retrieves a handle to a synthesized CDK construct.
    * 
    * This method provides controlled access to the underlying CDK constructs
@@ -168,7 +196,7 @@ export abstract class BaseComponent extends Construct implements IComponent {
     if (this.constructs.size === 0) {
       throw new Error(`Component ${this.node.id} has not been synthesized. Call synth() before accessing constructs.`);
     }
-    
+
     if (Object.keys(this.capabilities).length === 0) {
       throw new Error(`Component ${this.node.id} provides no capabilities. Components must expose at least one capability.`);
     }
@@ -188,7 +216,7 @@ export abstract class BaseComponent extends Construct implements IComponent {
     if (this.constructs.has(handle)) {
       throw new Error(`Construct handle '${handle}' is already registered in component ${this.node.id}`);
     }
-    
+
     this.constructs.set(handle, construct);
   }
 
@@ -226,7 +254,7 @@ export abstract class BaseComponent extends Construct implements IComponent {
       region: this.context.region,
       accountId: this.context.accountId
     };
-    
+
     this.taggingService.applyStandardTags(resource, taggingContext, additionalTags);
   }
 
@@ -238,7 +266,7 @@ export abstract class BaseComponent extends Construct implements IComponent {
     if (this.spec.policy?.backup?.enabled !== undefined) {
       return this.spec.policy.backup.enabled;
     }
-    
+
     // Default based on compliance framework
     switch (this.context.complianceFramework) {
       case 'fedramp-high':
@@ -256,7 +284,7 @@ export abstract class BaseComponent extends Construct implements IComponent {
     if (this.spec.policy?.monitoring?.metricsEnabled) {
       return this.context.complianceFramework === 'fedramp-high' ? 'comprehensive' : 'enhanced';
     }
-    
+
     switch (this.context.complianceFramework) {
       case 'fedramp-high':
         return 'comprehensive';
@@ -355,7 +383,7 @@ export abstract class BaseComponent extends Construct implements IComponent {
   private getCollectorEndpoint(): string {
     const framework = this.context.complianceFramework;
     const region = this.context.region;
-    
+
     switch (framework) {
       case 'fedramp-high':
         return `https://otel-collector.fedramp-high.${region}.platform.local:4317`;
@@ -371,7 +399,7 @@ export abstract class BaseComponent extends Construct implements IComponent {
    */
   private getTracesSamplingRate(): number {
     const framework = this.context.complianceFramework;
-    
+
     switch (framework) {
       case 'fedramp-high':
         return 1.0; // 100% sampling for complete audit trail
@@ -400,7 +428,7 @@ export abstract class BaseComponent extends Construct implements IComponent {
    */
   private getMetricsCollectionInterval(): number {
     const framework = this.context.complianceFramework;
-    
+
     switch (framework) {
       case 'fedramp-high':
         return 30; // 30 seconds for high-frequency monitoring
@@ -416,7 +444,7 @@ export abstract class BaseComponent extends Construct implements IComponent {
    */
   private getLogsRetentionPeriod(): number {
     const framework = this.context.complianceFramework;
-    
+
     switch (framework) {
       case 'fedramp-high':
         return 2555; // 7 years (approximately)
@@ -455,10 +483,10 @@ export abstract class BaseComponent extends Construct implements IComponent {
   protected getLogger(loggerName?: string): any {
     // Import Logger dynamically to avoid circular dependencies
     const { Logger } = require('@platform/logger');
-    
+
     const name = loggerName || `${this.context.serviceName}.${this.spec.name}`;
     const logger = Logger.getLogger(name);
-    
+
     // Set global context for this component's logs
     Logger.setGlobalContext({
       service: {
@@ -476,7 +504,7 @@ export abstract class BaseComponent extends Construct implements IComponent {
         resource: this.spec.name
       }
     });
-    
+
     return logger;
   }
 
@@ -485,7 +513,7 @@ export abstract class BaseComponent extends Construct implements IComponent {
    */
   protected logComponentEvent(event: string, message: string, data?: any): void {
     const logger = this.getLogger();
-    
+
     logger.info(message, {
       context: {
         action: 'component_lifecycle',
@@ -511,7 +539,7 @@ export abstract class BaseComponent extends Construct implements IComponent {
    */
   protected logComplianceEvent(event: string, message: string, data?: any): void {
     const logger = this.getLogger();
-    
+
     logger.info(message, {
       context: {
         action: 'compliance_event',
@@ -537,7 +565,7 @@ export abstract class BaseComponent extends Construct implements IComponent {
    */
   protected logResourceCreation(resourceType: string, resourceId: string, properties?: any): void {
     const logger = this.getLogger();
-    
+
     logger.info(`${resourceType} created successfully`, {
       context: {
         action: 'resource_creation',
@@ -563,7 +591,7 @@ export abstract class BaseComponent extends Construct implements IComponent {
    */
   protected logError(error: Error, context: string, additionalData?: any): void {
     const logger = this.getLogger();
-    
+
     logger.error(`Error in ${context}`, error, {
       context: {
         action: 'error_event',
@@ -590,7 +618,7 @@ export abstract class BaseComponent extends Construct implements IComponent {
    */
   protected logPerformanceMetric(operation: string, duration: number, additionalMetrics?: any): void {
     const logger = this.getLogger();
-    
+
     logger.info(`Performance metric: ${operation}`, {
       context: {
         action: 'performance_measurement',
@@ -638,18 +666,18 @@ export abstract class BaseComponent extends Construct implements IComponent {
    */
   private sanitizeResourceProperties(properties?: any): any {
     if (!properties) return {};
-    
+
     const sanitized = { ...properties };
-    
+
     // Remove sensitive properties that should not be logged
     const sensitiveKeys = ['password', 'secret', 'key', 'token', 'credential'];
-    
+
     for (const key of sensitiveKeys) {
       if (key in sanitized) {
         sanitized[key] = '[REDACTED]';
       }
     }
-    
+
     return sanitized;
   }
 
@@ -657,9 +685,9 @@ export abstract class BaseComponent extends Construct implements IComponent {
    * Get service instance identifier for logging context.
    */
   private getServiceInstance(): string {
-    return process.env.HOSTNAME || 
-           process.env.AWS_LAMBDA_FUNCTION_NAME || 
-           `${this.context.serviceName}-instance`;
+    return process.env.HOSTNAME ||
+      process.env.AWS_LAMBDA_FUNCTION_NAME ||
+      `${this.context.serviceName}-instance`;
   }
 
   /**
@@ -681,33 +709,33 @@ export abstract class BaseComponent extends Construct implements IComponent {
           const lambdaFunction = this.getConstruct('function');
           securityGroup = (lambdaFunction as any)?.connections?.securityGroups?.[0];
           break;
-        
+
         case 'ecs-fargate-service':
         case 'ecs-ec2-service':
           // ECS services have security groups
           const service = this.getConstruct('service');
           securityGroup = (service as any)?.connections?.securityGroups?.[0];
           break;
-        
+
         case 'ec2-instance':
           // EC2 instances have security groups
           const instance = this.getConstruct('instance');
           securityGroup = (instance as any)?.connections?.securityGroups?.[0];
           break;
-        
+
         case 'alb':
         case 'application-load-balancer':
           // ALBs have security groups
           const loadBalancer = this.getConstruct('loadBalancer');
           securityGroup = (loadBalancer as any)?.connections?.securityGroups?.[0];
           break;
-        
+
         case 'rds-database':
           // RDS instances have security groups
           const database = this.getConstruct('database');
           securityGroup = (database as any)?.connections?.securityGroups?.[0];
           break;
-        
+
         default:
           throw new Error(`Component type '${componentType}' does not have a known security group pattern`);
       }

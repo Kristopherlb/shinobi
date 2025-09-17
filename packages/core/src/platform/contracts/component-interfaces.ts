@@ -82,6 +82,18 @@ export interface IComponent extends IConstruct {
   /** Returns the component's unique type identifier */
   getType(): string;
 
+  /** Returns the component name */
+  getName(): string;
+
+  /** Returns the component ID */
+  getId(): string;
+
+  /** Returns the service name this component belongs to */
+  getServiceName(): string;
+
+  /** Returns the capability data for this component */
+  getCapabilityData(): any;
+
   /** Retrieves a handle to a synthesized CDK construct */
   getConstruct(handle: string): IConstruct | undefined;
 
@@ -94,6 +106,7 @@ export interface IComponent extends IConstruct {
  */
 export interface BindingResult {
   environmentVariables: Record<string, string>;
+  metadata?: Record<string, any>;
 }
 
 /**

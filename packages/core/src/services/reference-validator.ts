@@ -2,7 +2,7 @@
  * Reference Validator Service - Single responsibility for semantic validation
  * Implements Principle 4: Single Responsibility Principle
  */
-import { Logger } from '../utils/logger';
+import { Logger } from '../platform/logger/src';
 
 export interface ReferenceValidatorDependencies {
   logger: Logger;
@@ -13,7 +13,7 @@ export interface ReferenceValidatorDependencies {
  * Responsibility: Stage 4 - Semantic & Reference Validation (AC-P4.1, AC-P4.2, AC-P4.3)
  */
 export class ReferenceValidator {
-  constructor(private dependencies: ReferenceValidatorDependencies) {}
+  constructor(private dependencies: ReferenceValidatorDependencies) { }
 
   async validateReferences(manifest: any): Promise<void> {
     this.dependencies.logger.debug('Validating references and semantic rules');
@@ -76,7 +76,7 @@ export class ReferenceValidator {
         refMatches.forEach(match => {
           const refContent = match.slice(6, -1); // Remove ${ref: and }
           const componentName = refContent.split('.')[0]; // Extract component name
-          
+
           if (!componentNames.has(componentName)) {
             throw new Error(`Reference to non-existent component '${componentName}' in ${refContent} at ${path}`);
           }

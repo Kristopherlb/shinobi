@@ -5,7 +5,7 @@
  */
 
 import { SecurityGroupImportConfigBuilder, SecurityGroupImportConfig } from '../../src/security-group-import.builder';
-import { ComponentContext, ComponentSpec } from '../../../../../src/platform/contracts/component-interfaces';
+import { ComponentContext, ComponentSpec } from '@shinobi/core';
 
 describe('SecurityGroupImportConfigBuilder', () => {
   let mockContext: ComponentContext;

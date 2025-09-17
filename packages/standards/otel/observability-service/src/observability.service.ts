@@ -21,8 +21,8 @@ import {
   IPlatformService, 
   PlatformServiceContext, 
   PlatformServiceResult 
-} from '@cdk-lib/platform-contracts';
-import { BaseComponent } from '@cdk-lib/platform-contracts';
+} from '@shinobi/core';
+import { BaseComponent } from '@shinobi/core';
 import { IObservabilityHandler, ObservabilityConfig } from '../observability-handlers/observability-handlers/observability-handler.interface';
 import { LambdaObservabilityHandler } from '../observability-handlers/observability-handlers/lambda-observability.handler';
 import { VpcObservabilityHandler } from '../observability-handlers/observability-handlers/vpc-observability.handler';
@@ -31,7 +31,7 @@ import { RdsObservabilityHandler } from '../observability-handlers/observability
 import { Ec2ObservabilityHandler } from '../observability-handlers/observability-handlers/ec2-observability.handler';
 import { SqsObservabilityHandler } from '../observability-handlers/observability-handlers/sqs-observability.handler';
 import { EcsObservabilityHandler } from '../observability-handlers/observability-handlers/ecs-observability.handler';
-import { ITaggingService, defaultTaggingService } from '@cdk-lib/tagging-service';
+import { ITaggingService, defaultTaggingService } from '@shinobi/standards-tagging';
 
 
 /**

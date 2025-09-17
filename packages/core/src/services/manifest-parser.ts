@@ -4,7 +4,7 @@
  */
 import * as fs from 'fs/promises';
 import * as YAML from 'yaml';
-import { Logger } from '../core-engine/logger';
+import { Logger } from '../platform/logger/src';
 
 export interface ManifestParserDependencies {
   logger: Logger;

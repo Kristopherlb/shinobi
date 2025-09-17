@@ -1,5 +1,5 @@
 {
-  "name": "@cdk-lib/security-group-import",
+  "name": "@shinobi/security-group-import",
   "version": "1.0.0",
   "description": "Platform component for importing existing AWS Security Groups via SSM parameters",
   "main": "dist/index.js",

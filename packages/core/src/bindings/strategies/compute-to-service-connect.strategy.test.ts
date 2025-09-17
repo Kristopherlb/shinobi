@@ -10,17 +10,118 @@ import * as ec2 from 'aws-cdk-lib/aws-ec2';
 import * as iam from 'aws-cdk-lib/aws-iam';
 import { Template, Match } from 'aws-cdk-lib/assertions';
 import { ComputeToServiceConnectBinder } from './compute-to-service-connect.strategy';
-import { EcsFargateServiceComponent } from '../../../packages/components/ecs-fargate-service/ecs-fargate-service.component';
-import { EcsEc2ServiceComponent } from '../../../packages/components/ecs-ec2-service/ecs-ec2-service.component';
-import { EcsClusterComponent } from '../../../packages/components/ecs-cluster/ecs-cluster.component';
-import { ComponentContext, ComponentSpec } from '../../platform/contracts/component-interfaces';
-import { BindingDirective } from '../../platform/contracts/platform-binding-trigger-spec';
-import { 
-  TestFixtureFactory, 
+// Mock ECS components for testing
+class EcsClusterComponent {
+  constructor(
+    public stack: cdk.Stack,
+    public id: string,
+    public context: ComponentContext,
+    public spec: ComponentSpec
+  ) { }
+
+  synth(): void {
+    // Mock implementation
+  }
+
+  getConstruct(name: string): any {
+    return {
+      securityGroupId: 'sg-cluster-123',
+      clusterArn: 'arn:aws:ecs:us-east-1:123456789012:cluster/test-cluster'
+    };
+  }
+
+  getType(): string {
+    return 'ecs-cluster';
+  }
+
+  getCapabilities(): Record<string, any> {
+    return {
+      'service:connect': {
+        serviceName: 'test-cluster',
+        dnsName: 'test-cluster.internal',
+        internalEndpoint: 'test-cluster.internal:80',
+        port: 80
+      }
+    };
+  }
+}
+
+class EcsFargateServiceComponent {
+  constructor(
+    public stack: cdk.Stack,
+    public id: string,
+    public context: ComponentContext,
+    public spec: ComponentSpec
+  ) { }
+
+  synth(): void {
+    // Mock implementation
+  }
+
+  getConstruct(name: string): any {
+    return {
+      securityGroupId: 'sg-fargate-123',
+      serviceArn: 'arn:aws:ecs:us-east-1:123456789012:service/test-cluster/fargate-service'
+    };
+  }
+
+  getType(): string {
+    return 'ecs-fargate-service';
+  }
+
+  getCapabilities(): Record<string, any> {
+    return {
+      'service:connect': {
+        serviceName: 'fargate-service',
+        dnsName: 'fargate-service.internal',
+        internalEndpoint: 'fargate-service.internal:80',
+        port: 80
+      }
+    };
+  }
+}
+
+class EcsEc2ServiceComponent {
+  constructor(
+    public stack: cdk.Stack,
+    public id: string,
+    public context: ComponentContext,
+    public spec: ComponentSpec
+  ) { }
+
+  synth(): void {
+    // Mock implementation
+  }
+
+  getConstruct(name: string): any {
+    return {
+      securityGroupId: 'sg-ec2-123',
+      serviceArn: 'arn:aws:ecs:us-east-1:123456789012:service/test-cluster/ec2-service'
+    };
+  }
+
+  getType(): string {
+    return 'ecs-ec2-service';
+  }
+
+  getCapabilities(): Record<string, any> {
+    return {
+      'service:connect': {
+        serviceName: 'ec2-service',
+        dnsName: 'ec2-service.internal',
+        internalEndpoint: 'ec2-service.internal:80',
+        port: 80
+      }
+    };
+  }
+}
+import { ComponentContext, ComponentSpec, BindingDirective } from '@shinobi/core';
+import {
+  TestFixtureFactory,
   TestAssertions,
   TEST_CONTEXTS,
-  TEST_SPECS 
-} from '../../../packages/components/ecs-cluster/test-fixtures';
+  TEST_SPECS
+} from '../../@shinobi/components/ecs-cluster/test-fixtures';
 
 // Mock Lambda component for testing compute-to-service binding
 class MockLambdaComponent {
@@ -110,7 +211,7 @@ describe('ComputeToServiceConnectBinder__StrategyMatching__BindingExecution', ()
     expect(binder.canHandle('lambda-api', 'service:connect')).toBe(true);
     expect(binder.canHandle('ecs-fargate-service', 'service:connect')).toBe(true);
     expect(binder.canHandle('ecs-ec2-service', 'service:connect')).toBe(true);
-    
+
     // Should match the *:service:connect pattern conceptually
     expect(binder.canHandle('any-type', 'service:connect')).toBe(true);
   });

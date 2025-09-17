@@ -4,11 +4,11 @@
  */
 
 // Re-export shared binding context
-export { BindingContext } from '@platform/contracts';
+export { BindingContext } from '../platform/contracts/binding-context';
 
 // Export binding strategies
-export { LambdaToRdsImportStrategy, LambdaToRdsImportStrategyDependencies } from './strategies/lambda-to-rds-import.strategy';
-export { LambdaToSnsImportStrategy, LambdaToSnsImportStrategyDependencies } from './strategies/lambda-to-sns-import.strategy';
+// export { LambdaToRdsImportStrategy, LambdaToRdsImportStrategyDependencies } from './strategies/lambda-to-rds-import.strategy';
+// export { LambdaToSnsImportStrategy, LambdaToSnsImportStrategyDependencies } from './strategies/lambda-to-sns-import.strategy';
 export { ComputeToOpenFeatureStrategy, ComputeToOpenFeatureStrategyDependencies } from './strategies/compute-to-openfeature.strategy';
 export { ComputeToServiceConnectBinder } from './strategies/compute-to-service-connect.strategy';
 export { ComputeToIamRoleBinder } from './strategies/compute-to-iam-role.strategy';

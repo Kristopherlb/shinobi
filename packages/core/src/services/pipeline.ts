@@ -2,7 +2,7 @@ import * as fs from 'fs/promises';
 import * as YAML from 'yaml';
 import Ajv from 'ajv';
 import addFormats from 'ajv-formats';
-import { Logger } from '../cli/utils/logger';
+import { Logger } from '../platform/logger/src';
 import { SchemaManager } from './schema-manager';
 
 export interface ValidationResult {
@@ -56,7 +56,7 @@ export class ValidationPipeline {
 
     // Stages 1-2: Parse and validate
     const validationResult = await this.validate(manifestPath);
-    
+
     // Stage 3: Context Hydration (AC-P3.1, AC-P3.2, AC-P3.3) with $ref support
     const hydratedManifest = await this.hydrateContext(validationResult.manifest, environment, manifestPath);
 
@@ -75,7 +75,7 @@ export class ValidationPipeline {
     try {
       const fileContent = await fs.readFile(manifestPath, 'utf8');
       const manifest = YAML.parse(fileContent);
-      
+
       if (!manifest || typeof manifest !== 'object') {
         throw new Error('Invalid YAML: manifest must be an object');
       }
@@ -99,7 +99,7 @@ export class ValidationPipeline {
 
     // Get the master schema (dynamically composed)
     const schema = await this.dependencies.schemaManager.getBaseSchema();
-    
+
     const validate = this.ajv.compile(schema);
     const valid = validate(manifest);
 
@@ -113,7 +113,7 @@ export class ValidationPipeline {
       });
 
       const errorMsg = `Schema validation failed:\n${errorMessages.join('\n')}`;
-      this.dependencies.logger.debug('Schema validation errors', errors);
+      this.dependencies.logger.debug('Schema validation errors', { data: { errors } });
       throw new Error(errorMsg);
     }
 

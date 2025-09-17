@@ -3,14 +3,14 @@
  * Enables compliance-aware component creation
  */
 
-import { 
-  IComponentFactory, 
+import {
+  IComponentFactory,
   IComponentRegistry,
   ComponentSpec,
   ComponentContext,
   IComponent,
   IComponentCreator
-} from '@platform/contracts';
+} from '../platform/contracts';
 
 /**
  * Abstract Factory Provider - creates the appropriate factory for compliance framework
@@ -36,7 +36,7 @@ export class ComponentFactoryProvider {
 export class ComponentRegistry implements IComponentRegistry {
   private creators: Map<string, IComponentCreator> = new Map();
 
-  constructor(private complianceFramework: string) {}
+  constructor(private complianceFramework: string) { }
 
   register(type: string, creator: IComponentCreator): void {
     this.creators.set(type, creator);
@@ -67,7 +67,7 @@ export class ComponentRegistry implements IComponentRegistry {
     // 1. Scan node_modules for @platform/component-* packages
     // 2. Load each package and register its component creators
     // 3. Handle version compatibility checking
-    
+
     // For now, this is a placeholder that component packages would extend
     console.log(`Discovering component packages for ${this.complianceFramework} compliance...`);
   }
@@ -79,12 +79,12 @@ export class ComponentRegistry implements IComponentRegistry {
 class CommercialComponentFactory implements IComponentFactory {
   createRegistry(): IComponentRegistry {
     const registry = new ComponentRegistry('commercial');
-    
+
     // Component packages would register themselves here
     // registry.register('lambda-api', new LambdaApiCreator());
     // registry.register('rds-postgres', new RdsPostgresCreator());
     // registry.register('sqs-queue', new SqsQueueCreator());
-    
+
     return registry;
   }
 
@@ -103,11 +103,11 @@ class CommercialComponentFactory implements IComponentFactory {
 class FedRAMPModerateComponentFactory implements IComponentFactory {
   createRegistry(): IComponentRegistry {
     const registry = new ComponentRegistry('fedramp-moderate');
-    
+
     // FedRAMP Moderate versions of components with additional compliance logic
     // registry.register('lambda-api', new FedRAMPLambdaApiCreator());
     // registry.register('rds-postgres', new FedRAMPRdsPostgresCreator());
-    
+
     return registry;
   }
 
@@ -126,11 +126,11 @@ class FedRAMPModerateComponentFactory implements IComponentFactory {
 class FedRAMPHighComponentFactory implements IComponentFactory {
   createRegistry(): IComponentRegistry {
     const registry = new ComponentRegistry('fedramp-high');
-    
+
     // FedRAMP High versions with strictest compliance requirements
     // registry.register('lambda-api', new FedRAMPHighLambdaApiCreator());
     // registry.register('rds-postgres', new FedRAMPHighRdsPostgresCreator());
-    
+
     return registry;
   }
 

@@ -4,6 +4,10 @@
  */
 
 import { PolicyStatement } from 'aws-cdk-lib/aws-iam';
+import { IComponent } from './component-interfaces';
+
+// Re-export IComponent for external use
+export { IComponent } from './component-interfaces';
 
 // =============================================================================
 // COMPLIANCE FRAMEWORK TYPES
@@ -261,13 +265,6 @@ export interface ComplianceAction {
 // ENHANCED BINDING CONTEXT
 // =============================================================================
 
-export interface IComponent {
-  getName(): string;
-  getId(): string;
-  getType(): string;
-  getServiceName(): string;
-  getCapabilityData(): CapabilityData;
-}
 
 export interface EnhancedBindingContext<T extends ComplianceFramework = ComplianceFramework> {
   source: IComponent;

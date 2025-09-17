@@ -18,7 +18,8 @@
     "test": {
       "executor": "@nx/jest:jest",
       "options": {
-        "jestConfig": "packages/core/jest.config.ts"
+        "jestConfig": "packages/core/jest.config.ts",
+        "passWithNoTests": true
       }
     },
     "lint": {

@@ -3,11 +3,11 @@
  * Used by all binding strategies to standardize binding configuration
  */
 
-import { Component } from './component';
+import { IComponent } from './component-interfaces';
 
 export interface BindingContext {
-  sourceComponent: Component;
-  targetComponent: Component;
+  sourceComponent: IComponent;
+  targetComponent: IComponent;
   capability: string;
   access: 'read' | 'write' | 'readwrite' | 'admin';
   customEnvVars?: Record<string, string>;

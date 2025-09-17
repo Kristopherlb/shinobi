@@ -17,21 +17,24 @@
 import * as fs from 'fs';
 import * as yaml from 'js-yaml';
 import * as path from 'path';
-import { 
-  IPlatformService, 
-  PlatformServiceContext, 
-  PlatformServiceResult 
+import {
+  IPlatformService,
+  PlatformServiceContext,
+  PlatformServiceResult
 } from '../platform/contracts/platform-services';
 import { BaseComponent } from '../platform/contracts/component';
-import { IObservabilityHandler, ObservabilityConfig } from './observability-handlers/observability-handler.interface';
-import { LambdaObservabilityHandler } from './observability-handlers/lambda-observability.handler';
-import { VpcObservabilityHandler } from './observability-handlers/vpc-observability.handler';
-import { AlbObservabilityHandler } from './observability-handlers/alb-observability.handler';
-import { RdsObservabilityHandler } from './observability-handlers/rds-observability.handler';
-import { Ec2ObservabilityHandler } from './observability-handlers/ec2-observability.handler';
-import { SqsObservabilityHandler } from './observability-handlers/sqs-observability.handler';
-import { EcsObservabilityHandler } from './observability-handlers/ecs-observability.handler';
-import { ITaggingService, defaultTaggingService } from '../../packages/tagging-service/tagging.service';
+import {
+  IObservabilityHandler,
+  ObservabilityConfig,
+  LambdaObservabilityHandler,
+  VpcObservabilityHandler,
+  AlbObservabilityHandler,
+  RdsObservabilityHandler,
+  Ec2ObservabilityHandler,
+  SqsObservabilityHandler,
+  EcsObservabilityHandler
+} from '@shinobi/observability-handlers';
+import { ITaggingService, defaultTaggingService } from '@shinobi/core';
 
 
 /**
@@ -52,7 +55,7 @@ export class ObservabilityService implements IPlatformService {
     this.taggingService = taggingService;
     // Load centralized observability configuration from platform configuration
     this.observabilityConfig = this.loadObservabilityConfig();
-    
+
     // Initialize the handler registry using the Handler Pattern
     this.handlers = this.initializeHandlers();
   }
@@ -63,7 +66,7 @@ export class ObservabilityService implements IPlatformService {
    */
   private initializeHandlers(): Map<string, IObservabilityHandler> {
     const handlerMap = new Map<string, IObservabilityHandler>();
-    
+
     // Register all component-specific handlers with tagging service injection
     handlerMap.set('lambda-api', new LambdaObservabilityHandler(this.context, this.taggingService));
     handlerMap.set('lambda-worker', new LambdaObservabilityHandler(this.context, this.taggingService));
@@ -75,7 +78,7 @@ export class ObservabilityService implements IPlatformService {
     handlerMap.set('ecs-cluster', new EcsObservabilityHandler(this.context, this.taggingService));
     handlerMap.set('ecs-fargate-service', new EcsObservabilityHandler(this.context, this.taggingService));
     handlerMap.set('ecs-ec2-service', new EcsObservabilityHandler(this.context, this.taggingService));
-    
+
     return handlerMap;
   }
 
@@ -86,7 +89,7 @@ export class ObservabilityService implements IPlatformService {
   private loadObservabilityConfig(): ObservabilityConfig {
     const framework = this.context.complianceFramework;
     const configPath = this.getPlatformConfigPath(framework);
-    
+
     try {
       if (!fs.existsSync(configPath)) {
         this.context.logger.warn(`Platform configuration file not found: ${configPath}, using fallback defaults`, {
@@ -96,14 +99,14 @@ export class ObservabilityService implements IPlatformService {
         });
         return this.getFallbackConfig();
       }
-      
+
       const fileContents = fs.readFileSync(configPath, 'utf8');
       const platformConfig = yaml.load(fileContents) as any;
-      
+
       // Extract observability configuration for this compliance framework
       if (platformConfig?.defaults?.observability) {
         const config = platformConfig.defaults.observability;
-    return {
+        return {
           traceSamplingRate: config.traceSamplingRate || 0.1,
           metricsInterval: config.metricsInterval || 300,
           logsRetentionDays: config.logsRetentionDays || 365,
@@ -112,14 +115,14 @@ export class ObservabilityService implements IPlatformService {
           ec2OtelUserDataTemplate: config.ec2OtelUserDataTemplate || this.getFallbackConfig().ec2OtelUserDataTemplate
         };
       }
-      
+
       this.context.logger.warn(`No observability configuration found in ${configPath}, using fallback defaults`, {
         service: this.name,
         framework,
         configPath
       });
       return this.getFallbackConfig();
-      
+
     } catch (error) {
       this.context.logger.error(`Failed to load platform configuration for framework '${framework}': ${(error as Error).message}`, {
         service: this.name,
@@ -189,14 +192,14 @@ export class ObservabilityService implements IPlatformService {
         'OTEL_SERVICE_NAME': '{{ componentName }}',
         'OTEL_SERVICE_VERSION': '{{ serviceVersion }}',
         'OTEL_RESOURCE_ATTRIBUTES': 'service.name={{ serviceName }},deployment.environment={{ environment }},cloud.provider={{ cloudProvider }}',
-      'OTEL_TRACES_SAMPLER': 'traceidratio',
+        'OTEL_TRACES_SAMPLER': 'traceidratio',
         'OTEL_TRACES_SAMPLER_ARG': '{{ traceSamplingRate }}',
-      'OTEL_METRICS_EXPORTER': 'otlp',
-      'OTEL_LOGS_EXPORTER': 'otlp',
-      'OTEL_PROPAGATORS': 'tracecontext,baggage,xray',
-      'OTEL_INSTRUMENTATION_COMMON_DEFAULT_ENABLED': 'true',
-      'OTEL_BSP_MAX_EXPORT_BATCH_SIZE': '512',
-      'OTEL_BSP_EXPORT_TIMEOUT': '30000',
+        'OTEL_METRICS_EXPORTER': 'otlp',
+        'OTEL_LOGS_EXPORTER': 'otlp',
+        'OTEL_PROPAGATORS': 'tracecontext,baggage,xray',
+        'OTEL_INSTRUMENTATION_COMMON_DEFAULT_ENABLED': 'true',
+        'OTEL_BSP_MAX_EXPORT_BATCH_SIZE': '512',
+        'OTEL_BSP_EXPORT_TIMEOUT': '30000',
         'OTEL_METRIC_EXPORT_INTERVAL': '{{ metricsInterval }}'
       },
       ec2OtelUserDataTemplate: '#!/bin/bash\nyum update -y\ncurl -L -o /tmp/otelcol-contrib.deb https://github.com/open-telemetry/opentelemetry-collector-releases/releases/latest/download/otelcol-contrib_linux_amd64.deb\ndpkg -i /tmp/otelcol-contrib.deb\ncat > /opt/aws/otel-collector/config.yaml << \'EOF\'\n{{ otelAgentConfigJson }}\nEOF\n{{ otelEnvironmentVars }}\nsystemctl enable otelcol-contrib\nsystemctl start otelcol-contrib'
@@ -222,13 +225,13 @@ export class ObservabilityService implements IPlatformService {
 
     // Find the appropriate handler for this component type
     const handler = this.handlers.get(componentType);
-    
+
     if (!handler) {
       // Simply log and return for unsupported types - don't throw error
-      this.context.logger.info(`No OpenTelemetry instrumentation for component type ${componentType}`, { 
+      this.context.logger.info(`No OpenTelemetry instrumentation for component type ${componentType}`, {
         service: this.name,
-        componentType, 
-        componentName 
+        componentType,
+        componentName
       });
       return;
     }
@@ -240,17 +243,17 @@ export class ObservabilityService implements IPlatformService {
 
       // Ensure result is valid before accessing properties
       if (result) {
-      // Log successful application
-      this.context.logger.info('OpenTelemetry observability applied successfully', {
-        service: this.name,
-        componentType,
-        componentName,
+        // Log successful application
+        this.context.logger.info('OpenTelemetry observability applied successfully', {
+          service: this.name,
+          componentType,
+          componentName,
           alarmsCreated: result.alarmsCreated,
           instrumentationApplied: result.instrumentationApplied,
           executionTimeMs: result.executionTimeMs
         });
       }
-      
+
     } catch (error) {
       const executionTime = Date.now() - startTime;
       this.context.logger.error('Failed to apply observability', {
@@ -272,10 +275,10 @@ export class ObservabilityService implements IPlatformService {
   public buildOTelEnvironmentVariables(componentName: string): Record<string, string> {
     const template = this.observabilityConfig.otelEnvironmentTemplate;
     const envVars: Record<string, string> = {};
-    
+
     // Determine cloud provider - this is an AWS CDK library, so always AWS
     const cloudProvider = 'aws';
-    
+
     for (const [key, value] of Object.entries(template)) {
       envVars[key] = value
         .replace('{{ region }}', this.context.region)
@@ -289,7 +292,7 @@ export class ObservabilityService implements IPlatformService {
         .replace('{{ traceSamplingRate }}', this.observabilityConfig.traceSamplingRate.toString())
         .replace('{{ metricsInterval }}', this.observabilityConfig.metricsInterval.toString());
     }
-    
+
     return envVars;
   }
 
