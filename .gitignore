@@ -12,3 +12,4 @@ feedback
 TODO.md
 dist
 .env
+.nx/

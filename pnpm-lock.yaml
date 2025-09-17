@@ -784,6 +784,8 @@ importers:
         specifier: ^5.9.2
         version: 5.9.2
 
+  packages/standards/otel/observability-handlers: {}
+
   packages/standards/tagging:
     dependencies:
       '@shinobi/core':
