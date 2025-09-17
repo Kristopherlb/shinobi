@@ -18517,3 +18517,61 @@ Error [ERR_STREAM_DESTROYED]: Cannot call write after a stream was destroyed
 [NX v21.5.2 Daemon Server] - 2025-09-17T21:14:28.785Z - [WATCHER]: Stopping the watcher for /Users/kristopherbowles/project42/shinobi (sources)
 [NX v21.5.2 Daemon Server] - 2025-09-17T21:14:28.785Z - [WATCHER]: Stopping the watcher for /Users/kristopherbowles/project42/shinobi (outputs)
 [NX v21.5.2 Daemon Server] - 2025-09-17T21:14:28.786Z - Server stopped because: "Stopping the daemon the set of ignored files changed (native)"
+[NX v21.5.2 Daemon Server] - 2025-09-17T21:16:59.761Z - Started listening on: /private/var/folders/bl/w2w59l4s63x0c_z62tcn9k340000gn/T/77fdd68737df457e08f3/d.sock
+[NX v21.5.2 Daemon Server] - 2025-09-17T21:16:59.767Z - [WATCHER]: Subscribed to changes within: /Users/kristopherbowles/project42/shinobi (native)
+[NX v21.5.2 Daemon Server] - 2025-09-17T21:16:59.768Z - Established a connection. Number of open connections: 1
+[NX v21.5.2 Daemon Server] - 2025-09-17T21:16:59.769Z - Closed a connection. Number of open connections: 0
+[NX v21.5.2 Daemon Server] - 2025-09-17T21:16:59.778Z - Established a connection. Number of open connections: 1
+[NX v21.5.2 Daemon Server] - 2025-09-17T21:16:59.778Z - Established a connection. Number of open connections: 2
+[NX v21.5.2 Daemon Server] - 2025-09-17T21:16:59.779Z - Closed a connection. Number of open connections: 1
+[NX v21.5.2 Daemon Server] - 2025-09-17T21:16:59.780Z - [REQUEST]: Client Request for Project Graph Received
+[NX v21.5.2 Daemon Server] - 2025-09-17T21:16:59.785Z - Time taken for 'loadSpecifiedNxPlugins' 0.7982080000000167ms
+Time for 'plugin worker 76310 code loading' 3.2049999999999983
+Time for 'plugin worker 76312 code loading' 4.510624999999997
+Time for 'plugin worker 76311 code loading' 4.15325
+[NX v21.5.2 Daemon Server] - 2025-09-17T21:16:59.971Z - Time taken for 'Load Nx Plugin: /Users/kristopherbowles/project42/shinobi/node_modules/.pnpm/nx@21.5.2/node_modules/nx/src/plugins/package-json' 189.92699999999996ms
+[NX v21.5.2 Daemon Server] - 2025-09-17T21:16:59.972Z - Time taken for 'Load Nx Plugin: /Users/kristopherbowles/project42/shinobi/node_modules/.pnpm/nx@21.5.2/node_modules/nx/src/plugins/project-json/build-nodes/project-json' 190.250792ms
+[NX v21.5.2 Daemon Server] - 2025-09-17T21:16:59.997Z - [REQUEST]: Updated workspace context based on watched changes, recomputing project graph...
+[NX v21.5.2 Daemon Server] - 2025-09-17T21:16:59.997Z - [REQUEST]: 
+[NX v21.5.2 Daemon Server] - 2025-09-17T21:16:59.997Z - [REQUEST]: 
+[NX v21.5.2 Daemon Server] - 2025-09-17T21:17:00.000Z - No files changed, but no in-memory cached project graph found. Recomputing it...
+[NX v21.5.2 Daemon Server] - 2025-09-17T21:17:00.006Z - Time taken for 'loadDefaultNxPlugins' 215.218417ms
+Time for 'nx/js/dependencies-and-lockfile:createNodes' 4.175916000000001
+Time for 'nx/core/project-json:createNodes' 2.2917089999999973
+Time for 'nx/core/package-json:createNodes' 30.986207999999976
+
+ NX   Using `implicitDependencies` for global implicit dependencies configuration is no longer supported.
+
+Use "namedInputs" instead. You can run "nx repair" to automatically migrate your configuration.
+For more information about the usage of "namedInputs" see https://nx.dev/deprecated/global-implicit-dependencies#global-implicit-dependencies
+
+[NX v21.5.2 Daemon Server] - 2025-09-17T21:17:00.056Z - Time taken for 'build-project-configs' 45.426166999999964ms
+Time for 'build typescript dependencies' 0.21879200000000765
+[NX v21.5.2 Daemon Server] - 2025-09-17T21:17:00.080Z - Wrote project graph cache to /Users/kristopherbowles/project42/shinobi/.nx/workspace-data/project-graph.json
+[NX v21.5.2 Daemon Server] - 2025-09-17T21:17:00.080Z - [SYNC]: collect registered sync generators
+[NX v21.5.2 Daemon Server] - 2025-09-17T21:17:00.081Z - [REQUEST]: Responding to the client. project-graph
+[NX v21.5.2 Daemon Server] - 2025-09-17T21:17:00.083Z - Time taken for 'total for creating and serializing project graph' 301.539ms
+[NX v21.5.2 Daemon Server] - 2025-09-17T21:17:00.085Z - Done responding to the client project-graph
+[NX v21.5.2 Daemon Server] - 2025-09-17T21:17:00.085Z - Handled REQUEST_PROJECT_GRAPH. Handling time: 301. Response time: 4.
+[NX v21.5.2 Daemon Server] - 2025-09-17T21:17:00.088Z - [REQUEST]: Responding to the client. handleContextFileData
+[NX v21.5.2 Daemon Server] - 2025-09-17T21:17:00.089Z - Done responding to the client handleContextFileData
+[NX v21.5.2 Daemon Server] - 2025-09-17T21:17:00.089Z - Handled GET_CONTEXT_FILE_DATA. Handling time: 1. Response time: 1.
+[NX v21.5.2 Daemon Server] - 2025-09-17T21:17:00.090Z - Closed a connection. Number of open connections: 0
+[NX v21.5.2 Daemon Server] - 2025-09-17T21:17:00.109Z - Established a connection. Number of open connections: 1
+[NX v21.5.2 Daemon Server] - 2025-09-17T21:17:00.109Z - Established a connection. Number of open connections: 2
+[NX v21.5.2 Daemon Server] - 2025-09-17T21:17:00.109Z - Closed a connection. Number of open connections: 1
+[NX v21.5.2 Daemon Server] - 2025-09-17T21:17:00.109Z - Established a connection. Number of open connections: 2
+[NX v21.5.2 Daemon Server] - 2025-09-17T21:17:00.109Z - Closed a connection. Number of open connections: 1
+[NX v21.5.2 Daemon Server] - 2025-09-17T21:17:00.110Z - [REQUEST]: Client Request for Project Graph Received
+[NX v21.5.2 Daemon Server] - 2025-09-17T21:17:00.110Z - Reusing in-memory cached project graph because no files changed.
+[NX v21.5.2 Daemon Server] - 2025-09-17T21:17:00.110Z - [REQUEST]: Responding to the client. project-graph
+[NX v21.5.2 Daemon Server] - 2025-09-17T21:17:00.112Z - Time taken for 'total for creating and serializing project graph' 0.34504200000003493ms
+[NX v21.5.2 Daemon Server] - 2025-09-17T21:17:00.112Z - Done responding to the client project-graph
+[NX v21.5.2 Daemon Server] - 2025-09-17T21:17:00.113Z - Handled REQUEST_PROJECT_GRAPH. Handling time: 0. Response time: 3.
+[NX v21.5.2 Daemon Server] - 2025-09-17T21:17:00.115Z - [REQUEST]: Client Request for Project Graph Received
+[NX v21.5.2 Daemon Server] - 2025-09-17T21:17:00.115Z - Reusing in-memory cached project graph because no files changed.
+[NX v21.5.2 Daemon Server] - 2025-09-17T21:17:00.115Z - [REQUEST]: Responding to the client. project-graph
+[NX v21.5.2 Daemon Server] - 2025-09-17T21:17:00.116Z - Time taken for 'total for creating and serializing project graph' 0.2588749999999891ms
+[NX v21.5.2 Daemon Server] - 2025-09-17T21:17:00.117Z - Done responding to the client project-graph
+[NX v21.5.2 Daemon Server] - 2025-09-17T21:17:00.117Z - Handled REQUEST_PROJECT_GRAPH. Handling time: 0. Response time: 2.
+[NX v21.5.2 Daemon Server] - 2025-09-17T21:17:00.119Z - Established a connection. Number of open connections: 2

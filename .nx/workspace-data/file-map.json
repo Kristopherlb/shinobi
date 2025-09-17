@@ -221,7 +221,7 @@
       },
       {
         "file": ".gitignore",
-        "hash": "8538269989523781772"
+        "hash": "12585179508984304550"
       },
       {
         "file": ".npmrc",
@@ -2517,6 +2517,798 @@
       }
     ],
     "projectFileMap": {
+      "@platform/components-ecs-cluster": [
+        {
+          "file": "packages/components/ecs-cluster/README.md",
+          "hash": "5711965402752597089"
+        },
+        {
+          "file": "packages/components/ecs-cluster/audit/component.plan.json",
+          "hash": "5890905166405813607"
+        },
+        {
+          "file": "packages/components/ecs-cluster/audit/ecs-cluster.oscal.json",
+          "hash": "17307345491618519105"
+        },
+        {
+          "file": "packages/components/ecs-cluster/audit/rego/ecs_security_policies.rego",
+          "hash": "15648791524796145860"
+        },
+        {
+          "file": "packages/components/ecs-cluster/audit/rego/fedramp_compliance_policies.rego",
+          "hash": "1025692883495614040"
+        },
+        {
+          "file": "packages/components/ecs-cluster/ecs-cluster.builder.ts",
+          "hash": "11764996314055308599"
+        },
+        {
+          "file": "packages/components/ecs-cluster/ecs-cluster.component.ts",
+          "hash": "11079722335476232979",
+          "deps": [
+            "npm:aws-cdk-lib",
+            "npm:constructs"
+          ]
+        },
+        {
+          "file": "packages/components/ecs-cluster/ecs-cluster.creator.ts",
+          "hash": "4824399226680477304",
+          "deps": [
+            "npm:constructs"
+          ]
+        },
+        {
+          "file": "packages/components/ecs-cluster/index.ts",
+          "hash": "16212354259320976876"
+        },
+        {
+          "file": "packages/components/ecs-cluster/observability/alarms-config.json",
+          "hash": "8784668252131249405"
+        },
+        {
+          "file": "packages/components/ecs-cluster/observability/otel-dashboard-template.json",
+          "hash": "16586087010420489991"
+        },
+        {
+          "file": "packages/components/ecs-cluster/package.json",
+          "hash": "11026324459740437011",
+          "deps": [
+            "@platform/core-engine",
+            "npm:@types/jest@29.5.14",
+            "npm:@types/node@18.14.6",
+            "npm:jest@29.7.0",
+            "npm:typescript",
+            "npm:aws-cdk-lib",
+            "npm:constructs"
+          ]
+        },
+        {
+          "file": "packages/components/ecs-cluster/test-fixtures.ts",
+          "hash": "5631308092033538424",
+          "deps": [
+            "npm:aws-cdk-lib"
+          ]
+        },
+        {
+          "file": "packages/components/ecs-cluster/tests/ecs-cluster.component.test.ts",
+          "hash": "16202472981137872812",
+          "deps": [
+            "npm:aws-cdk-lib"
+          ]
+        }
+      ],
+      "@platform/rds-postgres": [
+        {
+          "file": "packages/components/rds-postgres/README.md",
+          "hash": "8759288169756959386"
+        },
+        {
+          "file": "packages/components/rds-postgres/catalog-info.yaml",
+          "hash": "10439544403880839816"
+        },
+        {
+          "file": "packages/components/rds-postgres/index.ts",
+          "hash": "15502698355078739822"
+        },
+        {
+          "file": "packages/components/rds-postgres/lambda-to-rds.binder.ts",
+          "hash": "3935080995599300467",
+          "deps": [
+            "@platform/contracts",
+            "npm:aws-cdk-lib"
+          ]
+        },
+        {
+          "file": "packages/components/rds-postgres/package.json",
+          "hash": "6905696251653525424",
+          "deps": [
+            "@platform/core-engine",
+            "@platform/contracts"
+          ]
+        },
+        {
+          "file": "packages/components/rds-postgres/rds-postgres.builder.ts",
+          "hash": "7920052047321603194"
+        },
+        {
+          "file": "packages/components/rds-postgres/rds-postgres.component.ts",
+          "hash": "11205714353457515016",
+          "deps": [
+            "npm:aws-cdk-lib",
+            "npm:constructs",
+            "@platform/contracts"
+          ]
+        },
+        {
+          "file": "packages/components/rds-postgres/rds-postgres.creator.ts",
+          "hash": "18240099973498744035",
+          "deps": [
+            "@platform/contracts"
+          ]
+        },
+        {
+          "file": "packages/components/rds-postgres/src/index.ts",
+          "hash": "6987571137554338213"
+        },
+        {
+          "file": "packages/components/rds-postgres/src/rds-postgres.builder.ts",
+          "hash": "8678746731244034821"
+        },
+        {
+          "file": "packages/components/rds-postgres/src/rds-postgres.ts",
+          "hash": "9920915642484978454",
+          "deps": [
+            "@platform/contracts"
+          ]
+        },
+        {
+          "file": "packages/components/rds-postgres/tests/rds-postgres.builder.test.ts",
+          "hash": "428790112298671325"
+        },
+        {
+          "file": "packages/components/rds-postgres/tests/rds-postgres.component.synthesis.test.ts",
+          "hash": "814480808830408659",
+          "deps": [
+            "npm:aws-cdk-lib"
+          ]
+        },
+        {
+          "file": "packages/components/rds-postgres/tests/rds-postgres.test.ts",
+          "hash": "16226239482375038440"
+        },
+        {
+          "file": "packages/components/rds-postgres/tsconfig.json",
+          "hash": "3803076836316330929"
+        }
+      ],
+      "@shinobi/route53-record": [
+        {
+          "file": "packages/components/route53-record/README.md",
+          "hash": "12227641330370076317"
+        },
+        {
+          "file": "packages/components/route53-record/jest.config.js",
+          "hash": "8872577854924552600"
+        },
+        {
+          "file": "packages/components/route53-record/package.json",
+          "hash": "9319254705289320503",
+          "deps": [
+            "npm:@types/jest@29.5.14",
+            "npm:@types/node@18.14.6",
+            "npm:jest@29.7.0",
+            "npm:ts-jest",
+            "npm:typescript",
+            "npm:aws-cdk-lib",
+            "npm:constructs"
+          ]
+        },
+        {
+          "file": "packages/components/route53-record/src/index.ts",
+          "hash": "6699374738505384649"
+        },
+        {
+          "file": "packages/components/route53-record/src/route53-record.builder.ts",
+          "hash": "13536580926389542465"
+        },
+        {
+          "file": "packages/components/route53-record/src/route53-record.component.ts",
+          "hash": "7825024219622912135",
+          "deps": [
+            "npm:aws-cdk-lib",
+            "npm:constructs"
+          ]
+        },
+        {
+          "file": "packages/components/route53-record/src/route53-record.creator.ts",
+          "hash": "16561946231068905396",
+          "deps": [
+            "npm:aws-cdk-lib",
+            "npm:constructs"
+          ]
+        },
+        {
+          "file": "packages/components/route53-record/tests/setup.ts",
+          "hash": "18413757483339146050"
+        },
+        {
+          "file": "packages/components/route53-record/tests/unit/route53-record.builder.test.ts",
+          "hash": "9879376328810605208"
+        },
+        {
+          "file": "packages/components/route53-record/tests/unit/route53-record.component.test.ts",
+          "hash": "17296820352463261960",
+          "deps": [
+            "npm:aws-cdk-lib"
+          ]
+        }
+      ],
+      "@platform/components-container-application": [
+        {
+          "file": "packages/components/container-application/package.json",
+          "hash": "5063921494724820499",
+          "deps": [
+            "npm:aws-cdk-lib",
+            "npm:constructs",
+            "npm:@types/jest@29.5.14",
+            "npm:@types/node@20.19.14",
+            "npm:@typescript-eslint/eslint-plugin",
+            "npm:@typescript-eslint/parser",
+            "npm:eslint",
+            "npm:jest@29.7.0",
+            "npm:ts-jest",
+            "npm:typescript",
+            "@platform/contracts",
+            "@platform/core-engine"
+          ]
+        },
+        {
+          "file": "packages/components/container-application/src/container-application.builder.ts",
+          "hash": "4708335185500006773",
+          "deps": [
+            "@platform/contracts"
+          ]
+        },
+        {
+          "file": "packages/components/container-application/src/container-application.component.ts",
+          "hash": "16225585997234048283",
+          "deps": [
+            "npm:aws-cdk-lib",
+            "npm:constructs",
+            "@platform/contracts"
+          ]
+        },
+        {
+          "file": "packages/components/container-application/src/container-application.creator.ts",
+          "hash": "2326517139878986357",
+          "deps": [
+            "npm:constructs"
+          ]
+        },
+        {
+          "file": "packages/components/container-application/src/index.ts",
+          "hash": "8193930565131220180",
+          "deps": [
+            "@platform/contracts"
+          ]
+        }
+      ],
+      "@platform/shinobi": [
+        {
+          "file": "packages/components/shinobi/MCP_SERVER_README.md",
+          "hash": "6459763790868124426"
+        },
+        {
+          "file": "packages/components/shinobi/README.md",
+          "hash": "7152864019549833671"
+        },
+        {
+          "file": "packages/components/shinobi/SHINOBI_SUMMARY.md",
+          "hash": "59767366379295371"
+        },
+        {
+          "file": "packages/components/shinobi/examples/basic-usage.ts",
+          "hash": "13408313125355963233",
+          "deps": [
+            "npm:aws-cdk-lib"
+          ]
+        },
+        {
+          "file": "packages/components/shinobi/package.json",
+          "hash": "5441731817767429332",
+          "deps": [
+            "npm:@types/jest@29.5.14",
+            "npm:@types/node@20.19.14",
+            "npm:jest@29.7.0",
+            "npm:ts-jest",
+            "npm:typescript",
+            "npm:eslint",
+            "npm:@typescript-eslint/eslint-plugin",
+            "npm:@typescript-eslint/parser",
+            "npm:aws-cdk-lib",
+            "npm:constructs",
+            "npm:@modelcontextprotocol/sdk",
+            "@platform/contracts",
+            "@platform/core-engine",
+            "npm:ts-node"
+          ]
+        },
+        {
+          "file": "packages/components/shinobi/src/index.ts",
+          "hash": "10769049332265089796"
+        },
+        {
+          "file": "packages/components/shinobi/src/server/Dockerfile",
+          "hash": "11448454393328977296"
+        },
+        {
+          "file": "packages/components/shinobi/src/server/index.ts",
+          "hash": "5891648825243447708"
+        },
+        {
+          "file": "packages/components/shinobi/src/server/shinobi-server.ts",
+          "hash": "17461991709149714167",
+          "deps": [
+            "npm:@modelcontextprotocol/sdk",
+            "npm:yaml"
+          ]
+        },
+        {
+          "file": "packages/components/shinobi/src/shinobi-feature-flags.d.ts",
+          "hash": "17114174420381852242",
+          "deps": [
+            "npm:constructs"
+          ]
+        },
+        {
+          "file": "packages/components/shinobi/src/shinobi-feature-flags.js",
+          "hash": "4282063208346686125"
+        },
+        {
+          "file": "packages/components/shinobi/src/shinobi-feature-flags.ts",
+          "hash": "14921346832874750914",
+          "deps": [
+            "npm:constructs"
+          ]
+        },
+        {
+          "file": "packages/components/shinobi/src/shinobi.builder.ts",
+          "hash": "10862203041976285208"
+        },
+        {
+          "file": "packages/components/shinobi/src/shinobi.component.ts",
+          "hash": "16393217938141915462",
+          "deps": [
+            "npm:aws-cdk-lib",
+            "npm:constructs",
+            "@platform/contracts"
+          ]
+        },
+        {
+          "file": "packages/components/shinobi/src/shinobi.creator.ts",
+          "hash": "446152092422279017",
+          "deps": [
+            "npm:constructs"
+          ]
+        },
+        {
+          "file": "packages/components/shinobi/tests/shinobi-feature-flags.test.ts",
+          "hash": "12658648825897813797",
+          "deps": [
+            "npm:aws-cdk-lib"
+          ]
+        },
+        {
+          "file": "packages/components/shinobi/tests/shinobi.builder.test.ts",
+          "hash": "4729943776137609677"
+        },
+        {
+          "file": "packages/components/shinobi/tests/shinobi.component.synthesis.test.ts",
+          "hash": "14108253921081575877",
+          "deps": [
+            "npm:aws-cdk-lib"
+          ]
+        },
+        {
+          "file": "packages/components/shinobi/tsconfig.server.json",
+          "hash": "10896337934498905975"
+        }
+      ],
+      "@platform/dagger-engine-pool": [
+        {
+          "file": "packages/components/dagger-engine-pool/Config.schema.json",
+          "hash": "2638608803403775365"
+        },
+        {
+          "file": "packages/components/dagger-engine-pool/Dockerfile",
+          "hash": "2297734316329566405"
+        },
+        {
+          "file": "packages/components/dagger-engine-pool/README.md",
+          "hash": "9150142918602494193"
+        },
+        {
+          "file": "packages/components/dagger-engine-pool/artifactory-config.yml",
+          "hash": "15523351795281863507"
+        },
+        {
+          "file": "packages/components/dagger-engine-pool/audit/component.plan.json",
+          "hash": "17160111245138805243"
+        },
+        {
+          "file": "packages/components/dagger-engine-pool/audit/dagger-engine-pool.oscal.json",
+          "hash": "5452705044063411195"
+        },
+        {
+          "file": "packages/components/dagger-engine-pool/audit/rego/dagger-engine-pool.rego",
+          "hash": "2576705173284365420"
+        },
+        {
+          "file": "packages/components/dagger-engine-pool/audit/rego/dagger-engine-pool_test.rego",
+          "hash": "7709936061227559800"
+        },
+        {
+          "file": "packages/components/dagger-engine-pool/dagger-engine-pool.builder.ts",
+          "hash": "13119873041551180391",
+          "deps": [
+            "@platform/core-engine"
+          ]
+        },
+        {
+          "file": "packages/components/dagger-engine-pool/dagger-engine-pool.component.ts",
+          "hash": "9824504582773459497",
+          "deps": [
+            "npm:constructs",
+            "npm:aws-cdk-lib",
+            "@platform/core-engine",
+            "@platform/contracts"
+          ]
+        },
+        {
+          "file": "packages/components/dagger-engine-pool/dagger-engine-pool.creator.ts",
+          "hash": "6021743022608376776",
+          "deps": [
+            "@platform/contracts"
+          ]
+        },
+        {
+          "file": "packages/components/dagger-engine-pool/dagger.ts",
+          "hash": "445040631999380248"
+        },
+        {
+          "file": "packages/components/dagger-engine-pool/index.ts",
+          "hash": "11785154820915998269"
+        },
+        {
+          "file": "packages/components/dagger-engine-pool/jest.config.cjs",
+          "hash": "8572334324115476695"
+        },
+        {
+          "file": "packages/components/dagger-engine-pool/observability/alarms-config.json",
+          "hash": "13117841330682180256"
+        },
+        {
+          "file": "packages/components/dagger-engine-pool/observability/otel-dashboard-template.json",
+          "hash": "8658243697673035135"
+        },
+        {
+          "file": "packages/components/dagger-engine-pool/package-lock.json",
+          "hash": "8206533669035327107"
+        },
+        {
+          "file": "packages/components/dagger-engine-pool/package.json",
+          "hash": "13360133717310686826",
+          "deps": [
+            "npm:aws-cdk-lib",
+            "npm:constructs",
+            "npm:@types/jest@29.5.14",
+            "npm:@types/node@20.19.14",
+            "npm:eslint",
+            "npm:@typescript-eslint/eslint-plugin",
+            "npm:@typescript-eslint/parser",
+            "npm:jest@29.7.0",
+            "npm:ts-jest",
+            "npm:typescript"
+          ]
+        },
+        {
+          "file": "packages/components/dagger-engine-pool/src/@platform/contracts.ts",
+          "hash": "10829073697374391291"
+        },
+        {
+          "file": "packages/components/dagger-engine-pool/src/@platform/core-engine.ts",
+          "hash": "8839553426797909667",
+          "deps": [
+            [
+              "npm:aws-cdk-lib",
+              "dynamic"
+            ]
+          ]
+        },
+        {
+          "file": "packages/components/dagger-engine-pool/src/@platform/tagging-service.ts",
+          "hash": "8133700757308145278"
+        },
+        {
+          "file": "packages/components/dagger-engine-pool/src/dagger-engine-pool.builder.ts",
+          "hash": "8457974355917973513"
+        },
+        {
+          "file": "packages/components/dagger-engine-pool/src/dagger-engine-pool.component.ts",
+          "hash": "11226865660144903321",
+          "deps": [
+            "npm:constructs",
+            "npm:aws-cdk-lib",
+            "@platform/core-engine",
+            "@platform/contracts"
+          ]
+        },
+        {
+          "file": "packages/components/dagger-engine-pool/src/dagger-engine-pool.creator.ts",
+          "hash": "6021743022608376776",
+          "deps": [
+            "@platform/contracts"
+          ]
+        },
+        {
+          "file": "packages/components/dagger-engine-pool/src/index.ts",
+          "hash": "11785154820915998269"
+        },
+        {
+          "file": "packages/components/dagger-engine-pool/src/schema/Config.schema.json",
+          "hash": "2638608803403775365"
+        },
+        {
+          "file": "packages/components/dagger-engine-pool/src/types.ts",
+          "hash": "7047125115490644294"
+        },
+        {
+          "file": "packages/components/dagger-engine-pool/tests/setup.ts",
+          "hash": "4239574004095774559",
+          "deps": [
+            "npm:aws-cdk-lib"
+          ]
+        },
+        {
+          "file": "packages/components/dagger-engine-pool/tests/unit/builder.test.ts",
+          "hash": "9297836529419921144"
+        },
+        {
+          "file": "packages/components/dagger-engine-pool/tests/unit/component.test.ts",
+          "hash": "2497899561894686387",
+          "deps": [
+            "npm:aws-cdk-lib",
+            "npm:constructs"
+          ]
+        },
+        {
+          "file": "packages/components/dagger-engine-pool/tsconfig.json",
+          "hash": "9407488615300569937"
+        },
+        {
+          "file": "packages/components/dagger-engine-pool/types.ts",
+          "hash": "7047125115490644294"
+        }
+      ],
+      "@platform/components-deployment-bundle-pipeline": [
+        {
+          "file": "packages/components/deployment-bundle-pipeline/README.md",
+          "hash": "13878995460923611435"
+        },
+        {
+          "file": "packages/components/deployment-bundle-pipeline/audit/component.plan.json",
+          "hash": "16787725895637861291"
+        },
+        {
+          "file": "packages/components/deployment-bundle-pipeline/audit/deployment-bundle-pipeline.oscal.json",
+          "hash": "17646327668684797317"
+        },
+        {
+          "file": "packages/components/deployment-bundle-pipeline/audit/rego/bundle_security_policies.rego",
+          "hash": "16161582798300545449"
+        },
+        {
+          "file": "packages/components/deployment-bundle-pipeline/dagger.ts",
+          "hash": "8477345662149291955"
+        },
+        {
+          "file": "packages/components/deployment-bundle-pipeline/jest.config.js",
+          "hash": "16174409094751740907"
+        },
+        {
+          "file": "packages/components/deployment-bundle-pipeline/observability/alarms-config.json",
+          "hash": "18270987230754750055"
+        },
+        {
+          "file": "packages/components/deployment-bundle-pipeline/observability/otel-dashboard-template.json",
+          "hash": "1517350791177335245"
+        },
+        {
+          "file": "packages/components/deployment-bundle-pipeline/package.json",
+          "hash": "11762208609345315320",
+          "deps": [
+            "npm:aws-cdk-lib",
+            "npm:constructs",
+            "npm:@types/jest@29.5.14",
+            "npm:@types/node@20.19.14",
+            "npm:@typescript-eslint/eslint-plugin",
+            "npm:@typescript-eslint/parser",
+            "npm:eslint",
+            "npm:jest@29.7.0",
+            "npm:ts-jest",
+            "npm:typescript",
+            "@platform/core-engine",
+            "@platform/contracts"
+          ]
+        },
+        {
+          "file": "packages/components/deployment-bundle-pipeline/scripts/gen-provenance.sh",
+          "hash": "11792887095119311477"
+        },
+        {
+          "file": "packages/components/deployment-bundle-pipeline/src/deployment-bundle-pipeline.builder.ts",
+          "hash": "12701639863134911742"
+        },
+        {
+          "file": "packages/components/deployment-bundle-pipeline/src/deployment-bundle-pipeline.component.ts",
+          "hash": "6955649166442358862"
+        },
+        {
+          "file": "packages/components/deployment-bundle-pipeline/src/deployment-bundle-pipeline.creator.ts",
+          "hash": "1470025511806899686"
+        },
+        {
+          "file": "packages/components/deployment-bundle-pipeline/src/index.ts",
+          "hash": "5974657487635288014"
+        },
+        {
+          "file": "packages/components/deployment-bundle-pipeline/src/types.ts",
+          "hash": "6076368853284652266"
+        },
+        {
+          "file": "packages/components/deployment-bundle-pipeline/tests/setup.ts",
+          "hash": "13712925196876119842"
+        },
+        {
+          "file": "packages/components/deployment-bundle-pipeline/tests/simple.test.ts",
+          "hash": "6991431107637804510"
+        },
+        {
+          "file": "packages/components/deployment-bundle-pipeline/tests/unit/builder.test.ts",
+          "hash": "91214594767232889"
+        },
+        {
+          "file": "packages/components/deployment-bundle-pipeline/tests/unit/component.test.ts",
+          "hash": "8751873657856482411",
+          "deps": [
+            "npm:aws-cdk-lib"
+          ]
+        }
+      ],
+      "@shinobi/vpc": [
+        {
+          "file": "packages/components/vpc/README.md",
+          "hash": "8875819887397071593"
+        },
+        {
+          "file": "packages/components/vpc/audit/component.plan.json",
+          "hash": "12000413060616824162"
+        },
+        {
+          "file": "packages/components/vpc/audit/rego/vpc.rego",
+          "hash": "8533818154920924019"
+        },
+        {
+          "file": "packages/components/vpc/audit/rego/vpc_test.rego",
+          "hash": "12810827227442909778"
+        },
+        {
+          "file": "packages/components/vpc/audit/vpc.oscal.json",
+          "hash": "18022597759662346645"
+        },
+        {
+          "file": "packages/components/vpc/generation-summary.json",
+          "hash": "897740523218728149"
+        },
+        {
+          "file": "packages/components/vpc/index.ts",
+          "hash": "4065872702002909585"
+        },
+        {
+          "file": "packages/components/vpc/jest.config.js",
+          "hash": "9876185703598838263"
+        },
+        {
+          "file": "packages/components/vpc/observability/alarms-config.json",
+          "hash": "10768305995109260950"
+        },
+        {
+          "file": "packages/components/vpc/observability/otel-dashboard-template.json",
+          "hash": "4576313993253791197"
+        },
+        {
+          "file": "packages/components/vpc/package.json",
+          "hash": "4433943797058200473",
+          "deps": [
+            "npm:aws-cdk-lib",
+            "npm:constructs",
+            "npm:@types/node@20.19.14",
+            "npm:typescript",
+            "npm:jest@29.7.0",
+            "npm:ts-jest",
+            "npm:@types/jest@29.5.14",
+            "npm:eslint",
+            "npm:@typescript-eslint/eslint-plugin",
+            "npm:@typescript-eslint/parser"
+          ]
+        },
+        {
+          "file": "packages/components/vpc/test-simple.ts",
+          "hash": "909108858185588679",
+          "deps": [
+            "npm:aws-cdk-lib"
+          ]
+        },
+        {
+          "file": "packages/components/vpc/tests/compliance.test.ts",
+          "hash": "3053902171632405232",
+          "deps": [
+            "npm:aws-cdk-lib"
+          ]
+        },
+        {
+          "file": "packages/components/vpc/tests/observability.test.ts",
+          "hash": "9392671795301397368",
+          "deps": [
+            "npm:aws-cdk-lib"
+          ]
+        },
+        {
+          "file": "packages/components/vpc/tests/unit/builder.test.ts",
+          "hash": "12519849711213784901"
+        },
+        {
+          "file": "packages/components/vpc/tests/unit/component.test.ts",
+          "hash": "5942211991237852784",
+          "deps": [
+            "npm:aws-cdk-lib"
+          ]
+        },
+        {
+          "file": "packages/components/vpc/tests/vpc.builder.test.ts",
+          "hash": "4012717958027362008"
+        },
+        {
+          "file": "packages/components/vpc/tests/vpc.component.synthesis.test.ts",
+          "hash": "17165583504273358829",
+          "deps": [
+            "npm:aws-cdk-lib"
+          ]
+        },
+        {
+          "file": "packages/components/vpc/tsconfig.json",
+          "hash": "17199098717519277380"
+        },
+        {
+          "file": "packages/components/vpc/vpc.builder.ts",
+          "hash": "11213271852805247841"
+        },
+        {
+          "file": "packages/components/vpc/vpc.component.ts",
+          "hash": "10562567076080033799",
+          "deps": [
+            "npm:aws-cdk-lib",
+            "npm:constructs"
+          ]
+        },
+        {
+          "file": "packages/components/vpc/vpc.creator.ts",
+          "hash": "10119006679148726255",
+          "deps": [
+            "npm:constructs"
+          ]
+        }
+      ],
       "@platform/lambda-api": [
         {
           "file": "packages/components/lambda-api/README.md",
@@ -2626,440 +3418,142 @@
           "hash": "13061676739970566293"
         }
       ],
-      "standards-iam-audit": [
+      "@platform/sqs-queue": [
         {
-          "file": "packages/standards/iam-audit/jest.config.ts",
-          "hash": "17376543197423877982"
+          "file": "packages/components/sqs-queue/README.md",
+          "hash": "9733795423599130915"
         },
         {
-          "file": "packages/standards/iam-audit/package.json",
-          "hash": "9666128690917301319",
+          "file": "packages/components/sqs-queue/index.ts",
+          "hash": "7808616212344776076"
+        },
+        {
+          "file": "packages/components/sqs-queue/package.json",
+          "hash": "5134414201242472872",
           "deps": [
-            "npm:@types/jest",
-            "npm:@types/node",
-            "npm:jest",
-            "npm:ts-jest",
-            "npm:typescript",
-            "core"
+            "@platform/core-engine",
+            "@platform/contracts"
           ]
         },
         {
-          "file": "packages/standards/iam-audit/project.json",
-          "hash": "14930067881558315151"
+          "file": "packages/components/sqs-queue/sqs-queue.builder.ts",
+          "hash": "6453869290730610805"
         },
         {
-          "file": "packages/standards/iam-audit/src/index.ts",
-          "hash": "4071809394949347885"
-        },
-        {
-          "file": "packages/standards/iam-audit/tsconfig.lib.json",
-          "hash": "4006877950016446411"
-        },
-        {
-          "file": "packages/standards/iam-audit/tsconfig.spec.json",
-          "hash": "4933087548142887878"
-        }
-      ],
-      "standards-otel": [
-        {
-          "file": "packages/standards/otel/jest.config.ts",
-          "hash": "6111863468677153421"
-        },
-        {
-          "file": "packages/standards/otel/observability-handlers/LICENSE",
-          "hash": "16598915710037825395"
-        },
-        {
-          "file": "packages/standards/otel/observability-handlers/README.md",
-          "hash": "372591635001803681"
-        },
-        {
-          "file": "packages/standards/otel/observability-handlers/jest.config.js",
-          "hash": "14633644044989953655"
-        },
-        {
-          "file": "packages/standards/otel/observability-handlers/package.json",
-          "hash": "11001703709877924320"
-        },
-        {
-          "file": "packages/standards/otel/observability-handlers/src/index.ts",
-          "hash": "14157258903363968085"
-        },
-        {
-          "file": "packages/standards/otel/observability-handlers/src/observability-handlers/alb-observability.handler.ts",
-          "hash": "13037109722196961622",
-          "deps": [
-            "npm:aws-cdk-lib",
-            "npm:constructs",
-            "core",
-            "standards-tagging"
-          ]
-        },
-        {
-          "file": "packages/standards/otel/observability-handlers/src/observability-handlers/ec2-observability.handler.ts",
-          "hash": "8740670410844121554",
-          "deps": [
-            "npm:aws-cdk-lib",
-            "npm:constructs",
-            "core",
-            "standards-tagging"
-          ]
-        },
-        {
-          "file": "packages/standards/otel/observability-handlers/src/observability-handlers/ecs-observability.handler.ts",
-          "hash": "7704250732032170510",
-          "deps": [
-            "npm:aws-cdk-lib",
-            "npm:constructs",
-            "core",
-            "standards-tagging"
-          ]
-        },
-        {
-          "file": "packages/standards/otel/observability-handlers/src/observability-handlers/lambda-observability.handler.ts",
-          "hash": "65199636401898549",
-          "deps": [
-            "npm:aws-cdk-lib",
-            "npm:constructs",
-            "core",
-            "standards-tagging"
-          ]
-        },
-        {
-          "file": "packages/standards/otel/observability-handlers/src/observability-handlers/observability-handler.interface.ts",
-          "hash": "8277778655671834191",
-          "deps": [
-            "core"
-          ]
-        },
-        {
-          "file": "packages/standards/otel/observability-handlers/src/observability-handlers/rds-observability.handler.ts",
-          "hash": "6996258714616989255",
-          "deps": [
-            "npm:aws-cdk-lib",
-            "npm:constructs",
-            "core",
-            "standards-tagging"
-          ]
-        },
-        {
-          "file": "packages/standards/otel/observability-handlers/src/observability-handlers/sqs-observability.handler.ts",
-          "hash": "16605700550003496204",
-          "deps": [
-            "npm:aws-cdk-lib",
-            "npm:constructs",
-            "core",
-            "standards-tagging"
-          ]
-        },
-        {
-          "file": "packages/standards/otel/observability-handlers/src/observability-handlers/vpc-observability.handler.ts",
-          "hash": "13547783474756583451",
-          "deps": [
-            "npm:aws-cdk-lib",
-            "npm:constructs",
-            "core",
-            "standards-tagging"
-          ]
-        },
-        {
-          "file": "packages/standards/otel/observability-handlers/tests/alb-observability.handler.test.ts",
-          "hash": "12309072073426642567",
-          "deps": [
-            "npm:@jest/globals@29.7.0"
-          ]
-        },
-        {
-          "file": "packages/standards/otel/observability-handlers/tests/ec2-instance-observability.handler.test.ts",
-          "hash": "17103899165148351615",
-          "deps": [
-            "npm:@jest/globals@29.7.0",
-            "npm:aws-cdk-lib"
-          ]
-        },
-        {
-          "file": "packages/standards/otel/observability-handlers/tests/ecs-cluster-observability.handler.test.ts",
-          "hash": "13830556018747295252",
-          "deps": [
-            "npm:@jest/globals@29.7.0",
-            "npm:aws-cdk-lib"
-          ]
-        },
-        {
-          "file": "packages/standards/otel/observability-handlers/tests/lambda-observability.handler.test.ts",
-          "hash": "7128224057350229212",
-          "deps": [
-            "npm:@jest/globals@29.7.0",
-            "npm:aws-cdk-lib"
-          ]
-        },
-        {
-          "file": "packages/standards/otel/observability-handlers/tests/rds-observability.handler.test.ts",
-          "hash": "9042485201220165329",
-          "deps": [
-            "npm:@jest/globals@29.7.0",
-            "npm:aws-cdk-lib"
-          ]
-        },
-        {
-          "file": "packages/standards/otel/observability-handlers/tests/setup.ts",
-          "hash": "5122231078295259622"
-        },
-        {
-          "file": "packages/standards/otel/observability-handlers/tests/sqs-queue-observability.handler.test.ts",
-          "hash": "13899747438339935816",
-          "deps": [
-            "npm:@jest/globals@29.7.0",
-            "npm:aws-cdk-lib"
-          ]
-        },
-        {
-          "file": "packages/standards/otel/observability-handlers/tests/vpc-observability.handler.test.ts",
-          "hash": "6958892882667683199",
-          "deps": [
-            "npm:@jest/globals@29.7.0",
-            "npm:aws-cdk-lib"
-          ]
-        },
-        {
-          "file": "packages/standards/otel/observability-handlers/tsconfig.json",
-          "hash": "2566188581520956726"
-        },
-        {
-          "file": "packages/standards/otel/observability-service/LICENSE",
-          "hash": "16598915710037825395"
-        },
-        {
-          "file": "packages/standards/otel/observability-service/README.md",
-          "hash": "14004875152782376455"
-        },
-        {
-          "file": "packages/standards/otel/observability-service/jest.config.js",
-          "hash": "17749332919602818872"
-        },
-        {
-          "file": "packages/standards/otel/observability-service/package.json",
-          "hash": "5839917029613451821"
-        },
-        {
-          "file": "packages/standards/otel/observability-service/src/index.ts",
-          "hash": "14576853449568551689",
-          "deps": [
-            "core"
-          ]
-        },
-        {
-          "file": "packages/standards/otel/observability-service/src/observability-ecs-integration.test.ts",
-          "hash": "12247497269365464300",
-          "deps": [
-            "npm:aws-cdk-lib"
-          ]
-        },
-        {
-          "file": "packages/standards/otel/observability-service/src/observability.service.ts",
-          "hash": "5404755849175764500",
-          "deps": [
-            "npm:js-yaml",
-            "core",
-            "standards-tagging"
-          ]
-        },
-        {
-          "file": "packages/standards/otel/observability-service/tests/observability.service.test.ts",
-          "hash": "2771411585767484469",
-          "deps": [
-            "npm:@jest/globals@29.7.0"
-          ]
-        },
-        {
-          "file": "packages/standards/otel/observability-service/tests/setup.ts",
-          "hash": "16863747030110124403"
-        },
-        {
-          "file": "packages/standards/otel/observability-service/tsconfig.json",
-          "hash": "2566188581520956726"
-        },
-        {
-          "file": "packages/standards/otel/package.json",
-          "hash": "11181082992551532905",
-          "deps": [
-            "npm:@types/jest",
-            "npm:@types/node",
-            "npm:jest",
-            "npm:ts-jest",
-            "npm:typescript",
-            "core"
-          ]
-        },
-        {
-          "file": "packages/standards/otel/project.json",
-          "hash": "8962512259308795559"
-        },
-        {
-          "file": "packages/standards/otel/src/index.ts",
-          "hash": "11626192773278863"
-        },
-        {
-          "file": "packages/standards/otel/tsconfig.lib.json",
-          "hash": "4006877950016446411"
-        },
-        {
-          "file": "packages/standards/otel/tsconfig.spec.json",
-          "hash": "4933087548142887878"
-        }
-      ],
-      "@shinobi/waf-web-acl": [
-        {
-          "file": "packages/components/waf-web-acl/README.md",
-          "hash": "17008738479240580462"
-        },
-        {
-          "file": "packages/components/waf-web-acl/audit/component.plan.json",
-          "hash": "3788771416989704294"
-        },
-        {
-          "file": "packages/components/waf-web-acl/audit/rego/waf-web-acl.rego",
-          "hash": "4549901112313703409"
-        },
-        {
-          "file": "packages/components/waf-web-acl/audit/rego/waf-web-acl_test.rego",
-          "hash": "1361618906301371191"
-        },
-        {
-          "file": "packages/components/waf-web-acl/audit/waf-web-acl.oscal.json",
-          "hash": "16277330243353922880"
-        },
-        {
-          "file": "packages/components/waf-web-acl/generation-summary.json",
-          "hash": "14849119580553636282"
-        },
-        {
-          "file": "packages/components/waf-web-acl/index.ts",
-          "hash": "4731666954053614571"
-        },
-        {
-          "file": "packages/components/waf-web-acl/jest.config.js",
-          "hash": "9876185703598838263"
-        },
-        {
-          "file": "packages/components/waf-web-acl/observability/alarms-config.json",
-          "hash": "4152041008491441549"
-        },
-        {
-          "file": "packages/components/waf-web-acl/observability/otel-dashboard-template.json",
-          "hash": "2992940375170622884"
-        },
-        {
-          "file": "packages/components/waf-web-acl/package.json",
-          "hash": "4260300768035706498",
-          "deps": [
-            "npm:aws-cdk-lib",
-            "npm:constructs",
-            "npm:@types/node@20.19.14",
-            "npm:typescript",
-            "npm:jest@29.7.0",
-            "npm:ts-jest",
-            "npm:@types/jest@29.5.14",
-            "npm:eslint",
-            "npm:@typescript-eslint/eslint-plugin",
-            "npm:@typescript-eslint/parser"
-          ]
-        },
-        {
-          "file": "packages/components/waf-web-acl/test-simple.ts",
-          "hash": "5136964639576209382",
-          "deps": [
-            "npm:aws-cdk-lib"
-          ]
-        },
-        {
-          "file": "packages/components/waf-web-acl/tests/compliance.test.ts",
-          "hash": "5647549887242323296",
-          "deps": [
-            "npm:aws-cdk-lib"
-          ]
-        },
-        {
-          "file": "packages/components/waf-web-acl/tests/observability.test.ts",
-          "hash": "16901353383645345596",
-          "deps": [
-            "npm:aws-cdk-lib"
-          ]
-        },
-        {
-          "file": "packages/components/waf-web-acl/tests/unit/builder.test.ts",
-          "hash": "7053145320088816150"
-        },
-        {
-          "file": "packages/components/waf-web-acl/tests/unit/component.test.ts",
-          "hash": "12370473514984648205",
-          "deps": [
-            "npm:aws-cdk-lib"
-          ]
-        },
-        {
-          "file": "packages/components/waf-web-acl/tests/waf-web-acl.builder.test.ts",
-          "hash": "10424695884945106098"
-        },
-        {
-          "file": "packages/components/waf-web-acl/tests/waf-web-acl.component.synthesis.test.ts",
-          "hash": "7893294639799327433",
-          "deps": [
-            "npm:aws-cdk-lib"
-          ]
-        },
-        {
-          "file": "packages/components/waf-web-acl/tsconfig.json",
-          "hash": "17199098717519277380"
-        },
-        {
-          "file": "packages/components/waf-web-acl/waf-web-acl.builder.ts",
-          "hash": "9839599123294211283"
-        },
-        {
-          "file": "packages/components/waf-web-acl/waf-web-acl.component.ts",
-          "hash": "9040301899747735610",
-          "deps": [
-            "npm:constructs",
-            "npm:aws-cdk-lib"
-          ]
-        },
-        {
-          "file": "packages/components/waf-web-acl/waf-web-acl.creator.ts",
-          "hash": "16378867316660102374",
+          "file": "packages/components/sqs-queue/sqs-queue.component.ts",
+          "hash": "6608638317469215564",
           "deps": [
             "npm:constructs"
           ]
+        },
+        {
+          "file": "packages/components/sqs-queue/sqs-queue.creator.ts",
+          "hash": "1012329583018216750",
+          "deps": [
+            "npm:constructs"
+          ]
+        },
+        {
+          "file": "packages/components/sqs-queue/src/index.ts",
+          "hash": "4278295809996988374"
+        },
+        {
+          "file": "packages/components/sqs-queue/src/sqs-queue.builder.ts",
+          "hash": "13633362278467887341"
+        },
+        {
+          "file": "packages/components/sqs-queue/src/sqs-queue.ts",
+          "hash": "15932321534885017322",
+          "deps": [
+            "@platform/contracts"
+          ]
+        },
+        {
+          "file": "packages/components/sqs-queue/tests/sqs-queue.builder.test.ts",
+          "hash": "7778016531980127335"
+        },
+        {
+          "file": "packages/components/sqs-queue/tests/sqs-queue.component.synthesis.test.ts",
+          "hash": "1120452757508618688",
+          "deps": [
+            "npm:aws-cdk-lib"
+          ]
+        },
+        {
+          "file": "packages/components/sqs-queue/tests/sqs-queue.test.ts",
+          "hash": "11086619260875896889"
+        },
+        {
+          "file": "packages/components/sqs-queue/tsconfig.json",
+          "hash": "4796780823213029049"
         }
       ],
-      "@platform/test-scaffolding": [
+      "constructs-prd": [
         {
-          "file": "packages/test-scaffolding/catalog-info.yaml",
-          "hash": "8284313283764872719"
+          "file": "packages/constructs/prd/infrastructure/catalog-info.yaml",
+          "hash": "2422457067429494017"
         },
         {
-          "file": "packages/test-scaffolding/package.json",
-          "hash": "8168191612582447540",
+          "file": "packages/constructs/prd/infrastructure/package.json",
+          "hash": "2791711716308872494"
+        },
+        {
+          "file": "packages/constructs/prd/infrastructure/src/app.ts",
+          "hash": "1747817340691154262",
           "deps": [
             "@platform/core-engine",
-            "@platform/lambda-api"
+            "@platform/lambda-api",
+            "@platform/rds-postgres",
+            "@platform/sqs-queue"
           ]
         },
         {
-          "file": "packages/test-scaffolding/src/index.ts",
-          "hash": "16368101225447287238"
-        },
-        {
-          "file": "packages/test-scaffolding/tests/e2e.test.ts",
-          "hash": "4886770293315683095",
+          "file": "packages/constructs/prd/infrastructure/tests/infrastructure.test.ts",
+          "hash": "10519204466383240064",
           "deps": [
-            "@platform/core-engine",
-            "@platform/lambda-api"
+            [
+              "core",
+              "dynamic"
+            ]
           ]
         },
         {
-          "file": "packages/test-scaffolding/tsconfig.json",
-          "hash": "8932654266176729782"
+          "file": "packages/constructs/prd/infrastructure/tsconfig.json",
+          "hash": "8690522403544838164"
+        },
+        {
+          "file": "packages/constructs/prd/jest.config.ts",
+          "hash": "12725421230875213953"
+        },
+        {
+          "file": "packages/constructs/prd/package.json",
+          "hash": "1385521602886594778",
+          "deps": [
+            "npm:@types/jest",
+            "npm:@types/node",
+            "npm:jest",
+            "npm:ts-jest",
+            "npm:typescript",
+            "core",
+            "npm:aws-cdk-lib",
+            "npm:constructs"
+          ]
+        },
+        {
+          "file": "packages/constructs/prd/project.json",
+          "hash": "7729634818246254872"
+        },
+        {
+          "file": "packages/constructs/prd/src/index.ts",
+          "hash": "14721177349526847501"
+        },
+        {
+          "file": "packages/constructs/prd/tsconfig.lib.json",
+          "hash": "4006877950016446411"
+        },
+        {
+          "file": "packages/constructs/prd/tsconfig.spec.json",
+          "hash": "4933087548142887878"
         }
       ],
       "@shinobi/security-group-import": [
@@ -3132,335 +3626,6 @@
           ]
         }
       ],
-      "@platform/components-ecs-cluster": [
-        {
-          "file": "packages/components/ecs-cluster/README.md",
-          "hash": "5711965402752597089"
-        },
-        {
-          "file": "packages/components/ecs-cluster/audit/component.plan.json",
-          "hash": "5890905166405813607"
-        },
-        {
-          "file": "packages/components/ecs-cluster/audit/ecs-cluster.oscal.json",
-          "hash": "17307345491618519105"
-        },
-        {
-          "file": "packages/components/ecs-cluster/audit/rego/ecs_security_policies.rego",
-          "hash": "15648791524796145860"
-        },
-        {
-          "file": "packages/components/ecs-cluster/audit/rego/fedramp_compliance_policies.rego",
-          "hash": "1025692883495614040"
-        },
-        {
-          "file": "packages/components/ecs-cluster/ecs-cluster.builder.ts",
-          "hash": "11764996314055308599"
-        },
-        {
-          "file": "packages/components/ecs-cluster/ecs-cluster.component.ts",
-          "hash": "11079722335476232979",
-          "deps": [
-            "npm:aws-cdk-lib",
-            "npm:constructs"
-          ]
-        },
-        {
-          "file": "packages/components/ecs-cluster/ecs-cluster.creator.ts",
-          "hash": "4824399226680477304",
-          "deps": [
-            "npm:constructs"
-          ]
-        },
-        {
-          "file": "packages/components/ecs-cluster/index.ts",
-          "hash": "16212354259320976876"
-        },
-        {
-          "file": "packages/components/ecs-cluster/observability/alarms-config.json",
-          "hash": "8784668252131249405"
-        },
-        {
-          "file": "packages/components/ecs-cluster/observability/otel-dashboard-template.json",
-          "hash": "16586087010420489991"
-        },
-        {
-          "file": "packages/components/ecs-cluster/package.json",
-          "hash": "11026324459740437011",
-          "deps": [
-            "@platform/core-engine",
-            "npm:@types/jest@29.5.14",
-            "npm:@types/node@18.14.6",
-            "npm:jest@29.7.0",
-            "npm:typescript",
-            "npm:aws-cdk-lib",
-            "npm:constructs"
-          ]
-        },
-        {
-          "file": "packages/components/ecs-cluster/test-fixtures.ts",
-          "hash": "5631308092033538424",
-          "deps": [
-            "npm:aws-cdk-lib"
-          ]
-        },
-        {
-          "file": "packages/components/ecs-cluster/tests/ecs-cluster.component.test.ts",
-          "hash": "16202472981137872812",
-          "deps": [
-            "npm:aws-cdk-lib"
-          ]
-        }
-      ],
-      "mcp-server": [
-        {
-          "file": "packages/mcp/server/jest.config.ts",
-          "hash": "7662061424955689041"
-        },
-        {
-          "file": "packages/mcp/server/mcp-server/package-lock.json",
-          "hash": "6877202686507413097"
-        },
-        {
-          "file": "packages/mcp/server/mcp-server/package.json",
-          "hash": "7948729148702269209"
-        },
-        {
-          "file": "packages/mcp/server/mcp-server/src/index.ts",
-          "hash": "12101638018650849266",
-          "deps": [
-            "npm:@modelcontextprotocol/sdk"
-          ]
-        },
-        {
-          "file": "packages/mcp/server/mcp-server/tsconfig.json",
-          "hash": "5599065727704449325"
-        },
-        {
-          "file": "packages/mcp/server/package.json",
-          "hash": "16858635039255016490",
-          "deps": [
-            "npm:@types/jest",
-            "npm:@types/node",
-            "npm:jest",
-            "npm:ts-jest",
-            "npm:typescript",
-            "core"
-          ]
-        },
-        {
-          "file": "packages/mcp/server/project.json",
-          "hash": "7718167712427444311"
-        },
-        {
-          "file": "packages/mcp/server/src/index.ts",
-          "hash": "1159992869243563360"
-        },
-        {
-          "file": "packages/mcp/server/tsconfig.lib.json",
-          "hash": "4006877950016446411"
-        },
-        {
-          "file": "packages/mcp/server/tsconfig.spec.json",
-          "hash": "4933087548142887878"
-        }
-      ],
-      "@shinobi/route53-record": [
-        {
-          "file": "packages/components/route53-record/README.md",
-          "hash": "12227641330370076317"
-        },
-        {
-          "file": "packages/components/route53-record/jest.config.js",
-          "hash": "8872577854924552600"
-        },
-        {
-          "file": "packages/components/route53-record/package.json",
-          "hash": "9319254705289320503",
-          "deps": [
-            "npm:@types/jest@29.5.14",
-            "npm:@types/node@18.14.6",
-            "npm:jest@29.7.0",
-            "npm:ts-jest",
-            "npm:typescript",
-            "npm:aws-cdk-lib",
-            "npm:constructs"
-          ]
-        },
-        {
-          "file": "packages/components/route53-record/src/index.ts",
-          "hash": "6699374738505384649"
-        },
-        {
-          "file": "packages/components/route53-record/src/route53-record.builder.ts",
-          "hash": "13536580926389542465"
-        },
-        {
-          "file": "packages/components/route53-record/src/route53-record.component.ts",
-          "hash": "7825024219622912135",
-          "deps": [
-            "npm:aws-cdk-lib",
-            "npm:constructs"
-          ]
-        },
-        {
-          "file": "packages/components/route53-record/src/route53-record.creator.ts",
-          "hash": "16561946231068905396",
-          "deps": [
-            "npm:aws-cdk-lib",
-            "npm:constructs"
-          ]
-        },
-        {
-          "file": "packages/components/route53-record/tests/setup.ts",
-          "hash": "18413757483339146050"
-        },
-        {
-          "file": "packages/components/route53-record/tests/unit/route53-record.builder.test.ts",
-          "hash": "9879376328810605208"
-        },
-        {
-          "file": "packages/components/route53-record/tests/unit/route53-record.component.test.ts",
-          "hash": "17296820352463261960",
-          "deps": [
-            "npm:aws-cdk-lib"
-          ]
-        }
-      ],
-      "@shinobi/iam-role": [
-        {
-          "file": "packages/components/iam-role/README.md",
-          "hash": "7071355276627829512"
-        },
-        {
-          "file": "packages/components/iam-role/iam-role.builder.ts",
-          "hash": "6707384248016723074"
-        },
-        {
-          "file": "packages/components/iam-role/iam-role.component.ts",
-          "hash": "12298196756404030350",
-          "deps": [
-            "npm:aws-cdk-lib",
-            "npm:constructs",
-            "@platform/contracts"
-          ]
-        },
-        {
-          "file": "packages/components/iam-role/iam-role.creator.ts",
-          "hash": "15557093242912559569",
-          "deps": [
-            "npm:constructs"
-          ]
-        },
-        {
-          "file": "packages/components/iam-role/index.ts",
-          "hash": "14368404982965057882"
-        },
-        {
-          "file": "packages/components/iam-role/jest.config.js",
-          "hash": "8872577854924552600"
-        },
-        {
-          "file": "packages/components/iam-role/package.json",
-          "hash": "14779663558035812880",
-          "deps": [
-            "npm:@types/jest@29.5.14",
-            "npm:@types/node@18.14.6",
-            "npm:jest@29.7.0",
-            "npm:ts-jest",
-            "npm:typescript",
-            "npm:aws-cdk-lib",
-            "npm:constructs"
-          ]
-        },
-        {
-          "file": "packages/components/iam-role/src/iam-role.builder.ts",
-          "hash": "13026019905667719822"
-        },
-        {
-          "file": "packages/components/iam-role/src/iam-role.component.ts",
-          "hash": "10902960519453146380",
-          "deps": [
-            "npm:aws-cdk-lib",
-            "npm:constructs"
-          ]
-        },
-        {
-          "file": "packages/components/iam-role/src/iam-role.creator.ts",
-          "hash": "12278729811654738898",
-          "deps": [
-            "npm:aws-cdk-lib",
-            "npm:constructs"
-          ]
-        },
-        {
-          "file": "packages/components/iam-role/src/index.ts",
-          "hash": "15767283160446062351"
-        },
-        {
-          "file": "packages/components/iam-role/tests/iam-role.builder.test.ts",
-          "hash": "2397482134037065033",
-          "deps": [
-            "npm:aws-cdk-lib"
-          ]
-        },
-        {
-          "file": "packages/components/iam-role/tests/iam-role.component.synthesis.test.ts",
-          "hash": "8161760620205208218",
-          "deps": [
-            "npm:aws-cdk-lib"
-          ]
-        },
-        {
-          "file": "packages/components/iam-role/tests/setup.ts",
-          "hash": "4837194134954504577"
-        },
-        {
-          "file": "packages/components/iam-role/tests/unit/iam-role.builder.test.ts",
-          "hash": "16401924134188795461",
-          "deps": [
-            "npm:aws-cdk-lib"
-          ]
-        },
-        {
-          "file": "packages/components/iam-role/tests/unit/iam-role.component.test.ts",
-          "hash": "6535920510812439819",
-          "deps": [
-            "npm:aws-cdk-lib"
-          ]
-        }
-      ],
-      "@platform/core-engine": [
-        {
-          "file": "packages/core-engine/catalog-info.yaml",
-          "hash": "12406042930707765105"
-        },
-        {
-          "file": "packages/core-engine/package.json",
-          "hash": "429654548695076195",
-          "deps": [
-            "@platform/contracts"
-          ]
-        },
-        {
-          "file": "packages/core-engine/src/index.ts",
-          "hash": "966081879783914188",
-          "deps": [
-            "@platform/contracts"
-          ]
-        },
-        {
-          "file": "packages/core-engine/tests/core-engine.test.ts",
-          "hash": "14406557928951961792",
-          "deps": [
-            "@platform/contracts"
-          ]
-        },
-        {
-          "file": "packages/core-engine/tsconfig.json",
-          "hash": "6977085707718287595"
-        }
-      ],
       "@platform/contracts": [
         {
           "file": "packages/contracts/catalog-info.yaml",
@@ -3481,6 +3646,166 @@
         {
           "file": "packages/contracts/tsconfig.json",
           "hash": "8656178427616574977"
+        }
+      ],
+      "standards-deprecation": [
+        {
+          "file": "packages/standards/deprecation/jest.config.ts",
+          "hash": "14908822425355342593"
+        },
+        {
+          "file": "packages/standards/deprecation/package.json",
+          "hash": "5024915981973030009",
+          "deps": [
+            "npm:@types/jest",
+            "npm:@types/node",
+            "npm:jest",
+            "npm:ts-jest",
+            "npm:typescript",
+            "core"
+          ]
+        },
+        {
+          "file": "packages/standards/deprecation/project.json",
+          "hash": "14557095603496790845"
+        },
+        {
+          "file": "packages/standards/deprecation/src/index.ts",
+          "hash": "6679164348460821020"
+        },
+        {
+          "file": "packages/standards/deprecation/tsconfig.lib.json",
+          "hash": "4006877950016446411"
+        },
+        {
+          "file": "packages/standards/deprecation/tsconfig.spec.json",
+          "hash": "4933087548142887878"
+        }
+      ],
+      "standards-logging": [
+        {
+          "file": "packages/standards/logging/jest.config.ts",
+          "hash": "6212428225453359354"
+        },
+        {
+          "file": "packages/standards/logging/logger/package.json",
+          "hash": "9885892114452180776"
+        },
+        {
+          "file": "packages/standards/logging/logger/src/index.ts",
+          "hash": "6990188296771592858"
+        },
+        {
+          "file": "packages/standards/logging/logging-handlers/ecs-logging.handler.ts",
+          "hash": "4627184214387026905",
+          "deps": [
+            "npm:aws-cdk-lib"
+          ]
+        },
+        {
+          "file": "packages/standards/logging/logging-handlers/lambda-logging.handler.ts",
+          "hash": "10378691914809214089",
+          "deps": [
+            "npm:aws-cdk-lib"
+          ]
+        },
+        {
+          "file": "packages/standards/logging/logging-handlers/rds-logging.handler.ts",
+          "hash": "15698975061694846017",
+          "deps": [
+            "npm:aws-cdk-lib"
+          ]
+        },
+        {
+          "file": "packages/standards/logging/logging-handlers/s3-logging.handler.ts",
+          "hash": "9741267168836505615",
+          "deps": [
+            "npm:aws-cdk-lib"
+          ]
+        },
+        {
+          "file": "packages/standards/logging/logging-handlers/sqs-logging.handler.ts",
+          "hash": "6482523572944248222",
+          "deps": [
+            "npm:aws-cdk-lib"
+          ]
+        },
+        {
+          "file": "packages/standards/logging/logging-handlers/vpc-logging.handler.ts",
+          "hash": "10485265435268449646",
+          "deps": [
+            "npm:aws-cdk-lib"
+          ]
+        },
+        {
+          "file": "packages/standards/logging/logging-service/infrastructure-logging.service.ts",
+          "hash": "14711410109618432037",
+          "deps": [
+            "npm:js-yaml",
+            "npm:aws-cdk-lib"
+          ]
+        },
+        {
+          "file": "packages/standards/logging/logging-service/src/logging-config.interface.ts",
+          "hash": "5669031592836118128"
+        },
+        {
+          "file": "packages/standards/logging/package.json",
+          "hash": "9466123277895662607",
+          "deps": [
+            "npm:@types/jest",
+            "npm:@types/node",
+            "npm:jest",
+            "npm:ts-jest",
+            "npm:typescript",
+            "core"
+          ]
+        },
+        {
+          "file": "packages/standards/logging/project.json",
+          "hash": "1604754247836925496"
+        },
+        {
+          "file": "packages/standards/logging/src/index.ts",
+          "hash": "10473453194656803611"
+        },
+        {
+          "file": "packages/standards/logging/tsconfig.lib.json",
+          "hash": "3885536577365832930"
+        },
+        {
+          "file": "packages/standards/logging/tsconfig.spec.json",
+          "hash": "905612802202146129"
+        }
+      ],
+      "@platform/test-scaffolding": [
+        {
+          "file": "packages/test-scaffolding/catalog-info.yaml",
+          "hash": "8284313283764872719"
+        },
+        {
+          "file": "packages/test-scaffolding/package.json",
+          "hash": "8168191612582447540",
+          "deps": [
+            "@platform/core-engine",
+            "@platform/lambda-api"
+          ]
+        },
+        {
+          "file": "packages/test-scaffolding/src/index.ts",
+          "hash": "16368101225447287238"
+        },
+        {
+          "file": "packages/test-scaffolding/tests/e2e.test.ts",
+          "hash": "4886770293315683095",
+          "deps": [
+            "@platform/core-engine",
+            "@platform/lambda-api"
+          ]
+        },
+        {
+          "file": "packages/test-scaffolding/tsconfig.json",
+          "hash": "8932654266176729782"
         }
       ],
       "core": [
@@ -4607,14 +4932,228 @@
           "hash": "8727841706476593207"
         }
       ],
-      "standards-tagging": [
+      "standards-otel": [
         {
-          "file": "packages/standards/tagging/jest.config.ts",
-          "hash": "11173089299829010346"
+          "file": "packages/standards/otel/jest.config.ts",
+          "hash": "6111863468677153421"
         },
         {
-          "file": "packages/standards/tagging/package.json",
-          "hash": "5111549344473245502",
+          "file": "packages/standards/otel/observability-handlers/LICENSE",
+          "hash": "16598915710037825395"
+        },
+        {
+          "file": "packages/standards/otel/observability-handlers/README.md",
+          "hash": "372591635001803681"
+        },
+        {
+          "file": "packages/standards/otel/observability-handlers/jest.config.js",
+          "hash": "14633644044989953655"
+        },
+        {
+          "file": "packages/standards/otel/observability-handlers/package.json",
+          "hash": "11001703709877924320"
+        },
+        {
+          "file": "packages/standards/otel/observability-handlers/src/index.ts",
+          "hash": "14157258903363968085"
+        },
+        {
+          "file": "packages/standards/otel/observability-handlers/src/observability-handlers/alb-observability.handler.ts",
+          "hash": "13037109722196961622",
+          "deps": [
+            "npm:aws-cdk-lib",
+            "npm:constructs",
+            "core",
+            "standards-tagging"
+          ]
+        },
+        {
+          "file": "packages/standards/otel/observability-handlers/src/observability-handlers/ec2-observability.handler.ts",
+          "hash": "8740670410844121554",
+          "deps": [
+            "npm:aws-cdk-lib",
+            "npm:constructs",
+            "core",
+            "standards-tagging"
+          ]
+        },
+        {
+          "file": "packages/standards/otel/observability-handlers/src/observability-handlers/ecs-observability.handler.ts",
+          "hash": "7704250732032170510",
+          "deps": [
+            "npm:aws-cdk-lib",
+            "npm:constructs",
+            "core",
+            "standards-tagging"
+          ]
+        },
+        {
+          "file": "packages/standards/otel/observability-handlers/src/observability-handlers/lambda-observability.handler.ts",
+          "hash": "65199636401898549",
+          "deps": [
+            "npm:aws-cdk-lib",
+            "npm:constructs",
+            "core",
+            "standards-tagging"
+          ]
+        },
+        {
+          "file": "packages/standards/otel/observability-handlers/src/observability-handlers/observability-handler.interface.ts",
+          "hash": "8277778655671834191",
+          "deps": [
+            "core"
+          ]
+        },
+        {
+          "file": "packages/standards/otel/observability-handlers/src/observability-handlers/rds-observability.handler.ts",
+          "hash": "6996258714616989255",
+          "deps": [
+            "npm:aws-cdk-lib",
+            "npm:constructs",
+            "core",
+            "standards-tagging"
+          ]
+        },
+        {
+          "file": "packages/standards/otel/observability-handlers/src/observability-handlers/sqs-observability.handler.ts",
+          "hash": "16605700550003496204",
+          "deps": [
+            "npm:aws-cdk-lib",
+            "npm:constructs",
+            "core",
+            "standards-tagging"
+          ]
+        },
+        {
+          "file": "packages/standards/otel/observability-handlers/src/observability-handlers/vpc-observability.handler.ts",
+          "hash": "13547783474756583451",
+          "deps": [
+            "npm:aws-cdk-lib",
+            "npm:constructs",
+            "core",
+            "standards-tagging"
+          ]
+        },
+        {
+          "file": "packages/standards/otel/observability-handlers/tests/alb-observability.handler.test.ts",
+          "hash": "12309072073426642567",
+          "deps": [
+            "npm:@jest/globals@29.7.0"
+          ]
+        },
+        {
+          "file": "packages/standards/otel/observability-handlers/tests/ec2-instance-observability.handler.test.ts",
+          "hash": "17103899165148351615",
+          "deps": [
+            "npm:@jest/globals@29.7.0",
+            "npm:aws-cdk-lib"
+          ]
+        },
+        {
+          "file": "packages/standards/otel/observability-handlers/tests/ecs-cluster-observability.handler.test.ts",
+          "hash": "13830556018747295252",
+          "deps": [
+            "npm:@jest/globals@29.7.0",
+            "npm:aws-cdk-lib"
+          ]
+        },
+        {
+          "file": "packages/standards/otel/observability-handlers/tests/lambda-observability.handler.test.ts",
+          "hash": "7128224057350229212",
+          "deps": [
+            "npm:@jest/globals@29.7.0",
+            "npm:aws-cdk-lib"
+          ]
+        },
+        {
+          "file": "packages/standards/otel/observability-handlers/tests/rds-observability.handler.test.ts",
+          "hash": "9042485201220165329",
+          "deps": [
+            "npm:@jest/globals@29.7.0",
+            "npm:aws-cdk-lib"
+          ]
+        },
+        {
+          "file": "packages/standards/otel/observability-handlers/tests/setup.ts",
+          "hash": "5122231078295259622"
+        },
+        {
+          "file": "packages/standards/otel/observability-handlers/tests/sqs-queue-observability.handler.test.ts",
+          "hash": "13899747438339935816",
+          "deps": [
+            "npm:@jest/globals@29.7.0",
+            "npm:aws-cdk-lib"
+          ]
+        },
+        {
+          "file": "packages/standards/otel/observability-handlers/tests/vpc-observability.handler.test.ts",
+          "hash": "6958892882667683199",
+          "deps": [
+            "npm:@jest/globals@29.7.0",
+            "npm:aws-cdk-lib"
+          ]
+        },
+        {
+          "file": "packages/standards/otel/observability-handlers/tsconfig.json",
+          "hash": "2566188581520956726"
+        },
+        {
+          "file": "packages/standards/otel/observability-service/LICENSE",
+          "hash": "16598915710037825395"
+        },
+        {
+          "file": "packages/standards/otel/observability-service/README.md",
+          "hash": "14004875152782376455"
+        },
+        {
+          "file": "packages/standards/otel/observability-service/jest.config.js",
+          "hash": "17749332919602818872"
+        },
+        {
+          "file": "packages/standards/otel/observability-service/package.json",
+          "hash": "5839917029613451821"
+        },
+        {
+          "file": "packages/standards/otel/observability-service/src/index.ts",
+          "hash": "14576853449568551689",
+          "deps": [
+            "core"
+          ]
+        },
+        {
+          "file": "packages/standards/otel/observability-service/src/observability-ecs-integration.test.ts",
+          "hash": "12247497269365464300",
+          "deps": [
+            "npm:aws-cdk-lib"
+          ]
+        },
+        {
+          "file": "packages/standards/otel/observability-service/src/observability.service.ts",
+          "hash": "5404755849175764500",
+          "deps": [
+            "npm:js-yaml",
+            "core",
+            "standards-tagging"
+          ]
+        },
+        {
+          "file": "packages/standards/otel/observability-service/tests/observability.service.test.ts",
+          "hash": "2771411585767484469",
+          "deps": [
+            "npm:@jest/globals@29.7.0"
+          ]
+        },
+        {
+          "file": "packages/standards/otel/observability-service/tests/setup.ts",
+          "hash": "16863747030110124403"
+        },
+        {
+          "file": "packages/standards/otel/observability-service/tsconfig.json",
+          "hash": "2566188581520956726"
+        },
+        {
+          "file": "packages/standards/otel/package.json",
+          "hash": "11181082992551532905",
           "deps": [
             "npm:@types/jest",
             "npm:@types/node",
@@ -4625,42 +5164,334 @@
           ]
         },
         {
-          "file": "packages/standards/tagging/project.json",
-          "hash": "5211435454898070980"
+          "file": "packages/standards/otel/project.json",
+          "hash": "8962512259308795559"
         },
         {
-          "file": "packages/standards/tagging/src/index.ts",
-          "hash": "3757243954293906837"
+          "file": "packages/standards/otel/src/index.ts",
+          "hash": "11626192773278863"
         },
         {
-          "file": "packages/standards/tagging/tagging-service/tagging.service.d.ts",
-          "hash": "7203087500097985379",
+          "file": "packages/standards/otel/tsconfig.lib.json",
+          "hash": "4006877950016446411"
+        },
+        {
+          "file": "packages/standards/otel/tsconfig.spec.json",
+          "hash": "4933087548142887878"
+        }
+      ],
+      "@shinobi/iam-role": [
+        {
+          "file": "packages/components/iam-role/README.md",
+          "hash": "7071355276627829512"
+        },
+        {
+          "file": "packages/components/iam-role/iam-role.builder.ts",
+          "hash": "6707384248016723074"
+        },
+        {
+          "file": "packages/components/iam-role/iam-role.component.ts",
+          "hash": "12298196756404030350",
+          "deps": [
+            "npm:aws-cdk-lib",
+            "npm:constructs",
+            "@platform/contracts"
+          ]
+        },
+        {
+          "file": "packages/components/iam-role/iam-role.creator.ts",
+          "hash": "15557093242912559569",
           "deps": [
             "npm:constructs"
           ]
         },
         {
-          "file": "packages/standards/tagging/tagging-service/tagging.service.js",
-          "hash": "15812850634719577064",
+          "file": "packages/components/iam-role/index.ts",
+          "hash": "14368404982965057882"
+        },
+        {
+          "file": "packages/components/iam-role/jest.config.js",
+          "hash": "8872577854924552600"
+        },
+        {
+          "file": "packages/components/iam-role/package.json",
+          "hash": "14779663558035812880",
           "deps": [
-            "npm:aws-cdk-lib"
+            "npm:@types/jest@29.5.14",
+            "npm:@types/node@18.14.6",
+            "npm:jest@29.7.0",
+            "npm:ts-jest",
+            "npm:typescript",
+            "npm:aws-cdk-lib",
+            "npm:constructs"
           ]
         },
         {
-          "file": "packages/standards/tagging/tagging-service/tagging.service.ts",
-          "hash": "806566449185703956",
+          "file": "packages/components/iam-role/src/iam-role.builder.ts",
+          "hash": "13026019905667719822"
+        },
+        {
+          "file": "packages/components/iam-role/src/iam-role.component.ts",
+          "hash": "10902960519453146380",
           "deps": [
             "npm:aws-cdk-lib",
             "npm:constructs"
           ]
         },
         {
-          "file": "packages/standards/tagging/tsconfig.lib.json",
-          "hash": "4006877950016446411"
+          "file": "packages/components/iam-role/src/iam-role.creator.ts",
+          "hash": "12278729811654738898",
+          "deps": [
+            "npm:aws-cdk-lib",
+            "npm:constructs"
+          ]
         },
         {
-          "file": "packages/standards/tagging/tsconfig.spec.json",
-          "hash": "4933087548142887878"
+          "file": "packages/components/iam-role/src/index.ts",
+          "hash": "15767283160446062351"
+        },
+        {
+          "file": "packages/components/iam-role/tests/iam-role.builder.test.ts",
+          "hash": "2397482134037065033",
+          "deps": [
+            "npm:aws-cdk-lib"
+          ]
+        },
+        {
+          "file": "packages/components/iam-role/tests/iam-role.component.synthesis.test.ts",
+          "hash": "8161760620205208218",
+          "deps": [
+            "npm:aws-cdk-lib"
+          ]
+        },
+        {
+          "file": "packages/components/iam-role/tests/setup.ts",
+          "hash": "4837194134954504577"
+        },
+        {
+          "file": "packages/components/iam-role/tests/unit/iam-role.builder.test.ts",
+          "hash": "16401924134188795461",
+          "deps": [
+            "npm:aws-cdk-lib"
+          ]
+        },
+        {
+          "file": "packages/components/iam-role/tests/unit/iam-role.component.test.ts",
+          "hash": "6535920510812439819",
+          "deps": [
+            "npm:aws-cdk-lib"
+          ]
+        }
+      ],
+      "@shinobi/waf-web-acl": [
+        {
+          "file": "packages/components/waf-web-acl/README.md",
+          "hash": "17008738479240580462"
+        },
+        {
+          "file": "packages/components/waf-web-acl/audit/component.plan.json",
+          "hash": "3788771416989704294"
+        },
+        {
+          "file": "packages/components/waf-web-acl/audit/rego/waf-web-acl.rego",
+          "hash": "4549901112313703409"
+        },
+        {
+          "file": "packages/components/waf-web-acl/audit/rego/waf-web-acl_test.rego",
+          "hash": "1361618906301371191"
+        },
+        {
+          "file": "packages/components/waf-web-acl/audit/waf-web-acl.oscal.json",
+          "hash": "16277330243353922880"
+        },
+        {
+          "file": "packages/components/waf-web-acl/generation-summary.json",
+          "hash": "14849119580553636282"
+        },
+        {
+          "file": "packages/components/waf-web-acl/index.ts",
+          "hash": "4731666954053614571"
+        },
+        {
+          "file": "packages/components/waf-web-acl/jest.config.js",
+          "hash": "9876185703598838263"
+        },
+        {
+          "file": "packages/components/waf-web-acl/observability/alarms-config.json",
+          "hash": "4152041008491441549"
+        },
+        {
+          "file": "packages/components/waf-web-acl/observability/otel-dashboard-template.json",
+          "hash": "2992940375170622884"
+        },
+        {
+          "file": "packages/components/waf-web-acl/package.json",
+          "hash": "4260300768035706498",
+          "deps": [
+            "npm:aws-cdk-lib",
+            "npm:constructs",
+            "npm:@types/node@20.19.14",
+            "npm:typescript",
+            "npm:jest@29.7.0",
+            "npm:ts-jest",
+            "npm:@types/jest@29.5.14",
+            "npm:eslint",
+            "npm:@typescript-eslint/eslint-plugin",
+            "npm:@typescript-eslint/parser"
+          ]
+        },
+        {
+          "file": "packages/components/waf-web-acl/test-simple.ts",
+          "hash": "5136964639576209382",
+          "deps": [
+            "npm:aws-cdk-lib"
+          ]
+        },
+        {
+          "file": "packages/components/waf-web-acl/tests/compliance.test.ts",
+          "hash": "5647549887242323296",
+          "deps": [
+            "npm:aws-cdk-lib"
+          ]
+        },
+        {
+          "file": "packages/components/waf-web-acl/tests/observability.test.ts",
+          "hash": "16901353383645345596",
+          "deps": [
+            "npm:aws-cdk-lib"
+          ]
+        },
+        {
+          "file": "packages/components/waf-web-acl/tests/unit/builder.test.ts",
+          "hash": "7053145320088816150"
+        },
+        {
+          "file": "packages/components/waf-web-acl/tests/unit/component.test.ts",
+          "hash": "12370473514984648205",
+          "deps": [
+            "npm:aws-cdk-lib"
+          ]
+        },
+        {
+          "file": "packages/components/waf-web-acl/tests/waf-web-acl.builder.test.ts",
+          "hash": "10424695884945106098"
+        },
+        {
+          "file": "packages/components/waf-web-acl/tests/waf-web-acl.component.synthesis.test.ts",
+          "hash": "7893294639799327433",
+          "deps": [
+            "npm:aws-cdk-lib"
+          ]
+        },
+        {
+          "file": "packages/components/waf-web-acl/tsconfig.json",
+          "hash": "17199098717519277380"
+        },
+        {
+          "file": "packages/components/waf-web-acl/waf-web-acl.builder.ts",
+          "hash": "9839599123294211283"
+        },
+        {
+          "file": "packages/components/waf-web-acl/waf-web-acl.component.ts",
+          "hash": "9040301899747735610",
+          "deps": [
+            "npm:constructs",
+            "npm:aws-cdk-lib"
+          ]
+        },
+        {
+          "file": "packages/components/waf-web-acl/waf-web-acl.creator.ts",
+          "hash": "16378867316660102374",
+          "deps": [
+            "npm:constructs"
+          ]
+        }
+      ],
+      "@platform/api-gateway-http": [
+        {
+          "file": "packages/components/api-gateway-http/Config.schema.json",
+          "hash": "15896977287079812988"
+        },
+        {
+          "file": "packages/components/api-gateway-http/README.md",
+          "hash": "4100645914046560575"
+        },
+        {
+          "file": "packages/components/api-gateway-http/api-gateway-http.builder.ts",
+          "hash": "4747549058266377113",
+          "deps": [
+            "@platform/contracts"
+          ]
+        },
+        {
+          "file": "packages/components/api-gateway-http/api-gateway-http.component.ts",
+          "hash": "5818390651344963497",
+          "deps": [
+            "npm:aws-cdk-lib",
+            "npm:constructs",
+            "@platform/contracts"
+          ]
+        },
+        {
+          "file": "packages/components/api-gateway-http/api-gateway-http.creator.ts",
+          "hash": "13915173715344268240",
+          "deps": [
+            "npm:constructs",
+            "@platform/contracts"
+          ]
+        },
+        {
+          "file": "packages/components/api-gateway-http/catalog-info.yaml",
+          "hash": "15060507522821356185"
+        },
+        {
+          "file": "packages/components/api-gateway-http/index.ts",
+          "hash": "428419197447611397"
+        },
+        {
+          "file": "packages/components/api-gateway-http/package.json",
+          "hash": "8049002768884357254",
+          "deps": [
+            "npm:aws-cdk-lib",
+            "npm:constructs",
+            "npm:@types/jest@29.5.14",
+            "npm:@types/node@20.19.14",
+            "npm:@typescript-eslint/eslint-plugin",
+            "npm:@typescript-eslint/parser",
+            "npm:eslint",
+            "npm:jest@29.7.0",
+            "npm:ts-jest",
+            "npm:typescript",
+            "@platform/contracts",
+            "@platform/core-engine"
+          ]
+        },
+        {
+          "file": "packages/components/api-gateway-http/tests/api-gateway-http.builder.test.ts",
+          "hash": "999307411287950051",
+          "deps": [
+            "@platform/contracts"
+          ]
+        },
+        {
+          "file": "packages/components/api-gateway-http/tests/api-gateway-http.component.synthesis.test.ts",
+          "hash": "12885725491186572499",
+          "deps": [
+            "npm:aws-cdk-lib",
+            "@platform/contracts"
+          ]
+        },
+        {
+          "file": "packages/components/api-gateway-http/tests/api-gateway-http.component.test.ts",
+          "hash": "13181969816438842353",
+          "deps": [
+            "npm:aws-cdk-lib",
+            "@platform/contracts"
+          ]
+        },
+        {
+          "file": "packages/components/api-gateway-http/tsconfig.json",
+          "hash": "2601391265962747273"
         }
       ],
       "@platform/components-backstage-portal": [
@@ -4737,99 +5568,91 @@
           "hash": "5525663129715303864"
         }
       ],
-      "@platform/components-deployment-bundle-pipeline": [
+      "standards-iam-audit": [
         {
-          "file": "packages/components/deployment-bundle-pipeline/README.md",
-          "hash": "13878995460923611435"
+          "file": "packages/standards/iam-audit/jest.config.ts",
+          "hash": "17376543197423877982"
         },
         {
-          "file": "packages/components/deployment-bundle-pipeline/audit/component.plan.json",
-          "hash": "16787725895637861291"
-        },
-        {
-          "file": "packages/components/deployment-bundle-pipeline/audit/deployment-bundle-pipeline.oscal.json",
-          "hash": "17646327668684797317"
-        },
-        {
-          "file": "packages/components/deployment-bundle-pipeline/audit/rego/bundle_security_policies.rego",
-          "hash": "16161582798300545449"
-        },
-        {
-          "file": "packages/components/deployment-bundle-pipeline/dagger.ts",
-          "hash": "8477345662149291955"
-        },
-        {
-          "file": "packages/components/deployment-bundle-pipeline/jest.config.js",
-          "hash": "16174409094751740907"
-        },
-        {
-          "file": "packages/components/deployment-bundle-pipeline/observability/alarms-config.json",
-          "hash": "18270987230754750055"
-        },
-        {
-          "file": "packages/components/deployment-bundle-pipeline/observability/otel-dashboard-template.json",
-          "hash": "1517350791177335245"
-        },
-        {
-          "file": "packages/components/deployment-bundle-pipeline/package.json",
-          "hash": "11762208609345315320",
+          "file": "packages/standards/iam-audit/package.json",
+          "hash": "9666128690917301319",
           "deps": [
-            "npm:aws-cdk-lib",
-            "npm:constructs",
-            "npm:@types/jest@29.5.14",
-            "npm:@types/node@20.19.14",
-            "npm:@typescript-eslint/eslint-plugin",
-            "npm:@typescript-eslint/parser",
-            "npm:eslint",
-            "npm:jest@29.7.0",
+            "npm:@types/jest",
+            "npm:@types/node",
+            "npm:jest",
             "npm:ts-jest",
             "npm:typescript",
-            "@platform/core-engine",
-            "@platform/contracts"
+            "core"
           ]
         },
         {
-          "file": "packages/components/deployment-bundle-pipeline/scripts/gen-provenance.sh",
-          "hash": "11792887095119311477"
+          "file": "packages/standards/iam-audit/project.json",
+          "hash": "14930067881558315151"
         },
         {
-          "file": "packages/components/deployment-bundle-pipeline/src/deployment-bundle-pipeline.builder.ts",
-          "hash": "12701639863134911742"
+          "file": "packages/standards/iam-audit/src/index.ts",
+          "hash": "4071809394949347885"
         },
         {
-          "file": "packages/components/deployment-bundle-pipeline/src/deployment-bundle-pipeline.component.ts",
-          "hash": "6955649166442358862"
+          "file": "packages/standards/iam-audit/tsconfig.lib.json",
+          "hash": "4006877950016446411"
         },
         {
-          "file": "packages/components/deployment-bundle-pipeline/src/deployment-bundle-pipeline.creator.ts",
-          "hash": "1470025511806899686"
+          "file": "packages/standards/iam-audit/tsconfig.spec.json",
+          "hash": "4933087548142887878"
+        }
+      ],
+      "mcp-server": [
+        {
+          "file": "packages/mcp/server/jest.config.ts",
+          "hash": "7662061424955689041"
         },
         {
-          "file": "packages/components/deployment-bundle-pipeline/src/index.ts",
-          "hash": "5974657487635288014"
+          "file": "packages/mcp/server/mcp-server/package-lock.json",
+          "hash": "6877202686507413097"
         },
         {
-          "file": "packages/components/deployment-bundle-pipeline/src/types.ts",
-          "hash": "6076368853284652266"
+          "file": "packages/mcp/server/mcp-server/package.json",
+          "hash": "7948729148702269209"
         },
         {
-          "file": "packages/components/deployment-bundle-pipeline/tests/setup.ts",
-          "hash": "13712925196876119842"
-        },
-        {
-          "file": "packages/components/deployment-bundle-pipeline/tests/simple.test.ts",
-          "hash": "6991431107637804510"
-        },
-        {
-          "file": "packages/components/deployment-bundle-pipeline/tests/unit/builder.test.ts",
-          "hash": "91214594767232889"
-        },
-        {
-          "file": "packages/components/deployment-bundle-pipeline/tests/unit/component.test.ts",
-          "hash": "8751873657856482411",
+          "file": "packages/mcp/server/mcp-server/src/index.ts",
+          "hash": "12101638018650849266",
           "deps": [
-            "npm:aws-cdk-lib"
+            "npm:@modelcontextprotocol/sdk"
           ]
+        },
+        {
+          "file": "packages/mcp/server/mcp-server/tsconfig.json",
+          "hash": "5599065727704449325"
+        },
+        {
+          "file": "packages/mcp/server/package.json",
+          "hash": "16858635039255016490",
+          "deps": [
+            "npm:@types/jest",
+            "npm:@types/node",
+            "npm:jest",
+            "npm:ts-jest",
+            "npm:typescript",
+            "core"
+          ]
+        },
+        {
+          "file": "packages/mcp/server/project.json",
+          "hash": "7718167712427444311"
+        },
+        {
+          "file": "packages/mcp/server/src/index.ts",
+          "hash": "1159992869243563360"
+        },
+        {
+          "file": "packages/mcp/server/tsconfig.lib.json",
+          "hash": "4006877950016446411"
+        },
+        {
+          "file": "packages/mcp/server/tsconfig.spec.json",
+          "hash": "4933087548142887878"
         }
       ],
       "svc": [
@@ -4988,806 +5811,45 @@
           "hash": "13453859391622790998"
         }
       ],
-      "@shinobi/vpc": [
+      "@platform/core-engine": [
         {
-          "file": "packages/components/vpc/README.md",
-          "hash": "8875819887397071593"
+          "file": "packages/core-engine/catalog-info.yaml",
+          "hash": "12406042930707765105"
         },
         {
-          "file": "packages/components/vpc/audit/component.plan.json",
-          "hash": "12000413060616824162"
-        },
-        {
-          "file": "packages/components/vpc/audit/rego/vpc.rego",
-          "hash": "8533818154920924019"
-        },
-        {
-          "file": "packages/components/vpc/audit/rego/vpc_test.rego",
-          "hash": "12810827227442909778"
-        },
-        {
-          "file": "packages/components/vpc/audit/vpc.oscal.json",
-          "hash": "18022597759662346645"
-        },
-        {
-          "file": "packages/components/vpc/generation-summary.json",
-          "hash": "897740523218728149"
-        },
-        {
-          "file": "packages/components/vpc/index.ts",
-          "hash": "4065872702002909585"
-        },
-        {
-          "file": "packages/components/vpc/jest.config.js",
-          "hash": "9876185703598838263"
-        },
-        {
-          "file": "packages/components/vpc/observability/alarms-config.json",
-          "hash": "10768305995109260950"
-        },
-        {
-          "file": "packages/components/vpc/observability/otel-dashboard-template.json",
-          "hash": "4576313993253791197"
-        },
-        {
-          "file": "packages/components/vpc/package.json",
-          "hash": "4433943797058200473",
+          "file": "packages/core-engine/package.json",
+          "hash": "429654548695076195",
           "deps": [
-            "npm:aws-cdk-lib",
-            "npm:constructs",
-            "npm:@types/node@20.19.14",
-            "npm:typescript",
-            "npm:jest@29.7.0",
-            "npm:ts-jest",
-            "npm:@types/jest@29.5.14",
-            "npm:eslint",
-            "npm:@typescript-eslint/eslint-plugin",
-            "npm:@typescript-eslint/parser"
+            "@platform/contracts"
           ]
         },
         {
-          "file": "packages/components/vpc/test-simple.ts",
-          "hash": "909108858185588679",
+          "file": "packages/core-engine/src/index.ts",
+          "hash": "966081879783914188",
           "deps": [
-            "npm:aws-cdk-lib"
+            "@platform/contracts"
           ]
         },
         {
-          "file": "packages/components/vpc/tests/compliance.test.ts",
-          "hash": "3053902171632405232",
+          "file": "packages/core-engine/tests/core-engine.test.ts",
+          "hash": "14406557928951961792",
           "deps": [
-            "npm:aws-cdk-lib"
+            "@platform/contracts"
           ]
         },
         {
-          "file": "packages/components/vpc/tests/observability.test.ts",
-          "hash": "9392671795301397368",
-          "deps": [
-            "npm:aws-cdk-lib"
-          ]
-        },
-        {
-          "file": "packages/components/vpc/tests/unit/builder.test.ts",
-          "hash": "12519849711213784901"
-        },
-        {
-          "file": "packages/components/vpc/tests/unit/component.test.ts",
-          "hash": "5942211991237852784",
-          "deps": [
-            "npm:aws-cdk-lib"
-          ]
-        },
-        {
-          "file": "packages/components/vpc/tests/vpc.builder.test.ts",
-          "hash": "4012717958027362008"
-        },
-        {
-          "file": "packages/components/vpc/tests/vpc.component.synthesis.test.ts",
-          "hash": "17165583504273358829",
-          "deps": [
-            "npm:aws-cdk-lib"
-          ]
-        },
-        {
-          "file": "packages/components/vpc/tsconfig.json",
-          "hash": "17199098717519277380"
-        },
-        {
-          "file": "packages/components/vpc/vpc.builder.ts",
-          "hash": "11213271852805247841"
-        },
-        {
-          "file": "packages/components/vpc/vpc.component.ts",
-          "hash": "10562567076080033799",
-          "deps": [
-            "npm:aws-cdk-lib",
-            "npm:constructs"
-          ]
-        },
-        {
-          "file": "packages/components/vpc/vpc.creator.ts",
-          "hash": "10119006679148726255",
-          "deps": [
-            "npm:constructs"
-          ]
+          "file": "packages/core-engine/tsconfig.json",
+          "hash": "6977085707718287595"
         }
       ],
-      "@platform/shinobi": [
+      "standards-tagging": [
         {
-          "file": "packages/components/shinobi/MCP_SERVER_README.md",
-          "hash": "6459763790868124426"
+          "file": "packages/standards/tagging/jest.config.ts",
+          "hash": "11173089299829010346"
         },
         {
-          "file": "packages/components/shinobi/README.md",
-          "hash": "7152864019549833671"
-        },
-        {
-          "file": "packages/components/shinobi/SHINOBI_SUMMARY.md",
-          "hash": "59767366379295371"
-        },
-        {
-          "file": "packages/components/shinobi/examples/basic-usage.ts",
-          "hash": "13408313125355963233",
-          "deps": [
-            "npm:aws-cdk-lib"
-          ]
-        },
-        {
-          "file": "packages/components/shinobi/package.json",
-          "hash": "5441731817767429332",
-          "deps": [
-            "npm:@types/jest@29.5.14",
-            "npm:@types/node@20.19.14",
-            "npm:jest@29.7.0",
-            "npm:ts-jest",
-            "npm:typescript",
-            "npm:eslint",
-            "npm:@typescript-eslint/eslint-plugin",
-            "npm:@typescript-eslint/parser",
-            "npm:aws-cdk-lib",
-            "npm:constructs",
-            "npm:@modelcontextprotocol/sdk",
-            "@platform/contracts",
-            "@platform/core-engine",
-            "npm:ts-node"
-          ]
-        },
-        {
-          "file": "packages/components/shinobi/src/index.ts",
-          "hash": "10769049332265089796"
-        },
-        {
-          "file": "packages/components/shinobi/src/server/Dockerfile",
-          "hash": "11448454393328977296"
-        },
-        {
-          "file": "packages/components/shinobi/src/server/index.ts",
-          "hash": "5891648825243447708"
-        },
-        {
-          "file": "packages/components/shinobi/src/server/shinobi-server.ts",
-          "hash": "17461991709149714167",
-          "deps": [
-            "npm:@modelcontextprotocol/sdk",
-            "npm:yaml"
-          ]
-        },
-        {
-          "file": "packages/components/shinobi/src/shinobi-feature-flags.d.ts",
-          "hash": "17114174420381852242",
-          "deps": [
-            "npm:constructs"
-          ]
-        },
-        {
-          "file": "packages/components/shinobi/src/shinobi-feature-flags.js",
-          "hash": "4282063208346686125"
-        },
-        {
-          "file": "packages/components/shinobi/src/shinobi-feature-flags.ts",
-          "hash": "14921346832874750914",
-          "deps": [
-            "npm:constructs"
-          ]
-        },
-        {
-          "file": "packages/components/shinobi/src/shinobi.builder.ts",
-          "hash": "10862203041976285208"
-        },
-        {
-          "file": "packages/components/shinobi/src/shinobi.component.ts",
-          "hash": "16393217938141915462",
-          "deps": [
-            "npm:aws-cdk-lib",
-            "npm:constructs",
-            "@platform/contracts"
-          ]
-        },
-        {
-          "file": "packages/components/shinobi/src/shinobi.creator.ts",
-          "hash": "446152092422279017",
-          "deps": [
-            "npm:constructs"
-          ]
-        },
-        {
-          "file": "packages/components/shinobi/tests/shinobi-feature-flags.test.ts",
-          "hash": "12658648825897813797",
-          "deps": [
-            "npm:aws-cdk-lib"
-          ]
-        },
-        {
-          "file": "packages/components/shinobi/tests/shinobi.builder.test.ts",
-          "hash": "4729943776137609677"
-        },
-        {
-          "file": "packages/components/shinobi/tests/shinobi.component.synthesis.test.ts",
-          "hash": "14108253921081575877",
-          "deps": [
-            "npm:aws-cdk-lib"
-          ]
-        },
-        {
-          "file": "packages/components/shinobi/tsconfig.server.json",
-          "hash": "10896337934498905975"
-        }
-      ],
-      "@platform/api-gateway-http": [
-        {
-          "file": "packages/components/api-gateway-http/Config.schema.json",
-          "hash": "15896977287079812988"
-        },
-        {
-          "file": "packages/components/api-gateway-http/README.md",
-          "hash": "4100645914046560575"
-        },
-        {
-          "file": "packages/components/api-gateway-http/api-gateway-http.builder.ts",
-          "hash": "4747549058266377113",
-          "deps": [
-            "@platform/contracts"
-          ]
-        },
-        {
-          "file": "packages/components/api-gateway-http/api-gateway-http.component.ts",
-          "hash": "5818390651344963497",
-          "deps": [
-            "npm:aws-cdk-lib",
-            "npm:constructs",
-            "@platform/contracts"
-          ]
-        },
-        {
-          "file": "packages/components/api-gateway-http/api-gateway-http.creator.ts",
-          "hash": "13915173715344268240",
-          "deps": [
-            "npm:constructs",
-            "@platform/contracts"
-          ]
-        },
-        {
-          "file": "packages/components/api-gateway-http/catalog-info.yaml",
-          "hash": "15060507522821356185"
-        },
-        {
-          "file": "packages/components/api-gateway-http/index.ts",
-          "hash": "428419197447611397"
-        },
-        {
-          "file": "packages/components/api-gateway-http/package.json",
-          "hash": "8049002768884357254",
-          "deps": [
-            "npm:aws-cdk-lib",
-            "npm:constructs",
-            "npm:@types/jest@29.5.14",
-            "npm:@types/node@20.19.14",
-            "npm:@typescript-eslint/eslint-plugin",
-            "npm:@typescript-eslint/parser",
-            "npm:eslint",
-            "npm:jest@29.7.0",
-            "npm:ts-jest",
-            "npm:typescript",
-            "@platform/contracts",
-            "@platform/core-engine"
-          ]
-        },
-        {
-          "file": "packages/components/api-gateway-http/tests/api-gateway-http.builder.test.ts",
-          "hash": "999307411287950051",
-          "deps": [
-            "@platform/contracts"
-          ]
-        },
-        {
-          "file": "packages/components/api-gateway-http/tests/api-gateway-http.component.synthesis.test.ts",
-          "hash": "12885725491186572499",
-          "deps": [
-            "npm:aws-cdk-lib",
-            "@platform/contracts"
-          ]
-        },
-        {
-          "file": "packages/components/api-gateway-http/tests/api-gateway-http.component.test.ts",
-          "hash": "13181969816438842353",
-          "deps": [
-            "npm:aws-cdk-lib",
-            "@platform/contracts"
-          ]
-        },
-        {
-          "file": "packages/components/api-gateway-http/tsconfig.json",
-          "hash": "2601391265962747273"
-        }
-      ],
-      "@platform/dagger-engine-pool": [
-        {
-          "file": "packages/components/dagger-engine-pool/Config.schema.json",
-          "hash": "2638608803403775365"
-        },
-        {
-          "file": "packages/components/dagger-engine-pool/Dockerfile",
-          "hash": "2297734316329566405"
-        },
-        {
-          "file": "packages/components/dagger-engine-pool/README.md",
-          "hash": "9150142918602494193"
-        },
-        {
-          "file": "packages/components/dagger-engine-pool/artifactory-config.yml",
-          "hash": "15523351795281863507"
-        },
-        {
-          "file": "packages/components/dagger-engine-pool/audit/component.plan.json",
-          "hash": "17160111245138805243"
-        },
-        {
-          "file": "packages/components/dagger-engine-pool/audit/dagger-engine-pool.oscal.json",
-          "hash": "5452705044063411195"
-        },
-        {
-          "file": "packages/components/dagger-engine-pool/audit/rego/dagger-engine-pool.rego",
-          "hash": "2576705173284365420"
-        },
-        {
-          "file": "packages/components/dagger-engine-pool/audit/rego/dagger-engine-pool_test.rego",
-          "hash": "7709936061227559800"
-        },
-        {
-          "file": "packages/components/dagger-engine-pool/dagger-engine-pool.builder.ts",
-          "hash": "13119873041551180391",
-          "deps": [
-            "@platform/core-engine"
-          ]
-        },
-        {
-          "file": "packages/components/dagger-engine-pool/dagger-engine-pool.component.ts",
-          "hash": "9824504582773459497",
-          "deps": [
-            "npm:constructs",
-            "npm:aws-cdk-lib",
-            "@platform/core-engine",
-            "@platform/contracts"
-          ]
-        },
-        {
-          "file": "packages/components/dagger-engine-pool/dagger-engine-pool.creator.ts",
-          "hash": "6021743022608376776",
-          "deps": [
-            "@platform/contracts"
-          ]
-        },
-        {
-          "file": "packages/components/dagger-engine-pool/dagger.ts",
-          "hash": "445040631999380248"
-        },
-        {
-          "file": "packages/components/dagger-engine-pool/index.ts",
-          "hash": "11785154820915998269"
-        },
-        {
-          "file": "packages/components/dagger-engine-pool/jest.config.cjs",
-          "hash": "8572334324115476695"
-        },
-        {
-          "file": "packages/components/dagger-engine-pool/observability/alarms-config.json",
-          "hash": "13117841330682180256"
-        },
-        {
-          "file": "packages/components/dagger-engine-pool/observability/otel-dashboard-template.json",
-          "hash": "8658243697673035135"
-        },
-        {
-          "file": "packages/components/dagger-engine-pool/package-lock.json",
-          "hash": "8206533669035327107"
-        },
-        {
-          "file": "packages/components/dagger-engine-pool/package.json",
-          "hash": "13360133717310686826",
-          "deps": [
-            "npm:aws-cdk-lib",
-            "npm:constructs",
-            "npm:@types/jest@29.5.14",
-            "npm:@types/node@20.19.14",
-            "npm:eslint",
-            "npm:@typescript-eslint/eslint-plugin",
-            "npm:@typescript-eslint/parser",
-            "npm:jest@29.7.0",
-            "npm:ts-jest",
-            "npm:typescript"
-          ]
-        },
-        {
-          "file": "packages/components/dagger-engine-pool/src/@platform/contracts.ts",
-          "hash": "10829073697374391291"
-        },
-        {
-          "file": "packages/components/dagger-engine-pool/src/@platform/core-engine.ts",
-          "hash": "8839553426797909667",
-          "deps": [
-            [
-              "npm:aws-cdk-lib",
-              "dynamic"
-            ]
-          ]
-        },
-        {
-          "file": "packages/components/dagger-engine-pool/src/@platform/tagging-service.ts",
-          "hash": "8133700757308145278"
-        },
-        {
-          "file": "packages/components/dagger-engine-pool/src/dagger-engine-pool.builder.ts",
-          "hash": "8457974355917973513"
-        },
-        {
-          "file": "packages/components/dagger-engine-pool/src/dagger-engine-pool.component.ts",
-          "hash": "11226865660144903321",
-          "deps": [
-            "npm:constructs",
-            "npm:aws-cdk-lib",
-            "@platform/core-engine",
-            "@platform/contracts"
-          ]
-        },
-        {
-          "file": "packages/components/dagger-engine-pool/src/dagger-engine-pool.creator.ts",
-          "hash": "6021743022608376776",
-          "deps": [
-            "@platform/contracts"
-          ]
-        },
-        {
-          "file": "packages/components/dagger-engine-pool/src/index.ts",
-          "hash": "11785154820915998269"
-        },
-        {
-          "file": "packages/components/dagger-engine-pool/src/schema/Config.schema.json",
-          "hash": "2638608803403775365"
-        },
-        {
-          "file": "packages/components/dagger-engine-pool/src/types.ts",
-          "hash": "7047125115490644294"
-        },
-        {
-          "file": "packages/components/dagger-engine-pool/tests/setup.ts",
-          "hash": "4239574004095774559",
-          "deps": [
-            "npm:aws-cdk-lib"
-          ]
-        },
-        {
-          "file": "packages/components/dagger-engine-pool/tests/unit/builder.test.ts",
-          "hash": "9297836529419921144"
-        },
-        {
-          "file": "packages/components/dagger-engine-pool/tests/unit/component.test.ts",
-          "hash": "2497899561894686387",
-          "deps": [
-            "npm:aws-cdk-lib",
-            "npm:constructs"
-          ]
-        },
-        {
-          "file": "packages/components/dagger-engine-pool/tsconfig.json",
-          "hash": "9407488615300569937"
-        },
-        {
-          "file": "packages/components/dagger-engine-pool/types.ts",
-          "hash": "7047125115490644294"
-        }
-      ],
-      "constructs-prd": [
-        {
-          "file": "packages/constructs/prd/infrastructure/catalog-info.yaml",
-          "hash": "2422457067429494017"
-        },
-        {
-          "file": "packages/constructs/prd/infrastructure/package.json",
-          "hash": "2791711716308872494"
-        },
-        {
-          "file": "packages/constructs/prd/infrastructure/src/app.ts",
-          "hash": "1747817340691154262",
-          "deps": [
-            "@platform/core-engine",
-            "@platform/lambda-api",
-            "@platform/rds-postgres",
-            "@platform/sqs-queue"
-          ]
-        },
-        {
-          "file": "packages/constructs/prd/infrastructure/tests/infrastructure.test.ts",
-          "hash": "10519204466383240064",
-          "deps": [
-            [
-              "core",
-              "dynamic"
-            ]
-          ]
-        },
-        {
-          "file": "packages/constructs/prd/infrastructure/tsconfig.json",
-          "hash": "8690522403544838164"
-        },
-        {
-          "file": "packages/constructs/prd/jest.config.ts",
-          "hash": "12725421230875213953"
-        },
-        {
-          "file": "packages/constructs/prd/package.json",
-          "hash": "1385521602886594778",
-          "deps": [
-            "npm:@types/jest",
-            "npm:@types/node",
-            "npm:jest",
-            "npm:ts-jest",
-            "npm:typescript",
-            "core",
-            "npm:aws-cdk-lib",
-            "npm:constructs"
-          ]
-        },
-        {
-          "file": "packages/constructs/prd/project.json",
-          "hash": "7729634818246254872"
-        },
-        {
-          "file": "packages/constructs/prd/src/index.ts",
-          "hash": "14721177349526847501"
-        },
-        {
-          "file": "packages/constructs/prd/tsconfig.lib.json",
-          "hash": "4006877950016446411"
-        },
-        {
-          "file": "packages/constructs/prd/tsconfig.spec.json",
-          "hash": "4933087548142887878"
-        }
-      ],
-      "@platform/rds-postgres": [
-        {
-          "file": "packages/components/rds-postgres/README.md",
-          "hash": "8759288169756959386"
-        },
-        {
-          "file": "packages/components/rds-postgres/catalog-info.yaml",
-          "hash": "10439544403880839816"
-        },
-        {
-          "file": "packages/components/rds-postgres/index.ts",
-          "hash": "15502698355078739822"
-        },
-        {
-          "file": "packages/components/rds-postgres/lambda-to-rds.binder.ts",
-          "hash": "3935080995599300467",
-          "deps": [
-            "@platform/contracts",
-            "npm:aws-cdk-lib"
-          ]
-        },
-        {
-          "file": "packages/components/rds-postgres/package.json",
-          "hash": "6905696251653525424",
-          "deps": [
-            "@platform/core-engine",
-            "@platform/contracts"
-          ]
-        },
-        {
-          "file": "packages/components/rds-postgres/rds-postgres.builder.ts",
-          "hash": "7920052047321603194"
-        },
-        {
-          "file": "packages/components/rds-postgres/rds-postgres.component.ts",
-          "hash": "11205714353457515016",
-          "deps": [
-            "npm:aws-cdk-lib",
-            "npm:constructs",
-            "@platform/contracts"
-          ]
-        },
-        {
-          "file": "packages/components/rds-postgres/rds-postgres.creator.ts",
-          "hash": "18240099973498744035",
-          "deps": [
-            "@platform/contracts"
-          ]
-        },
-        {
-          "file": "packages/components/rds-postgres/src/index.ts",
-          "hash": "6987571137554338213"
-        },
-        {
-          "file": "packages/components/rds-postgres/src/rds-postgres.builder.ts",
-          "hash": "8678746731244034821"
-        },
-        {
-          "file": "packages/components/rds-postgres/src/rds-postgres.ts",
-          "hash": "9920915642484978454",
-          "deps": [
-            "@platform/contracts"
-          ]
-        },
-        {
-          "file": "packages/components/rds-postgres/tests/rds-postgres.builder.test.ts",
-          "hash": "428790112298671325"
-        },
-        {
-          "file": "packages/components/rds-postgres/tests/rds-postgres.component.synthesis.test.ts",
-          "hash": "814480808830408659",
-          "deps": [
-            "npm:aws-cdk-lib"
-          ]
-        },
-        {
-          "file": "packages/components/rds-postgres/tests/rds-postgres.test.ts",
-          "hash": "16226239482375038440"
-        },
-        {
-          "file": "packages/components/rds-postgres/tsconfig.json",
-          "hash": "3803076836316330929"
-        }
-      ],
-      "@platform/sqs-queue": [
-        {
-          "file": "packages/components/sqs-queue/README.md",
-          "hash": "9733795423599130915"
-        },
-        {
-          "file": "packages/components/sqs-queue/index.ts",
-          "hash": "7808616212344776076"
-        },
-        {
-          "file": "packages/components/sqs-queue/package.json",
-          "hash": "5134414201242472872",
-          "deps": [
-            "@platform/core-engine",
-            "@platform/contracts"
-          ]
-        },
-        {
-          "file": "packages/components/sqs-queue/sqs-queue.builder.ts",
-          "hash": "6453869290730610805"
-        },
-        {
-          "file": "packages/components/sqs-queue/sqs-queue.component.ts",
-          "hash": "6608638317469215564",
-          "deps": [
-            "npm:constructs"
-          ]
-        },
-        {
-          "file": "packages/components/sqs-queue/sqs-queue.creator.ts",
-          "hash": "1012329583018216750",
-          "deps": [
-            "npm:constructs"
-          ]
-        },
-        {
-          "file": "packages/components/sqs-queue/src/index.ts",
-          "hash": "4278295809996988374"
-        },
-        {
-          "file": "packages/components/sqs-queue/src/sqs-queue.builder.ts",
-          "hash": "13633362278467887341"
-        },
-        {
-          "file": "packages/components/sqs-queue/src/sqs-queue.ts",
-          "hash": "15932321534885017322",
-          "deps": [
-            "@platform/contracts"
-          ]
-        },
-        {
-          "file": "packages/components/sqs-queue/tests/sqs-queue.builder.test.ts",
-          "hash": "7778016531980127335"
-        },
-        {
-          "file": "packages/components/sqs-queue/tests/sqs-queue.component.synthesis.test.ts",
-          "hash": "1120452757508618688",
-          "deps": [
-            "npm:aws-cdk-lib"
-          ]
-        },
-        {
-          "file": "packages/components/sqs-queue/tests/sqs-queue.test.ts",
-          "hash": "11086619260875896889"
-        },
-        {
-          "file": "packages/components/sqs-queue/tsconfig.json",
-          "hash": "4796780823213029049"
-        }
-      ],
-      "standards-logging": [
-        {
-          "file": "packages/standards/logging/jest.config.ts",
-          "hash": "6212428225453359354"
-        },
-        {
-          "file": "packages/standards/logging/logger/package.json",
-          "hash": "9885892114452180776"
-        },
-        {
-          "file": "packages/standards/logging/logger/src/index.ts",
-          "hash": "6990188296771592858"
-        },
-        {
-          "file": "packages/standards/logging/logging-handlers/ecs-logging.handler.ts",
-          "hash": "4627184214387026905",
-          "deps": [
-            "npm:aws-cdk-lib"
-          ]
-        },
-        {
-          "file": "packages/standards/logging/logging-handlers/lambda-logging.handler.ts",
-          "hash": "10378691914809214089",
-          "deps": [
-            "npm:aws-cdk-lib"
-          ]
-        },
-        {
-          "file": "packages/standards/logging/logging-handlers/rds-logging.handler.ts",
-          "hash": "15698975061694846017",
-          "deps": [
-            "npm:aws-cdk-lib"
-          ]
-        },
-        {
-          "file": "packages/standards/logging/logging-handlers/s3-logging.handler.ts",
-          "hash": "9741267168836505615",
-          "deps": [
-            "npm:aws-cdk-lib"
-          ]
-        },
-        {
-          "file": "packages/standards/logging/logging-handlers/sqs-logging.handler.ts",
-          "hash": "6482523572944248222",
-          "deps": [
-            "npm:aws-cdk-lib"
-          ]
-        },
-        {
-          "file": "packages/standards/logging/logging-handlers/vpc-logging.handler.ts",
-          "hash": "10485265435268449646",
-          "deps": [
-            "npm:aws-cdk-lib"
-          ]
-        },
-        {
-          "file": "packages/standards/logging/logging-service/infrastructure-logging.service.ts",
-          "hash": "14711410109618432037",
-          "deps": [
-            "npm:js-yaml",
-            "npm:aws-cdk-lib"
-          ]
-        },
-        {
-          "file": "packages/standards/logging/logging-service/src/logging-config.interface.ts",
-          "hash": "5669031592836118128"
-        },
-        {
-          "file": "packages/standards/logging/package.json",
-          "hash": "9466123277895662607",
+          "file": "packages/standards/tagging/package.json",
+          "hash": "5111549344473245502",
           "deps": [
             "npm:@types/jest",
             "npm:@types/node",
@@ -5798,104 +5860,42 @@
           ]
         },
         {
-          "file": "packages/standards/logging/project.json",
-          "hash": "1604754247836925496"
+          "file": "packages/standards/tagging/project.json",
+          "hash": "5211435454898070980"
         },
         {
-          "file": "packages/standards/logging/src/index.ts",
-          "hash": "10473453194656803611"
+          "file": "packages/standards/tagging/src/index.ts",
+          "hash": "3757243954293906837"
         },
         {
-          "file": "packages/standards/logging/tsconfig.lib.json",
-          "hash": "3885536577365832930"
-        },
-        {
-          "file": "packages/standards/logging/tsconfig.spec.json",
-          "hash": "905612802202146129"
-        }
-      ],
-      "standards-deprecation": [
-        {
-          "file": "packages/standards/deprecation/jest.config.ts",
-          "hash": "14908822425355342593"
-        },
-        {
-          "file": "packages/standards/deprecation/package.json",
-          "hash": "5024915981973030009",
-          "deps": [
-            "npm:@types/jest",
-            "npm:@types/node",
-            "npm:jest",
-            "npm:ts-jest",
-            "npm:typescript",
-            "core"
-          ]
-        },
-        {
-          "file": "packages/standards/deprecation/project.json",
-          "hash": "14557095603496790845"
-        },
-        {
-          "file": "packages/standards/deprecation/src/index.ts",
-          "hash": "6679164348460821020"
-        },
-        {
-          "file": "packages/standards/deprecation/tsconfig.lib.json",
-          "hash": "4006877950016446411"
-        },
-        {
-          "file": "packages/standards/deprecation/tsconfig.spec.json",
-          "hash": "4933087548142887878"
-        }
-      ],
-      "@platform/components-container-application": [
-        {
-          "file": "packages/components/container-application/package.json",
-          "hash": "5063921494724820499",
-          "deps": [
-            "npm:aws-cdk-lib",
-            "npm:constructs",
-            "npm:@types/jest@29.5.14",
-            "npm:@types/node@20.19.14",
-            "npm:@typescript-eslint/eslint-plugin",
-            "npm:@typescript-eslint/parser",
-            "npm:eslint",
-            "npm:jest@29.7.0",
-            "npm:ts-jest",
-            "npm:typescript",
-            "@platform/contracts",
-            "@platform/core-engine"
-          ]
-        },
-        {
-          "file": "packages/components/container-application/src/container-application.builder.ts",
-          "hash": "4708335185500006773",
-          "deps": [
-            "@platform/contracts"
-          ]
-        },
-        {
-          "file": "packages/components/container-application/src/container-application.component.ts",
-          "hash": "16225585997234048283",
-          "deps": [
-            "npm:aws-cdk-lib",
-            "npm:constructs",
-            "@platform/contracts"
-          ]
-        },
-        {
-          "file": "packages/components/container-application/src/container-application.creator.ts",
-          "hash": "2326517139878986357",
+          "file": "packages/standards/tagging/tagging-service/tagging.service.d.ts",
+          "hash": "7203087500097985379",
           "deps": [
             "npm:constructs"
           ]
         },
         {
-          "file": "packages/components/container-application/src/index.ts",
-          "hash": "8193930565131220180",
+          "file": "packages/standards/tagging/tagging-service/tagging.service.js",
+          "hash": "15812850634719577064",
           "deps": [
-            "@platform/contracts"
+            "npm:aws-cdk-lib"
           ]
+        },
+        {
+          "file": "packages/standards/tagging/tagging-service/tagging.service.ts",
+          "hash": "806566449185703956",
+          "deps": [
+            "npm:aws-cdk-lib",
+            "npm:constructs"
+          ]
+        },
+        {
+          "file": "packages/standards/tagging/tsconfig.lib.json",
+          "hash": "4006877950016446411"
+        },
+        {
+          "file": "packages/standards/tagging/tsconfig.spec.json",
+          "hash": "4933087548142887878"
         }
       ]
     }
