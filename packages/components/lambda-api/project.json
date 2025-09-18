@@ -1,0 +1,45 @@
+{
+  "name": "lambda-api",
+  "sourceRoot": "packages/components/lambda-api/src",
+  "projectType": "library",
+  "tags": [
+    "type:lib",
+    "scope:components",
+    "scope:lambda-api"
+  ],
+  "targets": {
+    "build": {
+      "executor": "@nx/js:tsc",
+      "options": {
+        "outputPath": "dist/packages/components/lambda-api",
+        "tsConfig": "packages/components/lambda-api/tsconfig.json",
+        "main": "packages/components/lambda-api/index.ts"
+      },
+      "outputs": [
+        "{options.outputPath}"
+      ]
+    },
+    "test": {
+      "executor": "@nx/jest:jest",
+      "options": {
+        "jestConfig": "packages/components/lambda-api/jest.config.js",
+        "passWithNoTests": true
+      }
+    },
+    "lint": {
+      "executor": "@nx/eslint:lint",
+      "options": {
+        "lintFilePatterns": [
+          "packages/components/lambda-api/**/*.ts"
+        ]
+      }
+    },
+    "type-check": {
+      "executor": "@nx/js:tsc",
+      "options": {
+        "tsConfig": "packages/components/lambda-api/tsconfig.json",
+        "noEmit": true
+      }
+    }
+  }
+}

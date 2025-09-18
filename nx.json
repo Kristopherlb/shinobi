@@ -11,8 +11,10 @@
           "build",
           "lint",
           "test",
-          "e2e"
-        ]
+          "e2e",
+          "type-check"
+        ],
+        "parallel": 3
       }
     }
   },
@@ -24,16 +26,43 @@
   "namedInputs": {
     "default": [
       "{projectRoot}/**/*",
-      "!{projectRoot}/**/*.test.*"
+      "!{projectRoot}/**/*.test.*",
+      "!{projectRoot}/**/*.spec.*"
     ],
     "production": [
       "default",
       "!{projectRoot}/**/*.spec.*",
-      "!{projectRoot}/**/*.test.*"
+      "!{projectRoot}/**/*.test.*",
+      "!{projectRoot}/**/*.stories.*"
     ]
   },
   "targetDefaults": {
     "build": {
+      "dependsOn": [
+        "^build"
+      ],
+      "inputs": [
+        "production",
+        "^production"
+      ],
+      "outputs": [
+        "{options.outputPath}"
+      ]
+    },
+    "test": {
+      "inputs": [
+        "default",
+        "^production",
+        "{workspaceRoot}/jest.config.js"
+      ]
+    },
+    "lint": {
+      "inputs": [
+        "default",
+        "{workspaceRoot}/.eslintrc.json"
+      ]
+    },
+    "type-check": {
       "dependsOn": [
         "^build"
       ],

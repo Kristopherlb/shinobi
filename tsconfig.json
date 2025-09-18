@@ -2,10 +2,8 @@
   "extends": "./tsconfig.base.json",
   "include": [
     "src/**/*",
-    "packages/components/**/*",
-    "packages/logging-handlers/**/*",
-    "packages/logging-service/**/*",
-    "packages/tagging-service/**/*"
+    "packages/**/*",
+    "apps/**/*"
   ],
   "exclude": [
     "node_modules",

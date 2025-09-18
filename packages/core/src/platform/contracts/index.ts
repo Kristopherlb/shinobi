@@ -18,8 +18,11 @@ export {
 // Export configuration builder contracts
 export * from './config-builder';
 
-// Export Platform Binding & Trigger Specification v1.0 (canonical binding interfaces)
+// export binding and trigger specification types
+export * from './bindings';
 export * from './platform-binding-trigger-spec';
+// re-export BindingContext, BindingResult and IBinderStrategy from the spec to avoid duplicate definitions
+export { BindingContext, BindingResult, IBinderStrategy } from './platform-binding-trigger-spec';
 
 // Export trigger system interfaces
 export * from './trigger-interfaces';

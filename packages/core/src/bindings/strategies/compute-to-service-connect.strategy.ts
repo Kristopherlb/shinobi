@@ -12,7 +12,8 @@ import {
   IBinderStrategy,
   BindingContext,
   BindingResult,
-  CompatibilityEntry
+  CompatibilityEntry,
+  IComponent
 } from '@shinobi/core';
 
 /**
@@ -29,9 +30,9 @@ export class ComputeToServiceConnectBinder implements IBinderStrategy {
   /**
    * Check if this strategy can handle the binding
    */
-  canHandle(sourceType: string, targetCapability: string): boolean {
+  canHandle(sourceType: string, capability: string): boolean {
     // This strategy handles any compute type binding to service:connect capability
-    return targetCapability === 'service:connect';
+    return capability === 'service:connect';
   }
 
   /**
@@ -297,8 +298,8 @@ export class ComputeToServiceConnectBinder implements IBinderStrategy {
     // For compliance frameworks, add additional network restrictions
     if (complianceFramework === 'fedramp-high' || complianceFramework === 'fedramp-moderate') {
       // Add compliance-specific network configurations
-      config['requireEncryption'] = true;
-      config['auditTraffic'] = true;
+      (config as any)['requireEncryption'] = true;
+      (config as any)['auditTraffic'] = true;
     }
 
     return config;

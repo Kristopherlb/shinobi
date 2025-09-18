@@ -1,13 +1,13 @@
 /**
  * Core binding contracts and types
- * Centralized location for all binding-related types to prevent circular dependencies
+ * Thin re-export wrapper for canonical binding interfaces
  */
 
-import { PolicyStatement } from 'aws-cdk-lib/aws-iam';
+import { BindingContext, BindingResult, IBinderStrategy, CompatibilityEntry, IBinderMatrix } from './platform-binding-trigger-spec';
 import { IComponent } from './component-interfaces';
 
-// Re-export IComponent for external use
-export { IComponent } from './component-interfaces';
+// Re-export canonical binding interfaces
+export { BindingContext, BindingResult, IBinderStrategy, CompatibilityEntry, IBinderMatrix, IComponent };
 
 // =============================================================================
 // COMPLIANCE FRAMEWORK TYPES
@@ -17,10 +17,8 @@ export type ComplianceFramework = 'commercial' | 'fedramp-moderate' | 'fedramp-h
 
 export type ComponentType = 's3-bucket' | 'lambda-api' | 'rds-postgres' | 'ec2-instance' | 'dynamodb-table' | 'sqs-queue' | 'sns-topic';
 
-export type Tier<T extends ComplianceFramework> = T;
-
 // =============================================================================
-// CAPABILITY TYPES (TIER-ISOLATED)
+// CAPABILITY TYPES
 // =============================================================================
 
 export type DbCapability = 'db:postgres' | 'db:mysql' | 'db:aurora-postgres' | 'db:aurora-mysql';
@@ -41,39 +39,7 @@ export type Capability =
   | MonitoringCapability;
 
 // =============================================================================
-// ACCESS LEVELS
-// =============================================================================
-
-export type AccessLevel = 'read' | 'write' | 'readwrite' | 'admin';
-
-// =============================================================================
-// COMPONENT SELECTOR
-// =============================================================================
-
-export interface ComponentSelector {
-  type?: string;
-  withLabels?: Record<string, string>;
-}
-
-// =============================================================================
-// BINDING DIRECTIVE
-// =============================================================================
-
-export interface BindingDirective {
-  to?: string;
-  select?: ComponentSelector;
-  capability: Capability;
-  access: AccessLevel;
-  env?: Record<string, string>;
-  options?: Record<string, unknown>;
-  metadata?: {
-    description?: string;
-    tags?: Record<string, string>;
-  };
-}
-
-// =============================================================================
-// CAPABILITY DATA (DISCRIMINATED UNIONS)
+// CAPABILITY DATA TYPES
 // =============================================================================
 
 export interface PostgresCapabilityData {
@@ -239,11 +205,11 @@ export interface SecurityGroupRule {
 }
 
 // =============================================================================
-// IAM POLICIES (PROPERLY TYPED)
+// IAM POLICIES
 // =============================================================================
 
 export interface IamPolicy {
-  statement: PolicyStatement;
+  statement: any; // PolicyStatement from aws-cdk-lib/aws-iam
   description: string;
   complianceRequirement: string;
 }
@@ -262,23 +228,21 @@ export interface ComplianceAction {
 }
 
 // =============================================================================
-// ENHANCED BINDING CONTEXT
+// ENHANCED BINDING INTERFACES (LEGACY - DEPRECATED)
 // =============================================================================
 
+// These interfaces are kept for backward compatibility but should be migrated to
+// the canonical interfaces in platform-binding-trigger-spec.ts
 
 export interface EnhancedBindingContext<T extends ComplianceFramework = ComplianceFramework> {
   source: IComponent;
   target: IComponent;
-  directive: BindingDirective;
+  directive: any; // BindingDirective
   environment: string;
   complianceFramework: T;
   targetCapabilityData: CapabilityData;
   options?: Record<string, unknown>;
 }
-
-// =============================================================================
-// ENHANCED BINDING RESULT (IMMUTABLE & AUDITABLE)
-// =============================================================================
 
 export interface EnhancedBindingResult {
   readonly environmentVariables: Readonly<Record<string, string>>;
@@ -300,7 +264,7 @@ export interface BindingMetadata {
   readonly sourceId: string;
   readonly targetId: string;
   readonly capability: Capability;
-  readonly access: AccessLevel;
+  readonly access: string; // AccessLevel
   readonly framework: ComplianceFramework;
   readonly environment: string;
 }

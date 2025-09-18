@@ -1,0 +1,45 @@
+{
+  "name": "s3-bucket",
+  "sourceRoot": "packages/components/s3-bucket",
+  "projectType": "library",
+  "tags": [
+    "type:lib",
+    "scope:components",
+    "scope:s3-bucket"
+  ],
+  "targets": {
+    "build": {
+      "executor": "@nx/js:tsc",
+      "options": {
+        "outputPath": "dist/packages/components/s3-bucket",
+        "tsConfig": "packages/components/s3-bucket/tsconfig.json",
+        "main": "packages/components/s3-bucket/index.ts"
+      },
+      "outputs": [
+        "{options.outputPath}"
+      ]
+    },
+    "test": {
+      "executor": "@nx/jest:jest",
+      "options": {
+        "jestConfig": "packages/components/s3-bucket/jest.config.js",
+        "passWithNoTests": true
+      }
+    },
+    "lint": {
+      "executor": "@nx/eslint:lint",
+      "options": {
+        "lintFilePatterns": [
+          "packages/components/s3-bucket/**/*.ts"
+        ]
+      }
+    },
+    "type-check": {
+      "executor": "@nx/js:tsc",
+      "options": {
+        "tsConfig": "packages/components/s3-bucket/tsconfig.json",
+        "noEmit": true
+      }
+    }
+  }
+}

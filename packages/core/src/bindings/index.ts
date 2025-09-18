@@ -3,8 +3,8 @@
  * Strategies for connecting AWS components automatically
  */
 
-// Re-export shared binding context
-export { BindingContext } from '../platform/contracts/binding-context';
+// Re-export shared binding context from canonical spec
+export { BindingContext } from '../platform/contracts/platform-binding-trigger-spec';
 
 // Export binding strategies
 // export { LambdaToRdsImportStrategy, LambdaToRdsImportStrategyDependencies } from './strategies/lambda-to-rds-import.strategy';

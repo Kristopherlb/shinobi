@@ -32,9 +32,9 @@ export class ComputeToSecurityGroupImportBinder implements IBinderStrategy {
   /**
    * Check if this strategy can handle the binding
    */
-  canHandle(sourceType: string, targetCapability: string): boolean {
+  canHandle(sourceType: string, capability: string): boolean {
     // This strategy handles any compute type binding to security-group:import capability
-    return targetCapability === 'security-group:import';
+    return capability === 'security-group:import';
   }
 
   /**
@@ -73,9 +73,11 @@ export class ComputeToSecurityGroupImportBinder implements IBinderStrategy {
 
     } catch (error) {
       return {
-        success: false,
-        error: `Failed to bind ${source.getType()} to imported security group: ${(error as Error).message}`,
-        resources: []
+        environmentVariables: {},
+        metadata: {
+          error: `Failed to bind ${source.getType()} to imported security group: ${(error as Error).message}`,
+          success: false
+        }
       };
     }
   }
@@ -93,12 +95,12 @@ export class ComputeToSecurityGroupImportBinder implements IBinderStrategy {
     instance.addSecurityGroup(securityGroup);
 
     return {
-      success: true,
-      resources: [],
+      environmentVariables: {},
       metadata: {
         bindingType: 'ec2-to-security-group-import',
         securityGroupId: securityGroup.securityGroupId,
-        vpcId: securityGroup.vpc?.vpcId
+        vpcId: undefined, // Security group VPC not accessible via ISecurityGroup interface
+        success: true
       }
     };
   }
@@ -126,19 +128,19 @@ export class ComputeToSecurityGroupImportBinder implements IBinderStrategy {
             'ec2:DescribeNetworkInterfaces',
             'ec2:DeleteNetworkInterface'
           ],
-          resources: [`arn:aws:ec2:${context.region}:${context.account}:vpc/*`]
+          resources: [`arn:aws:ec2:*:*:vpc/*`]
         }));
       }
     }
 
     return {
-      success: true,
-      resources: [],
+      environmentVariables: {},
       metadata: {
         bindingType: 'lambda-to-security-group-import',
         securityGroupId: securityGroup.securityGroupId,
         vpcId: undefined, // Security group VPC not accessible via ISecurityGroup interface
-        requiresVpc: !lambdaFunction.isBoundToVpc
+        requiresVpc: !lambdaFunction.isBoundToVpc,
+        success: true
       }
     };
   }
@@ -156,13 +158,13 @@ export class ComputeToSecurityGroupImportBinder implements IBinderStrategy {
     service.connections.addSecurityGroup(securityGroup);
 
     return {
-      success: true,
-      resources: [],
+      environmentVariables: {},
       metadata: {
         bindingType: 'ecs-to-security-group-import',
         securityGroupId: securityGroup.securityGroupId,
-        vpcId: securityGroup.vpc?.vpcId,
-        serviceArn: service.serviceArn
+        vpcId: undefined, // Security group VPC not accessible via ISecurityGroup interface
+        serviceArn: service.serviceArn,
+        success: true
       }
     };
   }
@@ -174,38 +176,44 @@ export class ComputeToSecurityGroupImportBinder implements IBinderStrategy {
     return [
       {
         sourceType: 'ec2-instance',
-        targetCapability: 'security-group:import',
-        supported: true,
+        targetType: 'security-group',
+        capability: 'security-group:import',
+        supportedAccess: ['read'],
         description: 'Adds imported security group to EC2 instance security groups'
       },
       {
         sourceType: 'lambda-api',
-        targetCapability: 'security-group:import',
-        supported: true,
+        targetType: 'security-group',
+        capability: 'security-group:import',
+        supportedAccess: ['read'],
         description: 'Configures Lambda VPC access to use imported security group'
       },
       {
         sourceType: 'lambda-worker',
-        targetCapability: 'security-group:import',
-        supported: true,
+        targetType: 'security-group',
+        capability: 'security-group:import',
+        supportedAccess: ['read'],
         description: 'Configures Lambda VPC access to use imported security group'
       },
       {
         sourceType: 'lambda-scheduled',
-        targetCapability: 'security-group:import',
-        supported: true,
+        targetType: 'security-group',
+        capability: 'security-group:import',
+        supportedAccess: ['read'],
         description: 'Configures Lambda VPC access to use imported security group'
       },
       {
         sourceType: 'ecs-fargate-service',
-        targetCapability: 'security-group:import',
-        supported: true,
+        targetType: 'security-group',
+        capability: 'security-group:import',
+        supportedAccess: ['read'],
         description: 'Adds imported security group to ECS Fargate service'
       },
       {
         sourceType: 'ecs-ec2-service',
-        targetCapability: 'security-group:import',
-        supported: true,
+        targetType: 'security-group',
+        capability: 'security-group:import',
+        supportedAccess: ['read'],
         description: 'Adds imported security group to ECS EC2 service'
       }
     ];

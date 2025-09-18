@@ -132,7 +132,7 @@ describe('BackstagePortalComponent', () => {
 
     it('should create log groups', () => {
       component.synth();
-      expect(component['_createLogGroups').toHaveBeenCalled();
+      expect(component['_createLogGroups']).toHaveBeenCalled();
     });
 
     it('should create Backstage services', () => {
@@ -181,7 +181,7 @@ describe('BackstagePortalComponent', () => {
           organization: 'Minimal Org'
         }
       };
-      
+
       const minimalComponent = new BackstagePortalComponent({}, 'minimal-component', context, minimalSpec);
       expect(minimalComponent['config']).toBeDefined();
       expect(minimalComponent['config'].portal.name).toBe('Minimal Portal');

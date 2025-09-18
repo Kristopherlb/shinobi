@@ -5,10 +5,14 @@
 
 import { Construct, IConstruct } from 'constructs';
 import { IVpc } from 'aws-cdk-lib/aws-ec2';
+import { BindingContext, BindingResult, IBinderStrategy } from './platform-binding-trigger-spec';
 
 // Re-export CDK types for convenience
 export { Construct, IConstruct };
 export { IVpc };
+
+// Re-export canonical binding interfaces
+export { BindingContext, BindingResult, IBinderStrategy };
 
 /**
  * Component specification interface
@@ -48,16 +52,7 @@ export interface ComponentContext {
 }
 
 
-/**
- * Binding context for component connections
- */
-export interface BindingContext {
-  source: IComponent;
-  target: IComponent;
-  directive: any;
-  environment: string;
-  complianceFramework: string;
-}
+// BindingContext is now imported from platform-binding-trigger-spec
 
 /**
  * Core component interface - The Public Contract
@@ -101,13 +96,7 @@ export interface IComponent extends IConstruct {
   _getSecurityGroupHandle(role: 'source' | 'target'): any;
 }
 
-/**
- * Result of component binding operation
- */
-export interface BindingResult {
-  environmentVariables: Record<string, string>;
-  metadata?: Record<string, any>;
-}
+// BindingResult is now imported from platform-binding-trigger-spec
 
 /**
  * Component creator interface for Factory Method pattern
@@ -126,13 +115,7 @@ export interface IComponentRegistry {
   getSupportedTypes(): string[];
 }
 
-/**
- * Binder strategy interface for component connections
- */
-export interface IBinderStrategy {
-  canHandle(sourceType: string, targetCapability: string): boolean;
-  bind(context: BindingContext): BindingResult;
-}
+// IBinderStrategy is now imported from platform-binding-trigger-spec
 
 /**
  * Component factory interface for Abstract Factory pattern

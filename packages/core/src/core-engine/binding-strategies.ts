@@ -7,7 +7,8 @@ import {
   IComponent,
   BindingContext,
   BindingResult,
-  IBinderStrategy
+  IBinderStrategy,
+  CompatibilityEntry
 } from '../platform/contracts';
 
 export interface BindingDirective {
@@ -26,8 +27,9 @@ export interface BindingDirective {
  * Strategy interface for different binding types
  */
 export abstract class BinderStrategy implements IBinderStrategy {
-  abstract canHandle(sourceType: string, targetCapability: string): boolean;
+  abstract canHandle(sourceType: string, capability: string): boolean;
   abstract bind(context: BindingContext): BindingResult;
+  abstract getCompatibilityMatrix(): CompatibilityEntry[];
 
   protected generateSecureDescription(context: BindingContext): string {
     return `${context.source.getType()}-${context.source.getName()} -> ${context.target.getType()}-${context.target.getName()}`;
@@ -44,9 +46,9 @@ export class BinderRegistry {
     this.strategies.push(strategy);
   }
 
-  findStrategy(sourceType: string, targetCapability: string): BinderStrategy | null {
+  findStrategy(sourceType: string, capability: string): BinderStrategy | null {
     return this.strategies.find(strategy =>
-      strategy.canHandle(sourceType, targetCapability)
+      strategy.canHandle(sourceType, capability)
     ) || null;
   }
 

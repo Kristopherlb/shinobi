@@ -15,14 +15,45 @@
     "moduleResolution": "node",
     "baseUrl": ".",
     "paths": {
-      "@shinobi/core": ["packages/core/src/index.ts"],
-      "@shinobi/standards-logging": ["packages/standards/logging/src/index.ts"],
-      "@shinobi/standards-otel": ["packages/standards/otel/src/index.ts"],
-      "@shinobi/standards-tagging": ["packages/standards/tagging/src/index.ts"],
-      "@shinobi/standards-iam-audit": ["packages/standards/iam-audit/src/index.ts"],
-      "@shinobi/standards-deprecation": ["packages/standards/deprecation/src/index.ts"],
-      "@shinobi/mcp-server": ["packages/mcp/server/src/index.ts"],
-      "@shinobi/constructs-prd": ["packages/constructs/prd/src/index.ts"]
+      "@platform/contracts": [
+        "packages/core/src/platform/contracts/index.ts"
+      ],
+      "@platform/core-engine": [
+        "packages/core-engine/src/index.ts"
+      ],
+      "@platform/*": [
+        "packages/components/*/src/index.ts"
+      ],
+      "@shinobi/*": [
+        "packages/*/src/index.ts"
+      ],
+      "@shinobi/components/*": [
+        "packages/components/*/src/index.ts"
+      ],
+      "@shinobi/core": [
+        "packages/core/src/index.ts"
+      ],
+      "@shinobi/standards-logging": [
+        "packages/standards/logging/src/index.ts"
+      ],
+      "@shinobi/standards-otel": [
+        "packages/standards/otel/src/index.ts"
+      ],
+      "@shinobi/standards-tagging": [
+        "packages/standards/tagging/src/index.ts"
+      ],
+      "@shinobi/standards-iam-audit": [
+        "packages/standards/iam-audit/src/index.ts"
+      ],
+      "@shinobi/standards-deprecation": [
+        "packages/standards/deprecation/src/index.ts"
+      ],
+      "@shinobi/mcp-server": [
+        "packages/mcp/server/src/index.ts"
+      ],
+      "@shinobi/constructs-prd": [
+        "packages/constructs/prd/src/index.ts"
+      ]
     }
   },
   "exclude": [

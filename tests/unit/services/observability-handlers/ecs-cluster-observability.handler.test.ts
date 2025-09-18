@@ -40,7 +40,7 @@ describe('EcsObservabilityHandler', () => {
     jest.useFakeTimers();
     jest.setSystemTime(new Date('2024-01-01T00:00:00Z'));
     Math.random = jest.fn(() => 0.5);
-    
+
     // Restore environment variables after each test
     originalEnv = process.env;
     process.env = { ...originalEnv };
@@ -89,7 +89,7 @@ describe('EcsObservabilityHandler', () => {
   afterEach(() => {
     // Restore environment variables
     process.env = originalEnv;
-    
+
     // Restore timers
     jest.useRealTimers();
     jest.restoreAllMocks();
@@ -157,16 +157,15 @@ describe('EcsObservabilityHandler', () => {
       });
 
       expect(() => handler.apply(mockComponent)).not.toThrow();
-      
+
       // expect(mockContext.logger.error).toHaveBeenCalledWith(
-        'Failed to apply ECS observability',
+      'Failed to apply ECS observability',
         expect.objectContaining({
           service: 'ObservabilityService',
           componentType: 'ecs',
           componentName: 'test-component',
           error: 'Alarm creation failed'
-        })
-      );
+        });
 
       (cloudwatch.Alarm as any) = originalAlarm;
     });

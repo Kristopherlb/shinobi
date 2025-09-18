@@ -14,9 +14,10 @@
           }
         },
         "test": {
-          "executor": "nx:run-commands",
+          "executor": "@nx/jest:jest",
           "options": {
-            "command": "jest --passWithNoTests --config=jest.config.js packages/core-engine"
+            "jestConfig": "packages/core-engine/jest.config.js",
+            "passWithNoTests": true
           }
         },
         "lint": {
@@ -39,9 +40,10 @@
           }
         },
         "test": {
-          "executor": "nx:run-commands",
+          "executor": "@nx/jest:jest",
           "options": {
-            "command": "jest --passWithNoTests --config=jest.config.js packages/contracts"
+            "jestConfig": "packages/contracts/jest.config.js",
+            "passWithNoTests": true
           }
         },
         "lint": {
@@ -64,9 +66,10 @@
           }
         },
         "test": {
-          "executor": "nx:run-commands",
+          "executor": "@nx/jest:jest",
           "options": {
-            "command": "jest --passWithNoTests --config=jest.config.js packages/components/lambda-api"
+            "jestConfig": "packages/components/lambda-api/jest.config.js",
+            "passWithNoTests": true
           }
         },
         "lint": {
@@ -89,9 +92,10 @@
           }
         },
         "test": {
-          "executor": "nx:run-commands",
+          "executor": "@nx/jest:jest",
           "options": {
-            "command": "jest --passWithNoTests --config=jest.config.js packages/components/rds-postgres"
+            "jestConfig": "packages/components/rds-postgres/jest.config.js",
+            "passWithNoTests": true
           }
         },
         "lint": {
@@ -114,9 +118,10 @@
           }
         },
         "test": {
-          "executor": "nx:run-commands",
+          "executor": "@nx/jest:jest",
           "options": {
-            "command": "jest --passWithNoTests --config=jest.config.js packages/components/sqs-queue"
+            "jestConfig": "packages/components/sqs-queue/jest.config.js",
+            "passWithNoTests": true
           }
         },
         "lint": {
@@ -139,9 +144,10 @@
           }
         },
         "test": {
-          "executor": "nx:run-commands",
+          "executor": "@nx/jest:jest",
           "options": {
-            "command": "jest --passWithNoTests --config=jest.config.js packages/infrastructure"
+            "jestConfig": "packages/infrastructure/jest.config.js",
+            "passWithNoTests": true
           }
         },
         "lint": {
@@ -164,9 +170,10 @@
           }
         },
         "test": {
-          "executor": "nx:run-commands",
+          "executor": "@nx/jest:jest",
           "options": {
-            "command": "jest --passWithNoTests --config=jest.config.js packages/test-scaffolding"
+            "jestConfig": "packages/test-scaffolding/jest.config.js",
+            "passWithNoTests": true
           }
         },
         "lint": {

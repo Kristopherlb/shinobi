@@ -193,7 +193,6 @@ export class PlanCommand {
         'platform:service-name': manifest.service,
         'platform:owner': manifest.owner,
         'platform:environment': environment,
-        'platform:managed-by': 'platform-cdk'
         'platform:managed-by': 'shinobi'
       };
 

@@ -184,7 +184,565 @@
       "nx.json",
       "nx/target-defaults"
     ],
+    "targets.build.outputs": [
+      "nx.json",
+      "nx/target-defaults"
+    ],
     "targets.build.parallelism": [
+      "nx.json",
+      "nx/target-defaults"
+    ],
+    "targets.test.inputs": [
+      "nx.json",
+      "nx/target-defaults"
+    ],
+    "targets.test.parallelism": [
+      "nx.json",
+      "nx/target-defaults"
+    ],
+    "targets.lint.inputs": [
+      "nx.json",
+      "nx/target-defaults"
+    ],
+    "targets.lint.parallelism": [
+      "nx.json",
+      "nx/target-defaults"
+    ]
+  },
+  "backstage-app/shinobi": {
+    "root": [
+      "backstage-app/shinobi/package.json",
+      "nx/core/package-json"
+    ],
+    "name": [
+      "backstage-app/shinobi/package.json",
+      "nx/core/package-json"
+    ],
+    "tags": [
+      "backstage-app/shinobi/package.json",
+      "nx/core/package-json"
+    ],
+    "tags.npm:private": [
+      "backstage-app/shinobi/package.json",
+      "nx/core/package-json"
+    ],
+    "metadata.targetGroups": [
+      "backstage-app/shinobi/package.json",
+      "nx/core/package-json"
+    ],
+    "metadata.targetGroups.NPM Scripts": [
+      "backstage-app/shinobi/package.json",
+      "nx/core/package-json"
+    ],
+    "metadata.targetGroups.NPM Scripts.0": [
+      "backstage-app/shinobi/package.json",
+      "nx/core/package-json"
+    ],
+    "metadata.targetGroups.NPM Scripts.1": [
+      "backstage-app/shinobi/package.json",
+      "nx/core/package-json"
+    ],
+    "metadata.targetGroups.NPM Scripts.2": [
+      "backstage-app/shinobi/package.json",
+      "nx/core/package-json"
+    ],
+    "metadata.targetGroups.NPM Scripts.3": [
+      "backstage-app/shinobi/package.json",
+      "nx/core/package-json"
+    ],
+    "metadata.targetGroups.NPM Scripts.4": [
+      "backstage-app/shinobi/package.json",
+      "nx/core/package-json"
+    ],
+    "metadata.targetGroups.NPM Scripts.5": [
+      "backstage-app/shinobi/package.json",
+      "nx/core/package-json"
+    ],
+    "metadata.targetGroups.NPM Scripts.6": [
+      "backstage-app/shinobi/package.json",
+      "nx/core/package-json"
+    ],
+    "metadata.targetGroups.NPM Scripts.7": [
+      "backstage-app/shinobi/package.json",
+      "nx/core/package-json"
+    ],
+    "metadata.targetGroups.NPM Scripts.8": [
+      "backstage-app/shinobi/package.json",
+      "nx/core/package-json"
+    ],
+    "metadata.targetGroups.NPM Scripts.9": [
+      "backstage-app/shinobi/package.json",
+      "nx/core/package-json"
+    ],
+    "metadata.targetGroups.NPM Scripts.10": [
+      "backstage-app/shinobi/package.json",
+      "nx/core/package-json"
+    ],
+    "metadata.targetGroups.NPM Scripts.11": [
+      "backstage-app/shinobi/package.json",
+      "nx/core/package-json"
+    ],
+    "metadata.targetGroups.NPM Scripts.12": [
+      "backstage-app/shinobi/package.json",
+      "nx/core/package-json"
+    ],
+    "metadata.targetGroups.NPM Scripts.13": [
+      "backstage-app/shinobi/package.json",
+      "nx/core/package-json"
+    ],
+    "metadata.targetGroups.NPM Scripts.14": [
+      "backstage-app/shinobi/package.json",
+      "nx/core/package-json"
+    ],
+    "metadata.js": [
+      "backstage-app/shinobi/package.json",
+      "nx/core/package-json"
+    ],
+    "metadata.js.packageName": [
+      "backstage-app/shinobi/package.json",
+      "nx/core/package-json"
+    ],
+    "metadata.js.isInPackageManagerWorkspaces": [
+      "backstage-app/shinobi/package.json",
+      "nx/core/package-json"
+    ],
+    "targets": [
+      "backstage-app/shinobi/package.json",
+      "nx/core/package-json"
+    ],
+    "targets.start": [
+      "backstage-app/shinobi/package.json",
+      "nx/core/package-json"
+    ],
+    "targets.start.executor": [
+      "backstage-app/shinobi/package.json",
+      "nx/core/package-json"
+    ],
+    "targets.start.options": [
+      "backstage-app/shinobi/package.json",
+      "nx/core/package-json"
+    ],
+    "targets.start.metadata": [
+      "backstage-app/shinobi/package.json",
+      "nx/core/package-json"
+    ],
+    "targets.start.options.script": [
+      "backstage-app/shinobi/package.json",
+      "nx/core/package-json"
+    ],
+    "targets.start.metadata.scriptContent": [
+      "backstage-app/shinobi/package.json",
+      "nx/core/package-json"
+    ],
+    "targets.start.metadata.runCommand": [
+      "backstage-app/shinobi/package.json",
+      "nx/core/package-json"
+    ],
+    "targets.build:backend": [
+      "backstage-app/shinobi/package.json",
+      "nx/core/package-json"
+    ],
+    "targets.build:backend.executor": [
+      "backstage-app/shinobi/package.json",
+      "nx/core/package-json"
+    ],
+    "targets.build:backend.options": [
+      "backstage-app/shinobi/package.json",
+      "nx/core/package-json"
+    ],
+    "targets.build:backend.metadata": [
+      "backstage-app/shinobi/package.json",
+      "nx/core/package-json"
+    ],
+    "targets.build:backend.options.script": [
+      "backstage-app/shinobi/package.json",
+      "nx/core/package-json"
+    ],
+    "targets.build:backend.metadata.scriptContent": [
+      "backstage-app/shinobi/package.json",
+      "nx/core/package-json"
+    ],
+    "targets.build:backend.metadata.runCommand": [
+      "backstage-app/shinobi/package.json",
+      "nx/core/package-json"
+    ],
+    "targets.build:all": [
+      "backstage-app/shinobi/package.json",
+      "nx/core/package-json"
+    ],
+    "targets.build:all.executor": [
+      "backstage-app/shinobi/package.json",
+      "nx/core/package-json"
+    ],
+    "targets.build:all.options": [
+      "backstage-app/shinobi/package.json",
+      "nx/core/package-json"
+    ],
+    "targets.build:all.metadata": [
+      "backstage-app/shinobi/package.json",
+      "nx/core/package-json"
+    ],
+    "targets.build:all.options.script": [
+      "backstage-app/shinobi/package.json",
+      "nx/core/package-json"
+    ],
+    "targets.build:all.metadata.scriptContent": [
+      "backstage-app/shinobi/package.json",
+      "nx/core/package-json"
+    ],
+    "targets.build:all.metadata.runCommand": [
+      "backstage-app/shinobi/package.json",
+      "nx/core/package-json"
+    ],
+    "targets.build-image": [
+      "backstage-app/shinobi/package.json",
+      "nx/core/package-json"
+    ],
+    "targets.build-image.executor": [
+      "backstage-app/shinobi/package.json",
+      "nx/core/package-json"
+    ],
+    "targets.build-image.options": [
+      "backstage-app/shinobi/package.json",
+      "nx/core/package-json"
+    ],
+    "targets.build-image.metadata": [
+      "backstage-app/shinobi/package.json",
+      "nx/core/package-json"
+    ],
+    "targets.build-image.options.script": [
+      "backstage-app/shinobi/package.json",
+      "nx/core/package-json"
+    ],
+    "targets.build-image.metadata.scriptContent": [
+      "backstage-app/shinobi/package.json",
+      "nx/core/package-json"
+    ],
+    "targets.build-image.metadata.runCommand": [
+      "backstage-app/shinobi/package.json",
+      "nx/core/package-json"
+    ],
+    "targets.tsc": [
+      "backstage-app/shinobi/package.json",
+      "nx/core/package-json"
+    ],
+    "targets.tsc.executor": [
+      "backstage-app/shinobi/package.json",
+      "nx/core/package-json"
+    ],
+    "targets.tsc.options": [
+      "backstage-app/shinobi/package.json",
+      "nx/core/package-json"
+    ],
+    "targets.tsc.metadata": [
+      "backstage-app/shinobi/package.json",
+      "nx/core/package-json"
+    ],
+    "targets.tsc.options.script": [
+      "backstage-app/shinobi/package.json",
+      "nx/core/package-json"
+    ],
+    "targets.tsc.metadata.scriptContent": [
+      "backstage-app/shinobi/package.json",
+      "nx/core/package-json"
+    ],
+    "targets.tsc.metadata.runCommand": [
+      "backstage-app/shinobi/package.json",
+      "nx/core/package-json"
+    ],
+    "targets.tsc:full": [
+      "backstage-app/shinobi/package.json",
+      "nx/core/package-json"
+    ],
+    "targets.tsc:full.executor": [
+      "backstage-app/shinobi/package.json",
+      "nx/core/package-json"
+    ],
+    "targets.tsc:full.options": [
+      "backstage-app/shinobi/package.json",
+      "nx/core/package-json"
+    ],
+    "targets.tsc:full.metadata": [
+      "backstage-app/shinobi/package.json",
+      "nx/core/package-json"
+    ],
+    "targets.tsc:full.options.script": [
+      "backstage-app/shinobi/package.json",
+      "nx/core/package-json"
+    ],
+    "targets.tsc:full.metadata.scriptContent": [
+      "backstage-app/shinobi/package.json",
+      "nx/core/package-json"
+    ],
+    "targets.tsc:full.metadata.runCommand": [
+      "backstage-app/shinobi/package.json",
+      "nx/core/package-json"
+    ],
+    "targets.clean": [
+      "backstage-app/shinobi/package.json",
+      "nx/core/package-json"
+    ],
+    "targets.clean.executor": [
+      "backstage-app/shinobi/package.json",
+      "nx/core/package-json"
+    ],
+    "targets.clean.options": [
+      "backstage-app/shinobi/package.json",
+      "nx/core/package-json"
+    ],
+    "targets.clean.metadata": [
+      "backstage-app/shinobi/package.json",
+      "nx/core/package-json"
+    ],
+    "targets.clean.options.script": [
+      "backstage-app/shinobi/package.json",
+      "nx/core/package-json"
+    ],
+    "targets.clean.metadata.scriptContent": [
+      "backstage-app/shinobi/package.json",
+      "nx/core/package-json"
+    ],
+    "targets.clean.metadata.runCommand": [
+      "backstage-app/shinobi/package.json",
+      "nx/core/package-json"
+    ],
+    "targets.test": [
+      "backstage-app/shinobi/package.json",
+      "nx/core/package-json"
+    ],
+    "targets.test.executor": [
+      "backstage-app/shinobi/package.json",
+      "nx/core/package-json"
+    ],
+    "targets.test.options": [
+      "backstage-app/shinobi/package.json",
+      "nx/core/package-json"
+    ],
+    "targets.test.metadata": [
+      "backstage-app/shinobi/package.json",
+      "nx/core/package-json"
+    ],
+    "targets.test.options.script": [
+      "backstage-app/shinobi/package.json",
+      "nx/core/package-json"
+    ],
+    "targets.test.metadata.scriptContent": [
+      "backstage-app/shinobi/package.json",
+      "nx/core/package-json"
+    ],
+    "targets.test.metadata.runCommand": [
+      "backstage-app/shinobi/package.json",
+      "nx/core/package-json"
+    ],
+    "targets.test:all": [
+      "backstage-app/shinobi/package.json",
+      "nx/core/package-json"
+    ],
+    "targets.test:all.executor": [
+      "backstage-app/shinobi/package.json",
+      "nx/core/package-json"
+    ],
+    "targets.test:all.options": [
+      "backstage-app/shinobi/package.json",
+      "nx/core/package-json"
+    ],
+    "targets.test:all.metadata": [
+      "backstage-app/shinobi/package.json",
+      "nx/core/package-json"
+    ],
+    "targets.test:all.options.script": [
+      "backstage-app/shinobi/package.json",
+      "nx/core/package-json"
+    ],
+    "targets.test:all.metadata.scriptContent": [
+      "backstage-app/shinobi/package.json",
+      "nx/core/package-json"
+    ],
+    "targets.test:all.metadata.runCommand": [
+      "backstage-app/shinobi/package.json",
+      "nx/core/package-json"
+    ],
+    "targets.test:e2e": [
+      "backstage-app/shinobi/package.json",
+      "nx/core/package-json"
+    ],
+    "targets.test:e2e.executor": [
+      "backstage-app/shinobi/package.json",
+      "nx/core/package-json"
+    ],
+    "targets.test:e2e.options": [
+      "backstage-app/shinobi/package.json",
+      "nx/core/package-json"
+    ],
+    "targets.test:e2e.metadata": [
+      "backstage-app/shinobi/package.json",
+      "nx/core/package-json"
+    ],
+    "targets.test:e2e.options.script": [
+      "backstage-app/shinobi/package.json",
+      "nx/core/package-json"
+    ],
+    "targets.test:e2e.metadata.scriptContent": [
+      "backstage-app/shinobi/package.json",
+      "nx/core/package-json"
+    ],
+    "targets.test:e2e.metadata.runCommand": [
+      "backstage-app/shinobi/package.json",
+      "nx/core/package-json"
+    ],
+    "targets.fix": [
+      "backstage-app/shinobi/package.json",
+      "nx/core/package-json"
+    ],
+    "targets.fix.executor": [
+      "backstage-app/shinobi/package.json",
+      "nx/core/package-json"
+    ],
+    "targets.fix.options": [
+      "backstage-app/shinobi/package.json",
+      "nx/core/package-json"
+    ],
+    "targets.fix.metadata": [
+      "backstage-app/shinobi/package.json",
+      "nx/core/package-json"
+    ],
+    "targets.fix.options.script": [
+      "backstage-app/shinobi/package.json",
+      "nx/core/package-json"
+    ],
+    "targets.fix.metadata.scriptContent": [
+      "backstage-app/shinobi/package.json",
+      "nx/core/package-json"
+    ],
+    "targets.fix.metadata.runCommand": [
+      "backstage-app/shinobi/package.json",
+      "nx/core/package-json"
+    ],
+    "targets.lint": [
+      "backstage-app/shinobi/package.json",
+      "nx/core/package-json"
+    ],
+    "targets.lint.executor": [
+      "backstage-app/shinobi/package.json",
+      "nx/core/package-json"
+    ],
+    "targets.lint.options": [
+      "backstage-app/shinobi/package.json",
+      "nx/core/package-json"
+    ],
+    "targets.lint.metadata": [
+      "backstage-app/shinobi/package.json",
+      "nx/core/package-json"
+    ],
+    "targets.lint.options.script": [
+      "backstage-app/shinobi/package.json",
+      "nx/core/package-json"
+    ],
+    "targets.lint.metadata.scriptContent": [
+      "backstage-app/shinobi/package.json",
+      "nx/core/package-json"
+    ],
+    "targets.lint.metadata.runCommand": [
+      "backstage-app/shinobi/package.json",
+      "nx/core/package-json"
+    ],
+    "targets.lint:all": [
+      "backstage-app/shinobi/package.json",
+      "nx/core/package-json"
+    ],
+    "targets.lint:all.executor": [
+      "backstage-app/shinobi/package.json",
+      "nx/core/package-json"
+    ],
+    "targets.lint:all.options": [
+      "backstage-app/shinobi/package.json",
+      "nx/core/package-json"
+    ],
+    "targets.lint:all.metadata": [
+      "backstage-app/shinobi/package.json",
+      "nx/core/package-json"
+    ],
+    "targets.lint:all.options.script": [
+      "backstage-app/shinobi/package.json",
+      "nx/core/package-json"
+    ],
+    "targets.lint:all.metadata.scriptContent": [
+      "backstage-app/shinobi/package.json",
+      "nx/core/package-json"
+    ],
+    "targets.lint:all.metadata.runCommand": [
+      "backstage-app/shinobi/package.json",
+      "nx/core/package-json"
+    ],
+    "targets.prettier:check": [
+      "backstage-app/shinobi/package.json",
+      "nx/core/package-json"
+    ],
+    "targets.prettier:check.executor": [
+      "backstage-app/shinobi/package.json",
+      "nx/core/package-json"
+    ],
+    "targets.prettier:check.options": [
+      "backstage-app/shinobi/package.json",
+      "nx/core/package-json"
+    ],
+    "targets.prettier:check.metadata": [
+      "backstage-app/shinobi/package.json",
+      "nx/core/package-json"
+    ],
+    "targets.prettier:check.options.script": [
+      "backstage-app/shinobi/package.json",
+      "nx/core/package-json"
+    ],
+    "targets.prettier:check.metadata.scriptContent": [
+      "backstage-app/shinobi/package.json",
+      "nx/core/package-json"
+    ],
+    "targets.prettier:check.metadata.runCommand": [
+      "backstage-app/shinobi/package.json",
+      "nx/core/package-json"
+    ],
+    "targets.new": [
+      "backstage-app/shinobi/package.json",
+      "nx/core/package-json"
+    ],
+    "targets.new.executor": [
+      "backstage-app/shinobi/package.json",
+      "nx/core/package-json"
+    ],
+    "targets.new.options": [
+      "backstage-app/shinobi/package.json",
+      "nx/core/package-json"
+    ],
+    "targets.new.metadata": [
+      "backstage-app/shinobi/package.json",
+      "nx/core/package-json"
+    ],
+    "targets.new.options.script": [
+      "backstage-app/shinobi/package.json",
+      "nx/core/package-json"
+    ],
+    "targets.new.metadata.scriptContent": [
+      "backstage-app/shinobi/package.json",
+      "nx/core/package-json"
+    ],
+    "targets.new.metadata.runCommand": [
+      "backstage-app/shinobi/package.json",
+      "nx/core/package-json"
+    ],
+    "targets.test.inputs": [
+      "nx.json",
+      "nx/target-defaults"
+    ],
+    "targets.test.parallelism": [
+      "nx.json",
+      "nx/target-defaults"
+    ],
+    "targets.lint.inputs": [
+      "nx.json",
+      "nx/target-defaults"
+    ],
+    "targets.lint.parallelism": [
       "nx.json",
       "nx/target-defaults"
     ]
@@ -522,7 +1080,27 @@
       "nx.json",
       "nx/target-defaults"
     ],
+    "targets.build.outputs": [
+      "nx.json",
+      "nx/target-defaults"
+    ],
     "targets.build.parallelism": [
+      "nx.json",
+      "nx/target-defaults"
+    ],
+    "targets.test.inputs": [
+      "nx.json",
+      "nx/target-defaults"
+    ],
+    "targets.test.parallelism": [
+      "nx.json",
+      "nx/target-defaults"
+    ],
+    "targets.lint.inputs": [
+      "nx.json",
+      "nx/target-defaults"
+    ],
+    "targets.lint.parallelism": [
       "nx.json",
       "nx/target-defaults"
     ]
@@ -908,7 +1486,27 @@
       "nx.json",
       "nx/target-defaults"
     ],
+    "targets.build.outputs": [
+      "nx.json",
+      "nx/target-defaults"
+    ],
     "targets.build.parallelism": [
+      "nx.json",
+      "nx/target-defaults"
+    ],
+    "targets.test.inputs": [
+      "nx.json",
+      "nx/target-defaults"
+    ],
+    "targets.test.parallelism": [
+      "nx.json",
+      "nx/target-defaults"
+    ],
+    "targets.lint.inputs": [
+      "nx.json",
+      "nx/target-defaults"
+    ],
+    "targets.lint.parallelism": [
       "nx.json",
       "nx/target-defaults"
     ]
@@ -1274,7 +1872,27 @@
       "nx.json",
       "nx/target-defaults"
     ],
+    "targets.build.outputs": [
+      "nx.json",
+      "nx/target-defaults"
+    ],
     "targets.build.parallelism": [
+      "nx.json",
+      "nx/target-defaults"
+    ],
+    "targets.test.inputs": [
+      "nx.json",
+      "nx/target-defaults"
+    ],
+    "targets.test.parallelism": [
+      "nx.json",
+      "nx/target-defaults"
+    ],
+    "targets.lint.inputs": [
+      "nx.json",
+      "nx/target-defaults"
+    ],
+    "targets.lint.parallelism": [
       "nx.json",
       "nx/target-defaults"
     ]
@@ -1580,7 +2198,27 @@
       "nx.json",
       "nx/target-defaults"
     ],
+    "targets.build.outputs": [
+      "nx.json",
+      "nx/target-defaults"
+    ],
     "targets.build.parallelism": [
+      "nx.json",
+      "nx/target-defaults"
+    ],
+    "targets.test.inputs": [
+      "nx.json",
+      "nx/target-defaults"
+    ],
+    "targets.test.parallelism": [
+      "nx.json",
+      "nx/target-defaults"
+    ],
+    "targets.lint.inputs": [
+      "nx.json",
+      "nx/target-defaults"
+    ],
+    "targets.lint.parallelism": [
       "nx.json",
       "nx/target-defaults"
     ]
@@ -1930,23 +2568,55 @@
       "nx.json",
       "nx/target-defaults"
     ],
+    "targets.build.outputs": [
+      "nx.json",
+      "nx/target-defaults"
+    ],
     "targets.build.parallelism": [
+      "nx.json",
+      "nx/target-defaults"
+    ],
+    "targets.test.inputs": [
+      "nx.json",
+      "nx/target-defaults"
+    ],
+    "targets.test.parallelism": [
+      "nx.json",
+      "nx/target-defaults"
+    ],
+    "targets.lint.inputs": [
+      "nx.json",
+      "nx/target-defaults"
+    ],
+    "targets.lint.parallelism": [
+      "nx.json",
+      "nx/target-defaults"
+    ],
+    "targets.type-check.dependsOn": [
+      "nx.json",
+      "nx/target-defaults"
+    ],
+    "targets.type-check.inputs": [
+      "nx.json",
+      "nx/target-defaults"
+    ],
+    "targets.type-check.parallelism": [
       "nx.json",
       "nx/target-defaults"
     ]
   },
   "packages/components/ecs-cluster": {
     "root": [
-      "packages/components/ecs-cluster/package.json",
-      "nx/core/package-json"
+      "packages/components/ecs-cluster/project.json",
+      "nx/core/project-json"
     ],
     "name": [
-      "packages/components/ecs-cluster/package.json",
-      "nx/core/package-json"
+      "packages/components/ecs-cluster/project.json",
+      "nx/core/project-json"
     ],
     "projectType": [
-      "packages/components/ecs-cluster/package.json",
-      "nx/core/package-json"
+      "packages/components/ecs-cluster/project.json",
+      "nx/core/project-json"
     ],
     "tags": [
       "packages/components/ecs-cluster/package.json",
@@ -1992,18 +2662,6 @@
       "packages/components/ecs-cluster/package.json",
       "nx/core/package-json"
     ],
-    "metadata.targetGroups.NPM Scripts.1": [
-      "packages/components/ecs-cluster/package.json",
-      "nx/core/package-json"
-    ],
-    "metadata.targetGroups.NPM Scripts.2": [
-      "packages/components/ecs-cluster/package.json",
-      "nx/core/package-json"
-    ],
-    "metadata.targetGroups.NPM Scripts.3": [
-      "packages/components/ecs-cluster/package.json",
-      "nx/core/package-json"
-    ],
     "metadata.description": [
       "packages/components/ecs-cluster/package.json",
       "nx/core/package-json"
@@ -2025,90 +2683,6 @@
       "nx/core/package-json"
     ],
     "targets": [
-      "packages/components/ecs-cluster/package.json",
-      "nx/core/package-json"
-    ],
-    "targets.build": [
-      "packages/components/ecs-cluster/package.json",
-      "nx/core/package-json"
-    ],
-    "targets.build.executor": [
-      "packages/components/ecs-cluster/package.json",
-      "nx/core/package-json"
-    ],
-    "targets.build.options": [
-      "packages/components/ecs-cluster/package.json",
-      "nx/core/package-json"
-    ],
-    "targets.build.metadata": [
-      "packages/components/ecs-cluster/package.json",
-      "nx/core/package-json"
-    ],
-    "targets.build.options.script": [
-      "packages/components/ecs-cluster/package.json",
-      "nx/core/package-json"
-    ],
-    "targets.build.metadata.scriptContent": [
-      "packages/components/ecs-cluster/package.json",
-      "nx/core/package-json"
-    ],
-    "targets.build.metadata.runCommand": [
-      "packages/components/ecs-cluster/package.json",
-      "nx/core/package-json"
-    ],
-    "targets.test": [
-      "packages/components/ecs-cluster/package.json",
-      "nx/core/package-json"
-    ],
-    "targets.test.executor": [
-      "packages/components/ecs-cluster/package.json",
-      "nx/core/package-json"
-    ],
-    "targets.test.options": [
-      "packages/components/ecs-cluster/package.json",
-      "nx/core/package-json"
-    ],
-    "targets.test.metadata": [
-      "packages/components/ecs-cluster/package.json",
-      "nx/core/package-json"
-    ],
-    "targets.test.options.script": [
-      "packages/components/ecs-cluster/package.json",
-      "nx/core/package-json"
-    ],
-    "targets.test.metadata.scriptContent": [
-      "packages/components/ecs-cluster/package.json",
-      "nx/core/package-json"
-    ],
-    "targets.test.metadata.runCommand": [
-      "packages/components/ecs-cluster/package.json",
-      "nx/core/package-json"
-    ],
-    "targets.lint": [
-      "packages/components/ecs-cluster/package.json",
-      "nx/core/package-json"
-    ],
-    "targets.lint.executor": [
-      "packages/components/ecs-cluster/package.json",
-      "nx/core/package-json"
-    ],
-    "targets.lint.options": [
-      "packages/components/ecs-cluster/package.json",
-      "nx/core/package-json"
-    ],
-    "targets.lint.metadata": [
-      "packages/components/ecs-cluster/package.json",
-      "nx/core/package-json"
-    ],
-    "targets.lint.options.script": [
-      "packages/components/ecs-cluster/package.json",
-      "nx/core/package-json"
-    ],
-    "targets.lint.metadata.scriptContent": [
-      "packages/components/ecs-cluster/package.json",
-      "nx/core/package-json"
-    ],
-    "targets.lint.metadata.runCommand": [
       "packages/components/ecs-cluster/package.json",
       "nx/core/package-json"
     ],
@@ -2156,6 +2730,106 @@
       "packages/components/ecs-cluster/package.json",
       "nx/core/package-json"
     ],
+    "sourceRoot": [
+      "packages/components/ecs-cluster/project.json",
+      "nx/core/project-json"
+    ],
+    "tags.type:lib": [
+      "packages/components/ecs-cluster/project.json",
+      "nx/core/project-json"
+    ],
+    "tags.scope:components": [
+      "packages/components/ecs-cluster/project.json",
+      "nx/core/project-json"
+    ],
+    "tags.scope:ecs-cluster": [
+      "packages/components/ecs-cluster/project.json",
+      "nx/core/project-json"
+    ],
+    "targets.build": [
+      "packages/components/ecs-cluster/project.json",
+      "nx/core/project-json"
+    ],
+    "targets.build.executor": [
+      "packages/components/ecs-cluster/project.json",
+      "nx/core/project-json"
+    ],
+    "targets.build.options": [
+      "packages/components/ecs-cluster/project.json",
+      "nx/core/project-json"
+    ],
+    "targets.build.outputs": [
+      "packages/components/ecs-cluster/project.json",
+      "nx/core/project-json"
+    ],
+    "targets.build.options.outputPath": [
+      "packages/components/ecs-cluster/project.json",
+      "nx/core/project-json"
+    ],
+    "targets.build.options.tsConfig": [
+      "packages/components/ecs-cluster/project.json",
+      "nx/core/project-json"
+    ],
+    "targets.build.options.main": [
+      "packages/components/ecs-cluster/project.json",
+      "nx/core/project-json"
+    ],
+    "targets.test": [
+      "packages/components/ecs-cluster/project.json",
+      "nx/core/project-json"
+    ],
+    "targets.test.executor": [
+      "packages/components/ecs-cluster/project.json",
+      "nx/core/project-json"
+    ],
+    "targets.test.options": [
+      "packages/components/ecs-cluster/project.json",
+      "nx/core/project-json"
+    ],
+    "targets.test.options.jestConfig": [
+      "packages/components/ecs-cluster/project.json",
+      "nx/core/project-json"
+    ],
+    "targets.test.options.passWithNoTests": [
+      "packages/components/ecs-cluster/project.json",
+      "nx/core/project-json"
+    ],
+    "targets.lint": [
+      "packages/components/ecs-cluster/project.json",
+      "nx/core/project-json"
+    ],
+    "targets.lint.executor": [
+      "packages/components/ecs-cluster/project.json",
+      "nx/core/project-json"
+    ],
+    "targets.lint.options": [
+      "packages/components/ecs-cluster/project.json",
+      "nx/core/project-json"
+    ],
+    "targets.lint.options.lintFilePatterns": [
+      "packages/components/ecs-cluster/project.json",
+      "nx/core/project-json"
+    ],
+    "targets.type-check": [
+      "packages/components/ecs-cluster/project.json",
+      "nx/core/project-json"
+    ],
+    "targets.type-check.executor": [
+      "packages/components/ecs-cluster/project.json",
+      "nx/core/project-json"
+    ],
+    "targets.type-check.options": [
+      "packages/components/ecs-cluster/project.json",
+      "nx/core/project-json"
+    ],
+    "targets.type-check.options.tsConfig": [
+      "packages/components/ecs-cluster/project.json",
+      "nx/core/project-json"
+    ],
+    "targets.type-check.options.noEmit": [
+      "packages/components/ecs-cluster/project.json",
+      "nx/core/project-json"
+    ],
     "targets.build.dependsOn": [
       "nx.json",
       "nx/target-defaults"
@@ -2165,6 +2839,34 @@
       "nx/target-defaults"
     ],
     "targets.build.parallelism": [
+      "nx.json",
+      "nx/target-defaults"
+    ],
+    "targets.test.inputs": [
+      "nx.json",
+      "nx/target-defaults"
+    ],
+    "targets.test.parallelism": [
+      "nx.json",
+      "nx/target-defaults"
+    ],
+    "targets.lint.inputs": [
+      "nx.json",
+      "nx/target-defaults"
+    ],
+    "targets.lint.parallelism": [
+      "nx.json",
+      "nx/target-defaults"
+    ],
+    "targets.type-check.dependsOn": [
+      "nx.json",
+      "nx/target-defaults"
+    ],
+    "targets.type-check.inputs": [
+      "nx.json",
+      "nx/target-defaults"
+    ],
+    "targets.type-check.parallelism": [
       "nx.json",
       "nx/target-defaults"
     ]
@@ -2398,23 +3100,35 @@
       "nx.json",
       "nx/target-defaults"
     ],
+    "targets.build.outputs": [
+      "nx.json",
+      "nx/target-defaults"
+    ],
     "targets.build.parallelism": [
+      "nx.json",
+      "nx/target-defaults"
+    ],
+    "targets.test.inputs": [
+      "nx.json",
+      "nx/target-defaults"
+    ],
+    "targets.test.parallelism": [
       "nx.json",
       "nx/target-defaults"
     ]
   },
   "packages/components/lambda-api": {
     "root": [
-      "packages/components/lambda-api/package.json",
-      "nx/core/package-json"
+      "packages/components/lambda-api/project.json",
+      "nx/core/project-json"
     ],
     "name": [
-      "packages/components/lambda-api/package.json",
-      "nx/core/package-json"
+      "packages/components/lambda-api/project.json",
+      "nx/core/project-json"
     ],
     "projectType": [
-      "packages/components/lambda-api/package.json",
-      "nx/core/package-json"
+      "packages/components/lambda-api/project.json",
+      "nx/core/project-json"
     ],
     "tags": [
       "packages/components/lambda-api/package.json",
@@ -2425,18 +3139,6 @@
       "nx/core/package-json"
     ],
     "metadata.targetGroups": [
-      "packages/components/lambda-api/package.json",
-      "nx/core/package-json"
-    ],
-    "metadata.targetGroups.NPM Scripts": [
-      "packages/components/lambda-api/package.json",
-      "nx/core/package-json"
-    ],
-    "metadata.targetGroups.NPM Scripts.0": [
-      "packages/components/lambda-api/package.json",
-      "nx/core/package-json"
-    ],
-    "metadata.targetGroups.NPM Scripts.1": [
       "packages/components/lambda-api/package.json",
       "nx/core/package-json"
     ],
@@ -2460,61 +3162,105 @@
       "packages/components/lambda-api/package.json",
       "nx/core/package-json"
     ],
+    "sourceRoot": [
+      "packages/components/lambda-api/project.json",
+      "nx/core/project-json"
+    ],
+    "tags.type:lib": [
+      "packages/components/lambda-api/project.json",
+      "nx/core/project-json"
+    ],
+    "tags.scope:components": [
+      "packages/components/lambda-api/project.json",
+      "nx/core/project-json"
+    ],
+    "tags.scope:lambda-api": [
+      "packages/components/lambda-api/project.json",
+      "nx/core/project-json"
+    ],
     "targets.build": [
-      "packages/components/lambda-api/package.json",
-      "nx/core/package-json"
+      "packages/components/lambda-api/project.json",
+      "nx/core/project-json"
     ],
     "targets.build.executor": [
-      "packages/components/lambda-api/package.json",
-      "nx/core/package-json"
+      "packages/components/lambda-api/project.json",
+      "nx/core/project-json"
     ],
     "targets.build.options": [
-      "packages/components/lambda-api/package.json",
-      "nx/core/package-json"
+      "packages/components/lambda-api/project.json",
+      "nx/core/project-json"
     ],
-    "targets.build.metadata": [
-      "packages/components/lambda-api/package.json",
-      "nx/core/package-json"
+    "targets.build.outputs": [
+      "packages/components/lambda-api/project.json",
+      "nx/core/project-json"
     ],
-    "targets.build.options.script": [
-      "packages/components/lambda-api/package.json",
-      "nx/core/package-json"
+    "targets.build.options.outputPath": [
+      "packages/components/lambda-api/project.json",
+      "nx/core/project-json"
     ],
-    "targets.build.metadata.scriptContent": [
-      "packages/components/lambda-api/package.json",
-      "nx/core/package-json"
+    "targets.build.options.tsConfig": [
+      "packages/components/lambda-api/project.json",
+      "nx/core/project-json"
     ],
-    "targets.build.metadata.runCommand": [
-      "packages/components/lambda-api/package.json",
-      "nx/core/package-json"
+    "targets.build.options.main": [
+      "packages/components/lambda-api/project.json",
+      "nx/core/project-json"
     ],
     "targets.test": [
-      "packages/components/lambda-api/package.json",
-      "nx/core/package-json"
+      "packages/components/lambda-api/project.json",
+      "nx/core/project-json"
     ],
     "targets.test.executor": [
-      "packages/components/lambda-api/package.json",
-      "nx/core/package-json"
+      "packages/components/lambda-api/project.json",
+      "nx/core/project-json"
     ],
     "targets.test.options": [
-      "packages/components/lambda-api/package.json",
-      "nx/core/package-json"
+      "packages/components/lambda-api/project.json",
+      "nx/core/project-json"
     ],
-    "targets.test.metadata": [
-      "packages/components/lambda-api/package.json",
-      "nx/core/package-json"
+    "targets.test.options.jestConfig": [
+      "packages/components/lambda-api/project.json",
+      "nx/core/project-json"
     ],
-    "targets.test.options.script": [
-      "packages/components/lambda-api/package.json",
-      "nx/core/package-json"
+    "targets.test.options.passWithNoTests": [
+      "packages/components/lambda-api/project.json",
+      "nx/core/project-json"
     ],
-    "targets.test.metadata.scriptContent": [
-      "packages/components/lambda-api/package.json",
-      "nx/core/package-json"
+    "targets.lint": [
+      "packages/components/lambda-api/project.json",
+      "nx/core/project-json"
     ],
-    "targets.test.metadata.runCommand": [
-      "packages/components/lambda-api/package.json",
-      "nx/core/package-json"
+    "targets.lint.executor": [
+      "packages/components/lambda-api/project.json",
+      "nx/core/project-json"
+    ],
+    "targets.lint.options": [
+      "packages/components/lambda-api/project.json",
+      "nx/core/project-json"
+    ],
+    "targets.lint.options.lintFilePatterns": [
+      "packages/components/lambda-api/project.json",
+      "nx/core/project-json"
+    ],
+    "targets.type-check": [
+      "packages/components/lambda-api/project.json",
+      "nx/core/project-json"
+    ],
+    "targets.type-check.executor": [
+      "packages/components/lambda-api/project.json",
+      "nx/core/project-json"
+    ],
+    "targets.type-check.options": [
+      "packages/components/lambda-api/project.json",
+      "nx/core/project-json"
+    ],
+    "targets.type-check.options.tsConfig": [
+      "packages/components/lambda-api/project.json",
+      "nx/core/project-json"
+    ],
+    "targets.type-check.options.noEmit": [
+      "packages/components/lambda-api/project.json",
+      "nx/core/project-json"
     ],
     "targets.build.dependsOn": [
       "nx.json",
@@ -2525,6 +3271,34 @@
       "nx/target-defaults"
     ],
     "targets.build.parallelism": [
+      "nx.json",
+      "nx/target-defaults"
+    ],
+    "targets.test.inputs": [
+      "nx.json",
+      "nx/target-defaults"
+    ],
+    "targets.test.parallelism": [
+      "nx.json",
+      "nx/target-defaults"
+    ],
+    "targets.lint.inputs": [
+      "nx.json",
+      "nx/target-defaults"
+    ],
+    "targets.lint.parallelism": [
+      "nx.json",
+      "nx/target-defaults"
+    ],
+    "targets.type-check.dependsOn": [
+      "nx.json",
+      "nx/target-defaults"
+    ],
+    "targets.type-check.inputs": [
+      "nx.json",
+      "nx/target-defaults"
+    ],
+    "targets.type-check.parallelism": [
       "nx.json",
       "nx/target-defaults"
     ]
@@ -2650,7 +3424,19 @@
       "nx.json",
       "nx/target-defaults"
     ],
+    "targets.build.outputs": [
+      "nx.json",
+      "nx/target-defaults"
+    ],
     "targets.build.parallelism": [
+      "nx.json",
+      "nx/target-defaults"
+    ],
+    "targets.test.inputs": [
+      "nx.json",
+      "nx/target-defaults"
+    ],
+    "targets.test.parallelism": [
       "nx.json",
       "nx/target-defaults"
     ]
@@ -2888,7 +3674,19 @@
       "nx.json",
       "nx/target-defaults"
     ],
+    "targets.build.outputs": [
+      "nx.json",
+      "nx/target-defaults"
+    ],
     "targets.build.parallelism": [
+      "nx.json",
+      "nx/target-defaults"
+    ],
+    "targets.test.inputs": [
+      "nx.json",
+      "nx/target-defaults"
+    ],
+    "targets.test.parallelism": [
       "nx.json",
       "nx/target-defaults"
     ]
@@ -3126,7 +3924,19 @@
       "nx.json",
       "nx/target-defaults"
     ],
+    "targets.build.outputs": [
+      "nx.json",
+      "nx/target-defaults"
+    ],
     "targets.build.parallelism": [
+      "nx.json",
+      "nx/target-defaults"
+    ],
+    "targets.test.inputs": [
+      "nx.json",
+      "nx/target-defaults"
+    ],
+    "targets.test.parallelism": [
       "nx.json",
       "nx/target-defaults"
     ]
@@ -3576,7 +4386,27 @@
       "nx.json",
       "nx/target-defaults"
     ],
+    "targets.build.outputs": [
+      "nx.json",
+      "nx/target-defaults"
+    ],
     "targets.build.parallelism": [
+      "nx.json",
+      "nx/target-defaults"
+    ],
+    "targets.test.inputs": [
+      "nx.json",
+      "nx/target-defaults"
+    ],
+    "targets.test.parallelism": [
+      "nx.json",
+      "nx/target-defaults"
+    ],
+    "targets.lint.inputs": [
+      "nx.json",
+      "nx/target-defaults"
+    ],
+    "targets.lint.parallelism": [
       "nx.json",
       "nx/target-defaults"
     ]
@@ -3702,7 +4532,19 @@
       "nx.json",
       "nx/target-defaults"
     ],
+    "targets.build.outputs": [
+      "nx.json",
+      "nx/target-defaults"
+    ],
     "targets.build.parallelism": [
+      "nx.json",
+      "nx/target-defaults"
+    ],
+    "targets.test.inputs": [
+      "nx.json",
+      "nx/target-defaults"
+    ],
+    "targets.test.parallelism": [
       "nx.json",
       "nx/target-defaults"
     ]
@@ -3960,7 +4802,27 @@
       "nx.json",
       "nx/target-defaults"
     ],
+    "targets.build.outputs": [
+      "nx.json",
+      "nx/target-defaults"
+    ],
     "targets.build.parallelism": [
+      "nx.json",
+      "nx/target-defaults"
+    ],
+    "targets.test.inputs": [
+      "nx.json",
+      "nx/target-defaults"
+    ],
+    "targets.test.parallelism": [
+      "nx.json",
+      "nx/target-defaults"
+    ],
+    "targets.lint.inputs": [
+      "nx.json",
+      "nx/target-defaults"
+    ],
+    "targets.lint.parallelism": [
       "nx.json",
       "nx/target-defaults"
     ]
@@ -4218,7 +5080,27 @@
       "nx.json",
       "nx/target-defaults"
     ],
+    "targets.build.outputs": [
+      "nx.json",
+      "nx/target-defaults"
+    ],
     "targets.build.parallelism": [
+      "nx.json",
+      "nx/target-defaults"
+    ],
+    "targets.test.inputs": [
+      "nx.json",
+      "nx/target-defaults"
+    ],
+    "targets.test.parallelism": [
+      "nx.json",
+      "nx/target-defaults"
+    ],
+    "targets.lint.inputs": [
+      "nx.json",
+      "nx/target-defaults"
+    ],
+    "targets.lint.parallelism": [
       "nx.json",
       "nx/target-defaults"
     ]
@@ -4356,7 +5238,27 @@
       "nx.json",
       "nx/target-defaults"
     ],
+    "targets.build.outputs": [
+      "nx.json",
+      "nx/target-defaults"
+    ],
     "targets.build.parallelism": [
+      "nx.json",
+      "nx/target-defaults"
+    ],
+    "targets.test.inputs": [
+      "nx.json",
+      "nx/target-defaults"
+    ],
+    "targets.test.parallelism": [
+      "nx.json",
+      "nx/target-defaults"
+    ],
+    "targets.lint.inputs": [
+      "nx.json",
+      "nx/target-defaults"
+    ],
+    "targets.lint.parallelism": [
       "nx.json",
       "nx/target-defaults"
     ]
@@ -4482,7 +5384,19 @@
       "nx.json",
       "nx/target-defaults"
     ],
+    "targets.build.outputs": [
+      "nx.json",
+      "nx/target-defaults"
+    ],
     "targets.build.parallelism": [
+      "nx.json",
+      "nx/target-defaults"
+    ],
+    "targets.test.inputs": [
+      "nx.json",
+      "nx/target-defaults"
+    ],
+    "targets.test.parallelism": [
       "nx.json",
       "nx/target-defaults"
     ]
@@ -4628,23 +5542,43 @@
       "nx.json",
       "nx/target-defaults"
     ],
+    "targets.build.outputs": [
+      "nx.json",
+      "nx/target-defaults"
+    ],
     "targets.build.parallelism": [
+      "nx.json",
+      "nx/target-defaults"
+    ],
+    "targets.test.inputs": [
+      "nx.json",
+      "nx/target-defaults"
+    ],
+    "targets.test.parallelism": [
+      "nx.json",
+      "nx/target-defaults"
+    ],
+    "targets.lint.inputs": [
+      "nx.json",
+      "nx/target-defaults"
+    ],
+    "targets.lint.parallelism": [
       "nx.json",
       "nx/target-defaults"
     ]
   },
   "packages/core-engine": {
     "root": [
-      "packages/core-engine/package.json",
-      "nx/core/package-json"
+      "packages/core-engine/project.json",
+      "nx/core/project-json"
     ],
     "name": [
-      "packages/core-engine/package.json",
-      "nx/core/package-json"
+      "packages/core-engine/project.json",
+      "nx/core/project-json"
     ],
     "projectType": [
-      "packages/core-engine/package.json",
-      "nx/core/package-json"
+      "packages/core-engine/project.json",
+      "nx/core/project-json"
     ],
     "tags": [
       "packages/core-engine/package.json",
@@ -4655,22 +5589,6 @@
       "nx/core/package-json"
     ],
     "metadata.targetGroups": [
-      "packages/core-engine/package.json",
-      "nx/core/package-json"
-    ],
-    "metadata.targetGroups.NPM Scripts": [
-      "packages/core-engine/package.json",
-      "nx/core/package-json"
-    ],
-    "metadata.targetGroups.NPM Scripts.0": [
-      "packages/core-engine/package.json",
-      "nx/core/package-json"
-    ],
-    "metadata.targetGroups.NPM Scripts.1": [
-      "packages/core-engine/package.json",
-      "nx/core/package-json"
-    ],
-    "metadata.targetGroups.NPM Scripts.2": [
       "packages/core-engine/package.json",
       "nx/core/package-json"
     ],
@@ -4694,89 +5612,101 @@
       "packages/core-engine/package.json",
       "nx/core/package-json"
     ],
+    "sourceRoot": [
+      "packages/core-engine/project.json",
+      "nx/core/project-json"
+    ],
+    "tags.type:lib": [
+      "packages/core-engine/project.json",
+      "nx/core/project-json"
+    ],
+    "tags.scope:core": [
+      "packages/core-engine/project.json",
+      "nx/core/project-json"
+    ],
     "targets.build": [
-      "packages/core-engine/package.json",
-      "nx/core/package-json"
+      "packages/core-engine/project.json",
+      "nx/core/project-json"
     ],
     "targets.build.executor": [
-      "packages/core-engine/package.json",
-      "nx/core/package-json"
+      "packages/core-engine/project.json",
+      "nx/core/project-json"
     ],
     "targets.build.options": [
-      "packages/core-engine/package.json",
-      "nx/core/package-json"
+      "packages/core-engine/project.json",
+      "nx/core/project-json"
     ],
-    "targets.build.metadata": [
-      "packages/core-engine/package.json",
-      "nx/core/package-json"
+    "targets.build.outputs": [
+      "packages/core-engine/project.json",
+      "nx/core/project-json"
     ],
-    "targets.build.options.script": [
-      "packages/core-engine/package.json",
-      "nx/core/package-json"
+    "targets.build.options.outputPath": [
+      "packages/core-engine/project.json",
+      "nx/core/project-json"
     ],
-    "targets.build.metadata.scriptContent": [
-      "packages/core-engine/package.json",
-      "nx/core/package-json"
+    "targets.build.options.tsConfig": [
+      "packages/core-engine/project.json",
+      "nx/core/project-json"
     ],
-    "targets.build.metadata.runCommand": [
-      "packages/core-engine/package.json",
-      "nx/core/package-json"
+    "targets.build.options.main": [
+      "packages/core-engine/project.json",
+      "nx/core/project-json"
     ],
     "targets.test": [
-      "packages/core-engine/package.json",
-      "nx/core/package-json"
+      "packages/core-engine/project.json",
+      "nx/core/project-json"
     ],
     "targets.test.executor": [
-      "packages/core-engine/package.json",
-      "nx/core/package-json"
+      "packages/core-engine/project.json",
+      "nx/core/project-json"
     ],
     "targets.test.options": [
-      "packages/core-engine/package.json",
-      "nx/core/package-json"
+      "packages/core-engine/project.json",
+      "nx/core/project-json"
     ],
-    "targets.test.metadata": [
-      "packages/core-engine/package.json",
-      "nx/core/package-json"
+    "targets.test.options.jestConfig": [
+      "packages/core-engine/project.json",
+      "nx/core/project-json"
     ],
-    "targets.test.options.script": [
-      "packages/core-engine/package.json",
-      "nx/core/package-json"
-    ],
-    "targets.test.metadata.scriptContent": [
-      "packages/core-engine/package.json",
-      "nx/core/package-json"
-    ],
-    "targets.test.metadata.runCommand": [
-      "packages/core-engine/package.json",
-      "nx/core/package-json"
+    "targets.test.options.passWithNoTests": [
+      "packages/core-engine/project.json",
+      "nx/core/project-json"
     ],
     "targets.lint": [
-      "packages/core-engine/package.json",
-      "nx/core/package-json"
+      "packages/core-engine/project.json",
+      "nx/core/project-json"
     ],
     "targets.lint.executor": [
-      "packages/core-engine/package.json",
-      "nx/core/package-json"
+      "packages/core-engine/project.json",
+      "nx/core/project-json"
     ],
     "targets.lint.options": [
-      "packages/core-engine/package.json",
-      "nx/core/package-json"
+      "packages/core-engine/project.json",
+      "nx/core/project-json"
     ],
-    "targets.lint.metadata": [
-      "packages/core-engine/package.json",
-      "nx/core/package-json"
+    "targets.lint.options.lintFilePatterns": [
+      "packages/core-engine/project.json",
+      "nx/core/project-json"
     ],
-    "targets.lint.options.script": [
-      "packages/core-engine/package.json",
-      "nx/core/package-json"
+    "targets.type-check": [
+      "packages/core-engine/project.json",
+      "nx/core/project-json"
     ],
-    "targets.lint.metadata.scriptContent": [
-      "packages/core-engine/package.json",
-      "nx/core/package-json"
+    "targets.type-check.executor": [
+      "packages/core-engine/project.json",
+      "nx/core/project-json"
     ],
-    "targets.lint.metadata.runCommand": [
-      "packages/core-engine/package.json",
-      "nx/core/package-json"
+    "targets.type-check.options": [
+      "packages/core-engine/project.json",
+      "nx/core/project-json"
+    ],
+    "targets.type-check.options.tsConfig": [
+      "packages/core-engine/project.json",
+      "nx/core/project-json"
+    ],
+    "targets.type-check.options.noEmit": [
+      "packages/core-engine/project.json",
+      "nx/core/project-json"
     ],
     "targets.build.dependsOn": [
       "nx.json",
@@ -4787,6 +5717,34 @@
       "nx/target-defaults"
     ],
     "targets.build.parallelism": [
+      "nx.json",
+      "nx/target-defaults"
+    ],
+    "targets.test.inputs": [
+      "nx.json",
+      "nx/target-defaults"
+    ],
+    "targets.test.parallelism": [
+      "nx.json",
+      "nx/target-defaults"
+    ],
+    "targets.lint.inputs": [
+      "nx.json",
+      "nx/target-defaults"
+    ],
+    "targets.lint.parallelism": [
+      "nx.json",
+      "nx/target-defaults"
+    ],
+    "targets.type-check.dependsOn": [
+      "nx.json",
+      "nx/target-defaults"
+    ],
+    "targets.type-check.inputs": [
+      "nx.json",
+      "nx/target-defaults"
+    ],
+    "targets.type-check.parallelism": [
       "nx.json",
       "nx/target-defaults"
     ]
@@ -4924,9 +5882,75 @@
       "nx.json",
       "nx/target-defaults"
     ],
+    "targets.build.outputs": [
+      "nx.json",
+      "nx/target-defaults"
+    ],
     "targets.build.parallelism": [
       "nx.json",
       "nx/target-defaults"
+    ],
+    "targets.test.inputs": [
+      "nx.json",
+      "nx/target-defaults"
+    ],
+    "targets.test.parallelism": [
+      "nx.json",
+      "nx/target-defaults"
+    ],
+    "targets.lint.inputs": [
+      "nx.json",
+      "nx/target-defaults"
+    ],
+    "targets.lint.parallelism": [
+      "nx.json",
+      "nx/target-defaults"
+    ]
+  },
+  "packages/observability-handlers": {
+    "root": [
+      "packages/observability-handlers/package.json",
+      "nx/core/package-json"
+    ],
+    "name": [
+      "packages/observability-handlers/package.json",
+      "nx/core/package-json"
+    ],
+    "projectType": [
+      "packages/observability-handlers/package.json",
+      "nx/core/package-json"
+    ],
+    "tags": [
+      "packages/observability-handlers/package.json",
+      "nx/core/package-json"
+    ],
+    "tags.npm:private": [
+      "packages/observability-handlers/package.json",
+      "nx/core/package-json"
+    ],
+    "metadata.targetGroups": [
+      "packages/observability-handlers/package.json",
+      "nx/core/package-json"
+    ],
+    "metadata.js": [
+      "packages/observability-handlers/package.json",
+      "nx/core/package-json"
+    ],
+    "metadata.js.packageName": [
+      "packages/observability-handlers/package.json",
+      "nx/core/package-json"
+    ],
+    "metadata.js.packageMain": [
+      "packages/observability-handlers/package.json",
+      "nx/core/package-json"
+    ],
+    "metadata.js.isInPackageManagerWorkspaces": [
+      "packages/observability-handlers/package.json",
+      "nx/core/package-json"
+    ],
+    "targets": [
+      "packages/observability-handlers/package.json",
+      "nx/core/package-json"
     ]
   },
   "packages/standards/deprecation": {
@@ -5062,7 +6086,27 @@
       "nx.json",
       "nx/target-defaults"
     ],
+    "targets.build.outputs": [
+      "nx.json",
+      "nx/target-defaults"
+    ],
     "targets.build.parallelism": [
+      "nx.json",
+      "nx/target-defaults"
+    ],
+    "targets.test.inputs": [
+      "nx.json",
+      "nx/target-defaults"
+    ],
+    "targets.test.parallelism": [
+      "nx.json",
+      "nx/target-defaults"
+    ],
+    "targets.lint.inputs": [
+      "nx.json",
+      "nx/target-defaults"
+    ],
+    "targets.lint.parallelism": [
       "nx.json",
       "nx/target-defaults"
     ]
@@ -5200,7 +6244,27 @@
       "nx.json",
       "nx/target-defaults"
     ],
+    "targets.build.outputs": [
+      "nx.json",
+      "nx/target-defaults"
+    ],
     "targets.build.parallelism": [
+      "nx.json",
+      "nx/target-defaults"
+    ],
+    "targets.test.inputs": [
+      "nx.json",
+      "nx/target-defaults"
+    ],
+    "targets.test.parallelism": [
+      "nx.json",
+      "nx/target-defaults"
+    ],
+    "targets.lint.inputs": [
+      "nx.json",
+      "nx/target-defaults"
+    ],
+    "targets.lint.parallelism": [
       "nx.json",
       "nx/target-defaults"
     ]
@@ -5338,7 +6402,27 @@
       "nx.json",
       "nx/target-defaults"
     ],
+    "targets.build.outputs": [
+      "nx.json",
+      "nx/target-defaults"
+    ],
     "targets.build.parallelism": [
+      "nx.json",
+      "nx/target-defaults"
+    ],
+    "targets.test.inputs": [
+      "nx.json",
+      "nx/target-defaults"
+    ],
+    "targets.test.parallelism": [
+      "nx.json",
+      "nx/target-defaults"
+    ],
+    "targets.lint.inputs": [
+      "nx.json",
+      "nx/target-defaults"
+    ],
+    "targets.lint.parallelism": [
       "nx.json",
       "nx/target-defaults"
     ]
@@ -5476,7 +6560,27 @@
       "nx.json",
       "nx/target-defaults"
     ],
+    "targets.build.outputs": [
+      "nx.json",
+      "nx/target-defaults"
+    ],
     "targets.build.parallelism": [
+      "nx.json",
+      "nx/target-defaults"
+    ],
+    "targets.test.inputs": [
+      "nx.json",
+      "nx/target-defaults"
+    ],
+    "targets.test.parallelism": [
+      "nx.json",
+      "nx/target-defaults"
+    ],
+    "targets.lint.inputs": [
+      "nx.json",
+      "nx/target-defaults"
+    ],
+    "targets.lint.parallelism": [
       "nx.json",
       "nx/target-defaults"
     ]
@@ -5614,7 +6718,27 @@
       "nx.json",
       "nx/target-defaults"
     ],
+    "targets.build.outputs": [
+      "nx.json",
+      "nx/target-defaults"
+    ],
     "targets.build.parallelism": [
+      "nx.json",
+      "nx/target-defaults"
+    ],
+    "targets.test.inputs": [
+      "nx.json",
+      "nx/target-defaults"
+    ],
+    "targets.test.parallelism": [
+      "nx.json",
+      "nx/target-defaults"
+    ],
+    "targets.lint.inputs": [
+      "nx.json",
+      "nx/target-defaults"
+    ],
+    "targets.lint.parallelism": [
       "nx.json",
       "nx/target-defaults"
     ]
@@ -5740,7 +6864,181 @@
       "nx.json",
       "nx/target-defaults"
     ],
+    "targets.build.outputs": [
+      "nx.json",
+      "nx/target-defaults"
+    ],
     "targets.build.parallelism": [
+      "nx.json",
+      "nx/target-defaults"
+    ],
+    "targets.test.inputs": [
+      "nx.json",
+      "nx/target-defaults"
+    ],
+    "targets.test.parallelism": [
+      "nx.json",
+      "nx/target-defaults"
+    ]
+  },
+  "packages/components/s3-bucket": {
+    "root": [
+      "packages/components/s3-bucket/project.json",
+      "nx/core/project-json"
+    ],
+    "name": [
+      "packages/components/s3-bucket/project.json",
+      "nx/core/project-json"
+    ],
+    "sourceRoot": [
+      "packages/components/s3-bucket/project.json",
+      "nx/core/project-json"
+    ],
+    "projectType": [
+      "packages/components/s3-bucket/project.json",
+      "nx/core/project-json"
+    ],
+    "tags": [
+      "packages/components/s3-bucket/project.json",
+      "nx/core/project-json"
+    ],
+    "tags.type:lib": [
+      "packages/components/s3-bucket/project.json",
+      "nx/core/project-json"
+    ],
+    "tags.scope:components": [
+      "packages/components/s3-bucket/project.json",
+      "nx/core/project-json"
+    ],
+    "tags.scope:s3-bucket": [
+      "packages/components/s3-bucket/project.json",
+      "nx/core/project-json"
+    ],
+    "targets": [
+      "packages/components/s3-bucket/project.json",
+      "nx/core/project-json"
+    ],
+    "targets.build": [
+      "packages/components/s3-bucket/project.json",
+      "nx/core/project-json"
+    ],
+    "targets.build.executor": [
+      "packages/components/s3-bucket/project.json",
+      "nx/core/project-json"
+    ],
+    "targets.build.options": [
+      "packages/components/s3-bucket/project.json",
+      "nx/core/project-json"
+    ],
+    "targets.build.outputs": [
+      "packages/components/s3-bucket/project.json",
+      "nx/core/project-json"
+    ],
+    "targets.build.options.outputPath": [
+      "packages/components/s3-bucket/project.json",
+      "nx/core/project-json"
+    ],
+    "targets.build.options.tsConfig": [
+      "packages/components/s3-bucket/project.json",
+      "nx/core/project-json"
+    ],
+    "targets.build.options.main": [
+      "packages/components/s3-bucket/project.json",
+      "nx/core/project-json"
+    ],
+    "targets.test": [
+      "packages/components/s3-bucket/project.json",
+      "nx/core/project-json"
+    ],
+    "targets.test.executor": [
+      "packages/components/s3-bucket/project.json",
+      "nx/core/project-json"
+    ],
+    "targets.test.options": [
+      "packages/components/s3-bucket/project.json",
+      "nx/core/project-json"
+    ],
+    "targets.test.options.jestConfig": [
+      "packages/components/s3-bucket/project.json",
+      "nx/core/project-json"
+    ],
+    "targets.test.options.passWithNoTests": [
+      "packages/components/s3-bucket/project.json",
+      "nx/core/project-json"
+    ],
+    "targets.lint": [
+      "packages/components/s3-bucket/project.json",
+      "nx/core/project-json"
+    ],
+    "targets.lint.executor": [
+      "packages/components/s3-bucket/project.json",
+      "nx/core/project-json"
+    ],
+    "targets.lint.options": [
+      "packages/components/s3-bucket/project.json",
+      "nx/core/project-json"
+    ],
+    "targets.lint.options.lintFilePatterns": [
+      "packages/components/s3-bucket/project.json",
+      "nx/core/project-json"
+    ],
+    "targets.type-check": [
+      "packages/components/s3-bucket/project.json",
+      "nx/core/project-json"
+    ],
+    "targets.type-check.executor": [
+      "packages/components/s3-bucket/project.json",
+      "nx/core/project-json"
+    ],
+    "targets.type-check.options": [
+      "packages/components/s3-bucket/project.json",
+      "nx/core/project-json"
+    ],
+    "targets.type-check.options.tsConfig": [
+      "packages/components/s3-bucket/project.json",
+      "nx/core/project-json"
+    ],
+    "targets.type-check.options.noEmit": [
+      "packages/components/s3-bucket/project.json",
+      "nx/core/project-json"
+    ],
+    "targets.build.dependsOn": [
+      "nx.json",
+      "nx/target-defaults"
+    ],
+    "targets.build.inputs": [
+      "nx.json",
+      "nx/target-defaults"
+    ],
+    "targets.build.parallelism": [
+      "nx.json",
+      "nx/target-defaults"
+    ],
+    "targets.test.inputs": [
+      "nx.json",
+      "nx/target-defaults"
+    ],
+    "targets.test.parallelism": [
+      "nx.json",
+      "nx/target-defaults"
+    ],
+    "targets.lint.inputs": [
+      "nx.json",
+      "nx/target-defaults"
+    ],
+    "targets.lint.parallelism": [
+      "nx.json",
+      "nx/target-defaults"
+    ],
+    "targets.type-check.dependsOn": [
+      "nx.json",
+      "nx/target-defaults"
+    ],
+    "targets.type-check.inputs": [
+      "nx.json",
+      "nx/target-defaults"
+    ],
+    "targets.type-check.parallelism": [
       "nx.json",
       "nx/target-defaults"
     ]

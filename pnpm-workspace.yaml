@@ -3,3 +3,13 @@ packages:
   - "packages/*"
   - "packages/*/*"
   - "tools/*"
+  - "backstage-app/*"
+  - "!**/node_modules"
+  - "!**/dist"
+  - "!**/.nx"
+  - "!**/tmp"
+
+onlyBuiltDependencies:
+  - "@swc/core"
+  - nx
+  - unrs-resolver

@@ -6,10 +6,10 @@
 
 import * as lambda from 'aws-cdk-lib/aws-lambda';
 import * as iam from 'aws-cdk-lib/aws-iam';
-import { Component, BindingContext, StructuredLogger } from '@shinobi/core';
+import { IComponent, BindingContext, BindingResult, CompatibilityEntry, Logger } from '@shinobi/core';
 
 export interface ComputeToOpenFeatureStrategyDependencies {
-  logger: StructuredLogger;
+  logger: Logger;
 }
 
 /**
@@ -20,13 +20,56 @@ export class ComputeToOpenFeatureStrategy {
   constructor(private dependencies: ComputeToOpenFeatureStrategyDependencies) { }
 
   /**
+   * Get compatibility matrix for this binding strategy
+   */
+  getCompatibilityMatrix(): CompatibilityEntry[] {
+    return [
+      {
+        sourceType: 'lambda-api',
+        targetType: 'openfeature-provider',
+        capability: 'openfeature:provider',
+        supportedAccess: ['read'],
+        description: 'Configures Lambda function to use OpenFeature provider for feature flags'
+      },
+      {
+        sourceType: 'lambda-worker',
+        targetType: 'openfeature-provider',
+        capability: 'openfeature:provider',
+        supportedAccess: ['read'],
+        description: 'Configures Lambda worker to use OpenFeature provider for feature flags'
+      },
+      {
+        sourceType: 'lambda-function',
+        targetType: 'openfeature-provider',
+        capability: 'openfeature:provider',
+        supportedAccess: ['read'],
+        description: 'Configures Lambda function to use OpenFeature provider for feature flags'
+      },
+      {
+        sourceType: 'container',
+        targetType: 'openfeature-provider',
+        capability: 'openfeature:provider',
+        supportedAccess: ['read'],
+        description: 'Configures container to use OpenFeature provider for feature flags'
+      },
+      {
+        sourceType: 'ecs-service',
+        targetType: 'openfeature-provider',
+        capability: 'openfeature:provider',
+        supportedAccess: ['read'],
+        description: 'Configures ECS service to use OpenFeature provider for feature flags'
+      }
+    ];
+  }
+
+  /**
    * Check if this strategy can handle the given binding
    */
   canHandle(context: BindingContext): boolean {
     // Check if source is a compute component and target provides OpenFeature capability
-    const isComputeSource = this.isComputeComponent(context.sourceComponent);
-    const hasOpenFeatureCapability = this.hasOpenFeatureCapability(context.targetComponent);
-    const isOpenFeatureCapability = context.capability === 'openfeature:provider';
+    const isComputeSource = this.isComputeComponent(context.source);
+    const hasOpenFeatureCapability = this.hasOpenFeatureCapability(context.target);
+    const isOpenFeatureCapability = context.directive.capability === 'openfeature:provider';
 
     return isComputeSource && hasOpenFeatureCapability && isOpenFeatureCapability;
   }
@@ -35,10 +78,10 @@ export class ComputeToOpenFeatureStrategy {
    * Apply the binding between compute component and OpenFeature provider
    */
   async apply(context: BindingContext): Promise<void> {
-    this.dependencies.logger.debug(`Applying compute to OpenFeature binding: ${context.access} access`);
+    this.dependencies.logger.debug(`Applying compute to OpenFeature binding: ${context.directive.access} access`);
 
-    const computeFunction = this.extractComputeFunction(context.sourceComponent);
-    const providerComponent = context.targetComponent;
+    const computeFunction = this.extractComputeFunction(context.source);
+    const providerComponent = context.target;
 
     if (!computeFunction) {
       throw new Error('Could not extract compute function from source component');
@@ -48,7 +91,7 @@ export class ComputeToOpenFeatureStrategy {
     const providerCapability = this.getProviderCapability(providerComponent);
 
     // 2. Configure IAM permissions based on provider type
-    await this.configureProviderAccess(computeFunction, providerCapability, context.access);
+    await this.configureProviderAccess(computeFunction, providerCapability, context.directive.access);
 
     // 3. Set environment variables for OpenFeature SDK auto-configuration
     await this.setOpenFeatureEnvironmentVariables(computeFunction, providerCapability, context);
@@ -154,9 +197,9 @@ export class ComputeToOpenFeatureStrategy {
       ...providerCapability.environmentVariables,
 
       // Feature flag service metadata
-      FEATURE_FLAG_SERVICE: context.targetComponent.getName(),
+      FEATURE_FLAG_SERVICE: context.target.getName(),
       FEATURE_FLAG_ENVIRONMENT: context.environment || 'production',
-      FEATURE_FLAG_ACCESS_LEVEL: context.access,
+      FEATURE_FLAG_ACCESS_LEVEL: context.directive.access,
 
       // Observability configuration
       OPENFEATURE_TELEMETRY_ENABLED: 'true',
@@ -186,8 +229,8 @@ export class ComputeToOpenFeatureStrategy {
     }
 
     // Apply custom environment variable names if provided
-    if (context.customEnvVars) {
-      for (const [standardName, customName] of Object.entries(context.customEnvVars)) {
+    if (context.directive.env) {
+      for (const [standardName, customName] of Object.entries(context.directive.env)) {
         if (environmentVariables[standardName]) {
           environmentVariables[customName] = environmentVariables[standardName];
           delete environmentVariables[standardName];
@@ -199,6 +242,23 @@ export class ComputeToOpenFeatureStrategy {
     this.addEnvironmentVariables(computeFunction, environmentVariables);
 
     this.dependencies.logger.debug('OpenFeature environment variables set successfully');
+  }
+
+  /**
+   * Bind method required by IBinderStrategy interface
+   */
+  bind(context: BindingContext): BindingResult {
+    // This strategy modifies CDK constructs directly, so we return minimal result
+    return {
+      environmentVariables: {},
+      metadata: {
+        strategy: 'compute-to-openfeature',
+        sourceType: context.source.getType(),
+        targetType: context.target.getType(),
+        capability: context.directive.capability,
+        access: context.directive.access
+      }
+    };
   }
 
   /**
@@ -231,7 +291,7 @@ export class ComputeToOpenFeatureStrategy {
   /**
    * Check if a component is a compute component
    */
-  private isComputeComponent(component: Component): boolean {
+  private isComputeComponent(component: IComponent): boolean {
     const computeTypes = ['lambda-api', 'lambda-worker', 'lambda-function', 'container', 'ecs-service'];
     return computeTypes.includes(component.getType());
   }
@@ -239,7 +299,7 @@ export class ComputeToOpenFeatureStrategy {
   /**
    * Check if component has OpenFeature capability
    */
-  private hasOpenFeatureCapability(component: Component): boolean {
+  private hasOpenFeatureCapability(component: IComponent): boolean {
     const capabilities = component.getCapabilities();
     return 'openfeature:provider' in capabilities;
   }
@@ -247,7 +307,7 @@ export class ComputeToOpenFeatureStrategy {
   /**
    * Extract compute function from component
    */
-  private extractComputeFunction(component: Component): lambda.IFunction | null {
+  private extractComputeFunction(component: IComponent): lambda.IFunction | null {
     // Try to get the main compute construct
     const computeConstruct = component.getConstruct('main') ||
       component.getConstruct('function') ||
@@ -263,7 +323,7 @@ export class ComputeToOpenFeatureStrategy {
   /**
    * Get OpenFeature provider capability data
    */
-  private getProviderCapability(component: Component): any {
+  private getProviderCapability(component: IComponent): any {
     const capabilities = component.getCapabilities();
     return capabilities['openfeature:provider'];
   }

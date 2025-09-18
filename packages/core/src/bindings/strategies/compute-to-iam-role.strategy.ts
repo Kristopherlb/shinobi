@@ -34,9 +34,9 @@ export class ComputeToIamRoleBinder implements IBinderStrategy {
   /**
    * Check if this strategy can handle the binding
    */
-  canHandle(sourceType: string, targetCapability: string): boolean {
+  canHandle(sourceType: string, capability: string): boolean {
     // This strategy handles any compute type binding to iam:assumeRole capability
-    return targetCapability === 'iam:assumeRole';
+    return capability === 'iam:assumeRole';
   }
 
   /**
