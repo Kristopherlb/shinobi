@@ -9,22 +9,33 @@
 
 import { ShinobiMcpServer } from './shinobi-server.js';
 import { ShinobiConfig } from '../shinobi.builder.js';
+import { Logger } from '@platform/logger';
 
 /**
  * Main function to start the Shinobi MCP Server
  */
 async function main(): Promise<void> {
+  const logger = new Logger('shinobi-mcp-server');
+
   try {
     // Load configuration from environment or use defaults
     const config: ShinobiConfig = loadConfigFromEnvironment();
-    
+
     // Create and start the MCP server
     const server = new ShinobiMcpServer(config);
     await server.start();
-    
-    console.log('Shinobi MCP Server started successfully');
+
+    logger.info('Shinobi MCP Server started successfully', {
+      service: 'shinobi-mcp-server',
+      version: config.api?.version || '1.0',
+      environment: process.env.NODE_ENV || 'development'
+    });
   } catch (error) {
-    console.error('Failed to start Shinobi MCP Server:', error);
+    logger.error('Failed to start Shinobi MCP Server', {
+      service: 'shinobi-mcp-server',
+      error: error instanceof Error ? error.message : String(error),
+      stack: error instanceof Error ? error.stack : undefined
+    });
     process.exit(1);
   }
 }
@@ -117,20 +128,32 @@ function loadConfigFromEnvironment(): ShinobiConfig {
 }
 
 // Handle graceful shutdown
+const logger = new Logger('shinobi-mcp-server');
+
 process.on('SIGINT', () => {
-  console.log('Received SIGINT, shutting down gracefully...');
+  logger.info('Received SIGINT, shutting down gracefully...', {
+    service: 'shinobi-mcp-server',
+    signal: 'SIGINT'
+  });
   process.exit(0);
 });
 
 process.on('SIGTERM', () => {
-  console.log('Received SIGTERM, shutting down gracefully...');
+  logger.info('Received SIGTERM, shutting down gracefully...', {
+    service: 'shinobi-mcp-server',
+    signal: 'SIGTERM'
+  });
   process.exit(0);
 });
 
 // Start the server
 if (require.main === module) {
   main().catch((error) => {
-    console.error('Unhandled error:', error);
+    logger.error('Unhandled error', {
+      service: 'shinobi-mcp-server',
+      error: error instanceof Error ? error.message : String(error),
+      stack: error instanceof Error ? error.stack : undefined
+    });
     process.exit(1);
   });
 }

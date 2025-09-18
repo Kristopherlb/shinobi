@@ -1,0 +1,104 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "type": "object",
+  "title": "RDS Postgres Component Configuration",
+  "description": "Configuration schema for the RDS Postgres component",
+  "properties": {
+    "serviceName": {
+      "type": "string",
+      "description": "Name of the service this component belongs to",
+      "minLength": 1,
+      "maxLength": 63
+    },
+    "environment": {
+      "type": "string",
+      "description": "Environment name (dev, staging, prod)",
+      "enum": [
+        "dev",
+        "staging",
+        "prod"
+      ]
+    },
+    "complianceFramework": {
+      "type": "string",
+      "description": "Compliance framework to apply",
+      "enum": [
+        "commercial",
+        "fedramp-moderate",
+        "fedramp-high"
+      ],
+      "default": "commercial"
+    },
+    "instanceClass": {
+      "type": "string",
+      "description": "RDS instance class",
+      "default": "db.t3.micro"
+    },
+    "allocatedStorage": {
+      "type": "integer",
+      "description": "Allocated storage in GB",
+      "minimum": 20,
+      "maximum": 65536,
+      "default": 20
+    },
+    "backupRetentionPeriod": {
+      "type": "integer",
+      "description": "Backup retention period in days",
+      "minimum": 0,
+      "maximum": 35,
+      "default": 7
+    },
+    "multiAz": {
+      "type": "boolean",
+      "description": "Enable Multi-AZ deployment",
+      "default": false
+    },
+    "publiclyAccessible": {
+      "type": "boolean",
+      "description": "Make database publicly accessible",
+      "default": false
+    },
+    "encryption": {
+      "type": "object",
+      "properties": {
+        "enabled": {
+          "type": "boolean",
+          "default": true
+        },
+        "kmsKeyId": {
+          "type": "string",
+          "description": "KMS key ID for encryption"
+        }
+      }
+    },
+    "database": {
+      "type": "object",
+      "properties": {
+        "name": {
+          "type": "string",
+          "description": "Database name"
+        },
+        "username": {
+          "type": "string",
+          "description": "Master username"
+        }
+      }
+    },
+    "tags": {
+      "type": "object",
+      "description": "Resource tags",
+      "patternProperties": {
+        "^[a-zA-Z0-9\\-_.:/=+@]+$": {
+          "type": "string",
+          "maxLength": 256
+        }
+      },
+      "additionalProperties": false
+    }
+  },
+  "required": [
+    "serviceName",
+    "environment"
+  ],
+  "additionalProperties": false
+}
