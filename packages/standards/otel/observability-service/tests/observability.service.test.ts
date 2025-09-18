@@ -22,9 +22,9 @@ import * as fs from 'fs';
 import * as path from 'path';
 import * as os from 'os';
 import { ObservabilityService } from '../../../src/services/observability.service';
-import { PlatformServiceContext } from '../../../src/platform/contracts/platform-services';
-import { BaseComponent } from '../../../src/platform/contracts/component';
-import { ComponentSpec, ComponentContext } from '../../../src/platform/contracts/component-interfaces';
+import { PlatformServiceContext } from '../@shinobi/core/platform-services';
+import { BaseComponent } from '../@shinobi/core/component';
+import { ComponentSpec, ComponentContext } from '../@shinobi/core/component-interfaces';
 
 // Mock the handler classes
 jest.mock('../../../src/services/observability-handlers/lambda-observability.handler');

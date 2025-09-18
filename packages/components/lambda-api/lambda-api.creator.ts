@@ -10,7 +10,7 @@ import {
   ComponentSpec, 
   ComponentContext, 
   IComponentCreator 
-} from '../../../src/platform/contracts/component-interfaces';
+} from '../@shinobi/core/component-interfaces';
 import { LambdaApiComponent } from './lambda-api.component';
 import { LambdaApiConfig, LAMBDA_API_CONFIG_SCHEMA } from './lambda-api.builder';
 

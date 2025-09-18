@@ -10,12 +10,12 @@ import * as kms from 'aws-cdk-lib/aws-kms';
 import * as iam from 'aws-cdk-lib/aws-iam';
 import * as cdk from 'aws-cdk-lib';
 import { Construct } from 'constructs';
-import { BaseComponent } from '../../../src/platform/contracts/component';
+import { BaseComponent } from '../@shinobi/core/component';
 import {
   ComponentSpec,
   ComponentContext,
   ComponentCapabilities
-} from '../../../src/platform/contracts/component-interfaces';
+} from '../@shinobi/core/component-interfaces';
 import { SsmParameterConfig, SsmParameterConfigBuilder } from './ssm-parameter.builder';
 
 /**

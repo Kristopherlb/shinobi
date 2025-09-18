@@ -5,7 +5,7 @@
 import { App, Stack } from 'aws-cdk-lib';
 import { WafWebAclComponent } from './waf-web-acl.component';
 import { WafWebAclConfig } from './waf-web-acl.builder';
-import { ComponentContext, ComponentSpec } from '../../../src/platform/contracts/component-interfaces';
+import { ComponentContext, ComponentSpec } from '../@shinobi/core/component-interfaces';
 
 // Mock context
 const mockContext: ComponentContext = {

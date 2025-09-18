@@ -10,7 +10,7 @@ import {
   createShinobiFeatureFlags, 
   getShinobiFeatureFlagConfig 
 } from '../src/shinobi-feature-flags';
-import { ComponentContext } from '../../../../src/platform/contracts/component-interfaces';
+import { ComponentContext } from '../../@shinobi/core/component-interfaces';
 
 const createMockContext = (
   complianceFramework: string = 'commercial',

@@ -10,7 +10,7 @@ import {
   ComponentSpec, 
   ComponentContext, 
   IComponentCreator 
-} from '../../../src/platform/contracts/component-interfaces';
+} from '../@shinobi/core/component-interfaces';
 import { VpcComponent } from './vpc.component';
 import { VpcConfig, VPC_CONFIG_SCHEMA } from './vpc.builder';
 

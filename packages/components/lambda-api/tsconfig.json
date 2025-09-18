@@ -1,17 +1,10 @@
 {
   "extends": "../../../tsconfig.base.json",
   "compilerOptions": {
-    "outDir": "../../../dist/packages/components/lambda-api"
+    "rootDir": "src",
+    "outDir": "dist"
   },
   "include": [
     "src/**/*"
-  ],
-  "references": [
-    {
-      "path": "../../core-engine"
-    },
-    {
-      "path": "../../contracts"
-    }
   ]
 }

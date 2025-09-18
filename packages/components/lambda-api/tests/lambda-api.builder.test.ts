@@ -21,7 +21,7 @@
  */
 
 import { LambdaApiComponentConfigBuilder, LambdaApiConfig } from '../lambda-api.builder';
-import { ComponentContext, ComponentSpec } from '../../../../src/platform/contracts/component-interfaces';
+import { ComponentContext, ComponentSpec } from '../../@shinobi/core/component-interfaces';
 
 const createMockContext = (
   complianceFramework: 'commercial' | 'fedramp-moderate' | 'fedramp-high' = 'commercial',

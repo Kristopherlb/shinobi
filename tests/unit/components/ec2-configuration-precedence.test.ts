@@ -4,7 +4,7 @@ import {
   EC2_INSTANCE_CONFIG_SCHEMA,
   Ec2InstanceConfig 
 } from '../../../src/components/ec2-instance/ec2-instance.component';
-import { ComponentContext, ComponentSpec } from '../../../src/platform/contracts/component-interfaces';
+import { ComponentContext, ComponentSpec } from '../@shinobi/core/component-interfaces';
 
 describe('EC2 Configuration Precedence Chain', () => {
   let app: cdk.App;

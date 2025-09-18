@@ -10,7 +10,7 @@ import {
   ComponentSpec, 
   ComponentContext, 
   IComponentCreator 
-} from '../../../src/platform/contracts/component-interfaces';
+} from '../@shinobi/core/component-interfaces';
 import { EcsFargateServiceComponentComponent } from './ecs-fargate-service.component';
 import { EcsFargateServiceConfig, ECS_FARGATE_SERVICE_CONFIG_SCHEMA } from './ecs-fargate-service.builder';
 

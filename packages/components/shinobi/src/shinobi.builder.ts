@@ -5,7 +5,7 @@
  * Provides 5-layer configuration precedence chain and compliance-aware defaults.
  */
 
-import { ConfigBuilder, ConfigBuilderContext } from '../../../../src/platform/contracts/config-builder';
+import { ConfigBuilder, ConfigBuilderContext } from '../../@shinobi/core/config-builder';
 import { ShinobiConfig, SHINOBI_CONFIG_SCHEMA } from './shinobi.component';
 
 /**

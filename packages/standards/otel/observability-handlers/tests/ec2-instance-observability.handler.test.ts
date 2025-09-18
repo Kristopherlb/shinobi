@@ -20,8 +20,8 @@
 import { describe, test, expect, beforeEach, afterEach, jest } from '@jest/globals';
 import * as cloudwatch from 'aws-cdk-lib/aws-cloudwatch';
 import { Ec2ObservabilityHandler } from '../../../../src/services/observability-handlers/ec2-observability.handler';
-import { PlatformServiceContext } from '../../../../src/platform/contracts/platform-services';
-import { BaseComponent } from '../../../../src/platform/contracts/component';
+import { PlatformServiceContext } from '../../@shinobi/core/platform-services';
+import { BaseComponent } from '../../@shinobi/core/component';
 import { ITaggingService } from '../../../../src/services/tagging.service';
 import { ObservabilityConfig } from '../../../../src/services/observability-handlers/observability-handler.interface';
 

@@ -23,16 +23,16 @@ export class ResolverBinderRegistry extends BaseBinderRegistry {
    */
   private registerEnterpriseStrategies(): void {
     // Core binding strategies
-    this.registerStrategy(new LambdaToSqsBinderStrategy());
-    this.registerStrategy(new LambdaToRdsBinderStrategy());
-    this.registerStrategy(new LambdaToS3BucketBinderStrategy());
-    
+    this.register(new LambdaToSqsBinderStrategy());
+    this.register(new LambdaToRdsBinderStrategy());
+    this.register(new LambdaToS3BucketBinderStrategy());
+
     // IAM Role binding strategies
-    this.registerStrategy(new ComputeToIamRoleBinder());
-    
+    this.register(new ComputeToIamRoleBinder());
+
     // Security Group Import binding strategies
-    this.registerStrategy(new ComputeToSecurityGroupImportBinder());
-    
+    this.register(new ComputeToSecurityGroupImportBinder());
+
     // Enterprise-specific strategies could be added here
     // this.registerStrategy(new LambdaToSecretsManagerBinderStrategy());
     // this.registerStrategy(new LambdaToParameterStoreBinderStrategy());
@@ -171,7 +171,7 @@ export class ResolverBinderRegistry extends BaseBinderRegistry {
     suggestion?: string;
   } {
     const strategy = this.findStrategy(sourceType, targetCapability);
-    
+
     if (strategy) {
       return { valid: true };
     }

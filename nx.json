@@ -1,80 +1,35 @@
 {
-  "npmScope": "shinobi",
-  "affected": {
-    "defaultBase": "main"
-  },
-  "tasksRunnerOptions": {
-    "default": {
-      "runner": "nx/tasks-runners/default",
-      "options": {
-        "cacheableOperations": [
-          "build",
-          "lint",
-          "test",
-          "e2e",
-          "type-check"
-        ],
-        "parallel": 3
-      }
-    }
-  },
-  "pluginsConfig": {
-    "@nx/js": {
-      "analyzeSourceFiles": true
-    }
-  },
+  "extends": "nx/presets/npm.json",
   "namedInputs": {
     "default": [
       "{projectRoot}/**/*",
-      "!{projectRoot}/**/*.test.*",
-      "!{projectRoot}/**/*.spec.*"
+      "!{projectRoot}/dist/**",
+      "!{projectRoot}/coverage/**"
     ],
     "production": [
       "default",
-      "!{projectRoot}/**/*.spec.*",
-      "!{projectRoot}/**/*.test.*",
-      "!{projectRoot}/**/*.stories.*"
+      "!{projectRoot}/**/*.spec.ts",
+      "!{projectRoot}/**/*.test.ts"
     ]
   },
   "targetDefaults": {
     "build": {
-      "dependsOn": [
-        "^build"
-      ],
       "inputs": [
-        "production",
-        "^production"
+        "production"
       ],
-      "outputs": [
-        "{options.outputPath}"
-      ]
+      "cache": true
     },
     "test": {
       "inputs": [
-        "default",
-        "^production",
-        "{workspaceRoot}/jest.config.js"
-      ]
-    },
-    "lint": {
-      "inputs": [
-        "default",
-        "{workspaceRoot}/.eslintrc.json"
-      ]
-    },
-    "type-check": {
-      "dependsOn": [
-        "^build"
+        "default"
       ],
+      "cache": true
+    },
+    "typecheck": {
       "inputs": [
-        "production",
-        "^production"
-      ]
+        "production"
+      ],
+      "cache": true
     }
-  },
-  "implicitDependencies": {},
-  "workspaceLayout": {
-    "appsDir": "apps",
-    "libsDir": "packages"
   }
 }

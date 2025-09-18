@@ -1,13 +1,9 @@
 packages:
-  - "apps/*"
   - "packages/*"
   - "packages/*/*"
   - "tools/*"
+  - "apps/*"
   - "backstage-app/*"
-  - "!**/node_modules"
-  - "!**/dist"
-  - "!**/.nx"
-  - "!**/tmp"
 
 onlyBuiltDependencies:
   - "@swc/core"

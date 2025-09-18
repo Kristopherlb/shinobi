@@ -10,7 +10,7 @@ import {
   ComponentSpec, 
   ComponentContext, 
   IComponentCreator 
-} from '../../../src/platform/contracts/component-interfaces';
+} from '../@shinobi/core/component-interfaces';
 import { WafWebAclComponent } from './waf-web-acl.component';
 import { WafWebAclConfig, WAF_WEB_ACL_CONFIG_SCHEMA } from './waf-web-acl.builder';
 

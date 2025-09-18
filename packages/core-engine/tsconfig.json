@@ -1,14 +1,10 @@
 {
   "extends": "../../tsconfig.base.json",
   "compilerOptions": {
-    "outDir": "../../dist/packages/core-engine"
+    "rootDir": "src",
+    "outDir": "dist"
   },
   "include": [
     "src/**/*"
-  ],
-  "references": [
-    {
-      "path": "../contracts"
-    }
   ]
 }

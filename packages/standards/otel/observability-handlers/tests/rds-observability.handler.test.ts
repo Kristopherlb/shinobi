@@ -21,8 +21,8 @@ import { describe, test, expect, beforeEach, afterEach, jest } from '@jest/globa
 import * as cloudwatch from 'aws-cdk-lib/aws-cloudwatch';
 import * as rds from 'aws-cdk-lib/aws-rds';
 import { RdsObservabilityHandler } from '../../../../src/services/observability-handlers/rds-observability.handler';
-import { PlatformServiceContext } from '../../../../src/platform/contracts/platform-services';
-import { BaseComponent } from '../../../../src/platform/contracts/component';
+import { PlatformServiceContext } from '../../@shinobi/core/platform-services';
+import { BaseComponent } from '../../@shinobi/core/component';
 import { ITaggingService } from '../../../../src/services/tagging.service';
 
 // Mock AWS CDK constructs

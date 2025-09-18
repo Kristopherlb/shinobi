@@ -1,13 +1,13 @@
 import { PlanCommand } from '../../../src/cli/commands/plan';
-import { ServiceManifestParser } from '../../../src/platform/contracts/components/service-manifest-parser';
-import { ComponentFactory } from '../../../src/platform/contracts/components/component-factory';
+import { ServiceManifestParser } from '../@shinobi/core/components/service-manifest-parser';
+import { ComponentFactory } from '../@shinobi/core/components/component-factory';
 import { StandardArtifactWriter } from '../../../src/platform/services/artifact-writer';
 import * as fs from 'fs';
 import * as path from 'path';
 
 // Mock dependencies
-jest.mock('../../../src/platform/contracts/components/service-manifest-parser');
-jest.mock('../../../src/platform/contracts/components/component-factory');
+jest.mock('../@shinobi/core/components/service-manifest-parser');
+jest.mock('../@shinobi/core/components/component-factory');
 jest.mock('../../../src/platform/services/artifact-writer');
 
 describe('PlanCommand', () => {

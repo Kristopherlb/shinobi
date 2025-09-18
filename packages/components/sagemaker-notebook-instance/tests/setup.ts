@@ -5,8 +5,8 @@
  */
 
 // Mock the ConfigBuilder to avoid platform configuration loading during tests
-jest.mock('../../../../src/platform/contracts/config-builder', () => {
-  const originalModule = jest.requireActual('../../../../src/platform/contracts/config-builder');
+jest.mock('../../@shinobi/core/config-builder', () => {
+  const originalModule = jest.requireActual('../../@shinobi/core/config-builder');
   
   return {
     ...originalModule,

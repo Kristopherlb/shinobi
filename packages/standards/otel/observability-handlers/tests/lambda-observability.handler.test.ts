@@ -21,8 +21,8 @@ import { describe, test, expect, beforeEach, afterEach, jest } from '@jest/globa
 import * as lambda from 'aws-cdk-lib/aws-lambda';
 import * as iam from 'aws-cdk-lib/aws-iam';
 import { LambdaObservabilityHandler } from '../../../../src/services/observability-handlers/lambda-observability.handler';
-import { PlatformServiceContext } from '../../../../src/platform/contracts/platform-services';
-import { BaseComponent } from '../../../../src/platform/contracts/component';
+import { PlatformServiceContext } from '../../@shinobi/core/platform-services';
+import { BaseComponent } from '../../@shinobi/core/component';
 
 // Mock AWS CDK constructs
 jest.mock('aws-cdk-lib/aws-lambda');

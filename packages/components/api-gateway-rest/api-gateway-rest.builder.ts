@@ -5,7 +5,7 @@
  * Provides 5-layer configuration precedence chain and compliance-aware defaults.
  */
 
-import { ConfigBuilder, ConfigBuilderContext } from '../../../src/platform/contracts/config-builder';
+import { ConfigBuilder, ConfigBuilderContext } from '../@shinobi/core/config-builder';
 
 /**
  * Configuration interface for ApiGatewayRestComponent component

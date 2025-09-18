@@ -10,7 +10,7 @@ import {
   ComponentSpec, 
   ComponentContext, 
   IComponentCreator 
-} from '../../../src/platform/contracts/component-interfaces';
+} from '../@shinobi/core/component-interfaces';
 import { EcsEc2ServiceComponentComponent } from './ecs-ec2-service.component';
 import { EcsEc2ServiceConfig, ECS_EC2_SERVICE_CONFIG_SCHEMA } from './ecs-ec2-service.builder';
 

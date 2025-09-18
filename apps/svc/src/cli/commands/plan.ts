@@ -16,16 +16,16 @@ import {
   ComplianceSummary,
   CLIOutputOptions,
   CLIOutputFormat
-} from '../../platform/contracts/artifacts';
-import { ServiceManifestParser } from '../../platform/contracts/components/service-manifest-parser';
-import { ManifestParser } from '../../services/manifest-parser';
-import { ComponentFactory } from '../../platform/contracts/components/component-factory';
-import { ComplianceControlMappingService } from '../../platform/services/compliance-control-mapping';
-import { TaggingEnforcementService } from '../../platform/services/tagging-enforcement';
-import { CompliancePlanGenerator } from '../../platform/services/compliance-plan-generator';
-import { ArtifactWriter } from '../../platform/contracts/artifacts';
-import { StandardArtifactWriter } from '../../platform/services/artifact-writer';
-import { ArtifactSerializerFactory } from '../../platform/services/artifact-serializer';
+} from '@shinobi/core';
+import { ServiceManifestParser } from '@shinobi/core';
+import { ManifestParser } from '@shinobi/core';
+import { ComponentFactory } from '@shinobi/core';
+import { ComplianceControlMappingService } from '@shinobi/core';
+import { TaggingEnforcementService } from '@shinobi/core';
+import { CompliancePlanGenerator } from '@shinobi/core';
+import { ArtifactWriter } from '@shinobi/core';
+import { StandardArtifactWriter } from '@shinobi/core';
+import { ArtifactSerializerFactory } from '@shinobi/core';
 
 interface PlanCommandOptions {
   env?: string;

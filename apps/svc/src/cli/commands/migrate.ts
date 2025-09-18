@@ -19,10 +19,10 @@ import {
   UnmappedResource,
   ManualPatch,
   DriftCheckResult
-} from '../../platform/contracts/artifacts';
-import { ArtifactWriter } from '../../platform/services/artifact-writer';
-import { StandardArtifactWriter } from '../../platform/services/artifact-writer';
-import { ArtifactSerializerFactory } from '../../platform/services/artifact-serializer';
+} from '@shinobi/core';
+import { ArtifactWriter } from '@shinobi/core';
+import { StandardArtifactWriter } from '@shinobi/core';
+import { ArtifactSerializerFactory } from '@shinobi/core';
 
 interface MigrateCommandOptions {
   output?: string;

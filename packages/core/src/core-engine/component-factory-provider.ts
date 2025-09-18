@@ -12,6 +12,9 @@ import {
   IComponentCreator
 } from '../platform/contracts';
 
+// Re-export types for external use
+export type { ComponentContext, IComponent };
+
 /**
  * Abstract Factory Provider - creates the appropriate factory for compliance framework
  */

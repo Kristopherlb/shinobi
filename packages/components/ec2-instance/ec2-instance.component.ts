@@ -14,12 +14,12 @@ import * as cloudwatch from 'aws-cdk-lib/aws-cloudwatch';
 import * as cdk from 'aws-cdk-lib';
 import { Construct } from 'constructs';
 // File system operations are now handled by the abstract ConfigBuilder base class
-import { BaseComponent } from '../../../src/platform/contracts/component';
+import { BaseComponent } from '../@shinobi/core/component';
 import {
   ComponentSpec,
   ComponentContext,
   ComponentCapabilities
-} from '../../../src/platform/contracts/component-interfaces';
+} from '../@shinobi/core/component-interfaces';
 import { Ec2InstanceComponentConfigBuilder, Ec2InstanceConfig } from './ec2-instance.builder';
 
 
@@ -463,13 +463,30 @@ export class Ec2InstanceComponent extends BaseComponent {
   }
 
   /**
-   * Configure observability for the EC2 instance per OpenTelemetry standard
-   * Creates mandatory CloudWatch alarms for operational monitoring
+   * Configure OpenTelemetry observability for the EC2 instance per Platform Observability Standard
+   * Implements comprehensive observability with OTel environment variables and CloudWatch alarms
    */
   private configureObservabilityForInstance(): void {
     if (!this.instance) {
       return;
     }
+
+    // Get standardized OpenTelemetry environment variables for EC2 instance
+    const otelEnvVars = this.configureObservability(this.instance, {
+      serviceName: `${this.context.serviceName}-ec2-instance`,
+      serviceVersion: '1.0.0',
+      componentType: 'ec2-instance',
+      complianceFramework: this.context.complianceFramework,
+      customAttributes: {
+        'instance.type': this.config!.instanceType || 't3.micro',
+        'instance.architecture': 'x86_64',
+        'aws.region': this.context.region || 'us-east-1'
+      }
+    });
+
+    // Store OTel environment variables for EC2 user data
+    // These will be applied to the instance via user data script
+    this.registerCapability('otel:environment', otelEnvVars);
 
     // Create CloudWatch alarms for observability
 
@@ -485,7 +502,7 @@ export class Ec2InstanceComponent extends BaseComponent {
         },
         statistic: 'Average'
       }),
-      threshold: 80,
+      threshold: this.getCpuAlarmThreshold(),
       evaluationPeriods: 3,
       datapointsToAlarm: 2,
       treatMissingData: cloudwatch.TreatMissingData.NOT_BREACHING
@@ -546,7 +563,25 @@ export class Ec2InstanceComponent extends BaseComponent {
     this.registerConstruct('systemCheckAlarm', systemCheckAlarm);
     this.registerConstruct('instanceCheckAlarm', instanceCheckAlarm);
 
-    this.logComponentEvent('observability_configured', `Configured ${3} CloudWatch alarms for ${this.context.complianceFramework} compliance`);
+    this.logComponentEvent('observability_configured', 'OpenTelemetry observability standard applied to EC2 Instance', {
+      otelServiceName: otelEnvVars['OTEL_SERVICE_NAME'],
+      otelExporterEndpoint: otelEnvVars['OTEL_EXPORTER_OTLP_ENDPOINT'],
+      alarmsCreated: 3
+    });
+  }
+
+  /**
+   * Get CPU alarm threshold based on compliance framework
+   */
+  private getCpuAlarmThreshold(): number {
+    switch (this.context.complianceFramework) {
+      case 'fedramp-high':
+        return 70; // More aggressive monitoring for high security
+      case 'fedramp-moderate':
+        return 75; // Moderate monitoring
+      default:
+        return 80; // Standard commercial monitoring
+    }
   }
 
   /**

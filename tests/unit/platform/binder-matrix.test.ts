@@ -21,13 +21,13 @@
  */
 
 import { describe, test, expect, beforeEach, afterEach, jest } from '@jest/globals';
-import { BinderMatrix } from '../../../src/platform/contracts/binder-matrix';
+import { BinderMatrix } from '../@shinobi/core/binder-matrix';
 import { 
   IBinderStrategy, 
   ITriggerStrategy, 
   CompatibilityEntry, 
   TriggerCompatibilityEntry 
-} from '../../../src/platform/contracts/platform-binding-trigger-spec';
+} from '../@shinobi/core/platform-binding-trigger-spec';
 
 // Deterministic fixtures
 class MockBinderStrategy implements IBinderStrategy {

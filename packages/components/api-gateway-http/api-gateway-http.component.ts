@@ -26,7 +26,7 @@ import * as targets from 'aws-cdk-lib/aws-route53-targets';
 import * as cdk from 'aws-cdk-lib';
 import { Construct } from 'constructs';
 import { ComponentSpec, ComponentContext, ComponentCapabilities } from '@platform/contracts';
-import { BaseComponent } from '../../../src/platform/contracts/component';
+import { BaseComponent } from '../@shinobi/core/component';
 import { ApiGatewayHttpConfigBuilder, ApiGatewayHttpConfig } from './api-gateway-http.builder';
 
 /**

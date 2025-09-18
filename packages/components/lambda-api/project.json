@@ -1,45 +1,48 @@
 {
-  "name": "lambda-api",
+  "name": "@platform/components-lambda-api",
+  "root": "packages/components/lambda-api",
   "sourceRoot": "packages/components/lambda-api/src",
   "projectType": "library",
-  "tags": [
-    "type:lib",
-    "scope:components",
-    "scope:lambda-api"
-  ],
   "targets": {
     "build": {
-      "executor": "@nx/js:tsc",
+      "executor": "nx:run-commands",
       "options": {
-        "outputPath": "dist/packages/components/lambda-api",
-        "tsConfig": "packages/components/lambda-api/tsconfig.json",
-        "main": "packages/components/lambda-api/index.ts"
+        "command": "tsc -b"
       },
+      "inputs": [
+        "default",
+        "{projectRoot}/tsconfig.json",
+        "{projectRoot}/src/**"
+      ],
       "outputs": [
-        "{options.outputPath}"
+        "{projectRoot}/dist"
       ]
+    },
+    "typecheck": {
+      "executor": "nx:run-commands",
+      "options": {
+        "command": "tsc --noEmit"
+      }
     },
     "test": {
       "executor": "@nx/jest:jest",
+      "outputs": [
+        "{projectRoot}/coverage"
+      ],
       "options": {
-        "jestConfig": "packages/components/lambda-api/jest.config.js",
+        "jestConfig": "packages/components/lambda-api/jest.config.ts",
         "passWithNoTests": true
       }
     },
     "lint": {
-      "executor": "@nx/eslint:lint",
+      "executor": "nx:run-commands",
       "options": {
-        "lintFilePatterns": [
-          "packages/components/lambda-api/**/*.ts"
-        ]
-      }
-    },
-    "type-check": {
-      "executor": "@nx/js:tsc",
-      "options": {
-        "tsConfig": "packages/components/lambda-api/tsconfig.json",
-        "noEmit": true
+        "command": "eslint . --ext .ts,.tsx"
       }
     }
-  }
+  },
+  "tags": [
+    "type:lib",
+    "scope:components"
+  ]
 }

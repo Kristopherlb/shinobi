@@ -36,3 +36,6 @@ export * from './openfeature-interfaces';
 // Export platform services interfaces
 export * from './platform-services';
 export * from './logging-interfaces';
+
+// Export artifact contracts
+export * from './artifacts';

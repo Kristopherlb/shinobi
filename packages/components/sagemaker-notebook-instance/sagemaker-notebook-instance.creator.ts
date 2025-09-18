@@ -10,7 +10,7 @@ import {
   ComponentSpec, 
   ComponentContext, 
   IComponentCreator 
-} from '../../../../src/platform/contracts/component-interfaces';
+} from '../../@shinobi/core/component-interfaces';
 import { SageMakerNotebookInstanceComponent } from './sagemaker-notebook-instance.component';
 import { SageMakerNotebookInstanceConfig, SAGEMAKER_NOTEBOOK_INSTANCE_CONFIG_SCHEMA } from './sagemaker-notebook-instance.builder';
 

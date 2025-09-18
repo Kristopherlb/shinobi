@@ -38,6 +38,11 @@ export {
   DriftAvoidanceEngine
 } from './drift-avoidance';
 
+// Import classes for utility functions
+import { LogicalIdManager } from './logical-id-manager';
+import { PlanningLogicalIdIntegration } from './planning-integration';
+import { DriftAvoidanceEngine } from './drift-avoidance';
+
 // Utility functions
 export const createLogicalIdManager = (logger: any) => new LogicalIdManager(logger);
 export const createPlanningIntegration = (logger: any) => new PlanningLogicalIdIntegration(logger);

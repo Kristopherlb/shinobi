@@ -15,13 +15,13 @@
 import * as ecs from 'aws-cdk-lib/aws-ecs';
 import * as logs from 'aws-cdk-lib/aws-logs';
 import * as cdk from 'aws-cdk-lib';
-import { IComponent } from '../../src/platform/contracts/component-interfaces';
-import { PlatformServiceContext } from '../../src/platform/contracts/platform-services';
+import { IComponent } from '@shinobi/core/component-interfaces';
+import { PlatformServiceContext } from '@shinobi/core/platform-services';
 import { 
   ILoggingHandler, 
   LoggingHandlerResult,
   PlatformLoggerConfig 
-} from '../../src/platform/contracts/logging-interfaces';
+} from '@shinobi/core/logging-interfaces';
 import { LoggingService } from '../logging-service/infrastructure-logging.service';
 
 /**

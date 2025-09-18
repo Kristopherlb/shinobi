@@ -1,0 +1,48 @@
+{
+  "name": "@platform/components-container-application",
+  "root": "packages/components/container-application",
+  "sourceRoot": "packages/components/container-application/src",
+  "projectType": "library",
+  "targets": {
+    "build": {
+      "executor": "nx:run-commands",
+      "options": {
+        "command": "tsc -b"
+      },
+      "inputs": [
+        "default",
+        "{projectRoot}/tsconfig.json",
+        "{projectRoot}/src/**"
+      ],
+      "outputs": [
+        "{projectRoot}/dist"
+      ]
+    },
+    "typecheck": {
+      "executor": "nx:run-commands",
+      "options": {
+        "command": "tsc --noEmit"
+      }
+    },
+    "test": {
+      "executor": "@nx/jest:jest",
+      "outputs": [
+        "{projectRoot}/coverage"
+      ],
+      "options": {
+        "jestConfig": "packages/components/container-application/jest.config.ts",
+        "passWithNoTests": true
+      }
+    },
+    "lint": {
+      "executor": "nx:run-commands",
+      "options": {
+        "command": "eslint . --ext .ts,.tsx"
+      }
+    }
+  },
+  "tags": [
+    "type:lib",
+    "scope:components"
+  ]
+}

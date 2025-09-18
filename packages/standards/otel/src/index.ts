@@ -1,3 +1,3 @@
 // OpenTelemetry standards exports
-export * from './observability-service';
-export * from './observability-handlers';
+export * from '../observability-service/src';
+export * from '../observability-handlers/src';

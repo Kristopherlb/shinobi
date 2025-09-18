@@ -7,7 +7,7 @@
 
 import { Construct } from 'constructs';
 import { FeatureFlagComponent } from '../../../feature-flag/src/feature-flag.component';
-import { ComponentSpec, ComponentContext } from '../../../../src/platform/contracts/component-interfaces';
+import { ComponentSpec, ComponentContext } from '../../@shinobi/core/component-interfaces';
 
 /**
  * Feature flag definitions for Shinobi component

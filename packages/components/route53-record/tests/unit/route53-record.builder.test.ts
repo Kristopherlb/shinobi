@@ -5,7 +5,7 @@
  */
 
 import { Route53RecordConfigBuilder, Route53RecordConfig } from '../../src/route53-record.builder';
-import { ComponentContext, ComponentSpec } from '../../../../../src/platform/contracts/component-interfaces';
+import { ComponentContext, ComponentSpec } from '../../../@shinobi/core/component-interfaces';
 
 describe('Route53RecordConfigBuilder', () => {
   let mockContext: ComponentContext;

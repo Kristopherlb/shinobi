@@ -1,13 +1,13 @@
 // tests/unit/components/component-factory.test.ts
 // Unit tests for Component Factory & Registry
 
-import { ComponentFactory, ComponentFactoryBuilder } from '../../../src/platform/contracts/components/component-factory';
-import { ComponentRegistry } from '../../../src/platform/contracts/components/component-registry';
-import { ComponentConfigBuilder } from '../../../src/platform/contracts/components/component-config-builder';
-import { ComponentContext, ComponentContextBuilder } from '../../../src/platform/contracts/components/component-context';
-import { ComponentSpec, ComponentSpecBuilder } from '../../../src/platform/contracts/components/component-spec';
-import { ExampleS3BucketComponent } from '../../../src/platform/contracts/components/example-s3-bucket-component';
-import { ComplianceFramework } from '../../../src/platform/contracts/bindings';
+import { ComponentFactory, ComponentFactoryBuilder } from '../@shinobi/core/components/component-factory';
+import { ComponentRegistry } from '../@shinobi/core/components/component-registry';
+import { ComponentConfigBuilder } from '../@shinobi/core/components/component-config-builder';
+import { ComponentContext, ComponentContextBuilder } from '../@shinobi/core/components/component-context';
+import { ComponentSpec, ComponentSpecBuilder } from '../@shinobi/core/components/component-spec';
+import { ExampleS3BucketComponent } from '../@shinobi/core/components/example-s3-bucket-component';
+import { ComplianceFramework } from '../@shinobi/core/bindings';
 
 describe('ComponentFactory', () => {
   let factory: ComponentFactory;

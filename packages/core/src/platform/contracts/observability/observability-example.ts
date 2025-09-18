@@ -139,7 +139,7 @@ export async function demonstrateFedRampModerateObservability() {
     console.log(`- IAM Policies: ${containerResult.iamPolicies.length} created`);
     console.log(`- CloudWatch Log Groups: ${containerResult.cloudWatchLogGroups.length} created`);
     console.log(`- X-Ray Configurations: ${containerResult.xrayConfigurations.length} configured`);
-    console.log(`- Sidecar Configurations: ${containerResult.sidecarConfigurations.length} configured`);
+    console.log(`- Sidecar Configurations: ${containerResult.sidecarConfigurations?.length ?? 0} configured`);
     console.log(`- Compliance Actions: ${containerResult.complianceActions.length} applied\n`);
 
     // Show compliance actions
@@ -189,7 +189,7 @@ export async function demonstrateFedRampHighObservability() {
     console.log(`- IAM Policies: ${vmResult.iamPolicies.length} created`);
     console.log(`- CloudWatch Log Groups: ${vmResult.cloudWatchLogGroups.length} created`);
     console.log(`- X-Ray Configurations: ${vmResult.xrayConfigurations.length} configured`);
-    console.log(`- Agent Configurations: ${vmResult.agentConfigurations.length} configured`);
+    console.log(`- Agent Configurations: ${vmResult.agentConfigurations?.length ?? 0} configured`);
     console.log(`- Compliance Actions: ${vmResult.complianceActions.length} applied\n`);
 
     // Show compliance actions

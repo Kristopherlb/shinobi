@@ -4,7 +4,7 @@
  */
 
 import {
-  BinderStrategy,
+  IBinderStrategy,
   BindingContext,
   BindingResult
 } from '@shinobi/core';
@@ -18,10 +18,27 @@ import * as iam from 'aws-cdk-lib/aws-iam';
 /**
  * Enhanced Lambda to SQS binding with enterprise security
  */
-export class LambdaToSqsBinderStrategy extends BinderStrategy {
+export class LambdaToSqsBinderStrategy implements IBinderStrategy {
   canHandle(sourceType: string, targetCapability: string): boolean {
     return (sourceType === 'lambda-api' || sourceType === 'lambda-worker') &&
       targetCapability === 'queue:sqs';
+  }
+
+  getCompatibilityMatrix(): any[] {
+    return [
+      {
+        sourceType: 'lambda-api',
+        targetCapability: 'queue:sqs',
+        description: 'Lambda function can send messages to SQS queue',
+        supported: true
+      },
+      {
+        sourceType: 'lambda-worker',
+        targetCapability: 'queue:sqs',
+        description: 'Lambda worker can consume messages from SQS queue',
+        supported: true
+      }
+    ];
   }
 
   bind(context: BindingContext): BindingResult {
@@ -168,10 +185,27 @@ export class LambdaToSqsBinderStrategy extends BinderStrategy {
 /**
  * Enhanced Lambda to RDS binding with enterprise security
  */
-export class LambdaToRdsBinderStrategy extends BinderStrategy {
+export class LambdaToRdsBinderStrategy implements IBinderStrategy {
   canHandle(sourceType: string, targetCapability: string): boolean {
     return (sourceType === 'lambda-api' || sourceType === 'lambda-worker') &&
       targetCapability === 'db:postgres';
+  }
+
+  getCompatibilityMatrix(): any[] {
+    return [
+      {
+        sourceType: 'lambda-api',
+        targetCapability: 'db:postgres',
+        description: 'Lambda function can connect to PostgreSQL database',
+        supported: true
+      },
+      {
+        sourceType: 'lambda-worker',
+        targetCapability: 'db:postgres',
+        description: 'Lambda worker can connect to PostgreSQL database',
+        supported: true
+      }
+    ];
   }
 
   bind(context: BindingContext): BindingResult {
@@ -315,10 +349,27 @@ export class LambdaToRdsBinderStrategy extends BinderStrategy {
 /**
  * Enhanced Lambda to S3 binding with enterprise security
  */
-export class LambdaToS3BucketBinderStrategy extends BinderStrategy {
+export class LambdaToS3BucketBinderStrategy implements IBinderStrategy {
   canHandle(sourceType: string, targetCapability: string): boolean {
     return (sourceType === 'lambda-api' || sourceType === 'lambda-worker') &&
       targetCapability === 'bucket:s3';
+  }
+
+  getCompatibilityMatrix(): any[] {
+    return [
+      {
+        sourceType: 'lambda-api',
+        targetCapability: 'bucket:s3',
+        description: 'Lambda function can read/write to S3 bucket',
+        supported: true
+      },
+      {
+        sourceType: 'lambda-worker',
+        targetCapability: 'bucket:s3',
+        description: 'Lambda worker can read/write to S3 bucket',
+        supported: true
+      }
+    ];
   }
 
   bind(context: BindingContext): BindingResult {

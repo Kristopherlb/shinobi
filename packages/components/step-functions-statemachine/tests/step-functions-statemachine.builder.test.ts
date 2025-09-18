@@ -4,7 +4,7 @@
  */
 
 import { StepFunctionsStateMachineConfigBuilder, StepFunctionsStateMachineConfig } from '../step-functions-statemachine.builder';
-import { ComponentContext, ComponentSpec } from '../../../../src/platform/contracts/component-interfaces';
+import { ComponentContext, ComponentSpec } from '../../@shinobi/core/component-interfaces';
 import { Construct } from 'constructs';
 import { Stack } from 'aws-cdk-lib';
 

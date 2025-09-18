@@ -7,7 +7,7 @@
 
 import * as cdk from 'aws-cdk-lib';
 import { Construct } from 'constructs';
-import { IComponentCreator, IComponent, ComponentContext, ComponentSpec } from '../../../../src/platform/contracts/component-interfaces';
+import { IComponentCreator, IComponent, ComponentContext, ComponentSpec } from '../../@shinobi/core/component-interfaces';
 import { Route53RecordComponent } from './route53-record.component';
 
 /**

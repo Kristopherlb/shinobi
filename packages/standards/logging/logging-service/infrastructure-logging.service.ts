@@ -21,15 +21,15 @@ import * as cdk from 'aws-cdk-lib';
 import { 
   IPlatformService, 
   PlatformServiceContext 
-} from '../../src/platform/contracts/platform-services';
-import { IComponent } from '../../src/platform/contracts/component-interfaces';
+} from '@shinobi/core/platform-services';
+import { IComponent } from '@shinobi/core/component-interfaces';
 import { 
   ILoggingHandler, 
   LoggingHandlerResult,
   LogRetentionPolicy,
   LogSecurityConfig,
   PlatformLoggerConfig
-} from '../../src/platform/contracts/logging-interfaces';
+} from '@shinobi/core/logging-interfaces';
 import { LoggingConfig } from './src/logging-config.interface';
 
 // Import concrete handlers

@@ -5,7 +5,7 @@
 
 import { Logger } from '../core-engine/logger';
 import { ComponentFactoryProvider } from '../core-engine/component-factory-provider';
-import { ComponentRegistry, Component, ComponentContext } from '../core-engine/component-factory-provider';
+import { ComponentRegistry, IComponent, ComponentContext } from '../core-engine/component-factory-provider';
 import { ComponentBinder, BinderRegistry } from '../core-engine/binding-strategies';
 import * as cdk from 'aws-cdk-lib';
 import * as path from 'path';
@@ -70,19 +70,19 @@ export class ResolverEngine {
 
       // Phase 1: Component Instantiation (AC-RS1.1, AC-RS1.2, AC-RS1.3)
       const components = await this.instantiateComponents(validatedConfig, stack);
-      
+
       // Phase 2: Synthesis (AC-RS2.1, AC-RS2.2, AC-RS2.3)  
       const outputsMap = await this.synthesizeComponents(components);
-      
+
       // Phase 3: Binding (AC-RS3.1, AC-RS3.2)
       const bindings = await this.bindComponents(components, outputsMap, validatedConfig);
-      
+
       // Phase 4: Patching (AC-RS4.1, AC-RS4.2)
       const patchesApplied = await this.applyPatches(stack, components, validatedConfig);
-      
+
       // Phase 5: Final Assembly (AC-RS5.1)
       const synthesisTime = Date.now() - startTime;
-      
+
       this.dependencies.logger.success(`Synthesis completed in ${synthesisTime}ms`);
       this.dependencies.logger.info(`  Components: ${components.length}`);
       this.dependencies.logger.info(`  Bindings: ${bindings.length}`);
@@ -132,7 +132,7 @@ export class ResolverEngine {
         try {
           const component = registry.createComponent(componentSpec, context);
           components.push(component);
-          
+
           this.dependencies.logger.debug(`Instantiated component: ${componentSpec.name} (${componentSpec.type})`);
         } catch (error) {
           throw new Error(`Failed to instantiate component '${componentSpec.name}': ${error instanceof Error ? error.message : 'Unknown error'}`);
@@ -158,7 +158,7 @@ export class ResolverEngine {
       try {
         // AC-RS2.2: Call synth() method - triggers Builder pattern within component
         const synthesizedConstruct = component.synth();
-        
+
         // AC-RS2.3: Collect capability outputs for binding phase
         const capabilities = component.getCapabilities();
         outputsMap.set(component.spec.name, {
@@ -168,7 +168,7 @@ export class ResolverEngine {
         });
 
         this.dependencies.logger.debug(`Synthesized component: ${component.spec.name}`);
-        
+
         // Log capability details for debugging
         Object.keys(capabilities).forEach(capabilityKey => {
           this.dependencies.logger.debug(`  Capability: ${capabilityKey}`, capabilities[capabilityKey]);
@@ -188,7 +188,7 @@ export class ResolverEngine {
    * Resolves component bindings using Strategy pattern
    */
   private async bindComponents(
-    components: Component[], 
+    components: Component[],
     outputsMap: Map<string, any>,
     validatedConfig: any
   ): Promise<Array<any>> {
@@ -206,7 +206,7 @@ export class ResolverEngine {
         try {
           // AC-RS3.2: Resolve target component and execute binding
           const target = this.resolveTarget(bindDirective, outputsMap);
-          
+
           if (!target) {
             throw new Error(`Cannot resolve binding target for directive: ${JSON.stringify(bindDirective)}`);
           }
@@ -221,7 +221,7 @@ export class ResolverEngine {
           };
 
           const bindingResult = this.componentBinder.bind(bindingContext);
-          
+
           bindings.push({
             source: component.spec.name,
             target: target.component.spec.name,
@@ -257,10 +257,10 @@ export class ResolverEngine {
     // Selector-based resolution with ambiguity checking
     if (bindDirective.select) {
       const matchingComponents: any[] = [];
-      
+
       for (const [componentName, output] of outputsMap.entries()) {
         const component = output.component;
-        
+
         // Match by type
         if (bindDirective.select.type && component.getType() === bindDirective.select.type) {
           // Match by labels if specified
@@ -276,19 +276,19 @@ export class ResolverEngine {
           }
         }
       }
-      
+
       // Validate selector results
       if (matchingComponents.length === 0) {
         const selectorDesc = JSON.stringify(bindDirective.select);
         throw new Error(`Selector found no matching components for: ${selectorDesc}`);
       }
-      
+
       if (matchingComponents.length > 1) {
         const componentNames = matchingComponents.map(output => output.component.spec.name).join(', ');
         const selectorDesc = JSON.stringify(bindDirective.select);
         throw new Error(`Ambiguous selector: Found ${matchingComponents.length} components matching ${selectorDesc}: [${componentNames}]. Please make selector more specific.`);
       }
-      
+
       return matchingComponents[0];
     }
 
@@ -300,15 +300,15 @@ export class ResolverEngine {
    * Apply escape hatch modifications if patches.ts exists
    */
   private async applyPatches(
-    stack: cdk.Stack, 
-    components: Component[], 
+    stack: cdk.Stack,
+    components: Component[],
     validatedConfig: any
   ): Promise<boolean> {
     this.dependencies.logger.debug('Phase 4: Patching');
 
     // AC-RS4.1: Check for existence of patches.ts file
     const patchesPath = path.resolve(process.cwd(), 'patches.ts');
-    
+
     if (!fs.existsSync(patchesPath)) {
       this.dependencies.logger.debug('No patches.ts file found - skipping patching phase');
       return false;
@@ -317,10 +317,10 @@ export class ResolverEngine {
     try {
       // AC-RS4.2: If file exists, invoke patch functions
       this.dependencies.logger.info('Applying patches from patches.ts');
-      
+
       // Dynamic import of patches file
       const patchesModule = await import(patchesPath);
-      
+
       if (typeof patchesModule.applyPatches === 'function') {
         const patchContext = {
           stack,
@@ -330,14 +330,14 @@ export class ResolverEngine {
         };
 
         await patchesModule.applyPatches(patchContext);
-        
+
         this.dependencies.logger.success('Successfully applied patches');
-        
+
         // Log patch info if available
         if (patchesModule.patchInfo) {
           this.dependencies.logger.info('Patch Info:', patchesModule.patchInfo);
         }
-        
+
         return true;
       } else {
         this.dependencies.logger.warn('patches.ts exists but does not export applyPatches function');
@@ -355,7 +355,7 @@ export class ResolverEngine {
    */
   private buildConstructsMap(components: Component[]): Record<string, any> {
     const constructsMap: Record<string, any> = {};
-    
+
     for (const component of components) {
       // Retrieve the main construct handle stored during the REAL synthesis phase
       const mainConstruct = component.getConstruct('main');
@@ -365,7 +365,7 @@ export class ResolverEngine {
         this.dependencies.logger.warn(`Component ${component.getName()} has no 'main' construct handle`);
       }
     }
-    
+
     return constructsMap;
   }
 

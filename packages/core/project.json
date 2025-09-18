@@ -1,34 +1,48 @@
 {
   "name": "core",
+  "root": "packages/core",
   "sourceRoot": "packages/core/src",
   "projectType": "library",
-  "tags": [
-    "type:lib",
-    "scope:core"
-  ],
   "targets": {
     "build": {
-      "executor": "@nx/js:tsc",
+      "executor": "nx:run-commands",
       "options": {
-        "outputPath": "dist/packages/core",
-        "tsConfig": "packages/core/tsconfig.lib.json",
-        "main": "packages/core/src/index.ts"
+        "command": "tsc -b"
+      },
+      "inputs": [
+        "default",
+        "{projectRoot}/tsconfig.json",
+        "{projectRoot}/src/**"
+      ],
+      "outputs": [
+        "{projectRoot}/dist"
+      ]
+    },
+    "typecheck": {
+      "executor": "nx:run-commands",
+      "options": {
+        "command": "tsc --noEmit"
       }
     },
     "test": {
       "executor": "@nx/jest:jest",
+      "outputs": [
+        "{projectRoot}/coverage"
+      ],
       "options": {
         "jestConfig": "packages/core/jest.config.ts",
         "passWithNoTests": true
       }
     },
     "lint": {
-      "executor": "@nx/eslint:lint",
+      "executor": "nx:run-commands",
       "options": {
-        "lintFilePatterns": [
-          "packages/core/src/**/*.ts"
-        ]
+        "command": "eslint . --ext .ts,.tsx"
       }
     }
-  }
+  },
+  "tags": [
+    "type:lib",
+    "scope:core"
+  ]
 }

@@ -11,11 +11,12 @@ import * as ec2 from 'aws-cdk-lib/aws-ec2';
 import * as logs from 'aws-cdk-lib/aws-logs';
 import * as iam from 'aws-cdk-lib/aws-iam';
 import * as secretsmanager from 'aws-cdk-lib/aws-secretsmanager';
+import * as cloudwatch from 'aws-cdk-lib/aws-cloudwatch';
 import * as cdk from 'aws-cdk-lib';
 import { Construct } from 'constructs';
-import { BaseComponent } from '../../../src/platform/contracts/component';
-import { ComponentSpec, ComponentContext, ComponentCapabilities } from '../../../src/platform/contracts/component-interfaces';
-import { ConfigBuilder, ConfigBuilderContext } from '../../../src/platform/contracts/config-builder';
+import { BaseComponent } from '../@shinobi/core/component';
+import { ComponentSpec, ComponentContext, ComponentCapabilities } from '../@shinobi/core/component-interfaces';
+import { ConfigBuilder, ConfigBuilderContext } from '../@shinobi/core/config-builder';
 
 /**
  * Configuration interface for ECS EC2 Service component
@@ -23,7 +24,7 @@ import { ConfigBuilder, ConfigBuilderContext } from '../../../src/platform/contr
 export interface EcsEc2ServiceConfig {
   /** Name of the ECS cluster component to deploy to */
   cluster: string;
-  
+
   /** Container image configuration */
   image: {
     /** Container image URI or repository name */
@@ -31,34 +32,34 @@ export interface EcsEc2ServiceConfig {
     /** Image tag (optional, defaults to 'latest') */
     tag?: string;
   };
-  
+
   /** CPU allocation at task level (CPU units, 1024 = 1 vCPU) */
   taskCpu: number;
-  
+
   /** Memory allocation at task level (MiB) */
   taskMemory: number;
-  
+
   /** Container port configuration */
   port: number;
-  
+
   /** Service Connect configuration for service discovery */
   serviceConnect: {
     /** Friendly name for the port mapping used in service discovery */
     portMappingName: string;
   };
-  
+
   /** Environment variables for the container (optional) */
   environment?: Record<string, string>;
-  
+
   /** Secrets from AWS Secrets Manager (optional) */
   secrets?: Record<string, string>;
-  
+
   /** Task role ARN for container permissions (optional, auto-created if not provided) */
   taskRoleArn?: string;
-  
+
   /** Number of desired tasks (optional, defaults to 1) */
   desiredCount?: number;
-  
+
   /** Placement constraints for EC2 service (optional) */
   placementConstraints?: Array<{
     /** Constraint type (memberOf, distinctInstance, etc.) */
@@ -66,7 +67,7 @@ export interface EcsEc2ServiceConfig {
     /** Constraint expression */
     expression?: string;
   }>;
-  
+
   /** Placement strategies for EC2 service (optional) */
   placementStrategies?: Array<{
     /** Strategy type (random, spread, binpack) */
@@ -74,7 +75,7 @@ export interface EcsEc2ServiceConfig {
     /** Field to apply strategy to */
     field?: string;
   }>;
-  
+
   /** Health check configuration (optional) */
   healthCheck?: {
     /** Command to run for health check */
@@ -86,7 +87,7 @@ export interface EcsEc2ServiceConfig {
     /** Number of retries before marking unhealthy (optional, defaults to 3) */
     retries?: number;
   };
-  
+
   /** Auto scaling configuration (optional) */
   autoScaling?: {
     /** Minimum number of tasks */
@@ -98,7 +99,7 @@ export interface EcsEc2ServiceConfig {
     /** Target memory utilization percentage for scaling */
     targetMemoryUtilization?: number;
   };
-  
+
   /** Additional tags for service resources */
   tags?: Record<string, string>;
 }
@@ -351,7 +352,7 @@ export const ECS_EC2_SERVICE_CONFIG_SCHEMA = {
  * Implements the centralized 5-layer precedence engine
  */
 export class EcsEc2ServiceConfigBuilder extends ConfigBuilder<EcsEc2ServiceConfig> {
-  
+
   constructor(context: ComponentContext, spec: ComponentSpec) {
     const builderContext: ConfigBuilderContext = { context, spec };
     super(builderContext, ECS_EC2_SERVICE_CONFIG_SCHEMA);
@@ -397,7 +398,7 @@ export class EcsEc2ServiceConfigBuilder extends ConfigBuilder<EcsEc2ServiceConfi
    */
   protected getComplianceFrameworkDefaults(): Record<string, any> {
     const framework = this.builderContext.context.complianceFramework;
-    
+
     switch (framework) {
       case 'fedramp-high':
         return {
@@ -421,7 +422,7 @@ export class EcsEc2ServiceConfigBuilder extends ConfigBuilder<EcsEc2ServiceConfi
             { type: 'spread', field: 'instanceId' }
           ]
         };
-        
+
       case 'fedramp-moderate':
         return {
           taskCpu: 512, // Balanced CPU
@@ -443,7 +444,7 @@ export class EcsEc2ServiceConfigBuilder extends ConfigBuilder<EcsEc2ServiceConfi
             field: 'instanceId'
           }]
         };
-        
+
       default: // commercial
         return {
           taskCpu: 256, // Cost optimized
@@ -486,36 +487,39 @@ export class EcsEc2ServiceComponent extends BaseComponent {
    */
   public synth(): void {
     this.logComponentEvent('synthesis_start', 'Starting ECS EC2 Service synthesis');
-    
+
     try {
       // Build configuration using ConfigBuilder
       this.configBuilder = new EcsEc2ServiceConfigBuilder(this.context, this.spec);
       this.config = this.configBuilder.buildSync();
-      
+
       // Create task definition
       this.createTaskDefinition();
-      
+
       // Create security group
       this.createSecurityGroup();
-      
+
       // Create EC2 service
       this.createEc2Service();
-      
+
       // Configure auto scaling if specified
       this.configureAutoScaling();
-      
+
+      // Configure OpenTelemetry observability (required by Platform Observability Standard)
+      this.configureObservabilityForEcsService();
+
       // Apply standard platform tags
       this.applyServiceTags();
-      
+
       // Register constructs
       this.registerConstruct('service', this.service!);
       this.registerConstruct('taskDefinition', this.taskDefinition!);
       this.registerConstruct('securityGroup', this.securityGroup!);
       this.registerConstruct('logGroup', this.logGroup!);
-      
+
       // Register service:connect capability
       this.registerCapability('service:connect', this.buildServiceConnectCapability());
-      
+
       this.logComponentEvent('synthesis_complete', 'ECS EC2 Service synthesis completed successfully');
     } catch (error) {
       this.logError(error as Error, 'ECS EC2 Service synthesis');
@@ -546,7 +550,7 @@ export class EcsEc2ServiceComponent extends BaseComponent {
     this.logGroup = new logs.LogGroup(this, 'LogGroup', {
       logGroupName: `/ecs/${this.context.serviceName}/${this.spec.name}`,
       retention: this.getLogRetention(),
-      removalPolicy: this.isComplianceFramework() ? 
+      removalPolicy: this.isComplianceFramework() ?
         cdk.RemovalPolicy.RETAIN : cdk.RemovalPolicy.DESTROY
     });
 
@@ -568,7 +572,7 @@ export class EcsEc2ServiceComponent extends BaseComponent {
     });
 
     // Add container to task definition
-    const imageUri = this.config!.image.tag ? 
+    const imageUri = this.config!.image.tag ?
       `${this.config!.image.repository}:${this.config!.image.tag}` :
       `${this.config!.image.repository}:latest`;
 
@@ -608,7 +612,7 @@ export class EcsEc2ServiceComponent extends BaseComponent {
    */
   private createSecurityGroup(): void {
     const vpc = this.getVpcFromContext();
-    
+
     this.securityGroup = new ec2.SecurityGroup(this, 'SecurityGroup', {
       vpc: vpc,
       description: `Security group for ${this.context.serviceName} ${this.spec.name}`,
@@ -638,12 +642,12 @@ export class EcsEc2ServiceComponent extends BaseComponent {
     const vpc = this.getVpcFromContext();
 
     // Build placement constraints
-    const placementConstraints = this.config!.placementConstraints?.map(constraint => 
+    const placementConstraints = this.config!.placementConstraints?.map(constraint =>
       this.buildPlacementConstraint(constraint.type, constraint.expression)
     );
 
     // Build placement strategies  
-    const placementStrategies = this.config!.placementStrategies?.map(strategy => 
+    const placementStrategies = this.config!.placementStrategies?.map(strategy =>
       this.buildPlacementStrategy(strategy.type, strategy.field)
     );
 
@@ -653,17 +657,17 @@ export class EcsEc2ServiceComponent extends BaseComponent {
       taskDefinition: this.taskDefinition,
       desiredCount: this.config!.desiredCount,
       serviceName: `${this.context.serviceName}-${this.spec.name}`,
-      
+
       // Network configuration
       vpcSubnets: {
         subnetType: ec2.SubnetType.PRIVATE_WITH_EGRESS, // Private subnets for security
       },
       securityGroups: [this.securityGroup],
-      
+
       // EC2-specific placement configuration
       placementConstraints: placementConstraints,
       placementStrategies: placementStrategies,
-      
+
       // Service Connect configuration
       serviceConnectConfiguration: {
         namespace: cluster.defaultCloudMapNamespace?.namespaceName,
@@ -673,12 +677,129 @@ export class EcsEc2ServiceComponent extends BaseComponent {
           port: this.config!.port,
         }],
       },
-      
+
       // Enable circuit breaker for deployment safety
       enableExecuteCommand: this.isComplianceFramework(), // Enable for compliance debugging
     });
 
     this.logResourceCreation('ec2-service', this.service.serviceName);
+  }
+
+  /**
+   * Configure OpenTelemetry observability for ECS EC2 Service per Platform Observability Standard
+   * Implements comprehensive observability with OTel environment variables and CloudWatch alarms
+   */
+  private configureObservabilityForEcsService(): void {
+    if (!this.service || !this.taskDefinition) {
+      return;
+    }
+
+    // Get standardized OpenTelemetry environment variables for ECS service
+    const otelEnvVars = this.configureObservability(this.service, {
+      serviceName: `${this.context.serviceName}-ecs-ec2-service`,
+      serviceVersion: '1.0.0',
+      componentType: 'ecs-ec2-service',
+      complianceFramework: this.context.complianceFramework,
+      customAttributes: {
+        'ecs.launch-type': 'EC2',
+        'ecs.task-definition': this.taskDefinition.family,
+        'container.port': this.config!.port.toString(),
+        'service.connect.name': this.config!.serviceConnect.portMappingName
+      }
+    });
+
+    // Store OTel environment variables for ECS task definitions
+    // These will be applied to all tasks running in this service
+    this.registerCapability('otel:environment', otelEnvVars);
+
+    // Create CloudWatch alarms for observability
+    this.createEcsServiceAlarms();
+
+    this.logComponentEvent('observability_configured', 'OpenTelemetry observability standard applied to ECS EC2 Service', {
+      otelServiceName: otelEnvVars['OTEL_SERVICE_NAME'],
+      otelExporterEndpoint: otelEnvVars['OTEL_EXPORTER_OTLP_ENDPOINT'],
+      serviceName: this.service.serviceName
+    });
+  }
+
+  /**
+   * Create CloudWatch alarms for ECS service monitoring
+   */
+  private createEcsServiceAlarms(): void {
+    if (!this.service) return;
+
+    const cluster = this.getClusterFromBinding();
+    const serviceName = this.service.serviceName;
+
+    // CPU Utilization Alarm
+    const cpuAlarm = new cloudwatch.Alarm(this, 'CpuUtilizationAlarm', {
+      alarmName: `${this.context.serviceName}-${this.spec.name}-cpu-high`,
+      alarmDescription: `High CPU utilization for ECS EC2 service ${serviceName}`,
+      metric: new cloudwatch.Metric({
+        namespace: 'AWS/ECS',
+        metricName: 'CPUUtilization',
+        statistic: 'Average',
+        period: cdk.Duration.minutes(5),
+        dimensionsMap: {
+          ServiceName: serviceName,
+          ClusterName: cluster.clusterName
+        }
+      }),
+      threshold: this.getCpuAlarmThreshold(),
+      evaluationPeriods: 3,
+      comparisonOperator: cloudwatch.ComparisonOperator.GREATER_THAN_THRESHOLD
+    });
+
+    // Memory Utilization Alarm
+    const memoryAlarm = new cloudwatch.Alarm(this, 'MemoryUtilizationAlarm', {
+      alarmName: `${this.context.serviceName}-${this.spec.name}-memory-high`,
+      alarmDescription: `High memory utilization for ECS EC2 service ${serviceName}`,
+      metric: new cloudwatch.Metric({
+        namespace: 'AWS/ECS',
+        metricName: 'MemoryUtilization',
+        statistic: 'Average',
+        period: cdk.Duration.minutes(5),
+        dimensionsMap: {
+          ServiceName: serviceName,
+          ClusterName: cluster.clusterName
+        }
+      }),
+      threshold: this.getMemoryAlarmThreshold(),
+      evaluationPeriods: 3,
+      comparisonOperator: cloudwatch.ComparisonOperator.GREATER_THAN_THRESHOLD
+    });
+
+    // Register alarms as constructs for visibility
+    this.registerConstruct('cpuAlarm', cpuAlarm);
+    this.registerConstruct('memoryAlarm', memoryAlarm);
+  }
+
+  /**
+   * Get CPU alarm threshold based on compliance framework
+   */
+  private getCpuAlarmThreshold(): number {
+    switch (this.context.complianceFramework) {
+      case 'fedramp-high':
+        return 60; // More aggressive monitoring for high security
+      case 'fedramp-moderate':
+        return 70; // Moderate monitoring
+      default:
+        return 80; // Standard commercial monitoring
+    }
+  }
+
+  /**
+   * Get memory alarm threshold based on compliance framework
+   */
+  private getMemoryAlarmThreshold(): number {
+    switch (this.context.complianceFramework) {
+      case 'fedramp-high':
+        return 70; // More aggressive monitoring for high security
+      case 'fedramp-moderate':
+        return 80; // Moderate monitoring
+      default:
+        return 85; // Standard commercial monitoring
+    }
   }
 
   /**
@@ -690,7 +811,7 @@ export class EcsEc2ServiceComponent extends BaseComponent {
     }
 
     const autoScalingConfig = this.config!.autoScaling;
-    
+
     // Setup service auto scaling
     const scaling = this.service.autoScaleTaskCount({
       minCapacity: autoScalingConfig.minCapacity,
@@ -715,7 +836,7 @@ export class EcsEc2ServiceComponent extends BaseComponent {
       });
     }
 
-    this.logComponentEvent('autoscaling_configured', 
+    this.logComponentEvent('autoscaling_configured',
       `Auto scaling configured: ${autoScalingConfig.minCapacity}-${autoScalingConfig.maxCapacity} tasks`);
   }
 
@@ -734,11 +855,11 @@ export class EcsEc2ServiceComponent extends BaseComponent {
     if (this.service) {
       this.applyStandardTags(this.service, standardTags);
     }
-    
+
     if (this.taskDefinition) {
       this.applyStandardTags(this.taskDefinition, standardTags);
     }
-    
+
     if (this.securityGroup) {
       this.applyStandardTags(this.securityGroup, standardTags);
     }
@@ -758,7 +879,7 @@ export class EcsEc2ServiceComponent extends BaseComponent {
    */
   private buildServiceConnectCapability() {
     const cluster = this.getClusterFromBinding();
-    
+
     return {
       serviceName: this.spec.name,
       serviceArn: this.service!.serviceArn,
@@ -814,13 +935,13 @@ export class EcsEc2ServiceComponent extends BaseComponent {
       case 'random':
         return ecs.PlacementStrategy.randomly();
       case 'spread':
-        return field ? 
-          ecs.PlacementStrategy.spreadAcross(field) : 
+        return field ?
+          ecs.PlacementStrategy.spreadAcross(field) :
           ecs.PlacementStrategy.spreadAcrossInstances();
       case 'binpack':
         // Note: binpack strategy implementation may vary by CDK version
-        return field ? 
-          ecs.PlacementStrategy.packedBy(field as any) : 
+        return field ?
+          ecs.PlacementStrategy.packedBy(field as any) :
           ecs.PlacementStrategy.packedBy(ecs.BinPackResource.MEMORY);
       default:
         throw new Error(`Unknown placement strategy type: ${type}`);

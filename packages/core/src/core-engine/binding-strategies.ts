@@ -40,13 +40,13 @@ export abstract class BinderStrategy implements IBinderStrategy {
  * Registry for managing binder strategies
  */
 export class BinderRegistry {
-  private strategies: BinderStrategy[] = [];
+  private strategies: IBinderStrategy[] = [];
 
-  register(strategy: BinderStrategy): void {
+  register(strategy: IBinderStrategy): void {
     this.strategies.push(strategy);
   }
 
-  findStrategy(sourceType: string, capability: string): BinderStrategy | null {
+  findStrategy(sourceType: string, capability: string): IBinderStrategy | null {
     return this.strategies.find(strategy =>
       strategy.canHandle(sourceType, capability)
     ) || null;

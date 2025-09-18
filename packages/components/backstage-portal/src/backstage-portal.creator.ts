@@ -10,7 +10,7 @@ import {
   ComponentSpec, 
   ComponentContext, 
   IComponentCreator 
-} from '../../../../src/platform/contracts/component-interfaces';
+} from '../../@shinobi/core/component-interfaces';
 import { BackstagePortalComponent } from './backstage-portal.component';
 import { BackstagePortalConfig, BACKSTAGE_PORTAL_CONFIG_SCHEMA } from './backstage-portal.builder';
 

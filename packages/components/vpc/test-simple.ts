@@ -5,7 +5,7 @@
 import { App, Stack } from 'aws-cdk-lib';
 import { VpcComponent } from './vpc.component';
 import { VpcConfig } from './vpc.builder';
-import { ComponentContext, ComponentSpec } from '../../../src/platform/contracts/component-interfaces';
+import { ComponentContext, ComponentSpec } from '../@shinobi/core/component-interfaces';
 
 // Mock context
 const mockContext: ComponentContext = {
