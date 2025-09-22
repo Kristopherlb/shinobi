@@ -18,20 +18,30 @@
     "downlevelIteration": true,
     "baseUrl": ".",
     "paths": {
-      "@shinobi/*": [
-        "packages/*/src",
-        "packages/components/*/src",
-        "packages/standards/*/src"
+      "@shinobi/core/*": [
+        "packages/core/src/*"
       ],
-      "@platform/*": [
-        "packages/*/src",
-        "packages/components/*/src",
-        "packages/standards/*/src"
+      "@shinobi/standards-otel/*": [
+        "packages/standards/otel/src/*"
+      ],
+      "@shinobi/standards-logging/*": [
+        "packages/standards/logging/src/*"
+      ],
+      "@platform/components/*": [
+        "packages/components/*/src/*"
+      ],
+      "@platform/constructs/*": [
+        "packages/constructs/*/src/*"
+      ],
+      "@cdk-lib/*": [
+        "packages/constructs/*/src/*"
       ]
     }
   },
   "exclude": [
     "dist",
-    "node_modules"
+    "node_modules",
+    "packages/core/_temp-problematic-files/**",
+    "packages/core/_temp-problematic-platform/**"
   ]
 }

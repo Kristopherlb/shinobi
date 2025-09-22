@@ -1,16 +1,34 @@
 {
-  "name": "@platform/lambda-api",
+  "name": "@platform/components-lambda-api",
   "version": "0.0.1",
   "private": true,
-  "main": "dist/packages/components/lambda-api/index.js",
-  "types": "dist/packages/components/lambda-api/index.d.ts",
+  "type": "commonjs",
+  "main": "./dist/index.js",
+  "types": "./dist/index.d.ts",
+  "exports": {
+    ".": {
+      "require": "./dist/index.js",
+      "types": "./dist/index.d.ts"
+    }
+  },
+  "files": [
+    "dist"
+  ],
   "scripts": {
     "build": "tsc -p tsconfig.json",
-    "test": "jest"
+    "clean": "rimraf dist"
   },
   "dependencies": {
-    "@platform/core-engine": "workspace:*",
-    "@platform/contracts": "workspace:*"
+    "@shinobi/core": "workspace:*",
+    "aws-cdk-lib": "^2.214.0",
+    "constructs": "^10.4.2",
+    "source-map-support": "^0.5.21"
   },
-  "devDependencies": {}
+  "peerDependencies": {
+    "aws-cdk-lib": ">=2.100.0",
+    "constructs": ">=10.0.0"
+  },
+  "engines": {
+    "node": ">=18.18"
+  }
 }
