@@ -19,7 +19,7 @@ import {
 } from '@shinobi/core';
 import { ServiceManifestParser } from '@shinobi/core';
 import { ManifestParser } from '@shinobi/core';
-import { ComponentFactory } from '@shinobi/core';
+import { IComponentFactory, ComponentFactory } from '@shinobi/core';
 import { ComplianceControlMappingService } from '@shinobi/core';
 import { TaggingEnforcementService } from '@shinobi/core';
 import { CompliancePlanGenerator } from '@shinobi/core';
@@ -41,7 +41,7 @@ interface PlanCommandOptions {
 export class PlanCommand {
   private manifestParser: ManifestParser;
   private serviceManifestParser: ServiceManifestParser;
-  private componentFactory: ComponentFactory;
+  private componentFactory: IComponentFactory;
   private complianceService: ComplianceControlMappingService;
   private taggingService: TaggingEnforcementService;
   private compliancePlanGenerator: CompliancePlanGenerator;

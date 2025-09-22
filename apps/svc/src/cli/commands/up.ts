@@ -14,12 +14,12 @@ import {
   ResourceDeploymentResult,
   DeploymentChanges,
   CLIOutputOptions
-} from '../../platform/contracts/artifacts';
-import { ServiceManifestParser } from '../../platform/contracts/components/service-manifest-parser';
-import { ComponentFactory } from '../../platform/contracts/components/component-factory';
-import { ArtifactWriter } from '../../platform/services/artifact-writer';
-import { StandardArtifactWriter } from '../../platform/services/artifact-writer';
-import { ArtifactSerializerFactory } from '../../platform/services/artifact-serializer';
+} from '@shinobi/core';
+import { ServiceManifestParser } from '@shinobi/core';
+import { ComponentFactory } from '@shinobi/core';
+import { ArtifactWriter } from '@shinobi/core';
+import { StandardArtifactWriter } from '@shinobi/core';
+import { ArtifactSerializerFactory } from '@shinobi/core';
 
 interface UpCommandOptions {
   env?: string;

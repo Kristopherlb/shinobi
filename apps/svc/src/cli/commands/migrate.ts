@@ -18,7 +18,8 @@ import {
   MappedResource,
   UnmappedResource,
   ManualPatch,
-  DriftCheckResult
+  DriftCheckResult,
+  ComponentType
 } from '@shinobi/core';
 import { ArtifactWriter } from '@shinobi/core';
 import { StandardArtifactWriter } from '@shinobi/core';
@@ -172,7 +173,7 @@ export class MigrateCommand {
     for (const resource of analysis.resources) {
       const mapping = this.mapResourceToComponent(resource);
 
-      if (mapping.mapped) {
+      if (mapping.mapped && mapping.newLogicalId && mapping.componentType && mapping.componentId) {
         // Add to logical ID mapping
         logicalIdMap.mappings[resource.logicalId] = mapping.newLogicalId;
         logicalIdMap.reverse[mapping.newLogicalId] = resource.logicalId;
@@ -183,7 +184,7 @@ export class MigrateCommand {
         if (!componentResult) {
           componentResult = {
             componentId: mapping.componentId,
-            componentType: mapping.componentType,
+            componentType: mapping.componentType as ComponentType,
             status: 'mapped',
             originalResources: [],
             mappedResources: [],
@@ -193,11 +194,12 @@ export class MigrateCommand {
           components.push(componentResult);
         }
 
+        // componentResult is guaranteed to be defined at this point
         componentResult.originalResources.push(resource);
         componentResult.mappedResources.push({
           logicalId: mapping.newLogicalId,
           type: resource.type,
-          componentType: mapping.componentType,
+          componentType: mapping.componentType as ComponentType,
           componentId: mapping.componentId,
           properties: resource.properties,
           complianceControls: this.getComplianceControls(mapping.componentType)
@@ -207,8 +209,8 @@ export class MigrateCommand {
         const unmappedResource: UnmappedResource = {
           logicalId: resource.logicalId,
           type: resource.type,
-          reason: mapping.reason,
-          suggestedComponentType: mapping.suggestedComponentType,
+          reason: mapping.reason || 'Unknown reason',
+          suggestedComponentType: mapping.suggestedComponentType as ComponentType | undefined,
           properties: resource.properties
         };
 
