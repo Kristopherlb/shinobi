@@ -10,7 +10,7 @@ export * from "./lambda-api.builder";
 // Configuration exports
 export {
   LambdaApiConfig,
-  LambdaApiComponentConfigBuilder,
+  LambdaApiConfigBuilder,
   LAMBDA_API_CONFIG_SCHEMA
 } from './lambda-api.builder';
 

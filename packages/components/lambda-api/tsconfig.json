@@ -5,7 +5,7 @@
     "moduleResolution": "Node",
     "declaration": true,
     "outDir": "dist",
-    "rootDir": "src",
+    "rootDir": ".",
     "strict": true,
     "esModuleInterop": true,
     "skipLibCheck": true,
@@ -16,31 +16,18 @@
       ],
       "@shinobi/core/*": [
         "../../../packages/core/src/*"
-      ],
-      "@platform/contracts": [
-        "../../../packages/core/src/platform/contracts/index.ts"
-      ],
-      "@platform/contracts/*": [
-        "../../../packages/core/src/platform/contracts/*"
-      ],
-      "@shinobi/standards-otel/*": [
-        "../../../packages/standards/otel/src"
-      ],
-      "@shinobi/standards-logging/*": [
-        "../../../packages/standards/logging/src"
-      ],
-      "@platform/components/*": [
-        "../../../packages/components/*/src"
-      ],
-      "@platform/constructs/*": [
-        "../../../packages/constructs/*/src"
-      ],
-      "@cdk-lib/*": [
-        "../../../packages/constructs/*/src"
       ]
     }
   },
   "include": [
-    "src/*"
+    "index.ts",
+    "*.component.ts",
+    "*.builder.ts",
+    "*.creator.ts"
+  ],
+  "exclude": [
+    "dist",
+    "node_modules",
+    "**/*.test.ts"
   ]
 }

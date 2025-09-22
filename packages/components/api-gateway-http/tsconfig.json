@@ -1,29 +1,35 @@
 {
-  "extends": "../../../tsconfig.base.json",
   "compilerOptions": {
-    "outDir": "./dist",
-    "rootDir": ".",
+    "target": "ES2022",
+    "module": "CommonJS",
+    "moduleResolution": "Node",
     "declaration": true,
-    "declarationMap": true,
-    "sourceMap": true,
-    "composite": true
+    "outDir": "dist",
+    "rootDir": ".",
+    "strict": true,
+    "esModuleInterop": true,
+    "skipLibCheck": true,
+    "baseUrl": ".",
+    "paths": {
+      "@shinobi/core": [
+        "../../../packages/core/src/index.ts"
+      ],
+      "@shinobi/core/*": [
+        "../../../packages/core/src/*"
+      ]
+    }
   },
   "include": [
-    "**/*.ts"
+    "index.ts",
+    "*.component.ts",
+    "*.builder.ts",
+    "*.creator.ts"
   ],
   "exclude": [
-    "node_modules",
     "dist",
+    "node_modules",
     "**/*.test.ts",
     "**/*.spec.ts"
-  ],
-  "references": [
-    {
-      "path": "../../../packages/contracts"
-    },
-    {
-      "path": "../../../packages/core-engine"
-    }
   ]
 }
 

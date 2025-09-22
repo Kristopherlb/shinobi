@@ -8,11 +8,33 @@ import {
   Tags,
   Stack,
 } from "aws-cdk-lib";
-import {
-  BaseComponent,
-  ComponentContext,
-} from "@shinobi/core";
-import { CapabilityData } from "@shinobi/core/platform/contracts/bindings";
+// Minimal interfaces to avoid circular dependencies
+export interface ComponentContext {
+  serviceName: string;
+  environment: string;
+  complianceFramework?: string;
+  otelCollectorEndpoint?: string;
+  owner?: string;
+}
+
+export interface CapabilityData {
+  type: string;
+  endpoints?: Record<string, any>;
+  resources?: Record<string, any>;
+  securityGroups?: string[];
+  secrets?: Record<string, any>;
+}
+
+// Minimal base component
+export abstract class BaseComponent {
+  protected spec: any;
+  protected context: ComponentContext;
+
+  constructor(spec: any, context: ComponentContext) {
+    this.spec = spec;
+    this.context = context;
+  }
+}
 
 export interface LambdaApiSpec {
   /** e.g. "src/api.handler" */
@@ -36,6 +58,9 @@ export class LambdaApiComponent extends BaseComponent {
     super(spec, ctx);
     (this as any).scope = scope;
     (this as any).id = id;
+    // Make this work as a CDK construct for synthesis
+    Object.setPrototypeOf(this, scope.constructor.prototype);
+    (this as any).node = scope.node;
   }
   private get typedSpec(): LambdaApiSpec {
     return (this as any).spec as LambdaApiSpec;
@@ -115,19 +140,24 @@ export class LambdaApiComponent extends BaseComponent {
       anyMethod: true,
     });
 
-    // Platform tagging
-    this.taggingService.applyComplianceTags(fn, this.context.complianceFramework, {
-      serviceName: this.context.serviceName,
-      environment: this.context.environment,
-      owner: this.context.owner,
-      componentType: "lambda-api"
-    });
-    this.taggingService.applyComplianceTags(api, this.context.complianceFramework, {
-      serviceName: this.context.serviceName,
-      environment: this.context.environment,
-      owner: this.context.owner,
-      componentType: "lambda-api"
-    });
+    // Platform tagging (simplified for standalone package)
+    Tags.of(fn).add("Service", this.context.serviceName);
+    Tags.of(fn).add("Environment", this.context.environment);
+    if (this.context.owner) {
+      Tags.of(fn).add("Owner", this.context.owner);
+    }
+    if (this.context.complianceFramework) {
+      Tags.of(fn).add("ComplianceFramework", this.context.complianceFramework);
+    }
+
+    Tags.of(api).add("Service", this.context.serviceName);
+    Tags.of(api).add("Environment", this.context.environment);
+    if (this.context.owner) {
+      Tags.of(api).add("Owner", this.context.owner);
+    }
+    if (this.context.complianceFramework) {
+      Tags.of(api).add("ComplianceFramework", this.context.complianceFramework);
+    }
 
     // Registry bookkeeping
     (this as any).registerConstructs("lambda", fn);
