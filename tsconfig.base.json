@@ -19,22 +19,25 @@
     "baseUrl": ".",
     "paths": {
       "@shinobi/core/*": [
-        "packages/core/src/*"
+        "packages/core/src/index.ts"
       ],
       "@shinobi/standards-otel/*": [
-        "packages/standards/otel/src/*"
+        "packages/standards/otel/src"
       ],
       "@shinobi/standards-logging/*": [
         "packages/standards/logging/src/*"
       ],
       "@platform/components/*": [
-        "packages/components/*/src/*"
+        "packages/components/*/src"
       ],
       "@platform/constructs/*": [
-        "packages/constructs/*/src/*"
+        "packages/constructs/*/src"
+      ],
+      "@platform/contracts/*": [
+        "packages/platform/contracts/*"
       ],
       "@cdk-lib/*": [
-        "packages/constructs/*/src/*"
+        "packages/constructs/*/src"
       ]
     }
   },

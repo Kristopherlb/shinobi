@@ -51,6 +51,11 @@ export interface ComponentContext {
    * Platform configuration overrides
    */
   platformConfig?: Record<string, any>;
+
+  /**
+   * OTEL collector endpoint for observability
+   */
+  otelCollectorEndpoint?: string;
 }
 
 /**

@@ -1,3 +1,4 @@
+"use strict";
 /**
  * Component API Contract Specification v1.0
  *
@@ -5,8 +6,10 @@
  * all components in the platform must implement. This contract ensures that
  * every component is a predictable, secure, and composable building block.
  */
-import { Construct } from 'constructs';
-import { defaultTaggingService } from '../../../packages/tagging-service/tagging.service';
+Object.defineProperty(exports, "__esModule", { value: true });
+exports.Component = exports.BaseComponent = void 0;
+const constructs_1 = require("constructs");
+const tagging_service_1 = require("../services/tagging-service/tagging.service");
 /**
  * Abstract base class that all platform components MUST extend - The Implementation Helper
  *
@@ -18,7 +21,7 @@ import { defaultTaggingService } from '../../../packages/tagging-service/tagging
  * Implements Interface Segregation Principle by providing concrete implementations
  * of common component functionality while maintaining the lean IComponent contract.
  */
-export class BaseComponent extends Construct {
+class BaseComponent extends constructs_1.Construct {
     /** The component's specification from the service manifest. */
     spec;
     /** The context of the service this component belongs to. */
@@ -37,11 +40,35 @@ export class BaseComponent extends Construct {
      * @param context Service-wide context including environment, compliance framework
      * @param spec Component specification from the service.yml manifest
      */
-    constructor(scope, id, context, spec, taggingService = defaultTaggingService) {
+    constructor(scope, id, context, spec, taggingService = tagging_service_1.defaultTaggingService) {
         super(scope, id);
         this.context = context;
         this.spec = spec;
         this.taggingService = taggingService;
+    }
+    /**
+     * Returns the component name.
+     */
+    getName() {
+        return this.spec.name;
+    }
+    /**
+     * Returns the component ID.
+     */
+    getId() {
+        return this.node.id;
+    }
+    /**
+     * Returns the service name this component belongs to.
+     */
+    getServiceName() {
+        return this.context.serviceName;
+    }
+    /**
+     * Returns the capability data for this component.
+     */
+    getCapabilityData() {
+        return this.getCapabilities();
     }
     /**
      * Retrieves a handle to a synthesized CDK construct.
@@ -579,5 +606,6 @@ export class BaseComponent extends Construct {
         }
     }
 }
+exports.BaseComponent = BaseComponent;
 // Backwards compatibility export - maintains existing import patterns
-export const Component = BaseComponent;
+exports.Component = BaseComponent;

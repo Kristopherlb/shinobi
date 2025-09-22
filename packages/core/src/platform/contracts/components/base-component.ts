@@ -12,6 +12,8 @@ import { CompliancePlanGenerator, CompliancePlanConfig } from '@shinobi/core';
  * Abstract base component class
  * All Shinobi components must extend this class
  */
+
+export { ComponentContext, IComponent };
 export abstract class BaseComponent implements IComponent {
   protected config: Record<string, any>;
   protected context: ComponentContext;

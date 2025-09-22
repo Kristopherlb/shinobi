@@ -63,3 +63,4 @@ export declare class TaggingService implements ITaggingService {
  * Default tagging service instance
  */
 export declare const defaultTaggingService: TaggingService;
+//# sourceMappingURL=tagging.service.d.ts.map

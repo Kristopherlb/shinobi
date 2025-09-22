@@ -14,21 +14,18 @@
   "files": [
     "dist"
   ],
-  "scripts": {
-    "build": "tsc -p tsconfig.json",
-    "clean": "rimraf dist"
-  },
   "dependencies": {
-    "@shinobi/core": "workspace:*",
     "aws-cdk-lib": "^2.214.0",
     "constructs": "^10.4.2",
-    "source-map-support": "^0.5.21"
+    "@shinobi/core": "workspace:*"
   },
   "peerDependencies": {
     "aws-cdk-lib": ">=2.100.0",
     "constructs": ">=10.0.0"
   },
-  "engines": {
-    "node": ">=18.18"
+  "scripts": {
+    "build": "tsc -p tsconfig.lib.json",
+    "clean": "rimraf dist",
+    "test": "jest -c ../../../../jest.preset.ts --roots=./src"
   }
 }

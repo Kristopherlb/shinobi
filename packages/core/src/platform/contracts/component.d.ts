@@ -7,7 +7,7 @@
  */
 import { Construct, IConstruct } from 'constructs';
 import { ComponentSpec, ComponentContext, ComponentCapabilities, IComponent } from './component-interfaces';
-import { ITaggingService } from '../../../packages/tagging-service/tagging.service';
+import { ITaggingService } from '../services/tagging-service/tagging.service';
 /**
  * Options for configuring observability on components
  */
@@ -104,6 +104,22 @@ export declare abstract class BaseComponent extends Construct implements ICompon
      * @returns string The component type (e.g., 'rds-postgres', 'lambda-api')
      */
     abstract getType(): string;
+    /**
+     * Returns the component name.
+     */
+    getName(): string;
+    /**
+     * Returns the component ID.
+     */
+    getId(): string;
+    /**
+     * Returns the service name this component belongs to.
+     */
+    getServiceName(): string;
+    /**
+     * Returns the capability data for this component.
+     */
+    getCapabilityData(): any;
     /**
      * Retrieves a handle to a synthesized CDK construct.
      *
@@ -279,3 +295,4 @@ export declare abstract class BaseComponent extends Construct implements ICompon
     _getSecurityGroupHandle(role: 'source' | 'target'): any;
 }
 export declare const Component: typeof BaseComponent;
+//# sourceMappingURL=component.d.ts.map

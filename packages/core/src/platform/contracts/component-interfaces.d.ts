@@ -4,8 +4,10 @@
  */
 import { Construct, IConstruct } from 'constructs';
 import { IVpc } from 'aws-cdk-lib/aws-ec2';
+import { BindingContext, BindingResult, IBinderStrategy } from './platform-binding-trigger-spec';
 export { Construct, IConstruct };
 export { IVpc };
+export { BindingContext, BindingResult, IBinderStrategy };
 /**
  * Component specification interface
  */
@@ -14,6 +16,7 @@ export interface ComponentSpec {
     type: string;
     config: Record<string, any>;
     binds?: Array<any>;
+    triggers?: Array<any>;
     labels?: Record<string, string>;
     overrides?: Record<string, any>;
     policy?: Record<string, any>;
@@ -40,16 +43,6 @@ export interface ComponentContext {
     serviceLabels?: Record<string, string>;
 }
 /**
- * Binding context for component connections
- */
-export interface BindingContext {
-    source: IComponent;
-    target: IComponent;
-    directive: any;
-    environment: string;
-    complianceFramework: string;
-}
-/**
  * Core component interface - The Public Contract
  *
  * This is the lean, minimal contract that defines what it means to be a component.
@@ -67,16 +60,18 @@ export interface IComponent extends IConstruct {
     getCapabilities(): ComponentCapabilities;
     /** Returns the component's unique type identifier */
     getType(): string;
+    /** Returns the component name */
+    getName(): string;
+    /** Returns the component ID */
+    getId(): string;
+    /** Returns the service name this component belongs to */
+    getServiceName(): string;
+    /** Returns the capability data for this component */
+    getCapabilityData(): any;
     /** Retrieves a handle to a synthesized CDK construct */
     getConstruct(handle: string): IConstruct | undefined;
     /** Get security group handle for binding operations */
     _getSecurityGroupHandle(role: 'source' | 'target'): any;
-}
-/**
- * Result of component binding operation
- */
-export interface BindingResult {
-    environmentVariables: Record<string, string>;
 }
 /**
  * Component creator interface for Factory Method pattern
@@ -94,13 +89,6 @@ export interface IComponentRegistry {
     getSupportedTypes(): string[];
 }
 /**
- * Binder strategy interface for component connections
- */
-export interface IBinderStrategy {
-    canHandle(sourceType: string, targetCapability: string): boolean;
-    bind(context: BindingContext): BindingResult;
-}
-/**
  * Component factory interface for Abstract Factory pattern
  */
 export interface IComponentFactory {
@@ -109,3 +97,4 @@ export interface IComponentFactory {
     getComplianceFramework(): string;
 }
 export * from './component';
+//# sourceMappingURL=component-interfaces.d.ts.map

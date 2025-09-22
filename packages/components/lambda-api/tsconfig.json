@@ -1,10 +1,46 @@
 {
-  "extends": "../../../tsconfig.base.json",
   "compilerOptions": {
+    "target": "ES2022",
+    "module": "CommonJS",
+    "moduleResolution": "Node",
+    "declaration": true,
+    "outDir": "dist",
     "rootDir": "src",
-    "outDir": "dist"
+    "strict": true,
+    "esModuleInterop": true,
+    "skipLibCheck": true,
+    "baseUrl": ".",
+    "paths": {
+      "@shinobi/core": [
+        "../../../packages/core/src/index.ts"
+      ],
+      "@shinobi/core/*": [
+        "../../../packages/core/src/*"
+      ],
+      "@platform/contracts": [
+        "../../../packages/core/src/platform/contracts/index.ts"
+      ],
+      "@platform/contracts/*": [
+        "../../../packages/core/src/platform/contracts/*"
+      ],
+      "@shinobi/standards-otel/*": [
+        "../../../packages/standards/otel/src"
+      ],
+      "@shinobi/standards-logging/*": [
+        "../../../packages/standards/logging/src"
+      ],
+      "@platform/components/*": [
+        "../../../packages/components/*/src"
+      ],
+      "@platform/constructs/*": [
+        "../../../packages/constructs/*/src"
+      ],
+      "@cdk-lib/*": [
+        "../../../packages/constructs/*/src"
+      ]
+    }
   },
   "include": [
-    "src/**/*"
+    "src/*"
   ]
 }
