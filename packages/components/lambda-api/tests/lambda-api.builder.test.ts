@@ -75,9 +75,9 @@ describe('LambdaApiComponentConfigBuilder', () => {
       // Verify hardcoded fallbacks are applied
       expect(config.runtime?.name).toBe('nodejs20.x');
       expect(config.memorySize).toBe(512);
-      expect(config.timeoutSec).toBe(10);
+      expect(config.timeout).toBe(30);
       expect(config.handler).toBe('src/api.handler');
-      expect(config.environment).toEqual({});
+      expect(config.environmentVariables).toEqual({});
       expect(config.logRetentionDays).toBe(14);
     });
 
@@ -147,7 +147,7 @@ describe('LambdaApiComponentConfigBuilder', () => {
       // Verify component config overrides platform defaults
       expect(config.runtime?.name).toBe('nodejs20.x'); // Runtime is fixed in our implementation
       expect(config.memorySize).toBe(512); // Our implementation doesn't override memorySize from spec
-      expect(config.timeoutSec).toBe(10); // Our implementation uses default timeout
+      expect(config.timeout).toBe(30); // Our implementation uses default timeout
       // Monitoring not implemented in current version
     });
 

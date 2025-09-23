@@ -93,7 +93,7 @@ describe('LambdaApiComponent Synthesis', () => {
       const spec = createMockSpec({
         handler: 'custom.handler',
         memorySize: 1024,
-        timeoutSec: 60
+        timeout: 60
       });
 
       const { component } = synthesizeComponent(context, spec);

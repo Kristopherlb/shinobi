@@ -41,9 +41,9 @@ export interface LambdaApiSpec {
   handler: string;
   runtime?: lambda.Runtime;       // default NODEJS_20_X
   memorySize?: number;            // default 512
-  timeoutSec?: number;            // default 10
+  timeout?: number;               // default 30
   logRetentionDays?: number;      // default 14 (>=30 in fedramp)
-  environment?: Record<string, string>;
+  environmentVariables?: Record<string, string>;
 }
 
 type HttpApiCapability = { url: string; functionArn: string };
@@ -85,7 +85,7 @@ export class LambdaApiComponent extends BaseComponent {
       handler: spec.handler,
       code: lambda.Code.fromAsset("dist/app"),
       memorySize: spec.memorySize ?? 512,
-      timeout: Duration.seconds(spec.timeoutSec ?? 10),
+      timeout: Duration.seconds(spec.timeout ?? 30),
       tracing: lambda.Tracing.ACTIVE,
       environment: {
         // OTel standard envs
@@ -97,7 +97,8 @@ export class LambdaApiComponent extends BaseComponent {
         ]
           .filter(Boolean)
           .join(","),
-        ...(spec.environment ?? {}),
+        // CDK property name: environment maps to our spec.environmentVariables
+        ...(spec.environmentVariables ?? {}),
       },
       logRetention: retention,
     });

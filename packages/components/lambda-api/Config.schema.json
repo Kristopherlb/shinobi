@@ -36,7 +36,7 @@
       ],
       "default": "nodejs20.x"
     },
-    "memory": {
+    "memorySize": {
       "type": "number",
       "description": "Memory allocation in MB",
       "minimum": 128,
@@ -264,7 +264,7 @@
     {
       "handler": "index.handler",
       "runtime": "nodejs20.x",
-      "memory": 512,
+      "memorySize": 512,
       "timeout": 30,
       "api": {
         "cors": true,
@@ -274,7 +274,7 @@
     {
       "handler": "src/handler.lambda_handler",
       "runtime": "python3.11",
-      "memory": 1024,
+      "memorySize": 1024,
       "timeout": 60,
       "environmentVariables": {
         "LOG_LEVEL": "INFO",

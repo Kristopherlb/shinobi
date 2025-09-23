@@ -15,9 +15,9 @@ export const LAMBDA_API_CONFIG_SCHEMA = {
     handler: { type: "string" },
     runtime: { type: "string" },
     memorySize: { type: "number", minimum: 128, maximum: 10240 },
-    timeoutSec: { type: "number", minimum: 1, maximum: 900 },
+    timeout: { type: "number", minimum: 1, maximum: 900 },
     logRetentionDays: { type: "number", minimum: 1, maximum: 3653 },
-    environment: { type: "object", additionalProperties: { type: "string" } }
+    environmentVariables: { type: "object", additionalProperties: { type: "string" } }
   },
   required: ["handler"],
   additionalProperties: false
@@ -30,17 +30,23 @@ export class LambdaApiConfigBuilder {
       handler: "src/api.handler",
       runtime: lambda.Runtime.NODEJS_20_X,
       memorySize: 512,
-      timeoutSec: 10,
+      timeout: 30,
       logRetentionDays: 14,
-      environment: {},
+      environmentVariables: {},
     };
 
     // Compliance defaults
     const isFedramp =
       (ctx.complianceFramework ?? "").startsWith("fedramp");
     if (isFedramp) {
-      // Slightly stricter defaults in fedramp modes
-      base.timeoutSec = Math.max(base.timeoutSec || 10, 10);
+      // FedRAMP compliance requirements
+      if (ctx.complianceFramework === "fedramp-moderate") {
+        base.memorySize = 768;
+        base.timeout = 45;
+      } else if (ctx.complianceFramework === "fedramp-high") {
+        base.memorySize = 1024;
+        base.timeout = 60;
+      }
       base.logRetentionDays = Math.max(base.logRetentionDays || 30, 30);
     }
 
@@ -48,7 +54,10 @@ export class LambdaApiConfigBuilder {
     return {
       ...base,
       ...input,
-      environment: { ...(base.environment ?? {}), ...(input.environment ?? {}) },
+      environmentVariables: {
+        ...(base.environmentVariables ?? {}),
+        ...(input.environmentVariables ?? {})
+      },
     };
   }
 
