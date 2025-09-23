@@ -57,7 +57,7 @@ describe('CloudFrontBinderStrategy', () => {
 
   beforeEach(() => {
     strategy = new CloudFrontBinderStrategy();
-    
+
     mockSourceComponent = {
       addToRolePolicy: jest.fn(),
       addEnvironment: jest.fn()
@@ -158,7 +158,7 @@ describe('CloudFrontBinderStrategy', () => {
   describe('Bind__CloudFrontDistributionCapability__ConfiguresDistributionAccess', () => {
     test('should configure read access for distribution', async () => {
       const readOnlyBinding = { ...mockBinding, access: ['read'] };
-      
+
       await strategy.bind(mockSourceComponent, mockTargetComponent, readOnlyBinding, mockContext);
 
       expect(mockSourceComponent.addToRolePolicy).toHaveBeenCalledWith({
@@ -173,7 +173,7 @@ describe('CloudFrontBinderStrategy', () => {
 
     test('should configure write access for distribution', async () => {
       const writeOnlyBinding = { ...mockBinding, access: ['write'] };
-      
+
       await strategy.bind(mockSourceComponent, mockTargetComponent, writeOnlyBinding, mockContext);
 
       expect(mockSourceComponent.addToRolePolicy).toHaveBeenCalledWith({
@@ -202,7 +202,7 @@ describe('CloudFrontBinderStrategy', () => {
   describe('Bind__CloudFrontOriginCapability__ConfiguresOriginAccess', () => {
     test('should configure read access for origin', async () => {
       const originBinding = { ...mockBinding, capability: 'cloudfront:origin', access: ['read'] };
-      
+
       await strategy.bind(mockSourceComponent, mockTargetComponent, originBinding, mockContext);
 
       expect(mockSourceComponent.addToRolePolicy).toHaveBeenCalledWith({
@@ -217,7 +217,7 @@ describe('CloudFrontBinderStrategy', () => {
 
     test('should configure write access for origin', async () => {
       const originBinding = { ...mockBinding, capability: 'cloudfront:origin', access: ['write'] };
-      
+
       await strategy.bind(mockSourceComponent, mockTargetComponent, originBinding, mockContext);
 
       expect(mockSourceComponent.addToRolePolicy).toHaveBeenCalledWith({
@@ -232,7 +232,7 @@ describe('CloudFrontBinderStrategy', () => {
 
     test('should inject origin environment variables', async () => {
       const originBinding = { ...mockBinding, capability: 'cloudfront:origin' };
-      
+
       await strategy.bind(mockSourceComponent, mockTargetComponent, originBinding, mockContext);
 
       expect(mockSourceComponent.addEnvironment).toHaveBeenCalledWith('CLOUDFRONT_ORIGIN_DOMAIN', mockTargetComponent.originDomainName);
@@ -244,7 +244,7 @@ describe('CloudFrontBinderStrategy', () => {
   describe('Bind__CloudFrontCacheBehaviorCapability__ConfiguresCacheBehaviorAccess', () => {
     test('should configure read access for cache behavior', async () => {
       const cacheBinding = { ...mockBinding, capability: 'cloudfront:cache-behavior', access: ['read'] };
-      
+
       await strategy.bind(mockSourceComponent, mockTargetComponent, cacheBinding, mockContext);
 
       expect(mockSourceComponent.addToRolePolicy).toHaveBeenCalledWith({
@@ -259,7 +259,7 @@ describe('CloudFrontBinderStrategy', () => {
 
     test('should configure write access for cache behavior', async () => {
       const cacheBinding = { ...mockBinding, capability: 'cloudfront:cache-behavior', access: ['write'] };
-      
+
       await strategy.bind(mockSourceComponent, mockTargetComponent, cacheBinding, mockContext);
 
       expect(mockSourceComponent.addToRolePolicy).toHaveBeenCalledWith({
@@ -274,7 +274,7 @@ describe('CloudFrontBinderStrategy', () => {
 
     test('should inject cache behavior environment variables', async () => {
       const cacheBinding = { ...mockBinding, capability: 'cloudfront:cache-behavior' };
-      
+
       await strategy.bind(mockSourceComponent, mockTargetComponent, cacheBinding, mockContext);
 
       expect(mockSourceComponent.addEnvironment).toHaveBeenCalledWith('CLOUDFRONT_VIEWER_PROTOCOL_POLICY', mockTargetComponent.viewerProtocolPolicy);
@@ -290,7 +290,7 @@ describe('CloudFrontBinderStrategy', () => {
   describe('Bind__EmptyAccessArray__ThrowsError', () => {
     test('should throw error when access array is empty', async () => {
       const emptyAccessBinding = { ...mockBinding, access: [] };
-      
+
       await expect(strategy.bind(mockSourceComponent, mockTargetComponent, emptyAccessBinding, mockContext))
         .rejects.toThrow('Access array cannot be empty for CloudFront binding');
     });
@@ -299,7 +299,7 @@ describe('CloudFrontBinderStrategy', () => {
   describe('Bind__InvalidAccessType__ThrowsError', () => {
     test('should throw error for invalid access type', async () => {
       const invalidAccessBinding = { ...mockBinding, access: ['invalid'] };
-      
+
       await expect(strategy.bind(mockSourceComponent, mockTargetComponent, invalidAccessBinding, mockContext))
         .rejects.toThrow('Invalid access types for CloudFront binding: invalid. Valid types: read, write, admin, invalidate');
     });

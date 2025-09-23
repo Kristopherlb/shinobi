@@ -113,14 +113,14 @@ describe('EfsBinderStrategy', () => {
 
   describe('Bind__NullBinding__ThrowsError', () => {
     test('should throw error when binding is null', async () => {
-      await expect(strategy.bind(mockSourceComponent, mockTargetComponent, null, mockContext))
+      await expect(strategy.bind(mockSourceComponent, mockTargetComponent, null as any, mockContext))
         .rejects.toThrow('Binding is required for EFS binding');
     });
   });
 
   describe('Bind__NullContext__ThrowsError', () => {
     test('should throw error when context is null', async () => {
-      await expect(strategy.bind(mockSourceComponent, mockTargetComponent, mockBinding, null))
+      await expect(strategy.bind(mockSourceComponent, mockTargetComponent, mockBinding, null as any))
         .rejects.toThrow('Context is required for EFS binding');
     });
   });
@@ -135,7 +135,7 @@ describe('EfsBinderStrategy', () => {
 
   describe('Bind__MissingAccess__ThrowsError', () => {
     test('should throw error when access is missing', async () => {
-      const invalidBinding = { ...mockBinding, access: undefined };
+      const invalidBinding = { ...mockBinding, access: undefined as any };
       await expect(strategy.bind(mockSourceComponent, mockTargetComponent, invalidBinding, mockContext))
         .rejects.toThrow('Binding access is required');
     });

@@ -57,7 +57,7 @@ describe('IoTCoreBinderStrategy', () => {
 
   beforeEach(() => {
     strategy = new IoTCoreBinderStrategy();
-    
+
     mockSourceComponent = {
       addToRolePolicy: jest.fn(),
       addEnvironment: jest.fn()
@@ -155,7 +155,7 @@ describe('IoTCoreBinderStrategy', () => {
   describe('Bind__IoTThingCapability__ConfiguresThingAccess', () => {
     test('should configure read access for thing', async () => {
       const readOnlyBinding = { ...mockBinding, access: ['read'] };
-      
+
       await strategy.bind(mockSourceComponent, mockTargetComponent, readOnlyBinding, mockContext);
 
       expect(mockSourceComponent.addToRolePolicy).toHaveBeenCalledWith({
@@ -170,7 +170,7 @@ describe('IoTCoreBinderStrategy', () => {
 
     test('should configure write access for thing', async () => {
       const writeOnlyBinding = { ...mockBinding, access: ['write'] };
-      
+
       await strategy.bind(mockSourceComponent, mockTargetComponent, writeOnlyBinding, mockContext);
 
       expect(mockSourceComponent.addToRolePolicy).toHaveBeenCalledWith({
@@ -198,7 +198,7 @@ describe('IoTCoreBinderStrategy', () => {
   describe('Bind__IoTCertificateCapability__ConfiguresCertificateAccess', () => {
     test('should configure read access for certificate', async () => {
       const certBinding = { ...mockBinding, capability: 'iot:certificate', access: ['read'] };
-      
+
       await strategy.bind(mockSourceComponent, mockTargetComponent, certBinding, mockContext);
 
       expect(mockSourceComponent.addToRolePolicy).toHaveBeenCalledWith({
@@ -213,7 +213,7 @@ describe('IoTCoreBinderStrategy', () => {
 
     test('should configure write access for certificate', async () => {
       const certBinding = { ...mockBinding, capability: 'iot:certificate', access: ['write'] };
-      
+
       await strategy.bind(mockSourceComponent, mockTargetComponent, certBinding, mockContext);
 
       expect(mockSourceComponent.addToRolePolicy).toHaveBeenCalledWith({
@@ -228,7 +228,7 @@ describe('IoTCoreBinderStrategy', () => {
 
     test('should inject certificate environment variables', async () => {
       const certBinding = { ...mockBinding, capability: 'iot:certificate' };
-      
+
       await strategy.bind(mockSourceComponent, mockTargetComponent, certBinding, mockContext);
 
       expect(mockSourceComponent.addEnvironment).toHaveBeenCalledWith('IOT_CERTIFICATE_ID', mockTargetComponent.certificateId);
@@ -239,7 +239,7 @@ describe('IoTCoreBinderStrategy', () => {
   describe('Bind__IoTPolicyCapability__ConfiguresPolicyAccess', () => {
     test('should configure read access for policy', async () => {
       const policyBinding = { ...mockBinding, capability: 'iot:policy', access: ['read'] };
-      
+
       await strategy.bind(mockSourceComponent, mockTargetComponent, policyBinding, mockContext);
 
       expect(mockSourceComponent.addToRolePolicy).toHaveBeenCalledWith({
@@ -254,7 +254,7 @@ describe('IoTCoreBinderStrategy', () => {
 
     test('should configure write access for policy', async () => {
       const policyBinding = { ...mockBinding, capability: 'iot:policy', access: ['write'] };
-      
+
       await strategy.bind(mockSourceComponent, mockTargetComponent, policyBinding, mockContext);
 
       expect(mockSourceComponent.addToRolePolicy).toHaveBeenCalledWith({
@@ -270,7 +270,7 @@ describe('IoTCoreBinderStrategy', () => {
 
     test('should inject policy environment variables', async () => {
       const policyBinding = { ...mockBinding, capability: 'iot:policy' };
-      
+
       await strategy.bind(mockSourceComponent, mockTargetComponent, policyBinding, mockContext);
 
       expect(mockSourceComponent.addEnvironment).toHaveBeenCalledWith('IOT_POLICY_NAME', mockTargetComponent.policyName);
@@ -281,7 +281,7 @@ describe('IoTCoreBinderStrategy', () => {
   describe('Bind__IoTTopicCapability__ConfiguresTopicAccess', () => {
     test('should configure read access for topic', async () => {
       const topicBinding = { ...mockBinding, capability: 'iot:topic', access: ['read'] };
-      
+
       await strategy.bind(mockSourceComponent, mockTargetComponent, topicBinding, mockContext);
 
       expect(mockSourceComponent.addToRolePolicy).toHaveBeenCalledWith({
@@ -295,7 +295,7 @@ describe('IoTCoreBinderStrategy', () => {
 
     test('should configure write access for topic', async () => {
       const topicBinding = { ...mockBinding, capability: 'iot:topic', access: ['write'] };
-      
+
       await strategy.bind(mockSourceComponent, mockTargetComponent, topicBinding, mockContext);
 
       expect(mockSourceComponent.addToRolePolicy).toHaveBeenCalledWith({
@@ -310,7 +310,7 @@ describe('IoTCoreBinderStrategy', () => {
 
     test('should inject topic environment variables', async () => {
       const topicBinding = { ...mockBinding, capability: 'iot:topic' };
-      
+
       await strategy.bind(mockSourceComponent, mockTargetComponent, topicBinding, mockContext);
 
       expect(mockSourceComponent.addEnvironment).toHaveBeenCalledWith('IOT_TOPIC_NAME', mockTargetComponent.topicName);
@@ -321,7 +321,7 @@ describe('IoTCoreBinderStrategy', () => {
   describe('Bind__IoTRuleCapability__ConfiguresRuleAccess', () => {
     test('should configure read access for rule', async () => {
       const ruleBinding = { ...mockBinding, capability: 'iot:rule', access: ['read'] };
-      
+
       await strategy.bind(mockSourceComponent, mockTargetComponent, ruleBinding, mockContext);
 
       expect(mockSourceComponent.addToRolePolicy).toHaveBeenCalledWith({
@@ -336,7 +336,7 @@ describe('IoTCoreBinderStrategy', () => {
 
     test('should configure write access for rule', async () => {
       const ruleBinding = { ...mockBinding, capability: 'iot:rule', access: ['write'] };
-      
+
       await strategy.bind(mockSourceComponent, mockTargetComponent, ruleBinding, mockContext);
 
       expect(mockSourceComponent.addToRolePolicy).toHaveBeenCalledWith({
@@ -352,7 +352,7 @@ describe('IoTCoreBinderStrategy', () => {
 
     test('should inject rule environment variables', async () => {
       const ruleBinding = { ...mockBinding, capability: 'iot:rule' };
-      
+
       await strategy.bind(mockSourceComponent, mockTargetComponent, ruleBinding, mockContext);
 
       expect(mockSourceComponent.addEnvironment).toHaveBeenCalledWith('IOT_RULE_NAME', mockTargetComponent.ruleName);
@@ -366,7 +366,7 @@ describe('IoTCoreBinderStrategy', () => {
   describe('Bind__EmptyAccessArray__ThrowsError', () => {
     test('should throw error when access array is empty', async () => {
       const emptyAccessBinding = { ...mockBinding, access: [] };
-      
+
       await expect(strategy.bind(mockSourceComponent, mockTargetComponent, emptyAccessBinding, mockContext))
         .rejects.toThrow('Access array cannot be empty for IoT Core binding');
     });
@@ -375,7 +375,7 @@ describe('IoTCoreBinderStrategy', () => {
   describe('Bind__InvalidAccessType__ThrowsError', () => {
     test('should throw error for invalid access type', async () => {
       const invalidAccessBinding = { ...mockBinding, access: ['invalid'] };
-      
+
       await expect(strategy.bind(mockSourceComponent, mockTargetComponent, invalidAccessBinding, mockContext))
         .rejects.toThrow('Invalid access types for IoT Core binding: invalid. Valid types: read, write, admin, connect, publish, subscribe');
     });
