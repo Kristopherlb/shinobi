@@ -5,7 +5,7 @@
  * Component override > Environment > Platform > Compliance > Hardcoded defaults
  */
 
-import { ConfigBuilder, ComponentContext, ComponentSpec } from '@platform/core-engine';
+import { ConfigBuilder, ComponentContext, ComponentSpec } from '@platform/core';
 
 /**
  * Configuration interface for Backstage Portal Component

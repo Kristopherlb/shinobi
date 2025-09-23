@@ -4,6 +4,14 @@ import { LambdaApiSpec } from "./lambda-api.component";
 type BuilderContext = {
   complianceFramework?: string;     // "commercial" | "fedramp-moderate" | "fedramp-high" | etc.
   environment?: string;             // e.g. "dev-us-east-1"
+  observability?: {
+    collectorEndpoint?: string;
+    adotLayerArn?: string;
+    adotLayerArnMap?: Record<string, string>;
+    enableTracing?: boolean;
+    enableMetrics?: boolean;
+    enableLogs?: boolean;
+  };
 };
 
 // Export types and schema for external use
@@ -20,6 +28,9 @@ export class LambdaApiConfigBuilder {
       timeout: 30,
       logRetentionDays: 14,
       environmentVariables: {},
+      codePath: "./src",
+      useInlineFallback: true,
+      apiType: "rest",
     };
 
     // Compliance defaults

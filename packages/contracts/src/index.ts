@@ -9,8 +9,14 @@ export interface ComponentContext {
   account?: string; // Legacy property for backward compatibility
   region?: string;
   scope: any; // CDK Construct scope - required
+  vpc?: any; // VPC construct for components that need it
   observability?: {
     collectorEndpoint?: string;
+    adotLayerArn?: string;
+    adotLayerArnMap?: Record<string, string>;
+    enableTracing?: boolean;
+    enableMetrics?: boolean;
+    enableLogs?: boolean;
   };
   tags?: Record<string, string>;
 }

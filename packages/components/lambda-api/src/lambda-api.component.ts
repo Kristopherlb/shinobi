@@ -11,6 +11,8 @@ import {
 } from "aws-cdk-lib";
 import { ComponentSpec, ComponentCapabilities, ComponentContext } from "@platform/contracts";
 import { BaseComponent } from "@shinobi/core";
+import * as path from "path";
+import * as fs from "fs";
 
 export interface LambdaApiSpec {
   /** e.g. "src/api.handler" */
@@ -20,6 +22,14 @@ export interface LambdaApiSpec {
   timeout?: number;               // default 30
   logRetentionDays?: number;      // default 14 (>=30 in fedramp)
   environmentVariables?: Record<string, string>;
+  /** Path to Lambda function code directory or file */
+  codePath?: string;              // default "./src"
+  /** Asset hash for code changes detection */
+  codeAssetHash?: string;         // optional for cache busting
+  /** Use inline code as fallback when codePath is not available */
+  useInlineFallback?: boolean;    // default true
+  /** API Gateway type: 'rest' or 'http' */
+  apiType?: 'rest' | 'http';      // default 'rest'
 }
 
 type HttpApiCapability = { url: string; functionArn: string };
@@ -36,6 +46,204 @@ export class LambdaApiComponent extends BaseComponent {
 
   private get typedSpec(): LambdaApiSpec {
     return this.spec.config as LambdaApiSpec;
+  }
+
+  /**
+   * Loads Lambda function code from the specified path or falls back to inline code
+   */
+  private loadLambdaCode(): lambda.Code {
+    const spec = this.typedSpec;
+    const codePath = spec.codePath ?? "./src";
+    const useInlineFallback = spec.useInlineFallback ?? true;
+
+    try {
+      // Check if codePath exists and is accessible
+      const fullPath = path.resolve(codePath);
+      if (fs.existsSync(fullPath)) {
+        const stats = fs.statSync(fullPath);
+
+        if (stats.isDirectory()) {
+          // Directory path - use fromAsset
+          return lambda.Code.fromAsset(fullPath, {
+            assetHash: spec.codeAssetHash
+          });
+        } else if (stats.isFile()) {
+          // File path - use fromAsset with the directory containing the file
+          return lambda.Code.fromAsset(path.dirname(fullPath), {
+            assetHash: spec.codeAssetHash
+          });
+        }
+      }
+
+      // If we reach here, the path doesn't exist or is invalid
+      if (useInlineFallback) {
+        console.warn(`Lambda code path '${codePath}' not found, falling back to inline code`);
+        return this.getInlineFallbackCode();
+      } else {
+        throw new Error(`Lambda code path '${codePath}' not found and inline fallback is disabled`);
+      }
+    } catch (error) {
+      if (useInlineFallback) {
+        console.warn(`Error loading Lambda code from '${codePath}': ${error}, falling back to inline code`);
+        return this.getInlineFallbackCode();
+      } else {
+        throw new Error(`Failed to load Lambda code from '${codePath}': ${error}`);
+      }
+    }
+  }
+
+  /**
+   * Attaches observability layer (ADOT) to the Lambda function if configured
+   */
+  private attachObservabilityLayer(fn: lambda.Function, region: string): void {
+    const observability = this.context.observability;
+
+    if (!observability) {
+      console.warn('No observability configuration provided - ADOT layer will not be attached');
+      return;
+    }
+
+    // Check if observability is enabled
+    const isObservabilityEnabled =
+      observability.enableTracing !== false &&
+      observability.enableMetrics !== false &&
+      observability.enableLogs !== false;
+
+    if (!isObservabilityEnabled) {
+      console.log('Observability disabled - ADOT layer will not be attached');
+      return;
+    }
+
+    // Get ADOT layer ARN from context
+    const adotLayerArn = this.getAdotLayerArn(region);
+
+    if (!adotLayerArn) {
+      console.warn(`No ADOT layer ARN found for region ${region} - observability layer will not be attached`);
+      return;
+    }
+
+    try {
+      fn.addLayers(
+        lambda.LayerVersion.fromLayerVersionArn(this, "AdotLayer", adotLayerArn)
+      );
+      console.log(`ADOT layer attached successfully: ${adotLayerArn}`);
+    } catch (error) {
+      console.error(`Failed to attach ADOT layer: ${error}`);
+      // Don't throw - observability is optional
+    }
+  }
+
+  /**
+   * Gets the appropriate ADOT layer ARN for the given region
+   */
+  private getAdotLayerArn(region: string): string | undefined {
+    const observability = this.context.observability;
+
+    if (!observability) {
+      return undefined;
+    }
+
+    // Try region-specific ARN first, then fallback to global ARN
+    return observability.adotLayerArnMap?.[region] ?? observability.adotLayerArn;
+  }
+
+  /**
+   * Provides a more realistic inline fallback code that can handle basic API requests
+   */
+  private getInlineFallbackCode(): lambda.Code {
+    return lambda.Code.fromInline(`
+      const { APIGatewayProxyEvent, APIGatewayProxyResult } = require('aws-lambda');
+
+      exports.handler = async (event) => {
+        console.log('Received event:', JSON.stringify(event, null, 2));
+        
+        try {
+          // Basic CORS headers
+          const headers = {
+            'Content-Type': 'application/json',
+            'Access-Control-Allow-Origin': '*',
+            'Access-Control-Allow-Headers': 'Content-Type,X-Amz-Date,Authorization,X-Api-Key,X-Amz-Security-Token',
+            'Access-Control-Allow-Methods': 'GET,POST,PUT,DELETE,OPTIONS'
+          };
+
+          // Handle preflight OPTIONS requests
+          if (event.httpMethod === 'OPTIONS') {
+            return {
+              statusCode: 200,
+              headers,
+              body: ''
+            };
+          }
+
+          // Basic routing based on HTTP method and path
+          const method = event.httpMethod;
+          const path = event.path || '/';
+          
+          let response;
+          
+          switch (method) {
+            case 'GET':
+              if (path === '/health' || path === '/') {
+                response = {
+                  status: 'healthy',
+                  timestamp: new Date().toISOString(),
+                  service: process.env.OTEL_SERVICE_NAME || 'lambda-api',
+                  environment: process.env.OTEL_RESOURCE_ATTRIBUTES || 'unknown'
+                };
+              } else {
+                response = {
+                  message: 'Hello from Lambda API!',
+                  method: 'GET',
+                  path: path,
+                  queryParams: event.queryStringParameters || {}
+                };
+              }
+              break;
+              
+            case 'POST':
+            case 'PUT':
+              response = {
+                message: 'Request received',
+                method: method,
+                path: path,
+                body: event.body ? JSON.parse(event.body) : null,
+                timestamp: new Date().toISOString()
+              };
+              break;
+              
+            default:
+              response = {
+                message: 'Method not supported',
+                method: method,
+                path: path,
+                supportedMethods: ['GET', 'POST', 'PUT', 'OPTIONS']
+              };
+          }
+
+          return {
+            statusCode: 200,
+            headers,
+            body: JSON.stringify(response)
+          };
+          
+        } catch (error) {
+          console.error('Error processing request:', error);
+          
+          return {
+            statusCode: 500,
+            headers: {
+              'Content-Type': 'application/json',
+              'Access-Control-Allow-Origin': '*'
+            },
+            body: JSON.stringify({
+              error: 'Internal server error',
+              message: error.message,
+              timestamp: new Date().toISOString()
+            })
+          };
+        }
+      };
+    `);
   }
 
   synth(): void {
@@ -55,21 +263,18 @@ export class LambdaApiComponent extends BaseComponent {
       functionName: `${this.context.serviceName}-${this.node.id}`,
       runtime: spec.runtime ?? lambda.Runtime.NODEJS_20_X,
       handler: spec.handler,
-      code: lambda.Code.fromInline(`
-        exports.handler = async (event) => {
-          return { statusCode: 200, body: JSON.stringify({ message: 'Hello from Lambda!' }) };
-        };
-      `),
+      code: this.loadLambdaCode(),
       memorySize: spec.memorySize ?? 512,
       timeout: Duration.seconds(spec.timeout ?? 30),
       tracing: lambda.Tracing.ACTIVE,
       environment: {
         // OTel standard envs
-        OTEL_EXPORTER_OTLP_ENDPOINT: (this.context as any).otelCollectorEndpoint ?? "",
+        OTEL_EXPORTER_OTLP_ENDPOINT: this.context.observability?.collectorEndpoint ?? "",
         OTEL_SERVICE_NAME: this.context.serviceName,
         OTEL_RESOURCE_ATTRIBUTES: [
           this.context.environment ? `env=${this.context.environment}` : undefined,
-          (this.context as any).owner ? `owner=${(this.context as any).owner}` : undefined,
+          this.context.owner ? `owner=${this.context.owner}` : undefined,
+          this.context.complianceFramework ? `compliance=${this.context.complianceFramework}` : undefined,
         ]
           .filter(Boolean)
           .join(","),
@@ -79,15 +284,8 @@ export class LambdaApiComponent extends BaseComponent {
       logRetention: retention,
     });
 
-    // Optionally attach ADOT Lambda Layer if provided via context
-    const adotLayerArn =
-      (this.context as any)?.adotLayerArnMap?.[region] ??
-      (this.context as any)?.adotLayerArn;
-    if (adotLayerArn) {
-      fn.addLayers(
-        lambda.LayerVersion.fromLayerVersionArn(this, "AdotLayer", adotLayerArn)
-      );
-    }
+    // Attach ADOT Lambda Layer if observability is configured
+    this.attachObservabilityLayer(fn, region);
 
     // API Gateway (REST proxy to Lambda)
     const api = new apigw.RestApi(this, "RestApi", {

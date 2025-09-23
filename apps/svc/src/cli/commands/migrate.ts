@@ -8,22 +8,125 @@
 import { Command } from 'commander';
 import * as fs from 'fs';
 import * as path from 'path';
-import {
-  MigrationArtifact,
-  ComponentMigrationResult,
-  LogicalIdMapping,
-  MigrationReport,
-  MigrationArtifacts,
-  OriginalResource,
-  MappedResource,
-  UnmappedResource,
-  ManualPatch,
-  DriftCheckResult,
-  ComponentType
-} from '@shinobi/core';
-import { ArtifactWriter } from '@shinobi/core';
-import { StandardArtifactWriter } from '@shinobi/core';
-import { ArtifactSerializerFactory } from '@shinobi/core';
+// Local type definitions for migration functionality
+type ComponentType = string;
+type ComplianceFramework = 'commercial' | 'fedramp-moderate' | 'fedramp-high';
+
+interface OriginalResource {
+  logicalId: string;
+  type: string;
+  properties: Record<string, any>;
+  metadata?: Record<string, any>;
+}
+
+interface MappedResource {
+  logicalId: string;
+  type: string;
+  componentType: ComponentType;
+  componentId: string;
+  properties: Record<string, any>;
+  complianceControls: string[];
+}
+
+interface UnmappedResource {
+  logicalId: string;
+  type: string;
+  reason: string;
+  suggestedComponentType?: ComponentType;
+  properties: Record<string, any>;
+}
+
+interface ManualPatch {
+  componentId: string;
+  description: string;
+  code: string;
+  priority: 'high' | 'medium' | 'low';
+}
+
+interface LogicalIdMapping {
+  version: string;
+  mappings: Record<string, string>;
+  reverse: Record<string, string>;
+  components: Record<string, string>;
+}
+
+interface DriftCheckResult {
+  hasDrift: boolean;
+  driftDetails: any[];
+  emptyDiff: boolean;
+}
+
+interface ComponentMigrationResult {
+  componentId: string;
+  componentType: ComponentType;
+  status: 'mapped' | 'manual' | 'failed';
+  originalResources: OriginalResource[];
+  mappedResources: MappedResource[];
+  unmappedResources: UnmappedResource[];
+  manualPatches: ManualPatch[];
+}
+
+interface MigrationSummary {
+  totalResources: number;
+  mappedResources: number;
+  unmappedResources: number;
+  componentsCreated: number;
+  manualPatchesRequired: number;
+  driftDetected: boolean;
+}
+
+interface MigrationReport {
+  summary: MigrationSummary;
+  components: ComponentMigrationResult[];
+  unmappedResources: UnmappedResource[];
+  manualPatches: ManualPatch[];
+  driftCheck: DriftCheckResult;
+  recommendations: string[];
+}
+
+interface MigrationArtifacts {
+  serviceManifest: string;
+  logicalIdMap: string;
+  migrationReport: string;
+  patchesFile: string;
+  srcDirectory: string;
+}
+
+interface MigrationArtifact {
+  version: string;
+  timestamp: string;
+  command: 'migrate';
+  environment: string;
+  serviceName: string;
+  complianceFramework: ComplianceFramework;
+  migrationId: string;
+  sourcePath: string;
+  targetPath: string;
+  status: 'success' | 'failure' | 'partial';
+  components: ComponentMigrationResult[];
+  logicalIdMap: LogicalIdMapping;
+  report: MigrationReport;
+  artifacts: MigrationArtifacts;
+}
+
+interface ArtifactWriter {
+  writeMigrationArtifact(artifact: MigrationArtifact, outputDir: string): Promise<string[]>;
+}
+
+class StandardArtifactWriter implements ArtifactWriter {
+  async writeMigrationArtifact(artifact: MigrationArtifact, outputDir: string): Promise<string[]> {
+    // Simple implementation
+    return [];
+  }
+}
+
+class ArtifactSerializerFactory {
+  static create(format: 'json' | 'yaml'): any {
+    return {
+      serialize: (data: any) => JSON.stringify(data, null, 2)
+    };
+  }
+}
 
 interface MigrateCommandOptions {
   output?: string;

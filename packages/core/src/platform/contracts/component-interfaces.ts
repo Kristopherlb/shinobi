@@ -49,6 +49,16 @@ export interface ComponentContext {
   region?: string;
   accountId?: string;
   serviceLabels?: Record<string, string>;
+  owner?: string;
+  observability?: {
+    collectorEndpoint?: string;
+    adotLayerArn?: string;
+    adotLayerArnMap?: Record<string, string>;
+    enableTracing?: boolean;
+    enableMetrics?: boolean;
+    enableLogs?: boolean;
+  };
+  tags?: Record<string, string>;
 }
 
 

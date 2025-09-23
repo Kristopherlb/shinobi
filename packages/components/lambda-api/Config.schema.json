@@ -53,12 +53,40 @@
     },
     "codePath": {
       "type": "string",
-      "description": "Path to Lambda function code",
+      "description": "Path to Lambda function code directory or file",
       "default": "./src",
       "examples": [
         "./src",
         "./dist",
-        "./lambda"
+        "./lambda",
+        "./src/index.js"
+      ]
+    },
+    "codeAssetHash": {
+      "type": "string",
+      "description": "Asset hash for code changes detection and cache busting",
+      "examples": [
+        "abc123def456",
+        "v1.0.0",
+        "2024-01-15"
+      ]
+    },
+    "useInlineFallback": {
+      "type": "boolean",
+      "description": "Use inline code as fallback when codePath is not available",
+      "default": true
+    },
+    "apiType": {
+      "type": "string",
+      "description": "API Gateway type",
+      "enum": [
+        "rest",
+        "http"
+      ],
+      "default": "rest",
+      "examples": [
+        "rest",
+        "http"
       ]
     },
     "environmentVariables": {

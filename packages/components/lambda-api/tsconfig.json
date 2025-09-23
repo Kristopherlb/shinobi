@@ -23,7 +23,11 @@
       "@platform/contracts/*": [
         "../../../packages/contracts/src/*"
       ]
-    }
+    },
+    "typeRoots": [
+      "../../../node_modules/@types",
+      "../../../packages/contracts/src"
+    ]
   },
   "include": [
     "index.ts",
