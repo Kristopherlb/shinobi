@@ -57,7 +57,7 @@ describe('AmplifyBinderStrategy', () => {
 
   beforeEach(() => {
     strategy = new AmplifyBinderStrategy();
-    
+
     mockSourceComponent = {
       addToRolePolicy: jest.fn(),
       addEnvironment: jest.fn()
@@ -153,7 +153,7 @@ describe('AmplifyBinderStrategy', () => {
   describe('Bind__AmplifyAppCapability__ConfiguresAppAccess', () => {
     test('should configure read access for app', async () => {
       const readOnlyBinding = { ...mockBinding, access: ['read'] };
-      
+
       await strategy.bind(mockSourceComponent, mockTargetComponent, readOnlyBinding, mockContext);
 
       expect(mockSourceComponent.addToRolePolicy).toHaveBeenCalledWith({
@@ -168,7 +168,7 @@ describe('AmplifyBinderStrategy', () => {
 
     test('should configure write access for app', async () => {
       const writeOnlyBinding = { ...mockBinding, access: ['write'] };
-      
+
       await strategy.bind(mockSourceComponent, mockTargetComponent, writeOnlyBinding, mockContext);
 
       expect(mockSourceComponent.addToRolePolicy).toHaveBeenCalledWith({
@@ -200,7 +200,7 @@ describe('AmplifyBinderStrategy', () => {
   describe('Bind__AmplifyBranchCapability__ConfiguresBranchAccess', () => {
     test('should configure read access for branch', async () => {
       const branchBinding = { ...mockBinding, capability: 'amplify:branch', access: ['read'] };
-      
+
       await strategy.bind(mockSourceComponent, mockTargetComponent, branchBinding, mockContext);
 
       expect(mockSourceComponent.addToRolePolicy).toHaveBeenCalledWith({
@@ -215,7 +215,7 @@ describe('AmplifyBinderStrategy', () => {
 
     test('should configure write access for branch', async () => {
       const branchBinding = { ...mockBinding, capability: 'amplify:branch', access: ['write'] };
-      
+
       await strategy.bind(mockSourceComponent, mockTargetComponent, branchBinding, mockContext);
 
       expect(mockSourceComponent.addToRolePolicy).toHaveBeenCalledWith({
@@ -231,7 +231,7 @@ describe('AmplifyBinderStrategy', () => {
 
     test('should inject branch environment variables', async () => {
       const branchBinding = { ...mockBinding, capability: 'amplify:branch' };
-      
+
       await strategy.bind(mockSourceComponent, mockTargetComponent, branchBinding, mockContext);
 
       expect(mockSourceComponent.addEnvironment).toHaveBeenCalledWith('AMPLIFY_BRANCH_NAME', mockTargetComponent.branch);
@@ -243,7 +243,7 @@ describe('AmplifyBinderStrategy', () => {
   describe('Bind__AmplifyDomainCapability__ConfiguresDomainAccess', () => {
     test('should configure read access for domain', async () => {
       const domainBinding = { ...mockBinding, capability: 'amplify:domain', access: ['read'] };
-      
+
       await strategy.bind(mockSourceComponent, mockTargetComponent, domainBinding, mockContext);
 
       expect(mockSourceComponent.addToRolePolicy).toHaveBeenCalledWith({
@@ -258,7 +258,7 @@ describe('AmplifyBinderStrategy', () => {
 
     test('should configure write access for domain', async () => {
       const domainBinding = { ...mockBinding, capability: 'amplify:domain', access: ['write'] };
-      
+
       await strategy.bind(mockSourceComponent, mockTargetComponent, domainBinding, mockContext);
 
       expect(mockSourceComponent.addToRolePolicy).toHaveBeenCalledWith({
@@ -274,7 +274,7 @@ describe('AmplifyBinderStrategy', () => {
 
     test('should inject domain environment variables', async () => {
       const domainBinding = { ...mockBinding, capability: 'amplify:domain' };
-      
+
       await strategy.bind(mockSourceComponent, mockTargetComponent, domainBinding, mockContext);
 
       expect(mockSourceComponent.addEnvironment).toHaveBeenCalledWith('AMPLIFY_CUSTOM_DOMAIN', mockTargetComponent.customDomain);
@@ -284,7 +284,7 @@ describe('AmplifyBinderStrategy', () => {
   describe('Bind__EmptyAccessArray__ThrowsError', () => {
     test('should throw error when access array is empty', async () => {
       const emptyAccessBinding = { ...mockBinding, access: [] };
-      
+
       await expect(strategy.bind(mockSourceComponent, mockTargetComponent, emptyAccessBinding, mockContext))
         .rejects.toThrow('Access array cannot be empty for Amplify binding');
     });
@@ -293,7 +293,7 @@ describe('AmplifyBinderStrategy', () => {
   describe('Bind__InvalidAccessType__ThrowsError', () => {
     test('should throw error for invalid access type', async () => {
       const invalidAccessBinding = { ...mockBinding, access: ['invalid'] };
-      
+
       await expect(strategy.bind(mockSourceComponent, mockTargetComponent, invalidAccessBinding, mockContext))
         .rejects.toThrow('Invalid access types for Amplify binding: invalid. Valid types: read, write, admin, deploy');
     });

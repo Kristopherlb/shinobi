@@ -57,7 +57,7 @@ describe('NeptuneBinderStrategy', () => {
 
   beforeEach(() => {
     strategy = new NeptuneBinderStrategy();
-    
+
     mockSourceComponent = {
       addToRolePolicy: jest.fn(),
       addEnvironment: jest.fn()
@@ -148,7 +148,7 @@ describe('NeptuneBinderStrategy', () => {
   describe('Bind__NeptuneClusterCapability__ConfiguresClusterAccess', () => {
     test('should configure read access for cluster', async () => {
       const readOnlyBinding = { ...mockBinding, access: ['read'] };
-      
+
       await strategy.bind(mockSourceComponent, mockTargetComponent, readOnlyBinding, mockContext);
 
       expect(mockSourceComponent.addToRolePolicy).toHaveBeenCalledWith({
@@ -163,7 +163,7 @@ describe('NeptuneBinderStrategy', () => {
 
     test('should configure write access for cluster', async () => {
       const writeOnlyBinding = { ...mockBinding, access: ['write'] };
-      
+
       await strategy.bind(mockSourceComponent, mockTargetComponent, writeOnlyBinding, mockContext);
 
       expect(mockSourceComponent.addToRolePolicy).toHaveBeenCalledWith({
@@ -193,7 +193,7 @@ describe('NeptuneBinderStrategy', () => {
   describe('Bind__NeptuneInstanceCapability__ConfiguresInstanceAccess', () => {
     test('should configure read access for instance', async () => {
       const instanceBinding = { ...mockBinding, capability: 'neptune:instance', access: ['read'] };
-      
+
       await strategy.bind(mockSourceComponent, mockTargetComponent, instanceBinding, mockContext);
 
       expect(mockSourceComponent.addToRolePolicy).toHaveBeenCalledWith({
@@ -208,7 +208,7 @@ describe('NeptuneBinderStrategy', () => {
 
     test('should configure write access for instance', async () => {
       const instanceBinding = { ...mockBinding, capability: 'neptune:instance', access: ['write'] };
-      
+
       await strategy.bind(mockSourceComponent, mockTargetComponent, instanceBinding, mockContext);
 
       expect(mockSourceComponent.addToRolePolicy).toHaveBeenCalledWith({
@@ -224,7 +224,7 @@ describe('NeptuneBinderStrategy', () => {
 
     test('should inject instance environment variables', async () => {
       const instanceBinding = { ...mockBinding, capability: 'neptune:instance' };
-      
+
       await strategy.bind(mockSourceComponent, mockTargetComponent, instanceBinding, mockContext);
 
       expect(mockSourceComponent.addEnvironment).toHaveBeenCalledWith('NEPTUNE_INSTANCE_IDENTIFIER', mockTargetComponent.instanceIdentifier);
@@ -238,7 +238,7 @@ describe('NeptuneBinderStrategy', () => {
   describe('Bind__NeptuneQueryCapability__ConfiguresQueryAccess', () => {
     test('should configure query access', async () => {
       const queryBinding = { ...mockBinding, capability: 'neptune:query', access: ['read'] };
-      
+
       await strategy.bind(mockSourceComponent, mockTargetComponent, queryBinding, mockContext);
 
       expect(mockSourceComponent.addToRolePolicy).toHaveBeenCalledWith({
@@ -252,7 +252,7 @@ describe('NeptuneBinderStrategy', () => {
 
     test('should inject query environment variables', async () => {
       const queryBinding = { ...mockBinding, capability: 'neptune:query' };
-      
+
       await strategy.bind(mockSourceComponent, mockTargetComponent, queryBinding, mockContext);
 
       expect(mockSourceComponent.addEnvironment).toHaveBeenCalledWith('NEPTUNE_QUERY_ENDPOINT', mockTargetComponent.endpoint);
@@ -263,7 +263,7 @@ describe('NeptuneBinderStrategy', () => {
   describe('Bind__EmptyAccessArray__ThrowsError', () => {
     test('should throw error when access array is empty', async () => {
       const emptyAccessBinding = { ...mockBinding, access: [] };
-      
+
       await expect(strategy.bind(mockSourceComponent, mockTargetComponent, emptyAccessBinding, mockContext))
         .rejects.toThrow('Access array cannot be empty for Neptune binding');
     });
@@ -272,7 +272,7 @@ describe('NeptuneBinderStrategy', () => {
   describe('Bind__InvalidAccessType__ThrowsError', () => {
     test('should throw error for invalid access type', async () => {
       const invalidAccessBinding = { ...mockBinding, access: ['invalid'] };
-      
+
       await expect(strategy.bind(mockSourceComponent, mockTargetComponent, invalidAccessBinding, mockContext))
         .rejects.toThrow('Invalid access types for Neptune binding: invalid. Valid types: read, write, admin, query');
     });

@@ -57,7 +57,7 @@ describe('LightsailBinderStrategy', () => {
 
   beforeEach(() => {
     strategy = new LightsailBinderStrategy();
-    
+
     mockSourceComponent = {
       addToRolePolicy: jest.fn(),
       addEnvironment: jest.fn()
@@ -154,7 +154,7 @@ describe('LightsailBinderStrategy', () => {
   describe('Bind__LightsailInstanceCapability__ConfiguresInstanceAccess', () => {
     test('should configure read access for instance', async () => {
       const readOnlyBinding = { ...mockBinding, access: ['read'] };
-      
+
       await strategy.bind(mockSourceComponent, mockTargetComponent, readOnlyBinding, mockContext);
 
       expect(mockSourceComponent.addToRolePolicy).toHaveBeenCalledWith({
@@ -169,7 +169,7 @@ describe('LightsailBinderStrategy', () => {
 
     test('should configure write access for instance', async () => {
       const writeOnlyBinding = { ...mockBinding, access: ['write'] };
-      
+
       await strategy.bind(mockSourceComponent, mockTargetComponent, writeOnlyBinding, mockContext);
 
       expect(mockSourceComponent.addToRolePolicy).toHaveBeenCalledWith({
@@ -203,7 +203,7 @@ describe('LightsailBinderStrategy', () => {
   describe('Bind__LightsailDatabaseCapability__ConfiguresDatabaseAccess', () => {
     test('should configure read access for database', async () => {
       const databaseBinding = { ...mockBinding, capability: 'lightsail:database', access: ['read'] };
-      
+
       await strategy.bind(mockSourceComponent, mockTargetComponent, databaseBinding, mockContext);
 
       expect(mockSourceComponent.addToRolePolicy).toHaveBeenCalledWith({
@@ -218,7 +218,7 @@ describe('LightsailBinderStrategy', () => {
 
     test('should configure write access for database', async () => {
       const databaseBinding = { ...mockBinding, capability: 'lightsail:database', access: ['write'] };
-      
+
       await strategy.bind(mockSourceComponent, mockTargetComponent, databaseBinding, mockContext);
 
       expect(mockSourceComponent.addToRolePolicy).toHaveBeenCalledWith({
@@ -234,7 +234,7 @@ describe('LightsailBinderStrategy', () => {
 
     test('should inject database environment variables', async () => {
       const databaseBinding = { ...mockBinding, capability: 'lightsail:database' };
-      
+
       await strategy.bind(mockSourceComponent, mockTargetComponent, databaseBinding, mockContext);
 
       expect(mockSourceComponent.addEnvironment).toHaveBeenCalledWith('LIGHTSAIL_DATABASE_NAME', mockTargetComponent.databaseName);
@@ -252,7 +252,7 @@ describe('LightsailBinderStrategy', () => {
   describe('Bind__LightsailLoadBalancerCapability__ConfiguresLoadBalancerAccess', () => {
     test('should configure read access for load balancer', async () => {
       const lbBinding = { ...mockBinding, capability: 'lightsail:load-balancer', access: ['read'] };
-      
+
       await strategy.bind(mockSourceComponent, mockTargetComponent, lbBinding, mockContext);
 
       expect(mockSourceComponent.addToRolePolicy).toHaveBeenCalledWith({
@@ -267,7 +267,7 @@ describe('LightsailBinderStrategy', () => {
 
     test('should configure write access for load balancer', async () => {
       const lbBinding = { ...mockBinding, capability: 'lightsail:load-balancer', access: ['write'] };
-      
+
       await strategy.bind(mockSourceComponent, mockTargetComponent, lbBinding, mockContext);
 
       expect(mockSourceComponent.addToRolePolicy).toHaveBeenCalledWith({
@@ -285,7 +285,7 @@ describe('LightsailBinderStrategy', () => {
   describe('Bind__EmptyAccessArray__ThrowsError', () => {
     test('should throw error when access array is empty', async () => {
       const emptyAccessBinding = { ...mockBinding, access: [] };
-      
+
       await expect(strategy.bind(mockSourceComponent, mockTargetComponent, emptyAccessBinding, mockContext))
         .rejects.toThrow('Access array cannot be empty for Lightsail binding');
     });
@@ -294,7 +294,7 @@ describe('LightsailBinderStrategy', () => {
   describe('Bind__InvalidAccessType__ThrowsError', () => {
     test('should throw error for invalid access type', async () => {
       const invalidAccessBinding = { ...mockBinding, access: ['invalid'] };
-      
+
       await expect(strategy.bind(mockSourceComponent, mockTargetComponent, invalidAccessBinding, mockContext))
         .rejects.toThrow('Invalid access types for Lightsail binding: invalid. Valid types: read, write, admin, manage');
     });

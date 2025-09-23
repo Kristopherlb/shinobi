@@ -57,7 +57,7 @@ describe('ElasticBeanstalkBinderStrategy', () => {
 
   beforeEach(() => {
     strategy = new ElasticBeanstalkBinderStrategy();
-    
+
     mockSourceComponent = {
       addToRolePolicy: jest.fn(),
       addEnvironment: jest.fn()
@@ -147,7 +147,7 @@ describe('ElasticBeanstalkBinderStrategy', () => {
   describe('Bind__ElasticBeanstalkApplicationCapability__ConfiguresApplicationAccess', () => {
     test('should configure read access for application', async () => {
       const readOnlyBinding = { ...mockBinding, access: ['read'] };
-      
+
       await strategy.bind(mockSourceComponent, mockTargetComponent, readOnlyBinding, mockContext);
 
       expect(mockSourceComponent.addToRolePolicy).toHaveBeenCalledWith({
@@ -162,7 +162,7 @@ describe('ElasticBeanstalkBinderStrategy', () => {
 
     test('should configure write access for application', async () => {
       const writeOnlyBinding = { ...mockBinding, access: ['write'] };
-      
+
       await strategy.bind(mockSourceComponent, mockTargetComponent, writeOnlyBinding, mockContext);
 
       expect(mockSourceComponent.addToRolePolicy).toHaveBeenCalledWith({
@@ -187,7 +187,7 @@ describe('ElasticBeanstalkBinderStrategy', () => {
   describe('Bind__ElasticBeanstalkEnvironmentCapability__ConfiguresEnvironmentAccess', () => {
     test('should configure read access for environment', async () => {
       const envBinding = { ...mockBinding, capability: 'elasticbeanstalk:environment', access: ['read'] };
-      
+
       await strategy.bind(mockSourceComponent, mockTargetComponent, envBinding, mockContext);
 
       expect(mockSourceComponent.addToRolePolicy).toHaveBeenCalledWith({
@@ -202,7 +202,7 @@ describe('ElasticBeanstalkBinderStrategy', () => {
 
     test('should configure write access for environment', async () => {
       const envBinding = { ...mockBinding, capability: 'elasticbeanstalk:environment', access: ['write'] };
-      
+
       await strategy.bind(mockSourceComponent, mockTargetComponent, envBinding, mockContext);
 
       expect(mockSourceComponent.addToRolePolicy).toHaveBeenCalledWith({
@@ -218,7 +218,7 @@ describe('ElasticBeanstalkBinderStrategy', () => {
 
     test('should inject environment environment variables', async () => {
       const envBinding = { ...mockBinding, capability: 'elasticbeanstalk:environment' };
-      
+
       await strategy.bind(mockSourceComponent, mockTargetComponent, envBinding, mockContext);
 
       expect(mockSourceComponent.addEnvironment).toHaveBeenCalledWith('EB_ENVIRONMENT_NAME', mockTargetComponent.environmentName);
@@ -234,7 +234,7 @@ describe('ElasticBeanstalkBinderStrategy', () => {
   describe('Bind__ElasticBeanstalkVersionCapability__ConfiguresVersionAccess', () => {
     test('should configure read access for version', async () => {
       const versionBinding = { ...mockBinding, capability: 'elasticbeanstalk:version', access: ['read'] };
-      
+
       await strategy.bind(mockSourceComponent, mockTargetComponent, versionBinding, mockContext);
 
       expect(mockSourceComponent.addToRolePolicy).toHaveBeenCalledWith({
@@ -249,7 +249,7 @@ describe('ElasticBeanstalkBinderStrategy', () => {
 
     test('should configure write access for version', async () => {
       const versionBinding = { ...mockBinding, capability: 'elasticbeanstalk:version', access: ['write'] };
-      
+
       await strategy.bind(mockSourceComponent, mockTargetComponent, versionBinding, mockContext);
 
       expect(mockSourceComponent.addToRolePolicy).toHaveBeenCalledWith({
@@ -264,7 +264,7 @@ describe('ElasticBeanstalkBinderStrategy', () => {
 
     test('should inject version environment variables', async () => {
       const versionBinding = { ...mockBinding, capability: 'elasticbeanstalk:version' };
-      
+
       await strategy.bind(mockSourceComponent, mockTargetComponent, versionBinding, mockContext);
 
       expect(mockSourceComponent.addEnvironment).toHaveBeenCalledWith('EB_VERSION_LABEL', mockTargetComponent.versionLabel);
@@ -275,7 +275,7 @@ describe('ElasticBeanstalkBinderStrategy', () => {
   describe('Bind__EmptyAccessArray__ThrowsError', () => {
     test('should throw error when access array is empty', async () => {
       const emptyAccessBinding = { ...mockBinding, access: [] };
-      
+
       await expect(strategy.bind(mockSourceComponent, mockTargetComponent, emptyAccessBinding, mockContext))
         .rejects.toThrow('Access array cannot be empty for Elastic Beanstalk binding');
     });
@@ -284,7 +284,7 @@ describe('ElasticBeanstalkBinderStrategy', () => {
   describe('Bind__InvalidAccessType__ThrowsError', () => {
     test('should throw error for invalid access type', async () => {
       const invalidAccessBinding = { ...mockBinding, access: ['invalid'] };
-      
+
       await expect(strategy.bind(mockSourceComponent, mockTargetComponent, invalidAccessBinding, mockContext))
         .rejects.toThrow('Invalid access types for Elastic Beanstalk binding: invalid. Valid types: read, write, admin, deploy');
     });

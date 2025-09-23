@@ -57,7 +57,7 @@ describe('VpcBinderStrategy', () => {
 
   beforeEach(() => {
     strategy = new VpcBinderStrategy();
-    
+
     mockSourceComponent = {
       addToRolePolicy: jest.fn(),
       addEnvironment: jest.fn()
@@ -154,7 +154,7 @@ describe('VpcBinderStrategy', () => {
   describe('Bind__VpcNetworkCapability__ConfiguresNetworkAccess', () => {
     test('should configure read access for network', async () => {
       const readOnlyBinding = { ...mockBinding, access: ['read'] };
-      
+
       await strategy.bind(mockSourceComponent, mockTargetComponent, readOnlyBinding, mockContext);
 
       expect(mockSourceComponent.addToRolePolicy).toHaveBeenCalledWith({
@@ -169,7 +169,7 @@ describe('VpcBinderStrategy', () => {
 
     test('should configure write access for network', async () => {
       const writeOnlyBinding = { ...mockBinding, access: ['write'] };
-      
+
       await strategy.bind(mockSourceComponent, mockTargetComponent, writeOnlyBinding, mockContext);
 
       expect(mockSourceComponent.addToRolePolicy).toHaveBeenCalledWith({
@@ -196,7 +196,7 @@ describe('VpcBinderStrategy', () => {
   describe('Bind__VpcSubnetCapability__ConfiguresSubnetAccess', () => {
     test('should configure read access for subnet', async () => {
       const subnetBinding = { ...mockBinding, capability: 'vpc:subnet', access: ['read'] };
-      
+
       await strategy.bind(mockSourceComponent, mockTargetComponent, subnetBinding, mockContext);
 
       expect(mockSourceComponent.addToRolePolicy).toHaveBeenCalledWith({
@@ -211,7 +211,7 @@ describe('VpcBinderStrategy', () => {
 
     test('should configure write access for subnet', async () => {
       const subnetBinding = { ...mockBinding, capability: 'vpc:subnet', access: ['write'] };
-      
+
       await strategy.bind(mockSourceComponent, mockTargetComponent, subnetBinding, mockContext);
 
       expect(mockSourceComponent.addToRolePolicy).toHaveBeenCalledWith({
@@ -227,7 +227,7 @@ describe('VpcBinderStrategy', () => {
 
     test('should inject subnet environment variables', async () => {
       const subnetBinding = { ...mockBinding, capability: 'vpc:subnet' };
-      
+
       await strategy.bind(mockSourceComponent, mockTargetComponent, subnetBinding, mockContext);
 
       expect(mockSourceComponent.addEnvironment).toHaveBeenCalledWith('SUBNET_ID', mockTargetComponent.subnetId);
@@ -240,7 +240,7 @@ describe('VpcBinderStrategy', () => {
   describe('Bind__VpcSecurityGroupCapability__ConfiguresSecurityGroupAccess', () => {
     test('should configure read access for security group', async () => {
       const sgBinding = { ...mockBinding, capability: 'vpc:security-group', access: ['read'] };
-      
+
       await strategy.bind(mockSourceComponent, mockTargetComponent, sgBinding, mockContext);
 
       expect(mockSourceComponent.addToRolePolicy).toHaveBeenCalledWith({
@@ -255,7 +255,7 @@ describe('VpcBinderStrategy', () => {
 
     test('should configure write access for security group', async () => {
       const sgBinding = { ...mockBinding, capability: 'vpc:security-group', access: ['write'] };
-      
+
       await strategy.bind(mockSourceComponent, mockTargetComponent, sgBinding, mockContext);
 
       expect(mockSourceComponent.addToRolePolicy).toHaveBeenCalledWith({
@@ -274,7 +274,7 @@ describe('VpcBinderStrategy', () => {
 
     test('should inject security group environment variables', async () => {
       const sgBinding = { ...mockBinding, capability: 'vpc:security-group' };
-      
+
       await strategy.bind(mockSourceComponent, mockTargetComponent, sgBinding, mockContext);
 
       expect(mockSourceComponent.addEnvironment).toHaveBeenCalledWith('SECURITY_GROUP_ID', mockTargetComponent.securityGroupId);
@@ -287,7 +287,7 @@ describe('VpcBinderStrategy', () => {
   describe('Bind__VpcRouteTableCapability__ConfiguresRouteTableAccess', () => {
     test('should configure read access for route table', async () => {
       const rtBinding = { ...mockBinding, capability: 'vpc:route-table', access: ['read'] };
-      
+
       await strategy.bind(mockSourceComponent, mockTargetComponent, rtBinding, mockContext);
 
       expect(mockSourceComponent.addToRolePolicy).toHaveBeenCalledWith({
@@ -302,7 +302,7 @@ describe('VpcBinderStrategy', () => {
 
     test('should configure write access for route table', async () => {
       const rtBinding = { ...mockBinding, capability: 'vpc:route-table', access: ['write'] };
-      
+
       await strategy.bind(mockSourceComponent, mockTargetComponent, rtBinding, mockContext);
 
       expect(mockSourceComponent.addToRolePolicy).toHaveBeenCalledWith({
@@ -319,7 +319,7 @@ describe('VpcBinderStrategy', () => {
 
     test('should inject route table environment variables', async () => {
       const rtBinding = { ...mockBinding, capability: 'vpc:route-table' };
-      
+
       await strategy.bind(mockSourceComponent, mockTargetComponent, rtBinding, mockContext);
 
       expect(mockSourceComponent.addEnvironment).toHaveBeenCalledWith('ROUTE_TABLE_ID', mockTargetComponent.routeTableId);
@@ -330,7 +330,7 @@ describe('VpcBinderStrategy', () => {
   describe('Bind__VpcNatGatewayCapability__ConfiguresNatGatewayAccess', () => {
     test('should configure read access for NAT gateway', async () => {
       const natBinding = { ...mockBinding, capability: 'vpc:nat-gateway', access: ['read'] };
-      
+
       await strategy.bind(mockSourceComponent, mockTargetComponent, natBinding, mockContext);
 
       expect(mockSourceComponent.addToRolePolicy).toHaveBeenCalledWith({
@@ -344,7 +344,7 @@ describe('VpcBinderStrategy', () => {
 
     test('should configure write access for NAT gateway', async () => {
       const natBinding = { ...mockBinding, capability: 'vpc:nat-gateway', access: ['write'] };
-      
+
       await strategy.bind(mockSourceComponent, mockTargetComponent, natBinding, mockContext);
 
       expect(mockSourceComponent.addToRolePolicy).toHaveBeenCalledWith({
@@ -359,7 +359,7 @@ describe('VpcBinderStrategy', () => {
 
     test('should inject NAT gateway environment variables', async () => {
       const natBinding = { ...mockBinding, capability: 'vpc:nat-gateway' };
-      
+
       await strategy.bind(mockSourceComponent, mockTargetComponent, natBinding, mockContext);
 
       expect(mockSourceComponent.addEnvironment).toHaveBeenCalledWith('NAT_GATEWAY_ID', mockTargetComponent.natGatewayId);
@@ -370,7 +370,7 @@ describe('VpcBinderStrategy', () => {
   describe('Bind__EmptyAccessArray__ThrowsError', () => {
     test('should throw error when access array is empty', async () => {
       const emptyAccessBinding = { ...mockBinding, access: [] };
-      
+
       await expect(strategy.bind(mockSourceComponent, mockTargetComponent, emptyAccessBinding, mockContext))
         .rejects.toThrow('Access array cannot be empty for VPC binding');
     });
@@ -379,7 +379,7 @@ describe('VpcBinderStrategy', () => {
   describe('Bind__InvalidAccessType__ThrowsError', () => {
     test('should throw error for invalid access type', async () => {
       const invalidAccessBinding = { ...mockBinding, access: ['invalid'] };
-      
+
       await expect(strategy.bind(mockSourceComponent, mockTargetComponent, invalidAccessBinding, mockContext))
         .rejects.toThrow('Invalid access types for VPC binding: invalid. Valid types: read, write, admin, manage');
     });

@@ -57,7 +57,7 @@ describe('StepFunctionsBinderStrategy', () => {
 
   beforeEach(() => {
     strategy = new StepFunctionsBinderStrategy();
-    
+
     mockSourceComponent = {
       addToRolePolicy: jest.fn(),
       addEnvironment: jest.fn()
@@ -149,7 +149,7 @@ describe('StepFunctionsBinderStrategy', () => {
   describe('Bind__StepFunctionsStateMachineCapability__ConfiguresStateMachineAccess', () => {
     test('should configure read access for state machine', async () => {
       const readOnlyBinding = { ...mockBinding, access: ['read'] };
-      
+
       await strategy.bind(mockSourceComponent, mockTargetComponent, readOnlyBinding, mockContext);
 
       expect(mockSourceComponent.addToRolePolicy).toHaveBeenCalledWith({
@@ -164,7 +164,7 @@ describe('StepFunctionsBinderStrategy', () => {
 
     test('should configure write access for state machine', async () => {
       const writeOnlyBinding = { ...mockBinding, access: ['write'] };
-      
+
       await strategy.bind(mockSourceComponent, mockTargetComponent, writeOnlyBinding, mockContext);
 
       expect(mockSourceComponent.addToRolePolicy).toHaveBeenCalledWith({
@@ -192,7 +192,7 @@ describe('StepFunctionsBinderStrategy', () => {
   describe('Bind__StepFunctionsExecutionCapability__ConfiguresExecutionAccess', () => {
     test('should configure read access for execution', async () => {
       const executionBinding = { ...mockBinding, capability: 'stepfunctions:execution', access: ['read'] };
-      
+
       await strategy.bind(mockSourceComponent, mockTargetComponent, executionBinding, mockContext);
 
       expect(mockSourceComponent.addToRolePolicy).toHaveBeenCalledWith({
@@ -207,7 +207,7 @@ describe('StepFunctionsBinderStrategy', () => {
 
     test('should configure write access for execution', async () => {
       const executionBinding = { ...mockBinding, capability: 'stepfunctions:execution', access: ['write'] };
-      
+
       await strategy.bind(mockSourceComponent, mockTargetComponent, executionBinding, mockContext);
 
       expect(mockSourceComponent.addToRolePolicy).toHaveBeenCalledWith({
@@ -222,7 +222,7 @@ describe('StepFunctionsBinderStrategy', () => {
 
     test('should inject execution environment variables', async () => {
       const executionBinding = { ...mockBinding, capability: 'stepfunctions:execution' };
-      
+
       await strategy.bind(mockSourceComponent, mockTargetComponent, executionBinding, mockContext);
 
       expect(mockSourceComponent.addEnvironment).toHaveBeenCalledWith('STEP_FUNCTIONS_EXECUTION_NAME', mockTargetComponent.executionName);
@@ -234,7 +234,7 @@ describe('StepFunctionsBinderStrategy', () => {
   describe('Bind__StepFunctionsActivityCapability__ConfiguresActivityAccess', () => {
     test('should configure read access for activity', async () => {
       const activityBinding = { ...mockBinding, capability: 'stepfunctions:activity', access: ['read'] };
-      
+
       await strategy.bind(mockSourceComponent, mockTargetComponent, activityBinding, mockContext);
 
       expect(mockSourceComponent.addToRolePolicy).toHaveBeenCalledWith({
@@ -249,7 +249,7 @@ describe('StepFunctionsBinderStrategy', () => {
 
     test('should configure write access for activity', async () => {
       const activityBinding = { ...mockBinding, capability: 'stepfunctions:activity', access: ['write'] };
-      
+
       await strategy.bind(mockSourceComponent, mockTargetComponent, activityBinding, mockContext);
 
       expect(mockSourceComponent.addToRolePolicy).toHaveBeenCalledWith({
@@ -266,7 +266,7 @@ describe('StepFunctionsBinderStrategy', () => {
   describe('Bind__EmptyAccessArray__ThrowsError', () => {
     test('should throw error when access array is empty', async () => {
       const emptyAccessBinding = { ...mockBinding, access: [] };
-      
+
       await expect(strategy.bind(mockSourceComponent, mockTargetComponent, emptyAccessBinding, mockContext))
         .rejects.toThrow('Access array cannot be empty for Step Functions binding');
     });
@@ -275,7 +275,7 @@ describe('StepFunctionsBinderStrategy', () => {
   describe('Bind__InvalidAccessType__ThrowsError', () => {
     test('should throw error for invalid access type', async () => {
       const invalidAccessBinding = { ...mockBinding, access: ['invalid'] };
-      
+
       await expect(strategy.bind(mockSourceComponent, mockTargetComponent, invalidAccessBinding, mockContext))
         .rejects.toThrow('Invalid access types for Step Functions binding: invalid. Valid types: read, write, admin, execute');
     });

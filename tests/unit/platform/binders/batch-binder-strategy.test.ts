@@ -57,7 +57,7 @@ describe('BatchBinderStrategy', () => {
 
   beforeEach(() => {
     strategy = new BatchBinderStrategy();
-    
+
     mockSourceComponent = {
       addToRolePolicy: jest.fn(),
       addEnvironment: jest.fn()
@@ -184,7 +184,7 @@ describe('BatchBinderStrategy', () => {
   describe('Bind__BatchJobQueueCapability__ConfiguresJobQueueAccess', () => {
     test('should configure read access for job queue', async () => {
       const readOnlyBinding = { ...mockBinding, access: ['read'] };
-      
+
       await strategy.bind(mockSourceComponent, mockTargetComponent, readOnlyBinding, mockContext);
 
       expect(mockSourceComponent.addToRolePolicy).toHaveBeenCalledWith({
@@ -199,7 +199,7 @@ describe('BatchBinderStrategy', () => {
 
     test('should configure write access for job queue', async () => {
       const writeOnlyBinding = { ...mockBinding, access: ['write'] };
-      
+
       await strategy.bind(mockSourceComponent, mockTargetComponent, writeOnlyBinding, mockContext);
 
       expect(mockSourceComponent.addToRolePolicy).toHaveBeenCalledWith({
@@ -236,7 +236,7 @@ describe('BatchBinderStrategy', () => {
   describe('Bind__BatchComputeEnvironmentCapability__ConfiguresComputeEnvironmentAccess', () => {
     test('should configure read access for compute environment', async () => {
       const computeEnvBinding = { ...mockBinding, capability: 'batch:compute-environment', access: ['read'] };
-      
+
       await strategy.bind(mockSourceComponent, mockTargetComponent, computeEnvBinding, mockContext);
 
       expect(mockSourceComponent.addToRolePolicy).toHaveBeenCalledWith({
@@ -250,7 +250,7 @@ describe('BatchBinderStrategy', () => {
 
     test('should configure write access for compute environment', async () => {
       const computeEnvBinding = { ...mockBinding, capability: 'batch:compute-environment', access: ['write'] };
-      
+
       await strategy.bind(mockSourceComponent, mockTargetComponent, computeEnvBinding, mockContext);
 
       expect(mockSourceComponent.addToRolePolicy).toHaveBeenCalledWith({
@@ -266,7 +266,7 @@ describe('BatchBinderStrategy', () => {
 
     test('should configure ECS cluster access for managed compute environments', async () => {
       const computeEnvBinding = { ...mockBinding, capability: 'batch:compute-environment' };
-      
+
       await strategy.bind(mockSourceComponent, mockTargetComponent, computeEnvBinding, mockContext);
 
       expect(mockSourceComponent.addToRolePolicy).toHaveBeenCalledWith({
@@ -282,7 +282,7 @@ describe('BatchBinderStrategy', () => {
 
     test('should configure instance role access for unmanaged compute environments', async () => {
       const computeEnvBinding = { ...mockBinding, capability: 'batch:compute-environment' };
-      
+
       await strategy.bind(mockSourceComponent, mockTargetComponent, computeEnvBinding, mockContext);
 
       expect(mockSourceComponent.addToRolePolicy).toHaveBeenCalledWith({
@@ -296,7 +296,7 @@ describe('BatchBinderStrategy', () => {
 
     test('should inject compute environment environment variables', async () => {
       const computeEnvBinding = { ...mockBinding, capability: 'batch:compute-environment' };
-      
+
       await strategy.bind(mockSourceComponent, mockTargetComponent, computeEnvBinding, mockContext);
 
       expect(mockSourceComponent.addEnvironment).toHaveBeenCalledWith('BATCH_COMPUTE_ENVIRONMENT_NAME', mockTargetComponent.computeEnvironmentName);
@@ -307,7 +307,7 @@ describe('BatchBinderStrategy', () => {
 
     test('should configure instance configuration', async () => {
       const computeEnvBinding = { ...mockBinding, capability: 'batch:compute-environment' };
-      
+
       await strategy.bind(mockSourceComponent, mockTargetComponent, computeEnvBinding, mockContext);
 
       expect(mockSourceComponent.addEnvironment).toHaveBeenCalledWith('BATCH_INSTANCE_TYPES', 'm5.large,m5.xlarge');
@@ -320,7 +320,7 @@ describe('BatchBinderStrategy', () => {
   describe('Bind__BatchJobDefinitionCapability__ConfiguresJobDefinitionAccess', () => {
     test('should configure read access for job definition', async () => {
       const jobDefBinding = { ...mockBinding, capability: 'batch:job-definition', access: ['read'] };
-      
+
       await strategy.bind(mockSourceComponent, mockTargetComponent, jobDefBinding, mockContext);
 
       expect(mockSourceComponent.addToRolePolicy).toHaveBeenCalledWith({
@@ -335,7 +335,7 @@ describe('BatchBinderStrategy', () => {
 
     test('should configure write access for job definition', async () => {
       const jobDefBinding = { ...mockBinding, capability: 'batch:job-definition', access: ['write'] };
-      
+
       await strategy.bind(mockSourceComponent, mockTargetComponent, jobDefBinding, mockContext);
 
       expect(mockSourceComponent.addToRolePolicy).toHaveBeenCalledWith({
@@ -350,7 +350,7 @@ describe('BatchBinderStrategy', () => {
 
     test('should configure ECR access for container images', async () => {
       const jobDefBinding = { ...mockBinding, capability: 'batch:job-definition' };
-      
+
       await strategy.bind(mockSourceComponent, mockTargetComponent, jobDefBinding, mockContext);
 
       expect(mockSourceComponent.addToRolePolicy).toHaveBeenCalledWith({
@@ -367,7 +367,7 @@ describe('BatchBinderStrategy', () => {
 
     test('should inject job definition environment variables', async () => {
       const jobDefBinding = { ...mockBinding, capability: 'batch:job-definition' };
-      
+
       await strategy.bind(mockSourceComponent, mockTargetComponent, jobDefBinding, mockContext);
 
       expect(mockSourceComponent.addEnvironment).toHaveBeenCalledWith('BATCH_JOB_DEFINITION_NAME', mockTargetComponent.jobDefinitionName);
@@ -378,7 +378,7 @@ describe('BatchBinderStrategy', () => {
 
     test('should configure container environment', async () => {
       const jobDefBinding = { ...mockBinding, capability: 'batch:job-definition' };
-      
+
       await strategy.bind(mockSourceComponent, mockTargetComponent, jobDefBinding, mockContext);
 
       expect(mockSourceComponent.addEnvironment).toHaveBeenCalledWith('BATCH_CONTAINER_IMAGE', mockTargetComponent.containerProperties.image);
@@ -391,7 +391,7 @@ describe('BatchBinderStrategy', () => {
   describe('Bind__BatchJobCapability__ConfiguresJobAccess', () => {
     test('should configure read access for job', async () => {
       const jobBinding = { ...mockBinding, capability: 'batch:job', access: ['read'] };
-      
+
       await strategy.bind(mockSourceComponent, mockTargetComponent, jobBinding, mockContext);
 
       expect(mockSourceComponent.addToRolePolicy).toHaveBeenCalledWith({
@@ -406,7 +406,7 @@ describe('BatchBinderStrategy', () => {
 
     test('should configure write access for job', async () => {
       const jobBinding = { ...mockBinding, capability: 'batch:job', access: ['write'] };
-      
+
       await strategy.bind(mockSourceComponent, mockTargetComponent, jobBinding, mockContext);
 
       expect(mockSourceComponent.addToRolePolicy).toHaveBeenCalledWith({
@@ -422,7 +422,7 @@ describe('BatchBinderStrategy', () => {
 
     test('should configure CloudWatch Logs access for job logs', async () => {
       const jobBinding = { ...mockBinding, capability: 'batch:job' };
-      
+
       await strategy.bind(mockSourceComponent, mockTargetComponent, jobBinding, mockContext);
 
       expect(mockSourceComponent.addToRolePolicy).toHaveBeenCalledWith({
@@ -437,7 +437,7 @@ describe('BatchBinderStrategy', () => {
 
     test('should inject job environment variables', async () => {
       const jobBinding = { ...mockBinding, capability: 'batch:job' };
-      
+
       await strategy.bind(mockSourceComponent, mockTargetComponent, jobBinding, mockContext);
 
       expect(mockSourceComponent.addEnvironment).toHaveBeenCalledWith('BATCH_JOB_NAME', mockTargetComponent.jobName);
@@ -453,7 +453,7 @@ describe('BatchBinderStrategy', () => {
     test('should configure VPC networking for FedRAMP Moderate', async () => {
       const fedrampContext = { ...mockContext, complianceFramework: ComplianceFramework.FEDRAMP_MODERATE };
       const jobBinding = { ...mockBinding, capability: 'batch:job' };
-      
+
       await strategy.bind(mockSourceComponent, mockTargetComponent, jobBinding, fedrampContext);
 
       expect(mockSourceComponent.addEnvironment).toHaveBeenCalledWith('BATCH_SUBNETS', 'subnet-12345,subnet-67890');
@@ -465,7 +465,7 @@ describe('BatchBinderStrategy', () => {
     test('should configure encryption and secrets for FedRAMP High', async () => {
       const fedrampHighContext = { ...mockContext, complianceFramework: ComplianceFramework.FEDRAMP_HIGH };
       const jobBinding = { ...mockBinding, capability: 'batch:job' };
-      
+
       await strategy.bind(mockSourceComponent, mockTargetComponent, jobBinding, fedrampHighContext);
 
       expect(mockSourceComponent.addEnvironment).toHaveBeenCalledWith('BATCH_ENCRYPTION_ENABLED', 'true');
@@ -494,7 +494,7 @@ describe('BatchBinderStrategy', () => {
   describe('Bind__EmptyAccessArray__ThrowsError', () => {
     test('should throw error when access array is empty', async () => {
       const emptyAccessBinding = { ...mockBinding, access: [] };
-      
+
       await expect(strategy.bind(mockSourceComponent, mockTargetComponent, emptyAccessBinding, mockContext))
         .rejects.toThrow('Access array cannot be empty for Batch binding');
     });
@@ -503,7 +503,7 @@ describe('BatchBinderStrategy', () => {
   describe('Bind__InvalidAccessType__ThrowsError', () => {
     test('should throw error for invalid access type', async () => {
       const invalidAccessBinding = { ...mockBinding, access: ['invalid'] };
-      
+
       await expect(strategy.bind(mockSourceComponent, mockTargetComponent, invalidAccessBinding, mockContext))
         .rejects.toThrow('Invalid access types for Batch binding: invalid. Valid types: read, write, admin, submit, cancel');
     });

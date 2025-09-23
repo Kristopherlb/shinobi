@@ -57,7 +57,7 @@ describe('EksBinderStrategy', () => {
 
   beforeEach(() => {
     strategy = new EksBinderStrategy();
-    
+
     mockSourceComponent = {
       addToRolePolicy: jest.fn(),
       addEnvironment: jest.fn()
@@ -156,7 +156,7 @@ describe('EksBinderStrategy', () => {
   describe('Bind__EksClusterCapability__ConfiguresClusterAccess', () => {
     test('should configure read access for cluster', async () => {
       const readOnlyBinding = { ...mockBinding, access: ['read'] };
-      
+
       await strategy.bind(mockSourceComponent, mockTargetComponent, readOnlyBinding, mockContext);
 
       expect(mockSourceComponent.addToRolePolicy).toHaveBeenCalledWith({
@@ -171,7 +171,7 @@ describe('EksBinderStrategy', () => {
 
     test('should configure write access for cluster', async () => {
       const writeOnlyBinding = { ...mockBinding, access: ['write'] };
-      
+
       await strategy.bind(mockSourceComponent, mockTargetComponent, writeOnlyBinding, mockContext);
 
       expect(mockSourceComponent.addToRolePolicy).toHaveBeenCalledWith({
@@ -209,7 +209,7 @@ describe('EksBinderStrategy', () => {
   describe('Bind__EksNodegroupCapability__ConfiguresNodegroupAccess', () => {
     test('should configure read access for nodegroup', async () => {
       const nodegroupBinding = { ...mockBinding, capability: 'eks:nodegroup', access: ['read'] };
-      
+
       await strategy.bind(mockSourceComponent, mockTargetComponent, nodegroupBinding, mockContext);
 
       expect(mockSourceComponent.addToRolePolicy).toHaveBeenCalledWith({
@@ -224,7 +224,7 @@ describe('EksBinderStrategy', () => {
 
     test('should configure write access for nodegroup', async () => {
       const nodegroupBinding = { ...mockBinding, capability: 'eks:nodegroup', access: ['write'] };
-      
+
       await strategy.bind(mockSourceComponent, mockTargetComponent, nodegroupBinding, mockContext);
 
       expect(mockSourceComponent.addToRolePolicy).toHaveBeenCalledWith({
@@ -241,7 +241,7 @@ describe('EksBinderStrategy', () => {
 
     test('should inject nodegroup environment variables', async () => {
       const nodegroupBinding = { ...mockBinding, capability: 'eks:nodegroup' };
-      
+
       await strategy.bind(mockSourceComponent, mockTargetComponent, nodegroupBinding, mockContext);
 
       expect(mockSourceComponent.addEnvironment).toHaveBeenCalledWith('EKS_NODEGROUP_NAME', mockTargetComponent.nodeGroupName);
@@ -256,7 +256,7 @@ describe('EksBinderStrategy', () => {
   describe('Bind__EksFargateProfileCapability__ConfiguresFargateProfileAccess', () => {
     test('should configure read access for fargate profile', async () => {
       const fargateBinding = { ...mockBinding, capability: 'eks:fargate-profile', access: ['read'] };
-      
+
       await strategy.bind(mockSourceComponent, mockTargetComponent, fargateBinding, mockContext);
 
       expect(mockSourceComponent.addToRolePolicy).toHaveBeenCalledWith({
@@ -271,7 +271,7 @@ describe('EksBinderStrategy', () => {
 
     test('should configure write access for fargate profile', async () => {
       const fargateBinding = { ...mockBinding, capability: 'eks:fargate-profile', access: ['write'] };
-      
+
       await strategy.bind(mockSourceComponent, mockTargetComponent, fargateBinding, mockContext);
 
       expect(mockSourceComponent.addToRolePolicy).toHaveBeenCalledWith({
@@ -289,7 +289,7 @@ describe('EksBinderStrategy', () => {
   describe('Bind__EmptyAccessArray__ThrowsError', () => {
     test('should throw error when access array is empty', async () => {
       const emptyAccessBinding = { ...mockBinding, access: [] };
-      
+
       await expect(strategy.bind(mockSourceComponent, mockTargetComponent, emptyAccessBinding, mockContext))
         .rejects.toThrow('Access array cannot be empty for EKS binding');
     });
@@ -298,7 +298,7 @@ describe('EksBinderStrategy', () => {
   describe('Bind__InvalidAccessType__ThrowsError', () => {
     test('should throw error for invalid access type', async () => {
       const invalidAccessBinding = { ...mockBinding, access: ['invalid'] };
-      
+
       await expect(strategy.bind(mockSourceComponent, mockTargetComponent, invalidAccessBinding, mockContext))
         .rejects.toThrow('Invalid access types for EKS binding: invalid. Valid types: read, write, admin, deploy');
     });

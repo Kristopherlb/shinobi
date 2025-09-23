@@ -57,7 +57,7 @@ describe('SecretsManagerBinderStrategy', () => {
 
   beforeEach(() => {
     strategy = new SecretsManagerBinderStrategy();
-    
+
     mockSourceComponent = {
       addToRolePolicy: jest.fn(),
       addEnvironment: jest.fn()
@@ -150,7 +150,7 @@ describe('SecretsManagerBinderStrategy', () => {
   describe('Bind__SecretsManagerSecretCapability__ConfiguresSecretAccess', () => {
     test('should configure read access for secret', async () => {
       const readOnlyBinding = { ...mockBinding, access: ['read'] };
-      
+
       await strategy.bind(mockSourceComponent, mockTargetComponent, readOnlyBinding, mockContext);
 
       expect(mockSourceComponent.addToRolePolicy).toHaveBeenCalledWith({
@@ -165,7 +165,7 @@ describe('SecretsManagerBinderStrategy', () => {
 
     test('should configure write access for secret', async () => {
       const writeOnlyBinding = { ...mockBinding, access: ['write'] };
-      
+
       await strategy.bind(mockSourceComponent, mockTargetComponent, writeOnlyBinding, mockContext);
 
       expect(mockSourceComponent.addToRolePolicy).toHaveBeenCalledWith({
@@ -209,7 +209,7 @@ describe('SecretsManagerBinderStrategy', () => {
   describe('Bind__SecretsManagerRotationCapability__ConfiguresRotationAccess', () => {
     test('should configure read access for rotation', async () => {
       const rotationBinding = { ...mockBinding, capability: 'secretsmanager:rotation', access: ['read'] };
-      
+
       await strategy.bind(mockSourceComponent, mockTargetComponent, rotationBinding, mockContext);
 
       expect(mockSourceComponent.addToRolePolicy).toHaveBeenCalledWith({
@@ -224,7 +224,7 @@ describe('SecretsManagerBinderStrategy', () => {
 
     test('should configure write access for rotation', async () => {
       const rotationBinding = { ...mockBinding, capability: 'secretsmanager:rotation', access: ['write'] };
-      
+
       await strategy.bind(mockSourceComponent, mockTargetComponent, rotationBinding, mockContext);
 
       expect(mockSourceComponent.addToRolePolicy).toHaveBeenCalledWith({
@@ -239,7 +239,7 @@ describe('SecretsManagerBinderStrategy', () => {
 
     test('should inject rotation environment variables', async () => {
       const rotationBinding = { ...mockBinding, capability: 'secretsmanager:rotation' };
-      
+
       await strategy.bind(mockSourceComponent, mockTargetComponent, rotationBinding, mockContext);
 
       expect(mockSourceComponent.addEnvironment).toHaveBeenCalledWith('SECRET_ROTATION_ENABLED', mockTargetComponent.rotationEnabled.toString());
@@ -251,7 +251,7 @@ describe('SecretsManagerBinderStrategy', () => {
   describe('Bind__SecretsManagerPolicyCapability__ConfiguresPolicyAccess', () => {
     test('should configure read access for policy', async () => {
       const policyBinding = { ...mockBinding, capability: 'secretsmanager:policy', access: ['read'] };
-      
+
       await strategy.bind(mockSourceComponent, mockTargetComponent, policyBinding, mockContext);
 
       expect(mockSourceComponent.addToRolePolicy).toHaveBeenCalledWith({
@@ -265,7 +265,7 @@ describe('SecretsManagerBinderStrategy', () => {
 
     test('should configure write access for policy', async () => {
       const policyBinding = { ...mockBinding, capability: 'secretsmanager:policy', access: ['write'] };
-      
+
       await strategy.bind(mockSourceComponent, mockTargetComponent, policyBinding, mockContext);
 
       expect(mockSourceComponent.addToRolePolicy).toHaveBeenCalledWith({
@@ -282,7 +282,7 @@ describe('SecretsManagerBinderStrategy', () => {
   describe('Bind__EmptyAccessArray__ThrowsError', () => {
     test('should throw error when access array is empty', async () => {
       const emptyAccessBinding = { ...mockBinding, access: [] };
-      
+
       await expect(strategy.bind(mockSourceComponent, mockTargetComponent, emptyAccessBinding, mockContext))
         .rejects.toThrow('Access array cannot be empty for Secrets Manager binding');
     });
@@ -291,7 +291,7 @@ describe('SecretsManagerBinderStrategy', () => {
   describe('Bind__InvalidAccessType__ThrowsError', () => {
     test('should throw error for invalid access type', async () => {
       const invalidAccessBinding = { ...mockBinding, access: ['invalid'] };
-      
+
       await expect(strategy.bind(mockSourceComponent, mockTargetComponent, invalidAccessBinding, mockContext))
         .rejects.toThrow('Invalid access types for Secrets Manager binding: invalid. Valid types: read, write, admin, rotate');
     });

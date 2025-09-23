@@ -57,7 +57,7 @@ describe('AppRunnerBinderStrategy', () => {
 
   beforeEach(() => {
     strategy = new AppRunnerBinderStrategy();
-    
+
     mockSourceComponent = {
       addToRolePolicy: jest.fn(),
       addEnvironment: jest.fn()
@@ -149,7 +149,7 @@ describe('AppRunnerBinderStrategy', () => {
   describe('Bind__AppRunnerServiceCapability__ConfiguresServiceAccess', () => {
     test('should configure read access for service', async () => {
       const readOnlyBinding = { ...mockBinding, access: ['read'] };
-      
+
       await strategy.bind(mockSourceComponent, mockTargetComponent, readOnlyBinding, mockContext);
 
       expect(mockSourceComponent.addToRolePolicy).toHaveBeenCalledWith({
@@ -166,7 +166,7 @@ describe('AppRunnerBinderStrategy', () => {
 
     test('should configure write access for service', async () => {
       const writeOnlyBinding = { ...mockBinding, access: ['write'] };
-      
+
       await strategy.bind(mockSourceComponent, mockTargetComponent, writeOnlyBinding, mockContext);
 
       expect(mockSourceComponent.addToRolePolicy).toHaveBeenCalledWith({
@@ -211,7 +211,7 @@ describe('AppRunnerBinderStrategy', () => {
 
     test('should use default port when not specified', async () => {
       const targetWithoutPort = { ...mockTargetComponent, port: undefined };
-      
+
       await strategy.bind(mockSourceComponent, targetWithoutPort, mockBinding, mockContext);
 
       expect(mockSourceComponent.addEnvironment).toHaveBeenCalledWith('PORT', '8080');
@@ -221,7 +221,7 @@ describe('AppRunnerBinderStrategy', () => {
   describe('Bind__AppRunnerConnectionCapability__ConfiguresConnectionAccess', () => {
     test('should configure read access for connection', async () => {
       const connectionBinding = { ...mockBinding, capability: 'apprunner:connection', access: ['read'] };
-      
+
       await strategy.bind(mockSourceComponent, mockTargetComponent, connectionBinding, mockContext);
 
       expect(mockSourceComponent.addToRolePolicy).toHaveBeenCalledWith({
@@ -236,7 +236,7 @@ describe('AppRunnerBinderStrategy', () => {
 
     test('should configure write access for connection', async () => {
       const connectionBinding = { ...mockBinding, capability: 'apprunner:connection', access: ['write'] };
-      
+
       await strategy.bind(mockSourceComponent, mockTargetComponent, connectionBinding, mockContext);
 
       expect(mockSourceComponent.addToRolePolicy).toHaveBeenCalledWith({
@@ -252,7 +252,7 @@ describe('AppRunnerBinderStrategy', () => {
 
     test('should configure GitHub access for GITHUB provider', async () => {
       const connectionBinding = { ...mockBinding, capability: 'apprunner:connection' };
-      
+
       await strategy.bind(mockSourceComponent, mockTargetComponent, connectionBinding, mockContext);
 
       expect(mockSourceComponent.addToRolePolicy).toHaveBeenCalledWith({
@@ -267,7 +267,7 @@ describe('AppRunnerBinderStrategy', () => {
 
     test('should inject connection environment variables', async () => {
       const connectionBinding = { ...mockBinding, capability: 'apprunner:connection' };
-      
+
       await strategy.bind(mockSourceComponent, mockTargetComponent, connectionBinding, mockContext);
 
       expect(mockSourceComponent.addEnvironment).toHaveBeenCalledWith('APP_RUNNER_CONNECTION_NAME', mockTargetComponent.connectionName);
@@ -280,7 +280,7 @@ describe('AppRunnerBinderStrategy', () => {
     test('should use default branch name when not specified', async () => {
       const targetWithoutBranch = { ...mockTargetComponent, branchName: undefined };
       const connectionBinding = { ...mockBinding, capability: 'apprunner:connection' };
-      
+
       await strategy.bind(mockSourceComponent, targetWithoutBranch, connectionBinding, mockContext);
 
       expect(mockSourceComponent.addEnvironment).toHaveBeenCalledWith('BRANCH_NAME', 'main');
@@ -290,7 +290,7 @@ describe('AppRunnerBinderStrategy', () => {
   describe('Bind__FedRampModerateCompliance__ConfiguresSecureNetworking', () => {
     test('should configure VPC connector for FedRAMP Moderate', async () => {
       const fedrampContext = { ...mockContext, complianceFramework: ComplianceFramework.FEDRAMP_MODERATE };
-      
+
       await strategy.bind(mockSourceComponent, mockTargetComponent, mockBinding, fedrampContext);
 
       expect(mockSourceComponent.addEnvironment).toHaveBeenCalledWith('VPC_CONNECTOR_ARN', mockTargetComponent.vpcConnectorArn);
@@ -308,7 +308,7 @@ describe('AppRunnerBinderStrategy', () => {
   describe('Bind__FedRampHighCompliance__ConfiguresCustomDomain', () => {
     test('should configure custom domain and SSL certificate for FedRAMP High', async () => {
       const fedrampHighContext = { ...mockContext, complianceFramework: ComplianceFramework.FEDRAMP_HIGH };
-      
+
       await strategy.bind(mockSourceComponent, mockTargetComponent, mockBinding, fedrampHighContext);
 
       expect(mockSourceComponent.addEnvironment).toHaveBeenCalledWith('CUSTOM_DOMAIN', mockTargetComponent.customDomain);
@@ -343,7 +343,7 @@ describe('AppRunnerBinderStrategy', () => {
   describe('Bind__EmptyAccessArray__ThrowsError', () => {
     test('should throw error when access array is empty', async () => {
       const emptyAccessBinding = { ...mockBinding, access: [] };
-      
+
       await expect(strategy.bind(mockSourceComponent, mockTargetComponent, emptyAccessBinding, mockContext))
         .rejects.toThrow('Access array cannot be empty for App Runner binding');
     });
@@ -352,7 +352,7 @@ describe('AppRunnerBinderStrategy', () => {
   describe('Bind__InvalidAccessType__ThrowsError', () => {
     test('should throw error for invalid access type', async () => {
       const invalidAccessBinding = { ...mockBinding, access: ['invalid'] };
-      
+
       await expect(strategy.bind(mockSourceComponent, mockTargetComponent, invalidAccessBinding, mockContext))
         .rejects.toThrow('Invalid access types for App Runner binding: invalid. Valid types: read, write, admin, deploy, scale');
     });

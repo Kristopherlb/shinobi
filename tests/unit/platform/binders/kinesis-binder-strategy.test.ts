@@ -57,7 +57,7 @@ describe('KinesisBinderStrategy', () => {
 
   beforeEach(() => {
     strategy = new KinesisBinderStrategy();
-    
+
     mockSourceComponent = {
       addToRolePolicy: jest.fn(),
       addEnvironment: jest.fn()
@@ -145,7 +145,7 @@ describe('KinesisBinderStrategy', () => {
   describe('Bind__KinesisStreamCapability__ConfiguresStreamAccess', () => {
     test('should configure read access for stream', async () => {
       const readOnlyBinding = { ...mockBinding, access: ['read'] };
-      
+
       await strategy.bind(mockSourceComponent, mockTargetComponent, readOnlyBinding, mockContext);
 
       expect(mockSourceComponent.addToRolePolicy).toHaveBeenCalledWith({
@@ -162,7 +162,7 @@ describe('KinesisBinderStrategy', () => {
 
     test('should configure write access for stream', async () => {
       const writeOnlyBinding = { ...mockBinding, access: ['write'] };
-      
+
       await strategy.bind(mockSourceComponent, mockTargetComponent, writeOnlyBinding, mockContext);
 
       expect(mockSourceComponent.addToRolePolicy).toHaveBeenCalledWith({
@@ -208,7 +208,7 @@ describe('KinesisBinderStrategy', () => {
   describe('Bind__KinesisFirehoseCapability__ConfiguresFirehoseAccess', () => {
     test('should configure read access for firehose', async () => {
       const firehoseBinding = { ...mockBinding, capability: 'kinesis:firehose', access: ['read'] };
-      
+
       await strategy.bind(mockSourceComponent, mockTargetComponent, firehoseBinding, mockContext);
 
       expect(mockSourceComponent.addToRolePolicy).toHaveBeenCalledWith({
@@ -223,7 +223,7 @@ describe('KinesisBinderStrategy', () => {
 
     test('should configure write access for firehose', async () => {
       const firehoseBinding = { ...mockBinding, capability: 'kinesis:firehose', access: ['write'] };
-      
+
       await strategy.bind(mockSourceComponent, mockTargetComponent, firehoseBinding, mockContext);
 
       expect(mockSourceComponent.addToRolePolicy).toHaveBeenCalledWith({
@@ -241,7 +241,7 @@ describe('KinesisBinderStrategy', () => {
 
     test('should inject firehose environment variables', async () => {
       const firehoseBinding = { ...mockBinding, capability: 'kinesis:firehose' };
-      
+
       await strategy.bind(mockSourceComponent, mockTargetComponent, firehoseBinding, mockContext);
 
       expect(mockSourceComponent.addEnvironment).toHaveBeenCalledWith('FIREHOSE_DELIVERY_STREAM_NAME', mockTargetComponent.firehoseDeliveryStreamName);
@@ -252,7 +252,7 @@ describe('KinesisBinderStrategy', () => {
   describe('Bind__KinesisAnalyticsCapability__ConfiguresAnalyticsAccess', () => {
     test('should configure read access for analytics', async () => {
       const analyticsBinding = { ...mockBinding, capability: 'kinesis:analytics', access: ['read'] };
-      
+
       await strategy.bind(mockSourceComponent, mockTargetComponent, analyticsBinding, mockContext);
 
       expect(mockSourceComponent.addToRolePolicy).toHaveBeenCalledWith({
@@ -267,7 +267,7 @@ describe('KinesisBinderStrategy', () => {
 
     test('should configure write access for analytics', async () => {
       const analyticsBinding = { ...mockBinding, capability: 'kinesis:analytics', access: ['write'] };
-      
+
       await strategy.bind(mockSourceComponent, mockTargetComponent, analyticsBinding, mockContext);
 
       expect(mockSourceComponent.addToRolePolicy).toHaveBeenCalledWith({
@@ -287,7 +287,7 @@ describe('KinesisBinderStrategy', () => {
   describe('Bind__EmptyAccessArray__ThrowsError', () => {
     test('should throw error when access array is empty', async () => {
       const emptyAccessBinding = { ...mockBinding, access: [] };
-      
+
       await expect(strategy.bind(mockSourceComponent, mockTargetComponent, emptyAccessBinding, mockContext))
         .rejects.toThrow('Access array cannot be empty for Kinesis binding');
     });
@@ -296,7 +296,7 @@ describe('KinesisBinderStrategy', () => {
   describe('Bind__InvalidAccessType__ThrowsError', () => {
     test('should throw error for invalid access type', async () => {
       const invalidAccessBinding = { ...mockBinding, access: ['invalid'] };
-      
+
       await expect(strategy.bind(mockSourceComponent, mockTargetComponent, invalidAccessBinding, mockContext))
         .rejects.toThrow('Invalid access types for Kinesis binding: invalid. Valid types: read, write, admin, consume, produce');
     });

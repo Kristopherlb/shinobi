@@ -252,7 +252,7 @@ describe('EcsFargateBinderStrategy', () => {
     test('should throw error when region is missing from context', async () => {
       // Arrange
       const invalidContext = { ...bindingContext };
-      delete invalidContext.region;
+      delete (invalidContext as any).region;
 
       const binding: ComponentBinding = {
         from: 'lambda-function',
@@ -269,7 +269,7 @@ describe('EcsFargateBinderStrategy', () => {
     test('should throw error when accountId is missing from context', async () => {
       // Arrange
       const invalidContext = { ...bindingContext };
-      delete invalidContext.accountId;
+      delete (invalidContext as any).accountId;
 
       const binding: ComponentBinding = {
         from: 'lambda-function',

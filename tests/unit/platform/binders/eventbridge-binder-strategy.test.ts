@@ -57,7 +57,7 @@ describe('EventBridgeBinderStrategy', () => {
 
   beforeEach(() => {
     strategy = new EventBridgeBinderStrategy();
-    
+
     mockSourceComponent = {
       addToRolePolicy: jest.fn(),
       addEnvironment: jest.fn()
@@ -149,7 +149,7 @@ describe('EventBridgeBinderStrategy', () => {
   describe('Bind__EventBridgeEventBusCapability__ConfiguresEventBusAccess', () => {
     test('should configure read access for event bus', async () => {
       const readOnlyBinding = { ...mockBinding, access: ['read'] };
-      
+
       await strategy.bind(mockSourceComponent, mockTargetComponent, readOnlyBinding, mockContext);
 
       expect(mockSourceComponent.addToRolePolicy).toHaveBeenCalledWith({
@@ -164,7 +164,7 @@ describe('EventBridgeBinderStrategy', () => {
 
     test('should configure write access for event bus', async () => {
       const writeOnlyBinding = { ...mockBinding, access: ['write'] };
-      
+
       await strategy.bind(mockSourceComponent, mockTargetComponent, writeOnlyBinding, mockContext);
 
       expect(mockSourceComponent.addToRolePolicy).toHaveBeenCalledWith({
@@ -189,7 +189,7 @@ describe('EventBridgeBinderStrategy', () => {
   describe('Bind__EventBridgeRuleCapability__ConfiguresRuleAccess', () => {
     test('should configure read access for rule', async () => {
       const ruleBinding = { ...mockBinding, capability: 'eventbridge:rule', access: ['read'] };
-      
+
       await strategy.bind(mockSourceComponent, mockTargetComponent, ruleBinding, mockContext);
 
       expect(mockSourceComponent.addToRolePolicy).toHaveBeenCalledWith({
@@ -204,7 +204,7 @@ describe('EventBridgeBinderStrategy', () => {
 
     test('should configure write access for rule', async () => {
       const ruleBinding = { ...mockBinding, capability: 'eventbridge:rule', access: ['write'] };
-      
+
       await strategy.bind(mockSourceComponent, mockTargetComponent, ruleBinding, mockContext);
 
       expect(mockSourceComponent.addToRolePolicy).toHaveBeenCalledWith({
@@ -221,7 +221,7 @@ describe('EventBridgeBinderStrategy', () => {
 
     test('should inject rule environment variables', async () => {
       const ruleBinding = { ...mockBinding, capability: 'eventbridge:rule' };
-      
+
       await strategy.bind(mockSourceComponent, mockTargetComponent, ruleBinding, mockContext);
 
       expect(mockSourceComponent.addEnvironment).toHaveBeenCalledWith('EVENTBRIDGE_RULE_NAME', mockTargetComponent.ruleName);
@@ -235,7 +235,7 @@ describe('EventBridgeBinderStrategy', () => {
   describe('Bind__EventBridgeTargetCapability__ConfiguresTargetAccess', () => {
     test('should configure read access for target', async () => {
       const targetBinding = { ...mockBinding, capability: 'eventbridge:target', access: ['read'] };
-      
+
       await strategy.bind(mockSourceComponent, mockTargetComponent, targetBinding, mockContext);
 
       expect(mockSourceComponent.addToRolePolicy).toHaveBeenCalledWith({
@@ -249,7 +249,7 @@ describe('EventBridgeBinderStrategy', () => {
 
     test('should configure write access for target', async () => {
       const targetBinding = { ...mockBinding, capability: 'eventbridge:target', access: ['write'] };
-      
+
       await strategy.bind(mockSourceComponent, mockTargetComponent, targetBinding, mockContext);
 
       expect(mockSourceComponent.addToRolePolicy).toHaveBeenCalledWith({
@@ -264,7 +264,7 @@ describe('EventBridgeBinderStrategy', () => {
 
     test('should inject target environment variables', async () => {
       const targetBinding = { ...mockBinding, capability: 'eventbridge:target' };
-      
+
       await strategy.bind(mockSourceComponent, mockTargetComponent, targetBinding, mockContext);
 
       expect(mockSourceComponent.addEnvironment).toHaveBeenCalledWith('EVENTBRIDGE_TARGET_ID', mockTargetComponent.targetId);
@@ -276,7 +276,7 @@ describe('EventBridgeBinderStrategy', () => {
   describe('Bind__EmptyAccessArray__ThrowsError', () => {
     test('should throw error when access array is empty', async () => {
       const emptyAccessBinding = { ...mockBinding, access: [] };
-      
+
       await expect(strategy.bind(mockSourceComponent, mockTargetComponent, emptyAccessBinding, mockContext))
         .rejects.toThrow('Access array cannot be empty for EventBridge binding');
     });
@@ -285,7 +285,7 @@ describe('EventBridgeBinderStrategy', () => {
   describe('Bind__InvalidAccessType__ThrowsError', () => {
     test('should throw error for invalid access type', async () => {
       const invalidAccessBinding = { ...mockBinding, access: ['invalid'] };
-      
+
       await expect(strategy.bind(mockSourceComponent, mockTargetComponent, invalidAccessBinding, mockContext))
         .rejects.toThrow('Invalid access types for EventBridge binding: invalid. Valid types: read, write, admin, publish, subscribe');
     });

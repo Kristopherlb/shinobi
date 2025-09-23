@@ -57,7 +57,7 @@ describe('EfsBinderStrategy', () => {
 
   beforeEach(() => {
     strategy = new EfsBinderStrategy();
-    
+
     mockSourceComponent = {
       addToRolePolicy: jest.fn(),
       addEnvironment: jest.fn()
@@ -152,7 +152,7 @@ describe('EfsBinderStrategy', () => {
   describe('Bind__EfsFileSystemCapability__ConfiguresFileSystemAccess', () => {
     test('should configure read access for file system', async () => {
       const readOnlyBinding = { ...mockBinding, access: ['read'] };
-      
+
       await strategy.bind(mockSourceComponent, mockTargetComponent, readOnlyBinding, mockContext);
 
       expect(mockSourceComponent.addToRolePolicy).toHaveBeenCalledWith({
@@ -167,7 +167,7 @@ describe('EfsBinderStrategy', () => {
 
     test('should configure write access for file system', async () => {
       const writeOnlyBinding = { ...mockBinding, access: ['write'] };
-      
+
       await strategy.bind(mockSourceComponent, mockTargetComponent, writeOnlyBinding, mockContext);
 
       expect(mockSourceComponent.addToRolePolicy).toHaveBeenCalledWith({
@@ -212,7 +212,7 @@ describe('EfsBinderStrategy', () => {
   describe('Bind__EfsMountTargetCapability__ConfiguresMountTargetAccess', () => {
     test('should configure read access for mount target', async () => {
       const mountTargetBinding = { ...mockBinding, capability: 'efs:mount-target', access: ['read'] };
-      
+
       await strategy.bind(mockSourceComponent, mockTargetComponent, mountTargetBinding, mockContext);
 
       expect(mockSourceComponent.addToRolePolicy).toHaveBeenCalledWith({
@@ -226,7 +226,7 @@ describe('EfsBinderStrategy', () => {
 
     test('should configure write access for mount target', async () => {
       const mountTargetBinding = { ...mockBinding, capability: 'efs:mount-target', access: ['write'] };
-      
+
       await strategy.bind(mockSourceComponent, mockTargetComponent, mountTargetBinding, mockContext);
 
       expect(mockSourceComponent.addToRolePolicy).toHaveBeenCalledWith({
@@ -242,7 +242,7 @@ describe('EfsBinderStrategy', () => {
 
     test('should inject mount target environment variables', async () => {
       const mountTargetBinding = { ...mockBinding, capability: 'efs:mount-target' };
-      
+
       await strategy.bind(mockSourceComponent, mockTargetComponent, mountTargetBinding, mockContext);
 
       expect(mockSourceComponent.addEnvironment).toHaveBeenCalledWith('EFS_MOUNT_TARGET_ID', mockTargetComponent.mountTargetId);
@@ -257,7 +257,7 @@ describe('EfsBinderStrategy', () => {
   describe('Bind__EfsAccessPointCapability__ConfiguresAccessPointAccess', () => {
     test('should configure read access for access point', async () => {
       const accessPointBinding = { ...mockBinding, capability: 'efs:access-point', access: ['read'] };
-      
+
       await strategy.bind(mockSourceComponent, mockTargetComponent, accessPointBinding, mockContext);
 
       expect(mockSourceComponent.addToRolePolicy).toHaveBeenCalledWith({
@@ -271,7 +271,7 @@ describe('EfsBinderStrategy', () => {
 
     test('should configure write access for access point', async () => {
       const accessPointBinding = { ...mockBinding, capability: 'efs:access-point', access: ['write'] };
-      
+
       await strategy.bind(mockSourceComponent, mockTargetComponent, accessPointBinding, mockContext);
 
       expect(mockSourceComponent.addToRolePolicy).toHaveBeenCalledWith({
@@ -288,7 +288,7 @@ describe('EfsBinderStrategy', () => {
   describe('Bind__EmptyAccessArray__ThrowsError', () => {
     test('should throw error when access array is empty', async () => {
       const emptyAccessBinding = { ...mockBinding, access: [] };
-      
+
       await expect(strategy.bind(mockSourceComponent, mockTargetComponent, emptyAccessBinding, mockContext))
         .rejects.toThrow('Access array cannot be empty for EFS binding');
     });
@@ -297,7 +297,7 @@ describe('EfsBinderStrategy', () => {
   describe('Bind__InvalidAccessType__ThrowsError', () => {
     test('should throw error for invalid access type', async () => {
       const invalidAccessBinding = { ...mockBinding, access: ['invalid'] };
-      
+
       await expect(strategy.bind(mockSourceComponent, mockTargetComponent, invalidAccessBinding, mockContext))
         .rejects.toThrow('Invalid access types for EFS binding: invalid. Valid types: read, write, admin, mount');
     });

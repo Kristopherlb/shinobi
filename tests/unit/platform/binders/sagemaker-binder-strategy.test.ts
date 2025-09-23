@@ -57,7 +57,7 @@ describe('SageMakerBinderStrategy', () => {
 
   beforeEach(() => {
     strategy = new SageMakerBinderStrategy();
-    
+
     mockSourceComponent = {
       addToRolePolicy: jest.fn(),
       addEnvironment: jest.fn()
@@ -175,7 +175,7 @@ describe('SageMakerBinderStrategy', () => {
   describe('Bind__SageMakerNotebookCapability__ConfiguresNotebookAccess', () => {
     test('should configure read access for notebook', async () => {
       const readOnlyBinding = { ...mockBinding, access: ['read'] };
-      
+
       await strategy.bind(mockSourceComponent, mockTargetComponent, readOnlyBinding, mockContext);
 
       expect(mockSourceComponent.addToRolePolicy).toHaveBeenCalledWith({
@@ -190,7 +190,7 @@ describe('SageMakerBinderStrategy', () => {
 
     test('should configure write access for notebook', async () => {
       const writeOnlyBinding = { ...mockBinding, access: ['write'] };
-      
+
       await strategy.bind(mockSourceComponent, mockTargetComponent, writeOnlyBinding, mockContext);
 
       expect(mockSourceComponent.addToRolePolicy).toHaveBeenCalledWith({
@@ -219,7 +219,7 @@ describe('SageMakerBinderStrategy', () => {
   describe('Bind__SageMakerModelCapability__ConfiguresModelAccess', () => {
     test('should configure read access for model', async () => {
       const modelBinding = { ...mockBinding, capability: 'sagemaker:model', access: ['read'] };
-      
+
       await strategy.bind(mockSourceComponent, mockTargetComponent, modelBinding, mockContext);
 
       expect(mockSourceComponent.addToRolePolicy).toHaveBeenCalledWith({
@@ -234,7 +234,7 @@ describe('SageMakerBinderStrategy', () => {
 
     test('should configure write access for model', async () => {
       const modelBinding = { ...mockBinding, capability: 'sagemaker:model', access: ['write'] };
-      
+
       await strategy.bind(mockSourceComponent, mockTargetComponent, modelBinding, mockContext);
 
       expect(mockSourceComponent.addToRolePolicy).toHaveBeenCalledWith({
@@ -250,7 +250,7 @@ describe('SageMakerBinderStrategy', () => {
 
     test('should inject model environment variables', async () => {
       const modelBinding = { ...mockBinding, capability: 'sagemaker:model' };
-      
+
       await strategy.bind(mockSourceComponent, mockTargetComponent, modelBinding, mockContext);
 
       expect(mockSourceComponent.addEnvironment).toHaveBeenCalledWith('SAGEMAKER_MODEL_NAME', mockTargetComponent.modelName);
@@ -261,7 +261,7 @@ describe('SageMakerBinderStrategy', () => {
   describe('Bind__SageMakerEndpointCapability__ConfiguresEndpointAccess', () => {
     test('should configure read access for endpoint', async () => {
       const endpointBinding = { ...mockBinding, capability: 'sagemaker:endpoint', access: ['read'] };
-      
+
       await strategy.bind(mockSourceComponent, mockTargetComponent, endpointBinding, mockContext);
 
       expect(mockSourceComponent.addToRolePolicy).toHaveBeenCalledWith({
@@ -276,7 +276,7 @@ describe('SageMakerBinderStrategy', () => {
 
     test('should configure write access for endpoint', async () => {
       const endpointBinding = { ...mockBinding, capability: 'sagemaker:endpoint', access: ['write'] };
-      
+
       await strategy.bind(mockSourceComponent, mockTargetComponent, endpointBinding, mockContext);
 
       expect(mockSourceComponent.addToRolePolicy).toHaveBeenCalledWith({
@@ -292,7 +292,7 @@ describe('SageMakerBinderStrategy', () => {
 
     test('should inject endpoint environment variables', async () => {
       const endpointBinding = { ...mockBinding, capability: 'sagemaker:endpoint' };
-      
+
       await strategy.bind(mockSourceComponent, mockTargetComponent, endpointBinding, mockContext);
 
       expect(mockSourceComponent.addEnvironment).toHaveBeenCalledWith('SAGEMAKER_ENDPOINT_NAME', mockTargetComponent.endpointName);
@@ -304,7 +304,7 @@ describe('SageMakerBinderStrategy', () => {
   describe('Bind__SageMakerTrainingJobCapability__ConfiguresTrainingJobAccess', () => {
     test('should configure read access for training job', async () => {
       const trainingBinding = { ...mockBinding, capability: 'sagemaker:training-job', access: ['read'] };
-      
+
       await strategy.bind(mockSourceComponent, mockTargetComponent, trainingBinding, mockContext);
 
       expect(mockSourceComponent.addToRolePolicy).toHaveBeenCalledWith({
@@ -319,7 +319,7 @@ describe('SageMakerBinderStrategy', () => {
 
     test('should configure write access for training job', async () => {
       const trainingBinding = { ...mockBinding, capability: 'sagemaker:training-job', access: ['write'] };
-      
+
       await strategy.bind(mockSourceComponent, mockTargetComponent, trainingBinding, mockContext);
 
       expect(mockSourceComponent.addToRolePolicy).toHaveBeenCalledWith({
@@ -334,7 +334,7 @@ describe('SageMakerBinderStrategy', () => {
 
     test('should inject training job environment variables', async () => {
       const trainingBinding = { ...mockBinding, capability: 'sagemaker:training-job' };
-      
+
       await strategy.bind(mockSourceComponent, mockTargetComponent, trainingBinding, mockContext);
 
       expect(mockSourceComponent.addEnvironment).toHaveBeenCalledWith('SAGEMAKER_TRAINING_JOB_NAME', mockTargetComponent.trainingJobName);
@@ -348,7 +348,7 @@ describe('SageMakerBinderStrategy', () => {
   describe('Bind__EmptyAccessArray__ThrowsError', () => {
     test('should throw error when access array is empty', async () => {
       const emptyAccessBinding = { ...mockBinding, access: [] };
-      
+
       await expect(strategy.bind(mockSourceComponent, mockTargetComponent, emptyAccessBinding, mockContext))
         .rejects.toThrow('Access array cannot be empty for SageMaker binding');
     });
@@ -357,7 +357,7 @@ describe('SageMakerBinderStrategy', () => {
   describe('Bind__InvalidAccessType__ThrowsError', () => {
     test('should throw error for invalid access type', async () => {
       const invalidAccessBinding = { ...mockBinding, access: ['invalid'] };
-      
+
       await expect(strategy.bind(mockSourceComponent, mockTargetComponent, invalidAccessBinding, mockContext))
         .rejects.toThrow('Invalid access types for SageMaker binding: invalid. Valid types: read, write, admin, train, deploy');
     });
