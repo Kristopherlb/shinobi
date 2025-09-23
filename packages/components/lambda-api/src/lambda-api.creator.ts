@@ -6,21 +6,9 @@
  */
 
 import { Construct } from 'constructs';
-// Minimal interfaces to avoid circular dependencies
-export interface ComponentSpec {
-  name: string;
-  type: string;
-  config: any;
-}
+import { ComponentSpec, ComponentContext } from '@platform/contracts';
 
-export interface ComponentContext {
-  serviceName: string;
-  environment: string;
-  complianceFramework?: string;
-  otelCollectorEndpoint?: string;
-  owner?: string;
-}
-
+// Define IComponentCreator locally since it's not exported from contracts
 export interface IComponentCreator {
   createComponent(spec: ComponentSpec, context: ComponentContext): any;
 }
@@ -83,7 +71,7 @@ export class LambdaApiComponentCreator implements IComponentCreator {
    * Factory method to create component instances
    */
   public createComponent(spec: ComponentSpec, context: ComponentContext): LambdaApiComponent {
-    return new LambdaApiComponent(context as any, spec.name, context, spec.config);
+    return new LambdaApiComponent(context.scope, spec.name, context, spec);
   }
 
   /**

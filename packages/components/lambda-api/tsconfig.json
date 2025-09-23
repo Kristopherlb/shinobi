@@ -5,7 +5,6 @@
     "moduleResolution": "Node",
     "declaration": true,
     "outDir": "../../../dist/packages/components/lambda-api",
-    "rootDir": ".",
     "strict": true,
     "esModuleInterop": true,
     "skipLibCheck": true,
@@ -17,6 +16,12 @@
       ],
       "@shinobi/core/*": [
         "../../../packages/core/src/*"
+      ],
+      "@platform/contracts": [
+        "../../../packages/contracts/src/index.ts"
+      ],
+      "@platform/contracts/*": [
+        "../../../packages/contracts/src/*"
       ]
     }
   },

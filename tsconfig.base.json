@@ -33,8 +33,11 @@
       "@platform/constructs/*": [
         "packages/constructs/*/src"
       ],
+      "@platform/contracts": [
+        "packages/contracts/src/index.ts"
+      ],
       "@platform/contracts/*": [
-        "packages/platform/contracts/*"
+        "packages/contracts/src/*"
       ],
       "@cdk-lib/*": [
         "packages/constructs/*/src"

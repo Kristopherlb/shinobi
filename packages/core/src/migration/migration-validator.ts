@@ -9,7 +9,7 @@ import { execSync } from 'child_process';
 import * as fs from 'fs';
 import * as path from 'path';
 
-export interface ValidationResult {
+export interface MigrationValidationResult {
   success: boolean;
   diffResult: 'NO CHANGES' | 'HAS CHANGES';
   planOutput: string;
@@ -41,7 +41,7 @@ export class MigrationValidator {
     migratedProjectPath: string,
     originalTemplatePath: string,
     options: MigrationOptions
-  ): Promise<ValidationResult> {
+  ): Promise<MigrationValidationResult> {
     this.logger.debug('Starting migration validation');
 
     const validationErrors: string[] = [];
@@ -80,7 +80,7 @@ export class MigrationValidator {
         warnings.push('Templates have differences - manual review required');
       }
 
-      const result: ValidationResult = {
+      const result: MigrationValidationResult = {
         success: validationErrors.length === 0,
         diffResult: diffStatus,
         planOutput: planResult.output,
@@ -537,7 +537,7 @@ export class MigrationValidator {
   /**
    * Generate detailed validation report
    */
-  generateValidationReport(result: ValidationResult): string[] {
+  generateValidationReport(result: MigrationValidationResult): string[] {
     const report: string[] = [];
 
     report.push('=== Migration Validation Report ===');

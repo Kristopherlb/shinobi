@@ -7,6 +7,7 @@ import { Logger } from '../core-engine/logger';
 import { ComponentFactoryProvider } from '../core-engine/component-factory-provider';
 import { ComponentRegistry, IComponent, ComponentContext } from '../core-engine/component-factory-provider';
 import { ComponentBinder, BinderRegistry } from '../core-engine/binding-strategies';
+import { Component } from '../platform/contracts/component';
 import * as cdk from 'aws-cdk-lib';
 import * as path from 'path';
 import * as fs from 'fs';
@@ -20,7 +21,7 @@ export interface ResolverEngineDependencies {
 export interface SynthesisResult {
   app: cdk.App;
   stacks: cdk.Stack[];
-  components: Component[];
+  components: IComponent[];
   bindings: Array<{
     source: string;
     target: string;
@@ -107,7 +108,7 @@ export class ResolverEngine {
    * Phase 1: Component Instantiation
    * Uses Factory Method pattern to create all required components
    */
-  private async instantiateComponents(validatedConfig: any, stack: cdk.Stack): Promise<Component[]> {
+  private async instantiateComponents(validatedConfig: any, stack: cdk.Stack): Promise<IComponent[]> {
     this.dependencies.logger.debug('Phase 1: Component Instantiation');
 
     // AC-RS1.2: Use ComponentFactoryProvider with correct complianceFramework
@@ -117,7 +118,7 @@ export class ResolverEngine {
 
     this.dependencies.logger.info(`Using ${complianceFramework} component factory`);
 
-    const components: Component[] = [];
+    const components: IComponent[] = [];
 
     // AC-RS1.3: Iterate through components array and instantiate via Factory Method
     if (validatedConfig.components && Array.isArray(validatedConfig.components)) {
@@ -148,7 +149,7 @@ export class ResolverEngine {
    * Phase 2: Synthesis  
    * Calls synth() on each component to create CDK constructs and collect capabilities
    */
-  private async synthesizeComponents(components: Component[]): Promise<Map<string, any>> {
+  private async synthesizeComponents(components: IComponent[]): Promise<Map<string, any>> {
     this.dependencies.logger.debug('Phase 2: Component Synthesis');
 
     const outputsMap = new Map<string, any>();
@@ -188,7 +189,7 @@ export class ResolverEngine {
    * Resolves component bindings using Strategy pattern
    */
   private async bindComponents(
-    components: Component[],
+    components: IComponent[],
     outputsMap: Map<string, any>,
     validatedConfig: any
   ): Promise<Array<any>> {
@@ -301,7 +302,7 @@ export class ResolverEngine {
    */
   private async applyPatches(
     stack: cdk.Stack,
-    components: Component[],
+    components: IComponent[],
     validatedConfig: any
   ): Promise<boolean> {
     this.dependencies.logger.debug('Phase 4: Patching');
@@ -353,7 +354,7 @@ export class ResolverEngine {
   /**
    * Build a map of component constructs for patch context
    */
-  private buildConstructsMap(components: Component[]): Record<string, any> {
+  private buildConstructsMap(components: IComponent[]): Record<string, any> {
     const constructsMap: Record<string, any> = {};
 
     for (const component of components) {

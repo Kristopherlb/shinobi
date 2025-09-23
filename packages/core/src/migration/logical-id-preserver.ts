@@ -7,7 +7,7 @@ import { Logger } from '../core-engine/logger';
 import { StackAnalysisResult } from './cloudformation-analyzer';
 import { ResourceMappingResult } from './resource-mapper';
 
-export interface LogicalIdMapping {
+export interface LogicalIdPreservationMapping {
   originalId: string;
   newId: string;
   resourceType: string;
@@ -18,7 +18,7 @@ export interface LogicalIdMapping {
 
 export interface LogicalIdPreservationResult {
   logicalIdMap: Record<string, string>;
-  mappings: LogicalIdMapping[];
+  mappings: LogicalIdPreservationMapping[];
   preservationStrategies: Record<string, number>;
   warnings: string[];
 }
@@ -35,7 +35,7 @@ export class LogicalIdPreserver {
   ): Promise<LogicalIdPreservationResult> {
     this.logger.debug('Generating logical ID preservation mapping');
 
-    const mappings: LogicalIdMapping[] = [];
+    const mappings: LogicalIdPreservationMapping[] = [];
     const logicalIdMap: Record<string, string> = {};
     const preservationStrategies: Record<string, number> = {};
     const warnings: string[] = [];
@@ -65,7 +65,7 @@ export class LogicalIdPreserver {
         originalResource.type
       );
 
-      const mapping: LogicalIdMapping = {
+      const mapping: LogicalIdPreservationMapping = {
         originalId: originalResource.logicalId,
         newId: newLogicalId,
         resourceType: originalResource.type,
@@ -185,7 +185,7 @@ export class LogicalIdPreserver {
     return /[A-Z0-9]{8}$/.test(logicalId);
   }
 
-  private detectLogicalIdConflicts(mappings: LogicalIdMapping[]): string[] {
+  private detectLogicalIdConflicts(mappings: LogicalIdPreservationMapping[]): string[] {
     const conflicts: string[] = [];
     const newIdCounts = new Map<string, string[]>();
 

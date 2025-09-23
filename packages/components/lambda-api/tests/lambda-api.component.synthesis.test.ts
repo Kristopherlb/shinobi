@@ -5,33 +5,25 @@
 
 import { App, Stack } from 'aws-cdk-lib';
 import { LambdaApiComponent } from '../src/lambda-api.component';
-import { LambdaApiConfig } from '../src/lambda-api.builder';
-
-// Use local interfaces since we removed core dependency
-interface ComponentContext {
-  serviceName: string;
-  environment: string;
-  complianceFramework?: string;
-  otelCollectorEndpoint?: string;
-  owner?: string;
-}
-
-interface ComponentSpec {
-  name: string;
-  type: string;
-  config: any;
-}
+import { ComponentContext, ComponentSpec } from '../../../contracts/src/index';
 
 const createMockContext = (
   complianceFramework: 'commercial' | 'fedramp-moderate' | 'fedramp-high' = 'commercial',
   environment: string = 'dev'
-): ComponentContext => ({
-  serviceName: 'test-service',
-  environment,
-  complianceFramework
-});
+): ComponentContext => {
+  const app = new App();
+  const stack = new Stack(app, 'TestStack');
+  return {
+    serviceName: 'test-service',
+    environment,
+    complianceFramework,
+    scope: stack,
+    region: 'us-east-1',
+    accountId: '123456789012'
+  };
+};
 
-const createMockSpec = (config: Partial<LambdaApiConfig> = {}): ComponentSpec => ({
+const createMockSpec = (config: any = {}): ComponentSpec => ({
   name: 'test-lambda-api',
   type: 'lambda-api',
   config: {
@@ -48,8 +40,7 @@ const synthesizeComponent = (
   const stack = new Stack(app, 'TestStack');
 
   const component = new LambdaApiComponent(stack, 'TestLambdaApi', context, spec);
-  // Note: synth() method not implemented in current version
-  // component.synth();
+  component.synth();
 
   return { component, stack };
 };

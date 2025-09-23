@@ -6,7 +6,7 @@
 import { Logger } from '../core-engine/logger';
 import { StackAnalysisResult } from './cloudformation-analyzer';
 import { ResourceMappingResult } from './resource-mapper';
-import { ValidationResult } from './migration-validator';
+import { MigrationValidationResult } from './migration-validator';
 import { MigrationOptions } from './migration-engine';
 import * as fs from 'fs';
 import * as path from 'path';
@@ -21,7 +21,7 @@ export class MigrationReporter {
     outputDir: string,
     analysisResult: StackAnalysisResult,
     mappingResult: ResourceMappingResult,
-    validationResult: ValidationResult,
+    validationResult: MigrationValidationResult,
     options: MigrationOptions
   ): Promise<string> {
     const reportPath = path.join(outputDir, 'MIGRATION_REPORT.md');
@@ -43,7 +43,7 @@ export class MigrationReporter {
   private buildReport(
     analysisResult: StackAnalysisResult,
     mappingResult: ResourceMappingResult,
-    validationResult: ValidationResult,
+    validationResult: MigrationValidationResult,
     options: MigrationOptions
   ): string {
     const timestamp = new Date().toISOString();
@@ -118,7 +118,7 @@ ${this.generateValidationDetails(validationResult)}
   private generateExecutiveSummary(
     analysisResult: StackAnalysisResult,
     mappingResult: ResourceMappingResult,
-    validationResult: ValidationResult
+    validationResult: MigrationValidationResult
   ): string {
     const totalResources = analysisResult.resources.length;
     const mappedResources = mappingResult.mappedResources.length;
@@ -247,7 +247,7 @@ ${validationResult.diffResult === 'NO CHANGES'
     return content;
   }
 
-  private generateValidationResults(validationResult: ValidationResult): string {
+  private generateValidationResults(validationResult: MigrationValidationResult): string {
     let content = `**Validation Status:** ${validationResult.success ? 'PASSED' : 'FAILED'}\n`;
     content += `**Template Diff Status:** ${validationResult.diffResult}\n\n`;
 
@@ -267,7 +267,7 @@ ${validationResult.diffResult === 'NO CHANGES'
 
   private generateNextSteps(
     mappingResult: ResourceMappingResult,
-    validationResult: ValidationResult
+    validationResult: MigrationValidationResult
   ): string {
     const steps: string[] = [];
 
@@ -292,7 +292,7 @@ ${validationResult.diffResult === 'NO CHANGES'
     return steps.join('\n');
   }
 
-  private generateLogicalIdDetails(validationResult: ValidationResult): string {
+  private generateLogicalIdDetails(validationResult: MigrationValidationResult): string {
     return `The migration tool generated a \`logical-id-map.json\` file to preserve CloudFormation resource state. This ensures that your existing resources (especially stateful ones like databases) are not replaced during the migration.
 
 **How it works:**
@@ -304,7 +304,7 @@ ${validationResult.diffResult === 'NO CHANGES'
 **Validation:** ${validationResult.diffResult === 'NO CHANGES' ? 'Logical ID preservation is working correctly' : 'Review template differences to ensure preservation is working'}`;
   }
 
-  private generateValidationDetails(validationResult: ValidationResult): string {
+  private generateValidationDetails(validationResult: MigrationValidationResult): string {
     let content = '**Platform Validation:**\n';
     
     if (validationResult.success) {

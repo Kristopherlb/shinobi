@@ -21,7 +21,8 @@
   "dependencies": {
     "aws-cdk-lib": "^2.214.0",
     "constructs": "^10.4.2",
-    "@shinobi/core": "workspace:*"
+    "@shinobi/core": "workspace:*",
+    "@platform/contracts": "workspace:*"
   },
   "peerDependencies": {
     "aws-cdk-lib": ">=2.100.0",

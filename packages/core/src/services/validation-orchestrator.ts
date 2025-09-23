@@ -8,7 +8,7 @@ import { SchemaValidator } from './schema-validator';
 import { ContextHydrator } from './context-hydrator';
 import { ReferenceValidator } from './reference-validator';
 
-export interface ValidationResult {
+export interface ValidationOrchestratorResult {
   manifest: any;
   warnings: string[];
 }
@@ -31,12 +31,12 @@ export interface ValidationOrchestratorDependencies {
  * Role: Service/Manager - Coordinates other services to accomplish complex task
  */
 export class ValidationOrchestrator {
-  constructor(private dependencies: ValidationOrchestratorDependencies) {}
+  constructor(private dependencies: ValidationOrchestratorDependencies) { }
 
   /**
    * Stage 1-2: Parse and validate manifest (AC-P1.1, AC-P1.2, AC-P2.1, AC-P2.2, AC-P2.3)
    */
-  async validate(manifestPath: string): Promise<ValidationResult> {
+  async validate(manifestPath: string): Promise<ValidationOrchestratorResult> {
     this.dependencies.logger.debug('Starting validation pipeline orchestration');
 
     // Stage 1: Parsing (AC-P1.1, AC-P1.2)
@@ -62,10 +62,10 @@ export class ValidationOrchestrator {
 
     // Stages 1-2: Parse and validate
     const validationResult = await this.validate(manifestPath);
-    
+
     // Stage 3: Context Hydration (AC-P3.1, AC-P3.2, AC-P3.3)
     const hydratedManifest = await this.dependencies.contextHydrator.hydrateContext(
-      validationResult.manifest, 
+      validationResult.manifest,
       environment
     );
 

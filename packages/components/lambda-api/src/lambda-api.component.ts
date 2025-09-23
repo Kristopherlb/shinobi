@@ -9,7 +9,8 @@ import {
   Tags,
   Stack,
 } from "aws-cdk-lib";
-import { BaseComponent, ComponentSpec, ComponentCapabilities, ComponentContext } from "@platform/contracts";
+import { ComponentSpec, ComponentCapabilities, ComponentContext } from "@platform/contracts";
+import { BaseComponent } from "@shinobi/core";
 
 export interface LambdaApiSpec {
   /** e.g. "src/api.handler" */
@@ -32,6 +33,7 @@ export class LambdaApiComponent extends BaseComponent {
   ) {
     super(scope, id, context, spec);
   }
+
   private get typedSpec(): LambdaApiSpec {
     return this.spec.config as LambdaApiSpec;
   }
@@ -39,7 +41,7 @@ export class LambdaApiComponent extends BaseComponent {
   synth(): void {
     const spec = this.typedSpec;
     const isFedramp = (this.context.complianceFramework ?? "").startsWith("fedramp");
-    const stack = Stack.of(this as any);
+    const stack = Stack.of(this);
     const region = stack.region;
 
     // Logs
@@ -53,7 +55,11 @@ export class LambdaApiComponent extends BaseComponent {
       functionName: `${this.context.serviceName}-${this.node.id}`,
       runtime: spec.runtime ?? lambda.Runtime.NODEJS_20_X,
       handler: spec.handler,
-      code: lambda.Code.fromAsset("dist/app"),
+      code: lambda.Code.fromInline(`
+        exports.handler = async (event) => {
+          return { statusCode: 200, body: JSON.stringify({ message: 'Hello from Lambda!' }) };
+        };
+      `),
       memorySize: spec.memorySize ?? 512,
       timeout: Duration.seconds(spec.timeout ?? 30),
       tracing: lambda.Tracing.ACTIVE,
@@ -174,8 +180,6 @@ export class LambdaApiComponent extends BaseComponent {
         return days >= 30 ? logs.RetentionDays.ONE_MONTH : logs.RetentionDays.TWO_WEEKS;
     }
   }
-  // inside class LambdaApiComponent extends BaseComponent { ... }
-
   // ---- BaseComponent abstract impls ----
   public getType(): string {
     return "lambda-api";

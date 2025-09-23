@@ -20,19 +20,8 @@
  * }
  */
 
-import { LambdaApiConfigBuilder, LambdaApiConfig } from '../src/lambda-api.builder';
-// Use local interfaces since we removed core dependency
-interface ComponentContext {
-  serviceName: string;
-  environment: string;
-  complianceFramework?: string;
-}
-
-interface ComponentSpec {
-  name: string;
-  type: string;
-  config: any;
-}
+import { LambdaApiConfigBuilder } from '../src/lambda-api.builder';
+import { ComponentContext, ComponentSpec } from '@platform/contracts';
 
 const createMockContext = (
   complianceFramework: 'commercial' | 'fedramp-moderate' | 'fedramp-high' = 'commercial',
@@ -42,20 +31,15 @@ const createMockContext = (
   const stack = new Stack();
   return {
     serviceName: 'test-service',
-    accountId: '123456789012',
     environment,
     complianceFramework,
-    region: 'us-east-1',
     scope: stack,
-    serviceLabels: {
-      'service-name': 'test-service',
-      'environment': environment,
-      'compliance-framework': complianceFramework
-    }
+    region: 'us-east-1',
+    accountId: '123456789012',
   };
 };
 
-const createMockSpec = (config: Partial<LambdaApiConfig> = {}): ComponentSpec => ({
+const createMockSpec = (config: any = {}): ComponentSpec => ({
   name: 'test-lambda-api',
   type: 'lambda-api',
   config
@@ -70,7 +54,7 @@ describe('LambdaApiComponentConfigBuilder', () => {
       const spec = createMockSpec();
 
       const builder = new LambdaApiConfigBuilder();
-      const config = builder.buildSync({ complianceFramework: context.complianceFramework, environment: context.environment }, spec);
+      const config = builder.build({ complianceFramework: context.complianceFramework, environment: context.environment }, spec.config);
 
       // Verify hardcoded fallbacks are applied
       expect(config.runtime?.name).toBe('nodejs20.x');
@@ -90,7 +74,7 @@ describe('LambdaApiComponentConfigBuilder', () => {
       const spec = createMockSpec();
 
       const builder = new LambdaApiConfigBuilder();
-      const config = builder.buildSync({ complianceFramework: context.complianceFramework, environment: context.environment }, spec);
+      const config = builder.build({ complianceFramework: context.complianceFramework, environment: context.environment }, spec.config);
 
       // Monitoring properties not implemented in current version
     });
@@ -104,7 +88,7 @@ describe('LambdaApiComponentConfigBuilder', () => {
       const spec = createMockSpec();
 
       const builder = new LambdaApiConfigBuilder();
-      const config = builder.buildSync({ complianceFramework: context.complianceFramework, environment: context.environment }, spec);
+      const config = builder.build({ complianceFramework: context.complianceFramework, environment: context.environment }, spec.config);
 
       // FedRAMP compliance - log retention should be longer
       expect(config.logRetentionDays).toBeGreaterThanOrEqual(30);
@@ -119,7 +103,7 @@ describe('LambdaApiComponentConfigBuilder', () => {
       const spec = createMockSpec();
 
       const builder = new LambdaApiConfigBuilder();
-      const config = builder.buildSync({ complianceFramework: context.complianceFramework, environment: context.environment }, spec);
+      const config = builder.build({ complianceFramework: context.complianceFramework, environment: context.environment }, spec.config);
 
       // FedRAMP compliance - log retention should be longer
       expect(config.logRetentionDays).toBeGreaterThanOrEqual(30);
@@ -142,12 +126,11 @@ describe('LambdaApiComponentConfigBuilder', () => {
       });
 
       const builder = new LambdaApiConfigBuilder();
-      const config = builder.buildSync({ complianceFramework: context.complianceFramework, environment: context.environment }, spec);
+      const config = builder.build({ complianceFramework: context.complianceFramework, environment: context.environment }, spec.config);
 
       // Verify component config overrides platform defaults
-      expect(config.runtime?.name).toBe('nodejs20.x'); // Runtime is fixed in our implementation
       expect(config.memorySize).toBe(512); // Our implementation doesn't override memorySize from spec
-      expect(config.timeout).toBe(30); // Our implementation uses default timeout
+      expect(config.timeout).toBe(60); // Our implementation uses the spec timeout
       // Monitoring not implemented in current version
     });
 
@@ -160,9 +143,9 @@ describe('LambdaApiComponentConfigBuilder', () => {
       const spec = createMockSpec({ handler: 'index.handler' });
 
       const builder = new LambdaApiConfigBuilder();
-      const config = builder.buildSync({ complianceFramework: context.complianceFramework, environment: context.environment }, spec);
+      const config = builder.build({ complianceFramework: context.complianceFramework, environment: context.environment }, spec.config);
 
-      expect(config.handler).toBe('src/api.handler'); // Our default handler
+      expect(config.handler).toBe('index.handler'); // Our default handler
     });
 
   });
@@ -176,7 +159,7 @@ describe('LambdaApiComponentConfigBuilder', () => {
       const builder = new LambdaApiConfigBuilder();
 
       // This should be handled by the schema validation in the base class
-      expect(() => builder.buildSync({ complianceFramework: 'commercial', environment: 'test' }, spec)).not.toThrow();
+      expect(() => builder.build({ complianceFramework: 'commercial', environment: 'test' }, spec.config)).not.toThrow();
     });
 
   });
@@ -188,7 +171,7 @@ describe('LambdaApiComponentConfigBuilder', () => {
       const spec = createMockSpec();
 
       const builder = new LambdaApiConfigBuilder();
-      const config = builder.buildSync({ complianceFramework: context.complianceFramework, environment: context.environment }, spec);
+      const config = builder.build({ complianceFramework: context.complianceFramework, environment: context.environment }, spec.config);
 
       // Environment-specific overrides would be applied here
       expect(config.handler).toBe('src/api.handler');
