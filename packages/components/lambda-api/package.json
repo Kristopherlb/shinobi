@@ -9,10 +9,14 @@
     ".": {
       "require": "./dist/index.js",
       "types": "./dist/index.d.ts"
+    },
+    "./schema": {
+      "require": "./Config.schema.json"
     }
   },
   "files": [
-    "dist"
+    "dist",
+    "Config.schema.json"
   ],
   "dependencies": {
     "aws-cdk-lib": "^2.214.0",

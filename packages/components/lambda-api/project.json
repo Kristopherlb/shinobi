@@ -12,13 +12,14 @@
         "outputPath": "dist/packages/components/lambda-api",
         "assets": [
           "packages/components/lambda-api/README.md",
+          "packages/components/lambda-api/Config.schema.json",
           {
             "input": "packages/components/lambda-api",
             "glob": "package.json",
             "output": "."
           }
         ],
-        "main": "packages/components/lambda-api/src/index.ts"
+        "main": "packages/components/lambda-api/index.ts"
       }
     },
     "test": {

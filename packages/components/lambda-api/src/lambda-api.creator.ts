@@ -25,7 +25,8 @@ export interface IComponentCreator {
   createComponent(spec: ComponentSpec, context: ComponentContext): any;
 }
 import { LambdaApiComponent } from './lambda-api.component';
-import { LambdaApiConfig, LAMBDA_API_CONFIG_SCHEMA } from './lambda-api.builder';
+import { LambdaApiConfig } from './lambda-api.builder';
+import { LAMBDA_API_CONFIG_SCHEMA } from '../index';
 
 /**
  * Creator class for LambdaApiComponent component

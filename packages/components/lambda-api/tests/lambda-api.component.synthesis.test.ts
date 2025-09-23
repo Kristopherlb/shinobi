@@ -4,8 +4,8 @@
  */
 
 import { App, Stack } from 'aws-cdk-lib';
-import { LambdaApiComponent } from '../lambda-api.component';
-import { LambdaApiConfig } from '../lambda-api.builder';
+import { LambdaApiComponent } from '../src/lambda-api.component';
+import { LambdaApiConfig } from '../src/lambda-api.builder';
 
 // Use local interfaces since we removed core dependency
 interface ComponentContext {

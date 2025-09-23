@@ -20,7 +20,7 @@
  * }
  */
 
-import { LambdaApiConfigBuilder, LambdaApiConfig } from '../lambda-api.builder';
+import { LambdaApiConfigBuilder, LambdaApiConfig } from '../src/lambda-api.builder';
 // Use local interfaces since we removed core dependency
 interface ComponentContext {
   serviceName: string;

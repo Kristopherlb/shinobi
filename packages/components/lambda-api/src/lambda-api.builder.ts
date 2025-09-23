@@ -9,19 +9,6 @@ type BuilderContext = {
 // Export types and schema for external use
 export type LambdaApiConfig = LambdaApiSpec;
 
-export const LAMBDA_API_CONFIG_SCHEMA = {
-  type: "object",
-  properties: {
-    handler: { type: "string" },
-    runtime: { type: "string" },
-    memorySize: { type: "number", minimum: 128, maximum: 10240 },
-    timeout: { type: "number", minimum: 1, maximum: 900 },
-    logRetentionDays: { type: "number", minimum: 1, maximum: 3653 },
-    environmentVariables: { type: "object", additionalProperties: { type: "string" } }
-  },
-  required: ["handler"],
-  additionalProperties: false
-};
 
 export class LambdaApiConfigBuilder {
   build(ctx: BuilderContext, input: Partial<LambdaApiSpec>): LambdaApiSpec {

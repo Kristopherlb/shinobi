@@ -9,6 +9,7 @@
     "strict": true,
     "esModuleInterop": true,
     "skipLibCheck": true,
+    "resolveJsonModule": true,
     "baseUrl": ".",
     "paths": {
       "@shinobi/core": [
@@ -21,9 +22,7 @@
   },
   "include": [
     "index.ts",
-    "*.component.ts",
-    "*.builder.ts",
-    "*.creator.ts"
+    "src/**/*"
   ],
   "exclude": [
     "dist",
