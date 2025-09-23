@@ -1,4 +1,4 @@
-import { LambdaApiComponent, LambdaApiBuilder } from '../src/lambda-api';
+import { LambdaApiComponent, LambdaApiConfigBuilder } from '../index';
 
 test('LambdaApiComponent has correct name', () => {
   const comp = new LambdaApiComponent();
@@ -29,7 +29,7 @@ test('LambdaApiComponent accepts custom configuration', () => {
 
 test('LambdaApiBuilder can build component', () => {
   const comp = new LambdaApiComponent();
-  const builder = new LambdaApiBuilder();
+  const builder = new LambdaApiConfigBuilder();
   const result = builder.build(comp);
   expect(result.functionName).toBe('lambda-lambda-api');
   expect(result.runtime).toBe('nodejs18.x');
@@ -37,7 +37,7 @@ test('LambdaApiBuilder can build component', () => {
 
 test('LambdaApiBuilder can generate CloudFormation', () => {
   const comp = new LambdaApiComponent();
-  const builder = new LambdaApiBuilder();
+  const builder = new LambdaApiConfigBuilder();
   const cf = builder.generateCloudFormation(comp);
   expect(cf.Type).toBe('AWS::Lambda::Function');
   expect(cf.Properties.FunctionName).toBe('lambda-lambda-api');
