@@ -15,8 +15,8 @@ import {
   BindingContext,
   BindingResult,
   CompatibilityEntry
-} from '@shinobi/core';
-import { IComponent } from '@shinobi/core';
+} from '../../platform/contracts/platform-binding-trigger-spec';
+import { IComponent } from '../../platform/contracts/component-interfaces';
 
 /**
  * ComputeToIamRoleBinder
@@ -74,10 +74,21 @@ export class ComputeToIamRoleBinder implements IBinderStrategy {
       }
 
     } catch (error) {
+      // Preserve error context for better debugging
+      const errorDetails = {
+        message: error instanceof Error ? error.message : 'Unknown error',
+        stack: error instanceof Error ? error.stack : undefined,
+        errorType: error instanceof Error ? error.constructor.name : typeof error,
+        sourceType: source.getType(),
+        targetType: target.getType(),
+        timestamp: new Date().toISOString()
+      };
+
       return {
         environmentVariables: {},
         metadata: {
-          error: `Failed to bind ${source.getType()} to IAM role: ${(error as Error).message}`,
+          error: `Failed to bind ${source.getType()} to IAM role: ${errorDetails.message}`,
+          errorDetails,
           success: false
         }
       };
@@ -103,9 +114,17 @@ export class ComputeToIamRoleBinder implements IBinderStrategy {
       }
     );
 
-    // Attach the instance profile to the EC2 instance
-    // Note: In real implementation, this would be done through CDK constructs
-    // For now, we'll just log that the binding was successful
+    // Attach the instance profile to the EC2 instance using CDK construct
+    // Note: This requires the EC2 instance to be configured with the instance profile
+    // The actual attachment happens through the EC2 instance configuration
+    if ('addPropertyOverride' in instance) {
+      (instance as any).addPropertyOverride('IamInstanceProfile', instanceProfile.ref);
+    } else {
+      // For EC2 instances, we need to use the instance profile directly
+      // This is a limitation of the current CDK construct - in practice, the instance profile
+      // should be configured during instance creation, not after
+      console.warn(`Instance profile ${instanceProfile.ref} created but not automatically attached to EC2 instance ${instance.instanceId}. Manual configuration may be required.`);
+    }
 
     return {
       environmentVariables: {
@@ -134,8 +153,8 @@ export class ComputeToIamRoleBinder implements IBinderStrategy {
     // Get existing role from Lambda function
     const existingRole = lambdaFunction.role;
     if (existingRole) {
-      // Add policies from the target role to the existing Lambda role
-      role.attachInlinePolicy(
+      // Add policies from the target role to the existing Lambda role (FIXED: was attaching to wrong role)
+      existingRole.attachInlinePolicy(
         new iam.Policy(source, `MergedPolicy-${context.target.node.id}`, {
           statements: this.extractPolicyStatements(role)
         })
@@ -200,16 +219,30 @@ export class ComputeToIamRoleBinder implements IBinderStrategy {
    * Extract policy statements from an IAM role for merging
    */
   private extractPolicyStatements(role: iam.Role): iam.PolicyStatement[] {
-    // This is a simplified extraction - in practice, you'd need to handle
-    // both inline and managed policies more comprehensively
     const statements: iam.PolicyStatement[] = [];
 
-    // For now, return a basic assume role policy
+    // Since we can't access private properties directly, we'll create a basic policy
+    // that allows the role to be assumed by the compute component
+    // In a real implementation, you'd need to use AWS SDK to fetch the actual policies
     statements.push(
       new iam.PolicyStatement({
         effect: iam.Effect.ALLOW,
         actions: ['sts:AssumeRole'],
-        resources: [role.roleArn]
+        resources: [role.roleArn],
+        sid: 'AllowRoleAssumption'
+      })
+    );
+
+    // Add a generic policy for common AWS services that might be needed
+    statements.push(
+      new iam.PolicyStatement({
+        effect: iam.Effect.ALLOW,
+        actions: [
+          'sts:GetCallerIdentity',
+          'sts:TagSession'
+        ],
+        resources: ['*'],
+        sid: 'BasicSTS'
       })
     );
 

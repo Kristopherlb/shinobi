@@ -17,6 +17,30 @@ export class DynamoDbBinderStrategy implements IBinderStrategy {
     binding: ComponentBinding,
     context: BindingContext
   ): Promise<void> {
+    // Validate inputs
+    if (!targetComponent) {
+      throw new Error('Target component is required for DynamoDB table binding');
+    }
+    if (!binding?.capability) {
+      throw new Error('Binding capability is required');
+    }
+    if (!binding?.access || !Array.isArray(binding.access)) {
+      throw new Error('Binding access array is required');
+    }
+    if (!context?.region || !context?.accountId) {
+      throw new Error('Missing required context properties for ARN construction: region, accountId');
+    }
+
+    // Validate access patterns
+    const validAccessTypes = ['read', 'write', 'admin', 'encrypt', 'decrypt', 'backup', 'process'];
+    const invalidAccess = binding.access.filter(a => !validAccessTypes.includes(a));
+    if (invalidAccess.length > 0) {
+      throw new Error(`Invalid access types for DynamoDB table binding: ${invalidAccess.join(', ')}. Valid types: ${validAccessTypes.join(', ')}`);
+    }
+    if (binding.access.length === 0) {
+      throw new Error('Access array cannot be empty for DynamoDB table binding');
+    }
+
     const { capability, access } = binding;
 
     switch (capability) {
@@ -30,7 +54,7 @@ export class DynamoDbBinderStrategy implements IBinderStrategy {
         await this.bindToStream(sourceComponent, targetComponent, binding, context);
         break;
       default:
-        throw new Error(`Unsupported DynamoDB capability: ${capability}`);
+        throw new Error(`Unsupported DynamoDB capability: ${capability}. Supported capabilities: ${this.supportedCapabilities.join(', ')}`);
     }
   }
 
@@ -40,6 +64,14 @@ export class DynamoDbBinderStrategy implements IBinderStrategy {
     binding: ComponentBinding,
     context: BindingContext
   ): Promise<void> {
+    // Validate required target component properties
+    if (!targetComponent?.tableArn) {
+      throw new Error('Target component missing required tableArn property for DynamoDB table binding');
+    }
+    if (!targetComponent?.tableName) {
+      throw new Error('Target component missing required tableName property for DynamoDB table binding');
+    }
+
     const { access } = binding;
 
     // Grant table access permissions
@@ -102,15 +134,17 @@ export class DynamoDbBinderStrategy implements IBinderStrategy {
     // Inject table environment variables
     sourceComponent.addEnvironment('DYNAMODB_TABLE_NAME', targetComponent.tableName);
     sourceComponent.addEnvironment('DYNAMODB_TABLE_ARN', targetComponent.tableArn);
-    sourceComponent.addEnvironment('DYNAMODB_TABLE_STATUS', targetComponent.tableStatus);
+    if (targetComponent?.tableStatus) {
+      sourceComponent.addEnvironment('DYNAMODB_TABLE_STATUS', targetComponent.tableStatus);
+    }
     sourceComponent.addEnvironment('DYNAMODB_REGION', context.region);
 
     // Configure table metadata
-    if (targetComponent.keySchema) {
+    if (targetComponent?.keySchema) {
       sourceComponent.addEnvironment('DYNAMODB_KEY_SCHEMA', JSON.stringify(targetComponent.keySchema));
     }
 
-    if (targetComponent.attributeDefinitions) {
+    if (targetComponent?.attributeDefinitions) {
       sourceComponent.addEnvironment('DYNAMODB_ATTRIBUTE_DEFINITIONS', JSON.stringify(targetComponent.attributeDefinitions));
     }
 

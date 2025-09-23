@@ -15,7 +15,6 @@ export * from './services/plan-output-formatter';
 export * from './services/schema-manager';
 
 // Export other core modules
-export * from './bindings';
 export * from './resolver';
 
 // Export core engine (including Logger) - avoid conflicts with resolver
