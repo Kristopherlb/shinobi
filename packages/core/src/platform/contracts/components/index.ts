@@ -3,7 +3,7 @@
 
 export * from './component-factory';
 export * from './component-registry';
-export * from './component-context';
+// export * from './component-context';
 export * from './component-spec';
 export * from './component-config-builder';
 export * from './base-component';

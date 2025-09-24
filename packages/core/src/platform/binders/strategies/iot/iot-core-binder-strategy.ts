@@ -6,7 +6,7 @@
 import { IBinderStrategy } from '../binder-strategy';
 import { BindingContext } from '../../binding-context';
 import { ComponentBinding } from '../../component-binding';
-import { ComplianceFramework } from '../../../compliance/compliance-framework';
+// Compliance framework branching removed; use binding.options/config instead
 
 export class IoTCoreBinderStrategy implements IBinderStrategy {
   readonly supportedCapabilities = ['iot:thing', 'iot:topic', 'iot:rule', 'iot:certificate'];
@@ -99,9 +99,8 @@ export class IoTCoreBinderStrategy implements IBinderStrategy {
       });
     }
 
-    // Configure secure access for FedRAMP environments
-    if (context.complianceFramework === ComplianceFramework.FEDRAMP_MODERATE ||
-      context.complianceFramework === ComplianceFramework.FEDRAMP_HIGH) {
+    // Configure secure access when requested via options/config
+    if (binding.options?.requireSecureAccess === true) {
       await this.configureSecureThingAccess(sourceComponent, targetComponent, context);
     }
   }
@@ -340,8 +339,8 @@ export class IoTCoreBinderStrategy implements IBinderStrategy {
     // Configure device authentication
     sourceComponent.addEnvironment('IOT_DEVICE_AUTHENTICATION_ENABLED', 'true');
 
-    // Configure mutual TLS for FedRAMP High
-    if (context.complianceFramework === ComplianceFramework.FEDRAMP_HIGH) {
+    // Optionally enable mutual TLS when requested
+    if ((targetComponent as any)?.requireMutualTls === true) {
       sourceComponent.addEnvironment('IOT_MUTUAL_TLS_ENABLED', 'true');
     }
 
@@ -377,8 +376,8 @@ export class IoTCoreBinderStrategy implements IBinderStrategy {
       Resource: '*'
     });
 
-    // Configure VPC endpoints for private connectivity in FedRAMP High
-    if (context.complianceFramework === ComplianceFramework.FEDRAMP_HIGH) {
+    // Configure VPC endpoints for private connectivity when requested
+    if ((targetComponent as any)?.enableVpcEndpoint === true) {
       sourceComponent.addEnvironment('IOT_VPC_ENDPOINT_ENABLED', 'true');
     }
 

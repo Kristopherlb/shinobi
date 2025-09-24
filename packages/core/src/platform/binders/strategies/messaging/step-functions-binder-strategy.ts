@@ -6,7 +6,7 @@
 import { IBinderStrategy } from '../binder-strategy';
 import { BindingContext } from '../../binding-context';
 import { ComponentBinding } from '../../component-binding';
-import { ComplianceFramework } from '../../../compliance/compliance-framework';
+// Compliance framework branching removed; use binding.options/config instead
 
 export class StepFunctionsBinderStrategy implements IBinderStrategy {
   readonly supportedCapabilities = ['states:state-machine', 'states:execution', 'states:activity'];
@@ -100,9 +100,8 @@ export class StepFunctionsBinderStrategy implements IBinderStrategy {
       sourceComponent.addEnvironment('STEP_FUNCTIONS_STATE_MACHINE_DEFINITION', targetComponent.definition);
     }
 
-    // Configure secure access for FedRAMP environments
-    if (context.complianceFramework === ComplianceFramework.FEDRAMP_MODERATE ||
-      context.complianceFramework === ComplianceFramework.FEDRAMP_HIGH) {
+    // Configure secure access when requested via options/config
+    if (binding.options?.requireSecureAccess === true) {
       await this.configureSecureStateMachineAccess(sourceComponent, targetComponent, context);
     }
   }
@@ -283,20 +282,14 @@ export class StepFunctionsBinderStrategy implements IBinderStrategy {
       });
     }
 
-    // Configure encryption for FedRAMP High
-    if (context.complianceFramework === ComplianceFramework.FEDRAMP_HIGH) {
+    // Configure encryption when requested via options/config
+    if ((targetComponent as any)?.enableEncryption === true) {
       sourceComponent.addEnvironment('STEP_FUNCTIONS_ENCRYPTION_ENABLED', 'true');
-
       if (targetComponent.kmsKeyId) {
         sourceComponent.addEnvironment('STEP_FUNCTIONS_KMS_KEY_ID', targetComponent.kmsKeyId);
-
-        // Grant KMS permissions
         sourceComponent.addToRolePolicy({
           Effect: 'Allow',
-          Action: [
-            'kms:Decrypt',
-            'kms:GenerateDataKey'
-          ],
+          Action: ['kms:Decrypt', 'kms:GenerateDataKey'],
           Resource: targetComponent.kmsKeyId
         });
       }

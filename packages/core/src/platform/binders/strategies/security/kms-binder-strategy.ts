@@ -6,7 +6,7 @@
 import { IBinderStrategy } from '../binder-strategy';
 import { BindingContext } from '../../binding-context';
 import { ComponentBinding } from '../../component-binding';
-import { ComplianceFramework } from '../../../compliance/compliance-framework';
+// Compliance framework branching removed; use binding.options/config instead
 
 export class KmsBinderStrategy implements IBinderStrategy {
   readonly supportedCapabilities = ['kms:key', 'kms:alias', 'kms:grant'];
@@ -144,9 +144,8 @@ export class KmsBinderStrategy implements IBinderStrategy {
     sourceComponent.addEnvironment('KMS_KEY_SPEC', targetComponent.keySpec || 'SYMMETRIC_DEFAULT');
     sourceComponent.addEnvironment('KMS_KEY_ORIGIN', targetComponent.origin || 'AWS_KMS');
 
-    // Configure secure access for FedRAMP environments
-    if (context.complianceFramework === ComplianceFramework.FEDRAMP_MODERATE ||
-      context.complianceFramework === ComplianceFramework.FEDRAMP_HIGH) {
+    // Configure secure access when requested via options/config
+    if (binding.options?.requireSecureAccess === true) {
       await this.configureSecureKeyAccess(sourceComponent, targetComponent, context);
     }
   }
@@ -236,7 +235,7 @@ export class KmsBinderStrategy implements IBinderStrategy {
     if (targetComponent?.granteePrincipal) {
       sourceComponent.addEnvironment('KMS_GRANT_GRANTEE_PRINCIPAL', targetComponent.granteePrincipal);
     }
-    
+
     // Safe array handling for operations
     const operations = targetComponent?.operations;
     if (operations && Array.isArray(operations)) {
@@ -256,18 +255,12 @@ export class KmsBinderStrategy implements IBinderStrategy {
       sourceComponent.addEnvironment('KMS_KEY_POLICY', JSON.stringify(targetComponent.keyPolicy));
     }
 
-    // Configure automatic key rotation for compliance
-    if (context.complianceFramework === ComplianceFramework.FEDRAMP_HIGH) {
+    // Configure automatic key rotation when requested
+    if ((targetComponent as any)?.enableKeyRotation === true) {
       sourceComponent.addEnvironment('KMS_AUTOMATIC_KEY_ROTATION_ENABLED', 'true');
-
-      // Grant key rotation permissions
       sourceComponent.addToRolePolicy({
         Effect: 'Allow',
-        Action: [
-          'kms:EnableKeyRotation',
-          'kms:DisableKeyRotation',
-          'kms:GetKeyRotationStatus'
-        ],
+        Action: ['kms:EnableKeyRotation', 'kms:DisableKeyRotation', 'kms:GetKeyRotationStatus'],
         Resource: targetComponent.keyArn
       });
     }
@@ -292,8 +285,8 @@ export class KmsBinderStrategy implements IBinderStrategy {
       Resource: `arn:aws:logs:${context.region}:${context.accountId}:log-group:/aws/kms/*`
     });
 
-    // Configure FIPS endpoints for FedRAMP High
-    if (context.complianceFramework === ComplianceFramework.FEDRAMP_HIGH) {
+    // Configure FIPS endpoints when requested
+    if ((targetComponent as any)?.enableFipsEndpoint === true) {
       sourceComponent.addEnvironment('KMS_FIPS_ENDPOINT_ENABLED', 'true');
       sourceComponent.addEnvironment('KMS_ENDPOINT', `https://kms-fips.${context.region}.amazonaws.com`);
     }

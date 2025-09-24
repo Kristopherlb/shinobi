@@ -2,7 +2,7 @@
 // Example S3 Bucket component implementation
 
 import { BaseComponent } from './base-component';
-import { ComponentContext } from './component-context';
+import { ComponentContext } from '../component-interfaces';
 import { S3CapabilityData } from '../bindings';
 
 /**
@@ -19,8 +19,8 @@ export class ExampleS3BucketComponent extends BaseComponent {
     // Validate configuration
     this.validateConfig();
 
-    // Apply compliance-specific configuration
-    this.applyComplianceConfig();
+    // Apply manifest-driven configuration (no framework branching)
+    this.applyConfig(this.config);
 
     // Initialize component-specific properties
     this.bucketName = this.generateBucketName();
@@ -83,53 +83,7 @@ export class ExampleS3BucketComponent extends BaseComponent {
     console.log('Tags:', this.getTags());
   }
 
-  /**
-   * Apply commercial compliance configuration
-   */
-  protected applyCommercialConfig(): void {
-    // Commercial-specific S3 configuration
-    this.config = {
-      ...this.config,
-      versioned: this.getConfigValue('versioned', false),
-      publicReadAccess: this.getConfigValue('publicReadAccess', false),
-      blockPublicAccess: this.getConfigValue('blockPublicAccess', true),
-      encryption: this.getConfigValue('encryption', 'AES256')
-    };
-  }
-
-  /**
-   * Apply FedRAMP Moderate compliance configuration
-   */
-  protected applyFedrampModerateConfig(): void {
-    // FedRAMP Moderate-specific S3 configuration
-    this.config = {
-      ...this.config,
-      versioned: true,
-      publicReadAccess: false,
-      blockPublicAccess: true,
-      encryption: 'aws:kms',
-      accessLogging: this.getConfigValue('accessLogging', true),
-      kmsKeyId: this.getConfigValue('kmsKeyId', 'alias/aws/s3')
-    };
-  }
-
-  /**
-   * Apply FedRAMP High compliance configuration
-   */
-  protected applyFedrampHighConfig(): void {
-    // FedRAMP High-specific S3 configuration
-    this.config = {
-      ...this.config,
-      versioned: true,
-      publicReadAccess: false,
-      blockPublicAccess: true,
-      encryption: 'aws:kms',
-      accessLogging: true,
-      kmsKeyId: this.getConfigValue('kmsKeyId', 'alias/aws/s3'),
-      objectLock: this.getConfigValue('objectLock', true),
-      objectLockRetentionDays: this.getConfigValue('objectLockRetentionDays', 2555) // 7 years
-    };
-  }
+  // Removed framework-specific apply methods; configuration should be driven by manifest input
 
   /**
    * Validate component-specific configuration
@@ -142,9 +96,7 @@ export class ExampleS3BucketComponent extends BaseComponent {
       throw new Error('Invalid encryption type. Must be AES256 or aws:kms');
     }
 
-    if (this.hasConfigKey('publicReadAccess') && this.config.publicReadAccess && this.getComplianceFramework() !== 'commercial') {
-      throw new Error('Public read access is not allowed in FedRAMP environments');
-    }
+    // Policy restrictions should be enforced by validators/policies, not hardcoded here
   }
 
   /**

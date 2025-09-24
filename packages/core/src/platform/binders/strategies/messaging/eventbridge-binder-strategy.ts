@@ -6,7 +6,7 @@
 import { IBinderStrategy } from '../binder-strategy';
 import { BindingContext } from '../../binding-context';
 import { ComponentBinding } from '../../component-binding';
-import { ComplianceFramework } from '../../../compliance/compliance-framework';
+// Compliance framework branching removed; use binding.options/config instead
 
 export class EventBridgeBinderStrategy implements IBinderStrategy {
   readonly supportedCapabilities = ['eventbridge:event-bus', 'eventbridge:rule', 'eventbridge:connection'];
@@ -74,9 +74,8 @@ export class EventBridgeBinderStrategy implements IBinderStrategy {
     sourceComponent.addEnvironment('EVENTBRIDGE_EVENT_BUS_ARN', targetComponent.eventBusArn);
     sourceComponent.addEnvironment('EVENTBRIDGE_EVENT_BUS_POLICY', targetComponent.policy);
 
-    // Configure secure access for FedRAMP environments
-    if (context.complianceFramework === ComplianceFramework.FEDRAMP_MODERATE ||
-      context.complianceFramework === ComplianceFramework.FEDRAMP_HIGH) {
+    // Configure secure access when requested via options/config
+    if (binding.options?.requireSecureAccess === true) {
       await this.configureSecureEventBusAccess(sourceComponent, targetComponent, context);
     }
   }
@@ -280,13 +279,13 @@ export class EventBridgeBinderStrategy implements IBinderStrategy {
       Resource: `arn:aws:logs:${context.region}:${context.accountId}:log-group:/aws/events/*`
     });
 
-    // Configure VPC endpoints for private connectivity in FedRAMP High
-    if (context.complianceFramework === ComplianceFramework.FEDRAMP_HIGH) {
+    // Configure VPC endpoints when requested
+    if ((targetComponent as any)?.enableVpcEndpoint === true) {
       sourceComponent.addEnvironment('EVENTBRIDGE_VPC_ENDPOINT_ENABLED', 'true');
     }
 
-    // Configure event filtering for sensitive data
-    if (context.complianceFramework === ComplianceFramework.FEDRAMP_HIGH) {
+    // Configure event filtering when requested
+    if ((targetComponent as any)?.enableEventFiltering === true) {
       sourceComponent.addEnvironment('EVENTBRIDGE_EVENT_FILTERING_ENABLED', 'true');
     }
   }

@@ -1,6 +1,15 @@
 /**
  * Concrete Binder Strategy Implementations
- * Enterprise-grade binding logic for different component combinations
+ *
+ * PURPOSE: CDK-specific infrastructure code generation
+ * - Generates actual CDK constructs and AWS infrastructure
+ * - Creates IAM policies, security groups, environment variables
+ * - Works with real CDK constructs (lambda.Function, sqs.Queue, etc.)
+ * - Most sophisticated layer - handles actual deployment
+ *
+ * Architecture Layer: Infrastructure generation
+ * Above: Platform Binders (validation), Core-Engine (generic logic)
+ * Below: Direct CDK synthesis
  */
 
 import {

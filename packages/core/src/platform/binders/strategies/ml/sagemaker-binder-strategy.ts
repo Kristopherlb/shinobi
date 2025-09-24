@@ -6,7 +6,7 @@
 import { IBinderStrategy } from '../binder-strategy';
 import { BindingContext } from '../../binding-context';
 import { ComponentBinding } from '../../component-binding';
-import { ComplianceFramework } from '../../../compliance/compliance-framework';
+// Compliance framework branching removed; use binding.options/config instead
 
 export class SageMakerBinderStrategy implements IBinderStrategy {
   readonly supportedCapabilities = ['sagemaker:notebook', 'sagemaker:model', 'sagemaker:endpoint', 'sagemaker:training-job'];
@@ -105,9 +105,8 @@ export class SageMakerBinderStrategy implements IBinderStrategy {
     sourceComponent.addEnvironment('SAGEMAKER_NOTEBOOK_INSTANCE_TYPE', targetComponent.instanceType);
     sourceComponent.addEnvironment('SAGEMAKER_NOTEBOOK_INSTANCE_STATUS', targetComponent.notebookInstanceStatus);
 
-    // Configure secure access for FedRAMP environments
-    if (context.complianceFramework === ComplianceFramework.FEDRAMP_MODERATE ||
-      context.complianceFramework === ComplianceFramework.FEDRAMP_HIGH) {
+    // Configure secure access when requested via options/config
+    if (binding.options?.requireSecureAccess === true) {
       await this.configureSecureNotebookAccess(sourceComponent, targetComponent, context);
     }
   }
@@ -349,8 +348,8 @@ export class SageMakerBinderStrategy implements IBinderStrategy {
       });
     }
 
-    // Configure root access restrictions for FedRAMP High
-    if (context.complianceFramework === ComplianceFramework.FEDRAMP_HIGH) {
+    // Optionally restrict root access when configured
+    if ((targetComponent as any)?.disableRootAccess === true) {
       sourceComponent.addEnvironment('SAGEMAKER_ROOT_ACCESS_ENABLED', 'false');
     }
 

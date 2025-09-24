@@ -6,7 +6,7 @@
 import { IBinderStrategy } from '../binder-strategy';
 import { BindingContext } from '../../binding-context';
 import { ComponentBinding } from '../../component-binding';
-import { ComplianceFramework } from '../../../compliance/compliance-framework';
+// Compliance framework branching removed; use binding.options/config instead
 
 export class SecretsManagerBinderStrategy implements IBinderStrategy {
   readonly supportedCapabilities = ['secretsmanager:secret', 'secretsmanager:rotation'];
@@ -94,9 +94,8 @@ export class SecretsManagerBinderStrategy implements IBinderStrategy {
       sourceComponent.addEnvironment('SECRETS_MANAGER_VERSION_STAGES', targetComponent.versionStages.join(','));
     }
 
-    // Configure secure access for FedRAMP environments
-    if (context.complianceFramework === ComplianceFramework.FEDRAMP_MODERATE ||
-      context.complianceFramework === ComplianceFramework.FEDRAMP_HIGH) {
+    // Configure secure access when requested via options/config
+    if (binding.options?.requireSecureAccess === true) {
       await this.configureSecureSecretAccess(sourceComponent, targetComponent, context);
     }
   }
@@ -185,10 +184,10 @@ export class SecretsManagerBinderStrategy implements IBinderStrategy {
       sourceComponent.addEnvironment('SECRETS_MANAGER_RESOURCE_POLICY', JSON.stringify(targetComponent.resourcePolicy));
     }
 
-    // Configure automatic rotation for compliance
-    if (context.complianceFramework === ComplianceFramework.FEDRAMP_HIGH) {
+    // Configure automatic rotation when explicitly required
+    if ((targetComponent as any)?.autoRotationDays) {
       sourceComponent.addEnvironment('SECRETS_MANAGER_AUTO_ROTATION_REQUIRED', 'true');
-      sourceComponent.addEnvironment('SECRETS_MANAGER_ROTATION_INTERVAL_DAYS', '30');
+      sourceComponent.addEnvironment('SECRETS_MANAGER_ROTATION_INTERVAL_DAYS', String((targetComponent as any).autoRotationDays));
     }
 
     // Configure audit logging

@@ -14,7 +14,6 @@ import {
 import { BindingCache } from './performance/binding-cache';
 import { BindingMetricsCollector } from './performance/binding-metrics-collector';
 import { BindingBenchmark } from './performance/binding-benchmark';
-import { ComplianceEnforcer } from './compliance/compliance-enforcer';
 
 // Logger interface for structured logging
 interface Logger {
@@ -32,7 +31,6 @@ export class EnhancedBinderRegistry {
   private cache: BindingCache;
   private metrics: BindingMetricsCollector;
   private benchmark: BindingBenchmark;
-  private complianceEnforcer: ComplianceEnforcer;
   private logger: Logger;
 
   constructor(logger: Logger, cacheConfig?: any) {
@@ -40,7 +38,6 @@ export class EnhancedBinderRegistry {
     this.cache = new BindingCache(cacheConfig);
     this.metrics = new BindingMetricsCollector();
     this.benchmark = new BindingBenchmark();
-    this.complianceEnforcer = new ComplianceEnforcer();
     this.registerDefaultStrategies();
   }
 
@@ -102,41 +99,17 @@ export class EnhancedBinderRegistry {
         throw error;
       }
 
-      // Enforce compliance rules
-      const complianceActions = await this.complianceEnforcer.enforceCompliance(context);
-      const hasErrors = complianceActions.some(action => action.severity === 'error');
-      if (hasErrors) {
-        const errorActions = complianceActions.filter(action => action.severity === 'error');
-        this.logger.error('binder.bind.compliance_error', {
-          bindingId,
-          errors: errorActions
-        });
-        throw new Error(`Compliance violations: ${errorActions.map(a => a.ruleId).join(', ')}`);
-      }
-
-      // Log compliance warnings
-      const warnings = complianceActions.filter(action => action.severity === 'warning');
-      if (warnings.length > 0) {
-        this.logger.warn('binder.bind.compliance_warning', {
-          bindingId,
-          service: context.source.getServiceName(),
-          source: context.source.getName(),
-          target: context.target.getName(),
-          capability: context.directive.capability,
-          framework: context.complianceFramework,
-          warnings: warnings.map(w => ({ ruleId: w.ruleId, message: w.message }))
-        });
-      }
+      // Compliance enforcement removed; bind strategies must be safe-by-default or manifest-driven
 
       // Execute binding strategy
       const bindingResult = await strategy.bind(context);
 
-      // Add compliance actions to result
+      // Wrap result with metadata only
       const enhancedResult: EnhancedBindingResult = {
         environmentVariables: bindingResult.environmentVariables,
         iamPolicies: bindingResult.iamPolicies,
         securityGroupRules: bindingResult.securityGroupRules,
-        complianceActions: [...bindingResult.complianceActions, ...complianceActions],
+        complianceActions: bindingResult.complianceActions,
         metadata: {
           ...bindingResult.metadata,
           bindingId,
@@ -156,8 +129,7 @@ export class EnhancedBinderRegistry {
       this.logger.info('binder.bind.success', {
         bindingId,
         duration,
-        strategy: strategy.getStrategyName(),
-        complianceActions: complianceActions.length
+        strategy: strategy.getStrategyName()
       });
 
       return enhancedResult;

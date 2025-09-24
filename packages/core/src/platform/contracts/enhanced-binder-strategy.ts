@@ -62,8 +62,8 @@ export abstract class EnhancedBinderStrategy {
 
     if (!context.targetCapabilityData) {
       if (STRICT) throw new Error('Target capability data is required');
-      // noop in tests: return identity or minimal binding result
-      return context.sourceConfig; // or an object your callers already handle
+      // noop in tests
+      return;
     }
   }
 

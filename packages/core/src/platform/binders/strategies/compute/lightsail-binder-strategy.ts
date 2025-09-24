@@ -6,7 +6,7 @@
 import { IBinderStrategy } from '../binder-strategy';
 import { BindingContext } from '../../binding-context';
 import { ComponentBinding } from '../../component-binding';
-import { ComplianceFramework } from '../../../compliance/compliance-framework';
+// Compliance framework branching removed; use binding.options/config instead
 
 export class LightsailBinderStrategy implements IBinderStrategy {
   readonly supportedCapabilities = ['lightsail:instance', 'lightsail:database', 'lightsail:load-balancer', 'lightsail:container-service'];
@@ -99,9 +99,8 @@ export class LightsailBinderStrategy implements IBinderStrategy {
       sourceComponent.addEnvironment('LIGHTSAIL_PORTS', JSON.stringify(targetComponent.networking.ports));
     }
 
-    // Configure secure access for FedRAMP environments
-    if (context.complianceFramework === ComplianceFramework.FEDRAMP_MODERATE ||
-      context.complianceFramework === ComplianceFramework.FEDRAMP_HIGH) {
+    // Configure secure access when requested via options/config
+    if (binding.options?.requireSecureAccess === true) {
       await this.configureSecureInstanceAccess(sourceComponent, targetComponent, context);
     }
   }
@@ -163,10 +162,9 @@ export class LightsailBinderStrategy implements IBinderStrategy {
     sourceComponent.addEnvironment('LIGHTSAIL_DATABASE_PORT', targetComponent.masterEndpoint.port.toString());
     sourceComponent.addEnvironment('LIGHTSAIL_DATABASE_USERNAME', targetComponent.masterUsername);
 
-    // Configure secure database access for FedRAMP environments
-    if (context.complianceFramework === ComplianceFramework.FEDRAMP_MODERATE ||
-      context.complianceFramework === ComplianceFramework.FEDRAMP_HIGH) {
-      await this.configureSecureDatabaseAccess(sourceComponent, targetComponent, context);
+    // Configure secure database access when requested via options/config
+    if (binding.options?.requireSecureAccess === true) {
+      await this.configureSecureDatabaseAccess(sourceComponent, targetComponent, context, binding);
     }
   }
 
@@ -319,7 +317,8 @@ export class LightsailBinderStrategy implements IBinderStrategy {
   private async configureSecureDatabaseAccess(
     sourceComponent: any,
     targetComponent: any,
-    context: BindingContext
+    context: BindingContext,
+    binding?: ComponentBinding
   ): Promise<void> {
     // Configure encrypted connections
     sourceComponent.addEnvironment('LIGHTSAIL_DATABASE_SSL_ENABLED', 'true');
@@ -328,7 +327,7 @@ export class LightsailBinderStrategy implements IBinderStrategy {
     if (targetComponent.backupRetentionEnabled) {
       sourceComponent.addEnvironment('LIGHTSAIL_BACKUP_RETENTION_ENABLED', 'true');
       sourceComponent.addEnvironment('LIGHTSAIL_BACKUP_RETENTION_DAYS',
-        context.complianceFramework === ComplianceFramework.FEDRAMP_HIGH ? '30' : '7');
+        (binding as any)?.options?.backupRetentionDays ? String((binding as any).options.backupRetentionDays) : '7');
     }
 
     // Configure parameter groups for security

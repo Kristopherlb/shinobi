@@ -6,7 +6,7 @@
 import { IBinderStrategy } from '../binder-strategy';
 import { BindingContext } from '../../binding-context';
 import { ComponentBinding } from '../../component-binding';
-import { ComplianceFramework } from '../../../compliance/compliance-framework';
+// Compliance framework branching removed; use binding.options/config instead
 
 export class VpcBinderStrategy implements IBinderStrategy {
   readonly supportedCapabilities = ['vpc:network', 'vpc:subnet', 'vpc:security-group', 'vpc:route-table', 'vpc:nat-gateway'];
@@ -92,9 +92,8 @@ export class VpcBinderStrategy implements IBinderStrategy {
       sourceComponent.addEnvironment('VPC_DNS_SUPPORT', targetComponent.enableDnsSupport.toString());
     }
 
-    // Configure secure networking for FedRAMP environments
-    if (context.complianceFramework === ComplianceFramework.FEDRAMP_MODERATE ||
-      context.complianceFramework === ComplianceFramework.FEDRAMP_HIGH) {
+    // Configure secure networking when requested via options/config
+    if (binding.options?.requireSecureAccess === true) {
       await this.configureSecureNetworkAccess(sourceComponent, targetComponent, context);
     }
   }
@@ -316,21 +315,13 @@ export class VpcBinderStrategy implements IBinderStrategy {
       });
     }
 
-    // Configure VPC endpoints for private connectivity in FedRAMP High
-    if (context.complianceFramework === ComplianceFramework.FEDRAMP_HIGH) {
+    // Configure VPC endpoints when explicitly enabled
+    if ((targetComponent as any)?.enableVpcEndpoints === true) {
       sourceComponent.addEnvironment('VPC_ENDPOINTS_ENABLED', 'true');
-
-      // Configure common VPC endpoints
-      const vpcEndpoints = [
-        's3',
-        'dynamodb',
-        'ec2',
-        'ecs',
-        'ecr.api',
-        'ecr.dkr',
-        'logs'
-      ];
-      sourceComponent.addEnvironment('VPC_ENDPOINT_SERVICES', vpcEndpoints.join(','));
+      const endpoints: string[] = (targetComponent as any)?.vpcEndpoints ?? [];
+      if (endpoints.length > 0) {
+        sourceComponent.addEnvironment('VPC_ENDPOINT_SERVICES', endpoints.join(','));
+      }
     }
 
     // Configure network ACLs for additional security

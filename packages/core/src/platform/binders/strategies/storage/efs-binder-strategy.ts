@@ -6,7 +6,7 @@
 import { IBinderStrategy } from '../binder-strategy';
 import { BindingContext } from '../../binding-context';
 import { ComponentBinding } from '../../component-binding';
-import { ComplianceFramework } from '../../../compliance/compliance-framework';
+// Compliance framework branching removed; use binding.options/config instead
 
 export class EfsBinderStrategy implements IBinderStrategy {
   readonly supportedCapabilities = ['efs:file-system', 'efs:mount-target', 'efs:access-point'];
@@ -79,9 +79,8 @@ export class EfsBinderStrategy implements IBinderStrategy {
     sourceComponent.addEnvironment('EFS_PERFORMANCE_MODE', targetComponent.performanceMode || 'generalPurpose');
     sourceComponent.addEnvironment('EFS_THROUGHPUT_MODE', targetComponent.throughputMode || 'bursting');
 
-    // Configure secure access for FedRAMP environments
-    if (context.complianceFramework === ComplianceFramework.FEDRAMP_MODERATE ||
-      context.complianceFramework === ComplianceFramework.FEDRAMP_HIGH) {
+    // Configure secure access when requested via options/config
+    if (binding.options?.requireSecureAccess === true) {
       await this.configureSecureFileSystemAccess(sourceComponent, targetComponent, context);
     }
   }
@@ -202,17 +201,12 @@ export class EfsBinderStrategy implements IBinderStrategy {
       }
     }
 
-    // Configure backup policy for compliance
-    if (context.complianceFramework === ComplianceFramework.FEDRAMP_HIGH) {
+    // Configure backup policy when requested
+    if ((targetComponent as any)?.backupPolicyEnabled === true) {
       sourceComponent.addEnvironment('EFS_BACKUP_POLICY_ENABLED', 'true');
-
-      // Grant backup permissions
       sourceComponent.addToRolePolicy({
         Effect: 'Allow',
-        Action: [
-          'elasticfilesystem:PutBackupPolicy',
-          'elasticfilesystem:GetBackupPolicy'
-        ],
+        Action: ['elasticfilesystem:PutBackupPolicy', 'elasticfilesystem:GetBackupPolicy'],
         Resource: targetComponent.fileSystemArn
       });
     }

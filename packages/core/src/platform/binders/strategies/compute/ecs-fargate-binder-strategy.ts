@@ -6,7 +6,7 @@
 import { IBinderStrategy } from '../binder-strategy';
 import { BindingContext } from '../../binding-context';
 import { ComponentBinding } from '../../component-binding';
-import { ComplianceFramework } from '../../../compliance/compliance-framework';
+// Compliance framework branching removed; use binding.options/config instead
 
 export class EcsFargateBinderStrategy implements IBinderStrategy {
   readonly supportedCapabilities = ['ecs:cluster', 'ecs:service', 'ecs:task-definition'];
@@ -110,10 +110,9 @@ export class EcsFargateBinderStrategy implements IBinderStrategy {
     sourceComponent.addEnvironment('ECS_CLUSTER_ARN', targetComponent.clusterArn);
     sourceComponent.addEnvironment('AWS_REGION', context.region);
 
-    // Configure network connectivity for FedRAMP environments
-    if (context.complianceFramework === ComplianceFramework.FEDRAMP_MODERATE ||
-      context.complianceFramework === ComplianceFramework.FEDRAMP_HIGH) {
-      await this.configureSecureNetworkAccess(sourceComponent, targetComponent, context);
+    // Configure secure network connectivity when requested via options/config
+    if (binding.options?.requireSecureNetworking === true) {
+      await this.configureSecureNetworkAccess(sourceComponent, targetComponent, context, binding);
     }
   }
 
@@ -222,9 +221,10 @@ export class EcsFargateBinderStrategy implements IBinderStrategy {
   private async configureSecureNetworkAccess(
     sourceComponent: any,
     targetComponent: any,
-    context: BindingContext
+    context: BindingContext,
+    binding?: ComponentBinding
   ): Promise<void> {
-    // Ensure secure network access for FedRAMP environments
+    // Ensure secure network access when requested (no framework branching)
     if (sourceComponent.securityGroup) {
       sourceComponent.securityGroup.addIngressRule(
         sourceComponent.securityGroup,
@@ -232,10 +232,8 @@ export class EcsFargateBinderStrategy implements IBinderStrategy {
         'HTTPS access for ECS API calls'
       );
     }
-
-    // Configure VPC endpoints for private connectivity in FedRAMP environments
-    if (context.complianceFramework === ComplianceFramework.FEDRAMP_HIGH) {
-      // Add VPC endpoint configuration for ECS API calls
+    // Optionally configure endpoint override when explicitly enabled
+    if (binding?.options?.enablePrivateEcsEndpoint === true) {
       sourceComponent.addEnvironment('ECS_ENDPOINT', `https://ecs.${context.region}.amazonaws.com`);
     }
   }

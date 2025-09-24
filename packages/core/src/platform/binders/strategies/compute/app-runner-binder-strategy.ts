@@ -6,7 +6,6 @@
 import { IBinderStrategy } from '../binder-strategy';
 import { BindingContext } from '../../binding-context';
 import { ComponentBinding } from '../../component-binding';
-import { ComplianceFramework } from '../../../compliance/compliance-framework';
 
 export class AppRunnerBinderStrategy implements IBinderStrategy {
   readonly supportedCapabilities = ['apprunner:service', 'apprunner:connection'];
@@ -90,9 +89,8 @@ export class AppRunnerBinderStrategy implements IBinderStrategy {
     sourceComponent.addEnvironment('PORT', targetComponent.port?.toString() || '8080');
     sourceComponent.addEnvironment('AWS_REGION', context.region);
 
-    // Configure secure networking for FedRAMP environments
-    if (context.complianceFramework === ComplianceFramework.FEDRAMP_MODERATE ||
-      context.complianceFramework === ComplianceFramework.FEDRAMP_HIGH) {
+    // Configure secure networking if requested by manifest/config
+    if (binding.options?.requireSecureNetworking === true) {
       await this.configureSecureNetworking(sourceComponent, targetComponent, context);
     }
   }
@@ -173,8 +171,8 @@ export class AppRunnerBinderStrategy implements IBinderStrategy {
       });
     }
 
-    // Configure custom domain with SSL certificate for FedRAMP High
-    if (context.complianceFramework === ComplianceFramework.FEDRAMP_HIGH && targetComponent.customDomain) {
+    // Configure custom domain with SSL certificate if requested
+    if (targetComponent.customDomain) {
       sourceComponent.addEnvironment('CUSTOM_DOMAIN', targetComponent.customDomain);
       sourceComponent.addEnvironment('SSL_CERTIFICATE_ARN', targetComponent.sslCertificateArn);
 

@@ -6,7 +6,6 @@
 import { IBinderStrategy } from '../binder-strategy';
 import { BindingContext } from '../../binding-context';
 import { ComponentBinding } from '../../component-binding';
-import { ComplianceFramework } from '../../../compliance/compliance-framework';
 
 export class CloudFrontBinderStrategy implements IBinderStrategy {
   readonly supportedCapabilities = ['cloudfront:distribution', 'cloudfront:origin', 'cloudfront:cache-policy'];
@@ -115,9 +114,8 @@ export class CloudFrontBinderStrategy implements IBinderStrategy {
       sourceComponent.addEnvironment('CLOUDFRONT_DEFAULT_CACHE_BEHAVIOR', JSON.stringify(targetComponent.defaultCacheBehavior));
     }
 
-    // Configure secure access for FedRAMP environments
-    if (context.complianceFramework === ComplianceFramework.FEDRAMP_MODERATE ||
-      context.complianceFramework === ComplianceFramework.FEDRAMP_HIGH) {
+    // Configure secure access if requested by manifest/config
+    if (binding.options?.requireSecureDistributionAccess === true) {
       await this.configureSecureDistributionAccess(sourceComponent, targetComponent, context);
     }
   }
@@ -333,8 +331,8 @@ export class CloudFrontBinderStrategy implements IBinderStrategy {
       Resource: `arn:aws:logs:${context.region}:${context.accountId}:log-group:/aws/cloudfront/*`
     });
 
-    // Configure edge locations for FedRAMP High
-    if (context.complianceFramework === ComplianceFramework.FEDRAMP_HIGH) {
+    // Optional: restrict to US-only edge locations if requested
+    if ((targetComponent as any).edgeLocationsUsOnly === true || (targetComponent as any).usOnly === true) {
       sourceComponent.addEnvironment('CLOUDFRONT_EDGE_LOCATIONS_US_ONLY', 'true');
     }
   }

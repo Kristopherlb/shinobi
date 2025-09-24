@@ -4,8 +4,8 @@
  */
 
 export { ResolverEngine, ResolverEngineDependencies, SynthesisResult } from './resolver-engine';
-export { BinderStrategy, BinderRegistry, ComponentBinder } from './binding-strategies';
-export { ComponentFactoryProvider, ComponentRegistry } from './component-factory-provider';
+export { ComponentFactoryBuilder } from '../platform/contracts/components/component-factory';
+export { ComponentRegistry } from '../platform/contracts/components/component-registry';
 export { Logger, LogLevel, LogEntry } from './logger';
 
 // Re-export contracts for convenience

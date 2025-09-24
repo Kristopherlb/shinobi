@@ -6,7 +6,7 @@
 import { IBinderStrategy } from '../binder-strategy';
 import { BindingContext } from '../../binding-context';
 import { ComponentBinding } from '../../component-binding';
-import { ComplianceFramework } from '../../../compliance/compliance-framework';
+// Compliance framework branching removed; use binding.options/config instead
 
 export class AmplifyBinderStrategy implements IBinderStrategy {
   readonly supportedCapabilities = ['amplify:app', 'amplify:branch', 'amplify:domain'];
@@ -110,9 +110,8 @@ export class AmplifyBinderStrategy implements IBinderStrategy {
       sourceComponent.addEnvironment('AMPLIFY_BUILD_SPEC', targetComponent.buildSpec);
     }
 
-    // Configure secure access for FedRAMP environments
-    if (context.complianceFramework === ComplianceFramework.FEDRAMP_MODERATE ||
-      context.complianceFramework === ComplianceFramework.FEDRAMP_HIGH) {
+    // Configure secure access when requested via options/config
+    if (binding.options?.requireSecureAccess === true) {
       await this.configureSecureAppAccess(sourceComponent, targetComponent, context);
     }
   }
@@ -283,10 +282,9 @@ export class AmplifyBinderStrategy implements IBinderStrategy {
       Resource: `arn:aws:logs:${context.region}:${context.accountId}:log-group:/aws/amplify/*`
     });
 
-    // Configure VPC for private builds in FedRAMP High
-    if (context.complianceFramework === ComplianceFramework.FEDRAMP_HIGH) {
+    // Configure VPC for private builds when requested
+    if ((targetComponent as any)?.enableVpc === true) {
       sourceComponent.addEnvironment('AMPLIFY_VPC_ENABLED', 'true');
-
       if (targetComponent.vpcConfig) {
         sourceComponent.addEnvironment('AMPLIFY_VPC_CONFIG', JSON.stringify(targetComponent.vpcConfig));
       }

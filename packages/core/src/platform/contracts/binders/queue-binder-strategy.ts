@@ -32,7 +32,7 @@ export class QueueBinderStrategy extends EnhancedBinderStrategy {
     return computeTypes.includes(sourceType) && queueCapabilities.includes(targetCapability);
   }
 
-  bind(context: EnhancedBindingContext): EnhancedBindingResult {
+  async bind(context: EnhancedBindingContext): Promise<EnhancedBindingResult> {
     this.validateBindingContext(context);
 
     const capability = context.targetCapabilityData;
@@ -47,12 +47,10 @@ export class QueueBinderStrategy extends EnhancedBinderStrategy {
     // SQS/SNS don't require security group rules (HTTP/HTTPS access)
     const securityGroupRules: SecurityGroupRule[] = [];
 
-    // Apply compliance restrictions
-    const { policies, rules, actions } = this.applyComplianceRestrictions(
-      context,
-      iamPolicies,
-      securityGroupRules
-    );
+    // Compliance restrictions removed; policies/rules unchanged
+    const policies = iamPolicies;
+    const rules = securityGroupRules;
+    const actions: ComplianceAction[] = [];
 
     // Configure dead letter queue if specified
     const dlqConfig = this.configureDeadLetterQueue(context, capability, actions);
@@ -62,7 +60,6 @@ export class QueueBinderStrategy extends EnhancedBinderStrategy {
       policies,
       rules,
       actions,
-      context,
       {
         networkConfig: this.createQueueNetworkConfig(context, capability),
         deadLetterQueue: dlqConfig
@@ -356,16 +353,15 @@ export class QueueBinderStrategy extends EnhancedBinderStrategy {
     const dlqConfig = context.directive.options?.deadLetterQueue;
 
     if (dlqConfig) {
+      // Keep actions array shape but no framework semantics
       actions.push({
-        type: 'policy',
-        description: 'Dead letter queue configured for message processing failures',
+        ruleId: 'dlq_configuration',
+        severity: 'info',
+        message: 'Dead letter queue configured for message processing failures',
         framework: context.complianceFramework,
-        details: {
-          requirement: 'dlq_configuration',
-          maxReceiveCount: dlqConfig.maxReceiveCount || 3,
-          queueArn: dlqConfig.queueArn
-        }
-      });
+        remediation: undefined,
+        metadata: { maxReceiveCount: dlqConfig.maxReceiveCount || 3, queueArn: dlqConfig.queueArn }
+      } as any);
 
       return {
         enabled: true,
@@ -414,25 +410,25 @@ export class QueueBinderStrategy extends EnhancedBinderStrategy {
     const mappings = customMappings || context.directive.env || defaultMappings;
 
     // Map capability data to environment variables
-    if (capability.resources?.url && mappings.queueUrl) {
-      envVars[mappings.queueUrl] = capability.resources.url;
+    if ((capability.resources as any)?.url && mappings.queueUrl) {
+      envVars[mappings.queueUrl] = (capability.resources as any).url;
     }
     if (capability.resources?.arn && mappings.queueArn) {
       envVars[mappings.queueArn] = capability.resources.arn;
     }
-    if (capability.resources?.topicArn && mappings.topicArn) {
-      envVars[mappings.topicArn] = capability.resources.topicArn;
+    if ((capability.resources as any)?.topicArn && mappings.topicArn) {
+      envVars[mappings.topicArn] = (capability.resources as any).topicArn;
     }
-    if (capability.region && mappings.region) {
-      envVars[mappings.region] = capability.region;
+    if ((capability as any).region && mappings.region) {
+      envVars[mappings.region] = (capability as any).region;
     }
 
     // Dead letter queue configuration
-    if (capability.deadLetterQueue?.url && mappings.dlqUrl) {
-      envVars[mappings.dlqUrl] = capability.deadLetterQueue.url;
+    if ((capability as any).deadLetterQueue?.url && mappings.dlqUrl) {
+      envVars[mappings.dlqUrl] = (capability as any).deadLetterQueue.url;
     }
-    if (capability.deadLetterQueue?.arn && mappings.dlqArn) {
-      envVars[mappings.dlqArn] = capability.deadLetterQueue.arn;
+    if ((capability as any).deadLetterQueue?.arn && mappings.dlqArn) {
+      envVars[mappings.dlqArn] = (capability as any).deadLetterQueue.arn;
     }
 
     return envVars;
@@ -441,47 +437,5 @@ export class QueueBinderStrategy extends EnhancedBinderStrategy {
   /**
    * Override compliance restrictions for queue-specific requirements
    */
-  protected applyComplianceRestrictions(
-    context: EnhancedBindingContext,
-    policies: IamPolicy[],
-    securityGroupRules: SecurityGroupRule[]
-  ): { policies: IamPolicy[]; rules: SecurityGroupRule[]; actions: ComplianceAction[] } {
-    const result = super.applyComplianceRestrictions(context, policies, securityGroupRules);
-
-    // Add queue-specific compliance actions
-    if (context.complianceFramework === 'fedramp-high' || context.complianceFramework === 'fedramp-moderate') {
-      result.actions.push({
-        type: 'restriction',
-        description: 'FedRAMP: VPC endpoint required for SQS/SNS access',
-        framework: context.complianceFramework,
-        details: {
-          requirement: 'vpc_endpoint_sqs_sns',
-          services: ['sqs', 'sns']
-        }
-      });
-
-      result.actions.push({
-        type: 'monitoring',
-        description: 'FedRAMP: Queue access logging required',
-        framework: context.complianceFramework,
-        details: {
-          requirement: 'queue_access_logging',
-          retention: context.complianceFramework === 'fedramp-high' ? '365_days' : '90_days'
-        }
-      });
-
-      // Dead letter queue requirement for FedRAMP
-      result.actions.push({
-        type: 'policy',
-        description: 'FedRAMP: Dead letter queue required for message processing',
-        framework: context.complianceFramework,
-        details: {
-          requirement: 'dead_letter_queue',
-          purpose: 'error_handling'
-        }
-      });
-    }
-
-    return result;
-  }
+  // Compliance restrictions removed entirely; behavior now manifest-driven
 }

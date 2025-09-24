@@ -6,7 +6,6 @@
 import { IBinderStrategy } from '../binder-strategy';
 import { BindingContext } from '../../binding-context';
 import { ComponentBinding } from '../../component-binding';
-import { ComplianceFramework } from '../../../compliance/compliance-framework';
 
 export class EmrBinderStrategy implements IBinderStrategy {
   readonly supportedCapabilities = ['emr:cluster', 'emr:step', 'emr:notebook'];
@@ -108,10 +107,9 @@ export class EmrBinderStrategy implements IBinderStrategy {
       sourceComponent.addEnvironment('EMR_APPLICATIONS', targetComponent.applications.map((app: any) => app.name).join(','));
     }
 
-    // Configure secure access for FedRAMP environments
-    if (context.complianceFramework === ComplianceFramework.FEDRAMP_MODERATE ||
-      context.complianceFramework === ComplianceFramework.FEDRAMP_HIGH) {
-      await this.configureSecureClusterAccess(sourceComponent, targetComponent, context);
+    // Configure secure access if requested by manifest/config
+    if ((binding.options && binding.options.requireSecureAccess) || context.tags?.RequireSecureAccess === 'true') {
+      await this.configureSecureClusterAccess(sourceComponent, targetComponent, binding, context);
     }
   }
 
@@ -243,6 +241,7 @@ export class EmrBinderStrategy implements IBinderStrategy {
   private async configureSecureClusterAccess(
     sourceComponent: any,
     targetComponent: any,
+    binding: ComponentBinding,
     context: BindingContext
   ): Promise<void> {
     // Configure encryption at rest
@@ -279,8 +278,8 @@ export class EmrBinderStrategy implements IBinderStrategy {
       sourceComponent.addEnvironment('EMR_SLAVE_SECURITY_GROUP', targetComponent.emrManagedSlaveSecurityGroup);
     }
 
-    // Configure Kerberos authentication for FedRAMP High
-    if (context.complianceFramework === ComplianceFramework.FEDRAMP_HIGH) {
+    // Configure Kerberos authentication if requested
+    if (binding.options && binding.options.enableKerberos === true) {
       sourceComponent.addEnvironment('EMR_KERBEROS_ENABLED', 'true');
 
       if (targetComponent.kerberosAttributes) {
@@ -320,8 +319,10 @@ export class EmrBinderStrategy implements IBinderStrategy {
       Resource: '*'
     });
 
-    // Configure audit logging for compliance
-    sourceComponent.addEnvironment('EMR_AUDIT_LOGGING_ENABLED', 'true');
+    // Configure audit logging if requested
+    if (binding.options && binding.options.enableAuditLogging === true) {
+      sourceComponent.addEnvironment('EMR_AUDIT_LOGGING_ENABLED', 'true');
+    }
 
     // Grant CloudTrail permissions for audit logging
     sourceComponent.addToRolePolicy({

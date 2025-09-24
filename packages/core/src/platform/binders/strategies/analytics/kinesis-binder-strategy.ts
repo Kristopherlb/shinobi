@@ -6,7 +6,6 @@
 import { IBinderStrategy } from '../binder-strategy';
 import { BindingContext } from '../../binding-context';
 import { ComponentBinding } from '../../component-binding';
-import { ComplianceFramework } from '../../../compliance/compliance-framework';
 
 export class KinesisBinderStrategy implements IBinderStrategy {
   readonly supportedCapabilities = ['kinesis:stream', 'kinesis:analytics', 'kinesis:firehose'];
@@ -114,10 +113,9 @@ export class KinesisBinderStrategy implements IBinderStrategy {
       }
     }
 
-    // Configure secure access for FedRAMP environments
-    if (context.complianceFramework === ComplianceFramework.FEDRAMP_MODERATE ||
-      context.complianceFramework === ComplianceFramework.FEDRAMP_HIGH) {
-      await this.configureSecureStreamAccess(sourceComponent, targetComponent, context);
+    // Configure secure access if requested by manifest/config
+    if (binding.options?.requireSecureAccess === true) {
+      await this.configureSecureStreamAccess(sourceComponent, targetComponent, binding, context);
     }
   }
 
@@ -261,9 +259,8 @@ export class KinesisBinderStrategy implements IBinderStrategy {
       sourceComponent.addEnvironment('KINESIS_FIREHOSE_DESTINATION_TYPE', targetComponent.deliveryStreamDestinationType);
     }
 
-    // Configure secure access for FedRAMP environments
-    if (context.complianceFramework === ComplianceFramework.FEDRAMP_MODERATE ||
-      context.complianceFramework === ComplianceFramework.FEDRAMP_HIGH) {
+    // Configure secure access if requested by manifest/config
+    if (binding.options?.requireSecureAccess === true) {
       await this.configureSecureFirehoseAccess(sourceComponent, targetComponent, context);
     }
   }
@@ -271,6 +268,7 @@ export class KinesisBinderStrategy implements IBinderStrategy {
   private async configureSecureStreamAccess(
     sourceComponent: any,
     targetComponent: any,
+    binding: ComponentBinding,
     context: BindingContext
   ): Promise<void> {
     // Configure enhanced monitoring
@@ -287,13 +285,12 @@ export class KinesisBinderStrategy implements IBinderStrategy {
       Resource: '*'
     });
 
-    // Configure data retention for compliance
-    if (context.complianceFramework === ComplianceFramework.FEDRAMP_HIGH) {
-      sourceComponent.addEnvironment('KINESIS_STREAM_RETENTION_DAYS', '30');
+    // Optional: data retention setting
+    if (binding.options?.retentionDays) {
+      sourceComponent.addEnvironment('KINESIS_STREAM_RETENTION_DAYS', String(binding.options.retentionDays));
     }
 
-    // Configure VPC endpoints for private access in FedRAMP High
-    if (context.complianceFramework === ComplianceFramework.FEDRAMP_HIGH) {
+    if (binding.options?.enableVpcEndpoint === true) {
       sourceComponent.addEnvironment('KINESIS_VPC_ENDPOINT_ENABLED', 'true');
     }
   }
@@ -323,7 +320,7 @@ export class KinesisBinderStrategy implements IBinderStrategy {
       }
     }
 
-    // Configure backup for compliance
+    // Configure backup if requested
     if (targetComponent.s3DestinationConfiguration?.backupConfiguration) {
       sourceComponent.addEnvironment('KINESIS_FIREHOSE_BACKUP_ENABLED', 'true');
       sourceComponent.addEnvironment('KINESIS_FIREHOSE_BACKUP_S3_BUCKET',

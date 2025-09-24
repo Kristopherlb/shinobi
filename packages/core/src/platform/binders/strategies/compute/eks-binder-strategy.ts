@@ -6,7 +6,7 @@
 import { IBinderStrategy } from '../binder-strategy';
 import { BindingContext } from '../../binding-context';
 import { ComponentBinding } from '../../component-binding';
-import { ComplianceFramework } from '../../../compliance/compliance-framework';
+// Compliance framework branching removed; use binding.options/config instead
 
 export class EksBinderStrategy implements IBinderStrategy {
   readonly supportedCapabilities = ['eks:cluster', 'eks:nodegroup', 'eks:pod', 'eks:service'];
@@ -156,9 +156,8 @@ export class EksBinderStrategy implements IBinderStrategy {
     sourceComponent.addEnvironment('KUBERNETES_POD_NAME', targetComponent.podName);
     sourceComponent.addEnvironment('KUBERNETES_SERVICE_ACCOUNT', targetComponent.serviceAccount);
 
-    // Configure service mesh access for FedRAMP environments
-    if (context.complianceFramework === ComplianceFramework.FEDRAMP_MODERATE ||
-      context.complianceFramework === ComplianceFramework.FEDRAMP_HIGH) {
+    // Configure service mesh access if requested by manifest/config
+    if (binding.options?.enableServiceMesh) {
       await this.configureServiceMeshAccess(sourceComponent, targetComponent, context);
     }
   }

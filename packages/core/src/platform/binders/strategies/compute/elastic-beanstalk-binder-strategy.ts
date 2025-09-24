@@ -6,7 +6,7 @@
 import { IBinderStrategy } from '../binder-strategy';
 import { BindingContext } from '../../binding-context';
 import { ComponentBinding } from '../../component-binding';
-import { ComplianceFramework } from '../../../compliance/compliance-framework';
+// Compliance framework branching removed; use binding.options/config instead
 
 export class ElasticBeanstalkBinderStrategy implements IBinderStrategy {
   readonly supportedCapabilities = ['elasticbeanstalk:application', 'elasticbeanstalk:environment', 'elasticbeanstalk:version'];
@@ -162,10 +162,9 @@ export class ElasticBeanstalkBinderStrategy implements IBinderStrategy {
     sourceComponent.addEnvironment('EB_TIER_TYPE', targetComponent.tier?.type);
     sourceComponent.addEnvironment('EB_TIER_VERSION', targetComponent.tier?.version);
 
-    // Configure secure networking for FedRAMP environments
-    if (context.complianceFramework === ComplianceFramework.FEDRAMP_MODERATE ||
-      context.complianceFramework === ComplianceFramework.FEDRAMP_HIGH) {
-      await this.configureSecureEnvironment(sourceComponent, targetComponent, context);
+    // Configure secure networking when requested via options/config
+    if (binding.options?.requireSecureNetworking === true) {
+      await this.configureSecureEnvironment(sourceComponent, targetComponent, binding, context);
     }
   }
 
@@ -234,6 +233,7 @@ export class ElasticBeanstalkBinderStrategy implements IBinderStrategy {
   private async configureSecureEnvironment(
     sourceComponent: any,
     targetComponent: any,
+    binding: ComponentBinding,
     context: BindingContext
   ): Promise<void> {
     // Configure VPC networking for private environments
@@ -286,8 +286,8 @@ export class ElasticBeanstalkBinderStrategy implements IBinderStrategy {
       });
     }
 
-    // Configure encryption for FedRAMP High environments
-    if (context.complianceFramework === ComplianceFramework.FEDRAMP_HIGH) {
+    // Configure encryption when requested via options/config
+    if ((binding as any)?.options?.enableEncryption === true) {
       sourceComponent.addEnvironment('EB_ENCRYPTION_ENABLED', 'true');
 
       if (targetComponent.encryptionKeyArn) {

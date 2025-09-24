@@ -6,7 +6,7 @@
 import { IBinderStrategy } from '../binder-strategy';
 import { BindingContext } from '../../binding-context';
 import { ComponentBinding } from '../../component-binding';
-import { ComplianceFramework } from '../../../compliance/compliance-framework';
+// Compliance framework branching removed; use binding.options/config instead
 
 export class DynamoDbBinderStrategy implements IBinderStrategy {
   readonly supportedCapabilities = ['dynamodb:table', 'dynamodb:index', 'dynamodb:stream'];
@@ -151,10 +151,9 @@ export class DynamoDbBinderStrategy implements IBinderStrategy {
     // Configure billing mode
     sourceComponent.addEnvironment('DYNAMODB_BILLING_MODE', targetComponent.billingMode || 'PAY_PER_REQUEST');
 
-    // Configure secure access for FedRAMP environments
-    if (context.complianceFramework === ComplianceFramework.FEDRAMP_MODERATE ||
-      context.complianceFramework === ComplianceFramework.FEDRAMP_HIGH) {
-      await this.configureSecureTableAccess(sourceComponent, targetComponent, context);
+    // Configure secure access when requested via options/config
+    if (binding.options?.requireSecureAccess === true) {
+      await this.configureSecureTableAccess(sourceComponent, targetComponent, context, binding);
     }
   }
 
@@ -270,7 +269,8 @@ export class DynamoDbBinderStrategy implements IBinderStrategy {
   private async configureSecureTableAccess(
     sourceComponent: any,
     targetComponent: any,
-    context: BindingContext
+    context: BindingContext,
+    binding?: ComponentBinding
   ): Promise<void> {
     // Configure encryption at rest
     if (targetComponent.sseSpecification?.sseEnabled) {
@@ -297,10 +297,10 @@ export class DynamoDbBinderStrategy implements IBinderStrategy {
       sourceComponent.addEnvironment('DYNAMODB_PITR_ENABLED', 'true');
     }
 
-    // Configure backup retention for compliance
-    if (targetComponent.backupPolicy) {
-      sourceComponent.addEnvironment('DYNAMODB_BACKUP_RETENTION_DAYS',
-        context.complianceFramework === ComplianceFramework.FEDRAMP_HIGH ? '30' : '7');
+    // Configure backup retention when specified via options or target policy
+    if ((binding?.options && binding.options.backupRetentionDays !== undefined) || targetComponent.backupPolicy) {
+      const retention = (binding?.options?.backupRetentionDays ?? 7).toString();
+      sourceComponent.addEnvironment('DYNAMODB_BACKUP_RETENTION_DAYS', retention);
     }
 
     // Configure global tables for high availability
@@ -320,8 +320,8 @@ export class DynamoDbBinderStrategy implements IBinderStrategy {
       });
     }
 
-    // Configure VPC endpoints for private access in FedRAMP High
-    if (context.complianceFramework === ComplianceFramework.FEDRAMP_HIGH) {
+    // Configure VPC endpoints for private access when requested
+    if (binding?.options?.enableVpcEndpoint === true) {
       sourceComponent.addEnvironment('DYNAMODB_VPC_ENDPOINT_ENABLED', 'true');
     }
   }

@@ -6,7 +6,7 @@
 import { IBinderStrategy } from '../binder-strategy';
 import { BindingContext } from '../../binding-context';
 import { ComponentBinding } from '../../component-binding';
-import { ComplianceFramework } from '../../../compliance/compliance-framework';
+// Compliance framework branching removed; use binding.options/config instead
 
 export class NeptuneBinderStrategy implements IBinderStrategy {
   readonly supportedCapabilities = ['neptune:cluster', 'neptune:instance', 'neptune:query'];
@@ -77,9 +77,8 @@ export class NeptuneBinderStrategy implements IBinderStrategy {
     sourceComponent.addEnvironment('NEPTUNE_CLUSTER_STATUS', targetComponent.status);
     sourceComponent.addEnvironment('NEPTUNE_CLUSTER_ENGINE', targetComponent.engine);
 
-    // Configure secure access for FedRAMP environments
-    if (context.complianceFramework === ComplianceFramework.FEDRAMP_MODERATE ||
-      context.complianceFramework === ComplianceFramework.FEDRAMP_HIGH) {
+    // Configure secure access when requested via options/config
+    if (binding.options?.requireSecureAccess === true) {
       await this.configureSecureClusterAccess(sourceComponent, targetComponent, context);
     }
   }
@@ -156,9 +155,8 @@ export class NeptuneBinderStrategy implements IBinderStrategy {
       sourceComponent.addEnvironment('NEPTUNE_GREMLIN_ENDPOINT', targetComponent.gremlinEndpoint);
     }
 
-    // Configure secure query access for FedRAMP environments
-    if (context.complianceFramework === ComplianceFramework.FEDRAMP_MODERATE ||
-      context.complianceFramework === ComplianceFramework.FEDRAMP_HIGH) {
+    // Configure secure query access when requested via options/config
+    if (binding.options?.requireSecureAccess === true) {
       await this.configureSecureQueryAccess(sourceComponent, targetComponent, context);
     }
   }
@@ -187,10 +185,9 @@ export class NeptuneBinderStrategy implements IBinderStrategy {
       }
     }
 
-    // Configure backup retention for compliance
+    // Configure backup retention when specified
     if (targetComponent.backupRetentionPeriod) {
-      sourceComponent.addEnvironment('NEPTUNE_BACKUP_RETENTION_DAYS',
-        context.complianceFramework === ComplianceFramework.FEDRAMP_HIGH ? '30' : '7');
+      sourceComponent.addEnvironment('NEPTUNE_BACKUP_RETENTION_DAYS', String(targetComponent.backupRetentionPeriod));
     }
 
     // Configure VPC security groups for private access

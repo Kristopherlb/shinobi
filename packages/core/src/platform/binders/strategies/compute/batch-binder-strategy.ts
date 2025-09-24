@@ -6,7 +6,7 @@
 import { IBinderStrategy } from '../binder-strategy';
 import { BindingContext } from '../../binding-context';
 import { ComponentBinding } from '../../component-binding';
-import { ComplianceFramework } from '../../../compliance/compliance-framework';
+// Compliance framework branching removed; use binding.options/config instead
 
 export class BatchBinderStrategy implements IBinderStrategy {
   readonly supportedCapabilities = ['batch:job-queue', 'batch:compute-environment', 'batch:job-definition', 'batch:job'];
@@ -271,16 +271,16 @@ export class BatchBinderStrategy implements IBinderStrategy {
     sourceComponent.addEnvironment('BATCH_JOB_DEFINITION', targetComponent.jobDefinition);
     sourceComponent.addEnvironment('BATCH_JOB_STATUS', targetComponent.status);
 
-    // Configure secure networking for FedRAMP environments
-    if (context.complianceFramework === ComplianceFramework.FEDRAMP_MODERATE ||
-      context.complianceFramework === ComplianceFramework.FEDRAMP_HIGH) {
-      await this.configureSecureJobEnvironment(sourceComponent, targetComponent, context);
+    // Configure secure networking if requested by manifest/config (no framework branching)
+    if (binding.options?.requireSecureNetworking) {
+      await this.configureSecureJobEnvironment(sourceComponent, targetComponent, binding, context);
     }
   }
 
   private async configureSecureJobEnvironment(
     sourceComponent: any,
     targetComponent: any,
+    binding: ComponentBinding,
     context: BindingContext
   ): Promise<void> {
     // Configure VPC networking for batch jobs
@@ -292,8 +292,8 @@ export class BatchBinderStrategy implements IBinderStrategy {
       }
     }
 
-    // Configure encryption for sensitive data in FedRAMP High
-    if (context.complianceFramework === ComplianceFramework.FEDRAMP_HIGH) {
+    // Configure encryption for sensitive data when requested via options/config
+    if (binding.options?.enableEncryption === true) {
       sourceComponent.addEnvironment('BATCH_ENCRYPTION_ENABLED', 'true');
 
       if (targetComponent.encryptionKeyArn) {

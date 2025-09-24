@@ -8,26 +8,23 @@ import * as path from 'path';
 import * as fs from 'fs';
 import {
   ComponentSpec,
-  ComponentContext,
   IComponent,
-  IComponentFactory,
-  IComponentRegistry,
-  BindingContext,
-  IBinderStrategy,
   IPlatformService,
   PlatformServiceContext,
   PlatformServiceRegistry,
   BaseComponent
 } from '../platform/contracts';
+import { ComprehensiveBinderRegistry } from '../platform/binders/registry/comprehensive-binder-registry';
+import { ComponentContext as FactoryComponentContext } from '../platform/contracts/components/component-context';
+import { ComponentBinding } from '../platform/binders/component-binding';
+import { BindingContext as PlatformBindingContext } from '../platform/binders/binding-context';
 import { Logger } from './logger';
-import { ComponentFactoryProvider } from './component-factory-provider';
-import { ComponentBinder, BinderRegistry } from './binding-strategies';
+import { ComponentFactoryBuilder } from '../platform/contracts/components/component-factory';
 import { ObservabilityService } from '../services/observability.service';
 
 export interface ResolverEngineDependencies {
   logger: Logger;
-  binderRegistry?: BinderRegistry;
-  componentBinder?: ComponentBinder;
+  binderRegistry?: ComprehensiveBinderRegistry;
 }
 
 export interface SynthesisResult {
@@ -49,12 +46,10 @@ export interface SynthesisResult {
  * Orchestrates the complete 5-phase process of synthesizing and binding components
  */
 export class ResolverEngine {
-  private binderRegistry: BinderRegistry;
-  private componentBinder: ComponentBinder;
+  private binderRegistry: ComprehensiveBinderRegistry;
 
   constructor(private dependencies: ResolverEngineDependencies) {
-    this.binderRegistry = dependencies.binderRegistry || new BinderRegistry();
-    this.componentBinder = dependencies.componentBinder || new ComponentBinder(this.binderRegistry);
+    this.binderRegistry = dependencies.binderRegistry || new ComprehensiveBinderRegistry();
   }
 
   /**
@@ -76,7 +71,6 @@ export class ResolverEngine {
         tags: {
           Service: validatedConfig.service,
           Owner: validatedConfig.owner,
-          ComplianceFramework: validatedConfig.complianceFramework || 'commercial',
           Environment: process.env.NODE_ENV || 'dev'
         }
       });
@@ -126,25 +120,26 @@ export class ResolverEngine {
   private async instantiateComponents(validatedConfig: any, stack: cdk.Stack): Promise<IComponent[]> {
     this.dependencies.logger.debug('Phase 1: Component Instantiation');
 
-    const complianceFramework = validatedConfig.complianceFramework || 'commercial';
-    const factory = ComponentFactoryProvider.createFactory(complianceFramework);
-    const registry = factory.createRegistry();
-
-    this.dependencies.logger.info(`Using ${complianceFramework} component factory`);
+    const factory = new ComponentFactoryBuilder().build();
+    this.dependencies.logger.info('Using canonical component factory');
 
     const components: IComponent[] = [];
 
     if (validatedConfig.components && Array.isArray(validatedConfig.components)) {
       for (const componentSpec of validatedConfig.components) {
-        const context: ComponentContext = {
+        const context: FactoryComponentContext = {
           serviceName: validatedConfig.service,
           environment: process.env.NODE_ENV || 'dev',
-          complianceFramework: complianceFramework as any,
-          scope: stack
+          complianceFramework: (validatedConfig.complianceFramework || 'commercial') as any,
+          region: process.env.CDK_DEFAULT_REGION || 'us-east-1',
+          accountId: process.env.CDK_DEFAULT_ACCOUNT || '123456789012',
+          // scope is part of the IComponent contract's context elsewhere; factory context does not include it
+          // map as metadata for factory consumers that may need it
+          metadata: { scope: stack }
         };
 
         try {
-          const component = registry.createComponent(componentSpec, context);
+          const component = factory.create(componentSpec.type, context, componentSpec);
           components.push(component);
 
           this.dependencies.logger.debug(`Instantiated component: ${componentSpec.name} (${componentSpec.type})`);
@@ -275,21 +270,39 @@ export class ResolverEngine {
             throw new Error(`Cannot resolve binding target for directive: ${JSON.stringify(bindDirective)}`);
           }
 
-          const bindingContext: BindingContext = {
-            source: component,
-            target: target.component,
-            directive: bindDirective,
+          const platformBindingContext: PlatformBindingContext = {
+            region: process.env.CDK_DEFAULT_REGION || 'us-east-1',
+            accountId: process.env.CDK_DEFAULT_ACCOUNT || '123456789012',
+            complianceFramework: (validatedConfig.complianceFramework || 'commercial') as 'commercial' | 'fedramp-moderate' | 'fedramp-high',
             environment: process.env.NODE_ENV || 'dev',
-            complianceFramework: validatedConfig.complianceFramework || 'commercial'
+            tags: {
+              Service: validatedConfig.service,
+              Environment: process.env.NODE_ENV || 'dev',
+              ComplianceFramework: validatedConfig.complianceFramework || 'commercial'
+            }
           };
 
-          const bindingResult = this.componentBinder.bind(bindingContext);
+          const platformBinding: ComponentBinding = {
+            from: component.spec.name,
+            to: target.component.spec.name,
+            capability: bindDirective.capability,
+            access: Array.isArray(bindDirective.access) ? bindDirective.access : [bindDirective.access || 'read'],
+            env: bindDirective.env,
+            options: bindDirective.options
+          };
+
+          const strategy = this.binderRegistry.get(bindDirective.capability);
+          if (!strategy) {
+            throw new Error(`No binding strategy found for capability: ${bindDirective.capability}`);
+          }
+
+          await strategy.bind(component, target.component, platformBinding, platformBindingContext);
 
           bindings.push({
             source: component.spec.name,
             target: target.component.spec.name,
             capability: bindDirective.capability,
-            result: bindingResult
+            result: { success: true } // Platform binders don't return results, they perform binding directly
           });
 
           this.dependencies.logger.debug(

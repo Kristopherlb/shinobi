@@ -31,7 +31,7 @@ export class ApiGatewayBinderStrategy extends EnhancedBinderStrategy {
     return computeTypes.includes(sourceType) && apiGatewayCapabilities.includes(targetCapability);
   }
 
-  bind(context: EnhancedBindingContext): EnhancedBindingResult {
+  async bind(context: EnhancedBindingContext): Promise<EnhancedBindingResult> {
     this.validateBindingContext(context);
 
     const capability = context.targetCapabilityData;
@@ -46,19 +46,16 @@ export class ApiGatewayBinderStrategy extends EnhancedBinderStrategy {
     // API Gateway doesn't require security group rules (HTTP/HTTPS access)
     const securityGroupRules: SecurityGroupRule[] = [];
 
-    // Apply compliance restrictions
-    const { policies, rules, actions } = this.applyComplianceRestrictions(
-      context,
-      iamPolicies,
-      securityGroupRules
-    );
+    // Compliance restrictions removed; policies/rules unchanged
+    const policies = iamPolicies;
+    const rules = securityGroupRules;
+    const actions: ComplianceAction[] = [];
 
     return this.createBindingResult(
       environmentVariables,
       policies,
       rules,
       actions,
-      context,
       {
         networkConfig: this.createApiGatewayNetworkConfig(context, capability)
       }
@@ -226,25 +223,23 @@ export class ApiGatewayBinderStrategy extends EnhancedBinderStrategy {
     const mappings = customMappings || context.directive.env || defaultMappings;
 
     // Map capability data to environment variables
-    if (capability.endpoints?.url && mappings.apiUrl) {
-      envVars[mappings.apiUrl] = capability.endpoints.url;
+    if ((capability as any).endpoints?.invokeUrl && mappings.apiUrl) {
+      envVars[mappings.apiUrl] = (capability as any).endpoints.invokeUrl;
     }
     if (capability.resources?.arn && mappings.apiArn) {
       envVars[mappings.apiArn] = capability.resources.arn;
     }
-    if (capability.resources?.id && mappings.apiId) {
-      envVars[mappings.apiId] = capability.resources.id;
+    if ((capability.resources as any)?.apiId && mappings.apiId) {
+      envVars[mappings.apiId] = (capability.resources as any).apiId;
     }
-    if (capability.stage?.name && mappings.stageName) {
-      envVars[mappings.stageName] = capability.stage.name;
-    }
-    if (capability.region && mappings.region) {
-      envVars[mappings.region] = capability.region;
-    }
+    // Optional mapping if your schema exposes stage/region differently
 
     // Generate base URL for API calls
-    if (capability.endpoints?.url && capability.stage?.name) {
-      const baseUrl = `${capability.endpoints.url}/${capability.stage.name}`;
+    // Optional base URL construction if capability exposes fields
+    const endpUrl = (capability as any)?.endpoints?.invokeUrl || (capability as any)?.endpoints?.url;
+    const stageName = (capability as any)?.resources?.stage || (capability as any)?.stage?.name;
+    if (endpUrl && stageName) {
+      const baseUrl = `${endpUrl}/${stageName}`;
       envVars[`${context.target.getName().toUpperCase()}_BASE_URL`] = baseUrl;
     }
 

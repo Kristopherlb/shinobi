@@ -31,7 +31,7 @@ export class LambdaBinderStrategy extends EnhancedBinderStrategy {
     return computeTypes.includes(sourceType) && lambdaCapabilities.includes(targetCapability);
   }
 
-  bind(context: EnhancedBindingContext): EnhancedBindingResult {
+  async bind(context: EnhancedBindingContext): Promise<EnhancedBindingResult> {
     this.validateBindingContext(context);
 
     const capability = context.targetCapabilityData;
@@ -46,19 +46,16 @@ export class LambdaBinderStrategy extends EnhancedBinderStrategy {
     // Lambda doesn't require security group rules (HTTP/HTTPS access)
     const securityGroupRules: SecurityGroupRule[] = [];
 
-    // Apply compliance restrictions
-    const { policies, rules, actions } = this.applyComplianceRestrictions(
-      context,
-      iamPolicies,
-      securityGroupRules
-    );
+    // Compliance restrictions removed; policies/rules unchanged
+    const policies = iamPolicies;
+    const rules = securityGroupRules;
+    const actions: ComplianceAction[] = [];
 
     return this.createBindingResult(
       environmentVariables,
       policies,
       rules,
       actions,
-      context,
       {
         networkConfig: this.createLambdaNetworkConfig(context, capability)
       }
@@ -223,23 +220,23 @@ export class LambdaBinderStrategy extends EnhancedBinderStrategy {
     const mappings = customMappings || context.directive.env || defaultMappings;
 
     // Map capability data to environment variables
-    if (capability.resources?.name && mappings.functionName) {
-      envVars[mappings.functionName] = capability.resources.name;
+    if ((capability.resources as any)?.name && mappings.functionName) {
+      envVars[mappings.functionName] = (capability.resources as any).name;
     }
     if (capability.resources?.arn && mappings.functionArn) {
       envVars[mappings.functionArn] = capability.resources.arn;
     }
-    if (capability.resources?.url && mappings.functionUrl) {
-      envVars[mappings.functionUrl] = capability.resources.url;
+    if ((capability.resources as any)?.url && mappings.functionUrl) {
+      envVars[mappings.functionUrl] = (capability.resources as any).url;
     }
-    if (capability.region && mappings.region) {
-      envVars[mappings.region] = capability.region;
+    if ((capability as any).region && mappings.region) {
+      envVars[mappings.region] = (capability as any).region;
     }
-    if (capability.config?.timeout && mappings.timeout) {
-      envVars[mappings.timeout] = capability.config.timeout.toString();
+    if ((capability as any).config?.timeout && mappings.timeout) {
+      envVars[mappings.timeout] = (capability as any).config.timeout.toString();
     }
-    if (capability.config?.memorySize && mappings.memorySize) {
-      envVars[mappings.memorySize] = capability.config.memorySize.toString();
+    if ((capability as any).config?.memorySize && mappings.memorySize) {
+      envVars[mappings.memorySize] = (capability as any).config.memorySize.toString();
     }
 
     return envVars;
