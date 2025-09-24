@@ -7,6 +7,7 @@ import * as path from 'path';
 import * as YAML from 'yaml';
 import { ErrorMessages } from './error-message-utils';
 import { withPerformanceTiming } from './performance-metrics';
+import { Logger } from '../platform/logger/src';
 
 export interface TemplateConfig {
   templates: {
@@ -30,6 +31,7 @@ export interface TemplateConfig {
  */
 export class ConfigLoader {
   private static _templateConfig: TemplateConfig | null = null;
+  private static logger = Logger.getLogger('config-loader');
 
   /**
    * Load template configuration from external YAML file
@@ -56,7 +58,7 @@ export class ConfigLoader {
           this._templateConfig = YAML.parse(configContent) as TemplateConfig;
 
           // Add info-level logging for successful config load
-          console.info(`✅ Template configuration loaded from ${configPath}`);
+          this.logger.info(`Template configuration loaded from ${configPath}`);
           return this._templateConfig;
         } catch (error) {
           throw new Error(ErrorMessages.configLoadFailed(configPath, error instanceof Error ? error.message : String(error)));

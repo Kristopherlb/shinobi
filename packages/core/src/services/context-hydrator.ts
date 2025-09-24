@@ -27,7 +27,11 @@ export class ContextHydrator {
       async () => {
         // Validate environment exists in manifest
         if (!manifest.environments || !manifest.environments[environment]) {
-          throw new Error(ErrorMessages.invalidEnvironment(environment));
+          const availableEnvs = manifest.environments ? Object.keys(manifest.environments) : [];
+          const errorMessage = availableEnvs.length > 0
+            ? `Environment "${environment}" not defined in manifest. Available environments: ${availableEnvs.join(', ')}`
+            : `Environment "${environment}" not defined in manifest. No environments section found.`;
+          throw new Error(errorMessage);
         }
 
         this.dependencies.logger.debug(`Hydrating context for environment: ${environment}`);

@@ -52,16 +52,25 @@ export class EnhancedSchemaValidator {
   private configValidators = new Map<string, any>();
 
   constructor(private dependencies: EnhancedSchemaValidatorDependencies) {
+    // Check for feature flag to enable strict mode
+    const enableStrictMode = process.env.SHINOBI_STRICT_SCHEMA_VALIDATION === 'true';
+
     this.ajv = new Ajv({
       allErrors: true,
       verbose: true,
-      strict: false, // Keep false for now - schemas need review before enabling strict mode
+      strict: enableStrictMode,
+      strictSchema: enableStrictMode,
+      strictNumbers: enableStrictMode,
       allowUnionTypes: true,
       coerceTypes: false,
       useDefaults: false,
       removeAdditional: false
     });
     addFormats(this.ajv);
+
+    if (enableStrictMode) {
+      this.dependencies.logger.info('AJV strict mode enabled via SHINOBI_STRICT_SCHEMA_VALIDATION=true');
+    }
   }
 
   /**
@@ -109,6 +118,13 @@ export class EnhancedSchemaValidator {
         // Add info-level logging for validation outcomes
         if (!overallValid) {
           this.dependencies.logger.info(`Validation completed with ${errors.length} errors and ${warnings.length} warnings.`);
+
+          // Log detailed errors in debug mode or when there are few errors
+          if (errors.length <= 5 || process.env.SHINOBI_VERBOSE_VALIDATION === 'true') {
+            errors.forEach(error => {
+              this.dependencies.logger.debug(`Validation error: ${error.message} at ${error.path} (rule: ${error.rule}, component: ${error.componentType}/${error.componentName})`);
+            });
+          }
         } else {
           this.dependencies.logger.info('Manifest validation passed with no errors.');
         }
