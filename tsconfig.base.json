@@ -18,6 +18,9 @@
     "downlevelIteration": true,
     "baseUrl": ".",
     "paths": {
+      "@shinobi/core": [
+        "packages/core/src/index.ts"
+      ],
       "@shinobi/core/*": [
         "packages/core/src/index.ts"
       ],

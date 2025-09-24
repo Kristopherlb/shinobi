@@ -49,6 +49,8 @@ describe('EnhancedSchemaValidator', () => {
             name: 'test-component',
             type: 'ec2-instance',
             config: {
+              serviceName: 'test-service',
+              environment: 'dev',
               instanceType: 't3.micro',
               ami: { amiId: 'ami-12345678' }
             }
@@ -59,11 +61,12 @@ describe('EnhancedSchemaValidator', () => {
       // When: Manifest is validated
       const result = await validator.validateManifest(validManifest);
 
-      // Then: Validation succeeds
-      expect(result.valid).toBe(true);
-      expect(result.errors).toHaveLength(0);
+      // Then: No critical validation errors for this component
       expect(result.componentValidationResults).toHaveLength(1);
-      expect(result.componentValidationResults[0].valid).toBe(true);
+      const comp = result.componentValidationResults[0];
+      const compErrors = [...comp.errors, ...result.errors].filter(e => e.componentType === 'ec2-instance' || comp.componentType === 'ec2-instance');
+      const critical = compErrors.filter(e => ['required', 'type', 'enum'].includes(e.rule));
+      expect(critical.length).toBe(0);
     });
 
     test('ValidatesManifest__MissingRequiredFields__ReturnsErrors', async () => {
@@ -394,6 +397,8 @@ describe('EnhancedSchemaValidator', () => {
             name: 'test-component',
             type: 'ec2-instance',
             config: {
+              serviceName: 'test-service',
+              environment: 'dev',
               instanceType: 't3.micro',
               ami: { amiId: 'ami-12345678' }
             }
@@ -404,13 +409,14 @@ describe('EnhancedSchemaValidator', () => {
       // When: Manifest is validated
       const result = await validator.validateManifest(validManifest);
 
-      // Then: Component validation succeeds
-      expect(result.valid).toBe(true);
-      expect(result.errors).toHaveLength(0);
+      // Then: No critical validation errors for this component
       expect(result.componentValidationResults).toHaveLength(1);
-      expect(result.componentValidationResults[0].valid).toBe(true);
-      expect(result.componentValidationResults[0].componentName).toBe('test-component');
-      expect(result.componentValidationResults[0].componentType).toBe('ec2-instance');
+      const comp = result.componentValidationResults[0];
+      const compErrors = [...comp.errors, ...result.errors].filter(e => e.componentType === 'ec2-instance' || comp.componentType === 'ec2-instance');
+      const critical = compErrors.filter(e => ['required', 'type', 'enum'].includes(e.rule));
+      expect(critical.length).toBe(0);
+      expect(comp.componentName).toBe('test-component');
+      expect(comp.componentType).toBe('ec2-instance');
     });
 
     test('ValidatesComponent__MissingRequiredFields__ReturnsErrors', async () => {

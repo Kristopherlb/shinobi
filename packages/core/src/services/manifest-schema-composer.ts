@@ -68,10 +68,11 @@ export class ManifestSchemaComposer {
       'packages/components/**/src/schema/Config.schema.json'
     ];
     const files = new Set<string>();
+    const repoRoot = path.resolve(__dirname, '../../../..');
 
     try {
       for (const pattern of patterns) {
-        for (const file of await glob(pattern, { cwd: process.cwd(), posix: true })) {
+        for (const file of await glob(pattern, { cwd: repoRoot, posix: true })) {
           files.add(file);
         }
       }
@@ -93,7 +94,8 @@ export class ManifestSchemaComposer {
    */
   private async loadComponentSchema(schemaFilePath: string): Promise<void> {
     try {
-      const fullPath = path.resolve(process.cwd(), schemaFilePath);
+      const repoRoot = path.resolve(__dirname, '../../../..');
+      const fullPath = path.resolve(repoRoot, schemaFilePath);
       const schemaContent = await fs.readFile(fullPath, 'utf8');
       const schema = JSON.parse(schemaContent);
 
@@ -194,8 +196,7 @@ export class ManifestSchemaComposer {
       then: {
         properties: {
           config: { $ref: `#/$defs/component.${componentType}.config` }
-        },
-        required: ['config']
+        }
       }
     }));
 

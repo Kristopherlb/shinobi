@@ -9,13 +9,13 @@ import * as cdk from 'aws-cdk-lib';
 import * as cloudwatch from 'aws-cdk-lib/aws-cloudwatch';
 import { Template, Match } from 'aws-cdk-lib/assertions';
 import { ObservabilityService } from './observability.service';
-import { ComponentContext, ComponentSpec, PlatformServiceContext, BaseComponent } from '@shinobi/core';
+import { ComponentContext, ComponentSpec, IComponent as BaseComponent } from '../platform/contracts/component-interfaces';
 import {
   TestFixtureFactory,
   PerformanceTestHelpers,
   TEST_CONTEXTS,
   TEST_SPECS
-} from '../@shinobi/components/ecs-cluster/test-fixtures';
+} from './__mocks__/ecs-test-fixtures';
 
 /*
  * Test Metadata: TP-OBSERVABILITY-ECS-001

@@ -3,15 +3,10 @@
  * Basic test to verify the enhanced binder registry works
  */
 
-import {
-  EnhancedBinderRegistry,
-  DatabaseBinderStrategy,
-  EnhancedBindingContext,
-  BindingDirective,
-  Capability,
-  ComplianceFramework,
-  PostgresCapabilityData
-} from '@shinobi/core';
+import { EnhancedBinderRegistry } from '../enhanced-binder-registry';
+import { DatabaseBinderStrategy } from '../binders/database-binder-strategy';
+import { EnhancedBindingContext, Capability, ComplianceFramework, IComponent, PostgresCapabilityData } from '../bindings';
+import { BindingDirective } from '../platform-binding-trigger-spec';
 
 // Mock logger
 const mockLogger = {
@@ -21,12 +16,19 @@ const mockLogger = {
   debug: jest.fn()
 };
 
-// Mock component
-const mockComponent = {
+// Minimal IComponent mock
+const mockComponent: IComponent = {
   getName: () => 'test-component',
   getId: () => 'test-component-id',
   getType: () => 'lambda-api',
   getServiceName: () => 'test-service',
+  getCapabilities: () => ({} as any),
+  getConstruct: () => ({} as any),
+  synth: () => undefined as any,
+  _getSecurityGroupHandle: () => undefined as any,
+  node: {} as any,
+  context: {} as any,
+  spec: { name: 'test', type: 'lambda-api', config: {} } as any,
   getCapabilityData: () => ({
     type: 'db:postgres' as const,
     endpoints: { host: 'localhost', port: 5432, database: 'testdb' },
