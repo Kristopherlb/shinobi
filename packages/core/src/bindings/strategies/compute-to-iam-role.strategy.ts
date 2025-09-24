@@ -159,6 +159,9 @@ export class ComputeToIamRoleBinder implements IBinderStrategy {
           statements: this.extractPolicyStatements(role)
         })
       );
+
+      // Update trust policy to allow Lambda to assume the target role
+      role.grantAssumeRole(new iam.ServicePrincipal('lambda.amazonaws.com'));
     } else {
       // If no existing role, attach the target role directly
       lambdaFunction.addToRolePolicy(
@@ -168,6 +171,9 @@ export class ComputeToIamRoleBinder implements IBinderStrategy {
           resources: [role.roleArn]
         })
       );
+
+      // Update trust policy to allow Lambda to assume the target role
+      role.grantAssumeRole(new iam.ServicePrincipal('lambda.amazonaws.com'));
     }
 
     return {
@@ -178,6 +184,7 @@ export class ComputeToIamRoleBinder implements IBinderStrategy {
         bindingType: 'lambda-to-iam-role',
         roleArn: role.roleArn,
         policyMerged: !!existingRole,
+        trustPolicyUpdated: true,
         success: true
       }
     };

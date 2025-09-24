@@ -6,8 +6,8 @@
 import * as cdk from 'aws-cdk-lib';
 import * as path from 'path';
 import * as fs from 'fs';
-import { 
-  ComponentSpec, 
+import {
+  ComponentSpec,
   ComponentContext,
   IComponent,
   IComponentFactory,
@@ -16,7 +16,8 @@ import {
   IBinderStrategy,
   IPlatformService,
   PlatformServiceContext,
-  PlatformServiceRegistry
+  PlatformServiceRegistry,
+  BaseComponent
 } from '../platform/contracts';
 import { Logger } from './logger';
 import { ComponentFactoryProvider } from './component-factory-provider';
@@ -82,22 +83,22 @@ export class ResolverEngine {
 
       // Phase 1: Component Instantiation
       const components = await this.instantiateComponents(validatedConfig, stack);
-      
+
       // Phase 2: Synthesis
       const outputsMap = await this.synthesizeComponents(components);
-      
+
       // Phase 2.5: Platform Services Application
       await this.applyPlatformServices(components, validatedConfig);
-      
+
       // Phase 3: Binding
       const bindings = await this.bindComponents(components, outputsMap, validatedConfig);
-      
+
       // Phase 4: Patching
       const patchesApplied = await this.applyPatches(stack, components, validatedConfig);
-      
+
       // Phase 5: Final Assembly
       const synthesisTime = Date.now() - startTime;
-      
+
       this.dependencies.logger.success(`Synthesis completed in ${synthesisTime}ms`);
       this.dependencies.logger.info(`  Components: ${components.length}`);
       this.dependencies.logger.info(`  Bindings: ${bindings.length}`);
@@ -145,7 +146,7 @@ export class ResolverEngine {
         try {
           const component = registry.createComponent(componentSpec, context);
           components.push(component);
-          
+
           this.dependencies.logger.debug(`Instantiated component: ${componentSpec.name} (${componentSpec.type})`);
         } catch (error) {
           throw new Error(`Failed to instantiate component '${componentSpec.name}': ${error instanceof Error ? error.message : 'Unknown error'}`);
@@ -169,7 +170,7 @@ export class ResolverEngine {
     for (const component of components) {
       try {
         component.synth();
-        
+
         const capabilities = component.getCapabilities();
         outputsMap.set(component.spec.name, {
           construct: component.getConstruct('main'),
@@ -178,7 +179,7 @@ export class ResolverEngine {
         });
 
         this.dependencies.logger.debug(`Synthesized component: ${component.spec.name}`);
-        
+
         Object.keys(capabilities).forEach(capabilityKey => {
           this.dependencies.logger.debug(`  Capability: ${capabilityKey}`, capabilities[capabilityKey]);
         });
@@ -206,6 +207,7 @@ export class ResolverEngine {
       complianceFramework: validatedConfig.complianceFramework || 'commercial',
       region: process.env.CDK_DEFAULT_REGION || 'us-east-1',
       serviceLabels: validatedConfig.labels || {},
+      logger: this.dependencies.logger,
       serviceRegistry: {
         observability: { enabled: true }, // Always enable observability for now
         costManagement: { enabled: false }, // TODO: Implement in future
@@ -217,7 +219,7 @@ export class ResolverEngine {
 
     // Initialize platform services
     const enabledServices: IPlatformService[] = [];
-    
+
     // Add observability service if enabled
     if (serviceContext.serviceRegistry.observability?.enabled) {
       enabledServices.push(new ObservabilityService(serviceContext));
@@ -226,12 +228,12 @@ export class ResolverEngine {
     // Apply each service to all components
     for (const service of enabledServices) {
       this.dependencies.logger.debug(`Applying ${service.name} to components`);
-      
+
       let processedCount = 0;
 
       for (const component of components) {
         try {
-          service.apply(component);
+          service.apply(component as BaseComponent);
           processedCount++;
         } catch (error) {
           this.dependencies.logger.warn(
@@ -252,7 +254,7 @@ export class ResolverEngine {
    * Resolves component bindings using Strategy pattern
    */
   private async bindComponents(
-    components: IComponent[], 
+    components: IComponent[],
     outputsMap: Map<string, any>,
     validatedConfig: any
   ): Promise<Array<any>> {
@@ -268,7 +270,7 @@ export class ResolverEngine {
       for (const bindDirective of component.spec.binds) {
         try {
           const target = this.resolveTarget(bindDirective, outputsMap);
-          
+
           if (!target) {
             throw new Error(`Cannot resolve binding target for directive: ${JSON.stringify(bindDirective)}`);
           }
@@ -282,7 +284,7 @@ export class ResolverEngine {
           };
 
           const bindingResult = this.componentBinder.bind(bindingContext);
-          
+
           bindings.push({
             source: component.spec.name,
             target: target.component.spec.name,
@@ -318,10 +320,10 @@ export class ResolverEngine {
     // Selector-based resolution with ambiguity checking
     if (bindDirective.select) {
       const matchingComponents: any[] = [];
-      
+
       for (const [componentName, output] of outputsMap.entries()) {
         const component = output.component;
-        
+
         // Match by type
         if (bindDirective.select.type && component.getType() === bindDirective.select.type) {
           // Match by labels if specified
@@ -337,19 +339,19 @@ export class ResolverEngine {
           }
         }
       }
-      
+
       // Validate selector results
       if (matchingComponents.length === 0) {
         const selectorDesc = JSON.stringify(bindDirective.select);
         throw new Error(`Selector found no matching components for: ${selectorDesc}`);
       }
-      
+
       if (matchingComponents.length > 1) {
         const componentNames = matchingComponents.map(output => output.component.spec.name).join(', ');
         const selectorDesc = JSON.stringify(bindDirective.select);
         throw new Error(`Ambiguous selector: Found ${matchingComponents.length} components matching ${selectorDesc}: [${componentNames}]. Please make selector more specific.`);
       }
-      
+
       return matchingComponents[0];
     }
 
@@ -361,14 +363,14 @@ export class ResolverEngine {
    * Apply escape hatch modifications if patches.ts exists
    */
   private async applyPatches(
-    stack: cdk.Stack, 
-    components: IComponent[], 
+    stack: cdk.Stack,
+    components: IComponent[],
     validatedConfig: any
   ): Promise<boolean> {
     this.dependencies.logger.debug('Phase 4: Patching');
 
     const patchesPath = path.resolve(process.cwd(), 'patches.ts');
-    
+
     if (!fs.existsSync(patchesPath)) {
       this.dependencies.logger.debug('No patches.ts file found - skipping patching phase');
       return false;
@@ -376,9 +378,9 @@ export class ResolverEngine {
 
     try {
       this.dependencies.logger.info('Applying patches from patches.ts');
-      
+
       const patchesModule = await import(patchesPath);
-      
+
       if (typeof patchesModule.applyPatches === 'function') {
         const patchContext = {
           stack,
@@ -388,13 +390,13 @@ export class ResolverEngine {
         };
 
         await patchesModule.applyPatches(patchContext);
-        
+
         this.dependencies.logger.success('Successfully applied patches');
-        
+
         if (patchesModule.patchInfo) {
           this.dependencies.logger.info('Patch Info:', patchesModule.patchInfo);
         }
-        
+
         return true;
       } else {
         this.dependencies.logger.warn('patches.ts exists but does not export applyPatches function');
@@ -412,7 +414,7 @@ export class ResolverEngine {
    */
   private buildConstructsMap(components: IComponent[]): Record<string, any> {
     const constructsMap: Record<string, any> = {};
-    
+
     for (const component of components) {
       // Retrieve the main construct handle stored during the REAL synthesis phase
       const mainConstruct = component.getConstruct('main');
@@ -422,7 +424,7 @@ export class ResolverEngine {
         this.dependencies.logger.warn(`Component ${component.getName()} has no 'main' construct handle`);
       }
     }
-    
+
     return constructsMap;
   }
 

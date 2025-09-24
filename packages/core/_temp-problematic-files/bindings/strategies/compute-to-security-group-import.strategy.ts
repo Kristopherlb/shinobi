@@ -7,9 +7,10 @@
  */
 
 import * as ec2 from 'aws-cdk-lib/aws-ec2';
+import * as iam from 'aws-cdk-lib/aws-iam';
 import * as lambda from 'aws-cdk-lib/aws-lambda';
 import * as ecs from 'aws-cdk-lib/aws-ecs';
-import { 
+import {
   IBinderStrategy,
   BindingContext,
   BindingResult,
@@ -41,7 +42,7 @@ export class ComputeToSecurityGroupImportBinder implements IBinderStrategy {
    */
   bind(context: BindingContext): BindingResult {
     const { source, target, directive, environment, complianceFramework } = context;
-    
+
     try {
       // Get security group import capability information from target
       const sgCapability = target.getCapabilities()['security-group:import'];
@@ -116,18 +117,13 @@ export class ComputeToSecurityGroupImportBinder implements IBinderStrategy {
     if (lambdaFunction.isBoundToVpc()) {
       lambdaFunction.connections.addSecurityGroup(securityGroup);
     } else {
-      // If Lambda is not in a VPC, we need to configure it to be in the same VPC as the security group
-      if (securityGroup.vpc) {
-        lambdaFunction.addToRolePolicy(new lambda.PolicyStatement({
-          effect: lambda.Effect.ALLOW,
-          actions: [
-            'ec2:CreateNetworkInterface',
-            'ec2:DescribeNetworkInterfaces',
-            'ec2:DeleteNetworkInterface'
-          ],
-          resources: [`arn:aws:ec2:${context.region}:${context.account}:vpc/${securityGroup.vpc.vpcId}`]
-        }));
-      }
+      // If Lambda is not in a VPC, fail with clear error message
+      // Adding IAM permissions alone doesn't put Lambda in VPC
+      throw new Error(
+        `Cannot bind security group: Lambda ${source.node.id} is not in a VPC. ` +
+        `Security groups can only be bound to Lambda functions that are already configured for VPC access. ` +
+        `Please configure the Lambda to use VPC networking first.`
+      );
     }
 
     return {

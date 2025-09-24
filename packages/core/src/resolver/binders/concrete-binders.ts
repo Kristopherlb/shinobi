@@ -7,7 +7,7 @@ import {
   IBinderStrategy,
   BindingContext,
   BindingResult
-} from '@shinobi/core';
+} from '../../platform/contracts/platform-binding-trigger-spec';
 import * as lambda from 'aws-cdk-lib/aws-lambda';
 import * as rds from 'aws-cdk-lib/aws-rds';
 import * as s3 from 'aws-cdk-lib/aws-s3';
@@ -44,34 +44,59 @@ export class LambdaToSqsBinderStrategy implements IBinderStrategy {
   bind(context: BindingContext): BindingResult {
     const { source, target, directive } = context;
 
-    // 1. Get the REAL L2 construct handles from the component instances
-    const lambdaConstruct = source.getConstruct('main') as lambda.Function;
-    const sqsQueueConstruct = target.getConstruct('main') as sqs.IQueue;
+    try {
+      // 1. Get the REAL L2 construct handles from the component instances
+      const lambdaConstruct = source.getConstruct('main') as lambda.Function;
+      const sqsQueueConstruct = target.getConstruct('main') as sqs.IQueue;
 
-    if (!lambdaConstruct || !sqsQueueConstruct) {
-      throw new Error(`Could not retrieve construct handles for binding ${source.getName()} -> ${target.getName()}`);
-    }
-
-    // 2. Use high-level L2 methods to apply IAM permissions directly
-    this.grantSQSAccess(sqsQueueConstruct, lambdaConstruct, directive.access);
-
-    // 3. Apply compliance-specific security enhancements
-    if (context.complianceFramework.startsWith('fedramp')) {
-      this.applyFedRAMPSecurityEnhancements(sqsQueueConstruct, lambdaConstruct, context);
-    }
-
-    // 4. Handle advanced options like dead letter queue
-    if (directive.options?.deadLetterQueue) {
-      this.configureDeadLetterQueue(sqsQueueConstruct, lambdaConstruct, context);
-    }
-
-    // 5. Return environment variables from the REAL construct
-    return {
-      environmentVariables: {
-        [directive.env?.queueUrl || 'QUEUE_URL']: sqsQueueConstruct.queueUrl,
-        [directive.env?.queueArn || 'QUEUE_ARN']: sqsQueueConstruct.queueArn
+      if (!lambdaConstruct || !sqsQueueConstruct) {
+        throw new Error(`Could not retrieve construct handles for binding ${source.getName()} -> ${target.getName()}`);
       }
-    };
+
+      // 2. Use high-level L2 methods to apply IAM permissions directly
+      this.grantSQSAccess(sqsQueueConstruct, lambdaConstruct, directive.access);
+
+      // 3. Apply compliance-specific security enhancements
+      if (context.complianceFramework.startsWith('fedramp')) {
+        this.applyFedRAMPSecurityEnhancements(sqsQueueConstruct, lambdaConstruct, context);
+      }
+
+      // 4. Handle advanced options like dead letter queue
+      if (directive.options?.deadLetterQueue) {
+        this.configureDeadLetterQueue(sqsQueueConstruct, lambdaConstruct, context);
+      }
+
+      // 5. Return environment variables from the REAL construct
+      return {
+        environmentVariables: {
+          [directive.env?.queueUrl || 'QUEUE_URL']: sqsQueueConstruct.queueUrl,
+          [directive.env?.queueArn || 'QUEUE_ARN']: sqsQueueConstruct.queueArn
+        },
+        metadata: {
+          bindingType: 'lambda-to-sqs',
+          success: true
+        }
+      };
+    } catch (error) {
+      // Preserve error context for better debugging
+      const errorDetails = {
+        message: error instanceof Error ? error.message : 'Unknown error',
+        stack: error instanceof Error ? error.stack : undefined,
+        errorType: error instanceof Error ? error.constructor.name : typeof error,
+        sourceType: source.getType(),
+        targetType: target.getType(),
+        timestamp: new Date().toISOString()
+      };
+
+      return {
+        environmentVariables: {},
+        metadata: {
+          error: `Failed to bind ${source.getType()} to SQS: ${errorDetails.message}`,
+          errorDetails,
+          success: false
+        }
+      };
+    }
   }
 
 
@@ -112,19 +137,36 @@ export class LambdaToSqsBinderStrategy implements IBinderStrategy {
     lambdaConstruct: lambda.Function,
     context: BindingContext
   ): void {
+    // Get the actual deployment region from CDK stack
+    const region = context.environment || 'us-east-1';
+
     // Add enhanced SQS monitoring permissions for FedRAMP compliance
     lambdaConstruct.addToRolePolicy(
       new iam.PolicyStatement({
         effect: iam.Effect.ALLOW,
         actions: [
           'sqs:GetQueueAttributes',
-          'sqs:ListQueues',
           'sqs:ListQueueTags'
         ],
         resources: [sqsQueueConstruct.queueArn],
         conditions: {
           'StringEquals': {
-            'aws:RequestedRegion': process.env.AWS_REGION || 'us-east-1',
+            'aws:RequestedRegion': region,
+            'aws:SecureTransport': 'true'
+          }
+        }
+      })
+    );
+
+    // ListQueues requires wildcard resource with region condition
+    lambdaConstruct.addToRolePolicy(
+      new iam.PolicyStatement({
+        effect: iam.Effect.ALLOW,
+        actions: ['sqs:ListQueues'],
+        resources: ['*'],
+        conditions: {
+          'StringEquals': {
+            'aws:RequestedRegion': region,
             'aws:SecureTransport': 'true'
           }
         }
@@ -211,38 +253,63 @@ export class LambdaToRdsBinderStrategy implements IBinderStrategy {
   bind(context: BindingContext): BindingResult {
     const { source, target, directive } = context;
 
-    // 1. Get the REAL L2 construct handles from the component instances
-    const lambdaConstruct = source.getConstruct('main') as lambda.Function;
-    const rdsConstruct = target.getConstruct('main') as rds.DatabaseInstance;
+    try {
+      // 1. Get the REAL L2 construct handles from the component instances
+      const lambdaConstruct = source.getConstruct('main') as lambda.Function;
+      const rdsConstruct = target.getConstruct('main') as rds.DatabaseInstance;
 
-    if (!lambdaConstruct || !rdsConstruct) {
-      throw new Error(`Could not retrieve construct handles for binding ${source.spec.name} -> ${target.spec.name}`);
+      if (!lambdaConstruct || !rdsConstruct) {
+        throw new Error(`Could not retrieve construct handles for binding ${source.spec.name} -> ${target.spec.name}`);
+      }
+
+      // 2. Use high-level L2 methods to apply wiring directly
+      // Allow Lambda to connect to RDS on the default PostgreSQL port
+      rdsConstruct.connections.allowDefaultPortFrom(
+        lambdaConstruct,
+        `Allow connection from Lambda ${source.spec.name}`
+      );
+
+      // Grant Lambda access to connect to the database and read secrets
+      this.grantDatabaseAccess(rdsConstruct, lambdaConstruct, directive.access);
+
+      // 3. Handle advanced options like IAM Auth
+      if (directive.options?.iamAuth) {
+        this.enableIamDatabaseAuth(rdsConstruct, lambdaConstruct, context);
+      }
+
+      // 4. Apply compliance-specific security enhancements
+      if (context.complianceFramework.startsWith('fedramp')) {
+        this.applyFedRAMPSecurityEnhancements(rdsConstruct, lambdaConstruct, context);
+      }
+
+      // 5. Return environment variables (the main output now that constructs are wired directly)
+      return {
+        environmentVariables: this.buildEnvironmentVariables(target, directive, rdsConstruct),
+        metadata: {
+          bindingType: 'lambda-to-rds',
+          success: true
+        }
+      };
+    } catch (error) {
+      // Preserve error context for better debugging
+      const errorDetails = {
+        message: error instanceof Error ? error.message : 'Unknown error',
+        stack: error instanceof Error ? error.stack : undefined,
+        errorType: error instanceof Error ? error.constructor.name : typeof error,
+        sourceType: source.getType(),
+        targetType: target.getType(),
+        timestamp: new Date().toISOString()
+      };
+
+      return {
+        environmentVariables: {},
+        metadata: {
+          error: `Failed to bind ${source.getType()} to RDS: ${errorDetails.message}`,
+          errorDetails,
+          success: false
+        }
+      };
     }
-
-    // 2. Use high-level L2 methods to apply wiring directly
-    // Allow Lambda to connect to RDS on the default PostgreSQL port
-    rdsConstruct.connections.allowDefaultPortFrom(
-      lambdaConstruct,
-      `Allow connection from Lambda ${source.spec.name}`
-    );
-
-    // Grant Lambda access to connect to the database and read secrets
-    this.grantDatabaseAccess(rdsConstruct, lambdaConstruct, directive.access);
-
-    // 3. Handle advanced options like IAM Auth
-    if (directive.options?.iamAuth) {
-      this.enableIamDatabaseAuth(rdsConstruct, lambdaConstruct, context);
-    }
-
-    // 4. Apply compliance-specific security enhancements
-    if (context.complianceFramework.startsWith('fedramp')) {
-      this.applyFedRAMPSecurityEnhancements(rdsConstruct, lambdaConstruct, context);
-    }
-
-    // 5. Return environment variables (the main output now that constructs are wired directly)
-    return {
-      environmentVariables: this.buildEnvironmentVariables(target, directive, rdsConstruct)
-    };
   }
 
 
@@ -309,6 +376,9 @@ export class LambdaToRdsBinderStrategy implements IBinderStrategy {
     lambdaConstruct: lambda.Function,
     context: BindingContext
   ): void {
+    // Get the actual deployment region from CDK stack
+    const region = context.environment || 'us-east-1';
+
     // Add enhanced monitoring permissions for FedRAMP compliance
     lambdaConstruct.addToRolePolicy(
       new iam.PolicyStatement({
@@ -321,7 +391,7 @@ export class LambdaToRdsBinderStrategy implements IBinderStrategy {
         resources: ['*'], // Describe actions require wildcard resource
         conditions: {
           'StringEquals': {
-            'aws:RequestedRegion': process.env.AWS_REGION || 'us-east-1',
+            'aws:RequestedRegion': region,
             'aws:SecureTransport': 'true'
           }
         }
@@ -375,31 +445,56 @@ export class LambdaToS3BucketBinderStrategy implements IBinderStrategy {
   bind(context: BindingContext): BindingResult {
     const { source, target, directive } = context;
 
-    // 1. Get the REAL L2 construct handles from the component instances
-    const lambdaConstruct = source.getConstruct('main') as lambda.Function;
-    const s3Construct = target.getConstruct('main') as s3.Bucket;
+    try {
+      // 1. Get the REAL L2 construct handles from the component instances
+      const lambdaConstruct = source.getConstruct('main') as lambda.Function;
+      const s3Construct = target.getConstruct('main') as s3.Bucket;
 
-    if (!lambdaConstruct || !s3Construct) {
-      throw new Error(`Could not retrieve construct handles for binding ${source.spec.name} -> ${target.spec.name}`);
+      if (!lambdaConstruct || !s3Construct) {
+        throw new Error(`Could not retrieve construct handles for binding ${source.spec.name} -> ${target.spec.name}`);
+      }
+
+      // 2. Use high-level L2 methods to grant S3 access directly
+      this.grantS3Access(s3Construct, lambdaConstruct, directive.access);
+
+      // 3. Handle advanced options like KMS encryption
+      if (directive.options?.kmsEncryption) {
+        this.enableKMSEncryption(s3Construct, lambdaConstruct, context);
+      }
+
+      // 4. Apply compliance-specific security enhancements
+      if (context.complianceFramework.startsWith('fedramp')) {
+        this.applyS3FedRAMPSecurityEnhancements(s3Construct, lambdaConstruct, context);
+      }
+
+      // 5. Return environment variables (the main output now that constructs are wired directly)
+      return {
+        environmentVariables: this.buildS3EnvironmentVariables(directive, s3Construct),
+        metadata: {
+          bindingType: 'lambda-to-s3',
+          success: true
+        }
+      };
+    } catch (error) {
+      // Preserve error context for better debugging
+      const errorDetails = {
+        message: error instanceof Error ? error.message : 'Unknown error',
+        stack: error instanceof Error ? error.stack : undefined,
+        errorType: error instanceof Error ? error.constructor.name : typeof error,
+        sourceType: source.getType(),
+        targetType: target.getType(),
+        timestamp: new Date().toISOString()
+      };
+
+      return {
+        environmentVariables: {},
+        metadata: {
+          error: `Failed to bind ${source.getType()} to S3: ${errorDetails.message}`,
+          errorDetails,
+          success: false
+        }
+      };
     }
-
-    // 2. Use high-level L2 methods to grant S3 access directly
-    this.grantS3Access(s3Construct, lambdaConstruct, directive.access);
-
-    // 3. Handle advanced options like KMS encryption
-    if (directive.options?.kmsEncryption) {
-      this.enableKMSEncryption(s3Construct, lambdaConstruct, context);
-    }
-
-    // 4. Apply compliance-specific security enhancements
-    if (context.complianceFramework.startsWith('fedramp')) {
-      this.applyS3FedRAMPSecurityEnhancements(s3Construct, lambdaConstruct, context);
-    }
-
-    // 5. Return environment variables (the main output now that constructs are wired directly)
-    return {
-      environmentVariables: this.buildS3EnvironmentVariables(directive, s3Construct)
-    };
   }
 
 
@@ -457,8 +552,29 @@ export class LambdaToS3BucketBinderStrategy implements IBinderStrategy {
     lambdaConstruct: lambda.Function,
     context: BindingContext
   ): void {
-    // Grant Lambda permission to use KMS key for S3 encryption
-    const kmsKeyArn = context.directive.options?.kmsKeyId || 'alias/aws/s3';
+    // Get the actual deployment region from CDK stack
+    const region = context.environment || 'us-east-1';
+
+    // Handle KMS key ARN properly
+    let kmsKeyArn: string;
+    const kmsKeyId = context.directive.options?.kmsKeyId;
+
+    if (kmsKeyId) {
+      // If user provided a key ID, construct proper ARN
+      if (kmsKeyId.startsWith('alias/')) {
+        // Convert alias to proper ARN format
+        kmsKeyArn = `arn:aws:kms:${region}:*:${kmsKeyId}`;
+      } else if (kmsKeyId.startsWith('arn:aws:kms:')) {
+        // Already a full ARN
+        kmsKeyArn = kmsKeyId;
+      } else {
+        // Assume it's a key ID, construct ARN
+        kmsKeyArn = `arn:aws:kms:${region}:*:key/${kmsKeyId}`;
+      }
+    } else {
+      // For AWS-managed S3 key, no explicit policy needed as AWS services can use it by default
+      return;
+    }
 
     lambdaConstruct.addToRolePolicy(
       new iam.PolicyStatement({
@@ -475,7 +591,7 @@ export class LambdaToS3BucketBinderStrategy implements IBinderStrategy {
         resources: [kmsKeyArn],
         conditions: {
           'StringEquals': {
-            'kms:ViaService': `s3.${process.env.AWS_REGION || 'us-east-1'}.amazonaws.com`
+            'kms:ViaService': `s3.${region}.amazonaws.com`
           }
         }
       })
@@ -490,6 +606,9 @@ export class LambdaToS3BucketBinderStrategy implements IBinderStrategy {
     lambdaConstruct: lambda.Function,
     context: BindingContext
   ): void {
+    // Get the actual deployment region from CDK stack
+    const region = context.environment || 'us-east-1';
+
     // Add enhanced S3 monitoring permissions for FedRAMP compliance
     lambdaConstruct.addToRolePolicy(
       new iam.PolicyStatement({
@@ -503,7 +622,7 @@ export class LambdaToS3BucketBinderStrategy implements IBinderStrategy {
         resources: ['*'], // These actions require wildcard resource
         conditions: {
           'StringEquals': {
-            'aws:RequestedRegion': process.env.AWS_REGION || 'us-east-1',
+            'aws:RequestedRegion': region,
             'aws:SecureTransport': 'true'
           }
         }
@@ -523,6 +642,20 @@ export class LambdaToS3BucketBinderStrategy implements IBinderStrategy {
           conditions: {
             'StringNotLike': {
               's3:prefix': allowedPrefix
+            }
+          }
+        })
+      );
+
+      // Restrict to VPC endpoints for FedRAMP High (similar to SQS)
+      lambdaConstruct.addToRolePolicy(
+        new iam.PolicyStatement({
+          effect: iam.Effect.DENY,
+          actions: ['s3:*'],
+          resources: ['*'],
+          conditions: {
+            'StringNotEquals': {
+              'aws:SourceVpce': context.directive.options?.vpcEndpoint || 'vpce-*'
             }
           }
         })
