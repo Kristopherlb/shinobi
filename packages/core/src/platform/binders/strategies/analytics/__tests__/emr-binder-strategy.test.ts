@@ -20,7 +20,7 @@ describe('EmrBinderStrategy config-driven behavior', () => {
       level: 'unit',
       capability: 'emr:cluster',
       oracle: 'exact',
-      invariants: [ 'envs set for encryption/vpc/kerberos/audit', 'IAM statements include KMS' ],
+      invariants: ['envs set for encryption/vpc/kerberos/audit', 'IAM statements include KMS'],
       fixtures: ['MockComponent', 'MockEmrCluster'],
       inputs: { shape: 'ComponentBinding', notes: 'requireSecureAccess true; enableKerberos true; enableAuditLogging true' },
       risks: [], dependencies: [], evidence: [],
@@ -47,7 +47,7 @@ describe('EmrBinderStrategy config-driven behavior', () => {
     } as any;
 
     const binding: ComponentBinding = {
-      from: 'etl', to: 'cluster', capability: 'emr:cluster', access: ['read','write'], env: {},
+      from: 'etl', to: 'cluster', capability: 'emr:cluster', access: ['read', 'write'], env: {},
       options: { requireSecureAccess: true, enableKerberos: true, enableAuditLogging: true }
     } as any;
     const context: BindingContext = { region: 'us-east-1', accountId: '123456789012', environment: 'test' } as any;
