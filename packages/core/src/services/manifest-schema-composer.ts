@@ -171,13 +171,18 @@ export class ManifestSchemaComposer {
       schema.$defs[defKey] = info.schema;
     }
 
-    // Strengthen `type` to the loaded component types
+    // Strengthen `type` to the loaded component types (only if non-empty to avoid Ajv enum error)
     if (componentDef.properties?.type) {
-      componentDef.properties.type = {
-        type: 'string',
-        enum: allTypes,
-        description: `The type of component to create. Must be one of: ${allTypes.join(', ')}`
-      };
+      if (allTypes.length > 0) {
+        componentDef.properties.type = {
+          type: 'string',
+          enum: allTypes,
+          description: `The type of component to create. Must be one of: ${allTypes.join(', ')}`
+        };
+      } else {
+        // Fall back to a simple string type when no component schemas are discovered
+        componentDef.properties.type = { type: 'string', description: 'Component type' };
+      }
     }
 
     // Add conditionals that bind type -> config
@@ -194,8 +199,10 @@ export class ManifestSchemaComposer {
       }
     }));
 
-    // Merge with existing allOf (if any)
-    componentDef.allOf = [...(componentDef.allOf || []), ...conditionals];
+    // Merge with existing allOf (if any). Only append when there are conditionals.
+    if (conditionals.length > 0) {
+      componentDef.allOf = [...(componentDef.allOf || []), ...conditionals];
+    }
 
     this.dependencies.logger.debug(`Enhanced component config validation with ${allTypes.length} component types`);
   }
