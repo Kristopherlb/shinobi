@@ -61,6 +61,30 @@ describe('LambdaBinderStrategy env mapping', () => {
     expect(Object.values(result.environmentVariables)).toContain('15');
     expect(Object.values(result.environmentVariables)).toContain('512');
   });
+
+  test('Lambda__OptionsValidation__RejectsInvalidTypes', async () => {
+    const strategy = new LambdaBinderStrategy();
+    const source = new MockComponent();
+    const target = new MockComponent();
+
+    const context: EnhancedBindingContext = {
+      source: source as any,
+      target: target as any,
+      directive: { capability: 'lambda:function', access: 'read' } as any,
+      environment: 'test',
+      complianceFramework: 'commercial',
+      targetCapabilityData: {
+        type: 'lambda:function',
+        resources: { arn: 'arn:aws:lambda:us-east-1:123:function:fn', functionName: 'fn', version: '$LATEST', url: 'https://lambda-url' },
+        environment: {},
+        vpc: undefined,
+        config: { timeout: 15, memorySize: 512 }
+      } as any,
+      options: { reservedConcurrentExecutions: 'oops' } as any
+    } as any;
+
+    await expect(strategy.bind(context)).rejects.toThrow(/Invalid binding options/);
+  });
 });
 
 

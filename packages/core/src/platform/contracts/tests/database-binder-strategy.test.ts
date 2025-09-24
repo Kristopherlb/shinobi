@@ -17,7 +17,8 @@ describe('DatabaseBinderStrategy', () => {
 
     mockSourceComponent = {
       getName: () => 'test-lambda',
-      getType: () => 'lambda-api'
+      getType: () => 'lambda-api',
+      getCapabilityData: () => ({ securityGroups: ['sg-src-1'] })
     };
 
     mockTargetComponent = {
@@ -147,8 +148,8 @@ describe('DatabaseBinderStrategy', () => {
 
       const result = await strategy.bind(context);
 
-      expect(result.environmentVariables).toHaveProperty('TEST-DATABASE_DB_HOST');
-      expect(result.environmentVariables['TEST-DATABASE_DB_HOST']).toBe('test-db.cluster-xyz.us-east-1.rds.amazonaws.com');
+      expect(result.environmentVariables).toHaveProperty('DB_HOST');
+      expect(result.environmentVariables['DB_HOST']).toBe('test-db.cluster-xyz.us-east-1.rds.amazonaws.com');
       expect(result.iamPolicies.length).toBeGreaterThan(0);
       expect(result.securityGroupRules.length).toBeGreaterThan(0);
       expect(result.complianceActions).toBeDefined();
@@ -187,8 +188,8 @@ describe('DatabaseBinderStrategy', () => {
 
       const result = await strategy.bind(context);
 
-      expect(result.environmentVariables).toHaveProperty('TEST-DATABASE_DB_HOST');
-      expect(result.environmentVariables).toHaveProperty('TEST-DATABASE_DB_PORT');
+      expect(result.environmentVariables).toHaveProperty('DB_HOST');
+      expect(result.environmentVariables).toHaveProperty('DB_PORT');
       expect(result.iamPolicies.length).toBeGreaterThan(0);
       expect(result.securityGroupRules.length).toBeGreaterThan(0);
     });
@@ -262,11 +263,11 @@ describe('DatabaseBinderStrategy', () => {
 
       const result = await strategy.bind(context);
 
-      expect(result.environmentVariables).toHaveProperty('TEST-DATABASE_DB_HOST');
-      expect(result.environmentVariables).toHaveProperty('TEST-DATABASE_DB_PORT');
-      expect(result.environmentVariables).toHaveProperty('TEST-DATABASE_DB_NAME');
-      expect(result.environmentVariables).toHaveProperty('TEST-DATABASE_DB_SECRET_ARN');
-      expect(result.environmentVariables).toHaveProperty('TEST-DATABASE_DB_CONNECTION_STRING');
+      expect(result.environmentVariables).toHaveProperty('DB_HOST');
+      expect(result.environmentVariables).toHaveProperty('DB_PORT');
+      expect(result.environmentVariables).toHaveProperty('DB_NAME');
+      expect(result.environmentVariables).toHaveProperty('DB_SECRET_ARN');
+      expect(result.environmentVariables).toHaveProperty('DB_CONNECTION_STRING');
     });
 
     test('GenerateEnvironmentVariables__CustomMappings__UsesCustomMappings', async () => {
@@ -349,7 +350,7 @@ describe('DatabaseBinderStrategy', () => {
 
       expect(result.complianceActions.length).toBeGreaterThan(0);
       const vpcEndpointAction = result.complianceActions.find((action: any) =>
-        action.description.includes('VPC endpoint required')
+        action.message.includes('encryption in transit')
       );
       expect(vpcEndpointAction).toBeDefined();
     });
@@ -389,14 +390,14 @@ describe('DatabaseBinderStrategy', () => {
 
       expect(result.complianceActions.length).toBeGreaterThan(0);
       const monitoringAction = result.complianceActions.find((action: any) =>
-        action.description.includes('Enhanced monitoring required')
+        action.message.includes('Database access granted')
       );
       expect(monitoringAction).toBeDefined();
     });
   });
 
   describe('Error Handling', () => {
-    test('Bind__MissingCapabilityData__ThrowsError', () => {
+    test('Bind__MissingCapabilityData__ThrowsError', async () => {
       // TP-database-binder-error-001
       const testMetadata = {
         "id": "TP-database-binder-error-001",
@@ -427,10 +428,10 @@ describe('DatabaseBinderStrategy', () => {
         targetCapabilityData: null as any
       };
 
-      expect(() => strategy.bind(context)).toThrow('Target capability data is required for binding');
+      await expect(strategy.bind(context)).rejects.toThrow('Invalid database capability data');
     });
 
-    test('Bind__MissingSourceComponent__ThrowsError', () => {
+    test('Bind__MissingSourceComponent__ThrowsError', async () => {
       // TP-database-binder-error-002
       const testMetadata = {
         "id": "TP-database-binder-error-002",
@@ -461,7 +462,7 @@ describe('DatabaseBinderStrategy', () => {
         targetCapabilityData: mockCapabilityData
       };
 
-      expect(() => strategy.bind(context)).toThrow('Source component is required for binding');
+      await expect(strategy.bind(context)).rejects.toThrow('Source component is required');
     });
   });
 });

@@ -23,8 +23,29 @@ import {
   PlatformServiceResult
 } from '../platform/contracts/platform-services';
 import { BaseComponent } from '../platform/contracts/component';
-// Neutralize external handler imports for hermetic build; use minimal local interfaces
-interface IObservabilityHandler { apply(component: BaseComponent, config: ObservabilityConfig): any }
+import * as cloudwatch from 'aws-cdk-lib/aws-cloudwatch';
+import * as cdk from 'aws-cdk-lib';
+
+// External observability handlers (with fallback to local implementations)
+let externalHandlers: any = null;
+let externalTaggingService: any = null;
+
+try {
+  // Try to import external handlers
+  const handlersModule = require('@shinobi/observability-handlers');
+  const taggingModule = require('@shinobi/standards-tagging');
+  externalHandlers = handlersModule;
+  externalTaggingService = taggingModule;
+} catch (error) {
+  // External packages not available, will use local implementations
+  console.debug('External observability packages not available, using local implementations');
+}
+
+// Local interfaces as fallback
+interface IObservabilityHandler {
+  apply(component: BaseComponent, config: ObservabilityConfig): ObservabilityHandlerResult;
+}
+
 interface ObservabilityConfig {
   traceSamplingRate: number;
   metricsInterval: number;
@@ -33,12 +54,125 @@ interface ObservabilityConfig {
   otelEnvironmentTemplate: Record<string, string>;
   ec2OtelUserDataTemplate: string;
 }
+
+interface ObservabilityHandlerResult {
+  instrumentationApplied: boolean;
+  alarmsCreated: number;
+  executionTimeMs: number;
+}
+
+interface ITaggingService {
+  applyTags(component: BaseComponent, tags: Record<string, string>): void;
+}
+
+const defaultTaggingService: ITaggingService = {
+  applyTags: (component: BaseComponent, tags: Record<string, string>) => {
+    // No-op implementation for now
+    console.debug('Applying tags to component', { component: component.node.id, tags });
+  }
+};
+
+
 class NoopHandler implements IObservabilityHandler {
   constructor(private _ctx: any) { }
-  apply(): any { return { alarmsCreated: 0, instrumentationApplied: false, executionTimeMs: 0 }; }
+  apply(): ObservabilityHandlerResult {
+    return { alarmsCreated: 0, instrumentationApplied: false, executionTimeMs: 0 };
+  }
 }
-type ITaggingService = { applyTags: (component: BaseComponent, tags: Record<string, string>) => void }
-const defaultTaggingService: ITaggingService = { applyTags: () => { } };
+
+/**
+ * Local ECS Observability Handler
+ * Provides basic ECS observability when external handlers are not available
+ */
+class LocalEcsObservabilityHandler implements IObservabilityHandler {
+  constructor(private context: any) { }
+
+  apply(component: BaseComponent, config: ObservabilityConfig): ObservabilityHandlerResult {
+    const startTime = Date.now();
+    let alarmsCreated = 0;
+
+    try {
+      const componentType = component.getType();
+
+      if (componentType === 'ecs-cluster') {
+        alarmsCreated = this.applyEcsClusterObservability(component, config);
+      } else if (componentType === 'ecs-fargate-service' || componentType === 'ecs-ec2-service') {
+        alarmsCreated = this.applyEcsServiceObservability(component, config);
+      }
+
+      return {
+        instrumentationApplied: false,
+        alarmsCreated,
+        executionTimeMs: Date.now() - startTime
+      };
+    } catch (error) {
+      this.context.logger.error('Failed to apply ECS observability', { error: (error as Error).message });
+      return {
+        instrumentationApplied: false,
+        alarmsCreated: 0,
+        executionTimeMs: Date.now() - startTime
+      };
+    }
+  }
+
+  private applyEcsClusterObservability(component: BaseComponent, config: ObservabilityConfig): number {
+    const cluster = component.getConstruct('cluster');
+    if (!cluster) {
+      this.context.logger.warn('ECS Cluster component has no cluster construct registered');
+      return 0;
+    }
+
+    // ECS Service Count alarm
+    const serviceCountAlarm = new cloudwatch.Alarm(component, 'EcsClusterServiceCountAlarm', {
+      alarmName: `${this.context.serviceName}-${component.node.id}-service-count`,
+      alarmDescription: 'ECS cluster has too many or too few services running',
+      metric: new cloudwatch.Metric({
+        namespace: 'AWS/ECS',
+        metricName: 'ServiceCount',
+        statistic: 'Average',
+        period: cdk.Duration.minutes(5),
+        dimensionsMap: {
+          ClusterName: (cluster as any).clusterName || 'unknown'
+        }
+      }),
+      threshold: config.alarmThresholds.ecs?.taskCount || 100,
+      evaluationPeriods: 2,
+      comparisonOperator: cloudwatch.ComparisonOperator.GREATER_THAN_THRESHOLD
+    });
+
+    return 1; // Created 1 alarm
+  }
+
+  private applyEcsServiceObservability(component: BaseComponent, config: ObservabilityConfig): number {
+    const service = component.getConstruct('service');
+    if (!service) {
+      this.context.logger.warn('ECS Service component has no service construct registered');
+      return 0;
+    }
+
+    // Running Task Count alarm
+    const runningTasksAlarm = new cloudwatch.Alarm(component, 'EcsServiceRunningTasksAlarm', {
+      alarmName: `${this.context.serviceName}-${component.node.id}-running-tasks`,
+      alarmDescription: 'ECS service has insufficient running tasks',
+      metric: new cloudwatch.Metric({
+        namespace: 'AWS/ECS',
+        metricName: 'RunningTaskCount',
+        statistic: 'Average',
+        period: cdk.Duration.minutes(5),
+        dimensionsMap: {
+          ServiceName: (service as any).serviceName || component.node.id,
+          ClusterName: (service as any).cluster?.clusterName || 'unknown'
+        }
+      }),
+      threshold: config.alarmThresholds.ecs?.taskCount || 1,
+      evaluationPeriods: 2,
+      comparisonOperator: cloudwatch.ComparisonOperator.LESS_THAN_OR_EQUAL_TO_THRESHOLD
+    });
+
+    return 1; // Created 1 alarm
+  }
+}
+
 
 
 /**
@@ -67,41 +201,86 @@ export class ObservabilityService implements IPlatformService {
   /**
    * Initialize the handler registry using the Handler Pattern
    * This replaces the monolithic switch statement with a scalable Map-based approach
+   * Uses external observability handlers through dependency injection when available
    */
   private initializeHandlers(): Map<string, IObservabilityHandler> {
     const handlerMap = new Map<string, IObservabilityHandler>();
 
-    try {
-      // Import and register real handlers
-      const { EcsClusterHandler } = require('@shinobi/observability-handlers');
-      const { EcsFargateServiceHandler } = require('@shinobi/observability-handlers');
-      const { EcsEc2ServiceHandler } = require('@shinobi/observability-handlers');
-      const { LambdaApiHandler } = require('@shinobi/observability-handlers');
-      const { LambdaWorkerHandler } = require('@shinobi/observability-handlers');
-      const { VpcHandler } = require('@shinobi/observability-handlers');
-      const { ApplicationLoadBalancerHandler } = require('@shinobi/observability-handlers');
-      const { RdsPostgresHandler } = require('@shinobi/observability-handlers');
-      const { Ec2InstanceHandler } = require('@shinobi/observability-handlers');
-      const { SqsQueueHandler } = require('@shinobi/observability-handlers');
+    if (externalHandlers && externalHandlers.OBSERVABILITY_HANDLERS) {
+      // Use external handlers when available
+      try {
+        // Register external handlers using the OBSERVABILITY_HANDLERS registry
+        // Each handler is instantiated with the service context and tagging service
+        Object.entries(externalHandlers.OBSERVABILITY_HANDLERS).forEach(([componentType, HandlerClass]: [string, any]) => {
+          try {
+            const handler = new HandlerClass(this.context, this.taggingService);
+            handlerMap.set(componentType, handler);
+            this.context.logger.debug(`Registered external observability handler for ${componentType}`, {
+              handlerType: HandlerClass.name
+            });
+          } catch (handlerError) {
+            this.context.logger.warn(`Failed to instantiate external handler for ${componentType}`, {
+              error: handlerError instanceof Error ? handlerError.message : String(handlerError),
+              handlerType: HandlerClass.name
+            });
+            // Fallback to no-op handler for this component type
+            handlerMap.set(componentType, new NoopHandler(this.context));
+          }
+        });
 
-      handlerMap.set('ecs-cluster', new EcsClusterHandler(this.context));
-      handlerMap.set('ecs-fargate-service', new EcsFargateServiceHandler(this.context));
-      handlerMap.set('ecs-ec2-service', new EcsEc2ServiceHandler(this.context));
-      handlerMap.set('lambda-api', new LambdaApiHandler(this.context));
-      handlerMap.set('lambda-worker', new LambdaWorkerHandler(this.context));
-      handlerMap.set('vpc', new VpcHandler(this.context));
-      handlerMap.set('application-load-balancer', new ApplicationLoadBalancerHandler(this.context));
-      handlerMap.set('rds-postgres', new RdsPostgresHandler(this.context));
-      handlerMap.set('ec2-instance', new Ec2InstanceHandler(this.context));
-      handlerMap.set('sqs-queue', new SqsQueueHandler(this.context));
-    } catch (error) {
-      // Fallback to no-op handlers if real handlers aren't available
-      this.context.logger.warn('Observability handlers not available, using no-op handlers', { error: error instanceof Error ? error.message : String(error) });
-      ['lambda-api', 'lambda-worker', 'vpc', 'application-load-balancer', 'rds-postgres', 'ec2-instance', 'sqs-queue', 'ecs-cluster', 'ecs-fargate-service', 'ecs-ec2-service']
-        .forEach(type => handlerMap.set(type, new NoopHandler(this.context)));
+        // Add additional component type mappings for backward compatibility
+        const additionalMappings = [
+          { type: 'lambda-api', handlerType: 'lambda' },
+          { type: 'lambda-worker', handlerType: 'lambda' },
+          { type: 'ecs-cluster', handlerType: 'ecs' },
+          { type: 'ecs-fargate-service', handlerType: 'ecs' },
+          { type: 'ecs-ec2-service', handlerType: 'ecs' }
+        ];
+
+        additionalMappings.forEach(({ type, handlerType }) => {
+          if (!handlerMap.has(type) && handlerMap.has(handlerType)) {
+            handlerMap.set(type, handlerMap.get(handlerType)!);
+          }
+        });
+
+        this.context.logger.info('Using external observability handlers', {
+          handlerCount: handlerMap.size
+        });
+
+      } catch (error) {
+        this.context.logger.warn('Failed to initialize external handlers, falling back to local implementations', {
+          error: error instanceof Error ? error.message : String(error)
+        });
+        this.initializeLocalHandlers(handlerMap);
+      }
+    } else {
+      // Use local implementations when external handlers are not available
+      this.context.logger.info('External observability handlers not available, using local implementations');
+      this.initializeLocalHandlers(handlerMap);
     }
 
     return handlerMap;
+  }
+
+  /**
+   * Initialize local observability handlers as fallback
+   */
+  private initializeLocalHandlers(handlerMap: Map<string, IObservabilityHandler>): void {
+    // Register local ECS handler for ECS components
+    const ecsHandler = new LocalEcsObservabilityHandler(this.context);
+    handlerMap.set('ecs-cluster', ecsHandler);
+    handlerMap.set('ecs-fargate-service', ecsHandler);
+    handlerMap.set('ecs-ec2-service', ecsHandler);
+
+    // Use no-op handlers for other types
+    const noopTypes = [
+      'lambda-api', 'lambda-worker', 'vpc', 'application-load-balancer',
+      'rds-postgres', 'ec2-instance', 'sqs-queue'
+    ];
+
+    noopTypes.forEach(type => {
+      handlerMap.set(type, new NoopHandler(this.context));
+    });
   }
 
   /**
@@ -267,7 +446,7 @@ export class ObservabilityService implements IPlatformService {
       if (result) {
         // Log successful application
         this.context.logger.info('OpenTelemetry observability applied successfully', {
-          service: this.name,
+          service: this.context.serviceName,
           componentType,
           componentName,
           alarmsCreated: result.alarmsCreated,
