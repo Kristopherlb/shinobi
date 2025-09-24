@@ -8,6 +8,7 @@ import addFormats from 'ajv-formats';
 import { Logger } from '../platform/logger/src/index';
 import { ManifestSchemaComposer } from './manifest-schema-composer';
 import { SchemaErrorFormatter } from './schema-error-formatter';
+import { withPerformanceTiming } from './performance-metrics';
 
 export interface EnhancedSchemaValidatorDependencies {
   logger: Logger;
@@ -54,7 +55,7 @@ export class EnhancedSchemaValidator {
     this.ajv = new Ajv({
       allErrors: true,
       verbose: true,
-      strict: false,
+      strict: false, // Keep false for now - schemas need review before enabling strict mode
       allowUnionTypes: true,
       coerceTypes: false,
       useDefaults: false,
@@ -67,47 +68,63 @@ export class EnhancedSchemaValidator {
    * Validate a manifest against the composed master schema
    */
   async validateManifest(manifest: any): Promise<ValidationResult> {
-    this.dependencies.logger.debug('Starting enhanced manifest validation');
+    return withPerformanceTiming(
+      'enhanced-schema-validator.validateManifest',
+      async () => {
+        this.dependencies.logger.debug('Starting enhanced manifest validation');
 
-    // Ensure master schema is loaded and compiled
-    if (!this.masterSchema) {
-      this.masterSchema = await this.dependencies.schemaComposer.composeMasterSchema();
-      this.compiledMaster = this.ajv.compile(this.masterSchema);
-    }
+        // Ensure master schema is loaded and compiled
+        if (!this.masterSchema) {
+          this.masterSchema = await this.dependencies.schemaComposer.composeMasterSchema();
+          this.compiledMaster = this.ajv.compile(this.masterSchema);
+        }
 
-    // Use cached compiled validator
-    const validate = this.compiledMaster!;
-    const valid = validate(manifest);
+        // Use cached compiled validator
+        const validate = this.compiledMaster!;
+        const valid = validate(manifest);
 
-    const errors: ValidationError[] = [];
-    const warnings: ValidationError[] = [];
+        const errors: ValidationError[] = [];
+        const warnings: ValidationError[] = [];
 
-    if (!valid && validate.errors) {
-      // Process schema validation errors
-      const processedErrors = this.processSchemaErrors(validate.errors, manifest);
-      errors.push(...processedErrors.filter(e => e.severity === 'error'));
-      warnings.push(...processedErrors.filter(e => e.severity === 'warning'));
-    }
+        if (!valid && validate.errors) {
+          // Process schema validation errors
+          const processedErrors = this.processSchemaErrors(validate.errors, manifest);
+          errors.push(...processedErrors.filter(e => e.severity === 'error'));
+          warnings.push(...processedErrors.filter(e => e.severity === 'warning'));
+        }
 
-    // Perform additional component-specific validation
-    const componentValidationResults = await this.validateComponents(manifest);
+        // Perform additional component-specific validation
+        const componentValidationResults = await this.validateComponents(manifest);
 
-    // Aggregate component errors and warnings
-    for (const componentResult of componentValidationResults) {
-      errors.push(...componentResult.errors);
-      warnings.push(...componentResult.warnings);
-    }
+        // Aggregate component errors and warnings
+        for (const componentResult of componentValidationResults) {
+          errors.push(...componentResult.errors);
+          warnings.push(...componentResult.warnings);
+        }
 
-    const overallValid = valid && errors.length === 0;
+        const overallValid = valid && errors.length === 0;
 
-    this.dependencies.logger.debug('Enhanced manifest validation completed');
+        this.dependencies.logger.debug('Enhanced manifest validation completed');
 
-    return {
-      valid: overallValid,
-      errors,
-      warnings,
-      componentValidationResults
-    };
+        // Add info-level logging for validation outcomes
+        if (!overallValid) {
+          this.dependencies.logger.info(`Validation completed with ${errors.length} errors and ${warnings.length} warnings.`);
+        } else {
+          this.dependencies.logger.info('Manifest validation passed with no errors.');
+        }
+
+        return {
+          valid: overallValid,
+          errors,
+          warnings,
+          componentValidationResults
+        };
+      },
+      {
+        manifestKeys: Object.keys(manifest),
+        componentCount: manifest.components?.length || 0
+      }
+    );
   }
 
   /**

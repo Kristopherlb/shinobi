@@ -25,6 +25,7 @@ import {
 import { BaseComponent } from '../platform/contracts/component';
 import * as cloudwatch from 'aws-cdk-lib/aws-cloudwatch';
 import * as cdk from 'aws-cdk-lib';
+import { withPerformanceTiming } from './performance-metrics';
 
 // External observability handlers (with fallback to local implementations)
 let externalHandlers: any = null;
@@ -420,53 +421,61 @@ export class ObservabilityService implements IPlatformService {
    * Architecture: Uses the Handler Pattern for scalable, maintainable component-specific logic.
    */
   public apply(component: BaseComponent): void {
-    const startTime = Date.now();
     const componentType = component.getType();
     const componentName = component.node.id;
 
-    // Find the appropriate handler for this component type
-    const handler = this.handlers.get(componentType);
+    withPerformanceTiming(
+      'observability-service.apply',
+      () => {
+        // Find the appropriate handler for this component type
+        const handler = this.handlers.get(componentType);
 
-    if (!handler) {
-      // Simply log and return for unsupported types - don't throw error
-      this.context.logger.info(`No OpenTelemetry instrumentation for component type ${componentType}`, {
-        service: this.name,
-        componentType,
-        componentName
-      });
-      return;
-    }
+        if (!handler) {
+          // Simply log and return for unsupported types - don't throw error
+          this.context.logger.info(`No OpenTelemetry instrumentation for component type ${componentType}`, {
+            service: this.name,
+            componentType,
+            componentName
+          });
+          return;
+        }
 
-    try {
-      // Delegate to the appropriate handler using the Handler Pattern
-      // Pass the centralized configuration to the handler
-      const result = handler.apply(component, this.observabilityConfig);
+        try {
+          // Delegate to the appropriate handler using the Handler Pattern
+          // Pass the centralized configuration to the handler
+          const result = handler.apply(component, this.observabilityConfig);
 
-      // Ensure result is valid before accessing properties
-      if (result) {
-        // Log successful application
-        this.context.logger.info('OpenTelemetry observability applied successfully', {
-          service: this.context.serviceName,
-          componentType,
-          componentName,
-          alarmsCreated: result.alarmsCreated,
-          instrumentationApplied: result.instrumentationApplied,
-          executionTimeMs: result.executionTimeMs
-        });
-      }
+          // Ensure result is valid before accessing properties
+          if (result) {
+            // Log successful application
+            this.context.logger.info('OpenTelemetry observability applied successfully', {
+              service: this.context.serviceName,
+              componentType,
+              componentName,
+              alarmsCreated: result.alarmsCreated,
+              instrumentationApplied: result.instrumentationApplied,
+              executionTimeMs: result.executionTimeMs
+            });
+          }
 
-    } catch (error) {
-      const executionTime = Date.now() - startTime;
-      this.context.logger.error('Failed to apply observability', {
-        service: this.name,
+        } catch (error) {
+          this.context.logger.error('Failed to apply observability', {
+            service: this.name,
+            componentType,
+            componentName,
+            error: (error as Error).message,
+            stack: (error as Error).stack
+          });
+          throw error;
+        }
+      },
+      {
         componentType,
         componentName,
-        executionTimeMs: executionTime,
-        error: (error as Error).message,
-        stack: (error as Error).stack
-      });
-      throw error;
-    }
+        serviceName: this.context.serviceName,
+        handlerType: this.handlers.get(componentType)?.constructor.name || 'none'
+      }
+    );
   }
 
   /**

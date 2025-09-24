@@ -5,6 +5,8 @@
 import * as fs from 'fs/promises';
 import * as path from 'path';
 import * as YAML from 'yaml';
+import { ErrorMessages } from './error-message-utils';
+import { withPerformanceTiming } from './performance-metrics';
 
 export interface TemplateConfig {
   templates: {
@@ -32,20 +34,56 @@ export class ConfigLoader {
   /**
    * Load template configuration from external YAML file
    * Implements caching to avoid repeated file I/O
+   * Supports environment variable override for config path
    */
   static async getTemplateConfig(): Promise<TemplateConfig> {
     if (this._templateConfig) {
       return this._templateConfig;
     }
 
-    const configPath = path.join(__dirname, '../../config/templates.yaml');
-    
-    try {
-      const configContent = await fs.readFile(configPath, 'utf8');
-      this._templateConfig = YAML.parse(configContent) as TemplateConfig;
-      return this._templateConfig;
-    } catch (error) {
-      throw new Error(`Failed to load template configuration from ${configPath}: ${error}`);
+    return withPerformanceTiming(
+      'config-loader.getTemplateConfig',
+      async () => {
+        // Support environment variable override for config path
+        const configPath = process.env.TEMPLATE_CONFIG_PATH ||
+          path.join(__dirname, '../../config/templates.yaml');
+
+        // Validate path security to prevent directory traversal
+        this.validatePathSecurity(configPath);
+
+        try {
+          const configContent = await fs.readFile(configPath, 'utf8');
+          this._templateConfig = YAML.parse(configContent) as TemplateConfig;
+
+          // Add info-level logging for successful config load
+          console.info(`✅ Template configuration loaded from ${configPath}`);
+          return this._templateConfig;
+        } catch (error) {
+          throw new Error(ErrorMessages.configLoadFailed(configPath, error instanceof Error ? error.message : String(error)));
+        }
+      },
+      { configPath: process.env.TEMPLATE_CONFIG_PATH || 'default' }
+    );
+  }
+
+  /**
+   * Validate that the config path is secure and doesn't attempt directory traversal
+   * @param configPath The path to validate
+   * @throws Error if path is insecure
+   */
+  private static validatePathSecurity(configPath: string): void {
+    const normalizedPath = path.normalize(configPath);
+    const resolvedPath = path.resolve(normalizedPath);
+
+    // Check for directory traversal attempts
+    if (normalizedPath.includes('..') || normalizedPath.includes('~')) {
+      throw new Error(ErrorMessages.pathTraversalAttempt(configPath, 'ConfigLoader'));
+    }
+
+    // Ensure path is within expected directory structure
+    const expectedBaseDir = path.resolve(__dirname, '../../config');
+    if (!resolvedPath.startsWith(expectedBaseDir) && !process.env.TEMPLATE_CONFIG_PATH) {
+      throw new Error(ErrorMessages.systemDirectoryAccess(configPath, 'ConfigLoader'));
     }
   }
 

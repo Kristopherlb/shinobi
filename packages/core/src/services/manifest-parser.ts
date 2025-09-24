@@ -5,6 +5,8 @@
 import * as fs from 'fs/promises';
 import * as YAML from 'yaml';
 import { Logger } from '../platform/logger/src';
+import { ErrorMessages } from './error-message-utils';
+import { withPerformanceTiming } from './performance-metrics';
 
 export interface ManifestParserDependencies {
   logger: Logger;
@@ -18,27 +20,58 @@ export class ManifestParser {
   constructor(private dependencies: ManifestParserDependencies) { }
 
   async parseManifest(manifestPath: string): Promise<any> {
-    this.dependencies.logger.debug(`Parsing manifest: ${manifestPath}`);
+    return withPerformanceTiming(
+      'manifest-parser.parseManifest',
+      async () => {
+        this.dependencies.logger.debug(`Parsing manifest: ${manifestPath}`);
 
-    try {
-      const fileContent = await fs.readFile(manifestPath, 'utf8');
-      const manifest = YAML.parse(fileContent);
+        // Validate path security before reading file
+        this.validatePathSecurity(manifestPath);
 
-      if (!manifest || typeof manifest !== 'object') {
-        throw new Error('Invalid YAML: manifest must be an object');
-      }
+        try {
+          const fileContent = await fs.readFile(manifestPath, 'utf8');
+          const manifest = YAML.parse(fileContent);
 
-      this.dependencies.logger.debug('Manifest parsed successfully');
-      return manifest;
+          if (!manifest || typeof manifest !== 'object') {
+            throw new Error(ErrorMessages.invalidManifestStructure('manifest must be an object'));
+          }
 
-    } catch (error) {
-      if (error instanceof Error) {
-        if (error.message.includes('YAML')) {
-          throw new Error(`Invalid YAML syntax: ${error.message}`);
+          this.dependencies.logger.debug('Manifest parsed successfully');
+          this.dependencies.logger.info(`Loaded and parsed manifest from ${manifestPath}`);
+          return manifest;
+
+        } catch (error) {
+          if (error instanceof Error) {
+            if (error.message.includes('YAML')) {
+              throw new Error(ErrorMessages.invalidYamlSyntax(manifestPath, error.message));
+            }
+            throw new Error(ErrorMessages.fileReadFailed(manifestPath, error.message));
+          }
+          throw error;
         }
-        throw new Error(`Failed to read manifest: ${error.message}`);
-      }
-      throw error;
+      },
+      { manifestPath, fileSize: 'unknown' }
+    );
+  }
+
+  /**
+   * Validate that the manifest path is secure and doesn't attempt directory traversal
+   * @param manifestPath The path to validate
+   * @throws Error if path is insecure
+   */
+  private validatePathSecurity(manifestPath: string): void {
+    const normalizedPath = path.normalize(manifestPath);
+
+    // Check for directory traversal attempts
+    if (normalizedPath.includes('..') || normalizedPath.includes('~')) {
+      throw new Error(ErrorMessages.pathTraversalAttempt(manifestPath, 'ManifestParser'));
+    }
+
+    // Ensure path is within reasonable bounds (not absolute system paths)
+    const resolvedPath = path.resolve(normalizedPath);
+    if (resolvedPath.startsWith('/etc/') || resolvedPath.startsWith('/usr/') ||
+      resolvedPath.startsWith('/var/') || resolvedPath.startsWith('/root/')) {
+      throw new Error(ErrorMessages.systemDirectoryAccess(manifestPath, 'ManifestParser'));
     }
   }
 }

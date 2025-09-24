@@ -6,6 +6,8 @@ import { Logger } from '../platform/logger/src';
 import * as fs from 'fs/promises';
 import * as path from 'path';
 import * as YAML from 'yaml';
+import { ErrorMessages } from './error-message-utils';
+import { withPerformanceTiming } from './performance-metrics';
 
 export interface ContextHydratorDependencies {
   logger: Logger;
@@ -20,31 +22,44 @@ export class ContextHydrator {
   constructor(private dependencies: ContextHydratorDependencies) { }
 
   async hydrateContext(manifest: Record<string, any>, environment: string): Promise<Record<string, any>> {
-    this.dependencies.logger.debug(`Hydrating context for environment: ${environment}`);
+    return withPerformanceTiming(
+      'context-hydrator.hydrateContext',
+      async () => {
+        // Validate environment exists in manifest
+        if (!manifest.environments || !manifest.environments[environment]) {
+          throw new Error(ErrorMessages.invalidEnvironment(environment));
+        }
 
-    // Deep clone the manifest to avoid mutations
-    const hydrated = JSON.parse(JSON.stringify(manifest));
+        this.dependencies.logger.debug(`Hydrating context for environment: ${environment}`);
 
-    // Set defaults for complianceFramework if not specified
-    if (!hydrated.complianceFramework) {
-      hydrated.complianceFramework = 'commercial';
-    }
+        // Deep clone the manifest to avoid mutations
+        const hydrated = JSON.parse(JSON.stringify(manifest));
 
-    // Process $ref keywords in environments block first
-    if (hydrated.environments) {
-      await this.resolveEnvironmentReferences(hydrated);
-    }
+        // Set defaults for complianceFramework if not specified with warning
+        if (!hydrated.complianceFramework) {
+          hydrated.complianceFramework = 'commercial';
+          this.dependencies.logger.warn(`No complianceFramework specified; defaulting to "commercial".`);
+        }
 
-    // Process environment-specific values
-    if (hydrated.environments && hydrated.environments[environment]) {
-      const envDefaults = hydrated.environments[environment].defaults || {};
+        // Process $ref keywords in environments block first
+        if (hydrated.environments) {
+          await this.resolveEnvironmentReferences(hydrated);
+        }
 
-      // Apply environment interpolation throughout the manifest
-      this.interpolateEnvironmentValues(hydrated, envDefaults, environment);
-    }
+        // Process environment-specific values
+        if (hydrated.environments && hydrated.environments[environment]) {
+          const envDefaults = hydrated.environments[environment].defaults || {};
 
-    this.dependencies.logger.debug('Context hydration completed');
-    return hydrated;
+          // Apply environment interpolation throughout the manifest
+          this.interpolateEnvironmentValues(hydrated, envDefaults, environment);
+        }
+
+        this.dependencies.logger.debug('Context hydration completed');
+        this.dependencies.logger.info(`Context hydrated for environment: ${environment}`);
+        return hydrated;
+      },
+      { environment, manifestPath: this.dependencies.manifestPath }
+    );
   }
 
   private interpolateEnvironmentValues(obj: any, envDefaults: Record<string, any>, environment: string): void {
@@ -132,7 +147,7 @@ export class ContextHydrator {
 
     // Circular dependency detection
     if (resolvedRefs.has(secureResolvedPath)) {
-      throw new Error(`Circular reference detected: ${refPath} has already been resolved in this chain`);
+      throw new Error(ErrorMessages.circularReference(refPath));
     }
     resolvedRefs.add(secureResolvedPath);
 
@@ -146,13 +161,13 @@ export class ContextHydrator {
       } else if (secureResolvedPath.endsWith('.yml') || secureResolvedPath.endsWith('.yaml')) {
         return YAML.parse(fileContent);
       } else {
-        throw new Error(`Unsupported file format for $ref: ${refPath}. Only .json, .yml, and .yaml files are supported.`);
+        throw new Error(ErrorMessages.unsupportedFileFormat(refPath, ['.json', '.yml', '.yaml']));
       }
     } catch (error: any) {
       if (error.code === 'ENOENT') {
-        throw new Error(`Referenced file not found: ${refPath}. Please ensure the file exists and the path is correct.`);
+        throw new Error(ErrorMessages.fileNotFound(refPath, 'ContextHydrator'));
       }
-      throw new Error(`Failed to load referenced file ${refPath}: ${error.message}`);
+      throw new Error(ErrorMessages.fileReadFailed(refPath, error.message));
     }
   }
 
@@ -175,7 +190,7 @@ export class ContextHydrator {
 
     if (!normalizedResolvedPath.startsWith(normalizedManifestDir + path.sep) &&
       normalizedResolvedPath !== normalizedManifestDir) {
-      throw new Error(`Security violation: $ref path "${refPath}" attempts to access files outside the service repository. Path traversal is not allowed.`);
+      throw new Error(ErrorMessages.unauthorizedFileAccess(refPath));
     }
 
     return resolvedPath;
