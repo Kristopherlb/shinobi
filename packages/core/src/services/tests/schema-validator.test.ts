@@ -63,8 +63,10 @@ describe('SchemaValidator (Enhanced)', () => {
             name: 'test-component',
             type: 'ec2-instance',
             config: {
+              serviceName: 'test-service',
+              environment: 'dev',
               instanceType: 't3.micro',
-              ami: { amiId: 'ami-12345678' }
+              amiId: 'ami-12345678'
             }
           }
         ]
@@ -146,8 +148,10 @@ describe('SchemaValidator (Enhanced)', () => {
             name: 'test-component',
             type: 'ec2-instance',
             config: {
+              serviceName: 'test-service',
+              environment: 'dev',
               instanceType: 't3.micro',
-              ami: { amiId: 'ami-12345678' }
+              amiId: 'ami-12345678'
             }
           }
         ]
@@ -220,8 +224,10 @@ describe('SchemaValidator (Enhanced)', () => {
             name: 'test-component',
             type: 'ec2-instance',
             config: {
+              serviceName: 'test-service',
+              environment: 'dev',
               instanceType: 't3.micro',
-              ami: { amiId: 'ami-12345678' }
+              amiId: 'ami-12345678'
             }
           }
         ]

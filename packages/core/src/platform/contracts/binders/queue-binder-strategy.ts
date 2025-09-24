@@ -7,6 +7,7 @@ import * as iam from 'aws-cdk-lib/aws-iam';
 import * as sqs from 'aws-cdk-lib/aws-sqs';
 import * as sns from 'aws-cdk-lib/aws-sns';
 import { EnhancedBinderStrategy } from '../enhanced-binder-strategy';
+import { validateOptions } from './binding-options';
 import {
   EnhancedBindingContext,
   EnhancedBindingResult,
@@ -34,6 +35,12 @@ export class QueueBinderStrategy extends EnhancedBinderStrategy {
 
   async bind(context: EnhancedBindingContext): Promise<EnhancedBindingResult> {
     this.validateBindingContext(context);
+
+    const capabilityKey = (context.targetCapabilityData?.type || 'queue:sqs') as any;
+    const validation = validateOptions(capabilityKey, context.options);
+    if (!validation.valid) {
+      throw new Error(`Invalid binding options: ${validation.errors.join(', ')}`);
+    }
 
     const capability = context.targetCapabilityData;
     const access = context.directive.access;

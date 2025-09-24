@@ -13,6 +13,7 @@ import {
   SecurityGroupRule,
   ComplianceAction
 } from '../bindings';
+import { validateOptions } from './binding-options';
 
 /**
  * Lambda binder strategy for Lambda function invocations
@@ -33,6 +34,11 @@ export class LambdaBinderStrategy extends EnhancedBinderStrategy {
 
   async bind(context: EnhancedBindingContext): Promise<EnhancedBindingResult> {
     this.validateBindingContext(context);
+
+    const validation = validateOptions('lambda:function', context.options);
+    if (!validation.valid) {
+      throw new Error(`Invalid binding options: ${validation.errors.join(', ')}`);
+    }
 
     const capability = context.targetCapabilityData;
     const access = context.directive.access;

@@ -70,9 +70,36 @@ export class ObservabilityService implements IPlatformService {
    */
   private initializeHandlers(): Map<string, IObservabilityHandler> {
     const handlerMap = new Map<string, IObservabilityHandler>();
-    // Register minimal no-op handlers; detailed handlers can be injected later
-    ['lambda-api', 'lambda-worker', 'vpc', 'application-load-balancer', 'rds-postgres', 'ec2-instance', 'sqs-queue', 'ecs-cluster', 'ecs-fargate-service', 'ecs-ec2-service']
-      .forEach(type => handlerMap.set(type, new NoopHandler(this.context)));
+
+    try {
+      // Import and register real handlers
+      const { EcsClusterHandler } = require('@shinobi/observability-handlers');
+      const { EcsFargateServiceHandler } = require('@shinobi/observability-handlers');
+      const { EcsEc2ServiceHandler } = require('@shinobi/observability-handlers');
+      const { LambdaApiHandler } = require('@shinobi/observability-handlers');
+      const { LambdaWorkerHandler } = require('@shinobi/observability-handlers');
+      const { VpcHandler } = require('@shinobi/observability-handlers');
+      const { ApplicationLoadBalancerHandler } = require('@shinobi/observability-handlers');
+      const { RdsPostgresHandler } = require('@shinobi/observability-handlers');
+      const { Ec2InstanceHandler } = require('@shinobi/observability-handlers');
+      const { SqsQueueHandler } = require('@shinobi/observability-handlers');
+
+      handlerMap.set('ecs-cluster', new EcsClusterHandler(this.context));
+      handlerMap.set('ecs-fargate-service', new EcsFargateServiceHandler(this.context));
+      handlerMap.set('ecs-ec2-service', new EcsEc2ServiceHandler(this.context));
+      handlerMap.set('lambda-api', new LambdaApiHandler(this.context));
+      handlerMap.set('lambda-worker', new LambdaWorkerHandler(this.context));
+      handlerMap.set('vpc', new VpcHandler(this.context));
+      handlerMap.set('application-load-balancer', new ApplicationLoadBalancerHandler(this.context));
+      handlerMap.set('rds-postgres', new RdsPostgresHandler(this.context));
+      handlerMap.set('ec2-instance', new Ec2InstanceHandler(this.context));
+      handlerMap.set('sqs-queue', new SqsQueueHandler(this.context));
+    } catch (error) {
+      // Fallback to no-op handlers if real handlers aren't available
+      this.context.logger.warn('Observability handlers not available, using no-op handlers', { error: error instanceof Error ? error.message : String(error) });
+      ['lambda-api', 'lambda-worker', 'vpc', 'application-load-balancer', 'rds-postgres', 'ec2-instance', 'sqs-queue', 'ecs-cluster', 'ecs-fargate-service', 'ecs-ec2-service']
+        .forEach(type => handlerMap.set(type, new NoopHandler(this.context)));
+    }
 
     return handlerMap;
   }
