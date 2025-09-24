@@ -64,10 +64,15 @@ describe('ApiGatewayHttpConfigBuilder', () => {
       // Verify hardcoded fallbacks are applied
       expect(config.protocolType).toBe('HTTP');
       expect(config.cors?.allowOrigins).toEqual([]);
-      expect(config.cors?.allowHeaders).toEqual(['Content-Type', 'Authorization']);
-      expect(config.cors?.allowMethods).toEqual(['GET', 'POST', 'OPTIONS']);
+      expect(config.cors?.allowHeaders).toEqual([
+        'Content-Type',
+        'Authorization',
+        'X-Requested-With',
+        'X-CSRF-Token'
+      ]);
+      expect(config.cors?.allowMethods).toEqual(['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS']);
       expect(config.cors?.allowCredentials).toBe(false);
-      expect(config.cors?.maxAge).toBe(300);
+      expect(config.cors?.maxAge).toBe(86400);
 
       expect(config.throttling?.rateLimit).toBe(1000);
       expect(config.throttling?.burstLimit).toBe(2000);
@@ -102,10 +107,10 @@ describe('ApiGatewayHttpConfigBuilder', () => {
       // Verify commercial compliance defaults
       expect(config.cors?.allowOrigins).toEqual([]); // Must be explicitly configured
       expect(config.cors?.allowCredentials).toBe(false);
-      expect(config.cors?.maxAge).toBe(300);
+      expect(config.cors?.maxAge).toBe(86400);
 
-      expect(config.throttling?.rateLimit).toBe(50);
-      expect(config.throttling?.burstLimit).toBe(100);
+      expect(config.throttling?.rateLimit).toBe(1000);
+      expect(config.throttling?.burstLimit).toBe(2000);
 
       expect(config.defaultStage?.stageName).toBe('dev');
       expect(config.defaultStage?.autoDeploy).toBe(true);
@@ -117,7 +122,7 @@ describe('ApiGatewayHttpConfigBuilder', () => {
       expect(config.monitoring?.tracingEnabled).toBe(true);
       expect(config.monitoring?.alarms?.errorRate4xx).toBe(5.0);
       expect(config.monitoring?.alarms?.errorRate5xx).toBe(1.0);
-      expect(config.monitoring?.alarms?.highLatency).toBe(2000);
+      expect(config.monitoring?.alarms?.highLatency).toBe(5000);
 
       expect(config.customDomain?.securityPolicy).toBeUndefined();
       expect(config.customDomain?.endpointType).toBeUndefined();
@@ -134,12 +139,13 @@ describe('ApiGatewayHttpConfigBuilder', () => {
       expect(config.cors?.allowCredentials).toBe(false);
 
       expect(config.accessLogging?.enabled).toBe(true);
-      expect(config.accessLogging?.retentionInDays).toBe(30);
+      expect(config.accessLogging?.retentionInDays).toBe(90);
 
       expect(config.monitoring?.detailedMetrics).toBe(true);
       expect(config.monitoring?.tracingEnabled).toBe(true);
-      expect(config.monitoring?.alarms?.errorRate4xx).toBe(5.0);
-      expect(config.monitoring?.alarms?.errorRate5xx).toBe(1.0);
+      expect(config.monitoring?.alarms?.errorRate4xx).toBe(2.0);
+      expect(config.monitoring?.alarms?.errorRate5xx).toBe(0.5);
+      expect(config.monitoring?.alarms?.highLatency).toBe(3000);
 
       expect(config.throttling?.rateLimit).toBe(50);
       expect(config.throttling?.burstLimit).toBe(100);

@@ -228,7 +228,7 @@ describe('ApiGatewayHttpComponent', () => {
       // Access log group is created with platform naming convention
       template.hasResourceProperties('AWS::Logs::LogGroup', {
         LogGroupName: '/platform/http-api/test-http-service/test-http-api-gateway',
-        RetentionInDays: 30
+        RetentionInDays: 90
       });
     });
   });

@@ -365,7 +365,7 @@ export class ApiGatewayHttpComponent extends BaseComponent {
       this.registerConstruct('stage', this.stage);
     }
     if (this.accessLogGroup) {
-      this.registerConstruct('accessLogGroup', this.accessLogGroup);
+      this.registerConstruct('logGroup', this.accessLogGroup);
     }
     if (this.domainName) {
       this.registerConstruct('customDomain', this.domainName);
@@ -489,16 +489,16 @@ export class ApiGatewayHttpComponent extends BaseComponent {
   private getAccessLogRetentionSetting(): logs.RetentionDays {
     const override = this.config.accessLogging?.retentionInDays;
     if (override !== undefined) {
-      const enumValues = logs.RetentionDays as unknown as Record<string, logs.RetentionDays | undefined>;
-      const retention = enumValues[override.toString()];
-      if (retention) {
-        return retention;
-      }
-
+      const enumValues = logs.RetentionDays as unknown as Record<string, number | undefined>;
       const allowed = Object.keys(enumValues)
         .filter(key => /^\d+$/.test(key))
         .map(Number)
         .sort((a, b) => a - b);
+
+      if (allowed.includes(override)) {
+        return override as logs.RetentionDays;
+      }
+
       throw new Error(`Unsupported access log retention ${override}. Allowed values: ${allowed.join(', ')}.`);
     }
     return this.getDefaultLogRetention();

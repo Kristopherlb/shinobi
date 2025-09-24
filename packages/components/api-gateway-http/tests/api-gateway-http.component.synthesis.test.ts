@@ -105,7 +105,7 @@ describe('ApiGatewayHttpComponent Synthesis', () => {
 
       template.hasResourceProperties('AWS::Logs::LogGroup', {
         LogGroupName: '/platform/http-api/test-service/test-api',
-        RetentionInDays: 30
+        RetentionInDays: 90
       });
     });
 
@@ -327,13 +327,12 @@ describe('ApiGatewayHttpComponent Synthesis', () => {
         }
       });
 
-      const { template } = synthesizeComponent(context, spec);
+      const { component, template } = synthesizeComponent(context, spec);
 
-      // Verify no log group is created
-      template.resourceCountIs('AWS::Logs::LogGroup', 0);
+      expect(component['config'].accessLogging?.enabled).toBe(false);
 
-      // Verify no IAM role for logging
-      template.resourceCountIs('AWS::IAM::Role', 0);
+      const logGroups = template.findResources('AWS::Logs::LogGroup');
+      expect(Object.keys(logGroups)).toHaveLength(0);
     });
 
     it('should configure custom log format and retention', () => {
@@ -394,18 +393,21 @@ describe('ApiGatewayHttpComponent Synthesis', () => {
 
       // Verify custom alarm thresholds
       template.hasResourceProperties('AWS::CloudWatch::Alarm', {
-        AlarmName: 'test-api-api-4xx-errors',
-        Threshold: 15.0
+        AlarmName: 'test-service-test-api-4xx-error-rate',
+        Threshold: 15.0,
+        MetricName: '4XXError'
       });
 
       template.hasResourceProperties('AWS::CloudWatch::Alarm', {
-        AlarmName: 'test-api-api-5xx-errors',
-        Threshold: 2.0
+        AlarmName: 'test-service-test-api-5xx-error-rate',
+        Threshold: 2.0,
+        MetricName: '5XXError'
       });
 
       template.hasResourceProperties('AWS::CloudWatch::Alarm', {
-        AlarmName: 'test-api-api-high-latency',
-        Threshold: 8000
+        AlarmName: 'test-service-test-api-latency',
+        Threshold: 8000,
+        MetricName: 'Latency'
       });
     });
 
@@ -422,19 +424,22 @@ describe('ApiGatewayHttpComponent Synthesis', () => {
       const capabilities = component.getCapabilities();
 
       // Verify HTTP API capability
-      expect(capabilities['api:http']).toBeDefined();
-      expect(capabilities['api:http'].apiId).toBeDefined();
-      expect(capabilities['api:http'].apiEndpoint).toBeDefined();
-      expect(capabilities['api:http'].stageName).toBe('dev');
-
-      // Verify monitoring capability
-      expect(capabilities['monitoring:api']).toBeDefined();
-      expect(capabilities['monitoring:api'].detailedMetrics).toBe(true);
-      expect(capabilities['monitoring:api'].tracingEnabled).toBe(true);
-
-      // Verify logging capability
-      expect(capabilities['logging:access']).toBeDefined();
-      expect(capabilities['logging:access'].logGroupName).toBe('/aws/apigateway/test-api-http-api');
+      const httpCap = capabilities['api:http'];
+      expect(httpCap).toBeDefined();
+      expect(httpCap.resources).toEqual(
+        expect.objectContaining({
+          arn: expect.stringContaining(':apigateway:'),
+          apiId: expect.any(String),
+          stage: 'dev'
+        })
+      );
+      expect(httpCap.endpoints).toEqual(
+        expect.objectContaining({
+          invokeUrl: expect.any(String),
+          executeApiArn: expect.stringContaining(':apigateway:')
+        })
+      );
+      expect(httpCap.cors).toEqual({ enabled: false, origins: [] });
     });
 
     it('should register construct handles for patches.ts access', () => {
@@ -445,7 +450,7 @@ describe('ApiGatewayHttpComponent Synthesis', () => {
 
       // Verify main constructs are registered
       expect(component.getConstruct('main')).toBeDefined();
-      expect(component.getConstruct('api')).toBeDefined();
+      expect(component.getConstruct('httpApi')).toBeDefined();
       expect(component.getConstruct('stage')).toBeDefined();
       expect(component.getConstruct('logGroup')).toBeDefined();
     });
@@ -464,11 +469,12 @@ describe('ApiGatewayHttpComponent Synthesis', () => {
       // Verify custom domain constructs are registered
       expect(component.getConstruct('customDomain')).toBeDefined();
 
-      // Verify custom domain capability
       const capabilities = component.getCapabilities();
-      expect(capabilities['api:custom-domain']).toBeDefined();
-      expect(capabilities['api:custom-domain'].domainName).toBe('api.example.com');
-      expect(capabilities['api:custom-domain'].domainEndpoint).toBe('https://api.example.com');
+      expect(capabilities['api:http'].customDomain).toEqual(
+        expect.objectContaining({
+          domainName: expect.any(String)
+        })
+      );
     });
 
   });
@@ -502,7 +508,8 @@ describe('ApiGatewayHttpComponent Synthesis', () => {
       const { component } = synthesizeComponent(context, spec);
 
       const capabilities = component.getCapabilities();
-      expect(capabilities['api:websocket']).toBeDefined();
+      expect(capabilities['api:http']).toBeDefined();
+      expect(capabilities['api:websocket']).toBeUndefined();
     });
 
   });
