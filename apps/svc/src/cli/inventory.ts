@@ -10,7 +10,10 @@ import { Project, Node, SyntaxKind, NewExpression, ImportDeclaration } from 'ts-
 import * as fs from 'fs';
 import * as path from 'path';
 import chalk from 'chalk';
-import { logger } from '../services/logger';
+import { Logger } from './utils/logger';
+
+const logger = new Logger('svc.cli.inventory');
+logger.configure({ verbose: false, ci: false });
 
 interface ConstructUsage {
   type: string;
@@ -181,7 +184,11 @@ export class InventoryCommand {
                 }
               }
             } catch (error) {
-              logger.debug(`Error accessing namedImports in ${relativePath}:`, error);
+              logger.debug(`Error accessing namedImports in ${relativePath}:`, {
+                data: {
+                  error: error instanceof Error ? error.message : String(error)
+                }
+              });
             }
           }
           
@@ -199,7 +206,11 @@ export class InventoryCommand {
                 cdkImports.add(namespaceImport.name);
               }
             } catch (error) {
-              logger.debug(`Error accessing namespaceImport in ${relativePath}:`, error);
+              logger.debug(`Error accessing namespaceImport in ${relativePath}:`, {
+                data: {
+                  error: error instanceof Error ? error.message : String(error)
+                }
+              });
             }
           }
         }

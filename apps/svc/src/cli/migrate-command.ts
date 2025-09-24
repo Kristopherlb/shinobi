@@ -6,8 +6,13 @@
 import { Command } from 'commander';
 import inquirer from 'inquirer';
 import chalk from 'chalk';
-import { MigrationEngine, MigrationOptions, MigrationResult } from '../migration/migration-engine';
-import { Logger } from '../utils/logger';
+import {
+  MigrationEngine,
+  MigrationOptions,
+  MigrationResult,
+  Logger as CoreEngineLogger
+} from '@shinobi/core';
+import { Logger } from './utils/logger';
 import * as fs from 'fs';
 import * as path from 'path';
 
@@ -32,6 +37,7 @@ export function createMigrateCommand(): Command {
     .option('--non-interactive', 'Run without prompts (requires all options)')
     .action(async (options) => {
       const logger = new Logger();
+      logger.configure({ verbose: !!options.verbose, ci: !!options.ci });
       
       try {
         await runMigration(options, logger);
@@ -74,7 +80,7 @@ async function runMigration(options: any, logger: Logger): Promise<void> {
   }
 
   // Execute migration
-  const migrationEngine = new MigrationEngine(logger);
+  const migrationEngine = new MigrationEngine(new CoreEngineLogger());
   const result = await executeMigration(migrationEngine, migrationOptions, logger);
 
   // Display results
@@ -205,7 +211,11 @@ async function getAvailableStacks(projectPath: string, logger: Logger): Promise<
     
     return output.trim().split('\n').filter(line => line.trim());
   } catch (error) {
-    logger.debug('Could not list CDK stacks:', error);
+    logger.debug('Could not list CDK stacks', {
+      data: {
+        error: error instanceof Error ? error.message : String(error)
+      }
+    });
     return [];
   }
 }

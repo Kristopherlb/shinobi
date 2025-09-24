@@ -1,6 +1,5 @@
 /**
- * FileDiscovery utility re-export for CLI compatibility
- * This maintains backward compatibility for CLI commands
+ * FileDiscovery utility re-export leveraging the canonical implementation from @shinobi/core.
  */
 
-export { FileDiscovery } from '../../services/file-discovery';
+export { FileDiscovery } from '@shinobi/core';

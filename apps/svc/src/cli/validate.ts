@@ -1,6 +1,6 @@
-import { Logger } from '../utils/logger';
-import { ValidationOrchestrator } from '../services/validation-orchestrator';
-import { FileDiscovery } from '../utils/file-discovery';
+import { Logger } from './utils/logger';
+import { ValidationOrchestrator } from '@shinobi/core';
+import { FileDiscovery } from './utils/file-discovery';
 
 export interface ValidateOptions {
   file?: string;
@@ -26,7 +26,7 @@ export class ValidateCommand {
   constructor(private dependencies: ValidateDependencies) {}
 
   async execute(options: ValidateOptions): Promise<ValidateResult> {
-    this.dependencies.logger.debug('Starting validate command', options);
+    this.dependencies.logger.debug('Starting validate command', { data: options });
 
     try {
       // Discover manifest file
@@ -51,7 +51,7 @@ export class ValidateCommand {
       
       if (result.warnings && result.warnings.length > 0) {
         this.dependencies.logger.warn(`Found ${result.warnings.length} warning(s):`);
-        result.warnings.forEach(warning => {
+        result.warnings.forEach((warning: string) => {
           this.dependencies.logger.warn(`  - ${warning}`);
         });
       }
@@ -73,7 +73,7 @@ export class ValidateCommand {
 
     } catch (error) {
       const errorMessage = error instanceof Error ? error.message : 'Unknown error occurred';
-      this.dependencies.logger.error('Validation failed:', error);
+      this.dependencies.logger.error('Validation failed', error);
       
       return {
         success: false,

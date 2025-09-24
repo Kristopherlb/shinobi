@@ -1,7 +1,8 @@
 import inquirer from 'inquirer';
+import { ConfigLoader } from '@shinobi/core';
 import { Logger } from './utils/logger';
 import { FileDiscovery } from './utils/file-discovery';
-import { TemplateEngine } from '../templates/template-engine';
+import { TemplateEngine } from './templates/template-engine';
 
 export interface InitOptions {
   name?: string;
@@ -30,7 +31,7 @@ export class InitCommand {
   async execute(options: InitOptions): Promise<InitResult> {
     // Store options for force flag access
     this.options = options;
-    this.dependencies.logger.debug('Starting init command', options);
+    this.dependencies.logger.debug('Starting init command', { data: options });
 
     try {
       // Pre-flight checks
@@ -74,7 +75,7 @@ export class InitCommand {
 
     } catch (error) {
       const errorMessage = error instanceof Error ? error.message : 'Unknown error occurred';
-      this.dependencies.logger.error('Failed to initialize service:', error);
+      this.dependencies.logger.error('Failed to initialize service', error);
 
       return {
         success: false,
@@ -197,83 +198,42 @@ export class InitCommand {
    */
   private async discoverTemplates(): Promise<Array<{ name: string; value: string; description?: string }>> {
     try {
-      const fs = await import('fs/promises');
-      const path = await import('path');
+      const config = await ConfigLoader.getTemplateConfig();
 
-      // Robust path resolution for templates directory
-      const possiblePaths = [
-        path.resolve(process.cwd(), 'src/templates/patterns'),
-        path.resolve(process.cwd(), 'templates/patterns'),
-        path.resolve(__dirname, '../templates/patterns'),
-        path.resolve(__dirname, '../../src/templates/patterns')
+      const templates: Array<{ name: string; value: string; description?: string }> = [
+        {
+          name: 'Empty (minimal setup)',
+          value: 'empty',
+          description: 'Basic service scaffold with no components'
+        }
       ];
 
-      let templatesDir = '';
-      for (const possiblePath of possiblePaths) {
-        try {
-          await fs.access(possiblePath);
-          templatesDir = possiblePath;
-          break;
-        } catch {
-          // Continue to next path
-        }
+      if (config.templates.lambda_api_with_db) {
+        templates.push({
+          name: 'Lambda API with Database',
+          value: 'lambda-api-with-db',
+          description: 'REST API backed by Lambda and RDS PostgreSQL'
+        });
       }
 
-      if (!templatesDir) {
-        this.dependencies.logger.debug('No templates directory found in standard locations');
-        throw new Error('Templates directory not found');
+      if (config.templates.worker_with_queue) {
+        templates.push({
+          name: 'Worker with Queue',
+          value: 'worker-with-queue',
+          description: 'Background processor triggered by SQS events'
+        });
       }
 
-      try {
-        const templateDirs = await fs.readdir(templatesDir, { withFileTypes: true });
-        const templates = [];
-
-        for (const entry of templateDirs) {
-          if (entry.isDirectory()) {
-            const templateName = entry.name;
-
-            // Try to read template metadata
-            const metadataPath = path.join(templatesDir, templateName, 'metadata.json');
-            let displayName = templateName;
-            let description = '';
-
-            try {
-              const metadataContent = await fs.readFile(metadataPath, 'utf8');
-              const metadata = JSON.parse(metadataContent);
-              displayName = metadata.displayName || templateName;
-              description = metadata.description || '';
-            } catch {
-              // No metadata file, use directory name
-              displayName = templateName.replace(/-/g, ' ').replace(/\b\w/g, l => l.toUpperCase());
-            }
-
-            templates.push({
-              name: description ? `${displayName} - ${description}` : displayName,
-              value: templateName,
-              description
-            });
-          }
-        }
-
-        if (templates.length > 0) {
-          this.dependencies.logger.debug(`Discovered ${templates.length} templates: ${templates.map(t => t.value).join(', ')}`);
-          return templates;
-        }
-      } catch (error) {
-        this.dependencies.logger.debug(`Templates directory not found at ${templatesDir}, using fallback templates`, error);
-      }
-
-      // Fallback to hardcoded templates if directory doesn't exist
-      return [
-        { name: 'Empty (minimal setup)', value: 'empty', description: 'Basic service.yml only' },
-        { name: 'Lambda API with Database', value: 'lambda-api-with-db', description: 'REST API with RDS PostgreSQL' },
-        { name: 'Worker with Queue', value: 'worker-with-queue', description: 'Background processing with SQS' }
-      ];
+      this.dependencies.logger.debug(`Template catalog populated with ${templates.length} entries`);
+      return templates;
 
     } catch (error) {
-      this.dependencies.logger.debug('Failed to discover templates, using fallback:', error);
+      this.dependencies.logger.warn('Falling back to default template list; failed to load configuration', {
+        data: {
+          reason: error instanceof Error ? error.message : String(error)
+        }
+      });
 
-      // Return fallback templates
       return [
         { name: 'Empty (minimal setup)', value: 'empty' },
         { name: 'Lambda API with Database', value: 'lambda-api-with-db' },

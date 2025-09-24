@@ -3,6 +3,7 @@
  * Implements Principle 4: Single Responsibility Principle
  */
 import * as fs from 'fs/promises';
+import * as path from 'path';
 import * as YAML from 'yaml';
 import { Logger } from '../platform/logger/src';
 import { ErrorMessages } from './error-message-utils';

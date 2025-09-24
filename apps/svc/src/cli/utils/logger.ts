@@ -1,6 +1,10 @@
 /**
- * Logger utility re-export for CLI compatibility
- * This maintains backward compatibility for CLI commands
+ * Logger utility that exposes a preconfigured structured logger instance for commands
  */
 
-export { Logger, logger, LoggerConfig } from '../console-logger';
+import { Logger, LoggerConfig } from '../console-logger';
+
+const sharedLogger = new Logger();
+
+export { Logger, LoggerConfig };
+export { sharedLogger as logger };

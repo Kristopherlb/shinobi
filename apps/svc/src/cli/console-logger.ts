@@ -1,143 +1,133 @@
-import chalk from 'chalk';
+import { randomUUID } from 'crypto';
+import { Logger as PlatformLogger, LoggerOptions, LogLevel, Timer } from '@platform/logger';
 
 export interface LoggerConfig {
   verbose: boolean;
   ci: boolean;
+  environment?: string;
+  compliance?: string;
+  serviceName?: string;
 }
 
-export class Logger {
-  private config: LoggerConfig = { verbose: false, ci: false };
+interface CapturedLog {
+  level: LogLevel | 'SUCCESS';
+  message: string;
+  data?: any;
+  timestamp: string;
+}
 
-  configure(config: LoggerConfig) {
-    this.config = config;
+/**
+ * CLI logger that extends the platform structured logger to provide
+ * ergonomic helpers used by the existing commands (e.g. `success`).
+ */
+export class Logger extends PlatformLogger {
+  private readonly instanceId = randomUUID();
+  private capturedLogs: CapturedLog[] = [];
+  private verbose = false;
+  private ci = false;
+
+  constructor(name = 'svc.cli') {
+    super(name);
   }
 
-  info(message: string, data?: any) {
-    this.addToLogs('info', message, data);
-    
-    if (this.config.ci) {
-      console.log(JSON.stringify({
-        level: 'info',
-        message,
-        data,
-        timestamp: new Date().toISOString()
-      }));
-    } else {
-      console.log(chalk.blue('ℹ'), message);
-      if (data && this.config.verbose) {
-        console.log(chalk.gray(JSON.stringify(data, null, 2)));
+  configure(config: LoggerConfig): void {
+    this.verbose = !!config.verbose;
+    this.ci = !!config.ci;
+
+    PlatformLogger.setGlobalContext({
+      service: {
+        name: config.serviceName ?? 'svc-cli',
+        version: process.env.SVC_VERSION ?? '0.1.0',
+        instance: `cli-${this.instanceId}`
+      },
+      environment: {
+        name: config.environment ?? (this.ci ? 'ci' : 'local'),
+        region: process.env.AWS_REGION ?? process.env.AWS_DEFAULT_REGION ?? 'us-east-1',
+        compliance: config.compliance ?? 'commercial'
       }
+    });
+  }
+
+  override info(message: string, options?: LoggerOptions): void {
+    this.capture('INFO', message, options?.data);
+    super.info(message, options);
+  }
+
+  success(message: string, data?: any): void {
+    this.capture('SUCCESS', message, data);
+    super.info(message, this.buildOptions({ status: 'success', ...toObject(data) }));
+  }
+
+  override warn(message: string, options?: LoggerOptions): void {
+    this.capture('WARN', message, options?.data);
+    super.warn(message, options);
+  }
+
+  override error(message: string, error?: Error | any, options?: LoggerOptions): void {
+    this.capture('ERROR', message, error);
+    super.error(message, error, options);
+  }
+
+  override debug(message: string, options?: LoggerOptions): void {
+    if (!this.verbose) {
+      return;
     }
+
+    this.capture('DEBUG', message, options?.data);
+    super.debug(message, options);
   }
 
-  success(message: string, data?: any) {
-    this.addToLogs('success', message, data);
-    
-    if (this.config.ci) {
-      console.log(JSON.stringify({
-        level: 'success',
-        message,
-        data,
-        timestamp: new Date().toISOString()
-      }));
-    } else {
-      console.log(chalk.green('✓'), message);
-      if (data && this.config.verbose) {
-        console.log(chalk.gray(JSON.stringify(data, null, 2)));
-      }
+  override trace(message: string, options?: LoggerOptions): void {
+    if (!this.verbose) {
+      return;
     }
+    this.capture('TRACE', message, options?.data);
+    super.trace(message, options);
   }
 
-  warn(message: string, data?: any) {
-    this.addToLogs('warn', message, data);
-    
-    if (this.config.ci) {
-      console.log(JSON.stringify({
-        level: 'warn',
-        message,
-        data,
-        timestamp: new Date().toISOString()
-      }));
-    } else {
-      console.warn(chalk.yellow('⚠'), message);
-      if (data && this.config.verbose) {
-        console.warn(chalk.gray(JSON.stringify(data, null, 2)));
-      }
-    }
+  override isDebugEnabled(): boolean {
+    return this.verbose && super.isDebugEnabled();
   }
 
-  error(message: string, error?: any) {
-    const errorData = error instanceof Error 
-      ? { message: error.message, stack: error.stack }
-      : error;
-
-    this.addToLogs('error', message, errorData);
-
-    if (this.config.ci) {
-      console.error(JSON.stringify({
-        level: 'error',
-        message,
-        error: errorData,
-        timestamp: new Date().toISOString()
-      }));
-    } else {
-      console.error(chalk.red('✗'), message);
-      if (error && this.config.verbose) {
-        console.error(chalk.gray(error instanceof Error ? error.stack : JSON.stringify(errorData, null, 2)));
-      }
-    }
+  override isTraceEnabled(): boolean {
+    return this.verbose && super.isTraceEnabled();
   }
 
-  debug(message: string, data?: any) {
-    if (!this.config.verbose) return;
-
-    if (this.config.ci) {
-      console.log(JSON.stringify({
-        level: 'debug',
-        message,
-        data,
-        timestamp: new Date().toISOString()
-      }));
-    } else {
-      console.log(chalk.gray('🔍'), chalk.gray(message));
-      if (data) {
-        console.log(chalk.gray(JSON.stringify(data, null, 2)));
-      }
-    }
+  override startTimer(): Timer {
+    return super.startTimer();
   }
 
-  // Enhanced methods for migration tool
-  private logs: Array<{ level: string; message: string; data?: any; timestamp: string }> = [];
-
-  getLogs(): Array<{ level: number; message: string; data?: any; timestamp: string }> {
-    return this.logs.map(log => ({
-      level: this.getLevelNumber(log.level),
-      message: log.message,
-      data: log.data,
-      timestamp: log.timestamp
-    }));
+  override async flush(): Promise<void> {
+    await super.flush();
   }
 
-  private getLevelNumber(level: string): number {
-    const levels: Record<string, number> = {
-      'debug': 0,
-      'info': 1,
-      'warn': 2,
-      'error': 3,
-      'success': 4
-    };
-    return levels[level] || 1;
+  getLogs(): CapturedLog[] {
+    return [...this.capturedLogs];
   }
 
-  private addToLogs(level: string, message: string, data?: any): void {
-    this.logs.push({
+  private capture(level: LogLevel | 'SUCCESS', message: string, data?: any): void {
+    this.capturedLogs.push({
       level,
       message,
       data,
       timestamp: new Date().toISOString()
     });
   }
+
+  private buildOptions(data?: any): LoggerOptions | undefined {
+    const normalized = toObject(data);
+    return normalized ? { data: normalized } : undefined;
+  }
 }
 
-// Legacy singleton export - deprecated, use dependency injection instead
-export const logger = new Logger();
+function toObject(data?: any): Record<string, unknown> | undefined {
+  if (data === undefined || data === null) {
+    return undefined;
+  }
+
+  if (typeof data === 'object') {
+    return data as Record<string, unknown>;
+  }
+
+  return { value: data };
+}

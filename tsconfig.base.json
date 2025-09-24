@@ -24,6 +24,9 @@
       "@shinobi/core/*": [
         "packages/core/src/index.ts"
       ],
+      "@platform/logger": [
+        "packages/core/src/platform/logger/src/index.ts"
+      ],
       "@shinobi/standards-otel/*": [
         "packages/standards/otel/src"
       ],

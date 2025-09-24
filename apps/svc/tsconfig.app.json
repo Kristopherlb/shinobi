@@ -2,7 +2,7 @@
   "extends": "../../tsconfig.base.json",
   "compilerOptions": {
     "outDir": "../../dist/apps/svc",
-    "rootDir": "src"
+    "rootDir": "../.."
   },
   "include": [
     "src/**/*",
@@ -10,6 +10,13 @@
   ],
   "exclude": [
     "src/**/*.test.ts",
-    "src/**/*.spec.ts"
+    "src/**/*.spec.ts",
+    "src/main.ts",
+    "src/cli/commands/**/*"
+  ],
+  "references": [
+    {
+      "path": "../../packages/core/tsconfig.lib.json"
+    }
   ]
 }

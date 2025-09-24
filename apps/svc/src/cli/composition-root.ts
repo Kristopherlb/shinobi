@@ -5,17 +5,17 @@
 import { Logger } from './utils/logger';
 import { FileDiscovery } from './utils/file-discovery';
 import { TemplateEngine } from './templates/template-engine';
-import { SchemaManager } from './schemas/schema-manager';
-import { InitCommand } from './cli/init';
-import { ValidateCommand } from './cli/validate';
-import { PlanCommand } from './cli/plan';
-import { ValidationOrchestrator } from './services/validation-orchestrator';
-import { ManifestParser } from './services/manifest-parser';
-import { SchemaValidator } from './services/schema-validator';
-import { ContextHydrator } from './services/context-hydrator';
-import { ReferenceValidator } from './services/reference-validator';
-import { ManifestSchemaComposer } from './services/manifest-schema-composer';
-import { EnhancedSchemaValidator } from './services/enhanced-schema-validator';
+import {
+  ContextHydrator,
+  ManifestParser,
+  ReferenceValidator,
+  SchemaManager,
+  SchemaValidator,
+  ValidationOrchestrator
+} from '@shinobi/core';
+import { InitCommand } from './init';
+import { ValidateCommand } from './validate';
+import { PlanCommand } from './plan';
 import inquirer from 'inquirer';
 
 export interface ApplicationDependencies {
@@ -28,8 +28,6 @@ export interface ApplicationDependencies {
   schemaValidator: SchemaValidator;
   contextHydrator: ContextHydrator;
   referenceValidator: ReferenceValidator;
-  schemaComposer: ManifestSchemaComposer;
-  enhancedValidator: EnhancedSchemaValidator;
 }
 
 export class CompositionRoot {
@@ -52,20 +50,9 @@ export class CompositionRoot {
     const templateEngine = new TemplateEngine({ logger });
 
     // Create enhanced schema validation services
-    const schemaComposer = new ManifestSchemaComposer({ logger });
-    const enhancedValidator = new EnhancedSchemaValidator({
-      logger,
-      schemaComposer
-    });
-
     // Create focused services (single responsibility)
     const manifestParser = new ManifestParser({ logger });
-    const schemaValidator = new SchemaValidator({
-      logger,
-      schemaManager,
-      enhancedValidator,
-      schemaComposer
-    });
+    const schemaValidator = new SchemaValidator({ logger, schemaManager });
     const contextHydrator = new ContextHydrator({ logger });
     const referenceValidator = new ReferenceValidator({ logger });
 
@@ -87,9 +74,7 @@ export class CompositionRoot {
       manifestParser,
       schemaValidator,
       contextHydrator,
-      referenceValidator,
-      schemaComposer,
-      enhancedValidator
+      referenceValidator
     };
 
     return this._dependencies;

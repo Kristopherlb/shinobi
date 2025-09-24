@@ -37,10 +37,6 @@ export class PlanOutputFormatter {
   formatPlanOutput(input: FormatterInput): FormattedOutput {
     const { synthesisResult, cdkDiff, environment, complianceFramework } = input;
 
-    // Debug logging
-    console.log('DEBUG: synthesisResult.resolvedManifest:', synthesisResult.resolvedManifest);
-    console.log('DEBUG: components:', synthesisResult.resolvedManifest?.components);
-
     // Build user-friendly summary
     const summary = this.buildUserFriendlySummary(synthesisResult, cdkDiff, environment, complianceFramework);
 
@@ -75,26 +71,30 @@ export class PlanOutputFormatter {
       '',
       `Environment: ${environment}`,
       `Compliance Framework: ${complianceFramework}`,
-      `Synthesis Time: ${synthesisResult.synthesisTime}ms`,
+      `Synthesis Time: ${synthesisResult.synthesisTime ?? 0}ms`,
       ''
     ];
 
     // Component summary
     lines.push('--- Components ---');
-    if (synthesisResult.resolvedManifest?.components && synthesisResult.resolvedManifest.components.length > 0) {
-      synthesisResult.resolvedManifest.components.forEach((component: any) => {
-        lines.push(`  • ${component.name} (${component.type})`);
+    const manifestComponents = Array.isArray(synthesisResult.resolvedManifest?.components)
+      ? synthesisResult.resolvedManifest.components
+      : [];
 
-        if (component.config) {
-          const configKeys = Object.keys(component.config);
-          if (configKeys.length > 0) {
-            lines.push(`    Config: ${configKeys.join(', ')}`);
-          }
+    if (manifestComponents.length > 0) {
+      manifestComponents.forEach((component: any) => {
+        const componentName = component.name || component.spec?.name || 'unnamed-component';
+        const componentType = component.type || component.spec?.type || 'unknown';
+        lines.push(`  • ${componentName} (${componentType})`);
+
+        const config = component.config || component.spec?.config;
+        if (config && Object.keys(config).length > 0) {
+          lines.push(`    Config keys: ${Object.keys(config).join(', ')}`);
         }
 
-        if (component.tags) {
-          const tagCount = Object.keys(component.tags).length;
-          lines.push(`    Tags: ${tagCount} applied`);
+        const tags = component.tags || component.spec?.tags;
+        if (tags && Object.keys(tags).length > 0) {
+          lines.push(`    Tags: ${Object.keys(tags).length} applied`);
         }
       });
     } else {
@@ -167,13 +167,30 @@ export class PlanOutputFormatter {
    * Build structured data for programmatic access
    */
   private buildStructuredData(synthesisResult: any, cdkDiff: any): any {
+    const components = Array.isArray(synthesisResult.components)
+      ? synthesisResult.components.map((component: any) => {
+          if (typeof component.getType === 'function') {
+            return {
+              name: component.spec?.name ?? component.name,
+              type: component.getType(),
+              capabilities: typeof component.getCapabilities === 'function' ? component.getCapabilities() : [],
+              constructs: typeof component.getAllConstructs === 'function'
+                ? Object.fromEntries(component.getAllConstructs())
+                : {}
+            };
+          }
+
+          return {
+            name: component.name,
+            type: component.type,
+            capabilities: component.capabilities || [],
+            constructs: component.constructs || {}
+          };
+        })
+      : [];
+
     return {
-      components: synthesisResult.components?.map((component: any) => ({
-        name: component.spec.name,
-        type: component.getType(),
-        capabilities: component.getCapabilities(),
-        constructs: Object.fromEntries(component.getAllConstructs())
-      })) || [],
+      components,
       bindings: synthesisResult.bindings || [],
       changes: cdkDiff || {},
       stacks: synthesisResult.stacks?.map((stack: any) => stack.stackName) || [],
