@@ -5,8 +5,8 @@
  * Provides 5-layer configuration precedence chain and compliance-aware defaults.
  */
 
-import { ConfigBuilder } from '../@shinobi/core/config-builder';
-import { ComponentContext, ComponentSpec } from '@platform/contracts';
+import { ConfigBuilder, ConfigBuilderContext, ComponentContext, ComponentSpec } from '@shinobi/core';
+import configSchema from './Config.schema.json';
 
 /**
  * Configuration interface for Modern HTTP API Gateway component
@@ -47,8 +47,10 @@ export interface ApiGatewayHttpConfig {
     autoGenerateCertificate?: boolean;
     /** Route 53 hosted zone ID for DNS */
     hostedZoneId?: string;
+    /** Hosted zone name (if different from domain) */
+    hostedZoneName?: string;
     /** Security policy */
-    securityPolicy?: string;
+    securityPolicy?: 'TLS_1_2';
     /** Endpoint type */
     endpointType?: 'EDGE' | 'REGIONAL';
     /** Base path mapping */
@@ -288,80 +290,11 @@ export interface ApiGatewayHttpConfig {
     enableWaf?: boolean;
     enableApiKey?: boolean;
     requireAuthorization?: boolean;
+    webAclArn?: string;
   };
 }
 
-/**
- * Load the JSON Schema for API Gateway HTTP configuration validation
- */
-function loadConfigSchema(): any {
-  const fs = require('fs');
-  const path = require('path');
-  const schemaPath = path.join(__dirname, 'Config.schema.json');
-  try {
-    return JSON.parse(fs.readFileSync(schemaPath, 'utf8'));
-  } catch (error) {
-    // Fallback to a minimal schema if file not found
-    return {
-      type: 'object',
-      properties: {
-        apiName: { type: 'string' },
-        description: { type: 'string' },
-        protocolType: { type: 'string', enum: ['HTTP', 'WEBSOCKET'] },
-        cors: {
-          type: 'object',
-          properties: {
-            allowOrigins: { type: 'array', items: { type: 'string' } },
-            allowHeaders: { type: 'array', items: { type: 'string' } },
-            allowMethods: { type: 'array', items: { type: 'string' } },
-            allowCredentials: { type: 'boolean' },
-            maxAge: { type: 'number' }
-          }
-        },
-        customDomain: {
-          type: 'object',
-          properties: {
-            domainName: { type: 'string' },
-            certificateArn: { type: 'string' },
-            securityPolicy: { type: 'string' },
-            endpointType: { type: 'string' }
-          }
-        },
-        throttling: {
-          type: 'object',
-          properties: {
-            rateLimit: { type: 'number' },
-            burstLimit: { type: 'number' }
-          }
-        },
-        accessLogging: {
-          type: 'object',
-          properties: {
-            enabled: { type: 'boolean' },
-            retentionInDays: { type: 'number' },
-            format: { type: 'string' }
-          }
-        },
-        monitoring: {
-          type: 'object',
-          properties: {
-            detailedMetrics: { type: 'boolean' },
-            tracingEnabled: { type: 'boolean' },
-            alarms: { type: 'object' }
-          }
-        },
-        security: {
-          type: 'object',
-          properties: {
-            enableWaf: { type: 'boolean' },
-            enableApiKey: { type: 'boolean' },
-            requireAuthorization: { type: 'boolean' }
-          }
-        }
-      }
-    };
-  }
-}
+export const API_GATEWAY_HTTP_CONFIG_SCHEMA = configSchema;
 
 /**
  * ConfigBuilder for API Gateway HTTP component
@@ -384,8 +317,7 @@ export class ApiGatewayHttpConfigBuilder extends ConfigBuilder<ApiGatewayHttpCon
     if (!spec) {
       throw new Error('ComponentSpec is required');
     }
-    const schema = loadConfigSchema();
-    super({ context, spec }, { type: 'api-gateway-http', properties: schema.properties });
+    super({ context, spec } as ConfigBuilderContext, API_GATEWAY_HTTP_CONFIG_SCHEMA as any);
     this.context = context;
     this.spec = spec;
   }
@@ -407,6 +339,36 @@ export class ApiGatewayHttpConfigBuilder extends ConfigBuilder<ApiGatewayHttpCon
         config.throttling.burstLimit = 100; // Default safe value
       }
     }
+
+    // Ensure default stage configuration exists
+    config.defaultStage = {
+      stageName: config.defaultStage?.stageName ?? this.context.environment ?? '$default',
+      autoDeploy: config.defaultStage?.autoDeploy ?? true,
+      throttling: config.defaultStage?.throttling ?? config.throttling
+    };
+
+    // Normalise CORS minimal safe defaults
+    if (config.cors) {
+      if (!config.cors.allowHeaders || config.cors.allowHeaders.length === 0) {
+        config.cors.allowHeaders = ['Content-Type', 'Authorization'];
+      }
+      if (!config.cors.allowMethods || config.cors.allowMethods.length === 0) {
+        config.cors.allowMethods = ['GET', 'POST', 'OPTIONS'];
+      }
+      config.cors.allowOrigins = config.cors.allowOrigins ?? [];
+      config.cors.allowCredentials = config.cors.allowCredentials ?? false;
+      config.cors.maxAge = config.cors.maxAge ?? 300;
+    }
+
+    // Observability is mandatory per platform standard
+    config.observability = {
+      tracingEnabled: config.observability?.tracingEnabled ?? true,
+      metricsEnabled: config.observability?.metricsEnabled ?? true,
+      logsEnabled: config.observability?.logsEnabled ?? true,
+      otlpEndpoint: config.observability?.otlpEndpoint,
+      serviceName: config.observability?.serviceName,
+      resourceAttributes: config.observability?.resourceAttributes
+    };
 
     return config;
   }
@@ -431,12 +393,18 @@ export class ApiGatewayHttpConfigBuilder extends ConfigBuilder<ApiGatewayHttpCon
         burstLimit: 100
       },
       accessLogging: {
-        enabled: false,
-        format: '$requestId $requestTime $httpMethod $resourcePath $status $responseLength $requestTime'
+        enabled: true,
+        retentionInDays: 30,
+        format: '$context.requestId $context.requestTime $context.identity.sourceIp $context.httpMethod $context.routeKey $context.status $context.responseLength'
       },
       monitoring: {
-        detailedMetrics: false,
-        tracingEnabled: false
+        detailedMetrics: true,
+        tracingEnabled: true,
+        alarms: {
+          errorRate4xx: 5,
+          errorRate5xx: 1,
+          highLatency: 2000
+        }
       },
       apiSettings: {
         disableExecuteApiEndpoint: false,
@@ -459,6 +427,6 @@ export class ApiGatewayHttpConfigBuilder extends ConfigBuilder<ApiGatewayHttpCon
    * Get the JSON Schema for validation
    */
   public getSchema(): any {
-    return loadConfigSchema();
+    return API_GATEWAY_HTTP_CONFIG_SCHEMA;
   }
 }

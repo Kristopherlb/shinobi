@@ -12,9 +12,10 @@
  * For complex enterprise features, use api-gateway-rest instead.
  */
 
-export { 
-  ApiGatewayHttpComponent,
-  API_GATEWAY_HTTP_CONFIG_SCHEMA,
+export { ApiGatewayHttpComponent } from './api-gateway-http.component';
+export { ApiGatewayHttpCreator } from './api-gateway-http.creator';
+export {
   ApiGatewayHttpConfig,
-  ApiGatewayHttpConfigBuilder
-} from './api-gateway-http.component';
+  ApiGatewayHttpConfigBuilder,
+  API_GATEWAY_HTTP_CONFIG_SCHEMA
+} from './api-gateway-http.builder';

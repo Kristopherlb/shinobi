@@ -5,9 +5,9 @@
     "moduleResolution": "Node",
     "declaration": true,
     "outDir": "dist",
-    "rootDir": ".",
     "strict": true,
     "esModuleInterop": true,
+    "resolveJsonModule": true,
     "skipLibCheck": true,
     "baseUrl": ".",
     "paths": {
@@ -32,4 +32,3 @@
     "**/*.spec.ts"
   ]
 }
-

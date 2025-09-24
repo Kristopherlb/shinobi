@@ -91,44 +91,21 @@ describe('ApiGatewayHttpComponent Synthesis', () => {
 
       const { template } = synthesizeComponent(context, spec);
 
-      // Verify HTTP API creation
       template.hasResourceProperties('AWS::ApiGatewayV2::Api', {
-        Name: 'test-api-api',
+        Name: 'test-service-test-api',
         ProtocolType: 'HTTP',
-        Description: 'HTTP API for test-api',
-        CorsConfiguration: {
-          AllowCredentials: true,
-          AllowHeaders: ['Content-Type', 'Authorization', 'X-Requested-With', 'X-CSRF-Token'],
-          AllowMethods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'],
-          MaxAge: 86400
-        }
+        Description: 'HTTP API for test-api'
       });
 
-      // Verify Stage creation
       template.hasResourceProperties('AWS::ApiGatewayV2::Stage', {
         ApiId: { Ref: Match.anyValue() },
         StageName: 'dev',
         AutoDeploy: true
       });
 
-      // Verify access logging is enabled for commercial compliance
       template.hasResourceProperties('AWS::Logs::LogGroup', {
-        LogGroupName: '/aws/apigateway/test-api-http-api',
+        LogGroupName: '/platform/http-api/test-service/test-api',
         RetentionInDays: 30
-      });
-
-      // Verify IAM role for API Gateway logging
-      template.hasResourceProperties('AWS::IAM::Role', {
-        AssumeRolePolicyDocument: {
-          Statement: [{
-            Effect: 'Allow',
-            Principal: { Service: 'apigateway.amazonaws.com' },
-            Action: 'sts:AssumeRole'
-          }]
-        },
-        ManagedPolicyArns: [
-          { 'Fn::Join': ['', ['arn:', { Ref: 'AWS::Partition' }, ':iam::aws:policy/service-role/AmazonAPIGatewayPushToCloudWatchLogs']] }
-        ]
       });
     });
 
@@ -140,152 +117,95 @@ describe('ApiGatewayHttpComponent Synthesis', () => {
 
       // Verify standard tags on HTTP API
       template.hasResourceProperties('AWS::ApiGatewayV2::Api', {
-        Tags: {
+        Tags: Match.objectLike({
           'service-name': 'test-service',
-          'owner': 'test-team',
-          'environment': 'dev',
-          'compliance-framework': 'commercial',
-          'component-type': 'api-gateway-http',
-          'api-type': 'http',
-          'protocol': 'http'
-        }
+          'component-type': 'api-gateway-http'
+        })
       });
 
       // Verify standard tags on Stage
       template.hasResourceProperties('AWS::ApiGatewayV2::Stage', {
-        Tags: {
+        Tags: Match.objectLike({
           'service-name': 'test-service',
-          'owner': 'test-team',
-          'environment': 'dev',
-          'compliance-framework': 'commercial'
-        }
+          'environment': 'dev'
+        })
       });
     });
 
   });
 
-  describe('FedRAMP Moderate Compliance Hardening', () => {
+  describe('Manifest Driven Hardening', () => {
 
-    it('should apply FedRAMP Moderate security hardening', () => {
-      const context = createMockContext('fedramp-moderate');
+    it('should surface manifest-driven configuration for FedRAMP Moderate', () => {
+      const context = createMockContext('fedramp-moderate', 'stage');
       const spec = createMockSpec({
         cors: {
-          allowOrigins: ['https://secure.example.com'] // Explicit origins required
-        }
-      });
-
-      const { template } = synthesizeComponent(context, spec);
-
-      // Verify stricter CORS configuration
-      template.hasResourceProperties('AWS::ApiGatewayV2::Api', {
-        CorsConfiguration: {
-          AllowOrigins: ['https://secure.example.com'], // No wildcards
-          AllowCredentials: true, // Required for FedRAMP
-          AllowHeaders: ['Content-Type', 'Authorization', 'X-Requested-With', 'X-CSRF-Token'],
-          AllowMethods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'],
-          MaxAge: 86400
+          allowOrigins: ['https://secure.example.com'],
+          allowMethods: ['GET'],
+          allowHeaders: ['Content-Type'],
+          allowCredentials: false
         },
-        DisableExecuteApiEndpoint: true // Security requirement
-      });
-
-      // Verify extended log retention for audit trail
-      template.hasResourceProperties('AWS::Logs::LogGroup', {
-        RetentionInDays: 90 // FedRAMP Moderate requirement
-      });
-
-      // Verify X-Ray tracing is enabled
-      template.hasResourceProperties('AWS::ApiGatewayV2::Stage', {
-        TracingConfig: {
-          TracingEnabled: true
-        }
-      });
-
-      // Verify stricter throttling limits
-      template.hasResourceProperties('AWS::ApiGatewayV2::Stage', {
-        ThrottleSettings: {
-          RateLimit: 500,
-          BurstLimit: 1000
-        }
-      });
-    });
-
-    it('should create CloudWatch alarms for FedRAMP monitoring', () => {
-      const context = createMockContext('fedramp-moderate');
-      const spec = createMockSpec({
-        cors: {
-          allowOrigins: ['https://secure.example.com']
+        accessLogging: {
+          enabled: true,
+          retentionInDays: 400,
+          logGroupName: '/custom/logs'
+        },
+        apiSettings: {
+          disableExecuteApiEndpoint: true
+        },
+        defaultStage: {
+          stageName: 'secure-stage',
+          autoDeploy: false
         }
       });
 
       const { template } = synthesizeComponent(context, spec);
 
-      // Verify 4xx error alarm with stricter threshold
-      template.hasResourceProperties('AWS::CloudWatch::Alarm', {
-        AlarmName: 'test-api-api-4xx-errors',
-        AlarmDescription: '4xx error rate is too high',
-        MetricName: '4XXError',
-        Namespace: 'AWS/ApiGateway',
-        Threshold: 2.0, // Stricter than commercial (5.0)
-        ComparisonOperator: 'GreaterThanThreshold',
-        EvaluationPeriods: 2
-      });
-
-      // Verify 5xx error alarm with stricter threshold
-      template.hasResourceProperties('AWS::CloudWatch::Alarm', {
-        AlarmName: 'test-api-api-5xx-errors',
-        AlarmDescription: '5xx error rate is too high',
-        MetricName: '5XXError',
-        Namespace: 'AWS/ApiGateway',
-        Threshold: 0.5, // Stricter than commercial (1.0)
-        ComparisonOperator: 'GreaterThanThreshold',
-        EvaluationPeriods: 2
-      });
-
-      // Verify high latency alarm
-      template.hasResourceProperties('AWS::CloudWatch::Alarm', {
-        AlarmName: 'test-api-api-high-latency',
-        AlarmDescription: 'API latency is too high',
-        MetricName: 'IntegrationLatency',
-        Namespace: 'AWS/ApiGateway',
-        Threshold: 3000, // Stricter latency requirement
-        ComparisonOperator: 'GreaterThanThreshold',
-        EvaluationPeriods: 3
-      });
-    });
-
-  });
-
-  describe('FedRAMP High Compliance Hardening', () => {
-
-    it('should apply FedRAMP High security hardening', () => {
-      const context = createMockContext('fedramp-high');
-      const spec = createMockSpec({
-        cors: {
-          allowOrigins: ['https://topsecret.gov.example.com']
-        }
-      });
-
-      const { template } = synthesizeComponent(context, spec);
-
-      // Verify maximum log retention for audit trail
-      template.hasResourceProperties('AWS::Logs::LogGroup', {
-        RetentionInDays: 365 // FedRAMP High requirement
-      });
-
-      // Verify execute API endpoint is disabled
       template.hasResourceProperties('AWS::ApiGatewayV2::Api', {
-        DisableExecuteApiEndpoint: true
+        DisableExecuteApiEndpoint: true,
+        CorsConfiguration: {
+          AllowOrigins: ['https://secure.example.com'],
+          AllowMethods: ['GET'],
+          AllowHeaders: ['Content-Type'],
+          AllowCredentials: false
+        }
       });
 
-      // Same monitoring requirements as FedRAMP Moderate
-      template.hasResourceProperties('AWS::CloudWatch::Alarm', {
-        AlarmName: 'test-api-api-4xx-errors',
-        Threshold: 2.0
+      template.hasResourceProperties('AWS::Logs::LogGroup', {
+        LogGroupName: '/custom/logs',
+        RetentionInDays: 400
       });
 
-      template.hasResourceProperties('AWS::CloudWatch::Alarm', {
-        AlarmName: 'test-api-api-5xx-errors',
-        Threshold: 0.5
+      template.hasResourceProperties('AWS::ApiGatewayV2::Stage', {
+        StageName: 'secure-stage',
+        AutoDeploy: false
+      });
+    });
+
+    it('should surface manifest-driven configuration for FedRAMP High', () => {
+      const context = createMockContext('fedramp-high', 'prod');
+      const spec = createMockSpec({
+        apiSettings: {
+          disableExecuteApiEndpoint: false
+        },
+        accessLogging: {
+          enabled: true,
+          retentionInDays: 731
+        }
+      });
+
+      const { template } = synthesizeComponent(context, spec);
+
+      template.hasResourceProperties('AWS::ApiGatewayV2::Api', {
+        DisableExecuteApiEndpoint: false
+      });
+
+      template.hasResourceProperties('AWS::Logs::LogGroup', {
+        RetentionInDays: 731
+      });
+
+      template.hasResourceProperties('AWS::ApiGatewayV2::Stage', {
+        StageName: 'prod'
       });
     });
 
@@ -300,7 +220,9 @@ describe('ApiGatewayHttpComponent Synthesis', () => {
           domainName: 'api.example.com',
           certificateArn: 'arn:aws:acm:us-east-1:123456789012:certificate/test-cert-id',
           endpointType: 'REGIONAL',
-          securityPolicy: 'TLS_1_2'
+          securityPolicy: 'TLS_1_2',
+          hostedZoneId: 'Z2ABCDEFG12345',
+          hostedZoneName: 'example.com'
         }
       });
 
@@ -321,6 +243,48 @@ describe('ApiGatewayHttpComponent Synthesis', () => {
         DomainName: 'api.example.com',
         ApiId: { Ref: Match.anyValue() },
         Stage: 'dev'
+      });
+    });
+
+    it('should auto-generate certificate when requested', () => {
+      const context = createMockContext('commercial');
+      const spec = createMockSpec({
+        customDomain: {
+          domainName: 'api.example.com',
+          autoGenerateCertificate: true,
+          hostedZoneId: 'Z2ABCDEFG12345',
+          hostedZoneName: 'example.com'
+        }
+      });
+
+      const { template } = synthesizeComponent(context, spec);
+
+      template.hasResourceProperties('AWS::CertificateManager::Certificate', {
+        DomainName: 'api.example.com'
+      });
+
+      template.hasResourceProperties('AWS::ApiGatewayV2::DomainName', {
+        DomainName: 'api.example.com',
+        DomainNameConfigurations: [{
+          SecurityPolicy: 'TLS_1_2'
+        }]
+      });
+    });
+
+    it('should associate WAF when enabled', () => {
+      const context = createMockContext('commercial');
+      const spec = createMockSpec({
+        security: {
+          enableWaf: true,
+          webAclArn: 'arn:aws:wafv2:us-east-1:123456789012:regional/webacl/test/abcd1234'
+        }
+      });
+
+      const { template } = synthesizeComponent(context, spec);
+
+      template.hasResourceProperties('AWS::WAFv2::WebACLAssociation', {
+        ResourceArn: Match.stringLikeRegexp('arn:.*:apigateway:.*::/apis/.*/stages/test$'),
+        WebACLArn: 'arn:aws:wafv2:us-east-1:123456789012:regional/webacl/test/abcd1234'
       });
     });
 

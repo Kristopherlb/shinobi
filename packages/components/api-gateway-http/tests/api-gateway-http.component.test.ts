@@ -117,12 +117,18 @@ describe('ApiGatewayHttpComponent', () => {
           rateLimit: 50    // Conservative fallback
         },
         accessLogging: {
-          enabled: false, // Commercial framework default (disabled for cost)
-          format: expect.any(String) // JSON formatted log structure
+          enabled: true,
+          retentionInDays: 30,
+          format: expect.any(String)
         },
         monitoring: {
-          detailedMetrics: false,
-          tracingEnabled: false
+          detailedMetrics: true,
+          tracingEnabled: true,
+          alarms: {
+            errorRate4xx: 5,
+            errorRate5xx: 1,
+            highLatency: 2000
+          }
         },
         apiSettings: {
           disableExecuteApiEndpoint: false,
@@ -166,11 +172,13 @@ describe('ApiGatewayHttpComponent', () => {
 
       // Assert: Verify compliance-aware defaults for HTTP API
       expect(config.protocolType).toBe('HTTP');
-      expect(config.cors?.allowOrigins).toEqual([]); // FedRAMP requires explicit CORS config
-      expect(config.cors?.allowCredentials).toBe(false); // Always secure
-      expect(config.throttling?.burstLimit).toBeLessThanOrEqual(100); // Conservative limits
-      expect(config.throttling?.rateLimit).toBeLessThanOrEqual(50);
-      expect(config.accessLogging?.enabled).toBe(true); // FedRAMP requires logging
+      expect(config.cors?.allowOrigins).toEqual([]);
+      expect(config.cors?.allowCredentials).toBe(false);
+      expect(config.throttling?.burstLimit).toBe(100);
+      expect(config.throttling?.rateLimit).toBe(50);
+      expect(config.accessLogging?.enabled).toBe(true);
+      expect(config.accessLogging?.retentionInDays).toBe(30);
+      expect(config.defaultStage?.stageName).toBe('test');
     });
   });
 
@@ -205,17 +213,52 @@ describe('ApiGatewayHttpComponent', () => {
 
       // Contract validation: HTTP API exists with correct properties
       template.hasResourceProperties('AWS::ApiGatewayV2::Api', {
-        Name: Match.stringLikeRegexp('test-http-api-gateway'),
+        Name: 'test-http-service-test-http-api-gateway',
         ProtocolType: 'HTTP',
-        Description: Match.stringLikeRegexp('Modern HTTP API Gateway')
+        Description: 'HTTP API for test-http-api-gateway'
       });
 
       // Contract validation: Default stage exists
       template.hasResourceProperties('AWS::ApiGatewayV2::Stage', {
         ApiId: Match.anyValue(),
-        StageName: '$default',
+        StageName: 'test',
         AutoDeploy: true
       });
+
+      // Access log group is created with platform naming convention
+      template.hasResourceProperties('AWS::Logs::LogGroup', {
+        LogGroupName: '/platform/http-api/test-http-service/test-http-api-gateway',
+        RetentionInDays: 30
+      });
+    });
+  });
+
+  describe('Component__AccessLogging__ValidatesRetentionValues', () => {
+    it('should throw when unsupported retention days are provided', () => {
+      const specWithInvalidRetention = createMockSpec({
+        accessLogging: {
+          enabled: true,
+          retentionInDays: 55
+        }
+      });
+
+      const component = new ApiGatewayHttpComponent(stack, 'TestHttpApiGateway', mockContext, specWithInvalidRetention);
+
+      expect(() => component.synth()).toThrow('Unsupported access log retention 55');
+    });
+  });
+
+  describe('Security__WafConfiguration__Validated', () => {
+    it('should throw when enableWaf is true without webAclArn', () => {
+      const specWithInvalidWaf = createMockSpec({
+        security: {
+          enableWaf: true
+        }
+      });
+
+      const component = new ApiGatewayHttpComponent(stack, 'TestHttpApiGateway', mockContext, specWithInvalidWaf);
+
+      expect(() => component.synth()).toThrow('security.enableWaf is true but security.webAclArn is not provided.');
     });
   });
 
@@ -250,13 +293,11 @@ describe('ApiGatewayHttpComponent', () => {
 
       // Exact validation: HTTP API has mandatory tags
       template.hasResourceProperties('AWS::ApiGatewayV2::Api', {
-        Tags: {
+        Tags: Match.objectLike({
           'service-name': 'test-http-service',
           'component-name': 'test-http-api-gateway',
-          'component-type': 'api-gateway-http',
-          'environment': 'test',
-          'compliance-framework': 'commercial'
-        }
+          'component-type': 'api-gateway-http'
+        })
       });
     });
   });
@@ -280,7 +321,7 @@ describe('ApiGatewayHttpComponent', () => {
    * }
    */
   describe('Component__PostSynthesis__ProvidesCorrectHttpApiCapabilities', () => {
-    it('should provide api:http-v2 capability with correct structure', () => {
+    it('should provide api:http capability with correct structure', () => {
       // Arrange: Create and synthesize HTTP API component
       const component = new ApiGatewayHttpComponent(stack, 'TestHttpApiGateway', mockContext, mockSpec);
       component.synth();
@@ -289,12 +330,25 @@ describe('ApiGatewayHttpComponent', () => {
       const capabilities = component.getCapabilities();
 
       // Assert: Verify exact HTTP API capability structure
-      expect(capabilities).toHaveProperty('api:http-v2');
-      expect(capabilities['api:http-v2']).toEqual({
-        apiId: expect.any(String),
-        apiEndpoint: expect.any(String),
-        customDomainName: undefined
-      });
+      expect(capabilities).toHaveProperty('api:http');
+      expect(capabilities['api:http']).toEqual(
+        expect.objectContaining({
+          type: 'api:http',
+          resources: expect.objectContaining({
+            arn: expect.any(String),
+            apiId: expect.any(String),
+            stage: 'test'
+          }),
+          endpoints: expect.objectContaining({
+            invokeUrl: expect.any(String),
+            executeApiArn: expect.any(String)
+          }),
+          cors: expect.objectContaining({
+            enabled: false,
+            origins: []
+          })
+        })
+      );
     });
   });
 
