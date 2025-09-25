@@ -37,6 +37,8 @@ export interface ResourceMappingResult {
  */
 export class ResourceMapper {
   private resourceTypeMap: Map<string, ResourceTypeHandler>;
+  private readonly propertyReferenceCache = new Map<string, string>();
+  private readonly dependencyCache = new Map<string, ReadonlySet<string>>();
 
   constructor(private logger: Logger) {
     this.resourceTypeMap = new Map();
@@ -48,6 +50,9 @@ export class ResourceMapper {
     serviceName: string,
     complianceFramework: string
   ): Promise<ResourceMappingResult> {
+    this.propertyReferenceCache.clear();
+    this.dependencyCache.clear();
+
     const components: ComponentMapping[] = [];
     const mappedResources: Array<{ logicalId: string; componentName: string; componentType: string }> = [];
     const unmappableResources: UnmappableResource[] = [];
@@ -220,16 +225,17 @@ export class ResourceMapper {
     resource1: CloudFormationResource,
     resource2: CloudFormationResource
   ): boolean {
-    // Check direct dependencies
-    if (resource1.dependsOn?.includes(resource2.logicalId) || 
-        resource2.dependsOn?.includes(resource1.logicalId)) {
+    const resource1Dependencies = this.getDependencies(resource1);
+    const resource2Dependencies = this.getDependencies(resource2);
+
+    if (resource1Dependencies.has(resource2.logicalId) || resource2Dependencies.has(resource1.logicalId)) {
       return true;
     }
 
     // Check property references
-    const props1Str = JSON.stringify(resource1.properties);
-    const props2Str = JSON.stringify(resource2.properties);
-    
+    const props1Str = this.getSerializedProperties(resource1);
+    const props2Str = this.getSerializedProperties(resource2);
+
     return props1Str.includes(resource2.logicalId) || props2Str.includes(resource1.logicalId);
   }
 
@@ -475,6 +481,28 @@ export class ResourceMapper {
     };
 
     return actionMap[resource.type] || `Add using patches.ts with L1 construct: new ${resource.type.split('::').pop()}(...)`;
+  }
+
+  private getSerializedProperties(resource: CloudFormationResource): string {
+    const cached = this.propertyReferenceCache.get(resource.logicalId);
+    if (cached) {
+      return cached;
+    }
+
+    const serialized = JSON.stringify(resource.properties ?? {});
+    this.propertyReferenceCache.set(resource.logicalId, serialized);
+    return serialized;
+  }
+
+  private getDependencies(resource: CloudFormationResource): ReadonlySet<string> {
+    const cached = this.dependencyCache.get(resource.logicalId);
+    if (cached) {
+      return cached;
+    }
+
+    const dependencies = new Set(resource.dependsOn ?? []);
+    this.dependencyCache.set(resource.logicalId, dependencies);
+    return dependencies;
   }
 }
 
