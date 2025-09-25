@@ -1,0 +1,40 @@
+apiVersion: backstage.io/v1alpha1
+kind: Component
+metadata:
+  name: ecs-fargate-service
+  title: ECS Fargate Service
+  description: Serverless Fargate service with secure networking, scaling, and service discovery.
+  tags:
+    - component
+    - aws
+    - ecs
+    - fargate
+    - containers
+  annotations:
+    platform.shinobi.dev/component-type: ecs-fargate-service
+    github.com/project-slug: project42/shinobi
+    backstage.io/techdocs-ref: dir:.
+spec:
+  type: compute
+  lifecycle: production
+  owner: group:default/platform-engineering
+  system: system:default/shinobi
+  metadata:
+    platform:
+      componentType: ecs-fargate-service
+      category: compute
+      description: Fargate service component that provisions tasks, load balancer wiring, and platform-standard policies.
+      capabilities:
+        - service:connect
+      awsServices:
+        - ecs
+        - logs
+        - cloudwatch
+        - iam
+      tags:
+        required:
+          - ecs
+          - fargate
+          - observability
+      documentation:
+        readme: packages/components/ecs-fargate-service/README.md

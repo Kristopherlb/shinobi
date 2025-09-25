@@ -1,0 +1,41 @@
+apiVersion: backstage.io/v1alpha1
+kind: Component
+metadata:
+  name: ec2-instance
+  title: EC2 Instance
+  description: Hardened EC2 instance with launch templates, IAM profiles, and observability defaults.
+  tags:
+    - component
+    - aws
+    - ec2
+    - compute
+    - observability
+  annotations:
+    platform.shinobi.dev/component-type: ec2-instance
+    github.com/project-slug: project42/shinobi
+    backstage.io/techdocs-ref: dir:.
+spec:
+  type: infrastructure
+  lifecycle: production
+  owner: group:default/platform-engineering
+  system: system:default/shinobi
+  metadata:
+    platform:
+      componentType: ec2-instance
+      category: compute
+      description: EC2 instance component providing launch configuration, security controls, and OTEL instrumentation hooks.
+      capabilities:
+        - compute:ec2
+        - otel:environment
+      awsServices:
+        - ec2
+        - iam
+        - cloudwatch
+        - kms
+      tags:
+        required:
+          - compute
+          - ec2
+          - observability
+      documentation:
+        readme: packages/components/ec2-instance/README.md

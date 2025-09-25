@@ -1,0 +1,39 @@
+apiVersion: backstage.io/v1alpha1
+kind: Component
+metadata:
+  name: s3-bucket
+  title: S3 Bucket
+  description: Secure S3 bucket with lifecycle policies, encryption, and access logging.
+  tags:
+    - component
+    - aws
+    - s3
+    - storage
+    - security
+  annotations:
+    platform.shinobi.dev/component-type: s3-bucket
+    github.com/project-slug: project42/shinobi
+    backstage.io/techdocs-ref: dir:.
+spec:
+  type: storage
+  lifecycle: production
+  owner: group:default/platform-engineering
+  system: system:default/shinobi
+  metadata:
+    platform:
+      componentType: s3-bucket
+      category: storage
+      description: S3 bucket component covering encryption, replication, logging, and compliance defaults.
+      capabilities:
+        - bucket:s3
+      awsServices:
+        - s3
+        - kms
+        - cloudwatch
+      tags:
+        required:
+          - storage
+          - s3
+          - observability
+      documentation:
+        readme: packages/components/s3-bucket/README.md

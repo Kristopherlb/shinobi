@@ -72,6 +72,18 @@ export class ContainerApplicationComponentCreator implements IComponentCreator {
    * JSON Schema for component configuration validation
    */
   public readonly configSchema = CONTAINER_APPLICATION_CONFIG_SCHEMA;
+
+  /**
+   * Capabilities exposed after synthesis
+   */
+  public getProvidedCapabilities(): string[] {
+    return [
+      'application:url',
+      'ecr:repository',
+      'cluster:name',
+      'service:name'
+    ];
+  }
   
   /**
    * Factory method to create component instances
@@ -181,14 +193,7 @@ export class ContainerApplicationComponentCreator implements IComponentCreator {
    * Get component capabilities
    */
   public getCapabilities(): string[] {
-    return [
-      'application:url',
-      'ecr:repository',
-      'cluster:name',
-      'service:name',
-      'alb:dns-name',
-      'alb:zone-id'
-    ];
+    return this.getProvidedCapabilities();
   }
 
   /**

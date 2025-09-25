@@ -1,0 +1,20 @@
+apiVersion: backstage.io/v1alpha1
+kind: Component
+metadata:
+  name: components-deployment-bundle-pipeline
+  title: Components Deployment Bundle Pipeline
+  description: Production-ready deployment bundle pipeline with comprehensive compliance artifacts
+  annotations:
+    platform.shinobi.dev/component-type: components-deployment-bundle-pipeline
+spec:
+  type: library
+  lifecycle: experimental
+  owner: group:default/platform-engineering
+  system: system:default/shinobi
+  metadata:
+    platform:
+      componentType: components-deployment-bundle-pipeline
+      version: 1.0.0
+      description: Production-ready deployment bundle pipeline with comprehensive compliance artifacts
+      capabilities: []
+      tags: ["deployment","bundle","pipeline","compliance","security","sbom","cosign","slsa","artifactory","oci","platform"]

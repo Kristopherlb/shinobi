@@ -1,0 +1,39 @@
+apiVersion: backstage.io/v1alpha1
+kind: Component
+metadata:
+  name: feature-flag
+  title: Feature Flag Store
+  description: OpenFeature-compatible feature flag store with audit logging and environment scoping.
+  tags:
+    - component
+    - feature-flags
+    - experimentation
+    - aws
+    - governance
+  annotations:
+    platform.shinobi.dev/component-type: feature-flag
+    github.com/project-slug: project42/shinobi
+    backstage.io/techdocs-ref: dir:.
+spec:
+  type: platform
+  lifecycle: production
+  owner: group:default/platform-engineering
+  system: system:default/shinobi
+  metadata:
+    platform:
+      componentType: feature-flag
+      category: platform
+      description: Feature flag component providing rule evaluation, audit trails, and compliance alignment.
+      capabilities:
+        - feature:flag
+      awsServices:
+        - dynamodb
+        - lambda
+        - cloudwatch
+      tags:
+        required:
+          - experimentation
+          - governance
+          - observability
+      documentation:
+        readme: packages/components/feature-flag/README.md

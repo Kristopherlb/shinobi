@@ -1,0 +1,39 @@
+apiVersion: backstage.io/v1alpha1
+kind: Component
+metadata:
+  name: dynamodb-table
+  title: DynamoDB Table
+  description: Provisioned DynamoDB table with capacity policies, encryption, and observability automation.
+  tags:
+    - component
+    - aws
+    - dynamodb
+    - storage
+    - data
+  annotations:
+    platform.shinobi.dev/component-type: dynamodb-table
+    github.com/project-slug: project42/shinobi
+    backstage.io/techdocs-ref: dir:.
+spec:
+  type: data
+  lifecycle: production
+  owner: group:default/platform-engineering
+  system: system:default/shinobi
+  metadata:
+    platform:
+      componentType: dynamodb-table
+      category: storage
+      description: DynamoDB table component with configurable throughput, global tables, and compliance defaults.
+      capabilities:
+        - db:dynamodb
+      awsServices:
+        - dynamodb
+        - kms
+        - cloudwatch
+      tags:
+        required:
+          - data
+          - storage
+          - observability
+      documentation:
+        readme: packages/components/dynamodb-table/README.md

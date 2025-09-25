@@ -1,0 +1,20 @@
+apiVersion: backstage.io/v1alpha1
+kind: Component
+metadata:
+  name: security-group-import
+  title: Security Group Import
+  description: Platform component for importing existing AWS Security Groups via SSM parameters
+  annotations:
+    platform.shinobi.dev/component-type: security-group-import
+spec:
+  type: library
+  lifecycle: experimental
+  owner: group:default/platform-engineering
+  system: system:default/shinobi
+  metadata:
+    platform:
+      componentType: security-group-import
+      version: 1.0.0
+      description: Platform component for importing existing AWS Security Groups via SSM parameters
+      capabilities: []
+      tags: ["aws","cdk","security-group","import","ssm","platform","component"]

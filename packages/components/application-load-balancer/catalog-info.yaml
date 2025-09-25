@@ -1,0 +1,41 @@
+apiVersion: backstage.io/v1alpha1
+kind: Component
+metadata:
+  name: application-load-balancer
+  title: Application Load Balancer
+  description: Layer 7 load balancing with compliance-aware logging, monitoring, and WAF integration.
+  tags:
+    - component
+    - aws
+    - alb
+    - networking
+    - load-balancer
+  annotations:
+    platform.shinobi.dev/component-type: application-load-balancer
+    github.com/project-slug: project42/shinobi
+    backstage.io/techdocs-ref: dir:.
+spec:
+  type: infrastructure
+  lifecycle: production
+  owner: group:default/platform-engineering
+  system: system:default/shinobi
+  metadata:
+    platform:
+      componentType: application-load-balancer
+      category: networking
+      description: Application Load Balancer component with multi-stage listeners, target groups, and compliance defaults.
+      capabilities:
+        - net:load-balancer
+        - net:load-balancer-target
+      awsServices:
+        - elbv2
+        - ec2
+        - s3
+        - cloudwatch
+      tags:
+        required:
+          - alb
+          - networking
+          - observability
+      documentation:
+        readme: packages/components/application-load-balancer/README.md

@@ -1,0 +1,40 @@
+apiVersion: backstage.io/v1alpha1
+kind: Component
+metadata:
+  name: eventbridge-rule-pattern
+  title: EventBridge Rule (Pattern)
+  description: Pattern-based EventBridge rule for event-driven triggers with DLQ and monitoring support.
+  tags:
+    - component
+    - aws
+    - eventbridge
+    - integration
+    - automation
+  annotations:
+    platform.shinobi.dev/component-type: eventbridge-rule-pattern
+    github.com/project-slug: project42/shinobi
+    backstage.io/techdocs-ref: dir:.
+spec:
+  type: integration
+  lifecycle: production
+  owner: group:default/platform-engineering
+  system: system:default/shinobi
+  metadata:
+    platform:
+      componentType: eventbridge-rule-pattern
+      category: integration
+      description: EventBridge pattern rule for event-driven workflows, supporting policy checks and observability hooks.
+      capabilities:
+        - eventbridge:rule-pattern
+      awsServices:
+        - events
+        - cloudwatch
+        - iam
+        - sqs
+      tags:
+        required:
+          - events
+          - automation
+          - observability
+      documentation:
+        readme: packages/components/eventbridge-rule-pattern/README.md

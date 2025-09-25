@@ -1,0 +1,38 @@
+apiVersion: backstage.io/v1alpha1
+kind: Component
+metadata:
+  name: route53-hosted-zone
+  title: Route53 Hosted Zone
+  description: Managed DNS hosted zone with delegation, record automation, and guardrails.
+  tags:
+    - component
+    - aws
+    - dns
+    - networking
+    - governance
+  annotations:
+    platform.shinobi.dev/component-type: route53-hosted-zone
+    github.com/project-slug: project42/shinobi
+    backstage.io/techdocs-ref: dir:.
+spec:
+  type: infrastructure
+  lifecycle: production
+  owner: group:default/platform-engineering
+  system: system:default/shinobi
+  metadata:
+    platform:
+      componentType: route53-hosted-zone
+      category: networking
+      description: Route53 hosted zone component providing DNS zone management with compliance tagging.
+      capabilities:
+        - dns:hosted-zone
+      awsServices:
+        - route53
+        - cloudwatch
+      tags:
+        required:
+          - dns
+          - networking
+          - governance
+      documentation:
+        readme: packages/components/route53-hosted-zone/README.md

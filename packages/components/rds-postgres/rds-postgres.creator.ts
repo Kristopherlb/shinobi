@@ -99,4 +99,8 @@ export class RdsPostgresCreator implements IComponentCreator {
     // - Development cost optimization
     // - Staging performance configuration
   }
+
+  public getProvidedCapabilities(): string[] {
+    return ['db:postgres'];
+  }
 }

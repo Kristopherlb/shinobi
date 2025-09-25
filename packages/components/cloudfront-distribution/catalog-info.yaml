@@ -1,0 +1,41 @@
+apiVersion: backstage.io/v1alpha1
+kind: Component
+metadata:
+  name: cloudfront-distribution
+  title: CloudFront Distribution
+  description: Global CDN edge distribution with configurable origins, behaviors, and security controls.
+  tags:
+    - component
+    - aws
+    - cloudfront
+    - cdn
+    - security
+  annotations:
+    platform.shinobi.dev/component-type: cloudfront-distribution
+    github.com/project-slug: project42/shinobi
+    backstage.io/techdocs-ref: dir:.
+spec:
+  type: infrastructure
+  lifecycle: production
+  owner: group:default/platform-engineering
+  system: system:default/shinobi
+  metadata:
+    platform:
+      componentType: cloudfront-distribution
+      category: networking
+      description: CloudFront distribution component supporting S3, ALB, and custom origins with compliance policies.
+      capabilities:
+        - cdn:cloudfront
+      awsServices:
+        - cloudfront
+        - s3
+        - elbv2
+        - certificatemanager
+        - cloudwatch
+      tags:
+        required:
+          - cdn
+          - edge
+          - observability
+      documentation:
+        readme: packages/components/cloudfront-distribution/README.md

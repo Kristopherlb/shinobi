@@ -1,0 +1,40 @@
+apiVersion: backstage.io/v1alpha1
+kind: Component
+metadata:
+  name: cognito-user-pool
+  title: Cognito User Pool
+  description: Managed Cognito user pool with identity providers, secure policies, and observability.
+  tags:
+    - component
+    - aws
+    - cognito
+    - identity
+    - security
+  annotations:
+    platform.shinobi.dev/component-type: cognito-user-pool
+    github.com/project-slug: project42/shinobi
+    backstage.io/techdocs-ref: dir:.
+spec:
+  type: security
+  lifecycle: production
+  owner: group:default/platform-engineering
+  system: system:default/shinobi
+  metadata:
+    platform:
+      componentType: cognito-user-pool
+      category: security
+      description: Cognito user pool component providing identity, federation, and compliance-aware configuration.
+      capabilities:
+        - auth:user-pool
+        - auth:identity-provider
+      awsServices:
+        - cognito
+        - cloudwatch
+        - iam
+      tags:
+        required:
+          - identity
+          - security
+          - observability
+      documentation:
+        readme: packages/components/cognito-user-pool/README.md

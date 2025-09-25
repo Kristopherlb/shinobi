@@ -48,4 +48,8 @@ export class SecurityGroupImportCreator implements IComponentCreator {
            spec.config.securityGroup.ssmParameterName &&
            typeof spec.config.securityGroup.ssmParameterName === 'string';
   }
+
+  public getProvidedCapabilities(): string[] {
+    return ['security-group:import'];
+  }
 }

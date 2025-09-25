@@ -54,4 +54,8 @@ export class Route53RecordCreator implements IComponentCreator {
            spec.config.record.target &&
            (typeof spec.config.record.target === 'string' || Array.isArray(spec.config.record.target));
   }
+
+  public getProvidedCapabilities(): string[] {
+    return ['dns:record'];
+  }
 }

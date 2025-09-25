@@ -1,8 +1,10 @@
 import * as fs from 'fs';
+import { Dirent } from 'fs';
 import * as fsp from 'fs/promises';
 import * as path from 'path';
 import { execSync } from 'child_process';
-import { loadComponentCatalog, ComponentCatalogEntry } from './component-catalog';
+import { loadComponentCatalog, ComponentCatalogEntry, formatCatalogDisplayName } from './component-catalog';
+import { sync as globSync } from 'glob';
 import { IComponentCreator } from '@shinobi/core';
 
 interface LoadCreatorsOptions {
@@ -116,12 +118,36 @@ export const loadComponentCreators = async (
       continue;
     }
 
+    const componentRoot = path.join(componentsDir, packageDir);
+    const candidatePaths: string[] = [];
+    const primaryIndex = path.join(componentRoot, 'index.ts');
+    if (fs.existsSync(primaryIndex)) {
+      candidatePaths.push(primaryIndex);
+    }
+
+    const creatorGlob = globSync('src/**/*creator.ts', {
+      cwd: componentRoot,
+      absolute: true
+    });
+    candidatePaths.push(...creatorGlob);
+
     let moduleExports: Record<string, any> | undefined;
-    try {
-      const sourceIndex = path.join(rootDir, 'packages/components', packageDir, 'index.ts');
-      moduleExports = require(sourceIndex);
-    } catch (error) {
-      console.warn(`Skipping component package ${packageName}: ${(error as Error).message}`);
+    let loadError: Error | undefined;
+
+    for (const candidate of candidatePaths) {
+      try {
+        moduleExports = require(candidate);
+        break;
+      } catch (error) {
+        loadError = error as Error;
+        continue;
+      }
+    }
+
+    if (!moduleExports) {
+      if (loadError) {
+        console.warn(`Skipping component package ${packageName}: ${loadError.message}`);
+      }
       continue;
     }
 

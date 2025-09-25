@@ -1,0 +1,40 @@
+apiVersion: backstage.io/v1alpha1
+kind: Component
+metadata:
+  name: sagemaker-notebook-instance
+  title: SageMaker Notebook Instance
+  description: Managed SageMaker notebook with lifecycle configuration, encryption, and monitoring.
+  tags:
+    - component
+    - aws
+    - sagemaker
+    - ml
+    - analytics
+  annotations:
+    platform.shinobi.dev/component-type: sagemaker-notebook-instance
+    github.com/project-slug: project42/shinobi
+    backstage.io/techdocs-ref: dir:.
+spec:
+  type: data
+  lifecycle: production
+  owner: group:default/platform-engineering
+  system: system:default/shinobi
+  metadata:
+    platform:
+      componentType: sagemaker-notebook-instance
+      category: data
+      description: SageMaker notebook component with lifecycle scripts, IAM profiles, and compliance controls.
+      capabilities:
+        - ml:notebook
+      awsServices:
+        - sagemaker
+        - iam
+        - kms
+        - cloudwatch
+      tags:
+        required:
+          - ml
+          - analytics
+          - observability
+      documentation:
+        readme: packages/components/sagemaker-notebook-instance/README.md

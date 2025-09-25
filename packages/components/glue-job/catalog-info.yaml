@@ -1,0 +1,40 @@
+apiVersion: backstage.io/v1alpha1
+kind: Component
+metadata:
+  name: glue-job
+  title: Glue Job
+  description: Managed AWS Glue job with connection management, monitoring, and compliance defaults.
+  tags:
+    - component
+    - aws
+    - glue
+    - etl
+    - data
+  annotations:
+    platform.shinobi.dev/component-type: glue-job
+    github.com/project-slug: project42/shinobi
+    backstage.io/techdocs-ref: dir:.
+spec:
+  type: data
+  lifecycle: production
+  owner: group:default/platform-engineering
+  system: system:default/shinobi
+  metadata:
+    platform:
+      componentType: glue-job
+      category: data
+      description: Glue ETL job component managing scripts, triggers, and observability instrumentation.
+      capabilities:
+        - etl:glue-job
+      awsServices:
+        - glue
+        - s3
+        - cloudwatch
+        - iam
+      tags:
+        required:
+          - etl
+          - data
+          - observability
+      documentation:
+        readme: packages/components/glue-job/README.md

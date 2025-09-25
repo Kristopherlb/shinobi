@@ -1,0 +1,42 @@
+apiVersion: backstage.io/v1alpha1
+kind: Component
+metadata:
+  name: ecs-ec2-service
+  title: ECS EC2 Service
+  description: EC2-backed ECS service with Service Connect, scaling policies, and observability automation.
+  tags:
+    - component
+    - aws
+    - ecs
+    - ec2
+    - compute
+  annotations:
+    platform.shinobi.dev/component-type: ecs-ec2-service
+    github.com/project-slug: project42/shinobi
+    backstage.io/techdocs-ref: dir:.
+spec:
+  type: compute
+  lifecycle: production
+  owner: group:default/platform-engineering
+  system: system:default/shinobi
+  metadata:
+    platform:
+      componentType: ecs-ec2-service
+      category: compute
+      description: ECS service running on EC2 capacity with blue/green rollout support and OTEL environment exports.
+      capabilities:
+        - service:connect
+        - otel:environment
+      awsServices:
+        - ecs
+        - ec2
+        - autoscaling
+        - cloudwatch
+        - iam
+      tags:
+        required:
+          - ecs
+          - compute
+          - observability
+      documentation:
+        readme: packages/components/ecs-ec2-service/README.md

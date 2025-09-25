@@ -7,5 +7,11 @@ export default {
     '^@shinobi/(.*)$': '<rootDir>/../../$1/src',
     '^@platform/(.*)$': '<rootDir>/../../$1/src'
   },
-  collectCoverageFrom: ['src/**/*.{ts,tsx}', '!src/**/*.d.ts']
+  collectCoverageFrom: ['src/**/*.{ts,tsx}', '!src/**/*.d.ts'],
+  testMatch: [
+    '**/tests/**/*.test.ts',
+    '**/tests/**/*.test.tsx',
+    '**/tests/**/*.spec.ts',
+    '**/tests/**/*.spec.tsx'
+  ]
 };

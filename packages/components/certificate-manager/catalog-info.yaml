@@ -1,0 +1,39 @@
+apiVersion: backstage.io/v1alpha1
+kind: Component
+metadata:
+  name: certificate-manager
+  title: Certificate Manager
+  description: Provision and manage ACM certificates with DNS/email validation and compliance guardrails.
+  tags:
+    - component
+    - aws
+    - acm
+    - security
+    - tls
+  annotations:
+    platform.shinobi.dev/component-type: certificate-manager
+    github.com/project-slug: project42/shinobi
+    backstage.io/techdocs-ref: dir:.
+spec:
+  type: infrastructure
+  lifecycle: production
+  owner: group:default/platform-engineering
+  system: system:default/shinobi
+  metadata:
+    platform:
+      componentType: certificate-manager
+      category: security
+      description: Certificate Manager component delivering ACM-issued certificates with automated validation.
+      capabilities:
+        - certificate:acm
+      awsServices:
+        - certificatemanager
+        - route53
+        - cloudwatch
+      tags:
+        required:
+          - security
+          - tls
+          - compliance
+      documentation:
+        readme: packages/components/certificate-manager/README.md

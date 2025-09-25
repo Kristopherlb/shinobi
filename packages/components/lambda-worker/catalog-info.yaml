@@ -1,0 +1,40 @@
+apiVersion: backstage.io/v1alpha1
+kind: Component
+metadata:
+  name: lambda-worker
+  title: Lambda Worker
+  description: Asynchronous Lambda worker with event sources, DLQ wiring, and observability defaults.
+  tags:
+    - component
+    - aws
+    - lambda
+    - worker
+    - serverless
+  annotations:
+    platform.shinobi.dev/component-type: lambda-worker
+    github.com/project-slug: project42/shinobi
+    backstage.io/techdocs-ref: dir:.
+spec:
+  type: compute
+  lifecycle: production
+  owner: group:default/platform-engineering
+  system: system:default/shinobi
+  metadata:
+    platform:
+      componentType: lambda-worker
+      category: compute
+      description: Lambda worker component for background processing with retry, DLQ, and OTEL integration.
+      capabilities:
+        - lambda:function
+      awsServices:
+        - lambda
+        - cloudwatch
+        - sqs
+        - kms
+      tags:
+        required:
+          - serverless
+          - compute
+          - observability
+      documentation:
+        readme: packages/components/lambda-worker/README.md

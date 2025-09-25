@@ -88,13 +88,20 @@ export class DaggerEnginePoolCreator implements IComponentCreator {
   /**
    * Returns the component's capabilities that can be bound to by other components.
    */
-  public getCapabilities(): string[] {
+  public getProvidedCapabilities(): string[] {
     return [
       'dagger:endpoint',
       'storage:artifacts',
       'security:kms',
       'logging:cloudwatch'
     ];
+  }
+
+  /**
+   * Legacy capability accessor
+   */
+  public getCapabilities(): string[] {
+    return this.getProvidedCapabilities();
   }
 
   /**

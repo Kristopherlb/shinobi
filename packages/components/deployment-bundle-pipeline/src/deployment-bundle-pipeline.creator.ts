@@ -185,4 +185,12 @@ export class DeploymentBundlePipelineCreator implements IComponentCreator {
   getOptionalContext(): string[] {
     return ['environment', 'complianceFramework', 'buildId', 'gitCommit', 'gitBranch'];
   }
+
+  getProvidedCapabilities(): string[] {
+    return [
+      'bundle:digest',
+      'bundle:reference',
+      'bundle:manifest'
+    ];
+  }
 }

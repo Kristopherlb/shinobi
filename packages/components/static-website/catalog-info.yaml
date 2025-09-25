@@ -1,0 +1,41 @@
+apiVersion: backstage.io/v1alpha1
+kind: Component
+metadata:
+  name: static-website
+  title: Static Website
+  description: Static website stack with S3 hosting, CloudFront CDN, and certificate automation.
+  tags:
+    - component
+    - aws
+    - website
+    - s3
+    - cloudfront
+  annotations:
+    platform.shinobi.dev/component-type: static-website
+    github.com/project-slug: project42/shinobi
+    backstage.io/techdocs-ref: dir:.
+spec:
+  type: platform
+  lifecycle: production
+  owner: group:default/platform-engineering
+  system: system:default/shinobi
+  metadata:
+    platform:
+      componentType: static-website
+      category: platform
+      description: Static website component packaging S3, CloudFront, ACM, and Route53 integration with compliance defaults.
+      capabilities:
+        - hosting:static
+      awsServices:
+        - s3
+        - cloudfront
+        - certificatemanager
+        - route53
+        - cloudwatch
+      tags:
+        required:
+          - website
+          - cdn
+          - observability
+      documentation:
+        readme: packages/components/static-website/README.md

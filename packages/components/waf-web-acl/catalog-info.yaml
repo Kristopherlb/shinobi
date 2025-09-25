@@ -1,0 +1,20 @@
+apiVersion: backstage.io/v1alpha1
+kind: Component
+metadata:
+  name: waf-web-acl
+  title: Waf Web Acl
+  description: CDK L3 component for waf-web-acl
+  annotations:
+    platform.shinobi.dev/component-type: waf-web-acl
+spec:
+  type: library
+  lifecycle: experimental
+  owner: group:default/platform-engineering
+  system: system:default/shinobi
+  metadata:
+    platform:
+      componentType: waf-web-acl
+      version: 0.1.0
+      description: CDK L3 component for waf-web-acl
+      capabilities: []
+      tags: ["aws","cdk","infrastructure","component"]

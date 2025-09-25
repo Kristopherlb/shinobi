@@ -12,6 +12,7 @@ export class DaggerConfigBuilder extends ConfigBuilder<DaggerConfig> {
     this.merge({
       fipsMode: true,
       instanceType: 'c7i.large',
+      daggerVersion: '0.9.0',
       storage: { cache: 'EBS', ebsGiB: 200 },
       endpoint: { nlbInternal: true },
       observability: { logRetentionDays: 365 },
@@ -58,6 +59,7 @@ export class DaggerConfigBuilder extends ConfigBuilder<DaggerConfig> {
     return {
       fipsMode: true,
       instanceType: 'c7i.large',
+      daggerVersion: '0.9.0',
       storage: { cache: 'EBS', ebsGiB: 200 },
       endpoint: { nlbInternal: true },
       observability: { logRetentionDays: 365 },
