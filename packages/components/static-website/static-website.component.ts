@@ -20,7 +20,7 @@ import {
   ComponentSpec,
   ComponentContext,
   ComponentCapabilities
-} from '../../../src/platform/contracts/component-interfaces';
+} from '../@shinobi/core/component-interfaces';
 import { StaticWebsiteConfig, StaticWebsiteConfigBuilder } from './static-website.builder';
 
 /**

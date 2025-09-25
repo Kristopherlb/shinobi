@@ -12,7 +12,7 @@ import * as servicediscovery from 'aws-cdk-lib/aws-servicediscovery';
 import { Template, Match } from 'aws-cdk-lib/assertions';
 import { EcsClusterComponent } from '../ecs-cluster.component';
 import { EcsClusterComponentConfigBuilder } from '../ecs-cluster.builder';
-import { ComponentContext, ComponentSpec } from '../../../../src/platform/contracts/component-interfaces';
+import { ComponentContext, ComponentSpec } from '../../@shinobi/core/component-interfaces';
 import { 
   TestFixtureFactory, 
   TestAssertions, 

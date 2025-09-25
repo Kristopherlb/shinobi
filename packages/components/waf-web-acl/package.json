@@ -1,5 +1,5 @@
 {
-  "name": "@cdk-lib/waf-web-acl",
+  "name": "@shinobi/waf-web-acl",
   "version": "0.1.0",
   "description": "CDK L3 component for waf-web-acl",
   "main": "dist/index.js",

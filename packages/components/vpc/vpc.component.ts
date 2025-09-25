@@ -10,9 +10,9 @@ import * as logs from 'aws-cdk-lib/aws-logs';
 import * as iam from 'aws-cdk-lib/aws-iam';
 import * as cdk from 'aws-cdk-lib';
 import { Construct } from 'constructs';
-import { BaseComponent } from '../../../src/platform/contracts/component';
-import { ComponentSpec, ComponentContext, ComponentCapabilities } from '../../../src/platform/contracts/component-interfaces';
-import { ConfigBuilderContext } from '../../../src/platform/contracts/config-builder';
+import { BaseComponent } from '../@shinobi/core/component';
+import { ComponentSpec, ComponentContext, ComponentCapabilities } from '../@shinobi/core/component-interfaces';
+import { ConfigBuilderContext } from '../@shinobi/core/config-builder';
 import { VpcConfig, VpcConfigBuilder, VPC_CONFIG_SCHEMA } from './vpc.builder';
 
 

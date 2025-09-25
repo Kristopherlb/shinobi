@@ -112,7 +112,13 @@ export class ShinobiMcpServer {
   async start(): Promise<void> {
     const transport = new StdioServerTransport();
     await this.server.connect(transport);
-    console.log('Shinobi MCP Server started');
+
+    // Use platform logger instead of console
+    const logger = new (await import('@platform/logger')).Logger('shinobi-mcp-server');
+    logger.info('Shinobi MCP Server started', {
+      service: 'shinobi-mcp-server',
+      transport: 'stdio'
+    });
   }
 
   /**

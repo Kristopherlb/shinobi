@@ -1,0 +1,32 @@
+{
+  "name": "standards-deprecation",
+  "sourceRoot": "packages/standards/deprecation/src",
+  "projectType": "library",
+  "tags": [
+    "type:lib",
+    "scope:standards"
+  ],
+  "targets": {
+    "build": {
+      "executor": "@nx/js:tsc",
+      "options": {
+        "outputPath": "dist/packages/standards/deprecation",
+        "tsConfig": "packages/standards/deprecation/tsconfig.lib.json"
+      }
+    },
+    "test": {
+      "executor": "@nx/jest:jest",
+      "options": {
+        "jestConfig": "packages/standards/deprecation/jest.config.ts"
+      }
+    },
+    "lint": {
+      "executor": "@nx/eslint:lint",
+      "options": {
+        "lintFilePatterns": [
+          "packages/standards/deprecation/src/**/*.ts"
+        ]
+      }
+    }
+  }
+}

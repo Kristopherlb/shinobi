@@ -4,7 +4,7 @@
  */
 
 import { ShinobiComponentConfigBuilder, ShinobiConfig } from '../src/shinobi.builder';
-import { ComponentContext, ComponentSpec } from '../../../../src/platform/contracts/component-interfaces';
+import { ComponentContext, ComponentSpec } from '../../@shinobi/core/component-interfaces';
 
 const createMockContext = (
   complianceFramework: string = 'commercial',

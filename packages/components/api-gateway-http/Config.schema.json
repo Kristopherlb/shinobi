@@ -115,6 +115,17 @@
           "pattern": "^Z[A-Z0-9]{16,32}$",
           "description": "Route 53 hosted zone ID for DNS management"
         },
+        "hostedZoneName": {
+          "type": "string",
+          "description": "Hosted zone name if different from the domain (e.g. example.com)"
+        },
+        "securityPolicy": {
+          "type": "string",
+          "enum": [
+            "TLS_1_2"
+          ],
+          "description": "Minimum TLS version enforced for the custom domain"
+        },
         "basePath": {
           "type": "string",
           "pattern": "^[a-zA-Z0-9/_\\-]+$",
@@ -259,6 +270,11 @@
           "type": "boolean",
           "default": true,
           "description": "Require authorization for API access"
+        },
+        "webAclArn": {
+          "type": "string",
+          "pattern": "^arn:aws[a-zA-Z0-9-]*:wafv2:[a-z0-9-]+:[0-9]{12}:regional/webacl/.+$",
+          "description": "WAFv2 Web ACL ARN to associate with the API when enableWaf is true"
         }
       },
       "additionalProperties": false

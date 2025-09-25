@@ -1,8 +1,8 @@
 import { describe, test, expect, beforeEach } from '@jest/globals';
 import { Template } from 'aws-cdk-lib/assertions';
 import * as cdk from 'aws-cdk-lib';
-import { S3BucketComponent } from '../../../packages/components/s3-bucket/src/s3-bucket.component';
-import { ComponentContext, ComponentSpec } from '../../../packages/platform/contracts/src/component-interfaces';
+import { S3BucketComponent } from '@shinobi/components/s3-bucket/s3-bucket.component';
+import { ComponentContext, ComponentSpec } from '@shinobi/core/contracts/src/component-interfaces';
 
 describe('S3BucketComponent - CloudFormation Synthesis', () => {
   let app: cdk.App;
@@ -39,7 +39,7 @@ describe('S3BucketComponent - CloudFormation Synthesis', () => {
       component.synth();
 
       const template = Template.fromStack(stack);
-      
+
       // Verify S3 bucket is created
       template.hasResourceProperties('AWS::S3::Bucket', {
         BucketName: 'test-service-data-bucket'
@@ -123,7 +123,7 @@ describe('S3BucketComponent - CloudFormation Synthesis', () => {
   describe('Compliance Framework Testing', () => {
     test('should apply FedRAMP Moderate hardening', () => {
       mockContext.complianceFramework = 'fedramp-moderate';
-      
+
       component = new S3BucketComponent(stack, 'TestS3Bucket', mockContext, mockSpec);
       component.synth();
 
@@ -151,7 +151,7 @@ describe('S3BucketComponent - CloudFormation Synthesis', () => {
 
     test('should apply FedRAMP High security controls', () => {
       mockContext.complianceFramework = 'fedramp-high';
-      
+
       component = new S3BucketComponent(stack, 'TestS3Bucket', mockContext, mockSpec);
       component.synth();
 
@@ -194,7 +194,7 @@ describe('S3BucketComponent - CloudFormation Synthesis', () => {
       component.synth();
 
       const capabilities = component.getCapabilities();
-      
+
       expect(capabilities['storage:s3']).toBeDefined();
       expect(capabilities['storage:s3'].bucketName).toBe('test-service-data-bucket');
       expect(capabilities['storage:s3'].bucketArn).toContain('arn:aws:s3:::test-service-data-bucket');
@@ -227,7 +227,7 @@ describe('S3BucketComponent - CloudFormation Synthesis', () => {
       };
 
       component = new S3BucketComponent(stack, 'TestS3Bucket', mockContext, mockSpec);
-      
+
       expect(() => component.synth()).toThrow();
     });
 
@@ -235,7 +235,7 @@ describe('S3BucketComponent - CloudFormation Synthesis', () => {
       mockSpec.config = {};  // Missing bucketName
 
       component = new S3BucketComponent(stack, 'TestS3Bucket', mockContext, mockSpec);
-      
+
       expect(() => component.synth()).toThrow('bucketName is required');
     });
   });
@@ -246,7 +246,7 @@ describe('S3BucketComponent - CloudFormation Synthesis', () => {
       component.synth();
 
       const cfnTemplate = app.synth().getStackByName('TestStack').template;
-      
+
       // Basic CloudFormation structure validation
       expect(cfnTemplate).toHaveProperty('AWSTemplateFormatVersion', '2010-09-09');
       expect(cfnTemplate).toHaveProperty('Resources');

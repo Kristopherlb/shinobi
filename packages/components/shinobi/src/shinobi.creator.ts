@@ -10,7 +10,7 @@ import {
   ComponentSpec, 
   ComponentContext, 
   IComponentCreator 
-} from '../../../../src/platform/contracts/component-interfaces';
+} from '../../@shinobi/core/component-interfaces';
 import { ShinobiComponent } from './shinobi.component';
 import { ShinobiConfig, SHINOBI_CONFIG_SCHEMA } from './shinobi.component';
 

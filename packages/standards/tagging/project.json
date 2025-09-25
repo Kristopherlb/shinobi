@@ -1,0 +1,32 @@
+{
+  "name": "standards-tagging",
+  "sourceRoot": "packages/standards/tagging/src",
+  "projectType": "library",
+  "tags": [
+    "type:lib",
+    "scope:standards"
+  ],
+  "targets": {
+    "build": {
+      "executor": "@nx/js:tsc",
+      "options": {
+        "outputPath": "dist/packages/standards/tagging",
+        "tsConfig": "packages/standards/tagging/tsconfig.lib.json"
+      }
+    },
+    "test": {
+      "executor": "@nx/jest:jest",
+      "options": {
+        "jestConfig": "packages/standards/tagging/jest.config.ts"
+      }
+    },
+    "lint": {
+      "executor": "@nx/eslint:lint",
+      "options": {
+        "lintFilePatterns": [
+          "packages/standards/tagging/src/**/*.ts"
+        ]
+      }
+    }
+  }
+}

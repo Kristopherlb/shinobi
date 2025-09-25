@@ -10,7 +10,7 @@ import {
   ComponentSpec, 
   ComponentContext, 
   IComponentCreator 
-} from '../../../src/platform/contracts/component-interfaces';
+} from '../@shinobi/core/component-interfaces';
 import { EcsClusterComponent } from './ecs-cluster.component';
 import { EcsClusterConfig, ECS_CLUSTER_CONFIG_SCHEMA } from './ecs-cluster.builder';
 

@@ -1,10 +1,10 @@
 // tests/unit/components/service-manifest-parser.test.ts
 // Unit tests for Service Manifest Parser
 
-import { ServiceManifestParser, ServiceManifest } from '../../../src/platform/contracts/components/service-manifest-parser';
-import { ComponentFactory, ComponentFactoryBuilder } from '../../../src/platform/contracts/components/component-factory';
-import { ExampleS3BucketComponent } from '../../../src/platform/contracts/components/example-s3-bucket-component';
-import { ComplianceFramework } from '../../../src/platform/contracts/bindings';
+import { ServiceManifestParser, ServiceManifest } from '../@shinobi/core/components/service-manifest-parser';
+import { ComponentFactory, ComponentFactoryBuilder } from '../@shinobi/core/components/component-factory';
+import { ExampleS3BucketComponent } from '../@shinobi/core/components/example-s3-bucket-component';
+import { ComplianceFramework } from '../@shinobi/core/bindings';
 
 describe('ServiceManifestParser', () => {
   let parser: ServiceManifestParser;

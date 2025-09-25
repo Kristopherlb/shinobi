@@ -1,5 +1,5 @@
 {
-  "name": "@cdk-lib/vpc",
+  "name": "@shinobi/vpc",
   "version": "0.1.0",
   "description": "CDK L3 component for vpc",
   "main": "dist/index.js",

@@ -8,8 +8,8 @@
 import * as cdk from 'aws-cdk-lib';
 import * as route53 from 'aws-cdk-lib/aws-route53';
 import { Construct } from 'constructs';
-import { BaseComponent } from '../../../../src/platform/contracts/component';
-import { ComponentContext, ComponentSpec } from '../../../../src/platform/contracts/component-interfaces';
+import { BaseComponent } from '../../@shinobi/core/component';
+import { ComponentContext, ComponentSpec } from '../../@shinobi/core/component-interfaces';
 import { Route53RecordConfig, Route53RecordConfigBuilder } from './route53-record.builder';
 // Platform services will be injected by the platform
 // import { Logger } from '../../../../src/platform/services/logger';

@@ -10,7 +10,7 @@ import {
   ComponentSpec, 
   ComponentContext, 
   IComponentCreator 
-} from '../../../src/platform/contracts/component-interfaces';
+} from '../@shinobi/core/component-interfaces';
 import { EcrRepositoryComponent } from './ecr-repository.component';
 import { EcrRepositoryConfig, ECR_REPOSITORY_CONFIG_SCHEMA } from './ecr-repository.builder';
 

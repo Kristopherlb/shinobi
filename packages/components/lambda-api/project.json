@@ -1,0 +1,49 @@
+{
+  "name": "@platform/components-lambda-api",
+  "sourceRoot": "packages/components/lambda-api/src",
+  "targets": {
+    "build": {
+      "executor": "@nx/js:tsc",
+      "outputs": [
+        "{options.outputPath}"
+      ],
+      "options": {
+        "tsConfig": "packages/components/lambda-api/tsconfig.lib.json",
+        "outputPath": "dist/packages/components/lambda-api",
+        "assets": [
+          "packages/components/lambda-api/README.md",
+          "packages/components/lambda-api/Config.schema.json",
+          {
+            "input": "packages/components/lambda-api",
+            "glob": "package.json",
+            "output": "."
+          }
+        ],
+        "main": "packages/components/lambda-api/index.ts"
+      }
+    },
+    "test": {
+      "executor": "nx:run-commands",
+      "options": {
+        "command": "jest -c jest.preset.ts --roots=packages/components/lambda-api/src",
+        "cwd": "."
+      }
+    },
+    "clean": {
+      "executor": "nx:run-commands",
+      "options": {
+        "command": "rimraf dist/packages/components/lambda-api"
+      }
+    },
+    "typecheck": {
+      "executor": "nx:run-commands",
+      "options": {
+        "command": "tsc -p packages/components/lambda-api/tsconfig.lib.json --noEmit"
+      }
+    }
+  },
+  "tags": [
+    "scope:components",
+    "type:library"
+  ]
+}

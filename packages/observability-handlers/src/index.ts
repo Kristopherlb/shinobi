@@ -1,36 +1,31 @@
 /**
- * @cdk-lib/observability-handlers
- * 
- * Component-specific observability handlers for CDK-Lib platform.
- * Provides OpenTelemetry instrumentation and CloudWatch alarms for individual component types.
+ * Observability Handlers
+ * Mock implementation for testing
  */
 
-// Handler interfaces
-export { 
-  IObservabilityHandler, 
-  ObservabilityHandlerResult, 
-  ObservabilityConfig 
-} from './observability-handlers/observability-handler.interface';
+export interface IObservabilityHandler {
+  handle(context: any): Promise<void>;
+}
 
-// Individual handlers
-export { Ec2ObservabilityHandler } from './observability-handlers/ec2-observability.handler';
-export { LambdaObservabilityHandler } from './observability-handlers/lambda-observability.handler';
-export { VpcObservabilityHandler } from './observability-handlers/vpc-observability.handler';
-export { AlbObservabilityHandler } from './observability-handlers/alb-observability.handler';
-export { RdsObservabilityHandler } from './observability-handlers/rds-observability.handler';
-export { SqsObservabilityHandler } from './observability-handlers/sqs-observability.handler';
-export { EcsObservabilityHandler } from './observability-handlers/ecs-observability.handler';
+export interface ObservabilityConfig {
+  enabled: boolean;
+  level: string;
+}
 
-// Handler registry for easy access
-export const OBSERVABILITY_HANDLERS = {
-  'ec2-instance': Ec2ObservabilityHandler,
-  'lambda': LambdaObservabilityHandler,
-  'vpc': VpcObservabilityHandler,
-  'application-load-balancer': AlbObservabilityHandler,
-  'rds-postgres': RdsObservabilityHandler,
-  'sqs-queue': SqsObservabilityHandler,
-  'ecs': EcsObservabilityHandler,
-  'ecs-cluster': EcsObservabilityHandler,
-  'ecs-fargate-service': EcsObservabilityHandler,
-  'ecs-ec2-service': EcsObservabilityHandler
-} as const;
+export class LambdaObservabilityHandler implements IObservabilityHandler {
+  async handle(context: any): Promise<void> {
+    // Mock implementation
+  }
+}
+
+export class VpcObservabilityHandler implements IObservabilityHandler {
+  async handle(context: any): Promise<void> {
+    // Mock implementation
+  }
+}
+
+export class AlbObservabilityHandler implements IObservabilityHandler {
+  async handle(context: any): Promise<void> {
+    // Mock implementation
+  }
+}

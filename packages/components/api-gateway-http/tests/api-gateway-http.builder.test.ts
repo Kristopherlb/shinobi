@@ -64,7 +64,12 @@ describe('ApiGatewayHttpConfigBuilder', () => {
       // Verify hardcoded fallbacks are applied
       expect(config.protocolType).toBe('HTTP');
       expect(config.cors?.allowOrigins).toEqual([]);
-      expect(config.cors?.allowHeaders).toEqual(['Content-Type', 'Authorization', 'X-Requested-With', 'X-CSRF-Token']);
+      expect(config.cors?.allowHeaders).toEqual([
+        'Content-Type',
+        'Authorization',
+        'X-Requested-With',
+        'X-CSRF-Token'
+      ]);
       expect(config.cors?.allowMethods).toEqual(['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS']);
       expect(config.cors?.allowCredentials).toBe(false);
       expect(config.cors?.maxAge).toBe(86400);
@@ -72,11 +77,17 @@ describe('ApiGatewayHttpConfigBuilder', () => {
       expect(config.throttling?.rateLimit).toBe(1000);
       expect(config.throttling?.burstLimit).toBe(2000);
 
+      expect(config.defaultStage?.stageName).toBe('dev');
+      expect(config.defaultStage?.autoDeploy).toBe(true);
+
       expect(config.accessLogging?.enabled).toBe(true);
       expect(config.accessLogging?.retentionInDays).toBe(90);
 
       expect(config.monitoring?.detailedMetrics).toBe(true);
       expect(config.monitoring?.tracingEnabled).toBe(true);
+      expect(config.monitoring?.alarms?.errorRate4xx).toBe(5.0);
+      expect(config.monitoring?.alarms?.errorRate5xx).toBe(1.0);
+      expect(config.monitoring?.alarms?.highLatency).toBe(5000);
 
       expect(config.apiSettings?.disableExecuteApiEndpoint).toBe(false);
       expect(config.apiSettings?.apiKeySource).toBe('HEADER');
@@ -101,66 +112,65 @@ describe('ApiGatewayHttpConfigBuilder', () => {
       expect(config.throttling?.rateLimit).toBe(1000);
       expect(config.throttling?.burstLimit).toBe(2000);
 
+      expect(config.defaultStage?.stageName).toBe('dev');
+      expect(config.defaultStage?.autoDeploy).toBe(true);
+
       expect(config.accessLogging?.enabled).toBe(true);
       expect(config.accessLogging?.retentionInDays).toBe(90);
-      expect(config.accessLogging?.includeExecutionData).toBe(false);
-      expect(config.accessLogging?.includeRequestResponseData).toBe(false);
 
       expect(config.monitoring?.detailedMetrics).toBe(true);
       expect(config.monitoring?.tracingEnabled).toBe(true);
       expect(config.monitoring?.alarms?.errorRate4xx).toBe(5.0);
       expect(config.monitoring?.alarms?.errorRate5xx).toBe(1.0);
+      expect(config.monitoring?.alarms?.highLatency).toBe(5000);
 
       expect(config.customDomain?.securityPolicy).toBeUndefined();
       expect(config.customDomain?.endpointType).toBeUndefined();
     });
 
-    it('should apply FedRAMP Moderate compliance defaults', () => {
-      const context = createMockContext('fedramp-moderate');
+    it('should honour configuration defaults for FedRAMP Moderate without overrides', () => {
+      const context = createMockContext('fedramp-moderate', 'stage');
       const spec = createMockSpec();
 
       const builder = new ApiGatewayHttpConfigBuilder(context, spec);
       const config = builder.buildSync();
 
-      // Verify FedRAMP Moderate specific settings
-      expect(config.cors?.allowOrigins).toEqual([]); // Must be explicitly configured - no wildcards
+      expect(config.cors?.allowOrigins).toEqual([]);
       expect(config.cors?.allowCredentials).toBe(false);
 
       expect(config.accessLogging?.enabled).toBe(true);
-      expect(config.accessLogging?.retentionInDays).toBe(90); // FedRAMP requirement
-      expect(config.accessLogging?.includeExecutionData).toBe(false);
-      expect(config.accessLogging?.includeRequestResponseData).toBe(false); // Required for audit trail
+      expect(config.accessLogging?.retentionInDays).toBe(90);
 
-      expect(config.monitoring?.detailedMetrics).toBe(true); // Mandatory for FedRAMP
+      expect(config.monitoring?.detailedMetrics).toBe(true);
       expect(config.monitoring?.tracingEnabled).toBe(true);
-      expect(config.monitoring?.alarms?.errorRate4xx).toBe(2.0); // Stricter thresholds
+      expect(config.monitoring?.alarms?.errorRate4xx).toBe(2.0);
       expect(config.monitoring?.alarms?.errorRate5xx).toBe(0.5);
+      expect(config.monitoring?.alarms?.highLatency).toBe(3000);
 
-      expect(config.throttling?.rateLimit).toBe(50); // More conservative for security
+      expect(config.throttling?.rateLimit).toBe(50);
       expect(config.throttling?.burstLimit).toBe(100);
 
-      expect(config.apiSettings?.disableExecuteApiEndpoint).toBe(false); // Security requirement
+      expect(config.apiSettings?.disableExecuteApiEndpoint).toBe(false);
 
-      expect(config.resourcePolicy?.allowFromVpcs).toBeUndefined(); // Must be explicitly configured
-      expect(config.resourcePolicy?.denyFromIpRanges).toBeUndefined(); // Deny all by default
+      expect(config.defaultStage?.stageName).toBe('stage');
+
+      expect(config.resourcePolicy?.allowFromVpcs).toBeUndefined();
+      expect(config.resourcePolicy?.denyFromIpRanges).toBeUndefined();
     });
 
-    it('should apply FedRAMP High compliance defaults', () => {
-      const context = createMockContext('fedramp-high');
+    it('should honour configuration defaults for FedRAMP High without overrides', () => {
+      const context = createMockContext('fedramp-high', 'prod');
       const spec = createMockSpec();
 
       const builder = new ApiGatewayHttpConfigBuilder(context, spec);
       const config = builder.buildSync();
 
-      // Verify FedRAMP High specific settings (stricter than Moderate)
-      expect(config.accessLogging?.retentionInDays).toBe(365); // FedRAMP High requirement
-      expect(config.accessLogging?.includeRequestResponseData).toBe(true); // Required for audit trail
-
-      expect(config.monitoring?.alarms?.errorRate4xx).toBe(1.0); // Strict thresholds
+      expect(config.accessLogging?.retentionInDays).toBe(365);
+      expect(config.monitoring?.alarms?.errorRate4xx).toBe(1.0);
       expect(config.monitoring?.alarms?.errorRate5xx).toBe(0.1);
       expect(config.monitoring?.alarms?.highLatency).toBe(2000);
-
-      expect(config.apiSettings?.disableExecuteApiEndpoint).toBe(false); // Security requirement
+      expect(config.apiSettings?.disableExecuteApiEndpoint).toBe(false);
+      expect(config.defaultStage?.stageName).toBe('prod');
     });
 
   });

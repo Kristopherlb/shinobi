@@ -1,6 +1,11 @@
 packages:
-  - "packages/core-engine"
-  - "packages/contracts"
-  - "packages/components/*"
-  - "packages/infrastructure"
-  - "packages/test-scaffolding"
+  - "packages/*"
+  - "packages/*/*"
+  - "tools/*"
+  - "apps/*"
+  - "backstage-app/*"
+
+onlyBuiltDependencies:
+  - "@swc/core"
+  - nx
+  - unrs-resolver

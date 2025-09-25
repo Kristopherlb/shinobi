@@ -7,7 +7,7 @@ import { Template, Match } from 'aws-cdk-lib/assertions';
 import { App, Stack } from 'aws-cdk-lib';
 import { StepFunctionsStateMachineComponent } from '../step-functions-statemachine.component';
 import { StepFunctionsStateMachineConfig } from '../step-functions-statemachine.builder';
-import { ComponentContext, ComponentSpec } from '../../../../src/platform/contracts/component-interfaces';
+import { ComponentContext, ComponentSpec } from '../../@shinobi/core/component-interfaces';
 
 const createMockContext = (
   complianceFramework: 'commercial' | 'fedramp-moderate' | 'fedramp-high' = 'commercial',

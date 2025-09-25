@@ -1,10 +1,10 @@
 // tests/unit/observability/observability-binder-strategy.test.ts
 // Unit tests for ObservabilityBinderStrategy
 
-import { ObservabilityBinderStrategy } from '../../../src/platform/contracts/observability/observability-binder-strategy';
-import { ObservabilityConfigFactory } from '../../../src/platform/contracts/observability/observability-config-factory';
-import { ComplianceFramework, Capability, PostgresCapabilityData } from '../../../src/platform/contracts/bindings';
-import { EnhancedBindingContext } from '../../../src/platform/contracts/bindings';
+import { ObservabilityBinderStrategy } from '../@shinobi/core/observability/observability-binder-strategy';
+import { ObservabilityConfigFactory } from '../@shinobi/core/observability/observability-config-factory';
+import { ComplianceFramework, Capability, PostgresCapabilityData } from '../@shinobi/core/bindings';
+import { EnhancedBindingContext } from '../@shinobi/core/bindings';
 
 // Mock components for testing
 class MockComponent {

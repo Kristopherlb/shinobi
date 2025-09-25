@@ -6,12 +6,12 @@
  */
 
 import { Construct, IConstruct } from 'constructs';
-import { BaseComponent } from '../../../src/platform/contracts/component';
+import { BaseComponent } from '../@shinobi/core/component';
 import {
   ComponentSpec,
   ComponentContext,
   ComponentCapabilities
-} from '../../../src/platform/contracts/component-interfaces';
+} from '../@shinobi/core/component-interfaces';
 import {
   WafWebAclConfig,
   WafWebAclConfigBuilder

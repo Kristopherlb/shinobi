@@ -17,13 +17,13 @@ import * as cognito from 'aws-cdk-lib/aws-cognito';
 import * as iam from 'aws-cdk-lib/aws-iam';
 import * as cdk from 'aws-cdk-lib';
 import { Construct } from 'constructs';
-import { BaseComponent } from '../../../src/platform/contracts/component';
+import { BaseComponent } from '../@shinobi/core/component';
 import {
   ComponentSpec,
   ComponentContext,
   ComponentCapabilities
-} from '../../../src/platform/contracts/component-interfaces';
-import { ConfigBuilder, ConfigBuilderContext } from '../../../src/platform/contracts/config-builder';
+} from '../@shinobi/core/component-interfaces';
+import { ConfigBuilder, ConfigBuilderContext } from '../@shinobi/core/config-builder';
 
 /**
  * Configuration interface for Enterprise REST API Gateway component

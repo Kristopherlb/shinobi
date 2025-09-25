@@ -7,7 +7,7 @@
 import { Stack } from 'aws-cdk-lib';
 import { Template } from 'aws-cdk-lib/assertions';
 import { SecurityGroupImportComponent } from '../../src/security-group-import.component';
-import { ComponentContext, ComponentSpec } from '../../../../../src/platform/contracts/component-interfaces';
+import { ComponentContext, ComponentSpec } from '@shinobi/core';
 
 describe('SecurityGroupImportComponent', () => {
   let stack: Stack;
@@ -43,7 +43,7 @@ describe('SecurityGroupImportComponent', () => {
 
       // Should not create any new AWS resources (it's an import)
       template.resourceCountIs('AWS::EC2::SecurityGroup', 0);
-      
+
       // Should create SSM parameter reference
       template.hasResourceProperties('AWS::SSM::Parameter', {
         Name: '/test/security-groups/web-servers'
@@ -125,7 +125,7 @@ describe('SecurityGroupImportComponent', () => {
 
     it('should throw error for unknown construct handle', () => {
       const component = new SecurityGroupImportComponent(stack, 'TestSgImport', mockContext, mockSpec);
-      
+
       expect(() => component.getConstruct('unknown')).toThrow('Unknown construct handle: unknown');
     });
 
@@ -223,13 +223,13 @@ describe('SecurityGroupImportComponent', () => {
   describe('Component Type and Synthesis', () => {
     it('should return correct component type', () => {
       const component = new SecurityGroupImportComponent(stack, 'TestSgImport', mockContext, mockSpec);
-      
+
       expect(component.getType()).toBe('security-group-import');
     });
 
     it('should complete synthesis without errors', () => {
       const component = new SecurityGroupImportComponent(stack, 'TestSgImport', mockContext, mockSpec);
-      
+
       expect(() => component.synth()).not.toThrow();
     });
   });

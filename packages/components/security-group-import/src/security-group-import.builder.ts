@@ -5,7 +5,7 @@
  * Provides 5-layer configuration precedence chain and compliance-aware defaults.
  */
 
-import { ConfigBuilder, ConfigBuilderContext } from '../../../../src/platform/contracts/config-builder';
+import { ConfigBuilder, ConfigBuilderContext } from '@shinobi/core';
 
 /**
  * Configuration interface for SecurityGroupImportComponent component
@@ -13,40 +13,40 @@ import { ConfigBuilder, ConfigBuilderContext } from '../../../../src/platform/co
 export interface SecurityGroupImportConfig {
   /** Component name (optional, will be auto-generated) */
   name?: string;
-  
+
   /** Component description */
   description?: string;
-  
+
   /** Security Group import configuration */
   securityGroup: {
     /** SSM parameter name containing the security group ID */
     ssmParameterName: string;
-    
+
     /** AWS region where the security group exists (optional, defaults to current region) */
     region?: string;
-    
+
     /** AWS account ID where the security group exists (optional, defaults to current account) */
     accountId?: string;
-    
+
     /** VPC ID where the security group exists (optional, for validation) */
     vpcId?: string;
-    
+
     /** Security group name for reference (optional, for documentation) */
     securityGroupName?: string;
   };
-  
+
   /** Import validation settings */
   validation?: {
     /** Whether to validate the security group exists during synthesis */
     validateExistence?: boolean;
-    
+
     /** Whether to validate the security group is in the expected VPC */
     validateVpc?: boolean;
-    
+
     /** Custom validation timeout in seconds */
     validationTimeout?: number;
   };
-  
+
   /** Tagging configuration (for documentation purposes only) */
   tags?: Record<string, string>;
 }
@@ -147,7 +147,7 @@ export const SECURITY_GROUP_IMPORT_CONFIG_SCHEMA = {
  * with 5-layer precedence chain and compliance-aware defaults.
  */
 export class SecurityGroupImportConfigBuilder extends ConfigBuilder<SecurityGroupImportConfig> {
-  
+
   constructor(context: ConfigBuilderContext) {
     super(context, SECURITY_GROUP_IMPORT_CONFIG_SCHEMA);
   }

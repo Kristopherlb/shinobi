@@ -1,25 +1,62 @@
 {
   "root": true,
   "ignorePatterns": [
-    "dist",
-    "node_modules"
+    "**/*"
   ],
-  "plugins": [],
-  "extends": [
-    "eslint:recommended"
+  "plugins": [
+    "@nx"
   ],
   "overrides": [
     {
       "files": [
-        "*.ts"
+        "*.ts",
+        "*.tsx"
       ],
-      "parserOptions": {
-        "project": [
-          "./tsconfig.base.json"
-        ],
-        "sourceType": "module"
-      },
-      "rules": {}
+      "extends": [
+        "plugin:@nx/typescript"
+      ],
+      "rules": {
+        "@nx/enforce-module-boundaries": [
+          "error",
+          {
+            "enforceBuildableLibDependency": true,
+            "allow": [],
+            "depConstraints": [
+              {
+                "sourceTag": "type:app",
+                "onlyDependOnLibsWithTags": [
+                  "type:lib"
+                ]
+              },
+              {
+                "sourceTag": "scope:cli",
+                "onlyDependOnLibsWithTags": [
+                  "scope:core",
+                  "scope:*"
+                ]
+              },
+              {
+                "sourceTag": "scope:standards",
+                "onlyDependOnLibsWithTags": [
+                  "scope:core"
+                ]
+              },
+              {
+                "sourceTag": "scope:mcp",
+                "onlyDependOnLibsWithTags": [
+                  "scope:core"
+                ]
+              },
+              {
+                "sourceTag": "scope:constructs",
+                "onlyDependOnLibsWithTags": [
+                  "scope:core"
+                ]
+              }
+            ]
+          }
+        ]
+      }
     }
   ]
 }

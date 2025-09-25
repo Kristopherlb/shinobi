@@ -10,7 +10,7 @@ import {
   ComponentSpec, 
   ComponentContext, 
   IComponentCreator 
-} from '../../../src/platform/contracts/component-interfaces';
+} from '../@shinobi/core/component-interfaces';
 import { ApiGatewayRestComponentComponent } from './api-gateway-rest.component';
 import { ApiGatewayRestConfig, API_GATEWAY_REST_CONFIG_SCHEMA } from './api-gateway-rest.builder';
 

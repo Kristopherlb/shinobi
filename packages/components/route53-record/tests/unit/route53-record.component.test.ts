@@ -7,7 +7,7 @@
 import { Stack } from 'aws-cdk-lib';
 import { Template } from 'aws-cdk-lib/assertions';
 import { Route53RecordComponent } from '../../src/route53-record.component';
-import { ComponentContext, ComponentSpec } from '../../../../../src/platform/contracts/component-interfaces';
+import { ComponentContext, ComponentSpec } from '../../../@shinobi/core/component-interfaces';
 
 describe('Route53RecordComponent', () => {
   let stack: Stack;

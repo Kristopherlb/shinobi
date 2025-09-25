@@ -4,8 +4,8 @@
  */
 
 import { VpcConfigBuilder, VpcConfig, VPC_CONFIG_SCHEMA } from '../vpc.builder';
-import { ComponentContext, ComponentSpec } from '../../../../src/platform/contracts/component-interfaces';
-import { ConfigBuilderContext } from '../../../../src/platform/contracts/config-builder';
+import { ComponentContext, ComponentSpec } from '../../@shinobi/core/component-interfaces';
+import { ConfigBuilderContext } from '../../@shinobi/core/config-builder';
 
 const createMockContext = (
   complianceFramework: 'commercial' | 'fedramp-moderate' | 'fedramp-high' = 'commercial',

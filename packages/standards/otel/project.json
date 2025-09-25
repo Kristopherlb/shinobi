@@ -1,0 +1,32 @@
+{
+  "name": "standards-otel",
+  "sourceRoot": "packages/standards/otel/src",
+  "projectType": "library",
+  "tags": [
+    "type:lib",
+    "scope:standards"
+  ],
+  "targets": {
+    "build": {
+      "executor": "@nx/js:tsc",
+      "options": {
+        "outputPath": "dist/packages/standards/otel",
+        "tsConfig": "packages/standards/otel/tsconfig.lib.json"
+      }
+    },
+    "test": {
+      "executor": "@nx/jest:jest",
+      "options": {
+        "jestConfig": "packages/standards/otel/jest.config.ts"
+      }
+    },
+    "lint": {
+      "executor": "@nx/eslint:lint",
+      "options": {
+        "lintFilePatterns": [
+          "packages/standards/otel/src/**/*.ts"
+        ]
+      }
+    }
+  }
+}

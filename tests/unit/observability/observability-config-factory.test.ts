@@ -1,8 +1,8 @@
 // tests/unit/observability/observability-config-factory.test.ts
 // Unit tests for ObservabilityConfigFactory
 
-import { ObservabilityConfigFactory } from '../../../src/platform/contracts/observability/observability-config-factory';
-import { ObservabilityConfig } from '../../../src/platform/contracts/observability/observability-types';
+import { ObservabilityConfigFactory } from '../@shinobi/core/observability/observability-config-factory';
+import { ObservabilityConfig } from '../@shinobi/core/observability/observability-types';
 
 describe('ObservabilityConfigFactory', () => {
   describe('createConfig', () => {

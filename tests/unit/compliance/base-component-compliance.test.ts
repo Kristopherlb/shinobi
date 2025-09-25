@@ -1,6 +1,6 @@
-import { BaseComponent } from '../../../src/platform/contracts/components/base-component';
-import { ComponentContext } from '../../../src/platform/contracts/components/component-context';
-import { ComplianceFramework } from '../../../src/platform/contracts/bindings';
+import { BaseComponent } from '../@shinobi/core/components/base-component';
+import { ComponentContext } from '../@shinobi/core/components/component-context';
+import { ComplianceFramework } from '../@shinobi/core/bindings';
 
 // Mock the services
 jest.mock('../../../src/platform/services/compliance-control-mapping', () => ({

@@ -10,7 +10,7 @@ import {
   ComponentSpec,
   ComponentContext,
   IComponentCreator
-} from '../../../src/platform/contracts/component-interfaces';
+} from '../@shinobi/core/component-interfaces';
 import { Ec2InstanceComponent } from './ec2-instance.component';
 import { Ec2InstanceConfig, EC2_INSTANCE_CONFIG_SCHEMA } from './ec2-instance.builder';
 

@@ -4,14 +4,18 @@
  */
 
 // Component exports
-export { LambdaApiComponentComponent } from './lambda-api.component';
+export * from "./src/lambda-api.component";
+export * from "./src/lambda-api.builder";
 
 // Configuration exports
-export { 
+export {
   LambdaApiConfig,
-  LambdaApiComponentConfigBuilder,
-  LAMBDA_API_CONFIG_SCHEMA
-} from './lambda-api.builder';
+  LambdaApiConfigBuilder
+} from './src/lambda-api.builder';
+
+// Schema export
+export { default as LAMBDA_API_CONFIG_SCHEMA } from './Config.schema.json';
 
 // Creator exports
-export { LambdaApiComponentCreator } from './lambda-api.creator';
+export { LambdaApiComponentCreator } from './src/lambda-api.creator';
+

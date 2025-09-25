@@ -8,7 +8,7 @@
 import { Template } from 'aws-cdk-lib/assertions';
 import { Stack } from 'aws-cdk-lib';
 import { Ec2InstanceComponent } from '../ec2-instance.component';
-import { ComponentContext, ComponentSpec } from '../../../../src/platform/contracts';
+import { ComponentContext, ComponentSpec } from '../../@shinobi/core';
 
 describe('EC2 Instance Observability Tests', () => {
   let stack: Stack;

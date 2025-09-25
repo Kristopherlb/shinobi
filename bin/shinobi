@@ -1,0 +1,49 @@
+#!/usr/bin/env node
+
+const fs = require('fs');
+const path = require('path');
+const Module = require('module');
+const { execSync } = require('child_process');
+
+const rootDir = path.resolve(__dirname, '..');
+const distCliEntry = path.resolve(rootDir, 'dist/apps/shinobi/main.js');
+const coreDistDir = path.resolve(rootDir, 'dist/packages/core');
+
+const ensureBuilt = () => {
+  if (!fs.existsSync(coreDistDir)) {
+    console.log('⚙️  Building @shinobi/core...');
+    execSync('pnpm --filter @shinobi/core build', { stdio: 'inherit', cwd: rootDir });
+  }
+  if (!fs.existsSync(distCliEntry)) {
+    console.log('⚙️  Building @shinobi/cli...');
+    execSync('pnpm --filter @shinobi/cli build', { stdio: 'inherit', cwd: rootDir });
+  }
+};
+
+ensureBuilt();
+
+const aliasEntries = [
+  {
+    match: (request) => request === '@shinobi/core' || request === '../@shinobi/core',
+    resolve: () => path.join(coreDistDir, 'index.js')
+  },
+  {
+    match: (request) => request === '@platform/contracts' || request === '../@platform/contracts',
+    resolve: () => path.join(rootDir, 'packages/contracts/dist/index.js')
+  },
+  {
+    match: (request) => request.startsWith('@platform/logger') || request.startsWith('../@platform/logger'),
+    resolve: () => path.join(coreDistDir, 'platform/logger/src/index.js')
+  }
+];
+
+const originalResolveFilename = Module._resolveFilename;
+Module._resolveFilename = function(request, parent, isMain, options) {
+  const alias = aliasEntries.find(entry => entry.match(request));
+  if (alias) {
+    return alias.resolve();
+  }
+  return originalResolveFilename.call(this, request, parent, isMain, options);
+};
+
+require(distCliEntry);

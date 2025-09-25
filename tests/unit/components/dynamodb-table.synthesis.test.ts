@@ -1,8 +1,8 @@
 import { describe, test, expect, beforeEach } from '@jest/globals';
 import { Template } from 'aws-cdk-lib/assertions';
 import * as cdk from 'aws-cdk-lib';
-import { DynamoDbTableComponent } from '../../../packages/components/dynamodb-table/src/dynamodb-table.component';
-import { ComponentContext, ComponentSpec } from '../../../packages/platform/contracts/src/component-interfaces';
+import { DynamoDbTableComponent } from '@shinobi/components/dynamodb-table/src/dynamodb-table.component';
+import { ComponentContext, ComponentSpec } from '@shinobi/core/contracts/src/component-interfaces';
 
 describe('DynamodbTableComponent - CloudFormation Synthesis', () => {
   let app: cdk.App;

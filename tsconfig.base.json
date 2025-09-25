@@ -1,32 +1,59 @@
 {
   "compilerOptions": {
-    "target": "ES2020",
-    "module": "commonjs",
-    "rootDir": ".",
+    "target": "ES2022",
+    "lib": [
+      "ES2022"
+    ],
+    "module": "CommonJS",
+    "moduleResolution": "Node",
     "composite": true,
     "declaration": true,
+    "declarationMap": true,
     "sourceMap": true,
     "outDir": "dist",
     "strict": true,
     "esModuleInterop": true,
     "skipLibCheck": true,
     "forceConsistentCasingInFileNames": true,
-    "moduleResolution": "node",
+    "downlevelIteration": true,
     "baseUrl": ".",
     "paths": {
+      "@shinobi/core": [
+        "packages/core/src/index.ts"
+      ],
+      "@shinobi/core/*": [
+        "packages/core/src/index.ts"
+      ],
+      "@platform/logger": [
+        "packages/core/src/platform/logger/src/index.ts"
+      ],
+      "@shinobi/standards-otel/*": [
+        "packages/standards/otel/src"
+      ],
+      "@shinobi/standards-logging/*": [
+        "packages/standards/logging/src/*"
+      ],
+      "@platform/components/*": [
+        "packages/components/*/src"
+      ],
+      "@platform/constructs/*": [
+        "packages/constructs/*/src"
+      ],
       "@platform/contracts": [
         "packages/contracts/src/index.ts"
       ],
-      "@platform/core-engine": [
-        "packages/core-engine/src/index.ts"
+      "@platform/contracts/*": [
+        "packages/contracts/src/*"
       ],
-      "@platform/*": [
-        "packages/components/*/src/index.ts"
+      "@cdk-lib/*": [
+        "packages/constructs/*/src"
       ]
     }
   },
   "exclude": [
+    "dist",
     "node_modules",
-    "dist"
+    "packages/core/_temp-problematic-files/**",
+    "packages/core/_temp-problematic-platform/**"
   ]
 }

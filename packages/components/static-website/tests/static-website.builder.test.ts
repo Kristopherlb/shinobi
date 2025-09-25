@@ -5,7 +5,7 @@
  */
 
 import { StaticWebsiteConfigBuilder, StaticWebsiteConfig } from '../static-website.builder';
-import { ComponentContext, ComponentSpec } from '../../../../src/platform/contracts/component-interfaces';
+import { ComponentContext, ComponentSpec } from '../../@shinobi/core/component-interfaces';
 
 // Mock context helper
 function createMockContext(complianceFramework: string = 'commercial'): ComponentContext {

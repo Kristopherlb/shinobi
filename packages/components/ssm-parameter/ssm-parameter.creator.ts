@@ -10,7 +10,7 @@ import {
   ComponentSpec, 
   ComponentContext, 
   IComponentCreator 
-} from '../../../src/platform/contracts/component-interfaces';
+} from '../@shinobi/core/component-interfaces';
 import { SsmParameterComponent } from './ssm-parameter.component';
 import { SsmParameterConfig, SSM_PARAMETER_CONFIG_SCHEMA } from './ssm-parameter.builder';
 

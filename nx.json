@@ -1,26 +1,35 @@
 {
-  "npmScope": "platform",
-  "affected": {
-    "defaultBase": "main"
-  },
-  "tasksRunnerOptions": {
-    "default": {
-      "runner": "nx/tasks-runners/default",
-      "options": {
-        "cacheableOperations": [
-          "build",
-          "lint",
-          "test",
-          "e2e"
-        ]
-      }
-    }
+  "extends": "nx/presets/npm.json",
+  "namedInputs": {
+    "default": [
+      "{projectRoot}/**/*",
+      "!{projectRoot}/dist/**",
+      "!{projectRoot}/coverage/**"
+    ],
+    "production": [
+      "default",
+      "!{projectRoot}/**/*.spec.ts",
+      "!{projectRoot}/**/*.test.ts"
+    ]
   },
   "targetDefaults": {
     "build": {
-      "dependsOn": [
-        "^build"
-      ]
+      "inputs": [
+        "production"
+      ],
+      "cache": true
+    },
+    "test": {
+      "inputs": [
+        "default"
+      ],
+      "cache": true
+    },
+    "typecheck": {
+      "inputs": [
+        "production"
+      ],
+      "cache": true
     }
   }
 }

@@ -1,0 +1,32 @@
+{
+  "name": "standards-iam-audit",
+  "sourceRoot": "packages/standards/iam-audit/src",
+  "projectType": "library",
+  "tags": [
+    "type:lib",
+    "scope:standards"
+  ],
+  "targets": {
+    "build": {
+      "executor": "@nx/js:tsc",
+      "options": {
+        "outputPath": "dist/packages/standards/iam-audit",
+        "tsConfig": "packages/standards/iam-audit/tsconfig.lib.json"
+      }
+    },
+    "test": {
+      "executor": "@nx/jest:jest",
+      "options": {
+        "jestConfig": "packages/standards/iam-audit/jest.config.ts"
+      }
+    },
+    "lint": {
+      "executor": "@nx/eslint:lint",
+      "options": {
+        "lintFilePatterns": [
+          "packages/standards/iam-audit/src/**/*.ts"
+        ]
+      }
+    }
+  }
+}

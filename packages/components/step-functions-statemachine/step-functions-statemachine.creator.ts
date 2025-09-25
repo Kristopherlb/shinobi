@@ -10,7 +10,7 @@ import {
   ComponentSpec, 
   ComponentContext, 
   IComponentCreator 
-} from '../../../src/platform/contracts/component-interfaces';
+} from '../@shinobi/core/component-interfaces';
 import { StepFunctionsStateMachineComponent } from './step-functions-statemachine.component';
 import { StepFunctionsStateMachineConfig, STEP_FUNCTIONS_STATEMACHINE_CONFIG_SCHEMA } from './step-functions-statemachine.builder';
 

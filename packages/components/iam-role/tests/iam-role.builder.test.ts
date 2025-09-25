@@ -4,7 +4,7 @@
  */
 
 import { IamRoleConfigBuilder, IamRoleConfig } from '../src/iam-role.builder';
-import { ComponentContext, ComponentSpec } from '../../../../src/platform/contracts/component-interfaces';
+import { ComponentContext, ComponentSpec } from '../../@shinobi/core/component-interfaces';
 import { Stack } from 'aws-cdk-lib';
 
 const createMockContext = (

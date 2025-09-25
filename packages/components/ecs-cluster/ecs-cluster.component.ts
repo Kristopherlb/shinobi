@@ -12,8 +12,8 @@ import * as servicediscovery from 'aws-cdk-lib/aws-servicediscovery';
 import * as autoscaling from 'aws-cdk-lib/aws-autoscaling';
 import * as cdk from 'aws-cdk-lib';
 import { Construct } from 'constructs';
-import { BaseComponent } from '../../../src/platform/contracts/component';
-import { ComponentSpec, ComponentContext, ComponentCapabilities } from '../../../src/platform/contracts/component-interfaces';
+import { BaseComponent } from '../@shinobi/core/component';
+import { ComponentSpec, ComponentContext, ComponentCapabilities } from '../@shinobi/core/component-interfaces';
 import { EcsClusterConfig, EcsClusterComponentConfigBuilder } from './ecs-cluster.builder';
 
 
@@ -29,7 +29,7 @@ export class EcsClusterComponent extends BaseComponent {
 
   constructor(scope: Construct, id: string, context: ComponentContext, spec: ComponentSpec) {
     super(scope, id, context, spec);
-    
+
     // Build configuration only - no synthesis in constructor
     const configBuilder = new EcsClusterComponentConfigBuilder({ context, spec });
     this.config = configBuilder.buildSync();
@@ -40,46 +40,49 @@ export class EcsClusterComponent extends BaseComponent {
    */
   public synth(): void {
     this.logComponentEvent('synthesis_start', 'Starting ECS Cluster synthesis');
-    
+
     const startTime = Date.now();
-    
+
     try {
       // Create ECS Cluster
       this.createEcsCluster();
-      
+
       // Create Service Connect namespace
       this.createServiceConnectNamespace();
-      
+
       // Create optional EC2 capacity
       this.createEc2CapacityIfNeeded();
-      
+
       // Configure cluster settings
       this.configureClusterSettings();
-      
+
+      // Configure OpenTelemetry observability for ECS tasks
+      this.configureOpenTelemetryForEcs();
+
       // Apply standard platform tags
       this.applyClusterTags();
-      
+
       // Register constructs for binding access
       this.registerConstruct('cluster', this.cluster!);
       this.registerConstruct('namespace', this.namespace!);
       if (this.autoScalingGroup) {
         this.registerConstruct('autoScalingGroup', this.autoScalingGroup);
       }
-      
+
       // Register ecs:cluster capability
       this.registerCapability('ecs:cluster', this.buildEcsClusterCapability());
-      
+
       const duration = Date.now() - startTime;
       this.logPerformanceMetric('component_synthesis', duration, {
         resourcesCreated: Object.keys(this.capabilities).length
       });
-      
+
       this.logComponentEvent('synthesis_complete', 'ECS Cluster synthesis completed successfully', {
         clusterCreated: 1,
         namespaceCreated: 1,
         capacityCreated: !!this.autoScalingGroup
       });
-      
+
     } catch (error) {
       this.logError(error as Error, 'component synthesis', {
         componentType: 'ecs-cluster',
@@ -108,7 +111,7 @@ export class EcsClusterComponent extends BaseComponent {
    * Create the ECS Cluster
    */
   private createEcsCluster(): void {
-    const clusterName = this.config.clusterName || 
+    const clusterName = this.config.clusterName ||
       `${this.context.serviceName}-${this.spec.name}`;
 
     this.cluster = new ecs.Cluster(this, 'Cluster', {
@@ -171,7 +174,7 @@ export class EcsClusterComponent extends BaseComponent {
       desiredCapacity: capacityConfig.desiredSize || capacityConfig.minSize,
       keyName: capacityConfig.keyName,
       autoScalingGroupName: `${this.context.serviceName}-${this.spec.name}-asg`,
-      
+
       // User data to join the ECS cluster
       userData: ec2.UserData.forLinux(),
     });
@@ -191,14 +194,14 @@ export class EcsClusterComponent extends BaseComponent {
 
     // Add capacity provider to cluster
     const capacityProvider = new ecs.AsgCapacityProvider(this, 'CapacityProvider', {
-              autoScalingGroup: this.autoScalingGroup,
-              enableManagedScaling: true,
+      autoScalingGroup: this.autoScalingGroup,
+      enableManagedScaling: true,
       enableManagedTerminationProtection: false,
     });
 
     this.cluster.addAsgCapacityProvider(capacityProvider);
 
-    this.logResourceCreation('ec2-capacity', 
+    this.logResourceCreation('ec2-capacity',
       `${capacityConfig.instanceType} (${capacityConfig.minSize}-${capacityConfig.maxSize} instances)`);
   }
 
@@ -210,15 +213,15 @@ export class EcsClusterComponent extends BaseComponent {
 
     // Apply compliance-specific settings
     const complianceFramework = this.context.complianceFramework;
-    
+
     if (complianceFramework === 'fedramp-high' || complianceFramework === 'fedramp-moderate') {
       // Enable capacity providers for compliance
       this.cluster.addDefaultCapacityProviderStrategy([
         { capacityProvider: 'FARGATE', weight: 1 },
         { capacityProvider: 'FARGATE_SPOT', weight: 1 } // Cost optimization for non-critical workloads
       ]);
-      
-      this.logComponentEvent('compliance_configured', 
+
+      this.logComponentEvent('compliance_configured',
         `Applied ${complianceFramework} compliance settings`);
     } else {
       // Commercial - cost optimized with more spot usage
@@ -227,6 +230,33 @@ export class EcsClusterComponent extends BaseComponent {
         { capacityProvider: 'FARGATE_SPOT', weight: 2 } // Favor spot for cost optimization
       ]);
     }
+  }
+
+  /**
+   * Configure OpenTelemetry observability for ECS tasks according to Platform Observability Standard
+   */
+  private configureOpenTelemetryForEcs(): void {
+    if (!this.cluster) {
+      this.logComponentEvent('otel_skipped', 'ECS Cluster not available for OTel configuration');
+      return;
+    }
+
+    // Get standardized OpenTelemetry environment variables for ECS tasks
+    const otelEnvVars = this.configureObservability(this.cluster, {
+      serviceName: `${this.context.serviceName}-ecs-cluster`,
+      serviceVersion: '1.0.0',
+      componentType: 'ecs-cluster',
+      complianceFramework: this.context.complianceFramework
+    });
+
+    // Store OTel environment variables for ECS task definitions
+    // These will be applied to all tasks running in this cluster
+    this.registerCapability('otel:environment', otelEnvVars);
+
+    this.logComponentEvent('observability_configured', 'OpenTelemetry observability standard applied to ECS Cluster', {
+      otelServiceName: otelEnvVars['OTEL_SERVICE_NAME'],
+      otelExporterEndpoint: otelEnvVars['OTEL_EXPORTER_OTLP_ENDPOINT']
+    });
   }
 
   /**
@@ -256,7 +286,7 @@ export class EcsClusterComponent extends BaseComponent {
     // Apply user-defined tags
     if (this.config.tags) {
       Object.entries(this.config.tags).forEach(([key, value]) => {
-    if (this.cluster) {
+        if (this.cluster) {
           cdk.Tags.of(this.cluster).add(key, value);
         }
       });
@@ -268,7 +298,7 @@ export class EcsClusterComponent extends BaseComponent {
    */
   private buildEcsClusterCapability() {
     const vpc = this.getVpcFromContext();
-    
+
     return {
       clusterName: this.cluster!.clusterName,
       clusterArn: this.cluster!.clusterArn,

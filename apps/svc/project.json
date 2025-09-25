@@ -1,0 +1,39 @@
+{
+  "name": "shinobi",
+  "sourceRoot": "apps/svc/src",
+  "projectType": "application",
+  "tags": [
+    "type:app",
+    "scope:cli"
+  ],
+  "targets": {
+    "build": {
+      "executor": "@nx/node:build",
+      "options": {
+        "outputPath": "dist/apps/shinobi",
+        "main": "apps/svc/src/main.ts",
+        "tsConfig": "apps/svc/tsconfig.app.json"
+      }
+    },
+    "serve": {
+      "executor": "@nx/node:execute",
+      "options": {
+        "buildTarget": "shinobi:build"
+      }
+    },
+    "test": {
+      "executor": "@nx/jest:jest",
+      "options": {
+        "jestConfig": "apps/svc/jest.config.ts"
+      }
+    },
+    "lint": {
+      "executor": "@nx/eslint:lint",
+      "options": {
+        "lintFilePatterns": [
+          "apps/svc/src/**/*.ts"
+        ]
+      }
+    }
+  }
+}

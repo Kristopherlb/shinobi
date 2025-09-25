@@ -1,0 +1,32 @@
+{
+  "name": "mcp-server",
+  "sourceRoot": "packages/mcp/server/src",
+  "projectType": "library",
+  "tags": [
+    "type:lib",
+    "scope:mcp"
+  ],
+  "targets": {
+    "build": {
+      "executor": "@nx/js:tsc",
+      "options": {
+        "outputPath": "dist/packages/mcp/server",
+        "tsConfig": "packages/mcp/server/tsconfig.lib.json"
+      }
+    },
+    "test": {
+      "executor": "@nx/jest:jest",
+      "options": {
+        "jestConfig": "packages/mcp/server/jest.config.ts"
+      }
+    },
+    "lint": {
+      "executor": "@nx/eslint:lint",
+      "options": {
+        "lintFilePatterns": [
+          "packages/mcp/server/src/**/*.ts"
+        ]
+      }
+    }
+  }
+}

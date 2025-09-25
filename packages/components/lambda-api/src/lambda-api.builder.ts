@@ -1,29 +1,66 @@
-import { LambdaApiComponent } from './lambda-api';
-// Builder class to construct the Lambda API component (e.g., define CDK constructs)
+import * as lambda from "aws-cdk-lib/aws-lambda";
+import { LambdaApiSpec } from "./lambda-api.component";
 
-export class LambdaApiBuilder {
-  build(component: LambdaApiComponent) {
-    // Placeholder: build AWS resources for the component
+type BuilderContext = {
+  complianceFramework?: string;     // "commercial" | "fedramp-moderate" | "fedramp-high" | etc.
+  environment?: string;             // e.g. "dev-us-east-1"
+  observability?: {
+    collectorEndpoint?: string;
+    adotLayerArn?: string;
+    adotLayerArnMap?: Record<string, string>;
+    enableTracing?: boolean;
+    enableMetrics?: boolean;
+    enableLogs?: boolean;
+  };
+};
+
+// Export types and schema for external use
+export type LambdaApiConfig = LambdaApiSpec;
+
+
+export class LambdaApiConfigBuilder {
+  build(ctx: BuilderContext, input: Partial<LambdaApiSpec>): LambdaApiSpec {
+    // Platform defaults
+    const base: LambdaApiSpec = {
+      handler: "src/api.handler",
+      runtime: lambda.Runtime.NODEJS_20_X,
+      memorySize: 512,
+      timeout: 30,
+      logRetentionDays: 14,
+      environmentVariables: {},
+      codePath: "./src",
+      useInlineFallback: true,
+      apiType: "rest",
+    };
+
+    // Compliance defaults
+    const isFedramp =
+      (ctx.complianceFramework ?? "").startsWith("fedramp");
+    if (isFedramp) {
+      // FedRAMP compliance requirements
+      if (ctx.complianceFramework === "fedramp-moderate") {
+        base.memorySize = 768;
+        base.timeout = 45;
+      } else if (ctx.complianceFramework === "fedramp-high") {
+        base.memorySize = 1024;
+        base.timeout = 60;
+      }
+      base.logRetentionDays = Math.max(base.logRetentionDays || 30, 30);
+    }
+
+    // Merge input last (component-level overrides win)
     return {
-      functionName: `lambda-${component.name}`,
-      runtime: component.getRuntime(),
-      handler: component.getHandler(),
-      timeout: component.getTimeout(),
-      memorySize: component.getMemorySize()
+      ...base,
+      ...input,
+      environmentVariables: {
+        ...(base.environmentVariables ?? {}),
+        ...(input.environmentVariables ?? {})
+      },
     };
   }
 
-  generateCloudFormation(component: LambdaApiComponent): any {
-    // Placeholder: generate CloudFormation template
-    return {
-      Type: 'AWS::Lambda::Function',
-      Properties: {
-        FunctionName: `lambda-${component.name}`,
-        Runtime: component.getRuntime(),
-        Handler: component.getHandler(),
-        Timeout: component.getTimeout(),
-        MemorySize: component.getMemorySize()
-      }
-    };
+  // Convenience for legacy codepaths
+  buildSync(ctx: BuilderContext, input: Partial<LambdaApiSpec>): LambdaApiSpec {
+    return this.build(ctx, input);
   }
 }

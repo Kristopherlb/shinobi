@@ -15,9 +15,9 @@ import * as cloudwatch from 'aws-cdk-lib/aws-cloudwatch';
 import * as elbv2 from 'aws-cdk-lib/aws-elasticloadbalancingv2';
 import * as cdk from 'aws-cdk-lib';
 import { Construct } from 'constructs';
-import { BaseComponent } from '../../../src/platform/contracts/component';
-import { ComponentSpec, ComponentContext, ComponentCapabilities } from '../../../src/platform/contracts/component-interfaces';
-import { ConfigBuilder, ConfigBuilderContext } from '../../../src/platform/contracts/config-builder';
+import { BaseComponent } from '../@shinobi/core/component';
+import { ComponentSpec, ComponentContext, ComponentCapabilities } from '../@shinobi/core/component-interfaces';
+import { ConfigBuilder, ConfigBuilderContext } from '../@shinobi/core/config-builder';
 
 /**
  * Configuration interface for ECS Fargate Service component

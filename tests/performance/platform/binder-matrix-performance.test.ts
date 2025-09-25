@@ -21,12 +21,12 @@
  */
 
 import { describe, test, expect, beforeEach, afterEach, jest } from '@jest/globals';
-import { BinderMatrix } from '../../../src/platform/contracts/binder-matrix';
+import { BinderMatrix } from '../@shinobi/core/binder-matrix';
 import { 
   IBinderStrategy, 
   ITriggerStrategy, 
   CompatibilityEntry 
-} from '../../../src/platform/contracts/platform-binding-trigger-spec';
+} from '../@shinobi/core/platform-binding-trigger-spec';
 
 // Performance measurement utilities
 interface BenchmarkResult {

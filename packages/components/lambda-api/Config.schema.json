@@ -1,0 +1,339 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "title": "Lambda API Component Configuration",
+  "description": "Configuration schema for the Lambda API component supporting AWS Lambda with API Gateway integration",
+  "type": "object",
+  "properties": {
+    "handler": {
+      "type": "string",
+      "description": "Lambda function handler (e.g., 'index.handler', 'src/api.handler')",
+      "pattern": "^[a-zA-Z0-9._/-]+\\.(handler|lambda_handler)$",
+      "examples": [
+        "index.handler",
+        "src/api.handler",
+        "src/handler.lambda_handler"
+      ]
+    },
+    "runtime": {
+      "type": "string",
+      "description": "Lambda runtime environment",
+      "enum": [
+        "nodejs20.x",
+        "nodejs18.x",
+        "nodejs16.x",
+        "python3.11",
+        "python3.10",
+        "python3.9",
+        "python3.8",
+        "java17",
+        "java11",
+        "java8.al2",
+        "dotnet6",
+        "dotnetcore3.1",
+        "go1.x",
+        "ruby3.2",
+        "ruby2.7"
+      ],
+      "default": "nodejs20.x"
+    },
+    "memorySize": {
+      "type": "number",
+      "description": "Memory allocation in MB",
+      "minimum": 128,
+      "maximum": 10240,
+      "multipleOf": 64,
+      "default": 512
+    },
+    "timeout": {
+      "type": "number",
+      "description": "Function timeout in seconds",
+      "minimum": 1,
+      "maximum": 900,
+      "default": 30
+    },
+    "codePath": {
+      "type": "string",
+      "description": "Path to Lambda function code directory or file",
+      "default": "./src",
+      "examples": [
+        "./src",
+        "./dist",
+        "./lambda",
+        "./src/index.js"
+      ]
+    },
+    "codeAssetHash": {
+      "type": "string",
+      "description": "Asset hash for code changes detection and cache busting",
+      "examples": [
+        "abc123def456",
+        "v1.0.0",
+        "2024-01-15"
+      ]
+    },
+    "useInlineFallback": {
+      "type": "boolean",
+      "description": "Use inline code as fallback when codePath is not available",
+      "default": true
+    },
+    "apiType": {
+      "type": "string",
+      "description": "API Gateway type",
+      "enum": [
+        "rest",
+        "http"
+      ],
+      "default": "rest",
+      "examples": [
+        "rest",
+        "http"
+      ]
+    },
+    "environmentVariables": {
+      "type": "object",
+      "description": "Environment variables for the Lambda function",
+      "additionalProperties": {
+        "type": "string"
+      },
+      "default": {},
+      "examples": [
+        {
+          "LOG_LEVEL": "INFO",
+          "API_VERSION": "v1",
+          "NODE_ENV": "production"
+        }
+      ]
+    },
+    "logRetentionDays": {
+      "type": "number",
+      "description": "CloudWatch log retention in days",
+      "minimum": 1,
+      "maximum": 3653,
+      "default": 14
+    },
+    "api": {
+      "type": "object",
+      "description": "API Gateway configuration",
+      "properties": {
+        "name": {
+          "type": "string",
+          "description": "API Gateway name (auto-generated if not provided)"
+        },
+        "cors": {
+          "type": "boolean",
+          "description": "Enable CORS for API Gateway",
+          "default": false
+        },
+        "apiKeyRequired": {
+          "type": "boolean",
+          "description": "Require API key for requests",
+          "default": false
+        },
+        "description": {
+          "type": "string",
+          "description": "API Gateway description"
+        },
+        "endpointConfiguration": {
+          "type": "object",
+          "description": "API Gateway endpoint configuration",
+          "properties": {
+            "types": {
+              "type": "array",
+              "items": {
+                "type": "string",
+                "enum": [
+                  "REGIONAL",
+                  "EDGE",
+                  "PRIVATE"
+                ]
+              },
+              "default": [
+                "REGIONAL"
+              ]
+            }
+          }
+        }
+      },
+      "additionalProperties": false
+    },
+    "vpc": {
+      "type": "object",
+      "description": "VPC configuration for FedRAMP compliance",
+      "properties": {
+        "vpcId": {
+          "type": "string",
+          "description": "VPC ID for Lambda deployment",
+          "pattern": "^vpc-[0-9a-f]{8,17}$"
+        },
+        "subnetIds": {
+          "type": "array",
+          "description": "Subnet IDs for Lambda deployment",
+          "items": {
+            "type": "string",
+            "pattern": "^subnet-[0-9a-f]{8,17}$"
+          },
+          "minItems": 1,
+          "maxItems": 16
+        },
+        "securityGroupIds": {
+          "type": "array",
+          "description": "Security group IDs for Lambda",
+          "items": {
+            "type": "string",
+            "pattern": "^sg-[0-9a-f]{8,17}$"
+          },
+          "minItems": 1,
+          "maxItems": 5
+        }
+      },
+      "required": [
+        "vpcId",
+        "subnetIds",
+        "securityGroupIds"
+      ],
+      "additionalProperties": false
+    },
+    "encryption": {
+      "type": "object",
+      "description": "Encryption configuration for FedRAMP High",
+      "properties": {
+        "kmsKeyArn": {
+          "type": "string",
+          "description": "KMS key ARN for environment variable encryption",
+          "pattern": "^arn:aws:kms:[a-z0-9-]+:[0-9]{12}:key/[0-9a-f-]+$"
+        }
+      },
+      "additionalProperties": false
+    },
+    "security": {
+      "type": "object",
+      "description": "Security tooling configuration",
+      "properties": {
+        "tools": {
+          "type": "object",
+          "properties": {
+            "falco": {
+              "type": "boolean",
+              "description": "Enable security monitoring",
+              "default": false
+            }
+          },
+          "additionalProperties": false
+        }
+      },
+      "additionalProperties": false
+    },
+    "monitoring": {
+      "type": "object",
+      "description": "Monitoring and observability configuration",
+      "properties": {
+        "enabled": {
+          "type": "boolean",
+          "description": "Enable monitoring",
+          "default": true
+        },
+        "detailedMetrics": {
+          "type": "boolean",
+          "description": "Enable detailed CloudWatch metrics",
+          "default": false
+        },
+        "alarms": {
+          "type": "object",
+          "description": "CloudWatch alarm configuration",
+          "properties": {
+            "errorRateThreshold": {
+              "type": "number",
+              "description": "Error rate threshold for alarms (errors per 5 minutes)",
+              "minimum": 1,
+              "maximum": 100,
+              "default": 5
+            },
+            "durationThreshold": {
+              "type": "number",
+              "description": "Duration threshold as percentage of timeout",
+              "minimum": 50,
+              "maximum": 100,
+              "default": 80
+            },
+            "throttleThreshold": {
+              "type": "number",
+              "description": "Throttle threshold for alarms",
+              "minimum": 1,
+              "maximum": 100,
+              "default": 1
+            }
+          },
+          "additionalProperties": false
+        }
+      },
+      "additionalProperties": false
+    },
+    "tags": {
+      "type": "object",
+      "description": "Additional resource tags",
+      "additionalProperties": {
+        "type": "string"
+      },
+      "default": {},
+      "examples": [
+        {
+          "team": "backend",
+          "project": "api-service",
+          "environment": "production"
+        }
+      ]
+    }
+  },
+  "required": [
+    "handler"
+  ],
+  "additionalProperties": false,
+  "examples": [
+    {
+      "handler": "index.handler",
+      "runtime": "nodejs20.x",
+      "memorySize": 512,
+      "timeout": 30,
+      "api": {
+        "cors": true,
+        "apiKeyRequired": false
+      }
+    },
+    {
+      "handler": "src/handler.lambda_handler",
+      "runtime": "python3.11",
+      "memorySize": 1024,
+      "timeout": 60,
+      "environmentVariables": {
+        "LOG_LEVEL": "INFO",
+        "API_VERSION": "v1"
+      },
+      "vpc": {
+        "vpcId": "vpc-12345678",
+        "subnetIds": [
+          "subnet-12345678",
+          "subnet-87654321"
+        ],
+        "securityGroupIds": [
+          "sg-12345678"
+        ]
+      },
+      "encryption": {
+        "kmsKeyArn": "arn:aws:kms:us-east-1:123456789012:key/12345678-1234-1234-1234-123456789012"
+      },
+      "monitoring": {
+        "enabled": true,
+        "detailedMetrics": true,
+        "alarms": {
+          "errorRateThreshold": 5,
+          "durationThreshold": 80,
+          "throttleThreshold": 1
+        }
+      },
+      "tags": {
+        "team": "backend",
+        "project": "api-service"
+      }
+    }
+  ]
+}

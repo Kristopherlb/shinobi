@@ -1,156 +1,86 @@
 {
   "$schema": "http://json-schema.org/draft-07/schema#",
-  "title": "EC2 Instance Config",
-  "description": "Configuration for creating an EC2 instance",
   "type": "object",
-  "required": [
-    "instanceType",
-    "ami"
-  ],
+  "title": "EC2 Instance Component Configuration",
+  "description": "Configuration schema for the EC2 Instance component",
   "properties": {
+    "serviceName": {
+      "type": "string",
+      "description": "Name of the service this component belongs to",
+      "minLength": 1,
+      "maxLength": 63
+    },
+    "environment": {
+      "type": "string",
+      "description": "Environment name (dev, staging, prod)",
+      "enum": [
+        "dev",
+        "staging",
+        "prod"
+      ]
+    },
+    "complianceFramework": {
+      "type": "string",
+      "description": "Compliance framework to apply",
+      "enum": [
+        "commercial",
+        "fedramp-moderate",
+        "fedramp-high"
+      ],
+      "default": "commercial"
+    },
     "instanceType": {
       "type": "string",
       "description": "EC2 instance type",
-      "enum": [
-        "t3.micro",
-        "t3.small",
-        "t3.medium",
-        "t3.large",
-        "t3.xlarge",
-        "m5.large",
-        "m5.xlarge",
-        "c5.large",
-        "c5.xlarge"
-      ],
       "default": "t3.micro"
     },
-    "ami": {
-      "type": "object",
-      "description": "AMI configuration",
-      "required": [
-        "amiId"
-      ],
-      "properties": {
-        "amiId": {
-          "type": "string",
-          "description": "AMI ID",
-          "pattern": "^ami-[0-9a-f]{8,17}$"
-        },
-        "amiName": {
-          "type": "string",
-          "description": "AMI name (optional)"
-        }
-      }
+    "amiId": {
+      "type": "string",
+      "description": "AMI ID to use for the instance"
+    },
+    "keyName": {
+      "type": "string",
+      "description": "EC2 Key Pair name for SSH access"
+    },
+    "securityGroups": {
+      "type": "array",
+      "items": {
+        "type": "string"
+      },
+      "description": "Security group IDs to attach"
     },
     "userData": {
-      "type": "object",
-      "description": "User data script configuration",
-      "properties": {
-        "script": {
-          "type": "string",
-          "description": "User data script content"
-        },
-        "encoding": {
-          "type": "string",
-          "enum": [
-            "text/plain",
-            "text/x-shellscript",
-            "text/cloud-config"
-          ],
-          "default": "text/x-shellscript"
-        }
-      }
-    },
-    "storage": {
-      "type": "object",
-      "description": "Storage configuration",
-      "properties": {
-        "rootVolumeSize": {
-          "type": "integer",
-          "description": "Root volume size in GB",
-          "minimum": 8,
-          "maximum": 16384,
-          "default": 20
-        },
-        "encrypted": {
-          "type": "boolean",
-          "description": "Enable encryption for root volume",
-          "default": true
-        },
-        "additionalVolumes": {
-          "type": "array",
-          "description": "Additional EBS volumes",
-          "items": {
-            "type": "object",
-            "required": [
-              "deviceName",
-              "size"
-            ],
-            "properties": {
-              "deviceName": {
-                "type": "string",
-                "description": "Device name (e.g., /dev/sdf)"
-              },
-              "size": {
-                "type": "integer",
-                "description": "Volume size in GB",
-                "minimum": 1,
-                "maximum": 16384
-              },
-              "encrypted": {
-                "type": "boolean",
-                "default": true
-              },
-              "volumeType": {
-                "type": "string",
-                "enum": [
-                  "gp2",
-                  "gp3",
-                  "io1",
-                  "io2",
-                  "st1",
-                  "sc1"
-                ],
-                "default": "gp3"
-              }
-            }
-          }
-        }
-      }
+      "type": "string",
+      "description": "User data script to run on instance startup"
     },
     "monitoring": {
       "type": "object",
-      "description": "Monitoring configuration",
       "properties": {
-        "detailed": {
+        "enabled": {
           "type": "boolean",
-          "description": "Enable detailed monitoring",
-          "default": false
-        },
-        "cloudwatchLogs": {
-          "type": "boolean",
-          "description": "Enable CloudWatch logs",
           "default": true
+        },
+        "detailedMonitoring": {
+          "type": "boolean",
+          "default": false
         }
       }
     },
-    "security": {
+    "tags": {
       "type": "object",
-      "description": "Security configuration",
-      "properties": {
-        "keyPairName": {
+      "description": "Resource tags",
+      "patternProperties": {
+        "^[a-zA-Z0-9\\-_.:/=+@]+$": {
           "type": "string",
-          "description": "EC2 Key Pair name for SSH access"
-        },
-        "securityGroupIds": {
-          "type": "array",
-          "description": "Security group IDs",
-          "items": {
-            "type": "string",
-            "pattern": "^sg-[0-9a-f]{8,17}$"
-          }
+          "maxLength": 256
         }
-      }
+      },
+      "additionalProperties": false
     }
-  }
+  },
+  "required": [
+    "serviceName",
+    "environment"
+  ],
+  "additionalProperties": false
 }

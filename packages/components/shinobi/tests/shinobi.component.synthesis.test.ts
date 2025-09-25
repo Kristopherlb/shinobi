@@ -6,7 +6,7 @@
 import { App, Stack } from 'aws-cdk-lib';
 import { Template } from 'aws-cdk-lib/assertions';
 import { ShinobiComponent, ShinobiConfig } from '../src/shinobi.component';
-import { ComponentContext, ComponentSpec } from '../../../../src/platform/contracts/component-interfaces';
+import { ComponentContext, ComponentSpec } from '../../@shinobi/core/component-interfaces';
 
 const createMockContext = (
   complianceFramework: string = 'commercial',

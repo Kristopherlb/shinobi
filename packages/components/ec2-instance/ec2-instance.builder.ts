@@ -5,8 +5,8 @@
  * Provides 5-layer configuration precedence chain and compliance-aware defaults.
  */
 
-import { ConfigBuilder, ConfigBuilderContext } from '../../../src/platform/contracts/config-builder';
-import { ComponentSpec, ComponentContext } from '../../../src/platform/contracts/component-interfaces';
+import { ConfigBuilder, ConfigBuilderContext } from '../@shinobi/core/config-builder';
+import { ComponentSpec, ComponentContext } from '../@shinobi/core/component-interfaces';
 
 /**
  * Configuration interface for Ec2InstanceComponent component

@@ -1,17 +1,41 @@
 {
-  "extends": "../../../tsconfig.base.json",
   "compilerOptions": {
-    "outDir": "../../../dist/packages/components/lambda-api"
+    "target": "ES2022",
+    "module": "CommonJS",
+    "moduleResolution": "Node",
+    "declaration": true,
+    "outDir": "../../../dist/packages/components/lambda-api",
+    "strict": true,
+    "esModuleInterop": true,
+    "skipLibCheck": true,
+    "resolveJsonModule": true,
+    "baseUrl": ".",
+    "paths": {
+      "@shinobi/core": [
+        "../../../packages/core/src/index.ts"
+      ],
+      "@shinobi/core/*": [
+        "../../../packages/core/src/*"
+      ],
+      "@platform/contracts": [
+        "../../../packages/contracts/src/index.ts"
+      ],
+      "@platform/contracts/*": [
+        "../../../packages/contracts/src/*"
+      ]
+    },
+    "typeRoots": [
+      "../../../node_modules/@types",
+      "../../../packages/contracts/src"
+    ]
   },
   "include": [
+    "index.ts",
     "src/**/*"
   ],
-  "references": [
-    {
-      "path": "../../core-engine"
-    },
-    {
-      "path": "../../contracts"
-    }
+  "exclude": [
+    "dist",
+    "node_modules",
+    "**/*.test.ts"
   ]
 }

@@ -60,7 +60,7 @@ jest.mock('aws-cdk-lib/assertions', () => ({
 }));
 
 // Mock platform contracts
-jest.mock('../../../../src/platform/contracts/component', () => ({
+jest.mock('../../@shinobi/core/component', () => ({
   BaseComponent: jest.fn().mockImplementation(function(this: any) {
     this.applyStandardTags = jest.fn();
     this.registerConstruct = jest.fn();

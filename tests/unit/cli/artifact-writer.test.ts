@@ -1,5 +1,5 @@
 import { StandardArtifactWriter } from '../../../src/platform/services/artifact-writer';
-import { PlanArtifact, DeploymentArtifact, MigrationArtifact } from '../../../src/platform/contracts/artifacts';
+import { PlanArtifact, DeploymentArtifact, MigrationArtifact } from '../@shinobi/core/artifacts';
 import * as fs from 'fs';
 import * as path from 'path';
 import * as os from 'os';

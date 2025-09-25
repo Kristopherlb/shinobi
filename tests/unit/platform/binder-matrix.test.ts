@@ -21,13 +21,13 @@
  */
 
 import { describe, test, expect, beforeEach, afterEach, jest } from '@jest/globals';
-import { BinderMatrix } from '../../../src/platform/contracts/binder-matrix';
-import { 
-  IBinderStrategy, 
-  ITriggerStrategy, 
-  CompatibilityEntry, 
-  TriggerCompatibilityEntry 
-} from '../../../src/platform/contracts/platform-binding-trigger-spec';
+import { BinderMatrix } from '../../../../packages/core/src/platform/contracts/binder-matrix';
+import {
+  IBinderStrategy,
+  ITriggerStrategy,
+  CompatibilityEntry,
+  TriggerCompatibilityEntry
+} from '../../../../packages/core/src/platform/contracts/platform-binding-trigger-spec';
 
 // Deterministic fixtures
 class MockBinderStrategy implements IBinderStrategy {
@@ -35,7 +35,7 @@ class MockBinderStrategy implements IBinderStrategy {
     private sourceType: string,
     private capabilities: string[],
     private targetType: string = 'mock-target'
-  ) {}
+  ) { }
 
   canHandle(sourceType: string, capability: string): boolean {
     return sourceType === this.sourceType && this.capabilities.includes(capability);
@@ -62,12 +62,12 @@ class MockTriggerStrategy implements ITriggerStrategy {
     private sourceType: string,
     private eventTypes: string[],
     private targetType: string = 'mock-target'
-  ) {}
+  ) { }
 
   canHandle(sourceType: string, targetType: string, eventType: string): boolean {
-    return sourceType === this.sourceType && 
-           targetType === this.targetType && 
-           this.eventTypes.includes(eventType);
+    return sourceType === this.sourceType &&
+      targetType === this.targetType &&
+      this.eventTypes.includes(eventType);
   }
 
   getCompatibilityMatrix(): TriggerCompatibilityEntry[] {
@@ -93,9 +93,9 @@ describe('BinderMatrix', () => {
   beforeEach(() => {
     // Deterministic setup - fresh matrix for each test
     matrix = new BinderMatrix();
-    
+
     // Spy on console.warn for warning assertions
-    consoleWarnSpy = jest.spyOn(console, 'warn').mockImplementation(() => {});
+    consoleWarnSpy = jest.spyOn(console, 'warn').mockImplementation(() => { });
   });
 
   afterEach(() => {
@@ -444,7 +444,7 @@ describe('BinderMatrix', () => {
       const lambdaStrategy = new MockBinderStrategy('lambda-function', ['READ_ONLY']);
       const s3Strategy = new MockBinderStrategy('s3-bucket', ['WRITE_ONLY']);
       const triggerStrategy = new MockTriggerStrategy('sqs-queue', ['MessageReceived']);
-      
+
       matrix.registerBindingStrategy(lambdaStrategy);
       matrix.registerBindingStrategy(s3Strategy);
       matrix.registerTriggerStrategy(triggerStrategy);
