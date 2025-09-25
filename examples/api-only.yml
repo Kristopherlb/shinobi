@@ -1,0 +1,11 @@
+service: api-only
+owner: platform-engineering
+complianceFramework: commercial
+environment: dev
+region: us-east-1
+accountId: 123456789012
+components:
+  - name: gateway
+    type: api-gateway-http
+    config:
+      description: API only test

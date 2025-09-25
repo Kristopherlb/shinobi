@@ -1,5 +1,5 @@
 {
-  "name": "svc",
+  "name": "shinobi",
   "sourceRoot": "apps/svc/src",
   "projectType": "application",
   "tags": [
@@ -10,7 +10,7 @@
     "build": {
       "executor": "@nx/node:build",
       "options": {
-        "outputPath": "dist/apps/svc",
+        "outputPath": "dist/apps/shinobi",
         "main": "apps/svc/src/main.ts",
         "tsConfig": "apps/svc/tsconfig.app.json"
       }
@@ -18,7 +18,7 @@
     "serve": {
       "executor": "@nx/node:execute",
       "options": {
-        "buildTarget": "svc:build"
+        "buildTarget": "shinobi:build"
       }
     },
     "test": {

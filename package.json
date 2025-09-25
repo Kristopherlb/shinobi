@@ -6,7 +6,7 @@
     "packages/*"
   ],
   "bin": {
-    "svc": "./bin/svc"
+    "shinobi": "./bin/shinobi"
   },
   "scripts": {
     "build": "nx run-many -t build --all",
@@ -18,7 +18,7 @@
     "affected:test": "nx affected -t test",
     "affected:lint": "nx affected -t lint",
     "affected:typecheck": "nx affected -t typecheck",
-    "svc": "pnpm --filter @shinobi/svc start",
+    "shinobi": "pnpm --filter @shinobi/cli start",
     "test:unit": "jest tests/unit",
     "test:integration": "jest tests/integration",
     "test:e2e": "jest tests/e2e",

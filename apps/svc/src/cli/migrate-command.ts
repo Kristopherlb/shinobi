@@ -1,11 +1,10 @@
 /**
  * CLI Command for Migration Tool
- * Implements the interactive workflow for svc migrate
+ * Implements the interactive workflow for shinobi migrate
  */
 
 import { Command } from 'commander';
 import inquirer from 'inquirer';
-import chalk from 'chalk';
 import {
   MigrationEngine,
   MigrationOptions,
@@ -15,6 +14,16 @@ import {
 import { Logger } from './utils/logger';
 import * as fs from 'fs';
 import * as path from 'path';
+
+const format = (value: unknown): string => (value ?? '').toString();
+const chalk = {
+  bold: (value: unknown) => format(value),
+  cyan: (value: unknown) => format(value),
+  green: (value: unknown) => format(value),
+  yellow: (value: unknown) => format(value),
+  red: (value: unknown) => format(value),
+  dim: (value: unknown) => format(value)
+};
 
 interface CliAnswers {
   cdkProjectPath: string;
@@ -290,17 +299,17 @@ function displayResults(result: MigrationResult, logger: Logger): void {
   if (result.unmappableResources.length > 0) {
     logger.info(`1. Review unmappable resources in: ${chalk.cyan(result.reportPath)}`);
     logger.info(`2. Add unmappable resources to: ${chalk.cyan('patches.ts')}`);
-    logger.info('3. Test with: svc plan');
+        logger.info('3. Test with: shinobi plan');
     logger.info('4. Validate with: cdk diff');
   } else if (result.finalDiffResult === 'NO CHANGES') {
     logger.info('1. Update the owner field in service.yml');
-    logger.info('2. Test locally: svc local up');
-    logger.info('3. Deploy when ready: svc deploy');
+    logger.info('2. Test locally: shinobi local up');
+    logger.info('3. Deploy when ready: shinobi deploy');
     logger.info(chalk.green('🎉 Your migration achieved zero CloudFormation changes!'));
   } else {
     logger.info(`1. Review template differences in: ${chalk.cyan(result.reportPath)}`);
     logger.info('2. Verify stateful resources maintain their logical IDs');
-    logger.info('3. Test with: svc plan');
+    logger.info('3. Test with: shinobi plan');
     logger.info('4. Compare with: cdk diff');
   }
 

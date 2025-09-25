@@ -5,7 +5,6 @@
 
 // Export main CLI application
 export * from './cli';
-export * from './cli-new';
 export * from './composition-root';
 
 // Export individual commands

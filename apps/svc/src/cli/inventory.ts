@@ -9,10 +9,17 @@ import { Command } from 'commander';
 import { Project, Node, SyntaxKind, NewExpression, ImportDeclaration } from 'ts-morph';
 import * as fs from 'fs';
 import * as path from 'path';
-import chalk from 'chalk';
 import { Logger } from './utils/logger';
 
-const logger = new Logger('svc.cli.inventory');
+const chalk = {
+  cyan: (text: string) => text,
+  gray: (text: string) => text,
+  green: (text: string) => text,
+  red: (text: string) => text,
+  yellow: (text: string) => text
+};
+
+const logger = new Logger('shinobi.cli.inventory');
 logger.configure({ verbose: false, ci: false });
 
 interface ConstructUsage {

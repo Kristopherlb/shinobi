@@ -44,7 +44,7 @@ export class DeployCommand {
     }
 
     this.dependencies.logger.warn(
-      'svc deploy is not yet supported. Run "svc plan" and deploy through your CDK pipeline or CI workflow.'
+      'shinobi deploy is not yet supported. Run "shinobi plan" and deploy through your CDK pipeline or CI workflow.'
     );
 
     return {

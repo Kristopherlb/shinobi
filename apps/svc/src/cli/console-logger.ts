@@ -26,7 +26,7 @@ export class Logger extends PlatformLogger {
   private verbose = false;
   private ci = false;
 
-  constructor(name = 'svc.cli') {
+  constructor(name = 'shinobi.cli') {
     super(name);
   }
 
@@ -36,8 +36,8 @@ export class Logger extends PlatformLogger {
 
     PlatformLogger.setGlobalContext({
       service: {
-        name: config.serviceName ?? 'svc-cli',
-        version: process.env.SVC_VERSION ?? '0.1.0',
+        name: config.serviceName ?? 'shinobi-cli',
+        version: process.env.SHINOBI_CLI_VERSION ?? process.env.SVC_VERSION ?? '0.1.0',
         instance: `cli-${this.instanceId}`
       },
       environment: {

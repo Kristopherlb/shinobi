@@ -107,7 +107,8 @@ export class ApiGatewayHttpComponent extends BaseComponent {
       apiName: this.config.apiName ?? `${this.context.serviceName}-${this.spec.name}`,
       description: this.config.description ?? `HTTP API for ${this.spec.name}`,
       corsPreflight: cors,
-      createDefaultStage: false
+      createDefaultStage: false,
+      disableExecuteApiEndpoint: this.config.apiSettings?.disableExecuteApiEndpoint
     });
 
     this.applyStandardTags(this.httpApi, this.config.tags);

@@ -1,17 +1,19 @@
 {
-  "name": "@shinobi/svc",
+  "name": "@shinobi/cli",
   "version": "0.1.0",
-  "type": "module",
+  "type": "commonjs",
   "bin": {
-    "svc": "dist/bin/svc.js"
+    "shinobi": "dist/apps/shinobi/main.js"
   },
   "scripts": {
     "build": "tsc -p tsconfig.app.json",
-    "start": "node dist/bin/svc.js",
+    "start": "node --require ts-node/register/transpile-only src/main.ts",
     "test": "jest"
   },
   "dependencies": {
-    "@shinobi/core": "workspace:*"
+    "@shinobi/core": "workspace:*",
+    "tsconfig-paths": "^4.2.0",
+    "ts-node": "^10.9.2"
   },
   "devDependencies": {
     "@types/inquirer": "^9.0.9",

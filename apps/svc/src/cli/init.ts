@@ -1,5 +1,8 @@
 import inquirer from 'inquirer';
 import { ConfigLoader } from '@shinobi/core';
+import * as path from 'path';
+import * as fs from 'fs/promises';
+import { loadComponentCatalog, ComponentCatalogEntry } from './utils/component-catalog';
 import { Logger } from './utils/logger';
 import { FileDiscovery } from './utils/file-discovery';
 import { TemplateEngine } from './templates/template-engine';
@@ -65,8 +68,8 @@ export class InitCommand {
       this.dependencies.logger.success(`Service '${inputs.name}' initialized successfully!`);
       this.dependencies.logger.info('Next steps:');
       this.dependencies.logger.info('  1. Edit service.yml to customize your service');
-      this.dependencies.logger.info('  2. Run "svc validate" to check your configuration');
-      this.dependencies.logger.info('  3. Run "svc plan" to see resolved configuration');
+      this.dependencies.logger.info('  2. Run "shinobi validate" to check your configuration');
+      this.dependencies.logger.info('  3. Run "shinobi plan" to see resolved configuration');
 
       return {
         success: true,
@@ -198,35 +201,29 @@ export class InitCommand {
    */
   private async discoverTemplates(): Promise<Array<{ name: string; value: string; description?: string }>> {
     try {
-      const config = await ConfigLoader.getTemplateConfig();
-
-      const templates: Array<{ name: string; value: string; description?: string }> = [
+      const curatedScaffolds = await this.loadCuratedScaffolds();
+      const availableComponents = await this.loadComponentRegistryMetadata();
+      const combined: Array<{ name: string; value: string; description?: string }> = [
         {
           name: 'Empty (minimal setup)',
           value: 'empty',
           description: 'Basic service scaffold with no components'
-        }
+        },
+        ...curatedScaffolds,
+        ...availableComponents
       ];
 
-      if (config.templates.lambda_api_with_db) {
-        templates.push({
-          name: 'Lambda API with Database',
-          value: 'lambda-api-with-db',
-          description: 'REST API backed by Lambda and RDS PostgreSQL'
-        });
-      }
-
-      if (config.templates.worker_with_queue) {
-        templates.push({
-          name: 'Worker with Queue',
-          value: 'worker-with-queue',
-          description: 'Background processor triggered by SQS events'
-        });
-      }
+      const seen = new Set<string>();
+      const templates = combined.filter(template => {
+        if (seen.has(template.value)) {
+          return false;
+        }
+        seen.add(template.value);
+        return true;
+      });
 
       this.dependencies.logger.debug(`Template catalog populated with ${templates.length} entries`);
       return templates;
-
     } catch (error) {
       this.dependencies.logger.warn('Falling back to default template list; failed to load configuration', {
         data: {
@@ -240,6 +237,51 @@ export class InitCommand {
         { name: 'Worker with Queue', value: 'worker-with-queue' }
       ];
     }
+  }
+
+  private async loadCuratedScaffolds(): Promise<Array<{ name: string; value: string; description?: string }>> {
+    try {
+      const config = await ConfigLoader.getTemplateConfig();
+      const scaffolds: Array<{ name: string; value: string; description?: string }> = [];
+
+      if (config.templates.lambda_api_with_db) {
+        scaffolds.push({
+          name: 'Lambda API with Database',
+          value: 'lambda-api-with-db',
+          description: 'REST API backed by Lambda and RDS PostgreSQL'
+        });
+      }
+
+      if (config.templates.worker_with_queue) {
+        scaffolds.push({
+          name: 'Worker with Queue',
+          value: 'worker-with-queue',
+          description: 'Background processor triggered by SQS events'
+        });
+      }
+
+      return scaffolds;
+    } catch {
+      return [];
+    }
+  }
+
+  private async loadComponentRegistryMetadata(): Promise<Array<{ name: string; value: string; description?: string }>> {
+    const catalogEntries: ComponentCatalogEntry[] = await loadComponentCatalog();
+
+    return catalogEntries.map(entry => ({
+      name: entry.displayName,
+      value: entry.componentType,
+      description: entry.description ?? `Lifecycle: ${entry.lifecycle}`
+    }));
+  }
+
+  private formatDisplayName(raw: string): string {
+    return raw
+      .split(/[-_]/)
+      .filter(Boolean)
+      .map(part => part.charAt(0).toUpperCase() + part.slice(1))
+      .join(' ');
   }
 
   private async gatherInputs(
