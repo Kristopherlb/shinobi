@@ -9,8 +9,14 @@ export interface ComponentContext {
     account?: string;
     region?: string;
     scope: any;
+    vpc?: any;
     observability?: {
         collectorEndpoint?: string;
+        adotLayerArn?: string;
+        adotLayerArnMap?: Record<string, string>;
+        enableTracing?: boolean;
+        enableMetrics?: boolean;
+        enableLogs?: boolean;
     };
     tags?: Record<string, string>;
 }

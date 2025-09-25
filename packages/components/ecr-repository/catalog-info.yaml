@@ -1,0 +1,39 @@
+apiVersion: backstage.io/v1alpha1
+kind: Component
+metadata:
+  name: ecr-repository
+  title: ECR Repository
+  description: Secure ECR repository with image scanning, lifecycle policies, and tagging standards.
+  tags:
+    - component
+    - aws
+    - ecr
+    - containers
+    - security
+  annotations:
+    platform.shinobi.dev/component-type: ecr-repository
+    github.com/project-slug: project42/shinobi
+    backstage.io/techdocs-ref: dir:.
+spec:
+  type: infrastructure
+  lifecycle: production
+  owner: group:default/platform-engineering
+  system: system:default/shinobi
+  metadata:
+    platform:
+      componentType: ecr-repository
+      category: containers
+      description: ECR repository component with encryption, vulnerability scanning, and compliance aware logging.
+      capabilities:
+        - container:ecr
+      awsServices:
+        - ecr
+        - kms
+        - cloudwatch
+      tags:
+        required:
+          - containers
+          - registry
+          - security
+      documentation:
+        readme: packages/components/ecr-repository/README.md

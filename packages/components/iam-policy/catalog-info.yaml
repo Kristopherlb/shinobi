@@ -1,0 +1,38 @@
+apiVersion: backstage.io/v1alpha1
+kind: Component
+metadata:
+  name: iam-policy
+  title: IAM Policy
+  description: Managed IAM policy with statement composition, linting, and least-privilege enforcement.
+  tags:
+    - component
+    - aws
+    - iam
+    - security
+    - governance
+  annotations:
+    platform.shinobi.dev/component-type: iam-policy
+    github.com/project-slug: project42/shinobi
+    backstage.io/techdocs-ref: dir:.
+spec:
+  type: security
+  lifecycle: production
+  owner: group:default/platform-engineering
+  system: system:default/shinobi
+  metadata:
+    platform:
+      componentType: iam-policy
+      category: security
+      description: IAM policy component with template composition, compliance rules, and change management.
+      capabilities:
+        - iam:policy
+      awsServices:
+        - iam
+        - cloudwatch
+      tags:
+        required:
+          - security
+          - governance
+          - compliance
+      documentation:
+        readme: packages/components/iam-policy/README.md

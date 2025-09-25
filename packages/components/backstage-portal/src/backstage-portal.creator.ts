@@ -77,6 +77,17 @@ export class BackstagePortalComponentCreator implements IComponentCreator {
    * JSON Schema for component configuration validation
    */
   public readonly configSchema = BACKSTAGE_PORTAL_CONFIG_SCHEMA;
+
+  /**
+   * Capabilities exposed after synthesis
+   */
+  public getProvidedCapabilities(): string[] {
+    return [
+      'portal:url',
+      'ecr:repository',
+      'cluster:name'
+    ];
+  }
   
   /**
    * Factory method to create component instances

@@ -1,0 +1,39 @@
+apiVersion: backstage.io/v1alpha1
+kind: Component
+metadata:
+  name: kinesis-stream
+  title: Kinesis Stream
+  description: Managed Kinesis data stream with scaling, encryption, and consumer management.
+  tags:
+    - component
+    - aws
+    - kinesis
+    - streaming
+    - data
+  annotations:
+    platform.shinobi.dev/component-type: kinesis-stream
+    github.com/project-slug: project42/shinobi
+    backstage.io/techdocs-ref: dir:.
+spec:
+  type: data
+  lifecycle: production
+  owner: group:default/platform-engineering
+  system: system:default/shinobi
+  metadata:
+    platform:
+      componentType: kinesis-stream
+      category: data
+      description: Kinesis stream component delivering shard management, consumer policies, and observability.
+      capabilities:
+        - stream:kinesis
+      awsServices:
+        - kinesis
+        - cloudwatch
+        - kms
+      tags:
+        required:
+          - streaming
+          - data
+          - observability
+      documentation:
+        readme: packages/components/kinesis-stream/README.md

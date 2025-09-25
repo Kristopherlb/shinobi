@@ -1,0 +1,40 @@
+apiVersion: backstage.io/v1alpha1
+kind: Component
+metadata:
+  name: api-gateway-rest
+  title: API Gateway REST
+  description: Enterprise-grade REST API Gateway with Cognito auth, throttling, and WAF integration.
+  tags:
+    - component
+    - aws
+    - api-gateway
+    - rest
+    - security
+  annotations:
+    platform.shinobi.dev/component-type: api-gateway-rest
+    github.com/project-slug: project42/shinobi
+    backstage.io/techdocs-ref: dir:.
+spec:
+  type: service
+  lifecycle: production
+  owner: group:default/platform-engineering
+  system: system:default/shinobi
+  metadata:
+    platform:
+      componentType: api-gateway-rest
+      category: integration
+      description: Enterprise REST API Gateway component following Shinobi platform standards.
+      capabilities:
+        - api:rest
+      awsServices:
+        - apigateway
+        - cognito
+        - waf
+      tags:
+        required:
+          - api
+          - rest
+          - gateway
+          - observability
+      documentation:
+        readme: packages/components/api-gateway-rest/README.md

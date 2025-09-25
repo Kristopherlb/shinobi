@@ -51,6 +51,7 @@ export interface DaggerConfig {
   fipsMode: boolean;
   capacity: Capacity;
   instanceType?: string;
+  daggerVersion?: string;
   endpoint?: EndpointConfig;
   storage?: StorageConfig;
   observability?: ObservabilityConfig;

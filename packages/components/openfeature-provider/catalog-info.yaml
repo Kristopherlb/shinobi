@@ -1,0 +1,39 @@
+apiVersion: backstage.io/v1alpha1
+kind: Component
+metadata:
+  name: openfeature-provider
+  title: OpenFeature Provider
+  description: OpenFeature-compliant provider service with secure evaluation, caching, and observability.
+  tags:
+    - component
+    - openfeature
+    - feature-flags
+    - platform
+    - observability
+  annotations:
+    platform.shinobi.dev/component-type: openfeature-provider
+    github.com/project-slug: project42/shinobi
+    backstage.io/techdocs-ref: dir:.
+spec:
+  type: platform
+  lifecycle: production
+  owner: group:default/platform-engineering
+  system: system:default/shinobi
+  metadata:
+    platform:
+      componentType: openfeature-provider
+      category: platform
+      description: OpenFeature provider component exposing evaluation APIs with caching and audit support.
+      capabilities:
+        - openfeature:provider
+      awsServices:
+        - lambda
+        - dynamodb
+        - cloudwatch
+      tags:
+        required:
+          - feature-management
+          - observability
+          - governance
+      documentation:
+        readme: packages/components/openfeature-provider/README.md

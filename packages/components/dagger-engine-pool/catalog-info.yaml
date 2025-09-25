@@ -1,0 +1,20 @@
+apiVersion: backstage.io/v1alpha1
+kind: Component
+metadata:
+  name: dagger-engine-pool
+  title: Dagger Engine Pool
+  description: Dagger Engine Pool component for private, FIPS/STIG-friendly CI/CD infrastructure
+  annotations:
+    platform.shinobi.dev/component-type: dagger-engine-pool
+spec:
+  type: library
+  lifecycle: experimental
+  owner: group:default/platform-engineering
+  system: system:default/shinobi
+  metadata:
+    platform:
+      componentType: dagger-engine-pool
+      version: 1.0.0
+      description: Dagger Engine Pool component for private, FIPS/STIG-friendly CI/CD infrastructure
+      capabilities: []
+      tags: ["aws-cdk","dagger","cicd","infrastructure","compliance","fedramp","fips","stig"]

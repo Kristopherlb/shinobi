@@ -1,0 +1,39 @@
+apiVersion: backstage.io/v1alpha1
+kind: Component
+metadata:
+  name: ssm-parameter
+  title: SSM Parameter
+  description: Systems Manager parameter with type enforcement, encryption, and lifecycle policies.
+  tags:
+    - component
+    - aws
+    - ssm
+    - configuration
+    - security
+  annotations:
+    platform.shinobi.dev/component-type: ssm-parameter
+    github.com/project-slug: project42/shinobi
+    backstage.io/techdocs-ref: dir:.
+spec:
+  type: platform
+  lifecycle: production
+  owner: group:default/platform-engineering
+  system: system:default/shinobi
+  metadata:
+    platform:
+      componentType: ssm-parameter
+      category: configuration
+      description: SSM parameter component providing secure configuration storage with tagging and observability.
+      capabilities:
+        - configuration:parameter
+      awsServices:
+        - ssm
+        - kms
+        - cloudwatch
+      tags:
+        required:
+          - configuration
+          - security
+          - observability
+      documentation:
+        readme: packages/components/ssm-parameter/README.md

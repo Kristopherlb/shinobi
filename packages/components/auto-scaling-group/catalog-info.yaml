@@ -1,0 +1,41 @@
+apiVersion: backstage.io/v1alpha1
+kind: Component
+metadata:
+  name: auto-scaling-group
+  title: Auto Scaling Group
+  description: Elastic compute fleet with launch templates, scaling policies, and compliance hardening.
+  tags:
+    - component
+    - aws
+    - autoscaling
+    - compute
+    - ec2
+  annotations:
+    platform.shinobi.dev/component-type: auto-scaling-group
+    github.com/project-slug: project42/shinobi
+    backstage.io/techdocs-ref: dir:.
+spec:
+  type: infrastructure
+  lifecycle: production
+  owner: group:default/platform-engineering
+  system: system:default/shinobi
+  metadata:
+    platform:
+      componentType: auto-scaling-group
+      category: compute
+      description: Auto Scaling Group component covering launch templates, scaling policies, and observability hooks.
+      capabilities:
+        - compute:asg
+      awsServices:
+        - autoscaling
+        - ec2
+        - cloudwatch
+        - iam
+        - kms
+      tags:
+        required:
+          - compute
+          - autoscaling
+          - observability
+      documentation:
+        readme: packages/components/auto-scaling-group/README.md

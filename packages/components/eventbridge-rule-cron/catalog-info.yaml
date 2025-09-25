@@ -1,0 +1,41 @@
+apiVersion: backstage.io/v1alpha1
+kind: Component
+metadata:
+  name: eventbridge-rule-cron
+  title: EventBridge Rule (Cron)
+  description: Scheduled EventBridge rule with cron expressions, DLQ integration, and compliance tagging.
+  tags:
+    - component
+    - aws
+    - eventbridge
+    - scheduler
+    - automation
+  annotations:
+    platform.shinobi.dev/component-type: eventbridge-rule-cron
+    github.com/project-slug: project42/shinobi
+    backstage.io/techdocs-ref: dir:.
+spec:
+  type: integration
+  lifecycle: production
+  owner: group:default/platform-engineering
+  system: system:default/shinobi
+  metadata:
+    platform:
+      componentType: eventbridge-rule-cron
+      category: integration
+      description: EventBridge rule component executing cron schedules with alarm hooks and DLQ support.
+      capabilities:
+        - scheduler:cron
+        - trigger:eventbridge
+      awsServices:
+        - events
+        - cloudwatch
+        - iam
+        - sqs
+      tags:
+        required:
+          - scheduling
+          - automation
+          - observability
+      documentation:
+        readme: packages/components/eventbridge-rule-cron/README.md

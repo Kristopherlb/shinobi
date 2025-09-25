@@ -1,8 +1,6 @@
 import inquirer from 'inquirer';
 import { ConfigLoader } from '@shinobi/core';
-import * as path from 'path';
-import * as fs from 'fs/promises';
-import { loadComponentCatalog, ComponentCatalogEntry } from './utils/component-catalog';
+import { loadComponentCreators } from './utils/component-loader';
 import { Logger } from './utils/logger';
 import { FileDiscovery } from './utils/file-discovery';
 import { TemplateEngine } from './templates/template-engine';
@@ -267,21 +265,15 @@ export class InitCommand {
   }
 
   private async loadComponentRegistryMetadata(): Promise<Array<{ name: string; value: string; description?: string }>> {
-    const catalogEntries: ComponentCatalogEntry[] = await loadComponentCatalog();
+    const creators = await loadComponentCreators({ includeNonProduction: false, autoBuild: false });
 
-    return catalogEntries.map(entry => ({
-      name: entry.displayName,
-      value: entry.componentType,
-      description: entry.description ?? `Lifecycle: ${entry.lifecycle}`
-    }));
-  }
-
-  private formatDisplayName(raw: string): string {
-    return raw
-      .split(/[-_]/)
-      .filter(Boolean)
-      .map(part => part.charAt(0).toUpperCase() + part.slice(1))
-      .join(' ');
+    return Array.from(creators.values())
+      .map(({ entry }) => ({
+        name: entry.displayName,
+        value: entry.componentType,
+        description: entry.description ?? `Lifecycle: ${entry.lifecycle}`
+      }))
+      .sort((a, b) => a.name.localeCompare(b.name));
   }
 
   private async gatherInputs(

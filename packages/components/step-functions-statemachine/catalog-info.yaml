@@ -1,0 +1,39 @@
+apiVersion: backstage.io/v1alpha1
+kind: Component
+metadata:
+  name: step-functions-statemachine
+  title: Step Functions State Machine
+  description: Serverless workflow orchestrator with definition management, IAM policies, and observability.
+  tags:
+    - component
+    - aws
+    - step-functions
+    - workflow
+    - automation
+  annotations:
+    platform.shinobi.dev/component-type: step-functions-statemachine
+    github.com/project-slug: project42/shinobi
+    backstage.io/techdocs-ref: dir:.
+spec:
+  type: integration
+  lifecycle: production
+  owner: group:default/platform-engineering
+  system: system:default/shinobi
+  metadata:
+    platform:
+      componentType: step-functions-statemachine
+      category: integration
+      description: Step Functions state machine component for orchestrating workflows with compliance and observability hooks.
+      capabilities:
+        - workflow:step-functions
+      awsServices:
+        - stepfunctions
+        - iam
+        - cloudwatch
+      tags:
+        required:
+          - automation
+          - workflow
+          - observability
+      documentation:
+        readme: packages/components/step-functions-statemachine/README.md

@@ -1,0 +1,20 @@
+apiVersion: backstage.io/v1alpha1
+kind: Component
+metadata:
+  name: vpc
+  title: Vpc
+  description: CDK L3 component for vpc
+  annotations:
+    platform.shinobi.dev/component-type: vpc
+spec:
+  type: library
+  lifecycle: experimental
+  owner: group:default/platform-engineering
+  system: system:default/shinobi
+  metadata:
+    platform:
+      componentType: vpc
+      version: 0.1.0
+      description: CDK L3 component for vpc
+      capabilities: []
+      tags: ["aws","cdk","infrastructure","component"]

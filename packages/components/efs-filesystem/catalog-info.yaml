@@ -1,0 +1,40 @@
+apiVersion: backstage.io/v1alpha1
+kind: Component
+metadata:
+  name: efs-filesystem
+  title: EFS Filesystem
+  description: Elastic File System with lifecycle policies, access points, and compliance tagging.
+  tags:
+    - component
+    - aws
+    - efs
+    - storage
+    - filesystem
+  annotations:
+    platform.shinobi.dev/component-type: efs-filesystem
+    github.com/project-slug: project42/shinobi
+    backstage.io/techdocs-ref: dir:.
+spec:
+  type: storage
+  lifecycle: production
+  owner: group:default/platform-engineering
+  system: system:default/shinobi
+  metadata:
+    platform:
+      componentType: efs-filesystem
+      category: storage
+      description: EFS filesystem component providing network mount targets, encryption, and observability hooks.
+      capabilities:
+        - storage:efs
+      awsServices:
+        - efs
+        - ec2
+        - kms
+        - cloudwatch
+      tags:
+        required:
+          - storage
+          - filesystem
+          - observability
+      documentation:
+        readme: packages/components/efs-filesystem/README.md

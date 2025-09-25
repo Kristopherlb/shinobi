@@ -1,0 +1,20 @@
+apiVersion: backstage.io/v1alpha1
+kind: Component
+metadata:
+  name: components-ecs-cluster
+  title: Components Ecs Cluster
+  description: ECS Cluster component for the Platform - provides ECS clusters with Service Connect capability
+  annotations:
+    platform.shinobi.dev/component-type: components-ecs-cluster
+spec:
+  type: library
+  lifecycle: experimental
+  owner: group:default/platform-engineering
+  system: system:default/shinobi
+  metadata:
+    platform:
+      componentType: components-ecs-cluster
+      version: 1.0.0
+      description: ECS Cluster component for the Platform - provides ECS clusters with Service Connect capability
+      capabilities: []
+      tags: ["aws","ecs","cluster","service-connect","platform","cdk"]

@@ -1,0 +1,39 @@
+apiVersion: backstage.io/v1alpha1
+kind: Component
+metadata:
+  name: sns-topic
+  title: SNS Topic
+  description: Managed SNS topic with subscription policies, encryption, and event delivery monitoring.
+  tags:
+    - component
+    - aws
+    - sns
+    - messaging
+    - integration
+  annotations:
+    platform.shinobi.dev/component-type: sns-topic
+    github.com/project-slug: project42/shinobi
+    backstage.io/techdocs-ref: dir:.
+spec:
+  type: integration
+  lifecycle: production
+  owner: group:default/platform-engineering
+  system: system:default/shinobi
+  metadata:
+    platform:
+      componentType: sns-topic
+      category: messaging
+      description: SNS topic component handling subscriptions, DLQs, and compliance-aware security controls.
+      capabilities:
+        - topic:sns
+      awsServices:
+        - sns
+        - kms
+        - cloudwatch
+      tags:
+        required:
+          - messaging
+          - notifications
+          - observability
+      documentation:
+        readme: packages/components/sns-topic/README.md

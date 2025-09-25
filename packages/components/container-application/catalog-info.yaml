@@ -1,0 +1,20 @@
+apiVersion: backstage.io/v1alpha1
+kind: Component
+metadata:
+  name: components-container-application
+  title: Components Container Application
+  description: Production-grade containerized application component for the Shinobi platform
+  annotations:
+    platform.shinobi.dev/component-type: components-container-application
+spec:
+  type: library
+  lifecycle: experimental
+  owner: group:default/platform-engineering
+  system: system:default/shinobi
+  metadata:
+    platform:
+      componentType: components-container-application
+      version: 1.0.0
+      description: Production-grade containerized application component for the Shinobi platform
+      capabilities: []
+      tags: ["container","application","ecs","fargate","load-balancer","microservices","docker","observability","monitoring","aws","scalable","zero-config","shinobi","platform","component"]

@@ -1,0 +1,40 @@
+apiVersion: backstage.io/v1alpha1
+kind: Component
+metadata:
+  name: elasticache-redis
+  title: ElastiCache Redis
+  description: Managed Redis cluster with encryption, subnet groups, and monitoring baselines.
+  tags:
+    - component
+    - aws
+    - redis
+    - cache
+    - performance
+  annotations:
+    platform.shinobi.dev/component-type: elasticache-redis
+    github.com/project-slug: project42/shinobi
+    backstage.io/techdocs-ref: dir:.
+spec:
+  type: data
+  lifecycle: production
+  owner: group:default/platform-engineering
+  system: system:default/shinobi
+  metadata:
+    platform:
+      componentType: elasticache-redis
+      category: data
+      description: ElastiCache Redis component delivering clustered cache nodes with compliance-aware security.
+      capabilities:
+        - cache:redis
+      awsServices:
+        - elasticache
+        - ec2
+        - kms
+        - cloudwatch
+      tags:
+        required:
+          - cache
+          - redis
+          - observability
+      documentation:
+        readme: packages/components/elasticache-redis/README.md

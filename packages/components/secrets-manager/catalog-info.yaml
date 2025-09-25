@@ -1,0 +1,39 @@
+apiVersion: backstage.io/v1alpha1
+kind: Component
+metadata:
+  name: secrets-manager
+  title: Secrets Manager
+  description: Managed Secrets Manager vault with rotation policies, encryption, and auditing.
+  tags:
+    - component
+    - aws
+    - secrets
+    - security
+    - compliance
+  annotations:
+    platform.shinobi.dev/component-type: secrets-manager
+    github.com/project-slug: project42/shinobi
+    backstage.io/techdocs-ref: dir:.
+spec:
+  type: security
+  lifecycle: production
+  owner: group:default/platform-engineering
+  system: system:default/shinobi
+  metadata:
+    platform:
+      componentType: secrets-manager
+      category: security
+      description: Secrets Manager component delivering encrypted secrets with rotation, tagging, and observability hooks.
+      capabilities:
+        - secret:secretsmanager
+      awsServices:
+        - secretsmanager
+        - kms
+        - cloudwatch
+      tags:
+        required:
+          - security
+          - secrets
+          - observability
+      documentation:
+        readme: packages/components/secrets-manager/README.md

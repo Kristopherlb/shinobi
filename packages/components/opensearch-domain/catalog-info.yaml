@@ -1,0 +1,40 @@
+apiVersion: backstage.io/v1alpha1
+kind: Component
+metadata:
+  name: opensearch-domain
+  title: OpenSearch Domain
+  description: Managed OpenSearch domain with access policies, encryption, and observability automation.
+  tags:
+    - component
+    - aws
+    - opensearch
+    - search
+    - analytics
+  annotations:
+    platform.shinobi.dev/component-type: opensearch-domain
+    github.com/project-slug: project42/shinobi
+    backstage.io/techdocs-ref: dir:.
+spec:
+  type: data
+  lifecycle: production
+  owner: group:default/platform-engineering
+  system: system:default/shinobi
+  metadata:
+    platform:
+      componentType: opensearch-domain
+      category: data
+      description: OpenSearch domain component for search and analytics workloads with compliance guardrails.
+      capabilities:
+        - search:opensearch
+      awsServices:
+        - opensearch
+        - ec2
+        - kms
+        - cloudwatch
+      tags:
+        required:
+          - search
+          - analytics
+          - observability
+      documentation:
+        readme: packages/components/opensearch-domain/README.md
