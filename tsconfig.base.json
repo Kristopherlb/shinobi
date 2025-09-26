@@ -19,70 +19,70 @@
     "baseUrl": ".",
     "paths": {
       "@shinobi/core/component": [
-        "dist/packages/core/platform/contracts/component.d.ts"
+        "dist/packages/core/src/platform/contracts/component.d.ts"
       ],
       "@shinobi/core/component-interfaces": [
-        "dist/packages/core/platform/contracts/component-interfaces.d.ts"
+        "dist/packages/core/src/platform/contracts/component-interfaces.d.ts"
       ],
       "@shinobi/core/config-builder": [
-        "dist/packages/core/platform/contracts/config-builder.d.ts"
+        "dist/packages/core/src/platform/contracts/config-builder.d.ts"
       ],
       "@shinobi/core/logging-interfaces": [
-        "dist/packages/core/platform/contracts/logging-interfaces.d.ts"
+        "dist/packages/core/src/platform/contracts/logging-interfaces.d.ts"
       ],
       "@shinobi/core/platform-services": [
-        "dist/packages/core/platform/contracts/platform-services.d.ts"
+        "dist/packages/core/src/platform/contracts/platform-services.d.ts"
       ],
       "@shinobi/core": [
-        "dist/packages/core/index.d.ts"
+        "dist/packages/core/src/index.d.ts"
       ],
       "@shinobi/core/*": [
-        "dist/packages/core/index.d.ts"
+        "dist/packages/core/src"
       ],
       "@shinobi/observability-handlers": [
-        "dist/packages/observability-handlers/index.d.ts"
+        "dist/packages/observability-handlers/src/index.d.ts"
       ],
       "@shinobi/observability-handlers/*": [
-        "dist/packages/observability-handlers/index.d.ts"
+        "dist/packages/observability-handlers/src"
       ],
       "@shinobi/standards-deprecation": [
-        "dist/packages/standards/deprecation/index.d.ts"
+        "dist/packages/standards/deprecation/src/index.d.ts"
       ],
       "@shinobi/standards-deprecation/*": [
-        "dist/packages/standards/deprecation/index.d.ts"
+        "dist/packages/standards/deprecation/src"
       ],
       "@shinobi/standards-iam-audit": [
-        "dist/packages/standards/iam-audit/index.d.ts"
+        "dist/packages/standards/iam-audit/src/index.d.ts"
       ],
       "@shinobi/standards-iam-audit/*": [
-        "dist/packages/standards/iam-audit/index.d.ts"
+        "dist/packages/standards/iam-audit/src"
       ],
       "@shinobi/standards-logging": [
-        "dist/packages/standards/logging/index.d.ts"
+        "dist/packages/standards/logging/src/index.d.ts"
       ],
       "@shinobi/standards-logging/*": [
-        "dist/packages/standards/logging/index.d.ts"
+        "dist/packages/standards/logging/src"
       ],
       "@shinobi/standards-otel": [
-        "dist/packages/standards/otel/index.d.ts"
+        "dist/packages/standards/otel/src/index.d.ts"
       ],
       "@shinobi/standards-otel/*": [
-        "dist/packages/standards/otel/index.d.ts"
+        "dist/packages/standards/otel/src"
       ],
       "@shinobi/standards-tagging": [
-        "dist/packages/standards/tagging/index.d.ts"
+        "dist/packages/standards/tagging/src/index.d.ts"
       ],
       "@shinobi/standards-tagging/*": [
-        "dist/packages/standards/tagging/index.d.ts"
+        "dist/packages/standards/tagging/src"
       ],
       "@platform/logger": [
-        "packages/core/src/platform/logger/src/index.ts"
+        "dist/packages/core/src/platform/logger/src/index.d.ts"
       ],
       "@platform/components/*": [
-        "packages/components/*/src"
+        "dist/packages/components/*/src"
       ],
       "@platform/constructs/*": [
-        "packages/constructs/*/src"
+        "dist/packages/constructs/*/src"
       ],
       "@platform/contracts": [
         "packages/contracts/src/index.ts"

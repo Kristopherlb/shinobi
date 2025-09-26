@@ -8,11 +8,9 @@
   ],
   "targets": {
     "build": {
-      "executor": "@nx/node:build",
+      "executor": "nx:run-commands",
       "options": {
-        "outputPath": "dist/apps/shinobi",
-        "main": "apps/svc/src/main.ts",
-        "tsConfig": "apps/svc/tsconfig.app.json"
+        "command": "pnpm exec tsc -p apps/svc/tsconfig.app.json"
       }
     },
     "serve": {
