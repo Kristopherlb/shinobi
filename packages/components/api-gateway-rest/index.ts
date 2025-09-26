@@ -4,14 +4,14 @@
  */
 
 // Component exports
-export { ApiGatewayRestComponent } from './api-gateway-rest.component';
+export { ApiGatewayRestComponent } from './src/api-gateway-rest.component';
 
 // Configuration exports
 export {
   ApiGatewayRestConfig,
   ApiGatewayRestConfigBuilder,
   API_GATEWAY_REST_CONFIG_SCHEMA,
-} from './api-gateway-rest.builder';
+} from './src/api-gateway-rest.builder';
 
 // Creator exports
-export { ApiGatewayRestComponentCreator } from './api-gateway-rest.creator';
+export { ApiGatewayRestComponentCreator } from './src/api-gateway-rest.creator';

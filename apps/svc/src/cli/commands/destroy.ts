@@ -1,23 +1,20 @@
 import { Command } from 'commander';
 import { CompositionRoot } from '../composition-root';
 
-export function createUpCommand(): Command {
+export function createDestroyCommand(): Command {
   const root = new CompositionRoot();
-  const command = new Command('up');
+  const command = new Command('destroy');
 
   command
-    .description('Deploy the service to AWS using AWS CDK CLI primitives')
+    .description('Delete the CloudFormation stack associated with the manifest')
     .option('-f, --file <manifest>', 'Path to service manifest file')
-    .option('-e, --env <environment>', 'Environment to deploy', 'dev')
+    .option('-e, --env <environment>', 'Environment to target', 'dev')
     .option('-r, --region <region>', 'AWS region override')
     .option('-a, --account <accountId>', 'AWS account ID override')
-    .option('-s, --stack <stackName>', 'Override CloudFormation stack name')
     .option('-p, --profile <profile>', 'AWS profile to use for credentials')
-    .option('--require-approval <level>', 'Change approval level', 'any-change')
-    .option('--yes', 'Skip interactive confirmation prompt')
-    .option('--json', 'Emit CDK deploy output as JSON (requires --yes)')
-    .option('--include-experimental', 'Include non-production components when resolving creators', false)
-    .option('--retain-asset-dir', 'Keep the synthesized asset directory after deployment')
+    .option('-s, --stack <stackName>', 'Override CloudFormation stack name')
+    .option('-y, --yes', 'Skip interactive confirmation prompt')
+    .option('--json', 'Emit results as JSON (requires --yes for destructive actions)')
     .action(async (options, cmd) => {
       const parent: any = cmd.parent || {};
       const rootOpts = parent.opts ? parent.opts() : {};
@@ -26,19 +23,16 @@ export function createUpCommand(): Command {
         ci: !!rootOpts.ci
       });
 
-      const upCommand = root.createUpCommand(dependencies);
-      const result = await upCommand.execute({
+      const destroyCommand = root.createDestroyCommand(dependencies);
+      const result = await destroyCommand.execute({
         file: options.file,
         env: options.env,
         region: options.region,
         account: options.account,
-        stack: options.stack,
         profile: options.profile,
-        requireApproval: options.requireApproval,
+        stack: options.stack,
         yes: options.yes,
-        json: options.json,
-        includeExperimental: options.includeExperimental,
-        retainAssetDir: options.retainAssetDir
+        json: options.json
       });
 
       if (result.success) {

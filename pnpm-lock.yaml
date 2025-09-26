@@ -63,6 +63,9 @@ importers:
         specifier: ^5.9.2
         version: 5.9.2
     devDependencies:
+      '@aws-cdk/cli-lib-alpha':
+        specifier: 2.1029.3-alpha.0
+        version: 2.1029.3-alpha.0
       '@nx/eslint':
         specifier: ^21.5.2
         version: 21.5.2(@babel/traverse@7.28.4)(@swc/core@1.13.5(@swc/helpers@0.5.17))(@zkochan/js-yaml@0.0.7)(eslint@8.57.1)(nx@21.5.2(@swc/core@1.13.5(@swc/helpers@0.5.17)))
@@ -869,6 +872,11 @@ packages:
 
   '@aws-cdk/asset-node-proxy-agent-v6@2.1.0':
     resolution: {integrity: sha512-7bY3J8GCVxLupn/kNmpPc5VJz8grx+4RKfnnJiO1LG+uxkZfANZG3RMHhE+qQxxwkyQ9/MfPtTpf748UhR425A==}
+
+  '@aws-cdk/cli-lib-alpha@2.1029.3-alpha.0':
+    resolution: {integrity: sha512-d9nX6xTd9NpEtEItq/pxLDVl1Lu6AFOrjdutfJLjAUjmFrrHjKTbBO2rlzlashVNkJS1iRHbd6DtwBYHyVl4Kw==}
+    engines: {node: '>= 18.0.0'}
+    deprecated: Deprecated in favor of @aws-cdk/toolkit-lib, a newer approach providing similar functionality to this package. Please migrate.
 
   '@aws-cdk/cloud-assembly-schema@48.9.0':
     resolution: {integrity: sha512-wZsFnrLLzowYA26yfV6Xe7h6ZAYXZwsAQLLBowxhVdR5NcJIeCWI0dAavNdrUdZgiEbYU4rkUX3AXYI+nC6FTA==}
@@ -8547,6 +8555,8 @@ snapshots:
   '@aws-cdk/asset-awscli-v1@2.2.242': {}
 
   '@aws-cdk/asset-node-proxy-agent-v6@2.1.0': {}
+
+  '@aws-cdk/cli-lib-alpha@2.1029.3-alpha.0': {}
 
   '@aws-cdk/cloud-assembly-schema@48.9.0': {}
 

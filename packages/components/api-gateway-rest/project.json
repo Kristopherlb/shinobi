@@ -7,7 +7,7 @@
     "build": {
       "executor": "nx:run-commands",
       "options": {
-        "command": "tsc -p packages/components/api-gateway-rest/tsconfig.json"
+        "command": "tsc -p packages/components/api-gateway-rest/tsconfig.json && node tools/cleanup-ts-build-artifacts.mjs"
       },
       "inputs": [
         "default",
@@ -17,7 +17,7 @@
         "{projectRoot}/tests/**/*.ts"
       ],
       "outputs": [
-        "{projectRoot}/dist"
+        "{workspaceRoot}/dist/packages/components/api-gateway-rest"
       ]
     },
     "typecheck": {

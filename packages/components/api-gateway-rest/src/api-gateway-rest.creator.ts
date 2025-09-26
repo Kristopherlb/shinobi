@@ -6,11 +6,7 @@
  */
 
 import { Construct } from 'constructs';
-import {
-  ComponentSpec,
-  ComponentContext,
-  IComponentCreator,
-} from '@platform/contracts';
+import { ComponentContext, ComponentSpec, IComponentCreator } from '@shinobi/core';
 import { ApiGatewayRestComponent } from './api-gateway-rest.component';
 import {
   ApiGatewayRestConfig,
@@ -71,12 +67,18 @@ export class ApiGatewayRestComponentCreator implements IComponentCreator {
   /**
    * Factory method to create component instances
    */
-  public createComponent(
-    scope: Construct,
-    spec: ComponentSpec,
-    context: ComponentContext,
-  ): ApiGatewayRestComponent {
-    return new ApiGatewayRestComponent(scope, spec.name, context, spec);
+  public createComponent(spec: ComponentSpec, context: ComponentContext): ApiGatewayRestComponent {
+    if (!context.scope) {
+      throw new Error('ComponentContext.scope is required to create components');
+    }
+
+    this.assertValidSpec(spec, context);
+
+    return new ApiGatewayRestComponent(context.scope as Construct, spec.name, context, spec);
+  }
+
+  public processComponent(spec: ComponentSpec, context: ComponentContext): ApiGatewayRestComponent {
+    return this.createComponent(spec, context);
   }
   
   /**
@@ -86,30 +88,10 @@ export class ApiGatewayRestComponentCreator implements IComponentCreator {
     spec: ComponentSpec, 
     context: ComponentContext
   ): { valid: boolean; errors: string[] } {
-    const errors: string[] = [];
-    const config = spec.config as ApiGatewayRestConfig;
-    
-    // Validate component name
-    if (!spec.name || spec.name.length === 0) {
-      errors.push('Component name is required');
-    } else if (!/^[a-zA-Z][a-zA-Z0-9-_]*$/.test(spec.name)) {
-      errors.push('Component name must start with a letter and contain only alphanumeric characters, hyphens, and underscores');
-    }
-    
-    // TODO: Add component-specific validations here
-    
-    // Environment-specific validations
-    if (context.environment === 'prod') {
-      if (config?.monitoring?.detailedMetrics === false) {
-        errors.push('Monitoring must be enabled in production environment');
-      }
-
-      // TODO: Add production-specific validations
-    }
-    
+    const errors = this.collectValidationErrors(spec, context);
     return {
       valid: errors.length === 0,
-      errors
+      errors,
     };
   }
   
@@ -126,9 +108,7 @@ export class ApiGatewayRestComponentCreator implements IComponentCreator {
    * Returns the capabilities this component requires from other components
    */
   public getRequiredCapabilities(): string[] {
-    return [
-      // TODO: Define required capabilities
-    ];
+    return [];
   }
   
   /**
@@ -142,5 +122,27 @@ export class ApiGatewayRestComponentCreator implements IComponentCreator {
       'authorizer',
       'usagePlan'
     ];
+  }
+
+  private assertValidSpec(spec: ComponentSpec, context: ComponentContext): void {
+    const errors = this.collectValidationErrors(spec, context);
+    if (errors.length > 0) {
+      throw new Error(`Invalid api-gateway-rest specification: ${errors.join('; ')}`);
+    }
+  }
+
+  private collectValidationErrors(spec: ComponentSpec, context: ComponentContext): string[] {
+    const errors: string[] = [];
+    const config = (spec.config ?? {}) as ApiGatewayRestConfig;
+
+    if (!spec.name || !/^[a-zA-Z][a-zA-Z0-9-_]*$/.test(spec.name)) {
+      errors.push('Component name must start with a letter and contain only alphanumeric characters, hyphens, and underscores');
+    }
+
+    if (context.environment === 'prod' && config.monitoring?.detailedMetrics === false) {
+      errors.push('Monitoring must be enabled in production environment');
+    }
+
+    return errors;
   }
 }

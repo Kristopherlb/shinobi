@@ -16,6 +16,9 @@ import {
 import { InitCommand } from './init';
 import { ValidateCommand } from './validate';
 import { PlanCommand } from './plan';
+import { DiffCommand } from './diff';
+import { DestroyCommand } from './destroy';
+import { UpCommand } from './up';
 import inquirer from 'inquirer';
 
 export interface ApplicationDependencies {
@@ -103,6 +106,27 @@ export class CompositionRoot {
   createPlanCommand(dependencies: ApplicationDependencies): PlanCommand {
     return new PlanCommand({
       pipeline: dependencies.validationOrchestrator,
+      fileDiscovery: dependencies.fileDiscovery,
+      logger: dependencies.logger
+    });
+  }
+
+  createDiffCommand(dependencies: ApplicationDependencies): DiffCommand {
+    return new DiffCommand({
+      fileDiscovery: dependencies.fileDiscovery,
+      logger: dependencies.logger
+    });
+  }
+
+  createDestroyCommand(dependencies: ApplicationDependencies): DestroyCommand {
+    return new DestroyCommand({
+      fileDiscovery: dependencies.fileDiscovery,
+      logger: dependencies.logger
+    });
+  }
+
+  createUpCommand(dependencies: ApplicationDependencies): UpCommand {
+    return new UpCommand({
       fileDiscovery: dependencies.fileDiscovery,
       logger: dependencies.logger
     });

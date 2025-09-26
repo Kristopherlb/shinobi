@@ -173,6 +173,18 @@ Stage 3 (Context Hydration): The pipeline MUST identify the target environment a
 
 Stage 4 (Semantic Validation): The pipeline MUST verify that all binds and ${ref:...} directives point to valid components within the manifest.
 
+shinobi diff
+
+Purpose: Provide an environment-aware drift detection workflow by comparing the synthesized CloudFormation template with the active stack in the target AWS account. The command reuses the svc plan synthesis pipeline, fetches the deployed stack template, and emits a structured summary of additions, removals, and property-level modifications. CI pipelines MUST treat a non-zero exit code (3) as "changes detected" so deployments can be gated until the diff is reviewed.
+
+Example usage: shinobi diff --file service.yml --env dev --region us-east-1
+
+shinobi destroy
+
+Purpose: Perform a controlled teardown of the CloudFormation stack that backs a service manifest. The command resolves the stack name the same way as synth/plan, prompts for confirmation (unless --yes is supplied), and waits until CloudFormation reports the deletion has completed. In CI mode the --json flag emits machine-readable status while --yes suppresses the interactive prompt.
+
+Example usage: shinobi destroy --file service.yml --env dev --yes
+
 Command
 
 Purpose & How It Works
@@ -299,4 +311,3 @@ svc platform
 Provides meta-commands for the CLI tool itself. This group of commands helps users manage their installation of the platform tooling. <br> - svc platform version: Shows the current version of the @platform/core-engine. <br> - svc platform update: Checks for and installs new versions of the core engine and component packages. <br> - svc platform doctor: Runs a series of diagnostic checks to ensure the user's environment is correctly configured (e.g., AWS credentials, Docker, cdk-dia installed).
 
 svc platform update
-

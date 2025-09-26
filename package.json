@@ -69,6 +69,7 @@
     "typescript": "^5.9.2"
   },
   "devDependencies": {
+    "@aws-cdk/cli-lib-alpha": "2.1029.3-alpha.0",
     "@nx/eslint": "^21.5.2",
     "@nx/eslint-plugin": "^21.5.2",
     "@nx/jest": "^21.5.2",

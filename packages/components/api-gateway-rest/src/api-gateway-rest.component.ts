@@ -55,7 +55,6 @@ export class ApiGatewayRestComponent extends BaseComponent {
     this.configureUsagePlan();
     this.ensureDefaultMethod();
     this.applyObservability();
-    this.applyComplianceHardening();
     this.configureWafAssociation();
     this.createMonitoringAlarms();
 
@@ -335,29 +334,6 @@ export class ApiGatewayRestComponent extends BaseComponent {
       ...cfnStage.variables,
       ...otelEnv,
     };
-  }
-
-  private applyComplianceHardening(): void {
-    if (!this.stage) {
-      return;
-    }
-
-    const cfnStage = this.stage.node.defaultChild as apigateway.CfnStage;
-
-    if (this.context.complianceFramework?.startsWith('fedramp')) {
-      cfnStage.addMetadata('ComplianceFramework', this.context.complianceFramework);
-      cfnStage.methodSettings = [
-        {
-          dataTraceEnabled: false,
-          metricsEnabled: true,
-          throttlingBurstLimit: this.config.throttling?.burstLimit,
-          throttlingRateLimit: this.config.throttling?.rateLimit,
-          loggingLevel: this.config.logging?.executionLoggingLevel ?? 'ERROR',
-          resourcePath: '/*',
-          httpMethod: '*',
-        },
-      ];
-    }
   }
 
   private configureWafAssociation(): void {

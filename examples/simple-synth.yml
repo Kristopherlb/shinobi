@@ -2,13 +2,9 @@ service: sample-service
 owner: platform-engineering
 complianceFramework: commercial
 environment: dev
-region: us-east-1
-accountId: 123456789012
+region: us-west-2
+accountId: 911871352725
 components:
-  - name: gateway
-    type: api-gateway-http
-    config:
-      description: Sample API Gateway
   - name: api
     type: lambda-api
     config:
@@ -16,9 +12,3 @@ components:
       handler: index.handler
       memorySize: 256
       timeout: 30
-  - name: database
-    type: rds-postgres
-    config:
-      instanceClass: db.t3.micro
-      allocatedStorage: 20
-      engineVersion: '15.4'

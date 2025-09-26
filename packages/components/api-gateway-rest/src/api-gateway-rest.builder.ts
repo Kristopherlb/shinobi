@@ -1,6 +1,5 @@
+import { ComponentContext, ComponentSpec } from '@platform/contracts';
 import {
-  ComponentContext,
-  ComponentSpec,
   ConfigBuilder,
   ConfigBuilderContext,
   ComponentConfigSchema,
@@ -419,20 +418,18 @@ export const API_GATEWAY_REST_CONFIG_SCHEMA: ComponentConfigSchema = {
 };
 
 export class ApiGatewayRestConfigBuilder extends ConfigBuilder<ApiGatewayRestConfig> {
-  private readonly context: ComponentContext;
-
   constructor(context: ComponentContext, spec: ComponentSpec) {
     const builderContext: ConfigBuilderContext = { context, spec };
     super(builderContext, API_GATEWAY_REST_CONFIG_SCHEMA);
-    this.context = context;
   }
 
   protected getHardcodedFallbacks(): ApiGatewayRestConfig {
-    const env = this.context.environment ?? 'prod';
-    const componentName = this.builderContext.spec.name;
+    const { context, spec } = this.builderContext;
+    const env = context.environment ?? 'prod';
+    const componentName = spec.name;
 
     return {
-      apiName: `${this.context.serviceName}-${componentName}`,
+      apiName: `${context.serviceName}-${componentName}`,
       description: `Enterprise REST API Gateway for ${componentName}`,
       deploymentStage: env,
       disableExecuteApiEndpoint: false,

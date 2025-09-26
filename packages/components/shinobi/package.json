@@ -1,6 +1,7 @@
 {
   "name": "@platform/shinobi",
   "version": "1.0.0",
+  "type": "module",
   "description": "Shinobi Component - The Platform Intelligence Brain. A production-grade Ops MCP Server that becomes the brain for SRE/DevOps/DPE/Developers and leadership.",
   "main": "src/index.ts",
   "types": "src/index.ts",
