@@ -11,7 +11,8 @@
       "executor": "@nx/js:tsc",
       "options": {
         "outputPath": "dist/packages/standards/otel",
-        "tsConfig": "packages/standards/otel/tsconfig.lib.json"
+        "tsConfig": "packages/standards/otel/tsconfig.lib.json",
+        "main": "packages/standards/otel/src/index.ts"
       }
     },
     "test": {

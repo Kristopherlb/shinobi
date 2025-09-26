@@ -11,7 +11,8 @@
       "executor": "@nx/js:tsc",
       "options": {
         "outputPath": "dist/packages/standards/tagging",
-        "tsConfig": "packages/standards/tagging/tsconfig.lib.json"
+        "tsConfig": "packages/standards/tagging/tsconfig.lib.json",
+        "main": "packages/standards/tagging/src/index.ts"
       }
     },
     "test": {

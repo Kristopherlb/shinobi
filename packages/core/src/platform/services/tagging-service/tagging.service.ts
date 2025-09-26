@@ -17,7 +17,6 @@ export interface TaggingContext {
   componentName: string;
   componentType: string;
   environment: string;
-  complianceFramework: string;
   region?: string;
   accountId?: string;
 }
@@ -41,42 +40,40 @@ export class TaggingService implements ITaggingService {
   public buildStandardTags(context: TaggingContext): Record<string, string> {
     const now = new Date();
     const deploymentId = `deploy-${now.getFullYear()}${(now.getMonth() + 1).toString().padStart(2, '0')}${now.getDate().toString().padStart(2, '0')}-${now.getHours().toString().padStart(2, '0')}${now.getMinutes().toString().padStart(2, '0')}${now.getSeconds().toString().padStart(2, '0')}`;
-    
+
     return {
       // Core Service Tags
       'service-name': context.serviceName,
       'service-version': context.serviceLabels?.version || '1.0.0',
       'component-name': context.componentName,
       'component-type': context.componentType,
-      
+
       // Environment Tags
       'environment': context.environment,
       'deployment-id': deploymentId,
-      'compliance-framework': context.complianceFramework,
-      
+
       // AWS Tags
       'cloud-provider': 'aws',
       'cloud-region': context.region || 'us-east-1',
       'cloud-account': context.accountId || 'unknown',
-      
+
       // Platform Tags
       'platform': 'cdk-lib',
       'platform-version': '1.0.0',
       'managed-by': 'platform-engineering',
-      
+
       // Cost Management Tags
       'cost-center': 'platform',
       'project': context.serviceName,
       'owner': 'platform-engineering',
-      
+
       // Security Tags
-      'data-classification': this.getDataClassification(context.complianceFramework),
-      'encryption-required': this.getEncryptionRequired(context.complianceFramework),
-      
+      'data-classification': 'internal',
+      'encryption-required': 'true',
+
       // Operational Tags
-      'backup-required': this.getBackupRequired(context.complianceFramework),
-      'monitoring-level': this.getMonitoringLevel(context.complianceFramework),
-      'retention-period': this.getRetentionPeriod(context.complianceFramework)
+      'backup-required': 'true',
+      'monitoring-level': 'enhanced'
     };
   }
 
@@ -85,12 +82,12 @@ export class TaggingService implements ITaggingService {
    */
   public applyStandardTags(resource: IConstruct, context: TaggingContext, additionalTags?: Record<string, string>): void {
     const standardTags = this.buildStandardTags(context);
-    
+
     // Apply all standard tags
     Object.entries(standardTags).forEach(([key, value]) => {
       cdk.Tags.of(resource).add(key, value);
     });
-    
+
     // Apply any additional component-specific tags
     if (additionalTags) {
       Object.entries(additionalTags).forEach(([key, value]) => {

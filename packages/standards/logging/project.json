@@ -8,11 +8,13 @@
   ],
   "targets": {
     "build": {
-      "executor": "@nx/js:tsc",
+      "executor": "nx:run-commands",
       "options": {
-        "outputPath": "dist/packages/standards/logging",
-        "tsConfig": "packages/standards/logging/tsconfig.lib.json"
-      }
+        "command": "tsc -p packages/standards/logging/tsconfig.lib.json"
+      },
+      "outputs": [
+        "{workspaceRoot}/dist/packages/standards/logging"
+      ]
     },
     "test": {
       "executor": "@nx/jest:jest",

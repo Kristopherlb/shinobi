@@ -122,3 +122,42 @@ defaults:
         lowThroughput: 2
     tracing:
       xrayEnabled: true
+
+  s3-bucket:
+    public: false
+    versioning: true
+    eventBridgeEnabled: false
+    encryption:
+      type: KMS
+    security:
+      blockPublicAccess: true
+      requireSecureTransport: true
+      requireMfaDelete: true
+      denyDeleteActions: true
+      tools:
+        clamavScan: true
+    lifecycleRules:
+      - id: fedramp-high-archival
+        enabled: true
+        transitions:
+          - storageClass: GLACIER
+            transitionAfter: 90
+          - storageClass: DEEP_ARCHIVE
+            transitionAfter: 365
+        expiration:
+          days: 2555
+    compliance:
+      auditLogging: true
+      auditBucketRetentionDays: 2555
+      auditBucketObjectLock:
+        enabled: true
+        mode: COMPLIANCE
+        retentionDays: 395
+      objectLock:
+        enabled: true
+        mode: COMPLIANCE
+        retentionDays: 2555
+    monitoring:
+      enabled: true
+      clientErrorThreshold: 2
+      serverErrorThreshold: 1

@@ -11,7 +11,8 @@
       "executor": "@nx/js:tsc",
       "options": {
         "outputPath": "dist/packages/standards/iam-audit",
-        "tsConfig": "packages/standards/iam-audit/tsconfig.lib.json"
+        "tsConfig": "packages/standards/iam-audit/tsconfig.lib.json",
+        "main": "packages/standards/iam-audit/src/index.ts"
       }
     },
     "test": {

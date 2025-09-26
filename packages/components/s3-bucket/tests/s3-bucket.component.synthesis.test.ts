@@ -1,117 +1,142 @@
 /**
- * S3BucketComponent Component Synthesis Test Suite
- * Implements Platform Testing Standard v1.0 - Component Synthesis Testing
+ * S3 Bucket Component synthesis tests
+ * Ensures generated CloudFormation matches compliance expectations.
  */
 
 import { Template, Match } from 'aws-cdk-lib/assertions';
 import { App, Stack } from 'aws-cdk-lib';
-import { S3BucketComponentComponent } from './s3-bucket.component';
-import { S3BucketConfig } from './s3-bucket.builder';
-import { ComponentContext, ComponentSpec } from '../../platform/contracts/component-interfaces';
+import {
+  ComponentContext,
+  ComponentSpec
+} from '@platform/contracts';
+import { S3BucketComponent } from '../s3-bucket.component';
+import { S3BucketConfig } from '../s3-bucket.builder';
 
-const createMockContext = (
-  complianceFramework: string = 'commercial',
-  environment: string = 'dev'
-): ComponentContext => ({
-  serviceName: 'test-service',
-  owner: 'test-team',
-  environment,
-  complianceFramework,
-  region: 'us-east-1',
-  account: '123456789012',
-  tags: {
-    'service-name': 'test-service',
-    'owner': 'test-team',
-    'environment': environment,
-    'compliance-framework': complianceFramework
-  }
-});
+const createContext = (
+  complianceFramework: ComponentContext['complianceFramework']
+): ComponentContext => {
+  const app = new App();
+  const stack = new Stack(app, 'TestStack');
 
-const createMockSpec = (config: Partial<S3BucketConfig> = {}): ComponentSpec => ({
-  name: 'test-s3-bucket',
+  return {
+    serviceName: 'test-service',
+    environment: 'dev',
+    complianceFramework,
+    scope: stack,
+    region: 'us-east-1',
+    accountId: '123456789012'
+  } as ComponentContext;
+};
+
+const createSpec = (config: Partial<S3BucketConfig> = {}): ComponentSpec => ({
+  name: 'test-bucket',
   type: 's3-bucket',
   config
 });
 
-const synthesizeComponent = (
-  context: ComponentContext,
-  spec: ComponentSpec
-): { component: S3BucketComponentComponent; template: Template } => {
-  const app = new App();
-  const stack = new Stack(app, 'TestStack');
-  
-  const component = new S3BucketComponentComponent(stack, spec, context);
+const synthesize = (context: ComponentContext, spec: ComponentSpec) => {
+  const stack = context.scope as Stack;
+  const component = new S3BucketComponent(stack, spec.name, context, spec);
   component.synth();
-  
-  const template = Template.fromStack(stack);
-  return { component, template };
+  return Template.fromStack(stack);
 };
 
-describe('S3BucketComponentComponent Synthesis', () => {
-  
-  describe('Default Happy Path Synthesis', () => {
-    
-    it('should synthesize basic s3-bucket with commercial compliance', () => {
-      const context = createMockContext('commercial');
-      const spec = createMockSpec();
-      
-      const { template } = synthesizeComponent(context, spec);
-      
-      // TODO: Add specific CloudFormation resource assertions
-      // Example:
-      // template.hasResourceProperties('AWS::SomeService::Resource', {
-      //   PropertyName: 'ExpectedValue'
-      // });
+describe('S3BucketComponent', () => {
+  it('creates a commercial bucket with platform defaults', () => {
+    const context = createContext('commercial');
+    const template = synthesize(context, createSpec());
+
+    template.hasResourceProperties('AWS::S3::Bucket', {
+      VersioningConfiguration: Match.absent(),
+      BucketEncryption: {
+        ServerSideEncryptionConfiguration: Match.arrayWith([
+          Match.objectLike({
+            ServerSideEncryptionByDefault: Match.objectLike({
+              SSEAlgorithm: 'AES256'
+            })
+          })
+        ])
+      }
     });
-    
-    it('should apply standard platform tags', () => {
-      const context = createMockContext('commercial');
-      const spec = createMockSpec();
-      
-      const { template } = synthesizeComponent(context, spec);
-      
-      // TODO: Verify standard tags are applied to resources
-    });
-    
+
+    template.resourceCountIs('AWS::KMS::Key', 0);
   });
-  
-  describe('Compliance Framework Hardening', () => {
-    
-    it('should apply FedRAMP compliance hardening', () => {
-      const context = createMockContext('fedramp-moderate');
-      const spec = createMockSpec();
-      
-      const { template } = synthesizeComponent(context, spec);
-      
-      // TODO: Verify FedRAMP-specific hardening is applied
+
+  it('enables FedRAMP Moderate hardening from platform config', () => {
+    const context = createContext('fedramp-moderate');
+    const template = synthesize(context, createSpec());
+
+    template.hasResourceProperties('AWS::KMS::Key', {
+      KeySpec: 'SYMMETRIC_DEFAULT'
     });
-    
+
+    template.hasResourceProperties('AWS::S3::Bucket', Match.objectLike({
+      VersioningConfiguration: { Status: 'Enabled' },
+      BucketEncryption: {
+        ServerSideEncryptionConfiguration: Match.arrayWith([
+          Match.objectLike({
+            ServerSideEncryptionByDefault: Match.objectLike({
+              SSEAlgorithm: 'aws:kms'
+            })
+          })
+        ])
+      },
+      LoggingConfiguration: Match.objectLike({
+        DestinationBucketName: Match.anyValue()
+      })
+    }));
+
+    template.hasResourceProperties('AWS::S3::BucketPolicy', Match.objectLike({
+      PolicyDocument: {
+        Statement: Match.arrayWith([
+          Match.objectLike({ Sid: 'DenyInsecureTransport' }),
+          Match.objectLike({ Sid: 'RequireMFAForDelete' })
+        ])
+      }
+    }));
   });
-  
-  describe('Component Capabilities and Constructs', () => {
-    
-    it('should register correct capabilities after synthesis', () => {
-      const context = createMockContext('commercial');
-      const spec = createMockSpec();
-      
-      const { component } = synthesizeComponent(context, spec);
-      
-      const capabilities = component.getCapabilities();
-      
-      // TODO: Verify component-specific capabilities
-      expect(capabilities).toBeDefined();
-    });
-    
-    it('should register construct handles for patches.ts access', () => {
-      const context = createMockContext('commercial');
-      const spec = createMockSpec();
-      
-      const { component } = synthesizeComponent(context, spec);
-      
-      // Verify main construct is registered
-      expect(component.getConstruct('main')).toBeDefined();
-    });
-    
+
+  it('enables object lock for FedRAMP High', () => {
+    const context = createContext('fedramp-high');
+    const template = synthesize(context, createSpec());
+
+    template.hasResourceProperties('AWS::S3::Bucket', Match.objectLike({
+      ObjectLockEnabled: true,
+      ObjectLockConfiguration: Match.objectLike({
+        Rule: Match.objectLike({
+          DefaultRetention: Match.objectLike({
+            Mode: 'COMPLIANCE',
+            Days: 2555
+          })
+        })
+      })
+    }));
+
+    template.hasResourceProperties('AWS::S3::BucketPolicy', Match.objectLike({
+      PolicyDocument: {
+        Statement: Match.arrayWith([
+          Match.objectLike({ Sid: 'DenyDeleteActions' })
+        ])
+      }
+    }));
   });
-  
+
+  it('allows manifest overrides to disable audit logging', () => {
+    const context = createContext('fedramp-moderate');
+    const template = synthesize(
+      context,
+      createSpec({
+        compliance: { auditLogging: false },
+        encryption: { type: 'AES256' }
+      })
+    );
+
+    template.resourceCountIs('AWS::S3::Bucket', 1);
+    template.resourceCountIs('AWS::KMS::Key', 0);
+
+    const buckets = template.findResources('AWS::S3::Bucket');
+    Object.values(buckets).forEach(resource => {
+      expect(resource.Properties?.LoggingConfiguration).toBeUndefined();
+    });
+  });
 });

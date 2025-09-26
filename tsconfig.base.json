@@ -18,20 +18,65 @@
     "downlevelIteration": true,
     "baseUrl": ".",
     "paths": {
+      "@shinobi/core/component": [
+        "dist/packages/core/platform/contracts/component.d.ts"
+      ],
+      "@shinobi/core/component-interfaces": [
+        "dist/packages/core/platform/contracts/component-interfaces.d.ts"
+      ],
+      "@shinobi/core/config-builder": [
+        "dist/packages/core/platform/contracts/config-builder.d.ts"
+      ],
+      "@shinobi/core/logging-interfaces": [
+        "dist/packages/core/platform/contracts/logging-interfaces.d.ts"
+      ],
+      "@shinobi/core/platform-services": [
+        "dist/packages/core/platform/contracts/platform-services.d.ts"
+      ],
       "@shinobi/core": [
-        "packages/core/src/index.ts"
+        "dist/packages/core/index.d.ts"
       ],
       "@shinobi/core/*": [
-        "packages/core/src/index.ts"
+        "dist/packages/core/index.d.ts"
+      ],
+      "@shinobi/observability-handlers": [
+        "dist/packages/observability-handlers/index.d.ts"
+      ],
+      "@shinobi/observability-handlers/*": [
+        "dist/packages/observability-handlers/index.d.ts"
+      ],
+      "@shinobi/standards-deprecation": [
+        "dist/packages/standards/deprecation/index.d.ts"
+      ],
+      "@shinobi/standards-deprecation/*": [
+        "dist/packages/standards/deprecation/index.d.ts"
+      ],
+      "@shinobi/standards-iam-audit": [
+        "dist/packages/standards/iam-audit/index.d.ts"
+      ],
+      "@shinobi/standards-iam-audit/*": [
+        "dist/packages/standards/iam-audit/index.d.ts"
+      ],
+      "@shinobi/standards-logging": [
+        "dist/packages/standards/logging/index.d.ts"
+      ],
+      "@shinobi/standards-logging/*": [
+        "dist/packages/standards/logging/index.d.ts"
+      ],
+      "@shinobi/standards-otel": [
+        "dist/packages/standards/otel/index.d.ts"
+      ],
+      "@shinobi/standards-otel/*": [
+        "dist/packages/standards/otel/index.d.ts"
+      ],
+      "@shinobi/standards-tagging": [
+        "dist/packages/standards/tagging/index.d.ts"
+      ],
+      "@shinobi/standards-tagging/*": [
+        "dist/packages/standards/tagging/index.d.ts"
       ],
       "@platform/logger": [
         "packages/core/src/platform/logger/src/index.ts"
-      ],
-      "@shinobi/standards-otel/*": [
-        "packages/standards/otel/src"
-      ],
-      "@shinobi/standards-logging/*": [
-        "packages/standards/logging/src/*"
       ],
       "@platform/components/*": [
         "packages/components/*/src"

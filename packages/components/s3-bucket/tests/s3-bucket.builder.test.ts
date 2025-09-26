@@ -1,98 +1,80 @@
 /**
- * S3BucketComponent ConfigBuilder Test Suite
- * Implements Platform Testing Standard v1.0 - ConfigBuilder Testing
+ * S3 Bucket ConfigBuilder Tests
+ * Validates configuration precedence against the Platform Configuration Standard.
  */
 
-import { S3BucketComponentConfigBuilder, S3BucketConfig } from './s3-bucket.builder';
-import { ComponentContext, ComponentSpec } from '../../platform/contracts/component-interfaces';
+import { App, Stack } from 'aws-cdk-lib';
+import {
+  ComponentContext,
+  ComponentSpec
+} from '@platform/contracts';
+import {
+  S3BucketComponentConfigBuilder,
+  S3BucketConfig
+} from '../s3-bucket.builder';
 
-const createMockContext = (
-  complianceFramework: string = 'commercial',
-  environment: string = 'dev'
-): ComponentContext => ({
-  serviceName: 'test-service',
-  owner: 'test-team',
-  environment,
-  complianceFramework,
-  region: 'us-east-1',
-  account: '123456789012',
-  tags: {
-    'service-name': 'test-service',
-    'owner': 'test-team',
-    'environment': environment,
-    'compliance-framework': complianceFramework
-  }
-});
+const createContext = (framework: ComponentContext['complianceFramework']): ComponentContext => {
+  const app = new App();
+  const stack = new Stack(app, 'TestStack');
 
-const createMockSpec = (config: Partial<S3BucketConfig> = {}): ComponentSpec => ({
-  name: 'test-s3-bucket',
+  return {
+    serviceName: 'test-service',
+    environment: 'dev',
+    complianceFramework: framework,
+    scope: stack,
+    region: 'us-east-1',
+    accountId: '123456789012'
+  } as ComponentContext;
+};
+
+const createSpec = (config: Partial<S3BucketConfig> = {}): ComponentSpec => ({
+  name: 'test-bucket',
   type: 's3-bucket',
   config
 });
 
 describe('S3BucketComponentConfigBuilder', () => {
-  
-  describe('Hardcoded Fallbacks (Layer 1)', () => {
-    
-    it('should provide ultra-safe baseline configuration', () => {
-      const context = createMockContext();
-      const spec = createMockSpec();
-      
-      const builder = new S3BucketComponentConfigBuilder(context, spec);
-      const config = builder.buildSync();
-      
-      // Verify hardcoded fallbacks are applied
-      expect(config.monitoring?.enabled).toBe(true);
-      expect(config.monitoring?.detailedMetrics).toBe(false);
+  it('loads commercial defaults from platform configuration', () => {
+    const builder = new S3BucketComponentConfigBuilder({
+      context: createContext('commercial'),
+      spec: createSpec()
     });
-    
+
+    const config = builder.buildSync();
+
+    expect(config.versioning).toBe(false);
+    expect(config.encryption?.type).toBe('AES256');
+    expect(config.security?.tools?.clamavScan).toBe(false);
+    expect(config.monitoring?.enabled).toBe(false);
   });
-  
-  describe('Compliance Framework Defaults (Layer 2)', () => {
-    
-    it('should apply commercial compliance defaults', () => {
-      const context = createMockContext('commercial');
-      const spec = createMockSpec();
-      
-      const builder = new S3BucketComponentConfigBuilder(context, spec);
-      const config = builder.buildSync();
-      
-      expect(config.monitoring?.enabled).toBe(true);
-      expect(config.monitoring?.detailedMetrics).toBe(true);
+
+  it('applies FedRAMP Moderate defaults', () => {
+    const builder = new S3BucketComponentConfigBuilder({
+      context: createContext('fedramp-moderate'),
+      spec: createSpec()
     });
-    
-    it('should apply FedRAMP compliance defaults', () => {
-      const context = createMockContext('fedramp-moderate');
-      const spec = createMockSpec();
-      
-      const builder = new S3BucketComponentConfigBuilder(context, spec);
-      const config = builder.buildSync();
-      
-      expect(config.monitoring?.enabled).toBe(true);
-      expect(config.monitoring?.detailedMetrics).toBe(true); // Mandatory for FedRAMP
-    });
-    
+
+    const config = builder.buildSync();
+
+    expect(config.versioning).toBe(true);
+    expect(config.encryption?.type).toBe('KMS');
+    expect(config.security?.requireMfaDelete).toBe(true);
+    expect(config.monitoring?.enabled).toBe(true);
+    expect(config.security?.tools?.clamavScan).toBe(true);
   });
-  
-  describe('5-Layer Precedence Chain', () => {
-    
-    it('should apply component overrides over platform defaults', () => {
-      const context = createMockContext('commercial');
-      const spec = createMockSpec({
-        monitoring: {
-          enabled: false,
-          detailedMetrics: false
-        }
-      });
-      
-      const builder = new S3BucketComponentConfigBuilder(context, spec);
-      const config = builder.buildSync();
-      
-      // Verify component config overrides platform defaults
-      expect(config.monitoring?.enabled).toBe(false);
-      expect(config.monitoring?.detailedMetrics).toBe(false);
+
+  it('honours manifest overrides with highest precedence', () => {
+    const builder = new S3BucketComponentConfigBuilder({
+      context: createContext('fedramp-moderate'),
+      spec: createSpec({
+        encryption: { type: 'AES256' },
+        security: { requireMfaDelete: false }
+      })
     });
-    
+
+    const config = builder.buildSync();
+
+    expect(config.encryption?.type).toBe('AES256');
+    expect(config.security?.requireMfaDelete).toBe(false);
   });
-  
 });

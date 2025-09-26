@@ -114,3 +114,34 @@ defaults:
         lowThroughput: 5
     tracing:
       xrayEnabled: true
+
+  s3-bucket:
+    public: false
+    versioning: true
+    eventBridgeEnabled: false
+    encryption:
+      type: KMS
+    security:
+      blockPublicAccess: true
+      requireSecureTransport: true
+      requireMfaDelete: true
+      denyDeleteActions: false
+      tools:
+        clamavScan: true
+    lifecycleRules:
+      - id: compliance-archival
+        enabled: true
+        transitions:
+          - storageClass: GLACIER
+            transitionAfter: 90
+          - storageClass: DEEP_ARCHIVE
+            transitionAfter: 365
+    compliance:
+      auditLogging: true
+      auditBucketRetentionDays: 1095
+      objectLock:
+        enabled: false
+    monitoring:
+      enabled: true
+      clientErrorThreshold: 5
+      serverErrorThreshold: 1

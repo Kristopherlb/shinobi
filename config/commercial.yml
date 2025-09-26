@@ -100,3 +100,26 @@ defaults:
         lowThroughput: 10
     tracing:
       xrayEnabled: true
+
+  s3-bucket:
+    public: false
+    versioning: false
+    eventBridgeEnabled: false
+    encryption:
+      type: AES256
+    security:
+      blockPublicAccess: true
+      requireSecureTransport: true
+      requireMfaDelete: false
+      denyDeleteActions: false
+      tools:
+        clamavScan: false
+    lifecycleRules: []
+    compliance:
+      auditLogging: false
+      objectLock:
+        enabled: false
+    monitoring:
+      enabled: false
+      clientErrorThreshold: 10
+      serverErrorThreshold: 1

@@ -250,7 +250,6 @@ export abstract class BaseComponent extends Construct implements IComponent {
       componentName: this.spec.name,
       componentType: this.getType(),
       environment: this.context.environment,
-      complianceFramework: this.context.complianceFramework,
       region: this.context.region,
       accountId: this.context.accountId
     };

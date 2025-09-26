@@ -6,9 +6,17 @@ region: us-west-2
 accountId: 911871352725
 components:
   - name: api
-    type: lambda-api
+    type: s3-bucket
     config:
-      runtime: nodejs20.x
-      handler: index.handler
-      memorySize: 256
-      timeout: 30
+      bucketName: sample-bucket
+      versioning: true
+      encryption:
+        type: KMS
+      public: false
+      security:
+        blockPublicAccess: true
+      eventBridgeEnabled: true
+      compliance:
+        auditLogging: true
+        auditBucketName: sample-audit-bucket
+        auditBucketRetentionDays: 365

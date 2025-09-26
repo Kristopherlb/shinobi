@@ -1,7 +1,7 @@
 {
-  "extends": "../../tsconfig.base.json",
+  "extends": "../../../tsconfig.base.json",
   "compilerOptions": {
-    "outDir": "../../dist/packages/core",
+    "outDir": "../../../dist/packages/standards/deprecation",
     "rootDir": "src"
   },
   "include": ["src/**/*"],
