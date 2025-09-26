@@ -1,412 +1,457 @@
-/**
- * Enterprise REST API Gateway Component implementing Component API Contract v1.0
- * 
- * AWS API Gateway v1 (REST API) for enterprise use cases with advanced features:
- * - Cognito User Pool authentication with scopes
- * - Request/response transformation and validation  
- * - API key management and throttling
- * - WAF integration and enterprise security
- * - Full feature set with caching and SDK generation
- * 
- * Use this for complex enterprise APIs requiring advanced authentication and transformation.
- * For simple, high-performance APIs, use api-gateway-http instead.
- */
-
 import * as apigateway from 'aws-cdk-lib/aws-apigateway';
+import * as acm from 'aws-cdk-lib/aws-certificatemanager';
 import * as cognito from 'aws-cdk-lib/aws-cognito';
-import * as iam from 'aws-cdk-lib/aws-iam';
-import * as cdk from 'aws-cdk-lib';
+import * as cw from 'aws-cdk-lib/aws-cloudwatch';
+import * as logs from 'aws-cdk-lib/aws-logs';
+import { Duration, RemovalPolicy } from 'aws-cdk-lib';
 import { Construct } from 'constructs';
-import { BaseComponent } from '../@shinobi/core/component';
+
 import {
-  ComponentSpec,
+  BaseComponent,
+  ComponentCapabilities,
   ComponentContext,
-  ComponentCapabilities
-} from '../@shinobi/core/component-interfaces';
-import { ConfigBuilder, ConfigBuilderContext } from '../@shinobi/core/config-builder';
+  ComponentSpec,
+} from '@shinobi/core';
 
-/**
- * Configuration interface for Enterprise REST API Gateway component
- */
-export interface ApiGatewayRestConfig {
-  /** API name (optional, defaults to component name) */
-  apiName?: string;
-  
-  /** API description */
-  description?: string;
-  
-  /** API Gateway deployment stage */
-  deploymentStage?: string;
-  
-  /** Domain configuration */
-  domain?: {
-    domainName?: string;
-    certificateArn?: string;
-    basePath?: string;
-  };
-  
-  /** CORS configuration */
-  cors?: {
-    allowOrigins?: string[];
-    allowMethods?: string[];
-    allowHeaders?: string[];
-    allowCredentials?: boolean;
-  };
-  
-  /** Authentication configuration */
-  authentication?: {
-    cognito?: {
-      userPoolId?: string;
-      userPoolArn?: string;
-      scopes?: string[];
-    };
-    apiKey?: {
-      required?: boolean;
-      keyName?: string;
-    };
-  };
-  
-  /** Tracing configuration */
-  tracing?: {
-    xrayEnabled?: boolean;
-  };
-  
-  /** Throttling configuration */
-  throttling?: {
-    burstLimit?: number;
-    rateLimit?: number;
-  };
-  
-  /** WAF association */
-  waf?: {
-    webAclArn?: string;
-  };
-  
-  /** Tags for the API */
-  tags?: Record<string, string>;
+import {
+  ApiGatewayRestConfig,
+  ApiGatewayRestConfigBuilder,
+} from './api-gateway-rest.builder';
+
+interface ApiGatewayRestCapability {
+  apiId: string;
+  endpointUrl: string;
+  stageName: string;
+  restApiArn: string;
+  authorizerArn?: string;
 }
 
-/**
- * JSON Schema for Enterprise REST API Gateway configuration
- */
-export const API_GATEWAY_REST_CONFIG_SCHEMA = {
-  type: 'object',
-  properties: {
-    apiName: {
-      type: 'string',
-      pattern: '^[a-zA-Z0-9._-]+$',
-      maxLength: 1024
-    },
-    description: { type: 'string' },
-    deploymentStage: {
-      type: 'string',
-      pattern: '^[a-zA-Z0-9._-]+$',
-      maxLength: 64
-    },
-    domain: {
-      type: 'object',
-      properties: {
-        domainName: { type: 'string' },
-        certificateArn: { type: 'string' },
-        basePath: { type: 'string' }
-      }
-    },
-    cors: {
-      type: 'object',
-      properties: {
-        allowOrigins: {
-          type: 'array',
-          items: { type: 'string' }
-        },
-        allowMethods: {
-          type: 'array',
-          items: { type: 'string' }
-        },
-        allowHeaders: {
-          type: 'array',
-          items: { type: 'string' }
-        },
-        allowCredentials: { type: 'boolean' }
-      }
-    },
-    authentication: {
-      type: 'object',
-      properties: {
-        cognito: {
-          type: 'object',
-          properties: {
-            userPoolId: { type: 'string' },
-            userPoolArn: { type: 'string' },
-            scopes: {
-              type: 'array',
-              items: { type: 'string' }
-            }
-          }
-        },
-        apiKey: {
-          type: 'object',
-          properties: {
-            required: { type: 'boolean' },
-            keyName: { type: 'string' }
-          }
-        }
-      }
-    },
-    tracing: {
-      type: 'object',
-      properties: {
-        xrayEnabled: { type: 'boolean' }
-      }
-    },
-    throttling: {
-      type: 'object',
-      properties: {
-        burstLimit: { type: 'number', minimum: 0 },
-        rateLimit: { type: 'number', minimum: 0 }
-      }
-    },
-    waf: {
-      type: 'object',
-      properties: {
-        webAclArn: { type: 'string' }
-      }
-    },
-    tags: {
-      type: 'object',
-      additionalProperties: { type: 'string' }
-    }
-  },
-  additionalProperties: false
-};
-
-/**
- * ConfigBuilder for Enterprise REST API Gateway component
- */
-export class ApiGatewayRestConfigBuilder extends ConfigBuilder<ApiGatewayRestConfig> {
-  constructor(context: ComponentContext, spec: ComponentSpec) {
-    const builderContext: ConfigBuilderContext = { context, spec };
-    super(builderContext, API_GATEWAY_REST_CONFIG_SCHEMA);
-  }
-
-    /**
-   * Builds the final configuration using the centralized 5-layer precedence engine
-   */
-    public async build(): Promise<ApiGatewayRestConfig> {
-      return this.buildSync();
-    }
-  /**
-   * Component-specific hardcoded fallbacks
-   */
-  protected getHardcodedFallbacks(): ApiGatewayRestConfig {
-    return {
-      deploymentStage: this.builderContext.context.environment,
-      description: `Enterprise REST API Gateway for ${this.builderContext.spec.name}`,
-      cors: {
-        allowOrigins: [], // CORS origins MUST be configured per environment - no hardcoded defaults
-        allowMethods: ['GET', 'POST', 'OPTIONS'], // Minimal safe methods as fallback only
-        allowHeaders: ['Content-Type', 'Authorization'], // Minimal safe headers as fallback only  
-        allowCredentials: false // Always false for security - never override
-      },
-      tracing: {
-        xrayEnabled: false // Tracing enablement driven by compliance framework config
-      },
-      throttling: {
-        burstLimit: 100, // Very conservative fallback - real limits come from environment config
-        rateLimit: 50   // Very conservative fallback - real limits come from environment config
-      }
-    };
-  }
-
-}
-
-/**
- * Enterprise REST API Gateway Component implementing Component API Contract v1.0
- */
 export class ApiGatewayRestComponent extends BaseComponent {
   private api?: apigateway.RestApi;
-  private deployment?: apigateway.Deployment;
   private stage?: apigateway.Stage;
   private authorizer?: apigateway.CognitoUserPoolsAuthorizer;
-  private config?: ApiGatewayRestConfig;
+  private accessLogGroup?: logs.LogGroup;
+  private usagePlan?: apigateway.UsagePlan;
+  private config!: ApiGatewayRestConfig;
+  private resolvedStageName!: string;
 
-  constructor(scope: Construct, id: string, context: ComponentContext, spec: ComponentSpec) {
+  constructor(
+    scope: Construct,
+    id: string,
+    context: ComponentContext,
+    spec: ComponentSpec,
+  ) {
     super(scope, id, context, spec);
   }
 
-  /**
-   * Synthesis phase - Create standalone API Gateway with advanced configuration
-   */
-  public synth(): void {
-    try {
-      // Build configuration using ConfigBuilder
-      const configBuilder = new ApiGatewayRestConfigBuilder(this.context, this.spec);
-      this.config = configBuilder.buildSync();
-      
-      // Create API Gateway
-      this.createApiGateway();
-      
-      // Create Cognito authorizer if configured
-      this.createCognitoAuthorizerIfNeeded();
-      
-      // Configure tracing
-      this.configureTracing();
-      
-      // Apply compliance hardening
-      this.applyComplianceHardening();
-      
-      // Register constructs
-      this.registerConstruct('api', this.api!);
-      this.registerConstruct('stage', this.stage!);
-      if (this.authorizer) {
-        this.registerConstruct('authorizer', this.authorizer);
-      }
-      
-      // Register capabilities
-      this.registerCapability('api:rest', this.buildApiCapability());
-      
-    } catch (error) {
-      throw error;
+  public override synth(): void {
+    const builder = new ApiGatewayRestConfigBuilder(this.context, this.spec);
+    this.config = builder.build();
+
+    this.resolvedStageName = this.resolveStageName();
+
+    this.createRestApi();
+    this.configureAuthentication();
+    this.configureUsagePlan();
+    this.ensureDefaultMethod();
+    this.applyObservability();
+    this.applyComplianceHardening();
+    this.configureWafAssociation();
+    this.createMonitoringAlarms();
+
+    if (!this.api || !this.stage) {
+      throw new Error('API Gateway REST component failed to create core constructs.');
     }
+
+    this.registerConstruct('main', this.api);
+    this.registerConstruct('stage', this.stage);
+    if (this.accessLogGroup) {
+      this.registerConstruct('accessLogGroup', this.accessLogGroup);
+    }
+    if (this.authorizer) {
+      this.registerConstruct('authorizer', this.authorizer);
+    }
+    if (this.usagePlan) {
+      this.registerConstruct('usagePlan', this.usagePlan);
+    }
+
+    this.registerCapability('api:rest', this.getApiCapability());
   }
 
-  /**
-   * Get the capabilities this component provides
-   */
-  public getCapabilities(): ComponentCapabilities {
+  public override getCapabilities(): ComponentCapabilities {
     this.validateSynthesized();
     return this.capabilities;
   }
 
-  /**
-   * Get the component type identifier
-   */
-  public getType(): string {
+  public override getType(): string {
     return 'api-gateway-rest';
   }
 
-  /**
-   * Create CloudWatch log group if logging is enabled
-   */
+  private createRestApi(): void {
+    const deployOptions = this.buildStageOptions(this.resolvedStageName);
 
-  /**
-   * Create API Gateway REST API
-   */
-  private createApiGateway(): void {
-    const apiName = this.config!.apiName || `${this.context.serviceName}-${this.spec.name}`;
-
-    this.api = new apigateway.RestApi(this, 'ApiGateway', {
-      restApiName: apiName,
-      description: this.config!.description,
-      deployOptions: {
-        stageName: this.config!.deploymentStage || 'prod',
-        throttlingBurstLimit: this.config!.throttling?.burstLimit,
-        throttlingRateLimit: this.config!.throttling?.rateLimit,
-        tracingEnabled: this.config!.tracing?.xrayEnabled
+    this.api = new apigateway.RestApi(this, 'RestApi', {
+      restApiName: this.config.apiName ?? `${this.context.serviceName}-${this.spec.name}`,
+      description:
+        this.config.description ?? `Enterprise REST API Gateway for ${this.spec.name}`,
+      deployOptions,
+      endpointConfiguration: {
+        types: [apigateway.EndpointType.REGIONAL],
       },
-      defaultCorsPreflightOptions: this.config!.cors ? {
-        allowOrigins: this.config!.cors.allowOrigins || [],
-        allowMethods: this.config!.cors.allowMethods || [],
-        allowHeaders: this.config!.cors.allowHeaders || [],
-        allowCredentials: this.config!.cors.allowCredentials
-      } : undefined,
-      apiKeySourceType: this.config!.authentication?.apiKey?.required ? 
-        apigateway.ApiKeySourceType.HEADER : undefined
+      defaultCorsPreflightOptions: this.configureCors(),
+      apiKeySourceType: this.config.authentication?.apiKey?.required
+        ? apigateway.ApiKeySourceType.HEADER
+        : undefined,
+      disableExecuteApiEndpoint: this.config.disableExecuteApiEndpoint,
     });
 
-    // Get the deployment stage
     this.stage = this.api.deploymentStage;
 
-    // Apply standard tags
     this.applyStandardTags(this.api, {
       'api-type': 'rest',
-      'deployment-stage': this.config!.deploymentStage || 'prod'
+      'deployment-stage': this.resolvedStageName,
     });
+    this.applyStandardTags(this.stage);
 
-    // Configure OpenTelemetry observability for API Gateway
-    const otelEnvVars = this.configureObservability(this.api!, {
-      serviceName: apiName
-    });
+    if (this.config.domain?.domainName && this.config.domain.certificateArn) {
+      const certificate = acm.Certificate.fromCertificateArn(
+        this,
+        'ApiGatewayCertificate',
+        this.config.domain.certificateArn,
+      );
 
-    // Apply OTel environment variables to the stage
-    const cfnStage = this.stage!.node.defaultChild as apigateway.CfnStage;
-    cfnStage.variables = {
-      ...cfnStage.variables,
-      ...otelEnvVars
-    };
-
+      this.api.addDomainName('CustomDomain', {
+        domainName: this.config.domain.domainName,
+        certificate,
+        basePath: this.config.domain.basePath,
+        endpointType: apigateway.EndpointType.REGIONAL,
+      });
+    }
   }
 
-  /**
-   * Create Cognito User Pool authorizer if configured
-   */
-  private createCognitoAuthorizerIfNeeded(): void {
-    if (!this.config!.authentication?.cognito?.userPoolArn) {
+  private buildStageOptions(stageName: string): apigateway.StageOptions {
+    const throttling = this.config.throttling ?? {};
+    const tracingEnabled =
+      this.config.tracing?.xrayEnabled ?? this.config.monitoring?.tracingEnabled;
+
+    const stageOptions: apigateway.StageOptions = {
+      stageName,
+      throttlingBurstLimit: throttling.burstLimit,
+      throttlingRateLimit: throttling.rateLimit,
+      metricsEnabled: this.config.logging?.metricsEnabled ?? true,
+      loggingLevel: this.resolveMethodLoggingLevel(),
+      dataTraceEnabled: this.config.logging?.dataTraceEnabled ?? false,
+      tracingEnabled: tracingEnabled ?? false,
+    };
+
+    if (this.shouldEnableAccessLogging()) {
+      const logDestination = this.getAccessLogDestination();
+      return {
+        ...stageOptions,
+        accessLogDestination: logDestination,
+        accessLogFormat: apigateway.AccessLogFormat.jsonWithStandardFields({
+          caller: true,
+          httpMethod: true,
+          ip: true,
+          protocol: true,
+          requestTime: true,
+          resourcePath: true,
+          responseLength: true,
+          status: true,
+          user: true,
+        }),
+      };
+    }
+
+    return stageOptions;
+  }
+
+  private shouldEnableAccessLogging(): boolean {
+    return this.config.logging?.accessLoggingEnabled ?? true;
+  }
+
+  private getAccessLogDestination(): apigateway.LogGroupLogDestination {
+    if (this.config.logging?.logGroupArn) {
+      const imported = logs.LogGroup.fromLogGroupArn(
+        this,
+        'ImportedAccessLogs',
+        this.config.logging.logGroupArn,
+      );
+      return new apigateway.LogGroupLogDestination(imported);
+    }
+
+    if (!this.accessLogGroup) {
+      this.accessLogGroup = new logs.LogGroup(this, 'AccessLogs', {
+        retention: this.resolveLogRetention(),
+        removalPolicy: RemovalPolicy.RETAIN,
+      });
+      this.applyStandardTags(this.accessLogGroup);
+    }
+
+    return new apigateway.LogGroupLogDestination(this.accessLogGroup);
+  }
+
+  private resolveLogRetention(): logs.RetentionDays | undefined {
+    const retention = this.config.logging?.retentionInDays;
+    switch (retention) {
+      case 90:
+        return logs.RetentionDays.THREE_MONTHS;
+      case 365:
+        return logs.RetentionDays.ONE_YEAR;
+      case 731:
+        return logs.RetentionDays.TWO_YEARS;
+      case 1095:
+      case 1096:
+        return logs.RetentionDays.THREE_YEARS;
+      case 1827:
+        return logs.RetentionDays.FIVE_YEARS;
+      case 2555:
+      case 2557:
+        return logs.RetentionDays.SEVEN_YEARS;
+      case 2922:
+        return logs.RetentionDays.EIGHT_YEARS;
+      case 3653:
+        return logs.RetentionDays.TEN_YEARS;
+      default:
+        return undefined;
+    }
+  }
+
+  private resolveMethodLoggingLevel(): apigateway.MethodLoggingLevel | undefined {
+    const level = this.config.logging?.executionLoggingLevel ?? 'ERROR';
+    if (level === 'OFF') {
+      return undefined;
+    }
+
+    return apigateway.MethodLoggingLevel[level];
+  }
+
+  private configureCors(): apigateway.CorsOptions | undefined {
+    if (!this.config.cors) {
+      return undefined;
+    }
+
+    const allowOrigins = this.config.cors.allowOrigins ?? [];
+    if (allowOrigins.length === 0) {
+      return undefined;
+    }
+
+    return {
+      allowOrigins,
+      allowMethods: this.config.cors.allowMethods,
+      allowHeaders: this.config.cors.allowHeaders,
+      allowCredentials: this.config.cors.allowCredentials,
+      maxAge: this.config.cors.maxAge
+        ? Duration.seconds(this.config.cors.maxAge)
+        : undefined,
+    };
+  }
+
+  private configureAuthentication(): void {
+    const cognitoConfig = this.config.authentication?.cognito;
+    if (!cognitoConfig?.userPoolArn) {
       return;
     }
 
     const userPool = cognito.UserPool.fromUserPoolArn(
-      this, 
-      'UserPool', 
-      this.config!.authentication!.cognito!.userPoolArn!
+      this,
+      'UserPool',
+      cognitoConfig.userPoolArn,
     );
 
     this.authorizer = new apigateway.CognitoUserPoolsAuthorizer(this, 'CognitoAuthorizer', {
       cognitoUserPools: [userPool],
       authorizerName: `${this.spec.name}-cognito-authorizer`,
-      identitySource: 'method.request.header.Authorization'
+      identitySource: 'method.request.header.Authorization',
     });
-
   }
 
-  /**
-   * Configure X-Ray tracing
-   */
-  private configureTracing(): void {
-    if (!this.config!.tracing?.xrayEnabled) {
+  private configureUsagePlan(): void {
+    const apiKeyConfig = this.config.authentication?.apiKey;
+    const derivedUsagePlan = this.config.usagePlan;
+
+    if (!apiKeyConfig?.required && !derivedUsagePlan) {
       return;
     }
 
-    // X-Ray tracing is already configured in deployOptions during API creation
-  }
+    let apiKey: apigateway.ApiKey | undefined;
+    if (apiKeyConfig?.required) {
+      apiKey = new apigateway.ApiKey(this, 'ApiKey', {
+        apiKeyName: apiKeyConfig.keyName ?? `${this.spec.name}-api-key`,
+        enabled: true,
+      });
+      this.applyStandardTags(apiKey);
+    }
 
+    const quotaSettings = derivedUsagePlan?.quota?.limit !== undefined && derivedUsagePlan?.quota?.period
+      ? {
+          limit: derivedUsagePlan.quota.limit,
+          period: this.mapQuotaPeriod(derivedUsagePlan.quota.period),
+        }
+      : undefined;
 
-  /**
-   * Apply compliance hardening based on framework
-   */
-  private applyComplianceHardening(): void {
-    if (!this.api) return;
+    this.usagePlan = this.api!.addUsagePlan('UsagePlan', {
+      name: derivedUsagePlan?.name ?? apiKeyConfig?.usagePlanName ?? `${this.spec.name}-usage`,
+      description: derivedUsagePlan?.description,
+      throttle: derivedUsagePlan?.throttle,
+      quota: quotaSettings,
+    });
 
-    switch (this.context.complianceFramework) {
-      case 'fedramp-high':
-      case 'fedramp-moderate':
-        // For FedRAMP environments, ensure API has proper logging and security
-        const cfnApi = this.api.node.defaultChild as apigateway.CfnRestApi;
-        cfnApi.addMetadata('ComplianceFramework', this.context.complianceFramework);
-        
-        break;
-        
-      default:
-        // No special hardening needed for commercial
-        break;
+    this.usagePlan.addApiStage({ stage: this.stage! });
+
+    if (apiKey) {
+      this.usagePlan.addApiKey(apiKey);
     }
   }
 
-  /**
-   * Build API Gateway capability descriptor
-   */
-  private buildApiCapability(): any {
-    return {
-      type: 'api:rest',
-      apiName: this.api!.restApiName,
-      apiId: this.api!.restApiId,
-      rootResourceId: this.api!.restApiRootResourceId,
-      stageName: this.config!.deploymentStage || 'prod',
-      endpoint: this.api!.url,
-      cognitoAuthorizer: this.authorizer ? {
-        authorizerArn: this.authorizer.authorizerArn,
-        userPoolArn: this.config!.authentication?.cognito?.userPoolArn
-      } : undefined
+  private ensureDefaultMethod(): void {
+    if (!this.api) {
+      return;
+    }
+
+    const mockIntegration = new apigateway.MockIntegration({
+      integrationResponses: [{ statusCode: '200' }],
+      requestTemplates: {
+        'application/json': '{ "statusCode": 200 }',
+      },
+    });
+
+    this.api.root.addMethod('GET', mockIntegration, {
+      methodResponses: [{ statusCode: '200' }],
+    });
+  }
+
+  private applyObservability(): void {
+    if (!this.api || !this.stage) {
+      return;
+    }
+
+    const otelEnv = this.configureObservability(this.api, {
+      serviceName: this.api.restApiName,
+    });
+
+    const cfnStage = this.stage.node.defaultChild as apigateway.CfnStage;
+    cfnStage.variables = {
+      ...cfnStage.variables,
+      ...otelEnv,
     };
   }
 
+  private applyComplianceHardening(): void {
+    if (!this.stage) {
+      return;
+    }
+
+    const cfnStage = this.stage.node.defaultChild as apigateway.CfnStage;
+
+    if (this.context.complianceFramework?.startsWith('fedramp')) {
+      cfnStage.addMetadata('ComplianceFramework', this.context.complianceFramework);
+      cfnStage.methodSettings = [
+        {
+          dataTraceEnabled: false,
+          metricsEnabled: true,
+          throttlingBurstLimit: this.config.throttling?.burstLimit,
+          throttlingRateLimit: this.config.throttling?.rateLimit,
+          loggingLevel: this.config.logging?.executionLoggingLevel ?? 'ERROR',
+          resourcePath: '/*',
+          httpMethod: '*',
+        },
+      ];
+    }
+  }
+
+  private configureWafAssociation(): void {
+    const webAclArn = this.config.waf?.webAclArn;
+    if (!webAclArn) {
+      return;
+    }
+
+    if (!this.stage) {
+      return;
+    }
+
+    const cfnStage = this.stage.node.defaultChild as apigateway.CfnStage;
+    cfnStage.addPropertyOverride('WebAclArn', webAclArn);
+  }
+
+  private createMonitoringAlarms(): void {
+    const thresholds = this.config.monitoring?.thresholds;
+    if (!thresholds || !this.api) {
+      return;
+    }
+
+    if (thresholds.errorRate4xxPercent !== undefined) {
+      const metric4xx = this.api.metricClientError({ period: Duration.minutes(5) });
+      new cw.Alarm(this, 'FourXXAlarm', {
+        metric: metric4xx,
+        threshold: thresholds.errorRate4xxPercent,
+        evaluationPeriods: 1,
+        comparisonOperator: cw.ComparisonOperator.GREATER_THAN_THRESHOLD,
+        alarmDescription: '4XX error rate exceeded threshold',
+      });
+    }
+
+    if (thresholds.errorRate5xxPercent !== undefined) {
+      const metric5xx = this.api.metricServerError({ period: Duration.minutes(5) });
+      new cw.Alarm(this, 'FiveXXAlarm', {
+        metric: metric5xx,
+        threshold: thresholds.errorRate5xxPercent,
+        evaluationPeriods: 1,
+        comparisonOperator: cw.ComparisonOperator.GREATER_THAN_THRESHOLD,
+        alarmDescription: '5XX error rate exceeded threshold',
+      });
+    }
+
+    if (thresholds.highLatencyMs !== undefined) {
+      const latencyMetric = this.api.metricLatency({ period: Duration.minutes(5) });
+      new cw.Alarm(this, 'LatencyAlarm', {
+        metric: latencyMetric,
+        threshold: thresholds.highLatencyMs,
+        evaluationPeriods: 1,
+        comparisonOperator: cw.ComparisonOperator.GREATER_THAN_THRESHOLD,
+        alarmDescription: 'Latency exceeded threshold',
+      });
+    }
+
+    if (thresholds.lowThroughput !== undefined) {
+      const countMetric = this.api.metricCount({ period: Duration.minutes(5) });
+      new cw.Alarm(this, 'ThroughputAlarm', {
+        metric: countMetric,
+        threshold: thresholds.lowThroughput,
+        evaluationPeriods: 1,
+        comparisonOperator: cw.ComparisonOperator.LESS_THAN_THRESHOLD,
+        alarmDescription: 'API throughput dropped below threshold',
+      });
+    }
+  }
+
+  private getApiCapability(): ApiGatewayRestCapability {
+    if (!this.api) {
+      throw new Error('API capability requested before API construct was created.');
+    }
+
+    return {
+      apiId: this.api.restApiId,
+      endpointUrl: this.api.url,
+      stageName: this.resolvedStageName,
+      restApiArn: this.api.arnForExecuteApi(),
+      authorizerArn: this.authorizer?.authorizerArn,
+    };
+  }
+
+  private resolveStageName(): string {
+    return this.config.deploymentStage ?? this.context.environment ?? 'prod';
+  }
+
+  private mapQuotaPeriod(period: 'DAY' | 'WEEK' | 'MONTH'): apigateway.Period {
+    switch (period) {
+      case 'DAY':
+        return apigateway.Period.DAY;
+      case 'WEEK':
+        return apigateway.Period.WEEK;
+      case 'MONTH':
+      default:
+        return apigateway.Period.MONTH;
+    }
+  }
 }

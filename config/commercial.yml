@@ -78,3 +78,25 @@ defaults:
       enableWaf: false
       enableApiKey: false
       requireAuthorization: true
+
+  api-gateway-rest:
+    disableExecuteApiEndpoint: false
+    throttling:
+      rateLimit: 1000
+      burstLimit: 2000
+    logging:
+      accessLoggingEnabled: true
+      retentionInDays: 90
+      executionLoggingLevel: INFO
+      dataTraceEnabled: false
+      metricsEnabled: true
+    monitoring:
+      detailedMetrics: true
+      tracingEnabled: true
+      thresholds:
+        errorRate4xxPercent: 5
+        errorRate5xxPercent: 1
+        highLatencyMs: 2000
+        lowThroughput: 10
+    tracing:
+      xrayEnabled: true

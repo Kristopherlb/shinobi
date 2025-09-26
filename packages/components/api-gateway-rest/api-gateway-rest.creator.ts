@@ -6,13 +6,16 @@
  */
 
 import { Construct } from 'constructs';
-import { 
-  ComponentSpec, 
-  ComponentContext, 
-  IComponentCreator 
-} from '../@shinobi/core/component-interfaces';
-import { ApiGatewayRestComponentComponent } from './api-gateway-rest.component';
-import { ApiGatewayRestConfig, API_GATEWAY_REST_CONFIG_SCHEMA } from './api-gateway-rest.builder';
+import {
+  ComponentSpec,
+  ComponentContext,
+  IComponentCreator,
+} from '@platform/contracts';
+import { ApiGatewayRestComponent } from './api-gateway-rest.component';
+import {
+  ApiGatewayRestConfig,
+  API_GATEWAY_REST_CONFIG_SCHEMA,
+} from './api-gateway-rest.builder';
 
 /**
  * Creator class for ApiGatewayRestComponent component
@@ -69,11 +72,11 @@ export class ApiGatewayRestComponentCreator implements IComponentCreator {
    * Factory method to create component instances
    */
   public createComponent(
-    scope: Construct, 
-    spec: ComponentSpec, 
-    context: ComponentContext
-  ): ApiGatewayRestComponentComponent {
-    return new ApiGatewayRestComponentComponent(scope, spec, context);
+    scope: Construct,
+    spec: ComponentSpec,
+    context: ComponentContext,
+  ): ApiGatewayRestComponent {
+    return new ApiGatewayRestComponent(scope, spec.name, context, spec);
   }
   
   /**
@@ -97,10 +100,10 @@ export class ApiGatewayRestComponentCreator implements IComponentCreator {
     
     // Environment-specific validations
     if (context.environment === 'prod') {
-      if (!config?.monitoring?.enabled) {
+      if (config?.monitoring?.detailedMetrics === false) {
         errors.push('Monitoring must be enabled in production environment');
       }
-      
+
       // TODO: Add production-specific validations
     }
     
@@ -115,8 +118,7 @@ export class ApiGatewayRestComponentCreator implements IComponentCreator {
    */
   public getProvidedCapabilities(): string[] {
     return [
-      'api:api-gateway-rest',
-      'monitoring:api-gateway-rest'
+      'api:rest'
     ];
   }
   
@@ -134,8 +136,11 @@ export class ApiGatewayRestComponentCreator implements IComponentCreator {
    */
   public getConstructHandles(): string[] {
     return [
-      'main'
-      // TODO: Add additional construct handles if needed
+      'main',
+      'stage',
+      'accessLogGroup',
+      'authorizer',
+      'usagePlan'
     ];
   }
 }

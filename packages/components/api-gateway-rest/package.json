@@ -1,0 +1,33 @@
+{
+  "name": "@platform/api-gateway-rest",
+  "version": "0.0.1",
+  "private": true,
+  "description": "AWS API Gateway REST component with platform compliance, logging, and observability standards.",
+  "main": "dist/index.js",
+  "types": "dist/index.d.ts",
+  "scripts": {
+    "build": "tsc -p tsconfig.json",
+    "test": "jest",
+    "lint": "eslint . --ext .ts",
+    "clean": "rm -rf dist coverage"
+  },
+  "dependencies": {
+    "@platform/contracts": "workspace:*",
+    "@shinobi/core": "workspace:*",
+    "aws-cdk-lib": "^2.214.0",
+    "constructs": "^10.4.2"
+  },
+  "devDependencies": {
+    "@types/jest": "^29.5.5",
+    "@types/node": "^20.11.30",
+    "ts-jest": "^29.1.1",
+    "typescript": "^5.4.5",
+    "jest": "^29.7.0",
+    "eslint": "^8.57.0"
+  },
+  "files": [
+    "dist",
+    "README.md",
+    "catalog-info.yaml"
+  ]
+}
