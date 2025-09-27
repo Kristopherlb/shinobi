@@ -21,6 +21,7 @@
     "inquirer": "^12.9.4",
     "js-yaml": "^4.1.0",
     "mustache": "^4.2.0",
+    "@openfeature/js-sdk": "^1.6.1",
     "ts-morph": "^27.0.0"
   },
   "peerDependencies": {

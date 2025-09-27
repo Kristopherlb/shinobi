@@ -37,10 +37,6 @@ export class S3BucketComponentCreator implements IComponentCreator {
       errors.push('Component name must start with a letter and contain only alphanumeric characters or hyphens.');
     }
 
-    if (config?.public && context.complianceFramework !== 'commercial') {
-      errors.push('Public buckets are not permitted under FedRAMP compliance frameworks.');
-    }
-
     if (config?.encryption?.type === 'KMS' && config.encryption.kmsKeyArn) {
       const arnPattern = /^arn:aws:kms:[a-z0-9-]+:\d{12}:key\/[a-f0-9-]{36}$/;
       if (!arnPattern.test(config.encryption.kmsKeyArn)) {

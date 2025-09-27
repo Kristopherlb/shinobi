@@ -38,6 +38,28 @@ export interface ComponentCapabilities {
 }
 
 /**
+ * Feature flag provider reference configuration captured from manifests/config builders.
+ */
+export interface FeatureFlagProviderReference {
+  name: string;
+  clientName?: string;
+  module?: string;
+  exportName?: string;
+  factory?: string;
+  options?: Record<string, any>;
+}
+
+/**
+ * Feature flag runtime configuration made available to components via context.
+ */
+export interface FeatureFlagRuntimeConfiguration {
+  provider?: FeatureFlagProviderReference;
+  defaultEvaluationContext?: Record<string, any>;
+  targetingKey?: string;
+  clientName?: string;
+}
+
+/**
  * Component context interface with strong CDK typing
  */
 export interface ComponentContext {
@@ -80,6 +102,7 @@ export interface ComponentContext {
     maskValue?: string;
     maxDepth?: number;
   };
+  featureFlags?: FeatureFlagRuntimeConfiguration;
 }
 
 

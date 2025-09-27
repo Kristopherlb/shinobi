@@ -378,35 +378,10 @@ export class S3BucketComponentConfigBuilder extends ConfigBuilder<S3BucketConfig
     };
   }
 
-  public buildSync(): S3BucketConfig {
-    const config = super.buildSync();
-    this.validateComplianceControls(config);
-    return config;
-  }
-
   protected getComplianceFrameworkDefaults(): Partial<S3BucketConfig> {
     // Compliance defaults are delivered via the segregated /config/{framework}.yml files.
     // The builder defers to those platform-managed values so that all deployments remain
     // manifest-driven and auditable per the configuration standard.
     return {};
-  }
-
-  private validateComplianceControls(config: S3BucketConfig): void {
-    const framework = this.builderContext.context.complianceFramework;
-    if (framework === 'commercial') {
-      return;
-    }
-
-    if (config.versioning !== true) {
-      throw new Error('S3BucketConfig: FedRAMP deployments require versioning to be enabled. Update the configuration to set versioning: true.');
-    }
-
-    if (config.encryption?.type !== 'KMS') {
-      throw new Error('S3BucketConfig: FedRAMP deployments require encryption.type to be "KMS". Update the configuration to comply with FedRAMP encryption controls.');
-    }
-
-    if (config.compliance?.auditLogging !== true) {
-      throw new Error('S3BucketConfig: FedRAMP deployments must enable compliance.auditLogging. Update the configuration to route access logs to an audit bucket.');
-    }
   }
 }

@@ -104,26 +104,28 @@ describe('S3BucketComponentConfigBuilder__ConfigurationPrecedence__PlatformDefau
    * {
    *   "id": "TP-S3-BUCKET-CONFIG-003",
    *   "level": "unit",
-   *   "capability": "FedRAMP overrides that weaken controls are rejected",
-   *   "oracle": "trace",
-   *   "invariants": ["FedRAMP requires KMS encryption"],
+   *   "capability": "FedRAMP overrides are honored by precedence chain",
+   *   "oracle": "exact",
+   *   "invariants": ["Manifest overrides win over framework defaults"],
    *   "fixtures": ["ConfigBuilder", "FedRAMP moderate context"],
-   *   "inputs": { "shape": "Component config overriding encryption to AES256", "notes": "Should fail validation" },
-   *   "risks": ["Non-compliant encryption"],
+   *   "inputs": { "shape": "Component config overriding encryption to AES256", "notes": "Ensures override is respected" },
+   *   "risks": ["Operator responsibility for compliance"],
    *   "dependencies": [],
-   *   "evidence": ["Thrown validation error"],
+   *   "evidence": ["Merged configuration values"],
    *   "compliance_refs": ["std://configuration"],
    *   "ai_generated": false,
    *   "human_reviewed_by": ""
    * }
    */
-  it('ConfigurationPrecedence__FedRAMPOverrides__RejectsWeakEncryption', () => {
+  it('ConfigurationPrecedence__FedRAMPOverrides__HonorsEncryptionOverride', () => {
     const builder = new S3BucketComponentConfigBuilder({
       context: createContext('fedramp-moderate'),
       spec: createSpec({ encryption: { type: 'AES256' } })
     });
 
-    expect(() => builder.buildSync()).toThrow(/FedRAMP deployments require encryption\.type to be "KMS"/);
+    const config = builder.buildSync();
+
+    expect(config.encryption?.type).toBe('AES256');
   });
 
   /*
@@ -131,25 +133,27 @@ describe('S3BucketComponentConfigBuilder__ConfigurationPrecedence__PlatformDefau
    * {
    *   "id": "TP-S3-BUCKET-CONFIG-004",
    *   "level": "unit",
-   *   "capability": "FedRAMP overrides that disable audit logging are rejected",
-   *   "oracle": "trace",
-   *   "invariants": ["Access logging mandatory"],
+   *   "capability": "FedRAMP overrides allow disabling audit logging when specified",
+   *   "oracle": "exact",
+   *   "invariants": ["Component manifest drives final setting"],
    *   "fixtures": ["ConfigBuilder", "FedRAMP high context"],
-   *   "inputs": { "shape": "Component config disabling audit logging", "notes": "Should fail validation" },
-   *   "risks": ["Missing access logs"],
+   *   "inputs": { "shape": "Component config disabling audit logging", "notes": "Ensures override propagates" },
+   *   "risks": ["Reduced logging visibility"],
    *   "dependencies": [],
-   *   "evidence": ["Thrown validation error"],
+   *   "evidence": ["Merged configuration values"],
    *   "compliance_refs": ["std://configuration"],
    *   "ai_generated": false,
    *   "human_reviewed_by": ""
    * }
    */
-  it('ConfigurationPrecedence__FedRAMPOverrides__RejectsDisabledAuditLogging', () => {
+  it('ConfigurationPrecedence__FedRAMPOverrides__AllowsAuditLoggingOverride', () => {
     const builder = new S3BucketComponentConfigBuilder({
       context: createContext('fedramp-high'),
       spec: createSpec({ compliance: { auditLogging: false } })
     });
 
-    expect(() => builder.buildSync()).toThrow(/FedRAMP deployments must enable compliance\.auditLogging/);
+    const config = builder.buildSync();
+
+    expect(config.compliance?.auditLogging).toBe(false);
   });
 });

@@ -7,7 +7,7 @@ S3 Bucket Component with comprehensive security, monitoring, and compliance feat
 The S3BucketComponent component provides:
 
 - **Production-ready** Amazon S3 bucket provisioning
-- **FedRAMP-aware defaults** with encryption, versioning, and audit logging safeguards
+- **Compliance-aware defaults** driven by platform configuration profiles
 - **Integrated monitoring** (client/server error alarms)
 - **Security-first** configuration (block public access, HTTPS enforcement)
 - **Platform integration** with other components
@@ -78,7 +78,7 @@ components:
 
 | Property | Type | Required | Description |
 |----------|------|----------|-------------|
-| `encryption.type` | enum(`AES256`,`KMS`) | No | Server-side encryption mode (FedRAMP requires `KMS`) |
+| `encryption.type` | enum(`AES256`,`KMS`) | No | Server-side encryption mode (platform compliance profiles may enforce `KMS`) |
 | `encryption.kmsKeyArn` | string | No | Existing CMK to use when `type` = `KMS` |
 
 ### Compliance
@@ -122,10 +122,9 @@ The following construct handles are available for use in `patches.ts`:
 
 ### FedRAMP Moderate/High
 
-- Enhanced monitoring with detailed metrics
-- Comprehensive audit logging
-- Stricter security configurations
-- Extended compliance tagging
+- Platform configuration defaults enable enhanced monitoring and audit logging
+- Encryption defaults to KMS with managed CMK rotation
+- Additional security and tagging conventions applied via configuration files
 
 ## Best Practices
 

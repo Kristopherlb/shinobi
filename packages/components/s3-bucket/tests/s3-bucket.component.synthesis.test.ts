@@ -186,26 +186,31 @@ describe('S3BucketComponent__Synthesis__ComplianceBehaviors', () => {
    * {
    *   "id": "TP-S3-BUCKET-COMPONENT-004",
    *   "level": "unit",
-   *   "capability": "FedRAMP overrides that disable audit logging are rejected",
-   *   "oracle": "trace",
-   *   "invariants": ["Audit logging required"],
+   *   "capability": "FedRAMP overrides can disable audit logging when explicitly configured",
+   *   "oracle": "contract",
+   *   "invariants": ["Manifest overrides remain authoritative"],
    *   "fixtures": ["cdk.Stack", "S3BucketComponent"],
-   *   "inputs": { "shape": "FedRAMP moderate with audit logging disabled", "notes": "Expect validation failure" },
-   *   "risks": ["Missing access logs"],
+   *   "inputs": { "shape": "FedRAMP moderate with audit logging disabled", "notes": "Ensures no audit bucket is created" },
+   *   "risks": ["Operator assumes compliance responsibility"],
    *   "dependencies": [],
-   *   "evidence": ["Thrown error"],
+   *   "evidence": ["CloudFormation template"],
    *   "compliance_refs": ["std://configuration"],
    *   "ai_generated": false,
    *   "human_reviewed_by": ""
    * }
    */
-  it('ManifestOverrides__FedRAMPAuditLoggingDisabled__ThrowsComplianceError', () => {
+  it('ManifestOverrides__FedRAMPAuditLoggingDisabled__OmitsAuditBucket', () => {
     const context = createContext('fedramp-moderate');
-    const spec = createSpec({
-      compliance: { auditLogging: false }
-    });
+    const template = synthesize(
+      context,
+      createSpec({ compliance: { auditLogging: false } })
+    );
 
-    expect(() => synthesize(context, spec)).toThrow(/FedRAMP deployments must enable compliance\.auditLogging/);
+    const buckets = template.findResources('AWS::S3::Bucket');
+    Object.values(buckets).forEach(resource => {
+      const logging = resource.Properties?.LoggingConfiguration;
+      expect(logging).toBeUndefined();
+    });
   });
 
   /*

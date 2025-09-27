@@ -53,7 +53,7 @@ export interface ObservabilityConfig {
   customAttributes: Record<string, string>;
 }
 
-interface BaseComponentServices {
+export interface BaseComponentServices {
   taggingService: ITaggingService;
   observabilityService: IObservabilityService;
   loggingService: ILoggingService;

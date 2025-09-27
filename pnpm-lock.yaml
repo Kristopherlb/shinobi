@@ -175,17 +175,14 @@ importers:
 
   packages/components/api-gateway-http:
     dependencies:
-      '@platform/contracts':
+      '@shinobi/core':
         specifier: workspace:*
-        version: link:../../contracts
-      '@platform/core-engine':
-        specifier: workspace:*
-        version: link:../../core-engine
+        version: link:../../core
       aws-cdk-lib:
-        specifier: ^2.100.0
+        specifier: ^2.214.0
         version: 2.214.0(constructs@10.4.2)
       constructs:
-        specifier: ^10.3.0
+        specifier: ^10.4.2
         version: 10.4.2
     devDependencies:
       '@types/jest':
@@ -215,9 +212,6 @@ importers:
 
   packages/components/api-gateway-rest:
     dependencies:
-      '@platform/contracts':
-        specifier: workspace:*
-        version: link:../../contracts
       '@shinobi/core':
         specifier: workspace:*
         version: link:../../core
@@ -502,6 +496,21 @@ importers:
         specifier: ^5.0.0
         version: 5.9.2
 
+  packages/components/s3-bucket:
+    dependencies:
+      '@platform/contracts':
+        specifier: workspace:*
+        version: link:../../contracts
+      '@shinobi/core':
+        specifier: workspace:*
+        version: link:../../core
+      aws-cdk-lib:
+        specifier: ^2.214.0
+        version: 2.214.0(constructs@10.4.2)
+      constructs:
+        specifier: ^10.4.2
+        version: 10.4.2
+
   packages/components/security-group-import:
     dependencies:
       aws-cdk-lib:
@@ -657,6 +666,9 @@ importers:
       '@aws-sdk/client-cloudformation':
         specifier: ^3.637.0
         version: 3.890.0
+      '@openfeature/js-sdk':
+        specifier: ^1.6.1
+        version: 1.6.1
       ajv:
         specifier: ^8.17.1
         version: 8.17.1
@@ -2654,6 +2666,11 @@ packages:
 
   '@octokit/types@9.3.2':
     resolution: {integrity: sha512-D4iHGTdAnEEVsB8fl95m1hiz7D5YiRdQ9b/OEb3BYRVwbLsGHcRVPz+u+BgRLNk0Q0/4iZCBqDN96j2XNxfXrA==}
+
+  '@openfeature/js-sdk@1.6.1':
+    resolution: {integrity: sha512-IMxkVxpAiiMfmqQXLsMlePb0/NtmmuisOcA27LGjJy7dXRqafNpJlzJXxSsGou1+/DtrFOVkJ/Udc1adNfXaFg==}
+    engines: {node: '>=16'}
+    deprecated: This package has been moved to @openfeature/server-sdk
 
   '@phenomnomnominal/tsquery@5.0.1':
     resolution: {integrity: sha512-3nVv+e2FQwsW8Aw6qTU6f+1rfcJ3hrcnvH/mu9i8YhxO+9sqbOfpL8m6PbET5+xKOlz/VSbp0RoYWYCtIsnmuA==}
@@ -11438,6 +11455,8 @@ snapshots:
   '@octokit/types@9.3.2':
     dependencies:
       '@octokit/openapi-types': 18.1.1
+
+  '@openfeature/js-sdk@1.6.1': {}
 
   '@phenomnomnominal/tsquery@5.0.1(typescript@5.9.2)':
     dependencies:
