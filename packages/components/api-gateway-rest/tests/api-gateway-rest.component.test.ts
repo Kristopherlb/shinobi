@@ -4,7 +4,7 @@ import { Template, Match } from 'aws-cdk-lib/assertions';
 
 import { ApiGatewayRestComponent } from '../src/api-gateway-rest.component';
 import { ApiGatewayRestConfigBuilder } from '../src/api-gateway-rest.builder';
-import { ComponentContext, ComponentSpec } from '@platform/contracts';
+import { ComponentContext, ComponentSpec } from '@shinobi/core';
 
 type Mutable<T> = {
   -readonly [P in keyof T]: T[P];

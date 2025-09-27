@@ -47,7 +47,7 @@
     "versioning": {
       "type": "boolean",
       "description": "Enable bucket versioning",
-      "default": false
+      "default": true
     },
     "encryption": {
       "type": "object",

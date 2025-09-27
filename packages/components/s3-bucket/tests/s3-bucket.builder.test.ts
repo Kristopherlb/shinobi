@@ -47,9 +47,9 @@ describe('S3BucketComponentConfigBuilder__ConfigurationPrecedence__PlatformDefau
    *   "risks": [],
    *   "dependencies": ["config/commercial.yml"],
    *   "evidence": ["Merged configuration values"],
-   *   "complianceRefs": ["std://configuration"],
-   *   "aiGenerated": false,
-   *   "humanReviewedBy": ""
+   *   "compliance_refs": ["std://configuration"],
+   *   "ai_generated": false,
+   *   "human_reviewed_by": ""
    * }
    */
   it('ConfigurationPrecedence__CommercialDefaults__UsesPlatformValues', () => {
@@ -60,7 +60,7 @@ describe('S3BucketComponentConfigBuilder__ConfigurationPrecedence__PlatformDefau
 
     const config = builder.buildSync();
 
-    expect(config.versioning).toBe(false);
+    expect(config.versioning).toBe(true);
     expect(config.encryption?.type).toBe('AES256');
     expect(config.security?.tools?.clamavScan).toBe(false);
     expect(config.monitoring?.enabled).toBe(false);
@@ -79,9 +79,9 @@ describe('S3BucketComponentConfigBuilder__ConfigurationPrecedence__PlatformDefau
    *   "risks": [],
    *   "dependencies": ["config/fedramp-moderate.yml"],
    *   "evidence": ["Merged configuration values"],
-   *   "complianceRefs": ["std://configuration"],
-   *   "aiGenerated": false,
-   *   "humanReviewedBy": ""
+   *   "compliance_refs": ["std://configuration"],
+   *   "ai_generated": false,
+   *   "human_reviewed_by": ""
    * }
    */
   it('ConfigurationPrecedence__FedRAMPModerate__AppliesComplianceDefaults', () => {
@@ -104,31 +104,52 @@ describe('S3BucketComponentConfigBuilder__ConfigurationPrecedence__PlatformDefau
    * {
    *   "id": "TP-S3-BUCKET-CONFIG-003",
    *   "level": "unit",
-   *   "capability": "Manifest overrides win over platform defaults",
-   *   "oracle": "exact",
-   *   "invariants": ["Component config overrides compliance defaults"],
-   *   "fixtures": ["ConfigBuilder", "Manifest overrides"],
-   *   "inputs": { "shape": "Component config overriding encryption and MFA", "notes": "FedRAMP moderate context" },
-   *   "risks": [],
+   *   "capability": "FedRAMP overrides that weaken controls are rejected",
+   *   "oracle": "trace",
+   *   "invariants": ["FedRAMP requires KMS encryption"],
+   *   "fixtures": ["ConfigBuilder", "FedRAMP moderate context"],
+   *   "inputs": { "shape": "Component config overriding encryption to AES256", "notes": "Should fail validation" },
+   *   "risks": ["Non-compliant encryption"],
    *   "dependencies": [],
-   *   "evidence": ["Merged configuration values"],
-   *   "complianceRefs": ["std://configuration"],
-   *   "aiGenerated": false,
-   *   "humanReviewedBy": ""
+   *   "evidence": ["Thrown validation error"],
+   *   "compliance_refs": ["std://configuration"],
+   *   "ai_generated": false,
+   *   "human_reviewed_by": ""
    * }
    */
-  it('ConfigurationPrecedence__ManifestOverrides__WinOverComplianceDefaults', () => {
+  it('ConfigurationPrecedence__FedRAMPOverrides__RejectsWeakEncryption', () => {
     const builder = new S3BucketComponentConfigBuilder({
       context: createContext('fedramp-moderate'),
-      spec: createSpec({
-        encryption: { type: 'AES256' },
-        security: { requireMfaDelete: false }
-      })
+      spec: createSpec({ encryption: { type: 'AES256' } })
     });
 
-    const config = builder.buildSync();
+    expect(() => builder.buildSync()).toThrow(/FedRAMP deployments require encryption\.type to be "KMS"/);
+  });
 
-    expect(config.encryption?.type).toBe('AES256');
-    expect(config.security?.requireMfaDelete).toBe(false);
+  /*
+   * Test Metadata: TP-S3-BUCKET-CONFIG-004
+   * {
+   *   "id": "TP-S3-BUCKET-CONFIG-004",
+   *   "level": "unit",
+   *   "capability": "FedRAMP overrides that disable audit logging are rejected",
+   *   "oracle": "trace",
+   *   "invariants": ["Access logging mandatory"],
+   *   "fixtures": ["ConfigBuilder", "FedRAMP high context"],
+   *   "inputs": { "shape": "Component config disabling audit logging", "notes": "Should fail validation" },
+   *   "risks": ["Missing access logs"],
+   *   "dependencies": [],
+   *   "evidence": ["Thrown validation error"],
+   *   "compliance_refs": ["std://configuration"],
+   *   "ai_generated": false,
+   *   "human_reviewed_by": ""
+   * }
+   */
+  it('ConfigurationPrecedence__FedRAMPOverrides__RejectsDisabledAuditLogging', () => {
+    const builder = new S3BucketComponentConfigBuilder({
+      context: createContext('fedramp-high'),
+      spec: createSpec({ compliance: { auditLogging: false } })
+    });
+
+    expect(() => builder.buildSync()).toThrow(/FedRAMP deployments must enable compliance\.auditLogging/);
   });
 });

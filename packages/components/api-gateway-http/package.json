@@ -1,17 +1,17 @@
 {
-  "name": "@platform/api-gateway-http",
+  "name": "@platform/components-api-gateway-http",
   "version": "0.0.1",
   "private": true,
   "description": "AWS API Gateway v2 HTTP API component with compliance, observability, and security features",
-  "main": "dist/packages/components/api-gateway-http/index.js",
-  "types": "dist/packages/components/api-gateway-http/index.d.ts",
+  "main": "../../dist/packages/components/api-gateway-http/index.js",
+  "types": "../../dist/packages/components/api-gateway-http/index.d.ts",
   "scripts": {
     "build": "tsc -p tsconfig.json",
     "test": "jest",
     "test:watch": "jest --watch",
     "test:coverage": "jest --coverage",
-    "lint": "eslint src/**/*.ts",
-    "lint:fix": "eslint src/**/*.ts --fix",
+    "lint": "eslint . --ext .ts",
+    "lint:fix": "eslint . --ext .ts --fix",
     "clean": "rm -rf dist coverage"
   },
   "keywords": [
@@ -31,10 +31,9 @@
   "author": "Shinobi Platform Team",
   "license": "MIT",
   "dependencies": {
-    "@platform/contracts": "workspace:*",
-    "@platform/core-engine": "workspace:*",
-    "aws-cdk-lib": "^2.100.0",
-    "constructs": "^10.3.0"
+    "@shinobi/core": "workspace:*",
+    "aws-cdk-lib": "^2.214.0",
+    "constructs": "^10.4.2"
   },
   "devDependencies": {
     "@types/jest": "^29.5.5",
@@ -95,4 +94,3 @@
     ]
   }
 }
-

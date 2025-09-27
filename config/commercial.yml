@@ -103,7 +103,7 @@ defaults:
 
   s3-bucket:
     public: false
-    versioning: false
+    versioning: true
     eventBridgeEnabled: false
     encryption:
       type: AES256

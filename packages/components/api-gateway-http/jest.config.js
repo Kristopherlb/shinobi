@@ -2,7 +2,7 @@ const baseConfig = require('../../../jest.preset.cjs');
 
 module.exports = {
   ...baseConfig,
-  displayName: '@platform/api-gateway-http',
+  displayName: '@platform/components-api-gateway-http',
   rootDir: __dirname,
   testEnvironment: 'node',
   transform: baseConfig.transform,
@@ -11,9 +11,7 @@ module.exports = {
   moduleNameMapper: {
     ...baseConfig.moduleNameMapper,
     '^@shinobi/core$': '<rootDir>/../../core/src/index.ts',
-    '^@shinobi/core/(.*)$': '<rootDir>/../../core/src/$1',
-    '^@platform/contracts$': '<rootDir>/../../contracts/src/index.ts',
-    '^@platform/contracts/(.*)$': '<rootDir>/../../contracts/src/$1'
+    '^@shinobi/core/(.*)$': '<rootDir>/../../core/src/$1'
   },
   setupFilesAfterEnv: ['<rootDir>/tests/setup.ts'],
   coverageDirectory: '<rootDir>/coverage',

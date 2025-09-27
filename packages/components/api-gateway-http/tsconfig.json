@@ -1,34 +1,29 @@
 {
+  "extends": "../../../tsconfig.base.json",
   "compilerOptions": {
-    "target": "ES2022",
-    "module": "CommonJS",
-    "moduleResolution": "Node",
+    "rootDir": ".",
+    "outDir": "../../../dist/packages/components/api-gateway-http",
+    "composite": true,
     "declaration": true,
-    "outDir": "dist",
-    "strict": true,
-    "esModuleInterop": true,
+    "declarationMap": true,
+    "moduleResolution": "node",
     "resolveJsonModule": true,
-    "skipLibCheck": true,
-    "baseUrl": ".",
-    "paths": {
-      "@shinobi/core": [
-        "../../../packages/core/src/index.ts"
-      ],
-      "@shinobi/core/*": [
-        "../../../packages/core/src/*"
-      ]
-    }
+    "esModuleInterop": true
   },
   "include": [
     "index.ts",
     "*.component.ts",
     "*.builder.ts",
-    "*.creator.ts"
+    "*.creator.ts",
+    "Config.schema.json"
   ],
   "exclude": [
     "dist",
     "node_modules",
     "**/*.test.ts",
     "**/*.spec.ts"
+  ],
+  "references": [
+    { "path": "../../core/tsconfig.json" }
   ]
 }

@@ -380,7 +380,7 @@ export class ApiGatewayHttpConfigBuilder extends ConfigBuilder<ApiGatewayHttpCon
   public getHardcodedFallbacks(): Record<string, any> {
     return {
       protocolType: 'HTTP',
-      description: 'Modern HTTP API Gateway for test-http-api-gateway',
+      description: `HTTP API for ${this.spec.name}`,
       cors: {
         allowOrigins: [],
         allowHeaders: ['Content-Type', 'Authorization'],
@@ -394,8 +394,7 @@ export class ApiGatewayHttpConfigBuilder extends ConfigBuilder<ApiGatewayHttpCon
       },
       accessLogging: {
         enabled: true,
-        retentionInDays: 30,
-        format: '$context.requestId $context.requestTime $context.identity.sourceIp $context.httpMethod $context.routeKey $context.status $context.responseLength'
+        retentionInDays: 90
       },
       monitoring: {
         detailedMetrics: true,
@@ -403,7 +402,8 @@ export class ApiGatewayHttpConfigBuilder extends ConfigBuilder<ApiGatewayHttpCon
         alarms: {
           errorRate4xx: 5,
           errorRate5xx: 1,
-          highLatency: 2000
+          highLatency: 2000,
+          lowThroughput: 1
         }
       },
       apiSettings: {
@@ -416,6 +416,94 @@ export class ApiGatewayHttpConfigBuilder extends ConfigBuilder<ApiGatewayHttpCon
         requireAuthorization: true
       }
     };
+  }
+
+  protected getComplianceFrameworkDefaults(): Partial<ApiGatewayHttpConfig> {
+    switch (this.context.complianceFramework) {
+      case 'fedramp-high':
+        return {
+          throttling: {
+            rateLimit: 25,
+            burstLimit: 50
+          },
+          accessLogging: {
+            enabled: true,
+            retentionInDays: 365,
+            includeExecutionData: true,
+            includeRequestResponseData: true
+          },
+          monitoring: {
+            detailedMetrics: true,
+            tracingEnabled: true,
+            alarms: {
+              errorRate4xx: 1.0,
+              errorRate5xx: 0.1,
+              highLatency: 2000,
+              lowThroughput: 2
+            }
+          },
+          security: {
+            enableWaf: true,
+            enableApiKey: true,
+            requireAuthorization: true
+          }
+        };
+      case 'fedramp-moderate':
+        return {
+          throttling: {
+            rateLimit: 50,
+            burstLimit: 100
+          },
+          accessLogging: {
+            enabled: true,
+            retentionInDays: 90,
+            includeExecutionData: false,
+            includeRequestResponseData: false
+          },
+          monitoring: {
+            detailedMetrics: true,
+            tracingEnabled: true,
+            alarms: {
+              errorRate4xx: 2.0,
+              errorRate5xx: 0.5,
+              highLatency: 3000,
+              lowThroughput: 5
+            }
+          },
+          security: {
+            enableWaf: true,
+            enableApiKey: true,
+            requireAuthorization: true
+          }
+        };
+      default:
+        return {
+          throttling: {
+            rateLimit: 1000,
+            burstLimit: 2000
+          },
+          accessLogging: {
+            retentionInDays: 90,
+            includeExecutionData: false,
+            includeRequestResponseData: false
+          },
+          monitoring: {
+            detailedMetrics: true,
+            tracingEnabled: true,
+            alarms: {
+              errorRate4xx: 5.0,
+              errorRate5xx: 1.0,
+              highLatency: 5000,
+              lowThroughput: 10
+            }
+          },
+          security: {
+            enableWaf: false,
+            enableApiKey: false,
+            requireAuthorization: true
+          }
+        };
+    }
   }
 
   // Add build method for async compatibility

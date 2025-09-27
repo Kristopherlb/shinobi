@@ -1,8 +1,9 @@
-import { ComponentContext, ComponentSpec } from '@platform/contracts';
 import {
+  ComponentContext,
+  ComponentSpec,
   ConfigBuilder,
   ConfigBuilderContext,
-  ComponentConfigSchema,
+  ComponentConfigSchema
 } from '@shinobi/core';
 
 export interface ApiGatewayRestCorsConfig {

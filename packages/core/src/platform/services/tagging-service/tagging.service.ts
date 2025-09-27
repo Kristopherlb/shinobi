@@ -19,6 +19,7 @@ export interface TaggingContext {
   environment: string;
   region?: string;
   accountId?: string;
+  complianceFramework?: string;
 }
 
 /**
@@ -40,6 +41,7 @@ export class TaggingService implements ITaggingService {
   public buildStandardTags(context: TaggingContext): Record<string, string> {
     const now = new Date();
     const deploymentId = `deploy-${now.getFullYear()}${(now.getMonth() + 1).toString().padStart(2, '0')}${now.getDate().toString().padStart(2, '0')}-${now.getHours().toString().padStart(2, '0')}${now.getMinutes().toString().padStart(2, '0')}${now.getSeconds().toString().padStart(2, '0')}`;
+    const complianceFramework = context.serviceLabels?.complianceFramework ?? context.complianceFramework ?? 'commercial';
 
     return {
       // Core Service Tags
@@ -51,6 +53,7 @@ export class TaggingService implements ITaggingService {
       // Environment Tags
       'environment': context.environment,
       'deployment-id': deploymentId,
+      'compliance-framework': complianceFramework,
 
       // AWS Tags
       'cloud-provider': 'aws',
@@ -68,7 +71,7 @@ export class TaggingService implements ITaggingService {
       'owner': 'platform-engineering',
 
       // Security Tags
-      'data-classification': 'internal',
+      'data-classification': this.getDataClassification(complianceFramework),
       'encryption-required': 'true',
 
       // Operational Tags

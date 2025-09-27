@@ -1,7 +1,7 @@
 import type { Config } from 'jest';
 
 const config: Config = {
-  displayName: '@platform/api-gateway-rest',
+  displayName: '@platform/components-api-gateway-rest',
   rootDir: __dirname,
   testEnvironment: 'node',
   transform: {
@@ -10,9 +10,7 @@ const config: Config = {
   moduleFileExtensions: ['ts', 'tsx', 'js', 'jsx', 'json'],
   moduleNameMapper: {
     '^@shinobi/core$': '<rootDir>/../../core/src/index.ts',
-    '^@shinobi/core/(.*)$': '<rootDir>/../../core/src/$1',
-    '^@platform/contracts$': '<rootDir>/../../contracts/src/index.ts',
-    '^@platform/contracts/(.*)$': '<rootDir>/../../contracts/src/$1'
+    '^@shinobi/core/(.*)$': '<rootDir>/../../core/src/$1'
   },
   testMatch: ['<rootDir>/tests/**/*.test.ts'],
   collectCoverageFrom: [

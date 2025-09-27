@@ -49,23 +49,23 @@ describe('S3BucketComponent__Synthesis__ComplianceBehaviors', () => {
    *   "level": "unit",
    *   "capability": "Commercial synthesis uses platform defaults",
    *   "oracle": "contract",
-   *   "invariants": ["AES256 encryption", "No custom KMS"],
+   *   "invariants": ["AES256 encryption", "Versioning enabled"],
    *   "fixtures": ["cdk.Stack", "S3BucketComponent"],
    *   "inputs": { "shape": "Commercial context without overrides", "notes": "Validates default behavior" },
    *   "risks": [],
    *   "dependencies": ["config/commercial.yml"],
    *   "evidence": ["CloudFormation template"],
-   *   "complianceRefs": ["std://configuration"],
-   *   "aiGenerated": false,
-   *   "humanReviewedBy": ""
+   *   "compliance_refs": ["std://configuration"],
+   *   "ai_generated": false,
+   *   "human_reviewed_by": ""
    * }
    */
   it('CommercialDefaults__BaselineConfiguration__SynthesizesAES256Bucket', () => {
     const context = createContext('commercial');
     const template = synthesize(context, createSpec());
 
-    template.hasResourceProperties('AWS::S3::Bucket', {
-      VersioningConfiguration: Match.absent(),
+    template.hasResourceProperties('AWS::S3::Bucket', Match.objectLike({
+      VersioningConfiguration: { Status: 'Enabled' },
       BucketEncryption: {
         ServerSideEncryptionConfiguration: Match.arrayWith([
           Match.objectLike({
@@ -74,8 +74,9 @@ describe('S3BucketComponent__Synthesis__ComplianceBehaviors', () => {
             })
           })
         ])
-      }
-    });
+      },
+      LoggingConfiguration: Match.absent()
+    }));
 
     template.resourceCountIs('AWS::KMS::Key', 0);
   });
@@ -93,9 +94,9 @@ describe('S3BucketComponent__Synthesis__ComplianceBehaviors', () => {
    *   "risks": [],
    *   "dependencies": ["config/fedramp-moderate.yml"],
    *   "evidence": ["CloudFormation template"],
-   *   "complianceRefs": ["std://configuration", "std://observability"],
-   *   "aiGenerated": false,
-   *   "humanReviewedBy": ""
+   *   "compliance_refs": ["std://configuration", "std://observability"],
+   *   "ai_generated": false,
+   *   "human_reviewed_by": ""
    * }
    */
   it('FedRAMPModerateDefaults__ComplianceHardening__CreatesKmsAndLogging', () => {
@@ -150,9 +151,9 @@ describe('S3BucketComponent__Synthesis__ComplianceBehaviors', () => {
    *   "risks": [],
    *   "dependencies": ["config/fedramp-high.yml"],
    *   "evidence": ["CloudFormation template"],
-   *   "complianceRefs": ["std://configuration"],
-   *   "aiGenerated": false,
-   *   "humanReviewedBy": ""
+   *   "compliance_refs": ["std://configuration"],
+   *   "ai_generated": false,
+   *   "human_reviewed_by": ""
    * }
    */
   it('FedRAMPHighDefaults__ObjectLockCompliance__EnablesRetentionPolicies', () => {
@@ -185,31 +186,54 @@ describe('S3BucketComponent__Synthesis__ComplianceBehaviors', () => {
    * {
    *   "id": "TP-S3-BUCKET-COMPONENT-004",
    *   "level": "unit",
-   *   "capability": "Manifest overrides disable compliance logging",
-   *   "oracle": "contract",
-   *   "invariants": ["Audit bucket omitted", "No KMS key"],
+   *   "capability": "FedRAMP overrides that disable audit logging are rejected",
+   *   "oracle": "trace",
+   *   "invariants": ["Audit logging required"],
    *   "fixtures": ["cdk.Stack", "S3BucketComponent"],
-   *   "inputs": { "shape": "FedRAMP moderate with audit logging disabled", "notes": "Ensures overrides propagate" },
-   *   "risks": [],
+   *   "inputs": { "shape": "FedRAMP moderate with audit logging disabled", "notes": "Expect validation failure" },
+   *   "risks": ["Missing access logs"],
    *   "dependencies": [],
-   *   "evidence": ["CloudFormation template"],
-   *   "complianceRefs": ["std://configuration"],
-   *   "aiGenerated": false,
-   *   "humanReviewedBy": ""
+   *   "evidence": ["Thrown error"],
+   *   "compliance_refs": ["std://configuration"],
+   *   "ai_generated": false,
+   *   "human_reviewed_by": ""
    * }
    */
-  it('ManifestOverrides__AuditLoggingDisabled__OmitsAuditBucket', () => {
+  it('ManifestOverrides__FedRAMPAuditLoggingDisabled__ThrowsComplianceError', () => {
     const context = createContext('fedramp-moderate');
+    const spec = createSpec({
+      compliance: { auditLogging: false }
+    });
+
+    expect(() => synthesize(context, spec)).toThrow(/FedRAMP deployments must enable compliance\.auditLogging/);
+  });
+
+  /*
+   * Test Metadata: TP-S3-BUCKET-COMPONENT-005
+   * {
+   *   "id": "TP-S3-BUCKET-COMPONENT-005",
+   *   "level": "unit",
+   *   "capability": "Commercial overrides can disable audit logging",
+   *   "oracle": "contract",
+   *   "invariants": ["No audit bucket created"],
+   *   "fixtures": ["cdk.Stack", "S3BucketComponent"],
+   *   "inputs": { "shape": "Commercial context with audit logging disabled", "notes": "Allowed relaxation" },
+   *   "risks": ["Reduced visibility"],
+   *   "dependencies": [],
+   *   "evidence": ["CloudFormation template"],
+   *   "compliance_refs": ["std://configuration"],
+   *   "ai_generated": false,
+   *   "human_reviewed_by": ""
+   * }
+   */
+  it('ManifestOverrides__CommercialAuditLoggingDisabled__OmitsAuditBucket', () => {
+    const context = createContext('commercial');
     const template = synthesize(
       context,
-      createSpec({
-        compliance: { auditLogging: false },
-        encryption: { type: 'AES256' }
-      })
+      createSpec({ compliance: { auditLogging: false } })
     );
 
     template.resourceCountIs('AWS::S3::Bucket', 1);
-    template.resourceCountIs('AWS::KMS::Key', 0);
 
     const buckets = template.findResources('AWS::S3::Bucket');
     Object.values(buckets).forEach(resource => {
@@ -218,7 +242,7 @@ describe('S3BucketComponent__Synthesis__ComplianceBehaviors', () => {
   });
 
   /*
-   * Test Metadata: TP-S3-BUCKET-COMPONENT-005
+   * Test Metadata: TP-S3-BUCKET-COMPONENT-006
    * {
    *   "id": "TP-S3-BUCKET-COMPONENT-006",
    *   "level": "unit",
@@ -230,9 +254,9 @@ describe('S3BucketComponent__Synthesis__ComplianceBehaviors', () => {
    *   "risks": ["Bucket name collisions"],
    *   "dependencies": [],
    *   "evidence": ["Audit bucket CloudFormation resource"],
-   *   "complianceRefs": ["std://configuration"],
-   *   "aiGenerated": false,
-   *   "humanReviewedBy": ""
+   *   "compliance_refs": ["std://configuration"],
+   *   "ai_generated": false,
+   *   "human_reviewed_by": ""
    * }
    */
   it('AuditBucketNaming__DefaultConfiguration__UsesDeterministicUniqueName', () => {
@@ -249,9 +273,9 @@ describe('S3BucketComponent__Synthesis__ComplianceBehaviors', () => {
   });
 
   /*
-    * Test Metadata: TP-S3-BUCKET-COMPONENT-006
-    * {
-    *   "id": "TP-S3-BUCKET-COMPONENT-006",
+   * Test Metadata: TP-S3-BUCKET-COMPONENT-007
+   * {
+   *   "id": "TP-S3-BUCKET-COMPONENT-007",
    *   "level": "unit",
    *   "capability": "Object lock requires versioning",
    *   "oracle": "trace",
@@ -261,9 +285,9 @@ describe('S3BucketComponent__Synthesis__ComplianceBehaviors', () => {
    *   "risks": [],
    *   "dependencies": [],
    *   "evidence": ["Thrown error"],
-   *   "complianceRefs": ["std://configuration"],
-   *   "aiGenerated": false,
-   *   "humanReviewedBy": ""
+   *   "compliance_refs": ["std://configuration"],
+   *   "ai_generated": false,
+   *   "human_reviewed_by": ""
    * }
    */
   it('ObjectLock__VersioningDisabled__ThrowsInformativeError', () => {
