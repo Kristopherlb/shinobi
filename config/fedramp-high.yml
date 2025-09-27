@@ -135,7 +135,7 @@ defaults:
       requireMfaDelete: true
       denyDeleteActions: true
       tools:
-        clamavScan: true
+        clamavScan: false
     lifecycleRules:
       - id: fedramp-high-archival
         enabled: true

@@ -308,7 +308,32 @@ export const S3_BUCKET_CONFIG_SCHEMA: ComponentConfigSchema = {
         }
       }
     }
-  }
+  },
+  allOf: [
+    {
+      if: {
+        properties: {
+          compliance: {
+            properties: {
+              objectLock: {
+                properties: {
+                  enabled: { const: true }
+                }
+              }
+            }
+          }
+        }
+      },
+      then: {
+        properties: {
+          versioning: {
+            const: true,
+            description: 'Versioning must be enabled when objectLock.enabled is true'
+          }
+        }
+      }
+    }
+  ]
 };
 
 export class S3BucketComponentConfigBuilder extends ConfigBuilder<S3BucketConfig> {

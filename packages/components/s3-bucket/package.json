@@ -1,0 +1,36 @@
+{
+  "name": "@platform/components-s3-bucket",
+  "version": "0.0.1",
+  "private": true,
+  "type": "commonjs",
+  "main": "./dist/index.js",
+  "types": "./dist/index.d.ts",
+  "exports": {
+    ".": {
+      "require": "./dist/index.js",
+      "types": "./dist/index.d.ts"
+    },
+    "./schema": {
+      "require": "./Config.schema.json"
+    }
+  },
+  "files": [
+    "dist",
+    "Config.schema.json"
+  ],
+  "dependencies": {
+    "aws-cdk-lib": "^2.214.0",
+    "constructs": "^10.4.2",
+    "@shinobi/core": "workspace:*",
+    "@platform/contracts": "workspace:*"
+  },
+  "peerDependencies": {
+    "aws-cdk-lib": ">=2.100.0",
+    "constructs": ">=10.0.0"
+  },
+  "scripts": {
+    "build": "tsc -p tsconfig.lib.json",
+    "clean": "rm -rf dist",
+    "test": "jest -c ../../../../jest.preset.ts --roots=./tests"
+  }
+}

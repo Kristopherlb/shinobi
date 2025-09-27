@@ -5,18 +5,12 @@ environment: dev
 region: us-west-2
 accountId: 911871352725
 components:
-  - name: api
+  - name: sample-bucket
     type: s3-bucket
     config:
-      bucketName: sample-bucket
-      versioning: true
-      encryption:
-        type: KMS
       public: false
-      security:
-        blockPublicAccess: true
-      eventBridgeEnabled: true
+      versioning: false
       compliance:
-        auditLogging: true
-        auditBucketName: sample-audit-bucket
-        auditBucketRetentionDays: 365
+        auditLogging: false
+        objectLock:
+          enabled: false

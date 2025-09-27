@@ -10,3 +10,5 @@ export {
   S3BucketConfig,
   S3_BUCKET_CONFIG_SCHEMA
 } from './s3-bucket.builder';
+
+export { S3BucketComponentCreator } from './s3-bucket.creator';

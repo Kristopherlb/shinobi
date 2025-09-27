@@ -1,7 +1,17 @@
 {
   "extends": "./tsconfig.json",
   "compilerOptions": {
-    "composite": true
+    "composite": true,
+    "declaration": true,
+    "declarationMap": true
   },
-  "references": []
+  "include": [
+    "index.ts",
+    "Config.schema.json",
+    "src/**/*"
+  ],
+  "references": [
+    { "path": "../../core/tsconfig.lib.json" },
+    { "path": "../../contracts/tsconfig.json" }
+  ]
 }

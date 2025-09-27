@@ -221,5 +221,30 @@
         }
       }
     }
-  }
+  },
+  "allOf": [
+    {
+      "if": {
+        "properties": {
+          "compliance": {
+            "properties": {
+              "objectLock": {
+                "properties": {
+                  "enabled": { "const": true }
+                }
+              }
+            }
+          }
+        }
+      },
+      "then": {
+        "properties": {
+          "versioning": {
+            "const": true,
+            "description": "Versioning must be enabled when objectLock.enabled is true"
+          }
+        }
+      }
+    }
+  ]
 }

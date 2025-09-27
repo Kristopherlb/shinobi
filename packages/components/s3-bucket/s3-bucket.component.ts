@@ -8,8 +8,6 @@
 
 import * as s3 from 'aws-cdk-lib/aws-s3';
 import * as kms from 'aws-cdk-lib/aws-kms';
-import * as lambda from 'aws-cdk-lib/aws-lambda';
-import * as s3n from 'aws-cdk-lib/aws-s3-notifications';
 import * as iam from 'aws-cdk-lib/aws-iam';
 import * as cloudwatch from 'aws-cdk-lib/aws-cloudwatch';
 import * as cdk from 'aws-cdk-lib';
@@ -30,7 +28,6 @@ export class S3BucketComponent extends BaseComponent {
   private kmsKey?: kms.IKey;
   private managedKmsKey?: kms.Key;
   private auditBucket?: s3.Bucket;
-  private virusScanLambda?: lambda.Function;
   private config?: S3BucketConfig;
 
   constructor(scope: Construct, id: string, context: ComponentContext, spec: ComponentSpec) {
@@ -62,10 +59,6 @@ export class S3BucketComponent extends BaseComponent {
     if (this.auditBucket) {
       this.registerConstruct('auditBucket', this.auditBucket);
     }
-    if (this.virusScanLambda) {
-      this.registerConstruct('virusScanLambda', this.virusScanLambda);
-    }
-
     this.registerCapability('bucket:s3', this.buildBucketCapability());
   }
 
@@ -120,8 +113,7 @@ export class S3BucketComponent extends BaseComponent {
       return;
     }
 
-    const account = this.context.accountId ?? (this.context as any).account ?? 'unknown-account';
-    const baseBucketName = compliance.auditBucketName ?? `${this.context.serviceName}-audit-${account}`;
+    const baseBucketName = compliance.auditBucketName ?? this.buildAuditBucketName();
     const retentionDays = compliance.auditBucketRetentionDays ?? 365;
 
     this.auditBucket = new s3.Bucket(this, 'AuditBucket', {
@@ -171,6 +163,8 @@ export class S3BucketComponent extends BaseComponent {
   }
 
   private createS3Bucket(): void {
+    this.ensureObjectLockPreconditions();
+
     const baseProps: s3.BucketProps = {
       ...(this.config?.bucketName ? { bucketName: this.config.bucketName } : {}),
       versioned: this.config?.versioning ?? false,
@@ -279,7 +273,7 @@ export class S3BucketComponent extends BaseComponent {
           sid: 'DenyDeleteActions',
           effect: iam.Effect.DENY,
           principals: [new iam.AnyPrincipal()],
-          actions: ['s3:DeleteBucket', 's3:DeleteBucketPolicy', 's3:PutBucketAcl', 's3:PutBucketPolicy', 's3:PutObjectAcl'],
+          actions: ['s3:DeleteBucket', 's3:DeleteBucketPolicy'],
           resources: [this.bucket.bucketArn, `${this.bucket.bucketArn}/*`]
         })
       );
@@ -309,7 +303,7 @@ export class S3BucketComponent extends BaseComponent {
 
   private configureSecurityTooling(): void {
     if (this.config?.security?.tools?.clamavScan) {
-      this.createVirusScanLambda();
+      throw new Error('S3BucketComponent: ClamAV scanning is not implemented. Disable security.tools.clamavScan or integrate the dedicated virus scanning component.');
     }
   }
 
@@ -319,6 +313,7 @@ export class S3BucketComponent extends BaseComponent {
     }
 
     const bucketName = this.bucket.bucketName;
+    this.bucket.addMetric({ id: 'EntireBucket' });
     const clientThreshold = this.config.monitoring.clientErrorThreshold ?? 10;
     const serverThreshold = this.config.monitoring.serverErrorThreshold ?? 1;
 
@@ -372,39 +367,6 @@ export class S3BucketComponent extends BaseComponent {
     });
   }
 
-  private createVirusScanLambda(): void {
-    this.virusScanLambda = new lambda.Function(this, 'VirusScanFunction', {
-      runtime: lambda.Runtime.PYTHON_3_11,
-      handler: 'scan.handler',
-      code: lambda.Code.fromInline(`
-import json
-import boto3
-
-
-def handler(event, context):
-    print(f"Scanning object: {event}")
-    return {
-        'statusCode': 200,
-        'body': json.dumps('Object scanned successfully')
-    }
-      `),
-      description: 'ClamAV virus scanning for S3 objects',
-      timeout: cdk.Duration.minutes(5),
-      memorySize: 1024
-    });
-
-    this.applyStandardTags(this.virusScanLambda, {
-      'function-type': 'virus-scan',
-      'runtime': 'python3.11',
-      'security-tool': 'clamav'
-    });
-
-    if (this.bucket) {
-      this.bucket.addObjectCreatedNotification(new s3n.LambdaDestination(this.virusScanLambda));
-      this.bucket.grantRead(this.virusScanLambda);
-    }
-  }
-
   private buildBucketCapability(): Record<string, any> {
     return {
       bucketName: this.bucket!.bucketName,
@@ -413,10 +375,50 @@ def handler(event, context):
     };
   }
 
+  private ensureObjectLockPreconditions(): void {
+    const objectLockConfig = this.config?.compliance?.objectLock;
+    if (objectLockConfig?.enabled && this.config?.versioning !== true) {
+      throw new Error('S3BucketComponent: objectLock.enabled requires versioning to be true. Update the manifest or configuration defaults to enable versioning.');
+    }
+  }
+
   private getBucketEncryption(): s3.BucketEncryption {
     return this.config?.encryption?.type === 'KMS'
       ? s3.BucketEncryption.KMS
       : s3.BucketEncryption.S3_MANAGED;
+  }
+
+  private buildAuditBucketName(): string {
+    const account = this.context.accountId ?? (this.context as any).account ?? 'unknown-account';
+    const environment = this.context.environment ?? 'env';
+    const parts = [
+      this.context.serviceName,
+      this.spec.name,
+      environment,
+      'audit',
+      account
+    ];
+
+    const normalized = parts
+      .map(part => part?.toString().trim().toLowerCase().replace(/[^a-z0-9-]/g, '-'))
+      .filter(part => part && part.length > 0) as string[];
+
+    let candidate = normalized.join('-').replace(/-+/g, '-');
+    candidate = candidate.replace(/^-+/, '').replace(/-+$/, '');
+
+    if (candidate.length < 3) {
+      candidate = `audit-${account}`.toLowerCase();
+    }
+
+    if (candidate.length > 63) {
+      candidate = candidate.slice(0, 63).replace(/-+$/, '');
+    }
+
+    if (!/^[a-z0-9]/.test(candidate)) {
+      candidate = `a-${candidate}`;
+    }
+
+    return candidate;
   }
 
   private getStorageClass(storageClass: string): s3.StorageClass {

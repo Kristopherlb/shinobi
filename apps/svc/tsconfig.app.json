@@ -2,7 +2,7 @@
   "extends": "../../tsconfig.base.json",
   "compilerOptions": {
     "outDir": "../../dist/apps/shinobi",
-    "rootDir": "../../"
+    "rootDir": "./src"
   },
   "include": [
     "src/**/*"

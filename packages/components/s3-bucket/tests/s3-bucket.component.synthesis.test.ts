@@ -8,7 +8,7 @@ import { App, Stack } from 'aws-cdk-lib';
 import {
   ComponentContext,
   ComponentSpec
-} from '@platform/contracts';
+} from '@shinobi/core';
 import { S3BucketComponent } from '../s3-bucket.component';
 import { S3BucketConfig } from '../s3-bucket.builder';
 
@@ -41,8 +41,26 @@ const synthesize = (context: ComponentContext, spec: ComponentSpec) => {
   return Template.fromStack(stack);
 };
 
-describe('S3BucketComponent', () => {
-  it('creates a commercial bucket with platform defaults', () => {
+describe('S3BucketComponent__Synthesis__ComplianceBehaviors', () => {
+  /*
+   * Test Metadata: TP-S3-BUCKET-COMPONENT-001
+   * {
+   *   "id": "TP-S3-BUCKET-COMPONENT-001",
+   *   "level": "unit",
+   *   "capability": "Commercial synthesis uses platform defaults",
+   *   "oracle": "contract",
+   *   "invariants": ["AES256 encryption", "No custom KMS"],
+   *   "fixtures": ["cdk.Stack", "S3BucketComponent"],
+   *   "inputs": { "shape": "Commercial context without overrides", "notes": "Validates default behavior" },
+   *   "risks": [],
+   *   "dependencies": ["config/commercial.yml"],
+   *   "evidence": ["CloudFormation template"],
+   *   "complianceRefs": ["std://configuration"],
+   *   "aiGenerated": false,
+   *   "humanReviewedBy": ""
+   * }
+   */
+  it('CommercialDefaults__BaselineConfiguration__SynthesizesAES256Bucket', () => {
     const context = createContext('commercial');
     const template = synthesize(context, createSpec());
 
@@ -62,7 +80,25 @@ describe('S3BucketComponent', () => {
     template.resourceCountIs('AWS::KMS::Key', 0);
   });
 
-  it('enables FedRAMP Moderate hardening from platform config', () => {
+  /*
+   * Test Metadata: TP-S3-BUCKET-COMPONENT-002
+   * {
+   *   "id": "TP-S3-BUCKET-COMPONENT-002",
+   *   "level": "unit",
+   *   "capability": "FedRAMP Moderate defaults enforce KMS and logging",
+   *   "oracle": "contract",
+   *   "invariants": ["KMS CMK created", "Access logging enabled", "Metrics configuration present"],
+   *   "fixtures": ["cdk.Stack", "S3BucketComponent"],
+   *   "inputs": { "shape": "FedRAMP moderate context without overrides", "notes": "Validates compliance hardening" },
+   *   "risks": [],
+   *   "dependencies": ["config/fedramp-moderate.yml"],
+   *   "evidence": ["CloudFormation template"],
+   *   "complianceRefs": ["std://configuration", "std://observability"],
+   *   "aiGenerated": false,
+   *   "humanReviewedBy": ""
+   * }
+   */
+  it('FedRAMPModerateDefaults__ComplianceHardening__CreatesKmsAndLogging', () => {
     const context = createContext('fedramp-moderate');
     const template = synthesize(context, createSpec());
 
@@ -83,7 +119,12 @@ describe('S3BucketComponent', () => {
       },
       LoggingConfiguration: Match.objectLike({
         DestinationBucketName: Match.anyValue()
-      })
+      }),
+      MetricsConfigurations: Match.arrayWith([
+        Match.objectLike({
+          Id: 'EntireBucket'
+        })
+      ])
     }));
 
     template.hasResourceProperties('AWS::S3::BucketPolicy', Match.objectLike({
@@ -96,7 +137,25 @@ describe('S3BucketComponent', () => {
     }));
   });
 
-  it('enables object lock for FedRAMP High', () => {
+  /*
+   * Test Metadata: TP-S3-BUCKET-COMPONENT-003
+   * {
+   *   "id": "TP-S3-BUCKET-COMPONENT-003",
+   *   "level": "unit",
+   *   "capability": "FedRAMP High object lock enforcement",
+   *   "oracle": "contract",
+   *   "invariants": ["Object lock enabled", "Compliance retention"],
+   *   "fixtures": ["cdk.Stack", "S3BucketComponent"],
+   *   "inputs": { "shape": "FedRAMP high context without overrides", "notes": "Validates object lock" },
+   *   "risks": [],
+   *   "dependencies": ["config/fedramp-high.yml"],
+   *   "evidence": ["CloudFormation template"],
+   *   "complianceRefs": ["std://configuration"],
+   *   "aiGenerated": false,
+   *   "humanReviewedBy": ""
+   * }
+   */
+  it('FedRAMPHighDefaults__ObjectLockCompliance__EnablesRetentionPolicies', () => {
     const context = createContext('fedramp-high');
     const template = synthesize(context, createSpec());
 
@@ -121,7 +180,25 @@ describe('S3BucketComponent', () => {
     }));
   });
 
-  it('allows manifest overrides to disable audit logging', () => {
+  /*
+   * Test Metadata: TP-S3-BUCKET-COMPONENT-004
+   * {
+   *   "id": "TP-S3-BUCKET-COMPONENT-004",
+   *   "level": "unit",
+   *   "capability": "Manifest overrides disable compliance logging",
+   *   "oracle": "contract",
+   *   "invariants": ["Audit bucket omitted", "No KMS key"],
+   *   "fixtures": ["cdk.Stack", "S3BucketComponent"],
+   *   "inputs": { "shape": "FedRAMP moderate with audit logging disabled", "notes": "Ensures overrides propagate" },
+   *   "risks": [],
+   *   "dependencies": [],
+   *   "evidence": ["CloudFormation template"],
+   *   "complianceRefs": ["std://configuration"],
+   *   "aiGenerated": false,
+   *   "humanReviewedBy": ""
+   * }
+   */
+  it('ManifestOverrides__AuditLoggingDisabled__OmitsAuditBucket', () => {
     const context = createContext('fedramp-moderate');
     const template = synthesize(
       context,
@@ -138,5 +215,72 @@ describe('S3BucketComponent', () => {
     Object.values(buckets).forEach(resource => {
       expect(resource.Properties?.LoggingConfiguration).toBeUndefined();
     });
+  });
+
+  /*
+   * Test Metadata: TP-S3-BUCKET-COMPONENT-005
+   * {
+   *   "id": "TP-S3-BUCKET-COMPONENT-006",
+   *   "level": "unit",
+   *   "capability": "Audit bucket naming uniqueness",
+   *   "oracle": "exact",
+   *   "invariants": ["Generated name incorporates service, component, environment, and account"],
+   *   "fixtures": ["cdk.Stack", "S3BucketComponent"],
+   *   "inputs": { "shape": "FedRAMP moderate context with audit logging enabled", "notes": "Verifies deterministic bucket naming" },
+   *   "risks": ["Bucket name collisions"],
+   *   "dependencies": [],
+   *   "evidence": ["Audit bucket CloudFormation resource"],
+   *   "complianceRefs": ["std://configuration"],
+   *   "aiGenerated": false,
+   *   "humanReviewedBy": ""
+   * }
+   */
+  it('AuditBucketNaming__DefaultConfiguration__UsesDeterministicUniqueName', () => {
+    const context = createContext('fedramp-moderate');
+    const template = synthesize(context, createSpec());
+
+    const auditBucket = template.findResources('AWS::S3::Bucket', {
+      Properties: Match.objectLike({
+        BucketName: Match.stringLikeRegexp('test-service-test-bucket-dev-audit-123456789012')
+      })
+    });
+
+    expect(Object.keys(auditBucket)).toHaveLength(1);
+  });
+
+  /*
+    * Test Metadata: TP-S3-BUCKET-COMPONENT-006
+    * {
+    *   "id": "TP-S3-BUCKET-COMPONENT-006",
+   *   "level": "unit",
+   *   "capability": "Object lock requires versioning",
+   *   "oracle": "trace",
+   *   "invariants": ["Validation error thrown"],
+   *   "fixtures": ["cdk.Stack", "S3BucketComponent"],
+   *   "inputs": { "shape": "Object lock enabled with versioning disabled", "notes": "Expect synth failure" },
+   *   "risks": [],
+   *   "dependencies": [],
+   *   "evidence": ["Thrown error"],
+   *   "complianceRefs": ["std://configuration"],
+   *   "aiGenerated": false,
+   *   "humanReviewedBy": ""
+   * }
+   */
+  it('ObjectLock__VersioningDisabled__ThrowsInformativeError', () => {
+    const context = createContext('commercial');
+    const spec = createSpec({
+      versioning: false,
+      compliance: {
+        objectLock: {
+          enabled: true,
+          mode: 'COMPLIANCE',
+          retentionDays: 365
+        }
+      }
+    });
+
+    expect(() => synthesize(context, spec)).toThrow(
+      /objectLock\.enabled requires versioning to be true/
+    );
   });
 });

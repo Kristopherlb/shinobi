@@ -127,7 +127,7 @@ defaults:
       requireMfaDelete: true
       denyDeleteActions: false
       tools:
-        clamavScan: true
+        clamavScan: false
     lifecycleRules:
       - id: compliance-archival
         enabled: true

@@ -8,6 +8,9 @@ const { execSync } = require('child_process');
 const rootDir = path.resolve(__dirname, '..');
 const distCliEntry = path.resolve(rootDir, 'dist/apps/shinobi/main.js');
 const coreDistDir = path.resolve(rootDir, 'dist/packages/core');
+const contractsDistDir = path.resolve(rootDir, 'dist/packages/contracts');
+const coreSrcDir = path.resolve(rootDir, 'packages/core/src');
+const contractsSrcDir = path.resolve(rootDir, 'packages/contracts/src');
 
 const ensureBuilt = () => {
   if (!fs.existsSync(coreDistDir)) {
@@ -43,6 +46,29 @@ Module._resolveFilename = function(request, parent, isMain, options) {
   if (alias) {
     return alias.resolve();
   }
+
+  const normalizedRequest = path.isAbsolute(request)
+    ? path.normalize(request)
+    : request;
+
+  if (typeof normalizedRequest === 'string' && path.isAbsolute(normalizedRequest)) {
+    if (normalizedRequest.startsWith(coreSrcDir)) {
+      const relative = path.relative(coreSrcDir, normalizedRequest);
+      const candidate = path.join(coreDistDir, relative).replace(/\.ts$/, '.js');
+      if (fs.existsSync(candidate)) {
+        return candidate;
+      }
+    }
+
+    if (normalizedRequest.startsWith(contractsSrcDir)) {
+      const relative = path.relative(contractsSrcDir, normalizedRequest);
+      const candidate = path.join(contractsDistDir, relative).replace(/\.ts$/, '.js');
+      if (fs.existsSync(candidate)) {
+        return candidate;
+      }
+    }
+  }
+
   return originalResolveFilename.call(this, request, parent, isMain, options);
 };
 
