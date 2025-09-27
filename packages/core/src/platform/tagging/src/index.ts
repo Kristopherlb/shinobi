@@ -30,9 +30,17 @@ export interface TaggingContext {
   environment: string;
   costCenter: string;
   owner: string;
-  complianceFramework?: 'fedramp-low' | 'fedramp-moderate' | 'fedramp-high' | 'pci-dss' | 'hipaa';
+  complianceFramework?: string;
   componentType: string;
   componentName: string;
+  metadata?: {
+    classification?: string;
+    dataClassification?: string;
+    retentionPeriod?: string;
+    logsRetention?: string;
+    backupPolicy?: string;
+    monitoringLevel?: string;
+  };
 }
 
 export class PlatformTagging {
@@ -48,6 +56,28 @@ export class PlatformTagging {
   generateStandardTags(): StandardTags {
     const now = new Date().toISOString();
     
+    const classification = this.resolveString(
+      this.context.metadata?.classification,
+      this.context.metadata?.dataClassification,
+      'internal'
+    );
+
+    const retentionPeriod = this.resolveString(
+      this.context.metadata?.retentionPeriod,
+      this.context.metadata?.logsRetention,
+      '1-year'
+    );
+
+    const backupPolicy = this.resolveString(
+      this.context.metadata?.backupPolicy,
+      'standard'
+    );
+
+    const monitoringLevel = this.resolveString(
+      this.context.metadata?.monitoringLevel,
+      'standard'
+    );
+
     return {
       'platform:managed-by': 'platform-cdk',
       'platform:component-type': this.context.componentType,
@@ -58,10 +88,10 @@ export class PlatformTagging {
       'platform:created-by': 'platform-automation',
       'platform:created-date': now,
       'compliance:framework': this.context.complianceFramework || 'none',
-      'compliance:classification': this.getComplianceClassification(),
-      'compliance:retention-period': this.getRetentionPeriod(),
-      'governance:backup-policy': this.getBackupPolicy(),
-      'governance:monitoring-level': this.getMonitoringLevel()
+      'compliance:classification': classification,
+      'compliance:retention-period': retentionPeriod,
+      'governance:backup-policy': backupPolicy,
+      'governance:monitoring-level': monitoringLevel
     };
   }
 
@@ -87,67 +117,15 @@ export class PlatformTagging {
   /**
    * Get compliance classification based on framework
    */
-  private getComplianceClassification(): string {
-    switch (this.context.complianceFramework) {
-      case 'fedramp-high':
-        return 'high';
-      case 'fedramp-moderate':
-      case 'pci-dss':
-      case 'hipaa':
-        return 'moderate';
-      case 'fedramp-low':
-        return 'low';
-      default:
-        return 'internal';
+  private resolveString(...values: Array<string | undefined>): string {
+    for (const value of values) {
+      if (value !== undefined && value !== null) {
+        const normalized = value.toString().trim();
+        if (normalized.length > 0) {
+          return normalized;
+        }
+      }
     }
-  }
-
-  /**
-   * Get retention period based on compliance requirements
-   */
-  private getRetentionPeriod(): string {
-    switch (this.context.complianceFramework) {
-      case 'fedramp-high':
-        return '7-years';
-      case 'fedramp-moderate':
-      case 'pci-dss':
-        return '3-years';
-      case 'hipaa':
-        return '6-years';
-      default:
-        return '1-year';
-    }
-  }
-
-  /**
-   * Get backup policy based on compliance requirements
-   */
-  private getBackupPolicy(): string {
-    switch (this.context.complianceFramework) {
-      case 'fedramp-high':
-        return 'daily-cross-region';
-      case 'fedramp-moderate':
-      case 'pci-dss':
-      case 'hipaa':
-        return 'daily-local';
-      default:
-        return 'weekly';
-    }
-  }
-
-  /**
-   * Get monitoring level based on compliance requirements
-   */
-  private getMonitoringLevel(): string {
-    switch (this.context.complianceFramework) {
-      case 'fedramp-high':
-        return 'comprehensive';
-      case 'fedramp-moderate':
-      case 'pci-dss':
-      case 'hipaa':
-        return 'enhanced';
-      default:
-        return 'standard';
-    }
+    return '';
   }
 }

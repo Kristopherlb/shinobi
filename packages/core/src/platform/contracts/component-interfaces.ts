@@ -43,7 +43,7 @@ export interface ComponentCapabilities {
 export interface ComponentContext {
   serviceName: string;
   environment: string;
-  complianceFramework: 'commercial' | 'fedramp-moderate' | 'fedramp-high';
+  complianceFramework: string;
   scope: Construct; // CDK Construct scope - strongly typed
   vpc?: IVpc; // VPC construct for components that need it - strongly typed
   region?: string;
@@ -57,8 +57,29 @@ export interface ComponentContext {
     enableTracing?: boolean;
     enableMetrics?: boolean;
     enableLogs?: boolean;
+    tracesSamplingRate?: number;
+    metricsIntervalSeconds?: number;
+    logsRetentionDays?: number;
+    enableXRayTracing?: boolean;
+    enablePerformanceInsights?: boolean;
+    customAttributes?: Record<string, string>;
   };
   tags?: Record<string, string>;
+  governance?: {
+    backupRequired?: boolean;
+    monitoringLevel?: string;
+  };
+  logging?: {
+    classification?: string;
+    auditRequired?: boolean;
+    retentionDays?: number;
+  };
+  security?: {
+    sensitiveKeys?: string[];
+    sensitivePatterns?: string[];
+    maskValue?: string;
+    maxDepth?: number;
+  };
 }
 
 

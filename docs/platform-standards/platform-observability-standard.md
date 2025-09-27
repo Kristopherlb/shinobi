@@ -266,31 +266,17 @@ The base `Component` class provides standardized observability utilities:
 
 ```typescript
 abstract class Component extends Construct {
-  
-  /**
-   * Apply standard OpenTelemetry configuration to any compute resource
-   */
   protected configureObservability(resource: IConstruct, options: ObservabilityOptions = {}): void {
-    const config = this.buildObservabilityConfig(options);
-    this.applyObservabilityConfig(resource, config);
-  }
+    const config = this.observabilityService.buildConfig({
+      context: this.context,
+      spec: this.spec,
+      policy: this.spec.policy,
+      options,
+      governance: this.governanceMetadata
+    });
 
-  /**
-   * Build observability configuration based on compliance framework
-   */
-  private buildObservabilityConfig(options: ObservabilityOptions): ObservabilityConfig {
-    return {
-      collectorEndpoint: this.getCollectorEndpoint(),
-      serviceName: options.serviceName || this.spec.name,
-      serviceVersion: this.context.serviceVersion,
-      environment: this.context.environment,
-      region: this.context.region,
-      complianceFramework: this.context.complianceFramework,
-      tracesSampling: this.getTracesSamplingRate(),
-      metricsInterval: this.getMetricsCollectionInterval(),
-      logsRetention: this.getLogsRetentionPeriod(),
-      ...options
-    };
+    const env = this.observabilityService.buildEnvironmentVariables(config, this.governanceMetadata);
+    this.applyObservabilityConfig(resource, env);
   }
 }
 ```
@@ -300,16 +286,10 @@ abstract class Component extends Construct {
 All components automatically inject required OTel environment variables:
 
 ```typescript
-const otelEnvVars = {
-  'OTEL_EXPORTER_OTLP_ENDPOINT': this.getCollectorEndpoint(),
-  'OTEL_EXPORTER_OTLP_HEADERS': `authorization=Bearer ${this.getOtelAuthToken()}`,
-  'OTEL_SERVICE_NAME': this.spec.name,
-  'OTEL_SERVICE_VERSION': this.context.serviceVersion,
-  'OTEL_RESOURCE_ATTRIBUTES': this.buildResourceAttributes(),
-  'OTEL_TRACES_SAMPLER': this.getTracesSampler(),
-  'OTEL_METRICS_EXPORTER': 'otlp',
-  'OTEL_LOGS_EXPORTER': 'otlp'
-};
+const otelEnvVars = this.observabilityService.buildEnvironmentVariables(
+  config,
+  this.governanceMetadata
+);
 ```
 
 ## 8. Security & Compliance Considerations
