@@ -1,111 +1,86 @@
-# CloudFrontDistributionComponent Component
+# CloudFront Distribution Component
 
-CloudFront Distribution Component implementing Component API Contract v1.0 with comprehensive security, monitoring, and compliance features.
+Configuration-driven CloudFront distribution that honours the platform precedence chain via `CloudFrontDistributionComponentConfigBuilder`. All compliance-specific defaults live in `/config/<framework>.yml`; the component simply consumes the resolved configuration and materialises the CDN infrastructure.
 
-## Overview
+## Features
 
-The CloudFrontDistributionComponent component provides:
+- Origin-agnostic (S3, ALB, custom HTTP) with optional custom headers and origin paths.
+- Cache behaviours (default + additional) defined declaratively, including protocol policy, methods, cache/origin request policy IDs.
+- Logging, geo restriction, price class, WAF and domain configuration sourced from manifest/config.
+- Observability surface (4xx, 5xx, origin latency alarms) expressed via config with per-framework defaults.
+- Capability payload advertises the `hardeningProfile` to downstream binders.
 
-- **Production-ready** cloud front distribution component functionality
-- **Comprehensive compliance** (Commercial, FedRAMP Moderate/High)
-- **Integrated monitoring** and observability
-- **Security-first** configuration
-- **Platform integration** with other components
-
-### Category: networking
-
-### AWS Service: CLOUDFRONT
-
-This component manages CLOUDFRONT resources and provides a simplified, secure interface for common use cases.
-
-## Usage Example
-
-### Basic Configuration
+## Usage
 
 ```yaml
-service: my-service
-owner: platform-team
-complianceFramework: commercial
-
 components:
-  - name: my-cloudfront-distribution
+  - name: static-cdn
     type: cloudfront-distribution
     config:
-      description: "Production cloudfront-distribution instance"
+      comment: "Public frontend CDN"
+      origin:
+        type: s3
+        s3BucketName: my-frontend-bucket
+        originPath: /prod
+      defaultBehavior:
+        viewerProtocolPolicy: redirect-to-https
+        allowedMethods: [GET, HEAD]
+        cachedMethods: [GET, HEAD, OPTIONS]
+        cachePolicyId: 658327ea-f89d-4fab-a63d-7e88639e58f6 # CacheOptimized
+      logging:
+        enabled: true
+        bucket: platform-cloudfront-logs
+        prefix: my-service/
       monitoring:
         enabled: true
-        detailedMetrics: true
+        alarms:
+          error4xx:
+            enabled: true
+            threshold: 10
+          error5xx:
+            enabled: true
+            threshold: 2
 ```
 
-## Configuration Reference
+Unspecified settings inherit the platform defaults for the active compliance framework (see `/config/<framework>.yml`).
 
-### Root Configuration
+## Key Configuration Sections
 
-| Property | Type | Required | Description |
-|----------|------|----------|-------------|
-| `name` | string | No | Component name (auto-generated if not provided) |
-| `description` | string | No | Component description for documentation |
-| `monitoring` | object | No | Monitoring and observability configuration |
-| `tags` | object | No | Additional resource tags |
+| Path | Description |
+|------|-------------|
+| `origin` | Required origin definition (`type`, with supporting properties for S3/ALB/custom HTTP). |
+| `defaultBehavior` | Viewer protocol policy, allowed/cached methods, optional cache/origin request policies, compression flag. |
+| `additionalBehaviors[]` | Additional path patterns that reuse the resolved origin with per-behaviour overrides. |
+| `geoRestriction` | `none`, `whitelist`, or `blacklist` plus country list. |
+| `priceClass` | `PriceClass_100`, `PriceClass_200`, or `PriceClass_All`. |
+| `domain` | Optional ACM certificate ARN and custom domain names. |
+| `logging` | Enablement, destination bucket/prefix, cookie inclusion. Logging is disabled automatically if a bucket is not provided. |
+| `monitoring` | Global toggle and alarm thresholds for 4xx, 5xx, and origin latency (threshold expressed in milliseconds). |
+| `webAclId` | Attach an existing AWS WAF ACL. |
+| `hardeningProfile` | Abstract posture flag surfaced via capabilities (defaults to `baseline`; FedRAMP defaults set this to `hardened`/`stig`). |
 
-### Monitoring Configuration
+## Capability
 
-| Property | Type | Required | Description |
-|----------|------|----------|-------------|
-| `enabled` | boolean | No | Enable monitoring (default: true) |
-| `detailedMetrics` | boolean | No | Enable detailed CloudWatch metrics |
+`cdn:cloudfront`
 
-## Capabilities Provided
+```json
+{
+  "type": "cdn:cloudfront",
+  "distributionId": "ABC123",
+  "distributionDomainName": "d123.cloudfront.net",
+  "domainNames": ["app.example.com"],
+  "originType": "s3",
+  "priceClass": "PriceClass_200",
+  "hardeningProfile": "hardened"
+}
+```
 
-This component provides the following capabilities for binding with other components:
-
-- `networking:cloudfront-distribution` - Main cloudfront-distribution capability
-- `monitoring:cloudfront-distribution` - Monitoring capability
-
-## Construct Handles
-
-The following construct handles are available for use in `patches.ts`:
-
-- `main` - Main cloudfront-distribution construct
-
-## Compliance Frameworks
-
-### Commercial
-
-- Standard monitoring configuration
-- Basic resource tagging
-- Standard security settings
-
-### FedRAMP Moderate/High
-
-- Enhanced monitoring with detailed metrics
-- Comprehensive audit logging
-- Stricter security configurations
-- Extended compliance tagging
-
-## Best Practices
-
-1. **Always enable monitoring** in production environments
-2. **Use descriptive names** for better resource identification
-3. **Configure appropriate tags** for cost allocation and governance
-4. **Review compliance requirements** for your environment
-5. **Test configurations** in development before production deployment
-
-## Development
-
-### Running Tests
+## Testing
 
 ```bash
-# Run all tests for this component
-npm test -- --testPathPattern=cloudfront-distribution
-
-# Run only builder tests
-npm test -- --testPathPattern=cloudfront-distribution.builder
-
-# Run only synthesis tests
-npm test -- --testPathPattern=cloudfront-distribution.component.synthesis
+corepack pnpm exec jest --runTestsByPath \
+  packages/components/cloudfront-distribution/tests/cloudfront-distribution.builder.test.ts \
+  packages/components/cloudfront-distribution/tests/cloudfront-distribution.component.synthesis.test.ts
 ```
 
----
-
-*Generated by Component Completion Script*
+Ensure relevant platform defaults are present in `/config/<framework>.yml` when adding new configuration knobs.

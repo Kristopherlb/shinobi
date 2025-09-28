@@ -1,99 +1,101 @@
-/**
- * CloudFrontDistributionComponent ConfigBuilder Test Suite
- * Implements Platform Testing Standard v1.0 - ConfigBuilder Testing
- */
-
-import { CloudFrontDistributionComponentConfigBuilder, CloudFrontDistributionConfig } from '../cloudfront-distribution.builder';
+import {
+  CloudFrontDistributionComponentConfigBuilder,
+  CloudFrontDistributionConfig
+} from '../cloudfront-distribution.builder';
 import { ComponentContext, ComponentSpec } from '../../../platform/contracts/component-interfaces';
 
-const createMockContext = (
-  complianceFramework: string = 'commercial',
-  environment: string = 'dev'
-): ComponentContext => ({
+const createMockContext = (framework: string = 'commercial'): ComponentContext => ({
   serviceName: 'test-service',
-  owner: 'test-team',
-  environment,
-  complianceFramework,
+  owner: 'platform-team',
+  environment: 'dev',
+  complianceFramework: framework,
   region: 'us-east-1',
   account: '123456789012',
   tags: {
     'service-name': 'test-service',
-    'owner': 'test-team',
-    'environment': environment,
-    'compliance-framework': complianceFramework
+    'environment': 'dev',
+    'compliance-framework': framework
   }
 });
 
 const createMockSpec = (config: Partial<CloudFrontDistributionConfig> = {}): ComponentSpec => ({
-  name: 'test-cloudfront-distribution',
+  name: 'test-cloudfront',
   type: 'cloudfront-distribution',
   config
 });
 
 describe('CloudFrontDistributionComponentConfigBuilder', () => {
-  
-  describe('Hardcoded Fallbacks (Layer 1)', () => {
-    
-    it('should provide ultra-safe baseline configuration', () => {
-      const context = createMockContext();
-      const spec = createMockSpec();
-      
-      const builder = new CloudFrontDistributionComponentConfigBuilder(context, spec);
-      const config = builder.buildSync();
-      
-      // Verify hardcoded fallbacks are applied
-      expect(config.monitoring?.enabled).toBe(true);
-      expect(config.monitoring?.detailedMetrics).toBe(false);
-      expect(config.tags).toBeDefined();
-    });
-    
+  it('merges commercial defaults with hardcoded fallbacks', () => {
+    const builder = new CloudFrontDistributionComponentConfigBuilder(createMockContext('commercial'), createMockSpec());
+    const config = builder.buildSync();
+
+    expect(config.origin.type).toBe('s3');
+    expect(config.defaultBehavior?.viewerProtocolPolicy).toBe('allow-all');
+    expect(config.priceClass).toBe('PriceClass_100');
+    expect(config.logging?.enabled).toBe(false);
+    expect(config.monitoring?.enabled).toBe(false);
+    expect(config.hardeningProfile).toBe('baseline');
   });
-  
-  describe('Compliance Framework Defaults (Layer 2)', () => {
-    
-    it('should apply commercial compliance defaults', () => {
-      const context = createMockContext('commercial');
-      const spec = createMockSpec();
-      
-      const builder = new CloudFrontDistributionComponentConfigBuilder(context, spec);
-      const config = builder.buildSync();
-      
-      expect(config.monitoring?.enabled).toBe(true);
-      expect(config.monitoring?.detailedMetrics).toBe(true);
-    });
-    
-    it('should apply FedRAMP compliance defaults', () => {
-      const context = createMockContext('fedramp-moderate');
-      const spec = createMockSpec();
-      
-      const builder = new CloudFrontDistributionComponentConfigBuilder(context, spec);
-      const config = builder.buildSync();
-      
-      expect(config.monitoring?.enabled).toBe(true);
-      expect(config.monitoring?.detailedMetrics).toBe(true); // Mandatory for FedRAMP
-    });
-    
+
+  it('applies FedRAMP High defaults from platform configuration', () => {
+    const builder = new CloudFrontDistributionComponentConfigBuilder(createMockContext('fedramp-high'), createMockSpec());
+    const config = builder.buildSync();
+
+    expect(config.defaultBehavior?.viewerProtocolPolicy).toBe('https-only');
+    expect(config.priceClass).toBe('PriceClass_All');
+    expect(config.logging?.enabled).toBe(true);
+    expect(config.monitoring?.enabled).toBe(true);
+    expect(config.monitoring?.alarms?.error5xx?.enabled).toBe(true);
+    expect(config.hardeningProfile).toBe('stig');
   });
-  
-  describe('5-Layer Precedence Chain', () => {
-    
-    it('should apply component overrides over platform defaults', () => {
-      const context = createMockContext('commercial');
-      const spec = createMockSpec({
-        monitoring: {
-          enabled: false,
-          detailedMetrics: false
+
+  it('honours manifest overrides above platform defaults', () => {
+    const builder = new CloudFrontDistributionComponentConfigBuilder(
+      createMockContext('commercial'),
+      createMockSpec({
+        origin: {
+          type: 'custom',
+          customDomainName: 'api.internal.example.com'
+        },
+        defaultBehavior: {
+          viewerProtocolPolicy: 'redirect-to-https',
+          allowedMethods: ['GET', 'HEAD', 'POST']
+        },
+        logging: {
+          enabled: true,
+          bucket: 'custom-logs'
         }
-      });
-      
-      const builder = new CloudFrontDistributionComponentConfigBuilder(context, spec);
-      const config = builder.buildSync();
-      
-      // Verify component config overrides platform defaults
-      expect(config.monitoring?.enabled).toBe(false);
-      expect(config.monitoring?.detailedMetrics).toBe(false);
-    });
-    
+      })
+    );
+
+    const config = builder.buildSync();
+
+    expect(config.origin.type).toBe('custom');
+    expect(config.origin.customDomainName).toBe('api.internal.example.com');
+    expect(config.defaultBehavior?.viewerProtocolPolicy).toBe('redirect-to-https');
+    expect(config.defaultBehavior?.allowedMethods).toContain('POST');
+    expect(config.logging?.bucket).toBe('custom-logs');
   });
-  
+
+  it('normalises optional structures with safe defaults', () => {
+    const builder = new CloudFrontDistributionComponentConfigBuilder(
+      createMockContext('commercial'),
+      createMockSpec({
+        monitoring: {
+          enabled: true,
+          alarms: {
+            error4xx: { enabled: true },
+            originLatencyMs: { enabled: true, threshold: 7500 }
+          }
+        }
+      })
+    );
+
+    const config = builder.buildSync();
+
+    expect(config.monitoring?.alarms?.error4xx?.enabled).toBe(true);
+    expect(config.monitoring?.alarms?.error4xx?.threshold).toBeGreaterThan(0);
+    expect(config.monitoring?.alarms?.originLatencyMs?.threshold).toBe(7500);
+    expect(config.additionalBehaviors).toEqual([]);
+  });
 });

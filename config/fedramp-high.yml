@@ -246,6 +246,41 @@ defaults:
           metric-type: security
           compliance: fedramp-high
 
+  cloudfront-distribution:
+    origin:
+      type: s3
+    defaultBehavior:
+      viewerProtocolPolicy: https-only
+      allowedMethods: ["GET", "HEAD"]
+      cachedMethods: ["GET", "HEAD", "OPTIONS"]
+      compress: true
+    additionalBehaviors: []
+    priceClass: PriceClass_All
+    geoRestriction:
+      type: none
+      countries: []
+    logging:
+      enabled: true
+      bucket: fedramp-high-cloudfront-logs
+      prefix: fedramp-high/
+      includeCookies: true
+    monitoring:
+      enabled: true
+      alarms:
+        error4xx:
+          enabled: true
+          threshold: 25
+          evaluationPeriods: 2
+        error5xx:
+          enabled: true
+          threshold: 5
+          evaluationPeriods: 2
+        originLatencyMs:
+          enabled: true
+          threshold: 3000
+          evaluationPeriods: 2
+    hardeningProfile: stig
+
   rds-postgres:
     instance:
       engineVersion: '15.4'

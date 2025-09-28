@@ -168,6 +168,33 @@ defaults:
       usageAlarm:
         enabled: false
 
+  cloudfront-distribution:
+    origin:
+      type: s3
+    defaultBehavior:
+      viewerProtocolPolicy: allow-all
+      allowedMethods: ["GET", "HEAD"]
+      cachedMethods: ["GET", "HEAD"]
+      compress: true
+    additionalBehaviors: []
+    priceClass: PriceClass_100
+    geoRestriction:
+      type: none
+      countries: []
+    logging:
+      enabled: false
+      includeCookies: false
+    monitoring:
+      enabled: false
+      alarms:
+        error4xx:
+          enabled: false
+        error5xx:
+          enabled: false
+        originLatencyMs:
+          enabled: false
+    hardeningProfile: baseline
+
   rds-postgres:
     instance:
       engineVersion: '15.4'
