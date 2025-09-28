@@ -181,3 +181,38 @@ defaults:
       allowedVpceIds:
         - vpce-*
       requireTemporaryCredentials: false
+
+  iam-policy:
+    controls:
+      denyInsecureTransport: true
+      requireMfaForActions: []
+      additionalStatements: []
+    logging:
+      usage:
+        enabled: true
+        retentionInDays: 90
+        removalPolicy: destroy
+        tags:
+          log-type: policy-usage
+          retention: 90-days
+      compliance:
+        enabled: true
+        retentionInDays: 365
+        removalPolicy: retain
+        logGroupNameSuffix: compliance
+        tags:
+          log-type: compliance
+          retention: 1-year
+          compliance: fedramp-moderate
+    monitoring:
+      enabled: true
+      detailedMetrics: true
+      usageAlarm:
+        enabled: true
+        threshold: 1000
+        evaluationPeriods: 2
+        periodMinutes: 60
+        treatMissingData: not-breaching
+        tags:
+          metric-type: security
+          compliance: fedramp-moderate

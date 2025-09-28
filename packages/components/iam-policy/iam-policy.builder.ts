@@ -5,8 +5,12 @@
  * Provides 5-layer configuration precedence chain and compliance-aware defaults.
  */
 
-import { ConfigBuilder, ConfigBuilderContext } from '../../platform/contracts/config-builder';
-import { ComponentContext, ComponentSpec } from '../../platform/contracts/component-interfaces';
+import {
+  ConfigBuilder,
+  ConfigBuilderContext,
+  ComponentConfigSchema
+} from '@shinobi/core';
+import { ComponentContext, ComponentSpec } from '@platform/contracts';
 
 export type IamPolicyRemovalPolicy = 'retain' | 'destroy';
 
@@ -78,7 +82,7 @@ export interface IamPolicyConfig {
 /**
  * JSON Schema for IamPolicyComponent configuration validation
  */
-export const IAM_POLICY_CONFIG_SCHEMA = {
+export const IAM_POLICY_CONFIG_SCHEMA: ComponentConfigSchema = {
   type: 'object',
   properties: {
     name: {

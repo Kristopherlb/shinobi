@@ -20,8 +20,7 @@ import {
   IamPolicyConfig,
   IamPolicyComponentConfigBuilder,
   IamPolicyLogConfig,
-  IamPolicyControlsConfig,
-  IamPolicyUsageAlarmConfig
+  IamPolicyControlsConfig
 } from './iam-policy.builder';
 
 /**
@@ -291,11 +290,45 @@ export class IamPolicyComponent extends Component {
     return statements;
   }
 
-  private buildComplianceStatements(): iam.PolicyStatement[] {
+  private buildPolicyName(): string {
+    if (this.config?.policyName) {
+      return this.config.policyName;
+    }
+    return `${this.context.serviceName}-${this.spec.name}`;
+  }
+
+  private attachPolicyToEntities(): void {
+    if (!this.policy || !(this.policy instanceof iam.ManagedPolicy)) {
+      return;
+    }
+
+    const managedPolicy = this.policy as iam.ManagedPolicy;
+
+    this.config?.groups?.forEach(groupName => {
+      const group = iam.Group.fromGroupName(this, `Group${groupName}`, groupName);
+      group.addManagedPolicy(managedPolicy);
+    });
+
+    this.config?.roles?.forEach(roleName => {
+      const role = iam.Role.fromRoleName(this, `Role${roleName}`, roleName);
+      role.addManagedPolicy(managedPolicy);
+    });
+
+    this.config?.users?.forEach(userName => {
+      const user = iam.User.fromUserName(this, `User${userName}`, userName);
+      user.addManagedPolicy(managedPolicy);
+    });
+  }
+
+  private buildControlStatements(): iam.PolicyStatement[] {
+    const controls = this.config?.controls;
+    if (!controls) {
+      return [];
+    }
+
     const statements: iam.PolicyStatement[] = [];
 
-    if (['fedramp-moderate', 'fedramp-high'].includes(this.context.complianceFramework)) {
-      // Always deny insecure transport
+    if (controls.denyInsecureTransport) {
       statements.push(new iam.PolicyStatement({
         sid: 'DenyInsecureTransport',
         effect: iam.Effect.DENY,
@@ -309,17 +342,11 @@ export class IamPolicyComponent extends Component {
       }));
     }
 
-    if (this.context.complianceFramework === 'fedramp-high') {
-      // Require MFA for sensitive actions
+    if (controls.requireMfaForActions && controls.requireMfaForActions.length > 0) {
       statements.push(new iam.PolicyStatement({
         sid: 'RequireMFAForSensitiveActions',
         effect: iam.Effect.DENY,
-        actions: [
-          'iam:*',
-          'kms:*',
-          's3:Delete*',
-          'rds:Delete*'
-        ],
+        actions: controls.requireMfaForActions,
         resources: ['*'],
         conditions: {
           BoolIfExists: {
@@ -329,161 +356,168 @@ export class IamPolicyComponent extends Component {
       }));
     }
 
+    statements.push(...this.mapConfiguredStatements(controls.additionalStatements));
+
     return statements;
   }
 
-  private buildPolicyName(): string {
-    if (this.config!.policyName) {
-      return this.config!.policyName;
+  private mapConfiguredStatements(statements?: IamPolicyControlsConfig['additionalStatements']): iam.PolicyStatement[] {
+    if (!statements || statements.length === 0) {
+      return [];
     }
-    return `${this.context.serviceName}-${this.spec.name}`;
+
+    return statements.map(stmt => new iam.PolicyStatement({
+      sid: stmt?.sid,
+      effect: stmt.effect === 'Allow' ? iam.Effect.ALLOW : iam.Effect.DENY,
+      actions: stmt.actions,
+      resources: stmt.resources && stmt.resources.length > 0 ? stmt.resources : undefined,
+      conditions: stmt.conditions
+    }));
   }
 
-  private attachPolicyToEntities(): void {
-    if (!this.policy || !(this.policy instanceof iam.ManagedPolicy)) {
-      return; // Only managed policies can be attached
+  private applyLoggingConfiguration(): void {
+    if (!this.policy) {
+      return;
     }
 
-    const managedPolicy = this.policy as iam.ManagedPolicy;
-
-    // Attach to groups
-    if (this.config!.groups && this.config!.groups.length > 0) {
-      this.config!.groups.forEach(groupName => {
-        const group = iam.Group.fromGroupName(this, `Group${groupName}`, groupName);
-        group.addManagedPolicy(managedPolicy);
-      });
+    const logging = this.config?.logging;
+    if (!logging) {
+      return;
     }
 
-    // Attach to roles
-    if (this.config!.roles && this.config!.roles.length > 0) {
-      this.config!.roles.forEach(roleName => {
-        const role = iam.Role.fromRoleName(this, `Role${roleName}`, roleName);
-        role.addManagedPolicy(managedPolicy);
-      });
-    }
-
-    // Attach to users
-    if (this.config!.users && this.config!.users.length > 0) {
-      this.config!.users.forEach(userName => {
-        const user = iam.User.fromUserName(this, `User${userName}`, userName);
-        user.addManagedPolicy(managedPolicy);
-      });
-    }
+    this.createLogGroupFromConfig('UsageLogGroup', logging.usage, '', 'usageLogGroup');
+    this.createLogGroupFromConfig('ComplianceLogGroup', logging.compliance, 'compliance', 'complianceLogGroup');
+    this.createLogGroupFromConfig('AuditLogGroup', logging.audit, 'audit', 'auditLogGroup');
   }
 
-  private applyComplianceHardening(): void {
-    switch (this.context.complianceFramework) {
-      case 'fedramp-moderate':
-        this.applyFedrampModerateHardening();
-        break;
-      case 'fedramp-high':
-        this.applyFedrampHighHardening();
-        break;
-      default:
-        this.applyCommercialHardening();
-        break;
+  private createLogGroupFromConfig(id: string, config: IamPolicyLogConfig | undefined, defaultSuffix: string, registerKey: string): void {
+    if (!config?.enabled) {
+      return;
     }
+
+    const policyName = this.buildPolicyName();
+    const suffix = config.logGroupNameSuffix ?? defaultSuffix;
+    const suffixPart = suffix ? `/${suffix}` : '';
+    const logGroupName = config.logGroupName ?? `/aws/iam/policy/${policyName}${suffixPart}`;
+
+    const logGroup = new logs.LogGroup(this, id, {
+      logGroupName,
+      retention: this.resolveLogRetention(config.retentionInDays),
+      removalPolicy: this.resolveRemovalPolicy(config.removalPolicy)
+    });
+
+    const baseTags = {
+      'log-type': registerKey.replace(/LogGroup$/i, '').replace(/[A-Z]/g, letter => `-${letter.toLowerCase()}`).replace(/^-/, ''),
+      'policy-name': policyName
+    };
+
+    this.applyStandardTags(logGroup, {
+      ...baseTags,
+      ...(config.tags ?? {})
+    });
+
+    this.registerConstruct(registerKey, logGroup);
   }
 
-  private applyCommercialHardening(): void {
-    // Basic logging for policy usage
-    if (this.policy) {
-      const logGroup = new logs.LogGroup(this, 'PolicyLogGroup', {
-        logGroupName: `/aws/iam/policy/${this.buildPolicyName()}`,
-        retention: logs.RetentionDays.THREE_MONTHS,
-        removalPolicy: cdk.RemovalPolicy.DESTROY
-      });
-
-      this.applyStandardTags(logGroup, {
-        'log-type': 'policy-usage',
-        'retention': '3-months'
-      });
+  private resolveLogRetention(retentionInDays?: number): logs.RetentionDays | undefined {
+    if (!retentionInDays) {
+      return undefined;
     }
+
+    const retentionMap = logs.RetentionDays as unknown as Record<number, logs.RetentionDays>;
+    const retention = retentionMap[retentionInDays];
+
+    if (retention) {
+      return retention;
+    }
+
+    this.logComponentEvent('log_retention_defaulted', 'Unsupported log retention requested for IAM policy log group', {
+      requestedRetentionInDays: retentionInDays,
+      defaultApplied: logs.RetentionDays.THREE_MONTHS
+    });
+
+    return logs.RetentionDays.THREE_MONTHS;
   }
 
-  private applyFedrampModerateHardening(): void {
-    this.applyCommercialHardening();
-
-    if (this.policy) {
-      const complianceLogGroup = new logs.LogGroup(this, 'CompliancePolicyLogGroup', {
-        logGroupName: `/aws/iam/policy/${this.buildPolicyName()}/compliance`,
-        retention: logs.RetentionDays.ONE_YEAR,
-        removalPolicy: cdk.RemovalPolicy.RETAIN
-      });
-
-      this.applyStandardTags(complianceLogGroup, {
-        'log-type': 'compliance',
-        'retention': '1-year',
-        'compliance': 'fedramp-moderate'
-      });
+  private resolveRemovalPolicy(removalPolicy?: string): cdk.RemovalPolicy {
+    if (removalPolicy === 'destroy') {
+      return cdk.RemovalPolicy.DESTROY;
     }
-  }
-
-  private applyFedrampHighHardening(): void {
-    this.applyFedrampModerateHardening();
-
-    if (this.policy) {
-      const auditLogGroup = new logs.LogGroup(this, 'AuditPolicyLogGroup', {
-        logGroupName: `/aws/iam/policy/${this.buildPolicyName()}/audit`,
-        retention: logs.RetentionDays.TEN_YEARS,
-        removalPolicy: cdk.RemovalPolicy.RETAIN
-      });
-
-      this.applyStandardTags(auditLogGroup, {
-        'log-type': 'audit',
-        'retention': '10-years',
-        'compliance': 'fedramp-high'
-      });
-    }
+    return cdk.RemovalPolicy.RETAIN;
   }
 
   private buildPolicyCapability(): any {
-    const policyArn = this.policy instanceof iam.ManagedPolicy ? 
+    const policyArn = this.policy instanceof iam.ManagedPolicy ?
       (this.policy as iam.ManagedPolicy).managedPolicyArn :
       (this.policy as iam.Policy).policyName;
 
     return {
-      policyArn: policyArn,
+      policyArn,
       policyName: this.buildPolicyName()
     };
   }
 
   private configureObservabilityForPolicy(): void {
-    if (this.context.complianceFramework === 'commercial') {
+    const monitoring = this.config?.monitoring;
+    if (!monitoring?.enabled) {
+      return;
+    }
+
+    const usageAlarmConfig = monitoring.usageAlarm;
+    if (!usageAlarmConfig?.enabled) {
       return;
     }
 
     const policyName = this.buildPolicyName();
+    const threshold = usageAlarmConfig.threshold ?? 1000;
+    const evaluationPeriods = usageAlarmConfig.evaluationPeriods ?? 2;
+    const periodMinutes = usageAlarmConfig.periodMinutes ?? 60;
 
-    // 1. Policy Usage Alarm (unusual access patterns)
     const policyUsageAlarm = new cloudwatch.Alarm(this, 'PolicyUsageAlarm', {
       alarmName: `${this.context.serviceName}-${this.spec.name}-policy-usage`,
-      alarmDescription: 'IAM Policy usage monitoring alarm',
+      alarmDescription: 'IAM policy usage monitoring alarm',
       metric: new cloudwatch.Metric({
         namespace: 'AWS/IAM',
         metricName: 'PolicyUsage',
-        dimensionsMap: {
-          PolicyName: policyName
-        },
+        dimensionsMap: { PolicyName: policyName },
         statistic: 'Sum',
-        period: cdk.Duration.hours(1)
+        period: cdk.Duration.minutes(periodMinutes)
       }),
-      threshold: 1000, // High usage threshold
-      evaluationPeriods: 2,
+      threshold,
+      evaluationPeriods,
       comparisonOperator: cloudwatch.ComparisonOperator.GREATER_THAN_THRESHOLD,
-      treatMissingData: cloudwatch.TreatMissingData.NOT_BREACHING
+      treatMissingData: this.resolveTreatMissingData(usageAlarmConfig.treatMissingData)
     });
 
     this.applyStandardTags(policyUsageAlarm, {
       'alarm-type': 'policy-usage',
       'metric-type': 'security',
-      'threshold': '1000'
+      'threshold': threshold.toString(),
+      ...(usageAlarmConfig.tags ?? {})
     });
 
-    this.logComponentEvent('observability_configured', 'OpenTelemetry observability standard applied to IAM Policy', {
-      alarmsCreated: 1,
-      policyName: policyName,
-      monitoringEnabled: true
+    this.registerConstruct('policyUsageAlarm', policyUsageAlarm);
+
+    this.logComponentEvent('observability_configured', 'IAM policy monitoring configured', {
+      policyName,
+      threshold,
+      evaluationPeriods,
+      periodMinutes
     });
   }
+
+  private resolveTreatMissingData(value?: string): cloudwatch.TreatMissingData {
+    switch (value) {
+      case 'breaching':
+        return cloudwatch.TreatMissingData.BREACHING;
+      case 'ignore':
+        return cloudwatch.TreatMissingData.IGNORE;
+      case 'missing':
+        return cloudwatch.TreatMissingData.MISSING;
+      default:
+        return cloudwatch.TreatMissingData.NOT_BREACHING;
+    }
+  }
 }
+
+export { IamPolicyComponent as IamPolicyComponentComponent };

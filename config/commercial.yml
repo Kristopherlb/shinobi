@@ -148,3 +148,22 @@ defaults:
       restrictToVpce: false
       allowedVpceIds: []
       requireTemporaryCredentials: false
+
+  iam-policy:
+    controls:
+      denyInsecureTransport: false
+      requireMfaForActions: []
+      additionalStatements: []
+    logging:
+      usage:
+        enabled: true
+        retentionInDays: 90
+        removalPolicy: destroy
+        tags:
+          log-type: policy-usage
+          retention: 90-days
+    monitoring:
+      enabled: false
+      detailedMetrics: false
+      usageAlarm:
+        enabled: false

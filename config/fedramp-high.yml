@@ -197,3 +197,51 @@ defaults:
       allowedVpceIds:
         - vpce-*
       requireTemporaryCredentials: true
+
+  iam-policy:
+    controls:
+      denyInsecureTransport: true
+      requireMfaForActions:
+        - iam:*
+        - kms:*
+        - s3:Delete*
+        - rds:Delete*
+      additionalStatements: []
+    logging:
+      usage:
+        enabled: true
+        retentionInDays: 90
+        removalPolicy: destroy
+        tags:
+          log-type: policy-usage
+          retention: 90-days
+      compliance:
+        enabled: true
+        retentionInDays: 365
+        removalPolicy: retain
+        logGroupNameSuffix: compliance
+        tags:
+          log-type: compliance
+          retention: 1-year
+          compliance: fedramp-high
+      audit:
+        enabled: true
+        retentionInDays: 3653
+        removalPolicy: retain
+        logGroupNameSuffix: audit
+        tags:
+          log-type: audit
+          retention: 10-years
+          compliance: fedramp-high
+    monitoring:
+      enabled: true
+      detailedMetrics: true
+      usageAlarm:
+        enabled: true
+        threshold: 1000
+        evaluationPeriods: 2
+        periodMinutes: 60
+        treatMissingData: not-breaching
+        tags:
+          metric-type: security
+          compliance: fedramp-high
