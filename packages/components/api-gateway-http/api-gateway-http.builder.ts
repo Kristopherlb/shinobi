@@ -142,6 +142,8 @@ export interface ApiGatewayHttpConfig {
     logGroupName?: string;
     /** Log retention in days */
     retentionInDays?: number;
+    /** Retain log group on stack deletion */
+    retainOnDelete?: boolean;
     /** Log format */
     format?: string;
     /** Include execution data */
@@ -328,49 +330,12 @@ export class ApiGatewayHttpConfigBuilder extends ConfigBuilder<ApiGatewayHttpCon
    * configuration merging logic. We only need to implement the abstract methods.
    */
   public buildSync(): ApiGatewayHttpConfig {
-    const config = super.buildSync() as ApiGatewayHttpConfig;
-
-    // Validate and sanitize throttling values
-    if (config.throttling) {
-      if (!config.throttling.rateLimit || config.throttling.rateLimit <= 0) {
-        config.throttling.rateLimit = 50; // Default safe value
-      }
-      if (!config.throttling.burstLimit || config.throttling.burstLimit <= 0) {
-        config.throttling.burstLimit = 100; // Default safe value
-      }
-    }
-
-    // Ensure default stage configuration exists
-    config.defaultStage = {
-      stageName: config.defaultStage?.stageName ?? this.context.environment ?? '$default',
-      autoDeploy: config.defaultStage?.autoDeploy ?? true,
-      throttling: config.defaultStage?.throttling ?? config.throttling
-    };
-
-    // Normalise CORS minimal safe defaults
-    if (config.cors) {
-      if (!config.cors.allowHeaders || config.cors.allowHeaders.length === 0) {
-        config.cors.allowHeaders = ['Content-Type', 'Authorization'];
-      }
-      if (!config.cors.allowMethods || config.cors.allowMethods.length === 0) {
-        config.cors.allowMethods = ['GET', 'POST', 'OPTIONS'];
-      }
-      config.cors.allowOrigins = config.cors.allowOrigins ?? [];
-      config.cors.allowCredentials = config.cors.allowCredentials ?? false;
-      config.cors.maxAge = config.cors.maxAge ?? 300;
-    }
-
-    // Observability is mandatory per platform standard
-    config.observability = {
-      tracingEnabled: config.observability?.tracingEnabled ?? true,
-      metricsEnabled: config.observability?.metricsEnabled ?? true,
-      logsEnabled: config.observability?.logsEnabled ?? true,
-      otlpEndpoint: config.observability?.otlpEndpoint,
-      serviceName: config.observability?.serviceName,
-      resourceAttributes: config.observability?.resourceAttributes
-    };
-
-    return config;
+    const hardcoded = this.getHardcodedFallbacks();
+    const resolved = super.buildSync() as ApiGatewayHttpConfig;
+    const complianceDefaults = this.getComplianceDefaults();
+    const userOverrides = (this.spec.config ?? {}) as Record<string, any>;
+    const merged = this.applyComplianceDefaults(resolved, hardcoded, complianceDefaults, userOverrides) as ApiGatewayHttpConfig;
+    return this.normaliseConfig(merged);
   }
 
   /**
@@ -394,7 +359,8 @@ export class ApiGatewayHttpConfigBuilder extends ConfigBuilder<ApiGatewayHttpCon
       },
       accessLogging: {
         enabled: true,
-        retentionInDays: 90
+        retentionInDays: 90,
+        retainOnDelete: false
       },
       monitoring: {
         detailedMetrics: true,
@@ -418,7 +384,7 @@ export class ApiGatewayHttpConfigBuilder extends ConfigBuilder<ApiGatewayHttpCon
     };
   }
 
-  protected getComplianceFrameworkDefaults(): Partial<ApiGatewayHttpConfig> {
+  private getComplianceDefaults(): Partial<ApiGatewayHttpConfig> {
     switch (this.context.complianceFramework) {
       case 'fedramp-high':
         return {
@@ -429,6 +395,7 @@ export class ApiGatewayHttpConfigBuilder extends ConfigBuilder<ApiGatewayHttpCon
           accessLogging: {
             enabled: true,
             retentionInDays: 365,
+            retainOnDelete: true,
             includeExecutionData: true,
             includeRequestResponseData: true
           },
@@ -457,6 +424,7 @@ export class ApiGatewayHttpConfigBuilder extends ConfigBuilder<ApiGatewayHttpCon
           accessLogging: {
             enabled: true,
             retentionInDays: 90,
+            retainOnDelete: true,
             includeExecutionData: false,
             includeRequestResponseData: false
           },
@@ -484,6 +452,7 @@ export class ApiGatewayHttpConfigBuilder extends ConfigBuilder<ApiGatewayHttpCon
           },
           accessLogging: {
             retentionInDays: 90,
+            retainOnDelete: false,
             includeExecutionData: false,
             includeRequestResponseData: false
           },
@@ -504,6 +473,129 @@ export class ApiGatewayHttpConfigBuilder extends ConfigBuilder<ApiGatewayHttpCon
           }
         };
     }
+  }
+
+  private normaliseConfig(config: ApiGatewayHttpConfig): ApiGatewayHttpConfig {
+    const normalised: ApiGatewayHttpConfig = { ...config };
+
+    const throttling = normalised.throttling ?? { rateLimit: 50, burstLimit: 100 };
+    throttling.rateLimit = throttling.rateLimit && throttling.rateLimit > 0 ? throttling.rateLimit : 50;
+    throttling.burstLimit = throttling.burstLimit && throttling.burstLimit > 0 ? throttling.burstLimit : 100;
+    normalised.throttling = throttling;
+
+    normalised.defaultStage = {
+      stageName: normalised.defaultStage?.stageName ?? this.context.environment ?? '$default',
+      autoDeploy: normalised.defaultStage?.autoDeploy ?? true,
+      throttling: normalised.defaultStage?.throttling ?? throttling
+    };
+
+    if (normalised.cors) {
+      const cors = { ...normalised.cors };
+      cors.allowHeaders = cors.allowHeaders && cors.allowHeaders.length > 0 ? cors.allowHeaders : ['Content-Type', 'Authorization'];
+      cors.allowMethods = cors.allowMethods && cors.allowMethods.length > 0 ? cors.allowMethods : ['GET', 'POST', 'OPTIONS'];
+      cors.allowOrigins = cors.allowOrigins ?? [];
+      cors.allowCredentials = cors.allowCredentials ?? false;
+      cors.maxAge = cors.maxAge ?? 300;
+      normalised.cors = cors;
+    }
+
+    normalised.accessLogging = {
+      ...normalised.accessLogging,
+      enabled: normalised.accessLogging?.enabled ?? true,
+      retentionInDays: normalised.accessLogging?.retentionInDays ?? 90,
+      retainOnDelete: normalised.accessLogging?.retainOnDelete ?? false
+    };
+
+    const monitoring = normalised.monitoring ?? {};
+    normalised.monitoring = {
+      ...monitoring,
+      detailedMetrics: monitoring.detailedMetrics ?? true,
+      tracingEnabled: monitoring.tracingEnabled ?? true,
+      alarms: monitoring.alarms ? { ...monitoring.alarms } : undefined
+    };
+
+    const security = normalised.security ?? {};
+    normalised.security = {
+      ...security,
+      enableWaf: security.enableWaf ?? false,
+      enableApiKey: security.enableApiKey ?? false,
+      requireAuthorization: security.requireAuthorization ?? true
+    };
+
+    normalised.apiSettings = {
+      disableExecuteApiEndpoint: normalised.apiSettings?.disableExecuteApiEndpoint ?? false,
+      apiKeySource: normalised.apiSettings?.apiKeySource ?? 'HEADER'
+    };
+
+    normalised.observability = {
+      tracingEnabled: normalised.observability?.tracingEnabled ?? true,
+      metricsEnabled: normalised.observability?.metricsEnabled ?? true,
+      logsEnabled: normalised.observability?.logsEnabled ?? true,
+      otlpEndpoint: normalised.observability?.otlpEndpoint,
+      serviceName: normalised.observability?.serviceName,
+      resourceAttributes: normalised.observability?.resourceAttributes
+    };
+
+    return normalised;
+  }
+
+  private applyComplianceDefaults(
+    resolved: Record<string, any>,
+    fallback: Record<string, any>,
+    compliance: Record<string, any>,
+    overrides: Record<string, any>
+  ): Record<string, any> {
+    const result = { ...resolved };
+
+    for (const [key, complianceValue] of Object.entries(compliance)) {
+      const fallbackValue = fallback ? fallback[key] : undefined;
+      const currentValue = result[key];
+      const overrideValue = overrides ? overrides[key] : undefined;
+
+      if (Array.isArray(complianceValue)) {
+        if (
+          currentValue === undefined ||
+          (overrideValue === undefined && this.valuesEqual(currentValue, fallbackValue))
+        ) {
+          result[key] = complianceValue;
+        }
+        continue;
+      }
+
+      if (complianceValue !== null && typeof complianceValue === 'object') {
+        result[key] = this.applyComplianceDefaults(
+          currentValue || {},
+          (fallbackValue as Record<string, any>) || {},
+          complianceValue as Record<string, any>,
+          (overrideValue as Record<string, any>) || {}
+        );
+        continue;
+      }
+
+      if (
+        currentValue === undefined ||
+        (overrideValue === undefined && this.valuesEqual(currentValue, fallbackValue))
+      ) {
+        result[key] = complianceValue;
+      }
+    }
+
+    return result;
+  }
+
+  private valuesEqual(a: any, b: any): boolean {
+    if (Array.isArray(a) && Array.isArray(b)) {
+      if (a.length !== b.length) {
+        return false;
+      }
+      return a.every((value, index) => this.valuesEqual(value, b[index]));
+    }
+
+    if (typeof a === 'object' || typeof b === 'object') {
+      return JSON.stringify(a) === JSON.stringify(b);
+    }
+
+    return a === b;
   }
 
   // Add build method for async compatibility

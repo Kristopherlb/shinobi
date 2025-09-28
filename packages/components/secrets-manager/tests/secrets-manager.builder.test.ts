@@ -6,6 +6,16 @@
 import { SecretsManagerComponentConfigBuilder, SecretsManagerConfig } from '../secrets-manager.builder';
 import { ComponentContext, ComponentSpec } from '../../../platform/contracts/component-interfaces';
 
+beforeEach(() => {
+  jest
+    .spyOn(SecretsManagerComponentConfigBuilder.prototype as any, '_loadPlatformConfiguration')
+    .mockReturnValue({});
+});
+
+afterEach(() => {
+  jest.restoreAllMocks();
+});
+
 const createMockContext = (
   complianceFramework: string = 'commercial',
   environment: string = 'dev'
@@ -31,69 +41,70 @@ const createMockSpec = (config: Partial<SecretsManagerConfig> = {}): ComponentSp
 });
 
 describe('SecretsManagerComponentConfigBuilder', () => {
-  
-  describe('Hardcoded Fallbacks (Layer 1)', () => {
-    
-    it('should provide ultra-safe baseline configuration', () => {
-      const context = createMockContext();
-      const spec = createMockSpec();
-      
-      const builder = new SecretsManagerComponentConfigBuilder(context, spec);
-      const config = builder.buildSync();
-      
-      // Verify hardcoded fallbacks are applied
-      expect(config.monitoring?.enabled).toBe(true);
-      expect(config.monitoring?.detailedMetrics).toBe(false);
-      expect(config.tags).toBeDefined();
-    });
-    
-  });
-  
-  describe('Compliance Framework Defaults (Layer 2)', () => {
-    
-    it('should apply commercial compliance defaults', () => {
-      const context = createMockContext('commercial');
-      const spec = createMockSpec();
-      
-      const builder = new SecretsManagerComponentConfigBuilder(context, spec);
-      const config = builder.buildSync();
-      
-      expect(config.monitoring?.enabled).toBe(true);
-      expect(config.monitoring?.detailedMetrics).toBe(true);
-    });
-    
-    it('should apply FedRAMP compliance defaults', () => {
-      const context = createMockContext('fedramp-moderate');
-      const spec = createMockSpec();
-      
-      const builder = new SecretsManagerComponentConfigBuilder(context, spec);
-      const config = builder.buildSync();
-      
-      expect(config.monitoring?.enabled).toBe(true);
-      expect(config.monitoring?.detailedMetrics).toBe(true); // Mandatory for FedRAMP
-    });
-    
-  });
-  
-  describe('5-Layer Precedence Chain', () => {
-    
-    it('should apply component overrides over platform defaults', () => {
-      const context = createMockContext('commercial');
-      const spec = createMockSpec({
-        monitoring: {
-          enabled: false,
-          detailedMetrics: false
-        }
+  describe('Compliance defaults', () => {
+    it('applies commercial defaults without compliance hardening', () => {
+      const builder = new SecretsManagerComponentConfigBuilder({
+        context: createMockContext('commercial'),
+        spec: createMockSpec()
       });
-      
-      const builder = new SecretsManagerComponentConfigBuilder(context, spec);
+
       const config = builder.buildSync();
-      
-      // Verify component config overrides platform defaults
+
       expect(config.monitoring?.enabled).toBe(false);
-      expect(config.monitoring?.detailedMetrics).toBe(false);
+      expect(config.encryption?.createCustomerManagedKey).toBe(false);
+      expect(config.accessPolicies?.restrictToVpce).toBe(false);
     });
-    
+
+    it('applies FedRAMP Moderate defaults', () => {
+      const builder = new SecretsManagerComponentConfigBuilder({
+        context: createMockContext('fedramp-moderate'),
+        spec: createMockSpec()
+      });
+
+      const config = builder.buildSync();
+
+      expect(config.automaticRotation?.enabled).toBe(true);
+      expect(config.automaticRotation?.schedule?.automaticallyAfterDays).toBe(90);
+      expect(config.encryption?.createCustomerManagedKey).toBe(true);
+      expect(config.accessPolicies?.restrictToVpce).toBe(true);
+      expect(config.monitoring?.enabled).toBe(true);
+    });
+
+    it('applies FedRAMP High defaults', () => {
+      const builder = new SecretsManagerComponentConfigBuilder({
+        context: createMockContext('fedramp-high'),
+        spec: createMockSpec()
+      });
+
+      const config = builder.buildSync();
+
+      expect(config.automaticRotation?.schedule?.automaticallyAfterDays).toBe(30);
+      expect(config.encryption?.enableKeyRotation).toBe(true);
+      expect(config.recovery?.recoveryWindowInDays).toBe(7);
+      expect(config.accessPolicies?.requireTemporaryCredentials).toBe(true);
+    });
   });
-  
+
+  describe('Precedence chain', () => {
+    it('honours component overrides of compliance defaults', () => {
+      const builder = new SecretsManagerComponentConfigBuilder({
+        context: createMockContext('fedramp-high'),
+        spec: createMockSpec({
+          encryption: {
+            createCustomerManagedKey: false,
+            enableKeyRotation: false
+          },
+          automaticRotation: {
+            enabled: false
+          }
+        })
+      });
+
+      const config = builder.buildSync();
+
+      expect(config.encryption?.createCustomerManagedKey).toBe(false);
+      expect(config.encryption?.enableKeyRotation).toBe(false);
+      expect(config.automaticRotation?.enabled).toBe(false);
+    });
+  });
 });

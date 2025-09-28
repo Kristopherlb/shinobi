@@ -6,8 +6,30 @@
 import { Template, Match } from 'aws-cdk-lib/assertions';
 import { App, Stack } from 'aws-cdk-lib';
 import { SecretsManagerComponentComponent } from '../secrets-manager.component';
-import { SecretsManagerConfig } from '../secrets-manager.builder';
+import { SecretsManagerComponentConfigBuilder, SecretsManagerConfig } from '../secrets-manager.builder';
 import { ComponentContext, ComponentSpec } from '../../../platform/contracts/component-interfaces';
+
+jest.mock('@platform/logger', () => ({
+  Logger: {
+    setGlobalContext: jest.fn(),
+    getLogger: jest.fn(() => ({
+      info: jest.fn(),
+      warn: jest.fn(),
+      error: jest.fn(),
+      debug: jest.fn()
+    }))
+  }
+}), { virtual: true });
+
+beforeEach(() => {
+  jest
+    .spyOn(SecretsManagerComponentConfigBuilder.prototype as any, '_loadPlatformConfiguration')
+    .mockReturnValue({});
+});
+
+afterEach(() => {
+  jest.restoreAllMocks();
+});
 
 const createMockContext = (
   complianceFramework: string = 'commercial',
@@ -40,7 +62,7 @@ const synthesizeComponent = (
   const app = new App();
   const stack = new Stack(app, 'TestStack');
   
-  const component = new SecretsManagerComponentComponent(stack, spec, context);
+  const component = new SecretsManagerComponentComponent(stack, spec.name, context, spec);
   component.synth();
   
   const template = Template.fromStack(stack);
@@ -89,6 +111,48 @@ describe('SecretsManagerComponentComponent Synthesis', () => {
       expect(component.getConstruct('main')).toBeDefined();
     });
     
+  });
+
+  describe('Configuration-driven behaviour', () => {
+    it('creates a customer managed key when requested via config', () => {
+      const context = createMockContext('commercial');
+      const spec = createMockSpec({
+        encryption: {
+          createCustomerManagedKey: true,
+          enableKeyRotation: true
+        }
+      });
+
+      const { template } = synthesizeComponent(context, spec);
+
+      template.hasResourceProperties('AWS::KMS::Key', {
+        EnableKeyRotation: true
+      });
+    });
+
+    it('synthesises monitoring alarms when enabled in config', () => {
+      const context = createMockContext('commercial');
+      const spec = createMockSpec({
+        automaticRotation: {
+          enabled: true
+        },
+        monitoring: {
+          enabled: true,
+          rotationFailureThreshold: 2,
+          unusualAccessThresholdMs: 4000
+        }
+      });
+
+      const { template } = synthesizeComponent(context, spec);
+
+      template.hasResourceProperties('AWS::CloudWatch::Alarm', Match.objectLike({
+        Threshold: 2
+      }));
+
+      template.hasResourceProperties('AWS::CloudWatch::Alarm', Match.objectLike({
+        Threshold: 4000
+      }));
+    });
   });
   
 });

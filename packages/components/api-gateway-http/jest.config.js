@@ -11,7 +11,8 @@ module.exports = {
   moduleNameMapper: {
     ...baseConfig.moduleNameMapper,
     '^@shinobi/core$': '<rootDir>/../../core/src/index.ts',
-    '^@shinobi/core/(.*)$': '<rootDir>/../../core/src/$1'
+    '^@shinobi/core/(.*)$': '<rootDir>/../../core/src/$1',
+    '^@platform/logger$': '<rootDir>/tests/stubs/platform-logger.ts'
   },
   setupFilesAfterEnv: ['<rootDir>/tests/setup.ts'],
   coverageDirectory: '<rootDir>/coverage',

@@ -6,6 +6,16 @@
 import { ApiGatewayHttpConfigBuilder, ApiGatewayHttpConfig } from '../api-gateway-http.builder';
 import { ComponentContext, ComponentSpec } from '@shinobi/core';
 
+beforeEach(() => {
+  jest
+    .spyOn(ApiGatewayHttpConfigBuilder.prototype as any, '_loadPlatformConfiguration')
+    .mockReturnValue({});
+});
+
+afterEach(() => {
+  jest.restoreAllMocks();
+});
+
 // Helper factories
 const createContext = (
   complianceFramework: ComponentContext['complianceFramework'] = 'commercial',
@@ -45,6 +55,7 @@ describe('ApiGatewayHttpConfigBuilder__HardcodedFallbacks__SecureBaseline', () =
     expect(config.throttling).toEqual({ rateLimit: 1000, burstLimit: 2000 });
     expect(config.accessLogging?.enabled).toBe(true);
     expect(config.accessLogging?.retentionInDays).toBe(90);
+    expect(config.accessLogging?.retainOnDelete).toBe(false);
     expect(config.monitoring?.alarms?.highLatency).toBe(5000);
     expect(config.monitoring?.alarms?.lowThroughput).toBe(10);
     expect(config.apiSettings?.disableExecuteApiEndpoint).toBe(false);
@@ -56,6 +67,7 @@ describe('ApiGatewayHttpConfigBuilder__ComplianceDefaults__ApplyPlatformProfiles
     const config = new ApiGatewayHttpConfigBuilder(createContext('commercial'), createSpec()).buildSync();
     expect(config.monitoring?.alarms?.lowThroughput).toBe(10);
     expect(config.accessLogging?.retentionInDays).toBe(90);
+    expect(config.accessLogging?.retainOnDelete).toBe(false);
   });
 
   it('ComplianceDefaults__FedRampModerate__MatchesPlatformDefaults', () => {
@@ -64,11 +76,13 @@ describe('ApiGatewayHttpConfigBuilder__ComplianceDefaults__ApplyPlatformProfiles
     expect(config.monitoring?.alarms?.errorRate4xx).toBe(2.0);
     expect(config.monitoring?.alarms?.highLatency).toBe(3000);
     expect(config.monitoring?.alarms?.lowThroughput).toBe(5);
+    expect(config.accessLogging?.retainOnDelete).toBe(true);
   });
 
   it('ComplianceDefaults__FedRampHigh__MatchesPlatformDefaults', () => {
     const config = new ApiGatewayHttpConfigBuilder(createContext('fedramp-high', 'prod'), createSpec()).buildSync();
     expect(config.accessLogging?.retentionInDays).toBe(365);
+    expect(config.accessLogging?.retainOnDelete).toBe(true);
     expect(config.monitoring?.alarms?.errorRate4xx).toBe(1.0);
     expect(config.monitoring?.alarms?.highLatency).toBe(2000);
     expect(config.monitoring?.alarms?.lowThroughput).toBe(2);

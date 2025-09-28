@@ -6,10 +6,10 @@ Secrets Manager Component with comprehensive security, monitoring, and complianc
 
 The SecretsManagerComponent component provides:
 
-- **Production-ready** secrets manager component functionality
-- **Comprehensive compliance** (Commercial, FedRAMP Moderate/High)
-- **Integrated monitoring** and observability
-- **Security-first** configuration
+- **Production-ready** secrets manager provisioning
+- **Compliance-aware defaults** sourced from manifest/config profiles
+- **Integrated monitoring** via configurable CloudWatch alarms
+- **Security-first** access policies and encryption controls
 - **Platform integration** with other components
 
 ### Category: security
@@ -28,13 +28,28 @@ owner: platform-team
 complianceFramework: commercial
 
 components:
-  - name: my-secrets-manager
+  - name: credentials-store
     type: secrets-manager
     config:
-      description: "Production secrets-manager instance"
+      description: "Primary secret for the checkout service"
+      generateSecret:
+        enabled: true
+        passwordLength: 48
+      automaticRotation:
+        enabled: true
+        schedule:
+          automaticallyAfterDays: 60
+      encryption:
+        createCustomerManagedKey: true
+        enableKeyRotation: true
       monitoring:
         enabled: true
-        detailedMetrics: true
+        unusualAccessThresholdMs: 4000
+      accessPolicies:
+        denyInsecureTransport: true
+        restrictToVpce: true
+        allowedVpceIds:
+          - vpce-0abc123def456
 ```
 
 ## Configuration Reference
@@ -43,17 +58,71 @@ components:
 
 | Property | Type | Required | Description |
 |----------|------|----------|-------------|
-| `name` | string | No | Component name (auto-generated if not provided) |
-| `description` | string | No | Component description for documentation |
-| `monitoring` | object | No | Monitoring and observability configuration |
-| `tags` | object | No | Additional resource tags |
+| `secretName` | string | No | Secret name (defaults to `<service>/<component>` when omitted) |
+| `description` | string | No | Human-readable description |
+| `secretValue.secretStringValue` | string | No | Initial plaintext secret value |
+| `generateSecret` | object | No | Automatic secret generation settings |
+| `automaticRotation` | object | No | Rotation schedule and Lambda configuration |
+| `encryption` | object | No | Encryption strategy (customer managed vs AWS managed) |
+| `replicas` | array | No | Multi-region replica configuration |
+| `recovery` | object | No | Deletion protection and recovery window controls |
+| `monitoring` | object | No | Monitoring and alarm thresholds |
+| `accessPolicies` | object | No | Secret access policy toggles |
+
+### Secret Generation
+
+| Property | Type | Default | Description |
+|----------|------|---------|-------------|
+| `generateSecret.enabled` | boolean | `false` | Enable automatic secret generation |
+| `generateSecret.passwordLength` | number | `32` | Length of generated password |
+| `generateSecret.excludeCharacters` | string | `"@/\'` | Characters to exclude |
+
+### Automatic Rotation
+
+| Property | Type | Default | Description |
+|----------|------|---------|-------------|
+| `automaticRotation.enabled` | boolean | Varies by compliance | Enable automatic rotation |
+| `automaticRotation.schedule.automaticallyAfterDays` | number | `365` | Rotation interval (days) |
+| `automaticRotation.rotationLambda.createFunction` | boolean | Varies by compliance | Provision managed rotation Lambda |
+| `automaticRotation.rotationLambda.enableTracing` | boolean | Varies by compliance | Enable AWS X-Ray tracing |
+
+### Encryption
+
+| Property | Type | Default | Description |
+|----------|------|---------|-------------|
+| `encryption.kmsKeyArn` | string | — | Existing KMS key ARN |
+| `encryption.createCustomerManagedKey` | boolean | Varies by compliance | Create customer managed key |
+| `encryption.enableKeyRotation` | boolean | Varies by compliance | Enable CMK rotation |
+
+### Recovery Settings
+
+| Property | Type | Default | Description |
+|----------|------|---------|-------------|
+| `recovery.deletionProtection` | boolean | Varies by compliance | Enable deletion protection |
+| `recovery.recoveryWindowInDays` | number | `30` | Recovery window when deletion protection disabled |
+
+### Monitoring & Alarms
+
+| Property | Type | Default | Description |
+|----------|------|---------|-------------|
+| `monitoring.enabled` | boolean | Varies by compliance | Enable monitoring alarms |
+| `monitoring.rotationFailureThreshold` | number | `1` | Threshold for rotation failure alarms |
+| `monitoring.unusualAccessThresholdMs` | number | `5000` | Latency threshold for unusual access alarm |
+
+### Access Policies
+
+| Property | Type | Default | Description |
+|----------|------|---------|-------------|
+| `accessPolicies.denyInsecureTransport` | boolean | `true` | Deny non-TLS access |
+| `accessPolicies.restrictToVpce` | boolean | Varies by compliance | Restrict access to VPCEs |
+| `accessPolicies.allowedVpceIds` | array | `[]` | Allowed VPC endpoints when restriction enabled |
+| `accessPolicies.requireTemporaryCredentials` | boolean | Varies by compliance | Require STS/temporary credentials |
 
 ### Monitoring Configuration
 
 | Property | Type | Required | Description |
 |----------|------|----------|-------------|
 | `enabled` | boolean | No | Enable monitoring (default: true) |
-| `detailedMetrics` | boolean | No | Enable detailed CloudWatch metrics |
 
 ## Capabilities Provided
 
@@ -76,12 +145,17 @@ The following construct handles are available for use in `patches.ts`:
 - Basic resource tagging
 - Standard security settings
 
-### FedRAMP Moderate/High
+### FedRAMP Moderate
 
-- Enhanced monitoring with detailed metrics
-- Comprehensive audit logging
-- Stricter security configurations
-- Extended compliance tagging
+- Automatic rotation enabled with 90-day cadence
+- Customer-managed KMS key and deletion protection
+- Monitoring and VPCE access restrictions enabled by default
+
+### FedRAMP High
+
+- Automatic rotation enabled with 30-day cadence and tracing
+- Customer-managed KMS key with rotation, seven-day recovery window
+- VPCE restrictions and temporary-credential enforcement enabled
 
 ## Best Practices
 

@@ -9,7 +9,7 @@
 import { Template, Match } from 'aws-cdk-lib/assertions';
 import { App, Stack } from 'aws-cdk-lib';
 import { ApiGatewayHttpComponent } from '../api-gateway-http.component';
-import { ApiGatewayHttpConfig } from '../api-gateway-http.builder';
+import { ApiGatewayHttpConfig, ApiGatewayHttpConfigBuilder } from '../api-gateway-http.builder';
 import { ComponentContext, ComponentSpec } from '@shinobi/core';
 
 // Test Metadata as per Platform Testing Standard v1.0 Section 11
@@ -81,6 +81,16 @@ describe('ApiGatewayHttpComponent__Synthesis__ResourceCompliance', () => {
 
   afterAll(() => {
     jest.useRealTimers();
+  });
+
+  beforeEach(() => {
+    jest
+      .spyOn(ApiGatewayHttpConfigBuilder.prototype as any, '_loadPlatformConfiguration')
+      .mockReturnValue({});
+  });
+
+  afterEach(() => {
+    jest.restoreAllMocks();
   });
 
   describe('Default Happy Path Synthesis', () => {
@@ -339,7 +349,7 @@ describe('ApiGatewayHttpComponent__Synthesis__ResourceCompliance', () => {
       expect(logSpy).toHaveBeenCalledWith(
         'waf_configuration_missing',
         expect.any(String),
-        expect.objectContaining({ component: 'test-http-api-gateway' })
+        expect.objectContaining({ component: 'test-api' })
       );
       expect(template.findResources('AWS::WAFv2::WebACLAssociation')).toEqual({});
 

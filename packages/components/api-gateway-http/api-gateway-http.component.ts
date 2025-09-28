@@ -85,10 +85,11 @@ export class ApiGatewayHttpComponent extends BaseComponent {
 
   private createAccessLogGroup(): void {
     const retention = this.getAccessLogRetentionSetting();
+    const retainOnDelete = this.config.accessLogging?.retainOnDelete ?? false;
     this.accessLogGroup = new logs.LogGroup(this, 'AccessLogs', {
       logGroupName: this.config.accessLogging?.logGroupName ?? `/platform/http-api/${this.context.serviceName}/${this.spec.name}`,
       retention,
-      removalPolicy: this.requiresLogRetention() ? cdk.RemovalPolicy.RETAIN : cdk.RemovalPolicy.DESTROY
+      removalPolicy: retainOnDelete ? cdk.RemovalPolicy.RETAIN : cdk.RemovalPolicy.DESTROY
     });
     this.applyStandardTags(this.accessLogGroup);
   }
@@ -521,35 +522,20 @@ export class ApiGatewayHttpComponent extends BaseComponent {
 
   private getAccessLogRetentionSetting(): logs.RetentionDays {
     const override = this.config.accessLogging?.retentionInDays;
+    const enumValues = logs.RetentionDays as unknown as Record<string, number | undefined>;
+    const allowed = Object.keys(enumValues)
+      .filter(key => /^\d+$/.test(key))
+      .map(Number)
+      .sort((a, b) => a - b);
+
     if (override !== undefined) {
-      const enumValues = logs.RetentionDays as unknown as Record<string, number | undefined>;
-      const allowed = Object.keys(enumValues)
-        .filter(key => /^\d+$/.test(key))
-        .map(Number)
-        .sort((a, b) => a - b);
-
-      if (allowed.includes(override)) {
-        return override as logs.RetentionDays;
+      if (!allowed.includes(override)) {
+        throw new Error(`Unsupported access log retention ${override}. Allowed values: ${allowed.join(', ')}.`);
       }
-
-      throw new Error(`Unsupported access log retention ${override}. Allowed values: ${allowed.join(', ')}.`);
+      return override as logs.RetentionDays;
     }
-    return this.getDefaultLogRetention();
-  }
 
-  private getDefaultLogRetention(): logs.RetentionDays {
-    switch (this.context.complianceFramework) {
-      case 'fedramp-high':
-        return logs.RetentionDays.SEVEN_YEARS;
-      case 'fedramp-moderate':
-        return logs.RetentionDays.THREE_YEARS;
-      default:
-        return logs.RetentionDays.THREE_MONTHS;
-    }
-  }
-
-  private requiresLogRetention(): boolean {
-    return this.context.complianceFramework === 'fedramp-moderate' || this.context.complianceFramework === 'fedramp-high';
+    return logs.RetentionDays.THREE_MONTHS;
   }
 
   private configureApiKeyUsage(): void {

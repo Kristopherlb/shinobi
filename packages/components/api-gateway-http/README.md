@@ -465,3 +465,14 @@ When migrating from `api-gateway-rest` to `api-gateway-http`:
 5. **Enable access logging** for security auditing
 6. **Disable execute API endpoint** in secure environments
 7. **Use VPC Links** for private integrations
+### Access Logging
+
+| Property | Type | Default | Description |
+|----------|------|---------|-------------|
+| `enabled` | boolean | `true` | Enable access logging |
+| `logGroupName` | string | `/platform/http-api/<service>/<component>` | Custom log group name |
+| `retentionInDays` | number | Compliance-driven (90 / 365) | CloudWatch Logs retention period |
+| `retainOnDelete` | boolean | Compliance-driven (`false` commercial, `true` FedRAMP) | Retain log group when stack is deleted |
+| `format` | string | Standard JSON fields | Custom log format |
+| `includeExecutionData` | boolean | Compliance-driven | Include execution context data |
+| `includeRequestResponseData` | boolean | Compliance-driven | Include request/response payloads |
