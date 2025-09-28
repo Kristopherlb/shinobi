@@ -350,11 +350,26 @@ export class PlanOutputFormatter {
    * Check for resources that should be encrypted in compliance frameworks
    */
   private checkForUnencryptedResources(synthesisResult: any): boolean {
-    if (!synthesisResult.components) return false;
+    if (!Array.isArray(synthesisResult.components) || synthesisResult.components.length === 0) {
+      return false;
+    }
 
     return synthesisResult.components.some((component: any) => {
-      const constructs = component.getAllConstructs();
-      for (const [handle, construct] of constructs) {
+      const constructSource =
+        typeof component?.getAllConstructs === 'function'
+          ? component.getAllConstructs()
+          : component?.constructs;
+
+      if (!constructSource) {
+        return false;
+      }
+
+      const entries: Iterable<[string, any]> =
+        typeof (constructSource as any)[Symbol.iterator] === 'function'
+          ? (constructSource as Iterable<[string, any]>)
+          : Object.entries(constructSource as Record<string, any>);
+
+      for (const [handle, construct] of entries) {
         if (handle.includes('rds.DatabaseInstance') &&
           construct.properties?.storageEncrypted === false) {
           return true;
