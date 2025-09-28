@@ -1,8 +1,11 @@
 /**
  * RDS PostgreSQL Component
- * 
- * A managed PostgreSQL relational database with comprehensive compliance hardening.
- * Implements three-tiered compliance model (Commercial/FedRAMP Moderate/FedRAMP High).
+ *
+ * A managed PostgreSQL relational database with comprehensive controls that are
+ * fully driven by configuration defaults supplied via the ConfigBuilder. The
+ * component no longer embeds compliance-specific decision trees; instead it
+ * consumes the resolved configuration and applies infrastructure as code
+ * accordingly.
  */
 
 import * as rds from 'aws-cdk-lib/aws-rds';
@@ -20,473 +23,13 @@ import {
   ComponentContext,
   ComponentCapabilities
 } from '@platform/contracts';
-
-/**
- * Configuration interface for RDS PostgreSQL component
- */
-export interface RdsPostgresConfig {
-  /** Database name (required) */
-  dbName: string;
-  
-  /** Master username */
-  username?: string;
-  
-  /** Instance class */
-  instanceClass?: string;
-  
-  /** Allocated storage in GB */
-  allocatedStorage?: number;
-  
-  /** Max allocated storage for auto-scaling */
-  maxAllocatedStorage?: number;
-  
-  /** Multi-AZ deployment */
-  multiAz?: boolean;
-  
-  /** Backup retention period in days */
-  backupRetentionDays?: number;
-  
-  /** Backup window */
-  backupWindow?: string;
-  
-  /** Maintenance window */
-  maintenanceWindow?: string;
-  
-  /** Enable encryption at rest */
-  encryptionEnabled?: boolean;
-  
-  /** KMS key ARN for encryption */
-  kmsKeyArn?: string;
-  
-  /** VPC configuration */
-  vpc?: {
-    vpcId?: string;
-    subnetIds?: string[];
-    securityGroupIds?: string[];
-  };
-  
-  /** Performance Insights configuration */
-  performanceInsights?: {
-    enabled?: boolean;
-    retentionPeriod?: number;
-  };
-  
-  /** Enhanced Monitoring */
-  enhancedMonitoring?: {
-    enabled?: boolean;
-    interval?: number;
-  };
-}
-
-/**
- * Configuration schema for RDS PostgreSQL component
- */
-export const RDS_POSTGRES_CONFIG_SCHEMA = {
-  type: 'object',
-  title: 'RDS PostgreSQL Configuration',
-  description: 'Configuration for creating an RDS PostgreSQL database instance',
-  required: ['dbName'],
-  properties: {
-    dbName: {
-      type: 'string',
-      description: 'The name of the database to create',
-      pattern: '^[a-zA-Z][a-zA-Z0-9_]*$',
-      minLength: 1,
-      maxLength: 63
-    },
-    username: {
-      type: 'string',
-      description: 'The master username for the database',
-      pattern: '^[a-zA-Z][a-zA-Z0-9_]*$',
-      minLength: 1,
-      maxLength: 63,
-      default: 'postgres'
-    },
-    instanceClass: {
-      type: 'string',
-      description: 'The EC2 instance class for the database',
-      enum: ['db.t3.micro', 'db.t3.small', 'db.t3.medium', 'db.t3.large', 
-             'db.r5.large', 'db.r5.xlarge', 'db.r5.2xlarge', 'db.r5.4xlarge'],
-      default: 'db.t3.micro'
-    },
-    allocatedStorage: {
-      type: 'number',
-      description: 'The initial storage allocation in GB',
-      minimum: 20,
-      maximum: 65536,
-      default: 20
-    },
-    maxAllocatedStorage: {
-      type: 'number',
-      description: 'Maximum storage allocation for auto-scaling in GB',
-      minimum: 20,
-      maximum: 65536
-    },
-    multiAz: {
-      type: 'boolean',
-      description: 'Enable Multi-AZ deployment for high availability',
-      default: false
-    },
-    backupRetentionDays: {
-      type: 'number',
-      description: 'Number of days to retain backups',
-      minimum: 0,
-      maximum: 35,
-      default: 7
-    },
-    backupWindow: {
-      type: 'string',
-      description: 'Daily backup window in UTC (HH:mm-HH:mm format)',
-      pattern: '^([0-1]?[0-9]|2[0-3]):[0-5][0-9]-([0-1]?[0-9]|2[0-3]):[0-5][0-9]$'
-    },
-    maintenanceWindow: {
-      type: 'string',
-      description: 'Weekly maintenance window (ddd:HH:mm-ddd:HH:mm format)',
-      pattern: '^(sun|mon|tue|wed|thu|fri|sat):[0-2][0-9]:[0-5][0-9]-(sun|mon|tue|wed|thu|fri|sat):[0-2][0-9]:[0-5][0-9]$'
-    },
-    encryptionEnabled: {
-      type: 'boolean',
-      description: 'Enable encryption at rest for the database',
-      default: false
-    },
-    kmsKeyArn: {
-      type: 'string',
-      description: 'KMS key ARN for encryption (if not provided, AWS managed key is used)',
-      pattern: '^arn:aws:kms:[a-z0-9-]+:[0-9]{12}:key/[a-f0-9-]{36}$'
-    },
-    vpc: {
-      type: 'object',
-      description: 'VPC configuration for database deployment',
-      properties: {
-        vpcId: {
-          type: 'string',
-          description: 'VPC ID for database deployment',
-          pattern: '^vpc-[a-f0-9]{8,17}$'
-        },
-        subnetIds: {
-          type: 'array',
-          description: 'Subnet IDs for database subnet group',
-          items: {
-            type: 'string',
-            pattern: '^subnet-[a-f0-9]{8,17}$'
-          },
-          minItems: 2,
-          maxItems: 6
-        },
-        securityGroupIds: {
-          type: 'array',
-          description: 'Security group IDs for database access',
-          items: {
-            type: 'string',
-            pattern: '^sg-[a-f0-9]{8,17}$'
-          },
-          maxItems: 5
-        }
-      },
-      additionalProperties: false
-    },
-    performanceInsights: {
-      type: 'object',
-      description: 'Performance Insights configuration',
-      properties: {
-        enabled: {
-          type: 'boolean',
-          description: 'Enable Performance Insights',
-          default: false
-        },
-        retentionPeriod: {
-          type: 'number',
-          description: 'Performance Insights retention period in days',
-          enum: [7, 31, 93, 186, 372, 731, 1095, 1827, 2555],
-          default: 7
-        }
-      },
-      additionalProperties: false,
-      default: {
-        enabled: false,
-        retentionPeriod: 7
-      }
-    },
-    enhancedMonitoring: {
-      type: 'object',
-      description: 'Enhanced monitoring configuration',
-      properties: {
-        enabled: {
-          type: 'boolean',
-          description: 'Enable enhanced monitoring',
-          default: false
-        },
-        interval: {
-          type: 'number',
-          description: 'Monitoring interval in seconds',
-          enum: [1, 5, 10, 15, 30, 60],
-          default: 60
-        }
-      },
-      additionalProperties: false,
-      default: {
-        enabled: false,
-        interval: 60
-      }
-    }
-  },
-  additionalProperties: false,
-  defaults: {
-    username: 'postgres',
-    instanceClass: 'db.t3.micro',
-    allocatedStorage: 20,
-    backupRetentionDays: 7,
-    multiAz: false,
-    encryptionEnabled: false,
-    performanceInsights: {
-      enabled: false,
-      retentionPeriod: 7
-    },
-    enhancedMonitoring: {
-      enabled: false,
-      interval: 60
-    }
-  }
-};
-
-/**
- * Configuration builder for RDS PostgreSQL component
- */
-export class RdsPostgresConfigBuilder {
-  private context: ComponentContext;
-  private spec: ComponentSpec;
-  
-  constructor(context: ComponentContext, spec: ComponentSpec) {
-    this.context = context;
-    this.spec = spec;
-  }
-
-  /**
-   * Builds the final configuration by applying platform defaults, compliance frameworks, and user overrides
-   */
-  public async build(): Promise<RdsPostgresConfig> {
-    return this.buildSync();
-  }
-
-  /**
-   * Synchronous version of build for use in synth() method
-   */
-  public buildSync(): RdsPostgresConfig {
-    // Start with platform defaults
-    const platformDefaults = this.getPlatformDefaults();
-    
-    // Apply compliance framework defaults
-    const complianceDefaults = this.getComplianceFrameworkDefaults();
-    
-    // Merge user configuration from spec
-    const userConfig = this.spec.config || {};
-    
-    // Merge configurations (user config takes precedence)
-    const mergedConfig = this.mergeConfigs(
-      this.mergeConfigs(platformDefaults, complianceDefaults),
-      userConfig
-    );
-    
-    return mergedConfig as RdsPostgresConfig;
-  }
-
-  /**
-   * Simple merge utility for combining configuration objects
-   */
-  private mergeConfigs(target: Record<string, any>, source: Record<string, any>): Record<string, any> {
-    const result = { ...target };
-    
-    for (const key in source) {
-      if (source[key] && typeof source[key] === 'object' && !Array.isArray(source[key])) {
-        result[key] = this.mergeConfigs(result[key] || {}, source[key]);
-      } else {
-        result[key] = source[key];
-      }
-    }
-    
-    return result;
-  }
-
-  /**
-   * Get platform-wide defaults for RDS PostgreSQL
-   */
-  private getPlatformDefaults(): Record<string, any> {
-    return {
-      username: 'postgres',
-      instanceClass: this.getDefaultInstanceClass(),
-      allocatedStorage: this.getDefaultAllocatedStorage(),
-      backupRetentionDays: this.getDefaultBackupRetentionDays(),
-      multiAz: this.getDefaultMultiAz(),
-      encryptionEnabled: this.getDefaultEncryptionEnabled(),
-      performanceInsights: {
-        enabled: this.getDefaultPerformanceInsightsEnabled(),
-        retentionPeriod: this.getDefaultPerformanceInsightsRetention()
-      },
-      enhancedMonitoring: {
-        enabled: this.getDefaultEnhancedMonitoringEnabled(),
-        interval: this.getDefaultEnhancedMonitoringInterval()
-      }
-    };
-  }
-
-  /**
-   * Get compliance framework specific defaults
-   */
-  private getComplianceFrameworkDefaults(): Record<string, any> {
-    const framework = this.context.complianceFramework;
-    
-    switch (framework) {
-      case 'fedramp-moderate':
-        return {
-          instanceClass: this.getComplianceInstanceClass('fedramp-moderate'),
-          allocatedStorage: Math.max(this.getDefaultAllocatedStorage(), 100), // Larger storage for compliance
-          backupRetentionDays: 30, // Extended backup retention
-          multiAz: true, // Required for high availability
-          encryptionEnabled: true, // Required encryption
-          performanceInsights: {
-            enabled: true, // Enhanced monitoring required
-            retentionPeriod: 1095 // 3 years retention
-          },
-          enhancedMonitoring: {
-            enabled: true,
-            interval: 5 // More frequent monitoring
-          }
-        };
-        
-      case 'fedramp-high':
-        return {
-          instanceClass: this.getComplianceInstanceClass('fedramp-high'),
-          allocatedStorage: Math.max(this.getDefaultAllocatedStorage(), 200), // Even larger storage
-          backupRetentionDays: 90, // Maximum backup retention
-          multiAz: true, // Required for high availability
-          encryptionEnabled: true, // Required encryption with CMK
-          performanceInsights: {
-            enabled: true, // Enhanced monitoring required
-            retentionPeriod: 2555 // 7 years retention
-          },
-          enhancedMonitoring: {
-            enabled: true,
-            interval: 1 // High-frequency monitoring
-          }
-        };
-        
-      default: // commercial
-        return {};
-    }
-  }
-
-  /**
-   * Get default instance class based on compliance framework
-   */
-  private getDefaultInstanceClass(): string {
-    switch (this.context.complianceFramework) {
-      case 'fedramp-high':
-        return 'db.r5.xlarge'; // High-performance instances for compliance
-      case 'fedramp-moderate':
-        return 'db.r5.large'; // Enhanced performance for moderate compliance
-      default:
-        return 'db.t3.micro'; // Cost-optimized for commercial
-    }
-  }
-
-  /**
-   * Get compliance-specific instance class
-   */
-  private getComplianceInstanceClass(framework: string): string {
-    switch (framework) {
-      case 'fedramp-high':
-        return 'db.r5.xlarge';
-      case 'fedramp-moderate':
-        return 'db.r5.large';
-      default:
-        return 'db.t3.micro';
-    }
-  }
-
-  /**
-   * Get default allocated storage based on compliance framework
-   */
-  private getDefaultAllocatedStorage(): number {
-    switch (this.context.complianceFramework) {
-      case 'fedramp-high':
-        return 200; // Larger storage for compliance logging
-      case 'fedramp-moderate':
-        return 100; // Moderate increase for compliance
-      default:
-        return 20; // Minimum for cost optimization
-    }
-  }
-
-  /**
-   * Get default backup retention days
-   */
-  private getDefaultBackupRetentionDays(): number {
-    switch (this.context.complianceFramework) {
-      case 'fedramp-high':
-        return 90; // Maximum retention for high compliance
-      case 'fedramp-moderate':
-        return 30; // Extended retention for moderate compliance
-      default:
-        return 7; // Standard retention for commercial
-    }
-  }
-
-  /**
-   * Get default Multi-AZ setting
-   */
-  private getDefaultMultiAz(): boolean {
-    return ['fedramp-moderate', 'fedramp-high'].includes(this.context.complianceFramework);
-  }
-
-  /**
-   * Get default encryption setting
-   */
-  private getDefaultEncryptionEnabled(): boolean {
-    return ['fedramp-moderate', 'fedramp-high'].includes(this.context.complianceFramework);
-  }
-
-  /**
-   * Get default Performance Insights enabled setting
-   */
-  private getDefaultPerformanceInsightsEnabled(): boolean {
-    return ['fedramp-moderate', 'fedramp-high'].includes(this.context.complianceFramework);
-  }
-
-  /**
-   * Get default Performance Insights retention
-   */
-  private getDefaultPerformanceInsightsRetention(): number {
-    switch (this.context.complianceFramework) {
-      case 'fedramp-high':
-        return 2555; // 7 years for high compliance
-      case 'fedramp-moderate':
-        return 1095; // 3 years for moderate compliance
-      default:
-        return 7; // Minimum for commercial
-    }
-  }
-
-  /**
-   * Get default Enhanced Monitoring enabled setting
-   */
-  private getDefaultEnhancedMonitoringEnabled(): boolean {
-    return ['fedramp-moderate', 'fedramp-high'].includes(this.context.complianceFramework);
-  }
-
-  /**
-   * Get default Enhanced Monitoring interval
-   */
-  private getDefaultEnhancedMonitoringInterval(): number {
-    switch (this.context.complianceFramework) {
-      case 'fedramp-high':
-        return 1; // 1 second for high-frequency monitoring
-      case 'fedramp-moderate':
-        return 5; // 5 seconds for standard monitoring
-      default:
-        return 60; // 1 minute for cost-effective monitoring
-    }
-  }
-}
+import {
+  RdsPostgresComponentConfigBuilder,
+  RdsPostgresConfig,
+  RdsPostgresLogConfig,
+  RdsPostgresMonitoringAlarmsConfig,
+  RdsPostgresAlarmConfig
+} from './rds-postgres.builder';
 
 /**
  * RDS PostgreSQL Component implementing Component API Contract v1.0
@@ -498,83 +41,122 @@ export class RdsPostgresComponent extends Component {
   private kmsKey?: kms.Key;
   private parameterGroup?: rds.ParameterGroup;
   private config?: RdsPostgresConfig;
+  private vpc?: ec2.IVpc;
 
   constructor(scope: Construct, id: string, context: ComponentContext, spec: ComponentSpec) {
     super(scope, id, context, spec);
   }
 
+  private configureSecretRotation(): void {
+    if (!this.database || !this.secret) {
+      return;
+    }
+
+    const rotation = this.config?.rotation;
+    if (!rotation?.enabled) {
+      return;
+    }
+
+    const automaticallyAfter = cdk.Duration.days(rotation.scheduleInDays ?? 30);
+
+    if (rotation.mode === 'multi-user') {
+      this.database.addRotationMultiUser('DatabaseRotationMultiUser', {
+        secret: this.secret,
+        automaticallyAfter
+      });
+    } else {
+      this.database.addRotationSingleUser({
+        automaticallyAfter
+      });
+    }
+  }
+
+  private resolveLogRetention(days: number): logs.RetentionDays {
+    const retentionMap = logs.RetentionDays as unknown as Record<number, logs.RetentionDays>;
+    return retentionMap[days] ?? logs.RetentionDays.THREE_MONTHS;
+  }
+
+  private resolveComparisonOperator(value?: string): cloudwatch.ComparisonOperator {
+    switch (value) {
+      case 'gt':
+        return cloudwatch.ComparisonOperator.GREATER_THAN_THRESHOLD;
+      case 'lt':
+        return cloudwatch.ComparisonOperator.LESS_THAN_THRESHOLD;
+      case 'lte':
+        return cloudwatch.ComparisonOperator.LESS_THAN_OR_EQUAL_TO_THRESHOLD;
+      case 'gte':
+      default:
+        return cloudwatch.ComparisonOperator.GREATER_THAN_OR_EQUAL_TO_THRESHOLD;
+    }
+  }
+
+  private resolveTreatMissingData(value?: string): cloudwatch.TreatMissingData {
+    switch (value) {
+      case 'breaching':
+        return cloudwatch.TreatMissingData.BREACHING;
+      case 'ignore':
+        return cloudwatch.TreatMissingData.IGNORE;
+      case 'missing':
+        return cloudwatch.TreatMissingData.MISSING;
+      case 'not-breaching':
+      default:
+        return cloudwatch.TreatMissingData.NOT_BREACHING;
+    }
+  }
+
   /**
-   * Synthesis phase - Create RDS PostgreSQL database with compliance hardening
+   * Synthesis phase - create RDS PostgreSQL database using resolved configuration
    */
   public synth(): void {
-    // Log component synthesis start
     this.logComponentEvent('synthesis_start', 'Starting RDS Postgres component synthesis', {
-      dbName: this.spec.config?.dbName,
-      instanceClass: this.spec.config?.instanceClass
+      component: this.spec.name
     });
-    
+
     const startTime = Date.now();
-    
+
     try {
-      // Build configuration using ConfigBuilder
-      const configBuilder = new RdsPostgresConfigBuilder(this.context, this.spec);
+      const configBuilder = new RdsPostgresComponentConfigBuilder(this.context, this.spec);
       this.config = configBuilder.buildSync();
-      
-      // Log configuration built
-      this.logComponentEvent('config_built', 'RDS Postgres configuration built successfully', {
+
+      this.logComponentEvent('config_built', 'Resolved RDS Postgres configuration', {
         dbName: this.config.dbName,
-        instanceClass: this.config.instanceClass,
-        multiAz: this.config.multiAz
+        instanceType: this.config.instance?.instanceType,
+        multiAz: this.config.instance?.multiAz ?? false
       });
-      
-      // Create KMS key for encryption if needed
+
       this.createKmsKeyIfNeeded();
-    
-    // Create database secret
-    this.createDatabaseSecret();
-    
-    // Create parameter group for STIG compliance if needed
-    this.createParameterGroupIfNeeded();
-    
-    // Create security group
-    this.createSecurityGroup();
-    
-    // Create database instance
-    this.createDatabaseInstance();
-    
-    // Apply compliance hardening
-    this.applyComplianceHardening();
-    
-    // Configure observability
-    this.configureObservabilityForRds();
-    
-    // Register constructs
-    this.registerConstruct('database', this.database!);
-    this.registerConstruct('secret', this.secret!);
-    this.registerConstruct('securityGroup', this.securityGroup!);
-    if (this.kmsKey) {
-      this.registerConstruct('kmsKey', this.kmsKey);
-    }
-    if (this.parameterGroup) {
-      this.registerConstruct('parameterGroup', this.parameterGroup);
-    }
-    
-    // Register capabilities
-    this.registerCapability('db:postgres', this.buildDatabaseCapability());
-    
-    // Log successful synthesis completion
-    const duration = Date.now() - startTime;
-    this.logPerformanceMetric('component_synthesis', duration, {
-      resourcesCreated: Object.keys(this.capabilities).length
-    });
-    
-    this.logComponentEvent('synthesis_complete', 'RDS Postgres component synthesis completed successfully', {
-      databaseCreated: 1,
-      secretCreated: 1,
-      kmsKeyCreated: !!this.kmsKey,
-      securityGroupCreated: !!this.securityGroup
-    });
-    
+      this.createDatabaseSecret();
+      this.createParameterGroupFromConfig();
+      this.createSecurityGroup();
+      this.createDatabaseInstance();
+      this.configureSecretRotation();
+      this.configureLogGroups();
+      this.configureMonitoringAlarms();
+      this.configureObservabilityForDatabase();
+
+      this.registerConstruct('database', this.database!);
+      this.registerConstruct('secret', this.secret!);
+      this.registerConstruct('securityGroup', this.securityGroup!);
+      if (this.kmsKey) {
+        this.registerConstruct('kmsKey', this.kmsKey);
+      }
+      if (this.parameterGroup) {
+        this.registerConstruct('parameterGroup', this.parameterGroup);
+      }
+
+      this.registerCapability('db:postgres', this.buildDatabaseCapability());
+
+      const duration = Date.now() - startTime;
+      this.logPerformanceMetric('component_synthesis', duration, {
+        resourcesCreated: Object.keys(this.capabilities).length
+      });
+
+      this.logComponentEvent('synthesis_complete', 'RDS Postgres component synthesis completed successfully', {
+        databaseCreated: !!this.database,
+        secretCreated: !!this.secret,
+        kmsKeyCreated: !!this.kmsKey,
+        parameterGroupCreated: !!this.parameterGroup
+      });
     } catch (error) {
       this.logError(error as Error, 'component synthesis', {
         componentType: 'rds-postgres',
@@ -603,33 +185,47 @@ export class RdsPostgresComponent extends Component {
    * Create KMS key for encryption if required by compliance framework
    */
   private createKmsKeyIfNeeded(): void {
-    if (this.shouldUseCustomerManagedKey()) {
-      this.kmsKey = new kms.Key(this, 'EncryptionKey', {
-        description: `Encryption key for ${this.spec.name} PostgreSQL database`,
-        enableKeyRotation: this.context.complianceFramework === 'fedramp-high',
-        keyUsage: kms.KeyUsage.ENCRYPT_DECRYPT,
-        keySpec: kms.KeySpec.SYMMETRIC_DEFAULT
-      });
-      
-      // Apply standard tags to KMS key
-      this.applyStandardTags(this.kmsKey, {
-        'key-usage': 'rds-encryption',
-        'key-rotation-enabled': (this.context.complianceFramework === 'fedramp-high').toString()
-      });
-
-      // Grant RDS service access to the key
-      this.kmsKey.addToResourcePolicy(new iam.PolicyStatement({
-        sid: 'AllowRDSService',
-        principals: [new iam.ServicePrincipal('rds.amazonaws.com')],
-        actions: [
-          'kms:Decrypt',
-          'kms:GenerateDataKey*',
-          'kms:CreateGrant',
-          'kms:DescribeKey'
-        ],
-        resources: ['*']
-      }));
+    const encryption = this.config?.encryption;
+    if (!encryption?.enabled) {
+      if (encryption?.kmsKeyArn) {
+        this.kmsKey = kms.Key.fromKeyArn(this, 'ImportedEncryptionKey', encryption.kmsKeyArn);
+      }
+      return;
     }
+
+    if (encryption?.kmsKeyArn) {
+      this.kmsKey = kms.Key.fromKeyArn(this, 'ImportedEncryptionKey', encryption.kmsKeyArn);
+      return;
+    }
+
+    if (!encryption?.customerManagedKey?.create) {
+      this.kmsKey = undefined;
+      return;
+    }
+
+    this.kmsKey = new kms.Key(this, 'EncryptionKey', {
+      description: `Encryption key for ${this.spec.name} PostgreSQL database`,
+      enableKeyRotation: encryption.customerManagedKey.enableRotation ?? false,
+      keyUsage: kms.KeyUsage.ENCRYPT_DECRYPT,
+      keySpec: kms.KeySpec.SYMMETRIC_DEFAULT
+    });
+
+    this.applyStandardTags(this.kmsKey, {
+      'key-usage': 'rds-encryption',
+      'key-rotation-enabled': (encryption.customerManagedKey.enableRotation ?? false).toString()
+    });
+
+    this.kmsKey.addToResourcePolicy(new iam.PolicyStatement({
+      sid: 'AllowRDSService',
+      principals: [new iam.ServicePrincipal('rds.amazonaws.com')],
+      actions: [
+        'kms:Decrypt',
+        'kms:GenerateDataKey*',
+        'kms:CreateGrant',
+        'kms:DescribeKey'
+      ],
+      resources: ['*']
+    }));
   }
 
   /**
@@ -659,195 +255,268 @@ export class RdsPostgresComponent extends Component {
   /**
    * Create parameter group for STIG compliance in FedRAMP High
    */
-  private createParameterGroupIfNeeded(): void {
-    if (this.context.complianceFramework === 'fedramp-high') {
-      this.parameterGroup = new rds.ParameterGroup(this, 'ParameterGroup', {
-        engine: rds.DatabaseInstanceEngine.postgres({
-          version: rds.PostgresEngineVersion.VER_15_4
-        }),
-        description: 'STIG-compliant parameter group for PostgreSQL',
-        parameters: {
-          // STIG compliance parameters
-          'log_statement': 'all',
-          'log_min_duration_statement': '0',
-          'log_connections': '1',
-          'log_disconnections': '1',
-          'log_duration': '1',
-          'log_hostname': '1',
-          'log_line_prefix': '%t:%r:%u@%d:[%p]:',
-          'shared_preload_libraries': 'pgaudit',
-          'pgaudit.log': 'all',
-          'pgaudit.log_catalog': '1',
-          'pgaudit.log_parameter': '1',
-          'pgaudit.log_statement_once': '1',
-          'ssl': '1',
-          'ssl_ciphers': 'HIGH:!aNULL:!eNULL:!EXPORT:!DES:!RC4:!MD5:!PSK:!SRP:!CAMELLIA',
-          'password_encryption': 'scram-sha-256'
-        }
-      });
+  private createParameterGroupFromConfig(): void {
+    const parameterGroupConfig = this.config?.parameterGroup;
+    if (!parameterGroupConfig?.enabled) {
+      this.parameterGroup = undefined;
+      return;
     }
+
+    this.parameterGroup = new rds.ParameterGroup(this, 'ParameterGroup', {
+      engine: rds.DatabaseInstanceEngine.postgres({
+        version: this.resolveEngineVersion()
+      }),
+      description: parameterGroupConfig.description ?? `Parameter group for ${this.spec.name}`,
+      parameters: parameterGroupConfig.parameters ?? {}
+    });
+
+    this.applyStandardTags(this.parameterGroup, {
+      'parameter-group': this.parameterGroup.parameterGroupName,
+      'database-engine': 'postgres'
+    });
   }
 
   /**
    * Create security group for database access
    */
   private createSecurityGroup(): void {
-    // For demo purposes, create a VPC or use default
-    const vpc = ec2.Vpc.fromLookup(this, 'Vpc', { isDefault: true });
+    const networking = this.config?.networking ?? {};
+
+    if (networking.vpcId) {
+      this.vpc = ec2.Vpc.fromLookup(this, 'Vpc', { vpcId: networking.vpcId });
+    } else if (networking.useDefaultVpc ?? true) {
+      this.vpc = ec2.Vpc.fromLookup(this, 'Vpc', { isDefault: true });
+    } else {
+      throw new Error('RDS Postgres component requires networking.vpcId or useDefaultVpc to be true.');
+    }
 
     this.securityGroup = new ec2.SecurityGroup(this, 'DatabaseSecurityGroup', {
-      vpc,
+      vpc: this.vpc,
       description: `Security group for ${this.config!.dbName} PostgreSQL database`,
       allowAllOutbound: false
     });
-    
-    // Apply standard tags to security group
+
     this.applyStandardTags(this.securityGroup, {
       'security-group-type': 'database',
       'database-engine': 'postgres'
     });
 
-    // Add ingress rule for PostgreSQL port (will be refined by binding strategies)
-    this.securityGroup.addIngressRule(
-      ec2.Peer.ipv4(vpc.vpcCidrBlock),
-      ec2.Port.tcp(5432),
-      'PostgreSQL access from VPC'
-    );
+    const ingressCidrs = networking.ingressCidrs ?? [];
+    const port = networking.port ?? 5432;
+
+    if (ingressCidrs.length === 0 && this.vpc) {
+      this.securityGroup.addIngressRule(
+        ec2.Peer.ipv4(this.vpc.vpcCidrBlock),
+        ec2.Port.tcp(port),
+        'Default PostgreSQL access from VPC'
+      );
+    } else {
+      ingressCidrs.forEach((cidr, index) => {
+        this.securityGroup!.addIngressRule(
+          ec2.Peer.ipv4(cidr),
+          ec2.Port.tcp(port),
+          `Configured PostgreSQL access ${index + 1}`
+        );
+      });
+    }
   }
 
   /**
    * Create the RDS database instance
    */
   private createDatabaseInstance(): void {
-    const vpc = ec2.Vpc.fromLookup(this, 'VpcForDb', { isDefault: true });
+    if (!this.vpc) {
+      throw new Error('RDS Postgres component attempted to create a database before the VPC was initialised.');
+    }
+
+    const instanceConfig = this.config!.instance ?? {};
+    const backupConfig = this.config!.backup ?? {};
+    const monitoringConfig = this.config!.monitoring ?? {};
+    const encryptionEnabled = this.config!.encryption?.enabled ?? false;
+
+    const monitoringInterval = monitoringConfig.enhancedMonitoring?.enabled
+      ? cdk.Duration.seconds(monitoringConfig.enhancedMonitoring.intervalSeconds ?? 60)
+      : undefined;
+
+    const performanceInsightsEnabled = monitoringConfig.performanceInsights?.enabled ?? false;
+    const performanceInsightsRetention = performanceInsightsEnabled
+      ? this.resolvePerformanceInsightsRetention()
+      : undefined;
+
+    const performanceInsightsKey = (monitoringConfig.performanceInsights?.useCustomerManagedKey ?? false)
+      ? this.kmsKey
+      : undefined;
 
     const props: rds.DatabaseInstanceProps = {
       engine: rds.DatabaseInstanceEngine.postgres({
-        version: rds.PostgresEngineVersion.VER_15_4
+        version: this.resolveEngineVersion()
       }),
-      instanceType: ec2.InstanceType.of(
-        ec2.InstanceClass.BURSTABLE3,
-        ec2.InstanceSize.MICRO
-      ),
+      instanceType: new ec2.InstanceType(instanceConfig.instanceType ?? 't3.micro'),
       credentials: rds.Credentials.fromSecret(this.secret!),
-      vpc,
+      vpc: this.vpc,
       securityGroups: [this.securityGroup!],
       databaseName: this.config!.dbName,
-      allocatedStorage: this.config!.allocatedStorage || 20,
-      maxAllocatedStorage: this.config!.maxAllocatedStorage,
-      storageEncrypted: this.shouldEnableEncryption(),
+      allocatedStorage: instanceConfig.allocatedStorage ?? 20,
+      maxAllocatedStorage: instanceConfig.maxAllocatedStorage,
+      storageEncrypted: encryptionEnabled,
       storageEncryptionKey: this.kmsKey,
-      backupRetention: cdk.Duration.days(this.getBackupRetentionDays()),
+      backupRetention: cdk.Duration.days(backupConfig.retentionDays ?? 7),
+      copyTagsToSnapshot: backupConfig.copyTagsToSnapshots ?? true,
+      preferredBackupWindow: backupConfig.preferredWindow,
       deleteAutomatedBackups: false,
-      deletionProtection: this.isComplianceFramework(),
-      multiAz: this.shouldEnableMultiAz(),
+      deletionProtection: instanceConfig.deletionProtection ?? false,
+      multiAz: instanceConfig.multiAz ?? false,
       parameterGroup: this.parameterGroup,
-      monitoringInterval: this.getEnhancedMonitoringInterval(),
-      enablePerformanceInsights: this.shouldEnableRdsPerformanceInsights(),
-      performanceInsightRetention: this.getPerformanceInsightsRetention(),
-      performanceInsightEncryptionKey: this.kmsKey,
-      removalPolicy: this.isComplianceFramework() ? 
-        cdk.RemovalPolicy.RETAIN : cdk.RemovalPolicy.DESTROY
+      monitoringInterval,
+      enablePerformanceInsights: performanceInsightsEnabled,
+      performanceInsightRetention: performanceInsightsRetention,
+      performanceInsightEncryptionKey: performanceInsightsKey,
+      iamAuthentication: this.config?.security?.iamAuthentication ?? false,
+      removalPolicy: (instanceConfig.removalPolicy ?? 'destroy') === 'retain'
+        ? cdk.RemovalPolicy.RETAIN
+        : cdk.RemovalPolicy.DESTROY,
+      publiclyAccessible: instanceConfig.publiclyAccessible ?? false,
+      cloudwatchLogsExports: this.config?.observability?.logExports
     };
 
     this.database = new rds.DatabaseInstance(this, 'Database', props);
-    
-    // Apply standard tags to database instance
+
     this.applyStandardTags(this.database, {
       'database-name': this.config!.dbName,
       'database-engine': 'postgres',
-      'database-version': '15.4',
-      'instance-class': this.config!.instanceClass || 'db.t3.micro',
-      'multi-az': (!!this.config!.multiAz).toString(),
-      'backup-retention-days': this.getBackupRetentionDays().toString()
+      'database-version': this.config!.instance?.engineVersion ?? '15.4',
+      'instance-type': instanceConfig.instanceType ?? 't3.micro',
+      'multi-az': (instanceConfig.multiAz ?? false).toString(),
+      'backup-retention-days': (backupConfig.retentionDays ?? 7).toString()
     });
-    
-    // Configure observability for database monitoring
-    this.configureObservabilityForDatabase();
-    
-    // Log database creation
+
     this.logResourceCreation('rds-postgres-instance', this.database.instanceIdentifier, {
       dbName: this.config!.dbName,
       engine: 'postgres',
-      instanceClass: this.config!.instanceClass,
-      multiAz: !!this.config!.multiAz,
-      encryptionEnabled: this.shouldEnableEncryption(),
-      performanceInsightsEnabled: this.shouldEnableRdsPerformanceInsights()
+      instanceType: instanceConfig.instanceType ?? 't3.micro',
+      multiAz: instanceConfig.multiAz ?? false,
+      encryptionEnabled,
+      performanceInsightsEnabled
     });
   }
 
-  /**
-   * Apply compliance-specific hardening
-   */
-  private applyComplianceHardening(): void {
-    switch (this.context.complianceFramework) {
-      case 'fedramp-moderate':
-        this.applyFedrampModerateHardening();
-        break;
-      case 'fedramp-high':
-        this.applyFedrampHighHardening();
-        break;
-      default:
-        this.applyCommercialHardening();
-        break;
-    }
-  }
-
-  private applyCommercialHardening(): void {
-    // Basic logging configuration
-    if (this.database) {
-      // Enable basic logging
-      this.database.addRotationSingleUser();
-    }
-  }
-
-  private applyFedrampModerateHardening(): void {
-    // Enhanced monitoring and logging
-    const dbLogGroup = new logs.LogGroup(this, 'DatabaseLogGroup', {
-      logGroupName: `/aws/rds/instance/${this.database!.instanceIdentifier}/postgresql`,
-      retention: logs.RetentionDays.THREE_MONTHS,
-      removalPolicy: cdk.RemovalPolicy.RETAIN
-    });
-    
-    // Apply standard tags to database log group
-    this.applyStandardTags(dbLogGroup, {
-      'log-type': 'database',
-      'database-engine': 'postgres',
-      'retention-period': 'three-months',
-      'compliance-logging': 'fedramp-moderate'
-    });
-
-    // Enable automated backups with longer retention
-    // This is handled in createDatabaseInstance with getBackupRetentionDays()
-  }
-
-  private applyFedrampHighHardening(): void {
-    // Apply all moderate hardening
-    this.applyFedrampModerateHardening();
-
-    // Extended audit logging
-    const auditLogGroup = new logs.LogGroup(this, 'AuditLogGroup', {
-      logGroupName: `/aws/rds/instance/${this.database!.instanceIdentifier}/audit`,
-      retention: logs.RetentionDays.ONE_YEAR,
-      removalPolicy: cdk.RemovalPolicy.RETAIN
-    });
-    
-    // Apply standard tags to audit log group
-    this.applyStandardTags(auditLogGroup, {
-      'log-type': 'audit',
-      'database-engine': 'postgres',
-      'retention-period': 'one-year',
-      'compliance-logging': 'fedramp-high'
-    });
-
-    // Enable IAM database authentication
-    if (this.database) {
-      const cfnInstance = this.database.node.defaultChild as rds.CfnDBInstance;
-      cfnInstance.enableIamDatabaseAuthentication = true;
+  private configureLogGroups(): void {
+    if (!this.database) {
+      return;
     }
 
-    // Create immutable backup copies (would be implemented with cross-region backup)
-    // This would copy snapshots to the WORM S3 bucket created by S3 component
+    const logging = this.config?.logging;
+    this.createLogGroupFromConfig('DatabaseLogs', logging?.database, 'database');
+    this.createLogGroupFromConfig('AuditLogs', logging?.audit, 'audit');
+  }
+
+  private configureMonitoringAlarms(): void {
+    if (!this.database) {
+      return;
+    }
+
+    const alarms = this.config?.monitoring?.alarms ?? {} as RdsPostgresMonitoringAlarmsConfig;
+    const dbIdentifier = this.database.instanceIdentifier;
+
+    this.createAlarmFromConfig(
+      'CpuUtilizationAlarm',
+      alarms.cpuUtilization,
+      {
+        alarmName: `${this.context.serviceName}-${this.spec.name}-db-cpu`,
+        metricName: 'CPUUtilization',
+        namespace: 'AWS/RDS',
+        dimensions: { DBInstanceIdentifier: dbIdentifier }
+      }
+    );
+
+    this.createAlarmFromConfig(
+      'DatabaseConnectionsAlarm',
+      alarms.databaseConnections,
+      {
+        alarmName: `${this.context.serviceName}-${this.spec.name}-db-connections`,
+        metricName: 'DatabaseConnections',
+        namespace: 'AWS/RDS',
+        dimensions: { DBInstanceIdentifier: dbIdentifier }
+      }
+    );
+
+    this.createAlarmFromConfig(
+      'FreeStorageSpaceAlarm',
+      alarms.freeStorageSpaceBytes,
+      {
+        alarmName: `${this.context.serviceName}-${this.spec.name}-db-storage`,
+        metricName: 'FreeStorageSpace',
+        namespace: 'AWS/RDS',
+        dimensions: { DBInstanceIdentifier: dbIdentifier }
+      }
+    );
+  }
+
+  private createAlarmFromConfig(
+    id: string,
+    alarmConfig: RdsPostgresAlarmConfig | undefined,
+    options: { alarmName: string; metricName: string; namespace: string; dimensions: Record<string, string> }
+  ): void {
+    if (!alarmConfig?.enabled) {
+      return;
+    }
+
+    const period = cdk.Duration.minutes(alarmConfig.periodMinutes ?? 5);
+    const metric = new cloudwatch.Metric({
+      namespace: options.namespace,
+      metricName: options.metricName,
+      dimensionsMap: options.dimensions,
+      statistic: alarmConfig.statistic ?? 'Average',
+      period
+    });
+
+    const alarm = new cloudwatch.Alarm(this, id, {
+      alarmName: options.alarmName,
+      alarmDescription: `${options.metricName} alarm for ${this.spec.name}`,
+      metric,
+      threshold: alarmConfig.threshold ?? 0,
+      evaluationPeriods: alarmConfig.evaluationPeriods ?? 1,
+      comparisonOperator: this.resolveComparisonOperator(alarmConfig.comparisonOperator),
+      treatMissingData: this.resolveTreatMissingData(alarmConfig.treatMissingData)
+    });
+
+    this.applyStandardTags(alarm, {
+      'alarm-metric': options.metricName,
+      ...(alarmConfig.tags ?? {})
+    });
+
+    this.registerConstruct(`${id}Construct`, alarm);
+  }
+
+  private createLogGroupFromConfig(
+    id: string,
+    logConfig: RdsPostgresLogConfig | undefined,
+    logType: string
+  ): void {
+    if (!logConfig?.enabled) {
+      return;
+    }
+
+    const logGroupName = logConfig.logGroupName
+      ?? `/aws/rds/instance/${this.database!.instanceIdentifier}/${logType}`;
+
+    const logGroup = new logs.LogGroup(this, id, {
+      logGroupName,
+      retention: logConfig.retentionInDays
+        ? this.resolveLogRetention(logConfig.retentionInDays)
+        : undefined,
+      removalPolicy: logConfig.removalPolicy === 'destroy'
+        ? cdk.RemovalPolicy.DESTROY
+        : cdk.RemovalPolicy.RETAIN
+    });
+
+    this.applyStandardTags(logGroup, {
+      'log-type': logType,
+      'database-name': this.config!.dbName,
+      ...(logConfig.tags ?? {})
+    });
+
+    this.registerConstruct(`${logType}LogGroup`, logGroup);
   }
 
   /**
@@ -860,198 +529,71 @@ export class RdsPostgresComponent extends Component {
       dbName: this.config!.dbName,
       secretArn: this.secret!.secretArn,
       sgId: this.securityGroup!.securityGroupId,
-      instanceArn: this.database!.instanceArn
+      instanceArn: this.database!.instanceArn,
+      securityProfile: this.config!.hardeningProfile ?? 'baseline'
     };
-  }
-
-  /**
-   * Helper methods for compliance decisions
-   */
-  private shouldUseCustomerManagedKey(): boolean {
-    return ['fedramp-moderate', 'fedramp-high'].includes(this.context.complianceFramework);
-  }
-
-  private shouldEnableEncryption(): boolean {
-    return this.context.complianceFramework !== 'commercial' || !!this.config!.encryptionEnabled;
-  }
-
-  private shouldEnableMultiAz(): boolean {
-    return this.context.complianceFramework !== 'commercial' || !!this.config!.multiAz;
-  }
-
-  private shouldEnableRdsPerformanceInsights(): boolean {
-    return ['fedramp-moderate', 'fedramp-high'].includes(this.context.complianceFramework);
-  }
-
-  private isComplianceFramework(): boolean {
-    return ['fedramp-moderate', 'fedramp-high'].includes(this.context.complianceFramework);
-  }
-
-  private getBackupRetentionDays(): number {
-    return this.config!.backupRetentionDays || 7;
-  }
-
-  private getEnhancedMonitoringInterval(): cdk.Duration | undefined {
-    if (this.config!.enhancedMonitoring?.enabled) {
-      return cdk.Duration.seconds(this.config!.enhancedMonitoring.interval || 60);
-    }
-    return undefined;
-  }
-
-  private getPerformanceInsightsRetention(): rds.PerformanceInsightRetention | undefined {
-    if (!this.config!.performanceInsights?.enabled) {
-      return undefined;
-    }
-    
-    const days = this.config!.performanceInsights.retentionPeriod || 7;
-    if (days >= 2555) {
-      return rds.PerformanceInsightRetention.LONG_TERM;
-    } else if (days >= 93) {
-      return rds.PerformanceInsightRetention.DEFAULT;
-    }
-    return rds.PerformanceInsightRetention.DEFAULT;
   }
 
   /**
    * Configure OpenTelemetry observability for database monitoring according to Platform Observability Standard
    */
   private configureObservabilityForDatabase(): void {
-    if (!this.database) return;
+    if (!this.database) {
+      return;
+    }
 
-    // Get standardized observability configuration for databases
-    const otelConfig = this.configureObservability(this.database, {
+    const instanceConfig = this.config!.instance ?? {};
+    const backupConfig = this.config!.backup ?? {};
+    const monitoringConfig = this.config!.monitoring ?? {};
+
+    this.configureObservability(this.database, {
       customAttributes: {
         'database.engine': 'postgres',
-        'database.version': '15.4',
+        'database.version': instanceConfig.engineVersion ?? '15.4',
         'database.name': this.config!.dbName,
-        'database.instance.class': this.config!.instanceClass || 'db.t3.micro',
-        'database.multi.az': (!!this.config!.multiAz).toString(),
-        'database.backup.retention': this.getBackupRetentionDays().toString(),
-        'database.performance.insights': this.shouldEnableRdsPerformanceInsights().toString()
+        'database.instance.type': instanceConfig.instanceType ?? 't3.micro',
+        'database.multi.az': (instanceConfig.multiAz ?? false).toString(),
+        'database.backup.retention': (backupConfig.retentionDays ?? 7).toString(),
+        'database.performance.insights': (monitoringConfig.performanceInsights?.enabled ?? false).toString()
       }
     });
 
-    // Enable Performance Insights based on compliance framework
-    if (this.shouldEnableRdsPerformanceInsights()) {
-      const cfnInstance = this.database.node.defaultChild as rds.CfnDBInstance;
+    const cfnInstance = this.database.node.defaultChild as rds.CfnDBInstance;
+
+    if (monitoringConfig.performanceInsights?.enabled ?? false) {
       cfnInstance.enablePerformanceInsights = true;
-      cfnInstance.performanceInsightsRetentionPeriod = this.getPerformanceInsightsRetentionDays();
-      
-      // Use customer-managed KMS key for Performance Insights in compliance environments
-      if (this.kmsKey) {
+      cfnInstance.performanceInsightsRetentionPeriod = this.config!.monitoring!.performanceInsights!.retentionDays ?? 7;
+      if ((monitoringConfig.performanceInsights?.useCustomerManagedKey ?? false) && this.kmsKey) {
         cfnInstance.performanceInsightsKmsKeyId = this.kmsKey.keyArn;
       }
     }
 
-    // Configure enhanced monitoring for detailed system metrics
-    const cfnInstance = this.database.node.defaultChild as rds.CfnDBInstance;
-    cfnInstance.monitoringInterval = this.getDatabaseMonitoringInterval();
-    
-    // Enable CloudWatch Logs exports for PostgreSQL
-    cfnInstance.enableCloudwatchLogsExports = ['postgresql'];
-  }
+    if (monitoringConfig.enhancedMonitoring?.enabled ?? false) {
+      cfnInstance.monitoringInterval = monitoringConfig.enhancedMonitoring.intervalSeconds ?? 60;
+    } else {
+      cfnInstance.monitoringInterval = 0;
+    }
 
-
-  /**
-   * Get Performance Insights retention period based on compliance framework
-   */
-  private getPerformanceInsightsRetentionDays(): number {
-    switch (this.context.complianceFramework) {
-      case 'fedramp-high':
-        return 2555; // 7 years for FedRAMP High
-      case 'fedramp-moderate':
-        return 1095; // 3 years for FedRAMP Moderate
-      default:
-        return 7; // Default minimum for commercial
+    if (this.config?.observability?.logExports?.length) {
+      cfnInstance.enableCloudwatchLogsExports = this.config!.observability!.logExports!;
     }
   }
 
-  /**
-   * Get enhanced monitoring interval based on compliance requirements
-   */
-  private getDatabaseMonitoringInterval(): number {
-    switch (this.context.complianceFramework) {
-      case 'fedramp-high':
-        return 1; // 1 second for high-frequency monitoring
-      case 'fedramp-moderate':
-        return 5; // 5 seconds for standard monitoring
-      default:
-        return 60; // 1 minute for cost-effective monitoring
-    }
+
+  private resolveEngineVersion(): rds.PostgresEngineVersion {
+    const version = this.config?.instance?.engineVersion ?? '15.4';
+    const major = version.split('.')[0] ?? '15';
+    return rds.PostgresEngineVersion.of(version, major);
   }
 
-  /**
-   * Configure CloudWatch observability for RDS PostgreSQL
-   */
-  private configureObservabilityForRds(): void {
-    // Enable monitoring for compliance frameworks only
-    if (this.context.complianceFramework === 'commercial') {
-      return;
+  private resolvePerformanceInsightsRetention(): rds.PerformanceInsightRetention | undefined {
+    if (!(this.config?.monitoring?.performanceInsights?.enabled ?? false)) {
+      return undefined;
     }
 
-    const dbIdentifier = this.database!.instanceIdentifier;
-
-    // 1. Database Connection Count Alarm
-    new cloudwatch.Alarm(this, 'DatabaseConnectionsAlarm', {
-      alarmName: `${this.context.serviceName}-${this.spec.name}-db-connections`,
-      alarmDescription: 'RDS PostgreSQL database connections alarm',
-      metric: new cloudwatch.Metric({
-        namespace: 'AWS/RDS',
-        metricName: 'DatabaseConnections',
-        dimensionsMap: {
-          DBInstanceIdentifier: dbIdentifier
-        },
-        statistic: 'Average',
-        period: cdk.Duration.minutes(5)
-      }),
-      threshold: 80,
-      evaluationPeriods: 2,
-      comparisonOperator: cloudwatch.ComparisonOperator.GREATER_THAN_THRESHOLD,
-      treatMissingData: cloudwatch.TreatMissingData.NOT_BREACHING
-    });
-
-    // 2. CPU Utilization Alarm
-    new cloudwatch.Alarm(this, 'DatabaseCPUAlarm', {
-      alarmName: `${this.context.serviceName}-${this.spec.name}-db-cpu`,
-      alarmDescription: 'RDS PostgreSQL CPU utilization alarm',
-      metric: new cloudwatch.Metric({
-        namespace: 'AWS/RDS',
-        metricName: 'CPUUtilization',
-        dimensionsMap: {
-          DBInstanceIdentifier: dbIdentifier
-        },
-        statistic: 'Average',
-        period: cdk.Duration.minutes(5)
-      }),
-      threshold: 80,
-      evaluationPeriods: 3,
-      comparisonOperator: cloudwatch.ComparisonOperator.GREATER_THAN_THRESHOLD,
-      treatMissingData: cloudwatch.TreatMissingData.NOT_BREACHING
-    });
-
-    // 3. Free Storage Space Alarm
-    new cloudwatch.Alarm(this, 'DatabaseStorageAlarm', {
-      alarmName: `${this.context.serviceName}-${this.spec.name}-db-storage`,
-      alarmDescription: 'RDS PostgreSQL free storage space alarm',
-      metric: new cloudwatch.Metric({
-        namespace: 'AWS/RDS',
-        metricName: 'FreeStorageSpace',
-        dimensionsMap: {
-          DBInstanceIdentifier: dbIdentifier
-        },
-        statistic: 'Average',
-        period: cdk.Duration.minutes(5)
-      }),
-      threshold: 2000000000, // 2GB in bytes
-      evaluationPeriods: 2,
-      comparisonOperator: cloudwatch.ComparisonOperator.LESS_THAN_THRESHOLD,
-      treatMissingData: cloudwatch.TreatMissingData.NOT_BREACHING
-    });
-
-    this.logComponentEvent('observability_configured', 'OpenTelemetry observability standard applied to RDS PostgreSQL', {
-      alarmsCreated: 3,
-      dbIdentifier: dbIdentifier,
-      monitoringEnabled: true
-    });
+    const days = this.config.monitoring.performanceInsights.retentionDays ?? 7;
+    return days >= 2555
+      ? rds.PerformanceInsightRetention.LONG_TERM
+      : rds.PerformanceInsightRetention.DEFAULT;
   }
 }

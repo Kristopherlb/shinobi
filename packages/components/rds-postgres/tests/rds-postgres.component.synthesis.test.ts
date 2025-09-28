@@ -1,94 +1,126 @@
 /**
- * RdsPostgresComponent Component Synthesis Test Suite
- * Implements Platform Testing Standard v1.0 - Component Synthesis Testing
+ * RdsPostgresComponent synthesis tests
+ * Validates that the component consumes resolved configuration without
+ * embedding compliance-aware logic in the implementation.
  */
 
-import { Template, Match } from 'aws-cdk-lib/assertions';
+jest.mock(
+  '@platform/logger',
+  () => ({
+    Logger: {
+      getLogger: () => ({
+        info: jest.fn(),
+        warn: jest.fn(),
+        error: jest.fn(),
+        debug: jest.fn()
+      }),
+      setGlobalContext: jest.fn()
+    }
+  }),
+  { virtual: true }
+);
+
 import { App, Stack } from 'aws-cdk-lib';
-import { RdsPostgresComponentComponent } from '../rds-postgres.component';
+import { Match, Template } from 'aws-cdk-lib/assertions';
+import { RdsPostgresComponent } from '../rds-postgres.component';
 import { RdsPostgresConfig } from '../rds-postgres.builder';
 import { ComponentContext, ComponentSpec } from '../../../platform/contracts/component-interfaces';
 
-const createMockContext = (
-  complianceFramework: string = 'commercial',
-  environment: string = 'dev'
-): ComponentContext => ({
-  serviceName: 'test-service',
-  owner: 'test-team',
-  environment,
-  complianceFramework,
+const createMockContext = (framework: string): ComponentContext => ({
+  serviceName: 'checkout',
+  owner: 'platform-team',
+  environment: 'dev',
+  complianceFramework: framework,
   region: 'us-east-1',
   account: '123456789012',
   tags: {
-    'service-name': 'test-service',
-    'owner': 'test-team',
-    'environment': environment,
-    'compliance-framework': complianceFramework
+    'service-name': 'checkout',
+    environment: 'dev',
+    'compliance-framework': framework
   }
 });
 
 const createMockSpec = (config: Partial<RdsPostgresConfig> = {}): ComponentSpec => ({
-  name: 'test-rds-postgres',
+  name: 'orders-db',
   type: 'rds-postgres',
   config
 });
 
-const synthesizeComponent = (
-  context: ComponentContext,
-  spec: ComponentSpec
-): { component: RdsPostgresComponentComponent; template: Template } => {
+const synthesize = (context: ComponentContext, spec: ComponentSpec) => {
   const app = new App();
   const stack = new Stack(app, 'TestStack');
-  
-  const component = new RdsPostgresComponentComponent(stack, spec, context);
+  const component = new RdsPostgresComponent(stack, spec.name, context, spec);
   component.synth();
-  
-  const template = Template.fromStack(stack);
-  return { component, template };
+  return { component, template: Template.fromStack(stack) };
 };
 
-describe('RdsPostgresComponentComponent Synthesis', () => {
-  
-  describe('Default Happy Path Synthesis', () => {
-    
-    it('should synthesize basic rds-postgres with commercial compliance', () => {
-      const context = createMockContext('commercial');
-      const spec = createMockSpec();
-      
-      const { template, component } = synthesizeComponent(context, spec);
-      
-      // TODO: Add specific CloudFormation resource assertions
-      // Verify component was created
-      expect(component).toBeDefined();
-      expect(component.getType()).toBe('rds-postgres');
+describe('RdsPostgresComponent synthesis', () => {
+  it('generates commercial baseline resources', () => {
+    const { template } = synthesize(createMockContext('commercial'), createMockSpec());
+
+    template.hasResourceProperties('AWS::RDS::DBInstance', {
+      DBInstanceClass: 'db.t3.micro',
+      MultiAZ: false,
+      StorageEncrypted: false,
+      EnablePerformanceInsights: Match.absent(),
+      EnableIAMDatabaseAuthentication: Match.absent(),
+      MonitoringInterval: Match.absent()
     });
-    
+
+    template.resourceCountIs('AWS::KMS::Key', 0);
+    template.resourceCountIs('AWS::Logs::LogGroup', 0);
   });
-  
-  describe('Component Capabilities and Constructs', () => {
-    
-    it('should register correct capabilities after synthesis', () => {
-      const context = createMockContext('commercial');
-      const spec = createMockSpec();
-      
-      const { component } = synthesizeComponent(context, spec);
-      
-      const capabilities = component.getCapabilities();
-      
-      // Verify component-specific capabilities
-      expect(capabilities).toBeDefined();
+
+  it('applies FedRAMP High hardened defaults via configuration', () => {
+    const { template } = synthesize(createMockContext('fedramp-high'), createMockSpec());
+
+    template.hasResourceProperties('AWS::KMS::Key', {
+      EnableKeyRotation: true
     });
-    
-    it('should register construct handles for patches.ts access', () => {
-      const context = createMockContext('commercial');
-      const spec = createMockSpec();
-      
-      const { component } = synthesizeComponent(context, spec);
-      
-      // Verify main construct is registered
-      expect(component.getConstruct('main')).toBeDefined();
+
+    template.hasResourceProperties('AWS::RDS::DBInstance', {
+      DBInstanceClass: 'db.r5.xlarge',
+      MultiAZ: true,
+      StorageEncrypted: true,
+      EnablePerformanceInsights: true,
+      PerformanceInsightsRetentionPeriod: 2555,
+      MonitoringInterval: 1,
+      EnableIAMDatabaseAuthentication: true,
+      EnableCloudwatchLogsExports: ['postgresql'],
+      DeletionProtection: true
     });
-    
+
+    template.resourceCountIs('AWS::Logs::LogGroup', 2);
   });
-  
+
+  it('respects manifest overrides for instance and backup configuration', () => {
+    const { template, component } = synthesize(
+      createMockContext('commercial'),
+      createMockSpec({
+        instance: {
+          instanceType: 'r6g.large',
+          multiAz: true
+        },
+        backup: {
+          retentionDays: 21
+        },
+        logging: {
+          database: { enabled: true, retentionInDays: 30 }
+        }
+      })
+    );
+
+    template.hasResourceProperties('AWS::RDS::DBInstance', {
+      DBInstanceClass: 'db.r6g.large',
+      MultiAZ: true,
+      BackupRetentionPeriod: 21
+    });
+
+    template.hasResourceProperties('AWS::Logs::LogGroup', {
+      RetentionInDays: 30
+    });
+
+    const capabilities = component.getCapabilities();
+    expect(capabilities['db:postgres'].securityProfile).toBe('baseline');
+  });
 });

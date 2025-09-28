@@ -216,3 +216,68 @@ defaults:
         tags:
           metric-type: security
           compliance: fedramp-moderate
+
+  rds-postgres:
+    instance:
+      engineVersion: '15.4'
+      instanceType: r5.large
+      allocatedStorage: 100
+      multiAz: true
+      deletionProtection: true
+      publiclyAccessible: false
+      removalPolicy: retain
+    encryption:
+      enabled: true
+      customerManagedKey:
+        create: true
+        enableRotation: true
+    backup:
+      retentionDays: 30
+      copyTagsToSnapshots: true
+    monitoring:
+      enhancedMonitoring:
+        enabled: true
+        intervalSeconds: 5
+      performanceInsights:
+        enabled: true
+        retentionDays: 1095
+        useCustomerManagedKey: true
+      alarms:
+        cpuUtilization:
+          enabled: true
+          threshold: 80
+          evaluationPeriods: 3
+          comparisonOperator: gte
+        freeStorageSpaceBytes:
+          enabled: true
+          threshold: 5368709120
+          evaluationPeriods: 2
+          comparisonOperator: lte
+        databaseConnections:
+          enabled: true
+          threshold: 80
+          evaluationPeriods: 2
+          comparisonOperator: gte
+    logging:
+      database:
+        enabled: true
+        retentionInDays: 180
+        removalPolicy: retain
+      audit:
+        enabled: false
+    rotation:
+      enabled: true
+      mode: single-user
+      scheduleInDays: 30
+    security:
+      iamAuthentication: false
+      enforceSsl: true
+    networking:
+      useDefaultVpc: true
+      ingressCidrs:
+        - 10.0.0.0/16
+      port: 5432
+    observability:
+      logExports:
+        - postgresql
+    hardeningProfile: hardened

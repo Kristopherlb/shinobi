@@ -167,3 +167,61 @@ defaults:
       detailedMetrics: false
       usageAlarm:
         enabled: false
+
+  rds-postgres:
+    instance:
+      engineVersion: '15.4'
+      instanceType: t3.micro
+      allocatedStorage: 20
+      multiAz: false
+      deletionProtection: false
+      publiclyAccessible: false
+      removalPolicy: destroy
+    encryption:
+      enabled: false
+      customerManagedKey:
+        create: false
+        enableRotation: false
+    backup:
+      retentionDays: 7
+      copyTagsToSnapshots: true
+    monitoring:
+      enhancedMonitoring:
+        enabled: false
+        intervalSeconds: 60
+      performanceInsights:
+        enabled: false
+        retentionDays: 7
+        useCustomerManagedKey: false
+      alarms:
+        cpuUtilization:
+          enabled: false
+        freeStorageSpaceBytes:
+          enabled: false
+        databaseConnections:
+          enabled: false
+    logging:
+      database:
+        enabled: false
+        retentionInDays: 90
+        removalPolicy: destroy
+      audit:
+        enabled: false
+        retentionInDays: 365
+        removalPolicy: retain
+    rotation:
+      enabled: false
+      mode: single-user
+      scheduleInDays: 30
+    security:
+      iamAuthentication: false
+      enforceSsl: true
+    networking:
+      useDefaultVpc: true
+      ingressCidrs:
+        - 10.0.0.0/16
+      port: 5432
+    observability:
+      logExports:
+        - postgresql
+    hardeningProfile: baseline

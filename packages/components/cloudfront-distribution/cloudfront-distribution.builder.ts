@@ -1,140 +1,404 @@
 /**
- * Configuration Builder for CloudFrontDistributionComponent Component
- * 
- * Implements the ConfigBuilder pattern as defined in the Platform Component API Contract.
- * Provides 5-layer configuration precedence chain and compliance-aware defaults.
+ * CloudFront Distribution configuration builder.
+ *
+ * Provides a configuration surface that follows the platform precedence chain
+ * and removes compliance-specific branching from the component implementation.
  */
 
-import { ConfigBuilder, ConfigBuilderContext } from '../../platform/contracts/config-builder';
+import {
+  ConfigBuilder,
+  ConfigBuilderContext,
+  ComponentConfigSchema
+} from '@shinobi/core';
+import { ComponentContext, ComponentSpec } from '@platform/contracts';
 
-/**
- * Configuration interface for CloudFrontDistributionComponent component
- */
-export interface CloudFrontDistributionConfig {
-  /** Component name (optional, will be auto-generated) */
-  name?: string;
-  
-  /** Component description */
-  description?: string;
-  
-  /** Enable detailed monitoring */
-  monitoring?: {
-    enabled?: boolean;
-    detailedMetrics?: boolean;
-    alarms?: {
-      // TODO: Define component-specific alarm thresholds
-    };
-  };
-  
-  /** Tagging configuration */
+export type ViewerProtocolPolicy = 'allow-all' | 'redirect-to-https' | 'https-only';
+export type PriceClass = 'PriceClass_100' | 'PriceClass_200' | 'PriceClass_All';
+export type GeoRestrictionType = 'none' | 'whitelist' | 'blacklist';
+export type OriginType = 's3' | 'alb' | 'custom';
+
+export interface CloudFrontAlarmConfig {
+  enabled?: boolean;
+  threshold?: number;
+  evaluationPeriods?: number;
+  periodMinutes?: number;
+  comparisonOperator?: 'gt' | 'gte' | 'lt' | 'lte';
+  treatMissingData?: 'breaching' | 'not-breaching' | 'ignore' | 'missing';
+  statistic?: string;
   tags?: Record<string, string>;
-  
-  // TODO: Add component-specific configuration properties
 }
 
-/**
- * JSON Schema for CloudFrontDistributionComponent configuration validation
- */
-export const CLOUDFRONT_DISTRIBUTION_CONFIG_SCHEMA = {
+export interface CloudFrontMonitoringConfig {
+  enabled?: boolean;
+  alarms?: {
+    error4xx?: CloudFrontAlarmConfig;
+    error5xx?: CloudFrontAlarmConfig;
+    originLatencyMs?: CloudFrontAlarmConfig;
+  };
+}
+
+export interface CloudFrontDomainConfig {
+  domainNames?: string[];
+  certificateArn?: string;
+}
+
+export interface CloudFrontLoggingConfig {
+  enabled?: boolean;
+  bucket?: string;
+  prefix?: string;
+  includeCookies?: boolean;
+}
+
+export interface CloudFrontOriginConfig {
+  type: OriginType;
+  s3BucketName?: string;
+  albDnsName?: string;
+  customDomainName?: string;
+  originPath?: string;
+  customHeaders?: Record<string, string>;
+}
+
+export interface CloudFrontBehaviorConfig {
+  viewerProtocolPolicy?: ViewerProtocolPolicy;
+  allowedMethods?: string[];
+  cachedMethods?: string[];
+  compress?: boolean;
+  cachePolicyId?: string;
+  originRequestPolicyId?: string;
+}
+
+export interface CloudFrontAdditionalBehaviorConfig extends CloudFrontBehaviorConfig {
+  pathPattern: string;
+}
+
+export interface CloudFrontGeoRestrictionConfig {
+  type?: GeoRestrictionType;
+  countries?: string[];
+}
+
+export interface CloudFrontDistributionConfig {
+  comment?: string;
+  origin: CloudFrontOriginConfig;
+  defaultBehavior?: CloudFrontBehaviorConfig;
+  additionalBehaviors?: CloudFrontAdditionalBehaviorConfig[];
+  priceClass?: PriceClass;
+  geoRestriction?: CloudFrontGeoRestrictionConfig;
+  domain?: CloudFrontDomainConfig;
+  logging?: CloudFrontLoggingConfig;
+  monitoring?: CloudFrontMonitoringConfig;
+  webAclId?: string;
+  hardeningProfile?: string;
+  tags?: Record<string, string>;
+}
+
+const ALARM_CONFIG_DEFINITION = {
   type: 'object',
+  additionalProperties: false,
   properties: {
-    name: {
+    enabled: { type: 'boolean', default: false },
+    threshold: { type: 'number' },
+    evaluationPeriods: { type: 'number', minimum: 1, default: 2 },
+    periodMinutes: { type: 'number', minimum: 1, default: 5 },
+    comparisonOperator: {
       type: 'string',
-      description: 'Component name (optional, will be auto-generated from component name)',
-      pattern: '^[a-zA-Z][a-zA-Z0-9-_]*$',
-      maxLength: 128
+      enum: ['gt', 'gte', 'lt', 'lte'],
+      default: 'gte'
     },
-    description: {
+    treatMissingData: {
       type: 'string',
-      description: 'Component description for documentation',
-      maxLength: 1024
+      enum: ['breaching', 'not-breaching', 'ignore', 'missing'],
+      default: 'not-breaching'
+    },
+    statistic: { type: 'string', default: 'Average' },
+    tags: {
+      type: 'object',
+      additionalProperties: { type: 'string' }
+    }
+  }
+};
+
+export const CLOUDFRONT_DISTRIBUTION_CONFIG_SCHEMA: ComponentConfigSchema = {
+  type: 'object',
+  additionalProperties: false,
+  required: ['origin'],
+  properties: {
+    comment: { type: 'string', maxLength: 128 },
+    origin: {
+      type: 'object',
+      additionalProperties: false,
+      required: ['type'],
+      properties: {
+        type: { type: 'string', enum: ['s3', 'alb', 'custom'] },
+        s3BucketName: { type: 'string' },
+        albDnsName: { type: 'string' },
+        customDomainName: { type: 'string' },
+        originPath: { type: 'string' },
+        customHeaders: {
+          type: 'object',
+          additionalProperties: { type: 'string' }
+        }
+      }
+    },
+    defaultBehavior: {
+      type: 'object',
+      additionalProperties: false,
+      properties: {
+        viewerProtocolPolicy: {
+          type: 'string',
+          enum: ['allow-all', 'redirect-to-https', 'https-only'],
+          default: 'allow-all'
+        },
+        allowedMethods: {
+          type: 'array',
+          items: { type: 'string' },
+          default: ['GET', 'HEAD']
+        },
+        cachedMethods: {
+          type: 'array',
+          items: { type: 'string' },
+          default: ['GET', 'HEAD']
+        },
+        compress: { type: 'boolean', default: true },
+        cachePolicyId: { type: 'string' },
+        originRequestPolicyId: { type: 'string' }
+      },
+      default: {}
+    },
+    additionalBehaviors: {
+      type: 'array',
+      items: {
+        type: 'object',
+        additionalProperties: false,
+        required: ['pathPattern'],
+        properties: {
+          pathPattern: { type: 'string' },
+          viewerProtocolPolicy: {
+            type: 'string',
+            enum: ['allow-all', 'redirect-to-https', 'https-only']
+          },
+          allowedMethods: {
+            type: 'array',
+            items: { type: 'string' }
+          },
+          cachedMethods: {
+            type: 'array',
+            items: { type: 'string' }
+          },
+          compress: { type: 'boolean' },
+          cachePolicyId: { type: 'string' },
+          originRequestPolicyId: { type: 'string' }
+        }
+      },
+      default: []
+    },
+    priceClass: {
+      type: 'string',
+      enum: ['PriceClass_100', 'PriceClass_200', 'PriceClass_All'],
+      default: 'PriceClass_100'
+    },
+    geoRestriction: {
+      type: 'object',
+      additionalProperties: false,
+      properties: {
+        type: {
+          type: 'string',
+          enum: ['none', 'whitelist', 'blacklist'],
+          default: 'none'
+        },
+        countries: {
+          type: 'array',
+          items: { type: 'string' }
+        }
+      },
+      default: {}
+    },
+    domain: {
+      type: 'object',
+      additionalProperties: false,
+      properties: {
+        domainNames: {
+          type: 'array',
+          items: { type: 'string' }
+        },
+        certificateArn: { type: 'string' }
+      },
+      default: {}
+    },
+    logging: {
+      type: 'object',
+      additionalProperties: false,
+      properties: {
+        enabled: { type: 'boolean', default: false },
+        bucket: { type: 'string' },
+        prefix: { type: 'string' },
+        includeCookies: { type: 'boolean', default: false }
+      },
+      default: {}
     },
     monitoring: {
       type: 'object',
-      description: 'Monitoring and observability configuration',
+      additionalProperties: false,
       properties: {
-        enabled: {
-          type: 'boolean',
-          default: true,
-          description: 'Enable monitoring'
-        },
-        detailedMetrics: {
-          type: 'boolean',
-          default: false,
-          description: 'Enable detailed CloudWatch metrics'
+        enabled: { type: 'boolean', default: false },
+        alarms: {
+          type: 'object',
+          additionalProperties: false,
+          properties: {
+            error4xx: ALARM_CONFIG_DEFINITION,
+            error5xx: ALARM_CONFIG_DEFINITION,
+            originLatencyMs: ALARM_CONFIG_DEFINITION
+          },
+          default: {}
         }
       },
-      additionalProperties: false
+      default: {}
     },
+    webAclId: { type: 'string' },
+    hardeningProfile: { type: 'string' },
     tags: {
       type: 'object',
-      description: 'Additional resource tags',
-      additionalProperties: { type: 'string' }
+      additionalProperties: { type: 'string' },
+      default: {}
     }
-    // TODO: Add component-specific schema properties
-  },
-  additionalProperties: false
+  }
 };
 
-/**
- * ConfigBuilder for CloudFrontDistributionComponent component
- * 
- * Implements the 5-layer configuration precedence chain:
- * 1. Hardcoded Fallbacks (ultra-safe baseline)
- * 2. Platform Defaults (from platform config)
- * 3. Environment Defaults (from environment config) 
- * 4. Component Overrides (from service.yml)
- * 5. Policy Overrides (from governance policies)
- */
 export class CloudFrontDistributionComponentConfigBuilder extends ConfigBuilder<CloudFrontDistributionConfig> {
-  
-  /**
-   * Layer 1: Hardcoded Fallbacks
-   * Ultra-safe baseline configuration that works in any environment
-   */
+  constructor(context: ComponentContext, spec: ComponentSpec) {
+    const builderContext: ConfigBuilderContext = { context, spec };
+    super(builderContext, CLOUDFRONT_DISTRIBUTION_CONFIG_SCHEMA);
+  }
+
   protected getHardcodedFallbacks(): Partial<CloudFrontDistributionConfig> {
     return {
-      monitoring: {
-        enabled: true,
-        detailedMetrics: false
+      comment: 'Managed by Shinobi platform',
+      origin: {
+        type: 's3'
       },
-      tags: {}
-      // TODO: Add component-specific hardcoded fallbacks
-    };
-  }
-  
-  /**
-   * Layer 2: Compliance Framework Defaults
-   * Security and compliance-specific configurations
-   */
-  protected getComplianceFrameworkDefaults(): Partial<CloudFrontDistributionConfig> {
-    const framework = this.context.complianceFramework;
-    
-    const baseCompliance: Partial<CloudFrontDistributionConfig> = {
+      defaultBehavior: {
+        viewerProtocolPolicy: 'allow-all',
+        allowedMethods: ['GET', 'HEAD'],
+        cachedMethods: ['GET', 'HEAD'],
+        compress: true
+      },
+      additionalBehaviors: [],
+      priceClass: 'PriceClass_100',
+      geoRestriction: {
+        type: 'none',
+        countries: []
+      },
+      logging: {
+        enabled: false,
+        includeCookies: false
+      },
       monitoring: {
-        enabled: true,
-        detailedMetrics: true
-      }
+        enabled: false,
+        alarms: {}
+      },
+      hardeningProfile: 'baseline',
+      tags: {}
     };
-    
-    if (framework === 'fedramp-moderate' || framework === 'fedramp-high') {
-      return {
-        ...baseCompliance,
-        monitoring: {
-          ...baseCompliance.monitoring,
-          detailedMetrics: true // Mandatory for FedRAMP
-        }
-        // TODO: Add FedRAMP-specific compliance defaults
-      };
-    }
-    
-    return baseCompliance;
   }
-  
-  /**
-   * Get the JSON Schema for validation
-   */
-  public getSchema(): any {
-    return CLOUDFRONT_DISTRIBUTION_CONFIG_SCHEMA;
+
+  public buildSync(): CloudFrontDistributionConfig {
+    const resolved = super.buildSync() as CloudFrontDistributionConfig;
+    return this.normaliseConfig(resolved);
+  }
+
+  private normaliseAlarmConfig(
+    alarm: CloudFrontAlarmConfig | undefined,
+    defaults: Required<Omit<CloudFrontAlarmConfig, 'tags'>>
+  ): CloudFrontAlarmConfig {
+    return {
+      enabled: alarm?.enabled ?? defaults.enabled,
+      threshold: alarm?.threshold ?? defaults.threshold,
+      evaluationPeriods: alarm?.evaluationPeriods ?? defaults.evaluationPeriods,
+      periodMinutes: alarm?.periodMinutes ?? defaults.periodMinutes,
+      comparisonOperator: alarm?.comparisonOperator ?? defaults.comparisonOperator,
+      treatMissingData: alarm?.treatMissingData ?? defaults.treatMissingData,
+      statistic: alarm?.statistic ?? defaults.statistic,
+      tags: alarm?.tags ?? {}
+    };
+  }
+
+  private normaliseConfig(config: CloudFrontDistributionConfig): CloudFrontDistributionConfig {
+    return {
+      comment: config.comment ?? 'Managed by Shinobi platform',
+      origin: {
+        type: config.origin.type,
+        s3BucketName: config.origin.s3BucketName,
+        albDnsName: config.origin.albDnsName,
+        customDomainName: config.origin.customDomainName,
+        originPath: config.origin.originPath,
+        customHeaders: config.origin.customHeaders ?? {}
+      },
+      defaultBehavior: {
+        viewerProtocolPolicy: config.defaultBehavior?.viewerProtocolPolicy ?? 'allow-all',
+        allowedMethods: config.defaultBehavior?.allowedMethods ?? ['GET', 'HEAD'],
+        cachedMethods: config.defaultBehavior?.cachedMethods ?? ['GET', 'HEAD'],
+        compress: config.defaultBehavior?.compress ?? true,
+        cachePolicyId: config.defaultBehavior?.cachePolicyId,
+        originRequestPolicyId: config.defaultBehavior?.originRequestPolicyId
+      },
+      additionalBehaviors: (config.additionalBehaviors ?? []).map(behavior => ({
+        pathPattern: behavior.pathPattern,
+        viewerProtocolPolicy: behavior.viewerProtocolPolicy ?? config.defaultBehavior?.viewerProtocolPolicy ?? 'allow-all',
+        allowedMethods: behavior.allowedMethods ?? ['GET', 'HEAD'],
+        cachedMethods: behavior.cachedMethods ?? ['GET', 'HEAD'],
+        compress: behavior.compress ?? true,
+        cachePolicyId: behavior.cachePolicyId,
+        originRequestPolicyId: behavior.originRequestPolicyId
+      })),
+      priceClass: config.priceClass ?? 'PriceClass_100',
+      geoRestriction: {
+        type: config.geoRestriction?.type ?? 'none',
+        countries: config.geoRestriction?.countries ?? []
+      },
+      domain: {
+        domainNames: config.domain?.domainNames ?? [],
+        certificateArn: config.domain?.certificateArn
+      },
+      logging: {
+        enabled: config.logging?.enabled ?? false,
+        bucket: config.logging?.bucket,
+        prefix: config.logging?.prefix,
+        includeCookies: config.logging?.includeCookies ?? false
+      },
+      monitoring: {
+        enabled: config.monitoring?.enabled ?? false,
+        alarms: {
+          error4xx: this.normaliseAlarmConfig(config.monitoring?.alarms?.error4xx, {
+            enabled: config.monitoring?.enabled ?? false,
+            threshold: 50,
+            evaluationPeriods: 2,
+            periodMinutes: 5,
+            comparisonOperator: 'gte',
+            treatMissingData: 'not-breaching',
+            statistic: 'Average'
+          }),
+          error5xx: this.normaliseAlarmConfig(config.monitoring?.alarms?.error5xx, {
+            enabled: config.monitoring?.enabled ?? false,
+            threshold: 10,
+            evaluationPeriods: 2,
+            periodMinutes: 5,
+            comparisonOperator: 'gte',
+            treatMissingData: 'not-breaching',
+            statistic: 'Average'
+          }),
+          originLatencyMs: this.normaliseAlarmConfig(config.monitoring?.alarms?.originLatencyMs, {
+            enabled: config.monitoring?.enabled ?? false,
+            threshold: 5000,
+            evaluationPeriods: 2,
+            periodMinutes: 5,
+            comparisonOperator: 'gte',
+            treatMissingData: 'not-breaching',
+            statistic: 'Average'
+          })
+        }
+      },
+      webAclId: config.webAclId,
+      hardeningProfile: config.hardeningProfile ?? 'baseline',
+      tags: config.tags ?? {}
+    };
   }
 }
