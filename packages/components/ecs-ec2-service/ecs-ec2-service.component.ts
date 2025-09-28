@@ -102,6 +102,36 @@ export interface EcsEc2ServiceConfig {
 
   /** Additional tags for service resources */
   tags?: Record<string, string>;
+
+  /** Logging configuration */
+  logging?: {
+    /** CloudWatch Logs retention period in days (must align with AWS supported values) */
+    retentionInDays?: number;
+  };
+
+  /** Monitoring and alarm configuration */
+  monitoring?: {
+    /** Enable or disable all monitoring resources */
+    enabled?: boolean;
+    /** CPU utilization alarm configuration */
+    cpuAlarm?: {
+      /** Enable or disable the CPU alarm */
+      enabled?: boolean;
+      /** CPU utilization threshold percentage */
+      threshold?: number;
+      /** Number of evaluation periods required to trigger the alarm */
+      evaluationPeriods?: number;
+    };
+    /** Memory utilization alarm configuration */
+    memoryAlarm?: {
+      /** Enable or disable the memory alarm */
+      enabled?: boolean;
+      /** Memory utilization threshold percentage */
+      threshold?: number;
+      /** Number of evaluation periods required to trigger the alarm */
+      evaluationPeriods?: number;
+    };
+  };
 }
 
 /**
@@ -325,6 +355,76 @@ export const ECS_EC2_SERVICE_CONFIG_SCHEMA = {
       additionalProperties: {
         type: 'string'
       }
+    },
+    logging: {
+      type: 'object',
+      description: 'Logging configuration for ECS service resources',
+      additionalProperties: false,
+      properties: {
+        retentionInDays: {
+          type: 'number',
+          description: 'CloudWatch Logs retention period in days',
+          enum: [1, 3, 5, 7, 14, 30, 60, 90, 120, 150, 180, 365, 400, 545, 731, 1096, 1827, 2192, 2557, 2922, 3288, 3653, 9999]
+        }
+      }
+    },
+    monitoring: {
+      type: 'object',
+      description: 'Monitoring and alarm configuration for the ECS service',
+      additionalProperties: false,
+      properties: {
+        enabled: {
+          type: 'boolean',
+          description: 'Enable or disable monitoring resources',
+          default: true
+        },
+        cpuAlarm: {
+          type: 'object',
+          additionalProperties: false,
+          properties: {
+            enabled: {
+              type: 'boolean',
+              description: 'Enable the CPU utilization alarm',
+              default: true
+            },
+            threshold: {
+              type: 'number',
+              description: 'CPU utilization threshold percentage',
+              minimum: 1,
+              maximum: 100
+            },
+            evaluationPeriods: {
+              type: 'number',
+              description: 'Number of periods to evaluate before triggering the alarm',
+              minimum: 1,
+              maximum: 10
+            }
+          }
+        },
+        memoryAlarm: {
+          type: 'object',
+          additionalProperties: false,
+          properties: {
+            enabled: {
+              type: 'boolean',
+              description: 'Enable the memory utilization alarm',
+              default: true
+            },
+            threshold: {
+              type: 'number',
+              description: 'Memory utilization threshold percentage',
+              minimum: 1,
+              maximum: 100
+            },
+            evaluationPeriods: {
+              type: 'number',
+              description: 'Number of periods to evaluate before triggering the alarm',
+              minimum: 1,
+              maximum: 10
+            }
+          }
+        }
+      }
     }
   },
   additionalProperties: false,
@@ -343,6 +443,22 @@ export const ECS_EC2_SERVICE_CONFIG_SCHEMA = {
     autoScaling: {
       targetCpuUtilization: 70,
       targetMemoryUtilization: 80
+    },
+    logging: {
+      retentionInDays: 30
+    },
+    monitoring: {
+      enabled: true,
+      cpuAlarm: {
+        enabled: true,
+        threshold: 80,
+        evaluationPeriods: 3
+      },
+      memoryAlarm: {
+        enabled: true,
+        threshold: 85,
+        evaluationPeriods: 3
+      }
     }
   }
 };
@@ -389,7 +505,23 @@ export class EcsEc2ServiceConfigBuilder extends ConfigBuilder<EcsEc2ServiceConfi
       placementStrategies: [{
         type: 'spread',
         field: 'instanceId'
-      }]
+      }],
+      logging: {
+        retentionInDays: 30
+      },
+      monitoring: {
+        enabled: true,
+        cpuAlarm: {
+          enabled: true,
+          threshold: 80,
+          evaluationPeriods: 3
+        },
+        memoryAlarm: {
+          enabled: true,
+          threshold: 85,
+          evaluationPeriods: 3
+        }
+      }
     };
   }
 
@@ -416,6 +548,19 @@ export class EcsEc2ServiceConfigBuilder extends ConfigBuilder<EcsEc2ServiceConfi
             targetCpuUtilization: 60, // More conservative scaling
             targetMemoryUtilization: 70
           },
+          logging: {
+            retentionInDays: 731
+          },
+          monitoring: {
+            cpuAlarm: {
+              threshold: 60,
+              evaluationPeriods: 2
+            },
+            memoryAlarm: {
+              threshold: 70,
+              evaluationPeriods: 2
+            }
+          },
           // High compliance placement: spread across AZs and instances
           placementStrategies: [
             { type: 'spread', field: 'attribute:ecs.availability-zone' },
@@ -439,6 +584,19 @@ export class EcsEc2ServiceConfigBuilder extends ConfigBuilder<EcsEc2ServiceConfi
             targetCpuUtilization: 65,
             targetMemoryUtilization: 75
           },
+          logging: {
+            retentionInDays: 365
+          },
+          monitoring: {
+            cpuAlarm: {
+              threshold: 70,
+              evaluationPeriods: 3
+            },
+            memoryAlarm: {
+              threshold: 80,
+              evaluationPeriods: 3
+            }
+          },
           placementStrategies: [{
             type: 'spread',
             field: 'instanceId'
@@ -455,6 +613,19 @@ export class EcsEc2ServiceConfigBuilder extends ConfigBuilder<EcsEc2ServiceConfi
             maxCapacity: 3, // Limited scaling for cost
             targetCpuUtilization: 70,
             targetMemoryUtilization: 80
+          },
+          logging: {
+            retentionInDays: 30
+          },
+          monitoring: {
+            cpuAlarm: {
+              threshold: 80,
+              evaluationPeriods: 3
+            },
+            memoryAlarm: {
+              threshold: 85,
+              evaluationPeriods: 3
+            }
           },
           // Cost-optimized placement: binpack to minimize instance usage
           placementStrategies: [{
@@ -728,78 +899,69 @@ export class EcsEc2ServiceComponent extends BaseComponent {
   private createEcsServiceAlarms(): void {
     if (!this.service) return;
 
+    const monitoring = this.config?.monitoring;
+    if (monitoring?.enabled === false) {
+      return;
+    }
+
     const cluster = this.getClusterFromBinding();
     const serviceName = this.service.serviceName;
 
-    // CPU Utilization Alarm
-    const cpuAlarm = new cloudwatch.Alarm(this, 'CpuUtilizationAlarm', {
-      alarmName: `${this.context.serviceName}-${this.spec.name}-cpu-high`,
-      alarmDescription: `High CPU utilization for ECS EC2 service ${serviceName}`,
-      metric: new cloudwatch.Metric({
-        namespace: 'AWS/ECS',
-        metricName: 'CPUUtilization',
-        statistic: 'Average',
-        period: cdk.Duration.minutes(5),
-        dimensionsMap: {
-          ServiceName: serviceName,
-          ClusterName: cluster.clusterName
-        }
-      }),
-      threshold: this.getCpuAlarmThreshold(),
-      evaluationPeriods: 3,
-      comparisonOperator: cloudwatch.ComparisonOperator.GREATER_THAN_THRESHOLD
-    });
+    const alarmsToRegister: Array<{ id: string; alarm: cloudwatch.Alarm }> = [];
 
-    // Memory Utilization Alarm
-    const memoryAlarm = new cloudwatch.Alarm(this, 'MemoryUtilizationAlarm', {
-      alarmName: `${this.context.serviceName}-${this.spec.name}-memory-high`,
-      alarmDescription: `High memory utilization for ECS EC2 service ${serviceName}`,
-      metric: new cloudwatch.Metric({
-        namespace: 'AWS/ECS',
-        metricName: 'MemoryUtilization',
-        statistic: 'Average',
-        period: cdk.Duration.minutes(5),
-        dimensionsMap: {
-          ServiceName: serviceName,
-          ClusterName: cluster.clusterName
-        }
-      }),
-      threshold: this.getMemoryAlarmThreshold(),
-      evaluationPeriods: 3,
-      comparisonOperator: cloudwatch.ComparisonOperator.GREATER_THAN_THRESHOLD
-    });
+    const cpuAlarmConfig = monitoring?.cpuAlarm ?? {};
+    if (cpuAlarmConfig.enabled !== false) {
+      const cpuThreshold = cpuAlarmConfig.threshold ?? 80;
+      const cpuEvaluationPeriods = cpuAlarmConfig.evaluationPeriods ?? 3;
 
-    // Register alarms as constructs for visibility
-    this.registerConstruct('cpuAlarm', cpuAlarm);
-    this.registerConstruct('memoryAlarm', memoryAlarm);
-  }
+      const cpuAlarm = new cloudwatch.Alarm(this, 'CpuUtilizationAlarm', {
+        alarmName: `${this.context.serviceName}-${this.spec.name}-cpu-high`,
+        alarmDescription: `High CPU utilization for ECS EC2 service ${serviceName}`,
+        metric: new cloudwatch.Metric({
+          namespace: 'AWS/ECS',
+          metricName: 'CPUUtilization',
+          statistic: 'Average',
+          period: cdk.Duration.minutes(5),
+          dimensionsMap: {
+            ServiceName: serviceName,
+            ClusterName: cluster.clusterName
+          }
+        }),
+        threshold: cpuThreshold,
+        evaluationPeriods: cpuEvaluationPeriods,
+        comparisonOperator: cloudwatch.ComparisonOperator.GREATER_THAN_THRESHOLD
+      });
 
-  /**
-   * Get CPU alarm threshold based on compliance framework
-   */
-  private getCpuAlarmThreshold(): number {
-    switch (this.context.complianceFramework) {
-      case 'fedramp-high':
-        return 60; // More aggressive monitoring for high security
-      case 'fedramp-moderate':
-        return 70; // Moderate monitoring
-      default:
-        return 80; // Standard commercial monitoring
+      alarmsToRegister.push({ id: 'cpuAlarm', alarm: cpuAlarm });
     }
-  }
 
-  /**
-   * Get memory alarm threshold based on compliance framework
-   */
-  private getMemoryAlarmThreshold(): number {
-    switch (this.context.complianceFramework) {
-      case 'fedramp-high':
-        return 70; // More aggressive monitoring for high security
-      case 'fedramp-moderate':
-        return 80; // Moderate monitoring
-      default:
-        return 85; // Standard commercial monitoring
+    const memoryAlarmConfig = monitoring?.memoryAlarm ?? {};
+    if (memoryAlarmConfig.enabled !== false) {
+      const memoryThreshold = memoryAlarmConfig.threshold ?? 85;
+      const memoryEvaluationPeriods = memoryAlarmConfig.evaluationPeriods ?? 3;
+
+      const memoryAlarm = new cloudwatch.Alarm(this, 'MemoryUtilizationAlarm', {
+        alarmName: `${this.context.serviceName}-${this.spec.name}-memory-high`,
+        alarmDescription: `High memory utilization for ECS EC2 service ${serviceName}`,
+        metric: new cloudwatch.Metric({
+          namespace: 'AWS/ECS',
+          metricName: 'MemoryUtilization',
+          statistic: 'Average',
+          period: cdk.Duration.minutes(5),
+          dimensionsMap: {
+            ServiceName: serviceName,
+            ClusterName: cluster.clusterName
+          }
+        }),
+        threshold: memoryThreshold,
+        evaluationPeriods: memoryEvaluationPeriods,
+        comparisonOperator: cloudwatch.ComparisonOperator.GREATER_THAN_THRESHOLD
+      });
+
+      alarmsToRegister.push({ id: 'memoryAlarm', alarm: memoryAlarm });
     }
+
+    alarmsToRegister.forEach(({ id, alarm }) => this.registerConstruct(id, alarm));
   }
 
   /**
@@ -952,14 +1114,18 @@ export class EcsEc2ServiceComponent extends BaseComponent {
    * Get log retention based on compliance framework
    */
   private getLogRetention(): logs.RetentionDays {
-    switch (this.context.complianceFramework) {
-      case 'fedramp-high':
-        return logs.RetentionDays.TWO_YEARS;
-      case 'fedramp-moderate':
-        return logs.RetentionDays.ONE_YEAR;
-      default:
-        return logs.RetentionDays.ONE_MONTH;
+    const retentionInDays = this.config?.logging?.retentionInDays ?? 30;
+    const isSupported = (logs.RetentionDays as unknown as Record<number, string | undefined>)[retentionInDays] !== undefined;
+
+    if (isSupported) {
+      return retentionInDays as unknown as logs.RetentionDays;
     }
+
+    this.logComponentEvent('log_retention_defaulted', 'Unsupported log retention requested; defaulting to one month', {
+      requestedRetentionInDays: retentionInDays
+    });
+
+    return logs.RetentionDays.ONE_MONTH;
   }
 
   /**

@@ -123,3 +123,28 @@ defaults:
       enabled: false
       clientErrorThreshold: 10
       serverErrorThreshold: 1
+
+  secrets-manager:
+    automaticRotation:
+      enabled: false
+      rotationLambda:
+        createFunction: false
+        enableTracing: false
+      schedule:
+        automaticallyAfterDays: 365
+    encryption:
+      createCustomerManagedKey: false
+      enableKeyRotation: false
+    recovery:
+      deletionProtection: false
+      recoveryWindowInDays: 30
+    replicas: []
+    monitoring:
+      enabled: false
+      rotationFailureThreshold: 1
+      unusualAccessThresholdMs: 5000
+    accessPolicies:
+      denyInsecureTransport: true
+      restrictToVpce: false
+      allowedVpceIds: []
+      requireTemporaryCredentials: false

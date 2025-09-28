@@ -139,9 +139,45 @@ defaults:
     compliance:
       auditLogging: true
       auditBucketRetentionDays: 1095
+      auditBucketLifecycleRules:
+        - id: fedramp-moderate-audit-retention
+          enabled: true
+          transitions:
+            - storageClass: GLACIER
+              transitionAfter: 90
+            - storageClass: DEEP_ARCHIVE
+              transitionAfter: 365
+          expiration:
+            days: 1095
       objectLock:
         enabled: false
     monitoring:
       enabled: true
       clientErrorThreshold: 5
       serverErrorThreshold: 1
+
+  secrets-manager:
+    automaticRotation:
+      enabled: true
+      rotationLambda:
+        createFunction: true
+        enableTracing: true
+      schedule:
+        automaticallyAfterDays: 90
+    encryption:
+      createCustomerManagedKey: true
+      enableKeyRotation: false
+    recovery:
+      deletionProtection: true
+      recoveryWindowInDays: 30
+    replicas: []
+    monitoring:
+      enabled: true
+      rotationFailureThreshold: 1
+      unusualAccessThresholdMs: 4000
+    accessPolicies:
+      denyInsecureTransport: true
+      restrictToVpce: true
+      allowedVpceIds:
+        - vpce-*
+      requireTemporaryCredentials: false

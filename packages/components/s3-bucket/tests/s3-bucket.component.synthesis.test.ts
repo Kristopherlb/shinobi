@@ -128,6 +128,25 @@ describe('S3BucketComponent__Synthesis__ComplianceBehaviors', () => {
       ])
     }));
 
+    template.hasResourceProperties('AWS::CloudWatch::Alarm', Match.objectLike({
+      Dimensions: Match.arrayWith([
+        Match.objectLike({ Name: 'BucketName', Value: Match.anyValue() }),
+        Match.objectLike({ Name: 'FilterId', Value: 'EntireBucket' })
+      ])
+    }));
+
+    const auditBuckets = template.findResources('AWS::S3::Bucket', {
+      Properties: Match.objectLike({
+        LifecycleConfiguration: Match.objectLike({
+          Rules: Match.arrayWith([
+            Match.objectLike({ Id: 'fedramp-moderate-audit-retention' })
+          ])
+        })
+      })
+    });
+
+    expect(Object.keys(auditBuckets)).toHaveLength(1);
+
     template.hasResourceProperties('AWS::S3::BucketPolicy', Match.objectLike({
       PolicyDocument: {
         Statement: Match.arrayWith([
@@ -175,7 +194,10 @@ describe('S3BucketComponent__Synthesis__ComplianceBehaviors', () => {
     template.hasResourceProperties('AWS::S3::BucketPolicy', Match.objectLike({
       PolicyDocument: {
         Statement: Match.arrayWith([
-          Match.objectLike({ Sid: 'DenyDeleteActions' })
+          Match.objectLike({
+            Sid: 'DenyDeleteActions',
+            Action: Match.arrayEquals(['s3:DeleteBucket', 's3:DeleteBucketPolicy'])
+          })
         ])
       }
     }));

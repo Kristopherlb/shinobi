@@ -16,357 +16,13 @@ import {
   ComponentContext,
   ComponentCapabilities
 } from '@platform/contracts';
-
-/**
- * Configuration interface for IAM Policy component
- */
-export interface IamPolicyConfig {
-  /** Policy name (optional, will be auto-generated if not provided) */
-  policyName?: string;
-  
-  /** Policy description */
-  description?: string;
-  
-  /** Policy type */
-  policyType?: 'managed' | 'inline';
-  
-  /** Policy document (IAM policy statements) */
-  policyDocument?: {
-    Version?: string;
-    Statement: Array<{
-      Sid?: string;
-      Effect: 'Allow' | 'Deny';
-      Action: string | string[];
-      Resource?: string | string[];
-      Principal?: any;
-      Condition?: Record<string, any>;
-    }>;
-  };
-  
-  /** Predefined policy templates */
-  policyTemplate?: {
-    /** Template type */
-    type: 'read-only' | 'power-user' | 'admin' | 'lambda-execution' | 'ecs-task' | 's3-access' | 'rds-access';
-    /** Resources to apply template to */
-    resources?: string[];
-    /** Additional permissions beyond template */
-    additionalStatements?: Array<{
-      Sid?: string;
-      Effect: 'Allow' | 'Deny';
-      Action: string | string[];
-      Resource?: string | string[];
-      Condition?: Record<string, any>;
-    }>;
-  };
-  
-  /** Path for managed policies */
-  path?: string;
-  
-  /** Groups to attach policy to */
-  groups?: string[];
-  
-  /** Roles to attach policy to */
-  roles?: string[];
-  
-  /** Users to attach policy to */
-  users?: string[];
-  
-  /** Tags for the policy */
-  tags?: Record<string, string>;
-}
-
-/**
- * Configuration schema for IAM Policy component
- */
-export const IAM_POLICY_CONFIG_SCHEMA = {
-  type: 'object',
-  title: 'IAM Policy Configuration',
-  description: 'Configuration for creating an IAM Policy',
-  properties: {
-    policyName: {
-      type: 'string',
-      description: 'Name of the policy (will be auto-generated if not provided)',
-      pattern: '^[a-zA-Z0-9+=,.@_-]+$',
-      maxLength: 128
-    },
-    description: {
-      type: 'string',
-      description: 'Description of the policy',
-      maxLength: 1000
-    },
-    policyType: {
-      type: 'string',
-      description: 'Type of IAM policy',
-      enum: ['managed', 'inline'],
-      default: 'managed'
-    },
-    policyDocument: {
-      type: 'object',
-      description: 'IAM policy document',
-      properties: {
-        Version: {
-          type: 'string',
-          description: 'Policy language version',
-          default: '2012-10-17'
-        },
-        Statement: {
-          type: 'array',
-          description: 'Policy statements',
-          items: {
-            type: 'object',
-            properties: {
-              Sid: {
-                type: 'string',
-                description: 'Statement ID'
-              },
-              Effect: {
-                type: 'string',
-                description: 'Allow or Deny',
-                enum: ['Allow', 'Deny']
-              },
-              Action: {
-                oneOf: [
-                  { type: 'string' },
-                  { type: 'array', items: { type: 'string' } }
-                ],
-                description: 'Actions'
-              },
-              Resource: {
-                oneOf: [
-                  { type: 'string' },
-                  { type: 'array', items: { type: 'string' } }
-                ],
-                description: 'Resources'
-              },
-              Condition: {
-                type: 'object',
-                description: 'Conditions'
-              }
-            },
-            required: ['Effect', 'Action'],
-            additionalProperties: false
-          },
-          minItems: 1
-        }
-      },
-      required: ['Statement'],
-      additionalProperties: false
-    },
-    policyTemplate: {
-      type: 'object',
-      description: 'Use predefined policy template',
-      properties: {
-        type: {
-          type: 'string',
-          description: 'Template type',
-          enum: ['read-only', 'power-user', 'admin', 'lambda-execution', 'ecs-task', 's3-access', 'rds-access']
-        },
-        resources: {
-          type: 'array',
-          description: 'Resources to apply template to',
-          items: { type: 'string' },
-          default: ['*']
-        },
-        additionalStatements: {
-          type: 'array',
-          description: 'Additional policy statements',
-          items: {
-            type: 'object',
-            properties: {
-              Sid: { type: 'string' },
-              Effect: { type: 'string', enum: ['Allow', 'Deny'] },
-              Action: {
-                oneOf: [
-                  { type: 'string' },
-                  { type: 'array', items: { type: 'string' } }
-                ]
-              },
-              Resource: {
-                oneOf: [
-                  { type: 'string' },
-                  { type: 'array', items: { type: 'string' } }
-                ]
-              },
-              Condition: { type: 'object' }
-            },
-            required: ['Effect', 'Action']
-          },
-          default: []
-        }
-      },
-      required: ['type'],
-      additionalProperties: false
-    },
-    path: {
-      type: 'string',
-      description: 'Path for managed policies',
-      pattern: '^/.*/$',
-      default: '/'
-    },
-    groups: {
-      type: 'array',
-      description: 'Groups to attach policy to',
-      items: { type: 'string' },
-      default: []
-    },
-    roles: {
-      type: 'array',
-      description: 'Roles to attach policy to',
-      items: { type: 'string' },
-      default: []
-    },
-    users: {
-      type: 'array',
-      description: 'Users to attach policy to',
-      items: { type: 'string' },
-      default: []
-    },
-    tags: {
-      type: 'object',
-      description: 'Tags for the policy',
-      additionalProperties: { type: 'string' },
-      default: {}
-    }
-  },
-  additionalProperties: false,
-  anyOf: [
-    { required: ['policyDocument'] },
-    { required: ['policyTemplate'] }
-  ],
-  defaults: {
-    policyType: 'managed',
-    path: '/',
-    groups: [],
-    roles: [],
-    users: [],
-    tags: {}
-  }
-};
-
-/**
- * Configuration builder for IAM Policy component
- */
-export class IamPolicyConfigBuilder {
-  private context: ComponentContext;
-  private spec: ComponentSpec;
-  
-  constructor(context: ComponentContext, spec: ComponentSpec) {
-    this.context = context;
-    this.spec = spec;
-  }
-
-  public async build(): Promise<IamPolicyConfig> {
-    return this.buildSync();
-  }
-
-  public buildSync(): IamPolicyConfig {
-    const platformDefaults = this.getPlatformDefaults();
-    const complianceDefaults = this.getComplianceFrameworkDefaults();
-    const userConfig = this.spec.config || {};
-    
-    const mergedConfig = this.mergeConfigs(
-      this.mergeConfigs(platformDefaults, complianceDefaults),
-      userConfig
-    );
-    
-    return mergedConfig as IamPolicyConfig;
-  }
-
-  private mergeConfigs(target: Record<string, any>, source: Record<string, any>): Record<string, any> {
-    const result = { ...target };
-    
-    for (const key in source) {
-      if (source[key] && typeof source[key] === 'object' && !Array.isArray(source[key])) {
-        result[key] = this.mergeConfigs(result[key] || {}, source[key]);
-      } else {
-        result[key] = source[key];
-      }
-    }
-    
-    return result;
-  }
-
-  private getPlatformDefaults(): Record<string, any> {
-    return {
-      policyType: 'managed',
-      path: '/',
-      tags: {
-        'service': this.context.serviceName,
-        'environment': this.context.environment,
-        'policy-type': 'platform-managed'
-      }
-    };
-  }
-
-  private getComplianceFrameworkDefaults(): Record<string, any> {
-    const framework = this.context.complianceFramework;
-    
-    switch (framework) {
-      case 'fedramp-moderate':
-        return {
-          tags: {
-            'compliance-framework': 'fedramp-moderate',
-            'policy-classification': 'controlled',
-            'audit-required': 'true'
-          },
-          // Add compliance-specific policy restrictions
-          additionalComplianceStatements: this.getComplianceStatements('moderate')
-        };
-        
-      case 'fedramp-high':
-        return {
-          tags: {
-            'compliance-framework': 'fedramp-high',
-            'policy-classification': 'confidential',
-            'audit-required': 'true',
-            'review-period': 'quarterly'
-          },
-          // Add stricter compliance statements
-          additionalComplianceStatements: this.getComplianceStatements('high')
-        };
-        
-      default: // commercial
-        return {};
-    }
-  }
-
-  private getComplianceStatements(level: string): Array<any> {
-    const baseStatements = [
-      {
-        Sid: 'DenyInsecureTransport',
-        Effect: 'Deny',
-        Action: '*',
-        Resource: '*',
-        Condition: {
-          Bool: {
-            'aws:SecureTransport': 'false'
-          }
-        }
-      }
-    ];
-
-    if (level === 'high') {
-      baseStatements.push({
-        Sid: 'RequireMFAForSensitiveActions',
-        Effect: 'Deny',
-        Action: [
-          'iam:*',
-          'kms:*',
-          's3:Delete*',
-          'rds:Delete*'
-        ],
-        Resource: '*',
-        Condition: {
-          BoolIfExists: {
-            'aws:MultiFactorAuthPresent': 'false'
-          }
-        }
-      });
-    }
-
-    return baseStatements;
-  }
-}
+import {
+  IamPolicyConfig,
+  IamPolicyComponentConfigBuilder,
+  IamPolicyLogConfig,
+  IamPolicyControlsConfig,
+  IamPolicyUsageAlarmConfig
+} from './iam-policy.builder';
 
 /**
  * IAM Policy Component implementing Component API Contract v1.0
@@ -388,7 +44,7 @@ export class IamPolicyComponent extends Component {
     const startTime = Date.now();
     
     try {
-      const configBuilder = new IamPolicyConfigBuilder(this.context, this.spec);
+      const configBuilder = new IamPolicyComponentConfigBuilder(this.context, this.spec);
       this.config = configBuilder.buildSync();
       
       this.logComponentEvent('config_built', 'IAM Policy configuration built successfully', {
@@ -399,7 +55,7 @@ export class IamPolicyComponent extends Component {
       
       this.createPolicy();
       this.attachPolicyToEntities();
-      this.applyComplianceHardening();
+      this.applyLoggingConfiguration();
       this.configureObservabilityForPolicy();
     
       this.registerConstruct('policy', this.policy!);
@@ -500,9 +156,9 @@ export class IamPolicyComponent extends Component {
       statements.push(...templateStatements);
     }
 
-    // Add compliance statements
-    const complianceStatements = this.buildComplianceStatements();
-    statements.push(...complianceStatements);
+    // Add control statements from configuration
+    const controlStatements = this.buildControlStatements();
+    statements.push(...controlStatements);
 
     return new iam.PolicyDocument({
       statements: statements

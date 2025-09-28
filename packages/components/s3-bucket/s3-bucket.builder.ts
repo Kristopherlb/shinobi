@@ -60,6 +60,7 @@ export interface S3BucketComplianceConfig {
   auditBucketName?: string;
   auditBucketRetentionDays?: number;
   auditBucketObjectLock?: S3BucketObjectLockConfig;
+  auditBucketLifecycleRules?: S3BucketLifecycleRule[];
   objectLock?: S3BucketObjectLockConfig;
 }
 
@@ -272,6 +273,57 @@ export const S3_BUCKET_CONFIG_SCHEMA: ComponentConfigSchema = {
             retentionDays: { type: 'number', minimum: 1 }
           }
         },
+        auditBucketLifecycleRules: {
+          type: 'array',
+          description: 'Lifecycle rules applied to the audit bucket',
+          items: {
+            type: 'object',
+            required: ['id', 'enabled'],
+            additionalProperties: false,
+            properties: {
+              id: {
+                type: 'string',
+                description: 'Unique identifier for the audit lifecycle rule'
+              },
+              enabled: {
+                type: 'boolean',
+                description: 'Enable or disable the audit bucket rule'
+              },
+              transitions: {
+                type: 'array',
+                description: 'Lifecycle transitions applied to audit objects',
+                items: {
+                  type: 'object',
+                  required: ['storageClass', 'transitionAfter'],
+                  additionalProperties: false,
+                  properties: {
+                    storageClass: {
+                      type: 'string',
+                      enum: ['STANDARD_IA', 'ONEZONE_IA', 'GLACIER', 'DEEP_ARCHIVE', 'GLACIER_IR'],
+                      description: 'Target storage class for the transition'
+                    },
+                    transitionAfter: {
+                      type: 'number',
+                      minimum: 1,
+                      description: 'Number of days after object creation to transition'
+                    }
+                  }
+                }
+              },
+              expiration: {
+                type: 'object',
+                additionalProperties: false,
+                properties: {
+                  days: {
+                    type: 'number',
+                    minimum: 1,
+                    description: 'Expire audit objects after the specified number of days'
+                  }
+                }
+              }
+            }
+          }
+        },
         objectLock: {
           type: 'object',
           additionalProperties: false,
@@ -366,6 +418,25 @@ export class S3BucketComponentConfigBuilder extends ConfigBuilder<S3BucketConfig
       },
       compliance: {
         auditLogging: false,
+        auditBucketLifecycleRules: [
+          {
+            id: 'audit-retention',
+            enabled: true,
+            transitions: [
+              {
+                storageClass: 'GLACIER',
+                transitionAfter: 90
+              },
+              {
+                storageClass: 'DEEP_ARCHIVE',
+                transitionAfter: 365
+              }
+            ],
+            expiration: {
+              days: 365
+            }
+          }
+        ],
         objectLock: {
           enabled: false
         }

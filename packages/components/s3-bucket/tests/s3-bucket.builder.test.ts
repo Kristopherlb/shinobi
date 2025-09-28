@@ -64,6 +64,16 @@ describe('S3BucketComponentConfigBuilder__ConfigurationPrecedence__PlatformDefau
     expect(config.encryption?.type).toBe('AES256');
     expect(config.security?.tools?.clamavScan).toBe(false);
     expect(config.monitoring?.enabled).toBe(false);
+    expect(config.compliance?.auditBucketLifecycleRules).toEqual([
+      expect.objectContaining({
+        id: 'audit-retention',
+        transitions: expect.arrayContaining([
+          expect.objectContaining({ storageClass: 'GLACIER', transitionAfter: 90 }),
+          expect.objectContaining({ storageClass: 'DEEP_ARCHIVE', transitionAfter: 365 })
+        ]),
+        expiration: expect.objectContaining({ days: 365 })
+      })
+    ]);
   });
 
   /*
@@ -97,6 +107,12 @@ describe('S3BucketComponentConfigBuilder__ConfigurationPrecedence__PlatformDefau
     expect(config.security?.requireMfaDelete).toBe(true);
     expect(config.monitoring?.enabled).toBe(true);
     expect(config.security?.tools?.clamavScan).toBe(false);
+    expect(config.compliance?.auditBucketLifecycleRules).toEqual([
+      expect.objectContaining({
+        id: 'fedramp-moderate-audit-retention',
+        expiration: expect.objectContaining({ days: 1095 })
+      })
+    ]);
   });
 
   /*
@@ -155,5 +171,58 @@ describe('S3BucketComponentConfigBuilder__ConfigurationPrecedence__PlatformDefau
     const config = builder.buildSync();
 
     expect(config.compliance?.auditLogging).toBe(false);
+  });
+
+  /*
+   * Test Metadata: TP-S3-BUCKET-CONFIG-005
+   * {
+   *   "id": "TP-S3-BUCKET-CONFIG-005",
+   *   "level": "unit",
+   *   "capability": "Builder merges custom audit lifecycle overrides",
+   *   "oracle": "exact",
+   *   "invariants": ["Developer overrides take precedence"],
+   *   "fixtures": ["ConfigBuilder", "Commercial context"],
+   *   "inputs": { "shape": "Component config specifying custom audit lifecycle", "notes": "Should replace defaults" },
+   *   "risks": ["Audit data retention mismatches"],
+   *   "dependencies": [],
+   *   "evidence": ["Merged configuration values"],
+   *   "compliance_refs": ["std://configuration"],
+   *   "ai_generated": false,
+   *   "human_reviewed_by": ""
+   * }
+   */
+  it('ConfigurationPrecedence__AuditLifecycleOverride__HonorsCustomRules', () => {
+    const builder = new S3BucketComponentConfigBuilder({
+      context: createContext('commercial'),
+      spec: createSpec({
+        compliance: {
+          auditLogging: true,
+          auditBucketLifecycleRules: [
+            {
+              id: 'custom-audit-retention',
+              enabled: true,
+              transitions: [
+                {
+                  storageClass: 'GLACIER',
+                  transitionAfter: 30
+                }
+              ],
+              expiration: {
+                days: 365
+              }
+            }
+          ]
+        }
+      })
+    });
+
+    const config = builder.buildSync();
+
+    expect(config.compliance?.auditBucketLifecycleRules).toEqual([
+      expect.objectContaining({
+        id: 'custom-audit-retention',
+        transitions: [expect.objectContaining({ transitionAfter: 30 })]
+      })
+    ]);
   });
 });

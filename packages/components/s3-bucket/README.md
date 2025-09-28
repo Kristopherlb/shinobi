@@ -103,14 +103,15 @@ components:
 
 This component provides the following capabilities for binding with other components:
 
-- `storage:s3-bucket` - Main s3-bucket capability
-- `monitoring:s3-bucket` - Monitoring capability
+- `bucket:s3` – Primary S3 bucket handle (name and ARN)
 
 ## Construct Handles
 
-The following construct handles are available for use in `patches.ts`:
-
-- `main` - Main s3-bucket construct
+- The following construct handles are registered for use in `patches.ts`:
+  - `main` – Alias of the primary bucket construct (legacy compatibility)
+  - `bucket` – Primary bucket construct
+  - `kmsKey` – Generated KMS key when the component creates one
+  - `auditBucket` – Dedicated audit logging bucket when enabled
 
 ## Compliance Frameworks
 

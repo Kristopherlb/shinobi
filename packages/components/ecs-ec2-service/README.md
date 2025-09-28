@@ -45,15 +45,27 @@ components:
 |----------|------|----------|-------------|
 | `name` | string | No | Component name (auto-generated if not provided) |
 | `description` | string | No | Component description for documentation |
-| `monitoring` | object | No | Monitoring and observability configuration |
+| `monitoring` | object | No | Monitoring configuration (CPU/Memory alarms, enablement) |
+| `logging` | object | No | Log retention configuration |
 | `tags` | object | No | Additional resource tags |
 
 ### Monitoring Configuration
 
 | Property | Type | Required | Description |
 |----------|------|----------|-------------|
-| `enabled` | boolean | No | Enable monitoring (default: true) |
-| `detailedMetrics` | boolean | No | Enable detailed CloudWatch metrics |
+| `enabled` | boolean | No | Enable monitoring resources (default: `true`) |
+| `cpuAlarm.enabled` | boolean | No | Enable CPU utilization alarm (default: `true`) |
+| `cpuAlarm.threshold` | number | No | CPU utilization percentage that triggers the alarm |
+| `cpuAlarm.evaluationPeriods` | number | No | Consecutive periods above threshold before alarming |
+| `memoryAlarm.enabled` | boolean | No | Enable memory utilization alarm (default: `true`) |
+| `memoryAlarm.threshold` | number | No | Memory utilization percentage that triggers the alarm |
+| `memoryAlarm.evaluationPeriods` | number | No | Consecutive periods above threshold before alarming |
+
+### Logging Configuration
+
+| Property | Type | Required | Description |
+|----------|------|----------|-------------|
+| `retentionInDays` | number | No | CloudWatch Logs retention period in days (must match AWS supported values) |
 
 ## Capabilities Provided
 

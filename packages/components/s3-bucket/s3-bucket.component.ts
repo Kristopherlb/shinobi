@@ -115,6 +115,17 @@ export class S3BucketComponent extends BaseComponent {
 
     const baseBucketName = compliance.auditBucketName ?? this.buildAuditBucketName();
     const retentionDays = compliance.auditBucketRetentionDays ?? 365;
+    const auditLifecycleRules = (compliance.auditBucketLifecycleRules ?? []).map(rule => ({
+      id: rule.id,
+      enabled: rule.enabled,
+      transitions: rule.transitions?.map(transition => ({
+        storageClass: this.getStorageClass(transition.storageClass),
+        transitionAfter: cdk.Duration.days(transition.transitionAfter)
+      })),
+      expiration: rule.expiration?.days
+        ? cdk.Duration.days(rule.expiration.days)
+        : undefined
+    }));
 
     this.auditBucket = new s3.Bucket(this, 'AuditBucket', {
       bucketName: baseBucketName,
@@ -123,23 +134,25 @@ export class S3BucketComponent extends BaseComponent {
       encryptionKey: this.kmsKey,
       blockPublicAccess: s3.BlockPublicAccess.BLOCK_ALL,
       removalPolicy: cdk.RemovalPolicy.RETAIN,
-      lifecycleRules: [
-        {
-          id: 'audit-retention',
-          enabled: true,
-          transitions: [
+      lifecycleRules: auditLifecycleRules.length
+        ? auditLifecycleRules
+        : [
             {
-              storageClass: s3.StorageClass.GLACIER,
-              transitionAfter: cdk.Duration.days(90)
-            },
-            {
-              storageClass: s3.StorageClass.DEEP_ARCHIVE,
-              transitionAfter: cdk.Duration.days(365)
+              id: 'audit-retention',
+              enabled: true,
+              transitions: [
+                {
+                  storageClass: s3.StorageClass.GLACIER,
+                  transitionAfter: cdk.Duration.days(90)
+                },
+                {
+                  storageClass: s3.StorageClass.DEEP_ARCHIVE,
+                  transitionAfter: cdk.Duration.days(365)
+                }
+              ],
+              expiration: cdk.Duration.days(retentionDays)
             }
-          ],
-          expiration: cdk.Duration.days(retentionDays)
-        }
-      ]
+          ]
     });
 
     this.applyStandardTags(this.auditBucket, {
@@ -313,6 +326,10 @@ export class S3BucketComponent extends BaseComponent {
     }
 
     const bucketName = this.bucket.bucketName;
+    const requestMetricDimensions = {
+      BucketName: bucketName,
+      FilterId: 'EntireBucket'
+    };
     this.bucket.addMetric({ id: 'EntireBucket' });
     const clientThreshold = this.config.monitoring.clientErrorThreshold ?? 10;
     const serverThreshold = this.config.monitoring.serverErrorThreshold ?? 1;
@@ -323,7 +340,7 @@ export class S3BucketComponent extends BaseComponent {
       metric: new cloudwatch.Metric({
         namespace: 'AWS/S3',
         metricName: '4xxErrors',
-        dimensionsMap: { BucketName: bucketName },
+        dimensionsMap: requestMetricDimensions,
         statistic: 'Sum',
         period: cdk.Duration.minutes(5)
       }),
@@ -344,7 +361,7 @@ export class S3BucketComponent extends BaseComponent {
       metric: new cloudwatch.Metric({
         namespace: 'AWS/S3',
         metricName: '5xxErrors',
-        dimensionsMap: { BucketName: bucketName },
+        dimensionsMap: requestMetricDimensions,
         statistic: 'Sum',
         period: cdk.Duration.minutes(5)
       }),

@@ -6,16 +6,6 @@
 import { SecretsManagerComponentConfigBuilder, SecretsManagerConfig } from '../secrets-manager.builder';
 import { ComponentContext, ComponentSpec } from '../../../platform/contracts/component-interfaces';
 
-beforeEach(() => {
-  jest
-    .spyOn(SecretsManagerComponentConfigBuilder.prototype as any, '_loadPlatformConfiguration')
-    .mockReturnValue({});
-});
-
-afterEach(() => {
-  jest.restoreAllMocks();
-});
-
 const createMockContext = (
   complianceFramework: string = 'commercial',
   environment: string = 'dev'

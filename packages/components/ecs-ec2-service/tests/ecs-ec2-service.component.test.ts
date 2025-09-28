@@ -70,6 +70,9 @@ describe('EcsEc2ServiceConfigBuilder__ConfigurationValidation__PlacementStrategi
     expect(config.taskMemory).toBe(1024); // Task-level memory MB
     expect(config.port).toBe(80); // Default HTTP port
     expect(config.desiredCount).toBe(1);
+    expect(config.monitoring?.cpuAlarm?.threshold).toBe(80);
+    expect(config.monitoring?.memoryAlarm?.threshold).toBe(85);
+    expect(config.logging?.retentionInDays).toBe(30);
   });
 
   it('ConfigBuilder__PlacementStrategies__ValidatesCorrectConfiguration', async () => {
@@ -158,6 +161,18 @@ describe('EcsEc2ServiceConfigBuilder__ConfigurationValidation__PlacementStrategi
         expect(config.placementStrategies).toBeDefined();
         const hasSpreadStrategy = config.placementStrategies?.some(strategy => strategy.type === 'spread');
         expect(hasSpreadStrategy).toBe(true);
+
+        expect(config.monitoring?.cpuAlarm?.threshold).toBeLessThanOrEqual(60);
+        expect(config.monitoring?.memoryAlarm?.threshold).toBeLessThanOrEqual(70);
+        expect(config.logging?.retentionInDays).toBeGreaterThanOrEqual(731);
+      } else if (framework === 'fedrampModerate') {
+        expect(config.monitoring?.cpuAlarm?.threshold).toBeLessThanOrEqual(70);
+        expect(config.monitoring?.memoryAlarm?.threshold).toBeLessThanOrEqual(80);
+        expect(config.logging?.retentionInDays).toBeGreaterThanOrEqual(365);
+      } else {
+        expect(config.monitoring?.cpuAlarm?.threshold).toBe(80);
+        expect(config.monitoring?.memoryAlarm?.threshold).toBe(85);
+        expect(config.logging?.retentionInDays).toBe(30);
       }
     }
   });
