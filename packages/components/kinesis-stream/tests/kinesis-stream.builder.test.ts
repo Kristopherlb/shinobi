@@ -1,99 +1,105 @@
-/**
- * KinesisStreamComponent ConfigBuilder Test Suite
- * Implements Platform Testing Standard v1.0 - ConfigBuilder Testing
- */
-
-import { KinesisStreamComponentConfigBuilder, KinesisStreamConfig } from '../kinesis-stream.builder';
+import {
+  KinesisStreamComponentConfigBuilder,
+  KinesisStreamConfig
+} from '../kinesis-stream.builder';
 import { ComponentContext, ComponentSpec } from '../../../platform/contracts/component-interfaces';
 
-const createMockContext = (
-  complianceFramework: string = 'commercial',
-  environment: string = 'dev'
-): ComponentContext => ({
-  serviceName: 'test-service',
-  owner: 'test-team',
-  environment,
-  complianceFramework,
+const createMockContext = (framework: string = 'commercial'): ComponentContext => ({
+  serviceName: 'analytics-service',
+  owner: 'platform-team',
+  environment: 'dev',
+  complianceFramework: framework,
   region: 'us-east-1',
   account: '123456789012',
   tags: {
-    'service-name': 'test-service',
-    'owner': 'test-team',
-    'environment': environment,
-    'compliance-framework': complianceFramework
+    'service-name': 'analytics-service',
+    environment: 'dev',
+    'compliance-framework': framework
   }
 });
 
 const createMockSpec = (config: Partial<KinesisStreamConfig> = {}): ComponentSpec => ({
-  name: 'test-kinesis-stream',
+  name: 'events-stream',
   type: 'kinesis-stream',
   config
 });
 
 describe('KinesisStreamComponentConfigBuilder', () => {
-  
-  describe('Hardcoded Fallbacks (Layer 1)', () => {
-    
-    it('should provide ultra-safe baseline configuration', () => {
-      const context = createMockContext();
-      const spec = createMockSpec();
-      
-      const builder = new KinesisStreamComponentConfigBuilder(context, spec);
-      const config = builder.buildSync();
-      
-      // Verify hardcoded fallbacks are applied
-      expect(config.monitoring?.enabled).toBe(true);
-      expect(config.monitoring?.detailedMetrics).toBe(false);
-      expect(config.tags).toBeDefined();
-    });
-    
+  it('merges commercial defaults with hardcoded fallbacks', () => {
+    const builder = new KinesisStreamComponentConfigBuilder(createMockContext('commercial'), createMockSpec());
+    const config = builder.buildSync();
+
+    expect(config.streamName).toBe('events-stream');
+    expect(config.streamMode).toBe('provisioned');
+    expect(config.shardCount).toBe(1);
+    expect(config.retentionHours).toBe(24);
+    expect(config.encryption.type).toBe('none');
+    expect(config.monitoring.enabled).toBe(false);
+    expect(config.hardeningProfile).toBe('baseline');
   });
-  
-  describe('Compliance Framework Defaults (Layer 2)', () => {
-    
-    it('should apply commercial compliance defaults', () => {
-      const context = createMockContext('commercial');
-      const spec = createMockSpec();
-      
-      const builder = new KinesisStreamComponentConfigBuilder(context, spec);
-      const config = builder.buildSync();
-      
-      expect(config.monitoring?.enabled).toBe(true);
-      expect(config.monitoring?.detailedMetrics).toBe(true);
-    });
-    
-    it('should apply FedRAMP compliance defaults', () => {
-      const context = createMockContext('fedramp-moderate');
-      const spec = createMockSpec();
-      
-      const builder = new KinesisStreamComponentConfigBuilder(context, spec);
-      const config = builder.buildSync();
-      
-      expect(config.monitoring?.enabled).toBe(true);
-      expect(config.monitoring?.detailedMetrics).toBe(true); // Mandatory for FedRAMP
-    });
-    
+
+  it('applies FedRAMP High defaults from segregated configuration', () => {
+    const builder = new KinesisStreamComponentConfigBuilder(createMockContext('fedramp-high'), createMockSpec());
+    const config = builder.buildSync();
+
+    expect(config.streamMode).toBe('provisioned');
+    expect(config.shardCount).toBeGreaterThanOrEqual(1);
+    expect(config.retentionHours).toBeGreaterThanOrEqual(168);
+    expect(config.encryption.type).toBe('kms');
+    expect(config.monitoring.enabled).toBe(true);
+    expect(config.monitoring.enhancedMetrics).toBe(true);
+    expect(config.monitoring.alarms?.iteratorAgeMs?.threshold).toBeLessThanOrEqual(60000);
+    expect(config.hardeningProfile).toBe('stig');
   });
-  
-  describe('5-Layer Precedence Chain', () => {
-    
-    it('should apply component overrides over platform defaults', () => {
-      const context = createMockContext('commercial');
-      const spec = createMockSpec({
+
+  it('sanitises stream name and honours manifest overrides', () => {
+    const builder = new KinesisStreamComponentConfigBuilder(
+      createMockContext('commercial'),
+      createMockSpec({
+        streamName: 'events stream@dev',
+        streamMode: 'on-demand',
+        encryption: {
+          type: 'aws-managed'
+        },
         monitoring: {
-          enabled: false,
-          detailedMetrics: false
+          enabled: true,
+          alarms: {
+            iteratorAgeMs: {
+              enabled: true,
+              threshold: 180000
+            }
+          }
         }
-      });
-      
-      const builder = new KinesisStreamComponentConfigBuilder(context, spec);
-      const config = builder.buildSync();
-      
-      // Verify component config overrides platform defaults
-      expect(config.monitoring?.enabled).toBe(false);
-      expect(config.monitoring?.detailedMetrics).toBe(false);
-    });
-    
+      })
+    );
+
+    const config = builder.buildSync();
+
+    expect(config.streamName).toBe('events-stream-dev');
+    expect(config.streamMode).toBe('on-demand');
+    expect(config.shardCount).toBeUndefined();
+    expect(config.encryption.type).toBe('aws-managed');
+    expect(config.monitoring.enabled).toBe(true);
+    expect(config.monitoring.alarms?.iteratorAgeMs?.threshold).toBe(180000);
   });
-  
+
+  it('normalises alarm configuration with safe defaults when partially specified', () => {
+    const builder = new KinesisStreamComponentConfigBuilder(
+      createMockContext('commercial'),
+      createMockSpec({
+        monitoring: {
+          enabled: true,
+          alarms: {
+            readProvisionedExceeded: { enabled: true }
+          }
+        }
+      })
+    );
+
+    const config = builder.buildSync();
+
+    expect(config.monitoring.alarms?.readProvisionedExceeded?.enabled).toBe(true);
+    expect(config.monitoring.alarms?.readProvisionedExceeded?.threshold).toBe(1);
+    expect(config.monitoring.alarms?.writeProvisionedExceeded?.enabled).toBe(false);
+  });
 });

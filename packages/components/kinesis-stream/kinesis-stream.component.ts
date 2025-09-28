@@ -1,13 +1,5 @@
-/**
- * Kinesis Stream Component implementing Component API Contract v1.0
- * 
- * A managed high-throughput, real-time data ingestion service.
- * Implements three-tiered compliance model (Commercial/FedRAMP Moderate/FedRAMP High).
- */
-
 import * as kinesis from 'aws-cdk-lib/aws-kinesis';
 import * as kms from 'aws-cdk-lib/aws-kms';
-import * as iam from 'aws-cdk-lib/aws-iam';
 import * as cloudwatch from 'aws-cdk-lib/aws-cloudwatch';
 import * as cdk from 'aws-cdk-lib';
 import { Construct } from 'constructs';
@@ -17,508 +9,282 @@ import {
   ComponentContext,
   ComponentCapabilities
 } from '@platform/contracts';
+import {
+  KinesisStreamComponentConfigBuilder,
+  KinesisStreamConfig,
+  KinesisStreamAlarmConfig,
+  KinesisStreamMonitoringConfig
+} from './kinesis-stream.builder';
 
-/**
- * Configuration interface for Kinesis Stream component
- */
-export interface KinesisStreamConfig {
-  /** Stream name (optional, defaults to component name) */
-  streamName?: string;
-  
-  /** Number of shards for the stream */
-  shardCount: number;
-  
-  /** Data retention period in hours */
-  retentionPeriod?: number;
-  
-  /** Encryption configuration */
-  encryption?: {
-    type: 'none' | 'kms';
-    kmsKeyId?: string;
-  };
-  
-  /** Monitoring configuration */
-  monitoring?: {
-    enabled?: boolean;
-    enhancedMetrics?: boolean;
-    alarms?: {
-      iteratorAgeThreshold?: number;
-      readThroughputThreshold?: number;
-      writeThroughputThreshold?: number;
-    };
-  };
-  
-  /** Tags for the stream */
-  tags?: Record<string, string>;
-}
-
-/**
- * JSON Schema for Kinesis Stream configuration
- */
-export const KINESIS_STREAM_CONFIG_SCHEMA = {
-  type: 'object',
-  properties: {
-    streamName: {
-      type: 'string',
-      pattern: '^[a-zA-Z0-9_.-]+$',
-      maxLength: 128
-    },
-    shardCount: {
-      type: 'number',
-      minimum: 1,
-      maximum: 500000
-    },
-    retentionPeriod: {
-      type: 'number',
-      minimum: 24,
-      maximum: 8760
-    },
-    encryption: {
-      type: 'object',
-      properties: {
-        type: {
-          type: 'string',
-          enum: ['none', 'kms']
-        },
-        kmsKeyId: { type: 'string' }
-      },
-      required: ['type']
-    },
-    monitoring: {
-      type: 'object',
-      properties: {
-        enabled: { type: 'boolean' },
-        enhancedMetrics: { type: 'boolean' },
-        alarms: {
-          type: 'object',
-          properties: {
-            iteratorAgeThreshold: { type: 'number', minimum: 0 },
-            readThroughputThreshold: { type: 'number', minimum: 0 },
-            writeThroughputThreshold: { type: 'number', minimum: 0 }
-          }
-        }
-      }
-    },
-    tags: {
-      type: 'object',
-      additionalProperties: { type: 'string' }
-    }
-  },
-  required: ['shardCount'],
-  additionalProperties: false
-};
-
-/**
- * ConfigBuilder for Kinesis Stream component
- */
-export class KinesisStreamConfigBuilder {
-  constructor(private context: ComponentContext, private spec: ComponentSpec) {}
-
-  /**
-   * Asynchronous build method - delegates to synchronous implementation
-   */
-  public async build(): Promise<KinesisStreamConfig> {
-    return this.buildSync();
-  }
-
-  /**
-   * Synchronous version of build for use in synth() method
-   */
-  public buildSync(): KinesisStreamConfig {
-    // Start with platform defaults
-    const platformDefaults = this.getPlatformDefaults();
-    
-    // Apply compliance framework defaults
-    const complianceDefaults = this.getComplianceFrameworkDefaults();
-    
-    // Merge user configuration from spec
-    const userConfig = this.spec.config || {};
-    
-    // Merge configurations (user config takes precedence)
-    const mergedConfig = this.mergeConfigs(
-      this.mergeConfigs(platformDefaults, complianceDefaults),
-      userConfig
-    );
-    
-    return mergedConfig as KinesisStreamConfig;
-  }
-
-  /**
-   * Simple merge utility for combining configuration objects
-   */
-  private mergeConfigs(base: Record<string, any>, override: Record<string, any>): Record<string, any> {
-    const result = { ...base };
-    
-    for (const [key, value] of Object.entries(override)) {
-      if (value !== undefined && value !== null) {
-        if (typeof value === 'object' && !Array.isArray(value) && typeof result[key] === 'object' && !Array.isArray(result[key])) {
-          result[key] = this.mergeConfigs(result[key] || {}, value);
-        } else {
-          result[key] = value;
-        }
-      }
-    }
-    
-    return result;
-  }
-
-  /**
-   * Get platform-wide defaults with intelligent configuration
-   */
-  private getPlatformDefaults(): Partial<KinesisStreamConfig> {
-    return {
-      retentionPeriod: this.getDefaultRetentionPeriod(),
-      encryption: {
-        type: this.shouldEnableEncryption() ? 'kms' : 'none'
-      },
-      monitoring: {
-        enabled: true,
-        enhancedMetrics: this.shouldEnableEnhancedMetrics(),
-        alarms: {
-          iteratorAgeThreshold: this.getDefaultIteratorAgeThreshold(),
-          readThroughputThreshold: 80,
-          writeThroughputThreshold: 80
-        }
-      }
-    };
-  }
-
-  /**
-   * Get compliance framework-specific defaults
-   */
-  private getComplianceFrameworkDefaults(): Partial<KinesisStreamConfig> {
-    switch (this.context.complianceFramework) {
-      case 'fedramp-high':
-        return {
-          retentionPeriod: 168, // 7 days minimum for FedRAMP High
-          encryption: {
-            type: 'kms' // Mandatory encryption
-          },
-          monitoring: {
-            enabled: true,
-            enhancedMetrics: true, // Enhanced monitoring for compliance
-            alarms: {
-              iteratorAgeThreshold: 60000, // 1 minute for high compliance
-              readThroughputThreshold: 70, // More sensitive monitoring
-              writeThroughputThreshold: 70
-            }
-          }
-        };
-        
-      case 'fedramp-moderate':
-        return {
-          retentionPeriod: 72, // 3 days for FedRAMP Moderate
-          encryption: {
-            type: 'kms' // Recommended encryption
-          },
-          monitoring: {
-            enabled: true,
-            enhancedMetrics: true,
-            alarms: {
-              iteratorAgeThreshold: 300000, // 5 minutes for moderate compliance
-              readThroughputThreshold: 75,
-              writeThroughputThreshold: 75
-            }
-          }
-        };
-        
-      default: // commercial
-        return {
-          retentionPeriod: 24, // 24 hours for cost optimization
-          encryption: {
-            type: 'none' // Optional for commercial
-          },
-          monitoring: {
-            enabled: false, // Optional monitoring
-            enhancedMetrics: false
-          }
-        };
-    }
-  }
-
-  /**
-   * Get default retention period based on compliance framework
-   */
-  private getDefaultRetentionPeriod(): number {
-    switch (this.context.complianceFramework) {
-      case 'fedramp-high':
-        return 168; // 7 days
-      case 'fedramp-moderate':
-        return 72; // 3 days
-      default:
-        return 24; // 1 day
-    }
-  }
-
-  /**
-   * Determine if encryption should be enabled by default
-   */
-  private shouldEnableEncryption(): boolean {
-    return ['fedramp-moderate', 'fedramp-high'].includes(this.context.complianceFramework);
-  }
-
-  /**
-   * Determine if enhanced metrics should be enabled by default
-   */
-  private shouldEnableEnhancedMetrics(): boolean {
-    return ['fedramp-moderate', 'fedramp-high'].includes(this.context.complianceFramework);
-  }
-
-  /**
-   * Get default iterator age threshold based on compliance framework
-   */
-  private getDefaultIteratorAgeThreshold(): number {
-    switch (this.context.complianceFramework) {
-      case 'fedramp-high':
-        return 60000; // 1 minute
-      case 'fedramp-moderate':
-        return 300000; // 5 minutes
-      default:
-        return 600000; // 10 minutes
-    }
-  }
-}
-
-/**
- * Kinesis Stream Component implementing Component API Contract v1.0
- */
 export class KinesisStreamComponent extends Component {
   private stream?: kinesis.Stream;
-  private kmsKey?: kms.Key;
+  private kmsKey?: kms.IKey;
+  private managedKmsKey?: kms.Key;
   private config?: KinesisStreamConfig;
 
   constructor(scope: Construct, id: string, context: ComponentContext, spec: ComponentSpec) {
     super(scope, id, context, spec);
   }
 
-  /**
-   * Synthesis phase - Create Kinesis stream with compliance hardening
-   */
   public synth(): void {
-    this.logComponentEvent('synthesis_start', 'Starting Kinesis Stream synthesis');
-    
+    this.logComponentEvent('synthesis_start', 'Starting Kinesis stream synthesis');
+
     try {
-      // Build configuration using ConfigBuilder
-      const configBuilder = new KinesisStreamConfigBuilder(this.context, this.spec);
-      this.config = configBuilder.buildSync();
-      
-      // Create KMS key if encryption is enabled
-      this.createKmsKeyIfNeeded();
-      
-      // Create Kinesis stream
-      this.createKinesisStream();
-      
-      // Configure observability
-      this.configureKinesisObservability();
-      
-      // Apply compliance hardening
-      this.applyComplianceHardening();
-      
-      // Register constructs
+      const builder = new KinesisStreamComponentConfigBuilder(this.context, this.spec);
+      this.config = builder.buildSync();
+
+      this.logComponentEvent('config_resolved', 'Resolved Kinesis stream configuration', {
+        streamName: this.config.streamName,
+        streamMode: this.config.streamMode,
+        shardCount: this.config.shardCount,
+        retentionHours: this.config.retentionHours,
+        encryption: this.config.encryption.type,
+        monitoringEnabled: this.config.monitoring.enabled
+      });
+
+      this.resolveEncryptionKey();
+      this.createStream();
+      this.configureMonitoring();
+
+      this.registerConstruct('main', this.stream!);
       this.registerConstruct('stream', this.stream!);
-      if (this.kmsKey) {
-        this.registerConstruct('kmsKey', this.kmsKey);
+      if (this.managedKmsKey) {
+        this.registerConstruct('kmsKey', this.managedKmsKey);
       }
-      
-      // Register capabilities
-      this.registerCapability('stream:kinesis', this.buildKinesisCapability());
-      
-      this.logComponentEvent('synthesis_complete', 'Kinesis Stream synthesis completed successfully');
+
+      this.registerCapability('stream:kinesis', this.buildCapability());
+
+      this.logComponentEvent('synthesis_complete', 'Kinesis stream synthesis completed', {
+        streamName: this.stream!.streamName,
+        streamArn: this.stream!.streamArn
+      });
     } catch (error) {
-      this.logError(error as Error, 'Kinesis Stream synthesis');
+      this.logError(error as Error, 'kinesis stream synthesis');
       throw error;
     }
   }
 
-  /**
-   * Get the capabilities this component provides
-   */
   public getCapabilities(): ComponentCapabilities {
     this.validateSynthesized();
     return this.capabilities;
   }
 
-  /**
-   * Get the component type identifier
-   */
   public getType(): string {
     return 'kinesis-stream';
   }
 
-  /**
-   * Create KMS key for encryption if needed
-   */
-  private createKmsKeyIfNeeded(): void {
-    if (this.config!.encryption?.type !== 'kms') {
+  private resolveEncryptionKey(): void {
+    this.kmsKey = undefined;
+    this.managedKmsKey = undefined;
+
+    const encryption = this.config!.encryption;
+    if (encryption.type !== 'kms') {
       return;
     }
 
-    this.kmsKey = new kms.Key(this, 'KmsKey', {
-      description: `KMS key for Kinesis stream ${this.spec.name}`,
-      enableKeyRotation: true,
-      removalPolicy: this.context.complianceFramework.startsWith('fedramp') ? 
-        cdk.RemovalPolicy.RETAIN : cdk.RemovalPolicy.DESTROY
-    });
+    if (encryption.kmsKeyArn) {
+      this.kmsKey = kms.Key.fromKeyArn(this, 'ImportedKinesisKey', encryption.kmsKeyArn);
+      return;
+    }
 
-    // Apply standard tags
-    this.applyStandardTags(this.kmsKey, {
-      'encryption-type': 'customer-managed'
-    });
+    if (encryption.customerManagedKey?.create) {
+      const key = new kms.Key(this, 'KinesisStreamKey', {
+        description: `Customer managed key for ${this.spec.name} Kinesis stream`,
+        enableKeyRotation: encryption.customerManagedKey.enableRotation ?? true
+      });
 
-    this.logResourceCreation('kms-key', this.kmsKey.keyId, {
-      keyRotation: true,
-      purpose: 'kinesis-encryption'
-    });
+      if (encryption.customerManagedKey.alias) {
+        key.addAlias(encryption.customerManagedKey.alias);
+      }
+
+      this.applyStandardTags(key, {
+        'encryption-scope': 'kinesis-stream',
+        'managed-by': 'shinobi'
+      });
+
+      this.kmsKey = key;
+      this.managedKmsKey = key;
+    }
   }
 
-  /**
-   * Create Kinesis stream
-   */
-  private createKinesisStream(): void {
-    const streamName = this.config!.streamName || `${this.context.serviceName}-${this.spec.name}`;
-
-    const streamProps: kinesis.StreamProps = {
-      streamName,
-      shardCount: this.config!.shardCount,
-      retentionPeriod: cdk.Duration.hours(this.config!.retentionPeriod || 24)
+  private createStream(): void {
+    const props: kinesis.StreamProps = {
+      streamName: this.config!.streamName,
+      retentionPeriod: cdk.Duration.hours(this.config!.retentionHours)
     };
 
-    // Apply encryption if enabled
-    if (this.config!.encryption?.type === 'kms') {
-      streamProps.encryption = kinesis.StreamEncryption.KMS;
-      if (this.kmsKey) {
-        streamProps.encryptionKey = this.kmsKey;
-      }
+    if (this.config!.streamMode === 'on-demand') {
+      props.streamMode = kinesis.StreamMode.ON_DEMAND;
+    } else {
+      props.shardCount = this.config!.shardCount ?? 1;
     }
 
-    this.stream = new kinesis.Stream(this, 'KinesisStream', streamProps);
+    switch (this.config!.encryption.type) {
+      case 'kms':
+        if (this.kmsKey) {
+          props.encryption = kinesis.StreamEncryption.KMS;
+          props.encryptionKey = this.kmsKey;
+        } else {
+          props.encryption = kinesis.StreamEncryption.KMS_MANAGED;
+          this.logComponentEvent('encryption_fallback', 'Kinesis stream encryption set to AWS-managed KMS key');
+        }
+        break;
+      case 'aws-managed':
+        props.encryption = kinesis.StreamEncryption.MANAGED;
+        break;
+      default:
+        props.encryption = kinesis.StreamEncryption.UNENCRYPTED;
+        break;
+    }
 
-    // Apply standard tags
+    this.stream = new kinesis.Stream(this, 'KinesisStream', props);
+
     this.applyStandardTags(this.stream, {
-      'stream-type': 'real-time-data',
-      'shard-count': this.config!.shardCount.toString(),
-      'encryption': this.config!.encryption?.type || 'none'
+      'stream-mode': this.config!.streamMode,
+      'shard-count': this.config!.streamMode === 'provisioned'
+        ? (this.config!.shardCount ?? 1).toString()
+        : 'on-demand',
+      'encryption': this.config!.encryption.type
     });
 
-    this.logResourceCreation('kinesis-stream', streamName, {
+    this.logResourceCreation('kinesis-stream', this.stream.streamName, {
+      streamMode: this.config!.streamMode,
       shardCount: this.config!.shardCount,
-      retentionPeriod: this.config!.retentionPeriod,
-      encryption: this.config!.encryption?.type
+      retentionHours: this.config!.retentionHours,
+      encryption: this.config!.encryption.type
     });
   }
 
-  /**
-   * Configure CloudWatch observability for Kinesis stream
-   */
-  private configureKinesisObservability(): void {
-    if (!this.config!.monitoring?.enabled) {
+  private configureMonitoring(): void {
+    const monitoring = this.config!.monitoring;
+    if (!monitoring.enabled) {
       return;
     }
 
-    const streamName = this.stream!.streamName;
+    if (monitoring.enhancedMetrics) {
+      this.logComponentEvent('enhanced_metrics_requested', 'Enhanced metrics requested for Kinesis stream', {
+        streamName: this.stream!.streamName
+      });
+    }
 
-    // 1. Iterator Age Alarm (consumer lag)
-    new cloudwatch.Alarm(this, 'IteratorAgeAlarm', {
-      alarmName: `${this.context.serviceName}-${this.spec.name}-iterator-age`,
-      alarmDescription: 'Kinesis stream iterator age alarm (consumer lag)',
-      metric: new cloudwatch.Metric({
-        namespace: 'AWS/Kinesis',
+    this.createAlarm(
+      'IteratorAgeAlarm',
+      monitoring,
+      monitoring.alarms?.iteratorAgeMs,
+      {
+        alarmName: `${this.context.serviceName}-${this.spec.name}-iterator-age`,
         metricName: 'GetRecords.IteratorAgeMilliseconds',
-        dimensionsMap: {
-          StreamName: streamName
-        },
-        statistic: 'Maximum',
-        period: cdk.Duration.minutes(5)
-      }),
-      threshold: this.config!.monitoring!.alarms?.iteratorAgeThreshold || 600000,
-      evaluationPeriods: 2,
-      comparisonOperator: cloudwatch.ComparisonOperator.GREATER_THAN_THRESHOLD,
-      treatMissingData: cloudwatch.TreatMissingData.NOT_BREACHING
-    });
+        statistic: 'Maximum'
+      }
+    );
 
-    // 2. Read Provisioned Throughput Exceeded Alarm
-    new cloudwatch.Alarm(this, 'ReadThroughputAlarm', {
-      alarmName: `${this.context.serviceName}-${this.spec.name}-read-throughput`,
-      alarmDescription: 'Kinesis stream read throughput exceeded alarm',
-      metric: new cloudwatch.Metric({
-        namespace: 'AWS/Kinesis',
+    this.createAlarm(
+      'ReadThroughputAlarm',
+      monitoring,
+      monitoring.alarms?.readProvisionedExceeded,
+      {
+        alarmName: `${this.context.serviceName}-${this.spec.name}-read-provisioned`,
         metricName: 'ReadProvisionedThroughputExceeded',
-        dimensionsMap: {
-          StreamName: streamName
-        },
-        statistic: 'Sum',
-        period: cdk.Duration.minutes(5)
-      }),
-      threshold: 1,
-      evaluationPeriods: 1,
-      comparisonOperator: cloudwatch.ComparisonOperator.GREATER_THAN_OR_EQUAL_TO_THRESHOLD,
-      treatMissingData: cloudwatch.TreatMissingData.NOT_BREACHING
-    });
+        statistic: 'Sum'
+      }
+    );
 
-    // 3. Write Provisioned Throughput Exceeded Alarm
-    new cloudwatch.Alarm(this, 'WriteThroughputAlarm', {
-      alarmName: `${this.context.serviceName}-${this.spec.name}-write-throughput`,
-      alarmDescription: 'Kinesis stream write throughput exceeded alarm',
-      metric: new cloudwatch.Metric({
-        namespace: 'AWS/Kinesis',
+    this.createAlarm(
+      'WriteThroughputAlarm',
+      monitoring,
+      monitoring.alarms?.writeProvisionedExceeded,
+      {
+        alarmName: `${this.context.serviceName}-${this.spec.name}-write-provisioned`,
         metricName: 'WriteProvisionedThroughputExceeded',
-        dimensionsMap: {
-          StreamName: streamName
-        },
-        statistic: 'Sum',
-        period: cdk.Duration.minutes(5)
-      }),
-      threshold: 1,
-      evaluationPeriods: 1,
-      comparisonOperator: cloudwatch.ComparisonOperator.GREATER_THAN_OR_EQUAL_TO_THRESHOLD,
-      treatMissingData: cloudwatch.TreatMissingData.NOT_BREACHING
-    });
-
-    this.logComponentEvent('observability_configured', 'OpenTelemetry observability standard applied to Kinesis stream', {
-      alarmsCreated: 3,
-      streamName: streamName,
-      monitoringEnabled: true
-    });
+        statistic: 'Sum'
+      }
+    );
   }
 
-  /**
-   * Apply compliance hardening based on framework
-   */
-  private applyComplianceHardening(): void {
-    if (!this.stream) return;
+  private createAlarm(
+    id: string,
+    monitoring: KinesisStreamMonitoringConfig,
+    alarmConfig: KinesisStreamAlarmConfig | undefined,
+    options: { alarmName: string; metricName: string; statistic: string }
+  ): void {
+    if (!alarmConfig?.enabled) {
+      return;
+    }
 
-    switch (this.context.complianceFramework) {
-      case 'fedramp-high':
-      case 'fedramp-moderate':
-        // For FedRAMP environments, ensure stream has proper encryption and monitoring
-        const cfnStream = this.stream.node.defaultChild as kinesis.CfnStream;
-        cfnStream.addMetadata('ComplianceFramework', this.context.complianceFramework);
-        
-        this.logComponentEvent('compliance_hardening_applied', 'FedRAMP compliance hardening applied', {
-          framework: this.context.complianceFramework,
-          encryptionEnabled: this.config!.encryption?.type === 'kms',
-          enhancedMetrics: this.config!.monitoring?.enhancedMetrics
-        });
-        break;
-        
+    const metric = new cloudwatch.Metric({
+      namespace: 'AWS/Kinesis',
+      metricName: options.metricName,
+      dimensionsMap: {
+        StreamName: this.stream!.streamName
+      },
+      statistic: alarmConfig.statistic ?? options.statistic,
+      period: cdk.Duration.minutes(alarmConfig.periodMinutes ?? 5)
+    });
+
+    const alarm = new cloudwatch.Alarm(this, id, {
+      alarmName: options.alarmName,
+      alarmDescription: `${options.metricName} alarm for ${this.spec.name}`,
+      metric,
+      threshold: alarmConfig.threshold ?? this.defaultThresholdForMetric(options.metricName),
+      evaluationPeriods: alarmConfig.evaluationPeriods ?? 2,
+      comparisonOperator: this.resolveComparisonOperator(alarmConfig.comparisonOperator),
+      treatMissingData: this.resolveTreatMissingData(alarmConfig.treatMissingData)
+    });
+
+    this.applyStandardTags(alarm, {
+      'alarm-metric': options.metricName.toLowerCase(),
+      ...(alarmConfig.tags ?? {})
+    });
+
+    this.registerConstruct(`${id}Construct`, alarm);
+  }
+
+  private defaultThresholdForMetric(metricName: string): number {
+    if (metricName === 'GetRecords.IteratorAgeMilliseconds') {
+      return 600000;
+    }
+    return 1;
+  }
+
+  private resolveComparisonOperator(operator?: string): cloudwatch.ComparisonOperator {
+    switch (operator) {
+      case 'gt':
+        return cloudwatch.ComparisonOperator.GREATER_THAN_THRESHOLD;
+      case 'lt':
+        return cloudwatch.ComparisonOperator.LESS_THAN_THRESHOLD;
+      case 'lte':
+        return cloudwatch.ComparisonOperator.LESS_THAN_OR_EQUAL_TO_THRESHOLD;
+      case 'gte':
       default:
-        // No special hardening needed for commercial
-        break;
+        return cloudwatch.ComparisonOperator.GREATER_THAN_OR_EQUAL_TO_THRESHOLD;
     }
   }
 
-  /**
-   * Build Kinesis capability descriptor
-   */
-  private buildKinesisCapability(): any {
+  private resolveTreatMissingData(value?: string): cloudwatch.TreatMissingData {
+    switch (value) {
+      case 'breaching':
+        return cloudwatch.TreatMissingData.BREACHING;
+      case 'ignore':
+        return cloudwatch.TreatMissingData.IGNORE;
+      case 'missing':
+        return cloudwatch.TreatMissingData.MISSING;
+      case 'not-breaching':
+      default:
+        return cloudwatch.TreatMissingData.NOT_BREACHING;
+    }
+  }
+
+  private buildCapability(): Record<string, any> {
     return {
       type: 'stream:kinesis',
       streamName: this.stream!.streamName,
       streamArn: this.stream!.streamArn,
+      streamMode: this.config!.streamMode,
       shardCount: this.config!.shardCount,
-      retentionPeriod: this.config!.retentionPeriod,
-      encryption: this.config!.encryption?.type,
-      kmsKeyArn: this.kmsKey?.keyArn
+      retentionHours: this.config!.retentionHours,
+      encryption: this.config!.encryption.type,
+      kmsKeyArn: this.kmsKey?.keyArn,
+      hardeningProfile: this.config!.hardeningProfile
     };
   }
 }

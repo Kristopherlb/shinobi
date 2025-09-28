@@ -1,111 +1,78 @@
-# KinesisStreamComponent Component
+# Kinesis Stream Component
 
-Kinesis Stream Component implementing Component API Contract v1.0 with comprehensive security, monitoring, and compliance features.
+Configuration-driven Kinesis data stream that leverages the platform’s five-layer precedence chain. The component consumes the resolved configuration produced by `KinesisStreamComponentConfigBuilder`; all compliance defaults live in `/config/<framework>.yml`.
 
-## Overview
+## Features
 
-The KinesisStreamComponent component provides:
+- Supports provisioned or on-demand stream mode with configurable shard count and retention window.
+- Encryption choices: none, AWS-managed KMS, or customer-managed key creation/import.
+- Observability surface covering iterator age and provisioned throughput alarms with per-framework defaults.
+- Capability payload includes `hardeningProfile` and encryption metadata for downstream consumers.
 
-- **Production-ready** kinesis stream component functionality
-- **Comprehensive compliance** (Commercial, FedRAMP Moderate/High)
-- **Integrated monitoring** and observability
-- **Security-first** configuration
-- **Platform integration** with other components
-
-### Category: messaging
-
-### AWS Service: KINESIS
-
-This component manages KINESIS resources and provides a simplified, secure interface for common use cases.
-
-## Usage Example
-
-### Basic Configuration
+## Usage
 
 ```yaml
-service: my-service
-owner: platform-team
-complianceFramework: commercial
-
 components:
-  - name: my-kinesis-stream
+  - name: ingest-stream
     type: kinesis-stream
     config:
-      description: "Production kinesis-stream instance"
+      streamMode: provisioned
+      shardCount: 4
+      retentionHours: 72
+      encryption:
+        type: kms
+        customerManagedKey:
+          create: true
+          alias: alias/ingest-stream
       monitoring:
         enabled: true
-        detailedMetrics: true
+        enhancedMetrics: true
+        alarms:
+          iteratorAgeMs:
+            enabled: true
+            threshold: 180000
 ```
 
-## Configuration Reference
+Unset fields inherit their values from the active framework configuration file.
 
-### Root Configuration
+## Configuration Highlights
 
-| Property | Type | Required | Description |
-|----------|------|----------|-------------|
-| `name` | string | No | Component name (auto-generated if not provided) |
-| `description` | string | No | Component description for documentation |
-| `monitoring` | object | No | Monitoring and observability configuration |
-| `tags` | object | No | Additional resource tags |
+| Path | Description |
+|------|-------------|
+| `streamMode` | `provisioned` (default) or `on-demand`. Shard count is required for provisioned mode. |
+| `shardCount` | Number of shards when stream mode is provisioned. |
+| `retentionHours` | Data retention in hours (24–8760). |
+| `encryption.type` | `none`, `aws-managed`, or `kms`. Use `kmsKeyArn` or `customerManagedKey.create` to control key usage. |
+| `monitoring.enabled` | Enables CloudWatch alarms. |
+| `monitoring.alarms.iteratorAgeMs` | Iterator age (ms) threshold for consumer lag. |
+| `monitoring.alarms.readProvisionedExceeded` | Count threshold for read throttling events. |
+| `monitoring.alarms.writeProvisionedExceeded` | Count threshold for write throttling events. |
+| `hardeningProfile` | Abstract security posture exposed via capabilities (`baseline`, `hardened`, `stig`). |
 
-### Monitoring Configuration
+## Capability
 
-| Property | Type | Required | Description |
-|----------|------|----------|-------------|
-| `enabled` | boolean | No | Enable monitoring (default: true) |
-| `detailedMetrics` | boolean | No | Enable detailed CloudWatch metrics |
+`stream:kinesis`
 
-## Capabilities Provided
+```json
+{
+  "type": "stream:kinesis",
+  "streamName": "ingest-stream",
+  "streamArn": "arn:aws:kinesis:...",
+  "streamMode": "provisioned",
+  "shardCount": 4,
+  "retentionHours": 72,
+  "encryption": "kms",
+  "kmsKeyArn": "arn:aws:kms:...",
+  "hardeningProfile": "hardened"
+}
+```
 
-This component provides the following capabilities for binding with other components:
-
-- `messaging:kinesis-stream` - Main kinesis-stream capability
-- `monitoring:kinesis-stream` - Monitoring capability
-
-## Construct Handles
-
-The following construct handles are available for use in `patches.ts`:
-
-- `main` - Main kinesis-stream construct
-
-## Compliance Frameworks
-
-### Commercial
-
-- Standard monitoring configuration
-- Basic resource tagging
-- Standard security settings
-
-### FedRAMP Moderate/High
-
-- Enhanced monitoring with detailed metrics
-- Comprehensive audit logging
-- Stricter security configurations
-- Extended compliance tagging
-
-## Best Practices
-
-1. **Always enable monitoring** in production environments
-2. **Use descriptive names** for better resource identification
-3. **Configure appropriate tags** for cost allocation and governance
-4. **Review compliance requirements** for your environment
-5. **Test configurations** in development before production deployment
-
-## Development
-
-### Running Tests
+## Tests
 
 ```bash
-# Run all tests for this component
-npm test -- --testPathPattern=kinesis-stream
-
-# Run only builder tests
-npm test -- --testPathPattern=kinesis-stream.builder
-
-# Run only synthesis tests
-npm test -- --testPathPattern=kinesis-stream.component.synthesis
+corepack pnpm exec jest --runTestsByPath \
+  packages/components/kinesis-stream/tests/kinesis-stream.builder.test.ts \
+  packages/components/kinesis-stream/tests/kinesis-stream.component.synthesis.test.ts
 ```
 
----
-
-*Generated by Component Completion Script*
+Note: component synthesis tests are subject to the known `@platform/logger` haste-map duplication issue; builder tests should still pass.

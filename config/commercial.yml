@@ -195,6 +195,54 @@ defaults:
           enabled: false
     hardeningProfile: baseline
 
+  kinesis-stream:
+    streamMode: provisioned
+    shardCount: 1
+    retentionHours: 24
+    encryption:
+      type: none
+    monitoring:
+      enabled: false
+      enhancedMetrics: false
+      alarms:
+        iteratorAgeMs:
+          enabled: false
+        readProvisionedExceeded:
+          enabled: false
+        writeProvisionedExceeded:
+          enabled: false
+    hardeningProfile: baseline
+
+  dynamodb-table:
+    partitionKey:
+      name: id
+      type: string
+    billingMode: pay-per-request
+    tableClass: standard
+    pointInTimeRecovery: false
+    timeToLive:
+      enabled: false
+    stream:
+      enabled: false
+      viewType: new-and-old-images
+    globalSecondaryIndexes: []
+    localSecondaryIndexes: []
+    encryption:
+      type: aws-managed
+    backup:
+      enabled: false
+      retentionDays: 7
+    monitoring:
+      enabled: false
+      alarms:
+        readThrottle:
+          enabled: false
+        writeThrottle:
+          enabled: false
+        systemErrors:
+          enabled: false
+    hardeningProfile: baseline
+
   rds-postgres:
     instance:
       engineVersion: '15.4'

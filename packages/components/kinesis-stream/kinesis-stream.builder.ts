@@ -1,140 +1,266 @@
-/**
- * Configuration Builder for KinesisStreamComponent Component
- * 
- * Implements the ConfigBuilder pattern as defined in the Platform Component API Contract.
- * Provides 5-layer configuration precedence chain and compliance-aware defaults.
- */
+import {
+  ConfigBuilder,
+  ConfigBuilderContext,
+  ComponentConfigSchema
+} from '@shinobi/core';
+import { ComponentContext, ComponentSpec } from '@platform/contracts';
 
-import { ConfigBuilder, ConfigBuilderContext } from '../../platform/contracts/config-builder';
+export type KinesisStreamMode = 'provisioned' | 'on-demand';
+export type KinesisEncryptionType = 'none' | 'aws-managed' | 'kms';
 
-/**
- * Configuration interface for KinesisStreamComponent component
- */
-export interface KinesisStreamConfig {
-  /** Component name (optional, will be auto-generated) */
-  name?: string;
-  
-  /** Component description */
-  description?: string;
-  
-  /** Enable detailed monitoring */
-  monitoring?: {
-    enabled?: boolean;
-    detailedMetrics?: boolean;
-    alarms?: {
-      // TODO: Define component-specific alarm thresholds
-    };
-  };
-  
-  /** Tagging configuration */
-  tags?: Record<string, string>;
-  
-  // TODO: Add component-specific configuration properties
+export interface KinesisStreamCustomerManagedKeyConfig {
+  create?: boolean;
+  alias?: string;
+  enableRotation?: boolean;
 }
 
-/**
- * JSON Schema for KinesisStreamComponent configuration validation
- */
-export const KINESIS_STREAM_CONFIG_SCHEMA = {
+export interface KinesisStreamEncryptionConfig {
+  type?: KinesisEncryptionType;
+  kmsKeyArn?: string;
+  customerManagedKey?: KinesisStreamCustomerManagedKeyConfig;
+}
+
+export interface KinesisStreamAlarmConfig {
+  enabled?: boolean;
+  threshold?: number;
+  evaluationPeriods?: number;
+  periodMinutes?: number;
+  comparisonOperator?: 'gt' | 'gte' | 'lt' | 'lte';
+  treatMissingData?: 'breaching' | 'not-breaching' | 'ignore' | 'missing';
+  statistic?: string;
+  tags?: Record<string, string>;
+}
+
+export interface KinesisStreamMonitoringConfig {
+  enabled?: boolean;
+  enhancedMetrics?: boolean;
+  alarms?: {
+    iteratorAgeMs?: KinesisStreamAlarmConfig;
+    readProvisionedExceeded?: KinesisStreamAlarmConfig;
+    writeProvisionedExceeded?: KinesisStreamAlarmConfig;
+  };
+}
+
+export interface KinesisStreamConfig {
+  streamName: string;
+  streamMode: KinesisStreamMode;
+  shardCount?: number;
+  retentionHours: number;
+  encryption: KinesisStreamEncryptionConfig;
+  monitoring: KinesisStreamMonitoringConfig;
+  hardeningProfile: string;
+  tags: Record<string, string>;
+}
+
+const ALARM_DEFINITION = {
   type: 'object',
+  additionalProperties: false,
   properties: {
-    name: {
+    enabled: { type: 'boolean', default: false },
+    threshold: { type: 'number' },
+    evaluationPeriods: { type: 'number', minimum: 1, default: 2 },
+    periodMinutes: { type: 'number', minimum: 1, default: 5 },
+    comparisonOperator: {
       type: 'string',
-      description: 'Component name (optional, will be auto-generated from component name)',
-      pattern: '^[a-zA-Z][a-zA-Z0-9-_]*$',
-      maxLength: 128
+      enum: ['gt', 'gte', 'lt', 'lte'],
+      default: 'gte'
     },
-    description: {
+    treatMissingData: {
       type: 'string',
-      description: 'Component description for documentation',
-      maxLength: 1024
+      enum: ['breaching', 'not-breaching', 'ignore', 'missing'],
+      default: 'not-breaching'
+    },
+    statistic: { type: 'string', default: 'Average' },
+    tags: {
+      type: 'object',
+      additionalProperties: { type: 'string' }
+    }
+  }
+};
+
+export const KINESIS_STREAM_CONFIG_SCHEMA: ComponentConfigSchema = {
+  type: 'object',
+  additionalProperties: false,
+  properties: {
+    streamName: {
+      type: 'string',
+      pattern: '^[a-zA-Z0-9_.-]+$'
+    },
+    streamMode: {
+      type: 'string',
+      enum: ['provisioned', 'on-demand'],
+      default: 'provisioned'
+    },
+    shardCount: {
+      type: 'number',
+      minimum: 1,
+      maximum: 500000
+    },
+    retentionHours: {
+      type: 'number',
+      minimum: 24,
+      maximum: 8760,
+      default: 24
+    },
+    encryption: {
+      type: 'object',
+      additionalProperties: false,
+      properties: {
+        type: {
+          type: 'string',
+          enum: ['none', 'aws-managed', 'kms'],
+          default: 'none'
+        },
+        kmsKeyArn: { type: 'string' },
+        customerManagedKey: {
+          type: 'object',
+          additionalProperties: false,
+          properties: {
+            create: { type: 'boolean', default: false },
+            alias: { type: 'string' },
+            enableRotation: { type: 'boolean', default: true }
+          }
+        }
+      },
+      default: {
+        type: 'none'
+      }
     },
     monitoring: {
       type: 'object',
-      description: 'Monitoring and observability configuration',
+      additionalProperties: false,
       properties: {
-        enabled: {
-          type: 'boolean',
-          default: true,
-          description: 'Enable monitoring'
-        },
-        detailedMetrics: {
-          type: 'boolean',
-          default: false,
-          description: 'Enable detailed CloudWatch metrics'
+        enabled: { type: 'boolean', default: false },
+        enhancedMetrics: { type: 'boolean', default: false },
+        alarms: {
+          type: 'object',
+          additionalProperties: false,
+          properties: {
+            iteratorAgeMs: ALARM_DEFINITION,
+            readProvisionedExceeded: ALARM_DEFINITION,
+            writeProvisionedExceeded: ALARM_DEFINITION
+          },
+          default: {}
         }
       },
-      additionalProperties: false
+      default: {}
+    },
+    hardeningProfile: {
+      type: 'string',
+      description: 'Abstract security posture indicator used by downstream services'
     },
     tags: {
       type: 'object',
-      description: 'Additional resource tags',
-      additionalProperties: { type: 'string' }
+      additionalProperties: { type: 'string' },
+      default: {}
     }
-    // TODO: Add component-specific schema properties
-  },
-  additionalProperties: false
+  }
 };
 
-/**
- * ConfigBuilder for KinesisStreamComponent component
- * 
- * Implements the 5-layer configuration precedence chain:
- * 1. Hardcoded Fallbacks (ultra-safe baseline)
- * 2. Platform Defaults (from platform config)
- * 3. Environment Defaults (from environment config) 
- * 4. Component Overrides (from service.yml)
- * 5. Policy Overrides (from governance policies)
- */
 export class KinesisStreamComponentConfigBuilder extends ConfigBuilder<KinesisStreamConfig> {
-  
-  /**
-   * Layer 1: Hardcoded Fallbacks
-   * Ultra-safe baseline configuration that works in any environment
-   */
+  constructor(context: ComponentContext, spec: ComponentSpec) {
+    const builderContext: ConfigBuilderContext = { context, spec };
+    super(builderContext, KINESIS_STREAM_CONFIG_SCHEMA);
+  }
+
   protected getHardcodedFallbacks(): Partial<KinesisStreamConfig> {
     return {
-      monitoring: {
-        enabled: true,
-        detailedMetrics: false
+      streamMode: 'provisioned',
+      shardCount: 1,
+      retentionHours: 24,
+      encryption: {
+        type: 'none'
       },
-      tags: {}
-      // TODO: Add component-specific hardcoded fallbacks
-    };
-  }
-  
-  /**
-   * Layer 2: Compliance Framework Defaults
-   * Security and compliance-specific configurations
-   */
-  protected getComplianceFrameworkDefaults(): Partial<KinesisStreamConfig> {
-    const framework = this.context.complianceFramework;
-    
-    const baseCompliance: Partial<KinesisStreamConfig> = {
       monitoring: {
-        enabled: true,
-        detailedMetrics: true
-      }
+        enabled: false,
+        enhancedMetrics: false,
+        alarms: {}
+      },
+      hardeningProfile: 'baseline',
+      tags: {}
     };
-    
-    if (framework === 'fedramp-moderate' || framework === 'fedramp-high') {
-      return {
-        ...baseCompliance,
-        monitoring: {
-          ...baseCompliance.monitoring,
-          detailedMetrics: true // Mandatory for FedRAMP
-        }
-        // TODO: Add FedRAMP-specific compliance defaults
-      };
-    }
-    
-    return baseCompliance;
   }
-  
-  /**
-   * Get the JSON Schema for validation
-   */
-  public getSchema(): any {
-    return KINESIS_STREAM_CONFIG_SCHEMA;
+
+  public buildSync(): KinesisStreamConfig {
+    const resolved = super.buildSync() as KinesisStreamConfig;
+    return this.normaliseConfig(resolved);
+  }
+
+  private normaliseAlarmConfig(
+    alarm: KinesisStreamAlarmConfig | undefined,
+    defaults: Required<Omit<KinesisStreamAlarmConfig, 'tags'>>
+  ): KinesisStreamAlarmConfig {
+    return {
+      enabled: alarm?.enabled ?? defaults.enabled,
+      threshold: alarm?.threshold ?? defaults.threshold,
+      evaluationPeriods: alarm?.evaluationPeriods ?? defaults.evaluationPeriods,
+      periodMinutes: alarm?.periodMinutes ?? defaults.periodMinutes,
+      comparisonOperator: alarm?.comparisonOperator ?? defaults.comparisonOperator,
+      treatMissingData: alarm?.treatMissingData ?? defaults.treatMissingData,
+      statistic: alarm?.statistic ?? defaults.statistic,
+      tags: alarm?.tags ?? {}
+    };
+  }
+
+  private normaliseConfig(config: KinesisStreamConfig): KinesisStreamConfig {
+    const specName = this.builderContext.spec.name;
+
+    const sanitisedName = (config.streamName ?? specName)
+      .replace(/[^a-zA-Z0-9_.-]/g, '-')
+      .substring(0, 128);
+
+    const streamMode = config.streamMode ?? 'provisioned';
+    const shardCount = streamMode === 'on-demand' ? undefined : Math.max(1, config.shardCount ?? 1);
+
+    return {
+      streamName: sanitisedName,
+      streamMode,
+      shardCount,
+      retentionHours: config.retentionHours ?? 24,
+      encryption: {
+        type: config.encryption?.type ?? 'none',
+        kmsKeyArn: config.encryption?.kmsKeyArn,
+        customerManagedKey: {
+          create: config.encryption?.customerManagedKey?.create ?? false,
+          alias: config.encryption?.customerManagedKey?.alias,
+          enableRotation: config.encryption?.customerManagedKey?.enableRotation ?? true
+        }
+      },
+      monitoring: {
+        enabled: config.monitoring?.enabled ?? false,
+        enhancedMetrics: config.monitoring?.enhancedMetrics ?? false,
+        alarms: {
+          iteratorAgeMs: this.normaliseAlarmConfig(config.monitoring?.alarms?.iteratorAgeMs, {
+            enabled: config.monitoring?.enabled ?? false,
+            threshold: 600000,
+            evaluationPeriods: 2,
+            periodMinutes: 5,
+            comparisonOperator: 'gte',
+            treatMissingData: 'not-breaching',
+            statistic: 'Maximum'
+          }),
+          readProvisionedExceeded: this.normaliseAlarmConfig(config.monitoring?.alarms?.readProvisionedExceeded, {
+            enabled: config.monitoring?.enabled ?? false,
+            threshold: 1,
+            evaluationPeriods: 1,
+            periodMinutes: 5,
+            comparisonOperator: 'gte',
+            treatMissingData: 'not-breaching',
+            statistic: 'Sum'
+          }),
+          writeProvisionedExceeded: this.normaliseAlarmConfig(config.monitoring?.alarms?.writeProvisionedExceeded, {
+            enabled: config.monitoring?.enabled ?? false,
+            threshold: 1,
+            evaluationPeriods: 1,
+            periodMinutes: 5,
+            comparisonOperator: 'gte',
+            treatMissingData: 'not-breaching',
+            statistic: 'Sum'
+          })
+        }
+      },
+      hardeningProfile: config.hardeningProfile ?? 'baseline',
+      tags: config.tags ?? {}
+    };
   }
 }

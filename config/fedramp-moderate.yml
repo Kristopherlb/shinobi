@@ -252,6 +252,74 @@ defaults:
           evaluationPeriods: 2
     hardeningProfile: hardened
 
+  kinesis-stream:
+    streamMode: provisioned
+    shardCount: 2
+    retentionHours: 72
+    encryption:
+      type: kms
+      customerManagedKey:
+        create: true
+        enableRotation: true
+    monitoring:
+      enabled: true
+      enhancedMetrics: true
+      alarms:
+        iteratorAgeMs:
+          enabled: true
+          threshold: 300000
+        readProvisionedExceeded:
+          enabled: true
+          threshold: 1
+        writeProvisionedExceeded:
+          enabled: true
+          threshold: 1
+    hardeningProfile: hardened
+
+  dynamodb-table:
+    partitionKey:
+      name: id
+      type: string
+    billingMode: provisioned
+    provisioned:
+      readCapacity: 10
+      writeCapacity: 5
+      autoScaling:
+        minReadCapacity: 10
+        maxReadCapacity: 100
+        minWriteCapacity: 5
+        maxWriteCapacity: 50
+        targetUtilizationPercent: 70
+    tableClass: standard
+    pointInTimeRecovery: true
+    timeToLive:
+      enabled: true
+      attributeName: ttlExpiry
+    stream:
+      enabled: true
+      viewType: new-and-old-images
+    encryption:
+      type: customer-managed
+      customerManagedKey:
+        create: true
+        enableRotation: true
+    backup:
+      enabled: true
+      retentionDays: 30
+    monitoring:
+      enabled: true
+      alarms:
+        readThrottle:
+          enabled: true
+          threshold: 1
+        writeThrottle:
+          enabled: true
+          threshold: 1
+        systemErrors:
+          enabled: true
+          threshold: 1
+    hardeningProfile: hardened
+
   rds-postgres:
     instance:
       engineVersion: '15.4'

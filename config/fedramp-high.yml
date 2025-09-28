@@ -281,6 +281,74 @@ defaults:
           evaluationPeriods: 2
     hardeningProfile: stig
 
+  kinesis-stream:
+    streamMode: provisioned
+    shardCount: 4
+    retentionHours: 168
+    encryption:
+      type: kms
+      customerManagedKey:
+        create: true
+        enableRotation: true
+    monitoring:
+      enabled: true
+      enhancedMetrics: true
+      alarms:
+        iteratorAgeMs:
+          enabled: true
+          threshold: 60000
+        readProvisionedExceeded:
+          enabled: true
+          threshold: 1
+        writeProvisionedExceeded:
+          enabled: true
+          threshold: 1
+    hardeningProfile: stig
+
+  dynamodb-table:
+    partitionKey:
+      name: id
+      type: string
+    billingMode: provisioned
+    provisioned:
+      readCapacity: 20
+      writeCapacity: 10
+      autoScaling:
+        minReadCapacity: 20
+        maxReadCapacity: 200
+        minWriteCapacity: 10
+        maxWriteCapacity: 100
+        targetUtilizationPercent: 70
+    tableClass: standard
+    pointInTimeRecovery: true
+    timeToLive:
+      enabled: true
+      attributeName: ttlExpiry
+    stream:
+      enabled: true
+      viewType: new-and-old-images
+    encryption:
+      type: customer-managed
+      customerManagedKey:
+        create: true
+        enableRotation: true
+    backup:
+      enabled: true
+      retentionDays: 90
+    monitoring:
+      enabled: true
+      alarms:
+        readThrottle:
+          enabled: true
+          threshold: 1
+        writeThrottle:
+          enabled: true
+          threshold: 1
+        systemErrors:
+          enabled: true
+          threshold: 1
+    hardeningProfile: stig
+
   rds-postgres:
     instance:
       engineVersion: '15.4'
