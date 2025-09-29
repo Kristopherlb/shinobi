@@ -69,11 +69,11 @@ export class ApplicationLoadBalancerComponentCreator implements IComponentCreato
    * Factory method to create component instances
    */
   public createComponent(
-    scope: Construct, 
-    spec: ComponentSpec, 
+    scope: Construct,
+    spec: ComponentSpec,
     context: ComponentContext
-  ): ApplicationLoadBalancerComponentComponent {
-    return new ApplicationLoadBalancerComponentComponent(scope, spec, context);
+  ): ApplicationLoadBalancerComponent {
+    return new ApplicationLoadBalancerComponent(scope, spec.name, context, spec);
   }
   
   /**
@@ -100,7 +100,7 @@ export class ApplicationLoadBalancerComponentCreator implements IComponentCreato
       if (!config?.monitoring?.enabled) {
         errors.push('Monitoring must be enabled in production environment');
       }
-      
+
       // TODO: Add production-specific validations
     }
     
@@ -115,8 +115,8 @@ export class ApplicationLoadBalancerComponentCreator implements IComponentCreato
    */
   public getProvidedCapabilities(): string[] {
     return [
-      'networking:application-load-balancer',
-      'monitoring:application-load-balancer'
+      'net:load-balancer',
+      'net:load-balancer-target'
     ];
   }
   
@@ -134,8 +134,10 @@ export class ApplicationLoadBalancerComponentCreator implements IComponentCreato
    */
   public getConstructHandles(): string[] {
     return [
-      'main'
-      // TODO: Add additional construct handles if needed
+      'main',
+      'loadBalancer',
+      'securityGroup',
+      'accessLogsBucket'
     ];
   }
 }

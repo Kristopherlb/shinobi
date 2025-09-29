@@ -8,6 +8,7 @@ module.exports = {
   moduleNameMapper: {
     // Platform aliases - match TypeScript paths exactly
     '^@platform/contracts$': '<rootDir>/packages/core/src/platform/contracts/index.ts',
+    '^@platform/logger$': '<rootDir>/packages/core/src/platform/logger/src/index.ts',
     '^@platform/core-engine$': '<rootDir>/packages/core-engine/src/index.ts',
     '^@platform/(.+)$': '<rootDir>/packages/components/$1/src/index.ts',
 

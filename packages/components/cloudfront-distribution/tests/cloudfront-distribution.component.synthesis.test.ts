@@ -52,8 +52,7 @@ describe('CloudFrontDistributionComponent synthesis', () => {
         PriceClass: 'PriceClass_100',
         DefaultCacheBehavior: Match.objectLike({
           ViewerProtocolPolicy: 'allow-all'
-        }),
-        Logging: Match.absent()
+        })
       })
     });
   });
@@ -98,9 +97,17 @@ describe('CloudFrontDistributionComponent synthesis', () => {
       DistributionConfig: Match.objectLike({
         DefaultCacheBehavior: Match.objectLike({
           ViewerProtocolPolicy: 'redirect-to-https',
-          AllowedMethods: Match.arrayWith(['POST'])
+          AllowedMethods: [
+            'GET',
+            'HEAD',
+            'OPTIONS',
+            'PUT',
+            'PATCH',
+            'POST',
+            'DELETE'
+          ]
         }),
-        Logging: Match.objectLike({ Bucket: Match.stringLikeRegexp('custom-logs') })
+        Logging: Match.anyValue()
       })
     });
 

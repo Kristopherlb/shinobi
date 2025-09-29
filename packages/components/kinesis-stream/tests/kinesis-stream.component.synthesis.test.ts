@@ -59,7 +59,7 @@ describe('KinesisStreamComponent synthesis', () => {
     const { template } = synthesize(createMockContext('fedramp-high'), createMockSpec());
 
     template.hasResourceProperties('AWS::Kinesis::Stream', {
-      Name: Match.stringContaining('ingest-events'),
+      Name: 'ingest-events',
       ShardCount: Match.integerGreaterThan(1),
       RetentionPeriodHours: Match.integerGreaterThanOrEqual(168)
     });

@@ -76,7 +76,7 @@ export class CloudFrontDistributionComponent extends Component {
         }
 
         const bucket = s3.Bucket.fromBucketName(this, 'OriginBucket', originConfig.s3BucketName);
-        this.origin = new origins.S3Origin(bucket, {
+        this.origin = new origins.S3BucketOrigin(bucket, {
           originPath: originConfig.originPath,
           customHeaders: originConfig.customHeaders
         });
@@ -249,11 +249,12 @@ export class CloudFrontDistributionComponent extends Component {
   private resolveAllowedMethods(methods?: string[]): cloudfront.AllowedMethods {
     const methodSet = new Set((methods ?? ['GET', 'HEAD']).map(method => method.toUpperCase()));
 
-    if (methodSet.has('DELETE') || methodSet.has('PUT') || methodSet.has('PATCH')) {
+    const mutatingMethods = ['POST', 'PUT', 'PATCH', 'DELETE'];
+    if (mutatingMethods.some(method => methodSet.has(method))) {
       return cloudfront.AllowedMethods.ALLOW_ALL;
     }
 
-    if (methodSet.has('POST')) {
+    if (methodSet.has('OPTIONS')) {
       return cloudfront.AllowedMethods.ALLOW_GET_HEAD_OPTIONS;
     }
 

@@ -198,6 +198,53 @@ defaults:
         - vpce-*
       requireTemporaryCredentials: true
 
+  application-load-balancer:
+    scheme: internet-facing
+    ipAddressType: ipv4
+    vpc:
+      subnetType: public
+      subnetIds: []
+    securityGroups:
+      create: true
+      securityGroupIds: []
+      ingress:
+        - port: 443
+          protocol: tcp
+          cidr: 0.0.0.0/0
+          description: Enforce TLS ingress
+    accessLogs:
+      enabled: true
+      prefix: alb/audit/
+      retentionDays: 365
+      removalPolicy: retain
+    listeners:
+      - port: 443
+        protocol: HTTPS
+        sslPolicy: ELBSecurityPolicy-TLS-1-2-Ext-2018-06
+    targetGroups: []
+    deletionProtection: true
+    idleTimeoutSeconds: 120
+    deploymentStrategy:
+      type: single
+    monitoring:
+      enabled: true
+      alarms:
+        http5xx:
+          enabled: true
+          threshold: 3
+        unhealthyHosts:
+          enabled: true
+          threshold: 1
+        connectionErrors:
+          enabled: true
+          threshold: 1
+        rejectedConnections:
+          enabled: true
+          threshold: 1
+    hardeningProfile: fedramp-high
+    tags:
+      compliance: fedramp-high
+
   iam-policy:
     controls:
       denyInsecureTransport: true

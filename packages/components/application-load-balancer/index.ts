@@ -4,7 +4,7 @@
  */
 
 // Component exports
-export { ApplicationLoadBalancerComponentComponent } from './application-load-balancer.component';
+export { ApplicationLoadBalancerComponent } from './application-load-balancer.component';
 
 // Configuration exports
 export { 

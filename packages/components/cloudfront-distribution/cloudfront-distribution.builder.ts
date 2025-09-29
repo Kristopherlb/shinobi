@@ -322,11 +322,14 @@ export class CloudFrontDistributionComponentConfigBuilder extends ConfigBuilder<
   }
 
   private normaliseConfig(config: CloudFrontDistributionConfig): CloudFrontDistributionConfig {
+    const originType = config.origin.type ?? 's3';
     return {
       comment: config.comment ?? 'Managed by Shinobi platform',
       origin: {
-        type: config.origin.type,
-        s3BucketName: config.origin.s3BucketName,
+        type: originType,
+        s3BucketName: originType === 's3'
+          ? config.origin.s3BucketName ?? this.generateDefaultBucketName()
+          : config.origin.s3BucketName,
         albDnsName: config.origin.albDnsName,
         customDomainName: config.origin.customDomainName,
         originPath: config.origin.originPath,
@@ -400,5 +403,13 @@ export class CloudFrontDistributionComponentConfigBuilder extends ConfigBuilder<
       hardeningProfile: config.hardeningProfile ?? 'baseline',
       tags: config.tags ?? {}
     };
+  }
+
+  private generateDefaultBucketName(): string {
+    const service = this.builderContext.context.serviceName || 'service';
+    const component = this.builderContext.spec.name || 'distribution';
+    const raw = `${service}-${component}-origin`.toLowerCase();
+    const sanitized = raw.replace(/[^a-z0-9.-]/g, '-').replace(/^-+/, '').replace(/-+$/, '');
+    return sanitized.substring(0, 63) || 'cloudfront-origin';
   }
 }

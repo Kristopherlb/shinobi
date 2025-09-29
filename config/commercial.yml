@@ -149,6 +149,55 @@ defaults:
       allowedVpceIds: []
       requireTemporaryCredentials: false
 
+  application-load-balancer:
+    scheme: internet-facing
+    ipAddressType: ipv4
+    vpc:
+      subnetType: public
+      subnetIds: []
+    securityGroups:
+      create: true
+      securityGroupIds: []
+      ingress:
+        - port: 80
+          protocol: tcp
+          cidr: 0.0.0.0/0
+          description: Allow HTTP from internet
+        - port: 443
+          protocol: tcp
+          cidr: 0.0.0.0/0
+          description: Allow HTTPS from internet
+    accessLogs:
+      enabled: false
+      prefix: alb/
+      retentionDays: 30
+      removalPolicy: destroy
+    listeners:
+      - port: 80
+        protocol: HTTP
+    targetGroups: []
+    deletionProtection: false
+    idleTimeoutSeconds: 60
+    deploymentStrategy:
+      type: single
+    monitoring:
+      enabled: false
+      alarms:
+        http5xx:
+          enabled: false
+          threshold: 10
+        unhealthyHosts:
+          enabled: false
+          threshold: 1
+        connectionErrors:
+          enabled: false
+          threshold: 5
+        rejectedConnections:
+          enabled: false
+          threshold: 1
+    hardeningProfile: baseline
+    tags: {}
+
   iam-policy:
     controls:
       denyInsecureTransport: false

@@ -1,111 +1,81 @@
-# ApplicationLoadBalancerComponent Component
+# Application Load Balancer Component
 
-Application Load Balancer Component implementing Component API Contract v1.0 with comprehensive security, monitoring, and compliance features.
+Configuration-driven Application Load Balancer that honours the platform precedence chain through `ApplicationLoadBalancerComponentConfigBuilder`. All compliance defaults now live in `/config/<framework>.yml`; the component only consumes the resolved configuration and materialises the L7 load balancer.
 
-## Overview
+## Features
 
-The ApplicationLoadBalancerComponent component provides:
+- Internet-facing or internal ALB with dual-stack support, subnets and security groups provided declaratively.
+- Listener definitions (HTTP/HTTPS) including HTTPS policy, redirect/fixed-response/forward default actions.
+- Target group catalogue (instance/IP/Lambda) with health checks, stickiness, and optional blue/green deployment scaffolding.
+- Access logging lifecycle, retention, and removal policy controlled exclusively by configuration.
+- Monitoring surfaces for HTTP 5xx, unhealthy hosts, connection errors, and rejected connections driven by config thresholds.
+- Capability payload advertises the resolved hardening profile for downstream binders.
 
-- **Production-ready** application load balancer component functionality
-- **Comprehensive compliance** (Commercial, FedRAMP Moderate/High)
-- **Integrated monitoring** and observability
-- **Security-first** configuration
-- **Platform integration** with other components
-
-### Category: networking
-
-### AWS Service: ELASTICLOADBALANCINGV2
-
-This component manages ELASTICLOADBALANCINGV2 resources and provides a simplified, secure interface for common use cases.
-
-## Usage Example
-
-### Basic Configuration
+## Usage
 
 ```yaml
-service: my-service
-owner: platform-team
-complianceFramework: commercial
-
 components:
-  - name: my-application-load-balancer
+  - name: edge-alb
     type: application-load-balancer
     config:
-      description: "Production application-load-balancer instance"
+      vpc:
+        vpcId: vpc-0123456789abcdef0
+      listeners:
+        - port: 443
+          protocol: HTTPS
+          certificateArn: arn:aws:acm:us-east-1:123456789012:certificate/11111111-2222-3333-4444-555555555555
+          defaultAction:
+            type: forward
+      targetGroups:
+        - name: web
+          port: 80
+          protocol: HTTP
+          targetType: instance
+          healthCheck:
+            path: /healthz
+      accessLogs:
+        enabled: true
+        bucketName: platform-alb-logs
+        prefix: edge/
       monitoring:
         enabled: true
-        detailedMetrics: true
+        alarms:
+          http5xx:
+            enabled: true
+            threshold: 5
 ```
 
-## Configuration Reference
+Any omitted properties fall back to the platform defaults for the active compliance framework (`/config/commercial.yml`, `/config/fedramp-moderate.yml`, `/config/fedramp-high.yml`).
 
-### Root Configuration
+## Key Configuration Sections
 
-| Property | Type | Required | Description |
-|----------|------|----------|-------------|
-| `name` | string | No | Component name (auto-generated if not provided) |
-| `description` | string | No | Component description for documentation |
-| `monitoring` | object | No | Monitoring and observability configuration |
-| `tags` | object | No | Additional resource tags |
+| Path | Description |
+|------|-------------|
+| `scheme` | `internet-facing` or `internal`. Defaults come from the framework config. |
+| `ipAddressType` | `ipv4` or `dualstack`. |
+| `vpc` | Lookup settings (VPC ID and/or subnet IDs) used to attach the ALB. |
+| `securityGroups` | Whether to create a managed security group and the ingress rules/additional security group IDs. |
+| `accessLogs` | Enablement, destination bucket/prefix, retention days, and removal policy. |
+| `listeners[]` | Listeners with protocol/port and optional TLS policy, certificate ARN, redirect/fixed-response/forward actions. |
+| `targetGroups[]` | Target groups (instance/IP/Lambda) with health check, stickiness, and naming constraints handled by the builder. |
+| `deploymentStrategy` | `single` or `blue-green`; blue/green target groups are scaffolded automatically when requested. |
+| `monitoring` | Toggle plus per-alarm thresholds for HTTP 5xx, unhealthy hosts, connection errors, and rejected connections. |
+| `hardeningProfile` | Abstract posture indicator surfaced via the `net:load-balancer` capability (defaults per framework). |
 
-### Monitoring Configuration
+## Capabilities
 
-| Property | Type | Required | Description |
-|----------|------|----------|-------------|
-| `enabled` | boolean | No | Enable monitoring (default: true) |
-| `detailedMetrics` | boolean | No | Enable detailed CloudWatch metrics |
+- `net:load-balancer` – ALB metadata (ARN, DNS name, hosted zone, hardening profile, monitoring flag).
+- `net:load-balancer-target` – Target group ARNs/names for downstream binders.
 
-## Capabilities Provided
-
-This component provides the following capabilities for binding with other components:
-
-- `networking:application-load-balancer` - Main application-load-balancer capability
-- `monitoring:application-load-balancer` - Monitoring capability
-
-## Construct Handles
-
-The following construct handles are available for use in `patches.ts`:
-
-- `main` - Main application-load-balancer construct
-
-## Compliance Frameworks
-
-### Commercial
-
-- Standard monitoring configuration
-- Basic resource tagging
-- Standard security settings
-
-### FedRAMP Moderate/High
-
-- Enhanced monitoring with detailed metrics
-- Comprehensive audit logging
-- Stricter security configurations
-- Extended compliance tagging
-
-## Best Practices
-
-1. **Always enable monitoring** in production environments
-2. **Use descriptive names** for better resource identification
-3. **Configure appropriate tags** for cost allocation and governance
-4. **Review compliance requirements** for your environment
-5. **Test configurations** in development before production deployment
-
-## Development
-
-### Running Tests
+## Testing
 
 ```bash
-# Run all tests for this component
-npm test -- --testPathPattern=application-load-balancer
-
-# Run only builder tests
-npm test -- --testPathPattern=application-load-balancer.builder
-
-# Run only synthesis tests
-npm test -- --testPathPattern=application-load-balancer.component.synthesis
+corepack pnpm exec jest --runTestsByPath \
+  packages/components/application-load-balancer/tests/application-load-balancer.builder.test.ts \
+  packages/components/application-load-balancer/tests/application-load-balancer.component.synthesis.test.ts
 ```
 
----
+## Notes
 
-*Generated by Component Completion Script*
+- The component no longer inspects `context.complianceFramework`; all compliance-driven behaviour must be expressed via the segregated config files.
+- When tests need to synthesise without hitting AWS, provide a VPC ID and inject the matching CDK context (the builder honours the supplied IDs without mutating them).
