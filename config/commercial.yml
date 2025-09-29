@@ -101,6 +101,144 @@ defaults:
       enableApiKey: false
       requireAuthorization: true
 
+  auto-scaling-group:
+    launchTemplate:
+      instanceType: t3.micro
+      detailedMonitoring: false
+      requireImdsv2: false
+      installAgents:
+        ssm: false
+        cloudwatch: false
+        stigHardening: false
+    autoScaling:
+      minCapacity: 1
+      maxCapacity: 3
+      desiredCapacity: 2
+    storage:
+      rootVolumeSize: 20
+      rootVolumeType: gp3
+      encrypted: false
+      kms:
+        useCustomerManagedKey: false
+        enableKeyRotation: false
+    healthCheck:
+      type: EC2
+      gracePeriod: 300
+    terminationPolicies:
+      - Default
+    vpc:
+      subnetType: PUBLIC
+      allowAllOutbound: true
+    security:
+      managedPolicies: []
+      attachLogDeliveryPolicy: false
+      stigComplianceTag: false
+    monitoring:
+      enabled: true
+      alarms:
+        cpuHigh:
+          enabled: true
+          threshold: 80
+          evaluationPeriods: 2
+          periodMinutes: 5
+          comparisonOperator: GT
+          treatMissingData: not-breaching
+        inService:
+          enabled: true
+          threshold: 1
+          evaluationPeriods: 2
+          periodMinutes: 1
+          comparisonOperator: LT
+          treatMissingData: breaching
+    tags: {}
+
+  certificate-manager:
+    subjectAlternativeNames: []
+    validation:
+      method: DNS
+    transparencyLoggingEnabled: true
+    keyAlgorithm: RSA_2048
+    logging:
+      groups:
+        - id: lifecycle
+          enabled: true
+          retentionInDays: 180
+          removalPolicy: destroy
+    monitoring:
+      enabled: false
+      expiration:
+        enabled: false
+      status:
+        enabled: false
+    tags: {}
+
+  cognito-user-pool:
+    signIn:
+      username: true
+      email: true
+      phone: false
+      preferredUsername: false
+    standardAttributes:
+      email:
+        required: true
+        mutable: false
+      givenName:
+        required: false
+        mutable: true
+      familyName:
+        required: false
+        mutable: true
+    passwordPolicy:
+      minLength: 12
+      requireLowercase: true
+      requireUppercase: true
+      requireDigits: true
+      requireSymbols: true
+      tempPasswordValidity: 7
+    mfa:
+      mode: optional
+      enableSms: true
+      enableTotp: true
+      smsMessage: "Your verification code is {####}"
+    accountRecovery:
+      email: true
+      phone: true
+    deviceTracking:
+      challengeRequiredOnNewDevice: false
+      deviceOnlyRememberedOnUserPrompt: true
+    advancedSecurityMode: audit
+    featurePlan: plus
+    deletionProtection: false
+    removalPolicy: retain
+    domain: {}
+    appClients: []
+    monitoring:
+      enabled: true
+      signInSuccess:
+        enabled: true
+        threshold: 1
+        evaluationPeriods: 3
+        periodMinutes: 5
+      signInThrottle:
+        enabled: true
+        threshold: 20
+        evaluationPeriods: 2
+        periodMinutes: 5
+      signUpSuccess:
+        enabled: true
+        threshold: 1
+        evaluationPeriods: 3
+        periodMinutes: 5
+      signUpThrottle:
+        enabled: true
+        threshold: 10
+        evaluationPeriods: 2
+        periodMinutes: 5
+      riskHigh:
+        enabled: false
+    tags:
+      compliance-tier: commercial
+
   api-gateway-rest:
     disableExecuteApiEndpoint: false
     throttling:

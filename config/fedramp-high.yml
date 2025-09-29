@@ -124,6 +124,170 @@ defaults:
       enableApiKey: true
       requireAuthorization: true
 
+  auto-scaling-group:
+    launchTemplate:
+      instanceType: m5.large
+      detailedMonitoring: true
+      requireImdsv2: true
+      installAgents:
+        ssm: true
+        cloudwatch: true
+        stigHardening: true
+    autoScaling:
+      minCapacity: 2
+      maxCapacity: 4
+      desiredCapacity: 2
+    storage:
+      rootVolumeSize: 100
+      rootVolumeType: gp3
+      encrypted: true
+      kms:
+        useCustomerManagedKey: true
+        enableKeyRotation: true
+    healthCheck:
+      type: ELB
+      gracePeriod: 120
+    terminationPolicies:
+      - Default
+    vpc:
+      subnetType: PRIVATE_WITH_EGRESS
+      allowAllOutbound: false
+    security:
+      managedPolicies:
+        - AmazonSSMManagedInstanceCore
+        - CloudWatchAgentServerPolicy
+      attachLogDeliveryPolicy: true
+      stigComplianceTag: true
+    monitoring:
+      enabled: true
+      alarms:
+        cpuHigh:
+          enabled: true
+          threshold: 70
+          evaluationPeriods: 2
+          periodMinutes: 5
+          comparisonOperator: GT
+          treatMissingData: not-breaching
+        inService:
+          enabled: true
+          threshold: 2
+          evaluationPeriods: 2
+          periodMinutes: 1
+          comparisonOperator: LT
+          treatMissingData: breaching
+    tags: {}
+
+  certificate-manager:
+    subjectAlternativeNames: []
+    validation:
+      method: DNS
+    transparencyLoggingEnabled: true
+    keyAlgorithm: EC_secp384r1
+    logging:
+      groups:
+        - id: lifecycle
+          enabled: true
+          retentionInDays: 365
+          removalPolicy: retain
+          tags:
+            compliance: fedramp-high
+        - id: compliance
+          enabled: true
+          retentionInDays: 365
+          removalPolicy: retain
+          tags:
+            log-type: compliance
+        - id: audit
+          enabled: true
+          retentionInDays: 3650
+          removalPolicy: retain
+          tags:
+            log-type: audit
+    monitoring:
+      enabled: true
+      expiration:
+        enabled: true
+        thresholdDays: 60
+        evaluationPeriods: 1
+        periodHours: 6
+      status:
+        enabled: true
+        threshold: 1
+        evaluationPeriods: 3
+        periodMinutes: 15
+    tags:
+      'compliance-framework': 'fedramp-high'
+
+  cognito-user-pool:
+    signIn:
+      username: true
+      email: true
+      phone: false
+      preferredUsername: false
+    standardAttributes:
+      email:
+        required: true
+        mutable: false
+      givenName:
+        required: true
+        mutable: false
+      familyName:
+        required: true
+        mutable: false
+    passwordPolicy:
+      minLength: 16
+      requireLowercase: true
+      requireUppercase: true
+      requireDigits: true
+      requireSymbols: true
+      tempPasswordValidity: 7
+    mfa:
+      mode: required
+      enableSms: false
+      enableTotp: true
+      smsMessage: "Your verification code is {####}"
+    accountRecovery:
+      email: true
+      phone: false
+    deviceTracking:
+      challengeRequiredOnNewDevice: true
+      deviceOnlyRememberedOnUserPrompt: true
+    advancedSecurityMode: enforced
+    featurePlan: plus
+    deletionProtection: true
+    removalPolicy: retain
+    domain: {}
+    appClients: []
+    monitoring:
+      enabled: true
+      signInSuccess:
+        enabled: true
+        threshold: 1
+        evaluationPeriods: 3
+        periodMinutes: 5
+      signInThrottle:
+        enabled: true
+        threshold: 5
+        evaluationPeriods: 2
+        periodMinutes: 5
+      signUpSuccess:
+        enabled: true
+        threshold: 1
+        evaluationPeriods: 3
+        periodMinutes: 5
+      signUpThrottle:
+        enabled: true
+        threshold: 3
+        evaluationPeriods: 2
+        periodMinutes: 5
+      riskHigh:
+        enabled: true
+        threshold: 1
+        evaluationPeriods: 1
+        periodMinutes: 5
+    tags:
+      compliance-tier: fedramp-high
+
   api-gateway-rest:
     disableExecuteApiEndpoint: true
     throttling:

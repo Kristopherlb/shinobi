@@ -1,1070 +1,482 @@
-/**
- * Cognito User Pool Component implementing Component API Contract v1.0
- * 
- * A managed user directory service for authentication and authorization.
- * Implements three-tiered compliance model (Commercial/FedRAMP Moderate/FedRAMP High).
- */
-
 import * as cognito from 'aws-cdk-lib/aws-cognito';
 import * as lambda from 'aws-cdk-lib/aws-lambda';
-import * as logs from 'aws-cdk-lib/aws-logs';
-import * as kms from 'aws-cdk-lib/aws-kms';
-import * as iam from 'aws-cdk-lib/aws-iam';
 import * as acm from 'aws-cdk-lib/aws-certificatemanager';
 import * as cloudwatch from 'aws-cdk-lib/aws-cloudwatch';
+import * as iam from 'aws-cdk-lib/aws-iam';
 import * as cdk from 'aws-cdk-lib';
 import { Construct } from 'constructs';
 import {
-  Component,
-  ComponentSpec,
+  BaseComponent,
+  ComponentCapabilities,
   ComponentContext,
-  ComponentCapabilities
-} from '../../../platform/contracts/src';
+  ComponentSpec
+} from '@shinobi/core';
+import {
+  AlarmConfig,
+  AppClientConfig,
+  CognitoUserPoolComponentConfigBuilder,
+  CognitoUserPoolConfig,
+  StandardAttributeConfig
+} from './cognito-user-pool.builder';
 
-/**
- * Configuration interface for Cognito User Pool component
- */
-export interface CognitoUserPoolConfig {
-  /** User pool name (optional, defaults to component name) */
-  userPoolName?: string;
-  
-  /** Sign-in configuration */
-  signIn?: {
-    username?: boolean;
-    email?: boolean;
-    phone?: boolean;
-    preferredUsername?: boolean;
-  };
-  
-  /** User attributes configuration */
-  standardAttributes?: {
-    email?: {
-      required?: boolean;
-      mutable?: boolean;
-    };
-    phone?: {
-      required?: boolean;
-      mutable?: boolean;
-    };
-    givenName?: {
-      required?: boolean;
-      mutable?: boolean;
-    };
-    familyName?: {
-      required?: boolean;
-      mutable?: boolean;
-    };
-    address?: {
-      required?: boolean;
-      mutable?: boolean;
-    };
-    birthdate?: {
-      required?: boolean;
-      mutable?: boolean;
-    };
-    gender?: {
-      required?: boolean;
-      mutable?: boolean;
-    };
-  };
-  
-  /** Custom attributes */
-  customAttributes?: Record<string, {
-    type: 'string' | 'number' | 'datetime' | 'boolean';
-    mutable?: boolean;
-    minLength?: number;
-    maxLength?: number;
-  }>;
-  
-  /** Password policy */
-  passwordPolicy?: {
-    minLength?: number;
-    requireLowercase?: boolean;
-    requireUppercase?: boolean;
-    requireDigits?: boolean;
-    requireSymbols?: boolean;
-    tempPasswordValidity?: number;
-  };
-  
-  /** MFA configuration */
-  mfa?: {
-    mode: 'off' | 'optional' | 'required';
-    enableSms?: boolean;
-    enableTotp?: boolean;
-    smsMessage?: string;
-  };
-  
-  /** Account recovery configuration */
-  accountRecovery?: {
-    email?: boolean;
-    phone?: boolean;
-  };
-  
-  /** Email configuration */
-  email?: {
-    fromEmail?: string;
-    fromName?: string;
-    replyToEmail?: string;
-    sesRegion?: string;
-    sesVerifiedDomain?: string;
-  };
-  
-  /** SMS configuration */
-  sms?: {
-    snsCallerArn?: string;
-    externalId?: string;
-  };
-  
-  /** Lambda triggers */
-  triggers?: {
-    preSignUp?: string;
-    postConfirmation?: string;
-    preAuthentication?: string;
-    postAuthentication?: string;
-    preTokenGeneration?: string;
-    userMigration?: string;
-    customMessage?: string;
-    defineAuthChallenge?: string;
-    createAuthChallenge?: string;
-    verifyAuthChallengeResponse?: string;
-  };
-  
-  /** Device tracking */
-  deviceTracking?: {
-    challengeRequiredOnNewDevice?: boolean;
-    deviceOnlyRememberedOnUserPrompt?: boolean;
-  };
-  
-  /** Advanced security features */
-  advancedSecurityMode?: 'off' | 'audit' | 'enforced';
-  
-  /** Deletion protection */
-  deletionProtection?: boolean;
-  
-  /** User pool domain */
-  domain?: {
-    domainPrefix?: string;
-    customDomain?: {
-      domainName: string;
-      certificateArn: string;
-    };
-  };
-  
-  /** App clients configuration */
-  appClients?: Array<{
-    clientName: string;
-    generateSecret?: boolean;
-    authFlows?: Array<'user-password' | 'admin-user-password' | 'custom' | 'user-srp' | 'allow-refresh-token'>;
-    supportedIdentityProviders?: Array<'cognito' | 'google' | 'facebook' | 'amazon' | 'apple'>;
-    callbackUrls?: string[];
-    logoutUrls?: string[];
-    oAuth?: {
-      flows?: Array<'authorization-code' | 'implicit' | 'client-credentials'>;
-      scopes?: Array<'phone' | 'email' | 'openid' | 'profile'>;
-    };
-    preventUserExistenceErrors?: boolean;
-    enableTokenRevocation?: boolean;
-    accessTokenValidity?: number;
-    idTokenValidity?: number;
-    refreshTokenValidity?: number;
-  }>;
-  
-  /** Tags for the user pool */
-  tags?: Record<string, string>;
-}
-
-/**
- * Configuration schema for Cognito User Pool component
- */
-export const COGNITO_USER_POOL_CONFIG_SCHEMA = {
-  type: 'object',
-  title: 'Cognito User Pool Configuration',
-  description: 'Configuration for creating a Cognito User Pool',
-  properties: {
-    userPoolName: {
-      type: 'string',
-      description: 'Name of the user pool',
-      pattern: '^[a-zA-Z0-9_.-]+$',
-      minLength: 1,
-      maxLength: 128
-    },
-    signIn: {
-      type: 'object',
-      description: 'Sign-in configuration',
-      properties: {
-        username: {
-          type: 'boolean',
-          description: 'Allow sign-in with username',
-          default: true
-        },
-        email: {
-          type: 'boolean',
-          description: 'Allow sign-in with email',
-          default: false
-        },
-        phone: {
-          type: 'boolean',
-          description: 'Allow sign-in with phone number',
-          default: false
-        },
-        preferredUsername: {
-          type: 'boolean',
-          description: 'Allow sign-in with preferred username',
-          default: false
-        }
-      }
-    },
-    standardAttributes: {
-      type: 'object',
-      description: 'Standard user attributes configuration',
-      properties: {
-        email: {
-          type: 'object',
-          properties: {
-            required: { type: 'boolean', default: false },
-            mutable: { type: 'boolean', default: true }
-          }
-        },
-        phone: {
-          type: 'object',
-          properties: {
-            required: { type: 'boolean', default: false },
-            mutable: { type: 'boolean', default: true }
-          }
-        },
-        givenName: {
-          type: 'object',
-          properties: {
-            required: { type: 'boolean', default: false },
-            mutable: { type: 'boolean', default: true }
-          }
-        },
-        familyName: {
-          type: 'object',
-          properties: {
-            required: { type: 'boolean', default: false },
-            mutable: { type: 'boolean', default: true }
-          }
-        }
-      }
-    },
-    passwordPolicy: {
-      type: 'object',
-      description: 'Password policy configuration',
-      properties: {
-        minLength: {
-          type: 'number',
-          description: 'Minimum password length',
-          minimum: 6,
-          maximum: 99,
-          default: 8
-        },
-        requireLowercase: {
-          type: 'boolean',
-          description: 'Require lowercase letters',
-          default: true
-        },
-        requireUppercase: {
-          type: 'boolean',
-          description: 'Require uppercase letters',
-          default: true
-        },
-        requireDigits: {
-          type: 'boolean',
-          description: 'Require numeric digits',
-          default: true
-        },
-        requireSymbols: {
-          type: 'boolean',
-          description: 'Require symbols',
-          default: true
-        },
-        tempPasswordValidity: {
-          type: 'number',
-          description: 'Temporary password validity in days',
-          minimum: 1,
-          maximum: 365,
-          default: 7
-        }
-      }
-    },
-    mfa: {
-      type: 'object',
-      description: 'Multi-factor authentication configuration',
-      required: ['mode'],
-      properties: {
-        mode: {
-          type: 'string',
-          description: 'MFA mode',
-          enum: ['off', 'optional', 'required'],
-          default: 'optional'
-        },
-        enableSms: {
-          type: 'boolean',
-          description: 'Enable SMS MFA',
-          default: true
-        },
-        enableTotp: {
-          type: 'boolean',
-          description: 'Enable TOTP MFA',
-          default: true
-        },
-        smsMessage: {
-          type: 'string',
-          description: 'SMS message template',
-          default: 'Your verification code is {####}'
-        }
-      }
-    },
-    accountRecovery: {
-      type: 'object',
-      description: 'Account recovery configuration',
-      properties: {
-        email: {
-          type: 'boolean',
-          description: 'Enable email recovery',
-          default: true
-        },
-        phone: {
-          type: 'boolean',
-          description: 'Enable phone recovery',
-          default: false
-        }
-      }
-    },
-    customAttributes: {
-      type: 'object',
-      description: 'Custom user attributes',
-      additionalProperties: {
-        type: 'object',
-        required: ['type'],
-        properties: {
-          type: {
-            type: 'string',
-            enum: ['string', 'number', 'datetime', 'boolean']
-          },
-          mutable: {
-            type: 'boolean',
-            default: true
-          },
-          minLength: {
-            type: 'number',
-            minimum: 0
-          },
-          maxLength: {
-            type: 'number',
-            minimum: 1
-          }
-        }
-      }
-    },
-    email: {
-      type: 'object',
-      description: 'Email configuration',
-      properties: {
-        fromEmail: {
-          type: 'string',
-          description: 'From email address'
-        },
-        fromName: {
-          type: 'string',
-          description: 'From name'
-        },
-        replyToEmail: {
-          type: 'string',
-          description: 'Reply-to email address'
-        },
-        sesRegion: {
-          type: 'string',
-          description: 'SES region'
-        },
-        sesVerifiedDomain: {
-          type: 'string',
-          description: 'SES verified domain'
-        }
-      }
-    },
-    sms: {
-      type: 'object',
-      description: 'SMS configuration',
-      properties: {
-        snsCallerArn: {
-          type: 'string',
-          description: 'SNS caller ARN for SMS'
-        },
-        externalId: {
-          type: 'string',
-          description: 'External ID for SMS role'
-        }
-      }
-    },
-    triggers: {
-      type: 'object',
-      description: 'Lambda trigger configuration',
-      properties: {
-        preSignUp: {
-          type: 'string',
-          description: 'Pre sign-up Lambda function ARN'
-        },
-        postConfirmation: {
-          type: 'string',
-          description: 'Post confirmation Lambda function ARN'
-        },
-        preAuthentication: {
-          type: 'string',
-          description: 'Pre authentication Lambda function ARN'
-        },
-        postAuthentication: {
-          type: 'string',
-          description: 'Post authentication Lambda function ARN'
-        },
-        preTokenGeneration: {
-          type: 'string',
-          description: 'Pre token generation Lambda function ARN'
-        },
-        userMigration: {
-          type: 'string',
-          description: 'User migration Lambda function ARN'
-        },
-        customMessage: {
-          type: 'string',
-          description: 'Custom message Lambda function ARN'
-        },
-        defineAuthChallenge: {
-          type: 'string',
-          description: 'Define auth challenge Lambda function ARN'
-        },
-        createAuthChallenge: {
-          type: 'string',
-          description: 'Create auth challenge Lambda function ARN'
-        },
-        verifyAuthChallengeResponse: {
-          type: 'string',
-          description: 'Verify auth challenge response Lambda function ARN'
-        }
-      }
-    },
-    deviceTracking: {
-      type: 'object',
-      description: 'Device tracking configuration',
-      properties: {
-        challengeRequiredOnNewDevice: {
-          type: 'boolean',
-          description: 'Require challenge on new device',
-          default: false
-        },
-        deviceOnlyRememberedOnUserPrompt: {
-          type: 'boolean',
-          description: 'Device only remembered on user prompt',
-          default: true
-        }
-      }
-    },
-    advancedSecurityMode: {
-      type: 'string',
-      description: 'Advanced security features mode',
-      enum: ['off', 'audit', 'enforced'],
-      default: 'audit'
-    },
-    deletionProtection: {
-      type: 'boolean',
-      description: 'Enable deletion protection',
-      default: false
-    },
-    domain: {
-      type: 'object',
-      description: 'User pool domain configuration',
-      properties: {
-        domainPrefix: {
-          type: 'string',
-          description: 'Domain prefix for Cognito domain',
-          pattern: '^[a-z0-9-]+$',
-          minLength: 1,
-          maxLength: 63
-        },
-        customDomain: {
-          type: 'object',
-          description: 'Custom domain configuration',
-          required: ['domainName', 'certificateArn'],
-          properties: {
-            domainName: {
-              type: 'string',
-              description: 'Custom domain name'
-            },
-            certificateArn: {
-              type: 'string',
-              description: 'ACM certificate ARN'
-            }
-          }
-        }
-      }
-    },
-    appClients: {
-      type: 'array',
-      description: 'App client configurations',
-      items: {
-        type: 'object',
-        required: ['clientName'],
-        properties: {
-          clientName: {
-            type: 'string',
-            description: 'Name of the app client'
-          },
-          generateSecret: {
-            type: 'boolean',
-            description: 'Generate client secret',
-            default: false
-          },
-          authFlows: {
-            type: 'array',
-            description: 'Enabled authentication flows',
-            items: {
-              type: 'string',
-              enum: ['user-password', 'admin-user-password', 'custom', 'user-srp', 'allow-refresh-token']
-            },
-            default: ['user-srp', 'allow-refresh-token']
-          },
-          preventUserExistenceErrors: {
-            type: 'boolean',
-            description: 'Prevent user existence errors',
-            default: true
-          },
-          enableTokenRevocation: {
-            type: 'boolean',
-            description: 'Enable token revocation',
-            default: true
-          }
-        }
-      }
-    }
-  },
-  additionalProperties: false
-};
-
-/**
- * Configuration builder for Cognito User Pool component
- */
-export class CognitoUserPoolConfigBuilder {
-  private context: ComponentContext;
-  private spec: ComponentSpec;
-  
-  constructor(context: ComponentContext, spec: ComponentSpec) {
-    this.context = context;
-    this.spec = spec;
-  }
-
-  /**
-   * Builds the final configuration by applying platform defaults, compliance frameworks, and user overrides
-   */
-  public async build(): Promise<CognitoUserPoolConfig> {
-    return this.buildSync();
-  }
-
-  /**
-   * Synchronous version of build for use in synth() method
-   */
-  public buildSync(): CognitoUserPoolConfig {
-    // Start with platform defaults
-    const platformDefaults = this.getPlatformDefaults();
-    
-    // Apply compliance framework defaults
-    const complianceDefaults = this.getComplianceFrameworkDefaults();
-    
-    // Merge user configuration from spec
-    const userConfig = this.spec.config || {};
-    
-    // Merge configurations (user config takes precedence)
-    const mergedConfig = this.mergeConfigs(
-      this.mergeConfigs(platformDefaults, complianceDefaults),
-      userConfig
-    );
-    
-    return mergedConfig as CognitoUserPoolConfig;
-  }
-
-  /**
-   * Simple merge utility for combining configuration objects
-   */
-  private mergeConfigs(target: Record<string, any>, source: Record<string, any>): Record<string, any> {
-    const result = { ...target };
-    
-    for (const key in source) {
-      if (source[key] && typeof source[key] === 'object' && !Array.isArray(source[key])) {
-        result[key] = this.mergeConfigs(result[key] || {}, source[key]);
-      } else {
-        result[key] = source[key];
-      }
-    }
-    
-    return result;
-  }
-
-  /**
-   * Get platform-wide defaults for Cognito User Pool
-   */
-  private getPlatformDefaults(): Record<string, any> {
-    return {
-      signIn: {
-        username: true,
-        email: false,
-        phone: false,
-        preferredUsername: false
-      },
-      passwordPolicy: {
-        minLength: 8,
-        requireLowercase: true,
-        requireUppercase: true,
-        requireDigits: true,
-        requireSymbols: false,
-        tempPasswordValidity: 7
-      },
-      mfa: {
-        mode: 'optional',
-        enableSms: true,
-        enableTotp: true,
-        smsMessage: 'Your verification code is {####}'
-      },
-      accountRecovery: {
-        email: true,
-        phone: false
-      },
-      advancedSecurityMode: 'audit',
-      deletionProtection: false,
-      deviceTracking: {
-        challengeRequiredOnNewDevice: false,
-        deviceOnlyRememberedOnUserPrompt: true
-      }
-    };
-  }
-
-  /**
-   * Get compliance framework specific defaults
-   */
-  private getComplianceFrameworkDefaults(): Record<string, any> {
-    const framework = this.context.complianceFramework;
-    
-    switch (framework) {
-      case 'fedramp-moderate':
-        return {
-          mfa: {
-            mode: 'required', // MFA required for compliance
-            enableSms: true,
-            enableTotp: true
-          },
-          passwordPolicy: {
-            minLength: 12, // Stronger password requirements
-            requireLowercase: true,
-            requireUppercase: true,
-            requireDigits: true,
-            requireSymbols: true,
-            tempPasswordValidity: 1 // Shorter validity for temp passwords
-          },
-          advancedSecurityMode: 'enforced', // Advanced security required
-          deletionProtection: true, // Prevent accidental deletion
-          deviceTracking: {
-            challengeRequiredOnNewDevice: true,
-            deviceOnlyRememberedOnUserPrompt: true
-          }
-        };
-        
-      case 'fedramp-high':
-        return {
-          mfa: {
-            mode: 'required', // MFA mandatory for high compliance
-            enableSms: false, // SMS less secure than TOTP
-            enableTotp: true
-          },
-          passwordPolicy: {
-            minLength: 14, // Very strong password requirements
-            requireLowercase: true,
-            requireUppercase: true,
-            requireDigits: true,
-            requireSymbols: true,
-            tempPasswordValidity: 1 // Minimal validity for temp passwords
-          },
-          advancedSecurityMode: 'enforced', // Advanced security mandatory
-          deletionProtection: true, // Mandatory protection
-          deviceTracking: {
-            challengeRequiredOnNewDevice: true,
-            deviceOnlyRememberedOnUserPrompt: false // Always remember for tracking
-          }
-        };
-        
-      default: // commercial
-        return {
-          mfa: {
-            mode: 'optional', // Cost optimization
-            enableSms: true,
-            enableTotp: false
-          },
-          passwordPolicy: {
-            minLength: 8, // Standard requirements
-            requireSymbols: false // Reduced complexity
-          },
-          advancedSecurityMode: 'audit', // Basic security
-          deletionProtection: false
-        };
-    }
-  }
-}
-
-/**
- * Cognito User Pool Component implementing Component API Contract v1.0
- */
-export class CognitoUserPoolComponent extends Component {
+export class CognitoUserPoolComponent extends BaseComponent {
   private userPool?: cognito.UserPool;
   private userPoolClients: cognito.UserPoolClient[] = [];
   private userPoolDomain?: cognito.UserPoolDomain;
-  private config?: CognitoUserPoolConfig;
+  private alarms: cloudwatch.Alarm[] = [];
+  private config!: CognitoUserPoolConfig;
 
   constructor(scope: Construct, id: string, context: ComponentContext, spec: ComponentSpec) {
     super(scope, id, context, spec);
   }
 
-  /**
-   * Synthesis phase - Create Cognito User Pool with compliance hardening
-   */
   public synth(): void {
     this.logComponentEvent('synthesis_start', 'Starting Cognito User Pool synthesis');
-    
-    try {
-      // Build configuration using ConfigBuilder
-      const configBuilder = new CognitoUserPoolConfigBuilder(this.context, this.spec);
-      this.config = configBuilder.buildSync();
-      
-      // Create Cognito User Pool
-      this.createUserPool();
-      
-      // Create app clients
-      this.createAppClients();
-      
-      // Create domain if configured
-      this.createDomainIfNeeded();
-      
-      // Configure observability (OpenTelemetry Standard)
-      this.configureObservabilityForUserPool();
-      
-      // Apply compliance hardening
-      this.applyComplianceHardening();
-      
-      // Register constructs
-      this.registerConstruct('userPool', this.userPool!);
-      this.userPoolClients.forEach((client, index) => {
-        this.registerConstruct(`client${index}`, client);
-      });
-      if (this.userPoolDomain) {
-        this.registerConstruct('domain', this.userPoolDomain);
-      }
-      
-      // Register capabilities
-      this.registerCapability('auth:user-pool', this.buildUserPoolCapability());
-      this.registerCapability('auth:identity-provider', this.buildIdentityProviderCapability());
-      
-      this.logComponentEvent('synthesis_complete', 'Cognito User Pool synthesis completed successfully');
-    } catch (error) {
-      this.logError(error as Error, 'Cognito User Pool synthesis');
-      throw error;
+
+    const builder = new CognitoUserPoolComponentConfigBuilder(this.context, this.spec);
+    this.config = builder.buildSync();
+
+    this.createUserPool();
+    this.createAppClients();
+    this.createDomainIfNeeded();
+    this.configureMonitoring();
+
+    this.registerConstruct('main', this.userPool!);
+    this.registerConstruct('userPool', this.userPool!);
+    this.userPoolClients.forEach((client, index) => this.registerConstruct(`client:${index}`, client));
+    if (this.userPoolDomain) {
+      this.registerConstruct('domain', this.userPoolDomain);
     }
+    this.alarms.forEach(alarm => this.registerConstruct(`alarm:${alarm.node.id}`, alarm));
+
+    this.registerCapability('auth:user-pool', this.buildUserPoolCapability());
+    this.registerCapability('auth:identity-provider', this.buildIdentityProviderCapability());
+
+    this.logComponentEvent('synthesis_complete', 'Cognito User Pool synthesis completed', {
+      userPoolId: this.userPool!.userPoolId,
+      advancedSecurityMode: this.config.advancedSecurityMode
+    });
   }
 
-  /**
-   * Get the capabilities this component provides
-   */
   public getCapabilities(): ComponentCapabilities {
     this.validateSynthesized();
     return this.capabilities;
   }
 
-  /**
-   * Get the component type identifier
-   */
   public getType(): string {
     return 'cognito-user-pool';
   }
 
-  /**
-   * Create Cognito User Pool
-   */
   private createUserPool(): void {
-    const userPoolName = this.config!.userPoolName || `${this.context.serviceName}-${this.spec.name}`;
-    
+    const removalPolicy = this.config.removalPolicy === 'retain'
+      ? cdk.RemovalPolicy.RETAIN
+      : cdk.RemovalPolicy.DESTROY;
+
+    const userPoolName = this.config.userPoolName ?? `${this.context.serviceName}-${this.spec.name}`;
+
+    const emailConfiguration = this.buildEmailConfiguration();
+    const smsConfiguration = this.buildSmsConfiguration();
+
     this.userPool = new cognito.UserPool(this, 'UserPool', {
       userPoolName,
       signInAliases: this.buildSignInAliases(),
       standardAttributes: this.buildStandardAttributes(),
       customAttributes: this.buildCustomAttributes(),
       passwordPolicy: this.buildPasswordPolicy(),
-      mfa: this.mapMfaMode(this.config!.mfa?.mode || 'optional'),
+      mfa: this.mapMfaMode(this.config.mfa.mode),
       mfaSecondFactor: this.buildMfaSecondFactor(),
       accountRecovery: this.mapAccountRecovery(),
       advancedSecurityMode: this.mapAdvancedSecurityMode(),
-      deletionProtection: this.config!.deletionProtection,
+      deletionProtection: this.config.deletionProtection,
       deviceTracking: this.buildDeviceTracking(),
       lambdaTriggers: this.buildLambdaTriggers(),
       userVerification: this.buildUserVerification(),
-      removalPolicy: this.isComplianceFramework() ? cdk.RemovalPolicy.RETAIN : cdk.RemovalPolicy.DESTROY
+      removalPolicy,
+      email: emailConfiguration,
+      smsRole: smsConfiguration?.smsRole,
+      smsRoleExternalId: smsConfiguration?.smsRoleExternalId,
+      featurePlan: this.mapFeaturePlan()
     });
 
-    // Apply standard tags
     this.applyStandardTags(this.userPool, {
       'resource-type': 'cognito-user-pool',
-      'mfa-mode': this.config!.mfa?.mode || 'optional',
-      'advanced-security': this.config!.advancedSecurityMode || 'audit',
-      ...this.config!.tags
+      'mfa-mode': this.config.mfa.mode,
+      'advanced-security': this.config.advancedSecurityMode,
+      ...this.config.tags
     });
 
     this.logResourceCreation('cognito-user-pool', userPoolName);
   }
 
-  /**
-   * Build sign-in aliases configuration
-   */
+  private createAppClients(): void {
+    for (const client of this.config.appClients) {
+      const created = this.userPool!.addClient(client.clientName, {
+        userPoolClientName: client.clientName,
+        generateSecret: client.generateSecret ?? false,
+        authFlows: this.buildAuthFlows(client.authFlows),
+        supportedIdentityProviders: this.buildIdentityProviders(client.supportedIdentityProviders),
+        oAuth: client.oAuth ? {
+          flows: this.buildOAuthFlows(client.oAuth.flows),
+          scopes: this.buildOAuthScopes(client.oAuth.scopes),
+          callbackUrls: client.oAuth.callbackUrls,
+          logoutUrls: client.oAuth.logoutUrls
+        } : undefined,
+        preventUserExistenceErrors: client.preventUserExistenceErrors ?? true,
+        enableTokenRevocation: client.enableTokenRevocation ?? true,
+        accessTokenValidity: client.accessTokenValidity
+          ? cdk.Duration.minutes(client.accessTokenValidity)
+          : undefined,
+        idTokenValidity: client.idTokenValidity
+          ? cdk.Duration.minutes(client.idTokenValidity)
+          : undefined,
+        refreshTokenValidity: client.refreshTokenValidity
+          ? cdk.Duration.days(client.refreshTokenValidity)
+          : undefined
+      });
+
+      this.userPoolClients.push(created);
+      this.logResourceCreation('cognito-app-client', client.clientName);
+    }
+  }
+
+  private createDomainIfNeeded(): void {
+    const domain = this.config.domain;
+    if (!domain) return;
+
+    if (domain.customDomain) {
+      this.userPoolDomain = this.userPool!.addDomain('CustomDomain', {
+        customDomain: {
+          domainName: domain.customDomain.domainName,
+          certificate: acm.Certificate.fromCertificateArn(
+            this,
+            'CustomDomainCert',
+            domain.customDomain.certificateArn
+          )
+        }
+      });
+    } else if (domain.domainPrefix) {
+      this.userPoolDomain = this.userPool!.addDomain('CognitoDomain', {
+        cognitoDomain: { domainPrefix: domain.domainPrefix }
+      });
+    }
+
+    if (this.userPoolDomain) {
+      this.logResourceCreation('cognito-user-pool-domain', domain.customDomain?.domainName ?? domain.domainPrefix!);
+    }
+  }
+
+  private configureMonitoring(): void {
+    if (!this.config.monitoring.enabled || this.config.advancedSecurityMode === 'off') {
+      return;
+    }
+
+    const userPoolId = this.userPool!.userPoolId;
+    this.createAlarm('SignInSuccessAlarm', this.config.monitoring.signInSuccess, {
+      metricName: 'SignInSuccesses',
+      defaultThreshold: 1,
+      defaultEvaluation: 3,
+      defaultPeriod: 5,
+      comparison: cloudwatch.ComparisonOperator.LESS_THAN_THRESHOLD,
+      treatMissing: cloudwatch.TreatMissingData.BREACHING,
+      description: 'Cognito sign-in success rate below threshold',
+      tag: 'signin-success'
+    }, userPoolId);
+
+    this.createAlarm('SignInThrottleAlarm', this.config.monitoring.signInThrottle, {
+      metricName: 'SignInThrottles',
+      defaultThreshold: 10,
+      defaultEvaluation: 2,
+      defaultPeriod: 5,
+      comparison: cloudwatch.ComparisonOperator.GREATER_THAN_THRESHOLD,
+      treatMissing: cloudwatch.TreatMissingData.NOT_BREACHING,
+      description: 'Cognito sign-in throttles exceeded threshold',
+      tag: 'signin-throttle'
+    }, userPoolId);
+
+    this.createAlarm('SignUpSuccessAlarm', this.config.monitoring.signUpSuccess, {
+      metricName: 'SignUpSuccesses',
+      defaultThreshold: 1,
+      defaultEvaluation: 3,
+      defaultPeriod: 5,
+      comparison: cloudwatch.ComparisonOperator.LESS_THAN_THRESHOLD,
+      treatMissing: cloudwatch.TreatMissingData.NOT_BREACHING,
+      description: 'Cognito sign-up success rate below threshold',
+      tag: 'signup-success'
+    }, userPoolId);
+
+    this.createAlarm('SignUpThrottleAlarm', this.config.monitoring.signUpThrottle, {
+      metricName: 'SignUpThrottles',
+      defaultThreshold: 5,
+      defaultEvaluation: 2,
+      defaultPeriod: 5,
+      comparison: cloudwatch.ComparisonOperator.GREATER_THAN_THRESHOLD,
+      treatMissing: cloudwatch.TreatMissingData.NOT_BREACHING,
+      description: 'Cognito sign-up throttles exceeded threshold',
+      tag: 'signup-throttle'
+    }, userPoolId);
+
+    if (this.config.monitoring.riskHigh.enabled) {
+      this.createAlarm('RiskHighAlarm', this.config.monitoring.riskHigh, {
+        metricName: 'RiskLevelHigh',
+        defaultThreshold: 1,
+        defaultEvaluation: 1,
+        defaultPeriod: 5,
+        comparison: cloudwatch.ComparisonOperator.GREATER_THAN_OR_EQUAL_TO_THRESHOLD,
+        treatMissing: cloudwatch.TreatMissingData.NOT_BREACHING,
+        description: 'Cognito high-risk events detected',
+        tag: 'risk-high'
+      }, userPoolId);
+    }
+  }
+
+  private createAlarm(
+    id: string,
+    alarmConfig: AlarmConfig,
+    defaults: {
+      metricName: string;
+      defaultThreshold: number;
+      defaultEvaluation: number;
+      defaultPeriod: number;
+      comparison: cloudwatch.ComparisonOperator;
+      treatMissing: cloudwatch.TreatMissingData;
+      description: string;
+      tag: string;
+    },
+    userPoolId: string
+  ): void {
+    if (!alarmConfig.enabled) {
+      return;
+    }
+
+    const alarm = new cloudwatch.Alarm(this, id, {
+      alarmName: `${this.context.serviceName}-${this.spec.name}-${defaults.tag}`,
+      alarmDescription: defaults.description,
+      metric: new cloudwatch.Metric({
+        namespace: 'AWS/Cognito',
+        metricName: defaults.metricName,
+        dimensionsMap: {
+          UserPool: userPoolId,
+          UserPoolClient: 'ALL_USER_POOL_CLIENTS'
+        },
+        statistic: 'Sum',
+        period: cdk.Duration.minutes(alarmConfig.periodMinutes ?? defaults.defaultPeriod)
+      }),
+      threshold: alarmConfig.threshold ?? defaults.defaultThreshold,
+      evaluationPeriods: alarmConfig.evaluationPeriods ?? defaults.defaultEvaluation,
+      comparisonOperator: defaults.comparison,
+      treatMissingData: defaults.treatMissing
+    });
+
+    this.applyStandardTags(alarm, {
+      'alarm-type': defaults.tag
+    });
+
+    this.alarms.push(alarm);
+  }
+
   private buildSignInAliases(): cognito.SignInAliases {
-    const signInConfig = this.config!.signIn || {};
-    
     return {
-      username: signInConfig.username,
-      email: signInConfig.email,
-      phone: signInConfig.phone,
-      preferredUsername: signInConfig.preferredUsername
+      username: this.config.signIn.username,
+      email: this.config.signIn.email,
+      phone: this.config.signIn.phone,
+      preferredUsername: this.config.signIn.preferredUsername
     };
   }
 
-  /**
-   * Build standard attributes configuration
-   */
   private buildStandardAttributes(): cognito.StandardAttributes {
-    const attrs = this.config!.standardAttributes || {};
-    
+    const attrs = this.config.standardAttributes;
+
+    const mapAttr = (attr?: StandardAttributeConfig): cognito.StandardAttribute | undefined => {
+      if (!attr) return undefined;
+      return {
+        required: attr.required ?? false,
+        mutable: attr.mutable ?? true
+      };
+    };
+
     return {
-      email: attrs.email ? {
-        required: attrs.email.required || false,
-        mutable: attrs.email.mutable !== false
-      } : undefined,
-      phoneNumber: attrs.phone ? {
-        required: attrs.phone.required || false,
-        mutable: attrs.phone.mutable !== false
-      } : undefined,
-      givenName: attrs.givenName ? {
-        required: attrs.givenName.required || false,
-        mutable: attrs.givenName.mutable !== false
-      } : undefined,
-      familyName: attrs.familyName ? {
-        required: attrs.familyName.required || false,
-        mutable: attrs.familyName.mutable !== false
-      } : undefined,
-      address: attrs.address ? {
-        required: attrs.address.required || false,
-        mutable: attrs.address.mutable !== false
-      } : undefined,
-      birthdate: attrs.birthdate ? {
-        required: attrs.birthdate.required || false,
-        mutable: attrs.birthdate.mutable !== false
-      } : undefined,
-      gender: attrs.gender ? {
-        required: attrs.gender.required || false,
-        mutable: attrs.gender.mutable !== false
-      } : undefined
+      email: mapAttr(attrs.email),
+      phoneNumber: mapAttr(attrs.phone),
+      givenName: mapAttr(attrs.givenName),
+      familyName: mapAttr(attrs.familyName),
+      address: mapAttr(attrs.address),
+      birthdate: mapAttr(attrs.birthdate),
+      gender: mapAttr(attrs.gender)
     };
   }
 
-  /**
-   * Build custom attributes configuration
-   */
   private buildCustomAttributes(): Record<string, cognito.ICustomAttribute> | undefined {
-    const customAttrs = this.config!.customAttributes;
-    if (!customAttrs) return undefined;
-    
+    if (!this.config.customAttributes) {
+      return undefined;
+    }
+
     const result: Record<string, cognito.ICustomAttribute> = {};
-    
-    for (const [name, config] of Object.entries(customAttrs)) {
-      switch (config.type) {
+
+    for (const [name, attribute] of Object.entries(this.config.customAttributes)) {
+      switch (attribute.type) {
         case 'string':
           result[name] = new cognito.StringAttribute({
-            minLen: config.minLength,
-            maxLen: config.maxLength,
-            mutable: config.mutable !== false
+            minLen: attribute.minLength,
+            maxLen: attribute.maxLength,
+            mutable: attribute.mutable ?? true
           });
           break;
         case 'number':
-          result[name] = new cognito.NumberAttribute({
-            mutable: config.mutable !== false
-          });
+          result[name] = new cognito.NumberAttribute({ mutable: attribute.mutable ?? true });
           break;
         case 'datetime':
-          result[name] = new cognito.DateTimeAttribute({
-            mutable: config.mutable !== false
-          });
+          result[name] = new cognito.DateTimeAttribute({ mutable: attribute.mutable ?? true });
           break;
         case 'boolean':
-          result[name] = new cognito.BooleanAttribute({
-            mutable: config.mutable !== false
-          });
+          result[name] = new cognito.BooleanAttribute({ mutable: attribute.mutable ?? true });
           break;
       }
     }
-    
+
     return result;
   }
 
-  /**
-   * Build password policy configuration
-   */
   private buildPasswordPolicy(): cognito.PasswordPolicy {
-    const policy = this.config!.passwordPolicy || {};
-    
     return {
-      minLength: policy.minLength || 8,
-      requireLowercase: policy.requireLowercase !== false,
-      requireUppercase: policy.requireUppercase !== false,
-      requireDigits: policy.requireDigits !== false,
-      requireSymbols: policy.requireSymbols || false,
-      tempPasswordValidity: policy.tempPasswordValidity ? cdk.Duration.days(policy.tempPasswordValidity) : undefined
+      minLength: this.config.passwordPolicy.minLength,
+      requireLowercase: this.config.passwordPolicy.requireLowercase,
+      requireUppercase: this.config.passwordPolicy.requireUppercase,
+      requireDigits: this.config.passwordPolicy.requireDigits,
+      requireSymbols: this.config.passwordPolicy.requireSymbols,
+      tempPasswordValidity: cdk.Duration.days(this.config.passwordPolicy.tempPasswordValidity)
     };
   }
 
-  /**
-   * Map MFA mode string to CDK enum
-   */
   private mapMfaMode(mode: string): cognito.Mfa {
     switch (mode) {
       case 'required':
         return cognito.Mfa.REQUIRED;
-      case 'optional':
-        return cognito.Mfa.OPTIONAL;
       case 'off':
-      default:
         return cognito.Mfa.OFF;
+      case 'optional':
+      default:
+        return cognito.Mfa.OPTIONAL;
     }
   }
 
-  /**
-   * Build MFA second factor configuration
-   */
   private buildMfaSecondFactor(): cognito.MfaSecondFactor {
-    const mfaConfig = this.config!.mfa || { enableSms: true, enableTotp: true };
-    
     return {
-      sms: mfaConfig.enableSms !== false,
-      otp: mfaConfig.enableTotp !== false
+      sms: this.config.mfa.enableSms,
+      otp: this.config.mfa.enableTotp
     };
   }
 
-  /**
-   * Map account recovery configuration
-   */
   private mapAccountRecovery(): cognito.AccountRecovery {
-    const recovery = this.config!.accountRecovery || {};
-    
+    const recovery = this.config.accountRecovery;
+
     if (recovery.email && recovery.phone) {
       return cognito.AccountRecovery.EMAIL_AND_PHONE_WITHOUT_MFA;
-    } else if (recovery.email) {
-      return cognito.AccountRecovery.EMAIL_ONLY;
-    } else if (recovery.phone) {
+    }
+
+    if (recovery.phone) {
       return cognito.AccountRecovery.PHONE_ONLY_WITHOUT_MFA;
-    } else {
+    }
+
+    if (recovery.email) {
       return cognito.AccountRecovery.EMAIL_ONLY;
     }
+
+    return cognito.AccountRecovery.EMAIL_ONLY;
   }
 
-  /**
-   * Map advanced security mode
-   */
   private mapAdvancedSecurityMode(): cognito.AdvancedSecurityMode {
-    const mode = this.config!.advancedSecurityMode || 'audit';
-    
-    switch (mode) {
+    switch (this.config.advancedSecurityMode) {
       case 'enforced':
         return cognito.AdvancedSecurityMode.ENFORCED;
-      case 'audit':
-        return cognito.AdvancedSecurityMode.AUDIT;
       case 'off':
-      default:
         return cognito.AdvancedSecurityMode.OFF;
+      case 'audit':
+      default:
+        return cognito.AdvancedSecurityMode.AUDIT;
     }
   }
 
-  /**
-   * Build device tracking configuration
-   */
+  private mapFeaturePlan(): cognito.FeaturePlan {
+    switch (this.config.featurePlan) {
+      case 'lite':
+        return cognito.FeaturePlan.LITE;
+      case 'essentials':
+        return cognito.FeaturePlan.ESSENTIALS;
+      case 'plus':
+      default:
+        return cognito.FeaturePlan.PLUS;
+    }
+  }
+
   private buildDeviceTracking(): cognito.DeviceTracking {
-    const tracking = this.config!.deviceTracking || {};
-    
     return {
-      challengeRequiredOnNewDevice: tracking.challengeRequiredOnNewDevice || false,
-      deviceOnlyRememberedOnUserPrompt: tracking.deviceOnlyRememberedOnUserPrompt !== false
+      challengeRequiredOnNewDevice: this.config.deviceTracking.challengeRequiredOnNewDevice,
+      deviceOnlyRememberedOnUserPrompt: this.config.deviceTracking.deviceOnlyRememberedOnUserPrompt
     };
   }
 
-  /**
-   * Build Lambda triggers configuration
-   */
   private buildLambdaTriggers(): cognito.UserPoolTriggers | undefined {
-    const triggers = this.config!.triggers;
-    if (!triggers) return undefined;
-    
-    const lambdaTriggers: cognito.UserPoolTriggers = {};
-    
+    const triggers = this.config.triggers;
+    if (!triggers) {
+      return undefined;
+    }
+
+    const fromArn = (id: string, arn?: string) => arn
+      ? lambda.Function.fromFunctionArn(this, id, arn)
+      : undefined;
+
     return {
-      preSignUp: triggers.preSignUp ? lambda.Function.fromFunctionArn(this, 'PreSignUpTrigger', triggers.preSignUp) : undefined,
-      postConfirmation: triggers.postConfirmation ? lambda.Function.fromFunctionArn(this, 'PostConfirmationTrigger', triggers.postConfirmation) : undefined,
-      preAuthentication: triggers.preAuthentication ? lambda.Function.fromFunctionArn(this, 'PreAuthenticationTrigger', triggers.preAuthentication) : undefined,
-      postAuthentication: triggers.postAuthentication ? lambda.Function.fromFunctionArn(this, 'PostAuthenticationTrigger', triggers.postAuthentication) : undefined,
-      preTokenGeneration: triggers.preTokenGeneration ? lambda.Function.fromFunctionArn(this, 'PreTokenGenerationTrigger', triggers.preTokenGeneration) : undefined,
-      userMigration: triggers.userMigration ? lambda.Function.fromFunctionArn(this, 'UserMigrationTrigger', triggers.userMigration) : undefined,
-      customMessage: triggers.customMessage ? lambda.Function.fromFunctionArn(this, 'CustomMessageTrigger', triggers.customMessage) : undefined,
-      defineAuthChallenge: triggers.defineAuthChallenge ? lambda.Function.fromFunctionArn(this, 'DefineAuthChallengeTrigger', triggers.defineAuthChallenge) : undefined,
-      createAuthChallenge: triggers.createAuthChallenge ? lambda.Function.fromFunctionArn(this, 'CreateAuthChallengeTrigger', triggers.createAuthChallenge) : undefined,
-      verifyAuthChallengeResponse: triggers.verifyAuthChallengeResponse ? lambda.Function.fromFunctionArn(this, 'VerifyAuthChallengeResponseTrigger', triggers.verifyAuthChallengeResponse) : undefined
+      preSignUp: fromArn('PreSignUpTrigger', triggers.preSignUp),
+      postConfirmation: fromArn('PostConfirmationTrigger', triggers.postConfirmation),
+      preAuthentication: fromArn('PreAuthenticationTrigger', triggers.preAuthentication),
+      postAuthentication: fromArn('PostAuthenticationTrigger', triggers.postAuthentication),
+      preTokenGeneration: fromArn('PreTokenGenerationTrigger', triggers.preTokenGeneration),
+      userMigration: fromArn('UserMigrationTrigger', triggers.userMigration),
+      customMessage: fromArn('CustomMessageTrigger', triggers.customMessage),
+      defineAuthChallenge: fromArn('DefineAuthChallengeTrigger', triggers.defineAuthChallenge),
+      createAuthChallenge: fromArn('CreateAuthChallengeTrigger', triggers.createAuthChallenge),
+      verifyAuthChallengeResponse: fromArn('VerifyAuthChallengeTrigger', triggers.verifyAuthChallengeResponse)
     };
   }
 
-  /**
-   * Build user verification configuration
-   */
   private buildUserVerification(): cognito.UserVerificationConfig {
     return {
       emailSubject: 'Verify your email for our application',
       emailBody: 'Your verification code is {####}',
       emailStyle: cognito.VerificationEmailStyle.CODE,
-      smsMessage: this.config!.mfa?.smsMessage || 'Your verification code is {####}'
+      smsMessage: this.config.mfa.smsMessage ?? 'Your verification code is {####}'
     };
   }
 
-  /**
-   * Create app clients
-   */
-  private createAppClients(): void {
-    const appClients = this.config!.appClients || [];
-    
-    for (const clientConfig of appClients) {
-      const client = this.userPool!.addClient(clientConfig.clientName, {
-        generateSecret: clientConfig.generateSecret || false,
-        authFlows: this.buildAuthFlows(clientConfig.authFlows),
-        supportedIdentityProviders: this.buildIdentityProviders(clientConfig.supportedIdentityProviders),
-        oAuth: clientConfig.oAuth ? {
-          flows: this.buildOAuthFlows(clientConfig.oAuth.flows),
-          scopes: this.buildOAuthScopes(clientConfig.oAuth.scopes),
-          callbackUrls: clientConfig.callbackUrls,
-          logoutUrls: clientConfig.logoutUrls
-        } : undefined,
-        preventUserExistenceErrors: clientConfig.preventUserExistenceErrors !== false,
-        enableTokenRevocation: clientConfig.enableTokenRevocation !== false,
-        accessTokenValidity: clientConfig.accessTokenValidity ? cdk.Duration.minutes(clientConfig.accessTokenValidity) : undefined,
-        idTokenValidity: clientConfig.idTokenValidity ? cdk.Duration.minutes(clientConfig.idTokenValidity) : undefined,
-        refreshTokenValidity: clientConfig.refreshTokenValidity ? cdk.Duration.days(clientConfig.refreshTokenValidity) : undefined
-      });
-      
-      this.userPoolClients.push(client);
-      this.logResourceCreation('user-pool-client', clientConfig.clientName);
+  private buildEmailConfiguration(): cognito.UserPoolEmail | undefined {
+    const email = this.config.email;
+    if (!email || !email.fromEmail) {
+      return undefined;
     }
+
+    return cognito.UserPoolEmail.withSES({
+      fromEmail: email.fromEmail,
+      fromName: email.fromName,
+      replyToEmail: email.replyToEmail,
+      sesRegion: email.sesRegion,
+      sesVerifiedDomain: email.sesVerifiedDomain
+    });
   }
 
-  /**
-   * Build authentication flows
-   */
+  private buildSmsConfiguration(): { smsRole: iam.IRole; smsRoleExternalId?: string } | undefined {
+    const sms = this.config.sms;
+    if (!sms?.snsCallerArn) {
+      return undefined;
+    }
+
+    return {
+      smsRole: iam.Role.fromRoleArn(this, 'SmsRole', sms.snsCallerArn),
+      smsRoleExternalId: sms.externalId
+    };
+  }
+
   private buildAuthFlows(authFlows?: string[]): cognito.AuthFlow {
-    if (!authFlows) {
+    if (!authFlows || authFlows.length === 0) {
       return {
         userSrp: true,
         adminUserPassword: false,
@@ -1072,7 +484,7 @@ export class CognitoUserPoolComponent extends Component {
         userPassword: false
       };
     }
-    
+
     return {
       userSrp: authFlows.includes('user-srp'),
       adminUserPassword: authFlows.includes('admin-user-password'),
@@ -1081,16 +493,13 @@ export class CognitoUserPoolComponent extends Component {
     };
   }
 
-  /**
-   * Build identity providers
-   */
   private buildIdentityProviders(providers?: string[]): cognito.UserPoolClientIdentityProvider[] {
-    if (!providers) {
+    if (!providers || providers.length === 0) {
       return [cognito.UserPoolClientIdentityProvider.COGNITO];
     }
-    
+
     const result: cognito.UserPoolClientIdentityProvider[] = [];
-    
+
     for (const provider of providers) {
       switch (provider) {
         case 'cognito':
@@ -1110,22 +519,19 @@ export class CognitoUserPoolComponent extends Component {
           break;
       }
     }
-    
-    return result;
+
+    return result.length > 0 ? result : [cognito.UserPoolClientIdentityProvider.COGNITO];
   }
 
-  /**
-   * Build OAuth flows
-   */
   private buildOAuthFlows(flows?: string[]): cognito.OAuthFlows {
-    if (!flows) {
+    if (!flows || flows.length === 0) {
       return {
         authorizationCodeGrant: true,
         implicitCodeGrant: false,
         clientCredentials: false
       };
     }
-    
+
     return {
       authorizationCodeGrant: flows.includes('authorization-code'),
       implicitCodeGrant: flows.includes('implicit'),
@@ -1133,16 +539,13 @@ export class CognitoUserPoolComponent extends Component {
     };
   }
 
-  /**
-   * Build OAuth scopes
-   */
   private buildOAuthScopes(scopes?: string[]): cognito.OAuthScope[] {
-    if (!scopes) {
+    if (!scopes || scopes.length === 0) {
       return [cognito.OAuthScope.OPENID];
     }
-    
+
     const result: cognito.OAuthScope[] = [];
-    
+
     for (const scope of scopes) {
       switch (scope) {
         case 'openid':
@@ -1159,41 +562,11 @@ export class CognitoUserPoolComponent extends Component {
           break;
       }
     }
-    
-    return result;
+
+    return result.length > 0 ? result : [cognito.OAuthScope.OPENID];
   }
 
-  /**
-   * Create domain if configured
-   */
-  private createDomainIfNeeded(): void {
-    const domainConfig = this.config!.domain;
-    if (!domainConfig) return;
-    
-    if (domainConfig.customDomain) {
-      this.userPoolDomain = this.userPool!.addDomain('Domain', {
-        customDomain: {
-          domainName: domainConfig.customDomain.domainName,
-          certificate: acm.Certificate.fromCertificateArn(this, 'DomainCert', domainConfig.customDomain.certificateArn)
-        }
-      });
-    } else if (domainConfig.domainPrefix) {
-      this.userPoolDomain = this.userPool!.addDomain('Domain', {
-        cognitoDomain: {
-          domainPrefix: domainConfig.domainPrefix
-        }
-      });
-    }
-    
-    if (this.userPoolDomain) {
-      this.logResourceCreation('user-pool-domain', domainConfig.customDomain?.domainName || domainConfig.domainPrefix!);
-    }
-  }
-
-  /**
-   * Build user pool capability data shape
-   */
-  private buildUserPoolCapability(): any {
+  private buildUserPoolCapability(): Record<string, any> {
     return {
       userPoolId: this.userPool!.userPoolId,
       userPoolArn: this.userPool!.userPoolArn,
@@ -1207,189 +580,12 @@ export class CognitoUserPoolComponent extends Component {
     };
   }
 
-  /**
-   * Build identity provider capability data shape
-   */
-  private buildIdentityProviderCapability(): any {
+  private buildIdentityProviderCapability(): Record<string, any> {
     return {
       userPoolId: this.userPool!.userPoolId,
       userPoolArn: this.userPool!.userPoolArn,
       providerName: this.userPool!.userPoolProviderName,
       providerUrl: this.userPool!.userPoolProviderUrl
     };
-  }
-
-  /**
-   * Apply compliance hardening based on framework
-   */
-  private applyComplianceHardening(): void {
-    switch (this.context.complianceFramework) {
-      case 'fedramp-high':
-        this.applyFedrampHighHardening();
-        break;
-      case 'fedramp-moderate':
-        this.applyFedrampModerateHardening();
-        break;
-      default:
-        this.applyCommercialHardening();
-        break;
-    }
-  }
-
-  /**
-   * Apply FedRAMP High compliance hardening
-   */
-  private applyFedrampHighHardening(): void {
-    this.logComplianceEvent('fedramp_high_hardening_applied', 'Applied FedRAMP High hardening to Cognito User Pool', {
-      mfaMode: this.config!.mfa?.mode,
-      advancedSecurityMode: this.config!.advancedSecurityMode,
-      passwordMinLength: this.config!.passwordPolicy?.minLength,
-      deletionProtection: this.config!.deletionProtection
-    });
-  }
-
-  /**
-   * Apply FedRAMP Moderate compliance hardening
-   */
-  private applyFedrampModerateHardening(): void {
-    this.logComplianceEvent('fedramp_moderate_hardening_applied', 'Applied FedRAMP Moderate hardening to Cognito User Pool', {
-      mfaMode: this.config!.mfa?.mode,
-      advancedSecurityMode: this.config!.advancedSecurityMode,
-      passwordMinLength: this.config!.passwordPolicy?.minLength
-    });
-  }
-
-  /**
-   * Apply commercial hardening
-   */
-  private applyCommercialHardening(): void {
-    this.logComponentEvent('commercial_hardening_applied', 'Applied commercial security hardening to Cognito User Pool');
-  }
-
-  /**
-   * Configure OpenTelemetry Observability Standard - CloudWatch Alarms for Cognito User Pool
-   */
-  private configureObservabilityForUserPool(): void {
-    // Cognito metrics are only available when advanced security mode is enabled
-    if (this.config!.advancedSecurityMode === 'off') {
-      return;
-    }
-
-    const userPoolId = this.userPool!.userPoolId;
-
-    // 1. Sign In Success Rate Alarm
-    new cloudwatch.Alarm(this, 'SignInSuccessAlarm', {
-      alarmName: `${this.context.serviceName}-${this.spec.name}-signin-success-rate`,
-      alarmDescription: 'Cognito User Pool sign-in success rate alarm',
-      metric: new cloudwatch.Metric({
-        namespace: 'AWS/Cognito',
-        metricName: 'SignInSuccesses',
-        dimensionsMap: {
-          UserPool: userPoolId,
-          UserPoolClient: 'ALL_USER_POOL_CLIENTS'
-        },
-        statistic: 'Sum',
-        period: cdk.Duration.minutes(5)
-      }),
-      threshold: 1,
-      evaluationPeriods: 3,
-      comparisonOperator: cloudwatch.ComparisonOperator.LESS_THAN_THRESHOLD,
-      treatMissingData: cloudwatch.TreatMissingData.BREACHING
-    });
-
-    // 2. Sign In Throttles Alarm
-    new cloudwatch.Alarm(this, 'SignInThrottleAlarm', {
-      alarmName: `${this.context.serviceName}-${this.spec.name}-signin-throttles`,
-      alarmDescription: 'Cognito User Pool sign-in throttles alarm',
-      metric: new cloudwatch.Metric({
-        namespace: 'AWS/Cognito',
-        metricName: 'SignInThrottles',
-        dimensionsMap: {
-          UserPool: userPoolId,
-          UserPoolClient: 'ALL_USER_POOL_CLIENTS'
-        },
-        statistic: 'Sum',
-        period: cdk.Duration.minutes(5)
-      }),
-      threshold: 10,
-      evaluationPeriods: 2,
-      comparisonOperator: cloudwatch.ComparisonOperator.GREATER_THAN_THRESHOLD,
-      treatMissingData: cloudwatch.TreatMissingData.NOT_BREACHING
-    });
-
-    // 3. Sign Up Success Rate Alarm
-    new cloudwatch.Alarm(this, 'SignUpSuccessAlarm', {
-      alarmName: `${this.context.serviceName}-${this.spec.name}-signup-success-rate`,
-      alarmDescription: 'Cognito User Pool sign-up success rate alarm',
-      metric: new cloudwatch.Metric({
-        namespace: 'AWS/Cognito',
-        metricName: 'SignUpSuccesses',
-        dimensionsMap: {
-          UserPool: userPoolId,
-          UserPoolClient: 'ALL_USER_POOL_CLIENTS'
-        },
-        statistic: 'Sum',
-        period: cdk.Duration.minutes(5)
-      }),
-      threshold: 1,
-      evaluationPeriods: 3,
-      comparisonOperator: cloudwatch.ComparisonOperator.LESS_THAN_THRESHOLD,
-      treatMissingData: cloudwatch.TreatMissingData.NOT_BREACHING
-    });
-
-    // 4. Sign Up Throttles Alarm
-    new cloudwatch.Alarm(this, 'SignUpThrottleAlarm', {
-      alarmName: `${this.context.serviceName}-${this.spec.name}-signup-throttles`,
-      alarmDescription: 'Cognito User Pool sign-up throttles alarm',
-      metric: new cloudwatch.Metric({
-        namespace: 'AWS/Cognito',
-        metricName: 'SignUpThrottles',
-        dimensionsMap: {
-          UserPool: userPoolId,
-          UserPoolClient: 'ALL_USER_POOL_CLIENTS'
-        },
-        statistic: 'Sum',
-        period: cdk.Duration.minutes(5)
-      }),
-      threshold: 5,
-      evaluationPeriods: 2,
-      comparisonOperator: cloudwatch.ComparisonOperator.GREATER_THAN_THRESHOLD,
-      treatMissingData: cloudwatch.TreatMissingData.NOT_BREACHING
-    });
-
-    // 5. High Risk Events Alarm (only when advanced security is enforced)
-    if (this.config!.advancedSecurityMode === 'enforced') {
-      new cloudwatch.Alarm(this, 'RiskLevelHighAlarm', {
-        alarmName: `${this.context.serviceName}-${this.spec.name}-risk-level-high`,
-        alarmDescription: 'Cognito User Pool high risk events alarm',
-        metric: new cloudwatch.Metric({
-          namespace: 'AWS/Cognito',
-          metricName: 'RiskLevelHigh',
-          dimensionsMap: {
-            UserPool: userPoolId,
-            UserPoolClient: 'ALL_USER_POOL_CLIENTS'
-          },
-          statistic: 'Sum',
-          period: cdk.Duration.minutes(5)
-        }),
-        threshold: 1,
-        evaluationPeriods: 1,
-        comparisonOperator: cloudwatch.ComparisonOperator.GREATER_THAN_OR_EQUAL_TO_THRESHOLD,
-        treatMissingData: cloudwatch.TreatMissingData.NOT_BREACHING
-      });
-    }
-
-    this.logComponentEvent('observability_configured', 'OpenTelemetry observability standard applied to Cognito User Pool', {
-      alarmsCreated: this.config!.advancedSecurityMode === 'enforced' ? 5 : 4,
-      advancedSecurityMode: this.config!.advancedSecurityMode,
-      userPoolId: userPoolId
-    });
-  }
-
-  /**
-   * Check if this is a compliance framework
-   */
-  private isComplianceFramework(): boolean {
-    return this.context.complianceFramework !== 'commercial';
   }
 }

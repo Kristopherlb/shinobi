@@ -11,7 +11,7 @@ import {
   ComponentContext, 
   IComponentCreator 
 } from '../../platform/contracts/component-interfaces';
-import { CognitoUserPoolComponentComponent } from './cognito-user-pool.component';
+import { CognitoUserPoolComponent } from './cognito-user-pool.component';
 import { CognitoUserPoolConfig, COGNITO_USER_POOL_CONFIG_SCHEMA } from './cognito-user-pool.builder';
 
 /**
@@ -38,7 +38,7 @@ export class CognitoUserPoolComponentCreator implements IComponentCreator {
   /**
    * Component description
    */
-  public readonly description = 'Cognito User Pool Component implementing Component API Contract v1.0';
+  public readonly description = 'Configuration-driven Cognito User Pool component';
   
   /**
    * Component category for organization
@@ -69,11 +69,11 @@ export class CognitoUserPoolComponentCreator implements IComponentCreator {
    * Factory method to create component instances
    */
   public createComponent(
-    scope: Construct, 
-    spec: ComponentSpec, 
+    scope: Construct,
+    spec: ComponentSpec,
     context: ComponentContext
-  ): CognitoUserPoolComponentComponent {
-    return new CognitoUserPoolComponentComponent(scope, spec, context);
+  ): CognitoUserPoolComponent {
+    return new CognitoUserPoolComponent(scope, spec.name, context, spec);
   }
   
   /**
@@ -96,12 +96,8 @@ export class CognitoUserPoolComponentCreator implements IComponentCreator {
     // TODO: Add component-specific validations here
     
     // Environment-specific validations
-    if (context.environment === 'prod') {
-      if (!config?.monitoring?.enabled) {
-        errors.push('Monitoring must be enabled in production environment');
-      }
-      
-      // TODO: Add production-specific validations
+    if (context.environment === 'prod' && !config?.monitoring?.enabled) {
+      errors.push('Monitoring must be enabled in production environments');
     }
     
     return {
@@ -115,8 +111,8 @@ export class CognitoUserPoolComponentCreator implements IComponentCreator {
    */
   public getProvidedCapabilities(): string[] {
     return [
-      'security:cognito-user-pool',
-      'monitoring:cognito-user-pool'
+      'auth:user-pool',
+      'auth:identity-provider'
     ];
   }
   
@@ -124,9 +120,7 @@ export class CognitoUserPoolComponentCreator implements IComponentCreator {
    * Returns the capabilities this component requires from other components
    */
   public getRequiredCapabilities(): string[] {
-    return [
-      // TODO: Define required capabilities
-    ];
+    return [];
   }
   
   /**
@@ -134,8 +128,9 @@ export class CognitoUserPoolComponentCreator implements IComponentCreator {
    */
   public getConstructHandles(): string[] {
     return [
-      'main'
-      // TODO: Add additional construct handles if needed
+      'main',
+      'userPool',
+      'domain'
     ];
   }
 }

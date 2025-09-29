@@ -3,12 +3,12 @@
 The following components still embed `context.complianceFramework` switches or per-framework defaults in code. Each item needs to be migrated so that all behaviour is driven from the ConfigBuilder + `/config/<framework>.yml` profile, with components consuming only the resolved configuration.
 
 ## Batch 1 – High Traffic Entry Points
-- [ ] `packages/components/api-gateway-http` — builder, component, creator, docs, tests
-- [ ] `packages/components/auto-scaling-group` — builder & component refactor (monitoring/KMS/alarm defaults)
-- [ ] `packages/components/certificate-manager` — builder/component switch removal
+- [x] `packages/components/api-gateway-http` — builder, component, creator, docs, tests
+- [x] `packages/components/auto-scaling-group` — builder & component refactor (monitoring/KMS/alarm defaults)
+- [x] `packages/components/certificate-manager` — builder/component switch removal
 
 ## Batch 2 – Identity & Networking
-- [ ] `packages/components/cognito-user-pool` — builder + component compliance switches
+- [x] `packages/components/cognito-user-pool` — builder + component compliance switches
 - [ ] `packages/components/static-website` — builder/component/creator WAF & logging defaults
 - [ ] `packages/components/waf-web-acl` — builder/component rule-set defaults
 

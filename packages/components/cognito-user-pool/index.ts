@@ -4,7 +4,7 @@
  */
 
 // Component exports
-export { CognitoUserPoolComponentComponent } from './cognito-user-pool.component';
+export { CognitoUserPoolComponent } from './cognito-user-pool.component';
 
 // Configuration exports
 export { 

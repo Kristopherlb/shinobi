@@ -4,7 +4,7 @@
  */
 
 // Component exports
-export { AutoScalingGroupComponentComponent } from './auto-scaling-group.component';
+export { AutoScalingGroupComponent } from './auto-scaling-group.component';
 
 // Configuration exports
 export { 

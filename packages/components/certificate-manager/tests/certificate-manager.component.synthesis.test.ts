@@ -1,94 +1,82 @@
-/**
- * CertificateManagerComponent Component Synthesis Test Suite
- * Implements Platform Testing Standard v1.0 - Component Synthesis Testing
- */
-
-import { Template, Match } from 'aws-cdk-lib/assertions';
+import * as route53 from 'aws-cdk-lib/aws-route53';
 import { App, Stack } from 'aws-cdk-lib';
-import { CertificateManagerComponentComponent } from '../certificate-manager.component';
+import { Template, Match } from 'aws-cdk-lib/assertions';
+import { CertificateManagerComponent } from '../certificate-manager.component';
 import { CertificateManagerConfig } from '../certificate-manager.builder';
-import { ComponentContext, ComponentSpec } from '../../../platform/contracts/component-interfaces';
+import { ComponentContext, ComponentSpec } from '@shinobi/core';
 
-const createMockContext = (
-  complianceFramework: string = 'commercial',
-  environment: string = 'dev'
-): ComponentContext => ({
-  serviceName: 'test-service',
-  owner: 'test-team',
-  environment,
-  complianceFramework,
-  region: 'us-east-1',
-  account: '123456789012',
-  tags: {
-    'service-name': 'test-service',
-    'owner': 'test-team',
-    'environment': environment,
-    'compliance-framework': complianceFramework
-  }
-});
-
-const createMockSpec = (config: Partial<CertificateManagerConfig> = {}): ComponentSpec => ({
-  name: 'test-certificate-manager',
+const createSpec = (config: Partial<CertificateManagerConfig>): ComponentSpec => ({
+  name: 'cert-test',
   type: 'certificate-manager',
   config
 });
 
-const synthesizeComponent = (
-  context: ComponentContext,
-  spec: ComponentSpec
-): { component: CertificateManagerComponentComponent; template: Template } => {
-  const app = new App();
-  const stack = new Stack(app, 'TestStack');
-  
-  const component = new CertificateManagerComponentComponent(stack, spec, context);
-  component.synth();
-  
-  const template = Template.fromStack(stack);
-  return { component, template };
-};
+describe('CertificateManagerComponent synthesis', () => {
+  const synthesize = (
+    framework: 'commercial' | 'fedramp-moderate' | 'fedramp-high',
+    overrides: Partial<CertificateManagerConfig> = {}
+  ) => {
+    const app = new App();
+    const stack = new Stack(app, 'TestStack');
+    const hostedZone = new route53.PublicHostedZone(stack, 'HostedZone', { zoneName: 'example.com' });
 
-describe('CertificateManagerComponentComponent Synthesis', () => {
-  
-  describe('Default Happy Path Synthesis', () => {
-    
-    it('should synthesize basic certificate-manager with commercial compliance', () => {
-      const context = createMockContext('commercial');
-      const spec = createMockSpec();
-      
-      const { template, component } = synthesizeComponent(context, spec);
-      
-      // TODO: Add specific CloudFormation resource assertions
-      // Verify component was created
-      expect(component).toBeDefined();
-      expect(component.getType()).toBe('certificate-manager');
+    const context: ComponentContext = {
+      serviceName: 'test-service',
+      owner: 'platform-team',
+      environment: framework === 'fedramp-high' ? 'prod' : 'dev',
+      complianceFramework: framework,
+      region: 'us-east-1',
+      account: '123456789012',
+      scope: stack,
+      tags: {
+        'service-name': 'test-service',
+        environment: framework === 'fedramp-high' ? 'prod' : 'dev',
+        'compliance-framework': framework
+      }
+    };
+
+    const spec = createSpec({
+      domainName: 'example.com',
+      validation: {
+        method: 'DNS',
+        hostedZoneId: hostedZone.hostedZoneId,
+        hostedZoneName: hostedZone.zoneName
+      },
+      ...overrides
     });
-    
+
+    const component = new CertificateManagerComponent(stack, 'CertificateManager', context, spec);
+    component.synth();
+
+    return {
+      template: Template.fromStack(stack),
+      component
+    };
+  };
+
+  it('creates an ACM certificate with DNS validation for commercial defaults', () => {
+    const { template } = synthesize('commercial');
+
+    template.hasResourceProperties('AWS::CertificateManager::Certificate', {
+      DomainName: 'example.com',
+      ValidationMethod: 'DNS'
+    });
   });
-  
-  describe('Component Capabilities and Constructs', () => {
-    
-    it('should register correct capabilities after synthesis', () => {
-      const context = createMockContext('commercial');
-      const spec = createMockSpec();
-      
-      const { component } = synthesizeComponent(context, spec);
-      
-      const capabilities = component.getCapabilities();
-      
-      // Verify component-specific capabilities
-      expect(capabilities).toBeDefined();
+
+  it('enables hardened settings for fedramp-high', () => {
+    const { template } = synthesize('fedramp-high');
+
+    template.hasResourceProperties('AWS::CertificateManager::Certificate', {
+      DomainName: 'example.com',
+      Tags: Match.arrayWith([
+        Match.objectLike({ Key: 'key-algorithm', Value: 'EC_secp384r1' })
+      ])
     });
-    
-    it('should register construct handles for patches.ts access', () => {
-      const context = createMockContext('commercial');
-      const spec = createMockSpec();
-      
-      const { component } = synthesizeComponent(context, spec);
-      
-      // Verify main construct is registered
-      expect(component.getConstruct('main')).toBeDefined();
+
+    template.hasResourceProperties('AWS::Logs::LogGroup', {
+      RetentionInDays: Match.anyValue()
     });
-    
+
+    template.resourceCountIs('AWS::CloudWatch::Alarm', 2);
   });
-  
 });

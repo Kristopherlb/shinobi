@@ -1,111 +1,86 @@
-# CognitoUserPoolComponent Component
+# Cognito User Pool Component
 
-Cognito User Pool Component implementing Component API Contract v1.0 with comprehensive security, monitoring, and compliance features.
+Configuration-driven Amazon Cognito User Pool that honours the shared
+ConfigBuilder precedence chain. Compliance-specific defaults (commercial,
+FedRAMP moderate/high) are encoded in `/config/<framework>.yml`; the component
+only consumes the resolved configuration when synthesising resources.
 
-## Overview
+## Features
 
-The CognitoUserPoolComponent component provides:
+- Sign-in aliases, standard/custom attributes, password policy, and device
+  tracking driven entirely by configuration.
+- Optional SES-backed email configuration and imported SMS role support.
+- App client creation with OAuth flows/scopes, identity providers, and token
+  validity controls.
+- Domain provisioning for Cognito-hosted UI (prefix or custom domain).
+- CloudWatch alarms for sign-in/sign-up success rates, throttling, and high risk
+  events with thresholds sourced from configuration.
+- Capability metadata exposes user-pool identifiers and registered app clients.
 
-- **Production-ready** cognito user pool component functionality
-- **Comprehensive compliance** (Commercial, FedRAMP Moderate/High)
-- **Integrated monitoring** and observability
-- **Security-first** configuration
-- **Platform integration** with other components
-
-### Category: security
-
-### AWS Service: COGNITO
-
-This component manages COGNITO resources and provides a simplified, secure interface for common use cases.
-
-## Usage Example
-
-### Basic Configuration
+## Usage
 
 ```yaml
-service: my-service
-owner: platform-team
-complianceFramework: commercial
-
 components:
-  - name: my-cognito-user-pool
+  - name: customer-auth
     type: cognito-user-pool
     config:
-      description: "Production cognito-user-pool instance"
+      userPoolName: customer-auth-prod
+      mfa:
+        mode: required
+        enableTotp: true
+      domain:
+        domainPrefix: customer-auth-prod
+      appClients:
+        - clientName: web-app
+          authFlows: ["user-srp"]
+          supportedIdentityProviders: ["cognito"]
+          oAuth:
+            flows: ["authorization-code"]
+            scopes: ["openid", "email", "profile"]
+            callbackUrls:
+              - https://app.example.com/auth/callback
+            logoutUrls:
+              - https://app.example.com/logout
       monitoring:
         enabled: true
-        detailedMetrics: true
+        riskHigh:
+          enabled: true
 ```
 
-## Configuration Reference
+Any field omitted inherits the defaults for the active compliance framework.
+For example, FedRAMP profiles enforce stringent password policies, mandatory
+advanced security mode, and tighter throttling thresholds.
 
-### Root Configuration
+## Key Configuration Sections
 
-| Property | Type | Required | Description |
-|----------|------|----------|-------------|
-| `name` | string | No | Component name (auto-generated if not provided) |
-| `description` | string | No | Component description for documentation |
-| `monitoring` | object | No | Monitoring and observability configuration |
-| `tags` | object | No | Additional resource tags |
+| Path | Description |
+|------|-------------|
+| `signIn` | Enable the sign-in aliases (username/email/phone/preferredUsername). At least one alias must be true. |
+| `standardAttributes` | Per-attribute required/mutable flags for built-in Cognito attributes. |
+| `customAttributes` | Map of additional attributes with type, mutability, and optional length bounds. |
+| `passwordPolicy` | Minimum length and complexity requirements including temporary password validity. |
+| `mfa` | MFA enforcement level plus second-factor toggles and SMS template. |
+| `featurePlan` | Cognito feature plan (`lite`, `essentials`, `plus`). Advanced security modes require `plus`. |
+| `accountRecovery` | Toggle email/phone recovery channels. |
+| `email` / `sms` | Optional SES sender configuration and imported SMS role ARN/external ID. |
+| `domain` | Cognito-hosted UI prefix or custom domain (with certificate ARN). |
+| `appClients[]` | App client definitions (auth flows, providers, OAuth, token validity, secrets). |
+| `monitoring` | Enable alarms and specify thresholds/evaluation periods per metric. |
+| `tags` | Additional resource tags merged with platform tagging. |
 
-### Monitoring Configuration
+## Capabilities
 
-| Property | Type | Required | Description |
-|----------|------|----------|-------------|
-| `enabled` | boolean | No | Enable monitoring (default: true) |
-| `detailedMetrics` | boolean | No | Enable detailed CloudWatch metrics |
+- `auth:user-pool` – User pool identifiers, provider name/URL, registered client IDs.
+- `auth:identity-provider` – Alias of provider name/URL for downstream binders.
 
-## Capabilities Provided
-
-This component provides the following capabilities for binding with other components:
-
-- `security:cognito-user-pool` - Main cognito-user-pool capability
-- `monitoring:cognito-user-pool` - Monitoring capability
-
-## Construct Handles
-
-The following construct handles are available for use in `patches.ts`:
-
-- `main` - Main cognito-user-pool construct
-
-## Compliance Frameworks
-
-### Commercial
-
-- Standard monitoring configuration
-- Basic resource tagging
-- Standard security settings
-
-### FedRAMP Moderate/High
-
-- Enhanced monitoring with detailed metrics
-- Comprehensive audit logging
-- Stricter security configurations
-- Extended compliance tagging
-
-## Best Practices
-
-1. **Always enable monitoring** in production environments
-2. **Use descriptive names** for better resource identification
-3. **Configure appropriate tags** for cost allocation and governance
-4. **Review compliance requirements** for your environment
-5. **Test configurations** in development before production deployment
-
-## Development
-
-### Running Tests
+## Testing
 
 ```bash
-# Run all tests for this component
-npm test -- --testPathPattern=cognito-user-pool
-
-# Run only builder tests
-npm test -- --testPathPattern=cognito-user-pool.builder
-
-# Run only synthesis tests
-npm test -- --testPathPattern=cognito-user-pool.component.synthesis
+corepack pnpm exec jest --runTestsByPath \
+  packages/components/cognito-user-pool/tests/cognito-user-pool.builder.test.ts \
+  packages/components/cognito-user-pool/tests/cognito-user-pool.component.synthesis.test.ts
 ```
 
----
-
-*Generated by Component Completion Script*
+The builder tests validate platform-default posture per framework and manifest
+override precedence. The synthesis suite ensures the component wires Cognito
+resources, app clients, domains, and alarms according to the resolved config.

@@ -11,7 +11,7 @@ import {
   ComponentContext, 
   IComponentCreator 
 } from '../../platform/contracts/component-interfaces';
-import { AutoScalingGroupComponentComponent } from './auto-scaling-group.component';
+import { AutoScalingGroupComponent } from './auto-scaling-group.component';
 import { AutoScalingGroupConfig, AUTO_SCALING_GROUP_CONFIG_SCHEMA } from './auto-scaling-group.builder';
 
 /**
@@ -69,11 +69,11 @@ export class AutoScalingGroupComponentCreator implements IComponentCreator {
    * Factory method to create component instances
    */
   public createComponent(
-    scope: Construct, 
-    spec: ComponentSpec, 
+    scope: Construct,
+    spec: ComponentSpec,
     context: ComponentContext
-  ): AutoScalingGroupComponentComponent {
-    return new AutoScalingGroupComponentComponent(scope, spec, context);
+  ): AutoScalingGroupComponent {
+    return new AutoScalingGroupComponent(scope, spec.name, context, spec);
   }
   
   /**
@@ -134,8 +134,13 @@ export class AutoScalingGroupComponentCreator implements IComponentCreator {
    */
   public getConstructHandles(): string[] {
     return [
-      'main'
-      // TODO: Add additional construct handles if needed
+      'main',
+      'autoScalingGroup',
+      'launchTemplate',
+      'securityGroup',
+      'instanceRole',
+      'instancesAlarm',
+      'cpuAlarm'
     ];
   }
 }

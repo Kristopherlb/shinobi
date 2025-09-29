@@ -1,99 +1,93 @@
-/**
- * CertificateManagerComponent ConfigBuilder Test Suite
- * Implements Platform Testing Standard v1.0 - ConfigBuilder Testing
- */
+import {
+  CertificateManagerComponentConfigBuilder,
+  CertificateManagerConfig
+} from '../certificate-manager.builder';
+import { ComponentContext, ComponentSpec } from '@shinobi/core';
 
-import { CertificateManagerComponentConfigBuilder, CertificateManagerConfig } from '../certificate-manager.builder';
-import { ComponentContext, ComponentSpec } from '../../../platform/contracts/component-interfaces';
-
-const createMockContext = (
-  complianceFramework: string = 'commercial',
+const createContext = (
+  framework: 'commercial' | 'fedramp-moderate' | 'fedramp-high' = 'commercial',
   environment: string = 'dev'
 ): ComponentContext => ({
   serviceName: 'test-service',
-  owner: 'test-team',
+  owner: 'platform-team',
   environment,
-  complianceFramework,
+  complianceFramework: framework,
   region: 'us-east-1',
   account: '123456789012',
+  scope: {} as any,
   tags: {
     'service-name': 'test-service',
-    'owner': 'test-team',
-    'environment': environment,
-    'compliance-framework': complianceFramework
+    owner: 'platform-team',
+    environment,
+    'compliance-framework': framework
   }
 });
 
-const createMockSpec = (config: Partial<CertificateManagerConfig> = {}): ComponentSpec => ({
-  name: 'test-certificate-manager',
+const createSpec = (config: Partial<CertificateManagerConfig> = {}): ComponentSpec => ({
+  name: 'cert-test',
   type: 'certificate-manager',
-  config
+  config: {
+    domainName: 'example.com',
+    ...config
+  }
 });
 
 describe('CertificateManagerComponentConfigBuilder', () => {
-  
-  describe('Hardcoded Fallbacks (Layer 1)', () => {
-    
-    it('should provide ultra-safe baseline configuration', () => {
-      const context = createMockContext();
-      const spec = createMockSpec();
-      
-      const builder = new CertificateManagerComponentConfigBuilder(context, spec);
-      const config = builder.buildSync();
-      
-      // Verify hardcoded fallbacks are applied
-      expect(config.monitoring?.enabled).toBe(true);
-      expect(config.monitoring?.detailedMetrics).toBe(false);
-      expect(config.tags).toBeDefined();
+  it('builds commercial defaults from platform configuration', () => {
+    const builder = new CertificateManagerComponentConfigBuilder({
+      context: createContext('commercial'),
+      spec: createSpec()
     });
-    
+
+    const config = builder.buildSync();
+
+    expect(config.validation.method).toBe('DNS');
+    expect(config.keyAlgorithm).toBe('RSA_2048');
+    expect(config.logging.groups.length).toBeGreaterThan(0);
+    expect(config.monitoring.enabled).toBe(false);
   });
-  
-  describe('Compliance Framework Defaults (Layer 2)', () => {
-    
-    it('should apply commercial compliance defaults', () => {
-      const context = createMockContext('commercial');
-      const spec = createMockSpec();
-      
-      const builder = new CertificateManagerComponentConfigBuilder(context, spec);
-      const config = builder.buildSync();
-      
-      expect(config.monitoring?.enabled).toBe(true);
-      expect(config.monitoring?.detailedMetrics).toBe(true);
+
+  it('applies fedramp-moderate hardened defaults', () => {
+    const builder = new CertificateManagerComponentConfigBuilder({
+      context: createContext('fedramp-moderate', 'stage'),
+      spec: createSpec()
     });
-    
-    it('should apply FedRAMP compliance defaults', () => {
-      const context = createMockContext('fedramp-moderate');
-      const spec = createMockSpec();
-      
-      const builder = new CertificateManagerComponentConfigBuilder(context, spec);
-      const config = builder.buildSync();
-      
-      expect(config.monitoring?.enabled).toBe(true);
-      expect(config.monitoring?.detailedMetrics).toBe(true); // Mandatory for FedRAMP
-    });
-    
+
+    const config = builder.buildSync();
+
+    expect(config.keyAlgorithm).toBe('RSA_2048');
+    expect(config.transparencyLoggingEnabled).toBe(true);
+    expect(config.logging.groups.some(group => group.id === 'compliance')).toBe(true);
+    expect(config.monitoring.enabled).toBe(true);
   });
-  
-  describe('5-Layer Precedence Chain', () => {
-    
-    it('should apply component overrides over platform defaults', () => {
-      const context = createMockContext('commercial');
-      const spec = createMockSpec({
-        monitoring: {
-          enabled: false,
-          detailedMetrics: false
+
+  it('allows manifest overrides to replace defaults', () => {
+    const builder = new CertificateManagerComponentConfigBuilder({
+      context: createContext('commercial'),
+      spec: createSpec({
+        keyAlgorithm: 'EC_prime256v1',
+        validation: {
+          method: 'EMAIL',
+          validationEmails: ['admin@example.com']
+        },
+        logging: {
+          groups: [
+            {
+              id: 'custom',
+              enabled: true,
+              retentionInDays: 30,
+              removalPolicy: 'destroy'
+            }
+          ]
         }
-      });
-      
-      const builder = new CertificateManagerComponentConfigBuilder(context, spec);
-      const config = builder.buildSync();
-      
-      // Verify component config overrides platform defaults
-      expect(config.monitoring?.enabled).toBe(false);
-      expect(config.monitoring?.detailedMetrics).toBe(false);
+      })
     });
-    
+
+    const config = builder.buildSync();
+
+    expect(config.keyAlgorithm).toBe('EC_prime256v1');
+    expect(config.validation.method).toBe('EMAIL');
+    expect(config.validation.validationEmails).toEqual(['admin@example.com']);
+    expect(config.logging.groups.map(group => group.id)).toEqual(['custom']);
   });
-  
 });
