@@ -282,6 +282,63 @@ defaults:
     removalPolicy: destroy
     tags: {}
 
+  efs-filesystem:
+    fileSystemName:
+    performanceMode: generalPurpose
+    throughputMode: bursting
+    provisionedThroughputMibps:
+    encryption:
+      enabled: true
+      encryptInTransit: false
+      kmsKeyArn:
+      customerManagedKey:
+        create: false
+        enableRotation: true
+    vpc:
+      enabled: false
+      vpcId:
+      subnetIds: []
+      securityGroup:
+        create: false
+        securityGroupId:
+        ingressRules:
+          - port: 2049
+            protocol: tcp
+            cidr: 0.0.0.0/0
+            description: NFS access
+    lifecycle:
+      transitionToIA: AFTER_30_DAYS
+      transitionToPrimary:
+    backups:
+      enabled: false
+    logging:
+      access:
+        enabled: false
+        retentionInDays: 90
+        removalPolicy: destroy
+      audit:
+        enabled: false
+        retentionInDays: 365
+        removalPolicy: retain
+    monitoring:
+      enabled: false
+      alarms:
+        storageUtilization:
+          enabled: false
+          threshold: 1099511627776
+        clientConnections:
+          enabled: false
+          threshold: 1000
+        burstCreditBalance:
+          enabled: false
+          threshold: 128
+          comparisonOperator: lt
+          statistic: Minimum
+    filesystemPolicy:
+    removalPolicy: destroy
+    hardeningProfile: baseline
+    tags: {}
+
   iam-policy:
     controls:
       denyInsecureTransport: false

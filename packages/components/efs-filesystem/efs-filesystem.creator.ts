@@ -11,7 +11,7 @@ import {
   ComponentContext, 
   IComponentCreator 
 } from '../../platform/contracts/component-interfaces';
-import { EfsFilesystemComponentComponent } from './efs-filesystem.component';
+import { EfsFilesystemComponent } from './efs-filesystem.component';
 import { EfsFilesystemConfig, EFS_FILESYSTEM_CONFIG_SCHEMA } from './efs-filesystem.builder';
 
 /**
@@ -69,11 +69,11 @@ export class EfsFilesystemComponentCreator implements IComponentCreator {
    * Factory method to create component instances
    */
   public createComponent(
-    scope: Construct, 
-    spec: ComponentSpec, 
+    scope: Construct,
+    spec: ComponentSpec,
     context: ComponentContext
-  ): EfsFilesystemComponentComponent {
-    return new EfsFilesystemComponentComponent(scope, spec, context);
+  ): EfsFilesystemComponent {
+    return new EfsFilesystemComponent(scope, spec.name, context, spec);
   }
   
   /**
@@ -115,8 +115,7 @@ export class EfsFilesystemComponentCreator implements IComponentCreator {
    */
   public getProvidedCapabilities(): string[] {
     return [
-      'storage:efs-filesystem',
-      'monitoring:efs-filesystem'
+      'storage:efs'
     ];
   }
   
@@ -134,8 +133,9 @@ export class EfsFilesystemComponentCreator implements IComponentCreator {
    */
   public getConstructHandles(): string[] {
     return [
-      'main'
-      // TODO: Add additional construct handles if needed
+      'main',
+      'filesystem',
+      'securityGroup'
     ];
   }
 }

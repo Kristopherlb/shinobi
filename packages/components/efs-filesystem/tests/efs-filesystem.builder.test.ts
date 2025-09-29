@@ -1,99 +1,119 @@
-/**
- * EfsFilesystemComponent ConfigBuilder Test Suite
- * Implements Platform Testing Standard v1.0 - ConfigBuilder Testing
- */
-
-import { EfsFilesystemComponentConfigBuilder, EfsFilesystemConfig } from '../efs-filesystem.builder';
+import {
+  EfsFilesystemComponentConfigBuilder,
+  EfsFilesystemConfig
+} from '../efs-filesystem.builder';
 import { ComponentContext, ComponentSpec } from '../../../platform/contracts/component-interfaces';
 
-const createMockContext = (
-  complianceFramework: string = 'commercial',
-  environment: string = 'dev'
-): ComponentContext => ({
-  serviceName: 'test-service',
-  owner: 'test-team',
-  environment,
-  complianceFramework,
+const createContext = (framework: string = 'commercial'): ComponentContext => ({
+  serviceName: 'files-service',
+  owner: 'platform-team',
+  environment: 'dev',
+  complianceFramework: framework,
   region: 'us-east-1',
   account: '123456789012',
   tags: {
-    'service-name': 'test-service',
-    'owner': 'test-team',
-    'environment': environment,
-    'compliance-framework': complianceFramework
+    'service-name': 'files-service',
+    environment: 'dev',
+    'compliance-framework': framework
   }
 });
 
-const createMockSpec = (config: Partial<EfsFilesystemConfig> = {}): ComponentSpec => ({
-  name: 'test-efs-filesystem',
+const createSpec = (config: Partial<EfsFilesystemConfig> = {}): ComponentSpec => ({
+  name: 'shared-efs',
   type: 'efs-filesystem',
   config
 });
 
 describe('EfsFilesystemComponentConfigBuilder', () => {
-  
-  describe('Hardcoded Fallbacks (Layer 1)', () => {
-    
-    it('should provide ultra-safe baseline configuration', () => {
-      const context = createMockContext();
-      const spec = createMockSpec();
-      
-      const builder = new EfsFilesystemComponentConfigBuilder(context, spec);
-      const config = builder.buildSync();
-      
-      // Verify hardcoded fallbacks are applied
-      expect(config.monitoring?.enabled).toBe(true);
-      expect(config.monitoring?.detailedMetrics).toBe(false);
-      expect(config.tags).toBeDefined();
-    });
-    
+  it('normalises commercial defaults', () => {
+    const builder = new EfsFilesystemComponentConfigBuilder(createContext('commercial'), createSpec());
+    const config = builder.buildSync();
+
+    expect(config.fileSystemName).toBe('files-service-shared-efs');
+    expect(config.performanceMode).toBe('generalPurpose');
+    expect(config.throughputMode).toBe('bursting');
+    expect(config.encryption.enabled).toBe(true);
+    expect(config.encryption.encryptInTransit).toBe(false);
+    expect(config.vpc.securityGroup.ingressRules[0].port).toBe(2049);
+    expect(config.monitoring.enabled).toBe(false);
+    expect(config.hardeningProfile).toBe('baseline');
   });
-  
-  describe('Compliance Framework Defaults (Layer 2)', () => {
-    
-    it('should apply commercial compliance defaults', () => {
-      const context = createMockContext('commercial');
-      const spec = createMockSpec();
-      
-      const builder = new EfsFilesystemComponentConfigBuilder(context, spec);
-      const config = builder.buildSync();
-      
-      expect(config.monitoring?.enabled).toBe(true);
-      expect(config.monitoring?.detailedMetrics).toBe(true);
-    });
-    
-    it('should apply FedRAMP compliance defaults', () => {
-      const context = createMockContext('fedramp-moderate');
-      const spec = createMockSpec();
-      
-      const builder = new EfsFilesystemComponentConfigBuilder(context, spec);
-      const config = builder.buildSync();
-      
-      expect(config.monitoring?.enabled).toBe(true);
-      expect(config.monitoring?.detailedMetrics).toBe(true); // Mandatory for FedRAMP
-    });
-    
+
+  it('applies fedramp-high platform defaults', () => {
+    const builder = new EfsFilesystemComponentConfigBuilder(createContext('fedramp-high'), createSpec());
+    const config = builder.buildSync();
+
+    expect(config.encryption.encryptInTransit).toBe(true);
+    expect(config.backups.enabled).toBe(true);
+    expect(config.monitoring.enabled).toBe(true);
+    expect(config.hardeningProfile).toBe('fedramp-high');
+    expect(config.logging.audit.enabled).toBe(true);
+    expect(config.removalPolicy).toBe('retain');
   });
-  
-  describe('5-Layer Precedence Chain', () => {
-    
-    it('should apply component overrides over platform defaults', () => {
-      const context = createMockContext('commercial');
-      const spec = createMockSpec({
-        monitoring: {
-          enabled: false,
-          detailedMetrics: false
+
+  it('honours manifest overrides for provisioned throughput and custom networking', () => {
+    const builder = new EfsFilesystemComponentConfigBuilder(
+      createContext('commercial'),
+      createSpec({
+        throughputMode: 'provisioned',
+        provisionedThroughputMibps: 128,
+        vpc: {
+          enabled: true,
+          vpcId: 'vpc-1234567890',
+          subnetIds: ['subnet-1', 'subnet-2'],
+          securityGroup: {
+            create: true,
+            ingressRules: [
+              {
+                port: 2049,
+                cidr: '10.0.0.0/16',
+                description: 'NFS from application subnets'
+              }
+            ]
+          }
+        },
+        logging: {
+          access: {
+            enabled: true,
+            retentionInDays: 180,
+            removalPolicy: 'retain'
+          }
         }
-      });
-      
-      const builder = new EfsFilesystemComponentConfigBuilder(context, spec);
-      const config = builder.buildSync();
-      
-      // Verify component config overrides platform defaults
-      expect(config.monitoring?.enabled).toBe(false);
-      expect(config.monitoring?.detailedMetrics).toBe(false);
-    });
-    
+      })
+    );
+
+    const config = builder.buildSync();
+
+    expect(config.throughputMode).toBe('provisioned');
+    expect(config.provisionedThroughputMibps).toBe(128);
+    expect(config.vpc.enabled).toBe(true);
+    expect(config.vpc.subnetIds).toEqual(['subnet-1', 'subnet-2']);
+    expect(config.logging.access.enabled).toBe(true);
+    expect(config.logging.access.removalPolicy).toBe('retain');
   });
-  
+
+  it('merges filesystem policy statements when provided', () => {
+    const builder = new EfsFilesystemComponentConfigBuilder(
+      createContext('commercial'),
+      createSpec({
+        filesystemPolicy: {
+          Version: '2012-10-17',
+          Statement: [
+            {
+              Effect: 'Allow',
+              Principal: {
+                AWS: 'arn:aws:iam::123456789012:role/ApplicationRole'
+              },
+              Action: 'elasticfilesystem:ClientMount',
+              Resource: '*'
+            }
+          ]
+        }
+      })
+    );
+
+    const config = builder.buildSync();
+    expect(config.filesystemPolicy).toBeDefined();
+    expect(config.filesystemPolicy?.Statement).toHaveLength(1);
+  });
 });

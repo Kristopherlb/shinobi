@@ -318,6 +318,64 @@ defaults:
     tags:
       compliance-framework: fedramp-moderate
 
+  efs-filesystem:
+    fileSystemName:
+    performanceMode: generalPurpose
+    throughputMode: bursting
+    provisionedThroughputMibps:
+    encryption:
+      enabled: true
+      encryptInTransit: true
+      kmsKeyArn:
+      customerManagedKey:
+        create: false
+        enableRotation: true
+    vpc:
+      enabled: false
+      vpcId:
+      subnetIds: []
+      securityGroup:
+        create: true
+        securityGroupId:
+        ingressRules:
+          - port: 2049
+            protocol: tcp
+            cidr: 10.0.0.0/8
+            description: NFS access from trusted networks
+    lifecycle:
+      transitionToIA: AFTER_30_DAYS
+      transitionToPrimary: AFTER_1_ACCESS
+    backups:
+      enabled: true
+    logging:
+      access:
+        enabled: true
+        retentionInDays: 365
+        removalPolicy: retain
+      audit:
+        enabled: true
+        retentionInDays: 365
+        removalPolicy: retain
+    monitoring:
+      enabled: true
+      alarms:
+        storageUtilization:
+          enabled: true
+          threshold: 879609302220
+        clientConnections:
+          enabled: true
+          threshold: 500
+        burstCreditBalance:
+          enabled: true
+          threshold: 256
+          comparisonOperator: lt
+          statistic: Minimum
+    filesystemPolicy:
+    removalPolicy: retain
+    hardeningProfile: fedramp-moderate
+    tags:
+      compliance-framework: fedramp-moderate
+
   iam-policy:
     controls:
       denyInsecureTransport: true
