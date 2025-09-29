@@ -229,6 +229,95 @@ defaults:
     tags:
       compliance: fedramp-moderate
 
+  opensearch-domain:
+    version: OpenSearch_2.7
+    cluster:
+      instanceType: m6g.medium.search
+      instanceCount: 3
+      zoneAwarenessEnabled: true
+      availabilityZoneCount: 2
+      dedicatedMasterEnabled: true
+      masterInstanceType: m6g.medium.search
+      masterInstanceCount: 3
+      warmEnabled: false
+    ebs:
+      enabled: true
+      volumeType: gp3
+      volumeSize: 100
+    vpc:
+      enabled: true
+      vpcId:
+      subnetIds: []
+      securityGroupIds: []
+      createSecurityGroup: true
+      ingressRules:
+        - port: 443
+          protocol: tcp
+          cidr: 10.0.0.0/8
+          description: HTTPS access from trusted networks
+        - port: 9200
+          protocol: tcp
+          cidr: 10.0.0.0/8
+          description: OpenSearch API access from trusted networks
+    encryption:
+      atRest:
+        enabled: true
+      nodeToNode: true
+    domainEndpoint:
+      enforceHttps: true
+      tlsSecurityPolicy: Policy-Min-TLS-1-2-2019-07
+    advancedSecurity:
+      enabled: true
+      internalUserDatabaseEnabled: false
+      masterUserName: master-user
+    logging:
+      slowSearch:
+        enabled: true
+        retentionInDays: 365
+        removalPolicy: retain
+      slowIndex:
+        enabled: true
+        retentionInDays: 365
+        removalPolicy: retain
+      application:
+        enabled: true
+        retentionInDays: 365
+        removalPolicy: retain
+      audit:
+        enabled: true
+        retentionInDays: 365
+        removalPolicy: retain
+    monitoring:
+      enabled: true
+      alarms:
+        clusterStatusRed:
+          enabled: true
+        clusterStatusYellow:
+          enabled: true
+        jvmMemoryPressure:
+          enabled: true
+          threshold: 75
+        freeStorageSpace:
+          enabled: true
+          threshold: 50
+          comparisonOperator: lt
+          statistic: Minimum
+    snapshot:
+      automatedSnapshotStartHour: 2
+    maintenance:
+      autoTune:
+        enabled: true
+        desiredState: ENABLED
+      offPeakWindowEnabled: true
+    accessPolicies:
+      statements: []
+    advancedOptions:
+      rest.action.multi.allow_explicit_index: 'true'
+    hardeningProfile: fedramp-moderate
+    removalPolicy: retain
+    tags:
+      compliance-framework: fedramp-moderate
+
   iam-policy:
     controls:
       denyInsecureTransport: true

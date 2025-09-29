@@ -198,6 +198,90 @@ defaults:
     hardeningProfile: baseline
     tags: {}
 
+  opensearch-domain:
+    version: OpenSearch_2.7
+    cluster:
+      instanceType: t3.small.search
+      instanceCount: 1
+      zoneAwarenessEnabled: false
+      availabilityZoneCount: 2
+      dedicatedMasterEnabled: false
+      warmEnabled: false
+    ebs:
+      enabled: true
+      volumeType: gp3
+      volumeSize: 50
+    vpc:
+      enabled: false
+      vpcId:
+      subnetIds: []
+      securityGroupIds: []
+      createSecurityGroup: false
+      ingressRules:
+        - port: 443
+          protocol: tcp
+          cidr: 0.0.0.0/0
+          description: HTTPS access to OpenSearch
+        - port: 9200
+          protocol: tcp
+          cidr: 0.0.0.0/0
+          description: OpenSearch API access
+    encryption:
+      atRest:
+        enabled: true
+      nodeToNode: true
+    domainEndpoint:
+      enforceHttps: true
+      tlsSecurityPolicy: Policy-Min-TLS-1-2-2019-07
+    advancedSecurity:
+      enabled: false
+      internalUserDatabaseEnabled: false
+    logging:
+      slowSearch:
+        enabled: false
+        retentionInDays: 90
+        removalPolicy: destroy
+      slowIndex:
+        enabled: false
+        retentionInDays: 90
+        removalPolicy: destroy
+      application:
+        enabled: true
+        retentionInDays: 90
+        removalPolicy: destroy
+      audit:
+        enabled: false
+        retentionInDays: 180
+        removalPolicy: destroy
+    monitoring:
+      enabled: false
+      alarms:
+        clusterStatusRed:
+          enabled: false
+        clusterStatusYellow:
+          enabled: false
+        jvmMemoryPressure:
+          enabled: false
+          threshold: 85
+        freeStorageSpace:
+          enabled: false
+          threshold: 10
+          comparisonOperator: lt
+          statistic: Minimum
+    snapshot:
+      automatedSnapshotStartHour: 0
+    maintenance:
+      autoTune:
+        enabled: false
+        desiredState: DISABLED
+      offPeakWindowEnabled: false
+    accessPolicies:
+      statements: []
+    advancedOptions: {}
+    hardeningProfile: baseline
+    removalPolicy: destroy
+    tags: {}
+
   iam-policy:
     controls:
       denyInsecureTransport: false

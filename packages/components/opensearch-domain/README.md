@@ -1,111 +1,84 @@
-# OpenSearchDomainComponent Component
+# OpenSearch Domain Component
 
-OpenSearch Domain Component with comprehensive security, monitoring, and compliance features.
+Configuration-driven OpenSearch domain that honours the platform precedence chain via
+`OpenSearchDomainComponentConfigBuilder`. Compliance-specific defaults are delivered from
+`/config/<framework>.yml`, keeping the component logic completely agnostic of frameworks.
 
-## Overview
+## Features
 
-The OpenSearchDomainComponent component provides:
+- Data/ingest cluster layout (instance type/count, zone awareness, dedicated masters, UltraWarm) fully configurable.
+- Storage, encryption, endpoint policy, and fine-grained access control expressed declaratively.
+- Log publishing (slow search/index, application, audit) with optional log-group provisioning, retention, and removal policies.
+- Monitoring/alarm thresholds (cluster status, JVM memory, free storage) sourced from configuration, surfaced as CloudWatch alarms.
+- Capability payload advertises the resolved hardening profile for downstream binders.
 
-- **Production-ready** open search domain component functionality
-- **Comprehensive compliance** (Commercial, FedRAMP Moderate/High)
-- **Integrated monitoring** and observability
-- **Security-first** configuration
-- **Platform integration** with other components
-
-### Category: database
-
-### AWS Service: OPENSEARCHSERVICE
-
-This component manages OPENSEARCHSERVICE resources and provides a simplified, secure interface for common use cases.
-
-## Usage Example
-
-### Basic Configuration
+## Usage
 
 ```yaml
-service: my-service
-owner: platform-team
-complianceFramework: commercial
-
 components:
-  - name: my-opensearch-domain
+  - name: primary-search
     type: opensearch-domain
     config:
-      description: "Production opensearch-domain instance"
+      cluster:
+        instanceType: m6g.large.search
+        instanceCount: 3
+        zoneAwarenessEnabled: true
+        dedicatedMasterEnabled: true
+        masterInstanceType: m6g.large.search
+      ebs:
+        volumeType: gp3
+        volumeSize: 120
+      logging:
+        audit:
+          enabled: true
+          retentionInDays: 365
+          removalPolicy: retain
       monitoring:
         enabled: true
-        detailedMetrics: true
+        alarms:
+          clusterStatusRed:
+            enabled: true
+          freeStorageSpace:
+            enabled: true
+            threshold: 80
+            comparisonOperator: lt
 ```
 
-## Configuration Reference
+Any unspecified properties fall back to the platform defaults for the active compliance
+framework (`/config/commercial.yml`, `/config/fedramp-moderate.yml`, `/config/fedramp-high.yml`).
 
-### Root Configuration
+## Key Configuration Sections
 
-| Property | Type | Required | Description |
-|----------|------|----------|-------------|
-| `name` | string | No | Component name (auto-generated if not provided) |
-| `description` | string | No | Component description for documentation |
-| `monitoring` | object | No | Monitoring and observability configuration |
-| `tags` | object | No | Additional resource tags |
+| Path | Description |
+|------|-------------|
+| `cluster` | Node topology (instance type/count, zone awareness, dedicated masters, warm nodes). |
+| `ebs` | Volume configuration (type, size, optional IOPS/throughput). |
+| `vpc` | VPC integration, security groups, and ingress rules. |
+| `encryption` | At-rest and node-to-node encryption toggles and optional KMS key ARN. |
+| `domainEndpoint` | HTTPS enforcement and TLS policy selection. |
+| `advancedSecurity` | Fine-grained access control settings (master user, optional password secret). |
+| `logging` | Slow search/index, application, and audit log controls with retention/removal policy. |
+| `monitoring` | Global toggle plus per-alarm thresholds (cluster status red/yellow, JVM memory pressure, free storage space). |
+| `snapshot` | Automated snapshot start hour. |
+| `maintenance.autoTune` | AutoTune desired state and off-peak window enablement. |
+| `accessPolicies.statements[]` | IAM-style policy statements granting/denying access to the domain. |
+| `advancedOptions` | Direct pass-through for OpenSearch advanced options. |
+| `hardeningProfile` | Abstract security posture reported via the component capability. |
 
-### Monitoring Configuration
+## Capabilities
 
-| Property | Type | Required | Description |
-|----------|------|----------|-------------|
-| `enabled` | boolean | No | Enable monitoring (default: true) |
-| `detailedMetrics` | boolean | No | Enable detailed CloudWatch metrics |
+- `search:opensearch` – Domain metadata (ARN, endpoint, engine, cluster summary, hardening profile).
 
-## Capabilities Provided
-
-This component provides the following capabilities for binding with other components:
-
-- `database:opensearch-domain` - Main opensearch-domain capability
-- `monitoring:opensearch-domain` - Monitoring capability
-
-## Construct Handles
-
-The following construct handles are available for use in `patches.ts`:
-
-- `main` - Main opensearch-domain construct
-
-## Compliance Frameworks
-
-### Commercial
-
-- Standard monitoring configuration
-- Basic resource tagging
-- Standard security settings
-
-### FedRAMP Moderate/High
-
-- Enhanced monitoring with detailed metrics
-- Comprehensive audit logging
-- Stricter security configurations
-- Extended compliance tagging
-
-## Best Practices
-
-1. **Always enable monitoring** in production environments
-2. **Use descriptive names** for better resource identification
-3. **Configure appropriate tags** for cost allocation and governance
-4. **Review compliance requirements** for your environment
-5. **Test configurations** in development before production deployment
-
-## Development
-
-### Running Tests
+## Testing
 
 ```bash
-# Run all tests for this component
-npm test -- --testPathPattern=opensearch-domain
-
-# Run only builder tests
-npm test -- --testPathPattern=opensearch-domain.builder
-
-# Run only synthesis tests
-npm test -- --testPathPattern=opensearch-domain.component.synthesis
+corepack pnpm exec jest --runTestsByPath \
+  packages/components/opensearch-domain/tests/opensearch-domain.builder.test.ts \
+  packages/components/opensearch-domain/tests/opensearch-domain.component.synthesis.test.ts
 ```
 
----
+## Notes
 
-*Generated by Component Completion Script*
+- The component no longer inspects `context.complianceFramework`; all compliance tuning must be defined in configuration.
+- If fine-grained access control is enabled with an internal user database, provide `advancedSecurity.masterUserPassword` or a `masterUserPasswordSecretArn`.
+- When `vpc.enabled` is true, either provide existing security group IDs or allow the component to create one by setting `createSecurityGroup: true`.

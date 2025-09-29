@@ -1,13 +1,7 @@
-/**
- * OpenSearch Domain Component
- * 
- * AWS OpenSearch Service domain for search and analytics workloads.
- * Implements three-tiered compliance model (Commercial/FedRAMP Moderate/FedRAMP High).
- */
-
 import * as opensearch from 'aws-cdk-lib/aws-opensearchservice';
 import * as ec2 from 'aws-cdk-lib/aws-ec2';
 import * as iam from 'aws-cdk-lib/aws-iam';
+import * as kms from 'aws-cdk-lib/aws-kms';
 import * as logs from 'aws-cdk-lib/aws-logs';
 import * as cloudwatch from 'aws-cdk-lib/aws-cloudwatch';
 import * as cdk from 'aws-cdk-lib';
@@ -18,698 +12,77 @@ import {
   ComponentContext,
   ComponentCapabilities
 } from '@platform/contracts';
+import {
+  OpenSearchDomainComponentConfigBuilder,
+  OpenSearchDomainConfig,
+  OpenSearchAlarmConfig,
+  OpenSearchLogConfig
+} from './opensearch-domain.builder';
 
-/**
- * Configuration interface for OpenSearch Domain component
- */
-export interface OpenSearchDomainConfig {
-  /** Domain name (optional, will be auto-generated) */
-  domainName?: string;
-  
-  /** OpenSearch version */
-  version?: string;
-  
-  /** Cluster configuration */
-  cluster?: {
-    /** Instance type for data nodes */
-    instanceType?: string;
-    /** Number of data nodes */
-    instanceCount?: number;
-    /** Enable dedicated master nodes */
-    dedicatedMasterEnabled?: boolean;
-    /** Master node instance type */
-    masterInstanceType?: string;
-    /** Number of master nodes */
-    masterInstanceCount?: number;
-    /** Enable warm nodes */
-    warmEnabled?: boolean;
-    /** Warm node instance type */
-    warmInstanceType?: string;
-    /** Number of warm nodes */
-    warmInstanceCount?: number;
-  };
-  
-  /** Storage configuration */
-  ebs?: {
-    /** Enable EBS storage */
-    enabled?: boolean;
-    /** Volume type */
-    volumeType?: 'gp2' | 'gp3' | 'io1' | 'io2';
-    /** Volume size in GB */
-    volumeSize?: number;
-    /** IOPS (for io1/io2) */
-    iops?: number;
-    /** Throughput (for gp3) */
-    throughput?: number;
-  };
-  
-  /** Network configuration */
-  vpc?: {
-    /** VPC ID */
-    vpcId?: string;
-    /** Subnet IDs */
-    subnetIds?: string[];
-    /** Security group IDs */
-    securityGroupIds?: string[];
-  };
-  
-  /** Access policy */
-  accessPolicies?: {
-    /** IAM policy document */
-    statements?: Array<{
-      Effect: 'Allow' | 'Deny';
-      Principal?: any;
-      Action: string | string[];
-      Resource?: string | string[];
-      Condition?: Record<string, any>;
-    }>;
-  };
-  
-  /** Encryption configuration */
-  encryptionAtRest?: {
-    /** Enable encryption at rest */
-    enabled?: boolean;
-  };
-  
-  /** Node-to-node encryption */
-  nodeToNodeEncryption?: {
-    /** Enable node-to-node encryption */
-    enabled?: boolean;
-  };
-  
-  /** Domain endpoint options */
-  domainEndpoint?: {
-    /** Enforce HTTPS */
-    enforceHTTPS?: boolean;
-    /** TLS security policy */
-    tlsSecurityPolicy?: string;
-  };
-  
-  /** Advanced security options */
-  advancedSecurity?: {
-    /** Enable fine-grained access control */
-    enabled?: boolean;
-    /** Internal user database */
-    internalUserDatabaseEnabled?: boolean;
-    /** Master user name */
-    masterUserName?: string;
-    /** Master user password */
-    masterUserPassword?: string;
-  };
-  
-  /** Logging configuration */
-  logging?: {
-    /** Slow search logs */
-    slowSearchLogEnabled?: boolean;
-    /** Slow index logs */
-    slowIndexLogEnabled?: boolean;
-    /** Error logs */
-    errorLogEnabled?: boolean;
-    /** Audit logs */
-    auditLogEnabled?: boolean;
-    /** Application logs */
-    appLogEnabled?: boolean;
-  };
-  
-  /** Advanced options */
-  advancedOptions?: Record<string, string>;
-  
-  /** Tags for the domain */
-  tags?: Record<string, string>;
+interface LoggingResources {
+  slowSearch?: logs.ILogGroup;
+  slowIndex?: logs.ILogGroup;
+  application?: logs.ILogGroup;
+  audit?: logs.ILogGroup;
 }
 
-/**
- * Configuration schema for OpenSearch Domain component
- */
-export const OPENSEARCH_DOMAIN_CONFIG_SCHEMA = {
-  type: 'object',
-  title: 'OpenSearch Domain Configuration',
-  description: 'Configuration for creating an OpenSearch domain',
-  properties: {
-    domainName: {
-      type: 'string',
-      description: 'Name of the domain (will be auto-generated if not provided)',
-      pattern: '^[a-z][a-z0-9\\-]+[a-z0-9]$',
-      minLength: 3,
-      maxLength: 28
-    },
-    version: {
-      type: 'string',
-      description: 'OpenSearch version',
-      enum: ['OpenSearch_1.3', 'OpenSearch_2.3', 'OpenSearch_2.5', 'OpenSearch_2.7'],
-      default: 'OpenSearch_2.7'
-    },
-    cluster: {
-      type: 'object',
-      description: 'Cluster configuration',
-      properties: {
-        instanceType: {
-          type: 'string',
-          description: 'Instance type for data nodes',
-          default: 't3.small.search'
-        },
-        instanceCount: {
-          type: 'number',
-          description: 'Number of data nodes',
-          minimum: 1,
-          maximum: 80,
-          default: 1
-        },
-        dedicatedMasterEnabled: {
-          type: 'boolean',
-          description: 'Enable dedicated master nodes',
-          default: false
-        },
-        masterInstanceType: {
-          type: 'string',
-          description: 'Master node instance type',
-          default: 't3.small.search'
-        },
-        masterInstanceCount: {
-          type: 'number',
-          description: 'Number of master nodes',
-          enum: [3, 5],
-          default: 3
-        },
-        warmEnabled: {
-          type: 'boolean',
-          description: 'Enable warm nodes',
-          default: false
-        },
-        warmInstanceType: {
-          type: 'string',
-          description: 'Warm node instance type',
-          default: 'ultrawarm1.medium.search'
-        },
-        warmInstanceCount: {
-          type: 'number',
-          description: 'Number of warm nodes',
-          minimum: 2,
-          maximum: 150,
-          default: 2
-        }
-      },
-      additionalProperties: false,
-      default: { instanceType: 't3.small.search', instanceCount: 1, dedicatedMasterEnabled: false }
-    },
-    ebs: {
-      type: 'object',
-      description: 'EBS storage configuration',
-      properties: {
-        enabled: {
-          type: 'boolean',
-          description: 'Enable EBS storage',
-          default: true
-        },
-        volumeType: {
-          type: 'string',
-          description: 'EBS volume type',
-          enum: ['gp2', 'gp3', 'io1', 'io2'],
-          default: 'gp3'
-        },
-        volumeSize: {
-          type: 'number',
-          description: 'Volume size in GB',
-          minimum: 10,
-          maximum: 3584,
-          default: 20
-        },
-        iops: {
-          type: 'number',
-          description: 'IOPS for io1/io2 volumes',
-          minimum: 100,
-          maximum: 16000
-        },
-        throughput: {
-          type: 'number',
-          description: 'Throughput for gp3 volumes',
-          minimum: 125,
-          maximum: 1000
-        }
-      },
-      additionalProperties: false,
-      default: { enabled: true, volumeType: 'gp3', volumeSize: 20 }
-    },
-    vpc: {
-      type: 'object',
-      description: 'VPC configuration',
-      properties: {
-        vpcId: {
-          type: 'string',
-          description: 'VPC ID for domain placement'
-        },
-        subnetIds: {
-          type: 'array',
-          description: 'Subnet IDs for domain placement',
-          items: { type: 'string' },
-          minItems: 1,
-          maxItems: 6
-        },
-        securityGroupIds: {
-          type: 'array',
-          description: 'Security group IDs',
-          items: { type: 'string' }
-        }
-      },
-      additionalProperties: false
-    },
-    accessPolicies: {
-      type: 'object',
-      description: 'Access policies for the domain',
-      properties: {
-        statements: {
-          type: 'array',
-          description: 'IAM policy statements',
-          items: {
-            type: 'object',
-            properties: {
-              Effect: {
-                type: 'string',
-                enum: ['Allow', 'Deny']
-              },
-              Action: {
-                oneOf: [
-                  { type: 'string' },
-                  { type: 'array', items: { type: 'string' } }
-                ]
-              },
-              Resource: {
-                oneOf: [
-                  { type: 'string' },
-                  { type: 'array', items: { type: 'string' } }
-                ]
-              },
-              Condition: { type: 'object' }
-            },
-            required: ['Effect', 'Action'],
-            additionalProperties: false
-          }
-        }
-      },
-      additionalProperties: false
-    },
-    encryptionAtRest: {
-      type: 'object',
-      description: 'Encryption at rest configuration',
-      properties: {
-        enabled: {
-          type: 'boolean',
-          description: 'Enable encryption at rest',
-          default: true
-        }
-      },
-      additionalProperties: false,
-      default: { enabled: true }
-    },
-    nodeToNodeEncryption: {
-      type: 'object',
-      description: 'Node-to-node encryption configuration',
-      properties: {
-        enabled: {
-          type: 'boolean',
-          description: 'Enable node-to-node encryption',
-          default: true
-        }
-      },
-      additionalProperties: false,
-      default: { enabled: true }
-    },
-    domainEndpoint: {
-      type: 'object',
-      description: 'Domain endpoint options',
-      properties: {
-        enforceHTTPS: {
-          type: 'boolean',
-          description: 'Enforce HTTPS',
-          default: true
-        },
-        tlsSecurityPolicy: {
-          type: 'string',
-          description: 'TLS security policy',
-          enum: ['Policy-Min-TLS-1-0-2019-07', 'Policy-Min-TLS-1-2-2019-07'],
-          default: 'Policy-Min-TLS-1-2-2019-07'
-        }
-      },
-      additionalProperties: false,
-      default: { enforceHTTPS: true, tlsSecurityPolicy: 'Policy-Min-TLS-1-2-2019-07' }
-    },
-    advancedSecurity: {
-      type: 'object',
-      description: 'Advanced security options',
-      properties: {
-        enabled: {
-          type: 'boolean',
-          description: 'Enable fine-grained access control',
-          default: false
-        },
-        internalUserDatabaseEnabled: {
-          type: 'boolean',
-          description: 'Enable internal user database',
-          default: false
-        },
-        masterUserName: {
-          type: 'string',
-          description: 'Master user name'
-        },
-        masterUserPassword: {
-          type: 'string',
-          description: 'Master user password'
-        }
-      },
-      additionalProperties: false,
-      default: { enabled: false, internalUserDatabaseEnabled: false }
-    },
-    logging: {
-      type: 'object',
-      description: 'Logging configuration',
-      properties: {
-        slowSearchLogEnabled: {
-          type: 'boolean',
-          description: 'Enable slow search logs',
-          default: false
-        },
-        slowIndexLogEnabled: {
-          type: 'boolean',
-          description: 'Enable slow index logs',
-          default: false
-        },
-        errorLogEnabled: {
-          type: 'boolean',
-          description: 'Enable error logs',
-          default: false
-        },
-        auditLogEnabled: {
-          type: 'boolean',
-          description: 'Enable audit logs',
-          default: false
-        },
-        appLogEnabled: {
-          type: 'boolean',
-          description: 'Enable application logs',
-          default: false
-        }
-      },
-      additionalProperties: false,
-      default: { slowSearchLogEnabled: false, slowIndexLogEnabled: false, errorLogEnabled: false, auditLogEnabled: false, appLogEnabled: false }
-    },
-    advancedOptions: {
-      type: 'object',
-      description: 'Advanced options',
-      additionalProperties: { type: 'string' },
-      default: {}
-    },
-    tags: {
-      type: 'object',
-      description: 'Tags for the domain',
-      additionalProperties: { type: 'string' },
-      default: {}
-    }
-  },
-  additionalProperties: false,
-  defaults: {
-    version: 'OpenSearch_2.7',
-    cluster: { instanceType: 't3.small.search', instanceCount: 1, dedicatedMasterEnabled: false },
-    ebs: { enabled: true, volumeType: 'gp3', volumeSize: 20 },
-    encryptionAtRest: { enabled: true },
-    nodeToNodeEncryption: { enabled: true },
-    domainEndpoint: { enforceHTTPS: true, tlsSecurityPolicy: 'Policy-Min-TLS-1-2-2019-07' },
-    advancedSecurity: { enabled: false, internalUserDatabaseEnabled: false },
-    logging: { slowSearchLogEnabled: false, slowIndexLogEnabled: false, errorLogEnabled: false, auditLogEnabled: false, appLogEnabled: false },
-    advancedOptions: {},
-    tags: {}
-  }
-};
-
-/**
- * Configuration builder for OpenSearch Domain component
- */
-export class OpenSearchDomainConfigBuilder {
-  private context: ComponentContext;
-  private spec: ComponentSpec;
-  
-  constructor(context: ComponentContext, spec: ComponentSpec) {
-    this.context = context;
-    this.spec = spec;
-  }
-
-  public async build(): Promise<OpenSearchDomainConfig> {
-    return this.buildSync();
-  }
-
-  public buildSync(): OpenSearchDomainConfig {
-    const platformDefaults = this.getPlatformDefaults();
-    const complianceDefaults = this.getComplianceFrameworkDefaults();
-    const userConfig = this.spec.config || {};
-    
-    const mergedConfig = this.mergeConfigs(
-      this.mergeConfigs(platformDefaults, complianceDefaults),
-      userConfig
-    );
-    
-    return mergedConfig as OpenSearchDomainConfig;
-  }
-
-  private mergeConfigs(target: Record<string, any>, source: Record<string, any>): Record<string, any> {
-    const result = { ...target };
-    
-    for (const key in source) {
-      if (source[key] && typeof source[key] === 'object' && !Array.isArray(source[key])) {
-        result[key] = this.mergeConfigs(result[key] || {}, source[key]);
-      } else {
-        result[key] = source[key];
-      }
-    }
-    
-    return result;
-  }
-
-  private getPlatformDefaults(): Record<string, any> {
-    return {
-      version: 'OpenSearch_2.7',
-      cluster: {
-        instanceType: this.getDefaultInstanceType(),
-        instanceCount: this.getDefaultInstanceCount(),
-        dedicatedMasterEnabled: this.getDefaultDedicatedMaster()
-      },
-      ebs: {
-        enabled: true,
-        volumeType: 'gp3',
-        volumeSize: this.getDefaultVolumeSize()
-      },
-      encryptionAtRest: {
-        enabled: true
-      },
-      nodeToNodeEncryption: {
-        enabled: true
-      },
-      domainEndpoint: {
-        enforceHTTPS: true,
-        tlsSecurityPolicy: 'Policy-Min-TLS-1-2-2019-07'
-      },
-      logging: this.getDefaultLogging(),
-      tags: {
-        'service': this.context.serviceName,
-        'environment': this.context.environment
-      }
-    };
-  }
-
-  private getComplianceFrameworkDefaults(): Record<string, any> {
-    const framework = this.context.complianceFramework;
-    
-    switch (framework) {
-      case 'fedramp-moderate':
-        return {
-          cluster: {
-            instanceType: 'm6g.medium.search', // More capable instances for compliance
-            instanceCount: 3, // Multi-node for reliability
-            dedicatedMasterEnabled: true, // Dedicated masters for stability
-            masterInstanceCount: 3
-          },
-          ebs: {
-            volumeSize: 100 // Larger storage for compliance data
-          },
-          advancedSecurity: {
-            enabled: true, // Fine-grained access control required
-            internalUserDatabaseEnabled: true
-          },
-          logging: {
-            slowSearchLogEnabled: true,
-            slowIndexLogEnabled: true,
-            errorLogEnabled: true,
-            auditLogEnabled: true, // Audit logging required
-            appLogEnabled: true
-          },
-          tags: {
-            'compliance-framework': 'fedramp-moderate',
-            'audit-logging': 'comprehensive',
-            'access-control': 'fine-grained'
-          }
-        };
-        
-      case 'fedramp-high':
-        return {
-          cluster: {
-            instanceType: 'm6g.large.search', // High-performance instances
-            instanceCount: 6, // More nodes for high availability
-            dedicatedMasterEnabled: true,
-            masterInstanceCount: 5, // 5-node master for high availability
-            warmEnabled: true, // Warm storage for cost optimization
-            warmInstanceCount: 2
-          },
-          ebs: {
-            volumeSize: 200, // Larger storage for high security requirements
-            volumeType: 'gp3' // High performance storage
-          },
-          advancedSecurity: {
-            enabled: true, // Mandatory fine-grained access control
-            internalUserDatabaseEnabled: true
-          },
-          logging: {
-            slowSearchLogEnabled: true,
-            slowIndexLogEnabled: true,
-            errorLogEnabled: true,
-            auditLogEnabled: true, // Mandatory comprehensive audit logging
-            appLogEnabled: true
-          },
-          tags: {
-            'compliance-framework': 'fedramp-high',
-            'audit-logging': 'comprehensive',
-            'access-control': 'fine-grained',
-            'security-level': 'high'
-          }
-        };
-        
-      default: // commercial
-        return {
-          advancedSecurity: {
-            enabled: false
-          },
-          logging: {
-            errorLogEnabled: true // Basic error logging
-          }
-        };
-    }
-  }
-
-  private getDefaultInstanceType(): string {
-    return this.context.complianceFramework === 'commercial' ? 't3.small.search' : 'm6g.medium.search';
-  }
-
-  private getDefaultInstanceCount(): number {
-    switch (this.context.complianceFramework) {
-      case 'fedramp-high':
-        return 6;
-      case 'fedramp-moderate':
-        return 3;
-      default:
-        return 1;
-    }
-  }
-
-  private getDefaultDedicatedMaster(): boolean {
-    return ['fedramp-moderate', 'fedramp-high'].includes(this.context.complianceFramework);
-  }
-
-  private getDefaultVolumeSize(): number {
-    switch (this.context.complianceFramework) {
-      case 'fedramp-high':
-        return 200;
-      case 'fedramp-moderate':
-        return 100;
-      default:
-        return 20;
-    }
-  }
-
-  private getDefaultLogging(): Record<string, boolean> {
-    const framework = this.context.complianceFramework;
-    
-    switch (framework) {
-      case 'fedramp-moderate':
-      case 'fedramp-high':
-        return {
-          slowSearchLogEnabled: true,
-          slowIndexLogEnabled: true,
-          errorLogEnabled: true,
-          auditLogEnabled: true,
-          appLogEnabled: true
-        };
-      default:
-        return {
-          slowSearchLogEnabled: false,
-          slowIndexLogEnabled: false,
-          errorLogEnabled: true,
-          auditLogEnabled: false,
-          appLogEnabled: false
-        };
-    }
-  }
-}
-
-/**
- * OpenSearch Domain Component implementing Component API Contract v1.0
- */
 export class OpenSearchDomainComponent extends Component {
   private domain?: opensearch.Domain;
   private vpc?: ec2.IVpc;
-  private securityGroup?: ec2.SecurityGroup;
+  private managedSecurityGroup?: ec2.SecurityGroup;
   private config?: OpenSearchDomainConfig;
+  private createdLogGroups: Record<string, logs.LogGroup> = {};
 
   constructor(scope: Construct, id: string, context: ComponentContext, spec: ComponentSpec) {
     super(scope, id, context, spec);
   }
 
   public synth(): void {
-    this.logComponentEvent('synthesis_start', 'Starting OpenSearch Domain component synthesis', {
-      domainName: this.spec.config?.domainName,
-      version: this.spec.config?.version
-    });
-    
     const startTime = Date.now();
-    
+    this.logComponentEvent('synthesis_start', 'Starting OpenSearch domain synthesis');
+
     try {
-      const configBuilder = new OpenSearchDomainConfigBuilder(this.context, this.spec);
-      this.config = configBuilder.buildSync();
-      
-      this.logComponentEvent('config_built', 'OpenSearch Domain configuration built successfully', {
+      const builder = new OpenSearchDomainComponentConfigBuilder(this.context, this.spec);
+      this.config = builder.buildSync();
+
+      this.logComponentEvent('config_resolved', 'Resolved OpenSearch domain configuration', {
         domainName: this.config.domainName,
         version: this.config.version,
-        instanceCount: this.config.cluster?.instanceCount
+        dataNodes: this.config.cluster.instanceCount,
+        hardeningProfile: this.config.hardeningProfile
       });
-      
-      this.lookupVpcIfNeeded();
+
+      this.resolveVpc();
       this.createSecurityGroupIfNeeded();
-      this.createOpenSearchDomain();
-      this.applyComplianceHardening();
-      this.configureObservabilityForDomain();
-    
+      const loggingResources = this.configureLogging();
+      this.createDomain(loggingResources);
+      this.applyStandardTags(this.domain!, {
+        'domain-name': this.config.domainName,
+        'opensearch-version': this.config.version,
+        'hardening-profile': this.config.hardeningProfile
+      });
+
+      this.configureMonitoring();
+      this.logHardeningProfile();
+
+      this.registerConstruct('main', this.domain!);
       this.registerConstruct('domain', this.domain!);
-      if (this.vpc) {
-        this.registerConstruct('vpc', this.vpc);
+      if (this.managedSecurityGroup) {
+        this.registerConstruct('securityGroup', this.managedSecurityGroup);
       }
-      if (this.securityGroup) {
-        this.registerConstruct('securityGroup', this.securityGroup);
-      }
-    
+      Object.entries(this.createdLogGroups).forEach(([key, logGroup]) => {
+        this.registerConstruct(`logGroup:${key}`, logGroup);
+      });
+
       this.registerCapability('search:opensearch', this.buildDomainCapability());
-    
-      const duration = Date.now() - startTime;
-      this.logPerformanceMetric('component_synthesis', duration, {
+
+      this.logPerformanceMetric('component_synthesis', Date.now() - startTime, {
         resourcesCreated: Object.keys(this.capabilities).length
       });
-    
-      this.logComponentEvent('synthesis_complete', 'OpenSearch Domain component synthesis completed successfully', {
-        domainCreated: 1,
-        encryptionEnabled: this.config.encryptionAtRest?.enabled,
-        advancedSecurityEnabled: this.config.advancedSecurity?.enabled
-      });
-      
+
+      this.logComponentEvent('synthesis_complete', 'OpenSearch domain synthesis completed');
     } catch (error) {
-      this.logError(error as Error, 'component synthesis', {
-        componentType: 'opensearch-domain',
-        stage: 'synthesis'
-      });
+      this.logError(error as Error, 'opensearch-domain synthesis');
       throw error;
     }
   }
@@ -723,126 +96,365 @@ export class OpenSearchDomainComponent extends Component {
     return 'opensearch-domain';
   }
 
-  private lookupVpcIfNeeded(): void {
-    if (this.config!.vpc?.vpcId) {
-      this.vpc = ec2.Vpc.fromLookup(this, 'Vpc', {
-        vpcId: this.config!.vpc.vpcId
-      });
+  private resolveVpc(): void {
+    if (!this.config?.vpc.enabled || !this.config.vpc.vpcId) {
+      return;
     }
+
+    this.vpc = ec2.Vpc.fromLookup(this, 'Vpc', {
+      vpcId: this.config.vpc.vpcId
+    });
   }
 
   private createSecurityGroupIfNeeded(): void {
-    if (this.vpc && !this.config!.vpc?.securityGroupIds?.length) {
-      this.securityGroup = new ec2.SecurityGroup(this, 'SecurityGroup', {
-        vpc: this.vpc,
-        description: `Security group for ${this.buildDomainName()} OpenSearch domain`,
-        allowAllOutbound: false
-      });
-
-      // Allow HTTPS traffic
-      this.securityGroup.addIngressRule(
-        ec2.Peer.anyIpv4(),
-        ec2.Port.tcp(443),
-        'HTTPS access to OpenSearch'
-      );
-
-      // Allow OpenSearch API access
-      this.securityGroup.addIngressRule(
-        ec2.Peer.anyIpv4(),
-        ec2.Port.tcp(9200),
-        'OpenSearch API access'
-      );
-
-      this.applyStandardTags(this.securityGroup, {
-        'security-group-type': 'opensearch',
-        'domain': this.buildDomainName()!
-      });
+    if (!this.vpc || !this.config?.vpc.createSecurityGroup) {
+      return;
     }
-  }
 
-  private createOpenSearchDomain(): void {
-    const domainProps: opensearch.DomainProps = {
-      domainName: this.buildDomainName(),
-      version: this.mapOpenSearchVersion(this.config!.version!),
-      capacity: this.buildCapacityConfig(),
-      ebs: this.buildEbsConfig(),
-      vpc: this.buildVpcConfig(),
-      accessPolicies: this.buildAccessPolicies(),
-      encryptionAtRest: this.config!.encryptionAtRest,
-      nodeToNodeEncryption: this.config!.nodeToNodeEncryption?.enabled,
-      domainEndpointOptions: this.buildDomainEndpointOptions(),
-      fineGrainedAccessControl: this.buildAdvancedSecurityConfig(),
-      logging: this.buildLoggingConfig(),
-      advancedOptions: this.config!.advancedOptions,
-      removalPolicy: this.getDomainRemovalPolicy()
-    };
-
-    this.domain = new opensearch.Domain(this, 'Domain', domainProps);
-
-    this.applyStandardTags(this.domain, {
-      'domain-name': this.buildDomainName()!,
-      'opensearch-version': this.config!.version!,
-      'instance-type': this.config!.cluster?.instanceType!,
-      'instance-count': (this.config!.cluster?.instanceCount || 1).toString(),
-      'encryption-at-rest': (this.config!.encryptionAtRest?.enabled || false).toString(),
-      'advanced-security': (this.config!.advancedSecurity?.enabled || false).toString()
+    const securityGroup = new ec2.SecurityGroup(this, 'OpenSearchSecurityGroup', {
+      vpc: this.vpc,
+      description: `Security group for ${this.config.domainName} OpenSearch domain`,
+      allowAllOutbound: true
     });
 
-    if (this.config!.tags) {
-      Object.entries(this.config!.tags).forEach(([key, value]) => {
-        cdk.Tags.of(this.domain!).add(key, value);
-      });
-    }
-    
-    this.logResourceCreation('opensearch-domain', this.buildDomainName()!, {
-      domainName: this.buildDomainName(),
-      version: this.config!.version,
-      instanceCount: this.config!.cluster?.instanceCount,
-      encryptionEnabled: this.config!.encryptionAtRest?.enabled
+    this.config.vpc.ingressRules.forEach(rule => {
+      const port = rule.protocol === 'udp' ? ec2.Port.udp(rule.port) : ec2.Port.tcp(rule.port);
+      securityGroup.addIngressRule(ec2.Peer.ipv4(rule.cidr), port, rule.description);
     });
+
+    this.applyStandardTags(securityGroup, {
+      'resource-type': 'security-group',
+      'opensearch-domain': this.config.domainName
+    });
+
+    this.logResourceCreation('security-group', securityGroup.securityGroupId);
+    this.managedSecurityGroup = securityGroup;
   }
 
-  private mapOpenSearchVersion(version: string): opensearch.EngineVersion {
-    switch (version) {
-      case 'OpenSearch_1.3':
-        return opensearch.EngineVersion.OPENSEARCH_1_3;
-      case 'OpenSearch_2.3':
-        return opensearch.EngineVersion.OPENSEARCH_2_3;
-      case 'OpenSearch_2.5':
-        return opensearch.EngineVersion.OPENSEARCH_2_5;
-      case 'OpenSearch_2.7':
-        return opensearch.EngineVersion.OPENSEARCH_2_7;
-      default:
-        return opensearch.EngineVersion.OPENSEARCH_2_7;
+  private configureLogging(): LoggingResources {
+    if (!this.config) {
+      return {};
     }
+
+    const logging: LoggingResources = {};
+
+    logging.slowSearch = this.prepareLogGroup('slow-search', this.config.logging.slowSearch);
+    logging.slowIndex = this.prepareLogGroup('slow-index', this.config.logging.slowIndex);
+    logging.application = this.prepareLogGroup('application', this.config.logging.application);
+    logging.audit = this.prepareLogGroup('audit', this.config.logging.audit);
+
+    return logging;
   }
 
-  private buildCapacityConfig(): opensearch.CapacityConfig {
-    const cluster = this.config!.cluster!;
-    
-    return {
-      dataNodes: cluster.instanceCount,
-      dataNodeInstanceType: cluster.instanceType!,
-      masterNodes: cluster.dedicatedMasterEnabled ? cluster.masterInstanceCount : undefined,
-      masterNodeInstanceType: cluster.dedicatedMasterEnabled ? cluster.masterInstanceType : undefined,
-      warmNodes: cluster.warmEnabled ? cluster.warmInstanceCount : undefined,
-      warmInstanceType: cluster.warmEnabled ? cluster.warmInstanceType : undefined
-    };
-  }
-
-  private buildEbsConfig(): opensearch.EbsOptions | undefined {
-    if (!this.config!.ebs?.enabled) {
+  private prepareLogGroup(key: string, config: OpenSearchLogConfig): logs.ILogGroup | undefined {
+    if (!config.enabled) {
       return undefined;
     }
 
-    const ebs = this.config!.ebs;
-    
+    if (!config.createLogGroup && config.logGroupName) {
+      return logs.LogGroup.fromLogGroupName(this, `${key}LogGroupImported`, config.logGroupName);
+    }
+
+    const logGroupName = config.logGroupName ?? this.generateLogGroupName(key);
+    const logGroup = new logs.LogGroup(this, `${this.toPascalCase(key)}LogGroup`, {
+      logGroupName,
+      retention: this.mapRetention(config.retentionInDays ?? 90),
+      removalPolicy: this.mapRemovalPolicy(config.removalPolicy ?? 'destroy')
+    });
+
+    if (config.tags && Object.keys(config.tags).length > 0) {
+      this.applyStandardTags(logGroup, config.tags);
+    } else {
+      this.applyStandardTags(logGroup, {
+        'resource-type': 'log-group',
+        'log-channel': key
+      });
+    }
+
+    this.createdLogGroups[key] = logGroup;
+    return logGroup;
+  }
+
+  private createDomain(logging: LoggingResources): void {
+    if (!this.config) {
+      throw new Error('OpenSearch configuration is not initialised');
+    }
+
+    const capacity: opensearch.CapacityConfig = {
+      dataNodes: this.config.cluster.instanceCount,
+      dataNodeInstanceType: this.config.cluster.instanceType,
+      masterNodes: this.config.cluster.dedicatedMasterEnabled ? this.config.cluster.masterInstanceCount : undefined,
+      masterNodeInstanceType: this.config.cluster.dedicatedMasterEnabled ? this.config.cluster.masterInstanceType : undefined,
+      warmNodes: this.config.cluster.warmEnabled ? this.config.cluster.warmInstanceCount : undefined,
+      warmInstanceType: this.config.cluster.warmEnabled ? this.config.cluster.warmInstanceType : undefined
+    };
+
+    const zoneAwareness: opensearch.ZoneAwarenessConfig | undefined = this.config.cluster.zoneAwarenessEnabled
+      ? {
+          enabled: true,
+          availabilityZoneCount: this.config.cluster.availabilityZoneCount
+        }
+      : undefined;
+
+    const ebsOptions: opensearch.EbsOptions | undefined = this.config.ebs.enabled
+      ? {
+          enabled: true,
+          volumeType: this.mapVolumeType(this.config.ebs.volumeType),
+          volumeSize: this.config.ebs.volumeSize,
+          iops: this.config.ebs.iops,
+          throughput: this.config.ebs.throughput
+        }
+      : undefined;
+
+    const domainProps: opensearch.DomainProps = {
+      domainName: this.config.domainName,
+      version: this.mapEngineVersion(this.config.version),
+      capacity,
+      zoneAwareness,
+      ebs: ebsOptions,
+      vpc: this.vpc,
+      securityGroups: this.buildSecurityGroups(),
+      vpcSubnets: this.buildVpcSubnets(),
+      encryptionAtRest: this.buildEncryptionAtRestOptions(),
+      nodeToNodeEncryption: this.config.encryption.nodeToNode,
+      enforceHttps: this.config.domainEndpoint.enforceHttps,
+      tlsSecurityPolicy: this.mapTlsSecurityPolicy(this.config.domainEndpoint.tlsSecurityPolicy),
+      fineGrainedAccessControl: this.buildAdvancedSecurityOptions(),
+      logging: this.buildLoggingOptions(logging),
+      accessPolicies: this.buildAccessPolicies(),
+      advancedOptions: this.config.advancedOptions,
+      removalPolicy: this.mapRemovalPolicy(this.config.removalPolicy),
+      offPeakWindowEnabled: this.config.maintenance.offPeakWindowEnabled,
+      automatedSnapshotStartHour: this.config.snapshot.automatedSnapshotStartHour
+    };
+
+    this.domain = new opensearch.Domain(this, 'OpenSearchDomain', domainProps);
+
+    this.logResourceCreation('opensearch-domain', this.domain.domainArn, {
+      domainName: this.config.domainName,
+      version: this.config.version,
+      dataNodes: this.config.cluster.instanceCount
+    });
+  }
+
+  private buildSecurityGroups(): ec2.ISecurityGroup[] | undefined {
+    if (!this.config?.vpc.enabled) {
+      return undefined;
+    }
+
+    const groups: ec2.ISecurityGroup[] = [];
+    if (this.managedSecurityGroup) {
+      groups.push(this.managedSecurityGroup);
+    }
+
+    this.config.vpc.securityGroupIds.forEach((securityGroupId, index) => {
+      groups.push(ec2.SecurityGroup.fromSecurityGroupId(this, `ImportedSecurityGroup${index}`, securityGroupId));
+    });
+
+    return groups.length > 0 ? groups : undefined;
+  }
+
+  private buildVpcSubnets(): ec2.SubnetSelection[] | undefined {
+    if (!this.config?.vpc.enabled) {
+      return undefined;
+    }
+
+    if (this.config.vpc.subnetIds.length > 0) {
+      const subnets = this.config.vpc.subnetIds.map((subnetId, index) =>
+        ec2.Subnet.fromSubnetId(this, `VpcSubnet${index}`, subnetId)
+      );
+
+      return [{ subnets }];
+    }
+
+    if (this.vpc) {
+      return [{ subnets: this.vpc.privateSubnets }];
+    }
+
+    return undefined;
+  }
+
+  private buildEncryptionAtRestOptions(): opensearch.EncryptionAtRestOptions | undefined {
+    if (!this.config?.encryption.atRest.enabled) {
+      return undefined;
+    }
+
+    let kmsKey: kms.IKey | undefined;
+    if (this.config.encryption.atRest.kmsKeyArn) {
+      kmsKey = kms.Key.fromKeyArn(this, 'OpenSearchEncryptionKey', this.config.encryption.atRest.kmsKeyArn);
+    }
+
     return {
       enabled: true,
-      volumeType: this.mapVolumeType(ebs.volumeType!),
-      volumeSize: ebs.volumeSize,
-      iops: ebs.iops,
-      throughput: ebs.throughput
+      kmsKey
+    };
+  }
+
+  private buildAdvancedSecurityOptions(): opensearch.AdvancedSecurityOptions | undefined {
+    if (!this.config?.advancedSecurity.enabled) {
+      return undefined;
+    }
+
+    const masterUserPassword = this.config.advancedSecurity.masterUserPasswordSecretArn
+      ? cdk.SecretValue.secretsManager(this.config.advancedSecurity.masterUserPasswordSecretArn)
+      : this.config.advancedSecurity.masterUserPassword
+        ? cdk.SecretValue.unsafePlainText(this.config.advancedSecurity.masterUserPassword)
+        : undefined;
+
+    return {
+      masterUserName: this.config.advancedSecurity.masterUserName,
+      masterUserPassword,
+      internalUserDatabaseEnabled: this.config.advancedSecurity.internalUserDatabaseEnabled
+    };
+  }
+
+  private buildLoggingOptions(logging: LoggingResources): opensearch.LoggingOptions | undefined {
+    const options: opensearch.LoggingOptions = {
+      slowSearchLogEnabled: this.config?.logging.slowSearch.enabled,
+      slowSearchLogGroup: logging.slowSearch,
+      slowIndexLogEnabled: this.config?.logging.slowIndex.enabled,
+      slowIndexLogGroup: logging.slowIndex,
+      appLogEnabled: this.config?.logging.application.enabled,
+      appLogGroup: logging.application,
+      auditLogEnabled: this.config?.logging.audit.enabled,
+      auditLogGroup: logging.audit
+    };
+
+    return Object.values(options).some(value => value) ? options : undefined;
+  }
+
+  private buildAccessPolicies(): iam.PolicyStatement[] | undefined {
+    if (!this.config || this.config.accessPolicies.statements.length === 0) {
+      return undefined;
+    }
+
+    return this.config.accessPolicies.statements.map((statement, index) => {
+      const principals = statement.principals?.map(principal =>
+        principal.startsWith('arn:') ? new iam.ArnPrincipal(principal) : new iam.ServicePrincipal(principal)
+      );
+
+      return new iam.PolicyStatement({
+        sid: `Statement${index}`,
+        effect: statement.effect === 'Allow' ? iam.Effect.ALLOW : iam.Effect.DENY,
+        actions: statement.actions,
+        resources: statement.resources && statement.resources.length > 0 ? statement.resources : undefined,
+        principals,
+        conditions: statement.conditions && Object.keys(statement.conditions).length > 0 ? statement.conditions : undefined
+      });
+    });
+  }
+
+  private configureMonitoring(): void {
+    if (!this.config?.monitoring.enabled) {
+      return;
+    }
+
+    const alarms: Array<{ id: string; config: OpenSearchAlarmConfig; metric: cloudwatch.Metric; defaultThreshold: number }> = [
+      {
+        id: 'ClusterStatusRedAlarm',
+        config: this.config.monitoring.alarms.clusterStatusRed,
+        defaultThreshold: 0,
+        metric: new cloudwatch.Metric({
+          namespace: 'AWS/ES',
+          metricName: 'ClusterStatus.red',
+          statistic: this.config.monitoring.alarms.clusterStatusRed.statistic ?? 'Maximum',
+          dimensionsMap: this.metricDimensions(),
+          period: cdk.Duration.minutes(this.config.monitoring.alarms.clusterStatusRed.periodMinutes ?? 5)
+        })
+      },
+      {
+        id: 'ClusterStatusYellowAlarm',
+        config: this.config.monitoring.alarms.clusterStatusYellow,
+        defaultThreshold: 0,
+        metric: new cloudwatch.Metric({
+          namespace: 'AWS/ES',
+          metricName: 'ClusterStatus.yellow',
+          statistic: this.config.monitoring.alarms.clusterStatusYellow.statistic ?? 'Maximum',
+          dimensionsMap: this.metricDimensions(),
+          period: cdk.Duration.minutes(this.config.monitoring.alarms.clusterStatusYellow.periodMinutes ?? 5)
+        })
+      },
+      {
+        id: 'JvmMemoryPressureAlarm',
+        config: this.config.monitoring.alarms.jvmMemoryPressure,
+        defaultThreshold: 80,
+        metric: new cloudwatch.Metric({
+          namespace: 'AWS/ES',
+          metricName: 'JVMMemoryPressure',
+          statistic: this.config.monitoring.alarms.jvmMemoryPressure.statistic ?? 'Maximum',
+          dimensionsMap: this.metricDimensions(),
+          period: cdk.Duration.minutes(this.config.monitoring.alarms.jvmMemoryPressure.periodMinutes ?? 5)
+        })
+      },
+      {
+        id: 'FreeStorageSpaceAlarm',
+        config: this.config.monitoring.alarms.freeStorageSpace,
+        defaultThreshold: 20,
+        metric: new cloudwatch.Metric({
+          namespace: 'AWS/ES',
+          metricName: 'FreeStorageSpace',
+          statistic: this.config.monitoring.alarms.freeStorageSpace.statistic ?? 'Minimum',
+          dimensionsMap: this.metricDimensions(),
+          period: cdk.Duration.minutes(this.config.monitoring.alarms.freeStorageSpace.periodMinutes ?? 5)
+        })
+      }
+    ];
+
+    alarms.forEach(alarmDefinition => {
+      if (!alarmDefinition.config.enabled) {
+        return;
+      }
+
+      const alarm = new cloudwatch.Alarm(this, alarmDefinition.id, {
+        alarmName: `${this.context.serviceName}-${this.spec.name}-${this.toKebabCase(alarmDefinition.id)}`,
+        alarmDescription: `OpenSearch ${this.spec.name} alarm for ${alarmDefinition.id}`,
+        metric: alarmDefinition.metric,
+        threshold: alarmDefinition.config.threshold ?? alarmDefinition.defaultThreshold,
+        evaluationPeriods: alarmDefinition.config.evaluationPeriods ?? 1,
+        comparisonOperator: this.mapComparisonOperator(alarmDefinition.config.comparisonOperator ?? 'gt'),
+        treatMissingData: this.mapTreatMissingData(alarmDefinition.config.treatMissingData ?? 'not-breaching')
+      });
+
+      this.applyStandardTags(alarm, {
+        'resource-type': 'cloudwatch-alarm',
+        'alarm-id': alarmDefinition.id,
+        ...alarmDefinition.config.tags
+      });
+    });
+
+    this.logComponentEvent('observability_configured', 'Configured OpenSearch monitoring alarms', {
+      domainName: this.config.domainName,
+      monitoringEnabled: true
+    });
+  }
+
+  private buildDomainCapability(): Record<string, any> {
+    return {
+      domainArn: this.domain!.domainArn,
+      domainName: this.config!.domainName,
+      endpoint: this.domain!.domainEndpoint,
+      version: this.config!.version,
+      hardeningProfile: this.config!.hardeningProfile,
+      dataNodes: this.config!.cluster.instanceCount,
+      instanceType: this.config!.cluster.instanceType,
+      monitoringEnabled: this.config!.monitoring.enabled
+    };
+  }
+
+  private logHardeningProfile(): void {
+    this.logComplianceEvent('hardening_profile_applied', 'Applied OpenSearch hardening profile', {
+      hardeningProfile: this.config!.hardeningProfile
+    });
+  }
+
+  private generateLogGroupName(suffix: string): string {
+    return `/aws/opensearch/${this.config!.domainName}/${suffix}`;
+  }
+
+  private metricDimensions(): Record<string, string> {
+    return {
+      DomainName: this.config!.domainName,
+      ClientId: this.context.account ?? this.context.accountId ?? this.context.serviceName
     };
   }
 
@@ -850,8 +462,6 @@ export class OpenSearchDomainComponent extends Component {
     switch (volumeType) {
       case 'gp2':
         return ec2.EbsDeviceVolumeType.GP2;
-      case 'gp3':
-        return ec2.EbsDeviceVolumeType.GP3;
       case 'io1':
         return ec2.EbsDeviceVolumeType.IO1;
       case 'io2':
@@ -861,287 +471,102 @@ export class OpenSearchDomainComponent extends Component {
     }
   }
 
-  private buildVpcConfig(): opensearch.VpcOptions | undefined {
-    if (!this.vpc) {
-      return undefined;
+  private mapEngineVersion(version: string): opensearch.EngineVersion {
+    switch (version) {
+      case 'OpenSearch_1.3':
+        return opensearch.EngineVersion.OPENSEARCH_1_3;
+      case 'OpenSearch_2.3':
+        return opensearch.EngineVersion.OPENSEARCH_2_3;
+      case 'OpenSearch_2.5':
+        return opensearch.EngineVersion.OPENSEARCH_2_5;
+      default:
+        return opensearch.EngineVersion.OPENSEARCH_2_7;
     }
-
-    const securityGroups = this.config!.vpc?.securityGroupIds?.map(id => 
-      ec2.SecurityGroup.fromSecurityGroupId(this, `SG${id}`, id)
-    ) || (this.securityGroup ? [this.securityGroup] : []);
-
-    const subnets = this.config!.vpc?.subnetIds?.map(id => 
-      ec2.Subnet.fromSubnetId(this, `Subnet${id}`, id)
-    ) || this.vpc.privateSubnets.slice(0, Math.min(3, this.vpc.privateSubnets.length));
-
-    return {
-      securityGroups,
-      subnets
-    };
-  }
-
-  private buildAccessPolicies(): iam.PolicyDocument[] | undefined {
-    if (!this.config!.accessPolicies?.statements) {
-      return undefined;
-    }
-
-    const statements = this.config!.accessPolicies.statements.map(stmt => 
-      new iam.PolicyStatement({
-        effect: stmt.Effect === 'Allow' ? iam.Effect.ALLOW : iam.Effect.DENY,
-        actions: Array.isArray(stmt.Action) ? stmt.Action : [stmt.Action],
-        resources: stmt.Resource ? (Array.isArray(stmt.Resource) ? stmt.Resource : [stmt.Resource]) : undefined,
-        principals: stmt.Principal ? [new iam.ArnPrincipal(stmt.Principal)] : undefined,
-        conditions: stmt.Condition
-      })
-    );
-
-    return [new iam.PolicyDocument({ statements })];
-  }
-
-  private buildDomainEndpointOptions(): opensearch.DomainEndpointOptions {
-    return {
-      enforceHttps: this.config!.domainEndpoint?.enforceHTTPS,
-      tlsSecurityPolicy: this.mapTlsSecurityPolicy(this.config!.domainEndpoint?.tlsSecurityPolicy!)
-    };
   }
 
   private mapTlsSecurityPolicy(policy: string): opensearch.TLSSecurityPolicy {
-    switch (policy) {
-      case 'Policy-Min-TLS-1-0-2019-07':
-        return opensearch.TLSSecurityPolicy.TLS_1_0;
-      case 'Policy-Min-TLS-1-2-2019-07':
-        return opensearch.TLSSecurityPolicy.TLS_1_2;
+    return policy === 'Policy-Min-TLS-1-0-2019-07'
+      ? opensearch.TLSSecurityPolicy.TLS_1_0
+      : opensearch.TLSSecurityPolicy.TLS_1_2;
+  }
+
+  private mapComparisonOperator(operator: string): cloudwatch.ComparisonOperator {
+    switch (operator) {
+      case 'lt':
+        return cloudwatch.ComparisonOperator.LESS_THAN_THRESHOLD;
+      case 'lte':
+        return cloudwatch.ComparisonOperator.LESS_THAN_OR_EQUAL_TO_THRESHOLD;
+      case 'gte':
+        return cloudwatch.ComparisonOperator.GREATER_THAN_OR_EQUAL_TO_THRESHOLD;
+      case 'gt':
       default:
-        return opensearch.TLSSecurityPolicy.TLS_1_2;
+        return cloudwatch.ComparisonOperator.GREATER_THAN_THRESHOLD;
     }
   }
 
-  private buildAdvancedSecurityConfig(): opensearch.AdvancedSecurityOptions | undefined {
-    if (!this.config!.advancedSecurity?.enabled) {
-      return undefined;
-    }
-
-    return {
-      masterUserName: this.config!.advancedSecurity.masterUserName,
-      masterUserPassword: this.config!.advancedSecurity.masterUserPassword ? 
-        cdk.SecretValue.unsafePlainText(this.config!.advancedSecurity.masterUserPassword) : undefined
-    };
-  }
-
-  private buildLoggingConfig(): opensearch.LoggingOptions | undefined {
-    const logging = this.config!.logging;
-    if (!logging) {
-      return undefined;
-    }
-
-    const logGroups: { [key: string]: logs.ILogGroup } = {};
-
-    if (logging.slowSearchLogEnabled) {
-      logGroups.slowSearchLogGroup = this.createLogGroup('SlowSearchLogs', 'slow-search');
-    }
-
-    if (logging.slowIndexLogEnabled) {
-      logGroups.slowIndexLogGroup = this.createLogGroup('SlowIndexLogs', 'slow-index');
-    }
-
-    if (logging.errorLogEnabled) {
-      logGroups.errorLogGroup = this.createLogGroup('ErrorLogs', 'error');
-    }
-
-    if (logging.auditLogEnabled) {
-      logGroups.auditLogGroup = this.createLogGroup('AuditLogs', 'audit');
-    }
-
-    if (logging.appLogEnabled) {
-      logGroups.appLogGroup = this.createLogGroup('AppLogs', 'app');
-    }
-
-    return Object.keys(logGroups).length > 0 ? logGroups as opensearch.LoggingOptions : undefined;
-  }
-
-  private createLogGroup(id: string, logType: string): logs.LogGroup {
-    const logGroup = new logs.LogGroup(this, id, {
-      logGroupName: `/aws/opensearch/domains/${this.buildDomainName()}/${logType}`,
-      retention: this.getLogRetention(),
-      removalPolicy: this.getLogRemovalPolicy()
-    });
-
-    this.applyStandardTags(logGroup, {
-      'log-type': logType,
-      'domain': this.buildDomainName()!,
-      'retention': this.getLogRetention().toString()
-    });
-
-    return logGroup;
-  }
-
-  private buildDomainName(): string | undefined {
-    if (this.config!.domainName) {
-      return this.config!.domainName;
-    }
-    return `${this.context.serviceName}-${this.spec.name}`;
-  }
-
-  private getDomainRemovalPolicy(): cdk.RemovalPolicy {
-    return ['fedramp-moderate', 'fedramp-high'].includes(this.context.complianceFramework) 
-      ? cdk.RemovalPolicy.RETAIN 
-      : cdk.RemovalPolicy.DESTROY;
-  }
-
-  private getLogRetention(): logs.RetentionDays {
-    switch (this.context.complianceFramework) {
-      case 'fedramp-high':
-        return logs.RetentionDays.TEN_YEARS;
-      case 'fedramp-moderate':
-        return logs.RetentionDays.ONE_YEAR;
+  private mapTreatMissingData(mode: string): cloudwatch.TreatMissingData {
+    switch (mode) {
+      case 'breaching':
+        return cloudwatch.TreatMissingData.BREACHING;
+      case 'ignore':
+        return cloudwatch.TreatMissingData.IGNORE;
+      case 'missing':
+        return cloudwatch.TreatMissingData.MISSING;
       default:
+        return cloudwatch.TreatMissingData.NOT_BREACHING;
+    }
+  }
+
+  private mapRetention(days: number): logs.RetentionDays {
+    switch (days) {
+      case 1:
+        return logs.RetentionDays.ONE_DAY;
+      case 3:
+        return logs.RetentionDays.THREE_DAYS;
+      case 5:
+        return logs.RetentionDays.FIVE_DAYS;
+      case 7:
+        return logs.RetentionDays.ONE_WEEK;
+      case 14:
+        return logs.RetentionDays.TWO_WEEKS;
+      case 30:
+        return logs.RetentionDays.ONE_MONTH;
+      case 60:
+        return logs.RetentionDays.TWO_MONTHS;
+      case 90:
         return logs.RetentionDays.THREE_MONTHS;
-    }
-  }
-
-  private getLogRemovalPolicy(): cdk.RemovalPolicy {
-    return ['fedramp-moderate', 'fedramp-high'].includes(this.context.complianceFramework) 
-      ? cdk.RemovalPolicy.RETAIN 
-      : cdk.RemovalPolicy.DESTROY;
-  }
-
-  private applyComplianceHardening(): void {
-    switch (this.context.complianceFramework) {
-      case 'fedramp-moderate':
-        this.applyFedrampModerateHardening();
-        break;
-      case 'fedramp-high':
-        this.applyFedrampHighHardening();
-        break;
+      case 120:
+        return logs.RetentionDays.FOUR_MONTHS;
+      case 150:
+        return logs.RetentionDays.FIVE_MONTHS;
+      case 180:
+        return logs.RetentionDays.SIX_MONTHS;
+      case 365:
+        return logs.RetentionDays.ONE_YEAR;
+      case 400:
+        return logs.RetentionDays.THIRTEEN_MONTHS;
+      case 545:
+        return logs.RetentionDays.EIGHTEEN_MONTHS;
+      case 731:
+        return logs.RetentionDays.TWO_YEARS;
+      case 1827:
+        return logs.RetentionDays.FIVE_YEARS;
+      case 3650:
+        return logs.RetentionDays.TEN_YEARS;
       default:
-        this.applyCommercialHardening();
-        break;
+        return days > 3650 ? logs.RetentionDays.INFINITE : logs.RetentionDays.THREE_MONTHS;
     }
   }
 
-  private applyCommercialHardening(): void {
-    // Basic security monitoring
-    if (this.domain) {
-      const securityLogGroup = new logs.LogGroup(this, 'SecurityLogGroup', {
-        logGroupName: `/aws/opensearch/${this.buildDomainName()}/security`,
-        retention: logs.RetentionDays.THREE_MONTHS,
-        removalPolicy: cdk.RemovalPolicy.DESTROY
-      });
-
-      this.applyStandardTags(securityLogGroup, {
-        'log-type': 'security',
-        'retention': '3-months'
-      });
-    }
+  private mapRemovalPolicy(removalPolicy: 'retain' | 'destroy'): cdk.RemovalPolicy {
+    return removalPolicy === 'retain' ? cdk.RemovalPolicy.RETAIN : cdk.RemovalPolicy.DESTROY;
   }
 
-  private applyFedrampModerateHardening(): void {
-    this.applyCommercialHardening();
-
-    if (this.domain) {
-      const complianceLogGroup = new logs.LogGroup(this, 'ComplianceLogGroup', {
-        logGroupName: `/aws/opensearch/${this.buildDomainName()}/compliance`,
-        retention: logs.RetentionDays.ONE_YEAR,
-        removalPolicy: cdk.RemovalPolicy.RETAIN
-      });
-
-      this.applyStandardTags(complianceLogGroup, {
-        'log-type': 'compliance',
-        'retention': '1-year',
-        'compliance': 'fedramp-moderate'
-      });
-    }
+  private toPascalCase(value: string): string {
+    return value.replace(/(^|[-_\s])(\w)/g, (_, __, char) => char.toUpperCase());
   }
 
-  private applyFedrampHighHardening(): void {
-    this.applyFedrampModerateHardening();
-
-    if (this.domain) {
-      const auditLogGroup = new logs.LogGroup(this, 'AuditLogGroup', {
-        logGroupName: `/aws/opensearch/${this.buildDomainName()}/audit`,
-        retention: logs.RetentionDays.TEN_YEARS,
-        removalPolicy: cdk.RemovalPolicy.RETAIN
-      });
-
-      this.applyStandardTags(auditLogGroup, {
-        'log-type': 'audit',
-        'retention': '10-years',
-        'compliance': 'fedramp-high'
-      });
-    }
-  }
-
-  private buildDomainCapability(): any {
-    return {
-      domainArn: this.domain!.domainArn,
-      domainName: this.buildDomainName(),
-      domainEndpoint: this.domain!.domainEndpoint
-    };
-  }
-
-  private configureObservabilityForDomain(): void {
-    if (this.context.complianceFramework === 'commercial') {
-      return;
-    }
-
-    const domainName = this.buildDomainName()!;
-
-    // 1. Cluster Status Alarm
-    const clusterStatusAlarm = new cloudwatch.Alarm(this, 'ClusterStatusAlarm', {
-      alarmName: `${this.context.serviceName}-${this.spec.name}-cluster-status`,
-      alarmDescription: 'OpenSearch cluster status alarm',
-      metric: new cloudwatch.Metric({
-        namespace: 'AWS/ES',
-        metricName: 'ClusterStatus.red',
-        dimensionsMap: {
-          DomainName: domainName,
-          ClientId: this.context.serviceName
-        },
-        statistic: 'Maximum',
-        period: cdk.Duration.minutes(1)
-      }),
-      threshold: 0,
-      evaluationPeriods: 1,
-      comparisonOperator: cloudwatch.ComparisonOperator.GREATER_THAN_THRESHOLD,
-      treatMissingData: cloudwatch.TreatMissingData.NOT_BREACHING
-    });
-
-    this.applyStandardTags(clusterStatusAlarm, {
-      'alarm-type': 'cluster-status',
-      'metric-type': 'availability',
-      'threshold': '0'
-    });
-
-    // 2. JVM Memory Pressure Alarm
-    const jvmMemoryAlarm = new cloudwatch.Alarm(this, 'JVMMemoryPressureAlarm', {
-      alarmName: `${this.context.serviceName}-${this.spec.name}-jvm-memory-pressure`,
-      alarmDescription: 'OpenSearch JVM memory pressure alarm',
-      metric: new cloudwatch.Metric({
-        namespace: 'AWS/ES',
-        metricName: 'JVMMemoryPressure',
-        dimensionsMap: {
-          DomainName: domainName,
-          ClientId: this.context.serviceName
-        },
-        statistic: 'Maximum',
-        period: cdk.Duration.minutes(5)
-      }),
-      threshold: 80, // 80% memory pressure threshold
-      evaluationPeriods: 3,
-      comparisonOperator: cloudwatch.ComparisonOperator.GREATER_THAN_THRESHOLD,
-      treatMissingData: cloudwatch.TreatMissingData.NOT_BREACHING
-    });
-
-    this.applyStandardTags(jvmMemoryAlarm, {
-      'alarm-type': 'jvm-memory-pressure',
-      'metric-type': 'performance',
-      'threshold': '80-percent'
-    });
-
-    this.logComponentEvent('observability_configured', 'OpenTelemetry observability standard applied to OpenSearch Domain', {
-      alarmsCreated: 2,
-      domainName: domainName,
-      monitoringEnabled: true
-    });
+  private toKebabCase(value: string): string {
+    return value.replace(/([a-z0-9])([A-Z])/g, '$1-$2').toLowerCase();
   }
 }

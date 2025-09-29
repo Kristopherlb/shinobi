@@ -4,7 +4,7 @@
  */
 
 // Component exports
-export { OpenSearchDomainComponentComponent } from './opensearch-domain.component';
+export { OpenSearchDomainComponent } from './opensearch-domain.component';
 
 // Configuration exports
 export { 
