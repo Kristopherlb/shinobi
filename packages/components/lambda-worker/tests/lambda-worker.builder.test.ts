@@ -29,7 +29,10 @@ const createSpec = (config: Partial<LambdaWorkerConfig> = {}): ComponentSpec => 
 
 describe('LambdaWorkerComponentConfigBuilder', () => {
   it('normalises baseline commercial configuration', () => {
-    const builder = new LambdaWorkerComponentConfigBuilder(createContext('commercial'), createSpec());
+    const builder = new LambdaWorkerComponentConfigBuilder({
+      context: createContext('commercial'),
+      spec: createSpec()
+    });
     const config = builder.buildSync();
 
     expect(config.functionName).toBe('worker-service-image-worker');
@@ -42,7 +45,10 @@ describe('LambdaWorkerComponentConfigBuilder', () => {
   });
 
   it('applies fedramp-high defaults from platform configuration', () => {
-    const builder = new LambdaWorkerComponentConfigBuilder(createContext('fedramp-high'), createSpec());
+    const builder = new LambdaWorkerComponentConfigBuilder({
+      context: createContext('fedramp-high'),
+      spec: createSpec()
+    });
     const config = builder.buildSync();
 
     expect(config.runtime).toBeDefined();
@@ -53,9 +59,9 @@ describe('LambdaWorkerComponentConfigBuilder', () => {
   });
 
   it('honours manifest overrides', () => {
-    const builder = new LambdaWorkerComponentConfigBuilder(
-      createContext('commercial'),
-      createSpec({
+    const builder = new LambdaWorkerComponentConfigBuilder({
+      context: createContext('commercial'),
+      spec: createSpec({
         functionName: 'custom-worker',
         memorySize: 1024,
         timeoutSeconds: 120,
@@ -85,7 +91,7 @@ describe('LambdaWorkerComponentConfigBuilder', () => {
           team: 'media'
         }
       })
-    );
+    });
 
     const config = builder.buildSync();
 
@@ -98,10 +104,13 @@ describe('LambdaWorkerComponentConfigBuilder', () => {
   });
 
   it('throws when handler is missing', () => {
-    const builder = new LambdaWorkerComponentConfigBuilder(createContext('commercial'), {
-      name: 'image-worker',
-      type: 'lambda-worker',
-      config: {}
+    const builder = new LambdaWorkerComponentConfigBuilder({
+      context: createContext('commercial'),
+      spec: {
+        name: 'image-worker',
+        type: 'lambda-worker',
+        config: {}
+      }
     });
 
     expect(() => builder.buildSync()).toThrow(/handler/i);

@@ -7,6 +7,7 @@
  */
 
 import * as cdk from 'aws-cdk-lib';
+import * as logs from 'aws-cdk-lib/aws-logs';
 import { Construct, IConstruct } from 'constructs';
 import { ComponentSpec, ComponentContext, ComponentCapabilities, IComponent } from './component-interfaces';
 import { ITaggingService, TaggingContext, defaultTaggingService } from '../services/tagging-service/tagging.service';
@@ -194,6 +195,30 @@ export abstract class BaseComponent extends Construct implements IComponent {
    */
   public getServiceName(): string {
     return this.context.serviceName;
+  }
+
+  /**
+   * Convert a numeric retention value (in days) to the matching CloudWatch Logs enum.
+   * Defaults to TEN_YEARS when the value exceeds the known thresholds.
+   */
+  protected mapLogRetentionDays(days: number): logs.RetentionDays {
+    if (days <= 1) return logs.RetentionDays.ONE_DAY;
+    if (days <= 3) return logs.RetentionDays.THREE_DAYS;
+    if (days <= 5) return logs.RetentionDays.FIVE_DAYS;
+    if (days <= 7) return logs.RetentionDays.ONE_WEEK;
+    if (days <= 14) return logs.RetentionDays.TWO_WEEKS;
+    if (days <= 30) return logs.RetentionDays.ONE_MONTH;
+    if (days <= 60) return logs.RetentionDays.TWO_MONTHS;
+    if (days <= 90) return logs.RetentionDays.THREE_MONTHS;
+    if (days <= 120) return logs.RetentionDays.FOUR_MONTHS;
+    if (days <= 150) return logs.RetentionDays.FIVE_MONTHS;
+    if (days <= 180) return logs.RetentionDays.SIX_MONTHS;
+    if (days <= 365) return logs.RetentionDays.ONE_YEAR;
+    if (days <= 400) return logs.RetentionDays.THIRTEEN_MONTHS;
+    if (days <= 545) return logs.RetentionDays.EIGHTEEN_MONTHS;
+    if (days <= 731) return logs.RetentionDays.TWO_YEARS;
+    if (days <= 1827) return logs.RetentionDays.FIVE_YEARS;
+    return logs.RetentionDays.TEN_YEARS;
   }
 
   /**

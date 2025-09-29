@@ -12,7 +12,6 @@ import {
   ConfigBuilderContext,
   ComponentConfigSchema
 } from '@shinobi/core';
-import { ComponentContext, ComponentSpec } from '@platform/contracts';
 
 export type LambdaRuntime = 'nodejs18.x' | 'nodejs20.x' | 'python3.9' | 'python3.10' | 'python3.11';
 export type LambdaArchitecture = 'x86_64' | 'arm64';
@@ -344,8 +343,7 @@ const DEFAULT_ALARM_BASELINE: Required<Omit<LambdaAlarmConfig, 'tags'>> = {
 };
 
 export class LambdaWorkerComponentConfigBuilder extends ConfigBuilder<LambdaWorkerConfig> {
-  constructor(context: ComponentContext, spec: ComponentSpec) {
-    const builderContext: ConfigBuilderContext = { context, spec };
+  constructor(builderContext: ConfigBuilderContext) {
     super(builderContext, LAMBDA_WORKER_CONFIG_SCHEMA);
   }
 

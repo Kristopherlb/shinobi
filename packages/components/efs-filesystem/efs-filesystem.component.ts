@@ -7,11 +7,11 @@ import * as cloudwatch from 'aws-cdk-lib/aws-cloudwatch';
 import * as cdk from 'aws-cdk-lib';
 import { Construct } from 'constructs';
 import {
-  Component,
+  BaseComponent,
   ComponentSpec,
   ComponentContext,
   ComponentCapabilities
-} from '@platform/contracts';
+} from '@shinobi/core';
 import {
   EfsFilesystemComponentConfigBuilder,
   EfsFilesystemConfig,
@@ -24,7 +24,7 @@ interface LoggingResources {
   audit?: logs.ILogGroup;
 }
 
-export class EfsFilesystemComponent extends Component {
+export class EfsFilesystemComponent extends BaseComponent {
   private fileSystem?: efs.FileSystem;
   private config?: EfsFilesystemConfig;
   private vpc?: ec2.IVpc;
@@ -42,7 +42,10 @@ export class EfsFilesystemComponent extends Component {
     this.logComponentEvent('synthesis_start', 'Starting EFS filesystem synthesis');
 
     try {
-      const builder = new EfsFilesystemComponentConfigBuilder(this.context, this.spec);
+      const builder = new EfsFilesystemComponentConfigBuilder({
+        context: this.context,
+        spec: this.spec
+      });
       this.config = builder.buildSync();
 
       this.logComponentEvent('config_resolved', 'Resolved EFS configuration', {
@@ -204,7 +207,7 @@ export class EfsFilesystemComponent extends Component {
     const logGroupName = config.logGroupName ?? this.generateLogGroupName(key);
     const logGroup = new logs.LogGroup(this, `${this.toPascalCase(key)}LogGroup`, {
       logGroupName,
-      retention: this.mapRetention(config.retentionInDays ?? 90),
+      retention: this.mapLogRetentionDays(config.retentionInDays ?? 90),
       removalPolicy: this.mapRemovalPolicy(config.removalPolicy ?? 'destroy')
     });
 
@@ -448,47 +451,6 @@ export class EfsFilesystemComponent extends Component {
         return cloudwatch.TreatMissingData.MISSING;
       default:
         return cloudwatch.TreatMissingData.NOT_BREACHING;
-    }
-  }
-
-  private mapRetention(days: number): logs.RetentionDays {
-    switch (days) {
-      case 1:
-        return logs.RetentionDays.ONE_DAY;
-      case 3:
-        return logs.RetentionDays.THREE_DAYS;
-      case 5:
-        return logs.RetentionDays.FIVE_DAYS;
-      case 7:
-        return logs.RetentionDays.ONE_WEEK;
-      case 14:
-        return logs.RetentionDays.TWO_WEEKS;
-      case 30:
-        return logs.RetentionDays.ONE_MONTH;
-      case 60:
-        return logs.RetentionDays.TWO_MONTHS;
-      case 90:
-        return logs.RetentionDays.THREE_MONTHS;
-      case 120:
-        return logs.RetentionDays.FOUR_MONTHS;
-      case 150:
-        return logs.RetentionDays.FIVE_MONTHS;
-      case 180:
-        return logs.RetentionDays.SIX_MONTHS;
-      case 365:
-        return logs.RetentionDays.ONE_YEAR;
-      case 400:
-        return logs.RetentionDays.THIRTEEN_MONTHS;
-      case 545:
-        return logs.RetentionDays.EIGHTEEN_MONTHS;
-      case 731:
-        return logs.RetentionDays.TWO_YEARS;
-      case 1827:
-        return logs.RetentionDays.FIVE_YEARS;
-      case 3650:
-        return logs.RetentionDays.TEN_YEARS;
-      default:
-        return days > 3650 ? logs.RetentionDays.INFINITE : logs.RetentionDays.THREE_MONTHS;
     }
   }
 

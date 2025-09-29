@@ -5,7 +5,7 @@
  * Provides 5-layer configuration precedence chain and compliance-aware defaults.
  */
 
-import { ConfigBuilder, ConfigBuilderContext, ComponentContext, ComponentSpec } from '@shinobi/core';
+import { ConfigBuilder, ConfigBuilderContext } from '@shinobi/core';
 import configSchema from './Config.schema.json';
 
 /**
@@ -309,19 +309,8 @@ export const API_GATEWAY_HTTP_CONFIG_SCHEMA = configSchema;
  * 5. Policy Overrides (from governance policies)
  */
 export class ApiGatewayHttpConfigBuilder extends ConfigBuilder<ApiGatewayHttpConfig> {
-  protected context: ComponentContext;
-  protected spec: ComponentSpec;
-
-  constructor(context: ComponentContext, spec: ComponentSpec) {
-    if (!context) {
-      throw new Error('ComponentContext is required');
-    }
-    if (!spec) {
-      throw new Error('ComponentSpec is required');
-    }
-    super({ context, spec } as ConfigBuilderContext, API_GATEWAY_HTTP_CONFIG_SCHEMA as any);
-    this.context = context;
-    this.spec = spec;
+  constructor(builderContext: ConfigBuilderContext) {
+    super(builderContext, API_GATEWAY_HTTP_CONFIG_SCHEMA as any);
   }
 
   /**
@@ -330,12 +319,8 @@ export class ApiGatewayHttpConfigBuilder extends ConfigBuilder<ApiGatewayHttpCon
    * configuration merging logic. We only need to implement the abstract methods.
    */
   public buildSync(): ApiGatewayHttpConfig {
-    const hardcoded = this.getHardcodedFallbacks();
     const resolved = super.buildSync() as ApiGatewayHttpConfig;
-    const complianceDefaults = this.getComplianceDefaults();
-    const userOverrides = (this.spec.config ?? {}) as Record<string, any>;
-    const merged = this.applyComplianceDefaults(resolved, hardcoded, complianceDefaults, userOverrides) as ApiGatewayHttpConfig;
-    return this.normaliseConfig(merged);
+    return this.normaliseConfig(resolved);
   }
 
   /**
@@ -345,7 +330,7 @@ export class ApiGatewayHttpConfigBuilder extends ConfigBuilder<ApiGatewayHttpCon
   public getHardcodedFallbacks(): Record<string, any> {
     return {
       protocolType: 'HTTP',
-      description: `HTTP API for ${this.spec.name}`,
+      description: `HTTP API for ${this.builderContext.spec.name}`,
       cors: {
         allowOrigins: [],
         allowHeaders: ['Content-Type', 'Authorization'],
@@ -384,97 +369,6 @@ export class ApiGatewayHttpConfigBuilder extends ConfigBuilder<ApiGatewayHttpCon
     };
   }
 
-  private getComplianceDefaults(): Partial<ApiGatewayHttpConfig> {
-    switch (this.context.complianceFramework) {
-      case 'fedramp-high':
-        return {
-          throttling: {
-            rateLimit: 25,
-            burstLimit: 50
-          },
-          accessLogging: {
-            enabled: true,
-            retentionInDays: 365,
-            retainOnDelete: true,
-            includeExecutionData: true,
-            includeRequestResponseData: true
-          },
-          monitoring: {
-            detailedMetrics: true,
-            tracingEnabled: true,
-            alarms: {
-              errorRate4xx: 1.0,
-              errorRate5xx: 0.1,
-              highLatency: 2000,
-              lowThroughput: 2
-            }
-          },
-          security: {
-            enableWaf: true,
-            enableApiKey: true,
-            requireAuthorization: true
-          }
-        };
-      case 'fedramp-moderate':
-        return {
-          throttling: {
-            rateLimit: 50,
-            burstLimit: 100
-          },
-          accessLogging: {
-            enabled: true,
-            retentionInDays: 90,
-            retainOnDelete: true,
-            includeExecutionData: false,
-            includeRequestResponseData: false
-          },
-          monitoring: {
-            detailedMetrics: true,
-            tracingEnabled: true,
-            alarms: {
-              errorRate4xx: 2.0,
-              errorRate5xx: 0.5,
-              highLatency: 3000,
-              lowThroughput: 5
-            }
-          },
-          security: {
-            enableWaf: true,
-            enableApiKey: true,
-            requireAuthorization: true
-          }
-        };
-      default:
-        return {
-          throttling: {
-            rateLimit: 1000,
-            burstLimit: 2000
-          },
-          accessLogging: {
-            retentionInDays: 90,
-            retainOnDelete: false,
-            includeExecutionData: false,
-            includeRequestResponseData: false
-          },
-          monitoring: {
-            detailedMetrics: true,
-            tracingEnabled: true,
-            alarms: {
-              errorRate4xx: 5.0,
-              errorRate5xx: 1.0,
-              highLatency: 5000,
-              lowThroughput: 10
-            }
-          },
-          security: {
-            enableWaf: false,
-            enableApiKey: false,
-            requireAuthorization: true
-          }
-        };
-    }
-  }
-
   private normaliseConfig(config: ApiGatewayHttpConfig): ApiGatewayHttpConfig {
     const normalised: ApiGatewayHttpConfig = { ...config };
 
@@ -484,7 +378,7 @@ export class ApiGatewayHttpConfigBuilder extends ConfigBuilder<ApiGatewayHttpCon
     normalised.throttling = throttling;
 
     normalised.defaultStage = {
-      stageName: normalised.defaultStage?.stageName ?? this.context.environment ?? '$default',
+      stageName: normalised.defaultStage?.stageName ?? this.builderContext.context.environment ?? '$default',
       autoDeploy: normalised.defaultStage?.autoDeploy ?? true,
       throttling: normalised.defaultStage?.throttling ?? throttling
     };
@@ -537,65 +431,6 @@ export class ApiGatewayHttpConfigBuilder extends ConfigBuilder<ApiGatewayHttpCon
     };
 
     return normalised;
-  }
-
-  private applyComplianceDefaults(
-    resolved: Record<string, any>,
-    fallback: Record<string, any>,
-    compliance: Record<string, any>,
-    overrides: Record<string, any>
-  ): Record<string, any> {
-    const result = { ...resolved };
-
-    for (const [key, complianceValue] of Object.entries(compliance)) {
-      const fallbackValue = fallback ? fallback[key] : undefined;
-      const currentValue = result[key];
-      const overrideValue = overrides ? overrides[key] : undefined;
-
-      if (Array.isArray(complianceValue)) {
-        if (
-          currentValue === undefined ||
-          (overrideValue === undefined && this.valuesEqual(currentValue, fallbackValue))
-        ) {
-          result[key] = complianceValue;
-        }
-        continue;
-      }
-
-      if (complianceValue !== null && typeof complianceValue === 'object') {
-        result[key] = this.applyComplianceDefaults(
-          currentValue || {},
-          (fallbackValue as Record<string, any>) || {},
-          complianceValue as Record<string, any>,
-          (overrideValue as Record<string, any>) || {}
-        );
-        continue;
-      }
-
-      if (
-        currentValue === undefined ||
-        (overrideValue === undefined && this.valuesEqual(currentValue, fallbackValue))
-      ) {
-        result[key] = complianceValue;
-      }
-    }
-
-    return result;
-  }
-
-  private valuesEqual(a: any, b: any): boolean {
-    if (Array.isArray(a) && Array.isArray(b)) {
-      if (a.length !== b.length) {
-        return false;
-      }
-      return a.every((value, index) => this.valuesEqual(value, b[index]));
-    }
-
-    if (typeof a === 'object' || typeof b === 'object') {
-      return JSON.stringify(a) === JSON.stringify(b);
-    }
-
-    return a === b;
   }
 
   // Add build method for async compatibility

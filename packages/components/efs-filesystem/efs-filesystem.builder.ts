@@ -3,7 +3,6 @@ import {
   ConfigBuilderContext,
   ComponentConfigSchema
 } from '@shinobi/core';
-import { ComponentContext, ComponentSpec } from '@platform/contracts';
 
 export type EfsPerformanceMode = 'generalPurpose' | 'maxIO';
 export type EfsThroughputMode = 'bursting' | 'provisioned' | 'elastic';
@@ -287,8 +286,7 @@ const DEFAULT_ALARM_BASELINE: Required<Omit<EfsAlarmConfig, 'tags'>> = {
 };
 
 export class EfsFilesystemComponentConfigBuilder extends ConfigBuilder<EfsFilesystemConfig> {
-  constructor(context: ComponentContext, spec: ComponentSpec) {
-    const builderContext: ConfigBuilderContext = { context, spec };
+  constructor(builderContext: ConfigBuilderContext) {
     super(builderContext, EFS_FILESYSTEM_CONFIG_SCHEMA);
   }
 

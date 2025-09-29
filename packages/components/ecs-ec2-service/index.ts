@@ -3,15 +3,10 @@
  * ECS EC2 Service Component
  */
 
-// Component exports
-export { EcsEc2ServiceComponentComponent } from './ecs-ec2-service.component';
-
-// Configuration exports
-export { 
+export { EcsEc2ServiceComponent } from './ecs-ec2-service.component';
+export {
   EcsEc2ServiceConfig,
-  EcsEc2ServiceComponentConfigBuilder,
+  EcsEc2ServiceConfigBuilder,
   ECS_EC2_SERVICE_CONFIG_SCHEMA
 } from './ecs-ec2-service.builder';
-
-// Creator exports
 export { EcsEc2ServiceComponentCreator } from './ecs-ec2-service.creator';

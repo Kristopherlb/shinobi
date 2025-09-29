@@ -110,7 +110,7 @@ export class VpcCreator implements IComponentCreator {
       errors.push('natGateways cannot be negative');
     }
     
-    if (config?.flowLogRetentionDays && !this.isValidLogRetention(config.flowLogRetentionDays)) {
+    if (config?.flowLogs?.retentionInDays && !this.isValidLogRetention(config.flowLogs.retentionInDays)) {
       errors.push('Invalid flow log retention period');
     }
     

@@ -35,20 +35,42 @@ defaults:
     cidr: 10.0.0.0/16
     maxAzs: 2
     natGateways: 1
-    flowLogsEnabled: true
-    flowLogRetentionDays: 30
+    flowLogs:
+      enabled: true
+      retentionInDays: 30
+      removalPolicy: destroy
+    subnets:
+      public:
+        cidrMask: 24
+        name: Public
+      private:
+        cidrMask: 24
+        name: Private
+      database:
+        cidrMask: 28
+        name: Database
     vpcEndpoints:
       s3: true
       dynamodb: true
       secretsManager: false
       kms: false
-    subnets:
-      public:
-        cidrMask: 24
-      private:
-        cidrMask: 24
-      database:
-        cidrMask: 28
+      lambda: false
+    dns:
+      enableDnsHostnames: true
+      enableDnsSupport: true
+    monitoring:
+      enabled: true
+      detailedMetrics: false
+      alarms:
+        natGatewayPacketDropThreshold: 1000
+        vpcFlowLogDeliveryFailures: 10
+    security:
+      createDefaultSecurityGroups: true
+      complianceNacls:
+        enabled: false
+        mode: standard
+      restrictDefaultSecurityGroup: false
+    tags: {}
 
   api-gateway-http:
     cors:
@@ -235,6 +257,30 @@ defaults:
       enableExecuteCommand: false
     deploymentStrategy:
       type: rolling
+
+  ecs-ec2-service:
+    taskCpu: 256
+    taskMemory: 512
+    port: 8080
+    desiredCount: 1
+    logging:
+      createLogGroup: true
+      streamPrefix: service
+      retentionInDays: 30
+      removalPolicy: destroy
+    monitoring:
+      enabled: true
+      alarms:
+        cpu:
+          enabled: true
+          threshold: 80
+          evaluationPeriods: 3
+        memory:
+          enabled: true
+          threshold: 85
+          evaluationPeriods: 3
+    diagnostics:
+      enableExecuteCommand: false
 
   opensearch-domain:
     version: OpenSearch_2.7

@@ -6,23 +6,22 @@ import * as events from 'aws-cdk-lib/aws-events';
 import * as targets from 'aws-cdk-lib/aws-events-targets';
 import * as ec2 from 'aws-cdk-lib/aws-ec2';
 import * as kms from 'aws-cdk-lib/aws-kms';
-import * as logs from 'aws-cdk-lib/aws-logs';
 import * as cloudwatch from 'aws-cdk-lib/aws-cloudwatch';
 import * as cdk from 'aws-cdk-lib';
 import { Construct } from 'constructs';
 import {
-  Component,
+  BaseComponent,
   ComponentSpec,
   ComponentContext,
   ComponentCapabilities
-} from '@platform/contracts';
+} from '@shinobi/core';
 import {
   LambdaWorkerComponentConfigBuilder,
   LambdaWorkerConfig,
   LambdaEventSource
 } from './lambda-worker.builder';
 
-export class LambdaWorkerComponent extends Component {
+export class LambdaWorkerComponent extends BaseComponent {
   private lambdaFunction?: lambda.Function;
   private config?: LambdaWorkerConfig;
   private eventRules: events.Rule[] = [];
@@ -32,7 +31,10 @@ export class LambdaWorkerComponent extends Component {
   }
 
   public synth(): void {
-    const builder = new LambdaWorkerComponentConfigBuilder(this.context, this.spec);
+    const builder = new LambdaWorkerComponentConfigBuilder({
+      context: this.context,
+      spec: this.spec
+    });
     this.config = builder.buildSync();
 
     this.logComponentEvent('config_resolved', 'Resolved lambda worker configuration', {
@@ -90,7 +92,7 @@ export class LambdaWorkerComponent extends Component {
       environment: this.buildEnvironment(),
       reservedConcurrentExecutions: this.config!.reservedConcurrency,
       tracing: this.config!.tracing.mode === 'Active' ? lambda.Tracing.ACTIVE : lambda.Tracing.PASS_THROUGH,
-      logRetention: this.mapLogRetention(this.config!.logging.logRetentionDays),
+      logRetention: this.mapLogRetentionDays(this.config!.logging.logRetentionDays),
       logRetentionRetryOptions: {
         base: cdk.Duration.seconds(2),
         maxRetries: 5
@@ -345,30 +347,6 @@ export class LambdaWorkerComponent extends Component {
 
   private mapArchitecture(architecture: string): lambda.Architecture {
     return architecture === 'arm64' ? lambda.Architecture.ARM_64 : lambda.Architecture.X86_64;
-  }
-
-  private mapLogRetention(days: number): logs.RetentionDays {
-    const retentionMap: Record<number, logs.RetentionDays> = {
-      1: logs.RetentionDays.ONE_DAY,
-      3: logs.RetentionDays.THREE_DAYS,
-      5: logs.RetentionDays.FIVE_DAYS,
-      7: logs.RetentionDays.ONE_WEEK,
-      14: logs.RetentionDays.TWO_WEEKS,
-      30: logs.RetentionDays.ONE_MONTH,
-      60: logs.RetentionDays.TWO_MONTHS,
-      90: logs.RetentionDays.THREE_MONTHS,
-      120: logs.RetentionDays.FOUR_MONTHS,
-      150: logs.RetentionDays.FIVE_MONTHS,
-      180: logs.RetentionDays.SIX_MONTHS,
-      365: logs.RetentionDays.ONE_YEAR,
-      400: logs.RetentionDays.THIRTEEN_MONTHS,
-      545: logs.RetentionDays.EIGHTEEN_MONTHS,
-      731: logs.RetentionDays.TWO_YEARS,
-      1827: logs.RetentionDays.FIVE_YEARS,
-      3650: logs.RetentionDays.TEN_YEARS
-    };
-
-    return retentionMap[days] ?? logs.RetentionDays.THREE_MONTHS;
   }
 
   private mapComparisonOperator(operator: string): cloudwatch.ComparisonOperator {

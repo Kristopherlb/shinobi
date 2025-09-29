@@ -26,7 +26,10 @@ const createSpec = (config: Partial<EfsFilesystemConfig> = {}): ComponentSpec =>
 
 describe('EfsFilesystemComponentConfigBuilder', () => {
   it('normalises commercial defaults', () => {
-    const builder = new EfsFilesystemComponentConfigBuilder(createContext('commercial'), createSpec());
+    const builder = new EfsFilesystemComponentConfigBuilder({
+      context: createContext('commercial'),
+      spec: createSpec()
+    });
     const config = builder.buildSync();
 
     expect(config.fileSystemName).toBe('files-service-shared-efs');
@@ -40,7 +43,10 @@ describe('EfsFilesystemComponentConfigBuilder', () => {
   });
 
   it('applies fedramp-high platform defaults', () => {
-    const builder = new EfsFilesystemComponentConfigBuilder(createContext('fedramp-high'), createSpec());
+    const builder = new EfsFilesystemComponentConfigBuilder({
+      context: createContext('fedramp-high'),
+      spec: createSpec()
+    });
     const config = builder.buildSync();
 
     expect(config.encryption.encryptInTransit).toBe(true);
@@ -52,9 +58,9 @@ describe('EfsFilesystemComponentConfigBuilder', () => {
   });
 
   it('honours manifest overrides for provisioned throughput and custom networking', () => {
-    const builder = new EfsFilesystemComponentConfigBuilder(
-      createContext('commercial'),
-      createSpec({
+    const builder = new EfsFilesystemComponentConfigBuilder({
+      context: createContext('commercial'),
+      spec: createSpec({
         throughputMode: 'provisioned',
         provisionedThroughputMibps: 128,
         vpc: {
@@ -80,7 +86,7 @@ describe('EfsFilesystemComponentConfigBuilder', () => {
           }
         }
       })
-    );
+    });
 
     const config = builder.buildSync();
 
@@ -93,9 +99,9 @@ describe('EfsFilesystemComponentConfigBuilder', () => {
   });
 
   it('merges filesystem policy statements when provided', () => {
-    const builder = new EfsFilesystemComponentConfigBuilder(
-      createContext('commercial'),
-      createSpec({
+    const builder = new EfsFilesystemComponentConfigBuilder({
+      context: createContext('commercial'),
+      spec: createSpec({
         filesystemPolicy: {
           Version: '2012-10-17',
           Statement: [
@@ -110,7 +116,7 @@ describe('EfsFilesystemComponentConfigBuilder', () => {
           ]
         }
       })
-    );
+    });
 
     const config = builder.buildSync();
     expect(config.filesystemPolicy).toBeDefined();

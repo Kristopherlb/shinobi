@@ -50,7 +50,10 @@ export class ApiGatewayHttpComponent extends BaseComponent {
       compliance: this.context.complianceFramework
     });
 
-    const configBuilder = new ApiGatewayHttpConfigBuilder(this.context, this.spec);
+    const configBuilder = new ApiGatewayHttpConfigBuilder({
+      context: this.context,
+      spec: this.spec
+    });
     this.config = configBuilder.buildSync();
 
     this.createAccessLogGroup();

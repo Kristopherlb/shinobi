@@ -6,12 +6,8 @@
  */
 
 import { Construct } from 'constructs';
-import { 
-  ComponentSpec, 
-  ComponentContext, 
-  IComponentCreator 
-} from '../@shinobi/core/component-interfaces';
-import { EcsEc2ServiceComponentComponent } from './ecs-ec2-service.component';
+import { ComponentSpec, ComponentContext, IComponentCreator } from '@platform/contracts';
+import { EcsEc2ServiceComponent } from './ecs-ec2-service.component';
 import { EcsEc2ServiceConfig, ECS_EC2_SERVICE_CONFIG_SCHEMA } from './ecs-ec2-service.builder';
 
 /**
@@ -69,11 +65,11 @@ export class EcsEc2ServiceComponentCreator implements IComponentCreator {
    * Factory method to create component instances
    */
   public createComponent(
-    scope: Construct, 
-    spec: ComponentSpec, 
+    scope: Construct,
+    spec: ComponentSpec,
     context: ComponentContext
-  ): EcsEc2ServiceComponentComponent {
-    return new EcsEc2ServiceComponentComponent(scope, spec, context);
+  ): EcsEc2ServiceComponent {
+    return new EcsEc2ServiceComponent(scope, spec.name, context, spec);
   }
   
   /**
@@ -114,28 +110,20 @@ export class EcsEc2ServiceComponentCreator implements IComponentCreator {
    * Returns the capabilities this component provides when synthesized
    */
   public getProvidedCapabilities(): string[] {
-    return [
-      'compute:ecs-ec2-service',
-      'monitoring:ecs-ec2-service'
-    ];
+    return ['service:connect', 'otel:environment'];
   }
   
   /**
    * Returns the capabilities this component requires from other components
    */
   public getRequiredCapabilities(): string[] {
-    return [
-      // TODO: Define required capabilities
-    ];
+    return [];
   }
   
   /**
    * Returns construct handles that will be registered by this component
    */
   public getConstructHandles(): string[] {
-    return [
-      'main'
-      // TODO: Add additional construct handles if needed
-    ];
+    return ['main', 'service', 'taskDefinition', 'securityGroup', 'logGroup'];
   }
 }

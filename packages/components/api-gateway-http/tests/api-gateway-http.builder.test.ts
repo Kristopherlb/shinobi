@@ -6,16 +6,6 @@
 import { ApiGatewayHttpConfigBuilder, ApiGatewayHttpConfig } from '../api-gateway-http.builder';
 import { ComponentContext, ComponentSpec } from '@shinobi/core';
 
-beforeEach(() => {
-  jest
-    .spyOn(ApiGatewayHttpConfigBuilder.prototype as any, '_loadPlatformConfiguration')
-    .mockReturnValue({});
-});
-
-afterEach(() => {
-  jest.restoreAllMocks();
-});
-
 // Helper factories
 const createContext = (
   complianceFramework: ComponentContext['complianceFramework'] = 'commercial',
@@ -46,7 +36,10 @@ const createSpec = (config: Partial<ApiGatewayHttpConfig> = {}): ComponentSpec =
 
 describe('ApiGatewayHttpConfigBuilder__HardcodedFallbacks__SecureBaseline', () => {
   it('HardcodedFallbacks__Commercial__OutputsSecureBaseline', () => {
-    const builder = new ApiGatewayHttpConfigBuilder(createContext(), createSpec());
+    const builder = new ApiGatewayHttpConfigBuilder({
+      context: createContext(),
+      spec: createSpec()
+    });
     const config = builder.buildSync();
 
     expect(config.protocolType).toBe('HTTP');
@@ -64,14 +57,20 @@ describe('ApiGatewayHttpConfigBuilder__HardcodedFallbacks__SecureBaseline', () =
 
 describe('ApiGatewayHttpConfigBuilder__ComplianceDefaults__ApplyPlatformProfiles', () => {
   it('ComplianceDefaults__Commercial__MatchesPlatformDefaults', () => {
-    const config = new ApiGatewayHttpConfigBuilder(createContext('commercial'), createSpec()).buildSync();
+    const config = new ApiGatewayHttpConfigBuilder({
+      context: createContext('commercial'),
+      spec: createSpec()
+    }).buildSync();
     expect(config.monitoring?.alarms?.lowThroughput).toBe(10);
     expect(config.accessLogging?.retentionInDays).toBe(90);
     expect(config.accessLogging?.retainOnDelete).toBe(false);
   });
 
   it('ComplianceDefaults__FedRampModerate__MatchesPlatformDefaults', () => {
-    const config = new ApiGatewayHttpConfigBuilder(createContext('fedramp-moderate', 'stage'), createSpec()).buildSync();
+    const config = new ApiGatewayHttpConfigBuilder({
+      context: createContext('fedramp-moderate', 'stage'),
+      spec: createSpec()
+    }).buildSync();
     expect(config.throttling).toEqual({ rateLimit: 50, burstLimit: 100 });
     expect(config.monitoring?.alarms?.errorRate4xx).toBe(2.0);
     expect(config.monitoring?.alarms?.highLatency).toBe(3000);
@@ -80,7 +79,10 @@ describe('ApiGatewayHttpConfigBuilder__ComplianceDefaults__ApplyPlatformProfiles
   });
 
   it('ComplianceDefaults__FedRampHigh__MatchesPlatformDefaults', () => {
-    const config = new ApiGatewayHttpConfigBuilder(createContext('fedramp-high', 'prod'), createSpec()).buildSync();
+    const config = new ApiGatewayHttpConfigBuilder({
+      context: createContext('fedramp-high', 'prod'),
+      spec: createSpec()
+    }).buildSync();
     expect(config.accessLogging?.retentionInDays).toBe(365);
     expect(config.accessLogging?.retainOnDelete).toBe(true);
     expect(config.monitoring?.alarms?.errorRate4xx).toBe(1.0);
@@ -91,9 +93,9 @@ describe('ApiGatewayHttpConfigBuilder__ComplianceDefaults__ApplyPlatformProfiles
 
 describe('ApiGatewayHttpConfigBuilder__Precedence__ManifestOverrides', () => {
   it('Precedence__ManifestOverrides__ReplacePlatformValues', () => {
-    const config = new ApiGatewayHttpConfigBuilder(
-      createContext('commercial'),
-      createSpec({
+    const config = new ApiGatewayHttpConfigBuilder({
+      context: createContext('commercial'),
+      spec: createSpec({
         protocolType: 'WEBSOCKET',
         throttling: { rateLimit: 2000, burstLimit: 4000 },
         accessLogging: { enabled: false },
@@ -103,7 +105,7 @@ describe('ApiGatewayHttpConfigBuilder__Precedence__ManifestOverrides', () => {
           alarms: { errorRate4xx: 25, lowThroughput: 1 }
         }
       })
-    ).buildSync();
+    }).buildSync();
 
     expect(config.protocolType).toBe('WEBSOCKET');
     expect(config.throttling).toEqual({ rateLimit: 2000, burstLimit: 4000 });
