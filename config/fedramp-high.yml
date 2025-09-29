@@ -174,8 +174,126 @@ defaults:
           evaluationPeriods: 2
           periodMinutes: 1
           comparisonOperator: LT
-          treatMissingData: breaching
+        treatMissingData: breaching
     tags: {}
+
+  glue-job:
+    glueVersion: '4.0'
+    jobType: glueetl
+    command:
+      pythonVersion: '3'
+      scriptArguments: {}
+    connections: []
+    maxConcurrentRuns: 5
+    maxRetries: 5
+    timeout: 720
+    workerConfiguration:
+      workerType: G.4X
+      numberOfWorkers: 50
+    defaultArguments:
+      --enable-continuous-cloudwatch-log: 'true'
+      --enable-metrics: 'true'
+      --enable-spark-ui: 'true'
+      --enable-auto-scaling: 'true'
+    nonOverridableArguments: {}
+    security:
+      encryption:
+        enabled: true
+        createCustomerManagedKey: true
+        removalPolicy: retain
+    logging:
+      groups:
+        - id: security
+          enabled: true
+          logGroupSuffix: security
+          retentionDays: 90
+          removalPolicy: destroy
+        - id: compliance
+          enabled: true
+          logGroupSuffix: compliance
+          retentionDays: 365
+          removalPolicy: retain
+        - id: audit
+          enabled: true
+          logGroupSuffix: audit
+          retentionDays: 3650
+          removalPolicy: retain
+    monitoring:
+      enabled: true
+      jobFailure:
+        threshold: 1
+        evaluationPeriods: 1
+        periodMinutes: 5
+      jobDuration:
+        thresholdMs: 3600000
+        evaluationPeriods: 1
+        periodMinutes: 15
+    tags:
+      compliance-framework: fedramp-high
+      monitoring: enabled
+      security-level: high
+
+  elasticache-redis:
+    engineVersion: '7.0'
+    nodeType: cache.r6g.xlarge
+    numCacheNodes: 2
+    port: 6379
+    vpc:
+      subnetIds: []
+    security:
+      create: true
+      securityGroupIds: []
+      allowedCidrs:
+        - 10.0.0.0/18
+    parameterGroup:
+      family: redis7
+      parameters:
+        tcp-keepalive: '60'
+        timeout: '300'
+        maxmemory-policy: allkeys-lru
+    encryption:
+      atRest: true
+      inTransit: true
+      authToken:
+        enabled: true
+        removalPolicy: retain
+    backup:
+      enabled: true
+      retentionDays: 30
+      window: '01:00-03:00'
+    maintenance:
+      window: 'sat:23:00-sun:01:00'
+    multiAz:
+      enabled: true
+      automaticFailover: true
+    monitoring:
+      enabled: true
+      logDelivery: []
+      alarms:
+        cpuUtilization:
+          enabled: true
+          threshold: 70
+          evaluationPeriods: 2
+          periodMinutes: 5
+        cacheMisses:
+          enabled: true
+          threshold: 250
+          evaluationPeriods: 2
+          periodMinutes: 5
+        evictions:
+          enabled: true
+          threshold: 2
+          evaluationPeriods: 2
+          periodMinutes: 5
+        connections:
+          enabled: true
+          threshold: 350
+          evaluationPeriods: 2
+          periodMinutes: 5
+    tags:
+      compliance-framework: fedramp-high
+      monitoring: enabled
+      security-level: high
 
   certificate-manager:
     subjectAlternativeNames: []
@@ -285,6 +403,30 @@ defaults:
         threshold: 1
         evaluationPeriods: 1
         periodMinutes: 5
+    tags:
+      compliance-tier: fedramp-high
+
+  static-website:
+    bucket:
+      indexDocument: index.html
+      errorDocument: error.html
+      versioning: true
+      accessLogging: true
+      removalPolicy: retain
+    distribution:
+      enabled: true
+      enableLogging: true
+      logFilePrefix: cloudfront/
+      priceClass: price-class-all
+    deployment:
+      enabled: false
+      retainOnDelete: false
+    security:
+      blockPublicAccess: true
+      encryption: true
+      enforceHTTPS: true
+    logging:
+      retentionDays: 3650
     tags:
       compliance-tier: fedramp-high
 

@@ -2,8 +2,8 @@
   "name": "@shinobi/core",
   "version": "0.1.0",
   "type": "module",
-  "main": "dist/index.js",
-  "types": "dist/index.d.ts",
+  "main": "../../dist/packages/core/index.js",
+  "types": "../../dist/packages/core/index.d.ts",
   "scripts": {
     "build": "tsc -p tsconfig.lib.json",
     "test": "jest"

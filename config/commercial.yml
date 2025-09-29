@@ -118,6 +118,7 @@ defaults:
       rootVolumeSize: 20
       rootVolumeType: gp3
       encrypted: false
+
       kms:
         useCustomerManagedKey: false
         enableKeyRotation: false
@@ -150,6 +151,101 @@ defaults:
           periodMinutes: 1
           comparisonOperator: LT
           treatMissingData: breaching
+    tags: {}
+
+  glue-job:
+    glueVersion: '4.0'
+    jobType: glueetl
+    command:
+      pythonVersion: '3'
+      scriptArguments: {}
+    connections: []
+    maxConcurrentRuns: 1
+    maxRetries: 0
+    timeout: 2880
+    workerConfiguration:
+      workerType: G.1X
+      numberOfWorkers: 10
+    defaultArguments: {}
+    nonOverridableArguments: {}
+    security:
+      encryption:
+        enabled: false
+        createCustomerManagedKey: false
+        removalPolicy: destroy
+    logging:
+      groups:
+        - id: security
+          enabled: true
+          logGroupSuffix: security
+          retentionDays: 90
+          removalPolicy: destroy
+    monitoring:
+      enabled: false
+      jobFailure:
+        threshold: 1
+        evaluationPeriods: 1
+        periodMinutes: 5
+      jobDuration:
+        thresholdMs: 3600000
+        evaluationPeriods: 1
+        periodMinutes: 15
+    tags: {}
+
+  elasticache-redis:
+    engineVersion: '7.0'
+    nodeType: cache.t4g.micro
+    numCacheNodes: 1
+    port: 6379
+    vpc:
+      subnetIds: []
+    security:
+      create: true
+      securityGroupIds: []
+      allowedCidrs:
+        - 10.0.0.0/8
+    parameterGroup:
+      family: redis7
+      parameters: {}
+    encryption:
+      atRest: false
+      inTransit: false
+      authToken:
+        enabled: false
+        removalPolicy: destroy
+    backup:
+      enabled: false
+      retentionDays: 1
+      window: '03:00-05:00'
+    maintenance:
+      window: 'sun:03:00-sun:04:00'
+    multiAz:
+      enabled: false
+      automaticFailover: false
+    monitoring:
+      enabled: false
+      logDelivery: []
+      alarms:
+        cpuUtilization:
+          enabled: false
+          threshold: 80
+          evaluationPeriods: 2
+          periodMinutes: 5
+        cacheMisses:
+          enabled: false
+          threshold: 1000
+          evaluationPeriods: 2
+          periodMinutes: 5
+        evictions:
+          enabled: false
+          threshold: 10
+          evaluationPeriods: 2
+          periodMinutes: 5
+        connections:
+          enabled: false
+          threshold: 500
+          evaluationPeriods: 2
+          periodMinutes: 5
     tags: {}
 
   certificate-manager:
@@ -236,6 +332,30 @@ defaults:
         periodMinutes: 5
       riskHigh:
         enabled: false
+    tags:
+      compliance-tier: commercial
+
+  static-website:
+    bucket:
+      indexDocument: index.html
+      errorDocument: error.html
+      versioning: false
+      accessLogging: false
+      removalPolicy: destroy
+    distribution:
+      enabled: true
+      enableLogging: false
+      logFilePrefix: cloudfront/
+      priceClass: price-class-100
+    deployment:
+      enabled: false
+      retainOnDelete: false
+    security:
+      blockPublicAccess: true
+      encryption: true
+      enforceHTTPS: true
+    logging:
+      retentionDays: 90
     tags:
       compliance-tier: commercial
 

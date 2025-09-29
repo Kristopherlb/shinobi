@@ -1,94 +1,111 @@
-/**
- * ElastiCacheRedisComponent Component Synthesis Test Suite
- * Implements Platform Testing Standard v1.0 - Component Synthesis Testing
- */
-
-import { Template, Match } from 'aws-cdk-lib/assertions';
 import { App, Stack } from 'aws-cdk-lib';
-import { ElastiCacheRedisComponentComponent } from '../elasticache-redis.component';
+import { Template, Match } from 'aws-cdk-lib/assertions';
+import * as ec2 from 'aws-cdk-lib/aws-ec2';
+import { Construct } from 'constructs';
+import { ComponentContext, ComponentSpec } from '@shinobi/core';
+import { ElastiCacheRedisComponent } from '../elasticache-redis.component';
 import { ElastiCacheRedisConfig } from '../elasticache-redis.builder';
-import { ComponentContext, ComponentSpec } from '../../../platform/contracts/component-interfaces';
 
-const createMockContext = (
-  complianceFramework: string = 'commercial',
-  environment: string = 'dev'
-): ComponentContext => ({
+type Framework = 'commercial' | 'fedramp-moderate' | 'fedramp-high';
+
+const baseContext = (framework: Framework = 'commercial'): ComponentContext => ({
   serviceName: 'test-service',
-  owner: 'test-team',
-  environment,
-  complianceFramework,
+  environment: 'dev',
+  complianceFramework: framework,
+  scope: {} as Construct,
   region: 'us-east-1',
-  account: '123456789012',
-  tags: {
-    'service-name': 'test-service',
-    'owner': 'test-team',
-    'environment': environment,
-    'compliance-framework': complianceFramework
-  }
-});
+  accountId: '123456789012'
+} as ComponentContext);
 
-const createMockSpec = (config: Partial<ElastiCacheRedisConfig> = {}): ComponentSpec => ({
-  name: 'test-elasticache-redis',
+const spec = (config: Partial<ElastiCacheRedisConfig> = {}): ComponentSpec => ({
+  name: 'test-redis',
   type: 'elasticache-redis',
   config
 });
 
-const synthesizeComponent = (
-  context: ComponentContext,
-  spec: ComponentSpec
-): { component: ElastiCacheRedisComponentComponent; template: Template } => {
+const synthesize = (framework: Framework, config?: Partial<ElastiCacheRedisConfig>) => {
   const app = new App();
-  const stack = new Stack(app, 'TestStack');
-  
-  const component = new ElastiCacheRedisComponentComponent(stack, spec, context);
+  const stack = new Stack(app, `TestStack-${framework}`);
+  const context = baseContext(framework);
+  context.vpc = new ec2.Vpc(stack, `TestVpc-${framework}`, { maxAzs: 2 });
+  const component = new ElastiCacheRedisComponent(stack, `Redis-${framework}`, context, spec(config));
   component.synth();
-  
-  const template = Template.fromStack(stack);
-  return { component, template };
+  return {
+    component,
+    template: Template.fromStack(stack)
+  };
 };
 
-describe('ElastiCacheRedisComponentComponent Synthesis', () => {
-  
-  describe('Default Happy Path Synthesis', () => {
-    
-    it('should synthesize basic elasticache-redis with commercial compliance', () => {
-      const context = createMockContext('commercial');
-      const spec = createMockSpec();
-      
-      const { template, component } = synthesizeComponent(context, spec);
-      
-      // TODO: Add specific CloudFormation resource assertions
-      // Verify component was created
-      expect(component).toBeDefined();
-      expect(component.getType()).toBe('elasticache-redis');
-    });
-    
+describe('ElastiCacheRedisComponent synthesis', () => {
+  it('creates a commercial cluster without encryption or snapshots', () => {
+    const { template, component } = synthesize('commercial');
+
+    template.hasResourceProperties('AWS::ElastiCache::ReplicationGroup', Match.objectLike({
+      AtRestEncryptionEnabled: false,
+      TransitEncryptionEnabled: false,
+      SnapshotRetentionLimit: 0,
+      NumCacheClusters: 1,
+      MultiAZEnabled: false
+    }));
+
+    expect(component.getConstruct('securityGroup')).toBeDefined();
+    expect(component.getCapabilities()['cache:redis'].multiAz).toBe(false);
   });
-  
-  describe('Component Capabilities and Constructs', () => {
-    
-    it('should register correct capabilities after synthesis', () => {
-      const context = createMockContext('commercial');
-      const spec = createMockSpec();
-      
-      const { component } = synthesizeComponent(context, spec);
-      
-      const capabilities = component.getCapabilities();
-      
-      // Verify component-specific capabilities
-      expect(capabilities).toBeDefined();
+
+  it('enables encryption and monitoring for fedramp-high defaults', () => {
+    const { template, component } = synthesize('fedramp-high');
+
+    template.hasResourceProperties('AWS::ElastiCache::ReplicationGroup', Match.objectLike({
+      AtRestEncryptionEnabled: true,
+      TransitEncryptionEnabled: true,
+      AutomaticFailoverEnabled: true,
+      SnapshotRetentionLimit: 30
+    }));
+
+    template.hasResourceProperties('AWS::ElastiCache::ReplicationGroup', {
+      LogDeliveryConfigurations: Match.arrayWith([
+        Match.objectLike({
+          LogType: 'slow-log',
+          DestinationType: 'cloudwatch-logs'
+        })
+      ])
     });
-    
-    it('should register construct handles for patches.ts access', () => {
-      const context = createMockContext('commercial');
-      const spec = createMockSpec();
-      
-      const { component } = synthesizeComponent(context, spec);
-      
-      // Verify main construct is registered
-      expect(component.getConstruct('main')).toBeDefined();
-    });
-    
+
+    const capability = component.getCapabilities()['cache:redis'];
+    expect(capability.authTokenSecretArn).toBeDefined();
+    expect(capability.multiAz).toBe(true);
   });
-  
+
+  it('applies manifest overrides for security groups and alarms', () => {
+    const { template } = synthesize('commercial', {
+      security: {
+        create: false,
+        securityGroupIds: ['sg-12345678'],
+        allowedCidrs: []
+      },
+      monitoring: {
+        enabled: true,
+        logDelivery: [
+          {
+            enabled: true,
+            logType: 'engine-log',
+            destinationType: 'cloudwatch-logs',
+            destinationName: '/aws/elasticache/redis/engine/test-service-test-redis'
+          }
+        ],
+        alarms: {
+          cpuUtilization: { enabled: true, threshold: 60, evaluationPeriods: 2, periodMinutes: 5 },
+          cacheMisses: { enabled: false, threshold: 0, evaluationPeriods: 1, periodMinutes: 5 },
+          evictions: { enabled: false, threshold: 0, evaluationPeriods: 1, periodMinutes: 5 },
+          connections: { enabled: true, threshold: 250, evaluationPeriods: 2, periodMinutes: 5 }
+        }
+      }
+    });
+
+    template.hasResourceProperties('AWS::ElastiCache::ReplicationGroup', Match.objectLike({
+      SecurityGroupIds: Match.arrayWith(['sg-12345678'])
+    }));
+
+    template.resourceCountIs('AWS::CloudWatch::Alarm', 2);
+  });
 });

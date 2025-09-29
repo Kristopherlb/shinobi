@@ -1,94 +1,133 @@
 /**
- * GlueJobComponent Component Synthesis Test Suite
- * Implements Platform Testing Standard v1.0 - Component Synthesis Testing
+ * GlueJobComponent synthesis tests
+ * Validates that the component consumes resolved configuration and synthesizes
+ * the correct AWS resources across compliance frameworks.
  */
 
-import { Template, Match } from 'aws-cdk-lib/assertions';
 import { App, Stack } from 'aws-cdk-lib';
-import { GlueJobComponentComponent } from '../glue-job.component';
+import { Template, Match } from 'aws-cdk-lib/assertions';
+import { GlueJobComponent } from '../glue-job.component';
 import { GlueJobConfig } from '../glue-job.builder';
-import { ComponentContext, ComponentSpec } from '../../../platform/contracts/component-interfaces';
+import { ComponentContext, ComponentSpec } from '@shinobi/core';
 
-const createMockContext = (
-  complianceFramework: string = 'commercial',
-  environment: string = 'dev'
-): ComponentContext => ({
-  serviceName: 'test-service',
-  owner: 'test-team',
-  environment,
-  complianceFramework,
-  region: 'us-east-1',
-  account: '123456789012',
-  tags: {
-    'service-name': 'test-service',
-    'owner': 'test-team',
-    'environment': environment,
-    'compliance-framework': complianceFramework
+const BASE_SCRIPT_LOCATION = 's3://test-bucket/scripts/job.py';
+
+const createSpec = (config: Partial<GlueJobConfig> = {}): ComponentSpec => ({
+  name: 'test-glue-job',
+  type: 'glue-job',
+  config: {
+    scriptLocation: BASE_SCRIPT_LOCATION,
+    ...config
   }
 });
 
-const createMockSpec = (config: Partial<GlueJobConfig> = {}): ComponentSpec => ({
-  name: 'test-glue-job',
-  type: 'glue-job',
-  config
-});
+const createContext = (stack: Stack, complianceFramework: 'commercial' | 'fedramp-moderate' | 'fedramp-high'): ComponentContext => ({
+  serviceName: 'test-service',
+  environment: 'dev',
+  complianceFramework,
+  scope: stack,
+  region: 'us-east-1',
+  accountId: '123456789012'
+} as ComponentContext);
 
-const synthesizeComponent = (
-  context: ComponentContext,
-  spec: ComponentSpec
-): { component: GlueJobComponentComponent; template: Template } => {
+const synthesize = (
+  complianceFramework: 'commercial' | 'fedramp-moderate' | 'fedramp-high',
+  override?: Partial<GlueJobConfig>
+) => {
   const app = new App();
-  const stack = new Stack(app, 'TestStack');
-  
-  const component = new GlueJobComponentComponent(stack, spec, context);
+  const stack = new Stack(app, `TestStack-${complianceFramework}`);
+  const context = createContext(stack, complianceFramework);
+  const spec = createSpec(override);
+  const component = new GlueJobComponent(stack, `GlueJob-${complianceFramework}`, context, spec);
+
   component.synth();
-  
-  const template = Template.fromStack(stack);
-  return { component, template };
+
+  return {
+    component,
+    template: Template.fromStack(stack)
+  };
 };
 
-describe('GlueJobComponentComponent Synthesis', () => {
-  
-  describe('Default Happy Path Synthesis', () => {
-    
-    it('should synthesize basic glue-job with commercial compliance', () => {
-      const context = createMockContext('commercial');
-      const spec = createMockSpec();
-      
-      const { template, component } = synthesizeComponent(context, spec);
-      
-      // TODO: Add specific CloudFormation resource assertions
-      // Verify component was created
-      expect(component).toBeDefined();
-      expect(component.getType()).toBe('glue-job');
-    });
-    
+describe('GlueJobComponent synthesis', () => {
+  it('synthesizes commercial configuration without encryption or monitoring', () => {
+    const { template, component } = synthesize('commercial');
+
+    template.hasResourceProperties('AWS::Glue::Job', Match.objectLike({
+      GlueVersion: '4.0',
+      MaxRetries: 0,
+      NumberOfWorkers: 10,
+      WorkerType: 'G.1X',
+      DefaultArguments: Match.objectLike({
+        '--enable-glue-datacatalog': 'true'
+      })
+    }));
+
+    template.resourceCountIs('AWS::KMS::Key', 0);
+    template.resourceCountIs('AWS::Glue::SecurityConfiguration', 0);
+    template.resourceCountIs('AWS::CloudWatch::Alarm', 0);
+
+    const capabilities = component.getCapabilities();
+    expect(capabilities['etl:glue-job'].monitoringEnabled).toBe(false);
   });
-  
-  describe('Component Capabilities and Constructs', () => {
-    
-    it('should register correct capabilities after synthesis', () => {
-      const context = createMockContext('commercial');
-      const spec = createMockSpec();
-      
-      const { component } = synthesizeComponent(context, spec);
-      
-      const capabilities = component.getCapabilities();
-      
-      // Verify component-specific capabilities
-      expect(capabilities).toBeDefined();
-    });
-    
-    it('should register construct handles for patches.ts access', () => {
-      const context = createMockContext('commercial');
-      const spec = createMockSpec();
-      
-      const { component } = synthesizeComponent(context, spec);
-      
-      // Verify main construct is registered
-      expect(component.getConstruct('main')).toBeDefined();
-    });
-    
+
+  it('creates encryption resources and alarms for fedramp-high', () => {
+    const { template, component } = synthesize('fedramp-high');
+
+    template.hasResourceProperties('AWS::Glue::Job', Match.objectLike({
+      MaxRetries: 5,
+      NumberOfWorkers: 50,
+      WorkerType: 'G.4X',
+      DefaultArguments: Match.objectLike({
+        '--enable-auto-scaling': 'true',
+        '--enable-metrics': 'true'
+      }),
+      SecurityConfiguration: Match.anyValue()
+    }));
+
+    template.resourceCountIs('AWS::KMS::Key', 1);
+    template.hasResourceProperties('AWS::Glue::SecurityConfiguration', Match.objectLike({
+      EncryptionConfiguration: Match.objectLike({
+        CloudWatchEncryption: Match.objectLike({ CloudWatchEncryptionMode: 'SSE-KMS' })
+      })
+    }));
+
+    template.resourceCountIs('AWS::CloudWatch::Alarm', 2);
+    template.resourceCountIs('AWS::Logs::LogGroup', 3);
+
+    expect(component.getConstruct('kmsKey')).toBeDefined();
+    expect(component.getConstruct('securityConfiguration')).toBeDefined();
+    expect(component.getConstruct('alarm:jobFailure')).toBeDefined();
+    expect(component.getConstruct('alarm:jobDuration')).toBeDefined();
+
+    const capability = component.getCapabilities()['etl:glue-job'];
+    expect(capability.monitoringEnabled).toBe(true);
+    expect(capability.securityConfiguration).toContain('test-service-test-glue-job');
+    expect(capability.kmsKeyArn).toBeDefined();
   });
-  
+
+  it('honours manifest overrides for logging groups and retries', () => {
+    const { template, component } = synthesize('fedramp-moderate', {
+      maxRetries: 2,
+      logging: {
+        groups: [
+          {
+            id: 'custom',
+            enabled: true,
+            logGroupSuffix: 'custom-log',
+            retentionDays: 30,
+            removalPolicy: 'destroy'
+          }
+        ]
+      }
+    });
+
+    template.hasResourceProperties('AWS::Glue::Job', Match.objectLike({ MaxRetries: 2 }));
+    template.resourceCountIs('AWS::Logs::LogGroup', 1);
+    template.hasResourceProperties('AWS::Logs::LogGroup', Match.objectLike({
+      LogGroupName: `/aws/glue/jobs/test-service-test-glue-job/custom-log`,
+      RetentionInDays: 30
+    }));
+
+    expect(component.getConstruct('logGroup:custom')).toBeDefined();
+  });
 });

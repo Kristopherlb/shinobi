@@ -209,19 +209,13 @@ describe('StaticWebsiteComponent Synthesis', () => {
       // Should create access log bucket
       template.resourceCountIs('AWS::S3::Bucket', 3); // Main bucket + access logs + distribution logs
 
-      // Should enable CloudFront logging
-      template.hasResourceProperties('AWS::CloudFront::Distribution', {
-        DistributionConfig: {
-          Logging: {
-            Bucket: {
-              'Fn::GetAtt': [
-                expect.stringMatching(/DistributionLogBucket/),
-                'DomainName'
-              ]
-            }
-          }
-        }
-      });
+      const distributions = template.findResources('AWS::CloudFront::Distribution');
+      const distribution = Object.values(distributions)[0];
+      expect(distribution).toBeDefined();
+      const logging = distribution.Properties?.DistributionConfig?.Logging;
+      expect(logging).toBeDefined();
+      expect(logging.Prefix).toBe('cloudfront/');
+      expect(logging.Bucket).toBeDefined();
     });
 
     it('should apply fedramp-high hardening', () => {
@@ -248,23 +242,18 @@ describe('StaticWebsiteComponent Synthesis', () => {
       // Should create access log bucket
       template.resourceCountIs('AWS::S3::Bucket', 3); // Main bucket + access logs + distribution logs
 
-      // Should enable CloudFront logging
-      template.hasResourceProperties('AWS::CloudFront::Distribution', {
-        DistributionConfig: {
-          Logging: {
-            Bucket: {
-              'Fn::GetAtt': [
-                expect.stringMatching(/DistributionLogBucket/),
-                'DomainName'
-              ]
-            }
-          }
-        }
-      });
+      const distributions = template.findResources('AWS::CloudFront::Distribution');
+      const distribution = Object.values(distributions)[0];
+      expect(distribution).toBeDefined();
+      const logging = distribution.Properties?.DistributionConfig?.Logging;
+      expect(logging).toBeDefined();
+      expect(logging.Prefix).toBe('cloudfront/');
+      expect(logging.Bucket).toBeDefined();
 
-      // Should set RETAIN removal policy for high security
-      template.hasResourceProperties('AWS::S3::Bucket', {
-        DeletionPolicy: 'Retain'
+      const bucketsRetain = template.findResources('AWS::S3::Bucket');
+      Object.values(bucketsRetain).forEach(resource => {
+        expect(resource.DeletionPolicy).toBe('Retain');
+        expect(resource.UpdateReplacePolicy).toBe('Retain');
       });
     });
 
@@ -282,18 +271,21 @@ describe('StaticWebsiteComponent Synthesis', () => {
 
       const template = Template.fromStack(stack);
 
-      // Should create lifecycle rules with 10-year retention for FedRAMP High
-      template.hasResourceProperties('AWS::S3::Bucket', {
-        LifecycleConfiguration: {
-          Rules: [
-            {
-              Id: 'DeleteOldLogs',
-              Status: 'Enabled',
-              ExpirationInDays: 3650 // 10 years
-            }
-          ]
-        }
-      });
+      const buckets = template.findResources('AWS::S3::Bucket');
+      const logBucket = Object.values(buckets).find(resource =>
+        resource.Properties?.LifecycleConfiguration
+      );
+
+      expect(logBucket).toBeDefined();
+      const rules = logBucket!.Properties!.LifecycleConfiguration?.Rules;
+      expect(rules).toEqual(
+        expect.arrayContaining([
+          expect.objectContaining({
+            Id: 'DeleteOldLogs',
+            ExpirationInDays: 3650
+          })
+        ])
+      );
     });
   });
 
@@ -372,15 +364,20 @@ describe('StaticWebsiteComponent Synthesis', () => {
 
       const template = Template.fromStack(stack);
 
-      // Check that tags are applied to S3 bucket
-      template.hasResourceProperties('AWS::S3::Bucket', {
-        Tags: expect.arrayContaining([
+      const buckets = template.findResources('AWS::S3::Bucket');
+      const websiteBucket = Object.values(buckets).find(resource =>
+        resource.Properties?.WebsiteConfiguration
+      );
+
+      expect(websiteBucket).toBeDefined();
+      expect(websiteBucket!.Properties!.Tags).toEqual(
+        expect.arrayContaining([
           expect.objectContaining({
             Key: 'bucket-type',
             Value: 'website'
           })
         ])
-      });
+      );
     });
 
     it('should apply custom tags when provided', () => {
@@ -402,9 +399,14 @@ describe('StaticWebsiteComponent Synthesis', () => {
 
       const template = Template.fromStack(stack);
 
-      // Custom tags should be applied in addition to standard tags
-      template.hasResourceProperties('AWS::S3::Bucket', {
-        Tags: expect.arrayContaining([
+      const buckets = template.findResources('AWS::S3::Bucket');
+      const websiteBucket = Object.values(buckets).find(resource =>
+        resource.Properties?.WebsiteConfiguration
+      );
+
+      expect(websiteBucket).toBeDefined();
+      expect(websiteBucket!.Properties!.Tags).toEqual(
+        expect.arrayContaining([
           expect.objectContaining({
             Key: 'custom-tag',
             Value: 'custom-value'
@@ -414,7 +416,7 @@ describe('StaticWebsiteComponent Synthesis', () => {
             Value: 'production'
           })
         ])
-      });
+      );
     });
   });
 });

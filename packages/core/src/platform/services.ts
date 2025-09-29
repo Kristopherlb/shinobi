@@ -9,3 +9,4 @@ export * from './services/compliance-control-mapping';
 export * from './services/compliance-plan-generator';
 export * from './services/tagging-enforcement';
 export * from './services/tagging-service/tagging.service';
+export * from './services/feature-flags';

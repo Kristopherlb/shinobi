@@ -1,99 +1,104 @@
-/**
- * ElastiCacheRedisComponent ConfigBuilder Test Suite
- * Implements Platform Testing Standard v1.0 - ConfigBuilder Testing
- */
+import { Construct } from 'constructs';
+import {
+  ElastiCacheRedisComponentConfigBuilder,
+  ElastiCacheRedisConfig
+} from '../elasticache-redis.builder';
+import { ComponentContext, ComponentSpec } from '@shinobi/core';
 
-import { ElastiCacheRedisComponentConfigBuilder, ElastiCacheRedisConfig } from '../elasticache-redis.builder';
-import { ComponentContext, ComponentSpec } from '../../../platform/contracts/component-interfaces';
+type Framework = 'commercial' | 'fedramp-moderate' | 'fedramp-high';
 
-const createMockContext = (
-  complianceFramework: string = 'commercial',
-  environment: string = 'dev'
-): ComponentContext => ({
+const createContext = (framework: Framework = 'commercial'): ComponentContext => ({
   serviceName: 'test-service',
-  owner: 'test-team',
-  environment,
-  complianceFramework,
+  environment: 'dev',
+  complianceFramework: framework,
+  scope: {} as Construct,
   region: 'us-east-1',
-  account: '123456789012',
-  tags: {
-    'service-name': 'test-service',
-    'owner': 'test-team',
-    'environment': environment,
-    'compliance-framework': complianceFramework
-  }
-});
+  accountId: '123456789012'
+} as ComponentContext);
 
-const createMockSpec = (config: Partial<ElastiCacheRedisConfig> = {}): ComponentSpec => ({
-  name: 'test-elasticache-redis',
+const createSpec = (config: Partial<ElastiCacheRedisConfig> = {}): ComponentSpec => ({
+  name: 'test-redis',
   type: 'elasticache-redis',
   config
 });
 
 describe('ElastiCacheRedisComponentConfigBuilder', () => {
-  
-  describe('Hardcoded Fallbacks (Layer 1)', () => {
-    
-    it('should provide ultra-safe baseline configuration', () => {
-      const context = createMockContext();
-      const spec = createMockSpec();
-      
-      const builder = new ElastiCacheRedisComponentConfigBuilder(context, spec);
-      const config = builder.buildSync();
-      
-      // Verify hardcoded fallbacks are applied
-      expect(config.monitoring?.enabled).toBe(true);
-      expect(config.monitoring?.detailedMetrics).toBe(false);
-      expect(config.tags).toBeDefined();
-    });
-    
+  it('applies commercial defaults with monitoring disabled', () => {
+    const builder = new ElastiCacheRedisComponentConfigBuilder(createContext('commercial'), createSpec());
+    const config = builder.buildSync();
+
+    expect(config.engineVersion).toBe('7.0');
+    expect(config.encryption.atRest).toBe(false);
+    expect(config.encryption.authToken.enabled).toBe(false);
+    expect(config.monitoring.enabled).toBe(false);
+    expect(config.monitoring.logDelivery).toHaveLength(0);
+    expect(config.multiAz.enabled).toBe(false);
   });
-  
-  describe('Compliance Framework Defaults (Layer 2)', () => {
-    
-    it('should apply commercial compliance defaults', () => {
-      const context = createMockContext('commercial');
-      const spec = createMockSpec();
-      
-      const builder = new ElastiCacheRedisComponentConfigBuilder(context, spec);
-      const config = builder.buildSync();
-      
-      expect(config.monitoring?.enabled).toBe(true);
-      expect(config.monitoring?.detailedMetrics).toBe(true);
-    });
-    
-    it('should apply FedRAMP compliance defaults', () => {
-      const context = createMockContext('fedramp-moderate');
-      const spec = createMockSpec();
-      
-      const builder = new ElastiCacheRedisComponentConfigBuilder(context, spec);
-      const config = builder.buildSync();
-      
-      expect(config.monitoring?.enabled).toBe(true);
-      expect(config.monitoring?.detailedMetrics).toBe(true); // Mandatory for FedRAMP
-    });
-    
+
+  it('enables hardening defaults for fedramp-moderate', () => {
+    const builder = new ElastiCacheRedisComponentConfigBuilder(createContext('fedramp-moderate'), createSpec());
+    const config = builder.buildSync();
+
+    expect(config.encryption.atRest).toBe(true);
+    expect(config.encryption.inTransit).toBe(true);
+    expect(config.encryption.authToken.enabled).toBe(true);
+    expect(config.backup.enabled).toBe(true);
+    expect(config.multiAz.enabled).toBe(true);
+    expect(config.monitoring.enabled).toBe(true);
+    expect(config.monitoring.logDelivery).toHaveLength(1);
+    expect(config.monitoring.logDelivery[0]).toMatchObject({ logType: 'slow-log', destinationType: 'cloudwatch-logs' });
   });
-  
-  describe('5-Layer Precedence Chain', () => {
-    
-    it('should apply component overrides over platform defaults', () => {
-      const context = createMockContext('commercial');
-      const spec = createMockSpec({
-        monitoring: {
-          enabled: false,
-          detailedMetrics: false
+
+  it('includes engine log delivery for fedramp-high via manifest override', () => {
+    const builder = new ElastiCacheRedisComponentConfigBuilder(createContext('fedramp-high'), createSpec({
+      monitoring: {
+        enabled: true,
+        logDelivery: [
+          {
+            enabled: true,
+            logType: 'engine-log',
+            destinationType: 'cloudwatch-logs',
+            destinationName: '/aws/elasticache/redis/engine/test-service-test-redis'
+          }
+        ],
+        alarms: {
+          cpuUtilization: { enabled: true, threshold: 65, evaluationPeriods: 3, periodMinutes: 5 },
+          cacheMisses: { enabled: true, threshold: 100, evaluationPeriods: 2, periodMinutes: 5 },
+          evictions: { enabled: true, threshold: 1, evaluationPeriods: 2, periodMinutes: 5 },
+          connections: { enabled: true, threshold: 300, evaluationPeriods: 2, periodMinutes: 5 }
         }
-      });
-      
-      const builder = new ElastiCacheRedisComponentConfigBuilder(context, spec);
-      const config = builder.buildSync();
-      
-      // Verify component config overrides platform defaults
-      expect(config.monitoring?.enabled).toBe(false);
-      expect(config.monitoring?.detailedMetrics).toBe(false);
-    });
-    
+      }
+    }));
+
+    const config = builder.buildSync();
+
+    expect(config.monitoring.logDelivery).toHaveLength(1);
+    expect(config.monitoring.logDelivery[0].logType).toBe('engine-log');
+    expect(config.monitoring.alarms.cpuUtilization.threshold).toBe(65);
   });
-  
+
+  it('honours manifest overrides over platform defaults', () => {
+    const builder = new ElastiCacheRedisComponentConfigBuilder(createContext('commercial'), createSpec({
+      engineVersion: '7.1',
+      nodeType: 'cache.r6g.large',
+      security: {
+        create: false,
+        securityGroupIds: ['sg-12345678'],
+        allowedCidrs: ['192.168.0.0/24']
+      },
+      multiAz: {
+        enabled: true,
+        automaticFailover: true
+      }
+    }));
+
+    const config = builder.buildSync();
+
+    expect(config.engineVersion).toBe('7.1');
+    expect(config.nodeType).toBe('cache.r6g.large');
+    expect(config.security.create).toBe(false);
+    expect(config.security.securityGroupIds).toContain('sg-12345678');
+    expect(config.multiAz.enabled).toBe(true);
+    expect(config.multiAz.automaticFailover).toBe(true);
+  });
 });

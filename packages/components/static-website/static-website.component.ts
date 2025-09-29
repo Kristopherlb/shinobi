@@ -15,13 +15,18 @@ import * as targets from 'aws-cdk-lib/aws-route53-targets';
 import * as iam from 'aws-cdk-lib/aws-iam';
 import * as cdk from 'aws-cdk-lib';
 import { Construct } from 'constructs';
-import { BaseComponent } from '../../platform/core/base-component';
+import { BaseComponent } from '@shinobi/core';
 import {
   ComponentSpec,
   ComponentContext,
   ComponentCapabilities
 } from '../@shinobi/core/component-interfaces';
-import { StaticWebsiteConfig, StaticWebsiteConfigBuilder } from './static-website.builder';
+import {
+  StaticWebsiteConfig,
+  StaticWebsiteConfigBuilder,
+  RemovalPolicyOption,
+  PriceClassOption
+} from './static-website.builder';
 
 /**
  * Static Website Component implementing Component API Contract v1.1
@@ -32,7 +37,8 @@ export class StaticWebsiteComponent extends BaseComponent {
   private deployment?: s3deploy.BucketDeployment;
   private accessLogBucket?: s3.Bucket;
   private distributionLogBucket?: s3.Bucket;
-  private config?: StaticWebsiteConfig;
+  private config!: StaticWebsiteConfig;
+  private originAccessIdentity?: cloudfront.OriginAccessIdentity;
   private logger = this.getLogger();
 
   constructor(scope: Construct, id: string, context: ComponentContext, spec: ComponentSpec) {
@@ -47,10 +53,7 @@ export class StaticWebsiteComponent extends BaseComponent {
 
     try {
       // Step 1: Build configuration using ConfigBuilder
-      const configBuilder = new StaticWebsiteConfigBuilder({
-        context: this.context,
-        spec: this.spec
-      });
+      const configBuilder = new StaticWebsiteConfigBuilder(this.context, this.spec);
       this.config = configBuilder.buildSync();
 
       // Step 2: Create helper resources (if needed) - KMS key creation handled by BaseComponent if needed
@@ -67,15 +70,17 @@ export class StaticWebsiteComponent extends BaseComponent {
       this.applyStandardTags(this.bucket!, {
         'bucket-type': 'website',
         'website-name': this.buildWebsiteName(),
-        'versioning': (this.config.bucket?.versioning || false).toString(),
-        'encryption': (this.config.security?.encryption || false).toString()
+        'versioning': this.config.bucket.versioning.toString(),
+        'encryption': this.config.security.encryption.toString(),
+        ...this.config.tags
       });
 
       if (this.distribution) {
         this.applyStandardTags(this.distribution, {
           'distribution-type': 'website',
           'website': this.buildWebsiteName(),
-          'logging-enabled': (this.config.distribution?.enableLogging || false).toString()
+          'logging-enabled': this.config.distribution.enableLogging.toString(),
+          ...this.config.tags
         });
       }
 
@@ -95,7 +100,7 @@ export class StaticWebsiteComponent extends BaseComponent {
       this.logger.info('Static Website component synthesis completed successfully', {
         bucketName: this.bucket!.bucketName,
         distributionId: this.distribution?.distributionId,
-        deploymentEnabled: this.config.deployment?.enabled
+        deploymentEnabled: this.config.deployment.enabled
       });
 
     } catch (error) {
@@ -117,43 +122,43 @@ export class StaticWebsiteComponent extends BaseComponent {
   }
 
   private createAccessLogBucketIfNeeded(): void {
-    if (this.config!.bucket?.accessLogging) {
+    if (this.config.bucket.accessLogging) {
       this.accessLogBucket = new s3.Bucket(this, 'AccessLogBucket', {
         bucketName: `${this.buildWebsiteName()}-access-logs`,
         encryption: s3.BucketEncryption.S3_MANAGED,
         blockPublicAccess: s3.BlockPublicAccess.BLOCK_ALL,
-        removalPolicy: this.getBucketRemovalPolicy(),
+        removalPolicy: this.mapRemovalPolicy(this.config.bucket.removalPolicy),
         lifecycleRules: [{
           id: 'DeleteOldLogs',
-          expiration: cdk.Duration.days(this.getLogRetentionDays())
+          expiration: cdk.Duration.days(this.config.logging.retentionDays)
         }]
       });
 
       this.applyStandardTags(this.accessLogBucket, {
         'bucket-type': 'access-logs',
         'website': this.buildWebsiteName(),
-        'log-retention': this.getLogRetentionDays().toString()
+        'log-retention': this.config.logging.retentionDays.toString()
       });
     }
   }
 
   private createDistributionLogBucketIfNeeded(): void {
-    if (this.config!.distribution?.enableLogging) {
+    if (this.config.distribution.enableLogging) {
       this.distributionLogBucket = new s3.Bucket(this, 'DistributionLogBucket', {
         bucketName: `${this.buildWebsiteName()}-cloudfront-logs`,
         encryption: s3.BucketEncryption.S3_MANAGED,
         blockPublicAccess: s3.BlockPublicAccess.BLOCK_ALL,
-        removalPolicy: this.getBucketRemovalPolicy(),
+        removalPolicy: this.mapRemovalPolicy(this.config.bucket.removalPolicy),
         lifecycleRules: [{
           id: 'DeleteOldLogs',
-          expiration: cdk.Duration.days(this.getLogRetentionDays())
+          expiration: cdk.Duration.days(this.config.logging.retentionDays)
         }]
       });
 
       this.applyStandardTags(this.distributionLogBucket, {
         'bucket-type': 'distribution-logs',
         'website': this.buildWebsiteName(),
-        'log-retention': this.getLogRetentionDays().toString()
+        'log-retention': this.config.logging.retentionDays.toString()
       });
     }
   }
@@ -161,12 +166,12 @@ export class StaticWebsiteComponent extends BaseComponent {
   private createWebsiteBucket(): void {
     const bucketProps: s3.BucketProps = {
       bucketName: this.buildWebsiteName(),
-      websiteIndexDocument: this.config!.bucket?.indexDocument,
-      websiteErrorDocument: this.config!.bucket?.errorDocument,
-      versioned: this.config!.bucket?.versioning,
-      encryption: this.config!.security?.encryption ? s3.BucketEncryption.S3_MANAGED : s3.BucketEncryption.UNENCRYPTED,
-      blockPublicAccess: this.config!.security?.blockPublicAccess ? s3.BlockPublicAccess.BLOCK_ALL : s3.BlockPublicAccess.BLOCK_ACLS,
-      removalPolicy: this.getBucketRemovalPolicy(),
+      websiteIndexDocument: this.config.bucket.indexDocument,
+      websiteErrorDocument: this.config.bucket.errorDocument,
+      versioned: this.config.bucket.versioning,
+      encryption: this.config.security.encryption ? s3.BucketEncryption.S3_MANAGED : s3.BucketEncryption.UNENCRYPTED,
+      blockPublicAccess: this.config.security.blockPublicAccess ? s3.BlockPublicAccess.BLOCK_ALL : s3.BlockPublicAccess.BLOCK_ACLS,
+      removalPolicy: this.mapRemovalPolicy(this.config.bucket.removalPolicy),
       serverAccessLogsBucket: this.accessLogBucket,
       serverAccessLogsPrefix: 's3-access/'
     };
@@ -174,34 +179,36 @@ export class StaticWebsiteComponent extends BaseComponent {
     this.bucket = new s3.Bucket(this, 'WebsiteBucket', bucketProps);
 
     // Add bucket policy for CloudFront access
-    if (this.config!.security?.blockPublicAccess) {
-      const oai = new cloudfront.OriginAccessIdentity(this, 'OAI', {
+    if (this.config.security.blockPublicAccess && this.config.distribution.enabled) {
+      this.originAccessIdentity = new cloudfront.OriginAccessIdentity(this, 'OAI', {
         comment: `OAI for ${this.buildWebsiteName()}`
       });
 
       this.bucket.addToResourcePolicy(new iam.PolicyStatement({
         actions: ['s3:GetObject'],
         resources: [this.bucket.arnForObjects('*')],
-        principals: [new iam.CanonicalUserPrincipal(oai.cloudFrontOriginAccessIdentityS3CanonicalUserId)]
+        principals: [new iam.CanonicalUserPrincipal(this.originAccessIdentity.cloudFrontOriginAccessIdentityS3CanonicalUserId)]
       }));
     }
 
     this.logger.info('Website S3 bucket created', {
       bucketName: this.bucket.bucketName,
-      versioning: this.config!.bucket?.versioning,
-      encryption: this.config!.security?.encryption
+      versioning: this.config.bucket.versioning,
+      encryption: this.config.security.encryption
     });
   }
 
   private createCloudFrontDistribution(): void {
-    if (!this.config!.distribution?.enabled) {
+    if (!this.config.distribution.enabled) {
       return;
     }
 
     // Default behavior
     const defaultBehavior: cloudfront.BehaviorOptions = {
-      origin: new origins.S3Origin(this.bucket!),
-      viewerProtocolPolicy: this.config!.security?.enforceHTTPS ? 
+      origin: new origins.S3Origin(this.bucket!, {
+        originAccessIdentity: this.originAccessIdentity
+      }),
+      viewerProtocolPolicy: this.config.security.enforceHTTPS ? 
         cloudfront.ViewerProtocolPolicy.REDIRECT_TO_HTTPS : 
         cloudfront.ViewerProtocolPolicy.ALLOW_ALL,
       allowedMethods: cloudfront.AllowedMethods.ALLOW_GET_HEAD_OPTIONS,
@@ -211,22 +218,22 @@ export class StaticWebsiteComponent extends BaseComponent {
 
     const distributionProps: cloudfront.DistributionProps = {
       defaultBehavior: defaultBehavior,
-      domainNames: this.config!.domain ? [this.config!.domain.domainName, ...(this.config!.domain.alternativeDomainNames || [])] : undefined,
-      certificate: this.config!.domain?.certificateArn ? 
-        certificatemanager.Certificate.fromCertificateArn(this, 'Certificate', this.config!.domain.certificateArn) : 
+      domainNames: this.config.domain ? [this.config.domain.domainName, ...(this.config.domain.alternativeDomainNames || [])] : undefined,
+      certificate: this.config.domain?.certificateArn ? 
+        certificatemanager.Certificate.fromCertificateArn(this, 'Certificate', this.config.domain.certificateArn) : 
         undefined,
-      priceClass: cloudfront.PriceClass.PRICE_CLASS_100, // Simplified from pass-through
-      defaultRootObject: this.config!.bucket?.indexDocument,
+      priceClass: this.mapPriceClass(this.config.distribution.priceClass),
+      defaultRootObject: this.config.bucket.indexDocument,
       errorResponses: [
         {
           httpStatus: 404,
           responseHttpStatus: 404,
-          responsePagePath: `/${this.config!.bucket?.errorDocument}`
+          responsePagePath: `/${this.config.bucket.errorDocument}`
         }
       ],
-      enableLogging: this.config!.distribution.enableLogging,
+      enableLogging: this.config.distribution.enableLogging,
       logBucket: this.distributionLogBucket,
-      logFilePrefix: this.config!.distribution.logFilePrefix
+      logFilePrefix: this.config.distribution.logFilePrefix
     };
 
     this.distribution = new cloudfront.Distribution(this, 'Distribution', distributionProps);
@@ -234,28 +241,28 @@ export class StaticWebsiteComponent extends BaseComponent {
     this.logger.info('CloudFront distribution created', {
       distributionId: this.distribution.distributionId,
       domainName: this.distribution.distributionDomainName,
-      loggingEnabled: this.config!.distribution.enableLogging
+      loggingEnabled: this.config.distribution.enableLogging
     });
   }
 
   private createDnsRecordsIfNeeded(): void {
-    if (!this.config!.domain || !this.distribution) {
+    if (!this.config.domain || !this.distribution) {
       return;
     }
 
-    if (this.config!.domain.hostedZoneId) {
-      const hostedZone = route53.HostedZone.fromHostedZoneId(this, 'HostedZone', this.config!.domain.hostedZoneId);
+    if (this.config.domain.hostedZoneId) {
+      const hostedZone = route53.HostedZone.fromHostedZoneId(this, 'HostedZone', this.config.domain.hostedZoneId);
 
       // Create A record for primary domain
       new route53.ARecord(this, 'AliasRecord', {
         zone: hostedZone,
-        recordName: this.config!.domain.domainName,
+        recordName: this.config.domain.domainName,
         target: route53.RecordTarget.fromAlias(new targets.CloudFrontTarget(this.distribution))
       });
 
       // Create A records for alternative domains
-      if (this.config!.domain.alternativeDomainNames) {
-        this.config!.domain.alternativeDomainNames.forEach((altDomain, index) => {
+      if (this.config.domain.alternativeDomainNames) {
+        this.config.domain.alternativeDomainNames.forEach((altDomain, index) => {
           new route53.ARecord(this, `AliasRecord${index}`, {
             zone: hostedZone,
             recordName: altDomain,
@@ -265,58 +272,57 @@ export class StaticWebsiteComponent extends BaseComponent {
       }
 
       this.logger.info('DNS records created', {
-        primaryDomain: this.config!.domain.domainName,
-        alternativeDomains: this.config!.domain.alternativeDomainNames?.length || 0
+        primaryDomain: this.config.domain.domainName,
+        alternativeDomains: this.config.domain.alternativeDomainNames?.length || 0
       });
     }
   }
 
   private createDeploymentIfNeeded(): void {
-    if (!this.config!.deployment?.enabled || !this.config!.deployment.sourcePath) {
+    if (!this.config.deployment.enabled || !this.config.deployment.sourcePath) {
       return;
     }
 
     this.deployment = new s3deploy.BucketDeployment(this, 'Deployment', {
-      sources: [s3deploy.Source.asset(this.config!.deployment.sourcePath)],
+      sources: [s3deploy.Source.asset(this.config.deployment.sourcePath)],
       destinationBucket: this.bucket!,
       distribution: this.distribution,
       distributionPaths: ['/*'],
-      retainOnDelete: this.config!.deployment.retainOnDelete
+      retainOnDelete: this.config.deployment.retainOnDelete
     });
 
     this.applyStandardTags(this.deployment, {
       'deployment-type': 'automatic',
-      'source-path': this.config!.deployment.sourcePath,
-      'retain-on-delete': (this.config!.deployment.retainOnDelete || false).toString()
+      'source-path': this.config.deployment.sourcePath,
+      'retain-on-delete': (this.config.deployment.retainOnDelete || false).toString()
     });
 
     this.logger.info('S3 deployment created', {
-      sourcePath: this.config!.deployment.sourcePath,
-      retainOnDelete: this.config!.deployment.retainOnDelete
+      sourcePath: this.config.deployment.sourcePath,
+      retainOnDelete: this.config.deployment.retainOnDelete
     });
   }
 
   private buildWebsiteName(): string {
-    if (this.config!.websiteName) {
-      return this.config!.websiteName;
+    if (this.config.websiteName) {
+      return this.config.websiteName;
     }
     return `${this.context.serviceName}-${this.spec.name}`;
   }
 
-  private getBucketRemovalPolicy(): cdk.RemovalPolicy {
-    return ['fedramp-moderate', 'fedramp-high'].includes(this.context.complianceFramework) 
-      ? cdk.RemovalPolicy.RETAIN 
-      : cdk.RemovalPolicy.DESTROY;
+  private mapRemovalPolicy(policy: RemovalPolicyOption): cdk.RemovalPolicy {
+    return policy === 'retain' ? cdk.RemovalPolicy.RETAIN : cdk.RemovalPolicy.DESTROY;
   }
 
-  private getLogRetentionDays(): number {
-    switch (this.context.complianceFramework) {
-      case 'fedramp-high':
-        return 3650; // 10 years
-      case 'fedramp-moderate':
-        return 365;  // 1 year
+  private mapPriceClass(priceClass: PriceClassOption): cloudfront.PriceClass {
+    switch (priceClass) {
+      case 'price-class-200':
+        return cloudfront.PriceClass.PRICE_CLASS_200;
+      case 'price-class-all':
+        return cloudfront.PriceClass.PRICE_CLASS_ALL;
+      case 'price-class-100':
       default:
-        return 90;   // 3 months
+        return cloudfront.PriceClass.PRICE_CLASS_100;
     }
   }
 
