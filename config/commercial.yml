@@ -339,6 +339,54 @@ defaults:
     hardeningProfile: baseline
     tags: {}
 
+  lambda-worker:
+    runtime: nodejs20.x
+    architecture: x86_64
+    memorySize: 256
+    timeoutSeconds: 300
+    codePath: ./src
+    environment: {}
+    reservedConcurrency:
+    deadLetterQueue:
+      enabled: false
+      maxReceiveCount: 3
+    eventSources: []
+    vpc:
+      enabled: false
+      vpcId:
+      subnetIds: []
+      securityGroupIds: []
+    kmsKeyArn:
+    logging:
+      logRetentionDays: 30
+      logFormat: JSON
+      systemLogLevel: INFO
+      applicationLogLevel: INFO
+    tracing:
+      mode: PassThrough
+    observability:
+      otelEnabled: false
+      otelLayerArn:
+      otelResourceAttributes: {}
+    securityTools:
+      falco: false
+    monitoring:
+      enabled: false
+      alarms:
+        errors:
+          enabled: false
+          threshold: 1
+        throttles:
+          enabled: false
+          threshold: 1
+        duration:
+          enabled: false
+          threshold: 60000
+          statistic: Average
+    hardeningProfile: baseline
+    removalPolicy: retain
+    tags: {}
+
   iam-policy:
     controls:
       denyInsecureTransport: false

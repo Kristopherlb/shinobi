@@ -396,6 +396,58 @@ defaults:
       compliance-framework: fedramp-high
       security-level: high
 
+  lambda-worker:
+    runtime: nodejs20.x
+    architecture: arm64
+    memorySize: 512
+    timeoutSeconds: 600
+    codePath: ./src
+    environment: {}
+    reservedConcurrency:
+    deadLetterQueue:
+      enabled: true
+      maxReceiveCount: 1
+    eventSources: []
+    vpc:
+      enabled: false
+      vpcId:
+      subnetIds: []
+      securityGroupIds: []
+    kmsKeyArn:
+    logging:
+      logRetentionDays: 180
+      logFormat: JSON
+      systemLogLevel: INFO
+      applicationLogLevel: INFO
+    tracing:
+      mode: Active
+    observability:
+      otelEnabled: true
+      otelLayerArn:
+      otelResourceAttributes:
+        deployment.environment: fedramp-high
+        security.level: high
+    securityTools:
+      falco: true
+    monitoring:
+      enabled: true
+      alarms:
+        errors:
+          enabled: true
+          threshold: 1
+        throttles:
+          enabled: true
+          threshold: 1
+        duration:
+          enabled: true
+          threshold: 120000
+          statistic: Average
+    hardeningProfile: fedramp-high
+    removalPolicy: retain
+    tags:
+      compliance-framework: fedramp-high
+      security-level: high
+
   iam-policy:
     controls:
       denyInsecureTransport: true

@@ -1,111 +1,100 @@
-# LambdaWorkerComponent Component
+# Lambda Worker Component
 
-Lambda Worker Component with comprehensive security, monitoring, and compliance features.
+Asynchronous worker Lambda built on the platform ConfigBuilder contract. All
+runtime/security/observability defaults are provided by `/config/<framework>.yml`
+– the component simply consumes the resolved configuration and instantiates the
+function.
 
-## Overview
+## Features
 
-The LambdaWorkerComponent component provides:
+- Configurable runtime (Node.js/Python), architecture, memory, timeout, and
+  reserved concurrency.
+- Optional dead-letter queue, VPC networking, and KMS environment-variable
+  encryption supplied via configuration.
+- Event sources (SQS, EventBridge schedule, EventBridge pattern) defined in the
+  manifest/config – the component wires them automatically.
+- Logging, tracing, and OpenTelemetry settings fully configuration-driven.
+- CloudWatch alarms for errors/throttles/duration and capability metadata with
+  hardening profile exposure.
 
-- **Production-ready** lambda worker component functionality
-- **Comprehensive compliance** (Commercial, FedRAMP Moderate/High)
-- **Integrated monitoring** and observability
-- **Security-first** configuration
-- **Platform integration** with other components
-
-### Category: compute
-
-### AWS Service: LAMBDA
-
-This component manages LAMBDA resources and provides a simplified, secure interface for common use cases.
-
-## Usage Example
-
-### Basic Configuration
+## Usage
 
 ```yaml
-service: my-service
-owner: platform-team
-complianceFramework: commercial
-
 components:
-  - name: my-lambda-worker
+  - name: image-resize-worker
     type: lambda-worker
     config:
-      description: "Production lambda-worker instance"
+      handler: index.handler
+      runtime: nodejs20.x
+      codePath: services/image-worker/dist
+      memorySize: 512
+      timeoutSeconds: 120
+      environment:
+        STAGE: prod
+        SOURCE_BUCKET: images-raw
+      deadLetterQueue:
+        enabled: true
+        queueArn: arn:aws:sqs:us-east-1:123456789012:image-worker-dlq
+      eventSources:
+        - type: sqs
+          queueArn: arn:aws:sqs:us-east-1:123456789012:image-worker-queue
+          batchSize: 5
       monitoring:
         enabled: true
-        detailedMetrics: true
+        alarms:
+          errors:
+            enabled: true
+          throttles:
+            enabled: true
+      logging:
+        logRetentionDays: 90
+        logFormat: JSON
+      observability:
+        otelEnabled: true
+        otelLayerArn: arn:aws:lambda:us-east-1:901920570463:layer:aws-otel-nodejs-amd64-ver-1-18-1:4
+        otelResourceAttributes:
+          service.environment: prod
 ```
 
-## Configuration Reference
+Any omitted property inherits the defaults for the active compliance framework
+(`config/commercial.yml`, `config/fedramp-moderate.yml`, `config/fedramp-high.yml`).
 
-### Root Configuration
+## Key Configuration Sections
 
-| Property | Type | Required | Description |
-|----------|------|----------|-------------|
-| `name` | string | No | Component name (auto-generated if not provided) |
-| `description` | string | No | Component description for documentation |
-| `monitoring` | object | No | Monitoring and observability configuration |
-| `tags` | object | No | Additional resource tags |
+| Path | Description |
+|------|-------------|
+| `handler` | Required Lambda handler (`file.export`). |
+| `runtime`, `architecture`, `memorySize`, `timeoutSeconds` | Core execution attributes. |
+| `environment` | Plain key/value environment variables. |
+| `deadLetterQueue` | Enable + queue ARN for async failure handling. |
+| `eventSources[]` | SQS queues, EventBridge schedules, or patterns that trigger the function. |
+| `vpc` | Optional VPC integration (VPC ID plus subnets/security-groups). |
+| `kmsKeyArn` | Customer-managed key for environment variable encryption. |
+| `logging` | Log retention/format and log-level controls. |
+| `tracing` | Active or pass-through X-Ray tracing. |
+| `observability` | OpenTelemetry toggle, optional layer ARN, resource attributes. |
+| `securityTools` | Additional hardening toggles (Falco). |
+| `monitoring` | Enable CloudWatch alarms for errors/throttles/duration. |
+| `hardeningProfile` | Abstract profile exposed via capability metadata. |
 
-### Monitoring Configuration
+## Capabilities
 
-| Property | Type | Required | Description |
-|----------|------|----------|-------------|
-| `enabled` | boolean | No | Enable monitoring (default: true) |
-| `detailedMetrics` | boolean | No | Enable detailed CloudWatch metrics |
+- `lambda:function` – ARN, name, runtime, timeout, and hardening profile of the
+  worker function.
 
-## Capabilities Provided
-
-This component provides the following capabilities for binding with other components:
-
-- `compute:lambda-worker` - Main lambda-worker capability
-- `monitoring:lambda-worker` - Monitoring capability
-
-## Construct Handles
-
-The following construct handles are available for use in `patches.ts`:
-
-- `main` - Main lambda-worker construct
-
-## Compliance Frameworks
-
-### Commercial
-
-- Standard monitoring configuration
-- Basic resource tagging
-- Standard security settings
-
-### FedRAMP Moderate/High
-
-- Enhanced monitoring with detailed metrics
-- Comprehensive audit logging
-- Stricter security configurations
-- Extended compliance tagging
-
-## Best Practices
-
-1. **Always enable monitoring** in production environments
-2. **Use descriptive names** for better resource identification
-3. **Configure appropriate tags** for cost allocation and governance
-4. **Review compliance requirements** for your environment
-5. **Test configurations** in development before production deployment
-
-## Development
-
-### Running Tests
+## Testing
 
 ```bash
-# Run all tests for this component
-npm test -- --testPathPattern=lambda-worker
-
-# Run only builder tests
-npm test -- --testPathPattern=lambda-worker.builder
-
-# Run only synthesis tests
-npm test -- --testPathPattern=lambda-worker.component.synthesis
+corepack pnpm exec jest --runTestsByPath \
+  packages/components/lambda-worker/tests/lambda-worker.builder.test.ts \
+  packages/components/lambda-worker/tests/lambda-worker.component.synthesis.test.ts
 ```
 
----
+## Notes
 
-*Generated by Component Completion Script*
+- The component does **not** infer behaviour from `context.complianceFramework`;
+  enforce compliance using the segregated config defaults.
+- Provide a real `codePath` containing your built artefacts; tests use a small
+  fixture under `tests/fixtures/basic-lambda` for synthesis.
+- When VPC integration is enabled, ensure the specified subnets/security groups
+  exist in the deployment account/region.

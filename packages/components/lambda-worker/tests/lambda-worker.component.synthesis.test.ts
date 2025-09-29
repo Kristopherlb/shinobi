@@ -1,94 +1,164 @@
-/**
- * LambdaWorkerComponent Component Synthesis Test Suite
- * Implements Platform Testing Standard v1.0 - Component Synthesis Testing
- */
-
+import * as path from 'path';
 import { Template, Match } from 'aws-cdk-lib/assertions';
 import { App, Stack } from 'aws-cdk-lib';
-import { LambdaWorkerComponentComponent } from '../lambda-worker.component';
+import { LambdaWorkerComponent } from '../lambda-worker.component';
 import { LambdaWorkerConfig } from '../lambda-worker.builder';
 import { ComponentContext, ComponentSpec } from '../../../platform/contracts/component-interfaces';
 
-const createMockContext = (
-  complianceFramework: string = 'commercial',
-  environment: string = 'dev'
-): ComponentContext => ({
-  serviceName: 'test-service',
-  owner: 'test-team',
-  environment,
-  complianceFramework,
+const FIXTURE_PATH = path.join(__dirname, 'fixtures/basic-lambda');
+const VPC_ID = 'vpc-0abc123def4567890';
+const CONTEXT_KEY = `vpcProvider:account=123456789012:filter.vpcId=${VPC_ID}:region=us-east-1`;
+
+const createContext = (framework: string = 'commercial'): ComponentContext => ({
+  serviceName: 'worker-service',
+  owner: 'platform-team',
+  environment: 'dev',
+  complianceFramework: framework,
   region: 'us-east-1',
   account: '123456789012',
   tags: {
-    'service-name': 'test-service',
-    'owner': 'test-team',
-    'environment': environment,
-    'compliance-framework': complianceFramework
+    'service-name': 'worker-service',
+    environment: 'dev',
+    'compliance-framework': framework
   }
 });
 
-const createMockSpec = (config: Partial<LambdaWorkerConfig> = {}): ComponentSpec => ({
-  name: 'test-lambda-worker',
+const createSpec = (config: Partial<LambdaWorkerConfig>): ComponentSpec => ({
+  name: 'image-worker',
   type: 'lambda-worker',
-  config
+  config: {
+    handler: 'index.handler',
+    codePath: FIXTURE_PATH,
+    ...config
+  }
 });
 
-const synthesizeComponent = (
-  context: ComponentContext,
-  spec: ComponentSpec
-): { component: LambdaWorkerComponentComponent; template: Template } => {
+const synthesizeComponent = (context: ComponentContext, spec: ComponentSpec) => {
   const app = new App();
-  const stack = new Stack(app, 'TestStack');
-  
-  const component = new LambdaWorkerComponentComponent(stack, spec, context);
+  const stack = new Stack(app, 'TestStack', {
+    env: { account: context.account, region: context.region }
+  });
+
+  const component = new LambdaWorkerComponent(stack, spec.name, context, spec);
   component.synth();
-  
-  const template = Template.fromStack(stack);
-  return { component, template };
+
+  return {
+    component,
+    template: Template.fromStack(stack)
+  };
 };
 
-describe('LambdaWorkerComponentComponent Synthesis', () => {
-  
-  describe('Default Happy Path Synthesis', () => {
-    
-    it('should synthesize basic lambda-worker with commercial compliance', () => {
-      const context = createMockContext('commercial');
-      const spec = createMockSpec();
-      
-      const { template, component } = synthesizeComponent(context, spec);
-      
-      // TODO: Add specific CloudFormation resource assertions
-      // Verify component was created
-      expect(component).toBeDefined();
-      expect(component.getType()).toBe('lambda-worker');
+describe('LambdaWorkerComponent synthesis', () => {
+  const originalContext = process.env.CDK_CONTEXT_JSON;
+
+  beforeAll(() => {
+    process.env.CDK_CONTEXT_JSON = JSON.stringify({
+      [CONTEXT_KEY]: {
+        vpcId: VPC_ID,
+        availabilityZones: ['us-east-1a', 'us-east-1b'],
+        publicSubnetIds: ['subnet-public-a', 'subnet-public-b'],
+        privateSubnetIds: ['subnet-private-a', 'subnet-private-b'],
+        isolatedSubnetIds: [],
+        ownerAccountId: '123456789012'
+      }
     });
-    
   });
-  
-  describe('Component Capabilities and Constructs', () => {
-    
-    it('should register correct capabilities after synthesis', () => {
-      const context = createMockContext('commercial');
-      const spec = createMockSpec();
-      
-      const { component } = synthesizeComponent(context, spec);
-      
-      const capabilities = component.getCapabilities();
-      
-      // Verify component-specific capabilities
-      expect(capabilities).toBeDefined();
-    });
-    
-    it('should register construct handles for patches.ts access', () => {
-      const context = createMockContext('commercial');
-      const spec = createMockSpec();
-      
-      const { component } = synthesizeComponent(context, spec);
-      
-      // Verify main construct is registered
-      expect(component.getConstruct('main')).toBeDefined();
-    });
-    
+
+  afterAll(() => {
+    if (originalContext === undefined) {
+      delete process.env.CDK_CONTEXT_JSON;
+    } else {
+      process.env.CDK_CONTEXT_JSON = originalContext;
+    }
   });
-  
+
+  it('synthesises a commercial worker with an SQS event source', () => {
+    const spec = createSpec({
+      environment: {
+        STAGE: 'dev'
+      },
+      eventSources: [
+        {
+          type: 'sqs',
+          queueArn: 'arn:aws:sqs:us-east-1:123456789012:image-worker-queue',
+          batchSize: 5
+        }
+      ],
+      monitoring: {
+        enabled: true,
+        alarms: {
+          errors: { enabled: true }
+        }
+      }
+    });
+
+    const { component, template } = synthesizeComponent(createContext('commercial'), spec);
+
+    template.hasResourceProperties('AWS::Lambda::Function', Match.objectLike({
+      Handler: 'index.handler',
+      Runtime: 'nodejs20.x',
+      MemorySize: 256,
+      Environment: Match.objectLike({
+        Variables: Match.objectLike({ STAGE: 'dev' })
+      })
+    }));
+
+    template.hasResourceProperties('AWS::Lambda::EventSourceMapping', Match.objectLike({
+      EventSourceArn: 'arn:aws:sqs:us-east-1:123456789012:image-worker-queue'
+    }));
+
+    expect(component.getCapabilities()['lambda:function']).toBeDefined();
+  });
+
+  it('enables logging and monitoring controls when requested', () => {
+    const spec = createSpec({
+      logging: {
+        logRetentionDays: 90,
+        logFormat: 'JSON',
+        systemLogLevel: 'WARN',
+        applicationLogLevel: 'WARN'
+      },
+      monitoring: {
+        enabled: true,
+        alarms: {
+          errors: { enabled: true, threshold: 2 },
+          throttles: { enabled: true },
+          duration: { enabled: true, threshold: 80000 }
+        }
+      }
+    });
+
+    const { template } = synthesizeComponent(createContext('commercial'), spec);
+
+    template.hasResource('AWS::CloudWatch::Alarm', Match.objectLike({
+      Properties: Match.objectLike({ AlarmName: Match.stringLikeRegexp('errors-alarm') })
+    }));
+
+    template.hasResource('AWS::Lambda::Function', Match.objectLike({
+      Properties: Match.objectLike({
+        Runtime: 'nodejs20.x',
+        MemorySize: 256
+      })
+    }));
+  });
+
+  it('honours fedramp-high defaults including VPC lookups', () => {
+    const spec = createSpec({
+      vpc: {
+        enabled: true,
+        vpcId: VPC_ID,
+        subnetIds: ['subnet-private-a', 'subnet-private-b'],
+        securityGroupIds: ['sg-0123456789abcdef0']
+      }
+    });
+
+    const { template } = synthesizeComponent(createContext('fedramp-high'), spec);
+
+    template.hasResourceProperties('AWS::Lambda::Function', Match.objectLike({
+      VpcConfig: Match.objectLike({
+        SecurityGroupIds: ['sg-0123456789abcdef0']
+      }),
+      TracingConfig: Match.objectLike({ Mode: 'Active' })
+    }));
+  });
 });

@@ -4,7 +4,7 @@
  */
 
 // Component exports
-export { LambdaWorkerComponentComponent } from './lambda-worker.component';
+export { LambdaWorkerComponent } from './lambda-worker.component';
 
 // Configuration exports
 export { 
