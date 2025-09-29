@@ -245,6 +245,44 @@ defaults:
     tags:
       compliance: fedramp-high
 
+  ecs-fargate-service:
+    cpu: 1024
+    memory: 2048
+    desiredCount: 2
+    autoScaling:
+      minCapacity: 2
+      maxCapacity: 10
+      targetCpuUtilization: 60
+      targetMemoryUtilization: 70
+    logging:
+      createLogGroup: true
+      streamPrefix: service
+      retentionInDays: 731
+      removalPolicy: retain
+    monitoring:
+      enabled: true
+      alarms:
+        cpuUtilization:
+          enabled: true
+          threshold: 70
+          evaluationPeriods: 3
+          periodMinutes: 5
+        memoryUtilization:
+          enabled: true
+          threshold: 75
+          evaluationPeriods: 3
+          periodMinutes: 5
+        runningTaskCount:
+          enabled: true
+          threshold: 2
+          comparisonOperator: lt
+          evaluationPeriods: 2
+          periodMinutes: 1
+    diagnostics:
+      enableExecuteCommand: true
+    deploymentStrategy:
+      type: rolling
+
   opensearch-domain:
     version: OpenSearch_2.7
     cluster:
@@ -442,6 +480,30 @@ defaults:
           enabled: true
           threshold: 120000
           statistic: Average
+    hardeningProfile: fedramp-high
+    removalPolicy: retain
+    tags:
+      compliance-framework: fedramp-high
+      security-level: high
+
+  route53-hosted-zone:
+    zoneType: public
+    vpcAssociations: []
+    queryLogging:
+      enabled: true
+      retentionDays: 1095
+      removalPolicy: retain
+    dnssec:
+      enabled: true
+    monitoring:
+      enabled: true
+      alarms:
+        queryVolume:
+          enabled: true
+          threshold: 12000
+        healthCheckFailures:
+          enabled: true
+          threshold: 3
     hardeningProfile: fedramp-high
     removalPolicy: retain
     tags:

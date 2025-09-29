@@ -11,7 +11,7 @@ import {
   ComponentContext, 
   IComponentCreator 
 } from '../../platform/contracts/component-interfaces';
-import { Route53HostedZoneComponentComponent } from './route53-hosted-zone.component';
+import { Route53HostedZoneComponent } from './route53-hosted-zone.component';
 import { Route53HostedZoneConfig, ROUTE53_HOSTED_ZONE_CONFIG_SCHEMA } from './route53-hosted-zone.builder';
 
 /**
@@ -72,8 +72,8 @@ export class Route53HostedZoneComponentCreator implements IComponentCreator {
     scope: Construct, 
     spec: ComponentSpec, 
     context: ComponentContext
-  ): Route53HostedZoneComponentComponent {
-    return new Route53HostedZoneComponentComponent(scope, spec, context);
+  ): Route53HostedZoneComponent {
+    return new Route53HostedZoneComponent(scope, spec.name, context, spec);
   }
   
   /**
@@ -93,7 +93,13 @@ export class Route53HostedZoneComponentCreator implements IComponentCreator {
       errors.push('Component name must start with a letter and contain only alphanumeric characters, hyphens, and underscores');
     }
     
-    // TODO: Add component-specific validations here
+    if (!config?.zoneName) {
+      errors.push('Hosted zone config requires a zoneName');
+    }
+
+    if ((config?.zoneType === 'private' || config?.zoneType === 'PRIVATE') && (!config?.vpcAssociations || config.vpcAssociations.length === 0)) {
+      errors.push('Private hosted zones must include at least one VPC association');
+    }
     
     // Environment-specific validations
     if (context.environment === 'prod') {
@@ -115,8 +121,7 @@ export class Route53HostedZoneComponentCreator implements IComponentCreator {
    */
   public getProvidedCapabilities(): string[] {
     return [
-      'networking:route53-hosted-zone',
-      'monitoring:route53-hosted-zone'
+      'dns:hosted-zone'
     ];
   }
   
@@ -134,8 +139,8 @@ export class Route53HostedZoneComponentCreator implements IComponentCreator {
    */
   public getConstructHandles(): string[] {
     return [
-      'main'
-      // TODO: Add additional construct handles if needed
+      'main',
+      'hostedZone'
     ];
   }
 }

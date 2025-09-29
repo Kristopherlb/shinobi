@@ -198,6 +198,44 @@ defaults:
     hardeningProfile: baseline
     tags: {}
 
+  ecs-fargate-service:
+    cpu: 256
+    memory: 512
+    desiredCount: 1
+    autoScaling:
+      minCapacity: 1
+      maxCapacity: 3
+      targetCpuUtilization: 70
+      targetMemoryUtilization: 80
+    logging:
+      createLogGroup: true
+      streamPrefix: service
+      retentionInDays: 30
+      removalPolicy: destroy
+    monitoring:
+      enabled: true
+      alarms:
+        cpuUtilization:
+          enabled: true
+          threshold: 85
+          evaluationPeriods: 3
+          periodMinutes: 5
+        memoryUtilization:
+          enabled: true
+          threshold: 90
+          evaluationPeriods: 3
+          periodMinutes: 5
+        runningTaskCount:
+          enabled: true
+          threshold: 1
+          comparisonOperator: lt
+          evaluationPeriods: 2
+          periodMinutes: 1
+    diagnostics:
+      enableExecuteCommand: false
+    deploymentStrategy:
+      type: rolling
+
   opensearch-domain:
     version: OpenSearch_2.7
     cluster:
@@ -383,6 +421,28 @@ defaults:
           enabled: false
           threshold: 60000
           statistic: Average
+    hardeningProfile: baseline
+    removalPolicy: retain
+    tags: {}
+
+  route53-hosted-zone:
+    zoneType: public
+    vpcAssociations: []
+    queryLogging:
+      enabled: false
+      retentionDays: 90
+      removalPolicy: destroy
+    dnssec:
+      enabled: false
+    monitoring:
+      enabled: false
+      alarms:
+        queryVolume:
+          enabled: false
+          threshold: 10000
+        healthCheckFailures:
+          enabled: false
+          threshold: 10
     hardeningProfile: baseline
     removalPolicy: retain
     tags: {}
