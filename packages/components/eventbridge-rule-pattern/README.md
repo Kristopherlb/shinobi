@@ -1,111 +1,104 @@
-# EventBridgeRulePatternComponent Component
+# EventBridge Rule Pattern Component
 
-EventBridge Rule Pattern Component implementing Component API Contract v1.0 with comprehensive security, monitoring, and compliance features.
-
-## Overview
-
-The EventBridgeRulePatternComponent component provides:
-
-- **Production-ready** event bridge rule pattern component functionality
-- **Comprehensive compliance** (Commercial, FedRAMP Moderate/High)
-- **Integrated monitoring** and observability
-- **Security-first** configuration
-- **Platform integration** with other components
-
-### Category: events
-
-### AWS Service: EVENTS
-
-This component manages EVENTS resources and provides a simplified, secure interface for common use cases.
+Creates an Amazon EventBridge rule that matches events using a manifest-driven pattern. All defaults come from `/config/<framework>.yml`; the component itself never branches on `context.complianceFramework`.
 
 ## Usage Example
 
-### Basic Configuration
-
 ```yaml
-service: my-service
-owner: platform-team
-complianceFramework: commercial
-
 components:
-  - name: my-eventbridge-rule-pattern
+  - name: user-signup-events
     type: eventbridge-rule-pattern
     config:
-      description: "Production eventbridge-rule-pattern instance"
+      eventPattern:
+        source: ['aws.cognito-idp']
+        detail-type: ['AWS API Call via CloudTrail']
+        detail:
+          eventName: ['SignUp']
       monitoring:
         enabled: true
-        detailedMetrics: true
+        failedInvocations:
+          enabled: true
+          threshold: 2
+        cloudWatchLogs:
+          enabled: true
+          logGroupName: /platform/events/user-signups
+          retentionDays: 90
+      deadLetterQueue:
+        enabled: true
+        retentionDays: 14
 ```
 
 ## Configuration Reference
 
-### Root Configuration
+| Field | Type | Required | Description |
+|-------|------|----------|-------------|
+| `eventPattern` | object | ✅ | Standard EventBridge event pattern (see AWS docs). |
+| `ruleName` | string | | Overrides the generated rule name. Invalid characters are replaced with `-` and truncated to 64 chars. |
+| `description` | string | | Rule description (defaults to `EventBridge rule pattern for <component>`). |
+| `state` | enum | | `enabled` (default) or `disabled`. |
+| `eventBus.name` | string | | Name of an existing event bus (defaults to `default`). |
+| `eventBus.arn` | string | | ARN of an event bus when cross-account. Overrides `name`. |
+| `input.type` | enum | | `constant`, `path`, or `transformer`. |
+| `input.value` | string | | Constant JSON string when `type: constant`. |
+| `input.path` | string | | JSON path when `type: path`. |
+| `input.transformer` | object | | Transformer definition (`inputTemplate` required) when `type: transformer`. |
+| `deadLetterQueue.enabled` | boolean | | Toggles creation of a DLQ (default per framework). |
+| `deadLetterQueue.maxRetryAttempts` | number | | Number of retry attempts applied by rule targets. |
+| `deadLetterQueue.retentionDays` | number | | Queue retention period (1–14 days). |
+| `monitoring.enabled` | boolean | | Enables alarms/logging. |
+| `monitoring.failedInvocations` | Alarm | | Alarm settings for `AWS/Events FailedInvocations`. |
+| `monitoring.invocations` | Alarm | | Alarm on invocation volume (`AWS/Events Invocations`). |
+| `monitoring.matchedEvents` | Alarm | | Alarm on matched events (`AWS/Events MatchedEvents`). |
+| `monitoring.deadLetterQueueMessages` | Alarm | | Alarm on DLQ message backlog (requires DLQ enabled). |
+| `monitoring.cloudWatchLogs.enabled` | boolean | | Enables CloudWatch log delivery for events. |
+| `monitoring.cloudWatchLogs.logGroupName` | string | | Custom log group name (defaults to `/aws/events/rule/<service>-<name>`). |
+| `monitoring.cloudWatchLogs.retentionDays` | number | | Log retention in days (mapped to the nearest CloudWatch enum). |
+| `monitoring.cloudWatchLogs.removalPolicy` | enum | | `retain` or `destroy`. |
+| `tags` | map | | Extra tags merged onto the rule. |
 
-| Property | Type | Required | Description |
-|----------|------|----------|-------------|
-| `name` | string | No | Component name (auto-generated if not provided) |
-| `description` | string | No | Component description for documentation |
-| `monitoring` | object | No | Monitoring and observability configuration |
-| `tags` | object | No | Additional resource tags |
+**Alarm Config fields**
 
-### Monitoring Configuration
+Each alarm block accepts:
 
-| Property | Type | Required | Description |
-|----------|------|----------|-------------|
-| `enabled` | boolean | No | Enable monitoring (default: true) |
-| `detailedMetrics` | boolean | No | Enable detailed CloudWatch metrics |
+| Field | Description |
+|-------|-------------|
+| `enabled` | Enables the alarm. |
+| `threshold` | Numeric threshold for the metric. |
+| `evaluationPeriods` | Number of evaluation periods. |
+| `periodMinutes` | Period size in minutes. |
+| `comparisonOperator` | `gt`, `gte`, `lt`, or `lte`. |
+| `treatMissingData` | `breaching`, `not-breaching`, `ignore`, or `missing`. |
+| `statistic` | `Sum`, `Average`, `Maximum`, or `Minimum`. |
 
-## Capabilities Provided
+## Capabilities
 
-This component provides the following capabilities for binding with other components:
-
-- `events:eventbridge-rule-pattern` - Main eventbridge-rule-pattern capability
-- `monitoring:eventbridge-rule-pattern` - Monitoring capability
+| Capability | Description |
+|------------|-------------|
+| `eventbridge:rule-pattern` | Exposes rule name/ARN, state, event bus identifier, and DLQ metadata (when created). |
 
 ## Construct Handles
 
-The following construct handles are available for use in `patches.ts`:
+| Handle | Description |
+|--------|-------------|
+| `main`, `rule` | Underlying `AWS::Events::Rule` construct. |
+| `deadLetterQueue` | Dead letter queue when enabled. |
+| `logGroup` | CloudWatch log group created for the rule. |
+| `alarm:<metric>` | CloudWatch alarms created from the monitoring configuration (e.g. `alarm:failedInvocations`). |
 
-- `main` - Main eventbridge-rule-pattern construct
+## Platform Defaults
 
-## Compliance Frameworks
+Defaults live in:
 
-### Commercial
+- `config/commercial.yml`
+- `config/fedramp-moderate.yml`
+- `config/fedramp-high.yml`
 
-- Standard monitoring configuration
-- Basic resource tagging
-- Standard security settings
+FedRAMP profiles enable logging, DLQ, and alarms out of the box. The commercial profile keeps these disabled unless opted-in.
 
-### FedRAMP Moderate/High
-
-- Enhanced monitoring with detailed metrics
-- Comprehensive audit logging
-- Stricter security configurations
-- Extended compliance tagging
-
-## Best Practices
-
-1. **Always enable monitoring** in production environments
-2. **Use descriptive names** for better resource identification
-3. **Configure appropriate tags** for cost allocation and governance
-4. **Review compliance requirements** for your environment
-5. **Test configurations** in development before production deployment
-
-## Development
-
-### Running Tests
+## Testing
 
 ```bash
-# Run all tests for this component
-npm test -- --testPathPattern=eventbridge-rule-pattern
-
-# Run only builder tests
-npm test -- --testPathPattern=eventbridge-rule-pattern.builder
-
-# Run only synthesis tests
-npm test -- --testPathPattern=eventbridge-rule-pattern.component.synthesis
+corepack pnpm exec jest --runTestsByPath \
+  packages/components/eventbridge-rule-pattern/tests/eventbridge-rule-pattern.builder.test.ts \
+  packages/components/eventbridge-rule-pattern/tests/eventbridge-rule-pattern.component.synthesis.test.ts --silent
 ```
-
----
-
-*Generated by Component Completion Script*

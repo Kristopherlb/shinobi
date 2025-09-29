@@ -1,99 +1,112 @@
-/**
- * SnsTopicComponent ConfigBuilder Test Suite
- * Implements Platform Testing Standard v1.0 - ConfigBuilder Testing
- */
+import { Construct } from 'constructs';
+import {
+  SnsTopicComponentConfigBuilder,
+  SnsTopicConfig
+} from '../sns-topic.builder';
+import { ComponentContext, ComponentSpec } from '@shinobi/core';
 
-import { SnsTopicComponentConfigBuilder, SnsTopicConfig } from '../sns-topic.builder';
-import { ComponentContext, ComponentSpec } from '../../../platform/contracts/component-interfaces';
+type Framework = 'commercial' | 'fedramp-moderate' | 'fedramp-high';
 
-const createMockContext = (
-  complianceFramework: string = 'commercial',
-  environment: string = 'dev'
-): ComponentContext => ({
+const createContext = (framework: Framework = 'commercial'): ComponentContext => ({
   serviceName: 'test-service',
-  owner: 'test-team',
-  environment,
-  complianceFramework,
+  environment: 'dev',
+  complianceFramework: framework,
+  scope: {} as Construct,
   region: 'us-east-1',
-  account: '123456789012',
-  tags: {
-    'service-name': 'test-service',
-    'owner': 'test-team',
-    'environment': environment,
-    'compliance-framework': complianceFramework
-  }
-});
+  accountId: '123456789012'
+} as ComponentContext);
 
-const createMockSpec = (config: Partial<SnsTopicConfig> = {}): ComponentSpec => ({
-  name: 'test-sns-topic',
+const createSpec = (config: Partial<SnsTopicConfig> = {}): ComponentSpec => ({
+  name: 'test-topic',
   type: 'sns-topic',
   config
 });
 
 describe('SnsTopicComponentConfigBuilder', () => {
-  
-  describe('Hardcoded Fallbacks (Layer 1)', () => {
-    
-    it('should provide ultra-safe baseline configuration', () => {
-      const context = createMockContext();
-      const spec = createMockSpec();
-      
-      const builder = new SnsTopicComponentConfigBuilder(context, spec);
-      const config = builder.buildSync();
-      
-      // Verify hardcoded fallbacks are applied
-      expect(config.monitoring?.enabled).toBe(true);
-      expect(config.monitoring?.detailedMetrics).toBe(false);
-      expect(config.tags).toBeDefined();
-    });
-    
+  it('applies commercial defaults with encryption disabled', () => {
+    const builder = new SnsTopicComponentConfigBuilder(createContext('commercial'), createSpec());
+    const config = builder.buildSync();
+
+    expect(config.fifo.enabled).toBe(false);
+    expect(config.encryption.enabled).toBe(false);
+    expect(config.monitoring.enabled).toBe(false);
+    expect(config.topicName).toBeUndefined();
   });
-  
-  describe('Compliance Framework Defaults (Layer 2)', () => {
-    
-    it('should apply commercial compliance defaults', () => {
-      const context = createMockContext('commercial');
-      const spec = createMockSpec();
-      
-      const builder = new SnsTopicComponentConfigBuilder(context, spec);
-      const config = builder.buildSync();
-      
-      expect(config.monitoring?.enabled).toBe(true);
-      expect(config.monitoring?.detailedMetrics).toBe(true);
-    });
-    
-    it('should apply FedRAMP compliance defaults', () => {
-      const context = createMockContext('fedramp-moderate');
-      const spec = createMockSpec();
-      
-      const builder = new SnsTopicComponentConfigBuilder(context, spec);
-      const config = builder.buildSync();
-      
-      expect(config.monitoring?.enabled).toBe(true);
-      expect(config.monitoring?.detailedMetrics).toBe(true); // Mandatory for FedRAMP
-    });
-    
+
+  it('enables encryption and alarms for fedramp-high', () => {
+    const builder = new SnsTopicComponentConfigBuilder(createContext('fedramp-high'), createSpec());
+    const config = builder.buildSync();
+
+    expect(config.encryption.enabled).toBe(true);
+    expect(config.encryption.customerManagedKey.create || config.encryption.kmsKeyArn).toBe(true);
+    expect(config.monitoring.enabled).toBe(true);
+    expect(config.monitoring.alarms.failedNotifications.enabled).toBe(true);
   });
-  
-  describe('5-Layer Precedence Chain', () => {
-    
-    it('should apply component overrides over platform defaults', () => {
-      const context = createMockContext('commercial');
-      const spec = createMockSpec({
-        monitoring: {
-          enabled: false,
-          detailedMetrics: false
+
+  it('honours manifest overrides', () => {
+    const builder = new SnsTopicComponentConfigBuilder(createContext('commercial'), createSpec({
+      topicName: 'custom-topic',
+      fifo: {
+        enabled: true,
+        contentBasedDeduplication: true
+      },
+      encryption: {
+        enabled: true,
+        kmsKeyArn: 'arn:aws:kms:us-east-1:123456789012:key/12345678-1234-1234-1234-1234567890ab',
+        customerManagedKey: {
+          create: false,
+          enableRotation: true
         }
-      });
-      
-      const builder = new SnsTopicComponentConfigBuilder(context, spec);
-      const config = builder.buildSync();
-      
-      // Verify component config overrides platform defaults
-      expect(config.monitoring?.enabled).toBe(false);
-      expect(config.monitoring?.detailedMetrics).toBe(false);
-    });
-    
+      },
+      monitoring: {
+        enabled: true,
+        alarms: {
+          failedNotifications: {
+            enabled: true,
+            threshold: 10,
+            evaluationPeriods: 3,
+            periodMinutes: 10,
+            comparisonOperator: 'gte',
+            treatMissingData: 'ignore',
+            statistic: 'Sum'
+          },
+          messageRate: {
+            enabled: true,
+            threshold: 1000,
+            evaluationPeriods: 1,
+            periodMinutes: 1,
+            comparisonOperator: 'gt',
+            treatMissingData: 'breaching',
+            statistic: 'Average'
+          }
+        }
+      },
+      policies: [
+        {
+          sid: 'AllowPublish',
+          actions: ['sns:Publish'],
+          principals: [{ type: 'service', identifiers: ['events.amazonaws.com'] }]
+        }
+      ]
+    }));
+
+    const config = builder.buildSync();
+
+    expect(config.topicName).toBe('custom-topic');
+    expect(config.fifo.enabled).toBe(true);
+    expect(config.encryption.kmsKeyArn).toContain('arn:aws:kms');
+    expect(config.policies).toHaveLength(1);
+    expect(config.monitoring.alarms.failedNotifications.threshold).toBe(10);
   });
-  
+
+  it('throws when encryption enabled without key configuration', () => {
+    const builder = new SnsTopicComponentConfigBuilder(createContext(), createSpec({
+      encryption: {
+        enabled: true,
+        customerManagedKey: { create: false, enableRotation: true }
+      }
+    }));
+
+    expect(() => builder.buildSync()).toThrow();
+  });
 });

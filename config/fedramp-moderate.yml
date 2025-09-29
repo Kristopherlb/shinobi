@@ -278,6 +278,100 @@ defaults:
       compliance-framework: fedramp-moderate
       monitoring: enabled
 
+  eventbridge-rule-pattern:
+    state: enabled
+    monitoring:
+      enabled: true
+      failedInvocations:
+        enabled: true
+        threshold: 3
+        evaluationPeriods: 2
+        periodMinutes: 5
+        comparisonOperator: gte
+        treatMissingData: not-breaching
+        statistic: Sum
+      invocations:
+        enabled: true
+        threshold: 0
+        evaluationPeriods: 3
+        periodMinutes: 5
+        comparisonOperator: lte
+        treatMissingData: breaching
+        statistic: Sum
+      matchedEvents:
+        enabled: true
+        threshold: 0
+        evaluationPeriods: 6
+        periodMinutes: 5
+        comparisonOperator: lte
+        treatMissingData: breaching
+        statistic: Sum
+      deadLetterQueueMessages:
+        enabled: true
+        threshold: 1
+        evaluationPeriods: 1
+        periodMinutes: 5
+        comparisonOperator: gte
+        treatMissingData: not-breaching
+        statistic: Sum
+      cloudWatchLogs:
+        enabled: true
+        retentionDays: 90
+        removalPolicy: retain
+    deadLetterQueue:
+      enabled: true
+      maxRetryAttempts: 3
+      retentionDays: 14
+    tags:
+      compliance-framework: fedramp-moderate
+
+  sns-topic:
+    fifo:
+      enabled: false
+      contentBasedDeduplication: false
+    encryption:
+      enabled: true
+      customerManagedKey:
+        create: true
+        enableRotation: true
+    tracing: PassThrough
+    policies:
+      - sid: DenyInsecureTransport
+        effect: deny
+        actions: ['sns:*']
+        conditions:
+          Bool:
+            aws:SecureTransport: 'false'
+      - sid: RequireAuthentication
+        effect: deny
+        actions: ['sns:*']
+        conditions:
+          Bool:
+            aws:PrincipalIsAWSService: 'false'
+          Null:
+            aws:userid: 'true'
+    monitoring:
+      enabled: true
+      alarms:
+        failedNotifications:
+          enabled: true
+          threshold: 1
+          evaluationPeriods: 2
+          periodMinutes: 5
+          comparisonOperator: gte
+          treatMissingData: not-breaching
+          statistic: Sum
+        messageRate:
+          enabled: true
+          threshold: 5000
+          evaluationPeriods: 2
+          periodMinutes: 5
+          comparisonOperator: gte
+          treatMissingData: not-breaching
+          statistic: Sum
+    tags:
+      compliance-framework: fedramp-moderate
+
   certificate-manager:
     subjectAlternativeNames: []
     validation:

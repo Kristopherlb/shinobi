@@ -295,6 +295,114 @@ defaults:
       monitoring: enabled
       security-level: high
 
+  eventbridge-rule-pattern:
+    state: enabled
+    monitoring:
+      enabled: true
+      failedInvocations:
+        enabled: true
+        threshold: 1
+        evaluationPeriods: 2
+        periodMinutes: 5
+        comparisonOperator: gte
+        treatMissingData: not-breaching
+        statistic: Sum
+      invocations:
+        enabled: true
+        threshold: 0
+        evaluationPeriods: 3
+        periodMinutes: 5
+        comparisonOperator: lte
+        treatMissingData: breaching
+        statistic: Sum
+      matchedEvents:
+        enabled: true
+        threshold: 0
+        evaluationPeriods: 6
+        periodMinutes: 5
+        comparisonOperator: lte
+        treatMissingData: breaching
+        statistic: Sum
+      deadLetterQueueMessages:
+        enabled: true
+        threshold: 1
+        evaluationPeriods: 1
+        periodMinutes: 5
+        comparisonOperator: gte
+        treatMissingData: not-breaching
+        statistic: Sum
+      cloudWatchLogs:
+        enabled: true
+        retentionDays: 365
+        removalPolicy: retain
+    deadLetterQueue:
+      enabled: true
+      maxRetryAttempts: 5
+      retentionDays: 14
+    tags:
+      compliance-framework: fedramp-high
+      monitoring: enabled
+      security-level: high
+
+  sns-topic:
+    fifo:
+      enabled: false
+      contentBasedDeduplication: false
+    encryption:
+      enabled: true
+      customerManagedKey:
+        create: true
+        enableRotation: true
+    tracing: Active
+    policies:
+      - sid: DenyInsecureTransport
+        effect: deny
+        actions: ['sns:*']
+        conditions:
+          Bool:
+            aws:SecureTransport: 'false'
+      - sid: RestrictSourceIPs
+        effect: deny
+        actions: ['sns:*']
+        conditions:
+          IpAddressIfExists:
+            aws:sourceIp: ['10.0.0.0/8', '172.16.0.0/12', '192.168.0.0/16']
+          Bool:
+            aws:ViaAWSService: 'false'
+      - sid: RequireMFAForAdmin
+        effect: deny
+        actions:
+          - sns:DeleteTopic
+          - sns:SetTopicAttributes
+          - sns:RemovePermission
+          - sns:AddPermission
+        conditions:
+          BoolIfExists:
+            aws:MultiFactorAuthPresent: 'false'
+    monitoring:
+      enabled: true
+      alarms:
+        failedNotifications:
+          enabled: true
+          threshold: 1
+          evaluationPeriods: 2
+          periodMinutes: 5
+          comparisonOperator: gte
+          treatMissingData: not-breaching
+          statistic: Sum
+        messageRate:
+          enabled: true
+          threshold: 2500
+          evaluationPeriods: 2
+          periodMinutes: 5
+          comparisonOperator: gte
+          treatMissingData: not-breaching
+          statistic: Sum
+    tags:
+      compliance-framework: fedramp-high
+      monitoring: enabled
+      security-level: high
+
   certificate-manager:
     subjectAlternativeNames: []
     validation:

@@ -1,111 +1,135 @@
-# SnsTopicComponent Component
+# SNS Topic Component
 
-SNS Topic Component with comprehensive security, monitoring, and compliance features.
-
-## Overview
-
-The SnsTopicComponent component provides:
-
-- **Production-ready** sns topic component functionality
-- **Comprehensive compliance** (Commercial, FedRAMP Moderate/High)
-- **Integrated monitoring** and observability
-- **Security-first** configuration
-- **Platform integration** with other components
-
-### Category: messaging
-
-### AWS Service: SNS
-
-This component manages SNS resources and provides a simplified, secure interface for common use cases.
+Creates an Amazon SNS topic using the platform’s configuration precedence chain. All encryption, policies, and monitoring behaviour are supplied by the resolved configuration; the component itself never branches on `context.complianceFramework`.
 
 ## Usage Example
 
-### Basic Configuration
-
 ```yaml
-service: my-service
-owner: platform-team
-complianceFramework: commercial
-
 components:
-  - name: my-sns-topic
+  - name: notifications
     type: sns-topic
     config:
-      description: "Production sns-topic instance"
+      displayName: Customer Notifications
+      fifo:
+        enabled: false
+      encryption:
+        enabled: true
+        customerManagedKey:
+          create: true
+          alias: alias/notifications-key
+          enableRotation: true
+      deliveryPolicy:
+        http:
+          defaultHealthyRetryPolicy:
+            numRetries: 5
+            minDelayTarget: 30
+            maxDelayTarget: 120
+            backoffFunction: exponential
+      policies:
+        - sid: DenyInsecureTransport
+          effect: deny
+          actions: ['sns:*']
+          principals:
+            - type: any
+          conditions:
+            Bool:
+              aws:SecureTransport: 'false'
       monitoring:
         enabled: true
-        detailedMetrics: true
+        alarms:
+          failedNotifications:
+            enabled: true
+            threshold: 1
+            evaluationPeriods: 2
+            periodMinutes: 5
+            comparisonOperator: gte
+            treatMissingData: not-breaching
+            statistic: Sum
+          messageRate:
+            enabled: true
+            threshold: 5000
+            evaluationPeriods: 2
+            periodMinutes: 5
+            comparisonOperator: gte
+            treatMissingData: not-breaching
+            statistic: Sum
 ```
 
 ## Configuration Reference
 
-### Root Configuration
+| Field | Type | Required | Description |
+|-------|------|----------|-------------|
+| `topicName` | string | | Override the generated topic name. `.fifo` is appended automatically when FIFO is enabled. |
+| `displayName` | string | | Display name for mobile push/SMS notifications. |
+| `fifo.enabled` | boolean | | Enable FIFO topic behaviour. |
+| `fifo.contentBasedDeduplication` | boolean | | Turn on content-based deduplication for FIFO topics. |
+| `encryption.enabled` | boolean | | Enables server-side encryption. |
+| `encryption.kmsKeyArn` | string | | Import an existing KMS key ARN. |
+| `encryption.customerManagedKey.create` | boolean | | Create a customer-managed key when `kmsKeyArn` is not supplied. |
+| `encryption.customerManagedKey.alias` | string | | Optional alias for the generated key. |
+| `encryption.customerManagedKey.enableRotation` | boolean | | Enable automatic key rotation when creating a key. |
+| `deliveryPolicy` | object | | Raw delivery policy map applied to the topic (e.g. HTTP retry configuration). |
+| `messageFilterPolicy` | object | | Informational filter policy data (exposed in capabilities for consumers). |
+| `tracing` | enum | | `Active` or `PassThrough` tracing mode (defaults to `PassThrough`). |
+| `policies[]` | object | | Declarative resource policies applied to the topic (see below). |
+| `monitoring.enabled` | boolean | | Enables CloudWatch alarms. |
+| `monitoring.alarms.failedNotifications` | Alarm | | Alarm configuration for `AWS/SNS NumberOfNotificationsFailed`. |
+| `monitoring.alarms.messageRate` | Alarm | | Alarm configuration for `AWS/SNS NumberOfMessagesPublished`. |
+| `tags` | map | | Additional tags merged into the topic. |
 
-| Property | Type | Required | Description |
-|----------|------|----------|-------------|
-| `name` | string | No | Component name (auto-generated if not provided) |
-| `description` | string | No | Component description for documentation |
-| `monitoring` | object | No | Monitoring and observability configuration |
-| `tags` | object | No | Additional resource tags |
+**Alarm Config Fields**
 
-### Monitoring Configuration
+Each alarm supports:
 
-| Property | Type | Required | Description |
-|----------|------|----------|-------------|
-| `enabled` | boolean | No | Enable monitoring (default: true) |
-| `detailedMetrics` | boolean | No | Enable detailed CloudWatch metrics |
+| Field | Description |
+|-------|-------------|
+| `enabled` | Turns the alarm on/off. |
+| `threshold` | Numeric threshold for the metric. |
+| `evaluationPeriods` | Number of consecutive periods required. |
+| `periodMinutes` | Period size in minutes. |
+| `comparisonOperator` | `gt`, `gte`, `lt`, or `lte`. |
+| `treatMissingData` | `breaching`, `not-breaching`, `ignore`, or `missing`. |
+| `statistic` | `Sum`, `Average`, `Minimum`, or `Maximum`. |
 
-## Capabilities Provided
+**Policy Statement Fields**
 
-This component provides the following capabilities for binding with other components:
+| Field | Description |
+|-------|-------------|
+| `sid` | Optional statement identifier. |
+| `effect` | `allow` or `deny` (defaults to `allow`). |
+| `actions` | Required list of SNS actions. |
+| `resources` | Optional list of ARNs (defaults to the topic ARN). |
+| `principals[]` | Principals to apply (`service`, `account`, or `any`). |
+| `conditions` | Optional condition block (matches IAM JSON structure). |
 
-- `messaging:sns-topic` - Main sns-topic capability
-- `monitoring:sns-topic` - Monitoring capability
+## Capabilities
+
+| Capability | Description |
+|------------|-------------|
+| `topic:sns` | Exposes topic ARN, FIFO/encryption status, tracing mode, and master key ARN if present. |
 
 ## Construct Handles
 
-The following construct handles are available for use in `patches.ts`:
+| Handle | Description |
+|--------|-------------|
+| `main`, `topic` | Underlying `AWS::SNS::Topic` construct. |
+| `kmsKey` | Generated KMS key when encryption creates one. |
+| `alarm:failedNotifications` / `alarm:messageRate` | CloudWatch alarms created from the monitoring configuration. |
 
-- `main` - Main sns-topic construct
+## Platform Defaults
 
-## Compliance Frameworks
+Defaults are provided in:
 
-### Commercial
+- `config/commercial.yml`
+- `config/fedramp-moderate.yml`
+- `config/fedramp-high.yml`
 
-- Standard monitoring configuration
-- Basic resource tagging
-- Standard security settings
+Commercial defaults keep encryption and alarms optional. FedRAMP profiles enable customer-managed keys, stricter retry policies, and CloudWatch alarms by default.
 
-### FedRAMP Moderate/High
-
-- Enhanced monitoring with detailed metrics
-- Comprehensive audit logging
-- Stricter security configurations
-- Extended compliance tagging
-
-## Best Practices
-
-1. **Always enable monitoring** in production environments
-2. **Use descriptive names** for better resource identification
-3. **Configure appropriate tags** for cost allocation and governance
-4. **Review compliance requirements** for your environment
-5. **Test configurations** in development before production deployment
-
-## Development
-
-### Running Tests
+## Testing
 
 ```bash
-# Run all tests for this component
-npm test -- --testPathPattern=sns-topic
-
-# Run only builder tests
-npm test -- --testPathPattern=sns-topic.builder
-
-# Run only synthesis tests
-npm test -- --testPathPattern=sns-topic.component.synthesis
+corepack pnpm exec jest --runTestsByPath \
+  packages/components/sns-topic/tests/sns-topic.builder.test.ts \
+  packages/components/sns-topic/tests/sns-topic.component.synthesis.test.ts --silent
 ```
-
----
-
-*Generated by Component Completion Script*

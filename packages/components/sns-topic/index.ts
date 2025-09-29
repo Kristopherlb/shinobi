@@ -1,15 +1,10 @@
-/**
- * @platform/sns-topic - SnsTopicComponent Component
- * SNS Topic Component
- */
-
 // Component exports
-export { SnsTopicComponentComponent } from './sns-topic.component';
+export { SnsTopicComponent } from './sns-topic.component';
 
-// Configuration exports
-export { 
-  SnsTopicConfig,
+// Builder exports
+export {
   SnsTopicComponentConfigBuilder,
+  SnsTopicConfig,
   SNS_TOPIC_CONFIG_SCHEMA
 } from './sns-topic.builder';
 
