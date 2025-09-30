@@ -23,6 +23,7 @@ import {
 } from './lambda-worker.builder';
 import { LambdaWorkerValidator } from './validation/lambda-worker.validator';
 import { LambdaAdvancedFeatures } from './advanced/lambda-advanced-features';
+import { LambdaObservabilityService } from '@shinobi/core/platform/services/lambda-powertools';
 
 export class LambdaWorkerComponent extends BaseComponent {
   private lambdaFunction?: lambda.Function;
@@ -604,6 +605,38 @@ export class LambdaWorkerComponent extends BaseComponent {
    */
   public getDeadLetterQueue(): sqs.Queue | undefined {
     return this.advancedFeatures?.getDeadLetterQueue();
+  }
+
+  /**
+   * Apply Lambda Powertools observability enhancements
+   */
+  public async applyPowertoolsObservability(): Promise<void> {
+    if (!this.lambdaFunction) {
+      throw new Error('Lambda function must be synthesized before applying Powertools observability');
+    }
+
+    const observabilityService = LambdaObservabilityService.createWorkerService(
+      this.context,
+      this.config!.functionName,
+      this.context.complianceFramework,
+      {
+        businessMetrics: true,
+        auditLogging: false,
+        logLevel: 'INFO'
+      }
+    );
+
+    const result = await observabilityService.applyObservability(this);
+
+    if (!result.success) {
+      throw new Error(`Failed to apply Powertools observability: ${result.error}`);
+    }
+
+    this.logComponentEvent('powertools_observability_applied', 'Lambda Powertools observability applied successfully', {
+      baseInstrumentationApplied: result.baseInstrumentation.instrumentationApplied,
+      powertoolsEnhancementsApplied: result.powertoolsEnhancements.instrumentationApplied,
+      totalExecutionTimeMs: result.totalExecutionTimeMs
+    });
   }
 
   private toKebabCase(value: string): string {

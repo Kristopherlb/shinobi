@@ -4,7 +4,7 @@
  */
 
 import { McpServerComponentConfigBuilder, McpServerConfig } from '../mcp-server.builder';
-import { ComponentContext, ComponentSpec } from '../../../platform/contracts/component-interfaces';
+import { ComponentContext, ComponentSpec } from '@shinobi/core';
 
 const createMockContext = (
   complianceFramework: string = 'commercial',
@@ -38,12 +38,12 @@ describe('McpServerComponentConfigBuilder', () => {
       const context = createMockContext();
       const spec = createMockSpec();
       
-      const builder = new McpServerComponentConfigBuilder(context, spec);
+      const builder = new McpServerComponentConfigBuilder({ context, spec });
       const config = builder.buildSync();
       
       // Verify hardcoded fallbacks are applied
       expect(config.monitoring?.enabled).toBe(true);
-      expect(config.monitoring?.detailedMetrics).toBe(false);
+      expect(config.monitoring?.detailedMetrics).toBe(true);
       expect(config.tags).toBeDefined();
     });
     
@@ -55,7 +55,7 @@ describe('McpServerComponentConfigBuilder', () => {
       const context = createMockContext('commercial');
       const spec = createMockSpec();
       
-      const builder = new McpServerComponentConfigBuilder(context, spec);
+      const builder = new McpServerComponentConfigBuilder({ context, spec });
       const config = builder.buildSync();
       
       expect(config.monitoring?.enabled).toBe(true);
@@ -66,7 +66,7 @@ describe('McpServerComponentConfigBuilder', () => {
       const context = createMockContext('fedramp-moderate');
       const spec = createMockSpec();
       
-      const builder = new McpServerComponentConfigBuilder(context, spec);
+      const builder = new McpServerComponentConfigBuilder({ context, spec });
       const config = builder.buildSync();
       
       expect(config.monitoring?.enabled).toBe(true);
@@ -86,7 +86,7 @@ describe('McpServerComponentConfigBuilder', () => {
         }
       });
       
-      const builder = new McpServerComponentConfigBuilder(context, spec);
+      const builder = new McpServerComponentConfigBuilder({ context, spec });
       const config = builder.buildSync();
       
       // Verify component config overrides platform defaults

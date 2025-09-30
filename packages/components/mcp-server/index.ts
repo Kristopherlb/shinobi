@@ -1,17 +1,11 @@
 /**
- * @platform/mcp-server - McpServerComponent Component
- * MCP Server Component
+ * @platform/mcp-server - McpServerComponent
  */
 
-// Component exports
-export { McpServerComponentComponent } from './mcp-server.component';
-
-// Configuration exports
-export { 
+export { McpServerComponent } from './mcp-server.component';
+export {
   McpServerConfig,
   McpServerComponentConfigBuilder,
   MCP_SERVER_CONFIG_SCHEMA
 } from './mcp-server.builder';
-
-// Creator exports
 export { McpServerComponentCreator } from './mcp-server.creator';

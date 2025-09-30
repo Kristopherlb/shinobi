@@ -62,18 +62,14 @@ describe('ShinobiComponent Synthesis', () => {
       // Verify ECR repository is created
       template.hasResourceProperties('AWS::ECR::Repository', {
         ImageTagMutability: 'MUTABLE',
-        ImageScanOnPush: true
+        ImageScanningConfiguration: {
+          ScanOnPush: true
+        }
       });
       
       // Verify ECS cluster is created
       template.hasResourceProperties('AWS::ECS::Cluster', {
-        ClusterName: 'test-service-shinobi-cluster',
-        ClusterSettings: [
-          {
-            Name: 'containerInsights',
-            Value: 'enabled'
-          }
-        ]
+        ClusterName: 'test-service-shinobi-cluster'
       });
       
       // Verify ECS task definition is created

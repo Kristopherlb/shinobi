@@ -691,6 +691,39 @@ defaults:
       logLevel: info
       structuredLogging: true
 
+  mcp-server:
+    ecrRepository: platform/mcp-server
+    container:
+      imageTag: latest
+      cpu: 512
+      memory: 1024
+      taskCount: 2
+      containerPort: 8080
+    loadBalancer:
+      enabled: true
+      internetFacing: false
+    authentication:
+      tokenExpiration: 30m
+    dataSources:
+      aws:
+        regions:
+          - us-east-1
+      templates:
+        branch: main
+    logging:
+      retentionDays: 90
+      logLevel: INFO
+    monitoring:
+      enabled: true
+      detailedMetrics: true
+      alarms:
+        cpuUtilization: 70
+        memoryUtilization: 70
+        responseTime: 1.5
+    enableExecuteCommand: true
+    tags:
+      compliance: fedramp-moderate
+
   secrets-manager:
     automaticRotation:
       enabled: true

@@ -572,8 +572,11 @@ export class ShinobiComponent extends BaseComponent {
 
     // Create API response time alarm if load balancer is enabled
     if (this.loadBalancer) {
+      const responseTimeMetric = this.loadBalancer.metrics.targetResponseTime({
+        period: cdk.Duration.minutes(1)
+      });
       new cloudwatch.Alarm(this, 'ResponseTimeAlarm', {
-        metric: this.loadBalancer.metricTargetResponseTime(),
+        metric: responseTimeMetric,
         threshold: responseTimeThreshold,
         evaluationPeriods: 2,
         alarmDescription: 'Shinobi API response time is high'

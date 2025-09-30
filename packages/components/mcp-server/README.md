@@ -1,111 +1,66 @@
-# McpServerComponent Component
+# MCP Server Component
 
-MCP Server Component with comprehensive security, monitoring, and compliance features.
+Model Context Protocol server that exposes the platform intelligence APIs. The component is fully configuration-driven: defaults live in `/config/<framework>.yml`, and the manifest should only describe deviations for an environment.
 
-## Overview
-
-The McpServerComponent component provides:
-
-- **Production-ready** mcp server component functionality
-- **Comprehensive compliance** (Commercial, FedRAMP Moderate/High)
-- **Integrated monitoring** and observability
-- **Security-first** configuration
-- **Platform integration** with other components
-
-### Category: integration
-
-### AWS Service: ECS
-
-This component manages ECS resources and provides a simplified, secure interface for common use cases.
-
-## Usage Example
-
-### Basic Configuration
+## Quick Start
 
 ```yaml
-service: my-service
-owner: platform-team
-complianceFramework: commercial
-
 components:
-  - name: my-mcp-server
+  - name: platform-brain
     type: mcp-server
     config:
-      description: "Production mcp-server instance"
-      monitoring:
+      container:
+        cpu: 1024          # overrides platform default
+        memory: 2048
+      loadBalancer:
         enabled: true
-        detailedMetrics: true
+        certificateArn: ${env:MCP_CERT_ARN}
+      monitoring:
+        alarms:
+          cpuUtilization: 65
+          memoryUtilization: 70
+          responseTime: 1.5
 ```
 
-## Configuration Reference
+## Configuration Surface (partial)
 
-### Root Configuration
+| Block | Highlights |
+|-------|------------|
+| `ecrRepository` | Name of the repository containing the MCP server image. |
+| `container` | `imageTag`, `cpu`, `memory`, `taskCount`, `containerPort`. Supports number strings for env interpolation. |
+| `loadBalancer` | Toggle ALB creation, optional `certificateArn`, `domainName`, and `internetFacing` flag. |
+| `authentication` | `jwtSecretArn` and `tokenExpiration` for token issuance. |
+| `dataSources` | Git/GitHub token ARNs, AWS cross-account roles, and template repository hints. |
+| `logging` | `retentionDays` (honoured via `BaseComponent.mapLogRetentionDays`) and `logLevel`. |
+| `monitoring` | Enable/disable alarms, detailed metrics, and per-alarm thresholds for CPU, memory, and response time. |
+| `enableExecuteCommand` | Enables ECS Exec if permitted in the deployment environment. |
 
-| Property | Type | Required | Description |
-|----------|------|----------|-------------|
-| `name` | string | No | Component name (auto-generated if not provided) |
-| `description` | string | No | Component description for documentation |
-| `monitoring` | object | No | Monitoring and observability configuration |
-| `tags` | object | No | Additional resource tags |
+Refer to `packages/components/mcp-server/mcp-server.builder.ts` for the authoritative schema enforced by the ConfigBuilder.
 
-### Monitoring Configuration
+## Capabilities
 
-| Property | Type | Required | Description |
-|----------|------|----------|-------------|
-| `enabled` | boolean | No | Enable monitoring (default: true) |
-| `detailedMetrics` | boolean | No | Enable detailed CloudWatch metrics |
-
-## Capabilities Provided
-
-This component provides the following capabilities for binding with other components:
-
-- `integration:mcp-server` - Main mcp-server capability
-- `monitoring:mcp-server` - Monitoring capability
+- `api:rest` – HTTPS endpoint (ALB URL or internal address when no ALB is created).
+- `container:ecs` – ECS resources for binders requiring direct cluster/service access.
 
 ## Construct Handles
 
-The following construct handles are available for use in `patches.ts`:
+Registered handles for `patches.ts`: `main`, `cluster`, `service`, `taskDefinition`, `repository`, `loadBalancer`, `logGroup`.
 
-- `main` - Main mcp-server construct
+## Compliance Defaults
 
-## Compliance Frameworks
+Platform defaults for Commercial, FedRAMP Moderate, and FedRAMP High live in:
 
-### Commercial
+- `config/commercial.yml`
+- `config/fedramp-moderate.yml`
+- `config/fedramp-high.yml`
 
-- Standard monitoring configuration
-- Basic resource tagging
-- Standard security settings
+The component no longer branches on `context.complianceFramework`; update those YAML files to adjust per-framework behaviour.
 
-### FedRAMP Moderate/High
-
-- Enhanced monitoring with detailed metrics
-- Comprehensive audit logging
-- Stricter security configurations
-- Extended compliance tagging
-
-## Best Practices
-
-1. **Always enable monitoring** in production environments
-2. **Use descriptive names** for better resource identification
-3. **Configure appropriate tags** for cost allocation and governance
-4. **Review compliance requirements** for your environment
-5. **Test configurations** in development before production deployment
-
-## Development
-
-### Running Tests
+## Testing
 
 ```bash
-# Run all tests for this component
-npm test -- --testPathPattern=mcp-server
-
-# Run only builder tests
-npm test -- --testPathPattern=mcp-server.builder
-
-# Run only synthesis tests
-npm test -- --testPathPattern=mcp-server.component.synthesis
+corepack pnpm exec jest \
+  --runTestsByPath \
+  packages/components/mcp-server/tests/mcp-server.builder.test.ts \
+  packages/components/mcp-server/tests/mcp-server.component.synthesis.test.ts
 ```
-
----
-
-*Generated by Component Completion Script*

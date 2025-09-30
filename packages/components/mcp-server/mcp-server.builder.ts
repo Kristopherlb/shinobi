@@ -1,306 +1,328 @@
 /**
- * Configuration Builder for McpServerComponent Component
- * 
- * Implements the ConfigBuilder pattern as defined in the Platform Component API Contract.
- * Provides 5-layer configuration precedence chain and compliance-aware defaults.
+ * MCP Server configuration builder using the shared ConfigBuilder precedence chain.
  */
 
-import { ConfigBuilder, ConfigBuilderContext } from '../../platform/contracts/config-builder';
+import {
+  ConfigBuilder,
+  ConfigBuilderContext,
+  ComponentConfigSchema
+} from '@shinobi/core';
 
-/**
- * Configuration interface for McpServerComponent component
- */
+const numberOrString = (minimum?: number, maximum?: number) => ({
+  oneOf: [
+    {
+      type: 'integer',
+      ...(minimum !== undefined ? { minimum } : {}),
+      ...(maximum !== undefined ? { maximum } : {})
+    },
+    { type: 'string' }
+  ]
+});
+
+export interface McpServerContainerConfig {
+  imageTag?: string;
+  cpu?: number | string;
+  memory?: number | string;
+  taskCount?: number | string;
+  containerPort?: number | string;
+}
+
+export interface McpServerLoadBalancerConfig {
+  enabled?: boolean;
+  certificateArn?: string;
+  domainName?: string;
+  internetFacing?: boolean;
+}
+
+export interface McpServerAuthenticationConfig {
+  jwtSecretArn?: string;
+  tokenExpiration?: string;
+}
+
+export interface McpServerGitDataSourceConfig {
+  repositoryUrls?: string[];
+  accessTokenArn?: string;
+}
+
+export interface McpServerAwsDataSourceConfig {
+  crossAccountRoles?: string[];
+  regions?: string[];
+}
+
+export interface McpServerTemplatesConfig {
+  repositoryUrl?: string;
+  branch?: string;
+}
+
+export interface McpServerDataSourcesConfig {
+  git?: McpServerGitDataSourceConfig;
+  aws?: McpServerAwsDataSourceConfig;
+  templates?: McpServerTemplatesConfig;
+}
+
+export interface McpServerVpcConfig {
+  vpcId?: string;
+  subnetIds?: string[];
+  securityGroupIds?: string[];
+}
+
+export type McpServerLogLevel = 'DEBUG' | 'INFO' | 'WARN' | 'ERROR';
+
+export interface McpServerLoggingConfig {
+  retentionDays?: number | string;
+  logLevel?: McpServerLogLevel;
+}
+
+export interface McpServerMonitoringAlarmsConfig {
+  cpuUtilization?: number | string;
+  memoryUtilization?: number | string;
+  responseTime?: number | string;
+}
+
+export interface McpServerMonitoringConfig {
+  enabled?: boolean;
+  detailedMetrics?: boolean;
+  alarms?: McpServerMonitoringAlarmsConfig;
+}
+
 export interface McpServerConfig {
-  /** Component name (optional, will be auto-generated) */
-  name?: string;
-  
-  /** Component description */
-  description?: string;
-  
-  /** Container configuration */
-  container?: {
-    imageTag?: string;
-    cpu?: number;
-    memory?: number;
-    taskCount?: number;
-    containerPort?: number;
-  };
-  
-  /** Load balancer configuration */
-  loadBalancer?: {
-    enabled?: boolean;
-    certificateArn?: string;
-    domainName?: string;
-  };
-  
-  /** Authentication configuration */
-  authentication?: {
-    jwtSecret?: string;
-    tokenExpiration?: string;
-  };
-  
-  /** Data sources configuration */
-  dataSources?: {
-    git?: {
-      repositoryUrls?: string[];
-      accessTokenArn?: string;
-    };
-    aws?: {
-      crossAccountRoles?: string[];
-      regions?: string[];
-    };
-    templates?: {
-      repositoryUrl?: string;
-      branch?: string;
-    };
-  };
-  
-  /** VPC configuration */
-  vpc?: {
-    vpcId?: string;
-    subnetIds?: string[];
-    securityGroupIds?: string[];
-  };
-  
-  /** Logging configuration */
-  logging?: {
-    retentionDays?: number;
-  };
-  
-  /** Enable detailed monitoring */
-  monitoring?: {
-    enabled?: boolean;
-    detailedMetrics?: boolean;
-  };
-  
-  /** Tagging configuration */
+  ecrRepository?: string;
+  container?: McpServerContainerConfig;
+  loadBalancer?: McpServerLoadBalancerConfig;
+  authentication?: McpServerAuthenticationConfig;
+  dataSources?: McpServerDataSourcesConfig;
+  vpc?: McpServerVpcConfig;
+  logging?: McpServerLoggingConfig;
+  monitoring?: McpServerMonitoringConfig;
+  enableExecuteCommand?: boolean;
   tags?: Record<string, string>;
 }
 
-/**
- * JSON Schema for McpServerComponent configuration validation
- */
-export const MCP_SERVER_CONFIG_SCHEMA = {
+export const MCP_SERVER_CONFIG_SCHEMA: ComponentConfigSchema = {
   type: 'object',
+  additionalProperties: false,
   properties: {
-    name: {
+    ecrRepository: {
       type: 'string',
-      description: 'Component name (optional, will be auto-generated from component name)',
-      pattern: '^[a-zA-Z][a-zA-Z0-9-_]*$',
-      maxLength: 128
-    },
-    description: {
-      type: 'string',
-      description: 'Component description for documentation',
-      maxLength: 1024
+      description: 'ECR repository name for the MCP server image',
+      pattern: '^[a-z0-9][a-z0-9-/]*[a-z0-9]$'
     },
     container: {
       type: 'object',
-      description: 'Container configuration',
+      additionalProperties: false,
       properties: {
         imageTag: {
           type: 'string',
-          default: 'latest',
-          description: 'Container image tag'
+          description: 'Container image tag to deploy',
+          default: 'latest'
         },
         cpu: {
-          type: 'number',
-          default: 256,
-          description: 'Task CPU units'
+          ...numberOrString(256),
+          description: 'CPU units allocated to the task'
         },
         memory: {
-          type: 'number',
-          default: 512,
-          description: 'Task memory in MB'
+          ...numberOrString(512),
+          description: 'Memory (MiB) allocated to the task'
         },
         taskCount: {
-          type: 'number',
-          default: 1,
+          ...numberOrString(1, 10),
           description: 'Desired task count'
         },
         containerPort: {
-          type: 'number',
-          default: 3000,
-          description: 'Container port'
+          ...numberOrString(1, 65535),
+          description: 'Container port exposed by the service'
         }
-      },
-      additionalProperties: false
+      }
     },
     loadBalancer: {
       type: 'object',
-      description: 'Load balancer configuration',
+      additionalProperties: false,
       properties: {
         enabled: {
           type: 'boolean',
-          default: true,
-          description: 'Enable load balancer'
+          description: 'Provision an Application Load Balancer'
         },
         certificateArn: {
           type: 'string',
-          description: 'SSL certificate ARN'
+          description: 'ACM certificate ARN for HTTPS listeners',
+          pattern: '^arn:aws:acm:[a-z0-9-]+:[0-9]{12}:certificate/[a-f0-9-]{36}$'
         },
         domainName: {
           type: 'string',
-          description: 'Custom domain name'
+          description: 'Custom domain name for the MCP server',
+          pattern: '^[a-z0-9.-]+$'
+        },
+        internetFacing: {
+          type: 'boolean',
+          description: 'Expose the load balancer to the internet'
         }
-      },
-      additionalProperties: false
+      }
     },
     authentication: {
       type: 'object',
-      description: 'Authentication configuration',
+      additionalProperties: false,
       properties: {
-        jwtSecret: {
+        jwtSecretArn: {
           type: 'string',
-          description: 'JWT secret for token validation'
+          description: 'Secrets Manager ARN containing the JWT signing secret',
+          pattern: '^arn:aws:secretsmanager:[a-z0-9-]+:[0-9]{12}:secret:[A-Za-z0-9/_+=.@-]+$'
         },
         tokenExpiration: {
           type: 'string',
-          default: '1h',
-          description: 'Token expiration time'
+          description: 'Default token expiration duration (e.g. 1h, 30m)'
         }
-      },
-      additionalProperties: false
+      }
     },
     dataSources: {
       type: 'object',
-      description: 'Data sources configuration',
+      additionalProperties: false,
       properties: {
         git: {
           type: 'object',
+          additionalProperties: false,
           properties: {
             repositoryUrls: {
               type: 'array',
               items: { type: 'string' },
-              description: 'Git repository URLs'
+              description: 'Git repositories containing manifests or templates'
             },
             accessTokenArn: {
               type: 'string',
-              description: 'Access token secret ARN'
+              description: 'Secrets Manager ARN containing a Git access token'
             }
-          },
-          additionalProperties: false
+          }
         },
         aws: {
           type: 'object',
+          additionalProperties: false,
           properties: {
             crossAccountRoles: {
               type: 'array',
               items: { type: 'string' },
-              description: 'Cross-account role ARNs'
+              description: 'IAM role ARNs MCP can assume for discovery'
             },
             regions: {
               type: 'array',
               items: { type: 'string' },
-              description: 'AWS regions to scan'
+              description: 'AWS regions scanned for platform intelligence'
             }
-          },
-          additionalProperties: false
+          }
         },
         templates: {
           type: 'object',
+          additionalProperties: false,
           properties: {
             repositoryUrl: {
               type: 'string',
-              description: 'Template repository URL'
+              description: 'Template repository URL used for scaffolding'
             },
             branch: {
               type: 'string',
-              default: 'main',
-              description: 'Template branch'
+              description: 'Template branch or ref',
+              default: 'main'
             }
-          },
-          additionalProperties: false
+          }
         }
-      },
-      additionalProperties: false
+      }
     },
     vpc: {
       type: 'object',
-      description: 'VPC configuration',
+      additionalProperties: false,
       properties: {
         vpcId: {
           type: 'string',
-          description: 'VPC ID'
+          description: 'Existing VPC identifier to deploy into',
+          pattern: '^vpc-[0-9a-f]{8,}$'
         },
         subnetIds: {
           type: 'array',
           items: { type: 'string' },
-          description: 'Subnet IDs'
+          description: 'Subnet identifiers used for the service'
         },
         securityGroupIds: {
           type: 'array',
           items: { type: 'string' },
-          description: 'Security group IDs'
+          description: 'Security group identifiers attached to the service ENIs'
         }
-      },
-      additionalProperties: false
+      }
     },
     logging: {
       type: 'object',
-      description: 'Logging configuration',
+      additionalProperties: false,
       properties: {
         retentionDays: {
-          type: 'number',
-          default: 30,
+          ...numberOrString(1),
           description: 'Log retention period in days'
+        },
+        logLevel: {
+          type: 'string',
+          enum: ['DEBUG', 'INFO', 'WARN', 'ERROR'],
+          description: 'Runtime log level'
         }
-      },
-      additionalProperties: false
+      }
     },
     monitoring: {
       type: 'object',
-      description: 'Monitoring and observability configuration',
+      additionalProperties: false,
       properties: {
         enabled: {
           type: 'boolean',
-          default: true,
-          description: 'Enable monitoring'
+          description: 'Enable CloudWatch alarms and metrics'
         },
         detailedMetrics: {
           type: 'boolean',
-          default: false,
-          description: 'Enable detailed CloudWatch metrics'
+          description: 'Enable ECS detailed CloudWatch metrics'
+        },
+        alarms: {
+          type: 'object',
+          additionalProperties: false,
+          properties: {
+            cpuUtilization: {
+              ...numberOrString(1),
+              description: 'Threshold for CPU utilization alarm (percent)'
+            },
+            memoryUtilization: {
+              ...numberOrString(1),
+              description: 'Threshold for memory utilization alarm (percent)'
+            },
+            responseTime: {
+              ...numberOrString(0),
+              description: 'Threshold for target response time alarm (seconds)'
+            }
+          }
         }
-      },
-      additionalProperties: false
+      }
+    },
+    enableExecuteCommand: {
+      type: 'boolean',
+      description: 'Enable ECS Exec for interactive diagnostics'
     },
     tags: {
       type: 'object',
-      description: 'Additional resource tags',
-      additionalProperties: { type: 'string' }
+      additionalProperties: { type: 'string' },
+      description: 'Additional tags applied to MCP server resources'
     }
-  },
-  additionalProperties: false
+  }
 };
 
-/**
- * ConfigBuilder for McpServerComponent component
- * 
- * Implements the 5-layer configuration precedence chain:
- * 1. Hardcoded Fallbacks (ultra-safe baseline)
- * 2. Platform Defaults (from platform config)
- * 3. Environment Defaults (from environment config) 
- * 4. Component Overrides (from service.yml)
- * 5. Policy Overrides (from governance policies)
- */
 export class McpServerComponentConfigBuilder extends ConfigBuilder<McpServerConfig> {
-  
-  /**
-   * Layer 1: Hardcoded Fallbacks
-   * Ultra-safe baseline configuration that works in any environment
-   */
+  constructor(builderContext: ConfigBuilderContext) {
+    super(builderContext, MCP_SERVER_CONFIG_SCHEMA);
+  }
+
   protected getHardcodedFallbacks(): Partial<McpServerConfig> {
     return {
+      ecrRepository: 'platform/mcp-server',
       container: {
         imageTag: 'latest',
         cpu: 256,
         memory: 512,
         taskCount: 1,
-        containerPort: 3000
+        containerPort: 8080
       },
       loadBalancer: {
-        enabled: true
+        enabled: true,
+        internetFacing: false
       },
       authentication: {
         tokenExpiration: '1h'
@@ -314,79 +336,25 @@ export class McpServerComponentConfigBuilder extends ConfigBuilder<McpServerConf
         }
       },
       logging: {
-        retentionDays: 30
+        retentionDays: 30,
+        logLevel: 'INFO'
       },
       monitoring: {
         enabled: true,
-        detailedMetrics: false
+        detailedMetrics: false,
+        alarms: {
+          cpuUtilization: 80,
+          memoryUtilization: 80,
+          responseTime: 2
+        }
       },
+      enableExecuteCommand: true,
       tags: {}
     };
   }
-  
-  /**
-   * Layer 2: Compliance Framework Defaults
-   * Security and compliance-specific configurations
-   */
+
   protected getComplianceFrameworkDefaults(): Partial<McpServerConfig> {
-    const framework = this.context.complianceFramework;
-    
-    const baseCompliance: Partial<McpServerConfig> = {
-      monitoring: {
-        enabled: true,
-        detailedMetrics: true
-      }
-    };
-    
-    if (framework === 'fedramp-moderate') {
-      return {
-        ...baseCompliance,
-        container: {
-          cpu: 512,
-          memory: 1024,
-          taskCount: 2
-        },
-        authentication: {
-          tokenExpiration: '30m'
-        },
-        logging: {
-          retentionDays: 90
-        },
-        monitoring: {
-          enabled: true,
-          detailedMetrics: true
-        }
-      };
-    }
-    
-    if (framework === 'fedramp-high') {
-      return {
-        ...baseCompliance,
-        container: {
-          cpu: 1024,
-          memory: 2048,
-          taskCount: 3
-        },
-        authentication: {
-          tokenExpiration: '15m'
-        },
-        logging: {
-          retentionDays: 2555 // 7 years
-        },
-        monitoring: {
-          enabled: true,
-          detailedMetrics: true
-        }
-      };
-    }
-    
-    return baseCompliance;
-  }
-  
-  /**
-   * Get the JSON Schema for validation
-   */
-  public getSchema(): any {
-    return MCP_SERVER_CONFIG_SCHEMA;
+    // Compliance-specific defaults are supplied via /config/<framework>.yml files.
+    return {};
   }
 }

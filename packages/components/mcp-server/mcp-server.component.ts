@@ -1,9 +1,9 @@
 /**
  * MCP Server Component
- * 
- * Model Context Protocol Server for platform ecosystem intelligence.
- * Provides both descriptive context and generative tooling capabilities.
- * Implements MCP Server Specification v1.0.
+ *
+ * Model Context Protocol server that powers the platform intelligence surface.
+ * The component consumes the resolved configuration produced by the shared
+ * ConfigBuilder and never inspects the compliance framework directly.
  */
 
 import * as ecs from 'aws-cdk-lib/aws-ecs';
@@ -17,152 +17,17 @@ import * as cdk from 'aws-cdk-lib';
 import * as cloudwatch from 'aws-cdk-lib/aws-cloudwatch';
 import { Construct } from 'constructs';
 import {
-  Component,
+  BaseComponent,
   ComponentSpec,
   ComponentContext,
   ComponentCapabilities
-} from '@platform/contracts';
+} from '@shinobi/core';
+import {
+  McpServerConfig,
+  McpServerComponentConfigBuilder
+} from './mcp-server.builder';
 
-/**
- * Configuration interface for MCP Server component
- */
-export interface McpServerConfig {
-  /** Container image tag */
-  imageTag?: string;
-  
-  /** ECR repository name */
-  ecrRepository?: string;
-  
-  /** Task CPU units */
-  cpu?: number;
-  
-  /** Task memory in MB */
-  memory?: number;
-  
-  /** Desired task count */
-  taskCount?: number;
-  
-  /** Container port */
-  containerPort?: number;
-  
-  /** Application Load Balancer configuration */
-  loadBalancer?: {
-    /** Enable ALB */
-    enabled?: boolean;
-    /** Certificate ARN for HTTPS */
-    certificateArn?: string;
-    /** Custom domain name */
-    domainName?: string;
-  };
-  
-  /** Authentication configuration */
-  authentication?: {
-    /** JWT secret for token validation */
-    jwtSecret?: string;
-    /** Token expiration time */
-    tokenExpiration?: string;
-  };
-  
-  /** Data source configuration */
-  dataSources?: {
-    /** Git repository configuration */
-    git?: {
-      /** Repository URLs for service manifests */
-      repositoryUrls?: string[];
-      /** Access token secret ARN */
-      accessTokenArn?: string;
-    };
-    /** AWS API access configuration */
-    aws?: {
-      /** Cross-account role ARNs for resource discovery */
-      crossAccountRoles?: string[];
-      /** Regions to scan */
-      regions?: string[];
-    };
-    /** Template repository configuration */
-    templates?: {
-      /** Template repository URL */
-      repositoryUrl?: string;
-      /** Template branch */
-      branch?: string;
-    };
-  };
-  
-  /** VPC configuration */
-  vpc?: {
-    vpcId?: string;
-    subnetIds?: string[];
-    securityGroupIds?: string[];
-  };
-  
-  /** Logging configuration */
-  logging?: {
-    /** Log retention period in days */
-    retentionDays?: number;
-    /** Log level */
-    logLevel?: 'DEBUG' | 'INFO' | 'WARN' | 'ERROR';
-  };
-}
-
-/**
- * Configuration schema for MCP Server component
- */
-export const MCP_SERVER_CONFIG_SCHEMA = {
-  type: 'object',
-  title: 'MCP Server Configuration',
-  description: 'Configuration for Model Context Protocol Server',
-  required: [],
-  properties: {
-    imageTag: {
-      type: 'string',
-      description: 'Container image tag',
-      default: 'latest'
-    },
-    ecrRepository: {
-      type: 'string',
-      description: 'ECR repository name',
-      default: 'platform/mcp-server'
-    },
-    cpu: {
-      type: 'number',
-      description: 'Task CPU units',
-      enum: [256, 512, 1024, 2048, 4096],
-      default: 512
-    },
-    memory: {
-      type: 'number',
-      description: 'Task memory in MB',
-      enum: [512, 1024, 2048, 4096, 8192, 16384],
-      default: 1024
-    },
-    taskCount: {
-      type: 'number',
-      description: 'Desired number of tasks',
-      minimum: 1,
-      maximum: 10,
-      default: 2
-    },
-    containerPort: {
-      type: 'number',
-      description: 'Container port for the API',
-      default: 8080
-    }
-  },
-  additionalProperties: false,
-  defaults: {
-    imageTag: 'latest',
-    ecrRepository: 'platform/mcp-server',
-    cpu: 512,
-    memory: 1024,
-    taskCount: 2,
-    containerPort: 8080
-  }
-};
-
-/**
- * MCP Server Component implementation
- */
-export class McpServerComponent extends Component {
+export class McpServerComponent extends BaseComponent {
   private cluster?: ecs.Cluster;
   private service?: ecs.FargateService;
   private taskDefinition?: ecs.FargateTaskDefinition;
@@ -175,103 +40,92 @@ export class McpServerComponent extends Component {
     super(scope, id, context, spec);
   }
 
-  /**
-   * Synthesis phase - Create AWS resources
-   */
   public synth(): void {
-    this.logComponentEvent('synthesis_start', 'Starting MCP Server synthesis');
-    
+    this.logComponentEvent('synthesis_start', 'Starting MCP server synthesis');
+
     try {
-      // Build configuration
-      this.config = this.buildConfigSync();
-      
-      // Create ECS resources
+      this.config = new McpServerComponentConfigBuilder({
+        context: this.context,
+        spec: this.spec
+      }).buildSync();
+
       this.createEcrRepository();
       this.createEcsCluster();
       this.createLogGroup();
       this.createTaskDefinition();
       this.createEcsService();
-      
-      // Create load balancer if enabled
-      if (this.config.loadBalancer?.enabled) {
+
+      const loadBalancerEnabled = this.resolveBoolean(this.config?.loadBalancer?.enabled, true);
+      if (loadBalancerEnabled) {
         this.createLoadBalancer();
       }
-      
-      // Apply compliance hardening
-      this.applyComplianceHardening();
-      
-      // Register constructs for binding access
+
+      this.registerConstruct('main', this.service!);
       this.registerConstruct('cluster', this.cluster!);
       this.registerConstruct('service', this.service!);
       this.registerConstruct('taskDefinition', this.taskDefinition!);
       this.registerConstruct('repository', this.repository!);
-      
+
       if (this.loadBalancer) {
         this.registerConstruct('loadBalancer', this.loadBalancer);
       }
-      
-      // Register capabilities
+
+      if (this.logGroup) {
+        this.registerConstruct('logGroup', this.logGroup);
+      }
+
       this.registerCapability('api:rest', this.buildApiCapability());
       this.registerCapability('container:ecs', this.buildContainerCapability());
-      
-      // Configure observability
-      this._configureObservabilityForMcpServer();
-      
-      this.logComponentEvent('synthesis_complete', 'MCP Server synthesis completed successfully');
+
+      this.configureObservability();
+
+      this.logComponentEvent('synthesis_complete', 'MCP server synthesis completed successfully');
     } catch (error) {
-      this.logError(error as Error, 'MCP Server synthesis');
+      this.logError(error as Error, 'MCP server synthesis');
       throw error;
     }
   }
 
-  /**
-   * Get the capabilities this component provides
-   */
   public getCapabilities(): ComponentCapabilities {
     this.validateSynthesized();
     return this.capabilities;
   }
 
-  /**
-   * Get the component type identifier
-   */
   public getType(): string {
     return 'mcp-server';
   }
 
-  private buildConfigSync(): McpServerConfig {
-    // Apply schema defaults and validation
-    const config = { ...MCP_SERVER_CONFIG_SCHEMA.defaults, ...this.spec.config };
-    
-    // Apply compliance-specific defaults
-    return this.applyComplianceDefaults(config);
-  }
-
   private createEcrRepository(): void {
+    const repositoryName = this.config?.ecrRepository ?? `${this.context.serviceName}-mcp-server`;
+
     this.repository = new ecr.Repository(this, 'Repository', {
-      repositoryName: this.config!.ecrRepository,
+      repositoryName,
       imageTagMutability: ecr.TagMutability.MUTABLE,
-      imageScanOnPush: true,
-      lifecycleRules: [{
-        rulePriority: 1,
-        description: 'Keep last 10 images',
-        maxImageCount: 10
-      }]
+      imageScanningConfiguration: { scanOnPush: true },
+      lifecycleRules: [
+        {
+          rulePriority: 1,
+          description: 'Retain most recent 10 images',
+          maxImageCount: 10
+        }
+      ]
     });
 
     this.applyStandardTags(this.repository, {
-      'resource-type': 'ecr-repository'
+      'resource-type': 'ecr-repository',
+      component: 'mcp-server'
     });
 
-    this.logResourceCreation('ecr-repository', this.repository.repositoryName);
+    this.logResourceCreation('ecr-repository', repositoryName);
   }
 
   private createEcsCluster(): void {
-    // Use existing VPC or create new one
+    const vpcConfig = this.config?.vpc;
+
     let vpc: ec2.IVpc;
-    if (this.config!.vpc?.vpcId) {
+    if (vpcConfig?.vpcId) {
       vpc = ec2.Vpc.fromLookup(this, 'Vpc', {
-        vpcId: this.config!.vpc.vpcId
+        vpcId: vpcConfig.vpcId
       });
     } else if (this.context.vpc) {
       vpc = this.context.vpc;
@@ -285,50 +139,53 @@ export class McpServerComponent extends Component {
     }
 
     this.cluster = new ecs.Cluster(this, 'Cluster', {
-      vpc: vpc,
-      clusterName: `${this.context.serviceName}-mcp-cluster`,
-      containerInsights: true
+      vpc,
+      clusterName: `${this.context.serviceName}-mcp-cluster`
     });
 
     this.applyStandardTags(this.cluster, {
-      'resource-type': 'ecs-cluster'
+      'resource-type': 'ecs-cluster',
+      component: 'mcp-server'
     });
 
     this.logResourceCreation('ecs-cluster', this.cluster.clusterName);
   }
 
   private createLogGroup(): void {
-    const retentionDays = this.config!.logging?.retentionDays || 
-      (this.context.complianceFramework === 'fedramp-high' ? 
-        logs.RetentionDays.ONE_YEAR : logs.RetentionDays.ONE_MONTH);
+    const retentionDays = this.resolveNumber(this.config?.logging?.retentionDays, 30);
 
     this.logGroup = new logs.LogGroup(this, 'LogGroup', {
-      logGroupName: `/ecs/${this.context.serviceName}/mcp-server`,
-      retention: retentionDays,
+      logGroupName: `/aws/ecs/${this.context.serviceName}/mcp-server`,
+      retention: this.mapLogRetentionDays(retentionDays),
       removalPolicy: cdk.RemovalPolicy.RETAIN
     });
 
     this.applyStandardTags(this.logGroup, {
-      'resource-type': 'log-group'
+      'resource-type': 'log-group',
+      component: 'mcp-server'
     });
   }
 
   private createTaskDefinition(): void {
+    const container = this.config?.container ?? {};
+    const cpu = this.resolveNumber(container.cpu, 256);
+    const memory = this.resolveNumber(container.memory, 512);
+    const containerPort = this.resolveNumber(container.containerPort, 8080);
+    const logLevel = this.config?.logging?.logLevel ?? 'INFO';
+    const imageTag = container.imageTag ?? 'latest';
+
     this.taskDefinition = new ecs.FargateTaskDefinition(this, 'TaskDefinition', {
-      cpu: this.config!.cpu,
-      memoryLimitMiB: this.config!.memory,
+      cpu,
+      memoryLimitMiB: memory,
       family: `${this.context.serviceName}-mcp-server`
     });
 
-    // Add necessary permissions
     this.taskDefinition.addToTaskRolePolicy(new iam.PolicyStatement({
       effect: iam.Effect.ALLOW,
       actions: [
-        // Git repository access
         'codecommit:GitPull',
         'codecommit:GetRepository',
         'codecommit:ListRepositories',
-        // AWS resource discovery
         'ec2:Describe*',
         'lambda:List*',
         'lambda:Get*',
@@ -341,41 +198,38 @@ export class McpServerComponent extends Component {
         'sqs:GetQueue*',
         'ecs:Describe*',
         'ecs:List*',
-        // Secrets manager for authentication
         'secretsmanager:GetSecretValue',
-        // CloudFormation for stack analysis
         'cloudformation:Describe*',
         'cloudformation:List*'
       ],
       resources: ['*']
     }));
 
-    // Cross-account roles for multi-account access
-    if (this.config!.dataSources?.aws?.crossAccountRoles) {
+    const crossAccountRoles = this.config?.dataSources?.aws?.crossAccountRoles ?? [];
+    if (crossAccountRoles.length > 0) {
       this.taskDefinition.addToTaskRolePolicy(new iam.PolicyStatement({
         effect: iam.Effect.ALLOW,
         actions: ['sts:AssumeRole'],
-        resources: this.config!.dataSources.aws.crossAccountRoles
+        resources: crossAccountRoles
       }));
     }
 
-    // Container definition
-    const container = this.taskDefinition.addContainer('McpServerContainer', {
-      image: ecs.ContainerImage.fromEcrRepository(this.repository!, this.config!.imageTag),
+    const containerDefinition = this.taskDefinition.addContainer('McpServerContainer', {
+      image: ecs.ContainerImage.fromEcrRepository(this.repository!, imageTag),
       environment: {
         NODE_ENV: 'production',
-        PORT: this.config!.containerPort!.toString(),
+        PORT: containerPort.toString(),
         SERVICE_NAME: this.context.serviceName,
         ENVIRONMENT: this.context.environment,
-        COMPLIANCE_FRAMEWORK: this.context.complianceFramework,
-        LOG_LEVEL: this.config!.logging?.logLevel || 'INFO'
+        LOG_LEVEL: logLevel,
+        TEMPLATES_BRANCH: this.config?.dataSources?.templates?.branch ?? 'main'
       },
       logging: ecs.LogDrivers.awsLogs({
         streamPrefix: 'mcp-server',
         logGroup: this.logGroup!
       }),
       healthCheck: {
-        command: ['CMD-SHELL', `curl -f http://localhost:${this.config!.containerPort}/admin/health || exit 1`],
+        command: ['CMD-SHELL', `curl -f http://localhost:${containerPort}/admin/health || exit 1`],
         interval: cdk.Duration.seconds(30),
         timeout: cdk.Duration.seconds(5),
         retries: 3,
@@ -383,31 +237,45 @@ export class McpServerComponent extends Component {
       }
     });
 
-    container.addPortMappings({
-      containerPort: this.config!.containerPort!,
+    if (this.config?.authentication?.jwtSecretArn) {
+      containerDefinition.addSecret('JWT_SECRET', ecs.Secret.fromSecretsManager(
+        secretsmanager.Secret.fromSecretCompleteArn(
+          this,
+          'JwtSecret',
+          this.config.authentication.jwtSecretArn
+        )
+      ));
+    }
+
+    containerDefinition.addPortMappings({
+      containerPort,
       protocol: ecs.Protocol.TCP
     });
 
     this.applyStandardTags(this.taskDefinition, {
-      'resource-type': 'ecs-task-definition'
+      'resource-type': 'ecs-task-definition',
+      component: 'mcp-server'
     });
   }
 
   private createEcsService(): void {
+    const container = this.config?.container ?? {};
+    const desiredCount = this.resolveNumber(container.taskCount, 1);
+    const enableExec = this.resolveBoolean(this.config?.enableExecuteCommand, true);
+
     this.service = new ecs.FargateService(this, 'Service', {
       cluster: this.cluster!,
       taskDefinition: this.taskDefinition!,
       serviceName: `${this.context.serviceName}-mcp-server`,
-      desiredCount: this.config!.taskCount,
+      desiredCount,
       platformVersion: ecs.FargatePlatformVersion.LATEST,
-      enableExecuteCommand: this.context.complianceFramework !== 'fedramp-high',
+      enableExecuteCommand: enableExec,
       assignPublicIp: false
     });
 
-    // Auto-scaling
     const scalableTarget = this.service.autoScaleTaskCount({
-      minCapacity: this.config!.taskCount!,
-      maxCapacity: this.config!.taskCount! * 3
+      minCapacity: desiredCount,
+      maxCapacity: desiredCount * 3
     });
 
     scalableTarget.scaleOnCpuUtilization('CpuScaling', {
@@ -423,7 +291,8 @@ export class McpServerComponent extends Component {
     });
 
     this.applyStandardTags(this.service, {
-      'resource-type': 'ecs-service'
+      'resource-type': 'ecs-service',
+      component: 'mcp-server'
     });
 
     this.logResourceCreation('ecs-service', this.service.serviceName);
@@ -431,25 +300,28 @@ export class McpServerComponent extends Component {
 
   private createLoadBalancer(): void {
     if (!this.cluster) {
-      throw new Error('ECS Cluster must be created before Load Balancer');
+      throw new Error('ECS cluster must be available before creating the load balancer');
     }
+
+    const loadBalancerConfig = this.config?.loadBalancer;
+    const containerPort = this.resolveNumber(this.config?.container?.containerPort, 8080);
+    const internetFacing = this.resolveBoolean(loadBalancerConfig?.internetFacing, false);
 
     this.loadBalancer = new elbv2.ApplicationLoadBalancer(this, 'LoadBalancer', {
       vpc: this.cluster.vpc,
-      internetFacing: true,
+      internetFacing,
       loadBalancerName: `${this.context.serviceName}-mcp-alb`
     });
 
-    // Target group
     const targetGroup = new elbv2.ApplicationTargetGroup(this, 'TargetGroup', {
       vpc: this.cluster.vpc,
-      port: this.config!.containerPort!,
+      port: containerPort,
       protocol: elbv2.ApplicationProtocol.HTTP,
       targetType: elbv2.TargetType.IP,
       healthCheck: {
         enabled: true,
         path: '/admin/health',
-        port: this.config!.containerPort!.toString(),
+        port: containerPort.toString(),
         protocol: elbv2.Protocol.HTTP,
         healthyHttpCodes: '200',
         interval: cdk.Duration.seconds(30),
@@ -459,203 +331,145 @@ export class McpServerComponent extends Component {
       }
     });
 
-    // Associate service with target group
     this.service!.attachToApplicationTargetGroup(targetGroup);
 
-    // Listener
-    const listener = this.loadBalancer.addListener('Listener', {
-      port: 443,
-      protocol: elbv2.ApplicationProtocol.HTTPS,
-      certificates: this.config!.loadBalancer?.certificateArn ? 
-        [elbv2.ListenerCertificate.fromArn(this.config!.loadBalancer.certificateArn)] : undefined,
-      defaultTargetGroups: [targetGroup]
-    });
-
-    // HTTP redirect to HTTPS
-    this.loadBalancer.addListener('HttpListener', {
-      port: 80,
-      protocol: elbv2.ApplicationProtocol.HTTP,
-      defaultAction: elbv2.ListenerAction.redirect({
+    const certificateArn = loadBalancerConfig?.certificateArn;
+    if (certificateArn) {
+      this.loadBalancer.addListener('HttpsListener', {
+        port: 443,
         protocol: elbv2.ApplicationProtocol.HTTPS,
-        port: '443'
-      })
-    });
+        certificates: [elbv2.ListenerCertificate.fromArn(certificateArn)],
+        defaultTargetGroups: [targetGroup]
+      });
+
+      this.loadBalancer.addListener('HttpListener', {
+        port: 80,
+        protocol: elbv2.ApplicationProtocol.HTTP,
+        defaultAction: elbv2.ListenerAction.redirect({
+          protocol: elbv2.ApplicationProtocol.HTTPS,
+          port: '443'
+        })
+      });
+    } else {
+      this.loadBalancer.addListener('HttpListener', {
+        port: 80,
+        protocol: elbv2.ApplicationProtocol.HTTP,
+        defaultTargetGroups: [targetGroup]
+      });
+    }
 
     this.applyStandardTags(this.loadBalancer, {
-      'resource-type': 'application-load-balancer'
+      'resource-type': 'application-load-balancer',
+      component: 'mcp-server'
     });
 
     this.logResourceCreation('application-load-balancer', this.loadBalancer.loadBalancerName);
   }
 
-  private buildApiCapability(): any {
-    const endpoint = this.loadBalancer ? 
-      `https://${this.config!.loadBalancer?.domainName || this.loadBalancer.loadBalancerDnsName}` :
-      `http://internal:${this.config!.containerPort}`;
+  private buildApiCapability(): Record<string, any> {
+    const containerPort = this.resolveNumber(this.config?.container?.containerPort, 8080);
+
+    const endpoint = this.loadBalancer
+      ? `https://${this.config?.loadBalancer?.domainName ?? this.loadBalancer.loadBalancerDnsName}`
+      : `http://internal:${containerPort}`;
 
     return {
-      endpoint: endpoint,
-      protocol: 'HTTPS',
+      endpoint,
+      protocol: this.loadBalancer ? 'HTTPS' : 'HTTP',
       apiType: 'REST',
       version: '1.0',
       paths: {
-        '/platform/*': 'Platform-Level Endpoints',
-        '/services/*': 'Service-Level Endpoints', 
-        '/platform/generate/*': 'Generative Tooling Endpoints',
-        '/admin/*': 'Platform Administration Endpoints'
-      },
-      authentication: {
-        type: 'Bearer',
-        scopes: ['read:services', 'generate:components', 'admin:platform']
+        '/platform/*': 'Platform-level endpoints',
+        '/services/*': 'Service intelligence endpoints',
+        '/platform/generate/*': 'Generative tooling',
+        '/admin/*': 'Administration endpoints'
       }
     };
   }
 
-  private buildContainerCapability(): any {
+  private buildContainerCapability(): Record<string, any> {
+    const containerPort = this.resolveNumber(this.config?.container?.containerPort, 8080);
+
     return {
       clusterArn: this.cluster!.clusterArn,
       serviceArn: this.service!.serviceArn,
       taskDefinitionArn: this.taskDefinition!.taskDefinitionArn,
       repositoryUri: this.repository!.repositoryUri,
-      imageTag: this.config!.imageTag!,
-      containerPort: this.config!.containerPort!
+      imageTag: this.config?.container?.imageTag ?? 'latest',
+      containerPort
     };
   }
 
-  /**
-   * Configure observability for MCP Server
-   */
-  private _configureObservabilityForMcpServer(): void {
-    if (!this.config?.monitoring?.enabled) {
+  private configureObservability(): void {
+    const monitoringEnabled = this.resolveBoolean(this.config?.monitoring?.enabled, true);
+    if (!monitoringEnabled || !this.service) {
       return;
     }
 
-    // Create CloudWatch alarms for ECS service
-    if (this.service) {
-      // CPU utilization alarm
-      new cloudwatch.Alarm(this, 'CpuUtilizationAlarm', {
-        metric: this.service.metricCpuUtilization(),
-        threshold: 80,
-        evaluationPeriods: 2,
-        alarmDescription: 'MCP Server CPU utilization is high'
-      });
+    const alarms = this.config?.monitoring?.alarms ?? {};
+    const cpuThreshold = this.resolveNumber(alarms?.cpuUtilization, 80);
+    const memoryThreshold = this.resolveNumber(alarms?.memoryUtilization, 80);
+    const responseTimeThreshold = this.resolveNumber(alarms?.responseTime, 2);
 
-      // Memory utilization alarm
-      new cloudwatch.Alarm(this, 'MemoryUtilizationAlarm', {
-        metric: this.service.metricMemoryUtilization(),
-        threshold: 80,
-        evaluationPeriods: 2,
-        alarmDescription: 'MCP Server memory utilization is high'
-      });
+    new cloudwatch.Alarm(this, 'CpuUtilizationAlarm', {
+      metric: this.service.metricCpuUtilization(),
+      threshold: cpuThreshold,
+      evaluationPeriods: 2,
+      alarmDescription: 'MCP server CPU utilization is high'
+    });
 
-      // Task count alarm
-      new cloudwatch.Alarm(this, 'TaskCountAlarm', {
-        metric: this.service.metricRunningTaskCount(),
-        threshold: 1,
-        evaluationPeriods: 1,
-        comparisonOperator: cloudwatch.ComparisonOperator.LESS_THAN_THRESHOLD,
-        alarmDescription: 'MCP Server has no running tasks'
-      });
-    }
+    new cloudwatch.Alarm(this, 'MemoryUtilizationAlarm', {
+      metric: this.service.metricMemoryUtilization(),
+      threshold: memoryThreshold,
+      evaluationPeriods: 2,
+      alarmDescription: 'MCP server memory utilization is high'
+    });
 
-    // Create API response time alarm if load balancer is enabled
+    const runningTaskMetric = new cloudwatch.Metric({
+      namespace: 'AWS/ECS',
+      metricName: 'RunningTaskCount',
+      statistic: 'Average',
+      period: cdk.Duration.minutes(1),
+      dimensionsMap: {
+        ClusterName: this.cluster!.clusterName,
+        ServiceName: this.service.serviceName
+      }
+    });
+
+    new cloudwatch.Alarm(this, 'TaskCountAlarm', {
+      metric: runningTaskMetric,
+      threshold: 1,
+      evaluationPeriods: 1,
+      comparisonOperator: cloudwatch.ComparisonOperator.LESS_THAN_THRESHOLD,
+      alarmDescription: 'MCP server has no running tasks'
+    });
+
     if (this.loadBalancer) {
+      const responseTimeMetric = this.loadBalancer.metrics.targetResponseTime({
+        period: cdk.Duration.minutes(1)
+      });
+
       new cloudwatch.Alarm(this, 'ResponseTimeAlarm', {
-        metric: this.loadBalancer.metricTargetResponseTime(),
-        threshold: 2, // 2 seconds
+        metric: responseTimeMetric,
+        threshold: responseTimeThreshold,
         evaluationPeriods: 2,
-        alarmDescription: 'MCP Server API response time is high'
+        alarmDescription: 'MCP server API response time is high'
       });
     }
 
-    this.logComponentEvent('observability_configured', 'MCP Server observability configured successfully');
+    this.logComponentEvent('observability_configured', 'MCP server observability configured');
   }
 
-  private applyComplianceDefaults(config: McpServerConfig): McpServerConfig {
-    switch (this.context.complianceFramework) {
-      case 'fedramp-high':
-        return {
-          ...config,
-          cpu: Math.max(config.cpu || 512, 1024),
-          memory: Math.max(config.memory || 1024, 2048),
-          taskCount: Math.max(config.taskCount || 2, 3),
-          logging: {
-            retentionDays: 365,
-            logLevel: 'INFO',
-            ...config.logging
-          }
-        };
-      case 'fedramp-moderate':
-        return {
-          ...config,
-          cpu: Math.max(config.cpu || 512, 512),
-          memory: Math.max(config.memory || 1024, 1024),
-          taskCount: Math.max(config.taskCount || 2, 2),
-          logging: {
-            retentionDays: 90,
-            logLevel: 'INFO',
-            ...config.logging
-          }
-        };
-      default:
-        return config;
-    }
-  }
-
-  private applyComplianceHardening(): void {
-    switch (this.context.complianceFramework) {
-      case 'fedramp-high':
-        this.applyFedrampHighHardening();
-        break;
-      case 'fedramp-moderate':
-        this.applyFedrampModerateHardening();
-        break;
-      default:
-        this.applyCommercialHardening();
-        break;
-    }
-  }
-
-  private applyFedrampHighHardening(): void {
-    // Enhanced audit logging
-    const auditLogGroup = new logs.LogGroup(this, 'AuditLogs', {
-      logGroupName: `/audit/${this.context.serviceName}/mcp-server`,
-      retention: logs.RetentionDays.ONE_YEAR,
-      removalPolicy: cdk.RemovalPolicy.RETAIN
-    });
-
-    // Security group restrictions
-    if (this.service && this.service.connections.securityGroups.length > 0) {
-      const securityGroup = this.service.connections.securityGroups[0];
-      
-      // Restrict outbound traffic
-      securityGroup.addEgressRule(
-        ec2.Peer.anyIpv4(),
-        ec2.Port.tcp(443),
-        'HTTPS outbound for AWS APIs'
-      );
+  private resolveNumber(value: number | string | undefined, fallback: number): number {
+    if (value === undefined || value === null) {
+      return fallback;
     }
 
-    // Apply FedRAMP High tags
-    this.applyStandardTags(this.service!, {
-      'compliance-level': 'fedramp-high',
-      'audit-required': 'true',
-      'encryption-required': 'true'
-    });
+    const numericValue = typeof value === 'string' ? Number(value) : value;
+    return Number.isFinite(numericValue) ? numericValue : fallback;
   }
 
-  private applyFedrampModerateHardening(): void {
-    // Apply FedRAMP Moderate tags
-    this.applyStandardTags(this.service!, {
-      'compliance-level': 'fedramp-moderate',
-      'audit-enabled': 'true'
-    });
-  }
-
-  private applyCommercialHardening(): void {
-    // Apply commercial tags
-    this.applyStandardTags(this.service!, {
-      'compliance-level': 'commercial'
-    });
+  private resolveBoolean(value: boolean | undefined, fallback: boolean): boolean {
+    return typeof value === 'boolean' ? value : fallback;
   }
 }
