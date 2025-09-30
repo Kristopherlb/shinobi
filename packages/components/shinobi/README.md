@@ -88,6 +88,9 @@ A production-grade Ops MCP Server that becomes the brain for SRE/DevOps/DPE/Deve
 
 ## Configuration
 
+The Shinobi component follows the shared ConfigBuilder precedence chain. Baseline values live in
+`/config/<framework>.yml` and the manifest only needs to specify deviations from those defaults.
+
 ### Basic Usage
 
 ```yaml

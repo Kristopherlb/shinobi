@@ -7,7 +7,7 @@
 
 import { App, Stack } from 'aws-cdk-lib';
 import { ShinobiComponent } from '../src/shinobi.component';
-import { ComponentContext, ComponentSpec } from '../../@shinobi/core/component-interfaces';
+import { ComponentContext, ComponentSpec } from '@shinobi/core';
 
 // Example 1: Basic Shinobi setup with minimal configuration
 export function createBasicShinobi(stack: Stack, context: ComponentContext): ShinobiComponent {
@@ -59,7 +59,7 @@ export function createBasicShinobi(stack: Stack, context: ComponentContext): Shi
     }
   };
 
-  return new ShinobiComponent(stack, 'BasicShinobi', context, spec);
+  return new ShinobiComponent(stack, spec.name, context, spec);
 }
 
 // Example 2: Enterprise Shinobi setup with all features enabled
@@ -170,7 +170,7 @@ export function createEnterpriseShinobi(stack: Stack, context: ComponentContext)
     }
   };
 
-  return new ShinobiComponent(stack, 'EnterpriseShinobi', context, spec);
+  return new ShinobiComponent(stack, spec.name, context, spec);
 }
 
 // Example 3: FedRAMP High compliant Shinobi setup

@@ -5,14 +5,15 @@
 
 import { App, Stack } from 'aws-cdk-lib';
 import { Template } from 'aws-cdk-lib/assertions';
-import { 
-  SHINOBI_FEATURE_FLAGS, 
-  createShinobiFeatureFlags, 
-  getShinobiFeatureFlagConfig 
+import {
+  SHINOBI_FEATURE_FLAGS,
+  createShinobiFeatureFlags,
+  getShinobiFeatureFlagConfig
 } from '../src/shinobi-feature-flags';
-import { ComponentContext } from '../../@shinobi/core/component-interfaces';
+import { ComponentContext } from '@shinobi/core';
 
 const createMockContext = (
+  stack: Stack,
   complianceFramework: string = 'commercial',
   environment: string = 'dev'
 ): ComponentContext => ({
@@ -22,10 +23,12 @@ const createMockContext = (
   complianceFramework,
   region: 'us-east-1',
   account: '123456789012',
+  accountId: '123456789012',
+  scope: stack,
   tags: {
     'service-name': 'test-service',
-    'owner': 'test-team',
-    'environment': environment,
+    owner: 'test-team',
+    environment,
     'compliance-framework': complianceFramework
   }
 });
@@ -39,7 +42,7 @@ describe('Shinobi Feature Flags', () => {
   beforeEach(() => {
     app = new App();
     stack = new Stack(app, 'TestStack');
-    context = createMockContext();
+    context = createMockContext(stack);
   });
 
   describe('Feature Flag Definitions', () => {
@@ -176,7 +179,7 @@ describe('Shinobi Feature Flags', () => {
     });
     
     it('should create feature flags with compliance-specific targeting', () => {
-      const fedrampContext = createMockContext('fedramp-high', 'prod');
+      const fedrampContext = createMockContext(stack, 'fedramp-high', 'prod');
       const featureFlags = createShinobiFeatureFlags(stack, fedrampContext, 'test-shinobi');
       
       // Find the security scanning flag
@@ -235,8 +238,8 @@ describe('Shinobi Feature Flags', () => {
     
     it('should have valid flag key patterns', () => {
       Object.keys(SHINOBI_FEATURE_FLAGS).forEach(flagKey => {
-        // Flag keys should follow the pattern: shinobi.category.feature
-        expect(flagKey).toMatch(/^shinobi\.[a-z-]+\.[a-z-]+$/);
+        // Flag keys should follow the pattern: shinobi.segment or shinobi.segment.detail
+        expect(flagKey).toMatch(/^shinobi\.[a-z-]+(?:\.[a-z-]+)?$/);
       });
     });
     

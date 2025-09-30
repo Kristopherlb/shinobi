@@ -158,9 +158,9 @@ export class ShinobiComponent extends BaseComponent {
   private createEcsCluster(): void {
     // Use existing VPC or create new one
     let vpc: ec2.IVpc;
-    if (this.config!.vpc?.vpcId) {
+    if (this.config?.vpc?.vpcId) {
       vpc = ec2.Vpc.fromLookup(this, 'Vpc', {
-        vpcId: this.config!.vpc.vpcId
+        vpcId: this.config.vpc.vpcId
       });
     } else if (this.context.vpc) {
       vpc = this.context.vpc;
@@ -174,9 +174,8 @@ export class ShinobiComponent extends BaseComponent {
     }
 
     this.cluster = new ecs.Cluster(this, 'Cluster', {
-      vpc: vpc,
-      clusterName: `${this.context.serviceName}-shinobi-cluster`,
-      containerInsights: true
+      vpc,
+      clusterName: `${this.context.serviceName}-shinobi-cluster`
     });
 
     this.applyStandardTags(this.cluster, {
@@ -204,7 +203,7 @@ export class ShinobiComponent extends BaseComponent {
   }
 
   private createDataStore(): void {
-    const tableConfig = this.config!.dataStore?.dynamodb || {};
+    const tableConfig = this.config?.dataStore?.dynamodb || {};
     
     this.dataTable = new dynamodb.Table(this, 'DataTable', {
       tableName: `${this.context.serviceName}-shinobi-data`,
@@ -216,11 +215,18 @@ export class ShinobiComponent extends BaseComponent {
         name: 'sk',
         type: dynamodb.AttributeType.STRING
       },
-      billingMode: tableConfig.billingMode === 'PROVISIONED' ? 
-        dynamodb.BillingMode.PROVISIONED : dynamodb.BillingMode.PAY_PER_REQUEST,
-      readCapacity: tableConfig.readCapacity,
-      writeCapacity: tableConfig.writeCapacity,
-      pointInTimeRecovery: true,
+      billingMode: tableConfig.billingMode === 'PROVISIONED'
+        ? dynamodb.BillingMode.PROVISIONED
+        : dynamodb.BillingMode.PAY_PER_REQUEST,
+      readCapacity: tableConfig.billingMode === 'PROVISIONED'
+        ? this.resolveNumber(tableConfig.readCapacity, 5)
+        : undefined,
+      writeCapacity: tableConfig.billingMode === 'PROVISIONED'
+        ? this.resolveNumber(tableConfig.writeCapacity, 5)
+        : undefined,
+      pointInTimeRecoverySpecification: {
+        pointInTimeRecoveryEnabled: true
+      },
       encryption: dynamodb.TableEncryption.AWS_MANAGED
     });
 
@@ -270,22 +276,22 @@ export class ShinobiComponent extends BaseComponent {
       }),
       environment: {
         NODE_ENV: this.context.environment || 'development',
-        LOG_LEVEL: this.config!.logging?.logLevel || 'info',
-        DATA_SOURCES: JSON.stringify(this.config!.dataSources || {}),
+        LOG_LEVEL: this.config?.logging?.logLevel || 'info',
+        DATA_SOURCES: JSON.stringify(this.config?.dataSources || {}),
         FEATURE_FLAGS_ENABLED: String(featureFlagsEnabled),
         COMPLIANCE_FRAMEWORK: this.context.complianceFramework,
         LOCAL_DEV_MODE: String(localDevEnabled),
         // MCP Server specific environment variables
-        SHINOBI_COMPUTE_MODE: this.config!.compute?.mode || 'ecs',
+        SHINOBI_COMPUTE_MODE: this.config?.compute?.mode || 'ecs',
         SHINOBI_CPU: String(cpu),
         SHINOBI_MEMORY: String(memory),
         SHINOBI_TASK_COUNT: String(taskCount),
         SHINOBI_CONTAINER_PORT: String(containerPort),
-        SHINOBI_API_EXPOSURE: this.config!.api?.exposure || 'internal',
+        SHINOBI_API_EXPOSURE: this.config?.api?.exposure || 'internal',
         SHINOBI_LOAD_BALANCER_ENABLED: String(loadBalancerEnabled),
-        SHINOBI_FEATURE_FLAGS_PROVIDER: this.config!.featureFlags?.provider || 'aws-appconfig',
-        SHINOBI_OBSERVABILITY_PROVIDER: this.config!.observability?.provider || 'cloudwatch',
-        SHINOBI_SECURITY_LEVEL: this.config!.compliance?.securityLevel || 'standard',
+        SHINOBI_FEATURE_FLAGS_PROVIDER: this.config?.featureFlags?.provider || 'aws-appconfig',
+        SHINOBI_OBSERVABILITY_PROVIDER: this.config?.observability?.provider || 'cloudwatch',
+        SHINOBI_SECURITY_LEVEL: this.config?.compliance?.securityLevel || 'standard',
         SHINOBI_LOG_RETENTION_DAYS: String(logRetentionDays)
       },
       secrets: {
@@ -356,7 +362,7 @@ export class ShinobiComponent extends BaseComponent {
     const containerPort = this.resolveNumber(this.config?.compute?.containerPort, 3000);
     this.loadBalancer = new elbv2.ApplicationLoadBalancer(this, 'LoadBalancer', {
       vpc: this.cluster.vpc,
-      internetFacing: this.config!.api?.exposure === 'public',
+      internetFacing: this.config?.api?.exposure === 'public',
       loadBalancerName: `${this.context.serviceName}-shinobi-alb`
     });
 
@@ -383,23 +389,31 @@ export class ShinobiComponent extends BaseComponent {
     this.service!.attachToApplicationTargetGroup(targetGroup);
 
     // Listener
-    const listener = this.loadBalancer.addListener('Listener', {
-      port: 443,
-      protocol: elbv2.ApplicationProtocol.HTTPS,
-      certificates: this.config!.api?.loadBalancer?.certificateArn ? 
-        [elbv2.ListenerCertificate.fromArn(this.config!.api.loadBalancer.certificateArn)] : undefined,
-      defaultTargetGroups: [targetGroup]
-    });
+    const certificateArn = this.config?.api?.loadBalancer?.certificateArn;
 
-    // HTTP redirect to HTTPS
-    this.loadBalancer.addListener('HttpListener', {
-      port: 80,
-      protocol: elbv2.ApplicationProtocol.HTTP,
-      defaultAction: elbv2.ListenerAction.redirect({
+    if (certificateArn) {
+      this.loadBalancer.addListener('HttpsListener', {
+        port: 443,
         protocol: elbv2.ApplicationProtocol.HTTPS,
-        port: '443'
-      })
-    });
+        certificates: [elbv2.ListenerCertificate.fromArn(certificateArn)],
+        defaultTargetGroups: [targetGroup]
+      });
+
+      this.loadBalancer.addListener('HttpListener', {
+        port: 80,
+        protocol: elbv2.ApplicationProtocol.HTTP,
+        defaultAction: elbv2.ListenerAction.redirect({
+          protocol: elbv2.ApplicationProtocol.HTTPS,
+          port: '443'
+        })
+      });
+    } else {
+      this.loadBalancer.addListener('HttpListener', {
+        port: 80,
+        protocol: elbv2.ApplicationProtocol.HTTP,
+        defaultTargetGroups: [targetGroup]
+      });
+    }
 
     this.applyStandardTags(this.loadBalancer, {
       'resource-type': 'application-load-balancer',
@@ -456,14 +470,14 @@ export class ShinobiComponent extends BaseComponent {
 
   private buildApiCapability(): any {
     const endpoint = this.loadBalancer ? 
-      `https://${this.config!.api?.loadBalancer?.domainName || this.loadBalancer.loadBalancerDnsName}` :
-      `http://internal:${this.config!.compute?.containerPort || 3000}`;
+      `https://${this.config?.api?.loadBalancer?.domainName || this.loadBalancer.loadBalancerDnsName}` :
+      `http://internal:${this.resolveNumber(this.config?.compute?.containerPort, 3000)}`;
 
     return {
       endpoint: endpoint,
       protocol: 'HTTPS',
       apiType: 'REST',
-      version: this.config!.api?.version || '1.0',
+      version: this.config?.api?.version || '1.0',
       paths: {
         '/catalog/*': 'Discovery & DocOps',
         '/graph/*': 'Topology, Graph & GUI Enablement',
@@ -490,17 +504,17 @@ export class ShinobiComponent extends BaseComponent {
       serviceArn: this.service!.serviceArn,
       taskDefinitionArn: this.taskDefinition!.taskDefinitionArn,
       repositoryUri: this.repository!.repositoryUri,
-      containerPort: this.config!.compute?.containerPort || 3000
+      containerPort: this.resolveNumber(this.config?.compute?.containerPort, 3000)
     };
   }
 
   private buildIntelligenceCapability(): any {
     return {
-      dataSources: this.config!.dataSources || {},
-      featureFlags: this.config!.featureFlags || {},
-      observability: this.config!.observability || {},
-      compliance: this.config!.compliance || {},
-      localDev: this.config!.localDev || {}
+      dataSources: this.config?.dataSources || {},
+      featureFlags: this.config?.featureFlags || {},
+      observability: this.config?.observability || {},
+      compliance: this.config?.compliance || {},
+      localDev: this.config?.localDev || {}
     };
   }
 
@@ -512,12 +526,17 @@ export class ShinobiComponent extends BaseComponent {
       return;
     }
 
+    const thresholds = this.config.observability.alerts.thresholds || {};
+    const cpuThreshold = this.resolveNumber(thresholds.cpuUtilization, 80);
+    const memoryThreshold = this.resolveNumber(thresholds.memoryUtilization, 80);
+    const responseTimeThreshold = this.resolveNumber(thresholds.responseTime, 2);
+
     // Create CloudWatch alarms for ECS service
     if (this.service) {
       // CPU utilization alarm
       new cloudwatch.Alarm(this, 'CpuUtilizationAlarm', {
         metric: this.service.metricCpuUtilization(),
-        threshold: this.config.observability.alerts.thresholds?.cpuUtilization || 80,
+        threshold: cpuThreshold,
         evaluationPeriods: 2,
         alarmDescription: 'Shinobi CPU utilization is high'
       });
@@ -525,14 +544,25 @@ export class ShinobiComponent extends BaseComponent {
       // Memory utilization alarm
       new cloudwatch.Alarm(this, 'MemoryUtilizationAlarm', {
         metric: this.service.metricMemoryUtilization(),
-        threshold: this.config.observability.alerts.thresholds?.memoryUtilization || 80,
+        threshold: memoryThreshold,
         evaluationPeriods: 2,
         alarmDescription: 'Shinobi memory utilization is high'
       });
 
       // Task count alarm
+      const runningTaskMetric = new cloudwatch.Metric({
+        namespace: 'AWS/ECS',
+        metricName: 'RunningTaskCount',
+        statistic: 'Average',
+        period: cdk.Duration.minutes(1),
+        dimensionsMap: {
+          ClusterName: this.cluster?.clusterName ?? this.service.cluster.clusterName,
+          ServiceName: this.service.serviceName
+        }
+      });
+
       new cloudwatch.Alarm(this, 'TaskCountAlarm', {
-        metric: this.service.metricRunningTaskCount(),
+        metric: runningTaskMetric,
         threshold: 1,
         evaluationPeriods: 1,
         comparisonOperator: cloudwatch.ComparisonOperator.LESS_THAN_THRESHOLD,
@@ -544,70 +574,13 @@ export class ShinobiComponent extends BaseComponent {
     if (this.loadBalancer) {
       new cloudwatch.Alarm(this, 'ResponseTimeAlarm', {
         metric: this.loadBalancer.metricTargetResponseTime(),
-        threshold: this.config.observability.alerts.thresholds?.responseTime || 2,
+        threshold: responseTimeThreshold,
         evaluationPeriods: 2,
         alarmDescription: 'Shinobi API response time is high'
       });
     }
 
     this.logComponentEvent('observability_configured', 'Shinobi observability configured successfully');
-  }
-
-  private applyComplianceDefaults(config: ShinobiConfig): ShinobiConfig {
-    switch (this.context.complianceFramework) {
-      case 'fedramp-moderate':
-        return {
-          ...config,
-          compute: {
-            ...config.compute,
-            cpu: Math.max(config.compute?.cpu || 512, 512),
-            memory: Math.max(config.compute?.memory || 1024, 1024),
-            taskCount: Math.max(config.compute?.taskCount || 1, 2)
-          },
-          api: {
-            ...config.api,
-            exposure: 'internal'
-          },
-          compliance: {
-            ...config.compliance,
-            securityLevel: 'enhanced',
-            auditLogging: true
-          },
-          logging: {
-            ...config.logging,
-            retentionDays: 90,
-            structuredLogging: true
-          }
-        };
-      
-      case 'fedramp-high':
-        return {
-          ...config,
-          compute: {
-            ...config.compute,
-            cpu: Math.max(config.compute?.cpu || 512, 1024),
-            memory: Math.max(config.compute?.memory || 1024, 2048),
-            taskCount: Math.max(config.compute?.taskCount || 1, 3)
-          },
-          api: {
-            ...config.api,
-            exposure: 'internal'
-          },
-          compliance: {
-            ...config.compliance,
-            securityLevel: 'maximum',
-            auditLogging: true
-          },
-          logging: {
-            ...config.logging,
-            retentionDays: 2555, // 7 years
-            structuredLogging: true
-          }
-        };
-      
-      default:
-        return config;
-    }
   }
 
   private applyComplianceHardening(): void {

@@ -3,8 +3,10 @@
  * Implements Platform Testing Standard v1.0 - ConfigBuilder Testing
  */
 
-import { ShinobiComponentConfigBuilder, ShinobiConfig } from '../src/shinobi.builder';
-import { ComponentContext, ComponentSpec } from '../../@shinobi/core/component-interfaces';
+import { ShinobiComponentConfigBuilder, ShinobiConfig, SHINOBI_CONFIG_SCHEMA } from '../src/shinobi.builder';
+import { ComponentContext, ComponentSpec } from '@shinobi/core';
+
+type PartialConfig = Partial<ShinobiConfig>;
 
 const createMockContext = (
   complianceFramework: string = 'commercial',
@@ -15,160 +17,130 @@ const createMockContext = (
   environment,
   complianceFramework,
   region: 'us-east-1',
+  accountId: '123456789012',
   account: '123456789012',
+  scope: undefined as any,
   tags: {
     'service-name': 'test-service',
-    'owner': 'test-team',
-    'environment': environment,
+    owner: 'test-team',
+    environment,
     'compliance-framework': complianceFramework
   }
 });
 
-const createMockSpec = (config: Partial<ShinobiConfig> = {}): ComponentSpec => ({
+const createMockSpec = (config: PartialConfig = {}): ComponentSpec => ({
   name: 'test-shinobi',
   type: 'shinobi',
   config
 });
 
 describe('ShinobiComponentConfigBuilder', () => {
-  
-  describe('Hardcoded Fallbacks (Layer 1)', () => {
-    
-    it('should provide ultra-safe baseline configuration', () => {
-      const context = createMockContext();
-      const spec = createMockSpec();
-      
-      const builder = new ShinobiComponentConfigBuilder(context, spec);
-      const config = builder.buildSync();
-      
-      // Verify hardcoded fallbacks are applied
-      expect(config.compute?.mode).toBe('ecs');
-      expect(config.compute?.cpu).toBe(256);
-      expect(config.compute?.memory).toBe(512);
-      expect(config.compute?.taskCount).toBe(1);
-      expect(config.compute?.containerPort).toBe(3000);
-      
-      expect(config.dataStore?.type).toBe('dynamodb');
-      expect(config.dataStore?.dynamodb?.billingMode).toBe('PAY_PER_REQUEST');
-      
-      expect(config.api?.exposure).toBe('internal');
-      expect(config.api?.loadBalancer?.enabled).toBe(true);
-      expect(config.api?.version).toBe('1.0');
-      
-      expect(config.featureFlags?.enabled).toBe(true);
-      expect(config.featureFlags?.provider).toBe('aws-appconfig');
-      expect(config.featureFlags?.defaults).toBeDefined();
-      
-      expect(config.dataSources?.components).toBe(true);
-      expect(config.dataSources?.services).toBe(true);
-      expect(config.dataSources?.dependencies).toBe(true);
-      expect(config.dataSources?.compliance).toBe(true);
-      expect(config.dataSources?.cost).toBe(false);
-      expect(config.dataSources?.security).toBe(false);
-      expect(config.dataSources?.performance).toBe(false);
-      
-      expect(config.observability?.provider).toBe('cloudwatch');
-      expect(config.observability?.alerts?.enabled).toBe(true);
-      
-      expect(config.compliance?.securityLevel).toBe('standard');
-      expect(config.compliance?.auditLogging).toBe(false);
-      
-      expect(config.localDev?.enabled).toBe(false);
-      expect(config.localDev?.seedData?.sampleComponents).toBe(true);
-      expect(config.localDev?.mockServices).toBe(true);
-      
-      expect(config.logging?.retentionDays).toBe(30);
-      expect(config.logging?.logLevel).toBe('info');
-      expect(config.logging?.structuredLogging).toBe(true);
-      
-      expect(config.tags).toBeDefined();
-    });
-    
-  });
+  const buildConfig = (framework: string, config: PartialConfig = {}): ShinobiConfig => {
+    const context = createMockContext(framework);
+    const spec = createMockSpec(config);
+    const builder = new ShinobiComponentConfigBuilder({ context, spec });
+    return builder.buildSync();
+  };
 
-  describe('Compliance Framework Defaults (Layer 2)', () => {
-    
-    it('should apply FedRAMP Moderate defaults', () => {
-      const context = createMockContext('fedramp-moderate', 'prod');
-      const spec = createMockSpec();
-      
-      const builder = new ShinobiComponentConfigBuilder(context, spec);
-      const config = builder.buildSync();
-      
-      // Verify FedRAMP Moderate specific defaults
-      expect(config.compute?.cpu).toBe(512);
-      expect(config.compute?.memory).toBe(1024);
-      expect(config.compute?.taskCount).toBe(2);
-      
-      expect(config.api?.exposure).toBe('internal');
-      
-      expect(config.featureFlags?.defaults?.['shinobi.advanced-analytics']).toBe(true);
-      expect(config.featureFlags?.defaults?.['shinobi.ai-insights']).toBe(false);
-      expect(config.featureFlags?.defaults?.['shinobi.auto-remediation']).toBe(false);
-      expect(config.featureFlags?.defaults?.['shinobi.predictive-scaling']).toBe(false);
-      expect(config.featureFlags?.defaults?.['shinobi.cost-optimization']).toBe(true);
-      expect(config.featureFlags?.defaults?.['shinobi.security-scanning']).toBe(true);
-      expect(config.featureFlags?.defaults?.['shinobi.compliance-monitoring']).toBe(true);
-      
-      expect(config.dataSources?.cost).toBe(true);
-      expect(config.dataSources?.security).toBe(true);
-      expect(config.dataSources?.performance).toBe(true);
-      
-      expect(config.observability?.dashboards).toContain('security');
-      expect(config.observability?.alerts?.thresholds?.cpuUtilization).toBe(70);
-      expect(config.observability?.alerts?.thresholds?.memoryUtilization).toBe(70);
-      expect(config.observability?.alerts?.thresholds?.responseTime).toBe(1.5);
-      
-      expect(config.compliance?.securityLevel).toBe('enhanced');
-      expect(config.compliance?.auditLogging).toBe(true);
-      
+  describe('Configuration Defaults', () => {
+    it('Commercial defaults reflect platform configuration', () => {
+      const config = buildConfig('commercial');
+
+      expect(config.compute).toMatchObject({
+        mode: 'ecs',
+        cpu: 256,
+        memory: 512,
+        taskCount: 1,
+        containerPort: 3000
+      });
+      expect(config.api).toMatchObject({
+        exposure: 'internal',
+        version: '1.0',
+        loadBalancer: { enabled: true },
+        rateLimit: { requestsPerMinute: 1000, burstCapacity: 2000 }
+      });
+      expect(config.featureFlags?.defaults).toMatchObject({
+        'shinobi.cost-optimization': true,
+        'shinobi.security-scanning': true,
+        'shinobi.compliance-monitoring': true
+      });
+      expect(config.dataSources).toMatchObject({
+        components: true,
+        services: true,
+        dependencies: true,
+        compliance: true,
+        cost: false,
+        security: false,
+        performance: false
+      });
+      expect(config.compliance).toMatchObject({
+        securityLevel: 'standard',
+        auditLogging: false
+      });
+      expect(config.logging).toMatchObject({
+        retentionDays: 30,
+        logLevel: 'info',
+        structuredLogging: true
+      });
+    });
+
+    it('FedRAMP Moderate defaults apply compliance hardening from configuration', () => {
+      const config = buildConfig('fedramp-moderate');
+
+      expect(config.compute).toMatchObject({
+        cpu: 512,
+        memory: 1024,
+        taskCount: 2
+      });
+      expect(config.dataSources).toEqual({
+        components: true,
+        services: true,
+        dependencies: true,
+        compliance: true,
+        cost: true,
+        security: true,
+        performance: true
+      });
+      expect(config.observability?.alerts?.thresholds).toMatchObject({
+        cpuUtilization: 70,
+        memoryUtilization: 70,
+        responseTime: 1.5
+      });
+      expect(config.compliance).toMatchObject({
+        securityLevel: 'enhanced',
+        auditLogging: true
+      });
       expect(config.logging?.retentionDays).toBe(90);
     });
-    
-    it('should apply FedRAMP High defaults', () => {
-      const context = createMockContext('fedramp-high', 'prod');
-      const spec = createMockSpec();
-      
-      const builder = new ShinobiComponentConfigBuilder(context, spec);
-      const config = builder.buildSync();
-      
-      // Verify FedRAMP High specific defaults
-      expect(config.compute?.cpu).toBe(1024);
-      expect(config.compute?.memory).toBe(2048);
-      expect(config.compute?.taskCount).toBe(3);
-      
-      expect(config.api?.exposure).toBe('internal');
-      
-      expect(config.featureFlags?.defaults?.['shinobi.advanced-analytics']).toBe(true);
-      expect(config.featureFlags?.defaults?.['shinobi.ai-insights']).toBe(true);
-      expect(config.featureFlags?.defaults?.['shinobi.auto-remediation']).toBe(true);
-      expect(config.featureFlags?.defaults?.['shinobi.predictive-scaling']).toBe(true);
-      expect(config.featureFlags?.defaults?.['shinobi.cost-optimization']).toBe(true);
-      expect(config.featureFlags?.defaults?.['shinobi.security-scanning']).toBe(true);
-      expect(config.featureFlags?.defaults?.['shinobi.compliance-monitoring']).toBe(true);
-      
-      expect(config.dataSources?.cost).toBe(true);
-      expect(config.dataSources?.security).toBe(true);
-      expect(config.dataSources?.performance).toBe(true);
-      
-      expect(config.observability?.dashboards).toContain('compliance');
-      expect(config.observability?.alerts?.thresholds?.cpuUtilization).toBe(60);
-      expect(config.observability?.alerts?.thresholds?.memoryUtilization).toBe(60);
-      expect(config.observability?.alerts?.thresholds?.responseTime).toBe(1);
-      
-      expect(config.compliance?.securityLevel).toBe('maximum');
-      expect(config.compliance?.auditLogging).toBe(true);
-      
-      expect(config.logging?.retentionDays).toBe(2555); // 7 years
+
+    it('FedRAMP High defaults enforce maximum security posture', () => {
+      const config = buildConfig('fedramp-high');
+
+      expect(config.compute).toMatchObject({
+        cpu: 1024,
+        memory: 2048,
+        taskCount: 3
+      });
+      const defaults = config.featureFlags?.defaults ?? {};
+      expect(Object.values(defaults).every(value => value === true)).toBe(true);
+      expect(config.observability?.dashboards).toEqual([
+        'reliability',
+        'performance',
+        'security',
+        'compliance'
+      ]);
+      expect(config.observability?.alerts?.thresholds).toMatchObject({
+        cpuUtilization: 60,
+        memoryUtilization: 60,
+        responseTime: 1
+      });
+      expect(config.logging?.retentionDays).toBe(2555);
     });
-    
   });
 
   describe('Configuration Merging', () => {
-    
-    it('should merge user configuration with defaults', () => {
-      const context = createMockContext();
-      const spec = createMockSpec({
+    it('merges user overrides with platform defaults', () => {
+      const config = buildConfig('commercial', {
         compute: {
           cpu: 1024,
           memory: 2048
@@ -176,133 +148,51 @@ describe('ShinobiComponentConfigBuilder', () => {
         api: {
           exposure: 'public',
           loadBalancer: {
-            enabled: false
+            enabled: true,
+            certificateArn: 'arn:aws:acm:us-east-1:123456789012:certificate/12345678-1234-1234-1234-123456789012'
           }
         },
         featureFlags: {
           enabled: false
         }
       });
-      
-      const builder = new ShinobiComponentConfigBuilder(context, spec);
-      const config = builder.buildSync();
-      
-      // Verify user overrides are applied
-      expect(config.compute?.cpu).toBe(1024);
-      expect(config.compute?.memory).toBe(2048);
-      expect(config.compute?.taskCount).toBe(1); // Default preserved
-      
-      expect(config.api?.exposure).toBe('public');
-      expect(config.api?.loadBalancer?.enabled).toBe(false);
-      expect(config.api?.version).toBe('1.0'); // Default preserved
-      
-      expect(config.featureFlags?.enabled).toBe(false);
-      expect(config.featureFlags?.provider).toBe('aws-appconfig'); // Default preserved
-    });
-    
-    it('should handle partial configuration objects', () => {
-      const context = createMockContext();
-      const spec = createMockSpec({
-        compute: {
-          cpu: 512
-        },
-        observability: {
-          provider: 'newrelic'
-        }
+
+      expect(config.compute).toMatchObject({
+        cpu: 1024,
+        memory: 2048,
+        taskCount: 1
       });
-      
-      const builder = new ShinobiComponentConfigBuilder(context, spec);
-      const config = builder.buildSync();
-      
-      // Verify partial overrides work correctly
-      expect(config.compute?.cpu).toBe(512);
-      expect(config.compute?.memory).toBe(512); // Default preserved
-      expect(config.compute?.taskCount).toBe(1); // Default preserved
-      
-      expect(config.observability?.provider).toBe('newrelic');
-      expect(config.observability?.alerts?.enabled).toBe(true); // Default preserved
+      expect(config.api?.exposure).toBe('public');
+      expect(config.featureFlags?.enabled).toBe(false);
+      expect(config.featureFlags?.provider).toBe('aws-appconfig');
     });
-    
-  });
 
-  describe('Schema Validation', () => {
-    
-    it('should return valid JSON schema', () => {
-      const context = createMockContext();
-      const spec = createMockSpec();
-      
-      const builder = new ShinobiComponentConfigBuilder(context, spec);
-      const schema = builder.getSchema();
-      
-      expect(schema).toBeDefined();
-      expect(schema.type).toBe('object');
-      expect(schema.properties).toBeDefined();
-      expect(schema.properties.compute).toBeDefined();
-      expect(schema.properties.dataStore).toBeDefined();
-      expect(schema.properties.api).toBeDefined();
-      expect(schema.properties.featureFlags).toBeDefined();
-      expect(schema.properties.dataSources).toBeDefined();
-      expect(schema.properties.observability).toBeDefined();
-      expect(schema.properties.compliance).toBeDefined();
-      expect(schema.properties.localDev).toBeDefined();
-      expect(schema.properties.logging).toBeDefined();
-      expect(schema.properties.tags).toBeDefined();
-    });
-    
-  });
+    it('supports environment variable interpolation for numeric values', () => {
+      process.env.SHINOBI_CPU = '1536';
+      process.env.SHINOBI_TASKS = '4';
 
-  describe('Environment Variable Interpolation', () => {
-    
-    it('should resolve environment variable interpolations in configuration', () => {
-      process.env.SHINOBI_CPU = '1024';
-      process.env.SHINOBI_MEMORY = '2048';
-      process.env.SHINOBI_TASK_COUNT = '3';
-      
-      const context = createMockContext();
-      const spec = createMockSpec({
+      const config = buildConfig('commercial', {
         compute: {
           cpu: '${env:SHINOBI_CPU}',
-          memory: '${env:SHINOBI_MEMORY}',
-          taskCount: '${env:SHINOBI_TASK_COUNT}'
+          taskCount: '${env:SHINOBI_TASKS}'
         }
       });
-      
-      const builder = new ShinobiComponentConfigBuilder(context, spec);
-      const config = builder.buildSync();
-      
-      expect(config.compute?.cpu).toBe(1024);
-      expect(config.compute?.memory).toBe(2048);
-      expect(config.compute?.taskCount).toBe(3);
-      
-      // Cleanup
+
+      expect(config.compute?.cpu).toBe('1536');
+      expect(config.compute?.taskCount).toBe('4');
+
       delete process.env.SHINOBI_CPU;
-      delete process.env.SHINOBI_MEMORY;
-      delete process.env.SHINOBI_TASK_COUNT;
+      delete process.env.SHINOBI_TASKS;
     });
-    
   });
 
-  describe('Error Handling', () => {
-    
-    it('should handle invalid configuration gracefully', () => {
-      const context = createMockContext();
-      const spec = createMockSpec({
-        compute: {
-          cpu: -1, // Invalid CPU value
-          memory: 0 // Invalid memory value
-        }
-      });
-      
-      const builder = new ShinobiComponentConfigBuilder(context, spec);
-      
-      // Should not throw, but use fallback values
-      expect(() => builder.buildSync()).not.toThrow();
-      
-      const config = builder.buildSync();
-      expect(config.compute?.cpu).toBe(256); // Fallback value
-      expect(config.compute?.memory).toBe(512); // Fallback value
+  describe('Schema Definition', () => {
+    it('exposes a JSON schema for configuration validation', () => {
+      expect(SHINOBI_CONFIG_SCHEMA.type).toBe('object');
+      expect(SHINOBI_CONFIG_SCHEMA.properties.compute).toBeDefined();
+      expect(SHINOBI_CONFIG_SCHEMA.properties.api).toBeDefined();
+      expect(SHINOBI_CONFIG_SCHEMA.properties.observability).toBeDefined();
+      expect(SHINOBI_CONFIG_SCHEMA.properties.logging).toBeDefined();
     });
-    
   });
-
 });

@@ -8,7 +8,7 @@
  */
 
 import { ShinobiMcpServer } from './shinobi-server.js';
-import { ShinobiConfig } from '../shinobi.builder.js';
+import { ShinobiConfig } from '../shinobi.builder';
 import { Logger } from '@platform/logger';
 
 /**

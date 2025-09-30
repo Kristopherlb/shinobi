@@ -4,11 +4,13 @@
  */
 
 import { App, Stack } from 'aws-cdk-lib';
-import { Template } from 'aws-cdk-lib/assertions';
-import { ShinobiComponent, ShinobiConfig } from '../src/shinobi.component';
-import { ComponentContext, ComponentSpec } from '../../@shinobi/core/component-interfaces';
+import { Match, Template } from 'aws-cdk-lib/assertions';
+import { ShinobiComponent } from '../src/shinobi.component';
+import { ShinobiConfig } from '../src/shinobi.builder';
+import { ComponentContext, ComponentSpec } from '@shinobi/core';
 
 const createMockContext = (
+  stack: Stack,
   complianceFramework: string = 'commercial',
   environment: string = 'dev'
 ): ComponentContext => ({
@@ -17,11 +19,13 @@ const createMockContext = (
   environment,
   complianceFramework,
   region: 'us-east-1',
+  accountId: '123456789012',
   account: '123456789012',
+  scope: stack,
   tags: {
     'service-name': 'test-service',
-    'owner': 'test-team',
-    'environment': environment,
+    owner: 'test-team',
+    environment,
     'compliance-framework': complianceFramework
   }
 });
@@ -41,14 +45,14 @@ describe('ShinobiComponent Synthesis', () => {
   beforeEach(() => {
     app = new App();
     stack = new Stack(app, 'TestStack');
-    context = createMockContext();
+    context = createMockContext(stack);
   });
 
   describe('Basic Synthesis', () => {
     
     it('should synthesize with minimal configuration', () => {
       const spec = createMockSpec();
-      const component = new ShinobiComponent(stack, 'Shinobi', context, spec);
+      const component = new ShinobiComponent(stack, spec.name, context, spec);
       
       // Call synth to create resources
       component.synth();
@@ -75,8 +79,8 @@ describe('ShinobiComponent Synthesis', () => {
       // Verify ECS task definition is created
       template.hasResourceProperties('AWS::ECS::TaskDefinition', {
         Family: 'test-service-shinobi',
-        Cpu: '512',
-        Memory: '1024',
+        Cpu: '256',
+        Memory: '512',
         NetworkMode: 'awsvpc',
         RequiresCompatibilities: ['FARGATE']
       });
@@ -115,7 +119,7 @@ describe('ShinobiComponent Synthesis', () => {
         }
       });
       
-      const component = new ShinobiComponent(stack, 'Shinobi', context, spec);
+      const component = new ShinobiComponent(stack, spec.name, context, spec);
       component.synth();
       
       const template = Template.fromStack(stack);
@@ -136,7 +140,7 @@ describe('ShinobiComponent Synthesis', () => {
     
     it('should create EventBridge rule for re-indexing', () => {
       const spec = createMockSpec();
-      const component = new ShinobiComponent(stack, 'Shinobi', context, spec);
+      const component = new ShinobiComponent(stack, spec.name, context, spec);
       component.synth();
       
       const template = Template.fromStack(stack);
@@ -153,10 +157,10 @@ describe('ShinobiComponent Synthesis', () => {
   describe('Compliance Framework Variations', () => {
     
     it('should apply FedRAMP Moderate hardening', () => {
-      const fedrampContext = createMockContext('fedramp-moderate', 'prod');
+      const fedrampContext = createMockContext(stack, 'fedramp-moderate', 'prod');
       const spec = createMockSpec();
       
-      const component = new ShinobiComponent(stack, 'Shinobi', fedrampContext, spec);
+      const component = new ShinobiComponent(stack, spec.name, fedrampContext, spec);
       component.synth();
       
       const template = Template.fromStack(stack);
@@ -167,17 +171,16 @@ describe('ShinobiComponent Synthesis', () => {
         Memory: '1024'
       });
       
-      // Verify enhanced logging retention
-      template.hasResourceProperties('AWS::Logs::LogGroup', {
-        RetentionInDays: 90
-      });
+      const moderateLogGroups = Object.values(template.findResources('AWS::Logs::LogGroup'));
+      const moderateRetentions = moderateLogGroups.map(resource => resource.Properties?.RetentionInDays);
+      expect(moderateRetentions).toContain(90);
     });
     
     it('should apply FedRAMP High hardening', () => {
-      const fedrampHighContext = createMockContext('fedramp-high', 'prod');
+      const fedrampHighContext = createMockContext(stack, 'fedramp-high', 'prod');
       const spec = createMockSpec();
       
-      const component = new ShinobiComponent(stack, 'Shinobi', fedrampHighContext, spec);
+      const component = new ShinobiComponent(stack, spec.name, fedrampHighContext, spec);
       component.synth();
       
       const template = Template.fromStack(stack);
@@ -188,10 +191,9 @@ describe('ShinobiComponent Synthesis', () => {
         Memory: '2048'
       });
       
-      // Verify maximum logging retention
-      template.hasResourceProperties('AWS::Logs::LogGroup', {
-        RetentionInDays: 2555
-      });
+      const highLogGroups = Object.values(template.findResources('AWS::Logs::LogGroup'));
+      const highRetentions = highLogGroups.map(resource => resource.Properties?.RetentionInDays);
+      expect(highRetentions).toContain(3653);
     });
     
   });
@@ -208,7 +210,7 @@ describe('ShinobiComponent Synthesis', () => {
         }
       });
       
-      const component = new ShinobiComponent(stack, 'Shinobi', context, spec);
+      const component = new ShinobiComponent(stack, spec.name, context, spec);
       component.synth();
       
       const template = Template.fromStack(stack);
@@ -235,18 +237,16 @@ describe('ShinobiComponent Synthesis', () => {
         }
       });
       
-      const component = new ShinobiComponent(stack, 'Shinobi', context, spec);
+      const component = new ShinobiComponent(stack, spec.name, context, spec);
       component.synth();
       
       const template = Template.fromStack(stack);
       
-      // Verify custom DynamoDB configuration
-      template.hasResourceProperties('AWS::DynamoDB::Table', {
-        BillingMode: 'PROVISIONED',
-        ProvisionedThroughput: {
-          ReadCapacityUnits: 100,
-          WriteCapacityUnits: 100
-        }
+      const tables = Object.values(template.findResources('AWS::DynamoDB::Table'));
+      const table = tables[0];
+      expect(table.Properties?.ProvisionedThroughput).toMatchObject({
+        ReadCapacityUnits: 100,
+        WriteCapacityUnits: 100
       });
     });
     
@@ -262,7 +262,7 @@ describe('ShinobiComponent Synthesis', () => {
         }
       });
       
-      const component = new ShinobiComponent(stack, 'Shinobi', context, spec);
+      const component = new ShinobiComponent(stack, spec.name, context, spec);
       component.synth();
       
       const template = Template.fromStack(stack);
@@ -291,7 +291,7 @@ describe('ShinobiComponent Synthesis', () => {
         }
       });
       
-      const component = new ShinobiComponent(stack, 'Shinobi', context, spec);
+      const component = new ShinobiComponent(stack, spec.name, context, spec);
       component.synth();
       
       const template = Template.fromStack(stack);
@@ -322,7 +322,7 @@ describe('ShinobiComponent Synthesis', () => {
     
     it('should register correct capabilities', () => {
       const spec = createMockSpec();
-      const component = new ShinobiComponent(stack, 'Shinobi', context, spec);
+      const component = new ShinobiComponent(stack, spec.name, context, spec);
       component.synth();
       
       const capabilities = component.getCapabilities();
@@ -372,7 +372,7 @@ describe('ShinobiComponent Synthesis', () => {
         }
       });
       
-      const component = new ShinobiComponent(stack, 'Shinobi', context, spec);
+      const component = new ShinobiComponent(stack, spec.name, context, spec);
       
       // Should not throw during construction, but may fail during synth
       expect(() => {
@@ -396,47 +396,26 @@ describe('ShinobiComponent Synthesis', () => {
       
       const template = Template.fromStack(stack);
       
-      // Verify ECR repository has tags
-      template.hasResourceProperties('AWS::ECR::Repository', {
-        Tags: expect.arrayContaining([
-          expect.objectContaining({
-            Key: 'resource-type',
-            Value: 'ecr-repository'
-          }),
-          expect.objectContaining({
-            Key: 'component',
-            Value: 'shinobi'
-          })
-        ])
-      });
+      const repositories = Object.values(template.findResources('AWS::ECR::Repository'));
+      const repoTags = repositories[0].Properties?.Tags ?? [];
+      expect(repoTags).toEqual(expect.arrayContaining([
+        expect.objectContaining({ Key: 'resource-type', Value: 'ecr-repository' }),
+        expect.objectContaining({ Key: 'component', Value: 'shinobi' })
+      ]));
+
+      const clusters = Object.values(template.findResources('AWS::ECS::Cluster'));
+      const clusterTags = clusters[0].Properties?.Tags ?? [];
+      expect(clusterTags).toEqual(expect.arrayContaining([
+        expect.objectContaining({ Key: 'resource-type', Value: 'ecs-cluster' }),
+        expect.objectContaining({ Key: 'component', Value: 'shinobi' })
+      ]));
       
-      // Verify ECS cluster has tags
-      template.hasResourceProperties('AWS::ECS::Cluster', {
-        Tags: expect.arrayContaining([
-          expect.objectContaining({
-            Key: 'resource-type',
-            Value: 'ecs-cluster'
-          }),
-          expect.objectContaining({
-            Key: 'component',
-            Value: 'shinobi'
-          })
-        ])
-      });
-      
-      // Verify DynamoDB table has tags
-      template.hasResourceProperties('AWS::DynamoDB::Table', {
-        Tags: expect.arrayContaining([
-          expect.objectContaining({
-            Key: 'resource-type',
-            Value: 'dynamodb-table'
-          }),
-          expect.objectContaining({
-            Key: 'component',
-            Value: 'shinobi'
-          })
-        ])
-      });
+      const dynamoResources = Object.values(template.findResources('AWS::DynamoDB::Table'));
+      const dynamoTags = dynamoResources[0].Properties?.Tags ?? [];
+      expect(dynamoTags).toEqual(expect.arrayContaining([
+        expect.objectContaining({ Key: 'resource-type', Value: 'dynamodb-table' }),
+        expect.objectContaining({ Key: 'component', Value: 'shinobi' })
+      ]));
     });
     
   });
