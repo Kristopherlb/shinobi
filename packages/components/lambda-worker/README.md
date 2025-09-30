@@ -1,49 +1,34 @@
 # Lambda Worker Component
 
-Enterprise-grade asynchronous Lambda worker component with comprehensive security, compliance, and operational capabilities. Built on the platform ConfigBuilder contract with advanced features including dead letter queues, event source integration, performance optimization, and circuit breaker patterns.
+CDK construct for deploying AWS Lambda functions configured for asynchronous workloads. Provides enterprise-grade event processing, data transformation, and background job capabilities with comprehensive monitoring and security features.
 
-## Overview
+## Key Features
 
-The Lambda Worker Component provides a production-ready foundation for asynchronous workloads including:
-- **Event Processing**: SQS queues, EventBridge rules, and scheduled tasks
-- **Data Processing**: ETL pipelines, batch processing, and stream processing
-- **Background Jobs**: Image processing, document conversion, and notification delivery
-- **Microservice Integration**: Async communication between services
+- **ConfigBuilder Integration** – Five-layer configuration precedence managed by the shared `ConfigBuilder` with framework defaults
+- **Multi-Event Source Support** – SQS queues, EventBridge schedules, and EventBridge pattern matching
+- **Dead Letter Queue Handling** – Automatic failure handling with configurable retry policies
+- **Advanced Event Processing** – Batch processing, scaling configuration, and custom event filtering
+- **Observability & Monitoring** – CloudWatch alarms, OpenTelemetry integration, and structured logging
+- **VPC & Encryption Ready** – Network isolation, KMS encryption, and security group management
+- **Performance Optimization** – Reserved concurrency, provisioned concurrency, and memory tuning
+- **Security Hardening** – Falco instrumentation, environment variable encryption, and least-privilege IAM
+- **CDK Nag Compliance** – Automated security validation with comprehensive suppressions for legitimate use cases
 
-## Core Capabilities
+## Supported Runtimes
 
-### **🔧 Runtime Configuration**
-- **Multi-Runtime Support**: Node.js 18.x/20.x, Python 3.9/3.10/3.11
-- **Architecture Options**: x86_64 and ARM64 (Graviton2) for cost optimization
-- **Memory & Timeout**: Configurable from 128MB to 10GB, 1s to 15min timeout
-- **Reserved Concurrency**: Precise resource allocation and cost control
+- Node.js: `nodejs18.x`, `nodejs20.x`
+- Python: `python3.9`, `python3.10`, `python3.11`
 
-### **🛡️ Security & Compliance**
-- **CDK Nag Integration**: Automated security validation with 12+ compliance checks
-- **Input Validation**: Multi-layer validation preventing misconfigurations
-- **Framework Compliance**: Commercial, FedRAMP Moderate/High, HIPAA, SOX support
-- **VPC Integration**: Network isolation with configurable subnets and security groups
-- **Encryption**: KMS integration for environment variables and data at rest
+## Architecture Options
 
-### **📊 Advanced Features**
-- **Dead Letter Queue (DLQ)**: Automatic failure handling with SQS integration
-- **Event Sources**: SQS, EventBridge schedule, and EventBridge pattern support
-- **Performance Optimization**: Provisioned concurrency, reserved concurrency, SnapStart
-- **Circuit Breaker**: Automatic failure detection and recovery patterns
-- **Comprehensive Monitoring**: CloudWatch alarms for errors, throttles, duration, and custom metrics
+- `x86_64` - Intel/AMD processors
+- `arm64` - AWS Graviton2 processors (cost-optimized)
 
-### **🔍 Observability & Monitoring**
-- **OpenTelemetry Integration**: Structured logging with trace correlation
-- **X-Ray Tracing**: Distributed tracing for complex workflows
-- **Lambda Powertools**: Enhanced observability with business metrics and parameter store integration
-- **CloudWatch Dashboards**: Pre-configured monitoring and alerting
-- **Compliance Scoring**: 0-100 scale validation with detailed remediation guidance
+## Event Source Types
 
-### **⚡ Performance & Reliability**
-- **Auto-Scaling**: Intelligent scaling based on utilization patterns
-- **Error Handling**: Retry logic with exponential backoff
-- **Resource Optimization**: Memory and timeout recommendations
-- **Cost Monitoring**: Automated cost tracking and optimization alerts
+- `sqs` - SQS queue triggers
+- `eventBridge` - EventBridge schedule triggers  
+- `eventBridgePattern` - EventBridge pattern matching triggers
 
 ## Configuration Guide
 
@@ -187,51 +172,147 @@ components:
         Owner: platform-team
 ```
 
-### **Framework-Specific Defaults**
+## Configuration Reference
 
-Configuration inherits defaults from compliance framework files:
-- `config/commercial.yml` - Standard commercial defaults
-- `config/fedramp-moderate.yml` - FedRAMP Moderate compliance requirements
-- `config/fedramp-high.yml` - FedRAMP High compliance requirements
-- `config/hipaa.yml` - HIPAA compliance requirements
-- `config/sox.yml` - SOX compliance requirements
+### Required Fields
 
-## Key Configuration Sections
+| Field | Type | Description |
+|-------|------|-------------|
+| `functionName` | string | Lambda function name |
+| `handler` | string | Function entry point (e.g., `index.handler`) |
+| `runtime` | string | Runtime version (`nodejs18.x`, `nodejs20.x`, `python3.9`, `python3.10`, `python3.11`) |
+| `architecture` | string | CPU architecture (`x86_64` or `arm64`) |
+| `memorySize` | number | Memory allocation in MB |
+| `timeoutSeconds` | number | Function timeout in seconds |
+| `codePath` | string | Path to function code directory |
+| `environment` | object | Environment variables |
+| `logging` | object | Log configuration |
+| `tracing` | object | X-Ray tracing configuration |
+| `observability` | object | OpenTelemetry configuration |
+| `securityTools` | object | Security tool configuration |
+| `monitoring` | object | CloudWatch monitoring configuration |
+| `hardeningProfile` | string | Hardening profile name |
+| `removalPolicy` | string | CDK removal policy (`retain` or `destroy`) |
+| `tags` | object | Resource tags |
 
-| Path | Description |
-|------|-------------|
-| `handler` | Required Lambda handler (`file.export`). |
-| `runtime`, `architecture`, `memorySize`, `timeoutSeconds` | Core execution attributes. |
-| `environment` | Plain key/value environment variables. |
-| `deadLetterQueue` | Enable + queue ARN for async failure handling. |
-| `eventSources[]` | SQS queues, EventBridge schedules, or patterns that trigger the function. |
-| `vpc` | Optional VPC integration (VPC ID plus subnets/security-groups). |
-| `kmsKeyArn` | Customer-managed key for environment variable encryption. |
-| `logging` | Log retention/format and log-level controls. |
-| `tracing` | Active or pass-through X-Ray tracing. |
-| `observability` | OpenTelemetry toggle, optional layer ARN, resource attributes. |
-| `securityTools` | Additional hardening toggles (Falco). |
-| `monitoring` | Enable CloudWatch alarms for errors/throttles/duration. |
-| `hardeningProfile` | Abstract profile exposed via capability metadata. |
+### Optional Fields
 
-## Capabilities
+| Field | Type | Description | Default |
+|-------|------|-------------|---------|
+| `description` | string | Function description | - |
+| `reservedConcurrency` | number | Concurrency limit | No limit |
+| `deadLetterQueue` | object | DLQ configuration | Disabled |
+| `eventSources` | array | Event source triggers | `[]` |
+| `vpc` | object | VPC configuration | Disabled |
+| `kmsKeyArn` | string | KMS key for encryption | AWS managed |
 
-- `lambda:function` – ARN, name, runtime, timeout, and hardening profile of the
-  worker function.
+### Event Source Configuration
 
-## Testing
+#### SQS Event Source
+```yaml
+eventSources:
+  - type: sqs
+    queueArn: arn:aws:sqs:region:account:queue-name
+    batchSize: 10
+    enabled: true
+```
 
+#### EventBridge Schedule
+```yaml
+eventSources:
+  - type: eventbridge
+    scheduleExpression: "rate(5 minutes)"
+    enabled: true
+```
+
+#### EventBridge Pattern
+```yaml
+eventSources:
+  - type: eventBridgePattern
+    eventPattern:
+      source: ["aws.s3"]
+      detail-type: ["Object Created"]
+    enabled: true
+```
+
+### Dead Letter Queue
+```yaml
+deadLetterQueue:
+  enabled: true
+  queueArn: arn:aws:sqs:region:account:dlq-name
+  maxReceiveCount: 3
+```
+
+### VPC Configuration
+```yaml
+vpc:
+  enabled: true
+  vpcId: vpc-12345
+  subnetIds:
+    - subnet-12345
+    - subnet-67890
+  securityGroupIds:
+    - sg-abcdef
+```
+
+### Monitoring Configuration
+```yaml
+monitoring:
+  enabled: true
+  alarms:
+    errors:
+      enabled: true
+      threshold: 1
+      evaluationPeriods: 1
+      periodMinutes: 1
+      comparisonOperator: gt
+      treatMissingData: breaching
+      statistic: Sum
+      tags: {}
+    throttles:
+      enabled: true
+      threshold: 5
+      evaluationPeriods: 2
+      periodMinutes: 1
+      comparisonOperator: gt
+      treatMissingData: breaching
+      statistic: Sum
+      tags: {}
+    duration:
+      enabled: true
+      threshold: 5000
+      evaluationPeriods: 2
+      periodMinutes: 1
+      comparisonOperator: gt
+      treatMissingData: breaching
+      statistic: Average
+      tags: {}
+```
+
+## Development
+
+### Build
 ```bash
-corepack pnpm exec jest --runTestsByPath \
-  packages/components/lambda-worker/tests/lambda-worker.builder.test.ts \
-  packages/components/lambda-worker/tests/lambda-worker.component.synthesis.test.ts
+pnpm build
+```
+
+### Test
+```bash
+pnpm test
+```
+
+### Validate
+```bash
+svc validate --env dev
+```
+
+### Plan
+```bash
+svc plan --env prod
 ```
 
 ## Notes
 
-- The component does **not** infer behaviour from `context.complianceFramework`;
-  enforce compliance using the segregated config defaults.
-- Provide a real `codePath` containing your built artefacts; tests use a small
-  fixture under `tests/fixtures/basic-lambda` for synthesis.
-- When VPC integration is enabled, ensure the specified subnets/security groups
-  exist in the deployment account/region.
+- Provide a real `codePath` containing your built artifacts
+- When VPC integration is enabled, ensure the specified subnets/security groups exist
+- The component uses the platform ConfigBuilder for configuration precedence

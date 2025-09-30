@@ -25,16 +25,45 @@ import { LambdaWorkerValidator } from './validation/lambda-worker.validator';
 import { LambdaAdvancedFeaturesService } from '@shinobi/core/platform/services/lambda-advanced-features';
 import { LambdaObservabilityService } from '@shinobi/core/platform/services/lambda-powertools';
 
+/**
+ * Lambda Worker Component
+ * 
+ * CDK construct for deploying AWS Lambda functions configured for asynchronous workloads.
+ * Supports SQS, EventBridge, and scheduled event sources with dead letter queue handling.
+ * 
+ * @example
+ * ```typescript
+ * const worker = new LambdaWorkerComponent(scope, 'MyWorker', context, spec);
+ * worker.synth();
+ * ```
+ */
 export class LambdaWorkerComponent extends BaseComponent {
   private lambdaFunction?: lambda.Function;
   private config?: LambdaWorkerConfig;
   private eventRules: events.Rule[] = [];
   private advancedFeatures?: LambdaAdvancedFeaturesService;
 
+  /**
+   * Creates a new Lambda Worker Component
+   * 
+   * @param scope - The CDK construct scope
+   * @param id - Unique identifier for this component
+   * @param context - Component context containing environment and compliance information
+   * @param spec - Component specification from the manifest
+   */
   constructor(scope: Construct, id: string, context: ComponentContext, spec: ComponentSpec) {
     super(scope, id, context, spec);
   }
 
+  /**
+   * Synthesizes the Lambda Worker component
+   * 
+   * Builds the configuration, validates inputs, creates the Lambda function,
+   * configures event sources, applies CDK Nag suppressions, and sets up monitoring.
+   * 
+   * @throws {Error} When configuration validation fails
+   * @throws {Error} When required configuration is missing
+   */
   public synth(): void {
     const builder = new LambdaWorkerComponentConfigBuilder({
       context: this.context,
@@ -73,15 +102,35 @@ export class LambdaWorkerComponent extends BaseComponent {
     });
   }
 
+  /**
+   * Gets the component capabilities
+   * 
+   * @returns The component capabilities including Lambda function metadata
+   * @throws {Error} When component has not been synthesized
+   */
   public getCapabilities(): ComponentCapabilities {
     this.validateSynthesized();
     return this.capabilities;
   }
 
+  /**
+   * Gets the component type
+   * 
+   * @returns The component type identifier
+   */
   public getType(): string {
     return 'lambda-worker';
   }
 
+  /**
+   * Creates the AWS Lambda function
+   * 
+   * Configures the Lambda function with runtime, architecture, memory, timeout,
+   * environment variables, VPC settings, and other core properties.
+   * 
+   * @returns The configured Lambda function
+   * @throws {Error} When configuration is missing or invalid
+   */
   private createLambdaFunction(): lambda.Function {
     const runtime = this.mapRuntime(this.config!.runtime);
     const architecture = this.mapArchitecture(this.config!.architecture);
@@ -153,6 +202,14 @@ export class LambdaWorkerComponent extends BaseComponent {
     return lambdaFunction;
   }
 
+  /**
+   * Builds environment variables for the Lambda function
+   * 
+   * Merges user-defined environment variables with system-level configuration
+   * including log levels and security tool settings.
+   * 
+   * @returns Environment variables object for Lambda function
+   */
   private buildEnvironment(): Record<string, string> {
     const env: Record<string, string> = {
       ...this.config!.environment,
@@ -167,6 +224,12 @@ export class LambdaWorkerComponent extends BaseComponent {
     return env;
   }
 
+  /**
+   * Configures event sources for the Lambda function
+   * 
+   * Iterates through configured event sources and sets up the appropriate
+   * AWS event source mappings (SQS, EventBridge schedule, EventBridge patterns).
+   */
   private configureEventSources(): void {
     this.config!.eventSources.forEach((source, index) => {
       if (!this.lambdaFunction) {
@@ -189,6 +252,15 @@ export class LambdaWorkerComponent extends BaseComponent {
     });
   }
 
+  /**
+   * Configures SQS event source for the Lambda function
+   * 
+   * Creates an SQS event source mapping that triggers the Lambda function
+   * when messages are available in the specified SQS queue.
+   * 
+   * @param source - SQS event source configuration
+   * @param index - Index for unique resource naming
+   */
   private configureSqsEventSource(source: LambdaEventSource, index: number): void {
     if (source.type !== 'sqs') {
       return;
@@ -208,6 +280,15 @@ export class LambdaWorkerComponent extends BaseComponent {
     this.lambdaFunction!.addEventSource(eventSource);
   }
 
+  /**
+   * Configures EventBridge schedule rule for the Lambda function
+   * 
+   * Creates a scheduled EventBridge rule that triggers the Lambda function
+   * based on a cron expression or rate expression.
+   * 
+   * @param source - EventBridge schedule configuration
+   * @param index - Index for unique resource naming
+   */
   private configureEventBridgeRule(source: LambdaEventSource, index: number): void {
     if (source.type !== 'eventBridge') {
       return;
@@ -225,6 +306,15 @@ export class LambdaWorkerComponent extends BaseComponent {
     this.eventRules.push(rule);
   }
 
+  /**
+   * Configures EventBridge pattern rule for the Lambda function
+   * 
+   * Creates an EventBridge rule that triggers the Lambda function
+   * when events matching the specified pattern are received.
+   * 
+   * @param source - EventBridge pattern configuration
+   * @param index - Index for unique resource naming
+   */
   private configureEventBridgePattern(source: LambdaEventSource, index: number): void {
     if (source.type !== 'eventBridgePattern') {
       return;
@@ -247,6 +337,12 @@ export class LambdaWorkerComponent extends BaseComponent {
     this.eventRules.push(rule);
   }
 
+  /**
+   * Configures CloudWatch monitoring and alarms
+   * 
+   * Sets up CloudWatch alarms for Lambda function errors, throttles, and duration
+   * based on the monitoring configuration.
+   */
   private configureMonitoring(): void {
     if (!this.config?.monitoring.enabled || !this.lambdaFunction) {
       return;
@@ -307,6 +403,12 @@ export class LambdaWorkerComponent extends BaseComponent {
     });
   }
 
+  /**
+   * Configures observability features for the Lambda function
+   * 
+   * Sets up OpenTelemetry integration, log formatting, and other observability
+   * features based on the configuration.
+   */
   private configureObservability(): void {
     if (!this.lambdaFunction) {
       return;
@@ -391,6 +493,14 @@ export class LambdaWorkerComponent extends BaseComponent {
     }
   }
 
+  /**
+   * Builds OpenTelemetry resource attributes string
+   * 
+   * Combines the function name with additional resource attributes
+   * from configuration into a comma-separated string format.
+   * 
+   * @returns OpenTelemetry resource attributes string
+   */
   private buildOtelResourceAttributes(): string {
     const attributes: Record<string, string> = {
       'service.name': this.config!.functionName,
@@ -403,7 +513,11 @@ export class LambdaWorkerComponent extends BaseComponent {
   }
 
   /**
-   * Configure advanced Lambda features
+   * Configures advanced Lambda features using the platform service
+   * 
+   * Sets up dead letter queues, event sources, performance optimizations,
+   * circuit breakers, and security enhancements through the unified
+   * LambdaAdvancedFeaturesService.
    */
   private configureAdvancedFeatures(): void {
     if (!this.advancedFeatures || !this.config) {
@@ -456,7 +570,12 @@ export class LambdaWorkerComponent extends BaseComponent {
   }
 
   /**
-   * Validate Lambda Worker configuration
+   * Validates Lambda Worker configuration
+   * 
+   * Performs comprehensive validation of the configuration including
+   * security, performance, and compliance checks using the validator.
+   * 
+   * @throws {Error} When configuration validation fails
    */
   private validateConfiguration(): void {
     if (!this.config) {
@@ -498,8 +617,12 @@ export class LambdaWorkerComponent extends BaseComponent {
   }
 
   /**
-   * Apply CDK Nag suppressions for Lambda-specific compliance requirements
-   * Suppresses warnings for legitimate Lambda use cases that may trigger security alerts
+   * Applies CDK Nag suppressions for Lambda-specific compliance requirements
+   * 
+   * Suppresses warnings for legitimate Lambda use cases that may trigger
+   * security alerts but are acceptable for the configured use case.
+   * 
+   * @param lambdaFunction - The Lambda function to apply suppressions to
    */
   private applyCdkNagSuppressions(lambdaFunction: lambda.Function): void {
     // AwsSolutions-L1: Lambda runtime version - Allow older runtimes for compatibility

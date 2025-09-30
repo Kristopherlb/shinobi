@@ -28,6 +28,18 @@ import {
 import { LambdaApiValidator } from '../validation/lambda-api.validator';
 import { LambdaAdvancedFeaturesService } from '@shinobi/core/platform/services/lambda-advanced-features';
 
+/**
+ * Lambda API Component
+ * 
+ * CDK construct for deploying AWS Lambda functions with API Gateway REST API integration.
+ * Supports configurable CORS, throttling, usage plans, monitoring, and VPC deployment.
+ * 
+ * @example
+ * ```typescript
+ * const api = new LambdaApiComponent(scope, 'MyAPI', context, spec);
+ * api.synth();
+ * ```
+ */
 export class LambdaApiComponent extends BaseComponent {
   private lambdaFunction?: lambda.Function;
   private restApi?: apigw.RestApi;
@@ -37,10 +49,27 @@ export class LambdaApiComponent extends BaseComponent {
   private config?: LambdaApiConfig;
   private advancedFeatures?: LambdaAdvancedFeaturesService;
 
+  /**
+   * Creates a new Lambda API Component
+   * 
+   * @param scope - The CDK construct scope
+   * @param id - Unique identifier for this component
+   * @param context - Component context containing environment and compliance information
+   * @param spec - Component specification from the manifest
+   */
   constructor(scope: Construct, id: string, context: ComponentContext, spec: ComponentSpec) {
     super(scope, id, context, spec);
   }
 
+  /**
+   * Synthesizes the Lambda API component
+   * 
+   * Builds the configuration, validates inputs, creates the Lambda function and API Gateway,
+   * configures monitoring, applies CDK Nag suppressions, and sets up advanced features.
+   * 
+   * @throws {Error} When configuration validation fails
+   * @throws {Error} When required configuration is missing
+   */
   public synth(): void {
     const builder = new LambdaApiComponentConfigBuilder({
       context: this.context,
@@ -110,15 +139,35 @@ export class LambdaApiComponent extends BaseComponent {
     });
   }
 
+  /**
+   * Gets the component capabilities
+   * 
+   * @returns The component capabilities including Lambda function and API Gateway metadata
+   * @throws {Error} When component has not been synthesized
+   */
   public getCapabilities(): ComponentCapabilities {
     this.validateSynthesized();
     return this.capabilities;
   }
 
+  /**
+   * Gets the component type
+   * 
+   * @returns The component type identifier
+   */
   public getType(): string {
     return 'lambda-api';
   }
 
+  /**
+   * Creates the AWS Lambda function
+   * 
+   * Configures the Lambda function with runtime, architecture, memory, timeout,
+   * environment variables, VPC settings, and other core properties.
+   * 
+   * @returns The configured Lambda function
+   * @throws {Error} When configuration is missing or invalid
+   */
   private createLambdaFunction(): lambda.Function {
     const runtime = this.mapRuntime(this.config!.runtime);
     const architecture = this.mapArchitecture(this.config!.architecture);
@@ -363,6 +412,14 @@ export class LambdaApiComponent extends BaseComponent {
     return restApi;
   }
 
+  /**
+   * Configures API Gateway usage plan
+   * 
+   * Sets up throttling and quota limits for the API Gateway if enabled
+   * in the configuration.
+   * 
+   * @param restApi - The API Gateway REST API to configure
+   */
   private configureUsagePlan(restApi: apigw.RestApi): void {
     const usagePlanConfig = this.config!.api.usagePlan;
 
@@ -399,6 +456,12 @@ export class LambdaApiComponent extends BaseComponent {
     this.applyStandardTags(this.usagePlan, usagePlanTags);
   }
 
+  /**
+   * Configures CloudWatch monitoring and alarms
+   * 
+   * Sets up CloudWatch alarms for Lambda function errors, throttles, duration
+   * and API Gateway 4xx/5xx errors based on the monitoring configuration.
+   */
   private configureMonitoring(): void {
     if (!this.config?.monitoring.enabled) {
       return;
@@ -447,6 +510,13 @@ export class LambdaApiComponent extends BaseComponent {
     }
   }
 
+  /**
+   * Ensures a CloudWatch alarm is created for Lambda metrics
+   * 
+   * @param id - Unique identifier for the alarm construct
+   * @param config - Alarm configuration
+   * @param options - Alarm options including metric and name suffix
+   */
   private ensureLambdaAlarm(id: string, config: LambdaApiAlarmConfig, options: { metric: cloudwatch.IMetric; alarmNameSuffix: string }): void {
     if (!config.enabled) {
       return;
@@ -469,6 +539,13 @@ export class LambdaApiComponent extends BaseComponent {
     });
   }
 
+  /**
+   * Ensures a CloudWatch alarm is created for API Gateway metrics
+   * 
+   * @param id - Unique identifier for the alarm construct
+   * @param config - Alarm configuration
+   * @param options - Alarm options including metric and name suffix
+   */
   private ensureApiAlarm(id: string, config: LambdaApiAlarmConfig, options: { metric: cloudwatch.IMetric; alarmNameSuffix: string }): void {
     if (!config.enabled) {
       return;
@@ -514,6 +591,14 @@ export class LambdaApiComponent extends BaseComponent {
     });
   }
 
+  /**
+   * Configures observability features for the Lambda function
+   * 
+   * Sets up OpenTelemetry integration, log formatting, and other observability
+   * features based on the configuration.
+   * 
+   * @param lambdaFunction - The Lambda function to configure
+   */
   private configureLambdaObservability(lambdaFunction: lambda.Function): void {
     if (this.config?.observability.otelEnabled) {
       lambdaFunction.addEnvironment('AWS_LAMBDA_EXEC_WRAPPER', '/opt/otel-handler');
@@ -629,7 +714,11 @@ export class LambdaApiComponent extends BaseComponent {
   }
 
   /**
-   * Configure advanced features for Lambda API
+   * Configures advanced Lambda features using the platform service
+   * 
+   * Sets up dead letter queues, event sources, performance optimizations,
+   * circuit breakers, and security enhancements through the unified
+   * LambdaAdvancedFeaturesService.
    */
   private configureAdvancedFeatures(): void {
     if (!this.advancedFeatures || !this.config) {
