@@ -3,9 +3,12 @@
  * S3 bucket with encryption, versioning, and compliance features
  */
 
-export { 
-  S3BucketComponent,
-  S3_BUCKET_CONFIG_SCHEMA,
+export { S3BucketComponent } from './s3-bucket.component';
+
+export {
+  S3BucketComponentConfigBuilder,
   S3BucketConfig,
-  S3BucketConfigBuilder
-} from './s3-bucket.component';
+  S3_BUCKET_CONFIG_SCHEMA
+} from './s3-bucket.builder';
+
+export { S3BucketComponentCreator } from './s3-bucket.creator';

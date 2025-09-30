@@ -73,7 +73,7 @@ export class SecretsManagerComponentCreator implements IComponentCreator {
     spec: ComponentSpec, 
     context: ComponentContext
   ): SecretsManagerComponentComponent {
-    return new SecretsManagerComponentComponent(scope, spec, context);
+    return new SecretsManagerComponentComponent(scope, spec.name, context, spec);
   }
   
   /**
@@ -134,8 +134,10 @@ export class SecretsManagerComponentCreator implements IComponentCreator {
    */
   public getConstructHandles(): string[] {
     return [
-      'main'
-      // TODO: Add additional construct handles if needed
+      'main',
+      'secret',
+      'kmsKey',
+      'rotationLambda'
     ];
   }
 }

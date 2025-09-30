@@ -5,6 +5,8 @@
     "declarationMap": true
   },
   "include": [
+    "index.ts",
+    "Config.schema.json",
     "src/**/*"
   ],
   "exclude": [

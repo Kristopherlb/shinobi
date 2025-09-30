@@ -12,11 +12,16 @@ import * as kms from 'aws-cdk-lib/aws-kms';
 import * as cdk from 'aws-cdk-lib';
 import { Construct } from 'constructs';
 import {
-  Component,
+  BaseComponent,
   ComponentSpec,
   ComponentContext,
   ComponentCapabilities
-} from '@platform/contracts';
+} from '@shinobi/core';
+import {
+  AutoScalingGroupConfig,
+  AutoScalingGroupComponentConfigBuilder,
+  AutoScalingGroupAlarmConfig
+} from './auto-scaling-group.builder';
 
 /**
  * Configuration interface for Auto Scaling Group component
@@ -399,14 +404,16 @@ export class AutoScalingGroupConfigBuilder {
 /**
  * Auto Scaling Group Component implementing Component API Contract v1.0
  */
-export class AutoScalingGroupComponent extends Component {
+export class AutoScalingGroupComponent extends BaseComponent {
   private autoScalingGroup?: autoscaling.AutoScalingGroup;
   private launchTemplate?: ec2.LaunchTemplate;
   private securityGroup?: ec2.SecurityGroup;
   private role?: iam.Role;
   private instanceProfile?: iam.InstanceProfile;
-  private kmsKey?: kms.Key;
-  private config?: AutoScalingGroupConfig;
+  private kmsKey?: kms.IKey;
+  private config!: AutoScalingGroupConfig;
+  private cpuAlarm?: cloudwatch.Alarm;
+  private inServiceAlarm?: cloudwatch.Alarm;
 
   constructor(scope: Construct, id: string, context: ComponentContext, spec: ComponentSpec) {
     super(scope, id, context, spec);
@@ -416,33 +423,41 @@ export class AutoScalingGroupComponent extends Component {
     this.logComponentEvent('synthesis_start', 'Starting Auto Scaling Group synthesis');
     
     try {
-      const configBuilder = new AutoScalingGroupConfigBuilder(this.context, this.spec);
+      const configBuilder = new AutoScalingGroupComponentConfigBuilder({
+        context: this.context,
+        spec: this.spec
+      });
       this.config = configBuilder.buildSync();
 
-    this.createKmsKeyIfNeeded();
-    this.createInstanceRole();
-    this.createSecurityGroup();
-    this.createLaunchTemplate();
-    this.createAutoScalingGroup();
-    this.applyComplianceHardening();
-    this.configureObservabilityForAsg();
+      this.createKmsKeyIfNeeded();
+      this.createInstanceRole();
+      this.createSecurityGroup();
+      this.createLaunchTemplate();
+      this.createAutoScalingGroup();
+      this.applySecurityHardening();
+      this.configureObservabilityForAsg();
 
-    this.registerConstruct('autoScalingGroup', this.autoScalingGroup!);
-    this.registerConstruct('launchTemplate', this.launchTemplate!);
-    this.registerConstruct('securityGroup', this.securityGroup!);
-    this.registerConstruct('role', this.role!);
-    if (this.kmsKey) {
-      this.registerConstruct('kmsKey', this.kmsKey);
-    }
+      this.registerConstruct('main', this.autoScalingGroup!);
+      this.registerConstruct('autoScalingGroup', this.autoScalingGroup!);
+      this.registerConstruct('launchTemplate', this.launchTemplate!);
+      this.registerConstruct('securityGroup', this.securityGroup!);
+      this.registerConstruct('instanceRole', this.role!);
+      if (this.instanceProfile) {
+        this.registerConstruct('instanceProfile', this.instanceProfile);
+      }
+      if (this.kmsKey) {
+        this.registerConstruct('kmsKey', this.kmsKey);
+      }
 
-      this.registerCapability('compute:asg', this.buildAutoScalingGroupCapability());
-      
-      // Validate that synthesis was successful
-      this.validateSynthesized();
-      
+      this.registerCapability('compute:auto-scaling-group', this.buildAutoScalingGroupCapability());
+      this.registerCapability('monitoring:auto-scaling-group', {
+        cpuAlarmArn: this.cpuAlarm?.alarmArn,
+        inServiceAlarmArn: this.inServiceAlarm?.alarmArn
+      });
+
       this.logComponentEvent('synthesis_complete', 'Auto Scaling Group synthesis completed successfully');
     } catch (error) {
-      this.logError(error as Error, 'Auto Scaling Group synthesis');
+      this.logError(error as Error, 'auto-scaling-group synthesis');
       throw error;
     }
   }
@@ -457,27 +472,59 @@ export class AutoScalingGroupComponent extends Component {
   }
 
   private createKmsKeyIfNeeded(): void {
-    if (this.shouldUseCustomerManagedKey()) {
-      this.kmsKey = new kms.Key(this, 'EbsEncryptionKey', {
-        description: `EBS encryption key for ${this.spec.name} Auto Scaling Group`,
-        enableKeyRotation: this.context.complianceFramework === 'fedramp-high',
-        keyUsage: kms.KeyUsage.ENCRYPT_DECRYPT,
-        keySpec: kms.KeySpec.SYMMETRIC_DEFAULT
-      });
+    const kmsConfig = this.config.storage.kms;
+    if (kmsConfig.kmsKeyArn) {
+      this.kmsKey = kms.Key.fromKeyArn(this, 'ImportedKmsKey', kmsConfig.kmsKeyArn);
+      return;
     }
+
+    if (!kmsConfig.useCustomerManagedKey) {
+      this.kmsKey = undefined;
+      return;
+    }
+
+    const key = new kms.Key(this, 'EbsEncryptionKey', {
+      description: `EBS encryption key for ${this.spec.name} Auto Scaling Group`,
+      enableKeyRotation: kmsConfig.enableKeyRotation,
+      keyUsage: kms.KeyUsage.ENCRYPT_DECRYPT,
+      keySpec: kms.KeySpec.SYMMETRIC_DEFAULT
+    });
+
+    this.applyStandardTags(key, {
+      'resource-type': 'kms-key',
+      'component': this.spec.name
+    });
+
+    this.kmsKey = key;
   }
 
   private createInstanceRole(): void {
     this.role = new iam.Role(this, 'InstanceRole', {
       assumedBy: new iam.ServicePrincipal('ec2.amazonaws.com'),
       description: `IAM role for ${this.spec.name} Auto Scaling Group instances`,
-      managedPolicies: this.getBaseManagedPolicies()
+      managedPolicies: this.config.security.managedPolicies.map(policyName =>
+        iam.ManagedPolicy.fromAwsManagedPolicyName(policyName)
+      )
     });
 
-    this.applyCompliancePolicies();
+    if (this.config.security.attachLogDeliveryPolicy) {
+      this.role.addToPolicy(new iam.PolicyStatement({
+        effect: iam.Effect.ALLOW,
+        actions: ['logs:PutLogEvents', 'logs:CreateLogStream', 'logs:CreateLogGroup'],
+        resources: ['arn:aws:logs:*:*:*']
+      }));
+    }
+
+    this.applyStandardTags(this.role, {
+      'resource-type': 'iam-role',
+      'component': this.spec.name
+    });
 
     this.instanceProfile = new iam.InstanceProfile(this, 'InstanceProfile', {
       role: this.role
+    });
+    this.applyStandardTags(this.instanceProfile, {
+      'resource-type': 'iam-instance-profile'
     });
   }
 
@@ -486,23 +533,32 @@ export class AutoScalingGroupComponent extends Component {
     this.securityGroup = new ec2.SecurityGroup(this, 'InstanceSecurityGroup', {
       vpc,
       description: `Security group for ${this.spec.name} Auto Scaling Group`,
-      allowAllOutbound: !this.isComplianceFramework()
+      allowAllOutbound: this.config.vpc.allowAllOutbound
     });
+
+    this.applyStandardTags(this.securityGroup, {
+      'resource-type': 'security-group'
+    });
+
     this.applySecurityGroupRules();
   }
 
   private createLaunchTemplate(): void {
     this.launchTemplate = new ec2.LaunchTemplate(this, 'LaunchTemplate', {
       launchTemplateName: `${this.context.serviceName}-${this.spec.name}`,
-      instanceType: new ec2.InstanceType(this.config!.launchTemplate?.instanceType || 't3.micro'),
+      instanceType: new ec2.InstanceType(this.config.launchTemplate.instanceType),
       machineImage: this.getInstanceAmi(),
       userData: this.buildUserData(),
-      keyName: this.config!.launchTemplate?.keyName,
+      keyName: this.config.launchTemplate.keyName,
       securityGroup: this.securityGroup!,
       role: this.role!,
       blockDevices: this.buildBlockDevices(),
-      detailedMonitoring: this.shouldEnableDetailedMonitoring(),
-      requireImdsv2: this.shouldRequireImdsv2()
+      detailedMonitoring: this.config.launchTemplate.detailedMonitoring,
+      requireImdsv2: this.config.launchTemplate.requireImdsv2
+    });
+
+    this.applyStandardTags(this.launchTemplate, {
+      'resource-type': 'launch-template'
     });
   }
 
@@ -513,39 +569,20 @@ export class AutoScalingGroupComponent extends Component {
       vpc,
       vpcSubnets: this.getVpcSubnets(),
       launchTemplate: this.launchTemplate!,
-      minCapacity: this.config!.autoScaling?.minCapacity,
-      maxCapacity: this.config!.autoScaling?.maxCapacity,
-      desiredCapacity: this.config!.autoScaling?.desiredCapacity,
+      minCapacity: this.config.autoScaling.minCapacity,
+      maxCapacity: this.config.autoScaling.maxCapacity,
+      desiredCapacity: this.config.autoScaling.desiredCapacity,
       healthCheck: this.getHealthCheckType(),
       terminationPolicies: this.getTerminationPolicies(),
       updatePolicy: this.getUpdatePolicy()
     });
+
     this.applyAutoScalingGroupTags();
   }
 
-  private applyComplianceHardening(): void {
-    if(this.isComplianceFramework()){
-      this.role!.addManagedPolicy(iam.ManagedPolicy.fromAwsManagedPolicyName('AmazonSSMManagedInstanceCore'));
-      this.role!.addManagedPolicy(iam.ManagedPolicy.fromAwsManagedPolicyName('CloudWatchAgentServerPolicy'));
-    }
-    if(this.context.complianceFramework === 'fedramp-high'){
+  private applySecurityHardening(): void {
+    if (this.config.security.stigComplianceTag) {
       cdk.Tags.of(this.autoScalingGroup!).add('STIGCompliant', 'true');
-    }
-  }
-
-  private getBaseManagedPolicies(): iam.IManagedPolicy[] {
-    return this.isComplianceFramework() 
-      ? [iam.ManagedPolicy.fromAwsManagedPolicyName('AmazonSSMManagedInstanceCore')] 
-      : [];
-  }
-
-  private applyCompliancePolicies(): void {
-    if (this.isComplianceFramework()) {
-        this.role!.addToPolicy(new iam.PolicyStatement({
-        effect: iam.Effect.ALLOW,
-        actions: ['logs:PutLogEvents', 'logs:CreateLogStream', 'logs:CreateLogGroup'],
-        resources: ['arn:aws:logs:*:*:*']
-      }));
     }
   }
 
@@ -556,18 +593,24 @@ export class AutoScalingGroupComponent extends Component {
 
   private buildUserData(): ec2.UserData {
     const userData = ec2.UserData.forLinux();
-    if (this.config?.launchTemplate?.userData) {
+    if (this.config.launchTemplate.userData) {
       userData.addCommands(this.config.launchTemplate.userData);
     }
-    if (this.isComplianceFramework()) {
+    if (this.config.launchTemplate.installAgents.ssm) {
       userData.addCommands(
         'yum install -y amazon-ssm-agent',
         'systemctl enable amazon-ssm-agent',
         'systemctl start amazon-ssm-agent'
       );
     }
-    if (this.context.complianceFramework === 'fedramp-high') {
-      userData.addCommands('# STIG hardening scripts here');
+    if (this.config.launchTemplate.installAgents.cloudwatch) {
+      userData.addCommands(
+        'yum install -y amazon-cloudwatch-agent',
+        'systemctl enable amazon-cloudwatch-agent'
+      );
+    }
+    if (this.config.launchTemplate.installAgents.stigHardening) {
+      userData.addCommands('# Apply STIG hardening scripts');
     }
     return userData;
   }
@@ -575,7 +618,7 @@ export class AutoScalingGroupComponent extends Component {
   private buildBlockDevices(): ec2.BlockDevice[] {
     return [{
       deviceName: '/dev/xvda',
-      volume: ec2.BlockDeviceVolume.ebs(this.config!.storage?.rootVolumeSize!, {
+      volume: ec2.BlockDeviceVolume.ebs(this.config.storage.rootVolumeSize, {
         volumeType: this.getEbsVolumeType(),
         encrypted: this.shouldEnableEbsEncryption(),
         kmsKey: this.kmsKey,
@@ -585,8 +628,10 @@ export class AutoScalingGroupComponent extends Component {
   }
 
   private applyAutoScalingGroupTags(): void {
-    cdk.Tags.of(this.autoScalingGroup!).add('Name', `${this.context.serviceName}-${this.spec.name}`);
-    // ... add other mandatory tags
+    this.applyStandardTags(this.autoScalingGroup!, {
+      Name: `${this.context.serviceName}-${this.spec.name}`,
+      ...this.config.tags
+    });
   }
 
   private buildAutoScalingGroupCapability(): any {
@@ -596,38 +641,31 @@ export class AutoScalingGroupComponent extends Component {
       roleArn: this.role!.roleArn,
       securityGroupId: this.securityGroup!.securityGroupId,
       launchTemplateId: this.launchTemplate!.launchTemplateId,
-      launchTemplateName: this.launchTemplate!.launchTemplateName
+      launchTemplateName: this.launchTemplate!.launchTemplateName,
+      kmsKeyArn: this.kmsKey ? this.kmsKey.keyArn : undefined
     };
   }
 
   // --- Helper methods for compliance decisions and configurations ---
 
   private getVpc(): ec2.IVpc {
-      return this.context.vpc || ec2.Vpc.fromLookup(this, 'DefaultVpc', { isDefault: true });
-  }
+    if (this.context.vpc) {
+      return this.context.vpc;
+    }
 
-  private isComplianceFramework(): boolean {
-    return ['fedramp-moderate', 'fedramp-high'].includes(this.context.complianceFramework);
-  }
+    if (this.config.vpc.vpcId) {
+      return ec2.Vpc.fromLookup(this, 'ConfiguredVpc', { vpcId: this.config.vpc.vpcId });
+    }
 
-  private shouldUseCustomerManagedKey(): boolean {
-    return this.isComplianceFramework() && this.config?.storage?.kmsKeyArn === undefined;
+    return ec2.Vpc.fromLookup(this, 'DefaultVpc', { isDefault: true });
   }
 
   private shouldEnableEbsEncryption(): boolean {
-    return this.isComplianceFramework() || this.config?.storage?.encrypted === true;
-  }
-
-  private shouldEnableDetailedMonitoring(): boolean {
-    return this.isComplianceFramework();
-  }
-
-  private shouldRequireImdsv2(): boolean {
-    return this.isComplianceFramework();
+    return this.config.storage.encrypted;
   }
 
   private getInstanceAmi(): ec2.IMachineImage {
-    if (this.config?.launchTemplate?.ami?.amiId) {
+    if (this.config.launchTemplate.ami?.amiId) {
       const amiMap: { [key: string]: string } = {};
       amiMap[this.context.region!] = this.config.launchTemplate.ami.amiId;
       return ec2.MachineImage.genericLinux(amiMap);
@@ -637,37 +675,49 @@ export class AutoScalingGroupComponent extends Component {
   }
 
   private getVpcSubnets(): ec2.SubnetSelection {
-    if (this.config?.vpc?.subnetIds) {
-      return { subnets: this.config.vpc.subnetIds.map(id => ec2.Subnet.fromSubnetId(this, id, id)) };
+    if (this.config.vpc.subnetIds && this.config.vpc.subnetIds.length > 0) {
+      return {
+        subnets: this.config.vpc.subnetIds.map((id, index) =>
+          ec2.Subnet.fromSubnetId(this, `AsgSubnet${index}`, id)
+        )
+      };
     }
-    return { subnetType: this.isComplianceFramework() ? ec2.SubnetType.PRIVATE_WITH_EGRESS : ec2.SubnetType.PUBLIC };
+    return {
+      subnetType: this.config.vpc.subnetType === 'PRIVATE_WITH_EGRESS'
+        ? ec2.SubnetType.PRIVATE_WITH_EGRESS
+        : ec2.SubnetType.PUBLIC
+    };
   }
 
   private getEbsVolumeType(): ec2.EbsDeviceVolumeType {
-      const type = this.config?.storage?.rootVolumeType || 'gp3';
-      return ec2.EbsDeviceVolumeType[type.toUpperCase() as keyof typeof ec2.EbsDeviceVolumeType];
+    const type = this.config.storage.rootVolumeType || 'gp3';
+    return ec2.EbsDeviceVolumeType[type.toUpperCase() as keyof typeof ec2.EbsDeviceVolumeType];
   }
 
   private getHealthCheckType(): autoscaling.HealthCheck {
-      return this.config?.healthCheck?.type === 'ELB' 
-          ? autoscaling.HealthCheck.elb({ grace: cdk.Duration.seconds(this.config.healthCheck.gracePeriod!) }) 
-          : autoscaling.HealthCheck.ec2({ grace: cdk.Duration.seconds(this.config?.healthCheck?.gracePeriod!) });
+    if (this.config.healthCheck.type === 'ELB') {
+      return autoscaling.HealthCheck.elb({ grace: cdk.Duration.seconds(this.config.healthCheck.gracePeriod) });
+    }
+
+    return autoscaling.HealthCheck.ec2({ grace: cdk.Duration.seconds(this.config.healthCheck.gracePeriod) });
   }
 
   private getTerminationPolicies(): autoscaling.TerminationPolicy[] {
-      return this.config?.terminationPolicies?.map(p => autoscaling.TerminationPolicy[p.toUpperCase() as keyof typeof autoscaling.TerminationPolicy]) || [autoscaling.TerminationPolicy.DEFAULT];
+    return (this.config.terminationPolicies ?? ['Default']).map(policy =>
+      autoscaling.TerminationPolicy[policy.toUpperCase() as keyof typeof autoscaling.TerminationPolicy]
+    );
   }
 
   private getUpdatePolicy(): autoscaling.UpdatePolicy {
-      const rollingUpdate = this.config?.updatePolicy?.rollingUpdate;
-      if (rollingUpdate) {
-          return autoscaling.UpdatePolicy.rollingUpdate({
-              minInstancesInService: rollingUpdate.minInstancesInService,
-              maxBatchSize: rollingUpdate.maxBatchSize,
-              pauseTime: rollingUpdate.pauseTime ? cdk.Duration.parse(rollingUpdate.pauseTime) : undefined
-          });
-      }
-      return autoscaling.UpdatePolicy.rollingUpdate();
+    const rollingUpdate = this.config.updatePolicy?.rollingUpdate;
+    if (rollingUpdate) {
+      return autoscaling.UpdatePolicy.rollingUpdate({
+        minInstancesInService: rollingUpdate.minInstancesInService,
+        maxBatchSize: rollingUpdate.maxBatchSize,
+        pauseTime: rollingUpdate.pauseTime ? cdk.Duration.parse(rollingUpdate.pauseTime) : undefined
+      });
+    }
+    return autoscaling.UpdatePolicy.rollingUpdate();
   }
 
   /**
@@ -676,47 +726,82 @@ export class AutoScalingGroupComponent extends Component {
    */
   private configureObservabilityForAsg(): void {
     // CPU Utilization Alarm - Aggregated across all instances
-    const cpuAlarm = new cloudwatch.Alarm(this, 'CpuUtilizationAlarm', {
-      metric: new cloudwatch.Metric({
-        namespace: 'AWS/AutoScaling',
-        metricName: 'CPUUtilization',
-        dimensionsMap: {
-          AutoScalingGroupName: this.autoScalingGroup!.autoScalingGroupName
-        },
-        statistic: 'Average',
-        period: cdk.Duration.minutes(5)
-      }),
-      threshold: 80,
-      evaluationPeriods: 2,
-      treatMissingData: cloudwatch.TreatMissingData.NOT_BREACHING,
-      alarmDescription: `CPU utilization high for Auto Scaling Group ${this.spec.name}`,
-      alarmName: `${this.context.serviceName}-${this.spec.name}-cpu-high`
-    });
+    const cpuAlarmConfig = this.config.monitoring.alarms.cpuHigh;
+    if (cpuAlarmConfig.enabled) {
+      this.cpuAlarm = new cloudwatch.Alarm(this, 'CpuUtilizationAlarm', {
+        metric: new cloudwatch.Metric({
+          namespace: 'AWS/AutoScaling',
+          metricName: 'CPUUtilization',
+          dimensionsMap: {
+            AutoScalingGroupName: this.autoScalingGroup!.autoScalingGroupName
+          },
+          statistic: 'Average',
+          period: cdk.Duration.minutes(cpuAlarmConfig.periodMinutes ?? 5)
+        }),
+        threshold: cpuAlarmConfig.threshold ?? 80,
+        evaluationPeriods: cpuAlarmConfig.evaluationPeriods ?? 2,
+        comparisonOperator: this.mapComparisonOperator(cpuAlarmConfig.comparisonOperator ?? 'GT'),
+        treatMissingData: this.mapTreatMissingData(cpuAlarmConfig.treatMissingData ?? 'not-breaching'),
+        alarmDescription: `CPU utilization high for Auto Scaling Group ${this.spec.name}`,
+        alarmName: `${this.context.serviceName}-${this.spec.name}-cpu-high`
+      });
 
-    // In-Service Instances Alarm - Ensures minimum capacity is maintained
-    const instancesAlarm = new cloudwatch.Alarm(this, 'InServiceInstancesAlarm', {
-      metric: new cloudwatch.Metric({
-        namespace: 'AWS/AutoScaling',
-        metricName: 'GroupInServiceInstances',
-        dimensionsMap: {
-          AutoScalingGroupName: this.autoScalingGroup!.autoScalingGroupName
-        },
-        statistic: 'Average',
-        period: cdk.Duration.minutes(1)
-      }),
-      threshold: this.config?.autoScaling?.minCapacity || 1,
-      evaluationPeriods: 2,
-      comparisonOperator: cloudwatch.ComparisonOperator.LESS_THAN_THRESHOLD,
-      treatMissingData: cloudwatch.TreatMissingData.BREACHING,
-      alarmDescription: `In-service instances below minimum capacity for Auto Scaling Group ${this.spec.name}`,
-      alarmName: `${this.context.serviceName}-${this.spec.name}-instances-low`
-    });
+      this.applyStandardTags(this.cpuAlarm, { 'alarm-type': 'cpu-high' });
+      this.registerConstruct('cpuAlarm', this.cpuAlarm);
+    }
 
-    // Register the alarms as constructs
-    this.registerConstruct('cpuAlarm', cpuAlarm);
-    this.registerConstruct('instancesAlarm', instancesAlarm);
+    const inServiceConfig = this.config.monitoring.alarms.inService;
+    if (inServiceConfig.enabled) {
+      this.inServiceAlarm = new cloudwatch.Alarm(this, 'InServiceInstancesAlarm', {
+        metric: new cloudwatch.Metric({
+          namespace: 'AWS/AutoScaling',
+          metricName: 'GroupInServiceInstances',
+          dimensionsMap: {
+            AutoScalingGroupName: this.autoScalingGroup!.autoScalingGroupName
+          },
+          statistic: 'Average',
+          period: cdk.Duration.minutes(inServiceConfig.periodMinutes ?? 1)
+        }),
+        threshold: inServiceConfig.threshold ?? this.config.autoScaling.minCapacity,
+        evaluationPeriods: inServiceConfig.evaluationPeriods ?? 2,
+        comparisonOperator: this.mapComparisonOperator(inServiceConfig.comparisonOperator ?? 'LT'),
+        treatMissingData: this.mapTreatMissingData(inServiceConfig.treatMissingData ?? 'breaching'),
+        alarmDescription: `In-service instances below minimum capacity for Auto Scaling Group ${this.spec.name}`,
+        alarmName: `${this.context.serviceName}-${this.spec.name}-instances-low`
+      });
 
-    this.logComponentEvent('observability_configured', 
-      `Configured 2 CloudWatch alarms for ${this.context.complianceFramework} compliance`);
+      this.applyStandardTags(this.inServiceAlarm, { 'alarm-type': 'in-service' });
+      this.registerConstruct('instancesAlarm', this.inServiceAlarm);
+    }
+
+    this.logComponentEvent('observability_configured', 'Configured Auto Scaling Group monitoring');
+  }
+
+  private mapComparisonOperator(operator: AutoScalingGroupAlarmConfig['comparisonOperator']): cloudwatch.ComparisonOperator {
+    switch (operator) {
+      case 'LT':
+        return cloudwatch.ComparisonOperator.LESS_THAN_THRESHOLD;
+      case 'LTE':
+        return cloudwatch.ComparisonOperator.LESS_THAN_OR_EQUAL_TO_THRESHOLD;
+      case 'GTE':
+        return cloudwatch.ComparisonOperator.GREATER_THAN_OR_EQUAL_TO_THRESHOLD;
+      case 'GT':
+      default:
+        return cloudwatch.ComparisonOperator.GREATER_THAN_THRESHOLD;
+    }
+  }
+
+  private mapTreatMissingData(mode: AutoScalingGroupAlarmConfig['treatMissingData']): cloudwatch.TreatMissingData {
+    switch (mode) {
+      case 'breaching':
+        return cloudwatch.TreatMissingData.BREACHING;
+      case 'ignore':
+        return cloudwatch.TreatMissingData.IGNORE;
+      case 'missing':
+        return cloudwatch.TreatMissingData.MISSING;
+      case 'not-breaching':
+      default:
+        return cloudwatch.TreatMissingData.NOT_BREACHING;
+    }
   }
 }

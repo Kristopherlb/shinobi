@@ -9,6 +9,18 @@ import { IamPolicyComponentComponent } from '../iam-policy.component';
 import { IamPolicyConfig } from '../iam-policy.builder';
 import { ComponentContext, ComponentSpec } from '../../../platform/contracts/component-interfaces';
 
+jest.mock('@platform/logger', () => ({
+  Logger: {
+    setGlobalContext: jest.fn(),
+    getLogger: jest.fn(() => ({
+      info: jest.fn(),
+      warn: jest.fn(),
+      error: jest.fn(),
+      debug: jest.fn()
+    }))
+  }
+}), { virtual: true });
+
 const createMockContext = (
   complianceFramework: string = 'commercial',
   environment: string = 'dev'
@@ -40,7 +52,7 @@ const synthesizeComponent = (
   const app = new App();
   const stack = new Stack(app, 'TestStack');
   
-  const component = new IamPolicyComponentComponent(stack, spec, context);
+  const component = new IamPolicyComponentComponent(stack, spec.name, context, spec);
   component.synth();
   
   const template = Template.fromStack(stack);

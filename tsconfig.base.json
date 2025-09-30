@@ -18,20 +18,65 @@
     "downlevelIteration": true,
     "baseUrl": ".",
     "paths": {
+      "@shinobi/core/component": [
+        "packages/core/src/platform/contracts/component.ts"
+      ],
+      "@shinobi/core/component-interfaces": [
+        "packages/core/src/platform/contracts/component-interfaces.ts"
+      ],
+      "@shinobi/core/config-builder": [
+        "packages/core/src/platform/contracts/config-builder.ts"
+      ],
+      "@shinobi/core/logging-interfaces": [
+        "packages/core/src/platform/contracts/logging-interfaces.ts"
+      ],
+      "@shinobi/core/platform-services": [
+        "packages/core/src/platform/contracts/platform-services.ts"
+      ],
       "@shinobi/core": [
         "packages/core/src/index.ts"
       ],
       "@shinobi/core/*": [
-        "packages/core/src/index.ts"
+        "packages/core/src/*"
       ],
-      "@platform/logger": [
-        "packages/core/src/platform/logger/src/index.ts"
+      "@shinobi/observability-handlers": [
+        "packages/observability-handlers/src/index.ts"
       ],
-      "@shinobi/standards-otel/*": [
-        "packages/standards/otel/src"
+      "@shinobi/observability-handlers/*": [
+        "packages/observability-handlers/src/*"
+      ],
+      "@shinobi/standards-deprecation": [
+        "packages/standards/deprecation/src/index.ts"
+      ],
+      "@shinobi/standards-deprecation/*": [
+        "packages/standards/deprecation/src/*"
+      ],
+      "@shinobi/standards-iam-audit": [
+        "packages/standards/iam-audit/src/index.ts"
+      ],
+      "@shinobi/standards-iam-audit/*": [
+        "packages/standards/iam-audit/src/*"
+      ],
+      "@shinobi/standards-logging": [
+        "packages/standards/logging/src/index.ts"
       ],
       "@shinobi/standards-logging/*": [
         "packages/standards/logging/src/*"
+      ],
+      "@shinobi/standards-otel": [
+        "packages/standards/otel/src/index.ts"
+      ],
+      "@shinobi/standards-otel/*": [
+        "packages/standards/otel/src/*"
+      ],
+      "@shinobi/standards-tagging": [
+        "packages/standards/tagging/src/index.ts"
+      ],
+      "@shinobi/standards-tagging/*": [
+        "packages/standards/tagging/src/*"
+      ],
+      "@platform/logger": [
+        "packages/core/src/platform/logger/src/index.ts"
       ],
       "@platform/components/*": [
         "packages/components/*/src"

@@ -1,98 +1,228 @@
 /**
- * S3BucketComponent ConfigBuilder Test Suite
- * Implements Platform Testing Standard v1.0 - ConfigBuilder Testing
+ * S3 Bucket ConfigBuilder Tests
+ * Validates configuration precedence against the Platform Configuration Standard.
  */
 
-import { S3BucketComponentConfigBuilder, S3BucketConfig } from './s3-bucket.builder';
-import { ComponentContext, ComponentSpec } from '../../platform/contracts/component-interfaces';
+import { App, Stack } from 'aws-cdk-lib';
+import {
+  ComponentContext,
+  ComponentSpec
+} from '@shinobi/core';
+import {
+  S3BucketComponentConfigBuilder,
+  S3BucketConfig
+} from '../s3-bucket.builder';
 
-const createMockContext = (
-  complianceFramework: string = 'commercial',
-  environment: string = 'dev'
-): ComponentContext => ({
-  serviceName: 'test-service',
-  owner: 'test-team',
-  environment,
-  complianceFramework,
-  region: 'us-east-1',
-  account: '123456789012',
-  tags: {
-    'service-name': 'test-service',
-    'owner': 'test-team',
-    'environment': environment,
-    'compliance-framework': complianceFramework
-  }
-});
+const createContext = (framework: ComponentContext['complianceFramework']): ComponentContext => {
+  const app = new App();
+  const stack = new Stack(app, 'TestStack');
 
-const createMockSpec = (config: Partial<S3BucketConfig> = {}): ComponentSpec => ({
-  name: 'test-s3-bucket',
+  return {
+    serviceName: 'test-service',
+    environment: 'dev',
+    complianceFramework: framework,
+    scope: stack,
+    region: 'us-east-1',
+    accountId: '123456789012'
+  } as ComponentContext;
+};
+
+const createSpec = (config: Partial<S3BucketConfig> = {}): ComponentSpec => ({
+  name: 'test-bucket',
   type: 's3-bucket',
   config
 });
 
-describe('S3BucketComponentConfigBuilder', () => {
-  
-  describe('Hardcoded Fallbacks (Layer 1)', () => {
-    
-    it('should provide ultra-safe baseline configuration', () => {
-      const context = createMockContext();
-      const spec = createMockSpec();
-      
-      const builder = new S3BucketComponentConfigBuilder(context, spec);
-      const config = builder.buildSync();
-      
-      // Verify hardcoded fallbacks are applied
-      expect(config.monitoring?.enabled).toBe(true);
-      expect(config.monitoring?.detailedMetrics).toBe(false);
+describe('S3BucketComponentConfigBuilder__ConfigurationPrecedence__PlatformDefaults', () => {
+  /*
+   * Test Metadata: TP-S3-BUCKET-CONFIG-001
+   * {
+   *   "id": "TP-S3-BUCKET-CONFIG-001",
+   *   "level": "unit",
+   *   "capability": "Configuration precedence applies commercial defaults",
+   *   "oracle": "exact",
+   *   "invariants": ["Commercial framework uses safe defaults"],
+   *   "fixtures": ["ConfigBuilder", "Commercial framework context"],
+   *   "inputs": { "shape": "Empty component configuration", "notes": "Relies on /config/commercial.yml" },
+   *   "risks": [],
+   *   "dependencies": ["config/commercial.yml"],
+   *   "evidence": ["Merged configuration values"],
+   *   "compliance_refs": ["std://configuration"],
+   *   "ai_generated": false,
+   *   "human_reviewed_by": ""
+   * }
+   */
+  it('ConfigurationPrecedence__CommercialDefaults__UsesPlatformValues', () => {
+    const builder = new S3BucketComponentConfigBuilder({
+      context: createContext('commercial'),
+      spec: createSpec()
     });
-    
+
+    const config = builder.buildSync();
+
+    expect(config.versioning).toBe(true);
+    expect(config.encryption?.type).toBe('AES256');
+    expect(config.security?.tools?.clamavScan).toBe(false);
+    expect(config.monitoring?.enabled).toBe(false);
+    expect(config.compliance?.auditBucketLifecycleRules).toEqual([
+      expect.objectContaining({
+        id: 'audit-retention',
+        transitions: expect.arrayContaining([
+          expect.objectContaining({ storageClass: 'GLACIER', transitionAfter: 90 }),
+          expect.objectContaining({ storageClass: 'DEEP_ARCHIVE', transitionAfter: 365 })
+        ]),
+        expiration: expect.objectContaining({ days: 365 })
+      })
+    ]);
   });
-  
-  describe('Compliance Framework Defaults (Layer 2)', () => {
-    
-    it('should apply commercial compliance defaults', () => {
-      const context = createMockContext('commercial');
-      const spec = createMockSpec();
-      
-      const builder = new S3BucketComponentConfigBuilder(context, spec);
-      const config = builder.buildSync();
-      
-      expect(config.monitoring?.enabled).toBe(true);
-      expect(config.monitoring?.detailedMetrics).toBe(true);
+
+  /*
+   * Test Metadata: TP-S3-BUCKET-CONFIG-002
+   * {
+   *   "id": "TP-S3-BUCKET-CONFIG-002",
+   *   "level": "unit",
+   *   "capability": "FedRAMP Moderate defaults override commercial baseline",
+   *   "oracle": "exact",
+   *   "invariants": ["FedRAMP defaults match platform config"],
+   *   "fixtures": ["ConfigBuilder", "FedRAMP moderate context"],
+   *   "inputs": { "shape": "Empty component configuration", "notes": "Relies on /config/fedramp-moderate.yml" },
+   *   "risks": [],
+   *   "dependencies": ["config/fedramp-moderate.yml"],
+   *   "evidence": ["Merged configuration values"],
+   *   "compliance_refs": ["std://configuration"],
+   *   "ai_generated": false,
+   *   "human_reviewed_by": ""
+   * }
+   */
+  it('ConfigurationPrecedence__FedRAMPModerate__AppliesComplianceDefaults', () => {
+    const builder = new S3BucketComponentConfigBuilder({
+      context: createContext('fedramp-moderate'),
+      spec: createSpec()
     });
-    
-    it('should apply FedRAMP compliance defaults', () => {
-      const context = createMockContext('fedramp-moderate');
-      const spec = createMockSpec();
-      
-      const builder = new S3BucketComponentConfigBuilder(context, spec);
-      const config = builder.buildSync();
-      
-      expect(config.monitoring?.enabled).toBe(true);
-      expect(config.monitoring?.detailedMetrics).toBe(true); // Mandatory for FedRAMP
-    });
-    
+
+    const config = builder.buildSync();
+
+    expect(config.versioning).toBe(true);
+    expect(config.encryption?.type).toBe('KMS');
+    expect(config.security?.requireMfaDelete).toBe(true);
+    expect(config.monitoring?.enabled).toBe(true);
+    expect(config.security?.tools?.clamavScan).toBe(false);
+    expect(config.compliance?.auditBucketLifecycleRules).toEqual([
+      expect.objectContaining({
+        id: 'fedramp-moderate-audit-retention',
+        expiration: expect.objectContaining({ days: 1095 })
+      })
+    ]);
   });
-  
-  describe('5-Layer Precedence Chain', () => {
-    
-    it('should apply component overrides over platform defaults', () => {
-      const context = createMockContext('commercial');
-      const spec = createMockSpec({
-        monitoring: {
-          enabled: false,
-          detailedMetrics: false
+
+  /*
+   * Test Metadata: TP-S3-BUCKET-CONFIG-003
+   * {
+   *   "id": "TP-S3-BUCKET-CONFIG-003",
+   *   "level": "unit",
+   *   "capability": "FedRAMP overrides are honored by precedence chain",
+   *   "oracle": "exact",
+   *   "invariants": ["Manifest overrides win over framework defaults"],
+   *   "fixtures": ["ConfigBuilder", "FedRAMP moderate context"],
+   *   "inputs": { "shape": "Component config overriding encryption to AES256", "notes": "Ensures override is respected" },
+   *   "risks": ["Operator responsibility for compliance"],
+   *   "dependencies": [],
+   *   "evidence": ["Merged configuration values"],
+   *   "compliance_refs": ["std://configuration"],
+   *   "ai_generated": false,
+   *   "human_reviewed_by": ""
+   * }
+   */
+  it('ConfigurationPrecedence__FedRAMPOverrides__HonorsEncryptionOverride', () => {
+    const builder = new S3BucketComponentConfigBuilder({
+      context: createContext('fedramp-moderate'),
+      spec: createSpec({ encryption: { type: 'AES256' } })
+    });
+
+    const config = builder.buildSync();
+
+    expect(config.encryption?.type).toBe('AES256');
+  });
+
+  /*
+   * Test Metadata: TP-S3-BUCKET-CONFIG-004
+   * {
+   *   "id": "TP-S3-BUCKET-CONFIG-004",
+   *   "level": "unit",
+   *   "capability": "FedRAMP overrides allow disabling audit logging when specified",
+   *   "oracle": "exact",
+   *   "invariants": ["Component manifest drives final setting"],
+   *   "fixtures": ["ConfigBuilder", "FedRAMP high context"],
+   *   "inputs": { "shape": "Component config disabling audit logging", "notes": "Ensures override propagates" },
+   *   "risks": ["Reduced logging visibility"],
+   *   "dependencies": [],
+   *   "evidence": ["Merged configuration values"],
+   *   "compliance_refs": ["std://configuration"],
+   *   "ai_generated": false,
+   *   "human_reviewed_by": ""
+   * }
+   */
+  it('ConfigurationPrecedence__FedRAMPOverrides__AllowsAuditLoggingOverride', () => {
+    const builder = new S3BucketComponentConfigBuilder({
+      context: createContext('fedramp-high'),
+      spec: createSpec({ compliance: { auditLogging: false } })
+    });
+
+    const config = builder.buildSync();
+
+    expect(config.compliance?.auditLogging).toBe(false);
+  });
+
+  /*
+   * Test Metadata: TP-S3-BUCKET-CONFIG-005
+   * {
+   *   "id": "TP-S3-BUCKET-CONFIG-005",
+   *   "level": "unit",
+   *   "capability": "Builder merges custom audit lifecycle overrides",
+   *   "oracle": "exact",
+   *   "invariants": ["Developer overrides take precedence"],
+   *   "fixtures": ["ConfigBuilder", "Commercial context"],
+   *   "inputs": { "shape": "Component config specifying custom audit lifecycle", "notes": "Should replace defaults" },
+   *   "risks": ["Audit data retention mismatches"],
+   *   "dependencies": [],
+   *   "evidence": ["Merged configuration values"],
+   *   "compliance_refs": ["std://configuration"],
+   *   "ai_generated": false,
+   *   "human_reviewed_by": ""
+   * }
+   */
+  it('ConfigurationPrecedence__AuditLifecycleOverride__HonorsCustomRules', () => {
+    const builder = new S3BucketComponentConfigBuilder({
+      context: createContext('commercial'),
+      spec: createSpec({
+        compliance: {
+          auditLogging: true,
+          auditBucketLifecycleRules: [
+            {
+              id: 'custom-audit-retention',
+              enabled: true,
+              transitions: [
+                {
+                  storageClass: 'GLACIER',
+                  transitionAfter: 30
+                }
+              ],
+              expiration: {
+                days: 365
+              }
+            }
+          ]
         }
-      });
-      
-      const builder = new S3BucketComponentConfigBuilder(context, spec);
-      const config = builder.buildSync();
-      
-      // Verify component config overrides platform defaults
-      expect(config.monitoring?.enabled).toBe(false);
-      expect(config.monitoring?.detailedMetrics).toBe(false);
+      })
     });
-    
+
+    const config = builder.buildSync();
+
+    expect(config.compliance?.auditBucketLifecycleRules).toEqual([
+      expect.objectContaining({
+        id: 'custom-audit-retention',
+        transitions: [expect.objectContaining({ transitionAfter: 30 })]
+      })
+    ]);
   });
-  
 });

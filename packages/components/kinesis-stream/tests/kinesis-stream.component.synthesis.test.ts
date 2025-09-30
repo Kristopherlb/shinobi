@@ -1,94 +1,101 @@
-/**
- * KinesisStreamComponent Component Synthesis Test Suite
- * Implements Platform Testing Standard v1.0 - Component Synthesis Testing
- */
+jest.mock(
+  '@platform/logger',
+  () => ({
+    Logger: {
+      getLogger: () => ({ info: jest.fn(), warn: jest.fn(), error: jest.fn(), debug: jest.fn() }),
+      setGlobalContext: jest.fn()
+    }
+  }),
+  { virtual: true }
+);
 
-import { Template, Match } from 'aws-cdk-lib/assertions';
 import { App, Stack } from 'aws-cdk-lib';
-import { KinesisStreamComponentComponent } from '../kinesis-stream.component';
+import { Match, Template } from 'aws-cdk-lib/assertions';
+import { KinesisStreamComponent } from '../kinesis-stream.component';
 import { KinesisStreamConfig } from '../kinesis-stream.builder';
 import { ComponentContext, ComponentSpec } from '../../../platform/contracts/component-interfaces';
 
-const createMockContext = (
-  complianceFramework: string = 'commercial',
-  environment: string = 'dev'
-): ComponentContext => ({
-  serviceName: 'test-service',
-  owner: 'test-team',
-  environment,
-  complianceFramework,
+const createMockContext = (framework: string): ComponentContext => ({
+  serviceName: 'analytics-service',
+  owner: 'platform-team',
+  environment: 'dev',
+  complianceFramework: framework,
   region: 'us-east-1',
   account: '123456789012',
   tags: {
-    'service-name': 'test-service',
-    'owner': 'test-team',
-    'environment': environment,
-    'compliance-framework': complianceFramework
+    'service-name': 'analytics-service',
+    environment: 'dev',
+    'compliance-framework': framework
   }
 });
 
 const createMockSpec = (config: Partial<KinesisStreamConfig> = {}): ComponentSpec => ({
-  name: 'test-kinesis-stream',
+  name: 'ingest-events',
   type: 'kinesis-stream',
   config
 });
 
-const synthesizeComponent = (
-  context: ComponentContext,
-  spec: ComponentSpec
-): { component: KinesisStreamComponentComponent; template: Template } => {
+const synthesize = (context: ComponentContext, spec: ComponentSpec) => {
   const app = new App();
   const stack = new Stack(app, 'TestStack');
-  
-  const component = new KinesisStreamComponentComponent(stack, spec, context);
+  const component = new KinesisStreamComponent(stack, spec.name, context, spec);
   component.synth();
-  
-  const template = Template.fromStack(stack);
-  return { component, template };
+  return { component, template: Template.fromStack(stack) };
 };
 
-describe('KinesisStreamComponentComponent Synthesis', () => {
-  
-  describe('Default Happy Path Synthesis', () => {
-    
-    it('should synthesize basic kinesis-stream with commercial compliance', () => {
-      const context = createMockContext('commercial');
-      const spec = createMockSpec();
-      
-      const { template, component } = synthesizeComponent(context, spec);
-      
-      // TODO: Add specific CloudFormation resource assertions
-      // Verify component was created
-      expect(component).toBeDefined();
-      expect(component.getType()).toBe('kinesis-stream');
+describe('KinesisStreamComponent synthesis', () => {
+  it('creates commercial stream with baseline defaults', () => {
+    const { template } = synthesize(createMockContext('commercial'), createMockSpec());
+
+    template.hasResourceProperties('AWS::Kinesis::Stream', {
+      Name: 'ingest-events',
+      StreamModeDetails: Match.absent(),
+      ShardCount: 1,
+      RetentionPeriodHours: 24
     });
-    
   });
-  
-  describe('Component Capabilities and Constructs', () => {
-    
-    it('should register correct capabilities after synthesis', () => {
-      const context = createMockContext('commercial');
-      const spec = createMockSpec();
-      
-      const { component } = synthesizeComponent(context, spec);
-      
-      const capabilities = component.getCapabilities();
-      
-      // Verify component-specific capabilities
-      expect(capabilities).toBeDefined();
+
+  it('applies FedRAMP High hardened defaults', () => {
+    const { template } = synthesize(createMockContext('fedramp-high'), createMockSpec());
+
+    template.hasResourceProperties('AWS::Kinesis::Stream', {
+      Name: 'ingest-events',
+      ShardCount: Match.integerGreaterThan(1),
+      RetentionPeriodHours: Match.integerGreaterThanOrEqual(168)
     });
-    
-    it('should register construct handles for patches.ts access', () => {
-      const context = createMockContext('commercial');
-      const spec = createMockSpec();
-      
-      const { component } = synthesizeComponent(context, spec);
-      
-      // Verify main construct is registered
-      expect(component.getConstruct('main')).toBeDefined();
-    });
-    
   });
-  
+
+  it('respects manifest overrides for stream mode and encryption', () => {
+    const { template, component } = synthesize(
+      createMockContext('commercial'),
+      createMockSpec({
+        streamMode: 'on-demand',
+        encryption: {
+          type: 'aws-managed'
+        },
+        monitoring: {
+          enabled: true,
+          alarms: {
+            iteratorAgeMs: {
+              enabled: true,
+              threshold: 120000
+            }
+          }
+        }
+      })
+    );
+
+    template.hasResourceProperties('AWS::Kinesis::Stream', {
+      StreamModeDetails: Match.objectLike({
+        StreamMode: 'ON_DEMAND'
+      }),
+      StreamEncryption: Match.objectLike({
+        EncryptionType: 'KMS'
+      })
+    });
+
+    const capability = component.getCapabilities()['stream:kinesis'];
+    expect(capability.streamMode).toBe('on-demand');
+    expect(capability.encryption).toBe('aws-managed');
+  });
 });

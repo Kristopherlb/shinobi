@@ -11,7 +11,7 @@ import {
   ComponentContext, 
   IComponentCreator 
 } from '../../platform/contracts/component-interfaces';
-import { OpenSearchDomainComponentComponent } from './opensearch-domain.component';
+import { OpenSearchDomainComponent } from './opensearch-domain.component';
 import { OpenSearchDomainConfig, OPENSEARCH_DOMAIN_CONFIG_SCHEMA } from './opensearch-domain.builder';
 
 /**
@@ -69,11 +69,11 @@ export class OpenSearchDomainComponentCreator implements IComponentCreator {
    * Factory method to create component instances
    */
   public createComponent(
-    scope: Construct, 
-    spec: ComponentSpec, 
+    scope: Construct,
+    spec: ComponentSpec,
     context: ComponentContext
-  ): OpenSearchDomainComponentComponent {
-    return new OpenSearchDomainComponentComponent(scope, spec, context);
+  ): OpenSearchDomainComponent {
+    return new OpenSearchDomainComponent(scope, spec.name, context, spec);
   }
   
   /**
@@ -115,8 +115,7 @@ export class OpenSearchDomainComponentCreator implements IComponentCreator {
    */
   public getProvidedCapabilities(): string[] {
     return [
-      'database:opensearch-domain',
-      'monitoring:opensearch-domain'
+      'search:opensearch'
     ];
   }
   
@@ -134,8 +133,9 @@ export class OpenSearchDomainComponentCreator implements IComponentCreator {
    */
   public getConstructHandles(): string[] {
     return [
-      'main'
-      // TODO: Add additional construct handles if needed
+      'main',
+      'domain',
+      'securityGroup'
     ];
   }
 }

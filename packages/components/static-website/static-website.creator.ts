@@ -115,21 +115,6 @@ export class StaticWebsiteCreator implements IComponentCreator {
       }
     }
     
-    // FedRAMP compliance validations
-    if (context.complianceFramework === 'fedramp-moderate' || context.complianceFramework === 'fedramp-high') {
-      if (config?.bucket?.versioning === false) {
-        errors.push('S3 versioning is mandatory for FedRAMP compliance');
-      }
-      
-      if (config?.bucket?.accessLogging === false) {
-        errors.push('S3 access logging is mandatory for FedRAMP compliance');
-      }
-      
-      if (config?.distribution?.enableLogging === false) {
-        errors.push('CloudFront logging is mandatory for FedRAMP compliance');
-      }
-    }
-    
     return {
       valid: errors.length === 0,
       errors

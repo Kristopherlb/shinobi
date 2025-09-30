@@ -4,7 +4,7 @@
  */
 
 // Component exports
-export { GlueJobComponentComponent } from './glue-job.component';
+export { GlueJobComponent } from './glue-job.component';
 
 // Configuration exports
 export { 

@@ -16,309 +16,11 @@ import {
   ComponentContext,
   ComponentCapabilities
 } from '@platform/contracts';
-
-/**
- * Configuration interface for IAM Role component
- */
-export interface IamRoleConfig {
-  /** Role name (optional, will be auto-generated if not provided) */
-  roleName?: string;
-  
-  /** Role description */
-  description?: string;
-  
-  /** Services that can assume this role */
-  assumedBy?: Array<{
-    /** AWS service name (e.g., 'lambda.amazonaws.com') */
-    service?: string;
-    /** AWS account ID */
-    accountId?: string;
-    /** Specific IAM role ARN */
-    roleArn?: string;
-    /** Federated identity provider */
-    federatedProvider?: string;
-  }>;
-  
-  /** Managed policy ARNs to attach */
-  managedPolicies?: string[];
-  
-  /** Inline policies to attach */
-  inlinePolicies?: Array<{
-    name: string;
-    document: any; // IAM policy document
-  }>;
-  
-  /** Maximum session duration */
-  maxSessionDuration?: number;
-  
-  /** External ID for cross-account access */
-  externalId?: string;
-  
-  /** Path for the role */
-  path?: string;
-  
-  /** Permission boundary policy ARN */
-  permissionsBoundary?: string;
-  
-  /** Tags for the role */
-  tags?: Record<string, string>;
-}
-
-/**
- * Configuration schema for IAM Role component
- */
-export const IAM_ROLE_CONFIG_SCHEMA = {
-  type: 'object',
-  title: 'IAM Role Configuration',
-  description: 'Configuration for creating an IAM Role',
-  properties: {
-    roleName: {
-      type: 'string',
-      description: 'Name of the role (will be auto-generated if not provided)',
-      pattern: '^[a-zA-Z0-9+=,.@_-]+$',
-      maxLength: 64
-    },
-    description: {
-      type: 'string',
-      description: 'Description of the role',
-      maxLength: 1000
-    },
-    assumedBy: {
-      type: 'array',
-      description: 'Services or entities that can assume this role',
-      items: {
-        type: 'object',
-        properties: {
-          service: {
-            type: 'string',
-            description: 'AWS service name (e.g., lambda.amazonaws.com)'
-          },
-          accountId: {
-            type: 'string',
-            description: 'AWS account ID',
-            pattern: '^[0-9]{12}$'
-          },
-          roleArn: {
-            type: 'string',
-            description: 'Specific IAM role ARN'
-          },
-          federatedProvider: {
-            type: 'string',
-            description: 'Federated identity provider'
-          }
-        },
-        additionalProperties: false
-      },
-      default: []
-    },
-    managedPolicies: {
-      type: 'array',
-      description: 'Managed policy ARNs to attach',
-      items: {
-        type: 'string',
-        description: 'Policy ARN'
-      },
-      default: []
-    },
-    inlinePolicies: {
-      type: 'array',
-      description: 'Inline policies to attach',
-      items: {
-        type: 'object',
-        properties: {
-          name: {
-            type: 'string',
-            description: 'Policy name'
-          },
-          document: {
-            type: 'object',
-            description: 'IAM policy document'
-          }
-        },
-        required: ['name', 'document'],
-        additionalProperties: false
-      },
-      default: []
-    },
-    maxSessionDuration: {
-      type: 'number',
-      description: 'Maximum session duration in seconds',
-      minimum: 3600,
-      maximum: 43200,
-      default: 3600
-    },
-    externalId: {
-      type: 'string',
-      description: 'External ID for cross-account access',
-      maxLength: 1224
-    },
-    path: {
-      type: 'string',
-      description: 'Path for the role',
-      pattern: '^/.*/$',
-      default: '/'
-    },
-    permissionsBoundary: {
-      type: 'string',
-      description: 'Permission boundary policy ARN'
-    },
-    tags: {
-      type: 'object',
-      description: 'Tags for the role',
-      additionalProperties: {
-        type: 'string'
-      },
-      default: {}
-    }
-  },
-  additionalProperties: false,
-  defaults: {
-    assumedBy: [],
-    managedPolicies: [],
-    inlinePolicies: [],
-    maxSessionDuration: 3600,
-    path: '/',
-    tags: {}
-  }
-};
-
-/**
- * Configuration builder for IAM Role component
- */
-export class IamRoleConfigBuilder {
-  private context: ComponentContext;
-  private spec: ComponentSpec;
-  
-  constructor(context: ComponentContext, spec: ComponentSpec) {
-    this.context = context;
-    this.spec = spec;
-  }
-
-  /**
-   * Builds the final configuration by applying platform defaults, compliance frameworks, and user overrides
-   */
-  public async build(): Promise<IamRoleConfig> {
-    return this.buildSync();
-  }
-
-  /**
-   * Synchronous version of build for use in synth() method
-   */
-  public buildSync(): IamRoleConfig {
-    // Start with platform defaults
-    const platformDefaults = this.getPlatformDefaults();
-    
-    // Apply compliance framework defaults
-    const complianceDefaults = this.getComplianceFrameworkDefaults();
-    
-    // Merge user configuration from spec
-    const userConfig = this.spec.config || {};
-    
-    // Merge configurations (user config takes precedence)
-    const mergedConfig = this.mergeConfigs(
-      this.mergeConfigs(platformDefaults, complianceDefaults),
-      userConfig
-    );
-    
-    return mergedConfig as IamRoleConfig;
-  }
-
-  /**
-   * Simple merge utility for combining configuration objects
-   */
-  private mergeConfigs(target: Record<string, any>, source: Record<string, any>): Record<string, any> {
-    const result = { ...target };
-    
-    for (const key in source) {
-      if (source[key] && typeof source[key] === 'object' && !Array.isArray(source[key])) {
-        result[key] = this.mergeConfigs(result[key] || {}, source[key]);
-      } else {
-        result[key] = source[key];
-      }
-    }
-    
-    return result;
-  }
-
-  /**
-   * Get platform-wide defaults for IAM Role
-   */
-  private getPlatformDefaults(): Record<string, any> {
-    return {
-      maxSessionDuration: this.getDefaultSessionDuration(),
-      path: '/',
-      tags: {
-        'service': this.context.serviceName,
-        'environment': this.context.environment
-      }
-    };
-  }
-
-  /**
-   * Get compliance framework specific defaults
-   */
-  private getComplianceFrameworkDefaults(): Record<string, any> {
-    const framework = this.context.complianceFramework;
-    
-    switch (framework) {
-      case 'fedramp-moderate':
-        return {
-          maxSessionDuration: 7200, // 2 hours max for compliance
-          // Mandatory compliance tags
-          tags: {
-            'compliance-framework': 'fedramp-moderate',
-            'data-classification': 'controlled',
-            'access-review': 'required'
-          },
-          // Add permission boundary for compliance
-          permissionsBoundary: this.getCompliancePermissionBoundary()
-        };
-        
-      case 'fedramp-high':
-        return {
-          maxSessionDuration: 3600, // 1 hour max for high security
-          // Stricter compliance tags
-          tags: {
-            'compliance-framework': 'fedramp-high',
-            'data-classification': 'confidential',
-            'access-review': 'quarterly',
-            'mfa-required': 'true'
-          },
-          // Mandatory permission boundary for high compliance
-          permissionsBoundary: this.getCompliancePermissionBoundary()
-        };
-        
-      default: // commercial
-        return {
-          tags: {
-            'environment': this.context.environment
-          }
-        };
-    }
-  }
-
-  /**
-   * Get default session duration based on compliance framework
-   */
-  private getDefaultSessionDuration(): number {
-    switch (this.context.complianceFramework) {
-      case 'fedramp-high':
-        return 3600; // 1 hour for high security
-      case 'fedramp-moderate':
-        return 7200; // 2 hours for moderate
-      default:
-        return 3600; // 1 hour default
-    }
-  }
-
-  /**
-   * Get compliance permission boundary ARN
-   */
-  private getCompliancePermissionBoundary(): string {
-    // In a real implementation, this would reference an actual compliance boundary policy
-    return `arn:aws:iam::${this.context.accountId}:policy/CompliancePermissionBoundary`;
-  }
-}
+import {
+  IamRoleConfig,
+  IamRoleComponentConfigBuilder,
+  IamRoleLogConfig
+} from './iam-role.builder';
 
 /**
  * IAM Role Component implementing Component API Contract v1.0
@@ -326,6 +28,10 @@ export class IamRoleConfigBuilder {
 export class IamRoleComponent extends Component {
   private role?: iam.Role;
   private config?: IamRoleConfig;
+  private instanceProfile?: iam.CfnInstanceProfile;
+  private accessLogGroup?: logs.LogGroup;
+  private auditLogGroup?: logs.LogGroup;
+  private sessionAlarm?: cloudwatch.Alarm;
 
   constructor(scope: Construct, id: string, context: ComponentContext, spec: ComponentSpec) {
     super(scope, id, context, spec);
@@ -344,43 +50,51 @@ export class IamRoleComponent extends Component {
     const startTime = Date.now();
     
     try {
-      // Build configuration using ConfigBuilder
-      const configBuilder = new IamRoleConfigBuilder(this.context, this.spec);
+      const configBuilder = new IamRoleComponentConfigBuilder(this.context, this.spec);
       this.config = configBuilder.buildSync();
-      
-      // Log configuration built
+
       this.logComponentEvent('config_built', 'IAM Role configuration built successfully', {
         roleName: this.config.roleName,
         maxSessionDuration: this.config.maxSessionDuration,
         managedPoliciesCount: this.config.managedPolicies?.length || 0
       });
-      
-      // Create IAM Role
+
       this.createRole();
-    
-      // Apply compliance hardening
-      this.applyComplianceHardening();
-    
-      // Configure observability
-      this.configureObservabilityForRole();
-    
-      // Register constructs
+      this.applyControlsFromConfig();
+      this.applyLoggingConfiguration();
+      this.configureMonitoringFromConfig();
+      this.applyServiceTags();
+
       this.registerConstruct('role', this.role!);
-    
-      // Register capabilities
+      if (this.instanceProfile) {
+        this.registerConstruct('instanceProfile', this.instanceProfile);
+        this.registerCapability('iam:instance-profile', {
+          instanceProfileName: this.instanceProfile.ref,
+          roleName: this.role!.roleName
+        });
+      }
+      if (this.accessLogGroup) {
+        this.registerConstruct('accessLogGroup', this.accessLogGroup);
+      }
+      if (this.auditLogGroup) {
+        this.registerConstruct('auditLogGroup', this.auditLogGroup);
+      }
+      if (this.sessionAlarm) {
+        this.registerConstruct('sessionAlarm', this.sessionAlarm);
+      }
+
       this.registerCapability('iam:role', this.buildRoleCapability());
-    
-      // Log successful synthesis completion
+
       const duration = Date.now() - startTime;
       this.logPerformanceMetric('component_synthesis', duration, {
         resourcesCreated: Object.keys(this.capabilities).length
       });
-    
+
       this.logComponentEvent('synthesis_complete', 'IAM Role component synthesis completed successfully', {
         roleCreated: 1,
-        policiesAttached: (this.config.managedPolicies?.length || 0) + (this.config.inlinePolicies?.length || 0)
+        policiesAttached: (this.config?.managedPolicies?.length || 0) + (this.config?.inlinePolicies?.length || 0)
       });
-      
+
     } catch (error) {
       this.logError(error as Error, 'component synthesis', {
         componentType: 'iam-role',
@@ -411,62 +125,35 @@ export class IamRoleComponent extends Component {
   private createRole(): void {
     // Build assume role policy based on configuration
     const assumedBy = this.buildAssumedByPrincipal();
-    
     const roleProps: iam.RoleProps = {
       roleName: this.buildRoleName(),
-      description: this.config!.description,
-      assumedBy: assumedBy,
-      maxSessionDuration: cdk.Duration.seconds(this.config!.maxSessionDuration!),
-      path: this.config!.path,
-      externalIds: this.config!.externalId ? [this.config!.externalId] : undefined,
-      permissionsBoundary: this.config!.permissionsBoundary ? 
-        iam.ManagedPolicy.fromManagedPolicyArn(this, 'PermissionsBoundary', this.config!.permissionsBoundary) : 
-        undefined
+      description: this.config?.description,
+      assumedBy,
+      maxSessionDuration: cdk.Duration.seconds(this.config?.maxSessionDuration ?? 3600),
+      path: this.config?.path ?? '/',
+      externalIds: this.config?.externalId ? [this.config.externalId] : undefined,
+      permissionsBoundary: this.resolvePermissionsBoundary()
     };
 
     this.role = new iam.Role(this, 'Role', roleProps);
 
-    // Apply standard tags
-    this.applyStandardTags(this.role, {
-      'role-type': 'custom',
-      'max-session-duration': this.config!.maxSessionDuration!.toString(),
-      'managed-policies-count': (this.config!.managedPolicies?.length || 0).toString(),
-      'inline-policies-count': (this.config!.inlinePolicies?.length || 0).toString()
+    this.config?.managedPolicies?.forEach((policyArn, index) => {
+      const policy = iam.ManagedPolicy.fromManagedPolicyArn(this, `ManagedPolicy${index}`, policyArn);
+      this.role!.addManagedPolicy(policy);
     });
 
-    // Apply additional user tags
-    if (this.config!.tags) {
-      Object.entries(this.config!.tags).forEach(([key, value]) => {
-        cdk.Tags.of(this.role!).add(key, value);
-      });
-    }
+    this.config?.inlinePolicies?.forEach((policySpec, index) => {
+      const policyDocument = iam.PolicyDocument.fromJson(policySpec.document);
+      this.role!.attachInlinePolicy(new iam.Policy(this, `InlinePolicy${index}`, {
+        policyName: policySpec.name,
+        document: policyDocument
+      }));
+    });
 
-    // Attach managed policies
-    if (this.config!.managedPolicies && this.config!.managedPolicies.length > 0) {
-      this.config!.managedPolicies.forEach((policyArn, index) => {
-        const policy = iam.ManagedPolicy.fromManagedPolicyArn(
-          this, `ManagedPolicy${index}`, policyArn
-        );
-        this.role!.addManagedPolicy(policy);
-      });
-    }
-
-    // Add inline policies
-    if (this.config!.inlinePolicies && this.config!.inlinePolicies.length > 0) {
-      this.config!.inlinePolicies.forEach(policySpec => {
-        const policyDocument = iam.PolicyDocument.fromJson(policySpec.document);
-        this.role!.attachInlinePolicy(new iam.Policy(this, policySpec.name, {
-          policyName: policySpec.name,
-          document: policyDocument
-        }));
-      });
-    }
-    
-    // Log role creation
     this.logResourceCreation('iam-role', this.role.roleName, {
-      assumedByPrincipals: this.config!.assumedBy?.length || 0,
-      managedPoliciesCount: this.config!.managedPolicies?.length || 0,
-      inlinePoliciesCount: this.config!.inlinePolicies?.length || 0
+      assumedByPrincipals: this.config?.assumedBy?.length || 0,
+      managedPoliciesCount: this.config?.managedPolicies?.length || 0,
+      inlinePoliciesCount: this.config?.inlinePolicies?.length || 0
     });
   }
 
@@ -511,213 +198,276 @@ export class IamRoleComponent extends Component {
   /**
    * Apply compliance-specific hardening
    */
-  private applyComplianceHardening(): void {
-    switch (this.context.complianceFramework) {
-      case 'fedramp-moderate':
-        this.applyFedrampModerateHardening();
-        break;
-      case 'fedramp-high':
-        this.applyFedrampHighHardening();
-        break;
-      default:
-        this.applyCommercialHardening();
-        break;
+
+  private resolvePermissionsBoundary(): iam.IManagedPolicy | undefined {
+    if (!this.config?.permissionsBoundary) {
+      if (this.config?.controls?.enforceBoundary) {
+        this.logComponentEvent('permissions_boundary_missing', 'Boundary enforcement requested but no permissionsBoundary provided', {
+          roleName: this.buildRoleName()
+        });
+      }
+      return undefined;
     }
+
+    return iam.ManagedPolicy.fromManagedPolicyArn(
+      this,
+      'PermissionsBoundary',
+      this.config.permissionsBoundary
+    );
   }
 
-  private applyCommercialHardening(): void {
-    // Basic security policies for commercial use
-    if (this.role) {
-      // Add basic security policy to prevent privilege escalation
-      this.role.attachInlinePolicy(new iam.Policy(this, 'SecurityPolicy', {
-        policyName: 'SecurityPolicy',
-        document: new iam.PolicyDocument({
-          statements: [
-            new iam.PolicyStatement({
-              sid: 'DenyPrivilegeEscalation',
-              effect: iam.Effect.DENY,
-              actions: [
-                'iam:AttachRolePolicy',
-                'iam:DetachRolePolicy',
-                'iam:PutRolePolicy',
-                'iam:DeleteRolePolicy',
-                'iam:CreateRole',
-                'iam:DeleteRole',
-                'iam:UpdateRole',
-                'iam:UpdateAssumeRolePolicy'
-              ],
-              resources: ['*']
-            })
-          ]
-        })
-      }));
-    }
-  }
-
-  private applyFedrampModerateHardening(): void {
-    // Apply commercial hardening
-    this.applyCommercialHardening();
-
-    if (this.role) {
-      // Enhanced access logging for compliance
-      const accessLogGroup = new logs.LogGroup(this, 'RoleAccessLogGroup', {
-        logGroupName: `/aws/iam/role/${this.role.roleName}`,
-        retention: logs.RetentionDays.ONE_YEAR,
-        removalPolicy: cdk.RemovalPolicy.RETAIN
-      });
-
-      // Apply standard tags
-      this.applyStandardTags(accessLogGroup, {
-        'log-type': 'role-access',
-        'retention': '1-year',
-        'compliance': 'fedramp-moderate'
-      });
-
-      // Add compliance monitoring policy
-      this.role.attachInlinePolicy(new iam.Policy(this, 'ComplianceMonitoringPolicy', {
-        policyName: 'ComplianceMonitoring',
-        document: new iam.PolicyDocument({
-          statements: [
-            new iam.PolicyStatement({
-              sid: 'RequireCloudTrailLogging',
-              effect: iam.Effect.DENY,
-              actions: ['*'],
-              resources: ['*'],
-              conditions: {
-                Bool: {
-                  'aws:CloudWatchLogsDelivery': 'false'
-                }
-              }
-            })
-          ]
-        })
-      }));
-    }
-  }
-
-  private applyFedrampHighHardening(): void {
-    // Apply all moderate hardening
-    this.applyFedrampModerateHardening();
-
-    if (this.role) {
-      // Extended audit logging for high compliance
-      const auditLogGroup = new logs.LogGroup(this, 'RoleAuditLogGroup', {
-        logGroupName: `/aws/iam/role/${this.role.roleName}/audit`,
-        retention: logs.RetentionDays.TEN_YEARS,
-        removalPolicy: cdk.RemovalPolicy.RETAIN
-      });
-
-      // Apply standard tags
-      this.applyStandardTags(auditLogGroup, {
-        'log-type': 'audit',
-        'retention': '10-years',
-        'compliance': 'fedramp-high'
-      });
-
-      // Additional security restrictions
-      this.role.attachInlinePolicy(new iam.Policy(this, 'HighSecurityPolicy', {
-        policyName: 'HighSecurity',
-        document: new iam.PolicyDocument({
-          statements: [
-            new iam.PolicyStatement({
-              sid: 'RequireMFAForSensitiveActions',
-              effect: iam.Effect.DENY,
-              actions: [
-                'iam:*',
-                'kms:*',
-                's3:Delete*',
-                'rds:Delete*'
-              ],
-              resources: ['*'],
-              conditions: {
-                BoolIfExists: {
-                  'aws:MultiFactorAuthPresent': 'false'
-                }
-              }
-            })
-          ]
-        })
-      }));
-    }
-  }
-
-  /**
-   * Build role capability data shape
-   */
-  private buildRoleCapability(): any {
-    return {
-      roleArn: this.role!.roleArn,
-      roleName: this.role!.roleName
-    };
-  }
-
-  /**
-   * Configure CloudWatch observability for IAM Role
-   */
-  private configureObservabilityForRole(): void {
-    // Enable monitoring for compliance frameworks only
-    if (this.context.complianceFramework === 'commercial') {
+  private applyControlsFromConfig(): void {
+    if (!this.role || !this.config?.controls) {
       return;
     }
 
-    const roleName = this.role!.roleName;
+    const controls = this.config.controls;
+    const statements: iam.PolicyStatement[] = [];
 
-    // 1. Role Assumption Frequency Alarm (unusual activity)
-    const assumptionFrequencyAlarm = new cloudwatch.Alarm(this, 'RoleAssumptionFrequencyAlarm', {
-      alarmName: `${this.context.serviceName}-${this.spec.name}-high-assumptions`,
-      alarmDescription: 'IAM Role high assumption frequency alarm',
+    if (controls.denyInsecureTransport) {
+      statements.push(new iam.PolicyStatement({
+        sid: 'DenyInsecureTransport',
+        effect: iam.Effect.DENY,
+        actions: ['*'],
+        resources: ['*'],
+        conditions: {
+          Bool: {
+            'aws:SecureTransport': 'false'
+          }
+        }
+      }));
+    }
+
+    statements.push(...this.mapConfiguredStatements(controls.additionalStatements));
+
+    if (statements.length > 0) {
+      this.role.attachInlinePolicy(new iam.Policy(this, 'RoleControlPolicy', {
+        policyName: `${this.role.roleName}-controls`,
+        document: new iam.PolicyDocument({ statements })
+      }));
+    }
+
+    this.applyTrustPolicyControls(controls.trustPolicies);
+
+    if (controls.requireInstanceProfile) {
+      this.instanceProfile = new iam.CfnInstanceProfile(this, 'InstanceProfile', {
+        roles: [this.role.roleName],
+        path: this.config?.path ?? '/'
+      });
+    }
+  }
+
+  private applyTrustPolicyControls(trustControls?: ReturnType<IamRoleComponentConfigBuilder['buildSync']>['controls']['trustPolicies']): void {
+    if (!trustControls || !this.role?.assumeRolePolicy) {
+      return;
+    }
+
+    if (trustControls.enforceMfa) {
+      this.role.assumeRolePolicy.addStatements(new iam.PolicyStatement({
+        sid: 'RequireMFAForAssumeRole',
+        effect: iam.Effect.DENY,
+        actions: ['sts:AssumeRole'],
+        principals: [new iam.AnyPrincipal()],
+        resources: ['*'],
+        conditions: {
+          BoolIfExists: {
+            'aws:MultiFactorAuthPresent': 'false'
+          }
+        }
+      }));
+    }
+
+    if (trustControls.allowedServicePrincipals && trustControls.allowedServicePrincipals.length > 0) {
+      this.role.assumeRolePolicy.addStatements(new iam.PolicyStatement({
+        sid: 'RestrictServicePrincipals',
+        effect: iam.Effect.DENY,
+        actions: ['sts:AssumeRole'],
+        principals: [new iam.AnyPrincipal()],
+        resources: ['*'],
+        conditions: {
+          StringNotEquals: {
+            'aws:PrincipalService': trustControls.allowedServicePrincipals
+          }
+        }
+      }));
+    }
+
+    if (trustControls.allowExternalId === false && this.config?.externalId) {
+      this.logComponentEvent('external_id_disallowed', 'External ID provided but trust policy disallows it', {
+        roleName: this.buildRoleName(),
+        externalId: this.config.externalId
+      });
+    }
+
+    if (trustControls.externalIdCondition) {
+      this.role.assumeRolePolicy.addStatements(new iam.PolicyStatement({
+        sid: 'RequireExternalIdMatch',
+        effect: iam.Effect.DENY,
+        actions: ['sts:AssumeRole'],
+        principals: [new iam.AnyPrincipal()],
+        resources: ['*'],
+        conditions: {
+          StringNotEquals: {
+            'sts:ExternalId': trustControls.externalIdCondition
+          }
+        }
+      }));
+    }
+  }
+
+  private mapConfiguredStatements(statements?: Array<{ sid?: string; effect: 'Allow' | 'Deny'; actions: string[]; resources?: string[]; conditions?: Record<string, any>; }>): iam.PolicyStatement[] {
+    if (!statements || statements.length === 0) {
+      return [];
+    }
+
+    return statements.map(stmt => new iam.PolicyStatement({
+      sid: stmt.sid,
+      effect: stmt.effect === 'Allow' ? iam.Effect.ALLOW : iam.Effect.DENY,
+      actions: stmt.actions,
+      resources: stmt.resources && stmt.resources.length > 0 ? stmt.resources : undefined,
+      conditions: stmt.conditions
+    }));
+  }
+
+  private applyLoggingConfiguration(): void {
+    if (!this.role) {
+      return;
+    }
+
+    const logging = this.config?.logging;
+    if (!logging) {
+      return;
+    }
+
+    this.accessLogGroup = this.createLogGroupFromConfig('AccessLogGroup', logging.access, 'access-log');
+    this.auditLogGroup = this.createLogGroupFromConfig('AuditLogGroup', logging.audit, 'audit-log');
+  }
+
+  private createLogGroupFromConfig(id: string, config: IamRoleLogConfig | undefined, defaultLogType: string): logs.LogGroup | undefined {
+    if (!config?.enabled) {
+      return undefined;
+    }
+
+    const roleName = this.buildRoleName();
+    const suffix = config.logGroupNameSuffix ? `/${config.logGroupNameSuffix}` : '';
+    const logGroupName = config.logGroupName ?? `/aws/iam/role/${roleName}${suffix}`;
+
+    const logGroup = new logs.LogGroup(this, id, {
+      logGroupName,
+      retention: this.resolveLogRetention(config.retentionInDays),
+      removalPolicy: this.resolveRemovalPolicy(config.removalPolicy)
+    });
+
+    this.applyStandardTags(logGroup, {
+      'log-type': defaultLogType,
+      'role-name': roleName,
+      ...(config.tags ?? {})
+    });
+
+    return logGroup;
+  }
+
+  private configureMonitoringFromConfig(): void {
+    const monitoring = this.config?.monitoring;
+    if (!this.role || !monitoring?.enabled || !monitoring.sessionAlarm?.enabled) {
+      return;
+    }
+
+    const periodMinutes = monitoring.sessionAlarm.periodMinutes ?? 60;
+    const threshold = monitoring.sessionAlarm.thresholdMinutes ?? 15;
+
+    this.sessionAlarm = new cloudwatch.Alarm(this, 'RoleSessionAlarm', {
+      alarmName: `${this.context.serviceName}-${this.spec.name}-session-duration`,
+      alarmDescription: 'IAM role session duration threshold exceeded',
       metric: new cloudwatch.Metric({
         namespace: 'AWS/CloudTrail',
         metricName: 'AssumeRole',
         dimensionsMap: {
-          RoleName: roleName
+          RoleName: this.role.roleName
         },
         statistic: 'Sum',
-        period: cdk.Duration.minutes(5)
+        period: cdk.Duration.minutes(periodMinutes)
       }),
-      threshold: 100, // High threshold for potential abuse
-      evaluationPeriods: 3,
+      threshold,
+      evaluationPeriods: monitoring.sessionAlarm.evaluationPeriods ?? 1,
       comparisonOperator: cloudwatch.ComparisonOperator.GREATER_THAN_THRESHOLD,
-      treatMissingData: cloudwatch.TreatMissingData.NOT_BREACHING
+      treatMissingData: this.resolveTreatMissingData(monitoring.sessionAlarm.treatMissingData)
     });
 
-    // Apply standard tags
-    this.applyStandardTags(assumptionFrequencyAlarm, {
-      'alarm-type': 'high-assumption-rate',
-      'metric-type': 'security',
-      'threshold': '100'
+    this.applyStandardTags(this.sessionAlarm, {
+      'alarm-type': 'session-duration',
+      'threshold': threshold.toString(),
+      ...(monitoring.sessionAlarm.tags ?? {})
+    });
+  }
+
+  private applyServiceTags(): void {
+    if (!this.role) {
+      return;
+    }
+
+    const standardTags = {
+      'component-type': 'iam-role',
+      'max-session-duration': (this.config?.maxSessionDuration ?? 3600).toString()
+    };
+
+    this.applyStandardTags(this.role, standardTags);
+
+    Object.entries(this.config?.tags ?? {}).forEach(([key, value]) => {
+      cdk.Tags.of(this.role!).add(key, value);
     });
 
-    // 2. Failed Assumption Attempts Alarm
-    const failedAssumptionAlarm = new cloudwatch.Alarm(this, 'FailedAssumptionAlarm', {
-      alarmName: `${this.context.serviceName}-${this.spec.name}-failed-assumptions`,
-      alarmDescription: 'IAM Role failed assumption attempts alarm',
-      metric: new cloudwatch.Metric({
-        namespace: 'AWS/CloudTrail',
-        metricName: 'AssumeRoleFailure',
-        dimensionsMap: {
-          RoleName: roleName
-        },
-        statistic: 'Sum',
-        period: cdk.Duration.minutes(5)
-      }),
-      threshold: 5, // Multiple failures could indicate attack
-      evaluationPeriods: 2,
-      comparisonOperator: cloudwatch.ComparisonOperator.GREATER_THAN_THRESHOLD,
-      treatMissingData: cloudwatch.TreatMissingData.NOT_BREACHING
+    [this.accessLogGroup, this.auditLogGroup].forEach(logGroup => {
+      if (logGroup) {
+        this.applyStandardTags(logGroup, standardTags);
+      }
+    });
+  }
+
+  private buildRoleCapability(): any {
+    return {
+      roleArn: this.role!.roleArn,
+      roleName: this.role!.roleName,
+      maxSessionDuration: this.config?.maxSessionDuration ?? 3600,
+      permissionsBoundary: this.config?.permissionsBoundary,
+      instanceProfileName: this.instanceProfile ? this.instanceProfile.ref : undefined
+    };
+  }
+
+  private resolveLogRetention(retentionInDays?: number): logs.RetentionDays | undefined {
+    if (!retentionInDays) {
+      return undefined;
+    }
+
+    const retention = (logs.RetentionDays as unknown as Record<number, logs.RetentionDays>)[retentionInDays];
+    if (retention) {
+      return retention;
+    }
+
+    this.logComponentEvent('log_retention_defaulted', 'Unsupported log retention requested; defaulting to 90 days', {
+      requestedRetentionInDays: retentionInDays
     });
 
-    // Apply standard tags
-    this.applyStandardTags(failedAssumptionAlarm, {
-      'alarm-type': 'failed-assumptions',
-      'metric-type': 'security',
-      'threshold': '5'
-    });
+    return logs.RetentionDays.THREE_MONTHS;
+  }
 
-    this.logComponentEvent('observability_configured', 'OpenTelemetry observability standard applied to IAM Role', {
-      alarmsCreated: 2,
-      roleName: roleName,
-      monitoringEnabled: true
-    });
+  private resolveRemovalPolicy(removalPolicy?: string): cdk.RemovalPolicy {
+    if (removalPolicy === 'destroy') {
+      return cdk.RemovalPolicy.DESTROY;
+    }
+    return cdk.RemovalPolicy.RETAIN;
+  }
+
+  private resolveTreatMissingData(value?: string): cloudwatch.TreatMissingData {
+    switch (value) {
+      case 'breaching':
+        return cloudwatch.TreatMissingData.BREACHING;
+      case 'ignore':
+        return cloudwatch.TreatMissingData.IGNORE;
+      case 'missing':
+        return cloudwatch.TreatMissingData.MISSING;
+      default:
+        return cloudwatch.TreatMissingData.NOT_BREACHING;
+    }
   }
 }

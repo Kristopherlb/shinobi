@@ -3,23 +3,12 @@
   "sourceRoot": "packages/components/lambda-api/src",
   "targets": {
     "build": {
-      "executor": "@nx/js:tsc",
+      "executor": "nx:run-commands",
       "outputs": [
-        "{options.outputPath}"
+        "{workspaceRoot}/dist/packages/components/lambda-api"
       ],
       "options": {
-        "tsConfig": "packages/components/lambda-api/tsconfig.lib.json",
-        "outputPath": "dist/packages/components/lambda-api",
-        "assets": [
-          "packages/components/lambda-api/README.md",
-          "packages/components/lambda-api/Config.schema.json",
-          {
-            "input": "packages/components/lambda-api",
-            "glob": "package.json",
-            "output": "."
-          }
-        ],
-        "main": "packages/components/lambda-api/index.ts"
+        "command": "pnpm exec tsc -b packages/components/lambda-api/tsconfig.build.json"
       }
     },
     "test": {

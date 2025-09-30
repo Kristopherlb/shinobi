@@ -1,372 +1,91 @@
-/**
- * EFS Filesystem Component
- * 
- * AWS Elastic File System for scalable, shared storage across multiple instances.
- * Implements three-tiered compliance model (Commercial/FedRAMP Moderate/FedRAMP High).
- */
-
 import * as efs from 'aws-cdk-lib/aws-efs';
 import * as ec2 from 'aws-cdk-lib/aws-ec2';
 import * as kms from 'aws-cdk-lib/aws-kms';
+import * as iam from 'aws-cdk-lib/aws-iam';
 import * as logs from 'aws-cdk-lib/aws-logs';
 import * as cloudwatch from 'aws-cdk-lib/aws-cloudwatch';
 import * as cdk from 'aws-cdk-lib';
 import { Construct } from 'constructs';
 import {
-  Component,
+  BaseComponent,
   ComponentSpec,
   ComponentContext,
   ComponentCapabilities
-} from '@platform/contracts';
+} from '@shinobi/core';
+import {
+  EfsFilesystemComponentConfigBuilder,
+  EfsFilesystemConfig,
+  EfsAlarmConfig,
+  EfsLogConfig
+} from './efs-filesystem.builder';
 
-/**
- * Configuration interface for EFS Filesystem component
- */
-export interface EfsFilesystemConfig {
-  /** Filesystem name (optional, will be auto-generated) */
-  filesystemName?: string;
-  
-  /** VPC where filesystem will be created */
-  vpc?: {
-    vpcId?: string;
-    subnetIds?: string[];
-  };
-  
-  /** Performance mode */
-  performanceMode?: 'generalPurpose' | 'maxIO';
-  
-  /** Throughput mode */
-  throughputMode?: 'provisioned' | 'bursting';
-  
-  /** Provisioned throughput (only for provisioned mode) */
-  provisionedThroughputPerSecond?: number;
-  
-  /** Encryption configuration */
-  encryption?: {
-    /** Encrypt data at rest */
-    encrypted?: boolean;
-    /** KMS key ARN for encryption */
-    kmsKeyArn?: string;
-    /** Encrypt data in transit */
-    encryptInTransit?: boolean;
-  };
-  
-  /** Lifecycle policy */
-  lifecyclePolicy?: {
-    /** Transition to Infrequent Access */
-    transitionToIA?: 'AFTER_7_DAYS' | 'AFTER_14_DAYS' | 'AFTER_30_DAYS' | 'AFTER_60_DAYS' | 'AFTER_90_DAYS';
-    /** Transition out of Infrequent Access */
-    transitionToPrimaryStorageClass?: 'AFTER_1_ACCESS';
-  };
-  
-  /** Backup policy */
-  enableAutomaticBackups?: boolean;
-  
-  /** File system policy */
-  filesystemPolicy?: any;
-  
-  /** Tags for the filesystem */
-  tags?: Record<string, string>;
+interface LoggingResources {
+  access?: logs.ILogGroup;
+  audit?: logs.ILogGroup;
 }
 
-/**
- * Configuration schema for EFS Filesystem component
- */
-export const EFS_FILESYSTEM_CONFIG_SCHEMA = {
-  type: 'object',
-  title: 'EFS Filesystem Configuration',
-  description: 'Configuration for creating an EFS filesystem',
-  properties: {
-    filesystemName: {
-      type: 'string',
-      description: 'Name of the filesystem (will be auto-generated if not provided)',
-      maxLength: 256
-    },
-    vpc: {
-      type: 'object',
-      description: 'VPC configuration',
-      properties: {
-        vpcId: {
-          type: 'string',
-          description: 'VPC ID where filesystem will be created'
-        },
-        subnetIds: {
-          type: 'array',
-          description: 'Subnet IDs for mount targets',
-          items: {
-            type: 'string'
-          }
-        }
-      },
-      additionalProperties: false
-    },
-    performanceMode: {
-      type: 'string',
-      description: 'Performance mode for the filesystem',
-      enum: ['generalPurpose', 'maxIO'],
-      default: 'generalPurpose'
-    },
-    throughputMode: {
-      type: 'string',
-      description: 'Throughput mode for the filesystem',
-      enum: ['provisioned', 'bursting'],
-      default: 'bursting'
-    },
-    provisionedThroughputPerSecond: {
-      type: 'number',
-      description: 'Provisioned throughput in MiB/s (only for provisioned mode)',
-      minimum: 1,
-      maximum: 1024
-    },
-    encryption: {
-      type: 'object',
-      description: 'Encryption configuration',
-      properties: {
-        encrypted: {
-          type: 'boolean',
-          description: 'Encrypt data at rest',
-          default: true
-        },
-        kmsKeyArn: {
-          type: 'string',
-          description: 'KMS key ARN for encryption'
-        },
-        encryptInTransit: {
-          type: 'boolean',
-          description: 'Encrypt data in transit',
-          default: true
-        }
-      },
-      additionalProperties: false,
-      default: { encrypted: true, encryptInTransit: true }
-    },
-    lifecyclePolicy: {
-      type: 'object',
-      description: 'Lifecycle management policy',
-      properties: {
-        transitionToIA: {
-          type: 'string',
-          description: 'When to transition to Infrequent Access',
-          enum: ['AFTER_7_DAYS', 'AFTER_14_DAYS', 'AFTER_30_DAYS', 'AFTER_60_DAYS', 'AFTER_90_DAYS']
-        },
-        transitionToPrimaryStorageClass: {
-          type: 'string',
-          description: 'When to transition back to primary storage',
-          enum: ['AFTER_1_ACCESS']
-        }
-      },
-      additionalProperties: false
-    },
-    enableAutomaticBackups: {
-      type: 'boolean',
-      description: 'Enable automatic backups',
-      default: false
-    },
-    filesystemPolicy: {
-      type: 'object',
-      description: 'IAM policy document for filesystem access'
-    },
-    tags: {
-      type: 'object',
-      description: 'Tags for the filesystem',
-      additionalProperties: {
-        type: 'string'
-      },
-      default: {}
-    }
-  },
-  additionalProperties: false,
-  defaults: {
-    performanceMode: 'generalPurpose',
-    throughputMode: 'bursting',
-    encryption: { encrypted: true, encryptInTransit: true },
-    enableAutomaticBackups: false,
-    tags: {}
-  }
-};
-
-/**
- * Configuration builder for EFS Filesystem component
- */
-export class EfsFilesystemConfigBuilder {
-  private context: ComponentContext;
-  private spec: ComponentSpec;
-  
-  constructor(context: ComponentContext, spec: ComponentSpec) {
-    this.context = context;
-    this.spec = spec;
-  }
-
-  public async build(): Promise<EfsFilesystemConfig> {
-    return this.buildSync();
-  }
-
-  public buildSync(): EfsFilesystemConfig {
-    const platformDefaults = this.getPlatformDefaults();
-    const complianceDefaults = this.getComplianceFrameworkDefaults();
-    const userConfig = this.spec.config || {};
-    
-    const mergedConfig = this.mergeConfigs(
-      this.mergeConfigs(platformDefaults, complianceDefaults),
-      userConfig
-    );
-    
-    return mergedConfig as EfsFilesystemConfig;
-  }
-
-  private mergeConfigs(target: Record<string, any>, source: Record<string, any>): Record<string, any> {
-    const result = { ...target };
-    
-    for (const key in source) {
-      if (source[key] && typeof source[key] === 'object' && !Array.isArray(source[key])) {
-        result[key] = this.mergeConfigs(result[key] || {}, source[key]);
-      } else {
-        result[key] = source[key];
-      }
-    }
-    
-    return result;
-  }
-
-  private getPlatformDefaults(): Record<string, any> {
-    return {
-      performanceMode: 'generalPurpose',
-      throughputMode: 'bursting',
-      encryption: {
-        encrypted: true,
-        encryptInTransit: this.getDefaultEncryptInTransit()
-      },
-      enableAutomaticBackups: this.getDefaultBackupPolicy(),
-      tags: {
-        'service': this.context.serviceName,
-        'environment': this.context.environment
-      }
-    };
-  }
-
-  private getComplianceFrameworkDefaults(): Record<string, any> {
-    const framework = this.context.complianceFramework;
-    
-    switch (framework) {
-      case 'fedramp-moderate':
-        return {
-          performanceMode: 'generalPurpose', // Consistent performance for compliance
-          encryption: {
-            encrypted: true, // Mandatory encryption
-            encryptInTransit: true
-          },
-          enableAutomaticBackups: true, // Required for compliance
-          lifecyclePolicy: {
-            transitionToIA: 'AFTER_30_DAYS' // Cost optimization
-          },
-          tags: {
-            'compliance-framework': 'fedramp-moderate',
-            'data-classification': 'controlled',
-            'backup-required': 'true'
-          }
-        };
-        
-      case 'fedramp-high':
-        return {
-          performanceMode: 'generalPurpose',
-          encryption: {
-            encrypted: true, // Mandatory
-            encryptInTransit: true // Required for high security
-          },
-          enableAutomaticBackups: true, // Mandatory
-          lifecyclePolicy: {
-            transitionToIA: 'AFTER_7_DAYS' // Frequent archival for security
-          },
-          tags: {
-            'compliance-framework': 'fedramp-high',
-            'data-classification': 'confidential',
-            'backup-required': 'true',
-            'security-level': 'high'
-          }
-        };
-        
-      default: // commercial
-        return {
-          encryption: {
-            encrypted: true,
-            encryptInTransit: false // Optional for commercial
-          }
-        };
-    }
-  }
-
-  private getDefaultEncryptInTransit(): boolean {
-    return ['fedramp-moderate', 'fedramp-high'].includes(this.context.complianceFramework);
-  }
-
-  private getDefaultBackupPolicy(): boolean {
-    return ['fedramp-moderate', 'fedramp-high'].includes(this.context.complianceFramework);
-  }
-}
-
-/**
- * EFS Filesystem Component implementing Component API Contract v1.0
- */
-export class EfsFilesystemComponent extends Component {
-  private filesystem?: efs.FileSystem;
-  private kmsKey?: kms.Key;
-  private vpc?: ec2.IVpc;
+export class EfsFilesystemComponent extends BaseComponent {
+  private fileSystem?: efs.FileSystem;
   private config?: EfsFilesystemConfig;
+  private vpc?: ec2.IVpc;
+  private managedSecurityGroup?: ec2.SecurityGroup;
+  private importedSecurityGroup?: ec2.ISecurityGroup;
+  private createdKmsKey?: kms.Key;
+  private createdLogGroups: Record<string, logs.LogGroup> = {};
 
   constructor(scope: Construct, id: string, context: ComponentContext, spec: ComponentSpec) {
     super(scope, id, context, spec);
   }
 
   public synth(): void {
-    this.logComponentEvent('synthesis_start', 'Starting EFS Filesystem component synthesis', {
-      filesystemName: this.spec.config?.filesystemName,
-      performanceMode: this.spec.config?.performanceMode
-    });
-    
-    const startTime = Date.now();
-    
+    const start = Date.now();
+    this.logComponentEvent('synthesis_start', 'Starting EFS filesystem synthesis');
+
     try {
-      const configBuilder = new EfsFilesystemConfigBuilder(this.context, this.spec);
-      this.config = configBuilder.buildSync();
-      
-      this.logComponentEvent('config_built', 'EFS Filesystem configuration built successfully', {
+      const builder = new EfsFilesystemComponentConfigBuilder({
+        context: this.context,
+        spec: this.spec
+      });
+      this.config = builder.buildSync();
+
+      this.logComponentEvent('config_resolved', 'Resolved EFS configuration', {
+        fileSystemName: this.config.fileSystemName,
         performanceMode: this.config.performanceMode,
         throughputMode: this.config.throughputMode,
-        encrypted: this.config.encryption?.encrypted
+        backupsEnabled: this.config.backups.enabled
       });
-      
-      this.lookupVpcIfNeeded();
-      this.createKmsKeyIfNeeded();
-      this.createFilesystem();
-      this.applyComplianceHardening();
-      this.configureObservabilityForFilesystem();
-    
-      this.registerConstruct('filesystem', this.filesystem!);
-      if (this.kmsKey) {
-        this.registerConstruct('kmsKey', this.kmsKey);
+
+      this.resolveVpc();
+      this.resolveSecurityGroup();
+      const kmsKey = this.resolveKmsKey();
+      const loggingResources = this.configureLogging();
+      this.createFileSystem(kmsKey, loggingResources);
+      this.configureMonitoring();
+      this.logHardeningProfile();
+
+      this.registerConstruct('main', this.fileSystem!);
+      this.registerConstruct('filesystem', this.fileSystem!);
+
+      if (this.managedSecurityGroup) {
+        this.registerConstruct('securityGroup', this.managedSecurityGroup);
       }
-      if (this.vpc) {
-        this.registerConstruct('vpc', this.vpc);
+
+      if (this.createdKmsKey) {
+        this.registerConstruct('kmsKey', this.createdKmsKey);
       }
-    
+
+      Object.entries(this.createdLogGroups).forEach(([key, logGroup]) => {
+        this.registerConstruct(`logGroup:${key}`, logGroup);
+      });
+
       this.registerCapability('storage:efs', this.buildFilesystemCapability());
-    
-      const duration = Date.now() - startTime;
-      this.logPerformanceMetric('component_synthesis', duration, {
+
+      this.logPerformanceMetric('component_synthesis', Date.now() - start, {
         resourcesCreated: Object.keys(this.capabilities).length
       });
-    
-      this.logComponentEvent('synthesis_complete', 'EFS Filesystem component synthesis completed successfully', {
-        filesystemCreated: 1,
-        encrypted: this.config.encryption?.encrypted,
-        backupsEnabled: this.config.enableAutomaticBackups
-      });
-      
+      this.logComponentEvent('synthesis_complete', 'EFS filesystem synthesis completed');
     } catch (error) {
-      this.logError(error as Error, 'component synthesis', {
-        componentType: 'efs-filesystem',
-        stage: 'synthesis'
-      });
+      this.logError(error as Error, 'efs-filesystem synthesis');
       throw error;
     }
   }
@@ -380,100 +99,311 @@ export class EfsFilesystemComponent extends Component {
     return 'efs-filesystem';
   }
 
-  private lookupVpcIfNeeded(): void {
-    if (this.config!.vpc?.vpcId) {
-      this.vpc = ec2.Vpc.fromLookup(this, 'Vpc', {
-        vpcId: this.config!.vpc.vpcId
-      });
+  private resolveVpc(): void {
+    if (!this.config?.vpc.enabled) {
+      throw new Error('EFS filesystem requires vpc configuration. Provide `config.vpc.vpcId` and subnet IDs.');
     }
+
+    if (!this.config.vpc.vpcId) {
+      throw new Error('EFS filesystem requires `config.vpc.vpcId` to be set.');
+    }
+
+    this.vpc = ec2.Vpc.fromLookup(this, 'Vpc', {
+      vpcId: this.config.vpc.vpcId
+    });
   }
 
-  private createKmsKeyIfNeeded(): void {
-    if (this.config!.encryption?.encrypted && this.shouldUseCustomerManagedKey()) {
-      this.kmsKey = new kms.Key(this, 'EncryptionKey', {
-        description: `Encryption key for ${this.spec.name} EFS filesystem`,
-        enableKeyRotation: this.context.complianceFramework === 'fedramp-high',
-        keyUsage: kms.KeyUsage.ENCRYPT_DECRYPT,
-        keySpec: kms.KeySpec.SYMMETRIC_DEFAULT
-      });
-
-      this.applyStandardTags(this.kmsKey, {
-        'encryption-type': 'customer-managed',
-        'key-rotation': (this.context.complianceFramework === 'fedramp-high').toString(),
-        'resource-type': 'efs-encryption'
-      });
+  private resolveSecurityGroup(): void {
+    if (!this.config?.vpc.enabled) {
+      return;
     }
-  }
 
-  private createFilesystem(): void {
-    const filesystemProps: efs.FileSystemProps = {
-      fileSystemName: this.buildFilesystemName(),
+    const sgConfig = this.config.vpc.securityGroup;
+
+    if (sgConfig.securityGroupId) {
+      this.importedSecurityGroup = ec2.SecurityGroup.fromSecurityGroupId(this, 'ImportedSecurityGroup', sgConfig.securityGroupId);
+    }
+
+    if (!sgConfig.create) {
+      return;
+    }
+
+    if (!this.vpc) {
+      throw new Error('Unable to create security group without a resolved VPC.');
+    }
+
+    const description = sgConfig.description ?? `Security group for ${this.config.fileSystemName} EFS filesystem`;
+    const securityGroup = new ec2.SecurityGroup(this, 'EfsSecurityGroup', {
       vpc: this.vpc,
-      performanceMode: this.mapPerformanceMode(this.config!.performanceMode!),
-      throughputMode: this.mapThroughputMode(this.config!.throughputMode!),
-      encrypted: this.config!.encryption?.encrypted,
-      kmsKey: this.kmsKey || (this.config!.encryption?.kmsKeyArn ? 
-        kms.Key.fromKeyArn(this, 'ExistingKey', this.config!.encryption.kmsKeyArn) : undefined),
-      lifecyclePolicy: this.buildLifecyclePolicy(),
-      enableBackupPolicy: this.config!.enableAutomaticBackups,
-      filesystemPolicy: this.config!.filesystemPolicy ? 
-        efs.PolicyDocument.fromJson(this.config!.filesystemPolicy) : undefined
+      description,
+      allowAllOutbound: true
+    });
+
+    sgConfig.ingressRules.forEach(rule => {
+      const port = rule.protocol === 'udp' ? ec2.Port.udp(rule.port) : ec2.Port.tcp(rule.port);
+      securityGroup.addIngressRule(ec2.Peer.ipv4(rule.cidr), port, rule.description);
+    });
+
+    this.applyStandardTags(securityGroup, {
+      'resource-type': 'security-group',
+      'efs-filesystem': this.config.fileSystemName
+    });
+
+    this.logResourceCreation('security-group', securityGroup.securityGroupId);
+    this.managedSecurityGroup = securityGroup;
+  }
+
+  private resolveKmsKey(): kms.IKey | undefined {
+    if (!this.config?.encryption.enabled) {
+      return undefined;
+    }
+
+    if (this.config.encryption.customerManagedKey.create) {
+      const key = new kms.Key(this, 'EfsEncryptionKey', {
+        description: `Customer managed key for ${this.config.fileSystemName} EFS filesystem`,
+        enableKeyRotation: this.config.encryption.customerManagedKey.enableRotation
+      });
+
+      if (this.config.encryption.customerManagedKey.alias) {
+        key.addAlias(this.config.encryption.customerManagedKey.alias);
+      }
+
+      this.applyStandardTags(key, {
+        'resource-type': 'kms-key',
+        'managed-by': 'efs-component'
+      });
+
+      this.createdKmsKey = key;
+      return key;
+    }
+
+    if (this.config.encryption.kmsKeyArn) {
+      return kms.Key.fromKeyArn(this, 'ImportedEfsKey', this.config.encryption.kmsKeyArn);
+    }
+
+    return undefined;
+  }
+
+  private configureLogging(): LoggingResources {
+    if (!this.config) {
+      return {};
+    }
+
+    return {
+      access: this.prepareLogGroup('access', this.config.logging.access),
+      audit: this.prepareLogGroup('audit', this.config.logging.audit)
+    };
+  }
+
+  private prepareLogGroup(key: string, config: EfsLogConfig): logs.ILogGroup | undefined {
+    if (!config.enabled) {
+      return undefined;
+    }
+
+    if (!config.createLogGroup && config.logGroupName) {
+      return logs.LogGroup.fromLogGroupName(this, `${this.toPascalCase(key)}LogGroupImported`, config.logGroupName);
+    }
+
+    const logGroupName = config.logGroupName ?? this.generateLogGroupName(key);
+    const logGroup = new logs.LogGroup(this, `${this.toPascalCase(key)}LogGroup`, {
+      logGroupName,
+      retention: this.mapLogRetentionDays(config.retentionInDays ?? 90),
+      removalPolicy: this.mapRemovalPolicy(config.removalPolicy ?? 'destroy')
+    });
+
+    if (config.tags && Object.keys(config.tags).length > 0) {
+      this.applyStandardTags(logGroup, config.tags);
+    } else {
+      this.applyStandardTags(logGroup, {
+        'resource-type': 'log-group',
+        'log-channel': key
+      });
+    }
+
+    this.createdLogGroups[key] = logGroup;
+    return logGroup;
+  }
+
+  private createFileSystem(kmsKey: kms.IKey | undefined, logging: LoggingResources): void {
+    if (!this.vpc) {
+      throw new Error('EFS filesystem creation requires a resolved VPC.');
+    }
+
+    const securityGroup = this.managedSecurityGroup ?? this.importedSecurityGroup;
+
+    const fileSystemProps: efs.FileSystemProps = {
+      vpc: this.vpc,
+      securityGroup,
+      vpcSubnets: this.buildVpcSubnets(),
+      fileSystemName: this.config!.fileSystemName,
+      performanceMode: this.mapPerformanceMode(this.config!.performanceMode),
+      throughputMode: this.mapThroughputMode(this.config!.throughputMode),
+      encrypted: this.config!.encryption.enabled,
+      kmsKey,
+      lifecyclePolicy: this.mapLifecyclePolicy(this.config!.lifecycle.transitionToIA),
+      outOfInfrequentAccessPolicy: this.mapOutOfIAPolicy(this.config!.lifecycle.transitionToPrimary),
+      enableAutomaticBackups: this.config!.backups.enabled,
+      fileSystemPolicy: this.buildFileSystemPolicy(),
+      removalPolicy: this.mapRemovalPolicy(this.config!.removalPolicy)
     };
 
-    if (this.config!.throughputMode === 'provisioned' && this.config!.provisionedThroughputPerSecond) {
-      Object.assign(filesystemProps, {
-        provisionedThroughputPerSecond: cdk.Size.mebibytes(this.config!.provisionedThroughputPerSecond)
-      });
+    if (this.config!.throughputMode === 'provisioned' && this.config!.provisionedThroughputMibps) {
+      fileSystemProps.provisionedThroughputPerSecond = cdk.Size.mebibytes(this.config!.provisionedThroughputMibps);
     }
 
-    this.filesystem = new efs.FileSystem(this, 'Filesystem', filesystemProps);
+    this.fileSystem = new efs.FileSystem(this, 'EfsFileSystem', fileSystemProps);
 
-    this.applyStandardTags(this.filesystem, {
+    this.applyStandardTags(this.fileSystem, {
       'filesystem-type': 'efs',
-      'performance-mode': this.config!.performanceMode!,
-      'throughput-mode': this.config!.throughputMode!,
-      'encrypted': this.config!.encryption?.encrypted!.toString(),
-      'backups-enabled': this.config!.enableAutomaticBackups!.toString()
+      'performance-mode': this.config!.performanceMode,
+      'throughput-mode': this.config!.throughputMode,
+      'encrypted': this.config!.encryption.enabled.toString(),
+      'encrypt-in-transit': this.config!.encryption.encryptInTransit.toString(),
+      'backups-enabled': this.config!.backups.enabled.toString(),
+      'hardening-profile': this.config!.hardeningProfile,
+      ...this.config!.tags
     });
 
-    if (this.config!.tags) {
-      Object.entries(this.config!.tags).forEach(([key, value]) => {
-        cdk.Tags.of(this.filesystem!).add(key, value);
-      });
+    this.logResourceCreation('efs-filesystem', this.fileSystem.fileSystemId, {
+      fileSystemArn: this.fileSystem.fileSystemArn,
+      performanceMode: this.config!.performanceMode,
+      throughputMode: this.config!.throughputMode
+    });
+  }
+
+  private buildFileSystemPolicy(): iam.PolicyDocument | undefined {
+    if (!this.config?.filesystemPolicy) {
+      return undefined;
     }
-    
-    this.logResourceCreation('efs-filesystem', this.buildFilesystemName()!, {
+
+    return iam.PolicyDocument.fromJson(this.config.filesystemPolicy);
+  }
+
+  private buildVpcSubnets(): ec2.SubnetSelection | undefined {
+    if (!this.config?.vpc.enabled) {
+      return undefined;
+    }
+
+    if (this.config.vpc.subnetIds.length > 0) {
+      const subnets = this.config.vpc.subnetIds.map((subnetId, index) =>
+        ec2.Subnet.fromSubnetId(this, `EfsSubnet${index}`, subnetId)
+      );
+      return { subnets };
+    }
+
+    if (this.vpc) {
+      return { subnets: this.vpc.privateSubnets };
+    }
+
+    return undefined;
+  }
+
+  private configureMonitoring(): void {
+    if (!this.config?.monitoring.enabled) {
+      return;
+    }
+
+    const alarms: Array<{ id: string; config: EfsAlarmConfig; metric: cloudwatch.Metric; defaultThreshold: number }> = [
+      {
+        id: 'StorageUtilizationAlarm',
+        config: this.config.monitoring.alarms.storageUtilization,
+        defaultThreshold: 1099511627776,
+        metric: new cloudwatch.Metric({
+          namespace: 'AWS/EFS',
+          metricName: 'StorageBytes',
+          statistic: this.config.monitoring.alarms.storageUtilization.statistic ?? 'Average',
+          dimensionsMap: this.metricDimensions('Total'),
+          period: cdk.Duration.minutes(this.config.monitoring.alarms.storageUtilization.periodMinutes ?? 5)
+        })
+      },
+      {
+        id: 'ClientConnectionsAlarm',
+        config: this.config.monitoring.alarms.clientConnections,
+        defaultThreshold: 1000,
+        metric: new cloudwatch.Metric({
+          namespace: 'AWS/EFS',
+          metricName: 'ClientConnections',
+          statistic: this.config.monitoring.alarms.clientConnections.statistic ?? 'Average',
+          dimensionsMap: this.metricDimensions(),
+          period: cdk.Duration.minutes(this.config.monitoring.alarms.clientConnections.periodMinutes ?? 5)
+        })
+      },
+      {
+        id: 'BurstCreditBalanceAlarm',
+        config: this.config.monitoring.alarms.burstCreditBalance,
+        defaultThreshold: 128,
+        metric: new cloudwatch.Metric({
+          namespace: 'AWS/EFS',
+          metricName: 'BurstCreditBalance',
+          statistic: this.config.monitoring.alarms.burstCreditBalance.statistic ?? 'Minimum',
+          dimensionsMap: this.metricDimensions(),
+          period: cdk.Duration.minutes(this.config.monitoring.alarms.burstCreditBalance.periodMinutes ?? 5)
+        })
+      }
+    ];
+
+    alarms.forEach(alarmDefinition => {
+      if (!alarmDefinition.config.enabled) {
+        return;
+      }
+
+      const alarm = new cloudwatch.Alarm(this, alarmDefinition.id, {
+        alarmName: `${this.context.serviceName}-${this.spec.name}-${this.toKebabCase(alarmDefinition.id)}`,
+        alarmDescription: `EFS filesystem alarm for ${alarmDefinition.id}`,
+        metric: alarmDefinition.metric,
+        threshold: alarmDefinition.config.threshold ?? alarmDefinition.defaultThreshold,
+        evaluationPeriods: alarmDefinition.config.evaluationPeriods ?? 1,
+        comparisonOperator: this.mapComparisonOperator(alarmDefinition.config.comparisonOperator ?? 'gt'),
+        treatMissingData: this.mapTreatMissingData(alarmDefinition.config.treatMissingData ?? 'not-breaching')
+      });
+
+      this.applyStandardTags(alarm, {
+        'resource-type': 'cloudwatch-alarm',
+        'alarm-id': alarmDefinition.id,
+        ...alarmDefinition.config.tags
+      });
+    });
+
+    this.logComponentEvent('observability_configured', 'Configured EFS monitoring alarms', {
+      fileSystemId: this.fileSystem?.fileSystemId,
+      monitoringEnabled: true
+    });
+  }
+
+  private buildFilesystemCapability(): Record<string, any> {
+    return {
+      fileSystemId: this.fileSystem!.fileSystemId,
+      fileSystemArn: this.fileSystem!.fileSystemArn,
+      fileSystemName: this.config!.fileSystemName,
       performanceMode: this.config!.performanceMode,
       throughputMode: this.config!.throughputMode,
-      encrypted: this.config!.encryption?.encrypted,
-      backupsEnabled: this.config!.enableAutomaticBackups
-    });
+      provisionedThroughputMibps: this.config!.provisionedThroughputMibps,
+      encryption: {
+        atRest: this.config!.encryption.enabled,
+        inTransit: this.config!.encryption.encryptInTransit
+      },
+      backupsEnabled: this.config!.backups.enabled,
+      hardeningProfile: this.config!.hardeningProfile
+    };
   }
 
   private mapPerformanceMode(mode: string): efs.PerformanceMode {
-    switch (mode) {
-      case 'maxIO':
-        return efs.PerformanceMode.MAX_IO;
-      default:
-        return efs.PerformanceMode.GENERAL_PURPOSE;
-    }
+    return mode === 'maxIO' ? efs.PerformanceMode.MAX_IO : efs.PerformanceMode.GENERAL_PURPOSE;
   }
 
   private mapThroughputMode(mode: string): efs.ThroughputMode {
     switch (mode) {
       case 'provisioned':
         return efs.ThroughputMode.PROVISIONED;
+      case 'elastic':
+        return efs.ThroughputMode.ELASTIC;
       default:
         return efs.ThroughputMode.BURSTING;
     }
   }
 
-  private buildLifecyclePolicy(): efs.LifecyclePolicy | undefined {
-    if (!this.config!.lifecyclePolicy?.transitionToIA) {
-      return undefined;
-    }
-
-    switch (this.config!.lifecyclePolicy.transitionToIA) {
+  private mapLifecyclePolicy(policy?: EfsFilesystemConfig['lifecycle']['transitionToIA']): efs.LifecyclePolicy | undefined {
+    switch (policy) {
       case 'AFTER_7_DAYS':
         return efs.LifecyclePolicy.AFTER_7_DAYS;
       case 'AFTER_14_DAYS':
@@ -489,153 +419,68 @@ export class EfsFilesystemComponent extends Component {
     }
   }
 
-  private buildFilesystemName(): string | undefined {
-    if (this.config!.filesystemName) {
-      return this.config!.filesystemName;
-    }
-    return `${this.context.serviceName}-${this.spec.name}`;
+  private mapOutOfIAPolicy(policy?: EfsFilesystemConfig['lifecycle']['transitionToPrimary']): efs.OutOfInfrequentAccessPolicy | undefined {
+    return policy === 'AFTER_1_ACCESS' ? efs.OutOfInfrequentAccessPolicy.AFTER_1_ACCESS : undefined;
   }
 
-  private shouldUseCustomerManagedKey(): boolean {
-    return ['fedramp-moderate', 'fedramp-high'].includes(this.context.complianceFramework) ||
-           !!this.config!.encryption?.kmsKeyArn;
+  private mapRemovalPolicy(policy: 'retain' | 'destroy'): cdk.RemovalPolicy {
+    return policy === 'destroy' ? cdk.RemovalPolicy.DESTROY : cdk.RemovalPolicy.RETAIN;
   }
 
-  private applyComplianceHardening(): void {
-    switch (this.context.complianceFramework) {
-      case 'fedramp-moderate':
-        this.applyFedrampModerateHardening();
-        break;
-      case 'fedramp-high':
-        this.applyFedrampHighHardening();
-        break;
+  private mapComparisonOperator(operator: string): cloudwatch.ComparisonOperator {
+    switch (operator) {
+      case 'lt':
+        return cloudwatch.ComparisonOperator.LESS_THAN_THRESHOLD;
+      case 'lte':
+        return cloudwatch.ComparisonOperator.LESS_THAN_OR_EQUAL_TO_THRESHOLD;
+      case 'gte':
+        return cloudwatch.ComparisonOperator.GREATER_THAN_OR_EQUAL_TO_THRESHOLD;
+      case 'gt':
       default:
-        this.applyCommercialHardening();
-        break;
+        return cloudwatch.ComparisonOperator.GREATER_THAN_THRESHOLD;
     }
   }
 
-  private applyCommercialHardening(): void {
-    // Basic access logging
-    if (this.filesystem) {
-      const accessLogGroup = new logs.LogGroup(this, 'AccessLogGroup', {
-        logGroupName: `/aws/efs/${this.buildFilesystemName()}`,
-        retention: logs.RetentionDays.THREE_MONTHS,
-        removalPolicy: cdk.RemovalPolicy.DESTROY
-      });
-
-      this.applyStandardTags(accessLogGroup, {
-        'log-type': 'filesystem-access',
-        'retention': '3-months'
-      });
+  private mapTreatMissingData(mode: string): cloudwatch.TreatMissingData {
+    switch (mode) {
+      case 'breaching':
+        return cloudwatch.TreatMissingData.BREACHING;
+      case 'ignore':
+        return cloudwatch.TreatMissingData.IGNORE;
+      case 'missing':
+        return cloudwatch.TreatMissingData.MISSING;
+      default:
+        return cloudwatch.TreatMissingData.NOT_BREACHING;
     }
   }
 
-  private applyFedrampModerateHardening(): void {
-    this.applyCommercialHardening();
-
-    if (this.filesystem) {
-      const complianceLogGroup = new logs.LogGroup(this, 'ComplianceLogGroup', {
-        logGroupName: `/aws/efs/${this.buildFilesystemName()}/compliance`,
-        retention: logs.RetentionDays.ONE_YEAR,
-        removalPolicy: cdk.RemovalPolicy.RETAIN
-      });
-
-      this.applyStandardTags(complianceLogGroup, {
-        'log-type': 'compliance',
-        'retention': '1-year',
-        'compliance': 'fedramp-moderate'
-      });
-    }
-  }
-
-  private applyFedrampHighHardening(): void {
-    this.applyFedrampModerateHardening();
-
-    if (this.filesystem) {
-      const auditLogGroup = new logs.LogGroup(this, 'AuditLogGroup', {
-        logGroupName: `/aws/efs/${this.buildFilesystemName()}/audit`,
-        retention: logs.RetentionDays.TEN_YEARS,
-        removalPolicy: cdk.RemovalPolicy.RETAIN
-      });
-
-      this.applyStandardTags(auditLogGroup, {
-        'log-type': 'audit',
-        'retention': '10-years',
-        'compliance': 'fedramp-high'
-      });
-    }
-  }
-
-  private buildFilesystemCapability(): any {
-    return {
-      filesystemId: this.filesystem!.fileSystemId,
-      filesystemArn: this.filesystem!.fileSystemArn
+  private metricDimensions(storageClass?: string): Record<string, string> {
+    const dimensions: Record<string, string> = {
+      FileSystemId: this.fileSystem!.fileSystemId
     };
-  }
 
-  private configureObservabilityForFilesystem(): void {
-    if (this.context.complianceFramework === 'commercial') {
-      return;
+    if (storageClass) {
+      dimensions.StorageClass = storageClass;
     }
 
-    const filesystemName = this.buildFilesystemName()!;
+    return dimensions;
+  }
 
-    // 1. Storage Utilization Alarm
-    const storageUtilizationAlarm = new cloudwatch.Alarm(this, 'StorageUtilizationAlarm', {
-      alarmName: `${this.context.serviceName}-${this.spec.name}-storage-utilization`,
-      alarmDescription: 'EFS filesystem storage utilization alarm',
-      metric: new cloudwatch.Metric({
-        namespace: 'AWS/EFS',
-        metricName: 'StorageBytes',
-        dimensionsMap: {
-          FileSystemId: this.filesystem!.fileSystemId,
-          StorageClass: 'Total'
-        },
-        statistic: 'Average',
-        period: cdk.Duration.hours(1)
-      }),
-      threshold: 1099511627776, // 1TB threshold
-      evaluationPeriods: 2,
-      comparisonOperator: cloudwatch.ComparisonOperator.GREATER_THAN_THRESHOLD,
-      treatMissingData: cloudwatch.TreatMissingData.NOT_BREACHING
-    });
+  private generateLogGroupName(suffix: string): string {
+    return `/aws/efs/${this.config!.fileSystemName}/${suffix}`;
+  }
 
-    this.applyStandardTags(storageUtilizationAlarm, {
-      'alarm-type': 'storage-utilization',
-      'metric-type': 'capacity',
-      'threshold': '1TB'
-    });
+  private toPascalCase(value: string): string {
+    return value.replace(/(^|[-_\s])(\w)/g, (_, __, char) => char.toUpperCase());
+  }
 
-    // 2. Connection Count Alarm
-    const connectionCountAlarm = new cloudwatch.Alarm(this, 'ConnectionCountAlarm', {
-      alarmName: `${this.context.serviceName}-${this.spec.name}-high-connections`,
-      alarmDescription: 'EFS filesystem high connection count alarm',
-      metric: new cloudwatch.Metric({
-        namespace: 'AWS/EFS',
-        metricName: 'ClientConnections',
-        dimensionsMap: {
-          FileSystemId: this.filesystem!.fileSystemId
-        },
-        statistic: 'Average',
-        period: cdk.Duration.minutes(5)
-      }),
-      threshold: 1000, // High connection threshold
-      evaluationPeriods: 3,
-      comparisonOperator: cloudwatch.ComparisonOperator.GREATER_THAN_THRESHOLD,
-      treatMissingData: cloudwatch.TreatMissingData.NOT_BREACHING
-    });
+  private toKebabCase(value: string): string {
+    return value.replace(/([a-z0-9])([A-Z])/g, '$1-$2').toLowerCase();
+  }
 
-    this.applyStandardTags(connectionCountAlarm, {
-      'alarm-type': 'high-connections',
-      'metric-type': 'usage',
-      'threshold': '1000'
-    });
-
-    this.logComponentEvent('observability_configured', 'OpenTelemetry observability standard applied to EFS Filesystem', {
-      alarmsCreated: 2,
-      filesystemName: filesystemName,
-      monitoringEnabled: true
+  private logHardeningProfile(): void {
+    this.logComplianceEvent('hardening_profile_applied', 'Applied EFS hardening profile', {
+      hardeningProfile: this.config!.hardeningProfile
     });
   }
 }

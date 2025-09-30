@@ -1,248 +1,208 @@
-/**
- * Configuration Builder for VPC Component
- * 
- * Implements the ConfigBuilder pattern as defined in the Platform Component API Contract.
- * Provides 5-layer configuration precedence chain and compliance-aware defaults.
- */
+import {
+  ConfigBuilder,
+  ConfigBuilderContext,
+  ComponentConfigSchema
+} from '@shinobi/core';
+import { ComponentContext, ComponentSpec } from '@platform/contracts';
 
-import { ConfigBuilder, ConfigBuilderContext, ComponentConfigSchema } from '../@shinobi/core/config-builder';
+export type VpcRemovalPolicy = 'retain' | 'destroy';
 
-/**
- * Configuration interface for VPC component
- */
-export interface VpcConfig {
-  /** Component name (optional, will be auto-generated) */
-  name?: string;
-  
-  /** Component description */
-  description?: string;
-  
-  /** CIDR block for the VPC */
-  cidr?: string;
-  
-  /** Maximum number of Availability Zones */
-  maxAzs?: number;
-  
-  /** Enable NAT gateways for private subnets */
-  natGateways?: number;
-  
-  /** Enable VPC Flow Logs */
-  flowLogsEnabled?: boolean;
-  
-  /** VPC Flow Logs retention period in days */
-  flowLogRetentionDays?: number;
-  
-  /** Subnet configuration */
-  subnets?: {
-    /** Public subnet configuration */
-    public?: {
-      cidrMask?: number;
-      name?: string;
-    };
-    /** Private subnet configuration */
-    private?: {
-      cidrMask?: number;
-      name?: string;
-    };
-    /** Database subnet configuration */
-    database?: {
-      cidrMask?: number;
-      name?: string;
-    };
-  };
-  
-  /** VPC Endpoints configuration */
-  vpcEndpoints?: {
-    s3?: boolean;
-    dynamodb?: boolean;
-    secretsManager?: boolean;
-    kms?: boolean;
-  };
-  
-  /** DNS configuration */
-  dns?: {
-    enableDnsHostnames?: boolean;
-    enableDnsSupport?: boolean;
-  };
-  
-  /** Enable detailed monitoring */
-  monitoring?: {
-    enabled?: boolean;
-    detailedMetrics?: boolean;
-    alarms?: {
-      natGatewayPacketDropThreshold?: number;
-      vpcFlowLogDeliveryFailures?: number;
-    };
-  };
-  
-  /** Tagging configuration */
-  tags?: Record<string, string>;
+export interface VpcFlowLogsConfig {
+  enabled: boolean;
+  retentionInDays: number;
+  removalPolicy: VpcRemovalPolicy;
 }
 
-/**
- * JSON Schema for VPC configuration validation
- */
-export const VPC_CONFIG_SCHEMA: ComponentConfigSchema = {
+export interface VpcSubnetConfig {
+  cidrMask: number;
+  name: string;
+}
+
+export interface VpcSubnetsConfig {
+  public: VpcSubnetConfig;
+  private: VpcSubnetConfig;
+  database: VpcSubnetConfig;
+}
+
+export interface VpcEndpointConfig {
+  s3: boolean;
+  dynamodb: boolean;
+  secretsManager: boolean;
+  kms: boolean;
+  lambda: boolean;
+}
+
+export interface VpcDnsConfig {
+  enableDnsHostnames: boolean;
+  enableDnsSupport: boolean;
+}
+
+export interface VpcMonitoringConfig {
+  enabled: boolean;
+  detailedMetrics: boolean;
+  alarms: {
+    natGatewayPacketDropThreshold: number;
+    vpcFlowLogDeliveryFailures: number;
+  };
+}
+
+export interface VpcSecurityConfig {
+  createDefaultSecurityGroups: boolean;
+  complianceNacls: {
+    enabled: boolean;
+    mode: 'standard' | 'high';
+  };
+  restrictDefaultSecurityGroup: boolean;
+}
+
+export interface VpcConfig {
+  cidr: string;
+  maxAzs: number;
+  natGateways: number;
+  flowLogs: VpcFlowLogsConfig;
+  subnets: VpcSubnetsConfig;
+  vpcEndpoints: VpcEndpointConfig;
+  dns: VpcDnsConfig;
+  monitoring: VpcMonitoringConfig;
+  security: VpcSecurityConfig;
+  tags: Record<string, string>;
+}
+
+const FLOW_LOGS_SCHEMA = {
   type: 'object',
+  additionalProperties: false,
   properties: {
-    name: {
-      type: 'string',
-      description: 'VPC name (optional, defaults to component name)',
-      pattern: '^[a-zA-Z][a-zA-Z0-9-_]*$',
-      maxLength: 128
-    },
-    description: {
-      type: 'string',
-      description: 'VPC description for documentation',
-      maxLength: 1024
-    },
-    cidr: {
-      type: 'string',
-      description: 'CIDR block for the VPC',
-      pattern: '^(?:[0-9]{1,3}\\.){3}[0-9]{1,3}/[0-9]{1,2}$',
-      default: '10.0.0.0/16'
-    },
-    maxAzs: {
+    enabled: { type: 'boolean', default: true },
+    retentionInDays: {
       type: 'number',
-      description: 'Maximum number of Availability Zones',
-      minimum: 2,
-      maximum: 6,
-      default: 2
-    },
-    natGateways: {
-      type: 'number',
-      description: 'Number of NAT gateways',
-      minimum: 0,
-      maximum: 6,
-      default: 1
-    },
-    flowLogsEnabled: {
-      type: 'boolean',
-      description: 'Enable VPC Flow Logs',
-      default: true
-    },
-    flowLogRetentionDays: {
-      type: 'number',
-      description: 'VPC Flow Logs retention period in days',
-      enum: [1, 3, 5, 7, 14, 30, 60, 90, 120, 150, 180, 365, 400, 545, 731, 1827, 3653],
+      enum: [1, 3, 5, 7, 14, 30, 60, 90, 120, 150, 180, 365, 400, 545, 731, 1827, 2555, 3653],
       default: 365
     },
-    subnets: {
-      type: 'object',
-      description: 'Subnet configuration',
-      properties: {
-        public: {
-          type: 'object',
-          properties: {
-            cidrMask: { type: 'number', minimum: 16, maximum: 28, default: 24 },
-            name: { type: 'string', default: 'Public' }
-          },
-          additionalProperties: false
-        },
-        private: {
-          type: 'object',
-          properties: {
-            cidrMask: { type: 'number', minimum: 16, maximum: 28, default: 24 },
-            name: { type: 'string', default: 'Private' }
-          },
-          additionalProperties: false
-        },
-        database: {
-          type: 'object',
-          properties: {
-            cidrMask: { type: 'number', minimum: 16, maximum: 28, default: 28 },
-            name: { type: 'string', default: 'Database' }
-          },
-          additionalProperties: false
-        }
-      },
-      additionalProperties: false
-    },
-    vpcEndpoints: {
-      type: 'object',
-      description: 'VPC Endpoints configuration',
-      properties: {
-        s3: { type: 'boolean', default: false },
-        dynamodb: { type: 'boolean', default: false },
-        secretsManager: { type: 'boolean', default: false },
-        kms: { type: 'boolean', default: false }
-      },
-      additionalProperties: false
-    },
-    dns: {
-      type: 'object',
-      description: 'DNS configuration',
-      properties: {
-        enableDnsHostnames: { type: 'boolean', default: true },
-        enableDnsSupport: { type: 'boolean', default: true }
-      },
-      additionalProperties: false
-    },
-    monitoring: {
-      type: 'object',
-      description: 'Monitoring configuration',
-      properties: {
-        enabled: { type: 'boolean', description: 'Enable monitoring', default: true },
-        detailedMetrics: { type: 'boolean', description: 'Enable detailed CloudWatch metrics', default: false },
-        alarms: {
-          type: 'object',
-          properties: {
-            natGatewayPacketDropThreshold: { type: 'number', default: 1000 },
-            vpcFlowLogDeliveryFailures: { type: 'number', default: 10 }
-          },
-          additionalProperties: false
-        }
-      },
-      additionalProperties: false
-    },
-    tags: {
-      type: 'object',
-      description: 'Custom tags for the VPC',
-      additionalProperties: { type: 'string' }
-    }
-  },
-  required: [],
-  additionalProperties: false
+    removalPolicy: { type: 'string', enum: ['retain', 'destroy'], default: 'retain' }
+  }
 };
 
-/**
- * ConfigBuilder implementation for VPC component
- */
-export class VpcConfigBuilder extends ConfigBuilder<VpcConfig> {
-  
-  constructor(builderContext: ConfigBuilderContext, schema: ComponentConfigSchema) {
-    super(builderContext, schema);
+const SUBNET_GROUP_SCHEMA = {
+  type: 'object',
+  additionalProperties: false,
+  properties: {
+    cidrMask: { type: 'number', minimum: 16, maximum: 28 },
+    name: { type: 'string' }
   }
-  
-  /**
-   * Provides ultra-safe baseline configuration that works in any environment
-   */
+};
+
+const ENDPOINTS_SCHEMA = {
+  type: 'object',
+  additionalProperties: false,
+  properties: {
+    s3: { type: 'boolean', default: false },
+    dynamodb: { type: 'boolean', default: false },
+    secretsManager: { type: 'boolean', default: false },
+    kms: { type: 'boolean', default: false },
+    lambda: { type: 'boolean', default: false }
+  }
+};
+
+const DNS_SCHEMA = {
+  type: 'object',
+  additionalProperties: false,
+  properties: {
+    enableDnsHostnames: { type: 'boolean', default: true },
+    enableDnsSupport: { type: 'boolean', default: true }
+  }
+};
+
+const MONITORING_SCHEMA = {
+  type: 'object',
+  additionalProperties: false,
+  properties: {
+    enabled: { type: 'boolean', default: true },
+    detailedMetrics: { type: 'boolean', default: false },
+    alarms: {
+      type: 'object',
+      additionalProperties: false,
+      properties: {
+        natGatewayPacketDropThreshold: { type: 'number', default: 1000 },
+        vpcFlowLogDeliveryFailures: { type: 'number', default: 10 }
+      }
+    }
+  }
+};
+
+const SECURITY_SCHEMA = {
+  type: 'object',
+  additionalProperties: false,
+  properties: {
+    createDefaultSecurityGroups: { type: 'boolean', default: true },
+    complianceNacls: {
+      type: 'object',
+      additionalProperties: false,
+      properties: {
+        enabled: { type: 'boolean', default: false },
+        mode: { type: 'string', enum: ['standard', 'high'], default: 'standard' }
+      }
+    },
+    restrictDefaultSecurityGroup: { type: 'boolean', default: false }
+  }
+};
+
+export const VPC_CONFIG_SCHEMA: ComponentConfigSchema = {
+  type: 'object',
+  additionalProperties: false,
+  properties: {
+    cidr: {
+      type: 'string',
+      pattern: '^(?:[0-9]{1,3}\\.){3}[0-9]{1,3}/[0-9]{1,2}$'
+    },
+    maxAzs: { type: 'number', minimum: 1, maximum: 6 },
+    natGateways: { type: 'number', minimum: 0, maximum: 6 },
+    flowLogs: FLOW_LOGS_SCHEMA,
+    subnets: {
+      type: 'object',
+      additionalProperties: false,
+      properties: {
+        public: SUBNET_GROUP_SCHEMA,
+        private: SUBNET_GROUP_SCHEMA,
+        database: SUBNET_GROUP_SCHEMA
+      }
+    },
+    vpcEndpoints: ENDPOINTS_SCHEMA,
+    dns: DNS_SCHEMA,
+    monitoring: MONITORING_SCHEMA,
+    security: SECURITY_SCHEMA,
+    tags: {
+      type: 'object',
+      additionalProperties: { type: 'string' }
+    }
+  }
+};
+
+export class VpcConfigBuilder extends ConfigBuilder<VpcConfig> {
+  constructor(builderContext: ConfigBuilderContext) {
+    super(builderContext, VPC_CONFIG_SCHEMA);
+  }
+
   protected getHardcodedFallbacks(): Partial<VpcConfig> {
     return {
       cidr: '10.0.0.0/16',
       maxAzs: 2,
       natGateways: 1,
-      flowLogsEnabled: true,
-      flowLogRetentionDays: 365, // 1 year baseline
+      flowLogs: {
+        enabled: true,
+        retentionInDays: 365,
+        removalPolicy: 'retain'
+      },
       subnets: {
-        public: {
-          cidrMask: 24,
-          name: 'Public'
-        },
-        private: {
-          cidrMask: 24,
-          name: 'Private'
-        },
-        database: {
-          cidrMask: 28,
-          name: 'Database'
-        }
+        public: { cidrMask: 24, name: 'Public' },
+        private: { cidrMask: 24, name: 'Private' },
+        database: { cidrMask: 28, name: 'Database' }
       },
       vpcEndpoints: {
         s3: false,
         dynamodb: false,
         secretsManager: false,
-        kms: false
+        kms: false,
+        lambda: false
       },
       dns: {
         enableDnsHostnames: true,
@@ -255,52 +215,110 @@ export class VpcConfigBuilder extends ConfigBuilder<VpcConfig> {
           natGatewayPacketDropThreshold: 1000,
           vpcFlowLogDeliveryFailures: 10
         }
+      },
+      security: {
+        createDefaultSecurityGroups: true,
+        complianceNacls: {
+          enabled: false,
+          mode: 'standard'
+        },
+        restrictDefaultSecurityGroup: false
+      },
+      tags: {}
+    };
+  }
+
+  public buildSync(): VpcConfig {
+    const resolved = super.buildSync() as Partial<VpcConfig>;
+    return this.normaliseConfig(resolved);
+  }
+
+  private normaliseConfig(config: Partial<VpcConfig>): VpcConfig {
+    return {
+      cidr: config.cidr ?? '10.0.0.0/16',
+      maxAzs: this.normaliseNumber(config.maxAzs, 2),
+      natGateways: this.normaliseNumber(config.natGateways, 1),
+      flowLogs: this.normaliseFlowLogs(config.flowLogs),
+      subnets: this.normaliseSubnets(config.subnets),
+      vpcEndpoints: this.normaliseEndpoints(config.vpcEndpoints),
+      dns: this.normaliseDns(config.dns),
+      monitoring: this.normaliseMonitoring(config.monitoring),
+      security: this.normaliseSecurity(config.security),
+      tags: config.tags ?? {}
+    };
+  }
+
+  private normaliseNumber(value: number | undefined, fallback: number): number {
+    return typeof value === 'number' && !Number.isNaN(value) ? value : fallback;
+  }
+
+  private normaliseFlowLogs(flowLogs?: Partial<VpcFlowLogsConfig>): VpcFlowLogsConfig {
+    return {
+      enabled: flowLogs?.enabled ?? true,
+      retentionInDays: flowLogs?.retentionInDays ?? 365,
+      removalPolicy: flowLogs?.removalPolicy === 'destroy' ? 'destroy' : 'retain'
+    };
+  }
+
+  private normaliseSubnets(subnets?: Partial<VpcSubnetsConfig>): VpcSubnetsConfig {
+    const fallback = this.getHardcodedFallbacks().subnets!;
+    return {
+      public: {
+        cidrMask: subnets?.public?.cidrMask ?? fallback.public.cidrMask,
+        name: subnets?.public?.name ?? fallback.public.name
+      },
+      private: {
+        cidrMask: subnets?.private?.cidrMask ?? fallback.private.cidrMask,
+        name: subnets?.private?.name ?? fallback.private.name
+      },
+      database: {
+        cidrMask: subnets?.database?.cidrMask ?? fallback.database.cidrMask,
+        name: subnets?.database?.name ?? fallback.database.name
       }
     };
   }
-  
-  /**
-   * Security and compliance-specific configurations
-   */
-  protected getComplianceFrameworkDefaults(): Partial<VpcConfig> {
-    const framework = this.builderContext.context.complianceFramework;
-    
-    // Commercial baseline
-    const baseCompliance: Partial<VpcConfig> = {
-      flowLogsEnabled: true,
-      flowLogRetentionDays: 365,
-      monitoring: {
-        enabled: true,
-        detailedMetrics: false,
-        alarms: {
-          natGatewayPacketDropThreshold: 1000,
-          vpcFlowLogDeliveryFailures: 10
-        }
+
+  private normaliseEndpoints(endpoints?: Partial<VpcEndpointConfig>): VpcEndpointConfig {
+    return {
+      s3: endpoints?.s3 ?? false,
+      dynamodb: endpoints?.dynamodb ?? false,
+      secretsManager: endpoints?.secretsManager ?? false,
+      kms: endpoints?.kms ?? false,
+      lambda: endpoints?.lambda ?? false
+    };
+  }
+
+  private normaliseDns(dns?: Partial<VpcDnsConfig>): VpcDnsConfig {
+    return {
+      enableDnsHostnames: dns?.enableDnsHostnames ?? true,
+      enableDnsSupport: dns?.enableDnsSupport ?? true
+    };
+  }
+
+  private normaliseMonitoring(monitoring?: Partial<VpcMonitoringConfig>): VpcMonitoringConfig {
+    return {
+      enabled: monitoring?.enabled ?? true,
+      detailedMetrics: monitoring?.detailedMetrics ?? false,
+      alarms: {
+        natGatewayPacketDropThreshold: monitoring?.alarms?.natGatewayPacketDropThreshold ?? 1000,
+        vpcFlowLogDeliveryFailures: monitoring?.alarms?.vpcFlowLogDeliveryFailures ?? 10
       }
     };
-    
-    if (framework === 'fedramp-moderate' || framework === 'fedramp-high') {
-      return {
-        ...baseCompliance,
-        flowLogRetentionDays: framework === 'fedramp-high' ? 2555 : 1827, // 7 years for high, 5 years for moderate
-        natGateways: 2, // Redundancy for compliance
-        vpcEndpoints: {
-          s3: true, // Required for secure data access
-          dynamodb: true,
-          secretsManager: true,
-          kms: true
-        },
-        monitoring: {
-          enabled: true,
-          detailedMetrics: true, // Required for compliance
-          alarms: {
-            natGatewayPacketDropThreshold: 500, // More sensitive
-            vpcFlowLogDeliveryFailures: 5 // More sensitive
-          }
-        }
-      };
-    }
-    
-    return baseCompliance;
+  }
+
+  private normaliseSecurity(security?: Partial<VpcSecurityConfig>): VpcSecurityConfig {
+    return {
+      createDefaultSecurityGroups: security?.createDefaultSecurityGroups ?? true,
+      complianceNacls: {
+        enabled: security?.complianceNacls?.enabled ?? false,
+        mode: security?.complianceNacls?.mode === 'high' ? 'high' : 'standard'
+      },
+      restrictDefaultSecurityGroup: security?.restrictDefaultSecurityGroup ?? false
+    };
   }
 }
+
+export const createVpcConfigBuilder = (context: ComponentContext, spec: ComponentSpec): VpcConfigBuilder => {
+  const builderContext: ConfigBuilderContext = { context, spec };
+  return new VpcConfigBuilder(builderContext);
+};

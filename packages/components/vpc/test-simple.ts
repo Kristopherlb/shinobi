@@ -29,8 +29,11 @@ const mockSpec: ComponentSpec = {
     cidr: '10.0.0.0/16',
     maxAzs: 2,
     natGateways: 1,
-    flowLogsEnabled: true,
-    flowLogRetentionDays: 30
+    flowLogs: {
+      enabled: true,
+      retentionInDays: 30,
+      removalPolicy: 'destroy'
+    }
   }
 };
 

@@ -23,6 +23,7 @@ export interface ComponentConfigSchema {
   readonly properties: Record<string, any>;
   readonly required?: string[];
   readonly additionalProperties?: boolean;
+  readonly allOf?: any[];
 }
 
 /**

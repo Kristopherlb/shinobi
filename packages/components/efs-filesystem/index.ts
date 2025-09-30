@@ -4,7 +4,7 @@
  */
 
 // Component exports
-export { EfsFilesystemComponentComponent } from './efs-filesystem.component';
+export { EfsFilesystemComponent } from './efs-filesystem.component';
 
 // Configuration exports
 export { 

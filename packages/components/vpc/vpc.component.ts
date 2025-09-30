@@ -10,10 +10,9 @@ import * as logs from 'aws-cdk-lib/aws-logs';
 import * as iam from 'aws-cdk-lib/aws-iam';
 import * as cdk from 'aws-cdk-lib';
 import { Construct } from 'constructs';
-import { BaseComponent } from '../@shinobi/core/component';
-import { ComponentSpec, ComponentContext, ComponentCapabilities } from '../@shinobi/core/component-interfaces';
-import { ConfigBuilderContext } from '../@shinobi/core/config-builder';
-import { VpcConfig, VpcConfigBuilder, VPC_CONFIG_SCHEMA } from './vpc.builder';
+import { BaseComponent } from '@shinobi/core';
+import { ComponentSpec, ComponentContext, ComponentCapabilities } from '@platform/contracts';
+import { VpcConfig, VpcConfigBuilder } from './vpc.builder';
 
 
 /**
@@ -40,11 +39,10 @@ export class VpcComponent extends BaseComponent {
 
     try {
       // Step 1: Build configuration using ConfigBuilder
-      const builderContext: ConfigBuilderContext = {
+      const builder = new VpcConfigBuilder({
         context: this.context,
-        spec: this.spec,
-      };
-      const builder = new VpcConfigBuilder(builderContext, VPC_CONFIG_SCHEMA);
+        spec: this.spec
+      });
       this.config = builder.buildSync();
 
       // Step 2: Create core AWS CDK constructs first
@@ -52,8 +50,8 @@ export class VpcComponent extends BaseComponent {
       this.createVpcFlowLogsIfEnabled();
       this.createVpcEndpointsIfNeeded();
 
-      // Step 3: Apply compliance hardening (after VPC exists)
-      this.applyComplianceHardening();
+      // Step 3: Apply security controls (after VPC exists)
+      this.applySecurityControls();
 
       // Step 4: Apply standard tags to all taggable resources
       this.applyStandardTagsToResources();
@@ -120,69 +118,68 @@ export class VpcComponent extends BaseComponent {
    * Create VPC Flow Logs for network monitoring
    */
   private createVpcFlowLogsIfEnabled(): void {
-    if (this.config!.flowLogsEnabled !== false) {
-      // Create log group for VPC Flow Logs
-      this.flowLogGroup = new logs.LogGroup(this, 'VpcFlowLogGroup', {
-        logGroupName: `/aws/vpc/flowlogs/${this.vpc!.vpcId}`,
-        retention: this.mapDaysToRetention(this.config!.flowLogRetentionDays || 30),
-        removalPolicy: this.isComplianceFramework() ?
-          cdk.RemovalPolicy.RETAIN : cdk.RemovalPolicy.DESTROY
-      });
-
-      // Create IAM role for Flow Logs
-      this.flowLogRole = new iam.Role(this, 'VpcFlowLogRole', {
-        assumedBy: new iam.ServicePrincipal('vpc-flow-logs.amazonaws.com'),
-        inlinePolicies: {
-          flowLogsDeliveryRolePolicy: new iam.PolicyDocument({
-            statements: [
-              new iam.PolicyStatement({
-                actions: [
-                  'logs:CreateLogGroup',
-                  'logs:CreateLogStream',
-                  'logs:PutLogEvents',
-                  'logs:DescribeLogGroups',
-                  'logs:DescribeLogStreams'
-                ],
-                resources: [`${this.flowLogGroup.logGroupArn}:*`]
-              })
-            ]
-          })
-        }
-      });
-
-      // Create VPC Flow Log
-      new ec2.FlowLog(this, 'VpcFlowLog', {
-        resourceType: ec2.FlowLogResourceType.fromVpc(this.vpc!),
-        destination: ec2.FlowLogDestination.toCloudWatchLogs(this.flowLogGroup, this.flowLogRole),
-        trafficType: ec2.FlowLogTrafficType.ALL
-      });
+    if (!this.config.flowLogs.enabled) {
+      return;
     }
+
+    const removalPolicy = this.config.flowLogs.removalPolicy === 'destroy'
+      ? cdk.RemovalPolicy.DESTROY
+      : cdk.RemovalPolicy.RETAIN;
+
+    this.flowLogGroup = new logs.LogGroup(this, 'VpcFlowLogGroup', {
+      logGroupName: `/aws/vpc/flowlogs/${this.vpc!.vpcId}`,
+      retention: this.mapLogRetentionDays(this.config.flowLogs.retentionInDays),
+      removalPolicy
+    });
+
+    this.flowLogRole = new iam.Role(this, 'VpcFlowLogRole', {
+      assumedBy: new iam.ServicePrincipal('vpc-flow-logs.amazonaws.com'),
+      inlinePolicies: {
+        flowLogsDeliveryRolePolicy: new iam.PolicyDocument({
+          statements: [
+            new iam.PolicyStatement({
+              actions: [
+                'logs:CreateLogGroup',
+                'logs:CreateLogStream',
+                'logs:PutLogEvents',
+                'logs:DescribeLogGroups',
+                'logs:DescribeLogStreams'
+              ],
+              resources: [`${this.flowLogGroup.logGroupArn}:*`]
+            })
+          ]
+        })
+      }
+    });
+
+    new ec2.FlowLog(this, 'VpcFlowLog', {
+      resourceType: ec2.FlowLogResourceType.fromVpc(this.vpc!),
+      destination: ec2.FlowLogDestination.toCloudWatchLogs(this.flowLogGroup, this.flowLogRole),
+      trafficType: ec2.FlowLogTrafficType.ALL
+    });
   }
 
   /**
    * Create VPC Endpoints based on configuration
    */
   private createVpcEndpointsIfNeeded(): void {
-    const endpoints = this.config!.vpcEndpoints;
+    const endpoints = this.config.vpcEndpoints;
 
-    // S3 Gateway Endpoint (no cost) - enabled by config or compliance framework
-    if (endpoints?.s3 || this.isComplianceFramework()) {
+    if (endpoints.s3) {
       this.vpc!.addGatewayEndpoint('S3Endpoint', {
         service: ec2.GatewayVpcEndpointAwsService.S3,
         subnets: [{ subnetType: ec2.SubnetType.PRIVATE_WITH_EGRESS }]
       });
     }
 
-    // DynamoDB Gateway Endpoint (no cost) - enabled by config or compliance framework
-    if (endpoints?.dynamodb || this.isComplianceFramework()) {
+    if (endpoints.dynamodb) {
       this.vpc!.addGatewayEndpoint('DynamoDbEndpoint', {
         service: ec2.GatewayVpcEndpointAwsService.DYNAMODB,
         subnets: [{ subnetType: ec2.SubnetType.PRIVATE_WITH_EGRESS }]
       });
     }
 
-    // Secrets Manager Interface Endpoint - enabled by config or FedRAMP High
-    if (endpoints?.secretsManager || this.context.complianceFramework === 'fedramp-high') {
+    if (endpoints.secretsManager) {
       this.vpc!.addInterfaceEndpoint('SecretsManagerEndpoint', {
         service: ec2.InterfaceVpcEndpointAwsService.SECRETS_MANAGER,
         privateDnsEnabled: true,
@@ -190,8 +187,7 @@ export class VpcComponent extends BaseComponent {
       });
     }
 
-    // KMS Interface Endpoint - enabled by config or FedRAMP High
-    if (endpoints?.kms || this.context.complianceFramework === 'fedramp-high') {
+    if (endpoints.kms) {
       this.vpc!.addInterfaceEndpoint('KmsEndpoint', {
         service: ec2.InterfaceVpcEndpointAwsService.KMS,
         privateDnsEnabled: true,
@@ -199,8 +195,7 @@ export class VpcComponent extends BaseComponent {
       });
     }
 
-    // Lambda endpoint for FedRAMP High (always created for highest compliance)
-    if (this.context.complianceFramework === 'fedramp-high') {
+    if (endpoints.lambda) {
       this.vpc!.addInterfaceEndpoint('LambdaEndpoint', {
         service: ec2.InterfaceVpcEndpointAwsService.LAMBDA,
         privateDnsEnabled: true,
@@ -210,44 +205,26 @@ export class VpcComponent extends BaseComponent {
   }
 
   /**
-   * Apply compliance-specific hardening
+   * Apply security controls defined by configuration
    */
-  private applyComplianceHardening(): void {
-    switch (this.context.complianceFramework) {
-      case 'fedramp-moderate':
-        this.applyFedrampModerateHardening();
-        break;
-      case 'fedramp-high':
-        this.applyFedrampHighHardening();
-        break;
-      default:
-        this.applyCommercialHardening();
-        break;
+  private applySecurityControls(): void {
+    const security = this.config.security;
+
+    if (security.createDefaultSecurityGroups) {
+      this.createDefaultSecurityGroups();
     }
-  }
 
-  private applyCommercialHardening(): void {
-    // Basic security group rules
-    this.createDefaultSecurityGroups();
-  }
+    if (security.complianceNacls.enabled) {
+      this.createComplianceNacls();
 
-  private applyFedrampModerateHardening(): void {
-    // Apply commercial hardening
-    this.applyCommercialHardening();
+      if (security.complianceNacls.mode === 'high') {
+        this.createHighSecurityNacls();
+      }
+    }
 
-    // Create stricter NACLs
-    this.createComplianceNacls();
-  }
-
-  private applyFedrampHighHardening(): void {
-    // Apply all moderate hardening
-    this.applyFedrampModerateHardening();
-
-    // Additional high-security NACLs
-    this.createHighSecurityNacls();
-
-    // Remove default security group rules
-    this.restrictDefaultSecurityGroup();
+    if (security.restrictDefaultSecurityGroup) {
+      this.restrictDefaultSecurityGroup();
+    }
   }
 
   /**
@@ -260,6 +237,7 @@ export class VpcComponent extends BaseComponent {
       description: 'Security group for web tier',
       allowAllOutbound: false
     });
+    this.applyStandardTags(webSecurityGroup, { 'security-group': 'web' });
 
     webSecurityGroup.addIngressRule(
       ec2.Peer.anyIpv4(),
@@ -279,6 +257,7 @@ export class VpcComponent extends BaseComponent {
       description: 'Security group for application tier',
       allowAllOutbound: false
     });
+    this.applyStandardTags(appSecurityGroup, { 'security-group': 'app' });
 
     appSecurityGroup.addIngressRule(
       webSecurityGroup,
@@ -292,6 +271,7 @@ export class VpcComponent extends BaseComponent {
       description: 'Security group for database tier',
       allowAllOutbound: false
     });
+    this.applyStandardTags(dbSecurityGroup, { 'security-group': 'database' });
 
     dbSecurityGroup.addIngressRule(
       appSecurityGroup,
@@ -409,71 +389,6 @@ export class VpcComponent extends BaseComponent {
   }
 
   /**
-   * Helper methods for compliance decisions
-   */
-  private isComplianceFramework(): boolean {
-    return ['fedramp-moderate', 'fedramp-high'].includes(this.context.complianceFramework);
-  }
-
-  /**
-   * Maps days to CloudWatch Logs retention enum
-   */
-  private mapDaysToRetention(days: number): logs.RetentionDays {
-    if (days <= 1) return logs.RetentionDays.ONE_DAY;
-    if (days <= 3) return logs.RetentionDays.THREE_DAYS;
-    if (days <= 5) return logs.RetentionDays.FIVE_DAYS;
-    if (days <= 7) return logs.RetentionDays.ONE_WEEK;
-    if (days <= 14) return logs.RetentionDays.TWO_WEEKS;
-    if (days <= 30) return logs.RetentionDays.ONE_MONTH;
-    if (days <= 60) return logs.RetentionDays.TWO_MONTHS;
-    if (days <= 90) return logs.RetentionDays.THREE_MONTHS;
-    if (days <= 120) return logs.RetentionDays.FOUR_MONTHS;
-    if (days <= 150) return logs.RetentionDays.FIVE_MONTHS;
-    if (days <= 180) return logs.RetentionDays.SIX_MONTHS;
-    if (days <= 365) return logs.RetentionDays.ONE_YEAR;
-    if (days <= 400) return logs.RetentionDays.THIRTEEN_MONTHS;
-    if (days <= 545) return logs.RetentionDays.EIGHTEEN_MONTHS;
-    if (days <= 730) return logs.RetentionDays.TWO_YEARS;
-    if (days <= 1827) return logs.RetentionDays.FIVE_YEARS;
-    return logs.RetentionDays.TEN_YEARS;
-  }
-
-
-  /**
-   * Apply standard platform tags to VPC and related resources
-   */
-  private applyVpcTags(): void {
-    if (this.vpc) {
-      // Apply standard platform tags to VPC
-      this.applyStandardTags(this.vpc);
-
-      // Apply standard tags to subnets
-      this.vpc.publicSubnets.forEach((subnet) => {
-        this.applyStandardTags(subnet, { 'subnet-type': 'public' });
-      });
-
-      this.vpc.privateSubnets.forEach((subnet) => {
-        this.applyStandardTags(subnet, { 'subnet-type': 'private' });
-      });
-
-      this.vpc.isolatedSubnets.forEach((subnet) => {
-        this.applyStandardTags(subnet, { 'subnet-type': 'isolated' });
-      });
-    }
-
-    // Apply tags to flow log group if it exists
-    if (this.flowLogGroup) {
-      this.applyStandardTags(this.flowLogGroup);
-    }
-
-    // Apply tags to flow log role if it exists
-    if (this.flowLogRole) {
-      this.applyStandardTags(this.flowLogRole);
-    }
-  }
-
-
-  /**
    * Apply standard tags to all taggable resources
    */
   private applyStandardTagsToResources(): void {
@@ -482,24 +397,21 @@ export class VpcComponent extends BaseComponent {
         'vpc-cidr': this.config.cidr || '10.0.0.0/16',
         'nat-gateways': String(this.config.natGateways ?? 1),
         'max-azs': String(this.config.maxAzs || 2),
-        'flow-logs-enabled': String(this.config.flowLogsEnabled ?? true),
-        'compliance:framework': this.context.complianceFramework,
-        'compliance:nist-controls': 'AC-2(3),AT-4(b)'
+        'flow-logs-enabled': String(this.config.flowLogs.enabled),
+        ...this.config.tags
       });
     }
 
     if (this.flowLogGroup) {
       this.applyStandardTags(this.flowLogGroup, {
         'log-type': 'vpc-flow-logs',
-        'retention-days': String(this.config.flowLogRetentionDays || 365),
-        'compliance:framework': this.context.complianceFramework
+        'retention-days': String(this.config.flowLogs.retentionInDays)
       });
     }
 
     if (this.flowLogRole) {
       this.applyStandardTags(this.flowLogRole, {
-        'role-type': 'vpc-flow-logs',
-        'compliance:framework': this.context.complianceFramework
+        'role-type': 'vpc-flow-logs'
       });
     }
   }
@@ -551,8 +463,8 @@ export class VpcComponent extends BaseComponent {
     // Security capability
     capabilities['security:network-isolation'] = {
       vpcId: this.vpc!.vpcId,
-      flowLogsEnabled: this.config.flowLogsEnabled ?? true,
-      vpcEndpointsEnabled: Object.values(this.config.vpcEndpoints || {}).some(enabled => enabled),
+      flowLogsEnabled: this.config.flowLogs.enabled,
+      vpcEndpointsEnabled: Object.values(this.config.vpcEndpoints).some(enabled => enabled),
       complianceFramework: this.context.complianceFramework
     };
 

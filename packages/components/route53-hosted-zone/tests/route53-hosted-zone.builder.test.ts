@@ -1,99 +1,102 @@
-/**
- * Route53HostedZoneComponent ConfigBuilder Test Suite
- * Implements Platform Testing Standard v1.0 - ConfigBuilder Testing
- */
-
-import { Route53HostedZoneComponentConfigBuilder, Route53HostedZoneConfig } from '../route53-hosted-zone.builder';
+import {
+  Route53HostedZoneComponentConfigBuilder,
+  Route53HostedZoneConfig
+} from '../route53-hosted-zone.builder';
 import { ComponentContext, ComponentSpec } from '../../../platform/contracts/component-interfaces';
 
-const createMockContext = (
-  complianceFramework: string = 'commercial',
-  environment: string = 'dev'
-): ComponentContext => ({
-  serviceName: 'test-service',
-  owner: 'test-team',
-  environment,
-  complianceFramework,
+const createContext = (framework: string = 'commercial'): ComponentContext => ({
+  serviceName: 'dns-service',
+  owner: 'platform-team',
+  environment: 'dev',
+  complianceFramework: framework,
   region: 'us-east-1',
   account: '123456789012',
   tags: {
-    'service-name': 'test-service',
-    'owner': 'test-team',
-    'environment': environment,
-    'compliance-framework': complianceFramework
+    'service-name': 'dns-service',
+    environment: 'dev',
+    'compliance-framework': framework
   }
 });
 
-const createMockSpec = (config: Partial<Route53HostedZoneConfig> = {}): ComponentSpec => ({
-  name: 'test-route53-hosted-zone',
+const createSpec = (config: Partial<Route53HostedZoneConfig>): ComponentSpec => ({
+  name: 'public-zone',
   type: 'route53-hosted-zone',
   config
 });
 
 describe('Route53HostedZoneComponentConfigBuilder', () => {
-  
-  describe('Hardcoded Fallbacks (Layer 1)', () => {
-    
-    it('should provide ultra-safe baseline configuration', () => {
-      const context = createMockContext();
-      const spec = createMockSpec();
-      
-      const builder = new Route53HostedZoneComponentConfigBuilder(context, spec);
-      const config = builder.buildSync();
-      
-      // Verify hardcoded fallbacks are applied
-      expect(config.monitoring?.enabled).toBe(true);
-      expect(config.monitoring?.detailedMetrics).toBe(false);
-      expect(config.tags).toBeDefined();
-    });
-    
+  it('normalises baseline commercial configuration', () => {
+    const builder = new Route53HostedZoneComponentConfigBuilder(
+      createContext('commercial'),
+      createSpec({ zoneName: 'Example.COM.' })
+    );
+
+    const config = builder.buildSync();
+
+    expect(config.zoneName).toBe('example.com');
+    expect(config.zoneType).toBe('public');
+    expect(config.queryLogging.enabled).toBe(false);
+    expect(config.monitoring.enabled).toBe(false);
+    expect(config.hardeningProfile).toBe('baseline');
   });
-  
-  describe('Compliance Framework Defaults (Layer 2)', () => {
-    
-    it('should apply commercial compliance defaults', () => {
-      const context = createMockContext('commercial');
-      const spec = createMockSpec();
-      
-      const builder = new Route53HostedZoneComponentConfigBuilder(context, spec);
-      const config = builder.buildSync();
-      
-      expect(config.monitoring?.enabled).toBe(true);
-      expect(config.monitoring?.detailedMetrics).toBe(true);
-    });
-    
-    it('should apply FedRAMP compliance defaults', () => {
-      const context = createMockContext('fedramp-moderate');
-      const spec = createMockSpec();
-      
-      const builder = new Route53HostedZoneComponentConfigBuilder(context, spec);
-      const config = builder.buildSync();
-      
-      expect(config.monitoring?.enabled).toBe(true);
-      expect(config.monitoring?.detailedMetrics).toBe(true); // Mandatory for FedRAMP
-    });
-    
+
+  it('applies fedramp-high defaults from platform configuration', () => {
+    const builder = new Route53HostedZoneComponentConfigBuilder(
+      createContext('fedramp-high'),
+      createSpec({ zoneName: 'secure.example.com' })
+    );
+
+    const config = builder.buildSync();
+
+    expect(config.queryLogging.enabled).toBe(true);
+    expect(config.dnssec.enabled).toBe(true);
+    expect(config.monitoring.enabled).toBe(true);
+    expect(config.hardeningProfile).toBe('fedramp-high');
   });
-  
-  describe('5-Layer Precedence Chain', () => {
-    
-    it('should apply component overrides over platform defaults', () => {
-      const context = createMockContext('commercial');
-      const spec = createMockSpec({
+
+  it('honours manifest overrides for private zone and logging', () => {
+    const builder = new Route53HostedZoneComponentConfigBuilder(
+      createContext('commercial'),
+      createSpec({
+        zoneName: 'internal.example.com',
+        zoneType: 'private',
+        vpcAssociations: [
+          { vpcId: 'vpc-0123456789abcdef0', region: 'us-east-1' }
+        ],
+        queryLogging: {
+          enabled: true,
+          logGroupName: '/aws/route53/internal',
+          retentionDays: 30,
+          removalPolicy: 'destroy'
+        },
         monitoring: {
-          enabled: false,
-          detailedMetrics: false
-        }
-      });
-      
-      const builder = new Route53HostedZoneComponentConfigBuilder(context, spec);
-      const config = builder.buildSync();
-      
-      // Verify component config overrides platform defaults
-      expect(config.monitoring?.enabled).toBe(false);
-      expect(config.monitoring?.detailedMetrics).toBe(false);
-    });
-    
+          enabled: true,
+          alarms: {
+            queryVolume: {
+              enabled: true,
+              threshold: 5000
+            }
+          }
+        },
+        tags: { team: 'networking' }
+      })
+    );
+
+    const config = builder.buildSync();
+
+    expect(config.zoneType).toBe('private');
+    expect(config.vpcAssociations).toHaveLength(1);
+    expect(config.queryLogging.enabled).toBe(true);
+    expect(config.monitoring.enabled).toBe(true);
+    expect(config.tags.team).toBe('networking');
   });
-  
+
+  it('throws when zone name is missing', () => {
+    const builder = new Route53HostedZoneComponentConfigBuilder(
+      createContext('commercial'),
+      createSpec({ zoneName: undefined as unknown as string })
+    );
+
+    expect(() => builder.buildSync()).toThrow(/zoneName/i);
+  });
 });

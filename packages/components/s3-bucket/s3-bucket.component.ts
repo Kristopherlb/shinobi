@@ -1,1074 +1,452 @@
 /**
  * S3 Bucket Component
- * 
- * An Amazon S3 bucket for object storage with compliance hardening.
- * Implements three-tiered compliance model (Commercial/FedRAMP Moderate/FedRAMP High).
+ *
+ * Creates an Amazon S3 bucket that honours the platform configuration
+ * precedence chain and applies optional security and compliance controls
+ * defined in the manifest and segregated /config defaults.
  */
 
 import * as s3 from 'aws-cdk-lib/aws-s3';
 import * as kms from 'aws-cdk-lib/aws-kms';
-import * as lambda from 'aws-cdk-lib/aws-lambda';
-import * as s3n from 'aws-cdk-lib/aws-s3-notifications';
 import * as iam from 'aws-cdk-lib/aws-iam';
 import * as cloudwatch from 'aws-cdk-lib/aws-cloudwatch';
 import * as cdk from 'aws-cdk-lib';
 import { Construct } from 'constructs';
 import {
-  Component,
+  BaseComponent,
   ComponentSpec,
   ComponentContext,
   ComponentCapabilities
-} from '@platform/contracts';
+} from '@shinobi/core';
+import {
+  S3BucketConfig,
+  S3BucketComponentConfigBuilder
+} from './s3-bucket.builder';
 
-/**
- * Configuration interface for S3 Bucket component
- */
-export interface S3BucketConfig {
-  /** Bucket name (optional, will be auto-generated if not provided) */
-  bucketName?: string;
-  
-  /** Whether the bucket allows public access */
-  public?: boolean;
-  
-  /** Static website hosting configuration */
-  website?: {
-    enabled: boolean;
-    indexDocument?: string;
-    errorDocument?: string;
-  };
-  
-  /** Enable EventBridge notifications */
-  eventBridgeEnabled?: boolean;
-  
-  /** Versioning configuration */
-  versioning?: boolean;
-  
-  /** Encryption configuration */
-  encryption?: {
-    type?: 'AES256' | 'KMS';
-    kmsKeyArn?: string;
-  };
-  
-  /** Lifecycle rules */
-  lifecycleRules?: Array<{
-    id: string;
-    enabled: boolean;
-    transitions?: Array<{
-      storageClass: string;
-      transitionAfter: number;
-    }>;
-    expiration?: {
-      days: number;
-    };
-  }>;
-  
-  /** Security tooling configuration */
-  security?: {
-    tools?: {
-      clamavScan?: boolean;
-    };
-  };
-  
-  /** Backup and compliance settings */
-  compliance?: {
-    objectLock?: {
-      enabled: boolean;
-      mode?: 'GOVERNANCE' | 'COMPLIANCE';
-      retentionDays?: number;
-    };
-    auditLogging?: boolean;
-  };
-}
-
-/**
- * Configuration schema for S3 Bucket component
- */
-export const S3_BUCKET_CONFIG_SCHEMA = {
-  type: 'object',
-  title: 'S3 Bucket Configuration',
-  description: 'Configuration for creating an S3 bucket for object storage',
-  properties: {
-    bucketName: {
-      type: 'string',
-      description: 'Bucket name (must be globally unique)',
-      pattern: '^[a-z0-9.-]+$',
-      minLength: 3,
-      maxLength: 63
-    },
-    public: {
-      type: 'boolean',
-      description: 'Whether to allow public access to the bucket',
-      default: false
-    },
-    website: {
-      type: 'object',
-      description: 'Static website hosting configuration',
-      properties: {
-        enabled: {
-          type: 'boolean',
-          description: 'Enable static website hosting',
-          default: false
-        },
-        indexDocument: {
-          type: 'string',
-          description: 'Index document for website hosting',
-          default: 'index.html'
-        },
-        errorDocument: {
-          type: 'string',
-          description: 'Error document for website hosting',
-          default: 'error.html'
-        }
-      },
-      additionalProperties: false,
-      default: {
-        enabled: false,
-        indexDocument: 'index.html',
-        errorDocument: 'error.html'
-      }
-    },
-    eventBridgeEnabled: {
-      type: 'boolean',
-      description: 'Enable EventBridge notifications for object events',
-      default: false
-    },
-    versioning: {
-      type: 'boolean',
-      description: 'Enable object versioning',
-      default: true
-    },
-    encryption: {
-      type: 'object',
-      description: 'Encryption configuration',
-      properties: {
-        type: {
-          type: 'string',
-          description: 'Encryption type',
-          enum: ['AES256', 'KMS'],
-          default: 'AES256'
-        },
-        kmsKeyArn: {
-          type: 'string',
-          description: 'KMS key ARN for encryption (required when type is KMS)',
-          pattern: '^arn:aws:kms:[a-z0-9-]+:[0-9]{12}:key/[a-f0-9-]{36}$'
-        }
-      },
-      additionalProperties: false,
-      default: {
-        type: 'AES256'
-      }
-    },
-    lifecycleRules: {
-      type: 'array',
-      description: 'Lifecycle rules for object management',
-      items: {
-        type: 'object',
-        properties: {
-          id: {
-            type: 'string',
-            description: 'Unique identifier for the lifecycle rule'
-          },
-          enabled: {
-            type: 'boolean',
-            description: 'Whether the lifecycle rule is enabled',
-            default: true
-          },
-          transitions: {
-            type: 'array',
-            description: 'Storage class transitions',
-            items: {
-              type: 'object',
-              properties: {
-                storageClass: {
-                  type: 'string',
-                  description: 'Target storage class',
-                  enum: ['STANDARD_IA', 'ONEZONE_IA', 'GLACIER', 'DEEP_ARCHIVE', 'GLACIER_IR']
-                },
-                transitionAfter: {
-                  type: 'number',
-                  description: 'Number of days after creation to transition',
-                  minimum: 1
-                }
-              },
-              required: ['storageClass', 'transitionAfter'],
-              additionalProperties: false
-            }
-          },
-          expiration: {
-            type: 'object',
-            description: 'Object expiration configuration',
-            properties: {
-              days: {
-                type: 'number',
-                description: 'Number of days after creation to expire objects',
-                minimum: 1
-              }
-            },
-            required: ['days'],
-            additionalProperties: false
-          }
-        },
-        required: ['id', 'enabled'],
-        additionalProperties: false
-      },
-      default: []
-    },
-    security: {
-      type: 'object',
-      description: 'Security tooling configuration',
-      properties: {
-        tools: {
-          type: 'object',
-          description: 'Security tools configuration',
-          properties: {
-            clamavScan: {
-              type: 'boolean',
-              description: 'Enable ClamAV virus scanning for uploaded objects',
-              default: false
-            }
-          },
-          additionalProperties: false,
-          default: {
-            clamavScan: false
-          }
-        }
-      },
-      additionalProperties: false,
-      default: {
-        tools: {
-          clamavScan: false
-        }
-      }
-    },
-    compliance: {
-      type: 'object',
-      description: 'Backup and compliance settings',
-      properties: {
-        objectLock: {
-          type: 'object',
-          description: 'Object Lock configuration for compliance',
-          properties: {
-            enabled: {
-              type: 'boolean',
-              description: 'Enable Object Lock',
-              default: false
-            },
-            mode: {
-              type: 'string',
-              description: 'Object Lock retention mode',
-              enum: ['GOVERNANCE', 'COMPLIANCE'],
-              default: 'COMPLIANCE'
-            },
-            retentionDays: {
-              type: 'number',
-              description: 'Default retention period in days',
-              minimum: 1,
-              maximum: 36500,
-              default: 395
-            }
-          },
-          additionalProperties: false,
-          default: {
-            enabled: false,
-            mode: 'COMPLIANCE',
-            retentionDays: 395
-          }
-        },
-        auditLogging: {
-          type: 'boolean',
-          description: 'Enable audit logging to centralized audit bucket',
-          default: false
-        }
-      },
-      additionalProperties: false,
-      default: {
-        objectLock: {
-          enabled: false,
-          mode: 'COMPLIANCE',
-          retentionDays: 395
-        },
-        auditLogging: false
-      }
-    }
-  },
-  additionalProperties: false,
-  defaults: {
-    public: false,
-    website: {
-      enabled: false,
-      indexDocument: 'index.html',
-      errorDocument: 'error.html'
-    },
-    eventBridgeEnabled: false,
-    versioning: true,
-    encryption: {
-      type: 'AES256'
-    },
-    lifecycleRules: [],
-    security: {
-      tools: {
-        clamavScan: false
-      }
-    },
-    compliance: {
-      objectLock: {
-        enabled: false,
-        mode: 'COMPLIANCE',
-        retentionDays: 395
-      },
-      auditLogging: false
-    }
-  }
-};
-
-/**
- * Configuration builder for S3 Bucket component
- */
-export class S3BucketConfigBuilder {
-  private context: ComponentContext;
-  private spec: ComponentSpec;
-  
-  constructor(context: ComponentContext, spec: ComponentSpec) {
-    this.context = context;
-    this.spec = spec;
-  }
-
-  /**
-   * Builds the final configuration by applying platform defaults, compliance frameworks, and user overrides
-   */
-  public async build(): Promise<S3BucketConfig> {
-    return this.buildSync();
-  }
-
-  /**
-   * Synchronous version of build for use in synth() method
-   */
-  public buildSync(): S3BucketConfig {
-    // Start with platform defaults
-    const platformDefaults = this.getPlatformDefaults();
-    
-    // Apply compliance framework defaults
-    const complianceDefaults = this.getComplianceFrameworkDefaults();
-    
-    // Merge user configuration from spec
-    const userConfig = this.spec.config || {};
-    
-    // Merge configurations (user config takes precedence)
-    const mergedConfig = this.mergeConfigs(
-      this.mergeConfigs(platformDefaults, complianceDefaults),
-      userConfig
-    );
-    
-    return mergedConfig as S3BucketConfig;
-  }
-
-  /**
-   * Simple merge utility for combining configuration objects
-   */
-  private mergeConfigs(target: Record<string, any>, source: Record<string, any>): Record<string, any> {
-    const result = { ...target };
-    
-    for (const key in source) {
-      if (source[key] && typeof source[key] === 'object' && !Array.isArray(source[key])) {
-        result[key] = this.mergeConfigs(result[key] || {}, source[key]);
-      } else {
-        result[key] = source[key];
-      }
-    }
-    
-    return result;
-  }
-
-  /**
-   * Get platform-wide defaults for S3 Bucket
-   */
-  private getPlatformDefaults(): Record<string, any> {
-    return {
-      public: false,
-      versioning: this.getDefaultVersioning(),
-      eventBridgeEnabled: false,
-      encryption: {
-        type: this.getDefaultEncryptionType()
-      },
-      website: {
-        enabled: false,
-        indexDocument: 'index.html',
-        errorDocument: 'error.html'
-      },
-      lifecycleRules: this.getDefaultLifecycleRules(),
-      security: {
-        tools: {
-          clamavScan: this.getDefaultClamAVEnabled()
-        }
-      },
-      compliance: {
-        objectLock: {
-          enabled: this.getDefaultObjectLockEnabled(),
-          mode: 'COMPLIANCE',
-          retentionDays: this.getDefaultRetentionDays()
-        },
-        auditLogging: this.getDefaultAuditLogging()
-      }
-    };
-  }
-
-  /**
-   * Get compliance framework specific defaults
-   */
-  private getComplianceFrameworkDefaults(): Record<string, any> {
-    const framework = this.context.complianceFramework;
-    
-    switch (framework) {
-      case 'fedramp-moderate':
-        return {
-          versioning: true, // Required for compliance
-          encryption: {
-            type: 'KMS' // Customer-managed keys required
-          },
-          security: {
-            tools: {
-              clamavScan: true // Security scanning required
-            }
-          },
-          compliance: {
-            objectLock: {
-              enabled: false, // Not required for moderate
-              mode: 'GOVERNANCE',
-              retentionDays: 1095 // 3 years
-            },
-            auditLogging: true // Enhanced logging required
-          },
-          lifecycleRules: [
-            {
-              id: 'compliance-archival',
-              enabled: true,
-              transitions: [
-                {
-                  storageClass: 'GLACIER',
-                  transitionAfter: 90
-                },
-                {
-                  storageClass: 'DEEP_ARCHIVE',
-                  transitionAfter: 365
-                }
-              ]
-            }
-          ]
-        };
-        
-      case 'fedramp-high':
-        return {
-          versioning: true, // Required for compliance
-          encryption: {
-            type: 'KMS' // Customer-managed keys required
-          },
-          security: {
-            tools: {
-              clamavScan: true // Security scanning required
-            }
-          },
-          compliance: {
-            objectLock: {
-              enabled: true, // Required for immutable backups
-              mode: 'COMPLIANCE',
-              retentionDays: 2555 // 7 years
-            },
-            auditLogging: true // Enhanced logging required
-          },
-          lifecycleRules: [
-            {
-              id: 'fedramp-high-archival',
-              enabled: true,
-              transitions: [
-                {
-                  storageClass: 'GLACIER',
-                  transitionAfter: 90
-                },
-                {
-                  storageClass: 'DEEP_ARCHIVE',
-                  transitionAfter: 365
-                }
-              ],
-              expiration: {
-                days: 2555 // 7 years maximum retention
-              }
-            }
-          ]
-        };
-        
-      default: // commercial
-        return {};
-    }
-  }
-
-  /**
-   * Get default versioning setting based on compliance framework
-   */
-  private getDefaultVersioning(): boolean {
-    return ['fedramp-moderate', 'fedramp-high'].includes(this.context.complianceFramework);
-  }
-
-  /**
-   * Get default encryption type based on compliance framework
-   */
-  private getDefaultEncryptionType(): string {
-    return ['fedramp-moderate', 'fedramp-high'].includes(this.context.complianceFramework) ? 'KMS' : 'AES256';
-  }
-
-  /**
-   * Get default ClamAV scanning setting
-   */
-  private getDefaultClamAVEnabled(): boolean {
-    return ['fedramp-moderate', 'fedramp-high'].includes(this.context.complianceFramework);
-  }
-
-  /**
-   * Get default Object Lock setting
-   */
-  private getDefaultObjectLockEnabled(): boolean {
-    return this.context.complianceFramework === 'fedramp-high';
-  }
-
-  /**
-   * Get default retention days based on compliance framework
-   */
-  private getDefaultRetentionDays(): number {
-    switch (this.context.complianceFramework) {
-      case 'fedramp-high':
-        return 2555; // 7 years for high compliance
-      case 'fedramp-moderate':
-        return 1095; // 3 years for moderate compliance
-      default:
-        return 395; // ~1 year for commercial
-    }
-  }
-
-  /**
-   * Get default audit logging setting
-   */
-  private getDefaultAuditLogging(): boolean {
-    return ['fedramp-moderate', 'fedramp-high'].includes(this.context.complianceFramework);
-  }
-
-  /**
-   * Get default lifecycle rules based on compliance framework
-   */
-  private getDefaultLifecycleRules(): Array<any> {
-    const framework = this.context.complianceFramework;
-    
-    if (framework === 'fedramp-high' || framework === 'fedramp-moderate') {
-      return [
-        {
-          id: 'compliance-archival',
-          enabled: true,
-          transitions: [
-            {
-              storageClass: 'GLACIER',
-              transitionAfter: 90
-            },
-            {
-              storageClass: 'DEEP_ARCHIVE',
-              transitionAfter: 365
-            }
-          ]
-        }
-      ];
-    }
-    
-    return [];
-  }
-}
-
-/**
- * S3 Bucket Component implementing Component API Contract v1.0
- */
-export class S3BucketComponent extends Component {
+export class S3BucketComponent extends BaseComponent {
   private bucket?: s3.Bucket;
-  private kmsKey?: kms.Key;
+  private kmsKey?: kms.IKey;
+  private managedKmsKey?: kms.Key;
   private auditBucket?: s3.Bucket;
-  private virusScanLambda?: lambda.Function;
   private config?: S3BucketConfig;
 
   constructor(scope: Construct, id: string, context: ComponentContext, spec: ComponentSpec) {
     super(scope, id, context, spec);
   }
 
-  /**
-   * Synthesis phase - Create S3 bucket with compliance hardening
-   */
   public synth(): void {
-    // Build configuration using ConfigBuilder
-    const configBuilder = new S3BucketConfigBuilder(this.context, this.spec);
+    const configBuilder = new S3BucketComponentConfigBuilder({
+      context: this.context,
+      spec: this.spec
+    });
+
     this.config = configBuilder.buildSync();
-    
-    // Create KMS key for encryption if needed
+
     this.createKmsKeyIfNeeded();
-    
-    // Create audit bucket for compliance frameworks
     this.createAuditBucketIfNeeded();
-    
-    // Create main S3 bucket
     this.createS3Bucket();
-    
-    // Apply compliance hardening
-    this.applyComplianceHardening();
-    
-    // Configure security tooling
+    this.applyBucketSecurityPolicies();
+    this.configureObjectLock();
     this.configureSecurityTooling();
-    
-    // Configure observability
-    this.configureObservabilityForS3();
-    
-    // Register constructs
+    this.configureMonitoring();
+
+    this.registerConstruct('main', this.bucket!);
     this.registerConstruct('bucket', this.bucket!);
-    if (this.kmsKey) {
-      this.registerConstruct('kmsKey', this.kmsKey);
+
+    if (this.managedKmsKey) {
+      this.registerConstruct('kmsKey', this.managedKmsKey);
     }
     if (this.auditBucket) {
       this.registerConstruct('auditBucket', this.auditBucket);
     }
-    
-    // Register capabilities
     this.registerCapability('bucket:s3', this.buildBucketCapability());
   }
 
-  /**
-   * Get the capabilities this component provides
-   */
   public getCapabilities(): ComponentCapabilities {
     this.validateSynthesized();
     return this.capabilities;
   }
 
-  /**
-   * Get the component type identifier
-   */
   public getType(): string {
     return 's3-bucket';
   }
 
-  /**
-   * Create KMS key for encryption if required by compliance framework
-   */
   private createKmsKeyIfNeeded(): void {
-    if (this.shouldUseCustomerManagedKey()) {
-      this.kmsKey = new kms.Key(this, 'EncryptionKey', {
-        description: `Encryption key for ${this.spec.name} S3 bucket`,
-        enableKeyRotation: this.context.complianceFramework === 'fedramp-high',
-        keyUsage: kms.KeyUsage.ENCRYPT_DECRYPT,
-        keySpec: kms.KeySpec.SYMMETRIC_DEFAULT
-      });
+    this.kmsKey = undefined;
+    this.managedKmsKey = undefined;
 
-      // Apply standard tags
-      this.applyStandardTags(this.kmsKey, {
-        'encryption-type': 'customer-managed',
-        'key-rotation': (this.context.complianceFramework === 'fedramp-high').toString(),
-        'resource-type': 's3-bucket-encryption'
-      });
-
-      // Grant S3 service access to the key
-      this.kmsKey.addToResourcePolicy(new iam.PolicyStatement({
-        sid: 'AllowS3Service',
-        principals: [new iam.ServicePrincipal('s3.amazonaws.com')],
-        actions: [
-          'kms:Decrypt',
-          'kms:GenerateDataKey'
-        ],
-        resources: ['*']
-      }));
-    }
-  }
-
-  /**
-   * Create audit bucket for centralized logging in compliance frameworks
-   */
-  private createAuditBucketIfNeeded(): void {
-    if (this.isComplianceFramework()) {
-      const auditBucketName = `${this.context.serviceName}-audit-${this.context.accountId}`;
-      
-      this.auditBucket = new s3.Bucket(this, 'AuditBucket', {
-        bucketName: auditBucketName,
-        versioned: true,
-        encryption: s3.BucketEncryption.KMS,
-        encryptionKey: this.kmsKey,
-        publicReadAccess: false,
-        // publicWriteAccess removed - use blockPublicAccess instead"
-        blockPublicAccess: s3.BlockPublicAccess.BLOCK_ALL,
-        lifecycleRules: [{
-          id: 'audit-retention',
-          enabled: true,
-          transitions: [{
-            storageClass: s3.StorageClass.GLACIER,
-            transitionAfter: cdk.Duration.days(90)
-          }, {
-            storageClass: s3.StorageClass.DEEP_ARCHIVE,
-            transitionAfter: cdk.Duration.days(365)
-          }],
-          // Keep audit logs for compliance requirements
-          expiration: cdk.Duration.days(this.context.complianceFramework === 'fedramp-high' ? 2555 : 1095) // 7 or 3 years
-        }],
-        removalPolicy: cdk.RemovalPolicy.RETAIN
-      });
-
-      // Apply standard tags
-      this.applyStandardTags(this.auditBucket, {
-        'bucket-type': 'audit',
-        'versioning': 'enabled',
-        'encryption': 'kms',
-        'retention-years': (this.context.complianceFramework === 'fedramp-high' ? '7' : '3')
-      });
-
-      // Apply Object Lock for immutable audit logs in FedRAMP High
-      if (this.context.complianceFramework === 'fedramp-high') {
-        const cfnBucket = this.auditBucket.node.defaultChild as s3.CfnBucket;
-        cfnBucket.objectLockEnabled = true;
-        cfnBucket.objectLockConfiguration = {
-          objectLockEnabled: 'Enabled',
-          rule: {
-            defaultRetention: {
-              mode: 'COMPLIANCE',
-              days: 395 // 13 months default retention
-            }
-          }
-        };
-      }
-    }
-  }
-
-  /**
-   * Create the main S3 bucket with compliance-specific configuration
-   */
-  private createS3Bucket(): void {
-    const bucketProps: s3.BucketProps = {
-      bucketName: this.config!.bucketName,
-      versioned: this.config!.versioning !== false,
-      encryption: this.getBucketEncryption(),
-      encryptionKey: this.kmsKey,
-      publicReadAccess: this.config!.public === true,
-      // Public write access is controlled by blockPublicAccess
-      blockPublicAccess: this.config!.public === true ? 
-        undefined : s3.BlockPublicAccess.BLOCK_ALL,
-      eventBridgeEnabled: this.config!.eventBridgeEnabled,
-      removalPolicy: this.isComplianceFramework() ? 
-        cdk.RemovalPolicy.RETAIN : cdk.RemovalPolicy.DESTROY
-    };
-
-    // Add website configuration if enabled
-    if (this.config!.website?.enabled) {
-      Object.assign(bucketProps, {
-        websiteIndexDocument: this.config!.website.indexDocument || 'index.html',
-        websiteErrorDocument: this.config!.website.errorDocument || 'error.html'
-      });
-    }
-
-    // Add lifecycle rules if configured
-    if (this.config!.lifecycleRules) {
-      const lifecycleRules = this.config!.lifecycleRules.map(rule => ({
-        id: rule.id,
-        enabled: rule.enabled,
-        transitions: rule.transitions?.map(t => ({
-          storageClass: this.getStorageClass(t.storageClass),
-          transitionAfter: cdk.Duration.days(t.transitionAfter)
-        })),
-        expiration: rule.expiration ? cdk.Duration.days(rule.expiration.days) : undefined
-      }));
-      Object.assign(bucketProps, { lifecycleRules });
-    }
-
-    this.bucket = new s3.Bucket(this, 'Bucket', bucketProps);
-
-    // Apply standard tags
-    this.applyStandardTags(this.bucket, {
-      'bucket-type': 'main',
-      'public-access': (!!this.config!.public).toString(),
-      'versioning': (this.config!.versioning !== false).toString(),
-      'website-enabled': (!!this.config!.website?.enabled).toString(),
-      'eventbridge-enabled': (!!this.config!.eventBridgeEnabled).toString()
-    });
-  }
-
-  /**
-   * Apply compliance-specific hardening
-   */
-  private applyComplianceHardening(): void {
-    switch (this.context.complianceFramework) {
-      case 'fedramp-moderate':
-        this.applyFedrampModerateHardening();
-        break;
-      case 'fedramp-high':
-        this.applyFedrampHighHardening();
-        break;
-      default:
-        this.applyCommercialHardening();
-        break;
-    }
-  }
-
-  private applyCommercialHardening(): void {
-    // Enable server access logging
-    if (this.bucket && this.auditBucket) {
-      this.bucket.addToResourcePolicy(new iam.PolicyStatement({
-        effect: iam.Effect.DENY,
-        principals: [new iam.AnyPrincipal()],
-        actions: ['s3:*'],
-        resources: [this.bucket.bucketArn, `${this.bucket.bucketArn}/*`],
-        conditions: {
-          Bool: {
-            'aws:SecureTransport': 'false'
-          }
-        }
-      }));
-    }
-  }
-
-  private applyFedrampModerateHardening(): void {
-    // Apply commercial hardening
-    this.applyCommercialHardening();
-
-    // Enable server access logging to audit bucket
-    if (this.bucket && this.auditBucket) {
-      this.bucket.addToResourcePolicy(new iam.PolicyStatement({
-        sid: 'DenyInsecureConnections',
-        effect: iam.Effect.DENY,
-        principals: [new iam.AnyPrincipal()],
-        actions: ['s3:*'],
-        resources: [this.bucket.bucketArn, `${this.bucket.bucketArn}/*`],
-        conditions: {
-          Bool: {
-            'aws:SecureTransport': 'false'
-          }
-        }
-      }));
-
-      // Enable object-level API logging
-      this.bucket.addToResourcePolicy(new iam.PolicyStatement({
-        sid: 'RequireSSLRequestsOnly',
-        effect: iam.Effect.DENY,
-        principals: [new iam.AnyPrincipal()],
-        actions: ['s3:*'],
-        resources: [this.bucket.bucketArn, `${this.bucket.bucketArn}/*`],
-        conditions: {
-          Bool: {
-            'aws:SecureTransport': 'false'
-          }
-        }
-      }));
-    }
-
-    // Enable MFA delete protection
-    // Note: This requires CLI/API configuration, not CDK
-    this.bucket!.addToResourcePolicy(new iam.PolicyStatement({
-      sid: 'RequireMFAForDelete',
-      effect: iam.Effect.DENY,
-      principals: [new iam.AnyPrincipal()],
-      actions: ['s3:DeleteObject', 's3:DeleteObjectVersion'],
-      resources: [`${this.bucket!.bucketArn}/*`],
-      conditions: {
-        BoolIfExists: {
-          'aws:MultiFactorAuthPresent': 'false'
-        }
-      }
-    }));
-  }
-
-  private applyFedrampHighHardening(): void {
-    // Apply all moderate hardening
-    this.applyFedrampModerateHardening();
-
-    // Apply Object Lock for immutable backups
-    if (this.bucket) {
-      const cfnBucket = this.bucket.node.defaultChild as s3.CfnBucket;
-      cfnBucket.objectLockEnabled = true;
-      cfnBucket.objectLockConfiguration = {
-        objectLockEnabled: 'Enabled',
-        rule: {
-          defaultRetention: {
-            mode: 'COMPLIANCE',
-            days: this.config!.compliance?.objectLock?.retentionDays || 395
-          }
-        }
-      };
-
-      // Explicit deny for delete actions to ensure immutability
-      this.bucket.addToResourcePolicy(new iam.PolicyStatement({
-        sid: 'DenyDeleteActions',
-        effect: iam.Effect.DENY,
-        principals: [new iam.AnyPrincipal()],
-        actions: [
-          's3:DeleteBucket',
-          's3:DeleteBucketPolicy',
-          's3:PutBucketAcl',
-          's3:PutBucketPolicy',
-          's3:PutObjectAcl'
-        ],
-        resources: [this.bucket.bucketArn, `${this.bucket.bucketArn}/*`]
-      }));
-    }
-  }
-
-  /**
-   * Configure security tooling integration
-   */
-  private configureSecurityTooling(): void {
-    if (this.config?.security?.tools?.clamavScan) {
-      this.createVirusScanLambda();
-    }
-  }
-
-  /**
-   * Create Lambda function for virus scanning with ClamAV
-   */
-  private createVirusScanLambda(): void {
-    this.virusScanLambda = new lambda.Function(this, 'VirusScanFunction', {
-      runtime: lambda.Runtime.PYTHON_3_11,
-      handler: 'scan.handler',
-      code: lambda.Code.fromInline(`
-import json
-import boto3
-
-def handler(event, context):
-    # ClamAV scanning logic would be implemented here
-    print(f"Scanning object: {event}")
-    
-    # In real implementation, this would:
-    # 1. Download object from S3
-    # 2. Scan with ClamAV
-    # 3. Take action based on scan results
-    
-    return {
-        'statusCode': 200,
-        'body': json.dumps('Object scanned successfully')
-    }
-      `),
-      description: 'ClamAV virus scanning for S3 objects',
-      timeout: cdk.Duration.minutes(5),
-      memorySize: 1024
-    });
-
-    // Apply standard tags
-    this.applyStandardTags(this.virusScanLambda, {
-      'function-type': 'virus-scan',
-      'runtime': 'python3.11',
-      'security-tool': 'clamav'
-    });
-
-    // Add S3 notification to trigger virus scan
-    if (this.bucket) {
-      this.bucket.addObjectCreatedNotification(new s3n.LambdaDestination(this.virusScanLambda));
-      
-      // Grant Lambda permissions to read from S3
-      this.bucket.grantRead(this.virusScanLambda);
-    }
-  }
-
-  /**
-   * Build bucket capability data shape
-   */
-  private buildBucketCapability(): any {
-    return {
-      bucketName: this.bucket!.bucketName,
-      bucketArn: this.bucket!.bucketArn
-    };
-  }
-
-  /**
-   * Helper methods for compliance decisions
-   */
-  private shouldUseCustomerManagedKey(): boolean {
-    return ['fedramp-moderate', 'fedramp-high'].includes(this.context.complianceFramework);
-  }
-
-  private isComplianceFramework(): boolean {
-    return ['fedramp-moderate', 'fedramp-high'].includes(this.context.complianceFramework);
-  }
-
-  private getBucketEncryption(): s3.BucketEncryption {
-    if (this.config?.encryption?.type === 'KMS') {
-      return s3.BucketEncryption.KMS;
-    }
-    return s3.BucketEncryption.S3_MANAGED;
-  }
-
-  private getStorageClass(storageClass: string): s3.StorageClass {
-    const storageClassMap: Record<string, s3.StorageClass> = {
-      'STANDARD_IA': s3.StorageClass.INFREQUENT_ACCESS,
-      'ONEZONE_IA': s3.StorageClass.ONE_ZONE_INFREQUENT_ACCESS,
-      'GLACIER': s3.StorageClass.GLACIER,
-      'DEEP_ARCHIVE': s3.StorageClass.DEEP_ARCHIVE,
-      'GLACIER_IR': s3.StorageClass.GLACIER_INSTANT_RETRIEVAL
-    };
-    
-    return storageClassMap[storageClass] || s3.StorageClass.INFREQUENT_ACCESS;
-  }
-
-  /**
-   * Configure CloudWatch observability for S3 Bucket
-   */
-  private configureObservabilityForS3(): void {
-    // Enable monitoring for compliance frameworks only
-    if (this.context.complianceFramework === 'commercial') {
+    if (this.config?.encryption?.type !== 'KMS') {
       return;
     }
 
-    const bucketName = this.bucket!.bucketName;
+    if (this.config.encryption?.kmsKeyArn) {
+      this.kmsKey = kms.Key.fromKeyArn(this, 'ImportedEncryptionKey', this.config.encryption.kmsKeyArn);
+      return;
+    }
 
-    // 1. S3 Request Errors Alarm (4xx errors)
-    const requestErrorsAlarm = new cloudwatch.Alarm(this, 'S3RequestErrorsAlarm', {
-      alarmName: `${this.context.serviceName}-${this.spec.name}-request-errors`,
-      alarmDescription: 'S3 bucket request errors alarm',
+    const key = new kms.Key(this, 'EncryptionKey', {
+      description: `Encryption key for ${this.spec.name} S3 bucket`,
+      enableKeyRotation: true,
+      keyUsage: kms.KeyUsage.ENCRYPT_DECRYPT,
+      keySpec: kms.KeySpec.SYMMETRIC_DEFAULT
+    });
+
+    this.applyStandardTags(key, {
+      'encryption-type': 'customer-managed',
+      'resource-type': 's3-bucket-encryption'
+    });
+
+    key.addToResourcePolicy(new iam.PolicyStatement({
+      sid: 'AllowS3ServiceUse',
+      principals: [new iam.ServicePrincipal('s3.amazonaws.com')],
+      actions: ['kms:Decrypt', 'kms:GenerateDataKey'],
+      resources: ['*']
+    }));
+
+    this.kmsKey = key;
+    this.managedKmsKey = key;
+  }
+
+  private createAuditBucketIfNeeded(): void {
+    const compliance = this.config?.compliance;
+    if (!compliance?.auditLogging) {
+      return;
+    }
+
+    const baseBucketName = compliance.auditBucketName ?? this.buildAuditBucketName();
+    const retentionDays = compliance.auditBucketRetentionDays ?? 365;
+    const auditLifecycleRules = (compliance.auditBucketLifecycleRules ?? []).map(rule => ({
+      id: rule.id,
+      enabled: rule.enabled,
+      transitions: rule.transitions?.map(transition => ({
+        storageClass: this.getStorageClass(transition.storageClass),
+        transitionAfter: cdk.Duration.days(transition.transitionAfter)
+      })),
+      expiration: rule.expiration?.days
+        ? cdk.Duration.days(rule.expiration.days)
+        : undefined
+    }));
+
+    this.auditBucket = new s3.Bucket(this, 'AuditBucket', {
+      bucketName: baseBucketName,
+      versioned: true,
+      encryption: this.getBucketEncryption(),
+      encryptionKey: this.kmsKey,
+      blockPublicAccess: s3.BlockPublicAccess.BLOCK_ALL,
+      removalPolicy: cdk.RemovalPolicy.RETAIN,
+      lifecycleRules: auditLifecycleRules.length
+        ? auditLifecycleRules
+        : [
+            {
+              id: 'audit-retention',
+              enabled: true,
+              transitions: [
+                {
+                  storageClass: s3.StorageClass.GLACIER,
+                  transitionAfter: cdk.Duration.days(90)
+                },
+                {
+                  storageClass: s3.StorageClass.DEEP_ARCHIVE,
+                  transitionAfter: cdk.Duration.days(365)
+                }
+              ],
+              expiration: cdk.Duration.days(retentionDays)
+            }
+          ]
+    });
+
+    this.applyStandardTags(this.auditBucket, {
+      'bucket-type': 'audit',
+      'retention-days': retentionDays.toString()
+    });
+
+    if (compliance.auditBucketObjectLock?.enabled) {
+      const cfnAuditBucket = this.auditBucket.node.defaultChild as s3.CfnBucket;
+      cfnAuditBucket.objectLockEnabled = true;
+      cfnAuditBucket.objectLockConfiguration = {
+        objectLockEnabled: 'Enabled',
+        rule: {
+          defaultRetention: {
+            mode: compliance.auditBucketObjectLock.mode ?? 'COMPLIANCE',
+            days: compliance.auditBucketObjectLock.retentionDays ?? retentionDays
+          }
+        }
+      };
+    }
+  }
+
+  private createS3Bucket(): void {
+    this.ensureObjectLockPreconditions();
+
+    const baseProps: s3.BucketProps = {
+      ...(this.config?.bucketName ? { bucketName: this.config.bucketName } : {}),
+      versioned: this.config?.versioning ?? false,
+      encryption: this.getBucketEncryption(),
+      encryptionKey: this.kmsKey,
+      publicReadAccess: this.config?.public === true,
+      blockPublicAccess:
+        this.config?.public === true || this.config?.security?.blockPublicAccess === false
+          ? undefined
+          : s3.BlockPublicAccess.BLOCK_ALL,
+      eventBridgeEnabled: this.config?.eventBridgeEnabled === true,
+      removalPolicy:
+        this.config?.compliance?.auditLogging || this.config?.compliance?.objectLock?.enabled
+          ? cdk.RemovalPolicy.RETAIN
+          : cdk.RemovalPolicy.DESTROY
+    };
+
+    const websiteProps = this.config?.website?.enabled
+      ? {
+        websiteIndexDocument: this.config.website.indexDocument ?? 'index.html',
+        websiteErrorDocument: this.config.website.errorDocument ?? 'error.html'
+      }
+      : {};
+
+    const lifecycleProps = this.config?.lifecycleRules?.length
+      ? {
+        lifecycleRules: this.config.lifecycleRules.map(rule => ({
+          id: rule.id,
+          enabled: rule.enabled,
+          transitions: rule.transitions?.map(transition => ({
+            storageClass: this.getStorageClass(transition.storageClass),
+            transitionAfter: cdk.Duration.days(transition.transitionAfter)
+          })),
+          expiration: rule.expiration?.days
+            ? cdk.Duration.days(rule.expiration.days)
+            : undefined
+        }))
+      }
+      : {};
+
+    const loggingProps = this.config?.compliance?.auditLogging && this.auditBucket
+      ? {
+        serverAccessLogsBucket: this.auditBucket,
+        serverAccessLogsPrefix: `logs/${this.spec.name}/`
+      }
+      : {};
+
+    const bucketProps: s3.BucketProps = {
+      ...baseProps,
+      ...websiteProps,
+      ...lifecycleProps,
+      ...loggingProps
+    };
+
+    this.bucket = new s3.Bucket(this, 'Bucket', bucketProps);
+
+    this.applyStandardTags(this.bucket, {
+      'bucket-type': 'primary',
+      'public-access': (this.config?.public === true).toString(),
+      'versioning': (this.config?.versioning ?? false).toString()
+    });
+  }
+
+  private applyBucketSecurityPolicies(): void {
+    if (!this.bucket) {
+      return;
+    }
+
+    if (this.config?.security?.requireSecureTransport !== false) {
+      this.bucket.addToResourcePolicy(
+        new iam.PolicyStatement({
+          sid: 'DenyInsecureTransport',
+          effect: iam.Effect.DENY,
+          principals: [new iam.AnyPrincipal()],
+          actions: ['s3:*'],
+          resources: [this.bucket.bucketArn, `${this.bucket.bucketArn}/*`],
+          conditions: {
+            Bool: {
+              'aws:SecureTransport': 'false'
+            }
+          }
+        })
+      );
+    }
+
+    if (this.config?.security?.requireMfaDelete) {
+      this.bucket.addToResourcePolicy(
+        new iam.PolicyStatement({
+          sid: 'RequireMFAForDelete',
+          effect: iam.Effect.DENY,
+          principals: [new iam.AnyPrincipal()],
+          actions: ['s3:DeleteObject', 's3:DeleteObjectVersion'],
+          resources: [`${this.bucket.bucketArn}/*`],
+          conditions: {
+            BoolIfExists: {
+              'aws:MultiFactorAuthPresent': 'false'
+            }
+          }
+        })
+      );
+    }
+
+    if (this.config?.security?.denyDeleteActions) {
+      this.bucket.addToResourcePolicy(
+        new iam.PolicyStatement({
+          sid: 'DenyDeleteActions',
+          effect: iam.Effect.DENY,
+          principals: [new iam.AnyPrincipal()],
+          actions: ['s3:DeleteBucket', 's3:DeleteBucketPolicy'],
+          resources: [this.bucket.bucketArn, `${this.bucket.bucketArn}/*`]
+        })
+      );
+    }
+  }
+
+  private configureObjectLock(): void {
+    if (!this.bucket || !this.config?.compliance?.objectLock?.enabled) {
+      return;
+    }
+
+    const retention = this.config.compliance.objectLock.retentionDays ?? 365;
+    const mode = this.config.compliance.objectLock.mode ?? 'COMPLIANCE';
+
+    const cfnBucket = this.bucket.node.defaultChild as s3.CfnBucket;
+    cfnBucket.objectLockEnabled = true;
+    cfnBucket.objectLockConfiguration = {
+      objectLockEnabled: 'Enabled',
+      rule: {
+        defaultRetention: {
+          mode,
+          days: retention
+        }
+      }
+    };
+  }
+
+  private configureSecurityTooling(): void {
+    if (this.config?.security?.tools?.clamavScan) {
+      throw new Error('S3BucketComponent: ClamAV scanning is not implemented. Disable security.tools.clamavScan or integrate the dedicated virus scanning component.');
+    }
+  }
+
+  private configureMonitoring(): void {
+    if (!this.config?.monitoring?.enabled || !this.bucket) {
+      return;
+    }
+
+    const bucketName = this.bucket.bucketName;
+    const requestMetricDimensions = {
+      BucketName: bucketName,
+      FilterId: 'EntireBucket'
+    };
+    this.bucket.addMetric({ id: 'EntireBucket' });
+    const clientThreshold = this.config.monitoring.clientErrorThreshold ?? 10;
+    const serverThreshold = this.config.monitoring.serverErrorThreshold ?? 1;
+
+    const clientErrorsAlarm = new cloudwatch.Alarm(this, 'S3ClientErrorsAlarm', {
+      alarmName: `${this.context.serviceName}-${this.spec.name}-client-errors`,
+      alarmDescription: 'Alarm for S3 bucket client (4xx) errors',
       metric: new cloudwatch.Metric({
         namespace: 'AWS/S3',
-        metricName: 'ClientErrors',
-        dimensionsMap: {
-          BucketName: bucketName
-        },
+        metricName: '4xxErrors',
+        dimensionsMap: requestMetricDimensions,
         statistic: 'Sum',
         period: cdk.Duration.minutes(5)
       }),
-      threshold: 10,
+      threshold: clientThreshold,
       evaluationPeriods: 2,
       comparisonOperator: cloudwatch.ComparisonOperator.GREATER_THAN_THRESHOLD,
       treatMissingData: cloudwatch.TreatMissingData.NOT_BREACHING
     });
 
-    // Apply standard tags
-    this.applyStandardTags(requestErrorsAlarm, {
-      'alarm-type': 'request-errors',
-      'metric-type': 'client-errors',
-      'threshold': '10'
+    this.applyStandardTags(clientErrorsAlarm, {
+      'alarm-type': 'client-errors',
+      'threshold': clientThreshold.toString()
     });
 
-    // 2. S3 Server Errors Alarm (5xx errors)
     const serverErrorsAlarm = new cloudwatch.Alarm(this, 'S3ServerErrorsAlarm', {
       alarmName: `${this.context.serviceName}-${this.spec.name}-server-errors`,
-      alarmDescription: 'S3 bucket server errors alarm',
+      alarmDescription: 'Alarm for S3 bucket server (5xx) errors',
       metric: new cloudwatch.Metric({
         namespace: 'AWS/S3',
-        metricName: 'ServerErrors',
-        dimensionsMap: {
-          BucketName: bucketName
-        },
+        metricName: '5xxErrors',
+        dimensionsMap: requestMetricDimensions,
         statistic: 'Sum',
         period: cdk.Duration.minutes(5)
       }),
-      threshold: 1,
+      threshold: serverThreshold,
       evaluationPeriods: 1,
       comparisonOperator: cloudwatch.ComparisonOperator.GREATER_THAN_OR_EQUAL_TO_THRESHOLD,
       treatMissingData: cloudwatch.TreatMissingData.NOT_BREACHING
     });
 
-    // Apply standard tags
     this.applyStandardTags(serverErrorsAlarm, {
       'alarm-type': 'server-errors',
-      'metric-type': 'server-errors',
-      'threshold': '1'
+      'threshold': serverThreshold.toString()
     });
 
-    this.logComponentEvent('observability_configured', 'OpenTelemetry observability standard applied to S3 bucket', {
+    this.logComponentEvent('observability_configured', 'Monitoring enabled for S3 bucket', {
+      bucketName,
       alarmsCreated: 2,
-      bucketName: bucketName,
-      monitoringEnabled: true
+      clientThreshold,
+      serverThreshold
     });
   }
 
+  private buildBucketCapability(): Record<string, any> {
+    return {
+      bucketName: this.bucket!.bucketName,
+      bucketArn: this.bucket!.bucketArn,
+      encryption: this.config?.encryption?.type ?? 'AES256'
+    };
+  }
+
+  private ensureObjectLockPreconditions(): void {
+    const objectLockConfig = this.config?.compliance?.objectLock;
+    if (objectLockConfig?.enabled && this.config?.versioning !== true) {
+      throw new Error('S3BucketComponent: objectLock.enabled requires versioning to be true. Update the manifest or configuration defaults to enable versioning.');
+    }
+  }
+
+  private getBucketEncryption(): s3.BucketEncryption {
+    return this.config?.encryption?.type === 'KMS'
+      ? s3.BucketEncryption.KMS
+      : s3.BucketEncryption.S3_MANAGED;
+  }
+
+  private buildAuditBucketName(): string {
+    const account = this.context.accountId ?? (this.context as any).account ?? 'unknown-account';
+    const environment = this.context.environment ?? 'env';
+    const parts = [
+      this.context.serviceName,
+      this.spec.name,
+      environment,
+      'audit',
+      account
+    ];
+
+    const normalized = parts
+      .map(part => part?.toString().trim().toLowerCase().replace(/[^a-z0-9-]/g, '-'))
+      .filter(part => part && part.length > 0) as string[];
+
+    let candidate = normalized.join('-').replace(/-+/g, '-');
+    candidate = candidate.replace(/^-+/, '').replace(/-+$/, '');
+
+    if (candidate.length < 3) {
+      candidate = `audit-${account}`.toLowerCase();
+    }
+
+    if (candidate.length > 63) {
+      candidate = candidate.slice(0, 63).replace(/-+$/, '');
+    }
+
+    if (!/^[a-z0-9]/.test(candidate)) {
+      candidate = `a-${candidate}`;
+    }
+
+    return candidate;
+  }
+
+  private getStorageClass(storageClass: string): s3.StorageClass {
+    const mapping: Record<string, s3.StorageClass> = {
+      STANDARD_IA: s3.StorageClass.INFREQUENT_ACCESS,
+      ONEZONE_IA: s3.StorageClass.ONE_ZONE_INFREQUENT_ACCESS,
+      GLACIER: s3.StorageClass.GLACIER,
+      DEEP_ARCHIVE: s3.StorageClass.DEEP_ARCHIVE,
+      GLACIER_IR: s3.StorageClass.GLACIER_INSTANT_RETRIEVAL
+    };
+
+    return mapping[storageClass] ?? s3.StorageClass.INFREQUENT_ACCESS;
+  }
 }

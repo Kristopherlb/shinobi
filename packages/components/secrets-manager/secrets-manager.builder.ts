@@ -1,140 +1,436 @@
 /**
- * Configuration Builder for SecretsManagerComponent Component
- * 
- * Implements the ConfigBuilder pattern as defined in the Platform Component API Contract.
- * Provides 5-layer configuration precedence chain and compliance-aware defaults.
+ * Secrets Manager configuration builder.
+ *
+ * Provides a configuration surface for the Secrets Manager component that
+ * adheres to the platform's five-layer precedence chain. Compliance-aware
+ * defaults are sourced from segregated configuration while component logic
+ * consumes only the resolved configuration returned by this builder.
  */
 
-import { ConfigBuilder, ConfigBuilderContext } from '../../platform/contracts/config-builder';
+import {
+  ConfigBuilder,
+  ConfigBuilderContext,
+  ComponentConfigSchema
+} from '@shinobi/core';
 
-/**
- * Configuration interface for SecretsManagerComponent component
- */
-export interface SecretsManagerConfig {
-  /** Component name (optional, will be auto-generated) */
-  name?: string;
-  
-  /** Component description */
-  description?: string;
-  
-  /** Enable detailed monitoring */
-  monitoring?: {
-    enabled?: boolean;
-    detailedMetrics?: boolean;
-    alarms?: {
-      // TODO: Define component-specific alarm thresholds
-    };
-  };
-  
-  /** Tagging configuration */
-  tags?: Record<string, string>;
-  
-  // TODO: Add component-specific configuration properties
+export interface SecretsManagerGenerateSecretConfig {
+  enabled?: boolean;
+  excludeCharacters?: string;
+  includeSpace?: boolean;
+  passwordLength?: number;
+  requireEachIncludedType?: boolean;
+  secretStringTemplate?: string;
+  generateStringKey?: string;
 }
 
-/**
- * JSON Schema for SecretsManagerComponent configuration validation
- */
-export const SECRETS_MANAGER_CONFIG_SCHEMA = {
+export interface SecretsManagerRotationLambdaConfig {
+  functionArn?: string;
+  createFunction?: boolean;
+  runtime?: string;
+  enableTracing?: boolean;
+}
+
+export interface SecretsManagerRotationConfig {
+  enabled?: boolean;
+  rotationLambda?: SecretsManagerRotationLambdaConfig;
+  schedule?: {
+    automaticallyAfterDays?: number;
+  };
+}
+
+export interface SecretsManagerReplicaConfig {
+  region: string;
+  kmsKeyArn?: string;
+}
+
+export interface SecretsManagerEncryptionConfig {
+  kmsKeyArn?: string;
+  createCustomerManagedKey?: boolean;
+  enableKeyRotation?: boolean;
+}
+
+export interface SecretsManagerRecoveryConfig {
+  deletionProtection?: boolean;
+  recoveryWindowInDays?: number;
+}
+
+export interface SecretsManagerMonitoringConfig {
+  enabled?: boolean;
+  rotationFailureThreshold?: number;
+  unusualAccessThresholdMs?: number;
+}
+
+export interface SecretsManagerAccessPoliciesConfig {
+  denyInsecureTransport?: boolean;
+  restrictToVpce?: boolean;
+  allowedVpceIds?: string[];
+  requireTemporaryCredentials?: boolean;
+}
+
+export interface SecretsManagerConfig {
+  secretName?: string;
+  description?: string;
+  secretValue?: {
+    secretStringValue?: string;
+    secretBinaryValue?: Buffer;
+  };
+  generateSecret?: SecretsManagerGenerateSecretConfig;
+  automaticRotation?: SecretsManagerRotationConfig;
+  replicas?: SecretsManagerReplicaConfig[];
+  encryption?: SecretsManagerEncryptionConfig;
+  recovery?: SecretsManagerRecoveryConfig;
+  monitoring?: SecretsManagerMonitoringConfig;
+  accessPolicies?: SecretsManagerAccessPoliciesConfig;
+}
+
+export const SECRETS_MANAGER_CONFIG_SCHEMA: ComponentConfigSchema = {
   type: 'object',
+  additionalProperties: false,
   properties: {
-    name: {
+    secretName: {
       type: 'string',
-      description: 'Component name (optional, will be auto-generated from component name)',
-      pattern: '^[a-zA-Z][a-zA-Z0-9-_]*$',
-      maxLength: 128
+      description: 'Name of the secret (auto-generated when omitted)',
+      pattern: '^[a-zA-Z0-9_./\\-]+$',
+      maxLength: 512
     },
     description: {
       type: 'string',
-      description: 'Component description for documentation',
-      maxLength: 1024
+      description: 'Description of the secret',
+      maxLength: 2048
     },
-    monitoring: {
+    secretValue: {
       type: 'object',
-      description: 'Monitoring and observability configuration',
+      description: 'Initial secret value',
       properties: {
-        enabled: {
-          type: 'boolean',
-          default: true,
-          description: 'Enable monitoring'
-        },
-        detailedMetrics: {
-          type: 'boolean',
-          default: false,
-          description: 'Enable detailed CloudWatch metrics'
+        secretStringValue: {
+          type: 'string',
+          description: 'Secret represented as plain text'
         }
       },
       additionalProperties: false
     },
-    tags: {
+    generateSecret: {
       type: 'object',
-      description: 'Additional resource tags',
-      additionalProperties: { type: 'string' }
+      description: 'Automatic secret generation configuration',
+      properties: {
+        enabled: {
+          type: 'boolean',
+          default: false
+        },
+        excludeCharacters: {
+          type: 'string',
+          default: '"@/\\\''
+        },
+        includeSpace: {
+          type: 'boolean',
+          default: false
+        },
+        passwordLength: {
+          type: 'number',
+          minimum: 4,
+          maximum: 1024,
+          default: 32
+        },
+        requireEachIncludedType: {
+          type: 'boolean',
+          default: true
+        },
+        secretStringTemplate: {
+          type: 'string'
+        },
+        generateStringKey: {
+          type: 'string'
+        }
+      },
+      additionalProperties: false,
+      default: {
+        enabled: false,
+        excludeCharacters: '"@/\\\'',
+        includeSpace: false,
+        passwordLength: 32,
+        requireEachIncludedType: true
+      }
+    },
+    automaticRotation: {
+      type: 'object',
+      description: 'Automatic rotation configuration',
+      properties: {
+        enabled: {
+          type: 'boolean',
+          default: false
+        },
+        rotationLambda: {
+          type: 'object',
+          additionalProperties: false,
+          properties: {
+            functionArn: {
+              type: 'string'
+            },
+            createFunction: {
+              type: 'boolean',
+              default: false
+            },
+            runtime: {
+              type: 'string'
+            },
+            enableTracing: {
+              type: 'boolean',
+              default: false
+            }
+          },
+          default: {
+            createFunction: false,
+            enableTracing: false
+          }
+        },
+        schedule: {
+          type: 'object',
+          additionalProperties: false,
+          properties: {
+            automaticallyAfterDays: {
+              type: 'number',
+              minimum: 1,
+              maximum: 365,
+              default: 365
+            }
+          },
+          default: {
+            automaticallyAfterDays: 365
+          }
+        }
+      },
+      additionalProperties: false,
+      default: {
+        enabled: false,
+        rotationLambda: {
+          createFunction: false,
+          enableTracing: false
+        },
+        schedule: {
+          automaticallyAfterDays: 365
+        }
+      }
+    },
+    replicas: {
+      type: 'array',
+      description: 'Multi-region replica configuration',
+      items: {
+        type: 'object',
+        properties: {
+          region: {
+            type: 'string'
+          },
+          kmsKeyArn: {
+            type: 'string'
+          }
+        },
+        required: ['region'],
+        additionalProperties: false
+      },
+      default: []
+    },
+    encryption: {
+      type: 'object',
+      description: 'Encryption configuration',
+      properties: {
+        kmsKeyArn: {
+          type: 'string'
+        },
+        createCustomerManagedKey: {
+          type: 'boolean',
+          default: false
+        },
+        enableKeyRotation: {
+          type: 'boolean',
+          default: false
+        }
+      },
+      additionalProperties: false,
+      default: {
+        createCustomerManagedKey: false,
+        enableKeyRotation: false
+      }
+    },
+    recovery: {
+      type: 'object',
+      description: 'Deletion protection and recovery window settings',
+      properties: {
+        deletionProtection: {
+          type: 'boolean',
+          default: false
+        },
+        recoveryWindowInDays: {
+          type: 'number',
+          minimum: 7,
+          maximum: 30,
+          default: 30
+        }
+      },
+      additionalProperties: false,
+      default: {
+        deletionProtection: false,
+        recoveryWindowInDays: 30
+      }
+    },
+    monitoring: {
+      type: 'object',
+      description: 'Monitoring and alarm configuration',
+      properties: {
+        enabled: {
+          type: 'boolean',
+          default: false
+        },
+        rotationFailureThreshold: {
+          type: 'number',
+          minimum: 1,
+          default: 1
+        },
+        unusualAccessThresholdMs: {
+          type: 'number',
+          minimum: 100,
+          default: 5000
+        }
+      },
+      additionalProperties: false,
+      default: {
+        enabled: false,
+        rotationFailureThreshold: 1,
+        unusualAccessThresholdMs: 5000
+      }
+    },
+    accessPolicies: {
+      type: 'object',
+      description: 'Secret access policy controls',
+      properties: {
+        denyInsecureTransport: {
+          type: 'boolean',
+          default: true
+        },
+        restrictToVpce: {
+          type: 'boolean',
+          default: false
+        },
+        allowedVpceIds: {
+          type: 'array',
+          items: {
+            type: 'string'
+          },
+          default: []
+        },
+        requireTemporaryCredentials: {
+          type: 'boolean',
+          default: false
+        }
+      },
+      additionalProperties: false,
+      default: {
+        denyInsecureTransport: true,
+        restrictToVpce: false,
+        allowedVpceIds: [],
+        requireTemporaryCredentials: false
+      }
     }
-    // TODO: Add component-specific schema properties
-  },
-  additionalProperties: false
+  }
 };
 
-/**
- * ConfigBuilder for SecretsManagerComponent component
- * 
- * Implements the 5-layer configuration precedence chain:
- * 1. Hardcoded Fallbacks (ultra-safe baseline)
- * 2. Platform Defaults (from platform config)
- * 3. Environment Defaults (from environment config) 
- * 4. Component Overrides (from service.yml)
- * 5. Policy Overrides (from governance policies)
- */
 export class SecretsManagerComponentConfigBuilder extends ConfigBuilder<SecretsManagerConfig> {
-  
-  /**
-   * Layer 1: Hardcoded Fallbacks
-   * Ultra-safe baseline configuration that works in any environment
-   */
+  constructor(options: ConfigBuilderContext) {
+    super(options, SECRETS_MANAGER_CONFIG_SCHEMA);
+  }
+
   protected getHardcodedFallbacks(): Partial<SecretsManagerConfig> {
     return {
-      monitoring: {
-        enabled: true,
-        detailedMetrics: false
+      generateSecret: {
+        enabled: false,
+        excludeCharacters: '"@/\\\'',
+        includeSpace: false,
+        passwordLength: 32,
+        requireEachIncludedType: true
       },
-      tags: {}
-      // TODO: Add component-specific hardcoded fallbacks
-    };
-  }
-  
-  /**
-   * Layer 2: Compliance Framework Defaults
-   * Security and compliance-specific configurations
-   */
-  protected getComplianceFrameworkDefaults(): Partial<SecretsManagerConfig> {
-    const framework = this.context.complianceFramework;
-    
-    const baseCompliance: Partial<SecretsManagerConfig> = {
+      automaticRotation: {
+        enabled: false,
+        rotationLambda: {
+          createFunction: false,
+          enableTracing: false
+        },
+        schedule: {
+          automaticallyAfterDays: 365
+        }
+      },
+      encryption: {
+        createCustomerManagedKey: false,
+        enableKeyRotation: false
+      },
+      recovery: {
+        deletionProtection: false,
+        recoveryWindowInDays: 30
+      },
+      replicas: [],
       monitoring: {
-        enabled: true,
-        detailedMetrics: true
+        enabled: false,
+        rotationFailureThreshold: 1,
+        unusualAccessThresholdMs: 5000
+      },
+      accessPolicies: {
+        denyInsecureTransport: true,
+        restrictToVpce: false,
+        allowedVpceIds: [],
+        requireTemporaryCredentials: false
       }
     };
-    
-    if (framework === 'fedramp-moderate' || framework === 'fedramp-high') {
-      return {
-        ...baseCompliance,
-        monitoring: {
-          ...baseCompliance.monitoring,
-          detailedMetrics: true // Mandatory for FedRAMP
+  }
+
+  public buildSync(): SecretsManagerConfig {
+    const resolved = super.buildSync() as SecretsManagerConfig;
+    return this.normaliseConfig(resolved);
+  }
+
+  private normaliseConfig(config: SecretsManagerConfig): SecretsManagerConfig {
+    const accessPolicies = config.accessPolicies ?? {};
+    const restrictToVpce = accessPolicies.restrictToVpce ?? false;
+    const allowedVpceIds = restrictToVpce
+      ? (accessPolicies.allowedVpceIds && accessPolicies.allowedVpceIds.length > 0
+          ? accessPolicies.allowedVpceIds
+          : ['vpce-*'])
+      : accessPolicies.allowedVpceIds ?? [];
+
+    return {
+      ...config,
+      automaticRotation: {
+        enabled: config.automaticRotation?.enabled ?? false,
+        rotationLambda: {
+          createFunction: config.automaticRotation?.rotationLambda?.createFunction ?? false,
+          functionArn: config.automaticRotation?.rotationLambda?.functionArn,
+          runtime: config.automaticRotation?.rotationLambda?.runtime,
+          enableTracing: config.automaticRotation?.rotationLambda?.enableTracing ?? false
+        },
+        schedule: {
+          automaticallyAfterDays:
+            config.automaticRotation?.schedule?.automaticallyAfterDays ?? 365
         }
-        // TODO: Add FedRAMP-specific compliance defaults
-      };
-    }
-    
-    return baseCompliance;
+      },
+      encryption: {
+        createCustomerManagedKey: config.encryption?.createCustomerManagedKey ?? false,
+        enableKeyRotation: config.encryption?.enableKeyRotation ?? false,
+        kmsKeyArn: config.encryption?.kmsKeyArn
+      },
+      recovery: {
+        deletionProtection: config.recovery?.deletionProtection ?? false,
+        recoveryWindowInDays: config.recovery?.recoveryWindowInDays ?? 30
+      },
+      monitoring: {
+        enabled: config.monitoring?.enabled ?? false,
+        rotationFailureThreshold: config.monitoring?.rotationFailureThreshold ?? 1,
+        unusualAccessThresholdMs: config.monitoring?.unusualAccessThresholdMs ?? 5000
+      },
+      accessPolicies: {
+        denyInsecureTransport: accessPolicies.denyInsecureTransport ?? true,
+        restrictToVpce,
+        allowedVpceIds,
+        requireTemporaryCredentials: accessPolicies.requireTemporaryCredentials ?? false
+      },
+      replicas: config.replicas ?? []
+    };
   }
-  
-  /**
-   * Get the JSON Schema for validation
-   */
-  public getSchema(): any {
-    return SECRETS_MANAGER_CONFIG_SCHEMA;
-  }
+
 }

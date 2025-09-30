@@ -1,99 +1,121 @@
-/**
- * ApplicationLoadBalancerComponent ConfigBuilder Test Suite
- * Implements Platform Testing Standard v1.0 - ConfigBuilder Testing
- */
-
-import { ApplicationLoadBalancerComponentConfigBuilder, ApplicationLoadBalancerConfig } from '../application-load-balancer.builder';
+import {
+  ApplicationLoadBalancerComponentConfigBuilder,
+  ApplicationLoadBalancerConfig
+} from '../application-load-balancer.builder';
 import { ComponentContext, ComponentSpec } from '../../../platform/contracts/component-interfaces';
 
-const createMockContext = (
-  complianceFramework: string = 'commercial',
-  environment: string = 'dev'
-): ComponentContext => ({
-  serviceName: 'test-service',
-  owner: 'test-team',
-  environment,
-  complianceFramework,
+const createContext = (framework: string = 'commercial'): ComponentContext => ({
+  serviceName: 'payments-service',
+  owner: 'platform-team',
+  environment: 'dev',
+  complianceFramework: framework,
   region: 'us-east-1',
   account: '123456789012',
   tags: {
-    'service-name': 'test-service',
-    'owner': 'test-team',
-    'environment': environment,
-    'compliance-framework': complianceFramework
+    'service-name': 'payments-service',
+    environment: 'dev',
+    'compliance-framework': framework
   }
 });
 
-const createMockSpec = (config: Partial<ApplicationLoadBalancerConfig> = {}): ComponentSpec => ({
-  name: 'test-application-load-balancer',
+const createSpec = (config: Partial<ApplicationLoadBalancerConfig> = {}): ComponentSpec => ({
+  name: 'public-alb',
   type: 'application-load-balancer',
   config
 });
 
 describe('ApplicationLoadBalancerComponentConfigBuilder', () => {
-  
-  describe('Hardcoded Fallbacks (Layer 1)', () => {
-    
-    it('should provide ultra-safe baseline configuration', () => {
-      const context = createMockContext();
-      const spec = createMockSpec();
-      
-      const builder = new ApplicationLoadBalancerComponentConfigBuilder(context, spec);
-      const config = builder.buildSync();
-      
-      // Verify hardcoded fallbacks are applied
-      expect(config.monitoring?.enabled).toBe(true);
-      expect(config.monitoring?.detailedMetrics).toBe(false);
-      expect(config.tags).toBeDefined();
-    });
-    
+  it('merges commercial defaults with hardcoded fallbacks', () => {
+    const builder = new ApplicationLoadBalancerComponentConfigBuilder(
+      createContext('commercial'),
+      createSpec()
+    );
+
+    const config = builder.buildSync();
+
+    expect(config.loadBalancerName).toBe('public-alb');
+    expect(config.scheme).toBe('internet-facing');
+    expect(config.ipAddressType).toBe('ipv4');
+    expect(config.listeners[0].port).toBe(80);
+    expect(config.accessLogs.enabled).toBe(false);
+    expect(config.monitoring.enabled).toBe(false);
+    expect(config.hardeningProfile).toBeDefined();
+    expect(config.securityGroups.create).toBe(true);
+    expect(config.securityGroups.ingress.length).toBeGreaterThanOrEqual(1);
   });
-  
-  describe('Compliance Framework Defaults (Layer 2)', () => {
-    
-    it('should apply commercial compliance defaults', () => {
-      const context = createMockContext('commercial');
-      const spec = createMockSpec();
-      
-      const builder = new ApplicationLoadBalancerComponentConfigBuilder(context, spec);
-      const config = builder.buildSync();
-      
-      expect(config.monitoring?.enabled).toBe(true);
-      expect(config.monitoring?.detailedMetrics).toBe(true);
-    });
-    
-    it('should apply FedRAMP compliance defaults', () => {
-      const context = createMockContext('fedramp-moderate');
-      const spec = createMockSpec();
-      
-      const builder = new ApplicationLoadBalancerComponentConfigBuilder(context, spec);
-      const config = builder.buildSync();
-      
-      expect(config.monitoring?.enabled).toBe(true);
-      expect(config.monitoring?.detailedMetrics).toBe(true); // Mandatory for FedRAMP
-    });
-    
+
+  it('applies fedramp-moderate defaults from segregated configuration', () => {
+    const builder = new ApplicationLoadBalancerComponentConfigBuilder(
+      createContext('fedramp-moderate'),
+      createSpec()
+    );
+
+    const config = builder.buildSync();
+
+    expect(config.deletionProtection).toBe(true);
+    expect(config.accessLogs.enabled).toBe(true);
+    expect(config.accessLogs.removalPolicy).toBe('retain');
+    expect(config.listeners.every(listener => listener.protocol === 'HTTPS')).toBe(true);
+    expect(config.monitoring.enabled).toBe(true);
+    expect(config.hardeningProfile).toMatch(/fedramp/i);
   });
-  
-  describe('5-Layer Precedence Chain', () => {
-    
-    it('should apply component overrides over platform defaults', () => {
-      const context = createMockContext('commercial');
-      const spec = createMockSpec({
+
+  it('sanitises names and honours manifest overrides', () => {
+    const builder = new ApplicationLoadBalancerComponentConfigBuilder(
+      createContext('commercial'),
+      createSpec({
+        loadBalancerName: 'public alb prod',
+        listeners: [
+          {
+            port: 443,
+            protocol: 'HTTPS',
+            certificateArn: 'arn:aws:acm:us-east-1:123456789012:certificate/11111111-2222-3333-4444-555555555555'
+          }
+        ],
+        accessLogs: {
+          enabled: true,
+          bucketName: 'custom-access-log-bucket'
+        },
+        idleTimeoutSeconds: 120
+      })
+    );
+
+    const config = builder.buildSync();
+
+    expect(config.loadBalancerName).toBe('public-alb-prod');
+    expect(config.listeners[0].port).toBe(443);
+    expect(config.listeners[0].protocol).toBe('HTTPS');
+    expect(config.accessLogs.enabled).toBe(true);
+    expect(config.accessLogs.bucketName).toBe('custom-access-log-bucket');
+    expect(config.idleTimeoutSeconds).toBe(120);
+  });
+
+  it('normalises monitoring alarms when partially specified', () => {
+    const builder = new ApplicationLoadBalancerComponentConfigBuilder(
+      createContext('commercial'),
+      createSpec({
         monitoring: {
-          enabled: false,
-          detailedMetrics: false
+          enabled: true,
+          alarms: {
+            http5xx: {
+              enabled: true,
+              threshold: 5
+            },
+            rejectedConnections: {
+              enabled: true
+            }
+          }
         }
-      });
-      
-      const builder = new ApplicationLoadBalancerComponentConfigBuilder(context, spec);
-      const config = builder.buildSync();
-      
-      // Verify component config overrides platform defaults
-      expect(config.monitoring?.enabled).toBe(false);
-      expect(config.monitoring?.detailedMetrics).toBe(false);
-    });
-    
+      })
+    );
+
+    const config = builder.buildSync();
+
+    expect(config.monitoring.enabled).toBe(true);
+    expect(config.monitoring.alarms.http5xx.enabled).toBe(true);
+    expect(config.monitoring.alarms.http5xx.threshold).toBe(5);
+    expect(config.monitoring.alarms.http5xx.evaluationPeriods).toBeGreaterThan(0);
+    expect(config.monitoring.alarms.rejectedConnections.enabled).toBe(true);
+    expect(config.monitoring.alarms.rejectedConnections.threshold).toBeGreaterThan(0);
   });
-  
 });

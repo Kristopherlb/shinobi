@@ -1,99 +1,118 @@
-/**
- * LambdaWorkerComponent ConfigBuilder Test Suite
- * Implements Platform Testing Standard v1.0 - ConfigBuilder Testing
- */
-
-import { LambdaWorkerComponentConfigBuilder, LambdaWorkerConfig } from '../lambda-worker.builder';
+import {
+  LambdaWorkerComponentConfigBuilder,
+  LambdaWorkerConfig
+} from '../lambda-worker.builder';
 import { ComponentContext, ComponentSpec } from '../../../platform/contracts/component-interfaces';
 
-const createMockContext = (
-  complianceFramework: string = 'commercial',
-  environment: string = 'dev'
-): ComponentContext => ({
-  serviceName: 'test-service',
-  owner: 'test-team',
-  environment,
-  complianceFramework,
+const createContext = (framework: string = 'commercial'): ComponentContext => ({
+  serviceName: 'worker-service',
+  owner: 'platform-team',
+  environment: 'dev',
+  complianceFramework: framework,
   region: 'us-east-1',
   account: '123456789012',
   tags: {
-    'service-name': 'test-service',
-    'owner': 'test-team',
-    'environment': environment,
-    'compliance-framework': complianceFramework
+    'service-name': 'worker-service',
+    environment: 'dev',
+    'compliance-framework': framework
   }
 });
 
-const createMockSpec = (config: Partial<LambdaWorkerConfig> = {}): ComponentSpec => ({
-  name: 'test-lambda-worker',
+const createSpec = (config: Partial<LambdaWorkerConfig> = {}): ComponentSpec => ({
+  name: 'image-worker',
   type: 'lambda-worker',
-  config
+  config: {
+    handler: 'index.handler',
+    ...config
+  }
 });
 
 describe('LambdaWorkerComponentConfigBuilder', () => {
-  
-  describe('Hardcoded Fallbacks (Layer 1)', () => {
-    
-    it('should provide ultra-safe baseline configuration', () => {
-      const context = createMockContext();
-      const spec = createMockSpec();
-      
-      const builder = new LambdaWorkerComponentConfigBuilder(context, spec);
-      const config = builder.buildSync();
-      
-      // Verify hardcoded fallbacks are applied
-      expect(config.monitoring?.enabled).toBe(true);
-      expect(config.monitoring?.detailedMetrics).toBe(false);
-      expect(config.tags).toBeDefined();
+  it('normalises baseline commercial configuration', () => {
+    const builder = new LambdaWorkerComponentConfigBuilder({
+      context: createContext('commercial'),
+      spec: createSpec()
     });
-    
+    const config = builder.buildSync();
+
+    expect(config.functionName).toBe('worker-service-image-worker');
+    expect(config.runtime).toBe('nodejs20.x');
+    expect(config.architecture).toBe('x86_64');
+    expect(config.memorySize).toBe(256);
+    expect(config.eventSources).toHaveLength(0);
+    expect(config.monitoring.enabled).toBe(false);
+    expect(config.hardeningProfile).toBe('baseline');
   });
-  
-  describe('Compliance Framework Defaults (Layer 2)', () => {
-    
-    it('should apply commercial compliance defaults', () => {
-      const context = createMockContext('commercial');
-      const spec = createMockSpec();
-      
-      const builder = new LambdaWorkerComponentConfigBuilder(context, spec);
-      const config = builder.buildSync();
-      
-      expect(config.monitoring?.enabled).toBe(true);
-      expect(config.monitoring?.detailedMetrics).toBe(true);
+
+  it('applies fedramp-high defaults from platform configuration', () => {
+    const builder = new LambdaWorkerComponentConfigBuilder({
+      context: createContext('fedramp-high'),
+      spec: createSpec()
     });
-    
-    it('should apply FedRAMP compliance defaults', () => {
-      const context = createMockContext('fedramp-moderate');
-      const spec = createMockSpec();
-      
-      const builder = new LambdaWorkerComponentConfigBuilder(context, spec);
-      const config = builder.buildSync();
-      
-      expect(config.monitoring?.enabled).toBe(true);
-      expect(config.monitoring?.detailedMetrics).toBe(true); // Mandatory for FedRAMP
-    });
-    
+    const config = builder.buildSync();
+
+    expect(config.runtime).toBeDefined();
+    expect(config.monitoring.enabled).toBe(true);
+    expect(config.securityTools.falco).toBe(true);
+    expect(config.hardeningProfile).toBe('fedramp-high');
+    expect(config.tracing.mode).toBeDefined();
   });
-  
-  describe('5-Layer Precedence Chain', () => {
-    
-    it('should apply component overrides over platform defaults', () => {
-      const context = createMockContext('commercial');
-      const spec = createMockSpec({
+
+  it('honours manifest overrides', () => {
+    const builder = new LambdaWorkerComponentConfigBuilder({
+      context: createContext('commercial'),
+      spec: createSpec({
+        functionName: 'custom-worker',
+        memorySize: 1024,
+        timeoutSeconds: 120,
+        environment: {
+          STAGE: 'prod'
+        },
+        eventSources: [
+          {
+            type: 'sqs',
+            queueArn: 'arn:aws:sqs:us-east-1:123456789012:images',
+            batchSize: 5
+          }
+        ],
+        logging: {
+          logRetentionDays: 90,
+          logFormat: 'JSON',
+          systemLogLevel: 'WARN',
+          applicationLogLevel: 'WARN'
+        },
         monitoring: {
-          enabled: false,
-          detailedMetrics: false
+          enabled: true,
+          alarms: {
+            errors: { enabled: true, threshold: 5 }
+          }
+        },
+        tags: {
+          team: 'media'
         }
-      });
-      
-      const builder = new LambdaWorkerComponentConfigBuilder(context, spec);
-      const config = builder.buildSync();
-      
-      // Verify component config overrides platform defaults
-      expect(config.monitoring?.enabled).toBe(false);
-      expect(config.monitoring?.detailedMetrics).toBe(false);
+      })
     });
-    
+
+    const config = builder.buildSync();
+
+    expect(config.functionName).toBe('custom-worker');
+    expect(config.memorySize).toBe(1024);
+    expect(config.environment.STAGE).toBe('prod');
+    expect(config.eventSources).toHaveLength(1);
+    expect(config.monitoring.enabled).toBe(true);
+    expect(config.tags.team).toBe('media');
   });
-  
+
+  it('throws when handler is missing', () => {
+    const builder = new LambdaWorkerComponentConfigBuilder({
+      context: createContext('commercial'),
+      spec: {
+        name: 'image-worker',
+        type: 'lambda-worker',
+        config: {}
+      }
+    });
+
+    expect(() => builder.buildSync()).toThrow(/handler/i);
+  });
 });

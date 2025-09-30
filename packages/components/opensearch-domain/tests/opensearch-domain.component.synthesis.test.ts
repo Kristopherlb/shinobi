@@ -1,94 +1,91 @@
-/**
- * OpenSearchDomainComponent Component Synthesis Test Suite
- * Implements Platform Testing Standard v1.0 - Component Synthesis Testing
- */
-
 import { Template, Match } from 'aws-cdk-lib/assertions';
 import { App, Stack } from 'aws-cdk-lib';
-import { OpenSearchDomainComponentComponent } from '../opensearch-domain.component';
+import { OpenSearchDomainComponent } from '../opensearch-domain.component';
 import { OpenSearchDomainConfig } from '../opensearch-domain.builder';
 import { ComponentContext, ComponentSpec } from '../../../platform/contracts/component-interfaces';
 
-const createMockContext = (
-  complianceFramework: string = 'commercial',
-  environment: string = 'dev'
-): ComponentContext => ({
-  serviceName: 'test-service',
-  owner: 'test-team',
-  environment,
-  complianceFramework,
+const createContext = (framework: string = 'commercial'): ComponentContext => ({
+  serviceName: 'search-service',
+  owner: 'platform-team',
+  environment: 'dev',
+  complianceFramework: framework,
   region: 'us-east-1',
   account: '123456789012',
   tags: {
-    'service-name': 'test-service',
-    'owner': 'test-team',
-    'environment': environment,
-    'compliance-framework': complianceFramework
+    'service-name': 'search-service',
+    environment: 'dev',
+    'compliance-framework': framework
   }
 });
 
-const createMockSpec = (config: Partial<OpenSearchDomainConfig> = {}): ComponentSpec => ({
-  name: 'test-opensearch-domain',
+const createSpec = (config: Partial<OpenSearchDomainConfig> = {}): ComponentSpec => ({
+  name: 'primary-search',
   type: 'opensearch-domain',
   config
 });
 
-const synthesizeComponent = (
-  context: ComponentContext,
-  spec: ComponentSpec
-): { component: OpenSearchDomainComponentComponent; template: Template } => {
+const synthesizeComponent = (context: ComponentContext, spec: ComponentSpec) => {
   const app = new App();
-  const stack = new Stack(app, 'TestStack');
-  
-  const component = new OpenSearchDomainComponentComponent(stack, spec, context);
+  const stack = new Stack(app, 'TestStack', {
+    env: { account: context.account, region: context.region }
+  });
+
+  const component = new OpenSearchDomainComponent(stack, spec.name, context, spec);
   component.synth();
-  
-  const template = Template.fromStack(stack);
-  return { component, template };
+
+  return {
+    component,
+    template: Template.fromStack(stack)
+  };
 };
 
-describe('OpenSearchDomainComponentComponent Synthesis', () => {
-  
-  describe('Default Happy Path Synthesis', () => {
-    
-    it('should synthesize basic opensearch-domain with commercial compliance', () => {
-      const context = createMockContext('commercial');
-      const spec = createMockSpec();
-      
-      const { template, component } = synthesizeComponent(context, spec);
-      
-      // TODO: Add specific CloudFormation resource assertions
-      // Verify component was created
-      expect(component).toBeDefined();
-      expect(component.getType()).toBe('opensearch-domain');
+describe('OpenSearchDomainComponent synthesis', () => {
+  it('synthesises a commercial domain with defaults', () => {
+    const { component, template } = synthesizeComponent(createContext('commercial'), createSpec());
+
+    template.hasResourceProperties('AWS::OpenSearchService::Domain', {
+      DomainName: 'search-service-primary-searc',
+      EngineVersion: 'OpenSearch_2.7'
     });
-    
+
+    expect(component.getType()).toBe('opensearch-domain');
+    expect(component.getCapabilities()['search:opensearch']).toBeDefined();
   });
-  
-  describe('Component Capabilities and Constructs', () => {
-    
-    it('should register correct capabilities after synthesis', () => {
-      const context = createMockContext('commercial');
-      const spec = createMockSpec();
-      
-      const { component } = synthesizeComponent(context, spec);
-      
-      const capabilities = component.getCapabilities();
-      
-      // Verify component-specific capabilities
-      expect(capabilities).toBeDefined();
-    });
-    
-    it('should register construct handles for patches.ts access', () => {
-      const context = createMockContext('commercial');
-      const spec = createMockSpec();
-      
-      const { component } = synthesizeComponent(context, spec);
-      
-      // Verify main construct is registered
-      expect(component.getConstruct('main')).toBeDefined();
-    });
-    
+
+  it('enables hardened settings for fedramp-high', () => {
+    const { template } = synthesizeComponent(createContext('fedramp-high'), createSpec());
+
+    template.hasResourceProperties('AWS::OpenSearchService::Domain', Match.objectLike({
+      ClusterConfig: Match.objectLike({
+        DedicatedMasterEnabled: true,
+        WarmEnabled: true
+      }),
+      LogPublishingOptions: Match.objectLike({
+        AUDIT_LOGS: Match.objectLike({ Enabled: true })
+      })
+    }));
   });
-  
+
+  it('honours manifest overrides for monitoring', () => {
+    const { template } = synthesizeComponent(
+      createContext('commercial'),
+      createSpec({
+        monitoring: {
+          enabled: true,
+          alarms: {
+            clusterStatusRed: {
+              enabled: true,
+              evaluationPeriods: 2
+            }
+          }
+        }
+      })
+    );
+
+    template.hasResource('AWS::CloudWatch::Alarm', Match.objectLike({
+      Properties: Match.objectLike({
+        AlarmName: Match.stringLikeRegexp('search-service-primary-search-cluster-status-red-alarm')
+      })
+    }));
+  });
 });

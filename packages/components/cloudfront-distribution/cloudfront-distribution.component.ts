@@ -1,17 +1,7 @@
-/**
- * CloudFront Distribution Component implementing Component API Contract v1.0
- * 
- * A managed Content Delivery Network (CDN) for global, low-latency content delivery.
- * Implements three-tiered compliance model (Commercial/FedRAMP Moderate/FedRAMP High).
- */
-
 import * as cloudfront from 'aws-cdk-lib/aws-cloudfront';
 import * as origins from 'aws-cdk-lib/aws-cloudfront-origins';
 import * as s3 from 'aws-cdk-lib/aws-s3';
-import * as elbv2 from 'aws-cdk-lib/aws-elasticloadbalancingv2';
 import * as certificatemanager from 'aws-cdk-lib/aws-certificatemanager';
-import * as iam from 'aws-cdk-lib/aws-iam';
-import * as logs from 'aws-cdk-lib/aws-logs';
 import * as cloudwatch from 'aws-cdk-lib/aws-cloudwatch';
 import * as cdk from 'aws-cdk-lib';
 import { Construct } from 'constructs';
@@ -20,437 +10,14 @@ import {
   ComponentSpec,
   ComponentContext,
   ComponentCapabilities
-} from '../../../platform/contracts/src';
+} from '@platform/contracts';
+import {
+  CloudFrontDistributionComponentConfigBuilder,
+  CloudFrontDistributionConfig,
+  CloudFrontAlarmConfig,
+  CloudFrontMonitoringConfig
+} from './cloudfront-distribution.builder';
 
-/**
- * Configuration interface for CloudFront Distribution component
- */
-export interface CloudFrontDistributionConfig {
-  /** Distribution comment/description */
-  comment?: string;
-  
-  /** Origin configuration */
-  origin: {
-    type: 's3' | 'alb' | 'custom';
-    s3BucketName?: string;
-    albDnsName?: string;
-    customDomainName?: string;
-    originPath?: string;
-    customHeaders?: Record<string, string>;
-  };
-  
-  /** Custom domain configuration */
-  domain?: {
-    domainNames?: string[];
-    certificateArn?: string;
-    sslSupportMethod?: 'sni-only' | 'vip';
-    minimumProtocolVersion?: string;
-  };
-  
-  /** Default cache behavior */
-  defaultBehavior?: {
-    viewerProtocolPolicy?: 'allow-all' | 'redirect-to-https' | 'https-only';
-    allowedMethods?: string[];
-    cachedMethods?: string[];
-    cachePolicyId?: string;
-    originRequestPolicyId?: string;
-    compress?: boolean;
-    ttl?: {
-      default?: number;
-      maximum?: number;
-      minimum?: number;
-    };
-  };
-  
-  /** Additional cache behaviors */
-  additionalBehaviors?: Array<{
-    pathPattern: string;
-    viewerProtocolPolicy?: 'allow-all' | 'redirect-to-https' | 'https-only';
-    allowedMethods?: string[];
-    cachedMethods?: string[];
-    cachePolicyId?: string;
-    originRequestPolicyId?: string;
-    compress?: boolean;
-  }>;
-  
-  /** Geographic restrictions */
-  geoRestriction?: {
-    type: 'whitelist' | 'blacklist' | 'none';
-    countries?: string[];
-  };
-  
-  /** Price class */
-  priceClass?: 'PriceClass_All' | 'PriceClass_200' | 'PriceClass_100';
-  
-  /** Logging configuration */
-  logging?: {
-    enabled?: boolean;
-    bucket?: string;
-    prefix?: string;
-    includeCookies?: boolean;
-  };
-  
-  /** WAF configuration */
-  webAclId?: string;
-  
-  /** Monitoring configuration */
-  monitoring?: {
-    enabled?: boolean;
-    alarms?: {
-      error4xxThreshold?: number;
-      error5xxThreshold?: number;
-      originLatencyThreshold?: number;
-    };
-  };
-  
-  /** Tags for the distribution */
-  tags?: Record<string, string>;
-}
-
-/**
- * JSON Schema for CloudFront Distribution configuration
- */
-export const CLOUDFRONT_DISTRIBUTION_CONFIG_SCHEMA = {
-  type: 'object',
-  properties: {
-    comment: { type: 'string' },
-    origin: {
-      type: 'object',
-      properties: {
-        type: {
-          type: 'string',
-          enum: ['s3', 'alb', 'custom']
-        },
-        s3BucketName: { type: 'string' },
-        albDnsName: { type: 'string' },
-        customDomainName: { type: 'string' },
-        originPath: { type: 'string' },
-        customHeaders: {
-          type: 'object',
-          additionalProperties: { type: 'string' }
-        }
-      },
-      required: ['type']
-    },
-    domain: {
-      type: 'object',
-      properties: {
-        domainNames: {
-          type: 'array',
-          items: { type: 'string' }
-        },
-        certificateArn: { type: 'string' },
-        sslSupportMethod: {
-          type: 'string',
-          enum: ['sni-only', 'vip']
-        },
-        minimumProtocolVersion: { type: 'string' }
-      }
-    },
-    defaultBehavior: {
-      type: 'object',
-      properties: {
-        viewerProtocolPolicy: {
-          type: 'string',
-          enum: ['allow-all', 'redirect-to-https', 'https-only']
-        },
-        allowedMethods: {
-          type: 'array',
-          items: { type: 'string' }
-        },
-        cachedMethods: {
-          type: 'array',
-          items: { type: 'string' }
-        },
-        cachePolicyId: { type: 'string' },
-        originRequestPolicyId: { type: 'string' },
-        compress: { type: 'boolean' },
-        ttl: {
-          type: 'object',
-          properties: {
-            default: { type: 'number', minimum: 0 },
-            maximum: { type: 'number', minimum: 0 },
-            minimum: { type: 'number', minimum: 0 }
-          }
-        }
-      }
-    },
-    additionalBehaviors: {
-      type: 'array',
-      items: {
-        type: 'object',
-        properties: {
-          pathPattern: { type: 'string' },
-          viewerProtocolPolicy: {
-            type: 'string',
-            enum: ['allow-all', 'redirect-to-https', 'https-only']
-          },
-          allowedMethods: {
-            type: 'array',
-            items: { type: 'string' }
-          },
-          cachedMethods: {
-            type: 'array',
-            items: { type: 'string' }
-          },
-          cachePolicyId: { type: 'string' },
-          originRequestPolicyId: { type: 'string' },
-          compress: { type: 'boolean' }
-        },
-        required: ['pathPattern']
-      }
-    },
-    geoRestriction: {
-      type: 'object',
-      properties: {
-        type: {
-          type: 'string',
-          enum: ['whitelist', 'blacklist', 'none']
-        },
-        countries: {
-          type: 'array',
-          items: { type: 'string' }
-        }
-      },
-      required: ['type']
-    },
-    priceClass: {
-      type: 'string',
-      enum: ['PriceClass_All', 'PriceClass_200', 'PriceClass_100']
-    },
-    logging: {
-      type: 'object',
-      properties: {
-        enabled: { type: 'boolean' },
-        bucket: { type: 'string' },
-        prefix: { type: 'string' },
-        includeCookies: { type: 'boolean' }
-      }
-    },
-    webAclId: { type: 'string' },
-    monitoring: {
-      type: 'object',
-      properties: {
-        enabled: { type: 'boolean' },
-        alarms: {
-          type: 'object',
-          properties: {
-            error4xxThreshold: { type: 'number', minimum: 0 },
-            error5xxThreshold: { type: 'number', minimum: 0 },
-            originLatencyThreshold: { type: 'number', minimum: 0 }
-          }
-        }
-      }
-    },
-    tags: {
-      type: 'object',
-      additionalProperties: { type: 'string' }
-    }
-  },
-  required: ['origin'],
-  additionalProperties: false
-};
-
-/**
- * ConfigBuilder for CloudFront Distribution component
- */
-export class CloudFrontDistributionConfigBuilder {
-  constructor(private context: ComponentContext, private spec: ComponentSpec) {}
-
-  /**
-   * Asynchronous build method - delegates to synchronous implementation
-   */
-  public async build(): Promise<CloudFrontDistributionConfig> {
-    return this.buildSync();
-  }
-
-  /**
-   * Synchronous version of build for use in synth() method
-   */
-  public buildSync(): CloudFrontDistributionConfig {
-    // Start with platform defaults
-    const platformDefaults = this.getPlatformDefaults();
-    
-    // Apply compliance framework defaults
-    const complianceDefaults = this.getComplianceFrameworkDefaults();
-    
-    // Merge user configuration from spec
-    const userConfig = this.spec.config || {};
-    
-    // Merge configurations (user config takes precedence)
-    const mergedConfig = this.mergeConfigs(
-      this.mergeConfigs(platformDefaults, complianceDefaults),
-      userConfig
-    );
-    
-    return mergedConfig as CloudFrontDistributionConfig;
-  }
-
-  /**
-   * Simple merge utility for combining configuration objects
-   */
-  private mergeConfigs(base: Record<string, any>, override: Record<string, any>): Record<string, any> {
-    const result = { ...base };
-    
-    for (const [key, value] of Object.entries(override)) {
-      if (value !== undefined && value !== null) {
-        if (typeof value === 'object' && !Array.isArray(value) && typeof result[key] === 'object' && !Array.isArray(result[key])) {
-          result[key] = this.mergeConfigs(result[key] || {}, value);
-        } else {
-          result[key] = value;
-        }
-      }
-    }
-    
-    return result;
-  }
-
-  /**
-   * Get platform-wide defaults with intelligent configuration
-   */
-  private getPlatformDefaults(): Partial<CloudFrontDistributionConfig> {
-    return {
-      comment: `CloudFront distribution for ${this.spec.name}`,
-      defaultBehavior: {
-        viewerProtocolPolicy: this.getDefaultViewerProtocolPolicy(),
-        allowedMethods: ['GET', 'HEAD', 'OPTIONS'],
-        cachedMethods: ['GET', 'HEAD'],
-        compress: true,
-        ttl: {
-          default: 86400, // 24 hours
-          maximum: 31536000, // 1 year
-          minimum: 0
-        }
-      },
-      priceClass: this.getDefaultPriceClass(),
-      geoRestriction: {
-        type: 'none'
-      },
-      logging: {
-        enabled: this.shouldEnableLogging(),
-        includeCookies: false
-      },
-      monitoring: {
-        enabled: true,
-        alarms: {
-          error4xxThreshold: 50,
-          error5xxThreshold: 10,
-          originLatencyThreshold: 5000
-        }
-      }
-    };
-  }
-
-  /**
-   * Get compliance framework-specific defaults
-   */
-  private getComplianceFrameworkDefaults(): Partial<CloudFrontDistributionConfig> {
-    switch (this.context.complianceFramework) {
-      case 'fedramp-high':
-        return {
-          defaultBehavior: {
-            viewerProtocolPolicy: 'https-only', // Mandatory HTTPS
-            ttl: {
-              default: 3600, // Shorter cache for security
-              maximum: 86400,
-              minimum: 0
-            }
-          },
-          priceClass: 'PriceClass_All', // Global coverage for compliance
-          logging: {
-            enabled: true, // Mandatory logging
-            includeCookies: true
-          },
-          monitoring: {
-            enabled: true,
-            alarms: {
-              error4xxThreshold: 25, // More sensitive monitoring
-              error5xxThreshold: 5,
-              originLatencyThreshold: 3000
-            }
-          }
-        };
-        
-      case 'fedramp-moderate':
-        return {
-          defaultBehavior: {
-            viewerProtocolPolicy: 'redirect-to-https', // Force HTTPS
-            ttl: {
-              default: 7200, // 2 hours
-              maximum: 86400,
-              minimum: 0
-            }
-          },
-          priceClass: 'PriceClass_200', // US, Europe, Asia coverage
-          logging: {
-            enabled: true, // Recommended logging
-            includeCookies: false
-          },
-          monitoring: {
-            enabled: true,
-            alarms: {
-              error4xxThreshold: 35,
-              error5xxThreshold: 8,
-              originLatencyThreshold: 4000
-            }
-          }
-        };
-        
-      default: // commercial
-        return {
-          defaultBehavior: {
-            viewerProtocolPolicy: 'allow-all', // Flexible for commercial
-          },
-          priceClass: 'PriceClass_100', // Cost-optimized
-          logging: {
-            enabled: false // Optional for commercial
-          },
-          monitoring: {
-            enabled: false // Optional monitoring
-          }
-        };
-    }
-  }
-
-  /**
-   * Get default viewer protocol policy based on compliance framework
-   */
-  private getDefaultViewerProtocolPolicy(): 'allow-all' | 'redirect-to-https' | 'https-only' {
-    switch (this.context.complianceFramework) {
-      case 'fedramp-high':
-        return 'https-only';
-      case 'fedramp-moderate':
-        return 'redirect-to-https';
-      default:
-        return 'allow-all';
-    }
-  }
-
-  /**
-   * Get default price class based on compliance framework
-   */
-  private getDefaultPriceClass(): 'PriceClass_All' | 'PriceClass_200' | 'PriceClass_100' {
-    switch (this.context.complianceFramework) {
-      case 'fedramp-high':
-        return 'PriceClass_All';
-      case 'fedramp-moderate':
-        return 'PriceClass_200';
-      default:
-        return 'PriceClass_100';
-    }
-  }
-
-  /**
-   * Determine if logging should be enabled by default
-   */
-  private shouldEnableLogging(): boolean {
-    return ['fedramp-moderate', 'fedramp-high'].includes(this.context.complianceFramework);
-  }
-}
-
-/**
- * CloudFront Distribution Component implementing Component API Contract v1.0
- */
 export class CloudFrontDistributionComponent extends Component {
   private distribution?: cloudfront.Distribution;
   private origin?: cloudfront.IOrigin;
@@ -460,311 +27,205 @@ export class CloudFrontDistributionComponent extends Component {
     super(scope, id, context, spec);
   }
 
-  /**
-   * Synthesis phase - Create CloudFront distribution with global CDN
-   */
   public synth(): void {
-    this.logComponentEvent('synthesis_start', 'Starting CloudFront Distribution synthesis');
-    
+    this.logComponentEvent('synthesis_start', 'Starting CloudFront distribution synthesis');
+
     try {
-      // Build configuration using ConfigBuilder
-      const configBuilder = new CloudFrontDistributionConfigBuilder(this.context, this.spec);
-      this.config = configBuilder.buildSync();
-      
-      // Create origin based on configuration
+      const builder = new CloudFrontDistributionComponentConfigBuilder(this.context, this.spec);
+      this.config = builder.buildSync();
+
+      this.logComponentEvent('config_resolved', 'Resolved CloudFront distribution configuration', {
+        originType: this.config.origin.type,
+        priceClass: this.config.priceClass,
+        monitoringEnabled: this.config.monitoring?.enabled ?? false
+      });
+
       this.createOrigin();
-      
-      // Create CloudFront distribution
-      this.createCloudFrontDistribution();
-      
-      // Configure observability
-      this.configureCloudFrontObservability();
-      
-      // Apply compliance hardening
-      this.applyComplianceHardening();
-      
-      // Register constructs
+      this.createDistribution();
+      this.configureMonitoring();
+
       this.registerConstruct('distribution', this.distribution!);
-      
-      // Register capabilities
-      this.registerCapability('cdn:cloudfront', this.buildCloudFrontCapability());
-      
-      this.logComponentEvent('synthesis_complete', 'CloudFront Distribution synthesis completed successfully');
+      this.registerCapability('cdn:cloudfront', this.buildCapability());
+
+      this.logComponentEvent('synthesis_complete', 'CloudFront distribution synthesis completed', {
+        distributionId: this.distribution!.distributionId,
+        domainName: this.distribution!.distributionDomainName
+      });
     } catch (error) {
-      this.logError(error as Error, 'CloudFront Distribution synthesis');
+      this.logError(error as Error, 'cloudfront distribution synthesis');
       throw error;
     }
   }
 
-  /**
-   * Get the capabilities this component provides
-   */
   public getCapabilities(): ComponentCapabilities {
     this.validateSynthesized();
     return this.capabilities;
   }
 
-  /**
-   * Get the component type identifier
-   */
   public getType(): string {
     return 'cloudfront-distribution';
   }
 
-  /**
-   * Create origin based on configuration
-   */
   private createOrigin(): void {
     const originConfig = this.config!.origin;
 
     switch (originConfig.type) {
-      case 's3':
+      case 's3': {
         if (!originConfig.s3BucketName) {
-          throw new Error('S3 bucket name is required for S3 origin');
+          throw new Error('CloudFront origin type "s3" requires origin.s3BucketName.');
         }
+
         const bucket = s3.Bucket.fromBucketName(this, 'OriginBucket', originConfig.s3BucketName);
-        this.origin = new origins.S3Origin(bucket, {
+        this.origin = new origins.S3BucketOrigin(bucket, {
           originPath: originConfig.originPath,
           customHeaders: originConfig.customHeaders
         });
         break;
-        
-      case 'alb':
+      }
+      case 'alb': {
         if (!originConfig.albDnsName) {
-          throw new Error('ALB DNS name is required for ALB origin');
+          throw new Error('CloudFront origin type "alb" requires origin.albDnsName.');
         }
+
         this.origin = new origins.HttpOrigin(originConfig.albDnsName, {
           originPath: originConfig.originPath,
           customHeaders: originConfig.customHeaders,
           protocolPolicy: cloudfront.OriginProtocolPolicy.HTTPS_ONLY
         });
         break;
-        
-      case 'custom':
+      }
+      case 'custom': {
         if (!originConfig.customDomainName) {
-          throw new Error('Custom domain name is required for custom origin');
+          throw new Error('CloudFront origin type "custom" requires origin.customDomainName.');
         }
+
         this.origin = new origins.HttpOrigin(originConfig.customDomainName, {
           originPath: originConfig.originPath,
           customHeaders: originConfig.customHeaders,
           protocolPolicy: cloudfront.OriginProtocolPolicy.HTTPS_ONLY
         });
         break;
-        
+      }
       default:
-        throw new Error(`Unsupported origin type: ${originConfig.type}`);
+        throw new Error(`Unsupported CloudFront origin type: ${originConfig.type}`);
     }
 
     this.logResourceCreation('cloudfront-origin', `${originConfig.type}-origin`, {
-      type: originConfig.type,
-      path: originConfig.originPath
+      originType: originConfig.type,
+      originPath: originConfig.originPath ?? '/'
     });
   }
 
-  /**
-   * Create CloudFront distribution
-   */
-  private createCloudFrontDistribution(): void {
+  private createDistribution(): void {
+    const logBucket = this.resolveLogBucket();
+    const loggingEnabled = Boolean(logBucket) && (this.config!.logging?.enabled ?? false);
+
     const distributionProps: cloudfront.DistributionProps = {
       comment: this.config!.comment,
-      defaultBehavior: {
-        origin: this.origin!,
-        viewerProtocolPolicy: this.getViewerProtocolPolicy(),
-        allowedMethods: this.getAllowedMethods(),
-        cachedMethods: this.getCachedMethods(),
-        compress: this.config!.defaultBehavior?.compress,
-        cachePolicy: this.config!.defaultBehavior?.cachePolicyId ? 
-          cloudfront.CachePolicy.fromCachePolicyId(this, 'CachePolicy', this.config!.defaultBehavior.cachePolicyId) : 
-          cloudfront.CachePolicy.CACHING_OPTIMIZED,
-        originRequestPolicy: this.config!.defaultBehavior?.originRequestPolicyId ? 
-          cloudfront.OriginRequestPolicy.fromOriginRequestPolicyId(this, 'OriginRequestPolicy', this.config!.defaultBehavior.originRequestPolicyId) : 
-          undefined
-      },
+      defaultBehavior: this.buildDefaultBehavior(),
       additionalBehaviors: this.buildAdditionalBehaviors(),
-      priceClass: this.getPriceClass(),
+      priceClass: this.resolvePriceClass(this.config!.priceClass),
       geoRestriction: this.buildGeoRestriction(),
-      certificate: this.config!.domain?.certificateArn ? 
-        certificatemanager.Certificate.fromCertificateArn(this, 'Certificate', this.config!.domain.certificateArn) : 
-        undefined,
       domainNames: this.config!.domain?.domainNames,
-      enableLogging: this.config!.logging?.enabled,
-      logBucket: this.config!.logging?.bucket ? 
-        s3.Bucket.fromBucketName(this, 'LogBucket', this.config!.logging.bucket) : 
-        undefined,
-      logFilePrefix: this.config!.logging?.prefix,
-      logIncludesCookies: this.config!.logging?.includeCookies,
+      certificate: this.config!.domain?.certificateArn
+        ? certificatemanager.Certificate.fromCertificateArn(this, 'Certificate', this.config!.domain.certificateArn)
+        : undefined,
+      enableLogging: loggingEnabled,
+      logBucket,
+      logFilePrefix: loggingEnabled ? this.config!.logging?.prefix : undefined,
+      logIncludesCookies: loggingEnabled ? (this.config!.logging?.includeCookies ?? false) : false,
       webAclId: this.config!.webAclId
     };
 
     this.distribution = new cloudfront.Distribution(this, 'CloudFrontDistribution', distributionProps);
 
-    // Apply standard tags
     this.applyStandardTags(this.distribution, {
       'distribution-type': 'cdn',
       'origin-type': this.config!.origin.type,
-      'price-class': this.config!.priceClass || 'PriceClass_100'
+      'price-class': this.config!.priceClass ?? 'PriceClass_100',
+      'hardening-profile': this.config!.hardeningProfile ?? 'baseline'
     });
 
     this.logResourceCreation('cloudfront-distribution', this.distribution.distributionId, {
       domainName: this.distribution.distributionDomainName,
-      priceClass: this.config!.priceClass,
-      originType: this.config!.origin.type
-    });
-  }
-
-  /**
-   * Configure CloudWatch observability for CloudFront distribution
-   */
-  private configureCloudFrontObservability(): void {
-    if (!this.config!.monitoring?.enabled) {
-      return;
-    }
-
-    const distributionId = this.distribution!.distributionId;
-
-    // 1. 4XX Error Rate Alarm
-    new cloudwatch.Alarm(this, 'Error4xxAlarm', {
-      alarmName: `${this.context.serviceName}-${this.spec.name}-4xx-errors`,
-      alarmDescription: 'CloudFront 4XX error rate alarm',
-      metric: new cloudwatch.Metric({
-        namespace: 'AWS/CloudFront',
-        metricName: '4xxErrorRate',
-        dimensionsMap: {
-          DistributionId: distributionId
-        },
-        statistic: 'Average',
-        period: cdk.Duration.minutes(5)
-      }),
-      threshold: this.config!.monitoring!.alarms?.error4xxThreshold || 50,
-      evaluationPeriods: 2,
-      comparisonOperator: cloudwatch.ComparisonOperator.GREATER_THAN_THRESHOLD,
-      treatMissingData: cloudwatch.TreatMissingData.NOT_BREACHING
-    });
-
-    // 2. 5XX Error Rate Alarm
-    new cloudwatch.Alarm(this, 'Error5xxAlarm', {
-      alarmName: `${this.context.serviceName}-${this.spec.name}-5xx-errors`,
-      alarmDescription: 'CloudFront 5XX error rate alarm',
-      metric: new cloudwatch.Metric({
-        namespace: 'AWS/CloudFront',
-        metricName: '5xxErrorRate',
-        dimensionsMap: {
-          DistributionId: distributionId
-        },
-        statistic: 'Average',
-        period: cdk.Duration.minutes(5)
-      }),
-      threshold: this.config!.monitoring!.alarms?.error5xxThreshold || 10,
-      evaluationPeriods: 2,
-      comparisonOperator: cloudwatch.ComparisonOperator.GREATER_THAN_THRESHOLD,
-      treatMissingData: cloudwatch.TreatMissingData.NOT_BREACHING
-    });
-
-    this.logComponentEvent('observability_configured', 'OpenTelemetry observability standard applied to CloudFront distribution', {
-      alarmsCreated: 2,
-      distributionId: distributionId,
-      monitoringEnabled: true
-    });
-  }
-
-  /**
-   * Apply compliance hardening based on framework
-   */
-  private applyComplianceHardening(): void {
-    if (!this.distribution) return;
-
-    switch (this.context.complianceFramework) {
-      case 'fedramp-high':
-      case 'fedramp-moderate':
-        // For FedRAMP environments, ensure distribution has proper security and logging
-        const cfnDistribution = this.distribution.node.defaultChild as cloudfront.CfnDistribution;
-        cfnDistribution.addMetadata('ComplianceFramework', this.context.complianceFramework);
-        
-        this.logComponentEvent('compliance_hardening_applied', 'FedRAMP compliance hardening applied', {
-          framework: this.context.complianceFramework,
-          httpsOnly: this.config!.defaultBehavior?.viewerProtocolPolicy === 'https-only',
-          loggingEnabled: this.config!.logging?.enabled
-        });
-        break;
-        
-      default:
-        // No special hardening needed for commercial
-        break;
-    }
-  }
-
-  /**
-   * Build CloudFront capability descriptor
-   */
-  private buildCloudFrontCapability(): any {
-    return {
-      type: 'cdn:cloudfront',
-      distributionId: this.distribution!.distributionId,
-      distributionDomainName: this.distribution!.distributionDomainName,
-      domainNames: this.config!.domain?.domainNames,
       originType: this.config!.origin.type,
       priceClass: this.config!.priceClass
+    });
+  }
+
+  private buildDefaultBehavior(): cloudfront.BehaviorOptions {
+    const behaviorConfig = this.config!.defaultBehavior ?? {};
+
+    return {
+      origin: this.origin!,
+      viewerProtocolPolicy: this.resolveViewerProtocolPolicy(behaviorConfig.viewerProtocolPolicy),
+      allowedMethods: this.resolveAllowedMethods(behaviorConfig.allowedMethods),
+      cachedMethods: this.resolveCachedMethods(behaviorConfig.cachedMethods),
+      compress: behaviorConfig.compress ?? true,
+      cachePolicy: behaviorConfig.cachePolicyId
+        ? cloudfront.CachePolicy.fromCachePolicyId(this, 'DefaultCachePolicy', behaviorConfig.cachePolicyId)
+        : cloudfront.CachePolicy.CACHING_OPTIMIZED,
+      originRequestPolicy: behaviorConfig.originRequestPolicyId
+        ? cloudfront.OriginRequestPolicy.fromOriginRequestPolicyId(
+            this,
+            'DefaultOriginRequestPolicy',
+            behaviorConfig.originRequestPolicyId
+          )
+        : undefined
     };
   }
 
-  /**
-   * Helper methods for building CDK properties
-   */
-  private getViewerProtocolPolicy(): cloudfront.ViewerProtocolPolicy {
-    switch (this.config!.defaultBehavior?.viewerProtocolPolicy) {
-      case 'https-only':
-        return cloudfront.ViewerProtocolPolicy.HTTPS_ONLY;
-      case 'redirect-to-https':
-        return cloudfront.ViewerProtocolPolicy.REDIRECT_TO_HTTPS;
-      default:
-        return cloudfront.ViewerProtocolPolicy.ALLOW_ALL;
-    }
-  }
-
-  private getAllowedMethods(): cloudfront.AllowedMethods {
-    const methods = this.config!.defaultBehavior?.allowedMethods || ['GET', 'HEAD'];
-    if (methods.includes('DELETE') || methods.includes('PUT') || methods.includes('PATCH')) {
-      return cloudfront.AllowedMethods.ALLOW_ALL;
-    }
-    if (methods.includes('POST')) {
-      return cloudfront.AllowedMethods.ALLOW_GET_HEAD_OPTIONS;
-    }
-    return cloudfront.AllowedMethods.ALLOW_GET_HEAD;
-  }
-
-  private getCachedMethods(): cloudfront.CachedMethods {
-    const methods = this.config!.defaultBehavior?.cachedMethods || ['GET', 'HEAD'];
-    if (methods.includes('OPTIONS')) {
-      return cloudfront.CachedMethods.CACHE_GET_HEAD_OPTIONS;
-    }
-    return cloudfront.CachedMethods.CACHE_GET_HEAD;
-  }
-
   private buildAdditionalBehaviors(): Record<string, cloudfront.BehaviorOptions> | undefined {
-    if (!this.config!.additionalBehaviors) {
+    const additional = this.config!.additionalBehaviors ?? [];
+    if (additional.length === 0) {
       return undefined;
     }
 
-    const behaviors: Record<string, cloudfront.BehaviorOptions> = {};
-    
-    for (const behavior of this.config!.additionalBehaviors) {
-      behaviors[behavior.pathPattern] = {
-        origin: this.origin!,
-        viewerProtocolPolicy: this.getViewerProtocolPolicyForBehavior(behavior.viewerProtocolPolicy),
-        allowedMethods: this.getAllowedMethodsForBehavior(behavior.allowedMethods),
-        cachedMethods: this.getCachedMethodsForBehavior(behavior.cachedMethods),
-        compress: behavior.compress,
-        cachePolicy: behavior.cachePolicyId ? 
-          cloudfront.CachePolicy.fromCachePolicyId(this, `CachePolicy-${behavior.pathPattern}`, behavior.cachePolicyId) : 
-          cloudfront.CachePolicy.CACHING_OPTIMIZED
-      };
-    }
+    return additional.reduce<Record<string, cloudfront.BehaviorOptions>>((acc, behavior, index) => {
+      const behaviorId = `AdditionalBehavior-${index}`;
 
-    return behaviors;
+      acc[behavior.pathPattern] = {
+        origin: this.origin!,
+        viewerProtocolPolicy: this.resolveViewerProtocolPolicy(behavior.viewerProtocolPolicy),
+        allowedMethods: this.resolveAllowedMethods(behavior.allowedMethods),
+        cachedMethods: this.resolveCachedMethods(behavior.cachedMethods),
+        compress: behavior.compress ?? true,
+        cachePolicy: behavior.cachePolicyId
+          ? cloudfront.CachePolicy.fromCachePolicyId(this, `${behaviorId}-CachePolicy`, behavior.cachePolicyId)
+          : cloudfront.CachePolicy.CACHING_OPTIMIZED,
+        originRequestPolicy: behavior.originRequestPolicyId
+          ? cloudfront.OriginRequestPolicy.fromOriginRequestPolicyId(
+              this,
+              `${behaviorId}-OriginRequestPolicy`,
+              behavior.originRequestPolicyId
+            )
+          : undefined
+      };
+
+      return acc;
+    }, {});
   }
 
-  private getPriceClass(): cloudfront.PriceClass {
-    switch (this.config!.priceClass) {
+  private buildGeoRestriction(): cloudfront.GeoRestriction | undefined {
+    const restriction = this.config!.geoRestriction;
+    if (!restriction || restriction.type === 'none') {
+      return undefined;
+    }
+
+    const countries = restriction.countries ?? [];
+    if (restriction.type === 'whitelist') {
+      return cloudfront.GeoRestriction.allowlist(...countries);
+    }
+
+    if (restriction.type === 'blacklist') {
+      return cloudfront.GeoRestriction.denylist(...countries);
+    }
+
+    return undefined;
+  }
+
+  private resolvePriceClass(priceClass?: string): cloudfront.PriceClass {
+    switch (priceClass) {
       case 'PriceClass_All':
         return cloudfront.PriceClass.PRICE_CLASS_ALL;
       case 'PriceClass_200':
@@ -774,24 +235,7 @@ export class CloudFrontDistributionComponent extends Component {
     }
   }
 
-  private buildGeoRestriction(): cloudfront.GeoRestriction | undefined {
-    if (!this.config!.geoRestriction || this.config!.geoRestriction.type === 'none') {
-      return undefined;
-    }
-
-    const countries = this.config!.geoRestriction.countries || [];
-    
-    switch (this.config!.geoRestriction.type) {
-      case 'whitelist':
-        return cloudfront.GeoRestriction.allowlist(...countries);
-      case 'blacklist':
-        return cloudfront.GeoRestriction.denylist(...countries);
-      default:
-        return undefined;
-    }
-  }
-
-  private getViewerProtocolPolicyForBehavior(policy?: string): cloudfront.ViewerProtocolPolicy {
+  private resolveViewerProtocolPolicy(policy?: string): cloudfront.ViewerProtocolPolicy {
     switch (policy) {
       case 'https-only':
         return cloudfront.ViewerProtocolPolicy.HTTPS_ONLY;
@@ -802,24 +246,153 @@ export class CloudFrontDistributionComponent extends Component {
     }
   }
 
-  private getAllowedMethodsForBehavior(methods?: string[]): cloudfront.AllowedMethods {
-    if (!methods) return cloudfront.AllowedMethods.ALLOW_GET_HEAD;
-    
-    if (methods.includes('DELETE') || methods.includes('PUT') || methods.includes('PATCH')) {
+  private resolveAllowedMethods(methods?: string[]): cloudfront.AllowedMethods {
+    const methodSet = new Set((methods ?? ['GET', 'HEAD']).map(method => method.toUpperCase()));
+
+    const mutatingMethods = ['POST', 'PUT', 'PATCH', 'DELETE'];
+    if (mutatingMethods.some(method => methodSet.has(method))) {
       return cloudfront.AllowedMethods.ALLOW_ALL;
     }
-    if (methods.includes('POST')) {
+
+    if (methodSet.has('OPTIONS')) {
       return cloudfront.AllowedMethods.ALLOW_GET_HEAD_OPTIONS;
     }
+
     return cloudfront.AllowedMethods.ALLOW_GET_HEAD;
   }
 
-  private getCachedMethodsForBehavior(methods?: string[]): cloudfront.CachedMethods {
-    if (!methods) return cloudfront.CachedMethods.CACHE_GET_HEAD;
-    
-    if (methods.includes('OPTIONS')) {
+  private resolveCachedMethods(methods?: string[]): cloudfront.CachedMethods {
+    const methodSet = new Set((methods ?? ['GET', 'HEAD']).map(method => method.toUpperCase()));
+    if (methodSet.has('OPTIONS')) {
       return cloudfront.CachedMethods.CACHE_GET_HEAD_OPTIONS;
     }
     return cloudfront.CachedMethods.CACHE_GET_HEAD;
+  }
+
+  private resolveLogBucket(): s3.IBucket | undefined {
+    if (!this.config!.logging?.enabled) {
+      return undefined;
+    }
+
+    const bucketName = this.config!.logging?.bucket;
+    if (!bucketName) {
+      this.logComponentEvent('logging_disabled', 'Logging requested without bucket; disabling logging to avoid synthesis failure');
+      return undefined;
+    }
+
+    return s3.Bucket.fromBucketName(this, 'LogBucket', bucketName);
+  }
+
+  private configureMonitoring(): void {
+    const monitoring = this.config!.monitoring;
+    if (!monitoring?.enabled) {
+      return;
+    }
+
+    this.createAlarm('CloudFront4xxAlarm', monitoring, monitoring.alarms?.error4xx, {
+      alarmName: `${this.context.serviceName}-${this.spec.name}-4xx-errors`,
+      metricName: '4xxErrorRate'
+    });
+
+    this.createAlarm('CloudFront5xxAlarm', monitoring, monitoring.alarms?.error5xx, {
+      alarmName: `${this.context.serviceName}-${this.spec.name}-5xx-errors`,
+      metricName: '5xxErrorRate'
+    });
+
+    this.createAlarm('CloudFrontOriginLatencyAlarm', monitoring, monitoring.alarms?.originLatencyMs, {
+      alarmName: `${this.context.serviceName}-${this.spec.name}-origin-latency`,
+      metricName: 'OriginLatency'
+    });
+  }
+
+  private createAlarm(
+    id: string,
+    monitoring: CloudFrontMonitoringConfig,
+    alarmConfig: CloudFrontAlarmConfig | undefined,
+    options: { alarmName: string; metricName: string }
+  ): void {
+    if (!alarmConfig?.enabled) {
+      return;
+    }
+
+    const metric = new cloudwatch.Metric({
+      namespace: 'AWS/CloudFront',
+      metricName: options.metricName,
+      dimensionsMap: {
+        DistributionId: this.distribution!.distributionId,
+        Region: 'Global'
+      },
+      statistic: alarmConfig.statistic ?? 'Average',
+      period: cdk.Duration.minutes(alarmConfig.periodMinutes ?? 5)
+    });
+
+    const alarm = new cloudwatch.Alarm(this, id, {
+      alarmName: options.alarmName,
+      alarmDescription: `${options.metricName} alarm for ${this.spec.name}`,
+      metric,
+      threshold: this.resolveThreshold(options.metricName, alarmConfig.threshold),
+      evaluationPeriods: alarmConfig.evaluationPeriods ?? 2,
+      comparisonOperator: this.resolveComparisonOperator(alarmConfig.comparisonOperator),
+      treatMissingData: this.resolveTreatMissingData(alarmConfig.treatMissingData)
+    });
+
+    this.applyStandardTags(alarm, {
+      'alarm-metric': options.metricName.toLowerCase(),
+      ...(alarmConfig.tags ?? {})
+    });
+
+    this.registerConstruct(`${id}Construct`, alarm);
+  }
+
+  private resolveThreshold(metricName: string, threshold?: number): number {
+    if (!threshold) {
+      return 0;
+    }
+
+    if (metricName === 'OriginLatency') {
+      return threshold / 1000;
+    }
+
+    return threshold;
+  }
+
+  private resolveComparisonOperator(operator?: string): cloudwatch.ComparisonOperator {
+    switch (operator) {
+      case 'gt':
+        return cloudwatch.ComparisonOperator.GREATER_THAN_THRESHOLD;
+      case 'lt':
+        return cloudwatch.ComparisonOperator.LESS_THAN_THRESHOLD;
+      case 'lte':
+        return cloudwatch.ComparisonOperator.LESS_THAN_OR_EQUAL_TO_THRESHOLD;
+      case 'gte':
+      default:
+        return cloudwatch.ComparisonOperator.GREATER_THAN_OR_EQUAL_TO_THRESHOLD;
+    }
+  }
+
+  private resolveTreatMissingData(value?: string): cloudwatch.TreatMissingData {
+    switch (value) {
+      case 'breaching':
+        return cloudwatch.TreatMissingData.BREACHING;
+      case 'ignore':
+        return cloudwatch.TreatMissingData.IGNORE;
+      case 'missing':
+        return cloudwatch.TreatMissingData.MISSING;
+      case 'not-breaching':
+      default:
+        return cloudwatch.TreatMissingData.NOT_BREACHING;
+    }
+  }
+
+  private buildCapability(): Record<string, any> {
+    return {
+      type: 'cdn:cloudfront',
+      distributionId: this.distribution!.distributionId,
+      distributionDomainName: this.distribution!.distributionDomainName,
+      domainNames: this.config!.domain?.domainNames,
+      originType: this.config!.origin.type,
+      priceClass: this.config!.priceClass,
+      hardeningProfile: this.config!.hardeningProfile ?? 'baseline'
+    };
   }
 }

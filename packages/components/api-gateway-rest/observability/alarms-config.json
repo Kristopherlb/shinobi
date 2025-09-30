@@ -1,0 +1,48 @@
+{
+  "alarms": [
+    {
+      "id": "api-gateway-rest-5xx-error-rate",
+      "metricNamespace": "AWS/ApiGateway",
+      "metricName": "5XXError",
+      "stat": "Average",
+      "period": 300,
+      "threshold": "{config.monitoring.thresholds.errorRate5xxPercent}",
+      "evaluationPeriods": 1,
+      "comparisonOperator": "GreaterThanThreshold",
+      "description": "Triggers when 5XX errors exceed the configured percentage threshold."
+    },
+    {
+      "id": "api-gateway-rest-4xx-error-rate",
+      "metricNamespace": "AWS/ApiGateway",
+      "metricName": "4XXError",
+      "stat": "Average",
+      "period": 300,
+      "threshold": "{config.monitoring.thresholds.errorRate4xxPercent}",
+      "evaluationPeriods": 1,
+      "comparisonOperator": "GreaterThanThreshold",
+      "description": "Triggers when 4XX errors exceed the configured percentage threshold."
+    },
+    {
+      "id": "api-gateway-rest-latency",
+      "metricNamespace": "AWS/ApiGateway",
+      "metricName": "Latency",
+      "stat": "Average",
+      "period": 300,
+      "threshold": "{config.monitoring.thresholds.highLatencyMs}",
+      "evaluationPeriods": 1,
+      "comparisonOperator": "GreaterThanThreshold",
+      "description": "Alerts when average latency exceeds the configured limit."
+    },
+    {
+      "id": "api-gateway-rest-low-throughput",
+      "metricNamespace": "AWS/ApiGateway",
+      "metricName": "Count",
+      "stat": "Sum",
+      "period": 300,
+      "threshold": "{config.monitoring.thresholds.lowThroughput}",
+      "evaluationPeriods": 1,
+      "comparisonOperator": "LessThanThreshold",
+      "description": "Detects traffic drops below the configured throughput minimum."
+    }
+  ]
+}

@@ -1,4 +1,5 @@
 {
+  "extends": "../../../tsconfig.base.json",
   "compilerOptions": {
     "target": "ES2022",
     "module": "CommonJS",
@@ -9,21 +10,6 @@
     "esModuleInterop": true,
     "skipLibCheck": true,
     "resolveJsonModule": true,
-    "baseUrl": ".",
-    "paths": {
-      "@shinobi/core": [
-        "../../../packages/core/src/index.ts"
-      ],
-      "@shinobi/core/*": [
-        "../../../packages/core/src/*"
-      ],
-      "@platform/contracts": [
-        "../../../packages/contracts/src/index.ts"
-      ],
-      "@platform/contracts/*": [
-        "../../../packages/contracts/src/*"
-      ]
-    },
     "typeRoots": [
       "../../../node_modules/@types",
       "../../../packages/contracts/src"
@@ -31,6 +17,7 @@
   },
   "include": [
     "index.ts",
+    "Config.schema.json",
     "src/**/*"
   ],
   "exclude": [

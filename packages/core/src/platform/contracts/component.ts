@@ -7,9 +7,20 @@
  */
 
 import * as cdk from 'aws-cdk-lib';
+import * as logs from 'aws-cdk-lib/aws-logs';
 import { Construct, IConstruct } from 'constructs';
 import { ComponentSpec, ComponentContext, ComponentCapabilities, IComponent } from './component-interfaces';
 import { ITaggingService, TaggingContext, defaultTaggingService } from '../services/tagging-service/tagging.service';
+import { IObservabilityService, defaultObservabilityService } from '../services/observability';
+import { ILoggingService, defaultLoggingService } from '../services/logging';
+import { IGovernanceService, GovernanceMetadata, defaultGovernanceService } from '../services/governance';
+import { IComplianceService, defaultComplianceService } from '../services/compliance';
+import { ISecurityService, defaultSecurityService } from '../services/security';
+import { ISecurityOperationsService, defaultSecurityOperationsService } from '../services/security-operations';
+import { ICostManagementService, defaultCostManagementService } from '../services/cost-management';
+import { IBackupRecoveryService, defaultBackupRecoveryService } from '../services/backup-recovery';
+import { IPerformanceOptimizationService, defaultPerformanceOptimizationService } from '../services/performance';
+import { IFeatureFlagService, defaultFeatureFlagService } from '../services/feature-flags';
 
 /**
  * Options for configuring observability on components
@@ -43,6 +54,20 @@ export interface ObservabilityConfig {
   customAttributes: Record<string, string>;
 }
 
+export interface BaseComponentServices {
+  taggingService: ITaggingService;
+  observabilityService: IObservabilityService;
+  loggingService: ILoggingService;
+  governanceService: IGovernanceService;
+  complianceService: IComplianceService;
+  securityService: ISecurityService;
+  costManagementService: ICostManagementService;
+  backupRecoveryService: IBackupRecoveryService;
+  performanceOptimizationService: IPerformanceOptimizationService;
+  featureFlagService: IFeatureFlagService;
+  securityOperationsService: ISecurityOperationsService;
+}
+
 /**
  * Abstract base class that all platform components MUST extend - The Implementation Helper
  * 
@@ -67,8 +92,20 @@ export abstract class BaseComponent extends Construct implements IComponent {
   /** A map of the capabilities this component provides after synthesis. */
   protected capabilities: ComponentCapabilities = {};
 
-  /** Tagging service for applying standard tags */
+  /** Services injected for cross-cutting platform concerns */
   protected readonly taggingService: ITaggingService;
+  protected readonly observabilityService: IObservabilityService;
+  protected readonly loggingService: ILoggingService;
+  protected readonly governanceService: IGovernanceService;
+  protected readonly complianceService: IComplianceService;
+  protected readonly securityService: ISecurityService;
+  protected readonly costManagementService: ICostManagementService;
+  protected readonly backupRecoveryService: IBackupRecoveryService;
+  protected readonly performanceOptimizationService: IPerformanceOptimizationService;
+  protected readonly featureFlagService: IFeatureFlagService;
+  protected readonly securityOperationsService: ISecurityOperationsService;
+
+  private governanceMetadataCache?: GovernanceMetadata;
 
   /**
    * Constructor for all platform components.
@@ -83,12 +120,22 @@ export abstract class BaseComponent extends Construct implements IComponent {
     id: string,
     context: ComponentContext,
     spec: ComponentSpec,
-    taggingService: ITaggingService = defaultTaggingService
+    services: Partial<BaseComponentServices> = {}
   ) {
     super(scope, id);
     this.context = context;
     this.spec = spec;
-    this.taggingService = taggingService;
+    this.taggingService = services.taggingService ?? defaultTaggingService;
+    this.observabilityService = services.observabilityService ?? defaultObservabilityService;
+    this.loggingService = services.loggingService ?? defaultLoggingService;
+    this.governanceService = services.governanceService ?? defaultGovernanceService;
+    this.complianceService = services.complianceService ?? defaultComplianceService;
+    this.securityService = services.securityService ?? defaultSecurityService;
+    this.costManagementService = services.costManagementService ?? defaultCostManagementService;
+    this.backupRecoveryService = services.backupRecoveryService ?? defaultBackupRecoveryService;
+    this.performanceOptimizationService = services.performanceOptimizationService ?? defaultPerformanceOptimizationService;
+    this.featureFlagService = services.featureFlagService ?? defaultFeatureFlagService;
+    this.securityOperationsService = services.securityOperationsService ?? defaultSecurityOperationsService;
   }
 
   /**
@@ -148,6 +195,30 @@ export abstract class BaseComponent extends Construct implements IComponent {
    */
   public getServiceName(): string {
     return this.context.serviceName;
+  }
+
+  /**
+   * Convert a numeric retention value (in days) to the matching CloudWatch Logs enum.
+   * Defaults to TEN_YEARS when the value exceeds the known thresholds.
+   */
+  protected mapLogRetentionDays(days: number): logs.RetentionDays {
+    if (days <= 1) return logs.RetentionDays.ONE_DAY;
+    if (days <= 3) return logs.RetentionDays.THREE_DAYS;
+    if (days <= 5) return logs.RetentionDays.FIVE_DAYS;
+    if (days <= 7) return logs.RetentionDays.ONE_WEEK;
+    if (days <= 14) return logs.RetentionDays.TWO_WEEKS;
+    if (days <= 30) return logs.RetentionDays.ONE_MONTH;
+    if (days <= 60) return logs.RetentionDays.TWO_MONTHS;
+    if (days <= 90) return logs.RetentionDays.THREE_MONTHS;
+    if (days <= 120) return logs.RetentionDays.FOUR_MONTHS;
+    if (days <= 150) return logs.RetentionDays.FIVE_MONTHS;
+    if (days <= 180) return logs.RetentionDays.SIX_MONTHS;
+    if (days <= 365) return logs.RetentionDays.ONE_YEAR;
+    if (days <= 400) return logs.RetentionDays.THIRTEEN_MONTHS;
+    if (days <= 545) return logs.RetentionDays.EIGHTEEN_MONTHS;
+    if (days <= 731) return logs.RetentionDays.TWO_YEARS;
+    if (days <= 1827) return logs.RetentionDays.FIVE_YEARS;
+    return logs.RetentionDays.TEN_YEARS;
   }
 
   /**
@@ -250,49 +321,14 @@ export abstract class BaseComponent extends Construct implements IComponent {
       componentName: this.spec.name,
       componentType: this.getType(),
       environment: this.context.environment,
-      complianceFramework: this.context.complianceFramework,
       region: this.context.region,
-      accountId: this.context.accountId
+      accountId: this.context.accountId,
+      complianceFramework: this.context.complianceFramework,
+      tags: this.context.tags,
+      governance: this.governanceMetadata
     };
 
     this.taggingService.applyStandardTags(resource, taggingContext, additionalTags);
-  }
-
-  /**
-   * Determines backup requirement based on compliance framework and component policy
-   */
-  private getBackupRequirement(): boolean {
-    // Check component policy first
-    if (this.spec.policy?.backup?.enabled !== undefined) {
-      return this.spec.policy.backup.enabled;
-    }
-
-    // Default based on compliance framework
-    switch (this.context.complianceFramework) {
-      case 'fedramp-high':
-      case 'fedramp-moderate':
-        return true;
-      default:
-        return false;
-    }
-  }
-
-  /**
-   * Determines monitoring level based on compliance framework and component policy
-   */
-  private getMonitoringLevel(): string {
-    if (this.spec.policy?.monitoring?.metricsEnabled) {
-      return this.context.complianceFramework === 'fedramp-high' ? 'comprehensive' : 'enhanced';
-    }
-
-    switch (this.context.complianceFramework) {
-      case 'fedramp-high':
-        return 'comprehensive';
-      case 'fedramp-moderate':
-        return 'enhanced';
-      default:
-        return 'basic';
-    }
   }
 
   /**
@@ -306,169 +342,31 @@ export abstract class BaseComponent extends Construct implements IComponent {
    * @returns Environment variables for OpenTelemetry instrumentation
    */
   protected configureObservability(resource: IConstruct, options: ObservabilityOptions = {}): Record<string, string> {
-    const otelConfig = this.buildObservabilityConfig(options);
-    return this.buildOtelEnvironmentVariables(otelConfig);
-  }
-
-  /**
-   * Build observability configuration based on compliance framework and component requirements.
-   * 
-   * @param options Component-specific observability options
-   * @returns Complete observability configuration conforming to Platform OpenTelemetry Standard v1.0
-   */
-  private buildObservabilityConfig(options: ObservabilityOptions = {}): ObservabilityConfig {
-    return {
-      collectorEndpoint: options.collectorEndpoint || this.getCollectorEndpoint(),
-      serviceName: options.serviceName || this.spec.name,
-      serviceVersion: this.context.serviceLabels?.version || '1.0.0',
-      environment: this.context.environment,
-      region: this.context.region || 'us-east-1',
-      complianceFramework: this.context.complianceFramework,
-      tracesSampling: options.tracesSampling ?? this.getTracesSamplingRate(),
-      metricsInterval: options.metricsInterval ?? this.getMetricsCollectionInterval(),
-      logsRetention: options.logsRetention ?? this.getLogsRetentionPeriod(),
-      enablePerformanceInsights: options.enablePerformanceInsights ?? this.shouldEnablePerformanceInsights(),
-      enableXRayTracing: options.enableXRayTracing ?? this.shouldEnableXRayTracing(),
-      customAttributes: options.customAttributes || {}
-    };
-  }
-
-  /**
-   * Build OpenTelemetry environment variables for automatic instrumentation.
-   */
-  private buildOtelEnvironmentVariables(config: ObservabilityConfig): Record<string, string> {
-    const resourceAttributes = [
-      `service.name=${config.serviceName}`,
-      `service.version=${config.serviceVersion}`,
-      `deployment.environment=${config.environment}`,
-      `cloud.provider=aws`,
-      `cloud.region=${config.region}`,
-      `compliance.framework=${config.complianceFramework}`,
-      `component.name=${this.spec.name}`,
-      `component.type=${this.getType()}`
-    ];
-
-    // Add custom attributes
-    Object.entries(config.customAttributes).forEach(([key, value]) => {
-      resourceAttributes.push(`${key}=${value}`);
+    const config = this.observabilityService.buildConfig({
+      context: this.context,
+      spec: this.spec,
+      policy: this.spec.policy,
+      options,
+      governance: this.governanceMetadata
     });
 
-    const envVars: Record<string, string> = {
-      'OTEL_EXPORTER_OTLP_ENDPOINT': config.collectorEndpoint,
-      'OTEL_EXPORTER_OTLP_HEADERS': `authorization=Bearer \${OTEL_COLLECTOR_AUTH_TOKEN}`,
-      'OTEL_SERVICE_NAME': config.serviceName,
-      'OTEL_SERVICE_VERSION': config.serviceVersion,
-      'OTEL_RESOURCE_ATTRIBUTES': resourceAttributes.join(','),
-      'OTEL_TRACES_SAMPLER': this.getTracesSampler(config.tracesSampling),
-      'OTEL_METRICS_EXPORTER': 'otlp',
-      'OTEL_LOGS_EXPORTER': 'otlp',
-      'OTEL_PROPAGATORS': 'tracecontext,baggage,xray',
-      'OTEL_INSTRUMENTATION_COMMON_DEFAULT_ENABLED': 'true'
-    };
+    return this.observabilityService.buildEnvironmentVariables(config, this.governanceMetadata);
+  }
 
-    // Add X-Ray tracing if enabled
-    if (config.enableXRayTracing) {
-      // Note: _X_AMZN_TRACE_ID is reserved by Lambda runtime and cannot be set manually
-      // X-Ray tracing is enabled via the tracing property on the Lambda function
-      envVars['OTEL_INSTRUMENTATION_AWS_LAMBDA_ENABLED'] = 'true';
-      envVars['OTEL_INSTRUMENTATION_AWS_LAMBDA_FLUSH_TIMEOUT'] = '30000';
+  protected get governanceMetadata(): GovernanceMetadata {
+    if (!this.governanceMetadataCache) {
+      this.governanceMetadataCache = this.governanceService.resolveGovernance({
+        context: this.context,
+        spec: this.spec,
+        policy: this.spec.policy,
+        tags: this.context.tags,
+        serviceLabels: this.context.serviceLabels,
+        logging: this.context.logging,
+        observability: this.context.observability
+      });
     }
 
-    return envVars;
-  }
-
-  /**
-   * Get OpenTelemetry collector endpoint based on compliance framework and region.
-   */
-  private getCollectorEndpoint(): string {
-    const framework = this.context.complianceFramework;
-    const region = this.context.region;
-
-    switch (framework) {
-      case 'fedramp-high':
-        return `https://otel-collector.fedramp-high.${region}.platform.local:4317`;
-      case 'fedramp-moderate':
-        return `https://otel-collector.fedramp-moderate.${region}.platform.local:4317`;
-      default:
-        return `https://otel-collector.commercial.${region}.platform.local:4317`;
-    }
-  }
-
-  /**
-   * Get trace sampling rate based on compliance framework requirements.
-   */
-  private getTracesSamplingRate(): number {
-    const framework = this.context.complianceFramework;
-
-    switch (framework) {
-      case 'fedramp-high':
-        return 1.0; // 100% sampling for complete audit trail
-      case 'fedramp-moderate':
-        return 0.25; // 25% sampling for enhanced monitoring
-      default:
-        return 0.1; // 10% sampling for cost optimization
-    }
-  }
-
-  /**
-   * Get trace sampler configuration string.
-   */
-  private getTracesSampler(samplingRate: number): string {
-    if (samplingRate >= 1.0) {
-      return 'always_on';
-    } else if (samplingRate <= 0.0) {
-      return 'always_off';
-    } else {
-      return `traceidratio:${samplingRate}`;
-    }
-  }
-
-  /**
-   * Get metrics collection interval based on compliance requirements.
-   */
-  private getMetricsCollectionInterval(): number {
-    const framework = this.context.complianceFramework;
-
-    switch (framework) {
-      case 'fedramp-high':
-        return 30; // 30 seconds for high-frequency monitoring
-      case 'fedramp-moderate':
-        return 60; // 1 minute for standard monitoring
-      default:
-        return 300; // 5 minutes for cost-effective monitoring
-    }
-  }
-
-  /**
-   * Get logs retention period in days based on compliance framework.
-   */
-  private getLogsRetentionPeriod(): number {
-    const framework = this.context.complianceFramework;
-
-    switch (framework) {
-      case 'fedramp-high':
-        return 2555; // 7 years (approximately)
-      case 'fedramp-moderate':
-        return 1095; // 3 years
-      default:
-        return 365; // 1 year
-    }
-  }
-
-  /**
-   * Determine if Performance Insights should be enabled for database components.
-   */
-  private shouldEnablePerformanceInsights(): boolean {
-    const framework = this.context.complianceFramework;
-    return framework !== 'commercial'; // Enable for all compliance frameworks
-  }
-
-  /**
-   * Determine if X-Ray tracing should be enabled.
-   */
-  private shouldEnableXRayTracing(): boolean {
-    const framework = this.context.complianceFramework;
-    return framework === 'fedramp-moderate' || framework === 'fedramp-high';
+    return this.governanceMetadataCache;
   }
 
   /**
@@ -481,36 +379,12 @@ export abstract class BaseComponent extends Construct implements IComponent {
    * @returns Platform logger instance with automatic context injection
    */
   protected getLogger(loggerName?: string): any {
-    // Import Logger dynamically to avoid circular dependencies
-    const { Logger } = require('@platform/logger');
-
-    const name = loggerName || `${this.context.serviceName}.${this.spec.name}`;
-    const logger = Logger.getLogger(name);
-
-    // Set global context for this component's logs
-    Logger.setGlobalContext({
-      service: {
-        name: this.context.serviceName,
-        version: this.context.serviceLabels?.version || '1.0.0',
-        instance: this.getServiceInstance()
-      },
-      environment: {
-        name: this.context.environment,
-        region: this.context.region,
-        compliance: this.context.complianceFramework
-      },
-      context: {
-        component: this.getType(),
-        resource: this.spec.name
-      }
-    });
-
-    return logger;
+    return this.loggingService.getLogger({
+      component: this.spec,
+      context: this.context,
+      governance: this.governanceMetadata
+    }, loggerName);
   }
-
-  /**
-   * Log component lifecycle events with standardized format.
-   */
   protected logComponentEvent(event: string, message: string, data?: any): void {
     const logger = this.getLogger();
 
@@ -528,8 +402,8 @@ export abstract class BaseComponent extends Construct implements IComponent {
         ...data
       },
       security: {
-        classification: this.getLogDataClassification(),
-        auditRequired: this.isAuditLoggingRequired()
+        classification: this.governanceMetadata.dataClassification,
+        auditRequired: this.governanceMetadata.auditLoggingRequired
       }
     });
   }
@@ -553,7 +427,7 @@ export abstract class BaseComponent extends Construct implements IComponent {
         ...data
       },
       security: {
-        classification: 'cui',
+        classification: this.governanceMetadata.dataClassification,
         auditRequired: true,
         securityEvent: 'compliance_action'
       }
@@ -580,8 +454,8 @@ export abstract class BaseComponent extends Construct implements IComponent {
         properties: this.sanitizeResourceProperties(properties)
       },
       security: {
-        classification: this.getLogDataClassification(),
-        auditRequired: this.isAuditLoggingRequired()
+        classification: this.governanceMetadata.dataClassification,
+        auditRequired: this.governanceMetadata.auditLoggingRequired
       }
     });
   }
@@ -606,7 +480,7 @@ export abstract class BaseComponent extends Construct implements IComponent {
         ...additionalData
       },
       security: {
-        classification: this.getLogDataClassification(),
+        classification: this.governanceMetadata.dataClassification,
         auditRequired: true,
         securityEvent: 'system_error'
       }
@@ -635,59 +509,36 @@ export abstract class BaseComponent extends Construct implements IComponent {
         ...additionalMetrics
       },
       security: {
-        classification: 'internal',
-        auditRequired: false
+        classification: this.governanceMetadata.dataClassification,
+        auditRequired: this.governanceMetadata.auditLoggingRequired
       }
     });
-  }
-
-  /**
-   * Determine data classification for logging based on compliance framework.
-   */
-  private getLogDataClassification(): string {
-    switch (this.context.complianceFramework) {
-      case 'fedramp-high':
-      case 'fedramp-moderate':
-        return 'cui';
-      default:
-        return 'internal';
-    }
-  }
-
-  /**
-   * Determine if audit logging is required based on compliance framework.
-   */
-  private isAuditLoggingRequired(): boolean {
-    return ['fedramp-moderate', 'fedramp-high'].includes(this.context.complianceFramework);
   }
 
   /**
    * Sanitize resource properties to remove sensitive information from logs.
    */
   private sanitizeResourceProperties(properties?: any): any {
-    if (!properties) return {};
-
-    const sanitized = { ...properties };
-
-    // Remove sensitive properties that should not be logged
-    const sensitiveKeys = ['password', 'secret', 'key', 'token', 'credential'];
-
-    for (const key of sensitiveKeys) {
-      if (key in sanitized) {
-        sanitized[key] = '[REDACTED]';
-      }
+    if (properties === undefined || properties === null) {
+      return {};
     }
 
-    return sanitized;
-  }
+    const securityPreferences = this.context.security ?? {};
+    const patternInputs = securityPreferences.sensitivePatterns ?? [];
+    const sensitivePatterns = patternInputs.map(pattern => {
+      try {
+        return new RegExp(pattern, 'i');
+      } catch {
+        return new RegExp(pattern.replace(/[.*+?^${}()|[\]\\]/g, '\\$&'), 'i');
+      }
+    });
 
-  /**
-   * Get service instance identifier for logging context.
-   */
-  private getServiceInstance(): string {
-    return process.env.HOSTNAME ||
-      process.env.AWS_LAMBDA_FUNCTION_NAME ||
-      `${this.context.serviceName}-instance`;
+    return this.securityService.sanitizeProperties(properties, {
+      sensitiveKeys: securityPreferences.sensitiveKeys,
+      sensitivePatterns,
+      maskValue: securityPreferences.maskValue,
+      maxDepth: securityPreferences.maxDepth
+    });
   }
 
   /**
@@ -698,58 +549,12 @@ export abstract class BaseComponent extends Construct implements IComponent {
    * @returns The security group construct or throws error if not found
    */
   public _getSecurityGroupHandle(role: 'source' | 'target'): any {
-    const componentType = this.getType();
-    let securityGroup: any = null;
-
     try {
-      switch (componentType) {
-        case 'lambda-api':
-        case 'lambda-worker':
-          // Lambda functions can have VPC configuration with security groups
-          const lambdaFunction = this.getConstruct('function');
-          securityGroup = (lambdaFunction as any)?.connections?.securityGroups?.[0];
-          break;
-
-        case 'ecs-fargate-service':
-        case 'ecs-ec2-service':
-          // ECS services have security groups
-          const service = this.getConstruct('service');
-          securityGroup = (service as any)?.connections?.securityGroups?.[0];
-          break;
-
-        case 'ec2-instance':
-          // EC2 instances have security groups
-          const instance = this.getConstruct('instance');
-          securityGroup = (instance as any)?.connections?.securityGroups?.[0];
-          break;
-
-        case 'alb':
-        case 'application-load-balancer':
-          // ALBs have security groups
-          const loadBalancer = this.getConstruct('loadBalancer');
-          securityGroup = (loadBalancer as any)?.connections?.securityGroups?.[0];
-          break;
-
-        case 'rds-database':
-          // RDS instances have security groups
-          const database = this.getConstruct('database');
-          securityGroup = (database as any)?.connections?.securityGroups?.[0];
-          break;
-
-        default:
-          throw new Error(`Component type '${componentType}' does not have a known security group pattern`);
-      }
-
-      if (!securityGroup) {
-        throw new Error(`No security group found for ${componentType} component '${this.node.id}'`);
-      }
-
-      return securityGroup;
-
+      return this.securityService.getSecurityGroupHandle(this, role);
     } catch (error) {
-      const errorMessage = error instanceof Error ? error.message : 'Unknown error';
+      const message = error instanceof Error ? error.message : 'Unknown error';
       throw new Error(
-        `Failed to get security group from ${role} component '${this.node.id}' of type '${componentType}': ${errorMessage}`
+        `Failed to resolve security group for ${role} component '${this.node.id}': ${message}`
       );
     }
   }

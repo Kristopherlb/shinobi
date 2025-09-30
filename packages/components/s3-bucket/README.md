@@ -6,10 +6,10 @@ S3 Bucket Component with comprehensive security, monitoring, and compliance feat
 
 The S3BucketComponent component provides:
 
-- **Production-ready** s3 bucket component functionality
-- **Comprehensive compliance** (Commercial, FedRAMP Moderate/High)
-- **Integrated monitoring** and observability
-- **Security-first** configuration
+- **Production-ready** Amazon S3 bucket provisioning
+- **Compliance-aware defaults** driven by platform configuration profiles
+- **Integrated monitoring** (client/server error alarms)
+- **Security-first** configuration (block public access, HTTPS enforcement)
 - **Platform integration** with other components
 
 ## Usage Example
@@ -25,10 +25,10 @@ components:
   - name: my-s3-bucket
     type: s3-bucket
     config:
-      description: "Production s3-bucket instance"
       monitoring:
         enabled: true
-        detailedMetrics: true
+        clientErrorThreshold: 25
+        serverErrorThreshold: 3
 ```
 
 ### Advanced Configuration
@@ -38,62 +38,94 @@ components:
   - name: advanced-s3-bucket
     type: s3-bucket
     config:
-      description: "Advanced s3-bucket with custom settings"
+      public: false
+      versioning: true
+      encryption:
+        type: KMS
+      compliance:
+        auditLogging: true
+        auditBucketRetentionDays: 1095
+      website:
+        enabled: true
+        indexDocument: index.html
+        errorDocument: error.html
       monitoring:
         enabled: true
-        detailedMetrics: true
-        alarms:
-          # Component-specific alarm thresholds
-      tags:
-        project: "platform"
-        criticality: "high"
+        clientErrorThreshold: 5
+        serverErrorThreshold: 1
 ```
 
 ## Configuration Reference
 
-### Root Configuration
+### Core Settings
 
 | Property | Type | Required | Description |
 |----------|------|----------|-------------|
-| `name` | string | No | Component name (auto-generated if not provided) |
-| `description` | string | No | Component description for documentation |
-| `monitoring` | object | No | Monitoring and observability configuration |
-| `tags` | object | No | Additional resource tags |
+| `public` | boolean | No | Allow public read access (default: `false`) |
+| `versioning` | boolean | No | Enable S3 bucket versioning (default: `true`) |
+| `eventBridgeEnabled` | boolean | No | Emit bucket events to EventBridge (default: `false`) |
+| `bucketName` | string | No | Explicit bucket name (must be globally unique) |
 
-### Monitoring Configuration
+### Website Hosting
 
 | Property | Type | Required | Description |
 |----------|------|----------|-------------|
-| `enabled` | boolean | No | Enable monitoring (default: true) |
-| `detailedMetrics` | boolean | No | Enable detailed CloudWatch metrics |
+| `website.enabled` | boolean | No | Enable static website hosting (default: `false`) |
+| `website.indexDocument` | string | No | Index document when website enabled (default: `index.html`) |
+| `website.errorDocument` | string | No | Error document when website enabled (default: `error.html`) |
+
+### Encryption
+
+| Property | Type | Required | Description |
+|----------|------|----------|-------------|
+| `encryption.type` | enum(`AES256`,`KMS`) | No | Server-side encryption mode (platform compliance profiles may enforce `KMS`) |
+| `encryption.kmsKeyArn` | string | No | Existing CMK to use when `type` = `KMS` |
+
+### Compliance
+
+| Property | Type | Required | Description |
+|----------|------|----------|-------------|
+| `compliance.auditLogging` | boolean | No | Enable server access logging to an audit bucket |
+| `compliance.auditBucketName` | string | No | Override name for the audit bucket |
+| `compliance.auditBucketRetentionDays` | number | No | Retention for audit bucket lifecycle rule |
+| `compliance.auditBucketObjectLock` | object | No | Object lock configuration applied to the audit bucket |
+| `compliance.objectLock` | object | No | Object lock configuration applied to the primary bucket |
+
+### Monitoring
+
+| Property | Type | Required | Description |
+|----------|------|----------|-------------|
+| `monitoring.enabled` | boolean | No | Enable CloudWatch alarms (default: `false`) |
+| `monitoring.clientErrorThreshold` | number | No | Threshold for 4xx error alarm (default: `10`) |
+| `monitoring.serverErrorThreshold` | number | No | Threshold for 5xx error alarm (default: `1`) |
 
 ## Capabilities Provided
 
 This component provides the following capabilities for binding with other components:
 
-- `storage:s3-bucket` - Main s3-bucket capability
-- `monitoring:s3-bucket` - Monitoring capability
+- `bucket:s3` – Primary S3 bucket handle (name and ARN)
 
 ## Construct Handles
 
-The following construct handles are available for use in `patches.ts`:
-
-- `main` - Main s3-bucket construct
+- The following construct handles are registered for use in `patches.ts`:
+  - `main` – Alias of the primary bucket construct (legacy compatibility)
+  - `bucket` – Primary bucket construct
+  - `kmsKey` – Generated KMS key when the component creates one
+  - `auditBucket` – Dedicated audit logging bucket when enabled
 
 ## Compliance Frameworks
 
 ### Commercial
 
-- Standard monitoring configuration
-- Basic resource tagging
-- Standard security settings
+- Versioning enabled, AES256 encryption
+- Monitoring disabled by default (can be enabled per component)
+- Audit logging optional
 
 ### FedRAMP Moderate/High
 
-- Enhanced monitoring with detailed metrics
-- Comprehensive audit logging
-- Stricter security configurations
-- Extended compliance tagging
+- Platform configuration defaults enable enhanced monitoring and audit logging
+- Encryption defaults to KMS with managed CMK rotation
+- Additional security and tagging conventions applied via configuration files
 
 ## Best Practices
 

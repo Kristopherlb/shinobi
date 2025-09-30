@@ -1,111 +1,105 @@
-# GlueJobComponent Component
+# Glue Job Component
 
-Glue Job Component with comprehensive security, monitoring, and compliance features.
-
-## Overview
-
-The GlueJobComponent component provides:
-
-- **Production-ready** glue job component functionality
-- **Comprehensive compliance** (Commercial, FedRAMP Moderate/High)
-- **Integrated monitoring** and observability
-- **Security-first** configuration
-- **Platform integration** with other components
-
-### Category: analytics
-
-### AWS Service: GLUE
-
-This component manages GLUE resources and provides a simplified, secure interface for common use cases.
+The Glue Job component creates an AWS Glue job that honours the platform's configuration precedence chain. It pulls hardened defaults from `/config/<framework>.yml`, applies service manifest overrides, and synthesizes logging, security, and monitoring controls without embedding compliance-specific logic in the implementation.
 
 ## Usage Example
 
-### Basic Configuration
-
 ```yaml
-service: my-service
-owner: platform-team
-complianceFramework: commercial
-
 components:
-  - name: my-glue-job
+  - name: nightly-etl
     type: glue-job
     config:
-      description: "Production glue-job instance"
+      scriptLocation: s3://analytics-artifacts/scripts/nightly-etl.py
+      description: Nightly batch ingest
+      workerConfiguration:
+        workerType: G.2X
+        numberOfWorkers: 20
+      defaultArguments:
+        --extra-py-files: s3://analytics-artifacts/lib/helpers.zip
+      security:
+        encryption:
+          enabled: true
+          createCustomerManagedKey: true
+      logging:
+        groups:
+          - id: security
+            logGroupSuffix: security
+            retentionDays: 90
+            removalPolicy: destroy
+          - id: compliance
+            logGroupSuffix: compliance
+            retentionDays: 365
+            removalPolicy: retain
       monitoring:
         enabled: true
-        detailedMetrics: true
 ```
 
 ## Configuration Reference
 
-### Root Configuration
+| Field | Type | Required | Description |
+|-------|------|----------|-------------|
+| `scriptLocation` | string | ✅ | S3 URI to the Glue script. |
+| `glueVersion` | string | | Glue runtime version (defaults per framework). |
+| `jobType` | enum | | Glue job type (`glueetl`, `gluestreaming`, `pythonshell`, `glueray`). |
+| `command.pythonVersion` | string | | Python runtime (defaults per framework). |
+| `command.scriptArguments` | map | | Additional script arguments merged with platform defaults. |
+| `workerConfiguration.workerType` | enum | | Worker type for the job. |
+| `workerConfiguration.numberOfWorkers` | number | | Worker count. |
+| `maxConcurrentRuns` | number | | Maximum concurrent runs. |
+| `maxRetries` | number | | Retry attempts on failure. |
+| `timeout` | number | | Timeout in minutes. |
+| `defaultArguments` | map | | Overrides merged on top of platform-supplied defaults (`--TempDir`, `--job-bookmark-option`, `--enable-glue-datacatalog`). |
+| `nonOverridableArguments` | map | | Arguments protected from job-level overrides. |
+| `security.encryption.enabled` | boolean | | Enables Glue, CloudWatch, job bookmark, and S3 encryption enforcement. |
+| `security.encryption.kmsKeyArn` | string | | Import an existing KMS key instead of creating one. |
+| `security.encryption.createCustomerManagedKey` | boolean | | Create a managed key when no ARN is provided. |
+| `security.encryption.removalPolicy` | enum | | Removal policy for the created key (`retain`/`destroy`). |
+| `security.securityConfigurationName` | string | | Supply an existing Glue security configuration rather than generating one. |
+| `logging.groups[]` | object | | Declarative log group list (`id`, `logGroupSuffix`, `retentionDays`, `removalPolicy`, `enabled`). |
+| `monitoring.enabled` | boolean | | Toggles alarm creation. |
+| `monitoring.jobFailure` | object | | Failure alarm thresholds: `threshold`, `evaluationPeriods`, `periodMinutes`. |
+| `monitoring.jobDuration` | object | | Duration alarm thresholds: `thresholdMs`, `evaluationPeriods`, `periodMinutes`. |
+| `tags` | map | | Additional resource tags merged with platform tagging. |
 
-| Property | Type | Required | Description |
-|----------|------|----------|-------------|
-| `name` | string | No | Component name (auto-generated if not provided) |
-| `description` | string | No | Component description for documentation |
-| `monitoring` | object | No | Monitoring and observability configuration |
-| `tags` | object | No | Additional resource tags |
+## Platform Defaults
 
-### Monitoring Configuration
+The builder resolves configuration using the five-layer precedence chain. Per-framework defaults live in:
 
-| Property | Type | Required | Description |
-|----------|------|----------|-------------|
-| `enabled` | boolean | No | Enable monitoring (default: true) |
-| `detailedMetrics` | boolean | No | Enable detailed CloudWatch metrics |
+- `config/commercial.yml`
+- `config/fedramp-moderate.yml`
+- `config/fedramp-high.yml`
 
-## Capabilities Provided
+FedRAMP profiles enable customer-managed encryption keys, extend log retention, and turn on monitoring by default. The commercial profile keeps encryption optional and disables alarms unless explicitly enabled.
 
-This component provides the following capabilities for binding with other components:
+## Capabilities
 
-- `analytics:glue-job` - Main glue-job capability
-- `monitoring:glue-job` - Monitoring capability
+| Capability | Description |
+|------------|-------------|
+| `etl:glue-job` | Exposes the job ARN, execution role ARN, security configuration, and monitoring flag for binders. |
 
 ## Construct Handles
 
-The following construct handles are available for use in `patches.ts`:
+| Handle | Description |
+|--------|-------------|
+| `main`, `glueJob` | The underlying `AWS::Glue::Job` L1 construct. |
+| `executionRole` | Created Glue execution role (when the manifest does not supply `roleArn`). |
+| `kmsKey` | Customer-managed key created for encryption (FedRAMP defaults). |
+| `securityConfiguration` | Generated Glue security configuration. |
+| `logGroup:<id>` | Log groups created from `logging.groups` (e.g. `logGroup:security`). |
+| `alarm:jobFailure` / `alarm:jobDuration` | CloudWatch alarms when monitoring is enabled. |
 
-- `main` - Main glue-job construct
+## Compliance Notes
 
-## Compliance Frameworks
+- **Commercial**: No KMS key or alarms unless requested; single security log group retained for 90 days.
+- **FedRAMP Moderate**: Customer-managed KMS key, compliance log group retained for 1 year, alarms enabled.
+- **FedRAMP High**: Adds 10-year audit log group, enables auto-scaling and enhanced worker defaults, alarms mandatory.
 
-### Commercial
-
-- Standard monitoring configuration
-- Basic resource tagging
-- Standard security settings
-
-### FedRAMP Moderate/High
-
-- Enhanced monitoring with detailed metrics
-- Comprehensive audit logging
-- Stricter security configurations
-- Extended compliance tagging
-
-## Best Practices
-
-1. **Always enable monitoring** in production environments
-2. **Use descriptive names** for better resource identification
-3. **Configure appropriate tags** for cost allocation and governance
-4. **Review compliance requirements** for your environment
-5. **Test configurations** in development before production deployment
-
-## Development
-
-### Running Tests
+## Testing
 
 ```bash
-# Run all tests for this component
-npm test -- --testPathPattern=glue-job
+# Config builder baseline
+corepack pnpm exec jest --runTestsByPath packages/components/glue-job/tests/glue-job.builder.test.ts
 
-# Run only builder tests
-npm test -- --testPathPattern=glue-job.builder
-
-# Run only synthesis tests
-npm test -- --testPathPattern=glue-job.component.synthesis
+# Component synthesis
+corepack pnpm exec jest --runTestsByPath packages/components/glue-job/tests/glue-job.component.synthesis.test.ts
 ```
-
----
-
-*Generated by Component Completion Script*

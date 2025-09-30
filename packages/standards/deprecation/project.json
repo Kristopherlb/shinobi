@@ -11,7 +11,8 @@
       "executor": "@nx/js:tsc",
       "options": {
         "outputPath": "dist/packages/standards/deprecation",
-        "tsConfig": "packages/standards/deprecation/tsconfig.lib.json"
+        "tsConfig": "packages/standards/deprecation/tsconfig.lib.json",
+        "main": "packages/standards/deprecation/src/index.ts"
       }
     },
     "test": {

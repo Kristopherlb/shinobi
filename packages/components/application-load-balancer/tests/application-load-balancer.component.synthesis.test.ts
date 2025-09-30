@@ -1,94 +1,120 @@
-/**
- * ApplicationLoadBalancerComponent Component Synthesis Test Suite
- * Implements Platform Testing Standard v1.0 - Component Synthesis Testing
- */
-
 import { Template, Match } from 'aws-cdk-lib/assertions';
 import { App, Stack } from 'aws-cdk-lib';
-import { ApplicationLoadBalancerComponentComponent } from '../application-load-balancer.component';
+import { ApplicationLoadBalancerComponent } from '../application-load-balancer.component';
 import { ApplicationLoadBalancerConfig } from '../application-load-balancer.builder';
 import { ComponentContext, ComponentSpec } from '../../../platform/contracts/component-interfaces';
 
-const createMockContext = (
-  complianceFramework: string = 'commercial',
-  environment: string = 'dev'
-): ComponentContext => ({
-  serviceName: 'test-service',
-  owner: 'test-team',
-  environment,
-  complianceFramework,
+const VPC_ID = 'vpc-0123456789abcdef0';
+
+const createContext = (framework: string = 'commercial'): ComponentContext => ({
+  serviceName: 'checkout-service',
+  owner: 'payments',
+  environment: 'dev',
+  complianceFramework: framework,
   region: 'us-east-1',
   account: '123456789012',
   tags: {
-    'service-name': 'test-service',
-    'owner': 'test-team',
-    'environment': environment,
-    'compliance-framework': complianceFramework
+    'service-name': 'checkout-service',
+    environment: 'dev',
+    'compliance-framework': framework
   }
 });
 
-const createMockSpec = (config: Partial<ApplicationLoadBalancerConfig> = {}): ComponentSpec => ({
-  name: 'test-application-load-balancer',
+const createSpec = (config: Partial<ApplicationLoadBalancerConfig> = {}): ComponentSpec => ({
+  name: 'checkout-alb',
   type: 'application-load-balancer',
   config
 });
 
-const synthesizeComponent = (
-  context: ComponentContext,
-  spec: ComponentSpec
-): { component: ApplicationLoadBalancerComponentComponent; template: Template } => {
+const synthesizeComponent = (context: ComponentContext, spec: ComponentSpec) => {
   const app = new App();
-  const stack = new Stack(app, 'TestStack');
-  
-  const component = new ApplicationLoadBalancerComponentComponent(stack, spec, context);
+  const stack = new Stack(app, 'TestStack', {
+    env: {
+      account: context.account,
+      region: context.region
+    }
+  });
+
+  const component = new ApplicationLoadBalancerComponent(stack, spec.name, context, spec);
   component.synth();
-  
-  const template = Template.fromStack(stack);
-  return { component, template };
+
+  return {
+    component,
+    template: Template.fromStack(stack)
+  };
 };
 
-describe('ApplicationLoadBalancerComponentComponent Synthesis', () => {
-  
-  describe('Default Happy Path Synthesis', () => {
-    
-    it('should synthesize basic application-load-balancer with commercial compliance', () => {
-      const context = createMockContext('commercial');
-      const spec = createMockSpec();
-      
-      const { template, component } = synthesizeComponent(context, spec);
-      
-      // TODO: Add specific CloudFormation resource assertions
-      // Verify component was created
-      expect(component).toBeDefined();
-      expect(component.getType()).toBe('application-load-balancer');
+describe('ApplicationLoadBalancerComponent synthesis', () => {
+  const originalContextJson = process.env.CDK_CONTEXT_JSON;
+
+  beforeAll(() => {
+    process.env.CDK_CONTEXT_JSON = JSON.stringify({
+      [`vpcProvider:account=123456789012:filter.vpcId=${VPC_ID}:region=us-east-1`]: {
+        vpcId: VPC_ID,
+        availabilityZones: ['us-east-1a', 'us-east-1b'],
+        publicSubnetIds: ['subnet-public-a', 'subnet-public-b'],
+        privateSubnetIds: ['subnet-private-a', 'subnet-private-b'],
+        isolatedSubnetIds: [],
+        publicSubnetRouteTableIds: ['rtb-public-a', 'rtb-public-b'],
+        privateSubnetRouteTableIds: ['rtb-private-a', 'rtb-private-b'],
+        isolatedSubnetRouteTableIds: [],
+        ownerAccountId: '123456789012'
+      }
     });
-    
   });
-  
-  describe('Component Capabilities and Constructs', () => {
-    
-    it('should register correct capabilities after synthesis', () => {
-      const context = createMockContext('commercial');
-      const spec = createMockSpec();
-      
-      const { component } = synthesizeComponent(context, spec);
-      
-      const capabilities = component.getCapabilities();
-      
-      // Verify component-specific capabilities
-      expect(capabilities).toBeDefined();
-    });
-    
-    it('should register construct handles for patches.ts access', () => {
-      const context = createMockContext('commercial');
-      const spec = createMockSpec();
-      
-      const { component } = synthesizeComponent(context, spec);
-      
-      // Verify main construct is registered
-      expect(component.getConstruct('main')).toBeDefined();
-    });
-    
+
+  afterAll(() => {
+    if (originalContextJson === undefined) {
+      delete process.env.CDK_CONTEXT_JSON;
+    } else {
+      process.env.CDK_CONTEXT_JSON = originalContextJson;
+    }
   });
-  
+
+  it('synthesizes a commercial load balancer with defaults', () => {
+    const context = createContext('commercial');
+    const spec = createSpec({
+      vpc: {
+        vpcId: VPC_ID
+      }
+    });
+
+    const { component, template } = synthesizeComponent(context, spec);
+
+    template.hasResourceProperties('AWS::ElasticLoadBalancingV2::LoadBalancer', {
+      Scheme: 'internet-facing',
+      Type: 'application'
+    });
+
+    template.resourceCountIs('AWS::EC2::SecurityGroup', 1);
+
+    expect(component.getType()).toBe('application-load-balancer');
+    expect(component.getCapabilities()['net:load-balancer']).toBeDefined();
+  });
+
+  it('enables monitoring and deletion protection for fedramp-high', () => {
+    const context = createContext('fedramp-high');
+    const spec = createSpec({
+      vpc: {
+        vpcId: VPC_ID
+      },
+      listeners: [
+        {
+          port: 443,
+          protocol: 'HTTPS',
+          certificateArn: 'arn:aws:acm:us-east-1:123456789012:certificate/aaaaaaaa-bbbb-cccc-dddd-eeeeeeeeeeee'
+        }
+      ]
+    });
+
+    const { template } = synthesizeComponent(context, spec);
+
+    template.hasResourceProperties('AWS::ElasticLoadBalancingV2::LoadBalancer', {
+      LoadBalancerAttributes: Match.arrayWith([
+        Match.objectLike({ Key: 'deletion_protection.enabled', Value: 'true' })
+      ])
+    });
+
+    template.hasResource('AWS::CloudWatch::Alarm', Match.anyValue());
+  });
 });

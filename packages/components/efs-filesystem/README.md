@@ -1,111 +1,93 @@
-# EfsFilesystemComponent Component
+# EFS Filesystem Component
 
-EFS Filesystem Component with comprehensive security, monitoring, and compliance features.
+Configuration-driven Amazon EFS filesystem that honours the platform precedence chain via
+`EfsFilesystemComponentConfigBuilder`. Compliance defaults live entirely in `/config/<framework>.yml`; the
+component simply consumes the resolved configuration to materialise the shared file system.
 
-## Overview
+## Features
 
-The EfsFilesystemComponent component provides:
+- File system topology (performance mode, throughput mode, provisioned throughput) declared via config.
+- VPC integration with optional security-group provisioning and custom ingress rules (default NFS port 2049).
+- Encryption controls (at rest, optional customer-managed KMS, and in-transit) with config-driven hardening profiles.
+- Lifecycle management, automatic backups, and file-system policy pass-through all resolved from configuration.
+- Optional CloudWatch log groups and alarms (storage utilisation, client connections, burst credits) defined per framework.
+- Capability metadata advertises the final hardening profile for downstream binders.
 
-- **Production-ready** efs filesystem component functionality
-- **Comprehensive compliance** (Commercial, FedRAMP Moderate/High)
-- **Integrated monitoring** and observability
-- **Security-first** configuration
-- **Platform integration** with other components
-
-### Category: storage
-
-### AWS Service: EFS
-
-This component manages EFS resources and provides a simplified, secure interface for common use cases.
-
-## Usage Example
-
-### Basic Configuration
+## Usage
 
 ```yaml
-service: my-service
-owner: platform-team
-complianceFramework: commercial
-
 components:
-  - name: my-efs-filesystem
+  - name: shared-efs
     type: efs-filesystem
     config:
-      description: "Production efs-filesystem instance"
+      fileSystemName: app-shared-fs
+      vpc:
+        vpcId: vpc-0123456789abcdef0
+        subnetIds:
+          - subnet-private-a
+          - subnet-private-b
+        securityGroup:
+          create: true
+          ingressRules:
+            - port: 2049
+              cidr: 10.0.0.0/16
+              description: "NFS traffic from application subnets"
+      encryption:
+        enabled: true
+        encryptInTransit: true
+        customerManagedKey:
+          create: true
+          alias: alias/app/shared-efs
+      backups:
+        enabled: true
+      logging:
+        access:
+          enabled: true
+          retentionInDays: 180
+          removalPolicy: retain
       monitoring:
         enabled: true
-        detailedMetrics: true
+        alarms:
+          storageUtilization:
+            enabled: true
+            threshold: 214748364800 # 200 GiB
 ```
 
-## Configuration Reference
+Any property omitted in the manifest defaults to the platform configuration for the active compliance
+framework (`/config/commercial.yml`, `/config/fedramp-moderate.yml`, `/config/fedramp-high.yml`).
 
-### Root Configuration
+## Key Configuration Sections
 
-| Property | Type | Required | Description |
-|----------|------|----------|-------------|
-| `name` | string | No | Component name (auto-generated if not provided) |
-| `description` | string | No | Component description for documentation |
-| `monitoring` | object | No | Monitoring and observability configuration |
-| `tags` | object | No | Additional resource tags |
+| Path | Description |
+|------|-------------|
+| `fileSystemName` | Final filesystem name; auto-sanitised if omitted. |
+| `performanceMode` | `generalPurpose` or `maxIO`. |
+| `throughputMode` | `bursting`, `provisioned`, or `elastic`; provisioned mode expects `provisionedThroughputMibps`. |
+| `encryption` | Controls at-rest encryption (with optional customer-managed key) and in-transit enforcement. |
+| `vpc` | VPC ID, target subnets, and optional security group creation/import with ingress rules. |
+| `lifecycle` | Transition files to/from Infrequent Access. |
+| `backups.enabled` | Enables AWS Backup integration. |
+| `logging.access` / `logging.audit` | Log group provisioning, retention, and removal policies. |
+| `monitoring` | Global toggle plus per-alarm thresholds for storage utilisation, client connections, and burst credit balance. |
+| `filesystemPolicy` | JSON policy document applied to the filesystem. |
+| `removalPolicy` | `retain` or `destroy`. |
+| `hardeningProfile` | Abstract security posture, surfaced in the component capability. |
 
-### Monitoring Configuration
+## Capabilities
 
-| Property | Type | Required | Description |
-|----------|------|----------|-------------|
-| `enabled` | boolean | No | Enable monitoring (default: true) |
-| `detailedMetrics` | boolean | No | Enable detailed CloudWatch metrics |
+- `storage:efs` – Filesystem metadata (ID, ARN, performance/throughput configuration, encryption posture, backups).
 
-## Capabilities Provided
-
-This component provides the following capabilities for binding with other components:
-
-- `storage:efs-filesystem` - Main efs-filesystem capability
-- `monitoring:efs-filesystem` - Monitoring capability
-
-## Construct Handles
-
-The following construct handles are available for use in `patches.ts`:
-
-- `main` - Main efs-filesystem construct
-
-## Compliance Frameworks
-
-### Commercial
-
-- Standard monitoring configuration
-- Basic resource tagging
-- Standard security settings
-
-### FedRAMP Moderate/High
-
-- Enhanced monitoring with detailed metrics
-- Comprehensive audit logging
-- Stricter security configurations
-- Extended compliance tagging
-
-## Best Practices
-
-1. **Always enable monitoring** in production environments
-2. **Use descriptive names** for better resource identification
-3. **Configure appropriate tags** for cost allocation and governance
-4. **Review compliance requirements** for your environment
-5. **Test configurations** in development before production deployment
-
-## Development
-
-### Running Tests
+## Testing
 
 ```bash
-# Run all tests for this component
-npm test -- --testPathPattern=efs-filesystem
-
-# Run only builder tests
-npm test -- --testPathPattern=efs-filesystem.builder
-
-# Run only synthesis tests
-npm test -- --testPathPattern=efs-filesystem.component.synthesis
+corepack pnpm exec jest --runTestsByPath \
+  packages/components/efs-filesystem/tests/efs-filesystem.builder.test.ts \
+  packages/components/efs-filesystem/tests/efs-filesystem.component.synthesis.test.ts
 ```
 
----
+## Notes
 
-*Generated by Component Completion Script*
+- The component no longer inspects `context.complianceFramework`; ensure framework defaults in `/config` capture required hardening.
+- Provide `config.vpc.vpcId` and subnet IDs – EFS mount targets must live in a VPC.
+- When `encryption.customerManagedKey.create` is true, the component provisions a dedicated KMS key; otherwise supply `kmsKeyArn` or allow AWS-managed keys.
+- Monitoring alarms and log groups are created only when explicitly enabled in configuration.

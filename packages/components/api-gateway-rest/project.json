@@ -1,0 +1,50 @@
+{
+  "name": "api-gateway-rest",
+  "root": "packages/components/api-gateway-rest",
+  "sourceRoot": "packages/components/api-gateway-rest",
+  "projectType": "library",
+  "targets": {
+    "build": {
+      "executor": "nx:run-commands",
+      "options": {
+        "command": "tsc -p packages/components/api-gateway-rest/tsconfig.json && node tools/cleanup-ts-build-artifacts.mjs"
+      },
+      "inputs": [
+        "default",
+        "{projectRoot}/tsconfig.json",
+        "{projectRoot}/index.ts",
+        "{projectRoot}/*.ts",
+        "{projectRoot}/tests/**/*.ts"
+      ],
+      "outputs": [
+        "{workspaceRoot}/dist/packages/components/api-gateway-rest"
+      ]
+    },
+    "typecheck": {
+      "executor": "nx:run-commands",
+      "options": {
+        "command": "tsc --noEmit -p packages/components/api-gateway-rest/tsconfig.json"
+      }
+    },
+    "test": {
+      "executor": "@nx/jest:jest",
+      "outputs": [
+        "{projectRoot}/coverage"
+      ],
+      "options": {
+        "jestConfig": "packages/components/api-gateway-rest/jest.config.ts",
+        "passWithNoTests": false
+      }
+    },
+    "lint": {
+      "executor": "nx:run-commands",
+      "options": {
+        "command": "eslint packages/components/api-gateway-rest --ext .ts --no-ignore"
+      }
+    }
+  },
+  "tags": [
+    "type:lib",
+    "scope:components"
+  ]
+}

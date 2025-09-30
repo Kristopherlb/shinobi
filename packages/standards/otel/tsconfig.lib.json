@@ -1,9 +1,17 @@
 {
-  "extends": "../../tsconfig.base.json",
+  "extends": "../../../tsconfig.base.json",
   "compilerOptions": {
-    "outDir": "../../dist/packages/core",
-    "rootDir": "src"
+    "outDir": "../../../dist/packages/standards/otel",
+    "rootDir": "."
   },
-  "include": ["src/**/*"],
-  "exclude": ["src/**/*.test.ts", "src/**/*.spec.ts"]
+  "include": [
+    "src/**/*",
+    "observability-handlers/src/**/*",
+    "observability-service/src/**/*",
+    "observability-service/observability-handlers/src/**/*"
+  ],
+  "exclude": [
+    "src/**/*.test.ts",
+    "src/**/*.spec.ts"
+  ]
 }

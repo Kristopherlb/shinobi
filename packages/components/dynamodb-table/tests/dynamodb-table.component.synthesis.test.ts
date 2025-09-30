@@ -1,94 +1,112 @@
-/**
- * DynamoDbTableComponent Component Synthesis Test Suite
- * Implements Platform Testing Standard v1.0 - Component Synthesis Testing
- */
+jest.mock(
+  '@platform/logger',
+  () => ({
+    Logger: {
+      getLogger: () => ({ info: jest.fn(), warn: jest.fn(), error: jest.fn(), debug: jest.fn() }),
+      setGlobalContext: jest.fn()
+    }
+  }),
+  { virtual: true }
+);
 
-import { Template, Match } from 'aws-cdk-lib/assertions';
 import { App, Stack } from 'aws-cdk-lib';
-import { DynamoDbTableComponentComponent } from '../dynamodb-table.component';
+import { Match, Template } from 'aws-cdk-lib/assertions';
+import { DynamoDbTableComponent } from '../dynamodb-table.component';
 import { DynamoDbTableConfig } from '../dynamodb-table.builder';
 import { ComponentContext, ComponentSpec } from '../../../platform/contracts/component-interfaces';
 
-const createMockContext = (
-  complianceFramework: string = 'commercial',
-  environment: string = 'dev'
-): ComponentContext => ({
-  serviceName: 'test-service',
-  owner: 'test-team',
-  environment,
-  complianceFramework,
+const createContext = (framework: string): ComponentContext => ({
+  serviceName: 'orders-service',
+  owner: 'platform-team',
+  environment: 'dev',
+  complianceFramework: framework,
   region: 'us-east-1',
   account: '123456789012',
   tags: {
-    'service-name': 'test-service',
-    'owner': 'test-team',
-    'environment': environment,
-    'compliance-framework': complianceFramework
+    'service-name': 'orders-service',
+    environment: 'dev',
+    'compliance-framework': framework
   }
 });
 
-const createMockSpec = (config: Partial<DynamoDbTableConfig> = {}): ComponentSpec => ({
-  name: 'test-dynamodb-table',
+const createSpec = (config: Partial<DynamoDbTableConfig>): ComponentSpec => ({
+  name: 'orders-table',
   type: 'dynamodb-table',
   config
 });
 
-const synthesizeComponent = (
-  context: ComponentContext,
-  spec: ComponentSpec
-): { component: DynamoDbTableComponentComponent; template: Template } => {
+const synthesize = (context: ComponentContext, spec: ComponentSpec) => {
   const app = new App();
   const stack = new Stack(app, 'TestStack');
-  
-  const component = new DynamoDbTableComponentComponent(stack, spec, context);
+  const component = new DynamoDbTableComponent(stack, spec.name, context, spec);
   component.synth();
-  
-  const template = Template.fromStack(stack);
-  return { component, template };
+  return { component, template: Template.fromStack(stack) };
 };
 
-describe('DynamoDbTableComponentComponent Synthesis', () => {
-  
-  describe('Default Happy Path Synthesis', () => {
-    
-    it('should synthesize basic dynamodb-table with commercial compliance', () => {
-      const context = createMockContext('commercial');
-      const spec = createMockSpec();
-      
-      const { template, component } = synthesizeComponent(context, spec);
-      
-      // TODO: Add specific CloudFormation resource assertions
-      // Verify component was created
-      expect(component).toBeDefined();
-      expect(component.getType()).toBe('dynamodb-table');
+describe('DynamoDbTableComponent synthesis', () => {
+  it('creates commercial PAYG table with defaults', () => {
+    const { template } = synthesize(
+      createContext('commercial'),
+      createSpec({
+        partitionKey: { name: 'id', type: 'string' }
+      })
+    );
+
+    template.hasResourceProperties('AWS::DynamoDB::Table', {
+      BillingMode: 'PAY_PER_REQUEST',
+      KeySchema: Match.arrayWith([
+        Match.objectLike({ AttributeName: 'id', KeyType: 'HASH' })
+      ]),
+      SSESpecification: Match.objectLike({ SSEType: 'KMS' })
     });
-    
   });
-  
-  describe('Component Capabilities and Constructs', () => {
-    
-    it('should register correct capabilities after synthesis', () => {
-      const context = createMockContext('commercial');
-      const spec = createMockSpec();
-      
-      const { component } = synthesizeComponent(context, spec);
-      
-      const capabilities = component.getCapabilities();
-      
-      // Verify component-specific capabilities
-      expect(capabilities).toBeDefined();
+
+  it('applies FedRAMP High defaults', () => {
+    const { template } = synthesize(
+      createContext('fedramp-high'),
+      createSpec({
+        partitionKey: { name: 'id', type: 'string' }
+      })
+    );
+
+    template.hasResourceProperties('AWS::DynamoDB::Table', {
+      BillingMode: 'PROVISIONED',
+      PointInTimeRecoverySpecification: Match.objectLike({ PointInTimeRecoveryEnabled: true })
     });
-    
-    it('should register construct handles for patches.ts access', () => {
-      const context = createMockContext('commercial');
-      const spec = createMockSpec();
-      
-      const { component } = synthesizeComponent(context, spec);
-      
-      // Verify main construct is registered
-      expect(component.getConstruct('main')).toBeDefined();
-    });
-    
   });
-  
+
+  it('respects manifest overrides for provisioned throughput and indexes', () => {
+    const { template, component } = synthesize(
+      createContext('commercial'),
+      createSpec({
+        partitionKey: { name: 'id', type: 'string' },
+        sortKey: { name: 'createdAt', type: 'number' },
+        billingMode: 'provisioned',
+        provisioned: {
+          readCapacity: 5,
+          writeCapacity: 5
+        },
+        globalSecondaryIndexes: [
+          {
+            indexName: 'status-index',
+            partitionKey: { name: 'status', type: 'string' }
+          }
+        ]
+      })
+    );
+
+    template.hasResourceProperties('AWS::DynamoDB::Table', {
+      BillingMode: 'PROVISIONED',
+      KeySchema: Match.arrayWith([
+        Match.objectLike({ AttributeName: 'createdAt', KeyType: 'RANGE' })
+      ]),
+      GlobalSecondaryIndexes: Match.arrayWith([
+        Match.objectLike({ IndexName: 'status-index' })
+      ])
+    });
+
+    const capability = component.getCapabilities()['db:dynamodb'];
+    expect(capability.billingMode).toBe('provisioned');
+    expect(capability.hardeningProfile).toBe('baseline');
+  });
 });

@@ -1,0 +1,307 @@
+@import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap');
+@import url('https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;500;600&display=swap');
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+@layer base {
+  :root {
+    /* Perplexity + Codex inspired color system */
+    /* Dark sapphire surfaces with violet/teal accents */
+    --background: 230 23% 9%;
+    --foreground: 230 25% 95%;
+
+    --card: 231 23% 11%;
+    --card-foreground: 230 25% 95%;
+
+    --popover: 231 23% 11%;
+    --popover-foreground: 230 25% 95%;
+
+    --primary: 251 91% 73%;
+    --primary-foreground: 230 25% 98%;
+
+    --secondary: 232 22% 13%;
+    --secondary-foreground: 230 25% 95%;
+
+    --muted: 233 20% 15%;
+    --muted-foreground: 230 10% 65%;
+
+    --accent: 185 95% 68%;
+    --accent-foreground: 230 23% 9%;
+
+    --destructive: 0 84% 65%;
+    --destructive-foreground: 230 25% 98%;
+
+    --border: 231 20% 18%;
+    --input: 231 20% 18%;
+    --ring: 251 91% 73%;
+
+    --radius: 0.5rem;
+
+    /* Custom semantic colors for developer platform */
+    --success: 142 86% 58%;
+    --warning: 38 92% 60%;
+    --info: 217 91% 68%;
+    --citation: 185 95% 68%;
+    --timeline: 233 20% 15%;
+    --metadata: 232 22% 13%;
+    --surface-tertiary: 233 20% 15%;
+    --border-accent: 251 50% 35%;
+  }
+
+  .dark {
+    /* Dark mode (default) - same as root for this design */
+    --background: 230 23% 9%;
+    --foreground: 230 25% 95%;
+
+    --card: 231 23% 11%;
+    --card-foreground: 230 25% 95%;
+
+    --popover: 231 23% 11%;
+    --popover-foreground: 230 25% 95%;
+
+    --primary: 251 91% 73%;
+    --primary-foreground: 230 25% 98%;
+
+    --secondary: 232 22% 13%;
+    --secondary-foreground: 230 25% 95%;
+
+    --muted: 233 20% 15%;
+    --muted-foreground: 230 10% 65%;
+
+    --accent: 185 95% 68%;
+    --accent-foreground: 230 23% 9%;
+
+    --destructive: 0 84% 65%;
+    --destructive-foreground: 230 25% 98%;
+
+    --border: 231 20% 18%;
+    --input: 231 20% 18%;
+    --ring: 251 91% 73%;
+
+    /* Custom semantic colors */
+    --success: 142 86% 58%;
+    --warning: 38 92% 60%;
+    --info: 217 91% 68%;
+    --citation: 185 95% 68%;
+    --timeline: 233 20% 15%;
+    --metadata: 232 22% 13%;
+    --surface-tertiary: 233 20% 15%;
+    --border-accent: 251 50% 35%;
+  }
+}
+
+@layer base {
+  * {
+    @apply border-border;
+  }
+  body {
+    @apply bg-background text-foreground font-sans;
+    font-family: 'Inter', system-ui, -apple-system, sans-serif;
+  }
+  code {
+    font-family: 'JetBrains Mono', 'Fira Code', 'SF Mono', Consolas, monospace;
+  }
+}
+
+@layer components {
+  /* Typography scale */
+  .text-h1 { @apply text-3xl font-bold leading-tight; }
+  .text-h2 { @apply text-2xl font-bold leading-tight; }
+  .text-h3 { @apply text-xl font-semibold leading-tight; }
+  .text-body { @apply text-base leading-relaxed; }
+  .text-code { @apply text-sm font-mono font-medium; }
+  
+  /* Citation and metadata styling */
+  .citation-badge {
+    @apply inline-flex items-center px-1.5 py-0.5 text-xs font-medium;
+    @apply bg-accent/10 text-accent border border-accent/20 rounded;
+  }
+  
+  .metadata-text {
+    @apply text-xs text-muted-foreground font-medium;
+  }
+  
+  .timeline-marker {
+    @apply w-2 h-2 rounded-full border-2;
+    background: hsl(var(--timeline));
+    border-color: hsl(var(--border-accent));
+  }
+  
+  .status-chip {
+    @apply inline-flex items-center px-2 py-1 text-xs font-medium rounded-full;
+  }
+  
+  .status-chip--success {
+    @apply bg-green-500/10 text-green-400 border border-green-500/20;
+  }
+  
+  .status-chip--warning {
+    @apply bg-amber-500/10 text-amber-400 border border-amber-500/20;
+  }
+  
+  .status-chip--error {
+    @apply bg-red-500/10 text-red-400 border border-red-500/20;
+  }
+  
+  .status-chip--info {
+    @apply bg-blue-500/10 text-blue-400 border border-blue-500/20;
+  }
+  
+  /* Split-pane layouts - Responsive */
+  .workspace-main {
+    @apply flex-1 min-w-0; /* min-w-0 allows flex item to shrink */
+  }
+  
+  .metadata-rail {
+    @apply w-80 flex-shrink-0 border-l border-border;
+    background: hsl(var(--metadata));
+  }
+  
+  .timeline-rail {
+    @apply w-72 flex-shrink-0 border-r border-border;
+    background: hsl(var(--timeline));
+  }
+  
+  /* Mobile touch optimization */
+  .touch-target {
+    @apply min-h-11 min-w-11; /* 44px minimum for accessibility */
+  }
+  
+  .mobile-safe-area {
+    padding-bottom: env(safe-area-inset-bottom);
+    padding-left: env(safe-area-inset-left);
+    padding-right: env(safe-area-inset-right);
+  }
+  
+  .mobile-optimized {
+    @apply text-base leading-relaxed; /* Better readability on mobile */
+  }
+  
+  /* Responsive typography */
+  @media (max-width: 640px) {
+    .text-h1 { @apply text-2xl; }
+    .text-h2 { @apply text-xl; }
+    .text-h3 { @apply text-lg; }
+  }
+  
+  /* Touch-friendly spacing */
+  @media (max-width: 1024px) {
+    .citation-badge {
+      @apply px-2 py-1 text-sm; /* Larger on mobile */
+    }
+    
+    .timeline-marker {
+      @apply w-3 h-3; /* Slightly larger for touch */
+    }
+  }
+  
+  /* Elevation system using custom colors */
+  .hover-elevate {
+    @apply transition-all duration-150;
+  }
+  
+  .hover-elevate:hover {
+    background: hsl(var(--surface-tertiary));
+    border-color: hsl(var(--border-accent) / 0.3);
+  }
+  
+  .active-elevate-2:active {
+    background: hsl(var(--surface-tertiary));
+    border-color: hsl(var(--border-accent) / 0.5);
+    transform: translateY(1px);
+  }
+  
+  /* Ambient gradients for subtle visual interest */
+  .gradient-ambient {
+    background: linear-gradient(135deg, 
+      hsl(var(--background)), 
+      hsl(var(--card))
+    );
+  }
+  
+  .gradient-accent {
+    background: linear-gradient(135deg,
+      hsl(var(--primary) / 0.1),
+      hsl(var(--accent) / 0.05)
+    );
+  }
+}
+
+/* Custom utilities for developer platform */
+@layer utilities {
+  .content-density-high {
+    @apply space-y-1 text-sm;
+  }
+  
+  .content-density-standard {
+    @apply space-y-3 text-base;
+  }
+  
+  .chrome-minimal {
+    @apply border-none bg-transparent shadow-none;
+  }
+  
+  .focus-ring {
+    @apply focus:outline-none focus:ring-2 focus:ring-primary/50 focus:ring-offset-2 focus:ring-offset-background;
+  }
+  
+  /* Mobile utilities */
+  .mobile-grid {
+    @apply grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4;
+  }
+  
+  .mobile-padding {
+    @apply p-4 lg:p-6;
+  }
+  
+  .mobile-text {
+    @apply text-base sm:text-sm;
+  }
+  
+  .touch-friendly {
+    @apply min-h-11 px-4 py-3;
+  }
+  
+  /* Safe area support for mobile devices */
+  .safe-top {
+    padding-top: env(safe-area-inset-top);
+  }
+  
+  .safe-bottom {
+    padding-bottom: env(safe-area-inset-bottom);
+  }
+  
+  .safe-left {
+    padding-left: env(safe-area-inset-left);
+  }
+  
+  .safe-right {
+    padding-right: env(safe-area-inset-right);
+  }
+}
+/* Critical Mobile Utilities */
+:root {
+  --bottom-nav-height: calc(70px + env(safe-area-inset-bottom));
+}
+
+.pb-safe-bottom {
+  padding-bottom: calc(5rem + env(safe-area-inset-bottom)); /* 80px + safe area for bottom nav */
+}
+
+.mobile-safe-height {
+  height: calc(100vh - var(--bottom-nav-height));
+}
+
+@media (min-width: 1024px) {
+  .lg\:mobile-safe-height-none {
+    height: 100vh;
+  }
+}
+.scrollbar-hide {
+  -ms-overflow-style: none;
+  scrollbar-width: none;
+}
+.scrollbar-hide::-webkit-scrollbar {
+  display: none;
+}

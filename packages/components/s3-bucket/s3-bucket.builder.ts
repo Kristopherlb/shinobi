@@ -1,138 +1,458 @@
 /**
- * Configuration Builder for S3BucketComponent Component
- * 
- * Implements the ConfigBuilder pattern as defined in the Platform Component API Contract.
- * Provides 5-layer configuration precedence chain and compliance-aware defaults.
+ * S3 Bucket configuration builder.
+ *
+ * Implements the shared ConfigBuilder precedence chain so that
+ * all deployment defaults are sourced from the platform configuration
+ * files in /config and developer overrides in service manifests.
  */
 
-import { ConfigBuilder, ConfigBuilderContext } from '../../platform/contracts/config-builder';
+import {
+  ConfigBuilder,
+  ConfigBuilderContext,
+  ComponentConfigSchema
+} from '@shinobi/core';
 
-/**
- * Configuration interface for S3BucketComponent component
- */
-export interface S3BucketConfig {
-  // TODO: Define comprehensive configuration interface
-  // This should be extracted and refined from the existing component
-  
-  /** Component name (optional, will be auto-generated) */
-  name?: string;
-  
-  /** Component description */
-  description?: string;
-  
-  /** Enable detailed monitoring */
-  monitoring?: {
-    enabled?: boolean;
-    detailedMetrics?: boolean;
-    alarms?: {
-      // Define component-specific alarm thresholds
-    };
-  };
-  
-  /** Tagging configuration */
-  tags?: Record<string, string>;
+export type S3BucketEncryptionType = 'AES256' | 'KMS';
+export type S3BucketStorageClass =
+  | 'STANDARD_IA'
+  | 'ONEZONE_IA'
+  | 'GLACIER'
+  | 'DEEP_ARCHIVE'
+  | 'GLACIER_IR';
+
+export interface S3BucketLifecycleTransition {
+  storageClass: S3BucketStorageClass;
+  transitionAfter: number;
 }
 
-/**
- * JSON Schema for S3BucketComponent configuration validation
- */
-export const S3_BUCKET_CONFIG_SCHEMA = {
+export interface S3BucketLifecycleRule {
+  id: string;
+  enabled: boolean;
+  transitions?: S3BucketLifecycleTransition[];
+  expiration?: {
+    days: number;
+  };
+}
+
+export interface S3BucketEncryptionConfig {
+  type?: S3BucketEncryptionType;
+  kmsKeyArn?: string;
+}
+
+export interface S3BucketSecurityConfig {
+  blockPublicAccess?: boolean;
+  requireSecureTransport?: boolean;
+  requireMfaDelete?: boolean;
+  denyDeleteActions?: boolean;
+  tools?: {
+    clamavScan?: boolean;
+  };
+}
+
+export interface S3BucketObjectLockConfig {
+  enabled: boolean;
+  mode?: 'GOVERNANCE' | 'COMPLIANCE';
+  retentionDays?: number;
+}
+
+export interface S3BucketComplianceConfig {
+  auditLogging?: boolean;
+  auditBucketName?: string;
+  auditBucketRetentionDays?: number;
+  auditBucketObjectLock?: S3BucketObjectLockConfig;
+  auditBucketLifecycleRules?: S3BucketLifecycleRule[];
+  objectLock?: S3BucketObjectLockConfig;
+}
+
+export interface S3BucketMonitoringConfig {
+  enabled?: boolean;
+  clientErrorThreshold?: number;
+  serverErrorThreshold?: number;
+}
+
+export interface S3BucketWebsiteConfig {
+  enabled?: boolean;
+  indexDocument?: string;
+  errorDocument?: string;
+}
+
+export interface S3BucketConfig {
+  bucketName?: string;
+  public?: boolean;
+  website?: S3BucketWebsiteConfig;
+  eventBridgeEnabled?: boolean;
+  versioning?: boolean;
+  encryption?: S3BucketEncryptionConfig;
+  lifecycleRules?: S3BucketLifecycleRule[];
+  security?: S3BucketSecurityConfig;
+  compliance?: S3BucketComplianceConfig;
+  monitoring?: S3BucketMonitoringConfig;
+}
+
+export const S3_BUCKET_CONFIG_SCHEMA: ComponentConfigSchema = {
   type: 'object',
+  additionalProperties: false,
   properties: {
-    name: {
+    bucketName: {
       type: 'string',
-      description: 'Component name (optional, will be auto-generated from component name)',
-      pattern: '^[a-zA-Z][a-zA-Z0-9-_]*$',
-      maxLength: 128
+      description: 'Optional name for the S3 bucket; must be globally unique',
+      pattern: '^[a-z0-9.-]+$',
+      minLength: 3,
+      maxLength: 63
     },
-    description: {
-      type: 'string',
-      description: 'Component description for documentation',
-      maxLength: 1024
+    public: {
+      type: 'boolean',
+      description: 'Allow public read access to the bucket',
+      default: false
     },
-    monitoring: {
+    website: {
       type: 'object',
-      description: 'Monitoring and observability configuration',
+      description: 'Static website hosting configuration',
+      additionalProperties: false,
       properties: {
         enabled: {
           type: 'boolean',
-          default: true,
-          description: 'Enable monitoring'
+          description: 'Enable S3 static website hosting',
+          default: false
         },
-        detailedMetrics: {
-          type: 'boolean',
-          default: false,
-          description: 'Enable detailed CloudWatch metrics'
+        indexDocument: {
+          type: 'string',
+          description: 'Index document served for directory listings',
+          default: 'index.html'
+        },
+        errorDocument: {
+          type: 'string',
+          description: 'Error document served for missing objects',
+          default: 'error.html'
         }
-      },
-      additionalProperties: false
+      }
     },
-    tags: {
+    eventBridgeEnabled: {
+      type: 'boolean',
+      description: 'Emit bucket notifications to Amazon EventBridge',
+      default: false
+    },
+    versioning: {
+      type: 'boolean',
+      description: 'Enable bucket versioning',
+      default: false
+    },
+    encryption: {
       type: 'object',
-      description: 'Additional resource tags',
-      additionalProperties: { type: 'string' }
+      description: 'Server-side encryption configuration',
+      additionalProperties: false,
+      properties: {
+        type: {
+          type: 'string',
+          enum: ['AES256', 'KMS'],
+          description: 'Encryption type for the bucket',
+          default: 'AES256'
+        },
+        kmsKeyArn: {
+          type: 'string',
+          description: 'Existing KMS key ARN to use when type is KMS',
+          pattern: '^arn:aws:kms:[a-z0-9-]+:[0-9]{12}:key/[a-f0-9-]{36}$'
+        }
+      }
+    },
+    lifecycleRules: {
+      type: 'array',
+      description: 'Lifecycle rules applied to bucket objects',
+      items: {
+        type: 'object',
+        required: ['id', 'enabled'],
+        additionalProperties: false,
+        properties: {
+          id: {
+            type: 'string',
+            description: 'Unique identifier for the lifecycle rule'
+          },
+          enabled: {
+            type: 'boolean',
+            description: 'Enable or disable the rule'
+          },
+          transitions: {
+            type: 'array',
+            description: 'Lifecycle transitions to alternate storage classes',
+            items: {
+              type: 'object',
+              required: ['storageClass', 'transitionAfter'],
+              additionalProperties: false,
+              properties: {
+                storageClass: {
+                  type: 'string',
+                  enum: ['STANDARD_IA', 'ONEZONE_IA', 'GLACIER', 'DEEP_ARCHIVE', 'GLACIER_IR'],
+                  description: 'Target storage class for the transition'
+                },
+                transitionAfter: {
+                  type: 'number',
+                  minimum: 1,
+                  description: 'Number of days after object creation to transition'
+                }
+              }
+            }
+          },
+          expiration: {
+            type: 'object',
+            additionalProperties: false,
+            properties: {
+              days: {
+                type: 'number',
+                minimum: 1,
+                description: 'Expire objects after the specified number of days'
+              }
+            }
+          }
+        }
+      }
+    },
+    security: {
+      type: 'object',
+      description: 'Security hardening configuration',
+      additionalProperties: false,
+      properties: {
+        blockPublicAccess: {
+          type: 'boolean',
+          description: 'Apply the AWS Block Public Access configuration to the bucket',
+          default: true
+        },
+        requireSecureTransport: {
+          type: 'boolean',
+          description: 'Deny requests made without HTTPS (aws:SecureTransport)',
+          default: true
+        },
+        requireMfaDelete: {
+          type: 'boolean',
+          description: 'Require MFA for delete operations via bucket policy',
+          default: false
+        },
+        denyDeleteActions: {
+          type: 'boolean',
+          description: 'Deny delete-style actions to enforce immutability',
+          default: false
+        },
+        tools: {
+          type: 'object',
+          additionalProperties: false,
+          properties: {
+            clamavScan: {
+              type: 'boolean',
+              description: 'Enable the ClamAV virus scanning Lambda integration',
+              default: false
+            }
+          }
+        }
+      }
+    },
+    compliance: {
+      type: 'object',
+      description: 'Compliance-focused configuration',
+      additionalProperties: false,
+      properties: {
+        auditLogging: {
+          type: 'boolean',
+          description: 'Enable server access logging to an audit bucket',
+          default: false
+        },
+        auditBucketName: {
+          type: 'string',
+          description: 'Override name for the audit bucket when auditLogging is enabled'
+        },
+        auditBucketRetentionDays: {
+          type: 'number',
+          minimum: 1,
+          description: 'Retention period in days for audit bucket lifecycle rules'
+        },
+        auditBucketObjectLock: {
+          type: 'object',
+          additionalProperties: false,
+          description: 'Object Lock configuration applied to the audit bucket',
+          properties: {
+            enabled: { type: 'boolean', default: false },
+            mode: { type: 'string', enum: ['GOVERNANCE', 'COMPLIANCE'] },
+            retentionDays: { type: 'number', minimum: 1 }
+          }
+        },
+        auditBucketLifecycleRules: {
+          type: 'array',
+          description: 'Lifecycle rules applied to the audit bucket',
+          items: {
+            type: 'object',
+            required: ['id', 'enabled'],
+            additionalProperties: false,
+            properties: {
+              id: {
+                type: 'string',
+                description: 'Unique identifier for the audit lifecycle rule'
+              },
+              enabled: {
+                type: 'boolean',
+                description: 'Enable or disable the audit bucket rule'
+              },
+              transitions: {
+                type: 'array',
+                description: 'Lifecycle transitions applied to audit objects',
+                items: {
+                  type: 'object',
+                  required: ['storageClass', 'transitionAfter'],
+                  additionalProperties: false,
+                  properties: {
+                    storageClass: {
+                      type: 'string',
+                      enum: ['STANDARD_IA', 'ONEZONE_IA', 'GLACIER', 'DEEP_ARCHIVE', 'GLACIER_IR'],
+                      description: 'Target storage class for the transition'
+                    },
+                    transitionAfter: {
+                      type: 'number',
+                      minimum: 1,
+                      description: 'Number of days after object creation to transition'
+                    }
+                  }
+                }
+              },
+              expiration: {
+                type: 'object',
+                additionalProperties: false,
+                properties: {
+                  days: {
+                    type: 'number',
+                    minimum: 1,
+                    description: 'Expire audit objects after the specified number of days'
+                  }
+                }
+              }
+            }
+          }
+        },
+        objectLock: {
+          type: 'object',
+          additionalProperties: false,
+          description: 'Object Lock configuration applied to the primary bucket',
+          properties: {
+            enabled: { type: 'boolean', default: false },
+            mode: { type: 'string', enum: ['GOVERNANCE', 'COMPLIANCE'] },
+            retentionDays: { type: 'number', minimum: 1 }
+          }
+        }
+      }
+    },
+    monitoring: {
+      type: 'object',
+      description: 'Monitoring and alerting configuration',
+      additionalProperties: false,
+      properties: {
+        enabled: {
+          type: 'boolean',
+          description: 'Enable CloudWatch alarms for the bucket',
+          default: false
+        },
+        clientErrorThreshold: {
+          type: 'number',
+          minimum: 0,
+          description: 'Alarm threshold for 4xx client errors',
+          default: 10
+        },
+        serverErrorThreshold: {
+          type: 'number',
+          minimum: 0,
+          description: 'Alarm threshold for 5xx server errors',
+          default: 1
+        }
+      }
     }
   },
-  additionalProperties: false
+  allOf: [
+    {
+      if: {
+        properties: {
+          compliance: {
+            properties: {
+              objectLock: {
+                properties: {
+                  enabled: { const: true }
+                }
+              }
+            }
+          }
+        }
+      },
+      then: {
+        properties: {
+          versioning: {
+            const: true,
+            description: 'Versioning must be enabled when objectLock.enabled is true'
+          }
+        }
+      }
+    }
+  ]
 };
 
-/**
- * ConfigBuilder for S3BucketComponent component
- * 
- * Implements the 5-layer configuration precedence chain:
- * 1. Hardcoded Fallbacks (ultra-safe baseline)
- * 2. Platform Defaults (from platform config)
- * 3. Environment Defaults (from environment config) 
- * 4. Component Overrides (from service.yml)
- * 5. Policy Overrides (from governance policies)
- */
 export class S3BucketComponentConfigBuilder extends ConfigBuilder<S3BucketConfig> {
-  
-  /**
-   * Layer 1: Hardcoded Fallbacks
-   * Ultra-safe baseline configuration that works in any environment
-   */
+  constructor(builderContext: ConfigBuilderContext) {
+    super(builderContext, S3_BUCKET_CONFIG_SCHEMA);
+  }
+
   protected getHardcodedFallbacks(): Partial<S3BucketConfig> {
     return {
-      monitoring: {
-        enabled: true,
-        detailedMetrics: false
+      public: false,
+      website: {
+        enabled: false,
+        indexDocument: 'index.html',
+        errorDocument: 'error.html'
       },
-      tags: {}
-    };
-  }
-  
-  /**
-   * Layer 2: Compliance Framework Defaults
-   * Security and compliance-specific configurations
-   */
-  protected getComplianceFrameworkDefaults(): Partial<S3BucketConfig> {
-    const framework = this.context.complianceFramework;
-    
-    const baseCompliance: Partial<S3BucketConfig> = {
+      eventBridgeEnabled: false,
+      versioning: true,
+      encryption: {
+        type: 'AES256'
+      },
+      lifecycleRules: [],
+      security: {
+        blockPublicAccess: true,
+        requireSecureTransport: true,
+        requireMfaDelete: false,
+        denyDeleteActions: false,
+        tools: {
+          clamavScan: false
+        }
+      },
+      compliance: {
+        auditLogging: false,
+        auditBucketLifecycleRules: [
+          {
+            id: 'audit-retention',
+            enabled: true,
+            transitions: [
+              {
+                storageClass: 'GLACIER',
+                transitionAfter: 90
+              },
+              {
+                storageClass: 'DEEP_ARCHIVE',
+                transitionAfter: 365
+              }
+            ],
+            expiration: {
+              days: 365
+            }
+          }
+        ],
+        objectLock: {
+          enabled: false
+        }
+      },
       monitoring: {
-        enabled: true,
-        detailedMetrics: true
+        enabled: false,
+        clientErrorThreshold: 10,
+        serverErrorThreshold: 1
       }
     };
-    
-    if (framework === 'fedramp-moderate' || framework === 'fedramp-high') {
-      return {
-        ...baseCompliance,
-        monitoring: {
-          ...baseCompliance.monitoring,
-          detailedMetrics: true // Mandatory for FedRAMP
-        }
-      };
-    }
-    
-    return baseCompliance;
   }
-  
-  /**
-   * Get the JSON Schema for validation
-   */
-  public getSchema(): any {
-    return S3_BUCKET_CONFIG_SCHEMA;
+
+  protected getComplianceFrameworkDefaults(): Partial<S3BucketConfig> {
+    // Compliance defaults are delivered via the segregated /config/{framework}.yml files.
+    // The builder defers to those platform-managed values so that all deployments remain
+    // manifest-driven and auditable per the configuration standard.
+    return {};
   }
 }

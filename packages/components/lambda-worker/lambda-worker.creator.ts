@@ -11,7 +11,7 @@ import {
   ComponentContext, 
   IComponentCreator 
 } from '../../platform/contracts/component-interfaces';
-import { LambdaWorkerComponentComponent } from './lambda-worker.component';
+import { LambdaWorkerComponent } from './lambda-worker.component';
 import { LambdaWorkerConfig, LAMBDA_WORKER_CONFIG_SCHEMA } from './lambda-worker.builder';
 
 /**
@@ -72,8 +72,8 @@ export class LambdaWorkerComponentCreator implements IComponentCreator {
     scope: Construct, 
     spec: ComponentSpec, 
     context: ComponentContext
-  ): LambdaWorkerComponentComponent {
-    return new LambdaWorkerComponentComponent(scope, spec, context);
+  ): LambdaWorkerComponent {
+    return new LambdaWorkerComponent(scope, spec.name, context, spec);
   }
   
   /**
@@ -93,7 +93,9 @@ export class LambdaWorkerComponentCreator implements IComponentCreator {
       errors.push('Component name must start with a letter and contain only alphanumeric characters, hyphens, and underscores');
     }
     
-    // TODO: Add component-specific validations here
+    if (!config?.handler) {
+      errors.push('Lambda worker handler is required');
+    }
     
     // Environment-specific validations
     if (context.environment === 'prod') {
@@ -115,8 +117,7 @@ export class LambdaWorkerComponentCreator implements IComponentCreator {
    */
   public getProvidedCapabilities(): string[] {
     return [
-      'compute:lambda-worker',
-      'monitoring:lambda-worker'
+      'lambda:function'
     ];
   }
   
@@ -134,8 +135,8 @@ export class LambdaWorkerComponentCreator implements IComponentCreator {
    */
   public getConstructHandles(): string[] {
     return [
-      'main'
-      // TODO: Add additional construct handles if needed
+      'main',
+      'lambdaFunction'
     ];
   }
 }

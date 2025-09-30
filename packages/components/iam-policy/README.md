@@ -46,14 +46,39 @@ components:
 | `name` | string | No | Component name (auto-generated if not provided) |
 | `description` | string | No | Component description for documentation |
 | `monitoring` | object | No | Monitoring and observability configuration |
+| `logging` | object | No | CloudWatch log group configuration for policy activity |
+| `controls` | object | No | Compliance guardrail statements applied to the policy |
 | `tags` | object | No | Additional resource tags |
 
 ### Monitoring Configuration
 
 | Property | Type | Required | Description |
 |----------|------|----------|-------------|
-| `enabled` | boolean | No | Enable monitoring (default: true) |
+| `enabled` | boolean | No | Enable monitoring (default driven by platform config) |
 | `detailedMetrics` | boolean | No | Enable detailed CloudWatch metrics |
+| `usageAlarm.enabled` | boolean | No | Enable IAM policy usage alarm |
+| `usageAlarm.threshold` | number | No | Sum of policy invocations before alarming |
+| `usageAlarm.evaluationPeriods` | number | No | Consecutive periods exceeding the threshold |
+| `usageAlarm.periodMinutes` | number | No | Evaluation period length in minutes |
+| `usageAlarm.treatMissingData` | enum | No | Alarm behaviour for missing datapoints |
+
+### Logging Configuration
+
+| Property | Type | Required | Description |
+|----------|------|----------|-------------|
+| `logging.usage.enabled` | boolean | No | Emit usage log group (default per platform config) |
+| `logging.usage.retentionInDays` | number | No | Log retention in days |
+| `logging.usage.removalPolicy` | enum(`retain`,`destroy`) | No | Removal policy for the usage log group |
+| `logging.compliance.enabled` | boolean | No | Emit compliance log group (FedRAMP defaults) |
+| `logging.audit.enabled` | boolean | No | Emit long-term audit log group (FedRAMP High) |
+
+### Controls Configuration
+
+| Property | Type | Required | Description |
+|----------|------|----------|-------------|
+| `controls.denyInsecureTransport` | boolean | No | Adds a deny statement for insecure transport |
+| `controls.requireMfaForActions` | string[] | No | Sensitive actions that require MFA |
+| `controls.additionalStatements` | object[] | No | Additional policy statements injected by governance |
 
 ## Capabilities Provided
 

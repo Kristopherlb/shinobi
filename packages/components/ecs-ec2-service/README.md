@@ -1,111 +1,74 @@
-# EcsEc2ServiceComponent Component
+# ECS EC2 Service Component
 
-ECS EC2 Service Component with comprehensive security, monitoring, and compliance features.
+Configuration-driven ECS service that runs on EC2 capacity while following the platform monitoring, logging, and tagging standards. All behaviour is sourced from the shared `ConfigBuilder` precedence chain, so compliance-specific values belong in `config/<framework>.yml` rather than the component code.
 
-## Overview
+## Highlights
 
-The EcsEc2ServiceComponent component provides:
+- Creates an EC2-backed ECS service with Service Connect discovery
+- Supports custom placement constraints/strategies, autoscaling, and health checks
+- Centralised logging controls (retention + removal policy) with the base `mapLogRetentionDays` helper
+- Monitoring thresholds for CPU/memory alarms resolved from configuration files
+- Optional AWS Exec Command toggled through configuration
 
-- **Production-ready** ecs ec2 service component functionality
-- **Comprehensive compliance** (Commercial, FedRAMP Moderate/High)
-- **Integrated monitoring** and observability
-- **Security-first** configuration
-- **Platform integration** with other components
-
-### Category: compute
-
-### AWS Service: ECS
-
-This component manages ECS resources and provides a simplified, secure interface for common use cases.
-
-## Usage Example
-
-### Basic Configuration
+## Usage
 
 ```yaml
-service: my-service
-owner: platform-team
-complianceFramework: commercial
-
 components:
-  - name: my-ecs-ec2-service
+  - name: orders-ec2
     type: ecs-ec2-service
     config:
-      description: "Production ecs-ec2-service instance"
-      monitoring:
-        enabled: true
-        detailedMetrics: true
+      cluster: shared-ecs-cluster
+      image:
+        repository: 123456789012.dkr.ecr.us-east-1.amazonaws.com/orders
+        tag: 1.4.0
+      taskCpu: 512
+      taskMemory: 1024
+      port: 8080
+      serviceConnect:
+        portMappingName: api
+        namespace: internal.local
+      environment:
+        APP_ENV: production
+      autoScaling:
+        minCapacity: 2
+        maxCapacity: 6
+        targetCpuUtilization: 65
+      placementStrategies:
+        - type: spread
+          field: attribute:ecs.availability-zone
+      logging:
+        retentionInDays: 365
+        removalPolicy: retain
+      diagnostics:
+        enableExecuteCommand: true
 ```
 
-## Configuration Reference
+Platform defaults for Commercial, FedRAMP Moderate, and FedRAMP High live under `config/`. Override only the values you need in the manifest; the builder merges them with governance/policy layers automatically.
 
-### Root Configuration
+## Key Configuration Blocks
 
-| Property | Type | Required | Description |
-|----------|------|----------|-------------|
-| `name` | string | No | Component name (auto-generated if not provided) |
-| `description` | string | No | Component description for documentation |
-| `monitoring` | object | No | Monitoring and observability configuration |
-| `tags` | object | No | Additional resource tags |
+| Block | Description |
+| --- | --- |
+| `taskCpu`, `taskMemory`, `desiredCount` | Container sizing and baseline capacity |
+| `serviceConnect` | Port mapping name plus optional DNS/namespace overrides |
+| `placementConstraints` / `placementStrategies` | ECS EC2 placement tuning (memberOf, distinctInstance, spread, binpack, random) |
+| `logging` | `createLogGroup`, `retentionInDays`, `removalPolicy`, and optional `logGroupName` reuse |
+| `monitoring.alarms` | CPU/memory alarm enablement, thresholds, and evaluation periods |
+| `diagnostics` | Toggle AWS Exec Command support |
 
-### Monitoring Configuration
+## Capabilities
 
-| Property | Type | Required | Description |
-|----------|------|----------|-------------|
-| `enabled` | boolean | No | Enable monitoring (default: true) |
-| `detailedMetrics` | boolean | No | Enable detailed CloudWatch metrics |
+- `service:connect` – Service Connect metadata for consumer bindings
+- `otel:environment` – OpenTelemetry environment variables for downstream tasks
 
-## Capabilities Provided
+## Handles
 
-This component provides the following capabilities for binding with other components:
+- `service`, `taskDefinition`, `securityGroup`, `logGroup` (if created)
 
-- `compute:ecs-ec2-service` - Main ecs-ec2-service capability
-- `monitoring:ecs-ec2-service` - Monitoring capability
-
-## Construct Handles
-
-The following construct handles are available for use in `patches.ts`:
-
-- `main` - Main ecs-ec2-service construct
-
-## Compliance Frameworks
-
-### Commercial
-
-- Standard monitoring configuration
-- Basic resource tagging
-- Standard security settings
-
-### FedRAMP Moderate/High
-
-- Enhanced monitoring with detailed metrics
-- Comprehensive audit logging
-- Stricter security configurations
-- Extended compliance tagging
-
-## Best Practices
-
-1. **Always enable monitoring** in production environments
-2. **Use descriptive names** for better resource identification
-3. **Configure appropriate tags** for cost allocation and governance
-4. **Review compliance requirements** for your environment
-5. **Test configurations** in development before production deployment
-
-## Development
-
-### Running Tests
+## Tests
 
 ```bash
-# Run all tests for this component
-npm test -- --testPathPattern=ecs-ec2-service
-
-# Run only builder tests
-npm test -- --testPathPattern=ecs-ec2-service.builder
-
-# Run only synthesis tests
-npm test -- --testPathPattern=ecs-ec2-service.component.synthesis
+corepack pnpm exec jest --runTestsByPath \
+  packages/components/ecs-ec2-service/tests/ecs-ec2-service.builder.test.ts \
+  packages/components/ecs-ec2-service/tests/ecs-ec2-service.component.synthesis.test.ts
 ```
-
----
-
-*Generated by Component Completion Script*

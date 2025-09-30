@@ -4,7 +4,7 @@
  */
 
 // Component exports
-export { Route53HostedZoneComponentComponent } from './route53-hosted-zone.component';
+export { Route53HostedZoneComponent } from './route53-hosted-zone.component';
 
 // Configuration exports
 export { 

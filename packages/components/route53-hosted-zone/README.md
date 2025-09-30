@@ -1,111 +1,90 @@
-# Route53HostedZoneComponent Component
+# Route53 Hosted Zone Component
 
-Route53 Hosted Zone Component with comprehensive security, monitoring, and compliance features.
+Configuration-driven hosted zone creation following the shared ConfigBuilder
+contract. All compliance-specific defaults are sourced from
+`/config/<framework>.yml`; the component simply consumes the resolved
+configuration when synthesising public or private zones.
 
-## Overview
+## Features
 
-The Route53HostedZoneComponent component provides:
+- Public or private hosted zones with optional multi-VPC associations.
+- Query logging support (existing log group or on-the-fly creation with
+  configurable retention/removal).
+- Optional DNSSEC enablement.
+- CloudWatch alarms driven by configuration (query volume, health-check
+  failures).
+- Capability metadata exposes zone type, DNSSEC status, and name servers.
 
-- **Production-ready** route53 hosted zone component functionality
-- **Comprehensive compliance** (Commercial, FedRAMP Moderate/High)
-- **Integrated monitoring** and observability
-- **Security-first** configuration
-- **Platform integration** with other components
-
-### Category: networking
-
-### AWS Service: ROUTE53
-
-This component manages ROUTE53 resources and provides a simplified, secure interface for common use cases.
-
-## Usage Example
-
-### Basic Configuration
+## Usage
 
 ```yaml
-service: my-service
-owner: platform-team
-complianceFramework: commercial
-
 components:
-  - name: my-route53-hosted-zone
+  - name: app-public-zone
     type: route53-hosted-zone
     config:
-      description: "Production route53-hosted-zone instance"
+      zoneName: example.com
+      comment: "Primary public zone"
+      zoneType: public
+      queryLogging:
+        enabled: true
+        retentionDays: 180
+        removalPolicy: retain
       monitoring:
         enabled: true
-        detailedMetrics: true
+        alarms:
+          queryVolume:
+            enabled: true
+            threshold: 20000
 ```
 
-## Configuration Reference
+Private zones specify VPC associations:
 
-### Root Configuration
+```yaml
+  - name: internal-zone
+    type: route53-hosted-zone
+    config:
+      zoneName: corp.internal
+      zoneType: private
+      vpcAssociations:
+        - vpcId: vpc-0123456789abcdef0
+      dnssec:
+        enabled: true
+```
 
-| Property | Type | Required | Description |
-|----------|------|----------|-------------|
-| `name` | string | No | Component name (auto-generated if not provided) |
-| `description` | string | No | Component description for documentation |
-| `monitoring` | object | No | Monitoring and observability configuration |
-| `tags` | object | No | Additional resource tags |
+Any omitted property inherits the defaults for the active compliance framework.
 
-### Monitoring Configuration
+## Key Configuration Sections
 
-| Property | Type | Required | Description |
-|----------|------|----------|-------------|
-| `enabled` | boolean | No | Enable monitoring (default: true) |
-| `detailedMetrics` | boolean | No | Enable detailed CloudWatch metrics |
+| Path | Description |
+|------|-------------|
+| `zoneName` | Required domain name. Trailing dots are stripped automatically. |
+| `zoneType` | `public` (default) or `private`; private zones require at least one VPC association. |
+| `vpcAssociations[]` | VPC ID and optional region for private zones. Additional entries are added via `addVpc`. |
+| `queryLogging` | Enable/disable query logging; optionally supply existing log group ARN, otherwise a log group is created with the configured retention/removal policy. |
+| `dnssec` | Toggle DNSSEC enablement. |
+| `monitoring` | Enable alarms for query volume and health-check failures with configurable thresholds. |
+| `hardeningProfile` | Abstract profile surfaced through component capabilities. |
+| `removalPolicy` | `retain` (default) or `destroy`. |
 
-## Capabilities Provided
+## Capabilities
 
-This component provides the following capabilities for binding with other components:
+- `dns:hosted-zone` – Hosted zone ID, name, type, DNSSEC status, and name servers.
 
-- `networking:route53-hosted-zone` - Main route53-hosted-zone capability
-- `monitoring:route53-hosted-zone` - Monitoring capability
-
-## Construct Handles
-
-The following construct handles are available for use in `patches.ts`:
-
-- `main` - Main route53-hosted-zone construct
-
-## Compliance Frameworks
-
-### Commercial
-
-- Standard monitoring configuration
-- Basic resource tagging
-- Standard security settings
-
-### FedRAMP Moderate/High
-
-- Enhanced monitoring with detailed metrics
-- Comprehensive audit logging
-- Stricter security configurations
-- Extended compliance tagging
-
-## Best Practices
-
-1. **Always enable monitoring** in production environments
-2. **Use descriptive names** for better resource identification
-3. **Configure appropriate tags** for cost allocation and governance
-4. **Review compliance requirements** for your environment
-5. **Test configurations** in development before production deployment
-
-## Development
-
-### Running Tests
+## Testing
 
 ```bash
-# Run all tests for this component
-npm test -- --testPathPattern=route53-hosted-zone
-
-# Run only builder tests
-npm test -- --testPathPattern=route53-hosted-zone.builder
-
-# Run only synthesis tests
-npm test -- --testPathPattern=route53-hosted-zone.component.synthesis
+corepack pnpm exec jest --runTestsByPath \
+  packages/components/route53-hosted-zone/tests/route53-hosted-zone.builder.test.ts \
+  packages/components/route53-hosted-zone/tests/route53-hosted-zone.component.synthesis.test.ts
 ```
 
----
+## Notes
 
-*Generated by Component Completion Script*
+- The component does not inspect `context.complianceFramework`; ensure the
+  `/config/<framework>.yml` files encode the required posture (DNSSEC, logging,
+  alarms, etc.).
+- When `zoneType` is `private`, provide the VPC IDs in the configuration so the
+  builder can associate them. |
+- Query logging requires the `route53resolver:AssociateResolverQueryLogConfig`
+  permissions when deploying; ensure your execution role has the appropriate
+  rights if you enable logging.

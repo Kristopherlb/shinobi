@@ -38,12 +38,34 @@ export interface ComponentCapabilities {
 }
 
 /**
+ * Feature flag provider reference configuration captured from manifests/config builders.
+ */
+export interface FeatureFlagProviderReference {
+  name: string;
+  clientName?: string;
+  module?: string;
+  exportName?: string;
+  factory?: string;
+  options?: Record<string, any>;
+}
+
+/**
+ * Feature flag runtime configuration made available to components via context.
+ */
+export interface FeatureFlagRuntimeConfiguration {
+  provider?: FeatureFlagProviderReference;
+  defaultEvaluationContext?: Record<string, any>;
+  targetingKey?: string;
+  clientName?: string;
+}
+
+/**
  * Component context interface with strong CDK typing
  */
 export interface ComponentContext {
   serviceName: string;
   environment: string;
-  complianceFramework: 'commercial' | 'fedramp-moderate' | 'fedramp-high';
+  complianceFramework: string;
   scope: Construct; // CDK Construct scope - strongly typed
   vpc?: IVpc; // VPC construct for components that need it - strongly typed
   region?: string;
@@ -57,8 +79,30 @@ export interface ComponentContext {
     enableTracing?: boolean;
     enableMetrics?: boolean;
     enableLogs?: boolean;
+    tracesSamplingRate?: number;
+    metricsIntervalSeconds?: number;
+    logsRetentionDays?: number;
+    enableXRayTracing?: boolean;
+    enablePerformanceInsights?: boolean;
+    customAttributes?: Record<string, string>;
   };
   tags?: Record<string, string>;
+  governance?: {
+    backupRequired?: boolean;
+    monitoringLevel?: string;
+  };
+  logging?: {
+    classification?: string;
+    auditRequired?: boolean;
+    retentionDays?: number;
+  };
+  security?: {
+    sensitiveKeys?: string[];
+    sensitivePatterns?: string[];
+    maskValue?: string;
+    maxDepth?: number;
+  };
+  featureFlags?: FeatureFlagRuntimeConfiguration;
 }
 
 

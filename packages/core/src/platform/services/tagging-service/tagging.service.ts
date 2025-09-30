@@ -7,6 +7,7 @@
 
 import * as cdk from 'aws-cdk-lib';
 import { IConstruct } from 'constructs';
+import { GovernanceMetadata } from '../governance';
 
 /**
  * Context information needed for building standard tags
@@ -17,9 +18,12 @@ export interface TaggingContext {
   componentName: string;
   componentType: string;
   environment: string;
-  complianceFramework: string;
   region?: string;
   accountId?: string;
+  complianceFramework?: string;
+  tags?: Record<string, string>;
+  governance?: GovernanceMetadata;
+  standardTagOverrides?: Record<string, string>;
 }
 
 /**
@@ -41,42 +45,117 @@ export class TaggingService implements ITaggingService {
   public buildStandardTags(context: TaggingContext): Record<string, string> {
     const now = new Date();
     const deploymentId = `deploy-${now.getFullYear()}${(now.getMonth() + 1).toString().padStart(2, '0')}${now.getDate().toString().padStart(2, '0')}-${now.getHours().toString().padStart(2, '0')}${now.getMinutes().toString().padStart(2, '0')}${now.getSeconds().toString().padStart(2, '0')}`;
-    
+
+    const overrides = context.standardTagOverrides ?? {};
+    const labels = context.serviceLabels ?? {};
+    const tags = context.tags ?? {};
+    const governance = context.governance;
+
+    const complianceFrameworkValue = this.resolveString(
+      overrides['compliance-framework'],
+      labels['compliance-framework'],
+      labels['complianceFramework'],
+      tags['compliance-framework'],
+      tags['complianceFramework'],
+      context.complianceFramework,
+      'none'
+    );
+
+    const dataClassification = governance?.dataClassification
+      ?? this.resolveString(
+        overrides['data-classification'],
+        labels['data-classification'],
+        labels['dataClassification'],
+        tags['data-classification'],
+        tags['dataClassification'],
+        'internal'
+      );
+
+    const backupRequired = this.resolveBooleanString(
+      overrides['backup-required'],
+      governance ? (governance.backupRequired ? 'true' : 'false') : undefined,
+      tags['backup-required'],
+      true
+    );
+
+    const monitoringLevel = this.resolveString(
+      overrides['monitoring-level'],
+      governance?.monitoringLevel,
+      labels['monitoring-level'],
+      labels['monitoringLevel'],
+      tags['monitoring-level'],
+      tags['monitoringLevel'],
+      'standard'
+    );
+
+    const retentionPeriod = this.resolveString(
+      overrides['retention-period'],
+      governance ? `${governance.logRetentionDays}-days` : undefined,
+      labels['retention-period'],
+      labels['retentionPeriod'],
+      tags['retention-period'],
+      tags['retentionPeriod'],
+      '1-year'
+    );
+
+    const costCenter = this.resolveString(
+      overrides['cost-center'],
+      labels['cost-center'],
+      labels['costCenter'],
+      tags['cost-center'],
+      tags['costCenter'],
+      'platform'
+    );
+
+    const owner = this.resolveString(
+      overrides['owner'],
+      labels['owner'],
+      tags['owner'],
+      'platform-engineering'
+    );
+
+    const project = this.resolveString(
+      overrides['project'],
+      labels['project'],
+      tags['project'],
+      context.serviceName
+    );
+
     return {
       // Core Service Tags
       'service-name': context.serviceName,
       'service-version': context.serviceLabels?.version || '1.0.0',
       'component-name': context.componentName,
       'component-type': context.componentType,
-      
+
       // Environment Tags
       'environment': context.environment,
       'deployment-id': deploymentId,
-      'compliance-framework': context.complianceFramework,
-      
+
       // AWS Tags
       'cloud-provider': 'aws',
       'cloud-region': context.region || 'us-east-1',
       'cloud-account': context.accountId || 'unknown',
-      
+
       // Platform Tags
       'platform': 'cdk-lib',
       'platform-version': '1.0.0',
       'managed-by': 'platform-engineering',
-      
+
       // Cost Management Tags
-      'cost-center': 'platform',
-      'project': context.serviceName,
-      'owner': 'platform-engineering',
-      
+      'cost-center': costCenter,
+      'project': project,
+      'owner': owner,
+
       // Security Tags
-      'data-classification': this.getDataClassification(context.complianceFramework),
-      'encryption-required': this.getEncryptionRequired(context.complianceFramework),
-      
+      'data-classification': dataClassification,
+      'encryption-required': 'true',
+      'compliance-framework': complianceFrameworkValue,
+
       // Operational Tags
-      'backup-required': this.getBackupRequired(context.complianceFramework),
-      'monitoring-level': this.getMonitoringLevel(context.complianceFramework),
-      'retention-period': this.getRetentionPeriod(context.complianceFramework)
+      'backup-required': backupRequired,
+      'monitoring-level': monitoringLevel,
+      'retention-period': retentionPeriod
     };
   }
 
@@ -85,12 +164,12 @@ export class TaggingService implements ITaggingService {
    */
   public applyStandardTags(resource: IConstruct, context: TaggingContext, additionalTags?: Record<string, string>): void {
     const standardTags = this.buildStandardTags(context);
-    
+
     // Apply all standard tags
     Object.entries(standardTags).forEach(([key, value]) => {
       cdk.Tags.of(resource).add(key, value);
     });
-    
+
     // Apply any additional component-specific tags
     if (additionalTags) {
       Object.entries(additionalTags).forEach(([key, value]) => {
@@ -99,77 +178,38 @@ export class TaggingService implements ITaggingService {
     }
   }
 
-  /**
-   * Get data classification based on compliance framework
-   */
-  private getDataClassification(framework: string): string {
-    switch (framework) {
-      case 'fedramp-high':
-        return 'confidential';
-      case 'fedramp-moderate':
-        return 'internal';
-      case 'commercial':
-      default:
-        return 'public';
+  private resolveString(...values: Array<string | undefined>): string {
+    for (const value of values) {
+      if (value !== undefined && value !== null) {
+        const trimmed = value.toString().trim();
+        if (trimmed.length > 0) {
+          return trimmed;
+        }
+      }
     }
+    return '';
   }
 
-  /**
-   * Get encryption requirement based on compliance framework
-   */
-  private getEncryptionRequired(framework: string): string {
-    switch (framework) {
-      case 'fedramp-high':
-      case 'fedramp-moderate':
-        return 'required';
-      case 'commercial':
-      default:
-        return 'recommended';
-    }
-  }
+  private resolveBooleanString(...values: Array<string | boolean | undefined>): string {
+    for (const value of values) {
+      if (value === undefined || value === null) {
+        continue;
+      }
 
-  /**
-   * Get backup requirement based on compliance framework
-   */
-  private getBackupRequired(framework: string): string {
-    switch (framework) {
-      case 'fedramp-high':
-      case 'fedramp-moderate':
-        return 'required';
-      case 'commercial':
-      default:
-        return 'recommended';
-    }
-  }
+      if (typeof value === 'boolean') {
+        return value ? 'true' : 'false';
+      }
 
-  /**
-   * Get monitoring level based on compliance framework
-   */
-  private getMonitoringLevel(framework: string): string {
-    switch (framework) {
-      case 'fedramp-high':
-        return 'enhanced';
-      case 'fedramp-moderate':
-        return 'standard';
-      case 'commercial':
-      default:
-        return 'basic';
+      const normalized = value.toString().trim().toLowerCase();
+      if (['true', '1', 'yes', 'enabled', 'required'].includes(normalized)) {
+        return 'true';
+      }
+      if (['false', '0', 'no', 'disabled', 'optional', 'recommended'].includes(normalized)) {
+        return 'false';
+      }
     }
-  }
 
-  /**
-   * Get retention period based on compliance framework
-   */
-  private getRetentionPeriod(framework: string): string {
-    switch (framework) {
-      case 'fedramp-high':
-        return '7-years';
-      case 'fedramp-moderate':
-        return '3-years';
-      case 'commercial':
-      default:
-        return '1-year';
-    }
+    return 'true';
   }
 }
 

@@ -35,20 +35,42 @@ defaults:
     cidr: 10.0.0.0/16
     maxAzs: 2
     natGateways: 1
-    flowLogsEnabled: true
-    flowLogRetentionDays: 30
+    flowLogs:
+      enabled: true
+      retentionInDays: 30
+      removalPolicy: destroy
+    subnets:
+      public:
+        cidrMask: 24
+        name: Public
+      private:
+        cidrMask: 24
+        name: Private
+      database:
+        cidrMask: 28
+        name: Database
     vpcEndpoints:
       s3: true
       dynamodb: true
       secretsManager: false
       kms: false
-    subnets:
-      public:
-        cidrMask: 24
-      private:
-        cidrMask: 24
-      database:
-        cidrMask: 28
+      lambda: false
+    dns:
+      enableDnsHostnames: true
+      enableDnsSupport: true
+    monitoring:
+      enabled: true
+      detailedMetrics: false
+      alarms:
+        natGatewayPacketDropThreshold: 1000
+        vpcFlowLogDeliveryFailures: 10
+    security:
+      createDefaultSecurityGroups: true
+      complianceNacls:
+        enabled: false
+        mode: standard
+      restrictDefaultSecurityGroup: false
+    tags: {}
 
   api-gateway-http:
     cors:
@@ -78,3 +100,805 @@ defaults:
       enableWaf: false
       enableApiKey: false
       requireAuthorization: true
+
+  auto-scaling-group:
+    launchTemplate:
+      instanceType: t3.micro
+      detailedMonitoring: false
+      requireImdsv2: false
+      installAgents:
+        ssm: false
+        cloudwatch: false
+        stigHardening: false
+    autoScaling:
+      minCapacity: 1
+      maxCapacity: 3
+      desiredCapacity: 2
+    storage:
+      rootVolumeSize: 20
+      rootVolumeType: gp3
+      encrypted: false
+
+      kms:
+        useCustomerManagedKey: false
+        enableKeyRotation: false
+    healthCheck:
+      type: EC2
+      gracePeriod: 300
+    terminationPolicies:
+      - Default
+    vpc:
+      subnetType: PUBLIC
+      allowAllOutbound: true
+    security:
+      managedPolicies: []
+      attachLogDeliveryPolicy: false
+      stigComplianceTag: false
+    monitoring:
+      enabled: true
+      alarms:
+        cpuHigh:
+          enabled: true
+          threshold: 80
+          evaluationPeriods: 2
+          periodMinutes: 5
+          comparisonOperator: GT
+          treatMissingData: not-breaching
+        inService:
+          enabled: true
+          threshold: 1
+          evaluationPeriods: 2
+          periodMinutes: 1
+          comparisonOperator: LT
+          treatMissingData: breaching
+    tags: {}
+
+  glue-job:
+    glueVersion: '4.0'
+    jobType: glueetl
+    command:
+      pythonVersion: '3'
+      scriptArguments: {}
+    connections: []
+    maxConcurrentRuns: 1
+    maxRetries: 0
+    timeout: 2880
+    workerConfiguration:
+      workerType: G.1X
+      numberOfWorkers: 10
+    defaultArguments: {}
+    nonOverridableArguments: {}
+    security:
+      encryption:
+        enabled: false
+        createCustomerManagedKey: false
+        removalPolicy: destroy
+    logging:
+      groups:
+        - id: security
+          enabled: true
+          logGroupSuffix: security
+          retentionDays: 90
+          removalPolicy: destroy
+    monitoring:
+      enabled: false
+      jobFailure:
+        threshold: 1
+        evaluationPeriods: 1
+        periodMinutes: 5
+      jobDuration:
+        thresholdMs: 3600000
+        evaluationPeriods: 1
+        periodMinutes: 15
+    tags: {}
+
+  elasticache-redis:
+    engineVersion: '7.0'
+    nodeType: cache.t4g.micro
+    numCacheNodes: 1
+    port: 6379
+    vpc:
+      subnetIds: []
+    security:
+      create: true
+      securityGroupIds: []
+      allowedCidrs:
+        - 10.0.0.0/8
+    parameterGroup:
+      family: redis7
+      parameters: {}
+    encryption:
+      atRest: false
+      inTransit: false
+      authToken:
+        enabled: false
+        removalPolicy: destroy
+    backup:
+      enabled: false
+      retentionDays: 1
+      window: '03:00-05:00'
+    maintenance:
+      window: 'sun:03:00-sun:04:00'
+    multiAz:
+      enabled: false
+      automaticFailover: false
+    monitoring:
+      enabled: false
+      logDelivery: []
+      alarms:
+        cpuUtilization:
+          enabled: false
+          threshold: 80
+          evaluationPeriods: 2
+          periodMinutes: 5
+        cacheMisses:
+          enabled: false
+          threshold: 1000
+          evaluationPeriods: 2
+          periodMinutes: 5
+        evictions:
+          enabled: false
+          threshold: 10
+          evaluationPeriods: 2
+          periodMinutes: 5
+        connections:
+          enabled: false
+          threshold: 500
+          evaluationPeriods: 2
+          periodMinutes: 5
+    tags: {}
+
+  certificate-manager:
+    subjectAlternativeNames: []
+    validation:
+      method: DNS
+    transparencyLoggingEnabled: true
+    keyAlgorithm: RSA_2048
+    logging:
+      groups:
+        - id: lifecycle
+          enabled: true
+          retentionInDays: 180
+          removalPolicy: destroy
+    monitoring:
+      enabled: false
+      expiration:
+        enabled: false
+      status:
+        enabled: false
+    tags: {}
+
+  cognito-user-pool:
+    signIn:
+      username: true
+      email: true
+      phone: false
+      preferredUsername: false
+    standardAttributes:
+      email:
+        required: true
+        mutable: false
+      givenName:
+        required: false
+        mutable: true
+      familyName:
+        required: false
+        mutable: true
+    passwordPolicy:
+      minLength: 12
+      requireLowercase: true
+      requireUppercase: true
+      requireDigits: true
+      requireSymbols: true
+      tempPasswordValidity: 7
+    mfa:
+      mode: optional
+      enableSms: true
+      enableTotp: true
+      smsMessage: "Your verification code is {####}"
+    accountRecovery:
+      email: true
+      phone: true
+    deviceTracking:
+      challengeRequiredOnNewDevice: false
+      deviceOnlyRememberedOnUserPrompt: true
+    advancedSecurityMode: audit
+    featurePlan: plus
+    deletionProtection: false
+    removalPolicy: retain
+    domain: {}
+    appClients: []
+    monitoring:
+      enabled: true
+      signInSuccess:
+        enabled: true
+        threshold: 1
+        evaluationPeriods: 3
+        periodMinutes: 5
+      signInThrottle:
+        enabled: true
+        threshold: 20
+        evaluationPeriods: 2
+        periodMinutes: 5
+      signUpSuccess:
+        enabled: true
+        threshold: 1
+        evaluationPeriods: 3
+        periodMinutes: 5
+      signUpThrottle:
+        enabled: true
+        threshold: 10
+        evaluationPeriods: 2
+        periodMinutes: 5
+      riskHigh:
+        enabled: false
+    tags:
+      compliance-tier: commercial
+
+  static-website:
+    bucket:
+      indexDocument: index.html
+      errorDocument: error.html
+      versioning: false
+      accessLogging: false
+      removalPolicy: destroy
+    distribution:
+      enabled: true
+      enableLogging: false
+      logFilePrefix: cloudfront/
+      priceClass: price-class-100
+    deployment:
+      enabled: false
+      retainOnDelete: false
+    security:
+      blockPublicAccess: true
+      encryption: true
+      enforceHTTPS: true
+    logging:
+      retentionDays: 90
+    tags:
+      compliance-tier: commercial
+
+  api-gateway-rest:
+    disableExecuteApiEndpoint: false
+    throttling:
+      rateLimit: 1000
+      burstLimit: 2000
+    logging:
+      accessLoggingEnabled: true
+      retentionInDays: 90
+      executionLoggingLevel: INFO
+      dataTraceEnabled: false
+      metricsEnabled: true
+    monitoring:
+      detailedMetrics: true
+      tracingEnabled: true
+      thresholds:
+        errorRate4xxPercent: 5
+        errorRate5xxPercent: 1
+        highLatencyMs: 2000
+        lowThroughput: 10
+    tracing:
+      xrayEnabled: true
+
+  s3-bucket:
+    public: false
+    versioning: true
+    eventBridgeEnabled: false
+    encryption:
+      type: AES256
+    security:
+      blockPublicAccess: true
+      requireSecureTransport: true
+      requireMfaDelete: false
+      denyDeleteActions: false
+      tools:
+        clamavScan: false
+    lifecycleRules: []
+    compliance:
+      auditLogging: false
+      objectLock:
+        enabled: false
+    monitoring:
+      enabled: false
+      clientErrorThreshold: 10
+      serverErrorThreshold: 1
+
+  secrets-manager:
+    automaticRotation:
+      enabled: false
+      rotationLambda:
+        createFunction: false
+        enableTracing: false
+      schedule:
+        automaticallyAfterDays: 365
+    encryption:
+      createCustomerManagedKey: false
+      enableKeyRotation: false
+    recovery:
+      deletionProtection: false
+      recoveryWindowInDays: 30
+    replicas: []
+    monitoring:
+      enabled: false
+      rotationFailureThreshold: 1
+      unusualAccessThresholdMs: 5000
+    accessPolicies:
+      denyInsecureTransport: true
+      restrictToVpce: false
+      allowedVpceIds: []
+      requireTemporaryCredentials: false
+
+  application-load-balancer:
+    scheme: internet-facing
+    ipAddressType: ipv4
+    vpc:
+      subnetType: public
+      subnetIds: []
+    securityGroups:
+      create: true
+      securityGroupIds: []
+      ingress:
+        - port: 80
+          protocol: tcp
+          cidr: 0.0.0.0/0
+          description: Allow HTTP from internet
+        - port: 443
+          protocol: tcp
+          cidr: 0.0.0.0/0
+          description: Allow HTTPS from internet
+    accessLogs:
+      enabled: false
+      prefix: alb/
+      retentionDays: 30
+      removalPolicy: destroy
+    listeners:
+      - port: 80
+        protocol: HTTP
+    targetGroups: []
+    deletionProtection: false
+    idleTimeoutSeconds: 60
+    deploymentStrategy:
+      type: single
+    monitoring:
+      enabled: false
+      alarms:
+        http5xx:
+          enabled: false
+          threshold: 10
+        unhealthyHosts:
+          enabled: false
+          threshold: 1
+        connectionErrors:
+          enabled: false
+          threshold: 5
+        rejectedConnections:
+          enabled: false
+          threshold: 1
+    hardeningProfile: baseline
+    tags: {}
+
+  ecs-fargate-service:
+    cpu: 256
+    memory: 512
+    desiredCount: 1
+    autoScaling:
+      minCapacity: 1
+      maxCapacity: 3
+      targetCpuUtilization: 70
+      targetMemoryUtilization: 80
+    logging:
+      createLogGroup: true
+      streamPrefix: service
+      retentionInDays: 30
+      removalPolicy: destroy
+    monitoring:
+      enabled: true
+      alarms:
+        cpuUtilization:
+          enabled: true
+          threshold: 85
+          evaluationPeriods: 3
+          periodMinutes: 5
+        memoryUtilization:
+          enabled: true
+          threshold: 90
+          evaluationPeriods: 3
+          periodMinutes: 5
+        runningTaskCount:
+          enabled: true
+          threshold: 1
+          comparisonOperator: lt
+          evaluationPeriods: 2
+          periodMinutes: 1
+    diagnostics:
+      enableExecuteCommand: false
+    deploymentStrategy:
+      type: rolling
+
+  ecs-ec2-service:
+    taskCpu: 256
+    taskMemory: 512
+    port: 8080
+    desiredCount: 1
+    logging:
+      createLogGroup: true
+      streamPrefix: service
+      retentionInDays: 30
+      removalPolicy: destroy
+    monitoring:
+      enabled: true
+      alarms:
+        cpu:
+          enabled: true
+          threshold: 80
+          evaluationPeriods: 3
+        memory:
+          enabled: true
+          threshold: 85
+          evaluationPeriods: 3
+    diagnostics:
+      enableExecuteCommand: false
+
+  opensearch-domain:
+    version: OpenSearch_2.7
+    cluster:
+      instanceType: t3.small.search
+      instanceCount: 1
+      zoneAwarenessEnabled: false
+      availabilityZoneCount: 2
+      dedicatedMasterEnabled: false
+      warmEnabled: false
+    ebs:
+      enabled: true
+      volumeType: gp3
+      volumeSize: 50
+    vpc:
+      enabled: false
+      vpcId:
+      subnetIds: []
+      securityGroupIds: []
+      createSecurityGroup: false
+      ingressRules:
+        - port: 443
+          protocol: tcp
+          cidr: 0.0.0.0/0
+          description: HTTPS access to OpenSearch
+        - port: 9200
+          protocol: tcp
+          cidr: 0.0.0.0/0
+          description: OpenSearch API access
+    encryption:
+      atRest:
+        enabled: true
+      nodeToNode: true
+    domainEndpoint:
+      enforceHttps: true
+      tlsSecurityPolicy: Policy-Min-TLS-1-2-2019-07
+    advancedSecurity:
+      enabled: false
+      internalUserDatabaseEnabled: false
+    logging:
+      slowSearch:
+        enabled: false
+        retentionInDays: 90
+        removalPolicy: destroy
+      slowIndex:
+        enabled: false
+        retentionInDays: 90
+        removalPolicy: destroy
+      application:
+        enabled: true
+        retentionInDays: 90
+        removalPolicy: destroy
+      audit:
+        enabled: false
+        retentionInDays: 180
+        removalPolicy: destroy
+    monitoring:
+      enabled: false
+      alarms:
+        clusterStatusRed:
+          enabled: false
+        clusterStatusYellow:
+          enabled: false
+        jvmMemoryPressure:
+          enabled: false
+          threshold: 85
+        freeStorageSpace:
+          enabled: false
+          threshold: 10
+          comparisonOperator: lt
+          statistic: Minimum
+    snapshot:
+      automatedSnapshotStartHour: 0
+    maintenance:
+      autoTune:
+        enabled: false
+        desiredState: DISABLED
+      offPeakWindowEnabled: false
+    accessPolicies:
+      statements: []
+    advancedOptions: {}
+    hardeningProfile: baseline
+    removalPolicy: destroy
+    tags: {}
+
+  efs-filesystem:
+    fileSystemName:
+    performanceMode: generalPurpose
+    throughputMode: bursting
+    provisionedThroughputMibps:
+    encryption:
+      enabled: true
+      encryptInTransit: false
+      kmsKeyArn:
+      customerManagedKey:
+        create: false
+        enableRotation: true
+    vpc:
+      enabled: false
+      vpcId:
+      subnetIds: []
+      securityGroup:
+        create: false
+        securityGroupId:
+        ingressRules:
+          - port: 2049
+            protocol: tcp
+            cidr: 0.0.0.0/0
+            description: NFS access
+    lifecycle:
+      transitionToIA: AFTER_30_DAYS
+      transitionToPrimary:
+    backups:
+      enabled: false
+    logging:
+      access:
+        enabled: false
+        retentionInDays: 90
+        removalPolicy: destroy
+      audit:
+        enabled: false
+        retentionInDays: 365
+        removalPolicy: retain
+    monitoring:
+      enabled: false
+      alarms:
+        storageUtilization:
+          enabled: false
+          threshold: 1099511627776
+        clientConnections:
+          enabled: false
+          threshold: 1000
+        burstCreditBalance:
+          enabled: false
+          threshold: 128
+          comparisonOperator: lt
+          statistic: Minimum
+    filesystemPolicy:
+    removalPolicy: destroy
+    hardeningProfile: baseline
+    tags: {}
+
+  lambda-worker:
+    runtime: nodejs20.x
+    architecture: x86_64
+    memorySize: 256
+    timeoutSeconds: 300
+    codePath: ./src
+    environment: {}
+    reservedConcurrency:
+    deadLetterQueue:
+      enabled: false
+      maxReceiveCount: 3
+    eventSources: []
+    vpc:
+      enabled: false
+      vpcId:
+      subnetIds: []
+      securityGroupIds: []
+    kmsKeyArn:
+    logging:
+      logRetentionDays: 30
+      logFormat: JSON
+      systemLogLevel: INFO
+      applicationLogLevel: INFO
+    tracing:
+      mode: PassThrough
+    observability:
+      otelEnabled: false
+      otelLayerArn:
+      otelResourceAttributes: {}
+    securityTools:
+      falco: false
+    monitoring:
+      enabled: false
+      alarms:
+        errors:
+          enabled: false
+          threshold: 1
+        throttles:
+          enabled: false
+          threshold: 1
+        duration:
+          enabled: false
+          threshold: 60000
+          statistic: Average
+    hardeningProfile: baseline
+    removalPolicy: retain
+    tags: {}
+
+  route53-hosted-zone:
+    zoneType: public
+    vpcAssociations: []
+    queryLogging:
+      enabled: false
+      retentionDays: 90
+      removalPolicy: destroy
+    dnssec:
+      enabled: false
+    monitoring:
+      enabled: false
+      alarms:
+        queryVolume:
+          enabled: false
+          threshold: 10000
+        healthCheckFailures:
+          enabled: false
+          threshold: 10
+    hardeningProfile: baseline
+    removalPolicy: retain
+    tags: {}
+
+  iam-policy:
+    controls:
+      denyInsecureTransport: false
+      requireMfaForActions: []
+      additionalStatements: []
+    logging:
+      usage:
+        enabled: true
+        retentionInDays: 90
+        removalPolicy: destroy
+        tags:
+          log-type: policy-usage
+          retention: 90-days
+    monitoring:
+      enabled: false
+      detailedMetrics: false
+      usageAlarm:
+        enabled: false
+
+  cloudfront-distribution:
+    origin:
+      type: s3
+    defaultBehavior:
+      viewerProtocolPolicy: allow-all
+      allowedMethods: ["GET", "HEAD"]
+      cachedMethods: ["GET", "HEAD"]
+      compress: true
+    additionalBehaviors: []
+    priceClass: PriceClass_100
+    geoRestriction:
+      type: none
+      countries: []
+    logging:
+      enabled: false
+      includeCookies: false
+    monitoring:
+      enabled: false
+      alarms:
+        error4xx:
+          enabled: false
+        error5xx:
+          enabled: false
+        originLatencyMs:
+          enabled: false
+    hardeningProfile: baseline
+
+  kinesis-stream:
+    streamMode: provisioned
+    shardCount: 1
+    retentionHours: 24
+    encryption:
+      type: none
+    monitoring:
+      enabled: false
+      enhancedMetrics: false
+      alarms:
+        iteratorAgeMs:
+          enabled: false
+        readProvisionedExceeded:
+          enabled: false
+        writeProvisionedExceeded:
+          enabled: false
+    hardeningProfile: baseline
+
+  dynamodb-table:
+    partitionKey:
+      name: id
+      type: string
+    billingMode: pay-per-request
+    tableClass: standard
+    pointInTimeRecovery: false
+    timeToLive:
+      enabled: false
+    stream:
+      enabled: false
+      viewType: new-and-old-images
+    globalSecondaryIndexes: []
+    localSecondaryIndexes: []
+    encryption:
+      type: aws-managed
+    backup:
+      enabled: false
+      retentionDays: 7
+    monitoring:
+      enabled: false
+      alarms:
+        readThrottle:
+          enabled: false
+        writeThrottle:
+          enabled: false
+        systemErrors:
+          enabled: false
+    hardeningProfile: baseline
+
+  rds-postgres:
+    instance:
+      engineVersion: '15.4'
+      instanceType: t3.micro
+      allocatedStorage: 20
+      multiAz: false
+      deletionProtection: false
+      publiclyAccessible: false
+      removalPolicy: destroy
+    encryption:
+      enabled: false
+      customerManagedKey:
+        create: false
+        enableRotation: false
+    backup:
+      retentionDays: 7
+      copyTagsToSnapshots: true
+    monitoring:
+      enhancedMonitoring:
+        enabled: false
+        intervalSeconds: 60
+      performanceInsights:
+        enabled: false
+        retentionDays: 7
+        useCustomerManagedKey: false
+      alarms:
+        cpuUtilization:
+          enabled: false
+        freeStorageSpaceBytes:
+          enabled: false
+        databaseConnections:
+          enabled: false
+    logging:
+      database:
+        enabled: false
+        retentionInDays: 90
+        removalPolicy: destroy
+      audit:
+        enabled: false
+        retentionInDays: 365
+        removalPolicy: retain
+    rotation:
+      enabled: false
+      mode: single-user
+      scheduleInDays: 30
+    security:
+      iamAuthentication: false
+      enforceSsl: true
+    networking:
+      useDefaultVpc: true
+      ingressCidrs:
+        - 10.0.0.0/16
+      port: 5432
+    observability:
+      logExports:
+        - postgresql
+    hardeningProfile: baseline

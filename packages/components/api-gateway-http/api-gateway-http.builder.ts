@@ -5,7 +5,7 @@
  * Provides 5-layer configuration precedence chain and compliance-aware defaults.
  */
 
-import { ConfigBuilder, ConfigBuilderContext, ComponentContext, ComponentSpec } from '@shinobi/core';
+import { ConfigBuilder, ConfigBuilderContext } from '@shinobi/core';
 import configSchema from './Config.schema.json';
 
 /**
@@ -142,6 +142,8 @@ export interface ApiGatewayHttpConfig {
     logGroupName?: string;
     /** Log retention in days */
     retentionInDays?: number;
+    /** Retain log group on stack deletion */
+    retainOnDelete?: boolean;
     /** Log format */
     format?: string;
     /** Include execution data */
@@ -307,19 +309,8 @@ export const API_GATEWAY_HTTP_CONFIG_SCHEMA = configSchema;
  * 5. Policy Overrides (from governance policies)
  */
 export class ApiGatewayHttpConfigBuilder extends ConfigBuilder<ApiGatewayHttpConfig> {
-  protected context: ComponentContext;
-  protected spec: ComponentSpec;
-
-  constructor(context: ComponentContext, spec: ComponentSpec) {
-    if (!context) {
-      throw new Error('ComponentContext is required');
-    }
-    if (!spec) {
-      throw new Error('ComponentSpec is required');
-    }
-    super({ context, spec } as ConfigBuilderContext, API_GATEWAY_HTTP_CONFIG_SCHEMA as any);
-    this.context = context;
-    this.spec = spec;
+  constructor(builderContext: ConfigBuilderContext) {
+    super(builderContext, API_GATEWAY_HTTP_CONFIG_SCHEMA as any);
   }
 
   /**
@@ -328,49 +319,8 @@ export class ApiGatewayHttpConfigBuilder extends ConfigBuilder<ApiGatewayHttpCon
    * configuration merging logic. We only need to implement the abstract methods.
    */
   public buildSync(): ApiGatewayHttpConfig {
-    const config = super.buildSync() as ApiGatewayHttpConfig;
-
-    // Validate and sanitize throttling values
-    if (config.throttling) {
-      if (!config.throttling.rateLimit || config.throttling.rateLimit <= 0) {
-        config.throttling.rateLimit = 50; // Default safe value
-      }
-      if (!config.throttling.burstLimit || config.throttling.burstLimit <= 0) {
-        config.throttling.burstLimit = 100; // Default safe value
-      }
-    }
-
-    // Ensure default stage configuration exists
-    config.defaultStage = {
-      stageName: config.defaultStage?.stageName ?? this.context.environment ?? '$default',
-      autoDeploy: config.defaultStage?.autoDeploy ?? true,
-      throttling: config.defaultStage?.throttling ?? config.throttling
-    };
-
-    // Normalise CORS minimal safe defaults
-    if (config.cors) {
-      if (!config.cors.allowHeaders || config.cors.allowHeaders.length === 0) {
-        config.cors.allowHeaders = ['Content-Type', 'Authorization'];
-      }
-      if (!config.cors.allowMethods || config.cors.allowMethods.length === 0) {
-        config.cors.allowMethods = ['GET', 'POST', 'OPTIONS'];
-      }
-      config.cors.allowOrigins = config.cors.allowOrigins ?? [];
-      config.cors.allowCredentials = config.cors.allowCredentials ?? false;
-      config.cors.maxAge = config.cors.maxAge ?? 300;
-    }
-
-    // Observability is mandatory per platform standard
-    config.observability = {
-      tracingEnabled: config.observability?.tracingEnabled ?? true,
-      metricsEnabled: config.observability?.metricsEnabled ?? true,
-      logsEnabled: config.observability?.logsEnabled ?? true,
-      otlpEndpoint: config.observability?.otlpEndpoint,
-      serviceName: config.observability?.serviceName,
-      resourceAttributes: config.observability?.resourceAttributes
-    };
-
-    return config;
+    const resolved = super.buildSync() as ApiGatewayHttpConfig;
+    return this.normaliseConfig(resolved);
   }
 
   /**
@@ -380,7 +330,7 @@ export class ApiGatewayHttpConfigBuilder extends ConfigBuilder<ApiGatewayHttpCon
   public getHardcodedFallbacks(): Record<string, any> {
     return {
       protocolType: 'HTTP',
-      description: 'Modern HTTP API Gateway for test-http-api-gateway',
+      description: `HTTP API for ${this.builderContext.spec.name}`,
       cors: {
         allowOrigins: [],
         allowHeaders: ['Content-Type', 'Authorization'],
@@ -394,8 +344,8 @@ export class ApiGatewayHttpConfigBuilder extends ConfigBuilder<ApiGatewayHttpCon
       },
       accessLogging: {
         enabled: true,
-        retentionInDays: 30,
-        format: '$context.requestId $context.requestTime $context.identity.sourceIp $context.httpMethod $context.routeKey $context.status $context.responseLength'
+        retentionInDays: 90,
+        retainOnDelete: false
       },
       monitoring: {
         detailedMetrics: true,
@@ -403,7 +353,8 @@ export class ApiGatewayHttpConfigBuilder extends ConfigBuilder<ApiGatewayHttpCon
         alarms: {
           errorRate4xx: 5,
           errorRate5xx: 1,
-          highLatency: 2000
+          highLatency: 2000,
+          lowThroughput: 1
         }
       },
       apiSettings: {
@@ -416,6 +367,70 @@ export class ApiGatewayHttpConfigBuilder extends ConfigBuilder<ApiGatewayHttpCon
         requireAuthorization: true
       }
     };
+  }
+
+  private normaliseConfig(config: ApiGatewayHttpConfig): ApiGatewayHttpConfig {
+    const normalised: ApiGatewayHttpConfig = { ...config };
+
+    const throttling = normalised.throttling ?? { rateLimit: 50, burstLimit: 100 };
+    throttling.rateLimit = throttling.rateLimit && throttling.rateLimit > 0 ? throttling.rateLimit : 50;
+    throttling.burstLimit = throttling.burstLimit && throttling.burstLimit > 0 ? throttling.burstLimit : 100;
+    normalised.throttling = throttling;
+
+    normalised.defaultStage = {
+      stageName: normalised.defaultStage?.stageName ?? this.builderContext.context.environment ?? '$default',
+      autoDeploy: normalised.defaultStage?.autoDeploy ?? true,
+      throttling: normalised.defaultStage?.throttling ?? throttling
+    };
+
+    if (normalised.cors) {
+      const cors = { ...normalised.cors };
+      cors.allowHeaders = cors.allowHeaders && cors.allowHeaders.length > 0 ? cors.allowHeaders : ['Content-Type', 'Authorization'];
+      cors.allowMethods = cors.allowMethods && cors.allowMethods.length > 0 ? cors.allowMethods : ['GET', 'POST', 'OPTIONS'];
+      cors.allowOrigins = cors.allowOrigins ?? [];
+      cors.allowCredentials = cors.allowCredentials ?? false;
+      cors.maxAge = cors.maxAge ?? 300;
+      normalised.cors = cors;
+    }
+
+    normalised.accessLogging = {
+      ...normalised.accessLogging,
+      enabled: normalised.accessLogging?.enabled ?? true,
+      retentionInDays: normalised.accessLogging?.retentionInDays ?? 90,
+      retainOnDelete: normalised.accessLogging?.retainOnDelete ?? false
+    };
+
+    const monitoring = normalised.monitoring ?? {};
+    normalised.monitoring = {
+      ...monitoring,
+      detailedMetrics: monitoring.detailedMetrics ?? true,
+      tracingEnabled: monitoring.tracingEnabled ?? true,
+      alarms: monitoring.alarms ? { ...monitoring.alarms } : undefined
+    };
+
+    const security = normalised.security ?? {};
+    normalised.security = {
+      ...security,
+      enableWaf: security.enableWaf ?? false,
+      enableApiKey: security.enableApiKey ?? false,
+      requireAuthorization: security.requireAuthorization ?? true
+    };
+
+    normalised.apiSettings = {
+      disableExecuteApiEndpoint: normalised.apiSettings?.disableExecuteApiEndpoint ?? false,
+      apiKeySource: normalised.apiSettings?.apiKeySource ?? 'HEADER'
+    };
+
+    normalised.observability = {
+      tracingEnabled: normalised.observability?.tracingEnabled ?? true,
+      metricsEnabled: normalised.observability?.metricsEnabled ?? true,
+      logsEnabled: normalised.observability?.logsEnabled ?? true,
+      otlpEndpoint: normalised.observability?.otlpEndpoint,
+      serviceName: normalised.observability?.serviceName,
+      resourceAttributes: normalised.observability?.resourceAttributes
+    };
+
+    return normalised;
   }
 
   // Add build method for async compatibility

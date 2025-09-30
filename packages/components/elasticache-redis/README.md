@@ -1,111 +1,98 @@
-# ElastiCacheRedisComponent Component
+# ElastiCache Redis Component
 
-ElastiCache Redis Component implementing Component API Contract v1.0 with comprehensive security, monitoring, and compliance features.
-
-## Overview
-
-The ElastiCacheRedisComponent component provides:
-
-- **Production-ready** elasti cache redis component functionality
-- **Comprehensive compliance** (Commercial, FedRAMP Moderate/High)
-- **Integrated monitoring** and observability
-- **Security-first** configuration
-- **Platform integration** with other components
-
-### Category: cache
-
-### AWS Service: ELASTICACHE
-
-This component manages ELASTICACHE resources and provides a simplified, secure interface for common use cases.
+Synthesises an ElastiCache replication group using the platform configuration precedence chain. Defaults come from `/config/<framework>.yml`; the component consumes the resolved configuration only and never inspects `context.complianceFramework`.
 
 ## Usage Example
 
-### Basic Configuration
-
 ```yaml
-service: my-service
-owner: platform-team
-complianceFramework: commercial
-
 components:
-  - name: my-elasticache-redis
+  - name: customer-cache
     type: elasticache-redis
     config:
-      description: "Production elasticache-redis instance"
+      engineVersion: '7.0'
+      nodeType: cache.r6g.large
+      numCacheNodes: 2
+      encryption:
+        atRest: true
+        inTransit: true
+        authToken:
+          enabled: true
+          removalPolicy: retain
+      backup:
+        enabled: true
+        retentionDays: 7
       monitoring:
         enabled: true
-        detailedMetrics: true
-```
+        alarms:
+          cpuUtilization:
+            enabled: true
+            threshold: 70
+``` 
 
 ## Configuration Reference
 
-### Root Configuration
+| Field | Type | Required | Description |
+|-------|------|----------|-------------|
+| `clusterName` | string | | Override the generated replication group identifier. |
+| `engineVersion` | string | | Redis engine version (defaults per framework). |
+| `nodeType` | string | | Cache node instance class. |
+| `numCacheNodes` | number | | Number of cache nodes in the replication group. |
+| `port` | number | | Redis port (defaults to 6379). |
+| `vpc.vpcId` | string | | Explicit VPC lookup; falls back to `context.vpc` or default VPC. |
+| `vpc.subnetIds` | string[] | | Override the subnets for the cache subnet group (defaults to private subnets). |
+| `security.create` | boolean | | Create a dedicated security group (default `true`). |
+| `security.securityGroupIds` | string[] | | Attach additional security groups. |
+| `security.allowedCidrs` | string[] | | CIDR blocks allowed when the component creates the security group. |
+| `parameterGroup.family` | string | | Parameter group family (default `redis7`). |
+| `parameterGroup.parameters` | map | | Custom Redis parameters. |
+| `encryption.atRest` | boolean | | Enable encryption at rest. |
+| `encryption.inTransit` | boolean | | Enable TLS between clients and the cluster. |
+| `encryption.authToken.enabled` | boolean | | Enable Redis AUTH token; creates a secret if `secretArn` is not supplied. |
+| `encryption.authToken.secretArn` | string | | Use an existing Secrets Manager secret for the AUTH token. |
+| `encryption.authToken.removalPolicy` | enum | | `retain` or `destroy` removal policy for generated secrets. |
+| `backup.enabled` | boolean | | Toggle automatic snapshots. |
+| `backup.retentionDays` | number | | Snapshot retention period (days). |
+| `backup.window` | string | | Snapshot window (`HH:MM-HH:MM` UTC). |
+| `maintenance.window` | string | | Maintenance window (`ddd:HH:MM-ddd:HH:MM` UTC). |
+| `maintenance.notificationTopicArn` | string | | SNS topic for maintenance notifications. |
+| `multiAz.enabled` | boolean | | Enable Multi-AZ deployment. |
+| `multiAz.automaticFailover` | boolean | | Enable automatic failover (requires Multi-AZ). |
+| `monitoring.enabled` | boolean | | Enable CloudWatch alarms/log delivery. |
+| `monitoring.logDelivery[]` | object | | Declarative log delivery targets (slow/engine logs). |
+| `monitoring.alarms.*` | object | | Threshold configuration for `cpuUtilization`, `cacheMisses`, `evictions`, and `connections`. |
+| `tags` | map | | Additional tags merged into the replication group. |
 
-| Property | Type | Required | Description |
-|----------|------|----------|-------------|
-| `name` | string | No | Component name (auto-generated if not provided) |
-| `description` | string | No | Component description for documentation |
-| `monitoring` | object | No | Monitoring and observability configuration |
-| `tags` | object | No | Additional resource tags |
+## Capabilities
 
-### Monitoring Configuration
-
-| Property | Type | Required | Description |
-|----------|------|----------|-------------|
-| `enabled` | boolean | No | Enable monitoring (default: true) |
-| `detailedMetrics` | boolean | No | Enable detailed CloudWatch metrics |
-
-## Capabilities Provided
-
-This component provides the following capabilities for binding with other components:
-
-- `cache:elasticache-redis` - Main elasticache-redis capability
-- `monitoring:elasticache-redis` - Monitoring capability
+| Capability | Description |
+|------------|-------------|
+| `cache:redis` | Provides the replication group ID, endpoints, port, engine metadata, and auth token secret ARN (when created). |
 
 ## Construct Handles
 
-The following construct handles are available for use in `patches.ts`:
+| Handle | Description |
+|--------|-------------|
+| `main`, `replicationGroup` | Underlying `AWS::ElastiCache::ReplicationGroup` resource. |
+| `subnetGroup` | Cache subnet group generated by the component. |
+| `securityGroup` | Dedicated security group when `security.create` is `true`. |
+| `parameterGroup` | Custom parameter group resource (when parameters are supplied). |
+| `authToken` | Generated Secrets Manager secret for the Redis AUTH token. |
+| `alarm:*` | CloudWatch alarms created from `monitoring.alarms`. |
 
-- `main` - Main elasticache-redis construct
+## Platform Defaults
 
-## Compliance Frameworks
+Platform defaults live in:
 
-### Commercial
+- `config/commercial.yml`
+- `config/fedramp-moderate.yml`
+- `config/fedramp-high.yml`
 
-- Standard monitoring configuration
-- Basic resource tagging
-- Standard security settings
+FedRAMP profiles enable encryption, Multi-AZ, enhanced backups, and monitoring out of the box. The commercial profile keeps those features optional.
 
-### FedRAMP Moderate/High
-
-- Enhanced monitoring with detailed metrics
-- Comprehensive audit logging
-- Stricter security configurations
-- Extended compliance tagging
-
-## Best Practices
-
-1. **Always enable monitoring** in production environments
-2. **Use descriptive names** for better resource identification
-3. **Configure appropriate tags** for cost allocation and governance
-4. **Review compliance requirements** for your environment
-5. **Test configurations** in development before production deployment
-
-## Development
-
-### Running Tests
+## Testing
 
 ```bash
-# Run all tests for this component
-npm test -- --testPathPattern=elasticache-redis
-
-# Run only builder tests
-npm test -- --testPathPattern=elasticache-redis.builder
-
-# Run only synthesis tests
-npm test -- --testPathPattern=elasticache-redis.component.synthesis
+corepack pnpm exec jest --runTestsByPath \
+  packages/components/elasticache-redis/tests/elasticache-redis.builder.test.ts \
+  packages/components/elasticache-redis/tests/elasticache-redis.component.synthesis.test.ts --silent
 ```
-
----
-
-*Generated by Component Completion Script*

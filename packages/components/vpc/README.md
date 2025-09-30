@@ -1,111 +1,69 @@
-# VpcComponent Component
+# VpcComponent
 
-VPC Component with comprehensive security, monitoring, and compliance features.
+Config-driven VPC provisioning aligned with the platform networking standard. The component consumes the shared `ConfigBuilder` precedence chain (platform defaults → environment overrides → manifest → policy), so no compliance behaviour is embedded in code.
 
-## Overview
+## Highlights
 
-The VpcComponent component provides:
+- Builds a three-tier VPC (public/private/database) with configurable CIDR masks and AZ fan-out
+- Optional CloudWatch flow logs with retention/removal policy controls
+- Managed VPC endpoints (S3, DynamoDB, Secrets Manager, KMS, Lambda) driven from configuration
+- Toggleable network security features (default security groups, compliance network ACLs, default SG restrictions)
+- Monitoring thresholds (NAT packet drops, flow-log delivery failures) resolved through config files
 
-- **Production-ready** vpc component functionality
-- **Comprehensive compliance** (Commercial, FedRAMP Moderate/High)
-- **Integrated monitoring** and observability
-- **Security-first** configuration
-- **Platform integration** with other components
-
-### Category: networking
-
-### AWS Service: EC2
-
-This component manages EC2 resources and provides a simplified, secure interface for common use cases.
-
-## Usage Example
-
-### Basic Configuration
+## Usage
 
 ```yaml
-service: my-service
-owner: platform-team
-complianceFramework: commercial
-
 components:
-  - name: my-vpc
+  - name: network
     type: vpc
     config:
-      description: "Production vpc instance"
-      monitoring:
+      cidr: 10.42.0.0/16
+      natGateways: 2
+      flowLogs:
         enabled: true
-        detailedMetrics: true
+        retentionInDays: 90
+        removalPolicy: destroy
+      vpcEndpoints:
+        s3: true
+        dynamodb: true
+        secretsManager: true
+        kms: true
+        lambda: false
+      security:
+        createDefaultSecurityGroups: true
+        complianceNacls:
+          enabled: true
+          mode: standard
+        restrictDefaultSecurityGroup: false
 ```
 
-## Configuration Reference
+Commercial / FedRAMP defaults live in `config/commercial.yml`, `config/fedramp-moderate.yml`, and `config/fedramp-high.yml`. Adjust those files to change organisation-wide behaviour; the component will pick up the resolved configuration automatically.
 
-### Root Configuration
+## Key Configuration Blocks
 
-| Property | Type | Required | Description |
-|----------|------|----------|-------------|
-| `name` | string | No | Component name (auto-generated if not provided) |
-| `description` | string | No | Component description for documentation |
-| `monitoring` | object | No | Monitoring and observability configuration |
-| `tags` | object | No | Additional resource tags |
+| Block | Description |
+| --- | --- |
+| `cidr`, `maxAzs`, `natGateways` | Core VPC topology knobs |
+| `subnets.public/private/database` | CIDR mask and friendly name per subnet tier |
+| `flowLogs.enabled` | Enables CloudWatch flow logs; `retentionInDays` must match a supported retention enum; `removalPolicy` chooses retain/destroy |
+| `vpcEndpoints` | Booleans for S3, DynamoDB, Secrets Manager, KMS, and Lambda endpoints |
+| `monitoring.alarms` | NAT packet drop and flow-log delivery thresholds consumed when alarms are created |
+| `security` | Controls whether default security groups or compliance NACLs are created and if the default SG is restricted |
 
-### Monitoring Configuration
+## Capabilities
 
-| Property | Type | Required | Description |
-|----------|------|----------|-------------|
-| `enabled` | boolean | No | Enable monitoring (default: true) |
-| `detailedMetrics` | boolean | No | Enable detailed CloudWatch metrics |
+- `net:vpc` – VPC identifiers and subnet IDs
+- `networking:vpc` – Regional context and subnet topology
+- `security:network-isolation` – Flow log + endpoint posture metadata
 
-## Capabilities Provided
+## Handles
 
-This component provides the following capabilities for binding with other components:
+- `main`, `vpc`, `flowLogGroup`, `flowLogRole` (when created) for patch integrations
 
-- `networking:vpc` - Main vpc capability
-- `monitoring:vpc` - Monitoring capability
-
-## Construct Handles
-
-The following construct handles are available for use in `patches.ts`:
-
-- `main` - Main vpc construct
-
-## Compliance Frameworks
-
-### Commercial
-
-- Standard monitoring configuration
-- Basic resource tagging
-- Standard security settings
-
-### FedRAMP Moderate/High
-
-- Enhanced monitoring with detailed metrics
-- Comprehensive audit logging
-- Stricter security configurations
-- Extended compliance tagging
-
-## Best Practices
-
-1. **Always enable monitoring** in production environments
-2. **Use descriptive names** for better resource identification
-3. **Configure appropriate tags** for cost allocation and governance
-4. **Review compliance requirements** for your environment
-5. **Test configurations** in development before production deployment
-
-## Development
-
-### Running Tests
+## Tests
 
 ```bash
-# Run all tests for this component
-npm test -- --testPathPattern=vpc
-
-# Run only builder tests
-npm test -- --testPathPattern=vpc.builder
-
-# Run only synthesis tests
-npm test -- --testPathPattern=vpc.component.synthesis
+corepack pnpm exec jest --runTestsByPath \
+  packages/components/vpc/tests/vpc.builder.test.ts \
+  packages/components/vpc/tests/vpc.component.synthesis.test.ts
 ```
-
----
-
-*Generated by Component Completion Script*

@@ -474,7 +474,8 @@ components:
     type: vpc
     config:
       natGateways: 2
-      flowLogsEnabled: true
+      flowLogs:
+        enabled: true
 ```
 
 Automatically creates:

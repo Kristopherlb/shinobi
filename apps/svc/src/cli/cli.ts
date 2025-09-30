@@ -7,6 +7,8 @@ import { createUpCommand } from './commands/up';
 import { createMigrateCommand } from './commands/migrate';
 import { createCatalogCommand } from './catalog';
 import { createSynthCommand } from './synth';
+import { createDiffCommand } from './commands/diff';
+import { createDestroyCommand } from './commands/destroy';
 
 interface GlobalCliOptions {
   verbose?: boolean;
@@ -125,6 +127,12 @@ program.addCommand(createCatalogCommand());
 
 // shinobi synth command
 program.addCommand(createSynthCommand());
+
+// shinobi diff command
+program.addCommand(createDiffCommand());
+
+// shinobi destroy command
+program.addCommand(createDestroyCommand());
 
 // shinobi up command (uses dedicated command factory)
 program.addCommand(createUpCommand());

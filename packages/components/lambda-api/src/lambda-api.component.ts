@@ -13,6 +13,7 @@ import { ComponentSpec, ComponentCapabilities, ComponentContext } from "@platfor
 import { BaseComponent } from "@shinobi/core";
 import * as path from "path";
 import * as fs from "fs";
+import { LambdaApiConfigBuilder } from "./lambda-api.builder";
 
 export interface LambdaApiSpec {
   /** e.g. "src/api.handler" */
@@ -35,6 +36,8 @@ export interface LambdaApiSpec {
 type HttpApiCapability = { url: string; functionArn: string };
 
 export class LambdaApiComponent extends BaseComponent {
+  private resolvedConfig?: LambdaApiSpec;
+
   constructor(
     scope: Construct,
     id: string,
@@ -45,7 +48,19 @@ export class LambdaApiComponent extends BaseComponent {
   }
 
   private get typedSpec(): LambdaApiSpec {
-    return this.spec.config as LambdaApiSpec;
+    if (!this.resolvedConfig) {
+      const builder = new LambdaApiConfigBuilder();
+      this.resolvedConfig = builder.build(
+        {
+          complianceFramework: this.context.complianceFramework,
+          environment: this.context.environment,
+          observability: this.context.observability,
+        },
+        (this.spec.config ?? {}) as Partial<LambdaApiSpec>
+      );
+    }
+
+    return this.resolvedConfig;
   }
 
   /**

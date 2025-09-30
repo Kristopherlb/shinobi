@@ -2,6 +2,9 @@
   "name": "s3-bucket",
   "sourceRoot": "packages/components/s3-bucket",
   "projectType": "library",
+  "implicitDependencies": [
+    "core"
+  ],
   "tags": [
     "type:lib",
     "scope:components",
@@ -9,14 +12,12 @@
   ],
   "targets": {
     "build": {
-      "executor": "@nx/js:tsc",
+      "executor": "nx:run-commands",
       "options": {
-        "outputPath": "dist/packages/components/s3-bucket",
-        "tsConfig": "packages/components/s3-bucket/tsconfig.json",
-        "main": "packages/components/s3-bucket/index.ts"
+        "command": "tsc -p packages/core/tsconfig.lib.json && tsc -b packages/components/s3-bucket/tsconfig.json"
       },
       "outputs": [
-        "{options.outputPath}"
+        "{workspaceRoot}/dist/packages/components/s3-bucket"
       ]
     },
     "test": {

@@ -10,7 +10,9 @@ export { StaticWebsiteComponent } from './static-website.component';
 export { 
   StaticWebsiteConfig,
   StaticWebsiteConfigBuilder,
-  STATIC_WEBSITE_CONFIG_SCHEMA
+  STATIC_WEBSITE_CONFIG_SCHEMA,
+  RemovalPolicyOption,
+  PriceClassOption
 } from './static-website.builder';
 
 // Creator exports

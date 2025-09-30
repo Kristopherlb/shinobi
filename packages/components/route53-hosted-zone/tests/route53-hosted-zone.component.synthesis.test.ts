@@ -1,94 +1,140 @@
-/**
- * Route53HostedZoneComponent Component Synthesis Test Suite
- * Implements Platform Testing Standard v1.0 - Component Synthesis Testing
- */
-
 import { Template, Match } from 'aws-cdk-lib/assertions';
 import { App, Stack } from 'aws-cdk-lib';
-import { Route53HostedZoneComponentComponent } from '../route53-hosted-zone.component';
+import { Route53HostedZoneComponent } from '../route53-hosted-zone.component';
 import { Route53HostedZoneConfig } from '../route53-hosted-zone.builder';
 import { ComponentContext, ComponentSpec } from '../../../platform/contracts/component-interfaces';
 
-const createMockContext = (
-  complianceFramework: string = 'commercial',
-  environment: string = 'dev'
-): ComponentContext => ({
-  serviceName: 'test-service',
-  owner: 'test-team',
-  environment,
-  complianceFramework,
+const VPC_ID = 'vpc-0abc123def4567890';
+const CONTEXT_KEY = `vpcProvider:account=123456789012:filter.vpcId=${VPC_ID}:region=us-east-1`;
+
+const createContext = (framework: string = 'commercial'): ComponentContext => ({
+  serviceName: 'dns-service',
+  owner: 'platform-team',
+  environment: 'dev',
+  complianceFramework: framework,
   region: 'us-east-1',
   account: '123456789012',
   tags: {
-    'service-name': 'test-service',
-    'owner': 'test-team',
-    'environment': environment,
-    'compliance-framework': complianceFramework
+    'service-name': 'dns-service',
+    environment: 'dev',
+    'compliance-framework': framework
   }
 });
 
-const createMockSpec = (config: Partial<Route53HostedZoneConfig> = {}): ComponentSpec => ({
-  name: 'test-route53-hosted-zone',
+const createSpec = (config: Partial<Route53HostedZoneConfig>): ComponentSpec => ({
+  name: 'public-zone',
   type: 'route53-hosted-zone',
   config
 });
 
-const synthesizeComponent = (
-  context: ComponentContext,
-  spec: ComponentSpec
-): { component: Route53HostedZoneComponentComponent; template: Template } => {
+const synthesizeComponent = (context: ComponentContext, spec: ComponentSpec) => {
   const app = new App();
-  const stack = new Stack(app, 'TestStack');
-  
-  const component = new Route53HostedZoneComponentComponent(stack, spec, context);
+  const stack = new Stack(app, 'TestStack', {
+    env: { account: context.account, region: context.region }
+  });
+
+  const component = new Route53HostedZoneComponent(stack, spec.name, context, spec);
   component.synth();
-  
-  const template = Template.fromStack(stack);
-  return { component, template };
+
+  return {
+    component,
+    template: Template.fromStack(stack)
+  };
 };
 
-describe('Route53HostedZoneComponentComponent Synthesis', () => {
-  
-  describe('Default Happy Path Synthesis', () => {
-    
-    it('should synthesize basic route53-hosted-zone with commercial compliance', () => {
-      const context = createMockContext('commercial');
-      const spec = createMockSpec();
-      
-      const { template, component } = synthesizeComponent(context, spec);
-      
-      // TODO: Add specific CloudFormation resource assertions
-      // Verify component was created
-      expect(component).toBeDefined();
-      expect(component.getType()).toBe('route53-hosted-zone');
+describe('Route53HostedZoneComponent synthesis', () => {
+  const originalContext = process.env.CDK_CONTEXT_JSON;
+
+  beforeAll(() => {
+    process.env.CDK_CONTEXT_JSON = JSON.stringify({
+      [CONTEXT_KEY]: {
+        vpcId: VPC_ID,
+        availabilityZones: ['us-east-1a', 'us-east-1b'],
+        publicSubnetIds: ['subnet-public-a', 'subnet-public-b'],
+        privateSubnetIds: ['subnet-private-a', 'subnet-private-b'],
+        isolatedSubnetIds: [],
+        ownerAccountId: '123456789012'
+      }
     });
-    
   });
-  
-  describe('Component Capabilities and Constructs', () => {
-    
-    it('should register correct capabilities after synthesis', () => {
-      const context = createMockContext('commercial');
-      const spec = createMockSpec();
-      
-      const { component } = synthesizeComponent(context, spec);
-      
-      const capabilities = component.getCapabilities();
-      
-      // Verify component-specific capabilities
-      expect(capabilities).toBeDefined();
-    });
-    
-    it('should register construct handles for patches.ts access', () => {
-      const context = createMockContext('commercial');
-      const spec = createMockSpec();
-      
-      const { component } = synthesizeComponent(context, spec);
-      
-      // Verify main construct is registered
-      expect(component.getConstruct('main')).toBeDefined();
-    });
-    
+
+  afterAll(() => {
+    if (originalContext === undefined) {
+      delete process.env.CDK_CONTEXT_JSON;
+    } else {
+      process.env.CDK_CONTEXT_JSON = originalContext;
+    }
   });
-  
+
+  it('creates a public hosted zone with query logging disabled', () => {
+    const spec = createSpec({
+      zoneName: 'example.com',
+      zoneType: 'public',
+      queryLogging: {
+        enabled: false,
+        retentionDays: 90,
+        removalPolicy: 'destroy'
+      }
+    });
+
+    const { component, template } = synthesizeComponent(createContext('commercial'), spec);
+
+    template.hasResourceProperties('AWS::Route53::HostedZone', Match.objectLike({
+      Name: 'example.com.'
+    }));
+
+    expect(component.getCapabilities()['dns:hosted-zone']).toBeDefined();
+  });
+
+  it('creates a private hosted zone with VPC association and DNSSEC', () => {
+    const spec = createSpec({
+      zoneName: 'internal.example.com',
+      zoneType: 'private',
+      vpcAssociations: [
+        { vpcId: VPC_ID }
+      ],
+      dnssec: {
+        enabled: true
+      }
+    });
+
+    const { template } = synthesizeComponent(createContext('commercial'), spec);
+
+    template.hasResourceProperties('AWS::Route53::HostedZone', Match.objectLike({
+      VPCs: Match.arrayWith([
+        Match.objectLike({ VPCId: VPC_ID })
+      ])
+    }));
+
+    template.hasResourceProperties('AWS::Route53::DNSSEC', Match.objectLike({
+      HostedZoneId: Match.anyValue()
+    }));
+  });
+
+  it('enables monitoring alarms when requested', () => {
+    const spec = createSpec({
+      zoneName: 'example.org',
+      monitoring: {
+        enabled: true,
+        alarms: {
+          queryVolume: {
+            enabled: true,
+            threshold: 20000
+          },
+          healthCheckFailures: {
+            enabled: true,
+            threshold: 5
+          }
+        }
+      }
+    });
+
+    const { template } = synthesizeComponent(createContext('commercial'), spec);
+
+    template.hasResource('AWS::CloudWatch::Alarm', Match.objectLike({
+      Properties: Match.objectLike({
+        AlarmName: Match.stringLikeRegexp('query-volume-alarm')
+      })
+    }));
+  });
 });

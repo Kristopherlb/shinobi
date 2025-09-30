@@ -1,111 +1,96 @@
-# DynamoDbTableComponent Component
+# DynamoDB Table Component
 
-DynamoDB Table Component implementing Component API Contract v1.0 with comprehensive security, monitoring, and compliance features.
+Configuration-driven DynamoDB table that sources all defaults from the platform ConfigBuilder. Compliance-specific behaviours (FedRAMP Moderate/High) are captured in `/config/<framework>.yml`; the component simply consumes the resolved configuration.
 
-## Overview
+## Features
 
-The DynamoDbTableComponent component provides:
-
-- **Production-ready** dynamo db table component functionality
-- **Comprehensive compliance** (Commercial, FedRAMP Moderate/High)
-- **Integrated monitoring** and observability
-- **Security-first** configuration
-- **Platform integration** with other components
-
-### Category: storage
-
-### AWS Service: DYNAMODB
-
-This component manages DYNAMODB resources and provides a simplified, secure interface for common use cases.
+- Key schema, billing mode, table class, TTL, streams, and indexes expressed declaratively via configuration.
+- Provisioned throughput auto-scaling, point-in-time recovery, and backup retention controlled by config defaults.
+- Encryption supports AWS-managed or customer-managed keys (including optional key creation/aliasing).
+- Monitoring alarms (read/write throttles, system errors) configurable per environment.
+- Capability payload includes `hardeningProfile` and encryption metadata for downstream consumers.
 
 ## Usage Example
 
-### Basic Configuration
-
 ```yaml
-service: my-service
-owner: platform-team
-complianceFramework: commercial
-
 components:
-  - name: my-dynamodb-table
+  - name: orders-table
     type: dynamodb-table
     config:
-      description: "Production dynamodb-table instance"
+      partitionKey:
+        name: orderId
+        type: string
+      sortKey:
+        name: createdAt
+        type: number
+      billingMode: provisioned
+      provisioned:
+        readCapacity: 10
+        writeCapacity: 5
+        autoScaling:
+          minReadCapacity: 5
+          maxReadCapacity: 50
+      pointInTimeRecovery: true
+      timeToLive:
+        enabled: true
+        attributeName: ttlExpiry
+      stream:
+        enabled: true
+        viewType: new-and-old-images
+      encryption:
+        type: customer-managed
+        customerManagedKey:
+          create: true
+          alias: alias/orders-table
       monitoring:
         enabled: true
-        detailedMetrics: true
+        alarms:
+          readThrottle:
+            enabled: true
+            threshold: 1
 ```
 
-## Configuration Reference
+## Configuration Highlights
 
-### Root Configuration
+| Path | Description |
+|------|-------------|
+| `partitionKey` / `sortKey` | Required table keys; include name and type (`string`, `number`, `binary`). |
+| `billingMode` | `pay-per-request` (default) or `provisioned`. Provisioned mode enables auto-scaling inputs. |
+| `provisioned` | Read/write capacity and optional auto-scaling bounds & utilization target. |
+| `tableClass` | `standard` or `infrequent-access`. |
+| `pointInTimeRecovery` | Enable PITR snapshots. |
+| `timeToLive` | Toggle TTL and specify the attribute when enabled. |
+| `stream` | Enable DynamoDB streams and choose a view type. |
+| `globalSecondaryIndexes` / `localSecondaryIndexes` | Configure additional indexes, projection types, and throughput. |
+| `encryption` | `aws-managed` or `customer-managed`; optionally supply `kmsKeyArn` or request key creation. |
+| `backup` | Enable table backups, retention (days), and optional schedule metadata. |
+| `monitoring.alarms` | Configure thresholds for read/write throttles and system errors. |
+| `hardeningProfile` | Exposed via the capability to signal posture (`baseline`, `hardened`, `stig`). |
 
-| Property | Type | Required | Description |
-|----------|------|----------|-------------|
-| `name` | string | No | Component name (auto-generated if not provided) |
-| `description` | string | No | Component description for documentation |
-| `monitoring` | object | No | Monitoring and observability configuration |
-| `tags` | object | No | Additional resource tags |
+## Capability
 
-### Monitoring Configuration
+`db:dynamodb`
 
-| Property | Type | Required | Description |
-|----------|------|----------|-------------|
-| `enabled` | boolean | No | Enable monitoring (default: true) |
-| `detailedMetrics` | boolean | No | Enable detailed CloudWatch metrics |
+```json
+{
+  "tableName": "orders-table",
+  "tableArn": "arn:aws:dynamodb:...",
+  "streamArn": "arn:aws:dynamodb:.../stream/...",
+  "billingMode": "provisioned",
+  "tableClass": "standard",
+  "pointInTimeRecovery": true,
+  "encryption": "customer-managed",
+  "kmsKeyArn": "arn:aws:kms:...",
+  "hardeningProfile": "hardened"
+}
+```
 
-## Capabilities Provided
-
-This component provides the following capabilities for binding with other components:
-
-- `storage:dynamodb-table` - Main dynamodb-table capability
-- `monitoring:dynamodb-table` - Monitoring capability
-
-## Construct Handles
-
-The following construct handles are available for use in `patches.ts`:
-
-- `main` - Main dynamodb-table construct
-
-## Compliance Frameworks
-
-### Commercial
-
-- Standard monitoring configuration
-- Basic resource tagging
-- Standard security settings
-
-### FedRAMP Moderate/High
-
-- Enhanced monitoring with detailed metrics
-- Comprehensive audit logging
-- Stricter security configurations
-- Extended compliance tagging
-
-## Best Practices
-
-1. **Always enable monitoring** in production environments
-2. **Use descriptive names** for better resource identification
-3. **Configure appropriate tags** for cost allocation and governance
-4. **Review compliance requirements** for your environment
-5. **Test configurations** in development before production deployment
-
-## Development
-
-### Running Tests
+## Tests
 
 ```bash
-# Run all tests for this component
-npm test -- --testPathPattern=dynamodb-table
-
-# Run only builder tests
-npm test -- --testPathPattern=dynamodb-table.builder
-
-# Run only synthesis tests
-npm test -- --testPathPattern=dynamodb-table.component.synthesis
+corepack pnpm exec jest --runTestsByPath \
+  packages/components/dynamodb-table/tests/dynamodb-table.builder.test.ts \
+  packages/components/dynamodb-table/tests/dynamodb-table.component.synthesis.test.ts
 ```
 
----
-
-*Generated by Component Completion Script*
+Note: component synthesis tests are currently blocked by the known `@platform/logger` haste-map duplication issue. Builder tests should pass.

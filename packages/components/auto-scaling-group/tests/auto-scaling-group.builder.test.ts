@@ -1,99 +1,100 @@
-/**
- * AutoScalingGroupComponent ConfigBuilder Test Suite
- * Implements Platform Testing Standard v1.0 - ConfigBuilder Testing
- */
+import {
+  AutoScalingGroupComponentConfigBuilder,
+  AutoScalingGroupConfig
+} from '../auto-scaling-group.builder';
+import { ComponentContext, ComponentSpec } from '@shinobi/core';
 
-import { AutoScalingGroupComponentConfigBuilder, AutoScalingGroupConfig } from '../auto-scaling-group.builder';
-import { ComponentContext, ComponentSpec } from '../../../platform/contracts/component-interfaces';
-
-const createMockContext = (
-  complianceFramework: string = 'commercial',
+const createContext = (
+  framework: 'commercial' | 'fedramp-moderate' | 'fedramp-high' = 'commercial',
   environment: string = 'dev'
 ): ComponentContext => ({
   serviceName: 'test-service',
-  owner: 'test-team',
+  owner: 'platform-team',
   environment,
-  complianceFramework,
+  complianceFramework: framework,
   region: 'us-east-1',
   account: '123456789012',
+  scope: {} as any,
   tags: {
     'service-name': 'test-service',
-    'owner': 'test-team',
-    'environment': environment,
-    'compliance-framework': complianceFramework
+    owner: 'platform-team',
+    environment,
+    'compliance-framework': framework
   }
 });
 
-const createMockSpec = (config: Partial<AutoScalingGroupConfig> = {}): ComponentSpec => ({
-  name: 'test-auto-scaling-group',
+const createSpec = (config: Partial<AutoScalingGroupConfig> = {}): ComponentSpec => ({
+  name: 'asg-test',
   type: 'auto-scaling-group',
   config
 });
 
 describe('AutoScalingGroupComponentConfigBuilder', () => {
-  
-  describe('Hardcoded Fallbacks (Layer 1)', () => {
-    
-    it('should provide ultra-safe baseline configuration', () => {
-      const context = createMockContext();
-      const spec = createMockSpec();
-      
-      const builder = new AutoScalingGroupComponentConfigBuilder(context, spec);
-      const config = builder.buildSync();
-      
-      // Verify hardcoded fallbacks are applied
-      expect(config.monitoring?.enabled).toBe(true);
-      expect(config.monitoring?.detailedMetrics).toBe(false);
-      expect(config.tags).toBeDefined();
+  it('builds commercial defaults from platform configuration', () => {
+    const builder = new AutoScalingGroupComponentConfigBuilder({
+      context: createContext('commercial'),
+      spec: createSpec()
     });
-    
+
+    const config = builder.buildSync();
+
+    expect(config.launchTemplate.instanceType).toBe('t3.micro');
+    expect(config.launchTemplate.detailedMonitoring).toBe(false);
+    expect(config.launchTemplate.requireImdsv2).toBe(false);
+    expect(config.vpc.subnetType).toBe('PUBLIC');
+    expect(config.storage.encrypted).toBe(false);
+    expect(config.security.managedPolicies).toHaveLength(0);
   });
-  
-  describe('Compliance Framework Defaults (Layer 2)', () => {
-    
-    it('should apply commercial compliance defaults', () => {
-      const context = createMockContext('commercial');
-      const spec = createMockSpec();
-      
-      const builder = new AutoScalingGroupComponentConfigBuilder(context, spec);
-      const config = builder.buildSync();
-      
-      expect(config.monitoring?.enabled).toBe(true);
-      expect(config.monitoring?.detailedMetrics).toBe(true);
+
+  it('builds fedramp-moderate defaults with hardened controls', () => {
+    const builder = new AutoScalingGroupComponentConfigBuilder({
+      context: createContext('fedramp-moderate', 'stage'),
+      spec: createSpec()
     });
-    
-    it('should apply FedRAMP compliance defaults', () => {
-      const context = createMockContext('fedramp-moderate');
-      const spec = createMockSpec();
-      
-      const builder = new AutoScalingGroupComponentConfigBuilder(context, spec);
-      const config = builder.buildSync();
-      
-      expect(config.monitoring?.enabled).toBe(true);
-      expect(config.monitoring?.detailedMetrics).toBe(true); // Mandatory for FedRAMP
-    });
-    
+
+    const config = builder.buildSync();
+
+    expect(config.launchTemplate.instanceType).toBe('t3.medium');
+    expect(config.launchTemplate.detailedMonitoring).toBe(true);
+    expect(config.launchTemplate.requireImdsv2).toBe(true);
+    expect(config.vpc.subnetType).toBe('PRIVATE_WITH_EGRESS');
+    expect(config.storage.encrypted).toBe(true);
+    expect(config.security.managedPolicies).toContain('AmazonSSMManagedInstanceCore');
+    expect(config.storage.kms.useCustomerManagedKey).toBe(true);
+    expect(config.storage.kms.enableKeyRotation).toBe(false);
   });
-  
-  describe('5-Layer Precedence Chain', () => {
-    
-    it('should apply component overrides over platform defaults', () => {
-      const context = createMockContext('commercial');
-      const spec = createMockSpec({
-        monitoring: {
-          enabled: false,
-          detailedMetrics: false
+
+  it('allows manifest overrides to take precedence', () => {
+    const builder = new AutoScalingGroupComponentConfigBuilder({
+      context: createContext('commercial'),
+      spec: createSpec({
+        launchTemplate: {
+          instanceType: 'm5.large',
+          detailedMonitoring: true,
+          requireImdsv2: true,
+          installAgents: {
+            ssm: true,
+            cloudwatch: true,
+            stigHardening: true
+          }
+        },
+        storage: {
+          rootVolumeSize: 200,
+          rootVolumeType: 'io2',
+          encrypted: true,
+          kms: {
+            useCustomerManagedKey: true,
+            enableKeyRotation: true
+          }
         }
-      });
-      
-      const builder = new AutoScalingGroupComponentConfigBuilder(context, spec);
-      const config = builder.buildSync();
-      
-      // Verify component config overrides platform defaults
-      expect(config.monitoring?.enabled).toBe(false);
-      expect(config.monitoring?.detailedMetrics).toBe(false);
+      })
     });
-    
+
+    const config = builder.buildSync();
+
+    expect(config.launchTemplate.instanceType).toBe('m5.large');
+    expect(config.launchTemplate.installAgents.cloudwatch).toBe(true);
+    expect(config.storage.rootVolumeSize).toBe(200);
+    expect(config.storage.kms.useCustomerManagedKey).toBe(true);
   });
-  
 });

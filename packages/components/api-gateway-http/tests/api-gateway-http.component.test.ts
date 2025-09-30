@@ -9,7 +9,7 @@ import { Template, Match } from 'aws-cdk-lib/assertions';
 import { App, Stack } from 'aws-cdk-lib';
 import { ApiGatewayHttpComponent } from '../api-gateway-http.component';
 import { ApiGatewayHttpConfigBuilder } from '../api-gateway-http.builder';
-import { ComponentContext, ComponentSpec } from '@platform/contracts';
+import { ComponentContext, ComponentSpec } from '@shinobi/core';
 
 // Test Metadata as per Platform Testing Standard v1.0 Section 11
 const TEST_METADATA = {
@@ -215,7 +215,7 @@ describe('ApiGatewayHttpComponent', () => {
       template.hasResourceProperties('AWS::ApiGatewayV2::Api', {
         Name: 'test-http-service-test-http-api-gateway',
         ProtocolType: 'HTTP',
-        Description: 'Modern HTTP API Gateway for test-http-api-gateway'
+        Description: 'HTTP API for test-http-api-gateway'
       });
 
       // Contract validation: Default stage exists
@@ -249,16 +249,27 @@ describe('ApiGatewayHttpComponent', () => {
   });
 
   describe('Security__WafConfiguration__Validated', () => {
-    it('should throw when enableWaf is true without webAclArn', () => {
+    it('Security__WafEnabledWithoutArn__EmitsWarningAndSkipsAssociation', () => {
       const specWithInvalidWaf = createMockSpec({
         security: {
           enableWaf: true
         }
       });
 
+      const logSpy = jest.spyOn(ApiGatewayHttpComponent.prototype as any, 'logComponentEvent');
       const component = new ApiGatewayHttpComponent(stack, 'TestHttpApiGateway', mockContext, specWithInvalidWaf);
+      component.synth();
 
-      expect(() => component.synth()).toThrow('security.enableWaf is true but security.webAclArn is not provided.');
+      expect(logSpy).toHaveBeenCalledWith(
+        'waf_configuration_missing',
+        expect.any(String),
+        expect.objectContaining({ component: 'test-http-api-gateway' })
+      );
+
+      const template = Template.fromStack(stack);
+      expect(template.findResources('AWS::WAFv2::WebACLAssociation')).toEqual({});
+
+      logSpy.mockRestore();
     });
   });
 

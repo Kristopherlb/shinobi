@@ -49,20 +49,42 @@ defaults:
     cidr: 10.0.0.0/16
     maxAzs: 3
     natGateways: 2
-    flowLogsEnabled: true
-    flowLogRetentionDays: 1095
+    flowLogs:
+      enabled: true
+      retentionInDays: 1827
+      removalPolicy: retain
+    subnets:
+      public:
+        cidrMask: 24
+        name: Public
+      private:
+        cidrMask: 24
+        name: Private
+      database:
+        cidrMask: 28
+        name: Database
     vpcEndpoints:
       s3: true
       dynamodb: true
       secretsManager: true
       kms: true
-    subnets:
-      public:
-        cidrMask: 24
-      private:
-        cidrMask: 24
-      database:
-        cidrMask: 28
+      lambda: false
+    dns:
+      enableDnsHostnames: true
+      enableDnsSupport: true
+    monitoring:
+      enabled: true
+      detailedMetrics: true
+      alarms:
+        natGatewayPacketDropThreshold: 500
+        vpcFlowLogDeliveryFailures: 5
+    security:
+      createDefaultSecurityGroups: true
+      complianceNacls:
+        enabled: true
+        mode: standard
+      restrictDefaultSecurityGroup: false
+    tags: {}
 
   api-gateway-http:
     cors:
@@ -78,6 +100,7 @@ defaults:
     accessLogging:
       enabled: true
       retentionInDays: 90
+      retainOnDelete: true
       includeExecutionData: false
       includeRequestResponseData: false
     monitoring:
@@ -92,3 +115,915 @@ defaults:
       enableWaf: true
       enableApiKey: true
       requireAuthorization: true
+
+  auto-scaling-group:
+    launchTemplate:
+      instanceType: t3.medium
+      detailedMonitoring: true
+      requireImdsv2: true
+      installAgents:
+        ssm: true
+        cloudwatch: true
+        stigHardening: false
+    autoScaling:
+      minCapacity: 1
+      maxCapacity: 3
+      desiredCapacity: 2
+    storage:
+      rootVolumeSize: 50
+      rootVolumeType: gp3
+      encrypted: true
+      kms:
+        useCustomerManagedKey: true
+        enableKeyRotation: false
+    healthCheck:
+      type: EC2
+      gracePeriod: 180
+    terminationPolicies:
+      - Default
+    vpc:
+      subnetType: PRIVATE_WITH_EGRESS
+      allowAllOutbound: false
+    security:
+      managedPolicies:
+        - AmazonSSMManagedInstanceCore
+        - CloudWatchAgentServerPolicy
+      attachLogDeliveryPolicy: true
+      stigComplianceTag: false
+    monitoring:
+      enabled: true
+      alarms:
+        cpuHigh:
+          enabled: true
+          threshold: 75
+          evaluationPeriods: 2
+          periodMinutes: 5
+          comparisonOperator: GT
+          treatMissingData: not-breaching
+        inService:
+          enabled: true
+          threshold: 1
+          evaluationPeriods: 2
+          periodMinutes: 1
+          comparisonOperator: LT
+          treatMissingData: breaching
+    tags: {}
+
+  glue-job:
+    glueVersion: '4.0'
+    jobType: glueetl
+    command:
+      pythonVersion: '3'
+      scriptArguments: {}
+    connections: []
+    maxConcurrentRuns: 3
+    maxRetries: 3
+    timeout: 1440
+    workerConfiguration:
+      workerType: G.2X
+      numberOfWorkers: 20
+    defaultArguments:
+      --enable-continuous-cloudwatch-log: 'true'
+      --enable-metrics: 'true'
+      --enable-spark-ui: 'true'
+    nonOverridableArguments: {}
+    security:
+      encryption:
+        enabled: true
+        createCustomerManagedKey: true
+        removalPolicy: retain
+    logging:
+      groups:
+        - id: security
+          enabled: true
+          logGroupSuffix: security
+          retentionDays: 90
+          removalPolicy: destroy
+        - id: compliance
+          enabled: true
+          logGroupSuffix: compliance
+          retentionDays: 365
+          removalPolicy: retain
+    monitoring:
+      enabled: true
+      jobFailure:
+        threshold: 1
+        evaluationPeriods: 1
+        periodMinutes: 5
+      jobDuration:
+        thresholdMs: 3600000
+        evaluationPeriods: 1
+        periodMinutes: 15
+    tags:
+      compliance-framework: fedramp-moderate
+      monitoring: enabled
+
+  elasticache-redis:
+    engineVersion: '7.0'
+    nodeType: cache.r6g.large
+    numCacheNodes: 2
+    port: 6379
+    vpc:
+      subnetIds: []
+    security:
+      create: true
+      securityGroupIds: []
+      allowedCidrs:
+        - 10.0.0.0/16
+    parameterGroup:
+      family: redis7
+      parameters:
+        tcp-keepalive: '60'
+        timeout: '300'
+    encryption:
+      atRest: true
+      inTransit: true
+      authToken:
+        enabled: true
+        removalPolicy: retain
+    backup:
+      enabled: true
+      retentionDays: 14
+      window: '02:00-04:00'
+    maintenance:
+      window: 'sun:01:00-sun:02:00'
+    multiAz:
+      enabled: true
+      automaticFailover: true
+    monitoring:
+      enabled: true
+      logDelivery: []
+      alarms:
+        cpuUtilization:
+          enabled: true
+          threshold: 75
+          evaluationPeriods: 2
+          periodMinutes: 5
+        cacheMisses:
+          enabled: true
+          threshold: 500
+          evaluationPeriods: 2
+          periodMinutes: 5
+        evictions:
+          enabled: true
+          threshold: 5
+          evaluationPeriods: 2
+          periodMinutes: 5
+        connections:
+          enabled: true
+          threshold: 400
+          evaluationPeriods: 2
+          periodMinutes: 5
+    tags:
+      compliance-framework: fedramp-moderate
+      monitoring: enabled
+
+  certificate-manager:
+    subjectAlternativeNames: []
+    validation:
+      method: DNS
+    transparencyLoggingEnabled: true
+    keyAlgorithm: RSA_2048
+    logging:
+      groups:
+        - id: lifecycle
+          enabled: true
+          retentionInDays: 365
+          removalPolicy: retain
+          tags:
+            compliance: fedramp-moderate
+        - id: compliance
+          enabled: true
+          retentionInDays: 365
+          removalPolicy: retain
+          tags:
+            log-type: compliance
+    monitoring:
+      enabled: true
+      expiration:
+        enabled: true
+        thresholdDays: 45
+        evaluationPeriods: 1
+        periodHours: 6
+      status:
+        enabled: true
+        threshold: 1
+        evaluationPeriods: 3
+        periodMinutes: 15
+    tags:
+      'compliance-framework': 'fedramp-moderate'
+
+  cognito-user-pool:
+    signIn:
+      username: true
+      email: true
+      phone: false
+      preferredUsername: false
+    standardAttributes:
+      email:
+        required: true
+        mutable: false
+      givenName:
+        required: true
+        mutable: false
+      familyName:
+        required: true
+        mutable: false
+    passwordPolicy:
+      minLength: 14
+      requireLowercase: true
+      requireUppercase: true
+      requireDigits: true
+      requireSymbols: true
+      tempPasswordValidity: 7
+    mfa:
+      mode: required
+      enableSms: true
+      enableTotp: true
+      smsMessage: "Your verification code is {####}"
+    accountRecovery:
+      email: true
+      phone: false
+    deviceTracking:
+      challengeRequiredOnNewDevice: true
+      deviceOnlyRememberedOnUserPrompt: true
+    advancedSecurityMode: enforced
+    featurePlan: plus
+    deletionProtection: true
+    removalPolicy: retain
+    domain: {}
+    appClients: []
+    monitoring:
+      enabled: true
+      signInSuccess:
+        enabled: true
+        threshold: 1
+        evaluationPeriods: 3
+        periodMinutes: 5
+      signInThrottle:
+        enabled: true
+        threshold: 10
+        evaluationPeriods: 2
+        periodMinutes: 5
+      signUpSuccess:
+        enabled: true
+        threshold: 1
+        evaluationPeriods: 3
+        periodMinutes: 5
+      signUpThrottle:
+        enabled: true
+        threshold: 5
+        evaluationPeriods: 2
+        periodMinutes: 5
+      riskHigh:
+        enabled: true
+        threshold: 1
+        evaluationPeriods: 1
+        periodMinutes: 5
+    tags:
+      compliance-tier: fedramp-moderate
+
+  static-website:
+    bucket:
+      indexDocument: index.html
+      errorDocument: error.html
+      versioning: true
+      accessLogging: true
+      removalPolicy: retain
+    distribution:
+      enabled: true
+      enableLogging: true
+      logFilePrefix: cloudfront/
+      priceClass: price-class-200
+    deployment:
+      enabled: false
+      retainOnDelete: false
+    security:
+      blockPublicAccess: true
+      encryption: true
+      enforceHTTPS: true
+    logging:
+      retentionDays: 365
+    tags:
+      compliance-tier: fedramp-moderate
+
+  api-gateway-rest:
+    disableExecuteApiEndpoint: true
+    throttling:
+      rateLimit: 200
+      burstLimit: 100
+    logging:
+      accessLoggingEnabled: true
+      retentionInDays: 365
+      executionLoggingLevel: ERROR
+      dataTraceEnabled: false
+      metricsEnabled: true
+    monitoring:
+      detailedMetrics: true
+      tracingEnabled: true
+      thresholds:
+        errorRate4xxPercent: 2
+        errorRate5xxPercent: 0.5
+        highLatencyMs: 2000
+        lowThroughput: 5
+    tracing:
+      xrayEnabled: true
+
+  s3-bucket:
+    public: false
+    versioning: true
+    eventBridgeEnabled: false
+    encryption:
+      type: KMS
+    security:
+      blockPublicAccess: true
+      requireSecureTransport: true
+      requireMfaDelete: true
+      denyDeleteActions: false
+      tools:
+        clamavScan: false
+    lifecycleRules:
+      - id: compliance-archival
+        enabled: true
+        transitions:
+          - storageClass: GLACIER
+            transitionAfter: 90
+          - storageClass: DEEP_ARCHIVE
+            transitionAfter: 365
+    compliance:
+      auditLogging: true
+      auditBucketRetentionDays: 1095
+      auditBucketLifecycleRules:
+        - id: fedramp-moderate-audit-retention
+          enabled: true
+          transitions:
+            - storageClass: GLACIER
+              transitionAfter: 90
+            - storageClass: DEEP_ARCHIVE
+              transitionAfter: 365
+          expiration:
+            days: 1095
+      objectLock:
+        enabled: false
+    monitoring:
+      enabled: true
+      clientErrorThreshold: 5
+      serverErrorThreshold: 1
+
+  secrets-manager:
+    automaticRotation:
+      enabled: true
+      rotationLambda:
+        createFunction: true
+        enableTracing: true
+      schedule:
+        automaticallyAfterDays: 90
+    encryption:
+      createCustomerManagedKey: true
+      enableKeyRotation: false
+    recovery:
+      deletionProtection: true
+      recoveryWindowInDays: 30
+    replicas: []
+    monitoring:
+      enabled: true
+      rotationFailureThreshold: 1
+      unusualAccessThresholdMs: 4000
+    accessPolicies:
+      denyInsecureTransport: true
+      restrictToVpce: true
+      allowedVpceIds:
+        - vpce-*
+      requireTemporaryCredentials: false
+
+  application-load-balancer:
+    scheme: internet-facing
+    ipAddressType: ipv4
+    vpc:
+      subnetType: public
+      subnetIds: []
+    securityGroups:
+      create: true
+      securityGroupIds: []
+      ingress:
+        - port: 443
+          protocol: tcp
+          cidr: 0.0.0.0/0
+          description: Enforce HTTPS ingress
+    accessLogs:
+      enabled: true
+      prefix: alb/audit/
+      retentionDays: 180
+      removalPolicy: retain
+    listeners:
+      - port: 443
+        protocol: HTTPS
+        sslPolicy: ELBSecurityPolicy-TLS-1-2-2017-01
+    targetGroups: []
+    deletionProtection: true
+    idleTimeoutSeconds: 60
+    deploymentStrategy:
+      type: single
+    monitoring:
+      enabled: true
+      alarms:
+        http5xx:
+          enabled: true
+          threshold: 5
+        unhealthyHosts:
+          enabled: true
+          threshold: 1
+        connectionErrors:
+          enabled: true
+          threshold: 2
+        rejectedConnections:
+          enabled: true
+          threshold: 1
+    hardeningProfile: fedramp-moderate
+    tags:
+      compliance: fedramp-moderate
+
+  ecs-fargate-service:
+    cpu: 512
+    memory: 1024
+    desiredCount: 1
+    autoScaling:
+      minCapacity: 1
+      maxCapacity: 5
+      targetCpuUtilization: 65
+      targetMemoryUtilization: 75
+    logging:
+      createLogGroup: true
+      streamPrefix: service
+      retentionInDays: 365
+      removalPolicy: retain
+    monitoring:
+      enabled: true
+      alarms:
+        cpuUtilization:
+          enabled: true
+          threshold: 80
+          evaluationPeriods: 3
+          periodMinutes: 5
+        memoryUtilization:
+          enabled: true
+          threshold: 85
+          evaluationPeriods: 3
+          periodMinutes: 5
+        runningTaskCount:
+          enabled: true
+          threshold: 1
+          comparisonOperator: lt
+          evaluationPeriods: 2
+          periodMinutes: 1
+    diagnostics:
+      enableExecuteCommand: true
+    deploymentStrategy:
+      type: rolling
+
+  ecs-ec2-service:
+    taskCpu: 512
+    taskMemory: 1024
+    port: 8080
+    desiredCount: 1
+    logging:
+      createLogGroup: true
+      streamPrefix: service
+      retentionInDays: 1827
+      removalPolicy: retain
+    monitoring:
+      enabled: true
+      alarms:
+        cpu:
+          enabled: true
+          threshold: 70
+          evaluationPeriods: 3
+        memory:
+          enabled: true
+          threshold: 80
+          evaluationPeriods: 3
+    diagnostics:
+      enableExecuteCommand: true
+
+  opensearch-domain:
+    version: OpenSearch_2.7
+    cluster:
+      instanceType: m6g.medium.search
+      instanceCount: 3
+      zoneAwarenessEnabled: true
+      availabilityZoneCount: 2
+      dedicatedMasterEnabled: true
+      masterInstanceType: m6g.medium.search
+      masterInstanceCount: 3
+      warmEnabled: false
+    ebs:
+      enabled: true
+      volumeType: gp3
+      volumeSize: 100
+    vpc:
+      enabled: true
+      vpcId:
+      subnetIds: []
+      securityGroupIds: []
+      createSecurityGroup: true
+      ingressRules:
+        - port: 443
+          protocol: tcp
+          cidr: 10.0.0.0/8
+          description: HTTPS access from trusted networks
+        - port: 9200
+          protocol: tcp
+          cidr: 10.0.0.0/8
+          description: OpenSearch API access from trusted networks
+    encryption:
+      atRest:
+        enabled: true
+      nodeToNode: true
+    domainEndpoint:
+      enforceHttps: true
+      tlsSecurityPolicy: Policy-Min-TLS-1-2-2019-07
+    advancedSecurity:
+      enabled: true
+      internalUserDatabaseEnabled: false
+      masterUserName: master-user
+    logging:
+      slowSearch:
+        enabled: true
+        retentionInDays: 365
+        removalPolicy: retain
+      slowIndex:
+        enabled: true
+        retentionInDays: 365
+        removalPolicy: retain
+      application:
+        enabled: true
+        retentionInDays: 365
+        removalPolicy: retain
+      audit:
+        enabled: true
+        retentionInDays: 365
+        removalPolicy: retain
+    monitoring:
+      enabled: true
+      alarms:
+        clusterStatusRed:
+          enabled: true
+        clusterStatusYellow:
+          enabled: true
+        jvmMemoryPressure:
+          enabled: true
+          threshold: 75
+        freeStorageSpace:
+          enabled: true
+          threshold: 50
+          comparisonOperator: lt
+          statistic: Minimum
+    snapshot:
+      automatedSnapshotStartHour: 2
+    maintenance:
+      autoTune:
+        enabled: true
+        desiredState: ENABLED
+      offPeakWindowEnabled: true
+    accessPolicies:
+      statements: []
+    advancedOptions:
+      rest.action.multi.allow_explicit_index: 'true'
+    hardeningProfile: fedramp-moderate
+    removalPolicy: retain
+    tags:
+      compliance-framework: fedramp-moderate
+
+  efs-filesystem:
+    fileSystemName:
+    performanceMode: generalPurpose
+    throughputMode: bursting
+    provisionedThroughputMibps:
+    encryption:
+      enabled: true
+      encryptInTransit: true
+      kmsKeyArn:
+      customerManagedKey:
+        create: false
+        enableRotation: true
+    vpc:
+      enabled: false
+      vpcId:
+      subnetIds: []
+      securityGroup:
+        create: true
+        securityGroupId:
+        ingressRules:
+          - port: 2049
+            protocol: tcp
+            cidr: 10.0.0.0/8
+            description: NFS access from trusted networks
+    lifecycle:
+      transitionToIA: AFTER_30_DAYS
+      transitionToPrimary: AFTER_1_ACCESS
+    backups:
+      enabled: true
+    logging:
+      access:
+        enabled: true
+        retentionInDays: 365
+        removalPolicy: retain
+      audit:
+        enabled: true
+        retentionInDays: 365
+        removalPolicy: retain
+    monitoring:
+      enabled: true
+      alarms:
+        storageUtilization:
+          enabled: true
+          threshold: 879609302220
+        clientConnections:
+          enabled: true
+          threshold: 500
+        burstCreditBalance:
+          enabled: true
+          threshold: 256
+          comparisonOperator: lt
+          statistic: Minimum
+    filesystemPolicy:
+    removalPolicy: retain
+    hardeningProfile: fedramp-moderate
+    tags:
+      compliance-framework: fedramp-moderate
+
+  lambda-worker:
+    runtime: nodejs20.x
+    architecture: x86_64
+    memorySize: 384
+    timeoutSeconds: 450
+    codePath: ./src
+    environment: {}
+    reservedConcurrency:
+    deadLetterQueue:
+      enabled: true
+      maxReceiveCount: 1
+    eventSources: []
+    vpc:
+      enabled: false
+      vpcId:
+      subnetIds: []
+      securityGroupIds: []
+    kmsKeyArn:
+    logging:
+      logRetentionDays: 120
+      logFormat: JSON
+      systemLogLevel: INFO
+      applicationLogLevel: INFO
+    tracing:
+      mode: Active
+    observability:
+      otelEnabled: true
+      otelLayerArn:
+      otelResourceAttributes:
+        deployment.environment: fedramp-moderate
+    securityTools:
+      falco: true
+    monitoring:
+      enabled: true
+      alarms:
+        errors:
+          enabled: true
+          threshold: 1
+        throttles:
+          enabled: true
+          threshold: 1
+        duration:
+          enabled: true
+          threshold: 90000
+          statistic: Average
+    hardeningProfile: fedramp-moderate
+    removalPolicy: retain
+    tags:
+      compliance-framework: fedramp-moderate
+
+  route53-hosted-zone:
+    zoneType: public
+    vpcAssociations: []
+    queryLogging:
+      enabled: true
+      retentionDays: 365
+      removalPolicy: retain
+    dnssec:
+      enabled: true
+    monitoring:
+      enabled: true
+      alarms:
+        queryVolume:
+          enabled: true
+          threshold: 15000
+        healthCheckFailures:
+          enabled: true
+          threshold: 5
+    hardeningProfile: fedramp-moderate
+    removalPolicy: retain
+    tags:
+      compliance-framework: fedramp-moderate
+
+  iam-policy:
+    controls:
+      denyInsecureTransport: true
+      requireMfaForActions: []
+      additionalStatements: []
+    logging:
+      usage:
+        enabled: true
+        retentionInDays: 90
+        removalPolicy: destroy
+        tags:
+          log-type: policy-usage
+          retention: 90-days
+      compliance:
+        enabled: true
+        retentionInDays: 365
+        removalPolicy: retain
+        logGroupNameSuffix: compliance
+        tags:
+          log-type: compliance
+          retention: 1-year
+          compliance: fedramp-moderate
+    monitoring:
+      enabled: true
+      detailedMetrics: true
+      usageAlarm:
+        enabled: true
+        threshold: 1000
+        evaluationPeriods: 2
+        periodMinutes: 60
+        treatMissingData: not-breaching
+        tags:
+          metric-type: security
+          compliance: fedramp-moderate
+
+  cloudfront-distribution:
+    origin:
+      type: s3
+    defaultBehavior:
+      viewerProtocolPolicy: redirect-to-https
+      allowedMethods: ["GET", "HEAD"]
+      cachedMethods: ["GET", "HEAD", "OPTIONS"]
+      compress: true
+    additionalBehaviors: []
+    priceClass: PriceClass_200
+    geoRestriction:
+      type: none
+      countries: []
+    logging:
+      enabled: true
+      bucket: compliance-cloudfront-logs
+      prefix: fedramp-moderate/
+      includeCookies: false
+    monitoring:
+      enabled: true
+      alarms:
+        error4xx:
+          enabled: true
+          threshold: 35
+          evaluationPeriods: 2
+        error5xx:
+          enabled: true
+          threshold: 8
+          evaluationPeriods: 2
+        originLatencyMs:
+          enabled: true
+          threshold: 4000
+          evaluationPeriods: 2
+    hardeningProfile: hardened
+
+  kinesis-stream:
+    streamMode: provisioned
+    shardCount: 2
+    retentionHours: 72
+    encryption:
+      type: kms
+      customerManagedKey:
+        create: true
+        enableRotation: true
+    monitoring:
+      enabled: true
+      enhancedMetrics: true
+      alarms:
+        iteratorAgeMs:
+          enabled: true
+          threshold: 300000
+        readProvisionedExceeded:
+          enabled: true
+          threshold: 1
+        writeProvisionedExceeded:
+          enabled: true
+          threshold: 1
+    hardeningProfile: hardened
+
+  dynamodb-table:
+    partitionKey:
+      name: id
+      type: string
+    billingMode: provisioned
+    provisioned:
+      readCapacity: 10
+      writeCapacity: 5
+      autoScaling:
+        minReadCapacity: 10
+        maxReadCapacity: 100
+        minWriteCapacity: 5
+        maxWriteCapacity: 50
+        targetUtilizationPercent: 70
+    tableClass: standard
+    pointInTimeRecovery: true
+    timeToLive:
+      enabled: true
+      attributeName: ttlExpiry
+    stream:
+      enabled: true
+      viewType: new-and-old-images
+    encryption:
+      type: customer-managed
+      customerManagedKey:
+        create: true
+        enableRotation: true
+    backup:
+      enabled: true
+      retentionDays: 30
+    monitoring:
+      enabled: true
+      alarms:
+        readThrottle:
+          enabled: true
+          threshold: 1
+        writeThrottle:
+          enabled: true
+          threshold: 1
+        systemErrors:
+          enabled: true
+          threshold: 1
+    hardeningProfile: hardened
+
+  rds-postgres:
+    instance:
+      engineVersion: '15.4'
+      instanceType: r5.large
+      allocatedStorage: 100
+      multiAz: true
+      deletionProtection: true
+      publiclyAccessible: false
+      removalPolicy: retain
+    encryption:
+      enabled: true
+      customerManagedKey:
+        create: true
+        enableRotation: true
+    backup:
+      retentionDays: 30
+      copyTagsToSnapshots: true
+    monitoring:
+      enhancedMonitoring:
+        enabled: true
+        intervalSeconds: 5
+      performanceInsights:
+        enabled: true
+        retentionDays: 1095
+        useCustomerManagedKey: true
+      alarms:
+        cpuUtilization:
+          enabled: true
+          threshold: 80
+          evaluationPeriods: 3
+          comparisonOperator: gte
+        freeStorageSpaceBytes:
+          enabled: true
+          threshold: 5368709120
+          evaluationPeriods: 2
+          comparisonOperator: lte
+        databaseConnections:
+          enabled: true
+          threshold: 80
+          evaluationPeriods: 2
+          comparisonOperator: gte
+    logging:
+      database:
+        enabled: true
+        retentionInDays: 180
+        removalPolicy: retain
+      audit:
+        enabled: false
+    rotation:
+      enabled: true
+      mode: single-user
+      scheduleInDays: 30
+    security:
+      iamAuthentication: false
+      enforceSsl: true
+    networking:
+      useDefaultVpc: true
+      ingressCidrs:
+        - 10.0.0.0/16
+      port: 5432
+    observability:
+      logExports:
+        - postgresql
+    hardeningProfile: hardened

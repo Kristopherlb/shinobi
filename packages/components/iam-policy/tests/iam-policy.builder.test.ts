@@ -31,69 +31,66 @@ const createMockSpec = (config: Partial<IamPolicyConfig> = {}): ComponentSpec =>
 });
 
 describe('IamPolicyComponentConfigBuilder', () => {
-  
-  describe('Hardcoded Fallbacks (Layer 1)', () => {
-    
-    it('should provide ultra-safe baseline configuration', () => {
-      const context = createMockContext();
-      const spec = createMockSpec();
-      
-      const builder = new IamPolicyComponentConfigBuilder(context, spec);
+  describe('Commercial defaults', () => {
+    it('loads platform defaults for commercial environments', () => {
+      const builder = new IamPolicyComponentConfigBuilder(createMockContext('commercial'), createMockSpec());
       const config = builder.buildSync();
-      
-      // Verify hardcoded fallbacks are applied
-      expect(config.monitoring?.enabled).toBe(true);
-      expect(config.monitoring?.detailedMetrics).toBe(false);
-      expect(config.tags).toBeDefined();
+
+      expect(config.monitoring?.enabled).toBe(false);
+      expect(config.logging?.usage?.enabled).toBe(true);
+      expect(config.controls?.denyInsecureTransport).toBe(false);
     });
-    
   });
-  
-  describe('Compliance Framework Defaults (Layer 2)', () => {
-    
-    it('should apply commercial compliance defaults', () => {
-      const context = createMockContext('commercial');
-      const spec = createMockSpec();
-      
-      const builder = new IamPolicyComponentConfigBuilder(context, spec);
+
+  describe('FedRAMP defaults', () => {
+    it('applies FedRAMP Moderate logging and controls', () => {
+      const builder = new IamPolicyComponentConfigBuilder(createMockContext('fedramp-moderate'), createMockSpec());
       const config = builder.buildSync();
-      
-      expect(config.monitoring?.enabled).toBe(true);
-      expect(config.monitoring?.detailedMetrics).toBe(true);
+
+      expect(config.controls?.denyInsecureTransport).toBe(true);
+      expect(config.logging?.compliance?.enabled).toBe(true);
+      expect(config.monitoring?.usageAlarm?.enabled).toBe(true);
+      expect(config.monitoring?.usageAlarm?.threshold).toBe(1000);
     });
-    
-    it('should apply FedRAMP compliance defaults', () => {
-      const context = createMockContext('fedramp-moderate');
-      const spec = createMockSpec();
-      
-      const builder = new IamPolicyComponentConfigBuilder(context, spec);
+
+    it('applies FedRAMP High controls requiring MFA', () => {
+      const builder = new IamPolicyComponentConfigBuilder(createMockContext('fedramp-high'), createMockSpec());
       const config = builder.buildSync();
-      
-      expect(config.monitoring?.enabled).toBe(true);
-      expect(config.monitoring?.detailedMetrics).toBe(true); // Mandatory for FedRAMP
+
+      expect(config.controls?.denyInsecureTransport).toBe(true);
+      expect(config.controls?.requireMfaForActions).toContain('iam:*');
+      expect(config.logging?.audit?.enabled).toBe(true);
+      expect(config.logging?.audit?.retentionInDays).toBe(3653);
     });
-    
   });
-  
-  describe('5-Layer Precedence Chain', () => {
-    
-    it('should apply component overrides over platform defaults', () => {
-      const context = createMockContext('commercial');
+
+  describe('Configuration overrides', () => {
+    it('honours component overrides over platform defaults', () => {
       const spec = createMockSpec({
+        controls: {
+          denyInsecureTransport: false,
+          requireMfaForActions: []
+        },
         monitoring: {
           enabled: false,
-          detailedMetrics: false
+          detailedMetrics: false,
+          usageAlarm: {
+            enabled: false
+          }
+        },
+        logging: {
+          usage: {
+            enabled: false
+          }
         }
       });
-      
-      const builder = new IamPolicyComponentConfigBuilder(context, spec);
+
+      const builder = new IamPolicyComponentConfigBuilder(createMockContext('fedramp-high'), spec);
       const config = builder.buildSync();
-      
-      // Verify component config overrides platform defaults
+
+      expect(config.controls?.denyInsecureTransport).toBe(false);
       expect(config.monitoring?.enabled).toBe(false);
-      expect(config.monitoring?.detailedMetrics).toBe(false);
+      expect(config.logging?.usage?.enabled).toBe(false);
     });
-    
   });
-  
 });

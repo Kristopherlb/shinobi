@@ -1,140 +1,238 @@
-/**
- * Configuration Builder for CertificateManagerComponent Component
- * 
- * Implements the ConfigBuilder pattern as defined in the Platform Component API Contract.
- * Provides 5-layer configuration precedence chain and compliance-aware defaults.
- */
+import {
+  ConfigBuilder,
+  ConfigBuilderContext,
+  ComponentConfigSchema
+} from '@shinobi/core';
 
-import { ConfigBuilder, ConfigBuilderContext } from '../../platform/contracts/config-builder';
+export type CertificateKeyAlgorithm = 'RSA_2048' | 'EC_prime256v1' | 'EC_secp384r1';
+export type CertificateValidationMethod = 'DNS' | 'EMAIL';
+export type LogRemovalPolicy = 'retain' | 'destroy';
 
-/**
- * Configuration interface for CertificateManagerComponent component
- */
-export interface CertificateManagerConfig {
-  /** Component name (optional, will be auto-generated) */
-  name?: string;
-  
-  /** Component description */
-  description?: string;
-  
-  /** Enable detailed monitoring */
-  monitoring?: {
-    enabled?: boolean;
-    detailedMetrics?: boolean;
-    alarms?: {
-      // TODO: Define component-specific alarm thresholds
-    };
-  };
-  
-  /** Tagging configuration */
-  tags?: Record<string, string>;
-  
-  // TODO: Add component-specific configuration properties
+export interface CertificateManagerValidationConfig {
+  method: CertificateValidationMethod;
+  hostedZoneId?: string;
+  hostedZoneName?: string;
+  validationEmails?: string[];
 }
 
-/**
- * JSON Schema for CertificateManagerComponent configuration validation
- */
-export const CERTIFICATE_MANAGER_CONFIG_SCHEMA = {
+export interface CertificateManagerLoggingGroupConfig {
+  id: string;
+  enabled: boolean;
+  logGroupName?: string;
+  retentionInDays: number;
+  removalPolicy: LogRemovalPolicy;
+  tags?: Record<string, string>;
+}
+
+export interface CertificateManagerLoggingConfig {
+  groups: CertificateManagerLoggingGroupConfig[];
+}
+
+export interface CertificateManagerMonitoringAlarmConfig {
+  enabled: boolean;
+  threshold?: number;
+  evaluationPeriods?: number;
+  periodMinutes?: number;
+}
+
+export interface CertificateManagerMonitoringConfig {
+  enabled: boolean;
+  expiration: CertificateManagerMonitoringAlarmConfig & { thresholdDays: number; periodHours: number };
+  status: CertificateManagerMonitoringAlarmConfig;
+}
+
+export interface CertificateManagerConfig {
+  domainName: string;
+  subjectAlternativeNames: string[];
+  validation: CertificateManagerValidationConfig;
+  transparencyLoggingEnabled: boolean;
+  keyAlgorithm: CertificateKeyAlgorithm;
+  logging: CertificateManagerLoggingConfig;
+  monitoring: CertificateManagerMonitoringConfig;
+  tags: Record<string, string>;
+}
+
+const CERTIFICATE_MANAGER_CONFIG_SCHEMA: ComponentConfigSchema = {
   type: 'object',
+  additionalProperties: false,
+  required: ['domainName'],
   properties: {
-    name: {
-      type: 'string',
-      description: 'Component name (optional, will be auto-generated from component name)',
-      pattern: '^[a-zA-Z][a-zA-Z0-9-_]*$',
-      maxLength: 128
+    domainName: { type: 'string' },
+    subjectAlternativeNames: {
+      type: 'array',
+      items: { type: 'string' },
+      default: []
     },
-    description: {
+    validation: {
+      type: 'object',
+      additionalProperties: false,
+      properties: {
+        method: { type: 'string', enum: ['DNS', 'EMAIL'], default: 'DNS' },
+        hostedZoneId: { type: 'string' },
+        hostedZoneName: { type: 'string' },
+        validationEmails: {
+          type: 'array',
+          items: { type: 'string' }
+        }
+      },
+      default: { method: 'DNS' }
+    },
+    transparencyLoggingEnabled: { type: 'boolean', default: true },
+    keyAlgorithm: {
       type: 'string',
-      description: 'Component description for documentation',
-      maxLength: 1024
+      enum: ['RSA_2048', 'EC_prime256v1', 'EC_secp384r1'],
+      default: 'RSA_2048'
+    },
+    logging: {
+      type: 'object',
+      additionalProperties: false,
+      properties: {
+        groups: {
+          type: 'array',
+          items: {
+            type: 'object',
+            additionalProperties: false,
+            properties: {
+              id: { type: 'string' },
+              enabled: { type: 'boolean', default: true },
+              logGroupName: { type: 'string' },
+              retentionInDays: { type: 'number' },
+              removalPolicy: { type: 'string', enum: ['retain', 'destroy'], default: 'retain' },
+              tags: {
+                type: 'object',
+                additionalProperties: { type: 'string' }
+              }
+            },
+            required: ['id', 'enabled', 'retentionInDays']
+          },
+          default: []
+        }
+      },
+      default: { groups: [] }
     },
     monitoring: {
       type: 'object',
-      description: 'Monitoring and observability configuration',
+      additionalProperties: false,
       properties: {
-        enabled: {
-          type: 'boolean',
-          default: true,
-          description: 'Enable monitoring'
-        },
-        detailedMetrics: {
-          type: 'boolean',
-          default: false,
-          description: 'Enable detailed CloudWatch metrics'
-        }
-      },
-      additionalProperties: false
+        enabled: { type: 'boolean', default: false },
+        expiration: { type: 'object' },
+        status: { type: 'object' }
+      }
     },
     tags: {
       type: 'object',
-      description: 'Additional resource tags',
-      additionalProperties: { type: 'string' }
+      additionalProperties: { type: 'string' },
+      default: {}
     }
-    // TODO: Add component-specific schema properties
-  },
-  additionalProperties: false
+  }
 };
 
-/**
- * ConfigBuilder for CertificateManagerComponent component
- * 
- * Implements the 5-layer configuration precedence chain:
- * 1. Hardcoded Fallbacks (ultra-safe baseline)
- * 2. Platform Defaults (from platform config)
- * 3. Environment Defaults (from environment config) 
- * 4. Component Overrides (from service.yml)
- * 5. Policy Overrides (from governance policies)
- */
+const DEFAULT_EXPIRATION_ALARM: CertificateManagerMonitoringConfig['expiration'] = {
+  enabled: true,
+  thresholdDays: 30,
+  threshold: 30,
+  evaluationPeriods: 1,
+  periodHours: 6
+};
+
+const DEFAULT_STATUS_ALARM: CertificateManagerMonitoringConfig['status'] = {
+  enabled: true,
+  threshold: 1,
+  evaluationPeriods: 3,
+  periodMinutes: 15
+};
+
 export class CertificateManagerComponentConfigBuilder extends ConfigBuilder<CertificateManagerConfig> {
-  
-  /**
-   * Layer 1: Hardcoded Fallbacks
-   * Ultra-safe baseline configuration that works in any environment
-   */
+  constructor(builderContext: ConfigBuilderContext) {
+    super(builderContext, CERTIFICATE_MANAGER_CONFIG_SCHEMA);
+  }
+
   protected getHardcodedFallbacks(): Partial<CertificateManagerConfig> {
     return {
+      subjectAlternativeNames: [],
+      validation: { method: 'DNS' },
+      transparencyLoggingEnabled: true,
+      keyAlgorithm: 'RSA_2048',
+      logging: {
+        groups: [
+          {
+            id: 'lifecycle',
+            enabled: true,
+            retentionInDays: 180,
+            removalPolicy: 'destroy'
+          }
+        ]
+      },
       monitoring: {
-        enabled: true,
-        detailedMetrics: false
+        enabled: false,
+        expiration: { ...DEFAULT_EXPIRATION_ALARM, enabled: false },
+        status: { ...DEFAULT_STATUS_ALARM, enabled: false }
       },
       tags: {}
-      // TODO: Add component-specific hardcoded fallbacks
     };
   }
-  
-  /**
-   * Layer 2: Compliance Framework Defaults
-   * Security and compliance-specific configurations
-   */
-  protected getComplianceFrameworkDefaults(): Partial<CertificateManagerConfig> {
-    const framework = this.context.complianceFramework;
-    
-    const baseCompliance: Partial<CertificateManagerConfig> = {
-      monitoring: {
-        enabled: true,
-        detailedMetrics: true
-      }
-    };
-    
-    if (framework === 'fedramp-moderate' || framework === 'fedramp-high') {
-      return {
-        ...baseCompliance,
-        monitoring: {
-          ...baseCompliance.monitoring,
-          detailedMetrics: true // Mandatory for FedRAMP
-        }
-        // TODO: Add FedRAMP-specific compliance defaults
-      };
+
+  public buildSync(): CertificateManagerConfig {
+    const resolved = super.buildSync() as CertificateManagerConfig;
+    if (!resolved.domainName) {
+      throw new Error('certificate-manager configuration requires a domainName');
     }
-    
-    return baseCompliance;
+    return this.normaliseConfig(resolved);
   }
-  
-  /**
-   * Get the JSON Schema for validation
-   */
-  public getSchema(): any {
-    return CERTIFICATE_MANAGER_CONFIG_SCHEMA;
+
+  private normaliseConfig(config: CertificateManagerConfig): CertificateManagerConfig {
+    const loggingGroups = (config.logging?.groups ?? []).map(group => ({
+      ...group,
+      retentionInDays: group.retentionInDays ?? 365,
+      removalPolicy: group.removalPolicy ?? 'retain'
+    }));
+
+    const validation: CertificateManagerValidationConfig = {
+      method: config.validation?.method ?? 'DNS',
+      hostedZoneId: config.validation?.hostedZoneId,
+      hostedZoneName: config.validation?.hostedZoneName,
+      validationEmails: config.validation?.validationEmails ?? []
+    };
+
+    const expirationAlarm = {
+      ...DEFAULT_EXPIRATION_ALARM,
+      ...config.monitoring?.expiration
+    };
+    if (expirationAlarm.periodHours === undefined) {
+      expirationAlarm.periodHours = DEFAULT_EXPIRATION_ALARM.periodHours;
+    }
+    if (expirationAlarm.threshold === undefined) {
+      expirationAlarm.threshold = DEFAULT_EXPIRATION_ALARM.threshold;
+    }
+
+    const statusAlarm = {
+      ...DEFAULT_STATUS_ALARM,
+      ...config.monitoring?.status
+    };
+    if (statusAlarm.periodMinutes === undefined) {
+      statusAlarm.periodMinutes = DEFAULT_STATUS_ALARM.periodMinutes;
+    }
+    if (statusAlarm.threshold === undefined) {
+      statusAlarm.threshold = DEFAULT_STATUS_ALARM.threshold;
+    }
+
+    return {
+      domainName: config.domainName,
+      subjectAlternativeNames: config.subjectAlternativeNames ?? [],
+      validation,
+      transparencyLoggingEnabled: config.transparencyLoggingEnabled ?? true,
+      keyAlgorithm: (config.keyAlgorithm ?? 'RSA_2048') as CertificateKeyAlgorithm,
+      logging: {
+        groups: loggingGroups
+      },
+      monitoring: {
+        enabled: config.monitoring?.enabled ?? false,
+        expiration: expirationAlarm,
+        status: statusAlarm
+      },
+      tags: config.tags ?? {}
+    };
   }
 }
+
+export { CERTIFICATE_MANAGER_CONFIG_SCHEMA };

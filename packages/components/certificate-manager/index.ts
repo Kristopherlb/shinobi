@@ -4,10 +4,10 @@
  */
 
 // Component exports
-export { CertificateManagerComponentComponent } from './certificate-manager.component';
+export { CertificateManagerComponent } from './certificate-manager.component';
 
 // Configuration exports
-export { 
+export {
   CertificateManagerConfig,
   CertificateManagerComponentConfigBuilder,
   CERTIFICATE_MANAGER_CONFIG_SCHEMA

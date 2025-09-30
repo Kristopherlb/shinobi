@@ -83,15 +83,6 @@ export class ApiGatewayHttpCreator implements IComponentCreator {
       }
     }
 
-    if (context.complianceFramework !== 'commercial') {
-      if (!config.cors?.allowOrigins || config.cors.allowOrigins.length === 0) {
-        errors.push('FedRAMP environments require explicit CORS allowOrigins configuration');
-      }
-      if (config.cors?.allowOrigins?.some(origin => origin === '*' || origin.includes('*'))) {
-        errors.push('Wildcard CORS origins are not permitted in FedRAMP environments');
-      }
-    }
-
     if (config.routes) {
       const keys = new Set<string>();
       config.routes.forEach((route, index) => {

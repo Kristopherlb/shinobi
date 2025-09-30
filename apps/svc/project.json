@@ -8,11 +8,21 @@
   ],
   "targets": {
     "build": {
-      "executor": "@nx/node:build",
+      "executor": "@nx/js:tsc",
+      "outputs": [
+        "{options.outputPath}"
+      ],
       "options": {
-        "outputPath": "dist/apps/shinobi",
+        "tsConfig": "apps/svc/tsconfig.app.json",
         "main": "apps/svc/src/main.ts",
-        "tsConfig": "apps/svc/tsconfig.app.json"
+        "outputPath": "dist/apps/shinobi",
+        "assets": [
+          {
+            "input": "apps/svc",
+            "glob": "package.json",
+            "output": "."
+          }
+        ]
       }
     },
     "serve": {

@@ -34,14 +34,15 @@ export class LambdaToRdsBinderStrategy implements IBinderStrategy {
     // 3. Configure VPC connectivity using CDK security groups
     this.configureNetworkAccess(rdsConstruct, lambdaConstruct, context);
 
-    // 4. Apply compliance-specific security enhancements
-    if (context.complianceFramework.startsWith('fedramp')) {
-      this.applyFedRAMPSecurityEnhancements(rdsConstruct, lambdaConstruct, context);
+    // 4. Apply security enhancements based on the database security profile
+    const securityProfile = this.getSecurityProfile(target);
+    if (this.requiresEnhancedSecurity(securityProfile)) {
+      this.applyEnhancedSecurityPolicies(rdsConstruct, lambdaConstruct, context, securityProfile);
     }
 
     // 5. Handle SSL/TLS configuration for secure connections
     if (directive.options?.ssl !== false) {
-      this.configureSecureConnection(rdsConstruct, lambdaConstruct, context);
+      this.configureSecureConnection(rdsConstruct, lambdaConstruct, securityProfile);
     }
 
     // 6. Return environment variables from the REAL construct
@@ -101,12 +102,16 @@ export class LambdaToRdsBinderStrategy implements IBinderStrategy {
   /**
    * Apply FedRAMP-specific security enhancements using CDK
    */
-  private applyFedRAMPSecurityEnhancements(
+  private requiresEnhancedSecurity(profile?: string): boolean {
+    return profile ? ['hardened', 'stig'].includes(profile) : false;
+  }
+
+  private applyEnhancedSecurityPolicies(
     rdsConstruct: rds.DatabaseInstance,
     lambdaConstruct: lambda.Function,
-    context: BindingContext
+    context: BindingContext,
+    profile?: string
   ): void {
-    // Add enhanced monitoring permissions for FedRAMP compliance
     lambdaConstruct.addToRolePolicy(
       new iam.PolicyStatement({
         effect: iam.Effect.ALLOW,
@@ -132,13 +137,12 @@ export class LambdaToRdsBinderStrategy implements IBinderStrategy {
   private configureSecureConnection(
     rdsConstruct: rds.DatabaseInstance,
     lambdaConstruct: lambda.Function,
-    context: BindingContext
+    securityProfile?: string
   ): void {
     // Add environment variable to enforce SSL connections
     lambdaConstruct.addEnvironment('DB_SSL_MODE', 'require');
     
-    // For FedRAMP, enforce certificate verification
-    if (context.complianceFramework.startsWith('fedramp')) {
+    if (this.requiresEnhancedSecurity(securityProfile)) {
       lambdaConstruct.addEnvironment('DB_SSL_MODE', 'verify-full');
     }
   }
@@ -155,5 +159,11 @@ export class LambdaToRdsBinderStrategy implements IBinderStrategy {
     const sslParam = requireSsl ? '?sslmode=require' : '';
     
     return `postgresql://{username}:{password}@${rdsConstruct.instanceEndpoint.hostname}:${rdsConstruct.instanceEndpoint.port}/${dbName}${sslParam}`;
+  }
+
+  private getSecurityProfile(target: any): string | undefined {
+    const capabilities = target.getCapabilities();
+    const databaseCapability = capabilities['db:postgres'] || capabilities['database:rds'];
+    return databaseCapability?.securityProfile;
   }
 }

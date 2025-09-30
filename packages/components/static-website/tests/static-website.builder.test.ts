@@ -32,46 +32,52 @@ describe('StaticWebsiteConfigBuilder', () => {
     it('should apply commercial defaults', () => {
       const context = createMockContext('commercial');
       const spec = createMockSpec();
-      const builder = new StaticWebsiteConfigBuilder({ context, spec });
+      const builder = new StaticWebsiteConfigBuilder(context, spec);
 
       const config = builder.buildSync();
 
-      expect(config.security?.blockPublicAccess).toBe(true);
-      expect(config.security?.encryption).toBe(true);
-      expect(config.security?.enforceHTTPS).toBe(true);
-      expect(config.bucket?.versioning).toBe(false);
-      expect(config.bucket?.accessLogging).toBe(false);
-      expect(config.distribution?.enableLogging).toBe(false);
+      expect(config.security.blockPublicAccess).toBe(true);
+      expect(config.security.encryption).toBe(true);
+      expect(config.security.enforceHTTPS).toBe(true);
+      expect(config.bucket.versioning).toBe(false);
+      expect(config.bucket.accessLogging).toBe(false);
+      expect(config.distribution.enableLogging).toBe(false);
+      expect(config.logging.retentionDays).toBe(90);
+      expect(config.bucket.removalPolicy).toBe('destroy');
     });
 
     it('should apply fedramp-moderate defaults', () => {
       const context = createMockContext('fedramp-moderate');
       const spec = createMockSpec();
-      const builder = new StaticWebsiteConfigBuilder({ context, spec });
+      const builder = new StaticWebsiteConfigBuilder(context, spec);
 
       const config = builder.buildSync();
 
-      expect(config.security?.blockPublicAccess).toBe(true);
-      expect(config.security?.encryption).toBe(true);
-      expect(config.security?.enforceHTTPS).toBe(true);
-      expect(config.bucket?.versioning).toBe(true); // Required for compliance
-      expect(config.bucket?.accessLogging).toBe(true); // Mandatory logging
-      expect(config.distribution?.enableLogging).toBe(true); // Required logging
+      expect(config.security.blockPublicAccess).toBe(true);
+      expect(config.security.encryption).toBe(true);
+      expect(config.security.enforceHTTPS).toBe(true);
+      expect(config.bucket.versioning).toBe(true);
+      expect(config.bucket.accessLogging).toBe(true);
+      expect(config.bucket.removalPolicy).toBe('retain');
+      expect(config.distribution.enableLogging).toBe(true);
+      expect(config.logging.retentionDays).toBe(365);
     });
 
     it('should apply fedramp-high defaults', () => {
       const context = createMockContext('fedramp-high');
       const spec = createMockSpec();
-      const builder = new StaticWebsiteConfigBuilder({ context, spec });
+      const builder = new StaticWebsiteConfigBuilder(context, spec);
 
       const config = builder.buildSync();
 
-      expect(config.security?.blockPublicAccess).toBe(true);
-      expect(config.security?.encryption).toBe(true);
-      expect(config.security?.enforceHTTPS).toBe(true);
-      expect(config.bucket?.versioning).toBe(true); // Mandatory
-      expect(config.bucket?.accessLogging).toBe(true); // Mandatory comprehensive logging
-      expect(config.distribution?.enableLogging).toBe(true); // Mandatory
+      expect(config.security.blockPublicAccess).toBe(true);
+      expect(config.security.encryption).toBe(true);
+      expect(config.security.enforceHTTPS).toBe(true);
+      expect(config.bucket.versioning).toBe(true);
+      expect(config.bucket.accessLogging).toBe(true);
+      expect(config.bucket.removalPolicy).toBe('retain');
+      expect(config.distribution.enableLogging).toBe(true);
+      expect(config.logging.retentionDays).toBe(3650);
     });
   });
 
@@ -79,16 +85,16 @@ describe('StaticWebsiteConfigBuilder', () => {
     it('should apply hardcoded fallbacks as baseline', () => {
       const context = createMockContext('commercial');
       const spec = createMockSpec({});
-      const builder = new StaticWebsiteConfigBuilder({ context, spec });
+      const builder = new StaticWebsiteConfigBuilder(context, spec);
 
       const config = builder.buildSync();
 
-      expect(config.bucket?.indexDocument).toBe('index.html');
-      expect(config.bucket?.errorDocument).toBe('error.html');
-      expect(config.distribution?.enabled).toBe(true);
-      expect(config.distribution?.logFilePrefix).toBe('cloudfront/');
-      expect(config.deployment?.enabled).toBe(false);
-      expect(config.deployment?.retainOnDelete).toBe(false);
+      expect(config.bucket.indexDocument).toBe('index.html');
+      expect(config.bucket.errorDocument).toBe('error.html');
+      expect(config.distribution.enabled).toBe(true);
+      expect(config.distribution.logFilePrefix).toBe('cloudfront/');
+      expect(config.deployment.enabled).toBe(false);
+      expect(config.deployment.retainOnDelete).toBe(false);
     });
 
     it('should allow component overrides to win over compliance defaults', () => {
@@ -102,13 +108,13 @@ describe('StaticWebsiteConfigBuilder', () => {
           enableLogging: false // Override compliance requirement
         }
       });
-      const builder = new StaticWebsiteConfigBuilder({ context, spec });
+      const builder = new StaticWebsiteConfigBuilder(context, spec);
 
       const config = builder.buildSync();
 
-      expect(config.bucket?.indexDocument).toBe('custom-index.html');
-      expect(config.bucket?.versioning).toBe(false); // Component override wins
-      expect(config.distribution?.enableLogging).toBe(false); // Component override wins
+      expect(config.bucket.indexDocument).toBe('custom-index.html');
+      expect(config.bucket.versioning).toBe(false);
+      expect(config.distribution.enableLogging).toBe(false);
     });
 
     it('should merge nested configuration objects correctly', () => {
@@ -123,15 +129,15 @@ describe('StaticWebsiteConfigBuilder', () => {
           // other security settings should use defaults
         }
       });
-      const builder = new StaticWebsiteConfigBuilder({ context, spec });
+      const builder = new StaticWebsiteConfigBuilder(context, spec);
 
       const config = builder.buildSync();
 
-      expect(config.bucket?.indexDocument).toBe('app.html');
-      expect(config.bucket?.versioning).toBe(false); // Default
-      expect(config.security?.encryption).toBe(false); // Override
-      expect(config.security?.blockPublicAccess).toBe(true); // Default
-      expect(config.security?.enforceHTTPS).toBe(true); // Default
+      expect(config.bucket.indexDocument).toBe('app.html');
+      expect(config.bucket.versioning).toBe(false);
+      expect(config.security.encryption).toBe(false);
+      expect(config.security.blockPublicAccess).toBe(true);
+      expect(config.security.enforceHTTPS).toBe(true);
     });
 
     it('should handle complex nested overrides', () => {
@@ -148,20 +154,19 @@ describe('StaticWebsiteConfigBuilder', () => {
           retainOnDelete: true
         }
       });
-      const builder = new StaticWebsiteConfigBuilder({ context, spec });
+      const builder = new StaticWebsiteConfigBuilder(context, spec);
 
       const config = builder.buildSync();
 
       expect(config.websiteName).toBe('my-custom-site');
       expect(config.domain?.domainName).toBe('example.com');
       expect(config.domain?.alternativeDomainNames).toEqual(['www.example.com']);
-      expect(config.deployment?.enabled).toBe(true);
-      expect(config.deployment?.sourcePath).toBe('./dist');
-      expect(config.deployment?.retainOnDelete).toBe(true);
-      // Compliance defaults should still apply
-      expect(config.bucket?.versioning).toBe(true);
-      expect(config.bucket?.accessLogging).toBe(true);
-      expect(config.distribution?.enableLogging).toBe(true);
+      expect(config.deployment.enabled).toBe(true);
+      expect(config.deployment.sourcePath).toBe('./dist');
+      expect(config.deployment.retainOnDelete).toBe(true);
+      expect(config.bucket.versioning).toBe(true);
+      expect(config.bucket.accessLogging).toBe(true);
+      expect(config.distribution.enableLogging).toBe(true);
     });
   });
 
@@ -169,7 +174,7 @@ describe('StaticWebsiteConfigBuilder', () => {
     it('should return the correct JSON schema', () => {
       const context = createMockContext();
       const spec = createMockSpec();
-      const builder = new StaticWebsiteConfigBuilder({ context, spec });
+      const builder = new StaticWebsiteConfigBuilder(context, spec);
 
       const schema = builder.getSchema();
 

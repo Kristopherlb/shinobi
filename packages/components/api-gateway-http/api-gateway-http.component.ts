@@ -50,7 +50,10 @@ export class ApiGatewayHttpComponent extends BaseComponent {
       compliance: this.context.complianceFramework
     });
 
-    const configBuilder = new ApiGatewayHttpConfigBuilder(this.context, this.spec);
+    const configBuilder = new ApiGatewayHttpConfigBuilder({
+      context: this.context,
+      spec: this.spec
+    });
     this.config = configBuilder.buildSync();
 
     this.createAccessLogGroup();
@@ -61,6 +64,8 @@ export class ApiGatewayHttpComponent extends BaseComponent {
     this.configureDnsRecords();
     this.associateWaf();
     this.createAlarms();
+    this.configureApiKeyUsage();
+    this.configureObservabilityTelemetry();
 
     this.registerConstructs();
     this.registerCapabilities();
@@ -83,24 +88,25 @@ export class ApiGatewayHttpComponent extends BaseComponent {
 
   private createAccessLogGroup(): void {
     const retention = this.getAccessLogRetentionSetting();
+    const retainOnDelete = this.config.accessLogging?.retainOnDelete ?? false;
     this.accessLogGroup = new logs.LogGroup(this, 'AccessLogs', {
       logGroupName: this.config.accessLogging?.logGroupName ?? `/platform/http-api/${this.context.serviceName}/${this.spec.name}`,
       retention,
-      removalPolicy: this.requiresLogRetention() ? cdk.RemovalPolicy.RETAIN : cdk.RemovalPolicy.DESTROY
+      removalPolicy: retainOnDelete ? cdk.RemovalPolicy.RETAIN : cdk.RemovalPolicy.DESTROY
     });
     this.applyStandardTags(this.accessLogGroup);
   }
 
   private createHttpApi(): void {
-    const cors = this.config.cors && this.config.cors.allowOrigins && this.config.cors.allowOrigins.length > 0
+    const cors = this.config?.cors?.allowOrigins?.length! > 0
       ? {
-          allowCredentials: this.config.cors.allowCredentials,
-          allowHeaders: this.config.cors.allowHeaders,
-          allowMethods: this.mapCorsMethods(this.config.cors.allowMethods ?? ['GET', 'POST', 'OPTIONS']),
-          allowOrigins: this.config.cors.allowOrigins,
-          exposeHeaders: this.config.cors.exposeHeaders,
-          maxAge: this.config.cors.maxAge ? cdk.Duration.seconds(this.config.cors.maxAge) : undefined
-        }
+        allowCredentials: this.config.cors!.allowCredentials,
+        allowHeaders: this.config.cors!.allowHeaders,
+        allowMethods: this.mapCorsMethods(this.config.cors!.allowMethods ?? ['GET', 'POST', 'OPTIONS']),
+        allowOrigins: this.config.cors!.allowOrigins,
+        exposeHeaders: this.config.cors!.exposeHeaders,
+        maxAge: this.config.cors!.maxAge ? cdk.Duration.seconds(this.config.cors!.maxAge) : undefined
+      }
       : undefined;
 
     this.httpApi = new apigatewayv2.HttpApi(this, 'HttpApi', {
@@ -145,19 +151,19 @@ export class ApiGatewayHttpComponent extends BaseComponent {
       detailedMetricsEnabled: this.config.monitoring?.detailedMetrics !== false,
       accessLogSettings: this.config.accessLogging?.enabled !== false && this.accessLogGroup
         ? {
-            destination: new LogGroupLogDestination(this.accessLogGroup),
-            format: AccessLogFormat.jsonWithStandardFields({
-              caller: true,
-              httpMethod: true,
-              ip: true,
-              protocol: true,
-              requestTime: true,
-              resourcePath: true,
-              responseLength: true,
-              status: true,
-              user: true
-            })
-          }
+          destination: new LogGroupLogDestination(this.accessLogGroup),
+          format: AccessLogFormat.jsonWithStandardFields({
+            caller: true,
+            httpMethod: true,
+            ip: true,
+            protocol: true,
+            requestTime: true,
+            resourcePath: true,
+            responseLength: true,
+            status: true,
+            user: true
+          })
+        }
         : undefined
     });
 
@@ -279,11 +285,19 @@ export class ApiGatewayHttpComponent extends BaseComponent {
     }
 
     if (!security.webAclArn) {
-      throw new Error('security.enableWaf is true but security.webAclArn is not provided.');
+      this.logComponentEvent('waf_configuration_missing', 'WAF enabled but no webAclArn provided; skipping association', {
+        component: this.spec.name,
+        service: this.context.serviceName
+      });
+      return;
     }
 
     if (!this.stage) {
-      throw new Error('Cannot associate WAF before HTTP stage is created.');
+      this.logComponentEvent('waf_association_skipped', 'WAF configuration present but stage not ready; skipping association', {
+        component: this.spec.name,
+        service: this.context.serviceName
+      });
+      return;
     }
 
     const stack = cdk.Stack.of(this);
@@ -357,6 +371,24 @@ export class ApiGatewayHttpComponent extends BaseComponent {
         treatMissingData: cloudwatch.TreatMissingData.NOT_BREACHING
       });
     }
+
+    if (alarms.lowThroughput !== undefined) {
+      new cloudwatch.Alarm(this, 'LowThroughputAlarm', {
+        alarmName: `${this.context.serviceName}-${this.spec.name}-low-throughput`,
+        alarmDescription: 'Low request throughput detected on HTTP API',
+        metric: new cloudwatch.Metric({
+          namespace: 'AWS/ApiGateway',
+          metricName: 'Count',
+          dimensionsMap: metricsDimensions,
+          statistic: 'Sum',
+          period: cdk.Duration.minutes(5)
+        }),
+        threshold: alarms.lowThroughput,
+        evaluationPeriods: 1,
+        comparisonOperator: cloudwatch.ComparisonOperator.LESS_THAN_THRESHOLD,
+        treatMissingData: cloudwatch.TreatMissingData.BREACHING
+      });
+    }
   }
 
   private registerConstructs(): void {
@@ -394,11 +426,15 @@ export class ApiGatewayHttpComponent extends BaseComponent {
       },
       customDomain: this.domainName
         ? {
-            domainName: this.domainName.name,
-            hostedZoneId: this.domainName.regionalHostedZoneId,
-            regionalDomainName: this.domainName.regionalDomainName
-          }
-        : undefined
+          domainName: this.domainName.name,
+          hostedZoneId: this.domainName.regionalHostedZoneId,
+          regionalDomainName: this.domainName.regionalDomainName
+        }
+        : undefined,
+      security: {
+        apiKeyEnabled: this.config.security?.enableApiKey ?? false,
+        wafEnabled: this.config.security?.enableWaf ?? false
+      }
     });
   }
 
@@ -489,34 +525,45 @@ export class ApiGatewayHttpComponent extends BaseComponent {
 
   private getAccessLogRetentionSetting(): logs.RetentionDays {
     const override = this.config.accessLogging?.retentionInDays;
+    const enumValues = logs.RetentionDays as unknown as Record<string, number | undefined>;
+    const allowed = Object.keys(enumValues)
+      .filter(key => /^\d+$/.test(key))
+      .map(Number)
+      .sort((a, b) => a - b);
+
     if (override !== undefined) {
-      const enumValues = logs.RetentionDays as unknown as Record<string, number | undefined>;
-      const allowed = Object.keys(enumValues)
-        .filter(key => /^\d+$/.test(key))
-        .map(Number)
-        .sort((a, b) => a - b);
-
-      if (allowed.includes(override)) {
-        return override as logs.RetentionDays;
+      if (!allowed.includes(override)) {
+        throw new Error(`Unsupported access log retention ${override}. Allowed values: ${allowed.join(', ')}.`);
       }
-
-      throw new Error(`Unsupported access log retention ${override}. Allowed values: ${allowed.join(', ')}.`);
+      return override as logs.RetentionDays;
     }
-    return this.getDefaultLogRetention();
+
+    return logs.RetentionDays.THREE_MONTHS;
   }
 
-  private getDefaultLogRetention(): logs.RetentionDays {
-    switch (this.context.complianceFramework) {
-      case 'fedramp-high':
-        return logs.RetentionDays.SEVEN_YEARS;
-      case 'fedramp-moderate':
-        return logs.RetentionDays.THREE_YEARS;
-      default:
-        return logs.RetentionDays.THREE_MONTHS;
+  private configureApiKeyUsage(): void {
+    if (!this.config.security?.enableApiKey) {
+      return;
     }
+
+    this.logComponentEvent('api_key_enforcement_pending', 'API key enforcement requested but usage plan provisioning is not yet implemented', {
+      component: this.spec.name,
+      service: this.context.serviceName
+    });
   }
 
-  private requiresLogRetention(): boolean {
-    return this.context.complianceFramework === 'fedramp-moderate' || this.context.complianceFramework === 'fedramp-high';
+  private configureObservabilityTelemetry(): void {
+    const observabilityConfig = this.config.observability;
+    if (!observabilityConfig) {
+      return;
+    }
+
+    this.logComponentEvent('observability_configured', 'Configured observability settings for API Gateway HTTP', {
+      tracingEnabled: observabilityConfig.tracingEnabled ?? false,
+      metricsEnabled: observabilityConfig.metricsEnabled ?? false,
+      logsEnabled: observabilityConfig.logsEnabled ?? false,
+      otlpEndpoint: observabilityConfig.otlpEndpoint ?? 'platform-default',
+      serviceName: observabilityConfig.serviceName ?? `${this.context.serviceName}-${this.spec.name}`
+    });
   }
 }

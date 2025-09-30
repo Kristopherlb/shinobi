@@ -2,10 +2,13 @@
   "extends": "../../../tsconfig.base.json",
   "compilerOptions": {
     "outDir": "../../../dist/packages/standards/logging",
-    "rootDir": "src"
+    "rootDir": "."
   },
   "include": [
-    "src/**/*"
+    "src/**/*",
+    "logging-service/**/*.ts",
+    "logger/**/*.ts",
+    "logging-handlers/**/*.ts"
   ],
   "exclude": [
     "src/**/*.test.ts",
