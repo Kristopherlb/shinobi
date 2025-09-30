@@ -2,7 +2,7 @@
   "mcpServers": {
     "shinobi": {
       "command": "node",
-      "args": ["packages/components/shinobi/mcp-server/dist/index.js"],
+      "args": ["apps/shinobi-mcp-server/dist/index.js"],
       "env": {
         "NODE_ENV": "development"
       }

@@ -9,11 +9,8 @@
 export { ShinobiComponent } from './shinobi.component';
 export { ShinobiComponentConfigBuilder, ShinobiConfig } from './shinobi.builder';
 export { ShinobiComponentCreator } from './shinobi.creator';
-export { 
-  SHINOBI_FEATURE_FLAGS, 
-  createShinobiFeatureFlags, 
-  getShinobiFeatureFlagConfig 
+export {
+  SHINOBI_FEATURE_FLAGS,
+  createShinobiFeatureFlags,
+  getShinobiFeatureFlagConfig
 } from './shinobi-feature-flags';
-
-// Export MCP Server
-export { ShinobiMcpServer, startShinobiServer } from './server/index';

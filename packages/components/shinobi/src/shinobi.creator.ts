@@ -87,11 +87,10 @@ export class ShinobiComponentCreator implements IComponentCreator {
    * Factory method to create component instances
    */
   public createComponent(
-    scope: Construct,
     spec: ComponentSpec,
     context: ComponentContext
   ): IComponent {
-    return new ShinobiComponent(scope, spec.name, context, spec);
+    return new ShinobiComponent(context.scope, spec.name, context, spec);
   }
   
   /**

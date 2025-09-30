@@ -77,6 +77,6 @@ If you encounter issues:
 
 To modify the MCP server:
 
-1. Edit files in `packages/components/shinobi/mcp-server/src/`
+1. Edit files in `apps/shinobi-mcp-server/src/`
 2. Run `npm run mcp:build` to rebuild
 3. Restart Cursor to pick up changes

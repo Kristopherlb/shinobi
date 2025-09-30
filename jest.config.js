@@ -19,7 +19,7 @@ module.exports = {
     '^@shinobi/standards-tagging$': '<rootDir>/packages/standards/tagging/src/index.ts',
     '^@shinobi/standards-iam-audit$': '<rootDir>/packages/standards/iam-audit/src/index.ts',
     '^@shinobi/standards-deprecation$': '<rootDir>/packages/standards/deprecation/src/index.ts',
-    '^@shinobi/mcp-server$': '<rootDir>/packages/mcp/server/src/index.ts',
+    '^@shinobi/mcp-server$': '<rootDir>/apps/shinobi-mcp-server/src/index.ts',
     '^@shinobi/observability-handlers$': '<rootDir>/packages/observability-handlers/src/index.ts',
     '^@shinobi/components/(.+)/(.+)$': '<rootDir>/packages/components/$1/$2.ts',
     '^@shinobi/components/(.+)/src/(.+)$': '<rootDir>/packages/components/$1/src/$2.ts',

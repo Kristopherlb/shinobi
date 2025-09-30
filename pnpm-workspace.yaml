@@ -1,6 +1,7 @@
 packages:
   - "packages/*"
   - "packages/*/*"
+  - "packages/*/*/*"
   - "tools/*"
   - "apps/*"
   - "backstage-app/*"

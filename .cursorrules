@@ -101,7 +101,7 @@ Provide meaningful errors with remediation tips.
 
 ## MCP Server Configuration
 # The Shinobi MCP Server provides comprehensive platform intelligence capabilities
-# It's available at: packages/components/shinobi/mcp-server/dist/index.js
+# It's available at: apps/shinobi-mcp-server/dist/index.js
 
 ## Component Catalog & Schema Tools
 # - get_component_catalog: Get all platform components with versions, capabilities, and stability

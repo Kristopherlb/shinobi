@@ -401,7 +401,7 @@ The CDK component automatically provisions:
 
 ```bash
 # Build the container
-docker build -t shinobi-mcp-server -f src/server/Dockerfile .
+docker build -t shinobi-mcp-server -f apps/shinobi-mcp-server/Dockerfile .
 
 # Run the container
 docker run -p 3000:3000 \

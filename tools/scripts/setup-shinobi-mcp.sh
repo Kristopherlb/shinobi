@@ -19,20 +19,21 @@ npm install
 
 # Build the MCP server
 echo "🔨 Building MCP server..."
-cd packages/components/shinobi/mcp-server
+cd apps/shinobi-mcp-server
 npm install
 npm run build
+npm link
 
 # Create a global symlink for easy access
 echo "🔗 Creating global symlink..."
 cd ../../..
-npm link packages/components/shinobi/mcp-server
+npm link @shinobi/mcp-server
 
 # Create a simple start script
 echo "📝 Creating start script..."
 cat > start-shinobi-mcp.sh << 'EOF'
 #!/bin/bash
-cd packages/components/shinobi/mcp-server
+cd apps/shinobi-mcp-server
 node dist/index.js
 EOF
 
@@ -46,7 +47,7 @@ cat > mcp-config-template.json << EOF
     "shinobi": {
       "command": "node",
       "args": [
-        "$(pwd)/packages/components/shinobi/mcp-server/dist/index.js"
+        "$(pwd)/apps/shinobi-mcp-server/dist/index.js"
       ],
       "env": {
         "NODE_ENV": "development"
