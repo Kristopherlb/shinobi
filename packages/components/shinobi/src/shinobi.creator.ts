@@ -29,32 +29,32 @@ import {
  * - Component type identification
  */
 export class ShinobiComponentCreator implements IComponentCreator {
-  
+
   /**
    * Component type identifier
    */
   public readonly componentType = 'shinobi';
-  
+
   /**
    * Component display name
    */
   public readonly displayName = 'Shinobi Platform Intelligence Brain';
-  
+
   /**
    * Component description
    */
   public readonly description = 'Production-grade Ops MCP Server that becomes the brain for SRE/DevOps/DPE/Developers and leadership. Delivers exceptional DX/UX from day one, runs locally and in AWS, and provides a clean runway to a drag-and-drop GUI that outputs platform L3 construct manifests.';
-  
+
   /**
    * Component category for organization
    */
   public readonly category = 'intelligence';
-  
+
   /**
    * AWS service this component manages
    */
   public readonly awsService = 'ECS';
-  
+
   /**
    * Component tags for discovery
    */
@@ -77,12 +77,12 @@ export class ShinobiComponentCreator implements IComponentCreator {
     'dynamodb',
     'feature-flags'
   ];
-  
+
   /**
    * JSON Schema for component configuration validation
    */
   public readonly configSchema = SHINOBI_CONFIG_SCHEMA;
-  
+
   /**
    * Factory method to create component instances
    */
@@ -92,7 +92,21 @@ export class ShinobiComponentCreator implements IComponentCreator {
   ): IComponent {
     return new ShinobiComponent(context.scope, spec.name, context, spec);
   }
-  
+
+  /**
+   * Process component after creation for additional setup
+   */
+  public processComponent(
+    spec: ComponentSpec,
+    context: ComponentContext
+  ): IComponent {
+    const component = this.createComponent(spec, context);
+    // TODO: Implement any post-creation processing if needed
+    // This could include setting up additional bindings, 
+    // registering event handlers, or other initialization
+    return component;
+  }
+
   /**
    * Validates component specification beyond JSON Schema validation
    */
@@ -190,7 +204,7 @@ export class ShinobiComponentCreator implements IComponentCreator {
       errors
     };
   }
-  
+
   /**
    * Returns the capabilities this component provides when synthesized
    */
@@ -209,7 +223,7 @@ export class ShinobiComponentCreator implements IComponentCreator {
       'feature:flags'
     ];
   }
-  
+
   /**
    * Returns the capabilities this component requires from other components
    */
@@ -220,7 +234,7 @@ export class ShinobiComponentCreator implements IComponentCreator {
       'feature:flags:provider'
     ];
   }
-  
+
   /**
    * Returns construct handles that will be registered by this component
    */

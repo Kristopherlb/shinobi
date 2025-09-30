@@ -47,14 +47,14 @@ async function main(): Promise<void> {
 function loadConfigFromEnvironment(): ShinobiConfig {
   return {
     compute: {
-      mode: (process.env.SHINOBI_COMPUTE_MODE as 'ecs' | 'lambda') || 'ecs',
+      mode: (process.env.SHINOBI_COMPUTE_MODE as 'ecs') || 'ecs',
       cpu: parseInt(process.env.SHINOBI_CPU || '512'),
       memory: parseInt(process.env.SHINOBI_MEMORY || '1024'),
       taskCount: parseInt(process.env.SHINOBI_TASK_COUNT || '1'),
       containerPort: parseInt(process.env.SHINOBI_CONTAINER_PORT || '3000')
     },
     dataStore: {
-      type: (process.env.SHINOBI_DATA_STORE_TYPE as 'dynamodb' | 'aurora-serverless') || 'dynamodb',
+      type: (process.env.SHINOBI_DATA_STORE_TYPE as 'dynamodb') || 'dynamodb',
       dynamodb: {
         billingMode: (process.env.SHINOBI_DYNAMODB_BILLING_MODE as 'PAY_PER_REQUEST' | 'PROVISIONED') || 'PAY_PER_REQUEST',
         readCapacity: process.env.SHINOBI_DYNAMODB_READ_CAPACITY ? parseInt(process.env.SHINOBI_DYNAMODB_READ_CAPACITY) : undefined,
@@ -115,9 +115,7 @@ function loadConfigFromEnvironment(): ShinobiConfig {
       mockServices: process.env.SHINOBI_MOCK_SERVICES !== 'false'
     },
     vpc: {
-      vpcId: process.env.SHINOBI_VPC_ID,
-      subnetIds: process.env.SHINOBI_SUBNET_IDS ? process.env.SHINOBI_SUBNET_IDS.split(',') : undefined,
-      securityGroupIds: process.env.SHINOBI_SECURITY_GROUP_IDS ? process.env.SHINOBI_SECURITY_GROUP_IDS.split(',') : undefined
+      vpcId: process.env.SHINOBI_VPC_ID
     },
     logging: {
       retentionDays: parseInt(process.env.SHINOBI_LOG_RETENTION_DAYS || '30'),

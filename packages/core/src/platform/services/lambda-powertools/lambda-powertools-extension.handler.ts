@@ -11,8 +11,8 @@
 import * as lambda from 'aws-cdk-lib/aws-lambda';
 import * as iam from 'aws-cdk-lib/aws-iam';
 import { BaseComponent } from '@shinobi/core';
-import { ObservabilityConfig } from '../../../standards/otel/observability-handlers/src/observability-handlers/observability-handler.interface';
 import { PlatformServiceContext } from '@shinobi/core/platform-services';
+import { ObservabilityConfig } from '@shinobi/core/platform/contracts';
 
 /**
  * Configuration for Lambda Powertools integration.
@@ -311,7 +311,7 @@ export class LambdaPowertoolsExtensionHandler {
     const envVars: Record<string, string> = {
       'POWERTOOLS_SERVICE_NAME': this.config.serviceName,
       'POWERTOOLS_LOGGER_LOG_LEVEL': this.config.logLevel,
-      'POWERTOOLS_LOGGER_SAMPLE_RATE': observabilityConfig.traceSamplingRate?.toString() || '0',
+      'POWERTOOLS_LOGGER_SAMPLE_RATE': observabilityConfig.tracesSampling?.toString() || '0',
       'POWERTOOLS_METRICS_NAMESPACE': this.config.metricsNamespace
     };
 
@@ -350,7 +350,7 @@ export class LambdaPowertoolsExtensionHandler {
 
     // OTEL correlation environment variables
     envVars['OTEL_CORRELATION_ENABLED'] = 'true';
-    envVars['OTEL_LAMBDA_HANDLER'] = lambdaFunction.handler;
+    envVars['OTEL_LAMBDA_HANDLER'] = 'index.handler'; // Default handler name
 
     // Apply environment variables
     Object.entries(envVars).forEach(([key, value]) => {

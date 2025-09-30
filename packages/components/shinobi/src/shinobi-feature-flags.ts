@@ -6,7 +6,6 @@
  */
 
 import { Construct } from 'constructs';
-import { FeatureFlagComponent } from '@platform/components/feature-flag/feature-flag.component';
 import { ComponentSpec, ComponentContext } from '@shinobi/core';
 import { ShinobiConfig } from './shinobi.builder';
 
@@ -16,7 +15,7 @@ export interface ShinobiFeatureFlagCondition {
   value: any;
 }
 
-export interface ShinobiFeatureFlagDefinition {
+export type ShinobiFeatureFlagDefinition = {
   flagKey: string;
   flagType: 'boolean';
   defaultValue: boolean;
@@ -26,7 +25,7 @@ export interface ShinobiFeatureFlagDefinition {
     conditions?: ShinobiFeatureFlagCondition[];
     variants?: Array<{ name: string; value: any; weight: number }>;
   };
-}
+};
 
 /**
  * Feature flag definitions for Shinobi component
@@ -516,8 +515,6 @@ export const SHINOBI_FEATURE_FLAGS: Record<string, ShinobiFeatureFlagDefinition>
   }
 } as const;
 
-type ShinobiFeatureFlagDefinition = (typeof SHINOBI_FEATURE_FLAGS)[keyof typeof SHINOBI_FEATURE_FLAGS];
-
 const DATA_SOURCE_FLAG_MAPPING: Record<string, keyof NonNullable<ShinobiConfig['dataSources']>> = {
   'shinobi.data.components': 'components',
   'shinobi.data.services': 'services',
@@ -586,35 +583,16 @@ function resolveShinobiFeatureFlags(config?: ShinobiConfig): Record<string, Shin
 
 /**
  * Create feature flag components for Shinobi
+ * TODO: Implement when FeatureFlagComponent is available
  */
 export function createShinobiFeatureFlags(
   scope: Construct,
   context: ComponentContext,
   baseName: string,
   config?: ShinobiConfig
-): FeatureFlagComponent[] {
-  const featureFlags: FeatureFlagComponent[] = [];
-
-  const resolvedFlags = resolveShinobiFeatureFlags(config);
-
-  Object.entries(resolvedFlags).forEach(([flagKey, flagConfig]) => {
-    const spec: ComponentSpec = {
-      name: `${baseName}-${flagKey.replace(/\./g, '-')}`,
-      type: 'feature-flag',
-      config: flagConfig
-    };
-
-    const featureFlag = new FeatureFlagComponent(
-      scope,
-      `${flagKey.replace(/\./g, '')}Flag`,
-      context,
-      spec
-    );
-
-    featureFlags.push(featureFlag);
-  });
-
-  return featureFlags;
+): any[] {
+  // TODO: Implement when FeatureFlagComponent is available
+  return [];
 }
 
 /**

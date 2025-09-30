@@ -6,7 +6,6 @@
  */
 
 import { ComponentContext } from '@shinobi/core';
-import { S3BucketConfig } from '../s3-bucket.builder';
 
 export interface ValidationError {
   field: string;
@@ -32,9 +31,9 @@ export interface ValidationResult {
 
 export class S3BucketValidator {
   private context: ComponentContext;
-  private config: S3BucketConfig;
+  private config: any;
 
-  constructor(context: ComponentContext, config: S3BucketConfig) {
+  constructor(context: ComponentContext, config: any) {
     this.context = context;
     this.config = config;
   }
@@ -73,7 +72,7 @@ export class S3BucketValidator {
   private validateBucketName(errors: ValidationError[], warnings: ValidationWarning[]): void {
     if (this.config.bucketName) {
       const name = this.config.bucketName;
-      
+
       // Length validation
       if (name.length < 3) {
         errors.push({
@@ -249,7 +248,7 @@ export class S3BucketValidator {
     if (this.config.lifecycleRules) {
       const rules = this.config.lifecycleRules;
 
-      rules.forEach((rule, index) => {
+      rules.forEach((rule: any, index: number) => {
         // Rule ID validation
         if (!rule.id || rule.id.trim().length === 0) {
           errors.push({
@@ -262,7 +261,7 @@ export class S3BucketValidator {
 
         // Transitions validation
         if (rule.transitions) {
-          rule.transitions.forEach((transition, transIndex) => {
+          rule.transitions.forEach((transition: any, transIndex: number) => {
             if (transition.transitionAfter < 1) {
               errors.push({
                 field: `lifecycleRules[${index}].transitions[${transIndex}].transitionAfter`,
@@ -384,9 +383,9 @@ export class S3BucketValidator {
       compliance.fedrampHigh = compliance.fedrampModerate;
 
       // Extended audit retention
-      if (this.config.compliance?.auditLogging && 
-          this.config.compliance.auditBucketRetentionDays && 
-          this.config.compliance.auditBucketRetentionDays < 2555) {
+      if (this.config.compliance?.auditLogging &&
+        this.config.compliance.auditBucketRetentionDays &&
+        this.config.compliance.auditBucketRetentionDays < 2555) {
         compliance.fedrampHigh = false;
         errors.push({
           field: 'compliance.auditBucketRetentionDays',

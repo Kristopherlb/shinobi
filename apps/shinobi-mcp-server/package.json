@@ -6,7 +6,7 @@
   "scripts": {
     "build": "tsc -p tsconfig.json",
     "start": "node dist/index.js",
-    "dev": "ts-node src/index.ts"
+    "dev": "node --loader ts-node/esm --loader tsconfig-paths/esm src/index.ts"
   },
   "dependencies": {
     "@modelcontextprotocol/sdk": "^0.4.0",

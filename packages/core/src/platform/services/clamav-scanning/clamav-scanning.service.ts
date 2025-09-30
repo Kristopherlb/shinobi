@@ -296,168 +296,168 @@ def send_notifications(bucket, key, scan_result):
     return baseCode;
   }
 
-  private addClamAvPermissions(function: lambda.Function, storageType: string): void {
+  private addClamAvPermissions(lambdaFunction: lambda.Function, storageType: string): void {
     const permissions: iam.PolicyStatement[] = [];
 
     // S3 permissions
-    if(storageType === 's3') {
-  permissions.push(
-    new iam.PolicyStatement({
-      effect: iam.Effect.ALLOW,
-      actions: [
-        's3:GetObject',
-        's3:PutObject',
-        's3:DeleteObject',
-        's3:ListBucket'
-      ],
-      resources: ['*'] // Would be scoped to specific buckets in practice
-    })
-  );
-}
+    if (storageType === 's3') {
+      permissions.push(
+        new iam.PolicyStatement({
+          effect: iam.Effect.ALLOW,
+          actions: [
+            's3:GetObject',
+            's3:PutObject',
+            's3:DeleteObject',
+            's3:ListBucket'
+          ],
+          resources: ['*'] // Would be scoped to specific buckets in practice
+        })
+      );
+    }
 
-// EFS permissions
-if (storageType === 'efs') {
-  permissions.push(
-    new iam.PolicyStatement({
-      effect: iam.Effect.ALLOW,
-      actions: [
-        'elasticfilesystem:DescribeFileSystems',
-        'elasticfilesystem:DescribeMountTargets'
-      ],
-      resources: ['*']
-    })
-  );
-}
+    // EFS permissions
+    if (storageType === 'efs') {
+      permissions.push(
+        new iam.PolicyStatement({
+          effect: iam.Effect.ALLOW,
+          actions: [
+            'elasticfilesystem:DescribeFileSystems',
+            'elasticfilesystem:DescribeMountTargets'
+          ],
+          resources: ['*']
+        })
+      );
+    }
 
-// FSx permissions
-if (storageType === 'fsx') {
-  permissions.push(
-    new iam.PolicyStatement({
-      effect: iam.Effect.ALLOW,
-      actions: [
-        'fsx:DescribeFileSystems',
-        'fsx:DescribeStorageVirtualMachines'
-      ],
-      resources: ['*']
-    })
-  );
-}
+    // FSx permissions
+    if (storageType === 'fsx') {
+      permissions.push(
+        new iam.PolicyStatement({
+          effect: iam.Effect.ALLOW,
+          actions: [
+            'fsx:DescribeFileSystems',
+            'fsx:DescribeStorageVirtualMachines'
+          ],
+          resources: ['*']
+        })
+      );
+    }
 
-// Common permissions
-permissions.push(
-  new iam.PolicyStatement({
-    effect: iam.Effect.ALLOW,
-    actions: [
-      'logs:CreateLogGroup',
-      'logs:CreateLogStream',
-      'logs:PutLogEvents'
-    ],
-    resources: ['*']
-  })
-);
+    // Common permissions
+    permissions.push(
+      new iam.PolicyStatement({
+        effect: iam.Effect.ALLOW,
+        actions: [
+          'logs:CreateLogGroup',
+          'logs:CreateLogStream',
+          'logs:PutLogEvents'
+        ],
+        resources: ['*']
+      })
+    );
 
-function.addToRolePolicy(...permissions);
+    permissions.forEach(policy => lambdaFunction.addToRolePolicy(policy));
   }
 
   private createQuarantineBucket(sourceBucket: s3.Bucket): s3.Bucket {
-  const quarantineBucket = new s3.Bucket(this.scope, 'ClamAvQuarantineBucket', {
-    bucketName: `${sourceBucket.bucketName}-quarantine`,
-    versioned: true,
-    encryption: s3.BucketEncryption.S3_MANAGED,
-    blockPublicAccess: s3.BlockPublicAccess.BLOCK_ALL,
-    lifecycleRules: [
-      {
-        id: 'quarantine-lifecycle',
-        enabled: true,
-        expiration: cdk.Duration.days(30), // Auto-delete after 30 days
-        abortIncompleteMultipartUploadAfter: cdk.Duration.days(1)
-      }
-    ]
-  });
+    const quarantineBucket = new s3.Bucket(this.scope, 'ClamAvQuarantineBucket', {
+      bucketName: `${sourceBucket.bucketName}-quarantine`,
+      versioned: true,
+      encryption: s3.BucketEncryption.S3_MANAGED,
+      blockPublicAccess: s3.BlockPublicAccess.BLOCK_ALL,
+      lifecycleRules: [
+        {
+          id: 'quarantine-lifecycle',
+          enabled: true,
+          expiration: cdk.Duration.days(30), // Auto-delete after 30 days
+          abortIncompleteMultipartUploadAfter: cdk.Duration.days(1)
+        }
+      ]
+    });
 
-  // Add tags for quarantine bucket
-  cdk.Tags.of(quarantineBucket).add('Purpose', 'Virus Quarantine');
-  cdk.Tags.of(quarantineBucket).add('ManagedBy', 'ClamAvService');
+    // Add tags for quarantine bucket
+    cdk.Tags.of(quarantineBucket).add('Purpose', 'Virus Quarantine');
+    cdk.Tags.of(quarantineBucket).add('ManagedBy', 'ClamAvService');
 
-  return quarantineBucket;
-}
+    return quarantineBucket;
+  }
 
   private configureS3UploadScanning(
-  bucket: s3.Bucket,
-  clamavFunction: lambda.Function,
-  quarantineBucket ?: s3.Bucket
-): void {
-  // Add permission for S3 to invoke Lambda
-  clamavFunction.addPermission('S3InvokePermission', {
-    principal: new iam.ServicePrincipal('s3.amazonaws.com'),
-    sourceArn: bucket.bucketArn
-  });
+    bucket: s3.Bucket,
+    clamavFunction: lambda.Function,
+    quarantineBucket?: s3.Bucket
+  ): void {
+    // Add permission for S3 to invoke Lambda
+    clamavFunction.addPermission('S3InvokePermission', {
+      principal: new iam.ServicePrincipal('s3.amazonaws.com'),
+      sourceArn: bucket.bucketArn
+    });
 
-  // Add event notification for object creation
-  bucket.addEventNotification(
-    s3.EventType.OBJECT_CREATED,
-    new s3_notifications.LambdaDestination(clamavFunction)
-  );
-}
+    // Add event notification for object creation
+    bucket.addEventNotification(
+      s3.EventType.OBJECT_CREATED,
+      new s3_notifications.LambdaDestination(clamavFunction)
+    );
+  }
 
   private configureScheduledScanning(clamavFunction: lambda.Function, bucket: s3.Bucket): void {
-  const rule = new events.Rule(this.scope, 'ClamAvScheduledScan', {
-    schedule: events.Schedule.rate(cdk.Duration.hours(24)),
-    description: 'Daily ClamAV scan of S3 bucket'
-  });
+    const rule = new events.Rule(this.scope, 'ClamAvScheduledScan', {
+      schedule: events.Schedule.rate(cdk.Duration.hours(24)),
+      description: 'Daily ClamAV scan of S3 bucket'
+    });
 
-  rule.addTarget(new events_targets.LambdaFunction(clamavFunction, {
-    event: events.RuleTargetInput.fromObject({
-      source: 'aws.events',
-      bucket: bucket.bucketName,
-      scanType: 'scheduled'
-    })
-  }));
-}
+    rule.addTarget(new events_targets.LambdaFunction(clamavFunction, {
+      event: events.RuleTargetInput.fromObject({
+        source: 'aws.events',
+        bucket: bucket.bucketName,
+        scanType: 'scheduled'
+      })
+    }));
+  }
 
   private configureEFSAccess(clamavFunction: lambda.Function, efsArn: string): void {
-  // Configure EFS access for Lambda
-  // Implementation would depend on EFS setup
-}
+    // Configure EFS access for Lambda
+    // Implementation would depend on EFS setup
+  }
 
   private configureScheduledEFSScanning(clamavFunction: lambda.Function, efsArn: string): void {
-  const rule = new events.Rule(this.scope, 'ClamAvEFSScheduledScan', {
-    schedule: events.Schedule.rate(cdk.Duration.hours(12)),
-    description: 'Twice-daily ClamAV scan of EFS'
-  });
+    const rule = new events.Rule(this.scope, 'ClamAvEFSScheduledScan', {
+      schedule: events.Schedule.rate(cdk.Duration.hours(12)),
+      description: 'Twice-daily ClamAV scan of EFS'
+    });
 
-  rule.addTarget(new events_targets.LambdaFunction(clamavFunction, {
-    event: events.RuleTargetInput.fromObject({
-      source: 'aws.events',
-      efsArn,
-      scanType: 'scheduled'
-    })
-  }));
-}
+    rule.addTarget(new events_targets.LambdaFunction(clamavFunction, {
+      event: events.RuleTargetInput.fromObject({
+        source: 'aws.events',
+        efsArn,
+        scanType: 'scheduled'
+      })
+    }));
+  }
 
   private configureFSxAccess(clamavFunction: lambda.Function, fsxArn: string): void {
-  // Configure FSx access for Lambda
-  // Implementation would depend on FSx setup
-}
+    // Configure FSx access for Lambda
+    // Implementation would depend on FSx setup
+  }
 
   private configureScheduledFSxScanning(clamavFunction: lambda.Function, fsxArn: string): void {
-  const rule = new events.Rule(this.scope, 'ClamAvFSxScheduledScan', {
-    schedule: events.Schedule.rate(cdk.Duration.hours(6)),
-    description: 'Four-times daily ClamAV scan of FSx'
-  });
+    const rule = new events.Rule(this.scope, 'ClamAvFSxScheduledScan', {
+      schedule: events.Schedule.rate(cdk.Duration.hours(6)),
+      description: 'Four-times daily ClamAV scan of FSx'
+    });
 
-  rule.addTarget(new events_targets.LambdaFunction(clamavFunction, {
-    event: events.RuleTargetInput.fromObject({
-      source: 'aws.events',
-      fsxArn,
-      scanType: 'scheduled'
-    })
-  }));
-}
+    rule.addTarget(new events_targets.LambdaFunction(clamavFunction, {
+      event: events.RuleTargetInput.fromObject({
+        source: 'aws.events',
+        fsxArn,
+        scanType: 'scheduled'
+      })
+    }));
+  }
 
   private logEvent(eventType: string, message: string, metadata: Record<string, any>): void {
-  console.log(`[ClamAvService] ${eventType}: ${message}`, metadata);
-}
+    console.log(`[ClamAvService] ${eventType}: ${message}`, metadata);
+  }
 }
 
 /**

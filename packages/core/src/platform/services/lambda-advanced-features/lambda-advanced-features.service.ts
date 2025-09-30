@@ -131,7 +131,7 @@ export class LambdaAdvancedFeaturesService {
 
   // Advanced feature resources
   private deadLetterQueue?: sqs.Queue;
-  private eventSources: Array<IEventSource> = [];
+  private eventSources: Array<lambda.EventSourceMapping> = [];
   private performanceAlarms: Array<cloudwatch.Alarm> = [];
   private securityEnhancements: Array<iam.PolicyStatement> = [];
 
@@ -188,7 +188,7 @@ export class LambdaAdvancedFeaturesService {
     }
 
     sqsConfig.queues.forEach(queueConfig => {
-      let queue: sqs.Queue;
+      let queue: sqs.IQueue;
 
       if (queueConfig.queueArn) {
         // Use existing queue
@@ -398,7 +398,7 @@ export class LambdaAdvancedFeaturesService {
   /**
    * Create SQS monitoring alarms
    */
-  private createSqsMonitoringAlarms(queue: sqs.Queue, queueName: string): void {
+  private createSqsMonitoringAlarms(queue: sqs.IQueue, queueName: string): void {
     // SQS queue depth alarm
     const queueDepthAlarm = new cloudwatch.Alarm(this.scope, `LambdaSQSDepth-${queueName}`, {
       alarmName: `${this.lambdaFunction.functionName}-sqs-${queueName}-depth`,
@@ -514,7 +514,7 @@ export class LambdaAdvancedFeaturesService {
   /**
    * Get event sources for external configuration
    */
-  public getEventSources(): IEventSource[] {
+  public getEventSources(): lambda.EventSourceMapping[] {
     return this.eventSources;
   }
 

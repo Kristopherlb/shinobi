@@ -2,7 +2,7 @@
   "extends": "../../tsconfig.base.json",
   "compilerOptions": {
     "composite": true,
-    "outDir": "./dist",
+    "outDir": "../../dist/apps/shinobi-mcp-server",
     "rootDir": "./src",
     "module": "ESNext",
     "target": "ES2022",
@@ -24,7 +24,11 @@
     "tests"
   ],
   "references": [
-    { "path": "../../packages/components/shinobi" },
-    { "path": "../../packages/core" }
+    {
+      "path": "../../packages/components/shinobi"
+    },
+    {
+      "path": "../../packages/core"
+    }
   ]
 }

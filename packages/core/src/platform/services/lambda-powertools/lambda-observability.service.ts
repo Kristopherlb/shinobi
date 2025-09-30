@@ -10,7 +10,7 @@
 
 import { BaseComponent } from '@shinobi/core';
 import { PlatformServiceContext } from '@shinobi/core/platform-services';
-import { ObservabilityConfig } from '../../../standards/otel/observability-handlers/src/observability-handlers/observability-handler.interface';
+import { ObservabilityConfig } from '@shinobi/core/platform/contracts';
 import { LambdaPowertoolsExtensionHandler, LambdaPowertoolsConfig } from './lambda-powertools-extension.handler';
 
 /**
@@ -100,23 +100,28 @@ export class LambdaObservabilityService {
   ): LambdaObservabilityService {
     const config: LambdaObservabilityServiceConfig = {
       observabilityConfig: {
-        otelEnvironmentTemplate: {
-          'OTEL_SERVICE_NAME': serviceName,
-          'OTEL_RESOURCE_ATTRIBUTES': `service.name=${serviceName},service.version=${context.serviceLabels?.version || '1.0.0'}`,
-          'OTEL_EXPORTER_OTLP_ENDPOINT': 'http://adot-collector:4317',
-          'OTEL_EXPORTER_OTLP_HEADERS': 'x-api-key={{ authToken }}',
-          'OTEL_TRACES_EXPORTER': 'otlp',
-          'OTEL_METRICS_EXPORTER': 'otlp',
-          'OTEL_LOGS_EXPORTER': 'otlp'
+        collectorEndpoint: 'http://adot-collector:4317',
+        serviceName,
+        serviceVersion: context.serviceLabels?.version || '1.0.0',
+        environment: context.environment,
+        region: context.region || 'us-east-1',
+        complianceFramework,
+        tracesSampling: 1.0,
+        metricsInterval: 60,
+        logsRetention: 7,
+        enablePerformanceInsights: true,
+        enableXRayTracing: true,
+        customAttributes: {
+          'service.name': serviceName,
+          'service.version': context.serviceLabels?.version || '1.0.0'
         },
         alarmThresholds: {
           lambda: {
             errorRate: 0.05,
-            duration: 5000
+            duration: 5000,
+            throttles: 10
           }
-        },
-        traceSamplingRate: 1.0,
-        metricsInterval: 60
+        }
       },
       powertoolsConfig: {
         serviceName,

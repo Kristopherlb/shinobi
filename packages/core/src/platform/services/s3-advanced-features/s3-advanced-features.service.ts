@@ -66,7 +66,7 @@ export interface S3AdvancedFeaturesService {
   configureCompliance(config: S3ComplianceConfig): void;
   configurePerformance(config: S3PerformanceConfig): void;
   getSecurityScanningResources(): Construct[];
-  getMonitoringResources(): Construct[];
+  getMonitoringResources(): (Construct | cloudwatch.Metric)[];
   getComplianceResources(): Construct[];
   getPerformanceResources(): Construct[];
 }
@@ -76,7 +76,7 @@ export class S3AdvancedFeaturesServiceImpl implements S3AdvancedFeaturesService 
   private context: ComponentContext;
   private bucket: s3.Bucket;
   private securityScanningResources: Construct[] = [];
-  private monitoringResources: Construct[] = [];
+  private monitoringResources: (Construct | cloudwatch.Metric)[] = [];
   private complianceResources: Construct[] = [];
   private performanceResources: Construct[] = [];
 
@@ -100,8 +100,7 @@ export class S3AdvancedFeaturesServiceImpl implements S3AdvancedFeaturesService 
 
     // Configure S3 event notifications for scan-on-upload
     if (config.scanOnUpload) {
-      const uploadNotification = this.configureUploadScanning(clamavFunction);
-      this.securityScanningResources.push(uploadNotification);
+      this.configureUploadScanning(clamavFunction);
     }
 
     // Configure quarantine bucket if specified
@@ -220,7 +219,7 @@ export class S3AdvancedFeaturesServiceImpl implements S3AdvancedFeaturesService 
   /**
    * Gets all monitoring resources
    */
-  getMonitoringResources(): Construct[] {
+  getMonitoringResources(): (Construct | cloudwatch.Metric)[] {
     return this.monitoringResources;
   }
 
@@ -272,7 +271,7 @@ def handler(event, context):
     });
   }
 
-  private configureUploadScanning(clamavFunction: lambda.Function): s3.BucketNotification {
+  private configureUploadScanning(clamavFunction: lambda.Function): void {
     clamavFunction.addPermission('S3InvokePermission', {
       principal: new iam.ServicePrincipal('s3.amazonaws.com'),
       sourceArn: this.bucket.bucketArn
@@ -297,8 +296,16 @@ def handler(event, context):
           new cloudwatch.GraphWidget({
             title: 'S3 Request Metrics',
             left: [
-              this.bucket.metricNumberOfObjects(),
-              this.bucket.metricBucketSizeBytes()
+              new cloudwatch.Metric({
+                namespace: 'AWS/S3',
+                metricName: 'NumberOfObjects',
+                dimensionsMap: { BucketName: this.bucket.bucketName }
+              }),
+              new cloudwatch.Metric({
+                namespace: 'AWS/S3',
+                metricName: 'BucketSizeBytes',
+                dimensionsMap: { BucketName: this.bucket.bucketName }
+              })
             ],
             width: 12
           })
@@ -307,8 +314,16 @@ def handler(event, context):
           new cloudwatch.GraphWidget({
             title: 'S3 Error Rates',
             left: [
-              this.bucket.metric('4xxErrors'),
-              this.bucket.metric('5xxErrors')
+              new cloudwatch.Metric({
+                namespace: 'AWS/S3',
+                metricName: '4xxErrors',
+                dimensionsMap: { BucketName: this.bucket.bucketName }
+              }),
+              new cloudwatch.Metric({
+                namespace: 'AWS/S3',
+                metricName: '5xxErrors',
+                dimensionsMap: { BucketName: this.bucket.bucketName }
+              })
             ],
             width: 12
           })
@@ -333,7 +348,11 @@ def handler(event, context):
   private createS3Alarms(thresholds: S3MonitoringConfig['thresholds']): cloudwatch.Alarm[] {
     return [
       new cloudwatch.Alarm(this.scope, 'S3ErrorRateAlarm', {
-        metric: this.bucket.metric('4xxErrors'),
+        metric: new cloudwatch.Metric({
+          namespace: 'AWS/S3',
+          metricName: '4xxErrors',
+          dimensionsMap: { BucketName: this.bucket.bucketName }
+        }),
         threshold: thresholds.errorRate,
         evaluationPeriods: 2,
         comparisonOperator: cloudwatch.ComparisonOperator.GREATER_THAN_THRESHOLD

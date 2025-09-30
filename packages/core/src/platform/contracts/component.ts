@@ -52,6 +52,35 @@ export interface ObservabilityConfig {
   enablePerformanceInsights: boolean;
   enableXRayTracing: boolean;
   customAttributes: Record<string, string>;
+  alarmThresholds?: {
+    lambda: {
+      errorRate: number;
+      duration: number;
+      throttles: number;
+    };
+  };
+}
+
+export type S3BucketEncryptionType = 'AES256' | 'KMS';
+
+export interface S3BucketEncryptionConfig {
+  type?: S3BucketEncryptionType;
+  kmsKeyArn?: string;
+}
+
+export interface S3BucketConfig {
+  bucketName?: string;
+  public?: boolean;
+  versioning?: boolean;
+  encryption?: S3BucketEncryptionConfig;
+  lifecycleRules?: Array<{
+    id: string;
+    status: 'Enabled' | 'Disabled';
+    transitions?: Array<{
+      storageClass: string;
+      transitionDays: number;
+    }>;
+  }>;
 }
 
 export interface BaseComponentServices {

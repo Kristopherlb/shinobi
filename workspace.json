@@ -230,7 +230,7 @@
         "dev": {
           "executor": "nx:run-commands",
           "options": {
-            "command": "ts-node apps/shinobi-mcp-server/src/index.ts"
+            "command": "node --loader ts-node/esm --loader tsconfig-paths/esm apps/shinobi-mcp-server/src/index.ts"
           }
         },
         "lint": {
