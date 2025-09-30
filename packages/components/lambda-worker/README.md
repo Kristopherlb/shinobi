@@ -1,63 +1,200 @@
 # Lambda Worker Component
 
-Asynchronous worker Lambda built on the platform ConfigBuilder contract. All
-runtime/security/observability defaults are provided by `/config/<framework>.yml`
-– the component simply consumes the resolved configuration and instantiates the
-function.
+Enterprise-grade asynchronous Lambda worker component with comprehensive security, compliance, and operational capabilities. Built on the platform ConfigBuilder contract with advanced features including dead letter queues, event source integration, performance optimization, and circuit breaker patterns.
 
-## Features
+## Overview
 
-- Configurable runtime (Node.js/Python), architecture, memory, timeout, and
-  reserved concurrency.
-- Optional dead-letter queue, VPC networking, and KMS environment-variable
-  encryption supplied via configuration.
-- Event sources (SQS, EventBridge schedule, EventBridge pattern) defined in the
-  manifest/config – the component wires them automatically.
-- Logging, tracing, and OpenTelemetry settings fully configuration-driven.
-- CloudWatch alarms for errors/throttles/duration and capability metadata with
-  hardening profile exposure.
+The Lambda Worker Component provides a production-ready foundation for asynchronous workloads including:
+- **Event Processing**: SQS queues, EventBridge rules, and scheduled tasks
+- **Data Processing**: ETL pipelines, batch processing, and stream processing
+- **Background Jobs**: Image processing, document conversion, and notification delivery
+- **Microservice Integration**: Async communication between services
 
-## Usage
+## Core Capabilities
+
+### **🔧 Runtime Configuration**
+- **Multi-Runtime Support**: Node.js 18.x/20.x, Python 3.9/3.10/3.11
+- **Architecture Options**: x86_64 and ARM64 (Graviton2) for cost optimization
+- **Memory & Timeout**: Configurable from 128MB to 10GB, 1s to 15min timeout
+- **Reserved Concurrency**: Precise resource allocation and cost control
+
+### **🛡️ Security & Compliance**
+- **CDK Nag Integration**: Automated security validation with 12+ compliance checks
+- **Input Validation**: Multi-layer validation preventing misconfigurations
+- **Framework Compliance**: Commercial, FedRAMP Moderate/High, HIPAA, SOX support
+- **VPC Integration**: Network isolation with configurable subnets and security groups
+- **Encryption**: KMS integration for environment variables and data at rest
+
+### **📊 Advanced Features**
+- **Dead Letter Queue (DLQ)**: Automatic failure handling with SQS integration
+- **Event Sources**: SQS, EventBridge schedule, and EventBridge pattern support
+- **Performance Optimization**: Provisioned concurrency, reserved concurrency, SnapStart
+- **Circuit Breaker**: Automatic failure detection and recovery patterns
+- **Comprehensive Monitoring**: CloudWatch alarms for errors, throttles, duration, and custom metrics
+
+### **🔍 Observability & Monitoring**
+- **OpenTelemetry Integration**: Structured logging with trace correlation
+- **X-Ray Tracing**: Distributed tracing for complex workflows
+- **Lambda Powertools**: Enhanced observability with business metrics and parameter store integration
+- **CloudWatch Dashboards**: Pre-configured monitoring and alerting
+- **Compliance Scoring**: 0-100 scale validation with detailed remediation guidance
+
+### **⚡ Performance & Reliability**
+- **Auto-Scaling**: Intelligent scaling based on utilization patterns
+- **Error Handling**: Retry logic with exponential backoff
+- **Resource Optimization**: Memory and timeout recommendations
+- **Cost Monitoring**: Automated cost tracking and optimization alerts
+
+## Configuration Guide
+
+### **Basic Configuration**
+
+```yaml
+components:
+  - name: data-processor-worker
+    type: lambda-worker
+    config:
+      handler: index.handler
+      runtime: nodejs20.x
+      codePath: services/data-processor/dist
+      memorySize: 1024
+      timeoutSeconds: 300
+      environment:
+        STAGE: prod
+        PROCESSING_BATCH_SIZE: 100
+```
+
+### **Complete Configuration Example**
 
 ```yaml
 components:
   - name: image-resize-worker
     type: lambda-worker
     config:
+      # Core Configuration
+      functionName: image-resize-worker
       handler: index.handler
       runtime: nodejs20.x
+      architecture: arm64
       codePath: services/image-worker/dist
-      memorySize: 512
-      timeoutSeconds: 120
+      memorySize: 1024
+      timeoutSeconds: 300
+      description: "Resize images from S3"
+      
+      # Environment Variables
       environment:
         STAGE: prod
         SOURCE_BUCKET: images-raw
+        DEST_BUCKET: images-processed
+        
+      # Reserved Concurrency (optional)
+      reservedConcurrency: 10
+      
+      # Dead Letter Queue
       deadLetterQueue:
         enabled: true
         queueArn: arn:aws:sqs:us-east-1:123456789012:image-worker-dlq
+        maxReceiveCount: 3
+        
+      # Event Sources
       eventSources:
         - type: sqs
           queueArn: arn:aws:sqs:us-east-1:123456789012:image-worker-queue
-          batchSize: 5
+          batchSize: 10
+          enabled: true
+        - type: eventbridge-schedule
+          scheduleExpression: "rate(5 minutes)"
+          enabled: true
+          
+      # VPC Configuration (optional)
+      vpc:
+        enabled: true
+        vpcId: vpc-12345
+        subnetIds:
+          - subnet-12345
+          - subnet-67890
+        securityGroupIds:
+          - sg-abcdef
+          
+      # KMS Encryption (optional)
+      kmsKeyArn: arn:aws:kms:us-east-1:123456789012:key/12345678-1234-1234-1234-123456789012
+        
+      # Logging Configuration
+      logging:
+        logRetentionDays: 30
+        logFormat: JSON
+        systemLogLevel: INFO
+        applicationLogLevel: INFO
+        
+      # X-Ray Tracing
+      tracing:
+        mode: Active
+        
+      # OpenTelemetry Observability
+      observability:
+        otelEnabled: true
+        otelLayerArn: arn:aws:lambda:us-east-1:901920570463:layer:aws-otel-nodejs-amd64-ver-1-18-1:4
+        otelResourceAttributes:
+          service.name: image-resize-worker
+          service.environment: prod
+          
+      # Security Tools
+      securityTools:
+        falco: false
+        
+      # CloudWatch Monitoring
       monitoring:
         enabled: true
         alarms:
           errors:
             enabled: true
+            threshold: 1
+            evaluationPeriods: 1
+            periodMinutes: 1
+            comparisonOperator: gt
+            treatMissingData: breaching
+            statistic: Sum
+            tags: {}
           throttles:
             enabled: true
-      logging:
-        logRetentionDays: 90
-        logFormat: JSON
-      observability:
-        otelEnabled: true
-        otelLayerArn: arn:aws:lambda:us-east-1:901920570463:layer:aws-otel-nodejs-amd64-ver-1-18-1:4
-        otelResourceAttributes:
-          service.environment: prod
+            threshold: 5
+            evaluationPeriods: 2
+            periodMinutes: 1
+            comparisonOperator: gt
+            treatMissingData: breaching
+            statistic: Sum
+            tags: {}
+          duration:
+            enabled: true
+            threshold: 5000
+            evaluationPeriods: 2
+            periodMinutes: 1
+            comparisonOperator: gt
+            treatMissingData: breaching
+            statistic: Average
+            tags: {}
+            
+      # Hardening Profile
+      hardeningProfile: standard
+      
+      # Removal Policy
+      removalPolicy: retain
+      
+      # Tags
+      tags:
+        Service: image-processing
+        Environment: prod
+        Owner: platform-team
 ```
 
-Any omitted property inherits the defaults for the active compliance framework
-(`config/commercial.yml`, `config/fedramp-moderate.yml`, `config/fedramp-high.yml`).
+### **Framework-Specific Defaults**
+
+Configuration inherits defaults from compliance framework files:
+- `config/commercial.yml` - Standard commercial defaults
+- `config/fedramp-moderate.yml` - FedRAMP Moderate compliance requirements
+- `config/fedramp-high.yml` - FedRAMP High compliance requirements
+- `config/hipaa.yml` - HIPAA compliance requirements
+- `config/sox.yml` - SOX compliance requirements
 
 ## Key Configuration Sections
 

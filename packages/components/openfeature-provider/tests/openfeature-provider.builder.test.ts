@@ -35,19 +35,27 @@ const createSpec = (config: Partial<OpenFeatureProviderComponentConfig> = {}): C
 });
 
 describe('OpenFeatureProviderComponentConfigBuilder', () => {
-  it('applies hardcoded fallbacks', () => {
+  it('applies platform defaults and derives names from context', () => {
     const context = createContext();
     const spec = createSpec();
 
     const config = new OpenFeatureProviderComponentConfigBuilder({ context, spec }).buildSync();
 
     expect(config.provider).toBe('aws-appconfig');
-    expect(config.awsAppConfig?.configurationProfileName).toBe('feature-flags');
-    expect(config.monitoring?.enabled).toBe(true);
-    expect(config.monitoring?.detailedMetrics).toBe(true);
+    expect(config.awsAppConfig).toMatchObject({
+      applicationName: 'test-service-features',
+      environmentName: 'dev',
+      configurationProfileName: 'feature-flags',
+      deploymentStrategy: expect.objectContaining({
+        name: 'progressive-rollout',
+        deploymentDurationMinutes: 10,
+        growthFactor: 20
+      }),
+      retrieverServicePrincipal: 'lambda.amazonaws.com'
+    });
   });
 
-  it('honours component overrides', () => {
+  it('allows component overrides for alternate providers', () => {
     const context = createContext();
     const spec = createSpec({
       provider: 'launchdarkly',
@@ -69,18 +77,18 @@ describe('OpenFeatureProviderComponentConfigBuilder', () => {
       environmentKey: 'env',
       clientSideId: 'client'
     });
-    expect(config.tags?.owner).toBe('platform');
+    expect(config.tags.owner).toBe('platform');
   });
 
-  it('applies FedRAMP Moderate defaults from platform config', () => {
+  it('pulls FedRAMP Moderate overrides from platform configuration', () => {
     const context = createContext('fedramp-moderate');
     const spec = createSpec();
 
     const config = new OpenFeatureProviderComponentConfigBuilder({ context, spec }).buildSync();
 
     expect(config.provider).toBe('aws-appconfig');
-    expect(config.awsAppConfig?.deploymentStrategy.growthType).toBe('LINEAR');
-    expect(config.monitoring?.detailedMetrics).toBe(true);
-    expect(config.monitoring?.alarms?.cpuUtilization).toBeDefined();
+    expect(config.awsAppConfig?.deploymentStrategy.deploymentDurationMinutes).toBe(15);
+    expect(config.awsAppConfig?.deploymentStrategy.growthFactor).toBe(15);
+    expect(config.awsAppConfig?.retrieverServicePrincipal).toBe('lambda.amazonaws.com');
   });
 });

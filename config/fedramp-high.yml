@@ -787,6 +787,22 @@ defaults:
     tags:
       compliance: fedramp-high
 
+  openfeature-provider:
+    provider: aws-appconfig
+    awsAppConfig:
+      configurationProfileName: feature-flags
+      deploymentStrategy:
+        name: progressive-rollout
+        deploymentDurationMinutes: 20
+        growthFactor: 10
+        growthType: LINEAR
+        finalBakeTimeInMinutes: 15
+        replicateTo: SSM_DOCUMENT
+      monitors: []
+      retrieverServicePrincipal: lambda.amazonaws.com
+    tags:
+      compliance: fedramp-high
+
   secrets-manager:
     automaticRotation:
       enabled: true

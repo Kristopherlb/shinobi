@@ -22,14 +22,14 @@ import {
   LambdaEventSource
 } from './lambda-worker.builder';
 import { LambdaWorkerValidator } from './validation/lambda-worker.validator';
-import { LambdaAdvancedFeatures } from './advanced/lambda-advanced-features';
+import { LambdaAdvancedFeaturesService } from '@shinobi/core/platform/services/lambda-advanced-features';
 import { LambdaObservabilityService } from '@shinobi/core/platform/services/lambda-powertools';
 
 export class LambdaWorkerComponent extends BaseComponent {
   private lambdaFunction?: lambda.Function;
   private config?: LambdaWorkerConfig;
   private eventRules: events.Rule[] = [];
-  private advancedFeatures?: LambdaAdvancedFeatures;
+  private advancedFeatures?: LambdaAdvancedFeaturesService;
 
   constructor(scope: Construct, id: string, context: ComponentContext, spec: ComponentSpec) {
     super(scope, id, context, spec);

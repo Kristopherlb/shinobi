@@ -64,23 +64,6 @@ describe('OpenFeatureProviderComponent synthesis', () => {
     }));
   });
 
-  it('skips ALB creation when disabled', () => {
-    const app = new App();
-    const stack = new Stack(app, 'NoAlbStack');
-    const context = createContext(stack);
-    const spec = createSpec({
-      loadBalancer: {
-        enabled: false
-      }
-    });
-
-    const component = new OpenFeatureProviderComponent(stack, spec.name, context, spec);
-    component.synth();
-
-    const template = Template.fromStack(stack);
-    template.resourceCountIs('AWS::ElasticLoadBalancingV2::LoadBalancer', 0);
-  });
-
   it('registers LaunchDarkly placeholder when configured', () => {
     const app = new App();
     const stack = new Stack(app, 'LaunchDarklyStack');
@@ -100,5 +83,28 @@ describe('OpenFeatureProviderComponent synthesis', () => {
     expect(component.getConstruct('providerConfig')).toBeDefined();
     const capabilities = component.getCapabilities();
     expect(capabilities['openfeature:provider'].providerType).toBe('launchdarkly');
+  });
+
+  it('exposes flagsmith configuration when selected', () => {
+    const app = new App();
+    const stack = new Stack(app, 'FlagsmithStack');
+    const context = createContext(stack);
+    const spec = createSpec({
+      provider: 'flagsmith',
+      flagsmith: {
+        environmentKey: 'env-key',
+        apiUrl: 'https://flags'
+      }
+    });
+
+    const component = new OpenFeatureProviderComponent(stack, spec.name, context, spec);
+    component.synth();
+
+    const capability = component.getCapabilities()['openfeature:provider'];
+    expect(capability.providerType).toBe('flagsmith');
+    expect(capability.connectionConfig).toMatchObject({
+      environmentKey: 'env-key',
+      apiUrl: 'https://flags'
+    });
   });
 });

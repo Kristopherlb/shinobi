@@ -26,7 +26,7 @@ import {
   LambdaApiAlarmConfig
 } from './lambda-api.builder';
 import { LambdaApiValidator } from '../validation/lambda-api.validator';
-import { LambdaApiAdvancedFeatures } from '../advanced/lambda-api-advanced-features';
+import { LambdaAdvancedFeaturesService } from '@shinobi/core/platform/services/lambda-advanced-features';
 
 export class LambdaApiComponent extends BaseComponent {
   private lambdaFunction?: lambda.Function;
@@ -35,7 +35,7 @@ export class LambdaApiComponent extends BaseComponent {
   private functionLogGroup?: logs.LogGroup;
   private usagePlan?: apigw.UsagePlan;
   private config?: LambdaApiConfig;
-  private advancedFeatures?: LambdaApiAdvancedFeatures;
+  private advancedFeatures?: LambdaAdvancedFeaturesService;
 
   constructor(scope: Construct, id: string, context: ComponentContext, spec: ComponentSpec) {
     super(scope, id, context, spec);
@@ -61,11 +61,10 @@ export class LambdaApiComponent extends BaseComponent {
     this.restApi = this.createRestApi(this.lambdaFunction);
     this.configureMonitoring();
 
-    // Initialize advanced features
-    this.advancedFeatures = new LambdaApiAdvancedFeatures(
+    // Initialize advanced features using platform service
+    this.advancedFeatures = LambdaAdvancedFeaturesService.createForApi(
       this.scope,
       this.lambdaFunction,
-      this.config,
       this.context
     );
 
@@ -649,12 +648,21 @@ export class LambdaApiComponent extends BaseComponent {
       }
     }
 
-    // Configure event sources if enabled
-    if (this.config.eventSources) {
-      this.advancedFeatures.configureEventSources(this.config.eventSources);
-      this.logComponentEvent('event_sources_configured', 'Event sources configured successfully', {
+    // Configure SQS event sources if enabled
+    if (this.config.eventSources?.sqs) {
+      this.advancedFeatures.configureSqsEventSources(this.config.eventSources.sqs);
+      this.logComponentEvent('sqs_event_sources_configured', 'SQS event sources configured successfully', {
         sqsEnabled: this.config.eventSources.sqs.enabled,
-        eventBridgeEnabled: this.config.eventSources.eventBridge.enabled
+        queueCount: this.config.eventSources.sqs.queues.length
+      });
+    }
+
+    // Configure EventBridge event sources if enabled
+    if (this.config.eventSources?.eventBridge) {
+      this.advancedFeatures.configureEventBridgeEventSources(this.config.eventSources.eventBridge);
+      this.logComponentEvent('eventbridge_event_sources_configured', 'EventBridge event sources configured successfully', {
+        eventBridgeEnabled: this.config.eventSources.eventBridge.enabled,
+        ruleCount: this.config.eventSources.eventBridge.rules.length
       });
     }
 
@@ -674,6 +682,21 @@ export class LambdaApiComponent extends BaseComponent {
       this.logComponentEvent('circuit_breaker_configured', 'Circuit breaker configured successfully', {
         failureThreshold: this.config.circuitBreaker.failureThreshold,
         recoveryTimeout: this.config.circuitBreaker.recoveryTimeoutSeconds
+      });
+    }
+
+    // Configure security enhancements if enabled
+    if (this.config.vpc?.enabled || this.config.encryption?.enabled) {
+      this.advancedFeatures.configureSecurityEnhancements({
+        vpc: this.config.vpc,
+        encryption: this.config.encryption,
+        secretsManager: {
+          enabled: false // Not implemented in lambda-api yet
+        }
+      });
+      this.logComponentEvent('security_enhancements_configured', 'Security enhancements configured successfully', {
+        vpcEnabled: this.config.vpc?.enabled,
+        encryptionEnabled: this.config.encryption?.enabled
       });
     }
 
