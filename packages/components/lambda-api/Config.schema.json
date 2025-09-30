@@ -1,339 +1,394 @@
 {
   "$schema": "http://json-schema.org/draft-07/schema#",
   "title": "Lambda API Component Configuration",
-  "description": "Configuration schema for the Lambda API component supporting AWS Lambda with API Gateway integration",
   "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "handler",
+    "deployment",
+    "api",
+    "logging",
+    "monitoring",
+    "observability"
+  ],
   "properties": {
+    "functionName": {
+      "type": "string",
+      "description": "Explicit name for the Lambda function"
+    },
     "handler": {
       "type": "string",
-      "description": "Lambda function handler (e.g., 'index.handler', 'src/api.handler')",
-      "pattern": "^[a-zA-Z0-9._/-]+\\.(handler|lambda_handler)$",
-      "examples": [
-        "index.handler",
-        "src/api.handler",
-        "src/handler.lambda_handler"
-      ]
+      "description": "Lambda handler entrypoint (e.g. src/api.handler)"
     },
     "runtime": {
       "type": "string",
-      "description": "Lambda runtime environment",
       "enum": [
         "nodejs20.x",
         "nodejs18.x",
-        "nodejs16.x",
         "python3.11",
         "python3.10",
-        "python3.9",
-        "python3.8",
-        "java17",
-        "java11",
-        "java8.al2",
-        "dotnet6",
-        "dotnetcore3.1",
-        "go1.x",
-        "ruby3.2",
-        "ruby2.7"
+        "python3.9"
       ],
       "default": "nodejs20.x"
     },
+    "architecture": {
+      "type": "string",
+      "enum": ["x86_64", "arm64"],
+      "default": "x86_64"
+    },
     "memorySize": {
       "type": "number",
-      "description": "Memory allocation in MB",
       "minimum": 128,
       "maximum": 10240,
-      "multipleOf": 64,
       "default": 512
     },
-    "timeout": {
+    "timeoutSeconds": {
       "type": "number",
-      "description": "Function timeout in seconds",
       "minimum": 1,
       "maximum": 900,
       "default": 30
     },
-    "codePath": {
-      "type": "string",
-      "description": "Path to Lambda function code directory or file",
-      "default": "./src",
-      "examples": [
-        "./src",
-        "./dist",
-        "./lambda",
-        "./src/index.js"
-      ]
+    "description": {
+      "type": "string"
     },
-    "codeAssetHash": {
-      "type": "string",
-      "description": "Asset hash for code changes detection and cache busting",
-      "examples": [
-        "abc123def456",
-        "v1.0.0",
-        "2024-01-15"
-      ]
-    },
-    "useInlineFallback": {
-      "type": "boolean",
-      "description": "Use inline code as fallback when codePath is not available",
-      "default": true
-    },
-    "apiType": {
-      "type": "string",
-      "description": "API Gateway type",
-      "enum": [
-        "rest",
-        "http"
-      ],
-      "default": "rest",
-      "examples": [
-        "rest",
-        "http"
-      ]
-    },
-    "environmentVariables": {
+    "environment": {
       "type": "object",
-      "description": "Environment variables for the Lambda function",
+      "default": {},
       "additionalProperties": {
         "type": "string"
-      },
-      "default": {},
-      "examples": [
-        {
-          "LOG_LEVEL": "INFO",
-          "API_VERSION": "v1",
-          "NODE_ENV": "production"
-        }
-      ]
+      }
     },
-    "logRetentionDays": {
+    "reservedConcurrency": {
       "type": "number",
-      "description": "CloudWatch log retention in days",
-      "minimum": 1,
-      "maximum": 3653,
-      "default": 14
+      "minimum": 1
     },
-    "api": {
+    "ephemeralStorageMb": {
+      "type": "number",
+      "minimum": 512,
+      "maximum": 10240,
+      "default": 512
+    },
+    "kmsKeyArn": {
+      "type": "string"
+    },
+    "logging": {
       "type": "object",
-      "description": "API Gateway configuration",
+      "additionalProperties": false,
+      "required": ["logRetentionDays", "logFormat", "systemLogLevel", "applicationLogLevel"],
       "properties": {
-        "name": {
+        "logRetentionDays": {
+          "type": "number",
+          "minimum": 1,
+          "default": 30
+        },
+        "logFormat": {
           "type": "string",
-          "description": "API Gateway name (auto-generated if not provided)"
+          "enum": ["TEXT", "JSON"],
+          "default": "JSON"
         },
-        "cors": {
-          "type": "boolean",
-          "description": "Enable CORS for API Gateway",
-          "default": false
-        },
-        "apiKeyRequired": {
-          "type": "boolean",
-          "description": "Require API key for requests",
-          "default": false
-        },
-        "description": {
+        "systemLogLevel": {
           "type": "string",
-          "description": "API Gateway description"
+          "enum": ["INFO", "WARN", "ERROR"],
+          "default": "INFO"
         },
-        "endpointConfiguration": {
-          "type": "object",
-          "description": "API Gateway endpoint configuration",
-          "properties": {
-            "types": {
-              "type": "array",
-              "items": {
-                "type": "string",
-                "enum": [
-                  "REGIONAL",
-                  "EDGE",
-                  "PRIVATE"
-                ]
-              },
-              "default": [
-                "REGIONAL"
-              ]
-            }
-          }
+        "applicationLogLevel": {
+          "type": "string",
+          "enum": ["DEBUG", "INFO", "WARN", "ERROR"],
+          "default": "INFO"
         }
-      },
-      "additionalProperties": false
+      }
+    },
+    "tracing": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "mode": {
+          "type": "string",
+          "enum": ["Active", "PassThrough"],
+          "default": "Active"
+        }
+      }
+    },
+    "deployment": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["codePath"],
+      "properties": {
+        "codePath": {
+          "type": "string",
+          "default": "./src"
+        },
+        "assetHash": {
+          "type": "string"
+        },
+        "inlineFallbackEnabled": {
+          "type": "boolean",
+          "default": true
+        }
+      }
     },
     "vpc": {
       "type": "object",
-      "description": "VPC configuration for FedRAMP compliance",
-      "properties": {
-        "vpcId": {
-          "type": "string",
-          "description": "VPC ID for Lambda deployment",
-          "pattern": "^vpc-[0-9a-f]{8,17}$"
-        },
-        "subnetIds": {
-          "type": "array",
-          "description": "Subnet IDs for Lambda deployment",
-          "items": {
-            "type": "string",
-            "pattern": "^subnet-[0-9a-f]{8,17}$"
-          },
-          "minItems": 1,
-          "maxItems": 16
-        },
-        "securityGroupIds": {
-          "type": "array",
-          "description": "Security group IDs for Lambda",
-          "items": {
-            "type": "string",
-            "pattern": "^sg-[0-9a-f]{8,17}$"
-          },
-          "minItems": 1,
-          "maxItems": 5
-        }
-      },
-      "required": [
-        "vpcId",
-        "subnetIds",
-        "securityGroupIds"
-      ],
-      "additionalProperties": false
-    },
-    "encryption": {
-      "type": "object",
-      "description": "Encryption configuration for FedRAMP High",
-      "properties": {
-        "kmsKeyArn": {
-          "type": "string",
-          "description": "KMS key ARN for environment variable encryption",
-          "pattern": "^arn:aws:kms:[a-z0-9-]+:[0-9]{12}:key/[0-9a-f-]+$"
-        }
-      },
-      "additionalProperties": false
-    },
-    "security": {
-      "type": "object",
-      "description": "Security tooling configuration",
-      "properties": {
-        "tools": {
-          "type": "object",
-          "properties": {
-            "falco": {
-              "type": "boolean",
-              "description": "Enable security monitoring",
-              "default": false
-            }
-          },
-          "additionalProperties": false
-        }
-      },
-      "additionalProperties": false
-    },
-    "monitoring": {
-      "type": "object",
-      "description": "Monitoring and observability configuration",
+      "additionalProperties": false,
       "properties": {
         "enabled": {
           "type": "boolean",
-          "description": "Enable monitoring",
+          "default": false
+        },
+        "vpcId": {
+          "type": "string"
+        },
+        "subnetIds": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          },
+          "default": []
+        },
+        "securityGroupIds": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          },
+          "default": []
+        }
+      }
+    },
+    "observability": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["otelEnabled", "otelResourceAttributes"],
+      "properties": {
+        "otelEnabled": {
+          "type": "boolean",
           "default": true
         },
-        "detailedMetrics": {
+        "otelLayerArn": {
+          "type": "string"
+        },
+        "otelResourceAttributes": {
+          "type": "object",
+          "default": {},
+          "additionalProperties": {
+            "type": "string"
+          }
+        }
+      }
+    },
+    "monitoring": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["enabled", "alarms"],
+      "properties": {
+        "enabled": {
           "type": "boolean",
-          "description": "Enable detailed CloudWatch metrics",
-          "default": false
+          "default": true
         },
         "alarms": {
           "type": "object",
-          "description": "CloudWatch alarm configuration",
+          "additionalProperties": false,
+          "required": [
+            "lambdaErrors",
+            "lambdaThrottles",
+            "lambdaDuration",
+            "api4xxErrors",
+            "api5xxErrors"
+          ],
           "properties": {
-            "errorRateThreshold": {
-              "type": "number",
-              "description": "Error rate threshold for alarms (errors per 5 minutes)",
-              "minimum": 1,
-              "maximum": 100,
-              "default": 5
-            },
-            "durationThreshold": {
-              "type": "number",
-              "description": "Duration threshold as percentage of timeout",
-              "minimum": 50,
-              "maximum": 100,
-              "default": 80
-            },
-            "throttleThreshold": {
-              "type": "number",
-              "description": "Throttle threshold for alarms",
-              "minimum": 1,
-              "maximum": 100,
-              "default": 1
-            }
-          },
-          "additionalProperties": false
+            "lambdaErrors": { "$ref": "#/definitions/AlarmConfig" },
+            "lambdaThrottles": { "$ref": "#/definitions/AlarmConfig" },
+            "lambdaDuration": { "$ref": "#/definitions/AlarmConfig" },
+            "api4xxErrors": { "$ref": "#/definitions/AlarmConfig" },
+            "api5xxErrors": { "$ref": "#/definitions/AlarmConfig" }
+          }
         }
-      },
-      "additionalProperties": false
+      }
+    },
+    "securityTools": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "falco": {
+          "type": "boolean",
+          "default": false
+        }
+      }
+    },
+    "hardeningProfile": {
+      "type": "string",
+      "default": "baseline"
+    },
+    "removalPolicy": {
+      "type": "string",
+      "enum": ["retain", "destroy"],
+      "default": "retain"
     },
     "tags": {
       "type": "object",
-      "description": "Additional resource tags",
+      "default": {},
       "additionalProperties": {
         "type": "string"
-      },
-      "default": {},
-      "examples": [
-        {
-          "team": "backend",
-          "project": "api-service",
-          "environment": "production"
-        }
-      ]
-    }
-  },
-  "required": [
-    "handler"
-  ],
-  "additionalProperties": false,
-  "examples": [
-    {
-      "handler": "index.handler",
-      "runtime": "nodejs20.x",
-      "memorySize": 512,
-      "timeout": 30,
-      "api": {
-        "cors": true,
-        "apiKeyRequired": false
       }
     },
-    {
-      "handler": "src/handler.lambda_handler",
-      "runtime": "python3.11",
-      "memorySize": 1024,
-      "timeout": 60,
-      "environmentVariables": {
-        "LOG_LEVEL": "INFO",
-        "API_VERSION": "v1"
-      },
-      "vpc": {
-        "vpcId": "vpc-12345678",
-        "subnetIds": [
-          "subnet-12345678",
-          "subnet-87654321"
-        ],
-        "securityGroupIds": [
-          "sg-12345678"
-        ]
-      },
-      "encryption": {
-        "kmsKeyArn": "arn:aws:kms:us-east-1:123456789012:key/12345678-1234-1234-1234-123456789012"
-      },
-      "monitoring": {
-        "enabled": true,
-        "detailedMetrics": true,
-        "alarms": {
-          "errorRateThreshold": 5,
-          "durationThreshold": 80,
-          "throttleThreshold": 1
+    "api": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["type", "stageName", "metricsEnabled", "tracingEnabled", "apiKeyRequired", "throttling", "usagePlan", "logging", "cors"],
+      "properties": {
+        "type": {
+          "type": "string",
+          "enum": ["rest"],
+          "default": "rest"
+        },
+        "name": {
+          "type": "string"
+        },
+        "description": {
+          "type": "string"
+        },
+        "stageName": {
+          "type": "string",
+          "default": "prod"
+        },
+        "metricsEnabled": {
+          "type": "boolean",
+          "default": true
+        },
+        "tracingEnabled": {
+          "type": "boolean",
+          "default": true
+        },
+        "apiKeyRequired": {
+          "type": "boolean",
+          "default": false
+        },
+        "throttling": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": ["burstLimit", "rateLimit"],
+          "properties": {
+            "burstLimit": {
+              "type": "number",
+              "minimum": 0,
+              "default": 100
+            },
+            "rateLimit": {
+              "type": "number",
+              "minimum": 0,
+              "default": 50
+            }
+          }
+        },
+        "usagePlan": {
+          "type": "object",
+          "additionalProperties": false,
+          "properties": {
+            "enabled": {
+              "type": "boolean",
+              "default": false
+            },
+            "name": {
+              "type": "string"
+            },
+            "throttle": {
+              "type": "object",
+              "additionalProperties": false,
+              "properties": {
+                "rateLimit": { "type": "number", "minimum": 0 },
+                "burstLimit": { "type": "number", "minimum": 0 }
+              }
+            },
+            "quota": {
+              "type": "object",
+              "additionalProperties": false,
+              "properties": {
+                "limit": { "type": "number", "minimum": 1 },
+                "period": { "type": "string", "enum": ["DAY", "WEEK", "MONTH"] }
+              }
+            }
+          }
+        },
+        "logging": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": ["enabled", "retentionDays", "logFormat", "prefix"],
+          "properties": {
+            "enabled": { "type": "boolean", "default": true },
+            "retentionDays": { "type": "number", "minimum": 1, "default": 90 },
+            "logFormat": { "type": "string", "enum": ["json", "xml"], "default": "json" },
+            "logGroupName": { "type": "string" },
+            "prefix": { "type": "string", "default": "access/" }
+          }
+        },
+        "cors": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": ["enabled", "allowOrigins", "allowHeaders", "allowMethods", "allowCredentials"],
+          "properties": {
+            "enabled": { "type": "boolean", "default": true },
+            "allowOrigins": {
+              "type": "array",
+              "items": { "type": "string" },
+              "default": ["*"]
+            },
+            "allowHeaders": {
+              "type": "array",
+              "items": { "type": "string" },
+              "default": ["Content-Type", "Authorization", "X-Requested-With"]
+            },
+            "allowMethods": {
+              "type": "array",
+              "items": { "type": "string" },
+              "default": ["GET", "POST", "PUT", "PATCH", "DELETE", "OPTIONS"]
+            },
+            "allowCredentials": { "type": "boolean", "default": false }
+          }
         }
-      },
-      "tags": {
-        "team": "backend",
-        "project": "api-service"
       }
     }
-  ]
+  },
+  "definitions": {
+    "AlarmConfig": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "enabled",
+        "threshold",
+        "evaluationPeriods",
+        "periodMinutes",
+        "comparisonOperator",
+        "treatMissingData",
+        "statistic",
+        "tags"
+      ],
+      "properties": {
+        "enabled": { "type": "boolean", "default": true },
+        "threshold": { "type": "number", "default": 5 },
+        "evaluationPeriods": { "type": "number", "minimum": 1, "default": 1 },
+        "periodMinutes": { "type": "number", "minimum": 1, "default": 5 },
+        "comparisonOperator": {
+          "type": "string",
+          "enum": ["gt", "gte", "lt", "lte"],
+          "default": "gt"
+        },
+        "treatMissingData": {
+          "type": "string",
+          "enum": ["breaching", "not-breaching", "ignore", "missing"],
+          "default": "not-breaching"
+        },
+        "statistic": {
+          "type": "string",
+          "enum": ["Sum", "Average", "Minimum", "Maximum"],
+          "default": "Sum"
+        },
+        "tags": {
+          "type": "object",
+          "default": {},
+          "additionalProperties": {
+            "type": "string"
+          }
+        }
+      }
+    }
+  }
 }

@@ -1,386 +1,485 @@
-/**
- * Configuration Builder for WAF Web ACL Component
- * 
- * Implements the ConfigBuilder pattern as defined in the Platform Component API Contract.
- * Provides 5-layer configuration precedence chain and compliance-aware defaults.
- */
+import {
+  ConfigBuilder,
+  ConfigBuilderContext,
+  ComponentConfigSchema
+} from '@shinobi/core';
 
-import { ConfigBuilder, ConfigBuilderContext } from '../@shinobi/core/config-builder';
-import { ComponentContext, ComponentSpec } from '../@shinobi/core/component-interfaces';
+export type WafScope = 'REGIONAL' | 'CLOUDFRONT';
+export type WafDefaultAction = 'allow' | 'block';
+export type WafOverrideAction = 'none' | 'count';
+export type AlarmComparisonOperator = 'gt' | 'gte' | 'lt' | 'lte';
+export type AlarmTreatMissingData = 'breaching' | 'not-breaching' | 'ignore' | 'missing';
+export type AlarmStatistic = 'Sum' | 'Average' | 'Minimum' | 'Maximum';
+export type RemovalPolicyOption = 'retain' | 'destroy';
+export type WafLogDestinationType = 'cloudwatch' | 'kinesis-firehose' | 's3';
 
-/**
- * Configuration interface for WAF Web ACL component
- */
-export interface WafWebAclConfig {
-  /** Web ACL name (optional, defaults to component name) */
-  name?: string;
-
-  /** Web ACL description */
-  description?: string;
-
-  /** Scope of the Web ACL */
-  scope?: 'REGIONAL' | 'CLOUDFRONT';
-
-  /** Default action for requests that don't match any rules */
-  defaultAction?: 'allow' | 'block';
-
-  /** AWS Managed Rule Groups */
-  managedRuleGroups?: Array<{
-    name: string;
-    vendorName: string;
-    priority: number;
-    overrideAction?: 'none' | 'count';
-    excludedRules?: string[];
-  }>;
-
-  /** Custom rules */
-  customRules?: Array<{
-    name: string;
-    priority: number;
-    action: 'allow' | 'block' | 'count';
-    statement: {
-      type: 'ip-set' | 'geo-match' | 'rate-based' | 'size-constraint' | 'sqli-match' | 'xss-match';
-      ipSet?: string[];
-      countries?: string[];
-      rateLimit?: number;
-      fieldToMatch?: {
-        type: 'uri-path' | 'query-string' | 'header' | 'body';
-        name?: string;
-      };
-      textTransformations?: Array<{
-        priority: number;
-        type: string;
-      }>;
-    };
-  }>;
-
-  /** Logging configuration */
-  logging?: {
-    enabled?: boolean;
-    destinationArn?: string;
-    logDestinationType?: 'kinesis-firehose' | 's3' | 'cloudwatch';
-    redactedFields?: Array<{
-      type: 'uri-path' | 'query-string' | 'header' | 'method';
-      name?: string;
-    }>;
-  };
-
-  /** Monitoring configuration */
-  monitoring?: {
-    enabled?: boolean;
-    detailedMetrics?: boolean;
-    alarms?: {
-      blockedRequestsThreshold?: number;
-      allowedRequestsThreshold?: number;
-      sampledRequestsEnabled?: boolean;
-    };
-  };
-
-  /** Tags for the Web ACL */
-  tags?: Record<string, string>;
+export interface WafRuleVisibilityConfig {
+  sampledRequestsEnabled: boolean;
+  cloudWatchMetricsEnabled: boolean;
+  metricName: string;
 }
 
-/**
- * JSON Schema for WAF Web ACL configuration validation
- */
-export const WAF_WEB_ACL_CONFIG_SCHEMA = {
+export interface WafManagedRuleGroupConfig {
+  name: string;
+  vendorName: string;
+  priority: number;
+  overrideAction: WafOverrideAction;
+  excludedRules: string[];
+  visibility: WafRuleVisibilityConfig;
+}
+
+export interface WafCustomGeoMatchStatement {
+  type: 'geo-match';
+  countryCodes: string[];
+}
+
+export interface WafCustomRateBasedStatement {
+  type: 'rate-based';
+  limit: number;
+  aggregateKeyType?: 'IP' | 'FORWARDED_IP';
+  forwardedIpFallbackBehavior?: 'MATCH' | 'NO_MATCH';
+  forwardedIpHeaderName?: string;
+}
+
+export interface WafCustomIpSetStatement {
+  type: 'ip-set';
+  arn: string;
+}
+
+export type WafCustomRuleStatementConfig =
+  | WafCustomGeoMatchStatement
+  | WafCustomRateBasedStatement
+  | WafCustomIpSetStatement;
+
+export interface WafCustomRuleConfig {
+  name: string;
+  priority: number;
+  action: 'allow' | 'block' | 'count';
+  visibility: WafRuleVisibilityConfig;
+  statement: WafCustomRuleStatementConfig;
+}
+
+export interface WafRedactedFieldConfig {
+  type: 'uri-path' | 'query-string' | 'header' | 'method' | 'body';
+  name?: string;
+}
+
+export interface WafLoggingConfig {
+  enabled: boolean;
+  destinationType: WafLogDestinationType;
+  destinationArn?: string;
+  logGroupName?: string;
+  retentionDays: number;
+  redactedFields: WafRedactedFieldConfig[];
+}
+
+export interface WafAlarmConfig {
+  enabled: boolean;
+  threshold: number;
+  evaluationPeriods: number;
+  periodMinutes: number;
+  comparisonOperator: AlarmComparisonOperator;
+  treatMissingData: AlarmTreatMissingData;
+  statistic: AlarmStatistic;
+  tags: Record<string, string>;
+}
+
+export interface WafMonitoringConfig {
+  enabled: boolean;
+  metricsEnabled: boolean;
+  detailedMetrics: boolean;
+  sampledRequestsEnabled: boolean;
+  alarms: {
+    blockedRequests: WafAlarmConfig;
+    allowedRequests: WafAlarmConfig;
+  };
+}
+
+export interface WafWebAclComponentConfig {
+  name: string;
+  description?: string;
+  scope: WafScope;
+  defaultAction: WafDefaultAction;
+  managedRuleGroups: WafManagedRuleGroupConfig[];
+  customRules: WafCustomRuleConfig[];
+  logging: WafLoggingConfig;
+  monitoring: WafMonitoringConfig;
+  removalPolicy: RemovalPolicyOption;
+  tags: Record<string, string>;
+}
+
+const RULE_VISIBILITY_DEFAULT = (metric: string): WafRuleVisibilityConfig => ({
+  sampledRequestsEnabled: true,
+  cloudWatchMetricsEnabled: true,
+  metricName: metric
+});
+
+const DEFAULT_FALLBACKS: WafWebAclComponentConfig = {
+  name: '',
+  description: undefined,
+  scope: 'REGIONAL',
+  defaultAction: 'allow',
+  managedRuleGroups: [
+    {
+      name: 'AWSManagedRulesCommonRuleSet',
+      vendorName: 'AWS',
+      priority: 1,
+      overrideAction: 'none',
+      excludedRules: [],
+      visibility: RULE_VISIBILITY_DEFAULT('AWSManagedRulesCommonRuleSet')
+    },
+    {
+      name: 'AWSManagedRulesKnownBadInputsRuleSet',
+      vendorName: 'AWS',
+      priority: 2,
+      overrideAction: 'none',
+      excludedRules: [],
+      visibility: RULE_VISIBILITY_DEFAULT('AWSManagedRulesKnownBadInputsRuleSet')
+    }
+  ],
+  customRules: [],
+  logging: {
+    enabled: true,
+    destinationType: 'cloudwatch',
+    retentionDays: 365,
+    redactedFields: [],
+    logGroupName: undefined,
+    destinationArn: undefined
+  },
+  monitoring: {
+    enabled: true,
+    metricsEnabled: true,
+    detailedMetrics: true,
+    sampledRequestsEnabled: true,
+    alarms: {
+      blockedRequests: {
+        enabled: true,
+        threshold: 1000,
+        evaluationPeriods: 2,
+        periodMinutes: 5,
+        comparisonOperator: 'gt',
+        treatMissingData: 'not-breaching',
+        statistic: 'Sum',
+        tags: {}
+      },
+      allowedRequests: {
+        enabled: false,
+        threshold: 10000,
+        evaluationPeriods: 2,
+        periodMinutes: 5,
+        comparisonOperator: 'gt',
+        treatMissingData: 'not-breaching',
+        statistic: 'Sum',
+        tags: {}
+      }
+    }
+  },
+  removalPolicy: 'destroy',
+  tags: {}
+};
+
+const REDACTED_FIELD_SCHEMA: ComponentConfigSchema = {
   type: 'object',
+  additionalProperties: false,
   properties: {
-    name: {
-      type: 'string',
-      description: 'Web ACL name (optional, defaults to component name)',
-      pattern: '^[a-zA-Z][a-zA-Z0-9-_]*$',
-      maxLength: 128
+    type: { type: 'string', enum: ['uri-path', 'query-string', 'header', 'method', 'body'] },
+    name: { type: 'string' }
+  },
+  required: ['type']
+};
+
+const MANAGED_RULE_GROUP_SCHEMA: ComponentConfigSchema = {
+  type: 'object',
+  additionalProperties: false,
+  properties: {
+    name: { type: 'string' },
+    vendorName: { type: 'string' },
+    priority: { type: 'number', minimum: 0 },
+    overrideAction: { type: 'string', enum: ['none', 'count'], default: 'none' },
+    excludedRules: {
+      type: 'array',
+      items: { type: 'string' },
+      default: []
     },
-    description: {
-      type: 'string',
-      description: 'Web ACL description',
-      maxLength: 1024
+    visibility: {
+      type: 'object',
+      additionalProperties: false,
+      properties: {
+        sampledRequestsEnabled: { type: 'boolean' },
+        cloudWatchMetricsEnabled: { type: 'boolean' },
+        metricName: { type: 'string' }
+      }
+    }
+  },
+  required: ['name', 'vendorName', 'priority']
+};
+
+const CUSTOM_RULE_SCHEMA: ComponentConfigSchema = {
+  type: 'object',
+  additionalProperties: false,
+  properties: {
+    name: { type: 'string' },
+    priority: { type: 'number', minimum: 0 },
+    action: { type: 'string', enum: ['allow', 'block', 'count'] },
+    visibility: {
+      type: 'object',
+      additionalProperties: false,
+      properties: {
+        sampledRequestsEnabled: { type: 'boolean' },
+        cloudWatchMetricsEnabled: { type: 'boolean' },
+        metricName: { type: 'string' }
+      }
     },
-    scope: {
-      type: 'string',
-      enum: ['REGIONAL', 'CLOUDFRONT'],
-      default: 'REGIONAL',
-      description: 'Scope of the Web ACL (REGIONAL for ALB/API Gateway, CLOUDFRONT for CloudFront)'
-    },
-    defaultAction: {
-      type: 'string',
-      enum: ['allow', 'block'],
-      default: 'allow',
-      description: 'Default action for requests that do not match any rules'
-    },
+    statement: {
+      type: 'object',
+      additionalProperties: false,
+      properties: {
+        type: { type: 'string', enum: ['geo-match', 'rate-based', 'ip-set'] },
+        countryCodes: {
+          type: 'array',
+          items: { type: 'string' }
+        },
+        limit: { type: 'number', minimum: 100 },
+        aggregateKeyType: { type: 'string', enum: ['IP', 'FORWARDED_IP'] },
+        forwardedIpFallbackBehavior: { type: 'string', enum: ['MATCH', 'NO_MATCH'] },
+        forwardedIpHeaderName: { type: 'string' },
+        arn: { type: 'string' }
+      },
+      required: ['type']
+    }
+  },
+  required: ['name', 'priority', 'action', 'statement']
+};
+
+const ALARM_SCHEMA: ComponentConfigSchema = {
+  type: 'object',
+  additionalProperties: false,
+  properties: {
+    enabled: { type: 'boolean', default: true },
+    threshold: { type: 'number', minimum: 0 },
+    evaluationPeriods: { type: 'number', minimum: 1, default: 2 },
+    periodMinutes: { type: 'number', minimum: 1, default: 5 },
+    comparisonOperator: { type: 'string', enum: ['gt', 'gte', 'lt', 'lte'], default: 'gt' },
+    treatMissingData: { type: 'string', enum: ['breaching', 'not-breaching', 'ignore', 'missing'], default: 'not-breaching' },
+    statistic: { type: 'string', enum: ['Sum', 'Average', 'Minimum', 'Maximum'], default: 'Sum' },
+    tags: {
+      type: 'object',
+      additionalProperties: { type: 'string' },
+      default: {}
+    }
+  }
+};
+
+export const WAF_WEB_ACL_CONFIG_SCHEMA: ComponentConfigSchema = {
+  type: 'object',
+  additionalProperties: false,
+  properties: {
+    name: { type: 'string' },
+    description: { type: 'string' },
+    scope: { type: 'string', enum: ['REGIONAL', 'CLOUDFRONT'] },
+    defaultAction: { type: 'string', enum: ['allow', 'block'] },
     managedRuleGroups: {
       type: 'array',
-      description: 'AWS Managed Rule Groups to include',
-      items: {
-        type: 'object',
-        properties: {
-          name: { type: 'string', description: 'Rule group name' },
-          vendorName: { type: 'string', description: 'Vendor name (usually AWS)' },
-          priority: { type: 'number', description: 'Rule priority' },
-          overrideAction: { type: 'string', enum: ['none', 'count'], description: 'Override action' },
-          excludedRules: { type: 'array', items: { type: 'string' }, description: 'Rules to exclude' }
-        },
-        required: ['name', 'vendorName', 'priority'],
-        additionalProperties: false
-      }
+      items: MANAGED_RULE_GROUP_SCHEMA
     },
     customRules: {
       type: 'array',
-      description: 'Custom WAF rules',
-      items: {
-        type: 'object',
-        properties: {
-          name: { type: 'string', description: 'Rule name' },
-          priority: { type: 'number', description: 'Rule priority' },
-          action: { type: 'string', enum: ['allow', 'block', 'count'], description: 'Rule action' },
-          statement: {
-            type: 'object',
-            description: 'Rule statement configuration',
-            additionalProperties: true
-          }
-        },
-        required: ['name', 'priority', 'action', 'statement'],
-        additionalProperties: false
-      }
+      items: CUSTOM_RULE_SCHEMA
     },
     logging: {
       type: 'object',
-      description: 'WAF logging configuration',
+      additionalProperties: false,
       properties: {
-        enabled: { type: 'boolean', default: true, description: 'Enable WAF logging' },
-        destinationArn: { type: 'string', description: 'Log destination ARN' },
-        logDestinationType: {
-          type: 'string',
-          enum: ['kinesis-firehose', 's3', 'cloudwatch'],
-          default: 'cloudwatch',
-          description: 'Type of log destination'
-        },
+        enabled: { type: 'boolean' },
+        destinationType: { type: 'string', enum: ['cloudwatch', 'kinesis-firehose', 's3'] },
+        destinationArn: { type: 'string' },
+        logGroupName: { type: 'string' },
+        retentionDays: { type: 'number', minimum: 1 },
         redactedFields: {
           type: 'array',
-          description: 'Fields to redact from logs',
-          items: {
-            type: 'object',
-            properties: {
-              type: { type: 'string', enum: ['uri-path', 'query-string', 'header', 'method'] },
-              name: { type: 'string' }
-            },
-            required: ['type'],
-            additionalProperties: false
-          }
+          items: REDACTED_FIELD_SCHEMA,
+          default: []
         }
-      },
-      additionalProperties: false
+      }
     },
     monitoring: {
       type: 'object',
-      description: 'Monitoring and observability configuration',
+      additionalProperties: false,
       properties: {
-        enabled: {
-          type: 'boolean',
-          default: true,
-          description: 'Enable monitoring'
-        },
-        detailedMetrics: {
-          type: 'boolean',
-          default: false,
-          description: 'Enable detailed CloudWatch metrics'
-        },
+        enabled: { type: 'boolean' },
+        metricsEnabled: { type: 'boolean' },
+        detailedMetrics: { type: 'boolean' },
+        sampledRequestsEnabled: { type: 'boolean' },
         alarms: {
           type: 'object',
-          description: 'CloudWatch alarm thresholds',
+          additionalProperties: false,
           properties: {
-            blockedRequestsThreshold: { type: 'number', default: 1000, description: 'Blocked requests alarm threshold' },
-            allowedRequestsThreshold: { type: 'number', default: 10000, description: 'Allowed requests alarm threshold' },
-            sampledRequestsEnabled: { type: 'boolean', default: true, description: 'Enable sampled requests' }
-          },
-          additionalProperties: false
+            blockedRequests: ALARM_SCHEMA,
+            allowedRequests: ALARM_SCHEMA
+          }
         }
-      },
-      additionalProperties: false
+      }
     },
+    removalPolicy: { type: 'string', enum: ['retain', 'destroy'] },
     tags: {
       type: 'object',
-      description: 'Additional resource tags',
       additionalProperties: { type: 'string' }
     }
-  },
-  additionalProperties: false
+  }
 };
 
-/**
- * ConfigBuilder for WAF Web ACL component
- * 
- * Implements the 5-layer configuration precedence chain:
- * 1. Hardcoded Fallbacks (ultra-safe baseline)
- * 2. Platform Defaults (from platform config)
- * 3. Environment Defaults (from environment config) 
- * 4. Component Overrides (from service.yml)
- * 5. Policy Overrides (from governance policies)
- */
-export class WafWebAclConfigBuilder extends ConfigBuilder<WafWebAclConfig> {
-
-  constructor(context: ComponentContext, spec: ComponentSpec) {
-    const builderContext: ConfigBuilderContext = {
-      context,
-      spec
-    };
+export class WafWebAclComponentConfigBuilder extends ConfigBuilder<WafWebAclComponentConfig> {
+  constructor(builderContext: ConfigBuilderContext) {
     super(builderContext, WAF_WEB_ACL_CONFIG_SCHEMA);
   }
 
-  /**
-   * Layer 1: Hardcoded Fallbacks
-   * Ultra-safe baseline configuration that works in any environment
-   */
-  protected getHardcodedFallbacks(): Partial<WafWebAclConfig> {
-    const framework = this.builderContext.context.complianceFramework;
-
-    // Base fallbacks that work for all environments
-    const baseFallbacks: Partial<WafWebAclConfig> = {
-      scope: 'REGIONAL',
-      defaultAction: 'allow',
-      managedRuleGroups: [
-        {
-          name: 'AWSManagedRulesCommonRuleSet',
-          vendorName: 'AWS',
-          priority: 1,
-          overrideAction: 'none'
-        },
-        {
-          name: 'AWSManagedRulesKnownBadInputsRuleSet',
-          vendorName: 'AWS',
-          priority: 2,
-          overrideAction: 'none'
-        }
-      ],
-      customRules: [],
-      logging: {
-        enabled: true,
-        logDestinationType: 'cloudwatch',
-        redactedFields: []
-      },
-      monitoring: {
-        enabled: true,
-        detailedMetrics: false,
-        alarms: {
-          blockedRequestsThreshold: 1000,
-          allowedRequestsThreshold: 10000,
-          sampledRequestsEnabled: true
-        }
-      },
-      tags: {}
-    };
-
-    // Apply compliance framework-specific enhancements
-    if (framework === 'commercial') {
-      return {
-        ...baseFallbacks,
-        monitoring: {
-          ...baseFallbacks.monitoring,
-          detailedMetrics: true,
-          alarms: {
-            ...baseFallbacks.monitoring!.alarms,
-            blockedRequestsThreshold: 500
-          }
-        }
-      };
-    }
-
-    if (framework === 'fedramp-moderate' || framework === 'fedramp-high') {
-      return {
-        ...baseFallbacks,
-        defaultAction: 'block',
-        managedRuleGroups: [
-          ...baseFallbacks.managedRuleGroups!,
-          {
-            name: 'AWSManagedRulesLinuxRuleSet',
-            vendorName: 'AWS',
-            priority: 4,
-            overrideAction: 'none'
-          },
-          {
-            name: 'AWSManagedRulesUnixRuleSet',
-            vendorName: 'AWS',
-            priority: 5,
-            overrideAction: 'none'
-          }
-        ],
-        monitoring: {
-          ...baseFallbacks.monitoring,
-          detailedMetrics: true,
-          alarms: {
-            ...baseFallbacks.monitoring!.alarms,
-            blockedRequestsThreshold: framework === 'fedramp-high' ? 100 : 250
-          }
-        }
-      };
-    }
-
-    return baseFallbacks;
+  protected getHardcodedFallbacks(): Partial<WafWebAclComponentConfig> {
+    return DEFAULT_FALLBACKS;
   }
 
-  /**
-   * Layer 2: Compliance Framework Defaults
-   * Security and compliance-specific configurations
-   */
-  protected getComplianceFrameworkDefaults(): Partial<WafWebAclConfig> {
-    const framework = this.builderContext.context.complianceFramework;
+  public buildSync(): WafWebAclComponentConfig {
+    const resolved = super.buildSync() as Partial<WafWebAclComponentConfig>;
+    return this.normalise(resolved);
+  }
 
-    // For commercial, we rely more on platform config, but add some enhancements
-    const baseCompliance: Partial<WafWebAclConfig> = {
-      monitoring: {
-        enabled: true,
-        detailedMetrics: true, // Enhanced for commercial
-        alarms: {
-          blockedRequestsThreshold: 500,
-          allowedRequestsThreshold: 5000,
-          sampledRequestsEnabled: true
-        }
+  public getSchema(): ComponentConfigSchema {
+    return WAF_WEB_ACL_CONFIG_SCHEMA;
+  }
+
+  private normalise(config: Partial<WafWebAclComponentConfig>): WafWebAclComponentConfig {
+    const merged: WafWebAclComponentConfig = {
+      ...DEFAULT_FALLBACKS,
+      ...config,
+      name: config.name?.trim() || this.builderContext.spec.name,
+      scope: (config.scope ?? DEFAULT_FALLBACKS.scope) as WafScope,
+      defaultAction: (config.defaultAction ?? DEFAULT_FALLBACKS.defaultAction) as WafDefaultAction,
+      managedRuleGroups: this.normaliseManagedRuleGroups(config.managedRuleGroups ?? DEFAULT_FALLBACKS.managedRuleGroups),
+      customRules: this.normaliseCustomRules(config.customRules ?? DEFAULT_FALLBACKS.customRules),
+      logging: {
+        ...DEFAULT_FALLBACKS.logging,
+        ...(config.logging ?? {}),
+        redactedFields: this.normaliseRedactedFields(config.logging?.redactedFields ?? DEFAULT_FALLBACKS.logging.redactedFields),
+        logGroupName: this.normaliseLogGroupName(config.logging?.logGroupName)
+      },
+      monitoring: this.normaliseMonitoring(config.monitoring),
+      removalPolicy: (config.removalPolicy ?? DEFAULT_FALLBACKS.removalPolicy) as RemovalPolicyOption,
+      tags: {
+        ...DEFAULT_FALLBACKS.tags,
+        ...(config.tags ?? {})
       }
     };
 
-    if (framework === 'fedramp-moderate' || framework === 'fedramp-high') {
-      return {
-        ...baseCompliance,
-        defaultAction: 'block', // More restrictive for FedRAMP
-        logging: {
-          ...baseCompliance.logging,
-          enabled: true // Mandatory logging for compliance
-        },
-        managedRuleGroups: [
-          ...baseCompliance.managedRuleGroups!,
-          {
-            name: 'AWSManagedRulesLinuxRuleSet',
-            vendorName: 'AWS',
-            priority: 4,
-            overrideAction: 'none'
-          },
-          {
-            name: 'AWSManagedRulesUnixRuleSet',
-            vendorName: 'AWS',
-            priority: 5,
-            overrideAction: 'none'
-          }
-        ],
-        monitoring: {
-          ...baseCompliance.monitoring,
-          detailedMetrics: true, // Mandatory for FedRAMP
-          alarms: {
-            blockedRequestsThreshold: framework === 'fedramp-high' ? 100 : 250,
-            allowedRequestsThreshold: framework === 'fedramp-high' ? 2000 : 3000,
-            sampledRequestsEnabled: true
-          }
-        }
-      };
-    }
-
-    return baseCompliance;
+    return merged;
   }
 
-  /**
-   * Get the JSON Schema for validation
-   */
-  public getSchema(): any {
-    return WAF_WEB_ACL_CONFIG_SCHEMA;
+  private normaliseManagedRuleGroups(groups: WafManagedRuleGroupConfig[]): WafManagedRuleGroupConfig[] {
+    const byPriority = new Map<number, WafManagedRuleGroupConfig>();
+    groups
+      .sort((a, b) => a.priority - b.priority)
+      .forEach((group) => {
+        const visibility = group.visibility ?? RULE_VISIBILITY_DEFAULT(`${group.name}Metric`);
+        byPriority.set(group.priority, {
+          ...group,
+          overrideAction: (group.overrideAction ?? 'none') as WafOverrideAction,
+          excludedRules: Array.from(new Set(group.excludedRules ?? [])).sort(),
+          visibility: this.normaliseVisibility(group.name, visibility)
+        });
+      });
+    return Array.from(byPriority.values());
+  }
+
+  private normaliseCustomRules(rules: WafCustomRuleConfig[]): WafCustomRuleConfig[] {
+    return rules
+      .sort((a, b) => a.priority - b.priority)
+      .map((rule, index) => {
+        const metricName = rule.visibility?.metricName ?? `${rule.name}Metric`;
+        return {
+          ...rule,
+          priority: rule.priority ?? index + 100,
+          action: rule.action,
+          visibility: this.normaliseVisibility(rule.name, rule.visibility ?? RULE_VISIBILITY_DEFAULT(metricName)),
+          statement: this.normaliseCustomStatement(rule.statement, rule.name)
+        };
+      });
+  }
+
+  private normaliseCustomStatement(statement: WafCustomRuleStatementConfig, ruleName: string): WafCustomRuleStatementConfig {
+    switch (statement.type) {
+      case 'geo-match': {
+        const codes = Array.from(new Set(statement.countryCodes ?? [])).sort();
+        if (codes.length === 0) {
+          throw new Error(`Custom rule '${ruleName}' of type geo-match requires at least one country code`);
+        }
+        return { type: 'geo-match', countryCodes: codes };
+      }
+      case 'rate-based': {
+        const limit = statement.limit ?? 2000;
+        return {
+          type: 'rate-based',
+          limit,
+          aggregateKeyType: statement.aggregateKeyType ?? 'IP',
+          forwardedIpFallbackBehavior: statement.forwardedIpFallbackBehavior,
+          forwardedIpHeaderName: statement.forwardedIpHeaderName
+        };
+      }
+      case 'ip-set': {
+        if (!statement.arn) {
+          throw new Error(`Custom rule '${ruleName}' of type ip-set requires an ARN`);
+        }
+        return { type: 'ip-set', arn: statement.arn };
+      }
+      default:
+        return statement;
+    }
+  }
+
+  private normaliseVisibility(ruleName: string, visibility: WafRuleVisibilityConfig): WafRuleVisibilityConfig {
+    return {
+      sampledRequestsEnabled: visibility.sampledRequestsEnabled ?? true,
+      cloudWatchMetricsEnabled: visibility.cloudWatchMetricsEnabled ?? true,
+      metricName: visibility.metricName?.trim() || `${ruleName}Metric`
+    };
+  }
+
+  private normaliseRedactedFields(fields: WafRedactedFieldConfig[]): WafRedactedFieldConfig[] {
+    return fields.map((field) => ({
+      type: field.type,
+      name: field.name?.trim()
+    }));
+  }
+
+  private normaliseMonitoring(monitoring?: Partial<WafMonitoringConfig>): WafMonitoringConfig {
+    const merged = {
+      ...DEFAULT_FALLBACKS.monitoring,
+      ...(monitoring ?? {})
+    } as WafMonitoringConfig;
+
+    merged.alarms = {
+      blockedRequests: this.mergeAlarm(DEFAULT_FALLBACKS.monitoring.alarms.blockedRequests, monitoring?.alarms?.blockedRequests),
+      allowedRequests: this.mergeAlarm(DEFAULT_FALLBACKS.monitoring.alarms.allowedRequests, monitoring?.alarms?.allowedRequests)
+    };
+
+    return merged;
+  }
+
+  private mergeAlarm(base: WafAlarmConfig, override?: Partial<WafAlarmConfig>): WafAlarmConfig {
+    return {
+      ...base,
+      ...(override ?? {}),
+      tags: {
+        ...base.tags,
+        ...(override?.tags ?? {})
+      }
+    };
+  }
+
+  private normaliseLogGroupName(customName?: string): string | undefined {
+    if (customName && customName.trim().length > 0) {
+      return customName.trim();
+    }
+
+    const service = this.builderContext.context.serviceName ?? 'service';
+    const component = this.builderContext.spec.name;
+    return `/aws/wafv2/${service}-${component}`;
   }
 }

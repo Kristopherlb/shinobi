@@ -1,273 +1,110 @@
 # Lambda API Component
 
-AWS Lambda function with API Gateway integration for synchronous API workloads. Implements platform standards with configuration-driven compliance.
+Managed AWS Lambda function fronted by API Gateway with configuration-driven hardening that satisfies the platform standards across Commercial, FedRAMP Moderate, and FedRAMP High environments. All behaviour is sourced from the manifest + `/config/<framework>.yml` defaults – there are no inline compliance switches.
 
-## Overview
+## Key Features
 
-The Lambda API Component provides a production-ready AWS Lambda function with API Gateway integration, supporting multiple compliance frameworks (Commercial, FedRAMP Moderate, FedRAMP High) with automatic security hardening and observability.
+- **ConfigBuilder Precedence** – Five-layer merge managed by the shared `ConfigBuilder`; defaults live under `config/` per framework.
+- **Hardened Lambda Runtime** – Runtime, architecture, memory, timeout, log retention, tracing, and Falco instrumentation resolved from config.
+- **REST API Gateway** – Stage logging, metrics, throttling, CORS, usage plans, and optional API keys are configuration-only.
+- **Observability & Monitoring** – CloudWatch alarms for Lambda errors/throttles/duration and API 4xx/5xx plus OTEL telemetry injection.
+- **VPC & Encryption Ready** – VPC wiring, KMS environment encryption, and removal policies controlled via manifest/config.
+- **Standardised Capabilities** – Registers `lambda:function` and `api:rest` capability payloads for downstream binders.
 
-## Features
-
-- **Multi-Framework Compliance**: Supports Commercial, FedRAMP Moderate, and FedRAMP High deployments
-- **Configuration-Driven**: 5-layer configuration precedence chain with platform defaults
-- **Security by Default**: Automatic encryption, VPC deployment for FedRAMP, and security monitoring
-- **Observability**: OpenTelemetry integration, CloudWatch alarms, and comprehensive logging
-- **API Gateway Integration**: REST API with CORS, API key support, and proxy integration
-- **Compliance Tagging**: Automatic resource tagging for compliance tracking
-
-## Usage
-
-### Basic Usage
+## Example Manifest
 
 ```yaml
-# service.yml
 components:
-  - name: my-api
+  - name: checkout-api
     type: lambda-api
     config:
-      handler: "index.handler"
-      runtime: "nodejs20.x"
-      memory: 512
-      timeout: 30
-      api:
-        cors: true
-        apiKeyRequired: false
-```
-
-### Advanced Configuration
-
-```yaml
-# service.yml
-components:
-  - name: my-api
-    type: lambda-api
-    config:
-      handler: "src/handler.lambda_handler"
-      runtime: "python3.11"
-      memory: 1024
-      timeout: 60
-      codePath: "./src"
-      environmentVariables:
-        LOG_LEVEL: "INFO"
-        API_VERSION: "v1"
-      api:
-        name: "my-production-api"
-        cors: true
-        apiKeyRequired: true
-      monitoring:
-        enabled: true
-        detailedMetrics: true
-        alarms:
-          errorRateThreshold: 5
-          durationThreshold: 80
-          throttleThreshold: 1
-      tags:
-        team: "backend"
-        project: "api-service"
-```
-
-### FedRAMP Configuration
-
-```yaml
-# service.yml (FedRAMP High)
-components:
-  - name: my-api
-    type: lambda-api
-    config:
-      handler: "index.handler"
-      runtime: "nodejs20.x"
-      memory: 1024
-      timeout: 60
+      handler: src/http.handler
+      runtime: python3.11
+      memorySize: 1024
+      timeoutSeconds: 60
+      environment:
+        LOG_LEVEL: DEBUG
+      deployment:
+        codePath: ./dist
+        inlineFallbackEnabled: false
       vpc:
-        vpcId: "vpc-12345678"
-        subnetIds: ["subnet-12345678", "subnet-87654321"]
-        securityGroupIds: ["sg-12345678"]
-      encryption:
-        kmsKeyArn: "arn:aws:kms:us-east-1:123456789012:key/12345678-1234-1234-1234-123456789012"
-      security:
-        tools:
-          falco: true
+        enabled: true
+        vpcId: vpc-1234567890abcdef0
+        subnetIds:
+          - subnet-aaaa1111
+          - subnet-bbbb2222
+        securityGroupIds:
+          - sg-0f00f0f0f0f0f0f0
+      api:
+        stageName: prod
+        apiKeyRequired: true
+        usagePlan:
+          enabled: true
+        cors:
+          enabled: true
+          allowOrigins:
+            - https://app.example.com
+          allowMethods:
+            - GET
+            - POST
+          allowHeaders:
+            - Content-Type
+            - Authorization
+          allowCredentials: true
       monitoring:
         enabled: true
-        detailedMetrics: true
+        alarms:
+          lambdaErrors:
+            enabled: true
+            threshold: 10
+            periodMinutes: 1
 ```
 
-## Configuration Reference
+## Configuration Surface
 
-### Required Properties
+| Section | Description |
+|---------|-------------|
+| `handler`, `runtime`, `architecture`, `memorySize`, `timeoutSeconds` | Lambda execution settings resolved from config defaults per framework. |
+| `logging` | Log retention days, format (`TEXT \| JSON`), and log levels export to environment variables. |
+| `tracing.mode` | `Active` (default) or `PassThrough`; ties into X-Ray/OTEL requirements. |
+| `deployment` | `codePath`, optional `assetHash`, and inline fallback toggle for bootstrap scenarios. |
+| `vpc` | Enables VPC deployment with explicit `vpcId`, `subnetIds`, and `securityGroupIds`. Required for FedRAMP defaults. |
+| `observability` | Controls OTEL layer injection plus additional resource attributes. Final env vars augmented by the platform observability service. |
+| `monitoring.alarms` | Thresholds for Lambda errors, throttles, duration, and API 4xx/5xx metrics. All alarms tagged via `applyStandardTags`. |
+| `api` | Stage name, throttling, usage plan, logging retention, and CORS definitions for the API Gateway REST API. |
+| `securityTools.falco` | Enables Falco instrumentation when required (true by default for FedRAMP frameworks). |
+| `hardeningProfile` | Baseline/fedramp-* string surfaced in capabilities for governance. |
 
-| Property | Type | Description | Example |
-|----------|------|-------------|---------|
-| `handler` | string | Lambda function handler | `"index.handler"` |
+Refer to `packages/components/lambda-api/Config.schema.json` for the full JSON schema.
 
-### Optional Properties
+## Compliance Defaults
 
-| Property | Type | Default | Description |
-|----------|------|---------|-------------|
-| `runtime` | string | `"nodejs20.x"` | Lambda runtime environment |
-| `memory` | number | `512` | Memory allocation in MB (128-10240) |
-| `timeout` | number | `30` | Function timeout in seconds (1-900) |
-| `codePath` | string | `"./src"` | Path to Lambda function code |
-| `environmentVariables` | object | `{}` | Environment variables for the function |
-| `api` | object | See below | API Gateway configuration |
-| `vpc` | object | `undefined` | VPC configuration for FedRAMP |
-| `encryption` | object | `undefined` | Encryption configuration |
-| `security` | object | See below | Security tooling configuration |
-| `monitoring` | object | See below | Monitoring and observability |
-| `tags` | object | `{}` | Additional resource tags |
+| Framework | Highlights |
+|-----------|------------|
+| Commercial | 512 MB, 30s timeout, public CORS, access logging retained 90 days, usage plan disabled, VPC optional. |
+| FedRAMP Moderate | 768 MB, 45s timeout, VPC + Falco enabled, API keys & usage plan required, logging retained 365 days. |
+| FedRAMP High | 1024 MB ARM64, 60s timeout, stricter throttles, access logs retained 2555 days, usage plan required, Falco enabled, hardened CORS. |
 
-### API Gateway Configuration
-
-| Property | Type | Default | Description |
-|----------|------|---------|-------------|
-| `name` | string | Auto-generated | API Gateway name |
-| `cors` | boolean | `false` | Enable CORS for API Gateway |
-| `apiKeyRequired` | boolean | `false` | Require API key for requests |
-
-### VPC Configuration (FedRAMP)
-
-| Property | Type | Description |
-|----------|------|-------------|
-| `vpcId` | string | VPC ID for Lambda deployment |
-| `subnetIds` | string[] | Subnet IDs for Lambda deployment |
-| `securityGroupIds` | string[] | Security group IDs for Lambda |
-
-### Encryption Configuration
-
-| Property | Type | Description |
-|----------|------|-------------|
-| `kmsKeyArn` | string | KMS key ARN for environment variable encryption |
-
-### Security Configuration
-
-| Property | Type | Default | Description |
-|----------|------|---------|-------------|
-| `tools.falco` | boolean | `false` | Enable Falco security monitoring |
-
-### Monitoring Configuration
-
-| Property | Type | Default | Description |
-|----------|------|---------|-------------|
-| `enabled` | boolean | `true` | Enable monitoring |
-| `detailedMetrics` | boolean | `false` | Enable detailed CloudWatch metrics |
-| `alarms.errorRateThreshold` | number | `5` | Error rate threshold for alarms |
-| `alarms.durationThreshold` | number | `80` | Duration threshold (percentage of timeout) |
-| `alarms.throttleThreshold` | number | `1` | Throttle threshold for alarms |
+All values are sourced from `config/commercial.yml`, `config/fedramp-moderate.yml`, and `config/fedramp-high.yml`. Update those files — not the component — to change framework behaviour.
 
 ## Capabilities
 
-### Provided Capabilities
-
-| Capability | Description | Data Shape |
-|------------|-------------|------------|
-| `lambda:function` | Lambda function capability | `{ functionArn, functionName, roleArn }` |
-| `api:rest` | REST API capability | `{ endpointUrl, apiId }` |
-
-### Required Capabilities
-
-None - this component is self-contained.
-
-## Construct Handles
-
-| Handle | Description | Type |
-|--------|-------------|------|
-| `lambdaFunction` | Main Lambda function construct | `aws-cdk-lib/aws-lambda.Function` |
-| `api` | API Gateway REST API construct | `aws-cdk-lib/aws-apigateway.RestApi` |
-| `kmsKey` | KMS key for encryption (FedRAMP High only) | `aws-cdk-lib/aws-kms.Key` |
-
-## Compliance Frameworks
-
-### Commercial
-- Basic CloudWatch logging (1 month retention)
-- Standard memory allocation (512MB)
-- Standard timeout (30s)
-- Optional CORS and API key requirements
-
-### FedRAMP Moderate
-- Enhanced CloudWatch logging (3 months retention)
-- Increased memory allocation (768MB)
-- Extended timeout (45s)
-- X-Ray tracing enabled
-- Falco security monitoring
-- VPC deployment required
-
-### FedRAMP High
-- Comprehensive CloudWatch logging (1 year audit retention)
-- Maximum memory allocation (1024MB)
-- Extended timeout (60s)
-- Customer-managed KMS encryption
-- STIG compliance configuration
-- VPC deployment with restricted internet access
-- Enhanced security monitoring
-
-## Security Features
-
-- **Encryption at Rest**: Environment variables encrypted using AWS KMS
-- **Encryption in Transit**: API Gateway enforces HTTPS for all requests
-- **Logging and Monitoring**: Comprehensive CloudWatch logging with compliance-aware retention
-- **Tracing and Observability**: X-Ray tracing for FedRAMP deployments, OpenTelemetry integration
-- **Security Monitoring**: Falco security monitoring for FedRAMP deployments
-- **Network Security**: VPC deployment for FedRAMP with restricted network access
-
-## Observability
-
-### CloudWatch Metrics
-- Lambda invocations, errors, duration, throttles
-- API Gateway requests, 4xx/5xx errors, latency
-- Custom application metrics
-
-### CloudWatch Alarms
-- High error rate detection
-- Duration threshold monitoring
-- Throttling detection
-- Memory utilization monitoring
-- API Gateway performance monitoring
-
-### Dashboards
-- Comprehensive monitoring dashboard template
-- Framework-specific compliance monitoring
-- Custom metrics visualization
+- `lambda:function` → ARN, runtime, memory, timeout, hardening profile, VPC and KMS metadata.
+- `api:rest` → API ID, execute ARN, stage URL, and optional usage plan identifiers.
 
 ## Testing
 
-The component includes comprehensive test coverage:
+The component follows the platform testing standard with targeted suites:
 
-- **Configuration Tests**: 5-layer precedence chain validation
-- **Synthesis Tests**: CloudFormation template generation verification
-- **Compliance Tests**: Framework-specific resource validation
-- **Integration Tests**: End-to-end component behavior
-
-Run tests:
 ```bash
-npm test -- --testPathPatterns=lambda-api
+corepack pnpm exec jest --runTestsByPath \
+  packages/components/lambda-api/tests/lambda-api.builder.test.ts \
+  packages/components/lambda-api/tests/lambda-api.component.synthesis.test.ts \
+  packages/components/lambda-api/tests/lambda-api.creator.test.ts
 ```
 
-## Dependencies
+All suites use deterministic fixtures and assert the resolved CDK template for each compliance framework.
 
-- AWS CDK Core (^2.0.0)
-- AWS Lambda CDK (^2.0.0)
-- AWS API Gateway CDK (^2.0.0)
-- Platform Contracts (^1.0.0)
+## Change Log
 
-## Compliance Standards
-
-This component helps meet the following compliance standards:
-
-- **AWS Foundational Security Best Practices**: Lambda.1, Lambda.2, Lambda.3, Lambda.4, Lambda.5
-- **FedRAMP Moderate Controls**: AC-2, AC-3, AC-6, AU-2, AU-3, AU-6, SC-7, SC-13
-- **FedRAMP High Controls**: AC-2(4), AU-2(3), SC-7(3), SC-13(1)
-
-## Audit Artifacts
-
-- **Component Plan**: `/audit/component.plan.json`
-- **OSCAL Metadata**: `/audit/lambda-api.oscal.json`
-- **Policy Stubs**: `/audit/rego/`
-- **Dashboard Template**: `/observability/otel-dashboard-template.json`
-- **Alarm Configuration**: `/observability/alarms-config.json`
-
-## Support
-
-For questions or issues:
-- Platform Team: platform-team@company.com
-- Security Team: security-team@company.com
-- Compliance Team: compliance-team@company.com
+- **2025-03-27** – Migrated to `ConfigBuilder`, removed in-code compliance switches, added comprehensive monitoring/usage-plan support, refreshed docs/tests.

@@ -7,9 +7,9 @@
 export { SsmParameterComponent } from './ssm-parameter.component';
 
 // Configuration exports
-export { 
-  SsmParameterConfig,
-  SsmParameterConfigBuilder,
+export {
+  SsmParameterComponentConfig,
+  SsmParameterComponentConfigBuilder,
   SSM_PARAMETER_CONFIG_SCHEMA
 } from './ssm-parameter.builder';
 

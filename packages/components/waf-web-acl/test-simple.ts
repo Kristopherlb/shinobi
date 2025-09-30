@@ -4,21 +4,19 @@
 
 import { App, Stack } from 'aws-cdk-lib';
 import { WafWebAclComponent } from './waf-web-acl.component';
-import { WafWebAclConfig } from './waf-web-acl.builder';
-import { ComponentContext, ComponentSpec } from '../@shinobi/core/component-interfaces';
+import { ComponentContext, ComponentSpec } from '@shinobi/core';
 
 // Mock context
+const app = new App();
+const stack = new Stack(app, 'TestStack');
+
 const mockContext: ComponentContext = {
   serviceName: 'test-service',
   environment: 'dev',
   complianceFramework: 'fedramp-moderate',
-  scope: {} as any,
+  scope: stack,
   region: 'us-east-1',
-  accountId: '123456789012',
-  serviceLabels: {
-    'owner': 'test-team',
-    'version': '1.0.0'
-  }
+  accountId: '123456789012'
 };
 
 // Mock spec
@@ -41,11 +39,7 @@ console.log('🧪 Testing WAF Web ACL Component Generation...');
 
 try {
   // Create CDK app and stack
-  const app = new App();
-  const stack = new Stack(app, 'TestStack');
-
-  // Create component
-  const component = new WafWebAclComponent(stack, mockSpec, mockContext);
+  const component = new WafWebAclComponent(stack, mockSpec.name, mockContext, mockSpec);
 
   // Test component type
   console.log('✅ Component type:', component.getType());

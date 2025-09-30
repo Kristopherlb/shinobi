@@ -1,255 +1,218 @@
-/**
- * WAF Web ACL Component implementing Platform Component API Contract v1.1
- * 
- * AWS WAF Web Application Firewall with comprehensive security rules and compliance hardening.
- * Provides protection against common web exploits, OWASP Top 10, and compliance-specific threats.
- */
-
-import { Construct, IConstruct } from 'constructs';
-import { BaseComponent } from '../@shinobi/core/component';
-import {
-  ComponentSpec,
-  ComponentContext,
-  ComponentCapabilities
-} from '../@shinobi/core/component-interfaces';
-import {
-  WafWebAclConfig,
-  WafWebAclConfigBuilder
-} from './waf-web-acl.builder';
-
-// AWS CDK imports
+import * as cdk from 'aws-cdk-lib';
 import * as wafv2 from 'aws-cdk-lib/aws-wafv2';
 import * as logs from 'aws-cdk-lib/aws-logs';
 import * as cloudwatch from 'aws-cdk-lib/aws-cloudwatch';
-import * as cdk from 'aws-cdk-lib';
+import { Construct } from 'constructs';
 
-/**
- * WAF Web ACL Component
- * 
- * Extends BaseComponent and implements the Platform Component API Contract.
- */
+import {
+  BaseComponent,
+  ComponentCapabilities,
+  ComponentContext,
+  ComponentSpec
+} from '@shinobi/core';
+
+import {
+  WafWebAclComponentConfigBuilder,
+  WafWebAclComponentConfig,
+  WafManagedRuleGroupConfig,
+  WafCustomRuleConfig,
+  WafCustomRuleStatementConfig,
+  WafAlarmConfig,
+  AlarmComparisonOperator,
+  AlarmTreatMissingData
+} from './waf-web-acl.builder';
+
 export class WafWebAclComponent extends BaseComponent {
-
-  /** Final resolved configuration */
-  private config!: WafWebAclConfig;
-
-  /** Main WAF Web ACL construct */
-  private webAcl!: wafv2.CfnWebACL;
-
-  /** CloudWatch Log Group for WAF logs */
+  private config?: WafWebAclComponentConfig;
+  private webAcl?: wafv2.CfnWebACL;
   private logGroup?: logs.LogGroup;
-
-  /** WAF logging configuration */
   private loggingConfiguration?: wafv2.CfnLoggingConfiguration;
+  private logDestinationArn?: string;
 
-  /**
-   * Constructor
-   */
-  constructor(scope: Construct, spec: ComponentSpec, context: ComponentContext) {
-    super(scope, spec.name, context, spec);
+  constructor(scope: Construct, id: string, context: ComponentContext, spec: ComponentSpec) {
+    super(scope, id, context, spec);
   }
 
-  /**
-   * Component type identifier
-   */
   public getType(): string {
     return 'waf-web-acl';
   }
 
-  /**
-   * Main synthesis method following Platform Component API Contract
-   */
   public synth(): void {
-    // Step 1: Build configuration using ConfigBuilder
-    const configBuilder = new WafWebAclConfigBuilder(this.context, this.spec);
-    this.config = configBuilder.buildSync();
-
-    // Step 2: Get logger from BaseComponent
-    const logger = this.getLogger();
-    logger.info('Starting WAF Web ACL synthesis', {
-      context: {
-        componentName: this.spec.name,
-        componentType: this.getType(),
-        scope: this.config.scope,
-        defaultAction: this.config.defaultAction
-      }
+    const builder = new WafWebAclComponentConfigBuilder({
+      context: this.context,
+      spec: this.spec
     });
 
-    // Step 3: Create AWS resources
-    this.createLogGroup();
+    this.config = builder.buildSync();
+
+    this.logComponentEvent('config_resolved', 'Resolved WAF Web ACL configuration', {
+      scope: this.config.scope,
+      defaultAction: this.config.defaultAction,
+      managedRuleGroups: this.config.managedRuleGroups.length,
+      customRules: this.config.customRules.length
+    });
+
+    this.configureLoggingDestination();
     this.createWebAcl();
-    this.createLoggingConfiguration();
-    this.createMonitoringAlarms();
-
-    // Step 4: Apply standard tags
-    this.applyResourceTags();
-
-    // Step 5: Register constructs
-    this.registerConstructs();
-
-    // Step 6: Register capabilities
+    this.configureLogging();
+    this.configureMonitoring();
+    this.registerResources();
     this.registerCapabilities();
 
-    logger.info('WAF Web ACL synthesis completed', {
-      context: {
-        componentName: this.spec.name,
-        webAclId: this.webAcl.attrId
-      }
+    this.logComponentEvent('synthesis_complete', 'WAF Web ACL synthesis complete', {
+      webAclArn: this.webAcl?.attrArn,
+      loggingConfigured: !!this.loggingConfiguration
     });
   }
 
-  /**
-   * Creates CloudWatch log group if logging is enabled
-   */
-  private createLogGroup(): void {
-    if (!this.config.logging?.enabled) return;
-
-    this.logGroup = new logs.LogGroup(this, 'WafLogGroup', {
-      logGroupName: `/aws/wafv2/${this.spec.name}`,
-      retention: this.getLogRetentionDays(),
-      removalPolicy: this.getRemovalPolicy()
-    });
+  public getCapabilities(): ComponentCapabilities {
+    this.validateSynthesized();
+    return this.capabilities;
   }
 
-  /**
-   * Creates the main WAF Web ACL with rules
-   */
+  private configureLoggingDestination(): void {
+    if (!this.config?.logging.enabled) {
+      return;
+    }
+
+    if (this.config.logging.destinationType === 'cloudwatch') {
+      this.logGroup = new logs.LogGroup(this, 'WafLogGroup', {
+        logGroupName: this.config.logging.logGroupName,
+        retention: this.mapLogRetentionDays(this.config.logging.retentionDays),
+        removalPolicy: this.config.removalPolicy === 'retain'
+          ? cdk.RemovalPolicy.RETAIN
+          : cdk.RemovalPolicy.DESTROY
+      });
+
+      this.applyStandardTags(this.logGroup, {
+        'log-type': 'waf',
+        ...this.config.tags
+      });
+
+      this.logDestinationArn = this.logGroup.logGroupArn;
+      return;
+    }
+
+    this.logDestinationArn = this.config.logging.destinationArn;
+  }
+
   private createWebAcl(): void {
-    const rules: wafv2.CfnWebACL.RuleProperty[] = [];
-
-    // Add managed rule groups
-    if (this.config.managedRuleGroups) {
-      this.config.managedRuleGroups.forEach(group => {
-        rules.push({
-          name: group.name,
-          priority: group.priority,
-          overrideAction: {
-            [group.overrideAction || 'none']: {}
-          },
-          statement: {
-            managedRuleGroupStatement: {
-              vendorName: group.vendorName,
-              name: group.name,
-              excludedRules: group.excludedRules?.map(ruleName => ({ name: ruleName }))
-            }
-          },
-          visibilityConfig: {
-            sampledRequestsEnabled: this.config.monitoring?.alarms?.sampledRequestsEnabled ?? true,
-            cloudWatchMetricsEnabled: this.config.monitoring?.enabled ?? true,
-            metricName: `${group.name}Metric`
-          }
-        });
-      });
+    if (!this.config) {
+      throw new Error('WAF configuration not resolved before synthesis');
     }
 
-    // Add custom rules
-    if (this.config.customRules) {
-      this.config.customRules.forEach(rule => {
-        rules.push({
-          name: rule.name,
-          priority: rule.priority,
-          action: {
-            [rule.action]: {}
-          },
-          statement: this.buildCustomRuleStatement(rule.statement),
-          visibilityConfig: {
-            sampledRequestsEnabled: this.config.monitoring?.alarms?.sampledRequestsEnabled ?? true,
-            cloudWatchMetricsEnabled: this.config.monitoring?.enabled ?? true,
-            metricName: `${rule.name}Metric`
-          }
-        });
-      });
-    }
+    const rules: wafv2.CfnWebACL.RuleProperty[] = [
+      ...this.config.managedRuleGroups.map((group) => this.buildManagedRule(group)),
+      ...this.config.customRules.map((rule) => this.buildCustomRule(rule))
+    ];
 
-    // Create the Web ACL
     this.webAcl = new wafv2.CfnWebACL(this, 'WebAcl', {
-      name: this.config.name || this.spec.name,
-      description: this.config.description || `WAF Web ACL for ${this.spec.name}`,
-      scope: this.config.scope || 'REGIONAL',
+      name: this.config.name,
+      description: this.config.description ?? `Web ACL for ${this.spec.name}`,
+      scope: this.config.scope,
       defaultAction: {
-        [this.config.defaultAction || 'allow']: {}
+        [this.config.defaultAction]: {}
       },
-      rules: rules,
-      visibilityConfig: {
-        sampledRequestsEnabled: this.config.monitoring?.alarms?.sampledRequestsEnabled ?? true,
-        cloudWatchMetricsEnabled: this.config.monitoring?.enabled ?? true,
-        metricName: `${this.spec.name}WebAcl`
-      }
+      rules,
+      visibilityConfig: this.buildVisibilityConfig(`${this.spec.name}WebAcl`)
+    });
+
+    this.webAcl.applyRemovalPolicy(
+      this.config.removalPolicy === 'retain'
+        ? cdk.RemovalPolicy.RETAIN
+        : cdk.RemovalPolicy.DESTROY
+    );
+
+    this.applyStandardTags(this.webAcl, {
+      'waf-scope': this.config.scope,
+      'default-action': this.config.defaultAction,
+      ...this.config.tags
     });
   }
 
-  /**
-   * Creates WAF logging configuration
-   */
-  private createLoggingConfiguration(): void {
-    if (!this.config.logging?.enabled || !this.webAcl || !this.logGroup) return;
-
-    this.loggingConfiguration = new wafv2.CfnLoggingConfiguration(this, 'LoggingConfig', {
-      resourceArn: this.webAcl.attrArn,
-      logDestinationConfigs: [this.logGroup.logGroupArn],
-      redactedFields: this.config.logging.redactedFields?.map(field => ({
-        [field.type.replace('-', '')]: field.name ? { name: field.name } : {}
-      }))
-    });
-  }
-
-  /**
-   * Creates CloudWatch monitoring alarms
-   */
-  private createMonitoringAlarms(): void {
-    if (!this.config.monitoring?.enabled || !this.webAcl) return;
-
-    const alarmConfig = this.config.monitoring.alarms;
-    if (!alarmConfig) return;
-
-    // Blocked requests alarm
-    if (alarmConfig.blockedRequestsThreshold) {
-      new cloudwatch.Alarm(this, 'BlockedRequestsAlarm', {
-        metric: new cloudwatch.Metric({
-          namespace: 'AWS/WAFV2',
-          metricName: 'BlockedRequests',
-          dimensionsMap: {
-            WebACL: this.webAcl.name || this.spec.name,
-            Region: this.context.region || 'us-east-1'
-          }
-        }),
-        threshold: alarmConfig.blockedRequestsThreshold,
-        evaluationPeriods: 2,
-        treatMissingData: cloudwatch.TreatMissingData.NOT_BREACHING,
-        alarmDescription: `High number of blocked requests in WAF ${this.spec.name}`
-      });
+  private configureLogging(): void {
+    if (!this.config?.logging.enabled || !this.webAcl) {
+      return;
     }
+
+    if (!this.logDestinationArn) {
+      this.logComponentEvent('logging_skipped', 'WAF logging enabled but no destination provided', {
+        destinationType: this.config.logging.destinationType
+      });
+      return;
+    }
+
+    this.loggingConfiguration = new wafv2.CfnLoggingConfiguration(this, 'LoggingConfiguration', {
+      resourceArn: this.webAcl.attrArn,
+      logDestinationConfigs: [this.logDestinationArn],
+      redactedFields: this.config.logging.redactedFields.map((field) => this.mapRedactedField(field))
+    });
+
+    this.loggingConfiguration.addDependency(this.webAcl);
   }
 
-  /**
-   * Applies standard tags to all resources
-   */
-  private applyResourceTags(): void {
-    const additionalTags = {
-      'component-type': this.getType(),
-      'waf-scope': this.config.scope || 'REGIONAL',
-      'default-action': this.config.defaultAction || 'allow',
-      'compliance:framework': this.context.complianceFramework,
-      'compliance:nist-controls': 'AC-2(3),AT-4(b)',
-      'platform:component': 'waf-web-acl',
-      'platform:service-type': this.context.serviceName
+  private configureMonitoring(): void {
+    if (!this.config?.monitoring.enabled || !this.webAcl) {
+      return;
+    }
+
+    const namespace = 'AWS/WAFV2';
+    const dimensions = {
+      WebACL: this.webAcl.name ?? this.config.name,
+      Region: this.context.region ?? cdk.Stack.of(this).region
     };
 
-    this.applyStandardTags(this.webAcl, additionalTags);
+    const blockedAlarm = this.config.monitoring.alarms.blockedRequests;
+    if (blockedAlarm.enabled) {
+      const alarm = this.createAlarm('BlockedRequestsAlarm', blockedAlarm, new cloudwatch.Metric({
+        namespace,
+        metricName: 'BlockedRequests',
+        dimensionsMap: dimensions,
+        statistic: blockedAlarm.statistic,
+        period: cdk.Duration.minutes(blockedAlarm.periodMinutes)
+      }));
 
-    if (this.logGroup) {
-      this.applyStandardTags(this.logGroup, {
-        'log-type': 'waf-logs',
-        'compliance:framework': this.context.complianceFramework,
-        'compliance:nist-controls': 'AC-2(3),AT-4(b)'
+      this.applyStandardTags(alarm, {
+        'alarm-type': 'waf-blocked-requests',
+        ...blockedAlarm.tags,
+        ...this.config.tags
+      });
+    }
+
+    const allowedAlarm = this.config.monitoring.alarms.allowedRequests;
+    if (allowedAlarm.enabled) {
+      const alarm = this.createAlarm('AllowedRequestsAlarm', allowedAlarm, new cloudwatch.Metric({
+        namespace,
+        metricName: 'AllowedRequests',
+        dimensionsMap: dimensions,
+        statistic: allowedAlarm.statistic,
+        period: cdk.Duration.minutes(allowedAlarm.periodMinutes)
+      }));
+
+      this.applyStandardTags(alarm, {
+        'alarm-type': 'waf-allowed-requests',
+        ...allowedAlarm.tags,
+        ...this.config.tags
       });
     }
   }
 
-  /**
-   * Registers construct handles for patches.ts access
-   */
-  private registerConstructs(): void {
+  private createAlarm(id: string, config: WafAlarmConfig, metric: cloudwatch.IMetric): cloudwatch.Alarm {
+    return new cloudwatch.Alarm(this, id, {
+      metric,
+      evaluationPeriods: config.evaluationPeriods,
+      threshold: config.threshold,
+      comparisonOperator: this.mapComparisonOperator(config.comparisonOperator),
+      treatMissingData: this.mapTreatMissingData(config.treatMissingData),
+      alarmDescription: `WAF alarm for ${this.spec.name}`
+    });
+  }
+
+  private registerResources(): void {
+    if (!this.webAcl) {
+      return;
+    }
+
     this.registerConstruct('main', this.webAcl);
     this.registerConstruct('webAcl', this.webAcl);
 
@@ -262,109 +225,162 @@ export class WafWebAclComponent extends BaseComponent {
     }
   }
 
-  /**
-   * Registers capabilities for component binding
-   */
   private registerCapabilities(): void {
-    const capabilities: ComponentCapabilities = {};
+    if (!this.webAcl || !this.config) {
+      return;
+    }
 
-    // Main WAF capability
-    capabilities['security:waf-web-acl'] = {
+    this.registerCapability('security:waf-web-acl', {
       webAclId: this.webAcl.attrId,
       webAclArn: this.webAcl.attrArn,
-      webAclName: this.webAcl.name,
-      scope: this.config.scope
-    };
-
-    // Monitoring capability
-    capabilities['monitoring:waf-web-acl'] = {
-      metricsNamespace: 'AWS/WAFV2',
-      webAclName: this.webAcl.name
-    };
-
-    // WAF-specific capability
-    capabilities['waf:web-acl'] = {
-      id: this.webAcl.attrId,
-      arn: this.webAcl.attrArn,
-      name: this.webAcl.name,
       scope: this.config.scope,
       defaultAction: this.config.defaultAction
-    };
+    });
 
-    // Protection capability
-    capabilities['protection:web-application'] = {
-      type: 'waf-web-acl',
+    this.registerCapability('waf:web-acl', {
+      id: this.webAcl.attrId,
+      arn: this.webAcl.attrArn,
+      name: this.config.name,
       scope: this.config.scope,
-      rulesCount: (this.config.managedRuleGroups?.length || 0) + (this.config.customRules?.length || 0),
-      loggingEnabled: this.config.logging?.enabled || false
-    };
+      managedRuleGroups: this.config.managedRuleGroups.length,
+      customRules: this.config.customRules.length
+    });
 
-    // Register all capabilities
-    Object.entries(capabilities).forEach(([key, data]) => {
-      this.registerCapability(key, data);
+    this.registerCapability('monitoring:waf-web-acl', {
+      metricsNamespace: 'AWS/WAFV2',
+      webAclName: this.config.name,
+      loggingDestinationArn: this.logDestinationArn
+    });
+
+    this.registerCapability('protection:web-application', {
+      provider: 'waf-web-acl',
+      loggingEnabled: this.config.logging.enabled,
+      scope: this.config.scope,
+      rules: this.config.managedRuleGroups.length + this.config.customRules.length
     });
   }
 
-  /**
-   * Returns the machine-readable capabilities of the component
-   */
-  public getCapabilities(): ComponentCapabilities {
-    return this.capabilities || {};
+  private buildManagedRule(group: WafManagedRuleGroupConfig): wafv2.CfnWebACL.RuleProperty {
+    return {
+      name: group.name,
+      priority: group.priority,
+      overrideAction: {
+        [group.overrideAction]: {}
+      },
+      statement: {
+        managedRuleGroupStatement: {
+          name: group.name,
+          vendorName: group.vendorName,
+          excludedRules: group.excludedRules.map((rule) => ({ name: rule }))
+        }
+      },
+      visibilityConfig: this.buildVisibilityConfig(group.visibility.metricName)
+    };
   }
 
-  // Helper methods
+  private buildCustomRule(rule: WafCustomRuleConfig): wafv2.CfnWebACL.RuleProperty {
+    return {
+      name: rule.name,
+      priority: rule.priority,
+      action: {
+        [rule.action]: {}
+      },
+      statement: this.buildCustomStatement(rule.statement, rule.name),
+      visibilityConfig: this.buildVisibilityConfig(rule.visibility.metricName)
+    };
+  }
 
-  /**
-   * Builds a custom rule statement based on configuration
-   */
-  private buildCustomRuleStatement(statement: any): wafv2.CfnWebACL.StatementProperty {
+  private buildCustomStatement(statement: WafCustomRuleStatementConfig, ruleName: string): wafv2.CfnWebACL.StatementProperty {
     switch (statement.type) {
       case 'geo-match':
         return {
           geoMatchStatement: {
-            countryCodes: statement.countries || []
+            countryCodes: statement.countryCodes
           }
         };
-      case 'rate-based':
-        return {
-          rateBasedStatement: {
-            limit: statement.rateLimit || 2000,
-            aggregateKeyType: 'IP'
-          }
+      case 'rate-based': {
+        const result: wafv2.CfnWebACL.RateBasedStatementProperty = {
+          limit: statement.limit,
+          aggregateKeyType: statement.aggregateKeyType ?? 'IP'
         };
+
+        if (statement.aggregateKeyType === 'FORWARDED_IP') {
+          result.forwardedIPConfig = {
+            fallbackBehavior: statement.forwardedIpFallbackBehavior ?? 'MATCH',
+            headerName: statement.forwardedIpHeaderName ?? 'X-Forwarded-For'
+          };
+        }
+
+        return { rateBasedStatement: result };
+      }
       case 'ip-set':
-        // For IP sets, we'd need to create an IP set resource first
-        // This is a simplified implementation
         return {
           ipSetReferenceStatement: {
-            arn: 'arn:aws:wafv2:region:account:regional/ipset/name/id' // Would be actual IP set ARN
+            arn: statement.arn
           }
         };
       default:
-        throw new Error(`Unsupported custom rule statement type: ${statement.type}`);
+        throw new Error(`Unsupported custom rule statement type '${(statement as { type: string }).type}' for rule '${ruleName}'`);
     }
   }
 
-  /**
-   * Gets log retention days based on compliance framework
-   */
-  private getLogRetentionDays(): number {
-    switch (this.context.complianceFramework) {
-      case 'fedramp-high':
-        return 2555; // 7 years
-      case 'fedramp-moderate':
-        return 1095; // 3 years
+  private buildVisibilityConfig(metricName: string): wafv2.CfnWebACL.VisibilityConfigProperty {
+    if (!this.config) {
+      throw new Error('Configuration required to build visibility config');
+    }
+
+    return {
+      sampledRequestsEnabled: this.config.monitoring.sampledRequestsEnabled,
+      cloudWatchMetricsEnabled: this.config.monitoring.metricsEnabled,
+      metricName
+    };
+  }
+
+  private mapRedactedField(field: { type: string; name?: string }): wafv2.CfnLoggingConfiguration.FieldToMatchProperty {
+    switch (field.type) {
+      case 'uri-path':
+        return { uriPath: {} };
+      case 'query-string':
+        return { queryString: {} };
+      case 'method':
+        return { method: {} };
+      case 'body':
+        return { body: {} };
+      case 'header':
       default:
-        return 365; // 1 year
+        return {
+          singleHeader: {
+            name: (field.name ?? '').toLowerCase()
+          }
+        };
     }
   }
 
-  /**
-   * Gets removal policy based on compliance framework
-   */
-  private getRemovalPolicy(): cdk.RemovalPolicy {
-    return ['fedramp-moderate', 'fedramp-high'].includes(this.context.complianceFramework)
-      ? cdk.RemovalPolicy.RETAIN
-      : cdk.RemovalPolicy.DESTROY;
+  private mapComparisonOperator(operator: AlarmComparisonOperator): cloudwatch.ComparisonOperator {
+    switch (operator) {
+      case 'lt':
+        return cloudwatch.ComparisonOperator.LESS_THAN_THRESHOLD;
+      case 'lte':
+        return cloudwatch.ComparisonOperator.LESS_THAN_OR_EQUAL_TO_THRESHOLD;
+      case 'gte':
+        return cloudwatch.ComparisonOperator.GREATER_THAN_OR_EQUAL_TO_THRESHOLD;
+      case 'gt':
+      default:
+        return cloudwatch.ComparisonOperator.GREATER_THAN_THRESHOLD;
+    }
+  }
+
+  private mapTreatMissingData(value: AlarmTreatMissingData): cloudwatch.TreatMissingData {
+    switch (value) {
+      case 'breaching':
+        return cloudwatch.TreatMissingData.BREACHING;
+      case 'ignore':
+        return cloudwatch.TreatMissingData.IGNORE;
+      case 'missing':
+        return cloudwatch.TreatMissingData.MISSING;
+      case 'not-breaching':
+      default:
+        return cloudwatch.TreatMissingData.NOT_BREACHING;
+    }
   }
 }
