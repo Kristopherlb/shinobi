@@ -250,7 +250,6 @@ export class EcsEc2ServiceComponent extends BaseComponent {
     const otelEnvVars = this.configureObservability(this.service, {
       serviceName: `${this.context.serviceName}-ecs-ec2-service`,
       componentType: 'ecs-ec2-service',
-      complianceFramework: this.context.complianceFramework,
       customAttributes: {
         'ecs.launch-type': 'EC2',
         'ecs.task-definition': this.taskDefinition.family,

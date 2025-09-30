@@ -28,7 +28,6 @@ The following components still embed `context.complianceFramework` switches or p
 - [ ] `packages/components/feature-flag`
 
 ## Batch 5 – Platform Services
-- [ ] `packages/components/backstage-portal`
 - [ ] `packages/components/container-application`
 - [ ] `packages/components/dagger-engine-pool` (root and `src/` variants)
 - [ ] `packages/components/deployment-bundle-pipeline`

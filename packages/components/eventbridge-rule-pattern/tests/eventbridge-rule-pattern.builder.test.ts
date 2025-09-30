@@ -1,99 +1,97 @@
-/**
- * EventBridgeRulePatternComponent ConfigBuilder Test Suite
- * Implements Platform Testing Standard v1.0 - ConfigBuilder Testing
- */
+import { Construct } from 'constructs';
+import {
+  EventBridgeRulePatternComponentConfigBuilder,
+  EventBridgeRulePatternConfig
+} from '../eventbridge-rule-pattern.builder';
+import { ComponentContext, ComponentSpec } from '@shinobi/core';
 
-import { EventBridgeRulePatternComponentConfigBuilder, EventBridgeRulePatternConfig } from '../eventbridge-rule-pattern.builder';
-import { ComponentContext, ComponentSpec } from '../../../platform/contracts/component-interfaces';
+type Framework = 'commercial' | 'fedramp-moderate' | 'fedramp-high';
 
-const createMockContext = (
-  complianceFramework: string = 'commercial',
-  environment: string = 'dev'
-): ComponentContext => ({
+const createContext = (framework: Framework = 'commercial'): ComponentContext => ({
   serviceName: 'test-service',
-  owner: 'test-team',
-  environment,
-  complianceFramework,
+  environment: 'dev',
+  complianceFramework: framework,
+  scope: {} as Construct,
   region: 'us-east-1',
-  account: '123456789012',
-  tags: {
-    'service-name': 'test-service',
-    'owner': 'test-team',
-    'environment': environment,
-    'compliance-framework': complianceFramework
+  accountId: '123456789012'
+} as ComponentContext);
+
+const createSpec = (config: Partial<EventBridgeRulePatternConfig> = {}): ComponentSpec => ({
+  name: 'test-rule',
+  type: 'eventbridge-rule-pattern',
+  config: {
+    eventPattern: { source: ['aws.ec2'] },
+    ...config
   }
 });
 
-const createMockSpec = (config: Partial<EventBridgeRulePatternConfig> = {}): ComponentSpec => ({
-  name: 'test-eventbridge-rule-pattern',
-  type: 'eventbridge-rule-pattern',
-  config
-});
-
 describe('EventBridgeRulePatternComponentConfigBuilder', () => {
-  
-  describe('Hardcoded Fallbacks (Layer 1)', () => {
-    
-    it('should provide ultra-safe baseline configuration', () => {
-      const context = createMockContext();
-      const spec = createMockSpec();
-      
-      const builder = new EventBridgeRulePatternComponentConfigBuilder(context, spec);
-      const config = builder.buildSync();
-      
-      // Verify hardcoded fallbacks are applied
-      expect(config.monitoring?.enabled).toBe(true);
-      expect(config.monitoring?.detailedMetrics).toBe(false);
-      expect(config.tags).toBeDefined();
-    });
-    
+  it('applies commercial defaults with monitoring disabled', () => {
+    const builder = new EventBridgeRulePatternComponentConfigBuilder(createContext('commercial'), createSpec());
+    const config = builder.buildSync();
+
+    expect(config.state).toBe('enabled');
+    expect(config.monitoring.enabled).toBe(false);
+    expect(config.deadLetterQueue.enabled).toBe(false);
+    expect(config.monitoring.cloudWatchLogs.enabled).toBe(false);
+    expect(config.ruleName).toMatch(/^test-service-test-rule/);
   });
-  
-  describe('Compliance Framework Defaults (Layer 2)', () => {
-    
-    it('should apply commercial compliance defaults', () => {
-      const context = createMockContext('commercial');
-      const spec = createMockSpec();
-      
-      const builder = new EventBridgeRulePatternComponentConfigBuilder(context, spec);
-      const config = builder.buildSync();
-      
-      expect(config.monitoring?.enabled).toBe(true);
-      expect(config.monitoring?.detailedMetrics).toBe(true);
-    });
-    
-    it('should apply FedRAMP compliance defaults', () => {
-      const context = createMockContext('fedramp-moderate');
-      const spec = createMockSpec();
-      
-      const builder = new EventBridgeRulePatternComponentConfigBuilder(context, spec);
-      const config = builder.buildSync();
-      
-      expect(config.monitoring?.enabled).toBe(true);
-      expect(config.monitoring?.detailedMetrics).toBe(true); // Mandatory for FedRAMP
-    });
-    
+
+  it('enables logging and DLQ defaults for fedramp-moderate', () => {
+    const builder = new EventBridgeRulePatternComponentConfigBuilder(createContext('fedramp-moderate'), createSpec());
+    const config = builder.buildSync();
+
+    expect(config.monitoring.enabled).toBe(true);
+    expect(config.monitoring.cloudWatchLogs.enabled).toBe(true);
+    expect(config.monitoring.cloudWatchLogs.retentionDays).toBe(90);
+    expect(config.deadLetterQueue.enabled).toBe(true);
+    expect(config.deadLetterQueue.maxRetryAttempts).toBe(3);
   });
-  
-  describe('5-Layer Precedence Chain', () => {
-    
-    it('should apply component overrides over platform defaults', () => {
-      const context = createMockContext('commercial');
-      const spec = createMockSpec({
-        monitoring: {
-          enabled: false,
-          detailedMetrics: false
+
+  it('honours manifest overrides over platform defaults', () => {
+    const builder = new EventBridgeRulePatternComponentConfigBuilder(createContext('commercial'), createSpec({
+      state: 'disabled',
+      deadLetterQueue: {
+        enabled: true,
+        maxRetryAttempts: 1,
+        retentionDays: 7
+      },
+      monitoring: {
+        enabled: true,
+        failedInvocations: {
+          enabled: true,
+          threshold: 10,
+          evaluationPeriods: 4,
+          periodMinutes: 10,
+          comparisonOperator: 'gte',
+          treatMissingData: 'ignore',
+          statistic: 'Sum'
+        },
+        cloudWatchLogs: {
+          enabled: true,
+          retentionDays: 60,
+          removalPolicy: 'retain'
         }
-      });
-      
-      const builder = new EventBridgeRulePatternComponentConfigBuilder(context, spec);
-      const config = builder.buildSync();
-      
-      // Verify component config overrides platform defaults
-      expect(config.monitoring?.enabled).toBe(false);
-      expect(config.monitoring?.detailedMetrics).toBe(false);
-    });
-    
+      }
+    }));
+
+    const config = builder.buildSync();
+
+    expect(config.state).toBe('disabled');
+    expect(config.deadLetterQueue.enabled).toBe(true);
+    expect(config.deadLetterQueue.retentionDays).toBe(7);
+    expect(config.monitoring.failedInvocations.threshold).toBe(10);
+    expect(config.monitoring.cloudWatchLogs.retentionDays).toBe(60);
+    expect(config.monitoring.cloudWatchLogs.removalPolicy).toBe('retain');
   });
-  
+
+  it('requires an event pattern', () => {
+    const builder = new EventBridgeRulePatternComponentConfigBuilder(createContext(), {
+      name: 'missing-pattern',
+      type: 'eventbridge-rule-pattern',
+      config: {}
+    });
+
+    expect(() => builder.buildSync()).toThrow(/eventPattern/);
+  });
 });

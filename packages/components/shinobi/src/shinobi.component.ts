@@ -11,7 +11,6 @@
 import * as ecs from 'aws-cdk-lib/aws-ecs';
 import * as ec2 from 'aws-cdk-lib/aws-ec2';
 import * as elbv2 from 'aws-cdk-lib/aws-elasticloadbalancingv2';
-import * as iam from 'aws-cdk-lib/aws-iam';
 import * as ecr from 'aws-cdk-lib/aws-ecr';
 import * as logs from 'aws-cdk-lib/aws-logs';
 import * as dynamodb from 'aws-cdk-lib/aws-dynamodb';
@@ -22,11 +21,11 @@ import * as cdk from 'aws-cdk-lib';
 import * as cloudwatch from 'aws-cdk-lib/aws-cloudwatch';
 import { Construct } from 'constructs';
 import {
-  Component,
+  BaseComponent,
   ComponentSpec,
   ComponentContext,
   ComponentCapabilities
-} from '@platform/contracts';
+} from '@shinobi/core';
 
 // Import the configuration interface and builder from the builder
 import { ShinobiConfig, ShinobiComponentConfigBuilder } from './shinobi.builder';
@@ -34,7 +33,7 @@ import { ShinobiConfig, ShinobiComponentConfigBuilder } from './shinobi.builder'
 /**
  * Shinobi Component - The Platform Intelligence Brain
  */
-export class ShinobiComponent extends Component {
+export class ShinobiComponent extends BaseComponent {
   private cluster?: ecs.Cluster;
   private service?: ecs.FargateService;
   private taskDefinition?: ecs.FargateTaskDefinition;
@@ -68,7 +67,8 @@ export class ShinobiComponent extends Component {
       this.createEcsService();
       
       // Create API infrastructure if enabled
-      if (this.config.api?.loadBalancer?.enabled) {
+      const loadBalancerEnabled = this.resolveBoolean(this.config?.api?.loadBalancer?.enabled, true);
+      if (loadBalancerEnabled) {
         this.createLoadBalancer();
       }
       
@@ -79,14 +79,21 @@ export class ShinobiComponent extends Component {
       this.applyComplianceHardening();
       
       // Register constructs for binding access
+      this.registerConstruct('main', this.service!);
       this.registerConstruct('cluster', this.cluster!);
       this.registerConstruct('service', this.service!);
       this.registerConstruct('taskDefinition', this.taskDefinition!);
       this.registerConstruct('repository', this.repository!);
       this.registerConstruct('dataTable', this.dataTable!);
-      
+
       if (this.loadBalancer) {
         this.registerConstruct('loadBalancer', this.loadBalancer);
+      }
+      if (this.logGroup) {
+        this.registerConstruct('logGroup', this.logGroup);
+      }
+      if (this.eventRule) {
+        this.registerConstruct('eventRule', this.eventRule);
       }
       
       // Register capabilities
@@ -121,7 +128,10 @@ export class ShinobiComponent extends Component {
 
   private buildConfigSync(): ShinobiConfig {
     // Use the builder to get configuration
-    const builder = new ShinobiComponentConfigBuilder(this.context, this.spec);
+    const builder = new ShinobiComponentConfigBuilder({
+      context: this.context,
+      spec: this.spec
+    });
     return builder.buildSync();
   }
 
@@ -178,13 +188,11 @@ export class ShinobiComponent extends Component {
   }
 
   private createLogGroup(): void {
-    const retentionDays = this.config!.logging?.retentionDays || 
-      (this.context.complianceFramework === 'fedramp-high' ? 
-        logs.RetentionDays.ONE_YEAR : logs.RetentionDays.ONE_MONTH);
+    const retentionDays = this.resolveNumber(this.config?.logging?.retentionDays, 30);
 
     this.logGroup = new logs.LogGroup(this, 'LogGroup', {
       logGroupName: `/aws/ecs/${this.context.serviceName}-shinobi`,
-      retention: retentionDays
+      retention: this.mapLogRetentionDays(retentionDays)
     });
 
     this.applyStandardTags(this.logGroup, {
@@ -238,9 +246,18 @@ export class ShinobiComponent extends Component {
   }
 
   private createTaskDefinition(): void {
+    const cpu = this.resolveNumber(this.config?.compute?.cpu, 512);
+    const memory = this.resolveNumber(this.config?.compute?.memory, 1024);
+    const taskCount = this.resolveNumber(this.config?.compute?.taskCount, 1);
+    const containerPort = this.resolveNumber(this.config?.compute?.containerPort, 3000);
+    const loadBalancerEnabled = this.resolveBoolean(this.config?.api?.loadBalancer?.enabled, true);
+    const logRetentionDays = this.resolveNumber(this.config?.logging?.retentionDays, 30);
+    const featureFlagsEnabled = this.resolveBoolean(this.config?.featureFlags?.enabled, true);
+    const localDevEnabled = this.resolveBoolean(this.config?.localDev?.enabled, false);
+
     this.taskDefinition = new ecs.FargateTaskDefinition(this, 'TaskDefinition', {
-      cpu: this.config!.compute?.cpu || 512,
-      memoryLimitMiB: this.config!.compute?.memory || 1024,
+      cpu,
+      memoryLimitMiB: memory,
       family: `${this.context.serviceName}-shinobi`
     });
 
@@ -255,21 +272,21 @@ export class ShinobiComponent extends Component {
         NODE_ENV: this.context.environment || 'development',
         LOG_LEVEL: this.config!.logging?.logLevel || 'info',
         DATA_SOURCES: JSON.stringify(this.config!.dataSources || {}),
-        FEATURE_FLAGS_ENABLED: String(this.config!.featureFlags?.enabled || false),
+        FEATURE_FLAGS_ENABLED: String(featureFlagsEnabled),
         COMPLIANCE_FRAMEWORK: this.context.complianceFramework,
-        LOCAL_DEV_MODE: String(this.config!.localDev?.enabled || false),
+        LOCAL_DEV_MODE: String(localDevEnabled),
         // MCP Server specific environment variables
         SHINOBI_COMPUTE_MODE: this.config!.compute?.mode || 'ecs',
-        SHINOBI_CPU: String(this.config!.compute?.cpu || 512),
-        SHINOBI_MEMORY: String(this.config!.compute?.memory || 1024),
-        SHINOBI_TASK_COUNT: String(this.config!.compute?.taskCount || 1),
-        SHINOBI_CONTAINER_PORT: String(this.config!.compute?.containerPort || 3000),
+        SHINOBI_CPU: String(cpu),
+        SHINOBI_MEMORY: String(memory),
+        SHINOBI_TASK_COUNT: String(taskCount),
+        SHINOBI_CONTAINER_PORT: String(containerPort),
         SHINOBI_API_EXPOSURE: this.config!.api?.exposure || 'internal',
-        SHINOBI_LOAD_BALANCER_ENABLED: String(this.config!.api?.loadBalancer?.enabled || true),
+        SHINOBI_LOAD_BALANCER_ENABLED: String(loadBalancerEnabled),
         SHINOBI_FEATURE_FLAGS_PROVIDER: this.config!.featureFlags?.provider || 'aws-appconfig',
         SHINOBI_OBSERVABILITY_PROVIDER: this.config!.observability?.provider || 'cloudwatch',
         SHINOBI_SECURITY_LEVEL: this.config!.compliance?.securityLevel || 'standard',
-        SHINOBI_LOG_RETENTION_DAYS: String(this.config!.logging?.retentionDays || 30)
+        SHINOBI_LOG_RETENTION_DAYS: String(logRetentionDays)
       },
       secrets: {
         DATABASE_URL: ecs.Secret.fromSecretsManager(
@@ -279,7 +296,7 @@ export class ShinobiComponent extends Component {
     });
 
     container.addPortMappings({
-      containerPort: this.config!.compute?.containerPort || 3000,
+      containerPort,
       protocol: ecs.Protocol.TCP
     });
 
@@ -296,18 +313,19 @@ export class ShinobiComponent extends Component {
       throw new Error('ECS Cluster and Task Definition must be created before ECS Service');
     }
 
+    const desiredCount = this.resolveNumber(this.config?.compute?.taskCount, 1);
     this.service = new ecs.FargateService(this, 'Service', {
       cluster: this.cluster,
       taskDefinition: this.taskDefinition,
       serviceName: `${this.context.serviceName}-shinobi`,
-      desiredCount: this.config!.compute?.taskCount || 1,
+      desiredCount,
       assignPublicIp: false
     });
 
     // Auto-scaling
     const scalableTarget = this.service.autoScaleTaskCount({
-      minCapacity: this.config!.compute?.taskCount || 1,
-      maxCapacity: (this.config!.compute?.taskCount || 1) * 3
+      minCapacity: desiredCount,
+      maxCapacity: desiredCount * 3
     });
 
     scalableTarget.scaleOnCpuUtilization('CpuScaling', {
@@ -335,6 +353,7 @@ export class ShinobiComponent extends Component {
       throw new Error('ECS Cluster must be created before Load Balancer');
     }
 
+    const containerPort = this.resolveNumber(this.config?.compute?.containerPort, 3000);
     this.loadBalancer = new elbv2.ApplicationLoadBalancer(this, 'LoadBalancer', {
       vpc: this.cluster.vpc,
       internetFacing: this.config!.api?.exposure === 'public',
@@ -344,13 +363,13 @@ export class ShinobiComponent extends Component {
     // Target group
     const targetGroup = new elbv2.ApplicationTargetGroup(this, 'TargetGroup', {
       vpc: this.cluster.vpc,
-      port: this.config!.compute?.containerPort || 3000,
+      port: containerPort,
       protocol: elbv2.ApplicationProtocol.HTTP,
       targetType: elbv2.TargetType.IP,
       healthCheck: {
         enabled: true,
         path: '/health',
-        port: (this.config!.compute?.containerPort || 3000).toString(),
+        port: containerPort.toString(),
         protocol: elbv2.Protocol.HTTP,
         healthyHttpCodes: '200',
         interval: cdk.Duration.seconds(30),
@@ -605,5 +624,17 @@ export class ShinobiComponent extends Component {
       this.logComponentEvent('compliance_hardening', 'Applied maximum security hardening');
     }
   }
-}
 
+  private resolveNumber(value: number | string | undefined, fallback: number): number {
+    if (value === undefined || value === null) {
+      return fallback;
+    }
+
+    const numericValue = typeof value === 'string' ? Number(value) : value;
+    return Number.isFinite(numericValue) ? numericValue : fallback;
+  }
+
+  private resolveBoolean(value: boolean | undefined, fallback: boolean): boolean {
+    return typeof value === 'boolean' ? value : fallback;
+  }
+}

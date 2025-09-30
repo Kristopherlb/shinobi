@@ -6,15 +6,17 @@
  */
 
 // Handler interfaces
-export { 
-  IObservabilityHandler, 
-  ObservabilityHandlerResult, 
-  ObservabilityConfig 
+export {
+  IObservabilityHandler,
+  ObservabilityHandlerResult,
+  ObservabilityConfig
 } from './observability-handlers/observability-handler.interface';
 
 // Individual handlers
 export { Ec2ObservabilityHandler } from './observability-handlers/ec2-observability.handler';
 export { LambdaObservabilityHandler } from './observability-handlers/lambda-observability.handler';
+export { LambdaPowertoolsExtensionHandler, LambdaPowertoolsConfig } from './observability-handlers/lambda-powertools-extension.handler';
+export { LambdaObservabilityService, LambdaObservabilityServiceConfig } from './services/lambda-observability.service';
 export { VpcObservabilityHandler } from './observability-handlers/vpc-observability.handler';
 export { AlbObservabilityHandler } from './observability-handlers/alb-observability.handler';
 export { RdsObservabilityHandler } from './observability-handlers/rds-observability.handler';

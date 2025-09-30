@@ -1,99 +1,111 @@
-/**
- * EventBridgeRuleCronComponent ConfigBuilder Test Suite
- * Implements Platform Testing Standard v1.0 - ConfigBuilder Testing
- */
+import { Construct } from 'constructs';
+import {
+  EventBridgeRuleCronComponentConfigBuilder,
+  EventBridgeRuleCronConfig
+} from '../eventbridge-rule-cron.builder';
+import { ComponentContext, ComponentSpec } from '@shinobi/core';
 
-import { EventBridgeRuleCronComponentConfigBuilder, EventBridgeRuleCronConfig } from '../eventbridge-rule-cron.builder';
-import { ComponentContext, ComponentSpec } from '../../../platform/contracts/component-interfaces';
+type Framework = 'commercial' | 'fedramp-moderate' | 'fedramp-high';
 
-const createMockContext = (
-  complianceFramework: string = 'commercial',
-  environment: string = 'dev'
-): ComponentContext => ({
+const baseContext = (framework: Framework = 'commercial'): ComponentContext => ({
   serviceName: 'test-service',
-  owner: 'test-team',
-  environment,
-  complianceFramework,
+  environment: 'dev',
+  complianceFramework: framework,
+  scope: {} as Construct,
   region: 'us-east-1',
-  account: '123456789012',
-  tags: {
-    'service-name': 'test-service',
-    'owner': 'test-team',
-    'environment': environment,
-    'compliance-framework': complianceFramework
+  accountId: '123456789012'
+} as ComponentContext);
+
+const spec = (config: Partial<EventBridgeRuleCronConfig> = {}): ComponentSpec => ({
+  name: 'test-cron',
+  type: 'eventbridge-rule-cron',
+  config: {
+    schedule: 'rate(5 minutes)',
+    ...config
   }
 });
 
-const createMockSpec = (config: Partial<EventBridgeRuleCronConfig> = {}): ComponentSpec => ({
-  name: 'test-eventbridge-rule-cron',
-  type: 'eventbridge-rule-cron',
-  config
-});
-
 describe('EventBridgeRuleCronComponentConfigBuilder', () => {
-  
-  describe('Hardcoded Fallbacks (Layer 1)', () => {
-    
-    it('should provide ultra-safe baseline configuration', () => {
-      const context = createMockContext();
-      const spec = createMockSpec();
-      
-      const builder = new EventBridgeRuleCronComponentConfigBuilder(context, spec);
-      const config = builder.buildSync();
-      
-      // Verify hardcoded fallbacks are applied
-      expect(config.monitoring?.enabled).toBe(true);
-      expect(config.monitoring?.detailedMetrics).toBe(false);
-      expect(config.tags).toBeDefined();
-    });
-    
+  it('applies commercial defaults', () => {
+    const builder = new EventBridgeRuleCronComponentConfigBuilder(baseContext('commercial'), spec());
+    const config = builder.buildSync();
+
+    expect(config.state).toBe('enabled');
+    expect(config.deadLetterQueue.enabled).toBe(false);
+    expect(config.monitoring.enabled).toBe(false);
+    expect(config.monitoring.cloudWatchLogs.enabled).toBe(false);
   });
-  
-  describe('Compliance Framework Defaults (Layer 2)', () => {
-    
-    it('should apply commercial compliance defaults', () => {
-      const context = createMockContext('commercial');
-      const spec = createMockSpec();
-      
-      const builder = new EventBridgeRuleCronComponentConfigBuilder(context, spec);
-      const config = builder.buildSync();
-      
-      expect(config.monitoring?.enabled).toBe(true);
-      expect(config.monitoring?.detailedMetrics).toBe(true);
-    });
-    
-    it('should apply FedRAMP compliance defaults', () => {
-      const context = createMockContext('fedramp-moderate');
-      const spec = createMockSpec();
-      
-      const builder = new EventBridgeRuleCronComponentConfigBuilder(context, spec);
-      const config = builder.buildSync();
-      
-      expect(config.monitoring?.enabled).toBe(true);
-      expect(config.monitoring?.detailedMetrics).toBe(true); // Mandatory for FedRAMP
-    });
-    
+
+  it('enables monitoring and DLQ for fedramp-high defaults', () => {
+    const builder = new EventBridgeRuleCronComponentConfigBuilder(baseContext('fedramp-high'), spec());
+    const config = builder.buildSync();
+
+    expect(config.deadLetterQueue.enabled).toBe(true);
+    expect(config.deadLetterQueue.maxRetryAttempts).toBeGreaterThan(0);
+    expect(config.monitoring.enabled).toBe(true);
+    expect(config.monitoring.cloudWatchLogs.enabled).toBe(true);
   });
-  
-  describe('5-Layer Precedence Chain', () => {
-    
-    it('should apply component overrides over platform defaults', () => {
-      const context = createMockContext('commercial');
-      const spec = createMockSpec({
-        monitoring: {
-          enabled: false,
-          detailedMetrics: false
+
+  it('honours manifest overrides', () => {
+    const builder = new EventBridgeRuleCronComponentConfigBuilder(baseContext('commercial'), spec({
+      ruleName: 'custom-rule',
+      description: 'Custom cron rule',
+      state: 'disabled',
+      eventBus: { name: 'custom-bus' },
+      deadLetterQueue: {
+        enabled: true,
+        maxRetryAttempts: 10,
+        retentionDays: 7
+      },
+      monitoring: {
+        enabled: true,
+        alarms: {
+          failedInvocations: {
+            enabled: true,
+            threshold: 5,
+            evaluationPeriods: 2,
+            periodMinutes: 10,
+            comparisonOperator: 'gte',
+            treatMissingData: 'ignore',
+            statistic: 'Sum'
+          },
+          invocationRate: {
+            enabled: true,
+            threshold: 200,
+            evaluationPeriods: 1,
+            periodMinutes: 1,
+            comparisonOperator: 'gt',
+            treatMissingData: 'breaching',
+            statistic: 'Average'
+          }
+        },
+        cloudWatchLogs: {
+          enabled: true,
+          logGroupName: '/aws/events/custom',
+          retentionDays: 60,
+          removalPolicy: 'retain'
         }
-      });
-      
-      const builder = new EventBridgeRuleCronComponentConfigBuilder(context, spec);
-      const config = builder.buildSync();
-      
-      // Verify component config overrides platform defaults
-      expect(config.monitoring?.enabled).toBe(false);
-      expect(config.monitoring?.detailedMetrics).toBe(false);
-    });
-    
+      }
+    }));
+
+    const config = builder.buildSync();
+
+    expect(config.ruleName).toBe('custom-rule');
+    expect(config.state).toBe('disabled');
+    expect(config.eventBus?.name).toBe('custom-bus');
+    expect(config.deadLetterQueue.enabled).toBe(true);
+    expect(config.monitoring.alarms.failedInvocations.threshold).toBe(5);
+    expect(config.monitoring.cloudWatchLogs.retentionDays).toBe(60);
   });
-  
+
+  it('throws when transformer input missing template', () => {
+    const builder = new EventBridgeRuleCronComponentConfigBuilder(baseContext(), spec({
+      input: {
+        type: 'transformer',
+        transformer: {}
+      }
+    }));
+
+    expect(() => builder.buildSync()).toThrow();
+  });
 });

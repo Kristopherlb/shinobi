@@ -1,405 +1,610 @@
-// packages/components/lambda-api/src/lambda-api.component.ts
-import { Construct } from "constructs";
+import * as fs from 'fs';
+import * as path from 'path';
+
+import * as cdk from 'aws-cdk-lib';
+import * as lambda from 'aws-cdk-lib/aws-lambda';
+import * as apigw from 'aws-cdk-lib/aws-apigateway';
+import * as logs from 'aws-cdk-lib/aws-logs';
+import * as cloudwatch from 'aws-cdk-lib/aws-cloudwatch';
+import * as ec2 from 'aws-cdk-lib/aws-ec2';
+import * as kms from 'aws-cdk-lib/aws-kms';
+import { Construct } from 'constructs';
+
 import {
-  Duration,
-  aws_lambda as lambda,
-  aws_apigateway as apigw,
-  aws_logs as logs,
-  aws_kms as kms,
-  Tags,
-  Stack,
-} from "aws-cdk-lib";
-import { ComponentSpec, ComponentCapabilities, ComponentContext } from "@platform/contracts";
-import { BaseComponent } from "@shinobi/core";
-import * as path from "path";
-import * as fs from "fs";
-import { LambdaApiConfigBuilder } from "./lambda-api.builder";
+  BaseComponent,
+  ComponentSpec,
+  ComponentContext,
+  ComponentCapabilities
+} from '@shinobi/core';
 
-export interface LambdaApiSpec {
-  /** e.g. "src/api.handler" */
-  handler: string;
-  runtime?: lambda.Runtime;       // default NODEJS_20_X
-  memorySize?: number;            // default 512
-  timeout?: number;               // default 30
-  logRetentionDays?: number;      // default 14 (>=30 in fedramp)
-  environmentVariables?: Record<string, string>;
-  /** Path to Lambda function code directory or file */
-  codePath?: string;              // default "./src"
-  /** Asset hash for code changes detection */
-  codeAssetHash?: string;         // optional for cache busting
-  /** Use inline code as fallback when codePath is not available */
-  useInlineFallback?: boolean;    // default true
-  /** API Gateway type: 'rest' or 'http' */
-  apiType?: 'rest' | 'http';      // default 'rest'
-}
-
-type HttpApiCapability = { url: string; functionArn: string };
+import {
+  LambdaApiComponentConfigBuilder,
+  LambdaApiConfig,
+  LambdaRuntime,
+  LambdaArchitecture,
+  LambdaApiAlarmConfig
+} from './lambda-api.builder';
 
 export class LambdaApiComponent extends BaseComponent {
-  private resolvedConfig?: LambdaApiSpec;
+  private lambdaFunction?: lambda.Function;
+  private restApi?: apigw.RestApi;
+  private accessLogGroup?: logs.LogGroup;
+  private functionLogGroup?: logs.LogGroup;
+  private usagePlan?: apigw.UsagePlan;
+  private config?: LambdaApiConfig;
 
-  constructor(
-    scope: Construct,
-    id: string,
-    context: ComponentContext,
-    spec: ComponentSpec
-  ) {
+  constructor(scope: Construct, id: string, context: ComponentContext, spec: ComponentSpec) {
     super(scope, id, context, spec);
   }
 
-  private get typedSpec(): LambdaApiSpec {
-    if (!this.resolvedConfig) {
-      const builder = new LambdaApiConfigBuilder();
-      this.resolvedConfig = builder.build(
-        {
-          complianceFramework: this.context.complianceFramework,
-          environment: this.context.environment,
-          observability: this.context.observability,
-        },
-        (this.spec.config ?? {}) as Partial<LambdaApiSpec>
+  public synth(): void {
+    const builder = new LambdaApiComponentConfigBuilder({
+      context: this.context,
+      spec: this.spec
+    });
+
+    this.config = builder.buildSync();
+
+    this.logComponentEvent('config_resolved', 'Resolved lambda-api configuration', {
+      functionName: this.config.functionName,
+      runtime: this.config.runtime,
+      memorySize: this.config.memorySize,
+      timeoutSeconds: this.config.timeoutSeconds,
+      apiStage: this.config.api.stageName
+    });
+
+    this.lambdaFunction = this.createLambdaFunction();
+    this.restApi = this.createRestApi(this.lambdaFunction);
+    this.configureMonitoring();
+
+    this.registerConstruct('main', this.lambdaFunction);
+    this.registerConstruct('lambdaFunction', this.lambdaFunction);
+
+    if (this.functionLogGroup) {
+      this.registerConstruct('functionLogGroup', this.functionLogGroup);
+    }
+
+    if (this.restApi) {
+      this.registerConstruct('api', this.restApi);
+      this.registerConstruct('apiStage', this.restApi.deploymentStage);
+    }
+
+    if (this.accessLogGroup) {
+      this.registerConstruct('accessLogs', this.accessLogGroup);
+    }
+
+    if (this.usagePlan) {
+      this.registerConstruct('usagePlan', this.usagePlan);
+    }
+
+    this.registerCapability('lambda:function', this.buildLambdaCapability());
+
+    if (this.restApi) {
+      this.registerCapability('api:rest', this.buildApiCapability());
+    }
+
+    this.logComponentEvent('synthesis_complete', 'Lambda API synthesis complete', {
+      functionArn: this.lambdaFunction.functionArn,
+      apiId: this.restApi?.restApiId,
+      monitoringEnabled: this.config.monitoring.enabled
+    });
+  }
+
+  public getCapabilities(): ComponentCapabilities {
+    this.validateSynthesized();
+    return this.capabilities;
+  }
+
+  public getType(): string {
+    return 'lambda-api';
+  }
+
+  private createLambdaFunction(): lambda.Function {
+    const runtime = this.mapRuntime(this.config!.runtime);
+    const architecture = this.mapArchitecture(this.config!.architecture);
+    const code = this.resolveLambdaCode();
+
+    let vpc: ec2.IVpc | undefined;
+    let subnets: ec2.ISubnet[] | undefined;
+    let securityGroups: ec2.ISecurityGroup[] | undefined;
+
+    if (this.config?.vpc.enabled) {
+      vpc = this.lookupVpc();
+
+      const subnetIds = this.config.vpc.subnetIds.length > 0
+        ? this.config.vpc.subnetIds
+        : vpc.privateSubnets.map((subnet) => subnet.subnetId);
+
+      subnets = subnetIds.map((subnetId, index) =>
+        ec2.Subnet.fromSubnetId(this, `LambdaApiSubnet${index}`, subnetId)
+      );
+
+      securityGroups = this.config.vpc.securityGroupIds.map((sgId, index) =>
+        ec2.SecurityGroup.fromSecurityGroupId(this, `LambdaApiSecurityGroup${index}`, sgId)
       );
     }
 
-    return this.resolvedConfig;
+    const removalPolicy = this.config!.removalPolicy === 'destroy'
+      ? cdk.RemovalPolicy.DESTROY
+      : cdk.RemovalPolicy.RETAIN;
+
+    this.functionLogGroup = new logs.LogGroup(this, 'LambdaApiExecutionLogs', {
+      retention: this.mapLogRetentionDays(this.config!.logging.logRetentionDays),
+      removalPolicy
+    });
+
+    this.applyStandardTags(this.functionLogGroup, {
+      'log-type': 'lambda-execution',
+      ...this.config!.tags
+    });
+
+    const env: Record<string, string> = {
+      ...this.config!.environment,
+      SYSTEM_LOG_LEVEL: this.config!.logging.systemLogLevel,
+      APPLICATION_LOG_LEVEL: this.config!.logging.applicationLogLevel,
+      AWS_LAMBDA_LOG_FORMAT: this.config!.logging.logFormat
+    };
+
+    if (this.config!.securityTools.falco) {
+      env.FALCO_ENABLED = 'true';
+    }
+
+    const props: lambda.FunctionProps = {
+      functionName: this.config!.functionName,
+      description: this.config!.description,
+      handler: this.config!.handler,
+      runtime,
+      architecture,
+      memorySize: this.config!.memorySize,
+      timeout: cdk.Duration.seconds(this.config!.timeoutSeconds),
+      code,
+      environment: env,
+      reservedConcurrentExecutions: this.config!.reservedConcurrency,
+      tracing: this.config!.tracing.mode === 'Active' ? lambda.Tracing.ACTIVE : lambda.Tracing.PASS_THROUGH,
+      ephemeralStorageSize: cdk.Size.mebibytes(this.config!.ephemeralStorageMb),
+      logGroup: this.functionLogGroup
+    };
+
+    if (this.config?.kmsKeyArn) {
+      props.environmentEncryption = kms.Key.fromKeyArn(this, 'LambdaEnvironmentKey', this.config.kmsKeyArn);
+    }
+
+    if (vpc) {
+      props.vpc = vpc;
+      props.vpcSubnets = subnets ? { subnets } : undefined;
+      props.securityGroups = securityGroups && securityGroups.length > 0 ? securityGroups : undefined;
+    }
+
+    const lambdaFunction = new lambda.Function(this, 'LambdaApiFunction', props);
+    lambdaFunction.applyRemovalPolicy(removalPolicy);
+
+    if (vpc && subnets) {
+      this.attachVpcConfiguration(lambdaFunction, subnets, securityGroups ?? []);
+    }
+    this.configureLambdaObservability(lambdaFunction);
+
+    this.applyStandardTags(lambdaFunction, {
+      'lambda-runtime': this.config!.runtime,
+      architecture: this.config!.architecture,
+      'hardening-profile': this.config!.hardeningProfile,
+      ...this.config!.tags
+    });
+
+    return lambdaFunction;
   }
 
-  /**
-   * Loads Lambda function code from the specified path or falls back to inline code
-   */
-  private loadLambdaCode(): lambda.Code {
-    const spec = this.typedSpec;
-    const codePath = spec.codePath ?? "./src";
-    const useInlineFallback = spec.useInlineFallback ?? true;
+  private resolveLambdaCode(): lambda.Code {
+    const deployment = this.config!.deployment;
+    const absolutePath = path.resolve(deployment.codePath);
 
     try {
-      // Check if codePath exists and is accessible
-      const fullPath = path.resolve(codePath);
-      if (fs.existsSync(fullPath)) {
-        const stats = fs.statSync(fullPath);
-
+      if (fs.existsSync(absolutePath)) {
+        const stats = fs.statSync(absolutePath);
         if (stats.isDirectory()) {
-          // Directory path - use fromAsset
-          return lambda.Code.fromAsset(fullPath, {
-            assetHash: spec.codeAssetHash
+          return lambda.Code.fromAsset(absolutePath, {
+            assetHash: deployment.assetHash
           });
-        } else if (stats.isFile()) {
-          // File path - use fromAsset with the directory containing the file
-          return lambda.Code.fromAsset(path.dirname(fullPath), {
-            assetHash: spec.codeAssetHash
+        }
+
+        if (stats.isFile()) {
+          return lambda.Code.fromAsset(path.dirname(absolutePath), {
+            assetHash: deployment.assetHash
           });
         }
       }
-
-      // If we reach here, the path doesn't exist or is invalid
-      if (useInlineFallback) {
-        console.warn(`Lambda code path '${codePath}' not found, falling back to inline code`);
-        return this.getInlineFallbackCode();
-      } else {
-        throw new Error(`Lambda code path '${codePath}' not found and inline fallback is disabled`);
-      }
     } catch (error) {
-      if (useInlineFallback) {
-        console.warn(`Error loading Lambda code from '${codePath}': ${error}, falling back to inline code`);
-        return this.getInlineFallbackCode();
-      } else {
-        throw new Error(`Failed to load Lambda code from '${codePath}': ${error}`);
-      }
+      this.logComponentEvent('lambda_code_error', 'Failed to load lambda source from disk', {
+        error: (error as Error).message,
+        codePath: deployment.codePath
+      });
     }
+
+    if (deployment.inlineFallbackEnabled) {
+      this.logComponentEvent('lambda_code_fallback', 'Lambda code path not found. Using inline fallback code.', {
+        codePath: deployment.codePath
+      });
+      return this.buildInlineFallbackCode();
+    }
+
+    throw new Error(`Lambda code path '${deployment.codePath}' not found and inline fallback is disabled.`);
   }
 
-  /**
-   * Attaches observability layer (ADOT) to the Lambda function if configured
-   */
-  private attachObservabilityLayer(fn: lambda.Function, region: string): void {
-    const observability = this.context.observability;
-
-    if (!observability) {
-      console.warn('No observability configuration provided - ADOT layer will not be attached');
-      return;
-    }
-
-    // Check if observability is enabled
-    const isObservabilityEnabled =
-      observability.enableTracing !== false &&
-      observability.enableMetrics !== false &&
-      observability.enableLogs !== false;
-
-    if (!isObservabilityEnabled) {
-      console.log('Observability disabled - ADOT layer will not be attached');
-      return;
-    }
-
-    // Get ADOT layer ARN from context
-    const adotLayerArn = this.getAdotLayerArn(region);
-
-    if (!adotLayerArn) {
-      console.warn(`No ADOT layer ARN found for region ${region} - observability layer will not be attached`);
-      return;
-    }
-
-    try {
-      fn.addLayers(
-        lambda.LayerVersion.fromLayerVersionArn(this, "AdotLayer", adotLayerArn)
-      );
-      console.log(`ADOT layer attached successfully: ${adotLayerArn}`);
-    } catch (error) {
-      console.error(`Failed to attach ADOT layer: ${error}`);
-      // Don't throw - observability is optional
-    }
-  }
-
-  /**
-   * Gets the appropriate ADOT layer ARN for the given region
-   */
-  private getAdotLayerArn(region: string): string | undefined {
-    const observability = this.context.observability;
-
-    if (!observability) {
-      return undefined;
-    }
-
-    // Try region-specific ARN first, then fallback to global ARN
-    return observability.adotLayerArnMap?.[region] ?? observability.adotLayerArn;
-  }
-
-  /**
-   * Provides a more realistic inline fallback code that can handle basic API requests
-   */
-  private getInlineFallbackCode(): lambda.Code {
+  private buildInlineFallbackCode(): lambda.Code {
     return lambda.Code.fromInline(`
-      const { APIGatewayProxyEvent, APIGatewayProxyResult } = require('aws-lambda');
+      const buildResponse = (statusCode, body) => ({
+        statusCode,
+        headers: {
+          'Content-Type': 'application/json',
+          'Access-Control-Allow-Origin': '*',
+          'Access-Control-Allow-Headers': 'Content-Type,Authorization,X-Requested-With',
+          'Access-Control-Allow-Methods': 'GET,POST,PUT,DELETE,OPTIONS'
+        },
+        body: JSON.stringify(body)
+      });
 
       exports.handler = async (event) => {
-        console.log('Received event:', JSON.stringify(event, null, 2));
-        
-        try {
-          // Basic CORS headers
-          const headers = {
-            'Content-Type': 'application/json',
-            'Access-Control-Allow-Origin': '*',
-            'Access-Control-Allow-Headers': 'Content-Type,X-Amz-Date,Authorization,X-Api-Key,X-Amz-Security-Token',
-            'Access-Control-Allow-Methods': 'GET,POST,PUT,DELETE,OPTIONS'
-          };
+        console.log('Inbound request', JSON.stringify(event));
 
-          // Handle preflight OPTIONS requests
-          if (event.httpMethod === 'OPTIONS') {
-            return {
-              statusCode: 200,
-              headers,
-              body: ''
-            };
-          }
-
-          // Basic routing based on HTTP method and path
-          const method = event.httpMethod;
-          const path = event.path || '/';
-          
-          let response;
-          
-          switch (method) {
-            case 'GET':
-              if (path === '/health' || path === '/') {
-                response = {
-                  status: 'healthy',
-                  timestamp: new Date().toISOString(),
-                  service: process.env.OTEL_SERVICE_NAME || 'lambda-api',
-                  environment: process.env.OTEL_RESOURCE_ATTRIBUTES || 'unknown'
-                };
-              } else {
-                response = {
-                  message: 'Hello from Lambda API!',
-                  method: 'GET',
-                  path: path,
-                  queryParams: event.queryStringParameters || {}
-                };
-              }
-              break;
-              
-            case 'POST':
-            case 'PUT':
-              response = {
-                message: 'Request received',
-                method: method,
-                path: path,
-                body: event.body ? JSON.parse(event.body) : null,
-                timestamp: new Date().toISOString()
-              };
-              break;
-              
-            default:
-              response = {
-                message: 'Method not supported',
-                method: method,
-                path: path,
-                supportedMethods: ['GET', 'POST', 'PUT', 'OPTIONS']
-              };
-          }
-
-          return {
-            statusCode: 200,
-            headers,
-            body: JSON.stringify(response)
-          };
-          
-        } catch (error) {
-          console.error('Error processing request:', error);
-          
-          return {
-            statusCode: 500,
-            headers: {
-              'Content-Type': 'application/json',
-              'Access-Control-Allow-Origin': '*'
-            },
-            body: JSON.stringify({
-              error: 'Internal server error',
-              message: error.message,
-              timestamp: new Date().toISOString()
-            })
-          };
+        if (event?.httpMethod === 'OPTIONS') {
+          return buildResponse(200, {});
         }
+
+        const response = {
+          message: 'Lambda API inline fallback response',
+          method: event?.httpMethod ?? 'UNKNOWN',
+          path: event?.path ?? '/',
+          requestId: event?.requestContext?.requestId,
+          timestamp: new Date().toISOString()
+        };
+
+        return buildResponse(200, response);
       };
     `);
   }
 
-  synth(): void {
-    const spec = this.typedSpec;
-    const isFedramp = (this.context.complianceFramework ?? "").startsWith("fedramp");
-    const stack = Stack.of(this);
-    const region = stack.region;
+  private createRestApi(fn: lambda.Function): apigw.RestApi {
+    const apiConfig = this.config!.api;
+    const logConfig = apiConfig.logging;
 
-    // Logs
-    const retention = this.resolveLogRetention(
-      this.effectiveRetentionDays(spec.logRetentionDays, isFedramp)
-    );
-    const accessLogs = new logs.LogGroup(this, "ApiAccessLogs", { retention });
+    if (logConfig.enabled) {
+      this.accessLogGroup = new logs.LogGroup(this, 'ApiAccessLogs', {
+        logGroupName: logConfig.logGroupName,
+        retention: this.mapLogRetentionDays(logConfig.retentionDays),
+        removalPolicy: this.config!.removalPolicy === 'destroy'
+          ? cdk.RemovalPolicy.DESTROY
+          : cdk.RemovalPolicy.RETAIN
+      });
 
-    // Lambda
-    const fn = new lambda.Function(this, "Function", {
-      functionName: `${this.context.serviceName}-${this.node.id}`,
-      runtime: spec.runtime ?? lambda.Runtime.NODEJS_20_X,
-      handler: spec.handler,
-      code: this.loadLambdaCode(),
-      memorySize: spec.memorySize ?? 512,
-      timeout: Duration.seconds(spec.timeout ?? 30),
-      tracing: lambda.Tracing.ACTIVE,
-      environment: {
-        // OTel standard envs
-        OTEL_EXPORTER_OTLP_ENDPOINT: this.context.observability?.collectorEndpoint ?? "",
-        OTEL_SERVICE_NAME: this.context.serviceName,
-        OTEL_RESOURCE_ATTRIBUTES: [
-          this.context.environment ? `env=${this.context.environment}` : undefined,
-          this.context.owner ? `owner=${this.context.owner}` : undefined,
-          this.context.complianceFramework ? `compliance=${this.context.complianceFramework}` : undefined,
-        ]
-          .filter(Boolean)
-          .join(","),
-        // CDK property name: environment maps to our spec.environmentVariables
-        ...(spec.environmentVariables ?? {}),
-      },
-      logRetention: retention,
-    });
+      this.applyStandardTags(this.accessLogGroup, {
+        'log-type': 'api-access',
+        stage: apiConfig.stageName,
+        ...this.config!.tags
+      });
+    }
 
-    // Attach ADOT Lambda Layer if observability is configured
-    this.attachObservabilityLayer(fn, region);
-
-    // API Gateway (REST proxy to Lambda)
-    const api = new apigw.RestApi(this, "RestApi", {
+    const restApi = new apigw.RestApi(this, 'LambdaRestApi', {
+      restApiName: apiConfig.name ?? `${this.context.serviceName}-${this.spec.name}`,
+      description: apiConfig.description ?? 'Lambda API component',
       deployOptions: {
-        stageName: "prod",
-        accessLogDestination: new apigw.LogGroupLogDestination(accessLogs),
-        accessLogFormat: apigw.AccessLogFormat.jsonWithStandardFields({
-          caller: true,
-          httpMethod: true,
-          ip: true,
-          protocol: true,
-          requestTime: true,
-          resourcePath: true,
-          responseLength: true,
-          status: true,
-          user: true,
+        stageName: apiConfig.stageName,
+        metricsEnabled: apiConfig.metricsEnabled,
+        tracingEnabled: apiConfig.tracingEnabled,
+        loggingLevel: logConfig.enabled ? apigw.MethodLoggingLevel.INFO : apigw.MethodLoggingLevel.OFF,
+        dataTraceEnabled: logConfig.enabled,
+        throttlingRateLimit: apiConfig.throttling.rateLimit,
+        throttlingBurstLimit: apiConfig.throttling.burstLimit,
+        accessLogDestination: logConfig.enabled && this.accessLogGroup
+          ? new apigw.LogGroupLogDestination(this.accessLogGroup)
+          : undefined,
+        accessLogFormat: logConfig.enabled
+          ? apigw.AccessLogFormat.jsonWithStandardFields({
+              caller: true,
+              httpMethod: true,
+              ip: true,
+              protocol: true,
+              requestTime: true,
+              resourcePath: true,
+              responseLength: true,
+              status: true,
+              user: true
+            })
+          : undefined
+      },
+      defaultMethodOptions: {
+        apiKeyRequired: apiConfig.apiKeyRequired
+      },
+      defaultCorsPreflightOptions: apiConfig.cors.enabled
+        ? {
+            allowOrigins: apiConfig.cors.allowOrigins,
+            allowHeaders: apiConfig.cors.allowHeaders,
+            allowMethods: apiConfig.cors.allowMethods,
+            allowCredentials: apiConfig.cors.allowCredentials
+          }
+        : undefined
+    });
+
+    const integration = new apigw.LambdaIntegration(fn, {
+      proxy: true
+    });
+
+    restApi.root.addProxy({
+      defaultIntegration: integration,
+      anyMethod: true
+    });
+
+    this.applyStandardTags(restApi, {
+      'api-stage': apiConfig.stageName,
+      'api-type': apiConfig.type,
+      ...this.config!.tags
+    });
+
+    this.configureUsagePlan(restApi);
+
+    return restApi;
+  }
+
+  private configureUsagePlan(restApi: apigw.RestApi): void {
+    const usagePlanConfig = this.config!.api.usagePlan;
+
+    if (!usagePlanConfig.enabled) {
+      return;
+    }
+
+    this.usagePlan = restApi.addUsagePlan('LambdaApiUsagePlan', {
+      name: usagePlanConfig.name ?? `${this.context.serviceName}-${this.spec.name}-usage-plan`,
+      throttle: usagePlanConfig.throttle
+        ? {
+            rateLimit: usagePlanConfig.throttle.rateLimit,
+            burstLimit: usagePlanConfig.throttle.burstLimit
+          }
+        : undefined,
+      quota: usagePlanConfig.quota
+        ? {
+            limit: usagePlanConfig.quota.limit,
+            period: usagePlanConfig.quota.period
+          }
+        : undefined
+    });
+
+    this.usagePlan.addApiStage({ stage: restApi.deploymentStage });
+
+    const usagePlanTags: Record<string, string> = {
+      ...this.config!.tags
+    };
+
+    if (this.usagePlan.usagePlanName) {
+      usagePlanTags['usage-plan'] = this.usagePlan.usagePlanName;
+    }
+
+    this.applyStandardTags(this.usagePlan, usagePlanTags);
+  }
+
+  private configureMonitoring(): void {
+    if (!this.config?.monitoring.enabled) {
+      return;
+    }
+
+    this.ensureLambdaAlarm('LambdaErrorsAlarm', this.config.monitoring.alarms.lambdaErrors, {
+      metric: this.lambdaFunction!.metricErrors({
+        period: cdk.Duration.minutes(this.config.monitoring.alarms.lambdaErrors.periodMinutes),
+        statistic: this.config.monitoring.alarms.lambdaErrors.statistic
+      }),
+      alarmNameSuffix: 'lambda-errors'
+    });
+
+    this.ensureLambdaAlarm('LambdaThrottlesAlarm', this.config.monitoring.alarms.lambdaThrottles, {
+      metric: this.lambdaFunction!.metricThrottles({
+        period: cdk.Duration.minutes(this.config.monitoring.alarms.lambdaThrottles.periodMinutes),
+        statistic: this.config.monitoring.alarms.lambdaThrottles.statistic
+      }),
+      alarmNameSuffix: 'lambda-throttles'
+    });
+
+    this.ensureLambdaAlarm('LambdaDurationAlarm', this.config.monitoring.alarms.lambdaDuration, {
+      metric: this.lambdaFunction!.metricDuration({
+        period: cdk.Duration.minutes(this.config.monitoring.alarms.lambdaDuration.periodMinutes),
+        statistic: this.config.monitoring.alarms.lambdaDuration.statistic
+      }),
+      alarmNameSuffix: 'lambda-duration'
+    });
+
+    if (this.restApi) {
+      this.ensureApiAlarm('Api4xxAlarm', this.config.monitoring.alarms.api4xxErrors, {
+        metric: this.restApi.metricClientError({
+          period: cdk.Duration.minutes(this.config.monitoring.alarms.api4xxErrors.periodMinutes),
+          statistic: this.config.monitoring.alarms.api4xxErrors.statistic
         }),
-      },
-      defaultCorsPreflightOptions: {
-        allowOrigins: apigw.Cors.ALL_ORIGINS,
-        allowMethods: apigw.Cors.ALL_METHODS,
-      },
+        alarmNameSuffix: 'api-4xx'
+      });
+
+      this.ensureApiAlarm('Api5xxAlarm', this.config.monitoring.alarms.api5xxErrors, {
+        metric: this.restApi.metricServerError({
+          period: cdk.Duration.minutes(this.config.monitoring.alarms.api5xxErrors.periodMinutes),
+          statistic: this.config.monitoring.alarms.api5xxErrors.statistic
+        }),
+        alarmNameSuffix: 'api-5xx'
+      });
+    }
+  }
+
+  private ensureLambdaAlarm(id: string, config: LambdaApiAlarmConfig, options: { metric: cloudwatch.IMetric; alarmNameSuffix: string }): void {
+    if (!config.enabled) {
+      return;
+    }
+
+    const alarm = new cloudwatch.Alarm(this, id, {
+      alarmName: `${this.context.serviceName}-${this.spec.name}-${options.alarmNameSuffix}`,
+      alarmDescription: `Lambda alarm for ${options.alarmNameSuffix}`,
+      metric: options.metric,
+      threshold: config.threshold,
+      evaluationPeriods: config.evaluationPeriods,
+      comparisonOperator: this.mapComparisonOperator(config.comparisonOperator),
+      treatMissingData: this.mapTreatMissingData(config.treatMissingData)
     });
 
-    api.root.addProxy({
-      defaultIntegration: new apigw.LambdaIntegration(fn, { proxy: true }),
-      anyMethod: true,
+    this.applyStandardTags(alarm, {
+      'resource-type': 'cloudwatch-alarm',
+      'alarm-id': options.alarmNameSuffix,
+      ...config.tags
+    });
+  }
+
+  private ensureApiAlarm(id: string, config: LambdaApiAlarmConfig, options: { metric: cloudwatch.IMetric; alarmNameSuffix: string }): void {
+    if (!config.enabled) {
+      return;
+    }
+
+    const alarm = new cloudwatch.Alarm(this, id, {
+      alarmName: `${this.context.serviceName}-${this.spec.name}-${options.alarmNameSuffix}`,
+      alarmDescription: `API Gateway alarm for ${options.alarmNameSuffix}`,
+      metric: options.metric,
+      threshold: config.threshold,
+      evaluationPeriods: config.evaluationPeriods,
+      comparisonOperator: this.mapComparisonOperator(config.comparisonOperator),
+      treatMissingData: this.mapTreatMissingData(config.treatMissingData)
     });
 
-    // Platform tagging (simplified for standalone package)
-    Tags.of(fn).add("Service", this.context.serviceName);
-    Tags.of(fn).add("Environment", this.context.environment);
-    if ((this.context as any).owner) {
-      Tags.of(fn).add("Owner", (this.context as any).owner);
+    this.applyStandardTags(alarm, {
+      'resource-type': 'cloudwatch-alarm',
+      'alarm-id': options.alarmNameSuffix,
+      ...config.tags
+    });
+  }
+
+  private attachVpcConfiguration(
+    lambdaFunction: lambda.Function,
+    subnets: ec2.ISubnet[],
+    securityGroups: ec2.ISecurityGroup[]
+  ): void {
+    lambdaFunction.addEnvironment('VPC_ENABLED', 'true');
+    lambdaFunction.addEnvironment('VPC_SUBNET_IDS', subnets.map((subnet) => subnet.subnetId).join(','));
+
+    if (securityGroups.length > 0) {
+      lambdaFunction.addEnvironment('VPC_SECURITY_GROUP_IDS', securityGroups.map((sg) => sg.securityGroupId).join(','));
     }
-    if (this.context.complianceFramework) {
-      Tags.of(fn).add("ComplianceFramework", this.context.complianceFramework);
+  }
+
+  private lookupVpc(): ec2.IVpc {
+    if (!this.config?.vpc.vpcId) {
+      throw new Error('VPC ID is required when VPC deployment is enabled for lambda-api.');
     }
 
-    Tags.of(api).add("Service", this.context.serviceName);
-    Tags.of(api).add("Environment", this.context.environment);
-    if ((this.context as any).owner) {
-      Tags.of(api).add("Owner", (this.context as any).owner);
-    }
-    if (this.context.complianceFramework) {
-      Tags.of(api).add("ComplianceFramework", this.context.complianceFramework);
+    return ec2.Vpc.fromLookup(this, 'LambdaApiVpc', {
+      vpcId: this.config.vpc.vpcId
+    });
+  }
+
+  private configureLambdaObservability(lambdaFunction: lambda.Function): void {
+    if (this.config?.observability.otelEnabled) {
+      lambdaFunction.addEnvironment('AWS_LAMBDA_EXEC_WRAPPER', '/opt/otel-handler');
+
+      const resourceAttributes = {
+        service: this.context.serviceName,
+        component: this.getType(),
+        'component.name': this.spec.name,
+        ...this.config.observability.otelResourceAttributes
+      };
+
+      lambdaFunction.addEnvironment(
+        'OTEL_RESOURCE_ATTRIBUTES',
+        Object.entries(resourceAttributes)
+          .map(([key, value]) => `${key}=${value}`)
+          .join(',')
+      );
+
+      if (this.config.observability.otelLayerArn) {
+        lambdaFunction.addLayers(
+          lambda.LayerVersion.fromLayerVersionArn(this, 'LambdaApiOtelLayer', this.config.observability.otelLayerArn)
+        );
+      }
     }
 
-    // Register constructs
-    this.constructs.set('lambdaFunction', fn);
-    this.constructs.set('api', api);
-    this.constructs.set('logGroup', accessLogs);
+    const otelEnv = this.configureObservability(lambdaFunction, {
+      serviceName: this.spec.name,
+      componentType: this.getType()
+    });
 
-    // Register capabilities
-    const capability: HttpApiCapability = { url: api.url, functionArn: fn.functionArn };
-    this.capabilities['lambda:function'] = {
-      functionArn: fn.functionArn,
-      functionName: fn.functionName,
-      roleArn: fn.role?.roleArn
-    };
-    this.capabilities['api:rest'] = {
-      url: api.url,
-      apiId: api.restApiId,
-      rootResourceId: api.root.resourceId
+    Object.entries(otelEnv).forEach(([key, value]) => {
+      if (value !== undefined && value !== null) {
+        lambdaFunction.addEnvironment(key, String(value));
+      }
+    });
+  }
+
+  private buildLambdaCapability(): Record<string, any> {
+    return {
+      functionArn: this.lambdaFunction!.functionArn,
+      functionName: this.lambdaFunction!.functionName,
+      runtime: this.config!.runtime,
+      architecture: this.config!.architecture,
+      memorySize: this.config!.memorySize,
+      timeoutSeconds: this.config!.timeoutSeconds,
+      hardeningProfile: this.config!.hardeningProfile,
+      vpcEnabled: this.config!.vpc.enabled,
+      kmsKeyArn: this.config!.kmsKeyArn
     };
   }
 
-  // ---- helpers ----
-
-  private effectiveRetentionDays(input: number | undefined, isFedramp: boolean): number {
-    const d = input ?? 14;
-    if (isFedramp) return Math.max(d, 30);
-    return d;
+  private buildApiCapability(): Record<string, any> {
+    return {
+      apiId: this.restApi!.restApiId,
+      url: this.restApi!.url,
+      stageName: this.restApi!.deploymentStage.stageName,
+      executionArn: this.restApi!.arnForExecuteApi(),
+      usagePlan: this.usagePlan
+        ? {
+            usagePlanId: this.usagePlan.usagePlanId,
+            usagePlanName: this.usagePlan.usagePlanName
+          }
+        : undefined
+    };
   }
 
-  private resolveLogRetention(days: number): logs.RetentionDays {
-    switch (days) {
-      case 1: return logs.RetentionDays.ONE_DAY;
-      case 3: return logs.RetentionDays.THREE_DAYS;
-      case 5: return logs.RetentionDays.FIVE_DAYS;
-      case 7: return logs.RetentionDays.ONE_WEEK;
-      case 14: return logs.RetentionDays.TWO_WEEKS;
-      case 30: return logs.RetentionDays.ONE_MONTH;
-      case 60: return logs.RetentionDays.TWO_MONTHS;
-      case 90: return logs.RetentionDays.THREE_MONTHS;
-      case 180: return logs.RetentionDays.SIX_MONTHS;
-      case 365: return logs.RetentionDays.ONE_YEAR;
+  private mapRuntime(runtime: LambdaRuntime): lambda.Runtime {
+    switch (runtime) {
+      case 'nodejs18.x':
+        return lambda.Runtime.NODEJS_18_X;
+      case 'python3.11':
+        return lambda.Runtime.PYTHON_3_11;
+      case 'python3.10':
+        return lambda.Runtime.PYTHON_3_10;
+      case 'python3.9':
+        return lambda.Runtime.PYTHON_3_9;
+      case 'nodejs20.x':
       default:
-        // round up to closest common bucket
-        return days >= 30 ? logs.RetentionDays.ONE_MONTH : logs.RetentionDays.TWO_WEEKS;
+        return lambda.Runtime.NODEJS_20_X;
     }
   }
-  // ---- BaseComponent abstract impls ----
-  public getType(): string {
-    return "lambda-api";
+
+  private mapArchitecture(architecture: LambdaArchitecture): lambda.Architecture {
+    return architecture === 'arm64' ? lambda.Architecture.ARM_64 : lambda.Architecture.X86_64;
   }
 
-  public getCapabilities(): ComponentCapabilities {
-    return this.capabilities;
+  private mapComparisonOperator(operator: string): cloudwatch.ComparisonOperator {
+    switch (operator) {
+      case 'lt':
+        return cloudwatch.ComparisonOperator.LESS_THAN_THRESHOLD;
+      case 'lte':
+        return cloudwatch.ComparisonOperator.LESS_THAN_OR_EQUAL_TO_THRESHOLD;
+      case 'gte':
+        return cloudwatch.ComparisonOperator.GREATER_THAN_OR_EQUAL_TO_THRESHOLD;
+      case 'gt':
+      default:
+        return cloudwatch.ComparisonOperator.GREATER_THAN_THRESHOLD;
+    }
   }
 
+  private mapTreatMissingData(value: string): cloudwatch.TreatMissingData {
+    switch (value) {
+      case 'breaching':
+        return cloudwatch.TreatMissingData.BREACHING;
+      case 'ignore':
+        return cloudwatch.TreatMissingData.IGNORE;
+      case 'missing':
+        return cloudwatch.TreatMissingData.MISSING;
+      case 'not-breaching':
+      default:
+        return cloudwatch.TreatMissingData.NOT_BREACHING;
+    }
+  }
 }

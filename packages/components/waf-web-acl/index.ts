@@ -7,9 +7,9 @@
 export { WafWebAclComponent } from './waf-web-acl.component';
 
 // Configuration exports
-export { 
-  WafWebAclConfig,
-  WafWebAclConfigBuilder,
+export {
+  WafWebAclComponentConfig,
+  WafWebAclComponentConfigBuilder,
   WAF_WEB_ACL_CONFIG_SCHEMA
 } from './waf-web-acl.builder';
 

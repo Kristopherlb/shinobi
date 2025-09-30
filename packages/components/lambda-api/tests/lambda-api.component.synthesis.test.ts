@@ -1,98 +1,111 @@
-/**
- * LambdaApiComponent Component Synthesis Test Suite
- * Simplified version focusing on basic instantiation
- */
-
 import { App, Stack } from 'aws-cdk-lib';
-import { LambdaApiComponent } from '../src/lambda-api.component';
-import { ComponentContext, ComponentSpec } from '../../../contracts/src/index';
+import { Match, Template } from 'aws-cdk-lib/assertions';
+import { ComponentContext, ComponentSpec } from '@shinobi/core';
 
-const createMockContext = (
-  complianceFramework: 'commercial' | 'fedramp-moderate' | 'fedramp-high' = 'commercial',
-  environment: string = 'dev'
+import { LambdaApiComponent } from '../src/lambda-api.component';
+import { LambdaApiConfig } from '../src/lambda-api.builder';
+
+const createContext = (
+  framework: 'commercial' | 'fedramp-moderate' | 'fedramp-high'
 ): ComponentContext => {
   const app = new App();
-  const stack = new Stack(app, 'TestStack');
+  const stack = new Stack(app, `Test-${framework}`);
+
   return {
-    serviceName: 'test-service',
-    environment,
-    complianceFramework,
+    serviceName: 'billing',
+    environment: 'dev',
+    complianceFramework: framework,
     scope: stack,
     region: 'us-east-1',
     accountId: '123456789012'
   };
 };
 
-const createMockSpec = (config: any = {}): ComponentSpec => ({
-  name: 'test-lambda-api',
+const createSpec = (config: Partial<LambdaApiConfig>): ComponentSpec => ({
+  name: 'billing-api',
   type: 'lambda-api',
   config: {
-    handler: 'index.handler',
+    handler: 'src/api.handler',
     ...config
   }
 });
 
-const synthesizeComponent = (
-  context: ComponentContext,
-  spec: ComponentSpec
-): { component: LambdaApiComponent; stack: Stack } => {
-  const app = new App();
-  const stack = new Stack(app, 'TestStack');
+describe('LambdaApiComponent synthesis', () => {
+  it('synthesizes Lambda + REST API with commercial defaults', () => {
+    const context = createContext('commercial');
+    const spec = createSpec({});
 
-  const component = new LambdaApiComponent(stack, 'TestLambdaApi', context, spec);
-  component.synth();
+    const component = new LambdaApiComponent(context.scope, spec.name, context, spec);
+    component.synth();
 
-  return { component, stack };
-};
+    const template = Template.fromStack(context.scope as Stack);
 
-describe('LambdaApiComponent Synthesis', () => {
+    template.hasResourceProperties('AWS::Lambda::Function', Match.objectLike({
+      Handler: 'src/api.handler',
+      Runtime: 'nodejs20.x',
+      MemorySize: 512,
+      TracingConfig: { Mode: 'Active' },
+      Environment: {
+        Variables: Match.objectLike({
+          SYSTEM_LOG_LEVEL: 'INFO',
+          APPLICATION_LOG_LEVEL: 'INFO',
+          AWS_LAMBDA_LOG_FORMAT: 'JSON'
+        })
+      }
+    }));
 
-  describe('BasicInstantiation', () => {
+    template.hasResourceProperties('AWS::ApiGateway::RestApi', Match.objectLike({
+      Name: Match.stringLikeRegexp('billing-api')
+    }));
 
-    it('should create component with commercial framework', () => {
-      const context = createMockContext('commercial');
-      const spec = createMockSpec();
+    template.hasResourceProperties('AWS::ApiGateway::Stage', Match.objectLike({
+      TracingEnabled: true,
+      MethodSettings: Match.arrayWith([
+        Match.objectLike({
+          LoggingLevel: 'INFO'
+        })
+      ])
+    }));
 
-      const { component } = synthesizeComponent(context, spec);
-
-      // Verify component was created
-      expect(component).toBeDefined();
-    });
-
-    it('should create component with FedRAMP Moderate framework', () => {
-      const context = createMockContext('fedramp-moderate');
-      const spec = createMockSpec();
-
-      const { component } = synthesizeComponent(context, spec);
-
-      // Verify component was created
-      expect(component).toBeDefined();
-    });
-
-    it('should create component with FedRAMP High framework', () => {
-      const context = createMockContext('fedramp-high');
-      const spec = createMockSpec();
-
-      const { component } = synthesizeComponent(context, spec);
-
-      // Verify component was created
-      expect(component).toBeDefined();
-    });
-
-    it('should create component with custom configuration', () => {
-      const context = createMockContext('commercial');
-      const spec = createMockSpec({
-        handler: 'custom.handler',
-        memorySize: 1024,
-        timeout: 60
-      });
-
-      const { component } = synthesizeComponent(context, spec);
-
-      // Verify component was created
-      expect(component).toBeDefined();
-    });
-
+    template.resourceCountIs('AWS::ApiGateway::UsagePlan', 0);
   });
 
+  it('enforces FedRAMP High configuration with VPC, usage plan, and API key', () => {
+    const context = createContext('fedramp-high');
+    const spec = createSpec({
+      vpc: {
+        enabled: false
+      },
+      api: {
+        usagePlan: {
+          enabled: true
+        },
+        cors: {
+          enabled: true,
+          allowOrigins: ['https://example.gov'],
+          allowHeaders: ['Content-Type'],
+          allowMethods: ['GET'],
+          allowCredentials: true
+        }
+      }
+    });
+
+    const component = new LambdaApiComponent(context.scope, spec.name, context, spec);
+    component.synth();
+
+    const template = Template.fromStack(context.scope as Stack);
+
+    template.hasResourceProperties('AWS::ApiGateway::Method', Match.objectLike({
+      ApiKeyRequired: true
+    }));
+
+    template.resourceCountIs('AWS::ApiGateway::UsagePlan', 1);
+    template.hasResourceProperties('AWS::ApiGateway::UsagePlan', Match.objectLike({
+      Throttle: Match.anyValue()
+    }));
+
+    template.hasResourceProperties('AWS::Logs::LogGroup', Match.objectLike({
+      RetentionInDays: 3653
+    }));
+  });
 });

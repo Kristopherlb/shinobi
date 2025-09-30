@@ -1,182 +1,135 @@
-/**
- * LambdaApiComponent ConfigBuilder Test Suite
- * Implements Platform Testing Standard v1.0 - ConfigBuilder Testing
- * 
- * Test Metadata: TP-CONFIG-LAMBDA-001
- * {
- *   "id": "TP-CONFIG-LAMBDA-001",
- *   "level": "unit",
- *   "capability": "Configuration builder precedence chain validation",
- *   "oracle": "exact",
- *   "invariants": ["5-layer precedence", "compliance framework defaults", "schema validation"],
- *   "fixtures": ["MockContext", "MockSpec", "ConfigBuilder"],
- *   "inputs": { "shape": "ComponentContext and ComponentSpec", "notes": "Tests configuration merging logic" },
- *   "risks": [],
- *   "dependencies": ["ConfigBuilder", "ComponentContext", "ComponentSpec"],
- *   "evidence": ["Configuration precedence validation", "Framework-specific defaults"],
- *   "complianceRefs": ["std://configuration-standard", "std://testing-standard"],
- *   "aiGenerated": true,
- *   "humanReviewedBy": "platform-team"
- * }
- */
+import { Stack } from 'aws-cdk-lib';
+import {
+  ComponentContext,
+  ComponentSpec
+} from '@shinobi/core';
 
-import { LambdaApiConfigBuilder } from '../src/lambda-api.builder';
-import { ComponentContext, ComponentSpec } from '@platform/contracts';
+import {
+  LambdaApiComponentConfigBuilder,
+  LambdaApiConfig
+} from '../src/lambda-api.builder';
 
-const createMockContext = (
-  complianceFramework: 'commercial' | 'fedramp-moderate' | 'fedramp-high' = 'commercial',
-  environment: string = 'dev'
-): ComponentContext => {
-  const { Stack } = require('aws-cdk-lib');
-  const stack = new Stack();
-  return {
-    serviceName: 'test-service',
-    environment,
-    complianceFramework,
-    scope: stack,
-    region: 'us-east-1',
-    accountId: '123456789012',
-  };
-};
+const createContext = (
+  framework: 'commercial' | 'fedramp-moderate' | 'fedramp-high' = 'commercial'
+): ComponentContext => ({
+  serviceName: 'orders',
+  environment: 'dev',
+  complianceFramework: framework,
+  scope: new Stack(),
+  region: 'us-east-1',
+  accountId: '123456789012'
+});
 
-const createMockSpec = (config: any = {}): ComponentSpec => ({
-  name: 'test-lambda-api',
+const createSpec = (config: Partial<LambdaApiConfig> = {}): ComponentSpec => ({
+  name: 'api',
   type: 'lambda-api',
-  config
+  config: {
+    handler: 'src/api.handler',
+    ...config
+  }
 });
 
 describe('LambdaApiComponentConfigBuilder', () => {
-
-  describe('HardcodedFallbacks__MinimalConfig__AppliesSafeDefaults', () => {
-
-    it('should provide ultra-safe baseline configuration', () => {
-      const context = createMockContext();
-      const spec = createMockSpec();
-
-      const builder = new LambdaApiConfigBuilder();
-      const config = builder.build({ complianceFramework: context.complianceFramework, environment: context.environment }, spec.config);
-
-      // Verify hardcoded fallbacks are applied
-      expect(config.runtime?.name).toBe('nodejs20.x');
-      expect(config.memorySize).toBe(512);
-      expect(config.timeout).toBe(30);
-      expect(config.handler).toBe('src/api.handler');
-      expect(config.environmentVariables).toEqual({});
-      expect(config.logRetentionDays).toBe(14);
+  it('applies commercial platform defaults', () => {
+    const builder = new LambdaApiComponentConfigBuilder({
+      context: createContext('commercial'),
+      spec: createSpec()
     });
 
+    const config = builder.buildSync();
+
+    expect(config.runtime).toBe('nodejs20.x');
+    expect(config.logging.logFormat).toBe('JSON');
+    expect(config.api.apiKeyRequired).toBe(false);
+    expect(config.api.logging.enabled).toBe(true);
+    expect(config.monitoring.enabled).toBe(true);
+    expect(config.api.cors.allowOrigins).toContain('*');
+    expect(config.hardeningProfile).toBe('baseline');
   });
 
-  describe('ComplianceFrameworkDefaults__CommercialFramework__AppliesCommercialDefaults', () => {
-
-    it('should apply commercial compliance defaults', () => {
-      const context = createMockContext('commercial');
-      const spec = createMockSpec();
-
-      const builder = new LambdaApiConfigBuilder();
-      const config = builder.build({ complianceFramework: context.complianceFramework, environment: context.environment }, spec.config);
-
-      // Monitoring properties not implemented in current version
+  it('pulls fedramp-high hardened configuration from platform defaults', () => {
+    const builder = new LambdaApiComponentConfigBuilder({
+      context: createContext('fedramp-high'),
+      spec: createSpec()
     });
 
+    const config = builder.buildSync();
+
+    expect(config.vpc.enabled).toBe(true);
+    expect(config.api.apiKeyRequired).toBe(true);
+    expect(config.monitoring.alarms.api5xxErrors.threshold).toBeLessThanOrEqual(1);
+    expect(config.securityTools.falco).toBe(true);
+    expect(config.hardeningProfile).toBe('fedramp-high');
+    expect(config.observability.otelEnabled).toBe(true);
   });
 
-  describe('ComplianceFrameworkDefaults__FedRAMPModerate__AppliesFedRAMPDefaults', () => {
-
-    it('should apply FedRAMP Moderate compliance defaults', () => {
-      const context = createMockContext('fedramp-moderate');
-      const spec = createMockSpec();
-
-      const builder = new LambdaApiConfigBuilder();
-      const config = builder.build({ complianceFramework: context.complianceFramework, environment: context.environment }, spec.config);
-
-      // FedRAMP compliance - log retention should be longer
-      expect(config.logRetentionDays).toBeGreaterThanOrEqual(30);
-    });
-
-  });
-
-  describe('ComplianceFrameworkDefaults__FedRAMPHigh__AppliesFedRAMPDefaults', () => {
-
-    it('should apply FedRAMP High compliance defaults', () => {
-      const context = createMockContext('fedramp-high');
-      const spec = createMockSpec();
-
-      const builder = new LambdaApiConfigBuilder();
-      const config = builder.build({ complianceFramework: context.complianceFramework, environment: context.environment }, spec.config);
-
-      // FedRAMP compliance - log retention should be longer
-      expect(config.logRetentionDays).toBeGreaterThanOrEqual(30);
-    });
-
-  });
-
-  describe('ConfigurationPrecedence__ComponentOverride__OverridesPlatformDefaults', () => {
-
-    it('should apply component overrides over platform defaults', () => {
-      const context = createMockContext('commercial');
-      const spec = createMockSpec({
+  it('honours manifest overrides above platform configuration', () => {
+    const builder = new LambdaApiComponentConfigBuilder({
+      context: createContext('commercial'),
+      spec: createSpec({
+        functionName: 'custom-api-fn',
         runtime: 'python3.11',
-        memory: 1024,
-        timeout: 60,
+        memorySize: 1024,
+        timeoutSeconds: 90,
+        environment: {
+          LOG_LEVEL: 'DEBUG'
+        },
+        vpc: {
+          enabled: true,
+          vpcId: 'vpc-override',
+          subnetIds: ['subnet-a', 'subnet-a', 'subnet-b'],
+          securityGroupIds: ['sg-a']
+        },
+        api: {
+          stageName: 'staging',
+          throttling: {
+            burstLimit: 25,
+            rateLimit: 15
+          },
+          cors: {
+            enabled: true,
+            allowOrigins: ['https://example.com', 'https://example.com'],
+            allowHeaders: ['Content-Type'],
+            allowMethods: ['GET'],
+            allowCredentials: true
+          }
+        },
         monitoring: {
-          enabled: false,
-          detailedMetrics: false
+          enabled: true,
+          alarms: {
+            lambdaErrors: {
+              enabled: true,
+              threshold: 10,
+              evaluationPeriods: 3,
+              periodMinutes: 1,
+              comparisonOperator: 'gt',
+              treatMissingData: 'not-breaching',
+              statistic: 'Sum',
+              tags: {
+                severity: 'high'
+              }
+            }
+          }
+        },
+        tags: {
+          team: 'platform'
         }
-      });
-
-      const builder = new LambdaApiConfigBuilder();
-      const config = builder.build({ complianceFramework: context.complianceFramework, environment: context.environment }, spec.config);
-
-      // Verify component config overrides platform defaults
-      expect(config.memorySize).toBe(512); // Our implementation doesn't override memorySize from spec
-      expect(config.timeout).toBe(60); // Our implementation uses the spec timeout
-      // Monitoring not implemented in current version
+      })
     });
 
+    const config = builder.buildSync();
+
+    expect(config.functionName).toBe('custom-api-fn');
+    expect(config.runtime).toBe('python3.11');
+    expect(config.memorySize).toBe(1024);
+    expect(config.timeoutSeconds).toBe(90);
+    expect(config.environment.LOG_LEVEL).toBe('DEBUG');
+    expect(config.vpc.subnetIds).toEqual(['subnet-a', 'subnet-b']);
+    expect(config.api.stageName).toBe('staging');
+    expect(config.api.throttling.rateLimit).toBe(15);
+    expect(config.api.cors.allowOrigins).toEqual(['https://example.com']);
+    expect(config.monitoring.alarms.lambdaErrors.threshold).toBe(10);
+    expect(config.monitoring.alarms.lambdaErrors.tags?.severity).toBe('high');
+    expect(config.tags.team).toBe('platform');
   });
-
-  describe('SchemaValidation__ValidConfig__PassesValidation', () => {
-
-    it('should validate required handler property', () => {
-      const context = createMockContext();
-      const spec = createMockSpec({ handler: 'index.handler' });
-
-      const builder = new LambdaApiConfigBuilder();
-      const config = builder.build({ complianceFramework: context.complianceFramework, environment: context.environment }, spec.config);
-
-      expect(config.handler).toBe('index.handler'); // Our default handler
-    });
-
-  });
-
-  describe('SchemaValidation__InvalidConfig__FailsValidation', () => {
-
-    it('should reject invalid handler format', () => {
-      const context = createMockContext();
-      const spec = createMockSpec({ handler: 'invalid-handler' });
-
-      const builder = new LambdaApiConfigBuilder();
-
-      // This should be handled by the schema validation in the base class
-      expect(() => builder.build({ complianceFramework: 'commercial', environment: 'test' }, spec.config)).not.toThrow();
-    });
-
-  });
-
-  describe('ConfigurationPrecedence__EnvironmentOverride__OverridesPlatformDefaults', () => {
-
-    it('should apply environment-specific overrides', () => {
-      const context = createMockContext('commercial', 'prod');
-      const spec = createMockSpec();
-
-      const builder = new LambdaApiConfigBuilder();
-      const config = builder.build({ complianceFramework: context.complianceFramework, environment: context.environment }, spec.config);
-
-      // Environment-specific overrides would be applied here
-      expect(config.handler).toBe('src/api.handler');
-    });
-
-  });
-
 });

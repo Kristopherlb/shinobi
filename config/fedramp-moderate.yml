@@ -31,19 +31,45 @@ defaults:
         overrideAction: none
       - name: AWSManagedRulesLinuxRuleSet
         vendorName: AWS
-        priority: 4
+        priority: 3
         overrideAction: none
       - name: AWSManagedRulesUnixRuleSet
         vendorName: AWS
-        priority: 5
+        priority: 4
         overrideAction: none
+    customRules: []
     logging:
       enabled: true
-      logDestinationType: cloudwatch
+      destinationType: cloudwatch
+      retentionDays: 1095
+      redactedFields: []
     monitoring:
       enabled: true
+      metricsEnabled: true
+      detailedMetrics: true
+      sampledRequestsEnabled: true
       alarms:
-        blockedRequestsThreshold: 250
+        blockedRequests:
+          enabled: true
+          threshold: 250
+          evaluationPeriods: 2
+          periodMinutes: 5
+          comparisonOperator: gt
+          treatMissingData: not-breaching
+          statistic: Sum
+          tags: {}
+        allowedRequests:
+          enabled: true
+          threshold: 3000
+          evaluationPeriods: 2
+          periodMinutes: 5
+          comparisonOperator: gt
+          treatMissingData: not-breaching
+          statistic: Sum
+          tags: {}
+    removalPolicy: retain
+    tags:
+      compliance-framework: fedramp-moderate
 
   vpc:
     cidr: 10.0.0.0/16
@@ -277,6 +303,133 @@ defaults:
     tags:
       compliance-framework: fedramp-moderate
       monitoring: enabled
+
+  eventbridge-rule-pattern:
+    state: enabled
+    monitoring:
+      enabled: true
+      failedInvocations:
+        enabled: true
+        threshold: 3
+        evaluationPeriods: 2
+        periodMinutes: 5
+        comparisonOperator: gte
+        treatMissingData: not-breaching
+        statistic: Sum
+      invocations:
+        enabled: true
+        threshold: 0
+        evaluationPeriods: 3
+        periodMinutes: 5
+        comparisonOperator: lte
+        treatMissingData: breaching
+        statistic: Sum
+      matchedEvents:
+        enabled: true
+        threshold: 0
+        evaluationPeriods: 6
+        periodMinutes: 5
+        comparisonOperator: lte
+        treatMissingData: breaching
+        statistic: Sum
+      deadLetterQueueMessages:
+        enabled: true
+        threshold: 1
+        evaluationPeriods: 1
+        periodMinutes: 5
+        comparisonOperator: gte
+        treatMissingData: not-breaching
+        statistic: Sum
+      cloudWatchLogs:
+        enabled: true
+        retentionDays: 90
+        removalPolicy: retain
+    deadLetterQueue:
+      enabled: true
+      maxRetryAttempts: 3
+      retentionDays: 14
+    tags:
+      compliance-framework: fedramp-moderate
+
+  eventbridge-rule-cron:
+    schedule: 'rate(5 minutes)'
+    state: enabled
+    deadLetterQueue:
+      enabled: true
+      maxRetryAttempts: 3
+      retentionDays: 14
+    monitoring:
+      enabled: true
+      alarms:
+        failedInvocations:
+          enabled: true
+          threshold: 1
+          evaluationPeriods: 2
+          periodMinutes: 5
+          comparisonOperator: gte
+          treatMissingData: not-breaching
+          statistic: Sum
+        invocationRate:
+          enabled: true
+          threshold: 1000
+          evaluationPeriods: 2
+          periodMinutes: 5
+          comparisonOperator: gte
+          treatMissingData: not-breaching
+          statistic: Sum
+      cloudWatchLogs:
+        enabled: true
+        retentionDays: 90
+        removalPolicy: retain
+    tags:
+      compliance-framework: fedramp-moderate
+
+  sns-topic:
+    fifo:
+      enabled: false
+      contentBasedDeduplication: false
+    encryption:
+      enabled: true
+      customerManagedKey:
+        create: true
+        enableRotation: true
+    tracing: PassThrough
+    policies:
+      - sid: DenyInsecureTransport
+        effect: deny
+        actions: ['sns:*']
+        conditions:
+          Bool:
+            aws:SecureTransport: 'false'
+      - sid: RequireAuthentication
+        effect: deny
+        actions: ['sns:*']
+        conditions:
+          Bool:
+            aws:PrincipalIsAWSService: 'false'
+          Null:
+            aws:userid: 'true'
+    monitoring:
+      enabled: true
+      alarms:
+        failedNotifications:
+          enabled: true
+          threshold: 1
+          evaluationPeriods: 2
+          periodMinutes: 5
+          comparisonOperator: gte
+          treatMissingData: not-breaching
+          statistic: Sum
+        messageRate:
+          enabled: true
+          threshold: 5000
+          evaluationPeriods: 2
+          periodMinutes: 5
+          comparisonOperator: gte
+          treatMissingData: not-breaching
+          statistic: Sum
+    tags:
+      compliance-framework: fedramp-moderate
 
   certificate-manager:
     subjectAlternativeNames: []
@@ -605,6 +758,19 @@ defaults:
     diagnostics:
       enableExecuteCommand: true
 
+  ssm-parameter:
+    kind: secureString
+    value: ''
+    values: []
+    tier: advanced
+    dataType: text
+    encryption:
+      customerManagedKey:
+        enabled: true
+        rotationEnabled: true
+        allowSsmService: true
+    tags: {}
+
   opensearch-domain:
     version: OpenSearch_2.7
     cluster:
@@ -801,6 +967,139 @@ defaults:
     removalPolicy: retain
     tags:
       compliance-framework: fedramp-moderate
+
+  lambda-api:
+    functionName:
+    handler: src/api.handler
+    runtime: nodejs20.x
+    architecture: x86_64
+    memorySize: 768
+    timeoutSeconds: 45
+    description:
+    environment: {}
+    reservedConcurrency:
+    ephemeralStorageMb: 1024
+    kmsKeyArn:
+    logging:
+      logRetentionDays: 90
+      logFormat: JSON
+      systemLogLevel: INFO
+      applicationLogLevel: INFO
+    tracing:
+      mode: Active
+    deployment:
+      codePath: ./src
+      assetHash:
+      inlineFallbackEnabled: true
+    vpc:
+      enabled: true
+      vpcId: ${env:PLATFORM_VPC_ID}
+      subnetIds:
+        - ${env:PLATFORM_PRIVATE_SUBNET_A}
+        - ${env:PLATFORM_PRIVATE_SUBNET_B}
+      securityGroupIds:
+        - ${env:LAMBDA_SECURITY_GROUP_ID}
+    observability:
+      otelEnabled: true
+      otelLayerArn: ${env:OTEL_LAMBDA_LAYER_ARN}
+      otelResourceAttributes:
+        compliance.framework: fedramp-moderate
+    monitoring:
+      enabled: true
+      alarms:
+        lambdaErrors:
+          enabled: true
+          threshold: 3
+          evaluationPeriods: 1
+          periodMinutes: 5
+          comparisonOperator: gt
+          treatMissingData: not-breaching
+          statistic: Sum
+          tags: {}
+        lambdaThrottles:
+          enabled: true
+          threshold: 1
+          evaluationPeriods: 1
+          periodMinutes: 5
+          comparisonOperator: gt
+          treatMissingData: not-breaching
+          statistic: Sum
+          tags: {}
+        lambdaDuration:
+          enabled: true
+          threshold: 45000
+          evaluationPeriods: 2
+          periodMinutes: 5
+          comparisonOperator: gte
+          treatMissingData: not-breaching
+          statistic: Average
+          tags: {}
+        api4xxErrors:
+          enabled: true
+          threshold: 3
+          evaluationPeriods: 1
+          periodMinutes: 5
+          comparisonOperator: gt
+          treatMissingData: not-breaching
+          statistic: Sum
+          tags: {}
+        api5xxErrors:
+          enabled: true
+          threshold: 1
+          evaluationPeriods: 1
+          periodMinutes: 5
+          comparisonOperator: gt
+          treatMissingData: breaching
+          statistic: Sum
+          tags: {}
+    securityTools:
+      falco: true
+    hardeningProfile: fedramp-moderate
+    removalPolicy: retain
+    tags:
+      compliance-framework: fedramp-moderate
+    api:
+      type: rest
+      name:
+      description:
+      stageName: prod
+      metricsEnabled: true
+      tracingEnabled: true
+      apiKeyRequired: true
+      throttling:
+        burstLimit: 80
+        rateLimit: 40
+      usagePlan:
+        enabled: true
+        name:
+        throttle:
+          rateLimit: 120
+          burstLimit: 60
+        quota:
+          limit: 500000
+          period: MONTH
+      logging:
+        enabled: true
+        retentionDays: 365
+        logFormat: json
+        logGroupName:
+        prefix: access/
+      cors:
+        enabled: true
+        allowOrigins:
+          - ${env:ALLOWED_CORS_ORIGIN}
+        allowHeaders:
+          - Content-Type
+          - Authorization
+          - X-Requested-With
+        allowMethods:
+          - GET
+          - POST
+          - PUT
+          - PATCH
+          - DELETE
+          - OPTIONS
+        allowCredentials: true
 
   route53-hosted-zone:
     zoneType: public

@@ -1,15 +1,10 @@
-/**
- * @platform/eventbridge-rule-cron - EventBridgeRuleCronComponent Component
- * EventBridge Rule Cron Component implementing Component API Contract v1.0
- */
-
 // Component exports
-export { EventBridgeRuleCronComponentComponent } from './eventbridge-rule-cron.component';
+export { EventBridgeRuleCronComponent } from './eventbridge-rule-cron.component';
 
-// Configuration exports
-export { 
-  EventBridgeRuleCronConfig,
+// Builder exports
+export {
   EventBridgeRuleCronComponentConfigBuilder,
+  EventBridgeRuleCronConfig,
   EVENTBRIDGE_RULE_CRON_CONFIG_SCHEMA
 } from './eventbridge-rule-cron.builder';
 

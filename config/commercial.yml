@@ -23,13 +23,38 @@ defaults:
         vendorName: AWS
         priority: 2
         overrideAction: none
+    customRules: []
     logging:
       enabled: true
-      logDestinationType: cloudwatch
+      destinationType: cloudwatch
+      retentionDays: 365
+      redactedFields: []
     monitoring:
       enabled: true
+      metricsEnabled: true
+      detailedMetrics: true
+      sampledRequestsEnabled: true
       alarms:
-        blockedRequestsThreshold: 1000
+        blockedRequests:
+          enabled: true
+          threshold: 1000
+          evaluationPeriods: 2
+          periodMinutes: 5
+          comparisonOperator: gt
+          treatMissingData: not-breaching
+          statistic: Sum
+          tags: {}
+        allowedRequests:
+          enabled: false
+          threshold: 10000
+          evaluationPeriods: 2
+          periodMinutes: 5
+          comparisonOperator: gt
+          treatMissingData: not-breaching
+          statistic: Sum
+          tags: {}
+    removalPolicy: destroy
+    tags: {}
 
   vpc:
     cidr: 10.0.0.0/16
@@ -246,6 +271,122 @@ defaults:
           threshold: 500
           evaluationPeriods: 2
           periodMinutes: 5
+    tags: {}
+
+  eventbridge-rule-pattern:
+    state: enabled
+    monitoring:
+      enabled: false
+      failedInvocations:
+        enabled: false
+        threshold: 5
+        evaluationPeriods: 2
+        periodMinutes: 5
+        comparisonOperator: gte
+        treatMissingData: not-breaching
+        statistic: Sum
+      invocations:
+        enabled: false
+        threshold: 0
+        evaluationPeriods: 3
+        periodMinutes: 5
+        comparisonOperator: lte
+        treatMissingData: breaching
+        statistic: Sum
+      matchedEvents:
+        enabled: false
+        threshold: 0
+        evaluationPeriods: 6
+        periodMinutes: 5
+        comparisonOperator: lte
+        treatMissingData: breaching
+        statistic: Sum
+      deadLetterQueueMessages:
+        enabled: false
+        threshold: 1
+        evaluationPeriods: 1
+        periodMinutes: 5
+        comparisonOperator: gte
+        treatMissingData: not-breaching
+        statistic: Sum
+      cloudWatchLogs:
+        enabled: false
+        retentionDays: 30
+        removalPolicy: destroy
+    deadLetterQueue:
+      enabled: false
+      maxRetryAttempts: 3
+      retentionDays: 14
+    tags: {}
+
+  eventbridge-rule-cron:
+    schedule: 'rate(5 minutes)'
+    state: enabled
+    deadLetterQueue:
+      enabled: false
+      maxRetryAttempts: 3
+      retentionDays: 14
+    monitoring:
+      enabled: false
+      alarms:
+        failedInvocations:
+          enabled: false
+          threshold: 1
+          evaluationPeriods: 2
+          periodMinutes: 5
+          comparisonOperator: gte
+          treatMissingData: not-breaching
+          statistic: Sum
+        invocationRate:
+          enabled: false
+          threshold: 1000
+          evaluationPeriods: 2
+          periodMinutes: 5
+          comparisonOperator: gte
+          treatMissingData: not-breaching
+          statistic: Sum
+      cloudWatchLogs:
+        enabled: false
+        retentionDays: 14
+        removalPolicy: destroy
+    tags: {}
+
+  sns-topic:
+    fifo:
+      enabled: false
+      contentBasedDeduplication: false
+    encryption:
+      enabled: false
+      customerManagedKey:
+        create: false
+        enableRotation: true
+    tracing: PassThrough
+    policies:
+      - sid: DenyInsecureTransport
+        effect: deny
+        actions: ['sns:*']
+        conditions:
+          Bool:
+            aws:SecureTransport: 'false'
+    monitoring:
+      enabled: false
+      alarms:
+        failedNotifications:
+          enabled: false
+          threshold: 1
+          evaluationPeriods: 2
+          periodMinutes: 5
+          comparisonOperator: gte
+          treatMissingData: not-breaching
+          statistic: Sum
+        messageRate:
+          enabled: false
+          threshold: 10000
+          evaluationPeriods: 2
+          periodMinutes: 5
+          comparisonOperator: gte
+          treatMissingData: not-breaching
+          statistic: Sum
     tags: {}
 
   certificate-manager:
@@ -540,6 +681,19 @@ defaults:
     diagnostics:
       enableExecuteCommand: false
 
+  ssm-parameter:
+    kind: string
+    value: ''
+    values: []
+    tier: standard
+    dataType: text
+    encryption:
+      customerManagedKey:
+        enabled: false
+        rotationEnabled: false
+        allowSsmService: true
+    tags: {}
+
   opensearch-domain:
     version: OpenSearch_2.7
     cluster:
@@ -728,6 +882,134 @@ defaults:
     hardeningProfile: baseline
     removalPolicy: retain
     tags: {}
+
+  lambda-api:
+    functionName:
+    handler: src/api.handler
+    runtime: nodejs20.x
+    architecture: x86_64
+    memorySize: 512
+    timeoutSeconds: 30
+    description:
+    environment: {}
+    reservedConcurrency:
+    ephemeralStorageMb: 512
+    kmsKeyArn:
+    logging:
+      logRetentionDays: 30
+      logFormat: JSON
+      systemLogLevel: INFO
+      applicationLogLevel: INFO
+    tracing:
+      mode: Active
+    deployment:
+      codePath: ./src
+      assetHash:
+      inlineFallbackEnabled: true
+    vpc:
+      enabled: false
+      vpcId:
+      subnetIds: []
+      securityGroupIds: []
+    observability:
+      otelEnabled: true
+      otelLayerArn:
+      otelResourceAttributes: {}
+    monitoring:
+      enabled: true
+      alarms:
+        lambdaErrors:
+          enabled: true
+          threshold: 5
+          evaluationPeriods: 1
+          periodMinutes: 5
+          comparisonOperator: gt
+          treatMissingData: not-breaching
+          statistic: Sum
+          tags: {}
+        lambdaThrottles:
+          enabled: true
+          threshold: 1
+          evaluationPeriods: 1
+          periodMinutes: 5
+          comparisonOperator: gt
+          treatMissingData: not-breaching
+          statistic: Sum
+          tags: {}
+        lambdaDuration:
+          enabled: true
+          threshold: 60000
+          evaluationPeriods: 2
+          periodMinutes: 5
+          comparisonOperator: gte
+          treatMissingData: not-breaching
+          statistic: Average
+          tags: {}
+        api4xxErrors:
+          enabled: true
+          threshold: 5
+          evaluationPeriods: 1
+          periodMinutes: 5
+          comparisonOperator: gt
+          treatMissingData: not-breaching
+          statistic: Sum
+          tags: {}
+        api5xxErrors:
+          enabled: true
+          threshold: 1
+          evaluationPeriods: 1
+          periodMinutes: 5
+          comparisonOperator: gt
+          treatMissingData: missing
+          statistic: Sum
+          tags: {}
+    securityTools:
+      falco: false
+    hardeningProfile: baseline
+    removalPolicy: retain
+    tags: {}
+    api:
+      type: rest
+      name:
+      description:
+      stageName: prod
+      metricsEnabled: true
+      tracingEnabled: true
+      apiKeyRequired: false
+      throttling:
+        burstLimit: 100
+        rateLimit: 50
+      usagePlan:
+        enabled: false
+        name:
+        throttle:
+          rateLimit: 200
+          burstLimit: 100
+        quota:
+          limit: 1000000
+          period: MONTH
+      logging:
+        enabled: true
+        retentionDays: 90
+        logFormat: json
+        logGroupName:
+        prefix: access/
+      cors:
+        enabled: true
+        allowOrigins:
+          - '*'
+        allowHeaders:
+          - Content-Type
+          - Authorization
+          - X-Requested-With
+        allowMethods:
+          - GET
+          - POST
+          - PUT
+          - PATCH
+          - DELETE
+          - OPTIONS
+        allowCredentials: false
 
   route53-hosted-zone:
     zoneType: public

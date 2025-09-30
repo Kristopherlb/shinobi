@@ -78,16 +78,16 @@ describe('API Integration Tests', () => {
 
     // Initialize DI container with mocked services
     const container = createWebUIDIContainer();
-    
+
     // Register mocked services
     const { WebUILoggerService } = await import('../../server/services/logger.service');
     const { createWebUIFeatureFlagService } = await import('../../server/services/feature-flag.service');
-    
+
     container.register(SERVICE_TOKENS.SHINOBI_LOGGER, mockLogger, true);
     container.register(SERVICE_TOKENS.LOGGER_SERVICE, new WebUILoggerService(mockLogger), true);
     container.register(SERVICE_TOKENS.SHINOBI_FEATURE_FLAG_SERVICE, mockFeatureFlagService, true);
     container.register(SERVICE_TOKENS.FEATURE_FLAG_SERVICE, createWebUIFeatureFlagService(mockFeatureFlagService, new WebUILoggerService(mockLogger)), true);
-    
+
     setGlobalContainer(container);
 
     // Register routes

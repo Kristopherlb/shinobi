@@ -1,111 +1,67 @@
-# SsmParameterComponent Component
+# SSM Parameter Component
 
-SSM Parameter Component with comprehensive security, monitoring, and compliance features.
+Configuration-driven wrapper around AWS Systems Manager Parameter Store. The component no longer inspects `context.complianceFramework`; all behaviour (parameter type, tier, encryption, tagging) is dictated by the manifest merged with `/config/<framework>.yml` defaults.
 
-## Overview
+## Highlights
 
-The SsmParameterComponent component provides:
+- **ConfigBuilder integration** – shared precedence engine (fallback → platform defaults → environment → manifest → policy overrides).
+- **Explicit parameter kinds** – create plain strings, string lists, or secure strings using `kind` plus `value`/`values`.
+- **Encryption controls** – toggle customer-managed keys (existing ARN or auto-provisioned) and rotation through the `encryption.customerManagedKey` block.
+- **Tier & data type** – choose between `standard`/`advanced` and set `text` or `aws:ec2:image` data types.
+- **Tagging & capabilities** – standard platform tagging plus `configuration:parameter` capability describing the created parameter.
 
-- **Production-ready** ssm parameter component functionality
-- **Comprehensive compliance** (Commercial, FedRAMP Moderate/High)
-- **Integrated monitoring** and observability
-- **Security-first** configuration
-- **Platform integration** with other components
-
-### Category: configuration
-
-### AWS Service: SSM
-
-This component manages SSM resources and provides a simplified, secure interface for common use cases.
-
-## Usage Example
-
-### Basic Configuration
+## Example Manifest
 
 ```yaml
-service: my-service
-owner: platform-team
-complianceFramework: commercial
-
 components:
-  - name: my-ssm-parameter
+  - name: checkout-db-password
     type: ssm-parameter
     config:
-      description: "Production ssm-parameter instance"
-      monitoring:
-        enabled: true
-        detailedMetrics: true
+      name: /checkout/prod/db/password
+      kind: secureString
+      value: '{{ env:CHECKOUT_DB_PASSWORD }}'
+      tier: advanced
+      encryption:
+        customerManagedKey:
+          enabled: true
+          rotationEnabled: true
+      tags:
+        environment: production
+        team: platform
 ```
 
 ## Configuration Reference
 
-### Root Configuration
+| Field | Type | Default | Notes |
+|-------|------|---------|-------|
+| `name` | string | `/<service>/<component>` | SSM parameter name (path or simple). |
+| `description` | string | – | Optional description. |
+| `kind` | `string \| stringList \| secureString` | `string` | Determines construct and encryption behaviour. |
+| `value` | string | `''` | Value for `string`/`secureString`. Can be used (comma-separated) to seed `stringList`. |
+| `values` | string[] | `[]` | Preferred source for `stringList` values. |
+| `allowedPattern` | string | – | Regular expression enforced by Parameter Store. |
+| `tier` | `standard \| advanced` | `standard` (`advanced` auto-selected for `secureString`) | Maps to `ssm.ParameterTier`. |
+| `dataType` | `text \| aws:ec2:image` | `text` | Only honoured for string/secureString. |
+| `encryption.customerManagedKey.enabled` | boolean | `false` | When `true` a key is created unless `kmsKeyArn` supplied. |
+| `encryption.customerManagedKey.kmsKeyArn` | string | – | Use an existing CMK instead of creating one. |
+| `encryption.customerManagedKey.rotationEnabled` | boolean | `false` | Applies when the component creates the key. |
+| `encryption.customerManagedKey.allowSsmService` | boolean | `true` | Adds resource policy for SSM service access when creating the key. |
+| `tags` | object | `{}` | Additional resource tags merged with platform defaults. |
 
-| Property | Type | Required | Description |
-|----------|------|----------|-------------|
-| `name` | string | No | Component name (auto-generated if not provided) |
-| `description` | string | No | Component description for documentation |
-| `monitoring` | object | No | Monitoring and observability configuration |
-| `tags` | object | No | Additional resource tags |
+## Capabilities
 
-### Monitoring Configuration
-
-| Property | Type | Required | Description |
-|----------|------|----------|-------------|
-| `enabled` | boolean | No | Enable monitoring (default: true) |
-| `detailedMetrics` | boolean | No | Enable detailed CloudWatch metrics |
-
-## Capabilities Provided
-
-This component provides the following capabilities for binding with other components:
-
-- `configuration:ssm-parameter` - Main ssm-parameter capability
-- `monitoring:ssm-parameter` - Monitoring capability
+- `configuration:parameter` – exposes the parameter ARN, name, kind, tier, and customer-managed key information for binders.
 
 ## Construct Handles
 
-The following construct handles are available for use in `patches.ts`:
+- `main`, `parameter`, `kmsKey` (when created).
 
-- `main` - Main ssm-parameter construct
-
-## Compliance Frameworks
-
-### Commercial
-
-- Standard monitoring configuration
-- Basic resource tagging
-- Standard security settings
-
-### FedRAMP Moderate/High
-
-- Enhanced monitoring with detailed metrics
-- Comprehensive audit logging
-- Stricter security configurations
-- Extended compliance tagging
-
-## Best Practices
-
-1. **Always enable monitoring** in production environments
-2. **Use descriptive names** for better resource identification
-3. **Configure appropriate tags** for cost allocation and governance
-4. **Review compliance requirements** for your environment
-5. **Test configurations** in development before production deployment
-
-## Development
-
-### Running Tests
+## Testing
 
 ```bash
-# Run all tests for this component
-npm test -- --testPathPattern=ssm-parameter
-
-# Run only builder tests
-npm test -- --testPathPattern=ssm-parameter.builder
-
-# Run only synthesis tests
-npm test -- --testPathPattern=ssm-parameter.component.synthesis
+corepack pnpm exec jest --runTestsByPath \
+  packages/components/ssm-parameter/tests/ssm-parameter.builder.test.ts \
+  packages/components/ssm-parameter/tests/ssm-parameter.component.synthesis.test.ts
 ```
 
----
-
-*Generated by Component Completion Script*
+The builder suite validates precedence/normalisation, while the synthesis suite asserts the generated CloudFormation resources.
