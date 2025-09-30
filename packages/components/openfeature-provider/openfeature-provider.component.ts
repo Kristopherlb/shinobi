@@ -136,7 +136,7 @@ export class OpenFeatureProviderComponent extends BaseComponent {
       ]
     });
 
-    this.retrieverRole.addToRolePolicy(new iam.PolicyStatement({
+    this.retrieverRole.addToPrincipalPolicy(new iam.PolicyStatement({
       effect: iam.Effect.ALLOW,
       actions: ['appconfig:StartConfigurationSession', 'appconfig:GetConfiguration'],
       resources: [

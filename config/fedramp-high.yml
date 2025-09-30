@@ -742,6 +742,7 @@ defaults:
     compliance:
       securityLevel: maximum
       auditLogging: true
+      framework: fedramp-high
     localDev:
       enabled: false
       seedData:

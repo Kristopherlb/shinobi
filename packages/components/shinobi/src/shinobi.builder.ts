@@ -85,6 +85,7 @@ export type ShinobiSecurityLevel = 'standard' | 'enhanced' | 'maximum';
 export interface ShinobiComplianceConfig {
   securityLevel?: ShinobiSecurityLevel;
   auditLogging?: boolean;
+  framework?: string;
 }
 
 export interface ShinobiLocalDevSeedDataConfig {
@@ -328,6 +329,10 @@ export const SHINOBI_CONFIG_SCHEMA: ComponentConfigSchema = {
         auditLogging: {
           type: 'boolean',
           description: 'Enable audit logging for Shinobi operations'
+        },
+        framework: {
+          type: 'string',
+          description: 'Compliance framework identifier sourced from platform config'
         }
       }
     },
@@ -413,74 +418,7 @@ export class ShinobiComponentConfigBuilder extends ConfigBuilder<ShinobiConfig> 
         dynamodb: {
           billingMode: 'PAY_PER_REQUEST'
         }
-      },
-      api: {
-        exposure: 'internal',
-        version: '1.0',
-        loadBalancer: {
-          enabled: true
-        },
-        rateLimit: {
-          requestsPerMinute: 1000,
-          burstCapacity: 2000
-        }
-      },
-      featureFlags: {
-        enabled: true,
-        provider: 'aws-appconfig',
-        defaults: {
-          'shinobi.advanced-analytics': false,
-          'shinobi.ai-insights': false,
-          'shinobi.auto-remediation': false,
-          'shinobi.predictive-scaling': false,
-          'shinobi.cost-optimization': true,
-          'shinobi.security-scanning': true,
-          'shinobi.compliance-monitoring': true,
-          'shinobi.performance-profiling': true,
-          'shinobi.dependency-analysis': true,
-          'shinobi.change-impact': true
-        }
-      },
-      dataSources: {
-        components: true,
-        services: true,
-        dependencies: true,
-        compliance: true,
-        cost: false,
-        security: false,
-        performance: false
-      },
-      observability: {
-        provider: 'cloudwatch',
-        dashboards: ['reliability', 'performance'],
-        alerts: {
-          enabled: true,
-          thresholds: {
-            cpuUtilization: 80,
-            memoryUtilization: 80,
-            responseTime: 2
-          }
-        }
-      },
-      compliance: {
-        securityLevel: 'standard',
-        auditLogging: false
-      },
-      localDev: {
-        enabled: false,
-        seedData: {
-          sampleComponents: true,
-          sampleServices: true,
-          sampleMetrics: true
-        },
-        mockServices: true
-      },
-      logging: {
-        retentionDays: 30,
-        logLevel: 'info',
-        structuredLogging: true
-      },
-      tags: {}
+      }
     };
   }
 

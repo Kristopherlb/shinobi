@@ -600,6 +600,7 @@ defaults:
     compliance:
       securityLevel: standard
       auditLogging: false
+      framework: commercial
     localDev:
       enabled: false
       seedData:

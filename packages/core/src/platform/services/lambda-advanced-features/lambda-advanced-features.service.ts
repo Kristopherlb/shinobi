@@ -221,7 +221,7 @@ export class LambdaAdvancedFeaturesService {
       this.eventSources.push(eventSourceMapping);
 
       // Create monitoring alarms for SQS
-      this.createSQSM onitoringAlarms(queue, queueConfig.name);
+      this.createSqsMonitoringAlarms(queue, queueConfig.name);
     });
   }
 
@@ -398,7 +398,7 @@ export class LambdaAdvancedFeaturesService {
   /**
    * Create SQS monitoring alarms
    */
-  private createSQSM onitoringAlarms(queue: sqs.Queue, queueName: string): void {
+  private createSqsMonitoringAlarms(queue: sqs.Queue, queueName: string): void {
     // SQS queue depth alarm
     const queueDepthAlarm = new cloudwatch.Alarm(this.scope, `LambdaSQSDepth-${queueName}`, {
       alarmName: `${this.lambdaFunction.functionName}-sqs-${queueName}-depth`,

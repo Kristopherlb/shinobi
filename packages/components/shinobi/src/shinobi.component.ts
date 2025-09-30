@@ -260,6 +260,7 @@ export class ShinobiComponent extends BaseComponent {
     const logRetentionDays = this.resolveNumber(this.config?.logging?.retentionDays, 30);
     const featureFlagsEnabled = this.resolveBoolean(this.config?.featureFlags?.enabled, true);
     const localDevEnabled = this.resolveBoolean(this.config?.localDev?.enabled, false);
+    const complianceFramework = this.config?.compliance?.framework ?? this.context.complianceFramework;
 
     this.taskDefinition = new ecs.FargateTaskDefinition(this, 'TaskDefinition', {
       cpu,
@@ -279,7 +280,7 @@ export class ShinobiComponent extends BaseComponent {
         LOG_LEVEL: this.config?.logging?.logLevel || 'info',
         DATA_SOURCES: JSON.stringify(this.config?.dataSources || {}),
         FEATURE_FLAGS_ENABLED: String(featureFlagsEnabled),
-        COMPLIANCE_FRAMEWORK: this.context.complianceFramework,
+        COMPLIANCE_FRAMEWORK: complianceFramework,
         LOCAL_DEV_MODE: String(localDevEnabled),
         // MCP Server specific environment variables
         SHINOBI_COMPUTE_MODE: this.config?.compute?.mode || 'ecs',

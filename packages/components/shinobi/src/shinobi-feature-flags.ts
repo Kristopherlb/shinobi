@@ -8,6 +8,7 @@
 import { Construct } from 'constructs';
 import { FeatureFlagComponent } from '@shinobi/components/feature-flag/feature-flag.component';
 import { ComponentSpec, ComponentContext } from '@shinobi/core';
+import { ShinobiConfig } from './shinobi.builder';
 
 /**
  * Feature flag definitions for Shinobi component
@@ -495,7 +496,75 @@ export const SHINOBI_FEATURE_FLAGS = {
       ]
     }
   }
+} as const;
+
+type ShinobiFeatureFlagDefinition = (typeof SHINOBI_FEATURE_FLAGS)[keyof typeof SHINOBI_FEATURE_FLAGS];
+
+const DATA_SOURCE_FLAG_MAPPING: Record<string, keyof NonNullable<ShinobiConfig['dataSources']>> = {
+  'shinobi.data.components': 'components',
+  'shinobi.data.services': 'services',
+  'shinobi.data.dependencies': 'dependencies',
+  'shinobi.data.compliance': 'compliance',
+  'shinobi.data.cost': 'cost',
+  'shinobi.data.security': 'security',
+  'shinobi.data.performance': 'performance'
 };
+
+const LOCAL_DEV_FLAG_MAPPING: Record<string, (config: NonNullable<ShinobiConfig['localDev']>) => boolean | undefined> = {
+  'shinobi.local.seed-data': localDev => localDev.seedData?.sampleComponents,
+  'shinobi.local.mock-services': localDev => localDev.mockServices
+};
+
+function resolveDefaultOverrides(config?: ShinobiConfig): Record<string, boolean> {
+  const overrides: Record<string, boolean> = {};
+
+  if (!config) {
+    return overrides;
+  }
+
+  const explicitDefaults = config.featureFlags?.defaults ?? {};
+  Object.entries(explicitDefaults).forEach(([flagKey, value]) => {
+    if (typeof value === 'boolean') {
+      overrides[flagKey] = value;
+    }
+  });
+
+  const dataSources = config.dataSources;
+  if (dataSources) {
+    Object.entries(DATA_SOURCE_FLAG_MAPPING).forEach(([flagKey, dataSourceKey]) => {
+      const value = dataSources[dataSourceKey];
+      if (typeof value === 'boolean') {
+        overrides[flagKey] = value;
+      }
+    });
+  }
+
+  const localDev = config.localDev;
+  if (localDev) {
+    Object.entries(LOCAL_DEV_FLAG_MAPPING).forEach(([flagKey, resolver]) => {
+      const value = resolver(localDev);
+      if (typeof value === 'boolean') {
+        overrides[flagKey] = value;
+      }
+    });
+  }
+
+  return overrides;
+}
+
+function resolveShinobiFeatureFlags(config?: ShinobiConfig): Record<string, ShinobiFeatureFlagDefinition> {
+  const overrides = resolveDefaultOverrides(config);
+
+  return Object.fromEntries(
+    Object.entries(SHINOBI_FEATURE_FLAGS).map(([flagKey, flagConfig]) => {
+      const defaultValue = overrides.hasOwnProperty(flagKey)
+        ? overrides[flagKey]
+        : flagConfig.defaultValue;
+
+      return [flagKey, { ...flagConfig, defaultValue }];
+    })
+  );
+}
 
 /**
  * Create feature flag components for Shinobi
@@ -503,11 +572,14 @@ export const SHINOBI_FEATURE_FLAGS = {
 export function createShinobiFeatureFlags(
   scope: Construct,
   context: ComponentContext,
-  baseName: string
+  baseName: string,
+  config?: ShinobiConfig
 ): FeatureFlagComponent[] {
   const featureFlags: FeatureFlagComponent[] = [];
 
-  Object.entries(SHINOBI_FEATURE_FLAGS).forEach(([flagKey, flagConfig]) => {
+  const resolvedFlags = resolveShinobiFeatureFlags(config);
+
+  Object.entries(resolvedFlags).forEach(([flagKey, flagConfig]) => {
     const spec: ComponentSpec = {
       name: `${baseName}-${flagKey.replace(/\./g, '-')}`,
       type: 'feature-flag',
@@ -530,12 +602,14 @@ export function createShinobiFeatureFlags(
 /**
  * Get feature flag configuration for Shinobi
  */
-export function getShinobiFeatureFlagConfig(): Record<string, any> {
-  const config: Record<string, any> = {};
+export function getShinobiFeatureFlagConfig(shinobiConfig?: ShinobiConfig): Record<string, any> {
+  const resolved: Record<string, any> = {};
 
-  Object.entries(SHINOBI_FEATURE_FLAGS).forEach(([flagKey, flagConfig]) => {
-    config[flagKey] = flagConfig.defaultValue;
+  const resolvedFlags = resolveShinobiFeatureFlags(shinobiConfig);
+
+  Object.entries(resolvedFlags).forEach(([flagKey, flagConfig]) => {
+    resolved[flagKey] = flagConfig.defaultValue;
   });
 
-  return config;
+  return resolved;
 }

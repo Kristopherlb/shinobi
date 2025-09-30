@@ -11,6 +11,7 @@ import {
   getShinobiFeatureFlagConfig
 } from '../src/shinobi-feature-flags';
 import { ComponentContext } from '@shinobi/core';
+import { ShinobiComponentConfigBuilder, ShinobiConfig } from '../src/shinobi.builder';
 
 const createMockContext = (
   stack: Stack,
@@ -32,6 +33,22 @@ const createMockContext = (
     'compliance-framework': complianceFramework
   }
 });
+
+const buildResolvedConfig = (
+  context: ComponentContext,
+  overrides: Partial<ShinobiConfig> = {}
+): ShinobiConfig => {
+  const builder = new ShinobiComponentConfigBuilder({
+    context,
+    spec: {
+      name: 'test-shinobi',
+      type: 'shinobi',
+      config: overrides
+    }
+  });
+
+  return builder.buildSync();
+};
 
 describe('Shinobi Feature Flags', () => {
   
@@ -96,7 +113,8 @@ describe('Shinobi Feature Flags', () => {
     });
     
     it('should have correct default values for commercial environment', () => {
-      const config = getShinobiFeatureFlagConfig();
+      const resolvedConfig = buildResolvedConfig(context);
+      const config = getShinobiFeatureFlagConfig(resolvedConfig);
       
       // Core intelligence flags should be disabled by default
       expect(config['shinobi.advanced-analytics']).toBe(false);
@@ -148,7 +166,8 @@ describe('Shinobi Feature Flags', () => {
   describe('Feature Flag Creation', () => {
     
     it('should create feature flag components', () => {
-      const featureFlags = createShinobiFeatureFlags(stack, context, 'test-shinobi');
+      const resolvedConfig = buildResolvedConfig(context);
+      const featureFlags = createShinobiFeatureFlags(stack, context, 'test-shinobi', resolvedConfig);
       
       expect(featureFlags).toBeDefined();
       expect(featureFlags.length).toBeGreaterThan(0);
@@ -161,7 +180,8 @@ describe('Shinobi Feature Flags', () => {
     });
     
     it('should create feature flags with correct targeting rules', () => {
-      const featureFlags = createShinobiFeatureFlags(stack, context, 'test-shinobi');
+      const resolvedConfig = buildResolvedConfig(context);
+      const featureFlags = createShinobiFeatureFlags(stack, context, 'test-shinobi', resolvedConfig);
       
       // Find the advanced analytics flag
       const advancedAnalyticsFlag = featureFlags.find(flag => 
@@ -180,7 +200,8 @@ describe('Shinobi Feature Flags', () => {
     
     it('should create feature flags with compliance-specific targeting', () => {
       const fedrampContext = createMockContext(stack, 'fedramp-high', 'prod');
-      const featureFlags = createShinobiFeatureFlags(stack, fedrampContext, 'test-shinobi');
+      const resolvedConfig = buildResolvedConfig(fedrampContext);
+      const featureFlags = createShinobiFeatureFlags(stack, fedrampContext, 'test-shinobi', resolvedConfig);
       
       // Find the security scanning flag
       const securityScanningFlag = featureFlags.find(flag => 
@@ -202,7 +223,8 @@ describe('Shinobi Feature Flags', () => {
   describe('Feature Flag Configuration', () => {
     
     it('should return correct configuration for commercial environment', () => {
-      const config = getShinobiFeatureFlagConfig();
+      const resolvedConfig = buildResolvedConfig(context);
+      const config = getShinobiFeatureFlagConfig(resolvedConfig);
       
       expect(config).toBeDefined();
       expect(typeof config).toBe('object');
@@ -219,7 +241,7 @@ describe('Shinobi Feature Flags', () => {
     });
     
     it('should have consistent default values across all flags', () => {
-      const config = getShinobiFeatureFlagConfig();
+      const config = getShinobiFeatureFlagConfig(buildResolvedConfig(context));
       
       // Verify boolean flags have boolean values
       Object.values(config).forEach(value => {
@@ -279,7 +301,7 @@ describe('Shinobi Feature Flags', () => {
   describe('Feature Flag Integration', () => {
     
     it('should integrate with Shinobi component configuration', () => {
-      const config = getShinobiFeatureFlagConfig();
+      const config = getShinobiFeatureFlagConfig(buildResolvedConfig(context));
       
       // Verify that feature flags can be used in Shinobi configuration
       const shinobiConfig = {
@@ -296,7 +318,7 @@ describe('Shinobi Feature Flags', () => {
     });
     
     it('should support environment-specific overrides', () => {
-      const baseConfig = getShinobiFeatureFlagConfig();
+      const baseConfig = getShinobiFeatureFlagConfig(buildResolvedConfig(context));
       
       // Simulate environment-specific overrides
       const devConfig = {
