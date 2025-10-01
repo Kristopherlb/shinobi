@@ -30,7 +30,7 @@
         "{projectRoot}/coverage"
       ],
       "options": {
-        "jestConfig": "packages/components/route53-record/jest.config.ts",
+        "jestConfig": "packages/components/route53-record/jest.config.mjs",
         "passWithNoTests": true
       }
     },

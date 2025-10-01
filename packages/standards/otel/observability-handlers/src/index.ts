@@ -10,27 +10,27 @@ export {
   IObservabilityHandler,
   ObservabilityHandlerResult,
   ObservabilityConfig
-} from './observability-handlers/observability-handler.interface';
+} from './observability-handlers/observability-handler.interface.js';
 
 // Individual handlers
-export { Ec2ObservabilityHandler } from './observability-handlers/ec2-observability.handler';
-export { LambdaObservabilityHandler } from './observability-handlers/lambda-observability.handler';
-export { LambdaPowertoolsExtensionHandler, LambdaPowertoolsConfig } from './observability-handlers/lambda-powertools-extension.handler';
-export { LambdaObservabilityService, LambdaObservabilityServiceConfig } from './services/lambda-observability.service';
-export { VpcObservabilityHandler } from './observability-handlers/vpc-observability.handler';
-export { AlbObservabilityHandler } from './observability-handlers/alb-observability.handler';
-export { RdsObservabilityHandler } from './observability-handlers/rds-observability.handler';
-export { SqsObservabilityHandler } from './observability-handlers/sqs-observability.handler';
-export { EcsObservabilityHandler } from './observability-handlers/ecs-observability.handler';
+export { Ec2ObservabilityHandler } from './observability-handlers/ec2-observability.handler.js';
+export { LambdaObservabilityHandler } from './observability-handlers/lambda-observability.handler.js';
+export { LambdaPowertoolsExtensionHandler, LambdaPowertoolsConfig } from './observability-handlers/lambda-powertools-extension.handler.js';
+export { LambdaObservabilityService, LambdaObservabilityServiceConfig } from './services/lambda-observability.service.js';
+export { VpcObservabilityHandler } from './observability-handlers/vpc-observability.handler.js';
+export { AlbObservabilityHandler } from './observability-handlers/alb-observability.handler.js';
+export { RdsObservabilityHandler } from './observability-handlers/rds-observability.handler.js';
+export { SqsObservabilityHandler } from './observability-handlers/sqs-observability.handler.js';
+export { EcsObservabilityHandler } from './observability-handlers/ecs-observability.handler.js';
 
 // Import handlers for registry
-import { Ec2ObservabilityHandler } from './observability-handlers/ec2-observability.handler';
-import { LambdaObservabilityHandler } from './observability-handlers/lambda-observability.handler';
-import { VpcObservabilityHandler } from './observability-handlers/vpc-observability.handler';
-import { AlbObservabilityHandler } from './observability-handlers/alb-observability.handler';
-import { RdsObservabilityHandler } from './observability-handlers/rds-observability.handler';
-import { SqsObservabilityHandler } from './observability-handlers/sqs-observability.handler';
-import { EcsObservabilityHandler } from './observability-handlers/ecs-observability.handler';
+import { Ec2ObservabilityHandler } from './observability-handlers/ec2-observability.handler.js';
+import { LambdaObservabilityHandler } from './observability-handlers/lambda-observability.handler.js';
+import { VpcObservabilityHandler } from './observability-handlers/vpc-observability.handler.js';
+import { AlbObservabilityHandler } from './observability-handlers/alb-observability.handler.js';
+import { RdsObservabilityHandler } from './observability-handlers/rds-observability.handler.js';
+import { SqsObservabilityHandler } from './observability-handlers/sqs-observability.handler.js';
+import { EcsObservabilityHandler } from './observability-handlers/ecs-observability.handler.js';
 
 // Handler registry for easy access
 export const OBSERVABILITY_HANDLERS = {

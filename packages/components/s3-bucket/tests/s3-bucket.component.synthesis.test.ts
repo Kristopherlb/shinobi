@@ -9,8 +9,8 @@ import {
   ComponentContext,
   ComponentSpec
 } from '@shinobi/core';
-import { S3BucketComponent } from '../s3-bucket.component';
-import { S3BucketConfig } from '../s3-bucket.builder';
+import { S3BucketComponent } from '../s3-bucket.component.js';
+import { S3BucketConfig } from '../s3-bucket.builder.js';
 
 const createContext = (
   complianceFramework: ComponentContext['complianceFramework']

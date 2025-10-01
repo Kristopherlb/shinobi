@@ -19,10 +19,10 @@
         "{options.outputPath}"
       ]
     },
-    "test": {
-      "executor": "@nx/jest:jest",
-      "options": {
-        "jestConfig": "packages/components/ecs-cluster/jest.config.js",
+        "test": {
+          "executor": "@nx/jest:jest",
+          "options": {
+            "jestConfig": "packages/components/ecs-cluster/jest.config.mjs",
         "passWithNoTests": true
       }
     },

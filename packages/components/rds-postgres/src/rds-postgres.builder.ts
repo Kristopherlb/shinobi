@@ -1,4 +1,4 @@
-import { RdsPostgresComponent } from './rds-postgres';
+import { RdsPostgresComponent } from './rds-postgres.js';
 
 export class RdsPostgresBuilder {
   build(component: RdsPostgresComponent) {

@@ -12,5 +12,6 @@
     "@platform/core-engine": "workspace:*",
     "@platform/contracts": "workspace:*"
   },
-  "devDependencies": {}
+  "devDependencies": {},
+  "type": "module"
 }

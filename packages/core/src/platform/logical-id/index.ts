@@ -8,12 +8,12 @@ export type {
   LogicalIdMapEntry,
   LogicalIdMap,
   DriftAvoidanceConfig
-} from './logical-id-manager';
+} from './logical-id-manager.js';
 
 export type {
   PlanningContext,
   PlanningResult
-} from './planning-integration';
+} from './planning-integration.js';
 
 export type {
   DriftAvoidanceStrategy,
@@ -22,26 +22,26 @@ export type {
   DriftAnalysisResult,
   DetectedDrift,
   RecommendedAction
-} from './drift-avoidance';
+} from './drift-avoidance.js';
 
 // Main classes
 export {
   LogicalIdManager,
   LogicalIdPreservationAspect
-} from './logical-id-manager';
+} from './logical-id-manager.js';
 
 export {
   PlanningLogicalIdIntegration
-} from './planning-integration';
+} from './planning-integration.js';
 
 export {
   DriftAvoidanceEngine
-} from './drift-avoidance';
+} from './drift-avoidance.js';
 
 // Import classes for utility functions
-import { LogicalIdManager } from './logical-id-manager';
-import { PlanningLogicalIdIntegration } from './planning-integration';
-import { DriftAvoidanceEngine } from './drift-avoidance';
+import { LogicalIdManager } from './logical-id-manager.js';
+import { PlanningLogicalIdIntegration } from './planning-integration.js';
+import { DriftAvoidanceEngine } from './drift-avoidance.js';
 
 // Utility functions
 export const createLogicalIdManager = (logger: any) => new LogicalIdManager(logger);

@@ -8,8 +8,8 @@
  * and provides enhanced observability capabilities without replacing existing infrastructure.
  */
 import { BaseComponent } from '@shinobi/core';
-import { ObservabilityConfig } from '../../../standards/otel/observability-handlers/src/observability-handlers/observability-handler.interface';
 import { PlatformServiceContext } from '@shinobi/core/platform-services';
+import { ObservabilityConfig } from '@shinobi/core/platform/contracts';
 /**
  * Configuration for Lambda Powertools integration.
  */

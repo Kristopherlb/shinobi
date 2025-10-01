@@ -4,8 +4,8 @@ import {
   ComponentSpec,
   IComponentCreator
 } from '@shinobi/core';
-import { GlueJobComponent } from './glue-job.component';
-import { GlueJobConfig, GLUE_JOB_CONFIG_SCHEMA } from './glue-job.builder';
+import { GlueJobComponent } from './glue-job.component.js';
+import { GlueJobConfig, GLUE_JOB_CONFIG_SCHEMA } from './glue-job.builder.js';
 
 export class GlueJobComponentCreator implements IComponentCreator {
   public readonly componentType = 'glue-job';

@@ -2,16 +2,16 @@
  * @platform/contracts - Shared Interfaces and Types
  * Common contracts used across all platform packages
  */
-export * from './component';
-export { ComponentSpec, ComponentContext, ComponentCapabilities, IComponent, IComponentCreator, IComponentRegistry, IComponentFactory } from './component-interfaces';
-export * from './config-builder';
-export * from './bindings';
-export * from './platform-binding-trigger-spec';
-export { BindingContext, BindingResult, IBinderStrategy } from './platform-binding-trigger-spec';
-export * from './trigger-interfaces';
-export * from './binder-matrix';
-export * from './openfeature-interfaces';
-export * from './platform-services';
-export * from './logging-interfaces';
-export * from './artifacts';
+export * from './component.js';
+export { ComponentSpec, ComponentContext, ComponentCapabilities, IComponent, IComponentCreator, IComponentRegistry, IComponentFactory } from './component-interfaces.js';
+export * from './config-builder.js';
+export * from './bindings.js';
+export * from './platform-binding-trigger-spec.js';
+export { BindingContext, BindingResult, IBinderStrategy } from './platform-binding-trigger-spec.js';
+export * from './trigger-interfaces.js';
+export * from './binder-matrix.js';
+export * from './openfeature-interfaces.js';
+export * from './platform-services.js';
+export * from './logging-interfaces.js';
+export * from './artifacts.js';
 //# sourceMappingURL=index.d.ts.map

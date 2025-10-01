@@ -4,4 +4,4 @@
  * Exports for the ClamAV Scanning platform service
  */
 
-export * from './clamav-scanning.service';
+export * from './clamav-scanning.service.js';

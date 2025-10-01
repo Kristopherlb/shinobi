@@ -31,6 +31,10 @@ sudo pacman -S ripgrep
 npm install
 ```
 
+### Module Compatibility
+
+All workspace packages compile to native ECMAScript modules. Use Node.js 20+ and standard `import` syntax when consuming Shinobi libraries. Legacy CommonJS automation can bridge with `createRequire` or `await import()` shims. See `docs/platform/esm-strategy.md` for migration guidance and examples.
+
 ## Platform Governance Audit
 
 The platform includes a comprehensive governance audit system that enforces architectural patterns, compliance requirements, and quality standards.

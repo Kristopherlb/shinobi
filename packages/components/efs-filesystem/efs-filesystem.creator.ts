@@ -10,9 +10,9 @@ import {
   ComponentSpec, 
   ComponentContext, 
   IComponentCreator 
-} from '../../platform/contracts/component-interfaces';
-import { EfsFilesystemComponent } from './efs-filesystem.component';
-import { EfsFilesystemConfig, EFS_FILESYSTEM_CONFIG_SCHEMA } from './efs-filesystem.builder';
+} from '../../platform/contracts/component-interfaces.js';
+import { EfsFilesystemComponent } from './efs-filesystem.component.js';
+import { EfsFilesystemConfig, EFS_FILESYSTEM_CONFIG_SCHEMA } from './efs-filesystem.builder.js';
 
 /**
  * Creator class for EfsFilesystemComponent component

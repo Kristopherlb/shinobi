@@ -1,6 +1,6 @@
 import * as cdk from 'aws-cdk-lib';
 import { ComponentContext, ComponentSpec } from '@platform/contracts';
-import { EcsFargateServiceComponentConfigBuilder } from '../ecs-fargate-service.builder';
+import { EcsFargateServiceComponentConfigBuilder } from '../ecs-fargate-service.builder.js';
 
 describe('EcsFargateServiceComponentConfigBuilder', () => {
   const scope = new cdk.Stack();

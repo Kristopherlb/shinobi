@@ -3,10 +3,10 @@
  * Demonstrates all enhancements: additional strategies, caching, monitoring, and performance optimization
  */
 
-import { EnhancedBinderRegistry } from './enhanced-binder-registry';
-import { BindingBenchmark } from './performance/binding-benchmark';
-import { EnhancedBindingContext, CapabilityData } from './enhanced-binding-context';
-import { Component } from './component';
+import { EnhancedBinderRegistry } from './enhanced-binder-registry.js';
+import { BindingBenchmark } from './performance/binding-benchmark.js';
+import { EnhancedBindingContext, CapabilityData } from './enhanced-binding-context.js';
+import { Component } from './component.js';
 
 /**
  * Enhanced example showing all binder strategy system capabilities

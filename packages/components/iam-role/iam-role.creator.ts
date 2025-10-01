@@ -10,9 +10,9 @@ import {
   ComponentSpec, 
   ComponentContext, 
   IComponentCreator 
-} from '../../platform/contracts/component-interfaces';
-import { IamRoleComponentComponent } from './iam-role.component';
-import { IamRoleConfig, IAM_ROLE_CONFIG_SCHEMA } from './iam-role.builder';
+} from '../../platform/contracts/component-interfaces.js';
+import { IamRoleComponentComponent } from './iam-role.component.js';
+import { IamRoleConfig, IAM_ROLE_CONFIG_SCHEMA } from './iam-role.builder.js';
 
 /**
  * Creator class for IamRoleComponent component

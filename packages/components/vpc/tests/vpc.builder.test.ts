@@ -1,7 +1,7 @@
 import { Stack } from 'aws-cdk-lib';
 import { ConfigBuilderContext } from '@shinobi/core';
-import { ComponentContext, ComponentSpec } from '../../@shinobi/core/component-interfaces';
-import { VpcConfig, VpcConfigBuilder } from '../vpc.builder';
+import { ComponentContext, ComponentSpec } from '../../@shinobi/core/component-interfaces.js';
+import { VpcConfig, VpcConfigBuilder } from '../vpc.builder.js';
 
 const createContext = (framework: 'commercial' | 'fedramp-moderate' | 'fedramp-high'): ComponentContext => ({
   serviceName: 'orders',

@@ -1,8 +1,8 @@
 import {
   KinesisStreamComponentConfigBuilder,
   KinesisStreamConfig
-} from '../kinesis-stream.builder';
-import { ComponentContext, ComponentSpec } from '../../../platform/contracts/component-interfaces';
+} from '../kinesis-stream.builder.js';
+import { ComponentContext, ComponentSpec } from '../../../platform/contracts/component-interfaces.js';
 
 const createMockContext = (framework: string = 'commercial'): ComponentContext => ({
   serviceName: 'analytics-service',

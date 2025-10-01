@@ -4,8 +4,8 @@
 
 import { App, Stack } from 'aws-cdk-lib';
 import { Match, Template } from 'aws-cdk-lib/assertions';
-import { OpenFeatureProviderComponent } from '../openfeature-provider.component';
-import { OpenFeatureProviderComponentConfig } from '../openfeature-provider.builder';
+import { OpenFeatureProviderComponent } from '../openfeature-provider.component.js';
+import { OpenFeatureProviderComponentConfig } from '../openfeature-provider.builder.js';
 import { ComponentContext, ComponentSpec } from '@shinobi/core';
 
 const createContext = (

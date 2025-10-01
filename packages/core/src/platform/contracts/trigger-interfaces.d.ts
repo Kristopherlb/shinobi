@@ -2,7 +2,7 @@
  * Trigger System Interfaces
  * Implementation interfaces for the trigger system defined in the Platform Binding & Trigger Specification v1.0
  */
-import { TriggerDirective, TriggerContext, TriggerResult, ITriggerStrategy, TriggerCompatibilityEntry, AccessLevel } from './platform-binding-trigger-spec';
+import { TriggerDirective, TriggerContext, TriggerResult, ITriggerStrategy, TriggerCompatibilityEntry, AccessLevel } from './platform-binding-trigger-spec.js';
 /**
  * Abstract base class for trigger strategies
  */

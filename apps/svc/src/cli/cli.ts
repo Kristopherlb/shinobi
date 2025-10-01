@@ -1,14 +1,14 @@
 #!/usr/bin/env node
 
 import { Command } from 'commander';
-import { registerInventoryCommand } from './inventory';
-import { CompositionRoot } from './composition-root';
-import { createUpCommand } from './commands/up';
-import { createMigrateCommand } from './commands/migrate';
-import { createCatalogCommand } from './catalog';
-import { createSynthCommand } from './synth';
-import { createDiffCommand } from './commands/diff';
-import { createDestroyCommand } from './commands/destroy';
+import { registerInventoryCommand } from './inventory.js';
+import { CompositionRoot } from './composition-root.js';
+import { createUpCommand } from './commands/up.js';
+import { createMigrateCommand } from './commands/migrate.js';
+import { createCatalogCommand } from './catalog.js';
+import { createSynthCommand } from './synth.js';
+import { createDiffCommand } from './commands/diff.js';
+import { createDestroyCommand } from './commands/destroy.js';
 
 interface GlobalCliOptions {
   verbose?: boolean;

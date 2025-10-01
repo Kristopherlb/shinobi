@@ -4,8 +4,8 @@
  * Generates and persists compliance plans for components,
  * including control mappings and audit information.
  */
-import { ComponentType, ComplianceFramework } from '../contracts/bindings';
-import { CompliancePlan } from './compliance-control-mapping';
+import { ComponentType, ComplianceFramework } from '../contracts/bindings.js';
+import { CompliancePlan } from './compliance-control-mapping.js';
 export interface CompliancePlanConfig {
     outputDir: string;
     includeAuditTrail: boolean;

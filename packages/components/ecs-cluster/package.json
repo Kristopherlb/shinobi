@@ -40,5 +40,6 @@
   ],
   "publishConfig": {
     "access": "restricted"
-  }
+  },
+  "type": "module"
 }

@@ -23,7 +23,7 @@ import {
   ElastiCacheRedisConfig,
   RedisAlarmThresholdConfig,
   RedisLogDeliveryConfig
-} from './elasticache-redis.builder';
+} from './elasticache-redis.builder.js';
 
 interface CreatedAlarm {
   id: string;

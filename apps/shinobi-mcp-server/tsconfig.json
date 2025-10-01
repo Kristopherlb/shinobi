@@ -2,11 +2,11 @@
   "extends": "../../tsconfig.base.json",
   "compilerOptions": {
     "composite": true,
-    "outDir": "../../dist/apps/shinobi-mcp-server",
+    "outDir": "dist",
     "rootDir": "./src",
-    "module": "ESNext",
+    "module": "NodeNext",
     "target": "ES2022",
-    "moduleResolution": "node",
+    "moduleResolution": "NodeNext",
     "allowSyntheticDefaultImports": true,
     "esModuleInterop": true,
     "skipLibCheck": true,
@@ -24,9 +24,6 @@
     "tests"
   ],
   "references": [
-    {
-      "path": "../../packages/components/shinobi"
-    },
     {
       "path": "../../packages/core"
     }

@@ -18,7 +18,7 @@
     "test": {
       "executor": "@nx/jest:jest",
       "options": {
-        "jestConfig": "packages/standards/otel/jest.config.ts"
+        "jestConfig": "packages/standards/otel/jest.config.mjs"
       }
     },
     "lint": {

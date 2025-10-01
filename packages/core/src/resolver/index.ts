@@ -4,8 +4,8 @@
  */
 
 // Export main resolver engine
-export * from './resolver-engine';
-export * from './binder-registry';
+export * from './resolver-engine.js';
+export * from './binder-registry.js';
 
 // Export concrete binders
-export * from './binders/concrete-binders';
+export * from './binders/concrete-binders.js';

@@ -9,7 +9,7 @@ import { Command } from 'commander';
 import { Project, Node, SyntaxKind, NewExpression, ImportDeclaration } from 'ts-morph';
 import * as fs from 'fs';
 import * as path from 'path';
-import { Logger } from './utils/logger';
+import { Logger } from './utils/logger.js';
 
 const chalk = {
   cyan: (text: string) => text,

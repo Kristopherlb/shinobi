@@ -7,8 +7,8 @@
 
 import { App, Stack } from 'aws-cdk-lib';
 import * as lambda from 'aws-cdk-lib/aws-lambda';
-import { LambdaPowertoolsExtensionHandler, LambdaPowertoolsConfig, DEFAULT_POWERTOOLS_CONFIG } from '../src/observability-handlers/lambda-powertools-extension.handler';
-import { ObservabilityConfig } from '../src/observability-handlers/observability-handler.interface';
+import { LambdaPowertoolsExtensionHandler, LambdaPowertoolsConfig, DEFAULT_POWERTOOLS_CONFIG } from '../src/observability-handlers/lambda-powertools-extension.handler.js';
+import { ObservabilityConfig } from '../src/observability-handlers/observability-handler.interface.js';
 import { BaseComponent } from '@shinobi/core';
 import { PlatformServiceContext } from '@shinobi/core/platform-services';
 

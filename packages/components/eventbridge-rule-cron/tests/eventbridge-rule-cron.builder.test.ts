@@ -2,7 +2,7 @@ import { Construct } from 'constructs';
 import {
   EventBridgeRuleCronComponentConfigBuilder,
   EventBridgeRuleCronConfig
-} from '../eventbridge-rule-cron.builder';
+} from '../eventbridge-rule-cron.builder.js';
 import { ComponentContext, ComponentSpec } from '@shinobi/core';
 
 type Framework = 'commercial' | 'fedramp-moderate' | 'fedramp-high';

@@ -5,7 +5,7 @@
  */
 
 import { App, Stack } from 'aws-cdk-lib';
-import { LambdaWorkerComponent } from '../../lambda-worker.component';
+import { LambdaWorkerComponent } from '../../lambda-worker.component.js';
 import { ComponentContext, ComponentSpec } from '@shinobi/core';
 
 describe('Advanced Features Tests - Lambda Worker Component', () => {

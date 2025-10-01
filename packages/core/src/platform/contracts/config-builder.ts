@@ -3,7 +3,7 @@
 import * as fs from 'fs';
 import * as path from 'path';
 import * as yaml from 'js-yaml';
-import { ComponentSpec, ComponentContext } from './component-interfaces';
+import { ComponentSpec, ComponentContext } from './component-interfaces.js';
 
 /**
  * Context object passed to ConfigBuilder constructors

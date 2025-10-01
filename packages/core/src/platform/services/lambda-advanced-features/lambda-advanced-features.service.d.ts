@@ -1,5 +1,4 @@
 import * as lambda from 'aws-cdk-lib/aws-lambda';
-import { IEventSource } from 'aws-cdk-lib/aws-lambda';
 import * as sqs from 'aws-cdk-lib/aws-sqs';
 import * as events from 'aws-cdk-lib/aws-events';
 import * as cloudwatch from 'aws-cdk-lib/aws-cloudwatch';
@@ -182,7 +181,7 @@ export declare class LambdaAdvancedFeaturesService {
     /**
      * Get event sources for external configuration
      */
-    getEventSources(): IEventSource[];
+    getEventSources(): lambda.EventSourceMapping[];
     /**
      * Get security enhancement policies
      */

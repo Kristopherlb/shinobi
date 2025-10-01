@@ -1,2 +1,2 @@
-export * from './infrastructure-logging.service';
-export * from './src/logging-config.interface';
+export * from './infrastructure-logging.service.js';
+export * from './src/logging-config.interface.js';

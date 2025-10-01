@@ -4,7 +4,7 @@
  */
 
 // Component exports
-export { StaticWebsiteComponent } from './static-website.component';
+export { StaticWebsiteComponent } from './static-website.component.js';
 
 // Configuration exports
 export { 
@@ -13,7 +13,7 @@ export {
   STATIC_WEBSITE_CONFIG_SCHEMA,
   RemovalPolicyOption,
   PriceClassOption
-} from './static-website.builder';
+} from './static-website.builder.js';
 
 // Creator exports
-export { StaticWebsiteCreator } from './static-website.creator';
+export { StaticWebsiteCreator } from './static-website.creator.js';

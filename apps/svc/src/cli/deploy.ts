@@ -1,5 +1,5 @@
-import { Logger } from './utils/logger';
-import { FileDiscovery } from './utils/file-discovery';
+import { Logger } from './utils/logger.js';
+import { FileDiscovery } from './utils/file-discovery.js';
 
 export interface DeployOptions {
   file?: string;

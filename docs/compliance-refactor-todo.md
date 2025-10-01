@@ -33,7 +33,7 @@ The following components still embed `context.complianceFramework` switches or p
 - [ ] `packages/components/deployment-bundle-pipeline`
 - [ ] `packages/components/mcp-server`
 - [ ] `packages/components/sagemaker-notebook-instance`
-- [ ] `packages/components/shinobi`
+- [x] `packages/components/shinobi` *(component removed; Shinobi MCP now ships solely as an application)*
 
 ## Shared Libraries
 - [ ] `packages/components/_lib/observability.ts` — extract framework retention map into config

@@ -5,7 +5,7 @@
  * These services are applied to components after synthesis to handle
  * concerns like observability, security scanning, cost management, etc.
  */
-import type { BaseComponent } from './component';
+import type { BaseComponent } from './component.js';
 /**
  * Standard interface for all platform services that operate on components
  * after synthesis to apply cross-cutting concerns.

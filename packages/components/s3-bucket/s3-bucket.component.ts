@@ -22,7 +22,7 @@ import {
 import {
   S3BucketConfig,
   S3BucketComponentConfigBuilder
-} from './s3-bucket.builder';
+} from './s3-bucket.builder.js';
 import { S3BucketValidator } from '@shinobi/core/platform/services/s3-advanced-features/s3-bucket.validator';
 import { createS3AdvancedFeaturesService } from '@shinobi/core/platform/services/s3-advanced-features/s3-advanced-features.service';
 import { createClamAvScanningService } from '@shinobi/core/platform/services/clamav-scanning/clamav-scanning.service';

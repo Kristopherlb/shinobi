@@ -2,7 +2,7 @@
  * Manifest Schema Composer - Dynamically composes master schema from base manifest and component schemas
  * Implements comprehensive JSON Schema validation with component-specific configuration validation
  */
-import { Logger } from '../platform/logger/src/index';
+import { Logger } from '../platform/logger/src/index.js';
 export interface ComponentSchemaInfo {
     componentType: string;
     schemaPath: string;
@@ -72,5 +72,6 @@ export declare class ManifestSchemaComposer {
         componentSchemasLoaded: number;
         componentTypes: string[];
     };
+    private rewriteSchemaRefs;
 }
 //# sourceMappingURL=manifest-schema-composer.d.ts.map

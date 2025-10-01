@@ -1,4 +1,4 @@
-import { ComplianceFramework } from '../bindings';
+import { ComplianceFramework } from '../bindings.js';
 /**
  * Component context containing environment and configuration data
  */

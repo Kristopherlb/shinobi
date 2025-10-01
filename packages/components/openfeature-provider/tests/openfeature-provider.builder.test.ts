@@ -5,7 +5,7 @@
 import {
   OpenFeatureProviderComponentConfigBuilder,
   OpenFeatureProviderComponentConfig
-} from '../openfeature-provider.builder';
+} from '../openfeature-provider.builder.js';
 import { ComponentContext, ComponentSpec } from '@shinobi/core';
 
 const createContext = (

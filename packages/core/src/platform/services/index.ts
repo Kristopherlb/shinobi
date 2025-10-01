@@ -5,14 +5,14 @@
  */
 
 // Lambda Services
-export * from './lambda-powertools';
-export * from './lambda-advanced-features';
+export * from './lambda-powertools/index.js';
+export * from './lambda-advanced-features/index.js';
 
 // Storage Services
-export * from './s3-advanced-features';
-export * from './clamav-scanning';
+export * from './s3-advanced-features/index.js';
+export * from './clamav-scanning/index.js';
 
 // Other Services
-export * from './logging';
-export * from './security';
-export * from './compliance';
+export * from './logging/index.js';
+export * from './security/index.js';
+export * from './compliance/index.js';

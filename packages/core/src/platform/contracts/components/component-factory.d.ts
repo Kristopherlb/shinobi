@@ -1,8 +1,8 @@
-import { IComponent } from '../bindings';
-import { ComponentConfigBuilder } from './component-config-builder';
-import { ComponentRegistry } from './component-registry';
-import { ComponentContext } from './component-context';
-import { ComponentSpec } from './component-spec';
+import { IComponent } from '../bindings.js';
+import { ComponentConfigBuilder } from './component-config-builder.js';
+import { ComponentRegistry } from './component-registry.js';
+import { ComponentContext } from './component-context.js';
+import { ComponentSpec } from './component-spec.js';
 /**
  * Interface for component factory operations
  */

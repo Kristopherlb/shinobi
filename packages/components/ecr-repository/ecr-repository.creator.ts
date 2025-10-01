@@ -10,9 +10,9 @@ import {
   ComponentSpec, 
   ComponentContext, 
   IComponentCreator 
-} from '../@shinobi/core/component-interfaces';
-import { EcrRepositoryComponent } from './ecr-repository.component';
-import { EcrRepositoryConfig, ECR_REPOSITORY_CONFIG_SCHEMA } from './ecr-repository.builder';
+} from '../@shinobi/core/component-interfaces.js';
+import { EcrRepositoryComponent } from './ecr-repository.component.js';
+import { EcrRepositoryConfig, ECR_REPOSITORY_CONFIG_SCHEMA } from './ecr-repository.builder.js';
 
 /**
  * Creator class for EcrRepositoryComponent component

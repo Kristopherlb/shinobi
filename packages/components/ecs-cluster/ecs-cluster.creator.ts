@@ -10,9 +10,9 @@ import {
   ComponentSpec, 
   ComponentContext, 
   IComponentCreator 
-} from '../@shinobi/core/component-interfaces';
-import { EcsClusterComponent } from './ecs-cluster.component';
-import { EcsClusterConfig, ECS_CLUSTER_CONFIG_SCHEMA } from './ecs-cluster.builder';
+} from '../@shinobi/core/component-interfaces.js';
+import { EcsClusterComponent } from './ecs-cluster.component.js';
+import { EcsClusterConfig, ECS_CLUSTER_CONFIG_SCHEMA } from './ecs-cluster.builder.js';
 
 /**
  * Creator class for EcsClusterComponent component

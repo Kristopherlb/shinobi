@@ -1,1 +1,1 @@
-export * from './governance.service';
+export * from './governance.service.js';

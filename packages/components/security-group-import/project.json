@@ -30,7 +30,7 @@
         "{projectRoot}/coverage"
       ],
       "options": {
-        "jestConfig": "packages/components/security-group-import/jest.config.ts",
+        "jestConfig": "packages/components/security-group-import/jest.config.mjs",
         "passWithNoTests": true
       }
     },

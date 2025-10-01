@@ -1,1 +1,1 @@
-export * from './cost-management.service';
+export * from './cost-management.service.js';

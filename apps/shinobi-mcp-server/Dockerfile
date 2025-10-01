@@ -4,16 +4,35 @@ FROM node:18-alpine
 # Set working directory
 WORKDIR /app
 
-# Copy package files
-COPY package*.json ./
+# Copy workspace files
+COPY package*.json pnpm-lock.yaml pnpm-workspace.yaml ./
+COPY nx.json tsconfig.base.json ./
+
+# Copy platform-kb directory (needed by MCP server)
+COPY platform-kb ./platform-kb
+
+# Copy packages that the MCP server depends on
+COPY packages/core ./packages/core
+COPY packages/contracts ./packages/contracts
+COPY packages/standards ./packages/standards
+COPY packages/observability-handlers ./packages/observability-handlers
+
+# Copy MCP server source
+COPY apps/shinobi-mcp-server ./apps/shinobi-mcp-server
 
 # Install dependencies
-RUN npm ci --only=production
+RUN npm install -g pnpm
+RUN pnpm install --frozen-lockfile
 
-# Copy source code
-COPY . .
+# Build packages individually to avoid nx issues
+RUN npx nx repair
+RUN npx nx build @shinobi/core
+RUN npx nx build @shinobi/contracts
+RUN npx nx build @shinobi/standards
+RUN npx nx build @shinobi/observability-handlers
 
-# Build the application
+# Build the MCP server
+WORKDIR /app/apps/shinobi-mcp-server
 RUN npm run build
 
 # Create non-root user
@@ -24,12 +43,8 @@ RUN adduser -S shinobi -u 1001
 RUN chown -R shinobi:nodejs /app
 USER shinobi
 
-# Expose port
-EXPOSE 3000
-
-# Health check
-HEALTHCHECK --interval=30s --timeout=3s --start-period=5s --retries=3 \
-  CMD node -e "require('http').get('http://localhost:3000/health', (res) => { process.exit(res.statusCode === 200 ? 0 : 1) })"
+# Set working directory back to MCP server
+WORKDIR /app/apps/shinobi-mcp-server
 
 # Start the MCP server
 CMD ["node", "dist/index.js"]

@@ -1,5 +1,5 @@
 import { ComponentContext, ComponentSpec } from '@shinobi/core';
-import { LambdaApiConfig } from '../src/lambda-api.builder';
+import { LambdaApiConfig } from '../src/lambda-api.builder.js';
 
 export interface ValidationResult {
   isValid: boolean;

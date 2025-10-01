@@ -6,14 +6,14 @@
  */
 
 // Export the main component
-export { SageMakerNotebookInstanceComponent } from './sagemaker-notebook-instance.component';
+export { SageMakerNotebookInstanceComponent } from './sagemaker-notebook-instance.component.js';
 
 // Export the configuration builder
-export { SageMakerNotebookInstanceComponentConfigBuilder } from './sagemaker-notebook-instance.builder';
+export { SageMakerNotebookInstanceComponentConfigBuilder } from './sagemaker-notebook-instance.builder.js';
 
 // Export the component creator
-export { SageMakerNotebookInstanceComponentCreator } from './sagemaker-notebook-instance.creator';
+export { SageMakerNotebookInstanceComponentCreator } from './sagemaker-notebook-instance.creator.js';
 
 // Export types and schema
-export type { SageMakerNotebookInstanceConfig } from './sagemaker-notebook-instance.builder';
-export { SAGEMAKER_NOTEBOOK_INSTANCE_CONFIG_SCHEMA } from './sagemaker-notebook-instance.builder';
+export type { SageMakerNotebookInstanceConfig } from './sagemaker-notebook-instance.builder.js';
+export { SAGEMAKER_NOTEBOOK_INSTANCE_CONFIG_SCHEMA } from './sagemaker-notebook-instance.builder.js';

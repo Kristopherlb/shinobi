@@ -18,7 +18,7 @@
     "test": {
       "executor": "@nx/jest:jest",
       "options": {
-        "jestConfig": "packages/standards/iam-audit/jest.config.ts"
+        "jestConfig": "packages/standards/iam-audit/jest.config.mjs"
       }
     },
     "lint": {

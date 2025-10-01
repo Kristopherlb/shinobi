@@ -1,4 +1,4 @@
-import { ComponentContext, ComponentSpec } from '../../contracts/component-interfaces';
+import { ComponentContext, ComponentSpec } from '../../contracts/component-interfaces.js';
 
 export interface GovernanceMetadata {
   dataClassification: string;

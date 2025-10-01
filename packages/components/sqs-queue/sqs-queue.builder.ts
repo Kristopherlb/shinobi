@@ -9,7 +9,7 @@
  * @service SQS
  */
 
-import { ConfigBuilder, ConfigBuilderContext } from '../../platform/contracts/config-builder';
+import { ConfigBuilder, ConfigBuilderContext } from '../../platform/contracts/config-builder.js';
 
 /**
  * Configuration interface for SqsQueueNew component

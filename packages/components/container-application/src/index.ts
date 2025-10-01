@@ -6,20 +6,20 @@
  */
 
 // Export the main component class
-export { ContainerApplicationComponent } from './container-application.component';
+export { ContainerApplicationComponent } from './container-application.component.js';
 
 // Export the configuration builder and types
 export { 
   ContainerApplicationConfig, 
   ContainerApplicationConfigBuilder, 
   CONTAINER_APPLICATION_CONFIG_SCHEMA 
-} from './container-application.builder';
+} from './container-application.builder.js';
 
 // Export the component creator
 export { 
   ContainerApplicationComponentCreator, 
   containerApplicationComponentCreator 
-} from './container-application.creator';
+} from './container-application.creator.js';
 
 // Re-export platform contracts for convenience
 export type { 

@@ -6,11 +6,10 @@
   "scripts": {
     "build": "tsc -p tsconfig.json",
     "start": "node dist/index.js",
-    "dev": "node --loader ts-node/esm --loader tsconfig-paths/esm src/index.ts"
+    "dev": "pnpm --filter @shinobi/core exec tsc -b tsconfig.json && pnpm exec tsc -b tsconfig.json && node dist/index.js"
   },
   "dependencies": {
     "@modelcontextprotocol/sdk": "^0.4.0",
-    "@platform/shinobi": "workspace:*",
     "@shinobi/core": "workspace:*",
     "yaml": "^2.8.1"
   },

@@ -1,6 +1,6 @@
 import * as cdk from 'aws-cdk-lib';
 import { ComponentContext, ComponentSpec } from '@platform/contracts';
-import { EcsEc2ServiceConfig, EcsEc2ServiceConfigBuilder } from '../ecs-ec2-service.builder';
+import { EcsEc2ServiceConfig, EcsEc2ServiceConfigBuilder } from '../ecs-ec2-service.builder.js';
 
 const createContext = (framework: 'commercial' | 'fedramp-moderate' | 'fedramp-high'): ComponentContext => ({
   serviceName: 'orders',

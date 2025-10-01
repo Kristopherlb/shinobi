@@ -1,5 +1,12 @@
 import { randomUUID } from 'crypto';
-import { Logger as PlatformLogger, LoggerOptions, LogLevel, Timer } from '@platform/logger';
+import {
+  Logger as PlatformLogger,
+  type LoggerOptions,
+  type LogLevel,
+  type Timer
+} from '@platform/logger';
+
+type PlatformLoggerInstance = InstanceType<typeof PlatformLogger>;
 
 export interface LoggerConfig {
   verbose: boolean;
@@ -7,6 +14,7 @@ export interface LoggerConfig {
   environment?: string;
   compliance?: string;
   serviceName?: string;
+  region?: string;
 }
 
 interface CapturedLog {
@@ -17,88 +25,91 @@ interface CapturedLog {
 }
 
 /**
- * CLI logger that extends the platform structured logger to provide
+ * CLI logger that wraps the platform structured logger to provide
  * ergonomic helpers used by the existing commands (e.g. `success`).
  */
-export class Logger extends PlatformLogger {
+export class Logger {
   private readonly instanceId = randomUUID();
   private capturedLogs: CapturedLog[] = [];
   private verbose = false;
   private ci = false;
+  private readonly baseLogger: PlatformLoggerInstance;
+  private currentConfig: LoggerConfig = { verbose: false, ci: false };
 
   constructor(name = 'shinobi.cli') {
-    super(name);
+    this.baseLogger = PlatformLogger.getLogger?.(name) ?? new PlatformLogger(name);
   }
 
   configure(config: LoggerConfig): void {
-    this.verbose = !!config.verbose;
-    this.ci = !!config.ci;
-
-    PlatformLogger.setGlobalContext({
-      service: {
-        name: config.serviceName ?? 'shinobi-cli',
-        version: process.env.SHINOBI_CLI_VERSION ?? process.env.SVC_VERSION ?? '0.1.0',
-        instance: `cli-${this.instanceId}`
-      },
-      environment: {
-        name: config.environment ?? (this.ci ? 'ci' : 'local'),
-        region: process.env.AWS_REGION ?? process.env.AWS_DEFAULT_REGION ?? 'us-east-1',
-        compliance: config.compliance ?? 'commercial'
-      }
-    });
+    this.currentConfig = { ...this.currentConfig, ...config };
+    this.verbose = !!this.currentConfig.verbose;
+    this.ci = !!this.currentConfig.ci;
+    this.applyGlobalContext();
   }
 
-  override info(message: string, options?: LoggerOptions): void {
+  get platformLogger(): PlatformLoggerInstance {
+    return this.baseLogger;
+  }
+
+  updateContext(context: Partial<Omit<LoggerConfig, 'verbose' | 'ci'>>): void {
+    this.configure({ ...this.currentConfig, ...context });
+  }
+
+  getCurrentConfig(): LoggerConfig {
+    return { ...this.currentConfig };
+  }
+
+  info(message: string, options?: LoggerOptions): void {
     this.capture('INFO', message, options?.data);
-    super.info(message, options);
+    this.baseLogger.info(message, options);
   }
 
   success(message: string, data?: any): void {
     this.capture('SUCCESS', message, data);
-    super.info(message, this.buildOptions({ status: 'success', ...toObject(data) }));
+    this.baseLogger.info(message, this.buildOptions({ status: 'success', ...toObject(data) }));
   }
 
-  override warn(message: string, options?: LoggerOptions): void {
+  warn(message: string, options?: LoggerOptions): void {
     this.capture('WARN', message, options?.data);
-    super.warn(message, options);
+    this.baseLogger.warn(message, options);
   }
 
-  override error(message: string, error?: Error | any, options?: LoggerOptions): void {
+  error(message: string, error?: Error | any, options?: LoggerOptions): void {
     this.capture('ERROR', message, error);
-    super.error(message, error, options);
+    this.baseLogger.error(message, error, options);
   }
 
-  override debug(message: string, options?: LoggerOptions): void {
+  debug(message: string, options?: LoggerOptions): void {
     if (!this.verbose) {
       return;
     }
 
     this.capture('DEBUG', message, options?.data);
-    super.debug(message, options);
+    this.baseLogger.debug(message, options);
   }
 
-  override trace(message: string, options?: LoggerOptions): void {
+  trace(message: string, options?: LoggerOptions): void {
     if (!this.verbose) {
       return;
     }
     this.capture('TRACE', message, options?.data);
-    super.trace(message, options);
+    this.baseLogger.trace(message, options);
   }
 
-  override isDebugEnabled(): boolean {
-    return this.verbose && super.isDebugEnabled();
+  isDebugEnabled(): boolean {
+    return this.verbose && this.baseLogger.isDebugEnabled();
   }
 
-  override isTraceEnabled(): boolean {
-    return this.verbose && super.isTraceEnabled();
+  isTraceEnabled(): boolean {
+    return this.verbose && this.baseLogger.isTraceEnabled();
   }
 
-  override startTimer(): Timer {
-    return super.startTimer();
+  startTimer(): Timer {
+    return this.baseLogger.startTimer();
   }
 
-  override async flush(): Promise<void> {
-    await super.flush();
+  async flush(): Promise<void> {
+    await this.baseLogger.flush();
   }
 
   getLogs(): CapturedLog[] {
@@ -117,6 +128,28 @@ export class Logger extends PlatformLogger {
   private buildOptions(data?: any): LoggerOptions | undefined {
     const normalized = toObject(data);
     return normalized ? { data: normalized } : undefined;
+  }
+
+  private applyGlobalContext(): void {
+    const config = this.currentConfig;
+    const serviceName = config.serviceName ?? 'shinobi-cli';
+    const serviceVersion = process.env.SHINOBI_CLI_VERSION ?? process.env.SVC_VERSION ?? '0.1.0';
+    const environmentName = config.environment ?? 'unknown';
+    const region = config.region ?? process.env.AWS_REGION ?? process.env.AWS_DEFAULT_REGION ?? 'unknown';
+    const compliance = config.compliance ?? 'unknown';
+
+    PlatformLogger.setGlobalContext({
+      service: {
+        name: serviceName,
+        version: serviceVersion,
+        instance: `cli-${this.instanceId}`
+      },
+      environment: {
+        name: environmentName,
+        region,
+        compliance
+      }
+    });
   }
 }
 

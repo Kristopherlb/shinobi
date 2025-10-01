@@ -3,7 +3,7 @@
  * Performance optimization for binder strategy operations
  */
 
-import { EnhancedBindingContext, EnhancedBindingResult } from '../bindings';
+import { EnhancedBindingContext, EnhancedBindingResult } from '../bindings.js';
 
 /**
  * Cache entry for binding results

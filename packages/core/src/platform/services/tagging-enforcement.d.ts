@@ -4,7 +4,7 @@
  * Enforces tagging standards and data classification requirements
  * across all platform components and resources.
  */
-import { ComponentType, ComplianceFramework } from '../contracts/bindings';
+import { ComponentType, ComplianceFramework } from '../contracts/bindings.js';
 export interface TaggingConfig {
     service: string;
     environment: string;

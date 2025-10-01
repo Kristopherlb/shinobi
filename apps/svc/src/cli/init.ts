@@ -1,9 +1,9 @@
 import inquirer from 'inquirer';
 import { ConfigLoader } from '@shinobi/core';
-import { loadComponentCreators } from './utils/component-loader';
-import { Logger } from './utils/logger';
-import { FileDiscovery } from './utils/file-discovery';
-import { TemplateEngine } from './templates/template-engine';
+import { loadComponentCreators } from './utils/component-loader.js';
+import { Logger } from './utils/logger.js';
+import { FileDiscovery } from './utils/file-discovery.js';
+import { TemplateEngine } from './templates/template-engine.js';
 
 export interface InitOptions {
   name?: string;

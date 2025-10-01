@@ -1,8 +1,8 @@
 import {
   OpenSearchDomainComponentConfigBuilder,
   OpenSearchDomainConfig
-} from '../opensearch-domain.builder';
-import { ComponentContext, ComponentSpec } from '../../../platform/contracts/component-interfaces';
+} from '../opensearch-domain.builder.js';
+import { ComponentContext, ComponentSpec } from '../../../platform/contracts/component-interfaces.js';
 
 const createContext = (framework: string = 'commercial'): ComponentContext => ({
   serviceName: 'search-service',

@@ -5,8 +5,8 @@
  */
 
 import { IComponentCreator } from '@platform/core';
-import { DeploymentBundlePipelineComponent } from './deployment-bundle-pipeline.component';
-import { DeploymentBundleConfig } from './types';
+import { DeploymentBundlePipelineComponent } from './deployment-bundle-pipeline.component.js';
+import { DeploymentBundleConfig } from './types.js';
 
 export class DeploymentBundlePipelineCreator implements IComponentCreator {
 

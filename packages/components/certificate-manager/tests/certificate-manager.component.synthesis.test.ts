@@ -1,8 +1,8 @@
 import * as route53 from 'aws-cdk-lib/aws-route53';
 import { App, Stack } from 'aws-cdk-lib';
 import { Template, Match } from 'aws-cdk-lib/assertions';
-import { CertificateManagerComponent } from '../certificate-manager.component';
-import { CertificateManagerConfig } from '../certificate-manager.builder';
+import { CertificateManagerComponent } from '../certificate-manager.component.js';
+import { CertificateManagerConfig } from '../certificate-manager.builder.js';
 import { ComponentContext, ComponentSpec } from '@shinobi/core';
 
 const createSpec = (config: Partial<CertificateManagerConfig>): ComponentSpec => ({

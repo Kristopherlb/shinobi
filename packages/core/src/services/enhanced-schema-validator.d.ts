@@ -2,8 +2,8 @@
  * Enhanced Schema Validator - Uses composed master schema for comprehensive validation
  * Provides detailed error reporting with JSON paths and component-specific validation
  */
-import { Logger } from '../platform/logger/src/index';
-import { ManifestSchemaComposer } from './manifest-schema-composer';
+import { Logger } from '../platform/logger/src/index.js';
+import { ManifestSchemaComposer } from './manifest-schema-composer.js';
 export interface EnhancedSchemaValidatorDependencies {
     logger: Logger;
     schemaComposer: ManifestSchemaComposer;

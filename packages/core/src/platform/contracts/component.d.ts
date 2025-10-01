@@ -7,18 +7,18 @@
  */
 import * as logs from 'aws-cdk-lib/aws-logs';
 import { Construct, IConstruct } from 'constructs';
-import { ComponentSpec, ComponentContext, ComponentCapabilities, IComponent } from './component-interfaces';
-import { ITaggingService } from '../services/tagging-service/tagging.service';
-import { IObservabilityService } from '../services/observability';
-import { ILoggingService } from '../services/logging';
-import { IGovernanceService, GovernanceMetadata } from '../services/governance';
-import { IComplianceService } from '../services/compliance';
-import { ISecurityService } from '../services/security';
-import { ISecurityOperationsService } from '../services/security-operations';
-import { ICostManagementService } from '../services/cost-management';
-import { IBackupRecoveryService } from '../services/backup-recovery';
-import { IPerformanceOptimizationService } from '../services/performance';
-import { IFeatureFlagService } from '../services/feature-flags';
+import { ComponentSpec, ComponentContext, ComponentCapabilities, IComponent } from './component-interfaces.js';
+import { ITaggingService } from '../services/tagging-service/tagging.service.js';
+import { IObservabilityService } from '../services/observability/index.js';
+import { ILoggingService } from '../services/logging/index.js';
+import { IGovernanceService, GovernanceMetadata } from '../services/governance/index.js';
+import { IComplianceService } from '../services/compliance/index.js';
+import { ISecurityService } from '../services/security/index.js';
+import { ISecurityOperationsService } from '../services/security-operations/index.js';
+import { ICostManagementService } from '../services/cost-management/index.js';
+import { IBackupRecoveryService } from '../services/backup-recovery/index.js';
+import { IPerformanceOptimizationService } from '../services/performance/index.js';
+import { IFeatureFlagService } from '../services/feature-flags/index.js';
 /**
  * Options for configuring observability on components
  */
@@ -48,6 +48,32 @@ export interface ObservabilityConfig {
     enablePerformanceInsights: boolean;
     enableXRayTracing: boolean;
     customAttributes: Record<string, string>;
+    alarmThresholds?: {
+        lambda: {
+            errorRate: number;
+            duration: number;
+            throttles: number;
+        };
+    };
+}
+export type S3BucketEncryptionType = 'AES256' | 'KMS';
+export interface S3BucketEncryptionConfig {
+    type?: S3BucketEncryptionType;
+    kmsKeyArn?: string;
+}
+export interface S3BucketConfig {
+    bucketName?: string;
+    public?: boolean;
+    versioning?: boolean;
+    encryption?: S3BucketEncryptionConfig;
+    lifecycleRules?: Array<{
+        id: string;
+        status: 'Enabled' | 'Disabled';
+        transitions?: Array<{
+            storageClass: string;
+            transitionDays: number;
+        }>;
+    }>;
 }
 export interface BaseComponentServices {
     taggingService: ITaggingService;

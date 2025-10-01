@@ -1,5 +1,5 @@
-import { ComponentContext } from './component-context';
-import { ComponentSpec } from './component-spec';
+import { ComponentContext } from './component-context.js';
+import { ComponentSpec } from './component-spec.js';
 /**
  * Configuration layer enumeration
  */

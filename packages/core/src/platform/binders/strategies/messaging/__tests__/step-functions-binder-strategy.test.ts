@@ -2,9 +2,9 @@
  * Path: packages/core/src/platform/binders/strategies/messaging/__tests__/step-functions-binder-strategy.test.ts
  */
 
-import { StepFunctionsBinderStrategy } from '../step-functions-binder-strategy';
-import type { BindingContext } from '../../../binding-context';
-import type { ComponentBinding } from '../../../component-binding';
+import { StepFunctionsBinderStrategy } from '../step-functions-binder-strategy.js';
+import type { BindingContext } from '../../../binding-context.js';
+import type { ComponentBinding } from '../../../component-binding.js';
 
 class MockComponent {
   public env: Record<string, string> = {};

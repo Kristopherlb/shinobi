@@ -3,56 +3,56 @@
  * Registry for all AWS service binder strategies
  */
 
-import { IBinderStrategy } from '../strategies/binder-strategy';
+import { IBinderStrategy } from '../strategies/binder-strategy.js';
 
 // Compute Services
-import { EcsFargateBinderStrategy } from '../strategies/compute/ecs-fargate-binder-strategy';
-import { EksBinderStrategy } from '../strategies/compute/eks-binder-strategy';
-import { AppRunnerBinderStrategy } from '../strategies/compute/app-runner-binder-strategy';
-import { BatchBinderStrategy } from '../strategies/compute/batch-binder-strategy';
-import { ElasticBeanstalkBinderStrategy } from '../strategies/compute/elastic-beanstalk-binder-strategy';
-import { LightsailBinderStrategy } from '../strategies/compute/lightsail-binder-strategy';
+import { EcsFargateBinderStrategy } from '../strategies/compute/ecs-fargate-binder-strategy.js';
+import { EksBinderStrategy } from '../strategies/compute/eks-binder-strategy.js';
+import { AppRunnerBinderStrategy } from '../strategies/compute/app-runner-binder-strategy.js';
+import { BatchBinderStrategy } from '../strategies/compute/batch-binder-strategy.js';
+import { ElasticBeanstalkBinderStrategy } from '../strategies/compute/elastic-beanstalk-binder-strategy.js';
+import { LightsailBinderStrategy } from '../strategies/compute/lightsail-binder-strategy.js';
 
 // Database Services
-import { DynamoDbBinderStrategy } from '../strategies/database/dynamodb-binder-strategy';
-import { NeptuneBinderStrategy } from '../strategies/database/neptune-binder-strategy';
+import { DynamoDbBinderStrategy } from '../strategies/database/dynamodb-binder-strategy.js';
+import { NeptuneBinderStrategy } from '../strategies/database/neptune-binder-strategy.js';
 
 // Networking Services
-import { VpcBinderStrategy } from '../strategies/networking/vpc-binder-strategy';
+import { VpcBinderStrategy } from '../strategies/networking/vpc-binder-strategy.js';
 
 // Analytics Services
-import { KinesisBinderStrategy } from '../strategies/analytics/kinesis-binder-strategy';
-import { EmrBinderStrategy } from '../strategies/analytics/emr-binder-strategy';
+import { KinesisBinderStrategy } from '../strategies/analytics/kinesis-binder-strategy.js';
+import { EmrBinderStrategy } from '../strategies/analytics/emr-binder-strategy.js';
 
 // Storage Services
-import { EfsBinderStrategy } from '../strategies/storage/efs-binder-strategy';
+import { EfsBinderStrategy } from '../strategies/storage/efs-binder-strategy.js';
 
 // Security Services
-import { SecretsManagerBinderStrategy } from '../strategies/security/secrets-manager-binder-strategy';
-import { KmsBinderStrategy } from '../strategies/security/kms-binder-strategy';
+import { SecretsManagerBinderStrategy } from '../strategies/security/secrets-manager-binder-strategy.js';
+import { KmsBinderStrategy } from '../strategies/security/kms-binder-strategy.js';
 
 // ML Services
-import { SageMakerBinderStrategy } from '../strategies/ml/sagemaker-binder-strategy';
+import { SageMakerBinderStrategy } from '../strategies/ml/sagemaker-binder-strategy.js';
 
 // Messaging Services
-import { EventBridgeBinderStrategy } from '../strategies/messaging/eventbridge-binder-strategy';
-import { StepFunctionsBinderStrategy } from '../strategies/messaging/step-functions-binder-strategy';
+import { EventBridgeBinderStrategy } from '../strategies/messaging/eventbridge-binder-strategy.js';
+import { StepFunctionsBinderStrategy } from '../strategies/messaging/step-functions-binder-strategy.js';
 
 // Mobile Services
-import { AmplifyBinderStrategy } from '../strategies/mobile/amplify-binder-strategy';
+import { AmplifyBinderStrategy } from '../strategies/mobile/amplify-binder-strategy.js';
 
 // IoT Services
-import { IoTCoreBinderStrategy } from '../strategies/iot/iot-core-binder-strategy';
+import { IoTCoreBinderStrategy } from '../strategies/iot/iot-core-binder-strategy.js';
 
 // CDN Services
-import { CloudFrontBinderStrategy } from '../strategies/cdn/cloudfront-binder-strategy';
+import { CloudFrontBinderStrategy } from '../strategies/cdn/cloudfront-binder-strategy.js';
 
 // Note: Existing strategies would be imported here when they're available
-// import { S3BinderStrategy } from '../strategies/storage/s3-binder-strategy';
-// import { RdsBinderStrategy } from '../strategies/database/rds-binder-strategy';
-// import { SqsBinderStrategy } from '../strategies/messaging/sqs-binder-strategy';
-// import { SnsBinderStrategy } from '../strategies/messaging/sns-binder-strategy';
-// import { LambdaBinderStrategy } from '../strategies/compute/lambda-binder-strategy';
+// import { S3BinderStrategy } from '../strategies/storage/s3-binder-strategy.js';
+// import { RdsBinderStrategy } from '../strategies/database/rds-binder-strategy.js';
+// import { SqsBinderStrategy } from '../strategies/messaging/sqs-binder-strategy.js';
+// import { SnsBinderStrategy } from '../strategies/messaging/sns-binder-strategy.js';
+// import { LambdaBinderStrategy } from '../strategies/compute/lambda-binder-strategy.js';
 
 export class ComprehensiveBinderRegistry {
   private strategies: Map<string, IBinderStrategy> = new Map();

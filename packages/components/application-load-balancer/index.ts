@@ -4,14 +4,14 @@
  */
 
 // Component exports
-export { ApplicationLoadBalancerComponent } from './application-load-balancer.component';
+export { ApplicationLoadBalancerComponent } from './application-load-balancer.component.js';
 
 // Configuration exports
 export { 
   ApplicationLoadBalancerConfig,
   ApplicationLoadBalancerComponentConfigBuilder,
   APPLICATION_LOAD_BALANCER_CONFIG_SCHEMA
-} from './application-load-balancer.builder';
+} from './application-load-balancer.builder.js';
 
 // Creator exports
-export { ApplicationLoadBalancerComponentCreator } from './application-load-balancer.creator';
+export { ApplicationLoadBalancerComponentCreator } from './application-load-balancer.creator.js';

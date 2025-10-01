@@ -20,7 +20,7 @@ import {
   ILoggingHandler, 
   LoggingHandlerResult 
 } from '@shinobi/core/logging-interfaces';
-import { LoggingService } from '../logging-service/infrastructure-logging.service';
+import { LoggingService } from '../logging-service/infrastructure-logging.service.js';
 
 /**
  * Logging handler for S3 buckets

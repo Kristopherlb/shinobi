@@ -4,11 +4,11 @@ import {
   ComponentSpec,
   IComponentCreator
 } from '@shinobi/core';
-import { ApiGatewayHttpComponent } from './api-gateway-http.component';
+import { ApiGatewayHttpComponent } from './api-gateway-http.component.js';
 import {
   ApiGatewayHttpConfig,
   API_GATEWAY_HTTP_CONFIG_SCHEMA
-} from './api-gateway-http.builder';
+} from './api-gateway-http.builder.js';
 
 export class ApiGatewayHttpCreator implements IComponentCreator {
   public readonly componentType = 'api-gateway-http';

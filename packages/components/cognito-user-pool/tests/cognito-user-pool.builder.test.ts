@@ -1,8 +1,8 @@
 import {
   CognitoUserPoolComponentConfigBuilder,
   CognitoUserPoolConfig
-} from '../cognito-user-pool.builder';
-import { ComponentContext, ComponentSpec } from '../../../platform/contracts/component-interfaces';
+} from '../cognito-user-pool.builder.js';
+import { ComponentContext, ComponentSpec } from '../../../platform/contracts/component-interfaces.js';
 
 type Framework = 'commercial' | 'fedramp-moderate' | 'fedramp-high';
 

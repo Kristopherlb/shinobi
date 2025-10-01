@@ -1,2 +1,2 @@
-export * from './backup-recovery.service';
+export * from './backup-recovery.service.js';
 //# sourceMappingURL=index.d.ts.map

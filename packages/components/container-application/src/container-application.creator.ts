@@ -10,9 +10,9 @@ import {
   ComponentSpec, 
   ComponentContext, 
   IComponentCreator 
-} from '../../@shinobi/core/component-interfaces';
-import { ContainerApplicationComponent } from './container-application.component';
-import { ContainerApplicationConfig, CONTAINER_APPLICATION_CONFIG_SCHEMA } from './container-application.builder';
+} from '../../@shinobi/core/component-interfaces.js';
+import { ContainerApplicationComponent } from './container-application.component.js';
+import { ContainerApplicationConfig, CONTAINER_APPLICATION_CONFIG_SCHEMA } from './container-application.builder.js';
 
 /**
  * Creator class for ContainerApplicationComponent component

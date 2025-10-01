@@ -3,9 +3,9 @@
  * Handles virtual private server bindings for Amazon Lightsail
  */
 
-import { IBinderStrategy } from '../binder-strategy';
-import { BindingContext } from '../../binding-context';
-import { ComponentBinding } from '../../component-binding';
+import { IBinderStrategy } from '../binder-strategy.js';
+import { BindingContext } from '../../binding-context.js';
+import { ComponentBinding } from '../../component-binding.js';
 // Compliance framework branching removed; use binding.options/config instead
 
 export class LightsailBinderStrategy implements IBinderStrategy {

@@ -1,6 +1,6 @@
 import { ComponentContext, ComponentSpec } from '@shinobi/core';
-import { LambdaApiValidator } from '../../validation/lambda-api.validator';
-import { LambdaApiConfig } from '../../src/lambda-api.builder';
+import { LambdaApiValidator } from '../../validation/lambda-api.validator.js';
+import { LambdaApiConfig } from '../../src/lambda-api.builder.js';
 
 describe('LambdaApiValidator', () => {
   const createContext = (framework: 'commercial' | 'fedramp-moderate' | 'fedramp-high' | 'hipaa' | 'sox'): ComponentContext => ({

@@ -9,18 +9,18 @@
 import * as cdk from 'aws-cdk-lib';
 import * as logs from 'aws-cdk-lib/aws-logs';
 import { Construct, IConstruct } from 'constructs';
-import { ComponentSpec, ComponentContext, ComponentCapabilities, IComponent } from './component-interfaces';
-import { ITaggingService, TaggingContext, defaultTaggingService } from '../services/tagging-service/tagging.service';
-import { IObservabilityService, defaultObservabilityService } from '../services/observability';
-import { ILoggingService, defaultLoggingService } from '../services/logging';
-import { IGovernanceService, GovernanceMetadata, defaultGovernanceService } from '../services/governance';
-import { IComplianceService, defaultComplianceService } from '../services/compliance';
-import { ISecurityService, defaultSecurityService } from '../services/security';
-import { ISecurityOperationsService, defaultSecurityOperationsService } from '../services/security-operations';
-import { ICostManagementService, defaultCostManagementService } from '../services/cost-management';
-import { IBackupRecoveryService, defaultBackupRecoveryService } from '../services/backup-recovery';
-import { IPerformanceOptimizationService, defaultPerformanceOptimizationService } from '../services/performance';
-import { IFeatureFlagService, defaultFeatureFlagService } from '../services/feature-flags';
+import { ComponentSpec, ComponentContext, ComponentCapabilities, IComponent } from './component-interfaces.js';
+import { ITaggingService, TaggingContext, defaultTaggingService } from '../services/tagging-service/tagging.service.js';
+import { IObservabilityService, defaultObservabilityService } from '../services/observability/index.js';
+import { ILoggingService, defaultLoggingService } from '../services/logging/index.js';
+import { IGovernanceService, GovernanceMetadata, defaultGovernanceService } from '../services/governance/index.js';
+import { IComplianceService, defaultComplianceService } from '../services/compliance/index.js';
+import { ISecurityService, defaultSecurityService } from '../services/security/index.js';
+import { ISecurityOperationsService, defaultSecurityOperationsService } from '../services/security-operations/index.js';
+import { ICostManagementService, defaultCostManagementService } from '../services/cost-management/index.js';
+import { IBackupRecoveryService, defaultBackupRecoveryService } from '../services/backup-recovery/index.js';
+import { IPerformanceOptimizationService, defaultPerformanceOptimizationService } from '../services/performance/index.js';
+import { IFeatureFlagService, defaultFeatureFlagService } from '../services/feature-flags/index.js';
 
 /**
  * Options for configuring observability on components

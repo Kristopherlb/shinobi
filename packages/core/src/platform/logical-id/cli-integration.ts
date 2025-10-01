@@ -3,11 +3,12 @@
  * Integrates logical ID preservation with the svc plan command
  */
 
+import { existsSync } from 'fs';
 import * as path from 'path';
-import { Logger } from '../logger/src';
-import { LogicalIdManager, LogicalIdMap } from './logical-id-manager';
-import { PlanningLogicalIdIntegration, PlanningContext } from './planning-integration';
-import { DriftAvoidanceEngine } from './drift-avoidance';
+import { Logger } from '../logger/src/index.js';
+import { LogicalIdManager, LogicalIdMap } from './logical-id-manager.js';
+import { PlanningLogicalIdIntegration, PlanningContext } from './planning-integration.js';
+import { DriftAvoidanceEngine } from './drift-avoidance.js';
 
 export interface LogicalIdCliOptions {
   stackName: string;
@@ -278,7 +279,7 @@ export class LogicalIdCliIntegration {
     ];
 
     for (const mapPath of possiblePaths) {
-      if (require('fs').existsSync(mapPath)) {
+      if (existsSync(mapPath)) {
         return mapPath;
       }
     }

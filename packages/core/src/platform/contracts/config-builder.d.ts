@@ -1,4 +1,4 @@
-import { ComponentSpec, ComponentContext } from './component-interfaces';
+import { ComponentSpec, ComponentContext } from './component-interfaces.js';
 /**
  * Context object passed to ConfigBuilder constructors
  */

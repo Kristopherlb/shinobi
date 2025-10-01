@@ -10,5 +10,5 @@
  * - Error handling patterns
  * - Comprehensive monitoring and alerting
  */
-export * from './lambda-advanced-features.service';
+export * from './lambda-advanced-features.service.js';
 //# sourceMappingURL=index.d.ts.map

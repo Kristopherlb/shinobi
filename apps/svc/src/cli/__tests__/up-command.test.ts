@@ -1,10 +1,10 @@
 import path from 'path';
 import os from 'os';
-import { UpCommand } from '../up';
-import type { UpOptions } from '../up';
-import type { Logger } from '../utils/logger';
+import { UpCommand } from '../up.js';
+import type { UpOptions } from '../up.js';
+import type { Logger } from '../utils/logger.js';
 import type { FileDiscovery } from '@shinobi/core';
-jest.mock('../utils/service-synthesizer', () => ({
+jest.mock('../utils/service-synthesizer.js', () => ({
   readManifest: jest.fn(),
   synthesizeService: jest.fn()
 }));
@@ -22,8 +22,12 @@ jest.mock('@aws-cdk/cli-lib-alpha', () => ({
 }));
 
 jest.mock('inquirer', () => ({
-  prompt: jest.fn()
+  __esModule: true,
+  default: { prompt: jest.fn() }
 }));
+
+import { readManifest, synthesizeService } from '../utils/service-synthesizer.js';
+import inquirer from 'inquirer';
 
 describe('UpCommand', () => {
   const logger: Logger = {
@@ -40,9 +44,9 @@ describe('UpCommand', () => {
   const upCommand = new UpCommand({ fileDiscovery, logger });
   const manifestPath = path.join(os.tmpdir(), 'service.yml');
 
-  const readManifestMock = require('../utils/service-synthesizer').readManifest as jest.Mock;
-  const synthesizeServiceMock = require('../utils/service-synthesizer').synthesizeService as jest.Mock;
-  const promptMock = require('inquirer').prompt as jest.Mock;
+  const readManifestMock = readManifest as unknown as jest.Mock;
+  const synthesizeServiceMock = synthesizeService as unknown as jest.Mock;
+  const promptMock = inquirer.prompt as unknown as jest.Mock;
 
   const baseOptions: UpOptions = {
     file: manifestPath,

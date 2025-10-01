@@ -16,7 +16,7 @@
         "test": {
           "executor": "@nx/jest:jest",
           "options": {
-            "jestConfig": "packages/core-engine/jest.config.js",
+            "jestConfig": "packages/core-engine/jest.config.mjs",
             "passWithNoTests": true
           }
         },
@@ -42,7 +42,7 @@
         "test": {
           "executor": "@nx/jest:jest",
           "options": {
-            "jestConfig": "packages/contracts/jest.config.js",
+            "jestConfig": "packages/contracts/jest.config.mjs",
             "passWithNoTests": true
           }
         },
@@ -68,7 +68,7 @@
         "test": {
           "executor": "@nx/jest:jest",
           "options": {
-            "jestConfig": "packages/components/lambda-api/jest.config.js",
+            "jestConfig": "packages/components/lambda-api/jest.config.mjs",
             "passWithNoTests": true
           }
         },
@@ -94,7 +94,7 @@
         "test": {
           "executor": "@nx/jest:jest",
           "options": {
-            "jestConfig": "packages/components/rds-postgres/jest.config.js",
+            "jestConfig": "packages/components/rds-postgres/jest.config.mjs",
             "passWithNoTests": true
           }
         },
@@ -120,7 +120,7 @@
         "test": {
           "executor": "@nx/jest:jest",
           "options": {
-            "jestConfig": "packages/components/sqs-queue/jest.config.js",
+            "jestConfig": "packages/components/sqs-queue/jest.config.mjs",
             "passWithNoTests": true
           }
         },
@@ -146,7 +146,7 @@
         "test": {
           "executor": "@nx/jest:jest",
           "options": {
-            "jestConfig": "packages/components/api-gateway-rest/jest.config.ts",
+            "jestConfig": "packages/components/api-gateway-rest/jest.config.mjs",
             "passWithNoTests": false
           }
         },
@@ -172,7 +172,7 @@
         "test": {
           "executor": "@nx/jest:jest",
           "options": {
-            "jestConfig": "packages/infrastructure/jest.config.js",
+            "jestConfig": "packages/infrastructure/jest.config.mjs",
             "passWithNoTests": true
           }
         },
@@ -198,7 +198,7 @@
         "test": {
           "executor": "@nx/jest:jest",
           "options": {
-            "jestConfig": "packages/test-scaffolding/jest.config.js",
+            "jestConfig": "packages/test-scaffolding/jest.config.mjs",
             "passWithNoTests": true
           }
         },
@@ -230,7 +230,7 @@
         "dev": {
           "executor": "nx:run-commands",
           "options": {
-            "command": "node --loader ts-node/esm --loader tsconfig-paths/esm apps/shinobi-mcp-server/src/index.ts"
+            "command": "pnpm --filter @shinobi/mcp-server dev"
           }
         },
         "lint": {

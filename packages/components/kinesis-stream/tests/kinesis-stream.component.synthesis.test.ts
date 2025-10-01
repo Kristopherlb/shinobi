@@ -11,9 +11,9 @@ jest.mock(
 
 import { App, Stack } from 'aws-cdk-lib';
 import { Match, Template } from 'aws-cdk-lib/assertions';
-import { KinesisStreamComponent } from '../kinesis-stream.component';
-import { KinesisStreamConfig } from '../kinesis-stream.builder';
-import { ComponentContext, ComponentSpec } from '../../../platform/contracts/component-interfaces';
+import { KinesisStreamComponent } from '../kinesis-stream.component.js';
+import { KinesisStreamConfig } from '../kinesis-stream.builder.js';
+import { ComponentContext, ComponentSpec } from '../../../platform/contracts/component-interfaces.js';
 
 const createMockContext = (framework: string): ComponentContext => ({
   serviceName: 'analytics-service',

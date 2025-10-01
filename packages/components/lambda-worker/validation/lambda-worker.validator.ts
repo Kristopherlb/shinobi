@@ -6,7 +6,7 @@
  */
 
 import { ComponentContext, ComponentSpec } from '@shinobi/core';
-import { LambdaWorkerConfig } from '../lambda-worker.builder';
+import { LambdaWorkerConfig } from '../lambda-worker.builder.js';
 
 /**
  * Validation error interface

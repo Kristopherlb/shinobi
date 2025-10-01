@@ -6,14 +6,14 @@
 import * as iam from 'aws-cdk-lib/aws-iam';
 import * as ec2 from 'aws-cdk-lib/aws-ec2';
 import * as elasticache from 'aws-cdk-lib/aws-elasticache';
-import { EnhancedBinderStrategy } from '../enhanced-binder-strategy';
+import { EnhancedBinderStrategy } from '../enhanced-binder-strategy.js';
 import {
   EnhancedBindingContext,
   EnhancedBindingResult,
   IamPolicy,
   SecurityGroupRule,
   ComplianceAction
-} from '../bindings';
+} from '../bindings.js';
 
 /**
  * Cache binder strategy for ElastiCache Redis connections

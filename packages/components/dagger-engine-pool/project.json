@@ -30,7 +30,7 @@
         "{projectRoot}/coverage"
       ],
       "options": {
-        "jestConfig": "packages/components/dagger-engine-pool/jest.config.ts",
+        "jestConfig": "packages/components/dagger-engine-pool/jest.config.mjs",
         "passWithNoTests": true
       }
     },

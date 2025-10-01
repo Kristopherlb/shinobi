@@ -2,9 +2,9 @@
  * Path: packages/core/src/platform/binders/strategies/database/__tests__/dynamodb-binder-strategy.test.ts
  */
 
-import { DynamoDbBinderStrategy } from '../dynamodb-binder-strategy';
-import type { BindingContext } from '../../../binding-context';
-import type { ComponentBinding } from '../../../component-binding';
+import { DynamoDbBinderStrategy } from '../dynamodb-binder-strategy.js';
+import type { BindingContext } from '../../../binding-context.js';
+import type { ComponentBinding } from '../../../component-binding.js';
 
 // Minimal mock component capturing env vars and IAM policies
 class MockComponent {

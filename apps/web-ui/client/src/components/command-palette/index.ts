@@ -1,3 +1,3 @@
-export { CommandPalette } from './CommandPalette';
-export { CommandProvider, useCommandPalette } from './CommandProvider';
-export { MockCommandProvider, MockShortcutService } from './MockCommandProvider';
+export { CommandPalette } from './CommandPalette.js';
+export { CommandProvider, useCommandPalette } from './CommandProvider.js';
+export { MockCommandProvider, MockShortcutService } from './MockCommandProvider.js';

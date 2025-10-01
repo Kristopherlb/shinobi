@@ -9,8 +9,8 @@
  */
 import { BaseComponent } from '@shinobi/core';
 import { PlatformServiceContext } from '@shinobi/core/platform-services';
-import { ObservabilityConfig } from '../../../standards/otel/observability-handlers/src/observability-handlers/observability-handler.interface';
-import { LambdaPowertoolsConfig } from './lambda-powertools-extension.handler';
+import { ObservabilityConfig } from '@shinobi/core/platform/contracts';
+import { LambdaPowertoolsConfig } from './lambda-powertools-extension.handler.js';
 /**
  * Configuration for the Lambda Observability Service
  */

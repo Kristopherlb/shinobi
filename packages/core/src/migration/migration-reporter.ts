@@ -3,11 +3,11 @@
  * Generates comprehensive migration reports and documentation
  */
 
-import { Logger } from '../core-engine/logger';
-import { StackAnalysisResult } from './cloudformation-analyzer';
-import { ResourceMappingResult } from './resource-mapper';
-import { MigrationValidationResult } from './migration-validator';
-import { MigrationOptions } from './migration-engine';
+import { Logger } from '../core-engine/logger.js';
+import { StackAnalysisResult } from './cloudformation-analyzer.js';
+import { ResourceMappingResult } from './resource-mapper.js';
+import { MigrationValidationResult } from './migration-validator.js';
+import { MigrationOptions } from './migration-engine.js';
 import * as fs from 'fs';
 import * as path from 'path';
 

@@ -12,7 +12,7 @@ import * as cdk from 'aws-cdk-lib';
 import { Construct } from 'constructs';
 import { BaseComponent } from '@shinobi/core';
 import { ComponentSpec, ComponentContext, ComponentCapabilities } from '@platform/contracts';
-import { VpcConfig, VpcConfigBuilder } from './vpc.builder';
+import { VpcConfig, VpcConfigBuilder } from './vpc.builder.js';
 
 
 /**

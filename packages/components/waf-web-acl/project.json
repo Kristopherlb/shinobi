@@ -30,7 +30,7 @@
         "{projectRoot}/coverage"
       ],
       "options": {
-        "jestConfig": "packages/components/waf-web-acl/jest.config.ts",
+        "jestConfig": "packages/components/waf-web-acl/jest.config.mjs",
         "passWithNoTests": true
       }
     },

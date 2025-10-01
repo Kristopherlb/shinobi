@@ -6,7 +6,8 @@
 
 import { BaseComponent } from '@platform/core';
 import { IComponent } from '@platform/core';
-import { DeploymentBundleConfig, BundleArtifacts, BundleManifest, SecurityScanResult, ComplianceReport } from './types';
+import { DeploymentBundlePipelineBuilder } from './deployment-bundle-pipeline.builder.js';
+import { DeploymentBundleConfig, BundleArtifacts, BundleManifest, SecurityScanResult, ComplianceReport } from './types.js';
 
 export class DeploymentBundlePipelineComponent extends BaseComponent implements IComponent {
   private config: DeploymentBundleConfig;
@@ -61,7 +62,7 @@ export class DeploymentBundlePipelineComponent extends BaseComponent implements 
   }
 
   private buildConfig(): DeploymentBundleConfig {
-    const builder = new (require('./deployment-bundle-pipeline.builder').DeploymentBundlePipelineBuilder)(this.context, this.spec);
+    const builder = new DeploymentBundlePipelineBuilder(this.context, this.spec);
     return builder.buildSync();
   }
 

@@ -5,7 +5,7 @@ import {
   readManifest,
   synthesizeService,
   SimpleManifest
-} from './utils/service-synthesizer';
+} from './utils/service-synthesizer.js';
 
 interface SynthOptions {
   file?: string;

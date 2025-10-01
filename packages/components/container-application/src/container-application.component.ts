@@ -25,7 +25,7 @@ import {
 } from '@platform/contracts';
 
 // Import the configuration interface and builder from the builder
-import { ContainerApplicationConfig, ContainerApplicationConfigBuilder } from './container-application.builder';
+import { ContainerApplicationConfig, ContainerApplicationConfigBuilder } from './container-application.builder.js';
 
 /**
  * Container Application Component - Generic Containerized Application Infrastructure
@@ -427,4 +427,4 @@ export class ContainerApplicationComponent extends Component {
 }
 
 // Export the configuration interface and schema for external use
-export { ContainerApplicationConfig, CONTAINER_APPLICATION_CONFIG_SCHEMA } from './container-application.builder';
+export { ContainerApplicationConfig, CONTAINER_APPLICATION_CONFIG_SCHEMA } from './container-application.builder.js';

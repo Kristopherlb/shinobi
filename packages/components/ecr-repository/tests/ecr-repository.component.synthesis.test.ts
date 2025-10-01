@@ -5,8 +5,8 @@
 
 import { Template, Match } from 'aws-cdk-lib/assertions';
 import { App, Stack } from 'aws-cdk-lib';
-import { EcrRepositoryComponent } from '../ecr-repository.component';
-import { EcrRepositoryConfig } from '../ecr-repository.builder';
+import { EcrRepositoryComponent } from '../ecr-repository.component.js';
+import { EcrRepositoryConfig } from '../ecr-repository.builder.js';
 import { ComponentContext, ComponentSpec } from '/Users/kristopherbowles/code/CDK-Lib/src/platform/contracts/component-interfaces';
 import { Construct } from 'constructs';
 

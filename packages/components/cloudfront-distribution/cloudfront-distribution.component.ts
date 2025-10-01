@@ -16,7 +16,7 @@ import {
   CloudFrontDistributionConfig,
   CloudFrontAlarmConfig,
   CloudFrontMonitoringConfig
-} from './cloudfront-distribution.builder';
+} from './cloudfront-distribution.builder.js';
 
 export class CloudFrontDistributionComponent extends Component {
   private distribution?: cloudfront.Distribution;

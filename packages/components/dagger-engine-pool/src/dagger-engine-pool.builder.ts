@@ -1,4 +1,4 @@
-import { DaggerConfig } from './types';
+import { DaggerConfig } from './types.js';
 
 /**
  * Builder merges configuration using the platform precedence chain:

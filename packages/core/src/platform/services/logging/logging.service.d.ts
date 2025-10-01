@@ -1,5 +1,5 @@
-import { ComponentContext, ComponentSpec } from '../../contracts/component-interfaces';
-import { GovernanceMetadata } from '../governance';
+import { ComponentContext, ComponentSpec } from '../../contracts/component-interfaces.js';
+import { GovernanceMetadata } from '../governance/index.js';
 export interface LoggingContext {
     component: ComponentSpec;
     context: ComponentContext;
@@ -10,6 +10,8 @@ export interface ILoggingService {
 }
 export declare class LoggingService implements ILoggingService {
     getLogger(loggingContext: LoggingContext, loggerName?: string): any;
+    private resolveClassification;
+    private resolveRegion;
     private resolveServiceInstance;
 }
 export declare const defaultLoggingService: LoggingService;

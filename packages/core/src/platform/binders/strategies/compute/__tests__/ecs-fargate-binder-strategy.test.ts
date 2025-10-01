@@ -2,9 +2,9 @@
  * Path: packages/core/src/platform/binders/strategies/compute/__tests__/ecs-fargate-binder-strategy.test.ts
  */
 
-import { EcsFargateBinderStrategy } from '../ecs-fargate-binder-strategy';
-import type { BindingContext } from '../../../binding-context';
-import type { ComponentBinding } from '../../../component-binding';
+import { EcsFargateBinderStrategy } from '../ecs-fargate-binder-strategy.js';
+import type { BindingContext } from '../../../binding-context.js';
+import type { ComponentBinding } from '../../../component-binding.js';
 
 class MockSecurityGroup {
   public rules: any[] = [];

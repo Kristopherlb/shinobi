@@ -4,7 +4,7 @@
  * Handles serialization and deserialization of CLI command artifacts
  * with support for JSON, YAML, and other formats.
  */
-import { BaseArtifact, ArtifactSerializer } from '../contracts/artifacts';
+import { BaseArtifact, ArtifactSerializer } from '../contracts/artifacts.js';
 export declare class JSONArtifactSerializer implements ArtifactSerializer {
     serialize(artifact: BaseArtifact): string;
     deserialize<T extends BaseArtifact>(data: string): T;

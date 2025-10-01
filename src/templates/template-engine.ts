@@ -1,8 +1,8 @@
 import * as fs from 'fs/promises';
 import * as path from 'path';
 import * as Mustache from 'mustache';
-import { Logger } from '../utils/logger';
-import { ConfigLoader } from '../utils/config-loader';
+import { Logger } from '../utils/logger.js';
+import { ConfigLoader } from '../utils/config-loader.js';
 
 export interface ProjectInputs {
   name: string;

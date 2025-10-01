@@ -9,7 +9,7 @@ import { App, Stack } from 'aws-cdk-lib';
 import * as lambda from 'aws-cdk-lib/aws-lambda';
 import * as sqs from 'aws-cdk-lib/aws-sqs';
 import * as events from 'aws-cdk-lib/aws-events';
-import { LambdaAdvancedFeatures } from '../../advanced/lambda-advanced-features';
+import { LambdaAdvancedFeatures } from '../../advanced/lambda-advanced-features.js';
 
 describe('Lambda Advanced Features Tests', () => {
   let app: App;

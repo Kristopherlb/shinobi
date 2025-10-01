@@ -120,9 +120,6 @@ importers:
       '@modelcontextprotocol/sdk':
         specifier: ^0.4.0
         version: 0.4.0
-      '@platform/shinobi':
-        specifier: workspace:*
-        version: link:../../packages/components/shinobi
       '@shinobi/core':
         specifier: workspace:*
         version: link:../../packages/core
@@ -819,46 +816,6 @@ importers:
       ts-jest:
         specifier: ^29.0.0
         version: 29.4.1(@babel/core@7.28.4)(@jest/transform@30.1.2)(@jest/types@30.0.5)(babel-jest@30.1.2(@babel/core@7.28.4))(esbuild@0.25.10)(jest-util@30.0.5)(jest@29.7.0(@types/node@18.14.6)(babel-plugin-macros@3.1.0)(ts-node@10.9.2(@swc/core@1.13.5(@swc/helpers@0.5.17))(@types/node@18.14.6)(typescript@5.9.2)))(typescript@5.9.2)
-      typescript:
-        specifier: ^5.0.0
-        version: 5.9.2
-
-  packages/components/shinobi:
-    dependencies:
-      '@platform/contracts':
-        specifier: workspace:*
-        version: link:../../contracts
-      '@platform/core-engine':
-        specifier: workspace:*
-        version: link:../../core-engine
-      aws-cdk-lib:
-        specifier: ^2.100.0
-        version: 2.214.0(constructs@10.4.2)
-      constructs:
-        specifier: ^10.0.0
-        version: 10.4.2
-    devDependencies:
-      '@types/jest':
-        specifier: ^29.5.0
-        version: 29.5.14
-      '@types/node':
-        specifier: ^20.0.0
-        version: 20.19.14
-      '@typescript-eslint/eslint-plugin':
-        specifier: ^6.0.0
-        version: 6.21.0(@typescript-eslint/parser@6.21.0(eslint@8.57.1)(typescript@5.9.2))(eslint@8.57.1)(typescript@5.9.2)
-      '@typescript-eslint/parser':
-        specifier: ^6.0.0
-        version: 6.21.0(eslint@8.57.1)(typescript@5.9.2)
-      eslint:
-        specifier: ^8.0.0
-        version: 8.57.1
-      jest:
-        specifier: ^29.5.0
-        version: 29.7.0(@types/node@20.19.14)(babel-plugin-macros@3.1.0)(ts-node@10.9.2(@swc/core@1.13.5(@swc/helpers@0.5.17))(@types/node@20.19.14)(typescript@5.9.2))
-      ts-jest:
-        specifier: ^29.1.0
-        version: 29.4.1(@babel/core@7.28.4)(@jest/transform@30.1.2)(@jest/types@30.0.5)(babel-jest@30.1.2(@babel/core@7.28.4))(esbuild@0.25.10)(jest-util@30.0.5)(jest@29.7.0(@types/node@20.19.14)(babel-plugin-macros@3.1.0)(ts-node@10.9.2(@swc/core@1.13.5(@swc/helpers@0.5.17))(@types/node@20.19.14)(typescript@5.9.2)))(typescript@5.9.2)
       typescript:
         specifier: ^5.0.0
         version: 5.9.2

@@ -8,15 +8,15 @@
  */
 
 import { ShinobiMcpServer } from './shinobi-server.js';
-import { ShinobiConfig } from '@platform/shinobi';
+import { ShinobiConfig } from './config.js';
 import { Logger } from '@shinobi/core';
-import { LogLevel } from '@shinobi/core';
+import { pathToFileURL } from 'node:url';
 
 /**
  * Main function to start the Shinobi MCP Server
  */
 async function main(): Promise<void> {
-  const logger = new Logger(LogLevel.INFO);
+  const logger = new Logger();
 
   try {
     // Load configuration from environment or use defaults
@@ -145,8 +145,8 @@ process.on('SIGTERM', () => {
   process.exit(0);
 });
 
-// Start the server
-if (require.main === module) {
+const entryHref = process.argv[1] ? pathToFileURL(process.argv[1]).href : undefined;
+if (entryHref === import.meta.url) {
   main().catch((error) => {
     logger.error('Unhandled error', {
       service: 'shinobi-mcp-server',

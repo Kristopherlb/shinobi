@@ -4,11 +4,11 @@ import {
   ComponentSpec,
   IComponentCreator
 } from '@shinobi/core';
-import { EventBridgeRuleCronComponent } from './eventbridge-rule-cron.component';
+import { EventBridgeRuleCronComponent } from './eventbridge-rule-cron.component.js';
 import {
   EVENTBRIDGE_RULE_CRON_CONFIG_SCHEMA,
   EventBridgeRuleCronConfig
-} from './eventbridge-rule-cron.builder';
+} from './eventbridge-rule-cron.builder.js';
 
 export class EventBridgeRuleCronComponentCreator implements IComponentCreator {
   public readonly componentType = 'eventbridge-rule-cron';

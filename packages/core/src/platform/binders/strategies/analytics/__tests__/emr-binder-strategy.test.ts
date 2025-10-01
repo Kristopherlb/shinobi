@@ -2,9 +2,9 @@
  * Path: packages/core/src/platform/binders/strategies/analytics/__tests__/emr-binder-strategy.test.ts
  */
 
-import { EmrBinderStrategy } from '../emr-binder-strategy';
-import type { BindingContext } from '../../../binding-context';
-import type { ComponentBinding } from '../../../component-binding';
+import { EmrBinderStrategy } from '../emr-binder-strategy.js';
+import type { BindingContext } from '../../../binding-context.js';
+import type { ComponentBinding } from '../../../component-binding.js';
 
 class MockComponent {
   public env: Record<string, string> = {};

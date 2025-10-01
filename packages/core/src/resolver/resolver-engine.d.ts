@@ -2,9 +2,9 @@
  * The Resolver & Synthesis Engine
  * Core orchestrator for translating validated configuration into CDK constructs
  */
-import { Logger } from '../core-engine/logger';
-import { IComponent } from '../platform/contracts';
-import { ComprehensiveBinderRegistry } from '../platform/binders/registry/comprehensive-binder-registry';
+import { Logger } from '../core-engine/logger.js';
+import { IComponent } from '../platform/contracts/index.js';
+import { ComprehensiveBinderRegistry } from '../platform/binders/registry/comprehensive-binder-registry.js';
 import * as cdk from 'aws-cdk-lib';
 export interface ResolverEngineDependencies {
     logger: Logger;

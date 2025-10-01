@@ -3,7 +3,7 @@
  * Comprehensive monitoring and metrics collection for binding operations
  */
 
-import { EnhancedBindingContext, EnhancedBindingResult } from '../bindings';
+import { EnhancedBindingContext, EnhancedBindingResult } from '../bindings.js';
 
 /**
  * Binding operation metrics

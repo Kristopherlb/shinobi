@@ -1,6 +1,6 @@
 import { InMemoryProvider, StandardResolutionReasons } from '@openfeature/js-sdk';
-import { FeatureFlagService } from '../feature-flag.service';
-import { ComponentContext } from '../../../contracts/component-interfaces';
+import { FeatureFlagService } from '../feature-flag.service.js';
+import { ComponentContext } from '../../../contracts/component-interfaces.js';
 
 const buildInMemoryProvider = () => new InMemoryProvider({
   'beta-feature': {

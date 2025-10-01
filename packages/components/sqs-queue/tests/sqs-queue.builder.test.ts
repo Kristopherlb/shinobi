@@ -5,8 +5,8 @@
  * @author Platform Team
  */
 
-import { SqsQueueNewConfigBuilder, SqsQueueNewConfig } from '../sqs-queue-new.builder';
-import { ComponentContext, ComponentSpec } from '../../../platform/contracts/component-interfaces';
+import { SqsQueueNewConfigBuilder, SqsQueueNewConfig } from '../sqs-queue-new.builder.js';
+import { ComponentContext, ComponentSpec } from '../../../platform/contracts/component-interfaces.js';
 
 const createMockContext = (
   complianceFramework: string = 'commercial',

@@ -8,14 +8,14 @@
  */
 
 // Component exports
-export { SqsQueueNewComponent } from './sqs-queue-new.component';
+export { SqsQueueNewComponent } from './sqs-queue-new.component.js';
 
 // Configuration exports
 export { 
   SqsQueueNewConfig,
   SqsQueueNewConfigBuilder,
   SQS_QUEUE_NEW_CONFIG_SCHEMA
-} from './sqs-queue-new.builder';
+} from './sqs-queue-new.builder.js';
 
 // Creator exports
-export { SqsQueueNewCreator } from './sqs-queue-new.creator';
+export { SqsQueueNewCreator } from './sqs-queue-new.creator.js';

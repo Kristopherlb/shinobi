@@ -1,8 +1,8 @@
 import { App, Stack } from 'aws-cdk-lib';
 import * as lambda from 'aws-cdk-lib/aws-lambda';
 import { Match, Template } from 'aws-cdk-lib/assertions';
-import { LambdaApiAdvancedFeatures } from '../../advanced/lambda-api-advanced-features';
-import { LambdaApiConfig } from '../../src/lambda-api.builder';
+import { LambdaApiAdvancedFeatures } from '../../advanced/lambda-api-advanced-features.js';
+import { LambdaApiConfig } from '../../src/lambda-api.builder.js';
 
 describe('LambdaApiAdvancedFeatures', () => {
   let app: App;

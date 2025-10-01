@@ -6,8 +6,8 @@
  */
 
 import { ComponentContext } from '@shinobi/core';
-import { LambdaWorkerValidator } from '../../validation/lambda-worker.validator';
-import { LambdaWorkerConfig } from '../../lambda-worker.builder';
+import { LambdaWorkerValidator } from '../../validation/lambda-worker.validator.js';
+import { LambdaWorkerConfig } from '../../lambda-worker.builder.js';
 
 describe('Lambda Worker Validator Tests', () => {
   let context: ComponentContext;

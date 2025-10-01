@@ -34,7 +34,7 @@
         "{projectRoot}/coverage"
       ],
       "options": {
-        "jestConfig": "packages/observability-handlers/jest.config.ts",
+        "jestConfig": "packages/observability-handlers/jest.config.mjs",
         "passWithNoTests": true
       }
     },

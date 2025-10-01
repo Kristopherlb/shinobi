@@ -1,5 +1,5 @@
-import { IComponent } from '../bindings';
-import { ComponentContext } from './component-context';
+import { IComponent } from '../bindings.js';
+import { ComponentContext } from './component-context.js';
 /**
  * Component constructor type
  */

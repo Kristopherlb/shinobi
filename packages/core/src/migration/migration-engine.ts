@@ -3,12 +3,12 @@
  * Implements the 4-phase migration workflow for CDK -> Platform conversion
  */
 
-import { Logger } from '../core-engine/logger';
-import { CloudFormationAnalyzer } from './cloudformation-analyzer';
-import { ResourceMapper } from './resource-mapper';
-import { LogicalIdPreserver } from './logical-id-preserver';
-import { MigrationValidator } from './migration-validator';
-import { MigrationReporter } from './migration-reporter';
+import { Logger } from '../core-engine/logger.js';
+import { CloudFormationAnalyzer } from './cloudformation-analyzer.js';
+import { ResourceMapper } from './resource-mapper.js';
+import { LogicalIdPreserver } from './logical-id-preserver.js';
+import { MigrationValidator } from './migration-validator.js';
+import { MigrationReporter } from './migration-reporter.js';
 import * as fs from 'fs';
 import * as path from 'path';
 import * as yaml from 'yaml';

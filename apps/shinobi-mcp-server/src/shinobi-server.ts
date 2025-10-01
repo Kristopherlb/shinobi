@@ -6,19 +6,20 @@
  * and leadership.
  */
 
-import { Server } from '@modelcontextprotocol/sdk/server/index';
-import { StdioServerTransport } from '@modelcontextprotocol/sdk/server/stdio';
+import { Server } from '@modelcontextprotocol/sdk/server/index.js';
+import { StdioServerTransport } from '@modelcontextprotocol/sdk/server/stdio.js';
 import {
   CallToolRequestSchema,
   ListResourcesRequestSchema,
   ListToolsRequestSchema,
   ReadResourceRequestSchema,
-} from '@modelcontextprotocol/sdk/types';
-import { ShinobiConfig } from '@platform/shinobi';
-import { Logger, LogLevel } from '@shinobi/core';
-import * as fs from 'fs';
-import * as path from 'path';
-import * as yaml from 'yaml';
+} from '@modelcontextprotocol/sdk/types.js';
+import { ShinobiConfig } from './config.js';
+import { Logger } from '@shinobi/core';
+import fs from 'node:fs';
+import path from 'node:path';
+import yaml from 'yaml';
+import { spawnSync } from 'node:child_process';
 
 /**
  * Platform KB Types
@@ -91,18 +92,10 @@ export class ShinobiMcpServer {
 
   constructor(config: ShinobiConfig) {
     this.config = config;
-    this.server = new Server(
-      {
-        name: 'shinobi-mcp-server',
-        version: '1.0.0',
-      },
-      {
-        capabilities: {
-          resources: {},
-          tools: {},
-        },
-      }
-    );
+    this.server = new Server({
+      name: 'shinobi-mcp-server',
+      version: '1.0.0',
+    });
 
     this.setupHandlers();
   }
@@ -115,7 +108,7 @@ export class ShinobiMcpServer {
     await this.server.connect(transport);
 
     // Use platform logger instead of console
-    const logger = new Logger(LogLevel.INFO);
+    const logger = new Logger();
     logger.info('Shinobi MCP Server started', {
       service: 'shinobi-mcp-server',
       transport: 'stdio'
@@ -326,8 +319,8 @@ export class ShinobiMcpServer {
  */
 
 import { BaseComponent } from '@platform/core';
-import { ${builderClass} } from './${componentName}.builder';
-import { applyComplianceTags } from '../_lib/tags';
+import { ${builderClass} } from './${componentName}.builder.js';
+import { applyComplianceTags } from '../_lib/tags.js';
 import * as aws from 'aws-cdk-lib';
 
 export class ${className} extends BaseComponent {
@@ -459,8 +452,8 @@ export class ${builderClass} extends ConfigBuilder<${configInterface}> {
  */
 
 import { IComponentCreator } from '@platform/core';
-import { ${className} } from './${componentName}.component';
-import { ${componentName.toUpperCase()}_CONFIG_SCHEMA } from './${componentName}.builder';
+import { ${className} } from './${componentName}.component.js';
+import { ${componentName.toUpperCase()}_CONFIG_SCHEMA } from './${componentName}.builder.js';
 
 export class ${creatorClass} implements IComponentCreator {
   
@@ -509,12 +502,12 @@ export const ${componentName}Creator = new ${creatorClass}();
  * ${componentName} Component Exports
  */
 
-export { ${className} } from './${componentName}.component';
-export { ${builderClass}, ${componentName.toUpperCase()}_CONFIG_SCHEMA } from './${componentName}.builder';
-export { ${creatorClass}, ${componentName}Creator } from './${componentName}.creator';
+export { ${className} } from './${componentName}.component.js';
+export { ${builderClass}, ${componentName.toUpperCase()}_CONFIG_SCHEMA } from './${componentName}.builder.js';
+export { ${creatorClass}, ${componentName}Creator } from './${componentName}.creator.js';
 
 // Re-export types
-export type { ${className}Config } from './${componentName}.builder';
+export type { ${className}Config } from './${componentName}.builder.js';
 `;
   }
 
@@ -1125,7 +1118,7 @@ allow {
  * Test for REGO policy: ${rule.id}
  */
 
-import { ${this.toPascalCase(componentName)} } from '../${componentName}.component';
+import { ${this.toPascalCase(componentName)} } from '../${componentName}.component.js';
 
 describe('REGO Policy: ${rule.id}', () => {
   it('should pass policy validation', () => {
@@ -1147,7 +1140,7 @@ describe('REGO Policy: ${rule.id}', () => {
  */
 
 import { Template } from 'aws-cdk-lib/assertions';
-import { ${className} } from '../${componentName}.component';
+import { ${className} } from '../${componentName}.component.js';
 
 describe('${className} Compliance Tests', () => {
   let component: ${className};
@@ -1267,7 +1260,7 @@ describe('${className} Compliance Tests', () => {
  * Tests for ${builderClass}
  */
 
-import { ${builderClass} } from '../${componentName}.builder';
+import { ${builderClass} } from '../${componentName}.builder.js';
 
 describe('${builderClass}', () => {
   describe('Configuration precedence', () => {
@@ -1310,7 +1303,7 @@ describe('${builderClass}', () => {
  */
 
 import { Template } from 'aws-cdk-lib/assertions';
-import { ${className} } from '../${componentName}.component';
+import { ${className} } from '../${componentName}.component.js';
 
 describe('${className}', () => {
   let component: ${className};
@@ -1357,7 +1350,7 @@ describe('${className}', () => {
  * Observability tests for ${className} component
  */
 
-import { ${className} } from '../${componentName}.component';
+import { ${className} } from '../${componentName}.component.js';
 
 describe('${className} Observability', () => {
   let component: ${className};
@@ -3077,7 +3070,6 @@ describe('${className} Observability', () => {
    * Execute shell command helper
    */
   private sh(cmd: string, args: string[], opts: any = {}): string {
-    const { spawnSync } = require('child_process');
     const res = spawnSync(cmd, args, {
       stdio: 'pipe',
       encoding: 'utf-8',

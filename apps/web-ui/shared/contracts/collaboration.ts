@@ -1,5 +1,5 @@
 // Collaboration Service Contracts
-import type { PresenceStatus } from './realtime';
+import type { PresenceStatus } from './realtime.js';
 
 export interface ICollaborationService {
   getMentionSuggestions(query: string, context?: string): Promise<MentionSuggestion[]>;

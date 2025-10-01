@@ -1,2 +1,2 @@
-export * from './security-operations.service';
+export * from './security-operations.service.js';
 //# sourceMappingURL=index.d.ts.map

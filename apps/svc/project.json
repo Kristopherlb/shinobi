@@ -34,7 +34,7 @@
     "test": {
       "executor": "@nx/jest:jest",
       "options": {
-        "jestConfig": "apps/svc/jest.config.ts"
+        "jestConfig": "apps/svc/jest.config.mjs"
       }
     },
     "lint": {

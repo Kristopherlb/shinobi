@@ -10,9 +10,9 @@ import {
   ComponentSpec, 
   ComponentContext, 
   IComponentCreator 
-} from '../../platform/contracts/component-interfaces';
-import { KinesisStreamComponentComponent } from './kinesis-stream.component';
-import { KinesisStreamConfig, KINESIS_STREAM_CONFIG_SCHEMA } from './kinesis-stream.builder';
+} from '../../platform/contracts/component-interfaces.js';
+import { KinesisStreamComponentComponent } from './kinesis-stream.component.js';
+import { KinesisStreamConfig, KINESIS_STREAM_CONFIG_SCHEMA } from './kinesis-stream.builder.js';
 
 /**
  * Creator class for KinesisStreamComponent component

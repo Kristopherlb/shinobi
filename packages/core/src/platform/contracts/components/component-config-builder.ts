@@ -1,9 +1,9 @@
 // src/platform/contracts/components/component-config-builder.ts
 // Component configuration builder with 5-layer precedence chain
 
-import { ComponentContext } from './component-context';
-import { ComponentSpec } from './component-spec';
-import { ComplianceFramework } from '../bindings';
+import { ComponentContext } from './component-context.js';
+import { ComponentSpec } from './component-spec.js';
+import { ComplianceFramework } from '../bindings.js';
 
 /**
  * Configuration layer enumeration

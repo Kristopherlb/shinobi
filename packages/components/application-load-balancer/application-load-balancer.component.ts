@@ -15,7 +15,7 @@ import {
   ApplicationLoadBalancerConfig,
   AlbListenerConfig,
   AlbTargetGroupConfig
-} from './application-load-balancer.builder';
+} from './application-load-balancer.builder.js';
 
 export class ApplicationLoadBalancerComponent extends Component {
   private loadBalancer?: elbv2.ApplicationLoadBalancer;

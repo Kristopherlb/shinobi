@@ -4,4 +4,4 @@
  */
 
 // Export main template engine
-export * from './template-engine';
+export * from './template-engine.js';

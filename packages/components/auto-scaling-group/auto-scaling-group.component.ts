@@ -21,7 +21,7 @@ import {
   AutoScalingGroupConfig,
   AutoScalingGroupComponentConfigBuilder,
   AutoScalingGroupAlarmConfig
-} from './auto-scaling-group.builder';
+} from './auto-scaling-group.builder.js';
 
 /**
  * Configuration interface for Auto Scaling Group component

@@ -2,8 +2,8 @@ import { jest } from '@jest/globals';
 import { App, Stack } from 'aws-cdk-lib';
 import { Template, Match } from 'aws-cdk-lib/assertions';
 
-import { ApiGatewayRestComponent } from '../src/api-gateway-rest.component';
-import { ApiGatewayRestConfigBuilder } from '../src/api-gateway-rest.builder';
+import { ApiGatewayRestComponent } from '../src/api-gateway-rest.component.js';
+import { ApiGatewayRestConfigBuilder } from '../src/api-gateway-rest.builder.js';
 import { ComponentContext, ComponentSpec } from '@shinobi/core';
 
 type Mutable<T> = {

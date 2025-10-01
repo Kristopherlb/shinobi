@@ -6,7 +6,7 @@
  * and lifecycle management.
  */
 
-import { SERVICE_TOKENS, WebUIServices } from './service-tokens';
+import { SERVICE_TOKENS, WebUIServices } from './service-tokens.js';
 
 /**
  * DI Container for WebUI services

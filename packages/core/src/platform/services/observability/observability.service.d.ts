@@ -1,6 +1,6 @@
-import { ComponentContext, ComponentSpec } from '../../contracts/component-interfaces';
-import { ObservabilityConfig, ObservabilityOptions } from '../../contracts/component';
-import { GovernanceMetadata } from '../governance';
+import { ComponentContext, ComponentSpec } from '../../contracts/component-interfaces.js';
+import { ObservabilityConfig, ObservabilityOptions } from '../../contracts/component.js';
+import { GovernanceMetadata } from '../governance/index.js';
 export interface ObservabilityBuildInput {
     context: ComponentContext;
     spec: ComponentSpec;

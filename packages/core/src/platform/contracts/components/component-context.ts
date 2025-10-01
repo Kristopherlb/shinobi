@@ -1,7 +1,7 @@
 // src/platform/contracts/components/component-context.ts
 // Component context for factory instantiation
 
-import { ComplianceFramework } from '../bindings';
+import { ComplianceFramework } from '../bindings.js';
 
 /**
  * Component context containing environment and configuration data

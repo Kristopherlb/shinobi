@@ -2,7 +2,7 @@ import { Construct } from 'constructs';
 import {
   SnsTopicComponentConfigBuilder,
   SnsTopicConfig
-} from '../sns-topic.builder';
+} from '../sns-topic.builder.js';
 import { ComponentContext, ComponentSpec } from '@shinobi/core';
 
 type Framework = 'commercial' | 'fedramp-moderate' | 'fedramp-high';

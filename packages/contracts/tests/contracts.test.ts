@@ -1,4 +1,4 @@
-import { ComponentSpec, ComponentConfig, ComponentBinding } from '../src/index';
+import { ComponentSpec, ComponentConfig, ComponentBinding } from '../src/index.js';
 
 test('ComponentSpec interface is defined', () => {
   const comp: ComponentSpec = { name: "example-component", type: "example-type", config: {} };

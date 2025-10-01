@@ -1,5 +1,5 @@
 // Neutralized compliance enforcer: manifest-driven config only; no framework branching
-import { EnhancedBindingContext, ComplianceAction } from './bindings';
+import { EnhancedBindingContext, ComplianceAction } from './bindings.js';
 
 export interface ComplianceEnforcementResult {
   compliant: boolean;

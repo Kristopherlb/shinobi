@@ -23,7 +23,7 @@
     "test": {
       "executor": "@nx/jest:jest",
       "options": {
-        "jestConfig": "packages/components/s3-bucket/jest.config.js",
+        "jestConfig": "packages/components/s3-bucket/jest.config.mjs",
         "passWithNoTests": true
       }
     },

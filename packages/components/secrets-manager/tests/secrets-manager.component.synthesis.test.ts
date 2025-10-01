@@ -5,9 +5,9 @@
 
 import { Template, Match } from 'aws-cdk-lib/assertions';
 import { App, Stack } from 'aws-cdk-lib';
-import { SecretsManagerComponentComponent } from '../secrets-manager.component';
-import { SecretsManagerComponentConfigBuilder, SecretsManagerConfig } from '../secrets-manager.builder';
-import { ComponentContext, ComponentSpec } from '../../../platform/contracts/component-interfaces';
+import { SecretsManagerComponentComponent } from '../secrets-manager.component.js';
+import { SecretsManagerComponentConfigBuilder, SecretsManagerConfig } from '../secrets-manager.builder.js';
+import { ComponentContext, ComponentSpec } from '../../../platform/contracts/component-interfaces.js';
 
 jest.mock('@platform/logger', () => ({
   Logger: {
