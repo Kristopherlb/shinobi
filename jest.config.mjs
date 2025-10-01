@@ -4,7 +4,7 @@ import url from 'node:url';
 const __dirname = path.dirname(url.fileURLToPath(import.meta.url));
 
 export default {
-  transform: { '^.+\\.[tj]sx?$': ['@swc/jest'] },
+  transform: { '^.+\\.[tj]sx?$': ['ts-jest', { tsconfig: 'tsconfig.jest.json' }] },
   transformIgnorePatterns: ['node_modules/(?!(uuid|@aws-sdk)/)'],
   testEnvironment: 'node',
   moduleFileExtensions: ['ts', 'tsx', 'js', 'jsx', 'json', 'node'],

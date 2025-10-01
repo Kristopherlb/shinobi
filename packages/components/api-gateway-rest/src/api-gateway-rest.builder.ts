@@ -60,10 +60,26 @@ export interface ApiGatewayRestMonitoringThresholds {
   lowThroughput?: number;
 }
 
+export interface ApiGatewayRestCustomMetricsConfig {
+  name: string;
+  namespace: string;
+  dimensions?: Record<string, string>;
+  statistic: 'Average' | 'Sum' | 'Maximum' | 'Minimum' | 'SampleCount';
+  period: number;
+  unit?: string;
+}
+
 export interface ApiGatewayRestMonitoringConfig {
   detailedMetrics?: boolean;
   tracingEnabled?: boolean;
   thresholds?: ApiGatewayRestMonitoringThresholds;
+  customMetrics?: ApiGatewayRestCustomMetricsConfig[];
+  businessMetrics?: {
+    transactionVolume?: boolean;
+    userActivity?: boolean;
+    featureUsage?: boolean;
+    performanceMetrics?: boolean;
+  };
 }
 
 export interface ApiGatewayRestThrottlingConfig {
@@ -85,6 +101,38 @@ export interface ApiGatewayRestWafConfig {
   webAclArn?: string;
 }
 
+export interface ApiGatewayRestResourcePolicyConfig {
+  document?: string;
+  allowFromVpcs?: string[];
+  allowFromIpRanges?: string[];
+  denyFromIpRanges?: string[];
+  allowFromAwsAccounts?: string[];
+  allowFromRegions?: string[];
+  denyFromRegions?: string[];
+}
+
+export interface ApiGatewayRestRequestValidationConfig {
+  validateRequestBody?: boolean;
+  validateRequestParameters?: boolean;
+  validateHeaders?: boolean;
+  requiredHeaders?: string[];
+  bodySchema?: Record<string, any>;
+}
+
+export interface ApiGatewayRestAdvancedThrottlingConfig {
+  perMethodThrottling?: boolean;
+  burstLimit?: number;
+  rateLimit?: number;
+  quotaLimit?: number;
+  quotaPeriod?: 'DAY' | 'WEEK' | 'MONTH';
+  customThrottlingRules?: Array<{
+    path: string;
+    method: string;
+    burstLimit: number;
+    rateLimit: number;
+  }>;
+}
+
 export interface ApiGatewayRestConfig {
   apiName?: string;
   description?: string;
@@ -94,6 +142,7 @@ export interface ApiGatewayRestConfig {
   cors?: ApiGatewayRestCorsConfig;
   authentication?: ApiGatewayRestAuthenticationConfig;
   throttling?: ApiGatewayRestThrottlingConfig;
+  advancedThrottling?: ApiGatewayRestAdvancedThrottlingConfig;
   logging?: ApiGatewayRestLoggingConfig;
   monitoring?: ApiGatewayRestMonitoringConfig;
   tracing?: {
@@ -101,6 +150,8 @@ export interface ApiGatewayRestConfig {
   };
   usagePlan?: ApiGatewayRestUsagePlanConfig;
   waf?: ApiGatewayRestWafConfig;
+  resourcePolicy?: ApiGatewayRestResourcePolicyConfig;
+  requestValidation?: ApiGatewayRestRequestValidationConfig;
   tags?: Record<string, string>;
 }
 
@@ -341,6 +392,70 @@ export const API_GATEWAY_REST_CONFIG_SCHEMA: ComponentConfigSchema = {
             },
           },
         },
+        customMetrics: {
+          type: 'array',
+          description: 'Custom CloudWatch metrics configuration.',
+          items: {
+            type: 'object',
+            additionalProperties: false,
+            required: ['name', 'namespace', 'statistic', 'period'],
+            properties: {
+              name: {
+                type: 'string',
+                description: 'Metric name.',
+              },
+              namespace: {
+                type: 'string',
+                description: 'CloudWatch namespace for the metric.',
+              },
+              dimensions: {
+                type: 'object',
+                description: 'Metric dimensions.',
+                additionalProperties: { type: 'string' },
+              },
+              statistic: {
+                type: 'string',
+                enum: ['Average', 'Sum', 'Maximum', 'Minimum', 'SampleCount'],
+                description: 'Metric statistic type.',
+              },
+              period: {
+                type: 'number',
+                description: 'Metric period in seconds.',
+              },
+              unit: {
+                type: 'string',
+                description: 'Metric unit (e.g., Count, Seconds, Bytes).',
+              },
+            },
+          },
+        },
+        businessMetrics: {
+          type: 'object',
+          additionalProperties: false,
+          description: 'Business metrics configuration for enhanced monitoring.',
+          properties: {
+            transactionVolume: {
+              type: 'boolean',
+              description: 'Enable transaction volume tracking.',
+              default: false,
+            },
+            userActivity: {
+              type: 'boolean',
+              description: 'Enable user activity monitoring.',
+              default: false,
+            },
+            featureUsage: {
+              type: 'boolean',
+              description: 'Enable feature usage tracking.',
+              default: false,
+            },
+            performanceMetrics: {
+              type: 'boolean',
+              description: 'Enable advanced performance metrics.',
+              default: false,
+            },
+          },
+        },
       },
     },
     tracing: {
@@ -407,6 +522,135 @@ export const API_GATEWAY_REST_CONFIG_SCHEMA: ComponentConfigSchema = {
         webAclArn: {
           type: 'string',
           description: 'ARN of the WAF WebACL to associate with the API stage.',
+        },
+      },
+    },
+    resourcePolicy: {
+      type: 'object',
+      additionalProperties: false,
+      description: 'API Gateway resource policy for access control.',
+      properties: {
+        document: {
+          type: 'string',
+          description: 'Custom resource policy document in JSON format.',
+        },
+        allowFromVpcs: {
+          type: 'array',
+          description: 'List of VPC IDs allowed to access the API.',
+          items: { type: 'string' },
+        },
+        allowFromIpRanges: {
+          type: 'array',
+          description: 'List of IP ranges allowed to access the API.',
+          items: { type: 'string' },
+        },
+        denyFromIpRanges: {
+          type: 'array',
+          description: 'List of IP ranges denied access to the API.',
+          items: { type: 'string' },
+        },
+        allowFromAwsAccounts: {
+          type: 'array',
+          description: 'List of AWS account IDs allowed to access the API.',
+          items: { type: 'string' },
+        },
+        allowFromRegions: {
+          type: 'array',
+          description: 'List of AWS regions allowed to access the API.',
+          items: { type: 'string' },
+        },
+        denyFromRegions: {
+          type: 'array',
+          description: 'List of AWS regions denied access to the API.',
+          items: { type: 'string' },
+        },
+      },
+    },
+    requestValidation: {
+      type: 'object',
+      additionalProperties: false,
+      description: 'Request validation configuration for enhanced security.',
+      properties: {
+        validateRequestBody: {
+          type: 'boolean',
+          description: 'Enable request body validation.',
+          default: false,
+        },
+        validateRequestParameters: {
+          type: 'boolean',
+          description: 'Enable request parameter validation.',
+          default: false,
+        },
+        validateHeaders: {
+          type: 'boolean',
+          description: 'Enable request header validation.',
+          default: false,
+        },
+        requiredHeaders: {
+          type: 'array',
+          description: 'List of required headers for all requests.',
+          items: { type: 'string' },
+        },
+        bodySchema: {
+          type: 'object',
+          description: 'JSON schema for request body validation.',
+          additionalProperties: true,
+        },
+      },
+    },
+    advancedThrottling: {
+      type: 'object',
+      additionalProperties: false,
+      description: 'Advanced throttling configuration with per-method controls.',
+      properties: {
+        perMethodThrottling: {
+          type: 'boolean',
+          description: 'Enable per-method throttling configuration.',
+          default: false,
+        },
+        burstLimit: {
+          type: 'number',
+          description: 'Global burst limit for all methods.',
+        },
+        rateLimit: {
+          type: 'number',
+          description: 'Global rate limit for all methods.',
+        },
+        quotaLimit: {
+          type: 'number',
+          description: 'Global quota limit for all methods.',
+        },
+        quotaPeriod: {
+          type: 'string',
+          enum: ['DAY', 'WEEK', 'MONTH'],
+          description: 'Global quota period for all methods.',
+        },
+        customThrottlingRules: {
+          type: 'array',
+          description: 'Custom throttling rules for specific paths and methods.',
+          items: {
+            type: 'object',
+            additionalProperties: false,
+            required: ['path', 'method', 'burstLimit', 'rateLimit'],
+            properties: {
+              path: {
+                type: 'string',
+                description: 'API path pattern (e.g., /users/{id}).',
+              },
+              method: {
+                type: 'string',
+                description: 'HTTP method (GET, POST, PUT, DELETE, etc.).',
+              },
+              burstLimit: {
+                type: 'number',
+                description: 'Burst limit for this specific path/method.',
+              },
+              rateLimit: {
+                type: 'number',
+                description: 'Rate limit for this specific path/method.',
+              },
+            },
+          },
         },
       },
     },

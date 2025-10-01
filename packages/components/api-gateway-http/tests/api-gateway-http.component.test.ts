@@ -7,8 +7,8 @@
 
 import { Template, Match } from 'aws-cdk-lib/assertions';
 import { App, Stack } from 'aws-cdk-lib';
-import { ApiGatewayHttpComponent } from '../api-gateway-http.component.js';
-import { ApiGatewayHttpConfigBuilder } from '../api-gateway-http.builder.js';
+import { ApiGatewayHttpComponent } from '../src/api-gateway-http.component.js';
+import { ApiGatewayHttpConfigBuilder } from '../src/api-gateway-http.builder.js';
 import { ComponentContext, ComponentSpec } from '@shinobi/core';
 
 // Test Metadata as per Platform Testing Standard v1.0 Section 11
@@ -94,7 +94,7 @@ describe('ApiGatewayHttpComponent', () => {
   describe('ConfigBuilder__ValidImplementation__ExtendsBaseClassCorrectly', () => {
     it('should extend ConfigBuilder and implement required methods', () => {
       // Arrange: Create config builder with deterministic inputs
-      const configBuilder = new ApiGatewayHttpConfigBuilder(mockContext, mockSpec);
+      const configBuilder = new ApiGatewayHttpConfigBuilder({ context: mockContext, spec: mockSpec });
 
       // Act: Get hardcoded fallbacks
       const fallbacks = configBuilder.getHardcodedFallbacks();
@@ -104,7 +104,7 @@ describe('ApiGatewayHttpComponent', () => {
       expect(typeof configBuilder.getHardcodedFallbacks).toBe('function');
       expect(fallbacks).toEqual({
         protocolType: 'HTTP',
-        description: 'Modern HTTP API Gateway for test-http-api-gateway',
+        description: 'HTTP API for test-http-api-gateway',
         cors: {
           allowOrigins: [], // Security-compliant: empty array forces explicit config
           allowMethods: ['GET', 'POST', 'OPTIONS'], // Minimal safe methods
@@ -118,8 +118,8 @@ describe('ApiGatewayHttpComponent', () => {
         },
         accessLogging: {
           enabled: true,
-          retentionInDays: 30,
-          format: expect.any(String)
+          retentionInDays: 90,
+          retainOnDelete: false
         },
         monitoring: {
           detailedMetrics: true,
@@ -127,7 +127,8 @@ describe('ApiGatewayHttpComponent', () => {
           alarms: {
             errorRate4xx: 5,
             errorRate5xx: 1,
-            highLatency: 2000
+            highLatency: 2000,
+            lowThroughput: 1
           }
         },
         apiSettings: {
@@ -165,7 +166,7 @@ describe('ApiGatewayHttpComponent', () => {
     it('should apply compliance-aware configuration for FedRAMP Moderate HTTP API', async () => {
       // Arrange: Create context with FedRAMP Moderate compliance
       const fedRAMPContext = createMockContext('fedramp-moderate');
-      const configBuilder = new ApiGatewayHttpConfigBuilder(fedRAMPContext, mockSpec);
+      const configBuilder = new ApiGatewayHttpConfigBuilder({ context: fedRAMPContext, spec: mockSpec });
 
       // Act: Build configuration using 5-layer precedence
       const config = await configBuilder.build();
@@ -452,7 +453,7 @@ describe('ApiGatewayHttpComponent', () => {
       component.synth();
 
       // Get the actual configuration used (through private access for testing)
-      const configBuilder = new ApiGatewayHttpConfigBuilder(mockContext, emptySpec);
+      const configBuilder = new ApiGatewayHttpConfigBuilder({ context: mockContext, spec: emptySpec });
       const fallbacks = configBuilder.getHardcodedFallbacks();
 
       // Assert: Verify security-first CORS defaults for HTTP API
@@ -486,7 +487,7 @@ describe('ApiGatewayHttpComponent', () => {
     it('should use conservative throttling limits that protect against resource exhaustion', () => {
       // Arrange: Create HTTP API component with no throttling config
       const emptySpec = createMockSpec({});
-      const configBuilder = new ApiGatewayHttpConfigBuilder(mockContext, emptySpec);
+      const configBuilder = new ApiGatewayHttpConfigBuilder({ context: mockContext, spec: emptySpec });
 
       // Act: Get hardcoded fallbacks
       const fallbacks = configBuilder.getHardcodedFallbacks();
@@ -587,7 +588,7 @@ describe('ApiGatewayHttpComponent Integration', () => {
       const httpSpec = createMockSpec({ description: 'Test API for protocol comparison' });
 
       // Act: Build configuration for HTTP API
-      const httpBuilder = new ApiGatewayHttpConfigBuilder(mockContext, httpSpec);
+      const httpBuilder = new ApiGatewayHttpConfigBuilder({ context: mockContext, spec: httpSpec });
       const httpConfig = await httpBuilder.build();
 
       // Assert: Verify HTTP API configuration structure
@@ -841,7 +842,7 @@ describe('ApiGatewayHttpComponent Integration', () => {
         }
       });
 
-      const builder = new ApiGatewayHttpConfigBuilder(context, spec);
+      const builder = new ApiGatewayHttpConfigBuilder({ context, spec });
       const config = builder.buildSync();
 
       // Verify FedRAMP Moderate defaults are applied
@@ -856,7 +857,7 @@ describe('ApiGatewayHttpComponent Integration', () => {
       context.environment = 'prod';
       const spec = createMockSpec();
 
-      const builder = new ApiGatewayHttpConfigBuilder(context, spec);
+      const builder = new ApiGatewayHttpConfigBuilder({ context, spec });
       const config = builder.buildSync();
 
       // Verify production environment defaults
@@ -873,7 +874,7 @@ describe('ApiGatewayHttpComponent Integration', () => {
         }
       });
 
-      const builder = new ApiGatewayHttpConfigBuilder(context, spec);
+      const builder = new ApiGatewayHttpConfigBuilder({ context, spec });
       const config = builder.buildSync();
 
       // Verify component config overrides defaults

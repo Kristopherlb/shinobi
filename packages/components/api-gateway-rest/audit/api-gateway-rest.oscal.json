@@ -1,0 +1,196 @@
+{
+  "oscal-version": "1.0.4",
+  "metadata": {
+    "title": "API Gateway REST Component - FedRAMP Compliance Assessment",
+    "last-modified": "2025-01-08T00:00:00Z",
+    "version": "1.0.0",
+    "oscal-version": "1.0.4",
+    "roles": [
+      {
+        "id": "component-owner",
+        "title": "Component Owner",
+        "description": "Responsible for component development and maintenance"
+      },
+      {
+        "id": "security-reviewer",
+        "title": "Security Reviewer", 
+        "description": "Responsible for security compliance review"
+      }
+    ],
+    "parties": [
+      {
+        "uuid": "shinobi-platform",
+        "type": "organization",
+        "name": "Shinobi Platform",
+        "email-addresses": ["platform@shinobi.dev"]
+      }
+    ]
+  },
+  "assessment-results": {
+    "uuid": "api-gateway-rest-assessment-2025-01-08",
+    "title": "API Gateway REST Component Security Assessment",
+    "description": "Comprehensive security assessment of the API Gateway REST component for FedRAMP compliance",
+    "start": "2025-01-08T00:00:00Z",
+    "reviewed-controls": {
+      "description": "FedRAMP controls reviewed for API Gateway REST component",
+      "control-selections": [
+        {
+          "description": "Access Control (AC) family",
+          "include-controls": [
+            {
+              "control-id": "ac-2",
+              "statement-id": ["ac-2_smt"]
+            },
+            {
+              "control-id": "ac-3", 
+              "statement-id": ["ac-3_smt"]
+            },
+            {
+              "control-id": "ac-4",
+              "statement-id": ["ac-4_smt"]
+            }
+          ]
+        },
+        {
+          "description": "Audit and Accountability (AU) family",
+          "include-controls": [
+            {
+              "control-id": "au-2",
+              "statement-id": ["au-2_smt"]
+            },
+            {
+              "control-id": "au-3",
+              "statement-id": ["au-3_smt"]
+            },
+            {
+              "control-id": "au-6",
+              "statement-id": ["au-6_smt"]
+            }
+          ]
+        }
+      ]
+    },
+    "results": [
+      {
+        "uuid": "api-gateway-rest-results",
+        "title": "API Gateway REST Security Assessment Results",
+        "description": "Assessment results for API Gateway REST component security controls",
+        "start": "2025-01-08T00:00:00Z",
+        "end": "2025-01-08T23:59:59Z",
+        "findings": [
+          {
+            "uuid": "ac-2-finding",
+            "title": "Account Management Implementation",
+            "description": "API Gateway REST component implements proper account management through IAM integration",
+            "status": "satisfied",
+            "target": {
+              "type": "component",
+              "title": "API Gateway REST Component",
+              "description": "AWS API Gateway REST API component"
+            },
+            "implementation-status": {
+              "state": "implemented",
+              "remarks": "Component supports IAM-based authentication and authorization with proper access controls"
+            }
+          },
+          {
+            "uuid": "au-2-finding", 
+            "title": "Audit Event Generation",
+            "description": "API Gateway REST component generates comprehensive audit logs",
+            "status": "satisfied",
+            "target": {
+              "type": "component",
+              "title": "API Gateway REST Component",
+              "description": "AWS API Gateway REST API component"
+            },
+            "implementation-status": {
+              "state": "implemented",
+              "remarks": "Component implements CloudWatch Logs integration with structured logging and configurable retention"
+            }
+          }
+        ],
+        "observations": [
+          {
+            "uuid": "security-observation-1",
+            "title": "Security Configuration",
+            "description": "Component implements security-by-default configuration with comprehensive access controls",
+            "methods": ["code-review", "static-analysis"],
+            "subjects": [
+              {
+                "type": "component",
+                "title": "API Gateway REST Component"
+              }
+            ],
+            "collected": "2025-01-08T00:00:00Z",
+            "findings": [
+              "ac-2-finding",
+              "au-2-finding"
+            ]
+          }
+        ]
+      }
+    ]
+  },
+  "system-security-plan": {
+    "uuid": "api-gateway-rest-ssp",
+    "metadata": {
+      "title": "API Gateway REST Component System Security Plan",
+      "last-modified": "2025-01-08T00:00:00Z",
+      "version": "1.0.0"
+    },
+    "system-characteristics": {
+      "system-name": "API Gateway REST Component",
+      "system-name-short": "api-gateway-rest",
+      "description": "AWS API Gateway REST API component providing secure, scalable API management capabilities",
+      "system-information": {
+        "information-type": "operational",
+        "value": "Production API Gateway component for secure API management"
+      }
+    },
+    "control-implementation": {
+      "description": "FedRAMP control implementation for API Gateway REST component",
+      "implemented-requirements": [
+        {
+          "control-id": "ac-2",
+          "description": "Account Management",
+          "props": [
+            {
+              "name": "implementation-status",
+              "value": "implemented"
+            }
+          ],
+          "statements": [
+            {
+              "statement-id": "ac-2_smt",
+              "description": "API Gateway REST component implements account management through IAM integration",
+              "status": {
+                "state": "implemented"
+              },
+              "remarks": "Component supports IAM-based authentication with proper access controls and user management"
+            }
+          ]
+        },
+        {
+          "control-id": "au-2",
+          "description": "Audit Events",
+          "props": [
+            {
+              "name": "implementation-status", 
+              "value": "implemented"
+            }
+          ],
+          "statements": [
+            {
+              "statement-id": "au-2_smt",
+              "description": "API Gateway REST component generates comprehensive audit events",
+              "status": {
+                "state": "implemented"
+              },
+              "remarks": "Component implements CloudWatch Logs with structured audit logging and configurable retention"
+            }
+          ]
+        }
+      ]
+    }
+  }
+}

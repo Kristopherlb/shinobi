@@ -12,9 +12,7 @@
   },
   "include": [
     "index.ts",
-    "*.component.ts",
-    "*.builder.ts",
-    "*.creator.ts",
+    "src/**/*.ts",
     "Config.schema.json"
   ],
   "exclude": [

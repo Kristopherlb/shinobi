@@ -6,7 +6,7 @@
  */
 
 import { ConfigBuilder, ConfigBuilderContext } from '@shinobi/core';
-import configSchema from './Config.schema.json';
+import configSchema from '../Config.schema.json' with { type: 'json' };
 
 /**
  * Configuration interface for Modern HTTP API Gateway component
@@ -342,7 +342,7 @@ export class ApiGatewayHttpConfigBuilder extends ConfigBuilder<ApiGatewayHttpCon
   public getHardcodedFallbacks(): Record<string, any> {
     return {
       protocolType: 'HTTP',
-      description: `HTTP API for ${this.builderContext.spec.name}`,
+      description: `HTTP API for ${this.builderContext.spec.name || 'unnamed-service'}`,
       cors: {
         allowOrigins: [],
         allowHeaders: ['Content-Type', 'Authorization'],
@@ -417,7 +417,15 @@ export class ApiGatewayHttpConfigBuilder extends ConfigBuilder<ApiGatewayHttpCon
       ...monitoring,
       detailedMetrics: monitoring.detailedMetrics ?? true,
       tracingEnabled: monitoring.tracingEnabled ?? true,
-      alarms: monitoring.alarms ? { ...monitoring.alarms } : undefined
+      alarms: monitoring.alarms ? { ...monitoring.alarms } : undefined,
+      customMetrics: monitoring.customMetrics?.map(metric => ({
+        name: metric.name,
+        namespace: metric.namespace ?? 'Custom/API-Gateway',
+        dimensions: metric.dimensions ?? {},
+        statistic: metric.statistic ?? 'Sum',
+        period: metric.period ?? 300,
+        unit: metric.unit ?? 'Count'
+      }))
     };
 
     const security = normalised.security ?? {};

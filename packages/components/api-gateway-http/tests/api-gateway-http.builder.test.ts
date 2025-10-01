@@ -3,7 +3,7 @@
  * Implements Platform Testing Standard v1.0 - ConfigBuilder Testing
  */
 
-import { ApiGatewayHttpConfigBuilder, ApiGatewayHttpConfig } from '../api-gateway-http.builder.js';
+import { ApiGatewayHttpConfigBuilder, ApiGatewayHttpConfig } from '../src/api-gateway-http.builder.js';
 import { ComponentContext, ComponentSpec } from '@shinobi/core';
 
 // Helper factories
