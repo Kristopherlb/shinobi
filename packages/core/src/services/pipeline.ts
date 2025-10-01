@@ -1,9 +1,9 @@
 import * as fs from 'fs/promises';
 import * as YAML from 'yaml';
-import Ajv from 'ajv';
-import addFormats from 'ajv-formats';
-import { Logger } from '../platform/logger/src';
-import { SchemaManager } from './schema-manager';
+import AjvImport, { type Ajv as AjvInstance, type ErrorObject } from 'ajv';
+import addFormatsImport from 'ajv-formats';
+import { Logger } from '../platform/logger/src/index.js';
+import { SchemaManager } from './schema-manager.js';
 
 export interface ValidationResult {
   manifest: any;
@@ -21,10 +21,13 @@ interface ValidationPipelineDependencies {
 }
 
 export class ValidationPipeline {
-  private ajv: Ajv;
+  private ajv: AjvInstance;
 
   constructor(private dependencies: ValidationPipelineDependencies) {
-    this.ajv = new Ajv({ allErrors: true, verbose: true });
+    const AjvConstructor = AjvImport as unknown as typeof import('ajv').default;
+    const addFormats = addFormatsImport as unknown as (ajv: AjvInstance) => AjvInstance;
+
+    this.ajv = new AjvConstructor({ allErrors: true, verbose: true });
     addFormats(this.ajv);
   }
 
@@ -104,8 +107,8 @@ export class ValidationPipeline {
     const valid = validate(manifest);
 
     if (!valid) {
-      const errors = validate.errors || [];
-      const errorMessages = errors.map(error => {
+      const errors = (validate.errors ?? []) as ErrorObject[];
+      const errorMessages = errors.map((error) => {
         const path = error.instancePath || error.schemaPath || 'root';
         const message = error.message || 'validation failed';
         const data = error.data !== undefined ? ` (found: ${JSON.stringify(error.data)})` : '';
@@ -127,7 +130,7 @@ export class ValidationPipeline {
     this.dependencies.logger.debug(`Hydrating context for environment: ${environment}`);
 
     // Use dedicated ContextHydrator service for enhanced functionality
-    const { ContextHydrator } = await import('../services/context-hydrator');
+    const { ContextHydrator } = await import('../services/context-hydrator.js');
     const contextHydrator = new ContextHydrator({
       logger: this.dependencies.logger,
       manifestPath: manifestPath

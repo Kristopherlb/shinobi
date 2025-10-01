@@ -5,7 +5,7 @@
 
 import * as iam from 'aws-cdk-lib/aws-iam';
 import * as s3 from 'aws-cdk-lib/aws-s3';
-import { EnhancedBinderStrategy } from '../enhanced-binder-strategy';
+import { EnhancedBinderStrategy } from '../enhanced-binder-strategy.js';
 import {
   EnhancedBindingContext,
   EnhancedBindingResult,
@@ -14,7 +14,7 @@ import {
   ComplianceAction,
   StorageCapability,
   Capability
-} from '../bindings';
+} from '../bindings.js';
 
 /**
  * Storage binder strategy for S3 bucket connections

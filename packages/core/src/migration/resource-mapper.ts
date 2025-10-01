@@ -3,9 +3,9 @@
  * Phase 2: Maps CloudFormation resources to platform components and generates manifest
  */
 
-import { Logger } from '../core-engine/logger';
-import { CloudFormationResource, StackAnalysisResult } from './cloudformation-analyzer';
-import { UnmappableResource } from './migration-engine';
+import { Logger } from '../core-engine/logger.js';
+import { CloudFormationResource, StackAnalysisResult } from './cloudformation-analyzer.js';
+import { UnmappableResource } from './migration-engine.js';
 
 export interface ComponentMapping {
   name: string;

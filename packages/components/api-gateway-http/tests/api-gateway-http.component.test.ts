@@ -7,8 +7,8 @@
 
 import { Template, Match } from 'aws-cdk-lib/assertions';
 import { App, Stack } from 'aws-cdk-lib';
-import { ApiGatewayHttpComponent } from '../api-gateway-http.component';
-import { ApiGatewayHttpConfigBuilder } from '../api-gateway-http.builder';
+import { ApiGatewayHttpComponent } from '../api-gateway-http.component.js';
+import { ApiGatewayHttpConfigBuilder } from '../api-gateway-http.builder.js';
 import { ComponentContext, ComponentSpec } from '@shinobi/core';
 
 // Test Metadata as per Platform Testing Standard v1.0 Section 11

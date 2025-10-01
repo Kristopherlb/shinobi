@@ -1,8 +1,8 @@
 import type { Express } from "express";
 import { createServer, type Server } from "http";
-import { storage } from "./storage";
-import { localDevManager } from "./localDevelopment";
-import featureFlagsRouter from "./routes/feature-flags";
+import { storage } from "./storage.js";
+import { localDevManager } from "./localDevelopment.js";
+import featureFlagsRouter from "./routes/feature-flags.js";
 
 export async function registerRoutes(app: Express): Promise<Server> {
   // Service creation endpoint for onboarding wizard

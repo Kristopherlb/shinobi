@@ -1,141 +1,88 @@
 /**
- * Creator for OpenFeatureProviderComponent Component
- * 
- * Implements the ComponentCreator pattern as defined in the Platform Component API Contract.
- * Makes the component discoverable by the platform and provides factory methods.
+ * Creator for the OpenFeature provider component.
  */
 
 import { Construct } from 'constructs';
-import { 
-  ComponentSpec, 
-  ComponentContext, 
-  IComponentCreator 
-} from '../../platform/contracts/component-interfaces';
-import { OpenFeatureProviderComponentComponent } from './openfeature-provider.component';
-import { OpenFeatureProviderConfig, OPENFEATURE_PROVIDER_CONFIG_SCHEMA } from './openfeature-provider.builder';
+import {
+  ComponentSpec,
+  ComponentContext,
+  IComponent,
+  IComponentCreator
+} from '@shinobi/core';
+import { OpenFeatureProviderComponent } from './openfeature-provider.component.js';
+import {
+  OpenFeatureProviderComponentConfig,
+  OpenFeatureProviderComponentConfigBuilder,
+  OPENFEATURE_PROVIDER_CONFIG_SCHEMA
+} from './openfeature-provider.builder.js';
 
-/**
- * Creator class for OpenFeatureProviderComponent component
- * 
- * Responsible for:
- * - Component factory creation
- * - Early validation of component specifications
- * - Schema definition and validation
- * - Component type identification
- */
 export class OpenFeatureProviderComponentCreator implements IComponentCreator {
-  
-  /**
-   * Component type identifier
-   */
   public readonly componentType = 'openfeature-provider';
-  
-  /**
-   * Component display name
-   */
-  public readonly displayName = 'Open Feature Provider Component';
-  
-  /**
-   * Component description
-   */
-  public readonly description = 'OpenFeature Provider Component';
-  
-  /**
-   * Component category for organization
-   */
-  public readonly category = 'feature-flags';
-  
-  /**
-   * AWS service this component manages
-   */
-  public readonly awsService = 'APPCONFIG';
-  
-  /**
-   * Component tags for discovery
-   */
-  public readonly tags = [
-    'openfeature-provider',
-    'feature-flags',
-    'aws',
-    'appconfig'
-  ];
-  
-  /**
-   * JSON Schema for component configuration validation
-   */
+  public readonly displayName = 'OpenFeature Provider';
+  public readonly description = 'Provisions feature flag provider infrastructure (AppConfig, LaunchDarkly, Flagsmith).';
+  public readonly category = 'integration';
+  public readonly awsService = 'AppConfig';
+  public readonly tags = ['openfeature', 'feature-flags', 'appconfig'];
   public readonly configSchema = OPENFEATURE_PROVIDER_CONFIG_SCHEMA;
-  
-  /**
-   * Factory method to create component instances
-   */
+
   public createComponent(
-    scope: Construct, 
-    spec: ComponentSpec, 
+    scope: Construct,
+    spec: ComponentSpec,
     context: ComponentContext
-  ): OpenFeatureProviderComponentComponent {
-    return new OpenFeatureProviderComponentComponent(scope, spec, context);
+  ): IComponent {
+    return new OpenFeatureProviderComponent(scope, spec.name, context, spec);
   }
-  
-  /**
-   * Validates component specification beyond JSON Schema validation
-   */
+
   public validateSpec(
-    spec: ComponentSpec, 
+    spec: ComponentSpec,
     context: ComponentContext
   ): { valid: boolean; errors: string[] } {
     const errors: string[] = [];
-    const config = spec.config as OpenFeatureProviderConfig;
-    
-    // Validate component name
-    if (!spec.name || spec.name.length === 0) {
-      errors.push('Component name is required');
-    } else if (!/^[a-zA-Z][a-zA-Z0-9-_]*$/.test(spec.name)) {
-      errors.push('Component name must start with a letter and contain only alphanumeric characters, hyphens, and underscores');
+    const config = spec.config as Partial<OpenFeatureProviderComponentConfig> | undefined;
+
+    if (!spec.name || !/^[a-zA-Z][a-zA-Z0-9-_]*$/.test(spec.name)) {
+      errors.push('Component name must start with a letter and contain only alphanumeric characters, hyphens, or underscores.');
     }
-    
-    // TODO: Add component-specific validations here
-    
-    // Environment-specific validations
-    if (context.environment === 'prod') {
-      if (!config?.monitoring?.enabled) {
-        errors.push('Monitoring must be enabled in production environment');
+
+    let resolvedConfig: OpenFeatureProviderComponentConfig | undefined;
+    try {
+      resolvedConfig = new OpenFeatureProviderComponentConfigBuilder({ context, spec }).buildSync();
+    } catch (error) {
+      errors.push(`Unable to resolve OpenFeature provider configuration: ${(error as Error).message}`);
+    }
+
+    if (resolvedConfig?.provider === 'aws-appconfig') {
+      const appConfig = resolvedConfig.awsAppConfig!;
+      if (!appConfig.applicationName) {
+        errors.push('awsAppConfig.applicationName is required when provider is aws-appconfig.');
       }
-      
-      // TODO: Add production-specific validations
+      if (!appConfig.environmentName) {
+        errors.push('awsAppConfig.environmentName is required when provider is aws-appconfig.');
+      }
     }
-    
+
+    if (context.environment === 'prod') {
+      const monitors = resolvedConfig?.awsAppConfig?.monitors ?? config?.awsAppConfig?.monitors ?? [];
+      if (resolvedConfig?.provider === 'aws-appconfig' && monitors.length === 0) {
+        errors.push('At least one monitor must be configured for AppConfig deployments in production.');
+      }
+    }
+
     return {
       valid: errors.length === 0,
       errors
     };
   }
-  
-  /**
-   * Returns the capabilities this component provides when synthesized
-   */
+
   public getProvidedCapabilities(): string[] {
-    return [
-      'feature-flags:openfeature-provider',
-      'monitoring:openfeature-provider'
-    ];
+    return ['openfeature:provider'];
   }
-  
-  /**
-   * Returns the capabilities this component requires from other components
-   */
+
   public getRequiredCapabilities(): string[] {
-    return [
-      // TODO: Define required capabilities
-    ];
+    return [];
   }
-  
-  /**
-   * Returns construct handles that will be registered by this component
-   */
+
   public getConstructHandles(): string[] {
-    return [
-      'main'
-      // TODO: Add additional construct handles if needed
-    ];
+    return ['main', 'application', 'environment', 'configurationProfile', 'deploymentStrategy', 'retrieverRole', 'providerConfig'];
   }
 }

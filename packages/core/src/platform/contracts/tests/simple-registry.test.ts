@@ -3,10 +3,10 @@
  * Basic test to verify the enhanced binder registry works
  */
 
-import { EnhancedBinderRegistry } from '../enhanced-binder-registry';
-import { DatabaseBinderStrategy } from '../binders/database-binder-strategy';
-import { EnhancedBindingContext, Capability, ComplianceFramework, IComponent, PostgresCapabilityData } from '../bindings';
-import { BindingDirective } from '../platform-binding-trigger-spec';
+import { EnhancedBinderRegistry } from '../enhanced-binder-registry.js';
+import { DatabaseBinderStrategy } from '../binders/database-binder-strategy.js';
+import { EnhancedBindingContext, Capability, ComplianceFramework, IComponent, PostgresCapabilityData } from '../bindings.js';
+import { BindingDirective } from '../platform-binding-trigger-spec.js';
 
 // Mock logger
 const mockLogger = {

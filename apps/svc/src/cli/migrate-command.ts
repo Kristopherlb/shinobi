@@ -11,7 +11,7 @@ import {
   MigrationResult,
   Logger as CoreEngineLogger
 } from '@shinobi/core';
-import { Logger } from './utils/logger';
+import { Logger } from './utils/logger.js';
 import * as fs from 'fs';
 import * as path from 'path';
 

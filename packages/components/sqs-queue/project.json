@@ -30,7 +30,7 @@
         "{projectRoot}/coverage"
       ],
       "options": {
-        "jestConfig": "packages/components/sqs-queue/jest.config.ts",
+        "jestConfig": "packages/components/sqs-queue/jest.config.mjs",
         "passWithNoTests": true
       }
     },

@@ -6,10 +6,10 @@ import {
   EnhancedBinderRegistry,
   EnhancedBindingContext,
   ComplianceFramework
-} from '../enhanced-binder-registry';
-import { ObservabilityBinderStrategy } from './observability-binder-strategy';
-import { ObservabilityConfigFactory } from './observability-config-factory';
-import { BaseComponentObservability } from './base-component-observability';
+} from '../enhanced-binder-registry.js';
+import { ObservabilityBinderStrategy } from './observability-binder-strategy.js';
+import { ObservabilityConfigFactory } from './observability-config-factory.js';
+import { BaseComponentObservability } from './base-component-observability.js';
 
 // Mock components for demonstration
 class MockLambdaComponent {

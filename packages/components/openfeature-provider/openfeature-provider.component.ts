@@ -1,9 +1,10 @@
 /**
  * OpenFeature Provider Component
- * 
- * Provisions backend infrastructure for feature flagging providers.
- * Initial implementation supports AWS AppConfig as the default provider.
- * Implements Platform Feature Flagging & Canary Deployment Standard v1.0.
+ *
+ * Provisions feature flag provider infrastructure based on the resolved
+ * configuration produced by the shared ConfigBuilder. The component no longer
+ * inspects the compliance framework directly – all framework-specific behaviour
+ * must be encoded in `/config/<framework>.yml`.
  */
 
 import * as appconfig from 'aws-cdk-lib/aws-appconfig';
@@ -11,273 +12,133 @@ import * as iam from 'aws-cdk-lib/aws-iam';
 import * as cdk from 'aws-cdk-lib';
 import { Construct } from 'constructs';
 import {
-  Component,
+  BaseComponent,
   ComponentSpec,
   ComponentContext,
-  ComponentCapabilities,
-  ConfigBuilder,
-  ComponentConfigSchema,
-  OpenFeatureProviderCapability
-} from '@platform/contracts';
+  ComponentCapabilities
+} from '@shinobi/core';
+import {
+  AwsAppConfigProviderConfig,
+  FlagsmithProviderConfig,
+  LaunchDarklyProviderConfig,
+  OpenFeatureProviderComponentConfig,
+  OpenFeatureProviderComponentConfigBuilder,
+  OpenFeatureProviderKind
+} from './openfeature-provider.builder.js';
+import { OpenFeatureProviderCapability } from '@shinobi/core/platform/contracts/openfeature-interfaces';
 
-/**
- * Configuration interface for OpenFeature Provider component
- */
-export interface OpenFeatureProviderConfig {
-  /** Provider type (aws-appconfig, launchdarkly, flagsmith, etc.) */
-  providerType: 'aws-appconfig' | 'launchdarkly' | 'flagsmith';
-  
-  /** Application name for the feature flag provider */
-  applicationName?: string;
-  
-  /** Environment name for feature flags */
-  environmentName?: string;
-  
-  /** AWS AppConfig specific configuration */
-  awsAppConfig?: {
-    /** Configuration profile name */
-    configurationProfileName?: string;
-    /** Deployment strategy ID for AWS AppConfig */
-    deploymentStrategyId?: string;
-    /** Monitor specifications for rollback */
-    monitors?: Array<{
-      alarmArn: string;
-      alarmRoleArn?: string;
-    }>;
-  };
-  
-  /** LaunchDarkly specific configuration */
-  launchDarkly?: {
-    /** LaunchDarkly project key */
-    projectKey?: string;
-    /** LaunchDarkly environment key */
-    environmentKey?: string;
-    /** SDK key for client-side flags */
-    clientSideId?: string;
-  };
-  
-  /** Flagsmith specific configuration */
-  flagsmith?: {
-    /** Flagsmith environment key */
-    environmentKey?: string;
-    /** API URL for self-hosted Flagsmith */
-    apiUrl?: string;
-  };
-}
-
-/**
- * Configuration schema for OpenFeature Provider component
- */
-export const OPENFEATURE_PROVIDER_CONFIG_SCHEMA: ComponentConfigSchema = {
-  type: 'object',
-  title: 'OpenFeature Provider Configuration',
-  description: 'Configuration for provisioning feature flagging backend infrastructure',
-  properties: {
-    providerType: {
-      type: 'string',
-      enum: ['aws-appconfig', 'launchdarkly', 'flagsmith'],
-      description: 'Backend provider for feature flags',
-      default: 'aws-appconfig'
-    },
-    applicationName: {
-      type: 'string',
-      description: 'Application name for the feature flag provider',
-      minLength: 1,
-      maxLength: 64
-    },
-    environmentName: {
-      type: 'string', 
-      description: 'Environment name for feature flags',
-      minLength: 1,
-      maxLength: 64
-    },
-    awsAppConfig: {
-      type: 'object',
-      description: 'AWS AppConfig specific configuration',
-      properties: {
-        configurationProfileName: {
-          type: 'string',
-          description: 'Configuration profile name',
-          maxLength: 64
-        },
-        deploymentStrategyId: {
-          type: 'string',
-          description: 'Deployment strategy ID for gradual rollouts'
-        }
-      }
-    }
-  },
-  required: ['providerType'],
-  additionalProperties: false,
-  defaults: {
-    providerType: 'aws-appconfig',
-    environmentName: 'production'
-  }
-};
-
-/**
- * OpenFeature Provider Component implementing Platform Feature Flagging Standard v1.0
- */
-export class OpenFeatureProviderComponent extends Component {
+export class OpenFeatureProviderComponent extends BaseComponent {
+  private config?: OpenFeatureProviderComponentConfig;
   private application?: appconfig.CfnApplication;
   private environment?: appconfig.CfnEnvironment;
   private configurationProfile?: appconfig.CfnConfigurationProfile;
   private deploymentStrategy?: appconfig.CfnDeploymentStrategy;
   private retrieverRole?: iam.Role;
-  private config?: OpenFeatureProviderConfig;
 
   constructor(scope: Construct, id: string, context: ComponentContext, spec: ComponentSpec) {
     super(scope, id, context, spec);
   }
 
-  /**
-   * Synthesis phase - Create OpenFeature provider infrastructure
-   */
   public synth(): void {
-    this.logComponentEvent('synthesis_start', 'Starting OpenFeature Provider component synthesis', {
-      providerType: this.spec.config?.providerType
-    });
-    
-    const startTime = Date.now();
-    
+    this.logComponentEvent('synthesis_start', 'Starting OpenFeature provider synthesis');
+
     try {
-      // Build configuration
-      this.config = this.buildConfigSync();
-      
-      this.logComponentEvent('config_built', 'OpenFeature Provider configuration built successfully', {
-        providerType: this.config.providerType,
-        applicationName: this.config.applicationName
-      });
-      
-      // Create provider-specific infrastructure
-      switch (this.config.providerType) {
+      this.config = new OpenFeatureProviderComponentConfigBuilder({
+        context: this.context,
+        spec: this.spec
+      }).buildSync();
+
+      switch (this.config.provider) {
         case 'aws-appconfig':
-          this.createAwsAppConfigInfrastructure();
+          this.createAwsAppConfigInfrastructure(this.config.awsAppConfig!);
           break;
         case 'launchdarkly':
-          this.createLaunchDarklyInfrastructure();
+          this.createLaunchDarklyPlaceholder(this.config.launchDarkly);
           break;
         case 'flagsmith':
-          this.createFlagsmithInfrastructure();
+          this.createFlagsmithPlaceholder(this.config.flagsmith);
           break;
-        default:
-          throw new Error(`Unsupported provider type: ${this.config.providerType}`);
       }
-      
-      // Register capabilities
+
       this.registerCapability('openfeature:provider', this.buildProviderCapability());
-      
-      // Log successful synthesis completion
-      const duration = Date.now() - startTime;
-      this.logPerformanceMetric('component_synthesis', duration, {
-        resourcesCreated: Object.keys(this.capabilities).length
-      });
-      
-      this.logComponentEvent('synthesis_complete', 'OpenFeature Provider component synthesis completed successfully', {
-        providerType: this.config.providerType,
-        resourcesCreated: Object.keys(this.constructs).size
-      });
-      
+      this.logComponentEvent('synthesis_complete', 'OpenFeature provider synthesis completed');
     } catch (error) {
-      this.logError(error as Error, 'component synthesis', {
-        componentType: 'openfeature-provider',
-        stage: 'synthesis'
-      });
+      this.logError(error as Error, 'openfeature-provider synthesis');
       throw error;
     }
   }
 
-  /**
-   * Get the capabilities this component provides
-   */
   public getCapabilities(): ComponentCapabilities {
     this.validateSynthesized();
     return this.capabilities;
   }
 
-  /**
-   * Get the component type identifier
-   */
   public getType(): string {
     return 'openfeature-provider';
   }
 
-  /**
-   * Create AWS AppConfig infrastructure for feature flagging
-   */
-  private createAwsAppConfigInfrastructure(): void {
-    const applicationName = this.config!.applicationName || `${this.context.serviceName}-features`;
-    const environmentName = this.config!.environmentName || this.context.environment;
-    
-    // Create AppConfig Application
+  private createAwsAppConfigInfrastructure(config: AwsAppConfigProviderConfig): void {
+    const applicationName = config.applicationName;
+    const environmentName = config.environmentName;
+
     this.application = new appconfig.CfnApplication(this, 'Application', {
       name: applicationName,
-      description: `Feature flags for ${this.context.serviceName} service`
-    });
-    
-    this.applyStandardTags(this.application, {
-      'appconfig-application': applicationName,
-      'openfeature-provider': 'aws-appconfig'
+      description: `Feature flags for ${this.context.serviceName}`
     });
 
-    // Create AppConfig Environment
+    this.applyStandardTags(this.application, {
+      'openfeature-provider': 'aws-appconfig',
+      ...(this.config?.tags ?? {})
+    });
+
     this.environment = new appconfig.CfnEnvironment(this, 'Environment', {
       applicationId: this.application.ref,
       name: environmentName,
-      description: `${environmentName} environment for feature flags`,
-      monitors: this.config!.awsAppConfig?.monitors?.map(monitor => ({
+      description: `${environmentName} environment for ${this.context.serviceName} feature flags`,
+      monitors: config.monitors.map(monitor => ({
         alarmArn: monitor.alarmArn,
         alarmRoleArn: monitor.alarmRoleArn
       }))
     });
 
     this.applyStandardTags(this.environment, {
-      'appconfig-environment': environmentName,
-      'openfeature-provider': 'aws-appconfig'
+      'openfeature-provider': 'aws-appconfig',
+      ...(this.config?.tags ?? {})
     });
 
-    // Create Configuration Profile for feature flags
-    const profileName = this.config!.awsAppConfig?.configurationProfileName || 'feature-flags';
     this.configurationProfile = new appconfig.CfnConfigurationProfile(this, 'ConfigurationProfile', {
       applicationId: this.application.ref,
-      name: profileName,
-      locationUri: 'hosted',  // Hosted configuration
+      name: config.configurationProfileName,
+      locationUri: 'hosted',
       type: 'AWS.AppConfig.FeatureFlags',
       description: 'OpenFeature-compatible feature flags configuration'
     });
 
     this.applyStandardTags(this.configurationProfile, {
-      'appconfig-profile': profileName,
-      'openfeature-provider': 'aws-appconfig'
+      'openfeature-provider': 'aws-appconfig',
+      ...(this.config?.tags ?? {})
     });
 
-    // Create custom deployment strategy for progressive delivery
     this.deploymentStrategy = new appconfig.CfnDeploymentStrategy(this, 'DeploymentStrategy', {
-      name: `${this.spec.name}-progressive-rollout`,
-      description: 'Progressive rollout strategy for feature flags',
-      deploymentDurationInMinutes: 10,
-      growthFactor: 20, // 20% traffic increase
-      growthType: 'LINEAR',
-      finalBakeTimeInMinutes: 5,
-      replicateTo: 'SSM_DOCUMENT'
+      name: config.deploymentStrategy.name,
+      deploymentDurationInMinutes: config.deploymentStrategy.deploymentDurationMinutes,
+      growthFactor: config.deploymentStrategy.growthFactor,
+      growthType: config.deploymentStrategy.growthType,
+      finalBakeTimeInMinutes: config.deploymentStrategy.finalBakeTimeInMinutes,
+      replicateTo: config.deploymentStrategy.replicateTo
     });
 
-    // Create IAM role for retrieving configuration
     this.retrieverRole = new iam.Role(this, 'RetrieverRole', {
-      assumedBy: new iam.ServicePrincipal('lambda.amazonaws.com'),
+      assumedBy: new iam.ServicePrincipal(config.retrieverServicePrincipal),
       description: 'Role for retrieving AppConfig feature flags',
       managedPolicies: [
         iam.ManagedPolicy.fromAwsManagedPolicyName('service-role/AWSLambdaBasicExecutionRole')
       ]
     });
 
-    // Grant permissions to retrieve configuration
-    this.retrieverRole.addToRolePolicy(new iam.PolicyStatement({
+    this.retrieverRole.addToPrincipalPolicy(new iam.PolicyStatement({
       effect: iam.Effect.ALLOW,
-      actions: [
-        'appconfig:StartConfigurationSession',
-        'appconfig:GetConfiguration'
-      ],
+      actions: ['appconfig:StartConfigurationSession', 'appconfig:GetConfiguration'],
       resources: [
         `arn:aws:appconfig:${cdk.Stack.of(this).region}:${cdk.Stack.of(this).account}:application/${this.application.ref}`,
         `arn:aws:appconfig:${cdk.Stack.of(this).region}:${cdk.Stack.of(this).account}:application/${this.application.ref}/environment/${this.environment.ref}`,
@@ -285,81 +146,61 @@ export class OpenFeatureProviderComponent extends Component {
       ]
     }));
 
-    // Register constructs
+    this.applyStandardTags(this.retrieverRole, {
+      'openfeature-provider': 'aws-appconfig',
+      ...(this.config?.tags ?? {})
+    });
+
+    this.registerConstruct('main', this.application);
     this.registerConstruct('application', this.application);
     this.registerConstruct('environment', this.environment);
     this.registerConstruct('configurationProfile', this.configurationProfile);
     this.registerConstruct('deploymentStrategy', this.deploymentStrategy);
     this.registerConstruct('retrieverRole', this.retrieverRole);
-
-    this.logResourceCreation('aws-appconfig-application', applicationName, {
-      applicationId: this.application.ref,
-      environmentName: environmentName,
-      configurationProfile: profileName
-    });
   }
 
-  /**
-   * Create LaunchDarkly infrastructure (placeholder for future implementation)
-   */
-  private createLaunchDarklyInfrastructure(): void {
-    // LaunchDarkly is a SaaS service, so infrastructure creation is minimal
-    // This would typically involve creating API keys and project configurations
-    // Implementation would depend on LaunchDarkly CDK constructs or custom resources
-    
-    this.logComponentEvent('provider_configured', 'LaunchDarkly provider configured', {
-      providerType: 'launchdarkly',
-      projectKey: this.config!.launchDarkly?.projectKey
+  private createLaunchDarklyPlaceholder(config: LaunchDarklyProviderConfig | undefined): void {
+    const output = new cdk.CfnOutput(this, 'LaunchDarklyConfiguration', {
+      description: 'LaunchDarkly configuration is managed externally',
+      value: JSON.stringify({
+        projectKey: config?.projectKey ?? '',
+        environmentKey: config?.environmentKey ?? '',
+        clientSideId: config?.clientSideId ?? ''
+      })
     });
 
-    // Register minimal construct for consistency
-    const placeholder = new cdk.CfnOutput(this, 'LaunchDarklyConfig', {
-      value: 'LaunchDarkly configuration managed externally',
-      description: 'LaunchDarkly provider configuration reference'
-    });
-    
-    this.registerConstruct('providerConfig', placeholder);
+    this.registerConstruct('main', output);
+    this.registerConstruct('providerConfig', output);
   }
 
-  /**
-   * Create Flagsmith infrastructure (placeholder for future implementation)
-   */
-  private createFlagsmithInfrastructure(): void {
-    // Flagsmith can be self-hosted or SaaS
-    // This would involve either deploying Flagsmith containers or configuring SaaS access
-    
-    this.logComponentEvent('provider_configured', 'Flagsmith provider configured', {
-      providerType: 'flagsmith',
-      environmentKey: this.config!.flagsmith?.environmentKey
+  private createFlagsmithPlaceholder(config: FlagsmithProviderConfig | undefined): void {
+    const output = new cdk.CfnOutput(this, 'FlagsmithConfiguration', {
+      description: 'Flagsmith configuration is managed externally',
+      value: JSON.stringify({
+        environmentKey: config?.environmentKey ?? '',
+        apiUrl: config?.apiUrl ?? ''
+      })
     });
 
-    // Register minimal construct for consistency
-    const placeholder = new cdk.CfnOutput(this, 'FlagsmithConfig', {
-      value: 'Flagsmith configuration managed externally',
-      description: 'Flagsmith provider configuration reference'
-    });
-    
-    this.registerConstruct('providerConfig', placeholder);
+    this.registerConstruct('main', output);
+    this.registerConstruct('providerConfig', output);
   }
 
-  /**
-   * Build provider capability data shape
-   */
   private buildProviderCapability(): OpenFeatureProviderCapability {
-    const baseCapability: OpenFeatureProviderCapability = {
-      providerType: this.config!.providerType,
+    const capability: OpenFeatureProviderCapability = {
+      providerType: this.config!.provider,
       connectionConfig: {},
       environmentVariables: {}
     };
 
-    switch (this.config!.providerType) {
+    switch (this.config!.provider) {
       case 'aws-appconfig':
-        baseCapability.connectionConfig = {
+        capability.connectionConfig = {
           applicationId: this.application!.ref,
           environmentId: this.environment!.ref,
           configurationProfileId: this.configurationProfile!.ref
         };
-        baseCapability.environmentVariables = {
+        capability.environmentVariables = {
           OPENFEATURE_PROVIDER: 'aws-appconfig',
           APPCONFIG_APPLICATION_ID: this.application!.ref,
           APPCONFIG_ENVIRONMENT_ID: this.environment!.ref,
@@ -368,45 +209,29 @@ export class OpenFeatureProviderComponent extends Component {
         };
         break;
       case 'launchdarkly':
-        baseCapability.connectionConfig = {
-          projectKey: this.config!.launchDarkly?.projectKey || '',
-          environmentKey: this.config!.launchDarkly?.environmentKey || ''
+        capability.connectionConfig = {
+          projectKey: this.config!.launchDarkly?.projectKey ?? '',
+          environmentKey: this.config!.launchDarkly?.environmentKey ?? ''
         };
-        baseCapability.environmentVariables = {
+        capability.environmentVariables = {
           OPENFEATURE_PROVIDER: 'launchdarkly',
-          LAUNCHDARKLY_PROJECT_KEY: this.config!.launchDarkly?.projectKey || '',
-          LAUNCHDARKLY_ENVIRONMENT_KEY: this.config!.launchDarkly?.environmentKey || ''
+          LAUNCHDARKLY_PROJECT_KEY: this.config!.launchDarkly?.projectKey ?? '',
+          LAUNCHDARKLY_ENVIRONMENT_KEY: this.config!.launchDarkly?.environmentKey ?? ''
         };
         break;
       case 'flagsmith':
-        baseCapability.connectionConfig = {
-          environmentKey: this.config!.flagsmith?.environmentKey || '',
-          apiUrl: this.config!.flagsmith?.apiUrl || 'https://api.flagsmith.com/api/v1/'
+        capability.connectionConfig = {
+          environmentKey: this.config!.flagsmith?.environmentKey ?? '',
+          apiUrl: this.config!.flagsmith?.apiUrl ?? ''
         };
-        baseCapability.environmentVariables = {
+        capability.environmentVariables = {
           OPENFEATURE_PROVIDER: 'flagsmith',
-          FLAGSMITH_ENVIRONMENT_KEY: this.config!.flagsmith?.environmentKey || '',
-          FLAGSMITH_API_URL: this.config!.flagsmith?.apiUrl || 'https://api.flagsmith.com/api/v1/'
+          FLAGSMITH_ENVIRONMENT_KEY: this.config!.flagsmith?.environmentKey ?? '',
+          FLAGSMITH_API_URL: this.config!.flagsmith?.apiUrl ?? ''
         };
         break;
     }
 
-    return baseCapability;
-  }
-
-  /**
-   * Simplified config building for component
-   */
-  private buildConfigSync(): OpenFeatureProviderConfig {
-    const config: OpenFeatureProviderConfig = {
-      providerType: this.spec.config?.providerType || 'aws-appconfig',
-      applicationName: this.spec.config?.applicationName,
-      environmentName: this.spec.config?.environmentName || this.context.environment,
-      awsAppConfig: this.spec.config?.awsAppConfig,
-      launchDarkly: this.spec.config?.launchDarkly,
-      flagsmith: this.spec.config?.flagsmith
-    };
-
-    return config;
+    return capability;
   }
 }

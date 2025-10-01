@@ -1,3 +1,3 @@
-export { AdvancedSearch } from './AdvancedSearch';
-export { SearchProvider, useSearch } from './SearchProvider';
-export { MockSearchService } from './MockSearchService';
+export { AdvancedSearch } from './AdvancedSearch.js';
+export { SearchProvider, useSearch } from './SearchProvider.js';
+export { MockSearchService } from './MockSearchService.js';

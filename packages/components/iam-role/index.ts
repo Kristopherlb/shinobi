@@ -4,14 +4,14 @@
  */
 
 // Component exports
-export { IamRoleComponentComponent } from './iam-role.component';
+export { IamRoleComponentComponent } from './iam-role.component.js';
 
 // Configuration exports
 export { 
   IamRoleConfig,
   IamRoleComponentConfigBuilder,
   IAM_ROLE_CONFIG_SCHEMA
-} from './iam-role.builder';
+} from './iam-role.builder.js';
 
 // Creator exports
-export { IamRoleComponentCreator } from './iam-role.creator';
+export { IamRoleComponentCreator } from './iam-role.creator.js';

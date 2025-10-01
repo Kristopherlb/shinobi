@@ -5,7 +5,7 @@
  */
 
 import { ConfigBuilder } from '@platform/core';
-import { DeploymentBundleConfig } from './types';
+import { DeploymentBundleConfig } from './types.js';
 
 export class DeploymentBundlePipelineBuilder extends ConfigBuilder<DeploymentBundleConfig> {
 

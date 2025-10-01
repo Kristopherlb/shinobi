@@ -10,9 +10,9 @@ import {
   ComponentSpec, 
   ComponentContext, 
   IComponentCreator 
-} from '../../platform/contracts/component-interfaces';
-import { ApplicationLoadBalancerComponent } from './application-load-balancer.component';
-import { ApplicationLoadBalancerConfig, APPLICATION_LOAD_BALANCER_CONFIG_SCHEMA } from './application-load-balancer.builder';
+} from '../../platform/contracts/component-interfaces.js';
+import { ApplicationLoadBalancerComponent } from './application-load-balancer.component.js';
+import { ApplicationLoadBalancerConfig, APPLICATION_LOAD_BALANCER_CONFIG_SCHEMA } from './application-load-balancer.builder.js';
 
 /**
  * Creator class for ApplicationLoadBalancerComponent component

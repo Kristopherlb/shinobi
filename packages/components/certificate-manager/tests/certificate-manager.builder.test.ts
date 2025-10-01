@@ -1,7 +1,7 @@
 import {
   CertificateManagerComponentConfigBuilder,
   CertificateManagerConfig
-} from '../certificate-manager.builder';
+} from '../certificate-manager.builder.js';
 import { ComponentContext, ComponentSpec } from '@shinobi/core';
 
 const createContext = (

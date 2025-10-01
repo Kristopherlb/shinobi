@@ -2,9 +2,9 @@
  * Path: packages/core/src/platform/binders/strategies/database/__tests__/neptune-binder-strategy.test.ts
  */
 
-import { NeptuneBinderStrategy } from '../neptune-binder-strategy';
-import type { BindingContext } from '../../../binding-context';
-import type { ComponentBinding } from '../../../component-binding';
+import { NeptuneBinderStrategy } from '../neptune-binder-strategy.js';
+import type { BindingContext } from '../../../binding-context.js';
+import type { ComponentBinding } from '../../../component-binding.js';
 
 class MockComponent {
   public env: Record<string, string> = {};

@@ -17,7 +17,7 @@ import {
   SsmParameterDataType,
   SsmParameterKind,
   SsmParameterTier
-} from './ssm-parameter.builder';
+} from './ssm-parameter.builder.js';
 
 export class SsmParameterComponent extends BaseComponent {
   private config?: SsmParameterComponentConfig;

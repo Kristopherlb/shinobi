@@ -16,7 +16,7 @@ import {
   DynamoDbMonitoringAlarmConfig,
   DynamoDbProvisionedThroughputConfig,
   DynamoDbGsiConfig
-} from './dynamodb-table.builder';
+} from './dynamodb-table.builder.js';
 
 export class DynamoDbTableComponent extends Component {
   private table?: dynamodb.Table;

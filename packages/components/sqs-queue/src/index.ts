@@ -1,2 +1,2 @@
-export * from './sqs-queue';
-export * from './sqs-queue.builder';
+export * from './sqs-queue.js';
+export * from './sqs-queue.builder.js';

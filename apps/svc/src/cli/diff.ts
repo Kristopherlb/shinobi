@@ -6,14 +6,14 @@ import {
   CloudFormationClient,
   GetTemplateCommand
 } from '@aws-sdk/client-cloudformation';
-import { Logger } from './utils/logger';
-import { FileDiscovery } from './utils/file-discovery';
+import { Logger } from './utils/logger.js';
+import { FileDiscovery } from './utils/file-discovery.js';
 import {
   synthesizeService,
   SimpleManifest,
   readManifest
-} from './utils/service-synthesizer';
-import { diffCloudFormationTemplates, TemplateDiff } from './utils/template-diff';
+} from './utils/service-synthesizer.js';
+import { diffCloudFormationTemplates, TemplateDiff } from './utils/template-diff.js';
 
 export interface DiffOptions {
   file?: string;

@@ -1,20 +1,20 @@
 import path from 'path';
 import os from 'os';
 import fs from 'fs';
-import { DiffCommand } from '../diff';
-import type { DiffOptions } from '../diff';
-import type { Logger } from '../utils/logger';
+import { DiffCommand } from '../diff.js';
+import type { DiffOptions } from '../diff.js';
+import type { Logger } from '../utils/logger.js';
 import type { FileDiscovery } from '@shinobi/core';
 
-jest.mock('../utils/service-synthesizer', () => ({
+jest.mock('../utils/service-synthesizer.js', () => ({
   readManifest: jest.fn(),
   synthesizeService: jest.fn()
 }));
 
-const synthesizeServiceMock = require('../utils/service-synthesizer')
-  .synthesizeService as jest.Mock;
-const readManifestMock = require('../utils/service-synthesizer')
-  .readManifest as jest.Mock;
+import { readManifest, synthesizeService } from '../utils/service-synthesizer.js';
+
+const synthesizeServiceMock = synthesizeService as unknown as jest.Mock;
+const readManifestMock = readManifest as unknown as jest.Mock;
 
 const sendMock = jest.fn();
 

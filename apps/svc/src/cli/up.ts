@@ -3,13 +3,13 @@ import * as fsp from 'fs/promises';
 import inquirer from 'inquirer';
 import { AwsCdkCli, RequireApproval } from '@aws-cdk/cli-lib-alpha';
 import { FileDiscovery } from '@shinobi/core';
-import { Logger } from './utils/logger';
+import { Logger } from './utils/logger.js';
 import {
   readManifest,
   synthesizeService,
   SimpleManifest,
   SynthesizeServiceResult
-} from './utils/service-synthesizer';
+} from './utils/service-synthesizer.js';
 
 export interface UpOptions {
   file?: string;

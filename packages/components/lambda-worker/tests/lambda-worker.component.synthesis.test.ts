@@ -1,9 +1,9 @@
 import * as path from 'path';
 import { Template, Match } from 'aws-cdk-lib/assertions';
 import { App, Stack } from 'aws-cdk-lib';
-import { LambdaWorkerComponent } from '../lambda-worker.component';
-import { LambdaWorkerConfig } from '../lambda-worker.builder';
-import { ComponentContext, ComponentSpec } from '../../../platform/contracts/component-interfaces';
+import { LambdaWorkerComponent } from '../lambda-worker.component.js';
+import { LambdaWorkerConfig } from '../lambda-worker.builder.js';
+import { ComponentContext, ComponentSpec } from '../../../platform/contracts/component-interfaces.js';
 
 const FIXTURE_PATH = path.join(__dirname, 'fixtures/basic-lambda');
 const VPC_ID = 'vpc-0abc123def4567890';

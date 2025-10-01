@@ -1,15 +1,15 @@
 /**
- * OpenFeatureProviderComponent Component Synthesis Test Suite
- * Implements Platform Testing Standard v1.0 - Component Synthesis Testing
+ * OpenFeature provider synthesis tests.
  */
 
-import { Template, Match } from 'aws-cdk-lib/assertions';
 import { App, Stack } from 'aws-cdk-lib';
-import { OpenFeatureProviderComponentComponent } from '../openfeature-provider.component';
-import { OpenFeatureProviderConfig } from '../openfeature-provider.builder';
-import { ComponentContext, ComponentSpec } from '../../../platform/contracts/component-interfaces';
+import { Match, Template } from 'aws-cdk-lib/assertions';
+import { OpenFeatureProviderComponent } from '../openfeature-provider.component.js';
+import { OpenFeatureProviderComponentConfig } from '../openfeature-provider.builder.js';
+import { ComponentContext, ComponentSpec } from '@shinobi/core';
 
-const createMockContext = (
+const createContext = (
+  stack: Stack,
   complianceFramework: string = 'commercial',
   environment: string = 'dev'
 ): ComponentContext => ({
@@ -19,76 +19,92 @@ const createMockContext = (
   complianceFramework,
   region: 'us-east-1',
   account: '123456789012',
+  accountId: '123456789012',
+  scope: stack,
   tags: {
     'service-name': 'test-service',
-    'owner': 'test-team',
-    'environment': environment,
+    owner: 'test-team',
+    environment,
     'compliance-framework': complianceFramework
   }
 });
 
-const createMockSpec = (config: Partial<OpenFeatureProviderConfig> = {}): ComponentSpec => ({
-  name: 'test-openfeature-provider',
+const createSpec = (config: Partial<OpenFeatureProviderComponentConfig> = {}): ComponentSpec => ({
+  name: 'openfeature',
   type: 'openfeature-provider',
   config
 });
 
-const synthesizeComponent = (
-  context: ComponentContext,
-  spec: ComponentSpec
-): { component: OpenFeatureProviderComponentComponent; template: Template } => {
-  const app = new App();
-  const stack = new Stack(app, 'TestStack');
-  
-  const component = new OpenFeatureProviderComponentComponent(stack, spec, context);
-  component.synth();
-  
-  const template = Template.fromStack(stack);
-  return { component, template };
-};
+describe('OpenFeatureProviderComponent synthesis', () => {
+  it('creates AppConfig resources when provider is aws-appconfig', () => {
+    const app = new App();
+    const stack = new Stack(app, 'AppConfigStack');
+    const context = createContext(stack, 'commercial');
+    const spec = createSpec();
 
-describe('OpenFeatureProviderComponentComponent Synthesis', () => {
-  
-  describe('Default Happy Path Synthesis', () => {
-    
-    it('should synthesize basic openfeature-provider with commercial compliance', () => {
-      const context = createMockContext('commercial');
-      const spec = createMockSpec();
-      
-      const { template, component } = synthesizeComponent(context, spec);
-      
-      // TODO: Add specific CloudFormation resource assertions
-      // Verify component was created
-      expect(component).toBeDefined();
-      expect(component.getType()).toBe('openfeature-provider');
-    });
-    
+    const component = new OpenFeatureProviderComponent(stack, spec.name, context, spec);
+    component.synth();
+
+    const template = Template.fromStack(stack);
+
+    template.hasResourceProperties('AWS::AppConfig::Application', Match.objectLike({
+      Name: 'test-service-features'
+    }));
+
+    template.hasResourceProperties('AWS::AppConfig::Environment', Match.objectLike({
+      Name: 'dev'
+    }));
+
+    template.hasResourceProperties('AWS::AppConfig::ConfigurationProfile', Match.objectLike({
+      Type: 'AWS.AppConfig.FeatureFlags'
+    }));
+
+    template.hasResourceProperties('AWS::AppConfig::DeploymentStrategy', Match.objectLike({
+      GrowthFactor: 20
+    }));
   });
-  
-  describe('Component Capabilities and Constructs', () => {
-    
-    it('should register correct capabilities after synthesis', () => {
-      const context = createMockContext('commercial');
-      const spec = createMockSpec();
-      
-      const { component } = synthesizeComponent(context, spec);
-      
-      const capabilities = component.getCapabilities();
-      
-      // Verify component-specific capabilities
-      expect(capabilities).toBeDefined();
+
+  it('registers LaunchDarkly placeholder when configured', () => {
+    const app = new App();
+    const stack = new Stack(app, 'LaunchDarklyStack');
+    const context = createContext(stack);
+    const spec = createSpec({
+      provider: 'launchdarkly',
+      launchDarkly: {
+        projectKey: 'proj',
+        environmentKey: 'env',
+        clientSideId: 'client'
+      }
     });
-    
-    it('should register construct handles for patches.ts access', () => {
-      const context = createMockContext('commercial');
-      const spec = createMockSpec();
-      
-      const { component } = synthesizeComponent(context, spec);
-      
-      // Verify main construct is registered
-      expect(component.getConstruct('main')).toBeDefined();
-    });
-    
+
+    const component = new OpenFeatureProviderComponent(stack, spec.name, context, spec);
+    component.synth();
+
+    expect(component.getConstruct('providerConfig')).toBeDefined();
+    const capabilities = component.getCapabilities();
+    expect(capabilities['openfeature:provider'].providerType).toBe('launchdarkly');
   });
-  
+
+  it('exposes flagsmith configuration when selected', () => {
+    const app = new App();
+    const stack = new Stack(app, 'FlagsmithStack');
+    const context = createContext(stack);
+    const spec = createSpec({
+      provider: 'flagsmith',
+      flagsmith: {
+        environmentKey: 'env-key',
+        apiUrl: 'https://flags'
+      }
+    });
+
+    const component = new OpenFeatureProviderComponent(stack, spec.name, context, spec);
+    component.synth();
+
+    const capability = component.getCapabilities()['openfeature:provider'];
+    expect(capability.providerType).toBe('flagsmith');
+    expect(capability.connectionConfig).toMatchObject({
+      environmentKey: 'env-key',
+      apiUrl: 'https://flags'
+    });
+  });
 });

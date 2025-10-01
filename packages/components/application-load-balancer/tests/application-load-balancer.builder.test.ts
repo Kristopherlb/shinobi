@@ -1,8 +1,8 @@
 import {
   ApplicationLoadBalancerComponentConfigBuilder,
   ApplicationLoadBalancerConfig
-} from '../application-load-balancer.builder';
-import { ComponentContext, ComponentSpec } from '../../../platform/contracts/component-interfaces';
+} from '../application-load-balancer.builder.js';
+import { ComponentContext, ComponentSpec } from '../../../platform/contracts/component-interfaces.js';
 
 const createContext = (framework: string = 'commercial'): ComponentContext => ({
   serviceName: 'payments-service',

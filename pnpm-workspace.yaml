@@ -1,9 +1,9 @@
 packages:
   - "packages/*"
   - "packages/*/*"
+  - "packages/*/*/*"
   - "tools/*"
   - "apps/*"
-  - "backstage-app/*"
 
 onlyBuiltDependencies:
   - "@swc/core"

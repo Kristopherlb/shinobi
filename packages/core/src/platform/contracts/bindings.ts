@@ -3,11 +3,24 @@
  * Thin re-export wrapper for canonical binding interfaces
  */
 
-import { BindingContext, BindingResult, IBinderStrategy, CompatibilityEntry, IBinderMatrix } from './platform-binding-trigger-spec';
-import { IComponent } from './component-interfaces';
+import type {
+  BindingContext,
+  BindingResult,
+  IBinderStrategy,
+  CompatibilityEntry,
+  IBinderMatrix
+} from './platform-binding-trigger-spec.js';
+import type { IComponent } from './component-interfaces.js';
 
 // Re-export canonical binding interfaces
-export { BindingContext, BindingResult, IBinderStrategy, CompatibilityEntry, IBinderMatrix, IComponent };
+export type {
+  BindingContext,
+  BindingResult,
+  IBinderStrategy,
+  CompatibilityEntry,
+  IBinderMatrix,
+  IComponent
+};
 
 // =============================================================================
 // COMPLIANCE FRAMEWORK TYPES

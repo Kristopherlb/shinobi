@@ -21,26 +21,31 @@ import {
   IPlatformService,
   PlatformServiceContext,
   PlatformServiceResult
-} from '../platform/contracts/platform-services';
-import { BaseComponent } from '../platform/contracts/component';
+} from '../platform/contracts/platform-services.js';
+import { BaseComponent } from '../platform/contracts/component.js';
 import * as cloudwatch from 'aws-cdk-lib/aws-cloudwatch';
 import * as cdk from 'aws-cdk-lib';
-import { withPerformanceTiming } from './performance-metrics';
+import { withPerformanceTiming } from './performance-metrics.js';
 
 // External observability handlers (with fallback to local implementations)
 let externalHandlers: any = null;
 let externalTaggingService: any = null;
+const OBSERVABILITY_HANDLERS_MODULE = '@shinobi/observability-handlers';
+const TAGGING_MODULE = '@shinobi/standards-tagging';
 
-try {
-  // Try to import external handlers
-  const handlersModule = require('@shinobi/observability-handlers');
-  const taggingModule = require('@shinobi/standards-tagging');
-  externalHandlers = handlersModule;
-  externalTaggingService = taggingModule;
-} catch (error) {
-  // External packages not available, will use local implementations
-  console.debug('External observability packages not available, using local implementations');
-}
+void (async () => {
+  try {
+    externalHandlers = await import(OBSERVABILITY_HANDLERS_MODULE);
+  } catch (error) {
+    console.debug('External observability handlers not available, using local implementations');
+  }
+
+  try {
+    externalTaggingService = await import(TAGGING_MODULE);
+  } catch (error) {
+    console.debug('External tagging package not available, using local implementation');
+  }
+})();
 
 // Local interfaces as fallback
 interface IObservabilityHandler {

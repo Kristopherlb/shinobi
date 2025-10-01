@@ -4,7 +4,7 @@ import { ComponentContext, ComponentSpec } from '@shinobi/core';
 import {
   WafWebAclComponentConfigBuilder,
   WafWebAclComponentConfig
-} from '../waf-web-acl.builder';
+} from '../waf-web-acl.builder.js';
 
 const createContext = (
   framework: 'commercial' | 'fedramp-moderate' | 'fedramp-high' = 'commercial'

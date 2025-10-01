@@ -3,16 +3,18 @@
  * Core contracts used across all platform components and engines
  */
 
-import { Construct, IConstruct } from 'constructs';
-import { IVpc } from 'aws-cdk-lib/aws-ec2';
-import { BindingContext, BindingResult, IBinderStrategy } from './platform-binding-trigger-spec';
+import { Construct } from 'constructs';
+import type { IConstruct } from 'constructs';
+import type { IVpc } from 'aws-cdk-lib/aws-ec2';
+import type { BindingContext, BindingResult, IBinderStrategy } from './platform-binding-trigger-spec.js';
 
 // Re-export CDK types for convenience
-export { Construct, IConstruct };
-export { IVpc };
+export { Construct };
+export type { IConstruct };
+export type { IVpc };
 
 // Re-export canonical binding interfaces
-export { BindingContext, BindingResult, IBinderStrategy };
+export type { BindingContext, BindingResult, IBinderStrategy };
 
 /**
  * Component specification interface
@@ -181,4 +183,4 @@ export interface IComponentFactory {
 }
 
 // Export base component classes and interfaces
-export * from './component';
+export * from './component.js';

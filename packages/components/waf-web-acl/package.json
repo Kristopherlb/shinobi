@@ -34,5 +34,6 @@
   "peerDependencies": {
     "aws-cdk-lib": "^2.100.0",
     "constructs": "^10.0.0"
-  }
+  },
+  "type": "module"
 }

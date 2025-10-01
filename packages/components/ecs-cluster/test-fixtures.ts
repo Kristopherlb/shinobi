@@ -5,7 +5,7 @@
 
 import * as cdk from 'aws-cdk-lib';
 import * as ec2 from 'aws-cdk-lib/aws-ec2';
-import { ComponentContext, ComponentSpec } from '../@shinobi/core/component-interfaces';
+import { ComponentContext, ComponentSpec } from '../@shinobi/core/component-interfaces.js';
 
 /**
  * Deterministic test clock - frozen at specific time for reproducible tests

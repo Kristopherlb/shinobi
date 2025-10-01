@@ -545,6 +545,53 @@ defaults:
       clientErrorThreshold: 10
       serverErrorThreshold: 1
 
+  mcp-server:
+    ecrRepository: platform/mcp-server
+    container:
+      imageTag: latest
+      cpu: 512
+      memory: 1024
+      taskCount: 2
+      containerPort: 8080
+    loadBalancer:
+      enabled: true
+      internetFacing: false
+    authentication:
+      tokenExpiration: 1h
+    dataSources:
+      aws:
+        regions:
+          - us-east-1
+      templates:
+        branch: main
+    logging:
+      retentionDays: 30
+      logLevel: INFO
+    monitoring:
+      enabled: true
+      detailedMetrics: true
+      alarms:
+        cpuUtilization: 80
+        memoryUtilization: 80
+        responseTime: 2
+    enableExecuteCommand: true
+    tags: {}
+
+  openfeature-provider:
+    provider: aws-appconfig
+    awsAppConfig:
+      configurationProfileName: feature-flags
+      deploymentStrategy:
+        name: progressive-rollout
+        deploymentDurationMinutes: 10
+        growthFactor: 20
+        growthType: LINEAR
+        finalBakeTimeInMinutes: 5
+        replicateTo: SSM_DOCUMENT
+      monitors: []
+      retrieverServicePrincipal: lambda.amazonaws.com
+    tags: {}
+
   secrets-manager:
     automaticRotation:
       enabled: false

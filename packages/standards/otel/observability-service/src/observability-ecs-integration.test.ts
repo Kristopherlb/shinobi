@@ -8,18 +8,18 @@
 import * as cdk from 'aws-cdk-lib';
 import * as cloudwatch from 'aws-cdk-lib/aws-cloudwatch';
 import { Template, Match } from 'aws-cdk-lib/assertions';
-import { ObservabilityService } from './observability.service';
-import { EcsClusterComponent } from '../components/ecs-cluster/ecs-cluster.component';
-import { EcsFargateServiceComponent } from '../components/ecs-fargate-service/ecs-fargate-service.component';
-import { EcsEc2ServiceComponent } from '../components/ecs-ec2-service/ecs-ec2-service.component';
-import { ComponentContext } from '../platform/contracts/component-interfaces';
-import { PlatformServiceContext } from '../platform/contracts/platform-services';
+import { ObservabilityService } from './observability.service.js';
+import { EcsClusterComponent } from '../components/ecs-cluster/ecs-cluster.component.js';
+import { EcsFargateServiceComponent } from '../components/ecs-fargate-service/ecs-fargate-service.component.js';
+import { EcsEc2ServiceComponent } from '../components/ecs-ec2-service/ecs-ec2-service.component.js';
+import { ComponentContext } from '../platform/contracts/component-interfaces.js';
+import { PlatformServiceContext } from '../platform/contracts/platform-services.js';
 import { 
   TestFixtureFactory,
   PerformanceTestHelpers,
   TEST_CONTEXTS,
   TEST_SPECS 
-} from '../components/ecs-cluster/test-fixtures';
+} from '../components/ecs-cluster/test-fixtures.js';
 
 /*
  * Test Metadata: TP-OBSERVABILITY-ECS-001

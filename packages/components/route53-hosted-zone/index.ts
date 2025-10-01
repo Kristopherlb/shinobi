@@ -4,14 +4,14 @@
  */
 
 // Component exports
-export { Route53HostedZoneComponent } from './route53-hosted-zone.component';
+export { Route53HostedZoneComponent } from './route53-hosted-zone.component.js';
 
 // Configuration exports
 export { 
   Route53HostedZoneConfig,
   Route53HostedZoneComponentConfigBuilder,
   ROUTE53_HOSTED_ZONE_CONFIG_SCHEMA
-} from './route53-hosted-zone.builder';
+} from './route53-hosted-zone.builder.js';
 
 // Creator exports
-export { Route53HostedZoneComponentCreator } from './route53-hosted-zone.creator';
+export { Route53HostedZoneComponentCreator } from './route53-hosted-zone.creator.js';

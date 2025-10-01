@@ -5,7 +5,7 @@
  * Provides 5-layer configuration precedence chain and compliance-aware defaults.
  */
 
-import { ConfigBuilder, ConfigBuilderContext } from '../../platform/contracts/config-builder';
+import { ConfigBuilder, ConfigBuilderContext } from '../../platform/contracts/config-builder.js';
 
 /**
  * Configuration interface for FeatureFlagComponent component

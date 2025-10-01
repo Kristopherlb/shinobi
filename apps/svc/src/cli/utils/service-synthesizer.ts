@@ -6,7 +6,7 @@ import * as YAML from 'yaml';
 import * as cdk from 'aws-cdk-lib';
 import { CloudAssembly, CloudFormationStackArtifact } from 'aws-cdk-lib/cx-api';
 import { ComponentContext, ComponentSpec } from '@shinobi/core';
-import { loadComponentCreators, ComponentCreatorEntry } from './component-loader';
+import { loadComponentCreators, ComponentCreatorEntry } from './component-loader.js';
 
 export interface ManifestComponent {
   name: string;

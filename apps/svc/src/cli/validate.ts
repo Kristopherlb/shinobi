@@ -1,6 +1,6 @@
-import { Logger } from './utils/logger';
+import { Logger } from './utils/logger.js';
 import { ValidationOrchestrator } from '@shinobi/core';
-import { FileDiscovery } from './utils/file-discovery';
+import { FileDiscovery } from './utils/file-discovery.js';
 
 export interface ValidateOptions {
   file?: string;

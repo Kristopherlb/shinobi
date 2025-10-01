@@ -19,11 +19,11 @@
 
 import { describe, test, expect, beforeEach, afterEach, jest } from '@jest/globals';
 import * as cloudwatch from 'aws-cdk-lib/aws-cloudwatch';
-import { Ec2ObservabilityHandler } from '../../../../src/services/observability-handlers/ec2-observability.handler';
-import { PlatformServiceContext } from '../../@shinobi/core/platform-services';
-import { BaseComponent } from '../../@shinobi/core/component';
-import { ITaggingService } from '../../../../src/services/tagging.service';
-import { ObservabilityConfig } from '../../../../src/services/observability-handlers/observability-handler.interface';
+import { Ec2ObservabilityHandler } from '../../../../src/services/observability-handlers/ec2-observability.handler.js';
+import { PlatformServiceContext } from '../../@shinobi/core/platform-services.js';
+import { BaseComponent } from '../../@shinobi/core/component.js';
+import { ITaggingService } from '../../../../src/services/tagging.service.js';
+import { ObservabilityConfig } from '../../../../src/services/observability-handlers/observability-handler.interface.js';
 
 // Mock AWS CDK constructs
 jest.mock('aws-cdk-lib/aws-cloudwatch');

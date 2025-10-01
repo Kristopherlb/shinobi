@@ -30,7 +30,7 @@
         "{projectRoot}/coverage"
       ],
       "options": {
-        "jestConfig": "packages/test-scaffolding/jest.config.ts",
+        "jestConfig": "packages/test-scaffolding/jest.config.mjs",
         "passWithNoTests": true
       }
     },

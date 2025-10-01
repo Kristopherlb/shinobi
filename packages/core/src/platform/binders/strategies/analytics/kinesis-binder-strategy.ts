@@ -3,9 +3,9 @@
  * Handles real-time data streaming bindings for Amazon Kinesis
  */
 
-import { IBinderStrategy } from '../binder-strategy';
-import { BindingContext } from '../../binding-context';
-import { ComponentBinding } from '../../component-binding';
+import { IBinderStrategy } from '../binder-strategy.js';
+import { BindingContext } from '../../binding-context.js';
+import { ComponentBinding } from '../../component-binding.js';
 
 export class KinesisBinderStrategy implements IBinderStrategy {
   readonly supportedCapabilities = ['kinesis:stream', 'kinesis:analytics', 'kinesis:firehose'];

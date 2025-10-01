@@ -4,6 +4,7 @@ const fs = require('fs');
 const path = require('path');
 const Module = require('module');
 const { execSync } = require('child_process');
+const { pathToFileURL } = require('url');
 
 const rootDir = path.resolve(__dirname, '..');
 const distCliEntry = path.resolve(rootDir, 'dist/apps/shinobi/main.js');
@@ -11,6 +12,16 @@ const coreDistDir = path.resolve(rootDir, 'dist/packages/core');
 const contractsDistDir = path.resolve(rootDir, 'dist/packages/contracts');
 const coreSrcDir = path.resolve(rootDir, 'packages/core/src');
 const contractsSrcDir = path.resolve(rootDir, 'packages/contracts/src');
+const cliNodeModulesDir = path.resolve(rootDir, 'apps/svc/node_modules');
+
+if (fs.existsSync(cliNodeModulesDir)) {
+  const nodePathEntries = [cliNodeModulesDir];
+  if (process.env.NODE_PATH) {
+    nodePathEntries.push(process.env.NODE_PATH);
+  }
+  process.env.NODE_PATH = nodePathEntries.join(path.delimiter);
+  Module._initPaths();
+}
 
 const ensureBuilt = () => {
   if (!fs.existsSync(coreDistDir)) {
@@ -72,4 +83,11 @@ Module._resolveFilename = function(request, parent, isMain, options) {
   return originalResolveFilename.call(this, request, parent, isMain, options);
 };
 
-require(distCliEntry);
+(async () => {
+  try {
+    await import(pathToFileURL(distCliEntry).href);
+  } catch (error) {
+    console.error('Failed to start Shinobi CLI', error);
+    process.exitCode = 1;
+  }
+})();

@@ -1,12 +1,12 @@
 // src/platform/contracts/components/service-manifest-parser.ts
 // Service manifest parser for component factory integration
 
-import { ComponentFactory } from './component-factory';
-import { ComponentContext } from './component-context';
-import { ComponentSpec } from './component-spec';
-import { ComponentContextBuilder } from './component-context';
-import { ComponentSpecBuilder } from './component-spec';
-import { ComplianceFramework } from '../bindings';
+import { ComponentFactory } from './component-factory.js';
+import { ComponentContext } from './component-context.js';
+import { ComponentSpec } from './component-spec.js';
+import { ComponentContextBuilder } from './component-context.js';
+import { ComponentSpecBuilder } from './component-spec.js';
+import { ComplianceFramework } from '../bindings.js';
 
 /**
  * Service manifest structure

@@ -1,5 +1,5 @@
 import { Command } from 'commander';
-import { loadComponentCreators } from './utils/component-loader';
+import { loadComponentCreators } from './utils/component-loader.js';
 
 interface CatalogOptions {
   all?: boolean;

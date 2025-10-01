@@ -3,12 +3,12 @@
  * Provides detailed error reporting with JSON paths and component-specific validation
  */
 
-import Ajv from 'ajv';
-import addFormats from 'ajv-formats';
-import { Logger } from '../platform/logger/src/index';
-import { ManifestSchemaComposer } from './manifest-schema-composer';
-import { SchemaErrorFormatter } from './schema-error-formatter';
-import { withPerformanceTiming } from './performance-metrics';
+import AjvImport, { type Ajv as AjvInstance, type ErrorObject } from 'ajv';
+import addFormatsImport from 'ajv-formats';
+import { Logger } from '../platform/logger/src/index.js';
+import { ManifestSchemaComposer } from './manifest-schema-composer.js';
+import { SchemaErrorFormatter } from './schema-error-formatter.js';
+import { withPerformanceTiming } from './performance-metrics.js';
 
 export interface EnhancedSchemaValidatorDependencies {
   logger: Logger;
@@ -46,7 +46,7 @@ export interface ComponentValidationResult {
  * Provides detailed validation with component-specific configuration checking
  */
 export class EnhancedSchemaValidator {
-  private ajv: Ajv;
+  private ajv: AjvInstance;
   private masterSchema: any = null;
   private compiledMaster: any | null = null;
   private configValidators = new Map<string, any>();
@@ -55,7 +55,12 @@ export class EnhancedSchemaValidator {
     // Check for feature flag to enable strict mode
     const enableStrictMode = process.env.SHINOBI_STRICT_SCHEMA_VALIDATION === 'true';
 
-    this.ajv = new Ajv({
+    const AjvConstructor =
+      ((AjvImport as unknown) as { default?: new (...args: any[]) => AjvInstance }).default ??
+      ((AjvImport as unknown) as new (...args: any[]) => AjvInstance);
+    const addFormats = addFormatsImport as unknown as (ajv: AjvInstance) => AjvInstance;
+
+    this.ajv = new AjvConstructor({
       allErrors: true,
       verbose: true,
       strict: enableStrictMode,
@@ -97,7 +102,7 @@ export class EnhancedSchemaValidator {
 
         if (!valid && validate.errors) {
           // Process schema validation errors
-          const processedErrors = this.processSchemaErrors(validate.errors, manifest);
+          const processedErrors = this.processSchemaErrors(validate.errors ?? [], manifest);
           errors.push(...processedErrors.filter(e => e.severity === 'error'));
           warnings.push(...processedErrors.filter(e => e.severity === 'warning'));
         }
@@ -146,7 +151,7 @@ export class EnhancedSchemaValidator {
   /**
    * Process raw AJV errors into structured validation errors
    */
-  private processSchemaErrors(ajvErrors: any[], manifest: any): ValidationError[] {
+  private processSchemaErrors(ajvErrors: ErrorObject[], manifest: any): ValidationError[] {
     const errors: ValidationError[] = [];
 
     for (const ajvError of ajvErrors) {
@@ -163,8 +168,8 @@ export class EnhancedSchemaValidator {
       };
 
       // Add allowed values for enum errors
-      if (ajvError.keyword === 'enum' && ajvError.schema) {
-        error.allowedValues = ajvError.schema;
+      if (ajvError.keyword === 'enum' && Array.isArray(ajvError.schema)) {
+        error.allowedValues = ajvError.schema as any[];
       }
 
       errors.push(error);

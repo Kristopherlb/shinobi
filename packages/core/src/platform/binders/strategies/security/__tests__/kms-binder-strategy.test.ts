@@ -2,9 +2,9 @@
  * Path: packages/core/src/platform/binders/strategies/security/__tests__/kms-binder-strategy.test.ts
  */
 
-import { KmsBinderStrategy } from '../kms-binder-strategy';
-import type { BindingContext } from '../../../binding-context';
-import type { ComponentBinding } from '../../../component-binding';
+import { KmsBinderStrategy } from '../kms-binder-strategy.js';
+import type { BindingContext } from '../../../binding-context.js';
+import type { ComponentBinding } from '../../../component-binding.js';
 
 class MockComponent {
   public env: Record<string, string> = {};

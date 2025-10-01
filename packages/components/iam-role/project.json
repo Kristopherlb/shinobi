@@ -30,7 +30,7 @@
         "{projectRoot}/coverage"
       ],
       "options": {
-        "jestConfig": "packages/components/iam-role/jest.config.ts",
+        "jestConfig": "packages/components/iam-role/jest.config.mjs",
         "passWithNoTests": true
       }
     },

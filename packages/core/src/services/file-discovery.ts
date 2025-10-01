@@ -1,8 +1,8 @@
 import * as fs from 'fs/promises';
 import * as path from 'path';
-import { Logger } from '../platform/logger/src';
-import { ErrorMessages } from './error-message-utils';
-import { withPerformanceTiming } from './performance-metrics';
+import { Logger } from '../platform/logger/src/index.js';
+import { ErrorMessages } from './error-message-utils.js';
+import { withPerformanceTiming } from './performance-metrics.js';
 
 const logger = Logger.getLogger('file-discovery');
 

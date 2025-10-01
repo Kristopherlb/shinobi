@@ -30,7 +30,7 @@
         "{projectRoot}/coverage"
       ],
       "options": {
-        "jestConfig": "packages/components/deployment-bundle-pipeline/jest.config.ts",
+        "jestConfig": "packages/components/deployment-bundle-pipeline/jest.config.mjs",
         "passWithNoTests": true
       }
     },

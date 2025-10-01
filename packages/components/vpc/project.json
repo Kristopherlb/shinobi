@@ -30,7 +30,7 @@
         "{projectRoot}/coverage"
       ],
       "options": {
-        "jestConfig": "packages/components/vpc/jest.config.ts",
+        "jestConfig": "packages/components/vpc/jest.config.mjs",
         "passWithNoTests": true
       }
     },

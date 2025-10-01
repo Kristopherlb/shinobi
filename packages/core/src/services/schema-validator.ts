@@ -3,13 +3,13 @@
  * Implements Principle 4: Single Responsibility Principle
  * Enhanced with component-specific schema validation
  */
-import Ajv from 'ajv';
-import addFormats from 'ajv-formats';
-import { Logger } from '../platform/logger/src/index';
-import { SchemaManager } from './schema-manager';
-import { SchemaErrorFormatter } from './schema-error-formatter';
-import { EnhancedSchemaValidator, ValidationResult } from './enhanced-schema-validator';
-import { ManifestSchemaComposer } from './manifest-schema-composer';
+import AjvImport, { type Ajv as AjvInstance, type ErrorObject } from 'ajv';
+import addFormatsImport from 'ajv-formats';
+import { Logger } from '../platform/logger/src/index.js';
+import { SchemaManager } from './schema-manager.js';
+import { SchemaErrorFormatter } from './schema-error-formatter.js';
+import { EnhancedSchemaValidator, ValidationResult } from './enhanced-schema-validator.js';
+import { ManifestSchemaComposer } from './manifest-schema-composer.js';
 
 export interface SchemaValidatorDependencies {
   logger: Logger;
@@ -24,11 +24,14 @@ export interface SchemaValidatorDependencies {
  * Enhanced with comprehensive component-specific validation
  */
 export class SchemaValidator {
-  private ajv: Ajv;
+  private ajv: AjvInstance;
   private enhancedValidator: EnhancedSchemaValidator;
 
   constructor(private dependencies: SchemaValidatorDependencies) {
-    this.ajv = new Ajv({ allErrors: true, verbose: true });
+    const AjvConstructor = AjvImport as unknown as typeof import('ajv').default;
+    const addFormats = addFormatsImport as unknown as (ajv: AjvInstance) => AjvInstance;
+
+    this.ajv = new AjvConstructor({ allErrors: true, verbose: true });
     addFormats(this.ajv);
 
     // Initialize enhanced validator if not provided
@@ -109,7 +112,7 @@ export class SchemaValidator {
     const valid = validate(manifest);
 
     if (!valid) {
-      const errors = validate.errors || [];
+      const errors = (validate.errors ?? []) as ErrorObject[];
 
       // Use the enhanced error formatter for better developer experience
       const errorReport = SchemaErrorFormatter.generateErrorReport(errors);

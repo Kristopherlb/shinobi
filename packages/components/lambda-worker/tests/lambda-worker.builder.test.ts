@@ -1,8 +1,8 @@
 import {
   LambdaWorkerComponentConfigBuilder,
   LambdaWorkerConfig
-} from '../lambda-worker.builder';
-import { ComponentContext, ComponentSpec } from '../../../platform/contracts/component-interfaces';
+} from '../lambda-worker.builder.js';
+import { ComponentContext, ComponentSpec } from '../../../platform/contracts/component-interfaces.js';
 
 const createContext = (framework: string = 'commercial'): ComponentContext => ({
   serviceName: 'worker-service',

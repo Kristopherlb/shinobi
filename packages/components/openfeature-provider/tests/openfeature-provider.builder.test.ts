@@ -1,12 +1,14 @@
 /**
  * OpenFeatureProviderComponent ConfigBuilder Test Suite
- * Implements Platform Testing Standard v1.0 - ConfigBuilder Testing
  */
 
-import { OpenFeatureProviderComponentConfigBuilder, OpenFeatureProviderConfig } from '../openfeature-provider.builder';
-import { ComponentContext, ComponentSpec } from '../../../platform/contracts/component-interfaces';
+import {
+  OpenFeatureProviderComponentConfigBuilder,
+  OpenFeatureProviderComponentConfig
+} from '../openfeature-provider.builder.js';
+import { ComponentContext, ComponentSpec } from '@shinobi/core';
 
-const createMockContext = (
+const createContext = (
   complianceFramework: string = 'commercial',
   environment: string = 'dev'
 ): ComponentContext => ({
@@ -16,84 +18,77 @@ const createMockContext = (
   complianceFramework,
   region: 'us-east-1',
   account: '123456789012',
+  accountId: '123456789012',
+  scope: undefined as any,
   tags: {
     'service-name': 'test-service',
-    'owner': 'test-team',
-    'environment': environment,
+    owner: 'test-team',
+    environment,
     'compliance-framework': complianceFramework
   }
 });
 
-const createMockSpec = (config: Partial<OpenFeatureProviderConfig> = {}): ComponentSpec => ({
-  name: 'test-openfeature-provider',
+const createSpec = (config: Partial<OpenFeatureProviderComponentConfig> = {}): ComponentSpec => ({
+  name: 'openfeature',
   type: 'openfeature-provider',
   config
 });
 
 describe('OpenFeatureProviderComponentConfigBuilder', () => {
-  
-  describe('Hardcoded Fallbacks (Layer 1)', () => {
-    
-    it('should provide ultra-safe baseline configuration', () => {
-      const context = createMockContext();
-      const spec = createMockSpec();
-      
-      const builder = new OpenFeatureProviderComponentConfigBuilder(context, spec);
-      const config = builder.buildSync();
-      
-      // Verify hardcoded fallbacks are applied
-      expect(config.monitoring?.enabled).toBe(true);
-      expect(config.monitoring?.detailedMetrics).toBe(false);
-      expect(config.tags).toBeDefined();
+  it('applies platform defaults and derives names from context', () => {
+    const context = createContext();
+    const spec = createSpec();
+
+    const config = new OpenFeatureProviderComponentConfigBuilder({ context, spec }).buildSync();
+
+    expect(config.provider).toBe('aws-appconfig');
+    expect(config.awsAppConfig).toMatchObject({
+      applicationName: 'test-service-features',
+      environmentName: 'dev',
+      configurationProfileName: 'feature-flags',
+      deploymentStrategy: expect.objectContaining({
+        name: 'progressive-rollout',
+        deploymentDurationMinutes: 10,
+        growthFactor: 20
+      }),
+      retrieverServicePrincipal: 'lambda.amazonaws.com'
     });
-    
   });
-  
-  describe('Compliance Framework Defaults (Layer 2)', () => {
-    
-    it('should apply commercial compliance defaults', () => {
-      const context = createMockContext('commercial');
-      const spec = createMockSpec();
-      
-      const builder = new OpenFeatureProviderComponentConfigBuilder(context, spec);
-      const config = builder.buildSync();
-      
-      expect(config.monitoring?.enabled).toBe(true);
-      expect(config.monitoring?.detailedMetrics).toBe(true);
+
+  it('allows component overrides for alternate providers', () => {
+    const context = createContext();
+    const spec = createSpec({
+      provider: 'launchdarkly',
+      launchDarkly: {
+        projectKey: 'project',
+        environmentKey: 'env',
+        clientSideId: 'client'
+      },
+      tags: {
+        owner: 'platform'
+      }
     });
-    
-    it('should apply FedRAMP compliance defaults', () => {
-      const context = createMockContext('fedramp-moderate');
-      const spec = createMockSpec();
-      
-      const builder = new OpenFeatureProviderComponentConfigBuilder(context, spec);
-      const config = builder.buildSync();
-      
-      expect(config.monitoring?.enabled).toBe(true);
-      expect(config.monitoring?.detailedMetrics).toBe(true); // Mandatory for FedRAMP
+
+    const config = new OpenFeatureProviderComponentConfigBuilder({ context, spec }).buildSync();
+
+    expect(config.provider).toBe('launchdarkly');
+    expect(config.launchDarkly).toMatchObject({
+      projectKey: 'project',
+      environmentKey: 'env',
+      clientSideId: 'client'
     });
-    
+    expect(config.tags.owner).toBe('platform');
   });
-  
-  describe('5-Layer Precedence Chain', () => {
-    
-    it('should apply component overrides over platform defaults', () => {
-      const context = createMockContext('commercial');
-      const spec = createMockSpec({
-        monitoring: {
-          enabled: false,
-          detailedMetrics: false
-        }
-      });
-      
-      const builder = new OpenFeatureProviderComponentConfigBuilder(context, spec);
-      const config = builder.buildSync();
-      
-      // Verify component config overrides platform defaults
-      expect(config.monitoring?.enabled).toBe(false);
-      expect(config.monitoring?.detailedMetrics).toBe(false);
-    });
-    
+
+  it('pulls FedRAMP Moderate overrides from platform configuration', () => {
+    const context = createContext('fedramp-moderate');
+    const spec = createSpec();
+
+    const config = new OpenFeatureProviderComponentConfigBuilder({ context, spec }).buildSync();
+
+    expect(config.provider).toBe('aws-appconfig');
+    expect(config.awsAppConfig?.deploymentStrategy.deploymentDurationMinutes).toBe(15);
+    expect(config.awsAppConfig?.deploymentStrategy.growthFactor).toBe(15);
+    expect(config.awsAppConfig?.retrieverServicePrincipal).toBe('lambda.amazonaws.com');
   });
-  
 });

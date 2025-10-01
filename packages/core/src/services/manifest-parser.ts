@@ -5,9 +5,9 @@
 import * as fs from 'fs/promises';
 import * as path from 'path';
 import * as YAML from 'yaml';
-import { Logger } from '../platform/logger/src';
-import { ErrorMessages } from './error-message-utils';
-import { withPerformanceTiming } from './performance-metrics';
+import { Logger } from '../platform/logger/src/index.js';
+import { ErrorMessages } from './error-message-utils.js';
+import { withPerformanceTiming } from './performance-metrics.js';
 
 export interface ManifestParserDependencies {
   logger: Logger;

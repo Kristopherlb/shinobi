@@ -3,7 +3,7 @@
  * Implements comprehensive JSON Schema validation with component-specific configuration validation
  */
 
-import { Logger } from '../platform/logger/src/index';
+import { Logger } from '../platform/logger/src/index.js';
 import * as fs from 'fs/promises';
 import * as path from 'path';
 import { glob } from 'glob';
@@ -115,10 +115,15 @@ export class ManifestSchemaComposer {
         return;
       }
 
+      const defKey = `component.${componentType}.config`;
+      const normalizedSchema = JSON.parse(JSON.stringify(schema));
+      delete normalizedSchema.$id;
+      this.rewriteSchemaRefs(normalizedSchema, defKey);
+
       this.componentSchemas.set(componentType, {
         componentType,
         schemaPath: fullPath,
-        schema
+        schema: normalizedSchema
       });
 
       this.dependencies.logger.debug(`Loaded schema for component type: ${componentType}`);
@@ -272,5 +277,25 @@ export class ManifestSchemaComposer {
       componentSchemasLoaded: this.componentSchemas.size,
       componentTypes: Array.from(this.componentSchemas.keys())
     };
+  }
+
+  private rewriteSchemaRefs(node: any, defKey: string): void {
+    if (!node || typeof node !== 'object') {
+      return;
+    }
+
+    if (typeof node.$ref === 'string') {
+      const ref = node.$ref;
+      if (ref.startsWith('#/')) {
+        const pointer = ref.slice(2);
+        node.$ref = `#/$defs/${defKey}/${pointer}`;
+      } else if (ref === '#') {
+        node.$ref = `#/$defs/${defKey}`;
+      }
+    }
+
+    for (const value of Object.values(node)) {
+      this.rewriteSchemaRefs(value, defKey);
+    }
   }
 }

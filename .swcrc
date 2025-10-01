@@ -7,7 +7,10 @@
     },
     "transform": {
       "legacyDecorator": true,
-      "decoratorMetadata": true
+      "decoratorMetadata": true,
+      "esm": {
+        "importInterop": "node"
+      }
     }
   },
   "module": {

@@ -2,9 +2,9 @@
  * Composition Root - The single place where all dependencies are wired together
  * This implements Principle 2: The Composition Root pattern
  */
-import { Logger } from './utils/logger';
-import { FileDiscovery } from './utils/file-discovery';
-import { TemplateEngine } from './templates/template-engine';
+import { Logger } from './utils/logger.js';
+import { FileDiscovery } from './utils/file-discovery.js';
+import { TemplateEngine } from './templates/template-engine.js';
 import {
   ContextHydrator,
   ManifestParser,
@@ -13,13 +13,14 @@ import {
   SchemaValidator,
   ValidationOrchestrator
 } from '@shinobi/core';
-import { InitCommand } from './init';
-import { ValidateCommand } from './validate';
-import { PlanCommand } from './plan';
-import { DiffCommand } from './diff';
-import { DestroyCommand } from './destroy';
-import { UpCommand } from './up';
+import { InitCommand } from './init.js';
+import { ValidateCommand } from './validate.js';
+import { PlanCommand } from './plan.js';
+import { DiffCommand } from './diff.js';
+import { DestroyCommand } from './destroy.js';
+import { UpCommand } from './up.js';
 import inquirer from 'inquirer';
+import { ExecutionContextManager } from './execution-context-manager.js';
 
 export interface ApplicationDependencies {
   logger: Logger;
@@ -31,6 +32,7 @@ export interface ApplicationDependencies {
   schemaValidator: SchemaValidator;
   contextHydrator: ContextHydrator;
   referenceValidator: ReferenceValidator;
+  executionContext: ExecutionContextManager;
 }
 
 export class CompositionRoot {
@@ -54,18 +56,24 @@ export class CompositionRoot {
 
     // Create enhanced schema validation services
     // Create focused services (single responsibility)
-    const manifestParser = new ManifestParser({ logger });
-    const schemaValidator = new SchemaValidator({ logger, schemaManager });
-    const contextHydrator = new ContextHydrator({ logger });
-    const referenceValidator = new ReferenceValidator({ logger });
+    const manifestParser = new ManifestParser({ logger: logger.platformLogger });
+    const schemaValidator = new SchemaValidator({ logger: logger.platformLogger, schemaManager });
+    const contextHydrator = new ContextHydrator({ logger: logger.platformLogger });
+    const referenceValidator = new ReferenceValidator({ logger: logger.platformLogger });
 
     // Create orchestrator that coordinates the services
     const validationOrchestrator = new ValidationOrchestrator({
-      logger,
+      logger: logger.platformLogger,
       manifestParser,
       schemaValidator,
       contextHydrator,
       referenceValidator
+    });
+
+    const executionContext = new ExecutionContextManager({
+      logger,
+      pipeline: validationOrchestrator,
+      fileDiscovery
     });
 
     this._dependencies = {
@@ -77,7 +85,8 @@ export class CompositionRoot {
       manifestParser,
       schemaValidator,
       contextHydrator,
-      referenceValidator
+      referenceValidator,
+      executionContext
     };
 
     return this._dependencies;
@@ -105,9 +114,8 @@ export class CompositionRoot {
 
   createPlanCommand(dependencies: ApplicationDependencies): PlanCommand {
     return new PlanCommand({
-      pipeline: dependencies.validationOrchestrator,
-      fileDiscovery: dependencies.fileDiscovery,
-      logger: dependencies.logger
+      logger: dependencies.logger,
+      executionContext: dependencies.executionContext
     });
   }
 

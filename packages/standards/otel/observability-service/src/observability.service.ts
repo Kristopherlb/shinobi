@@ -23,14 +23,14 @@ import {
   PlatformServiceResult 
 } from '@shinobi/core';
 import { BaseComponent } from '@shinobi/core';
-import { IObservabilityHandler, ObservabilityConfig } from '../observability-handlers/observability-handlers/observability-handler.interface';
-import { LambdaObservabilityHandler } from '../observability-handlers/observability-handlers/lambda-observability.handler';
-import { VpcObservabilityHandler } from '../observability-handlers/observability-handlers/vpc-observability.handler';
-import { AlbObservabilityHandler } from '../observability-handlers/observability-handlers/alb-observability.handler';
-import { RdsObservabilityHandler } from '../observability-handlers/observability-handlers/rds-observability.handler';
-import { Ec2ObservabilityHandler } from '../observability-handlers/observability-handlers/ec2-observability.handler';
-import { SqsObservabilityHandler } from '../observability-handlers/observability-handlers/sqs-observability.handler';
-import { EcsObservabilityHandler } from '../observability-handlers/observability-handlers/ecs-observability.handler';
+import { IObservabilityHandler, ObservabilityConfig } from '../observability-handlers/observability-handlers/observability-handler.interface.js';
+import { LambdaObservabilityHandler } from '../observability-handlers/observability-handlers/lambda-observability.handler.js';
+import { VpcObservabilityHandler } from '../observability-handlers/observability-handlers/vpc-observability.handler.js';
+import { AlbObservabilityHandler } from '../observability-handlers/observability-handlers/alb-observability.handler.js';
+import { RdsObservabilityHandler } from '../observability-handlers/observability-handlers/rds-observability.handler.js';
+import { Ec2ObservabilityHandler } from '../observability-handlers/observability-handlers/ec2-observability.handler.js';
+import { SqsObservabilityHandler } from '../observability-handlers/observability-handlers/sqs-observability.handler.js';
+import { EcsObservabilityHandler } from '../observability-handlers/observability-handlers/ecs-observability.handler.js';
 import { ITaggingService, defaultTaggingService } from '@shinobi/standards-tagging';
 
 

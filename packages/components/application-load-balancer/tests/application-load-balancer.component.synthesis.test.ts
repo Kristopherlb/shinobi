@@ -1,8 +1,8 @@
 import { Template, Match } from 'aws-cdk-lib/assertions';
 import { App, Stack } from 'aws-cdk-lib';
-import { ApplicationLoadBalancerComponent } from '../application-load-balancer.component';
-import { ApplicationLoadBalancerConfig } from '../application-load-balancer.builder';
-import { ComponentContext, ComponentSpec } from '../../../platform/contracts/component-interfaces';
+import { ApplicationLoadBalancerComponent } from '../application-load-balancer.component.js';
+import { ApplicationLoadBalancerConfig } from '../application-load-balancer.builder.js';
+import { ComponentContext, ComponentSpec } from '../../../platform/contracts/component-interfaces.js';
 
 const VPC_ID = 'vpc-0123456789abcdef0';
 

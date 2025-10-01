@@ -14,7 +14,7 @@ import {
   FeatureFlagEvaluationContext,
   IFeatureFlagService
 } from '@shinobi/core';
-import { WebUILoggerService } from './logger.service';
+import { WebUILoggerService } from './logger.service.js';
 
 export interface WebUIFeatureFlagConfig extends FeatureFlagServiceConfig {
   /** Default evaluation context for web-ui */

@@ -1,13 +1,13 @@
 {
   "name": "@shinobi/cli",
   "version": "0.1.0",
-  "type": "commonjs",
+  "type": "module",
   "bin": {
     "shinobi": "dist/apps/shinobi/main.js"
   },
   "scripts": {
     "build": "tsc -p tsconfig.app.json",
-    "start": "node --require ts-node/register/transpile-only src/main.ts",
+    "start": "TS_NODE_PROJECT=tsconfig.app.json node --loader ts-node/esm src/main.ts",
     "test": "jest"
   },
   "dependencies": {

@@ -28,9 +28,15 @@ export interface S3BucketLifecycleTransition {
 export interface S3BucketLifecycleRule {
   id: string;
   enabled: boolean;
+  prefix?: string;
+  tags?: Record<string, string>;
   transitions?: S3BucketLifecycleTransition[];
   expiration?: {
     days: number;
+    expiredObjectDeleteMarker?: boolean;
+  };
+  abortIncompleteMultipartUpload?: {
+    daysAfterInitiation: number;
   };
 }
 
@@ -171,6 +177,15 @@ export const S3_BUCKET_CONFIG_SCHEMA: ComponentConfigSchema = {
             type: 'boolean',
             description: 'Enable or disable the rule'
           },
+          prefix: {
+            type: 'string',
+            description: 'Object key prefix filter for this rule'
+          },
+          tags: {
+            type: 'object',
+            description: 'Tag filters for this rule',
+            additionalProperties: { type: 'string' }
+          },
           transitions: {
             type: 'array',
             description: 'Lifecycle transitions to alternate storage classes',
@@ -200,6 +215,22 @@ export const S3_BUCKET_CONFIG_SCHEMA: ComponentConfigSchema = {
                 type: 'number',
                 minimum: 1,
                 description: 'Expire objects after the specified number of days'
+              },
+              expiredObjectDeleteMarker: {
+                type: 'boolean',
+                description: 'Remove delete markers for expired objects',
+                default: false
+              }
+            }
+          },
+          abortIncompleteMultipartUpload: {
+            type: 'object',
+            additionalProperties: false,
+            properties: {
+              daysAfterInitiation: {
+                type: 'number',
+                minimum: 1,
+                description: 'Abort incomplete multipart uploads after specified days'
               }
             }
           }

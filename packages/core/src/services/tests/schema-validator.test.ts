@@ -3,11 +3,11 @@
  * Following Platform Testing Standard v1.0
  */
 
-import { SchemaValidator } from '../schema-validator';
-import { SchemaManager } from '../schema-manager';
-import { EnhancedSchemaValidator } from '../enhanced-schema-validator';
-import { ManifestSchemaComposer } from '../manifest-schema-composer';
-import { Logger } from '../../platform/logger/src/index';
+import { SchemaValidator } from '../schema-validator.js';
+import { SchemaManager } from '../schema-manager.js';
+import { EnhancedSchemaValidator } from '../enhanced-schema-validator.js';
+import { ManifestSchemaComposer } from '../manifest-schema-composer.js';
+import { Logger } from '../../platform/logger/src/index.js';
 
 // Test metadata following §11
 const testMetadata = {

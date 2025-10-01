@@ -1,5 +1,6 @@
-import { ComponentContext, ComponentSpec } from '../../contracts/component-interfaces';
-import { GovernanceMetadata } from '../governance';
+import { Logger } from '@platform/logger';
+import { ComponentContext, ComponentSpec } from '../../contracts/component-interfaces.js';
+import { GovernanceMetadata } from '../governance/index.js';
 
 export interface LoggingContext {
   component: ComponentSpec;
@@ -13,7 +14,6 @@ export interface ILoggingService {
 
 export class LoggingService implements ILoggingService {
   getLogger(loggingContext: LoggingContext, loggerName?: string): any {
-    const { Logger } = require('@platform/logger');
     const { component, context, governance } = loggingContext;
 
     const name = loggerName || `${context.serviceName}.${component.name}`;
@@ -22,12 +22,12 @@ export class LoggingService implements ILoggingService {
     Logger.setGlobalContext({
       service: {
         name: context.serviceName,
-        version: context.serviceLabels?.version || '1.0.0',
+        version: context.serviceLabels?.version ?? '1.0.0',
         instance: this.resolveServiceInstance(context)
       },
       environment: {
         name: context.environment,
-        region: context.region,
+        region: this.resolveRegion(context.region),
         compliance: context.complianceFramework
       },
       context: {
@@ -35,12 +35,29 @@ export class LoggingService implements ILoggingService {
         resource: component.name
       },
       security: {
-        classification: governance.dataClassification,
+        classification: this.resolveClassification(governance.dataClassification),
         auditRequired: governance.auditLoggingRequired
       }
     });
 
     return logger;
+  }
+
+  private resolveClassification(classification: string): 'public' | 'internal' | 'cui' | 'restricted' | undefined {
+    const normalized = classification?.toLowerCase();
+    switch (normalized) {
+      case 'public':
+      case 'internal':
+      case 'cui':
+      case 'restricted':
+        return normalized;
+      default:
+        return undefined;
+    }
+  }
+
+  private resolveRegion(region?: string): string {
+    return region ?? process.env.AWS_REGION ?? process.env.AWS_DEFAULT_REGION ?? 'unknown';
   }
 
   private resolveServiceInstance(context: ComponentContext): string {

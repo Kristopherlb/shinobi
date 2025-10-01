@@ -9,5 +9,6 @@
     "test": "jest"
   },
   "dependencies": {},
-  "devDependencies": {}
+  "devDependencies": {},
+  "type": "module"
 }

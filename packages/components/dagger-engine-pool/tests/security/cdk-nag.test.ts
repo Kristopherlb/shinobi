@@ -1,8 +1,8 @@
 import { App, Stack } from 'aws-cdk-lib';
 import { AwsSolutionsChecks, NagSuppressions } from 'cdk-nag';
-import { DaggerEnginePool } from '../../dagger-engine-pool.component';
+import { DaggerEnginePool } from '../../dagger-engine-pool.component.js';
 import { ComponentContext, ComponentSpec } from '@platform/contracts';
-import { DaggerConfig } from '../../types';
+import { DaggerConfig } from '../../types.js';
 
 describe('CDK Nag Security Tests', () => {
   let app: App;

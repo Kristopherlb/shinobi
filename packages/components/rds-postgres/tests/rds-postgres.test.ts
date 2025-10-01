@@ -1,4 +1,4 @@
-import { RdsPostgresComponent, RdsPostgresBuilder } from '../src/rds-postgres';
+import { RdsPostgresComponent, RdsPostgresBuilder } from '../src/rds-postgres.js';
 
 test('RdsPostgresComponent has correct name', () => {
   const comp = new RdsPostgresComponent();

@@ -1,4 +1,4 @@
-import { diffCloudFormationTemplates } from '../utils/template-diff';
+import { diffCloudFormationTemplates } from '../utils/template-diff.js';
 
 describe('diffCloudFormationTemplates', () => {
   it('detects added resources when stack does not yet contain them', () => {

@@ -4,11 +4,11 @@
  */
 
 // Export main migration engine
-export * from './migration-engine';
+export * from './migration-engine.js';
 
 // Export migration components
-export * from './cloudformation-analyzer';
-export * from './resource-mapper';
-export * from './logical-id-preserver';
-export * from './migration-validator';
-export * from './migration-reporter';
+export * from './cloudformation-analyzer.js';
+export * from './resource-mapper.js';
+export * from './logical-id-preserver.js';
+export * from './migration-validator.js';
+export * from './migration-reporter.js';

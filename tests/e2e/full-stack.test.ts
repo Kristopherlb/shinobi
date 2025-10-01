@@ -9,7 +9,7 @@ import * as fs from 'fs';
 import * as path from 'path';
 import * as yaml from 'js-yaml';
 import * as os from 'os';
-import { ServiceManifest } from '../../packages/components/mcp-server/services/service-endpoints';
+import { ServiceManifest } from '@shinobi/mcp-server';
 
 describe('E2E: Full Stack via Service Manifest', () => {
   let tempDir: string;

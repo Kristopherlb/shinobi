@@ -1,8 +1,8 @@
 import {
   CloudFrontDistributionComponentConfigBuilder,
   CloudFrontDistributionConfig
-} from '../cloudfront-distribution.builder';
-import { ComponentContext, ComponentSpec } from '../../../platform/contracts/component-interfaces';
+} from '../cloudfront-distribution.builder.js';
+import { ComponentContext, ComponentSpec } from '../../../platform/contracts/component-interfaces.js';
 
 const createMockContext = (framework: string = 'commercial'): ComponentContext => ({
   serviceName: 'test-service',

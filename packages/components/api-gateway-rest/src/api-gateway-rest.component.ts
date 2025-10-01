@@ -16,7 +16,7 @@ import {
 import {
   ApiGatewayRestConfig,
   ApiGatewayRestConfigBuilder,
-} from './api-gateway-rest.builder';
+} from './api-gateway-rest.builder.js';
 
 interface ApiGatewayRestCapability {
   apiId: string;

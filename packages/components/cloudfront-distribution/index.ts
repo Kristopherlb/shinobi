@@ -4,14 +4,14 @@
  */
 
 // Component exports
-export { CloudFrontDistributionComponentComponent } from './cloudfront-distribution.component';
+export { CloudFrontDistributionComponentComponent } from './cloudfront-distribution.component.js';
 
 // Configuration exports
 export { 
   CloudFrontDistributionConfig,
   CloudFrontDistributionComponentConfigBuilder,
   CLOUDFRONT_DISTRIBUTION_CONFIG_SCHEMA
-} from './cloudfront-distribution.builder';
+} from './cloudfront-distribution.builder.js';
 
 // Creator exports
-export { CloudFrontDistributionComponentCreator } from './cloudfront-distribution.creator';
+export { CloudFrontDistributionComponentCreator } from './cloudfront-distribution.creator.js';

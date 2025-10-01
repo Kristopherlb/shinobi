@@ -2,9 +2,9 @@
  * Path: packages/core/src/platform/binders/strategies/cdn/__tests__/cloudfront-binder-strategy.test.ts
  */
 
-import { CloudFrontBinderStrategy } from '../cloudfront-binder-strategy';
-import type { BindingContext } from '../../../binding-context';
-import type { ComponentBinding } from '../../../component-binding';
+import { CloudFrontBinderStrategy } from '../cloudfront-binder-strategy.js';
+import type { BindingContext } from '../../../binding-context.js';
+import type { ComponentBinding } from '../../../component-binding.js';
 
 class MockComponent {
   public env: Record<string, string> = {};

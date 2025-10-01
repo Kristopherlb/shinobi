@@ -1,10 +1,10 @@
 import path from 'path';
 import os from 'os';
-import { DestroyCommand } from '../destroy';
-import type { DestroyOptions } from '../destroy';
-import type { Logger } from '../utils/logger';
+import { DestroyCommand } from '../destroy.js';
+import type { DestroyOptions } from '../destroy.js';
+import type { Logger } from '../utils/logger.js';
 import type { FileDiscovery } from '@shinobi/core';
-jest.mock('../utils/service-synthesizer', () => ({
+jest.mock('../utils/service-synthesizer.js', () => ({
   readManifest: jest.fn()
 }));
 
@@ -19,23 +19,26 @@ jest.mock('@aws-sdk/client-cloudformation', () => {
 });
 
 jest.mock('inquirer', () => ({
-  prompt: jest.fn()
+  __esModule: true,
+  default: { prompt: jest.fn() }
 }));
 
-const readManifestMock = require('../utils/service-synthesizer').readManifest as jest.Mock;
-const {
+import { readManifest } from '../utils/service-synthesizer.js';
+import {
   CloudFormationClient,
   DeleteStackCommand,
   waitUntilStackDeleteComplete
-} = require('@aws-sdk/client-cloudformation');
+} from '@aws-sdk/client-cloudformation';
+import inquirer from 'inquirer';
 
-const promptMock = require('inquirer').prompt as jest.Mock;
+const readManifestMock = readManifest as unknown as jest.Mock;
+const promptMock = inquirer.prompt as unknown as jest.Mock;
 
 const sendMock = jest.fn();
-const waitUntilStackDeleteCompleteMock = waitUntilStackDeleteComplete as jest.Mock;
+const waitUntilStackDeleteCompleteMock = waitUntilStackDeleteComplete as unknown as jest.Mock;
 
-(CloudFormationClient as jest.Mock).mockImplementation(() => ({ send: sendMock }));
-(DeleteStackCommand as jest.Mock).mockImplementation((args: any) => args);
+(CloudFormationClient as unknown as jest.Mock).mockImplementation(() => ({ send: sendMock }));
+(DeleteStackCommand as unknown as jest.Mock).mockImplementation((args: any) => args);
 
 describe('DestroyCommand', () => {
   const logger: Logger = {

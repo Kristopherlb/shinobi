@@ -3,9 +3,9 @@
  * Demonstrates how to use the enhanced binder strategy system
  */
 
-import { BinderIntegration } from './binder-integration';
-import { EnhancedBindingContext, CapabilityData } from './enhanced-binding-context';
-import { Component } from './component';
+import { BinderIntegration } from './binder-integration.js';
+import { EnhancedBindingContext, CapabilityData } from './enhanced-binding-context.js';
+import { Component } from './component.js';
 
 /**
  * Example usage of the binder strategy system

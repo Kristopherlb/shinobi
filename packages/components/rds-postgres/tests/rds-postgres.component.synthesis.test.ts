@@ -22,9 +22,9 @@ jest.mock(
 
 import { App, Stack } from 'aws-cdk-lib';
 import { Match, Template } from 'aws-cdk-lib/assertions';
-import { RdsPostgresComponent } from '../rds-postgres.component';
-import { RdsPostgresConfig } from '../rds-postgres.builder';
-import { ComponentContext, ComponentSpec } from '../../../platform/contracts/component-interfaces';
+import { RdsPostgresComponent } from '../rds-postgres.component.js';
+import { RdsPostgresConfig } from '../rds-postgres.builder.js';
+import { ComponentContext, ComponentSpec } from '../../../platform/contracts/component-interfaces.js';
 
 const createMockContext = (framework: string): ComponentContext => ({
   serviceName: 'checkout',

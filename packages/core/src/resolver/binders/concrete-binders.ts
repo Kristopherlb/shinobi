@@ -16,7 +16,7 @@ import {
   IBinderStrategy,
   BindingContext,
   BindingResult
-} from '../../platform/contracts/platform-binding-trigger-spec';
+} from '../../platform/contracts/platform-binding-trigger-spec.js';
 import * as lambda from 'aws-cdk-lib/aws-lambda';
 import * as rds from 'aws-cdk-lib/aws-rds';
 import * as s3 from 'aws-cdk-lib/aws-s3';

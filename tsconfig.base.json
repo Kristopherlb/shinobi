@@ -4,8 +4,8 @@
     "lib": [
       "ES2022"
     ],
-    "module": "CommonJS",
-    "moduleResolution": "Node",
+    "module": "NodeNext",
+    "moduleResolution": "NodeNext",
     "composite": true,
     "declaration": true,
     "declarationMap": true,
@@ -16,6 +16,7 @@
     "skipLibCheck": true,
     "forceConsistentCasingInFileNames": true,
     "downlevelIteration": true,
+    "isolatedModules": true,
     "baseUrl": ".",
     "paths": {
       "@shinobi/core/component": [
@@ -29,6 +30,12 @@
       ],
       "@shinobi/core/logging-interfaces": [
         "packages/core/src/platform/contracts/logging-interfaces.ts"
+      ],
+      "@shinobi/core/platform/contracts": [
+        "packages/core/src/platform/contracts/index.ts"
+      ],
+      "@shinobi/core/platform/contracts/*": [
+        "packages/core/src/platform/contracts/*"
       ],
       "@shinobi/core/platform-services": [
         "packages/core/src/platform/contracts/platform-services.ts"

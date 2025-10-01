@@ -5,8 +5,8 @@
 
 import * as fs from 'fs/promises';
 import * as path from 'path';
-import Ajv from 'ajv';
-import addFormats from 'ajv-formats';
+import AjvImport, { type Ajv as AjvInstance, type ErrorObject } from 'ajv';
+import addFormatsImport from 'ajv-formats';
 
 export interface TestMetadata {
   id: string;
@@ -34,11 +34,14 @@ export interface ValidationResult {
 }
 
 export class TestMetadataValidator {
-  private ajv: Ajv;
+  private ajv: AjvInstance;
   private schema: any;
 
   constructor() {
-    this.ajv = new Ajv({ allErrors: true, verbose: true });
+    const AjvConstructor = AjvImport as unknown as typeof import('ajv').default;
+    const addFormats = addFormatsImport as unknown as (ajv: AjvInstance) => AjvInstance;
+
+    this.ajv = new AjvConstructor({ allErrors: true, verbose: true });
     addFormats(this.ajv);
   }
 
@@ -60,7 +63,7 @@ export class TestMetadataValidator {
     const warnings: string[] = [];
 
     if (!valid && validate.errors) {
-      for (const error of validate.errors) {
+      for (const error of (validate.errors ?? []) as ErrorObject[]) {
         const errorMessage = `${error.instancePath || 'root'}: ${error.message}`;
         errors.push(errorMessage);
       }

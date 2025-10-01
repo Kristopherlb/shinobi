@@ -5,9 +5,9 @@
 
 import { Template, Match } from 'aws-cdk-lib/assertions';
 import { App, Stack } from 'aws-cdk-lib';
-import { FeatureFlagComponentComponent } from '../feature-flag.component';
-import { FeatureFlagConfig } from '../feature-flag.builder';
-import { ComponentContext, ComponentSpec } from '../../../platform/contracts/component-interfaces';
+import { FeatureFlagComponentComponent } from '../feature-flag.component.js';
+import { FeatureFlagConfig } from '../feature-flag.builder.js';
+import { ComponentContext, ComponentSpec } from '../../../platform/contracts/component-interfaces.js';
 
 const createMockContext = (
   complianceFramework: string = 'commercial',

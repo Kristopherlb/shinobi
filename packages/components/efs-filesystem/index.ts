@@ -4,14 +4,14 @@
  */
 
 // Component exports
-export { EfsFilesystemComponent } from './efs-filesystem.component';
+export { EfsFilesystemComponent } from './efs-filesystem.component.js';
 
 // Configuration exports
 export { 
   EfsFilesystemConfig,
   EfsFilesystemComponentConfigBuilder,
   EFS_FILESYSTEM_CONFIG_SCHEMA
-} from './efs-filesystem.builder';
+} from './efs-filesystem.builder.js';
 
 // Creator exports
-export { EfsFilesystemComponentCreator } from './efs-filesystem.creator';
+export { EfsFilesystemComponentCreator } from './efs-filesystem.creator.js';

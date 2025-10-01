@@ -1,5 +1,5 @@
 import { Command } from 'commander';
-import { CompositionRoot } from '../composition-root';
+import { CompositionRoot } from '../composition-root.js';
 
 export function createDiffCommand(): Command {
   const root = new CompositionRoot();

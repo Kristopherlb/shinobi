@@ -441,15 +441,15 @@ export class Logger {
   }
 
   private getEnvironmentName(): string {
-    return process.env.ENVIRONMENT || process.env.NODE_ENV || 'development';
+    return process.env.ENVIRONMENT || process.env.NODE_ENV || 'unknown';
   }
 
   private getRegion(): string {
-    return process.env.AWS_REGION || process.env.AWS_DEFAULT_REGION || 'us-east-1';
+    return process.env.AWS_REGION || process.env.AWS_DEFAULT_REGION || 'unknown';
   }
 
   private getComplianceFramework(): string {
-    return process.env.COMPLIANCE_FRAMEWORK || 'commercial';
+    return process.env.COMPLIANCE_FRAMEWORK || 'unknown';
   }
 
   private getCurrentTraceContext(): LogTrace | undefined {

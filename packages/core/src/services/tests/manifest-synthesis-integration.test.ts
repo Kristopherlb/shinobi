@@ -22,14 +22,14 @@
 import * as cdk from 'aws-cdk-lib';
 import { Construct } from 'constructs';
 import { Template, Match } from 'aws-cdk-lib/assertions';
-import { ResolverEngine } from '../../resolver/resolver-engine';
-import { Logger } from '../../core-engine/logger';
-import { ComprehensiveBinderRegistry } from '../../platform/binders/registry/comprehensive-binder-registry';
-import { ComponentFactoryBuilder } from '../../platform/contracts/components/component-factory';
-import { ComponentRegistry } from '../../platform/contracts/components/component-registry';
-import { IComponent } from '../../platform/contracts';
-import { ComponentContext } from '../../platform/contracts/component-interfaces';
-import { ComponentSpec } from '../../platform/contracts/components/component-spec';
+import { ResolverEngine } from '../../resolver/resolver-engine.js';
+import { Logger } from '../../core-engine/logger.js';
+import { ComprehensiveBinderRegistry } from '../../platform/binders/registry/comprehensive-binder-registry.js';
+import { ComponentFactoryBuilder } from '../../platform/contracts/components/component-factory.js';
+import { ComponentRegistry } from '../../platform/contracts/components/component-registry.js';
+import { IComponent } from '../../platform/contracts/index.js';
+import { ComponentContext } from '../../platform/contracts/component-interfaces.js';
+import { ComponentSpec } from '../../platform/contracts/components/component-spec.js';
 
 
 /**

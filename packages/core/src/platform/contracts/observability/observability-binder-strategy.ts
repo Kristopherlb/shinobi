@@ -2,20 +2,20 @@
 // Observability binder strategy that integrates with the existing binder system
 
 import { PolicyStatement } from 'aws-cdk-lib/aws-iam';
-import { EnhancedBinderStrategy } from '../enhanced-binder-strategy';
+import { EnhancedBinderStrategy } from '../enhanced-binder-strategy.js';
 import {
   EnhancedBindingContext,
   EnhancedBindingResult,
   Capability,
   ComplianceFramework
-} from '../bindings';
+} from '../bindings.js';
 import {
   ObservabilityConfig,
   ObservabilityBindingResult,
   ComponentObservabilityCapability
-} from './observability-types';
-import { ObservabilityConfigFactory } from './observability-config-factory';
-import { BaseComponentObservability } from './base-component-observability';
+} from './observability-types.js';
+import { ObservabilityConfigFactory } from './observability-config-factory.js';
+import { BaseComponentObservability } from './base-component-observability.js';
 
 export class ObservabilityBinderStrategy extends EnhancedBinderStrategy {
   private observabilityConfig: ObservabilityConfig;

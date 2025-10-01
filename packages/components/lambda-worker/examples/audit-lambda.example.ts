@@ -1,7 +1,7 @@
 /**
  * Audit Lambda Example
  * 
- * Demonstrates how to use the enhanced Lambda Worker Component with
+ * Demonstrates how to use the Lambda Worker Component with
  * Lambda Observability Service and Powertools for compliance auditing.
  * 
  * This example shows:
@@ -9,6 +9,9 @@
  * - Business metrics for audit operations
  * - Parameter store integration for audit rules
  * - Structured logging with automatic Lambda context
+ * 
+ * The Lambda Worker Component now includes platform-level Lambda Powertools services
+ * that provide the same enhanced observability capabilities.
  */
 
 import { APIGatewayProxyEvent, APIGatewayProxyResult, Context } from 'aws-lambda';

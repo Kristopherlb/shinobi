@@ -132,7 +132,7 @@ jest.mock('aws-cdk-lib', () => {
 });
 
 jest.mock('aws-cdk-lib/aws-s3', () => {
-  const { Stack } = require('aws-cdk-lib');
+  const { Stack } = jest.requireActual('aws-cdk-lib');
 
   class Bucket {
     public readonly node: { defaultChild: any };
@@ -251,4 +251,3 @@ describe('PlanCommand basic synthesis', () => {
     });
   });
 });
-

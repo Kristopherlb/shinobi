@@ -9,5 +9,6 @@
   },
   "dependencies": {
     "@shinobi/core": "workspace:*"
-  }
+  },
+  "type": "module"
 }

@@ -3,7 +3,7 @@
  * Phase 1: Analyzes existing CDK project and extracts resource inventory
  */
 
-import { Logger } from '../core-engine/logger';
+import { Logger } from '../core-engine/logger.js';
 import { execSync } from 'child_process';
 import * as fs from 'fs';
 import * as path from 'path';

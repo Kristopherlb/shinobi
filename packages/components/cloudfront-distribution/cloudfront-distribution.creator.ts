@@ -10,9 +10,9 @@ import {
   ComponentSpec, 
   ComponentContext, 
   IComponentCreator 
-} from '../../platform/contracts/component-interfaces';
-import { CloudFrontDistributionComponentComponent } from './cloudfront-distribution.component';
-import { CloudFrontDistributionConfig, CLOUDFRONT_DISTRIBUTION_CONFIG_SCHEMA } from './cloudfront-distribution.builder';
+} from '../../platform/contracts/component-interfaces.js';
+import { CloudFrontDistributionComponentComponent } from './cloudfront-distribution.component.js';
+import { CloudFrontDistributionConfig, CLOUDFRONT_DISTRIBUTION_CONFIG_SCHEMA } from './cloudfront-distribution.builder.js';
 
 /**
  * Creator class for CloudFrontDistributionComponent component

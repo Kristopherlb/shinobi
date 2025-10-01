@@ -25,7 +25,7 @@ import {
   AlarmTreatMissingData,
   EventBridgeRulePatternComponentConfigBuilder,
   EventBridgeRulePatternConfig
-} from './eventbridge-rule-pattern.builder';
+} from './eventbridge-rule-pattern.builder.js';
 
 interface CreatedAlarm {
   id: string;

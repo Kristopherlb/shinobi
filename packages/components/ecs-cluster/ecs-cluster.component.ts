@@ -12,9 +12,9 @@ import * as servicediscovery from 'aws-cdk-lib/aws-servicediscovery';
 import * as autoscaling from 'aws-cdk-lib/aws-autoscaling';
 import * as cdk from 'aws-cdk-lib';
 import { Construct } from 'constructs';
-import { BaseComponent } from '../@shinobi/core/component';
-import { ComponentSpec, ComponentContext, ComponentCapabilities } from '../@shinobi/core/component-interfaces';
-import { EcsClusterConfig, EcsClusterComponentConfigBuilder } from './ecs-cluster.builder';
+import { BaseComponent } from '../@shinobi/core/component.js';
+import { ComponentSpec, ComponentContext, ComponentCapabilities } from '../@shinobi/core/component-interfaces.js';
+import { EcsClusterConfig, EcsClusterComponentConfigBuilder } from './ecs-cluster.builder.js';
 
 
 /**

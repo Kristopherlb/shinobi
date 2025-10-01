@@ -2,8 +2,8 @@ import { App, Stack } from 'aws-cdk-lib';
 import { Template, Match } from 'aws-cdk-lib/assertions';
 import { Construct } from 'constructs';
 import { ComponentContext, ComponentSpec } from '@shinobi/core';
-import { EventBridgeRuleCronComponent } from '../eventbridge-rule-cron.component';
-import { EventBridgeRuleCronConfig } from '../eventbridge-rule-cron.builder';
+import { EventBridgeRuleCronComponent } from '../eventbridge-rule-cron.component.js';
+import { EventBridgeRuleCronConfig } from '../eventbridge-rule-cron.builder.js';
 
 type Framework = 'commercial' | 'fedramp-moderate' | 'fedramp-high';
 

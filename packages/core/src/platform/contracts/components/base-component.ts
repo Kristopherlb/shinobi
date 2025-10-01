@@ -1,16 +1,16 @@
 // src/platform/contracts/components/base-component.ts
 // Abstract base component class for all Shinobi components
 
-import { IComponent, CapabilityData } from '../bindings';
-import { ComponentContext } from '../component-interfaces';
-import { ComponentConfigBuilder } from './component-config-builder';
+import type { IComponent, CapabilityData } from '../bindings.js';
+import type { ComponentContext } from '../component-interfaces.js';
+import { ComponentConfigBuilder } from './component-config-builder.js';
 
 /**
  * Abstract base component class
  * All Shinobi components must extend this class
  */
 
-export { ComponentContext, IComponent };
+export type { ComponentContext, IComponent };
 export abstract class BaseComponent {
   protected config: Record<string, any>;
   protected context: ComponentContext;

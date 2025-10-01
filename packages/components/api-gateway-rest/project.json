@@ -32,7 +32,7 @@
         "{projectRoot}/coverage"
       ],
       "options": {
-        "jestConfig": "packages/components/api-gateway-rest/jest.config.ts",
+        "jestConfig": "packages/components/api-gateway-rest/jest.config.mjs",
         "passWithNoTests": false
       }
     },

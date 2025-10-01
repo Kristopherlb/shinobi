@@ -6,7 +6,7 @@ The Shinobi MCP Server is now set up and ready to use with Cursor! It provides 8
 
 ## **✅ What's Already Done**
 
-1. **✅ MCP Server Built** - Standalone server at `packages/components/shinobi/mcp-server/`
+1. **✅ MCP Server Built** - Standalone server at `apps/shinobi-mcp-server/`
 2. **✅ Dependencies Installed** - All required packages installed
 3. **✅ Server Tested** - MCP server responds correctly to tool requests
 4. **✅ Configuration Files Created** - Ready for Cursor integration
@@ -23,7 +23,7 @@ The Shinobi MCP Server is now set up and ready to use with Cursor! It provides 8
    - Click "Add Server"
    - **Name**: `shinobi`
    - **Command**: `node`
-   - **Args**: `/Users/kristopherbowles/code/CDK-Lib/packages/components/shinobi/mcp-server/dist/index.js`
+   - **Args**: `/Users/kristopherbowles/code/CDK-Lib/apps/shinobi-mcp-server/dist/index.js`
    - **Environment Variables**: (leave empty for now)
 
 3. **Save and Restart Cursor**
@@ -79,14 +79,14 @@ After setup, test with:
 
 ```bash
 # Test the MCP server directly
-echo '{"jsonrpc": "2.0", "id": 1, "method": "tools/list", "params": {}}' | node packages/components/shinobi/mcp-server/dist/index.js
+echo '{"jsonrpc": "2.0", "id": 1, "method": "tools/list", "params": {}}' | node apps/shinobi-mcp-server/dist/index.js
 ```
 
 ## **🔧 Troubleshooting**
 
 ### **Server Not Responding**
 ```bash
-cd packages/components/shinobi/mcp-server
+cd apps/shinobi-mcp-server
 npm run build
 npm start
 ```
@@ -98,7 +98,7 @@ npm start
 
 ### **Permission Issues**
 ```bash
-chmod +x packages/components/shinobi/mcp-server/dist/index.js
+chmod +x apps/shinobi-mcp-server/dist/index.js
 ```
 
 ## **📊 What This Enables**

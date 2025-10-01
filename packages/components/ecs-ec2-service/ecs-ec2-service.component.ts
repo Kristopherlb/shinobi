@@ -19,7 +19,7 @@ import {
   EcsEc2ServiceConfigBuilder,
   EcsPlacementConstraintConfig,
   EcsPlacementStrategyConfig
-} from './ecs-ec2-service.builder';
+} from './ecs-ec2-service.builder.js';
 
 export class EcsEc2ServiceComponent extends BaseComponent {
   private service?: ecs.Ec2Service;

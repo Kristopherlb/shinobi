@@ -4,16 +4,22 @@
  */
 
 import { createHash } from 'crypto';
-import { EnhancedBinderStrategy } from './enhanced-binder-strategy';
+import { EnhancedBinderStrategy } from './enhanced-binder-strategy.js';
 import {
   EnhancedBindingContext,
   EnhancedBindingResult,
   BindingMetadata,
   Capability
-} from './bindings';
-import { BindingCache } from './performance/binding-cache';
-import { BindingMetricsCollector } from './performance/binding-metrics-collector';
-import { BindingBenchmark } from './performance/binding-benchmark';
+} from './bindings.js';
+import { BindingCache } from './performance/binding-cache.js';
+import { BindingMetricsCollector } from './performance/binding-metrics-collector.js';
+import { BindingBenchmark } from './performance/binding-benchmark.js';
+import { ApiGatewayBinderStrategy } from './binders/api-gateway-binder-strategy.js';
+import { CacheBinderStrategy } from './binders/cache-binder-strategy.js';
+import { DatabaseBinderStrategy } from './binders/database-binder-strategy.js';
+import { LambdaBinderStrategy } from './binders/lambda-binder-strategy.js';
+import { QueueBinderStrategy } from './binders/queue-binder-strategy.js';
+import { StorageBinderStrategy } from './binders/storage-binder-strategy.js';
 
 // Logger interface for structured logging
 interface Logger {
@@ -190,12 +196,12 @@ export class EnhancedBinderRegistry {
    */
   private registerDefaultStrategies(): void {
     // Import and register default strategies
-    this.register(new (require('./binders/database-binder-strategy').DatabaseBinderStrategy)());
-    this.register(new (require('./binders/storage-binder-strategy').StorageBinderStrategy)());
-    this.register(new (require('./binders/cache-binder-strategy').CacheBinderStrategy)());
-    this.register(new (require('./binders/queue-binder-strategy').QueueBinderStrategy)());
-    this.register(new (require('./binders/lambda-binder-strategy').LambdaBinderStrategy)());
-    this.register(new (require('./binders/api-gateway-binder-strategy').ApiGatewayBinderStrategy)());
+    this.register(new DatabaseBinderStrategy());
+    this.register(new StorageBinderStrategy());
+    this.register(new CacheBinderStrategy());
+    this.register(new QueueBinderStrategy());
+    this.register(new LambdaBinderStrategy());
+    this.register(new ApiGatewayBinderStrategy());
   }
 
   /**

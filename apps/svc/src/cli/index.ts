@@ -4,11 +4,11 @@
  */
 
 // Export main CLI application
-export * from './cli';
-export * from './composition-root';
+export * from './cli.js';
+export * from './composition-root.js';
 
 // Export individual commands
-export * from './init';
-export * from './validate';
-export * from './plan';
-export * from './migrate-command';
+export * from './init.js';
+export * from './validate.js';
+export * from './plan.js';
+export * from './migrate-command.js';

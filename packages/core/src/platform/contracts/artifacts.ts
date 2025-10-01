@@ -5,7 +5,7 @@
  * Ensures structured, machine-readable outputs for CI/CD integration and auditing.
  */
 
-import { ComponentType, ComplianceFramework } from './bindings';
+import { ComponentType, ComplianceFramework } from './bindings.js';
 
 // =============================================================================
 // BASE ARTIFACT INTERFACES

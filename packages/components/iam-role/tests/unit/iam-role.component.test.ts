@@ -6,8 +6,8 @@
 
 import { Stack } from 'aws-cdk-lib';
 import { Template } from 'aws-cdk-lib/assertions';
-import { IamRoleComponent } from '../../src/iam-role.component';
-import { ComponentContext, ComponentSpec } from '../../../@shinobi/core/component-interfaces';
+import { IamRoleComponent } from '../../src/iam-role.component.js';
+import { ComponentContext, ComponentSpec } from '../../../@shinobi/core/component-interfaces.js';
 
 describe('IamRoleComponent', () => {
   let stack: Stack;

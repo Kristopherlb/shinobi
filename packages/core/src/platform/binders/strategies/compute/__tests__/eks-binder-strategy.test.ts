@@ -2,9 +2,9 @@
  * Path: packages/core/src/platform/binders/strategies/compute/__tests__/eks-binder-strategy.test.ts
  */
 
-import { EksBinderStrategy } from '../eks-binder-strategy';
-import type { BindingContext } from '../../../binding-context';
-import type { ComponentBinding } from '../../../component-binding';
+import { EksBinderStrategy } from '../eks-binder-strategy.js';
+import type { BindingContext } from '../../../binding-context.js';
+import type { ComponentBinding } from '../../../component-binding.js';
 
 class MockComponent {
   public env: Record<string, string> = {};

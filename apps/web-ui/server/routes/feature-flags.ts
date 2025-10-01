@@ -7,8 +7,8 @@
  */
 
 import { Router, Request, Response } from 'express';
-import { getGlobalContainer } from '../services/di-container';
-import { SERVICE_TOKENS } from '../services/service-tokens';
+import { getGlobalContainer } from '../services/di-container.js';
+import { SERVICE_TOKENS } from '../services/service-tokens.js';
 
 const router = Router();
 

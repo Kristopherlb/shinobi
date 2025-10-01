@@ -3,7 +3,8 @@ import { Dirent } from 'fs';
 import * as fsp from 'fs/promises';
 import * as path from 'path';
 import { execSync } from 'child_process';
-import { loadComponentCatalog, ComponentCatalogEntry, formatCatalogDisplayName } from './component-catalog';
+import { pathToFileURL } from 'url';
+import { loadComponentCatalog, ComponentCatalogEntry, formatCatalogDisplayName } from './component-catalog.js';
 import { sync as globSync } from 'glob';
 import { IComponentCreator } from '@shinobi/core';
 
@@ -19,33 +20,12 @@ export interface ComponentCreatorEntry {
   creator: PlatformComponentCreator;
 }
 
-let tsRuntimePrepared = false;
-
-const prepareTsRuntime = () => {
-  if (tsRuntimePrepared) {
-    return;
-  }
-  try {
-    require('ts-node/register/transpile-only');
-    try {
-      require('tsconfig-paths/register');
-    } catch (pathError) {
-      console.warn('tsconfig-paths/register not found; TypeScript path aliases may not resolve.');
-    }
-    tsRuntimePrepared = true;
-  } catch (error) {
-    throw new Error(`Failed to prepare TypeScript runtime. ${(error as Error).message}`);
-  }
-};
-
-const ensurePackageBuilt = async (rootDir: string, entry: ComponentCatalogEntry) => {
-  const distIndex = path.join(rootDir, 'dist/packages/components', entry.packageDir, 'index.js');
+const ensurePackageBuilt = (rootDir: string, packageDir: string, packageName: string) => {
+  const distIndex = path.join(rootDir, 'dist/packages/components', packageDir, 'index.js');
   if (fs.existsSync(distIndex)) {
     return distIndex;
   }
 
-  // Attempt to build the component package
-  const packageName = entry.packageName;
   try {
     execSync(`pnpm --filter ${packageName} build`, {
       cwd: rootDir,
@@ -85,8 +65,6 @@ export const loadComponentCreators = async (
   const componentsDir = path.join(rootDir, 'packages/components');
   const catalogEntries = await loadComponentCatalog({ includeNonProduction: true });
   const catalogByType = new Map<string, ComponentCatalogEntry>(catalogEntries.map(entry => [entry.componentType, entry]));
-
-  prepareTsRuntime();
 
   let componentDirs: Dirent[];
   try {
@@ -131,12 +109,24 @@ export const loadComponentCreators = async (
     });
     candidatePaths.push(...creatorGlob);
 
+    const shouldBuild = options?.autoBuild !== false;
+    const distIndex = shouldBuild ? ensurePackageBuilt(rootDir, packageDir, packageName) : path.join(rootDir, 'dist/packages/components', packageDir, 'index.js');
+    if (!fs.existsSync(distIndex)) {
+      continue;
+    }
+
     let moduleExports: Record<string, any> | undefined;
     let loadError: Error | undefined;
 
     for (const candidate of candidatePaths) {
+      const distCandidate = toDistPath(rootDir, packageDir, candidate);
+      if (!distCandidate || !fs.existsSync(distCandidate)) {
+        continue;
+      }
+
       try {
-        moduleExports = require(candidate);
+        const moduleUrl = pathToFileURL(distCandidate).href;
+        moduleExports = await import(moduleUrl);
         break;
       } catch (error) {
         loadError = error as Error;
@@ -199,4 +189,19 @@ export const loadComponentCreators = async (
   }
 
   return creators;
+};
+
+const toDistPath = (rootDir: string, packageDir: string, candidatePath: string): string | null => {
+  const componentRoot = path.join(rootDir, 'packages/components', packageDir);
+  const relative = path.relative(componentRoot, candidatePath);
+  if (relative === 'index.ts') {
+    return path.join(rootDir, 'dist/packages/components', packageDir, 'index.js');
+  }
+
+  if (relative.startsWith('src') && candidatePath.endsWith('.ts')) {
+    const distRelative = relative.replace(/\.ts$/, '.js');
+    return path.join(rootDir, 'dist/packages/components', packageDir, distRelative);
+  }
+
+  return null;
 };

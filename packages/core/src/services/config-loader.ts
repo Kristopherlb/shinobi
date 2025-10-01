@@ -5,9 +5,9 @@
 import * as fs from 'fs/promises';
 import * as path from 'path';
 import * as YAML from 'yaml';
-import { ErrorMessages } from './error-message-utils';
-import { withPerformanceTiming } from './performance-metrics';
-import { Logger } from '../platform/logger/src';
+import { ErrorMessages } from './error-message-utils.js';
+import { withPerformanceTiming } from './performance-metrics.js';
+import { Logger } from '../platform/logger/src/index.js';
 
 export interface TemplateConfig {
   templates: {

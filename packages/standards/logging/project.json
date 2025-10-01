@@ -19,7 +19,7 @@
     "test": {
       "executor": "@nx/jest:jest",
       "options": {
-        "jestConfig": "packages/standards/logging/jest.config.ts"
+        "jestConfig": "packages/standards/logging/jest.config.mjs"
       }
     },
     "lint": {

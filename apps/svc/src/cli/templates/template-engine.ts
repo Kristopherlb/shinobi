@@ -1,7 +1,7 @@
 import * as fs from 'fs/promises';
-import * as Mustache from 'mustache';
+import Mustache from 'mustache';
 import { ConfigLoader } from '@shinobi/core';
-import { Logger } from '../utils/logger';
+import { Logger } from '../utils/logger.js';
 
 export interface ProjectInputs {
   name: string;

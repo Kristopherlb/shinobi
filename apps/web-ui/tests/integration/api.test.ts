@@ -10,10 +10,10 @@
 import { describe, it, expect, beforeAll, afterAll, vi } from 'vitest';
 import request from 'supertest';
 import express from 'express';
-import { registerRoutes } from '../../server/routes';
-import { createWebUIDIContainer, setGlobalContainer } from '../../server/services/di-container';
-import { SERVICE_TOKENS } from '../../server/services/service-tokens';
-import { setupDeterministicTest, teardownDeterministicTest, DeterminismHarness, TestMetadata } from '../utils/platform-testing-utils';
+import { registerRoutes } from '../../server/routes.js';
+import { createWebUIDIContainer, setGlobalContainer } from '../../server/services/di-container.js';
+import { SERVICE_TOKENS } from '../../server/services/service-tokens.js';
+import { setupDeterministicTest, teardownDeterministicTest, DeterminismHarness, TestMetadata } from '../utils/platform-testing-utils.js';
 
 // Mock the Logger service
 const mockLogger = {

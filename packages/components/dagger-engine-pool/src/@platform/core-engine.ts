@@ -1,3 +1,5 @@
+import { Key } from 'aws-cdk-lib/aws-kms';
+
 // Mock implementation of @platform/core-engine for testing
 export abstract class BaseComponent {
   protected constructs = new Map();
@@ -26,7 +28,6 @@ export abstract class BaseComponent {
   }
 
   protected createKmsKeyIfNeeded(purpose: string) {
-    const { Key } = require('aws-cdk-lib/aws-kms');
     return new Key(this.scope, 'MockKmsKey', {
       description: `Mock KMS key for ${purpose}`
     });

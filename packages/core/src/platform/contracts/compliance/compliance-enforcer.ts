@@ -9,7 +9,7 @@ import {
   ComplianceAction,
   Capability,
   SgPeer
-} from '../bindings';
+} from '../bindings.js';
 
 /**
  * Compliance enforcer for framework-specific validation

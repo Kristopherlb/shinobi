@@ -1,6 +1,6 @@
 import { ComponentRegistry } from '@platform/core-engine';
 import { LambdaApiComponent } from '@platform/lambda-api';
-import { TestHarness } from '../src/index';
+import { TestHarness } from '../src/index.js';
 
 test('LambdaApiComponent can be registered in ComponentRegistry', () => {
   const registry = new ComponentRegistry();

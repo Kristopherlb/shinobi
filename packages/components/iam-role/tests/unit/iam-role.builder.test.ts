@@ -4,8 +4,8 @@
  * Tests the 5-layer configuration precedence chain and validation.
  */
 
-import { IamRoleConfigBuilder, IamRoleConfig } from '../../src/iam-role.builder';
-import { ComponentContext, ComponentSpec } from '../../../@shinobi/core/component-interfaces';
+import { IamRoleConfigBuilder, IamRoleConfig } from '../../src/iam-role.builder.js';
+import { ComponentContext, ComponentSpec } from '../../../@shinobi/core/component-interfaces.js';
 import { Stack } from 'aws-cdk-lib';
 
 describe('IamRoleConfigBuilder', () => {

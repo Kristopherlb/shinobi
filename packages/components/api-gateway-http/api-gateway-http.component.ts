@@ -25,7 +25,7 @@ import {
   ComponentContext,
   ComponentSpec
 } from '@shinobi/core';
-import { ApiGatewayHttpConfig, ApiGatewayHttpConfigBuilder } from './api-gateway-http.builder';
+import { ApiGatewayHttpConfig, ApiGatewayHttpConfigBuilder } from './api-gateway-http.builder.js';
 
 type RouteConfig = NonNullable<ApiGatewayHttpConfig['routes']>[number];
 type CustomDomainConfig = NonNullable<ApiGatewayHttpConfig['customDomain']>;

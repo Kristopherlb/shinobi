@@ -10,9 +10,9 @@ import {
   ComponentSpec, 
   ComponentContext, 
   IComponentCreator 
-} from '../../platform/contracts/component-interfaces';
-import { AutoScalingGroupComponent } from './auto-scaling-group.component';
-import { AutoScalingGroupConfig, AUTO_SCALING_GROUP_CONFIG_SCHEMA } from './auto-scaling-group.builder';
+} from '../../platform/contracts/component-interfaces.js';
+import { AutoScalingGroupComponent } from './auto-scaling-group.component.js';
+import { AutoScalingGroupConfig, AUTO_SCALING_GROUP_CONFIG_SCHEMA } from './auto-scaling-group.builder.js';
 
 /**
  * Creator class for AutoScalingGroupComponent component

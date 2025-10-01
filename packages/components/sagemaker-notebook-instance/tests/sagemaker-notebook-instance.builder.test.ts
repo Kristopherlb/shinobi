@@ -3,8 +3,8 @@
  * Implements Platform Testing Standard v1.0 - ConfigBuilder Testing
  */
 
-import './setup';
-import { SageMakerNotebookInstanceComponentConfigBuilder, SageMakerNotebookInstanceConfig } from '../sagemaker-notebook-instance.builder';
+import './setup.js';
+import { SageMakerNotebookInstanceComponentConfigBuilder, SageMakerNotebookInstanceConfig } from '../sagemaker-notebook-instance.builder.js';
 import { ComponentContext, ComponentSpec } from '@platform/contracts';
 
 // Test metadata for Platform Testing Standard compliance

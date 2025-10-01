@@ -10,9 +10,9 @@ import {
   ComponentSpec, 
   ComponentContext, 
   IComponentCreator 
-} from '../../platform/contracts/component-interfaces';
-import { LambdaWorkerComponent } from './lambda-worker.component';
-import { LambdaWorkerConfig, LAMBDA_WORKER_CONFIG_SCHEMA } from './lambda-worker.builder';
+} from '../../platform/contracts/component-interfaces.js';
+import { LambdaWorkerComponent } from './lambda-worker.component.js';
+import { LambdaWorkerConfig, LAMBDA_WORKER_CONFIG_SCHEMA } from './lambda-worker.builder.js';
 
 /**
  * Creator class for LambdaWorkerComponent component

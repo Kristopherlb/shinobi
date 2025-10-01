@@ -1,0 +1,42 @@
+{
+  "name": "shinobi-mcp-server",
+  "root": "apps/shinobi-mcp-server",
+  "sourceRoot": "apps/shinobi-mcp-server/src",
+  "projectType": "application",
+  "targets": {
+    "build": {
+      "executor": "nx:run-commands",
+      "options": {
+        "command": "tsc -p apps/shinobi-mcp-server/tsconfig.json"
+      },
+      "outputs": [
+        "apps/shinobi-mcp-server/dist"
+      ]
+    },
+    "start": {
+      "executor": "nx:run-commands",
+      "options": {
+        "command": "node apps/shinobi-mcp-server/dist/index.js"
+      },
+      "dependsOn": [
+        "build"
+      ]
+    },
+    "dev": {
+      "executor": "nx:run-commands",
+      "options": {
+        "command": "ts-node apps/shinobi-mcp-server/src/index.ts"
+      }
+    },
+    "lint": {
+      "executor": "nx:run-commands",
+      "options": {
+        "command": "eslint apps/shinobi-mcp-server --ext .ts"
+      }
+    }
+  },
+  "tags": [
+    "type:app",
+    "scope:apps"
+  ]
+}

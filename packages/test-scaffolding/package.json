@@ -11,5 +11,6 @@
   "dependencies": {
     "@platform/core-engine": "workspace:*",
     "@platform/components-lambda-api": "workspace:*"
-  }
+  },
+  "type": "module"
 }
