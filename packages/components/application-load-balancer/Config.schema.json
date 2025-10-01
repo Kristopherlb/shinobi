@@ -1,0 +1,763 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "title": "Application Load Balancer Config",
+  "description": "Configuration schema for Application Load Balancer component",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "loadBalancerName",
+    "scheme",
+    "ipAddressType",
+    "vpc",
+    "securityGroups",
+    "accessLogs",
+    "listeners",
+    "targetGroups",
+    "deletionProtection",
+    "idleTimeoutSeconds",
+    "deploymentStrategy",
+    "monitoring",
+    "hardeningProfile",
+    "tags"
+  ],
+  "properties": {
+    "loadBalancerName": {
+      "type": "string",
+      "pattern": "^[a-zA-Z0-9-]+$",
+      "maxLength": 32,
+      "description": "Name of the Application Load Balancer"
+    },
+    "scheme": {
+      "type": "string",
+      "enum": [
+        "internet-facing",
+        "internal"
+      ],
+      "description": "Load balancer scheme - internet-facing or internal"
+    },
+    "ipAddressType": {
+      "type": "string",
+      "enum": [
+        "ipv4",
+        "dualstack"
+      ],
+      "description": "IP address type for the load balancer"
+    },
+    "vpc": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "subnetIds",
+        "subnetType"
+      ],
+      "properties": {
+        "vpcId": {
+          "type": "string",
+          "description": "VPC ID where the load balancer will be created"
+        },
+        "subnetIds": {
+          "type": "array",
+          "items": {
+            "type": "string",
+            "pattern": "^subnet-[a-f0-9]+"
+          },
+          "description": "List of subnet IDs for the load balancer"
+        },
+        "subnetType": {
+          "type": "string",
+          "enum": [
+            "public",
+            "private"
+          ],
+          "description": "Type of subnets - public or private"
+        }
+      }
+    },
+    "securityGroups": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "create",
+        "securityGroupIds",
+        "ingress"
+      ],
+      "properties": {
+        "create": {
+          "type": "boolean",
+          "description": "Whether to create a new security group"
+        },
+        "securityGroupIds": {
+          "type": "array",
+          "items": {
+            "type": "string",
+            "pattern": "^sg-[a-f0-9]+"
+          },
+          "description": "List of existing security group IDs"
+        },
+        "ingress": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "additionalProperties": false,
+            "required": [
+              "port"
+            ],
+            "properties": {
+              "port": {
+                "type": "number",
+                "minimum": 1,
+                "maximum": 65535,
+                "description": "Port number for the ingress rule"
+              },
+              "protocol": {
+                "type": "string",
+                "enum": [
+                  "tcp",
+                  "udp",
+                  "icmp"
+                ],
+                "default": "tcp",
+                "description": "Protocol for the ingress rule"
+              },
+              "cidr": {
+                "type": "string",
+                "pattern": "^(?:\\d{1,3}\\.){3}\\d{1,3}/\\d{1,2}$",
+                "description": "CIDR block for the ingress rule"
+              },
+              "description": {
+                "type": "string",
+                "description": "Description of the ingress rule"
+              }
+            }
+          },
+          "description": "Ingress rules for the security group"
+        }
+      }
+    },
+    "accessLogs": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "enabled",
+        "retentionDays",
+        "removalPolicy"
+      ],
+      "properties": {
+        "enabled": {
+          "type": "boolean",
+          "description": "Whether access logging is enabled"
+        },
+        "bucketName": {
+          "type": "string",
+          "description": "S3 bucket name for access logs"
+        },
+        "bucket": {
+          "type": "string",
+          "description": "S3 bucket reference for access logs"
+        },
+        "prefix": {
+          "type": "string",
+          "description": "S3 prefix for access logs"
+        },
+        "retentionDays": {
+          "type": "number",
+          "minimum": 1,
+          "description": "Number of days to retain access logs"
+        },
+        "removalPolicy": {
+          "type": "string",
+          "enum": [
+            "retain",
+            "destroy"
+          ],
+          "description": "Removal policy for access logs bucket"
+        }
+      }
+    },
+    "listeners": {
+      "type": "array",
+      "minItems": 1,
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "port",
+          "protocol"
+        ],
+        "properties": {
+          "port": {
+            "type": "number",
+            "minimum": 1,
+            "maximum": 65535,
+            "description": "Port number for the listener"
+          },
+          "protocol": {
+            "type": "string",
+            "enum": [
+              "HTTP",
+              "HTTPS"
+            ],
+            "description": "Protocol for the listener"
+          },
+          "certificateArn": {
+            "type": "string",
+            "description": "ARN of the SSL certificate for HTTPS listeners"
+          },
+          "sslPolicy": {
+            "type": "string",
+            "description": "SSL policy for HTTPS listeners"
+          },
+          "redirectToHttps": {
+            "type": "boolean",
+            "description": "Whether to redirect HTTP to HTTPS"
+          },
+          "defaultAction": {
+            "type": "object",
+            "additionalProperties": false,
+            "required": [
+              "type"
+            ],
+            "properties": {
+              "type": {
+                "type": "string",
+                "enum": [
+                  "fixed-response",
+                  "redirect",
+                  "forward"
+                ],
+                "description": "Type of default action"
+              },
+              "fixedResponse": {
+                "type": "object",
+                "additionalProperties": false,
+                "properties": {
+                  "statusCode": {
+                    "type": "number",
+                    "description": "HTTP status code for fixed response"
+                  },
+                  "contentType": {
+                    "type": "string",
+                    "description": "Content type for fixed response"
+                  },
+                  "messageBody": {
+                    "type": "string",
+                    "description": "Message body for fixed response"
+                  }
+                }
+              },
+              "redirect": {
+                "type": "object",
+                "additionalProperties": false,
+                "required": [
+                  "redirectUrl"
+                ],
+                "properties": {
+                  "redirectUrl": {
+                    "type": "string",
+                    "description": "URL to redirect to"
+                  }
+                }
+              }
+            }
+          }
+        }
+      },
+      "description": "List of listeners for the load balancer"
+    },
+    "targetGroups": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "name",
+          "port",
+          "protocol",
+          "targetType"
+        ],
+        "properties": {
+          "name": {
+            "type": "string",
+            "description": "Name of the target group"
+          },
+          "port": {
+            "type": "number",
+            "minimum": 1,
+            "maximum": 65535,
+            "description": "Port number for the target group"
+          },
+          "protocol": {
+            "type": "string",
+            "enum": [
+              "HTTP",
+              "HTTPS"
+            ],
+            "description": "Protocol for the target group"
+          },
+          "targetType": {
+            "type": "string",
+            "enum": [
+              "instance",
+              "ip",
+              "lambda"
+            ],
+            "description": "Type of targets for the target group"
+          },
+          "healthCheck": {
+            "type": "object",
+            "additionalProperties": false,
+            "properties": {
+              "enabled": {
+                "type": "boolean",
+                "description": "Whether health checks are enabled"
+              },
+              "path": {
+                "type": "string",
+                "description": "Health check path"
+              },
+              "protocol": {
+                "type": "string",
+                "enum": [
+                  "HTTP",
+                  "HTTPS"
+                ],
+                "description": "Health check protocol"
+              },
+              "port": {
+                "type": "number",
+                "minimum": 1,
+                "maximum": 65535,
+                "description": "Health check port"
+              },
+              "healthyThresholdCount": {
+                "type": "number",
+                "minimum": 2,
+                "maximum": 10,
+                "description": "Number of consecutive successful health checks"
+              },
+              "unhealthyThresholdCount": {
+                "type": "number",
+                "minimum": 2,
+                "maximum": 10,
+                "description": "Number of consecutive failed health checks"
+              },
+              "timeoutSeconds": {
+                "type": "number",
+                "minimum": 2,
+                "maximum": 120,
+                "description": "Health check timeout in seconds"
+              },
+              "intervalSeconds": {
+                "type": "number",
+                "minimum": 5,
+                "maximum": 300,
+                "description": "Health check interval in seconds"
+              },
+              "matcher": {
+                "type": "string",
+                "description": "HTTP status codes to consider healthy"
+              }
+            }
+          },
+          "stickiness": {
+            "type": "object",
+            "additionalProperties": false,
+            "properties": {
+              "enabled": {
+                "type": "boolean",
+                "description": "Whether stickiness is enabled"
+              },
+              "durationSeconds": {
+                "type": "number",
+                "minimum": 1,
+                "maximum": 604800,
+                "description": "Stickiness duration in seconds"
+              }
+            }
+          }
+        }
+      },
+      "description": "List of target groups for the load balancer"
+    },
+    "deletionProtection": {
+      "type": "boolean",
+      "description": "Whether deletion protection is enabled"
+    },
+    "idleTimeoutSeconds": {
+      "type": "number",
+      "minimum": 1,
+      "maximum": 4000,
+      "description": "Idle timeout in seconds"
+    },
+    "deploymentStrategy": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "type"
+      ],
+      "properties": {
+        "type": {
+          "type": "string",
+          "enum": [
+            "single",
+            "blue-green"
+          ],
+          "description": "Deployment strategy type"
+        },
+        "blueGreenConfig": {
+          "type": "object",
+          "additionalProperties": false,
+          "properties": {
+            "productionTrafficRoute": {
+              "type": "object",
+              "additionalProperties": false,
+              "properties": {
+                "type": {
+                  "type": "string",
+                  "enum": [
+                    "AllAtOnce",
+                    "Linear",
+                    "Canary"
+                  ],
+                  "description": "Traffic shift type"
+                },
+                "percentage": {
+                  "type": "number",
+                  "minimum": 1,
+                  "maximum": 100,
+                  "description": "Percentage of traffic to shift"
+                },
+                "interval": {
+                  "type": "number",
+                  "minimum": 1,
+                  "maximum": 60,
+                  "description": "Interval between traffic shifts in minutes"
+                }
+              }
+            },
+            "testTrafficRoute": {
+              "type": "object",
+              "additionalProperties": false,
+              "properties": {
+                "type": {
+                  "type": "string",
+                  "enum": [
+                    "AllAtOnce",
+                    "Linear",
+                    "Canary"
+                  ],
+                  "description": "Test traffic shift type"
+                },
+                "percentage": {
+                  "type": "number",
+                  "minimum": 1,
+                  "maximum": 100,
+                  "description": "Percentage of test traffic"
+                }
+              }
+            },
+            "terminationWaitTimeMinutes": {
+              "type": "number",
+              "minimum": 0,
+              "maximum": 2880,
+              "description": "Wait time before terminating old resources in minutes"
+            }
+          }
+        }
+      }
+    },
+    "monitoring": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "enabled",
+        "alarms"
+      ],
+      "properties": {
+        "enabled": {
+          "type": "boolean",
+          "description": "Whether monitoring is enabled"
+        },
+        "alarms": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": [
+            "http5xx",
+            "unhealthyHosts",
+            "connectionErrors",
+            "rejectedConnections"
+          ],
+          "properties": {
+            "http5xx": {
+              "type": "object",
+              "additionalProperties": false,
+              "required": [
+                "enabled",
+                "threshold",
+                "evaluationPeriods",
+                "periodMinutes",
+                "comparisonOperator",
+                "treatMissingData",
+                "statistic"
+              ],
+              "properties": {
+                "enabled": {
+                  "type": "boolean",
+                  "description": "Whether the alarm is enabled"
+                },
+                "threshold": {
+                  "type": "number",
+                  "description": "Alarm threshold value"
+                },
+                "evaluationPeriods": {
+                  "type": "number",
+                  "minimum": 1,
+                  "description": "Number of evaluation periods"
+                },
+                "periodMinutes": {
+                  "type": "number",
+                  "minimum": 1,
+                  "description": "Alarm period in minutes"
+                },
+                "comparisonOperator": {
+                  "type": "string",
+                  "enum": [
+                    "gt",
+                    "gte",
+                    "lt",
+                    "lte"
+                  ],
+                  "description": "Comparison operator for the alarm"
+                },
+                "treatMissingData": {
+                  "type": "string",
+                  "enum": [
+                    "breaching",
+                    "not-breaching",
+                    "ignore",
+                    "missing"
+                  ],
+                  "description": "How to treat missing data"
+                },
+                "statistic": {
+                  "type": "string",
+                  "description": "Statistic for the alarm"
+                },
+                "tags": {
+                  "type": "object",
+                  "additionalProperties": {
+                    "type": "string"
+                  },
+                  "description": "Tags for the alarm"
+                }
+              }
+            },
+            "unhealthyHosts": {
+              "type": "object",
+              "additionalProperties": false,
+              "required": [
+                "enabled",
+                "threshold",
+                "evaluationPeriods",
+                "periodMinutes",
+                "comparisonOperator",
+                "treatMissingData",
+                "statistic"
+              ],
+              "properties": {
+                "enabled": {
+                  "type": "boolean",
+                  "description": "Whether the alarm is enabled"
+                },
+                "threshold": {
+                  "type": "number",
+                  "description": "Alarm threshold value"
+                },
+                "evaluationPeriods": {
+                  "type": "number",
+                  "minimum": 1,
+                  "description": "Number of evaluation periods"
+                },
+                "periodMinutes": {
+                  "type": "number",
+                  "minimum": 1,
+                  "description": "Alarm period in minutes"
+                },
+                "comparisonOperator": {
+                  "type": "string",
+                  "enum": [
+                    "gt",
+                    "gte",
+                    "lt",
+                    "lte"
+                  ],
+                  "description": "Comparison operator for the alarm"
+                },
+                "treatMissingData": {
+                  "type": "string",
+                  "enum": [
+                    "breaching",
+                    "not-breaching",
+                    "ignore",
+                    "missing"
+                  ],
+                  "description": "How to treat missing data"
+                },
+                "statistic": {
+                  "type": "string",
+                  "description": "Statistic for the alarm"
+                },
+                "tags": {
+                  "type": "object",
+                  "additionalProperties": {
+                    "type": "string"
+                  },
+                  "description": "Tags for the alarm"
+                }
+              }
+            },
+            "connectionErrors": {
+              "type": "object",
+              "additionalProperties": false,
+              "required": [
+                "enabled",
+                "threshold",
+                "evaluationPeriods",
+                "periodMinutes",
+                "comparisonOperator",
+                "treatMissingData",
+                "statistic"
+              ],
+              "properties": {
+                "enabled": {
+                  "type": "boolean",
+                  "description": "Whether the alarm is enabled"
+                },
+                "threshold": {
+                  "type": "number",
+                  "description": "Alarm threshold value"
+                },
+                "evaluationPeriods": {
+                  "type": "number",
+                  "minimum": 1,
+                  "description": "Number of evaluation periods"
+                },
+                "periodMinutes": {
+                  "type": "number",
+                  "minimum": 1,
+                  "description": "Alarm period in minutes"
+                },
+                "comparisonOperator": {
+                  "type": "string",
+                  "enum": [
+                    "gt",
+                    "gte",
+                    "lt",
+                    "lte"
+                  ],
+                  "description": "Comparison operator for the alarm"
+                },
+                "treatMissingData": {
+                  "type": "string",
+                  "enum": [
+                    "breaching",
+                    "not-breaching",
+                    "ignore",
+                    "missing"
+                  ],
+                  "description": "How to treat missing data"
+                },
+                "statistic": {
+                  "type": "string",
+                  "description": "Statistic for the alarm"
+                },
+                "tags": {
+                  "type": "object",
+                  "additionalProperties": {
+                    "type": "string"
+                  },
+                  "description": "Tags for the alarm"
+                }
+              }
+            },
+            "rejectedConnections": {
+              "type": "object",
+              "additionalProperties": false,
+              "required": [
+                "enabled",
+                "threshold",
+                "evaluationPeriods",
+                "periodMinutes",
+                "comparisonOperator",
+                "treatMissingData",
+                "statistic"
+              ],
+              "properties": {
+                "enabled": {
+                  "type": "boolean",
+                  "description": "Whether the alarm is enabled"
+                },
+                "threshold": {
+                  "type": "number",
+                  "description": "Alarm threshold value"
+                },
+                "evaluationPeriods": {
+                  "type": "number",
+                  "minimum": 1,
+                  "description": "Number of evaluation periods"
+                },
+                "periodMinutes": {
+                  "type": "number",
+                  "minimum": 1,
+                  "description": "Alarm period in minutes"
+                },
+                "comparisonOperator": {
+                  "type": "string",
+                  "enum": [
+                    "gt",
+                    "gte",
+                    "lt",
+                    "lte"
+                  ],
+                  "description": "Comparison operator for the alarm"
+                },
+                "treatMissingData": {
+                  "type": "string",
+                  "enum": [
+                    "breaching",
+                    "not-breaching",
+                    "ignore",
+                    "missing"
+                  ],
+                  "description": "How to treat missing data"
+                },
+                "statistic": {
+                  "type": "string",
+                  "description": "Statistic for the alarm"
+                },
+                "tags": {
+                  "type": "object",
+                  "additionalProperties": {
+                    "type": "string"
+                  },
+                  "description": "Tags for the alarm"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "hardeningProfile": {
+      "type": "string",
+      "description": "Security hardening profile for the load balancer"
+    },
+    "tags": {
+      "type": "object",
+      "additionalProperties": {
+        "type": "string"
+      },
+      "description": "Tags to apply to the load balancer"
+    }
+  }
+}

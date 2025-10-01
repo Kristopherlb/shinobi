@@ -1,7 +1,7 @@
 import {
   AutoScalingGroupComponentConfigBuilder,
   AutoScalingGroupConfig
-} from '../auto-scaling-group.builder.js';
+} from '../src/auto-scaling-group.builder.js';
 import { ComponentContext, ComponentSpec } from '@shinobi/core';
 
 const createContext = (
@@ -40,9 +40,11 @@ describe('AutoScalingGroupComponentConfigBuilder', () => {
 
     expect(config.launchTemplate.instanceType).toBe('t3.micro');
     expect(config.launchTemplate.detailedMonitoring).toBe(false);
-    expect(config.launchTemplate.requireImdsv2).toBe(false);
+    expect(config.launchTemplate.requireImdsv2).toBe(true);
+    expect(config.launchTemplate.installAgents.ssm).toBe(true);
+    expect(config.launchTemplate.installAgents.cloudwatch).toBe(true);
     expect(config.vpc.subnetType).toBe('PUBLIC');
-    expect(config.storage.encrypted).toBe(false);
+    expect(config.storage.encrypted).toBe(true);
     expect(config.security.managedPolicies).toHaveLength(0);
   });
 
@@ -61,7 +63,7 @@ describe('AutoScalingGroupComponentConfigBuilder', () => {
     expect(config.storage.encrypted).toBe(true);
     expect(config.security.managedPolicies).toContain('AmazonSSMManagedInstanceCore');
     expect(config.storage.kms.useCustomerManagedKey).toBe(true);
-    expect(config.storage.kms.enableKeyRotation).toBe(false);
+    expect(config.storage.kms.enableKeyRotation).toBe(true);
   });
 
   it('allows manifest overrides to take precedence', () => {

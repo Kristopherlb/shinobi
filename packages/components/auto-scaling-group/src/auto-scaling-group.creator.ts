@@ -6,13 +6,16 @@
  */
 
 import { Construct } from 'constructs';
-import { 
-  ComponentSpec, 
-  ComponentContext, 
-  IComponentCreator 
-} from '../../platform/contracts/component-interfaces.js';
+import {
+  ComponentSpec,
+  ComponentContext,
+  IComponentCreator
+} from '@shinobi/core';
 import { AutoScalingGroupComponent } from './auto-scaling-group.component.js';
-import { AutoScalingGroupConfig, AUTO_SCALING_GROUP_CONFIG_SCHEMA } from './auto-scaling-group.builder.js';
+import {
+  AutoScalingGroupConfig,
+  AUTO_SCALING_GROUP_CONFIG_SCHEMA
+} from './auto-scaling-group.builder.js';
 
 /**
  * Creator class for AutoScalingGroupComponent component

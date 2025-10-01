@@ -1,0 +1,261 @@
+{
+  "dashboard": {
+    "name": "ALB-OpenTelemetry-Dashboard",
+    "description": "Application Load Balancer OpenTelemetry Observability Dashboard",
+    "version": "1.0",
+    "widgets": [
+      {
+        "type": "metric",
+        "title": "Request Rate",
+        "description": "Requests per second to the Application Load Balancer",
+        "metrics": [
+          {
+            "namespace": "AWS/ApplicationELB",
+            "metricName": "RequestCount",
+            "dimensions": {
+              "LoadBalancer": "${loadBalancerName}"
+            },
+            "statistic": "Sum",
+            "period": 300
+          }
+        ],
+        "yAxis": {
+          "left": {
+            "min": 0,
+            "label": "Requests/sec"
+          }
+        }
+      },
+      {
+        "type": "metric",
+        "title": "Response Time",
+        "description": "Average response time for ALB requests",
+        "metrics": [
+          {
+            "namespace": "AWS/ApplicationELB",
+            "metricName": "TargetResponseTime",
+            "dimensions": {
+              "LoadBalancer": "${loadBalancerName}"
+            },
+            "statistic": "Average",
+            "period": 300
+          }
+        ],
+        "yAxis": {
+          "left": {
+            "min": 0,
+            "label": "Seconds"
+          }
+        }
+      },
+      {
+        "type": "metric",
+        "title": "Error Rate",
+        "description": "HTTP error rates (4xx and 5xx)",
+        "metrics": [
+          {
+            "namespace": "AWS/ApplicationELB",
+            "metricName": "HTTPCode_ELB_4XX_Count",
+            "dimensions": {
+              "LoadBalancer": "${loadBalancerName}"
+            },
+            "statistic": "Sum",
+            "period": 300
+          },
+          {
+            "namespace": "AWS/ApplicationELB",
+            "metricName": "HTTPCode_ELB_5XX_Count",
+            "dimensions": {
+              "LoadBalancer": "${loadBalancerName}"
+            },
+            "statistic": "Sum",
+            "period": 300
+          }
+        ],
+        "yAxis": {
+          "left": {
+            "min": 0,
+            "label": "Error Count"
+          }
+        }
+      },
+      {
+        "type": "metric",
+        "title": "Healthy Hosts",
+        "description": "Number of healthy targets",
+        "metrics": [
+          {
+            "namespace": "AWS/ApplicationELB",
+            "metricName": "HealthyHostCount",
+            "dimensions": {
+              "LoadBalancer": "${loadBalancerName}",
+              "TargetGroup": "${targetGroupName}"
+            },
+            "statistic": "Average",
+            "period": 300
+          }
+        ],
+        "yAxis": {
+          "left": {
+            "min": 0,
+            "label": "Host Count"
+          }
+        }
+      },
+      {
+        "type": "metric",
+        "title": "Connection Count",
+        "description": "Active connections to the load balancer",
+        "metrics": [
+          {
+            "namespace": "AWS/ApplicationELB",
+            "metricName": "ActiveConnectionCount",
+            "dimensions": {
+              "LoadBalancer": "${loadBalancerName}"
+            },
+            "statistic": "Average",
+            "period": 300
+          }
+        ],
+        "yAxis": {
+          "left": {
+            "min": 0,
+            "label": "Connections"
+          }
+        }
+      },
+      {
+        "type": "metric",
+        "title": "Data Processed",
+        "description": "Bytes processed by the load balancer",
+        "metrics": [
+          {
+            "namespace": "AWS/ApplicationELB",
+            "metricName": "ProcessedBytes",
+            "dimensions": {
+              "LoadBalancer": "${loadBalancerName}"
+            },
+            "statistic": "Sum",
+            "period": 300
+          }
+        ],
+        "yAxis": {
+          "left": {
+            "min": 0,
+            "label": "Bytes"
+          }
+        }
+      }
+    ],
+    "alarms": [
+      {
+        "name": "ALB-High-Error-Rate",
+        "description": "ALB error rate is too high",
+        "metric": {
+          "namespace": "AWS/ApplicationELB",
+          "metricName": "HTTPCode_ELB_5XX_Count",
+          "dimensions": {
+            "LoadBalancer": "${loadBalancerName}"
+          },
+          "statistic": "Sum",
+          "period": 300
+        },
+        "threshold": 10,
+        "comparisonOperator": "GreaterThanThreshold",
+        "evaluationPeriods": 2,
+        "treatMissingData": "notBreaching"
+      },
+      {
+        "name": "ALB-High-Response-Time",
+        "description": "ALB response time is too high",
+        "metric": {
+          "namespace": "AWS/ApplicationELB",
+          "metricName": "TargetResponseTime",
+          "dimensions": {
+            "LoadBalancer": "${loadBalancerName}"
+          },
+          "statistic": "Average",
+          "period": 300
+        },
+        "threshold": 2.0,
+        "comparisonOperator": "GreaterThanThreshold",
+        "evaluationPeriods": 3,
+        "treatMissingData": "notBreaching"
+      },
+      {
+        "name": "ALB-Unhealthy-Hosts",
+        "description": "ALB has unhealthy hosts",
+        "metric": {
+          "namespace": "AWS/ApplicationELB",
+          "metricName": "UnHealthyHostCount",
+          "dimensions": {
+            "LoadBalancer": "${loadBalancerName}",
+            "TargetGroup": "${targetGroupName}"
+          },
+          "statistic": "Average",
+          "period": 300
+        },
+        "threshold": 1,
+        "comparisonOperator": "GreaterThanThreshold",
+        "evaluationPeriods": 2,
+        "treatMissingData": "notBreaching"
+      }
+    ],
+    "logs": [
+      {
+        "name": "ALB-Access-Logs",
+        "description": "Application Load Balancer access logs",
+        "logGroup": "/aws/applicationloadbalancer/${loadBalancerName}",
+        "retentionDays": 30,
+        "filters": [
+          {
+            "name": "Error-Requests",
+            "pattern": "[timestamp, request_id, client_ip, target_ip, request_processing_time, target_processing_time, response_processing_time, elb_status_code, target_status_code, received_bytes, sent_bytes, request_method, request_url, user_agent, ssl_cipher, ssl_protocol]",
+            "filter": "elb_status_code >= 400"
+          },
+          {
+            "name": "Slow-Requests",
+            "pattern": "[timestamp, request_id, client_ip, target_ip, request_processing_time, target_processing_time, response_processing_time, elb_status_code, target_status_code, received_bytes, sent_bytes, request_method, request_url, user_agent, ssl_cipher, ssl_protocol]",
+            "filter": "target_processing_time > 1.0"
+          }
+        ]
+      }
+    ],
+    "traces": {
+      "enabled": true,
+      "samplingRate": 0.1,
+      "xrayIntegration": true,
+      "customAttributes": [
+        "load_balancer_name",
+        "target_group_name",
+        "listener_port",
+        "request_method",
+        "request_url"
+      ]
+    },
+    "customMetrics": [
+      {
+        "name": "ALB-Request-Duration",
+        "description": "Custom request duration metric",
+        "namespace": "ALB/Custom",
+        "dimensions": {
+          "LoadBalancer": "${loadBalancerName}",
+          "TargetGroup": "${targetGroupName}"
+        },
+        "unit": "Seconds",
+        "statistic": "Average"
+      },
+      {
+        "name": "ALB-Error-Rate",
+        "description": "Custom error rate metric",
+        "namespace": "ALB/Custom",
+        "dimensions": {
+          "LoadBalancer": "${loadBalancerName}",
+          "TargetGroup": "${targetGroupName}"
+        },
+        "unit": "Percent",
+        "statistic": "Average"
+      }
+    ]
+  }
+}

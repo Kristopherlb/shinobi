@@ -1,0 +1,22 @@
+{
+  "alarms": [
+    {
+      "id": "cpuHigh",
+      "description": "CPU utilization breaching threshold across the ASG",
+      "namespace": "AWS/AutoScaling",
+      "metricName": "CPUUtilization",
+      "statistic": "Average",
+      "defaultThreshold": 80,
+      "defaultPeriodMinutes": 5
+    },
+    {
+      "id": "inService",
+      "description": "Number of in-service instances falling below the minimum capacity",
+      "namespace": "AWS/AutoScaling",
+      "metricName": "GroupInServiceInstances",
+      "statistic": "Average",
+      "defaultThreshold": 1,
+      "defaultPeriodMinutes": 1
+    }
+  ]
+}

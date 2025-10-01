@@ -130,10 +130,10 @@ defaults:
     launchTemplate:
       instanceType: t3.micro
       detailedMonitoring: false
-      requireImdsv2: false
+      requireImdsv2: true
       installAgents:
-        ssm: false
-        cloudwatch: false
+        ssm: true
+        cloudwatch: true
         stigHardening: false
     autoScaling:
       minCapacity: 1
@@ -142,11 +142,11 @@ defaults:
     storage:
       rootVolumeSize: 20
       rootVolumeType: gp3
-      encrypted: false
+      encrypted: true
 
       kms:
         useCustomerManagedKey: false
-        enableKeyRotation: false
+        enableKeyRotation: true
     healthCheck:
       type: EC2
       gracePeriod: 300

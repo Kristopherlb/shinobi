@@ -158,21 +158,21 @@ export interface ApiGatewayHttpConfig {
     detailedMetrics?: boolean;
     /** Enable X-Ray tracing */
     tracingEnabled?: boolean;
-  /** Custom metrics */
-  customMetrics?: {
-    /** Metric name */
-    name: string;
-    /** Metric namespace */
-    namespace?: string;
-    /** Dimensions */
-    dimensions?: Record<string, string>;
-    /** Statistic type */
-    statistic?: 'Sum' | 'Average' | 'Maximum' | 'Minimum' | 'SampleCount';
-    /** Period in seconds */
-    period?: number;
-    /** Unit for the metric */
-    unit?: string;
-  }[];
+    /** Custom metrics */
+    customMetrics?: {
+      /** Metric name */
+      name: string;
+      /** Metric namespace */
+      namespace?: string;
+      /** Dimensions */
+      dimensions?: Record<string, string>;
+      /** Statistic type */
+      statistic?: 'Sum' | 'Average' | 'Maximum' | 'Minimum' | 'SampleCount';
+      /** Period in seconds */
+      period?: number;
+      /** Unit for the metric */
+      unit?: string;
+    }[];
     /** CloudWatch alarms */
     alarms?: {
       /** 4xx error rate threshold */

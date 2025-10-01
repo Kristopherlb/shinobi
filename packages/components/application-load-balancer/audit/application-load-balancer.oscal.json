@@ -1,0 +1,289 @@
+{
+  "oscal-version": "1.0.4",
+  "uuid": "urn:uuid:12345678-1234-1234-1234-123456789012",
+  "metadata": {
+    "title": "Application Load Balancer Component Compliance Assessment",
+    "last-modified": "2025-01-08T00:00:00Z",
+    "version": "1.0.0",
+    "oscal-version": "1.0.4",
+    "roles": [
+      {
+        "id": "assessor",
+        "title": "Platform Security Assessor"
+      }
+    ],
+    "parties": [
+      {
+        "uuid": "urn:uuid:87654321-4321-4321-4321-210987654321",
+        "type": "organization",
+        "name": "Shinobi Platform Engineering",
+        "roles": [
+          "assessor"
+        ]
+      }
+    ]
+  },
+  "assessment-results": {
+    "uuid": "urn:uuid:11111111-2222-3333-4444-555555555555",
+    "title": "Application Load Balancer Component Security Assessment",
+    "description": "Comprehensive security assessment of the Application Load Balancer component against platform security standards and compliance frameworks",
+    "start": "2025-01-08T00:00:00Z",
+    "end": "2025-01-08T23:59:59Z",
+    "local-definitions": {
+      "components": [
+        {
+          "uuid": "urn:uuid:component-alb-001",
+          "type": "software",
+          "title": "Application Load Balancer Component",
+          "description": "AWS Application Load Balancer component for the Shinobi platform",
+          "props": [
+            {
+              "name": "version",
+              "value": "1.0.0"
+            },
+            {
+              "name": "component-type",
+              "value": "application-load-balancer"
+            },
+            {
+              "name": "compliance-framework",
+              "value": "commercial,fedramp-moderate,fedramp-high"
+            }
+          ]
+        }
+      ]
+    },
+    "results": [
+      {
+        "uuid": "urn:uuid:result-alb-001",
+        "title": "Application Load Balancer Security Assessment",
+        "description": "Security assessment results for the Application Load Balancer component",
+        "start": "2025-01-08T00:00:00Z",
+        "end": "2025-01-08T23:59:59Z",
+        "props": [
+          {
+            "name": "assessment-type",
+            "value": "security-compliance"
+          },
+          {
+            "name": "compliance-framework",
+            "value": "commercial,fedramp-moderate,fedramp-high"
+          }
+        ],
+        "findings": [
+          {
+            "uuid": "urn:uuid:finding-alb-001",
+            "title": "Schema Validation Compliance",
+            "description": "Component configuration schema meets platform standards",
+            "props": [
+              {
+                "name": "severity",
+                "value": "low"
+              },
+              {
+                "name": "status",
+                "value": "pass"
+              }
+            ],
+            "assessment-methods": [
+              {
+                "uuid": "urn:uuid:method-schema-001",
+                "description": "JSON Schema validation against platform standards",
+                "props": [
+                  {
+                    "name": "method-type",
+                    "value": "automated"
+                  }
+                ]
+              }
+            ],
+            "related-controls": [
+              {
+                "control-id": "AC-1",
+                "control-title": "Access Control Policy and Procedures"
+              }
+            ]
+          },
+          {
+            "uuid": "urn:uuid:finding-alb-002",
+            "title": "Tagging Standard Compliance",
+            "description": "Component properly implements platform tagging standards",
+            "props": [
+              {
+                "name": "severity",
+                "value": "low"
+              },
+              {
+                "name": "status",
+                "value": "pass"
+              }
+            ],
+            "assessment-methods": [
+              {
+                "uuid": "urn:uuid:method-tagging-001",
+                "description": "Code review of tagging implementation",
+                "props": [
+                  {
+                    "name": "method-type",
+                    "value": "manual"
+                  }
+                ]
+              }
+            ],
+            "related-controls": [
+              {
+                "control-id": "CM-2",
+                "control-title": "Baseline Configuration"
+              }
+            ]
+          },
+          {
+            "uuid": "urn:uuid:finding-alb-003",
+            "title": "Security Configuration Compliance",
+            "description": "Component implements security best practices",
+            "props": [
+              {
+                "name": "severity",
+                "value": "low"
+              },
+              {
+                "name": "status",
+                "value": "pass"
+              }
+            ],
+            "assessment-methods": [
+              {
+                "uuid": "urn:uuid:method-security-001",
+                "description": "Security configuration review",
+                "props": [
+                  {
+                    "name": "method-type",
+                    "value": "automated"
+                  }
+                ]
+              }
+            ],
+            "related-controls": [
+              {
+                "control-id": "SC-7",
+                "control-title": "Boundary Protection"
+              },
+              {
+                "control-id": "SC-8",
+                "control-title": "Transmission Confidentiality and Integrity"
+              }
+            ]
+          },
+          {
+            "uuid": "urn:uuid:finding-alb-004",
+            "title": "Observability Implementation Gap",
+            "description": "Component lacks comprehensive observability features",
+            "props": [
+              {
+                "name": "severity",
+                "value": "medium"
+              },
+              {
+                "name": "status",
+                "value": "open"
+              }
+            ],
+            "assessment-methods": [
+              {
+                "uuid": "urn:uuid:method-observability-001",
+                "description": "Observability feature assessment",
+                "props": [
+                  {
+                    "name": "method-type",
+                    "value": "manual"
+                  }
+                ]
+              }
+            ],
+            "related-controls": [
+              {
+                "control-id": "AU-2",
+                "control-title": "Audit Events"
+              },
+              {
+                "control-id": "AU-3",
+                "control-title": "Content of Audit Records"
+              }
+            ],
+            "remarks": "Component requires X-Ray tracing and OpenTelemetry integration for full observability compliance"
+          }
+        ],
+        "risk": {
+          "uuid": "urn:uuid:risk-alb-001",
+          "title": "Application Load Balancer Security Risk Assessment",
+          "description": "Overall security risk assessment for the Application Load Balancer component",
+          "props": [
+            {
+              "name": "risk-level",
+              "value": "low"
+            },
+            {
+              "name": "compliance-status",
+              "value": "compliant"
+            }
+          ],
+          "characterizations": [
+            {
+              "uuid": "urn:uuid:char-alb-001",
+              "title": "Security Posture",
+              "description": "Component demonstrates strong security posture with proper access controls, encryption, and monitoring",
+              "props": [
+                {
+                  "name": "assessment-result",
+                  "value": "pass"
+                }
+              ]
+            }
+          ]
+        }
+      }
+    ]
+  },
+  "back-matter": {
+    "resources": [
+      {
+        "uuid": "urn:uuid:resource-alb-001",
+        "title": "Application Load Balancer Component Documentation",
+        "description": "Component documentation and configuration reference",
+        "props": [
+          {
+            "name": "resource-type",
+            "value": "documentation"
+          }
+        ],
+        "rlinks": [
+          {
+            "href": "packages/components/application-load-balancer/README.md",
+            "media-type": "text/markdown"
+          }
+        ]
+      },
+      {
+        "uuid": "urn:uuid:resource-alb-002",
+        "title": "Platform Security Standards",
+        "description": "Platform security and compliance standards",
+        "props": [
+          {
+            "name": "resource-type",
+            "value": "standard"
+          }
+        ],
+        "rlinks": [
+          {
+            "href": "docs/platform-standards/platform-tagging-standard.md",
+            "media-type": "text/markdown"
+          },
+          {
+            "href": "docs/platform-standards/platform-observability-standard.md",
+            "media-type": "text/markdown"
+          }
+        ]
+      }
+    ]
+  }
+}

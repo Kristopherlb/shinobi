@@ -1,0 +1,175 @@
+{
+  "alarms": {
+    "http5xx": {
+      "enabled": true,
+      "threshold": 5,
+      "evaluationPeriods": 2,
+      "periodMinutes": 5,
+      "comparisonOperator": "gte",
+      "treatMissingData": "not-breaching",
+      "statistic": "Sum",
+      "description": "ALB HTTP 5xx errors",
+      "tags": {
+        "severity": "high",
+        "component": "application-load-balancer"
+      }
+    },
+    "unhealthyHosts": {
+      "enabled": true,
+      "threshold": 1,
+      "evaluationPeriods": 2,
+      "periodMinutes": 5,
+      "comparisonOperator": "gte",
+      "treatMissingData": "not-breaching",
+      "statistic": "Average",
+      "description": "ALB unhealthy hosts",
+      "tags": {
+        "severity": "high",
+        "component": "application-load-balancer"
+      }
+    },
+    "connectionErrors": {
+      "enabled": true,
+      "threshold": 10,
+      "evaluationPeriods": 2,
+      "periodMinutes": 5,
+      "comparisonOperator": "gte",
+      "treatMissingData": "not-breaching",
+      "statistic": "Sum",
+      "description": "ALB connection errors",
+      "tags": {
+        "severity": "medium",
+        "component": "application-load-balancer"
+      }
+    },
+    "rejectedConnections": {
+      "enabled": true,
+      "threshold": 5,
+      "evaluationPeriods": 2,
+      "periodMinutes": 5,
+      "comparisonOperator": "gte",
+      "treatMissingData": "not-breaching",
+      "statistic": "Sum",
+      "description": "ALB rejected connections",
+      "tags": {
+        "severity": "medium",
+        "component": "application-load-balancer"
+      }
+    },
+    "responseTime": {
+      "enabled": true,
+      "threshold": 2.0,
+      "evaluationPeriods": 3,
+      "periodMinutes": 5,
+      "comparisonOperator": "gte",
+      "treatMissingData": "not-breaching",
+      "statistic": "Average",
+      "description": "ALB response time",
+      "tags": {
+        "severity": "medium",
+        "component": "application-load-balancer"
+      }
+    },
+    "targetResponseTime": {
+      "enabled": true,
+      "threshold": 1.0,
+      "evaluationPeriods": 3,
+      "periodMinutes": 5,
+      "comparisonOperator": "gte",
+      "treatMissingData": "not-breaching",
+      "statistic": "Average",
+      "description": "ALB target response time",
+      "tags": {
+        "severity": "medium",
+        "component": "application-load-balancer"
+      }
+    }
+  },
+  "dashboards": {
+    "alb-overview": {
+      "title": "Application Load Balancer Overview",
+      "description": "Comprehensive ALB monitoring dashboard",
+      "widgets": [
+        {
+          "type": "metric",
+          "title": "Request Count",
+          "metrics": [
+            "AWS/ApplicationELB/RequestCount"
+          ],
+          "period": 300,
+          "statistic": "Sum"
+        },
+        {
+          "type": "metric",
+          "title": "Response Time",
+          "metrics": [
+            "AWS/ApplicationELB/TargetResponseTime"
+          ],
+          "period": 300,
+          "statistic": "Average"
+        },
+        {
+          "type": "metric",
+          "title": "HTTP 5xx Errors",
+          "metrics": [
+            "AWS/ApplicationELB/HTTPCode_ELB_5XX_Count"
+          ],
+          "period": 300,
+          "statistic": "Sum"
+        },
+        {
+          "type": "metric",
+          "title": "Healthy Hosts",
+          "metrics": [
+            "AWS/ApplicationELB/HealthyHostCount"
+          ],
+          "period": 300,
+          "statistic": "Average"
+        }
+      ]
+    }
+  },
+  "logs": {
+    "accessLogs": {
+      "enabled": true,
+      "retentionDays": 30,
+      "format": "json",
+      "fields": [
+        "timestamp",
+        "request_id",
+        "client_ip",
+        "target_ip",
+        "request_processing_time",
+        "target_processing_time",
+        "response_processing_time",
+        "elb_status_code",
+        "target_status_code",
+        "received_bytes",
+        "sent_bytes",
+        "request_method",
+        "request_url",
+        "user_agent",
+        "ssl_cipher",
+        "ssl_protocol"
+      ]
+    }
+  },
+  "tracing": {
+    "xray": {
+      "enabled": true,
+      "samplingRate": 0.1,
+      "tracingMode": "PassThrough"
+    },
+    "opentelemetry": {
+      "enabled": true,
+      "metrics": {
+        "enabled": true,
+        "namespace": "ALB/Custom"
+      },
+      "traces": {
+        "enabled": true,
+        "samplingRate": 0.1
+      }
+    }
+  }
+}

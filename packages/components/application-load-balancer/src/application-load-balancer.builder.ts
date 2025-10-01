@@ -129,6 +129,27 @@ export interface AlbMonitoringConfig {
   alarms?: AlbMonitoringAlarmsConfig;
 }
 
+export interface AlbXRayTracingConfig {
+  enabled?: boolean;
+  samplingRate?: number;
+  serviceName?: string;
+}
+
+export interface AlbWAFConfig {
+  enabled?: boolean;
+  managedRuleGroups?: string[];
+  customRules?: any[];
+}
+
+export interface AlbObservabilityConfig {
+  dashboard?: {
+    enabled?: boolean;
+    name?: string;
+  };
+  xrayTracing?: AlbXRayTracingConfig;
+  waf?: AlbWAFConfig;
+}
+
 export interface AlbVpcConfig {
   vpcId?: string;
   subnetIds?: string[];

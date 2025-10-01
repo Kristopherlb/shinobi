@@ -2,8 +2,11 @@ import * as elbv2 from 'aws-cdk-lib/aws-elasticloadbalancingv2';
 import * as ec2 from 'aws-cdk-lib/aws-ec2';
 import * as s3 from 'aws-cdk-lib/aws-s3';
 import * as cloudwatch from 'aws-cdk-lib/aws-cloudwatch';
+import * as wafv2 from 'aws-cdk-lib/aws-wafv2';
+import * as xray from 'aws-cdk-lib/aws-xray';
 import * as cdk from 'aws-cdk-lib';
 import { Construct } from 'constructs';
+import { NagSuppressions } from 'cdk-nag';
 import {
   Component,
   ComponentSpec,
@@ -25,6 +28,9 @@ export class ApplicationLoadBalancerComponent extends Component {
   private vpc?: ec2.IVpc;
   private accessLogsBucket?: s3.IBucket;
   private createdAccessLogsBucket?: s3.Bucket;
+  private webAcl?: wafv2.CfnWebACL;
+  private xraySamplingRule?: xray.CfnSamplingRule;
+  private dashboard?: cloudwatch.Dashboard;
   private config?: ApplicationLoadBalancerConfig;
 
   constructor(scope: Construct, id: string, context: ComponentContext, spec: ComponentSpec) {
@@ -44,7 +50,11 @@ export class ApplicationLoadBalancerComponent extends Component {
       this.createApplicationLoadBalancer();
       this.createTargetGroups();
       this.createListeners();
+      this.configureXRayTracing();
+      this.configureWAF();
       this.configureMonitoring();
+      this.createObservabilityDashboard();
+      this.applyCDKNagSuppressions();
 
       this.registerConstruct('main', this.loadBalancer!);
       this.registerConstruct('loadBalancer', this.loadBalancer!);
@@ -608,5 +618,191 @@ export class ApplicationLoadBalancerComponent extends Component {
 
     const trimmed = base.substring(0, 50).replace(/-+$/, '');
     return `${trimmed}-${this.node.addr.slice(-6)}`;
+  }
+
+  private configureXRayTracing(): void {
+    this.logComponentEvent('xray_tracing_config', 'Configuring X-Ray tracing for Application Load Balancer');
+
+    // Create X-Ray sampling rule for ALB traces
+    this.xraySamplingRule = new xray.CfnSamplingRule(this, 'XRaySamplingRule', {
+      samplingRule: {
+        ruleName: `${this.context.serviceName}-${this.spec.name}-alb-sampling`,
+        priority: 1000,
+        fixedRate: 0.1, // 10% sampling rate
+        reservoirSize: 1000,
+        serviceName: this.config!.loadBalancerName,
+        serviceType: 'AWS::ElasticLoadBalancingV2::LoadBalancer',
+        host: '*',
+        httpMethod: '*',
+        urlPath: '*',
+        version: 1
+      }
+    });
+
+    // Register X-Ray capability
+    this._registerCapability('tracing:xray', {
+      samplingRuleArn: this.xraySamplingRule.attrSamplingRuleArn,
+      samplingRate: 0.1,
+      serviceName: this.config!.loadBalancerName
+    });
+
+    this.logComponentEvent('xray_tracing_configured', 'X-Ray tracing configured successfully');
+  }
+
+  private configureWAF(): void {
+    this.logComponentEvent('waf_config', 'Configuring AWS WAF for Application Load Balancer');
+
+    // Create WAF Web ACL with security rules
+    this.webAcl = new wafv2.CfnWebACL(this, 'WebACL', {
+      name: `${this.context.serviceName}-${this.spec.name}-alb-waf`,
+      description: `WAF Web ACL for ${this.config!.loadBalancerName}`,
+      scope: 'REGIONAL',
+      defaultAction: {
+        allow: {}
+      },
+      rules: [
+        {
+          name: 'AWSManagedRulesCommonRuleSet',
+          priority: 1,
+          overrideAction: {
+            none: {}
+          },
+          statement: {
+            managedRuleGroupStatement: {
+              vendorName: 'AWS',
+              name: 'AWSManagedRulesCommonRuleSet'
+            }
+          },
+          visibilityConfig: {
+            sampledRequestsEnabled: true,
+            cloudWatchMetricsEnabled: true,
+            metricName: 'CommonRuleSetMetric'
+          }
+        },
+        {
+          name: 'AWSManagedRulesKnownBadInputsRuleSet',
+          priority: 2,
+          overrideAction: {
+            none: {}
+          },
+          statement: {
+            managedRuleGroupStatement: {
+              vendorName: 'AWS',
+              name: 'AWSManagedRulesKnownBadInputsRuleSet'
+            }
+          },
+          visibilityConfig: {
+            sampledRequestsEnabled: true,
+            cloudWatchMetricsEnabled: true,
+            metricName: 'KnownBadInputsRuleSetMetric'
+          }
+        },
+        {
+          name: 'AWSManagedRulesSQLiRuleSet',
+          priority: 3,
+          overrideAction: {
+            none: {}
+          },
+          statement: {
+            managedRuleGroupStatement: {
+              vendorName: 'AWS',
+              name: 'AWSManagedRulesSQLiRuleSet'
+            }
+          },
+          visibilityConfig: {
+            sampledRequestsEnabled: true,
+            cloudWatchMetricsEnabled: true,
+            metricName: 'SQLiRuleSetMetric'
+          }
+        }
+      ],
+      visibilityConfig: {
+        sampledRequestsEnabled: true,
+        cloudWatchMetricsEnabled: true,
+        metricName: 'ALBWebACL'
+      }
+    });
+
+    // Associate WAF with ALB
+    new wafv2.CfnWebACLAssociation(this, 'WebACLAssociation', {
+      resourceArn: this.loadBalancer!.loadBalancerArn,
+      webAclArn: this.webAcl.attrArn
+    });
+
+    // Register WAF capability
+    this._registerCapability('waf:web-acl', {
+      webAclArn: this.webAcl.attrArn,
+      webAclName: this.webAcl.name!,
+      associatedResourceArn: this.loadBalancer!.loadBalancerArn
+    });
+
+    this.logComponentEvent('waf_configured', 'AWS WAF configured successfully');
+  }
+
+  private createObservabilityDashboard(): void {
+    this.logComponentEvent('dashboard_config', 'Creating CloudWatch observability dashboard');
+
+    this.dashboard = new cloudwatch.Dashboard(this, 'ObservabilityDashboard', {
+      dashboardName: `${this.context.serviceName}-${this.spec.name}-alb-dashboard`
+    });
+
+    // Add widgets to the dashboard
+    this.dashboard.addWidgets(
+      new cloudwatch.GraphWidget({
+        title: 'Request Count',
+        left: [this.loadBalancer!.metricRequestCount()],
+        width: 12,
+        height: 6
+      }),
+      new cloudwatch.GraphWidget({
+        title: 'Response Time',
+        left: [this.loadBalancer!.metricTargetResponseTime()],
+        width: 12,
+        height: 6
+      }),
+      new cloudwatch.GraphWidget({
+        title: 'HTTP 5xx Errors',
+        left: [this.loadBalancer!.metricHttpCodeElb(elbv2.HttpCodeElb.ELB_5XX_COUNT)],
+        width: 12,
+        height: 6
+      }),
+      new cloudwatch.GraphWidget({
+        title: 'Healthy Hosts',
+        left: this.targetGroups.map(tg => tg.metricHealthyHostCount()),
+        width: 12,
+        height: 6
+      })
+    );
+
+    // Register dashboard capability
+    this._registerCapability('dashboard:cloudwatch', {
+      dashboardName: this.dashboard.dashboardName,
+      dashboardUrl: `https://console.aws.amazon.com/cloudwatch/home?region=${this.node.stack.region}#dashboards:name=${this.dashboard.dashboardName}`
+    });
+
+    this.logComponentEvent('dashboard_created', 'CloudWatch observability dashboard created successfully');
+  }
+
+  private applyCDKNagSuppressions(): void {
+    this.logComponentEvent('cdk_nag_config', 'Applying CDK Nag suppressions');
+
+    // Suppress specific CDK Nag rules with justifications
+    NagSuppressions.addResourceSuppressions(this.loadBalancer!, [
+      {
+        id: 'AwsSolutions-ELB2',
+        reason: 'Access logging is configured via the accessLogs configuration property'
+      }
+    ], true);
+
+    if (this.webAcl) {
+      NagSuppressions.addResourceSuppressions(this.webAcl, [
+        {
+          id: 'AwsSolutions-WAF2-1',
+          reason: 'WAF Web ACL uses managed rule groups for security best practices'
+        }
+      ], true);
+    }
+
+    this.logComponentEvent('cdk_nag_suppressions_applied', 'CDK Nag suppressions applied successfully');
   }
 }

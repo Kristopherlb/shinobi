@@ -1,5 +1,7 @@
 import { ConfigBuilder, ConfigBuilderContext, ComponentConfigSchema } from '@shinobi/core';
 
+import schemaJson from '../Config.schema.json' assert { type: 'json' };
+
 export type AutoScalingGroupTerminationPolicy =
   | 'Default'
   | 'OldestInstance'
@@ -107,145 +109,7 @@ export interface AutoScalingGroupConfig {
   tags: Record<string, string>;
 }
 
-const AUTO_SCALING_GROUP_CONFIG_SCHEMA: ComponentConfigSchema = {
-  type: 'object',
-  additionalProperties: false,
-  properties: {
-    name: { type: 'string' },
-    description: { type: 'string' },
-    launchTemplate: {
-      type: 'object',
-      additionalProperties: false,
-      properties: {
-        instanceType: { type: 'string' },
-        ami: {
-          type: 'object',
-          additionalProperties: false,
-          properties: {
-            amiId: { type: 'string' },
-            namePattern: { type: 'string' },
-            owner: { type: 'string' }
-          }
-        },
-        userData: { type: 'string' },
-        keyName: { type: 'string' },
-        detailedMonitoring: { type: 'boolean' },
-        requireImdsv2: { type: 'boolean' },
-        installAgents: {
-          type: 'object',
-          additionalProperties: false,
-          properties: {
-            ssm: { type: 'boolean' },
-            cloudwatch: { type: 'boolean' },
-            stigHardening: { type: 'boolean' }
-          }
-        }
-      }
-    },
-    autoScaling: {
-      type: 'object',
-      additionalProperties: false,
-      properties: {
-        minCapacity: { type: 'number' },
-        maxCapacity: { type: 'number' },
-        desiredCapacity: { type: 'number' }
-      }
-    },
-    storage: {
-      type: 'object',
-      additionalProperties: false,
-      properties: {
-        rootVolumeSize: { type: 'number' },
-        rootVolumeType: { type: 'string' },
-        encrypted: { type: 'boolean' },
-        kms: {
-          type: 'object',
-          additionalProperties: false,
-          properties: {
-            useCustomerManagedKey: { type: 'boolean' },
-            enableKeyRotation: { type: 'boolean' },
-            kmsKeyArn: { type: 'string' }
-          }
-        }
-      }
-    },
-    healthCheck: {
-      type: 'object',
-      additionalProperties: false,
-      properties: {
-        type: { type: 'string', enum: ['EC2', 'ELB'] },
-        gracePeriod: { type: 'number' }
-      }
-    },
-    terminationPolicies: {
-      type: 'array',
-      items: { type: 'string' }
-    },
-    updatePolicy: {
-      type: 'object',
-      additionalProperties: false,
-      properties: {
-        rollingUpdate: {
-          type: 'object',
-          additionalProperties: false,
-          properties: {
-            minInstancesInService: { type: 'number' },
-            maxBatchSize: { type: 'number' },
-            pauseTime: { type: 'string' }
-          }
-        }
-      }
-    },
-    vpc: {
-      type: 'object',
-      additionalProperties: false,
-      properties: {
-        vpcId: { type: 'string' },
-        subnetIds: {
-          type: 'array',
-          items: { type: 'string' }
-        },
-        securityGroupIds: {
-          type: 'array',
-          items: { type: 'string' }
-        },
-        subnetType: { type: 'string', enum: ['PUBLIC', 'PRIVATE_WITH_EGRESS'] },
-        allowAllOutbound: { type: 'boolean' }
-      }
-    },
-    security: {
-      type: 'object',
-      additionalProperties: false,
-      properties: {
-        managedPolicies: {
-          type: 'array',
-          items: { type: 'string' }
-        },
-        attachLogDeliveryPolicy: { type: 'boolean' },
-        stigComplianceTag: { type: 'boolean' }
-      }
-    },
-    monitoring: {
-      type: 'object',
-      additionalProperties: false,
-      properties: {
-        enabled: { type: 'boolean' },
-        alarms: {
-          type: 'object',
-          additionalProperties: false,
-          properties: {
-            cpuHigh: { type: 'object' },
-            inService: { type: 'object' }
-          }
-        }
-      }
-    },
-    tags: {
-      type: 'object',
-      additionalProperties: { type: 'string' }
-    }
-  }
-};
+const AUTO_SCALING_GROUP_CONFIG_SCHEMA = schemaJson as ComponentConfigSchema;
 
 const DEFAULT_ALARM: AutoScalingGroupAlarmConfig = {
   enabled: true,
@@ -275,10 +139,10 @@ export class AutoScalingGroupComponentConfigBuilder extends ConfigBuilder<AutoSc
       launchTemplate: {
         instanceType: 't3.micro',
         detailedMonitoring: false,
-        requireImdsv2: false,
+        requireImdsv2: true,
         installAgents: {
-          ssm: false,
-          cloudwatch: false,
+          ssm: true,
+          cloudwatch: true,
           stigHardening: false
         }
       },
@@ -290,10 +154,10 @@ export class AutoScalingGroupComponentConfigBuilder extends ConfigBuilder<AutoSc
       storage: {
         rootVolumeSize: 20,
         rootVolumeType: 'gp3',
-        encrypted: false,
+        encrypted: true,
         kms: {
           useCustomerManagedKey: false,
-          enableKeyRotation: false
+          enableKeyRotation: true
         }
       },
       healthCheck: {
@@ -342,10 +206,10 @@ export class AutoScalingGroupComponentConfigBuilder extends ConfigBuilder<AutoSc
         userData: launchTemplate.userData,
         keyName: launchTemplate.keyName,
         detailedMonitoring: launchTemplate.detailedMonitoring ?? false,
-        requireImdsv2: launchTemplate.requireImdsv2 ?? false,
+        requireImdsv2: launchTemplate.requireImdsv2 ?? true,
         installAgents: {
-          ssm: launchTemplate.installAgents?.ssm ?? false,
-          cloudwatch: launchTemplate.installAgents?.cloudwatch ?? false,
+          ssm: launchTemplate.installAgents?.ssm ?? true,
+          cloudwatch: launchTemplate.installAgents?.cloudwatch ?? true,
           stigHardening: launchTemplate.installAgents?.stigHardening ?? false
         }
       },
@@ -357,10 +221,10 @@ export class AutoScalingGroupComponentConfigBuilder extends ConfigBuilder<AutoSc
       storage: {
         rootVolumeSize: storage.rootVolumeSize ?? 20,
         rootVolumeType: storage.rootVolumeType ?? 'gp3',
-        encrypted: storage.encrypted ?? false,
+        encrypted: storage.encrypted ?? true,
         kms: {
           useCustomerManagedKey: storage.kms?.useCustomerManagedKey ?? false,
-          enableKeyRotation: storage.kms?.enableKeyRotation ?? false,
+          enableKeyRotation: storage.kms?.enableKeyRotation ?? true,
           kmsKeyArn: storage.kms?.kmsKeyArn
         }
       },

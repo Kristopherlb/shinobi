@@ -1,8 +1,8 @@
 import * as ec2 from 'aws-cdk-lib/aws-ec2';
 import { App, Stack } from 'aws-cdk-lib';
 import { Template, Match } from 'aws-cdk-lib/assertions';
-import { AutoScalingGroupComponent } from '../auto-scaling-group.component.js';
-import { AutoScalingGroupConfig } from '../auto-scaling-group.builder.js';
+import { AutoScalingGroupComponent } from '../src/auto-scaling-group.component.js';
+import { AutoScalingGroupConfig } from '../src/auto-scaling-group.builder.js';
 import { ComponentContext, ComponentSpec } from '@shinobi/core';
 
 const createSpec = (config: Partial<AutoScalingGroupConfig> = {}): ComponentSpec => ({

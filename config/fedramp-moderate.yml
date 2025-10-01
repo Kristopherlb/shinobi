@@ -161,7 +161,7 @@ defaults:
       encrypted: true
       kms:
         useCustomerManagedKey: true
-        enableKeyRotation: false
+        enableKeyRotation: true
     healthCheck:
       type: EC2
       gracePeriod: 180
