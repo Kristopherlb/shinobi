@@ -1,9 +1,11 @@
 import {
   ConfigBuilder,
   ConfigBuilderContext,
-  ComponentConfigSchema
+  ComponentConfigSchema,
+  ComponentContext,
+  ComponentSpec
 } from '@shinobi/core';
-import { ComponentContext, ComponentSpec } from '@platform/contracts';
+import schemaJson from '../Config.schema.json' assert { type: 'json' };
 
 export type AlbScheme = 'internet-facing' | 'internal';
 export type AlbIpAddressType = 'ipv4' | 'dualstack';
@@ -18,8 +20,8 @@ export type AlbTrafficShiftType = 'AllAtOnce' | 'Linear' | 'Canary';
 
 export interface AlbIngressRuleConfig {
   port: number;
-  protocol?: 'tcp' | 'udp' | 'icmp';
-  cidr?: string;
+  protocol?: 'tcp';
+  cidr: string;
   description?: string;
 }
 
@@ -191,369 +193,14 @@ export interface ApplicationLoadBalancerConfig {
       rejectedConnections: Required<AlbAlarmConfig>;
     };
   };
+  observability?: AlbObservabilityConfig;
   hardeningProfile: string;
   tags: Record<string, string>;
 }
 
-const INGRESS_RULE_DEFINITION = {
-  type: 'object',
-  additionalProperties: false,
-  required: ['port'],
-  properties: {
-    port: {
-      type: 'number',
-      minimum: 1,
-      maximum: 65535
-    },
-    protocol: {
-      type: 'string',
-      enum: ['tcp', 'udp', 'icmp'],
-      default: 'tcp'
-    },
-    cidr: {
-      type: 'string',
-      pattern: '^(?:\\d{1,3}\\.){3}\\d{1,3}/\\d{1,2}$'
-    },
-    description: {
-      type: 'string'
-    }
-  }
-};
+export const APPLICATION_LOAD_BALANCER_CONFIG_SCHEMA = schemaJson as ComponentConfigSchema;
 
-const DEFAULT_ACTION_DEFINITION = {
-  type: 'object',
-  additionalProperties: false,
-  required: ['type'],
-  properties: {
-    type: {
-      type: 'string',
-      enum: ['fixed-response', 'redirect', 'forward']
-    },
-    fixedResponse: {
-      type: 'object',
-      additionalProperties: false,
-      properties: {
-        statusCode: { type: 'number', minimum: 100, maximum: 599 },
-        contentType: { type: 'string' },
-        messageBody: { type: 'string' }
-      }
-    },
-    redirect: {
-      type: 'object',
-      additionalProperties: false,
-      required: ['redirectUrl'],
-      properties: {
-        redirectUrl: {
-          type: 'string',
-          pattern: '^https?://'
-        }
-      }
-    }
-  }
-};
-
-const LISTENER_DEFINITION = {
-  type: 'object',
-  additionalProperties: false,
-  required: ['port', 'protocol'],
-  properties: {
-    port: {
-      type: 'number',
-      minimum: 1,
-      maximum: 65535
-    },
-    protocol: {
-      type: 'string',
-      enum: ['HTTP', 'HTTPS']
-    },
-    certificateArn: {
-      type: 'string',
-      pattern: '^arn:aws:acm:[a-z0-9-]+:\\d{12}:certificate/[a-f0-9-]+$'
-    },
-    sslPolicy: {
-      type: 'string',
-      pattern: '^ELBSecurityPolicy-'
-    },
-    redirectToHttps: {
-      type: 'boolean'
-    },
-    defaultAction: DEFAULT_ACTION_DEFINITION
-  }
-};
-
-const HEALTH_CHECK_DEFINITION = {
-  type: 'object',
-  additionalProperties: false,
-  properties: {
-    enabled: { type: 'boolean' },
-    path: { type: 'string' },
-    protocol: {
-      type: 'string',
-      enum: ['HTTP', 'HTTPS']
-    },
-    port: {
-      type: 'number',
-      minimum: 1,
-      maximum: 65535
-    },
-    healthyThresholdCount: {
-      type: 'number',
-      minimum: 2,
-      maximum: 10
-    },
-    unhealthyThresholdCount: {
-      type: 'number',
-      minimum: 2,
-      maximum: 10
-    },
-    timeoutSeconds: {
-      type: 'number',
-      minimum: 2,
-      maximum: 120
-    },
-    intervalSeconds: {
-      type: 'number',
-      minimum: 5,
-      maximum: 300
-    },
-    matcher: { type: 'string' }
-  }
-};
-
-const TARGET_GROUP_DEFINITION = {
-  type: 'object',
-  additionalProperties: false,
-  required: ['name', 'port', 'protocol', 'targetType'],
-  properties: {
-    name: {
-      type: 'string',
-      pattern: '^[a-zA-Z0-9-]+$',
-      maxLength: 32
-    },
-    port: {
-      type: 'number',
-      minimum: 1,
-      maximum: 65535
-    },
-    protocol: {
-      type: 'string',
-      enum: ['HTTP', 'HTTPS']
-    },
-    targetType: {
-      type: 'string',
-      enum: ['instance', 'ip', 'lambda']
-    },
-    healthCheck: HEALTH_CHECK_DEFINITION,
-    stickiness: {
-      type: 'object',
-      additionalProperties: false,
-      properties: {
-        enabled: { type: 'boolean' },
-        durationSeconds: {
-          type: 'number',
-          minimum: 1,
-          maximum: 604800
-        }
-      }
-    }
-  }
-};
-
-const ALARM_DEFINITION = {
-  type: 'object',
-  additionalProperties: false,
-  properties: {
-    enabled: { type: 'boolean' },
-    threshold: { type: 'number' },
-    evaluationPeriods: { type: 'number', minimum: 1 },
-    periodMinutes: { type: 'number', minimum: 1 },
-    comparisonOperator: {
-      type: 'string',
-      enum: ['gt', 'gte', 'lt', 'lte']
-    },
-    treatMissingData: {
-      type: 'string',
-      enum: ['breaching', 'not-breaching', 'ignore', 'missing']
-    },
-    statistic: { type: 'string' },
-    tags: {
-      type: 'object',
-      additionalProperties: { type: 'string' }
-    }
-  }
-};
-
-export const APPLICATION_LOAD_BALANCER_CONFIG_SCHEMA: ComponentConfigSchema = {
-  type: 'object',
-  additionalProperties: false,
-  properties: {
-    loadBalancerName: {
-      type: 'string',
-      pattern: '^[a-zA-Z0-9-]+$',
-      maxLength: 32
-    },
-    scheme: {
-      type: 'string',
-      enum: ['internet-facing', 'internal']
-    },
-    ipAddressType: {
-      type: 'string',
-      enum: ['ipv4', 'dualstack']
-    },
-    vpc: {
-      type: 'object',
-      additionalProperties: false,
-      properties: {
-        vpcId: { type: 'string' },
-        subnetIds: {
-          type: 'array',
-          items: {
-            type: 'string',
-            pattern: '^subnet-[a-f0-9]+'
-          }
-        },
-        subnetType: {
-          type: 'string',
-          enum: ['public', 'private']
-        }
-      }
-    },
-    securityGroups: {
-      type: 'object',
-      additionalProperties: false,
-      properties: {
-        create: { type: 'boolean' },
-        securityGroupIds: {
-          type: 'array',
-          items: {
-            type: 'string',
-            pattern: '^sg-[a-f0-9]+'
-          }
-        },
-        ingress: {
-          type: 'array',
-          items: INGRESS_RULE_DEFINITION
-        }
-      }
-    },
-    accessLogs: {
-      type: 'object',
-      additionalProperties: false,
-      properties: {
-        enabled: { type: 'boolean' },
-        bucketName: { type: 'string' },
-        bucket: { type: 'string' },
-        prefix: { type: 'string' },
-        retentionDays: { type: 'number', minimum: 1 },
-        removalPolicy: {
-          type: 'string',
-          enum: ['retain', 'destroy']
-        }
-      }
-    },
-    listeners: {
-      type: 'array',
-      minItems: 1,
-      items: LISTENER_DEFINITION
-    },
-    targetGroups: {
-      type: 'array',
-      items: TARGET_GROUP_DEFINITION
-    },
-    deletionProtection: { type: 'boolean' },
-    idleTimeoutSeconds: {
-      type: 'number',
-      minimum: 1,
-      maximum: 4000
-    },
-    idleTimeout: {
-      type: 'number',
-      minimum: 1,
-      maximum: 4000
-    },
-    deploymentStrategy: {
-      type: 'object',
-      additionalProperties: false,
-      properties: {
-        type: {
-          type: 'string',
-          enum: ['single', 'blue-green']
-        },
-        blueGreenConfig: {
-          type: 'object',
-          additionalProperties: false,
-          properties: {
-            productionTrafficRoute: {
-              type: 'object',
-              additionalProperties: false,
-              properties: {
-                type: {
-                  type: 'string',
-                  enum: ['AllAtOnce', 'Linear', 'Canary']
-                },
-                percentage: { type: 'number', minimum: 1, maximum: 100 },
-                interval: { type: 'number', minimum: 1, maximum: 60 }
-              }
-            },
-            testTrafficRoute: {
-              type: 'object',
-              additionalProperties: false,
-              properties: {
-                type: {
-                  type: 'string',
-                  enum: ['AllAtOnce', 'Linear', 'Canary']
-                },
-                percentage: { type: 'number', minimum: 1, maximum: 100 }
-              }
-            },
-            terminationWaitTimeMinutes: {
-              type: 'number',
-              minimum: 0,
-              maximum: 2880
-            }
-          }
-        }
-      }
-    },
-    monitoring: {
-      type: 'object',
-      additionalProperties: false,
-      properties: {
-        enabled: { type: 'boolean' },
-        alarms: {
-          type: 'object',
-          additionalProperties: false,
-          properties: {
-            http5xx: ALARM_DEFINITION,
-            unhealthyHosts: ALARM_DEFINITION,
-            connectionErrors: ALARM_DEFINITION,
-            rejectedConnections: ALARM_DEFINITION
-          }
-        }
-      }
-    },
-    hardeningProfile: { type: 'string' },
-    tags: {
-      type: 'object',
-      additionalProperties: { type: 'string' }
-    }
-  }
-};
-
-const DEFAULT_HTTP_INGRESS: Required<AlbIngressRuleConfig>[] = [
-  {
-    port: 80,
-    protocol: 'tcp',
-    cidr: '0.0.0.0/0',
-    description: 'Allow HTTP'
-  },
-  {
-    port: 443,
-    protocol: 'tcp',
-    cidr: '0.0.0.0/0',
-    description: 'Allow HTTPS'
-  }
-];
+const DEFAULT_HTTP_INGRESS: Required<AlbIngressRuleConfig>[] = [];
 
 const DEFAULT_ALARM_BASELINE: Required<Omit<AlbAlarmConfig, 'tags'>> = {
   enabled: false,
@@ -585,9 +232,9 @@ export class ApplicationLoadBalancerComponentConfigBuilder extends ConfigBuilder
         ingress: DEFAULT_HTTP_INGRESS
       },
       accessLogs: {
-        enabled: false,
-        retentionDays: 30,
-        removalPolicy: 'destroy'
+        enabled: true,
+        retentionDays: 90,
+        removalPolicy: 'retain'
       },
       listeners: [
         {
@@ -597,18 +244,34 @@ export class ApplicationLoadBalancerComponentConfigBuilder extends ConfigBuilder
         }
       ],
       targetGroups: [],
-      deletionProtection: false,
+      deletionProtection: true,
       idleTimeoutSeconds: 60,
       deploymentStrategy: {
         type: 'single'
       },
       monitoring: {
-        enabled: false,
+        enabled: true,
         alarms: {
           http5xx: { ...DEFAULT_ALARM_BASELINE },
           unhealthyHosts: { ...DEFAULT_ALARM_BASELINE },
           connectionErrors: { ...DEFAULT_ALARM_BASELINE },
           rejectedConnections: { ...DEFAULT_ALARM_BASELINE }
+        }
+      },
+      observability: {
+        dashboard: {
+          enabled: true,
+          name: `${this.builderContext.spec.name}-alb-dashboard`
+        },
+        xrayTracing: {
+          enabled: true,
+          samplingRate: 0.1,
+          serviceName: this.builderContext.spec.name
+        },
+        waf: {
+          enabled: true,
+          managedRuleGroups: ['AWSManagedRulesCommonRuleSet', 'AWSManagedRulesKnownBadInputsRuleSet', 'AWSManagedRulesSQLiRuleSet'],
+          customRules: []
         }
       },
       hardeningProfile: 'baseline',
@@ -640,9 +303,25 @@ export class ApplicationLoadBalancerComponentConfigBuilder extends ConfigBuilder
     const targetGroups = this.normaliseTargetGroups(config.targetGroups);
     const deploymentStrategy = this.normaliseDeploymentStrategy(config.deploymentStrategy);
     const monitoring = this.normaliseMonitoring(config.monitoring);
+    const observability = config.observability ?? {
+      dashboard: {
+        enabled: true,
+        name: `${specName}-alb-dashboard`
+      },
+      xrayTracing: {
+        enabled: true,
+        samplingRate: 0.1,
+        serviceName: specName
+      },
+      waf: {
+        enabled: true,
+        managedRuleGroups: ['AWSManagedRulesCommonRuleSet', 'AWSManagedRulesKnownBadInputsRuleSet', 'AWSManagedRulesSQLiRuleSet'],
+        customRules: []
+      }
+    };
 
     const idleTimeoutSeconds = this.resolveIdleTimeout(config);
-    const deletionProtection = config.deletionProtection ?? false;
+    const deletionProtection = config.deletionProtection ?? true;
     const hardeningProfile = config.hardeningProfile ?? 'baseline';
     const tags = { ...(config.tags ?? {}) };
 
@@ -659,6 +338,7 @@ export class ApplicationLoadBalancerComponentConfigBuilder extends ConfigBuilder
       idleTimeoutSeconds,
       deploymentStrategy,
       monitoring,
+      observability,
       hardeningProfile,
       tags
     };
@@ -675,12 +355,18 @@ export class ApplicationLoadBalancerComponentConfigBuilder extends ConfigBuilder
   private normaliseSecurityGroups(securityGroups?: AlbSecurityGroupConfig): ApplicationLoadBalancerConfig['securityGroups'] {
     const create = securityGroups?.create ?? true;
     const securityGroupIds = [...(securityGroups?.securityGroupIds ?? [])];
-    const ingress = (securityGroups?.ingress ?? DEFAULT_HTTP_INGRESS).map(rule => ({
-      port: rule.port,
-      protocol: rule.protocol ?? 'tcp',
-      cidr: rule.cidr ?? '0.0.0.0/0',
-      description: rule.description ?? `Allow ${rule.protocol ?? 'tcp'} ${rule.port}`
-    }));
+    const ingress = (securityGroups?.ingress ?? DEFAULT_HTTP_INGRESS).map(rule => {
+      if (!rule.cidr) {
+        throw new Error('ALB security group ingress rules must specify a CIDR block');
+      }
+
+      return {
+        port: rule.port,
+        protocol: rule.protocol ?? 'tcp',
+        cidr: rule.cidr,
+        description: rule.description ?? `Allow ${rule.protocol ?? 'tcp'} ${rule.port}`
+      };
+    });
 
     return {
       create,
@@ -740,9 +426,9 @@ export class ApplicationLoadBalancerComponentConfigBuilder extends ConfigBuilder
         : undefined,
       stickiness: targetGroup.stickiness
         ? {
-            enabled: targetGroup.stickiness.enabled ?? false,
-            durationSeconds: targetGroup.stickiness.durationSeconds ?? 86400
-          }
+          enabled: targetGroup.stickiness.enabled ?? false,
+          durationSeconds: targetGroup.stickiness.durationSeconds ?? 86400
+        }
         : undefined
     }));
   }
@@ -777,9 +463,9 @@ export class ApplicationLoadBalancerComponentConfigBuilder extends ConfigBuilder
         },
         testTrafficRoute: strategy?.blueGreenConfig?.testTrafficRoute
           ? {
-              type: strategy.blueGreenConfig.testTrafficRoute.type ?? 'Canary',
-              percentage: strategy.blueGreenConfig.testTrafficRoute.percentage ?? 10
-            }
+            type: strategy.blueGreenConfig.testTrafficRoute.type ?? 'Canary',
+            percentage: strategy.blueGreenConfig.testTrafficRoute.percentage ?? 10
+          }
           : undefined,
         terminationWaitTimeMinutes: strategy?.blueGreenConfig?.terminationWaitTimeMinutes ?? 5
       }
@@ -787,7 +473,7 @@ export class ApplicationLoadBalancerComponentConfigBuilder extends ConfigBuilder
   }
 
   private normaliseMonitoring(monitoring?: AlbMonitoringConfig): ApplicationLoadBalancerConfig['monitoring'] {
-    const enabled = monitoring?.enabled ?? false;
+    const enabled = monitoring?.enabled ?? true;
 
     const http5xx = this.normaliseAlarmConfig(
       monitoring?.alarms?.http5xx,

@@ -7,7 +7,9 @@
       "metricName": "CPUUtilization",
       "statistic": "Average",
       "defaultThreshold": 80,
-      "defaultPeriodMinutes": 5
+      "defaultPeriodMinutes": 5,
+      "comparisonOperator": "GT",
+      "treatMissingData": "not-breaching"
     },
     {
       "id": "inService",
@@ -16,7 +18,85 @@
       "metricName": "GroupInServiceInstances",
       "statistic": "Average",
       "defaultThreshold": 1,
-      "defaultPeriodMinutes": 1
+      "defaultPeriodMinutes": 1,
+      "comparisonOperator": "LT",
+      "treatMissingData": "breaching"
+    },
+    {
+      "id": "memoryHigh",
+      "description": "High memory utilization across Auto Scaling Group instances",
+      "namespace": "Platform/AutoScalingGroup",
+      "metricName": "mem_used_percent",
+      "statistic": "Average",
+      "defaultThreshold": 85,
+      "defaultPeriodMinutes": 5,
+      "comparisonOperator": "GT",
+      "treatMissingData": "not-breaching"
+    },
+    {
+      "id": "diskHigh",
+      "description": "High disk utilization on Auto Scaling Group instances",
+      "namespace": "Platform/AutoScalingGroup",
+      "metricName": "disk_used_percent",
+      "statistic": "Average",
+      "defaultThreshold": 90,
+      "defaultPeriodMinutes": 5,
+      "comparisonOperator": "GT",
+      "treatMissingData": "not-breaching"
+    },
+    {
+      "id": "scalingActivity",
+      "description": "Excessive scaling activity detected",
+      "namespace": "AWS/AutoScaling",
+      "metricName": "GroupTotalInstances",
+      "statistic": "Maximum",
+      "defaultThreshold": 10,
+      "defaultPeriodMinutes": 15,
+      "comparisonOperator": "GT",
+      "treatMissingData": "not-breaching"
     }
-  ]
+  ],
+  "compliance": {
+    "fedrampModerate": {
+      "additionalAlarms": [
+        {
+          "id": "instanceHealthCheck",
+          "description": "Instance health check failures",
+          "namespace": "AWS/AutoScaling",
+          "metricName": "GroupInServiceInstances",
+          "statistic": "Average",
+          "defaultThreshold": 1,
+          "defaultPeriodMinutes": 1,
+          "comparisonOperator": "LT",
+          "treatMissingData": "breaching"
+        }
+      ]
+    },
+    "fedrampHigh": {
+      "additionalAlarms": [
+        {
+          "id": "instanceHealthCheck",
+          "description": "Instance health check failures",
+          "namespace": "AWS/AutoScaling",
+          "metricName": "GroupInServiceInstances",
+          "statistic": "Average",
+          "defaultThreshold": 1,
+          "defaultPeriodMinutes": 1,
+          "comparisonOperator": "LT",
+          "treatMissingData": "breaching"
+        },
+        {
+          "id": "securityGroupChanges",
+          "description": "Security group configuration changes detected",
+          "namespace": "AWS/Config",
+          "metricName": "ConfigurationItemChangeNotification",
+          "statistic": "Sum",
+          "defaultThreshold": 1,
+          "defaultPeriodMinutes": 5,
+          "comparisonOperator": "GT",
+          "treatMissingData": "not-breaching"
+        }
+      ]
+    }
+  }
 }

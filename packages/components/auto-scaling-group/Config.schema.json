@@ -56,7 +56,7 @@
         "detailedMonitoring": {
           "type": "boolean",
           "description": "Enable detailed CloudWatch metrics for instances.",
-          "default": false
+          "default": true
         },
         "requireImdsv2": {
           "type": "boolean",
@@ -164,7 +164,10 @@
       "properties": {
         "type": {
           "type": "string",
-          "enum": ["EC2", "ELB"],
+          "enum": [
+            "EC2",
+            "ELB"
+          ],
           "description": "Health check type executed by the Auto Scaling service.",
           "default": "EC2"
         },
@@ -181,10 +184,19 @@
       "type": "array",
       "description": "Ordered termination policies applied during scale-in events.",
       "items": {
-        "type": "string"
+        "type": "string",
+        "enum": [
+          "Default",
+          "OldestInstance",
+          "NewestInstance",
+          "OldestLaunchConfiguration",
+          "ClosestToNextInstanceHour"
+        ]
       },
       "minItems": 1,
-      "default": ["Default"]
+      "default": [
+        "Default"
+      ]
     },
     "updatePolicy": {
       "type": "object",
@@ -242,14 +254,17 @@
         },
         "subnetType": {
           "type": "string",
-          "enum": ["PUBLIC", "PRIVATE_WITH_EGRESS"],
+          "enum": [
+            "PUBLIC",
+            "PRIVATE_WITH_EGRESS"
+          ],
           "description": "Subnet selection strategy when specific subnet ids are not supplied.",
-          "default": "PUBLIC"
+          "default": "PRIVATE_WITH_EGRESS"
         },
         "allowAllOutbound": {
           "type": "boolean",
           "description": "Permit all outbound traffic from instance ENIs.",
-          "default": true
+          "default": false
         }
       }
     },
@@ -269,7 +284,7 @@
         "attachLogDeliveryPolicy": {
           "type": "boolean",
           "description": "Attach a policy that permits log delivery to CloudWatch Logs.",
-          "default": false
+          "default": true
         },
         "stigComplianceTag": {
           "type": "boolean",
@@ -350,13 +365,23 @@
         },
         "comparisonOperator": {
           "type": "string",
-          "enum": ["GT", "GTE", "LT", "LTE"],
+          "enum": [
+            "GT",
+            "GTE",
+            "LT",
+            "LTE"
+          ],
           "description": "CloudWatch comparison operator applied to the metric.",
           "default": "GT"
         },
         "treatMissingData": {
           "type": "string",
-          "enum": ["breaching", "not-breaching", "ignore", "missing"],
+          "enum": [
+            "breaching",
+            "not-breaching",
+            "ignore",
+            "missing"
+          ],
           "description": "CloudWatch treatment of missing data points.",
           "default": "not-breaching"
         }

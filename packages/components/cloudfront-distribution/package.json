@@ -1,0 +1,93 @@
+{
+  "name": "@shinobi/cloudfront-distribution",
+  "version": "1.0.0",
+  "description": "CloudFront Distribution Component for Shinobi Platform - Global CDN edge distribution with configurable origins, behaviors, and security controls",
+  "type": "module",
+  "main": "dist/index.js",
+  "types": "dist/index.d.ts",
+  "files": [
+    "dist/**/*",
+    "Config.schema.json",
+    "README.md",
+    "catalog-info.yaml"
+  ],
+  "scripts": {
+    "build": "tsc -p tsconfig.json",
+    "test": "jest",
+    "lint": "eslint src/**/*.ts",
+    "typecheck": "tsc --noEmit"
+  },
+  "keywords": [
+    "aws",
+    "cloudfront",
+    "cdn",
+    "distribution",
+    "shinobi",
+    "platform",
+    "infrastructure",
+    "typescript",
+    "cdk"
+  ],
+  "author": "Shinobi Platform Team",
+  "license": "MIT",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/project42/shinobi.git",
+    "directory": "packages/components/cloudfront-distribution"
+  },
+  "bugs": {
+    "url": "https://github.com/project42/shinobi/issues"
+  },
+  "homepage": "https://github.com/project42/shinobi/tree/main/packages/components/cloudfront-distribution#readme",
+  "dependencies": {
+    "aws-cdk-lib": "^2.214.0",
+    "constructs": "^10.4.2",
+    "@shinobi/core": "workspace:*",
+    "cdk-nag": "^2.27.0"
+  },
+  "devDependencies": {
+    "@types/jest": "^30.0.0",
+    "@types/node": "^20.14.10",
+    "jest": "^30.1.3",
+    "ts-jest": "^29.4.1",
+    "typescript": "^5.5.3",
+    "eslint": "^8.57.0",
+    "@typescript-eslint/eslint-plugin": "^7.0.0",
+    "@typescript-eslint/parser": "^7.0.0",
+    "@jest/globals": "^30.1.3"
+  },
+  "publishConfig": {
+    "access": "public",
+    "registry": "https://registry.npmjs.org/"
+  },
+  "engines": {
+    "node": ">=20.0.0",
+    "npm": ">=10.0.0"
+  },
+  "os": [
+    "darwin",
+    "linux",
+    "win32"
+  ],
+  "cpu": [
+    "x64",
+    "arm64"
+  ],
+  "stability": "stable",
+  "maturity": "production",
+  "compliance": [
+    "commercial",
+    "fedramp-moderate",
+    "fedramp-high"
+  ],
+  "capabilities": [
+    "cloudfront:distribution"
+  ],
+  "awsServices": [
+    "cloudfront",
+    "s3",
+    "elbv2",
+    "certificatemanager",
+    "cloudwatch"
+  ]
+}

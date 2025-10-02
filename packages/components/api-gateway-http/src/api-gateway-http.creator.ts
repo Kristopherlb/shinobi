@@ -39,7 +39,7 @@ export class ApiGatewayHttpCreator implements IComponentCreator {
   }
 
   public getProvidedCapabilities(): string[] {
-    return ['api:http'];
+    return ['api:http', 'observability:api-gateway-http'];
   }
 
   public getRequiredCapabilities(): string[] {

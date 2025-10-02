@@ -83,7 +83,7 @@
       "api:custom-domain",
       "auth:jwt",
       "auth:lambda",
-      "monitoring:api",
+      "observability:api-gateway-http",
       "logging:access"
     ],
     "bindings": [

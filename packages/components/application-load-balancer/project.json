@@ -1,0 +1,50 @@
+{
+  "name": "application-load-balancer",
+  "root": "packages/components/application-load-balancer",
+  "sourceRoot": "packages/components/application-load-balancer",
+  "projectType": "library",
+  "targets": {
+    "build": {
+      "executor": "nx:run-commands",
+      "options": {
+        "command": "tsc -p packages/components/application-load-balancer/tsconfig.json && node tools/cleanup-ts-build-artifacts.mjs"
+      },
+      "inputs": [
+        "default",
+        "{projectRoot}/tsconfig.json",
+        "{projectRoot}/index.ts",
+        "{projectRoot}/*.ts",
+        "{projectRoot}/tests/**/*.ts"
+      ],
+      "outputs": [
+        "{workspaceRoot}/dist/packages/components/application-load-balancer"
+      ]
+    },
+    "typecheck": {
+      "executor": "nx:run-commands",
+      "options": {
+        "command": "tsc --noEmit -p packages/components/application-load-balancer/tsconfig.json"
+      }
+    },
+    "test": {
+      "executor": "@nx/jest:jest",
+      "outputs": [
+        "{projectRoot}/coverage"
+      ],
+      "options": {
+        "jestConfig": "jest.config.mjs",
+        "passWithNoTests": false
+      }
+    },
+    "lint": {
+      "executor": "nx:run-commands",
+      "options": {
+        "command": "eslint packages/components/application-load-balancer --ext .ts --no-ignore"
+      }
+    }
+  },
+  "tags": [
+    "type:lib",
+    "scope:components"
+  ]
+}

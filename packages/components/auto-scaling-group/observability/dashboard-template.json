@@ -1,0 +1,176 @@
+{
+  "widgets": [
+    {
+      "type": "metric",
+      "properties": {
+        "metrics": [
+          [
+            "AWS/AutoScaling",
+            "GroupDesiredCapacity",
+            "AutoScalingGroupName",
+            "${AutoScalingGroupName}"
+          ],
+          [
+            ".",
+            "GroupInServiceInstances",
+            ".",
+            "."
+          ],
+          [
+            ".",
+            "GroupMaxSize",
+            ".",
+            "."
+          ],
+          [
+            ".",
+            "GroupMinSize",
+            ".",
+            "."
+          ]
+        ],
+        "view": "timeSeries",
+        "stacked": false,
+        "region": "${AWS::Region}",
+        "title": "Auto Scaling Group Capacity",
+        "period": 300,
+        "stat": "Average"
+      }
+    },
+    {
+      "type": "metric",
+      "properties": {
+        "metrics": [
+          [
+            "Platform/AutoScalingGroup",
+            "cpu_usage_user",
+            "AutoScalingGroupName",
+            "${AutoScalingGroupName}"
+          ],
+          [
+            ".",
+            "cpu_usage_system",
+            ".",
+            "."
+          ],
+          [
+            ".",
+            "cpu_usage_idle",
+            ".",
+            "."
+          ]
+        ],
+        "view": "timeSeries",
+        "stacked": false,
+        "region": "${AWS::Region}",
+        "title": "CPU Utilization",
+        "period": 300,
+        "stat": "Average"
+      }
+    },
+    {
+      "type": "metric",
+      "properties": {
+        "metrics": [
+          [
+            "Platform/AutoScalingGroup",
+            "mem_used_percent",
+            "AutoScalingGroupName",
+            "${AutoScalingGroupName}"
+          ]
+        ],
+        "view": "timeSeries",
+        "stacked": false,
+        "region": "${AWS::Region}",
+        "title": "Memory Utilization",
+        "period": 300,
+        "stat": "Average"
+      }
+    },
+    {
+      "type": "metric",
+      "properties": {
+        "metrics": [
+          [
+            "Platform/AutoScalingGroup",
+            "disk_used_percent",
+            "AutoScalingGroupName",
+            "${AutoScalingGroupName}",
+            "device",
+            "/dev/xvda"
+          ],
+          [
+            ".",
+            ".",
+            ".",
+            ".",
+            ".",
+            "/dev/xvdb"
+          ]
+        ],
+        "view": "timeSeries",
+        "stacked": false,
+        "region": "${AWS::Region}",
+        "title": "Disk Utilization",
+        "period": 300,
+        "stat": "Average"
+      }
+    },
+    {
+      "type": "metric",
+      "properties": {
+        "metrics": [
+          [
+            "AWS/AutoScaling",
+            "GroupPendingInstances",
+            "AutoScalingGroupName",
+            "${AutoScalingGroupName}"
+          ],
+          [
+            ".",
+            "GroupTerminatingInstances",
+            ".",
+            "."
+          ],
+          [
+            ".",
+            "GroupStandbyInstances",
+            ".",
+            "."
+          ]
+        ],
+        "view": "timeSeries",
+        "stacked": false,
+        "region": "${AWS::Region}",
+        "title": "Instance State Transitions",
+        "period": 300,
+        "stat": "Average"
+      }
+    },
+    {
+      "type": "metric",
+      "properties": {
+        "metrics": [
+          [
+            "Platform/AutoScalingGroup",
+            "netstat_tcp_established",
+            "AutoScalingGroupName",
+            "${AutoScalingGroupName}"
+          ],
+          [
+            ".",
+            "netstat_tcp_time_wait",
+            ".",
+            "."
+          ]
+        ],
+        "view": "timeSeries",
+        "stacked": false,
+        "region": "${AWS::Region}",
+        "title": "Network Connections",
+        "period": 300,
+        "stat": "Average"
+      }
+    }
+  ]
+}

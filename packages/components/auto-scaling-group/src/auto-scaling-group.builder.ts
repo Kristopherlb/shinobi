@@ -138,12 +138,12 @@ export class AutoScalingGroupComponentConfigBuilder extends ConfigBuilder<AutoSc
     return {
       launchTemplate: {
         instanceType: 't3.micro',
-        detailedMonitoring: false,
-        requireImdsv2: true,
+        detailedMonitoring: true, // Enable detailed monitoring by default for security
+        requireImdsv2: true, // IMDSv2 mandatory by default
         installAgents: {
           ssm: true,
-          cloudwatch: true,
-          stigHardening: false
+          cloudwatch: true, // Enable CloudWatch agent by default for observability
+          stigHardening: false // STIG hardening enabled per compliance framework
         }
       },
       autoScaling: {
@@ -154,7 +154,7 @@ export class AutoScalingGroupComponentConfigBuilder extends ConfigBuilder<AutoSc
       storage: {
         rootVolumeSize: 20,
         rootVolumeType: 'gp3',
-        encrypted: true,
+        encrypted: true, // Encryption mandatory by default
         kms: {
           useCustomerManagedKey: false,
           enableKeyRotation: true
@@ -166,13 +166,13 @@ export class AutoScalingGroupComponentConfigBuilder extends ConfigBuilder<AutoSc
       },
       terminationPolicies: ['Default'],
       vpc: {
-        subnetType: 'PUBLIC',
-        allowAllOutbound: true
+        subnetType: 'PRIVATE_WITH_EGRESS', // Default to private subnets for security
+        allowAllOutbound: false // Restrict outbound access by default
       },
       security: {
         managedPolicies: [],
-        attachLogDeliveryPolicy: false,
-        stigComplianceTag: false
+        attachLogDeliveryPolicy: true, // Enable log delivery by default for compliance
+        stigComplianceTag: false // STIG compliance enabled per framework
       },
       monitoring: {
         enabled: true,

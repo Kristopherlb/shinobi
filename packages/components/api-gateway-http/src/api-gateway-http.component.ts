@@ -15,7 +15,6 @@ import * as certificatemanager from 'aws-cdk-lib/aws-certificatemanager';
 import * as route53 from 'aws-cdk-lib/aws-route53';
 import * as targets from 'aws-cdk-lib/aws-route53-targets';
 import * as logs from 'aws-cdk-lib/aws-logs';
-import * as cloudwatch from 'aws-cdk-lib/aws-cloudwatch';
 import * as wafv2 from 'aws-cdk-lib/aws-wafv2';
 import * as cdk from 'aws-cdk-lib';
 import { Construct } from 'constructs';
@@ -63,8 +62,6 @@ export class ApiGatewayHttpComponent extends BaseComponent {
     this.configureCustomDomain();
     this.configureDnsRecords();
     this.associateWaf();
-    this.createAlarms();
-    this.createCustomMetrics();
     this.configureResourcePolicy();
     this.configureApiKeyUsage();
     this.configureObservabilityTelemetry();
@@ -312,119 +309,6 @@ export class ApiGatewayHttpComponent extends BaseComponent {
     });
   }
 
-  private createAlarms(): void {
-    const alarms = this.config.monitoring?.alarms;
-    if (!alarms) {
-      return;
-    }
-
-    const metricsDimensions = { ApiId: this.httpApi!.httpApiId, Stage: this.stage?.stageName ?? '$default' };
-
-    if (alarms.errorRate4xx !== undefined) {
-      new cloudwatch.Alarm(this, 'FourXxErrorAlarm', {
-        alarmName: `${this.context.serviceName}-${this.spec.name}-4xx-error-rate`,
-        alarmDescription: 'High 4XX error rate detected on HTTP API',
-        metric: new cloudwatch.Metric({
-          namespace: 'AWS/ApiGateway',
-          metricName: '4XXError',
-          dimensionsMap: metricsDimensions,
-          statistic: 'Sum',
-          period: cdk.Duration.minutes(5)
-        }),
-        threshold: alarms.errorRate4xx,
-        evaluationPeriods: 1,
-        comparisonOperator: cloudwatch.ComparisonOperator.GREATER_THAN_THRESHOLD,
-        treatMissingData: cloudwatch.TreatMissingData.NOT_BREACHING
-      });
-    }
-
-    if (alarms.errorRate5xx !== undefined) {
-      new cloudwatch.Alarm(this, 'FiveXxErrorAlarm', {
-        alarmName: `${this.context.serviceName}-${this.spec.name}-5xx-error-rate`,
-        alarmDescription: 'High 5XX error rate detected on HTTP API',
-        metric: new cloudwatch.Metric({
-          namespace: 'AWS/ApiGateway',
-          metricName: '5XXError',
-          dimensionsMap: metricsDimensions,
-          statistic: 'Sum',
-          period: cdk.Duration.minutes(5)
-        }),
-        threshold: alarms.errorRate5xx,
-        evaluationPeriods: 1,
-        comparisonOperator: cloudwatch.ComparisonOperator.GREATER_THAN_THRESHOLD,
-        treatMissingData: cloudwatch.TreatMissingData.NOT_BREACHING
-      });
-    }
-
-    if (alarms.highLatency !== undefined) {
-      new cloudwatch.Alarm(this, 'HighLatencyAlarm', {
-        alarmName: `${this.context.serviceName}-${this.spec.name}-latency`,
-        alarmDescription: 'High latency detected on HTTP API integration',
-        metric: new cloudwatch.Metric({
-          namespace: 'AWS/ApiGateway',
-          metricName: 'Latency',
-          dimensionsMap: metricsDimensions,
-          statistic: 'Average',
-          period: cdk.Duration.minutes(5)
-        }),
-        threshold: alarms.highLatency,
-        evaluationPeriods: 1,
-        comparisonOperator: cloudwatch.ComparisonOperator.GREATER_THAN_THRESHOLD,
-        treatMissingData: cloudwatch.TreatMissingData.NOT_BREACHING
-      });
-    }
-
-    if (alarms.lowThroughput !== undefined) {
-      new cloudwatch.Alarm(this, 'LowThroughputAlarm', {
-        alarmName: `${this.context.serviceName}-${this.spec.name}-low-throughput`,
-        alarmDescription: 'Low request throughput detected on HTTP API',
-        metric: new cloudwatch.Metric({
-          namespace: 'AWS/ApiGateway',
-          metricName: 'Count',
-          dimensionsMap: metricsDimensions,
-          statistic: 'Sum',
-          period: cdk.Duration.minutes(5)
-        }),
-        threshold: alarms.lowThroughput,
-        evaluationPeriods: 1,
-        comparisonOperator: cloudwatch.ComparisonOperator.LESS_THAN_THRESHOLD,
-        treatMissingData: cloudwatch.TreatMissingData.BREACHING
-      });
-    }
-  }
-
-  private createCustomMetrics(): void {
-    const customMetrics = this.config.monitoring?.customMetrics;
-    if (!customMetrics?.length) {
-      return;
-    }
-
-    const metricsDimensions = { ApiId: this.httpApi!.httpApiId, Stage: this.stage?.stageName ?? '$default' };
-
-    customMetrics.forEach((metric, index) => {
-      const metricName = `${this.context.serviceName}-${this.spec.name}-${metric.name}`;
-      const namespace = metric.namespace ?? 'Custom/API-Gateway';
-      
-      new cloudwatch.Metric({
-        namespace,
-        metricName: metric.name,
-        dimensionsMap: { ...metricsDimensions, ...metric.dimensions },
-        statistic: metric.statistic ?? 'Sum',
-        period: cdk.Duration.seconds(metric.period ?? 300),
-        unit: metric.unit as cloudwatch.Unit ?? cloudwatch.Unit.COUNT
-      });
-
-      this.logComponentEvent('custom_metric_created', `Created custom metric: ${metric.name}`, {
-        component: this.spec.name,
-        service: this.context.serviceName,
-        metricName: metric.name,
-        namespace,
-        statistic: metric.statistic ?? 'Sum',
-        period: metric.period ?? 300
-      });
-    });
-  }
-
   private configureResourcePolicy(): void {
     const resourcePolicy = this.config.resourcePolicy;
     if (!resourcePolicy) {
@@ -500,6 +384,169 @@ export class ApiGatewayHttpComponent extends BaseComponent {
         wafEnabled: this.config.security?.enableWaf ?? false
       }
     });
+
+    this.registerCapability('observability:api-gateway-http', this.buildObservabilityCapability(stageName));
+  }
+
+  private buildObservabilityCapability(stageName: string): Record<string, any> {
+    const telemetry = this.buildTelemetryRequirements(stageName);
+
+    return {
+      type: 'api-gateway-http',
+      stageName,
+      apiId: this.httpApi!.httpApiId,
+      logGroupName: this.accessLogGroup?.logGroupName,
+      accessLogging: this.config.accessLogging,
+      monitoring: this.config.monitoring,
+      observability: this.config.observability,
+      security: this.config.security,
+      throttling: this.config.throttling,
+      telemetry
+    };
+  }
+
+  private buildTelemetryRequirements(stageName: string): Record<string, any> {
+    const alarmsConfig = this.config.monitoring?.alarms ?? {};
+    const stageTelemetryId = `${this.context.serviceName}-${this.spec.name}-${stageName}`;
+    const dimensions = {
+      ApiId: this.httpApi!.httpApiId,
+      Stage: stageName
+    };
+
+    const metrics = [
+      {
+        id: 'api-gateway-http-4xx',
+        namespace: 'AWS/ApiGateway',
+        metricName: '4XXError',
+        dimensions,
+        statistic: 'Sum',
+        periodSeconds: 300,
+        description: 'Count of client error responses recorded by API Gateway'
+      },
+      {
+        id: 'api-gateway-http-5xx',
+        namespace: 'AWS/ApiGateway',
+        metricName: '5XXError',
+        dimensions,
+        statistic: 'Sum',
+        periodSeconds: 300,
+        description: 'Count of server error responses recorded by API Gateway'
+      },
+      {
+        id: 'api-gateway-http-latency',
+        namespace: 'AWS/ApiGateway',
+        metricName: 'Latency',
+        dimensions,
+        statistic: 'Average',
+        periodSeconds: 300,
+        unit: 'Milliseconds',
+        description: 'Average integration latency captured by API Gateway'
+      },
+      {
+        id: 'api-gateway-http-count',
+        namespace: 'AWS/ApiGateway',
+        metricName: 'Count',
+        dimensions,
+        statistic: 'Sum',
+        periodSeconds: 300,
+        description: 'Request count processed by API Gateway'
+      }
+    ];
+
+    const alarms: Array<Record<string, any>> = [];
+
+    if (alarmsConfig.errorRate4xx !== undefined) {
+      alarms.push({
+        id: `${stageTelemetryId}-4xx-threshold`,
+        metricId: 'api-gateway-http-4xx',
+        alarmName: `${stageTelemetryId}-4xx-error-rate`,
+        alarmDescription: '4XX error threshold breached for API Gateway HTTP stage',
+        threshold: alarmsConfig.errorRate4xx,
+        comparisonOperator: 'gt',
+        evaluationPeriods: 1,
+        severity: 'warning',
+        treatMissingData: 'notBreaching'
+      });
+    }
+
+    if (alarmsConfig.errorRate5xx !== undefined) {
+      alarms.push({
+        id: `${stageTelemetryId}-5xx-threshold`,
+        metricId: 'api-gateway-http-5xx',
+        alarmName: `${stageTelemetryId}-5xx-error-rate`,
+        alarmDescription: '5XX error threshold breached for API Gateway HTTP stage',
+        threshold: alarmsConfig.errorRate5xx,
+        comparisonOperator: 'gt',
+        evaluationPeriods: 1,
+        severity: 'critical',
+        treatMissingData: 'notBreaching'
+      });
+    }
+
+    if (alarmsConfig.highLatency !== undefined) {
+      alarms.push({
+        id: `${stageTelemetryId}-latency-threshold`,
+        metricId: 'api-gateway-http-latency',
+        alarmName: `${stageTelemetryId}-latency`,
+        alarmDescription: 'Latency threshold breached for API Gateway HTTP stage',
+        threshold: alarmsConfig.highLatency,
+        comparisonOperator: 'gt',
+        evaluationPeriods: 1,
+        severity: 'warning',
+        treatMissingData: 'notBreaching'
+      });
+    }
+
+    if (alarmsConfig.lowThroughput !== undefined) {
+      alarms.push({
+        id: `${stageTelemetryId}-throughput-threshold`,
+        metricId: 'api-gateway-http-count',
+        alarmName: `${stageTelemetryId}-low-throughput`,
+        alarmDescription: 'Throughput threshold breached for API Gateway HTTP stage',
+        threshold: alarmsConfig.lowThroughput,
+        comparisonOperator: 'lt',
+        evaluationPeriods: 1,
+        severity: 'warning',
+        treatMissingData: 'breaching'
+      });
+    }
+
+    const logging = {
+      enabled: this.config.accessLogging?.enabled !== false,
+      destination: 'cloudwatch-logs',
+      logGroupName: this.accessLogGroup?.logGroupName,
+      retentionDays: this.config.accessLogging?.retentionInDays ?? logs.RetentionDays.THREE_MONTHS,
+      format: 'json'
+    };
+
+    const tracingConfig = this.config.observability;
+
+    const tracing = tracingConfig
+      ? {
+          enabled: tracingConfig.tracingEnabled !== false,
+          provider: 'xray',
+          samplingRate: tracingConfig.samplingRate ?? 0.1,
+          attributes: {
+            'service.name': tracingConfig.serviceName ?? `${this.context.serviceName}-${this.spec.name}`,
+            stage: stageName
+          }
+        }
+      : {
+          enabled: true,
+          provider: 'xray',
+          samplingRate: 0.1,
+          attributes: {
+            'service.name': `${this.context.serviceName}-${this.spec.name}`,
+            stage: stageName
+          }
+        };
+
+    return {
+      metrics,
+      alarms: alarms.length ? alarms : undefined,
+      logging,
+      tracing
+    };
   }
 
   private createIntegration(routeConfig: RouteConfig, index: number): apigatewayv2.HttpRouteIntegration {
@@ -622,12 +669,16 @@ export class ApiGatewayHttpComponent extends BaseComponent {
       return;
     }
 
+    const stageName = this.stage?.stageName ?? '$default';
+    const telemetry = this.buildTelemetryRequirements(stageName);
+
     this.logComponentEvent('observability_configured', 'Configured observability settings for API Gateway HTTP', {
       tracingEnabled: observabilityConfig.tracingEnabled ?? false,
       metricsEnabled: observabilityConfig.metricsEnabled ?? false,
       logsEnabled: observabilityConfig.logsEnabled ?? false,
       otlpEndpoint: observabilityConfig.otlpEndpoint ?? 'platform-default',
-      serviceName: observabilityConfig.serviceName ?? `${this.context.serviceName}-${this.spec.name}`
+      serviceName: observabilityConfig.serviceName ?? `${this.context.serviceName}-${this.spec.name}`,
+      telemetry
     });
   }
 }

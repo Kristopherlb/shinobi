@@ -1,0 +1,22 @@
+{
+  "alarms": {
+    "certificateExpiration": {
+      "namespace": "AWS/CertificateManager",
+      "metricName": "DaysToExpiry",
+      "statistic": "Minimum",
+      "defaultThresholdDays": 30,
+      "defaultPeriodHours": 6,
+      "treatMissingData": "breaching",
+      "severity": "high"
+    },
+    "certificateStatus": {
+      "namespace": "AWS/CertificateManager",
+      "metricName": "CertificateStatus",
+      "statistic": "Maximum",
+      "defaultThreshold": 1,
+      "defaultPeriodMinutes": 15,
+      "treatMissingData": "breaching",
+      "severity": "high"
+    }
+  }
+}

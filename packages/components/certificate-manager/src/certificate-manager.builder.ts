@@ -3,6 +3,7 @@ import {
   ConfigBuilderContext,
   ComponentConfigSchema
 } from '@shinobi/core';
+import schemaJson from '../Config.schema.json' with { type: 'json' };
 
 export type CertificateKeyAlgorithm = 'RSA_2048' | 'EC_prime256v1' | 'EC_secp384r1';
 export type CertificateValidationMethod = 'DNS' | 'EMAIL';
@@ -52,80 +53,7 @@ export interface CertificateManagerConfig {
   tags: Record<string, string>;
 }
 
-const CERTIFICATE_MANAGER_CONFIG_SCHEMA: ComponentConfigSchema = {
-  type: 'object',
-  additionalProperties: false,
-  required: ['domainName'],
-  properties: {
-    domainName: { type: 'string' },
-    subjectAlternativeNames: {
-      type: 'array',
-      items: { type: 'string' },
-      default: []
-    },
-    validation: {
-      type: 'object',
-      additionalProperties: false,
-      properties: {
-        method: { type: 'string', enum: ['DNS', 'EMAIL'], default: 'DNS' },
-        hostedZoneId: { type: 'string' },
-        hostedZoneName: { type: 'string' },
-        validationEmails: {
-          type: 'array',
-          items: { type: 'string' }
-        }
-      },
-      default: { method: 'DNS' }
-    },
-    transparencyLoggingEnabled: { type: 'boolean', default: true },
-    keyAlgorithm: {
-      type: 'string',
-      enum: ['RSA_2048', 'EC_prime256v1', 'EC_secp384r1'],
-      default: 'RSA_2048'
-    },
-    logging: {
-      type: 'object',
-      additionalProperties: false,
-      properties: {
-        groups: {
-          type: 'array',
-          items: {
-            type: 'object',
-            additionalProperties: false,
-            properties: {
-              id: { type: 'string' },
-              enabled: { type: 'boolean', default: true },
-              logGroupName: { type: 'string' },
-              retentionInDays: { type: 'number' },
-              removalPolicy: { type: 'string', enum: ['retain', 'destroy'], default: 'retain' },
-              tags: {
-                type: 'object',
-                additionalProperties: { type: 'string' }
-              }
-            },
-            required: ['id', 'enabled', 'retentionInDays']
-          },
-          default: []
-        }
-      },
-      default: { groups: [] }
-    },
-    monitoring: {
-      type: 'object',
-      additionalProperties: false,
-      properties: {
-        enabled: { type: 'boolean', default: false },
-        expiration: { type: 'object' },
-        status: { type: 'object' }
-      }
-    },
-    tags: {
-      type: 'object',
-      additionalProperties: { type: 'string' },
-      default: {}
-    }
-  }
-};
+export const CERTIFICATE_MANAGER_CONFIG_SCHEMA = schemaJson as ComponentConfigSchema;
 
 const DEFAULT_EXPIRATION_ALARM: CertificateManagerMonitoringConfig['expiration'] = {
   enabled: true,
@@ -158,15 +86,15 @@ export class CertificateManagerComponentConfigBuilder extends ConfigBuilder<Cert
           {
             id: 'lifecycle',
             enabled: true,
-            retentionInDays: 180,
-            removalPolicy: 'destroy'
+            retentionInDays: 365,
+            removalPolicy: 'retain'
           }
         ]
       },
       monitoring: {
-        enabled: false,
-        expiration: { ...DEFAULT_EXPIRATION_ALARM, enabled: false },
-        status: { ...DEFAULT_STATUS_ALARM, enabled: false }
+        enabled: true,
+        expiration: { ...DEFAULT_EXPIRATION_ALARM },
+        status: { ...DEFAULT_STATUS_ALARM }
       },
       tags: {}
     };
@@ -177,7 +105,26 @@ export class CertificateManagerComponentConfigBuilder extends ConfigBuilder<Cert
     if (!resolved.domainName) {
       throw new Error('certificate-manager configuration requires a domainName');
     }
+
+    // Validate domain name format
+    this.validateDomainName(resolved.domainName);
+
+    // Validate SAN domains if provided
+    if (resolved.subjectAlternativeNames) {
+      for (const san of resolved.subjectAlternativeNames) {
+        this.validateDomainName(san, 'SAN');
+      }
+    }
+
     return this.normaliseConfig(resolved);
+  }
+
+  private validateDomainName(domain: string, label: 'Domain' | 'SAN' = 'Domain'): void {
+    const domainRegex = /^(?:[a-zA-Z0-9](?:[a-zA-Z0-9-]{0,61}[a-zA-Z0-9])?\.)+[a-zA-Z]{2,}$/;
+    if (!domainRegex.test(domain)) {
+      const prefix = label === 'SAN' ? 'SAN domain' : 'domain name';
+      throw new Error(`Invalid ${prefix} format: ${domain}. Must be a valid FQDN.`);
+    }
   }
 
   private normaliseConfig(config: CertificateManagerConfig): CertificateManagerConfig {
@@ -193,6 +140,10 @@ export class CertificateManagerComponentConfigBuilder extends ConfigBuilder<Cert
       hostedZoneName: config.validation?.hostedZoneName,
       validationEmails: config.validation?.validationEmails ?? []
     };
+
+    if (validation.method === 'EMAIL' && (!validation.validationEmails || validation.validationEmails.length === 0)) {
+      throw new Error('Email validation requires at least one validation email address.');
+    }
 
     const expirationAlarm = {
       ...DEFAULT_EXPIRATION_ALARM,
@@ -226,7 +177,7 @@ export class CertificateManagerComponentConfigBuilder extends ConfigBuilder<Cert
         groups: loggingGroups
       },
       monitoring: {
-        enabled: config.monitoring?.enabled ?? false,
+        enabled: config.monitoring?.enabled ?? true,
         expiration: expirationAlarm,
         status: statusAlarm
       },
@@ -234,5 +185,3 @@ export class CertificateManagerComponentConfigBuilder extends ConfigBuilder<Cert
     };
   }
 }
-
-export { CERTIFICATE_MANAGER_CONFIG_SCHEMA };

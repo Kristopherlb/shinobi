@@ -1,8 +1,8 @@
 import { Template, Match } from 'aws-cdk-lib/assertions';
 import { App, Stack } from 'aws-cdk-lib';
-import { ApplicationLoadBalancerComponent } from '../application-load-balancer.component.js';
-import { ApplicationLoadBalancerConfig } from '../application-load-balancer.builder.js';
-import { ComponentContext, ComponentSpec } from '../../../platform/contracts/component-interfaces.js';
+import { ApplicationLoadBalancerComponent } from '../src/application-load-balancer.component.js';
+import { ApplicationLoadBalancerConfig } from '../src/application-load-balancer.builder.js';
+import { ComponentContext, ComponentSpec } from '@shinobi/core';
 
 const VPC_ID = 'vpc-0123456789abcdef0';
 
@@ -107,7 +107,7 @@ describe('ApplicationLoadBalancerComponent synthesis', () => {
       ]
     });
 
-    const { template } = synthesizeComponent(context, spec);
+    const { template, component } = synthesizeComponent(context, spec);
 
     template.hasResourceProperties('AWS::ElasticLoadBalancingV2::LoadBalancer', {
       LoadBalancerAttributes: Match.arrayWith([
@@ -115,6 +115,19 @@ describe('ApplicationLoadBalancerComponent synthesis', () => {
       ])
     });
 
-    template.hasResource('AWS::CloudWatch::Alarm', Match.anyValue());
+    const observabilityCapability = component.getCapabilities()['observability:application-load-balancer'];
+    expect(observabilityCapability).toBeDefined();
+    expect(observabilityCapability.monitoring?.enabled).toBe(true);
+    expect(observabilityCapability.telemetry?.metrics).toEqual(
+      expect.arrayContaining([
+        expect.objectContaining({ metricName: 'HTTPCode_ELB_5XX_Count' })
+      ])
+    );
+    expect(observabilityCapability.telemetry?.logging).toEqual(
+      expect.objectContaining({
+        enabled: true,
+        destination: 's3'
+      })
+    );
   });
 });

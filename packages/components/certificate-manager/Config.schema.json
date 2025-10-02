@@ -1,0 +1,227 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "title": "Certificate Manager Config",
+  "description": "Configuration schema for the Certificate Manager component",
+  "type": "object",
+  "additionalProperties": false,
+  "properties": {
+    "domainName": {
+      "type": "string",
+      "description": "Primary domain name for the ACM certificate",
+      "pattern": "^(?:[a-zA-Z0-9](?:[a-zA-Z0-9-]{0,61}[a-zA-Z0-9])?\\.)+[a-zA-Z]{2,}$",
+      "minLength": 3,
+      "maxLength": 253
+    },
+    "subjectAlternativeNames": {
+      "type": "array",
+      "description": "Subject alternative names that should be added to the certificate",
+      "items": {
+        "type": "string",
+        "pattern": "^(?:[a-zA-Z0-9](?:[a-zA-Z0-9-]{0,61}[a-zA-Z0-9])?\\.)+[a-zA-Z]{2,}$",
+        "minLength": 3,
+        "maxLength": 253
+      },
+      "maxItems": 100,
+      "default": []
+    },
+    "validation": {
+      "type": "object",
+      "description": "Validation method configuration for the ACM certificate",
+      "additionalProperties": false,
+      "properties": {
+        "method": {
+          "type": "string",
+          "enum": ["DNS", "EMAIL"],
+          "default": "DNS"
+        },
+        "hostedZoneId": {
+          "type": "string",
+          "description": "Route53 hosted zone ID used for DNS validation"
+        },
+        "hostedZoneName": {
+          "type": "string",
+          "description": "Route53 hosted zone name used for DNS validation"
+        },
+        "validationEmails": {
+          "type": "array",
+          "description": "Email addresses to use for email validation",
+          "items": {
+            "type": "string",
+            "format": "email"
+          },
+          "minItems": 1
+        }
+      },
+      "default": {
+        "method": "DNS"
+      }
+    },
+    "transparencyLoggingEnabled": {
+      "type": "boolean",
+      "description": "Whether certificate transparency logging is enabled",
+      "default": true
+    },
+    "keyAlgorithm": {
+      "type": "string",
+      "description": "Key algorithm to use for the certificate",
+      "enum": ["RSA_2048", "EC_prime256v1", "EC_secp384r1"],
+      "default": "RSA_2048"
+    },
+    "logging": {
+      "type": "object",
+      "description": "CloudWatch log group configuration for certificate lifecycle events",
+      "additionalProperties": false,
+      "properties": {
+        "groups": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "additionalProperties": false,
+            "required": ["id", "enabled", "retentionInDays"],
+            "properties": {
+              "id": {
+                "type": "string",
+                "description": "Identifier used to name the log group construct"
+              },
+              "enabled": {
+                "type": "boolean",
+                "description": "Whether the log group should be created",
+                "default": true
+              },
+              "logGroupName": {
+                "type": "string",
+                "description": "Explicit log group name (optional)"
+              },
+              "retentionInDays": {
+                "type": "number",
+                "description": "Retention period for the log group in days",
+                "minimum": 1,
+                "maximum": 3653
+              },
+              "removalPolicy": {
+                "type": "string",
+                "enum": ["retain", "destroy"],
+                "default": "retain"
+              },
+              "tags": {
+                "type": "object",
+                "description": "Additional tags applied to the log group",
+                "additionalProperties": {
+                  "type": "string"
+                }
+              }
+            }
+          },
+          "default": []
+        }
+      },
+      "default": {
+        "groups": []
+      }
+    },
+    "monitoring": {
+      "type": "object",
+      "description": "Monitoring configuration for certificate expiration and status",
+      "additionalProperties": false,
+      "properties": {
+        "enabled": {
+          "type": "boolean",
+          "default": false
+        },
+        "expiration": {
+          "type": "object",
+          "additionalProperties": false,
+          "properties": {
+            "enabled": {
+              "type": "boolean",
+              "default": true
+            },
+            "thresholdDays": {
+              "type": "number",
+              "description": "Threshold in days before expiration to trigger the alarm",
+              "minimum": 1,
+              "maximum": 365
+            },
+            "threshold": {
+              "type": "number",
+              "description": "Override CloudWatch alarm threshold (defaults to thresholdDays)",
+              "minimum": 1,
+              "maximum": 365
+            },
+            "evaluationPeriods": {
+              "type": "number",
+              "description": "Number of evaluation periods for the alarm",
+              "minimum": 1,
+              "maximum": 10
+            },
+            "periodHours": {
+              "type": "number",
+              "description": "Period in hours for the expiration alarm metric",
+              "minimum": 1,
+              "maximum": 24
+            }
+          }
+        },
+        "status": {
+          "type": "object",
+          "additionalProperties": false,
+          "properties": {
+            "enabled": {
+              "type": "boolean",
+              "default": true
+            },
+            "threshold": {
+              "type": "number",
+              "description": "Threshold for the status alarm",
+              "minimum": 0,
+              "maximum": 10
+            },
+            "evaluationPeriods": {
+              "type": "number",
+              "description": "Number of evaluation periods for the status alarm",
+              "minimum": 1,
+              "maximum": 10
+            },
+            "periodMinutes": {
+              "type": "number",
+              "description": "Metric period in minutes for the status alarm",
+              "minimum": 1,
+              "maximum": 1440
+            }
+          }
+        }
+      }
+    },
+    "tags": {
+      "type": "object",
+      "description": "Additional resource tags merged with platform-managed tags",
+      "additionalProperties": {
+        "type": "string"
+      },
+      "default": {}
+    }
+  },
+  "required": ["domainName"],
+  "if": {
+    "properties": {
+      "validation": {
+        "properties": {
+          "method": { "const": "EMAIL" }
+        }
+      }
+    }
+  },
+  "then": {
+    "properties": {
+      "validation": {
+        "properties": {
+          "validationEmails": {
+            "minItems": 1,
+            "errorMessage": "Email validation requires at least one validation email address"
+          }
+        },
+        "required": ["validationEmails"]
+      }
+    }
+  }
+}

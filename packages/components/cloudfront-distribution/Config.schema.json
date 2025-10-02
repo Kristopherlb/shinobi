@@ -1,0 +1,386 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "title": "CloudFront Distribution Config",
+  "description": "Configuration schema for CloudFront Distribution component",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "origin"
+  ],
+  "properties": {
+    "comment": {
+      "type": "string",
+      "maxLength": 128,
+      "description": "Comment for the CloudFront distribution"
+    },
+    "origin": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "type"
+      ],
+      "properties": {
+        "type": {
+          "type": "string",
+          "enum": [
+            "s3",
+            "alb",
+            "custom"
+          ],
+          "description": "Type of origin for the CloudFront distribution"
+        },
+        "s3BucketName": {
+          "type": "string",
+          "description": "Name of the S3 bucket for S3 origin"
+        },
+        "albDnsName": {
+          "type": "string",
+          "description": "DNS name of the Application Load Balancer for ALB origin"
+        },
+        "customDomainName": {
+          "type": "string",
+          "description": "Custom domain name for custom origin"
+        },
+        "originPath": {
+          "type": "string",
+          "description": "Path to append to origin requests"
+        },
+        "customHeaders": {
+          "type": "object",
+          "additionalProperties": {
+            "type": "string"
+          },
+          "description": "Custom headers to send with origin requests"
+        }
+      }
+    },
+    "defaultBehavior": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "viewerProtocolPolicy": {
+          "type": "string",
+          "enum": [
+            "allow-all",
+            "redirect-to-https",
+            "https-only"
+          ],
+          "default": "redirect-to-https",
+          "description": "Protocol policy for viewer requests"
+        },
+        "allowedMethods": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          },
+          "default": [
+            "GET",
+            "HEAD"
+          ],
+          "description": "HTTP methods allowed for the behavior"
+        },
+        "cachedMethods": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          },
+          "default": [
+            "GET",
+            "HEAD"
+          ],
+          "description": "HTTP methods that can be cached"
+        },
+        "compress": {
+          "type": "boolean",
+          "default": true,
+          "description": "Whether to compress responses"
+        },
+        "cachePolicyId": {
+          "type": "string",
+          "description": "ID of the cache policy to use"
+        },
+        "originRequestPolicyId": {
+          "type": "string",
+          "description": "ID of the origin request policy to use"
+        }
+      },
+      "default": {}
+    },
+    "additionalBehaviors": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "pathPattern"
+        ],
+        "properties": {
+          "pathPattern": {
+            "type": "string",
+            "description": "Path pattern for the behavior"
+          },
+          "viewerProtocolPolicy": {
+            "type": "string",
+            "enum": [
+              "allow-all",
+              "redirect-to-https",
+              "https-only"
+            ]
+          },
+          "allowedMethods": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            }
+          },
+          "cachedMethods": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            }
+          },
+          "compress": {
+            "type": "boolean"
+          },
+          "cachePolicyId": {
+            "type": "string"
+          },
+          "originRequestPolicyId": {
+            "type": "string"
+          }
+        }
+      },
+      "default": []
+    },
+    "priceClass": {
+      "type": "string",
+      "enum": [
+        "PriceClass_100",
+        "PriceClass_200",
+        "PriceClass_All"
+      ],
+      "default": "PriceClass_100",
+      "description": "Price class for the CloudFront distribution"
+    },
+    "geoRestriction": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "type": {
+          "type": "string",
+          "enum": [
+            "none",
+            "whitelist",
+            "blacklist"
+          ],
+          "default": "none",
+          "description": "Type of geo restriction"
+        },
+        "countries": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          },
+          "description": "List of country codes for geo restriction"
+        }
+      },
+      "default": {}
+    },
+    "domain": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "domainNames": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          },
+          "description": "List of custom domain names"
+        },
+        "certificateArn": {
+          "type": "string",
+          "description": "ARN of the SSL certificate for custom domains"
+        }
+      },
+      "default": {}
+    },
+    "logging": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "enabled": {
+          "type": "boolean",
+          "default": true,
+          "description": "Whether to enable access logging"
+        },
+        "bucket": {
+          "type": "string",
+          "description": "S3 bucket name for access logs"
+        },
+        "prefix": {
+          "type": "string",
+          "description": "Prefix for access log files"
+        },
+        "includeCookies": {
+          "type": "boolean",
+          "default": false,
+          "description": "Whether to include cookies in access logs"
+        }
+      },
+      "default": {}
+    },
+    "monitoring": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "enabled": {
+          "type": "boolean",
+          "default": true,
+          "description": "Whether to enable monitoring"
+        },
+        "alarms": {
+          "type": "object",
+          "additionalProperties": false,
+          "properties": {
+            "error4xx": {
+              "$ref": "#/definitions/CloudFrontAlarmConfig"
+            },
+            "error5xx": {
+              "$ref": "#/definitions/CloudFrontAlarmConfig"
+            },
+            "originLatencyMs": {
+              "$ref": "#/definitions/CloudFrontAlarmConfig"
+            }
+          },
+          "default": {}
+        }
+      },
+      "default": {}
+    },
+    "observability": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "xrayTracing": {
+          "type": "object",
+          "additionalProperties": false,
+          "properties": {
+            "enabled": {
+              "type": "boolean",
+              "default": true,
+              "description": "Whether to enable X-Ray tracing"
+            },
+            "samplingRate": {
+              "type": "number",
+              "minimum": 0,
+              "maximum": 1,
+              "default": 0.1,
+              "description": "Sampling rate for X-Ray tracing"
+            },
+            "serviceName": {
+              "type": "string",
+              "description": "Override service name for X-Ray segments"
+            }
+          },
+          "default": {}
+        },
+        "dashboard": {
+          "type": "object",
+          "additionalProperties": false,
+          "properties": {
+            "enabled": {
+              "type": "boolean",
+              "default": true,
+              "description": "Whether to create a CloudWatch dashboard"
+            },
+            "name": {
+              "type": "string",
+              "description": "Optional custom name for the dashboard"
+            }
+          },
+          "default": {}
+        }
+      },
+      "default": {}
+    },
+    "webAclId": {
+      "type": "string",
+      "description": "ID of the Web ACL to associate with the distribution"
+    },
+    "hardeningProfile": {
+      "type": "string",
+      "description": "Security hardening profile for the distribution"
+    },
+    "tags": {
+      "type": "object",
+      "additionalProperties": {
+        "type": "string"
+      },
+      "default": {},
+      "description": "Tags to apply to the distribution"
+    }
+  },
+  "definitions": {
+    "CloudFrontAlarmConfig": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "enabled": {
+          "type": "boolean",
+          "default": false,
+          "description": "Whether the alarm is enabled"
+        },
+        "threshold": {
+          "type": "number",
+          "description": "Threshold value for the alarm"
+        },
+        "evaluationPeriods": {
+          "type": "number",
+          "minimum": 1,
+          "default": 2,
+          "description": "Number of evaluation periods"
+        },
+        "periodMinutes": {
+          "type": "number",
+          "minimum": 1,
+          "default": 5,
+          "description": "Period in minutes for the alarm"
+        },
+        "comparisonOperator": {
+          "type": "string",
+          "enum": [
+            "gt",
+            "gte",
+            "lt",
+            "lte"
+          ],
+          "default": "gte",
+          "description": "Comparison operator for the alarm"
+        },
+        "treatMissingData": {
+          "type": "string",
+          "enum": [
+            "breaching",
+            "not-breaching",
+            "ignore",
+            "missing"
+          ],
+          "default": "not-breaching",
+          "description": "How to treat missing data points"
+        },
+        "statistic": {
+          "type": "string",
+          "default": "Average",
+          "description": "Statistic for the alarm"
+        },
+        "tags": {
+          "type": "object",
+          "additionalProperties": {
+            "type": "string"
+          },
+          "description": "Tags for the alarm"
+        }
+      }
+    }
+  }
+}

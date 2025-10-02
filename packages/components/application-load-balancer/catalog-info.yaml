@@ -12,6 +12,7 @@ metadata:
     - load-balancer
   annotations:
     platform.shinobi.dev/component-type: application-load-balancer
+    platform.shinobi.dev/component-version: 0.0.1
     github.com/project-slug: project42/shinobi
     backstage.io/techdocs-ref: dir:.
 spec:
@@ -27,6 +28,7 @@ spec:
       capabilities:
         - net:load-balancer
         - net:load-balancer-target
+        - observability:application-load-balancer
       awsServices:
         - elbv2
         - ec2

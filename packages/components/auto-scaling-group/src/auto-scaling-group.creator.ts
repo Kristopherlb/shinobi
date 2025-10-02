@@ -119,7 +119,7 @@ export class AutoScalingGroupComponentCreator implements IComponentCreator {
   public getProvidedCapabilities(): string[] {
     return [
       'compute:auto-scaling-group',
-      'monitoring:auto-scaling-group'
+      'observability:auto-scaling-group'
     ];
   }
   
@@ -141,9 +141,7 @@ export class AutoScalingGroupComponentCreator implements IComponentCreator {
       'autoScalingGroup',
       'launchTemplate',
       'securityGroup',
-      'instanceRole',
-      'instancesAlarm',
-      'cpuAlarm'
+      'instanceRole'
     ];
   }
 }

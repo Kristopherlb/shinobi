@@ -1,9 +1,7 @@
 import * as elbv2 from 'aws-cdk-lib/aws-elasticloadbalancingv2';
 import * as ec2 from 'aws-cdk-lib/aws-ec2';
 import * as s3 from 'aws-cdk-lib/aws-s3';
-import * as cloudwatch from 'aws-cdk-lib/aws-cloudwatch';
 import * as wafv2 from 'aws-cdk-lib/aws-wafv2';
-import * as xray from 'aws-cdk-lib/aws-xray';
 import * as cdk from 'aws-cdk-lib';
 import { Construct } from 'constructs';
 import { NagSuppressions } from 'cdk-nag';
@@ -29,8 +27,6 @@ export class ApplicationLoadBalancerComponent extends Component {
   private accessLogsBucket?: s3.IBucket;
   private createdAccessLogsBucket?: s3.Bucket;
   private webAcl?: wafv2.CfnWebACL;
-  private xraySamplingRule?: xray.CfnSamplingRule;
-  private dashboard?: cloudwatch.Dashboard;
   private config?: ApplicationLoadBalancerConfig;
 
   constructor(scope: Construct, id: string, context: ComponentContext, spec: ComponentSpec) {
@@ -50,10 +46,7 @@ export class ApplicationLoadBalancerComponent extends Component {
       this.createApplicationLoadBalancer();
       this.createTargetGroups();
       this.createListeners();
-      this.configureXRayTracing();
       this.configureWAF();
-      this.configureMonitoring();
-      this.createObservabilityDashboard();
       this.applyCDKNagSuppressions();
 
       this.registerConstruct('main', this.loadBalancer!);
@@ -72,8 +65,14 @@ export class ApplicationLoadBalancerComponent extends Component {
 
       this.registerCapability('net:load-balancer', this.buildLoadBalancerCapability());
       this.registerCapability('net:load-balancer-target', this.buildTargetCapability());
+      const observabilityCapability = this.buildObservabilityCapability();
+      this.registerCapability('observability:application-load-balancer', observabilityCapability);
 
       this.logHardeningProfile();
+
+      this.logComponentEvent('observability_registered', 'Recorded ALB observability directives', {
+        telemetry: observabilityCapability.telemetry
+      });
 
       this.logComponentEvent('synthesis_complete', 'Application Load Balancer synthesis completed', {
         loadBalancerArn: this.loadBalancer!.loadBalancerArn,
@@ -104,10 +103,14 @@ export class ApplicationLoadBalancerComponent extends Component {
       });
       return;
     }
+    if (this.context.vpc) {
+      this.vpc = this.context.vpc;
+      return;
+    }
 
-    this.vpc = ec2.Vpc.fromLookup(this, 'DefaultVpc', {
-      isDefault: true
-    });
+    throw new Error(
+      'Application Load Balancer component requires `config.vpc.vpcId` or a VPC provided via context.vpc; default VPC lookup is no longer supported.'
+    );
   }
 
   private configureSecurityGroup(): void {
@@ -237,20 +240,20 @@ export class ApplicationLoadBalancerComponent extends Component {
       targetType: this.mapTargetType(config.targetType),
       healthCheck: config.healthCheck
         ? {
-            enabled: config.healthCheck.enabled,
-            path: config.healthCheck.path,
-            protocol: config.healthCheck.protocol === 'HTTPS' ? elbv2.Protocol.HTTPS : elbv2.Protocol.HTTP,
-            port: config.healthCheck.port ? config.healthCheck.port.toString() : undefined,
-            healthyThresholdCount: config.healthCheck.healthyThresholdCount,
-            unhealthyThresholdCount: config.healthCheck.unhealthyThresholdCount,
-            timeout: config.healthCheck.timeoutSeconds
-              ? cdk.Duration.seconds(config.healthCheck.timeoutSeconds)
-              : undefined,
-            interval: config.healthCheck.intervalSeconds
-              ? cdk.Duration.seconds(config.healthCheck.intervalSeconds)
-              : undefined,
-            healthyHttpCodes: config.healthCheck.matcher
-          }
+          enabled: config.healthCheck.enabled,
+          path: config.healthCheck.path,
+          protocol: config.healthCheck.protocol === 'HTTPS' ? elbv2.Protocol.HTTPS : elbv2.Protocol.HTTP,
+          port: config.healthCheck.port ? config.healthCheck.port.toString() : undefined,
+          healthyThresholdCount: config.healthCheck.healthyThresholdCount,
+          unhealthyThresholdCount: config.healthCheck.unhealthyThresholdCount,
+          timeout: config.healthCheck.timeoutSeconds
+            ? cdk.Duration.seconds(config.healthCheck.timeoutSeconds)
+            : undefined,
+          interval: config.healthCheck.intervalSeconds
+            ? cdk.Duration.seconds(config.healthCheck.intervalSeconds)
+            : undefined,
+          healthyHttpCodes: config.healthCheck.matcher
+        }
         : undefined
     });
 
@@ -395,107 +398,6 @@ export class ApplicationLoadBalancerComponent extends Component {
     this.targetGroups.push(blue, green);
   }
 
-  private configureMonitoring(): void {
-    if (!this.config!.monitoring.enabled) {
-      return;
-    }
-
-    const loadBalancerFullName = this.loadBalancer!.loadBalancerFullName;
-    const alarms = this.config!.monitoring.alarms;
-
-    const http5xxAlarm = new cloudwatch.Alarm(this, 'AlbHttp5xxAlarm', {
-      alarmName: `${this.context.serviceName}-${this.spec.name}-http-5xx-errors`,
-      alarmDescription: 'ALB HTTP 5xx server errors alarm',
-      metric: new cloudwatch.Metric({
-        namespace: 'AWS/ApplicationELB',
-        metricName: 'HTTPCode_Target_5XX_Count',
-        dimensionsMap: { LoadBalancer: loadBalancerFullName },
-        statistic: alarms.http5xx.statistic,
-        period: cdk.Duration.minutes(alarms.http5xx.periodMinutes)
-      }),
-      threshold: alarms.http5xx.threshold,
-      evaluationPeriods: alarms.http5xx.evaluationPeriods,
-      comparisonOperator: this.mapComparisonOperator(alarms.http5xx.comparisonOperator),
-      treatMissingData: this.mapTreatMissingData(alarms.http5xx.treatMissingData)
-    });
-
-    this.applyStandardTags(http5xxAlarm, {
-      'alarm-type': 'http5xx',
-      ...alarms.http5xx.tags
-    });
-
-    const unhealthyHostsAlarm = new cloudwatch.Alarm(this, 'AlbUnhealthyHostAlarm', {
-      alarmName: `${this.context.serviceName}-${this.spec.name}-unhealthy-hosts`,
-      alarmDescription: 'ALB unhealthy host count alarm',
-      metric: new cloudwatch.Metric({
-        namespace: 'AWS/ApplicationELB',
-        metricName: 'UnHealthyHostCount',
-        dimensionsMap: { LoadBalancer: loadBalancerFullName },
-        statistic: alarms.unhealthyHosts.statistic,
-        period: cdk.Duration.minutes(alarms.unhealthyHosts.periodMinutes)
-      }),
-      threshold: alarms.unhealthyHosts.threshold,
-      evaluationPeriods: alarms.unhealthyHosts.evaluationPeriods,
-      comparisonOperator: this.mapComparisonOperator(alarms.unhealthyHosts.comparisonOperator),
-      treatMissingData: this.mapTreatMissingData(alarms.unhealthyHosts.treatMissingData)
-    });
-
-    this.applyStandardTags(unhealthyHostsAlarm, {
-      'alarm-type': 'unhealthy-hosts',
-      ...alarms.unhealthyHosts.tags
-    });
-
-    const connectionErrorsAlarm = new cloudwatch.Alarm(this, 'AlbConnectionErrorsAlarm', {
-      alarmName: `${this.context.serviceName}-${this.spec.name}-connection-errors`,
-      alarmDescription: 'ALB target connection errors alarm',
-      metric: new cloudwatch.Metric({
-        namespace: 'AWS/ApplicationELB',
-        metricName: 'TargetConnectionErrorCount',
-        dimensionsMap: { LoadBalancer: loadBalancerFullName },
-        statistic: alarms.connectionErrors.statistic,
-        period: cdk.Duration.minutes(alarms.connectionErrors.periodMinutes)
-      }),
-      threshold: alarms.connectionErrors.threshold,
-      evaluationPeriods: alarms.connectionErrors.evaluationPeriods,
-      comparisonOperator: this.mapComparisonOperator(alarms.connectionErrors.comparisonOperator),
-      treatMissingData: this.mapTreatMissingData(alarms.connectionErrors.treatMissingData)
-    });
-
-    this.applyStandardTags(connectionErrorsAlarm, {
-      'alarm-type': 'connection-errors',
-      ...alarms.connectionErrors.tags
-    });
-
-    const rejectedConnectionsAlarm = new cloudwatch.Alarm(this, 'AlbRejectedConnectionsAlarm', {
-      alarmName: `${this.context.serviceName}-${this.spec.name}-rejected-connections`,
-      alarmDescription: 'ALB rejected connections alarm',
-      metric: new cloudwatch.Metric({
-        namespace: 'AWS/ApplicationELB',
-        metricName: 'RejectedConnectionCount',
-        dimensionsMap: { LoadBalancer: loadBalancerFullName },
-        statistic: alarms.rejectedConnections.statistic,
-        period: cdk.Duration.minutes(alarms.rejectedConnections.periodMinutes)
-      }),
-      threshold: alarms.rejectedConnections.threshold,
-      evaluationPeriods: alarms.rejectedConnections.evaluationPeriods,
-      comparisonOperator: this.mapComparisonOperator(alarms.rejectedConnections.comparisonOperator),
-      treatMissingData: this.mapTreatMissingData(alarms.rejectedConnections.treatMissingData)
-    });
-
-    this.applyStandardTags(rejectedConnectionsAlarm, {
-      'alarm-type': 'rejected-connections',
-      ...alarms.rejectedConnections.tags
-    });
-
-    this.logComponentEvent('observability_configured', 'Monitoring enabled for Application Load Balancer', {
-      alarmsCreated: 4,
-      http5xxThreshold: alarms.http5xx.threshold,
-      unhealthyHostThreshold: alarms.unhealthyHosts.threshold,
-      connectionErrorThreshold: alarms.connectionErrors.threshold,
-      rejectedConnectionThreshold: alarms.rejectedConnections.threshold
-    });
-  }
-
   private resolveSecurityGroups(): ec2.ISecurityGroup[] {
     const sgConfig = this.config!.securityGroups;
     const groups: ec2.ISecurityGroup[] = [];
@@ -539,36 +441,6 @@ export class ApplicationLoadBalancerComponent extends Component {
     }
   }
 
-  private mapComparisonOperator(operator: 'gt' | 'gte' | 'lt' | 'lte'): cloudwatch.ComparisonOperator {
-    switch (operator) {
-      case 'gt':
-        return cloudwatch.ComparisonOperator.GREATER_THAN_THRESHOLD;
-      case 'gte':
-        return cloudwatch.ComparisonOperator.GREATER_THAN_OR_EQUAL_TO_THRESHOLD;
-      case 'lt':
-        return cloudwatch.ComparisonOperator.LESS_THAN_THRESHOLD;
-      case 'lte':
-        return cloudwatch.ComparisonOperator.LESS_THAN_OR_EQUAL_TO_THRESHOLD;
-      default:
-        return cloudwatch.ComparisonOperator.GREATER_THAN_OR_EQUAL_TO_THRESHOLD;
-    }
-  }
-
-  private mapTreatMissingData(mode: 'breaching' | 'not-breaching' | 'ignore' | 'missing'): cloudwatch.TreatMissingData {
-    switch (mode) {
-      case 'breaching':
-        return cloudwatch.TreatMissingData.BREACHING;
-      case 'not-breaching':
-        return cloudwatch.TreatMissingData.NOT_BREACHING;
-      case 'ignore':
-        return cloudwatch.TreatMissingData.IGNORE;
-      case 'missing':
-        return cloudwatch.TreatMissingData.MISSING;
-      default:
-        return cloudwatch.TreatMissingData.NOT_BREACHING;
-    }
-  }
-
   private mapRemovalPolicy(policy: 'retain' | 'destroy'): cdk.RemovalPolicy {
     return policy === 'retain' ? cdk.RemovalPolicy.RETAIN : cdk.RemovalPolicy.DESTROY;
   }
@@ -605,6 +477,264 @@ export class ApplicationLoadBalancerComponent extends Component {
     };
   }
 
+  private buildObservabilityCapability(): Record<string, any> {
+    const telemetry = this.buildTelemetryDirectives();
+
+    return {
+      type: 'application-load-balancer',
+      loadBalancerArn: this.loadBalancer!.loadBalancerArn,
+      loadBalancerFullName: this.loadBalancer!.loadBalancerFullName,
+      monitoring: this.config!.monitoring,
+      observability: this.config!.observability,
+      accessLogs: this.config!.accessLogs,
+      accessLogBucketName: this.config!.accessLogs.bucketName ?? this.createdAccessLogsBucket?.bucketName,
+      logGroupName: this.accessLogGroup?.logGroupName,
+      listeners: this.listeners.map(listener => ({
+        port: listener.listenerPort,
+        protocol: listener.listenerProtocol?.toString()
+      })),
+      targetGroups: this.targetGroups.map(targetGroup => ({
+        name: targetGroup.targetGroupName,
+        targetType: targetGroup.targetType
+      })),
+      tags: this.config!.tags,
+      telemetry
+    };
+  }
+
+  private buildTelemetryDirectives(): Record<string, any> {
+    const monitoring = this.config!.monitoring;
+    const observability = this.config!.observability;
+    const loadBalancerFullName = this.loadBalancer!.loadBalancerFullName;
+
+    const baseDimensions = {
+      LoadBalancer: loadBalancerFullName
+    };
+
+    const metrics: Array<Record<string, any>> = [
+      {
+        id: `${loadBalancerFullName}-request-count`,
+        namespace: 'AWS/ApplicationELB',
+        metricName: 'RequestCount',
+        dimensions: baseDimensions,
+        statistic: 'Sum',
+        periodSeconds: 300,
+        description: 'Total number of requests processed by the Application Load Balancer'
+      },
+      {
+        id: `${loadBalancerFullName}-elb-5xx`,
+        namespace: 'AWS/ApplicationELB',
+        metricName: 'HTTPCode_ELB_5XX_Count',
+        dimensions: baseDimensions,
+        statistic: 'Sum',
+        periodSeconds: 300,
+        description: 'Count of 5XX errors generated by the load balancer'
+      }
+    ];
+
+    const alarms: Array<Record<string, any>> = [];
+
+    const addAlarm = (
+      idSuffix: string,
+      metricId: string,
+      alarmConfig: any,
+      severity: 'info' | 'warning' | 'critical'
+    ): void => {
+      if (!alarmConfig?.enabled) {
+        return;
+      }
+
+      alarms.push({
+        id: `${loadBalancerFullName}-${idSuffix}`,
+        metricId,
+        alarmName: `${this.context.serviceName}-${this.spec.name}-${idSuffix}`,
+        alarmDescription: `${idSuffix} threshold breached for Application Load Balancer`,
+        threshold: alarmConfig.threshold,
+        comparisonOperator: this.mapTelemetryComparisonOperator(alarmConfig.comparisonOperator),
+        evaluationPeriods: alarmConfig.evaluationPeriods,
+        severity,
+        treatMissingData: this.mapTelemetryTreatMissingData(alarmConfig.treatMissingData)
+      });
+    };
+
+    if (monitoring.enabled) {
+      const http5xx = monitoring.alarms.http5xx;
+      addAlarm('http5xx', `${loadBalancerFullName}-elb-5xx`, http5xx, 'critical');
+
+      this.targetGroups.forEach(targetGroup => {
+        const targetGroupDimension = this.resolveTargetGroupDimension(targetGroup.targetGroupArn);
+        const targetDimensions = {
+          ...baseDimensions,
+          TargetGroup: targetGroupDimension
+        };
+        const sanitizedSuffix = targetGroupDimension.replace(/[^a-zA-Z0-9_-]/g, '-');
+
+        const unhealthyMetricId = `${targetGroupDimension}-unhealthy-hosts`;
+        metrics.push({
+          id: unhealthyMetricId,
+          namespace: 'AWS/ApplicationELB',
+          metricName: 'UnHealthyHostCount',
+          dimensions: targetDimensions,
+          statistic: 'Average',
+          periodSeconds: (monitoring.alarms.unhealthyHosts.periodMinutes ?? 5) * 60,
+          description: 'Average number of unhealthy targets registered against the load balancer'
+        });
+        addAlarm(`unhealthy-hosts-${sanitizedSuffix}`, unhealthyMetricId, monitoring.alarms.unhealthyHosts, 'warning');
+
+        const connectionMetricId = `${targetGroupDimension}-connection-errors`;
+        metrics.push({
+          id: connectionMetricId,
+          namespace: 'AWS/ApplicationELB',
+          metricName: 'TargetConnectionErrorCount',
+          dimensions: targetDimensions,
+          statistic: 'Sum',
+          periodSeconds: (monitoring.alarms.connectionErrors.periodMinutes ?? 5) * 60,
+          description: 'Count of target connection errors experienced by the load balancer'
+        });
+        addAlarm(`connection-errors-${sanitizedSuffix}`, connectionMetricId, monitoring.alarms.connectionErrors, 'warning');
+
+        const rejectedMetricId = `${targetGroupDimension}-rejected-connections`;
+        metrics.push({
+          id: rejectedMetricId,
+          namespace: 'AWS/ApplicationELB',
+          metricName: 'RejectedConnectionCount',
+          dimensions: targetDimensions,
+          statistic: 'Sum',
+          periodSeconds: (monitoring.alarms.rejectedConnections.periodMinutes ?? 5) * 60,
+          description: 'Count of connections rejected because the load balancer reached capacity'
+        });
+        addAlarm(`rejected-connections-${sanitizedSuffix}`, rejectedMetricId, monitoring.alarms.rejectedConnections, 'warning');
+      });
+    }
+
+    const logging = {
+      enabled: this.config!.accessLogs.enabled,
+      destination: 's3',
+      bucketName: this.config!.accessLogs.bucketName ?? this.createdAccessLogsBucket?.bucketName,
+      retentionDays: this.config!.accessLogs.retentionDays,
+      format: 'parquet'
+    };
+
+    const tracingConfig = observability?.xrayTracing;
+    const tracing = tracingConfig?.enabled
+      ? {
+          enabled: true,
+          provider: 'xray',
+          samplingRate: tracingConfig.samplingRate ?? 0.1,
+          rules: [
+            {
+              name: `${this.context.serviceName}-${this.spec.name}-alb`,
+              priority: 1000,
+              fixedRate: tracingConfig.samplingRate ?? 0.1,
+              reservoirSize: 100,
+              serviceType: 'AWS::ElasticLoadBalancingV2::LoadBalancer',
+              resourceArn: this.loadBalancer!.loadBalancerArn
+            }
+          ],
+          attributes: {
+            'service.name': tracingConfig.serviceName ?? this.config!.loadBalancerName
+          }
+        }
+      : {
+          enabled: false,
+          provider: 'xray'
+        };
+
+    const dashboards: Array<Record<string, any>> = [];
+    const dashboardConfig = observability?.dashboard;
+    if (dashboardConfig?.enabled) {
+      dashboards.push({
+        id: `${loadBalancerFullName}-alb-dashboard`,
+        name: dashboardConfig.name ?? `${this.context.serviceName}-${this.spec.name}-alb-dashboard`,
+        description: 'Key ALB performance indicators rendered by the observability service',
+        widgets: [
+          {
+            id: 'alb-request-count-widget',
+            type: 'metric',
+            title: 'Request Count',
+            width: 12,
+            height: 6,
+            metrics: [
+              { metricId: `${loadBalancerFullName}-request-count`, label: 'Requests', stat: 'Sum' }
+            ]
+          },
+          {
+            id: 'alb-5xx-widget',
+            type: 'metric',
+            title: 'HTTP 5xx Errors',
+            width: 12,
+            height: 6,
+            metrics: [
+              { metricId: `${loadBalancerFullName}-elb-5xx`, label: 'ELB 5XX', stat: 'Sum' }
+            ]
+          }
+        ]
+      });
+    }
+
+    return {
+      metrics,
+      alarms: alarms.length ? alarms : undefined,
+      dashboards: dashboards.length ? dashboards : undefined,
+      logging,
+      tracing,
+      custom: {
+        listeners: this.listeners.map(listener => ({
+          port: listener.listenerPort,
+          protocol: listener.listenerProtocol?.toString()
+        })),
+        targetGroups: this.targetGroups.map(targetGroup => ({
+          arn: targetGroup.targetGroupArn,
+          dimension: this.resolveTargetGroupDimension(targetGroup.targetGroupArn)
+        }))
+      }
+    };
+  }
+
+  private resolveTargetGroupDimension(targetGroupArn: string): string {
+    const [, suffix] = targetGroupArn.split(':targetgroup/');
+    if (!suffix) {
+      return this.extractNameFromArn(targetGroupArn);
+    }
+    return `targetgroup/${suffix}`;
+  }
+
+  private extractNameFromArn(arn: string): string {
+    const parts = arn.split('/');
+    return parts.slice(-2).join('/') || arn;
+  }
+
+  private mapTelemetryComparisonOperator(operator: string | undefined): 'gt' | 'gte' | 'lt' | 'lte' {
+    switch ((operator ?? 'gte').toLowerCase()) {
+      case 'gt':
+        return 'gt';
+      case 'lt':
+        return 'lt';
+      case 'lte':
+        return 'lte';
+      case 'gte':
+      default:
+        return 'gte';
+    }
+  }
+
+  private mapTelemetryTreatMissingData(
+    treatMissingData: string | undefined
+  ): 'breaching' | 'notBreaching' | 'ignore' | 'missing' | undefined {
+    switch ((treatMissingData ?? '').toLowerCase()) {
+      case 'breaching':
+        return 'breaching';
+      case 'missing':
+        return 'missing';
+      case 'ignore':
+        return 'ignore';
+      case 'not-breaching':
+        return 'notBreaching';
+      default:
+        return undefined;
+    }
+  }
+
   private logHardeningProfile(): void {
     this.logComplianceEvent('hardening_profile_applied', 'Applied Application Load Balancer hardening profile', {
       hardeningProfile: this.config!.hardeningProfile
@@ -620,37 +750,57 @@ export class ApplicationLoadBalancerComponent extends Component {
     return `${trimmed}-${this.node.addr.slice(-6)}`;
   }
 
-  private configureXRayTracing(): void {
-    this.logComponentEvent('xray_tracing_config', 'Configuring X-Ray tracing for Application Load Balancer');
-
-    // Create X-Ray sampling rule for ALB traces
-    this.xraySamplingRule = new xray.CfnSamplingRule(this, 'XRaySamplingRule', {
-      samplingRule: {
-        ruleName: `${this.context.serviceName}-${this.spec.name}-alb-sampling`,
-        priority: 1000,
-        fixedRate: 0.1, // 10% sampling rate
-        reservoirSize: 1000,
-        serviceName: this.config!.loadBalancerName,
-        serviceType: 'AWS::ElasticLoadBalancingV2::LoadBalancer',
-        host: '*',
-        httpMethod: '*',
-        urlPath: '*',
-        version: 1
-      }
-    });
-
-    // Register X-Ray capability
-    this._registerCapability('tracing:xray', {
-      samplingRuleArn: this.xraySamplingRule.attrSamplingRuleArn,
-      samplingRate: 0.1,
-      serviceName: this.config!.loadBalancerName
-    });
-
-    this.logComponentEvent('xray_tracing_configured', 'X-Ray tracing configured successfully');
-  }
-
   private configureWAF(): void {
+    const wafConfig = this.config!.observability?.waf;
+
+    if (!wafConfig?.enabled) {
+      this.logComponentEvent('waf_skipped', 'WAF disabled in configuration');
+      return;
+    }
+
     this.logComponentEvent('waf_config', 'Configuring AWS WAF for Application Load Balancer');
+
+    // Build rules from configuration
+    const rules: any[] = [];
+    let priority = 1;
+
+    // Add managed rule groups
+    const managedRuleGroups = wafConfig.managedRuleGroups || [
+      'AWSManagedRulesCommonRuleSet',
+      'AWSManagedRulesKnownBadInputsRuleSet',
+      'AWSManagedRulesSQLiRuleSet'
+    ];
+
+    for (const ruleGroup of managedRuleGroups) {
+      rules.push({
+        name: ruleGroup,
+        priority: priority++,
+        overrideAction: {
+          none: {}
+        },
+        statement: {
+          managedRuleGroupStatement: {
+            vendorName: 'AWS',
+            name: ruleGroup
+          }
+        },
+        visibilityConfig: {
+          sampledRequestsEnabled: true,
+          cloudWatchMetricsEnabled: true,
+          metricName: `${ruleGroup}Metric`
+        }
+      });
+    }
+
+    // Add custom rules
+    if (wafConfig.customRules) {
+      for (const customRule of wafConfig.customRules) {
+        rules.push({
+          ...customRule,
+          priority: priority++
+        });
+      }
+    }
 
     // Create WAF Web ACL with security rules
     this.webAcl = new wafv2.CfnWebACL(this, 'WebACL', {
@@ -660,62 +810,7 @@ export class ApplicationLoadBalancerComponent extends Component {
       defaultAction: {
         allow: {}
       },
-      rules: [
-        {
-          name: 'AWSManagedRulesCommonRuleSet',
-          priority: 1,
-          overrideAction: {
-            none: {}
-          },
-          statement: {
-            managedRuleGroupStatement: {
-              vendorName: 'AWS',
-              name: 'AWSManagedRulesCommonRuleSet'
-            }
-          },
-          visibilityConfig: {
-            sampledRequestsEnabled: true,
-            cloudWatchMetricsEnabled: true,
-            metricName: 'CommonRuleSetMetric'
-          }
-        },
-        {
-          name: 'AWSManagedRulesKnownBadInputsRuleSet',
-          priority: 2,
-          overrideAction: {
-            none: {}
-          },
-          statement: {
-            managedRuleGroupStatement: {
-              vendorName: 'AWS',
-              name: 'AWSManagedRulesKnownBadInputsRuleSet'
-            }
-          },
-          visibilityConfig: {
-            sampledRequestsEnabled: true,
-            cloudWatchMetricsEnabled: true,
-            metricName: 'KnownBadInputsRuleSetMetric'
-          }
-        },
-        {
-          name: 'AWSManagedRulesSQLiRuleSet',
-          priority: 3,
-          overrideAction: {
-            none: {}
-          },
-          statement: {
-            managedRuleGroupStatement: {
-              vendorName: 'AWS',
-              name: 'AWSManagedRulesSQLiRuleSet'
-            }
-          },
-          visibilityConfig: {
-            sampledRequestsEnabled: true,
-            cloudWatchMetricsEnabled: true,
-            metricName: 'SQLiRuleSetMetric'
-          }
-        }
-      ],
+      rules,
       visibilityConfig: {
         sampledRequestsEnabled: true,
         cloudWatchMetricsEnabled: true,
@@ -730,57 +825,13 @@ export class ApplicationLoadBalancerComponent extends Component {
     });
 
     // Register WAF capability
-    this._registerCapability('waf:web-acl', {
+    this.registerCapability('waf:web-acl', {
       webAclArn: this.webAcl.attrArn,
       webAclName: this.webAcl.name!,
       associatedResourceArn: this.loadBalancer!.loadBalancerArn
     });
 
     this.logComponentEvent('waf_configured', 'AWS WAF configured successfully');
-  }
-
-  private createObservabilityDashboard(): void {
-    this.logComponentEvent('dashboard_config', 'Creating CloudWatch observability dashboard');
-
-    this.dashboard = new cloudwatch.Dashboard(this, 'ObservabilityDashboard', {
-      dashboardName: `${this.context.serviceName}-${this.spec.name}-alb-dashboard`
-    });
-
-    // Add widgets to the dashboard
-    this.dashboard.addWidgets(
-      new cloudwatch.GraphWidget({
-        title: 'Request Count',
-        left: [this.loadBalancer!.metricRequestCount()],
-        width: 12,
-        height: 6
-      }),
-      new cloudwatch.GraphWidget({
-        title: 'Response Time',
-        left: [this.loadBalancer!.metricTargetResponseTime()],
-        width: 12,
-        height: 6
-      }),
-      new cloudwatch.GraphWidget({
-        title: 'HTTP 5xx Errors',
-        left: [this.loadBalancer!.metricHttpCodeElb(elbv2.HttpCodeElb.ELB_5XX_COUNT)],
-        width: 12,
-        height: 6
-      }),
-      new cloudwatch.GraphWidget({
-        title: 'Healthy Hosts',
-        left: this.targetGroups.map(tg => tg.metricHealthyHostCount()),
-        width: 12,
-        height: 6
-      })
-    );
-
-    // Register dashboard capability
-    this._registerCapability('dashboard:cloudwatch', {
-      dashboardName: this.dashboard.dashboardName,
-      dashboardUrl: `https://console.aws.amazon.com/cloudwatch/home?region=${this.node.stack.region}#dashboards:name=${this.dashboard.dashboardName}`
-    });
-
-    this.logComponentEvent('dashboard_created', 'CloudWatch observability dashboard created successfully');
   }
 
   private applyCDKNagSuppressions(): void {

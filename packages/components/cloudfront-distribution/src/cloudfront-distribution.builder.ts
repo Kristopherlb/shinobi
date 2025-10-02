@@ -8,9 +8,10 @@
 import {
   ConfigBuilder,
   ConfigBuilderContext,
-  ComponentConfigSchema
+  ComponentConfigSchema,
+  ComponentContext,
+  ComponentSpec
 } from '@shinobi/core';
-import { ComponentContext, ComponentSpec } from '@platform/contracts';
 
 export type ViewerProtocolPolicy = 'allow-all' | 'redirect-to-https' | 'https-only';
 export type PriceClass = 'PriceClass_100' | 'PriceClass_200' | 'PriceClass_All';
@@ -76,6 +77,20 @@ export interface CloudFrontGeoRestrictionConfig {
   countries?: string[];
 }
 
+export interface CloudFrontXRayTracingConfig {
+  enabled?: boolean;
+  samplingRate?: number;
+  serviceName?: string;
+}
+
+export interface CloudFrontObservabilityConfig {
+  xrayTracing?: CloudFrontXRayTracingConfig;
+  dashboard?: {
+    enabled?: boolean;
+    name?: string;
+  };
+}
+
 export interface CloudFrontDistributionConfig {
   comment?: string;
   origin: CloudFrontOriginConfig;
@@ -86,6 +101,7 @@ export interface CloudFrontDistributionConfig {
   domain?: CloudFrontDomainConfig;
   logging?: CloudFrontLoggingConfig;
   monitoring?: CloudFrontMonitoringConfig;
+  observability?: CloudFrontObservabilityConfig;
   webAclId?: string;
   hardeningProfile?: string;
   tags?: Record<string, string>;
@@ -253,6 +269,32 @@ export const CLOUDFRONT_DISTRIBUTION_CONFIG_SCHEMA: ComponentConfigSchema = {
       },
       default: {}
     },
+    observability: {
+      type: 'object',
+      additionalProperties: false,
+      properties: {
+        xrayTracing: {
+          type: 'object',
+          additionalProperties: false,
+          properties: {
+            enabled: { type: 'boolean', default: true },
+            samplingRate: { type: 'number', minimum: 0, maximum: 1, default: 0.1 },
+            serviceName: { type: 'string' }
+          },
+          default: {}
+        },
+        dashboard: {
+          type: 'object',
+          additionalProperties: false,
+          properties: {
+            enabled: { type: 'boolean', default: true },
+            name: { type: 'string' }
+          },
+          default: {}
+        }
+      },
+      default: {}
+    },
     webAclId: { type: 'string' },
     hardeningProfile: { type: 'string' },
     tags: {
@@ -276,7 +318,7 @@ export class CloudFrontDistributionComponentConfigBuilder extends ConfigBuilder<
         type: 's3'
       },
       defaultBehavior: {
-        viewerProtocolPolicy: 'allow-all',
+        viewerProtocolPolicy: 'redirect-to-https', // SECURE DEFAULT
         allowedMethods: ['GET', 'HEAD'],
         cachedMethods: ['GET', 'HEAD'],
         compress: true
@@ -288,12 +330,51 @@ export class CloudFrontDistributionComponentConfigBuilder extends ConfigBuilder<
         countries: []
       },
       logging: {
-        enabled: false,
+        enabled: true, // SECURE DEFAULT - Enable logging for audit trails
         includeCookies: false
       },
       monitoring: {
-        enabled: false,
-        alarms: {}
+        enabled: true, // SECURE DEFAULT - Enable monitoring for security
+        alarms: {
+          error4xx: {
+            enabled: true,
+            threshold: 50,
+            evaluationPeriods: 2,
+            periodMinutes: 5,
+            comparisonOperator: 'gte',
+            treatMissingData: 'not-breaching',
+            statistic: 'Average'
+          },
+          error5xx: {
+            enabled: true,
+            threshold: 10,
+            evaluationPeriods: 2,
+            periodMinutes: 5,
+            comparisonOperator: 'gte',
+            treatMissingData: 'not-breaching',
+            statistic: 'Average'
+          },
+          originLatencyMs: {
+            enabled: true,
+            threshold: 5000,
+            evaluationPeriods: 2,
+            periodMinutes: 5,
+            comparisonOperator: 'gte',
+            treatMissingData: 'not-breaching',
+            statistic: 'Average'
+          }
+        }
+      },
+      observability: {
+        xrayTracing: {
+          enabled: true,
+          samplingRate: 0.1,
+          serviceName: this.builderContext.context.serviceName || 'cloudfront-distribution'
+        },
+        dashboard: {
+          enabled: true,
+          name: `${this.builderContext.context.serviceName || 'service'}-cloudfront-dashboard`
+        }
       },
       hardeningProfile: 'baseline',
       tags: {}
@@ -336,7 +417,7 @@ export class CloudFrontDistributionComponentConfigBuilder extends ConfigBuilder<
         customHeaders: config.origin.customHeaders ?? {}
       },
       defaultBehavior: {
-        viewerProtocolPolicy: config.defaultBehavior?.viewerProtocolPolicy ?? 'allow-all',
+        viewerProtocolPolicy: config.defaultBehavior?.viewerProtocolPolicy ?? 'redirect-to-https',
         allowedMethods: config.defaultBehavior?.allowedMethods ?? ['GET', 'HEAD'],
         cachedMethods: config.defaultBehavior?.cachedMethods ?? ['GET', 'HEAD'],
         compress: config.defaultBehavior?.compress ?? true,
@@ -345,7 +426,10 @@ export class CloudFrontDistributionComponentConfigBuilder extends ConfigBuilder<
       },
       additionalBehaviors: (config.additionalBehaviors ?? []).map(behavior => ({
         pathPattern: behavior.pathPattern,
-        viewerProtocolPolicy: behavior.viewerProtocolPolicy ?? config.defaultBehavior?.viewerProtocolPolicy ?? 'allow-all',
+        viewerProtocolPolicy:
+          behavior.viewerProtocolPolicy ??
+          config.defaultBehavior?.viewerProtocolPolicy ??
+          'redirect-to-https',
         allowedMethods: behavior.allowedMethods ?? ['GET', 'HEAD'],
         cachedMethods: behavior.cachedMethods ?? ['GET', 'HEAD'],
         compress: behavior.compress ?? true,
@@ -397,6 +481,22 @@ export class CloudFrontDistributionComponentConfigBuilder extends ConfigBuilder<
             treatMissingData: 'not-breaching',
             statistic: 'Average'
           })
+        }
+      },
+      observability: {
+        xrayTracing: {
+          enabled: config.observability?.xrayTracing?.enabled ?? true,
+          samplingRate: config.observability?.xrayTracing?.samplingRate ?? 0.1,
+          serviceName:
+            config.observability?.xrayTracing?.serviceName ??
+            this.builderContext.context.serviceName ??
+            'cloudfront-distribution'
+        },
+        dashboard: {
+          enabled: config.observability?.dashboard?.enabled ?? true,
+          name:
+            config.observability?.dashboard?.name ??
+            `${this.builderContext.context.serviceName || 'service'}-cloudfront-dashboard`
         }
       },
       webAclId: config.webAclId,

@@ -11,9 +11,9 @@ jest.mock(
 
 import { App, Stack } from 'aws-cdk-lib';
 import { Match, Template } from 'aws-cdk-lib/assertions';
-import { CloudFrontDistributionComponent } from '../cloudfront-distribution.component.js';
-import { CloudFrontDistributionConfig } from '../cloudfront-distribution.builder.js';
-import { ComponentContext, ComponentSpec } from '../../../platform/contracts/component-interfaces.js';
+import { CloudFrontDistributionComponent } from '../src/cloudfront-distribution.component.js';
+import { CloudFrontDistributionConfig } from '../src/cloudfront-distribution.builder.js';
+import { ComponentContext, ComponentSpec } from '../../../core/src/platform/contracts/component-interfaces.js';
 
 const createMockContext = (framework: string): ComponentContext => ({
   serviceName: 'test-service',
@@ -51,7 +51,7 @@ describe('CloudFrontDistributionComponent synthesis', () => {
       DistributionConfig: Match.objectLike({
         PriceClass: 'PriceClass_100',
         DefaultCacheBehavior: Match.objectLike({
-          ViewerProtocolPolicy: 'allow-all'
+          ViewerProtocolPolicy: 'redirect-to-https'
         })
       })
     });
@@ -111,8 +111,17 @@ describe('CloudFrontDistributionComponent synthesis', () => {
       })
     });
 
-    const capability = component.getCapabilities()['cdn:cloudfront'];
+    const capability = component.getCapabilities()['cloudfront:distribution'];
     expect(capability.originType).toBe('custom');
     expect(capability.hardeningProfile).toBe('baseline');
+    expect(capability.telemetry?.metrics).toEqual(
+      expect.arrayContaining([
+        expect.objectContaining({ metricName: '4xxErrorRate' }),
+        expect.objectContaining({ metricName: 'OriginLatency' })
+      ])
+    );
+    expect(capability.telemetry?.logging).toEqual(
+      expect.objectContaining({ destination: 's3' })
+    );
   });
 });

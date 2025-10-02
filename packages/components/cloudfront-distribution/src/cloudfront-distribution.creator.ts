@@ -6,12 +6,12 @@
  */
 
 import { Construct } from 'constructs';
-import { 
-  ComponentSpec, 
-  ComponentContext, 
-  IComponentCreator 
+import {
+  ComponentSpec,
+  ComponentContext,
+  IComponentCreator
 } from '../../platform/contracts/component-interfaces.js';
-import { CloudFrontDistributionComponentComponent } from './cloudfront-distribution.component.js';
+import { CloudFrontDistributionComponent } from './cloudfront-distribution.component.js';
 import { CloudFrontDistributionConfig, CLOUDFRONT_DISTRIBUTION_CONFIG_SCHEMA } from './cloudfront-distribution.builder.js';
 
 /**
@@ -33,7 +33,7 @@ export class CloudFrontDistributionComponentCreator implements IComponentCreator
   /**
    * Component display name
    */
-  public readonly displayName = 'Cloud Front Distribution Component';
+  public readonly displayName = 'CloudFront Distribution Component';
   
   /**
    * Component description
@@ -69,11 +69,11 @@ export class CloudFrontDistributionComponentCreator implements IComponentCreator
    * Factory method to create component instances
    */
   public createComponent(
-    scope: Construct, 
-    spec: ComponentSpec, 
+    scope: Construct,
+    spec: ComponentSpec,
     context: ComponentContext
-  ): CloudFrontDistributionComponentComponent {
-    return new CloudFrontDistributionComponentComponent(scope, spec, context);
+  ): CloudFrontDistributionComponent {
+    return new CloudFrontDistributionComponent(scope, spec.name, context, spec);
   }
   
   /**
@@ -115,8 +115,7 @@ export class CloudFrontDistributionComponentCreator implements IComponentCreator
    */
   public getProvidedCapabilities(): string[] {
     return [
-      'networking:cloudfront-distribution',
-      'monitoring:cloudfront-distribution'
+      'cloudfront:distribution'
     ];
   }
   

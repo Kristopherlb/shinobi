@@ -6,6 +6,11 @@
 import { Construct } from 'constructs';
 import type { IConstruct } from 'constructs';
 import type { IVpc } from 'aws-cdk-lib/aws-ec2';
+import type {
+  ComponentContext as BaseComponentContext,
+  ComponentSpec as BaseComponentSpec,
+  ComponentCapabilities as BaseComponentCapabilities
+} from '@platform/contracts';
 import type { BindingContext, BindingResult, IBinderStrategy } from './platform-binding-trigger-spec.js';
 
 // Re-export CDK types for convenience
@@ -19,25 +24,15 @@ export type { BindingContext, BindingResult, IBinderStrategy };
 /**
  * Component specification interface
  */
-export interface ComponentSpec {
-  name: string;
-  type: string;
-  config: Record<string, any>;
-  binds?: Array<any>;
-  triggers?: Array<any>;
+export interface ComponentSpec extends BaseComponentSpec {
   labels?: Record<string, string>;
   overrides?: Record<string, any>;
-  policy?: Record<string, any>;
 }
 
 /**
  * Component capabilities interface
  */
-export interface ComponentCapabilities {
-  [key: string]: {
-    [field: string]: any;
-  };
-}
+export interface ComponentCapabilities extends BaseComponentCapabilities {}
 
 /**
  * Feature flag provider reference configuration captured from manifests/config builders.
@@ -64,23 +59,14 @@ export interface FeatureFlagRuntimeConfiguration {
 /**
  * Component context interface with strong CDK typing
  */
-export interface ComponentContext {
-  serviceName: string;
-  environment: string;
-  complianceFramework: string;
-  scope: Construct; // CDK Construct scope - strongly typed
-  vpc?: IVpc; // VPC construct for components that need it - strongly typed
-  region?: string;
-  accountId?: string;
+type BaseObservabilityContext = NonNullable<BaseComponentContext['observability']>;
+
+export interface ComponentContext
+  extends Omit<BaseComponentContext, 'scope' | 'vpc' | 'observability' | 'tags'> {
+  scope: Construct;
+  vpc?: IVpc;
   serviceLabels?: Record<string, string>;
-  owner?: string;
-  observability?: {
-    collectorEndpoint?: string;
-    adotLayerArn?: string;
-    adotLayerArnMap?: Record<string, string>;
-    enableTracing?: boolean;
-    enableMetrics?: boolean;
-    enableLogs?: boolean;
+  observability?: BaseObservabilityContext & {
     tracesSamplingRate?: number;
     metricsIntervalSeconds?: number;
     logsRetentionDays?: number;

@@ -60,7 +60,7 @@ describe('AutoScalingGroupComponent synthesis', () => {
   };
 
   it('synthesizes with commercial defaults', () => {
-    const { template } = synthesize();
+    const { template, component } = synthesize();
 
     template.hasResourceProperties('AWS::AutoScaling::AutoScalingGroup', {
       MinSize: '1',
@@ -73,6 +73,18 @@ describe('AutoScalingGroupComponent synthesis', () => {
         InstanceType: 't3.micro'
       })
     });
+
+    const observabilityCapability = component.getCapabilities()['observability:auto-scaling-group'];
+    expect(observabilityCapability).toBeDefined();
+    expect(observabilityCapability.telemetry?.metrics).toEqual(
+      expect.arrayContaining([
+        expect.objectContaining({ metricName: 'GroupDesiredCapacity' }),
+        expect.objectContaining({ metricName: 'CPUUtilization' })
+      ])
+    );
+    expect(observabilityCapability.telemetry?.logging).toEqual(
+      expect.objectContaining({ destination: 'otel-collector' })
+    );
   });
 
   it('enables hardened settings for fedramp-high', () => {

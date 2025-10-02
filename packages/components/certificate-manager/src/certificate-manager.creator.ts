@@ -42,7 +42,7 @@ export class CertificateManagerComponentCreator implements IComponentCreator {
   }
 
   public getProvidedCapabilities(): string[] {
-    return ['security:certificate-manager'];
+    return ['certificate:acm'];
   }
 
   public getRequiredCapabilities(): string[] {

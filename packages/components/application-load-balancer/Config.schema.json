@@ -4,22 +4,6 @@
   "description": "Configuration schema for Application Load Balancer component",
   "type": "object",
   "additionalProperties": false,
-  "required": [
-    "loadBalancerName",
-    "scheme",
-    "ipAddressType",
-    "vpc",
-    "securityGroups",
-    "accessLogs",
-    "listeners",
-    "targetGroups",
-    "deletionProtection",
-    "idleTimeoutSeconds",
-    "deploymentStrategy",
-    "monitoring",
-    "hardeningProfile",
-    "tags"
-  ],
   "properties": {
     "loadBalancerName": {
       "type": "string",
@@ -46,10 +30,6 @@
     "vpc": {
       "type": "object",
       "additionalProperties": false,
-      "required": [
-        "subnetIds",
-        "subnetType"
-      ],
       "properties": {
         "vpcId": {
           "type": "string",
@@ -76,11 +56,7 @@
     "securityGroups": {
       "type": "object",
       "additionalProperties": false,
-      "required": [
-        "create",
-        "securityGroupIds",
-        "ingress"
-      ],
+      "required": [],
       "properties": {
         "create": {
           "type": "boolean",
@@ -100,7 +76,8 @@
             "type": "object",
             "additionalProperties": false,
             "required": [
-              "port"
+              "port",
+              "cidr"
             ],
             "properties": {
               "port": {
@@ -112,12 +89,10 @@
               "protocol": {
                 "type": "string",
                 "enum": [
-                  "tcp",
-                  "udp",
-                  "icmp"
+                  "tcp"
                 ],
                 "default": "tcp",
-                "description": "Protocol for the ingress rule"
+                "description": "Protocol for the ingress rule (ALB security groups only support TCP)"
               },
               "cidr": {
                 "type": "string",
@@ -137,11 +112,7 @@
     "accessLogs": {
       "type": "object",
       "additionalProperties": false,
-      "required": [
-        "enabled",
-        "retentionDays",
-        "removalPolicy"
-      ],
+      "required": [],
       "properties": {
         "enabled": {
           "type": "boolean",
@@ -743,6 +714,70 @@
                   "description": "Tags for the alarm"
                 }
               }
+            }
+          }
+        }
+      }
+    },
+    "observability": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "dashboard": {
+          "type": "object",
+          "additionalProperties": false,
+          "properties": {
+            "enabled": {
+              "type": "boolean",
+              "description": "Whether to create a CloudWatch dashboard"
+            },
+            "name": {
+              "type": "string",
+              "description": "Custom name for the dashboard"
+            }
+          }
+        },
+        "xrayTracing": {
+          "type": "object",
+          "additionalProperties": false,
+          "properties": {
+            "enabled": {
+              "type": "boolean",
+              "description": "Whether to enable X-Ray tracing"
+            },
+            "samplingRate": {
+              "type": "number",
+              "minimum": 0,
+              "maximum": 1,
+              "description": "X-Ray sampling rate (0.0 to 1.0)"
+            },
+            "serviceName": {
+              "type": "string",
+              "description": "Custom service name for X-Ray traces"
+            }
+          }
+        },
+        "waf": {
+          "type": "object",
+          "additionalProperties": false,
+          "properties": {
+            "enabled": {
+              "type": "boolean",
+              "description": "Whether to enable AWS WAF"
+            },
+            "managedRuleGroups": {
+              "type": "array",
+              "items": {
+                "type": "string"
+              },
+              "description": "List of AWS managed rule groups to enable"
+            },
+            "customRules": {
+              "type": "array",
+              "items": {
+                "type": "object"
+              },
+              "description": "Custom WAF rules"
             }
           }
         }

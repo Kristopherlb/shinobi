@@ -107,6 +107,23 @@ describe('ApiGatewayHttpComponent__Synthesis__ResourceCompliance', () => {
         LogGroupName: '/platform/http-api/test-service/test-api',
         RetentionInDays: 90
       });
+
+      const observabilityCapability = component.getCapabilities()['observability:api-gateway-http'];
+      expect(observabilityCapability).toBeDefined();
+      expect(observabilityCapability.stageName).toBe('dev');
+      expect(observabilityCapability.monitoring?.detailedMetrics).toBe(true);
+      expect(observabilityCapability.telemetry?.metrics).toEqual(
+        expect.arrayContaining([
+          expect.objectContaining({ metricName: '4XXError' }),
+          expect.objectContaining({ metricName: 'Latency' })
+        ])
+      );
+      expect(observabilityCapability.telemetry?.logging).toEqual(
+        expect.objectContaining({
+          enabled: true,
+          destination: 'cloudwatch-logs'
+        })
+      );
     });
 
     it('Tagging__AllCoreResources__IncludePlatformTags', () => {
@@ -421,26 +438,28 @@ describe('ApiGatewayHttpComponent__Synthesis__ResourceCompliance', () => {
         }
       });
 
-      const { template } = synthesizeComponent(context, spec);
+      const { component } = synthesizeComponent(context, spec);
 
-      // Verify custom alarm thresholds
-      template.hasResourceProperties('AWS::CloudWatch::Alarm', {
-        AlarmName: 'test-service-test-api-4xx-error-rate',
-        Threshold: 15.0,
-        MetricName: '4XXError'
-      });
-
-      template.hasResourceProperties('AWS::CloudWatch::Alarm', {
-        AlarmName: 'test-service-test-api-5xx-error-rate',
-        Threshold: 2.0,
-        MetricName: '5XXError'
-      });
-
-      template.hasResourceProperties('AWS::CloudWatch::Alarm', {
-        AlarmName: 'test-service-test-api-latency',
-        Threshold: 8000,
-        MetricName: 'Latency'
-      });
+      const telemetry = component.getCapabilities()['observability:api-gateway-http'].telemetry;
+      expect(telemetry?.alarms).toEqual(
+        expect.arrayContaining([
+          expect.objectContaining({
+            alarmName: 'test-service-test-api-dev-4xx-error-rate',
+            threshold: 15.0,
+            metricId: 'api-gateway-http-4xx'
+          }),
+          expect.objectContaining({
+            alarmName: 'test-service-test-api-dev-5xx-error-rate',
+            threshold: 2.0,
+            metricId: 'api-gateway-http-5xx'
+          }),
+          expect.objectContaining({
+            alarmName: 'test-service-test-api-dev-latency',
+            threshold: 8000,
+            metricId: 'api-gateway-http-latency'
+          })
+        ])
+      );
     });
 
     it('Monitoring__LowThroughputThreshold__CreatesCountAlarm', () => {
@@ -453,13 +472,18 @@ describe('ApiGatewayHttpComponent__Synthesis__ResourceCompliance', () => {
         }
       });
 
-      const { template } = synthesizeComponent(context, spec);
+      const { component } = synthesizeComponent(context, spec);
 
-      template.hasResourceProperties('AWS::CloudWatch::Alarm', {
-        AlarmName: 'test-service-test-api-low-throughput',
-        MetricName: 'Count',
-        ComparisonOperator: 'LessThanThreshold'
-      });
+      const telemetry = component.getCapabilities()['observability:api-gateway-http'].telemetry;
+      expect(telemetry?.alarms).toEqual(
+        expect.arrayContaining([
+          expect.objectContaining({
+            alarmName: 'test-service-test-api-dev-low-throughput',
+            comparisonOperator: 'lt',
+            metricId: 'api-gateway-http-count'
+          })
+        ])
+      );
     });
 
     it('Security__ApiKeyEnabledWithoutSupport__EmitsPendingEvent', () => {

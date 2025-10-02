@@ -262,7 +262,7 @@ This component provides the following capabilities for binding with other compon
 - `api:custom-domain` - Custom domain capability (if configured)
 - `auth:jwt` - JWT authentication capability (if configured)
 - `auth:lambda` - Lambda authorization capability (if configured)
-- `monitoring:api` - API monitoring and metrics capability
+- `observability:api-gateway-http` - OTEL-focused observability metadata (monitoring, tracing, logging configuration) including a `telemetry` descriptor for metrics and alarms
 - `logging:access` - Access logging capability
 
 ## Construct Handles
@@ -313,6 +313,28 @@ observability:
   tracingEnabled: true
   samplingRate: 0.1  # 10% sampling
   otlpEndpoint: "https://otlp.us-east-1.amazonaws.com"
+```
+
+> The component publishes an `observability:api-gateway-http` capability describing tracing, logging, and alarm preferences. The platform observability service consumes this metadata to provision OTEL collectors and CloudWatch artefacts centrally; the component itself no longer creates ad-hoc metrics or alarms.
+
+### Telemetry Descriptor
+
+The `observability:api-gateway-http` capability now includes a `telemetry` object. This object lists the API Gateway metrics the service expects (4XX/5XX error counts, latency, request volume), optional alarm thresholds sourced from the manifest, and logging/tracing preferences. The observability binder projects this metadata into OTEL pipelines and centralized CloudWatch alarms. Example capability payload excerpt:
+
+```json
+{
+  "telemetry": {
+    "metrics": [
+      { "metricName": "4XXError", "namespace": "AWS/ApiGateway" },
+      { "metricName": "Latency", "namespace": "AWS/ApiGateway" }
+    ],
+    "alarms": [
+      { "metricId": "api-gateway-http-4xx", "threshold": 50, "comparisonOperator": "gt" }
+    ],
+    "logging": { "destination": "cloudwatch-logs", "logGroupName": "/platform/http-api/..." },
+    "tracing": { "provider": "xray", "samplingRate": 0.1 }
+  }
+}
 ```
 
 ## Platform Tagging Standard

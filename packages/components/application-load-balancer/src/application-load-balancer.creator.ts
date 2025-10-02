@@ -6,11 +6,11 @@
  */
 
 import { Construct } from 'constructs';
-import { 
-  ComponentSpec, 
-  ComponentContext, 
-  IComponentCreator 
-} from '../../platform/contracts/component-interfaces.js';
+import {
+  ComponentSpec,
+  ComponentContext,
+  IComponentCreator
+} from '@shinobi/core';
 import { ApplicationLoadBalancerComponent } from './application-load-balancer.component.js';
 import { ApplicationLoadBalancerConfig, APPLICATION_LOAD_BALANCER_CONFIG_SCHEMA } from './application-load-balancer.builder.js';
 
@@ -116,7 +116,8 @@ export class ApplicationLoadBalancerComponentCreator implements IComponentCreato
   public getProvidedCapabilities(): string[] {
     return [
       'net:load-balancer',
-      'net:load-balancer-target'
+      'net:load-balancer-target',
+      'observability:application-load-balancer'
     ];
   }
   
