@@ -25,21 +25,66 @@ import {
 
 export default function ComponentDetail() {
   const [, params] = useRoute('/component/:componentName');
-  const componentName = params?.componentName || 's3-bucket';
+  const componentName = params?.componentName || 's3-cloudfront';
   const [open, setOpen] = useState(false);
   const [message, setMessage] = useState('');
 
-  // Mock component data - in real app this would come from props or API
-  const component = {
-    name: 'S3 Bucket',
-    version: 'v1.2.0',
-    icon: 'https://preview.uxpin.com/external-url',
-    description: 'This component provides secure S3-backed storage with configurable triggers for Lambda workers or queues. It automatically handles encryption, versioning, and access controls following your organization\'s security standards. Perfect for building event-driven architectures with reliable object storage at the foundation.',
-    tags: [
-      'capability:storage:s3',
-      'team:platform/storage',
-      'compliance:fedramp-high'
-    ],
+  // Mock component data based on component ID - in real app this would come from API
+  const getComponentData = (id: string) => {
+    const components = {
+      's3-cloudfront': {
+        name: 'S3 + CloudFront CDN',
+        version: 'v3.0.1',
+        icon: 'https://preview.uxpin.com/external-url',
+        description: 'S3 bucket with CloudFront distribution for global content delivery. Includes HTTPS, custom domains, and origin access control.',
+        tags: ['storage', 'cdn', 'https', 'global', 'performance'],
+        type: 's3-bucket',
+        category: 'storage'
+      },
+      'lambda-api-gateway': {
+        name: 'API Gateway + Lambda',
+        version: 'v2.1.3',
+        icon: 'https://preview.uxpin.com/external-url',
+        description: 'Serverless API with Lambda functions, API Gateway integration, and automatic scaling. Includes JWT authentication and request validation.',
+        tags: ['serverless', 'api', 'jwt', 'validation', 'cors'],
+        type: 'lambda-api',
+        category: 'compute'
+      },
+      'postgres-rds': {
+        name: 'PostgreSQL RDS',
+        version: 'v1.8.7',
+        icon: 'https://preview.uxpin.com/external-url',
+        description: 'Managed PostgreSQL database with automated backups, multi-AZ deployment, and encryption at rest. Optimized for production workloads.',
+        tags: ['database', 'postgresql', 'managed', 'encryption', 'backup'],
+        type: 'rds-postgres',
+        category: 'database'
+      },
+      'sqs-dlq': {
+        name: 'SQS Queue with DLQ',
+        version: 'v1.4.2',
+        icon: 'https://preview.uxpin.com/external-url',
+        description: 'SQS queue with dead letter queue, message encryption, and CloudWatch monitoring. Includes automatic retry logic and alarm configuration.',
+        tags: ['messaging', 'queue', 'dlq', 'monitoring', 'retry'],
+        type: 'sqs-queue',
+        category: 'messaging'
+      },
+      'ecs-fargate': {
+        name: 'ECS Fargate Service',
+        version: 'v2.3.5',
+        icon: 'https://preview.uxpin.com/external-url',
+        description: 'Containerized service with ECS Fargate, Application Load Balancer, and auto-scaling. Includes health checks and rolling deployments.',
+        tags: ['containers', 'fargate', 'scaling', 'loadbalancer', 'health'],
+        type: 'ecs-service',
+        category: 'compute'
+      }
+    };
+    return components[id as keyof typeof components] || components['s3-cloudfront'];
+  };
+
+  const component = getComponentData(componentName);
+
+  // Common data for all components
+  const commonData = {
     triggers: [
       { name: 'objectCreated', description: 'Fires when new objects are uploaded' },
       { name: 'objectRemoved', description: 'Fires when objects are deleted' },
@@ -94,6 +139,9 @@ export default function ComponentDetail() {
       }
     }
   };
+
+  // Merge component data with common data
+  const fullComponent = { ...component, ...commonData };
 
   const getStatusIcon = (status: string) => {
     switch (status) {
@@ -170,15 +218,15 @@ export default function ComponentDetail() {
                 <div className="flex items-center gap-4">
                   <img
                     className="w-12 h-12 object-cover rounded-lg"
-                    src={component.icon}
-                    alt={`${component.name} Icon`}
+                    src={fullComponent.icon}
+                    alt={`${fullComponent.name} Icon`}
                   />
                   <div>
                     <h1 className="text-4xl font-semibold text-foreground">
-                      {component.name}
+                      {fullComponent.name}
                     </h1>
                     <p className="text-muted-foreground text-lg mt-1">
-                      {component.version}
+                      {fullComponent.version}
                     </p>
                   </div>
                 </div>
@@ -189,7 +237,7 @@ export default function ComponentDetail() {
 
               {/* Tags */}
               <div className="flex flex-wrap gap-2">
-                {component.tags.map((tag, index) => (
+                {fullComponent.tags.map((tag, index) => (
                   <Badge key={index} variant="secondary">
                     {tag}
                   </Badge>
@@ -219,7 +267,7 @@ export default function ComponentDetail() {
                 What This Component Does
               </h2>
               <p className="text-muted-foreground leading-relaxed">
-                {component.description}
+                {fullComponent.description}
               </p>
             </div>
 
@@ -242,7 +290,7 @@ export default function ComponentDetail() {
                         Trigger Source Events
                       </h3>
                       <div className="space-y-2">
-                        {component.triggers.map((trigger, index) => (
+                        {fullComponent.triggers.map((trigger, index) => (
                           <div key={index} className="p-3 border border-border rounded-lg">
                             <div className="font-medium">{trigger.name}</div>
                             <div className="text-sm text-muted-foreground">
@@ -257,7 +305,7 @@ export default function ComponentDetail() {
                         Bindable Targets
                       </h3>
                       <div className="space-y-2">
-                        {component.bindableTargets.map((target, index) => (
+                        {fullComponent.bindableTargets.map((target, index) => (
                           <div key={index} className="p-3 border border-border rounded-lg">
                             <div className="font-medium">{target.name}</div>
                             <div className="text-sm text-muted-foreground">
@@ -284,7 +332,7 @@ export default function ComponentDetail() {
                 Security & Defaults
               </h2>
               <div className="grid grid-cols-2 gap-4">
-                {component.securityDefaults.map((item, index) => (
+                {fullComponent.securityDefaults.map((item, index) => (
                   <div key={index} className="flex items-center gap-3 p-4 border border-border rounded-lg">
                     {getStatusIcon(item.status)}
                     <div>
@@ -308,7 +356,7 @@ export default function ComponentDetail() {
                 <CollapsibleContent>
                   <div className="mt-4 p-4 bg-muted rounded-lg">
                     <pre className="text-sm text-muted-foreground overflow-x-auto">
-                      {JSON.stringify(component.configSchema, null, 2)}
+                      {JSON.stringify(fullComponent.configSchema, null, 2)}
                     </pre>
                   </div>
                 </CollapsibleContent>
@@ -321,7 +369,7 @@ export default function ComponentDetail() {
                 Supported Compliance Frameworks
               </h2>
               <div className="space-y-3">
-                {component.compliance.map((item, index) => (
+                {fullComponent.compliance.map((item, index) => (
                   <div key={index} className="flex items-center justify-between p-4 border border-border rounded-lg">
                     <div className="flex items-center gap-3">
                       {getStatusIcon(item.status)}
@@ -351,7 +399,7 @@ export default function ComponentDetail() {
                   <div className="grid grid-cols-3 gap-6">
                     <div className="text-center">
                       <div className="text-2xl font-bold text-blue-500">
-                        {component.metrics.availability}
+                        {fullComponent.metrics.availability}
                       </div>
                       <div className="text-sm text-muted-foreground">
                         Availability
@@ -359,7 +407,7 @@ export default function ComponentDetail() {
                     </div>
                     <div className="text-center">
                       <div className="text-2xl font-bold text-green-500">
-                        {component.metrics.avgResponse}
+                        {fullComponent.metrics.avgResponse}
                       </div>
                       <div className="text-sm text-muted-foreground">
                         Avg Response
@@ -367,7 +415,7 @@ export default function ComponentDetail() {
                     </div>
                     <div className="text-center">
                       <div className="text-2xl font-bold text-orange-500">
-                        {component.metrics.storageUsed}
+                        {fullComponent.metrics.storageUsed}
                       </div>
                       <div className="text-sm text-muted-foreground">
                         Storage Used
@@ -405,7 +453,7 @@ export default function ComponentDetail() {
                 Related Capabilities & Components
               </h2>
               <div className="grid grid-cols-2 gap-4">
-                {component.relatedComponents.map((related, index) => (
+                {fullComponent.relatedComponents.map((related, index) => (
                   <Card key={index}>
                     <CardContent className="p-4">
                       <div className="flex items-center gap-3 mb-2">

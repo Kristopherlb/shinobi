@@ -1,0 +1,757 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "title": "Cognito User Pool Config",
+  "description": "Configuration for creating a Cognito User Pool instance with AI-ready authentication patterns",
+  "type": "object",
+  "additionalProperties": false,
+  "properties": {
+    "userPoolName": {
+      "type": "string",
+      "description": "Optional name for the Cognito User Pool; must be globally unique"
+    },
+    "signIn": {
+      "type": "object",
+      "additionalProperties": false,
+      "description": "Configure sign-in aliases for user authentication",
+      "default": {
+        "username": true,
+        "email": false,
+        "phone": false,
+        "preferredUsername": false
+      },
+      "properties": {
+        "username": {
+          "type": "boolean",
+          "description": "Allow users to sign in with username",
+          "default": true
+        },
+        "email": {
+          "type": "boolean",
+          "description": "Allow users to sign in with email address",
+          "default": false
+        },
+        "phone": {
+          "type": "boolean",
+          "description": "Allow users to sign in with phone number",
+          "default": false
+        },
+        "preferredUsername": {
+          "type": "boolean",
+          "description": "Allow users to sign in with preferred username",
+          "default": false
+        }
+      }
+    },
+    "standardAttributes": {
+      "type": "object",
+      "additionalProperties": false,
+      "description": "Configure standard user attributes and their requirements",
+      "default": {},
+      "properties": {
+        "email": {
+          "type": "object",
+          "additionalProperties": false,
+          "properties": {
+            "required": {
+              "type": "boolean",
+              "description": "Whether this attribute is required during sign-up"
+            },
+            "mutable": {
+              "type": "boolean",
+              "description": "Whether users can modify this attribute after sign-up"
+            }
+          }
+        },
+        "phone": {
+          "type": "object",
+          "additionalProperties": false,
+          "properties": {
+            "required": {
+              "type": "boolean",
+              "description": "Whether this attribute is required during sign-up"
+            },
+            "mutable": {
+              "type": "boolean",
+              "description": "Whether users can modify this attribute after sign-up"
+            }
+          }
+        },
+        "givenName": {
+          "type": "object",
+          "additionalProperties": false,
+          "properties": {
+            "required": {
+              "type": "boolean",
+              "description": "Whether this attribute is required during sign-up"
+            },
+            "mutable": {
+              "type": "boolean",
+              "description": "Whether users can modify this attribute after sign-up"
+            }
+          }
+        },
+        "familyName": {
+          "type": "object",
+          "additionalProperties": false,
+          "properties": {
+            "required": {
+              "type": "boolean",
+              "description": "Whether this attribute is required during sign-up"
+            },
+            "mutable": {
+              "type": "boolean",
+              "description": "Whether users can modify this attribute after sign-up"
+            }
+          }
+        },
+        "address": {
+          "type": "object",
+          "additionalProperties": false,
+          "properties": {
+            "required": {
+              "type": "boolean",
+              "description": "Whether this attribute is required during sign-up"
+            },
+            "mutable": {
+              "type": "boolean",
+              "description": "Whether users can modify this attribute after sign-up"
+            }
+          }
+        },
+        "birthdate": {
+          "type": "object",
+          "additionalProperties": false,
+          "properties": {
+            "required": {
+              "type": "boolean",
+              "description": "Whether this attribute is required during sign-up"
+            },
+            "mutable": {
+              "type": "boolean",
+              "description": "Whether users can modify this attribute after sign-up"
+            }
+          }
+        },
+        "gender": {
+          "type": "object",
+          "additionalProperties": false,
+          "properties": {
+            "required": {
+              "type": "boolean",
+              "description": "Whether this attribute is required during sign-up"
+            },
+            "mutable": {
+              "type": "boolean",
+              "description": "Whether users can modify this attribute after sign-up"
+            }
+          }
+        }
+      }
+    },
+    "customAttributes": {
+      "type": "object",
+      "additionalProperties": {
+        "type": "object",
+        "required": ["type"],
+        "additionalProperties": false,
+        "properties": {
+          "type": {
+            "type": "string",
+            "enum": ["string", "number", "datetime", "boolean"],
+            "description": "Data type of the custom attribute"
+          },
+          "mutable": {
+            "type": "boolean",
+            "description": "Whether users can modify this attribute after sign-up",
+            "default": true
+          },
+          "minLength": {
+            "type": "number",
+            "minimum": 0,
+            "description": "Minimum length for string attributes"
+          },
+          "maxLength": {
+            "type": "number",
+            "minimum": 1,
+            "description": "Maximum length for string attributes"
+          }
+        }
+      },
+      "description": "Custom user attributes beyond standard Cognito attributes"
+    },
+    "passwordPolicy": {
+      "type": "object",
+      "additionalProperties": false,
+      "description": "Password complexity requirements and policies",
+      "default": {
+        "minLength": 8,
+        "requireLowercase": true,
+        "requireUppercase": true,
+        "requireDigits": true,
+        "requireSymbols": false,
+        "tempPasswordValidity": 7
+      },
+      "properties": {
+        "minLength": {
+          "type": "number",
+          "minimum": 6,
+          "description": "Minimum password length",
+          "default": 8
+        },
+        "requireLowercase": {
+          "type": "boolean",
+          "description": "Require at least one lowercase letter",
+          "default": true
+        },
+        "requireUppercase": {
+          "type": "boolean",
+          "description": "Require at least one uppercase letter",
+          "default": true
+        },
+        "requireDigits": {
+          "type": "boolean",
+          "description": "Require at least one digit",
+          "default": true
+        },
+        "requireSymbols": {
+          "type": "boolean",
+          "description": "Require at least one symbol",
+          "default": false
+        },
+        "tempPasswordValidity": {
+          "type": "number",
+          "minimum": 1,
+          "description": "Temporary password validity in days",
+          "default": 7
+        }
+      }
+    },
+    "mfa": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["mode"],
+      "description": "Multi-factor authentication configuration",
+      "default": {
+        "mode": "optional",
+        "enableSms": true,
+        "enableTotp": true,
+        "smsMessage": "Your verification code is {####}"
+      },
+      "properties": {
+        "mode": {
+          "type": "string",
+          "enum": ["off", "optional", "required"],
+          "description": "MFA enforcement level",
+          "default": "optional"
+        },
+        "enableSms": {
+          "type": "boolean",
+          "description": "Enable SMS-based MFA",
+          "default": true
+        },
+        "enableTotp": {
+          "type": "boolean",
+          "description": "Enable TOTP-based MFA (authenticator apps)",
+          "default": true
+        },
+        "smsMessage": {
+          "type": "string",
+          "description": "Custom SMS message template for MFA codes",
+          "default": "Your verification code is {####}"
+        }
+      }
+    },
+    "accountRecovery": {
+      "type": "object",
+      "additionalProperties": false,
+      "description": "Account recovery options for password reset",
+      "default": {
+        "email": true,
+        "phone": false
+      },
+      "properties": {
+        "email": {
+          "type": "boolean",
+          "description": "Allow password recovery via email",
+          "default": true
+        },
+        "phone": {
+          "type": "boolean",
+          "description": "Allow password recovery via phone",
+          "default": false
+        }
+      }
+    },
+    "email": {
+      "type": "object",
+      "additionalProperties": false,
+      "description": "Email configuration for user notifications",
+      "properties": {
+        "fromEmail": {
+          "type": "string",
+          "description": "Email address for sending notifications"
+        },
+        "fromName": {
+          "type": "string",
+          "description": "Display name for email sender"
+        },
+        "replyToEmail": {
+          "type": "string",
+          "description": "Reply-to email address"
+        },
+        "sesRegion": {
+          "type": "string",
+          "description": "AWS SES region for sending emails"
+        },
+        "sesVerifiedDomain": {
+          "type": "string",
+          "description": "Verified SES domain for sending emails"
+        }
+      }
+    },
+    "sms": {
+      "type": "object",
+      "additionalProperties": false,
+      "description": "SMS configuration for user notifications",
+      "properties": {
+        "snsCallerArn": {
+          "type": "string",
+          "description": "ARN of IAM role for sending SMS messages"
+        },
+        "externalId": {
+          "type": "string",
+          "description": "External ID for the SMS role"
+        }
+      }
+    },
+    "triggers": {
+      "type": "object",
+      "additionalProperties": false,
+      "description": "Lambda function triggers for custom authentication flows",
+      "properties": {
+        "preSignUp": {
+          "type": "string",
+          "description": "Lambda function ARN for pre-sign-up trigger"
+        },
+        "postConfirmation": {
+          "type": "string",
+          "description": "Lambda function ARN for post-confirmation trigger"
+        },
+        "preAuthentication": {
+          "type": "string",
+          "description": "Lambda function ARN for pre-authentication trigger"
+        },
+        "postAuthentication": {
+          "type": "string",
+          "description": "Lambda function ARN for post-authentication trigger"
+        },
+        "preTokenGeneration": {
+          "type": "string",
+          "description": "Lambda function ARN for pre-token generation trigger"
+        },
+        "userMigration": {
+          "type": "string",
+          "description": "Lambda function ARN for user migration trigger"
+        },
+        "customMessage": {
+          "type": "string",
+          "description": "Lambda function ARN for custom message trigger"
+        },
+        "defineAuthChallenge": {
+          "type": "string",
+          "description": "Lambda function ARN for define auth challenge trigger"
+        },
+        "createAuthChallenge": {
+          "type": "string",
+          "description": "Lambda function ARN for create auth challenge trigger"
+        },
+        "verifyAuthChallengeResponse": {
+          "type": "string",
+          "description": "Lambda function ARN for verify auth challenge response trigger"
+        }
+      }
+    },
+    "deviceTracking": {
+      "type": "object",
+      "additionalProperties": false,
+      "description": "Device tracking and security configuration",
+      "default": {
+        "challengeRequiredOnNewDevice": false,
+        "deviceOnlyRememberedOnUserPrompt": true
+      },
+      "properties": {
+        "challengeRequiredOnNewDevice": {
+          "type": "boolean",
+          "description": "Require challenge on new device",
+          "default": false
+        },
+        "deviceOnlyRememberedOnUserPrompt": {
+          "type": "boolean",
+          "description": "Only remember device when user explicitly prompts",
+          "default": true
+        }
+      }
+    },
+    "advancedSecurityMode": {
+      "type": "string",
+      "enum": ["off", "audit", "enforced"],
+      "description": "Cognito Advanced Security mode for threat detection",
+      "default": "audit"
+    },
+    "featurePlan": {
+      "type": "string",
+      "enum": ["lite", "essentials", "plus"],
+      "description": "Cognito feature plan tier",
+      "default": "plus"
+    },
+    "deletionProtection": {
+      "type": "boolean",
+      "description": "Enable deletion protection for the user pool",
+      "default": false
+    },
+    "removalPolicy": {
+      "type": "string",
+      "enum": ["retain", "destroy"],
+      "description": "CDK removal policy for the user pool",
+      "default": "destroy"
+    },
+    "domain": {
+      "type": "object",
+      "additionalProperties": false,
+      "description": "Domain configuration for Cognito hosted UI",
+      "properties": {
+        "domainPrefix": {
+          "type": "string",
+          "description": "Domain prefix for Cognito hosted domain"
+        },
+        "customDomain": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": ["domainName", "certificateArn"],
+          "properties": {
+            "domainName": {
+              "type": "string",
+              "description": "Custom domain name for the user pool"
+            },
+            "certificateArn": {
+              "type": "string",
+              "description": "ARN of ACM certificate for the custom domain"
+            }
+          }
+        }
+      }
+    },
+    "appClients": {
+      "type": "array",
+      "description": "Application clients for the user pool",
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": ["clientName"],
+        "properties": {
+          "clientName": {
+            "type": "string",
+            "description": "Name of the application client"
+          },
+          "generateSecret": {
+            "type": "boolean",
+            "description": "Generate client secret for this client",
+            "default": false
+          },
+          "authFlows": {
+            "type": "array",
+            "description": "Authentication flows supported by this client",
+            "items": {
+              "type": "string",
+              "enum": ["user-password", "admin-user-password", "custom", "user-srp"]
+            },
+            "default": ["user-srp"]
+          },
+          "supportedIdentityProviders": {
+            "type": "array",
+            "description": "Identity providers supported by this client",
+            "items": {
+              "type": "string",
+              "enum": ["cognito", "google", "facebook", "amazon", "apple"]
+            },
+            "default": ["cognito"]
+          },
+          "oAuth": {
+            "type": "object",
+            "additionalProperties": false,
+            "description": "OAuth configuration for this client",
+            "properties": {
+              "flows": {
+                "type": "array",
+                "description": "OAuth flows supported by this client",
+                "items": {
+                  "type": "string",
+                  "enum": ["authorization-code", "implicit", "client-credentials"]
+                }
+              },
+              "scopes": {
+                "type": "array",
+                "description": "OAuth scopes supported by this client",
+                "items": {
+                  "type": "string",
+                  "enum": ["openid", "email", "phone", "profile"]
+                }
+              },
+              "callbackUrls": {
+                "type": "array",
+                "description": "OAuth callback URLs for this client",
+                "items": {
+                  "type": "string"
+                }
+              },
+              "logoutUrls": {
+                "type": "array",
+                "description": "OAuth logout URLs for this client",
+                "items": {
+                  "type": "string"
+                }
+              }
+            }
+          },
+          "preventUserExistenceErrors": {
+            "type": "boolean",
+            "description": "Prevent user existence errors in authentication responses",
+            "default": true
+          },
+          "enableTokenRevocation": {
+            "type": "boolean",
+            "description": "Enable token revocation for this client",
+            "default": true
+          },
+          "accessTokenValidity": {
+            "type": "number",
+            "minimum": 1,
+            "description": "Access token validity in minutes"
+          },
+          "idTokenValidity": {
+            "type": "number",
+            "minimum": 1,
+            "description": "ID token validity in minutes"
+          },
+          "refreshTokenValidity": {
+            "type": "number",
+            "minimum": 1,
+            "description": "Refresh token validity in days"
+          }
+        }
+      }
+    },
+    "monitoring": {
+      "type": "object",
+      "additionalProperties": false,
+      "description": "CloudWatch monitoring and alerting configuration",
+      "default": {
+        "enabled": true,
+        "signInSuccess": {
+          "enabled": true,
+          "threshold": 1,
+          "evaluationPeriods": 3,
+          "periodMinutes": 5
+        },
+        "signInThrottle": {
+          "enabled": true,
+          "threshold": 20,
+          "evaluationPeriods": 2,
+          "periodMinutes": 5
+        },
+        "signUpSuccess": {
+          "enabled": true,
+          "threshold": 1,
+          "evaluationPeriods": 3,
+          "periodMinutes": 5
+        },
+        "signUpThrottle": {
+          "enabled": true,
+          "threshold": 10,
+          "evaluationPeriods": 2,
+          "periodMinutes": 5
+        },
+        "riskHigh": {
+          "enabled": false,
+          "threshold": 1,
+          "evaluationPeriods": 1,
+          "periodMinutes": 5
+        }
+      },
+      "properties": {
+        "enabled": {
+          "type": "boolean",
+          "description": "Enable CloudWatch monitoring for this user pool",
+          "default": true
+        },
+        "signInSuccess": {
+          "type": "object",
+          "additionalProperties": false,
+          "description": "Sign-in success rate monitoring",
+          "properties": {
+            "enabled": {
+              "type": "boolean",
+              "description": "Enable this alarm",
+              "default": true
+            },
+            "threshold": {
+              "type": "number",
+              "description": "Alarm threshold value",
+              "default": 1
+            },
+            "evaluationPeriods": {
+              "type": "number",
+              "minimum": 1,
+              "description": "Number of evaluation periods",
+              "default": 3
+            },
+            "periodMinutes": {
+              "type": "number",
+              "minimum": 1,
+              "description": "Evaluation period in minutes",
+              "default": 5
+            }
+          }
+        },
+        "signInThrottle": {
+          "type": "object",
+          "additionalProperties": false,
+          "description": "Sign-in throttling monitoring",
+          "properties": {
+            "enabled": {
+              "type": "boolean",
+              "description": "Enable this alarm",
+              "default": true
+            },
+            "threshold": {
+              "type": "number",
+              "description": "Alarm threshold value",
+              "default": 20
+            },
+            "evaluationPeriods": {
+              "type": "number",
+              "minimum": 1,
+              "description": "Number of evaluation periods",
+              "default": 2
+            },
+            "periodMinutes": {
+              "type": "number",
+              "minimum": 1,
+              "description": "Evaluation period in minutes",
+              "default": 5
+            }
+          }
+        },
+        "signUpSuccess": {
+          "type": "object",
+          "additionalProperties": false,
+          "description": "Sign-up success rate monitoring",
+          "properties": {
+            "enabled": {
+              "type": "boolean",
+              "description": "Enable this alarm",
+              "default": true
+            },
+            "threshold": {
+              "type": "number",
+              "description": "Alarm threshold value",
+              "default": 1
+            },
+            "evaluationPeriods": {
+              "type": "number",
+              "minimum": 1,
+              "description": "Number of evaluation periods",
+              "default": 3
+            },
+            "periodMinutes": {
+              "type": "number",
+              "minimum": 1,
+              "description": "Evaluation period in minutes",
+              "default": 5
+            }
+          }
+        },
+        "signUpThrottle": {
+          "type": "object",
+          "additionalProperties": false,
+          "description": "Sign-up throttling monitoring",
+          "properties": {
+            "enabled": {
+              "type": "boolean",
+              "description": "Enable this alarm",
+              "default": true
+            },
+            "threshold": {
+              "type": "number",
+              "description": "Alarm threshold value",
+              "default": 10
+            },
+            "evaluationPeriods": {
+              "type": "number",
+              "minimum": 1,
+              "description": "Number of evaluation periods",
+              "default": 2
+            },
+            "periodMinutes": {
+              "type": "number",
+              "minimum": 1,
+              "description": "Evaluation period in minutes",
+              "default": 5
+            }
+          }
+        },
+        "riskHigh": {
+          "type": "object",
+          "additionalProperties": false,
+          "description": "High-risk events monitoring",
+          "properties": {
+            "enabled": {
+              "type": "boolean",
+              "description": "Enable this alarm",
+              "default": false
+            },
+            "threshold": {
+              "type": "number",
+              "description": "Alarm threshold value",
+              "default": 1
+            },
+            "evaluationPeriods": {
+              "type": "number",
+              "minimum": 1,
+              "description": "Number of evaluation periods",
+              "default": 1
+            },
+            "periodMinutes": {
+              "type": "number",
+              "minimum": 1,
+              "description": "Evaluation period in minutes",
+              "default": 5
+            }
+          }
+        }
+      }
+    },
+    "tags": {
+      "type": "object",
+      "additionalProperties": {
+        "type": "string"
+      },
+      "description": "Additional resource tags to apply to the user pool",
+      "default": {}
+    }
+  },
+  "required": [
+    "signIn",
+    "standardAttributes",
+    "passwordPolicy",
+    "mfa",
+    "accountRecovery",
+    "deviceTracking",
+    "advancedSecurityMode",
+    "featurePlan",
+    "deletionProtection",
+    "removalPolicy",
+    "monitoring",
+    "tags"
+  ]
+}

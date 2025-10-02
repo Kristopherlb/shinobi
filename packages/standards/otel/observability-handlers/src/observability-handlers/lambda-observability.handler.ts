@@ -14,6 +14,7 @@ import { BaseComponent } from '@shinobi/core';
 import { IObservabilityHandler, ObservabilityHandlerResult, ObservabilityConfig } from './observability-handler.interface.js';
 import { PlatformServiceContext } from '@shinobi/core/platform-services';
 import { ITaggingService, TaggingContext, defaultTaggingService } from '@shinobi/standards-tagging';
+import type { ComponentTelemetryDirectives } from '@platform/observability';
 
 /**
  * Handler for Lambda component observability
@@ -53,13 +54,22 @@ export class LambdaObservabilityHandler implements IObservabilityHandler {
     const startTime = Date.now();
     let instrumentationApplied = false;
     let alarmsCreated = 0;
+    const telemetry = this.getTelemetry(component);
 
     try {
       // Apply OpenTelemetry instrumentation
       instrumentationApplied = this.applyLambdaOTelInstrumentation(component, config);
       
       // Create CloudWatch alarms
-      alarmsCreated = this.applyLambdaObservability(component, config);
+      if (!telemetry?.alarms?.length) {
+        alarmsCreated = this.applyLambdaObservability(component, config);
+      } else {
+        this.context.logger.debug('Telemetry directives detected for Lambda component; skipping legacy alarm synthesis', {
+          service: 'ObservabilityService',
+          componentType: component.getType(),
+          componentName: component.node.id
+        });
+      }
 
       const executionTime = Date.now() - startTime;
       
@@ -264,5 +274,24 @@ export class LambdaObservabilityHandler implements IObservabilityHandler {
     };
 
     return layerMap[runtime.name];
+  }
+
+  private getTelemetry(component: BaseComponent): ComponentTelemetryDirectives | undefined {
+    try {
+      const capabilities = component.getCapabilities();
+      for (const [key, value] of Object.entries(capabilities)) {
+        if (key.startsWith('observability:') && value && typeof value === 'object' && 'telemetry' in value) {
+          return (value as { telemetry?: ComponentTelemetryDirectives }).telemetry;
+        }
+      }
+    } catch (error) {
+      this.context.logger.debug('Unable to inspect component telemetry for Lambda handler', {
+        service: 'ObservabilityService',
+        componentType: component.getType(),
+        componentName: component.node.id,
+        error: (error as Error).message
+      });
+    }
+    return undefined;
   }
 }

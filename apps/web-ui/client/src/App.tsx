@@ -19,7 +19,6 @@ import ManifestEditorPage from "@/pages/manifest-editor";
 import ConfigurationPrecedencePage from "@/pages/configuration-precedence";
 import LocalDevelopmentPage from "@/pages/local-development";
 import ComponentDetail from "@/pages/ComponentDetail";
-import ComponentDetailDemo from "@/pages/ComponentDetailDemo";
 import NotFound from "@/pages/not-found";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/Badge";
@@ -259,13 +258,6 @@ compliance:
               description: 'Monitor platform-wide events, deployments, and system changes',
               action: 'View Feed',
               href: '/feed'
-            },
-            {
-              icon: Globe,
-              title: 'Component Detail Demo',
-              description: 'View the component detail page design implementation with dark mode',
-              action: 'View Demo',
-              href: '/component-detail-demo'
             }
           ].map((feature, index) => {
             const Icon = feature.icon;
@@ -354,7 +346,6 @@ function Router() {
       <Route path="/plans" component={PlansPage} />
       <Route path="/search" component={SearchPage} />
       <Route path="/component/:componentName" component={ComponentDetail} />
-      <Route path="/component-detail-demo" component={ComponentDetailDemo} />
       <Route component={NotFound} />
     </Switch>
   );

@@ -16,6 +16,8 @@ only consumes the resolved configuration when synthesising resources.
 - CloudWatch alarms for sign-in/sign-up success rates, throttling, and high risk
   events with thresholds sourced from configuration.
 - Capability metadata exposes user-pool identifiers and registered app clients.
+- Platform monitoring is enabled by default with production-safe thresholds,
+  and FedRAMP profiles automatically turn on the high-risk alarm.
 
 ## Usage
 
@@ -79,6 +81,8 @@ advanced security mode, and tighter throttling thresholds.
 corepack pnpm exec jest --runTestsByPath \
   packages/components/cognito-user-pool/tests/cognito-user-pool.builder.test.ts \
   packages/components/cognito-user-pool/tests/cognito-user-pool.component.synthesis.test.ts
+corepack pnpm exec jest --runTestsByPath \
+  packages/components/cognito-user-pool/tests/security/cdk-nag.test.ts
 ```
 
 The builder tests validate platform-default posture per framework and manifest
