@@ -1,11 +1,11 @@
 export default {
   displayName: '@platform/components-container-application',
+  preset: '../../../jest.preset.mjs',
   testEnvironment: 'node',
-  transform: { '^.+\.tsx?$': ['ts-jest', { tsconfig: '<rootDir>/tsconfig.json' }] },
-  moduleFileExtensions: ['ts', 'tsx', 'js'],
-  moduleNameMapper: {
-    '^@shinobi/(.*)$': '<rootDir>/../../$1/src',
-    '^@platform/(.*)$': '<rootDir>/../../$1/src'
+  transform: {
+    '^.+\\.[tj]s$': ['ts-jest', { tsconfig: '<rootDir>/tsconfig.spec.json' }]
   },
-  collectCoverageFrom: ['src/**/*.{ts,tsx}', '!src/**/*.d.ts']
+  moduleFileExtensions: ['ts', 'js'],
+  collectCoverageFrom: ['src/**/*.{ts,js}', '!src/**/*.d.ts'],
+  setupFilesAfterEnv: ['<rootDir>/tests/setup.ts']
 };

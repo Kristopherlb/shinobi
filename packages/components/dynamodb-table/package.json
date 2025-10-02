@@ -1,0 +1,66 @@
+{
+  "name": "@platform/dynamodb-table",
+  "version": "1.0.0",
+  "description": "DynamoDB Table Component implementing Component API Contract v1.0",
+  "main": "dist/index.js",
+  "types": "dist/index.d.ts",
+  "scripts": {
+    "build": "tsc",
+    "test": "jest",
+    "lint": "eslint src/**/*.ts",
+    "clean": "rm -rf dist"
+  },
+  "keywords": [
+    "dynamodb",
+    "table",
+    "component",
+    "platform",
+    "aws",
+    "cdk"
+  ],
+  "author": "Platform Engineering Team",
+  "license": "MIT",
+  "dependencies": {
+    "@platform/contracts": "workspace:*",
+    "@shinobi/core": "workspace:*",
+    "aws-cdk-lib": "^2.140.0",
+    "constructs": "^10.3.0"
+  },
+  "devDependencies": {
+    "@types/jest": "^29.5.0",
+    "@types/node": "^20.0.0",
+    "jest": "^29.5.0",
+    "ts-jest": "^29.1.0",
+    "typescript": "^5.0.0"
+  },
+  "peerDependencies": {
+    "aws-cdk-lib": "^2.140.0",
+    "constructs": "^10.3.0"
+  },
+  "files": [
+    "dist/**/*",
+    "Config.schema.json",
+    "README.md",
+    "catalog-info.yaml"
+  ],
+  "publishConfig": {
+    "access": "restricted",
+    "registry": "https://npm.pkg.github.com"
+  },
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/project42/shinobi.git",
+    "directory": "packages/components/dynamodb-table"
+  },
+  "bugs": {
+    "url": "https://github.com/project42/shinobi/issues"
+  },
+  "homepage": "https://github.com/project42/shinobi/tree/main/packages/components/dynamodb-table#readme",
+  "component": {
+    "type": "dynamodb-table",
+    "category": "storage",
+    "awsService": "DYNAMODB",
+    "stability": "stable",
+    "version": "1.0.0"
+  }
+}

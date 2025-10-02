@@ -111,10 +111,7 @@ jest.mock('aws-cdk-lib/aws-iam', () => ({
   }
 }));
 
-// Mock CDK Labs constructs
-jest.mock('@cdklabs/generative-ai-cdk-constructs', () => ({
-  // Add any specific mocks needed for CDK Labs constructs
-}));
+// CDK Labs constructs removed - not needed for this component
 
 // Global test timeout
 jest.setTimeout(30000);

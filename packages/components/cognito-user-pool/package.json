@@ -46,7 +46,6 @@
   "author": "Shinobi Platform Engineering",
   "license": "MIT",
   "dependencies": {
-    "@cdklabs/generative-ai-cdk-constructs": "^0.1.309",
     "aws-cdk-lib": "^2.214.0",
     "constructs": "^10.4.2",
     "@shinobi/core": "workspace:*",

@@ -1,7 +1,7 @@
 {
   "$schema": "http://json-schema.org/draft-07/schema#",
   "title": "Cognito User Pool Config",
-  "description": "Configuration for creating a Cognito User Pool instance with AI-ready authentication patterns",
+  "description": "Configuration for creating a Cognito User Pool instance with comprehensive authentication and security features",
   "type": "object",
   "additionalProperties": false,
   "properties": {
@@ -152,12 +152,19 @@
       "type": "object",
       "additionalProperties": {
         "type": "object",
-        "required": ["type"],
+        "required": [
+          "type"
+        ],
         "additionalProperties": false,
         "properties": {
           "type": {
             "type": "string",
-            "enum": ["string", "number", "datetime", "boolean"],
+            "enum": [
+              "string",
+              "number",
+              "datetime",
+              "boolean"
+            ],
             "description": "Data type of the custom attribute"
           },
           "mutable": {
@@ -229,7 +236,9 @@
     "mfa": {
       "type": "object",
       "additionalProperties": false,
-      "required": ["mode"],
+      "required": [
+        "mode"
+      ],
       "description": "Multi-factor authentication configuration",
       "default": {
         "mode": "optional",
@@ -240,7 +249,11 @@
       "properties": {
         "mode": {
           "type": "string",
-          "enum": ["off", "optional", "required"],
+          "enum": [
+            "off",
+            "optional",
+            "required"
+          ],
           "description": "MFA enforcement level",
           "default": "optional"
         },
@@ -394,13 +407,21 @@
     },
     "advancedSecurityMode": {
       "type": "string",
-      "enum": ["off", "audit", "enforced"],
+      "enum": [
+        "off",
+        "audit",
+        "enforced"
+      ],
       "description": "Cognito Advanced Security mode for threat detection",
       "default": "audit"
     },
     "featurePlan": {
       "type": "string",
-      "enum": ["lite", "essentials", "plus"],
+      "enum": [
+        "lite",
+        "essentials",
+        "plus"
+      ],
       "description": "Cognito feature plan tier",
       "default": "plus"
     },
@@ -411,7 +432,10 @@
     },
     "removalPolicy": {
       "type": "string",
-      "enum": ["retain", "destroy"],
+      "enum": [
+        "retain",
+        "destroy"
+      ],
       "description": "CDK removal policy for the user pool",
       "default": "destroy"
     },
@@ -427,7 +451,10 @@
         "customDomain": {
           "type": "object",
           "additionalProperties": false,
-          "required": ["domainName", "certificateArn"],
+          "required": [
+            "domainName",
+            "certificateArn"
+          ],
           "properties": {
             "domainName": {
               "type": "string",
@@ -447,7 +474,9 @@
       "items": {
         "type": "object",
         "additionalProperties": false,
-        "required": ["clientName"],
+        "required": [
+          "clientName"
+        ],
         "properties": {
           "clientName": {
             "type": "string",
@@ -463,18 +492,33 @@
             "description": "Authentication flows supported by this client",
             "items": {
               "type": "string",
-              "enum": ["user-password", "admin-user-password", "custom", "user-srp"]
+              "enum": [
+                "user-password",
+                "admin-user-password",
+                "custom",
+                "user-srp"
+              ]
             },
-            "default": ["user-srp"]
+            "default": [
+              "user-srp"
+            ]
           },
           "supportedIdentityProviders": {
             "type": "array",
             "description": "Identity providers supported by this client",
             "items": {
               "type": "string",
-              "enum": ["cognito", "google", "facebook", "amazon", "apple"]
+              "enum": [
+                "cognito",
+                "google",
+                "facebook",
+                "amazon",
+                "apple"
+              ]
             },
-            "default": ["cognito"]
+            "default": [
+              "cognito"
+            ]
           },
           "oAuth": {
             "type": "object",
@@ -486,7 +530,11 @@
                 "description": "OAuth flows supported by this client",
                 "items": {
                   "type": "string",
-                  "enum": ["authorization-code", "implicit", "client-credentials"]
+                  "enum": [
+                    "authorization-code",
+                    "implicit",
+                    "client-credentials"
+                  ]
                 }
               },
               "scopes": {
@@ -494,7 +542,12 @@
                 "description": "OAuth scopes supported by this client",
                 "items": {
                   "type": "string",
-                  "enum": ["openid", "email", "phone", "profile"]
+                  "enum": [
+                    "openid",
+                    "email",
+                    "phone",
+                    "profile"
+                  ]
                 }
               },
               "callbackUrls": {

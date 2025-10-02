@@ -4,10 +4,10 @@
  */
 
 // Component exports
-export { DynamoDbTableComponentComponent } from './dynamodb-table.component.js';
+export { DynamoDbTableComponent } from './dynamodb-table.component.js';
 
 // Configuration exports
-export { 
+export {
   DynamoDbTableConfig,
   DynamoDbTableComponentConfigBuilder,
   DYNAMODB_TABLE_CONFIG_SCHEMA

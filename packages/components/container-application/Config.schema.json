@@ -1,0 +1,444 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "title": "Container Application Config",
+  "description": "Configuration schema for the Container Application component",
+  "type": "object",
+  "additionalProperties": false,
+  "properties": {
+    "application": {
+      "type": "object",
+      "description": "Workload specific configuration for the containerised application",
+      "additionalProperties": false,
+      "properties": {
+        "name": {
+          "type": "string",
+          "pattern": "^[a-z0-9-]+$",
+          "description": "Application name used for ECS resources, log groups, and repository naming"
+        },
+        "port": {
+          "type": "integer",
+          "minimum": 1,
+          "maximum": 65535,
+          "default": 3000,
+          "description": "Primary container port exposed by the service"
+        },
+        "environment": {
+          "type": "object",
+          "additionalProperties": {
+            "type": "string"
+          },
+          "default": {},
+          "description": "Environment variables injected into the application container"
+        },
+        "secrets": {
+          "type": "object",
+          "additionalProperties": {
+            "type": "string"
+          },
+          "default": {},
+          "description": "Map of environment variable name to Secrets Manager secret reference"
+        }
+      },
+      "required": ["name", "port"]
+    },
+    "service": {
+      "type": "object",
+      "description": "Fargate service sizing and health checks",
+      "additionalProperties": false,
+      "properties": {
+        "desiredCount": {
+          "type": "integer",
+          "minimum": 1,
+          "maximum": 10,
+          "default": 2,
+          "description": "Desired number of running tasks"
+        },
+        "cpu": {
+          "type": "integer",
+          "enum": [256, 512, 1024, 2048, 4096],
+          "default": 512,
+          "description": "Fargate task CPU units (256 = 0.25 vCPU)"
+        },
+        "memory": {
+          "type": "integer",
+          "enum": [512, 1024, 2048, 4096, 8192],
+          "default": 1024,
+          "description": "Fargate task memory in MiB"
+        },
+        "healthCheck": {
+          "type": "object",
+          "description": "Container health check configuration",
+          "additionalProperties": false,
+          "properties": {
+            "command": {
+              "type": "array",
+              "items": {
+                "type": "string"
+              },
+              "default": ["CMD-SHELL", "curl -f http://localhost:3000/health || exit 1"],
+              "description": "Command executed inside the container to determine health"
+            },
+            "path": {
+              "type": "string",
+              "default": "/health",
+              "description": "HTTP path exposed by the application for health checks"
+            },
+            "interval": {
+              "type": "integer",
+              "minimum": 5,
+              "maximum": 300,
+              "default": 30,
+              "description": "Interval between health checks in seconds"
+            },
+            "timeout": {
+              "type": "integer",
+              "minimum": 1,
+              "maximum": 60,
+              "default": 5,
+              "description": "Timeout for health checks in seconds"
+            },
+            "retries": {
+              "type": "integer",
+              "minimum": 1,
+              "maximum": 10,
+              "default": 3,
+              "description": "Number of consecutive failures before considering the target unhealthy"
+            },
+            "startPeriod": {
+              "type": "integer",
+              "minimum": 0,
+              "maximum": 300,
+              "default": 60,
+              "description": "Grace period after task launch before health checks begin"
+            },
+            "healthyHttpCodes": {
+              "type": "string",
+              "default": "200",
+              "description": "HTTP response codes that indicate a healthy target"
+            },
+            "healthyThresholdCount": {
+              "type": "integer",
+              "minimum": 1,
+              "maximum": 10,
+              "default": 2,
+              "description": "Number of consecutive successes required to mark target healthy"
+            },
+            "unhealthyThresholdCount": {
+              "type": "integer",
+              "minimum": 1,
+              "maximum": 10,
+              "default": 3,
+              "description": "Number of consecutive failures required to mark target unhealthy"
+            }
+          }
+        }
+      },
+      "required": ["desiredCount", "cpu", "memory", "healthCheck"]
+    },
+    "network": {
+      "type": "object",
+      "description": "Networking configuration for VPC, subnets, and security groups",
+      "additionalProperties": false,
+      "properties": {
+        "vpcId": {
+          "type": "string",
+          "description": "Existing VPC ID to deploy into"
+        },
+        "subnetIds": {
+          "type": "array",
+          "description": "Explicit subnet IDs for the ECS service",
+          "items": {
+            "type": "string"
+          }
+        },
+        "securityGroupIds": {
+          "type": "array",
+          "description": "Existing security group IDs to attach to the service",
+          "items": {
+            "type": "string"
+          }
+        },
+        "assignPublicIp": {
+          "type": "boolean",
+          "default": true,
+          "description": "Assign public IPs to Fargate tasks"
+        },
+        "loadBalancerScheme": {
+          "type": "string",
+          "enum": ["internet-facing", "internal"],
+          "default": "internet-facing",
+          "description": "Determine whether the ALB is public or internal"
+        },
+        "natGateways": {
+          "type": "integer",
+          "minimum": 0,
+          "maximum": 3,
+          "default": 0,
+          "description": "Number of NAT gateways when the component creates a VPC"
+        }
+      },
+      "default": {}
+    },
+    "loadBalancer": {
+      "type": "object",
+      "description": "Application Load Balancer configuration",
+      "additionalProperties": false,
+      "properties": {
+        "port": {
+          "type": "integer",
+          "minimum": 1,
+          "maximum": 65535,
+          "default": 80,
+          "description": "Listener port for the primary HTTP listener"
+        },
+        "sslCertificateArn": {
+          "type": "string",
+          "description": "ACM certificate ARN to enable HTTPS"
+        }
+      },
+      "required": ["port"]
+    },
+    "ecr": {
+      "type": "object",
+      "description": "Container image repository configuration",
+      "additionalProperties": false,
+      "properties": {
+        "createRepository": {
+          "type": "boolean",
+          "default": true,
+          "description": "Create a dedicated ECR repository for the application"
+        },
+        "repositoryArn": {
+          "type": "string",
+          "description": "Existing ECR repository ARN to reuse when createRepository is false"
+        },
+        "maxImageCount": {
+          "type": "integer",
+          "minimum": 1,
+          "maximum": 1000,
+          "default": 10,
+          "description": "Maximum number of images to retain via lifecycle policy"
+        },
+        "imageScanOnPush": {
+          "type": "boolean",
+          "default": true,
+          "description": "Enable ECR image scanning on push"
+        }
+      },
+      "required": ["createRepository", "maxImageCount", "imageScanOnPush"]
+    },
+    "observability": {
+      "type": "object",
+      "description": "Logging, tracing, and alarm configuration",
+      "additionalProperties": false,
+      "properties": {
+        "enabled": {
+          "type": "boolean",
+          "default": true,
+          "description": "Toggle platform observability features"
+        },
+        "logRetentionDays": {
+          "type": "integer",
+          "enum": [1, 3, 5, 7, 14, 30, 60, 90, 120, 150, 180, 365, 400, 545, 731, 1096, 1827, 3653],
+          "default": 30,
+          "description": "CloudWatch log retention period"
+        },
+        "cpuThreshold": {
+          "type": "integer",
+          "minimum": 1,
+          "maximum": 100,
+          "default": 80,
+          "description": "Alarm threshold for high CPU utilisation"
+        },
+        "memoryThreshold": {
+          "type": "integer",
+          "minimum": 1,
+          "maximum": 100,
+          "default": 85,
+          "description": "Alarm threshold for high memory utilisation"
+        },
+        "enableTracing": {
+          "type": "boolean",
+          "default": true,
+          "description": "Enable AWS X-Ray tracing for the service"
+        },
+        "enableMetrics": {
+          "type": "boolean",
+          "default": true,
+          "description": "Publish custom metrics for the service"
+        }
+      },
+      "required": ["enabled", "logRetentionDays", "cpuThreshold", "memoryThreshold", "enableTracing", "enableMetrics"]
+    },
+    "service": {
+      "type": "object",
+      "description": "Fargate service sizing and scaling",
+      "additionalProperties": false,
+      "properties": {
+        "desiredCount": {
+          "type": "integer",
+          "minimum": 1,
+          "maximum": 10,
+          "default": 2,
+          "description": "Desired number of running tasks"
+        },
+        "cpu": {
+          "type": "integer",
+          "enum": [256, 512, 1024, 2048, 4096],
+          "default": 512,
+          "description": "Fargate task CPU units"
+        },
+        "memory": {
+          "type": "integer",
+          "enum": [512, 1024, 2048, 4096, 8192],
+          "default": 1024,
+          "description": "Fargate task memory in MiB"
+        },
+        "healthCheck": {
+          "type": "object",
+          "description": "Container health check configuration",
+          "additionalProperties": false,
+          "properties": {
+            "command": {
+              "type": "array",
+              "items": {
+                "type": "string"
+              },
+              "default": ["CMD-SHELL", "curl -f http://localhost:3000/health || exit 1"],
+              "description": "Command executed inside the container to determine health"
+            },
+            "path": {
+              "type": "string",
+              "default": "/health",
+              "description": "HTTP path exposed by the application for health checks"
+            },
+            "interval": {
+              "type": "integer",
+              "minimum": 5,
+              "maximum": 300,
+              "default": 30,
+              "description": "Interval between health checks in seconds"
+            },
+            "timeout": {
+              "type": "integer",
+              "minimum": 1,
+              "maximum": 60,
+              "default": 5,
+              "description": "Timeout for health checks in seconds"
+            },
+            "retries": {
+              "type": "integer",
+              "minimum": 1,
+              "maximum": 10,
+              "default": 3,
+              "description": "Number of consecutive failures before considering the target unhealthy"
+            },
+            "startPeriod": {
+              "type": "integer",
+              "minimum": 0,
+              "maximum": 300,
+              "default": 60,
+              "description": "Grace period after task launch before health checks begin"
+            },
+            "healthyHttpCodes": {
+              "type": "string",
+              "default": "200",
+              "description": "HTTP response codes that indicate a healthy target"
+            },
+            "healthyThresholdCount": {
+              "type": "integer",
+              "minimum": 1,
+              "maximum": 10,
+              "default": 2,
+              "description": "Number of consecutive successes required to mark target healthy"
+            },
+            "unhealthyThresholdCount": {
+              "type": "integer",
+              "minimum": 1,
+              "maximum": 10,
+              "default": 3,
+              "description": "Number of consecutive failures required to mark target unhealthy"
+            }
+          }
+        },
+        "autoScaling": {
+          "type": "object",
+          "description": "Automatic scaling settings for the service",
+          "additionalProperties": false,
+          "properties": {
+            "enabled": {
+              "type": "boolean",
+              "default": true,
+              "description": "Enable managed auto scaling for the service"
+            },
+            "maxCapacity": {
+              "type": "integer",
+              "minimum": 1,
+              "maximum": 50,
+              "default": 4,
+              "description": "Maximum number of tasks when auto scaling"
+            },
+            "cpuTarget": {
+              "type": "integer",
+              "minimum": 1,
+              "maximum": 100,
+              "default": 75,
+              "description": "CPU utilisation percentage target for scaling"
+            },
+            "memoryTarget": {
+              "type": "integer",
+              "minimum": 1,
+              "maximum": 100,
+              "default": 80,
+              "description": "Memory utilisation percentage target for scaling"
+            }
+          }
+        }
+      },
+      "required": ["desiredCount", "cpu", "memory", "healthCheck"]
+    },
+    "security": {
+      "type": "object",
+      "description": "Security hardening controls",
+      "additionalProperties": false,
+      "properties": {
+        "enableEncryption": {
+          "type": "boolean",
+          "default": true,
+          "description": "Enable encryption at rest for AWS resources created by the component"
+        },
+        "enableVpcFlowLogs": {
+          "type": "boolean",
+          "default": true,
+          "description": "Enable VPC Flow Logs when the component creates the VPC"
+        },
+        "enableWaf": {
+          "type": "boolean",
+          "default": false,
+          "description": "Associate an AWS WAF web ACL with the load balancer"
+        },
+        "webAclArn": {
+          "type": "string",
+          "description": "Existing AWS WAF WebACL ARN to associate when enableWaf is true"
+        }
+      },
+      "required": ["enableEncryption", "enableVpcFlowLogs", "enableWaf"]
+    },
+    "tags": {
+      "type": "object",
+      "additionalProperties": {
+        "type": "string"
+      },
+      "default": {},
+      "description": "Additional tags merged with the platform standard tagging set"
+    }
+  },
+  "required": [
+    "application",
+    "service",
+    "loadBalancer",
+    "ecr",
+    "observability",
+    "security"
+  ]
+}

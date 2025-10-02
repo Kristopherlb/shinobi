@@ -10,6 +10,7 @@ import {
   ComponentContext,
   ComponentCapabilities
 } from '@platform/contracts';
+import { Logger } from '@platform/logger';
 import {
   DynamoDbTableComponentConfigBuilder,
   DynamoDbTableConfig,
@@ -23,25 +24,39 @@ export class DynamoDbTableComponent extends Component {
   private kmsKey?: kms.IKey;
   private managedKmsKey?: kms.Key;
   private config?: DynamoDbTableConfig;
+  private logger: Logger;
 
   constructor(scope: Construct, id: string, context: ComponentContext, spec: ComponentSpec) {
     super(scope, id, context, spec);
+    this.logger = Logger.getLogger(`dynamodb-table.${spec.name}`);
   }
 
   public synth(): void {
-    this.logComponentEvent('synthesis_start', 'Starting DynamoDB table synthesis');
+    this.logger.info('Starting DynamoDB table synthesis', {
+      context: { action: 'synthesis_start', resource: 'dynamodb_table' },
+      data: {
+        componentName: this.spec.name,
+        componentType: this.getType(),
+        environment: this.context.environment,
+        complianceFramework: this.context.complianceFramework
+      }
+    });
 
     try {
       const builder = new DynamoDbTableComponentConfigBuilder(this.context, this.spec);
       this.config = builder.buildSync();
 
-      this.logComponentEvent('config_resolved', 'Resolved DynamoDB table configuration', {
-        tableName: this.config.tableName,
-        billingMode: this.config.billingMode,
-        pointInTimeRecovery: this.config.pointInTimeRecovery,
-        tableClass: this.config.tableClass,
-        encryption: this.config.encryption.type,
-        monitoringEnabled: this.config.monitoring.enabled
+      this.logger.info('Resolved DynamoDB table configuration', {
+        context: { action: 'config_resolved', resource: 'dynamodb_table' },
+        data: {
+          tableName: this.config.tableName,
+          billingMode: this.config.billingMode,
+          pointInTimeRecovery: this.config.pointInTimeRecovery,
+          tableClass: this.config.tableClass,
+          encryption: this.config.encryption.type,
+          monitoringEnabled: this.config.monitoring.enabled,
+          hardeningProfile: this.config.hardeningProfile
+        }
       });
 
       this.resolveEncryptionKey();
@@ -56,12 +71,24 @@ export class DynamoDbTableComponent extends Component {
 
       this.registerCapability('db:dynamodb', this.buildCapability());
 
-      this.logComponentEvent('synthesis_complete', 'DynamoDB table synthesis completed', {
-        tableName: this.table!.tableName,
-        tableArn: this.table!.tableArn
+      this.logger.info('DynamoDB table synthesis completed', {
+        context: { action: 'synthesis_complete', resource: 'dynamodb_table' },
+        data: {
+          tableName: this.table!.tableName,
+          tableArn: this.table!.tableArn,
+          streamArn: this.table!.tableStreamArn,
+          encryptionType: this.config.encryption.type,
+          kmsKeyArn: this.kmsKey?.keyArn
+        }
       });
     } catch (error) {
-      this.logError(error as Error, 'dynamodb table synthesis');
+      this.logger.error('DynamoDB table synthesis failed', error as Error, {
+        context: { action: 'synthesis_error', resource: 'dynamodb_table' },
+        data: {
+          componentName: this.spec.name,
+          error: (error as Error).message
+        }
+      });
       throw error;
     }
   }
@@ -143,6 +170,9 @@ export class DynamoDbTableComponent extends Component {
     if (this.config!.stream?.enabled) {
       props.stream = this.resolveStreamView(this.config!.stream.viewType);
     }
+
+    // Enable X-Ray tracing for observability
+    props.contributeInsights = true;
 
     this.table = new dynamodb.Table(this, 'Table', props);
 

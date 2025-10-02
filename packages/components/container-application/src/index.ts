@@ -26,4 +26,4 @@ export type {
   ComponentContext, 
   ComponentSpec, 
   ComponentCapabilities 
-} from '@platform/contracts';
+} from '@shinobi/core';

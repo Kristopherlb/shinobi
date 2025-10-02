@@ -4,6 +4,13 @@
   "description": "Production-grade containerized application component for the Shinobi platform",
   "main": "dist/index.js",
   "types": "dist/index.d.ts",
+  "exports": {
+    ".": {
+      "types": "./dist/index.d.ts",
+      "import": "./dist/index.js"
+    },
+    "./schema": "./Config.schema.json"
+  },
   "scripts": {
     "build": "tsc",
     "test": "jest",
@@ -34,7 +41,7 @@
   "license": "MIT",
   "dependencies": {
     "@platform/contracts": "workspace:*",
-    "@platform/core-engine": "workspace:*",
+    "@shinobi/core": "workspace:*",
     "aws-cdk-lib": "^2.100.0",
     "constructs": "^10.3.0"
   },
@@ -54,8 +61,10 @@
   },
   "files": [
     "dist",
+    "Config.schema.json",
     "README.md",
-    "LICENSE"
+    "audit",
+    "observability"
   ],
   "repository": {
     "type": "git",

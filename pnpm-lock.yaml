@@ -11,9 +11,6 @@ importers:
       '@aws-sdk/client-cloudformation':
         specifier: ^3.637.0
         version: 3.890.0
-      '@cdklabs/generative-ai-cdk-constructs':
-        specifier: ^0.1.309
-        version: 0.1.309(aws-cdk-lib@2.214.0(constructs@10.4.2))(constructs@10.4.2)
       '@modelcontextprotocol/sdk':
         specifier: ^0.4.0
         version: 0.4.0
@@ -12970,7 +12967,7 @@ snapshots:
       pathe: 1.1.2
       picocolors: 1.1.1
       sirv: 2.0.4
-      vitest: 1.6.1(@types/node@20.16.11)(@vitest/ui@1.6.1)(jsdom@23.2.0(bufferutil@4.0.9))(lightningcss@1.30.1)(terser@5.44.0)
+      vitest: 1.6.1(@types/node@24.4.0)(@vitest/ui@1.6.1)(jsdom@23.2.0(bufferutil@4.0.9))(lightningcss@1.30.1)(terser@5.44.0)
 
   '@vitest/utils@1.6.1':
     dependencies:

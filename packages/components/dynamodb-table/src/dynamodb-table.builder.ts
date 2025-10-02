@@ -4,6 +4,8 @@ import {
   ComponentConfigSchema
 } from '@shinobi/core';
 import { ComponentContext, ComponentSpec } from '@platform/contracts';
+import * as fs from 'fs';
+import * as path from 'path';
 
 type AttributeType = 'string' | 'number' | 'binary';
 
@@ -171,165 +173,11 @@ const ALARM_DEFINITION = {
   }
 };
 
-export const DYNAMODB_TABLE_CONFIG_SCHEMA: ComponentConfigSchema = {
-  type: 'object',
-  additionalProperties: false,
-  required: ['partitionKey'],
-  properties: {
-    tableName: {
-      type: 'string',
-      pattern: '^[a-zA-Z0-9_.-]{3,255}$'
-    },
-    partitionKey: ATTRIBUTE_DEFINITION,
-    sortKey: ATTRIBUTE_DEFINITION,
-    billingMode: {
-      type: 'string',
-      enum: ['pay-per-request', 'provisioned'],
-      default: 'pay-per-request'
-    },
-    provisioned: PROVISIONED_DEFINITION,
-    tableClass: {
-      type: 'string',
-      enum: ['standard', 'infrequent-access'],
-      default: 'standard'
-    },
-    pointInTimeRecovery: {
-      type: 'boolean',
-      default: false
-    },
-    timeToLive: {
-      type: 'object',
-      additionalProperties: false,
-      properties: {
-        enabled: { type: 'boolean', default: false },
-        attributeName: { type: 'string' }
-      },
-      default: { enabled: false }
-    },
-    stream: {
-      type: 'object',
-      additionalProperties: false,
-      properties: {
-        enabled: { type: 'boolean', default: false },
-        viewType: {
-          type: 'string',
-          enum: ['keys-only', 'new-image', 'old-image', 'new-and-old-images']
-        }
-      },
-      default: { enabled: false }
-    },
-    globalSecondaryIndexes: {
-      type: 'array',
-      items: {
-        type: 'object',
-        additionalProperties: false,
-        required: ['indexName', 'partitionKey'],
-        properties: {
-          indexName: { type: 'string', pattern: '^[a-zA-Z0-9_.-]{3,255}$' },
-          partitionKey: ATTRIBUTE_DEFINITION,
-          sortKey: ATTRIBUTE_DEFINITION,
-          projectionType: {
-            type: 'string',
-            enum: ['all', 'keys-only', 'include'],
-            default: 'all'
-          },
-          nonKeyAttributes: {
-            type: 'array',
-            items: { type: 'string' }
-          },
-          provisioned: PROVISIONED_DEFINITION
-        }
-      },
-      default: []
-    },
-    localSecondaryIndexes: {
-      type: 'array',
-      items: {
-        type: 'object',
-        additionalProperties: false,
-        required: ['indexName', 'sortKey'],
-        properties: {
-          indexName: { type: 'string', pattern: '^[a-zA-Z0-9_.-]{3,255}$' },
-          sortKey: ATTRIBUTE_DEFINITION,
-          projectionType: {
-            type: 'string',
-            enum: ['all', 'keys-only', 'include'],
-            default: 'all'
-          },
-          nonKeyAttributes: {
-            type: 'array',
-            items: { type: 'string' }
-          }
-        }
-      },
-      default: []
-    },
-    encryption: {
-      type: 'object',
-      additionalProperties: false,
-      properties: {
-        type: {
-          type: 'string',
-          enum: ['aws-managed', 'customer-managed'],
-          default: 'aws-managed'
-        },
-        kmsKeyArn: { type: 'string' },
-        customerManagedKey: {
-          type: 'object',
-          additionalProperties: false,
-          properties: {
-            create: { type: 'boolean', default: false },
-            alias: { type: 'string' },
-            enableRotation: { type: 'boolean', default: true }
-          }
-        }
-      },
-      default: {
-        type: 'aws-managed'
-      }
-    },
-    backup: {
-      type: 'object',
-      additionalProperties: false,
-      properties: {
-        enabled: { type: 'boolean', default: false },
-        retentionDays: { type: 'number', minimum: 7, maximum: 365 },
-        schedule: { type: 'string' }
-      },
-      default: {
-        enabled: false,
-        retentionDays: 7
-      }
-    },
-    monitoring: {
-      type: 'object',
-      additionalProperties: false,
-      properties: {
-        enabled: { type: 'boolean', default: false },
-        alarms: {
-          type: 'object',
-          additionalProperties: false,
-          properties: {
-            readThrottle: ALARM_DEFINITION,
-            writeThrottle: ALARM_DEFINITION,
-            systemErrors: ALARM_DEFINITION
-          },
-          default: {}
-        }
-      },
-      default: {}
-    },
-    hardeningProfile: {
-      type: 'string',
-      description: 'Abstract security posture identifier for downstream consumers'
-    },
-    tags: {
-      type: 'object',
-      additionalProperties: { type: 'string' },
-      default: {}
-    }
-  }
-};
+// Load schema from standalone Config.schema.json file
+const schemaPath = path.join(__dirname, '..', 'Config.schema.json');
+export const DYNAMODB_TABLE_CONFIG_SCHEMA: ComponentConfigSchema = JSON.parse(
+  fs.readFileSync(schemaPath, 'utf8')
+);
 
 export class DynamoDbTableComponentConfigBuilder extends ConfigBuilder<DynamoDbTableConfig> {
   constructor(context: ComponentContext, spec: ComponentSpec) {
@@ -395,16 +243,16 @@ export class DynamoDbTableComponentConfigBuilder extends ConfigBuilder<DynamoDbT
       billingMode: config.billingMode ?? 'pay-per-request',
       provisioned: config.billingMode === 'provisioned'
         ? {
-            readCapacity: config.provisioned?.readCapacity ?? 5,
-            writeCapacity: config.provisioned?.writeCapacity ?? 5,
-            autoScaling: {
-              minReadCapacity: config.provisioned?.autoScaling?.minReadCapacity ?? config.provisioned?.readCapacity ?? 5,
-              maxReadCapacity: config.provisioned?.autoScaling?.maxReadCapacity ?? (config.provisioned?.readCapacity ?? 5) * 10,
-              minWriteCapacity: config.provisioned?.autoScaling?.minWriteCapacity ?? config.provisioned?.writeCapacity ?? 5,
-              maxWriteCapacity: config.provisioned?.autoScaling?.maxWriteCapacity ?? (config.provisioned?.writeCapacity ?? 5) * 10,
-              targetUtilizationPercent: config.provisioned?.autoScaling?.targetUtilizationPercent ?? 70
-            }
+          readCapacity: config.provisioned?.readCapacity ?? 5,
+          writeCapacity: config.provisioned?.writeCapacity ?? 5,
+          autoScaling: {
+            minReadCapacity: config.provisioned?.autoScaling?.minReadCapacity ?? config.provisioned?.readCapacity ?? 5,
+            maxReadCapacity: config.provisioned?.autoScaling?.maxReadCapacity ?? (config.provisioned?.readCapacity ?? 5) * 10,
+            minWriteCapacity: config.provisioned?.autoScaling?.minWriteCapacity ?? config.provisioned?.writeCapacity ?? 5,
+            maxWriteCapacity: config.provisioned?.autoScaling?.maxWriteCapacity ?? (config.provisioned?.writeCapacity ?? 5) * 10,
+            targetUtilizationPercent: config.provisioned?.autoScaling?.targetUtilizationPercent ?? 70
           }
+        }
         : undefined,
       tableClass: config.tableClass ?? 'standard',
       pointInTimeRecovery: config.pointInTimeRecovery ?? false,
@@ -424,16 +272,16 @@ export class DynamoDbTableComponentConfigBuilder extends ConfigBuilder<DynamoDbT
         nonKeyAttributes: index.nonKeyAttributes ?? [],
         provisioned: index.provisioned
           ? {
-              readCapacity: index.provisioned.readCapacity,
-              writeCapacity: index.provisioned.writeCapacity,
-              autoScaling: {
-                minReadCapacity: index.provisioned.autoScaling?.minReadCapacity ?? index.provisioned.readCapacity,
-                maxReadCapacity: index.provisioned.autoScaling?.maxReadCapacity ?? index.provisioned.readCapacity * 10,
-                minWriteCapacity: index.provisioned.autoScaling?.minWriteCapacity ?? index.provisioned.writeCapacity,
-                maxWriteCapacity: index.provisioned.autoScaling?.maxWriteCapacity ?? index.provisioned.writeCapacity * 10,
-                targetUtilizationPercent: index.provisioned.autoScaling?.targetUtilizationPercent ?? 70
-              }
+            readCapacity: index.provisioned.readCapacity,
+            writeCapacity: index.provisioned.writeCapacity,
+            autoScaling: {
+              minReadCapacity: index.provisioned.autoScaling?.minReadCapacity ?? index.provisioned.readCapacity,
+              maxReadCapacity: index.provisioned.autoScaling?.maxReadCapacity ?? index.provisioned.readCapacity * 10,
+              minWriteCapacity: index.provisioned.autoScaling?.minWriteCapacity ?? index.provisioned.writeCapacity,
+              maxWriteCapacity: index.provisioned.autoScaling?.maxWriteCapacity ?? index.provisioned.writeCapacity * 10,
+              targetUtilizationPercent: index.provisioned.autoScaling?.targetUtilizationPercent ?? 70
             }
+          }
           : undefined
       })),
       localSecondaryIndexes: (config.localSecondaryIndexes ?? []).map(index => ({

@@ -1,7 +1,7 @@
 import {
   DynamoDbTableComponentConfigBuilder,
   DynamoDbTableConfig
-} from '../dynamodb-table.builder.js';
+} from '../src/dynamodb-table.builder.js';
 import { ComponentContext, ComponentSpec } from '../../../platform/contracts/component-interfaces.js';
 
 const createMockContext = (framework: string = 'commercial'): ComponentContext => ({
