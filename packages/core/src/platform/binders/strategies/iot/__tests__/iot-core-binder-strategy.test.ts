@@ -2,9 +2,9 @@
  * Path: packages/core/src/platform/binders/strategies/iot/__tests__/iot-core-binder-strategy.test.ts
  */
 
-import { IoTCoreBinderStrategy } from '../iot-core-binder-strategy.ts';
-import type { BindingContext } from '../../../binding-context.ts';
-import type { ComponentBinding } from '../../../component-binding.ts';
+import { IoTCoreBinderStrategy } from '../iot-core-binder-strategy.js';
+import type { BindingContext } from '../../../binding-context.js';
+import type { ComponentBinding } from '../../../component-binding.js';
 
 class MockComponent {
   public env: Record<string, string> = {};

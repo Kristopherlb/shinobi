@@ -18,7 +18,7 @@ import {
   CloudFrontMonitoringConfig,
   CloudFrontXRayTracingConfig,
   CloudFrontObservabilityConfig
-} from './cloudfront-distribution.builder.ts';
+} from './cloudfront-distribution.builder.js';
 
 /**
  * CloudFrontDistributionComponent orchestrates the full lifecycle of a CloudFront distribution

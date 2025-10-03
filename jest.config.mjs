@@ -31,7 +31,6 @@ export default {
   },
   transformIgnorePatterns: ['node_modules/(?!(uuid|@aws-sdk)/)'],
   moduleFileExtensions: ['ts', 'tsx', 'js', 'jsx', 'mjs', 'json', 'node'],
-  resolver: path.join(__dirname, 'tools/jest-resolver.cjs'),
   modulePathIgnorePatterns: ['[\\\\/]dist[\\\\/]', '<rootDir>/tmp/', '<rootDir>/tmp-shinobi/'],
   watchPathIgnorePatterns: ['[\\\\/]dist[\\\\/]', '<rootDir>/tmp/', '<rootDir>/tmp-shinobi/'],
   moduleNameMapper: {

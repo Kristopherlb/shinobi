@@ -5,10 +5,10 @@
 
 import AjvImport, { type Ajv as AjvInstance, type ErrorObject } from 'ajv';
 import addFormatsImport from 'ajv-formats';
-import { Logger } from '../platform/logger/src/index.ts';
-import { ManifestSchemaComposer } from './manifest-schema-composer.ts';
-import { SchemaErrorFormatter } from './schema-error-formatter.ts';
-import { withPerformanceTiming } from './performance-metrics.ts';
+import { Logger } from '../platform/logger/src/index.js';
+import { ManifestSchemaComposer } from './manifest-schema-composer.js';
+import { SchemaErrorFormatter } from './schema-error-formatter.js';
+import { withPerformanceTiming } from './performance-metrics.js';
 
 export interface EnhancedSchemaValidatorDependencies {
   logger: Logger;
@@ -266,10 +266,14 @@ export class EnhancedSchemaValidator {
     // Allow additional properties so tests that use alternative shapes (e.g., ami object) don't fail on unknowns
     schemaCopy.additionalProperties = true;
 
-    const tempSchema = {
+    const tempSchema: Record<string, any> = {
       type: 'object',
       ...schemaCopy
     };
+
+    if (componentSchemaInfo.definitions && Object.keys(componentSchemaInfo.definitions).length > 0) {
+      tempSchema.$defs = JSON.parse(JSON.stringify(componentSchemaInfo.definitions));
+    }
 
     const validate = this.ajv.compile(tempSchema);
     const valid = validate(component.config);

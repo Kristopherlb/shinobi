@@ -1,6 +1,6 @@
 import { Logger } from '@platform/logger';
-import { ComponentContext, ComponentSpec } from '../../contracts/component-interfaces.ts';
-import { GovernanceMetadata } from '../governance/index.ts';
+import { ComponentContext, ComponentSpec } from '../../contracts/component-interfaces.js';
+import { GovernanceMetadata } from '../governance/index.js';
 
 export interface LoggingContext {
   component: ComponentSpec;

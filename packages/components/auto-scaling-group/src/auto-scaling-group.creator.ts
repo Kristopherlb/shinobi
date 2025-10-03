@@ -11,11 +11,11 @@ import {
   ComponentContext,
   IComponentCreator
 } from '@shinobi/core';
-import { AutoScalingGroupComponent } from './auto-scaling-group.component.ts';
+import { AutoScalingGroupComponent } from './auto-scaling-group.component.js';
 import {
   AutoScalingGroupConfig,
   AUTO_SCALING_GROUP_CONFIG_SCHEMA
-} from './auto-scaling-group.builder.ts';
+} from './auto-scaling-group.builder.js';
 
 /**
  * Creator class for AutoScalingGroupComponent component

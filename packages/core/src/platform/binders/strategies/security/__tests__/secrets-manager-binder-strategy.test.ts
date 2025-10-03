@@ -2,9 +2,9 @@
  * Path: packages/core/src/platform/binders/strategies/security/__tests__/secrets-manager-binder-strategy.test.ts
  */
 
-import { SecretsManagerBinderStrategy } from '../secrets-manager-binder-strategy.ts';
-import type { BindingContext } from '../../../binding-context.ts';
-import type { ComponentBinding } from '../../../component-binding.ts';
+import { SecretsManagerBinderStrategy } from '../secrets-manager-binder-strategy.js';
+import type { BindingContext } from '../../../binding-context.js';
+import type { ComponentBinding } from '../../../component-binding.js';
 
 class MockComponent {
   public env: Record<string, string> = {};

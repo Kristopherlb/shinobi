@@ -1,1 +1,1 @@
-export * from './performance.service.ts';
+export * from './performance.service.js';

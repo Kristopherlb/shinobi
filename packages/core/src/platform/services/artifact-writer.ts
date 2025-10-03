@@ -15,8 +15,8 @@ import {
   ComponentPlanArtifact,
   LogicalIdMapping,
   MigrationReport
-} from '../contracts/artifacts.ts';
-import { ArtifactSerializerFactory } from './artifact-serializer.ts';
+} from '../contracts/artifacts.js';
+import { ArtifactSerializerFactory } from './artifact-serializer.js';
 
 export class StandardArtifactWriter implements ArtifactWriter {
   private serializer = ArtifactSerializerFactory.create('json');

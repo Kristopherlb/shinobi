@@ -2,9 +2,9 @@
  * Path: packages/core/src/platform/binders/strategies/messaging/__tests__/eventbridge-binder-strategy.test.ts
  */
 
-import { EventBridgeBinderStrategy } from '../eventbridge-binder-strategy.ts';
-import type { BindingContext } from '../../../binding-context.ts';
-import type { ComponentBinding } from '../../../component-binding.ts';
+import { EventBridgeBinderStrategy } from '../eventbridge-binder-strategy.js';
+import type { BindingContext } from '../../../binding-context.js';
+import type { ComponentBinding } from '../../../component-binding.js';
 
 class MockComponent {
   public env: Record<string, string> = {};

@@ -2,21 +2,21 @@
 // Observability binder strategy that integrates with the existing binder system
 
 import { PolicyStatement } from 'aws-cdk-lib/aws-iam';
-import { EnhancedBinderStrategy } from '../enhanced-binder-strategy.ts';
+import { EnhancedBinderStrategy } from '../enhanced-binder-strategy.js';
 import {
   EnhancedBindingContext,
   EnhancedBindingResult,
   Capability,
   ComplianceFramework
-} from '../bindings.ts';
+} from '../bindings.js';
 import {
   ObservabilityConfig,
   ObservabilityBindingResult,
   ComponentObservabilityCapability
-} from './observability-types.ts';
-import type { ComponentTelemetryDirectives } from '../../observability/src/index.ts';
-import { ObservabilityConfigFactory } from './observability-config-factory.ts';
-import { BaseComponentObservability } from './base-component-observability.ts';
+} from './observability-types.js';
+import type { ComponentTelemetryDirectives } from '../../observability/src/index.js';
+import { ObservabilityConfigFactory } from './observability-config-factory.js';
+import { BaseComponentObservability } from './base-component-observability.js';
 
 export class ObservabilityBinderStrategy extends EnhancedBinderStrategy {
   private observabilityConfig: ObservabilityConfig;
@@ -128,8 +128,8 @@ export class ObservabilityBinderStrategy extends EnhancedBinderStrategy {
       return undefined;
     }
 
-    const metricMap = new Map<string, ComponentTelemetryDirectives['metrics'][number]>();
-    const alarmMap = new Map<string, ComponentTelemetryDirectives['alarms'][number]>();
+    const metricMap = new Map<string, NonNullable<ComponentTelemetryDirectives['metrics']>[number]>();
+    const alarmMap = new Map<string, NonNullable<ComponentTelemetryDirectives['alarms']>[number]>();
     const dashboards: ComponentTelemetryDirectives['dashboards'] = [];
     const custom: Record<string, any> = {};
 

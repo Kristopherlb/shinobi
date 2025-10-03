@@ -3,14 +3,14 @@
  * Core orchestrator for translating validated configuration into CDK constructs
  */
 
-import { Logger } from '../core-engine/logger.ts';
-import { ComponentFactoryBuilder } from '../platform/contracts/components/component-factory.ts';
-import { IComponent } from '../platform/contracts/index.ts';
-import { ComponentContext as FactoryComponentContext } from '../platform/contracts/components/component-context.ts';
-import { ComprehensiveBinderRegistry } from '../platform/binders/registry/comprehensive-binder-registry.ts';
-import { ComponentBinding } from '../platform/binders/component-binding.ts';
-import { BindingContext as PlatformBindingContext } from '../platform/binders/binding-context.ts';
-import { Component } from '../platform/contracts/component.ts';
+import { Logger } from '../core-engine/logger.js';
+import { ComponentFactoryBuilder } from '../platform/contracts/components/component-factory.js';
+import { IComponent } from '../platform/contracts/index.js';
+import { ComponentContext as FactoryComponentContext } from '../platform/contracts/components/component-context.js';
+import { ComprehensiveBinderRegistry } from '../platform/binders/registry/comprehensive-binder-registry.js';
+import { ComponentBinding } from '../platform/binders/component-binding.js';
+import { BindingContext as PlatformBindingContext } from '../platform/binders/binding-context.js';
+import { Component } from '../platform/contracts/component.js';
 import * as cdk from 'aws-cdk-lib';
 import * as path from 'path';
 import * as fs from 'fs';

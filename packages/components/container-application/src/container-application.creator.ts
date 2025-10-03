@@ -4,11 +4,11 @@ import {
   ComponentSpec,
   IComponentCreator
 } from '@shinobi/core';
-import { ContainerApplicationComponent } from './container-application.component.ts';
+import { ContainerApplicationComponent } from './container-application.component.js';
 import {
   ContainerApplicationConfig,
   CONTAINER_APPLICATION_CONFIG_SCHEMA
-} from './container-application.builder.ts';
+} from './container-application.builder.js';
 
 export class ContainerApplicationComponentCreator implements IComponentCreator {
   public readonly componentType = 'container-application';

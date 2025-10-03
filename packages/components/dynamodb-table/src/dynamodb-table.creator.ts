@@ -10,9 +10,9 @@ import {
   ComponentSpec,
   ComponentContext,
   IComponentCreator
-} from '../../platform/contracts/component-interfaces.ts';
-import { DynamoDbTableComponent } from './dynamodb-table.component.ts';
-import { DynamoDbTableConfig, DYNAMODB_TABLE_CONFIG_SCHEMA } from './dynamodb-table.builder.ts';
+} from '../../platform/contracts/component-interfaces.js';
+import { DynamoDbTableComponent } from './dynamodb-table.component.js';
+import { DynamoDbTableConfig, DYNAMODB_TABLE_CONFIG_SCHEMA } from './dynamodb-table.builder.js';
 
 /**
  * Creator class for DynamoDbTableComponent component

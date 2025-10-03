@@ -3,7 +3,7 @@
  * Implementation interfaces for the trigger system defined in the Platform Binding & Trigger Specification v1.0
  */
 
-import { Component } from './component.ts';
+import { Component } from './component.js';
 import { 
   TriggerDirective, 
   TriggerContext, 
@@ -11,7 +11,7 @@ import {
   ITriggerStrategy,
   TriggerCompatibilityEntry,
   AccessLevel 
-} from './platform-binding-trigger-spec.ts';
+} from './platform-binding-trigger-spec.js';
 
 /**
  * Abstract base class for trigger strategies

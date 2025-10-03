@@ -2,8 +2,8 @@
  * Path: packages/core/src/platform/contracts/binders/__tests__/lambda-binder-strategy.test.ts
  */
 
-import { LambdaBinderStrategy } from '../lambda-binder-strategy.ts';
-import type { EnhancedBindingContext } from '../../bindings.ts';
+import { LambdaBinderStrategy } from '../lambda-binder-strategy.js';
+import type { EnhancedBindingContext } from '../../bindings.js';
 
 class MockComponent {
   public spec = { name: 'lambda' } as any;

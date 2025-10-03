@@ -4,22 +4,22 @@
  */
 
 import { createHash } from 'crypto';
-import { EnhancedBinderStrategy } from './enhanced-binder-strategy.ts';
+import { EnhancedBinderStrategy } from './enhanced-binder-strategy.js';
 import {
   EnhancedBindingContext,
   EnhancedBindingResult,
   BindingMetadata,
   Capability
-} from './bindings.ts';
-import { BindingCache } from './performance/binding-cache.ts';
-import { BindingMetricsCollector } from './performance/binding-metrics-collector.ts';
-import { BindingBenchmark } from './performance/binding-benchmark.ts';
-import { ApiGatewayBinderStrategy } from './binders/api-gateway-binder-strategy.ts';
-import { CacheBinderStrategy } from './binders/cache-binder-strategy.ts';
-import { DatabaseBinderStrategy } from './binders/database-binder-strategy.ts';
-import { LambdaBinderStrategy } from './binders/lambda-binder-strategy.ts';
-import { QueueBinderStrategy } from './binders/queue-binder-strategy.ts';
-import { StorageBinderStrategy } from './binders/storage-binder-strategy.ts';
+} from './bindings.js';
+import { BindingCache } from './performance/binding-cache.js';
+import { BindingMetricsCollector } from './performance/binding-metrics-collector.js';
+import { BindingBenchmark } from './performance/binding-benchmark.js';
+import { ApiGatewayBinderStrategy } from './binders/api-gateway-binder-strategy.js';
+import { CacheBinderStrategy } from './binders/cache-binder-strategy.js';
+import { DatabaseBinderStrategy } from './binders/database-binder-strategy.js';
+import { LambdaBinderStrategy } from './binders/lambda-binder-strategy.js';
+import { QueueBinderStrategy } from './binders/queue-binder-strategy.js';
+import { StorageBinderStrategy } from './binders/storage-binder-strategy.js';
 
 // Logger interface for structured logging
 interface Logger {

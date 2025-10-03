@@ -1,30 +1,30 @@
 // Export platform contracts first (highest priority)
-export * from './platform/contracts/index.ts';
+export * from './platform/contracts/index.js';
 
 // Export platform services
-export * from './platform/services.ts';
+export * from './platform/services.js';
 
 // Export core services (avoiding conflicts with contracts)
-export * from './services/schema-validator.ts';
-export * from './services/reference-validator.ts';
-export * from './services/manifest-parser.ts';
-export * from './services/context-hydrator.ts';
-export * from './services/validation-orchestrator.ts';
-export * from './services/config-loader.ts';
-export * from './services/file-discovery.ts';
-export * from './services/plan-output-formatter.ts';
-export * from './services/schema-manager.ts';
+export * from './services/schema-validator.js';
+export * from './services/reference-validator.js';
+export * from './services/manifest-parser.js';
+export * from './services/context-hydrator.js';
+export * from './services/validation-orchestrator.js';
+export * from './services/config-loader.js';
+export * from './services/file-discovery.js';
+export * from './services/plan-output-formatter.js';
+export * from './services/schema-manager.js';
 
 // Export other core modules
-export * from './resolver/index.ts';
+export * from './resolver/index.js';
 
 // Export core engine (including Logger) - avoid conflicts with resolver
-export { Logger, LogLevel } from './core-engine/logger.ts';
-export type { LogEntry } from './core-engine/logger.ts';
+export { Logger, LogLevel } from './core-engine/logger.js';
+export type { LogEntry } from './core-engine/logger.js';
 
 // Export migration (avoiding conflicts with contracts)
-export * from './migration/migration-engine.ts';
-export * from './migration/cloudformation-analyzer.ts';
-export * from './migration/resource-mapper.ts';
-export * from './migration/migration-reporter.ts';
+export * from './migration/migration-engine.js';
+export * from './migration/cloudformation-analyzer.js';
+export * from './migration/resource-mapper.js';
+export * from './migration/migration-reporter.js';
 // add other re-exports as needed

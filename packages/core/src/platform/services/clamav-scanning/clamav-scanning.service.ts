@@ -13,7 +13,7 @@ import * as events_targets from 'aws-cdk-lib/aws-events-targets';
 import * as iam from 'aws-cdk-lib/aws-iam';
 import * as cdk from 'aws-cdk-lib';
 import { Construct } from 'constructs';
-import { ComponentContext } from '../../contracts/component-interfaces.ts';
+import { ComponentContext } from '../../contracts/component-interfaces.js';
 
 export interface ClamAvScanningConfig {
   enabled: boolean;

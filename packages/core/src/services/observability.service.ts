@@ -21,11 +21,11 @@ import {
   IPlatformService,
   PlatformServiceContext,
   PlatformServiceResult
-} from '../platform/contracts/platform-services.ts';
-import { BaseComponent } from '../platform/contracts/component.ts';
+} from '../platform/contracts/platform-services.js';
+import { BaseComponent } from '../platform/contracts/component.js';
 import * as cloudwatch from 'aws-cdk-lib/aws-cloudwatch';
 import * as cdk from 'aws-cdk-lib';
-import { withPerformanceTiming } from './performance-metrics.ts';
+import { withPerformanceTiming } from './performance-metrics.js';
 
 // External observability handlers (with fallback to local implementations)
 let externalHandlers: any = null;

@@ -10,7 +10,7 @@
  * - Test results and coverage
  */
 
-export * from './deployment-bundle-pipeline.component.ts';
-export * from './deployment-bundle-pipeline.builder.ts';
-export * from './deployment-bundle-pipeline.creator.ts';
-export * from './types.ts';
+export * from './deployment-bundle-pipeline.component.js';
+export * from './deployment-bundle-pipeline.builder.js';
+export * from './deployment-bundle-pipeline.creator.js';
+export * from './types.js';

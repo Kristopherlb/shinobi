@@ -12,8 +12,8 @@ import * as cdk from 'aws-cdk-lib';
 import { BaseComponent } from '@platform/core-engine';
 import { ComponentContext, ComponentSpec } from '@platform/contracts';
 // import { applyComplianceTags } from '@platform/tagging-service';
-import { DaggerConfig, DaggerOutputs, DaggerEnginePoolProps } from './types.ts';
-import { DaggerConfigBuilder } from './dagger-engine-pool.builder.ts';
+import { DaggerConfig, DaggerOutputs, DaggerEnginePoolProps } from './types.js';
+import { DaggerConfigBuilder } from './dagger-engine-pool.builder.js';
 
 /**
  * DaggerEnginePool: provisions a private, FIPS/STIG-friendly fleet that exposes a remote Dagger engine via mTLS.

@@ -20,7 +20,7 @@ import {
 import {
   AutoScalingGroupConfig,
   AutoScalingGroupComponentConfigBuilder
-} from './auto-scaling-group.builder.ts';
+} from './auto-scaling-group.builder.js';
 
 /**
  * Auto Scaling Group Component implementing Component API Contract v1.0

@@ -2,9 +2,9 @@
  * Path: packages/core/src/platform/binders/strategies/mobile/__tests__/amplify-binder-strategy.test.ts
  */
 
-import { AmplifyBinderStrategy } from '../amplify-binder-strategy.ts';
-import type { BindingContext } from '../../../binding-context.ts';
-import type { ComponentBinding } from '../../../component-binding.ts';
+import { AmplifyBinderStrategy } from '../amplify-binder-strategy.js';
+import type { BindingContext } from '../../../binding-context.js';
+import type { ComponentBinding } from '../../../component-binding.js';
 
 class MockComponent {
   public env: Record<string, string> = {};

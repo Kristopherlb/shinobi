@@ -1,1 +1,1 @@
-export * from './feature-flag.service.ts';
+export * from './feature-flag.service.js';

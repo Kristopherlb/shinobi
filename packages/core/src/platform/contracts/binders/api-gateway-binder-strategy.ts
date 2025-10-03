@@ -5,15 +5,15 @@
 
 import * as iam from 'aws-cdk-lib/aws-iam';
 import * as apigateway from 'aws-cdk-lib/aws-apigateway';
-import { EnhancedBinderStrategy } from '../enhanced-binder-strategy.ts';
+import { EnhancedBinderStrategy } from '../enhanced-binder-strategy.js';
 import {
   EnhancedBindingContext,
   EnhancedBindingResult,
   IamPolicy,
   SecurityGroupRule,
   ComplianceAction
-} from '../bindings.ts';
-import { validateOptions } from './binding-options.ts';
+} from '../bindings.js';
+import { validateOptions } from './binding-options.js';
 
 /**
  * API Gateway binder strategy for API Gateway integrations

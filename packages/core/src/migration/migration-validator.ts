@@ -3,8 +3,8 @@
  * Phase 4: Validates migration and compares templates for zero-diff guarantee
  */
 
-import { Logger } from '../core-engine/logger.ts';
-import { MigrationOptions } from './migration-engine.ts';
+import { Logger } from '../core-engine/logger.js';
+import { MigrationOptions } from './migration-engine.js';
 import { execSync } from 'child_process';
 import * as fs from 'fs';
 import * as path from 'path';

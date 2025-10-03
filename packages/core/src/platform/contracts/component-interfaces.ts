@@ -6,12 +6,7 @@
 import { Construct } from 'constructs';
 import type { IConstruct } from 'constructs';
 import type { IVpc } from 'aws-cdk-lib/aws-ec2';
-import type {
-  ComponentContext as BaseComponentContext,
-  ComponentSpec as BaseComponentSpec,
-  ComponentCapabilities as BaseComponentCapabilities
-} from '@platform/contracts';
-import type { BindingContext, BindingResult, IBinderStrategy } from './platform-binding-trigger-spec.ts';
+import type { BindingContext, BindingResult, IBinderStrategy } from './platform-binding-trigger-spec.js';
 
 // Re-export CDK types for convenience
 export { Construct };
@@ -24,7 +19,13 @@ export type { BindingContext, BindingResult, IBinderStrategy };
 /**
  * Component specification interface
  */
-export interface ComponentSpec extends BaseComponentSpec {
+export interface ComponentSpec {
+  type: string;
+  name: string;
+  config: any;
+  binds?: any[];
+  triggers?: any[];
+  policy?: any;
   labels?: Record<string, string>;
   overrides?: Record<string, any>;
 }
@@ -32,7 +33,9 @@ export interface ComponentSpec extends BaseComponentSpec {
 /**
  * Component capabilities interface
  */
-export interface ComponentCapabilities extends BaseComponentCapabilities {}
+export interface ComponentCapabilities {
+  [key: string]: any;
+}
 
 /**
  * Feature flag provider reference configuration captured from manifests/config builders.
@@ -59,14 +62,26 @@ export interface FeatureFlagRuntimeConfiguration {
 /**
  * Component context interface with strong CDK typing
  */
-type BaseObservabilityContext = NonNullable<BaseComponentContext['observability']>;
-
-export interface ComponentContext
-  extends Omit<BaseComponentContext, 'scope' | 'vpc' | 'observability' | 'tags'> {
+export interface ComponentContext {
+  serviceName: string;
+  service?: string;
+  environment: string;
+  complianceFramework: 'commercial' | 'fedramp-moderate' | 'fedramp-high';
+  compliance?: string;
+  owner?: string;
+  accountId?: string;
+  account?: string;
+  region?: string;
   scope: Construct;
   vpc?: IVpc;
   serviceLabels?: Record<string, string>;
-  observability?: BaseObservabilityContext & {
+  observability?: {
+    collectorEndpoint?: string;
+    adotLayerArn?: string;
+    adotLayerArnMap?: Record<string, string>;
+    enableTracing?: boolean;
+    enableMetrics?: boolean;
+    enableLogs?: boolean;
     tracesSamplingRate?: number;
     metricsIntervalSeconds?: number;
     logsRetentionDays?: number;
@@ -92,9 +107,6 @@ export interface ComponentContext
   };
   featureFlags?: FeatureFlagRuntimeConfiguration;
 }
-
-
-// BindingContext is now imported from platform-binding-trigger-spec
 
 /**
  * Core component interface - The Public Contract
@@ -169,4 +181,4 @@ export interface IComponentFactory {
 }
 
 // Export base component classes and interfaces
-export * from './component.ts';
+export * from './component.js';

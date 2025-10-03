@@ -3,9 +3,9 @@
  * Phase 3: Generates logical ID mapping to preserve CloudFormation resource state
  */
 
-import { Logger } from '../core-engine/logger.ts';
-import { StackAnalysisResult } from './cloudformation-analyzer.ts';
-import { ResourceMappingResult } from './resource-mapper.ts';
+import { Logger } from '../core-engine/logger.js';
+import { StackAnalysisResult } from './cloudformation-analyzer.js';
+import { ResourceMappingResult } from './resource-mapper.js';
 
 export interface LogicalIdPreservationMapping {
   originalId: string;

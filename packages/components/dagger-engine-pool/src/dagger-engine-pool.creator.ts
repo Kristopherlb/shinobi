@@ -1,6 +1,6 @@
 import { ComponentContext, ComponentSpec, IComponentCreator } from '@platform/contracts';
-import { DaggerEnginePool } from './dagger-engine-pool.component.ts';
-import { DaggerEnginePoolProps } from './types.ts';
+import { DaggerEnginePool } from './dagger-engine-pool.component.js';
+import { DaggerEnginePoolProps } from './types.js';
 
 /**
  * Factory class for creating DaggerEnginePool component instances.

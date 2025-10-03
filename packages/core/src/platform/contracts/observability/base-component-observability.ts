@@ -3,16 +3,16 @@
 
 import { Construct } from 'constructs';
 import { PolicyStatement, Effect } from 'aws-cdk-lib/aws-iam';
-import { ComplianceFramework } from '../bindings.ts';
+import { ComplianceFramework } from '../bindings.js';
 import {
   ObservabilityConfig,
   ObservabilityBindingResult,
   ComponentObservabilityCapability
-} from './observability-types.ts';
-import { ObservabilityConfigFactory } from './observability-config-factory.ts';
-import { LambdaObservabilityStrategy } from './strategies/lambda-observability-strategy.ts';
-import { ContainerObservabilityStrategy } from './strategies/container-observability-strategy.ts';
-import { VMObservabilityStrategy } from './strategies/vm-observability-strategy.ts';
+} from './observability-types.js';
+import { ObservabilityConfigFactory } from './observability-config-factory.js';
+import { LambdaObservabilityStrategy } from './strategies/lambda-observability-strategy.js';
+import { ContainerObservabilityStrategy } from './strategies/container-observability-strategy.js';
+import { VMObservabilityStrategy } from './strategies/vm-observability-strategy.js';
 
 export interface BaseComponentObservabilityContext {
   componentName: string;

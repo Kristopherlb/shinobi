@@ -17,7 +17,7 @@ import {
 import {
   ComponentContext,
   FeatureFlagProviderReference
-} from '../../contracts/component-interfaces.ts';
+} from '../../contracts/component-interfaces.js';
 
 export type FeatureFlagEvaluationContext = EvaluationContext;
 

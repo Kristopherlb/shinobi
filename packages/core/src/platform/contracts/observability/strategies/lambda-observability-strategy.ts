@@ -5,13 +5,13 @@ import { PolicyStatement, Effect } from 'aws-cdk-lib/aws-iam';
 import { LogGroup, RetentionDays } from 'aws-cdk-lib/aws-logs';
 import { Function } from 'aws-cdk-lib/aws-lambda';
 import { RemovalPolicy } from 'aws-cdk-lib';
-import { ComplianceFramework } from '../../bindings.ts';
+import { ComplianceFramework } from '../../bindings.js';
 import {
   ObservabilityConfig,
   ObservabilityBindingResult,
   ComponentObservabilityCapability
-} from '../observability-types.ts';
-import { ObservabilityConfigFactory } from '../observability-config-factory.ts';
+} from '../observability-types.js';
+import { ObservabilityConfigFactory } from '../observability-config-factory.js';
 
 export interface LambdaObservabilityContext {
   function: Function;

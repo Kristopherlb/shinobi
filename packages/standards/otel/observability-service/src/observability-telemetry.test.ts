@@ -7,7 +7,7 @@
 
 import * as cdk from 'aws-cdk-lib';
 import { Template } from 'aws-cdk-lib/assertions';
-import { ObservabilityService } from './observability.service.ts';
+import { ObservabilityService } from './observability.service.js';
 import { BaseComponent, ComponentContext, ComponentSpec } from '@shinobi/core';
 import { PlatformServiceContext } from '@shinobi/core/platform-services';
 import type { ComponentCapabilities } from '@shinobi/core/platform/contracts/component-interfaces.ts';

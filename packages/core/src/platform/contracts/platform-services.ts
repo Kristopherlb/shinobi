@@ -6,7 +6,7 @@
  * concerns like observability, security scanning, cost management, etc.
  */
 
-import type { BaseComponent } from './component.ts';
+import type { BaseComponent } from './component.js';
 
 /**
  * Standard interface for all platform services that operate on components

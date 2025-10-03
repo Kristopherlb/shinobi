@@ -1,4 +1,4 @@
-import { Logger } from '../platform/logger/src/index.ts';
+import { Logger } from '../platform/logger/src/index.js';
 import * as fs from 'fs/promises';
 import * as path from 'path';
 import { fileURLToPath } from 'node:url';

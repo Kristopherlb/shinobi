@@ -5,11 +5,11 @@
  */
 import AjvImport, { type Ajv as AjvInstance, type ErrorObject } from 'ajv';
 import addFormatsImport from 'ajv-formats';
-import { Logger } from '../platform/logger/src/index.ts';
-import { SchemaManager } from './schema-manager.ts';
-import { SchemaErrorFormatter } from './schema-error-formatter.ts';
-import { EnhancedSchemaValidator, ValidationResult } from './enhanced-schema-validator.ts';
-import { ManifestSchemaComposer } from './manifest-schema-composer.ts';
+import { Logger } from '../platform/logger/src/index.js';
+import { SchemaManager } from './schema-manager.js';
+import { SchemaErrorFormatter } from './schema-error-formatter.js';
+import { EnhancedSchemaValidator, ValidationResult } from './enhanced-schema-validator.js';
+import { ManifestSchemaComposer } from './manifest-schema-composer.js';
 
 export interface SchemaValidatorDependencies {
   logger: Logger;

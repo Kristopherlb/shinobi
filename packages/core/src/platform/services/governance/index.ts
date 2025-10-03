@@ -1,1 +1,1 @@
-export * from './governance.service.ts';
+export * from './governance.service.js';

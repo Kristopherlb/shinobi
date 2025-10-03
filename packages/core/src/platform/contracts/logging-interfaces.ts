@@ -5,8 +5,8 @@
  * Implements the Handler Pattern for component-specific logging infrastructure.
  */
 
-import { IComponent } from './component-interfaces.ts';
-import { PlatformServiceContext } from './platform-services.ts';
+import { IComponent } from './component-interfaces.js';
+import { PlatformServiceContext } from './platform-services.js';
 
 /**
  * Standard interface for all component-specific logging handlers

@@ -3,7 +3,7 @@
  * Implements comprehensive JSON Schema validation with component-specific configuration validation
  */
 
-import { Logger } from '../platform/logger/src/index.ts';
+import { Logger } from '../platform/logger/src/index.js';
 import * as fs from 'fs/promises';
 import * as path from 'path';
 import { fileURLToPath } from 'node:url';
@@ -73,7 +73,8 @@ export class ManifestSchemaComposer {
       'packages/components/**/Config.schema.json',
       'packages/components/**/src/schema/Config.schema.json'
     ];
-    const files = new Set<string>();
+    const filesByComponent = new Map<string, { path: string; priority: number }>();
+    const fallbackFiles = new Set<string>();
     const repoRoot = path.resolve(moduleDir, '../../../..');
 
     try {
@@ -82,13 +83,33 @@ export class ManifestSchemaComposer {
           if (file.includes('/dist/')) {
             continue;
           }
-          files.add(file);
+          const componentType = this.deriveComponentTypeFromPath(file);
+          if (!componentType) {
+            fallbackFiles.add(file);
+            continue;
+          }
+
+          const priority = this.getSchemaSelectionPriority(file);
+          const existing = filesByComponent.get(componentType);
+          if (!existing || priority > existing.priority || (priority === existing.priority && file.length < existing.path.length)) {
+            filesByComponent.set(componentType, { path: file, priority });
+            if (existing && existing.path !== file) {
+              this.dependencies.logger.debug(`Using higher priority schema for component "${componentType}": ${file} (replaces ${existing.path})`);
+            }
+          } else {
+            this.dependencies.logger.debug(`Skipping lower priority schema for component "${componentType}": ${file}`);
+          }
         }
       }
 
-      this.dependencies.logger.debug(`Found ${files.size} component schema files`);
+      const selectedFiles = new Set<string>([
+        ...Array.from(filesByComponent.values(), ({ path }) => path),
+        ...fallbackFiles
+      ]);
 
-      for (const schemaFile of Array.from(files)) {
+      this.dependencies.logger.debug(`Found ${selectedFiles.size} component schema files after prioritising source schemas`);
+
+      for (const schemaFile of Array.from(selectedFiles)) {
         await this.loadComponentSchema(schemaFile);
       }
 
@@ -126,11 +147,17 @@ export class ManifestSchemaComposer {
 
       const defKey = `component.${componentType}.config`;
       const normalizedSchema = JSON.parse(JSON.stringify(schema));
-      normalizedSchema.$id = `#/$defs/${defKey}`;
+      delete normalizedSchema.$id;
 
       let extractedDefinitions: Record<string, any> | undefined;
       if (normalizedSchema.definitions) {
-        extractedDefinitions = JSON.parse(JSON.stringify(normalizedSchema.definitions));
+        extractedDefinitions = {};
+        for (const [definitionName, definitionSchema] of Object.entries(normalizedSchema.definitions)) {
+          const definitionKey = this.buildDefinitionKey(componentType, definitionName);
+          const clonedDefinition = JSON.parse(JSON.stringify(definitionSchema));
+          this.rewriteSchemaRefs(clonedDefinition, componentType);
+          extractedDefinitions[definitionKey] = clonedDefinition;
+        }
         delete normalizedSchema.definitions;
       }
 
@@ -148,6 +175,16 @@ export class ManifestSchemaComposer {
     } catch (error) {
       this.dependencies.logger.warn(`Failed to load component schema: ${schemaFilePath}`);
     }
+  }
+
+  private getSchemaSelectionPriority(schemaPath: string): number {
+    if (schemaPath.includes('/src/schema/')) {
+      return 3;
+    }
+    if (schemaPath.includes('/src/')) {
+      return 2;
+    }
+    return 1;
   }
 
   /**
@@ -195,8 +232,7 @@ export class ManifestSchemaComposer {
       schema.$defs[defKey] = info.schema;
 
       if (info.definitions) {
-        for (const [definitionName, definitionSchema] of Object.entries(info.definitions)) {
-          const definitionKey = `component.${componentType}.definition.${definitionName.replace(/[\/#]/g, '.')}`;
+        for (const [definitionKey, definitionSchema] of Object.entries(info.definitions)) {
           schema.$defs[definitionKey] = definitionSchema;
         }
       }
@@ -301,6 +337,10 @@ export class ManifestSchemaComposer {
       componentSchemasLoaded: this.componentSchemas.size,
       componentTypes: Array.from(this.componentSchemas.keys())
     };
+  }
+
+  private buildDefinitionKey(componentType: string, definitionName: string): string {
+    return `component.${componentType}.definition.${definitionName.replace(/[\/#]/g, '.')}`;
   }
 
   private rewriteSchemaRefs(node: any, componentType: string): void {

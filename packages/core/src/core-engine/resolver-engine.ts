@@ -13,14 +13,14 @@ import {
   PlatformServiceContext,
   PlatformServiceRegistry,
   BaseComponent
-} from '../platform/contracts/index.ts';
-import { ComprehensiveBinderRegistry } from '../platform/binders/registry/comprehensive-binder-registry.ts';
-import { ComponentContext as FactoryComponentContext } from '../platform/contracts/components/component-context.ts';
-import { ComponentBinding } from '../platform/binders/component-binding.ts';
-import { BindingContext as PlatformBindingContext } from '../platform/binders/binding-context.ts';
-import { Logger } from './logger.ts';
-import { ComponentFactoryBuilder } from '../platform/contracts/components/component-factory.ts';
-import { ObservabilityService } from '../services/observability.service.ts';
+} from '../platform/contracts/index.js';
+import { ComprehensiveBinderRegistry } from '../platform/binders/registry/comprehensive-binder-registry.js';
+import { ComponentContext as FactoryComponentContext } from '../platform/contracts/components/component-context.js';
+import { ComponentBinding } from '../platform/binders/component-binding.js';
+import { BindingContext as PlatformBindingContext } from '../platform/binders/binding-context.js';
+import { Logger } from './logger.js';
+import { ComponentFactoryBuilder } from '../platform/contracts/components/component-factory.js';
+import { ObservabilityService } from '../services/observability.service.js';
 
 export interface ResolverEngineDependencies {
   logger: Logger;

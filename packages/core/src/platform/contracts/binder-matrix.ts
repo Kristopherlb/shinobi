@@ -9,7 +9,7 @@ import {
   ITriggerStrategy,
   CompatibilityEntry,
   TriggerCompatibilityEntry
-} from './platform-binding-trigger-spec.ts';
+} from './platform-binding-trigger-spec.js';
 
 /**
  * Implementation of the Binder Matrix - Central registry for all supported component interactions

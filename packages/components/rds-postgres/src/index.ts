@@ -1,2 +1,2 @@
-export * from './rds-postgres.ts';
-export * from './rds-postgres.builder.ts';
+export * from './rds-postgres.js';
+export * from './rds-postgres.builder.js';

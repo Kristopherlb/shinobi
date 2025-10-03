@@ -8,7 +8,7 @@ import * as cdk from 'aws-cdk-lib';
 import { IConstruct } from 'constructs';
 import * as fs from 'fs';
 import * as path from 'path';
-import { Logger } from '../logger/src/index.ts';
+import { Logger } from '../logger/src/index.js';
 
 export interface LogicalIdMapEntry {
   originalId: string;

@@ -9,7 +9,7 @@ import {
   EnhancedBindingResult,
   Capability,
   ComplianceAction
-} from './bindings.ts';
+} from './bindings.js';
 
 /**
  * Abstract base class for enhanced binder strategies

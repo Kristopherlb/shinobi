@@ -11,4 +11,4 @@
  * - Comprehensive monitoring and alerting
  */
 
-export * from './lambda-advanced-features.service.ts';
+export * from './lambda-advanced-features.service.js';

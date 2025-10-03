@@ -8,9 +8,9 @@ import {
   EnhancedBindingResult,
   CapabilityData,
   BindingDirective
-} from './enhanced-binding-context.ts';
-import { EnhancedBinderRegistry } from './enhanced-binder-registry.ts';
-import { Component } from './component.ts';
+} from './enhanced-binding-context.js';
+import { EnhancedBinderRegistry } from './enhanced-binder-registry.js';
+import { Component } from './component.js';
 
 /**
  * Integration example for component synthesis process

@@ -1,9 +1,9 @@
 // src/platform/contracts/components/example-s3-bucket-component.ts
 // Example S3 Bucket component implementation
 
-import { BaseComponent } from './base-component.ts';
-import { ComponentContext } from '../component-interfaces.ts';
-import { S3CapabilityData } from '../bindings.ts';
+import { BaseComponent } from './base-component.js';
+import { ComponentContext } from '../component-interfaces.js';
+import { S3CapabilityData } from '../bindings.js';
 
 /**
  * Example S3 Bucket component implementation

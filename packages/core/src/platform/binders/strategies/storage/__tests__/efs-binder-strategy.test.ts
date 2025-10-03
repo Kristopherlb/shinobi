@@ -2,9 +2,9 @@
  * Path: packages/core/src/platform/binders/strategies/storage/__tests__/efs-binder-strategy.test.ts
  */
 
-import { EfsBinderStrategy } from '../efs-binder-strategy.ts';
-import type { BindingContext } from '../../../binding-context.ts';
-import type { ComponentBinding } from '../../../component-binding.ts';
+import { EfsBinderStrategy } from '../efs-binder-strategy.js';
+import type { BindingContext } from '../../../binding-context.js';
+import type { ComponentBinding } from '../../../component-binding.js';
 
 class MockComponent {
   public env: Record<string, string> = {};

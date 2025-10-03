@@ -20,7 +20,7 @@ import {
   ContainerApplicationConfig,
   ApplicationConfig,
   NetworkConfig
-} from './container-application.builder.ts';
+} from './container-application.builder.js';
 
 export class ContainerApplicationComponent extends BaseComponent {
   private config!: ContainerApplicationConfig;

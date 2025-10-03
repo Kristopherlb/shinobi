@@ -7,7 +7,7 @@
 
 import * as cdk from 'aws-cdk-lib';
 import { IConstruct } from 'constructs';
-import { GovernanceMetadata } from '../governance/index.ts';
+import { GovernanceMetadata } from '../governance/index.js';
 
 /**
  * Context information needed for building standard tags

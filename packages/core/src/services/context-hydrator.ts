@@ -2,12 +2,12 @@
  * Context Hydrator Service - Single responsibility for environment resolution
  * Implements Principle 4: Single Responsibility Principle
  */
-import { Logger } from '../platform/logger/src/index.ts';
+import { Logger } from '../platform/logger/src/index.js';
 import * as fs from 'fs/promises';
 import * as path from 'path';
 import * as YAML from 'yaml';
-import { ErrorMessages } from './error-message-utils.ts';
-import { withPerformanceTiming } from './performance-metrics.ts';
+import { ErrorMessages } from './error-message-utils.js';
+import { withPerformanceTiming } from './performance-metrics.js';
 
 export interface ContextHydratorDependencies {
   logger: Logger;

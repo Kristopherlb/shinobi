@@ -4,9 +4,9 @@
  */
 
 import * as cdk from 'aws-cdk-lib';
-import { Logger } from '../logger/src/index.ts';
-import { LogicalIdManager, LogicalIdMap, LogicalIdPreservationAspect } from './logical-id-manager.ts';
-import { ComponentContext } from '../contracts/component-interfaces.ts';
+import { Logger } from '../logger/src/index.js';
+import { LogicalIdManager, LogicalIdMap, LogicalIdPreservationAspect } from './logical-id-manager.js';
+import { ComponentContext } from '../contracts/component-interfaces.js';
 
 export interface PlanningContext {
   stackName: string;

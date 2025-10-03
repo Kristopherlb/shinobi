@@ -3,9 +3,9 @@
  * Handles big data processing bindings for Amazon EMR
  */
 
-import { IBinderStrategy } from '../binder-strategy.ts';
-import { BindingContext } from '../../binding-context.ts';
-import { ComponentBinding } from '../../component-binding.ts';
+import { IBinderStrategy } from '../binder-strategy.js';
+import { BindingContext } from '../../binding-context.js';
+import { ComponentBinding } from '../../component-binding.js';
 
 export class EmrBinderStrategy implements IBinderStrategy {
   readonly supportedCapabilities = ['emr:cluster', 'emr:step', 'emr:notebook'];

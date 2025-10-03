@@ -10,9 +10,9 @@ import {
   ComponentSpec, 
   ComponentContext, 
   IComponentCreator 
-} from '../../platform/contracts/component-interfaces.ts';
-import { CognitoUserPoolComponent } from './cognito-user-pool.component.ts';
-import { CognitoUserPoolConfig, COGNITO_USER_POOL_CONFIG_SCHEMA } from './cognito-user-pool.builder.ts';
+} from '../../platform/contracts/component-interfaces.js';
+import { CognitoUserPoolComponent } from './cognito-user-pool.component.js';
+import { CognitoUserPoolConfig, COGNITO_USER_POOL_CONFIG_SCHEMA } from './cognito-user-pool.builder.js';
 
 /**
  * Creator class for CognitoUserPoolComponent component

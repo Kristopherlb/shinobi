@@ -82,6 +82,12 @@
       "@shinobi/standards-tagging/*": [
         "packages/standards/tagging/src/*"
       ],
+      "@platform/contracts": [
+        "packages/core/src/platform/contracts/index.ts"
+      ],
+      "@platform/contracts/*": [
+        "packages/core/src/platform/contracts/*"
+      ],
       "@platform/logger": [
         "packages/core/src/platform/logger/src/index.ts"
       ],
@@ -90,12 +96,6 @@
       ],
       "@platform/constructs/*": [
         "packages/constructs/*/src"
-      ],
-      "@platform/contracts": [
-        "packages/contracts/src/index.ts"
-      ],
-      "@platform/contracts/*": [
-        "packages/contracts/src/*"
       ],
       "@cdk-lib/*": [
         "packages/constructs/*/src"

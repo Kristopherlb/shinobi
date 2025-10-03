@@ -6,15 +6,15 @@
 import * as iam from 'aws-cdk-lib/aws-iam';
 import * as sqs from 'aws-cdk-lib/aws-sqs';
 import * as sns from 'aws-cdk-lib/aws-sns';
-import { EnhancedBinderStrategy } from '../enhanced-binder-strategy.ts';
-import { validateOptions } from './binding-options.ts';
+import { EnhancedBinderStrategy } from '../enhanced-binder-strategy.js';
+import { validateOptions } from './binding-options.js';
 import {
   EnhancedBindingContext,
   EnhancedBindingResult,
   IamPolicy,
   SecurityGroupRule,
   ComplianceAction
-} from '../bindings.ts';
+} from '../bindings.js';
 
 /**
  * Queue binder strategy for SQS/SNS connections

@@ -1,8 +1,8 @@
 // src/platform/contracts/components/component-registry.ts
 // Component Registry for managing component type mappings
 
-import { IComponent } from '../bindings.ts';
-import { ComponentContext } from './component-context.ts';
+import { IComponent } from '../bindings.js';
+import { ComponentContext } from './component-context.js';
 
 /**
  * Component constructor type

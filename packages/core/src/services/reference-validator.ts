@@ -2,7 +2,7 @@
  * Reference Validator Service - Single responsibility for semantic validation
  * Implements Principle 4: Single Responsibility Principle
  */
-import { Logger } from '../platform/logger/src/index.ts';
+import { Logger } from '../platform/logger/src/index.js';
 
 export interface ReferenceValidatorDependencies {
   logger: Logger;

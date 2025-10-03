@@ -4,7 +4,7 @@
  */
 
 // Export component contracts
-export * from './component.ts';
+export * from './component.js';
 export type {
   ComponentSpec,
   ComponentContext,
@@ -13,29 +13,29 @@ export type {
   IComponentCreator,
   IComponentRegistry,
   IComponentFactory
-} from './component-interfaces.ts';
+} from './component-interfaces.js';
 
 // Export configuration builder contracts
-export * from './config-builder.ts';
+export * from './config-builder.js';
 
 // export binding and trigger specification types
-export * from './bindings.ts';
-export * from './platform-binding-trigger-spec.ts';
+export * from './bindings.js';
+export * from './platform-binding-trigger-spec.js';
 // re-export BindingContext, BindingResult and IBinderStrategy from the spec to avoid duplicate definitions
-export type { BindingContext, BindingResult, IBinderStrategy } from './platform-binding-trigger-spec.ts';
+export type { BindingContext, BindingResult, IBinderStrategy } from './platform-binding-trigger-spec.js';
 
 // Export trigger system interfaces
-export * from './trigger-interfaces.ts';
+export * from './trigger-interfaces.js';
 
 // Export binder matrix implementation
-export * from './binder-matrix.ts';
+export * from './binder-matrix.js';
 
 // Export OpenFeature standard interfaces
-export * from './openfeature-interfaces.ts';
+export * from './openfeature-interfaces.js';
 
 // Export platform services interfaces
-export * from './platform-services.ts';
-export * from './logging-interfaces.ts';
+export * from './platform-services.js';
+export * from './logging-interfaces.js';
 
 // Export artifact contracts
-export * from './artifacts.ts';
+export * from './artifacts.js';

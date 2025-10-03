@@ -2,11 +2,7 @@
   "extends": "../../tsconfig.base.json",
   "compilerOptions": {
     "outDir": "dist",
-    "rootDir": "src",
-    "paths": {
-      "@platform/contracts": ["../contracts/dist/index.js"],
-      "@platform/contracts/*": ["../contracts/dist/*"]
-    }
+    "rootDir": "src"
   },
   "include": [
     "src/**/*"

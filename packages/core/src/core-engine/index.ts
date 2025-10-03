@@ -3,12 +3,12 @@
  * Exports main engine classes and interfaces
  */
 
-export { ResolverEngine } from './resolver-engine.ts';
-export type { ResolverEngineDependencies, SynthesisResult } from './resolver-engine.ts';
-export { ComponentFactoryBuilder } from '../platform/contracts/components/component-factory.ts';
-export { ComponentRegistry } from '../platform/contracts/components/component-registry.ts';
-export { Logger, LogLevel } from './logger.ts';
-export type { LogEntry } from './logger.ts';
+export { ResolverEngine } from './resolver-engine.js';
+export type { ResolverEngineDependencies, SynthesisResult } from './resolver-engine.js';
+export { ComponentFactoryBuilder } from '../platform/contracts/components/component-factory.js';
+export { ComponentRegistry } from '../platform/contracts/components/component-registry.js';
+export { Logger, LogLevel } from './logger.js';
+export type { LogEntry } from './logger.js';
 
 // Re-export contracts for convenience
-export * from '../platform/contracts/index.ts';
+export * from '../platform/contracts/index.js';

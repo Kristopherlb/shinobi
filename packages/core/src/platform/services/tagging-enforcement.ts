@@ -5,8 +5,8 @@
  * across all platform components and resources.
  */
 
-import { ComponentType, ComplianceFramework } from '../contracts/bindings.ts';
-import { ComplianceControlMappingService } from './compliance-control-mapping.ts';
+import { ComponentType, ComplianceFramework } from '../contracts/bindings.js';
+import { ComplianceControlMappingService } from './compliance-control-mapping.js';
 
 // Tagging configuration
 export interface TaggingConfig {

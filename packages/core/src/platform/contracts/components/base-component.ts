@@ -1,9 +1,9 @@
 // src/platform/contracts/components/base-component.ts
 // Abstract base component class for all Shinobi components
 
-import type { IComponent, CapabilityData } from '../bindings.ts';
-import type { ComponentContext } from '../component-interfaces.ts';
-import { ComponentConfigBuilder } from './component-config-builder.ts';
+import type { IComponent, CapabilityData } from '../bindings.js';
+import type { ComponentContext } from '../component-interfaces.js';
+import { ComponentConfigBuilder } from './component-config-builder.js';
 
 /**
  * Abstract base component class

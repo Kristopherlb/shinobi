@@ -7,11 +7,11 @@
 
 import { Construct } from 'constructs';
 import { ComponentContext, ComponentSpec, IComponentCreator } from '@shinobi/core';
-import { ApiGatewayRestComponent } from './api-gateway-rest.component.ts';
+import { ApiGatewayRestComponent } from './api-gateway-rest.component.js';
 import {
   ApiGatewayRestConfig,
   API_GATEWAY_REST_CONFIG_SCHEMA,
-} from './api-gateway-rest.builder.ts';
+} from './api-gateway-rest.builder.js';
 
 /**
  * Creator class for ApiGatewayRestComponent component

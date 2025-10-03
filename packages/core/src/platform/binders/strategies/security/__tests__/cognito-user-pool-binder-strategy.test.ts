@@ -1,4 +1,4 @@
-import { CognitoUserPoolBinderStrategy } from '../cognito-user-pool-binder-strategy.ts';
+import { CognitoUserPoolBinderStrategy } from '../cognito-user-pool-binder-strategy.js';
 
 const createSourceComponent = () => {
   const environments: Record<string, string> = {};

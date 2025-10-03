@@ -1,1 +1,1 @@
-export * from './logging.service.ts';
+export * from './logging.service.js';
