@@ -1,5 +1,5 @@
 import { Client, EvaluationContext, EvaluationDetails, FlagValue, Hook, HookHints, JsonValue, Logger, Provider } from '@openfeature/js-sdk';
-import { ComponentContext, FeatureFlagProviderReference } from '../../contracts/component-interfaces.js';
+import { ComponentContext, FeatureFlagProviderReference } from '../../contracts/component-interfaces.ts';
 export type FeatureFlagEvaluationContext = EvaluationContext;
 export interface FeatureFlagProviderConfig extends FeatureFlagProviderReference {
     providerInstance?: Provider;

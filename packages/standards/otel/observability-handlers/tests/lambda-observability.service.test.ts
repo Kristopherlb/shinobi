@@ -7,8 +7,8 @@
 
 import { App, Stack } from 'aws-cdk-lib';
 import * as lambda from 'aws-cdk-lib/aws-lambda';
-import { LambdaObservabilityService, LambdaObservabilityServiceConfig } from '../src/services/lambda-observability.service.js';
-import { ObservabilityConfig } from '../src/observability-handlers/observability-handler.interface.js';
+import { LambdaObservabilityService, LambdaObservabilityServiceConfig } from '../src/services/lambda-observability.service.ts';
+import { ObservabilityConfig } from '../src/observability-handlers/observability-handler.interface.ts';
 import { PlatformServiceContext } from '@shinobi/core/platform-services';
 
 // Mock BaseComponent for testing

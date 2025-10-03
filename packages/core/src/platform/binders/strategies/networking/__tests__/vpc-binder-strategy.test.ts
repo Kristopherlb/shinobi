@@ -2,9 +2,9 @@
  * Path: packages/core/src/platform/binders/strategies/networking/__tests__/vpc-binder-strategy.test.ts
  */
 
-import { VpcBinderStrategy } from '../vpc-binder-strategy.js';
-import type { BindingContext } from '../../../binding-context.js';
-import type { ComponentBinding } from '../../../component-binding.js';
+import { VpcBinderStrategy } from '../vpc-binder-strategy.ts';
+import type { BindingContext } from '../../../binding-context.ts';
+import type { ComponentBinding } from '../../../component-binding.ts';
 
 class MockComponent {
   public env: Record<string, string> = {};

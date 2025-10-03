@@ -2,9 +2,9 @@
  * Resource Mapper
  * Phase 2: Maps CloudFormation resources to platform components and generates manifest
  */
-import { Logger } from '../core-engine/logger.js';
-import { StackAnalysisResult } from './cloudformation-analyzer.js';
-import { UnmappableResource } from './migration-engine.js';
+import { Logger } from '../core-engine/logger.ts';
+import { StackAnalysisResult } from './cloudformation-analyzer.ts';
+import { UnmappableResource } from './migration-engine.ts';
 export interface ComponentMapping {
     name: string;
     type: string;

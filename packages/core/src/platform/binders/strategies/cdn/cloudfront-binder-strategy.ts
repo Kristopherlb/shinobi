@@ -3,9 +3,9 @@
  * Handles content delivery network bindings for Amazon CloudFront
  */
 
-import { IBinderStrategy } from '../binder-strategy.js';
-import { BindingContext } from '../../binding-context.js';
-import { ComponentBinding } from '../../component-binding.js';
+import { IBinderStrategy } from '../binder-strategy.ts';
+import { BindingContext } from '../../binding-context.ts';
+import { ComponentBinding } from '../../component-binding.ts';
 
 export class CloudFrontBinderStrategy implements IBinderStrategy {
   readonly supportedCapabilities = ['cloudfront:distribution', 'cloudfront:origin', 'cloudfront:cache-policy'];

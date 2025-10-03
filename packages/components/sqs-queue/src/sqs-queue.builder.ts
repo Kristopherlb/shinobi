@@ -1,4 +1,4 @@
-import { SqsQueueComponent } from './sqs-queue.js';
+import { SqsQueueComponent } from './sqs-queue.ts';
 
 export class SqsQueueBuilder {
   build(component: SqsQueueComponent) {

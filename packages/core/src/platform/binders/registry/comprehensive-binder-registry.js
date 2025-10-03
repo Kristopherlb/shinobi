@@ -23,6 +23,7 @@ import { EfsBinderStrategy } from '../strategies/storage/efs-binder-strategy.js'
 import { SecretsManagerBinderStrategy } from '../strategies/security/secrets-manager-binder-strategy.js';
 import { KmsBinderStrategy } from '../strategies/security/kms-binder-strategy.js';
 import { CertificateBinderStrategy } from '../strategies/security/certificate-binder-strategy.js';
+import { CognitoUserPoolBinderStrategy } from '../strategies/security/cognito-user-pool-binder-strategy.js';
 // ML Services
 import { SageMakerBinderStrategy } from '../strategies/ml/sagemaker-binder-strategy.js';
 // Messaging Services
@@ -67,6 +68,7 @@ export class ComprehensiveBinderRegistry {
         this.register('secrets-manager', new SecretsManagerBinderStrategy());
         this.register('kms', new KmsBinderStrategy());
         this.register('certificate:acm', new CertificateBinderStrategy());
+        this.register('cognito-user-pool', new CognitoUserPoolBinderStrategy());
         // ML Services
         this.register('sagemaker', new SageMakerBinderStrategy());
         // Messaging Services
@@ -118,7 +120,8 @@ export class ComprehensiveBinderRegistry {
             ],
             'Security': [
                 'secrets-manager',
-                'kms'
+                'kms',
+                'cognito-user-pool'
             ],
             'ML': [
                 'sagemaker'

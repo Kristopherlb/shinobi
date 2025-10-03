@@ -5,9 +5,9 @@
 
 import { Template, Match } from 'aws-cdk-lib/assertions';
 import { App, Stack } from 'aws-cdk-lib';
-import { IamRoleComponent } from '../src/iam-role.component.js';
-import { IamRoleConfig } from '../src/iam-role.builder.js';
-import { ComponentContext, ComponentSpec } from '../../@shinobi/core/component-interfaces.js';
+import { IamRoleComponent } from '../src/iam-role.component.ts';
+import { IamRoleConfig } from '../src/iam-role.builder.ts';
+import { ComponentContext, ComponentSpec } from '../../@shinobi/core/component-interfaces.ts';
 
 const createMockContext = (
   complianceFramework: 'commercial' | 'fedramp-moderate' | 'fedramp-high' = 'commercial',

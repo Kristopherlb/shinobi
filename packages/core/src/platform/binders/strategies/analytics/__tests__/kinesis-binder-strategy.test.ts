@@ -2,9 +2,9 @@
  * Path: packages/core/src/platform/binders/strategies/analytics/__tests__/kinesis-binder-strategy.test.ts
  */
 
-import { KinesisBinderStrategy } from '../kinesis-binder-strategy.js';
-import type { BindingContext } from '../../../binding-context.js';
-import type { ComponentBinding } from '../../../component-binding.js';
+import { KinesisBinderStrategy } from '../kinesis-binder-strategy.ts';
+import type { BindingContext } from '../../../binding-context.ts';
+import type { ComponentBinding } from '../../../component-binding.ts';
 
 class MockComponent {
   public env: Record<string, string> = {};

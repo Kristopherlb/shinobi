@@ -15,8 +15,8 @@ import {
   BindingContext,
   BindingResult,
   CompatibilityEntry
-} from '../../platform/contracts/platform-binding-trigger-spec.js';
-import { IComponent } from '../../platform/contracts/component-interfaces.js';
+} from '../../platform/contracts/platform-binding-trigger-spec.ts';
+import { IComponent } from '../../platform/contracts/component-interfaces.ts';
 
 /**
  * ComputeToIamRoleBinder

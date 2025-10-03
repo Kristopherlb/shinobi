@@ -5,14 +5,14 @@
  */
 
 // Main component class
-export { IamRoleComponent } from './iam-role.component.js';
+export { IamRoleComponent } from './iam-role.component.ts';
 
 // Configuration builder and interfaces
 export { 
   IamRoleConfig, 
   IamRoleConfigBuilder, 
   IAM_ROLE_CONFIG_SCHEMA 
-} from './iam-role.builder.js';
+} from './iam-role.builder.ts';
 
 // Component creator factory
-export { IamRoleCreator } from './iam-role.creator.js';
+export { IamRoleCreator } from './iam-role.creator.ts';

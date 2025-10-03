@@ -10,9 +10,9 @@ import {
   ComponentSpec, 
   ComponentContext, 
   IComponentCreator 
-} from '../../@shinobi/core/component-interfaces.js';
-import { SageMakerNotebookInstanceComponent } from './sagemaker-notebook-instance.component.js';
-import { SageMakerNotebookInstanceConfig, SAGEMAKER_NOTEBOOK_INSTANCE_CONFIG_SCHEMA } from './sagemaker-notebook-instance.builder.js';
+} from '../../@shinobi/core/component-interfaces.ts';
+import { SageMakerNotebookInstanceComponent } from './sagemaker-notebook-instance.component.ts';
+import { SageMakerNotebookInstanceConfig, SAGEMAKER_NOTEBOOK_INSTANCE_CONFIG_SCHEMA } from './sagemaker-notebook-instance.builder.ts';
 
 /**
  * Creator class for SageMakerNotebookInstanceComponent component

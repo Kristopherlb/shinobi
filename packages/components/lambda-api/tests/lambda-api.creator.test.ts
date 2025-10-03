@@ -1,8 +1,8 @@
 import { Stack } from 'aws-cdk-lib';
 import { ComponentContext, ComponentSpec } from '@shinobi/core';
 
-import { LambdaApiComponentCreator } from '../src/lambda-api.creator.js';
-import { LambdaApiConfig } from '../src/lambda-api.builder.js';
+import { LambdaApiComponentCreator } from '../src/lambda-api.creator.ts';
+import { LambdaApiConfig } from '../src/lambda-api.builder.ts';
 
 const createContext = (): ComponentContext => ({
   serviceName: 'checkout',

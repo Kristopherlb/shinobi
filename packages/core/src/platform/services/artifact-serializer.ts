@@ -8,7 +8,7 @@
 import * as fs from 'fs';
 import * as path from 'path';
 import * as yaml from 'yaml';
-import { BaseArtifact, ArtifactSerializer } from '../contracts/artifacts.js';
+import { BaseArtifact, ArtifactSerializer } from '../contracts/artifacts.ts';
 
 export class JSONArtifactSerializer implements ArtifactSerializer {
   serialize(artifact: BaseArtifact): string {

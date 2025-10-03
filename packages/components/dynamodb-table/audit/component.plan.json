@@ -1,0 +1,6 @@
+{
+  "$schema": "platform://component-plan.schema.json",
+  "version": "1.0.0",
+  "component": "dynamodb-table",
+  "controls": []
+}

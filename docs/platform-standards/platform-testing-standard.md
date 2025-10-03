@@ -272,6 +272,17 @@ AI should self-validate against §15 before submitting tests.
 
 ---
 
+18. Jest Execution Guide (Component Suites)
+
+- Component suites run under Jest's native ESM pipeline via `@swc/jest` (module type `es6`).
+- The shared resolver (`tools/jest-resolver.cjs`) rewrites `*.js` specifiers to sibling `*.ts` sources so tests execute workspace code instead of build outputs.
+- Duplicate haste-map warnings are eliminated by ignoring `dist/`, `tmp/`, and `tmp-shinobi/` directories for module discovery and watch mode.
+- Run targeted suites with `pnpm exec jest --runTestsByPath <path-to-test>`; clear caches using `pnpm exec jest --clearCache` if transforms become stale after refactors.
+- When adding new shared modules, commit both the `.ts` source and matching `.js` ESM build artifacts so published packages remain valid while Jest continues to resolve TypeScript during test runs.
+
+
+---
+
 End of Document
 
 

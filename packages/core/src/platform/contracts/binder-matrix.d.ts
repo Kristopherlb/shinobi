@@ -2,7 +2,7 @@
  * Binder Matrix Implementation
  * Central registry for all supported component interactions (bindings and triggers)
  */
-import { IBinderMatrix, IBinderStrategy, ITriggerStrategy, CompatibilityEntry, TriggerCompatibilityEntry } from './platform-binding-trigger-spec.js';
+import { IBinderMatrix, IBinderStrategy, ITriggerStrategy, CompatibilityEntry, TriggerCompatibilityEntry } from './platform-binding-trigger-spec.ts';
 /**
  * Implementation of the Binder Matrix - Central registry for all supported component interactions
  * Optimized with Map-based lookups for O(1) performance

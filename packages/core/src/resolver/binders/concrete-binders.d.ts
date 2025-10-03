@@ -11,7 +11,7 @@
  * Above: Platform Binders (validation), Core-Engine (generic logic)
  * Below: Direct CDK synthesis
  */
-import { IBinderStrategy, BindingContext, BindingResult } from '../../platform/contracts/platform-binding-trigger-spec.js';
+import { IBinderStrategy, BindingContext, BindingResult } from '../../platform/contracts/platform-binding-trigger-spec.ts';
 /**
  * Enhanced Lambda to SQS binding with enterprise security
  */

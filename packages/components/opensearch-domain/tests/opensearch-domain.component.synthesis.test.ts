@@ -1,8 +1,8 @@
 import { Template, Match } from 'aws-cdk-lib/assertions';
 import { App, Stack } from 'aws-cdk-lib';
-import { OpenSearchDomainComponent } from '../opensearch-domain.component.js';
-import { OpenSearchDomainConfig } from '../opensearch-domain.builder.js';
-import { ComponentContext, ComponentSpec } from '../../../platform/contracts/component-interfaces.js';
+import { OpenSearchDomainComponent } from '../opensearch-domain.component.ts';
+import { OpenSearchDomainConfig } from '../opensearch-domain.builder.ts';
+import { ComponentContext, ComponentSpec } from '../../../platform/contracts/component-interfaces.ts';
 
 const createContext = (framework: string = 'commercial'): ComponentContext => ({
   serviceName: 'search-service',

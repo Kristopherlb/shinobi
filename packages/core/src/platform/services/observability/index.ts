@@ -1,1 +1,1 @@
-export * from './observability.service.js';
+export * from './observability.service.ts';

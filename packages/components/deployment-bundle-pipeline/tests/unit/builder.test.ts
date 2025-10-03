@@ -2,8 +2,8 @@
  * Unit tests for Deployment Bundle Pipeline Builder
  */
 
-import { DeploymentBundlePipelineBuilder } from '../../src/deployment-bundle-pipeline.builder.js';
-import { DeploymentBundleConfig } from '../../src/types.js';
+import { DeploymentBundlePipelineBuilder } from '../../src/deployment-bundle-pipeline.builder.ts';
+import { DeploymentBundleConfig } from '../../src/types.ts';
 
 describe('DeploymentBundlePipelineBuilder', () => {
   let builder: DeploymentBundlePipelineBuilder;

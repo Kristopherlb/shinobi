@@ -5,10 +5,10 @@
 
 import AjvImport, { type Ajv as AjvInstance, type ErrorObject } from 'ajv';
 import addFormatsImport from 'ajv-formats';
-import { Logger } from '../platform/logger/src/index.js';
-import { ManifestSchemaComposer } from './manifest-schema-composer.js';
-import { SchemaErrorFormatter } from './schema-error-formatter.js';
-import { withPerformanceTiming } from './performance-metrics.js';
+import { Logger } from '../platform/logger/src/index.ts';
+import { ManifestSchemaComposer } from './manifest-schema-composer.ts';
+import { SchemaErrorFormatter } from './schema-error-formatter.ts';
+import { withPerformanceTiming } from './performance-metrics.ts';
 
 export interface EnhancedSchemaValidatorDependencies {
   logger: Logger;
@@ -69,8 +69,15 @@ export class EnhancedSchemaValidator {
       allowUnionTypes: true,
       coerceTypes: false,
       useDefaults: false,
-      removeAdditional: false
+      removeAdditional: false,
+      keywords: enableStrictMode ? [] : ['errorMessage']
     });
+
+    if (!enableStrictMode) {
+      this.ajv.opts.strict = false;
+      this.ajv.opts.strictSchema = false;
+      this.ajv.opts.strictNumbers = false;
+    }
     addFormats(this.ajv);
 
     if (enableStrictMode) {

@@ -4,13 +4,11 @@ import {
   ComponentSpec,
   IComponentCreator
 } from '@shinobi/core';
-import {
-  ContainerApplicationComponent
-} from './container-application.component.js';
+import { ContainerApplicationComponent } from './container-application.component.ts';
 import {
   ContainerApplicationConfig,
   CONTAINER_APPLICATION_CONFIG_SCHEMA
-} from './container-application.builder.js';
+} from './container-application.builder.ts';
 
 export class ContainerApplicationComponentCreator implements IComponentCreator {
   public readonly componentType = 'container-application';
@@ -21,11 +19,55 @@ export class ContainerApplicationComponentCreator implements IComponentCreator {
   public readonly tags = ['ecs', 'fargate', 'container', 'application', 'alb', 'observability'];
   public readonly configSchema = CONTAINER_APPLICATION_CONFIG_SCHEMA;
 
-  public createComponent(scope: Construct, spec: ComponentSpec, context: ComponentContext): ContainerApplicationComponent {
+  public createComponent(spec: ComponentSpec, context: ComponentContext): ContainerApplicationComponent {
+    const scope = context.scope as Construct | undefined;
+    if (!scope) {
+      throw new Error('ComponentContext.scope is required to create container-application components');
+    }
+    this.assertValidSpec(spec, context);
     return new ContainerApplicationComponent(scope, spec.name, context, spec);
   }
 
+  public processComponent(spec: ComponentSpec, context: ComponentContext): ContainerApplicationComponent {
+    return this.createComponent(spec, context);
+  }
+
   public validateSpec(spec: ComponentSpec, context: ComponentContext): { valid: boolean; errors: string[] } {
+    const errors = this.collectValidationErrors(spec, context);
+    return {
+      valid: errors.length === 0,
+      errors
+    };
+  }
+
+  public getProvidedCapabilities(): string[] {
+    return ['service:connect', 'net:vpc', 'otel:environment'];
+  }
+
+  public getRequiredCapabilities(): string[] {
+    return [];
+  }
+
+  public getConstructHandles(): string[] {
+    return [
+      'cluster',
+      'service',
+      'taskDefinition',
+      'loadBalancer',
+      'targetGroup',
+      'applicationLogs',
+      'repository'
+    ];
+  }
+
+  private assertValidSpec(spec: ComponentSpec, context: ComponentContext): void {
+    const errors = this.collectValidationErrors(spec, context);
+    if (errors.length > 0) {
+      throw new Error(`Invalid container-application specification: ${errors.join('; ')}`);
+    }
+  }
+
+  private collectValidationErrors(spec: ComponentSpec, context: ComponentContext): string[] {
     const errors: string[] = [];
     const config = (spec.config ?? {}) as Partial<ContainerApplicationConfig>;
 
@@ -57,30 +99,7 @@ export class ContainerApplicationComponentCreator implements IComponentCreator {
       errors.push('Observability must remain enabled for production environments');
     }
 
-    return {
-      valid: errors.length === 0,
-      errors
-    };
-  }
-
-  public getProvidedCapabilities(): string[] {
-    return ['service:connect', 'net:vpc', 'otel:environment'];
-  }
-
-  public getRequiredCapabilities(): string[] {
-    return [];
-  }
-
-  public getConstructHandles(): string[] {
-    return [
-      'cluster',
-      'service',
-      'taskDefinition',
-      'loadBalancer',
-      'targetGroup',
-      'applicationLogs',
-      'repository'
-    ];
+    return errors;
   }
 }
 

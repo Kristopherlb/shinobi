@@ -4,14 +4,14 @@
  */
 
 // Component exports
-export { SecretsManagerComponentComponent } from './secrets-manager.component.js';
+export { SecretsManagerComponentComponent } from './secrets-manager.component.ts';
 
 // Configuration exports
 export { 
   SecretsManagerConfig,
   SecretsManagerComponentConfigBuilder,
   SECRETS_MANAGER_CONFIG_SCHEMA
-} from './secrets-manager.builder.js';
+} from './secrets-manager.builder.ts';
 
 // Creator exports
-export { SecretsManagerComponentCreator } from './secrets-manager.creator.js';
+export { SecretsManagerComponentCreator } from './secrets-manager.creator.ts';

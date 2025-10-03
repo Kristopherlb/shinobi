@@ -1,8 +1,8 @@
 import { App, Stack } from 'aws-cdk-lib';
 import { Match, Template } from 'aws-cdk-lib/assertions';
-import { CognitoUserPoolComponent } from '../src/cognito-user-pool.component.js';
-import { CognitoUserPoolConfig } from '../src/cognito-user-pool.builder.js';
-import { ComponentContext, ComponentSpec } from '../../../platform/contracts/component-interfaces.js';
+import { CognitoUserPoolComponent } from '../src/cognito-user-pool.component.ts';
+import { CognitoUserPoolConfig } from '../src/cognito-user-pool.builder.ts';
+import { ComponentContext, ComponentSpec } from '../../../platform/contracts/component-interfaces.ts';
 
 const createContext = (framework: ComponentContext['complianceFramework'] = 'commercial'): ComponentContext => ({
   serviceName: 'identity-service',

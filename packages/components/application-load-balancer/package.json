@@ -13,6 +13,7 @@
   },
   "dependencies": {
     "@shinobi/core": "workspace:*",
+    "@platform/contracts": "workspace:*",
     "aws-cdk-lib": "^2.214.0",
     "constructs": "^10.4.2",
     "cdk-nag": "^2.27.126"

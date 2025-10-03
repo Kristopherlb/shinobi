@@ -6,8 +6,8 @@
 import {
   RdsPostgresComponentConfigBuilder,
   RdsPostgresConfig
-} from '../rds-postgres.builder.js';
-import { ComponentContext, ComponentSpec } from '../../../platform/contracts/component-interfaces.js';
+} from '../rds-postgres.builder.ts';
+import { ComponentContext, ComponentSpec } from '../../../platform/contracts/component-interfaces.ts';
 
 const createMockContext = (
   complianceFramework: string = 'commercial',

@@ -1324,6 +1324,7 @@ defaults:
     backup:
       enabled: true
       retentionDays: 30
+      schedule: 'cron(0 3 * * ? *)'
     monitoring:
       enabled: true
       alarms:

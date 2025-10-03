@@ -3,7 +3,7 @@ import * as ec2 from 'aws-cdk-lib/aws-ec2';
 import * as ecs from 'aws-cdk-lib/aws-ecs';
 import { Template } from 'aws-cdk-lib/assertions';
 import { ComponentContext, ComponentSpec } from '@platform/contracts';
-import { EcsFargateServiceComponent } from '../ecs-fargate-service.component.js';
+import { EcsFargateServiceComponent } from '../ecs-fargate-service.component.ts';
 
 describe('EcsFargateServiceComponent synthesis', () => {
   let app: cdk.App;

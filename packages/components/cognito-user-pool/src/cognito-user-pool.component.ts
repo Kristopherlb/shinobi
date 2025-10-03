@@ -17,7 +17,7 @@ import {
   CognitoUserPoolComponentConfigBuilder,
   CognitoUserPoolConfig,
   StandardAttributeConfig
-} from './cognito-user-pool.builder.js';
+} from './cognito-user-pool.builder.ts';
 
 export class CognitoUserPoolComponent extends BaseComponent {
   private userPool?: cognito.UserPool;

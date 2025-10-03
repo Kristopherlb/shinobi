@@ -12,9 +12,9 @@ import * as cloudwatch from 'aws-cdk-lib/aws-cloudwatch';
 import * as kms from 'aws-cdk-lib/aws-kms';
 import * as cdk from 'aws-cdk-lib';
 import { Construct } from 'constructs';
-import { BaseComponent } from '../@shinobi/core.js';
-import { ComponentSpec, ComponentContext, ComponentCapabilities } from '../@shinobi/core/component-interfaces.js';
-import { EcrRepositoryConfig, EcrRepositoryComponentConfigBuilder, ECR_REPOSITORY_CONFIG_SCHEMA } from './ecr-repository.builder.js';
+import { BaseComponent } from '../@shinobi/core.ts';
+import { ComponentSpec, ComponentContext, ComponentCapabilities } from '../@shinobi/core/component-interfaces.ts';
+import { EcrRepositoryConfig, EcrRepositoryComponentConfigBuilder, ECR_REPOSITORY_CONFIG_SCHEMA } from './ecr-repository.builder.ts';
 
 
 /**

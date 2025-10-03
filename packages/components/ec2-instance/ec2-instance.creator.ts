@@ -10,9 +10,9 @@ import {
   ComponentSpec,
   ComponentContext,
   IComponentCreator
-} from '../@shinobi/core/component-interfaces.js';
-import { Ec2InstanceComponent } from './ec2-instance.component.js';
-import { Ec2InstanceConfig, EC2_INSTANCE_CONFIG_SCHEMA } from './ec2-instance.builder.js';
+} from '../@shinobi/core/component-interfaces.ts';
+import { Ec2InstanceComponent } from './ec2-instance.component.ts';
+import { Ec2InstanceConfig, EC2_INSTANCE_CONFIG_SCHEMA } from './ec2-instance.builder.ts';
 
 /**
  * Creator class for Ec2InstanceComponent component

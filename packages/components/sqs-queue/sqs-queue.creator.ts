@@ -14,9 +14,9 @@ import {
   ComponentSpec, 
   ComponentContext, 
   IComponentCreator 
-} from '../../platform/contracts/component-interfaces.js';
-import { SqsQueueNewComponent } from './sqs-queue-new.component.js';
-import { SqsQueueNewConfig, SQS_QUEUE_NEW_CONFIG_SCHEMA } from './sqs-queue-new.builder.js';
+} from '../../platform/contracts/component-interfaces.ts';
+import { SqsQueueNewComponent } from './sqs-queue-new.component.ts';
+import { SqsQueueNewConfig, SQS_QUEUE_NEW_CONFIG_SCHEMA } from './sqs-queue-new.builder.ts';
 
 /**
  * Creator class for SqsQueueNew component

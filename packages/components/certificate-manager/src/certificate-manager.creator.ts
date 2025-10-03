@@ -6,11 +6,11 @@ import {
 } from '@shinobi/core';
 import {
   CertificateManagerComponent
-} from './certificate-manager.component.js';
+} from './certificate-manager.component.ts';
 import {
   CertificateManagerConfig,
   CERTIFICATE_MANAGER_CONFIG_SCHEMA
-} from './certificate-manager.builder.js';
+} from './certificate-manager.builder.ts';
 
 export class CertificateManagerComponentCreator implements IComponentCreator {
   public readonly componentType = 'certificate-manager';

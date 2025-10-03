@@ -1,1 +1,1 @@
-export * from './backup-recovery.service.js';
+export * from './backup-recovery.service.ts';

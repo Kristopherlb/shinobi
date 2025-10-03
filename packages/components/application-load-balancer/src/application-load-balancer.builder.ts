@@ -5,7 +5,7 @@ import {
   ComponentContext,
   ComponentSpec
 } from '@shinobi/core';
-import schemaJson from '../Config.schema.json' assert { type: 'json' };
+import schemaJson from '../Config.schema.json' with { type: 'json' };
 
 export type AlbScheme = 'internet-facing' | 'internal';
 export type AlbIpAddressType = 'ipv4' | 'dualstack';

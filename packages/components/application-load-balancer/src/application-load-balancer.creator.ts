@@ -11,8 +11,8 @@ import {
   ComponentContext,
   IComponentCreator
 } from '@shinobi/core';
-import { ApplicationLoadBalancerComponent } from './application-load-balancer.component.js';
-import { ApplicationLoadBalancerConfig, APPLICATION_LOAD_BALANCER_CONFIG_SCHEMA } from './application-load-balancer.builder.js';
+import { ApplicationLoadBalancerComponent } from './application-load-balancer.component.ts';
+import { ApplicationLoadBalancerConfig, APPLICATION_LOAD_BALANCER_CONFIG_SCHEMA } from './application-load-balancer.builder.ts';
 
 /**
  * Creator class for ApplicationLoadBalancerComponent component

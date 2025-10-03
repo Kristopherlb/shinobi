@@ -2,8 +2,8 @@
  * Core binding contracts and types
  * Thin re-export wrapper for canonical binding interfaces
  */
-import type { BindingContext, BindingResult, IBinderStrategy, CompatibilityEntry, IBinderMatrix } from './platform-binding-trigger-spec.js';
-import type { IComponent } from './component-interfaces.js';
+import type { BindingContext, BindingResult, IBinderStrategy, CompatibilityEntry, IBinderMatrix } from './platform-binding-trigger-spec.ts';
+import type { IComponent } from './component-interfaces.ts';
 export type { BindingContext, BindingResult, IBinderStrategy, CompatibilityEntry, IBinderMatrix, IComponent };
 export type ComplianceFramework = 'commercial' | 'fedramp-moderate' | 'fedramp-high';
 export type ComponentType = 's3-bucket' | 'lambda-api' | 'rds-postgres' | 'ec2-instance' | 'dynamodb-table' | 'sqs-queue' | 'sns-topic';

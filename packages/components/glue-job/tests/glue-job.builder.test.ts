@@ -3,7 +3,7 @@
  * Validates the configuration precedence chain and compliance defaults.
  */
 
-import { GlueJobComponentConfigBuilder, GlueJobConfig } from '../glue-job.builder.js';
+import { GlueJobComponentConfigBuilder, GlueJobConfig } from '../glue-job.builder.ts';
 import { ComponentContext, ComponentSpec } from '@shinobi/core';
 import { Construct } from 'constructs';
 

@@ -20,7 +20,7 @@ import {
   ILoggingHandler, 
   LoggingHandlerResult 
 } from '@shinobi/core/logging-interfaces';
-import { LoggingService } from '../logging-service/infrastructure-logging.service.js';
+import { LoggingService } from '../logging-service/infrastructure-logging.service.ts';
 
 /**
  * Logging handler for RDS instances

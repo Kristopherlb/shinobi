@@ -1,7 +1,7 @@
 // src/platform/contracts/observability/observability-types.ts
 // Compliance-aware observability types and contracts
 
-import { ComplianceFramework } from '../bindings.js';
+import { ComplianceFramework } from '../bindings.ts';
 
 export type ObservabilityTier = 'commercial' | 'fedramp-moderate' | 'fedramp-high';
 

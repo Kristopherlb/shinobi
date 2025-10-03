@@ -1,5 +1,5 @@
-import { ComponentContext, ComponentSpec } from '../../contracts/component-interfaces.js';
-import { GovernanceMetadata } from '../governance/index.js';
+import { ComponentContext, ComponentSpec } from '../../contracts/component-interfaces.ts';
+import { GovernanceMetadata } from '../governance/index.ts';
 export interface LoggingContext {
     component: ComponentSpec;
     context: ComponentContext;

@@ -3,7 +3,7 @@
  * Implements Platform Testing Standard v1.0 - ConfigBuilder Testing
  */
 
-import { EcrRepositoryComponentConfigBuilder, EcrRepositoryConfig } from '../ecr-repository.builder.js';
+import { EcrRepositoryComponentConfigBuilder, EcrRepositoryConfig } from '../ecr-repository.builder.ts';
 import { ComponentContext, ComponentSpec } from '/Users/kristopherbowles/code/CDK-Lib/src/platform/contracts/component-interfaces';
 import { Construct } from 'constructs';
 import { Stack } from 'aws-cdk-lib';

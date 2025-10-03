@@ -5,7 +5,7 @@
  * Provides OpenTelemetry instrumentation and CloudWatch alarms across all component types.
  */
 
-export { ObservabilityService } from './observability.service.js';
+export { ObservabilityService } from './observability.service.ts';
 export type { IPlatformService } from '@shinobi/core';
 export type { PlatformServiceContext } from '@shinobi/core';
 

@@ -22,7 +22,7 @@ import {
   CertificateValidationMethod,
   CertificateKeyAlgorithm,
   CertificateManagerLoggingGroupConfig
-} from './certificate-manager.builder.js';
+} from './certificate-manager.builder.ts';
 
 export class CertificateManagerComponent extends BaseComponent {
   private certificate?: acm.Certificate;

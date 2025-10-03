@@ -2,8 +2,8 @@ import { App, Stack } from 'aws-cdk-lib';
 import { Match, Template } from 'aws-cdk-lib/assertions';
 import { ComponentContext, ComponentSpec } from '@shinobi/core';
 
-import { LambdaApiComponent } from '../src/lambda-api.component.js';
-import { LambdaApiConfig } from '../src/lambda-api.builder.js';
+import { LambdaApiComponent } from '../src/lambda-api.component.ts';
+import { LambdaApiConfig } from '../src/lambda-api.builder.ts';
 
 const createContext = (
   framework: 'commercial' | 'fedramp-moderate' | 'fedramp-high'

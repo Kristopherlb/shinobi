@@ -4,7 +4,7 @@
  */
 
 import './setup.js';
-import { SageMakerNotebookInstanceComponentConfigBuilder, SageMakerNotebookInstanceConfig } from '../sagemaker-notebook-instance.builder.js';
+import { SageMakerNotebookInstanceComponentConfigBuilder, SageMakerNotebookInstanceConfig } from '../sagemaker-notebook-instance.builder.ts';
 import { ComponentContext, ComponentSpec } from '@platform/contracts';
 
 // Test metadata for Platform Testing Standard compliance

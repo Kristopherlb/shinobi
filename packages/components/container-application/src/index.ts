@@ -6,24 +6,25 @@
  */
 
 // Export the main component class
-export { ContainerApplicationComponent } from './container-application.component.js';
+export { ContainerApplicationComponent } from './container-application.component.ts';
 
-// Export the configuration builder and types
-export { 
-  ContainerApplicationConfig, 
-  ContainerApplicationConfigBuilder, 
-  CONTAINER_APPLICATION_CONFIG_SCHEMA 
-} from './container-application.builder.js';
+// Export the configuration builder and schema
+export {
+  ContainerApplicationComponentConfigBuilder,
+  ContainerApplicationComponentConfigBuilder as ContainerApplicationConfigBuilder,
+  CONTAINER_APPLICATION_CONFIG_SCHEMA
+} from './container-application.builder.ts';
+export type { ContainerApplicationConfig } from './container-application.builder.ts';
 
 // Export the component creator
-export { 
-  ContainerApplicationComponentCreator, 
-  containerApplicationComponentCreator 
-} from './container-application.creator.js';
+export {
+  ContainerApplicationComponentCreator,
+  containerApplicationComponentCreator
+} from './container-application.creator.ts';
 
 // Re-export platform contracts for convenience
-export type { 
-  ComponentContext, 
-  ComponentSpec, 
-  ComponentCapabilities 
+export type {
+  ComponentContext,
+  ComponentSpec,
+  ComponentCapabilities
 } from '@shinobi/core';

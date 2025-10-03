@@ -7,10 +7,10 @@
 
 import * as cdk from 'aws-cdk-lib';
 import { Template } from 'aws-cdk-lib/assertions';
-import { ObservabilityService } from './observability.service.js';
+import { ObservabilityService } from './observability.service.ts';
 import { BaseComponent, ComponentContext, ComponentSpec } from '@shinobi/core';
 import { PlatformServiceContext } from '@shinobi/core/platform-services';
-import type { ComponentCapabilities } from '@shinobi/core/platform/contracts/component-interfaces.js';
+import type { ComponentCapabilities } from '@shinobi/core/platform/contracts/component-interfaces.ts';
 
 class MockTelemetryComponent extends BaseComponent {
   constructor(scope: cdk.Stack, id: string, context: ComponentContext, spec: ComponentSpec) {

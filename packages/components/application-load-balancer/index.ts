@@ -4,16 +4,16 @@
  */
 
 // Component exports
-export { ApplicationLoadBalancerComponent } from './src/application-load-balancer.component.js';
+export { ApplicationLoadBalancerComponent } from './src/application-load-balancer.component.ts';
 
 // Configuration exports
 export {
   ApplicationLoadBalancerComponentConfigBuilder,
   APPLICATION_LOAD_BALANCER_CONFIG_SCHEMA
-} from './src/application-load-balancer.builder.js';
+} from './src/application-load-balancer.builder.ts';
 
 // Type exports
-export type { ApplicationLoadBalancerConfig } from './src/application-load-balancer.builder.js';
+export type { ApplicationLoadBalancerConfig } from './src/application-load-balancer.builder.ts';
 
 // Creator exports
-export { ApplicationLoadBalancerComponentCreator } from './src/application-load-balancer.creator.js';
+export { ApplicationLoadBalancerComponentCreator } from './src/application-load-balancer.creator.ts';

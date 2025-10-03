@@ -5,7 +5,7 @@
  * Implements the Platform Tagging Standard v1.0.
  */
 import { IConstruct } from 'constructs';
-import { GovernanceMetadata } from '../governance/index.js';
+import { GovernanceMetadata } from '../governance/index.ts';
 /**
  * Context information needed for building standard tags
  */

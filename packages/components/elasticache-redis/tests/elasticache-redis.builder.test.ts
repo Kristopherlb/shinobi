@@ -2,7 +2,7 @@ import { Construct } from 'constructs';
 import {
   ElastiCacheRedisComponentConfigBuilder,
   ElastiCacheRedisConfig
-} from '../elasticache-redis.builder.js';
+} from '../elasticache-redis.builder.ts';
 import { ComponentContext, ComponentSpec } from '@shinobi/core';
 
 type Framework = 'commercial' | 'fedramp-moderate' | 'fedramp-high';

@@ -1,7 +1,7 @@
 // src/platform/contracts/observability/observability-config-factory.ts
 // Factory for creating compliance-tier-aware observability configurations
 
-import { ComplianceFramework } from '../bindings.js';
+import { ComplianceFramework } from '../bindings.ts';
 import {
   ObservabilityConfig,
   ObservabilityTier,
@@ -9,7 +9,7 @@ import {
   LoggingConfig,
   MetricsConfig,
   SecurityConfig
-} from './observability-types.js';
+} from './observability-types.ts';
 
 export class ObservabilityConfigFactory {
   private static readonly ADOT_LAYER_ARNS = {

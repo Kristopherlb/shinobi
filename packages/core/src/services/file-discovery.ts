@@ -1,8 +1,8 @@
 import * as fs from 'fs/promises';
 import * as path from 'path';
-import { Logger } from '../platform/logger/src/index.js';
-import { ErrorMessages } from './error-message-utils.js';
-import { withPerformanceTiming } from './performance-metrics.js';
+import { Logger } from '../platform/logger/src/index.ts';
+import { ErrorMessages } from './error-message-utils.ts';
+import { withPerformanceTiming } from './performance-metrics.ts';
 
 const logger = Logger.getLogger('file-discovery');
 
@@ -11,7 +11,7 @@ export class FileDiscovery {
    * Discover service.yml by searching from current directory upwards to git root
    * FR-CLI-2: Configuration Discovery
    */
-  async findManifest(startDir: string = '.'): Promise<string | null> {
+  async findManifest(startDir: string = '.', options?: { silentOnMissing?: boolean }): Promise<string | null> {
     return withPerformanceTiming(
       'file-discovery.findManifest',
       async () => {
@@ -55,7 +55,9 @@ export class FileDiscovery {
 
         // If the loop finishes, no manifest was found up to the root
         logger.debug('No service.yml or service.yaml found in directory tree');
-        logger.warn('No service.yml or service.yaml manifest file found in this project directory or its parents.');
+        if (!options?.silentOnMissing) {
+          logger.warn('No service.yml or service.yaml manifest file found in this project directory or its parents.');
+        }
         return null;
       },
       { startDir, resolvedPath: path.resolve(startDir) }

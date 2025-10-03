@@ -4,6 +4,6 @@
  * Provides enhanced observability capabilities for all Lambda components
  * while maintaining compatibility with existing OTEL + X-Ray infrastructure.
  */
-export * from './lambda-powertools-extension.handler.js';
-export * from './lambda-observability.service.js';
+export * from './lambda-powertools-extension.handler.ts';
+export * from './lambda-observability.service.ts';
 //# sourceMappingURL=index.d.ts.map

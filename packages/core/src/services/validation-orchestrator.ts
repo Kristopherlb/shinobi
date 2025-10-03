@@ -2,11 +2,11 @@
  * Validation Orchestrator - Command pattern implementation
  * Implements Principle 7: Clear Class Roles - This is a "Service/Manager" for orchestration
  */
-import { Logger } from '../platform/logger/src/index.js';
-import { ManifestParser } from './manifest-parser.js';
-import { SchemaValidator } from './schema-validator.js';
-import { ContextHydrator } from './context-hydrator.js';
-import { ReferenceValidator } from './reference-validator.js';
+import { Logger } from '../platform/logger/src/index.ts';
+import { ManifestParser } from './manifest-parser.ts';
+import { SchemaValidator } from './schema-validator.ts';
+import { ContextHydrator } from './context-hydrator.ts';
+import { ReferenceValidator } from './reference-validator.ts';
 
 export interface ValidationOrchestratorResult {
   manifest: any;

@@ -1,1 +1,1 @@
-export * from './security.service.js';
+export * from './security.service.ts';

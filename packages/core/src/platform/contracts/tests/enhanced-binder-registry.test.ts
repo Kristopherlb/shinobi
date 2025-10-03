@@ -3,10 +3,10 @@
  * Tests for the improved binder registry with async support and compliance
  */
 
-import { EnhancedBinderRegistry } from '../enhanced-binder-registry.js';
-import { DatabaseBinderStrategy } from '../binders/database-binder-strategy.js';
-import { EnhancedBindingContext, Capability, ComplianceFramework, IComponent } from '../bindings.js';
-import { BindingDirective } from '../platform-binding-trigger-spec.js';
+import { EnhancedBinderRegistry } from '../enhanced-binder-registry.ts';
+import { DatabaseBinderStrategy } from '../binders/database-binder-strategy.ts';
+import { EnhancedBindingContext, Capability, ComplianceFramework, IComponent } from '../bindings.ts';
+import { BindingDirective } from '../platform-binding-trigger-spec.ts';
 
 // Mock logger
 const mockLogger = {

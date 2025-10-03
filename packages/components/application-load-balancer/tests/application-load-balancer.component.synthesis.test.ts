@@ -1,7 +1,7 @@
 import { Template, Match } from 'aws-cdk-lib/assertions';
 import { App, Stack } from 'aws-cdk-lib';
-import { ApplicationLoadBalancerComponent } from '../src/application-load-balancer.component.js';
-import { ApplicationLoadBalancerConfig } from '../src/application-load-balancer.builder.js';
+import { ApplicationLoadBalancerComponent } from '../src/application-load-balancer.component.ts';
+import { ApplicationLoadBalancerConfig } from '../src/application-load-balancer.builder.ts';
 import { ComponentContext, ComponentSpec } from '@shinobi/core';
 
 const VPC_ID = 'vpc-0123456789abcdef0';

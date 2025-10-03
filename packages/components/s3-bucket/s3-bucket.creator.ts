@@ -4,8 +4,8 @@ import {
   IComponent,
   IComponentCreator
 } from '@shinobi/core';
-import { S3BucketComponent } from './s3-bucket.component.js';
-import { S3BucketConfig, S3_BUCKET_CONFIG_SCHEMA } from './s3-bucket.builder.js';
+import { S3BucketComponent } from './s3-bucket.component.ts';
+import { S3BucketConfig, S3_BUCKET_CONFIG_SCHEMA } from './s3-bucket.builder.ts';
 
 export class S3BucketComponentCreator implements IComponentCreator {
   public readonly componentType = 's3-bucket';

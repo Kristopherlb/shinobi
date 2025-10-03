@@ -2,7 +2,7 @@ import { App, Stack } from 'aws-cdk-lib';
 import { Match, Template } from 'aws-cdk-lib/assertions';
 import { ComponentContext, ComponentSpec } from '@shinobi/core';
 
-import { WafWebAclComponent } from '../waf-web-acl.component.js';
+import { WafWebAclComponent } from '../waf-web-acl.component.ts';
 
 const createContext = (
   framework: 'commercial' | 'fedramp-high' = 'commercial'

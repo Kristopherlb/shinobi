@@ -4,16 +4,16 @@
  */
 
 // Component exports
-export { CloudFrontDistributionComponent } from './cloudfront-distribution.component.js';
+export { CloudFrontDistributionComponent } from './cloudfront-distribution.component.ts';
 
 // Configuration exports
 export {
   CloudFrontDistributionComponentConfigBuilder,
   CLOUDFRONT_DISTRIBUTION_CONFIG_SCHEMA
-} from './cloudfront-distribution.builder.js';
+} from './cloudfront-distribution.builder.ts';
 
 // Type exports
-export type { CloudFrontDistributionConfig } from './cloudfront-distribution.builder.js';
+export type { CloudFrontDistributionConfig } from './cloudfront-distribution.builder.ts';
 
 // Creator exports
-export { CloudFrontDistributionComponentCreator } from './cloudfront-distribution.creator.js';
+export { CloudFrontDistributionComponentCreator } from './cloudfront-distribution.creator.ts';

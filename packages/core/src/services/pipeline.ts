@@ -2,8 +2,8 @@ import * as fs from 'fs/promises';
 import * as YAML from 'yaml';
 import AjvImport, { type Ajv as AjvInstance, type ErrorObject } from 'ajv';
 import addFormatsImport from 'ajv-formats';
-import { Logger } from '../platform/logger/src/index.js';
-import { SchemaManager } from './schema-manager.js';
+import { Logger } from '../platform/logger/src/index.ts';
+import { SchemaManager } from './schema-manager.ts';
 
 export interface ValidationResult {
   manifest: any;

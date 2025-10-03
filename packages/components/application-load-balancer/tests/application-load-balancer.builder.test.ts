@@ -1,7 +1,7 @@
 import {
   ApplicationLoadBalancerComponentConfigBuilder,
   ApplicationLoadBalancerConfig
-} from '../src/application-load-balancer.builder.js';
+} from '../src/application-load-balancer.builder.ts';
 import { ComponentContext, ComponentSpec } from '@shinobi/core';
 
 const createContext = (framework: string = 'commercial'): ComponentContext => ({

@@ -6,11 +6,11 @@ import {
   IComponentCreator
 } from '@shinobi/core';
 
-import { WafWebAclComponent } from './waf-web-acl.component.js';
+import { WafWebAclComponent } from './waf-web-acl.component.ts';
 import {
   WafWebAclComponentConfig,
   WAF_WEB_ACL_CONFIG_SCHEMA
-} from './waf-web-acl.builder.js';
+} from './waf-web-acl.builder.ts';
 
 export class WafWebAclComponentCreator implements IComponentCreator {
   public readonly componentType = 'waf-web-acl';

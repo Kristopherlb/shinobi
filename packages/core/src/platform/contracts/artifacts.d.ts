@@ -4,7 +4,7 @@
  * Defines the output artifacts and contracts for svc plan, svc up, and svc migrate commands.
  * Ensures structured, machine-readable outputs for CI/CD integration and auditing.
  */
-import { ComponentType, ComplianceFramework } from './bindings.js';
+import { ComponentType, ComplianceFramework } from './bindings.ts';
 export interface BaseArtifact {
     version: string;
     timestamp: string;

@@ -2,7 +2,7 @@ import { App, Stack } from 'aws-cdk-lib';
 import { Match, Template } from 'aws-cdk-lib/assertions';
 import { ComponentContext, ComponentSpec } from '@shinobi/core';
 
-import { SsmParameterComponent } from '../ssm-parameter.component.js';
+import { SsmParameterComponent } from '../ssm-parameter.component.ts';
 
 const createContext = (
   framework: 'commercial' | 'fedramp-moderate' | 'fedramp-high' = 'commercial'

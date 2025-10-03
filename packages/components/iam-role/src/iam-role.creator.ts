@@ -7,8 +7,8 @@
 
 import * as cdk from 'aws-cdk-lib';
 import { Construct } from 'constructs';
-import { IComponentCreator, IComponent, ComponentContext, ComponentSpec } from '../../@shinobi/core/component-interfaces.js';
-import { IamRoleComponent } from './iam-role.component.js';
+import { IComponentCreator, IComponent, ComponentContext, ComponentSpec } from '../../@shinobi/core/component-interfaces.ts';
+import { IamRoleComponent } from './iam-role.component.ts';
 
 /**
  * Factory for creating IamRoleComponent instances

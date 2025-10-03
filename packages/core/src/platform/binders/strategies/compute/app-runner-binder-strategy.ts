@@ -3,9 +3,9 @@
  * Handles containerized web application bindings for AWS App Runner
  */
 
-import { IBinderStrategy } from '../binder-strategy.js';
-import { BindingContext } from '../../binding-context.js';
-import { ComponentBinding } from '../../component-binding.js';
+import { IBinderStrategy } from '../binder-strategy.ts';
+import { BindingContext } from '../../binding-context.ts';
+import { ComponentBinding } from '../../component-binding.ts';
 
 export class AppRunnerBinderStrategy implements IBinderStrategy {
   readonly supportedCapabilities = ['apprunner:service', 'apprunner:connection'];

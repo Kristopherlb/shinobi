@@ -3,9 +3,9 @@
  * Following Platform Testing Standard v1.0
  */
 
-import { EnhancedSchemaValidator } from '../enhanced-schema-validator.js';
-import { ManifestSchemaComposer } from '../manifest-schema-composer.js';
-import { Logger } from '../../platform/logger/src/index.js';
+import { EnhancedSchemaValidator } from '../enhanced-schema-validator.ts';
+import { ManifestSchemaComposer } from '../manifest-schema-composer.ts';
+import { Logger } from '../../platform/logger/src/index.ts';
 
 // Test metadata following §11
 const testMetadata = {

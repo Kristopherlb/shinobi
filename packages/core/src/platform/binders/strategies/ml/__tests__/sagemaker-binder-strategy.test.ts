@@ -2,9 +2,9 @@
  * Path: packages/core/src/platform/binders/strategies/ml/__tests__/sagemaker-binder-strategy.test.ts
  */
 
-import { SageMakerBinderStrategy } from '../sagemaker-binder-strategy.js';
-import type { BindingContext } from '../../../binding-context.js';
-import type { ComponentBinding } from '../../../component-binding.js';
+import { SageMakerBinderStrategy } from '../sagemaker-binder-strategy.ts';
+import type { BindingContext } from '../../../binding-context.ts';
+import type { ComponentBinding } from '../../../component-binding.ts';
 
 class MockComponent {
   public env: Record<string, string> = {};

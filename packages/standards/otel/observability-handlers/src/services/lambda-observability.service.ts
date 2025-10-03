@@ -11,9 +11,9 @@
 
 import { BaseComponent } from '@shinobi/core';
 import { PlatformServiceContext } from '@shinobi/core/platform-services';
-import { LambdaObservabilityHandler } from '../observability-handlers/lambda-observability.handler.js';
-import { LambdaPowertoolsExtensionHandler, LambdaPowertoolsConfig } from '../observability-handlers/lambda-powertools-extension.handler.js';
-import { ObservabilityConfig, ObservabilityHandlerResult } from '../observability-handlers/observability-handler.interface.js';
+import { LambdaObservabilityHandler } from '../observability-handlers/lambda-observability.handler.ts';
+import { LambdaPowertoolsExtensionHandler, LambdaPowertoolsConfig } from '../observability-handlers/lambda-powertools-extension.handler.ts';
+import { ObservabilityConfig, ObservabilityHandlerResult } from '../observability-handlers/observability-handler.interface.ts';
 
 /**
  * Configuration for the Lambda Observability Service

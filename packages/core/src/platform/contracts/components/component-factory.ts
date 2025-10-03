@@ -1,11 +1,11 @@
 // src/platform/contracts/components/component-factory.ts
 // Component Factory & Registry Structure for Shinobi Platform
 
-import { IComponent } from '../bindings.js';
-import { ComponentConfigBuilder } from './component-config-builder.js';
-import { ComponentRegistry } from './component-registry.js';
-import { ComponentContext } from './component-context.js';
-import { ComponentSpec } from './component-spec.js';
+import { IComponent } from '../bindings.ts';
+import { ComponentConfigBuilder } from './component-config-builder.ts';
+import { ComponentRegistry } from './component-registry.ts';
+import { ComponentContext } from './component-context.ts';
+import { ComponentSpec } from './component-spec.ts';
 
 /**
  * Interface for component factory operations

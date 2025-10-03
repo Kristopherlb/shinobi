@@ -3,7 +3,7 @@
  * Part of the Strategy pattern for component binding
  */
 
-import { LambdaToSqsBinderStrategy, LambdaToRdsBinderStrategy, LambdaToS3BucketBinderStrategy } from './binders/concrete-binders.js';
+import { LambdaToSqsBinderStrategy, LambdaToRdsBinderStrategy, LambdaToS3BucketBinderStrategy } from './binders/concrete-binders.ts';
 
 /**
  * Deprecated Resolver Binder Registry shim

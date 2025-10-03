@@ -10,9 +10,9 @@ import {
   ComponentSpec, 
   ComponentContext, 
   IComponentCreator 
-} from '../@shinobi/core/component-interfaces.js';
-import { EcsFargateServiceComponentComponent } from './ecs-fargate-service.component.js';
-import { EcsFargateServiceConfig, ECS_FARGATE_SERVICE_CONFIG_SCHEMA } from './ecs-fargate-service.builder.js';
+} from '../@shinobi/core/component-interfaces.ts';
+import { EcsFargateServiceComponentComponent } from './ecs-fargate-service.component.ts';
+import { EcsFargateServiceConfig, ECS_FARGATE_SERVICE_CONFIG_SCHEMA } from './ecs-fargate-service.builder.ts';
 
 /**
  * Creator class for EcsFargateServiceComponent component

@@ -20,8 +20,8 @@ import {
   LambdaWorkerComponentConfigBuilder,
   LambdaWorkerConfig,
   LambdaEventSource
-} from './lambda-worker.builder.js';
-import { LambdaWorkerValidator } from './validation/lambda-worker.validator.js';
+} from './lambda-worker.builder.ts';
+import { LambdaWorkerValidator } from './validation/lambda-worker.validator.ts';
 import { LambdaAdvancedFeaturesService } from '@shinobi/core/platform/services/lambda-advanced-features';
 import { LambdaObservabilityService } from '@shinobi/core/platform/services/lambda-powertools';
 

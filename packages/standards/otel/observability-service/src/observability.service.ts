@@ -35,14 +35,14 @@ import type {
 import {
   IObservabilityHandler,
   ObservabilityConfig
-} from '../observability-handlers/observability-handlers/observability-handler.interface.js';
-import { LambdaObservabilityHandler } from '../observability-handlers/src/observability-handlers/lambda-observability.handler.js';
-import { VpcObservabilityHandler } from '../observability-handlers/src/observability-handlers/vpc-observability.handler.js';
-import { AlbObservabilityHandler } from '../observability-handlers/src/observability-handlers/alb-observability.handler.js';
-import { RdsObservabilityHandler } from '../observability-handlers/src/observability-handlers/rds-observability.handler.js';
-import { Ec2ObservabilityHandler } from '../observability-handlers/src/observability-handlers/ec2-observability.handler.js';
-import { SqsObservabilityHandler } from '../observability-handlers/src/observability-handlers/sqs-observability.handler.js';
-import { EcsObservabilityHandler } from '../observability-handlers/src/observability-handlers/ecs-observability.handler.js';
+} from '../observability-handlers/observability-handlers/observability-handler.interface.ts';
+import { LambdaObservabilityHandler } from '../observability-handlers/src/observability-handlers/lambda-observability.handler.ts';
+import { VpcObservabilityHandler } from '../observability-handlers/src/observability-handlers/vpc-observability.handler.ts';
+import { AlbObservabilityHandler } from '../observability-handlers/src/observability-handlers/alb-observability.handler.ts';
+import { RdsObservabilityHandler } from '../observability-handlers/src/observability-handlers/rds-observability.handler.ts';
+import { Ec2ObservabilityHandler } from '../observability-handlers/src/observability-handlers/ec2-observability.handler.ts';
+import { SqsObservabilityHandler } from '../observability-handlers/src/observability-handlers/sqs-observability.handler.ts';
+import { EcsObservabilityHandler } from '../observability-handlers/src/observability-handlers/ecs-observability.handler.ts';
 import { ITaggingService, TaggingContext, defaultTaggingService } from '@shinobi/standards-tagging';
 
 

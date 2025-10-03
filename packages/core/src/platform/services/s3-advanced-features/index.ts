@@ -4,5 +4,5 @@
  * Exports for the S3 Advanced Features platform service
  */
 
-export * from './s3-advanced-features.service.js';
-export * from './s3-bucket.validator.js';
+export * from './s3-advanced-features.service.ts';
+export * from './s3-bucket.validator.ts';

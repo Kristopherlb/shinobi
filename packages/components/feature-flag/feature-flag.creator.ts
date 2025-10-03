@@ -10,9 +10,9 @@ import {
   ComponentSpec, 
   ComponentContext, 
   IComponentCreator 
-} from '../../platform/contracts/component-interfaces.js';
-import { FeatureFlagComponentComponent } from './feature-flag.component.js';
-import { FeatureFlagConfig, FEATURE_FLAG_CONFIG_SCHEMA } from './feature-flag.builder.js';
+} from '../../platform/contracts/component-interfaces.ts';
+import { FeatureFlagComponentComponent } from './feature-flag.component.ts';
+import { FeatureFlagConfig, FEATURE_FLAG_CONFIG_SCHEMA } from './feature-flag.builder.ts';
 
 /**
  * Creator class for FeatureFlagComponent component

@@ -8,9 +8,9 @@
 import * as cdk from 'aws-cdk-lib';
 import * as cloudwatch from 'aws-cdk-lib/aws-cloudwatch';
 import { Template, Match } from 'aws-cdk-lib/assertions';
-import { ObservabilityService } from './observability.service.js';
-import { ComponentContext, ComponentSpec } from '../platform/contracts/component-interfaces.js';
-import { BaseComponent } from '../platform/contracts/component.js';
+import { ObservabilityService } from './observability.service.ts';
+import { ComponentContext, ComponentSpec } from '../platform/contracts/component-interfaces.ts';
+import { BaseComponent } from '../platform/contracts/component.ts';
 
 // Minimal local test fixtures to replace missing import
 const TestFixtureFactory = {

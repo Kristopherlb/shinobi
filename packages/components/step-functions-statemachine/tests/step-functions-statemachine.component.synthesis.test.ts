@@ -5,9 +5,9 @@
 
 import { Template, Match } from 'aws-cdk-lib/assertions';
 import { App, Stack } from 'aws-cdk-lib';
-import { StepFunctionsStateMachineComponent } from '../step-functions-statemachine.component.js';
-import { StepFunctionsStateMachineConfig } from '../step-functions-statemachine.builder.js';
-import { ComponentContext, ComponentSpec } from '../../@shinobi/core/component-interfaces.js';
+import { StepFunctionsStateMachineComponent } from '../step-functions-statemachine.component.ts';
+import { StepFunctionsStateMachineConfig } from '../step-functions-statemachine.builder.ts';
+import { ComponentContext, ComponentSpec } from '../../@shinobi/core/component-interfaces.ts';
 
 const createMockContext = (
   complianceFramework: 'commercial' | 'fedramp-moderate' | 'fedramp-high' = 'commercial',

@@ -20,13 +20,13 @@ import {
   ComponentSpec,
   ComponentContext,
   ComponentCapabilities
-} from '../@shinobi/core/component-interfaces.js';
+} from '../@shinobi/core/component-interfaces.ts';
 import {
   StaticWebsiteConfig,
   StaticWebsiteConfigBuilder,
   RemovalPolicyOption,
   PriceClassOption
-} from './static-website.builder.js';
+} from './static-website.builder.ts';
 
 /**
  * Static Website Component implementing Component API Contract v1.1

@@ -8,9 +8,9 @@
 import * as cdk from 'aws-cdk-lib';
 import * as iam from 'aws-cdk-lib/aws-iam';
 import { Construct } from 'constructs';
-import { BaseComponent } from '../../@shinobi/core/component.js';
-import { ComponentContext, ComponentSpec } from '../../@shinobi/core/component-interfaces.js';
-import { IamRoleConfig, IamRoleConfigBuilder } from './iam-role.builder.js';
+import { BaseComponent } from '../../@shinobi/core/component.ts';
+import { ComponentContext, ComponentSpec } from '../../@shinobi/core/component-interfaces.ts';
+import { IamRoleConfig, IamRoleConfigBuilder } from './iam-role.builder.ts';
 
 /**
  * IAM Role Component

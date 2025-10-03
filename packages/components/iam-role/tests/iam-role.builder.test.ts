@@ -3,8 +3,8 @@
  * Implements Platform Testing Standard v1.0 - ConfigBuilder Testing
  */
 
-import { IamRoleConfigBuilder, IamRoleConfig } from '../src/iam-role.builder.js';
-import { ComponentContext, ComponentSpec } from '../../@shinobi/core/component-interfaces.js';
+import { IamRoleConfigBuilder, IamRoleConfig } from '../src/iam-role.builder.ts';
+import { ComponentContext, ComponentSpec } from '../../@shinobi/core/component-interfaces.ts';
 import { Stack } from 'aws-cdk-lib';
 
 const createMockContext = (

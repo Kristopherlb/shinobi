@@ -21,7 +21,7 @@ import {
   IamPolicyComponentConfigBuilder,
   IamPolicyLogConfig,
   IamPolicyControlsConfig
-} from './iam-policy.builder.js';
+} from './iam-policy.builder.ts';
 
 /**
  * IAM Policy Component implementing Component API Contract v1.0

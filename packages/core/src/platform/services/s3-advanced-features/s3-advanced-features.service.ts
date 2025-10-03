@@ -14,7 +14,7 @@ import * as iam from 'aws-cdk-lib/aws-iam';
 import * as cloudwatch from 'aws-cdk-lib/aws-cloudwatch';
 import * as cdk from 'aws-cdk-lib';
 import { Construct } from 'constructs';
-import { ComponentContext } from '../../contracts/component-interfaces.js';
+import { ComponentContext } from '../../contracts/component-interfaces.ts';
 
 export interface S3SecurityScanningConfig {
   enabled: boolean;

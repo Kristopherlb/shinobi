@@ -2,6 +2,8 @@ import * as dynamodb from 'aws-cdk-lib/aws-dynamodb';
 import * as kms from 'aws-cdk-lib/aws-kms';
 import * as cloudwatch from 'aws-cdk-lib/aws-cloudwatch';
 import * as applicationautoscaling from 'aws-cdk-lib/aws-applicationautoscaling';
+import * as backup from 'aws-cdk-lib/aws-backup';
+import * as events from 'aws-cdk-lib/aws-events';
 import * as cdk from 'aws-cdk-lib';
 import { Construct } from 'constructs';
 import {
@@ -10,25 +12,25 @@ import {
   ComponentContext,
   ComponentCapabilities
 } from '@platform/contracts';
-import { Logger } from '@platform/logger';
 import {
   DynamoDbTableComponentConfigBuilder,
   DynamoDbTableConfig,
   DynamoDbMonitoringAlarmConfig,
   DynamoDbProvisionedThroughputConfig,
   DynamoDbGsiConfig
-} from './dynamodb-table.builder.js';
+} from './dynamodb-table.builder.ts';
 
 export class DynamoDbTableComponent extends Component {
   private table?: dynamodb.Table;
   private kmsKey?: kms.IKey;
   private managedKmsKey?: kms.Key;
   private config?: DynamoDbTableConfig;
-  private logger: Logger;
+  private logger: any;
+  private observabilityEnv?: Record<string, string>;
 
   constructor(scope: Construct, id: string, context: ComponentContext, spec: ComponentSpec) {
     super(scope, id, context, spec);
-    this.logger = Logger.getLogger(`dynamodb-table.${spec.name}`);
+    this.logger = this.getLogger();
   }
 
   public synth(): void {
@@ -62,6 +64,8 @@ export class DynamoDbTableComponent extends Component {
       this.resolveEncryptionKey();
       this.createTable();
       this.configureMonitoring();
+      this.configureObservabilityTelemetry();
+      this.configureBackupPlan();
 
       this.registerConstruct('main', this.table!);
       this.registerConstruct('table', this.table!);
@@ -69,7 +73,19 @@ export class DynamoDbTableComponent extends Component {
         this.registerConstruct('kmsKey', this.managedKmsKey);
       }
 
-      this.registerCapability('db:dynamodb', this.buildCapability());
+      const capability = this.buildCapability();
+      this.registerCapability('db:dynamodb', capability);
+      this.registerCapability('dynamodb:table', capability);
+
+      const indexCapabilities = this.buildIndexCapabilities();
+      if (indexCapabilities.length > 0) {
+        this.registerCapability('dynamodb:index', indexCapabilities);
+      }
+
+      const streamCapability = this.buildStreamCapability();
+      if (streamCapability) {
+        this.registerCapability('dynamodb:stream', streamCapability);
+      }
 
       this.logger.info('DynamoDB table synthesis completed', {
         context: { action: 'synthesis_complete', resource: 'dynamodb_table' },
@@ -143,7 +159,8 @@ export class DynamoDbTableComponent extends Component {
       billingMode: this.resolveBillingMode(),
       tableClass: this.resolveTableClass(),
       pointInTimeRecovery: this.config!.pointInTimeRecovery,
-      removalPolicy: cdk.RemovalPolicy.RETAIN
+      removalPolicy: cdk.RemovalPolicy.RETAIN,
+      contributorInsightsEnabled: this.config!.monitoring.enabled ?? false
     };
 
     if (this.config!.sortKey) {
@@ -170,9 +187,6 @@ export class DynamoDbTableComponent extends Component {
     if (this.config!.stream?.enabled) {
       props.stream = this.resolveStreamView(this.config!.stream.viewType);
     }
-
-    // Enable X-Ray tracing for observability
-    props.contributeInsights = true;
 
     this.table = new dynamodb.Table(this, 'Table', props);
 
@@ -298,8 +312,18 @@ export class DynamoDbTableComponent extends Component {
       return;
     }
 
-    this.configureReadAutoScaling('table', `table/${this.table.tableName}`, this.config.provisioned);
-    this.configureWriteAutoScaling('table', `table/${this.table.tableName}`, this.config.provisioned);
+    this.configureReadAutoScaling(
+      'table',
+      `table/${this.table.tableName}`,
+      this.config.provisioned,
+      applicationautoscaling.ScalableDimension.DYNAMODB_TABLE_READ_CAPACITY_UNITS
+    );
+    this.configureWriteAutoScaling(
+      'table',
+      `table/${this.table.tableName}`,
+      this.config.provisioned,
+      applicationautoscaling.ScalableDimension.DYNAMODB_TABLE_WRITE_CAPACITY_UNITS
+    );
   }
 
   private configureGsiAutoScaling(tableName: string, gsiConfig: DynamoDbGsiConfig): void {
@@ -308,14 +332,29 @@ export class DynamoDbTableComponent extends Component {
     }
 
     const resourceId = `table/${tableName}/index/${gsiConfig.indexName}`;
-    this.configureReadAutoScaling(`gsi-${gsiConfig.indexName}`, resourceId, gsiConfig.provisioned);
-    this.configureWriteAutoScaling(`gsi-${gsiConfig.indexName}`, resourceId, gsiConfig.provisioned);
+    this.configureReadAutoScaling(
+      `gsi-${gsiConfig.indexName}`,
+      resourceId,
+      gsiConfig.provisioned,
+      applicationautoscaling.ScalableDimension.DYNAMODB_INDEX_READ_CAPACITY_UNITS
+    );
+    this.configureWriteAutoScaling(
+      `gsi-${gsiConfig.indexName}`,
+      resourceId,
+      gsiConfig.provisioned,
+      applicationautoscaling.ScalableDimension.DYNAMODB_INDEX_WRITE_CAPACITY_UNITS
+    );
   }
 
-  private configureReadAutoScaling(prefix: string, resourceId: string, provisioned: DynamoDbProvisionedThroughputConfig): void {
+  private configureReadAutoScaling(
+    prefix: string,
+    resourceId: string,
+    provisioned: DynamoDbProvisionedThroughputConfig,
+    dimension: applicationautoscaling.ScalableDimension
+  ): void {
     const target = new applicationautoscaling.ScalableTarget(this, `${prefix}-ReadCapacity`, {
       serviceNamespace: applicationautoscaling.ServiceNamespace.DYNAMODB,
-      scalableDimension: 'dynamodb:table:ReadCapacityUnits',
+      scalableDimension: dimension,
       resourceId,
       minCapacity: provisioned.autoScaling?.minReadCapacity ?? provisioned.readCapacity,
       maxCapacity: provisioned.autoScaling?.maxReadCapacity ?? provisioned.readCapacity * 10
@@ -329,10 +368,15 @@ export class DynamoDbTableComponent extends Component {
     });
   }
 
-  private configureWriteAutoScaling(prefix: string, resourceId: string, provisioned: DynamoDbProvisionedThroughputConfig): void {
+  private configureWriteAutoScaling(
+    prefix: string,
+    resourceId: string,
+    provisioned: DynamoDbProvisionedThroughputConfig,
+    dimension: applicationautoscaling.ScalableDimension
+  ): void {
     const target = new applicationautoscaling.ScalableTarget(this, `${prefix}-WriteCapacity`, {
       serviceNamespace: applicationautoscaling.ServiceNamespace.DYNAMODB,
-      scalableDimension: 'dynamodb:table:WriteCapacityUnits',
+      scalableDimension: dimension,
       resourceId,
       minCapacity: provisioned.autoScaling?.minWriteCapacity ?? provisioned.writeCapacity,
       maxCapacity: provisioned.autoScaling?.maxWriteCapacity ?? provisioned.writeCapacity * 10
@@ -420,6 +464,96 @@ export class DynamoDbTableComponent extends Component {
     this.registerConstruct(`${id}Construct`, alarm);
   }
 
+  private configureObservabilityTelemetry(): void {
+    if (!this.table) {
+      return;
+    }
+
+    this.observabilityEnv = this.configureObservability(this.table, {
+      customAttributes: {
+        'aws.dynamodb.table.name': this.table.tableName,
+        'aws.dynamodb.billing_mode': this.config!.billingMode,
+        'aws.dynamodb.encryption': this.config!.encryption.type,
+        'aws.dynamodb.point_in_time_recovery': this.config!.pointInTimeRecovery ? 'true' : 'false'
+      }
+    });
+
+    const dashboard = new cloudwatch.Dashboard(this, 'DynamoDbObservabilityDashboard', {
+      dashboardName: `${this.context.serviceName}-${this.spec.name}-dynamodb`
+    });
+
+    dashboard.addWidgets(
+      new cloudwatch.GraphWidget({
+        title: 'Consumed Capacity Units',
+        left: [
+          this.table.metricConsumedReadCapacityUnits({ label: 'Read Capacity Units' }),
+          this.table.metricConsumedWriteCapacityUnits({ label: 'Write Capacity Units' })
+        ]
+      }),
+      new cloudwatch.GraphWidget({
+        title: 'Throttled Requests',
+        left: [
+          this.table.metricReadThrottleEvents({ label: 'Read Throttles' }),
+          this.table.metricWriteThrottleEvents({ label: 'Write Throttles' })
+        ]
+      }),
+      new cloudwatch.GraphWidget({
+        title: 'System Errors',
+        left: [
+          this.table.metricSystemErrors({ label: 'System Errors' })
+        ]
+      }),
+      new cloudwatch.GraphWidget({
+        title: 'Item Count',
+        left: [
+          this.table.metricItemCount({ label: 'Item Count' })
+        ],
+        statistic: 'Average'
+      })
+    );
+
+    this.logComponentEvent('observability_configured', 'Configured observability dashboard for DynamoDB table', {
+      dashboardName: `${this.context.serviceName}-${this.spec.name}-dynamodb`,
+      monitoringEnabled: true
+    });
+  }
+
+  private configureBackupPlan(): void {
+    if (!this.table || !(this.config?.backup?.enabled ?? false)) {
+      return;
+    }
+
+    const retentionDays = this.config!.backup.retentionDays ?? 35;
+    const scheduleExpression = this.config!.backup.schedule
+      ? events.Schedule.expression(this.config!.backup.schedule!)
+      : events.Schedule.cron({ minute: '0', hour: '5' });
+
+    const backupPlan = new backup.BackupPlan(this, 'DynamoDbBackupPlan', {
+      backupPlanName: `${this.context.serviceName}-${this.spec.name}-backup-plan`,
+      backupPlanRules: [
+        new backup.BackupPlanRule({
+          ruleName: `${this.spec.name}-daily`,
+          scheduleExpression,
+          deleteAfter: cdk.Duration.days(retentionDays)
+        })
+      ]
+    });
+
+    const backupSelection = backupPlan.addSelection('DynamoDbTableBackupSelection', {
+      selectionName: `${this.spec.name}-table`,
+      resources: [backup.BackupResource.fromDynamoDbTable(this.table)],
+      allowRestores: true
+    });
+
+    this.registerConstruct('backupPlan', backupPlan);
+    this.registerConstruct('backupSelection', backupSelection);
+
+    this.logComponentEvent('backup_plan_configured', 'Configured AWS Backup plan for DynamoDB table', {
+      retentionDays,
+      scheduleExpression: scheduleExpression.expressionString
+    });
+  }
+
   private resolveComparisonOperator(operator?: string): cloudwatch.ComparisonOperator {
     switch (operator) {
       case 'gt':
@@ -449,6 +583,9 @@ export class DynamoDbTableComponent extends Component {
   }
 
   private buildCapability(): Record<string, any> {
+    const keySchema = this.buildKeySchema();
+    const attributeDefinitions = this.buildAttributeDefinitions();
+
     return {
       tableName: this.table!.tableName,
       tableArn: this.table!.tableArn,
@@ -458,7 +595,149 @@ export class DynamoDbTableComponent extends Component {
       pointInTimeRecovery: this.config!.pointInTimeRecovery,
       encryption: this.config!.encryption.type,
       kmsKeyArn: this.kmsKey?.keyArn,
-      hardeningProfile: this.config!.hardeningProfile
+      hardeningProfile: this.config!.hardeningProfile,
+      keySchema,
+      attributeDefinitions,
+      tags: this.config!.tags,
+      observabilityEnv: this.observabilityEnv,
+      backup: {
+        enabled: this.config!.backup?.enabled ?? false,
+        retentionDays: this.config!.backup?.retentionDays ?? 0
+      }
     };
+  }
+
+  private buildKeySchema(): Array<{ attributeName: string; keyType: string }> {
+    const schema: Array<{ attributeName: string; keyType: string }> = [
+      {
+        attributeName: this.config!.partitionKey.name,
+        keyType: 'HASH'
+      }
+    ];
+
+    if (this.config!.sortKey) {
+      schema.push({
+        attributeName: this.config!.sortKey.name,
+        keyType: 'RANGE'
+      });
+    }
+
+    return schema;
+  }
+
+  private buildAttributeDefinitions(): Array<{ attributeName: string; attributeType: string }> {
+    const definitions = new Map<string, string>();
+
+    const registerDefinition = (name: string, type: string) => {
+      if (!definitions.has(name)) {
+        definitions.set(name, this.resolveAttributeDefinitionType(type));
+      }
+    };
+
+    registerDefinition(this.config!.partitionKey.name, this.config!.partitionKey.type);
+    if (this.config!.sortKey) {
+      registerDefinition(this.config!.sortKey.name, this.config!.sortKey.type);
+    }
+
+    (this.config!.globalSecondaryIndexes ?? []).forEach(index => {
+      registerDefinition(index.partitionKey.name, index.partitionKey.type);
+      if (index.sortKey) {
+        registerDefinition(index.sortKey.name, index.sortKey.type);
+      }
+    });
+
+    (this.config!.localSecondaryIndexes ?? []).forEach(index => {
+      registerDefinition(index.sortKey.name, index.sortKey.type);
+    });
+
+    return Array.from(definitions.entries()).map(([attributeName, attributeType]) => ({
+      attributeName,
+      attributeType
+    }));
+  }
+
+  private buildIndexCapabilities(): Array<Record<string, any>> {
+    if (!this.table) {
+      return [];
+    }
+
+    const indexes: Array<Record<string, any>> = [];
+    const tableName = this.table.tableName;
+    const region = this.context.region ?? 'us-east-1';
+    const accountId = this.context.accountId ?? this.context.account ?? '000000000000';
+
+    (this.config?.globalSecondaryIndexes ?? []).forEach(gsi => {
+      indexes.push({
+        indexName: gsi.indexName,
+        indexArn: `arn:aws:dynamodb:${region}:${accountId}:table/${tableName}/index/${gsi.indexName}`,
+        indexStatus: 'ACTIVE',
+        indexType: 'GLOBAL',
+        keySchema: [
+          {
+            attributeName: gsi.partitionKey.name,
+            keyType: 'HASH'
+          },
+          ...(gsi.sortKey
+            ? [{ attributeName: gsi.sortKey.name, keyType: 'RANGE' as const }]
+            : [])
+        ],
+        projection: {
+          projectionType: gsi.projectionType ?? 'all',
+          nonKeyAttributes: gsi.nonKeyAttributes ?? []
+        }
+      });
+    });
+
+    (this.config?.localSecondaryIndexes ?? []).forEach(lsi => {
+      indexes.push({
+        indexName: lsi.indexName,
+        indexArn: `arn:aws:dynamodb:${region}:${accountId}:table/${tableName}/index/${lsi.indexName}`,
+        indexStatus: 'ACTIVE',
+        indexType: 'LOCAL',
+        keySchema: [
+          {
+            attributeName: this.config!.partitionKey.name,
+            keyType: 'HASH'
+          },
+          {
+            attributeName: lsi.sortKey.name,
+            keyType: 'RANGE'
+          }
+        ],
+        projection: {
+          projectionType: lsi.projectionType ?? 'all',
+          nonKeyAttributes: lsi.nonKeyAttributes ?? []
+        }
+      });
+    });
+
+    return indexes;
+  }
+
+  private buildStreamCapability(): Record<string, any> | undefined {
+    if (!this.config?.stream?.enabled || !this.table?.tableStreamArn) {
+      return undefined;
+    }
+
+    return {
+      streamArn: this.table.tableStreamArn,
+      tableArn: this.table.tableArn,
+      tableName: this.table.tableName,
+      streamViewType: this.config.stream.viewType,
+      region: this.context.region ?? 'us-east-1'
+    };
+  }
+
+  private resolveAttributeDefinitionType(type: string): string {
+    switch (type) {
+      case 'string':
+        return 'S';
+      case 'number':
+        return 'N';
+      case 'binary':
+        return 'B';
+      default:
+        throw new Error(`Unsupported attribute definition type: ${type}`);
+    }
   }
 }

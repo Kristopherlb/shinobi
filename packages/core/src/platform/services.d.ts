@@ -2,13 +2,13 @@
  * Platform Services
  * Core platform services and utilities
  */
-export * from './services/artifact-serializer.js';
-export * from './services/artifact-writer.js';
-export * from './services/compliance-control-mapping.js';
-export * from './services/compliance-plan-generator.js';
-export * from './services/tagging-enforcement.js';
-export * from './services/tagging-service/tagging.service.js';
-export * from './services/feature-flags/index.js';
-export * from './services/lambda-powertools/index.js';
-export * from './services/lambda-advanced-features/index.js';
+export * from './services/artifact-serializer.ts';
+export * from './services/artifact-writer.ts';
+export * from './services/compliance-control-mapping.ts';
+export * from './services/compliance-plan-generator.ts';
+export * from './services/tagging-enforcement.ts';
+export * from './services/tagging-service/tagging.service.ts';
+export * from './services/feature-flags/index.ts';
+export * from './services/lambda-powertools/index.ts';
+export * from './services/lambda-advanced-features/index.ts';
 //# sourceMappingURL=services.d.ts.map

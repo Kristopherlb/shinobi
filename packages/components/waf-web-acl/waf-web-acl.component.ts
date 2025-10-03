@@ -20,7 +20,7 @@ import {
   WafAlarmConfig,
   AlarmComparisonOperator,
   AlarmTreatMissingData
-} from './waf-web-acl.builder.js';
+} from './waf-web-acl.builder.ts';
 
 export class WafWebAclComponent extends BaseComponent {
   private config?: WafWebAclComponentConfig;

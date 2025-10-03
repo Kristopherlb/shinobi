@@ -10,7 +10,7 @@ import * as rds from 'aws-cdk-lib/aws-rds';
 import * as cdk from 'aws-cdk-lib';
 import { IConstruct } from 'constructs';
 import { BaseComponent } from '@shinobi/core';
-import { IObservabilityHandler, ObservabilityHandlerResult, ObservabilityConfig } from './observability-handler.interface.js';
+import { IObservabilityHandler, ObservabilityHandlerResult, ObservabilityConfig } from './observability-handler.interface.ts';
 import { ITaggingService, TaggingContext, defaultTaggingService } from '@shinobi/standards-tagging';
 import { PlatformServiceContext } from '@shinobi/core/platform-services';
 

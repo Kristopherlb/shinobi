@@ -2,8 +2,8 @@
  * Migration Validator
  * Phase 4: Validates migration and compares templates for zero-diff guarantee
  */
-import { Logger } from '../core-engine/logger.js';
-import { MigrationOptions } from './migration-engine.js';
+import { Logger } from '../core-engine/logger.ts';
+import { MigrationOptions } from './migration-engine.ts';
 export interface MigrationValidationResult {
     success: boolean;
     diffResult: 'NO CHANGES' | 'HAS CHANGES';

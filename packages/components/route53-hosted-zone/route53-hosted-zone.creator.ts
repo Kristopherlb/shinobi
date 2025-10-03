@@ -10,9 +10,9 @@ import {
   ComponentSpec, 
   ComponentContext, 
   IComponentCreator 
-} from '../../platform/contracts/component-interfaces.js';
-import { Route53HostedZoneComponent } from './route53-hosted-zone.component.js';
-import { Route53HostedZoneConfig, ROUTE53_HOSTED_ZONE_CONFIG_SCHEMA } from './route53-hosted-zone.builder.js';
+} from '../../platform/contracts/component-interfaces.ts';
+import { Route53HostedZoneComponent } from './route53-hosted-zone.component.ts';
+import { Route53HostedZoneConfig, ROUTE53_HOSTED_ZONE_CONFIG_SCHEMA } from './route53-hosted-zone.builder.ts';
 
 /**
  * Creator class for Route53HostedZoneComponent component

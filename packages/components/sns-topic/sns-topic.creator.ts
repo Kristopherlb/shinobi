@@ -4,12 +4,12 @@ import {
   ComponentSpec,
   IComponentCreator
 } from '@shinobi/core';
-import { SnsTopicComponent } from './sns-topic.component.js';
+import { SnsTopicComponent } from './sns-topic.component.ts';
 import {
   SNS_TOPIC_CONFIG_SCHEMA,
   SnsTopicComponentConfigBuilder,
   SnsTopicConfig
-} from './sns-topic.builder.js';
+} from './sns-topic.builder.ts';
 
 export class SnsTopicComponentCreator implements IComponentCreator {
   public readonly componentType = 'sns-topic';

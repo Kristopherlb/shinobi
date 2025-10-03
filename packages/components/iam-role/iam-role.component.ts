@@ -20,7 +20,7 @@ import {
   IamRoleConfig,
   IamRoleComponentConfigBuilder,
   IamRoleLogConfig
-} from './iam-role.builder.js';
+} from './iam-role.builder.ts';
 
 /**
  * IAM Role Component implementing Component API Contract v1.0

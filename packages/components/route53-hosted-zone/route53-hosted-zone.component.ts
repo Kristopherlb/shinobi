@@ -15,7 +15,7 @@ import {
   Route53HostedZoneConfig,
   HostedZoneAlarmConfig,
   VpcAssociationConfig
-} from './route53-hosted-zone.builder.js';
+} from './route53-hosted-zone.builder.ts';
 
 export class Route53HostedZoneComponent extends Component {
   private hostedZone?: route53.HostedZone | route53.PrivateHostedZone;

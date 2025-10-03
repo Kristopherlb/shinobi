@@ -4,7 +4,7 @@
  * Tests the 5-layer configuration precedence chain and validation.
  */
 
-import { SecurityGroupImportConfigBuilder, SecurityGroupImportConfig } from '../../src/security-group-import.builder.js';
+import { SecurityGroupImportConfigBuilder, SecurityGroupImportConfig } from '../../src/security-group-import.builder.ts';
 import { ComponentContext, ComponentSpec } from '@shinobi/core';
 
 describe('SecurityGroupImportConfigBuilder', () => {

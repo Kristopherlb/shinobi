@@ -15,7 +15,7 @@ import {
   AlarmTreatMissingData,
   EventBridgeRuleCronComponentConfigBuilder,
   EventBridgeRuleCronConfig
-} from './eventbridge-rule-cron.builder.js';
+} from './eventbridge-rule-cron.builder.ts';
 
 interface CreatedAlarm {
   id: string;

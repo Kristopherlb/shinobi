@@ -83,17 +83,23 @@ export class ManifestSchemaComposer {
                 return;
             }
             if (this.componentSchemas.has(componentType)) {
-                this.dependencies.logger.warn(`Duplicate schema for component type "${componentType}". Using first loaded: ${this.componentSchemas.get(componentType).schemaPath}`);
+                this.dependencies.logger.debug(`Duplicate schema for component type "${componentType}". Using first loaded: ${this.componentSchemas.get(componentType).schemaPath}`);
                 return;
             }
             const defKey = `component.${componentType}.config`;
             const normalizedSchema = JSON.parse(JSON.stringify(schema));
-            delete normalizedSchema.$id;
-            this.rewriteSchemaRefs(normalizedSchema, defKey);
+            normalizedSchema.$id = `#/$defs/${defKey}`;
+            let extractedDefinitions;
+            if (normalizedSchema.definitions) {
+                extractedDefinitions = JSON.parse(JSON.stringify(normalizedSchema.definitions));
+                delete normalizedSchema.definitions;
+            }
+            this.rewriteSchemaRefs(normalizedSchema, componentType);
             this.componentSchemas.set(componentType, {
                 componentType,
                 schemaPath: fullPath,
-                schema: normalizedSchema
+                schema: normalizedSchema,
+                definitions: extractedDefinitions
             });
             this.dependencies.logger.debug(`Loaded schema for component type: ${componentType}`);
         }
@@ -137,6 +143,12 @@ export class ManifestSchemaComposer {
         for (const [componentType, info] of Array.from(this.componentSchemas.entries())) {
             const defKey = `component.${componentType}.config`;
             schema.$defs[defKey] = info.schema;
+            if (info.definitions) {
+                for (const [definitionName, definitionSchema] of Object.entries(info.definitions)) {
+                    const definitionKey = `component.${componentType}.definition.${definitionName.replace(/[\/#]/g, '.')}`;
+                    schema.$defs[definitionKey] = definitionSchema;
+                }
+            }
         }
         // Strengthen `type` to the loaded component types (only if non-empty to avoid Ajv enum error)
         if (componentDef.properties?.type) {
@@ -222,22 +234,25 @@ export class ManifestSchemaComposer {
             componentTypes: Array.from(this.componentSchemas.keys())
         };
     }
-    rewriteSchemaRefs(node, defKey) {
+    rewriteSchemaRefs(node, componentType) {
+        const configKey = `component.${componentType}.config`;
+        const definitionPrefix = `component.${componentType}.definition`;
         if (!node || typeof node !== 'object') {
             return;
         }
         if (typeof node.$ref === 'string') {
             const ref = node.$ref;
-            if (ref.startsWith('#/')) {
-                const pointer = ref.slice(2);
-                node.$ref = `#/$defs/${defKey}/${pointer}`;
+            if (ref.startsWith('#/definitions/')) {
+                const pointer = ref.slice('#/definitions/'.length);
+                const sanitizedPointer = pointer.replace(/[\/#]/g, '.');
+                node.$ref = `#/$defs/${definitionPrefix}.${sanitizedPointer}`;
             }
             else if (ref === '#') {
-                node.$ref = `#/$defs/${defKey}`;
+                node.$ref = `#/$defs/${configKey}`;
             }
         }
         for (const value of Object.values(node)) {
-            this.rewriteSchemaRefs(value, defKey);
+            this.rewriteSchemaRefs(value, componentType);
         }
     }
 }

@@ -190,7 +190,6 @@ export class DynamoDbTableComponentConfigBuilder extends ConfigBuilder<DynamoDbT
       billingMode: 'pay-per-request',
       tableClass: 'standard',
       pointInTimeRecovery: false,
-      retentionHours: 24,
       timeToLive: { enabled: false },
       stream: { enabled: false, viewType: 'new-and-old-images' },
       globalSecondaryIndexes: [],

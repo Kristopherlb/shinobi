@@ -3,7 +3,7 @@
  */
 
 import { App, Stack } from 'aws-cdk-lib';
-import { WafWebAclComponent } from './waf-web-acl.component.js';
+import { WafWebAclComponent } from './waf-web-acl.component.ts';
 import { ComponentContext, ComponentSpec } from '@shinobi/core';
 
 // Mock context

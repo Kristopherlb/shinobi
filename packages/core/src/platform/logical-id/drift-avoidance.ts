@@ -5,8 +5,8 @@
 
 import * as cdk from 'aws-cdk-lib';
 import { IConstruct } from 'constructs';
-import { Logger } from '../logger/src/index.js';
-import { LogicalIdMap, LogicalIdMapEntry } from './logical-id-manager.js';
+import { Logger } from '../logger/src/index.ts';
+import { LogicalIdMap, LogicalIdMapEntry } from './logical-id-manager.ts';
 
 export interface DriftAvoidanceStrategy {
   name: string;

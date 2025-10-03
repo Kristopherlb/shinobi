@@ -1,8 +1,8 @@
 import {
   DynamoDbTableComponentConfigBuilder,
   DynamoDbTableConfig
-} from '../src/dynamodb-table.builder.js';
-import { ComponentContext, ComponentSpec } from '../../../platform/contracts/component-interfaces.js';
+} from '../src/dynamodb-table.builder.ts';
+import { ComponentContext, ComponentSpec } from '../../../platform/contracts/component-interfaces.ts';
 
 const createMockContext = (framework: string = 'commercial'): ComponentContext => ({
   serviceName: 'catalog-service',
@@ -35,10 +35,12 @@ describe('DynamoDbTableComponentConfigBuilder', () => {
     expect(config.tableName).toBe('catalog-service-product-table');
     expect(config.billingMode).toBe('pay-per-request');
     expect(config.tableClass).toBe('standard');
-    expect(config.pointInTimeRecovery).toBe(false);
+    expect(config.pointInTimeRecovery).toBe(true);
     expect(config.encryption.type).toBe('aws-managed');
     expect(config.monitoring.enabled).toBe(false);
     expect(config.hardeningProfile).toBe('baseline');
+    expect(config.backup.enabled).toBe(true);
+    expect(config.backup.retentionDays).toBe(14);
   });
 
   it('applies FedRAMP High defaults from segregated configuration', () => {

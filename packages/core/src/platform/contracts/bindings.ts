@@ -9,8 +9,8 @@ import type {
   IBinderStrategy,
   CompatibilityEntry,
   IBinderMatrix
-} from './platform-binding-trigger-spec.js';
-import type { IComponent } from './component-interfaces.js';
+} from './platform-binding-trigger-spec.ts';
+import type { IComponent } from './component-interfaces.ts';
 
 // Re-export canonical binding interfaces
 export type {

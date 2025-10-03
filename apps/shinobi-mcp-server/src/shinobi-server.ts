@@ -39,6 +39,15 @@ interface PackMeta {
   tags: string[];
 }
 
+interface ComponentPattern {
+  id: string;
+  name: string;
+  description?: string;
+  type: string;
+  file: string;
+  data: any;
+}
+
 interface PackRule {
   id: string;
   name: string;
@@ -89,6 +98,7 @@ interface ComponentGenerationRequest {
 export class ShinobiMcpServer {
   private server: Server;
   private config: ShinobiConfig;
+  private patternCache?: ComponentPattern[];
 
   constructor(config: ShinobiConfig) {
     this.config = config;
@@ -2688,58 +2698,307 @@ describe('${className} Observability', () => {
 
   // Tool implementation methods (stubs for now)
   private async getComponentCatalog(args: any): Promise<any> {
+    const componentRoot = path.join(process.cwd(), 'packages', 'components');
+    const filter = (args?.filter as string | undefined)?.toLowerCase();
+    const specificComponent = (args?.componentName as string | undefined)?.toLowerCase();
+
+    let entries: fs.Dirent[] = [];
+    try {
+      entries = await fs.promises.readdir(componentRoot, { withFileTypes: true });
+    } catch (error) {
+      throw new Error(`Failed to read component directory at ${componentRoot}: ${(error as Error).message}`);
+    }
+
+    const components = await Promise.all(
+      entries
+        .filter(entry => entry.isDirectory())
+        .map(async entry => {
+          const dirName = entry.name;
+          const pkgPath = path.join(componentRoot, dirName, 'package.json');
+          if (!fs.existsSync(pkgPath)) {
+            return null;
+          }
+
+          try {
+            const pkgRaw = await fs.promises.readFile(pkgPath, 'utf8');
+            const pkg = JSON.parse(pkgRaw);
+            return {
+              name: pkg.name ?? dirName,
+              version: pkg.version ?? '0.0.0',
+              description: pkg.description ?? '',
+              tags: pkg.keywords ?? [],
+              component: pkg.component ?? {},
+              path: `packages/components/${dirName}`
+            };
+          } catch (error) {
+            Logger.getLogger('shinobi-mcp-server').warn(`Failed to load metadata for component ${dirName}`, {
+              error: (error as Error).message
+            });
+            return {
+              name: dirName,
+              version: 'unknown',
+              description: 'Failed to read package metadata',
+              tags: [],
+              component: {},
+              path: `packages/components/${dirName}`
+            };
+          }
+        })
+    );
+
+    const filteredComponents = components
+      .filter((component): component is NonNullable<typeof component> => component !== null)
+      .filter(component => {
+        const name = (component.name ?? '').toLowerCase();
+        if (specificComponent && name !== specificComponent && component.path.toLowerCase() !== `packages/components/${specificComponent}`) {
+          return false;
+        }
+        if (filter) {
+          return (
+            name.includes(filter) ||
+            (component.description ?? '').toLowerCase().includes(filter) ||
+            (component.tags ?? []).some((tag: string) => tag.toLowerCase().includes(filter))
+          );
+        }
+        return true;
+      });
+
     return {
       content: [
         {
-          type: 'text',
-          text: `Component catalog retrieved with filter: ${args.filter || 'none'}`
+          type: 'application/json',
+          text: JSON.stringify({ components: filteredComponents }, null, 2)
         }
       ]
     };
   }
 
   private async getComponentSchema(args: any): Promise<any> {
+    const componentName = args?.componentName ?? args?.name;
+    if (!componentName || typeof componentName !== 'string') {
+      throw new Error('componentName argument is required to retrieve a component schema');
+    }
+
+    const componentRoot = path.join(process.cwd(), 'packages', 'components', componentName);
+    const schemaPath = path.join(componentRoot, 'Config.schema.json');
+
+    if (!fs.existsSync(schemaPath)) {
+      throw new Error(`Config.schema.json not found for component '${componentName}' at ${schemaPath}`);
+    }
+
+    let schema: unknown;
+    try {
+      const schemaRaw = await fs.promises.readFile(schemaPath, 'utf8');
+      schema = JSON.parse(schemaRaw);
+    } catch (error) {
+      throw new Error(`Failed to load schema for component '${componentName}': ${(error as Error).message}`);
+    }
+
     return {
       content: [
         {
-          type: 'text',
-          text: `Schema for component ${args.componentName} retrieved`
+          type: 'application/json',
+          text: JSON.stringify(schema, null, 2)
         }
       ]
     };
   }
 
   private async getComponentPatterns(args: any): Promise<any> {
+    const patternType = (args?.patternType as string | undefined)?.toLowerCase();
+    const patterns = await this.loadComponentPatterns();
+
+    const filteredPatterns = patternType && patternType !== 'all'
+      ? patterns.filter(pattern => pattern.type === patternType)
+      : patterns;
+
     return {
       content: [
         {
-          type: 'text',
-          text: `Patterns for ${args.patternType || 'all types'} retrieved`
+          type: 'application/json',
+          text: JSON.stringify({ patterns: filteredPatterns }, null, 2)
         }
       ]
     };
   }
 
   private async expandPattern(args: any): Promise<any> {
+    const patternId = (args?.intent ?? args?.patternId ?? args?.id) as string | undefined;
+    if (!patternId) {
+      throw new Error('patternId or intent argument is required to expand a component pattern');
+    }
+
+    const patterns = await this.loadComponentPatterns();
+    const pattern = patterns.find(entry => entry.id === patternId || entry.name === patternId);
+
+    if (!pattern) {
+      throw new Error(`Pattern '${patternId}' was not found in the platform knowledge base`);
+    }
+
     return {
       content: [
         {
-          type: 'text',
-          text: `Expanded pattern for intent: ${args.intent}`
+          type: 'application/json',
+          text: JSON.stringify(pattern, null, 2)
         }
       ]
     };
   }
 
   private async planGraph(args: any): Promise<any> {
+    const manifestPath = this.resolveManifestPath(args?.manifestPath);
+
+    if (!fs.existsSync(manifestPath)) {
+      throw new Error(`Manifest not found at ${manifestPath}`);
+    }
+
+    const manifestRaw = await fs.promises.readFile(manifestPath, 'utf8');
+    const manifest = yaml.parse(manifestRaw) ?? {};
+
+    const serviceId = manifest.service ?? manifest.serviceName ?? 'service';
+    const nodes: Array<Record<string, any>> = [
+      {
+        id: serviceId,
+        type: 'service',
+        label: serviceId
+      }
+    ];
+
+    const edges: Array<Record<string, any>> = [];
+
+    const components = manifest.components ?? [];
+    components.forEach((component: any) => {
+      if (!component?.name) {
+        return;
+      }
+
+      nodes.push({
+        id: component.name,
+        type: 'component',
+        label: component.name,
+        componentType: component.type
+      });
+
+      edges.push({
+        from: serviceId,
+        to: component.name,
+        type: 'ownership'
+      });
+
+      (component.binds ?? []).forEach((bind: any) => {
+        const target = bind?.to ?? bind?.component ?? bind?.target;
+        if (!target) {
+          return;
+        }
+
+        edges.push({
+          from: component.name,
+          to: target,
+          type: 'binding',
+          capability: bind.capability,
+          access: bind.access
+        });
+      });
+    });
+
     return {
       content: [
         {
-          type: 'text',
-          text: `Graph plan generated for manifest`
+          type: 'application/json',
+          text: JSON.stringify({
+            manifestPath,
+            nodes,
+            edges
+          }, null, 2)
         }
       ]
     };
+  }
+
+  private async loadComponentPatterns(): Promise<ComponentPattern[]> {
+    if (this.patternCache) {
+      return this.patternCache;
+    }
+
+    const patterns: ComponentPattern[] = [];
+    const baseDir = path.join(process.cwd(), 'platform-kb');
+    const targets: Array<{ type: string; dir: string }> = [
+      { type: 'observability', dir: path.join(baseDir, 'observability', 'recipes') },
+      { type: 'controls', dir: path.join(baseDir, 'controls') },
+      { type: 'packs', dir: path.join(baseDir, 'packs') }
+    ];
+
+    for (const target of targets) {
+      await this.readPatternDirectory(target.dir, target.type, patterns);
+    }
+
+    this.patternCache = patterns;
+    return patterns;
+  }
+
+  private async readPatternDirectory(directory: string, type: string, patterns: ComponentPattern[]): Promise<void> {
+    let entries: fs.Dirent[];
+    try {
+      entries = await fs.promises.readdir(directory, { withFileTypes: true });
+    } catch (error) {
+      if ((error as NodeJS.ErrnoException).code === 'ENOENT') {
+        return;
+      }
+      throw error;
+    }
+
+    for (const entry of entries) {
+      const fullPath = path.join(directory, entry.name);
+
+      if (entry.isDirectory()) {
+        await this.readPatternDirectory(fullPath, type, patterns);
+        continue;
+      }
+
+      if (!/\.(ya?ml|json)$/i.test(entry.name)) {
+        continue;
+      }
+
+      const raw = await fs.promises.readFile(fullPath, 'utf8');
+      let data: any;
+      try {
+        data = entry.name.toLowerCase().endsWith('.json') ? JSON.parse(raw) : yaml.parse(raw);
+      } catch (error) {
+        Logger.getLogger('shinobi-mcp-server').warn(`Failed to parse pattern file ${fullPath}`, {
+          error: (error as Error).message
+        });
+        continue;
+      }
+
+      if (!data) {
+        continue;
+      }
+
+      const id = data.id ?? path.basename(entry.name, path.extname(entry.name));
+      const name = data.name ?? data.title ?? id;
+      const description = data.description ?? data.summary ?? data.details;
+
+      patterns.push({
+        id,
+        name,
+        description,
+        type,
+        file: path.relative(process.cwd(), fullPath),
+        data
+      });
+    }
+  }
+
+  private resolveManifestPath(inputPath?: string): string {
+    if (!inputPath) {
+      return path.join(process.cwd(), 'service.yml');
+    }
+
+    if (path.isAbsolute(inputPath)) {
+      return inputPath;
+    }
+
+    return path.join(process.cwd(), inputPath);
   }
 
   private async diffGraphs(args: any): Promise<any> {

@@ -7,8 +7,8 @@
 
 import * as cdk from 'aws-cdk-lib';
 import { Construct } from 'constructs';
-import { IComponentCreator, IComponent, ComponentContext, ComponentSpec } from '../../@shinobi/core/component-interfaces.js';
-import { SecurityGroupImportComponent } from './security-group-import.component.js';
+import { IComponentCreator, IComponent, ComponentContext, ComponentSpec } from '../../@shinobi/core/component-interfaces.ts';
+import { SecurityGroupImportComponent } from './security-group-import.component.ts';
 
 /**
  * Factory for creating SecurityGroupImportComponent instances

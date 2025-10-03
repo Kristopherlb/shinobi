@@ -1,2 +1,2 @@
 // Tagging standards exports
-export * from '../tagging-service/tagging.service.js';
+export * from '../tagging-service/tagging.service.ts';

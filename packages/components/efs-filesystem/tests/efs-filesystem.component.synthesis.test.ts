@@ -1,8 +1,8 @@
 import { Template, Match } from 'aws-cdk-lib/assertions';
 import { App, Stack } from 'aws-cdk-lib';
-import { EfsFilesystemComponent } from '../efs-filesystem.component.js';
-import { EfsFilesystemConfig } from '../efs-filesystem.builder.js';
-import { ComponentContext, ComponentSpec } from '../../../platform/contracts/component-interfaces.js';
+import { EfsFilesystemComponent } from '../efs-filesystem.component.ts';
+import { EfsFilesystemConfig } from '../efs-filesystem.builder.ts';
+import { ComponentContext, ComponentSpec } from '../../../platform/contracts/component-interfaces.ts';
 
 const VPC_ID = 'vpc-0abc123def4567890';
 const CONTEXT_KEY = `vpcProvider:account=123456789012:filter.vpcId=${VPC_ID}:region=us-east-1`;

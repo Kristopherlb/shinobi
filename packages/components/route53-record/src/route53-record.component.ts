@@ -8,13 +8,13 @@
 import * as cdk from 'aws-cdk-lib';
 import * as route53 from 'aws-cdk-lib/aws-route53';
 import { Construct } from 'constructs';
-import { BaseComponent } from '../../@shinobi/core/component.js';
-import { ComponentContext, ComponentSpec } from '../../@shinobi/core/component-interfaces.js';
-import { Route53RecordConfig, Route53RecordConfigBuilder } from './route53-record.builder.js';
+import { BaseComponent } from '../../@shinobi/core/component.ts';
+import { ComponentContext, ComponentSpec } from '../../@shinobi/core/component-interfaces.ts';
+import { Route53RecordConfig, Route53RecordConfigBuilder } from './route53-record.builder.ts';
 // Platform services will be injected by the platform
-// import { Logger } from '../../../../src/platform/services/logger.js';
-// import { ObservabilityService } from '../../../../src/platform/services/observability.service.js';
-// import { TaggingService } from '../../../../src/platform/services/tagging.service.js';
+// import { Logger } from '../../../../src/platform/services/logger.ts';
+// import { ObservabilityService } from '../../../../src/platform/services/observability.service.ts';
+// import { TaggingService } from '../../../../src/platform/services/tagging.service.ts';
 
 /**
  * Route 53 Record Component

@@ -9,18 +9,18 @@
 import * as cdk from 'aws-cdk-lib';
 import * as logs from 'aws-cdk-lib/aws-logs';
 import { Construct, IConstruct } from 'constructs';
-import { ComponentSpec, ComponentContext, ComponentCapabilities, IComponent } from './component-interfaces.js';
-import { ITaggingService, TaggingContext, defaultTaggingService } from '../services/tagging-service/tagging.service.js';
-import { IObservabilityService, defaultObservabilityService } from '../services/observability/index.js';
-import { ILoggingService, defaultLoggingService } from '../services/logging/index.js';
-import { IGovernanceService, GovernanceMetadata, defaultGovernanceService } from '../services/governance/index.js';
-import { IComplianceService, defaultComplianceService } from '../services/compliance/index.js';
-import { ISecurityService, defaultSecurityService } from '../services/security/index.js';
-import { ISecurityOperationsService, defaultSecurityOperationsService } from '../services/security-operations/index.js';
-import { ICostManagementService, defaultCostManagementService } from '../services/cost-management/index.js';
-import { IBackupRecoveryService, defaultBackupRecoveryService } from '../services/backup-recovery/index.js';
-import { IPerformanceOptimizationService, defaultPerformanceOptimizationService } from '../services/performance/index.js';
-import { IFeatureFlagService, defaultFeatureFlagService } from '../services/feature-flags/index.js';
+import { ComponentSpec, ComponentContext, ComponentCapabilities, IComponent } from './component-interfaces.ts';
+import { ITaggingService, TaggingContext, defaultTaggingService } from '../services/tagging-service/tagging.service.ts';
+import { IObservabilityService, defaultObservabilityService } from '../services/observability/index.ts';
+import { ILoggingService, defaultLoggingService } from '../services/logging/index.ts';
+import { IGovernanceService, GovernanceMetadata, defaultGovernanceService } from '../services/governance/index.ts';
+import { IComplianceService, defaultComplianceService } from '../services/compliance/index.ts';
+import { ISecurityService, defaultSecurityService } from '../services/security/index.ts';
+import { ISecurityOperationsService, defaultSecurityOperationsService } from '../services/security-operations/index.ts';
+import { ICostManagementService, defaultCostManagementService } from '../services/cost-management/index.ts';
+import { IBackupRecoveryService, defaultBackupRecoveryService } from '../services/backup-recovery/index.ts';
+import { IPerformanceOptimizationService, defaultPerformanceOptimizationService } from '../services/performance/index.ts';
+import { IFeatureFlagService, defaultFeatureFlagService } from '../services/feature-flags/index.ts';
 
 /**
  * Options for configuring observability on components

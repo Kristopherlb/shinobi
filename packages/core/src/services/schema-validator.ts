@@ -5,11 +5,11 @@
  */
 import AjvImport, { type Ajv as AjvInstance, type ErrorObject } from 'ajv';
 import addFormatsImport from 'ajv-formats';
-import { Logger } from '../platform/logger/src/index.js';
-import { SchemaManager } from './schema-manager.js';
-import { SchemaErrorFormatter } from './schema-error-formatter.js';
-import { EnhancedSchemaValidator, ValidationResult } from './enhanced-schema-validator.js';
-import { ManifestSchemaComposer } from './manifest-schema-composer.js';
+import { Logger } from '../platform/logger/src/index.ts';
+import { SchemaManager } from './schema-manager.ts';
+import { SchemaErrorFormatter } from './schema-error-formatter.ts';
+import { EnhancedSchemaValidator, ValidationResult } from './enhanced-schema-validator.ts';
+import { ManifestSchemaComposer } from './manifest-schema-composer.ts';
 
 export interface SchemaValidatorDependencies {
   logger: Logger;
@@ -53,6 +53,12 @@ export class SchemaValidator {
 
   async validateSchema(manifest: any): Promise<void> {
     this.dependencies.logger.debug('Validating manifest schema with enhanced validation');
+
+    if (process.env.SHINOBI_DISABLE_ENHANCED_VALIDATION === 'true') {
+      this.dependencies.logger.debug('Enhanced validation disabled via SHINOBI_DISABLE_ENHANCED_VALIDATION=true; using basic schema validation.');
+      await this.basicValidateSchema(manifest);
+      return;
+    }
 
     let result: ValidationResult | undefined;
     try {

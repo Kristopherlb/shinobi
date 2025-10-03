@@ -1,4 +1,4 @@
-import { Logger } from '../platform/logger/src/index.js';
+import { Logger } from '../platform/logger/src/index.ts';
 export interface ManifestParserDependencies {
     logger: Logger;
 }

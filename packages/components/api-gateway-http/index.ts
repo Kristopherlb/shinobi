@@ -12,10 +12,10 @@
  * For complex enterprise features, use api-gateway-rest instead.
  */
 
-export { ApiGatewayHttpComponent } from './src/api-gateway-http.component.js';
-export { ApiGatewayHttpCreator } from './src/api-gateway-http.creator.js';
+export { ApiGatewayHttpComponent } from './src/api-gateway-http.component.ts';
+export { ApiGatewayHttpCreator } from './src/api-gateway-http.creator.ts';
 export {
   ApiGatewayHttpConfigBuilder,
   API_GATEWAY_HTTP_CONFIG_SCHEMA
-} from './src/api-gateway-http.builder.js';
-export type { ApiGatewayHttpConfig } from './src/api-gateway-http.builder.js';
+} from './src/api-gateway-http.builder.ts';
+export type { ApiGatewayHttpConfig } from './src/api-gateway-http.builder.ts';

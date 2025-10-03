@@ -23,7 +23,7 @@ import {
 import {
   SecretsManagerConfig,
   SecretsManagerComponentConfigBuilder
-} from './secrets-manager.builder.js';
+} from './secrets-manager.builder.ts';
 
 export class SecretsManagerComponentComponent extends Component {
   private secret?: secretsmanager.Secret;

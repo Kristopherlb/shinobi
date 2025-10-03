@@ -24,8 +24,8 @@ import {
   LambdaRuntime,
   LambdaArchitecture,
   LambdaApiAlarmConfig
-} from './lambda-api.builder.js';
-import { LambdaApiValidator } from '../validation/lambda-api.validator.js';
+} from './lambda-api.builder.ts';
+import { LambdaApiValidator } from '../validation/lambda-api.validator.ts';
 import { LambdaAdvancedFeaturesService } from '@shinobi/core/platform/services/lambda-advanced-features';
 
 /**

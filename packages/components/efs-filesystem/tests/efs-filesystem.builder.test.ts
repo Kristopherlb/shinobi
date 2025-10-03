@@ -1,8 +1,8 @@
 import {
   EfsFilesystemComponentConfigBuilder,
   EfsFilesystemConfig
-} from '../efs-filesystem.builder.js';
-import { ComponentContext, ComponentSpec } from '../../../platform/contracts/component-interfaces.js';
+} from '../efs-filesystem.builder.ts';
+import { ComponentContext, ComponentSpec } from '../../../platform/contracts/component-interfaces.ts';
 
 const createContext = (framework: string = 'commercial'): ComponentContext => ({
   serviceName: 'files-service',

@@ -2,7 +2,7 @@
  * Comprehensive Binder Registry
  * Registry for all AWS service binder strategies
  */
-import { IBinderStrategy } from '../strategies/binder-strategy.js';
+import { IBinderStrategy } from '../strategies/binder-strategy.ts';
 export declare class ComprehensiveBinderRegistry {
     private strategies;
     constructor();

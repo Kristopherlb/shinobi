@@ -3,8 +3,8 @@
  * Following Platform Testing Standard v1.0
  */
 
-import { DatabaseBinderStrategy } from '../binders/database-binder-strategy.js';
-import { EnhancedBindingContext, CapabilityData } from '../bindings.js';
+import { DatabaseBinderStrategy } from '../binders/database-binder-strategy.ts';
+import { EnhancedBindingContext, CapabilityData } from '../bindings.ts';
 
 describe('DatabaseBinderStrategy', () => {
   let strategy: DatabaseBinderStrategy;

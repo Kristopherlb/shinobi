@@ -4,7 +4,7 @@
  * Maps components to NIST/FedRAMP controls based on component type and framework.
  * Provides compliance plan generation and control validation.
  */
-import { ComponentType, ComplianceFramework } from '../contracts/bindings.js';
+import { ComponentType, ComplianceFramework } from '../contracts/bindings.ts';
 export interface NISTControl {
     id: string;
     title: string;

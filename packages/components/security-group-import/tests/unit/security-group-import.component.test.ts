@@ -6,7 +6,7 @@
 
 import { Stack } from 'aws-cdk-lib';
 import { Template } from 'aws-cdk-lib/assertions';
-import { SecurityGroupImportComponent } from '../../src/security-group-import.component.js';
+import { SecurityGroupImportComponent } from '../../src/security-group-import.component.ts';
 import { ComponentContext, ComponentSpec } from '@shinobi/core';
 
 describe('SecurityGroupImportComponent', () => {

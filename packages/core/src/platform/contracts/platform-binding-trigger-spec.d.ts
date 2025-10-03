@@ -6,7 +6,7 @@
  * Status: Published
  * Last Updated: September 6, 2025
  */
-import { IComponent } from './component-interfaces.js';
+import { IComponent } from './component-interfaces.ts';
 /**
  * Fundamental interaction types in the platform
  */

@@ -1,10 +1,29 @@
 {
   "extends": "../../../tsconfig.base.json",
   "compilerOptions": {
-    "rootDir": "src",
-    "outDir": "dist"
+    "rootDir": ".",
+    "outDir": "../../../dist/packages/components/container-application",
+    "composite": true,
+    "declaration": true,
+    "declarationMap": true,
+    "moduleResolution": "NodeNext",
+    "resolveJsonModule": true,
+    "esModuleInterop": true
   },
   "include": [
-    "src/**/*"
+    "index.ts",
+    "src/**/*.ts",
+    "Config.schema.json"
+  ],
+  "exclude": [
+    "dist",
+    "node_modules",
+    "**/*.test.ts",
+    "**/*.spec.ts"
+  ],
+  "references": [
+    {
+      "path": "../../core/tsconfig.json"
+    }
   ]
 }

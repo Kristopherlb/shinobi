@@ -1,32 +1,24 @@
 import * as fs from 'fs/promises';
 import * as path from 'path';
 import * as os from 'os';
-import { exec } from 'child_process';
-import { promisify } from 'util';
+import { execCli } from './utils/cli-runner.js';
 
-const execAsync = promisify(exec);
+jest.setTimeout(30000);
 
 describe('End-to-End CLI Workflows', () => {
-  const cliPath = path.join(__dirname, '../../dist/cli.js');
+  const originalCwd = process.cwd();
   let testDir: string;
 
   beforeEach(async () => {
     testDir = await fs.mkdtemp(path.join(os.tmpdir(), 'svc-e2e-'));
     process.chdir(testDir);
-
-    // Build the CLI first
-    try {
-      await execAsync('npm run build', { cwd: path.join(__dirname, '../..') });
-    } catch (error) {
-      // CLI might already be built, continue
-    }
   });
 
   describe('Complete Development Workflow', () => {
     it('should complete full workflow: init -> validate -> plan', async () => {
       // Step 1: Initialize service
-      const { stdout: initOutput } = await execAsync(
-        `node ${cliPath} init --name shipping --owner team-fulfillment --framework commercial --pattern lambda-api-with-db`
+      const { stdout: initOutput } = await execCli(
+        `init --name shipping --owner team-fulfillment --framework commercial --pattern lambda-api-with-db`
       );
       expect(initOutput).toContain('initialized successfully');
 
@@ -37,27 +29,27 @@ describe('End-to-End CLI Workflows', () => {
       await expect(fs.access('patches.ts')).resolves.not.toThrow();
 
       // Step 2: Validate the generated manifest
-      const { stdout: validateOutput } = await execAsync(`node ${cliPath} validate`);
+      const { stdout: validateOutput } = await execCli(`validate`);
       expect(validateOutput).toContain('validation completed successfully');
       expect(validateOutput).toContain('Service: shipping');
       expect(validateOutput).toContain('Owner: team-fulfillment');
       expect(validateOutput).toContain('Compliance Framework: commercial');
 
       // Step 3: Plan for different environments
-      const { stdout: devPlanOutput } = await execAsync(`node ${cliPath} plan --env dev`);
+      const { stdout: devPlanOutput } = await execCli(`plan --env dev`);
       expect(devPlanOutput).toContain('Active Framework: commercial');
       expect(devPlanOutput).toContain('Planning deployment for environment: dev');
       expect(devPlanOutput).toContain('Resolved Configuration:');
 
-      const { stdout: prodPlanOutput } = await execAsync(`node ${cliPath} plan --env prod`);
+      const { stdout: prodPlanOutput } = await execCli(`plan --env prod`);
       expect(prodPlanOutput).toContain('Active Framework: commercial');
       expect(prodPlanOutput).toContain('Planning deployment for environment: prod');
     });
 
     it('should handle FedRAMP workflow with enhanced security', async () => {
       // Initialize FedRAMP High service
-      await execAsync(
-        `node ${cliPath} init --name secure-service --owner security-team --framework fedramp-high --pattern lambda-api-with-db`
+      await execCli(
+        `init --name secure-service --owner security-team --framework fedramp-high --pattern lambda-api-with-db`
       );
 
       const serviceYml = await fs.readFile('service.yml', 'utf8');
@@ -66,11 +58,11 @@ describe('End-to-End CLI Workflows', () => {
       expect(serviceYml).toContain('backupRetentionDays: 35');
 
       // Validate FedRAMP service
-      const { stdout: validateOutput } = await execAsync(`node ${cliPath} validate`);
+      const { stdout: validateOutput } = await execCli(`validate`);
       expect(validateOutput).toContain('Compliance Framework: fedramp-high');
 
       // Plan should show framework-specific settings
-      const { stdout: planOutput } = await execAsync(`node ${cliPath} plan --env prod`);
+      const { stdout: planOutput } = await execCli(`plan --env prod`);
       expect(planOutput).toContain('Active Framework: fedramp-high');
       
       // Parse JSON output to verify framework-specific settings
@@ -92,7 +84,7 @@ runtime: nodejs20
 components: []
       `);
 
-      await expect(execAsync(`node ${cliPath} validate`)).rejects.toMatchObject({
+      await expect(execCli(`validate`)).rejects.toMatchObject({
         code: 2,
         stderr: expect.stringContaining('service')
       });
@@ -100,7 +92,7 @@ components: []
 
     it('should handle file discovery errors gracefully', async () => {
       // No service.yml in directory
-      await expect(execAsync(`node ${cliPath} validate`)).rejects.toMatchObject({
+      await expect(execCli(`validate`)).rejects.toMatchObject({
         code: 2,
         stderr: expect.stringContaining('No service.yml found')
       });
@@ -122,7 +114,7 @@ components:
         access: read
       `);
 
-      await expect(execAsync(`node ${cliPath} plan --env dev`)).rejects.toMatchObject({
+      await expect(execCli(`plan --env dev`)).rejects.toMatchObject({
         code: 2,
         stderr: expect.stringContaining('nonexistent-db')
       });
@@ -148,7 +140,7 @@ components:
     });
 
     it('should provide human-readable output by default', async () => {
-      const { stdout } = await execAsync(`node ${cliPath} validate`);
+      const { stdout } = await execCli(`validate`);
       
       // Should contain human-readable elements
       expect(stdout).toMatch(/✓|ℹ|Service:/);
@@ -156,7 +148,7 @@ components:
     });
 
     it('should provide structured JSON output in CI mode', async () => {
-      const { stdout } = await execAsync(`node ${cliPath} validate --ci`);
+      const { stdout } = await execCli(`validate --ci`);
       
       // In CI mode, each log line should be valid JSON
       const lines = stdout.trim().split('\\n').filter(line => line.trim());
@@ -168,7 +160,7 @@ components:
     });
 
     it('should provide verbose debug output', async () => {
-      const { stdout } = await execAsync(`node ${cliPath} validate --verbose`);
+      const { stdout } = await execCli(`validate --verbose`);
       
       // Should contain debug information
       expect(stdout).toMatch(/debug|🔍|DEBUG/i);
@@ -205,7 +197,7 @@ components:
       `);
 
       // FedRAMP High should enforce strict security policies
-      await expect(execAsync(`node ${cliPath} validate`)).rejects.toMatchObject({
+      await expect(execCli(`validate`)).rejects.toMatchObject({
         code: 2,
         stderr: expect.stringMatching(/FedRAMP High requires|encryption|security policy/i)
       });
@@ -227,7 +219,7 @@ components:
       multiAz: false
       `);
 
-      await expect(execAsync(`node ${cliPath} plan --env prod`)).rejects.toMatchObject({
+      await expect(execCli(`plan --env prod`)).rejects.toMatchObject({
         code: 2,
         stderr: expect.stringMatching(/FedRAMP.*encryption.*backup.*policy/i)
       });
@@ -237,8 +229,8 @@ components:
   describe('Escape Hatch Validation', () => {
     it('should detect and report patches.ts usage in plan output', async () => {
       // Initialize service with patches file
-      await execAsync(
-        `node ${cliPath} init --name patched-service --owner dev-team --framework commercial --pattern lambda-api-with-db`
+      await execCli(
+        `init --name patched-service --owner dev-team --framework commercial --pattern lambda-api-with-db`
       );
 
       // Modify patches.ts to include actual patches
@@ -269,7 +261,7 @@ export const patchInfo = {
       `);
 
       // Plan should detect and report the patches
-      const { stdout: planOutput } = await execAsync(`node ${cliPath} plan --env dev`);
+      const { stdout: planOutput } = await execCli(`plan --env dev`);
       
       expect(planOutput).toContain('Patch Report');
       expect(planOutput).toContain('patches.ts detected');
@@ -299,7 +291,7 @@ export function applyPatches(scope: any): void {
 }
       `);
 
-      const { stdout: validateOutput } = await execAsync(`node ${cliPath} validate`);
+      const { stdout: validateOutput } = await execCli(`validate`);
       
       expect(validateOutput).toContain('validation completed successfully');
       expect(validateOutput).toMatch(/patches\.ts.*detected|escape hatch.*found/i);
@@ -308,8 +300,8 @@ export function applyPatches(scope: any): void {
 
   describe('Template Scaffolding Validation', () => {
     it('should scaffold lambda-api-with-db template correctly', async () => {
-      const { stdout: initOutput } = await execAsync(
-        `node ${cliPath} init --name e-commerce --owner team-backend --framework commercial --pattern lambda-api-with-db`
+      const { stdout: initOutput } = await execCli(
+        `init --name e-commerce --owner team-backend --framework commercial --pattern lambda-api-with-db`
       );
       
       expect(initOutput).toContain('initialized successfully');
@@ -347,8 +339,8 @@ export function applyPatches(scope: any): void {
     });
 
     it('should scaffold empty template with minimal structure', async () => {
-      await execAsync(
-        `node ${cliPath} init --name minimal-service --owner team-ops --framework fedramp-moderate --pattern empty`
+      await execCli(
+        `init --name minimal-service --owner team-ops --framework fedramp-moderate --pattern empty`
       );
 
       const serviceYml = await fs.readFile('service.yml', 'utf8');
@@ -364,8 +356,8 @@ export function applyPatches(scope: any): void {
     });
 
     it('should apply framework-specific template customizations', async () => {
-      await execAsync(
-        `node ${cliPath} init --name secure-api --owner security-team --framework fedramp-high --pattern lambda-api-with-db`
+      await execCli(
+        `init --name secure-api --owner security-team --framework fedramp-high --pattern lambda-api-with-db`
       );
 
       const serviceYml = await fs.readFile('service.yml', 'utf8');
@@ -416,7 +408,7 @@ components:
           handler: src/handler.getData
       `);
 
-      await expect(execAsync(`node ${cliPath} validate`)).rejects.toMatchObject({
+      await expect(execCli(`validate`)).rejects.toMatchObject({
         code: 2,
         stderr: expect.stringMatching(/suppression.*expired|AwsSolutions-IAM5.*2023-06-15/i)
       });
@@ -447,7 +439,7 @@ components:
       routes: []
       `);
 
-      await expect(execAsync(`node ${cliPath} validate`)).rejects.toMatchObject({
+      await expect(execCli(`validate`)).rejects.toMatchObject({
         code: 2,
         stderr: expect.stringMatching(/Missing.*owner.*expiresOn|Invalid.*date.*format|Missing.*id/i)
       });
@@ -581,13 +573,13 @@ components:
       `);
 
       // Validate the complex manifest
-      const { stdout: validateOutput } = await execAsync(`node ${cliPath} validate`);
+      const { stdout: validateOutput } = await execCli(`validate`);
       expect(validateOutput).toContain('validation completed successfully');
       expect(validateOutput).toContain('Components: 5');
 
       // Plan for both environments
-      const { stdout: devPlan } = await execAsync(`node ${cliPath} plan --env dev`);
-      const { stdout: prodPlan } = await execAsync(`node ${cliPath} plan --env prod`);
+      const { stdout: devPlan } = await execCli(`plan --env dev`);
+      const { stdout: prodPlan } = await execCli(`plan --env prod`);
 
       expect(devPlan).toContain('Active Framework: fedramp-moderate');
       expect(prodPlan).toContain('Active Framework: fedramp-moderate');
@@ -622,12 +614,12 @@ components:
       await fs.writeFile('service.yml', fixtureContent);
 
       // Validate should pass for compliant FedRAMP manifest
-      const { stdout: validateOutput } = await execAsync(`node ${cliPath} validate`);
+      const { stdout: validateOutput } = await execCli(`validate`);
       expect(validateOutput).toContain('validation completed successfully');
       expect(validateOutput).toContain('Compliance Framework: fedramp-moderate');
 
       // Plan should show FedRAMP-specific enhanced defaults
-      const { stdout: planOutput } = await execAsync(`node ${cliPath} plan --env prod`);
+      const { stdout: planOutput } = await execCli(`plan --env prod`);
       expect(planOutput).toContain('Active Framework: fedramp-moderate');
 
       // Parse and verify enhanced FedRAMP security configurations
@@ -663,15 +655,15 @@ components:
       await fs.writeFile('service.yml', fixtureContent);
 
       // Plan should fail with specific FedRAMP policy violations
-      await expect(execAsync(`node ${cliPath} plan --env prod`)).rejects.toMatchObject({
+      await expect(execCli(`plan --env prod`)).rejects.toMatchObject({
         code: 2,
         stderr: expect.stringMatching(/FedRAMP.*requires.*encryption|storage.*encrypted.*false|backup.*retention.*insufficient/i)
       });
     });
 
     it('should show FedRAMP High enhanced security requirements', async () => {
-      await execAsync(
-        `node ${cliPath} init --name fedramp-high-service --owner security-team --framework fedramp-high --pattern lambda-api-with-db`
+      await execCli(
+        `init --name fedramp-high-service --owner security-team --framework fedramp-high --pattern lambda-api-with-db`
       );
 
       const serviceYml = await fs.readFile('service.yml', 'utf8');
@@ -690,7 +682,7 @@ components:
       expect(serviceYml).toMatch(/suppress:/);
 
       // Plan should succeed and show enhanced controls
-      const { stdout: planOutput } = await execAsync(`node ${cliPath} plan --env prod`);
+      const { stdout: planOutput } = await execCli(`plan --env prod`);
       expect(planOutput).toContain('Active Framework: fedramp-high');
       expect(planOutput).toMatch(/enhanced.*security.*controls|FedRAMP.*High.*requirements/i);
     });
@@ -722,7 +714,7 @@ components:
       `);
 
       // Should fail validation due to expired suppression
-      await expect(execAsync(`node ${cliPath} validate`)).rejects.toMatchObject({
+      await expect(execCli(`validate`)).rejects.toMatchObject({
         code: 2,
         stderr: expect.stringMatching(/suppression.*expired.*2023-06-01|AwsSolutions-RDS2.*expired/i)
       });
@@ -731,7 +723,7 @@ components:
 
   afterEach(async () => {
     try {
-      process.chdir('/tmp');
+      process.chdir(originalCwd);
       await fs.rm(testDir, { recursive: true, force: true });
     } catch {
       // Ignore cleanup errors

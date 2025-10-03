@@ -6,7 +6,7 @@ import { Construct } from 'constructs';
 import type { IConstruct } from 'constructs';
 import type { IVpc } from 'aws-cdk-lib/aws-ec2';
 import type { ComponentContext as BaseComponentContext, ComponentSpec as BaseComponentSpec, ComponentCapabilities as BaseComponentCapabilities } from '@platform/contracts';
-import type { BindingContext, BindingResult, IBinderStrategy } from './platform-binding-trigger-spec.js';
+import type { BindingContext, BindingResult, IBinderStrategy } from './platform-binding-trigger-spec.ts';
 export { Construct };
 export type { IConstruct };
 export type { IVpc };
@@ -131,5 +131,5 @@ export interface IComponentFactory {
     getSupportedComponents(): string[];
     getComplianceFramework(): string;
 }
-export * from './component.js';
+export * from './component.ts';
 //# sourceMappingURL=component-interfaces.d.ts.map

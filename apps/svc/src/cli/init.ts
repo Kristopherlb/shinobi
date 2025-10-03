@@ -103,7 +103,7 @@ export class InitCommand {
     }
 
     // 3. Check if service.yml already exists
-    const existingManifest = await this.dependencies.fileDiscovery.findManifest('.');
+    const existingManifest = await this.dependencies.fileDiscovery.findManifest('.', { silentOnMissing: true });
     if (existingManifest) {
       return {
         success: false,

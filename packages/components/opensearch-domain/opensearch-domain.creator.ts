@@ -10,9 +10,9 @@ import {
   ComponentSpec, 
   ComponentContext, 
   IComponentCreator 
-} from '../../platform/contracts/component-interfaces.js';
-import { OpenSearchDomainComponent } from './opensearch-domain.component.js';
-import { OpenSearchDomainConfig, OPENSEARCH_DOMAIN_CONFIG_SCHEMA } from './opensearch-domain.builder.js';
+} from '../../platform/contracts/component-interfaces.ts';
+import { OpenSearchDomainComponent } from './opensearch-domain.component.ts';
+import { OpenSearchDomainConfig, OPENSEARCH_DOMAIN_CONFIG_SCHEMA } from './opensearch-domain.builder.ts';
 
 /**
  * Creator class for OpenSearchDomainComponent component

@@ -1,5 +1,5 @@
-import { PlanOutputFormatter } from '../plan-output-formatter.js';
-import { Logger } from '../../platform/logger/src/index.js';
+import { PlanOutputFormatter } from '../plan-output-formatter.ts';
+import { Logger } from '../../platform/logger/src/index.ts';
 
 describe('PlanOutputFormatter', () => {
   const logger = Logger.getLogger('PlanOutputFormatterTest');

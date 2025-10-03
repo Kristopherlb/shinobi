@@ -5,10 +5,10 @@
 
 import { existsSync } from 'fs';
 import * as path from 'path';
-import { Logger } from '../logger/src/index.js';
-import { LogicalIdManager, LogicalIdMap } from './logical-id-manager.js';
-import { PlanningLogicalIdIntegration, PlanningContext } from './planning-integration.js';
-import { DriftAvoidanceEngine } from './drift-avoidance.js';
+import { Logger } from '../logger/src/index.ts';
+import { LogicalIdManager, LogicalIdMap } from './logical-id-manager.ts';
+import { PlanningLogicalIdIntegration, PlanningContext } from './planning-integration.ts';
+import { DriftAvoidanceEngine } from './drift-avoidance.ts';
 
 export interface LogicalIdCliOptions {
   stackName: string;

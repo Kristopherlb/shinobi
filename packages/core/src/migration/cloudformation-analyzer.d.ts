@@ -2,7 +2,7 @@
  * CloudFormation Template Analyzer
  * Phase 1: Analyzes existing CDK project and extracts resource inventory
  */
-import { Logger } from '../core-engine/logger.js';
+import { Logger } from '../core-engine/logger.ts';
 export interface CloudFormationResource {
     logicalId: string;
     type: string;

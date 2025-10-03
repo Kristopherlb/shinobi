@@ -2,9 +2,9 @@
  * Path: packages/core/src/platform/binders/strategies/compute/__tests__/batch-binder-strategy.test.ts
  */
 
-import { BatchBinderStrategy } from '../batch-binder-strategy.js';
-import type { BindingContext } from '../../../binding-context.js';
-import type { ComponentBinding } from '../../../component-binding.js';
+import { BatchBinderStrategy } from '../batch-binder-strategy.ts';
+import type { BindingContext } from '../../../binding-context.ts';
+import type { ComponentBinding } from '../../../component-binding.ts';
 
 class MockComponent {
   public env: Record<string, string> = {};

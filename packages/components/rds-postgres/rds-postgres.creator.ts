@@ -9,7 +9,7 @@ import {
   IComponent, 
   IComponentCreator 
 } from '@platform/contracts';
-import { RdsPostgresComponent } from './rds-postgres.component.js';
+import { RdsPostgresComponent } from './rds-postgres.component.ts';
 
 /**
  * Creator for RDS Postgres components with Template Method governance

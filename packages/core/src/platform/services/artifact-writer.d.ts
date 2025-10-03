@@ -4,7 +4,7 @@
  * Handles writing CLI command artifacts to files with proper organization
  * and structured output for CI/CD integration and auditing.
  */
-import { PlanArtifact, DeploymentArtifact, MigrationArtifact, ArtifactWriter } from '../contracts/artifacts.js';
+import { PlanArtifact, DeploymentArtifact, MigrationArtifact, ArtifactWriter } from '../contracts/artifacts.ts';
 export declare class StandardArtifactWriter implements ArtifactWriter {
     private serializer;
     writePlanArtifact(artifact: PlanArtifact, outputDir: string): Promise<string[]>;

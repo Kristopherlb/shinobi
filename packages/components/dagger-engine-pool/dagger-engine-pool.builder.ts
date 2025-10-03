@@ -1,4 +1,4 @@
-import { DaggerConfig } from './types.js';
+import { DaggerConfig } from './types.ts';
 import { ConfigBuilder } from '@platform/core-engine';
 
 /**

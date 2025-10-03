@@ -2,7 +2,7 @@
  * Context Hydrator Service - Single responsibility for environment resolution
  * Implements Principle 4: Single Responsibility Principle
  */
-import { Logger } from '../platform/logger/src/index.js';
+import { Logger } from '../platform/logger/src/index.ts';
 export interface ContextHydratorDependencies {
     logger: Logger;
     manifestPath?: string;

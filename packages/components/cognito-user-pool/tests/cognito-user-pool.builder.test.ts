@@ -2,9 +2,9 @@ import {
   CognitoUserPoolComponentConfigBuilder,
   CognitoUserPoolConfig,
   COGNITO_USER_POOL_CONFIG_SCHEMA
-} from '../src/cognito-user-pool.builder.js';
-import { ComponentContext, ComponentSpec } from '../../../platform/contracts/component-interfaces.js';
-import COGNITO_USER_POOL_CONFIG_SCHEMA_JSON from '../Config.schema.json' assert { type: 'json' };
+} from '../src/cognito-user-pool.builder.ts';
+import { ComponentContext, ComponentSpec } from '../../../platform/contracts/component-interfaces.ts';
+import COGNITO_USER_POOL_CONFIG_SCHEMA_JSON from '../Config.schema.json' with { type: 'json' };
 
 type Framework = 'commercial' | 'fedramp-moderate' | 'fedramp-high';
 

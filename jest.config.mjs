@@ -4,12 +4,39 @@ import url from 'node:url';
 const __dirname = path.dirname(url.fileURLToPath(import.meta.url));
 
 export default {
-  transform: { '^.+\\.[tj]sx?$': ['ts-jest', { tsconfig: 'tsconfig.jest.json' }] },
-  transformIgnorePatterns: ['node_modules/(?!(uuid|@aws-sdk)/)'],
   testEnvironment: 'node',
-  moduleFileExtensions: ['ts', 'tsx', 'js', 'jsx', 'json', 'node'],
-  resolver: '@nx/jest/plugins/resolver',
+  testEnvironmentOptions: {
+    customExportConditions: ['node', 'default']
+  },
+  extensionsToTreatAsEsm: ['.ts', '.tsx'],
+  transform: {
+    '^.+\\.[tj]sx?$': [
+      '@swc/jest',
+      {
+        jsc: {
+          parser: {
+            syntax: 'typescript',
+            tsx: true,
+            decorators: true
+          },
+          target: 'es2022',
+          keepClassNames: true
+        },
+        module: {
+          type: 'es6'
+        },
+        sourceMaps: true
+      }
+    ]
+  },
+  transformIgnorePatterns: ['node_modules/(?!(uuid|@aws-sdk)/)'],
+  moduleFileExtensions: ['ts', 'tsx', 'js', 'jsx', 'mjs', 'json', 'node'],
+  resolver: path.join(__dirname, 'tools/jest-resolver.cjs'),
+  modulePathIgnorePatterns: ['[\\\\/]dist[\\\\/]', '<rootDir>/tmp/', '<rootDir>/tmp-shinobi/'],
+  watchPathIgnorePatterns: ['[\\\\/]dist[\\\\/]', '<rootDir>/tmp/', '<rootDir>/tmp-shinobi/'],
   moduleNameMapper: {
+    '^(?:\\.{1,2}/)+platform/contracts/(.+)\\.js$': '<rootDir>/packages/core/src/platform/contracts/$1.ts',
+    '^(\\.{1,2}/(?:.*/)?src/.+)\\.js$': '$1.ts',
     '^@platform/contracts$': '<rootDir>/packages/core/src/platform/contracts/index.ts',
     '^@platform/logger$': '<rootDir>/packages/core/src/platform/logger/src/index.ts',
     '^@platform/core-engine$': '<rootDir>/packages/core-engine/src/index.ts',

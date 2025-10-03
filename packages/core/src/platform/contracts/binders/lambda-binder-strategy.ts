@@ -5,15 +5,15 @@
 
 import * as iam from 'aws-cdk-lib/aws-iam';
 import * as lambda from 'aws-cdk-lib/aws-lambda';
-import { EnhancedBinderStrategy } from '../enhanced-binder-strategy.js';
+import { EnhancedBinderStrategy } from '../enhanced-binder-strategy.ts';
 import {
   EnhancedBindingContext,
   EnhancedBindingResult,
   IamPolicy,
   SecurityGroupRule,
   ComplianceAction
-} from '../bindings.js';
-import { validateOptions } from './binding-options.js';
+} from '../bindings.ts';
+import { validateOptions } from './binding-options.ts';
 
 /**
  * Lambda binder strategy for Lambda function invocations

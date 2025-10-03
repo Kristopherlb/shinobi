@@ -11,7 +11,7 @@ import * as iam from 'aws-cdk-lib/aws-iam';
 import * as cdk from 'aws-cdk-lib';
 import { IConstruct } from 'constructs';
 import { BaseComponent } from '@shinobi/core';
-import { IObservabilityHandler, ObservabilityHandlerResult, ObservabilityConfig } from './observability-handler.interface.js';
+import { IObservabilityHandler, ObservabilityHandlerResult, ObservabilityConfig } from './observability-handler.interface.ts';
 import { PlatformServiceContext } from '@shinobi/core/platform-services';
 import { ITaggingService, TaggingContext, defaultTaggingService } from '@shinobi/standards-tagging';
 import type { ComponentTelemetryDirectives } from '@platform/observability';

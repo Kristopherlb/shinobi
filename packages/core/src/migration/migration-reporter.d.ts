@@ -2,11 +2,11 @@
  * Migration Reporter
  * Generates comprehensive migration reports and documentation
  */
-import { Logger } from '../core-engine/logger.js';
-import { StackAnalysisResult } from './cloudformation-analyzer.js';
-import { ResourceMappingResult } from './resource-mapper.js';
-import { MigrationValidationResult } from './migration-validator.js';
-import { MigrationOptions } from './migration-engine.js';
+import { Logger } from '../core-engine/logger.ts';
+import { StackAnalysisResult } from './cloudformation-analyzer.ts';
+import { ResourceMappingResult } from './resource-mapper.ts';
+import { MigrationValidationResult } from './migration-validator.ts';
+import { MigrationOptions } from './migration-engine.ts';
 /**
  * Generates detailed migration reports and documentation
  */

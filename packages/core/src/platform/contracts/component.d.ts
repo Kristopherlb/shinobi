@@ -7,18 +7,18 @@
  */
 import * as logs from 'aws-cdk-lib/aws-logs';
 import { Construct, IConstruct } from 'constructs';
-import { ComponentSpec, ComponentContext, ComponentCapabilities, IComponent } from './component-interfaces.js';
-import { ITaggingService } from '../services/tagging-service/tagging.service.js';
-import { IObservabilityService } from '../services/observability/index.js';
-import { ILoggingService } from '../services/logging/index.js';
-import { IGovernanceService, GovernanceMetadata } from '../services/governance/index.js';
-import { IComplianceService } from '../services/compliance/index.js';
-import { ISecurityService } from '../services/security/index.js';
-import { ISecurityOperationsService } from '../services/security-operations/index.js';
-import { ICostManagementService } from '../services/cost-management/index.js';
-import { IBackupRecoveryService } from '../services/backup-recovery/index.js';
-import { IPerformanceOptimizationService } from '../services/performance/index.js';
-import { IFeatureFlagService } from '../services/feature-flags/index.js';
+import { ComponentSpec, ComponentContext, ComponentCapabilities, IComponent } from './component-interfaces.ts';
+import { ITaggingService } from '../services/tagging-service/tagging.service.ts';
+import { IObservabilityService } from '../services/observability/index.ts';
+import { ILoggingService } from '../services/logging/index.ts';
+import { IGovernanceService, GovernanceMetadata } from '../services/governance/index.ts';
+import { IComplianceService } from '../services/compliance/index.ts';
+import { ISecurityService } from '../services/security/index.ts';
+import { ISecurityOperationsService } from '../services/security-operations/index.ts';
+import { ICostManagementService } from '../services/cost-management/index.ts';
+import { IBackupRecoveryService } from '../services/backup-recovery/index.ts';
+import { IPerformanceOptimizationService } from '../services/performance/index.ts';
+import { IFeatureFlagService } from '../services/feature-flags/index.ts';
 /**
  * Options for configuring observability on components
  */

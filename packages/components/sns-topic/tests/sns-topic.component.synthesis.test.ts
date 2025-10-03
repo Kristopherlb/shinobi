@@ -2,8 +2,8 @@ import { App, Stack } from 'aws-cdk-lib';
 import { Template, Match } from 'aws-cdk-lib/assertions';
 import { Construct } from 'constructs';
 import { ComponentContext, ComponentSpec } from '@shinobi/core';
-import { SnsTopicComponent } from '../sns-topic.component.js';
-import { SnsTopicConfig } from '../sns-topic.builder.js';
+import { SnsTopicComponent } from '../sns-topic.component.ts';
+import { SnsTopicConfig } from '../sns-topic.builder.ts';
 
 type Framework = 'commercial' | 'fedramp-moderate' | 'fedramp-high';
 

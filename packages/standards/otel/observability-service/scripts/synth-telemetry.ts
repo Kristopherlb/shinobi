@@ -1,8 +1,8 @@
 import * as cdk from 'aws-cdk-lib';
 import { BaseComponent, ComponentContext, ComponentSpec } from '@shinobi/core';
 import { PlatformServiceContext } from '@shinobi/core/platform-services';
-import { ObservabilityService } from '../src/observability.service.js';
-import type { ComponentCapabilities } from '@shinobi/core/platform/contracts/component-interfaces.js';
+import { ObservabilityService } from '../src/observability.service.ts';
+import type { ComponentCapabilities } from '@shinobi/core/platform/contracts/component-interfaces.ts';
 
 type TelemetryComponentProps = {
   context: ComponentContext;

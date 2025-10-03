@@ -5,9 +5,9 @@
 
 import { Template, Match } from 'aws-cdk-lib/assertions';
 import { App, Stack } from 'aws-cdk-lib';
-import { IamPolicyComponentComponent } from '../iam-policy.component.js';
-import { IamPolicyConfig } from '../iam-policy.builder.js';
-import { ComponentContext, ComponentSpec } from '../../../platform/contracts/component-interfaces.js';
+import { IamPolicyComponentComponent } from '../iam-policy.component.ts';
+import { IamPolicyConfig } from '../iam-policy.builder.ts';
+import { ComponentContext, ComponentSpec } from '../../../platform/contracts/component-interfaces.ts';
 
 jest.mock('@platform/logger', () => ({
   Logger: {

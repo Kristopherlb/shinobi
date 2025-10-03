@@ -1,6 +1,6 @@
 import { ConfigBuilder, ConfigBuilderContext, ComponentConfigSchema } from '@shinobi/core';
 
-import schemaJson from '../Config.schema.json' assert { type: 'json' };
+import schemaJson from '../Config.schema.json' with { type: 'json' };
 
 export type AutoScalingGroupTerminationPolicy =
   | 'Default'

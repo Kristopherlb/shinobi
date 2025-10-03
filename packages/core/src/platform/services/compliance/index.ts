@@ -1,1 +1,1 @@
-export * from './compliance.service.js';
+export * from './compliance.service.ts';

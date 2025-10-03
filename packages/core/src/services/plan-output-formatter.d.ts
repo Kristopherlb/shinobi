@@ -2,7 +2,7 @@
  * Plan Output Formatter Service
  * Responsible for rendering synthesis results into user-friendly summaries
  */
-import { Logger } from '../platform/logger/src/index.js';
+import { Logger } from '../platform/logger/src/index.ts';
 export interface PlanOutputFormatterDependencies {
     logger: Logger;
 }

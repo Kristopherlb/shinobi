@@ -2,7 +2,7 @@
  * Platform Migration Engine
  * Implements the 4-phase migration workflow for CDK -> Platform conversion
  */
-import { Logger } from '../core-engine/logger.js';
+import { Logger } from '../core-engine/logger.ts';
 export interface MigrationOptions {
     cdkProjectPath: string;
     stackName: string;

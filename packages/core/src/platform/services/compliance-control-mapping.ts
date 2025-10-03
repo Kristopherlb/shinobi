@@ -5,7 +5,7 @@
  * Provides compliance plan generation and control validation.
  */
 
-import { ComponentType, ComplianceFramework } from '../contracts/bindings.js';
+import { ComponentType, ComplianceFramework } from '../contracts/bindings.ts';
 
 // NIST Control definitions
 export interface NISTControl {

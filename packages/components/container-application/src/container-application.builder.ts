@@ -1,9 +1,10 @@
 import {
   ConfigBuilder,
-  ConfigBuilderContext
+  ConfigBuilderContext,
+  ComponentContext,
+  ComponentSpec
 } from '@shinobi/core';
-import { ComponentContext, ComponentSpec } from '@shinobi/core';
-import CONTAINER_APPLICATION_CONFIG_SCHEMA from '../Config.schema.json' assert { type: 'json' };
+import CONTAINER_APPLICATION_CONFIG_SCHEMA from '../Config.schema.json' with { type: 'json' };
 
 export interface ApplicationSecretsConfig {
   [environmentVariable: string]: string;

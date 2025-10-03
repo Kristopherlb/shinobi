@@ -5,11 +5,11 @@ import {
   IComponentCreator
 } from '@shinobi/core';
 
-import { LambdaApiComponent } from './lambda-api.component.js';
+import { LambdaApiComponent } from './lambda-api.component.ts';
 import {
   LAMBDA_API_CONFIG_SCHEMA,
   LambdaApiConfig
-} from './lambda-api.builder.js';
+} from './lambda-api.builder.ts';
 
 export class LambdaApiComponentCreator implements IComponentCreator {
   public readonly componentType = 'lambda-api';

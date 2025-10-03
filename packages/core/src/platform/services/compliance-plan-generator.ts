@@ -5,9 +5,9 @@
  * including control mappings and audit information.
  */
 
-import { ComponentType, ComplianceFramework } from '../contracts/bindings.js';
-import { ComplianceControlMappingService, CompliancePlan } from './compliance-control-mapping.js';
-import { TaggingEnforcementService } from './tagging-enforcement.js';
+import { ComponentType, ComplianceFramework } from '../contracts/bindings.ts';
+import { ComplianceControlMappingService, CompliancePlan } from './compliance-control-mapping.ts';
+import { TaggingEnforcementService } from './tagging-enforcement.ts';
 import * as fs from 'fs';
 import * as path from 'path';
 

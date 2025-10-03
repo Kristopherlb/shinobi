@@ -11,7 +11,7 @@ import type {
   ComponentSpec as BaseComponentSpec,
   ComponentCapabilities as BaseComponentCapabilities
 } from '@platform/contracts';
-import type { BindingContext, BindingResult, IBinderStrategy } from './platform-binding-trigger-spec.js';
+import type { BindingContext, BindingResult, IBinderStrategy } from './platform-binding-trigger-spec.ts';
 
 // Re-export CDK types for convenience
 export { Construct };
@@ -169,4 +169,4 @@ export interface IComponentFactory {
 }
 
 // Export base component classes and interfaces
-export * from './component.js';
+export * from './component.ts';

@@ -5,7 +5,7 @@
  * Provides 5-layer configuration precedence chain and compliance-aware defaults.
  */
 
-import { ConfigBuilder, ConfigBuilderContext } from '../@shinobi/core/config-builder.js';
+import { ConfigBuilder, ConfigBuilderContext } from '../@shinobi/core/config-builder.ts';
 
 /**
  * Configuration interface for EcrRepositoryComponent component

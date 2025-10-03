@@ -20,7 +20,7 @@ import {
   ContainerApplicationConfig,
   ApplicationConfig,
   NetworkConfig
-} from './container-application.builder.js';
+} from './container-application.builder.ts';
 
 export class ContainerApplicationComponent extends BaseComponent {
   private config!: ContainerApplicationConfig;
@@ -376,7 +376,7 @@ export class ContainerApplicationComponent extends BaseComponent {
     const loadBalancer = new elbv2.ApplicationLoadBalancer(this, 'ContainerAlb', {
       vpc,
       internetFacing: this.config.network.loadBalancerScheme === 'internet-facing',
-      loadBalancerName: `${this.context.serviceName}-${this.spec.name}-alb`,
+      loadBalancerName: this.buildResourceName('alb', 32),
       vpcSubnets: this.buildAlbSubnetSelection(vpc, this.config.network),
       securityGroup: loadBalancerSecurityGroup
     });
@@ -597,6 +597,22 @@ export class ContainerApplicationComponent extends BaseComponent {
     if (Object.keys(this.otelEnvironment).length > 0) {
       this.registerCapability('otel:environment', this.otelEnvironment);
     }
+  }
+
+  private buildResourceName(suffix: string, maxLength: number): string {
+    const sanitized = `${this.context.serviceName}-${this.spec.name}-${suffix}`
+      .toLowerCase()
+      .replace(/[^a-z0-9-]/g, '-');
+
+    if (sanitized.length <= maxLength) {
+      return sanitized;
+    }
+
+    const hash = cdk.Names.uniqueId(this).replace(/[^a-z0-9]/gi, '').toLowerCase().slice(0, 6) || 'res';
+    const available = Math.max(maxLength - hash.length - 1, 1);
+    const trimmed = sanitized.slice(0, available).replace(/-+$/g, '');
+    const candidate = `${trimmed}-${hash}`;
+    return candidate.length > maxLength ? candidate.slice(0, maxLength) : candidate;
   }
 
   private getPrimarySecurityGroupId(): string {

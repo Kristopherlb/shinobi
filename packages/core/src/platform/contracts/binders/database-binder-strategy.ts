@@ -5,8 +5,8 @@
 
 import * as iam from 'aws-cdk-lib/aws-iam';
 import * as ec2 from 'aws-cdk-lib/aws-ec2';
-import { EnhancedBinderStrategy } from '../enhanced-binder-strategy.js';
-import { validateOptions } from './binding-options.js';
+import { EnhancedBinderStrategy } from '../enhanced-binder-strategy.ts';
+import { validateOptions } from './binding-options.ts';
 import {
   EnhancedBindingContext,
   EnhancedBindingResult,
@@ -17,7 +17,7 @@ import {
   Capability,
   PostgresCapabilityData,
   MySQLCapabilityData
-} from '../bindings.js';
+} from '../bindings.ts';
 
 /**
  * Database binder strategy for RDS/PostgreSQL connections

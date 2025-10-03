@@ -1,2 +1,2 @@
-export * from './governance.service.js';
+export * from './governance.service.ts';
 //# sourceMappingURL=index.d.ts.map

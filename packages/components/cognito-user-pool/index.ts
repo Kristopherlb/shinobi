@@ -4,14 +4,14 @@
  */
 
 // Component exports
-export { CognitoUserPoolComponent } from './src/cognito-user-pool.component.js';
+export { CognitoUserPoolComponent } from './src/cognito-user-pool.component.ts';
 
 // Configuration exports
 export {
   CognitoUserPoolConfig,
   CognitoUserPoolComponentConfigBuilder,
   COGNITO_USER_POOL_CONFIG_SCHEMA
-} from './src/cognito-user-pool.builder.js';
+} from './src/cognito-user-pool.builder.ts';
 
 // Creator exports
-export { CognitoUserPoolComponentCreator } from './src/cognito-user-pool.creator.js';
+export { CognitoUserPoolComponentCreator } from './src/cognito-user-pool.creator.ts';

@@ -2,7 +2,7 @@ import { App, Stack } from 'aws-cdk-lib';
 import { Template } from 'aws-cdk-lib/assertions';
 import * as ec2 from 'aws-cdk-lib/aws-ec2';
 import type { ComponentContext, ComponentSpec } from '@shinobi/core';
-import { ContainerApplicationComponent } from '../src/container-application.component.js';
+import { ContainerApplicationComponent } from '../src/container-application.component.ts';
 
 const createContext = (stack: Stack, overrides: Partial<ComponentContext> = {}): ComponentContext => ({
   scope: stack,

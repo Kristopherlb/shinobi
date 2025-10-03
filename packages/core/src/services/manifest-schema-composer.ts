@@ -3,15 +3,21 @@
  * Implements comprehensive JSON Schema validation with component-specific configuration validation
  */
 
-import { Logger } from '../platform/logger/src/index.js';
+import { Logger } from '../platform/logger/src/index.ts';
 import * as fs from 'fs/promises';
 import * as path from 'path';
+import { fileURLToPath } from 'node:url';
 import { glob } from 'glob';
+
+const moduleDir = typeof __dirname !== 'undefined'
+  ? __dirname
+  : path.dirname(fileURLToPath(import.meta.url));
 
 export interface ComponentSchemaInfo {
   componentType: string;
   schemaPath: string;
   schema: any;
+  definitions?: Record<string, any>;
 }
 
 export interface ManifestSchemaComposerDependencies {
@@ -52,7 +58,7 @@ export class ManifestSchemaComposer {
    * Load the base service manifest schema
    */
   private async loadBaseSchema(): Promise<any> {
-    const schemaPath = path.resolve(__dirname, 'service-manifest.schema.json');
+    const schemaPath = path.resolve(moduleDir, 'service-manifest.schema.json');
     const schemaContent = await fs.readFile(schemaPath, 'utf8');
     return JSON.parse(schemaContent);
   }
@@ -68,11 +74,14 @@ export class ManifestSchemaComposer {
       'packages/components/**/src/schema/Config.schema.json'
     ];
     const files = new Set<string>();
-    const repoRoot = path.resolve(__dirname, '../../../..');
+    const repoRoot = path.resolve(moduleDir, '../../../..');
 
     try {
       for (const pattern of patterns) {
         for (const file of await glob(pattern, { cwd: repoRoot, posix: true })) {
+          if (file.includes('/dist/')) {
+            continue;
+          }
           files.add(file);
         }
       }
@@ -94,7 +103,7 @@ export class ManifestSchemaComposer {
    */
   private async loadComponentSchema(schemaFilePath: string): Promise<void> {
     try {
-      const repoRoot = path.resolve(__dirname, '../../../..');
+      const repoRoot = path.resolve(moduleDir, '../../../..');
       const fullPath = path.resolve(repoRoot, schemaFilePath);
       const schemaContent = await fs.readFile(fullPath, 'utf8');
       const schema = JSON.parse(schemaContent);
@@ -111,19 +120,27 @@ export class ManifestSchemaComposer {
       }
 
       if (this.componentSchemas.has(componentType)) {
-        this.dependencies.logger.warn(`Duplicate schema for component type "${componentType}". Using first loaded: ${this.componentSchemas.get(componentType)!.schemaPath}`);
+        this.dependencies.logger.debug(`Duplicate schema for component type "${componentType}". Using first loaded: ${this.componentSchemas.get(componentType)!.schemaPath}`);
         return;
       }
 
       const defKey = `component.${componentType}.config`;
       const normalizedSchema = JSON.parse(JSON.stringify(schema));
-      delete normalizedSchema.$id;
-      this.rewriteSchemaRefs(normalizedSchema, defKey);
+      normalizedSchema.$id = `#/$defs/${defKey}`;
+
+      let extractedDefinitions: Record<string, any> | undefined;
+      if (normalizedSchema.definitions) {
+        extractedDefinitions = JSON.parse(JSON.stringify(normalizedSchema.definitions));
+        delete normalizedSchema.definitions;
+      }
+
+      this.rewriteSchemaRefs(normalizedSchema, componentType);
 
       this.componentSchemas.set(componentType, {
         componentType,
         schemaPath: fullPath,
-        schema: normalizedSchema
+        schema: normalizedSchema,
+        definitions: extractedDefinitions
       });
 
       this.dependencies.logger.debug(`Loaded schema for component type: ${componentType}`);
@@ -176,6 +193,13 @@ export class ManifestSchemaComposer {
     for (const [componentType, info] of Array.from(this.componentSchemas.entries())) {
       const defKey = `component.${componentType}.config`;
       schema.$defs[defKey] = info.schema;
+
+      if (info.definitions) {
+        for (const [definitionName, definitionSchema] of Object.entries(info.definitions)) {
+          const definitionKey = `component.${componentType}.definition.${definitionName.replace(/[\/#]/g, '.')}`;
+          schema.$defs[definitionKey] = definitionSchema;
+        }
+      }
     }
 
     // Strengthen `type` to the loaded component types (only if non-empty to avoid Ajv enum error)
@@ -279,23 +303,26 @@ export class ManifestSchemaComposer {
     };
   }
 
-  private rewriteSchemaRefs(node: any, defKey: string): void {
+  private rewriteSchemaRefs(node: any, componentType: string): void {
+    const configKey = `component.${componentType}.config`;
+    const definitionPrefix = `component.${componentType}.definition`;
     if (!node || typeof node !== 'object') {
       return;
     }
 
     if (typeof node.$ref === 'string') {
       const ref = node.$ref;
-      if (ref.startsWith('#/')) {
-        const pointer = ref.slice(2);
-        node.$ref = `#/$defs/${defKey}/${pointer}`;
+      if (ref.startsWith('#/definitions/')) {
+        const pointer = ref.slice('#/definitions/'.length);
+        const sanitizedPointer = pointer.replace(/[\/#]/g, '.');
+        node.$ref = `#/$defs/${definitionPrefix}.${sanitizedPointer}`;
       } else if (ref === '#') {
-        node.$ref = `#/$defs/${defKey}`;
+        node.$ref = `#/$defs/${configKey}`;
       }
     }
 
     for (const value of Object.values(node)) {
-      this.rewriteSchemaRefs(value, defKey);
+      this.rewriteSchemaRefs(value, componentType);
     }
   }
 }

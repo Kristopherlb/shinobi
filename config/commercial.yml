@@ -1192,7 +1192,7 @@ defaults:
       type: string
     billingMode: pay-per-request
     tableClass: standard
-    pointInTimeRecovery: false
+    pointInTimeRecovery: true
     timeToLive:
       enabled: false
     stream:
@@ -1203,8 +1203,9 @@ defaults:
     encryption:
       type: aws-managed
     backup:
-      enabled: false
-      retentionDays: 7
+      enabled: true
+      retentionDays: 14
+      schedule: 'cron(0 5 * * ? *)'
     monitoring:
       enabled: false
       alarms:

@@ -1,7 +1,7 @@
-import { Logger } from '../platform/logger/src/index.js';
-import { SchemaManager } from './schema-manager.js';
-import { EnhancedSchemaValidator } from './enhanced-schema-validator.js';
-import { ManifestSchemaComposer } from './manifest-schema-composer.js';
+import { Logger } from '../platform/logger/src/index.ts';
+import { SchemaManager } from './schema-manager.ts';
+import { EnhancedSchemaValidator } from './enhanced-schema-validator.ts';
+import { ManifestSchemaComposer } from './manifest-schema-composer.ts';
 export interface SchemaValidatorDependencies {
     logger: Logger;
     schemaManager: SchemaManager;

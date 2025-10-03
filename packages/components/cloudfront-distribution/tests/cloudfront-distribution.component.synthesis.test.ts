@@ -11,9 +11,9 @@ jest.mock(
 
 import { App, Stack } from 'aws-cdk-lib';
 import { Match, Template } from 'aws-cdk-lib/assertions';
-import { CloudFrontDistributionComponent } from '../src/cloudfront-distribution.component.js';
-import { CloudFrontDistributionConfig } from '../src/cloudfront-distribution.builder.js';
-import { ComponentContext, ComponentSpec } from '../../../core/src/platform/contracts/component-interfaces.js';
+import { CloudFrontDistributionComponent } from '../src/cloudfront-distribution.component.ts';
+import { CloudFrontDistributionConfig } from '../src/cloudfront-distribution.builder.ts';
+import { ComponentContext, ComponentSpec } from '../../../core/src/platform/contracts/component-interfaces.ts';
 
 const createMockContext = (framework: string): ComponentContext => ({
   serviceName: 'test-service',
