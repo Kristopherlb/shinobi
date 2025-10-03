@@ -62,7 +62,17 @@ describe('ContainerApplicationComponent', () => {
 
     const existingVpc = new ec2.Vpc(stack, 'ExistingVpc', {
       maxAzs: 2,
-      natGateways: 0
+      natGateways: 1,
+      subnetConfiguration: [
+        {
+          name: 'Public',
+          subnetType: ec2.SubnetType.PUBLIC
+        },
+        {
+          name: 'Private',
+          subnetType: ec2.SubnetType.PRIVATE_WITH_EGRESS
+        }
+      ]
     });
 
     const context = createContext(stack, { vpc: existingVpc });

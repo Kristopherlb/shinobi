@@ -590,6 +590,33 @@ defaults:
     tags:
       compliance-tier: fedramp-high
 
+  container-application:
+    service:
+      desiredCount: 2
+      cpu: 512
+      memory: 1024
+      autoScaling:
+        enabled: true
+        maxCapacity: 4
+        cpuTarget: 60
+        memoryTarget: 70
+    network:
+      assignPublicIp: false
+      loadBalancerScheme: internal
+      natGateways: 0
+    observability:
+      logRetentionDays: 180
+      cpuThreshold: 65
+      memoryThreshold: 70
+      enableTracing: true
+      enableMetrics: true
+    security:
+      enableEncryption: true
+      enableVpcFlowLogs: true
+      enableWaf: true
+    tags:
+      compliance-tier: fedramp-high
+
   static-website:
     bucket:
       indexDocument: index.html

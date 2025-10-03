@@ -482,6 +482,32 @@ defaults:
     tags:
       compliance-tier: commercial
 
+  container-application:
+    service:
+      desiredCount: 2
+      cpu: 512
+      memory: 1024
+      autoScaling:
+        enabled: true
+        maxCapacity: 4
+        cpuTarget: 75
+        memoryTarget: 80
+    network:
+      assignPublicIp: true
+      loadBalancerScheme: internet-facing
+      natGateways: 0
+    observability:
+      logRetentionDays: 30
+      cpuThreshold: 80
+      memoryThreshold: 85
+      enableTracing: true
+      enableMetrics: true
+    security:
+      enableEncryption: true
+      enableVpcFlowLogs: true
+      enableWaf: false
+    tags: {}
+
   static-website:
     bucket:
       indexDocument: index.html

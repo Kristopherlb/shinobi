@@ -3,7 +3,7 @@ import { Dirent } from 'fs';
 import * as fsp from 'fs/promises';
 import * as path from 'path';
 import { execSync } from 'child_process';
-import { pathToFileURL } from 'url';
+import { fileURLToPath, pathToFileURL } from 'url';
 import { loadComponentCatalog, ComponentCatalogEntry, formatCatalogDisplayName } from './component-catalog.js';
 import { sync as globSync } from 'glob';
 import { IComponentCreator } from '@shinobi/core';
@@ -58,10 +58,12 @@ const findCreatorExport = (moduleExports: Record<string, any>): PlatformComponen
   return undefined;
 };
 
+const moduleDir = path.dirname(fileURLToPath(import.meta.url));
+const rootDir = path.resolve(moduleDir, '../../../../../');
+
 export const loadComponentCreators = async (
   options?: LoadCreatorsOptions
 ): Promise<Map<string, ComponentCreatorEntry>> => {
-  const rootDir = path.resolve(__dirname, '../../../../../');
   const componentsDir = path.join(rootDir, 'packages/components');
   const catalogEntries = await loadComponentCatalog({ includeNonProduction: true });
   const catalogByType = new Map<string, ComponentCatalogEntry>(catalogEntries.map(entry => [entry.componentType, entry]));
