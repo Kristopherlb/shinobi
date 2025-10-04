@@ -6,8 +6,8 @@
 
 import { App, Stack } from 'aws-cdk-lib';
 import { Template, Match } from 'aws-cdk-lib/assertions';
-import { GlueJobComponent } from '../glue-job.component.js';
-import { GlueJobConfig } from '../glue-job.builder.js';
+import { GlueJobComponent } from '../glue-job.component.ts';
+import { GlueJobConfig } from '../glue-job.builder.ts';
 import { ComponentContext, ComponentSpec } from '@shinobi/core';
 
 const BASE_SCRIPT_LOCATION = 's3://test-bucket/scripts/job.py';

@@ -1,0 +1,22 @@
+{
+  "widgets": [
+    {
+      "type": "metric",
+      "title": "Days to Expiry",
+      "metrics": [
+        ["AWS/CertificateManager", "DaysToExpiry", "CertificateArn", "${certificateArn}"]
+      ],
+      "period": 3600,
+      "statistic": "Minimum"
+    },
+    {
+      "type": "metric",
+      "title": "Certificate Status",
+      "metrics": [
+        ["AWS/CertificateManager", "CertificateStatus", "CertificateArn", "${certificateArn}"]
+      ],
+      "period": 900,
+      "statistic": "Maximum"
+    }
+  ]
+}

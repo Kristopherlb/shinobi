@@ -11,6 +11,7 @@ import { IConstruct } from 'constructs';
 import { BaseComponent } from '@shinobi/core';
 import { IObservabilityHandler, ObservabilityHandlerResult, ObservabilityConfig } from './observability-handler.interface.js';
 import { ITaggingService, TaggingContext, defaultTaggingService } from '@shinobi/standards-tagging';
+import type { ComponentTelemetryDirectives } from '@platform/observability';
 import { PlatformServiceContext } from '@shinobi/core/platform-services';
 
 /**
@@ -92,6 +93,16 @@ export class AlbObservabilityHandler implements IObservabilityHandler {
    * Creates alarms for response time, unhealthy targets, and HTTP errors
    */
   private applyAlbObservability(component: BaseComponent, config: ObservabilityConfig): number {
+    const telemetry = this.getTelemetry(component);
+    if (telemetry?.alarms?.length || telemetry?.dashboards?.length) {
+      this.context.logger.debug('Telemetry directives detected for ALB; skipping legacy alarm synthesis', {
+        service: 'ObservabilityService',
+        componentType: component.getType(),
+        componentName: component.node.id
+      });
+      return 0;
+    }
+
     const loadBalancer = component.getConstruct('loadBalancer');
     if (!loadBalancer) {
       this.context.logger.warn('ALB component has no loadBalancer construct registered', { 
@@ -244,5 +255,24 @@ export class AlbObservabilityHandler implements IObservabilityHandler {
     }
 
     return alarmCount;
+  }
+
+  private getTelemetry(component: BaseComponent): ComponentTelemetryDirectives | undefined {
+    try {
+      const capabilities = component.getCapabilities();
+      for (const [key, value] of Object.entries(capabilities)) {
+        if (key.startsWith('observability:') && value && typeof value === 'object' && 'telemetry' in value) {
+          return (value as { telemetry?: ComponentTelemetryDirectives }).telemetry;
+        }
+      }
+    } catch (error) {
+      this.context.logger.debug('Unable to inspect component telemetry for ALB handler', {
+        service: 'ObservabilityService',
+        componentType: component.getType(),
+        componentName: component.node.id,
+        error: (error as Error).message
+      });
+    }
+    return undefined;
   }
 }

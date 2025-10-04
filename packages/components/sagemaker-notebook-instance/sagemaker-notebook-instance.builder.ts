@@ -5,8 +5,8 @@
  * Provides 5-layer configuration precedence chain and compliance-aware defaults.
  */
 
-import { ConfigBuilder, ConfigBuilderContext, ComponentConfigSchema } from '../@shinobi/core/config-builder.js';
-import { ComponentContext, ComponentSpec } from '../@shinobi/core/component-interfaces.js';
+import { ConfigBuilder, ConfigBuilderContext, ComponentConfigSchema } from '../@shinobi/core/config-builder.ts';
+import { ComponentContext, ComponentSpec } from '../@shinobi/core/component-interfaces.ts';
 
 /**
  * Configuration interface for SageMakerNotebookInstanceComponent component

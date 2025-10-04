@@ -7,8 +7,8 @@
 
 import { Template, Match } from 'aws-cdk-lib/assertions';
 import { App, Stack } from 'aws-cdk-lib';
-import { ApiGatewayHttpComponent } from '../api-gateway-http.component.js';
-import { ApiGatewayHttpConfigBuilder } from '../api-gateway-http.builder.js';
+import { ApiGatewayHttpComponent } from '../src/api-gateway-http.component.ts';
+import { ApiGatewayHttpConfigBuilder } from '../src/api-gateway-http.builder.ts';
 import { ComponentContext, ComponentSpec } from '@shinobi/core';
 
 // Test Metadata as per Platform Testing Standard v1.0 Section 11
@@ -94,7 +94,7 @@ describe('ApiGatewayHttpComponent', () => {
   describe('ConfigBuilder__ValidImplementation__ExtendsBaseClassCorrectly', () => {
     it('should extend ConfigBuilder and implement required methods', () => {
       // Arrange: Create config builder with deterministic inputs
-      const configBuilder = new ApiGatewayHttpConfigBuilder(mockContext, mockSpec);
+      const configBuilder = new ApiGatewayHttpConfigBuilder({ context: mockContext, spec: mockSpec });
 
       // Act: Get hardcoded fallbacks
       const fallbacks = configBuilder.getHardcodedFallbacks();
@@ -104,7 +104,7 @@ describe('ApiGatewayHttpComponent', () => {
       expect(typeof configBuilder.getHardcodedFallbacks).toBe('function');
       expect(fallbacks).toEqual({
         protocolType: 'HTTP',
-        description: 'Modern HTTP API Gateway for test-http-api-gateway',
+        description: 'HTTP API for test-http-api-gateway',
         cors: {
           allowOrigins: [], // Security-compliant: empty array forces explicit config
           allowMethods: ['GET', 'POST', 'OPTIONS'], // Minimal safe methods
@@ -118,8 +118,8 @@ describe('ApiGatewayHttpComponent', () => {
         },
         accessLogging: {
           enabled: true,
-          retentionInDays: 30,
-          format: expect.any(String)
+          retentionInDays: 90,
+          retainOnDelete: false
         },
         monitoring: {
           detailedMetrics: true,
@@ -127,7 +127,8 @@ describe('ApiGatewayHttpComponent', () => {
           alarms: {
             errorRate4xx: 5,
             errorRate5xx: 1,
-            highLatency: 2000
+            highLatency: 2000,
+            lowThroughput: 1
           }
         },
         apiSettings: {
@@ -165,7 +166,7 @@ describe('ApiGatewayHttpComponent', () => {
     it('should apply compliance-aware configuration for FedRAMP Moderate HTTP API', async () => {
       // Arrange: Create context with FedRAMP Moderate compliance
       const fedRAMPContext = createMockContext('fedramp-moderate');
-      const configBuilder = new ApiGatewayHttpConfigBuilder(fedRAMPContext, mockSpec);
+      const configBuilder = new ApiGatewayHttpConfigBuilder({ context: fedRAMPContext, spec: mockSpec });
 
       // Act: Build configuration using 5-layer precedence
       const config = await configBuilder.build();
@@ -452,7 +453,7 @@ describe('ApiGatewayHttpComponent', () => {
       component.synth();
 
       // Get the actual configuration used (through private access for testing)
-      const configBuilder = new ApiGatewayHttpConfigBuilder(mockContext, emptySpec);
+      const configBuilder = new ApiGatewayHttpConfigBuilder({ context: mockContext, spec: emptySpec });
       const fallbacks = configBuilder.getHardcodedFallbacks();
 
       // Assert: Verify security-first CORS defaults for HTTP API
@@ -486,7 +487,7 @@ describe('ApiGatewayHttpComponent', () => {
     it('should use conservative throttling limits that protect against resource exhaustion', () => {
       // Arrange: Create HTTP API component with no throttling config
       const emptySpec = createMockSpec({});
-      const configBuilder = new ApiGatewayHttpConfigBuilder(mockContext, emptySpec);
+      const configBuilder = new ApiGatewayHttpConfigBuilder({ context: mockContext, spec: emptySpec });
 
       // Act: Get hardcoded fallbacks
       const fallbacks = configBuilder.getHardcodedFallbacks();
@@ -587,7 +588,7 @@ describe('ApiGatewayHttpComponent Integration', () => {
       const httpSpec = createMockSpec({ description: 'Test API for protocol comparison' });
 
       // Act: Build configuration for HTTP API
-      const httpBuilder = new ApiGatewayHttpConfigBuilder(mockContext, httpSpec);
+      const httpBuilder = new ApiGatewayHttpConfigBuilder({ context: mockContext, spec: httpSpec });
       const httpConfig = await httpBuilder.build();
 
       // Assert: Verify HTTP API configuration structure
@@ -841,7 +842,7 @@ describe('ApiGatewayHttpComponent Integration', () => {
         }
       });
 
-      const builder = new ApiGatewayHttpConfigBuilder(context, spec);
+      const builder = new ApiGatewayHttpConfigBuilder({ context, spec });
       const config = builder.buildSync();
 
       // Verify FedRAMP Moderate defaults are applied
@@ -856,7 +857,7 @@ describe('ApiGatewayHttpComponent Integration', () => {
       context.environment = 'prod';
       const spec = createMockSpec();
 
-      const builder = new ApiGatewayHttpConfigBuilder(context, spec);
+      const builder = new ApiGatewayHttpConfigBuilder({ context, spec });
       const config = builder.buildSync();
 
       // Verify production environment defaults
@@ -873,12 +874,236 @@ describe('ApiGatewayHttpComponent Integration', () => {
         }
       });
 
-      const builder = new ApiGatewayHttpConfigBuilder(context, spec);
+      const builder = new ApiGatewayHttpConfigBuilder({ context, spec });
       const config = builder.buildSync();
 
       // Verify component config overrides defaults
       expect(config.throttling?.rateLimit).toBe(2000);
       expect(config.throttling?.burstLimit).toBe(4000);
+    });
+  });
+
+  // Custom Metrics Tests
+  describe('Custom Metrics', () => {
+    test('should create custom metrics when configured', () => {
+      const context = createMockContext('commercial');
+      const spec = createMockSpec({
+        monitoring: {
+          customMetrics: [
+            {
+              name: 'RequestCount',
+              namespace: 'Custom/API-Gateway',
+              statistic: 'Sum',
+              period: 300,
+              unit: 'Count',
+              dimensions: {
+                Environment: 'test',
+                Service: 'api-gateway-http'
+              }
+            },
+            {
+              name: 'ResponseTime',
+              namespace: 'Custom/API-Gateway',
+              statistic: 'Average',
+              period: 60,
+              unit: 'Milliseconds'
+            }
+          ]
+        }
+      });
+
+      const component = new ApiGatewayHttpComponent(stack, 'TestHttpApiGateway', context, spec);
+      component.synth();
+      const template = Template.fromStack(stack);
+
+      // Verify custom metrics are created (they appear as CloudWatch metrics)
+      // Note: Custom metrics don't create CloudFormation resources directly
+      // They are created at runtime, so we test the configuration is applied
+      expect(component['config'].monitoring?.customMetrics).toHaveLength(2);
+      expect(component['config'].monitoring?.customMetrics?.[0].name).toBe('RequestCount');
+      expect(component['config'].monitoring?.customMetrics?.[1].name).toBe('ResponseTime');
+    });
+
+    test('should handle custom metrics with default values', () => {
+      const context = createMockContext('commercial');
+      const spec = createMockSpec({
+        monitoring: {
+          customMetrics: [
+            {
+              name: 'SimpleMetric'
+              // Using defaults for other properties
+            }
+          ]
+        }
+      });
+
+      const component = new ApiGatewayHttpComponent(stack, 'TestHttpApiGateway', context, spec);
+      component.synth();
+
+      const customMetric = component['config'].monitoring?.customMetrics?.[0];
+      expect(customMetric?.name).toBe('SimpleMetric');
+      expect(customMetric?.namespace).toBe('Custom/API-Gateway');
+      expect(customMetric?.statistic).toBe('Sum');
+      expect(customMetric?.period).toBe(300);
+    });
+
+    test('should not create custom metrics when not configured', () => {
+      const context = createMockContext('commercial');
+      const spec = createMockSpec({});
+
+      const component = new ApiGatewayHttpComponent(stack, 'TestHttpApiGateway', context, spec);
+      component.synth();
+
+      expect(component['config'].monitoring?.customMetrics).toBeUndefined();
+    });
+  });
+
+  // Resource Policy Tests
+  describe('Resource Policy', () => {
+    test('should configure resource policy with IP ranges', () => {
+      const context = createMockContext('commercial');
+      const spec = createMockSpec({
+        resourcePolicy: {
+          allowFromIpRanges: ['203.0.113.0/24', '198.51.100.0/24'],
+          denyFromIpRanges: ['192.0.2.0/24'],
+          allowFromAwsAccounts: ['111111111111'],
+          allowFromRegions: ['us-east-1', 'us-west-2'],
+          denyFromRegions: ['eu-west-1']
+        }
+      });
+
+      const component = new ApiGatewayHttpComponent(stack, 'TestHttpApiGateway', context, spec);
+      component.synth();
+
+      const resourcePolicy = component['config'].resourcePolicy;
+      expect(resourcePolicy?.allowFromIpRanges).toEqual(['203.0.113.0/24', '198.51.100.0/24']);
+      expect(resourcePolicy?.denyFromIpRanges).toEqual(['192.0.2.0/24']);
+      expect(resourcePolicy?.allowFromAwsAccounts).toEqual(['111111111111']);
+      expect(resourcePolicy?.allowFromRegions).toEqual(['us-east-1', 'us-west-2']);
+      expect(resourcePolicy?.denyFromRegions).toEqual(['eu-west-1']);
+    });
+
+    test('should configure resource policy with VPC restrictions', () => {
+      const context = createMockContext('commercial');
+      const spec = createMockSpec({
+        resourcePolicy: {
+          allowFromVpcs: ['vpc-12345678', 'vpc-87654321'],
+          allowFromAwsAccounts: ['123456789012', '987654321098']
+        }
+      });
+
+      const component = new ApiGatewayHttpComponent(stack, 'TestHttpApiGateway', context, spec);
+      component.synth();
+
+      const resourcePolicy = component['config'].resourcePolicy;
+      expect(resourcePolicy?.allowFromVpcs).toEqual(['vpc-12345678', 'vpc-87654321']);
+      expect(resourcePolicy?.allowFromAwsAccounts).toEqual(['123456789012', '987654321098']);
+    });
+
+    test('should handle custom resource policy document', () => {
+      const context = createMockContext('commercial');
+      const customPolicy = {
+        Version: '2012-10-17',
+        Statement: [
+          {
+            Effect: 'Allow',
+            Principal: '*',
+            Action: 'execute-api:Invoke',
+            Resource: 'arn:aws:execute-api:*:*:*/*/*',
+            Condition: {
+              StringEquals: {
+                'aws:SourceVpce': 'vpce-12345678'
+              }
+            }
+          }
+        ]
+      };
+
+      const spec = createMockSpec({
+        resourcePolicy: {
+          document: customPolicy
+        }
+      });
+
+      const component = new ApiGatewayHttpComponent(stack, 'TestHttpApiGateway', context, spec);
+      component.synth();
+
+      const resourcePolicy = component['config'].resourcePolicy;
+      expect(resourcePolicy?.document).toEqual(customPolicy);
+    });
+
+    test('should not configure resource policy when not specified', () => {
+      const context = createMockContext('commercial');
+      const spec = createMockSpec({});
+
+      const component = new ApiGatewayHttpComponent(stack, 'TestHttpApiGateway', context, spec);
+      component.synth();
+
+      expect(component['config'].resourcePolicy).toBeUndefined();
+    });
+  });
+
+  // Integration Tests
+  describe('Enhanced Features Integration', () => {
+    test('should work with custom metrics and resource policy together', () => {
+      const context = createMockContext('commercial');
+      const spec = createMockSpec({
+        monitoring: {
+          customMetrics: [
+            {
+              name: 'SecurityEvents',
+              namespace: 'Security/API',
+              statistic: 'Sum',
+              period: 60,
+              unit: 'Count'
+            }
+          ]
+        },
+        resourcePolicy: {
+          allowFromIpRanges: ['203.0.113.0/24'],
+          denyFromIpRanges: ['192.0.2.0/24']
+        }
+      });
+
+      const component = new ApiGatewayHttpComponent(stack, 'TestHttpApiGateway', context, spec);
+      component.synth();
+
+      // Verify both features are configured
+      expect(component['config'].monitoring?.customMetrics).toHaveLength(1);
+      expect(component['config'].resourcePolicy?.allowFromIpRanges).toEqual(['203.0.113.0/24']);
+    });
+
+    test('should work with FedRAMP High compliance and enhanced features', () => {
+      const context = createMockContext('fedramp-high');
+      const spec = createMockSpec({
+        monitoring: {
+          customMetrics: [
+            {
+              name: 'ComplianceEvents',
+              namespace: 'Compliance/API',
+              statistic: 'Sum',
+              period: 300,
+              unit: 'Count'
+            }
+          ]
+        },
+        resourcePolicy: {
+          allowFromAwsAccounts: ['123456789012'],
+          allowFromRegions: ['us-east-1']
+        },
+        accessLogging: {
+          enabled: true,
+          retentionInDays: 365
+        }
+      });
+
+      const component = new ApiGatewayHttpComponent(stack, 'TestHttpApiGateway', context, spec);
+      component.synth();
+
+      // Verify FedRAMP High configuration with enhanced features
+      expect(component['config'].monitoring?.customMetrics).toHaveLength(1);
+      expect(component['config'].resourcePolicy?.allowFromAwsAccounts).toEqual(['123456789012']);
+      expect(component['config'].accessLogging?.retentionInDays).toBe(365);
     });
   });
 });

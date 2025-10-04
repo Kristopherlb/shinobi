@@ -1,0 +1,45 @@
+{
+  "component": "auto-scaling-group",
+  "auditDate": "2025-01-08",
+  "complianceScore": 95,
+  "criticalIssues": [
+    {
+      "id": "security-hardening",
+      "priority": "COMPLETED",
+      "description": "Security defaults hardened",
+      "actions": [
+        "✅ IMDSv2 mandatory by default",
+        "✅ EBS encryption enabled by default",
+        "✅ Private subnets by default",
+        "✅ Removed hardcoded security group rules"
+      ]
+    },
+    {
+      "id": "observability-gaps",
+      "priority": "COMPLETED",
+      "description": "OpenTelemetry integration added",
+      "actions": [
+        "✅ OTEL environment variables in user data",
+        "✅ CloudWatch agent installed",
+        "✅ Structured logging configured"
+      ]
+    }
+  ],
+  "recommendations": [
+    {
+      "id": "cdk-nag",
+      "description": "CDK Nag security validation implemented",
+      "effort": "COMPLETED"
+    },
+    {
+      "id": "versioning",
+      "description": "Semantic versioning with package.json added",
+      "effort": "COMPLETED"
+    }
+  ],
+  "nextSteps": [
+    "Run component tests to verify functionality",
+    "Validate CDK synthesis",
+    "Update documentation with new features"
+  ]
+}

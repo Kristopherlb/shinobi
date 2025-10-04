@@ -18,9 +18,9 @@
  */
 
 import { describe, test, expect, beforeEach, afterEach, jest } from '@jest/globals';
-import { AlbObservabilityHandler } from '../../../../src/services/observability-handlers/alb-observability.handler.js';
-import { PlatformServiceContext } from '../../@shinobi/core/platform-services.js';
-import { BaseComponent } from '../../@shinobi/core/component.js';
+import { AlbObservabilityHandler } from '../../../../src/services/observability-handlers/alb-observability.handler.ts';
+import { PlatformServiceContext } from '../../@shinobi/core/platform-services.ts';
+import { BaseComponent } from '../../@shinobi/core/component.ts';
 
 describe('AlbObservabilityHandler', () => {
   let handler: AlbObservabilityHandler;

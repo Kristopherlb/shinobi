@@ -161,7 +161,7 @@ defaults:
       encrypted: true
       kms:
         useCustomerManagedKey: true
-        enableKeyRotation: false
+        enableKeyRotation: true
     healthCheck:
       type: EC2
       gracePeriod: 180
@@ -533,6 +533,33 @@ defaults:
         threshold: 1
         evaluationPeriods: 1
         periodMinutes: 5
+    tags:
+      compliance-tier: fedramp-moderate
+
+  container-application:
+    service:
+      desiredCount: 2
+      cpu: 512
+      memory: 1024
+      autoScaling:
+        enabled: true
+        maxCapacity: 4
+        cpuTarget: 65
+        memoryTarget: 75
+    network:
+      assignPublicIp: false
+      loadBalancerScheme: internal
+      natGateways: 0
+    observability:
+      logRetentionDays: 90
+      cpuThreshold: 70
+      memoryThreshold: 75
+      enableTracing: true
+      enableMetrics: true
+    security:
+      enableEncryption: true
+      enableVpcFlowLogs: true
+      enableWaf: true
     tags:
       compliance-tier: fedramp-moderate
 
@@ -1297,6 +1324,7 @@ defaults:
     backup:
       enabled: true
       retentionDays: 30
+      schedule: 'cron(0 3 * * ? *)'
     monitoring:
       enabled: true
       alarms:

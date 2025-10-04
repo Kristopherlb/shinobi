@@ -25,7 +25,7 @@ import {
   GlueJobConfig,
   GlueJobMonitoringConfig,
   RemovalPolicyOption
-} from './glue-job.builder.js';
+} from './glue-job.builder.ts';
 
 export class GlueJobComponent extends BaseComponent {
   private glueJob?: glue.CfnJob;

@@ -1,8 +1,8 @@
 import {
   ApplicationLoadBalancerComponentConfigBuilder,
   ApplicationLoadBalancerConfig
-} from '../application-load-balancer.builder.js';
-import { ComponentContext, ComponentSpec } from '../../../platform/contracts/component-interfaces.js';
+} from '../src/application-load-balancer.builder.ts';
+import { ComponentContext, ComponentSpec } from '@shinobi/core';
 
 const createContext = (framework: string = 'commercial'): ComponentContext => ({
   serviceName: 'payments-service',
@@ -37,11 +37,11 @@ describe('ApplicationLoadBalancerComponentConfigBuilder', () => {
     expect(config.scheme).toBe('internet-facing');
     expect(config.ipAddressType).toBe('ipv4');
     expect(config.listeners[0].port).toBe(80);
-    expect(config.accessLogs.enabled).toBe(false);
-    expect(config.monitoring.enabled).toBe(false);
+    expect(config.accessLogs.enabled).toBe(true);
+    expect(config.monitoring.enabled).toBe(true);
     expect(config.hardeningProfile).toBeDefined();
     expect(config.securityGroups.create).toBe(true);
-    expect(config.securityGroups.ingress.length).toBeGreaterThanOrEqual(1);
+    expect(config.securityGroups.ingress.length).toBe(0);
   });
 
   it('applies fedramp-moderate defaults from segregated configuration', () => {

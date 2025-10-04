@@ -1,11 +1,12 @@
 {
   "extends": "./tsconfig.base.json",
   "compilerOptions": {
-    "module": "commonjs",
-    "target": "es2020",
-    "moduleResolution": "node",
+    "module": "nodenext",
+    "target": "es2022",
+    "moduleResolution": "nodenext",
     "esModuleInterop": true,
     "allowSyntheticDefaultImports": true,
+    "allowJs": true,
     "strict": true,
     "skipLibCheck": true,
     "forceConsistentCasingInFileNames": true

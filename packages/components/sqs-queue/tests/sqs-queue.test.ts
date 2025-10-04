@@ -1,4 +1,4 @@
-import { SqsQueueComponent, SqsQueueBuilder } from '../src/sqs-queue.js';
+import { SqsQueueComponent, SqsQueueBuilder } from '../src/sqs-queue.ts';
 
 test('SqsQueueComponent has correct name', () => {
   const comp = new SqsQueueComponent();

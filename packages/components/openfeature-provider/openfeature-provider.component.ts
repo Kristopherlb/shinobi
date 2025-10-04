@@ -24,7 +24,7 @@ import {
   OpenFeatureProviderComponentConfig,
   OpenFeatureProviderComponentConfigBuilder,
   OpenFeatureProviderKind
-} from './openfeature-provider.builder.js';
+} from './openfeature-provider.builder.ts';
 import { OpenFeatureProviderCapability } from '@shinobi/core/platform/contracts/openfeature-interfaces';
 
 export class OpenFeatureProviderComponent extends BaseComponent {

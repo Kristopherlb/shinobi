@@ -9,12 +9,12 @@ import {
   IComponent,
   IComponentCreator
 } from '@shinobi/core';
-import { OpenFeatureProviderComponent } from './openfeature-provider.component.js';
+import { OpenFeatureProviderComponent } from './openfeature-provider.component.ts';
 import {
   OpenFeatureProviderComponentConfig,
   OpenFeatureProviderComponentConfigBuilder,
   OPENFEATURE_PROVIDER_CONFIG_SCHEMA
-} from './openfeature-provider.builder.js';
+} from './openfeature-provider.builder.ts';
 
 export class OpenFeatureProviderComponentCreator implements IComponentCreator {
   public readonly componentType = 'openfeature-provider';

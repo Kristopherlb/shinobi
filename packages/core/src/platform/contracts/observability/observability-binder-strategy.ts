@@ -14,6 +14,7 @@ import {
   ObservabilityBindingResult,
   ComponentObservabilityCapability
 } from './observability-types.js';
+import type { ComponentTelemetryDirectives } from '../../observability/src/index.js';
 import { ObservabilityConfigFactory } from './observability-config-factory.js';
 import { BaseComponentObservability } from './base-component-observability.js';
 
@@ -84,6 +85,21 @@ export class ObservabilityBinderStrategy extends EnhancedBinderStrategy {
       remediation: `Apply ${action.action} for compliance`
     }));
 
+    const sourceCapabilities = (context.source.getCapabilityData() || {}) as Record<string, any>;
+    const observabilityCapabilities = Object.entries(sourceCapabilities)
+      .filter(([key]) => key.startsWith('observability:'))
+      .reduce<Record<string, any>>((acc, [key, value]) => {
+        acc[key] = value;
+        return acc;
+      }, {});
+
+    const certificateCapability = observabilityCapabilities['observability:certificate'];
+    const telemetryDirectives = this.mergeTelemetryDirectives(
+      Object.values(observabilityCapabilities)
+        .map(capability => capability?.telemetry as ComponentTelemetryDirectives | undefined)
+        .filter(Boolean) as ComponentTelemetryDirectives[]
+    );
+
     return {
       environmentVariables: Object.freeze(observabilityResult.environmentVariables),
       iamPolicies: Object.freeze(iamPolicies),
@@ -96,10 +112,84 @@ export class ObservabilityBinderStrategy extends EnhancedBinderStrategy {
           xrayConfigurations: observabilityResult.xrayConfigurations,
           adotConfigurations: observabilityResult.adotConfigurations,
           sidecarConfigurations: observabilityResult.sidecarConfigurations,
-          agentConfigurations: observabilityResult.agentConfigurations
+          agentConfigurations: observabilityResult.agentConfigurations,
+          capabilities: observabilityCapabilities,
+          certificate: certificateCapability,
+          telemetry: telemetryDirectives
         }
       })
     };
+  }
+
+  private mergeTelemetryDirectives(
+    directives: ComponentTelemetryDirectives[]
+  ): ComponentTelemetryDirectives | undefined {
+    if (!directives.length) {
+      return undefined;
+    }
+
+    const metricMap = new Map<string, NonNullable<ComponentTelemetryDirectives['metrics']>[number]>();
+    const alarmMap = new Map<string, NonNullable<ComponentTelemetryDirectives['alarms']>[number]>();
+    const dashboards: ComponentTelemetryDirectives['dashboards'] = [];
+    const custom: Record<string, any> = {};
+
+    let logging: ComponentTelemetryDirectives['logging'];
+    let tracing: ComponentTelemetryDirectives['tracing'];
+
+    for (const directive of directives) {
+      directive.metrics?.forEach(metric => {
+        metricMap.set(metric.id, { ...metricMap.get(metric.id), ...metric });
+      });
+
+      directive.alarms?.forEach(alarm => {
+        alarmMap.set(alarm.id, { ...alarmMap.get(alarm.id), ...alarm });
+      });
+
+      if (directive.dashboards) {
+        dashboards.push(...directive.dashboards);
+      }
+
+      if (directive.logging) {
+        logging = logging
+          ? { ...logging, ...directive.logging }
+          : { ...directive.logging };
+      }
+
+      if (directive.tracing) {
+        tracing = tracing
+          ? {
+              ...tracing,
+              ...directive.tracing,
+              attributes: {
+                ...(tracing.attributes ?? {}),
+                ...(directive.tracing.attributes ?? {})
+              },
+              rules: directive.tracing.rules ?? tracing.rules
+            }
+          : { ...directive.tracing };
+      }
+
+      Object.assign(custom, directive.custom);
+    }
+
+    const merged: ComponentTelemetryDirectives = {
+      metrics: Array.from(metricMap.values()),
+      alarms: Array.from(alarmMap.values()),
+      dashboards: dashboards.length ? dashboards : undefined,
+      logging,
+      tracing,
+      custom: Object.keys(custom).length ? custom : undefined
+    };
+
+    if (!merged.metrics?.length) {
+      delete merged.metrics;
+    }
+
+    if (!merged.alarms?.length) {
+      delete merged.alarms;
+    }
+
+    return merged;
   }
 
   private createSecurityGroupRules(

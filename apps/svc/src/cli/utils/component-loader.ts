@@ -2,11 +2,10 @@ import * as fs from 'fs';
 import { Dirent } from 'fs';
 import * as fsp from 'fs/promises';
 import * as path from 'path';
-import { execSync } from 'child_process';
-import { pathToFileURL } from 'url';
-import { loadComponentCatalog, ComponentCatalogEntry, formatCatalogDisplayName } from './component-catalog.js';
+import { fileURLToPath, pathToFileURL } from 'url';
 import { sync as globSync } from 'glob';
-import { IComponentCreator } from '@shinobi/core';
+import { loadComponentCatalog, ComponentCatalogEntry, formatCatalogDisplayName } from './component-catalog.js';
+import type { IComponentCreator } from '@shinobi/core';
 
 interface LoadCreatorsOptions {
   includeNonProduction?: boolean;
@@ -20,48 +19,17 @@ export interface ComponentCreatorEntry {
   creator: PlatformComponentCreator;
 }
 
-const ensurePackageBuilt = (rootDir: string, packageDir: string, packageName: string) => {
-  const distIndex = path.join(rootDir, 'dist/packages/components', packageDir, 'index.js');
-  if (fs.existsSync(distIndex)) {
-    return distIndex;
-  }
-
-  try {
-    execSync(`pnpm --filter ${packageName} build`, {
-      cwd: rootDir,
-      stdio: 'inherit'
-    });
-  } catch (error) {
-    throw new Error(`Failed to build component package ${packageName}: ${(error as Error).message}`);
-  }
-
-  if (!fs.existsSync(distIndex)) {
-    throw new Error(`Component package ${packageName} did not produce dist output at ${distIndex}`);
-  }
-
-  return distIndex;
-};
-
-const findCreatorExport = (moduleExports: Record<string, any>): PlatformComponentCreator | undefined => {
-  for (const exported of Object.values(moduleExports)) {
-    if (typeof exported === 'function') {
-      try {
-        const instance = new exported();
-        if (instance && typeof instance.createComponent === 'function' && typeof instance.componentType === 'string') {
-          return instance as PlatformComponentCreator;
-        }
-      } catch {
-        continue;
-      }
-    }
-  }
-  return undefined;
-};
+const moduleDir = path.dirname(fileURLToPath(import.meta.url));
+const rootDir = path.resolve(moduleDir, '../../../../../');
+const canImportTypeScript = Boolean(
+  process.env.TS_NODE_PROJECT ||
+  process.env.TS_NODE_COMPILER_OPTIONS ||
+  process.env.NODE_OPTIONS?.includes('ts-node')
+);
 
 export const loadComponentCreators = async (
   options?: LoadCreatorsOptions
 ): Promise<Map<string, ComponentCreatorEntry>> => {
-  const rootDir = path.resolve(__dirname, '../../../../../');
   const componentsDir = path.join(rootDir, 'packages/components');
   const catalogEntries = await loadComponentCatalog({ includeNonProduction: true });
   const catalogByType = new Map<string, ComponentCatalogEntry>(catalogEntries.map(entry => [entry.componentType, entry]));
@@ -109,35 +77,19 @@ export const loadComponentCreators = async (
     });
     candidatePaths.push(...creatorGlob);
 
-    const shouldBuild = options?.autoBuild !== false;
-    const distIndex = shouldBuild ? ensurePackageBuilt(rootDir, packageDir, packageName) : path.join(rootDir, 'dist/packages/components', packageDir, 'index.js');
-    if (!fs.existsSync(distIndex)) {
-      continue;
+    const sourceCandidates = buildSourceCandidates(candidatePaths);
+    let moduleExports = await loadFirstResolvedModule(sourceCandidates);
+
+    if (!moduleExports) {
+      const distCandidates = buildDistCandidates(rootDir, componentRoot, packageDir, candidatePaths);
+      moduleExports = await loadFirstResolvedModule(distCandidates);
     }
 
-    let moduleExports: Record<string, any> | undefined;
-    let loadError: Error | undefined;
-
-    for (const candidate of candidatePaths) {
-      const distCandidate = toDistPath(rootDir, packageDir, candidate);
-      if (!distCandidate || !fs.existsSync(distCandidate)) {
-        continue;
-      }
-
-      try {
-        const moduleUrl = pathToFileURL(distCandidate).href;
-        moduleExports = await import(moduleUrl);
-        break;
-      } catch (error) {
-        loadError = error as Error;
-        continue;
-      }
+    if (!moduleExports && options?.autoBuild) {
+      console.warn(`Component package ${packageName} is not built; skipping. Set TEMPLATE_CONFIG_PATH or run build first.`);
     }
 
     if (!moduleExports) {
-      if (loadError) {
-        console.warn(`Skipping component package ${packageName}: ${loadError.message}`);
-      }
       continue;
     }
 
@@ -191,17 +143,103 @@ export const loadComponentCreators = async (
   return creators;
 };
 
-const toDistPath = (rootDir: string, packageDir: string, candidatePath: string): string | null => {
-  const componentRoot = path.join(rootDir, 'packages/components', packageDir);
-  const relative = path.relative(componentRoot, candidatePath);
+const findCreatorExport = (moduleExports: Record<string, any>): PlatformComponentCreator | undefined => {
+  for (const exported of Object.values(moduleExports)) {
+    if (typeof exported === 'function') {
+      try {
+        const instance = new exported();
+        if (instance && typeof instance.createComponent === 'function' && typeof instance.componentType === 'string') {
+          return instance as PlatformComponentCreator;
+        }
+      } catch {
+        continue;
+      }
+    }
+  }
+  return undefined;
+};
+
+const buildSourceCandidates = (candidatePaths: string[]): string[] => {
+  const results = new Set<string>();
+
+  for (const candidate of candidatePaths) {
+    if (!canImportTypeScript) {
+      const jsSibling = candidate.replace(/\.ts$/, '.js');
+      results.add(jsSibling);
+      continue;
+    }
+
+    results.add(candidate);
+    results.add(candidate.replace(/\.ts$/, '.js'));
+  }
+
+  return Array.from(results);
+};
+
+const buildDistCandidates = (
+  workspaceRoot: string,
+  componentRoot: string,
+  packageDir: string,
+  candidatePaths: string[]
+): string[] => {
+  const distRoots = [
+    path.join(workspaceRoot, 'dist/packages/components', packageDir),
+    path.join(componentRoot, 'dist')
+  ];
+
+  const results = new Set<string>();
+
+  for (const candidate of candidatePaths) {
+    const relative = path.relative(componentRoot, candidate);
+    const candidates = buildDistRelativePaths(relative);
+
+    for (const distRoot of distRoots) {
+      for (const rel of candidates) {
+        const fullPath = path.join(distRoot, rel);
+        results.add(fullPath);
+      }
+    }
+  }
+
+  return Array.from(results);
+};
+
+const buildDistRelativePaths = (relative: string): string[] => {
+  const results: string[] = [];
+
   if (relative === 'index.ts') {
-    return path.join(rootDir, 'dist/packages/components', packageDir, 'index.js');
+    results.push('index.js');
+    return results;
   }
 
-  if (relative.startsWith('src') && candidatePath.endsWith('.ts')) {
-    const distRelative = relative.replace(/\.ts$/, '.js');
-    return path.join(rootDir, 'dist/packages/components', packageDir, distRelative);
+  const jsRelative = relative.replace(/\.ts$/, '.js');
+  results.push(jsRelative);
+
+  if (relative.startsWith(`src${path.sep}`) || relative.startsWith('src/')) {
+    const stripped = jsRelative.replace(/^src[\/]/, '');
+    results.push(path.join('src', stripped));
+    results.push(stripped);
   }
 
-  return null;
+  return results;
+};
+
+const loadFirstResolvedModule = async (candidatePaths: string[]): Promise<Record<string, any> | undefined> => {
+  for (const candidate of candidatePaths) {
+    try {
+      const stat = await fsp.stat(candidate);
+      if (!stat.isFile()) {
+        continue;
+      }
+
+      const moduleUrl = pathToFileURL(candidate).href;
+      return (await import(moduleUrl)) as Record<string, any>;
+    } catch (error) {
+      if ((error as NodeJS.ErrnoException)?.code === 'ENOENT') {
+        continue;
+      }
+    }
+  }
+
+  return undefined;
 };

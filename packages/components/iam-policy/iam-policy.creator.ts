@@ -10,9 +10,9 @@ import {
   ComponentSpec, 
   ComponentContext, 
   IComponentCreator 
-} from '../../platform/contracts/component-interfaces.js';
-import { IamPolicyComponentComponent } from './iam-policy.component.js';
-import { IamPolicyConfig, IAM_POLICY_CONFIG_SCHEMA } from './iam-policy.builder.js';
+} from '../../platform/contracts/component-interfaces.ts';
+import { IamPolicyComponentComponent } from './iam-policy.component.ts';
+import { IamPolicyConfig, IAM_POLICY_CONFIG_SCHEMA } from './iam-policy.builder.ts';
 
 /**
  * Creator class for IamPolicyComponent component

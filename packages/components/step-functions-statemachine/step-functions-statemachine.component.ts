@@ -11,9 +11,9 @@ import * as logs from 'aws-cdk-lib/aws-logs';
 import * as cloudwatch from 'aws-cdk-lib/aws-cloudwatch';
 import * as cdk from 'aws-cdk-lib';
 import { Construct } from 'constructs';
-import { BaseComponent } from '../@shinobi/core/component.js';
-import { ComponentSpec, ComponentContext, ComponentCapabilities } from '../@shinobi/core/component-interfaces.js';
-import { StepFunctionsStateMachineConfigBuilder, StepFunctionsStateMachineConfig } from './step-functions-statemachine.builder.js';
+import { BaseComponent } from '../@shinobi/core/component.ts';
+import { ComponentSpec, ComponentContext, ComponentCapabilities } from '../@shinobi/core/component-interfaces.ts';
+import { StepFunctionsStateMachineConfigBuilder, StepFunctionsStateMachineConfig } from './step-functions-statemachine.builder.ts';
 
 // Configuration interface is now defined in the builder file
 

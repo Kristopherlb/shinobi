@@ -1,0 +1,104 @@
+{
+  "component": {
+    "name": "api-gateway-rest",
+    "version": "0.0.1",
+    "type": "api-gateway-rest",
+    "description": "AWS API Gateway REST API component with comprehensive security, observability, and compliance features",
+    "provider": "aws",
+    "complianceFrameworks": [
+      "commercial",
+      "fedramp-moderate", 
+      "fedramp-high"
+    ]
+  },
+  "architecture": {
+    "pattern": "API Gateway REST with Lambda Integration",
+    "awsServices": [
+      "apigateway",
+      "cloudwatch",
+      "wafv2",
+      "xray",
+      "acm",
+      "cognito"
+    ],
+    "capabilities": [
+      "api:rest",
+      "api:gateway",
+      "monitoring:cloudwatch",
+      "security:waf",
+      "tracing:xray",
+      "auth:cognito"
+    ]
+  },
+  "security": {
+    "encryption": {
+      "inTransit": "TLS 1.2+",
+      "atRest": "N/A (stateless service)"
+    },
+    "accessControl": {
+      "authentication": ["Cognito", "API Key", "None"],
+      "authorization": ["Cognito", "API Key", "None"],
+      "cors": "Configurable with security defaults",
+      "waf": "Optional WAFv2 integration"
+    },
+    "networkSecurity": {
+      "vpcIntegration": "Not directly supported (REST API limitation)",
+      "privateEndpoints": "Not supported (REST API limitation)",
+      "publicAccess": "Configurable with security controls"
+    }
+  },
+  "observability": {
+    "metrics": {
+      "cloudwatch": "Comprehensive API Gateway metrics",
+      "custom": "Support for custom metrics via thresholds",
+      "alarms": "7 pre-configured alarms with AWS best practices"
+    },
+    "logging": {
+      "accessLogs": "CloudWatch Logs with configurable retention",
+      "executionLogs": "Method-level execution logging",
+      "structuredLogging": "JSON format with correlation IDs",
+      "retention": "90 days default, configurable"
+    },
+    "tracing": {
+      "xray": "Optional X-Ray tracing support",
+      "opentelemetry": "Full OTEL integration",
+      "correlation": "Request ID and trace correlation"
+    }
+  },
+  "compliance": {
+    "fedrampModerate": {
+      "status": "compliant",
+      "controls": ["AC-2", "AC-3", "AC-4", "AU-2", "AU-3", "AU-6", "CA-2", "CM-2", "CP-2", "IA-2", "IR-2", "MA-2", "PE-3", "PL-2", "RA-2", "SA-2", "SC-1", "SC-7", "SI-2"]
+    },
+    "fedrampHigh": {
+      "status": "compliant", 
+      "controls": ["AC-2", "AC-3", "AC-4", "AU-2", "AU-3", "AU-6", "CA-2", "CM-2", "CP-2", "IA-2", "IR-2", "MA-2", "PE-3", "PL-2", "RA-2", "SA-2", "SC-1", "SC-7", "SI-2"]
+    }
+  },
+  "deployment": {
+    "regions": ["us-east-1", "us-west-2", "eu-west-1"],
+    "environments": ["dev", "staging", "prod"],
+    "dependencies": ["@shinobi/core", "aws-cdk-lib"],
+    "resources": [
+      "AWS::ApiGateway::RestApi",
+      "AWS::ApiGateway::Stage",
+      "AWS::ApiGateway::Method",
+      "AWS::ApiGateway::Resource",
+      "AWS::ApiGateway::UsagePlan",
+      "AWS::ApiGateway::ApiKey",
+      "AWS::CloudWatch::LogGroup"
+    ]
+  },
+  "testing": {
+    "unitTests": "Comprehensive test coverage",
+    "integrationTests": "End-to-end API testing",
+    "complianceTests": "FedRAMP control validation"
+  },
+  "documentation": {
+    "readme": "Comprehensive usage guide",
+    "examples": "Basic and advanced configuration examples",
+    "troubleshooting": "Common issues and solutions"
+  },
+  "lastUpdated": "2025-01-08",
+  "auditVersion": "1.0.0"
+}

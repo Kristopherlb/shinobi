@@ -163,6 +163,7 @@ export class DynamoDbBinderStrategy implements IBinderStrategy {
     binding: ComponentBinding,
     context: BindingContext
   ): Promise<void> {
+    const resolvedIndex = this.resolveIndexTarget(targetComponent, binding);
     const { access } = binding;
 
     // Grant index access permissions
@@ -174,7 +175,7 @@ export class DynamoDbBinderStrategy implements IBinderStrategy {
           'dynamodb:Scan',
           'dynamodb:DescribeTable'
         ],
-        Resource: targetComponent.indexArn
+        Resource: resolvedIndex.indexArn
       });
     }
 
@@ -189,23 +190,23 @@ export class DynamoDbBinderStrategy implements IBinderStrategy {
           'dynamodb:UpdateLocalSecondaryIndex',
           'dynamodb:DeleteLocalSecondaryIndex'
         ],
-        Resource: targetComponent.indexArn
+        Resource: resolvedIndex.indexArn
       });
     }
 
     // Inject index environment variables
-    sourceComponent.addEnvironment('DYNAMODB_INDEX_NAME', targetComponent.indexName);
-    sourceComponent.addEnvironment('DYNAMODB_INDEX_ARN', targetComponent.indexArn);
-    sourceComponent.addEnvironment('DYNAMODB_INDEX_STATUS', targetComponent.indexStatus);
-    sourceComponent.addEnvironment('DYNAMODB_INDEX_TYPE', targetComponent.indexType);
+    sourceComponent.addEnvironment('DYNAMODB_INDEX_NAME', resolvedIndex.indexName);
+    sourceComponent.addEnvironment('DYNAMODB_INDEX_ARN', resolvedIndex.indexArn);
+    sourceComponent.addEnvironment('DYNAMODB_INDEX_STATUS', resolvedIndex.indexStatus);
+    sourceComponent.addEnvironment('DYNAMODB_INDEX_TYPE', resolvedIndex.indexType);
 
     // Configure index metadata
-    if (targetComponent.keySchema) {
-      sourceComponent.addEnvironment('DYNAMODB_INDEX_KEY_SCHEMA', JSON.stringify(targetComponent.keySchema));
+    if (resolvedIndex.keySchema) {
+      sourceComponent.addEnvironment('DYNAMODB_INDEX_KEY_SCHEMA', JSON.stringify(resolvedIndex.keySchema));
     }
 
-    if (targetComponent.projection) {
-      sourceComponent.addEnvironment('DYNAMODB_INDEX_PROJECTION', JSON.stringify(targetComponent.projection));
+    if (resolvedIndex.projection) {
+      sourceComponent.addEnvironment('DYNAMODB_INDEX_PROJECTION', JSON.stringify(resolvedIndex.projection));
     }
   }
 
@@ -264,6 +265,46 @@ export class DynamoDbBinderStrategy implements IBinderStrategy {
       sourceComponent.addEnvironment('DYNAMODB_LAMBDA_TRIGGER_ARN', targetComponent.lambdaTriggerArn);
       sourceComponent.addEnvironment('DYNAMODB_LAMBDA_TRIGGER_ENABLED', 'true');
     }
+  }
+
+  private resolveIndexTarget(targetComponent: any, binding: ComponentBinding): any {
+    const extractRequestedName = (): string | undefined => {
+      const options: any = (binding as any).options ?? {};
+      const metadata: any = (binding as any).metadata ?? {};
+      return options.indexName || options.name || metadata.indexName || metadata.name;
+    };
+
+    if (Array.isArray(targetComponent)) {
+      return this.pickIndex(targetComponent, extractRequestedName);
+    }
+
+    if (Array.isArray(targetComponent?.indexes)) {
+      return this.pickIndex(targetComponent.indexes, extractRequestedName);
+    }
+
+    return targetComponent;
+  }
+
+  private pickIndex(indexes: any[], getRequestedName: () => string | undefined): any {
+    if (indexes.length === 0) {
+      throw new Error('No DynamoDB indexes were provided by the target component capability.');
+    }
+
+    const requestedName = getRequestedName();
+
+    if (!requestedName) {
+      if (indexes.length > 1) {
+        throw new Error('Multiple DynamoDB indexes available; specify binding.options.indexName to select a target index.');
+      }
+      return indexes[0];
+    }
+
+    const match = indexes.find(index => index.indexName === requestedName);
+    if (!match) {
+      throw new Error(`DynamoDB index '${requestedName}' not found on target component. Available indexes: ${indexes.map(index => index.indexName).join(', ')}`);
+    }
+
+    return match;
   }
 
   private async configureSecureTableAccess(

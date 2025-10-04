@@ -4,14 +4,14 @@
  */
 
 // Component exports
-export { VpcComponent } from './vpc.component.js';
+export { VpcComponent } from './vpc.component.ts';
 
 // Configuration exports
 export { 
   VpcConfig,
   VpcConfigBuilder,
   VPC_CONFIG_SCHEMA
-} from './vpc.builder.js';
+} from './vpc.builder.ts';
 
 // Creator exports
-export { VpcCreator } from './vpc.creator.js';
+export { VpcCreator } from './vpc.creator.ts';

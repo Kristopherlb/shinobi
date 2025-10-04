@@ -18,6 +18,7 @@ import OnboardingPage from "@/pages/onboarding";
 import ManifestEditorPage from "@/pages/manifest-editor";
 import ConfigurationPrecedencePage from "@/pages/configuration-precedence";
 import LocalDevelopmentPage from "@/pages/local-development";
+import ComponentDetail from "@/pages/ComponentDetail";
 import NotFound from "@/pages/not-found";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/Badge";
@@ -34,9 +35,9 @@ import { SearchProvider } from "@/components/search";
 
 function Dashboard() {
   const mockTimestamp = new Date(Date.now() - 1000 * 60 * 15).toISOString();
-  
+
   return (
-    <AppShell 
+    <AppShell
       breadcrumbs={[{ label: 'Shinobi ADP' }, { label: 'Platform Overview' }]}
       showTimelineRail={true}
       showMetadataRail={true}
@@ -49,12 +50,12 @@ function Dashboard() {
               Shinobi Internal Developer Platform
             </h1>
             <p className="text-lg text-muted-foreground mb-6 leading-relaxed">
-              CDK-based IDP with declarative service.yml manifests, compliance-aware infrastructure, 
+              CDK-based IDP with declarative service.yml manifests, compliance-aware infrastructure,
               and AI-powered component generation for modern cloud deployments.
             </p>
             <div className="flex items-center gap-4">
               <CommandPaletteButton />
-              <Button 
+              <Button
                 variant="outline"
                 data-testid="button-view-documentation"
               >
@@ -67,34 +68,34 @@ function Dashboard() {
         {/* Platform Metrics Grid */}
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
           {[
-            { 
-              title: 'Active Tasks', 
-              value: '12', 
-              icon: CheckSquare, 
+            {
+              title: 'Active Tasks',
+              value: '12',
+              icon: CheckSquare,
               status: 'warn',
               change: '+3 from yesterday',
               description: 'Pipeline tasks in progress'
             },
-            { 
-              title: 'System Events', 
-              value: '247', 
-              icon: Activity, 
+            {
+              title: 'System Events',
+              value: '247',
+              icon: Activity,
               status: 'info',
               change: '+12% this hour',
               description: 'Real-time platform events'
             },
-            { 
-              title: 'AI Conversations', 
-              value: '8', 
-              icon: MessageSquare, 
+            {
+              title: 'AI Conversations',
+              value: '8',
+              icon: MessageSquare,
               status: 'success',
               change: '2 active sessions',
               description: 'Assistant interactions'
             },
-            { 
-              title: 'Critical Alerts', 
-              value: '3', 
-              icon: AlertTriangle, 
+            {
+              title: 'Critical Alerts',
+              value: '3',
+              icon: AlertTriangle,
               status: 'danger',
               change: 'Requires attention',
               description: 'Infrastructure warnings'
@@ -114,10 +115,10 @@ function Dashboard() {
                     {metric.value}
                   </div>
                   <div className="flex items-center gap-2">
-                    <Badge 
-                      variant={metric.status === 'success' ? 'success' : 
-                              metric.status === 'warn' ? 'warn' : 
-                              metric.status === 'danger' ? 'danger' : 'info'}
+                    <Badge
+                      variant={metric.status === 'success' ? 'success' :
+                        metric.status === 'warn' ? 'warn' :
+                          metric.status === 'danger' ? 'danger' : 'info'}
                       className="text-xs"
                     >
                       {metric.status}
@@ -152,11 +153,11 @@ function Dashboard() {
                   <div className="citation-badge">Citation #1</div>
                 </div>
               </div>
-              
+
               <div>
                 <h4 className="text-sm font-medium mb-3 text-foreground">Platform Tags</h4>
-                <TagList 
-                  tags={['kubernetes', 'production', 'auto-scaling', 'monitoring', 'security']} 
+                <TagList
+                  tags={['kubernetes', 'production', 'auto-scaling', 'monitoring', 'security']}
                   variant="outline"
                 />
               </div>
@@ -273,9 +274,9 @@ compliance:
                     {feature.description}
                   </p>
                   <Link href={feature.href || '#'}>
-                    <Button 
-                      variant="outline" 
-                      size="sm" 
+                    <Button
+                      variant="outline"
+                      size="sm"
                       className="w-full"
                       data-testid={`button-${feature.action.toLowerCase().replace(/\s+/g, '-')}`}
                     >
@@ -302,15 +303,15 @@ compliance:
               hint="Your infrastructure meets all compliance requirements. Regular scans are scheduled every 6 hours."
               cta={
                 <div className="flex gap-2">
-                  <Button 
-                    variant="outline" 
+                  <Button
+                    variant="outline"
                     size="sm"
                     data-testid="button-run-manual-scan"
                   >
                     Run Manual Scan
                   </Button>
-                  <Button 
-                    variant="ghost" 
+                  <Button
+                    variant="ghost"
                     size="sm"
                     data-testid="button-view-history"
                   >
@@ -344,6 +345,7 @@ function Router() {
       <Route path="/chat" component={ChatPage} />
       <Route path="/plans" component={PlansPage} />
       <Route path="/search" component={SearchPage} />
+      <Route path="/component/:componentName" component={ComponentDetail} />
       <Route component={NotFound} />
     </Switch>
   );
@@ -360,16 +362,16 @@ function App() {
       <TooltipProvider>
         <SearchProvider>
           <CommandProvider commandProvider={commandProvider} shortcutService={shortcutService}>
-          <div className="dark min-h-screen bg-background text-foreground">
-            <Toaster />
-            <Router />
-            <CommandPaletteIntegration />
-            {/* Bottom Navigation for Mobile */}
-            <div className="lg:hidden">
-              <div className="h-[var(--bottom-nav-height)]" /> {/* Spacer */}
+            <div className="dark min-h-screen bg-background text-foreground">
+              <Toaster />
+              <Router />
+              <CommandPaletteIntegration />
+              {/* Bottom Navigation for Mobile */}
+              <div className="lg:hidden">
+                <div className="h-[var(--bottom-nav-height)]" /> {/* Spacer */}
+              </div>
             </div>
-          </div>
-        </CommandProvider>
+          </CommandProvider>
         </SearchProvider>
       </TooltipProvider>
     </QueryClientProvider>

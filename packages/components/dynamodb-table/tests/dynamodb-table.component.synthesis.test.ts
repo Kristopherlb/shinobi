@@ -11,9 +11,9 @@ jest.mock(
 
 import { App, Stack } from 'aws-cdk-lib';
 import { Match, Template } from 'aws-cdk-lib/assertions';
-import { DynamoDbTableComponent } from '../dynamodb-table.component.js';
-import { DynamoDbTableConfig } from '../dynamodb-table.builder.js';
-import { ComponentContext, ComponentSpec } from '../../../platform/contracts/component-interfaces.js';
+import { DynamoDbTableComponent } from '../src/dynamodb-table.component.ts';
+import { DynamoDbTableConfig } from '../src/dynamodb-table.builder.ts';
+import { ComponentContext, ComponentSpec } from '../../../platform/contracts/component-interfaces.ts';
 
 const createContext = (framework: string): ComponentContext => ({
   serviceName: 'orders-service',
@@ -105,8 +105,42 @@ describe('DynamoDbTableComponent synthesis', () => {
       ])
     });
 
-    const capability = component.getCapabilities()['db:dynamodb'];
+    template.resourceCountIs('AWS::Backup::BackupPlan', 1);
+    template.resourceCountIs('AWS::Backup::BackupSelection', 1);
+    template.resourceCountIs('AWS::CloudWatch::Dashboard', 1);
+
+    template.hasResourceProperties('AWS::ApplicationAutoScaling::ScalableTarget', {
+      ResourceId: Match.stringLikeRegexp('table/orders-service-orders-table/index/status-index'),
+      ScalableDimension: 'dynamodb:index:ReadCapacityUnits'
+    });
+
+    const capabilities = component.getCapabilities();
+    const capability = capabilities['db:dynamodb'];
     expect(capability.billingMode).toBe('provisioned');
     expect(capability.hardeningProfile).toBe('baseline');
+    expect(capability.keySchema).toEqual(
+      expect.arrayContaining([
+        expect.objectContaining({ attributeName: 'id', keyType: 'HASH' }),
+        expect.objectContaining({ attributeName: 'createdAt', keyType: 'RANGE' })
+      ])
+    );
+    expect(capability.attributeDefinitions).toEqual(
+      expect.arrayContaining([
+        expect.objectContaining({ attributeName: 'id', attributeType: 'S' }),
+        expect.objectContaining({ attributeName: 'createdAt', attributeType: 'N' })
+      ])
+    );
+    expect(capability.backup).toEqual({ enabled: true, retentionDays: 14 });
+    expect(capability.observabilityEnv).toBeDefined();
+    expect(capabilities['dynamodb:table']).toEqual(capability);
+
+    const indexCapabilities = capabilities['dynamodb:index'];
+    expect(Array.isArray(indexCapabilities)).toBe(true);
+    expect(indexCapabilities[0]).toEqual(
+      expect.objectContaining({
+        indexName: 'status-index',
+        indexType: 'GLOBAL'
+      })
+    );
   });
 });

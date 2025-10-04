@@ -1,0 +1,52 @@
+{
+  "catalog": {
+    "uuid": "urn:uuid:12345678-1234-1234-1234-123456789012",
+    "metadata": {
+      "title": "Auto Scaling Group Component Security Controls",
+      "version": "1.0.0",
+      "oscal-version": "1.0.0",
+      "last-modified": "2025-01-08T00:00:00Z"
+    },
+    "groups": [
+      {
+        "id": "asg-security-controls",
+        "title": "Auto Scaling Group Security Controls",
+        "controls": [
+          {
+            "id": "asg-001",
+            "title": "Auto Scaling Group Health Checks",
+            "description": "Auto Scaling Groups must have properly configured health checks",
+            "props": [
+              {
+                "name": "implementation-status",
+                "value": "implemented"
+              }
+            ]
+          },
+          {
+            "id": "asg-002",
+            "title": "Instance Metadata Service v2",
+            "description": "All instances must require IMDSv2 for secure metadata access",
+            "props": [
+              {
+                "name": "implementation-status",
+                "value": "implemented"
+              }
+            ]
+          },
+          {
+            "id": "asg-003",
+            "title": "EBS Volume Encryption",
+            "description": "All EBS volumes must be encrypted at rest",
+            "props": [
+              {
+                "name": "implementation-status",
+                "value": "implemented"
+              }
+            ]
+          }
+        ]
+      }
+    ]
+  }
+}

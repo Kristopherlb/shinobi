@@ -16,5 +16,8 @@ spec:
       componentType: components-container-application
       version: 1.0.0
       description: Production-grade containerized application component for the Shinobi platform
-      capabilities: []
+      capabilities:
+        - service:connect
+        - net:vpc
+        - otel:environment
       tags: ["container","application","ecs","fargate","load-balancer","microservices","docker","observability","monitoring","aws","scalable","zero-config","shinobi","platform","component"]

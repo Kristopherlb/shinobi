@@ -1,0 +1,362 @@
+{
+  "component": {
+    "name": "application-load-balancer",
+    "version": "1.0.0",
+    "type": "infrastructure",
+    "description": "AWS Application Load Balancer component for the Shinobi platform",
+    "complianceFrameworks": [
+      "commercial",
+      "fedramp-moderate",
+      "fedramp-high"
+    ]
+  },
+  "auditPlan": {
+    "version": "1.0.0",
+    "created": "2025-01-08T00:00:00Z",
+    "auditor": "Shinobi Platform Engineering",
+    "prompts": [
+      {
+        "id": "prompt-01",
+        "title": "Schema Validation Audit",
+        "status": "completed",
+        "score": 9,
+        "maxScore": 10,
+        "findings": [
+          {
+            "type": "pass",
+            "description": "Schema properly declares $schema, title, and type",
+            "severity": "info"
+          },
+          {
+            "type": "pass",
+            "description": "All required fields properly declared",
+            "severity": "info"
+          },
+          {
+            "type": "pass",
+            "description": "Property definitions comprehensive with types and descriptions",
+            "severity": "info"
+          },
+          {
+            "type": "warning",
+            "description": "Missing example values for complex nested objects",
+            "severity": "low"
+          }
+        ]
+      },
+      {
+        "id": "prompt-02",
+        "title": "Tagging Standard Audit",
+        "status": "completed",
+        "score": 10,
+        "maxScore": 10,
+        "findings": [
+          {
+            "type": "pass",
+            "description": "Standard tags properly applied to all resources",
+            "severity": "info"
+          },
+          {
+            "type": "pass",
+            "description": "Tag propagation working correctly",
+            "severity": "info"
+          },
+          {
+            "type": "pass",
+            "description": "Tag format follows platform standards",
+            "severity": "info"
+          }
+        ]
+      },
+      {
+        "id": "prompt-03",
+        "title": "Logging Standard Audit",
+        "status": "completed",
+        "score": 9,
+        "maxScore": 10,
+        "findings": [
+          {
+            "type": "pass",
+            "description": "Uses structured logging with platform Logger class",
+            "severity": "info"
+          },
+          {
+            "type": "pass",
+            "description": "Log retention properly configured",
+            "severity": "info"
+          },
+          {
+            "type": "pass",
+            "description": "Correlation IDs integrated",
+            "severity": "info"
+          },
+          {
+            "type": "warning",
+            "description": "Log group creation could be more explicit",
+            "severity": "low"
+          }
+        ]
+      },
+      {
+        "id": "prompt-04",
+        "title": "Observability Standard Audit",
+        "status": "completed",
+        "score": 6,
+        "maxScore": 10,
+        "findings": [
+          {
+            "type": "pass",
+            "description": "CloudWatch alarms properly configured",
+            "severity": "info"
+          },
+          {
+            "type": "pass",
+            "description": "Custom metrics support implemented",
+            "severity": "info"
+          },
+          {
+            "type": "fail",
+            "description": "Missing X-Ray tracing integration",
+            "severity": "medium"
+          },
+          {
+            "type": "fail",
+            "description": "No OpenTelemetry/ADOT integration",
+            "severity": "medium"
+          }
+        ]
+      },
+      {
+        "id": "prompt-05",
+        "title": "CDK Best Practices Audit",
+        "status": "completed",
+        "score": 9,
+        "maxScore": 10,
+        "findings": [
+          {
+            "type": "pass",
+            "description": "Uses high-level L2 constructs properly",
+            "severity": "info"
+          },
+          {
+            "type": "pass",
+            "description": "No low-level Cfn* usage",
+            "severity": "info"
+          },
+          {
+            "type": "pass",
+            "description": "Consistent CDK v2 usage",
+            "severity": "info"
+          },
+          {
+            "type": "warning",
+            "description": "No CDK Nag integration",
+            "severity": "low"
+          }
+        ]
+      },
+      {
+        "id": "prompt-06",
+        "title": "Component Versioning & Metadata Audit",
+        "status": "completed",
+        "score": 8,
+        "maxScore": 10,
+        "findings": [
+          {
+            "type": "pass",
+            "description": "Follows semantic versioning",
+            "severity": "info"
+          },
+          {
+            "type": "pass",
+            "description": "Complete package metadata",
+            "severity": "info"
+          },
+          {
+            "type": "pass",
+            "description": "Comprehensive documentation",
+            "severity": "info"
+          },
+          {
+            "type": "warning",
+            "description": "Missing CHANGELOG.md",
+            "severity": "low"
+          }
+        ]
+      },
+      {
+        "id": "prompt-07",
+        "title": "Configuration Precedence Chain Audit",
+        "status": "completed",
+        "score": 10,
+        "maxScore": 10,
+        "findings": [
+          {
+            "type": "pass",
+            "description": "5-layer configuration system properly implemented",
+            "severity": "info"
+          },
+          {
+            "type": "pass",
+            "description": "No hardcoded environment logic",
+            "severity": "info"
+          },
+          {
+            "type": "pass",
+            "description": "Compliance segregation working correctly",
+            "severity": "info"
+          }
+        ]
+      },
+      {
+        "id": "prompt-08",
+        "title": "Capability Binding & Binder Matrix Audit",
+        "status": "completed",
+        "score": 9,
+        "maxScore": 10,
+        "findings": [
+          {
+            "type": "pass",
+            "description": "Capabilities properly registered",
+            "severity": "info"
+          },
+          {
+            "type": "pass",
+            "description": "Naming follows platform standards",
+            "severity": "info"
+          },
+          {
+            "type": "pass",
+            "description": "Data contracts complete",
+            "severity": "info"
+          },
+          {
+            "type": "warning",
+            "description": "Could benefit from runtime capability validation",
+            "severity": "low"
+          }
+        ]
+      },
+      {
+        "id": "prompt-09",
+        "title": "Internal Dependency Graph Audit",
+        "status": "completed",
+        "score": 10,
+        "maxScore": 10,
+        "findings": [
+          {
+            "type": "pass",
+            "description": "No circular dependencies",
+            "severity": "info"
+          },
+          {
+            "type": "pass",
+            "description": "Proper layering maintained",
+            "severity": "info"
+          },
+          {
+            "type": "pass",
+            "description": "Clean component encapsulation",
+            "severity": "info"
+          }
+        ]
+      },
+      {
+        "id": "prompt-10",
+        "title": "MCP Server API Contract Audit",
+        "status": "completed",
+        "score": 7,
+        "maxScore": 10,
+        "findings": [
+          {
+            "type": "pass",
+            "description": "Component properly registered in MCP server",
+            "severity": "info"
+          },
+          {
+            "type": "pass",
+            "description": "Schema accessible via MCP",
+            "severity": "info"
+          },
+          {
+            "type": "warning",
+            "description": "Some MCP endpoints return stub data",
+            "severity": "medium"
+          }
+        ]
+      },
+      {
+        "id": "prompt-11",
+        "title": "Security & Compliance Audit",
+        "status": "completed",
+        "score": 9,
+        "maxScore": 10,
+        "findings": [
+          {
+            "type": "pass",
+            "description": "Encryption properly implemented",
+            "severity": "info"
+          },
+          {
+            "type": "pass",
+            "description": "Access controls properly configured",
+            "severity": "info"
+          },
+          {
+            "type": "pass",
+            "description": "Compliance frameworks supported",
+            "severity": "info"
+          },
+          {
+            "type": "warning",
+            "description": "No WAF integration",
+            "severity": "low"
+          }
+        ]
+      }
+    ]
+  },
+  "summary": {
+    "totalScore": 86,
+    "maxScore": 110,
+    "percentage": 78,
+    "status": "compliant",
+    "criticalIssues": 0,
+    "highIssues": 0,
+    "mediumIssues": 3,
+    "lowIssues": 4,
+    "recommendations": [
+      "Implement X-Ray tracing integration",
+      "Add OpenTelemetry/ADOT support",
+      "Create CHANGELOG.md file",
+      "Add CDK Nag integration",
+      "Implement WAF integration"
+    ]
+  },
+  "nextSteps": [
+    {
+      "priority": "high",
+      "action": "Implement X-Ray tracing support",
+      "estimatedEffort": "2 days",
+      "assignee": "Platform Engineering"
+    },
+    {
+      "priority": "high",
+      "action": "Add OpenTelemetry integration",
+      "estimatedEffort": "3 days",
+      "assignee": "Platform Engineering"
+    },
+    {
+      "priority": "medium",
+      "action": "Create comprehensive documentation",
+      "estimatedEffort": "1 day",
+      "assignee": "Technical Writing"
+    },
+    {
+      "priority": "medium",
+      "action": "Add CDK Nag security validation",
+      "estimatedEffort": "1 day",
+      "assignee": "Platform Engineering"
+    }
+  ]
+}

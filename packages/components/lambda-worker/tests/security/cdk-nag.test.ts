@@ -7,7 +7,7 @@
 
 import { App, Stack } from 'aws-cdk-lib';
 import { AwsSolutionsChecks, NagSuppressions } from 'cdk-nag';
-import { LambdaWorkerComponent } from '../../lambda-worker.component.js';
+import { LambdaWorkerComponent } from '../../lambda-worker.component.ts';
 import { ComponentContext, ComponentSpec } from '@shinobi/core';
 
 describe('CDK Nag Security Tests - Lambda Worker Component', () => {

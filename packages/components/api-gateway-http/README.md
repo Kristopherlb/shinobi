@@ -262,7 +262,7 @@ This component provides the following capabilities for binding with other compon
 - `api:custom-domain` - Custom domain capability (if configured)
 - `auth:jwt` - JWT authentication capability (if configured)
 - `auth:lambda` - Lambda authorization capability (if configured)
-- `monitoring:api` - API monitoring and metrics capability
+- `observability:api-gateway-http` - OTEL-focused observability metadata (monitoring, tracing, logging configuration) including a `telemetry` descriptor for metrics and alarms
 - `logging:access` - Access logging capability
 
 ## Construct Handles
@@ -313,6 +313,28 @@ observability:
   tracingEnabled: true
   samplingRate: 0.1  # 10% sampling
   otlpEndpoint: "https://otlp.us-east-1.amazonaws.com"
+```
+
+> The component publishes an `observability:api-gateway-http` capability describing tracing, logging, and alarm preferences. The platform observability service consumes this metadata to provision OTEL collectors and CloudWatch artefacts centrally; the component itself no longer creates ad-hoc metrics or alarms.
+
+### Telemetry Descriptor
+
+The `observability:api-gateway-http` capability now includes a `telemetry` object. This object lists the API Gateway metrics the service expects (4XX/5XX error counts, latency, request volume), optional alarm thresholds sourced from the manifest, and logging/tracing preferences. The observability binder projects this metadata into OTEL pipelines and centralized CloudWatch alarms. Example capability payload excerpt:
+
+```json
+{
+  "telemetry": {
+    "metrics": [
+      { "metricName": "4XXError", "namespace": "AWS/ApiGateway" },
+      { "metricName": "Latency", "namespace": "AWS/ApiGateway" }
+    ],
+    "alarms": [
+      { "metricId": "api-gateway-http-4xx", "threshold": 50, "comparisonOperator": "gt" }
+    ],
+    "logging": { "destination": "cloudwatch-logs", "logGroupName": "/platform/http-api/..." },
+    "tracing": { "provider": "xray", "samplingRate": 0.1 }
+  }
+}
 ```
 
 ## Platform Tagging Standard
@@ -430,23 +452,434 @@ When migrating from `api-gateway-rest` to `api-gateway-http`:
 5. **Test CORS configuration** - HTTP API handles CORS differently
 6. **Verify integrations** - Some integration types may not be available
 
+## Advanced Configuration Examples
+
+### Complex Multi-Route API with Custom Metrics
+
+```yaml
+service: ecommerce-api
+owner: backend-team
+complianceFramework: commercial
+
+components:
+  - name: product-api
+    type: api-gateway-http
+    config:
+      apiName: ecommerce-product-api
+      description: E-commerce product management API
+      cors:
+        allowOrigins:
+          - "https://shop.example.com"
+          - "https://admin.example.com"
+        allowHeaders:
+          - "Content-Type"
+          - "Authorization"
+          - "X-Requested-With"
+        allowMethods:
+          - "GET"
+          - "POST"
+          - "PUT"
+          - "DELETE"
+          - "PATCH"
+        allowCredentials: true
+        maxAge: 3600
+      routes:
+        - routeKey: "GET /products"
+          integration:
+            type: AWS_PROXY
+            lambdaFunctionArn: "arn:aws:lambda:us-east-1:123456789012:function:get-products"
+          authorization:
+            authorizationType: JWT
+            jwtConfiguration:
+              issuer: "https://cognito-idp.us-east-1.amazonaws.com/us-east-1_ABC123DEF"
+              audience: ["6LxocgoUj0oO8XxXxXxXxX"]
+        - routeKey: "POST /products"
+          integration:
+            type: AWS_PROXY
+            lambdaFunctionArn: "arn:aws:lambda:us-east-1:123456789012:function:create-product"
+          authorization:
+            authorizationType: AWS_IAM
+        - routeKey: "GET /products/{id}"
+          integration:
+            type: AWS_PROXY
+            lambdaFunctionArn: "arn:aws:lambda:us-east-1:123456789012:function:get-product"
+        - routeKey: "PUT /products/{id}"
+          integration:
+            type: AWS_PROXY
+            lambdaFunctionArn: "arn:aws:lambda:us-east-1:123456789012:function:update-product"
+          authorization:
+            authorizationType: JWT
+            jwtConfiguration:
+              issuer: "https://cognito-idp.us-east-1.amazonaws.com/us-east-1_ABC123DEF"
+              audience: ["6LxocgoUj0oO8XxXxXxXxX"]
+      customDomain:
+        domainName: api.example.com
+        certificateArn: "arn:aws:acm:us-east-1:123456789012:certificate/12345678-1234-1234-1234-123456789012"
+        hostedZoneId: "Z1D633PJN98FT9"
+        securityPolicy: "TLS_1_2"
+      monitoring:
+        detailedMetrics: true
+        tracingEnabled: true
+        customMetrics:
+          - name: "ProductViews"
+            namespace: "Ecommerce/API"
+            statistic: "Sum"
+            period: 300
+            unit: "Count"
+            dimensions:
+              Environment: "production"
+              Service: "product-api"
+          - name: "ProductCreationRate"
+            namespace: "Ecommerce/API"
+            statistic: "Average"
+            period: 300
+            unit: "Count/Second"
+          - name: "ApiResponseTime"
+            namespace: "Ecommerce/API"
+            statistic: "Average"
+            period: 60
+            unit: "Milliseconds"
+        alarms:
+          errorRate4xx: 5.0
+          errorRate5xx: 1.0
+          highLatency: 2000
+          lowThroughput: 10
+      resourcePolicy:
+        allowFromIpRanges:
+          - "203.0.113.0/24"  # Office network
+          - "198.51.100.0/24" # VPN network
+        denyFromIpRanges:
+          - "192.0.2.0/24"    # Blocked network
+        allowFromAwsAccounts:
+          - "111111111111"     # Partner account
+        allowFromRegions:
+          - "us-east-1"
+          - "us-west-2"
+      throttling:
+        rateLimit: 1000
+        burstLimit: 2000
+      accessLogging:
+        enabled: true
+        retentionInDays: 30
+        includeExecutionData: true
+      security:
+        enableWaf: true
+        webAclArn: "arn:aws:wafv2:us-east-1:123456789012:regional/webacl/ecommerce-api-waf/12345678-1234-1234-1234-123456789012"
+        enableApiKey: false
+        requireAuthorization: true
+```
+
+### WebSocket API Configuration
+
+```yaml
+service: realtime-chat
+owner: frontend-team
+complianceFramework: commercial
+
+components:
+  - name: chat-websocket
+    type: api-gateway-http
+    config:
+      apiName: chat-websocket-api
+      description: Real-time chat WebSocket API
+      protocolType: WEBSOCKET
+      websocket:
+        connectRoute:
+          integrationType: LAMBDA
+          target: "arn:aws:lambda:us-east-1:123456789012:function:chat-connect"
+        disconnectRoute:
+          integrationType: LAMBDA
+          target: "arn:aws:lambda:us-east-1:123456789012:function:chat-disconnect"
+        defaultRoute:
+          integrationType: LAMBDA
+          target: "arn:aws:lambda:us-east-1:123456789012:function:chat-default"
+        customRoutes:
+          - routeKey: "sendMessage"
+            integrationType: LAMBDA
+            target: "arn:aws:lambda:us-east-1:123456789012:function:chat-send-message"
+          - routeKey: "joinRoom"
+            integrationType: LAMBDA
+            target: "arn:aws:lambda:us-east-1:123456789012:function:chat-join-room"
+      monitoring:
+        detailedMetrics: true
+        tracingEnabled: true
+        customMetrics:
+          - name: "WebSocketConnections"
+            namespace: "Chat/WebSocket"
+            statistic: "Sum"
+            period: 60
+            unit: "Count"
+          - name: "MessagesPerSecond"
+            namespace: "Chat/WebSocket"
+            statistic: "Sum"
+            period: 60
+            unit: "Count/Second"
+        alarms:
+          errorRate4xx: 2.0
+          errorRate5xx: 0.5
+          highLatency: 5000
+      throttling:
+        rateLimit: 100
+        burstLimit: 200
+```
+
+### FedRAMP High Security Configuration
+
+```yaml
+service: secure-government-api
+owner: government-team
+complianceFramework: fedramp-high
+
+components:
+  - name: secure-api
+    type: api-gateway-http
+    config:
+      apiName: secure-gov-api
+      description: Secure government API for FedRAMP High compliance
+      cors:
+        allowOrigins:
+          - "https://secure.gov.example.com"
+        allowHeaders:
+          - "Content-Type"
+          - "Authorization"
+          - "X-Requested-With"
+        allowMethods:
+          - "GET"
+          - "POST"
+        allowCredentials: false  # FedRAMP requirement
+        maxAge: 300
+      customDomain:
+        domainName: api.secure.gov.example.com
+        certificateArn: "arn:aws:acm:us-east-1:123456789012:certificate/fedramp-cert"
+        hostedZoneId: "Z1D633PJN98FT9"
+        securityPolicy: "TLS_1_2"
+      resourcePolicy:
+        allowFromVpcs:
+          - "vpc-12345678"  # Government VPC only
+        allowFromAwsAccounts:
+          - "123456789012"  # Government account only
+        allowFromRegions:
+          - "us-east-1"     # US East only
+        denyFromRegions:
+          - "us-west-2"     # No West Coast access
+      monitoring:
+        detailedMetrics: true
+        tracingEnabled: true
+        customMetrics:
+          - name: "SecurityEvents"
+            namespace: "Government/Security"
+            statistic: "Sum"
+            period: 60
+            unit: "Count"
+        alarms:
+          errorRate4xx: 1.0
+          errorRate5xx: 0.1
+          highLatency: 1000
+      accessLogging:
+        enabled: true
+        retentionInDays: 365  # FedRAMP High requirement
+        includeExecutionData: true
+        includeRequestResponseData: true
+      security:
+        enableWaf: true
+        webAclArn: "arn:aws:wafv2:us-east-1:123456789012:regional/webacl/fedramp-waf/12345678-1234-1234-1234-123456789012"
+        enableApiKey: true
+        requireAuthorization: true
+      throttling:
+        rateLimit: 100
+        burstLimit: 200
+```
+
 ## Troubleshooting
 
 ### Common Issues
 
-1. **CORS errors** - Ensure `allowOrigins` is properly configured
-2. **Authentication failures** - Verify JWT issuer and audience configuration
-3. **Integration timeouts** - Check `timeoutInMillis` settings
-4. **Custom domain issues** - Verify certificate and DNS configuration
-5. **VPC Link failures** - Ensure proper security group and subnet configuration
+#### 1. CORS Errors
+**Symptoms:** Browser shows CORS errors, requests blocked
+**Solutions:**
+- Verify `allowOrigins` includes your domain exactly (no trailing slashes)
+- Check `allowHeaders` includes all required headers
+- Ensure `allowCredentials: true` if sending cookies/auth headers
+- Test with browser dev tools Network tab
 
-### Debugging
+```yaml
+cors:
+  allowOrigins:
+    - "https://myapp.com"  # ✅ Correct
+    - "https://myapp.com/" # ❌ Wrong - trailing slash
+  allowHeaders:
+    - "Content-Type"
+    - "Authorization"
+    - "X-Custom-Header"    # Add any custom headers
+  allowCredentials: true   # If using cookies/auth
+```
 
-1. **Enable access logging** to see request details
-2. **Enable X-Ray tracing** for detailed request flow
-3. **Check CloudWatch metrics** for error rates and latency
-4. **Review CloudWatch alarms** for threshold breaches
-5. **Use patches.ts** to access and modify constructs if needed
+#### 2. Authentication Failures
+**Symptoms:** 401/403 errors, JWT validation failures
+**Solutions:**
+- Verify JWT issuer URL is correct and accessible
+- Check audience array matches your JWT token
+- Ensure JWT token is in Authorization header as "Bearer <token>"
+- Test JWT token with online decoder first
+
+```yaml
+authorization:
+  authorizationType: JWT
+  jwtConfiguration:
+    issuer: "https://cognito-idp.us-east-1.amazonaws.com/us-east-1_ABC123DEF"  # Must be exact
+    audience: ["6LxocgoUj0oO8XxXxXxXxX"]  # Must match token audience
+```
+
+#### 3. Integration Timeouts
+**Symptoms:** 504 Gateway Timeout errors
+**Solutions:**
+- Check Lambda function timeout settings
+- Verify Lambda function is not in error state
+- Check CloudWatch logs for Lambda errors
+- Consider increasing Lambda timeout if needed
+
+#### 4. Custom Domain Issues
+**Symptoms:** Domain not resolving, SSL errors
+**Solutions:**
+- Verify certificate is in the same region as API Gateway
+- Check Route 53 hosted zone configuration
+- Ensure certificate covers the domain name
+- Test certificate with AWS Certificate Manager console
+
+#### 5. VPC Link Failures
+**Symptoms:** Integration errors, network timeouts
+**Solutions:**
+- Verify security groups allow traffic on required ports
+- Check subnet configuration and routing
+- Ensure VPC Link is in "Available" state
+- Test connectivity from API Gateway to target
+
+#### 6. Custom Metrics Not Appearing
+**Symptoms:** Custom metrics not visible in CloudWatch
+**Solutions:**
+- Check metric namespace and name spelling
+- Verify dimensions are correctly formatted
+- Wait up to 15 minutes for metrics to appear
+- Check CloudWatch permissions
+
+### Debugging Steps
+
+#### 1. Enable Comprehensive Logging
+```yaml
+accessLogging:
+  enabled: true
+  retentionInDays: 7
+  includeExecutionData: true
+  includeRequestResponseData: true
+```
+
+#### 2. Enable X-Ray Tracing
+```yaml
+monitoring:
+  tracingEnabled: true
+```
+
+#### 3. Check CloudWatch Metrics
+- Go to CloudWatch → Metrics → Custom/API-Gateway
+- Look for your custom metrics
+- Check API Gateway built-in metrics
+
+#### 4. Review CloudWatch Logs
+- Check API Gateway execution logs
+- Review Lambda function logs if using Lambda integration
+- Look for error patterns
+
+#### 5. Test with curl/Postman
+```bash
+# Test basic API
+curl -X GET https://your-api-id.execute-api.us-east-1.amazonaws.com/prod/health
+
+# Test with CORS
+curl -X OPTIONS https://your-api-id.execute-api.us-east-1.amazonaws.com/prod/health \
+  -H "Origin: https://myapp.com" \
+  -H "Access-Control-Request-Method: GET"
+
+# Test with JWT
+curl -X GET https://your-api-id.execute-api.us-east-1.amazonaws.com/prod/protected \
+  -H "Authorization: Bearer your-jwt-token"
+```
+
+#### 6. Use patches.ts for Advanced Debugging
+```typescript
+// patches.ts
+import { HttpApi } from 'aws-cdk-lib/aws-apigatewayv2';
+
+export function patchApiGatewayHttp(component: any) {
+  // Access the underlying CDK construct
+  const httpApi = component.getConstruct('httpApi') as HttpApi;
+  
+  // Add custom logging or modify behavior
+  console.log('API Gateway ID:', httpApi.httpApiId);
+  
+  // Add custom tags or modify configuration
+  // This is useful for debugging or adding features not in the component
+}
+```
+
+### Performance Optimization
+
+#### 1. Throttling Configuration
+```yaml
+throttling:
+  rateLimit: 1000    # Adjust based on expected load
+  burstLimit: 2000   # Allow burst traffic
+```
+
+#### 2. Custom Metrics for Performance
+```yaml
+monitoring:
+  customMetrics:
+    - name: "ResponseTime"
+      namespace: "MyApp/API"
+      statistic: "Average"
+      period: 60
+      unit: "Milliseconds"
+    - name: "RequestCount"
+      namespace: "MyApp/API"
+      statistic: "Sum"
+      period: 300
+      unit: "Count"
+```
+
+#### 3. Caching Headers
+```yaml
+# Add to Lambda response
+headers:
+  Cache-Control: "max-age=300"
+  ETag: "version-123"
+```
+
+### Security Best Practices
+
+#### 1. Resource Policies
+```yaml
+resourcePolicy:
+  allowFromIpRanges:
+    - "203.0.113.0/24"  # Office network
+  denyFromIpRanges:
+    - "192.0.2.0/24"    # Blocked network
+  allowFromAwsAccounts:
+    - "111111111111"     # Partner account
+```
+
+#### 2. WAF Integration
+```yaml
+security:
+  enableWaf: true
+  webAclArn: "arn:aws:wafv2:us-east-1:123456789012:regional/webacl/my-waf/12345678-1234-1234-1234-123456789012"
+```
+
+#### 3. API Key Management
+```yaml
+security:
+  enableApiKey: true
+  requireAuthorization: true
+```
 
 ## Performance Considerations
 

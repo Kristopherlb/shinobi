@@ -1,0 +1,607 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "title": "DynamoDB Table Config",
+  "description": "Configuration schema for DynamoDB Table Component",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "partitionKey"
+  ],
+  "properties": {
+    "tableName": {
+      "type": "string",
+      "pattern": "^[a-zA-Z0-9_.-]{3,255}$",
+      "description": "Name of the DynamoDB table"
+    },
+    "partitionKey": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "name",
+        "type"
+      ],
+      "properties": {
+        "name": {
+          "type": "string",
+          "pattern": "^[a-zA-Z0-9_.-]+$",
+          "description": "Attribute name for the partition key"
+        },
+        "type": {
+          "type": "string",
+          "enum": [
+            "string",
+            "number",
+            "binary"
+          ],
+          "description": "Data type of the partition key attribute"
+        }
+      }
+    },
+    "sortKey": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "name",
+        "type"
+      ],
+      "properties": {
+        "name": {
+          "type": "string",
+          "pattern": "^[a-zA-Z0-9_.-]+$",
+          "description": "Attribute name for the sort key"
+        },
+        "type": {
+          "type": "string",
+          "enum": [
+            "string",
+            "number",
+            "binary"
+          ],
+          "description": "Data type of the sort key attribute"
+        }
+      }
+    },
+    "billingMode": {
+      "type": "string",
+      "enum": [
+        "pay-per-request",
+        "provisioned"
+      ],
+      "default": "pay-per-request",
+      "description": "Billing mode for the DynamoDB table"
+    },
+    "provisioned": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "readCapacity",
+        "writeCapacity"
+      ],
+      "properties": {
+        "readCapacity": {
+          "type": "number",
+          "minimum": 1,
+          "description": "Read capacity units for provisioned billing"
+        },
+        "writeCapacity": {
+          "type": "number",
+          "minimum": 1,
+          "description": "Write capacity units for provisioned billing"
+        },
+        "autoScaling": {
+          "type": "object",
+          "additionalProperties": false,
+          "properties": {
+            "minReadCapacity": {
+              "type": "number",
+              "minimum": 1
+            },
+            "maxReadCapacity": {
+              "type": "number",
+              "minimum": 1
+            },
+            "minWriteCapacity": {
+              "type": "number",
+              "minimum": 1
+            },
+            "maxWriteCapacity": {
+              "type": "number",
+              "minimum": 1
+            },
+            "targetUtilizationPercent": {
+              "type": "number",
+              "minimum": 20,
+              "maximum": 90
+            }
+          }
+        }
+      }
+    },
+    "tableClass": {
+      "type": "string",
+      "enum": [
+        "standard",
+        "infrequent-access"
+      ],
+      "default": "standard",
+      "description": "Table class for cost optimization"
+    },
+    "pointInTimeRecovery": {
+      "type": "boolean",
+      "default": false,
+      "description": "Enable point-in-time recovery for the table"
+    },
+    "timeToLive": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "enabled": {
+          "type": "boolean",
+          "default": false
+        },
+        "attributeName": {
+          "type": "string"
+        }
+      },
+      "default": {
+        "enabled": false
+      },
+      "description": "Time-to-live configuration"
+    },
+    "stream": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "enabled": {
+          "type": "boolean",
+          "default": false
+        },
+        "viewType": {
+          "type": "string",
+          "enum": [
+            "keys-only",
+            "new-image",
+            "old-image",
+            "new-and-old-images"
+          ]
+        }
+      },
+      "default": {
+        "enabled": false
+      },
+      "description": "DynamoDB Streams configuration"
+    },
+    "globalSecondaryIndexes": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "indexName",
+          "partitionKey"
+        ],
+        "properties": {
+          "indexName": {
+            "type": "string",
+            "pattern": "^[a-zA-Z0-9_.-]{3,255}$"
+          },
+          "partitionKey": {
+            "type": "object",
+            "additionalProperties": false,
+            "required": [
+              "name",
+              "type"
+            ],
+            "properties": {
+              "name": {
+                "type": "string",
+                "pattern": "^[a-zA-Z0-9_.-]+$"
+              },
+              "type": {
+                "type": "string",
+                "enum": [
+                  "string",
+                  "number",
+                  "binary"
+                ]
+              }
+            }
+          },
+          "sortKey": {
+            "type": "object",
+            "additionalProperties": false,
+            "required": [
+              "name",
+              "type"
+            ],
+            "properties": {
+              "name": {
+                "type": "string",
+                "pattern": "^[a-zA-Z0-9_.-]+$"
+              },
+              "type": {
+                "type": "string",
+                "enum": [
+                  "string",
+                  "number",
+                  "binary"
+                ]
+              }
+            }
+          },
+          "projectionType": {
+            "type": "string",
+            "enum": [
+              "all",
+              "keys-only",
+              "include"
+            ],
+            "default": "all"
+          },
+          "nonKeyAttributes": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            }
+          },
+          "provisioned": {
+            "type": "object",
+            "additionalProperties": false,
+            "required": [
+              "readCapacity",
+              "writeCapacity"
+            ],
+            "properties": {
+              "readCapacity": {
+                "type": "number",
+                "minimum": 1
+              },
+              "writeCapacity": {
+                "type": "number",
+                "minimum": 1
+              },
+              "autoScaling": {
+                "type": "object",
+                "additionalProperties": false,
+                "properties": {
+                  "minReadCapacity": {
+                    "type": "number",
+                    "minimum": 1
+                  },
+                  "maxReadCapacity": {
+                    "type": "number",
+                    "minimum": 1
+                  },
+                  "minWriteCapacity": {
+                    "type": "number",
+                    "minimum": 1
+                  },
+                  "maxWriteCapacity": {
+                    "type": "number",
+                    "minimum": 1
+                  },
+                  "targetUtilizationPercent": {
+                    "type": "number",
+                    "minimum": 20,
+                    "maximum": 90
+                  }
+                }
+              }
+            }
+          }
+        }
+      },
+      "default": [],
+      "description": "Global secondary indexes configuration"
+    },
+    "localSecondaryIndexes": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "indexName",
+          "sortKey"
+        ],
+        "properties": {
+          "indexName": {
+            "type": "string",
+            "pattern": "^[a-zA-Z0-9_.-]{3,255}$"
+          },
+          "sortKey": {
+            "type": "object",
+            "additionalProperties": false,
+            "required": [
+              "name",
+              "type"
+            ],
+            "properties": {
+              "name": {
+                "type": "string",
+                "pattern": "^[a-zA-Z0-9_.-]+$"
+              },
+              "type": {
+                "type": "string",
+                "enum": [
+                  "string",
+                  "number",
+                  "binary"
+                ]
+              }
+            }
+          },
+          "projectionType": {
+            "type": "string",
+            "enum": [
+              "all",
+              "keys-only",
+              "include"
+            ],
+            "default": "all"
+          },
+          "nonKeyAttributes": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            }
+          }
+        }
+      },
+      "default": [],
+      "description": "Local secondary indexes configuration"
+    },
+    "encryption": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "type": {
+          "type": "string",
+          "enum": [
+            "aws-managed",
+            "customer-managed"
+          ],
+          "default": "aws-managed",
+          "description": "Encryption type for the table"
+        },
+        "kmsKeyArn": {
+          "type": "string",
+          "description": "ARN of customer-managed KMS key"
+        },
+        "customerManagedKey": {
+          "type": "object",
+          "additionalProperties": false,
+          "properties": {
+            "create": {
+              "type": "boolean",
+              "default": false
+            },
+            "alias": {
+              "type": "string"
+            },
+            "enableRotation": {
+              "type": "boolean",
+              "default": true
+            }
+          }
+        }
+      },
+      "default": {
+        "type": "aws-managed"
+      },
+      "description": "Encryption configuration"
+    },
+    "backup": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "enabled": {
+          "type": "boolean",
+          "default": false
+        },
+        "retentionDays": {
+          "type": "number",
+          "minimum": 7,
+          "maximum": 365
+        },
+        "schedule": {
+          "type": "string"
+        }
+      },
+      "default": {
+        "enabled": false,
+        "retentionDays": 7
+      },
+      "description": "Backup configuration"
+    },
+    "monitoring": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "enabled": {
+          "type": "boolean",
+          "default": false
+        },
+        "alarms": {
+          "type": "object",
+          "additionalProperties": false,
+          "properties": {
+            "readThrottle": {
+              "type": "object",
+              "additionalProperties": false,
+              "properties": {
+                "enabled": {
+                  "type": "boolean",
+                  "default": false
+                },
+                "threshold": {
+                  "type": "number"
+                },
+                "evaluationPeriods": {
+                  "type": "number",
+                  "minimum": 1,
+                  "default": 2
+                },
+                "periodMinutes": {
+                  "type": "number",
+                  "minimum": 1,
+                  "default": 5
+                },
+                "comparisonOperator": {
+                  "type": "string",
+                  "enum": [
+                    "gt",
+                    "gte",
+                    "lt",
+                    "lte"
+                  ],
+                  "default": "gte"
+                },
+                "treatMissingData": {
+                  "type": "string",
+                  "enum": [
+                    "breaching",
+                    "not-breaching",
+                    "ignore",
+                    "missing"
+                  ],
+                  "default": "not-breaching"
+                },
+                "statistic": {
+                  "type": "string",
+                  "default": "Sum"
+                },
+                "tags": {
+                  "type": "object",
+                  "additionalProperties": {
+                    "type": "string"
+                  }
+                }
+              }
+            },
+            "writeThrottle": {
+              "type": "object",
+              "additionalProperties": false,
+              "properties": {
+                "enabled": {
+                  "type": "boolean",
+                  "default": false
+                },
+                "threshold": {
+                  "type": "number"
+                },
+                "evaluationPeriods": {
+                  "type": "number",
+                  "minimum": 1,
+                  "default": 2
+                },
+                "periodMinutes": {
+                  "type": "number",
+                  "minimum": 1,
+                  "default": 5
+                },
+                "comparisonOperator": {
+                  "type": "string",
+                  "enum": [
+                    "gt",
+                    "gte",
+                    "lt",
+                    "lte"
+                  ],
+                  "default": "gte"
+                },
+                "treatMissingData": {
+                  "type": "string",
+                  "enum": [
+                    "breaching",
+                    "not-breaching",
+                    "ignore",
+                    "missing"
+                  ],
+                  "default": "not-breaching"
+                },
+                "statistic": {
+                  "type": "string",
+                  "default": "Sum"
+                },
+                "tags": {
+                  "type": "object",
+                  "additionalProperties": {
+                    "type": "string"
+                  }
+                }
+              }
+            },
+            "systemErrors": {
+              "type": "object",
+              "additionalProperties": false,
+              "properties": {
+                "enabled": {
+                  "type": "boolean",
+                  "default": false
+                },
+                "threshold": {
+                  "type": "number"
+                },
+                "evaluationPeriods": {
+                  "type": "number",
+                  "minimum": 1,
+                  "default": 2
+                },
+                "periodMinutes": {
+                  "type": "number",
+                  "minimum": 1,
+                  "default": 5
+                },
+                "comparisonOperator": {
+                  "type": "string",
+                  "enum": [
+                    "gt",
+                    "gte",
+                    "lt",
+                    "lte"
+                  ],
+                  "default": "gte"
+                },
+                "treatMissingData": {
+                  "type": "string",
+                  "enum": [
+                    "breaching",
+                    "not-breaching",
+                    "ignore",
+                    "missing"
+                  ],
+                  "default": "not-breaching"
+                },
+                "statistic": {
+                  "type": "string",
+                  "default": "Sum"
+                },
+                "tags": {
+                  "type": "object",
+                  "additionalProperties": {
+                    "type": "string"
+                  }
+                }
+              }
+            }
+          },
+          "default": {}
+        }
+      },
+      "default": {},
+      "description": "Monitoring and alerting configuration"
+    },
+    "hardeningProfile": {
+      "type": "string",
+      "description": "Abstract security posture identifier for downstream consumers"
+    },
+    "tags": {
+      "type": "object",
+      "additionalProperties": {
+        "type": "string"
+      },
+      "default": {},
+      "description": "Additional tags for the DynamoDB table"
+    }
+  }
+}

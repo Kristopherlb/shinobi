@@ -103,7 +103,7 @@ export class InitCommand {
     }
 
     // 3. Check if service.yml already exists
-    const existingManifest = await this.dependencies.fileDiscovery.findManifest('.');
+    const existingManifest = await this.dependencies.fileDiscovery.findManifest('.', { silentOnMissing: true });
     if (existingManifest) {
       return {
         success: false,
@@ -128,12 +128,16 @@ export class InitCommand {
         !ignoredFiles.has(file) && !file.startsWith('.')
       );
 
+      const nonInteractive = this.isNonInteractive();
+
       if (significantFiles.length > 0) {
         this.dependencies.logger.warn(`Current directory is not empty. Found ${significantFiles.length} files/directories.`);
 
         // Check for --force flag to skip confirmation
-        if ((this as any).options?.force) {
+        if (this.options?.force) {
           this.dependencies.logger.info('--force flag detected, proceeding with initialization in non-empty directory');
+        } else if (nonInteractive) {
+          this.dependencies.logger.info('Non-interactive environment detected; proceeding with initialization without confirmation');
         } else {
           const { confirmInit } = await this.dependencies.prompter.prompt([{
             type: 'confirm',
@@ -339,5 +343,22 @@ export class InitCommand {
       pattern: options.pattern || answers.pattern,
       force: options.force || false
     };
+  }
+
+  private isNonInteractive(): boolean {
+    const explicitFlag = process.env.SHINOBI_CLI_NON_INTERACTIVE;
+    if (explicitFlag && explicitFlag.toLowerCase() === 'true') {
+      return true;
+    }
+
+    const ciFlag = process.env.CI;
+    if (ciFlag && ciFlag.toLowerCase() !== 'false') {
+      return true;
+    }
+
+    const stdoutTTY = typeof process.stdout !== 'undefined' ? process.stdout.isTTY : undefined;
+    const stdinTTY = typeof process.stdin !== 'undefined' ? process.stdin.isTTY : undefined;
+
+    return stdoutTTY === false || stdinTTY === false;
   }
 }

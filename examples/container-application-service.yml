@@ -1,0 +1,78 @@
+service: container-application-demo
+owner: platform-engineering
+complianceFramework: commercial
+environments:
+  dev:
+    defaults:
+      region: us-west-2
+      accountId: "911871352725"
+region: us-west-2
+accountId: "911871352725"
+tags:
+  cost-center: plat-001
+  managed-by: shinobi
+
+components:
+  - name: web-frontend
+    type: container-application
+    config:
+      application:
+        name: web-frontend
+        port: 8080
+        environment:
+          NODE_ENV: dev
+          LOG_LEVEL: info
+        secrets:
+          DATABASE_URL: arn:aws:secretsmanager:us-east-1:123456789012:secret:prod/database/url
+      service:
+        desiredCount: 3
+        cpu: 1024
+        memory: 2048
+        healthCheck:
+          command:
+            - CMD-SHELL
+            - curl -f http://localhost:8080/health || exit 1
+          path: /health
+          interval: 30
+          timeout: 5
+          retries: 3
+          startPeriod: 60
+          healthyHttpCodes: "200-399"
+          healthyThresholdCount: 3
+          unhealthyThresholdCount: 3
+        autoScaling:
+          enabled: true
+          maxCapacity: 6
+          cpuTarget: 70
+          memoryTarget: 75
+      network:
+        vpcId: vpc-0129efa01cc394f87
+        subnetIds:
+          - subnet-0a58632b97dcb9319
+          - subnet-0bf97ffc2fe0a470e
+        securityGroupIds:
+          - sg-02f3f9fbe4b6811c9
+        assignPublicIp: false
+        loadBalancerScheme: internal
+        natGateways: 1
+      loadBalancer:
+        port: 443
+        sslCertificateArn: arn:aws:acm:us-west-2:911871352725:certificate/5a0601b4-cca5-490b-b7ff-0302146f1043
+      ecr:
+        createRepository: true
+        maxImageCount: 20
+        imageScanOnPush: true
+      observability:
+        enabled: true
+        logRetentionDays: 90
+        cpuThreshold: 80
+        memoryThreshold: 85
+        enableTracing: true
+        enableMetrics: true
+      security:
+        enableEncryption: true
+        enableVpcFlowLogs: true
+        enableWaf: false
+      tags:
+        service-component: container-app
+        tier: web

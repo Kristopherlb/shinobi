@@ -1,0 +1,134 @@
+apiVersion: platform.shinobi.dev/v1
+kind: ObservabilityConfig
+metadata:
+  name: dynamodb-table-observability
+  component: dynamodb-table
+spec:
+  version: "1.0.0"
+  complianceFramework: ["commercial", "fedramp-moderate", "fedramp-high"]
+
+  tracing:
+    enabled: true
+    xray:
+      enabled: true
+      samplingRate: 1.0
+    opentelemetry:
+      enabled: true
+      autoInstrumentation: true
+      exporters:
+        - type: "otlp"
+          endpoint: "${OTEL_EXPORTER_OTLP_ENDPOINT}"
+
+  metrics:
+    enabled: true
+    custom:
+      - name: "dynamodb_table_read_capacity_utilization"
+        description: "DynamoDB table read capacity utilization percentage"
+        type: "gauge"
+        labels: ["table_name", "environment"]
+      - name: "dynamodb_table_write_capacity_utilization"
+        description: "DynamoDB table write capacity utilization percentage"
+        type: "gauge"
+        labels: ["table_name", "environment"]
+      - name: "dynamodb_table_item_count"
+        description: "Number of items in DynamoDB table"
+        type: "gauge"
+        labels: ["table_name", "environment"]
+      - name: "dynamodb_table_operation_duration"
+        description: "Duration of DynamoDB operations in milliseconds"
+        type: "histogram"
+        labels: ["table_name", "operation", "environment"]
+        buckets: [1, 5, 10, 25, 50, 100, 250, 500, 1000, 2500, 5000, 10000]
+
+  logging:
+    enabled: true
+    structured: true
+    correlation:
+      enabled: true
+      traceId: true
+      spanId: true
+    retention:
+      commercial: "30d"
+      fedramp-moderate: "90d"
+      fedramp-high: "2555d" # 7 years
+
+  alarms:
+    enabled: true
+    defaults:
+      - name: "DynamoDBReadThrottledRequests"
+        description: "DynamoDB table read throttled requests"
+        metric: "ReadThrottledRequests"
+        threshold: 1
+        evaluationPeriods: 2
+        comparisonOperator: "GreaterThanOrEqualToThreshold"
+      - name: "DynamoDBWriteThrottledRequests"
+        description: "DynamoDB table write throttled requests"
+        metric: "WriteThrottledRequests"
+        threshold: 1
+        evaluationPeriods: 2
+        comparisonOperator: "GreaterThanOrEqualToThreshold"
+      - name: "DynamoDBSystemErrors"
+        description: "DynamoDB table system errors"
+        metric: "SystemErrors"
+        threshold: 1
+        evaluationPeriods: 1
+        comparisonOperator: "GreaterThanOrEqualToThreshold"
+      - name: "DynamoDBConsumedReadCapacityUnits"
+        description: "DynamoDB table consumed read capacity units"
+        metric: "ConsumedReadCapacityUnits"
+        threshold: 80
+        evaluationPeriods: 3
+        comparisonOperator: "GreaterThanThreshold"
+        statistic: "Average"
+      - name: "DynamoDBConsumedWriteCapacityUnits"
+        description: "DynamoDB table consumed write capacity units"
+        metric: "ConsumedWriteCapacityUnits"
+        threshold: 80
+        evaluationPeriods: 3
+        comparisonOperator: "GreaterThanThreshold"
+        statistic: "Average"
+
+  dashboards:
+    enabled: true
+    templates:
+      - name: "DynamoDBTableOverview"
+        description: "Overview dashboard for DynamoDB table"
+        panels:
+          - title: "Read/Write Capacity Utilization"
+            type: "graph"
+            metrics:
+              - "ConsumedReadCapacityUnits"
+              - "ConsumedWriteCapacityUnits"
+          - title: "Throttled Requests"
+            type: "graph"
+            metrics:
+              - "ReadThrottledRequests"
+              - "WriteThrottledRequests"
+          - title: "System Errors"
+            type: "graph"
+            metrics:
+              - "SystemErrors"
+          - title: "Item Count"
+            type: "graph"
+            metrics:
+              - "ItemCount"
+
+  compliance:
+    fedramp-moderate:
+      logging:
+        retention: "90d"
+        encryption: "aws-managed"
+        auditRequired: true
+      monitoring:
+        enabled: true
+        realTimeAlerts: true
+    fedramp-high:
+      logging:
+        retention: "2555d" # 7 years
+        encryption: "customer-managed"
+        auditRequired: true
+        immutable: true
+      monitoring:
+        enabled: true
+        realTimeAlerts: true
+        siemIntegration: true

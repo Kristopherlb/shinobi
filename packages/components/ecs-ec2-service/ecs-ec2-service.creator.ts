@@ -7,8 +7,8 @@
 
 import { Construct } from 'constructs';
 import { ComponentSpec, ComponentContext, IComponentCreator } from '@platform/contracts';
-import { EcsEc2ServiceComponent } from './ecs-ec2-service.component.js';
-import { EcsEc2ServiceConfig, ECS_EC2_SERVICE_CONFIG_SCHEMA } from './ecs-ec2-service.builder.js';
+import { EcsEc2ServiceComponent } from './ecs-ec2-service.component.ts';
+import { EcsEc2ServiceConfig, ECS_EC2_SERVICE_CONFIG_SCHEMA } from './ecs-ec2-service.builder.ts';
 
 /**
  * Creator class for EcsEc2ServiceComponent component

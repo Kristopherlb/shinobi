@@ -1,8 +1,8 @@
 import {
   CloudFrontDistributionComponentConfigBuilder,
   CloudFrontDistributionConfig
-} from '../cloudfront-distribution.builder.js';
-import { ComponentContext, ComponentSpec } from '../../../platform/contracts/component-interfaces.js';
+} from '../src/cloudfront-distribution.builder.ts';
+import { ComponentContext, ComponentSpec } from '../../../core/src/platform/contracts/component-interfaces.ts';
 
 const createMockContext = (framework: string = 'commercial'): ComponentContext => ({
   serviceName: 'test-service',
@@ -30,10 +30,10 @@ describe('CloudFrontDistributionComponentConfigBuilder', () => {
     const config = builder.buildSync();
 
     expect(config.origin.type).toBe('s3');
-    expect(config.defaultBehavior?.viewerProtocolPolicy).toBe('allow-all');
+    expect(config.defaultBehavior?.viewerProtocolPolicy).toBe('redirect-to-https');
     expect(config.priceClass).toBe('PriceClass_100');
-    expect(config.logging?.enabled).toBe(false);
-    expect(config.monitoring?.enabled).toBe(false);
+    expect(config.logging?.enabled).toBe(true);
+    expect(config.monitoring?.enabled).toBe(true);
     expect(config.hardeningProfile).toBe('baseline');
   });
 

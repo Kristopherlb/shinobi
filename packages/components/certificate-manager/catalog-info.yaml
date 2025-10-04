@@ -12,6 +12,11 @@ metadata:
     - tls
   annotations:
     platform.shinobi.dev/component-type: certificate-manager
+    platform.shinobi.dev/component-version: 1.0.0
+    platform.shinobi.dev/mcp-resource-uri: "shinobi://components/certificate-manager"
+    platform.shinobi.dev/mcp-compliance-frameworks: '["commercial", "fedramp-moderate", "fedramp-high"]'
+    platform.shinobi.dev/mcp-observability: '["cloudwatch-alarms", "cloudwatch-logs", "certificate-monitoring", "transparency-logging"]'
+    platform.shinobi.dev/mcp-security: '["transparency-logging", "dns-validation", "email-validation", "key-rotation", "monitoring"]'
     github.com/project-slug: project42/shinobi
     backstage.io/techdocs-ref: dir:.
 spec:
@@ -26,6 +31,7 @@ spec:
       description: Certificate Manager component delivering ACM-issued certificates with automated validation.
       capabilities:
         - certificate:acm
+        - observability:certificate
       awsServices:
         - certificatemanager
         - route53

@@ -1,0 +1,80 @@
+templates:
+  service_base: |
+    service: {{ serviceName }}
+    owner: {{ owner }}
+    runtime: nodejs20
+    complianceFramework: {{ complianceFramework }}
+    {{#isFedRAMP}}
+    classification: controlled
+    auditLevel: detailed
+    {{/isFedRAMP}}
+    {{#isHighSecurity}}
+    backupRetentionDays: 35
+    {{/isHighSecurity}}
+    components:
+  lambda_api_with_db: |
+      - name: api
+        type: lambda-api
+        config:
+          routes:
+            - method: GET
+              path: /health
+              handler: src/api.getHealth
+      - name: database
+        type: rds-postgres
+        config:
+          backupRetentionDays: {{#isHighSecurity}}35{{/isHighSecurity}}{{^isHighSecurity}}14{{/isHighSecurity}}
+  worker_with_queue: |
+      - name: worker
+        type: lambda-worker
+        config:
+          queueName: {{ serviceName }}-queue
+      - name: queue
+        type: sqs-queue
+        config:
+          visibilityTimeout: 30
+  empty_service: |
+      []
+source_files:
+  api_lambda: |
+    import type { APIGatewayProxyHandlerV2 } from 'aws-lambda';
+
+    export const getHealth: APIGatewayProxyHandlerV2 = async () => ({
+      statusCode: 200,
+      body: JSON.stringify({ status: 'ok' })
+    });
+  worker_lambda: |
+    import type { SQSEvent } from 'aws-lambda';
+
+    export const handler = async (event: SQSEvent): Promise<void> => {
+      for (const record of event.Records) {
+        console.log('Processing message', record.messageId);
+      }
+    };
+  basic_handler: |
+    export const handler = async (): Promise<{ statusCode: number; body: string }> => ({
+      statusCode: 200,
+      body: JSON.stringify({ status: 'ok' })
+    });
+gitignore_template: |
+  node_modules/
+  dist/
+  .env
+patches_stub: |
+  /**
+   * Platform Patches File
+   * Custom CDK modifications for this service
+   */
+  import { Construct } from 'constructs';
+
+  export function applyPatches(scope: Construct): void {
+    // Add custom infrastructure adjustments here
+    console.log('Applying platform patches');
+  }
+
+  export const patchInfo = {
+    version: '1.0.0',
+    description: 'Custom platform patches',
+    author: 'platform-team',
+    appliedAt: new Date().toISOString()
+  };

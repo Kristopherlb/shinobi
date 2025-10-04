@@ -14,7 +14,7 @@ import {
   KinesisStreamConfig,
   KinesisStreamAlarmConfig,
   KinesisStreamMonitoringConfig
-} from './kinesis-stream.builder.js';
+} from './kinesis-stream.builder.ts';
 
 export class KinesisStreamComponent extends Component {
   private stream?: kinesis.Stream;

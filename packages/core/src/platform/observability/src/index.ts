@@ -1,7 +1,116 @@
 /**
- * Platform OpenTelemetry Observability Standard v1.0
+ * Platform OpenTelemetry Observability Standard v1.1
  * Automatic instrumentation and monitoring for all AWS resources
  */
+
+export type TelemetryStatistic =
+  | 'Average'
+  | 'Sum'
+  | 'SampleCount'
+  | 'Minimum'
+  | 'Maximum'
+  | 'p50'
+  | 'p75'
+  | 'p90'
+  | 'p95'
+  | 'p99';
+
+export type TelemetryComparisonOperator = 'gt' | 'gte' | 'lt' | 'lte';
+
+export type TelemetryTreatMissingData =
+  | 'breaching'
+  | 'notBreaching'
+  | 'ignore'
+  | 'missing';
+
+export interface TelemetryMetricDescriptor {
+  id: string;
+  namespace: string;
+  metricName: string;
+  dimensions?: Record<string, string>;
+  statistic?: TelemetryStatistic;
+  unit?: string;
+  periodSeconds?: number;
+  description?: string;
+}
+
+export interface TelemetryAlarmDescriptor {
+  id: string;
+  metricId: string;
+  alarmName?: string;
+  alarmDescription?: string;
+  threshold: number;
+  comparisonOperator: TelemetryComparisonOperator;
+  evaluationPeriods?: number;
+  datapointsToAlarm?: number;
+  treatMissingData?: TelemetryTreatMissingData;
+  severity?: 'info' | 'warning' | 'critical';
+  actions?: {
+    alarmActions?: string[];
+    okActions?: string[];
+    insufficientDataActions?: string[];
+  };
+  annotations?: Record<string, string>;
+}
+
+export type TelemetryWidgetType =
+  | 'metric'
+  | 'log'
+  | 'text'
+  | 'alarm'
+  | 'traceSummary';
+
+export interface TelemetryDashboardWidgetDescriptor {
+  id: string;
+  type: TelemetryWidgetType;
+  title: string;
+  width?: number;
+  height?: number;
+  metrics?: Array<{ metricId: string; label?: string; stat?: TelemetryStatistic }>;
+  markdown?: string;
+  annotations?: Record<string, string>;
+}
+
+export interface TelemetryDashboardDescriptor {
+  id: string;
+  name?: string;
+  description?: string;
+  widgets: TelemetryDashboardWidgetDescriptor[];
+  tags?: Record<string, string>;
+}
+
+export interface TelemetryTracingDescriptor {
+  enabled: boolean;
+  provider?: 'xray' | 'adot' | 'jaeger';
+  samplingRate?: number;
+  rules?: Array<{
+    name: string;
+    priority?: number;
+    fixedRate?: number;
+    reservoirSize?: number;
+    serviceType?: string;
+    resourceArn?: string;
+  }>;
+  attributes?: Record<string, string>;
+}
+
+export interface TelemetryLoggingDescriptor {
+  enabled: boolean;
+  destination?: 'cloudwatch-logs' | 'otel-collector' | 'firehose';
+  logGroupName?: string;
+  retentionDays?: number;
+  format?: 'json' | 'text';
+  fields?: Record<string, string>;
+}
+
+export interface ComponentTelemetryDirectives {
+  metrics?: TelemetryMetricDescriptor[];
+  alarms?: TelemetryAlarmDescriptor[];
+  dashboards?: TelemetryDashboardDescriptor[];
+  tracing?: TelemetryTracingDescriptor;
+  logging?: TelemetryLoggingDescriptor;
+  custom?: Record<string, any>;
+}
 
 export interface ObservabilityConfig {
   serviceName: string;
@@ -9,6 +118,7 @@ export interface ObservabilityConfig {
   environment: string;
   complianceFramework?: 'fedramp-low' | 'fedramp-moderate' | 'fedramp-high' | 'pci-dss' | 'hipaa';
   customAttributes?: Record<string, string>;
+  telemetry?: ComponentTelemetryDirectives;
 }
 
 export interface OTelEnvironmentVariables {
@@ -29,6 +139,7 @@ export interface LambdaOTelConfig {
   tracingConfig: {
     mode: 'Active' | 'PassThrough';
   };
+  telemetry?: ComponentTelemetryDirectives;
 }
 
 export interface DatabaseMonitoringConfig {
@@ -104,7 +215,8 @@ export class PlatformObservability {
       environmentVariables: this.buildOTelEnvironmentVariables(),
       tracingConfig: {
         mode: 'Active'
-      }
+      },
+      telemetry: this.describeTelemetryRequirements({ includeDashboards: false })
     };
   }
 
@@ -130,7 +242,7 @@ export class PlatformObservability {
    */
   configureQueueMonitoring(): QueueMonitoringConfig {
     const isHighCompliance = this.config.complianceFramework === 'fedramp-high';
-    
+
     return {
       alarms: {
         queueDepth: {
@@ -147,6 +259,87 @@ export class PlatformObservability {
         }
       }
     };
+  }
+
+  /**
+   * Build declarative telemetry requirements describing metrics, alarms, dashboards and tracing
+   */
+  describeTelemetryRequirements(options: { includeDashboards?: boolean } = {}): ComponentTelemetryDirectives {
+    const telemetry: ComponentTelemetryDirectives = {
+      metrics: [],
+      alarms: [],
+      tracing: {
+        enabled: true,
+        provider: 'xray',
+        samplingRate: this.config.telemetry?.tracing?.samplingRate ?? 0.1,
+        rules: this.config.telemetry?.tracing?.rules,
+        attributes: {
+          'service.name': this.config.serviceName,
+          ...(this.config.telemetry?.tracing?.attributes ?? {})
+        }
+      },
+      logging: this.config.telemetry?.logging ?? {
+        enabled: true,
+        destination: 'otel-collector',
+        retentionDays: 90,
+        format: 'json'
+      }
+    };
+
+    if (this.config.telemetry?.metrics?.length) {
+      telemetry.metrics = this.config.telemetry.metrics;
+    }
+
+    if (this.config.telemetry?.alarms?.length) {
+      telemetry.alarms = this.config.telemetry.alarms;
+    }
+
+    if (options.includeDashboards) {
+      telemetry.dashboards = this.config.telemetry?.dashboards;
+    }
+
+    if (!telemetry.metrics || telemetry.metrics.length === 0) {
+      telemetry.metrics = [
+        {
+          id: 'otel-throughput',
+          namespace: 'OTEL/Service',
+          metricName: 'RequestCount',
+          dimensions: {
+            ServiceName: this.config.serviceName,
+            Environment: this.config.environment
+          },
+          statistic: 'Sum',
+          periodSeconds: 300,
+          description: 'Total requests processed by the service'
+        }
+      ];
+    }
+
+    if (!telemetry.alarms || telemetry.alarms.length === 0) {
+      telemetry.alarms = [
+        {
+          id: 'otel-default-error-rate',
+          metricId: 'otel-throughput',
+          alarmName: `${this.config.serviceName}-error-rate`,
+          threshold: 0.05,
+          comparisonOperator: 'gt',
+          evaluationPeriods: 2,
+          datapointsToAlarm: 2,
+          severity: 'warning',
+          treatMissingData: 'notBreaching'
+        }
+      ];
+    }
+
+    if (!telemetry.tracing) {
+      telemetry.tracing = {
+        enabled: true,
+        provider: 'xray',
+        samplingRate: 0.1
+      };
+    }
+
+    return telemetry;
   }
 
   /**

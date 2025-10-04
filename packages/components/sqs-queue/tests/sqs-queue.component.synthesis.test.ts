@@ -7,9 +7,9 @@
 
 import { Template, Match } from 'aws-cdk-lib/assertions';
 import { App, Stack } from 'aws-cdk-lib';
-import { SqsQueueNewComponent } from '../sqs-queue-new.component.js';
-import { SqsQueueNewConfig } from '../sqs-queue-new.builder.js';
-import { ComponentContext, ComponentSpec } from '../../../platform/contracts/component-interfaces.js';
+import { SqsQueueNewComponent } from '../sqs-queue-new.component.ts';
+import { SqsQueueNewConfig } from '../sqs-queue-new.builder.ts';
+import { ComponentContext, ComponentSpec } from '../../../platform/contracts/component-interfaces.ts';
 
 const createMockContext = (
   complianceFramework: string = 'commercial',

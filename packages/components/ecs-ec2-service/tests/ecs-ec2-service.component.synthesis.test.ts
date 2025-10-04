@@ -3,7 +3,7 @@ import * as ec2 from 'aws-cdk-lib/aws-ec2';
 import * as ecs from 'aws-cdk-lib/aws-ecs';
 import { Template } from 'aws-cdk-lib/assertions';
 import { ComponentContext, ComponentSpec } from '@platform/contracts';
-import { EcsEc2ServiceComponent } from '../ecs-ec2-service.component.js';
+import { EcsEc2ServiceComponent } from '../ecs-ec2-service.component.ts';
 
 const createContext = (): ComponentContext => ({
   serviceName: 'orders',

@@ -61,11 +61,11 @@ Unspecified settings inherit the platform defaults for the active compliance fra
 
 ## Capability
 
-`cdn:cloudfront`
+`cloudfront:distribution`
 
 ```json
 {
-  "type": "cdn:cloudfront",
+  "type": "cloudfront:distribution",
   "distributionId": "ABC123",
   "distributionDomainName": "d123.cloudfront.net",
   "domainNames": ["app.example.com"],

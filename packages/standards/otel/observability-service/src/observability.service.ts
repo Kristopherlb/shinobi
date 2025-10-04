@@ -17,21 +17,33 @@
 import * as fs from 'fs';
 import * as yaml from 'js-yaml';
 import * as path from 'path';
-import { 
-  IPlatformService, 
-  PlatformServiceContext, 
-  PlatformServiceResult 
+import * as cloudwatch from 'aws-cdk-lib/aws-cloudwatch';
+import * as cdk from 'aws-cdk-lib';
+import { IConstruct } from 'constructs';
+import {
+  IPlatformService,
+  PlatformServiceContext,
+  PlatformServiceResult
 } from '@shinobi/core';
 import { BaseComponent } from '@shinobi/core';
-import { IObservabilityHandler, ObservabilityConfig } from '../observability-handlers/observability-handlers/observability-handler.interface.js';
-import { LambdaObservabilityHandler } from '../observability-handlers/observability-handlers/lambda-observability.handler.js';
-import { VpcObservabilityHandler } from '../observability-handlers/observability-handlers/vpc-observability.handler.js';
-import { AlbObservabilityHandler } from '../observability-handlers/observability-handlers/alb-observability.handler.js';
-import { RdsObservabilityHandler } from '../observability-handlers/observability-handlers/rds-observability.handler.js';
-import { Ec2ObservabilityHandler } from '../observability-handlers/observability-handlers/ec2-observability.handler.js';
-import { SqsObservabilityHandler } from '../observability-handlers/observability-handlers/sqs-observability.handler.js';
-import { EcsObservabilityHandler } from '../observability-handlers/observability-handlers/ecs-observability.handler.js';
-import { ITaggingService, defaultTaggingService } from '@shinobi/standards-tagging';
+import type {
+  ComponentTelemetryDirectives,
+  TelemetryAlarmDescriptor,
+  TelemetryDashboardDescriptor,
+  TelemetryMetricDescriptor
+} from '@platform/observability';
+import {
+  IObservabilityHandler,
+  ObservabilityConfig
+} from '../observability-handlers/observability-handlers/observability-handler.interface.js';
+import { LambdaObservabilityHandler } from '../observability-handlers/src/observability-handlers/lambda-observability.handler.js';
+import { VpcObservabilityHandler } from '../observability-handlers/src/observability-handlers/vpc-observability.handler.js';
+import { AlbObservabilityHandler } from '../observability-handlers/src/observability-handlers/alb-observability.handler.js';
+import { RdsObservabilityHandler } from '../observability-handlers/src/observability-handlers/rds-observability.handler.js';
+import { Ec2ObservabilityHandler } from '../observability-handlers/src/observability-handlers/ec2-observability.handler.js';
+import { SqsObservabilityHandler } from '../observability-handlers/src/observability-handlers/sqs-observability.handler.js';
+import { EcsObservabilityHandler } from '../observability-handlers/src/observability-handlers/ecs-observability.handler.js';
+import { ITaggingService, TaggingContext, defaultTaggingService } from '@shinobi/standards-tagging';
 
 
 /**
@@ -268,14 +280,27 @@ export class ObservabilityService implements IPlatformService {
 
     // Find the appropriate handler for this component type
     const handler = this.handlers.get(componentType);
-    
+
     if (!handler) {
-      // Simply log and return for unsupported types - don't throw error
-      this.context.logger.info(`No OpenTelemetry instrumentation for component type ${componentType}`, { 
-        service: this.name,
-        componentType, 
-        componentName 
-      });
+      const telemetryResult = this.applyTelemetryDirectives(component);
+
+      if (telemetryResult.alarms || telemetryResult.dashboards || telemetryResult.metrics) {
+        this.context.logger.info('Telemetry directives applied for component without dedicated handler', {
+          service: this.name,
+          componentType,
+          componentName,
+          telemetryMetricsMaterialized: telemetryResult.metrics,
+          telemetryAlarmsMaterialized: telemetryResult.alarms,
+          telemetryDashboardsMaterialized: telemetryResult.dashboards
+        });
+      } else {
+        // Simply log and return for unsupported types - don't throw error
+        this.context.logger.info(`No OpenTelemetry instrumentation for component type ${componentType}`, {
+          service: this.name,
+          componentType,
+          componentName
+        });
+      }
       return;
     }
 
@@ -284,16 +309,31 @@ export class ObservabilityService implements IPlatformService {
       // Pass the centralized configuration to the handler
       const result = handler.apply(component, this.observabilityConfig);
 
+      const telemetryResult = this.applyTelemetryDirectives(component);
+
       // Ensure result is valid before accessing properties
       if (result) {
       // Log successful application
-      this.context.logger.info('OpenTelemetry observability applied successfully', {
-        service: this.name,
-        componentType,
-        componentName,
-          alarmsCreated: result.alarmsCreated,
+        this.context.logger.info('OpenTelemetry observability applied successfully', {
+          service: this.name,
+          componentType,
+          componentName,
+          alarmsCreated: result.alarmsCreated + telemetryResult.alarms,
           instrumentationApplied: result.instrumentationApplied,
-          executionTimeMs: result.executionTimeMs
+          executionTimeMs: result.executionTimeMs,
+          telemetryMetricsMaterialized: telemetryResult.metrics,
+          telemetryDashboardsMaterialized: telemetryResult.dashboards
+        });
+      }
+
+      if (!result && (telemetryResult.metrics || telemetryResult.alarms || telemetryResult.dashboards)) {
+        this.context.logger.info('Telemetry directives applied via ObservabilityService', {
+          service: this.name,
+          componentType,
+          componentName,
+          telemetryMetricsMaterialized: telemetryResult.metrics,
+          telemetryAlarmsMaterialized: telemetryResult.alarms,
+          telemetryDashboardsMaterialized: telemetryResult.dashboards
         });
       }
       
@@ -400,5 +440,253 @@ export class ObservabilityService implements IPlatformService {
       info[componentType] = handler.constructor.name;
     });
     return info;
+  }
+
+  private applyTelemetryDirectives(component: BaseComponent): { metrics: number; alarms: number; dashboards: number } {
+    const telemetry = this.extractTelemetry(component);
+    if (!telemetry) {
+      return { metrics: 0, alarms: 0, dashboards: 0 };
+    }
+
+    const metricsMap = new Map<string, cloudwatch.IMetric>();
+    let metricsCount = 0;
+    let alarmsCount = 0;
+    let dashboardsCount = 0;
+
+    telemetry.metrics?.forEach((descriptor: TelemetryMetricDescriptor) => {
+      if (!descriptor?.id || !descriptor.metricName || !descriptor.namespace) {
+        this.context.logger.warn('Telemetry metric descriptor missing required fields', {
+          service: this.name,
+          componentType: component.getType(),
+          componentName: component.node.id,
+          descriptor
+        });
+        return;
+      }
+
+      const metric = new cloudwatch.Metric({
+        namespace: descriptor.namespace,
+        metricName: descriptor.metricName,
+        statistic: descriptor.statistic,
+        dimensionsMap: descriptor.dimensions,
+        unit: descriptor.unit,
+        period: descriptor.periodSeconds ? cdk.Duration.seconds(descriptor.periodSeconds) : undefined
+      });
+
+      metricsMap.set(descriptor.id, metric);
+      metricsCount += 1;
+    });
+
+    telemetry.alarms?.forEach((descriptor: TelemetryAlarmDescriptor) => {
+      const metric = metricsMap.get(descriptor.metricId);
+      if (!metric) {
+        this.context.logger.warn('Telemetry alarm references unknown metricId', {
+          service: this.name,
+          componentType: component.getType(),
+          componentName: component.node.id,
+          alarmId: descriptor.id,
+          metricId: descriptor.metricId
+        });
+        return;
+      }
+
+      const alarmId = this.generateResourceId('TelemetryAlarm', descriptor.id ?? descriptor.metricId);
+      const alarm = new cloudwatch.Alarm(component, alarmId, {
+        alarmName: descriptor.alarmName ?? `${this.context.serviceName}-${component.node.id}-${descriptor.id ?? descriptor.metricId}`,
+        alarmDescription: descriptor.alarmDescription,
+        metric,
+        threshold: descriptor.threshold,
+        evaluationPeriods: descriptor.evaluationPeriods ?? 1,
+        datapointsToAlarm: descriptor.datapointsToAlarm,
+        comparisonOperator: this.mapComparisonOperator(descriptor.comparisonOperator),
+        treatMissingData: this.mapTreatMissingData(descriptor.treatMissingData)
+      });
+
+      this.applyStandardTags(alarm, component);
+      alarmsCount += 1;
+    });
+
+    telemetry.dashboards?.forEach((descriptor: TelemetryDashboardDescriptor) => {
+      const dashboardId = this.generateResourceId('TelemetryDashboard', descriptor.id);
+      const dashboard = new cloudwatch.Dashboard(component, dashboardId, {
+        dashboardName: descriptor.name ?? `${this.context.serviceName}-${component.node.id}-${descriptor.id}`
+      });
+
+      descriptor.widgets?.forEach(widget => {
+        const widgetInstance = this.buildDashboardWidget(widget, metricsMap, component);
+        if (widgetInstance) {
+          dashboard.addWidgets(widgetInstance);
+        }
+      });
+
+      this.applyStandardTags(dashboard, component);
+      dashboardsCount += 1;
+    });
+
+    if (telemetry.logging) {
+      this.context.logger.info('Telemetry logging directive detected', {
+        service: this.name,
+        componentType: component.getType(),
+        componentName: component.node.id,
+        loggingDestination: telemetry.logging.destination,
+        loggingEnabled: telemetry.logging.enabled
+      });
+    }
+
+    if (telemetry.tracing) {
+      this.context.logger.info('Telemetry tracing directive detected', {
+        service: this.name,
+        componentType: component.getType(),
+        componentName: component.node.id,
+        tracingProvider: telemetry.tracing.provider,
+        tracingEnabled: telemetry.tracing.enabled,
+        tracingSamplingRate: telemetry.tracing.samplingRate
+      });
+    }
+
+    return {
+      metrics: metricsCount,
+      alarms: alarmsCount,
+      dashboards: dashboardsCount
+    };
+  }
+
+  private buildDashboardWidget(
+    widget: TelemetryDashboardDescriptor['widgets'][number],
+    metricsMap: Map<string, cloudwatch.IMetric>,
+    component: BaseComponent
+  ): cloudwatch.IWidget | undefined {
+    switch (widget.type) {
+      case 'metric': {
+        const leftMetrics: cloudwatch.IMetric[] = [];
+        widget.metrics?.forEach(metricRef => {
+          const metric = metricsMap.get(metricRef.metricId);
+          if (!metric) {
+            this.context.logger.warn('Dashboard widget metric reference not found', {
+              service: this.name,
+              componentType: component.getType(),
+              componentName: component.node.id,
+              widgetId: widget.id,
+              metricId: metricRef.metricId
+            });
+            return;
+          }
+
+          const labelledMetric = metricRef.stat || metricRef.label
+            ? metric.with({
+                statistic: metricRef.stat,
+                label: metricRef.label
+              })
+            : metric;
+
+          leftMetrics.push(labelledMetric);
+        });
+
+        if (!leftMetrics.length) {
+          return undefined;
+        }
+
+        return new cloudwatch.GraphWidget({
+          title: widget.title,
+          width: widget.width ?? 12,
+          height: widget.height ?? 6,
+          left: leftMetrics
+        });
+      }
+      case 'text':
+        if (!widget.markdown) {
+          return undefined;
+        }
+        return new cloudwatch.TextWidget({
+          markdown: widget.markdown,
+          width: widget.width ?? 12,
+          height: widget.height ?? 6
+        });
+      default:
+        this.context.logger.warn('Unsupported dashboard widget type encountered', {
+          service: this.name,
+          componentType: component.getType(),
+          componentName: component.node.id,
+          widgetType: widget.type
+        });
+        return undefined;
+    }
+  }
+
+  private extractTelemetry(component: BaseComponent): ComponentTelemetryDirectives | undefined {
+    let capabilities: Record<string, any> | undefined;
+    try {
+      capabilities = component.getCapabilities();
+    } catch (error) {
+      this.context.logger.debug('Component capabilities not yet available for telemetry extraction', {
+        service: this.name,
+        componentType: component.getType(),
+        componentName: component.node.id,
+        error: (error as Error).message
+      });
+      return undefined;
+    }
+
+    for (const [key, value] of Object.entries(capabilities ?? {})) {
+      if (key.startsWith('observability:') && value && typeof value === 'object' && 'telemetry' in value) {
+        return (value as { telemetry?: ComponentTelemetryDirectives }).telemetry;
+      }
+    }
+
+    return undefined;
+  }
+
+  private applyStandardTags(resource: IConstruct, component: BaseComponent, additionalTags?: Record<string, string>): void {
+    const taggingContext: TaggingContext = {
+      serviceName: this.context.serviceName,
+      serviceLabels: this.context.serviceLabels,
+      componentName: component.node.id,
+      componentType: component.getType(),
+      environment: this.context.environment,
+      complianceFramework: this.context.complianceFramework,
+      region: this.context.region,
+      accountId: undefined
+    };
+
+    this.taggingService.applyStandardTags(resource, taggingContext, additionalTags);
+  }
+
+  private generateResourceId(prefix: string, rawId: string | undefined): string {
+    const sanitized = (rawId ?? 'default')
+      .replace(/[^A-Za-z0-9]/g, '-')
+      .replace(/-+/g, '-')
+      .replace(/^-+|-+$/g, '');
+    const safeId = sanitized.length > 0 ? sanitized : 'Telemetry';
+    return `${prefix}${safeId.charAt(0).toUpperCase()}${safeId.slice(1)}`;
+  }
+
+  private mapComparisonOperator(value: string | undefined): cloudwatch.ComparisonOperator {
+    switch ((value ?? 'gte').toLowerCase()) {
+      case 'gt':
+        return cloudwatch.ComparisonOperator.GREATER_THAN_THRESHOLD;
+      case 'lt':
+        return cloudwatch.ComparisonOperator.LESS_THAN_THRESHOLD;
+      case 'lte':
+        return cloudwatch.ComparisonOperator.LESS_THAN_OR_EQUAL_TO_THRESHOLD;
+      case 'gte':
+      default:
+        return cloudwatch.ComparisonOperator.GREATER_THAN_OR_EQUAL_TO_THRESHOLD;
+    }
+  }
+
+  private mapTreatMissingData(value: string | undefined): cloudwatch.TreatMissingData | undefined {
+    switch ((value ?? '').toLowerCase()) {
+      case 'breaching':
+        return cloudwatch.TreatMissingData.BREACHING;
+      case 'ignore':
+        return cloudwatch.TreatMissingData.IGNORE;
+      case 'missing':
+        return cloudwatch.TreatMissingData.MISSING;
+      case 'notbreaching':
+      case 'not-breaching':
+        return cloudwatch.TreatMissingData.NOT_BREACHING;
+      default:
+        return undefined;
+    }
   }
 }

@@ -30,15 +30,15 @@ import {
   LogSecurityConfig,
   PlatformLoggerConfig
 } from '@shinobi/core/logging-interfaces';
-import { LoggingConfig } from './src/logging-config.interface.js';
+import { LoggingConfig } from './src/logging-config.interface.ts';
 
 // Import concrete handlers
-import { LambdaLoggingHandler } from '../logging-handlers/lambda-logging.handler.js';
-import { VpcLoggingHandler } from '../logging-handlers/vpc-logging.handler.js';
-import { EcsLoggingHandler } from '../logging-handlers/ecs-logging.handler.js';
-import { S3LoggingHandler } from '../logging-handlers/s3-logging.handler.js';
-import { RdsLoggingHandler } from '../logging-handlers/rds-logging.handler.js';
-import { SqsLoggingHandler } from '../logging-handlers/sqs-logging.handler.js';
+import { LambdaLoggingHandler } from '../logging-handlers/lambda-logging.handler.ts';
+import { VpcLoggingHandler } from '../logging-handlers/vpc-logging.handler.ts';
+import { EcsLoggingHandler } from '../logging-handlers/ecs-logging.handler.ts';
+import { S3LoggingHandler } from '../logging-handlers/s3-logging.handler.ts';
+import { RdsLoggingHandler } from '../logging-handlers/rds-logging.handler.ts';
+import { SqsLoggingHandler } from '../logging-handlers/sqs-logging.handler.ts';
 
 /**
  * Platform Logging Service implementing Platform Service Injector Standard v1.0

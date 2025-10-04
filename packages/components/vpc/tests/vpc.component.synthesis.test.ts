@@ -1,8 +1,8 @@
 import * as cdk from 'aws-cdk-lib';
 import { Template } from 'aws-cdk-lib/assertions';
-import { VpcComponent } from '../vpc.component.js';
-import { VpcConfig } from '../vpc.builder.js';
-import { ComponentContext, ComponentSpec } from '../../@shinobi/core/component-interfaces.js';
+import { VpcComponent } from '../vpc.component.ts';
+import { VpcConfig } from '../vpc.builder.ts';
+import { ComponentContext, ComponentSpec } from '../../@shinobi/core/component-interfaces.ts';
 
 const createContext = (framework: 'commercial' | 'fedramp-moderate' | 'fedramp-high'): ComponentContext => ({
   serviceName: 'orders',

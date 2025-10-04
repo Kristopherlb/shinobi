@@ -1,0 +1,29 @@
+{
+  "extends": "../../../tsconfig.base.json",
+  "compilerOptions": {
+    "rootDir": ".",
+    "outDir": "../../../dist/packages/components/auto-scaling-group",
+    "composite": true,
+    "declaration": true,
+    "declarationMap": true,
+    "moduleResolution": "NodeNext",
+    "resolveJsonModule": true,
+    "esModuleInterop": true
+  },
+  "include": [
+    "index.ts",
+    "src/**/*.ts",
+    "Config.schema.json"
+  ],
+  "exclude": [
+    "dist",
+    "node_modules",
+    "**/*.test.ts",
+    "**/*.spec.ts"
+  ],
+  "references": [
+    {
+      "path": "../../core/tsconfig.json"
+    }
+  ]
+}

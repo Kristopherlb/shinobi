@@ -4,14 +4,14 @@
  */
 
 // Component exports
-export { OpenFeatureProviderComponentComponent } from './openfeature-provider.component.js';
+export { OpenFeatureProviderComponentComponent } from './openfeature-provider.component.ts';
 
 // Configuration exports
 export { 
   OpenFeatureProviderConfig,
   OpenFeatureProviderComponentConfigBuilder,
   OPENFEATURE_PROVIDER_CONFIG_SCHEMA
-} from './openfeature-provider.builder.js';
+} from './openfeature-provider.builder.ts';
 
 // Creator exports
-export { OpenFeatureProviderComponentCreator } from './openfeature-provider.creator.js';
+export { OpenFeatureProviderComponentCreator } from './openfeature-provider.creator.ts';

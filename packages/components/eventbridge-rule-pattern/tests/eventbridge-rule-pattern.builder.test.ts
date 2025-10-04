@@ -2,7 +2,7 @@ import { Construct } from 'constructs';
 import {
   EventBridgeRulePatternComponentConfigBuilder,
   EventBridgeRulePatternConfig
-} from '../eventbridge-rule-pattern.builder.js';
+} from '../eventbridge-rule-pattern.builder.ts';
 import { ComponentContext, ComponentSpec } from '@shinobi/core';
 
 type Framework = 'commercial' | 'fedramp-moderate' | 'fedramp-high';

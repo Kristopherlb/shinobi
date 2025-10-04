@@ -4,7 +4,7 @@ import { ComponentContext, ComponentSpec } from '@shinobi/core';
 import {
   SsmParameterComponentConfig,
   SsmParameterComponentConfigBuilder
-} from '../ssm-parameter.builder.js';
+} from '../ssm-parameter.builder.ts';
 
 const createContext = (framework: 'commercial' | 'fedramp-moderate' | 'fedramp-high' = 'commercial'): ComponentContext => ({
   serviceName: 'orders',

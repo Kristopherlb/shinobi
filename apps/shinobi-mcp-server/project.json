@@ -10,7 +10,7 @@
         "command": "tsc -p apps/shinobi-mcp-server/tsconfig.json"
       },
       "outputs": [
-        "apps/shinobi-mcp-server/dist"
+        "{projectRoot}/dist"
       ]
     },
     "start": {

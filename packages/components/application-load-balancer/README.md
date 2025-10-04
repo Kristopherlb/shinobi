@@ -7,9 +7,14 @@ Configuration-driven Application Load Balancer that honours the platform precede
 - Internet-facing or internal ALB with dual-stack support, subnets and security groups provided declaratively.
 - Listener definitions (HTTP/HTTPS) including HTTPS policy, redirect/fixed-response/forward default actions.
 - Target group catalogue (instance/IP/Lambda) with health checks, stickiness, and optional blue/green deployment scaffolding.
-- Access logging lifecycle, retention, and removal policy controlled exclusively by configuration.
+- Access logging enabled by default with opinionated retention and removal safeguards.
 - Monitoring surfaces for HTTP 5xx, unhealthy hosts, connection errors, and rejected connections driven by config thresholds.
+- X-Ray tracing integration with configurable sampling rates for distributed request tracing.
+- AWS WAF integration with managed rule groups for security protection.
+- CloudWatch observability dashboard with key performance metrics.
+- CDK Nag security validation with proper suppressions and justifications.
 - Capability payload advertises the resolved hardening profile for downstream binders.
+- Secure-by-default posture: no implicit ingress rules, deletion protection on, and observability features active out of the box.
 
 ## Usage
 
@@ -26,6 +31,11 @@ components:
           certificateArn: arn:aws:acm:us-east-1:123456789012:certificate/11111111-2222-3333-4444-555555555555
           defaultAction:
             type: forward
+      securityGroups:
+        ingress:
+          - port: 443
+            cidr: 10.0.0.0/16
+            description: Allow HTTPS from corporate network
       targetGroups:
         - name: web
           port: 80
@@ -45,7 +55,7 @@ components:
             threshold: 5
 ```
 
-Any omitted properties fall back to the platform defaults for the active compliance framework (`/config/commercial.yml`, `/config/fedramp-moderate.yml`, `/config/fedramp-high.yml`).
+Any omitted properties fall back to the platform defaults for the active compliance framework (`/config/commercial.yml`, `/config/fedramp-moderate.yml`, `/config/fedramp-high.yml`). Those defaults enable access logging, observability, and deletion protection while requiring explicit ingress declarations.
 
 ## Key Configuration Sections
 
@@ -66,6 +76,64 @@ Any omitted properties fall back to the platform defaults for the active complia
 
 - `net:load-balancer` – ALB metadata (ARN, DNS name, hosted zone, hardening profile, monitoring flag).
 - `net:load-balancer-target` – Target group ARNs/names for downstream binders.
+- `observability:application-load-balancer` – Observability metadata (monitoring thresholds, logging, tracing, and telemetry descriptors) consumed by the OTEL service.
+
+## Observability Configuration
+
+The component supports comprehensive observability features through the `observability` configuration section:
+
+```yaml
+components:
+  - name: edge-alb
+    type: application-load-balancer
+    config:
+      # ... other configuration ...
+      observability:
+        dashboard:
+          enabled: true
+          name: "my-alb-dashboard"  # Optional custom name
+        xrayTracing:
+          enabled: true
+          samplingRate: 0.1  # 10% sampling
+          serviceName: "my-service"  # Optional custom service name
+        waf:
+          enabled: true
+          managedRuleGroups:
+            - "AWSManagedRulesCommonRuleSet"
+            - "AWSManagedRulesKnownBadInputsRuleSet"
+            - "AWSManagedRulesSQLiRuleSet"
+          customRules: []  # Optional custom rules
+```
+
+### Features
+
+- **Telemetry contract**: Publishes metrics and alarm expectations (`RequestCount`, `HTTPCode_ELB_5XX_Count`, unhealthy host counts, connection errors) via the observability capability.
+- **Centralised dashboards**: Emits dashboard widget definitions so the observability binder can render CloudWatch dashboards; the component no longer synthesizes them directly.
+- **Tracing directives**: Announces optional X-Ray sampling rules in telemetry instead of creating `CfnSamplingRule` resources.
+- **AWS WAF**: Security protection with managed rule groups and custom rules.
+- **CDK Nag**: Security validation with proper suppressions.
+
+> Monitoring thresholds, tracing preferences, and dashboard widgets are published through the `observability:application-load-balancer` capability so the central observability service can provision OTEL collectors, CloudWatch alarms, and dashboards centrally. The component no longer synthesizes those resources directly.
+
+### Telemetry Descriptor
+
+The `observability:application-load-balancer` capability exposes a `telemetry` object similar to the example below. The observability binder reads this payload to materialize metrics, alarms, dashboards, and tracing rules in a consistent manner:
+
+```json
+{
+  "telemetry": {
+    "metrics": [
+      { "metricName": "HTTPCode_ELB_5XX_Count", "namespace": "AWS/ApplicationELB" },
+      { "metricName": "UnHealthyHostCount", "dimensions": { "TargetGroup": "targetgroup/edge-blue/..." } }
+    ],
+    "alarms": [
+      { "id": "alb-http5xx", "metricId": "<lb>-elb-5xx", "threshold": 10, "comparisonOperator": "gte" }
+    ],
+    "logging": { "destination": "s3", "bucketName": "edge-alb-logs" },
+    "tracing": { "provider": "xray", "samplingRate": 0.1 }
+  }
+}
+```
 
 ## Testing
 

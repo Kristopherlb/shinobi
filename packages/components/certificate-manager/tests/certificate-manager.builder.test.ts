@@ -1,7 +1,7 @@
 import {
   CertificateManagerComponentConfigBuilder,
   CertificateManagerConfig
-} from '../certificate-manager.builder.js';
+} from '../src/certificate-manager.builder.ts';
 import { ComponentContext, ComponentSpec } from '@shinobi/core';
 
 const createContext = (
@@ -44,7 +44,10 @@ describe('CertificateManagerComponentConfigBuilder', () => {
     expect(config.validation.method).toBe('DNS');
     expect(config.keyAlgorithm).toBe('RSA_2048');
     expect(config.logging.groups.length).toBeGreaterThan(0);
-    expect(config.monitoring.enabled).toBe(false);
+    expect(config.logging.groups[0].removalPolicy).toBe('retain');
+    expect(config.monitoring.enabled).toBe(true);
+    expect(config.monitoring.expiration.enabled).toBe(true);
+    expect(config.monitoring.status.enabled).toBe(true);
   });
 
   it('applies fedramp-moderate hardened defaults', () => {
@@ -59,6 +62,8 @@ describe('CertificateManagerComponentConfigBuilder', () => {
     expect(config.transparencyLoggingEnabled).toBe(true);
     expect(config.logging.groups.some(group => group.id === 'compliance')).toBe(true);
     expect(config.monitoring.enabled).toBe(true);
+    expect(config.monitoring.expiration.enabled).toBe(true);
+    expect(config.monitoring.status.enabled).toBe(true);
   });
 
   it('allows manifest overrides to replace defaults', () => {
@@ -79,6 +84,19 @@ describe('CertificateManagerComponentConfigBuilder', () => {
               removalPolicy: 'destroy'
             }
           ]
+        },
+        monitoring: {
+          enabled: true,
+          expiration: {
+            enabled: false,
+            thresholdDays: 7,
+            periodHours: 12
+          },
+          status: {
+            enabled: false,
+            threshold: 0,
+            periodMinutes: 5
+          }
         }
       })
     });
@@ -89,5 +107,44 @@ describe('CertificateManagerComponentConfigBuilder', () => {
     expect(config.validation.method).toBe('EMAIL');
     expect(config.validation.validationEmails).toEqual(['admin@example.com']);
     expect(config.logging.groups.map(group => group.id)).toEqual(['custom']);
+    expect(config.monitoring.expiration.enabled).toBe(false);
+    expect(config.monitoring.expiration.enabled).toBe(false);
+    expect(config.monitoring.expiration.thresholdDays).toBe(7);
+    expect(config.monitoring.status.enabled).toBe(false);
+  });
+
+  it('requires validation emails when email validation is selected', () => {
+    const builder = new CertificateManagerComponentConfigBuilder({
+      context: createContext('commercial'),
+      spec: createSpec({
+        validation: {
+          method: 'EMAIL'
+        }
+      })
+    });
+
+    expect(() => builder.buildSync()).toThrow('Email validation requires at least one validation email address.');
+  });
+
+  it('validates domain name format in configuration', () => {
+    const builder = new CertificateManagerComponentConfigBuilder({
+      context: createContext('commercial'),
+      spec: createSpec({
+        domainName: 'invalid-domain'
+      })
+    });
+
+    expect(() => builder.buildSync()).toThrow('Invalid domain name format: invalid-domain. Must be a valid FQDN.');
+  });
+
+  it('validates SAN domain name format', () => {
+    const builder = new CertificateManagerComponentConfigBuilder({
+      context: createContext('commercial'),
+      spec: createSpec({
+        subjectAlternativeNames: ['invalid-san']
+      })
+    });
+
+    expect(() => builder.buildSync()).toThrow('Invalid SAN domain format: invalid-san. Must be a valid FQDN.');
   });
 });

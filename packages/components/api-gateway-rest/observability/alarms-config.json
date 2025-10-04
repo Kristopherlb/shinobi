@@ -1,48 +1,163 @@
 {
   "alarms": [
     {
-      "id": "api-gateway-rest-5xx-error-rate",
-      "metricNamespace": "AWS/ApiGateway",
-      "metricName": "5XXError",
-      "stat": "Average",
-      "period": 300,
-      "threshold": "{config.monitoring.thresholds.errorRate5xxPercent}",
-      "evaluationPeriods": 1,
-      "comparisonOperator": "GreaterThanThreshold",
-      "description": "Triggers when 5XX errors exceed the configured percentage threshold."
-    },
-    {
-      "id": "api-gateway-rest-4xx-error-rate",
+      "id": "api-gateway-rest-4xx-errors",
       "metricNamespace": "AWS/ApiGateway",
       "metricName": "4XXError",
       "stat": "Average",
-      "period": 300,
-      "threshold": "{config.monitoring.thresholds.errorRate4xxPercent}",
-      "evaluationPeriods": 1,
+      "threshold": 0.05,
       "comparisonOperator": "GreaterThanThreshold",
-      "description": "Triggers when 4XX errors exceed the configured percentage threshold."
+      "evaluationPeriods": 5,
+      "datapointsToAlarm": 5,
+      "period": 60,
+      "description": "High rate of 4XX client errors - indicates authorization issues, missing resources, or client request problems",
+      "treatMissingData": "notBreaching",
+      "severity": "warning",
+      "runbook": "Check CloudWatch Logs for 4XX error details, verify API permissions, validate request parameters",
+      "thresholdJustification": "Detects when more than 5% of requests return 4XX errors. Tune based on historical data and acceptable error rates."
     },
     {
-      "id": "api-gateway-rest-latency",
+      "id": "api-gateway-rest-5xx-errors",
+      "metricNamespace": "AWS/ApiGateway",
+      "metricName": "5XXError",
+      "stat": "Average",
+      "threshold": 0.05,
+      "comparisonOperator": "GreaterThanThreshold",
+      "evaluationPeriods": 3,
+      "datapointsToAlarm": 3,
+      "period": 60,
+      "description": "High rate of 5XX server errors - indicates backend issues, network problems, or integration failures",
+      "treatMissingData": "notBreaching",
+      "severity": "critical",
+      "runbook": "Check backend service health, verify integration configuration, review CloudWatch Logs for error details",
+      "thresholdJustification": "Detects when more than 5% of requests return 5XX errors. Critical for service availability."
+    },
+    {
+      "id": "api-gateway-rest-latency-p95",
       "metricNamespace": "AWS/ApiGateway",
       "metricName": "Latency",
-      "stat": "Average",
-      "period": 300,
-      "threshold": "{config.monitoring.thresholds.highLatencyMs}",
-      "evaluationPeriods": 1,
+      "stat": "p95",
+      "threshold": 1000,
       "comparisonOperator": "GreaterThanThreshold",
-      "description": "Alerts when average latency exceeds the configured limit."
+      "evaluationPeriods": 3,
+      "datapointsToAlarm": 3,
+      "period": 60,
+      "description": "High P95 latency - indicates performance degradation affecting 95% of requests",
+      "treatMissingData": "notBreaching",
+      "severity": "warning",
+      "runbook": "Check backend service performance, review integration latency, verify resource utilization",
+      "thresholdJustification": "P95 latency threshold of 1000ms ensures good user experience for majority of requests."
     },
     {
-      "id": "api-gateway-rest-low-throughput",
+      "id": "api-gateway-rest-latency-p99",
+      "metricNamespace": "AWS/ApiGateway",
+      "metricName": "Latency",
+      "stat": "p99",
+      "threshold": 2000,
+      "comparisonOperator": "GreaterThanThreshold",
+      "evaluationPeriods": 2,
+      "datapointsToAlarm": 2,
+      "period": 60,
+      "description": "High P99 latency - indicates severe performance issues affecting worst-case requests",
+      "treatMissingData": "notBreaching",
+      "severity": "critical",
+      "runbook": "Investigate backend bottlenecks, check for resource constraints, review integration timeouts",
+      "thresholdJustification": "P99 latency threshold of 2000ms catches severe performance issues affecting edge cases."
+    },
+    {
+      "id": "api-gateway-rest-low-traffic",
       "metricNamespace": "AWS/ApiGateway",
       "metricName": "Count",
-      "stat": "Sum",
-      "period": 300,
-      "threshold": "{config.monitoring.thresholds.lowThroughput}",
-      "evaluationPeriods": 1,
+      "stat": "SampleCount",
+      "threshold": 10,
       "comparisonOperator": "LessThanThreshold",
-      "description": "Detects traffic drops below the configured throughput minimum."
+      "evaluationPeriods": 10,
+      "datapointsToAlarm": 10,
+      "period": 60,
+      "description": "Unexpectedly low traffic volume - may indicate client issues, configuration problems, or API unavailability",
+      "treatMissingData": "breaching",
+      "severity": "warning",
+      "runbook": "Verify client applications are running, check API endpoint accessibility, review recent deployments",
+      "thresholdJustification": "Set based on historical baseline. Adjust threshold based on expected traffic patterns."
+    },
+    {
+      "id": "api-gateway-rest-integration-latency",
+      "metricNamespace": "AWS/ApiGateway",
+      "metricName": "IntegrationLatency",
+      "stat": "p95",
+      "threshold": 500,
+      "comparisonOperator": "GreaterThanThreshold",
+      "evaluationPeriods": 3,
+      "datapointsToAlarm": 3,
+      "period": 60,
+      "description": "High integration latency - indicates backend service performance issues",
+      "treatMissingData": "notBreaching",
+      "severity": "warning",
+      "runbook": "Check backend service health, review database performance, verify network connectivity",
+      "thresholdJustification": "Integration latency should be significantly lower than total API latency for good performance."
+    },
+    {
+      "id": "api-gateway-rest-cache-hit-ratio",
+      "metricNamespace": "AWS/ApiGateway",
+      "metricName": "CacheHitCount",
+      "stat": "Average",
+      "threshold": 0.8,
+      "comparisonOperator": "LessThanThreshold",
+      "evaluationPeriods": 5,
+      "datapointsToAlarm": 5,
+      "period": 300,
+      "description": "Low cache hit ratio - indicates inefficient caching configuration",
+      "treatMissingData": "notBreaching",
+      "severity": "info",
+      "runbook": "Review cache TTL settings, check cache key configuration, verify cacheable responses",
+      "thresholdJustification": "Cache hit ratio below 80% may indicate suboptimal caching configuration."
     }
-  ]
+  ],
+  "compositeAlarms": [
+    {
+      "id": "api-gateway-rest-health-check",
+      "alarmRule": "ALARM(api-gateway-rest-5xx-errors) OR ALARM(api-gateway-rest-latency-p99)",
+      "description": "Composite alarm for critical API Gateway REST health issues",
+      "severity": "critical",
+      "runbook": "API Gateway REST experiencing critical issues - check both error rates and latency"
+    },
+    {
+      "id": "api-gateway-rest-performance-degradation",
+      "alarmRule": "ALARM(api-gateway-rest-4xx-errors) OR ALARM(api-gateway-rest-latency-p95)",
+      "description": "Composite alarm for API Gateway REST performance degradation",
+      "severity": "warning",
+      "runbook": "API Gateway REST performance degraded - check error rates and latency metrics"
+    }
+  ],
+  "dashboardVariables": {
+    "apiId": "${api_id}",
+    "stage": "${stage}",
+    "region": "${region}",
+    "serviceName": "${service_name}",
+    "environment": "${environment}"
+  },
+  "notificationTargets": {
+    "snsTopics": [
+      "${alarm_notification_topic}"
+    ],
+    "slackChannels": [
+      "${slack_channel}"
+    ],
+    "pagerDuty": {
+      "serviceKey": "${pagerduty_service_key}"
+    }
+  },
+  "tags": {
+    "Service": "api-gateway-rest",
+    "Environment": "${environment}",
+    "Component": "monitoring",
+    "ManagedBy": "Shinobi",
+    "ComplianceFramework": "${compliance_framework}"
+  },
+  "awsBestPractices": {
+    "source": "AWS CloudWatch Best Practice Recommended Alarms",
+    "version": "2024-01-15",
+    "compliance": "AWS Well-Architected Framework OPS08-BP05",
+    "notes": "Based on AWS recommended alarm configurations for API Gateway REST with SRE-focused thresholds and runbooks"
+  }
 }

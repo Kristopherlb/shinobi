@@ -1,0 +1,35 @@
+{
+  "name": "@platform/components-application-load-balancer",
+  "version": "0.0.1",
+  "private": true,
+  "description": "Application Load Balancer component wiring platform standards for logging, monitoring, and security.",
+  "main": "../../dist/packages/components/application-load-balancer/index.js",
+  "types": "../../dist/packages/components/application-load-balancer/index.d.ts",
+  "scripts": {
+    "build": "tsc -p tsconfig.json",
+    "test": "jest",
+    "lint": "eslint . --ext .ts",
+    "clean": "rm -rf dist coverage"
+  },
+  "dependencies": {
+    "@shinobi/core": "workspace:*",
+    "@platform/contracts": "workspace:*",
+    "aws-cdk-lib": "^2.214.0",
+    "constructs": "^10.4.2",
+    "cdk-nag": "^2.27.126"
+  },
+  "devDependencies": {
+    "@types/jest": "^29.5.5",
+    "@types/node": "^20.11.30",
+    "jest": "^29.7.0",
+    "ts-jest": "^29.1.1",
+    "typescript": "^5.4.5",
+    "eslint": "^8.57.0"
+  },
+  "files": [
+    "dist",
+    "README.md",
+    "catalog-info.yaml"
+  ],
+  "type": "module"
+}

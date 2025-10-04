@@ -126,7 +126,20 @@ export abstract class ConfigBuilder<T = Record<string, any>> {
    * Get the file path for platform configuration based on compliance framework
    */
   private _getPlatformConfigPath(framework: string): string {
-    const configDir = path.resolve(process.cwd(), 'config');
+    // Always resolve config directory relative to workspace root
+    // Look for the config directory by traversing up from current directory
+    let currentDir = process.cwd();
+    let configDir = path.join(currentDir, 'config');
+    
+    // Traverse up the directory tree to find the workspace root (where config/ exists)
+    while (!fs.existsSync(configDir) && currentDir !== path.dirname(currentDir)) {
+      currentDir = path.dirname(currentDir);
+      configDir = path.join(currentDir, 'config');
+    }
+    
+    if (!fs.existsSync(configDir)) {
+      throw new Error(`Config directory not found. Searched from ${process.cwd()} up to ${currentDir}`);
+    }
     
     switch (framework) {
       case 'commercial':

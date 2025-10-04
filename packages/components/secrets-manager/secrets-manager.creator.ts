@@ -10,9 +10,9 @@ import {
   ComponentSpec, 
   ComponentContext, 
   IComponentCreator 
-} from '../../platform/contracts/component-interfaces.js';
-import { SecretsManagerComponentComponent } from './secrets-manager.component.js';
-import { SecretsManagerConfig, SECRETS_MANAGER_CONFIG_SCHEMA } from './secrets-manager.builder.js';
+} from '../../platform/contracts/component-interfaces.ts';
+import { SecretsManagerComponentComponent } from './secrets-manager.component.ts';
+import { SecretsManagerConfig, SECRETS_MANAGER_CONFIG_SCHEMA } from './secrets-manager.builder.ts';
 
 /**
  * Creator class for SecretsManagerComponent component

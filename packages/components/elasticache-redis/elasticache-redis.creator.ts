@@ -4,11 +4,11 @@ import {
   ComponentSpec,
   IComponentCreator
 } from '@shinobi/core';
-import { ElastiCacheRedisComponent } from './elasticache-redis.component.js';
+import { ElastiCacheRedisComponent } from './elasticache-redis.component.ts';
 import {
   ElastiCacheRedisConfig,
   ELASTICACHE_REDIS_CONFIG_SCHEMA
-} from './elasticache-redis.builder.js';
+} from './elasticache-redis.builder.ts';
 
 export class ElastiCacheRedisComponentCreator implements IComponentCreator {
   public readonly componentType = 'elasticache-redis';

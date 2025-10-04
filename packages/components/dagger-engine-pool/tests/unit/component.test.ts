@@ -30,12 +30,12 @@ import {
   createMockComponentContext,
   createMockComponentSpec,
   createTestStack
-} from '../../../../../tests/utils/mock-base-component.js';
+} from '../../../../../tests/utils/mock-base-component.ts';
 
 // Setup platform mocks
 setupPlatformMocks();
 
-import { DaggerEnginePool } from '../../src/dagger-engine-pool.component.js';
+import { DaggerEnginePool } from '../../src/dagger-engine-pool.component.ts';
 
 // Define interfaces locally to avoid import issues
 interface ComponentContext {

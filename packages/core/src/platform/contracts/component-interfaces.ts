@@ -20,23 +20,21 @@ export type { BindingContext, BindingResult, IBinderStrategy };
  * Component specification interface
  */
 export interface ComponentSpec {
-  name: string;
   type: string;
-  config: Record<string, any>;
-  binds?: Array<any>;
-  triggers?: Array<any>;
+  name: string;
+  config: any;
+  binds?: any[];
+  triggers?: any[];
+  policy?: any;
   labels?: Record<string, string>;
   overrides?: Record<string, any>;
-  policy?: Record<string, any>;
 }
 
 /**
  * Component capabilities interface
  */
 export interface ComponentCapabilities {
-  [key: string]: {
-    [field: string]: any;
-  };
+  [key: string]: any;
 }
 
 /**
@@ -66,14 +64,17 @@ export interface FeatureFlagRuntimeConfiguration {
  */
 export interface ComponentContext {
   serviceName: string;
+  service?: string;
   environment: string;
-  complianceFramework: string;
-  scope: Construct; // CDK Construct scope - strongly typed
-  vpc?: IVpc; // VPC construct for components that need it - strongly typed
-  region?: string;
-  accountId?: string;
-  serviceLabels?: Record<string, string>;
+  complianceFramework: 'commercial' | 'fedramp-moderate' | 'fedramp-high';
+  compliance?: string;
   owner?: string;
+  accountId?: string;
+  account?: string;
+  region?: string;
+  scope: Construct;
+  vpc?: IVpc;
+  serviceLabels?: Record<string, string>;
   observability?: {
     collectorEndpoint?: string;
     adotLayerArn?: string;
@@ -106,9 +107,6 @@ export interface ComponentContext {
   };
   featureFlags?: FeatureFlagRuntimeConfiguration;
 }
-
-
-// BindingContext is now imported from platform-binding-trigger-spec
 
 /**
  * Core component interface - The Public Contract

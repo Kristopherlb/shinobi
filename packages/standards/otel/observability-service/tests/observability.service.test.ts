@@ -21,10 +21,10 @@ import { describe, test, expect, beforeEach, afterEach, jest } from '@jest/globa
 import * as fs from 'fs';
 import * as path from 'path';
 import * as os from 'os';
-import { ObservabilityService } from '../../../src/services/observability.service.js';
-import { PlatformServiceContext } from '../@shinobi/core/platform-services.js';
-import { BaseComponent } from '../@shinobi/core/component.js';
-import { ComponentSpec, ComponentContext } from '../@shinobi/core/component-interfaces.js';
+import { ObservabilityService } from '../../../src/services/observability.service.ts';
+import { PlatformServiceContext } from '../@shinobi/core/platform-services.ts';
+import { BaseComponent } from '../@shinobi/core/component.ts';
+import { ComponentSpec, ComponentContext } from '../@shinobi/core/component-interfaces.ts';
 
 // Mock the handler classes
 jest.mock('../../../src/services/observability-handlers/lambda-observability.handler');

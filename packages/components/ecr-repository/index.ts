@@ -4,14 +4,14 @@
  */
 
 // Component exports
-export { EcrRepositoryComponentComponent } from './ecr-repository.component.js';
+export { EcrRepositoryComponentComponent } from './ecr-repository.component.ts';
 
 // Configuration exports
 export { 
   EcrRepositoryConfig,
   EcrRepositoryComponentConfigBuilder,
   ECR_REPOSITORY_CONFIG_SCHEMA
-} from './ecr-repository.builder.js';
+} from './ecr-repository.builder.ts';
 
 // Creator exports
-export { EcrRepositoryComponentCreator } from './ecr-repository.creator.js';
+export { EcrRepositoryComponentCreator } from './ecr-repository.creator.ts';

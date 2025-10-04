@@ -10,8 +10,8 @@ import * as route53 from 'aws-cdk-lib/aws-route53';
 import * as acm from 'aws-cdk-lib/aws-certificatemanager';
 import * as cdk from 'aws-cdk-lib';
 import { BaseComponent, ComponentContext, ComponentSpec } from '@platform/contracts';
-import { DaggerConfig, DaggerOutputs, DaggerEnginePoolProps } from './types.js';
-import { DaggerConfigBuilder } from './dagger-engine-pool.builder.js';
+import { DaggerConfig, DaggerOutputs, DaggerEnginePoolProps } from './types.ts';
+import { DaggerConfigBuilder } from './dagger-engine-pool.builder.ts';
 import { NagSuppressions } from 'cdk-nag';
 
 /**

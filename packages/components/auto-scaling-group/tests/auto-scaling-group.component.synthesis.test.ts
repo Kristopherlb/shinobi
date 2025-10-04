@@ -1,8 +1,8 @@
 import * as ec2 from 'aws-cdk-lib/aws-ec2';
 import { App, Stack } from 'aws-cdk-lib';
 import { Template, Match } from 'aws-cdk-lib/assertions';
-import { AutoScalingGroupComponent } from '../auto-scaling-group.component.js';
-import { AutoScalingGroupConfig } from '../auto-scaling-group.builder.js';
+import { AutoScalingGroupComponent } from '../src/auto-scaling-group.component.ts';
+import { AutoScalingGroupConfig } from '../src/auto-scaling-group.builder.ts';
 import { ComponentContext, ComponentSpec } from '@shinobi/core';
 
 const createSpec = (config: Partial<AutoScalingGroupConfig> = {}): ComponentSpec => ({
@@ -60,7 +60,7 @@ describe('AutoScalingGroupComponent synthesis', () => {
   };
 
   it('synthesizes with commercial defaults', () => {
-    const { template } = synthesize();
+    const { template, component } = synthesize();
 
     template.hasResourceProperties('AWS::AutoScaling::AutoScalingGroup', {
       MinSize: '1',
@@ -73,6 +73,18 @@ describe('AutoScalingGroupComponent synthesis', () => {
         InstanceType: 't3.micro'
       })
     });
+
+    const observabilityCapability = component.getCapabilities()['observability:auto-scaling-group'];
+    expect(observabilityCapability).toBeDefined();
+    expect(observabilityCapability.telemetry?.metrics).toEqual(
+      expect.arrayContaining([
+        expect.objectContaining({ metricName: 'GroupDesiredCapacity' }),
+        expect.objectContaining({ metricName: 'CPUUtilization' })
+      ])
+    );
+    expect(observabilityCapability.telemetry?.logging).toEqual(
+      expect.objectContaining({ destination: 'otel-collector' })
+    );
   });
 
   it('enables hardened settings for fedramp-high', () => {

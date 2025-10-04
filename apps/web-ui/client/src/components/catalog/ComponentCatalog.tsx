@@ -1,5 +1,6 @@
 import { useState } from "react";
 import { useQuery } from "@tanstack/react-query";
+import { Link } from "wouter";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -67,7 +68,7 @@ export function ComponentCatalog({ className }: ComponentCatalogProps) {
     queryKey: ['/api/catalog/components', searchQuery, selectedCategory, selectedCompliance, sortBy],
     queryFn: async (): Promise<CDKComponent[]> => {
       await new Promise(resolve => setTimeout(resolve, 900));
-      
+
       const mockComponents: CDKComponent[] = [
         {
           id: "lambda-api-gateway",
@@ -129,7 +130,7 @@ export function ComponentCatalog({ className }: ComponentCatalogProps) {
         {
           id: "sqs-dlq",
           name: "SQS Queue with DLQ",
-          version: "1.4.2", 
+          version: "1.4.2",
           type: "sqs-queue",
           description: "SQS queue with dead letter queue, message encryption, and CloudWatch monitoring. Includes automatic retry logic and alarm configuration.",
           category: "messaging",
@@ -211,31 +212,31 @@ export function ComponentCatalog({ className }: ComponentCatalogProps) {
           cdkVersion: "2.89.0"
         }
       ];
-      
+
       let filtered = mockComponents;
-      
+
       // Apply search filter
       if (searchQuery.trim()) {
         const query = searchQuery.toLowerCase();
-        filtered = filtered.filter(comp => 
+        filtered = filtered.filter(comp =>
           comp.name.toLowerCase().includes(query) ||
           comp.description.toLowerCase().includes(query) ||
           comp.tags.some(tag => tag.toLowerCase().includes(query))
         );
       }
-      
+
       // Apply category filter
       if (selectedCategory !== "all") {
         filtered = filtered.filter(comp => comp.category === selectedCategory);
       }
-      
+
       // Apply compliance filter
       if (selectedCompliance !== "all") {
-        filtered = filtered.filter(comp => 
+        filtered = filtered.filter(comp =>
           comp.compliance.frameworks.includes(selectedCompliance)
         );
       }
-      
+
       // Apply sorting
       switch (sortBy) {
         case 'popularity':
@@ -251,7 +252,7 @@ export function ComponentCatalog({ className }: ComponentCatalogProps) {
           filtered.sort((a, b) => new Date(b.updatedAt).getTime() - new Date(a.updatedAt).getTime());
           break;
       }
-      
+
       return filtered;
     }
   });
@@ -261,7 +262,7 @@ export function ComponentCatalog({ className }: ComponentCatalogProps) {
     queryKey: ['/api/catalog/templates'],
     queryFn: async (): Promise<ComponentTemplate[]> => {
       await new Promise(resolve => setTimeout(resolve, 700));
-      
+
       return [
         {
           id: "fullstack-web-app",
@@ -333,9 +334,9 @@ export function ComponentCatalog({ className }: ComponentCatalogProps) {
     return (
       <div className="flex items-center gap-1">
         {[...Array(5)].map((_, i) => (
-          <Star 
-            key={i} 
-            className={`w-3 h-3 ${i < Math.floor(rating) ? 'fill-yellow-400 text-yellow-400' : 'text-gray-300'}`} 
+          <Star
+            key={i}
+            className={`w-3 h-3 ${i < Math.floor(rating) ? 'fill-yellow-400 text-yellow-400' : 'text-gray-300'}`}
           />
         ))}
         <span className="text-sm text-muted-foreground ml-1">{rating}</span>
@@ -368,7 +369,7 @@ export function ComponentCatalog({ className }: ComponentCatalogProps) {
               data-testid="input-search-components"
             />
           </div>
-          
+
           <Select value={selectedCategory} onValueChange={setSelectedCategory}>
             <SelectTrigger className="w-36" data-testid="select-category">
               <SelectValue />
@@ -466,7 +467,7 @@ export function ComponentCatalog({ className }: ComponentCatalogProps) {
                             </div>
                           </div>
                         </div>
-                        
+
                         {component.compliance.certified && (
                           <Tooltip>
                             <TooltipTrigger>
@@ -477,12 +478,12 @@ export function ComponentCatalog({ className }: ComponentCatalogProps) {
                         )}
                       </div>
                     </CardHeader>
-                    
+
                     <CardContent className="space-y-4">
                       <p className="text-sm text-muted-foreground" data-testid={`component-description-${component.id}`}>
                         {component.description}
                       </p>
-                      
+
                       <div className="flex items-center justify-between">
                         {renderStars(component.rating)}
                         <div className="flex items-center gap-1 text-sm text-muted-foreground">
@@ -492,7 +493,7 @@ export function ComponentCatalog({ className }: ComponentCatalogProps) {
                           </span>
                         </div>
                       </div>
-                      
+
                       <div className="flex flex-wrap gap-1">
                         {component.tags.slice(0, 3).map((tag) => (
                           <Badge key={tag} variant="outline" className="text-xs" data-testid={`component-tag-${component.id}-${tag}`}>
@@ -505,7 +506,7 @@ export function ComponentCatalog({ className }: ComponentCatalogProps) {
                           </Badge>
                         )}
                       </div>
-                      
+
                       <div className="grid grid-cols-5 gap-1 text-xs">
                         <Tooltip>
                           <TooltipTrigger>
@@ -515,7 +516,7 @@ export function ComponentCatalog({ className }: ComponentCatalogProps) {
                           </TooltipTrigger>
                           <TooltipContent>Schema</TooltipContent>
                         </Tooltip>
-                        
+
                         <Tooltip>
                           <TooltipTrigger>
                             <div className={`flex items-center justify-center h-6 rounded ${component.files.builder ? 'bg-green-100 text-green-700' : 'bg-gray-100 text-gray-400'}`}>
@@ -524,7 +525,7 @@ export function ComponentCatalog({ className }: ComponentCatalogProps) {
                           </TooltipTrigger>
                           <TooltipContent>Builder</TooltipContent>
                         </Tooltip>
-                        
+
                         <Tooltip>
                           <TooltipTrigger>
                             <div className={`flex items-center justify-center h-6 rounded ${component.files.tests ? 'bg-green-100 text-green-700' : 'bg-gray-100 text-gray-400'}`}>
@@ -533,7 +534,7 @@ export function ComponentCatalog({ className }: ComponentCatalogProps) {
                           </TooltipTrigger>
                           <TooltipContent>Tests</TooltipContent>
                         </Tooltip>
-                        
+
                         <Tooltip>
                           <TooltipTrigger>
                             <div className={`flex items-center justify-center h-6 rounded ${component.files.docs ? 'bg-green-100 text-green-700' : 'bg-gray-100 text-gray-400'}`}>
@@ -542,7 +543,7 @@ export function ComponentCatalog({ className }: ComponentCatalogProps) {
                           </TooltipTrigger>
                           <TooltipContent>Documentation</TooltipContent>
                         </Tooltip>
-                        
+
                         <Tooltip>
                           <TooltipTrigger>
                             <div className={`flex items-center justify-center h-6 rounded ${component.files.examples ? 'bg-green-100 text-green-700' : 'bg-gray-100 text-gray-400'}`}>
@@ -552,7 +553,7 @@ export function ComponentCatalog({ className }: ComponentCatalogProps) {
                           <TooltipContent>Examples</TooltipContent>
                         </Tooltip>
                       </div>
-                      
+
                       <div className="flex items-center justify-between text-xs text-muted-foreground">
                         <span data-testid={`component-author-${component.id}`}>
                           by {component.author}
@@ -561,11 +562,13 @@ export function ComponentCatalog({ className }: ComponentCatalogProps) {
                           {formatDistanceToNow(new Date(component.updatedAt), { addSuffix: true })}
                         </span>
                       </div>
-                      
+
                       <div className="flex gap-2 pt-2">
-                        <Button size="sm" className="flex-1" data-testid={`button-use-${component.id}`}>
-                          Use Component
-                        </Button>
+                        <Link href={`/component/${component.id}`}>
+                          <Button size="sm" className="flex-1" data-testid={`button-use-${component.id}`}>
+                            Use Component
+                          </Button>
+                        </Link>
                         <Button variant="outline" size="sm" data-testid={`button-view-${component.id}`}>
                           <ExternalLink className="w-4 h-4" />
                         </Button>
@@ -607,10 +610,10 @@ export function ComponentCatalog({ className }: ComponentCatalogProps) {
                             <strong>Use case:</strong> {template.useCase}
                           </p>
                         </div>
-                        
+
                         <div className="flex flex-col items-end gap-2">
-                          <Badge 
-                            variant="outline" 
+                          <Badge
+                            variant="outline"
                             className={getDifficultyColor(template.difficulty)}
                             data-testid={`template-difficulty-${template.id}`}
                           >
@@ -621,7 +624,7 @@ export function ComponentCatalog({ className }: ComponentCatalogProps) {
                           </span>
                         </div>
                       </div>
-                      
+
                       <div className="flex items-center justify-between">
                         <div className="flex flex-wrap gap-1">
                           {template.tags.map((tag) => (
@@ -630,7 +633,7 @@ export function ComponentCatalog({ className }: ComponentCatalogProps) {
                             </Badge>
                           ))}
                         </div>
-                        
+
                         <div className="flex gap-2">
                           <Button variant="outline" size="sm" data-testid={`button-preview-${template.id}`}>
                             Preview
@@ -640,7 +643,7 @@ export function ComponentCatalog({ className }: ComponentCatalogProps) {
                           </Button>
                         </div>
                       </div>
-                      
+
                       <div className="mt-4 pt-4 border-t">
                         <p className="text-sm font-medium text-muted-foreground mb-2">Included Components:</p>
                         <div className="flex gap-2">

@@ -4,14 +4,19 @@
  */
 
 // Component exports
-export { CertificateManagerComponent } from './certificate-manager.component.js';
+export { CertificateManagerComponent } from './src/certificate-manager.component.ts';
 
 // Configuration exports
 export {
-  CertificateManagerConfig,
   CertificateManagerComponentConfigBuilder,
   CERTIFICATE_MANAGER_CONFIG_SCHEMA
-} from './certificate-manager.builder.js';
+} from './src/certificate-manager.builder.ts';
+
+// Type exports
+export type { CertificateManagerConfig } from './src/certificate-manager.builder.ts';
+
+// Schema exports
+export { default as CERTIFICATE_MANAGER_CONFIG_JSON_SCHEMA } from './Config.schema.json' with { type: 'json' };
 
 // Creator exports
-export { CertificateManagerComponentCreator } from './certificate-manager.creator.js';
+export { CertificateManagerComponentCreator } from './src/certificate-manager.creator.ts';

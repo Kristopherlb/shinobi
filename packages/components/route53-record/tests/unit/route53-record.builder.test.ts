@@ -4,8 +4,8 @@
  * Tests the 5-layer configuration precedence chain and validation.
  */
 
-import { Route53RecordConfigBuilder, Route53RecordConfig } from '../../src/route53-record.builder.js';
-import { ComponentContext, ComponentSpec } from '../../../@shinobi/core/component-interfaces.js';
+import { Route53RecordConfigBuilder, Route53RecordConfig } from '../../src/route53-record.builder.ts';
+import { ComponentContext, ComponentSpec } from '../../../@shinobi/core/component-interfaces.ts';
 
 describe('Route53RecordConfigBuilder', () => {
   let mockContext: ComponentContext;

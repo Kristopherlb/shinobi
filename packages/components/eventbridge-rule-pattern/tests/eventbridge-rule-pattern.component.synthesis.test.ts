@@ -2,8 +2,8 @@ import { App, Stack } from 'aws-cdk-lib';
 import { Template, Match } from 'aws-cdk-lib/assertions';
 import { Construct } from 'constructs';
 import { ComponentContext, ComponentSpec } from '@shinobi/core';
-import { EventBridgeRulePatternComponent } from '../eventbridge-rule-pattern.component.js';
-import { EventBridgeRulePatternConfig } from '../eventbridge-rule-pattern.builder.js';
+import { EventBridgeRulePatternComponent } from '../eventbridge-rule-pattern.component.ts';
+import { EventBridgeRulePatternConfig } from '../eventbridge-rule-pattern.builder.ts';
 
 type Framework = 'commercial' | 'fedramp-moderate' | 'fedramp-high';
 

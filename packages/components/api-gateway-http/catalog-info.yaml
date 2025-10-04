@@ -60,7 +60,7 @@ spec:
         - api:custom-domain
         - auth:jwt
         - auth:lambda
-        - monitoring:api
+        - observability:api-gateway-http
         - logging:access
       bindings:
         - lambda:invoke
@@ -106,5 +106,4 @@ spec:
             - compliance:framework=fedramp-high
             - compliance:level=high
             - compliance:data-classification=secret
-
 

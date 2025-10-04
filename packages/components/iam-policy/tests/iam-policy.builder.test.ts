@@ -3,8 +3,8 @@
  * Implements Platform Testing Standard v1.0 - ConfigBuilder Testing
  */
 
-import { IamPolicyComponentConfigBuilder, IamPolicyConfig } from '../iam-policy.builder.js';
-import { ComponentContext, ComponentSpec } from '../../../platform/contracts/component-interfaces.js';
+import { IamPolicyComponentConfigBuilder, IamPolicyConfig } from '../iam-policy.builder.ts';
+import { ComponentContext, ComponentSpec } from '../../../platform/contracts/component-interfaces.ts';
 
 const createMockContext = (
   complianceFramework: string = 'commercial',

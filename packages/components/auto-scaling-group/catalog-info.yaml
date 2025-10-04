@@ -12,6 +12,7 @@ metadata:
     - ec2
   annotations:
     platform.shinobi.dev/component-type: auto-scaling-group
+    platform.shinobi.dev/component-version: "1.0.0"
     github.com/project-slug: project42/shinobi
     backstage.io/techdocs-ref: dir:.
 spec:
@@ -25,7 +26,8 @@ spec:
       category: compute
       description: Auto Scaling Group component covering launch templates, scaling policies, and observability hooks.
       capabilities:
-        - compute:asg
+        - compute:auto-scaling-group
+        - observability:auto-scaling-group
       awsServices:
         - autoscaling
         - ec2

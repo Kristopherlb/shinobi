@@ -69,8 +69,15 @@ export class EnhancedSchemaValidator {
       allowUnionTypes: true,
       coerceTypes: false,
       useDefaults: false,
-      removeAdditional: false
+      removeAdditional: false,
+      keywords: enableStrictMode ? [] : ['errorMessage']
     });
+
+    if (!enableStrictMode) {
+      this.ajv.opts.strict = false;
+      this.ajv.opts.strictSchema = false;
+      this.ajv.opts.strictNumbers = false;
+    }
     addFormats(this.ajv);
 
     if (enableStrictMode) {
@@ -259,10 +266,14 @@ export class EnhancedSchemaValidator {
     // Allow additional properties so tests that use alternative shapes (e.g., ami object) don't fail on unknowns
     schemaCopy.additionalProperties = true;
 
-    const tempSchema = {
+    const tempSchema: Record<string, any> = {
       type: 'object',
       ...schemaCopy
     };
+
+    if (componentSchemaInfo.definitions && Object.keys(componentSchemaInfo.definitions).length > 0) {
+      tempSchema.$defs = JSON.parse(JSON.stringify(componentSchemaInfo.definitions));
+    }
 
     const validate = this.ajv.compile(tempSchema);
     const valid = validate(component.config);

@@ -6,8 +6,8 @@
 
 import { Template } from 'aws-cdk-lib/assertions';
 import { Stack } from 'aws-cdk-lib';
-import { StaticWebsiteComponent } from '../static-website.component.js';
-import { ComponentContext, ComponentSpec } from '../../@shinobi/core/component-interfaces.js';
+import { StaticWebsiteComponent } from '../static-website.component.ts';
+import { ComponentContext, ComponentSpec } from '../../@shinobi/core/component-interfaces.ts';
 
 // Mock context helper
 function createMockContext(complianceFramework: string = 'commercial'): ComponentContext {

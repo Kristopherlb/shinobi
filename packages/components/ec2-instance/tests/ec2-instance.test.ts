@@ -9,12 +9,12 @@ import * as iam from 'aws-cdk-lib/aws-iam';
 import * as kms from 'aws-cdk-lib/aws-kms';
 import { Template, Match } from 'aws-cdk-lib/assertions';
 import { Construct } from 'constructs';
-import { Ec2InstanceComponent } from '../ec2-instance.component.js';
+import { Ec2InstanceComponent } from '../ec2-instance.component.ts';
 import {
   Ec2InstanceComponentConfigBuilder,
   EC2_INSTANCE_CONFIG_SCHEMA,
   Ec2InstanceConfig
-} from '../ec2-instance.builder.js';
+} from '../ec2-instance.builder.ts';
 import { ComponentContext, ComponentSpec } from '@platform/contracts';
 
 describe('EC2 Instance Component', () => {

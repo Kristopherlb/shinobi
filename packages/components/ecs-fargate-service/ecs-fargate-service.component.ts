@@ -21,7 +21,7 @@ import {
   EcsFargateServiceComponentConfigBuilder,
   EcsFargateServiceConfig,
   EcsFargateAlarmConfig
-} from './ecs-fargate-service.builder.js';
+} from './ecs-fargate-service.builder.ts';
 
 /**
  * ECS Fargate Service Component implementing Component API Contract v1.0 and

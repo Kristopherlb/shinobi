@@ -4,12 +4,12 @@ import {
   ComponentSpec,
   IComponentCreator
 } from '@shinobi/core';
-import { EventBridgeRulePatternComponent } from './eventbridge-rule-pattern.component.js';
+import { EventBridgeRulePatternComponent } from './eventbridge-rule-pattern.component.ts';
 import {
   EVENTBRIDGE_RULE_PATTERN_CONFIG_SCHEMA,
   EventBridgeRulePatternConfig,
   EventBridgeRulePatternComponentConfigBuilder
-} from './eventbridge-rule-pattern.builder.js';
+} from './eventbridge-rule-pattern.builder.ts';
 
 export class EventBridgeRulePatternComponentCreator implements IComponentCreator {
   public readonly componentType = 'eventbridge-rule-pattern';

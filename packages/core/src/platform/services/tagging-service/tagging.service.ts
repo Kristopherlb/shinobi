@@ -163,19 +163,39 @@ export class TaggingService implements ITaggingService {
    * Apply standard tags to a CDK construct
    */
   public applyStandardTags(resource: IConstruct, context: TaggingContext, additionalTags?: Record<string, string>): void {
-    const standardTags = this.buildStandardTags(context);
+    const mergedTags = new Map<string, { key: string; value: string }>();
 
-    // Apply all standard tags
-    Object.entries(standardTags).forEach(([key, value]) => {
+    const addTag = (key: string, value: string | undefined) => {
+      if (value === undefined || value === null) {
+        return;
+      }
+
+      const trimmedValue = value.toString().trim();
+      if (trimmedValue.length === 0) {
+        return;
+      }
+
+      const normalizedKey = key.trim();
+      if (normalizedKey.length === 0) {
+        return;
+      }
+
+      mergedTags.set(normalizedKey.toLowerCase(), {
+        key: normalizedKey,
+        value: trimmedValue
+      });
+    };
+
+    const standardTags = this.buildStandardTags(context);
+    Object.entries(standardTags).forEach(([key, value]) => addTag(key, value));
+
+    if (additionalTags) {
+      Object.entries(additionalTags).forEach(([key, value]) => addTag(key, value));
+    }
+
+    mergedTags.forEach(({ key, value }) => {
       cdk.Tags.of(resource).add(key, value);
     });
-
-    // Apply any additional component-specific tags
-    if (additionalTags) {
-      Object.entries(additionalTags).forEach(([key, value]) => {
-        cdk.Tags.of(resource).add(key, value);
-      });
-    }
   }
 
   private resolveString(...values: Array<string | undefined>): string {

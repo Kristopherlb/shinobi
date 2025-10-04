@@ -22,10 +22,10 @@ import {
 import {
   S3BucketConfig,
   S3BucketComponentConfigBuilder
-} from './s3-bucket.builder.js';
-import { S3BucketValidator } from '@shinobi/core/platform/services/s3-advanced-features/s3-bucket.validator';
-import { createS3AdvancedFeaturesService } from '@shinobi/core/platform/services/s3-advanced-features/s3-advanced-features.service';
-import { createClamAvScanningService } from '@shinobi/core/platform/services/clamav-scanning/clamav-scanning.service';
+} from './s3-bucket.builder.ts';
+import { S3BucketValidator } from '@shinobi/core/platform/services/s3-advanced-features/s3-bucket.validator.ts';
+import { createS3AdvancedFeaturesService } from '@shinobi/core/platform/services/s3-advanced-features/s3-advanced-features.service.ts';
+import { createClamAvScanningService } from '@shinobi/core/platform/services/clamav-scanning/clamav-scanning.service.ts';
 
 export class S3BucketComponent extends BaseComponent {
   private bucket?: s3.Bucket;
@@ -488,7 +488,7 @@ export class S3BucketComponent extends BaseComponent {
     });
 
     // Log warnings
-    validationResult.warnings.forEach(warning => {
+    validationResult.warnings.forEach((warning: { message: string; field?: string; code?: string; remediation?: string }) => {
       this.logComponentEvent('configuration_warning', `Validation warning: ${warning.message}`, {
         field: warning.field,
         code: warning.code,
@@ -498,7 +498,9 @@ export class S3BucketComponent extends BaseComponent {
 
     // Throw error if validation fails
     if (!validationResult.isValid) {
-      const errorMessages = validationResult.errors.map(error => `${error.field}: ${error.message}`).join('; ');
+      const errorMessages = validationResult.errors
+        .map((error: { field?: string; message: string }) => `${error.field}: ${error.message}`)
+        .join('; ');
       throw new Error(`S3 bucket configuration validation failed: ${errorMessages}`);
     }
 

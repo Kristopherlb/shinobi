@@ -29,7 +29,7 @@ import {
   RdsPostgresLogConfig,
   RdsPostgresMonitoringAlarmsConfig,
   RdsPostgresAlarmConfig
-} from './rds-postgres.builder.js';
+} from './rds-postgres.builder.ts';
 
 /**
  * RDS PostgreSQL Component implementing Component API Contract v1.0

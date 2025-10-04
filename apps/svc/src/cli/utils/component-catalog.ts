@@ -1,6 +1,7 @@
 import * as fs from 'fs/promises';
 import { Dirent } from 'fs';
 import * as path from 'path';
+import { fileURLToPath } from 'url';
 import * as YAML from 'yaml';
 
 export interface ComponentCatalogEntry {
@@ -26,10 +27,12 @@ const formatDisplayName = (value: string): string =>
     .map(part => part.charAt(0).toUpperCase() + part.slice(1))
     .join(' ');
 
+const moduleDir = path.dirname(fileURLToPath(import.meta.url));
+const rootDir = path.resolve(moduleDir, '../../../../../');
+
 export const loadComponentCatalog = async (
   options?: ComponentCatalogOptions
 ): Promise<ComponentCatalogEntry[]> => {
-  const rootDir = path.resolve(__dirname, '../../../../../');
   const componentsDir = path.join(rootDir, 'packages/components');
 
   let dirEntries: Dirent[];

@@ -54,6 +54,12 @@ export class SchemaValidator {
   async validateSchema(manifest: any): Promise<void> {
     this.dependencies.logger.debug('Validating manifest schema with enhanced validation');
 
+    if (process.env.SHINOBI_DISABLE_ENHANCED_VALIDATION === 'true') {
+      this.dependencies.logger.debug('Enhanced validation disabled via SHINOBI_DISABLE_ENHANCED_VALIDATION=true; using basic schema validation.');
+      await this.basicValidateSchema(manifest);
+      return;
+    }
+
     let result: ValidationResult | undefined;
     try {
       // Use enhanced validator for comprehensive validation

@@ -1,8 +1,8 @@
 import {
   Route53HostedZoneComponentConfigBuilder,
   Route53HostedZoneConfig
-} from '../route53-hosted-zone.builder.js';
-import { ComponentContext, ComponentSpec } from '../../../platform/contracts/component-interfaces.js';
+} from '../route53-hosted-zone.builder.ts';
+import { ComponentContext, ComponentSpec } from '../../../platform/contracts/component-interfaces.ts';
 
 const createContext = (framework: string = 'commercial'): ComponentContext => ({
   serviceName: 'dns-service',

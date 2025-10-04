@@ -171,6 +171,37 @@ This section is the definitive registry of all officially supported capabilities
 
 **Example Providers**: `elasticache-redis`, `elasticache-redis-import`
 
+### Identity & Authentication Capabilities
+
+#### `auth:user-pool`
+
+**Definition**: Represents an Amazon Cognito user pool that issues tokens to downstream applications.
+
+**Data Shape Contract**:
+| Field | Type | Description & CDK Source |
+| :--- | :--- | :--- |
+| userPoolId | string | Cognito user pool identifier. From `userPool.userPoolId`. |
+| userPoolArn | string | ARN of the user pool. From `userPool.userPoolArn`. |
+| userPoolProviderName | string | Cognito provider name (issuer). From `userPool.userPoolProviderName`. |
+| userPoolProviderUrl | string | Cognito provider URL. From `userPool.userPoolProviderUrl`. |
+| domainBaseUrl | string? | Hosted UI base URL when a domain is configured. From `userPoolDomain.baseUrl()`. |
+| clients | array | Array of client metadata `{ clientId, clientName }`. From `userPoolClient.userPoolClientId` and `userPoolClient.userPoolClientName`. |
+
+**Example Providers**: `cognito-user-pool`
+
+#### `auth:identity-provider`
+
+**Definition**: Represents an authentication provider endpoint for federated sign-in or OIDC/JWT validation.
+
+**Data Shape Contract**:
+| Field | Type | Description & CDK Source |
+| :--- | :--- | :--- |
+| providerName | string | Cognito identity provider name / issuer. From `userPool.userPoolProviderName`. |
+| providerUrl | string | Discovery endpoint / issuer URL. From `userPool.userPoolProviderUrl`. |
+| userPoolArn | string? | ARN of the backing user pool when applicable. From `userPool.userPoolArn`. |
+
+**Example Providers**: `cognito-user-pool`
+
 ## 5. Examples in Practice
 
 This standard comes to life in the `service.yml` manifest, where a developer uses a capability key in a binds directive.

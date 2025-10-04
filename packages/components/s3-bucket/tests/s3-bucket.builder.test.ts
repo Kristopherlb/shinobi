@@ -11,7 +11,7 @@ import {
 import {
   S3BucketComponentConfigBuilder,
   S3BucketConfig
-} from '../s3-bucket.builder.js';
+} from '../s3-bucket.builder.ts';
 
 const createContext = (framework: ComponentContext['complianceFramework']): ComponentContext => {
   const app = new App();

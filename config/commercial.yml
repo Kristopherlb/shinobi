@@ -130,10 +130,10 @@ defaults:
     launchTemplate:
       instanceType: t3.micro
       detailedMonitoring: false
-      requireImdsv2: false
+      requireImdsv2: true
       installAgents:
-        ssm: false
-        cloudwatch: false
+        ssm: true
+        cloudwatch: true
         stigHardening: false
     autoScaling:
       minCapacity: 1
@@ -142,11 +142,11 @@ defaults:
     storage:
       rootVolumeSize: 20
       rootVolumeType: gp3
-      encrypted: false
+      encrypted: true
 
       kms:
         useCustomerManagedKey: false
-        enableKeyRotation: false
+        enableKeyRotation: true
     healthCheck:
       type: EC2
       gracePeriod: 300
@@ -179,10 +179,10 @@ defaults:
     tags: {}
 
   glue-job:
-    glueVersion: '4.0'
+    glueVersion: "4.0"
     jobType: glueetl
     command:
-      pythonVersion: '3'
+      pythonVersion: "3"
       scriptArguments: {}
     connections: []
     maxConcurrentRuns: 1
@@ -218,7 +218,7 @@ defaults:
     tags: {}
 
   elasticache-redis:
-    engineVersion: '7.0'
+    engineVersion: "7.0"
     nodeType: cache.t4g.micro
     numCacheNodes: 1
     port: 6379
@@ -241,9 +241,9 @@ defaults:
     backup:
       enabled: false
       retentionDays: 1
-      window: '03:00-05:00'
+      window: "03:00-05:00"
     maintenance:
-      window: 'sun:03:00-sun:04:00'
+      window: "sun:03:00-sun:04:00"
     multiAz:
       enabled: false
       automaticFailover: false
@@ -320,7 +320,7 @@ defaults:
     tags: {}
 
   eventbridge-rule-cron:
-    schedule: 'rate(5 minutes)'
+    schedule: "rate(5 minutes)"
     state: enabled
     deadLetterQueue:
       enabled: false
@@ -364,10 +364,10 @@ defaults:
     policies:
       - sid: DenyInsecureTransport
         effect: deny
-        actions: ['sns:*']
+        actions: ["sns:*"]
         conditions:
           Bool:
-            aws:SecureTransport: 'false'
+            aws:SecureTransport: "false"
     monitoring:
       enabled: false
       alarms:
@@ -399,14 +399,20 @@ defaults:
       groups:
         - id: lifecycle
           enabled: true
-          retentionInDays: 180
-          removalPolicy: destroy
+          retentionInDays: 365
+          removalPolicy: retain
     monitoring:
-      enabled: false
+      enabled: true
       expiration:
-        enabled: false
+        enabled: true
+        thresholdDays: 30
+        evaluationPeriods: 1
+        periodHours: 6
       status:
-        enabled: false
+        enabled: true
+        threshold: 1
+        evaluationPeriods: 3
+        periodMinutes: 15
     tags: {}
 
   cognito-user-pool:
@@ -475,6 +481,32 @@ defaults:
         enabled: false
     tags:
       compliance-tier: commercial
+
+  container-application:
+    service:
+      desiredCount: 2
+      cpu: 512
+      memory: 1024
+      autoScaling:
+        enabled: true
+        maxCapacity: 4
+        cpuTarget: 75
+        memoryTarget: 80
+    network:
+      assignPublicIp: true
+      loadBalancerScheme: internet-facing
+      natGateways: 0
+    observability:
+      logRetentionDays: 30
+      cpuThreshold: 80
+      memoryThreshold: 85
+      enableTracing: true
+      enableMetrics: true
+    security:
+      enableEncryption: true
+      enableVpcFlowLogs: true
+      enableWaf: false
+    tags: {}
 
   static-website:
     bucket:
@@ -626,42 +658,34 @@ defaults:
     securityGroups:
       create: true
       securityGroupIds: []
-      ingress:
-        - port: 80
-          protocol: tcp
-          cidr: 0.0.0.0/0
-          description: Allow HTTP from internet
-        - port: 443
-          protocol: tcp
-          cidr: 0.0.0.0/0
-          description: Allow HTTPS from internet
+      ingress: []
     accessLogs:
-      enabled: false
+      enabled: true
       prefix: alb/
-      retentionDays: 30
-      removalPolicy: destroy
+      retentionDays: 90
+      removalPolicy: retain
     listeners:
       - port: 80
         protocol: HTTP
     targetGroups: []
-    deletionProtection: false
+    deletionProtection: true
     idleTimeoutSeconds: 60
     deploymentStrategy:
       type: single
     monitoring:
-      enabled: false
+      enabled: true
       alarms:
         http5xx:
-          enabled: false
-          threshold: 10
+          enabled: true
+          threshold: 5
         unhealthyHosts:
-          enabled: false
+          enabled: true
           threshold: 1
         connectionErrors:
-          enabled: false
+          enabled: true
           threshold: 5
         rejectedConnections:
-          enabled: false
+          enabled: true
           threshold: 1
     hardeningProfile: baseline
     tags: {}
@@ -730,7 +754,7 @@ defaults:
 
   ssm-parameter:
     kind: string
-    value: ''
+    value: ""
     values: []
     tier: standard
     dataType: text
@@ -1044,7 +1068,7 @@ defaults:
       cors:
         enabled: true
         allowOrigins:
-          - '*'
+          - "*"
         allowHeaders:
           - Content-Type
           - Authorization
@@ -1103,7 +1127,7 @@ defaults:
     origin:
       type: s3
     defaultBehavior:
-      viewerProtocolPolicy: allow-all
+      viewerProtocolPolicy: redirect-to-https
       allowedMethods: ["GET", "HEAD"]
       cachedMethods: ["GET", "HEAD"]
       compress: true
@@ -1113,17 +1137,35 @@ defaults:
       type: none
       countries: []
     logging:
-      enabled: false
+      enabled: true
       includeCookies: false
     monitoring:
-      enabled: false
+      enabled: true
       alarms:
         error4xx:
-          enabled: false
+          enabled: true
+          threshold: 50
+          evaluationPeriods: 2
+          periodMinutes: 5
+          comparisonOperator: gte
+          treatMissingData: not-breaching
+          statistic: Average
         error5xx:
-          enabled: false
+          enabled: true
+          threshold: 10
+          evaluationPeriods: 2
+          periodMinutes: 5
+          comparisonOperator: gte
+          treatMissingData: not-breaching
+          statistic: Average
         originLatencyMs:
-          enabled: false
+          enabled: true
+          threshold: 5000
+          evaluationPeriods: 2
+          periodMinutes: 5
+          comparisonOperator: gte
+          treatMissingData: not-breaching
+          statistic: Average
     hardeningProfile: baseline
 
   kinesis-stream:
@@ -1150,7 +1192,7 @@ defaults:
       type: string
     billingMode: pay-per-request
     tableClass: standard
-    pointInTimeRecovery: false
+    pointInTimeRecovery: true
     timeToLive:
       enabled: false
     stream:
@@ -1161,8 +1203,9 @@ defaults:
     encryption:
       type: aws-managed
     backup:
-      enabled: false
-      retentionDays: 7
+      enabled: true
+      retentionDays: 14
+      schedule: 'cron(0 5 * * ? *)'
     monitoring:
       enabled: false
       alarms:
@@ -1176,7 +1219,7 @@ defaults:
 
   rds-postgres:
     instance:
-      engineVersion: '15.4'
+      engineVersion: "15.4"
       instanceType: t3.micro
       allocatedStorage: 20
       multiAz: false

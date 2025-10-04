@@ -10,16 +10,16 @@ import * as ecs from 'aws-cdk-lib/aws-ecs';
 import * as ec2 from 'aws-cdk-lib/aws-ec2';
 import * as servicediscovery from 'aws-cdk-lib/aws-servicediscovery';
 import { Template, Match } from 'aws-cdk-lib/assertions';
-import { EcsClusterComponent } from '../ecs-cluster.component.js';
-import { EcsClusterComponentConfigBuilder } from '../ecs-cluster.builder.js';
-import { ComponentContext, ComponentSpec } from '../../@shinobi/core/component-interfaces.js';
+import { EcsClusterComponent } from '../ecs-cluster.component.ts';
+import { EcsClusterComponentConfigBuilder } from '../ecs-cluster.builder.ts';
+import { ComponentContext, ComponentSpec } from '../../@shinobi/core/component-interfaces.ts';
 import { 
   TestFixtureFactory, 
   TestAssertions, 
   PerformanceTestHelpers,
   TEST_CONTEXTS,
   TEST_SPECS 
-} from '../test-fixtures.js';
+} from '../test-fixtures.ts';
 
 /*
  * Test Metadata: TP-ECS-CLUSTER-001

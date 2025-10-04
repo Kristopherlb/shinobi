@@ -25,13 +25,27 @@ spec:
       category: networking
       description: CloudFront distribution component supporting S3, ALB, and custom origins with compliance policies.
       capabilities:
-        - cdn:cloudfront
+        - cloudfront:distribution
       awsServices:
         - cloudfront
         - s3
         - elbv2
         - certificatemanager
         - cloudwatch
+      mcp:
+        resourceUri: "shinobi://components/cloudfront-distribution"
+        complianceFrameworks:
+          - commercial
+          - fedramp-moderate
+          - fedramp-high
+        observability:
+          - xray-tracing
+          - cloudwatch-dashboard
+          - cloudwatch-alarms
+        security:
+          - cdk-nag-validation
+          - secure-defaults
+          - waf-integration
       tags:
         required:
           - cdn

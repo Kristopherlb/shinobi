@@ -10,9 +10,9 @@ import {
   ComponentSpec, 
   ComponentContext, 
   IComponentCreator 
-} from '../@shinobi/core/component-interfaces.js';
-import { StepFunctionsStateMachineComponent } from './step-functions-statemachine.component.js';
-import { StepFunctionsStateMachineConfig, STEP_FUNCTIONS_STATEMACHINE_CONFIG_SCHEMA } from './step-functions-statemachine.builder.js';
+} from '../@shinobi/core/component-interfaces.ts';
+import { StepFunctionsStateMachineComponent } from './step-functions-statemachine.component.ts';
+import { StepFunctionsStateMachineConfig, STEP_FUNCTIONS_STATEMACHINE_CONFIG_SCHEMA } from './step-functions-statemachine.builder.ts';
 
 /**
  * Creator class for Step Functions State Machine component

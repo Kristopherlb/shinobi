@@ -1,0 +1,391 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "title": "AutoScalingGroup Config",
+  "description": "Configuration contract for the Auto Scaling Group platform component.",
+  "type": "object",
+  "additionalProperties": false,
+  "properties": {
+    "name": {
+      "type": "string",
+      "description": "Optional friendly name override for the Auto Scaling Group."
+    },
+    "description": {
+      "type": "string",
+      "description": "Human readable description used for tagging and logging."
+    },
+    "launchTemplate": {
+      "type": "object",
+      "description": "Launch template defaults applied to every Auto Scaling Group instance.",
+      "additionalProperties": false,
+      "properties": {
+        "instanceType": {
+          "type": "string",
+          "description": "EC2 instance type used by the Auto Scaling Group.",
+          "default": "t3.micro"
+        },
+        "ami": {
+          "type": "object",
+          "description": "AMI selection rules. Provide either a static AMI or lookup criteria.",
+          "additionalProperties": false,
+          "properties": {
+            "amiId": {
+              "type": "string",
+              "description": "Explicit AMI identifier to use (overrides lookup).",
+              "pattern": "^ami-[a-f0-9]{8,17}$"
+            },
+            "namePattern": {
+              "type": "string",
+              "description": "Name pattern used when performing AMI lookup.",
+              "default": "amzn2-ami-hvm-*-x86_64-gp2"
+            },
+            "owner": {
+              "type": "string",
+              "description": "Filter AMI lookup by owner alias or account id.",
+              "default": "amazon"
+            }
+          }
+        },
+        "userData": {
+          "type": "string",
+          "description": "User data script rendered into the launch template."
+        },
+        "keyName": {
+          "type": "string",
+          "description": "Existing EC2 key pair used for break-glass SSH access."
+        },
+        "detailedMonitoring": {
+          "type": "boolean",
+          "description": "Enable detailed CloudWatch metrics for instances.",
+          "default": true
+        },
+        "requireImdsv2": {
+          "type": "boolean",
+          "description": "Force all instances to require IMDSv2 token usage.",
+          "default": true
+        },
+        "installAgents": {
+          "type": "object",
+          "description": "Agent installation flags that harden the base AMI at boot time.",
+          "additionalProperties": false,
+          "properties": {
+            "ssm": {
+              "type": "boolean",
+              "description": "Install the AWS Systems Manager agent for fleet management.",
+              "default": true
+            },
+            "cloudwatch": {
+              "type": "boolean",
+              "description": "Install the CloudWatch agent for metrics and logs shipping.",
+              "default": true
+            },
+            "stigHardening": {
+              "type": "boolean",
+              "description": "Apply STIG hardening scripts aligned with FedRAMP guidance.",
+              "default": false
+            }
+          }
+        }
+      }
+    },
+    "autoScaling": {
+      "type": "object",
+      "description": "Auto scaling capacity bounds and desired state.",
+      "additionalProperties": false,
+      "properties": {
+        "minCapacity": {
+          "type": "integer",
+          "description": "Minimum number of instances kept in service.",
+          "minimum": 0,
+          "default": 1
+        },
+        "maxCapacity": {
+          "type": "integer",
+          "description": "Maximum number of instances allowed.",
+          "minimum": 1,
+          "default": 3
+        },
+        "desiredCapacity": {
+          "type": "integer",
+          "description": "Desired number of instances after scaling stabilises.",
+          "minimum": 0,
+          "default": 2
+        }
+      }
+    },
+    "storage": {
+      "type": "object",
+      "description": "Root volume configuration for instances provisioned by the group.",
+      "additionalProperties": false,
+      "properties": {
+        "rootVolumeSize": {
+          "type": "integer",
+          "description": "Size of the root EBS volume in GiB.",
+          "minimum": 8,
+          "default": 20
+        },
+        "rootVolumeType": {
+          "type": "string",
+          "description": "Provisioned EBS volume type.",
+          "default": "gp3"
+        },
+        "encrypted": {
+          "type": "boolean",
+          "description": "Encrypt the root volume with KMS-managed keys.",
+          "default": true
+        },
+        "kms": {
+          "type": "object",
+          "description": "KMS encryption settings for the root volume.",
+          "additionalProperties": false,
+          "properties": {
+            "useCustomerManagedKey": {
+              "type": "boolean",
+              "description": "Provision a dedicated CMK for the Auto Scaling Group.",
+              "default": false
+            },
+            "enableKeyRotation": {
+              "type": "boolean",
+              "description": "Enable annual CMK rotation when a customer managed key is used.",
+              "default": true
+            },
+            "kmsKeyArn": {
+              "type": "string",
+              "description": "Import an existing CMK ARN instead of creating a new key.",
+              "pattern": "^arn:aws:kms:[a-z0-9-]+:[0-9]{12}:key/[a-f0-9-]{36}$"
+            }
+          }
+        }
+      }
+    },
+    "healthCheck": {
+      "type": "object",
+      "description": "Health check strategy controlling replacement semantics.",
+      "additionalProperties": false,
+      "properties": {
+        "type": {
+          "type": "string",
+          "enum": [
+            "EC2",
+            "ELB"
+          ],
+          "description": "Health check type executed by the Auto Scaling service.",
+          "default": "EC2"
+        },
+        "gracePeriod": {
+          "type": "integer",
+          "description": "Seconds to wait before evaluating an instance as unhealthy.",
+          "minimum": 0,
+          "maximum": 7200,
+          "default": 300
+        }
+      }
+    },
+    "terminationPolicies": {
+      "type": "array",
+      "description": "Ordered termination policies applied during scale-in events.",
+      "items": {
+        "type": "string",
+        "enum": [
+          "Default",
+          "OldestInstance",
+          "NewestInstance",
+          "OldestLaunchConfiguration",
+          "ClosestToNextInstanceHour"
+        ]
+      },
+      "minItems": 1,
+      "default": [
+        "Default"
+      ]
+    },
+    "updatePolicy": {
+      "type": "object",
+      "description": "Rolling update strategy for new launch template revisions.",
+      "additionalProperties": false,
+      "properties": {
+        "rollingUpdate": {
+          "type": "object",
+          "additionalProperties": false,
+          "properties": {
+            "minInstancesInService": {
+              "type": "integer",
+              "description": "Instances kept healthy while a batch is updated.",
+              "minimum": 0
+            },
+            "maxBatchSize": {
+              "type": "integer",
+              "description": "Maximum instances replaced per batch.",
+              "minimum": 1
+            },
+            "pauseTime": {
+              "type": "string",
+              "description": "ISO-8601 duration between update batches.",
+              "pattern": "^PT(?:[0-9]+H)?(?:[0-9]+M)?(?:[0-9]+S)?$"
+            }
+          }
+        }
+      }
+    },
+    "vpc": {
+      "type": "object",
+      "description": "Network placement and connectivity configuration.",
+      "additionalProperties": false,
+      "properties": {
+        "vpcId": {
+          "type": "string",
+          "description": "Override the default service VPC identifier.",
+          "pattern": "^vpc-[a-f0-9]{8,17}$"
+        },
+        "subnetIds": {
+          "type": "array",
+          "description": "Specific subnet identifiers to target.",
+          "items": {
+            "type": "string",
+            "pattern": "^subnet-[a-f0-9]{8,17}$"
+          }
+        },
+        "securityGroupIds": {
+          "type": "array",
+          "description": "Additional security groups to attach to instances.",
+          "items": {
+            "type": "string",
+            "pattern": "^sg-[a-f0-9]{8,17}$"
+          }
+        },
+        "subnetType": {
+          "type": "string",
+          "enum": [
+            "PUBLIC",
+            "PRIVATE_WITH_EGRESS"
+          ],
+          "description": "Subnet selection strategy when specific subnet ids are not supplied.",
+          "default": "PRIVATE_WITH_EGRESS"
+        },
+        "allowAllOutbound": {
+          "type": "boolean",
+          "description": "Permit all outbound traffic from instance ENIs.",
+          "default": false
+        }
+      }
+    },
+    "security": {
+      "type": "object",
+      "description": "IAM and compliance controls attached to the instance profile.",
+      "additionalProperties": false,
+      "properties": {
+        "managedPolicies": {
+          "type": "array",
+          "description": "AWS managed policy names attached to the instance role.",
+          "items": {
+            "type": "string"
+          },
+          "default": []
+        },
+        "attachLogDeliveryPolicy": {
+          "type": "boolean",
+          "description": "Attach a policy that permits log delivery to CloudWatch Logs.",
+          "default": true
+        },
+        "stigComplianceTag": {
+          "type": "boolean",
+          "description": "Add STIG compliance tags required by FedRAMP accreditation.",
+          "default": false
+        }
+      }
+    },
+    "monitoring": {
+      "type": "object",
+      "description": "Observability controls including CloudWatch alarms.",
+      "additionalProperties": false,
+      "properties": {
+        "enabled": {
+          "type": "boolean",
+          "description": "Enable opinionated observability configuration (alarms, metrics).",
+          "default": true
+        },
+        "alarms": {
+          "type": "object",
+          "additionalProperties": false,
+          "properties": {
+            "cpuHigh": {
+              "$ref": "#/definitions/alarmConfig",
+              "description": "High CPU utilisation alarm configuration."
+            },
+            "inService": {
+              "$ref": "#/definitions/alarmConfig",
+              "description": "Alarm ensuring desired instance count stays in service."
+            }
+          }
+        }
+      }
+    },
+    "tags": {
+      "type": "object",
+      "description": "Additional resource tags merged with the platform tagging baseline.",
+      "additionalProperties": {
+        "type": "string"
+      },
+      "default": {}
+    }
+  },
+  "required": [
+    "launchTemplate",
+    "autoScaling",
+    "storage",
+    "healthCheck",
+    "terminationPolicies",
+    "vpc",
+    "security",
+    "monitoring"
+  ],
+  "definitions": {
+    "alarmConfig": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "enabled": {
+          "type": "boolean",
+          "description": "Toggle alarm creation.",
+          "default": true
+        },
+        "threshold": {
+          "type": "number",
+          "description": "Numeric threshold that triggers the alarm.",
+          "default": 80
+        },
+        "evaluationPeriods": {
+          "type": "integer",
+          "description": "Number of consecutive evaluation periods required to breach.",
+          "default": 2
+        },
+        "periodMinutes": {
+          "type": "integer",
+          "description": "Granularity of datapoints in minutes.",
+          "default": 5
+        },
+        "comparisonOperator": {
+          "type": "string",
+          "enum": [
+            "GT",
+            "GTE",
+            "LT",
+            "LTE"
+          ],
+          "description": "CloudWatch comparison operator applied to the metric.",
+          "default": "GT"
+        },
+        "treatMissingData": {
+          "type": "string",
+          "enum": [
+            "breaching",
+            "not-breaching",
+            "ignore",
+            "missing"
+          ],
+          "description": "CloudWatch treatment of missing data points.",
+          "default": "not-breaching"
+        }
+      }
+    }
+  }
+}

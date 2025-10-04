@@ -6,11 +6,11 @@ import {
   IComponentCreator
 } from '@shinobi/core';
 
-import { SsmParameterComponent } from './ssm-parameter.component.js';
+import { SsmParameterComponent } from './ssm-parameter.component.ts';
 import {
   SsmParameterComponentConfig,
   SSM_PARAMETER_CONFIG_SCHEMA
-} from './ssm-parameter.builder.js';
+} from './ssm-parameter.builder.ts';
 
 export class SsmParameterComponentCreator implements IComponentCreator {
   public readonly componentType = 'ssm-parameter';

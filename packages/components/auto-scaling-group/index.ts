@@ -4,14 +4,14 @@
  */
 
 // Component exports
-export { AutoScalingGroupComponent } from './auto-scaling-group.component.js';
+export { AutoScalingGroupComponent } from './src/auto-scaling-group.component.ts';
 
 // Configuration exports
-export { 
+export {
   AutoScalingGroupConfig,
   AutoScalingGroupComponentConfigBuilder,
   AUTO_SCALING_GROUP_CONFIG_SCHEMA
-} from './auto-scaling-group.builder.js';
+} from './src/auto-scaling-group.builder.ts';
 
 // Creator exports
-export { AutoScalingGroupComponentCreator } from './auto-scaling-group.creator.js';
+export { AutoScalingGroupComponentCreator } from './src/auto-scaling-group.creator.ts';

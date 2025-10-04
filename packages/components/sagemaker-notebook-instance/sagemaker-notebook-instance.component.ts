@@ -13,9 +13,9 @@ import * as cloudwatch from 'aws-cdk-lib/aws-cloudwatch';
 import * as kms from 'aws-cdk-lib/aws-kms';
 import * as cdk from 'aws-cdk-lib';
 import { Construct } from 'constructs';
-import { BaseComponent } from '../@shinobi/core.js';
-import { ComponentSpec, ComponentContext, ComponentCapabilities } from '../@shinobi/core/component-interfaces.js';
-import { SageMakerNotebookInstanceConfig, SageMakerNotebookInstanceComponentConfigBuilder } from './sagemaker-notebook-instance.builder.js';
+import { BaseComponent } from '../@shinobi/core.ts';
+import { ComponentSpec, ComponentContext, ComponentCapabilities } from '../@shinobi/core/component-interfaces.ts';
+import { SageMakerNotebookInstanceConfig, SageMakerNotebookInstanceComponentConfigBuilder } from './sagemaker-notebook-instance.builder.ts';
 
 /**
  * SageMaker Notebook Instance Component
