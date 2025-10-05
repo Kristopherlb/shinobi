@@ -5,12 +5,11 @@
  * Makes the component discoverable by the platform and provides factory methods.
  */
 
-import { Construct } from 'constructs';
 import {
   ComponentSpec,
   ComponentContext,
   IComponentCreator
-} from '../@shinobi/core/component-interfaces.ts';
+} from '@shinobi/core';
 import { Ec2InstanceComponent } from './ec2-instance.component.ts';
 import { Ec2InstanceConfig, EC2_INSTANCE_CONFIG_SCHEMA } from './ec2-instance.builder.ts';
 

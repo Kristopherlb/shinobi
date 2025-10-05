@@ -1,9 +1,18 @@
+/**
+ * Cognito User Pool Component Synthesis Test Suite
+ * Implements Platform Testing Standard v1.0 - Component Synthesis Testing
+ */
+
 import { App, Stack } from 'aws-cdk-lib';
 import { Match, Template } from 'aws-cdk-lib/assertions';
 import { CognitoUserPoolComponent } from '../src/cognito-user-pool.component.ts';
 import { CognitoUserPoolConfig } from '../src/cognito-user-pool.builder.ts';
 import { ComponentContext, ComponentSpec } from '../../../platform/contracts/component-interfaces.ts';
 
+// Deterministic test fixtures
+const DETERMINISTIC_TIMESTAMP = new Date('2025-01-08T12:00:00.000Z');
+
+// Helper factories
 const createContext = (framework: ComponentContext['complianceFramework'] = 'commercial'): ComponentContext => ({
   serviceName: 'identity-service',
   owner: 'identity-team',
@@ -38,102 +47,115 @@ const synthesise = (
   return { component, template: Template.fromStack(stack) };
 };
 
-describe('CognitoUserPoolComponent synthesis', () => {
-  it('creates a user pool with domain, app client, and alarms driven by config', () => {
-    const context = createContext('fedramp-high');
-    const spec = createSpec({
-      userPoolName: 'secure-user-pool',
-      advancedSecurityMode: 'enforced',
-      email: {
-        fromEmail: 'no-reply@example.com',
-        fromName: 'Example Auth',
-        replyToEmail: 'support@example.com',
-        sesRegion: 'us-east-1'
-      },
-      sms: {
-        snsCallerArn: 'arn:aws:iam::123456789012:role/CognitoSmsRole',
-        externalId: 'external-token'
-      },
-      domain: {
-        domainPrefix: 'secure-app'
-      },
-      monitoring: {
-        enabled: true,
-        signInSuccess: {
-          enabled: true,
-          threshold: 2
+describe('CognitoUserPoolComponent', () => {
+  // Freeze time for deterministic tests
+  beforeAll(() => {
+    jest.useFakeTimers();
+    jest.setSystemTime(DETERMINISTIC_TIMESTAMP);
+  });
+
+  afterAll(() => {
+    jest.useRealTimers();
+  });
+
+  describe('ComponentSynthesis__FedRampHighMode__CreatesSecureUserPool', () => {
+    it('ComponentSynthesis__FedRampHighConfiguration__CreatesUserPoolWithAlarms', () => {
+      // Test Metadata: {"id":"TP-cognito-user-pool-synthesis-001","level":"unit","capability":"Component synthesis creates user pool with domain, app client, and alarms","oracle":"contract","invariants":["User pool created with correct name and MFA configuration","User pool domain created with correct prefix","User pool client created with OAuth configuration","CloudWatch alarms created for monitoring","Capabilities registered correctly"],"fixtures":["createContext","createSpec","synthesise"],"inputs":{"shape":"FedRAMP High context with comprehensive configuration","notes":"Tests complete synthesis with all features"},"risks":["Missing required resources"],"dependencies":["aws-cdk-lib"],"evidence":["AWS::Cognito::UserPool present","AWS::Cognito::UserPoolDomain present","AWS::Cognito::UserPoolClient present","AWS::CloudWatch::Alarm count=5"],"compliance_refs":["std://platform-tagging"],"ai_generated":true,"human_reviewed_by":"Platform Engineering Team"}
+      const context = createContext('fedramp-high');
+      const spec = createSpec({
+        userPoolName: 'secure-user-pool',
+        advancedSecurityMode: 'enforced',
+        email: {
+          fromEmail: 'no-reply@example.com',
+          fromName: 'Example Auth',
+          replyToEmail: 'support@example.com',
+          sesRegion: 'us-east-1'
         },
-        signInThrottle: {
-          enabled: true,
-          threshold: 3
+        sms: {
+          snsCallerArn: 'arn:aws:iam::123456789012:role/CognitoSmsRole',
+          externalId: 'external-token'
         },
-        signUpSuccess: {
-          enabled: true,
-          threshold: 1
+        domain: {
+          domainPrefix: 'secure-app'
         },
-        signUpThrottle: {
+        monitoring: {
           enabled: true,
-          threshold: 2
-        },
-        riskHigh: {
-          enabled: true,
-          threshold: 1
-        }
-      },
-      appClients: [
-        {
-          clientName: 'web-client',
-          authFlows: ['user-srp'],
-          supportedIdentityProviders: ['cognito'],
-          oAuth: {
-            flows: ['authorization-code'],
-            scopes: ['openid', 'email'],
-            callbackUrls: ['https://app.example.com/callback'],
-            logoutUrls: ['https://app.example.com/logout']
+          signInSuccess: {
+            enabled: true,
+            threshold: 2
           },
-          refreshTokenValidity: 30
-        }
-      ]
+          signInThrottle: {
+            enabled: true,
+            threshold: 3
+          },
+          signUpSuccess: {
+            enabled: true,
+            threshold: 1
+          },
+          signUpThrottle: {
+            enabled: true,
+            threshold: 2
+          },
+          riskHigh: {
+            enabled: true,
+            threshold: 1
+          }
+        },
+        appClients: [
+          {
+            clientName: 'web-client',
+            authFlows: ['user-srp'],
+            supportedIdentityProviders: ['cognito'],
+            oAuth: {
+              flows: ['authorization-code'],
+              scopes: ['openid', 'email'],
+              callbackUrls: ['https://app.example.com/callback'],
+              logoutUrls: ['https://app.example.com/logout']
+            },
+            refreshTokenValidity: 30
+          }
+        ]
+      });
+
+      const { component, template } = synthesise(context, spec);
+
+      template.hasResourceProperties('AWS::Cognito::UserPool', Match.objectLike({
+        UserPoolName: 'secure-user-pool',
+        MfaConfiguration: 'ON',
+        UserPoolAddOns: {
+          AdvancedSecurityMode: 'ENFORCED'
+        },
+        UserPoolTier: 'PLUS',
+        EmailConfiguration: Match.objectLike({
+          EmailSendingAccount: 'DEVELOPER',
+          From: Match.stringLikeRegexp('no-reply@example.com')
+        }),
+        SmsConfiguration: Match.objectLike({
+          ExternalId: 'external-token',
+          SnsCallerArn: 'arn:aws:iam::123456789012:role/CognitoSmsRole'
+        })
+      }));
+
+      template.hasResourceProperties('AWS::Cognito::UserPoolDomain', Match.objectLike({
+        Domain: 'secure-app'
+      }));
+
+      template.hasResourceProperties('AWS::Cognito::UserPoolClient', Match.objectLike({
+        ClientName: 'web-client',
+        RefreshTokenValidity: 43200,
+        TokenValidityUnits: Match.objectLike({ RefreshToken: 'minutes' }),
+        ExplicitAuthFlows: Match.arrayWith(['ALLOW_USER_SRP_AUTH'])
+      }));
+
+      template.resourceCountIs('AWS::CloudWatch::Alarm', 5);
+
+      const capabilities = component.getCapabilities();
+      expect(capabilities['auth:user-pool']).toBeDefined();
+      expect(capabilities['auth:identity-provider']).toBeDefined();
+
+      expect(component.getConstruct('main')).toBeDefined();
+      expect(component.getConstruct('domain')).toBeDefined();
+      expect(component.getConstruct('client:0')).toBeDefined();
     });
-
-    const { component, template } = synthesise(context, spec);
-
-    template.hasResourceProperties('AWS::Cognito::UserPool', Match.objectLike({
-      UserPoolName: 'secure-user-pool',
-      MfaConfiguration: 'ON',
-      UserPoolAddOns: {
-        AdvancedSecurityMode: 'ENFORCED'
-      },
-      UserPoolTier: 'PLUS',
-      EmailConfiguration: Match.objectLike({
-        EmailSendingAccount: 'DEVELOPER',
-        From: Match.stringLikeRegexp('no-reply@example.com')
-      }),
-      SmsConfiguration: Match.objectLike({
-        ExternalId: 'external-token',
-        SnsCallerArn: 'arn:aws:iam::123456789012:role/CognitoSmsRole'
-      })
-    }));
-
-    template.hasResourceProperties('AWS::Cognito::UserPoolDomain', Match.objectLike({
-      Domain: 'secure-app'
-    }));
-
-    template.hasResourceProperties('AWS::Cognito::UserPoolClient', Match.objectLike({
-      ClientName: 'web-client',
-      RefreshTokenValidity: 43200,
-      TokenValidityUnits: Match.objectLike({ RefreshToken: 'minutes' }),
-      ExplicitAuthFlows: Match.arrayWith(['ALLOW_USER_SRP_AUTH'])
-    }));
-
-    template.resourceCountIs('AWS::CloudWatch::Alarm', 5);
-
-    const capabilities = component.getCapabilities();
-    expect(capabilities['auth:user-pool']).toBeDefined();
-    expect(capabilities['auth:identity-provider']).toBeDefined();
-
-    expect(component.getConstruct('main')).toBeDefined();
-    expect(component.getConstruct('domain')).toBeDefined();
-    expect(component.getConstruct('client:0')).toBeDefined();
   });
 });

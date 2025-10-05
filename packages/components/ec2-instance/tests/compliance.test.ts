@@ -81,7 +81,7 @@ describe('Ec2InstanceCompliance__Controls__Validation', () => {
      *   "risks": ["Unencrypted storage"],
      *   "dependencies": ["config/fedramp-moderate.yml"],
      *   "evidence": ["CloudFormation template"],
-     *   "compliance_refs": ["std://security", "std://configuration"],
+     *   "compliance_refs": ["std://platform-testing-standard", "std://security", "std://configuration"],
      *   "ai_generated": false,
      *   "human_reviewed_by": ""
      * }
@@ -111,7 +111,7 @@ describe('Ec2InstanceCompliance__Controls__Validation', () => {
      *   "risks": ["Unencrypted data at rest"],
      *   "dependencies": [],
      *   "evidence": ["CloudFormation template"],
-     *   "compliance_refs": ["std://security"],
+     *   "compliance_refs": ["std://platform-testing-standard", "std://security"],
      *   "ai_generated": false,
      *   "human_reviewed_by": ""
      * }
@@ -151,7 +151,7 @@ describe('Ec2InstanceCompliance__Controls__Validation', () => {
      *   "risks": ["Instances missing manageability"],
      *   "dependencies": [],
      *   "evidence": ["CloudFormation template"],
-     *   "compliance_refs": ["std://configuration", "std://security"],
+     *   "compliance_refs": ["std://platform-testing-standard", "std://configuration", "std://security"],
      *   "ai_generated": false,
      *   "human_reviewed_by": ""
      * }
@@ -178,7 +178,7 @@ describe('Ec2InstanceCompliance__Controls__Validation', () => {
      *   "risks": ["Missing compliance metadata"],
      *   "dependencies": [],
      *   "evidence": ["CloudFormation template"],
-     *   "compliance_refs": ["std://tagging"],
+     *   "compliance_refs": ["std://platform-testing-standard", "std://tagging"],
      *   "ai_generated": false,
      *   "human_reviewed_by": ""
      * }
@@ -213,7 +213,7 @@ describe('Ec2InstanceCompliance__Controls__Validation', () => {
      *   "risks": ["Missing FedRAMP high indicators"],
      *   "dependencies": [],
      *   "evidence": ["CloudFormation template"],
-     *   "compliance_refs": ["std://tagging"],
+     *   "compliance_refs": ["std://platform-testing-standard", "std://tagging"],
      *   "ai_generated": false,
      *   "human_reviewed_by": ""
      * }
@@ -242,7 +242,7 @@ describe('Ec2InstanceCompliance__Controls__Validation', () => {
      *   "risks": ["Metadata service downgrade"],
      *   "dependencies": [],
      *   "evidence": ["CloudFormation template"],
-     *   "compliance_refs": ["std://security"],
+     *   "compliance_refs": ["std://platform-testing-standard", "std://security"],
      *   "ai_generated": false,
      *   "human_reviewed_by": ""
      * }
@@ -277,7 +277,7 @@ describe('Ec2InstanceCompliance__Controls__Validation', () => {
      *   "risks": ["Reduced observability"],
      *   "dependencies": [],
      *   "evidence": ["CloudFormation template"],
-     *   "compliance_refs": ["std://observability"],
+     *   "compliance_refs": ["std://platform-testing-standard", "std://observability"],
      *   "ai_generated": false,
      *   "human_reviewed_by": ""
      * }
@@ -313,7 +313,7 @@ describe('Ec2InstanceCompliance__Controls__Validation', () => {
      *   "risks": ["Unexpected costs"],
      *   "dependencies": [],
      *   "evidence": ["CloudFormation template"],
-     *   "compliance_refs": ["std://configuration"],
+     *   "compliance_refs": ["std://platform-testing-standard", "std://configuration"],
      *   "ai_generated": false,
      *   "human_reviewed_by": ""
      * }
@@ -336,7 +336,7 @@ describe('Ec2InstanceCompliance__Controls__Validation', () => {
      *   "risks": ["Missing metadata"],
      *   "dependencies": [],
      *   "evidence": ["CloudFormation template"],
-     *   "compliance_refs": ["std://tagging"],
+     *   "compliance_refs": ["std://platform-testing-standard", "std://tagging"],
      *   "ai_generated": false,
      *   "human_reviewed_by": ""
      * }
@@ -366,7 +366,7 @@ describe('Ec2InstanceCompliance__Controls__Validation', () => {
      *   "risks": ["Wide-open SSH"],
      *   "dependencies": [],
      *   "evidence": ["CloudFormation template"],
-     *   "compliance_refs": ["std://security"],
+     *   "compliance_refs": ["std://platform-testing-standard", "std://security"],
      *   "ai_generated": false,
      *   "human_reviewed_by": ""
      * }
@@ -400,7 +400,7 @@ describe('Ec2InstanceCompliance__Controls__Validation', () => {
      *   "risks": ["Unexpected restriction"],
      *   "dependencies": [],
      *   "evidence": ["CloudFormation template"],
-     *   "compliance_refs": ["std://security"],
+     *   "compliance_refs": ["std://platform-testing-standard", "std://security"],
      *   "ai_generated": false,
      *   "human_reviewed_by": ""
      * }
@@ -437,7 +437,7 @@ describe('Ec2InstanceCompliance__Controls__Validation', () => {
      *   "risks": ["Privilege escalation"],
      *   "dependencies": [],
      *   "evidence": ["CloudFormation template"],
-     *   "compliance_refs": ["std://security"],
+     *   "compliance_refs": ["std://platform-testing-standard", "std://security"],
      *   "ai_generated": false,
      *   "human_reviewed_by": ""
      * }
@@ -471,7 +471,7 @@ describe('Ec2InstanceCompliance__Controls__Validation', () => {
      *   "risks": ["Instance profile mismatch"],
      *   "dependencies": [],
      *   "evidence": ["CloudFormation template"],
-     *   "compliance_refs": ["std://security"],
+     *   "compliance_refs": ["std://platform-testing-standard", "std://security"],
      *   "ai_generated": false,
      *   "human_reviewed_by": ""
      * }

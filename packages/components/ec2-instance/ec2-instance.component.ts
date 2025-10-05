@@ -14,12 +14,12 @@ import * as cloudwatch from 'aws-cdk-lib/aws-cloudwatch';
 import * as cdk from 'aws-cdk-lib';
 import { Construct } from 'constructs';
 // File system operations are now handled by the abstract ConfigBuilder base class
-import { BaseComponent } from '../@shinobi/core/component.ts';
 import {
+  BaseComponent,
   ComponentSpec,
   ComponentContext,
   ComponentCapabilities
-} from '../@shinobi/core/component-interfaces.ts';
+} from '@shinobi/core';
 import { Ec2InstanceComponentConfigBuilder, Ec2InstanceConfig } from './ec2-instance.builder.ts';
 
 

@@ -39,6 +39,7 @@ export default {
     '^(\\.{1,2}/(?:.*/)?src/.+)\\.js$': '$1.ts',
     '^(\\.{1,2}/)(component|config-builder|bindings|platform-binding-trigger-spec|trigger-interfaces|binder-matrix|openfeature-interfaces|platform-services|logging-interfaces|artifacts)\\.js$': '$1$2.ts',
     '^(\\.{1,2}/.*services/.+)\\.js$': '$1.ts',
+    '^(\\.{1,2}/.*\\.service)\\.js$': '$1.ts',
     '^@platform/contracts$': '<rootDir>/packages/core/src/platform/contracts/index.ts',
     '^@platform/logger$': '<rootDir>/packages/core/src/platform/logger/src/index.ts',
     '^@platform/core-engine$': '<rootDir>/packages/core-engine/src/index.ts',

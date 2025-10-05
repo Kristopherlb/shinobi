@@ -5,14 +5,14 @@
  * Makes the component discoverable by the platform and provides factory methods.
  */
 
-import { Construct } from 'constructs';
-import { 
-  ComponentSpec, 
-  ComponentContext, 
-  IComponentCreator 
-} from '../@shinobi/core/component-interfaces.ts';
+import {
+  ComponentSpec,
+  ComponentContext,
+  IComponentCreator
+} from '@shinobi/core';
 import { EcrRepositoryComponent } from './ecr-repository.component.ts';
-import { EcrRepositoryConfig, ECR_REPOSITORY_CONFIG_SCHEMA } from './ecr-repository.builder.ts';
+import { EcrRepositoryConfig } from './ecr-repository.builder.ts';
+import { ECR_REPOSITORY_CONFIG_SCHEMA } from './Config.schema.json' with { type: 'json' };
 
 /**
  * Creator class for EcrRepositoryComponent component

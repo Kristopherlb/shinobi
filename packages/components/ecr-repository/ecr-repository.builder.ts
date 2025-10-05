@@ -5,7 +5,7 @@
  * Provides 5-layer configuration precedence chain and compliance-aware defaults.
  */
 
-import { ConfigBuilder, ConfigBuilderContext } from '../@shinobi/core/config-builder.ts';
+import { ConfigBuilder, ConfigBuilderContext } from '@shinobi/core';
 
 /**
  * Configuration interface for EcrRepositoryComponent component
@@ -67,162 +67,11 @@ export interface EcrRepositoryConfig {
 
 /**
  * JSON Schema for EcrRepositoryComponent configuration validation
+ * Imported from standalone Config.schema.json file
  */
-export const ECR_REPOSITORY_CONFIG_SCHEMA = {
-  type: 'object',
-  title: 'ECR Repository Configuration',
-  description: 'Configuration for creating an ECR repository',
-  required: ['repositoryName'],
-  properties: {
-    repositoryName: {
-      type: 'string',
-      description: 'Name of the repository',
-      pattern: '^[a-z0-9]([._-]?[a-z0-9])*$',
-      minLength: 2,
-      maxLength: 256
-    },
-    imageScanningConfiguration: {
-      type: 'object',
-      description: 'Image scanning configuration',
-      properties: {
-        scanOnPush: {
-          type: 'boolean',
-          description: 'Enable automatic image scanning on push',
-          default: true
-        }
-      },
-      additionalProperties: false,
-      default: { scanOnPush: true }
-    },
-    imageTagMutability: {
-      type: 'string',
-      description: 'Image tag mutability setting',
-      enum: ['MUTABLE', 'IMMUTABLE'],
-      default: 'MUTABLE'
-    },
-    lifecyclePolicy: {
-      type: 'object',
-      description: 'Lifecycle management policy',
-      properties: {
-        maxImageCount: {
-          type: 'number',
-          description: 'Maximum number of images to keep',
-          minimum: 1,
-          maximum: 1000,
-          default: 100
-        },
-        maxImageAge: {
-          type: 'number',
-          description: 'Maximum image age in days',
-          minimum: 1,
-          maximum: 3650,
-          default: 365
-        },
-        untaggedImageRetentionDays: {
-          type: 'number',
-          description: 'Retention period for untagged images in days',
-          minimum: 1,
-          maximum: 365,
-          default: 7
-        }
-      },
-      additionalProperties: false
-    },
-    repositoryPolicy: {
-      type: 'object',
-      description: 'IAM policy document for repository access'
-    },
-    encryption: {
-      type: 'object',
-      description: 'Encryption configuration',
-      properties: {
-        encryptionType: {
-          type: 'string',
-          description: 'Encryption type',
-          enum: ['AES256', 'KMS'],
-          default: 'AES256'
-        },
-        kmsKeyArn: {
-          type: 'string',
-          description: 'KMS key ARN for KMS encryption'
-        }
-      },
-      additionalProperties: false,
-      default: { encryptionType: 'AES256' }
-    },
-    monitoring: {
-      type: 'object',
-      description: 'Monitoring and observability configuration',
-      properties: {
-        enabled: {
-          type: 'boolean',
-          default: true,
-          description: 'Enable monitoring'
-        },
-        detailedMetrics: {
-          type: 'boolean',
-          default: false,
-          description: 'Enable detailed CloudWatch metrics'
-        },
-        alarms: {
-          type: 'object',
-          description: 'Alarm configuration',
-          properties: {
-            pushRateThreshold: {
-              type: 'number',
-              description: 'Threshold for image push rate alarm',
-              minimum: 1,
-              default: 50
-            },
-            sizeThreshold: {
-              type: 'number',
-              description: 'Threshold for repository size alarm in bytes',
-              minimum: 1,
-              default: 10737418240
-            }
-          },
-          additionalProperties: false
-        }
-      },
-      additionalProperties: false
-    },
-    compliance: {
-      type: 'object',
-      description: 'Compliance configuration',
-      properties: {
-        retentionPolicy: {
-          type: 'string',
-          description: 'Resource retention policy',
-          enum: ['retain', 'destroy'],
-          default: 'destroy'
-        },
-        auditLogging: {
-          type: 'boolean',
-          description: 'Enable audit logging',
-          default: false
-        }
-      },
-      additionalProperties: false
-    },
-    tags: {
-      type: 'object',
-      description: 'Tags for the repository',
-      additionalProperties: {
-        type: 'string'
-      },
-      default: {}
-    }
-  },
-  additionalProperties: false,
-  defaults: {
-    imageScanningConfiguration: { scanOnPush: true },
-    imageTagMutability: 'MUTABLE',
-    encryption: { encryptionType: 'AES256' },
-    monitoring: { enabled: true, detailedMetrics: false },
-    compliance: { retentionPolicy: 'destroy', auditLogging: false },
-    tags: {}
-  }
-};
+import ECR_REPOSITORY_CONFIG_SCHEMA_JSON from './Config.schema.json' with { type: 'json' };
+
+export const ECR_REPOSITORY_CONFIG_SCHEMA = ECR_REPOSITORY_CONFIG_SCHEMA_JSON;
 
 /**
  * ConfigBuilder for EcrRepositoryComponent component

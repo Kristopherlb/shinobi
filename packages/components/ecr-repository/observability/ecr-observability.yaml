@@ -1,0 +1,315 @@
+# ECR Repository Observability Configuration
+# Defines monitoring, metrics, alarms, and compliance observability for ECR repositories
+
+observability:
+  version: "1.0.0"
+  component: "ecr-repository"
+  compliance_frameworks: ["commercial", "fedramp-moderate", "fedramp-high"]
+  
+  # Distributed Tracing Configuration
+  tracing:
+    enabled: true
+    provider: "xray"
+    sampling_rate: 0.1
+    trace_context_propagation: true
+    custom_attributes:
+      - repository_name
+      - image_count
+      - repository_size
+      - encryption_type
+      - scan_on_push
+      - tag_mutability
+    trace_metadata:
+      component_type: "container_registry"
+      service_boundary: "data"
+      data_classification: "internal"
+      
+  # Metrics Configuration
+  metrics:
+    enabled: true
+    provider: "cloudwatch"
+    namespace: "AWS/ECR"
+    custom_metrics:
+      - name: "ImagePushRate"
+        description: "Rate of image pushes to repository"
+        unit: "Count/Second"
+        dimensions:
+          - RepositoryName
+      - name: "RepositorySize"
+        description: "Total size of repository in bytes"
+        unit: "Bytes"
+        dimensions:
+          - RepositoryName
+      - name: "ImageCount"
+        description: "Number of images in repository"
+        unit: "Count"
+        dimensions:
+          - RepositoryName
+      - name: "ScanFindings"
+        description: "Number of security scan findings"
+        unit: "Count"
+        dimensions:
+          - RepositoryName
+          - Severity
+      - name: "LifecyclePolicyActions"
+        description: "Number of lifecycle policy actions executed"
+        unit: "Count"
+        dimensions:
+          - RepositoryName
+          - ActionType
+          
+  # Logging Configuration
+  logging:
+    enabled: true
+    provider: "cloudwatch"
+    log_group: "/aws/ecr/repository"
+    log_retention_days: 30
+    structured_logging: true
+    log_level: "INFO"
+    redact_sensitive_data: true
+    log_correlation_id: true
+    log_fields:
+      - repository_name
+      - image_digest
+      - action_type
+      - user_identity
+      - source_ip
+      - user_agent
+      - error_code
+      - error_message
+    compliance_logging:
+      fedramp_high:
+        log_retention_days: 90
+        audit_logging: true
+        access_logging: true
+      fedramp_moderate:
+        log_retention_days: 60
+        audit_logging: true
+        access_logging: false
+      commercial:
+        log_retention_days: 30
+        audit_logging: false
+        access_logging: false
+        
+  # Alarms Configuration
+  alarms:
+    enabled: true
+    provider: "cloudwatch"
+    
+    # Security Alarms
+    security_alarms:
+      - name: "HighSeverityVulnerabilities"
+        description: "High severity vulnerabilities detected in images"
+        metric: "ScanFindings"
+        threshold: 1
+        comparison: "GreaterThanThreshold"
+        period: 300
+        evaluation_periods: 1
+        severity: "HIGH"
+        dimensions:
+          Severity: "HIGH"
+          
+      - name: "ImageScanFailures"
+        description: "Image scan failures detected"
+        metric: "ScanFailures"
+        threshold: 1
+        comparison: "GreaterThanThreshold"
+        period: 300
+        evaluation_periods: 1
+        severity: "HIGH"
+        
+    # Performance Alarms
+    performance_alarms:
+      - name: "HighImagePushRate"
+        description: "Unusually high image push rate"
+        metric: "ImagePushRate"
+        threshold: 100
+        comparison: "GreaterThanThreshold"
+        period: 300
+        evaluation_periods: 2
+        severity: "MEDIUM"
+        
+      - name: "LargeRepositorySize"
+        description: "Repository size approaching limit"
+        metric: "RepositorySize"
+        threshold: 107374182400  # 100GB
+        comparison: "GreaterThanThreshold"
+        period: 300
+        evaluation_periods: 1
+        severity: "MEDIUM"
+        
+    # Operational Alarms
+    operational_alarms:
+      - name: "ExcessiveImageCount"
+        description: "Too many images in repository"
+        metric: "ImageCount"
+        threshold: 10000
+        comparison: "GreaterThanThreshold"
+        period: 300
+        evaluation_periods: 1
+        severity: "LOW"
+        
+      - name: "LifecyclePolicyFailures"
+        description: "Lifecycle policy execution failures"
+        metric: "LifecyclePolicyErrors"
+        threshold: 1
+        comparison: "GreaterThanThreshold"
+        period: 300
+        evaluation_periods: 1
+        severity: "MEDIUM"
+        
+  # Dashboards Configuration
+  dashboards:
+    enabled: true
+    provider: "cloudwatch"
+    
+    main_dashboard:
+      name: "ECR-Repository-Main"
+      description: "Main ECR repository monitoring dashboard"
+      widgets:
+        - type: "metric"
+          title: "Image Push Rate"
+          metrics:
+            - namespace: "AWS/ECR"
+              metric: "ImagePushRate"
+              dimensions:
+                RepositoryName: "${repository_name}"
+                
+        - type: "metric"
+          title: "Repository Size"
+          metrics:
+            - namespace: "AWS/ECR"
+              metric: "RepositorySize"
+              dimensions:
+                RepositoryName: "${repository_name}"
+                
+        - type: "metric"
+          title: "Security Scan Findings"
+          metrics:
+            - namespace: "AWS/ECR"
+              metric: "ScanFindings"
+              dimensions:
+                RepositoryName: "${repository_name}"
+                
+        - type: "log"
+          title: "ECR Access Logs"
+          log_group: "/aws/ecr/repository"
+          query: |
+            fields @timestamp, @message
+            | filter repository_name = "${repository_name}"
+            | sort @timestamp desc
+            | limit 100
+            
+    security_dashboard:
+      name: "ECR-Security"
+      description: "ECR security monitoring dashboard"
+      widgets:
+        - type: "metric"
+          title: "Vulnerability Severity Distribution"
+          metrics:
+            - namespace: "AWS/ECR"
+              metric: "ScanFindings"
+              dimensions:
+                RepositoryName: "${repository_name}"
+                Severity: "CRITICAL"
+            - namespace: "AWS/ECR"
+              metric: "ScanFindings"
+              dimensions:
+                RepositoryName: "${repository_name}"
+                Severity: "HIGH"
+            - namespace: "AWS/ECR"
+              metric: "ScanFindings"
+              dimensions:
+                RepositoryName: "${repository_name}"
+                Severity: "MEDIUM"
+            - namespace: "AWS/ECR"
+              metric: "ScanFindings"
+              dimensions:
+                RepositoryName: "${repository_name}"
+                Severity: "LOW"
+                
+  # Compliance Monitoring
+  compliance_monitoring:
+    enabled: true
+    
+    # FedRAMP High Compliance
+    fedramp_high:
+      requirements:
+        - encryption_at_rest: true
+        - encryption_in_transit: true
+        - access_logging: true
+        - audit_logging: true
+        - vulnerability_scanning: true
+        - image_signing: true
+        - lifecycle_management: true
+      monitoring:
+        - metric: "EncryptionEnabled"
+          threshold: 1
+          comparison: "LessThanThreshold"
+          severity: "CRITICAL"
+        - metric: "ScanOnPushEnabled"
+          threshold: 1
+          comparison: "LessThanThreshold"
+          severity: "CRITICAL"
+        - metric: "AccessLoggingEnabled"
+          threshold: 1
+          comparison: "LessThanThreshold"
+          severity: "HIGH"
+          
+    # FedRAMP Moderate Compliance
+    fedramp_moderate:
+      requirements:
+        - encryption_at_rest: true
+        - encryption_in_transit: true
+        - access_logging: false
+        - audit_logging: true
+        - vulnerability_scanning: true
+        - lifecycle_management: true
+      monitoring:
+        - metric: "EncryptionEnabled"
+          threshold: 1
+          comparison: "LessThanThreshold"
+          severity: "HIGH"
+        - metric: "ScanOnPushEnabled"
+          threshold: 1
+          comparison: "LessThanThreshold"
+          severity: "HIGH"
+          
+    # Commercial Compliance
+    commercial:
+      requirements:
+        - encryption_at_rest: true
+        - vulnerability_scanning: true
+        - lifecycle_management: true
+      monitoring:
+        - metric: "EncryptionEnabled"
+          threshold: 1
+          comparison: "LessThanThreshold"
+          severity: "MEDIUM"
+        - metric: "ScanOnPushEnabled"
+          threshold: 1
+          comparison: "LessThanThreshold"
+          severity: "MEDIUM"
+          
+  # OpenTelemetry Configuration
+  opentelemetry:
+    enabled: true
+    version: "1.0.0"
+    exporters:
+      - type: "otlp"
+        endpoint: "${OTEL_EXPORTER_OTLP_ENDPOINT}"
+        protocol: "grpc"
+      - type: "xray"
+        region: "${AWS_REGION}"
+    instrumentation:
+      - name: "aws-sdk"
+        version: "latest"
+      - name: "http"
+        version: "latest"
+    resource_attributes:
+      service.name: "ecr-repository"
+      service.version: "1.0.0"
+      deployment.environment: "${ENVIRONMENT}"
+      cloud.provider: "aws"
+      cloud.region: "${AWS_REGION}"
+      container.registry: "ecr"

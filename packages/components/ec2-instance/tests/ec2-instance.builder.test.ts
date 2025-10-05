@@ -65,7 +65,7 @@ describe('Ec2InstanceConfigBuilder__Precedence__AppliesFrameworkDefaults', () =>
    *   "risks": ["Unexpected baseline regression"],
    *   "dependencies": ["config/commercial.yml"],
    *   "evidence": ["Resolved configuration"],
-   *   "compliance_refs": ["std://configuration"],
+   *   "compliance_refs": ["std://platform-testing-standard", "std://configuration"],
    *   "ai_generated": false,
    *   "human_reviewed_by": ""
    * }
@@ -93,7 +93,7 @@ describe('Ec2InstanceConfigBuilder__Precedence__AppliesFrameworkDefaults', () =>
    *   "risks": ["Compliance bypass"],
    *   "dependencies": ["config/fedramp-moderate.yml"],
    *   "evidence": ["Resolved configuration"],
-   *   "compliance_refs": ["std://security", "std://configuration"],
+   *   "compliance_refs": ["std://platform-testing-standard", "std://security", "std://configuration"],
    *   "ai_generated": false,
    *   "human_reviewed_by": ""
    * }
@@ -125,7 +125,7 @@ describe('Ec2InstanceConfigBuilder__Precedence__AppliesFrameworkDefaults', () =>
    *   "risks": ["Insufficient hardening"],
    *   "dependencies": ["config/fedramp-high.yml"],
    *   "evidence": ["Resolved configuration"],
-   *   "compliance_refs": ["std://security"],
+   *   "compliance_refs": ["std://platform-testing-standard", "std://security"],
    *   "ai_generated": false,
    *   "human_reviewed_by": ""
    * }
@@ -152,7 +152,7 @@ describe('Ec2InstanceConfigBuilder__Precedence__AppliesFrameworkDefaults', () =>
    *   "risks": ["User overrides ignored"],
    *   "dependencies": [],
    *   "evidence": ["Resolved configuration"],
-   *   "compliance_refs": ["std://configuration"],
+   *   "compliance_refs": ["std://platform-testing-standard", "std://configuration"],
    *   "ai_generated": false,
    *   "human_reviewed_by": ""
    * }

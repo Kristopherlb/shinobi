@@ -2,7 +2,7 @@
 export * from './platform/contracts/index.js';
 
 // Export platform services
-export * from './platform/services.js';
+export * from './platform/services/index.js';
 
 // Export core services (avoiding conflicts with contracts)
 export * from './services/schema-validator.js';

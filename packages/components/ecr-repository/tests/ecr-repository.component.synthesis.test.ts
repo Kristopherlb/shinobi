@@ -1,63 +1,30 @@
-/**
- * EcrRepositoryComponent Component Synthesis Test Suite
- * Implements Platform Testing Standard v1.0 - Component Synthesis Testing
- */
-
-import { Template, Match } from 'aws-cdk-lib/assertions';
 import { App, Stack } from 'aws-cdk-lib';
+import { Match, Template } from 'aws-cdk-lib/assertions';
 import { EcrRepositoryComponent } from '../ecr-repository.component.ts';
-import { EcrRepositoryConfig } from '../ecr-repository.builder.ts';
-import { ComponentContext, ComponentSpec } from '/Users/kristopherbowles/code/CDK-Lib/src/platform/contracts/component-interfaces';
-import { Construct } from 'constructs';
+import {
+  EcrRepositoryComponentConfigBuilder,
+  EcrRepositoryConfig
+} from '../ecr-repository.builder.ts';
+import {
+  ComponentContext,
+  ComponentSpec
+} from '@shinobi/core/component-interfaces';
 
-// Test metadata for Platform Testing Standard compliance
-const TEST_METADATA = {
-  id: 'TP-ecr-repository-synthesis-001',
-  level: 'integration',
-  capability: 'Component synthesis and CloudFormation resource creation',
-  oracle: 'exact',
-  invariants: ['Component must synthesize successfully', 'CloudFormation resources must be valid'],
-  fixtures: ['MockComponentContext', 'MockComponentSpec', 'CDK App and Stack'],
-  inputs: { shape: 'ComponentContext and ComponentSpec objects', notes: 'Tests component synthesis logic' },
-  risks: ['Synthesis failure', 'Invalid CloudFormation template'],
-  dependencies: ['AWS CDK', 'BaseComponent'],
-  evidence: ['Component synthesizes without errors', 'CloudFormation resources are created'],
-  compliance_refs: ['Platform Testing Standard v1.0'],
-  ai_generated: true,
-  human_reviewed_by: 'Platform Engineering Team'
-};
+type Framework = 'commercial' | 'fedramp-moderate' | 'fedramp-high';
 
-// Determinism controls for Platform Testing Standard compliance
-beforeEach(() => {
-  jest.useFakeTimers();
-  jest.setSystemTime(new Date('2025-01-01T00:00:00.000Z'));
-  Math.random = jest.fn(() => 0.5);
+const createMockContext = (framework: Framework, scope: Stack): ComponentContext => ({
+  serviceName: 'test-service',
+  environment: 'dev',
+  complianceFramework: framework,
+  region: 'us-east-1',
+  accountId: '123456789012',
+  scope,
+  tags: {
+    'service-name': 'test-service',
+    environment: 'dev',
+    'compliance-framework': framework
+  }
 });
-
-afterEach(() => {
-  jest.useRealTimers();
-  jest.restoreAllMocks();
-});
-
-const createMockContext = (
-  complianceFramework: 'commercial' | 'fedramp-moderate' | 'fedramp-high' = 'commercial',
-  environment: string = 'dev'
-): ComponentContext => {
-  const stack = new Stack();
-  return {
-    serviceName: 'test-service',
-    accountId: '123456789012',
-    environment,
-    complianceFramework,
-    region: 'us-east-1',
-    scope: stack,
-    serviceLabels: {
-      'service-name': 'test-service',
-      'environment': environment,
-      'compliance-framework': complianceFramework
-    }
-  };
-};
 
 const createMockSpec = (config: Partial<EcrRepositoryConfig> = {}): ComponentSpec => ({
   name: 'test-ecr-repository',
@@ -69,125 +36,212 @@ const createMockSpec = (config: Partial<EcrRepositoryConfig> = {}): ComponentSpe
 });
 
 const synthesizeComponent = (
-  context: ComponentContext,
-  spec: ComponentSpec
-): { component: EcrRepositoryComponent; template: Template } => {
+  framework: Framework,
+  config: Partial<EcrRepositoryConfig> = {}
+) => {
   const app = new App();
-  const stack = new Stack(app, 'TestStack');
-  
+  const stack = new Stack(app, 'TestStack', {
+    env: { account: '123456789012', region: 'us-east-1' }
+  });
+
+  const context = createMockContext(framework, stack);
+  const spec = createMockSpec(config);
   const component = new EcrRepositoryComponent(stack, spec.name, context, spec);
+
   component.synth();
-  
-  const template = Template.fromStack(stack);
-  return { component, template };
+
+  return {
+    component,
+    template: Template.fromStack(stack)
+  };
 };
 
-describe('EcrRepositoryComponent Synthesis', () => {
-  
-  describe('DefaultSynthesis__CommercialFramework__CreatesValidResources', () => {
-    
-    it('should synthesize basic ecr-repository with commercial compliance', () => {
-      const context = createMockContext('commercial');
-      const spec = createMockSpec();
-      
-      const { template, component } = synthesizeComponent(context, spec);
-      
-      // Verify component was created
-      expect(component).toBeDefined();
-      expect(component.getType()).toBe('ecr-repository');
-      
-      // Verify ECR repository resource is created
-      template.hasResourceProperties('AWS::ECR::Repository', {
-        RepositoryName: 'test-repository',
-        ImageScanningConfiguration: {
-          ScanOnPush: false // Security-safe default
-        },
-        ImageTagMutability: 'MUTABLE'
-      });
-    });
-    
-  });
-  
-  describe('ComponentCapabilities__AfterSynthesis__RegistersCorrectCapabilities', () => {
-    
-    it('should register correct capabilities after synthesis', () => {
-      const context = createMockContext('commercial');
-      const spec = createMockSpec();
-      
-      const { component } = synthesizeComponent(context, spec);
-      
-      const capabilities = component.getCapabilities();
-      
-      // Verify component-specific capabilities
-      expect(capabilities).toBeDefined();
-      expect(capabilities['container:ecr']).toBeDefined();
-      expect(capabilities['container:ecr'].repositoryName).toBe('test-repository');
-    });
-    
-  });
-  
-  describe('ComponentConstructs__AfterSynthesis__RegistersConstructHandles', () => {
-    
-    it('should register construct handles for patches.ts access', () => {
-      const context = createMockContext('commercial');
-      const spec = createMockSpec();
-      
-      const { component } = synthesizeComponent(context, spec);
-      
-      // Verify main construct is registered
-      expect(component.getConstruct('repository')).toBeDefined();
-    });
-    
-  });
-  
-  describe('ObservabilityConfiguration__MonitoringEnabled__CreatesCloudWatchResources', () => {
-    
-    it('should create CloudWatch resources when monitoring is enabled', () => {
-      const context = createMockContext('commercial');
-      const spec = createMockSpec({
-        monitoring: {
-          enabled: true,
-          detailedMetrics: true
+describe('EcrRepositoryComponent__Synthesis__ResourceValidation', () => {
+  let platformConfigSpy: jest.SpyInstance;
+
+  beforeEach(() => {
+    platformConfigSpy = jest
+      .spyOn(EcrRepositoryComponentConfigBuilder.prototype, '_loadPlatformConfiguration')
+      .mockImplementation(function (this: EcrRepositoryComponentConfigBuilder) {
+        const framework = this.builderContext.context.complianceFramework;
+
+        if (framework === 'fedramp-moderate') {
+          return {
+            imageScanningConfiguration: { scanOnPush: true },
+            monitoring: { enabled: true, detailedMetrics: true },
+            compliance: { retentionPolicy: 'destroy', auditLogging: true }
+          };
         }
-      });
-      
-      const { template } = synthesizeComponent(context, spec);
-      
-      // Verify CloudWatch Log Group is created
-      template.hasResourceProperties('AWS::Logs::LogGroup', {
-        LogGroupName: '/aws/ecr/test-repository'
-      });
-      
-      // Verify CloudWatch Alarms are created
-      template.hasResourceProperties('AWS::CloudWatch::Alarm', {
-        AlarmName: Match.stringLikeRegexp('.*high-push-rate')
-      });
-    });
-    
-  });
-  
-  describe('SecurityConfiguration__KmsEncryption__CreatesKmsEncryptedRepository', () => {
-    
-    it('should create KMS encrypted repository when specified', () => {
-      const context = createMockContext('commercial');
-      const spec = createMockSpec({
-        encryption: {
-          encryptionType: 'KMS',
-          kmsKeyArn: 'arn:aws:kms:us-east-1:123456789012:key/test-key'
+
+        if (framework === 'fedramp-high') {
+          return {
+            imageScanningConfiguration: { scanOnPush: true },
+            encryption: { encryptionType: 'KMS', kmsKeyArn: 'arn:aws:kms:us-east-1:123456789012:key/mock' },
+            monitoring: { enabled: true, detailedMetrics: true },
+            compliance: { retentionPolicy: 'retain', auditLogging: true }
+          };
         }
+
+        return {
+          monitoring: { enabled: true, detailedMetrics: false }
+        };
       });
-      
-      const { template } = synthesizeComponent(context, spec);
-      
-      // Verify ECR repository with KMS encryption
-      template.hasResourceProperties('AWS::ECR::Repository', {
-        EncryptionConfiguration: {
-          EncryptionType: 'KMS'
-          // KmsKey is undefined when using default AWS managed key
-        }
-      });
-    });
-    
   });
-  
+
+  afterEach(() => {
+    platformConfigSpy.mockRestore();
+  });
+
+  /*
+   * Test Metadata: TP-ecr-repository-component-001
+   * {
+   *   "id": "TP-ecr-repository-component-001",
+   *   "level": "unit",
+   *   "capability": "Commercial synthesis produces baseline ECR repository",
+   *   "oracle": "contract",
+   *   "invariants": ["Repository name matches manifest", "Scan on push disabled by default"],
+   *   "fixtures": ["cdk.App", "cdk.Stack", "EcrRepositoryComponent"],
+   *   "inputs": { "shape": "Commercial context with defaults", "notes": "No manifest overrides" },
+   *   "risks": ["Repository misconfiguration"],
+   *   "dependencies": [],
+   *   "evidence": ["CloudFormation template"],
+   *   "compliance_refs": ["std://platform-testing-standard", "std://platform-configuration-standard"],
+   *   "ai_generated": false,
+   *   "human_reviewed_by": ""
+   * }
+   */
+  it('Repository__CommercialDefaults__SynthesizesBaselineResources', () => {
+    const { template } = synthesizeComponent('commercial');
+
+    template.hasResourceProperties('AWS::ECR::Repository', {
+      RepositoryName: 'test-repository',
+      ImageScanningConfiguration: {
+        ScanOnPush: false
+      },
+      ImageTagMutability: 'MUTABLE'
+    });
+  });
+
+  /*
+   * Test Metadata: TP-ecr-repository-component-002
+   * {
+   *   "id": "TP-ecr-repository-component-002",
+   *   "level": "unit",
+   *   "capability": "Component registers container capability after synthesis",
+   *   "oracle": "contract",
+   *   "invariants": ["Capability key container:ecr present"],
+   *   "fixtures": ["cdk.App", "cdk.Stack", "EcrRepositoryComponent"],
+   *   "inputs": { "shape": "Commercial context with defaults", "notes": "Capability map inspected post-synthesis" },
+   *   "risks": ["Capability registry missing"],
+   *   "dependencies": [],
+   *   "evidence": ["component.getCapabilities()"],
+   *   "compliance_refs": ["std://platform-testing-standard"],
+   *   "ai_generated": false,
+   *   "human_reviewed_by": ""
+   * }
+   */
+  it('Capabilities__AfterSynthesis__RegistersContainerCapability', () => {
+    const { component } = synthesizeComponent('commercial');
+
+    const capabilities = component.getCapabilities();
+    expect(capabilities['container:ecr']).toBeDefined();
+    expect(capabilities['container:ecr'].repositoryName).toBe('test-repository');
+  });
+
+  /*
+   * Test Metadata: TP-ecr-repository-component-003
+   * {
+   *   "id": "TP-ecr-repository-component-003",
+   *   "level": "unit",
+   *   "capability": "Construct handles expose repository construct",
+   *   "oracle": "contract",
+   *   "invariants": ["Repository handle registered"],
+   *   "fixtures": ["cdk.App", "cdk.Stack", "EcrRepositoryComponent"],
+   *   "inputs": { "shape": "Commercial context with defaults", "notes": "Construct registry queried" },
+   *   "risks": ["Patches unable to locate construct"],
+   *   "dependencies": [],
+   *   "evidence": ["component.getConstruct('repository')"],
+   *   "compliance_refs": ["std://platform-testing-standard"],
+   *   "ai_generated": false,
+   *   "human_reviewed_by": ""
+   * }
+   */
+  it('ConstructRegistry__AfterSynthesis__ReturnsRepositoryHandle', () => {
+    const { component } = synthesizeComponent('commercial');
+
+    expect(component.getConstruct('repository')).toBeDefined();
+  });
+
+  /*
+   * Test Metadata: TP-ecr-repository-component-004
+   * {
+   *   "id": "TP-ecr-repository-component-004",
+   *   "level": "unit",
+   *   "capability": "Monitoring controls create log group and alarms when enabled",
+   *   "oracle": "contract",
+   *   "invariants": ["Log group created", "Push rate alarm provisioned"],
+   *   "fixtures": ["cdk.App", "cdk.Stack", "EcrRepositoryComponent"],
+   *   "inputs": { "shape": "Commercial context with monitoring overrides", "notes": "Manifest enables detailed metrics" },
+   *   "risks": ["Missing observability artifacts"],
+   *   "dependencies": [],
+   *   "evidence": ["CloudFormation template"],
+   *   "compliance_refs": ["std://platform-testing-standard", "std://platform-observability-standard"],
+   *   "ai_generated": false,
+   *   "human_reviewed_by": ""
+   * }
+   */
+  it('Observability__MonitoringEnabled__CreatesLogGroupAndAlarms', () => {
+    const { template } = synthesizeComponent('commercial', {
+      monitoring: {
+        enabled: true,
+        detailedMetrics: true,
+        logRetentionDays: 90,
+        alarms: {
+          pushRateThreshold: 25,
+          sizeThreshold: 5368709120
+        }
+      }
+    });
+
+    template.hasResourceProperties('AWS::Logs::LogGroup', {
+      LogGroupName: '/aws/ecr/test-repository'
+    });
+
+    template.hasResourceProperties('AWS::CloudWatch::Alarm', {
+      AlarmName: Match.stringLikeRegexp('test-service-test-ecr-repository-high-push-rate')
+    });
+  });
+
+  /*
+   * Test Metadata: TP-ecr-repository-component-005
+   * {
+   *   "id": "TP-ecr-repository-component-005",
+   *   "level": "unit",
+   *   "capability": "FedRAMP high framework enforces KMS encryption",
+   *   "oracle": "contract",
+   *   "invariants": ["Encryption type KMS"],
+   *   "fixtures": ["cdk.App", "cdk.Stack", "EcrRepositoryComponent"],
+   *   "inputs": { "shape": "FedRAMP high context with overrides", "notes": "Manifest selects KMS encryption" },
+   *   "risks": ["Repository left unencrypted"],
+   *   "dependencies": [],
+   *   "evidence": ["CloudFormation template"],
+   *   "compliance_refs": ["std://platform-testing-standard", "std://platform-security-standard"],
+   *   "ai_generated": false,
+   *   "human_reviewed_by": ""
+   * }
+   */
+  it('Encryption__FedrampHigh__AppliesKmsEncryption', () => {
+    const { template } = synthesizeComponent('fedramp-high', {
+      encryption: {
+        encryptionType: 'KMS',
+        kmsKeyArn: 'arn:aws:kms:us-east-1:123456789012:key/test'
+      }
+    });
+
+    template.hasResourceProperties('AWS::ECR::Repository', {
+      EncryptionConfiguration: {
+        EncryptionType: 'KMS'
+      }
+    });
+  });
 });

@@ -76,7 +76,7 @@ describe('Ec2InstanceComponent__Synthesis__ResourceValidation', () => {
    *   "risks": ["Instance misconfiguration"],
    *   "dependencies": [],
    *   "evidence": ["CloudFormation template"],
-   *   "compliance_refs": ["std://configuration"],
+   *   "compliance_refs": ["std://platform-testing-standard", "std://configuration"],
    *   "ai_generated": false,
    *   "human_reviewed_by": ""
    * }
@@ -111,7 +111,7 @@ describe('Ec2InstanceComponent__Synthesis__ResourceValidation', () => {
    *   "risks": ["Missing security group"],
    *   "dependencies": [],
    *   "evidence": ["CloudFormation template"],
-   *   "compliance_refs": ["std://security"],
+   *   "compliance_refs": ["std://platform-testing-standard", "std://security"],
    *   "ai_generated": false,
    *   "human_reviewed_by": ""
    * }
@@ -137,7 +137,7 @@ describe('Ec2InstanceComponent__Synthesis__ResourceValidation', () => {
    *   "risks": ["Unencrypted storage"],
    *   "dependencies": ["config/fedramp-moderate.yml"],
    *   "evidence": ["CloudFormation template"],
-   *   "compliance_refs": ["std://security"],
+   *   "compliance_refs": ["std://platform-testing-standard", "std://security"],
    *   "ai_generated": false,
    *   "human_reviewed_by": ""
    * }
@@ -164,7 +164,7 @@ describe('Ec2InstanceComponent__Synthesis__ResourceValidation', () => {
    *   "risks": ["Metadata downgrade"],
    *   "dependencies": ["config/fedramp-high.yml"],
    *   "evidence": ["CloudFormation template"],
-   *   "compliance_refs": ["std://security"],
+   *   "compliance_refs": ["std://platform-testing-standard", "std://security"],
    *   "ai_generated": false,
    *   "human_reviewed_by": ""
    * }
@@ -200,7 +200,7 @@ describe('Ec2InstanceComponent__Synthesis__ResourceValidation', () => {
    *   "risks": ["Unexpected monitoring costs"],
    *   "dependencies": [],
    *   "evidence": ["CloudFormation template"],
-   *   "compliance_refs": ["std://observability"],
+   *   "compliance_refs": ["std://platform-testing-standard", "std://observability"],
    *   "ai_generated": false,
    *   "human_reviewed_by": ""
    * }
@@ -226,7 +226,7 @@ describe('Ec2InstanceComponent__Synthesis__ResourceValidation', () => {
    *   "risks": ["Missing critical alarm"],
    *   "dependencies": ["config/fedramp-moderate.yml"],
    *   "evidence": ["CloudFormation template"],
-   *   "compliance_refs": ["std://observability"],
+   *   "compliance_refs": ["std://platform-testing-standard", "std://observability"],
    *   "ai_generated": false,
    *   "human_reviewed_by": ""
    * }

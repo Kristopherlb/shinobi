@@ -4,7 +4,7 @@
  */
 
 // Component exports
-export { EcrRepositoryComponentComponent } from './ecr-repository.component.ts';
+export { EcrRepositoryComponent } from './ecr-repository.component.ts';
 
 // Configuration exports
 export { 
