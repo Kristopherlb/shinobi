@@ -59,7 +59,7 @@ describe('Ec2InstanceConfigBuilder__Precedence__AppliesFrameworkDefaults', () =>
    *   "level": "unit",
    *   "capability": "Commercial defaults populate baseline EC2 configuration",
    *   "oracle": "exact",
-   *   "invariants": ["Instance type defaults to t3.micro", "Storage encryption disabled by default"],
+   *   "invariants": ["Instance type defaults to t3.micro", "Storage encryption enabled by default"],
    *   "fixtures": ["ConfigBuilder", "Commercial context"],
    *   "inputs": { "shape": "Empty manifest", "notes": "Validates hard-coded fallbacks" },
    *   "risks": ["Unexpected baseline regression"],
@@ -77,7 +77,7 @@ describe('Ec2InstanceConfigBuilder__Precedence__AppliesFrameworkDefaults', () =>
     expect(config.instanceType).toBe('t3.micro');
     expect(config.storage?.rootVolumeSize).toBe(20);
     expect(config.storage?.rootVolumeType).toBe('gp3');
-    expect(config.storage?.encrypted).toBe(false);
+    expect(config.storage?.encrypted).toBe(true);
   });
 
   /*

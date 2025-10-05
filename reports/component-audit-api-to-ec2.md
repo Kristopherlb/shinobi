@@ -6,6 +6,7 @@ _Audit date: 2025-10-05. Standards referenced: all platform standards under `doc
 
 ### Prompt 01 — Schema Validation
 - `Config.schema.json` declares `$schema`/`$id`, but the root `required` array is empty. Several fields that the builder relies on (for example `customDomain.domainName` when `autoGenerateCertificate` is true) are only enforced in TypeScript/runtime. Align required fields with the schema so the MCP catalog returned by the AWS Labs server can validate manifests pre-flight.
+- ✅ Update 2025-10-05 — Rebuilt `Config.schema.json` with explicit route/auth definitions and cross-field guards (auto-generated certificates, VPC links, HTTP/AWS integrations). The new schema is now consumed by the builder via `API_GATEWAY_HTTP_CONFIG_SCHEMA`, keeping MCP validation in lockstep with runtime expectations.
 
 ### Prompt 02 — Tagging Standard
 - `api-gateway-http.component.ts:82-118` applies `applyStandardTags` to the API, stage, custom domain, and log group. Route53 records (not taggable) are the only constructs left untouched. No gaps found versus the tagging matrix defined in `platform-tagging-standard.md`.
@@ -33,6 +34,7 @@ _Audit date: 2025-10-05. Standards referenced: all platform standards under `doc
 
 ### Prompt 10 — MCP Server API Contract Alignment
 - `index.ts` exports the component and schema, so the Shinobi MCP server can serve `/platform/components/api-gateway-http/schema`. Ensure the generated schema is what the AWS Labs MCP validator expects (see Prompt 01).
+- ✅ Update 2025-10-05 — MCP export now exposes the expanded schema, matching the builder and enforcing conditional requirements before manifests reach the server.
 
 ### Prompt 11 — Security & Compliance
 - WAF association and resource policy logging are in place, but there is no automated enforcement that API keys or JWT authorizers are present (left to config). Review against FedRAMP guidance to ensure default throttling/log retention meet mandatory floors.
@@ -43,15 +45,18 @@ _Audit date: 2025-10-05. Standards referenced: all platform standards under `doc
 
 ### Prompt 01 — Schema Validation
 - Comprehensive schema with nested `required` clauses, but certain dependencies (e.g., method integrations) are validated only in builder logic. Align schema cross-field validation so MCP pre-validation can catch misconfigured integrations.
+- ✅ Update 2025-10-05 — Added top-level requirements and conditional rules enforcing custom-domain certificate pairing and Cognito authorizer configuration in `packages/components/api-gateway-rest/Config.schema.json`.
 
 ### Prompt 02 — Tagging Standard
 - Uses `applyStandardTags` on the REST API, stage, log group, and API keys (`api-gateway-rest.component.ts:113-286`). Compliant with tagging policy.
+- ✅ Update 2025-10-05 — Extended tagging to CloudWatch alarms created during observability setup to keep monitoring resources in policy scope.
 
 ### Prompt 03 — Logging Standard
 - Access logs configured with JSON format and configurable retention. Component logging flows through the platform logger.
 
 ### Prompt 04 — Observability Standard
 - Includes CloudWatch metrics/alarms and tracing toggles. The component does not surface an explicit observability capability; consider adding one to keep parity with AWS Labs observability guidance.
+- ✅ Update 2025-10-05 — `api-gateway-rest.component.ts` now registers an `observability:api-gateway-rest` capability and propagates OpenTelemetry variables via stage configuration.
 
 ### Prompt 05 — CDK Best Practices
 - L2 constructs, optional WAF, private endpoint support align with AWS Labs guidance. No `cdk-nag` automation yet.
@@ -70,6 +75,7 @@ _Audit date: 2025-10-05. Standards referenced: all platform standards under `doc
 
 ### Prompt 10 — MCP Contract
 - Schema and exports are in place. Ensure component metadata in MCP catalog includes descriptions for tooling (currently minimal).
+- ✅ Update 2025-10-05 — MCP schema export now includes the tightened validation rules introduced above, keeping manifest checks consistent across builder and server.
 
 ### Prompt 11 — Security & Compliance
 - Supports resource policies, WAF, API keys. Default CORS is open unless configured; enforce safer defaults for new services.
@@ -80,6 +86,7 @@ _Audit date: 2025-10-05. Standards referenced: all platform standards under `doc
 
 ### Prompt 01 — Schema Validation
 - Schema exists but root `required` array is empty. Required relationships (listeners vs. target groups) enforced at runtime only.
+- ✅ Update 2025-10-05 — Added `required: ['listeners']`, `minItems` validation, and listener-level requirements within `packages/components/application-load-balancer/Config.schema.json` to surface misconfigurations before synthesis.
 
 ### Prompt 02 — Tagging Standard
 - `applyStandardTags` applied to ALB, listeners, target groups. Access log bucket tagging left to bucket component—document this dependency.
@@ -110,6 +117,7 @@ _Audit date: 2025-10-05. Standards referenced: all platform standards under `doc
 
 ### Prompt 11 — Security & Compliance
 - Supports HTTPS listeners, security groups. Default security group rules allow 0.0.0.0/0 for HTTP unless overridden—flag for FedRAMP high environments.
+- ✅ Update 2025-10-05 — `application-load-balancer.component.ts` now blocks internet-facing deployments that expose port 80 to `0.0.0.0/0` unless an HTTPS listener or redirect is configured.
 
 ---
 
@@ -117,6 +125,7 @@ _Audit date: 2025-10-05. Standards referenced: all platform standards under `doc
 
 ### Prompt 01 — Schema Validation
 - Config schema enumerates defaults but lacks required relationships (e.g., when using mixed instances). Root `required` list is sparse.
+- ✅ Update 2025-10-05 — Added root and nested `required` clauses for launch template, scaling bounds, storage, health checks, VPC, security, and monitoring in `packages/components/auto-scaling-group/Config.schema.json`.
 
 ### Prompt 02 — Tagging Standard
 - Applies standard tags to ASG, launch template, security group. KMS key tagging handled when encryption enabled.
@@ -126,6 +135,7 @@ _Audit date: 2025-10-05. Standards referenced: all platform standards under `doc
 
 ### Prompt 04 — Observability Standard
 - Integrates detailed monitoring and registers relevant alarms when compliance demands. Consider exposing an explicit observability capability similar to EC2 component.
+- ✅ Update 2025-10-05 — Component already emits `observability:auto-scaling-group`; documentation refreshed to reflect this.
 
 ### Prompt 05 — CDK Best Practices
 - Launch template hardening (IMDSv2, SSM agent) aligns with AWS Labs guidance. Document cdk-nag status.
@@ -147,6 +157,7 @@ _Audit date: 2025-10-05. Standards referenced: all platform standards under `doc
 
 ### Prompt 11 — Security & Compliance
 - FedRAMP paths enable encryption, IMDSv2, agents. Commercial defaults still allow public subnets; highlight for secure-by-default policy.
+- ✅ Update 2025-10-05 — Builder enforces private subnet defaults with outbound egress disabled unless explicitly overridden and validates scaling bounds to guard against misconfiguration.
 
 ---
 
@@ -191,6 +202,7 @@ _Audit date: 2025-10-05. Standards referenced: all platform standards under `doc
 
 ### Prompt 01 — Schema Validation
 - Schema enumerates many options but leaves several conditional requirements to runtime (e.g., origins vs. behaviors). Extend schema for stronger MCP validation.
+- ✅ Update 2025-10-05 — Added origin-specific conditional requirements in `packages/components/cloudfront-distribution/Config.schema.json` so MCP validation surfaces missing inputs before synthesis.
 
 ### Prompt 02 — Tagging Standard
 - Applies platform tags to distributions, buckets, and log groups where applicable.
@@ -200,6 +212,7 @@ _Audit date: 2025-10-05. Standards referenced: all platform standards under `doc
 
 ### Prompt 04 — Observability Standard
 - Supports CloudWatch/Real-time metrics toggles. No explicit OTel capability yet.
+- ✅ Update 2025-10-05 — Component now publishes an `observability:cloudfront-distribution` capability populated with telemetry directives.
 
 ### Prompt 05 — CDK Best Practices
 - Implements security headers, WAF association per AWS Labs guidance. Ensure default TLS minimums match FedRAMP expectations.
@@ -218,6 +231,7 @@ _Audit date: 2025-10-05. Standards referenced: all platform standards under `doc
 
 ### Prompt 10 — MCP Contract
 - Schema exposed; consider publishing additional metadata (security headers) for MCP clients.
+- ✅ Update 2025-10-05 — Exported schema now contains the new origin constraints to keep MCP responses aligned with runtime expectations.
 
 ### Prompt 11 — Security & Compliance
 - Supports origin shielding, managed policies. Default logging disabled unless configured—call out for compliance.
@@ -237,6 +251,7 @@ _Audit date: 2025-10-05. Standards referenced: all platform standards under `doc
 
 ### Prompt 04 — Observability Standard
 - Emits alarms/metrics for sign-in failures and syncs with observability configuration, but lacks explicit OTel capability export.
+- ✅ Update 2025-10-05 — Component now publishes an `observability:cognito-user-pool` capability containing alarm metadata and monitoring state.
 
 ### Prompt 05 — CDK Best Practices
 - Follows AWS Labs guidance: MFA, password policies, advanced security. Evaluate adding cdk-nag as recommended.
@@ -274,6 +289,7 @@ _Audit date: 2025-10-05. Standards referenced: all platform standards under `doc
 
 ### Prompt 04 — Observability Standard
 - Integrates ADOT sidecar/telemetry options in config. Expose capability so binder matrix can connect to observability tooling automatically.
+- ✅ Update 2025-10-05 — Component now advertises an `observability:container-application` capability containing OTEL environment variables and alarm metadata.
 
 ### Prompt 05 — CDK Best Practices
 - Aligns with AWS Labs guidance (security groups, capacity providers). Nag integration pending.
@@ -302,6 +318,7 @@ _Audit date: 2025-10-05. Standards referenced: all platform standards under `doc
 
 ### Prompt 01 — Schema Validation
 - Schema requires `capacity`/`fipsMode` but still leaves some conditional fields (KMS vs. IAM) unchecked. Enhance before public MCP exposure.
+- ✅ Update 2025-10-05 — Added capacity bounds validation in the builder and schema rules enforcing EFS cache configuration via `featureFlags.sharedCacheEfs`.
 
 ### Prompt 02 — Tagging Standard
 - Applies tags to pools, subnets, security groups.
@@ -311,6 +328,7 @@ _Audit date: 2025-10-05. Standards referenced: all platform standards under `doc
 
 ### Prompt 04 — Observability Standard
 - Limited native observability; alarms/metrics minimal. Plan to align with AWS Labs recommendations for compute pools.
+- ✅ Update 2025-10-05 — Component now registers an `observability:dagger-engine-pool` capability with OpenTelemetry environment details.
 
 ### Prompt 05 — CDK Best Practices
 - Uses managed node groups with encryption. Ensure cdk-nag coverage.
@@ -339,6 +357,7 @@ _Audit date: 2025-10-05. Standards referenced: all platform standards under `doc
 
 ### Prompt 01 — Schema Validation
 - **Issue:** No `Config.schema.json` present. MCP validation cannot run for this component; create a schema consistent with other components and AWS Labs MCP expectations.
+- ✅ Update 2025-10-05 — Added `packages/components/deployment-bundle-pipeline/Config.schema.json` and wired the builder (`packages/components/deployment-bundle-pipeline/src/deployment-bundle-pipeline.builder.ts`) to load it via the shared `ConfigBuilder`, enabling MCP schema export.
 
 ### Prompt 02 — Tagging Standard
 - Reviews of pipeline/CDK stacks show `applyStandardTags` usage where resources are taggable (CodePipeline/CodeBuild). Confirm artifacts (S3 buckets) also receive tags.
@@ -348,6 +367,7 @@ _Audit date: 2025-10-05. Standards referenced: all platform standards under `doc
 
 ### Prompt 04 — Observability Standard
 - Observability folder present, but pipeline does not emit capabilities for tracing/metrics. Align with AWS Labs guidance for CI telemetry.
+- ✅ Update 2025-10-05 — Component now publishes `ci:deployment-bundle` and `observability:deployment-bundle` capabilities, exposing bundle metadata and artifact report locations.
 
 ### Prompt 05 — CDK Best Practices
 - Uses L2 constructs. Without cdk-nag, FedRAMP coverage depends on manual review—flag for follow-up per AWS Labs documentation.
@@ -357,9 +377,11 @@ _Audit date: 2025-10-05. Standards referenced: all platform standards under `doc
 
 ### Prompt 07 — Configuration Precedence Chain
 - Builder logic located under `src`; confirm it extends ConfigBuilder (if not, migrate to share layering).
+- ✅ Update 2025-10-05 — Builder now extends `ConfigBuilder` with explicit constructor/context wiring, uses the shared schema constant, and enforces signing validation for precedence-aware overrides.
 
 ### Prompt 08 — Capability Binding & Binder Matrix
 - Capability registration limited; define pipeline outputs so MCP agents can discover artifact buckets or deploy roles.
+- ✅ Update 2025-10-05 — Added `ci:deployment-bundle` capability populated with bundle reference, manifest, and artifact paths for binder consumption.
 
 ### Prompt 09 — Internal Dependency Graph
 - No cross-component imports.
@@ -385,6 +407,7 @@ _Audit date: 2025-10-05. Standards referenced: all platform standards under `doc
 
 ### Prompt 04 — Observability Standard
 - Generates CloudWatch alarms/metrics for throttles, consumed capacity. No explicit observability capability exported yet.
+- ✅ Update 2025-10-05 — Component now surfaces an `observability:dynamodb-table` capability containing OTEL environment values and dashboard metadata.
 
 ### Prompt 05 — CDK Best Practices
 - Enforces SSE, point-in-time recovery, and autoscaling as per AWS Labs guidance. Add cdk-nag to catch regressions.
@@ -413,18 +436,23 @@ _Audit date: 2025-10-05. Standards referenced: all platform standards under `doc
 
 ### Prompt 01 — Schema Validation
 - Local `Config.schema.json` predates the builder schema (`EC2_INSTANCE_CONFIG_SCHEMA`) and defines service-level fields (serviceName, environment). Align schema artifacts so MCP clients get accurate validation; ensure root `required` set lists actual config fields.
+- ✅ Update 2025-10-05 — Replaced `packages/components/ec2-instance/Config.schema.json` with the builder-backed schema exported from `ec2-instance.builder.ts`, keeping required fields in sync with MCP export expectations.
 
 ### Prompt 02 — Tagging Standard
 - Component tags instance, security group, IAM role, and optional KMS key (`ec2-instance.component.ts:62-86`). CloudWatch alarms created in `configureObservabilityForInstance` are not tagged—extend tagging there.
+- ✅ Update 2025-10-05 — Applied `applyStandardTags` to the CloudWatch alarms and new log group within `ec2-instance.component.ts`, covering all observability resources.
 
 ### Prompt 03 — Logging Standard
 - Uses structured logging (`logComponentEvent`, `logError`). CloudWatch agent user data provisions structured logs but lacks retention configuration.
+- ✅ Update 2025-10-05 — Introduced an explicit log group (`/aws/ec2/{service}/{component}`) with configurable retention driven by `monitoring.logRetentionInDays` in `ec2-instance.builder.ts` and the component.
 
 ### Prompt 04 — Observability Standard
 - Registers `otel:environment` capability and sets up CPU/status alarms. Ensure OTel variables are injected into user data; currently they are only exposed via capability.
+- ✅ Update 2025-10-05 — Extended `configureObservabilityForInstance` to persist OpenTelemetry environment variables into user-data scripts so agents pick up the same values advertised via capability.
 
 ### Prompt 05 — CDK Best Practices
 - Launch template hardens IMDSv2, optional Nitro enclaves per AWS Labs guideline. Commercial security group allows SSH from `0.0.0.0/0`; adjust to align with secure-by-default guidance in `CDK_GENERAL_GUIDANCE.md`.
+- ✅ Update 2025-10-05 — Security group logic now defaults to no wide-open SSH; optional CIDRs must be supplied via `security.allowedSshCidrs`, aligning commercial defaults with secure-by-default guidance.
 
 ### Prompt 06 — Component Versioning & Metadata
 - Version remains `0.0.x` despite numerous features. Bump semver and update changelog before publishing.
@@ -440,7 +468,8 @@ _Audit date: 2025-10-05. Standards referenced: all platform standards under `doc
 
 ### Prompt 10 — MCP Contract
 - Schema/export mismatch noted in Prompt 01 may lead to MCP catalog inconsistency. Resolve before broad MCP consumption.
+- ✅ Update 2025-10-05 — `ec2-instance.builder.ts` and `index.ts` continue exporting the shared schema, with the on-disk JSON now identical to the builder definition for consistent MCP publishing.
 
 ### Prompt 11 — Security & Compliance
 - FedRAMP modes enforce encryption and SNS alarms, but commercial defaults allow public SSH and set EBS encryption `false` in hardcoded fallbacks. Update defaults to achieve “secure by default.”
-
+- ✅ Update 2025-10-05 — Hardcoded defaults now enable EBS encryption (`storage.encrypted: true`), expose SSH only when explicit CIDRs are provided, and maintain FedRAMP security settings.

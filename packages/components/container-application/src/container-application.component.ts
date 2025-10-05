@@ -37,6 +37,7 @@ export class ContainerApplicationComponent extends BaseComponent {
   private ecrRepository?: ecr.IRepository;
   private otelEnvironment: Record<string, string> = {};
   private managedServiceSecurityGroup = false;
+  private observabilityAlarms: cloudwatch.Alarm[] = [];
 
   constructor(scope: Construct, id: string, context: ComponentContext, spec: ComponentSpec) {
     super(scope, id, context, spec);
@@ -528,6 +529,7 @@ export class ContainerApplicationComponent extends BaseComponent {
       'component': this.getType(),
       'alarm-type': 'cpu-utilization'
     });
+    this.observabilityAlarms.push(cpuAlarm);
 
     const memoryAlarm = new cloudwatch.Alarm(this, 'MemoryHighAlarm', {
       alarmName: `${this.context.serviceName}-${this.spec.name}-memory-high`,
@@ -542,6 +544,7 @@ export class ContainerApplicationComponent extends BaseComponent {
       'component': this.getType(),
       'alarm-type': 'memory-utilization'
     });
+    this.observabilityAlarms.push(memoryAlarm);
   }
 
   private registerConstructs(): void {
@@ -596,6 +599,17 @@ export class ContainerApplicationComponent extends BaseComponent {
 
     if (Object.keys(this.otelEnvironment).length > 0) {
       this.registerCapability('otel:environment', this.otelEnvironment);
+      this.registerCapability('observability:container-application', {
+        otelEnvironment: this.otelEnvironment,
+        logGroupName: this.logGroup?.logGroupName,
+        alarms: this.observabilityAlarms.map(alarm => ({
+          alarmName: alarm.alarmName,
+          alarmArn: alarm.alarmArn,
+          metricName: alarm.metric.metricName,
+          namespace: alarm.metric.namespace
+        })),
+        monitoringEnabled: this.config.observability.enabled
+      });
     }
   }
 

@@ -381,7 +381,7 @@ describe('Ec2InstanceCompliance__Controls__Validation', () => {
             IpProtocol: 'tcp',
             FromPort: 22,
             ToPort: 22,
-            Description: 'SSH access from VPC only'
+            Description: 'SSH access from 172.31.0.0/16'
           })
         ])
       }));
@@ -405,20 +405,12 @@ describe('Ec2InstanceCompliance__Controls__Validation', () => {
      *   "human_reviewed_by": ""
      * }
      */
-    it('SecurityGroup__CommercialIngress__AllowsPublicSsh', () => {
+    it('SecurityGroup__CommercialIngress__DoesNotOpenSshByDefault', () => {
       context = createContext('commercial', stack);
       const template = synthesize();
 
       template.hasResourceProperties('AWS::EC2::SecurityGroup', Match.objectLike({
-        SecurityGroupIngress: Match.arrayWith([
-          Match.objectLike({
-            IpProtocol: 'tcp',
-            FromPort: 22,
-            ToPort: 22,
-            CidrIp: '0.0.0.0/0',
-            Description: 'SSH access'
-          })
-        ])
+        SecurityGroupIngress: Match.absent()
       }));
     });
   });

@@ -126,6 +126,28 @@ defaults:
       enableApiKey: false
       requireAuthorization: true
 
+  deployment-bundle-pipeline:
+    artifactoryHost: artifactory.company.com
+    ociRepoBundles: artifactory.company.com/bundles
+    ociRepoImages: artifactory.company.com/images
+    signing:
+      keyless: true
+      fulcioUrl: https://fulcio.sigstore.dev
+      rekorUrl: https://rekor.sigstore.dev
+    security:
+      failOnCritical: true
+      onlyFixed: false
+      addCpesIfNone: true
+    bundle:
+      includeCdkOutput: true
+      includeTestReports: true
+      includeCoverage: true
+      includePolicyReports: true
+    runner:
+      image: registry/org/platform-runner:1.5.0
+      nodeVersion: "20.12.2"
+      fipsMode: false
+
   auto-scaling-group:
     launchTemplate:
       instanceType: t3.micro

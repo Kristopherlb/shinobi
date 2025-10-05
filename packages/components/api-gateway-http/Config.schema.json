@@ -2,14 +2,15 @@
   "$schema": "http://json-schema.org/draft-07/schema#",
   "$id": "https://platform.shinobi.dev/schemas/components/api-gateway-http/Config.schema.json",
   "title": "API Gateway HTTP Configuration Schema",
-  "description": "Configuration schema for AWS API Gateway v2 HTTP API component with compliance, observability, and security features",
+  "description": "Configuration schema for AWS API Gateway HTTP and WebSocket APIs with platform compliance defaults",
   "type": "object",
+  "additionalProperties": false,
   "properties": {
     "apiName": {
       "type": "string",
-      "description": "Name of the API (will be auto-generated if not provided)",
-      "maxLength": 128,
-      "pattern": "^[a-zA-Z0-9-_]+$"
+      "description": "Name of the API (auto-generated when omitted)",
+      "pattern": "^[a-zA-Z0-9-_]+$",
+      "maxLength": 128
     },
     "description": {
       "type": "string",
@@ -26,30 +27,369 @@
       "description": "Protocol type for the API"
     },
     "cors": {
+      "$ref": "#/definitions/cors"
+    },
+    "customDomain": {
       "type": "object",
-      "description": "CORS configuration for the API",
+      "description": "Custom domain configuration",
+      "additionalProperties": false,
+      "properties": {
+        "domainName": {
+          "type": "string",
+          "format": "hostname",
+          "description": "Custom domain name for the API"
+        },
+        "certificateArn": {
+          "type": "string",
+          "pattern": "^arn:aws:acm:[a-z0-9-]+:[0-9]{12}:certificate/[a-z0-9-]+$",
+          "description": "ARN of the ACM certificate"
+        },
+        "autoGenerateCertificate": {
+          "type": "boolean",
+          "description": "Automatically generate an ACM certificate"
+        },
+        "hostedZoneId": {
+          "type": "string",
+          "pattern": "^Z[A-Z0-9]{16,32}$",
+          "description": "Route 53 hosted zone ID for DNS validation"
+        },
+        "hostedZoneName": {
+          "type": "string",
+          "description": "Hosted zone name when different from the domain"
+        },
+        "securityPolicy": {
+          "type": "string",
+          "enum": [
+            "TLS_1_2"
+          ],
+          "description": "Minimum TLS version enforced"
+        },
+        "endpointType": {
+          "type": "string",
+          "enum": [
+            "EDGE",
+            "REGIONAL"
+          ],
+          "description": "Endpoint type for the custom domain"
+        },
+        "basePath": {
+          "type": "string",
+          "description": "Base path mapping"
+        }
+      },
+      "required": [
+        "domainName"
+      ],
+      "anyOf": [
+        {
+          "required": [
+            "certificateArn"
+          ]
+        },
+        {
+          "required": [
+            "autoGenerateCertificate"
+          ]
+        }
+      ]
+    },
+    "auth": {
+      "type": "object",
+      "description": "Authentication and authorisation configuration",
+      "additionalProperties": false,
+      "properties": {
+        "jwt": {
+          "type": "array",
+          "items": {
+            "$ref": "#/definitions/jwtAuthorizer"
+          }
+        },
+        "lambda": {
+          "type": "array",
+          "items": {
+            "$ref": "#/definitions/lambdaAuthorizer"
+          }
+        }
+      }
+    },
+    "routes": {
+      "type": "array",
+      "description": "HTTP route definitions",
+      "items": {
+        "$ref": "#/definitions/httpRoute"
+      }
+    },
+    "throttling": {
+      "$ref": "#/definitions/throttling"
+    },
+    "defaultStage": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "stageName": {
+          "type": "string",
+          "description": "Stage name (defaults to $default)"
+        },
+        "autoDeploy": {
+          "type": "boolean",
+          "default": true,
+          "description": "Enable auto deployment"
+        },
+        "throttling": {
+          "$ref": "#/definitions/throttling"
+        }
+      }
+    },
+    "accessLogging": {
+      "type": "object",
+      "description": "Access logging configuration",
+      "additionalProperties": false,
+      "properties": {
+        "enabled": {
+          "type": "boolean",
+          "default": true,
+          "description": "Enable access logging"
+        },
+        "logGroupName": {
+          "type": "string",
+          "description": "Override log group name"
+        },
+        "retentionInDays": {
+          "type": "integer",
+          "minimum": 1,
+          "maximum": 3653,
+          "description": "Retention period for access logs"
+        },
+        "retainOnDelete": {
+          "type": "boolean",
+          "default": false,
+          "description": "Retain log group on stack deletion"
+        },
+        "format": {
+          "type": "string",
+          "description": "Custom access log format"
+        },
+        "includeExecutionData": {
+          "type": "boolean",
+          "default": false
+        },
+        "includeRequestResponseData": {
+          "type": "boolean",
+          "default": false
+        }
+      }
+    },
+    "monitoring": {
+      "$ref": "#/definitions/monitoring"
+    },
+    "observability": {
+      "$ref": "#/definitions/observability"
+    },
+    "apiSettings": {
+      "type": "object",
+      "description": "Additional API settings",
+      "additionalProperties": false,
+      "properties": {
+        "disableExecuteApiEndpoint": {
+          "type": "boolean",
+          "default": false
+        },
+        "apiKeySource": {
+          "type": "string",
+          "enum": [
+            "HEADER",
+            "AUTHORIZER"
+          ],
+          "default": "HEADER"
+        },
+        "binaryMediaTypes": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          }
+        },
+        "minimumCompressionSize": {
+          "type": "integer",
+          "minimum": 0,
+          "maximum": 1048576
+        }
+      }
+    },
+    "security": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "enableWaf": {
+          "type": "boolean",
+          "default": false
+        },
+        "enableApiKey": {
+          "type": "boolean",
+          "default": false
+        },
+        "requireAuthorization": {
+          "type": "boolean",
+          "default": true
+        },
+        "webAclArn": {
+          "type": "string",
+          "pattern": "^arn:aws[a-zA-Z0-9-]*:wafv2:[a-z0-9-]+:[0-9]{12}:regional/webacl/.+$"
+        }
+      }
+    },
+    "resourcePolicy": {
+      "$ref": "#/definitions/resourcePolicy"
+    },
+    "vpc": {
+      "type": "object",
+      "description": "VPC Link configuration for private APIs",
+      "additionalProperties": false,
+      "properties": {
+        "vpcLinkId": {
+          "type": "string",
+          "pattern": "^vpclink-[a-z0-9]{17}$"
+        },
+        "createVpcLink": {
+          "type": "boolean",
+          "default": false
+        },
+        "vpcLinkConfig": {
+          "type": "object",
+          "additionalProperties": false,
+          "properties": {
+            "name": {
+              "type": "string",
+              "description": "Name for the VPC link"
+            },
+            "targets": {
+              "type": "array",
+              "items": {
+                "type": "string",
+                "pattern": "^arn:aws:elasticloadbalancing:[a-z0-9-]+:[0-9]{12}:loadbalancer/(net|app)/.+$"
+              },
+              "minItems": 1
+            },
+            "securityGroupIds": {
+              "type": "array",
+              "items": {
+                "type": "string",
+                "pattern": "^sg-[a-f0-9]{8,17}$"
+              }
+            },
+            "subnetIds": {
+              "type": "array",
+              "items": {
+                "type": "string",
+                "pattern": "^subnet-[a-f0-9]{8,17}$"
+              },
+              "minItems": 1
+            }
+          },
+          "required": [
+            "name",
+            "targets"
+          ]
+        }
+      }
+    },
+    "websocket": {
+      "type": "object",
+      "description": "WebSocket route integration configuration",
+      "additionalProperties": false,
+      "properties": {
+        "connectRoute": {
+          "$ref": "#/definitions/websocketRoute"
+        },
+        "disconnectRoute": {
+          "$ref": "#/definitions/websocketRoute"
+        },
+        "defaultRoute": {
+          "$ref": "#/definitions/websocketRoute"
+        },
+        "customRoutes": {
+          "type": "array",
+          "items": {
+            "$ref": "#/definitions/websocketCustomRoute"
+          }
+        }
+      }
+    },
+    "tags": {
+      "type": "object",
+      "description": "Additional tags for API resources",
+      "additionalProperties": {
+        "type": "string"
+      }
+    }
+  },
+  "required": [
+    "protocolType"
+  ],
+  "allOf": [
+    {
+      "if": {
+        "properties": {
+          "customDomain": {
+            "properties": {
+              "autoGenerateCertificate": {
+                "const": true
+              }
+            },
+            "required": [
+              "autoGenerateCertificate"
+            ]
+          }
+        }
+      },
+      "then": {
+        "properties": {
+          "customDomain": {
+            "required": [
+              "hostedZoneId"
+            ],
+            "not": {
+              "required": [
+                "certificateArn"
+              ]
+            }
+          }
+        }
+      },
+      "else": {
+        "properties": {
+          "customDomain": {
+            "not": {
+              "anyOf": [
+                {
+                  "required": [
+                    "certificateArn",
+                    "autoGenerateCertificate"
+                  ]
+                }
+              ]
+            }
+          }
+        }
+      }
+    }
+  ],
+  "definitions": {
+    "cors": {
+      "type": "object",
+      "additionalProperties": false,
       "properties": {
         "allowOrigins": {
           "type": "array",
           "items": {
             "type": "string",
             "format": "uri"
-          },
-          "description": "List of allowed origins for CORS",
-          "minItems": 0
+          }
         },
         "allowHeaders": {
           "type": "array",
           "items": {
             "type": "string"
-          },
-          "description": "List of allowed headers for CORS",
-          "default": [
-            "Content-Type",
-            "Authorization",
-            "X-Requested-With",
-            "X-CSRF-Token"
-          ]
+          }
         },
         "allowMethods": {
           "type": "array",
@@ -64,453 +404,485 @@
               "HEAD",
               "OPTIONS"
             ]
-          },
-          "description": "List of allowed HTTP methods for CORS",
-          "default": [
-            "GET",
-            "POST",
-            "PUT",
-            "DELETE",
-            "OPTIONS"
-          ]
+          }
         },
         "allowCredentials": {
           "type": "boolean",
-          "default": false,
-          "description": "Whether to allow credentials in CORS requests"
+          "default": false
         },
         "exposeHeaders": {
           "type": "array",
           "items": {
             "type": "string"
-          },
-          "description": "List of headers to expose in CORS responses"
+          }
         },
         "maxAge": {
           "type": "integer",
           "minimum": 0,
-          "maximum": 86400,
-          "default": 86400,
-          "description": "Maximum age for preflight requests in seconds"
+          "maximum": 86400
         }
-      },
-      "additionalProperties": false
+      }
     },
-    "customDomain": {
+    "jwtAuthorizer": {
       "type": "object",
-      "description": "Custom domain configuration",
+      "additionalProperties": false,
       "properties": {
-        "domainName": {
+        "issuer": {
           "type": "string",
-          "format": "hostname",
-          "description": "Custom domain name for the API"
+          "format": "uri"
         },
-        "certificateArn": {
-          "type": "string",
-          "pattern": "^arn:aws:acm:",
-          "description": "ARN of the SSL certificate"
+        "audience": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          },
+          "minItems": 1
         },
-        "hostedZoneId": {
-          "type": "string",
-          "pattern": "^Z[A-Z0-9]{16,32}$",
-          "description": "Route 53 hosted zone ID for DNS management"
+        "identitySource": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          }
         },
-        "hostedZoneName": {
-          "type": "string",
-          "description": "Hosted zone name if different from the domain (e.g. example.com)"
-        },
-        "securityPolicy": {
-          "type": "string",
-          "enum": [
-            "TLS_1_2"
-          ],
-          "description": "Minimum TLS version enforced for the custom domain"
-        },
-        "basePath": {
-          "type": "string",
-          "pattern": "^[a-zA-Z0-9/_\\-]+$",
-          "description": "Base path mapping for the domain"
+        "jwtConfiguration": {
+          "type": "object",
+          "additionalProperties": false,
+          "properties": {
+            "audience": {
+              "type": "array",
+              "items": {
+                "type": "string"
+              }
+            },
+            "issuer": {
+              "type": "string",
+              "format": "uri"
+            }
+          }
         }
       },
       "required": [
-        "domainName"
-      ],
-      "additionalProperties": false
+        "issuer",
+        "audience"
+      ]
     },
-    "stage": {
+    "lambdaAuthorizer": {
       "type": "object",
-      "description": "API Gateway stage configuration",
+      "additionalProperties": false,
       "properties": {
-        "stageName": {
+        "name": {
           "type": "string",
-          "pattern": "^[a-zA-Z0-9_-]+$",
-          "default": "prod",
-          "description": "Name of the API Gateway stage"
+          "minLength": 1
         },
-        "autoDeploy": {
-          "type": "boolean",
-          "default": true,
-          "description": "Whether to auto-deploy changes to the stage"
+        "functionArn": {
+          "type": "string",
+          "pattern": "^arn:aws:lambda:[a-z0-9-]+:[0-9]{12}:function:[a-zA-Z0-9-_]+$"
         },
-        "throttling": {
-          "type": "object",
-          "description": "Throttling configuration for the stage",
-          "properties": {
-            "rateLimit": {
-              "type": "integer",
-              "minimum": 1,
-              "maximum": 10000,
-              "description": "Rate limit (requests per second)"
-            },
-            "burstLimit": {
-              "type": "integer",
-              "minimum": 1,
-              "maximum": 20000,
-              "description": "Burst limit (requests per second)"
-            }
-          },
-          "additionalProperties": false
+        "type": {
+          "type": "string",
+          "enum": [
+            "REQUEST",
+            "TOKEN"
+          ],
+          "default": "REQUEST"
+        },
+        "identitySource": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          }
+        },
+        "authorizerResultTtlInSeconds": {
+          "type": "integer",
+          "minimum": 0,
+          "maximum": 3600
+        },
+        "enableSimpleResponses": {
+          "type": "boolean"
         }
       },
-      "additionalProperties": false
+      "required": [
+        "name",
+        "functionArn"
+      ]
+    },
+    "routeIntegration": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "type": {
+          "type": "string",
+          "enum": [
+            "HTTP_PROXY",
+            "AWS_PROXY",
+            "MOCK"
+          ]
+        },
+        "uri": {
+          "type": "string",
+          "format": "uri"
+        },
+        "lambdaFunctionArn": {
+          "type": "string",
+          "pattern": "^arn:aws:lambda:[a-z0-9-]+:[0-9]{12}:function:[a-zA-Z0-9-_]+$"
+        },
+        "httpMethod": {
+          "type": "string",
+          "enum": [
+            "GET",
+            "POST",
+            "PUT",
+            "DELETE",
+            "PATCH",
+            "HEAD",
+            "OPTIONS"
+          ]
+        },
+        "connectionType": {
+          "type": "string",
+          "enum": [
+            "INTERNET",
+            "VPC_LINK"
+          ]
+        },
+        "vpcLinkId": {
+          "type": "string",
+          "pattern": "^vpclink-[a-z0-9]{17}$"
+        }
+      },
+      "required": [
+        "type"
+      ],
+      "allOf": [
+        {
+          "if": {
+            "properties": {
+              "type": {
+                "const": "HTTP_PROXY"
+              }
+            }
+          },
+          "then": {
+            "required": [
+              "uri",
+              "httpMethod"
+            ]
+          }
+        },
+        {
+          "if": {
+            "properties": {
+              "type": {
+                "const": "AWS_PROXY"
+              }
+            }
+          },
+          "then": {
+            "required": [
+              "lambdaFunctionArn"
+            ]
+          }
+        }
+      ]
+    },
+    "routeAuthorization": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "authorizationType": {
+          "type": "string",
+          "enum": [
+            "NONE",
+            "AWS_IAM",
+            "JWT"
+          ],
+          "default": "NONE"
+        },
+        "jwtConfiguration": {
+          "type": "object",
+          "additionalProperties": false,
+          "properties": {
+            "issuer": {
+              "type": "string",
+              "format": "uri"
+            },
+            "audience": {
+              "type": "array",
+              "items": {
+                "type": "string"
+              }
+            }
+          }
+        }
+      },
+      "allOf": [
+        {
+          "if": {
+            "properties": {
+              "authorizationType": {
+                "const": "JWT"
+              }
+            }
+          },
+          "then": {
+            "required": [
+              "jwtConfiguration"
+            ]
+          }
+        }
+      ]
+    },
+    "httpRoute": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "routeKey": {
+          "type": "string",
+          "pattern": "^(\\$default|([A-Z]+\\s+/.*))$",
+          "description": "Route key in the form METHOD /path"
+        },
+        "integration": {
+          "$ref": "#/definitions/routeIntegration"
+        },
+        "authorization": {
+          "$ref": "#/definitions/routeAuthorization"
+        }
+      },
+      "required": [
+        "routeKey",
+        "integration"
+      ]
+    },
+    "throttling": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "rateLimit": {
+          "type": "integer",
+          "minimum": 1,
+          "maximum": 10000
+        },
+        "burstLimit": {
+          "type": "integer",
+          "minimum": 1,
+          "maximum": 20000
+        }
+      }
     },
     "monitoring": {
       "type": "object",
-      "description": "Monitoring and observability configuration",
+      "additionalProperties": false,
       "properties": {
         "detailedMetrics": {
           "type": "boolean",
-          "default": true,
-          "description": "Enable detailed CloudWatch metrics"
+          "default": true
         },
         "tracingEnabled": {
           "type": "boolean",
-          "default": true,
-          "description": "Enable X-Ray tracing"
+          "default": true
         },
         "customMetrics": {
           "type": "array",
-          "description": "Custom CloudWatch metrics configuration",
           "items": {
             "type": "object",
+            "additionalProperties": false,
             "properties": {
               "name": {
-                "type": "string",
-                "description": "Metric name"
+                "type": "string"
               },
               "namespace": {
                 "type": "string",
-                "description": "Metric namespace",
                 "default": "Custom/API-Gateway"
               },
               "dimensions": {
                 "type": "object",
-                "description": "Metric dimensions",
                 "additionalProperties": {
                   "type": "string"
                 }
               },
               "statistic": {
                 "type": "string",
-                "enum": ["Sum", "Average", "Maximum", "Minimum", "SampleCount"],
-                "default": "Sum",
-                "description": "Statistic type for the metric"
+                "enum": [
+                  "Sum",
+                  "Average",
+                  "Maximum",
+                  "Minimum",
+                  "SampleCount"
+                ],
+                "default": "Sum"
               },
               "period": {
                 "type": "integer",
                 "minimum": 60,
                 "maximum": 86400,
-                "default": 300,
-                "description": "Period in seconds"
+                "default": 300
               },
               "unit": {
-                "type": "string",
-                "description": "Unit for the metric"
+                "type": "string"
               }
             },
-            "required": ["name"],
-            "additionalProperties": false
+            "required": [
+              "name"
+            ]
           }
         },
         "alarms": {
           "type": "object",
-          "description": "CloudWatch alarms configuration",
+          "additionalProperties": false,
           "properties": {
             "errorRate4xx": {
               "type": "number",
               "minimum": 0,
-              "maximum": 100,
-              "description": "4xx error rate threshold (%)"
+              "maximum": 100
             },
             "errorRate5xx": {
               "type": "number",
               "minimum": 0,
-              "maximum": 100,
-              "description": "5xx error rate threshold (%)"
+              "maximum": 100
             },
             "highLatency": {
               "type": "number",
-              "minimum": 100,
-              "description": "High latency threshold (milliseconds)"
+              "minimum": 100
             },
             "lowThroughput": {
               "type": "number",
-              "minimum": 1,
-              "description": "Low throughput threshold (requests per minute)"
+              "minimum": 1
             }
-          },
-          "additionalProperties": false
+          }
         }
-      },
-      "additionalProperties": false
-    },
-    "accessLogging": {
-      "type": "object",
-      "description": "Access logging configuration",
-      "properties": {
-        "enabled": {
-          "type": "boolean",
-          "default": true,
-          "description": "Enable access logging"
-        },
-        "retentionInDays": {
-          "type": "integer",
-          "minimum": 1,
-          "maximum": 3653,
-          "description": "Log retention period in days"
-        },
-        "includeExecutionData": {
-          "type": "boolean",
-          "default": false,
-          "description": "Include execution data in logs"
-        },
-        "includeRequestResponseData": {
-          "type": "boolean",
-          "default": false,
-          "description": "Include request/response data in logs"
-        },
-        "format": {
-          "type": "string",
-          "description": "Custom log format string"
-        }
-      },
-      "additionalProperties": false
-    },
-    "security": {
-      "type": "object",
-      "description": "Security configuration",
-      "properties": {
-        "enableWaf": {
-          "type": "boolean",
-          "default": false,
-          "description": "Enable AWS WAF protection"
-        },
-        "enableApiKey": {
-          "type": "boolean",
-          "default": false,
-          "description": "Enable API key authentication"
-        },
-        "requireAuthorization": {
-          "type": "boolean",
-          "default": true,
-          "description": "Require authorization for API access"
-        },
-        "webAclArn": {
-          "type": "string",
-          "pattern": "^arn:aws[a-zA-Z0-9-]*:wafv2:[a-z0-9-]+:[0-9]{12}:regional/webacl/.+$",
-          "description": "WAFv2 Web ACL ARN to associate with the API when enableWaf is true"
-        }
-      },
-      "additionalProperties": false
-    },
-    "resourcePolicy": {
-      "type": "object",
-      "description": "Resource policy for API access control",
-      "properties": {
-        "document": {
-          "type": "object",
-          "description": "Custom resource policy document"
-        },
-        "allowFromVpcs": {
-          "type": "array",
-          "items": {
-            "type": "string",
-            "pattern": "^vpc-[a-z0-9]{8,17}$"
-          },
-          "description": "Allow access from specific VPCs"
-        },
-        "allowFromIpRanges": {
-          "type": "array",
-          "items": {
-            "type": "string",
-            "pattern": "^([0-9]{1,3}\\.){3}[0-9]{1,3}(/[0-9]{1,2})?$"
-          },
-          "description": "Allow access from specific IP ranges"
-        },
-        "denyFromIpRanges": {
-          "type": "array",
-          "items": {
-            "type": "string",
-            "pattern": "^([0-9]{1,3}\\.){3}[0-9]{1,3}(/[0-9]{1,2})?$"
-          },
-          "description": "Deny access from specific IP ranges"
-        },
-        "allowFromAwsAccounts": {
-          "type": "array",
-          "items": {
-            "type": "string",
-            "pattern": "^[0-9]{12}$"
-          },
-          "description": "Allow access from specific AWS accounts"
-        },
-        "allowFromRegions": {
-          "type": "array",
-          "items": {
-            "type": "string",
-            "pattern": "^[a-z0-9-]+$"
-          },
-          "description": "Allow access from specific AWS regions"
-        },
-        "denyFromRegions": {
-          "type": "array",
-          "items": {
-            "type": "string",
-            "pattern": "^[a-z0-9-]+$"
-          },
-          "description": "Deny access from specific AWS regions"
-        }
-      },
-      "additionalProperties": false
-    },
-    "throttling": {
-      "type": "object",
-      "description": "API throttling configuration",
-      "properties": {
-        "rateLimit": {
-          "type": "integer",
-          "minimum": 1,
-          "maximum": 10000,
-          "description": "Rate limit (requests per second)"
-        },
-        "burstLimit": {
-          "type": "integer",
-          "minimum": 1,
-          "maximum": 20000,
-          "description": "Burst limit (requests per second)"
-        }
-      },
-      "additionalProperties": false
+      }
     },
     "observability": {
       "type": "object",
-      "description": "OpenTelemetry observability configuration",
+      "additionalProperties": false,
       "properties": {
         "tracingEnabled": {
           "type": "boolean",
-          "default": true,
-          "description": "Enable OpenTelemetry tracing"
+          "default": true
         },
         "otlpEndpoint": {
           "type": "string",
-          "format": "uri",
-          "description": "OTLP endpoint for traces and metrics"
+          "format": "uri"
         },
         "serviceName": {
           "type": "string",
-          "pattern": "^[a-zA-Z0-9_-]+$",
-          "description": "Service name for OpenTelemetry"
+          "pattern": "^[a-zA-Z0-9_-]+$"
         },
         "resourceAttributes": {
           "type": "object",
-          "description": "Additional resource attributes for OpenTelemetry",
           "additionalProperties": {
             "type": "string"
           }
         },
         "metricsEnabled": {
           "type": "boolean",
-          "default": true,
-          "description": "Enable OpenTelemetry metrics export"
+          "default": true
         },
         "logsEnabled": {
           "type": "boolean",
-          "default": true,
-          "description": "Enable OpenTelemetry logs export"
+          "default": true
+        }
+      }
+    },
+    "resourcePolicy": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "document": {
+          "type": "object"
+        },
+        "allowFromVpcs": {
+          "type": "array",
+          "items": {
+            "type": "string",
+            "pattern": "^vpc-[a-f0-9]{8,17}$"
+          }
+        },
+        "allowFromIpRanges": {
+          "type": "array",
+          "items": {
+            "type": "string",
+            "pattern": "^([0-9]{1,3}\\.){3}[0-9]{1,3}(/[0-9]{1,2})?$"
+          }
+        },
+        "denyFromIpRanges": {
+          "type": "array",
+          "items": {
+            "type": "string",
+            "pattern": "^([0-9]{1,3}\\.){3}[0-9]{1,3}(/[0-9]{1,2})?$"
+          }
+        },
+        "allowFromAwsAccounts": {
+          "type": "array",
+          "items": {
+            "type": "string",
+            "pattern": "^[0-9]{12}$"
+          }
+        },
+        "allowFromRegions": {
+          "type": "array",
+          "items": {
+            "type": "string",
+            "pattern": "^[a-z0-9-]+$"
+          }
+        },
+        "denyFromRegions": {
+          "type": "array",
+          "items": {
+            "type": "string",
+            "pattern": "^[a-z0-9-]+$"
+          }
+        }
+      }
+    },
+    "websocketRoute": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "integrationType": {
+          "type": "string",
+          "enum": [
+            "LAMBDA",
+            "HTTP_PROXY",
+            "AWS_PROXY"
+          ]
+        },
+        "target": {
+          "type": "string",
+          "minLength": 1
         }
       },
-      "additionalProperties": false
+      "required": [
+        "integrationType",
+        "target"
+      ]
     },
-    "tags": {
+    "websocketCustomRoute": {
       "type": "object",
-      "description": "Additional tags for the API",
-      "additionalProperties": {
-        "type": "string"
-      }
+      "additionalProperties": false,
+      "properties": {
+        "routeKey": {
+          "type": "string",
+          "pattern": "^[^\\s]+$"
+        },
+        "integrationType": {
+          "type": "string",
+          "enum": [
+            "LAMBDA",
+            "HTTP_PROXY",
+            "AWS_PROXY"
+          ]
+        },
+        "target": {
+          "type": "string",
+          "minLength": 1
+        }
+      },
+      "required": [
+        "routeKey",
+        "integrationType",
+        "target"
+      ]
     }
-  },
-  "additionalProperties": false,
-  "required": [],
-  "examples": [
-    {
-      "description": "Basic HTTP API configuration",
-      "apiName": "user-api",
-      "description": "User management HTTP API",
-      "cors": {
-        "allowOrigins": [
-          "https://myapp.com"
-        ],
-        "allowMethods": [
-          "GET",
-          "POST",
-          "PUT",
-          "DELETE"
-        ],
-        "allowHeaders": [
-          "Content-Type",
-          "Authorization"
-        ]
-      },
-      "monitoring": {
-        "detailedMetrics": true,
-        "tracingEnabled": true,
-        "customMetrics": [
-          {
-            "name": "RequestCount",
-            "namespace": "Custom/API-Gateway",
-            "statistic": "Sum",
-            "period": 300,
-            "unit": "Count"
-          }
-        ]
-      },
-      "resourcePolicy": {
-        "allowFromIpRanges": ["203.0.113.0/24"],
-        "denyFromIpRanges": ["198.51.100.0/24"]
-      }
-    },
-    {
-      "description": "FedRAMP Moderate configuration",
-      "apiName": "secure-api",
-      "description": "Secure API for FedRAMP Moderate compliance",
-      "cors": {
-        "allowOrigins": [
-          "https://secure.myapp.com"
-        ],
-        "allowCredentials": false
-      },
-      "security": {
-        "enableWaf": true,
-        "enableApiKey": true,
-        "requireAuthorization": true
-      },
-      "accessLogging": {
-        "enabled": true,
-        "retentionInDays": 90
-      },
-      "observability": {
-        "tracingEnabled": true,
-        "serviceName": "secure-api-gateway"
-      }
-    }
-  ]
+  }
 }

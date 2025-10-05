@@ -75,6 +75,8 @@ export interface Ec2InstanceConfig {
     detailed?: boolean;
     /** CloudWatch agent config */
     cloudWatchAgent?: boolean;
+    /** Log retention in days for CloudWatch agent log group */
+    logRetentionInDays?: number;
   };
 
   /** Security configuration */
@@ -85,6 +87,8 @@ export interface Ec2InstanceConfig {
     httpTokens?: 'optional' | 'required';
     /** Enable Nitro Enclaves */
     nitroEnclaves?: boolean;
+    /** CIDR blocks allowed for SSH access */
+    allowedSshCidrs?: string[];
   };
 }
 
@@ -293,17 +297,19 @@ export class Ec2InstanceComponentConfigBuilder extends ConfigBuilder<Ec2Instance
       storage: {
         rootVolumeSize: 20,
         rootVolumeType: 'gp3',
-        encrypted: false,
+        encrypted: true,
         deleteOnTermination: true
       },
       monitoring: {
         detailed: false,
-        cloudWatchAgent: false
+        cloudWatchAgent: false,
+        logRetentionInDays: 90
       },
       security: {
         requireImdsv2: false,
         httpTokens: 'optional',
-        nitroEnclaves: false
+        nitroEnclaves: false,
+        allowedSshCidrs: []
       }
     };
   }

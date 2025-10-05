@@ -240,8 +240,8 @@ export class AutoScalingGroupComponentConfigBuilder extends ConfigBuilder<AutoSc
         vpcId: vpc.vpcId,
         subnetIds: vpc.subnetIds ?? [],
         securityGroupIds: vpc.securityGroupIds ?? [],
-        subnetType: vpc.subnetType ?? 'PUBLIC',
-        allowAllOutbound: vpc.allowAllOutbound ?? true
+        subnetType: vpc.subnetType ?? 'PRIVATE_WITH_EGRESS',
+        allowAllOutbound: vpc.allowAllOutbound ?? false
       },
       security: {
         managedPolicies: security.managedPolicies ?? [],
@@ -261,6 +261,8 @@ export class AutoScalingGroupComponentConfigBuilder extends ConfigBuilder<AutoSc
       tags: config.tags ?? {}
     };
 
+    this.validateAutoScalingBounds(normalised);
+
     return normalised;
   }
 
@@ -276,6 +278,18 @@ export class AutoScalingGroupComponentConfigBuilder extends ConfigBuilder<AutoSc
       comparisonOperator: alarm?.comparisonOperator ?? defaults.comparisonOperator,
       treatMissingData: alarm?.treatMissingData ?? defaults.treatMissingData
     };
+  }
+
+  private validateAutoScalingBounds(config: AutoScalingGroupConfig): void {
+    const { minCapacity, maxCapacity, desiredCapacity } = config.autoScaling;
+
+    if (minCapacity > maxCapacity) {
+      throw new Error('autoScaling.minCapacity cannot be greater than autoScaling.maxCapacity');
+    }
+
+    if (desiredCapacity < minCapacity || desiredCapacity > maxCapacity) {
+      throw new Error('autoScaling.desiredCapacity must be between minCapacity and maxCapacity');
+    }
   }
 }
 

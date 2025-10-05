@@ -142,6 +142,29 @@ defaults:
       enableApiKey: true
       requireAuthorization: true
 
+  deployment-bundle-pipeline:
+    artifactoryHost: artifactory.gov.company.com
+    ociRepoBundles: artifactory.gov.company.com/bundles
+    ociRepoImages: artifactory.gov.company.com/images
+    signing:
+      keyless: false
+      kmsKeyId: kms://aws-kms/alias/platform-cosign-fedramp-moderate
+      fulcioUrl: https://fulcio.sigstore.dev
+      rekorUrl: https://rekor.sigstore.dev
+    security:
+      failOnCritical: true
+      onlyFixed: true
+      addCpesIfNone: true
+    bundle:
+      includeCdkOutput: true
+      includeTestReports: true
+      includeCoverage: true
+      includePolicyReports: true
+    runner:
+      image: registry/org/platform-runner:1.5.0
+      nodeVersion: "20.12.2"
+      fipsMode: true
+
   auto-scaling-group:
     launchTemplate:
       instanceType: t3.medium

@@ -163,6 +163,13 @@
           "type": "boolean",
           "description": "Enable CloudWatch agent installation",
           "default": false
+        },
+        "logRetentionInDays": {
+          "type": "integer",
+          "description": "Retention period in days for CloudWatch agent logs",
+          "minimum": 1,
+          "maximum": 3653,
+          "default": 90
         }
       }
     },
@@ -189,6 +196,14 @@
           "type": "boolean",
           "description": "Enable AWS Nitro Enclaves",
           "default": false
+        },
+        "allowedSshCidrs": {
+          "type": "array",
+          "description": "CIDR blocks allowed for SSH ingress",
+          "items": {
+            "type": "string",
+            "pattern": "^([0-9]{1,3}\\.){3}[0-9]{1,3}(/[0-9]{1,2})$"
+          }
         }
       }
     }

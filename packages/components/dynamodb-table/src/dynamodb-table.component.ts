@@ -27,6 +27,7 @@ export class DynamoDbTableComponent extends Component {
   private config?: DynamoDbTableConfig;
   private logger: any;
   private observabilityEnv?: Record<string, string>;
+  private observabilityDashboardName?: string;
 
   constructor(scope: Construct, id: string, context: ComponentContext, spec: ComponentSpec) {
     super(scope, id, context, spec);
@@ -85,6 +86,14 @@ export class DynamoDbTableComponent extends Component {
       const streamCapability = this.buildStreamCapability();
       if (streamCapability) {
         this.registerCapability('dynamodb:stream', streamCapability);
+      }
+
+      if (this.observabilityEnv) {
+        this.registerCapability('observability:dynamodb-table', {
+          otelEnvironment: this.observabilityEnv,
+          dashboardName: this.observabilityDashboardName,
+          tableName: this.table!.tableName
+        });
       }
 
       this.logger.info('DynamoDB table synthesis completed', {
@@ -510,8 +519,10 @@ export class DynamoDbTableComponent extends Component {
       }
     });
 
+    this.observabilityDashboardName = `${this.context.serviceName}-${this.spec.name}-dynamodb`;
+
     const dashboard = new cloudwatch.Dashboard(this, 'DynamoDbObservabilityDashboard', {
-      dashboardName: `${this.context.serviceName}-${this.spec.name}-dynamodb`
+      dashboardName: this.observabilityDashboardName
     });
 
     this.applyStandardTags(dashboard, {
@@ -550,7 +561,7 @@ export class DynamoDbTableComponent extends Component {
     );
 
     this.logComponentEvent('observability_configured', 'Configured observability dashboard for DynamoDB table', {
-      dashboardName: `${this.context.serviceName}-${this.spec.name}-dynamodb`,
+      dashboardName: this.observabilityDashboardName,
       monitoringEnabled: true
     });
   }

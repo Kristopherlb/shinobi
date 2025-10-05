@@ -26,6 +26,13 @@ interface ApiGatewayRestCapability {
   authorizerArn?: string;
 }
 
+interface ApiGatewayRestObservabilityCapability {
+  apiId: string;
+  stageName: string;
+  environmentVariables: Record<string, string>;
+  endpointUrl: string;
+}
+
 export class ApiGatewayRestComponent extends BaseComponent {
   private api?: apigateway.RestApi;
   private stage?: apigateway.Stage;
@@ -34,6 +41,7 @@ export class ApiGatewayRestComponent extends BaseComponent {
   private usagePlan?: apigateway.UsagePlan;
   private config!: ApiGatewayRestConfig;
   private resolvedStageName!: string;
+  private observabilityEnvironment: Record<string, string> | undefined;
 
   constructor(
     scope: Construct,
@@ -79,6 +87,10 @@ export class ApiGatewayRestComponent extends BaseComponent {
     }
 
     this.registerCapability('api:rest', this.getApiCapability());
+    this.registerCapability(
+      'observability:api-gateway-rest',
+      this.getObservabilityCapability(),
+    );
   }
 
   public override getCapabilities(): ComponentCapabilities {
@@ -338,6 +350,8 @@ export class ApiGatewayRestComponent extends BaseComponent {
       ...cfnStage.variables,
       ...otelEnv,
     };
+
+    this.observabilityEnvironment = otelEnv;
   }
 
   private configureWafAssociation(): void {
@@ -362,46 +376,50 @@ export class ApiGatewayRestComponent extends BaseComponent {
 
     if (thresholds.errorRate4xxPercent !== undefined) {
       const metric4xx = this.api.metricClientError({ period: Duration.minutes(5) });
-      new cw.Alarm(this, 'FourXXAlarm', {
+      const alarm = new cw.Alarm(this, 'FourXXAlarm', {
         metric: metric4xx,
         threshold: thresholds.errorRate4xxPercent,
         evaluationPeriods: 1,
         comparisonOperator: cw.ComparisonOperator.GREATER_THAN_THRESHOLD,
         alarmDescription: '4XX error rate exceeded threshold',
       });
+      this.applyStandardTags(alarm);
     }
 
     if (thresholds.errorRate5xxPercent !== undefined) {
       const metric5xx = this.api.metricServerError({ period: Duration.minutes(5) });
-      new cw.Alarm(this, 'FiveXXAlarm', {
+      const alarm = new cw.Alarm(this, 'FiveXXAlarm', {
         metric: metric5xx,
         threshold: thresholds.errorRate5xxPercent,
         evaluationPeriods: 1,
         comparisonOperator: cw.ComparisonOperator.GREATER_THAN_THRESHOLD,
         alarmDescription: '5XX error rate exceeded threshold',
       });
+      this.applyStandardTags(alarm);
     }
 
     if (thresholds.highLatencyMs !== undefined) {
       const latencyMetric = this.api.metricLatency({ period: Duration.minutes(5) });
-      new cw.Alarm(this, 'LatencyAlarm', {
+      const alarm = new cw.Alarm(this, 'LatencyAlarm', {
         metric: latencyMetric,
         threshold: thresholds.highLatencyMs,
         evaluationPeriods: 1,
         comparisonOperator: cw.ComparisonOperator.GREATER_THAN_THRESHOLD,
         alarmDescription: 'Latency exceeded threshold',
       });
+      this.applyStandardTags(alarm);
     }
 
     if (thresholds.lowThroughput !== undefined) {
       const countMetric = this.api.metricCount({ period: Duration.minutes(5) });
-      new cw.Alarm(this, 'ThroughputAlarm', {
+      const alarm = new cw.Alarm(this, 'ThroughputAlarm', {
         metric: countMetric,
         threshold: thresholds.lowThroughput,
         evaluationPeriods: 1,
         comparisonOperator: cw.ComparisonOperator.LESS_THAN_THRESHOLD,
         alarmDescription: 'API throughput dropped below threshold',
       });
+      this.applyStandardTags(alarm);
     }
   }
 
@@ -418,6 +436,21 @@ export class ApiGatewayRestComponent extends BaseComponent {
       authorizerArn: this.authorizer?.authorizerArn,
     };
   }
+
+  private getObservabilityCapability(): ApiGatewayRestObservabilityCapability {
+    if (!this.api) {
+      throw new Error('Observability capability requested before API construct was created.');
+    }
+
+    return {
+      apiId: this.api.restApiId,
+      stageName: this.resolvedStageName,
+      endpointUrl: this.api.url,
+      environmentVariables: this.observabilityEnvironment ?? {},
+    };
+  }
+
+  private observabilityEnvironment: Record<string, string> | undefined;
 
   private resolveStageName(): string {
     return this.config.deploymentStage ?? this.context.environment ?? 'prod';

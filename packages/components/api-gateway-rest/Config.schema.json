@@ -112,7 +112,10 @@
                 "type": "string"
               }
             }
-          }
+          },
+          "required": [
+            "userPoolArn"
+          ]
         },
         "apiKey": {
           "type": "object",
@@ -616,6 +619,32 @@
       },
       "waf": {
         "webAclArn": "arn:aws:wafv2:us-gov-east-1:123456789012:regional/webacl/fedramp-webacl/abc123"
+      }
+    }
+  ],
+  "required": [
+    "deploymentStage"
+  ],
+  "allOf": [
+    {
+      "if": {
+        "properties": {
+          "domain": {
+            "required": [
+              "domainName"
+            ]
+          }
+        }
+      },
+      "then": {
+        "properties": {
+          "domain": {
+            "required": [
+              "domainName",
+              "certificateArn"
+            ]
+          }
+        }
       }
     }
   ]

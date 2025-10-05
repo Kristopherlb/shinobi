@@ -6,7 +6,7 @@ const __dirname = path.dirname(url.fileURLToPath(import.meta.url));
 
 export default {
   ...baseConfig,
-  displayName: '@platform/components-deployment-bundle-pipeline',
+  displayName: '@shinobi/cloudfront-distribution',
   rootDir: path.resolve(__dirname, '../../..'),
   roots: [__dirname],
   collectCoverageFrom: ['src/**/*.{ts,tsx}', '!src/**/*.d.ts'],

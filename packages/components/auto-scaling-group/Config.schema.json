@@ -110,7 +110,12 @@
           "minimum": 0,
           "default": 2
         }
-      }
+      },
+      "required": [
+        "minCapacity",
+        "maxCapacity",
+        "desiredCapacity"
+      ]
     },
     "storage": {
       "type": "object",
@@ -155,7 +160,13 @@
             }
           }
         }
-      }
+      },
+      "required": [
+        "rootVolumeSize",
+        "rootVolumeType",
+        "encrypted",
+        "kms"
+      ]
     },
     "healthCheck": {
       "type": "object",
@@ -178,7 +189,11 @@
           "maximum": 7200,
           "default": 300
         }
-      }
+      },
+      "required": [
+        "type",
+        "gracePeriod"
+      ]
     },
     "terminationPolicies": {
       "type": "array",
@@ -266,7 +281,11 @@
           "description": "Permit all outbound traffic from instance ENIs.",
           "default": false
         }
-      }
+      },
+      "required": [
+        "subnetType",
+        "allowAllOutbound"
+      ]
     },
     "security": {
       "type": "object",
@@ -291,7 +310,12 @@
           "description": "Add STIG compliance tags required by FedRAMP accreditation.",
           "default": false
         }
-      }
+      },
+      "required": [
+        "managedPolicies",
+        "attachLogDeliveryPolicy",
+        "stigComplianceTag"
+      ]
     },
     "monitoring": {
       "type": "object",
@@ -317,7 +341,11 @@
             }
           }
         }
-      }
+      },
+      "required": [
+        "enabled",
+        "alarms"
+      ]
     },
     "tags": {
       "type": "object",
@@ -333,7 +361,6 @@
     "autoScaling",
     "storage",
     "healthCheck",
-    "terminationPolicies",
     "vpc",
     "security",
     "monitoring"

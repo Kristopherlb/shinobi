@@ -25,6 +25,7 @@ export class CognitoUserPoolComponent extends BaseComponent {
   private userPoolDomain?: cognito.UserPoolDomain;
   private alarms: cloudwatch.Alarm[] = [];
   private config!: CognitoUserPoolConfig;
+  private observabilityCapability?: Record<string, any>;
 
   constructor(scope: Construct, id: string, context: ComponentContext, spec: ComponentSpec) {
     super(scope, id, context, spec);
@@ -51,6 +52,10 @@ export class CognitoUserPoolComponent extends BaseComponent {
 
     this.registerCapability('auth:user-pool', this.buildUserPoolCapability());
     this.registerCapability('auth:identity-provider', this.buildIdentityProviderCapability());
+    this.registerCapability('observability:cognito-user-pool', this.observabilityCapability ?? {
+      userPoolId: this.userPool!.userPoolId,
+      monitoringEnabled: false
+    });
 
     this.logComponentEvent('synthesis_complete', 'Cognito User Pool synthesis completed', {
       userPoolId: this.userPool!.userPoolId,
@@ -167,6 +172,11 @@ export class CognitoUserPoolComponent extends BaseComponent {
 
   private configureMonitoring(): void {
     if (!this.config.monitoring.enabled || this.config.advancedSecurityMode === 'off') {
+      this.observabilityCapability = {
+        userPoolId: this.userPool!.userPoolId,
+        monitoringEnabled: false,
+        advancedSecurityMode: this.config.advancedSecurityMode
+      };
       return;
     }
 
@@ -227,6 +237,19 @@ export class CognitoUserPoolComponent extends BaseComponent {
         tag: 'risk-high'
       }, userPoolId);
     }
+
+    this.observabilityCapability = {
+      userPoolId,
+      monitoringEnabled: true,
+      advancedSecurityMode: this.config.advancedSecurityMode,
+      alarms: this.alarms.map(alarm => ({
+        alarmName: alarm.alarmName,
+        alarmArn: alarm.alarmArn,
+        evaluationPeriods: alarm.evaluationPeriods,
+        threshold: alarm.threshold,
+        comparisonOperator: alarm.comparisonOperator
+      }))
+    };
   }
 
   private createAlarm(

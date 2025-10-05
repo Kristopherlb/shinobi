@@ -4,8 +4,7 @@
  * Creates immutable, signed deployment bundles with comprehensive compliance artifacts
  */
 
-import { BaseComponent } from '@platform/core';
-import { IComponent } from '@platform/core';
+import { BaseComponent, IComponent } from '@shinobi/core';
 import { DeploymentBundlePipelineBuilder } from './deployment-bundle-pipeline.builder.js';
 import { DeploymentBundleConfig, BundleArtifacts, BundleManifest, SecurityScanResult, ComplianceReport } from './types.js';
 
@@ -13,10 +12,21 @@ export class DeploymentBundlePipelineComponent extends BaseComponent implements 
   private config: DeploymentBundleConfig;
   private artifacts: BundleArtifacts | null = null;
   private manifest: BundleManifest | null = null;
+  private readonly logger = this.getLogger();
 
   constructor(scope: any, id: string, context: any, spec: any) {
     super(scope, id, context, spec);
     this.config = this.buildConfig();
+    this.artifacts = {
+      cdkOutput: 'cdk.out',
+      planJson: 'plan.json',
+      testReports: 'artifacts/tests',
+      coverageReports: 'artifacts/coverage',
+      sboms: { workspace: '', images: [] },
+      vulnReports: [],
+      policyReports: [],
+      provenance: 'artifacts/provenance.json'
+    };
   }
 
   getType(): string {
@@ -47,6 +57,7 @@ export class DeploymentBundlePipelineComponent extends BaseComponent implements 
       this.registerCapability('bundle:digest', this.manifest?.bundleDigest);
       this.registerCapability('bundle:reference', this.getBundleReference());
       this.registerCapability('bundle:manifest', this.manifest);
+      this.registerPipelineCapabilities();
 
       // Apply standard tags to any resources
       this.applyStandardTags(this);
@@ -486,6 +497,48 @@ export class DeploymentBundlePipelineComponent extends BaseComponent implements 
     const channelTag = `${this.config.ociRepoBundles}:${this.config.environment}`;
 
     this.logger.info('Bundle promoted', { channelTag });
+  }
+
+  private registerPipelineCapabilities(): void {
+    const bundleCapability = {
+      service: this.config.service,
+      environment: this.config.environment,
+      versionTag: this.config.versionTag,
+      complianceFramework: this.config.complianceFramework ?? 'commercial',
+      bundleReference: this.getBundleReference(),
+      manifest: this.manifest ?? undefined,
+      artifacts: this.artifacts
+        ? {
+          sbomWorkspace: this.artifacts.sboms.workspace,
+          sbomImages: this.artifacts.sboms.images,
+          testReports: this.artifacts.testReports,
+          coverageReports: this.artifacts.coverageReports,
+          vulnerabilityReports: this.artifacts.vulnReports,
+          policyReports: this.artifacts.policyReports,
+          provenance: this.artifacts.provenance,
+          cdkOutput: this.artifacts.cdkOutput,
+          planJson: this.artifacts.planJson
+        }
+        : undefined
+    };
+
+    this.registerCapability('ci:deployment-bundle', bundleCapability);
+
+    const observabilityCapability = {
+      service: this.config.service,
+      environment: this.config.environment,
+      reports: {
+        sbom: this.artifacts?.sboms,
+        security: this.artifacts?.vulnReports ?? [],
+        compliance: this.artifacts?.policyReports ?? [],
+        tests: this.artifacts?.testReports,
+        coverage: this.artifacts?.coverageReports
+      },
+      provenance: this.artifacts?.provenance,
+      versionTag: this.config.versionTag
+    };
+
+    this.registerCapability('observability:deployment-bundle', observabilityCapability);
   }
 
   private getBundleReference(): string {

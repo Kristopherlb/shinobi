@@ -165,6 +165,29 @@ defaults:
       enableApiKey: true
       requireAuthorization: true
 
+  deployment-bundle-pipeline:
+    artifactoryHost: artifactory.high.company.com
+    ociRepoBundles: artifactory.high.company.com/bundles
+    ociRepoImages: artifactory.high.company.com/images
+    signing:
+      keyless: false
+      kmsKeyId: kms://aws-kms/alias/platform-cosign-fedramp-high
+      fulcioUrl: https://fulcio.sigstore.dev
+      rekorUrl: https://rekor.sigstore.dev
+    security:
+      failOnCritical: true
+      onlyFixed: true
+      addCpesIfNone: true
+    bundle:
+      includeCdkOutput: true
+      includeTestReports: true
+      includeCoverage: true
+      includePolicyReports: true
+    runner:
+      image: registry/org/platform-runner:1.5.0-fips
+      nodeVersion: "20.12.2"
+      fipsMode: true
+
   auto-scaling-group:
     launchTemplate:
       instanceType: m5.large

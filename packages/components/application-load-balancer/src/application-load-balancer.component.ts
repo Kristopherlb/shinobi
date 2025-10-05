@@ -117,6 +117,8 @@ export class ApplicationLoadBalancerComponent extends Component {
     const sgConfig = this.config!.securityGroups;
 
     if (sgConfig.create) {
+      this.validateIngressRules(sgConfig);
+
       const securityGroup = new ec2.SecurityGroup(this, 'AlbSecurityGroup', {
         vpc: this.vpc!,
         description: `Security group for ${this.context.serviceName}-${this.spec.name} ALB`,
@@ -139,6 +141,23 @@ export class ApplicationLoadBalancerComponent extends Component {
       this.logResourceCreation('security-group', securityGroup.securityGroupId);
       this.managedSecurityGroup = securityGroup;
     }
+  }
+
+  private validateIngressRules(sgConfig: ApplicationLoadBalancerConfig['securityGroups']): void {
+    if (this.config!.scheme !== 'internet-facing') {
+      return;
+    }
+
+    const httpsListenerConfigured = this.isHttpsListenerConfigured();
+
+    sgConfig.ingress.forEach(rule => {
+      if (rule.cidr === '0.0.0.0/0' && rule.port === 80 && !httpsListenerConfigured) {
+        throw new Error(
+          'Internet-facing Application Load Balancers must not expose HTTP (port 80) to 0.0.0.0/0 without an HTTPS listener or redirect. '
+          + 'Enable redirectToHttps or configure an HTTPS listener with a certificate.'
+        );
+      }
+    });
   }
 
   private configureAccessLogsBucket(): void {
@@ -412,6 +431,10 @@ export class ApplicationLoadBalancerComponent extends Component {
     });
 
     return groups;
+  }
+
+  private isHttpsListenerConfigured(): boolean {
+    return this.config!.listeners.some(listener => listener.protocol === 'HTTPS' || listener.redirectToHttps === true);
   }
 
   private resolveSubnets(): ec2.ISubnet[] {

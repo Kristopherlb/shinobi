@@ -2,10 +2,8 @@ import * as ec2 from 'aws-cdk-lib/aws-ec2';
 import { App, Stack } from 'aws-cdk-lib';
 import { Template, Match } from 'aws-cdk-lib/assertions';
 import { AutoScalingGroupComponent } from '../src/auto-scaling-group.component.ts';
-import { AutoScalingGroupConfig } from '../src/auto-scaling-group.builder.ts';
-import { ComponentContext, ComponentSpec } from '@shinobi/core';
 
-const createSpec = (config: Partial<AutoScalingGroupConfig> = {}): ComponentSpec => ({
+const createSpec = (config = {}) => ({
   name: 'asg-test',
   type: 'auto-scaling-group',
   config
@@ -26,15 +24,12 @@ describe('AutoScalingGroupComponent synthesis', () => {
     }
   });
 
-  const synthesize = (
-    framework: 'commercial' | 'fedramp-moderate' | 'fedramp-high' = 'commercial',
-    overrides: Partial<AutoScalingGroupConfig> = {}
-  ) => {
+  const synthesize = (framework = 'commercial', overrides = {}) => {
     const app = new App();
     const stack = new Stack(app, 'TestStack');
     const vpc = new ec2.Vpc(stack, 'TestVpc', { maxAzs: 2 });
 
-    const context: ComponentContext = {
+    const context = {
       serviceName: 'test-service',
       owner: 'platform-team',
       environment: framework === 'fedramp-high' ? 'prod' : 'dev',
