@@ -24,8 +24,26 @@ const createMockSpec = (config: Partial<DynamoDbTableConfig> = {}): ComponentSpe
   config
 });
 
-describe('DynamoDbTableComponentConfigBuilder', () => {
-  it('merges commercial defaults with hardcoded fallbacks', () => {
+describe('DynamoDbTableComponentConfigBuilder__ConfigurationPrecedence__NormalisesOutput', () => {
+  /*
+   * Test Metadata: TP-DDB-TABLE-CONFIG-001
+   * {
+   *   "id": "TP-DDB-TABLE-CONFIG-001",
+   *   "level": "unit",
+   *   "capability": "Commercial framework inherits platform defaults",
+   *   "oracle": "exact",
+   *   "invariants": ["Commercial defaults remain stable"],
+   *   "fixtures": ["ConfigBuilder", "Commercial framework context"],
+   *   "inputs": { "shape": "Component manifest without overrides", "notes": "Expect merge with config/commercial.yml" },
+   *   "risks": [],
+   *   "dependencies": ["config/commercial.yml"],
+   *   "evidence": ["Resolved component configuration"],
+   *   "compliance_refs": ["std://configuration"],
+   *   "ai_generated": false,
+   *   "human_reviewed_by": ""
+   * }
+   */
+  it('ConfigurationPrecedence__CommercialDefaults__AppliesPlatformBaseline', () => {
     const builder = new DynamoDbTableComponentConfigBuilder(createMockContext('commercial'), createMockSpec({
       partitionKey: { name: 'id', type: 'string' }
     }));
@@ -37,13 +55,33 @@ describe('DynamoDbTableComponentConfigBuilder', () => {
     expect(config.tableClass).toBe('standard');
     expect(config.pointInTimeRecovery).toBe(true);
     expect(config.encryption.type).toBe('aws-managed');
-    expect(config.monitoring.enabled).toBe(false);
+    expect(config.monitoring.enabled).toBe(true);
+    expect(config.monitoring.alarms?.consumedReadCapacity?.enabled).toBe(true);
+    expect(config.monitoring.alarms?.consumedWriteCapacity?.enabled).toBe(true);
     expect(config.hardeningProfile).toBe('baseline');
     expect(config.backup.enabled).toBe(true);
     expect(config.backup.retentionDays).toBe(14);
   });
 
-  it('applies FedRAMP High defaults from segregated configuration', () => {
+  /*
+   * Test Metadata: TP-DDB-TABLE-CONFIG-002
+   * {
+   *   "id": "TP-DDB-TABLE-CONFIG-002",
+   *   "level": "unit",
+   *   "capability": "FedRAMP High segregated defaults applied",
+   *   "oracle": "exact",
+   *   "invariants": ["Provisioned capacity thresholds honoured"],
+   *   "fixtures": ["ConfigBuilder", "FedRAMP High framework context"],
+   *   "inputs": { "shape": "Component manifest without overrides", "notes": "Expect merge with config/fedramp-high.yml" },
+   *   "risks": ["Regression in security hardening"],
+   *   "dependencies": ["config/fedramp-high.yml"],
+   *   "evidence": ["Resolved component configuration"],
+   *   "compliance_refs": ["std://configuration"],
+   *   "ai_generated": false,
+   *   "human_reviewed_by": ""
+   * }
+   */
+  it('ConfigurationPrecedence__FedrampHighDefaults__AppliesSegregatedBaseline', () => {
     const builder = new DynamoDbTableComponentConfigBuilder(createMockContext('fedramp-high'), createMockSpec({
       partitionKey: { name: 'id', type: 'string' }
     }));
@@ -56,9 +94,29 @@ describe('DynamoDbTableComponentConfigBuilder', () => {
     expect(config.encryption.type).toBe('customer-managed');
     expect(config.backup.enabled).toBe(true);
     expect(config.hardeningProfile).toBe('stig');
+    expect(config.monitoring.enabled).toBe(true);
+    expect(config.monitoring.alarms?.consumedReadCapacity?.enabled).toBe(true);
   });
 
-  it('normalises provisioned throughput and auto-scaling inputs', () => {
+  /*
+   * Test Metadata: TP-DDB-TABLE-CONFIG-003
+   * {
+   *   "id": "TP-DDB-TABLE-CONFIG-003",
+   *   "level": "unit",
+   *   "capability": "Provisioned throughput auto-scaling normalisation",
+   *   "oracle": "exact",
+   *   "invariants": ["Auto-scaling bounds derived from base capacity"],
+   *   "fixtures": ["ConfigBuilder", "Provisioned throughput manifest"],
+   *   "inputs": { "shape": "Provisioned billing mode with partial autoScaling", "notes": "Max read capacity provided, others derived" },
+   *   "risks": ["Under-provisioned scaling policies"],
+   *   "dependencies": [],
+   *   "evidence": ["Resolved provisioned throughput section"],
+   *   "compliance_refs": ["std://configuration"],
+   *   "ai_generated": false,
+   *   "human_reviewed_by": ""
+   * }
+   */
+  it('ProvisionedThroughput__PartialScalingConfig__NormalisesCapacityBounds', () => {
     const builder = new DynamoDbTableComponentConfigBuilder(
       createMockContext('commercial'),
       createMockSpec({
@@ -81,7 +139,25 @@ describe('DynamoDbTableComponentConfigBuilder', () => {
     expect(config.provisioned?.autoScaling?.targetUtilizationPercent).toBe(70);
   });
 
-  it('normalises TTL, stream, and index projections', () => {
+  /*
+   * Test Metadata: TP-DDB-TABLE-CONFIG-004
+   * {
+   *   "id": "TP-DDB-TABLE-CONFIG-004",
+   *   "level": "unit",
+   *   "capability": "Feature toggles normalise TTL, stream, and projections",
+   *   "oracle": "exact",
+   *   "invariants": ["Optional features default safely"],
+   *   "fixtures": ["ConfigBuilder", "Commercial framework context"],
+   *   "inputs": { "shape": "Manifest enabling TTL, stream, and GSI", "notes": "Projection type should default to 'all'" },
+   *   "risks": ["Inconsistent projection configuration"],
+   *   "dependencies": [],
+   *   "evidence": ["Resolved TTL, stream, and GSI configuration"],
+   *   "compliance_refs": ["std://configuration"],
+   *   "ai_generated": false,
+   *   "human_reviewed_by": ""
+   * }
+   */
+  it('FeatureNormalisation__OptionalSettings__RetainsSafeDefaults', () => {
     const builder = new DynamoDbTableComponentConfigBuilder(
       createMockContext('commercial'),
       createMockSpec({
@@ -110,5 +186,138 @@ describe('DynamoDbTableComponentConfigBuilder', () => {
     expect(config.stream?.enabled).toBe(true);
     expect(config.stream?.viewType).toBe('new-image');
     expect(config.globalSecondaryIndexes?.[0].projectionType).toBe('all');
+  });
+
+  /*
+   * Test Metadata: TP-DDB-TABLE-CONFIG-005
+   * {
+   *   "id": "TP-DDB-TABLE-CONFIG-005",
+   *   "level": "unit",
+   *   "capability": "GSI provisioned throughput inherits table defaults",
+   *   "oracle": "exact",
+   *   "invariants": ["GSI scaling matches table provisioning"],
+   *   "fixtures": ["ConfigBuilder", "Provisioned throughput manifest"],
+   *   "inputs": { "shape": "Provisioned billing mode with GSI lacking overrides", "notes": "Expect inheritance from tableProvisioned" },
+   *   "risks": ["Inconsistent GSI scaling"],
+   *   "dependencies": [],
+   *   "evidence": ["Resolved GSI configuration"],
+   *   "compliance_refs": ["std://configuration"],
+   *   "ai_generated": false,
+   *   "human_reviewed_by": ""
+   * }
+   */
+  it('ProvisionedThroughput__GsiInheritance__DerivesFromTableProvisioned', () => {
+    const builder = new DynamoDbTableComponentConfigBuilder(
+      createMockContext('commercial'),
+      createMockSpec({
+        partitionKey: { name: 'id', type: 'string' },
+        billingMode: 'provisioned',
+        provisioned: {
+          readCapacity: 10,
+          writeCapacity: 6
+        },
+        globalSecondaryIndexes: [
+          {
+            indexName: 'orders-by-status',
+            partitionKey: { name: 'status', type: 'string' }
+          }
+        ]
+      })
+    );
+
+    const config = builder.buildSync();
+    const gsi = config.globalSecondaryIndexes?.[0];
+    expect(gsi?.provisioned?.readCapacity).toBe(10);
+    expect(gsi?.provisioned?.writeCapacity).toBe(6);
+    expect(gsi?.provisioned?.autoScaling?.minReadCapacity).toBe(10);
+    expect(gsi?.provisioned?.autoScaling?.minWriteCapacity).toBe(6);
+    expect(gsi?.provisioned?.autoScaling?.targetUtilizationPercent).toBe(70);
+  });
+
+  /*
+   * Test Metadata: TP-DDB-TABLE-CONFIG-006
+   * {
+   *   "id": "TP-DDB-TABLE-CONFIG-006",
+   *   "level": "unit",
+   *   "capability": "Monitoring override disables platform alarms",
+   *   "oracle": "exact",
+   *   "invariants": ["No alarms remain enabled when monitoring disabled"],
+   *   "fixtures": ["ConfigBuilder", "Commercial framework context"],
+   *   "inputs": { "shape": "Manifest explicitly disabling monitoring", "notes": "Ensures governance respects manifest" },
+   *   "risks": ["Unexpected alarm noise"],
+   *   "dependencies": [],
+   *   "evidence": ["Resolved monitoring configuration"],
+   *   "compliance_refs": ["std://configuration"],
+   *   "ai_generated": false,
+   *   "human_reviewed_by": ""
+   * }
+   */
+  it('MonitoringOverrides__DisabledFlag__DisablesAlarms', () => {
+    const builder = new DynamoDbTableComponentConfigBuilder(
+      createMockContext('commercial'),
+      createMockSpec({
+        partitionKey: { name: 'id', type: 'string' },
+        monitoring: {
+          enabled: false,
+          alarms: {
+            readThrottle: { enabled: false },
+            consumedReadCapacity: { enabled: false },
+            writeThrottle: { enabled: false },
+            consumedWriteCapacity: { enabled: false },
+            systemErrors: { enabled: false }
+          }
+        }
+      })
+    );
+
+    const config = builder.buildSync();
+    expect(config.monitoring.enabled).toBe(false);
+    const alarms = config.monitoring.alarms!;
+    expect(alarms.readThrottle?.enabled).toBe(false);
+    expect(alarms.consumedReadCapacity?.enabled).toBe(false);
+    expect(alarms.writeThrottle?.enabled).toBe(false);
+    expect(alarms.consumedWriteCapacity?.enabled).toBe(false);
+    expect(alarms.systemErrors?.enabled).toBe(false);
+  });
+
+  /*
+   * Test Metadata: TP-DDB-TABLE-CONFIG-007
+   * {
+   *   "id": "TP-DDB-TABLE-CONFIG-007",
+   *   "level": "unit",
+   *   "capability": "Customer managed key configuration honours manifest",
+   *   "oracle": "exact",
+   *   "invariants": ["Alias and rotation flags preserved"],
+   *   "fixtures": ["ConfigBuilder", "Commercial framework context"],
+   *   "inputs": { "shape": "Manifest requesting customer-managed key", "notes": "Rotation disabled explicitly" },
+   *   "risks": ["Incorrect KMS setup"],
+   *   "dependencies": [],
+   *   "evidence": ["Resolved encryption configuration"],
+   *   "compliance_refs": ["std://security"],
+   *   "ai_generated": false,
+   *   "human_reviewed_by": ""
+   * }
+   */
+  it('Encryption__CustomerManagedKey__HonoursAliasAndRotation', () => {
+    const builder = new DynamoDbTableComponentConfigBuilder(
+      createMockContext('commercial'),
+      createMockSpec({
+        partitionKey: { name: 'id', type: 'string' },
+        encryption: {
+          type: 'customer-managed',
+          customerManagedKey: {
+            create: true,
+            alias: 'alias/orders-table',
+            enableRotation: false
+          }
+        }
+      })
+    );
+
+    const config = builder.buildSync();
+    expect(config.encryption.type).toBe('customer-managed');
+    expect(config.encryption.customerManagedKey?.create).toBe(true);
+    expect(config.encryption.customerManagedKey?.alias).toBe('alias/orders-table');
+    expect(config.encryption.customerManagedKey?.enableRotation).toBe(false);
   });
 });

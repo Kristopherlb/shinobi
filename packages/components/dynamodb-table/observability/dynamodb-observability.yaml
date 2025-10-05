@@ -8,16 +8,13 @@ spec:
   complianceFramework: ["commercial", "fedramp-moderate", "fedramp-high"]
 
   tracing:
-    enabled: true
+    enabled: false
     xray:
-      enabled: true
-      samplingRate: 1.0
+      enabled: false
+      samplingRate: 0.0
     opentelemetry:
-      enabled: true
-      autoInstrumentation: true
-      exporters:
-        - type: "otlp"
-          endpoint: "${OTEL_EXPORTER_OTLP_ENDPOINT}"
+      enabled: false
+      autoInstrumentation: false
 
   metrics:
     enabled: true

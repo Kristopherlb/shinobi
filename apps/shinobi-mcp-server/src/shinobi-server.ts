@@ -16,6 +16,7 @@ import {
 } from '@modelcontextprotocol/sdk/types.js';
 import { ShinobiConfig } from './config.js';
 import { Logger } from '@shinobi/core';
+import { ComprehensiveBinderRegistry } from '@shinobi/core/platform/binders/registry/comprehensive-binder-registry.js';
 import fs from 'node:fs';
 import path from 'node:path';
 import yaml from 'yaml';
@@ -1442,6 +1443,39 @@ describe('${className} Observability', () => {
             }
           },
           {
+            name: 'get_capability_catalog',
+            description: 'Get the platform capability vocabulary along with supporting binder strategies',
+            inputSchema: {
+              type: 'object',
+              properties: {
+                includeAliases: {
+                  type: 'boolean',
+                  description: 'Include service type aliases for each capability',
+                  default: false
+                }
+              }
+            }
+          },
+          {
+            name: 'get_binding_matrix',
+            description: 'Retrieve the supported binding matrix derived from registered binder strategies',
+            inputSchema: {
+              type: 'object',
+              properties: {
+                includeAliases: {
+                  type: 'boolean',
+                  description: 'Include service type aliases in the matrix response',
+                  default: false
+                },
+                includeRecommendations: {
+                  type: 'boolean',
+                  description: 'Include recommended follow-up actions for each binder',
+                  default: true
+                }
+              }
+            }
+          },
+          {
             name: 'get_component_patterns',
             description: 'Get opinionated blueprints and patterns for common use cases',
             inputSchema: {
@@ -2308,6 +2342,18 @@ describe('${className} Observability', () => {
             mimeType: 'application/json'
           },
           {
+            uri: 'shinobi://capabilities',
+            name: 'Capability Vocabulary',
+            description: 'Canonical platform capability registry with providers',
+            mimeType: 'application/json'
+          },
+          {
+            uri: 'shinobi://bindings',
+            name: 'Binding Matrix',
+            description: 'Supported bindings between source components and capabilities',
+            mimeType: 'application/json'
+          },
+          {
             uri: 'shinobi://services',
             name: 'Service Registry',
             description: 'Registry of all deployed services',
@@ -2362,6 +2408,12 @@ describe('${className} Observability', () => {
               }
             ]
           };
+
+        case 'shinobi://capabilities':
+          return await this.getCapabilityCatalog({ includeAliases: false });
+
+        case 'shinobi://bindings':
+          return await this.getBindingMatrix({ includeAliases: false, includeRecommendations: true });
 
         case 'shinobi://services':
           return {
@@ -2446,6 +2498,12 @@ describe('${className} Observability', () => {
 
           case 'get_component_schema':
             return await this.getComponentSchema(args);
+
+          case 'get_capability_catalog':
+            return await this.getCapabilityCatalog(args);
+
+          case 'get_binding_matrix':
+            return await this.getBindingMatrix(args);
 
           case 'get_component_patterns':
             return await this.getComponentPatterns(args);
@@ -2799,6 +2857,105 @@ describe('${className} Observability', () => {
         {
           type: 'application/json',
           text: JSON.stringify(schema, null, 2)
+        }
+      ]
+    };
+  }
+
+  private async getCapabilityCatalog(args: { includeAliases?: boolean }): Promise<any> {
+    const includeAliases = args?.includeAliases ?? false;
+    const registry = new ComprehensiveBinderRegistry();
+
+    const strategyEntries = new Map<object, { primary: string; aliases: Set<string>; capabilities: string[] }>();
+
+    for (const serviceType of registry.getAllServiceTypes()) {
+      const strategy = registry.get(serviceType);
+      if (!strategy) {
+        continue;
+      }
+
+      if (!strategyEntries.has(strategy)) {
+        strategyEntries.set(strategy, {
+          primary: serviceType,
+          aliases: new Set<string>(),
+          capabilities: strategy.supportedCapabilities
+        });
+      } else if (includeAliases) {
+        strategyEntries.get(strategy)!.aliases.add(serviceType);
+      }
+    }
+
+    const capabilityMap = new Map<string, { providers: Set<string>; aliases: Set<string> }>();
+
+    for (const entry of strategyEntries.values()) {
+      for (const capability of entry.capabilities) {
+        if (!capabilityMap.has(capability)) {
+          capabilityMap.set(capability, { providers: new Set<string>(), aliases: new Set<string>() });
+        }
+        const bucket = capabilityMap.get(capability)!;
+        bucket.providers.add(entry.primary);
+        if (includeAliases) {
+          entry.aliases.forEach(alias => bucket.aliases.add(alias));
+        }
+      }
+    }
+
+    const capabilities = Array.from(capabilityMap.entries())
+      .map(([capability, data]) => ({
+        capability,
+        providers: Array.from(data.providers).sort(),
+        aliases: includeAliases ? Array.from(data.aliases).sort() : undefined
+      }))
+      .sort((a, b) => a.capability.localeCompare(b.capability));
+
+    return {
+      content: [
+        {
+          type: 'application/json',
+          text: JSON.stringify({ capabilities }, null, 2)
+        }
+      ]
+    };
+  }
+
+  private async getBindingMatrix(args: { includeAliases?: boolean; includeRecommendations?: boolean }): Promise<any> {
+    const includeAliases = args?.includeAliases ?? false;
+    const includeRecommendations = args?.includeRecommendations ?? true;
+
+    const registry = new ComprehensiveBinderRegistry();
+    const strategyEntries = new Map<object, { primary: string; aliases: Set<string>; capabilities: string[]; recommendations: string[] }>();
+
+    for (const serviceType of registry.getAllServiceTypes()) {
+      const strategy = registry.get(serviceType);
+      if (!strategy) {
+        continue;
+      }
+
+      if (!strategyEntries.has(strategy)) {
+        const recommendations = includeRecommendations ? registry.getBindingRecommendations(serviceType) : [];
+        strategyEntries.set(strategy, {
+          primary: serviceType,
+          aliases: new Set<string>(),
+          capabilities: strategy.supportedCapabilities,
+          recommendations
+        });
+      } else if (includeAliases) {
+        strategyEntries.get(strategy)!.aliases.add(serviceType);
+      }
+    }
+
+    const bindings = Array.from(strategyEntries.values()).map(entry => ({
+      serviceType: entry.primary,
+      aliases: includeAliases ? Array.from(entry.aliases).sort() : undefined,
+      supportedCapabilities: entry.capabilities,
+      recommendations: includeRecommendations ? entry.recommendations : undefined
+    }));
+
+    return {
+      content: [
+        {
+          type: 'application/json',
+          text: JSON.stringify({ bindings }, null, 2)
         }
       ]
     };

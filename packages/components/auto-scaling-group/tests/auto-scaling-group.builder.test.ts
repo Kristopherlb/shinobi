@@ -30,7 +30,25 @@ const createSpec = (config: Partial<AutoScalingGroupConfig> = {}): ComponentSpec
 });
 
 describe('AutoScalingGroupComponentConfigBuilder', () => {
-  it('builds commercial defaults from platform configuration', () => {
+  /*
+   * Test Metadata: TP-auto-scaling-group-config-builder-001
+   * {
+   *   "id": "TP-auto-scaling-group-config-builder-001",
+   *   "level": "unit",
+   *   "capability": "Commercial framework applies baseline launch template and storage defaults",
+   *   "oracle": "exact",
+   *   "invariants": ["IMDSv2 required", "Storage encrypted"],
+   *   "fixtures": ["Static component context", "Default manifest"],
+   *   "inputs": { "shape": "Empty manifest", "notes": "No overrides provided" },
+   *   "risks": ["Regressing baseline hardening"],
+   *   "dependencies": [],
+   *   "evidence": ["launchTemplate.instanceType", "storage.encrypted"],
+   *   "compliance_refs": ["std://platform-testing-standard"],
+   *   "ai_generated": false,
+   *   "human_reviewed_by": ""
+   * }
+   */
+  it('CommercialDefaults__PlatformBaseline__AppliesCommercialConfiguration', () => {
     const builder = new AutoScalingGroupComponentConfigBuilder({
       context: createContext('commercial'),
       spec: createSpec()
@@ -48,7 +66,25 @@ describe('AutoScalingGroupComponentConfigBuilder', () => {
     expect(config.security.managedPolicies).toHaveLength(0);
   });
 
-  it('builds fedramp-moderate defaults with hardened controls', () => {
+  /*
+   * Test Metadata: TP-auto-scaling-group-config-builder-002
+   * {
+   *   "id": "TP-auto-scaling-group-config-builder-002",
+   *   "level": "unit",
+   *   "capability": "FedRAMP Moderate framework enables hardened launch template and storage controls",
+   *   "oracle": "exact",
+   *   "invariants": ["Detailed monitoring enabled", "CMK with rotation required"],
+   *   "fixtures": ["FedRAMP Moderate component context", "Default manifest"],
+   *   "inputs": { "shape": "Empty manifest", "notes": "Stage environment with platform defaults" },
+   *   "risks": ["Missing FedRAMP hardening"],
+   *   "dependencies": [],
+   *   "evidence": ["launchTemplate.detailedMonitoring", "storage.kms.enableKeyRotation"],
+   *   "compliance_refs": ["std://platform-testing-standard"],
+   *   "ai_generated": false,
+   *   "human_reviewed_by": ""
+   * }
+   */
+  it('FedrampModerateDefaults__PlatformBaseline__AppliesHardenedControls', () => {
     const builder = new AutoScalingGroupComponentConfigBuilder({
       context: createContext('fedramp-moderate', 'stage'),
       spec: createSpec()
@@ -66,7 +102,25 @@ describe('AutoScalingGroupComponentConfigBuilder', () => {
     expect(config.storage.kms.enableKeyRotation).toBe(true);
   });
 
-  it('allows manifest overrides to take precedence', () => {
+  /*
+   * Test Metadata: TP-auto-scaling-group-config-builder-003
+   * {
+   *   "id": "TP-auto-scaling-group-config-builder-003",
+   *   "level": "unit",
+   *   "capability": "Manifest overrides take precedence over platform defaults",
+   *   "oracle": "exact",
+   *   "invariants": ["Instance type honors override", "KMS settings follow manifest"],
+   *   "fixtures": ["Commercial component context", "Manifest with overrides"],
+   *   "inputs": { "shape": "Manifest overriding launch template and storage", "notes": "User requested hardened agents" },
+   *   "risks": ["Overrides ignored"],
+   *   "dependencies": [],
+   *   "evidence": ["launchTemplate.instanceType", "storage.kms.useCustomerManagedKey"],
+   *   "compliance_refs": ["std://platform-testing-standard"],
+   *   "ai_generated": false,
+   *   "human_reviewed_by": ""
+   * }
+   */
+  it('ManifestOverrides__UserProvidedValues__OverridePlatformDefaults', () => {
     const builder = new AutoScalingGroupComponentConfigBuilder({
       context: createContext('commercial'),
       spec: createSpec({

@@ -59,7 +59,25 @@ describe('AutoScalingGroupComponent synthesis', () => {
     };
   };
 
-  it('synthesizes with commercial defaults', () => {
+  /*
+   * Test Metadata: TP-auto-scaling-group-component-001
+   * {
+   *   "id": "TP-auto-scaling-group-component-001",
+   *   "level": "integration",
+   *   "capability": "Commercial synthesis emits baseline ASG and launch template configuration",
+   *   "oracle": "exact",
+   *   "invariants": ["Desired capacity equals 2", "Launch template uses t3.micro"],
+   *   "fixtures": ["CDK App", "Test stack", "VPC fixture"],
+   *   "inputs": { "shape": "Commercial context without overrides", "notes": "Uses default manifest" },
+   *   "risks": ["Incorrect baseline capacity", "Missing observability capability"],
+   *   "dependencies": ["aws-cdk-lib/assertions"],
+   *   "evidence": ["AWS::AutoScaling::AutoScalingGroup", "observability capability telemetry"],
+   *   "compliance_refs": ["std://platform-testing-standard"],
+   *   "ai_generated": false,
+   *   "human_reviewed_by": ""
+   * }
+   */
+  it('CommercialSynthesis__DefaultConfig__ProducesBaselineAsg', () => {
     const { template, component } = synthesize();
 
     template.hasResourceProperties('AWS::AutoScaling::AutoScalingGroup', {
@@ -87,7 +105,25 @@ describe('AutoScalingGroupComponent synthesis', () => {
     );
   });
 
-  it('enables hardened settings for fedramp-high', () => {
+  /*
+   * Test Metadata: TP-auto-scaling-group-component-002
+   * {
+   *   "id": "TP-auto-scaling-group-component-002",
+   *   "level": "integration",
+   *   "capability": "FedRAMP High synthesis enables hardened launch template and key rotation",
+   *   "oracle": "exact",
+   *   "invariants": ["IMDSv2 required", "Detailed monitoring enabled"],
+   *   "fixtures": ["CDK App", "Test stack", "VPC fixture"],
+   *   "inputs": { "shape": "FedRAMP High context without overrides", "notes": "Prod environment" },
+   *   "risks": ["Missing FedRAMP key rotation", "Relaxed security group egress"],
+   *   "dependencies": ["aws-cdk-lib/assertions"],
+   *   "evidence": ["AWS::EC2::LaunchTemplate", "AWS::KMS::Key"],
+   *   "compliance_refs": ["std://platform-testing-standard"],
+   *   "ai_generated": false,
+   *   "human_reviewed_by": ""
+   * }
+   */
+  it('FedrampHighSynthesis__PlatformBaseline__EnablesHardenedControls', () => {
     const { template } = synthesize('fedramp-high');
 
     template.hasResourceProperties('AWS::EC2::LaunchTemplate', {

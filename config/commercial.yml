@@ -1207,14 +1207,23 @@ defaults:
       retentionDays: 14
       schedule: 'cron(0 5 * * ? *)'
     monitoring:
-      enabled: false
+      enabled: true
       alarms:
         readThrottle:
-          enabled: false
+          enabled: true
+          threshold: 1
+        consumedReadCapacity:
+          enabled: true
+          threshold: 80
         writeThrottle:
-          enabled: false
+          enabled: true
+          threshold: 1
+        consumedWriteCapacity:
+          enabled: true
+          threshold: 80
         systemErrors:
-          enabled: false
+          enabled: true
+          threshold: 1
     hardeningProfile: baseline
 
   rds-postgres:

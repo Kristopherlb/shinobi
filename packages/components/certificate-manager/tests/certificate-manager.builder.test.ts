@@ -33,7 +33,25 @@ const createSpec = (config: Partial<CertificateManagerConfig> = {}): ComponentSp
 });
 
 describe('CertificateManagerComponentConfigBuilder', () => {
-  it('builds commercial defaults from platform configuration', () => {
+  /*
+   * Test Metadata: TP-certificate-manager-config-builder-001
+   * {
+   *   "id": "TP-certificate-manager-config-builder-001",
+   *   "level": "unit",
+   *   "capability": "Commercial framework applies default validation, logging, and monitoring",
+   *   "oracle": "exact",
+   *   "invariants": ["DNS validation selected", "Monitoring alarms enabled"],
+   *   "fixtures": ["Static component context", "Baseline manifest"],
+   *   "inputs": { "shape": "Manifest with domain only", "notes": "No overrides" },
+   *   "risks": ["Missing baseline monitoring"],
+   *   "dependencies": [],
+   *   "evidence": ["validation.method", "monitoring.expiration.enabled"],
+   *   "compliance_refs": ["std://platform-testing-standard"],
+   *   "ai_generated": false,
+   *   "human_reviewed_by": ""
+   * }
+   */
+  it('CommercialDefaults__PlatformBaseline__AppliesCommercialConfiguration', () => {
     const builder = new CertificateManagerComponentConfigBuilder({
       context: createContext('commercial'),
       spec: createSpec()
@@ -50,7 +68,25 @@ describe('CertificateManagerComponentConfigBuilder', () => {
     expect(config.monitoring.status.enabled).toBe(true);
   });
 
-  it('applies fedramp-moderate hardened defaults', () => {
+  /*
+   * Test Metadata: TP-certificate-manager-config-builder-002
+   * {
+   *   "id": "TP-certificate-manager-config-builder-002",
+   *   "level": "unit",
+   *   "capability": "FedRAMP Moderate framework enables transparency logging and compliance log groups",
+   *   "oracle": "exact",
+   *   "invariants": ["Transparency logging enabled", "Compliance log group provisioned"],
+   *   "fixtures": ["FedRAMP Moderate context", "Baseline manifest"],
+   *   "inputs": { "shape": "Manifest with domain only", "notes": "Stage environment" },
+   *   "risks": ["Audit logging disabled"],
+   *   "dependencies": [],
+   *   "evidence": ["transparencyLoggingEnabled", "logging.groups"],
+   *   "compliance_refs": ["std://platform-testing-standard"],
+   *   "ai_generated": false,
+   *   "human_reviewed_by": ""
+   * }
+   */
+  it('FedrampModerateDefaults__PlatformBaseline__AppliesHardenedControls', () => {
     const builder = new CertificateManagerComponentConfigBuilder({
       context: createContext('fedramp-moderate', 'stage'),
       spec: createSpec()
@@ -66,7 +102,25 @@ describe('CertificateManagerComponentConfigBuilder', () => {
     expect(config.monitoring.status.enabled).toBe(true);
   });
 
-  it('allows manifest overrides to replace defaults', () => {
+  /*
+   * Test Metadata: TP-certificate-manager-config-builder-003
+   * {
+   *   "id": "TP-certificate-manager-config-builder-003",
+   *   "level": "unit",
+   *   "capability": "Manifest overrides replace platform defaults for key algorithm, validation, logging, and monitoring",
+   *   "oracle": "exact",
+   *   "invariants": ["Key algorithm override honored", "Logging retention respects manifest"],
+   *   "fixtures": ["Commercial context", "Manifest with overrides"],
+   *   "inputs": { "shape": "Manifest overriding key algorithm, validation, logging, monitoring", "notes": "User hardened configuration" },
+   *   "risks": ["Overrides ignored"],
+   *   "dependencies": [],
+   *   "evidence": ["keyAlgorithm", "monitoring.expiration.enabled"],
+   *   "compliance_refs": ["std://platform-testing-standard"],
+   *   "ai_generated": false,
+   *   "human_reviewed_by": ""
+   * }
+   */
+  it('ManifestOverrides__UserProvidedValues__OverridePlatformDefaults', () => {
     const builder = new CertificateManagerComponentConfigBuilder({
       context: createContext('commercial'),
       spec: createSpec({
@@ -113,7 +167,25 @@ describe('CertificateManagerComponentConfigBuilder', () => {
     expect(config.monitoring.status.enabled).toBe(false);
   });
 
-  it('requires validation emails when email validation is selected', () => {
+  /*
+   * Test Metadata: TP-certificate-manager-config-builder-004
+   * {
+   *   "id": "TP-certificate-manager-config-builder-004",
+   *   "level": "unit",
+   *   "capability": "Email validation requires at least one validation email",
+   *   "oracle": "exact",
+   *   "invariants": ["Email validation should enforce recipients"],
+   *   "fixtures": ["Commercial context", "Manifest selecting email validation"],
+   *   "inputs": { "shape": "Manifest with EMAIL validation and no recipients", "notes": "Negative validation" },
+   *   "risks": ["Inoperable email validation"],
+   *   "dependencies": [],
+   *   "evidence": ["Thrown error message"],
+   *   "compliance_refs": ["std://platform-testing-standard"],
+   *   "ai_generated": false,
+   *   "human_reviewed_by": ""
+   * }
+   */
+  it('EmailValidation__MissingAddresses__ThrowsValidationError', () => {
     const builder = new CertificateManagerComponentConfigBuilder({
       context: createContext('commercial'),
       spec: createSpec({
@@ -126,7 +198,25 @@ describe('CertificateManagerComponentConfigBuilder', () => {
     expect(() => builder.buildSync()).toThrow('Email validation requires at least one validation email address.');
   });
 
-  it('validates domain name format in configuration', () => {
+  /*
+   * Test Metadata: TP-certificate-manager-config-builder-005
+   * {
+   *   "id": "TP-certificate-manager-config-builder-005",
+   *   "level": "unit",
+   *   "capability": "Domain name must be a valid FQDN",
+   *   "oracle": "exact",
+   *   "invariants": ["Invalid domain triggers error"],
+   *   "fixtures": ["Commercial context", "Manifest with invalid domain"],
+   *   "inputs": { "shape": "Manifest with invalid domainName", "notes": "Negative validation" },
+   *   "risks": ["Certificates created for invalid domains"],
+   *   "dependencies": [],
+   *   "evidence": ["Thrown error message"],
+   *   "compliance_refs": ["std://platform-testing-standard"],
+   *   "ai_generated": false,
+   *   "human_reviewed_by": ""
+   * }
+   */
+  it('DomainValidation__InvalidFqdn__ThrowsFormatError', () => {
     const builder = new CertificateManagerComponentConfigBuilder({
       context: createContext('commercial'),
       spec: createSpec({
@@ -137,7 +227,25 @@ describe('CertificateManagerComponentConfigBuilder', () => {
     expect(() => builder.buildSync()).toThrow('Invalid domain name format: invalid-domain. Must be a valid FQDN.');
   });
 
-  it('validates SAN domain name format', () => {
+  /*
+   * Test Metadata: TP-certificate-manager-config-builder-006
+   * {
+   *   "id": "TP-certificate-manager-config-builder-006",
+   *   "level": "unit",
+   *   "capability": "Subject alternative names must be valid FQDNs",
+   *   "oracle": "exact",
+   *   "invariants": ["Invalid SAN triggers error"],
+   *   "fixtures": ["Commercial context", "Manifest with invalid SAN"],
+   *   "inputs": { "shape": "Manifest with invalid subjectAlternativeNames", "notes": "Negative validation" },
+   *   "risks": ["SAN certificates issued to invalid hosts"],
+   *   "dependencies": [],
+   *   "evidence": ["Thrown error message"],
+   *   "compliance_refs": ["std://platform-testing-standard"],
+   *   "ai_generated": false,
+   *   "human_reviewed_by": ""
+   * }
+   */
+  it('SanValidation__InvalidFqdn__ThrowsFormatError', () => {
     const builder = new CertificateManagerComponentConfigBuilder({
       context: createContext('commercial'),
       spec: createSpec({

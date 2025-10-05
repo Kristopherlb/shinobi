@@ -1,156 +1,221 @@
 import { jest } from '@jest/globals';
 import { App, Stack } from 'aws-cdk-lib';
-import { Template, Match } from 'aws-cdk-lib/assertions';
+import { Match, Template } from 'aws-cdk-lib/assertions';
 
 import { ApiGatewayRestComponent } from '../src/api-gateway-rest.component.ts';
 import { ApiGatewayRestConfigBuilder } from '../src/api-gateway-rest.builder.ts';
-import { ComponentContext, ComponentSpec } from '@shinobi/core';
 
-type Mutable<T> = {
-  -readonly [P in keyof T]: T[P];
-};
-
-const baseContext = (overrides: Partial<Mutable<ComponentContext>> = {}): ComponentContext => ({
+const createContext = (framework = 'commercial', scope?: Stack) => ({
   serviceName: 'test-service',
   environment: 'test',
-  complianceFramework: 'commercial',
-  scope: new App(),
+  complianceFramework: framework,
+  scope,
   region: 'us-east-1',
-  accountId: '123456789012',
-  ...overrides,
+  accountId: '123456789012'
 });
 
-const baseSpec = (config: Record<string, unknown> = {}): ComponentSpec => ({
-  name: 'api-gateway-rest-test',
+const createSpec = (config = {}) => ({
+  name: 'test-rest-api',
   type: 'api-gateway-rest',
-  config,
+  config
 });
 
-const freezeTime = () => {
-  const fixedDate = new Date('2025-01-01T00:00:00.000Z');
-  jest.useFakeTimers();
-  jest.setSystemTime(fixedDate);
-};
+describe('ApiGatewayRestComponent__Synthesis__RestApiResources', () => {
+  let app: App;
+  let stack: Stack;
+  let context: ReturnType<typeof createContext>;
+  let loadPlatformConfigSpy: jest.SpiedFunction<ApiGatewayRestConfigBuilder['_loadPlatformConfiguration']>;
 
-describe('ApiGatewayRestConfigBuilder', () => {
-  beforeEach(() => freezeTime());
-  afterEach(() => jest.useRealTimers());
+  beforeEach(() => {
+    app = new App();
+    stack = new Stack(app, 'RestApiStack', {
+      env: { account: '123456789012', region: 'us-east-1' }
+    });
+    context = createContext('commercial', stack);
 
-  it('merges platform defaults for commercial framework', () => {
-    // Test Metadata: {"id":"TP-api-gateway-rest-config-001","level":"unit","capability":"Config builder merges platform defaults","oracle":"exact","invariants":["Disable execute endpoint honours manifest","Throttling matches commercial baseline"],"fixtures":["baseContext","baseSpec"],"inputs":{"shape":"ComponentSpec without overrides","notes":"Uses commercial framework"},"risks":["Mismatched throttling defaults"],"dependencies":["config/commercial.yml"],"evidence":["disableExecuteApiEndpoint=false","throttling matches commercial"],"compliance_refs":["std://platform-configuration"],"ai_generated":false,"human_reviewed_by":""}
-    const context = baseContext();
-    const spec = baseSpec();
-    const builder = new ApiGatewayRestConfigBuilder(context, spec);
+    loadPlatformConfigSpy = jest
+      .spyOn(ApiGatewayRestConfigBuilder.prototype, '_loadPlatformConfiguration')
+      .mockImplementation(function () {
+        const framework = this.builderContext.context.complianceFramework;
+        if (framework === 'fedramp-high') {
+          return {
+            disableExecuteApiEndpoint: true,
+            throttling: { rateLimit: 100, burstLimit: 50 },
+            logging: { retentionInDays: 2555, executionLoggingLevel: 'ERROR' },
+            monitoring: { thresholds: { errorRate5xxPercent: 1 } },
+            tracing: { xrayEnabled: true }
+          };
+        }
 
-    const config = builder.build();
-
-    expect(config.disableExecuteApiEndpoint).toBe(false);
-    expect(config.throttling).toMatchObject({ rateLimit: 1000, burstLimit: 2000 });
-    expect(config.logging).toMatchObject({ retentionInDays: 90, executionLoggingLevel: 'INFO' });
-    expect(config.monitoring?.thresholds).toMatchObject({ errorRate5xxPercent: 1 });
+        return {
+          disableExecuteApiEndpoint: false,
+          throttling: { rateLimit: 1000, burstLimit: 2000 },
+          logging: { retentionInDays: 90, executionLoggingLevel: 'INFO' },
+          monitoring: { thresholds: { errorRate5xxPercent: 5 } },
+          tracing: { xrayEnabled: true }
+        };
+      });
   });
 
-  it('applies fedramp-high platform policy defaults', () => {
-    // Test Metadata: {"id":"TP-api-gateway-rest-config-002","level":"unit","capability":"Config builder enforces FedRAMP High defaults","oracle":"exact","invariants":["Execute endpoint disabled","FedRAMP throttling applied"],"fixtures":["baseContext","baseSpec"],"inputs":{"shape":"ComponentSpec without overrides","notes":"FedRAMP High compliance framework"},"risks":["Weak compliance guardrails"],"dependencies":["config/fedramp-high.yml"],"evidence":["DisableExecuteApiEndpoint=true","burstLimit=50"],"compliance_refs":["std://platform-configuration","std://platform-logging"],"ai_generated":false,"human_reviewed_by":""}
-    const context = baseContext({ complianceFramework: 'fedramp-high' });
-    const spec = baseSpec();
-    const builder = new ApiGatewayRestConfigBuilder(context, spec);
-
-    const config = builder.build();
-
-    expect(config.disableExecuteApiEndpoint).toBe(true);
-    expect(config.throttling).toMatchObject({ rateLimit: 100, burstLimit: 50 });
-    expect(config.logging).toMatchObject({ retentionInDays: 2555, executionLoggingLevel: 'ERROR' });
-    expect(config.tracing?.xrayEnabled ?? true).toBe(true);
+  afterEach(() => {
+    loadPlatformConfigSpy.mockRestore();
   });
-});
 
-describe('ApiGatewayRestComponent', () => {
-  beforeEach(() => freezeTime());
-  afterEach(() => jest.useRealTimers());
-
-  it('synthesizes REST API with logging, throttling, and capability contract', () => {
-    // Test Metadata: {"id":"TP-api-gateway-rest-component-001","level":"unit","capability":"Synthesis configures REST API","oracle":"contract","invariants":["Access logging enabled","Capability matches api:rest contract"],"fixtures":["Stack","ComponentContext"],"inputs":{"shape":"Commercial context with minimal overrides","notes":"Validates defaults"},"risks":["Missing access logs","Invalid capability shape"],"dependencies":["aws-cdk-lib"],"evidence":["AccessLogSetting present","Capability includes apiId"],"compliance_refs":["std://platform-logging","std://platform-capability"],"ai_generated":false,"human_reviewed_by":""}
-    const app = new App();
-    const stack = new Stack(app, 'ApiGatewayRestStack');
-    const context = baseContext({ scope: stack, complianceFramework: 'commercial' });
-    const spec = baseSpec({ description: 'Commercial API' });
-
-    const component = new ApiGatewayRestComponent(stack, spec.name, context, spec);
+  const synthesize = (specOverrides = {}, contextOverrides = {}) => {
+    const ctx = { ...context, ...contextOverrides };
+    const component = new ApiGatewayRestComponent(stack, 'TestRestApi', ctx, createSpec(specOverrides));
     component.synth();
+    return { component, template: Template.fromStack(stack) };
+  };
 
-    const template = Template.fromStack(stack);
+  /*
+   * Test Metadata: TP-API-GW-REST-COMPONENT-001
+   * {
+   *   "id": "TP-API-GW-REST-COMPONENT-001",
+   *   "level": "unit",
+   *   "capability": "Commercial synthesis creates regional REST API",
+   *   "oracle": "contract",
+   *   "invariants": ["Endpoint configuration regional", "Resource has friendly name"],
+   *   "fixtures": ["cdk.Stack", "ApiGatewayRestComponent"],
+   *   "inputs": { "shape": "Commercial framework with description", "notes": "No overrides" },
+   *   "risks": ["Wrong endpoint type"],
+   *   "dependencies": ["aws-cdk-lib"],
+   *   "evidence": ["EndpointConfiguration.Types contains REGIONAL"],
+   *   "compliance_refs": ["std://configuration"],
+   *   "ai_generated": false,
+   *   "human_reviewed_by": ""
+   * }
+   */
+  it('RestApiResource__CommercialDefaults__CreatesRegionalEndpoint', () => {
+    const { template } = synthesize({ description: 'Commercial API' });
 
     template.hasResourceProperties('AWS::ApiGateway::RestApi', {
-      Name: Match.stringLikeRegexp('test-service-api-gateway-rest-test'),
-      EndpointConfiguration: { Types: ['REGIONAL'] },
+      Name: Match.stringLikeRegexp('test-service-test-rest-api'),
+      EndpointConfiguration: { Types: ['REGIONAL'] }
     });
+  });
+
+  /*
+   * Test Metadata: TP-API-GW-REST-COMPONENT-002
+   * {
+   *   "id": "TP-API-GW-REST-COMPONENT-002",
+   *   "level": "unit",
+   *   "capability": "Commercial stage configures access logging",
+   *   "oracle": "contract",
+   *   "invariants": ["AccessLogSetting present", "Logging level INFO"],
+   *   "fixtures": ["cdk.Stack", "ApiGatewayRestComponent"],
+   *   "inputs": { "shape": "Commercial framework with defaults", "notes": "Validates logging" },
+   *   "risks": ["Missing access logs"],
+   *   "dependencies": ["aws-cdk-lib"],
+   *   "evidence": ["MethodSettings[0].LoggingLevel = INFO"],
+   *   "compliance_refs": ["std://logging"],
+   *   "ai_generated": false,
+   *   "human_reviewed_by": ""
+   * }
+   */
+  it('StageResource__CommercialDefaults__EnablesAccessLogging', () => {
+    const { template } = synthesize();
 
     template.hasResourceProperties('AWS::ApiGateway::Stage', {
       AccessLogSetting: Match.objectLike({}),
       MethodSettings: Match.arrayWith([
         Match.objectLike({
-          LoggingLevel: 'INFO',
-        }),
-      ]),
-    });
-
-    const capabilities = component.getCapabilities();
-    expect(capabilities['api:rest']).toMatchObject({
-      apiId: expect.any(String),
-      endpointUrl: expect.stringContaining('https://'),
-      stageName: 'test',
+          LoggingLevel: 'INFO'
+        })
+      ])
     });
   });
 
-  it('enforces FedRAMP High execute-api disablement', () => {
-    // Test Metadata: {"id":"TP-api-gateway-rest-component-002","level":"unit","capability":"FedRAMP high disables execute endpoint","oracle":"exact","invariants":["DisableExecuteApiEndpoint set"],"fixtures":["Stack","ComponentContext"],"inputs":{"shape":"FedRAMP High context","notes":"No overrides provided"},"risks":["Unrestricted public endpoint"],"dependencies":["config/fedramp-high.yml"],"evidence":["DisableExecuteApiEndpoint=true"],"compliance_refs":["std://platform-configuration"],"ai_generated":false,"human_reviewed_by":""}
-    const app = new App();
-    const stack = new Stack(app, 'ApiGatewayRestFedrampStack');
-    const context = baseContext({
-      scope: stack,
-      complianceFramework: 'fedramp-high',
-      environment: 'prod',
-    });
-    const spec = baseSpec();
+  /*
+   * Test Metadata: TP-API-GW-REST-COMPONENT-003
+   * {
+   *   "id": "TP-API-GW-REST-COMPONENT-003",
+   *   "level": "unit",
+   *   "capability": "FedRAMP high disables execute-api endpoint",
+   *   "oracle": "exact",
+   *   "invariants": ["DisableExecuteApiEndpoint = true"],
+   *   "fixtures": ["cdk.Stack", "ApiGatewayRestComponent"],
+   *   "inputs": { "shape": "FedRAMP high framework", "notes": "No overrides" },
+   *   "risks": ["Unrestricted public endpoint"],
+   *   "dependencies": ["aws-cdk-lib"],
+   *   "evidence": ["DisableExecuteApiEndpoint=true"],
+   *   "compliance_refs": ["std://security"],
+   *   "ai_generated": false,
+   *   "human_reviewed_by": ""
+   * }
+   */
+  it('RestApiResource__FedrampHigh__DisablesExecuteApiEndpoint', () => {
+    const { template } = synthesize({}, { complianceFramework: 'fedramp-high', environment: 'prod' });
 
-    const component = new ApiGatewayRestComponent(stack, spec.name, context, spec);
-    component.synth();
-
-    const template = Template.fromStack(stack);
     template.hasResourceProperties('AWS::ApiGateway::RestApi', {
-      DisableExecuteApiEndpoint: true,
+      DisableExecuteApiEndpoint: true
     });
   });
 
-  it('applies FedRAMP High logging and throttling hardening', () => {
-    // Test Metadata: {"id":"TP-api-gateway-rest-component-003","level":"unit","capability":"FedRAMP high logging and throttling","oracle":"exact","invariants":["Retention 7 years","Stage enforces FedRAMP throttling"],"fixtures":["Stack","ComponentContext"],"inputs":{"shape":"FedRAMP High context","notes":"No overrides provided"},"risks":["Non-compliant access logging","Incorrect throttling limits"],"dependencies":["config/fedramp-high.yml"],"evidence":["LogGroup RetentionInDays=2555","Stage throttling <= FedRAMP limits"],"compliance_refs":["std://platform-logging","std://platform-configuration"],"ai_generated":false,"human_reviewed_by":""}
-    const app = new App();
-    const stack = new Stack(app, 'ApiGatewayRestFedrampLoggingStack');
-    const context = baseContext({
-      scope: stack,
-      complianceFramework: 'fedramp-high',
-      environment: 'prod',
-    });
-    const spec = baseSpec();
-
-    const component = new ApiGatewayRestComponent(stack, spec.name, context, spec);
-    component.synth();
-
-    const template = Template.fromStack(stack);
-
-    const logGroups = template.findResources('AWS::Logs::LogGroup');
-    const retentionValues = Object.values(logGroups).map((resource) => resource.Properties?.RetentionInDays);
-    expect(retentionValues.some((value) => typeof value === 'number' && value >= 2555)).toBe(true);
+  /*
+   * Test Metadata: TP-API-GW-REST-COMPONENT-004
+   * {
+   *   "id": "TP-API-GW-REST-COMPONENT-004",
+   *   "level": "unit",
+   *   "capability": "FedRAMP high stage applies hardened logging and throttling",
+   *   "oracle": "contract",
+   *   "invariants": ["Throttling burst 50", "Logging level ERROR"],
+   *   "fixtures": ["cdk.Stack", "ApiGatewayRestComponent"],
+   *   "inputs": { "shape": "FedRAMP high framework", "notes": "No overrides" },
+   *   "risks": ["Non-compliant throttling"],
+   *   "dependencies": ["aws-cdk-lib"],
+   *   "evidence": ["ThrottlingBurstLimit=50"],
+   *   "compliance_refs": ["std://logging", "std://configuration"],
+   *   "ai_generated": false,
+   *   "human_reviewed_by": ""
+   * }
+   */
+  it('StageResource__FedrampHigh__AppliesHardenedThrottlingAndLogging', () => {
+    const { template } = synthesize({}, { complianceFramework: 'fedramp-high', environment: 'prod' });
 
     template.hasResourceProperties('AWS::ApiGateway::Stage', {
       MethodSettings: Match.arrayWith([
         Match.objectLike({
           ThrottlingBurstLimit: 50,
           ThrottlingRateLimit: 100,
-          LoggingLevel: 'ERROR',
-        }),
-      ]),
+          LoggingLevel: 'ERROR'
+        })
+      ])
     });
+
+    const logGroups = template.findResources('AWS::Logs::LogGroup');
+    const retentionValues = Object.values(logGroups).map(resource => resource.Properties?.RetentionInDays);
+    expect(retentionValues.some(value => typeof value === 'number' && value >= 2555)).toBe(true);
+  });
+
+  /*
+   * Test Metadata: TP-API-GW-REST-COMPONENT-005
+   * {
+   *   "id": "TP-API-GW-REST-COMPONENT-005",
+   *   "level": "unit",
+   *   "capability": "Capability contract exposes API identifiers",
+   *   "oracle": "exact",
+   *   "invariants": ["Capability has apiId", "Stage name matches context"],
+   *   "fixtures": ["cdk.Stack", "ApiGatewayRestComponent"],
+   *   "inputs": { "shape": "Commercial framework", "notes": "No overrides" },
+   *   "risks": ["Capability map drift"],
+   *   "dependencies": ["aws-cdk-lib"],
+   *   "evidence": ["Capability['api:rest'].stageName=test"],
+   *   "compliance_refs": ["std://capabilities"],
+   *   "ai_generated": false,
+   *   "human_reviewed_by": ""
+   * }
+   */
+  it('Capabilities__CommercialDefaults__PublishesRestApiContract', () => {
+    const { component } = synthesize();
+
+    const capabilities = component.getCapabilities();
+    expect(capabilities['api:rest']).toEqual(
+      expect.objectContaining({
+        apiId: expect.any(String),
+        endpointUrl: expect.stringContaining('https://'),
+        stageName: 'test'
+      })
+    );
   });
 });

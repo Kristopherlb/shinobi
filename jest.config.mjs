@@ -4,6 +4,7 @@ import url from 'node:url';
 const __dirname = path.dirname(url.fileURLToPath(import.meta.url));
 
 export default {
+  resolver: path.join(__dirname, 'tools/jest-resolver.cjs'),
   testEnvironment: 'node',
   testEnvironmentOptions: {
     customExportConditions: ['node', 'default']
@@ -36,6 +37,8 @@ export default {
   moduleNameMapper: {
     '^(?:\\.{1,2}/)+platform/contracts/(.+)\\.js$': '<rootDir>/packages/core/src/platform/contracts/$1.ts',
     '^(\\.{1,2}/(?:.*/)?src/.+)\\.js$': '$1.ts',
+    '^(\\.{1,2}/)(component|config-builder|bindings|platform-binding-trigger-spec|trigger-interfaces|binder-matrix|openfeature-interfaces|platform-services|logging-interfaces|artifacts)\\.js$': '$1$2.ts',
+    '^(\\.{1,2}/.*services/.+)\\.js$': '$1.ts',
     '^@platform/contracts$': '<rootDir>/packages/core/src/platform/contracts/index.ts',
     '^@platform/logger$': '<rootDir>/packages/core/src/platform/logger/src/index.ts',
     '^@platform/core-engine$': '<rootDir>/packages/core-engine/src/index.ts',

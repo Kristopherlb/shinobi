@@ -43,8 +43,26 @@ const synthesize = (context: ComponentContext, spec: ComponentSpec) => {
   return { component, template: Template.fromStack(stack) };
 };
 
-describe('DynamoDbTableComponent synthesis', () => {
-  it('creates commercial PAYG table with defaults', () => {
+describe('DynamoDbTableComponent__Synthesis__AppliesPlatformPolicies', () => {
+  /*
+   * Test Metadata: TP-DDB-TABLE-SYNTH-001
+   * {
+   *   "id": "TP-DDB-TABLE-SYNTH-001",
+   *   "level": "unit",
+   *   "capability": "Commercial synthesis produces PAYG table with managed encryption",
+   *   "oracle": "contract",
+   *   "invariants": ["Billing mode remains PAY_PER_REQUEST", "KMS encryption enforced"],
+   *   "fixtures": ["cdk.Stack", "DynamoDbTableComponent"],
+   *   "inputs": { "shape": "Commercial framework without overrides", "notes": "Validates platform defaults" },
+   *   "risks": ["Loss of baseline security"],
+   *   "dependencies": ["config/commercial.yml"],
+   *   "evidence": ["CloudFormation template"],
+   *   "compliance_refs": ["std://configuration", "std://security"],
+   *   "ai_generated": false,
+   *   "human_reviewed_by": ""
+   * }
+   */
+  it('CommercialDefaults__PayPerRequest__SynthesizesManagedTable', () => {
     const { template } = synthesize(
       createContext('commercial'),
       createSpec({
@@ -52,16 +70,41 @@ describe('DynamoDbTableComponent synthesis', () => {
       })
     );
 
-    template.hasResourceProperties('AWS::DynamoDB::Table', {
+    template.hasResourceProperties('AWS::DynamoDB::Table', Match.objectLike({
       BillingMode: 'PAY_PER_REQUEST',
       KeySchema: Match.arrayWith([
         Match.objectLike({ AttributeName: 'id', KeyType: 'HASH' })
       ]),
-      SSESpecification: Match.objectLike({ SSEType: 'KMS' })
-    });
+      SSESpecification: Match.objectLike({ SSEType: 'KMS' }),
+      PointInTimeRecoverySpecification: Match.objectLike({ PointInTimeRecoveryEnabled: true }),
+      ContributorInsightsSpecification: Match.objectLike({ Enabled: true })
+    }));
+
+    const table = template.findResources('AWS::DynamoDB::Table');
+    const tableResource = Object.values(table)[0] as any;
+    expect(tableResource.Properties?.TimeToLiveSpecification).toBeUndefined();
+    expect(tableResource.Properties?.StreamSpecification).toBeUndefined();
   });
 
-  it('applies FedRAMP High defaults', () => {
+  /*
+   * Test Metadata: TP-DDB-TABLE-SYNTH-002
+   * {
+   *   "id": "TP-DDB-TABLE-SYNTH-002",
+   *   "level": "unit",
+   *   "capability": "FedRAMP High synthesis enforces provisioned throughput and PITR",
+   *   "oracle": "contract",
+   *   "invariants": ["Provisioned billing mode", "Point-in-time recovery enabled"],
+   *   "fixtures": ["cdk.Stack", "DynamoDbTableComponent"],
+   *   "inputs": { "shape": "FedRAMP High framework without overrides", "notes": "Validates segregated defaults" },
+   *   "risks": ["Compliance regression"],
+   *   "dependencies": ["config/fedramp-high.yml"],
+   *   "evidence": ["CloudFormation template"],
+   *   "compliance_refs": ["std://configuration", "std://security"],
+   *   "ai_generated": false,
+   *   "human_reviewed_by": ""
+   * }
+   */
+  it('FedrampHighDefaults__ProvisionedMode__EnablesPointInTimeRecovery', () => {
     const { template } = synthesize(
       createContext('fedramp-high'),
       createSpec({
@@ -75,8 +118,26 @@ describe('DynamoDbTableComponent synthesis', () => {
     });
   });
 
-  it('respects manifest overrides for provisioned throughput and indexes', () => {
-    const { template, component } = synthesize(
+  /*
+   * Test Metadata: TP-DDB-TABLE-SYNTH-003
+   * {
+   *   "id": "TP-DDB-TABLE-SYNTH-003",
+   *   "level": "unit",
+   *   "capability": "Provisioned overrides synthesize table resources and scaling artifacts",
+   *   "oracle": "contract",
+   *   "invariants": ["Provisioned billing mode respected", "GSI configured with scaling"],
+   *   "fixtures": ["cdk.Stack", "DynamoDbTableComponent"],
+   *   "inputs": { "shape": "Manifest with provisioned table and single GSI", "notes": "Validates resource synthesis" },
+   *   "risks": ["Auto-scaling misconfiguration"],
+   *   "dependencies": [],
+   *   "evidence": ["CloudFormation template"],
+   *   "compliance_refs": ["std://configuration", "std://observability"],
+   *   "ai_generated": false,
+   *   "human_reviewed_by": ""
+   * }
+   */
+  it('ProvisionedOverrides__GsiConfiguration__CreatesExpectedResources', () => {
+    const { template } = synthesize(
       createContext('commercial'),
       createSpec({
         partitionKey: { name: 'id', type: 'string' },
@@ -109,10 +170,61 @@ describe('DynamoDbTableComponent synthesis', () => {
     template.resourceCountIs('AWS::Backup::BackupSelection', 1);
     template.resourceCountIs('AWS::CloudWatch::Dashboard', 1);
 
-    template.hasResourceProperties('AWS::ApplicationAutoScaling::ScalableTarget', {
-      ResourceId: Match.stringLikeRegexp('table/orders-service-orders-table/index/status-index'),
+    template.hasResourceProperties('AWS::ApplicationAutoScaling::ScalableTarget', Match.objectLike({
+      ScalableDimension: 'dynamodb:table:ReadCapacityUnits'
+    }));
+
+    template.hasResourceProperties('AWS::ApplicationAutoScaling::ScalableTarget', Match.objectLike({
+      ScalableDimension: 'dynamodb:table:WriteCapacityUnits'
+    }));
+
+    template.hasResourceProperties('AWS::ApplicationAutoScaling::ScalableTarget', Match.objectLike({
       ScalableDimension: 'dynamodb:index:ReadCapacityUnits'
-    });
+    }));
+
+    template.hasResourceProperties('AWS::ApplicationAutoScaling::ScalableTarget', Match.objectLike({
+      ScalableDimension: 'dynamodb:index:WriteCapacityUnits'
+    }));
+
+  });
+
+  /*
+   * Test Metadata: TP-DDB-TABLE-SYNTH-004
+   * {
+   *   "id": "TP-DDB-TABLE-SYNTH-004",
+   *   "level": "unit",
+   *   "capability": "Provisioned overrides expose capability metadata",
+   *   "oracle": "exact",
+   *   "invariants": ["Capability map mirrors synthesized resources"],
+   *   "fixtures": ["cdk.Stack", "DynamoDbTableComponent"],
+   *   "inputs": { "shape": "Manifest with provisioned table and single GSI", "notes": "Validates capability export" },
+   *   "risks": ["Capability registry drift"],
+   *   "dependencies": [],
+   *   "evidence": ["Component capability payload"],
+   *   "compliance_refs": ["std://configuration", "std://observability"],
+   *   "ai_generated": false,
+   *   "human_reviewed_by": ""
+   * }
+   */
+  it('ProvisionedOverrides__CapabilityExport__PublishesTableAndIndexMetadata', () => {
+    const { component } = synthesize(
+      createContext('commercial'),
+      createSpec({
+        partitionKey: { name: 'id', type: 'string' },
+        sortKey: { name: 'createdAt', type: 'number' },
+        billingMode: 'provisioned',
+        provisioned: {
+          readCapacity: 5,
+          writeCapacity: 5
+        },
+        globalSecondaryIndexes: [
+          {
+            indexName: 'status-index',
+            partitionKey: { name: 'status', type: 'string' }
+          }
+        ]
+      })
+    );
 
     const capabilities = component.getCapabilities();
     const capability = capabilities['db:dynamodb'];

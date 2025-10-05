@@ -1,25 +1,15 @@
 import path from 'node:path';
 import url from 'node:url';
-import baseConfig from '../../../jest.preset.mjs';
+import baseConfig from '../../../jest.config.mjs';
 
-const __filename = url.fileURLToPath(import.meta.url);
-const __dirname = path.dirname(__filename);
+const __dirname = path.dirname(url.fileURLToPath(import.meta.url));
+const rootDir = path.resolve(__dirname, '../../..');
 
 export default {
   ...baseConfig,
   displayName: '@platform/components-api-gateway-http',
-  rootDir: __dirname,
-  testEnvironment: 'node',
-  transform: baseConfig.transform,
-  transformIgnorePatterns: baseConfig.transformIgnorePatterns,
-  moduleFileExtensions: ['ts', 'tsx', 'js', 'jsx', 'json'],
-  moduleNameMapper: {
-    ...baseConfig.moduleNameMapper,
-    '^@shinobi/core$': '<rootDir>/../../core/src/index.ts',
-    '^@shinobi/core/(.*)$': '<rootDir>/../../core/src/$1',
-    '^@platform/logger$': '<rootDir>/tests/stubs/platform-logger.ts'
-  },
-  setupFilesAfterEnv: ['<rootDir>/tests/setup.ts'],
-  coverageDirectory: '<rootDir>/coverage',
-  collectCoverageFrom: ['<rootDir>/**/*.ts', '!<rootDir>/dist/**', '!<rootDir>/node_modules/**']
+  rootDir,
+  testMatch: ['<rootDir>/packages/components/api-gateway-http/tests/**/*.test.ts'],
+  collectCoverageFrom: ['packages/components/api-gateway-http/src/**/*.{ts,tsx}', '!packages/components/api-gateway-http/src/**/*.d.ts'],
+  coverageDirectory: path.join(rootDir, 'packages/components/api-gateway-http/coverage')
 };

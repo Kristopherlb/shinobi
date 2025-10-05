@@ -73,7 +73,12 @@ export class ComprehensiveBinderRegistry {
     this.register('lightsail', new LightsailBinderStrategy());
 
     // Database Services
-    this.register('dynamodb', new DynamoDbBinderStrategy());
+    const dynamodbStrategy = new DynamoDbBinderStrategy();
+    this.register('dynamodb', dynamodbStrategy);
+    this.register('db:dynamodb', dynamodbStrategy);
+    this.register('dynamodb:table', dynamodbStrategy);
+    this.register('dynamodb:index', dynamodbStrategy);
+    this.register('dynamodb:stream', dynamodbStrategy);
     this.register('neptune', new NeptuneBinderStrategy());
 
     // Networking Services
