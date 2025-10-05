@@ -24,32 +24,32 @@ import { ECR_REPOSITORY_CONFIG_SCHEMA } from './Config.schema.json' with { type:
  * - Component type identification
  */
 export class EcrRepositoryComponentCreator implements IComponentCreator {
-  
+
   /**
    * Component type identifier
    */
   public readonly componentType = 'ecr-repository';
-  
+
   /**
    * Component display name
    */
   public readonly displayName = 'Ecr Repository Component';
-  
+
   /**
    * Component description
    */
   public readonly description = 'ECR Repository Component';
-  
+
   /**
    * Component category for organization
    */
   public readonly category = 'containers';
-  
+
   /**
    * AWS service this component manages
    */
   public readonly awsService = 'ECR';
-  
+
   /**
    * Component tags for discovery
    */
@@ -59,57 +59,57 @@ export class EcrRepositoryComponentCreator implements IComponentCreator {
     'aws',
     'ecr'
   ];
-  
+
   /**
    * JSON Schema for component configuration validation
    */
   public readonly configSchema = ECR_REPOSITORY_CONFIG_SCHEMA;
-  
+
   /**
    * Factory method to create component instances
    */
   public createComponent(
-    scope: Construct, 
-    spec: ComponentSpec, 
+    scope: Construct,
+    spec: ComponentSpec,
     context: ComponentContext
   ): EcrRepositoryComponent {
     return new EcrRepositoryComponent(scope, spec.name, context, spec);
   }
-  
+
   /**
    * Validates component specification beyond JSON Schema validation
    */
   public validateSpec(
-    spec: ComponentSpec, 
+    spec: ComponentSpec,
     context: ComponentContext
   ): { valid: boolean; errors: string[] } {
     const errors: string[] = [];
     const config = spec.config as EcrRepositoryConfig;
-    
+
     // Validate component name
     if (!spec.name || spec.name.length === 0) {
       errors.push('Component name is required');
     } else if (!/^[a-zA-Z][a-zA-Z0-9-_]*$/.test(spec.name)) {
       errors.push('Component name must start with a letter and contain only alphanumeric characters, hyphens, and underscores');
     }
-    
+
     // TODO: Add component-specific validations here
-    
+
     // Environment-specific validations
     if (context.environment === 'prod') {
       if (!config?.monitoring?.enabled) {
         errors.push('Monitoring must be enabled in production environment');
       }
-      
+
       // TODO: Add production-specific validations
     }
-    
+
     return {
       valid: errors.length === 0,
       errors
     };
   }
-  
+
   /**
    * Returns the capabilities this component provides when synthesized
    */
@@ -119,7 +119,7 @@ export class EcrRepositoryComponentCreator implements IComponentCreator {
       'monitoring:ecr-repository'
     ];
   }
-  
+
   /**
    * Returns the capabilities this component requires from other components
    */
@@ -128,7 +128,7 @@ export class EcrRepositoryComponentCreator implements IComponentCreator {
       // TODO: Define required capabilities
     ];
   }
-  
+
   /**
    * Returns construct handles that will be registered by this component
    */

@@ -5,7 +5,7 @@ observability:
   version: "1.0.0"
   component: "ecr-repository"
   compliance_frameworks: ["commercial", "fedramp-moderate", "fedramp-high"]
-  
+
   # Distributed Tracing Configuration
   tracing:
     enabled: true
@@ -23,7 +23,7 @@ observability:
       component_type: "container_registry"
       service_boundary: "data"
       data_classification: "internal"
-      
+
   # Metrics Configuration
   metrics:
     enabled: true
@@ -57,7 +57,7 @@ observability:
         dimensions:
           - RepositoryName
           - ActionType
-          
+
   # Logging Configuration
   logging:
     enabled: true
@@ -90,12 +90,12 @@ observability:
         log_retention_days: 30
         audit_logging: false
         access_logging: false
-        
+
   # Alarms Configuration
   alarms:
     enabled: true
     provider: "cloudwatch"
-    
+
     # Security Alarms
     security_alarms:
       - name: "HighSeverityVulnerabilities"
@@ -108,7 +108,7 @@ observability:
         severity: "HIGH"
         dimensions:
           Severity: "HIGH"
-          
+
       - name: "ImageScanFailures"
         description: "Image scan failures detected"
         metric: "ScanFailures"
@@ -117,7 +117,7 @@ observability:
         period: 300
         evaluation_periods: 1
         severity: "HIGH"
-        
+
     # Performance Alarms
     performance_alarms:
       - name: "HighImagePushRate"
@@ -128,16 +128,16 @@ observability:
         period: 300
         evaluation_periods: 2
         severity: "MEDIUM"
-        
+
       - name: "LargeRepositorySize"
         description: "Repository size approaching limit"
         metric: "RepositorySize"
-        threshold: 107374182400  # 100GB
+        threshold: 107374182400 # 100GB
         comparison: "GreaterThanThreshold"
         period: 300
         evaluation_periods: 1
         severity: "MEDIUM"
-        
+
     # Operational Alarms
     operational_alarms:
       - name: "ExcessiveImageCount"
@@ -148,7 +148,7 @@ observability:
         period: 300
         evaluation_periods: 1
         severity: "LOW"
-        
+
       - name: "LifecyclePolicyFailures"
         description: "Lifecycle policy execution failures"
         metric: "LifecyclePolicyErrors"
@@ -157,12 +157,12 @@ observability:
         period: 300
         evaluation_periods: 1
         severity: "MEDIUM"
-        
+
   # Dashboards Configuration
   dashboards:
     enabled: true
     provider: "cloudwatch"
-    
+
     main_dashboard:
       name: "ECR-Repository-Main"
       description: "Main ECR repository monitoring dashboard"
@@ -174,7 +174,7 @@ observability:
               metric: "ImagePushRate"
               dimensions:
                 RepositoryName: "${repository_name}"
-                
+
         - type: "metric"
           title: "Repository Size"
           metrics:
@@ -182,7 +182,7 @@ observability:
               metric: "RepositorySize"
               dimensions:
                 RepositoryName: "${repository_name}"
-                
+
         - type: "metric"
           title: "Security Scan Findings"
           metrics:
@@ -190,7 +190,7 @@ observability:
               metric: "ScanFindings"
               dimensions:
                 RepositoryName: "${repository_name}"
-                
+
         - type: "log"
           title: "ECR Access Logs"
           log_group: "/aws/ecr/repository"
@@ -199,7 +199,7 @@ observability:
             | filter repository_name = "${repository_name}"
             | sort @timestamp desc
             | limit 100
-            
+
     security_dashboard:
       name: "ECR-Security"
       description: "ECR security monitoring dashboard"
@@ -227,11 +227,11 @@ observability:
               dimensions:
                 RepositoryName: "${repository_name}"
                 Severity: "LOW"
-                
+
   # Compliance Monitoring
   compliance_monitoring:
     enabled: true
-    
+
     # FedRAMP High Compliance
     fedramp_high:
       requirements:
@@ -255,7 +255,7 @@ observability:
           threshold: 1
           comparison: "LessThanThreshold"
           severity: "HIGH"
-          
+
     # FedRAMP Moderate Compliance
     fedramp_moderate:
       requirements:
@@ -274,7 +274,7 @@ observability:
           threshold: 1
           comparison: "LessThanThreshold"
           severity: "HIGH"
-          
+
     # Commercial Compliance
     commercial:
       requirements:
@@ -290,7 +290,7 @@ observability:
           threshold: 1
           comparison: "LessThanThreshold"
           severity: "MEDIUM"
-          
+
   # OpenTelemetry Configuration
   opentelemetry:
     enabled: true

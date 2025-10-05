@@ -13,16 +13,16 @@ import { ConfigBuilder, ConfigBuilderContext } from '@shinobi/core';
 export interface EcrRepositoryConfig {
   /** Repository name (required) */
   repositoryName: string;
-  
+
   /** Image scanning configuration */
   imageScanningConfiguration?: {
     /** Enable image scanning */
     scanOnPush?: boolean;
   };
-  
+
   /** Image tag mutability */
   imageTagMutability?: 'MUTABLE' | 'IMMUTABLE';
-  
+
   /** Lifecycle policy */
   lifecyclePolicy?: {
     /** Maximum number of images to keep */
@@ -32,10 +32,10 @@ export interface EcrRepositoryConfig {
     /** Rules for untagged images */
     untaggedImageRetentionDays?: number;
   };
-  
+
   /** Repository policy (IAM policy document) */
   repositoryPolicy?: any;
-  
+
   /** Encryption configuration */
   encryption?: {
     /** Encryption type */
@@ -43,7 +43,7 @@ export interface EcrRepositoryConfig {
     /** KMS key ARN (only for KMS encryption) */
     kmsKeyArn?: string;
   };
-  
+
   /** Monitoring configuration */
   monitoring?: {
     enabled?: boolean;
@@ -54,13 +54,13 @@ export interface EcrRepositoryConfig {
       sizeThreshold?: number;
     };
   };
-  
+
   /** Compliance configuration */
   compliance?: {
     retentionPolicy?: 'retain' | 'destroy';
     auditLogging?: boolean;
   };
-  
+
   /** Tags for the repository */
   tags?: Record<string, string>;
 }
@@ -84,11 +84,11 @@ export const ECR_REPOSITORY_CONFIG_SCHEMA = ECR_REPOSITORY_CONFIG_SCHEMA_JSON;
  * 5. Policy Overrides (from governance policies)
  */
 export class EcrRepositoryComponentConfigBuilder extends ConfigBuilder<EcrRepositoryConfig> {
-  
+
   constructor(context: ConfigBuilderContext) {
     super(context, ECR_REPOSITORY_CONFIG_SCHEMA);
   }
-  
+
   /**
    * Layer 1: Hardcoded Fallbacks
    * Ultra-safe baseline configuration that works in any environment
@@ -119,7 +119,7 @@ export class EcrRepositoryComponentConfigBuilder extends ConfigBuilder<EcrReposi
       tags: {}
     };
   }
-  
+
   /**
    * Layer 2: Compliance Framework Defaults
    * Security and compliance-specific configurations loaded from platform config
@@ -129,7 +129,7 @@ export class EcrRepositoryComponentConfigBuilder extends ConfigBuilder<EcrReposi
     // For now, return empty object to be overridden by platform config
     return {};
   }
-  
+
   /**
    * Get the JSON Schema for validation
    */
