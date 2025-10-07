@@ -36,7 +36,7 @@
         "MUTABLE",
         "IMMUTABLE"
       ],
-      "default": "MUTABLE"
+      "default": "IMMUTABLE"
     },
     "lifecyclePolicy": {
       "type": "object",
@@ -85,7 +85,8 @@
         },
         "kmsKeyArn": {
           "type": "string",
-          "description": "KMS key ARN for KMS encryption (required when encryptionType is KMS)"
+          "description": "KMS key ARN for KMS encryption (required when encryptionType is KMS)",
+          "pattern": "^arn:aws:kms:[a-z0-9-]+:\\d{12}:key/[a-f0-9-]+$"
         }
       },
       "additionalProperties": false,
@@ -171,7 +172,7 @@
     "imageScanningConfiguration": {
       "scanOnPush": true
     },
-    "imageTagMutability": "MUTABLE",
+    "imageTagMutability": "IMMUTABLE",
     "encryption": {
       "encryptionType": "AES256"
     },
@@ -184,5 +185,53 @@
       "auditLogging": false
     },
     "tags": {}
-  }
+  },
+  "allOf": [
+    {
+      "if": {
+        "properties": {
+          "encryption": {
+            "properties": {
+              "encryptionType": {
+                "const": "KMS"
+              }
+            },
+            "required": ["encryptionType"]
+          }
+        }
+      },
+      "then": {
+        "properties": {
+          "encryption": {
+            "required": ["kmsKeyArn"]
+          }
+        }
+      }
+    },
+    {
+      "if": {
+        "properties": {
+          "encryption": {
+            "properties": {
+              "kmsKeyArn": {
+                "type": "string"
+              }
+            },
+            "required": ["kmsKeyArn"]
+          }
+        }
+      },
+      "then": {
+        "properties": {
+          "encryption": {
+            "properties": {
+              "encryptionType": {
+                "const": "KMS"
+              }
+            }
+          }
+        }
+      }
+    }
+  ]
 }

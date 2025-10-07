@@ -487,7 +487,12 @@ export class ApplicationLoadBalancerComponent extends Component {
       scheme: this.config!.scheme,
       ipAddressType: this.config!.ipAddressType,
       monitoringEnabled: this.config!.monitoring.enabled,
-      hardeningProfile: this.config!.hardeningProfile
+      hardeningProfile: this.config!.hardeningProfile,
+      listeners: this.listeners.map(listener => ({
+        arn: listener.listenerArn,
+        port: listener.listenerPort,
+        protocol: listener.listenerProtocol?.toString()
+      }))
     };
   }
 

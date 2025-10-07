@@ -31,7 +31,10 @@ const createMockContext = (
 const createMockSpec = (config: Partial<EcrRepositoryConfig> = {}): ComponentSpec => ({
   name: 'test-ecr-repository',
   type: 'ecr-repository',
-  config
+  config: {
+    repositoryName: 'test-repository',
+    ...config
+  }
 });
 
 describe('EcrRepositoryComponentConfigBuilder__Precedence__AppliesFrameworkDefaults', () => {
@@ -95,8 +98,8 @@ describe('EcrRepositoryComponentConfigBuilder__Precedence__AppliesFrameworkDefau
     const builder = new EcrRepositoryComponentConfigBuilder({ context, spec });
     const config = builder.buildSync();
 
-    expect(config.imageScanningConfiguration?.scanOnPush).toBe(false);
-    expect(config.imageTagMutability).toBe('MUTABLE');
+    expect(config.imageScanningConfiguration?.scanOnPush).toBe(true);
+    expect(config.imageTagMutability).toBe('IMMUTABLE');
     expect(config.encryption?.encryptionType).toBe('AES256');
     expect(config.lifecyclePolicy?.maxImageCount).toBe(10);
     expect(config.monitoring?.enabled).toBe(true);
@@ -199,5 +202,69 @@ describe('EcrRepositoryComponentConfigBuilder__Precedence__AppliesFrameworkDefau
     expect(config.monitoring?.enabled).toBe(false);
     expect(config.monitoring?.detailedMetrics).toBe(false);
     expect(config.imageScanningConfiguration?.scanOnPush).toBe(true);
+  });
+
+  /*
+   * Test Metadata: TP-ecr-repository-config-builder-005
+   * {
+   *   "id": "TP-ecr-repository-config-builder-005",
+   *   "level": "unit",
+   *   "capability": "Config builder rejects incomplete KMS encryption configuration",
+   *   "oracle": "contract",
+   *   "invariants": ["Validation error thrown"],
+   *   "fixtures": ["ConfigBuilder"],
+   *   "inputs": { "shape": "Manifest sets encryptionType KMS without kmsKeyArn", "notes": "Schema should fail" },
+   *   "risks": ["Repositories deployed without CMK"],
+   *   "dependencies": [],
+   *   "evidence": ["builder.buildSync()"],
+   *   "compliance_refs": ["std://platform-testing-standard", "std://platform-security-standard"],
+   *   "ai_generated": false,
+   *   "human_reviewed_by": ""
+   * }
+   */
+  it('SchemaValidation__KmsWithoutKey__ThrowsValidationError', () => {
+    const context = createMockContext('commercial');
+    const spec = createMockSpec({
+      repositoryName: 'kms-validation',
+      encryption: {
+        encryptionType: 'KMS'
+      }
+    });
+
+    const builder = new EcrRepositoryComponentConfigBuilder({ context, spec });
+
+    expect(() => builder.buildSync()).toThrow();
+  });
+
+  /*
+   * Test Metadata: TP-ecr-repository-config-builder-006
+   * {
+   *   "id": "TP-ecr-repository-config-builder-006",
+   *   "level": "unit",
+   *   "capability": "Schema enforces lifecycle policy bounds",
+   *   "oracle": "contract",
+   *   "invariants": ["Lifecycle values within allowed range"],
+   *   "fixtures": ["ConfigBuilder"],
+   *   "inputs": { "shape": "Manifest sets lifecycle maxImageCount below minimum", "notes": "Should be rejected" },
+   *   "risks": ["Lifecycle misconfiguration leading to stale images"],
+   *   "dependencies": [],
+   *   "evidence": ["builder.buildSync()"],
+   *   "compliance_refs": ["std://platform-testing-standard"],
+   *   "ai_generated": false,
+   *   "human_reviewed_by": ""
+   * }
+   */
+  it('SchemaValidation__LifecyclePolicyOutOfRange__ThrowsValidationError', () => {
+    const context = createMockContext('commercial');
+    const spec = createMockSpec({
+      repositoryName: 'lifecycle-validation',
+      lifecyclePolicy: {
+        maxImageCount: 0
+      }
+    });
+
+    const builder = new EcrRepositoryComponentConfigBuilder({ context, spec });
+
+    expect(() => builder.buildSync()).toThrow();
   });
 });

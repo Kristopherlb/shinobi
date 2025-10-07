@@ -85,6 +85,12 @@ export const ECR_REPOSITORY_CONFIG_SCHEMA = ECR_REPOSITORY_CONFIG_SCHEMA_JSON;
  */
 export class EcrRepositoryComponentConfigBuilder extends ConfigBuilder<EcrRepositoryConfig> {
 
+  public buildSync(): EcrRepositoryConfig {
+    const config = super.buildSync();
+    this.validateConfig(config);
+    return config;
+  }
+
   constructor(context: ConfigBuilderContext) {
     super(context, ECR_REPOSITORY_CONFIG_SCHEMA);
   }
@@ -96,9 +102,10 @@ export class EcrRepositoryComponentConfigBuilder extends ConfigBuilder<EcrReposi
   protected getHardcodedFallbacks(): Partial<EcrRepositoryConfig> {
     return {
       imageScanningConfiguration: {
-        scanOnPush: false // Security-safe default
+        // Always perform vulnerability scans on push unless explicitly disabled
+        scanOnPush: true
       },
-      imageTagMutability: 'MUTABLE',
+      imageTagMutability: 'IMMUTABLE',
       encryption: {
         encryptionType: 'AES256'
       },
@@ -110,7 +117,11 @@ export class EcrRepositoryComponentConfigBuilder extends ConfigBuilder<EcrReposi
       monitoring: {
         enabled: true,
         detailedMetrics: false,
-        logRetentionDays: 90 // 3 months default
+        logRetentionDays: 90, // 3 months default
+        alarms: {
+          pushRateThreshold: 50,
+          sizeThreshold: 10 * 1024 * 1024 * 1024 // 10 GiB
+        }
       },
       compliance: {
         retentionPolicy: 'destroy',
@@ -125,9 +136,79 @@ export class EcrRepositoryComponentConfigBuilder extends ConfigBuilder<EcrReposi
    * Security and compliance-specific configurations loaded from platform config
    */
   protected getComplianceFrameworkDefaults(): Partial<EcrRepositoryConfig> {
-    // This will be loaded from /config/{framework}.yml files
-    // For now, return empty object to be overridden by platform config
-    return {};
+    const framework = this.builderContext.context.complianceFramework;
+
+    switch (framework) {
+      case 'fedramp-high':
+        return {
+          imageScanningConfiguration: {
+            scanOnPush: true
+          },
+          imageTagMutability: 'IMMUTABLE',
+          encryption: {
+            encryptionType: 'KMS'
+          },
+          monitoring: {
+            enabled: true,
+            detailedMetrics: true,
+            logRetentionDays: 365,
+            alarms: {
+              pushRateThreshold: 25,
+              sizeThreshold: 5 * 1024 * 1024 * 1024 // 5 GiB
+            }
+          },
+          compliance: {
+            retentionPolicy: 'retain',
+            auditLogging: true
+          }
+        };
+      case 'fedramp-moderate':
+        return {
+          imageScanningConfiguration: {
+            scanOnPush: true
+          },
+          imageTagMutability: 'IMMUTABLE',
+          encryption: {
+            encryptionType: 'KMS'
+          },
+          monitoring: {
+            enabled: true,
+            detailedMetrics: true,
+            logRetentionDays: 180,
+            alarms: {
+              pushRateThreshold: 40,
+              sizeThreshold: 7 * 1024 * 1024 * 1024 // 7 GiB
+            }
+          },
+          compliance: {
+            retentionPolicy: 'retain',
+            auditLogging: true
+          }
+        };
+      default:
+        return {
+          imageScanningConfiguration: {
+            scanOnPush: true
+          },
+          imageTagMutability: 'IMMUTABLE',
+          encryption: {
+            encryptionType: 'AES256'
+          },
+          monitoring: {
+            enabled: true,
+            detailedMetrics: false,
+            logRetentionDays: 90,
+            alarms: {
+              pushRateThreshold: 50,
+              sizeThreshold: 10 * 1024 * 1024 * 1024
+            }
+          },
+          compliance: {
+            retentionPolicy: 'destroy',
+            auditLogging: false
+          }
+        };
+    }
   }
 
   /**
@@ -135,5 +216,43 @@ export class EcrRepositoryComponentConfigBuilder extends ConfigBuilder<EcrReposi
    */
   public getSchema(): any {
     return ECR_REPOSITORY_CONFIG_SCHEMA;
+  }
+
+  private validateConfig(config: EcrRepositoryConfig): void {
+    if (!config.repositoryName || config.repositoryName.trim().length === 0) {
+      throw new Error('repositoryName is required for ECR repositories');
+    }
+
+    if (config.encryption?.encryptionType === 'KMS') {
+      const kmsKeyArn = config.encryption.kmsKeyArn;
+      if (!kmsKeyArn) {
+        throw new Error('kmsKeyArn must be provided when encryptionType is set to KMS');
+      }
+
+      const kmsArnPattern = /^arn:aws:kms:[a-z0-9-]+:\d{12}:key\/[a-f0-9-]+$/;
+      if (!kmsArnPattern.test(kmsKeyArn)) {
+        throw new Error(`kmsKeyArn '${kmsKeyArn}' is not a valid KMS key ARN`);
+      }
+    }
+
+    if (config.lifecyclePolicy) {
+      const { maxImageCount, maxImageAge, untaggedImageRetentionDays } = config.lifecyclePolicy;
+      if (maxImageCount !== undefined && (maxImageCount < 1 || maxImageCount > 1000)) {
+        throw new Error('lifecyclePolicy.maxImageCount must be between 1 and 1000');
+      }
+      if (maxImageAge !== undefined && (maxImageAge < 1 || maxImageAge > 3650)) {
+        throw new Error('lifecyclePolicy.maxImageAge must be between 1 and 3650');
+      }
+      if (untaggedImageRetentionDays !== undefined && (untaggedImageRetentionDays < 1 || untaggedImageRetentionDays > 365)) {
+        throw new Error('lifecyclePolicy.untaggedImageRetentionDays must be between 1 and 365');
+      }
+    }
+
+    if (config.monitoring?.logRetentionDays !== undefined) {
+      const days = config.monitoring.logRetentionDays;
+      if (days < 1 || days > 3650) {
+        throw new Error('monitoring.logRetentionDays must be between 1 and 3650');
+      }
+    }
   }
 }

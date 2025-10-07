@@ -26,6 +26,9 @@ import { EcrRepositoryConfig, EcrRepositoryComponentConfigBuilder, ECR_REPOSITOR
  */
 export class EcrRepositoryComponent extends BaseComponent {
   private repository?: ecr.Repository;
+  private accessLogGroup?: logs.LogGroup;
+  private pushRateAlarm?: cloudwatch.Alarm;
+  private repositorySizeAlarm?: cloudwatch.Alarm;
   private readonly config: EcrRepositoryConfig;
 
   constructor(scope: Construct, id: string, context: ComponentContext, spec: ComponentSpec) {
@@ -46,10 +49,22 @@ export class EcrRepositoryComponent extends BaseComponent {
     
     try {
       this.createRepository();
-      this.configureObservabilityForRepository();
-    
+      const observabilityCapability = this.configureObservabilityForRepository();
+
       this.registerConstruct('repository', this.repository!);
+      if (this.accessLogGroup) {
+        this.registerConstruct('accessLogGroup', this.accessLogGroup);
+      }
+      if (this.pushRateAlarm) {
+        this.registerConstruct('pushRateAlarm', this.pushRateAlarm);
+      }
+      if (this.repositorySizeAlarm) {
+        this.registerConstruct('repositorySizeAlarm', this.repositorySizeAlarm);
+      }
       this.registerCapability('container:ecr', this.buildRepositoryCapability());
+      if (observabilityCapability) {
+        this.registerCapability('observability:ecr-repository', observabilityCapability);
+      }
     
       const duration = Date.now() - startTime;
       this.logPerformanceMetric('component_synthesis', duration, {
@@ -81,12 +96,15 @@ export class EcrRepositoryComponent extends BaseComponent {
   }
 
   private createRepository(): void {
+    const { encryption, encryptionKey } = this.resolveEncryptionConfiguration();
+
     const repositoryProps: ecr.RepositoryProps = {
       repositoryName: this.config!.repositoryName,
       imageScanOnPush: this.config!.imageScanningConfiguration?.scanOnPush,
-      imageTagMutability: this.mapImageTagMutability(this.config!.imageTagMutability!),
+      imageTagMutability: this.mapImageTagMutability(this.config!.imageTagMutability ?? 'IMMUTABLE'),
       lifecycleRules: this.buildLifecycleRules(),
-      encryption: this.buildEncryptionConfiguration(),
+      encryption,
+      encryptionKey,
       removalPolicy: this.getRemovalPolicy()
     };
 
@@ -95,13 +113,20 @@ export class EcrRepositoryComponent extends BaseComponent {
     this.applyStandardTags(this.repository, {
       'repository-name': this.config!.repositoryName,
       'image-scanning': (this.config!.imageScanningConfiguration?.scanOnPush || false).toString(),
-      'tag-mutability': this.config!.imageTagMutability!,
+      'tag-mutability': this.config!.imageTagMutability ?? 'IMMUTABLE',
       'encryption-type': this.config!.encryption?.encryptionType || 'AES256'
     });
 
     if (this.config!.tags) {
       Object.entries(this.config!.tags).forEach(([key, value]) => {
         cdk.Tags.of(this.repository!).add(key, value);
+      });
+    }
+
+    if (this.config.repositoryPolicy) {
+      const policyDocument = iam.PolicyDocument.fromJson(this.config.repositoryPolicy);
+      policyDocument.statements.forEach((statement) => {
+        this.repository!.addToResourcePolicy(statement);
       });
     }
     
@@ -122,11 +147,28 @@ export class EcrRepositoryComponent extends BaseComponent {
     }
   }
 
-  private buildEncryptionConfiguration(): ecr.RepositoryEncryption {
+  private resolveEncryptionConfiguration(): {
+    encryption: ecr.RepositoryEncryption;
+    encryptionKey?: kms.IKey;
+  } {
     if (this.config!.encryption?.encryptionType === 'KMS') {
-      return ecr.RepositoryEncryption.KMS;
+      const kmsKeyArn = this.config!.encryption?.kmsKeyArn;
+      if (!kmsKeyArn) {
+        throw new Error('kmsKeyArn must be provided when encryptionType is set to KMS');
+      }
+      const encryptionKey = kmsKeyArn
+        ? kms.Key.fromKeyArn(this, 'RepositoryEncryptionKey', kmsKeyArn)
+        : undefined;
+
+      return {
+        encryption: ecr.RepositoryEncryption.KMS,
+        encryptionKey
+      };
     }
-    return ecr.RepositoryEncryption.AES_256;
+
+    return {
+      encryption: ecr.RepositoryEncryption.AES_256
+    };
   }
 
   private buildLifecycleRules(): ecr.LifecycleRule[] | undefined {
@@ -178,28 +220,49 @@ export class EcrRepositoryComponent extends BaseComponent {
     return {
       repositoryArn: this.repository!.repositoryArn,
       repositoryName: this.config!.repositoryName,
-      repositoryUri: this.repository!.repositoryUri
+      repositoryUri: this.repository!.repositoryUri,
+      imageScanOnPush: this.config!.imageScanningConfiguration?.scanOnPush ?? true,
+      imageTagMutability: this.config!.imageTagMutability ?? 'IMMUTABLE',
+      encryptionType: this.config!.encryption?.encryptionType ?? 'AES256'
     };
   }
 
-  private configureObservabilityForRepository(): void {
+  private configureObservabilityForRepository():
+    | {
+        logGroupArn: string;
+        logGroupName: string;
+        alarms: {
+          pushRateAlarmArn?: string;
+          repositorySizeAlarmArn?: string;
+        };
+        metrics: string[];
+      }
+    | undefined {
     if (!this.config?.monitoring?.enabled) {
-      return;
+      return undefined;
     }
 
     const repositoryName = this.config!.repositoryName;
 
     // Create CloudWatch Log Group for repository access logs
-    const accessLogGroup = new logs.LogGroup(this, 'AccessLogGroup', {
+    const retentionDays = this.config.monitoring?.logRetentionDays ?? 90;
+
+    this.accessLogGroup = new logs.LogGroup(this, 'AccessLogGroup', {
       logGroupName: `/aws/ecr/${repositoryName}`,
-      retention: this.getLogRetentionDays(),
+      retention: this.resolveLogRetention(retentionDays),
       removalPolicy: this.getRemovalPolicy()
     });
 
-    this.applyStandardTags(accessLogGroup, {
+    this.applyStandardTags(this.accessLogGroup, {
       'log-type': 'repository-access',
-      'retention': `${this.getLogRetentionDays()} days`
+      retention: `${retentionDays}d`
     });
+
+    if (this.config.tags) {
+      Object.entries(this.config.tags).forEach(([key, value]) => {
+        cdk.Tags.of(this.accessLogGroup!).add(key, value);
+      });
+    }
 
     // Create CloudWatch metrics for repository monitoring
     this.createCloudWatchMetrics(repositoryName);
@@ -212,27 +275,59 @@ export class EcrRepositoryComponent extends BaseComponent {
       repositoryName: repositoryName,
       monitoringEnabled: true
     });
+
+    return {
+      logGroupArn: this.accessLogGroup.logGroupArn,
+      logGroupName: this.accessLogGroup.logGroupName,
+      alarms: {
+        pushRateAlarmArn: this.pushRateAlarm?.alarmArn,
+        repositorySizeAlarmArn: this.repositorySizeAlarm?.alarmArn,
+        pushRateThreshold: this.config?.monitoring?.alarms?.pushRateThreshold || 50,
+        repositorySizeThreshold: this.config?.monitoring?.alarms?.sizeThreshold || 10737418240
+      },
+      metrics: ['NumberOfImagesPushed', 'RepositorySizeInBytes', 'NumberOfImagesPulled']
+    };
   }
 
-  private getLogRetentionDays(): logs.RetentionDays {
-    const retentionDays = this.config.monitoring?.logRetentionDays || 90;
-    
-    // Convert days to appropriate RetentionDays enum
-    if (retentionDays >= 3650) { // 10 years
+  private resolveLogRetention(retentionDays: number): logs.RetentionDays {
+    if (retentionDays >= 3650) {
       return logs.RetentionDays.TEN_YEARS;
-    } else if (retentionDays >= 365) { // 1 year
-      return logs.RetentionDays.ONE_YEAR;
-    } else if (retentionDays >= 90) { // 3 months
-      return logs.RetentionDays.THREE_MONTHS;
-    } else if (retentionDays >= 30) { // 1 month
-      return logs.RetentionDays.ONE_MONTH;
-    } else if (retentionDays >= 7) { // 1 week
-      return logs.RetentionDays.ONE_WEEK;
-    } else if (retentionDays >= 1) { // 1 day
-      return logs.RetentionDays.ONE_DAY;
-    } else {
-      return logs.RetentionDays.ONE_DAY; // Default to 1 day minimum
     }
+    if (retentionDays >= 1825) {
+      return logs.RetentionDays.FIVE_YEARS;
+    }
+    if (retentionDays >= 365) {
+      return logs.RetentionDays.ONE_YEAR;
+    }
+    if (retentionDays >= 180) {
+      return logs.RetentionDays.SIX_MONTHS;
+    }
+    if (retentionDays >= 120) {
+      return logs.RetentionDays.FOUR_MONTHS;
+    }
+    if (retentionDays >= 90) {
+      return logs.RetentionDays.THREE_MONTHS;
+    }
+    if (retentionDays >= 60) {
+      return logs.RetentionDays.TWO_MONTHS;
+    }
+    if (retentionDays >= 30) {
+      return logs.RetentionDays.ONE_MONTH;
+    }
+    if (retentionDays >= 14) {
+      return logs.RetentionDays.TWO_WEEKS;
+    }
+    if (retentionDays >= 7) {
+      return logs.RetentionDays.ONE_WEEK;
+    }
+    if (retentionDays >= 3) {
+      return logs.RetentionDays.THREE_DAYS;
+    }
+    if (retentionDays >= 1) {
+      return logs.RetentionDays.ONE_DAY;
+    }
+
+    return logs.RetentionDays.ONE_DAY;
   }
 
   private createCloudWatchMetrics(repositoryName: string): void {
@@ -272,7 +367,7 @@ export class EcrRepositoryComponent extends BaseComponent {
 
   private createCloudWatchAlarms(repositoryName: string): void {
     // Image Push Rate Alarm
-    new cloudwatch.Alarm(this, 'ImagePushRateAlarm', {
+    this.pushRateAlarm = new cloudwatch.Alarm(this, 'ImagePushRateAlarm', {
       alarmName: `${this.context.serviceName}-${this.spec.name}-high-push-rate`,
       alarmDescription: 'ECR repository high image push rate alarm',
       metric: new cloudwatch.Metric({
@@ -290,8 +385,19 @@ export class EcrRepositoryComponent extends BaseComponent {
       treatMissingData: cloudwatch.TreatMissingData.NOT_BREACHING
     });
 
+    this.applyStandardTags(this.pushRateAlarm, {
+      'alarm-type': 'ecr-push-rate',
+      repository: repositoryName
+    });
+
+    if (this.config.tags) {
+      Object.entries(this.config.tags).forEach(([key, value]) => {
+        cdk.Tags.of(this.pushRateAlarm!).add(key, value);
+      });
+    }
+
     // Repository Size Alarm
-    new cloudwatch.Alarm(this, 'RepositorySizeAlarm', {
+    this.repositorySizeAlarm = new cloudwatch.Alarm(this, 'RepositorySizeAlarm', {
       alarmName: `${this.context.serviceName}-${this.spec.name}-repository-size`,
       alarmDescription: 'ECR repository size threshold alarm',
       metric: new cloudwatch.Metric({
@@ -308,5 +414,16 @@ export class EcrRepositoryComponent extends BaseComponent {
       comparisonOperator: cloudwatch.ComparisonOperator.GREATER_THAN_THRESHOLD,
       treatMissingData: cloudwatch.TreatMissingData.NOT_BREACHING
     });
+
+    this.applyStandardTags(this.repositorySizeAlarm, {
+      'alarm-type': 'ecr-repository-size',
+      repository: repositoryName
+    });
+
+    if (this.config.tags) {
+      Object.entries(this.config.tags).forEach(([key, value]) => {
+        cdk.Tags.of(this.repositorySizeAlarm!).add(key, value);
+      });
+    }
   }
 }

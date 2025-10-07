@@ -5,6 +5,22 @@ All notable changes to the ECR Repository component will be documented in this f
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [1.1.0] - 2025-10-05
+
+### Added
+- Observability capability export exposing log group metadata and alarm thresholds for binder automation
+- AwsSolutions (`cdk-nag`) regression coverage to guard against security drift
+
+### Changed
+- Default configuration now enforces immutable tags, scan-on-push, and compliance-aware monitoring values across frameworks
+- CloudWatch log group and alarms inherit platform tags plus customer-supplied tags to satisfy the tagging matrix
+- Repository policy manifests apply JSON policy documents directly to the underlying repository resource
+- KMS encryption configuration now loads the specified key ARN during synthesis when selected
+
+### Fixed
+- Schema conditional validation prevents incomplete KMS definitions from bypassing MCP validation
+- Observability capability advertises log groups and thresholds so downstream systems can auto-bind telemetry routes
+
 ## [1.0.0] - 2024-01-15
 
 ### Added

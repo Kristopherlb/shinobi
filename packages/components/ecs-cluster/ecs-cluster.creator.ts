@@ -6,11 +6,11 @@
  */
 
 import { Construct } from 'constructs';
-import { 
-  ComponentSpec, 
-  ComponentContext, 
-  IComponentCreator 
-} from '../@shinobi/core/component-interfaces.ts';
+import {
+  ComponentSpec,
+  ComponentContext,
+  IComponentCreator
+} from '@shinobi/core';
 import { EcsClusterComponent } from './ecs-cluster.component.ts';
 import { EcsClusterConfig, ECS_CLUSTER_CONFIG_SCHEMA } from './ecs-cluster.builder.ts';
 
@@ -69,12 +69,11 @@ export class EcsClusterComponentCreator implements IComponentCreator {
    * Factory method to create component instances
    */
   public createComponent(
-    scope: Construct, 
-    id: string,
-    context: ComponentContext, 
-    spec: ComponentSpec
+    scope: Construct,
+    spec: ComponentSpec,
+    context: ComponentContext
   ): EcsClusterComponent {
-    return new EcsClusterComponent(scope, id, context, spec);
+    return new EcsClusterComponent(scope, spec.name, context, spec);
   }
   
   /**
@@ -115,28 +114,20 @@ export class EcsClusterComponentCreator implements IComponentCreator {
    * Returns the capabilities this component provides when synthesized
    */
   public getProvidedCapabilities(): string[] {
-    return [
-      'compute:ecs-cluster',
-      'monitoring:ecs-cluster'
-    ];
+    return ['ecs:cluster', 'observability:ecs-cluster', 'otel:environment'];
   }
   
   /**
    * Returns the capabilities this component requires from other components
    */
   public getRequiredCapabilities(): string[] {
-    return [
-      // TODO: Define required capabilities
-    ];
+    return ['network:vpc'];
   }
   
   /**
    * Returns construct handles that will be registered by this component
    */
   public getConstructHandles(): string[] {
-    return [
-      'main'
-      // TODO: Add additional construct handles if needed
-    ];
+    return ['cluster', 'namespace', 'autoScalingGroup'];
   }
 }

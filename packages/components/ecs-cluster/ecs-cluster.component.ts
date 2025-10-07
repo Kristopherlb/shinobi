@@ -6,14 +6,18 @@
  * Implements the Platform ECS Service Connect Standard v1.0.
  */
 
+import * as cdk from 'aws-cdk-lib';
 import * as ecs from 'aws-cdk-lib/aws-ecs';
 import * as ec2 from 'aws-cdk-lib/aws-ec2';
 import * as servicediscovery from 'aws-cdk-lib/aws-servicediscovery';
 import * as autoscaling from 'aws-cdk-lib/aws-autoscaling';
-import * as cdk from 'aws-cdk-lib';
 import { Construct } from 'constructs';
-import { BaseComponent } from '../@shinobi/core/component.ts';
-import { ComponentSpec, ComponentContext, ComponentCapabilities } from '../@shinobi/core/component-interfaces.ts';
+import {
+  BaseComponent,
+  ComponentSpec,
+  ComponentContext,
+  ComponentCapabilities
+} from '@shinobi/core';
 import { EcsClusterConfig, EcsClusterComponentConfigBuilder } from './ecs-cluster.builder.ts';
 
 
@@ -39,6 +43,11 @@ export class EcsClusterComponent extends BaseComponent {
    * Synthesis phase - Create ECS Cluster with Service Connect capability
    */
   public synth(): void {
+    if (this.cluster) {
+      this.logComponentEvent('synthesis_skipped', 'ECS Cluster already synthesized');
+      return;
+    }
+
     this.logComponentEvent('synthesis_start', 'Starting ECS Cluster synthesis');
 
     const startTime = Date.now();
@@ -57,7 +66,7 @@ export class EcsClusterComponent extends BaseComponent {
       this.configureClusterSettings();
 
       // Configure OpenTelemetry observability for ECS tasks
-      this.configureOpenTelemetryForEcs();
+      const observabilityCapability = this.configureOpenTelemetryForEcs();
 
       // Apply standard platform tags
       this.applyClusterTags();
@@ -71,6 +80,9 @@ export class EcsClusterComponent extends BaseComponent {
 
       // Register ecs:cluster capability
       this.registerCapability('ecs:cluster', this.buildEcsClusterCapability());
+      if (observabilityCapability) {
+        this.registerCapability('observability:ecs-cluster', observabilityCapability);
+      }
 
       const duration = Date.now() - startTime;
       this.logPerformanceMetric('component_synthesis', duration, {
@@ -135,19 +147,12 @@ export class EcsClusterComponent extends BaseComponent {
     // Get VPC from context or use default
     const vpc = this.getVpcFromContext();
 
-    // Create private DNS namespace for Service Connect
-    this.namespace = new servicediscovery.PrivateDnsNamespace(this, 'ServiceConnectNamespace', {
-      name: this.config.serviceConnect.namespace,
-      vpc: vpc,
-      description: `Service Connect namespace for ${this.context.serviceName}`,
-    });
-
-    // Configure the cluster's default Cloud Map namespace
-    this.cluster.addDefaultCloudMapNamespace({
+    // Create private DNS namespace for Service Connect and attach to cluster
+    this.namespace = this.cluster.addDefaultCloudMapNamespace({
       name: this.config.serviceConnect.namespace,
       type: servicediscovery.NamespaceType.DNS_PRIVATE,
       vpc: vpc
-    });
+    }) as servicediscovery.IPrivateDnsNamespace;
 
     this.logResourceCreation('service-connect-namespace', this.config.serviceConnect.namespace);
   }
@@ -235,10 +240,24 @@ export class EcsClusterComponent extends BaseComponent {
   /**
    * Configure OpenTelemetry observability for ECS tasks according to Platform Observability Standard
    */
-  private configureOpenTelemetryForEcs(): void {
+  private configureOpenTelemetryForEcs():
+    | {
+        otelEnvironment: Record<string, string>;
+        containerInsightsEnabled: boolean;
+        metrics: string[];
+        logging: {
+          containerInsights: boolean;
+        };
+      }
+    | undefined {
+    if (this.config.monitoring?.enabled === false) {
+      this.logComponentEvent('observability_skipped', 'Monitoring disabled for ECS Cluster');
+      return undefined;
+    }
+
     if (!this.cluster) {
       this.logComponentEvent('otel_skipped', 'ECS Cluster not available for OTel configuration');
-      return;
+      return undefined;
     }
 
     // Get standardized OpenTelemetry environment variables for ECS tasks
@@ -257,39 +276,50 @@ export class EcsClusterComponent extends BaseComponent {
       otelServiceName: otelEnvVars['OTEL_SERVICE_NAME'],
       otelExporterEndpoint: otelEnvVars['OTEL_EXPORTER_OTLP_ENDPOINT']
     });
+
+    return {
+      otelEnvironment: otelEnvVars,
+      containerInsightsEnabled: this.config.containerInsights ?? true,
+      metrics: ['AWS/ECS:CPUUtilization', 'AWS/ECS:MemoryUtilization'],
+      logging: {
+        containerInsights: this.config.containerInsights ?? true
+      }
+    };
   }
 
   /**
    * Apply standard platform tags to ECS Cluster and related resources
    */
   private applyClusterTags(): void {
+    const userTags = this.config.tags ?? {};
+
     if (this.cluster) {
       this.applyStandardTags(this.cluster, {
         'component-type': 'ecs-cluster',
-        'service-connect-namespace': this.config.serviceConnect.namespace
+        'service-connect-namespace': this.config.serviceConnect.namespace,
+        'component-name': this.spec.name,
+        ...userTags
       });
+      cdk.Tags.of(this.cluster).add('component-name', this.spec.name);
     }
 
     if (this.namespace) {
       this.applyStandardTags(this.namespace, {
-        'component-type': 'service-connect-namespace'
+        'component-type': 'service-connect-namespace',
+        'component-name': this.spec.name,
+        ...userTags
       });
+      cdk.Tags.of(this.namespace).add('component-name', this.spec.name);
     }
 
     if (this.autoScalingGroup) {
       this.applyStandardTags(this.autoScalingGroup, {
         'component-type': 'ecs-asg',
-        'instance-type': this.config.capacity?.instanceType || 'unknown'
+        'instance-type': this.config.capacity?.instanceType || 'unknown',
+        'component-name': this.spec.name,
+        ...userTags
       });
-    }
-
-    // Apply user-defined tags
-    if (this.config.tags) {
-      Object.entries(this.config.tags).forEach(([key, value]) => {
-        if (this.cluster) {
-          cdk.Tags.of(this.cluster).add(key, value);
-        }
-      });
+      cdk.Tags.of(this.autoScalingGroup).add('component-name', this.spec.name);
     }
   }
 
@@ -315,9 +345,11 @@ export class EcsClusterComponent extends BaseComponent {
    * Get VPC from context or throw error if not available
    */
   private getVpcFromContext(): ec2.IVpc {
-    // In a real implementation, this would get the VPC from the service context
-    // For now, we'll use the default VPC lookup
-    return ec2.Vpc.fromLookup(this, 'DefaultVpc', { isDefault: true });
+    if (this.context.vpc) {
+      return this.context.vpc;
+    }
+
+    throw new Error('ECS Cluster component requires a VPC provided via context.vpc');
   }
 
   /**

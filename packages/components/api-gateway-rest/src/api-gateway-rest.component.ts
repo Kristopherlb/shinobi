@@ -3,8 +3,9 @@ import * as acm from 'aws-cdk-lib/aws-certificatemanager';
 import * as cognito from 'aws-cdk-lib/aws-cognito';
 import * as cw from 'aws-cdk-lib/aws-cloudwatch';
 import * as logs from 'aws-cdk-lib/aws-logs';
-import { Duration, RemovalPolicy } from 'aws-cdk-lib';
+import { Duration, RemovalPolicy, Stack } from 'aws-cdk-lib';
 import { Construct } from 'constructs';
+import { NagSuppressions } from 'cdk-nag';
 
 import {
   BaseComponent,
@@ -69,6 +70,7 @@ export class ApiGatewayRestComponent extends BaseComponent {
     this.configureRequestValidation();
     this.configureAdvancedThrottling();
     this.configureEnhancedMonitoring();
+    this.applyCdkNagSuppressions();
 
     if (!this.api || !this.stage) {
       throw new Error('API Gateway REST component failed to create core constructs.');
@@ -549,5 +551,62 @@ export class ApiGatewayRestComponent extends BaseComponent {
     // 2. Set up business metrics tracking
     // 3. Configure advanced alerting rules
     // 4. Create performance optimization recommendations
+  }
+
+  private applyCdkNagSuppressions(): void {
+    if (this.api) {
+      NagSuppressions.addResourceSuppressions(
+        this.api,
+        [
+          {
+            id: 'AwsSolutions-APIG2',
+            reason:
+              'Request validation is enforced through manifest schema checks and downstream integration contracts; API Gateway request validators remain optional.'
+          },
+          {
+            id: 'AwsSolutions-APIG4',
+            reason:
+              'The REST component intentionally supports unauthenticated endpoints; teams enable IAM, Cognito, or custom authorizers based on service requirements.'
+          },
+          {
+            id: 'AwsSolutions-COG4',
+            reason:
+              'Cognito authorizers are configurable but not mandatory. This suppression tracks the exception for public APIs managed by downstream services.'
+          }
+        ],
+        true
+      );
+    }
+
+    if (this.api) {
+      const cloudWatchRole = this.api.node.tryFindChild('CloudWatchRole');
+      if (cloudWatchRole) {
+        NagSuppressions.addResourceSuppressions(
+          cloudWatchRole,
+          [
+            {
+              id: 'AwsSolutions-IAM4',
+              reason:
+                'AmazonAPIGatewayPushToCloudWatchLogs is an AWS-managed policy required for REST API access logging; tighter scoping is tracked separately.',
+              appliesTo: [
+              'Policy::arn:<AWS::Partition>:iam::aws:policy/service-role/AmazonAPIGatewayPushToCloudWatchLogs'
+            ]
+          }
+        ],
+        true
+      );
+      }
+    }
+
+    NagSuppressions.addStackSuppressions(Stack.of(this), [
+      {
+        id: 'AwsSolutions-IAM4',
+        reason:
+          'AmazonAPIGatewayPushToCloudWatchLogs is an AWS-managed policy required for REST API access logging; tighter scoping is tracked separately.',
+        appliesTo: [
+          'Policy::arn:<AWS::Partition>:iam::aws:policy/service-role/AmazonAPIGatewayPushToCloudWatchLogs'
+        ]
+      }
+    ]);
   }
 }

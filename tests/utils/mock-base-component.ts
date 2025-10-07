@@ -7,6 +7,7 @@
 
 import { Construct } from 'constructs';
 import * as cdk from 'aws-cdk-lib';
+import { ConfigBuilder as ActualConfigBuilder } from '@shinobi/core';
 
 export interface MockBaseComponentProps {
   id?: string;
@@ -123,7 +124,8 @@ export class MockBaseComponent extends Construct {
  * Use this in your test files to mock the BaseComponent
  */
 export const createPlatformCoreEngineMock = () => ({
-  BaseComponent: MockBaseComponent
+  BaseComponent: MockBaseComponent,
+  ConfigBuilder: ActualConfigBuilder
 });
 
 /**
@@ -131,6 +133,7 @@ export const createPlatformCoreEngineMock = () => ({
  * Use this in your test files to mock platform contracts
  */
 export const createPlatformContractsMock = () => ({
+  BaseComponent: MockBaseComponent,
   ComponentContext: {},
   ComponentSpec: {}
 });

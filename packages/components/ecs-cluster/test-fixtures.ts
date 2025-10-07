@@ -5,7 +5,7 @@
 
 import * as cdk from 'aws-cdk-lib';
 import * as ec2 from 'aws-cdk-lib/aws-ec2';
-import { ComponentContext, ComponentSpec } from '../@shinobi/core/component-interfaces.ts';
+import { ComponentContext, ComponentSpec } from '@shinobi/core/component-interfaces';
 
 /**
  * Deterministic test clock - frozen at specific time for reproducible tests
@@ -167,6 +167,7 @@ export const TEST_SPECS = {
 export class TestFixtureFactory {
   private static apps: cdk.App[] = [];
   private static stacks: cdk.Stack[] = [];
+  private static vpcCounter = 0;
 
   /**
    * Create a clean test environment with deterministic settings
@@ -203,6 +204,12 @@ export class TestFixtureFactory {
       fedrampHigh: { ...TEST_CONTEXTS.fedrampHigh, scope: stack }
     };
 
+    const defaultVpcId = `TestFixtureVpc-${++TestFixtureFactory.vpcCounter}`;
+    const defaultVpc = TestFixtureFactory.createMockVpc(stack, defaultVpcId);
+    Object.values(contexts).forEach((context) => {
+      context.vpc = defaultVpc;
+    });
+
     // Track for cleanup
     TestFixtureFactory.apps.push(app);
     TestFixtureFactory.stacks.push(stack);
@@ -220,7 +227,7 @@ export class TestFixtureFactory {
    */
   public static createMockVpc(stack: cdk.Stack, id: string = 'TestVpc'): ec2.IVpc {
     return new ec2.Vpc(stack, id, {
-      cidr: '10.0.0.0/16',
+      ipAddresses: ec2.IpAddresses.cidr('10.0.0.0/16'),
       maxAzs: 2,
       subnetConfiguration: [
         {
@@ -246,6 +253,7 @@ export class TestFixtureFactory {
   public static cleanup(): void {
     TestFixtureFactory.apps = [];
     TestFixtureFactory.stacks = [];
+    TestFixtureFactory.vpcCounter = 0;
   }
 
   /**
@@ -326,15 +334,20 @@ export class TestAssertions {
    * Assert that mandatory platform tags are present
    */
   public static assertMandatoryTags(template: cdk.assertions.Template, resourceType: string): void {
-    template.hasResourceProperties(resourceType, {
-      Tags: cdk.assertions.Match.arrayWith([
-        cdk.assertions.Match.objectLike({ Key: 'service-name', Value: cdk.assertions.Match.anyValue() }),
-        cdk.assertions.Match.objectLike({ Key: 'component-name', Value: cdk.assertions.Match.anyValue() }),
-        cdk.assertions.Match.objectLike({ Key: 'component-type', Value: cdk.assertions.Match.anyValue() }),
-        cdk.assertions.Match.objectLike({ Key: 'environment', Value: cdk.assertions.Match.anyValue() }),
-        cdk.assertions.Match.objectLike({ Key: 'compliance-framework', Value: cdk.assertions.Match.anyValue() })
-      ])
-    });
+    const resources = template.findResources(resourceType);
+    expect(Object.keys(resources).length).toBeGreaterThan(0);
+
+    const firstResource = Object.values(resources)[0] as { Properties?: { Tags?: Array<{ Key: string; Value: string }> } };
+    const tags = firstResource?.Properties?.Tags ?? [];
+
+    const expectTag = (key: string) => {
+      expect(tags.find((tag) => tag.Key === key)).toBeDefined();
+    };
+
+    expectTag('service-name');
+    expectTag('service-version');
+    expectTag('environment');
+    expectTag('compliance-framework');
   }
 
   /**

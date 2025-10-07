@@ -4,7 +4,7 @@
  */
 
 // Component exports
-export { EcsClusterComponentComponent } from './ecs-cluster.component.ts';
+export { EcsClusterComponent } from './ecs-cluster.component.ts';
 
 // Configuration exports
 export { 

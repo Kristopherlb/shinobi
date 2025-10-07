@@ -2,7 +2,7 @@
 # Defines monitoring, metrics, alarms, and compliance observability for ECR repositories
 
 observability:
-  version: "1.0.0"
+  version: "1.1.0"
   component: "ecr-repository"
   compliance_frameworks: ["commercial", "fedramp-moderate", "fedramp-high"]
 
@@ -308,7 +308,7 @@ observability:
         version: "latest"
     resource_attributes:
       service.name: "ecr-repository"
-      service.version: "1.0.0"
+      service.version: "1.1.0"
       deployment.environment: "${ENVIRONMENT}"
       cloud.provider: "aws"
       cloud.region: "${AWS_REGION}"

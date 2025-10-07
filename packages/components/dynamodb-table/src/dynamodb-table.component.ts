@@ -6,6 +6,7 @@ import * as backup from 'aws-cdk-lib/aws-backup';
 import * as events from 'aws-cdk-lib/aws-events';
 import * as cdk from 'aws-cdk-lib';
 import { Construct } from 'constructs';
+import { NagSuppressions } from 'cdk-nag';
 import {
   Component,
   ComponentSpec,
@@ -67,6 +68,7 @@ export class DynamoDbTableComponent extends Component {
       this.configureMonitoring();
       this.configureObservabilityTelemetry();
       this.configureBackupPlan();
+      this.applyCdkNagSuppressions();
 
       this.registerConstruct('main', this.table!);
       this.registerConstruct('table', this.table!);

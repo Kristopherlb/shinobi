@@ -1,19 +1,22 @@
 import path from 'node:path';
 import url from 'node:url';
-import preset from '../../../jest.preset.mjs';
+import baseConfig from '../../../jest.config.mjs';
 
-const __filename = url.fileURLToPath(import.meta.url);
-const __dirname = path.dirname(__filename);
+const __dirname = path.dirname(url.fileURLToPath(import.meta.url));
 const rootDir = path.resolve(__dirname, '../../..');
 
 export default {
-  ...preset,
+  ...baseConfig,
+  displayName: '@shinobi/components-ecs-cluster',
   rootDir,
-  coverageDirectory: path.join(rootDir, 'coverage', 'packages', 'components', 'ecs-cluster'),
+  testMatch: ['<rootDir>/packages/components/ecs-cluster/tests/**/*.test.ts'],
   moduleNameMapper: {
-    '^@platform/(.*)$': '<rootDir>/packages/$1/src',
-    '^@shinobi/observability-handlers$': '<rootDir>/packages/observability-handlers/src/index.ts',
-    '^@shinobi/components/(.+)/(.+)$': '<rootDir>/packages/components/$1/src/$2.ts'
+    ...baseConfig.moduleNameMapper
   },
-  testMatch: ['<rootDir>/packages/components/ecs-cluster/tests/**/*.test.ts']
+  collectCoverageFrom: [
+    'packages/components/ecs-cluster/**/*.ts',
+    '!packages/components/ecs-cluster/tests/**/*.ts',
+    '!packages/components/ecs-cluster/node_modules/**'
+  ],
+  coverageDirectory: path.join(rootDir, 'packages/components/ecs-cluster/coverage')
 };

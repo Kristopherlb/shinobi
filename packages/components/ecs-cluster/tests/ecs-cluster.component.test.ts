@@ -10,9 +10,9 @@ import * as ecs from 'aws-cdk-lib/aws-ecs';
 import * as ec2 from 'aws-cdk-lib/aws-ec2';
 import * as servicediscovery from 'aws-cdk-lib/aws-servicediscovery';
 import { Template, Match } from 'aws-cdk-lib/assertions';
+import { ComponentSpec } from '@shinobi/core/component-interfaces';
 import { EcsClusterComponent } from '../ecs-cluster.component.ts';
 import { EcsClusterComponentConfigBuilder } from '../ecs-cluster.builder.ts';
-import { ComponentContext, ComponentSpec } from '../../@shinobi/core/component-interfaces.ts';
 import { 
   TestFixtureFactory, 
   TestAssertions, 
@@ -20,6 +20,18 @@ import {
   TEST_CONTEXTS,
   TEST_SPECS 
 } from '../test-fixtures.ts';
+
+let platformConfigSpy: jest.SpyInstance;
+
+beforeEach(() => {
+  platformConfigSpy = jest
+    .spyOn(EcsClusterComponentConfigBuilder.prototype, '_loadPlatformConfiguration')
+    .mockImplementation(() => ({}));
+});
+
+afterEach(() => {
+  platformConfigSpy.mockRestore();
+});
 
 /*
  * Test Metadata: TP-ECS-CLUSTER-001
@@ -150,6 +162,9 @@ describe('EcsClusterComponent__ResourceSynthesis__CloudFormationGeneration', () 
   beforeEach(() => {
     testEnv = TestFixtureFactory.createTestEnvironment();
     mockVpc = TestFixtureFactory.createMockVpc(testEnv.stack);
+    Object.values(testEnv.contexts).forEach((context) => {
+      context.vpc = mockVpc;
+    });
   });
 
   afterEach(() => {
@@ -237,9 +252,18 @@ describe('EcsClusterComponent__ResourceSynthesis__CloudFormationGeneration', () 
     const frameworks: Array<keyof typeof TEST_CONTEXTS> = ['commercial', 'fedrampModerate', 'fedrampHigh'];
     
     for (const framework of frameworks) {
-      const frameworkStack = new cdk.Stack(testEnv.app, `TestStack-${String(framework)}`);
-      const context = { ...testEnv.contexts[framework], scope: frameworkStack };
-      
+      const frameworkEnv = TestFixtureFactory.createTestEnvironment();
+      const frameworkStack = frameworkEnv.stack;
+      const frameworkVpc = TestFixtureFactory.createMockVpc(
+        frameworkStack,
+        `FrameworkVpc-${String(framework)}`
+      );
+      const context = {
+        ...frameworkEnv.contexts[framework],
+        scope: frameworkStack,
+        vpc: frameworkVpc
+      };
+
       const component = new EcsClusterComponent(
         frameworkStack,
         `TestCluster-${String(framework)}`,
@@ -267,7 +291,169 @@ describe('EcsClusterComponent__ResourceSynthesis__CloudFormationGeneration', () 
           InstanceType: Match.stringLikeRegexp('(m5|c5|r5)\\.(large|xlarge)')
         });
       }
+
+      TestFixtureFactory.cleanup();
     }
+  });
+
+  /*
+   * Test Metadata: TP-ECS-CLUSTER-003
+   * {
+   *   "id": "TP-ECS-CLUSTER-003",
+   *   "level": "unit",
+   *   "capability": "Capabilities include observability metadata",
+   *   "oracle": "contract",
+   *   "invariants": ["observability capability registered", "otel environment exported"],
+   *   "fixtures": ["cdk.App", "cdk.Stack", "EcsClusterComponent"],
+   *   "inputs": { "shape": "Commercial cluster with defaults", "notes": "Observability enabled" },
+   *   "risks": ["Downstream telemetry binders missing data"],
+   *   "dependencies": [],
+   *   "evidence": ["component.getCapabilities()"],
+   *   "complianceRefs": ["std://platform-observability-standard"],
+   *   "aiGenerated": false,
+   *   "humanReviewedBy": ""
+   * }
+   */
+  it('Capabilities__AfterSynthesis__RegistersObservabilityMetadata', () => {
+    const component = new EcsClusterComponent(
+      testEnv.stack,
+      'ObservabilityCluster',
+      testEnv.contexts.commercial,
+      testEnv.specs.minimalCluster
+    );
+
+    component.synth();
+
+    const capabilities = component.getCapabilities();
+    expect(capabilities['ecs:cluster']).toBeDefined();
+    expect(capabilities['observability:ecs-cluster']).toBeDefined();
+    expect(capabilities['observability:ecs-cluster'].otelEnvironment).toBeDefined();
+    expect(capabilities['otel:environment']).toBeDefined();
+  });
+
+  /*
+   * Test Metadata: TP-ECS-CLUSTER-004
+   * {
+   *   "id": "TP-ECS-CLUSTER-004",
+   *   "level": "unit",
+   *   "capability": "Monitoring disabled skips observability capability",
+   *   "oracle": "contract",
+   *   "invariants": ["No observability capability", "No otel environment"],
+   *   "fixtures": ["cdk.App", "cdk.Stack", "EcsClusterComponent"],
+   *   "inputs": { "shape": "Cluster with monitoring disabled", "notes": "Validates opt-out" },
+   *   "risks": ["Telemetry provisioned when not requested"],
+   *   "dependencies": [],
+   *   "evidence": ["component.getCapabilities()"],
+   *   "complianceRefs": ["std://platform-observability-standard"],
+   *   "aiGenerated": false,
+   *   "humanReviewedBy": ""
+   * }
+   */
+  it('Observability__MonitoringDisabled__SkipsTelemetry', () => {
+    const component = new EcsClusterComponent(
+      testEnv.stack,
+      'NoObservabilityCluster',
+      testEnv.contexts.commercial,
+      {
+        ...testEnv.specs.minimalCluster,
+        config: {
+          ...testEnv.specs.minimalCluster.config,
+          monitoring: {
+            enabled: false
+          }
+        }
+      }
+    );
+
+    component.synth();
+
+    const capabilities = component.getCapabilities();
+    expect(capabilities['observability:ecs-cluster']).toBeUndefined();
+    expect(capabilities['otel:environment']).toBeUndefined();
+  });
+
+  /*
+   * Test Metadata: TP-ECS-CLUSTER-005
+   * {
+   *   "id": "TP-ECS-CLUSTER-005",
+   *   "level": "unit",
+   *   "capability": "User tags propagate to all cluster resources",
+   *   "oracle": "contract",
+   *   "invariants": ["Tag present on namespace", "Tag present on ASG"],
+   *   "fixtures": ["cdk.App", "cdk.Stack", "EcsClusterComponent"],
+   *   "inputs": { "shape": "Cluster with custom tags", "notes": "Ensures tagging standard compliance" },
+   *   "risks": ["Missing cost allocation tags"],
+   *   "dependencies": [],
+   *   "evidence": ["CloudFormation template"],
+   *   "complianceRefs": ["std://platform-tagging-standard"],
+   *   "aiGenerated": false,
+   *   "humanReviewedBy": ""
+   * }
+   */
+  it('Tagging__CustomTags__PropagateToResources', () => {
+    const component = new EcsClusterComponent(
+      testEnv.stack,
+      'TaggedCluster',
+      testEnv.contexts.commercial,
+      {
+        ...testEnv.specs.ec2Cluster,
+        config: {
+          ...testEnv.specs.ec2Cluster.config,
+          tags: {
+            'cost-center': 'eng-42'
+          }
+        }
+      }
+    );
+
+    component.synth();
+    const template = Template.fromStack(testEnv.stack);
+
+    template.hasResourceProperties('AWS::ServiceDiscovery::PrivateDnsNamespace', {
+      Tags: Match.arrayWith([
+        Match.objectLike({ Key: 'cost-center', Value: 'eng-42' })
+      ])
+    });
+
+    template.hasResourceProperties('AWS::AutoScaling::AutoScalingGroup', {
+      Tags: Match.arrayWith([
+        Match.objectLike({ Key: 'cost-center', Value: 'eng-42' })
+      ])
+    });
+  });
+
+  /*
+   * Test Metadata: TP-ECS-CLUSTER-006
+   * {
+   *   "id": "TP-ECS-CLUSTER-006",
+   *   "level": "unit",
+   *   "capability": "Component enforces VPC context requirement",
+   *   "oracle": "contract",
+   *   "invariants": ["Synth throws meaningful error"],
+   *   "fixtures": ["cdk.App", "cdk.Stack", "EcsClusterComponent"],
+   *   "inputs": { "shape": "Context without VPC", "notes": "Ensures secure-by-default network configuration" },
+   *   "risks": ["Resources deployed to unintended network"],
+   *   "dependencies": [],
+   *   "evidence": ["component.synth()"],
+   *   "complianceRefs": ["std://platform-networking-standard"],
+   *   "aiGenerated": false,
+   *   "humanReviewedBy": ""
+   * }
+   */
+  it('Networking__MissingVpc__ThrowsExplicitError', () => {
+    const contextWithoutVpc = {
+      ...testEnv.contexts.commercial,
+      vpc: undefined
+    };
+
+    const component = new EcsClusterComponent(
+      testEnv.stack,
+      'MissingVpcCluster',
+      contextWithoutVpc,
+      testEnv.specs.minimalCluster
+    );
+
+    expect(() => component.synth()).toThrow('requires a VPC');
   });
 });
 
@@ -311,6 +497,9 @@ describe('EcsClusterComponent__TaggingCompliance__MandatoryTags', () => {
     component.synth();
     const template = Template.fromStack(testEnv.stack);
 
+
+    // Debug output for tag structure
+
     // Verify mandatory tags on ECS Cluster
     TestAssertions.assertMandatoryTags(template, 'AWS::ECS::Cluster');
 
@@ -318,7 +507,7 @@ describe('EcsClusterComponent__TaggingCompliance__MandatoryTags', () => {
     TestAssertions.assertMandatoryTags(template, 'AWS::ServiceDiscovery::PrivateDnsNamespace');
 
     // Verify mandatory tags on Auto Scaling Group (if present)
-    TestAssertions.assertMandatoryTags(template, 'AWS::AutoScaling::AutoScalingGroup');
+        TestAssertions.assertMandatoryTags(template, 'AWS::AutoScaling::AutoScalingGroup');
 
     // Verify component-specific tags
     template.hasResourceProperties('AWS::ECS::Cluster', {
@@ -340,13 +529,12 @@ describe('EcsClusterComponent__TaggingCompliance__MandatoryTags', () => {
     component.synth();
     const template = Template.fromStack(testEnv.stack);
 
-    // Verify user-defined tags are applied
-    template.hasResourceProperties('AWS::ECS::Cluster', {
-      Tags: Match.arrayWith([
-        Match.objectLike({ Key: 'test-tag', Value: 'test-value' }),
-        Match.objectLike({ Key: 'environment', Value: 'testing' })
-      ])
-    });
+    const clusters = template.findResources('AWS::ECS::Cluster');
+    const cluster = Object.values(clusters)[0] as { Properties?: { Tags?: Array<{ Key: string; Value: string }> } };
+    const tags = cluster?.Properties?.Tags ?? [];
+
+    expect(tags.find((tag) => tag.Key === 'test-tag' && tag.Value === 'test-value')).toBeDefined();
+    expect(tags.find((tag) => tag.Key === 'environment' && tag.Value === 'testing')).toBeDefined();
   });
 });
 

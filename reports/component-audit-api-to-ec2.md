@@ -19,9 +19,11 @@ _Audit date: 2025-10-05. Standards referenced: all platform standards under `doc
 
 ### Prompt 05 — CDK Best Practices
 - Consistent with AWS Labs MCP guidance: uses L2 constructs, enforces TLS 1.2, and integrates WAF. No `cdk-nag` hooks are wired yet; consider adopting the `RulePack` recommendations from `awslabs.cdk_mcp_server.static.CDK_GENERAL_GUIDANCE.md` to close that gap.
+- ✅ Update 2025-10-05 — Added an AwsSolutions regression test via `cdk-nag` so REST API synth stays compliant.
 
 ### Prompt 06 — Component Versioning & Metadata
 - Package version remains `0.0.1` despite a mature implementation and broad feature set. Before publishing through MCP, bump to a stable semver and ensure the CHANGELOG reflects the current behavior.
+- ✅ Update 2025-10-05 — Promoted to `1.0.0` and documented the release in `CHANGELOG.md` (schema hardening, observability capability, cdk-nag coverage).
 
 ### Prompt 07 — Configuration Precedence Chain
 - Builder extends the shared `ConfigBuilder` with JSON schema import, so Layers 1–4 are honored. Layer 5 (policy overrides) is documented but not yet implemented—note this for services that expect governance exceptions.
@@ -60,9 +62,11 @@ _Audit date: 2025-10-05. Standards referenced: all platform standards under `doc
 
 ### Prompt 05 — CDK Best Practices
 - L2 constructs, optional WAF, private endpoint support align with AWS Labs guidance. No `cdk-nag` automation yet.
+- ✅ Update 2025-10-05 — Enabled `cdk-nag` checks with suppressions and regression tests so AwsSolutions findings stay suppressed with justification.
 
 ### Prompt 06 — Component Versioning & Metadata
 - Version `0.0.x` (check package.json) despite multiple features. Update versioning and CHANGELOG for MCP catalog accuracy.
+- ✅ Update 2025-10-05 — Bumped to `1.0.0` with a new changelog entry covering schema validation, observability, and cdk-nag adoption.
 
 ### Prompt 07 — Configuration Precedence Chain
 - Builder imports the shared `Config.schema.json` and delegates to `ConfigBuilder`; YAML framework defaults are respected. Policy override layer remains unimplemented.
@@ -99,9 +103,11 @@ _Audit date: 2025-10-05. Standards referenced: all platform standards under `doc
 
 ### Prompt 05 — CDK Best Practices
 - Uses `ApplicationLoadBalancer` L2, security groups, and listener rules, matching AWS Labs best-practice doc. Add cdk-nag integration per AWS guidance.
+- ✅ Update 2025-10-05 — `cdk-nag` is now enforced with documented suppressions and a Jest regression test to prevent AwsSolutions findings from reappearing.
 
 ### Prompt 06 — Component Versioning & Metadata
 - Version still `0.0.x`; ensure release process increments when new listeners/features are added.
+- ✅ Update 2025-10-05 — Released `1.1.0` and captured the schema, observability, and compliance enhancements in the component changelog.
 
 ### Prompt 07 — Configuration Precedence Chain
 - Builder extends ConfigBuilder with JSON schema; optional policy override layer still TODO.
@@ -114,6 +120,7 @@ _Audit date: 2025-10-05. Standards referenced: all platform standards under `doc
 
 ### Prompt 10 — MCP Contract
 - Schema exported; ensure capability metadata enumerates listener ARNs so MCP clients can bind target groups correctly.
+- ✅ Update 2025-10-05 — Capability export now includes listener ARNs alongside port/protocol metadata for binder consumption.
 
 ### Prompt 11 — Security & Compliance
 - Supports HTTPS listeners, security groups. Default security group rules allow 0.0.0.0/0 for HTTP unless overridden—flag for FedRAMP high environments.
@@ -139,12 +146,15 @@ _Audit date: 2025-10-05. Standards referenced: all platform standards under `doc
 
 ### Prompt 05 — CDK Best Practices
 - Launch template hardening (IMDSv2, SSM agent) aligns with AWS Labs guidance. Document cdk-nag status.
+- ✅ Update 2025-10-05 — Added an AwsSolutions (`cdk-nag`) regression test (`tests/security/cdk-nag.test.ts`) so synth stays compliant and suppressions remain justified.
 
 ### Prompt 06 — Component Versioning & Metadata
 - Version still `0.0.x`; confirm semver increments with each feature (Nitro Enclaves, FedRAMP controls, etc.).
+- ✅ Update 2025-10-05 — Published version `1.0.1` with a changelog capturing the new compliance test coverage.
 
 ### Prompt 07 — Configuration Precedence Chain
 - Builder uses ConfigBuilder with custom compliance overrides (similar to EC2). Ensure tests cover environment overrides (currently limited).
+- ✅ Update 2025-10-05 — Test suite now validates commercial and FedRAMP contexts (including VPC flow logs) via the new `cdk-nag` security coverage.
 
 ### Prompt 08 — Capability Binding & Binder Matrix
 - Capability registration should expose autoscaling group identifiers for binders (e.g., to attach target groups). Verify binder matrix coverage.
@@ -177,9 +187,11 @@ _Audit date: 2025-10-05. Standards referenced: all platform standards under `doc
 
 ### Prompt 05 — CDK Best Practices
 - Uses L2 constructs (`DnsValidatedCertificate`), honors AWS Labs security guidance. No automated nagging yet.
+- ✅ Update 2025-10-05 — Added an AwsSolutions (`cdk-nag`) regression test to reinforce the existing suppressions.
 
 ### Prompt 06 — Component Versioning & Metadata
 - Verify version increments after adding FedRAMP support (current semver indicates early stage).
+- ✅ Update 2025-10-05 — Released `1.0.1` with a changelog capturing the cdk-nag regression coverage.
 
 ### Prompt 07 — Configuration Precedence Chain
 - Builder extends ConfigBuilder and respects compliance defaults (transparency logging on for FedRAMP). Policy overrides pending.
@@ -255,9 +267,11 @@ _Audit date: 2025-10-05. Standards referenced: all platform standards under `doc
 
 ### Prompt 05 — CDK Best Practices
 - Follows AWS Labs guidance: MFA, password policies, advanced security. Evaluate adding cdk-nag as recommended.
+- ✅ Update 2025-10-05 — Added `cdk-nag` coverage with stack-level suppressions and regression tests to keep AwsSolutions findings addressed.
 
 ### Prompt 06 — Component Versioning & Metadata
 - Version still `0.0.x`. Update semver to reflect maturity.
+- ✅ Update 2025-10-05 — Released `1.0.0` alongside a changelog summarizing observability, schema, and compliance changes.
 
 ### Prompt 07 — Configuration Precedence Chain
 - Builder extends ConfigBuilder, but verify tests cover environment overrides (some scenarios missing).
@@ -293,9 +307,11 @@ _Audit date: 2025-10-05. Standards referenced: all platform standards under `doc
 
 ### Prompt 05 — CDK Best Practices
 - Aligns with AWS Labs guidance (security groups, capacity providers). Nag integration pending.
+- ✅ Update 2025-10-05 — Integrated `cdk-nag` suppressions and added an AwsSolutions regression test to keep the stack free of findings.
 
 ### Prompt 06 — Component Versioning & Metadata
 - Confirm semver increments when new deployment strategies (blue/green) added.
+- ✅ Update 2025-10-05 — Bumped to `1.1.0` with a release note covering observability, test, and compliance improvements.
 
 ### Prompt 07 — Configuration Precedence Chain
 - Builder uses ConfigBuilder; tests show layering across compliance frameworks.
@@ -332,9 +348,11 @@ _Audit date: 2025-10-05. Standards referenced: all platform standards under `doc
 
 ### Prompt 05 — CDK Best Practices
 - Uses managed node groups with encryption. Ensure cdk-nag coverage.
+- ✅ Update 2025-10-05 — Exercised `cdk-nag` AwsSolutions checks during tests and captured suppressions via shared helpers.
 
 ### Prompt 06 — Component Versioning & Metadata
 - Verify version increments; current release still `0.0.x`.
+- ✅ Update 2025-10-05 — Maintains `1.0.0` with test harness updates recorded in repository docs; monitor future feature releases for semver bumps.
 
 ### Prompt 07 — Configuration Precedence Chain
 - Builder extends ConfigBuilder with compliance-specific defaults (FIPS). Policy override support not yet implemented.
@@ -473,3 +491,54 @@ _Audit date: 2025-10-05. Standards referenced: all platform standards under `doc
 ### Prompt 11 — Security & Compliance
 - FedRAMP modes enforce encryption and SNS alarms, but commercial defaults allow public SSH and set EBS encryption `false` in hardcoded fallbacks. Update defaults to achieve “secure by default.”
 - ✅ Update 2025-10-05 — Hardcoded defaults now enable EBS encryption (`storage.encrypted: true`), expose SSH only when explicit CIDRs are provided, and maintain FedRAMP security settings.
+
+---
+
+## Component: ecr-repository
+
+### Prompt 01 — Schema Validation
+- Original schema lacked conditional enforcement for KMS encryption inputs, allowing manifests without `kmsKeyArn` to slip past MCP validation.
+- ✅ Update 2025-10-07 — Added conditional JSON Schema rules requiring `encryption.kmsKeyArn` when `encryptionType` is `KMS`, plus pattern validation and immutable tag defaults (`packages/components/ecr-repository/Config.schema.json`).
+
+### Prompt 02 — Tagging Standard
+- CloudWatch log group and alarms created for monitoring were previously untagged, violating the platform tagging matrix.
+- ✅ Update 2025-10-07 — Applied `applyStandardTags` and propagated user-supplied tags to the repository, access log group, and both CloudWatch alarms (`packages/components/ecr-repository/ecr-repository.component.ts`).
+
+### Prompt 03 — Logging Standard
+- Logging pipeline already leveraged the platform logger but observability resources were not surfaced for downstream tooling.
+- ✅ Update 2025-10-07 — Observability wiring now records log group metadata, retention, and alarm identifiers in an exported capability so logging consumers can auto-discover telemetry endpoints (`packages/components/ecr-repository/ecr-repository.component.ts`).
+
+### Prompt 04 — Observability Standard
+- Component did not expose an observability capability, limiting binder automation and dashboard hydration.
+- ✅ Update 2025-10-07 — Registered an `observability:ecr-repository` capability populated with log group, alarm thresholds, and metrics, aligning with the observability standard (`packages/components/ecr-repository/ecr-repository.component.ts`).
+- ✅ Update 2025-10-07 — Added regression tests to cover monitoring-disabled scenarios and telemetry tag propagation, bringing the suite in line with the platform testing standard (`packages/components/ecr-repository/tests/ecr-repository.component.synthesis.test.ts`).
+
+### Prompt 05 — CDK Best Practices
+- No automated `cdk-nag` coverage existed, and KMS encryption logic ignored supplied key ARNs.
+- ✅ Update 2025-10-07 — Wired repository creation to load customer KMS keys and added an AwsSolutions regression test to keep synth findings at zero (`packages/components/ecr-repository/ecr-repository.component.ts`, `packages/components/ecr-repository/tests/security/cdk-nag.test.ts`).
+- ✅ Update 2025-10-07 — Normalized security test naming/metadata to satisfy the platform testing standard and ensure findings are traceable (`packages/components/ecr-repository/tests/security/cdk-nag.test.ts`).
+
+### Prompt 06 — Component Versioning & Metadata
+- Package remained at `1.0.0` with no changelog entry for the new compliance controls.
+- ✅ Update 2025-10-07 — Bumped to `1.1.0`, refreshed the changelog with schema/tagging/nag updates, and synchronized observability metadata (`packages/components/ecr-repository/package.json`, `CHANGELOG.md`, `observability/ecr-observability.yaml`).
+
+### Prompt 07 — Configuration Precedence Chain
+- Compliance-aware defaults were minimal, leaving frameworks to rely on hardcoded fallbacks that weren’t scan-friendly.
+- ✅ Update 2025-10-07 — Hardened builder defaults to enforce scan-on-push, immutable tags, and compliance-specific monitoring retention per framework (`packages/components/ecr-repository/ecr-repository.builder.ts`).
+- ✅ Update 2025-10-07 — Builder now validates repository names, KMS key ARNs, and lifecycle/retention bounds with negative tests covering the failure paths (`packages/components/ecr-repository/ecr-repository.builder.ts`, `tests/ecr-repository.builder.test.ts`).
+
+### Prompt 08 — Capability Binding & Binder Matrix
+- Container capability omitted security metadata and no observability capability was registered for binders to consume.
+- ✅ Update 2025-10-07 — Enriched the `container:ecr` capability with scan/encryption attributes and surfaced the new observability capability for binder automation (`packages/components/ecr-repository/ecr-repository.component.ts`, `ecr-repository.creator.ts`).
+
+### Prompt 09 — Internal Dependency Graph
+- Dependency surface remained limited to core/CDK libraries; no action required.
+- ✅ Update 2025-10-07 — Confirmed no new cross-component dependencies were introduced while adding observability and tagging features.
+
+### Prompt 10 — MCP Contract
+- Schema/export mismatch risked MCP catalog drift, especially around KMS configuration.
+- ✅ Update 2025-10-07 — `index.ts` continues exporting the strengthened schema and updated capabilities, ensuring MCP responses reflect the conditional validation rules.
+
+### Prompt 11 — Security & Compliance
+- Mutable tags and optional scans violated platform security defaults; KMS mode allowed missing key IDs.
+- ✅ Update 2025-10-07 — Defaulted to immutable tags with scan-on-push, enforced KMS key requirements, and tagged monitoring artifacts to meet security governance (`packages/components/ecr-repository/ecr-repository.component.ts`).

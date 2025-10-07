@@ -10,6 +10,7 @@ import {
   ComponentContext,
   IComponentCreator
 } from '@shinobi/core';
+import { Construct } from 'constructs';
 import { EcrRepositoryComponent } from './ecr-repository.component.ts';
 import { EcrRepositoryConfig } from './ecr-repository.builder.ts';
 import { ECR_REPOSITORY_CONFIG_SCHEMA } from './Config.schema.json' with { type: 'json' };
@@ -33,7 +34,7 @@ export class EcrRepositoryComponentCreator implements IComponentCreator {
   /**
    * Component display name
    */
-  public readonly displayName = 'Ecr Repository Component';
+  public readonly displayName = 'ECR Repository Component';
 
   /**
    * Component description
@@ -114,28 +115,20 @@ export class EcrRepositoryComponentCreator implements IComponentCreator {
    * Returns the capabilities this component provides when synthesized
    */
   public getProvidedCapabilities(): string[] {
-    return [
-      'containers:ecr-repository',
-      'monitoring:ecr-repository'
-    ];
+    return ['container:ecr', 'observability:ecr-repository'];
   }
 
   /**
    * Returns the capabilities this component requires from other components
    */
   public getRequiredCapabilities(): string[] {
-    return [
-      // TODO: Define required capabilities
-    ];
+    return [];
   }
 
   /**
    * Returns construct handles that will be registered by this component
    */
   public getConstructHandles(): string[] {
-    return [
-      'main'
-      // TODO: Add additional construct handles if needed
-    ];
+    return ['repository', 'accessLogGroup', 'pushRateAlarm', 'repositorySizeAlarm'];
   }
 }

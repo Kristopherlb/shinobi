@@ -5,7 +5,8 @@
  * Provides 5-layer configuration precedence chain and compliance-aware defaults.
  */
 
-import { ConfigBuilder, ConfigBuilderContext } from '../@shinobi/core/config-builder.ts';
+import { ConfigBuilder, ConfigBuilderContext } from '@shinobi/core';
+import ECS_CLUSTER_CONFIG_SCHEMA_JSON from './Config.schema.json' with { type: 'json' };
 
 /**
  * Configuration interface for ECS Cluster component
@@ -61,125 +62,7 @@ export interface EcsClusterConfig {
 /**
  * JSON Schema for ECS Cluster configuration validation
  */
-export const ECS_CLUSTER_CONFIG_SCHEMA = {
-  type: 'object',
-  title: 'ECS Cluster Configuration',
-  description: 'Configuration for creating an ECS Cluster with Service Connect',
-  required: ['serviceConnect'],
-  properties: {
-    name: {
-      type: 'string',
-      description: 'Component name (optional, will be auto-generated from component name)',
-      pattern: '^[a-zA-Z][a-zA-Z0-9-_]*$',
-      maxLength: 128
-    },
-    description: {
-      type: 'string',
-      description: 'Component description for documentation',
-      maxLength: 1024
-    },
-    serviceConnect: {
-      type: 'object',
-      title: 'Service Connect Configuration', 
-      description: 'Configuration for ECS Service Connect and service discovery',
-      required: ['namespace'],
-      properties: {
-        namespace: {
-          type: 'string',
-          description: 'Cloud Map namespace for service discovery',
-          pattern: '^[a-zA-Z][a-zA-Z0-9.-]*$',
-          minLength: 1,
-          maxLength: 64,
-          examples: ['internal', 'my-app.internal', 'services']
-        }
-      },
-      additionalProperties: false
-    },
-    capacity: {
-      type: 'object',
-      title: 'EC2 Capacity Configuration',
-      description: 'Optional EC2 capacity for the cluster. If omitted, cluster is Fargate-only',
-      required: ['instanceType', 'minSize', 'maxSize'],
-      properties: {
-        instanceType: {
-          type: 'string',
-          description: 'EC2 instance type for cluster instances',
-          pattern: '^[a-z][0-9]*[a-z]*\\.[a-z0-9]+$',
-          examples: ['t3.medium', 'm5.large', 'c5.xlarge']
-        },
-        minSize: {
-          type: 'number',
-          description: 'Minimum number of instances in Auto Scaling Group',
-          minimum: 0,
-          maximum: 1000
-        },
-        maxSize: {
-          type: 'number',
-          description: 'Maximum number of instances in Auto Scaling Group', 
-          minimum: 1,
-          maximum: 1000
-        },
-        desiredSize: {
-          type: 'number',
-          description: 'Desired number of instances (defaults to minSize)',
-          minimum: 0,
-          maximum: 1000
-        },
-        keyName: {
-          type: 'string',
-          description: 'EC2 key pair name for SSH access',
-          pattern: '^[a-zA-Z][a-zA-Z0-9_-]*$'
-        },
-        enableMonitoring: {
-          type: 'boolean',
-          description: 'Enable detailed CloudWatch monitoring for instances',
-          default: false
-        }
-      },
-      additionalProperties: false
-    },
-    containerInsights: {
-      type: 'boolean',
-      description: 'Enable Container Insights for advanced monitoring',
-      default: true
-    },
-    clusterName: {
-      type: 'string',
-      description: 'Override for cluster name (auto-generated if not provided)',
-      pattern: '^[a-zA-Z][a-zA-Z0-9-]*$',
-      minLength: 1,
-      maxLength: 255
-    },
-    monitoring: {
-      type: 'object',
-      description: 'Monitoring and observability configuration',
-      properties: {
-        enabled: {
-          type: 'boolean',
-          default: true,
-          description: 'Enable monitoring'
-        },
-        detailedMetrics: {
-          type: 'boolean',
-          default: false,
-          description: 'Enable detailed CloudWatch metrics'
-        },
-        alarms: {
-          type: 'object',
-          description: 'Component-specific alarm thresholds',
-          additionalProperties: true
-        }
-      },
-      additionalProperties: false
-    },
-    tags: {
-      type: 'object',
-      description: 'Additional resource tags',
-      additionalProperties: { type: 'string' }
-    }
-  },
-  additionalProperties: false
-};
+export const ECS_CLUSTER_CONFIG_SCHEMA = ECS_CLUSTER_CONFIG_SCHEMA_JSON as const;
 
 /**
  * ConfigBuilder for ECS Cluster component
@@ -192,6 +75,12 @@ export const ECS_CLUSTER_CONFIG_SCHEMA = {
  * 5. Policy Overrides (from governance policies)
  */
 export class EcsClusterComponentConfigBuilder extends ConfigBuilder<EcsClusterConfig> {
+ 
+  public buildSync(): EcsClusterConfig {
+    const config = super.buildSync();
+    this.validateConfig(config);
+    return config;
+  }
   
   constructor(context: ConfigBuilderContext) {
     super(context, ECS_CLUSTER_CONFIG_SCHEMA);
@@ -267,6 +156,26 @@ export class EcsClusterComponentConfigBuilder extends ConfigBuilder<EcsClusterCo
             maxSize: 3
           }
         };
+    }
+  }
+
+  private validateConfig(config: EcsClusterConfig): void {
+    if (!config.serviceConnect?.namespace?.trim()) {
+      throw new Error('serviceConnect.namespace is required for ECS clusters');
+    }
+
+    if (config.capacity) {
+      const { minSize, maxSize, desiredSize } = config.capacity;
+
+      if (minSize > maxSize) {
+        throw new Error('capacity.minSize cannot be greater than capacity.maxSize');
+      }
+
+      if (desiredSize !== undefined) {
+        if (desiredSize < minSize || desiredSize > maxSize) {
+          throw new Error('capacity.desiredSize must be between minSize and maxSize');
+        }
+      }
     }
   }
 }

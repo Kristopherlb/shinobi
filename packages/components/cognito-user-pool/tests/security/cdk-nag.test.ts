@@ -3,11 +3,11 @@
  * Implements Platform Testing Standard v1.0 - Security Compliance Testing
  */
 
-import { App, Stack, Annotations } from 'aws-cdk-lib';
+import { App, Stack, Aspects } from 'aws-cdk-lib';
 import { AwsSolutionsChecks } from 'cdk-nag';
 import { CognitoUserPoolComponent } from '../../src/cognito-user-pool.component.ts';
 import { ComponentContext, ComponentSpec } from '../../../platform/contracts/component-interfaces.ts';
-import { Match } from 'aws-cdk-lib/assertions';
+import { Match, Annotations } from 'aws-cdk-lib/assertions';
 
 // Deterministic test fixtures
 const DETERMINISTIC_TIMESTAMP = new Date('2025-01-08T12:00:00.000Z');
@@ -53,10 +53,12 @@ describe('CognitoUserPoolComponent__SecurityCompliance__CDKNAGValidation', () =>
     const context = createContext();
     const spec = createSpec();
 
+    Aspects.of(stack).add(new AwsSolutionsChecks({ verbose: true }));
+
     const component = new CognitoUserPoolComponent(stack, spec.name, context, spec);
     component.synth();
 
-    AwsSolutionsChecks.check(stack);
+    app.synth();
 
     const errors = Annotations.fromStack(stack).findError('*', Match.stringLikeRegexp('AwsSolutions-'));
     expect(errors).toHaveLength(0);
