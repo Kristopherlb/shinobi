@@ -1,0 +1,27 @@
+apiVersion: observability.shinobi.dev/v1alpha1
+kind: ServiceLevelObjective
+metadata:
+  name: cache-availability
+  component: elasticache-redis
+spec:
+  description: >-
+    Maintain 99.9% availability for Redis primary endpoint, measured via synthetic GET/SET probes.
+  objectivePercent: 99.9
+  window: 30d
+  indicators:
+    - type: synthetic
+      name: redis-probe
+      successCondition: latency_ms < 10 and result == "ok"
+      source: mcp://baseline_probes/redis
+  alerting:
+    burnRates:
+      - window: 1h
+        threshold: 14
+      - window: 6h
+        threshold: 7
+  reporting:
+    owner: platform-engineering
+    complianceFrameworks:
+      - commercial
+      - fedramp-moderate
+      - fedramp-high

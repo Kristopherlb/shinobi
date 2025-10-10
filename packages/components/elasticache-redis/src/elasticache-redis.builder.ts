@@ -43,6 +43,7 @@ export interface RedisLogDeliveryConfig {
   destinationType: RedisLogDestinationType;
   destinationName: string;
   logFormat: 'text' | 'json';
+  managed?: boolean;
 }
 
 export interface RedisAlarmThresholdConfig {
@@ -124,7 +125,7 @@ const BACKUP_SCHEMA: ComponentConfigSchema = {
   additionalProperties: false,
   properties: {
     enabled: { type: 'boolean' },
-    retentionDays: { type: 'number', minimum: 0, maximum: 35 },
+    retentionDays: { type: 'integer', minimum: 0, maximum: 35 },
     window: {
       type: 'string',
       pattern: '^([01]?[0-9]|2[0-3]):[0-5][0-9]-([01]?[0-9]|2[0-3]):[0-5][0-9]$'
@@ -162,7 +163,8 @@ const LOG_DELIVERY_SCHEMA: ComponentConfigSchema = {
     logType: { type: 'string', enum: ['slow-log', 'engine-log'] },
     destinationType: { type: 'string', enum: ['cloudwatch-logs', 'kinesis-firehose'] },
     destinationName: { type: 'string' },
-    logFormat: { type: 'string', enum: ['text', 'json'] }
+    logFormat: { type: 'string', enum: ['text', 'json'] },
+    managed: { type: 'boolean', description: 'Internal flag indicating the platform manages this log destination' }
   }
 };
 
@@ -172,8 +174,8 @@ const ALARM_SCHEMA: ComponentConfigSchema = {
   properties: {
     enabled: { type: 'boolean' },
     threshold: { type: 'number', minimum: 0 },
-    evaluationPeriods: { type: 'number', minimum: 1 },
-    periodMinutes: { type: 'number', minimum: 1 }
+    evaluationPeriods: { type: 'integer', minimum: 1 },
+    periodMinutes: { type: 'integer', minimum: 1 }
   }
 };
 
@@ -206,8 +208,7 @@ const VPC_SCHEMA: ComponentConfigSchema = {
     vpcId: { type: 'string' },
     subnetIds: {
       type: 'array',
-      items: { type: 'string', pattern: '^subnet-[a-f0-9]+' },
-      minItems: 1
+      items: { type: 'string', pattern: '^subnet-[a-f0-9]+' }
     },
     subnetGroupName: { type: 'string' }
   }
@@ -244,13 +245,28 @@ const PARAMETER_GROUP_SCHEMA: ComponentConfigSchema = {
 export const ELASTICACHE_REDIS_CONFIG_SCHEMA: ComponentConfigSchema = {
   type: 'object',
   additionalProperties: false,
+  required: [
+    'engineVersion',
+    'nodeType',
+    'numCacheNodes',
+    'port',
+    'vpc',
+    'security',
+    'parameterGroup',
+    'encryption',
+    'backup',
+    'maintenance',
+    'multiAz',
+    'monitoring',
+    'tags'
+  ],
   properties: {
     clusterName: { type: 'string' },
     description: { type: 'string' },
     engineVersion: { type: 'string' },
     nodeType: { type: 'string' },
-    numCacheNodes: { type: 'number', minimum: 1, maximum: 20 },
-    port: { type: 'number', minimum: 1024, maximum: 65535 },
+    numCacheNodes: { type: 'integer', minimum: 1, maximum: 20 },
+    port: { type: 'integer', minimum: 1024, maximum: 65535 },
     vpc: VPC_SCHEMA,
     security: SECURITY_SCHEMA,
     parameterGroup: PARAMETER_GROUP_SCHEMA,
@@ -268,25 +284,25 @@ export const ELASTICACHE_REDIS_CONFIG_SCHEMA: ComponentConfigSchema = {
 
 const DEFAULT_ALARMS: RedisMonitoringConfig['alarms'] = {
   cpuUtilization: {
-    enabled: false,
+    enabled: true,
     threshold: 80,
     evaluationPeriods: 2,
     periodMinutes: 5
   },
   cacheMisses: {
-    enabled: false,
+    enabled: true,
     threshold: 1000,
     evaluationPeriods: 2,
     periodMinutes: 5
   },
   evictions: {
-    enabled: false,
+    enabled: true,
     threshold: 10,
     evaluationPeriods: 2,
     periodMinutes: 5
   },
   connections: {
-    enabled: false,
+    enabled: true,
     threshold: 500,
     evaluationPeriods: 2,
     periodMinutes: 5
@@ -304,23 +320,23 @@ const HARDENED_FALLBACKS: Partial<ElastiCacheRedisConfig> = {
   security: {
     create: true,
     securityGroupIds: [],
-    allowedCidrs: ['10.0.0.0/8']
+    allowedCidrs: []
   },
   parameterGroup: {
     family: 'redis7',
     parameters: {}
   },
   encryption: {
-    atRest: false,
-    inTransit: false,
+    atRest: true,
+    inTransit: true,
     authToken: {
-      enabled: false,
-      removalPolicy: 'destroy'
+      enabled: true,
+      removalPolicy: 'retain'
     }
   },
   backup: {
-    enabled: false,
-    retentionDays: 1,
+    enabled: true,
+    retentionDays: 7,
     window: '03:00-05:00'
   },
   maintenance: {
@@ -331,7 +347,7 @@ const HARDENED_FALLBACKS: Partial<ElastiCacheRedisConfig> = {
     automaticFailover: false
   },
   monitoring: {
-    enabled: false,
+    enabled: true,
     logDelivery: [],
     alarms: DEFAULT_ALARMS
   },
@@ -371,17 +387,29 @@ export class ElastiCacheRedisComponentConfigBuilder extends ConfigBuilder<Elasti
       logType: entry.logType,
       destinationType: entry.destinationType,
       destinationName: entry.destinationName,
-      logFormat: entry.logFormat ?? 'json'
+      logFormat: entry.logFormat ?? 'json',
+      managed: entry.managed ?? false
     }));
 
-    if ((monitoring.enabled ?? false) && logDelivery.length === 0) {
+    const ensureManagedLog = (logType: RedisLogType) => {
+      const alreadyPresent = logDelivery.some(entry => entry.logType === logType);
+      if (alreadyPresent) {
+        return;
+      }
+
       logDelivery.push({
         enabled: true,
-        logType: 'slow-log',
+        logType,
         destinationType: 'cloudwatch-logs',
-        destinationName: `/aws/elasticache/redis/${this.builderContext.context.serviceName}-${this.builderContext.spec.name}`,
-        logFormat: 'json'
+        destinationName: this.buildManagedLogGroupName(logType),
+        logFormat: 'json',
+        managed: true
       });
+    };
+
+    if (monitoring.enabled !== false) {
+      ensureManagedLog('slow-log');
+      ensureManagedLog('engine-log');
     }
 
     return {
@@ -399,7 +427,7 @@ export class ElastiCacheRedisComponentConfigBuilder extends ConfigBuilder<Elasti
       security: {
         create: config.security?.create ?? true,
         securityGroupIds: config.security?.securityGroupIds ?? [],
-        allowedCidrs: config.security?.allowedCidrs ?? ['10.0.0.0/8']
+        allowedCidrs: config.security?.allowedCidrs ?? []  // SECURITY: Force explicit CIDR configuration
       },
       parameterGroup: {
         family: config.parameterGroup?.family ?? 'redis7',
@@ -420,7 +448,7 @@ export class ElastiCacheRedisComponentConfigBuilder extends ConfigBuilder<Elasti
         automaticFailover: config.multiAz?.automaticFailover ?? false
       },
       monitoring: {
-        enabled: monitoring.enabled ?? false,
+        enabled: monitoring.enabled ?? true,
         logDelivery,
         alarms
       },
@@ -437,16 +465,21 @@ export class ElastiCacheRedisComponentConfigBuilder extends ConfigBuilder<Elasti
     };
   }
 
+  private buildManagedLogGroupName(logType: RedisLogType): string {
+    const baseName = `${this.builderContext.context.serviceName}-${this.builderContext.spec.name}`;
+    return `/aws/platform/redis/${baseName}/${logType}`;
+  }
+
   private normaliseEncryption(encryption?: Partial<RedisEncryptionConfig>): RedisEncryptionConfig {
     const authToken = encryption?.authToken ?? HARDENED_FALLBACKS.encryption!.authToken;
     return {
-      atRest: encryption?.atRest ?? false,
-      inTransit: encryption?.inTransit ?? false,
+      atRest: encryption?.atRest ?? true,
+      inTransit: encryption?.inTransit ?? true,
       authToken: {
-        enabled: authToken?.enabled ?? false,
+        enabled: authToken?.enabled ?? true,
         secretArn: authToken?.secretArn,
         description: authToken?.description,
-        removalPolicy: authToken?.removalPolicy ?? 'destroy'
+        removalPolicy: authToken?.removalPolicy ?? 'retain'
       }
     };
   }

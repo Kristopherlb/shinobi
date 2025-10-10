@@ -3,6 +3,8 @@ import {
   ConfigBuilderContext,
   ComponentConfigSchema
 } from '@shinobi/core';
+import * as fs from 'fs';
+import * as path from 'path';
 
 export type EfsPerformanceMode = 'generalPurpose' | 'maxIO';
 export type EfsThroughputMode = 'bursting' | 'provisioned' | 'elastic';
@@ -178,102 +180,10 @@ const ALARM_SCHEMA = {
   }
 };
 
-export const EFS_FILESYSTEM_CONFIG_SCHEMA: ComponentConfigSchema = {
-  type: 'object',
-  additionalProperties: false,
-  properties: {
-    fileSystemName: { type: 'string' },
-    performanceMode: { type: 'string', enum: ['generalPurpose', 'maxIO'], default: 'generalPurpose' },
-    throughputMode: { type: 'string', enum: ['bursting', 'provisioned', 'elastic'], default: 'bursting' },
-    provisionedThroughputMibps: { type: 'number', minimum: 1, maximum: 1024 },
-    encryption: {
-      type: 'object',
-      additionalProperties: false,
-      properties: {
-        enabled: { type: 'boolean' },
-        encryptInTransit: { type: 'boolean' },
-        kmsKeyArn: { type: 'string' },
-        customerManagedKey: {
-          type: 'object',
-          additionalProperties: false,
-          properties: {
-            create: { type: 'boolean' },
-            alias: { type: 'string' },
-            enableRotation: { type: 'boolean' }
-          }
-        }
-      }
-    },
-    vpc: {
-      type: 'object',
-      additionalProperties: false,
-      properties: {
-        enabled: { type: 'boolean' },
-        vpcId: { type: 'string' },
-        subnetIds: { type: 'array', items: { type: 'string' }, default: [] },
-        securityGroup: {
-          type: 'object',
-          additionalProperties: false,
-          properties: {
-            create: { type: 'boolean' },
-            securityGroupId: { type: 'string' },
-            description: { type: 'string' },
-            ingressRules: { type: 'array', items: SECURITY_GROUP_RULE_SCHEMA, default: [] }
-          }
-        }
-      }
-    },
-    lifecycle: {
-      type: 'object',
-      additionalProperties: false,
-      properties: {
-        transitionToIA: {
-          type: 'string',
-          enum: ['AFTER_7_DAYS', 'AFTER_14_DAYS', 'AFTER_30_DAYS', 'AFTER_60_DAYS', 'AFTER_90_DAYS']
-        },
-        transitionToPrimary: {
-          type: 'string',
-          enum: ['AFTER_1_ACCESS']
-        }
-      }
-    },
-    backups: {
-      type: 'object',
-      additionalProperties: false,
-      properties: {
-        enabled: { type: 'boolean' }
-      }
-    },
-    logging: {
-      type: 'object',
-      additionalProperties: false,
-      properties: {
-        access: LOG_SCHEMA,
-        audit: LOG_SCHEMA
-      }
-    },
-    monitoring: {
-      type: 'object',
-      additionalProperties: false,
-      properties: {
-        enabled: { type: 'boolean' },
-        alarms: {
-          type: 'object',
-          additionalProperties: false,
-          properties: {
-            storageUtilization: ALARM_SCHEMA,
-            clientConnections: ALARM_SCHEMA,
-            burstCreditBalance: ALARM_SCHEMA
-          }
-        }
-      }
-    },
-    filesystemPolicy: { type: 'object' },
-    removalPolicy: { type: 'string', enum: ['retain', 'destroy'] },
-    hardeningProfile: { type: 'string' },
-    tags: { type: 'object', additionalProperties: { type: 'string' } }
-  }
-};
+// Load schema from standalone Config.schema.json file
+const schemaPath = path.join(__dirname, '..', 'Config.schema.json');
+const schemaContent = fs.readFileSync(schemaPath, 'utf-8');
+export const EFS_FILESYSTEM_CONFIG_SCHEMA: ComponentConfigSchema = JSON.parse(schemaContent);
 
 const DEFAULT_ALARM_BASELINE: Required<Omit<EfsAlarmConfig, 'tags'>> = {
   enabled: false,
@@ -295,6 +205,7 @@ export class EfsFilesystemComponentConfigBuilder extends ConfigBuilder<EfsFilesy
       fileSystemName: undefined,
       performanceMode: 'generalPurpose',
       throughputMode: 'bursting',
+
       encryption: {
         enabled: true,
         encryptInTransit: false,
@@ -303,18 +214,22 @@ export class EfsFilesystemComponentConfigBuilder extends ConfigBuilder<EfsFilesy
           enableRotation: true
         }
       },
+
       vpc: {
         enabled: false,
         subnetIds: [],
         securityGroup: {
           create: false,
-          ingressRules: this.defaultIngressRules()
+          ingressRules: []
         }
       },
+
       lifecycle: {},
+
       backups: {
         enabled: false
       },
+
       logging: {
         access: {
           enabled: false,
@@ -323,20 +238,35 @@ export class EfsFilesystemComponentConfigBuilder extends ConfigBuilder<EfsFilesy
           removalPolicy: 'destroy'
         },
         audit: {
-          enabled: false,
+          enabled: true,
           createLogGroup: true,
           retentionInDays: 365,
           removalPolicy: 'retain'
         }
       },
+
       monitoring: {
         enabled: false,
         alarms: {
-          storageUtilization: { ...DEFAULT_ALARM_BASELINE },
-          clientConnections: { ...DEFAULT_ALARM_BASELINE },
-          burstCreditBalance: { ...DEFAULT_ALARM_BASELINE }
+          storageUtilization: {
+            ...DEFAULT_ALARM_BASELINE,
+            enabled: false,
+            threshold: 1099511627776
+          },
+          clientConnections: {
+            ...DEFAULT_ALARM_BASELINE,
+            enabled: false,
+            threshold: 1000
+          },
+          burstCreditBalance: {
+            ...DEFAULT_ALARM_BASELINE,
+            enabled: false,
+            threshold: 128,
+            comparisonOperator: 'lt'
+          }
         }
       },
+
       removalPolicy: 'retain',
       hardeningProfile: 'baseline',
       tags: {}
@@ -399,6 +329,17 @@ export class EfsFilesystemComponentConfigBuilder extends ConfigBuilder<EfsFilesy
       cidr: rule.cidr,
       description: rule.description
     }));
+
+    // VALIDATE - reject internet-wide access (security violation)
+    ingressRules.forEach(rule => {
+      if (rule.cidr === '0.0.0.0/0' || rule.cidr === '::/0') {
+        throw new Error(
+          `SECURITY VIOLATION: EFS security group ingress from ${rule.cidr} is not allowed. ` +
+          'NFS port 2049 must not be exposed to the internet. ' +
+          'Specify VPC CIDRs (e.g., 10.0.0.0/16) or use binder strategies for least-privilege access.'
+        );
+      }
+    });
 
     return {
       enabled,
@@ -508,14 +449,16 @@ export class EfsFilesystemComponentConfigBuilder extends ConfigBuilder<EfsFilesy
     return Math.max(min, Math.min(max, value));
   }
 
+  /**
+   * NO DEFAULT INGRESS RULES
+   * 
+   * Security-critical: We do NOT provide any default ingress rules.
+   * Users MUST explicitly configure allowed CIDRs or use binder strategies.
+   * 
+   * Per Platform Security Standard: least-privilege, no internet access by default.
+   * Per audit finding: 0.0.0.0/0 is a critical security vulnerability.
+   */
   private defaultIngressRules(): Required<EfsSecurityGroupRuleConfig>[] {
-    return [
-      {
-        port: 2049,
-        protocol: 'tcp',
-        cidr: '0.0.0.0/0',
-        description: 'NFS access'
-      }
-    ];
+    return []; // NO default ingress - explicit configuration required
   }
 }

@@ -1,0 +1,346 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "title": "ElastiCache Redis Component Configuration",
+  "description": "Complete configuration schema for the ElastiCache Redis component following Platform Component API standards",
+  "type": "object",
+  "additionalProperties": false,
+  "properties": {
+    "clusterName": {
+      "type": "string",
+      "description": "Override the generated replication group identifier (defaults to {serviceName}-{componentName})"
+    },
+    "description": {
+      "type": "string",
+      "description": "Human-readable description of the Redis cluster"
+    },
+    "engineVersion": {
+      "type": "string",
+      "description": "Redis engine version (e.g., '7.0', '7.1')",
+      "pattern": "^\\d+\\.\\d+$"
+    },
+    "nodeType": {
+      "type": "string",
+      "description": "Cache node instance class (e.g., 'cache.t4g.micro', 'cache.r6g.large')",
+      "pattern": "^cache\\.[a-z0-9]+\\.[a-z0-9]+$"
+    },
+    "numCacheNodes": {
+      "type": "integer",
+      "description": "Number of cache nodes in the replication group",
+      "minimum": 1,
+      "maximum": 20
+    },
+    "port": {
+      "type": "integer",
+      "description": "Redis port (default: 6379)",
+      "minimum": 1024,
+      "maximum": 65535
+    },
+    "vpc": {
+      "type": "object",
+      "description": "VPC and networking configuration",
+      "additionalProperties": false,
+      "properties": {
+        "vpcId": {
+          "type": "string",
+          "description": "Explicit VPC lookup ID; falls back to context.vpc or default VPC",
+          "pattern": "^vpc-[a-f0-9]+"
+        },
+        "subnetIds": {
+          "type": "array",
+          "description": "Override the subnets for the cache subnet group (defaults to private subnets)",
+          "items": {
+            "type": "string",
+            "pattern": "^subnet-[a-f0-9]+"
+          }
+        },
+        "subnetGroupName": {
+          "type": "string",
+          "description": "Custom name for the cache subnet group"
+        }
+      }
+    },
+    "security": {
+      "type": "object",
+      "description": "Security group and network access configuration",
+      "additionalProperties": false,
+      "properties": {
+        "create": {
+          "type": "boolean",
+          "description": "Create a dedicated security group (default: true)"
+        },
+        "securityGroupIds": {
+          "type": "array",
+          "description": "Additional security groups to attach",
+          "items": {
+            "type": "string",
+            "pattern": "^sg-[a-f0-9]+"
+          }
+        },
+        "allowedCidrs": {
+          "type": "array",
+          "description": "CIDR blocks allowed when the component creates the security group. Only private ranges are recommended.",
+          "items": {
+            "type": "string",
+            "pattern": "^([0-9]{1,3}\\.){3}[0-9]{1,3}/[0-9]{1,2}$"
+          }
+        }
+      }
+    },
+    "parameterGroup": {
+      "type": "object",
+      "description": "Redis parameter group configuration",
+      "additionalProperties": false,
+      "properties": {
+        "family": {
+          "type": "string",
+          "description": "Parameter group family (e.g., 'redis7', 'redis6.x')"
+        },
+        "parameters": {
+          "type": "object",
+          "description": "Custom Redis parameters (key-value pairs)",
+          "additionalProperties": {
+            "type": "string"
+          }
+        }
+      }
+    },
+    "encryption": {
+      "type": "object",
+      "description": "Encryption configuration for at-rest, in-transit, and AUTH token",
+      "additionalProperties": false,
+      "properties": {
+        "atRest": {
+          "type": "boolean",
+          "description": "Enable encryption at rest",
+          "default": true
+        },
+        "inTransit": {
+          "type": "boolean",
+          "description": "Enable TLS encryption between clients and the cluster",
+          "default": true
+        },
+        "authToken": {
+          "type": "object",
+          "description": "Redis AUTH token configuration",
+          "additionalProperties": false,
+          "properties": {
+            "enabled": {
+              "type": "boolean",
+              "description": "Enable Redis AUTH token; creates a secret if secretArn is not supplied",
+              "default": true
+            },
+            "secretArn": {
+              "type": "string",
+              "description": "Use an existing Secrets Manager secret for the AUTH token",
+              "pattern": "^arn:aws:secretsmanager:[a-z0-9-]+:[0-9]{12}:secret:.+"
+            },
+            "description": {
+              "type": "string",
+              "description": "Description for the generated secret"
+            },
+            "removalPolicy": {
+              "type": "string",
+              "description": "Removal policy for generated secrets ('retain' or 'destroy')",
+              "enum": [
+                "retain",
+                "destroy"
+              ],
+              "default": "retain"
+            }
+          }
+        }
+      }
+    },
+    "backup": {
+      "type": "object",
+      "description": "Automatic snapshot configuration",
+      "additionalProperties": false,
+      "properties": {
+        "enabled": {
+          "type": "boolean",
+          "description": "Toggle automatic snapshots",
+          "default": true
+        },
+        "retentionDays": {
+          "type": "integer",
+          "description": "Snapshot retention period (days)",
+          "minimum": 0,
+          "maximum": 35,
+          "default": 7
+        },
+        "window": {
+          "type": "string",
+          "description": "Snapshot window (HH:MM-HH:MM UTC)",
+          "pattern": "^([01]?[0-9]|2[0-3]):[0-5][0-9]-([01]?[0-9]|2[0-3]):[0-5][0-9]$"
+        }
+      }
+    },
+    "maintenance": {
+      "type": "object",
+      "description": "Maintenance window and notification configuration",
+      "additionalProperties": false,
+      "properties": {
+        "window": {
+          "type": "string",
+          "description": "Maintenance window (ddd:HH:MM-ddd:HH:MM UTC)",
+          "pattern": "^(sun|mon|tue|wed|thu|fri|sat):[0-2][0-9]:[0-5][0-9]-(sun|mon|tue|wed|thu|fri|sat):[0-2][0-9]:[0-5][0-9]$"
+        },
+        "notificationTopicArn": {
+          "type": "string",
+          "description": "SNS topic for maintenance notifications",
+          "pattern": "^arn:aws:sns:[a-z0-9-]+:[0-9]{12}:.+"
+        }
+      }
+    },
+    "multiAz": {
+      "type": "object",
+      "description": "Multi-AZ and automatic failover configuration",
+      "additionalProperties": false,
+      "properties": {
+        "enabled": {
+          "type": "boolean",
+          "description": "Enable Multi-AZ deployment"
+        },
+        "automaticFailover": {
+          "type": "boolean",
+          "description": "Enable automatic failover (requires Multi-AZ)"
+        }
+      }
+    },
+    "monitoring": {
+      "type": "object",
+      "description": "CloudWatch alarms and log delivery configuration",
+      "additionalProperties": false,
+      "properties": {
+        "enabled": {
+          "type": "boolean",
+          "description": "Enable CloudWatch alarms/log delivery",
+          "default": true
+        },
+        "logDelivery": {
+          "type": "array",
+          "description": "Declarative log delivery targets (slow/engine logs). Platform will add slow/engine log groups when none are provided.",
+          "items": {
+            "type": "object",
+            "additionalProperties": false,
+            "required": [
+              "logType",
+              "destinationType",
+              "destinationName"
+            ],
+            "properties": {
+              "enabled": {
+                "type": "boolean",
+                "description": "Enable this log delivery configuration"
+              },
+              "logType": {
+                "type": "string",
+                "description": "Type of Redis logs to capture",
+                "enum": [
+                  "slow-log",
+                  "engine-log"
+                ]
+              },
+              "destinationType": {
+                "type": "string",
+                "description": "Destination service for logs",
+                "enum": [
+                  "cloudwatch-logs",
+                  "kinesis-firehose"
+                ]
+              },
+              "destinationName": {
+                "type": "string",
+                "description": "Name of the CloudWatch log group or Firehose delivery stream. Platform-managed defaults follow `/aws/platform/redis/<service>-<component>/<logType>`."
+              },
+              "logFormat": {
+                "type": "string",
+                "description": "Log format (text or json)",
+                "enum": [
+                  "text",
+                  "json"
+                ],
+                "default": "json"
+              },
+              "managed": {
+                "type": "boolean",
+                "description": "Internal flag indicating the platform manages this log destination",
+                "default": false
+              }
+            }
+          }
+        },
+        "alarms": {
+          "type": "object",
+          "description": "Threshold configuration for CloudWatch alarms",
+          "additionalProperties": false,
+          "properties": {
+            "cpuUtilization": {
+              "$ref": "#/definitions/alarmThreshold"
+            },
+            "cacheMisses": {
+              "$ref": "#/definitions/alarmThreshold"
+            },
+            "evictions": {
+              "$ref": "#/definitions/alarmThreshold"
+            },
+            "connections": {
+              "$ref": "#/definitions/alarmThreshold"
+            }
+          }
+        }
+      }
+    },
+    "tags": {
+      "type": "object",
+      "description": "Additional tags merged into the replication group (platform tags applied automatically).",
+      "additionalProperties": {
+        "type": "string"
+      }
+    }
+  },
+  "definitions": {
+    "alarmThreshold": {
+      "type": "object",
+      "description": "CloudWatch alarm threshold configuration",
+      "additionalProperties": false,
+      "properties": {
+        "enabled": {
+          "type": "boolean",
+          "description": "Enable this alarm",
+          "default": true
+        },
+        "threshold": {
+          "type": "number",
+          "description": "Threshold value for the alarm",
+          "minimum": 0
+        },
+        "evaluationPeriods": {
+          "type": "integer",
+          "description": "Number of consecutive periods before alarming",
+          "minimum": 1
+        },
+        "periodMinutes": {
+          "type": "integer",
+          "description": "Duration of each evaluation period in minutes",
+          "minimum": 1
+        }
+      }
+    }
+  },
+  "required": [
+    "engineVersion",
+    "nodeType",
+    "numCacheNodes",
+    "port",
+    "vpc",
+    "security",
+    "parameterGroup",
+    "encryption",
+    "backup",
+    "maintenance",
+    "multiAz",
+    "monitoring",
+    "tags"
+  ]
+}

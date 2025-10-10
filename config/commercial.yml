@@ -249,20 +249,19 @@ defaults:
     security:
       create: true
       securityGroupIds: []
-      allowedCidrs:
-        - 10.0.0.0/8
+      allowedCidrs: []
     parameterGroup:
       family: redis7
       parameters: {}
     encryption:
-      atRest: false
-      inTransit: false
+      atRest: true
+      inTransit: true
       authToken:
-        enabled: false
-        removalPolicy: destroy
+        enabled: true
+        removalPolicy: retain
     backup:
-      enabled: false
-      retentionDays: 1
+      enabled: true
+      retentionDays: 7
       window: "03:00-05:00"
     maintenance:
       window: "sun:03:00-sun:04:00"
@@ -270,26 +269,26 @@ defaults:
       enabled: false
       automaticFailover: false
     monitoring:
-      enabled: false
+      enabled: true
       logDelivery: []
       alarms:
         cpuUtilization:
-          enabled: false
+          enabled: true
           threshold: 80
           evaluationPeriods: 2
           periodMinutes: 5
         cacheMisses:
-          enabled: false
+          enabled: true
           threshold: 1000
           evaluationPeriods: 2
           periodMinutes: 5
         evictions:
-          enabled: false
+          enabled: true
           threshold: 10
           evaluationPeriods: 2
           periodMinutes: 5
         connections:
-          enabled: false
+          enabled: true
           threshold: 500
           evaluationPeriods: 2
           periodMinutes: 5
@@ -903,11 +902,7 @@ defaults:
       securityGroup:
         create: false
         securityGroupId:
-        ingressRules:
-          - port: 2049
-            protocol: tcp
-            cidr: 0.0.0.0/0
-            description: NFS access
+        ingressRules: []
     lifecycle:
       transitionToIA: AFTER_30_DAYS
       transitionToPrimary:
@@ -915,11 +910,11 @@ defaults:
       enabled: false
     logging:
       access:
-        enabled: false
+        enabled: true
         retentionInDays: 90
         removalPolicy: destroy
       audit:
-        enabled: false
+        enabled: true
         retentionInDays: 365
         removalPolicy: retain
     monitoring:

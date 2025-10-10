@@ -31,6 +31,7 @@ export class EfsFilesystemComponent extends BaseComponent {
   private managedSecurityGroup?: ec2.SecurityGroup;
   private importedSecurityGroup?: ec2.ISecurityGroup;
   private createdKmsKey?: kms.Key;
+  private logEncryptionKey?: kms.Key;
   private createdLogGroups: Record<string, logs.LogGroup> = {};
 
   constructor(scope: Construct, id: string, context: ComponentContext, spec: ComponentSpec) {
@@ -78,7 +79,9 @@ export class EfsFilesystemComponent extends BaseComponent {
         this.registerConstruct(`logGroup:${key}`, logGroup);
       });
 
-      this.registerCapability('storage:efs', this.buildFilesystemCapability());
+      const filesystemCapability = this.buildFilesystemCapability();
+      this.registerCapability('storage:efs', filesystemCapability);
+      this.registerCapability('efs:file-system', filesystemCapability);
 
       this.logPerformanceMetric('component_synthesis', Date.now() - start, {
         resourcesCreated: Object.keys(this.capabilities).length
@@ -205,23 +208,78 @@ export class EfsFilesystemComponent extends BaseComponent {
     }
 
     const logGroupName = config.logGroupName ?? this.generateLogGroupName(key);
+
+    // Get KMS key for log encryption (required for FedRAMP)
+    const encryptionKey = this.getLogEncryptionKey();
+
     const logGroup = new logs.LogGroup(this, `${this.toPascalCase(key)}LogGroup`, {
       logGroupName,
       retention: this.mapLogRetentionDays(config.retentionInDays ?? 90),
-      removalPolicy: this.mapRemovalPolicy(config.removalPolicy ?? 'destroy')
+      removalPolicy: this.mapRemovalPolicy(config.removalPolicy ?? 'destroy'),
+      encryptionKey, // Add KMS encryption
     });
 
-    if (config.tags && Object.keys(config.tags).length > 0) {
-      this.applyStandardTags(logGroup, config.tags);
-    } else {
-      this.applyStandardTags(logGroup, {
-        'resource-type': 'log-group',
-        'log-channel': key
-      });
-    }
+    const baseTags = {
+      'resource-type': 'log-group',
+      'log-channel': key,
+      'encrypted': encryptionKey ? 'true' : 'false'
+    };
+    const customTags = config.tags ?? {};
+
+    this.applyStandardTags(logGroup, {
+      ...baseTags,
+      ...customTags
+    });
 
     this.createdLogGroups[key] = logGroup;
     return logGroup;
+  }
+
+  /**
+   * Get KMS key for log encryption (required for FedRAMP)
+   */
+  private getLogEncryptionKey(): kms.IKey | undefined {
+    const framework = this.context.complianceFramework;
+
+    // Commercial environments use AWS-managed encryption (default)
+    if (!framework || framework === 'commercial') {
+      return undefined;
+    }
+
+    // FedRAMP requires customer-managed CMK
+    if (framework.startsWith('fedramp')) {
+      if (this.logEncryptionKey) {
+        return this.logEncryptionKey;
+      }
+
+      // Reuse EFS encryption key if it was created
+      if (this.createdKmsKey) {
+        return this.createdKmsKey;
+      }
+
+      // Check if KMS key is provided in context
+      if ((this.context as any).kmsKeyArn) {
+        return kms.Key.fromKeyArn(this, 'LogKmsKey', (this.context as any).kmsKeyArn);
+      }
+
+      // Create a new CMK for logging
+      const key = new kms.Key(this, 'LogEncryptionKey', {
+        description: `Log encryption key for ${this.context.serviceName} EFS`,
+        enableKeyRotation: true,
+        removalPolicy: cdk.RemovalPolicy.RETAIN,
+      });
+
+      this.applyStandardTags(key, {
+        'resource-type': 'kms-key',
+        'purpose': 'log-encryption',
+        'compliance-framework': framework
+      });
+
+      this.logEncryptionKey = key;
+      return this.logEncryptionKey;
+    }
+
+    return undefined;
   }
 
   private createFileSystem(kmsKey: kms.IKey | undefined, logging: LoggingResources): void {
@@ -272,11 +330,11 @@ export class EfsFilesystemComponent extends BaseComponent {
   }
 
   private buildFileSystemPolicy(): iam.PolicyDocument | undefined {
-    if (!this.config?.filesystemPolicy) {
-      return undefined;
+    if (this.config?.filesystemPolicy) {
+      return iam.PolicyDocument.fromJson(this.config.filesystemPolicy);
     }
 
-    return iam.PolicyDocument.fromJson(this.config.filesystemPolicy);
+    return this.createDefaultFilesystemPolicy();
   }
 
   private buildVpcSubnets(): ec2.SubnetSelection | undefined {
@@ -371,6 +429,8 @@ export class EfsFilesystemComponent extends BaseComponent {
   }
 
   private buildFilesystemCapability(): Record<string, any> {
+    const securityGroup = this.managedSecurityGroup ?? this.importedSecurityGroup;
+
     return {
       fileSystemId: this.fileSystem!.fileSystemId,
       fileSystemArn: this.fileSystem!.fileSystemArn,
@@ -380,11 +440,42 @@ export class EfsFilesystemComponent extends BaseComponent {
       provisionedThroughputMibps: this.config!.provisionedThroughputMibps,
       encryption: {
         atRest: this.config!.encryption.enabled,
-        inTransit: this.config!.encryption.encryptInTransit
+        inTransit: this.config!.encryption.encryptInTransit,
+        kmsKeyArn: this.config!.encryption.kmsKeyArn ?? this.createdKmsKey?.keyArn
       },
       backupsEnabled: this.config!.backups.enabled,
-      hardeningProfile: this.config!.hardeningProfile
+      hardeningProfile: this.config!.hardeningProfile,
+      dnsName: this.fileSystem!.fileSystemDnsName,
+      lifecycleState: this.fileSystem!.fileSystemState,
+      securityGroupId: securityGroup?.securityGroupId,
+      logGroups: Object.entries(this.createdLogGroups).reduce<Record<string, string>>((acc, [channel, logGroup]) => {
+        acc[channel] = logGroup.logGroupName;
+        return acc;
+      }, {})
     };
+  }
+
+  private createDefaultFilesystemPolicy(): iam.PolicyDocument {
+    return new iam.PolicyDocument({
+      statements: [
+        new iam.PolicyStatement({
+          sid: 'DenyInsecureTransport',
+          effect: iam.Effect.DENY,
+          principals: [new iam.AnyPrincipal()],
+          actions: [
+            'elasticfilesystem:ClientMount',
+            'elasticfilesystem:ClientWrite',
+            'elasticfilesystem:ClientRootAccess'
+          ],
+          resources: ['*'],
+          conditions: {
+            Bool: {
+              'aws:SecureTransport': 'false'
+            }
+          }
+        })
+      ]
+    });
   }
 
   private mapPerformanceMode(mode: string): efs.PerformanceMode {

@@ -76,6 +76,22 @@ framework (`/config/commercial.yml`, `/config/fedramp-moderate.yml`, `/config/fe
 ## Capabilities
 
 - `storage:efs` – Filesystem metadata (ID, ARN, performance/throughput configuration, encryption posture, backups).
+- `efs:file-system` – Compatibility alias consumed by the platform binder matrix for describing direct file system bindings.
+
+## Binding
+
+Services can request EFS access through the standard binder matrix by targeting the `efs:file-system` capability. Example:
+
+```yaml
+binds:
+  - to: shared-efs
+    capability: efs:file-system
+    access: read
+    options:
+      requireSecureAccess: true
+```
+
+This injects the file system identifiers, DNS name, and security group metadata while enforcing TLS-only access through the default filesystem policy.
 
 ## Testing
 

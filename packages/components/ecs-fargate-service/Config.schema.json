@@ -293,7 +293,10 @@
             400,
             545,
             731,
+            1096,
             1827,
+            2192,
+            2557,
             3653
           ],
           "default": 30,
@@ -346,6 +349,18 @@
           "type": "boolean",
           "default": false,
           "description": "Enable ECS Exec for debugging (required for FedRAMP audit)"
+        }
+      }
+    },
+    "network": {
+      "type": "object",
+      "additionalProperties": false,
+      "description": "Network-level settings for the service security group",
+      "properties": {
+        "allowAllOutbound": {
+          "type": "boolean",
+          "default": false,
+          "description": "Allow all outbound egress traffic from the service security group (defaults to least-privilege)"
         }
       }
     },
@@ -498,6 +513,29 @@
               "comparisonOperator": "lt"
             }
           }
+        }
+      }
+    },
+    {
+      "name": "egress-enabled-sidecar",
+      "description": "Telemetry sidecar that requires unrestricted outbound access",
+      "config": {
+        "cluster": "shared-cluster",
+        "image": {
+          "repository": "123456789012.dkr.ecr.us-east-1.amazonaws.com/telemetry-agent",
+          "tag": "v2.5.1"
+        },
+        "cpu": 512,
+        "memory": 1024,
+        "desiredCount": 2,
+        "serviceConnect": {
+          "portMappingName": "otel"
+        },
+        "network": {
+          "allowAllOutbound": true
+        },
+        "logging": {
+          "retentionInDays": 1096
         }
       }
     }

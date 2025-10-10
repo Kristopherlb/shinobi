@@ -1,0 +1,39 @@
+{
+  "widgets": [
+    {
+      "type": "metric",
+      "width": 12,
+      "height": 6,
+      "properties": {
+        "title": "Redis Performance Overview",
+        "view": "timeSeries",
+        "region": "${region}",
+        "stat": "Average",
+        "period": 300,
+        "metrics": [
+          [ "AWS/ElastiCache", "CPUUtilization", "CacheClusterId", "${clusterId}", { "label": "CPU Utilisation (%)" } ],
+          [ ".", "EngineCPUUtilization", ".", ".", { "label": "Engine CPU (%)" } ],
+          [ "AWS/ElastiCache", "CacheHits", "CacheClusterId", "${clusterId}", { "stat": "Sum", "label": "Cache Hits" } ],
+          [ "AWS/ElastiCache", "CacheMisses", "CacheClusterId", "${clusterId}", { "stat": "Sum", "label": "Cache Misses" } ],
+          [ "AWS/ElastiCache", "CurrConnections", "CacheClusterId", "${clusterId}", { "label": "Current Connections" } ]
+        ]
+      }
+    },
+    {
+      "type": "metric",
+      "width": 12,
+      "height": 6,
+      "properties": {
+        "title": "Memory Pressure",
+        "view": "timeSeries",
+        "region": "${region}",
+        "period": 300,
+        "metrics": [
+          [ "AWS/ElastiCache", "Evictions", "CacheClusterId", "${clusterId}", { "stat": "Sum", "label": "Evictions" } ],
+          [ "AWS/ElastiCache", "BytesUsedForCache", "CacheClusterId", "${clusterId}", { "label": "Bytes Used" } ],
+          [ "AWS/ElastiCache", "SwapUsage", "CacheClusterId", "${clusterId}", { "label": "Swap Usage" } ]
+        ]
+      }
+    }
+  ]
+}

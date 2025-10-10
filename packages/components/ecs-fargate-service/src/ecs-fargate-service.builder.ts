@@ -85,6 +85,10 @@ export interface EcsFargateDiagnosticsConfig {
   enableExecuteCommand: boolean;
 }
 
+export interface EcsFargateNetworkConfig {
+  allowAllOutbound: boolean;
+}
+
 export interface EcsFargateServiceConfig {
   cluster: string;
   image: EcsFargateImageConfig;
@@ -102,6 +106,7 @@ export interface EcsFargateServiceConfig {
   logging: EcsFargateLoggingConfig;
   monitoring: EcsFargateMonitoringConfig;
   diagnostics: EcsFargateDiagnosticsConfig;
+  network?: EcsFargateNetworkConfig;
   hardeningProfile: string;
   tags: Record<string, string>;
 }
@@ -248,8 +253,16 @@ const DIAGNOSTICS_SCHEMA = {
   }
 };
 
+const NETWORK_SCHEMA = {
+  type: 'object',
+  additionalProperties: false,
+  properties: {
+    allowAllOutbound: { type: 'boolean', default: false }
+  }
+};
+
 // Load schema from standalone Config.schema.json file
-const schemaPath = path.join(__dirname, 'Config.schema.json');
+const schemaPath = path.join(__dirname, '..', 'Config.schema.json');
 const schemaContent = fs.readFileSync(schemaPath, 'utf-8');
 export const ECS_FARGATE_SERVICE_CONFIG_SCHEMA: ComponentConfigSchema = JSON.parse(schemaContent);
 
@@ -300,6 +313,7 @@ const LEGACY_SCHEMA = {
     logging: LOGGING_SCHEMA,
     monitoring: MONITORING_SCHEMA,
     diagnostics: DIAGNOSTICS_SCHEMA,
+    network: NETWORK_SCHEMA,
     hardeningProfile: { type: 'string', default: 'baseline' },
     tags: {
       type: 'object',
@@ -403,6 +417,10 @@ export class EcsFargateServiceComponentConfigBuilder extends ConfigBuilder<EcsFa
         enableExecuteCommand: isFedRamp
       },
 
+      network: {
+        allowAllOutbound: false
+      },
+
       hardeningProfile: 'baseline',
       tags: {}
     } as Partial<EcsFargateServiceConfig>;
@@ -415,9 +433,9 @@ export class EcsFargateServiceComponentConfigBuilder extends ConfigBuilder<EcsFa
   private getMinRetentionForFramework(framework: string): number {
     switch (framework) {
       case 'fedramp-high':
-        return 2555; // 7 years
+        return 2557; // 7 years
       case 'fedramp-moderate':
-        return 1095; // 3 years
+        return 1096; // 3 years
       default:
         return 30; // 30 days for commercial
     }
@@ -437,13 +455,23 @@ export class EcsFargateServiceComponentConfigBuilder extends ConfigBuilder<EcsFa
       throw new Error('ECS Fargate service requires `image.repository` to be set.');
     }
 
+    const framework = this.resolveFramework();
     const image = {
       repository: config.image.repository,
       tag: config.image.tag ?? 'latest'
     };
 
-    const desiredCount = config.desiredCount ?? 1;
+    const desiredCount = this.normaliseDesiredCount(config.desiredCount, framework);
     const autoScaling = this.normaliseAutoScaling(config.autoScaling, desiredCount);
+    const logging = this.normaliseLogging(config.logging);
+
+    if (framework === 'fedramp-high') {
+      logging.retentionInDays = Math.max(logging.retentionInDays ?? 0, 2557);
+      logging.removalPolicy = 'retain';
+    } else if (framework === 'fedramp-moderate') {
+      logging.retentionInDays = Math.max(logging.retentionInDays ?? 0, 1096);
+      logging.removalPolicy = 'retain';
+    }
 
     return {
       cluster: config.cluster,
@@ -459,12 +487,28 @@ export class EcsFargateServiceComponentConfigBuilder extends ConfigBuilder<EcsFa
       healthCheck: this.normaliseHealthCheck(config.healthCheck),
       autoScaling,
       deploymentStrategy: this.normaliseDeploymentStrategy(config.deploymentStrategy),
-      logging: this.normaliseLogging(config.logging),
-      monitoring: this.normaliseMonitoring(config.monitoring, desiredCount, autoScaling),
+      logging,
+      monitoring: this.normaliseMonitoring(config.monitoring, desiredCount, autoScaling, framework),
       diagnostics: this.normaliseDiagnostics(config.diagnostics),
+      network: this.normaliseNetwork(config.network),
       hardeningProfile: config.hardeningProfile ?? 'baseline',
       tags: config.tags ?? {}
     };
+  }
+
+  private normaliseDesiredCount(inputDesiredCount: number | undefined, framework?: string): number {
+    const baseline = inputDesiredCount ?? 1;
+
+    if (framework && framework.startsWith('fedramp')) {
+      return Math.max(baseline, 2);
+    }
+
+    return baseline;
+  }
+
+  private resolveFramework(): string | undefined {
+    const context = this.builderContext.context as any;
+    return context?.complianceFramework ?? context?.compliance;
   }
 
   private normaliseEnvironment(environment?: Record<string, string>): Record<string, string> {
@@ -572,38 +616,78 @@ export class EcsFargateServiceComponentConfigBuilder extends ConfigBuilder<EcsFa
   private normaliseMonitoring(
     monitoring: Partial<EcsFargateMonitoringConfig> | undefined,
     desiredCount: number,
-    autoScaling?: EcsFargateAutoScalingConfig
+    autoScaling: EcsFargateAutoScalingConfig | undefined,
+    framework: string | undefined
   ): EcsFargateMonitoringConfig {
     const enabled = monitoring?.enabled ?? true;
     const runningTaskThreshold = monitoring?.alarms?.runningTaskCount?.threshold
       ?? autoScaling?.minCapacity
       ?? desiredCount;
 
+    const cpuThreshold = monitoring?.alarms?.cpuUtilization?.threshold ?? this.getCpuThresholdForFramework(framework);
+    const memoryThreshold = monitoring?.alarms?.memoryUtilization?.threshold ?? this.getMemoryThresholdForFramework(framework);
+    const runningTaskCountThreshold = Math.max(runningTaskThreshold, framework && framework.startsWith('fedramp') ? 2 : 1);
+    const cpuAlarmInput = {
+      ...monitoring?.alarms?.cpuUtilization,
+      threshold: cpuThreshold
+    } as EcsFargateAlarmConfig | undefined;
+    const memoryAlarmInput = {
+      ...monitoring?.alarms?.memoryUtilization,
+      threshold: memoryThreshold
+    } as EcsFargateAlarmConfig | undefined;
+    const runningTaskAlarmInput = {
+      ...monitoring?.alarms?.runningTaskCount,
+      threshold: runningTaskCountThreshold,
+      comparisonOperator: monitoring?.alarms?.runningTaskCount?.comparisonOperator ?? 'lt'
+    } as EcsFargateAlarmConfig | undefined;
+
     return {
       enabled,
       alarms: {
-        cpuUtilization: this.normaliseAlarmConfig(monitoring?.alarms?.cpuUtilization, {
+        cpuUtilization: this.normaliseAlarmConfig(cpuAlarmInput, {
           ...DEFAULT_ALARM_BASELINE,
           enabled,
-          threshold: monitoring?.alarms?.cpuUtilization?.threshold ?? 85,
+          threshold: cpuThreshold,
           datapointsToAlarm: monitoring?.alarms?.cpuUtilization?.datapointsToAlarm
         }),
-        memoryUtilization: this.normaliseAlarmConfig(monitoring?.alarms?.memoryUtilization, {
+        memoryUtilization: this.normaliseAlarmConfig(memoryAlarmInput, {
           ...DEFAULT_ALARM_BASELINE,
           enabled,
-          threshold: monitoring?.alarms?.memoryUtilization?.threshold ?? 90,
+          threshold: memoryThreshold,
           datapointsToAlarm: monitoring?.alarms?.memoryUtilization?.datapointsToAlarm
         }),
-        runningTaskCount: this.normaliseAlarmConfig(monitoring?.alarms?.runningTaskCount, {
+        runningTaskCount: this.normaliseAlarmConfig(runningTaskAlarmInput, {
           ...DEFAULT_ALARM_BASELINE,
           enabled,
-          threshold: runningTaskThreshold,
+          threshold: runningTaskCountThreshold,
           comparisonOperator: monitoring?.alarms?.runningTaskCount?.comparisonOperator ?? 'lt',
           datapointsToAlarm: monitoring?.alarms?.runningTaskCount?.datapointsToAlarm,
           statistic: monitoring?.alarms?.runningTaskCount?.statistic ?? 'Average'
         })
       }
     };
+  }
+
+  private getCpuThresholdForFramework(framework: string | undefined): number {
+    switch (framework) {
+      case 'fedramp-high':
+        return 75;
+      case 'fedramp-moderate':
+        return 80;
+      default:
+        return 85;
+    }
+  }
+
+  private getMemoryThresholdForFramework(framework: string | undefined): number {
+    switch (framework) {
+      case 'fedramp-high':
+        return 80;
+      case 'fedramp-moderate':
+        return 85;
+      default:
+        return 90;
+    }
   }
 
   private normaliseAlarmConfig(
@@ -626,6 +710,12 @@ export class EcsFargateServiceComponentConfigBuilder extends ConfigBuilder<EcsFa
   private normaliseDiagnostics(diagnostics?: Partial<EcsFargateDiagnosticsConfig>): EcsFargateDiagnosticsConfig {
     return {
       enableExecuteCommand: diagnostics?.enableExecuteCommand ?? false
+    };
+  }
+
+  private normaliseNetwork(network?: Partial<EcsFargateNetworkConfig>): EcsFargateNetworkConfig {
+    return {
+      allowAllOutbound: network?.allowAllOutbound ?? false
     };
   }
 

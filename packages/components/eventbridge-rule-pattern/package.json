@@ -1,0 +1,84 @@
+{
+  "name": "@shinobi/component-eventbridge-rule-pattern",
+  "version": "1.0.0",
+  "description": "EventBridge pattern-based rule component with dead letter queue, CloudWatch logging, and comprehensive monitoring support",
+  "main": "index.js",
+  "types": "index.d.ts",
+  "keywords": [
+    "shinobi",
+    "eventbridge",
+    "aws-cdk",
+    "infrastructure",
+    "events",
+    "event-driven",
+    "pattern-matching",
+    "serverless"
+  ],
+  "author": "Platform Engineering <platform@shinobi.dev>",
+  "license": "MIT",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/project42/shinobi.git",
+    "directory": "packages/components/eventbridge-rule-pattern"
+  },
+  "bugs": {
+    "url": "https://github.com/project42/shinobi/issues"
+  },
+  "homepage": "https://github.com/project42/shinobi/tree/main/packages/components/eventbridge-rule-pattern#readme",
+  "engines": {
+    "node": ">=20.0.0"
+  },
+  "dependencies": {
+    "@shinobi/core": "workspace:*",
+    "@shinobi/contracts": "workspace:*",
+    "aws-cdk-lib": "^2.100.0",
+    "constructs": "^10.0.0"
+  },
+  "peerDependencies": {
+    "aws-cdk-lib": "^2.100.0",
+    "constructs": "^10.0.0"
+  },
+  "devDependencies": {
+    "@types/node": "^20.0.0",
+    "typescript": "^5.0.0",
+    "cdk-nag": "^2.28.0"
+  },
+  "scripts": {
+    "build": "tsc",
+    "test": "jest",
+    "test:watch": "jest --watch",
+    "test:coverage": "jest --coverage",
+    "lint": "eslint . --ext .ts",
+    "lint:fix": "eslint . --ext .ts --fix"
+  },
+  "publishConfig": {
+    "access": "restricted"
+  },
+  "stability": "stable",
+  "componentMetadata": {
+    "type": "eventbridge-rule-pattern",
+    "displayName": "EventBridge Rule (Pattern)",
+    "category": "events",
+    "awsServices": [
+      "EVENTBRIDGE",
+      "CLOUDWATCH",
+      "SQS"
+    ],
+    "complianceFrameworks": [
+      "commercial",
+      "fedramp-moderate",
+      "fedramp-high"
+    ],
+    "capabilities": [
+      "eventbridge:rule-pattern"
+    ],
+    "tags": [
+      "eventbridge",
+      "rule",
+      "pattern",
+      "events",
+      "integration",
+      "automation"
+    ]
+  }
+}

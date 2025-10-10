@@ -991,11 +991,7 @@ defaults:
       securityGroup:
         create: true
         securityGroupId:
-        ingressRules:
-          - port: 2049
-            protocol: tcp
-            cidr: 10.0.0.0/8
-            description: NFS access from trusted networks
+        ingressRules: []
     lifecycle:
       transitionToIA: AFTER_30_DAYS
       transitionToPrimary: AFTER_1_ACCESS

@@ -4,11 +4,11 @@ import {
   ComponentSpec,
   IComponentCreator
 } from '@shinobi/core';
-import { ElastiCacheRedisComponent } from './elasticache-redis.component.ts';
+import { ElastiCacheRedisComponent } from './elasticache-redis.component.js';
 import {
   ElastiCacheRedisConfig,
   ELASTICACHE_REDIS_CONFIG_SCHEMA
-} from './elasticache-redis.builder.ts';
+} from './elasticache-redis.builder.js';
 
 export class ElastiCacheRedisComponentCreator implements IComponentCreator {
   public readonly componentType = 'elasticache-redis';
@@ -39,8 +39,24 @@ export class ElastiCacheRedisComponentCreator implements IComponentCreator {
       errors.push('automaticFailover requires multiAz.enabled to be true.');
     }
 
-    if (context.environment === 'prod' && config?.monitoring?.enabled === false) {
-      errors.push('Monitoring must remain enabled in production environments.');
+    if (!config?.vpc?.vpcId && !context.vpc) {
+      errors.push('A VPC is required. Provide config.vpc.vpcId or ensure the platform context supplies context.vpc.');
+    }
+
+    if (config?.monitoring?.enabled === false) {
+      errors.push('Monitoring cannot be disabled. The Platform Observability Standard requires telemetry for every deployment.');
+    }
+
+    if (config?.encryption?.atRest === false || config?.encryption?.inTransit === false) {
+      errors.push('Encryption at rest and in transit must remain enabled for Redis clusters.');
+    }
+
+    if (config?.encryption?.authToken?.enabled === false) {
+      errors.push('Redis AUTH token enforcement must remain enabled. Provide a secretArn if you need to supply an existing token.');
+    }
+
+    if (config?.security?.allowedCidrs?.some(cidr => cidr === '0.0.0.0/0')) {
+      errors.push('CIDR 0.0.0.0/0 is not permitted for Redis ingress. Restrict allowedCidrs to private ranges.');
     }
 
     return {

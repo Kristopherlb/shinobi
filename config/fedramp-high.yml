@@ -1044,11 +1044,7 @@ defaults:
       securityGroup:
         create: true
         securityGroupId:
-        ingressRules:
-          - port: 2049
-            protocol: tcp
-            cidr: 10.0.0.0/8
-            description: Restricted NFS access
+        ingressRules: []
     lifecycle:
       transitionToIA: AFTER_7_DAYS
       transitionToPrimary: AFTER_1_ACCESS
@@ -1057,11 +1053,11 @@ defaults:
     logging:
       access:
         enabled: true
-        retentionInDays: 1095
+        retentionInDays: 3653
         removalPolicy: retain
       audit:
         enabled: true
-        retentionInDays: 3650
+        retentionInDays: 3653
         removalPolicy: retain
     monitoring:
       enabled: true

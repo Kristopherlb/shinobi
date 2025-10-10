@@ -1,5 +1,5 @@
 /**
- * Creator for EcsFargateServiceComponent Component
+ * Creator for EfsFilesystemComponent Component
  * 
  * Implements the ComponentCreator pattern as defined in the Platform Component API Contract.
  * Makes the component discoverable by the platform and provides factory methods.
@@ -10,12 +10,12 @@ import {
   ComponentSpec,
   ComponentContext,
   IComponentCreator
-} from '../@shinobi/core/component-interfaces.ts';
-import { EcsFargateServiceComponentComponent } from './ecs-fargate-service.component.ts';
-import { EcsFargateServiceConfig, ECS_FARGATE_SERVICE_CONFIG_SCHEMA } from './ecs-fargate-service.builder.ts';
+} from '@shinobi/core';
+import { EfsFilesystemComponent } from './efs-filesystem.component.ts';
+import { EfsFilesystemConfig, EFS_FILESYSTEM_CONFIG_SCHEMA } from './efs-filesystem.builder.ts';
 
 /**
- * Creator class for EcsFargateServiceComponent component
+ * Creator class for EfsFilesystemComponent component
  * 
  * Responsible for:
  * - Component factory creation
@@ -23,12 +23,12 @@ import { EcsFargateServiceConfig, ECS_FARGATE_SERVICE_CONFIG_SCHEMA } from './ec
  * - Schema definition and validation
  * - Component type identification
  */
-export class EcsFargateServiceComponentCreator implements IComponentCreator {
+export class EfsFilesystemComponentCreator implements IComponentCreator {
 
   /**
    * Component type identifier
    */
-  public readonly componentType = 'ecs-fargate-service';
+  public readonly componentType = 'efs-filesystem';
 
   /**
    * Component version (semantic versioning)
@@ -43,22 +43,22 @@ export class EcsFargateServiceComponentCreator implements IComponentCreator {
   /**
    * Component display name
    */
-  public readonly displayName = 'ECS Fargate Service';
+  public readonly displayName = 'Amazon EFS Filesystem';
 
   /**
    * Component description
    */
-  public readonly description = 'Serverless ECS Fargate service with Service Connect integration, blue-green deployment support, auto-scaling, and comprehensive CloudWatch monitoring';
+  public readonly description = 'Amazon EFS filesystem with encryption at rest and in transit, lifecycle management, CloudWatch monitoring, and automatic backups';
 
   /**
    * Component category for organization
    */
-  public readonly category = 'compute';
+  public readonly category = 'storage';
 
   /**
    * AWS service this component manages
    */
-  public readonly awsService = 'ECS';
+  public readonly awsService = 'EFS';
 
   /**
    * Supported compliance frameworks
@@ -73,21 +73,21 @@ export class EcsFargateServiceComponentCreator implements IComponentCreator {
    * Component tags for discovery
    */
   public readonly tags = [
-    'ecs',
-    'fargate',
-    'containers',
-    'service-connect',
-    'compute',
-    'serverless',
+    'efs',
+    'filesystem',
+    'storage',
+    'nfs',
+    'encryption',
+    'lifecycle',
     'aws',
-    'blue-green',
-    'auto-scaling'
+    'shared-storage',
+    'monitoring'
   ];
 
   /**
    * JSON Schema for component configuration validation
    */
-  public readonly configSchema = ECS_FARGATE_SERVICE_CONFIG_SCHEMA;
+  public readonly configSchema = EFS_FILESYSTEM_CONFIG_SCHEMA;
 
   /**
    * Factory method to create component instances
@@ -96,8 +96,8 @@ export class EcsFargateServiceComponentCreator implements IComponentCreator {
     scope: Construct,
     spec: ComponentSpec,
     context: ComponentContext
-  ): EcsFargateServiceComponentComponent {
-    return new EcsFargateServiceComponentComponent(scope, spec, context);
+  ): EfsFilesystemComponent {
+    return new EfsFilesystemComponent(scope, spec.name, context, spec);
   }
 
   /**
@@ -108,7 +108,7 @@ export class EcsFargateServiceComponentCreator implements IComponentCreator {
     context: ComponentContext
   ): { valid: boolean; errors: string[] } {
     const errors: string[] = [];
-    const config = spec.config as EcsFargateServiceConfig;
+    const config = spec.config as EfsFilesystemConfig;
 
     // Validate component name
     if (!spec.name || spec.name.length === 0) {
@@ -139,9 +139,7 @@ export class EcsFargateServiceComponentCreator implements IComponentCreator {
    */
   public getProvidedCapabilities(): string[] {
     return [
-      'service:connect', // Service Connect capability for service discovery
-      'compute:ecs-fargate', // Compute capability
-      'monitoring:ecs-service' // Monitoring capability
+      'storage:efs'
     ];
   }
 
@@ -150,8 +148,7 @@ export class EcsFargateServiceComponentCreator implements IComponentCreator {
    */
   public getRequiredCapabilities(): string[] {
     return [
-      'cluster:ecs', // Requires an ECS cluster
-      'network:vpc' // Requires a VPC
+      'network:vpc' // EFS requires a VPC for mount targets
     ];
   }
 
@@ -160,8 +157,9 @@ export class EcsFargateServiceComponentCreator implements IComponentCreator {
    */
   public getConstructHandles(): string[] {
     return [
-      'main'
-      // TODO: Add additional construct handles if needed
+      'main',
+      'filesystem',
+      'securityGroup'
     ];
   }
 }

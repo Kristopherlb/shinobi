@@ -1,0 +1,55 @@
+{
+  "widgets": [
+    {
+      "type": "metric",
+      "width": 24,
+      "height": 6,
+      "properties": {
+        "title": "Availability & Replication",
+        "view": "timeSeries",
+        "region": "${region}",
+        "stat": "Average",
+        "period": 60,
+        "metrics": [
+          [ "AWS/ElastiCache", "ReplicationLag", "CacheClusterId", "${clusterId}", { "label": "Replication Lag (s)" } ],
+          [ "AWS/ElastiCache", "ServerSideNetworkBytesIn", "CacheClusterId", "${clusterId}", { "stat": "Sum", "label": "Network In" } ],
+          [ "AWS/ElastiCache", "ServerSideNetworkBytesOut", "CacheClusterId", "${clusterId}", { "stat": "Sum", "label": "Network Out" } ],
+          [ "AWS/ElastiCache", "CmdGet", "CacheClusterId", "${clusterId}", { "stat": "Sum", "label": "GET Commands" } ],
+          [ "AWS/ElastiCache", "CmdSet", "CacheClusterId", "${clusterId}", { "stat": "Sum", "label": "SET Commands" } ]
+        ]
+      }
+    },
+    {
+      "type": "metric",
+      "width": 12,
+      "height": 6,
+      "properties": {
+        "title": "Error Signals",
+        "view": "timeSeries",
+        "region": "${region}",
+        "stat": "Sum",
+        "period": 300,
+        "metrics": [
+          [ "AWS/ElastiCache", "NewConnections", "CacheClusterId", "${clusterId}", { "label": "New Connections" } ],
+          [ "AWS/ElastiCache", "Reclaimed", "CacheClusterId", "${clusterId}", { "label": "Reclaimed Connections" } ],
+          [ "AWS/ElastiCache", "ReplConfAckGap", "CacheClusterId", "${clusterId}", { "label": "Replica ACK Gap" } ]
+        ]
+      }
+    },
+    {
+      "type": "metric",
+      "width": 12,
+      "height": 6,
+      "properties": {
+        "title": "Latency Percentiles",
+        "view": "timeSeries",
+        "region": "${region}",
+        "stat": "p95",
+        "period": 60,
+        "metrics": [
+          [ "AWS/ElastiCache", "Latency", "CacheClusterId", "${clusterId}", { "label": "Command Latency" } ]
+        ]
+      }
+    }
+  ]
+}

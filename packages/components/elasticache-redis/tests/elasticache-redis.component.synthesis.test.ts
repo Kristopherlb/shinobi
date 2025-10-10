@@ -3,8 +3,8 @@ import { Template, Match } from 'aws-cdk-lib/assertions';
 import * as ec2 from 'aws-cdk-lib/aws-ec2';
 import { Construct } from 'constructs';
 import { ComponentContext, ComponentSpec } from '@shinobi/core';
-import { ElastiCacheRedisComponent } from '../elasticache-redis.component.ts';
-import { ElastiCacheRedisConfig } from '../elasticache-redis.builder.ts';
+import { ElastiCacheRedisComponent } from '../src/elasticache-redis.component.ts';
+import { ElastiCacheRedisConfig } from '../src/elasticache-redis.builder.ts';
 
 type Framework = 'commercial' | 'fedramp-moderate' | 'fedramp-high';
 
@@ -37,19 +37,33 @@ const synthesize = (framework: Framework, config?: Partial<ElastiCacheRedisConfi
 };
 
 describe('ElastiCacheRedisComponent synthesis', () => {
-  it('creates a commercial cluster without encryption or snapshots', () => {
+  it('synthesizes a hardened commercial cluster by default', () => {
     const { template, component } = synthesize('commercial');
 
     template.hasResourceProperties('AWS::ElastiCache::ReplicationGroup', Match.objectLike({
-      AtRestEncryptionEnabled: false,
-      TransitEncryptionEnabled: false,
-      SnapshotRetentionLimit: 0,
+      AtRestEncryptionEnabled: true,
+      TransitEncryptionEnabled: true,
+      SnapshotRetentionLimit: 7,
       NumCacheClusters: 1,
       MultiAZEnabled: false
     }));
 
+    template.hasResourceProperties('AWS::ElastiCache::ReplicationGroup', {
+      LogDeliveryConfigurations: Match.arrayWith([
+        Match.objectLike({ LogType: 'slow-log', DestinationType: 'cloudwatch-logs' }),
+        Match.objectLike({ LogType: 'engine-log', DestinationType: 'cloudwatch-logs' })
+      ])
+    });
+
+    template.resourceCountIs('AWS::Logs::LogGroup', 2);
+    template.resourceCountIs('AWS::KMS::Key', 1);
+    template.resourceCountIs('AWS::CloudWatch::Alarm', 4);
+
     expect(component.getConstruct('securityGroup')).toBeDefined();
-    expect(component.getCapabilities()['cache:redis'].multiAz).toBe(false);
+    const capability = component.getCapabilities()['cache:redis'];
+    expect(capability.multiAz).toBe(false);
+    expect(capability.primaryEndpointAddress).toBeDefined();
+    expect(capability.sgId).toBeDefined();
   });
 
   it('enables encryption and monitoring for fedramp-high defaults', () => {
@@ -71,9 +85,14 @@ describe('ElastiCacheRedisComponent synthesis', () => {
       ])
     });
 
+    template.resourceCountIs('AWS::Logs::LogGroup', 2);
+
     const capability = component.getCapabilities()['cache:redis'];
     expect(capability.authTokenSecretArn).toBeDefined();
     expect(capability.multiAz).toBe(true);
+    expect(capability.securityGroupIds).toBeDefined();
+
+    template.resourceCountIs('AWS::CloudWatch::Alarm', 4);
   });
 
   it('applies manifest overrides for security groups and alarms', () => {
@@ -107,5 +126,14 @@ describe('ElastiCacheRedisComponent synthesis', () => {
     }));
 
     template.resourceCountIs('AWS::CloudWatch::Alarm', 2);
+  });
+
+  it('throws when neither config.vpc.vpcId nor context.vpc is provided', () => {
+    const app = new App();
+    const stack = new Stack(app, 'TestStack-NoVpc');
+    const context = baseContext('commercial');
+    const component = new ElastiCacheRedisComponent(stack, 'Redis-NoVpc', context, spec());
+
+    expect(() => component.synth()).toThrow(/requires an explicit VPC/);
   });
 });

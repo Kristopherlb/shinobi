@@ -10,6 +10,8 @@ import * as elasticache from 'aws-cdk-lib/aws-elasticache';
 import * as ec2 from 'aws-cdk-lib/aws-ec2';
 import * as secretsmanager from 'aws-cdk-lib/aws-secretsmanager';
 import * as cloudwatch from 'aws-cdk-lib/aws-cloudwatch';
+import * as logs from 'aws-cdk-lib/aws-logs';
+import * as kms from 'aws-cdk-lib/aws-kms';
 import * as cdk from 'aws-cdk-lib';
 import { Construct } from 'constructs';
 import {
@@ -23,7 +25,7 @@ import {
   ElastiCacheRedisConfig,
   RedisAlarmThresholdConfig,
   RedisLogDeliveryConfig
-} from './elasticache-redis.builder.ts';
+} from './elasticache-redis.builder.js';
 
 interface CreatedAlarm {
   id: string;
@@ -40,6 +42,7 @@ export class ElastiCacheRedisComponent extends BaseComponent {
   private vpc?: ec2.IVpc;
   private config?: ElastiCacheRedisConfig;
   private readonly createdAlarms: CreatedAlarm[] = [];
+  private loggingKmsKey?: kms.Key;
 
   constructor(scope: Construct, id: string, context: ComponentContext, spec: ComponentSpec) {
     super(scope, id, context, spec);
@@ -59,6 +62,18 @@ export class ElastiCacheRedisComponent extends BaseComponent {
         encryptionInTransit: this.config.encryption.inTransit,
         monitoringEnabled: this.config.monitoring.enabled
       });
+
+      if (this.config.monitoring.enabled === false) {
+        throw new Error('Monitoring cannot be disabled for the ElastiCache Redis component.');
+      }
+
+      if (!this.config.encryption.atRest || !this.config.encryption.inTransit) {
+        throw new Error('Encryption at rest and in transit must remain enabled for the ElastiCache Redis component.');
+      }
+
+      if (!this.config.encryption.authToken.enabled) {
+        throw new Error('Redis AUTH token enforcement must remain enabled. Provide encryption.authToken.secretArn for BYO secrets.');
+      }
 
       this.resolveVpc();
       this.createParameterGroupIfNeeded();
@@ -128,9 +143,17 @@ export class ElastiCacheRedisComponent extends BaseComponent {
       return;
     }
 
-    this.vpc = ec2.Vpc.fromLookup(this, 'DefaultVpc', {
-      isDefault: true
-    });
+    this.logError(
+      new Error('Missing VPC context'),
+      'elasticache-redis:vpc-resolution',
+      {
+        guidance: 'Provide config.vpc.vpcId or inject context.vpc. Default VPC usage is prohibited.'
+      }
+    );
+    throw new Error(
+      `ElastiCache Redis component '${this.spec.name}' requires an explicit VPC. ` +
+        'Configure config.vpc.vpcId or provide context.vpc; default VPC lookup is not permitted.'
+    );
   }
 
   private createParameterGroupIfNeeded(): void {
@@ -332,9 +355,13 @@ export class ElastiCacheRedisComponent extends BaseComponent {
 
   private buildLogDeliveryConfigurations(): elasticache.CfnReplicationGroup.LogDeliveryConfigurationProperty[] {
     const enabledConfigs = this.config!.monitoring.logDelivery.filter(entry => entry.enabled);
-    return enabledConfigs.map((entry: RedisLogDeliveryConfig) => {
+    return enabledConfigs.map((entry: RedisLogDeliveryConfig, index) => {
       const details: elasticache.CfnReplicationGroup.DestinationDetailsProperty = {};
       if (entry.destinationType === 'cloudwatch-logs') {
+        const logGroup = this.ensureManagedLogGroup(entry, index);
+        if (logGroup) {
+          this.registerConstruct(`log-group:${entry.logType}:${index}`, logGroup);
+        }
         details.cloudWatchLogsDetails = {
           logGroup: entry.destinationName
         };
@@ -353,25 +380,93 @@ export class ElastiCacheRedisComponent extends BaseComponent {
     });
   }
 
+  private ensureManagedLogGroup(entry: RedisLogDeliveryConfig, index: number): logs.LogGroup | undefined {
+    if (entry.destinationType !== 'cloudwatch-logs') {
+      return undefined;
+    }
+
+    const isManaged = entry.managed ?? entry.destinationName.startsWith('/aws/platform/redis/');
+    if (!isManaged) {
+      return undefined;
+    }
+
+    const logGroup = new logs.LogGroup(this, `${this.toPascal(entry.logType)}LogGroup${index}`, {
+      logGroupName: entry.destinationName,
+      retention: this.mapLogRetentionDays(this.governanceMetadata.logRetentionDays),
+      encryptionKey: this.resolveLoggingKmsKey(),
+      removalPolicy: cdk.RemovalPolicy.RETAIN
+    });
+
+    this.applyStandardTags(logGroup, {
+      'resource-type': 'log-group',
+      'log-type': entry.logType
+    });
+
+    return logGroup;
+  }
+
+  private resolveLoggingKmsKey(): kms.IKey | undefined {
+    if (this.config?.encryption.atRest === false && this.config?.encryption.inTransit === false) {
+      return undefined;
+    }
+
+    if (!this.loggingKmsKey) {
+      this.loggingKmsKey = new kms.Key(this, 'RedisLogsKmsKey', {
+        description: `KMS key for ${this.getClusterName()} CloudWatch log encryption`,
+        enableKeyRotation: true,
+        removalPolicy: cdk.RemovalPolicy.RETAIN
+      });
+
+      this.applyStandardTags(this.loggingKmsKey, {
+        'resource-type': 'kms-key',
+        purpose: 'redis-log-encryption'
+      });
+
+      this.registerConstruct('kms:redis-log', this.loggingKmsKey);
+    }
+
+    return this.loggingKmsKey;
+  }
+
   private composeSecurityGroupIds(): string[] {
     const ids = [...this.config!.security.securityGroupIds];
     if (this.securityGroup) {
       ids.push(this.securityGroup.securityGroupId);
     }
-    return ids;
+
+    if (ids.length === 0) {
+      throw new Error(
+        `ElastiCache Redis component '${this.spec.name}' must have at least one security group id ` +
+          'either from config.security.securityGroupIds or a managed security group.'
+      );
+    }
+
+    return Array.from(new Set(ids));
   }
 
   private buildCapability(): Record<string, any> {
+    const primarySecurityGroupId = this.securityGroup?.securityGroupId ?? this.config!.security.securityGroupIds[0];
+
+    if (!primarySecurityGroupId) {
+      throw new Error(
+        `Capability export requires a security group. Provide securityGroupIds when security.create is false.`
+      );
+    }
+
     return {
-      clusterId: this.replicationGroup!.replicationGroupId,
+      clusterId: this.replicationGroup!.attrReplicationGroupId,
       clusterName: this.getClusterName(),
       engineVersion: this.config!.engineVersion,
       nodeType: this.config!.nodeType,
-      primaryEndpoint: this.replicationGroup!.attrPrimaryEndPointAddress,
-      readerEndpoint: this.replicationGroup!.attrReaderEndPointAddress,
+      primaryEndpointAddress: this.replicationGroup!.attrPrimaryEndPointAddress,
+      primaryEndpointPort: this.replicationGroup!.attrPrimaryEndPointPort,
+      readerEndpointAddress: this.replicationGroup!.attrReaderEndPointAddress,
+      readerEndpointPort: this.replicationGroup!.attrReaderEndPointPort,
       port: this.config!.port,
       authTokenSecretArn: this.authTokenSecret?.secretArn,
-      multiAz: this.config!.multiAz.enabled
+      multiAz: this.config!.multiAz.enabled,
+      sgId: primarySecurityGroupId,
+      securityGroupIds: Array.from(new Set(this.composeSecurityGroupIds()))
     };
   }
 

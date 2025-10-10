@@ -1,0 +1,269 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "title": "EventBridge Rule Cron Component Configuration",
+  "description": "Complete configuration schema for EventBridge scheduled rules with cron/rate expressions",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "schedule"
+  ],
+  "properties": {
+    "ruleName": {
+      "type": "string",
+      "description": "Override the generated rule name (sanitized to 64 characters max)",
+      "maxLength": 64
+    },
+    "schedule": {
+      "type": "string",
+      "description": "Cron or rate expression (e.g., 'cron(0 12 * * ? *)' or 'rate(5 minutes)')",
+      "examples": [
+        "cron(0 12 * * ? *)",
+        "rate(5 minutes)",
+        "cron(0 9 ? * MON-FRI *)"
+      ]
+    },
+    "description": {
+      "type": "string",
+      "description": "Human-readable description of the rule"
+    },
+    "eventBus": {
+      "type": "object",
+      "description": "EventBridge bus configuration",
+      "additionalProperties": false,
+      "properties": {
+        "name": {
+          "type": "string",
+          "description": "Name of the event bus (defaults to 'default')"
+        },
+        "arn": {
+          "type": "string",
+          "description": "ARN of the event bus (overrides name)",
+          "pattern": "^arn:aws:events:[a-z0-9-]+:[0-9]{12}:event-bus/.+"
+        }
+      }
+    },
+    "state": {
+      "type": "string",
+      "description": "Rule state (enabled or disabled)",
+      "enum": [
+        "enabled",
+        "disabled"
+      ],
+      "default": "enabled"
+    },
+    "input": {
+      "type": "object",
+      "description": "Input transformation configuration",
+      "additionalProperties": false,
+      "properties": {
+        "type": {
+          "type": "string",
+          "description": "Input type",
+          "enum": [
+            "constant",
+            "path",
+            "transformer"
+          ]
+        },
+        "value": {
+          "type": "string",
+          "description": "Constant payload when type is 'constant'"
+        },
+        "path": {
+          "type": "string",
+          "description": "JSON path when type is 'path'"
+        },
+        "transformer": {
+          "type": "object",
+          "description": "Input transformer configuration",
+          "additionalProperties": false,
+          "required": [
+            "inputTemplate"
+          ],
+          "properties": {
+            "inputPathsMap": {
+              "type": "object",
+              "description": "Map of JSON paths to variables",
+              "additionalProperties": {
+                "type": "string"
+              }
+            },
+            "inputTemplate": {
+              "type": "string",
+              "description": "Template for transforming the input (required)"
+            }
+          }
+        }
+      }
+    },
+    "deadLetterQueue": {
+      "type": "object",
+      "description": "Dead letter queue configuration for failed invocations",
+      "additionalProperties": false,
+      "properties": {
+        "enabled": {
+          "type": "boolean",
+          "description": "Enable dead letter queue",
+          "default": false
+        },
+        "maxRetryAttempts": {
+          "type": "number",
+          "description": "Maximum retry attempts before sending to DLQ",
+          "minimum": 0,
+          "maximum": 185,
+          "default": 3
+        },
+        "retentionDays": {
+          "type": "number",
+          "description": "DLQ message retention in days",
+          "minimum": 1,
+          "maximum": 14,
+          "default": 14
+        }
+      }
+    },
+    "monitoring": {
+      "type": "object",
+      "description": "CloudWatch monitoring configuration",
+      "additionalProperties": false,
+      "properties": {
+        "enabled": {
+          "type": "boolean",
+          "description": "Enable monitoring alarms and logs",
+          "default": false
+        },
+        "alarms": {
+          "type": "object",
+          "description": "CloudWatch alarm configurations",
+          "additionalProperties": false,
+          "properties": {
+            "failedInvocations": {
+              "$ref": "#/definitions/alarmConfig"
+            },
+            "invocationRate": {
+              "$ref": "#/definitions/alarmConfig"
+            }
+          }
+        },
+        "cloudWatchLogs": {
+          "type": "object",
+          "description": "CloudWatch Logs configuration",
+          "additionalProperties": false,
+          "properties": {
+            "enabled": {
+              "type": "boolean",
+              "description": "Enable CloudWatch Logs delivery",
+              "default": false
+            },
+            "logGroupName": {
+              "type": "string",
+              "description": "Custom log group name (defaults to /aws/events/rule/{service}-{component})"
+            },
+            "retentionDays": {
+              "type": "number",
+              "description": "Log retention in days",
+              "enum": [
+                1,
+                3,
+                5,
+                7,
+                14,
+                30,
+                60,
+                90,
+                120,
+                150,
+                180,
+                365,
+                400,
+                545,
+                731,
+                1827,
+                3653
+              ],
+              "default": 14
+            },
+            "removalPolicy": {
+              "type": "string",
+              "description": "Removal policy for log group",
+              "enum": [
+                "retain",
+                "destroy"
+              ],
+              "default": "destroy"
+            }
+          }
+        }
+      }
+    },
+    "tags": {
+      "type": "object",
+      "description": "Additional tags (platform tags applied automatically)",
+      "additionalProperties": {
+        "type": "string"
+      }
+    }
+  },
+  "definitions": {
+    "alarmConfig": {
+      "type": "object",
+      "description": "CloudWatch alarm configuration",
+      "additionalProperties": false,
+      "properties": {
+        "enabled": {
+          "type": "boolean",
+          "description": "Enable this alarm",
+          "default": false
+        },
+        "threshold": {
+          "type": "number",
+          "description": "Alarm threshold value",
+          "minimum": 0
+        },
+        "evaluationPeriods": {
+          "type": "number",
+          "description": "Number of periods to evaluate",
+          "minimum": 1
+        },
+        "periodMinutes": {
+          "type": "number",
+          "description": "Period length in minutes",
+          "minimum": 1
+        },
+        "comparisonOperator": {
+          "type": "string",
+          "description": "Comparison operator",
+          "enum": [
+            "gt",
+            "gte",
+            "lt",
+            "lte"
+          ],
+          "default": "gte"
+        },
+        "treatMissingData": {
+          "type": "string",
+          "description": "How to handle missing data",
+          "enum": [
+            "breaching",
+            "not-breaching",
+            "ignore",
+            "missing"
+          ],
+          "default": "not-breaching"
+        },
+        "statistic": {
+          "type": "string",
+          "description": "Metric statistic",
+          "enum": [
+            "Sum",
+            "Average",
+            "Minimum",
+            "Maximum"
+          ],
+          "default": "Sum"
+        }
+      }
+    }
+  }
+}

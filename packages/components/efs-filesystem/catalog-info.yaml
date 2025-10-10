@@ -24,8 +24,11 @@ spec:
       componentType: efs-filesystem
       category: storage
       description: EFS filesystem component providing network mount targets, encryption, and observability hooks.
+      maturity: production
+      releaseChannel: stable
       capabilities:
         - storage:efs
+        - efs:file-system
       awsServices:
         - efs
         - ec2

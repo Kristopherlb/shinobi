@@ -26,6 +26,9 @@ spec:
       description: Fargate service component that provisions tasks, load balancer wiring, and platform-standard policies.
       capabilities:
         - service:connect
+        - compute:ecs-fargate
+        - monitoring:ecs-service
+        - otel:environment
       awsServices:
         - ecs
         - logs

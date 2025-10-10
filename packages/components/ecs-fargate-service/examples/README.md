@@ -19,6 +19,9 @@ Service configured for FedRAMP Moderate compliance.
 ### fedramp-high.yml
 Service configured for FedRAMP High compliance with full security controls.
 
+### network-allow-all-outbound.yml
+Service that opts into unrestricted egress by setting `network.allowAllOutbound: true`.
+
 ## Usage
 
 Copy an example and modify it for your service:
@@ -33,4 +36,3 @@ svc plan --manifest my-service.yml --env dev
 ## Configuration Options
 
 For complete schema documentation, see [Config.schema.json](../Config.schema.json).
-

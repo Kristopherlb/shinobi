@@ -16,6 +16,7 @@ import * as cloudwatch from 'aws-cdk-lib/aws-cloudwatch';
 import * as elbv2 from 'aws-cdk-lib/aws-elasticloadbalancingv2';
 import * as cdk from 'aws-cdk-lib';
 import { Construct } from 'constructs';
+import { NagSuppressions } from 'cdk-nag';
 import { BaseComponent } from '@shinobi/core';
 import { ComponentSpec, ComponentContext, ComponentCapabilities } from '@platform/contracts';
 import {
@@ -32,11 +33,14 @@ export class EcsFargateServiceComponent extends BaseComponent {
   private service?: ecs.FargateService;
   private taskDefinition?: ecs.FargateTaskDefinition;
   private securityGroup?: ec2.SecurityGroup;
+  private albSecurityGroup?: ec2.SecurityGroup;
   private logGroup?: logs.ILogGroup;
   private createdLogGroup?: logs.LogGroup;
   private config?: EcsFargateServiceConfig;
   private configBuilder?: EcsFargateServiceComponentConfigBuilder;
   private importedCluster?: ecs.ICluster;
+  private container?: ecs.ContainerDefinition;
+  private serviceConnectNamespace?: string;
   private blueGreenResources?: {
     applicationLoadBalancer: elbv2.ApplicationLoadBalancer;
     productionTargetGroup: elbv2.ApplicationTargetGroup;
@@ -85,6 +89,9 @@ export class EcsFargateServiceComponent extends BaseComponent {
       this.registerConstruct('service', this.service!);
       this.registerConstruct('taskDefinition', this.taskDefinition!);
       this.registerConstruct('securityGroup', this.securityGroup!);
+      if (this.albSecurityGroup) {
+        this.registerConstruct('albSecurityGroup', this.albSecurityGroup);
+      }
       if (this.createdLogGroup) {
         this.registerConstruct('logGroup', this.createdLogGroup);
       }
@@ -128,6 +135,8 @@ export class EcsFargateServiceComponent extends BaseComponent {
       1024: [2048, 3072, 4096, 5120, 6144, 7168, 8192],
       2048: [4096, 5120, 6144, 7168, 8192, 9216, 10240, 11264, 12288, 13312, 14336, 15360, 16384],
       4096: [8192, 9216, 10240, 11264, 12288, 13312, 14336, 15360, 16384, 17408, 18432, 19456, 20480, 21504, 22528, 23552, 24576, 25600, 26624, 27648, 28672, 29696, 30720],
+      8192: [16384, 17408, 18432, 19456, 20480, 22528, 24576, 26624, 28672, 30720, 32768, 36864, 40960, 45056, 49152, 53248, 57344, 61440],
+      16384: [32768, 34816, 36864, 38912, 40960, 45056, 49152, 53248, 57344, 61440, 65536, 69632, 73728, 77824, 81920, 86016, 90112, 94208, 98304, 102400, 106496, 110592, 114688, 118784, 122880],
     };
 
     if (!compatibleMemory[cpu]?.includes(memory)) {
@@ -145,19 +154,39 @@ export class EcsFargateServiceComponent extends BaseComponent {
     const logGroup = this.resolveLogGroup();
 
     // Create task role if not provided
-    let taskRole: iam.Role | undefined;
+    let taskRole: iam.IRole;
     if (this.config!.taskRoleArn) {
-      taskRole = iam.Role.fromRoleArn(this, 'TaskRole', this.config!.taskRoleArn) as iam.Role;
+      taskRole = iam.Role.fromRoleArn(this, 'TaskRole', this.config!.taskRoleArn);
     } else {
-      taskRole = new iam.Role(this, 'TaskRole', {
+      const managedTaskRole = new iam.Role(this, 'TaskRole', {
         assumedBy: new iam.ServicePrincipal('ecs-tasks.amazonaws.com'),
         description: `Task role for ${this.context.serviceName} ${this.spec.name}`,
       });
 
       // Add X-Ray permissions for distributed tracing
-      taskRole.addManagedPolicy(
-        iam.ManagedPolicy.fromAwsManagedPolicyName('AWSXRayDaemonWriteAccess')
-      );
+      managedTaskRole.addToPrincipalPolicy(new iam.PolicyStatement({
+        sid: 'AllowXRayTelemetry',
+        actions: ['xray:PutTraceSegments', 'xray:PutTelemetryRecords'],
+        resources: [
+          cdk.Stack.of(this).formatArn({
+            service: 'xray',
+            resource: '*'
+          })
+        ]
+      }));
+
+      this.applyStandardTags(managedTaskRole, {
+        'resource-type': 'iam-role',
+        'role-purpose': 'ecs-task'
+      });
+
+      if (this.config!.tags) {
+        Object.entries(this.config!.tags).forEach(([key, value]) => {
+          cdk.Tags.of(managedTaskRole).add(key, value);
+        });
+      }
+
+      taskRole = managedTaskRole;
     }
 
     // Determine ephemeral storage size based on framework
@@ -179,23 +208,45 @@ export class EcsFargateServiceComponent extends BaseComponent {
       `${this.config!.image.repository}:latest`;
 
     // Build environment with OTEL configuration
-    const environment = {
-      ...this.config!.environment,
-      ...this.buildOtelEnvironment(),
-    };
-
     const container = this.taskDefinition.addContainer('Container', {
       image: ecs.ContainerImage.fromRegistry(imageUri),
       logging: ecs.LogDrivers.awsLogs({
         streamPrefix: this.config!.logging.streamPrefix || this.spec.name,
         logGroup
       }),
-      environment,
+      environment: this.config!.environment,
       secrets: this.buildSecretsFromConfig(),
     });
 
+    this.container = container;
+
     // Add X-Ray daemon sidecar for distributed tracing
     this.addXRayDaemonSidecar(logGroup);
+
+    NagSuppressions.addResourceSuppressions(this.taskDefinition, [
+      {
+        id: 'AwsSolutions-ECS2',
+        reason: 'Observability environment variables are injected by platform policy and do not contain secrets.'
+      }
+    ], true);
+
+    if (this.taskDefinition.executionRole) {
+      NagSuppressions.addResourceSuppressions(this.taskDefinition.executionRole, [
+        {
+          id: 'AwsSolutions-IAM4',
+          reason: 'The execution role requires AWS managed permissions provided by AmazonECSTaskExecutionRolePolicy.'
+        }
+      ], true);
+    }
+
+    if (taskRole instanceof iam.Role) {
+      NagSuppressions.addResourceSuppressions(taskRole, [
+        {
+          id: 'AwsSolutions-IAM5',
+          reason: 'Telemetry publishing to AWS X-Ray requires account-scoped access.'
+        }
+      ], true);
+    }
 
     // Add port mapping
     container.addPortMappings({
@@ -303,12 +354,19 @@ export class EcsFargateServiceComponent extends BaseComponent {
    */
   private createSecurityGroup(): void {
     const vpc = this.getVpcFromContext();
+    const allowAllOutbound = this.config!.network?.allowAllOutbound ?? false;
 
     this.securityGroup = new ec2.SecurityGroup(this, 'SecurityGroup', {
       vpc: vpc,
       description: `Security group for ${this.context.serviceName} ${this.spec.name}`,
-      allowAllOutbound: true, // Allow outbound traffic (can be restricted via config)
+      allowAllOutbound,
     });
+
+    if (allowAllOutbound) {
+      this.logComplianceEvent('outbound_policy_override', 'Service security group configured with allowAllOutbound=true', {
+        component: this.spec.name
+      });
+    }
 
     // DO NOT add default ingress rules here
     // Ingress rules are created by binder strategies when components bind to this service
@@ -339,7 +397,10 @@ export class EcsFargateServiceComponent extends BaseComponent {
       400: logs.RetentionDays.THIRTEEN_MONTHS,
       545: logs.RetentionDays.EIGHTEEN_MONTHS,
       731: logs.RetentionDays.TWO_YEARS,
+      1096: logs.RetentionDays.THREE_YEARS,
       1827: logs.RetentionDays.FIVE_YEARS,
+      2192: logs.RetentionDays.SIX_YEARS,
+      2557: logs.RetentionDays.SEVEN_YEARS,
       3653: logs.RetentionDays.TEN_YEARS
     };
 
@@ -363,11 +424,10 @@ export class EcsFargateServiceComponent extends BaseComponent {
 
     // Create the Fargate service
     const serviceConnectNamespace = this.config!.serviceConnect.namespace
-      ?? cluster.defaultCloudMapNamespace?.namespaceName;
+      ?? cluster.defaultCloudMapNamespace?.namespaceName
+      ?? `${this.context.serviceName}.local`;
 
-    if (!serviceConnectNamespace) {
-      throw new Error('Service Connect namespace must be provided via config.serviceConnect.namespace or on the target cluster.');
-    }
+    this.serviceConnectNamespace = serviceConnectNamespace;
 
     this.service = new ecs.FargateService(this, 'Service', {
       cluster: cluster,
@@ -455,25 +515,30 @@ export class EcsFargateServiceComponent extends BaseComponent {
       'service-connect-name': this.config!.serviceConnect.portMappingName,
       'container-port': this.config!.port.toString()
     };
+    const resources: Array<Construct | undefined> = [
+      this.service,
+      this.taskDefinition,
+      this.securityGroup,
+      this.albSecurityGroup,
+      this.logGroup,
+      this.blueGreenResources?.applicationLoadBalancer,
+      this.blueGreenResources?.productionTargetGroup,
+      this.blueGreenResources?.testTargetGroup
+    ];
 
-    if (this.service) {
-      this.applyStandardTags(this.service, standardTags);
-    }
+    resources.forEach((resource) => {
+      if (resource) {
+        this.applyStandardTags(resource, standardTags);
+      }
+    });
 
-    if (this.taskDefinition) {
-      this.applyStandardTags(this.taskDefinition, standardTags);
-    }
-
-    if (this.securityGroup) {
-      this.applyStandardTags(this.securityGroup, standardTags);
-    }
-
-    // Apply user-defined tags
     if (this.config!.tags) {
       Object.entries(this.config!.tags).forEach(([key, value]) => {
-        if (this.service) {
-          cdk.Tags.of(this.service).add(key, value);
-        }
+        resources.forEach((resource) => {
+          if (resource) {
+            cdk.Tags.of(resource).add(key, value);
+          }
+        });
       });
     }
   }
@@ -484,16 +549,20 @@ export class EcsFargateServiceComponent extends BaseComponent {
   private buildServiceConnectCapability() {
     const cluster = this.getClusterFromBinding();
     const isBlueGreenDeployment = this.config!.deploymentStrategy?.type === 'blue-green';
+    const namespace = this.serviceConnectNamespace ?? this.config!.serviceConnect.namespace;
+    const dnsName = this.config!.serviceConnect.dnsName
+      ?? (namespace ? `${this.spec.name}.${namespace}` : this.spec.name);
 
     const capability: any = {
       serviceName: this.spec.name,
       serviceArn: this.service!.serviceArn,
       clusterName: cluster.clusterName,
-      dnsName: `${this.spec.name}.${cluster.defaultCloudMapNamespace?.namespaceName}`,
+      dnsName,
+      namespace,
       port: this.config!.port,
       portMappingName: this.config!.serviceConnect.portMappingName,
       securityGroupId: this.securityGroup!.securityGroupId,
-      internalEndpoint: `http://${this.spec.name}.internal:${this.config!.port}`, // Service Connect endpoint
+      internalEndpoint: `http://${dnsName}:${this.config!.port}`,
       deploymentStrategy: this.config!.deploymentStrategy?.type || 'rolling'
     };
 
@@ -533,42 +602,6 @@ export class EcsFargateServiceComponent extends BaseComponent {
   }
 
   /**
-   * Build OTEL environment variables for observability
-   * Per Platform Observability Standard
-   */
-  private buildOtelEnvironment(): Record<string, string> {
-    const framework = this.context.complianceFramework || 'commercial';
-    const region = this.context.region;
-    const environment = this.context.environment;
-
-    return {
-      // OpenTelemetry configuration
-      'OTEL_EXPORTER_OTLP_ENDPOINT': `https://otel-collector.${environment}.${region}.platform.local:4317`,
-      'OTEL_SERVICE_NAME': this.context.serviceName,
-      'OTEL_SERVICE_VERSION': (this.context as any).serviceVersion || '1.0.0',
-      'OTEL_RESOURCE_ATTRIBUTES': [
-        `service.name=${this.context.serviceName}`,
-        `service.namespace=${this.spec.name}`,
-        `deployment.environment=${environment}`,
-        `cloud.provider=aws`,
-        `cloud.region=${region}`,
-        `cloud.platform=aws_ecs`,
-        `compliance.framework=${framework}`,
-      ].join(','),
-
-      // X-Ray integration
-      'AWS_XRAY_DAEMON_ADDRESS': 'localhost:2000',
-      'AWS_XRAY_CONTEXT_MISSING': 'LOG_ERROR',
-      'AWS_XRAY_TRACING_NAME': `${this.context.serviceName}-${this.spec.name}`,
-
-      // Trace propagation
-      'OTEL_PROPAGATORS': 'tracecontext,baggage,xray',
-      'OTEL_TRACES_SAMPLER': framework.startsWith('fedramp') ? 'always_on' : 'parentbased_traceidratio',
-      'OTEL_TRACES_SAMPLER_ARG': framework.startsWith('fedramp') ? '1.0' : '0.1',
-    };
-  }
-
-  /**
    * Add X-Ray daemon sidecar container for distributed tracing
    */
   private addXRayDaemonSidecar(logGroup: logs.ILogGroup): void {
@@ -577,7 +610,7 @@ export class EcsFargateServiceComponent extends BaseComponent {
     }
 
     const xrayContainer = this.taskDefinition.addContainer('xray-daemon', {
-      image: ecs.ContainerImage.fromRegistry('public.ecr.aws/xray/aws-xray-daemon:latest'),
+      image: ecs.ContainerImage.fromRegistry('public.ecr.aws/xray/aws-xray-daemon:3.3.7'),
       cpu: 32,
       memoryReservationMiB: 256,
       essential: false, // Don't fail task if X-Ray daemon fails
@@ -659,11 +692,12 @@ export class EcsFargateServiceComponent extends BaseComponent {
    * Get VPC from context
    */
   private getVpcFromContext(): ec2.IVpc {
-    if ((this.context as ComponentContext).vpc) {
-      return (this.context as ComponentContext).vpc!;
+    const contextVpc = (this.context as ComponentContext).vpc;
+    if (!contextVpc) {
+      throw new Error('ECS Fargate Service requires an explicitly provided VPC. Bind a VPC component instead of relying on the default VPC.');
     }
 
-    return ec2.Vpc.fromLookup(this, 'DefaultVpc', { isDefault: true });
+    return contextVpc;
   }
 
   private createAlarm(
@@ -730,18 +764,31 @@ export class EcsFargateServiceComponent extends BaseComponent {
    * Implements Platform OpenTelemetry Observability Standard v1.0
    */
   private _configureObservabilityForEcsService(): void {
-    if (!this.service || !this.config) {
-      throw new Error('Service and config must be created before configuring observability');
+    if (!this.service || !this.config || !this.container) {
+      throw new Error('Service, config, and container must be created before configuring observability');
     }
 
     const monitoring = this.config.monitoring;
 
     if (!monitoring.enabled) {
-      this.logComponentEvent('observability_skipped', 'Monitoring disabled for ECS Fargate service', {
-        reason: 'monitoring.disabled'
-      });
-      return;
+      throw new Error('Observability cannot be disabled for ECS Fargate services. Remove monitoring.enabled=false to comply with the Platform Observability Standard.');
     }
+
+    const otelEnv = this.configureObservability(this.service, {
+      serviceName: `${this.context.serviceName}-${this.spec.name}`,
+      componentType: this.getType(),
+      customAttributes: {
+        'ecs.launch-type': 'FARGATE',
+        'ecs.task-definition': this.taskDefinition?.family ?? 'unknown',
+        'service.connect.name': this.config.serviceConnect.portMappingName
+      }
+    });
+
+    Object.entries(otelEnv).forEach(([key, value]) => {
+      this.container!.addEnvironment(key, value);
+    });
+
+    this.registerCapability('otel:environment', otelEnv);
 
     const clusterName = this.config.cluster;
     const serviceName = this.service.serviceName;
@@ -820,6 +867,12 @@ export class EcsFargateServiceComponent extends BaseComponent {
         'service-name': serviceName,
         'cluster-name': clusterName
       });
+
+      if (this.config.tags) {
+        Object.entries(this.config.tags).forEach(([key, value]) => {
+          cdk.Tags.of(alarm).add(key, value);
+        });
+      }
     });
 
     this.logComponentEvent('observability_configured', 'CloudWatch monitoring configured for ECS Fargate service', {
@@ -841,12 +894,31 @@ export class EcsFargateServiceComponent extends BaseComponent {
     const loadBalancerConfig = blueGreenConfig.loadBalancer;
     const vpc = this.getVpcFromContext();
 
+    // Create ALB security group with least-privilege defaults
+    this.albSecurityGroup = new ec2.SecurityGroup(this, 'BlueGreenALBSecurityGroup', {
+      vpc,
+      description: `ALB security group for ${this.context.serviceName} ${this.spec.name}`,
+      allowAllOutbound: false
+    });
+
+    this.albSecurityGroup.addEgressRule(
+      this.securityGroup!,
+      ec2.Port.tcp(this.config!.port),
+      'Allow blue/green ALB to reach service tasks'
+    );
+
+    this.securityGroup!.addIngressRule(
+      this.albSecurityGroup,
+      ec2.Port.tcp(this.config!.port),
+      'Allow blue/green ALB ingress to service tasks'
+    );
+
     // Create ALB for blue-green deployment
     const alb = new elbv2.ApplicationLoadBalancer(this, 'BlueGreenALB', {
-      vpc: vpc,
+      vpc,
       internetFacing: false, // Internal ALB for microservice communication
       loadBalancerName: `${this.context.serviceName}-${this.spec.name}-bg`,
-      securityGroup: this.securityGroup
+      securityGroup: this.albSecurityGroup
     });
 
     // Create production target group (blue)
@@ -907,8 +979,18 @@ export class EcsFargateServiceComponent extends BaseComponent {
       testListener: testListener
     };
 
-    // Apply standard tags to ALB resources
-    [alb, productionTargetGroup, testTargetGroup].forEach(resource => {
+    this.applyStandardTags(alb, {
+      'deployment-strategy': 'blue-green'
+    });
+
+    if (this.albSecurityGroup) {
+      this.applyStandardTags(this.albSecurityGroup, {
+        'deployment-strategy': 'blue-green',
+        'security-group-role': 'load-balancer'
+      });
+    }
+
+    [productionTargetGroup, testTargetGroup].forEach(resource => {
       this.applyStandardTags(resource, {
         'deployment-strategy': 'blue-green',
         'target-group-type': resource === productionTargetGroup ? 'production' : 'test'

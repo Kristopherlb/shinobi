@@ -1,6 +1,6 @@
 # ElastiCache Redis Component
 
-Synthesises an ElastiCache replication group using the platform configuration precedence chain. Defaults come from `/config/<framework>.yml`; the component consumes the resolved configuration only and never inspects `context.complianceFramework`.
+Synthesises a FedRAMP-ready ElastiCache replication group using the platform configuration precedence chain. Defaults come from `/config/<framework>.yml`; the component consumes the resolved configuration only and never inspects `context.complianceFramework`. A VPC **must** be provided via `config.vpc.vpcId` or injected on `context.vpc`; default VPC usage is blocked.
 
 ## Usage Example
 
@@ -12,6 +12,13 @@ components:
       engineVersion: '7.0'
       nodeType: cache.r6g.large
       numCacheNodes: 2
+      vpc:
+        vpcId: vpc-1234567890abcdef0
+        subnetGroupName: customer-cache-subnets
+      security:
+        create: true
+        allowedCidrs:
+          - 10.0.0.0/16
       encryption:
         atRest: true
         inTransit: true
@@ -22,10 +29,8 @@ components:
         enabled: true
         retentionDays: 7
       monitoring:
-        enabled: true
         alarms:
           cpuUtilization:
-            enabled: true
             threshold: 70
 ``` 
 
@@ -33,40 +38,40 @@ components:
 
 | Field | Type | Required | Description |
 |-------|------|----------|-------------|
-| `clusterName` | string | | Override the generated replication group identifier. |
-| `engineVersion` | string | | Redis engine version (defaults per framework). |
-| `nodeType` | string | | Cache node instance class. |
-| `numCacheNodes` | number | | Number of cache nodes in the replication group. |
-| `port` | number | | Redis port (defaults to 6379). |
-| `vpc.vpcId` | string | | Explicit VPC lookup; falls back to `context.vpc` or default VPC. |
-| `vpc.subnetIds` | string[] | | Override the subnets for the cache subnet group (defaults to private subnets). |
-| `security.create` | boolean | | Create a dedicated security group (default `true`). |
-| `security.securityGroupIds` | string[] | | Attach additional security groups. |
-| `security.allowedCidrs` | string[] | | CIDR blocks allowed when the component creates the security group. |
-| `parameterGroup.family` | string | | Parameter group family (default `redis7`). |
-| `parameterGroup.parameters` | map | | Custom Redis parameters. |
-| `encryption.atRest` | boolean | | Enable encryption at rest. |
-| `encryption.inTransit` | boolean | | Enable TLS between clients and the cluster. |
-| `encryption.authToken.enabled` | boolean | | Enable Redis AUTH token; creates a secret if `secretArn` is not supplied. |
-| `encryption.authToken.secretArn` | string | | Use an existing Secrets Manager secret for the AUTH token. |
-| `encryption.authToken.removalPolicy` | enum | | `retain` or `destroy` removal policy for generated secrets. |
-| `backup.enabled` | boolean | | Toggle automatic snapshots. |
-| `backup.retentionDays` | number | | Snapshot retention period (days). |
-| `backup.window` | string | | Snapshot window (`HH:MM-HH:MM` UTC). |
-| `maintenance.window` | string | | Maintenance window (`ddd:HH:MM-ddd:HH:MM` UTC). |
-| `maintenance.notificationTopicArn` | string | | SNS topic for maintenance notifications. |
-| `multiAz.enabled` | boolean | | Enable Multi-AZ deployment. |
-| `multiAz.automaticFailover` | boolean | | Enable automatic failover (requires Multi-AZ). |
-| `monitoring.enabled` | boolean | | Enable CloudWatch alarms/log delivery. |
-| `monitoring.logDelivery[]` | object | | Declarative log delivery targets (slow/engine logs). |
-| `monitoring.alarms.*` | object | | Threshold configuration for `cpuUtilization`, `cacheMisses`, `evictions`, and `connections`. |
-| `tags` | map | | Additional tags merged into the replication group. |
+| `clusterName` | string | No | Override the generated replication group identifier. |
+| `engineVersion` | string | Yes | Redis engine version (defaults per framework). |
+| `nodeType` | string | Yes | Cache node instance class. |
+| `numCacheNodes` | integer | Yes | Number of cache nodes in the replication group. |
+| `port` | integer | Yes | Redis port (defaults to 6379). |
+| `vpc.vpcId` | string | Conditionally | Explicit VPC lookup ID. Required when `context.vpc` is not supplied. |
+| `vpc.subnetIds` | string[] | No | Override the subnets for the cache subnet group (defaults to private subnets discovered in the VPC). |
+| `security.create` | boolean | Yes | Create a dedicated security group (default `true`). |
+| `security.securityGroupIds` | string[] | Conditionally | Additional security groups to attach when `security.create` is `false`. |
+| `security.allowedCidrs` | string[] | Yes | CIDR blocks allowed when the component creates the security group (use private ranges only). |
+| `parameterGroup.family` | string | Yes | Parameter group family (default `redis7`). |
+| `parameterGroup.parameters` | map | Yes | Custom Redis parameters (empty map by default). |
+| `encryption.atRest` | boolean | Yes | Must remain `true`; managed CMKs are provisioned automatically for log delivery. |
+| `encryption.inTransit` | boolean | Yes | Must remain `true`; enforces TLS between clients and the cluster. |
+| `encryption.authToken.enabled` | boolean | Yes | Must remain `true`; creates a Secrets Manager secret when `secretArn` is omitted. |
+| `encryption.authToken.secretArn` | string | Conditionally | Use an existing Secrets Manager secret for the AUTH token. |
+| `encryption.authToken.removalPolicy` | enum | Yes | `retain` or `destroy` removal policy for generated secrets (`retain` by default). |
+| `backup.enabled` | boolean | Yes | Automated snapshots are enabled by default. |
+| `backup.retentionDays` | integer | Yes | Snapshot retention period (defaults to 7 days; increase for FedRAMP). |
+| `backup.window` | string | Yes | Snapshot window (`HH:MM-HH:MM` UTC). |
+| `maintenance.window` | string | Yes | Maintenance window (`ddd:HH:MM-ddd:HH:MM` UTC). |
+| `maintenance.notificationTopicArn` | string | No | SNS topic for maintenance notifications. |
+| `multiAz.enabled` | boolean | Yes | Enable Multi-AZ deployment (default `false`; FedRAMP profiles enable). |
+| `multiAz.automaticFailover` | boolean | Conditionally | Enable automatic failover (requires Multi-AZ). |
+| `monitoring.enabled` | boolean | Yes | Must remain `true`; structured logging and alarms are mandatory. |
+| `monitoring.logDelivery[]` | object | Yes | Declarative log delivery targets. Slow- and engine-log CloudWatch log groups are created automatically when not supplied. |
+| `monitoring.alarms.*` | object | Yes | Threshold configuration for `cpuUtilization`, `cacheMisses`, `evictions`, and `connections`. |
+| `tags` | map | Yes | Additional tags merged into the replication group. |
 
 ## Capabilities
 
 | Capability | Description |
 |------------|-------------|
-| `cache:redis` | Provides the replication group ID, endpoints, port, engine metadata, and auth token secret ARN (when created). |
+| `cache:redis` | Provides the replication group ID, endpoints, port, security group IDs, engine metadata, and auth token secret ARN (when created). |
 
 ## Construct Handles
 
@@ -78,6 +83,8 @@ components:
 | `parameterGroup` | Custom parameter group resource (when parameters are supplied). |
 | `authToken` | Generated Secrets Manager secret for the Redis AUTH token. |
 | `alarm:*` | CloudWatch alarms created from `monitoring.alarms`. |
+| `log-group:<type>:<index>` | Managed CloudWatch log groups for slow/engine logs. |
+| `kms:redis-log` | KMS CMK securing CloudWatch log groups. |
 
 ## Platform Defaults
 
@@ -87,7 +94,16 @@ Platform defaults live in:
 - `config/fedramp-moderate.yml`
 - `config/fedramp-high.yml`
 
-FedRAMP profiles enable encryption, Multi-AZ, enhanced backups, and monitoring out of the box. The commercial profile keeps those features optional.
+All profiles now enable encryption, AUTH token enforcement, automated backups, dual log delivery and baseline alarms. FedRAMP profiles additionally enable Multi-AZ/automatic failover and tighten alarm thresholds.
+
+## Observability Assets
+
+- Dashboards: `observability/dashboards/redis-performance.json`, `observability/dashboards/redis-health.json`
+- Alarm catalogue: `observability/alarms.md`
+- Runbooks: see `observability/runbooks/*`
+- SLO definition: `observability/slos/cache-availability.yaml`
+
+These artefacts map directly to the managed CloudWatch log groups (`/aws/platform/redis/<service>-<component>/slow-log` and `/aws/platform/redis/<service>-<component>/engine-log`) and the default alarm handles.
 
 ## Testing
 
