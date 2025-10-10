@@ -11,8 +11,8 @@ import * as ec2 from 'aws-cdk-lib/aws-ec2';
 import * as servicediscovery from 'aws-cdk-lib/aws-servicediscovery';
 import { Template, Match } from 'aws-cdk-lib/assertions';
 import { ComponentSpec } from '@shinobi/core/component-interfaces';
-import { EcsClusterComponent } from '../ecs-cluster.component.ts';
-import { EcsClusterComponentConfigBuilder } from '../ecs-cluster.builder.ts';
+import { EcsClusterComponent } from '../src/ecs-cluster.component.ts';
+import { EcsClusterComponentConfigBuilder } from '../src/ecs-cluster.builder.ts';
 import { 
   TestFixtureFactory, 
   TestAssertions, 
@@ -220,25 +220,56 @@ describe('EcsClusterComponent__ResourceSynthesis__CloudFormationGeneration', () 
     component.synth();
     const template = Template.fromStack(testEnv.stack);
 
-    // Verify Auto Scaling Group is created
-    template.hasResourceProperties('AWS::AutoScaling::AutoScalingGroup', {
+    // Verify Auto Scaling Group is created with IMDSv2 enforcement and scale-in protection
+    template.hasResourceProperties('AWS::AutoScaling::AutoScalingGroup', Match.objectLike({
       MinSize: '2',
       MaxSize: '10',
-      DesiredCapacity: '3'
-    });
+      DesiredCapacity: '3',
+      NewInstancesProtectedFromScaleIn: true
+    }));
 
     // Verify Capacity Provider
     template.hasResourceProperties('AWS::ECS::CapacityProvider', {
       AutoScalingGroupProvider: Match.anyValue()
     });
 
-    // Verify Launch Configuration/Template with ECS optimized AMI
+    // Verify Launch Configuration with ECS optimised AMI, IMDSv2 requirement and encrypted volume
     template.hasResource('AWS::AutoScaling::LaunchConfiguration', {
       Properties: Match.objectLike({
-        ImageId: Match.anyValue(), // ECS optimized AMI
-        InstanceType: 'm5.large'
+        InstanceType: 'm5.large',
+        MetadataOptions: Match.objectLike({
+          HttpTokens: 'required'
+        }),
+        BlockDeviceMappings: Match.arrayWith([
+          Match.objectLike({
+            Ebs: Match.objectLike({
+              Encrypted: true,
+              VolumeType: 'gp3'
+            })
+          })
+        ])
       })
     });
+
+    // Verify security group restricts outbound traffic to HTTPS
+    template.hasResourceProperties('AWS::EC2::SecurityGroup', Match.objectLike({
+      SecurityGroupEgress: Match.arrayWith([
+        Match.objectLike({
+          FromPort: 443,
+          ToPort: 443
+        })
+      ])
+    }));
+
+    // Verify IAM role includes SSM access for patching/management
+    template.hasResourceProperties('AWS::IAM::Role', Match.objectLike({
+      ManagedPolicyArns: Match.arrayWith([
+        Match.stringLikeRegexp('AmazonSSMManagedInstanceCore')
+      ])
+    }));
+
+    // Verify log retention custom resource exists for Container Insights
+    template.resourceCountIs('Custom::LogRetention', 2);
 
     // Count total resources to ensure no resource explosion
     const resourceCounts = PerformanceTestHelpers.countResources(template);
@@ -246,13 +277,88 @@ describe('EcsClusterComponent__ResourceSynthesis__CloudFormationGeneration', () 
     expect(resourceCounts['AWS::ServiceDiscovery::PrivateDnsNamespace']).toBe(1);
     expect(resourceCounts['AWS::AutoScaling::AutoScalingGroup']).toBe(1);
     expect(resourceCounts['AWS::ECS::CapacityProvider']).toBe(1);
+
+    expect(Object.keys(template.findResources('AWS::CloudWatch::Alarm'))).not.toHaveLength(0);
+    expect(Object.keys(template.findResources('AWS::CloudWatch::Dashboard'))).not.toHaveLength(0);
+  });
+
+  it('Observability__ExtendedRetention__SupportsTenYearWindow', async () => {
+    const env = TestFixtureFactory.createTestEnvironment();
+    const stack = env.stack;
+    const vpc = TestFixtureFactory.createMockVpc(stack);
+    const context = {
+      ...env.contexts.commercial,
+      scope: stack,
+      vpc
+    };
+
+    const spec: ComponentSpec = {
+      ...env.specs.minimalCluster,
+      config: {
+        ...env.specs.minimalCluster.config,
+        observability: {
+          logging: {
+            retentionInDays: 3650
+          }
+        }
+      }
+    };
+
+    const component = new EcsClusterComponent(stack, 'HighRetentionCluster', context, spec);
+    component.synth();
+
+    const template = Template.fromStack(stack);
+    const retentionResources = template.findResources('Custom::LogRetention');
+    const retentionValues = Object.values(retentionResources).map((resource: any) => resource.Properties?.RetentionInDays);
+
+    expect(retentionValues).toContain(3653);
+  });
+
+  it('FedRamp__Capacity__CreatesManagedKmsKey', async () => {
+    const env = TestFixtureFactory.createTestEnvironment({
+      region: TEST_CONTEXTS.fedrampHigh.region
+    });
+    const stack = env.stack;
+    const vpc = TestFixtureFactory.createMockVpc(stack);
+    const context = {
+      ...env.contexts.fedrampHigh,
+      scope: stack,
+      vpc
+    };
+
+    const component = new EcsClusterComponent(
+      stack,
+      'FedrampCluster',
+      context,
+      env.specs.ec2Cluster
+    );
+
+    component.synth();
+    const template = Template.fromStack(stack);
+
+    template.hasResourceProperties('AWS::KMS::Key', Match.objectLike({
+      EnableKeyRotation: true
+    }));
+
+    template.hasResourceProperties('AWS::AutoScaling::LaunchConfiguration', Match.objectLike({
+      BlockDeviceMappings: Match.arrayWith([
+        Match.objectLike({
+          Ebs: Match.objectLike({
+            Encrypted: true,
+            KmsKeyId: Match.anyValue()
+          })
+        })
+      ])
+    }));
   });
 
   it('Synthesis__ComplianceFrameworks__CreatesCorrectResources', async () => {
     const frameworks: Array<keyof typeof TEST_CONTEXTS> = ['commercial', 'fedrampModerate', 'fedrampHigh'];
     
     for (const framework of frameworks) {
-      const frameworkEnv = TestFixtureFactory.createTestEnvironment();
+      const frameworkEnv = TestFixtureFactory.createTestEnvironment({
+        region: TEST_CONTEXTS[framework].region
+      });
       const frameworkStack = frameworkEnv.stack;
       const frameworkVpc = TestFixtureFactory.createMockVpc(
         frameworkStack,
@@ -292,6 +398,21 @@ describe('EcsClusterComponent__ResourceSynthesis__CloudFormationGeneration', () 
         });
       }
 
+      const associations = template.findResources('AWS::ECS::ClusterCapacityProviderAssociations');
+      const association = Object.values(associations)[0] as {
+        Properties?: {
+          DefaultCapacityProviderStrategy?: Array<{ CapacityProvider: string }>;
+        };
+      };
+      const strategyProviders = (association?.Properties?.DefaultCapacityProviderStrategy ?? []).map(
+        (item) => item.CapacityProvider
+      );
+
+      expect(strategyProviders.length).toBeGreaterThan(0);
+      if (framework === 'fedrampModerate' || framework === 'fedrampHigh') {
+        expect(strategyProviders).not.toContain('FARGATE_SPOT');
+      }
+
       TestFixtureFactory.cleanup();
     }
   });
@@ -327,8 +448,15 @@ describe('EcsClusterComponent__ResourceSynthesis__CloudFormationGeneration', () 
     const capabilities = component.getCapabilities();
     expect(capabilities['ecs:cluster']).toBeDefined();
     expect(capabilities['observability:ecs-cluster']).toBeDefined();
-    expect(capabilities['observability:ecs-cluster'].otelEnvironment).toBeDefined();
+    const observabilityCapability = capabilities['observability:ecs-cluster'];
+    expect(observabilityCapability.otelEnvironment).toBeDefined();
+    expect(observabilityCapability.logging.retentionInDays).toBeGreaterThan(0);
+    expect(observabilityCapability.logging.appliedRetentionInDays).toBeGreaterThan(0);
+    expect(observabilityCapability.tracing.adotSidecar).toBe(true);
     expect(capabilities['otel:environment']).toBeDefined();
+    expect(Array.isArray(observabilityCapability.alarms.alarmNames)).toBe(true);
+    expect(observabilityCapability.alarms.alarmNames.length).toBeGreaterThan(0);
+    expect(observabilityCapability.dashboard.name).toBeTruthy();
   });
 
   /*
@@ -349,8 +477,8 @@ describe('EcsClusterComponent__ResourceSynthesis__CloudFormationGeneration', () 
    *   "humanReviewedBy": ""
    * }
    */
-  it('Observability__MonitoringDisabled__SkipsTelemetry', () => {
-    const component = new EcsClusterComponent(
+  it('Observability__MonitoringDisabled__ThrowsValidationError', () => {
+    expect(() => new EcsClusterComponent(
       testEnv.stack,
       'NoObservabilityCluster',
       testEnv.contexts.commercial,
@@ -363,13 +491,7 @@ describe('EcsClusterComponent__ResourceSynthesis__CloudFormationGeneration', () 
           }
         }
       }
-    );
-
-    component.synth();
-
-    const capabilities = component.getCapabilities();
-    expect(capabilities['observability:ecs-cluster']).toBeUndefined();
-    expect(capabilities['otel:environment']).toBeUndefined();
+    )).toThrow('monitoring.enabled');
   });
 
   /*
@@ -416,6 +538,12 @@ describe('EcsClusterComponent__ResourceSynthesis__CloudFormationGeneration', () 
     });
 
     template.hasResourceProperties('AWS::AutoScaling::AutoScalingGroup', {
+      Tags: Match.arrayWith([
+        Match.objectLike({ Key: 'cost-center', Value: 'eng-42' })
+      ])
+    });
+
+    template.hasResourceProperties('AWS::EC2::SecurityGroup', {
       Tags: Match.arrayWith([
         Match.objectLike({ Key: 'cost-center', Value: 'eng-42' })
       ])
@@ -516,6 +644,12 @@ describe('EcsClusterComponent__TaggingCompliance__MandatoryTags', () => {
         Match.objectLike({ Key: 'service-connect-namespace', Value: 'production' })
       ])
     });
+
+    template.hasResourceProperties('AWS::IAM::Role', Match.objectLike({
+      Tags: Match.arrayWith([
+        Match.objectLike({ Key: 'component-type', Value: 'ecs-asg-role' })
+      ])
+    }));
   });
 
   it('Tagging__UserDefinedTags__PreservedAndApplied', async () => {
@@ -611,8 +745,7 @@ describe('EcsClusterComponent__CapabilityContract__ServiceConnectProvision', () 
     const clusterCapability = capabilities['ecs:cluster'];
 
     expect(clusterCapability.hasEc2Capacity).toBe(true);
-    expect(clusterCapability.capacityProviders).toContain('EC2');
-    expect(clusterCapability.capacityProviders).toContain('FARGATE');
+    expect(clusterCapability.capacityProviders).toEqual(expect.arrayContaining(['EC2', 'FARGATE', 'FARGATE_SPOT']));
   });
 
   it('Capabilities__FargateOnlyCluster__ReflectsServerlessConfiguration', async () => {
@@ -629,6 +762,22 @@ describe('EcsClusterComponent__CapabilityContract__ServiceConnectProvision', () 
     const clusterCapability = capabilities['ecs:cluster'];
 
     expect(clusterCapability.hasEc2Capacity).toBe(false);
+    expect(clusterCapability.capacityProviders).toEqual(['FARGATE', 'FARGATE_SPOT']);
+  });
+
+  it('Capabilities__FedrampCluster__OmitsSpotCapacity', async () => {
+    const fedrampComponent = new EcsClusterComponent(
+      testEnv.stack,
+      'FedrampCluster',
+      testEnv.contexts.fedrampHigh,
+      testEnv.specs.minimalCluster
+    );
+
+    fedrampComponent.synth();
+
+    const capabilities = fedrampComponent.getCapabilities();
+    const clusterCapability = capabilities['ecs:cluster'];
+
     expect(clusterCapability.capacityProviders).toEqual(['FARGATE']);
   });
 });

@@ -1,0 +1,471 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "title": "ECS EC2 Service Configuration",
+  "description": "Configuration schema for ECS EC2 Service component with Service Connect integration, autoscaling, and comprehensive observability",
+  "type": "object",
+  "additionalProperties": false,
+  "properties": {
+    "cluster": {
+      "type": "string",
+      "minLength": 1,
+      "description": "Name or ARN of the ECS cluster where the service will run. Can be a cluster name or full ARN."
+    },
+    "image": {
+      "type": "object",
+      "description": "Container image configuration for the ECS task",
+      "additionalProperties": false,
+      "properties": {
+        "repository": {
+          "type": "string",
+          "minLength": 1,
+          "description": "Container image repository URI (e.g., ECR repository URL or Docker Hub image)"
+        },
+        "tag": {
+          "type": "string",
+          "default": "latest",
+          "description": "Image tag to deploy. Defaults to 'latest' but specific version tags are recommended for production"
+        }
+      },
+      "required": [
+        "repository"
+      ]
+    },
+    "taskCpu": {
+      "type": "number",
+      "minimum": 128,
+      "description": "CPU units allocated to the task. 256 units = 0.25 vCPU. Minimum 128, increases by framework (commercial: 256, fedramp-moderate: 512, fedramp-high: 1024+)"
+    },
+    "taskMemory": {
+      "type": "number",
+      "minimum": 128,
+      "description": "Memory in MiB allocated to the task. Must be compatible with taskCpu value per AWS ECS requirements"
+    },
+    "port": {
+      "type": "number",
+      "minimum": 1,
+      "maximum": 65535,
+      "default": 8080,
+      "description": "Container port to expose for the application. Must be a non-privileged port (1024-65535 recommended)"
+    },
+    "serviceConnect": {
+      "type": "object",
+      "description": "ECS Service Connect configuration for service mesh integration",
+      "additionalProperties": false,
+      "properties": {
+        "portMappingName": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 64,
+          "description": "Name for the port mapping used by Service Connect for service discovery"
+        },
+        "dnsName": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 253,
+          "description": "Optional custom DNS name for the service. Defaults to component name if not specified"
+        },
+        "namespace": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 253,
+          "description": "Cloud Map namespace for service discovery. Uses cluster default namespace if not specified"
+        }
+      },
+      "required": [
+        "portMappingName"
+      ]
+    },
+    "environment": {
+      "type": "object",
+      "additionalProperties": {
+        "type": "string"
+      },
+      "default": {},
+      "description": "Environment variables to inject into the container as plaintext key-value pairs. For sensitive values, use 'secrets' instead"
+    },
+    "secrets": {
+      "type": "object",
+      "additionalProperties": {
+        "type": "string"
+      },
+      "default": {},
+      "description": "Secrets from AWS Secrets Manager to inject as environment variables. Values are secret ARNs"
+    },
+    "taskRoleArn": {
+      "type": "string",
+      "description": "Optional ARN of an existing IAM role for the ECS task. If not provided, a new role will be created with minimal permissions"
+    },
+    "desiredCount": {
+      "type": "number",
+      "minimum": 0,
+      "maximum": 1000,
+      "default": 1,
+      "description": "Desired number of task instances to run. Set to 0 to stop the service without deleting it"
+    },
+    "placementConstraints": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "properties": {
+          "type": {
+            "type": "string",
+            "enum": [
+              "memberOf",
+              "distinctInstance"
+            ],
+            "description": "Type of placement constraint: 'memberOf' for attribute-based, 'distinctInstance' to spread across instances"
+          },
+          "expression": {
+            "type": "string",
+            "description": "Cluster Query Language expression for 'memberOf' constraints (e.g., 'attribute:ecs.instance-type == t3.large')"
+          }
+        },
+        "required": [
+          "type"
+        ]
+      },
+      "default": [],
+      "description": "ECS placement constraints to control where tasks are placed on EC2 instances"
+    },
+    "placementStrategies": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "properties": {
+          "type": {
+            "type": "string",
+            "enum": [
+              "random",
+              "spread",
+              "binpack"
+            ],
+            "description": "Placement strategy type: 'random', 'spread' (distribute), or 'binpack' (pack tightly)"
+          },
+          "field": {
+            "type": "string",
+            "description": "Field to apply strategy to (e.g., 'attribute:ecs.availability-zone', 'instanceId', 'memory', 'cpu')"
+          }
+        },
+        "required": [
+          "type"
+        ]
+      },
+      "default": [],
+      "description": "ECS placement strategies to optimize task distribution across EC2 instances"
+    },
+    "healthCheck": {
+      "type": "object",
+      "description": "Container health check configuration",
+      "additionalProperties": false,
+      "properties": {
+        "command": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          },
+          "minItems": 1,
+          "description": "Health check command to run inside the container (e.g., ['CMD-SHELL', 'curl -f http://localhost:8080/health || exit 1'])"
+        },
+        "intervalSeconds": {
+          "type": "number",
+          "minimum": 5,
+          "maximum": 300,
+          "default": 30,
+          "description": "Time interval between health checks in seconds"
+        },
+        "timeoutSeconds": {
+          "type": "number",
+          "minimum": 2,
+          "maximum": 60,
+          "default": 5,
+          "description": "Time to wait for a health check response before considering it failed"
+        },
+        "retries": {
+          "type": "number",
+          "minimum": 1,
+          "maximum": 10,
+          "default": 3,
+          "description": "Number of consecutive failures required before marking container as unhealthy"
+        }
+      },
+      "required": [
+        "command"
+      ]
+    },
+    "autoScaling": {
+      "type": "object",
+      "description": "Auto scaling configuration for the ECS service",
+      "additionalProperties": false,
+      "properties": {
+        "minCapacity": {
+          "type": "number",
+          "minimum": 0,
+          "maximum": 1000,
+          "description": "Minimum number of tasks to maintain. Should be <= desiredCount"
+        },
+        "maxCapacity": {
+          "type": "number",
+          "minimum": 1,
+          "maximum": 1000,
+          "description": "Maximum number of tasks that can be scaled up to"
+        },
+        "targetCpuUtilization": {
+          "type": "number",
+          "minimum": 10,
+          "maximum": 100,
+          "description": "Target CPU utilization percentage for scaling (e.g., 70 means scale when average CPU exceeds 70%)"
+        },
+        "targetMemoryUtilization": {
+          "type": "number",
+          "minimum": 10,
+          "maximum": 100,
+          "description": "Target memory utilization percentage for scaling (e.g., 80 means scale when average memory exceeds 80%)"
+        }
+      }
+    },
+    "logging": {
+      "type": "object",
+      "description": "CloudWatch Logs configuration for container logging",
+      "additionalProperties": false,
+      "properties": {
+        "createLogGroup": {
+          "type": "boolean",
+          "default": true,
+          "description": "Whether to create a new CloudWatch log group. Set to false to use an existing log group"
+        },
+        "logGroupName": {
+          "type": "string",
+          "description": "Custom log group name. Defaults to '/ecs/{serviceName}/{componentName}' if not specified"
+        },
+        "streamPrefix": {
+          "type": "string",
+          "default": "service",
+          "description": "Prefix for CloudWatch log streams. Helps organize logs from multiple containers"
+        },
+        "retentionInDays": {
+          "type": "number",
+          "enum": [
+            1,
+            3,
+            5,
+            7,
+            14,
+            30,
+            60,
+            90,
+            120,
+            150,
+            180,
+            365,
+            400,
+            545,
+            731,
+            1827,
+            3653
+          ],
+          "default": 30,
+          "description": "Log retention period in days. Framework defaults: commercial=30, fedramp-moderate=1827, fedramp-high=3653"
+        },
+        "removalPolicy": {
+          "type": "string",
+          "enum": [
+            "retain",
+            "destroy"
+          ],
+          "default": "retain",
+          "description": "Policy for log group deletion: 'retain' keeps logs after stack deletion, 'destroy' deletes them"
+        }
+      }
+    },
+    "monitoring": {
+      "type": "object",
+      "description": "CloudWatch monitoring and alarming configuration",
+      "additionalProperties": false,
+      "properties": {
+        "enabled": {
+          "type": "boolean",
+          "default": true,
+          "description": "Whether to enable CloudWatch alarms for this service. Always true for FedRAMP deployments"
+        },
+        "alarms": {
+          "type": "object",
+          "description": "Alarm configuration for CPU and memory metrics",
+          "additionalProperties": false,
+          "properties": {
+            "cpu": {
+              "type": "object",
+              "description": "CPU utilization alarm configuration",
+              "additionalProperties": false,
+              "properties": {
+                "enabled": {
+                  "type": "boolean",
+                  "default": true,
+                  "description": "Whether to create CPU utilization alarm"
+                },
+                "threshold": {
+                  "type": "number",
+                  "minimum": 1,
+                  "maximum": 100,
+                  "default": 80,
+                  "description": "CPU utilization percentage threshold to trigger alarm. Framework defaults: commercial=80, fedramp-moderate=70, fedramp-high=60"
+                },
+                "evaluationPeriods": {
+                  "type": "number",
+                  "minimum": 1,
+                  "maximum": 10,
+                  "default": 3,
+                  "description": "Number of consecutive periods threshold must be breached before alarming"
+                }
+              }
+            },
+            "memory": {
+              "type": "object",
+              "description": "Memory utilization alarm configuration",
+              "additionalProperties": false,
+              "properties": {
+                "enabled": {
+                  "type": "boolean",
+                  "default": true,
+                  "description": "Whether to create memory utilization alarm"
+                },
+                "threshold": {
+                  "type": "number",
+                  "minimum": 1,
+                  "maximum": 100,
+                  "default": 85,
+                  "description": "Memory utilization percentage threshold to trigger alarm. Framework defaults: commercial=85, fedramp-moderate=75, fedramp-high=70"
+                },
+                "evaluationPeriods": {
+                  "type": "number",
+                  "minimum": 1,
+                  "maximum": 10,
+                  "default": 3,
+                  "description": "Number of consecutive periods threshold must be breached before alarming"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "diagnostics": {
+      "type": "object",
+      "description": "Diagnostic and troubleshooting configuration",
+      "additionalProperties": false,
+      "properties": {
+        "enableExecuteCommand": {
+          "type": "boolean",
+          "default": false,
+          "description": "Enable AWS ECS Exec for interactive debugging. Enabled by default for FedRAMP deployments. Security consideration: only enable in non-production or when needed"
+        }
+      },
+      "default": {
+        "enableExecuteCommand": false
+      }
+    },
+    "tags": {
+      "type": "object",
+      "additionalProperties": {
+        "type": "string"
+      },
+      "default": {},
+      "description": "Additional custom tags to apply to all resources. Standard platform tags are applied automatically"
+    },
+    "observability": {
+      "type": "object",
+      "description": "Observability configuration for distributed tracing, metrics, and monitoring. Supports both sidecar and centralized collector modes",
+      "additionalProperties": false,
+      "properties": {
+        "xray": {
+          "type": "object",
+          "description": "AWS X-Ray distributed tracing configuration",
+          "additionalProperties": false,
+          "properties": {
+            "enabled": {
+              "type": "boolean",
+              "default": false,
+              "description": "Enable X-Ray tracing for the ECS service. When enabled, traces all requests and dependencies"
+            },
+            "mode": {
+              "type": "string",
+              "enum": ["sidecar", "centralized"],
+              "default": "centralized",
+              "description": "Collector mode: 'sidecar' adds X-Ray daemon container to task, 'centralized' uses account-level collector"
+            }
+          }
+        },
+        "adot": {
+          "type": "object",
+          "description": "AWS Distro for OpenTelemetry (ADOT) collector configuration",
+          "additionalProperties": false,
+          "properties": {
+            "enabled": {
+              "type": "boolean",
+              "default": false,
+              "description": "Enable ADOT collector for OpenTelemetry traces, metrics, and logs"
+            },
+            "mode": {
+              "type": "string",
+              "enum": ["sidecar", "centralized"],
+              "default": "centralized",
+              "description": "Collector mode: 'sidecar' adds ADOT collector container to task, 'centralized' uses account-level collector"
+            },
+            "version": {
+              "type": "string",
+              "default": "v0.35.0",
+              "description": "ADOT collector image version (e.g., 'v0.35.0', 'latest')"
+            }
+          }
+        },
+        "dashboard": {
+          "type": "object",
+          "description": "CloudWatch Dashboard configuration for service monitoring",
+          "additionalProperties": false,
+          "properties": {
+            "enabled": {
+              "type": "boolean",
+              "default": true,
+              "description": "Create CloudWatch Dashboard with service metrics and logs. Recommended for all production services"
+            },
+            "widgets": {
+              "type": "array",
+              "items": {
+                "type": "string",
+                "enum": ["cpu", "memory", "tasks", "logs", "service-connect", "alarms"]
+              },
+              "default": ["cpu", "memory", "tasks", "logs"],
+              "description": "Dashboard widgets to include. Default includes all standard widgets"
+            }
+          }
+        }
+      }
+    },
+    "network": {
+      "type": "object",
+      "description": "Network security and egress configuration",
+      "additionalProperties": false,
+      "properties": {
+        "egressPolicy": {
+          "type": "string",
+          "enum": ["allow-all", "vpc-only", "vpc-endpoints-only"],
+          "default": "allow-all",
+          "description": "Egress traffic policy. 'allow-all' for development, 'vpc-only' for internal services, 'vpc-endpoints-only' for FedRAMP High"
+        },
+        "vpcEndpoints": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          },
+          "default": [],
+          "description": "VPC endpoint prefix list IDs for 'vpc-endpoints-only' policy (e.g., ['pl-12345678'] for CloudWatch Logs endpoint)"
+        }
+      }
+    }
+  },
+  "required": [
+    "cluster",
+    "image"
+  ]
+}

@@ -9,13 +9,16 @@ All notable changes to the ECS Cluster component are documented in this file fol
 - Observability capability emission that surfaces OTEL environment variables and container insights details to downstream binders.
 - Negative builder tests covering missing service connect namespace and invalid capacity bounds.
 - AwsSolutions (`cdk-nag`) regression coverage to guard against security drift.
+- Cluster-level observability configuration (log retention, dashboards, tracing) surfaced through schema, builder defaults, and capabilities.
+- Hardened EC2 capacity path with IMDSv2-required launch configurations, SSM enrollment, encrypted GP3 volumes, and dedicated security group handle.
 
 ### Changed
 - Component now requires a VPC to be provided through `context.vpc`, avoiding default lookups and aligning with networking governance.
 - Tag propagation extended to the Service Connect namespace and any EC2 capacity resources, ensuring compliance with the tagging standard.
 - Package metadata modernised (workspace dependencies, exports, scripts) and version bumped to `1.1.0`.
+- Default capacity provider strategy removes Fargate Spot in FedRAMP modes while retaining commercial cost optimisations.
+- Container Insights log retention is now compliance-aware and managed via dedicated custom resources.
 
 ### Fixed
 - Corrected module exports (typo in `index.ts`) so the component can be imported by registries without patching.
 - Builder validation now enforces capacity bounds and ensures desired counts remain within range.
-

@@ -4,10 +4,13 @@ import {
   ComponentConfigSchema
 } from '@shinobi/core';
 import { ComponentContext, ComponentSpec } from '@platform/contracts';
+import configSchemaJson from '../Config.schema.json';
 
 export type EcsPlacementConstraintType = 'memberOf' | 'distinctInstance';
 export type EcsPlacementStrategyType = 'random' | 'spread' | 'binpack';
 export type EcsEc2LogRemovalPolicy = 'retain' | 'destroy';
+export type CollectorMode = 'sidecar' | 'centralized';
+export type EgressPolicy = 'allow-all' | 'vpc-only' | 'vpc-endpoints-only';
 
 export interface EcsServiceConnectConfig {
   portMappingName: string;
@@ -70,6 +73,33 @@ export interface EcsDiagnosticsConfig {
   enableExecuteCommand: boolean;
 }
 
+export interface EcsXRayConfig {
+  enabled: boolean;
+  mode: CollectorMode;
+}
+
+export interface EcsAdotConfig {
+  enabled: boolean;
+  mode: CollectorMode;
+  version?: string;
+}
+
+export interface EcsDashboardConfig {
+  enabled: boolean;
+  widgets?: string[];
+}
+
+export interface EcsObservabilityConfig {
+  xray?: EcsXRayConfig;
+  adot?: EcsAdotConfig;
+  dashboard?: EcsDashboardConfig;
+}
+
+export interface EcsNetworkConfig {
+  egressPolicy: EgressPolicy;
+  vpcEndpoints?: string[];
+}
+
 export interface EcsEc2ServiceConfig {
   cluster: string;
   image: EcsImageConfig;
@@ -88,148 +118,13 @@ export interface EcsEc2ServiceConfig {
   logging: EcsLogConfig;
   monitoring: EcsMonitoringConfig;
   diagnostics: EcsDiagnosticsConfig;
+  observability?: EcsObservabilityConfig;
+  network?: EcsNetworkConfig;
   tags: Record<string, string>;
 }
 
-const HEALTH_CHECK_SCHEMA = {
-  type: 'object',
-  additionalProperties: false,
-  properties: {
-    command: {
-      type: 'array',
-      items: { type: 'string' },
-      minItems: 1
-    },
-    intervalSeconds: { type: 'number', minimum: 5, maximum: 300, default: 30 },
-    timeoutSeconds: { type: 'number', minimum: 2, maximum: 60, default: 5 },
-    retries: { type: 'number', minimum: 1, maximum: 10, default: 3 }
-  },
-  required: ['command']
-};
-
-const PLACEMENT_CONSTRAINT_SCHEMA = {
-  type: 'object',
-  additionalProperties: false,
-  properties: {
-    type: { type: 'string', enum: ['memberOf', 'distinctInstance'] },
-    expression: { type: 'string' }
-  },
-  required: ['type']
-};
-
-const PLACEMENT_STRATEGY_SCHEMA = {
-  type: 'object',
-  additionalProperties: false,
-  properties: {
-    type: { type: 'string', enum: ['random', 'spread', 'binpack'] },
-    field: { type: 'string' }
-  },
-  required: ['type']
-};
-
-const LOGGING_SCHEMA = {
-  type: 'object',
-  additionalProperties: false,
-  properties: {
-    createLogGroup: { type: 'boolean', default: true },
-    logGroupName: { type: 'string' },
-    streamPrefix: { type: 'string', default: 'service' },
-    retentionInDays: {
-      type: 'number',
-      enum: [1, 3, 5, 7, 14, 30, 60, 90, 120, 150, 180, 365, 400, 545, 731, 1827, 3653],
-      default: 30
-    },
-    removalPolicy: { type: 'string', enum: ['retain', 'destroy'], default: 'retain' }
-  }
-};
-
-const ALARM_SCHEMA = {
-  type: 'object',
-  additionalProperties: false,
-  properties: {
-    enabled: { type: 'boolean', default: true },
-    threshold: { type: 'number', minimum: 1, maximum: 100, default: 80 },
-    evaluationPeriods: { type: 'number', minimum: 1, maximum: 10, default: 3 }
-  }
-};
-
-const MONITORING_SCHEMA = {
-  type: 'object',
-  additionalProperties: false,
-  properties: {
-    enabled: { type: 'boolean', default: true },
-    alarms: {
-      type: 'object',
-      additionalProperties: false,
-      properties: {
-        cpu: ALARM_SCHEMA,
-        memory: ALARM_SCHEMA
-      }
-    }
-  }
-};
-
-const SERVICE_CONNECT_SCHEMA = {
-  type: 'object',
-  additionalProperties: false,
-  properties: {
-    portMappingName: { type: 'string', minLength: 1, maxLength: 64 },
-    dnsName: { type: 'string', minLength: 1, maxLength: 253 },
-    namespace: { type: 'string', minLength: 1, maxLength: 253 }
-  },
-  required: ['portMappingName']
-};
-
-export const ECS_EC2_SERVICE_CONFIG_SCHEMA: ComponentConfigSchema = {
-  type: 'object',
-  additionalProperties: false,
-  properties: {
-    cluster: { type: 'string', minLength: 1 },
-    image: {
-      type: 'object',
-      additionalProperties: false,
-      properties: {
-        repository: { type: 'string', minLength: 1 },
-        tag: { type: 'string', default: 'latest' }
-      },
-      required: ['repository']
-    },
-    taskCpu: { type: 'number', minimum: 128 },
-    taskMemory: { type: 'number', minimum: 128 },
-    port: { type: 'number', minimum: 1, maximum: 65535, default: 8080 },
-    serviceConnect: SERVICE_CONNECT_SCHEMA,
-    environment: { type: 'object', additionalProperties: { type: 'string' }, default: {} },
-    secrets: { type: 'object', additionalProperties: { type: 'string' }, default: {} },
-    taskRoleArn: { type: 'string' },
-    desiredCount: { type: 'number', minimum: 0, maximum: 1000, default: 1 },
-    placementConstraints: { type: 'array', items: PLACEMENT_CONSTRAINT_SCHEMA, default: [] },
-    placementStrategies: { type: 'array', items: PLACEMENT_STRATEGY_SCHEMA, default: [] },
-    healthCheck: HEALTH_CHECK_SCHEMA,
-    autoScaling: {
-      type: 'object',
-      additionalProperties: false,
-      properties: {
-        minCapacity: { type: 'number', minimum: 0, maximum: 1000 },
-        maxCapacity: { type: 'number', minimum: 1, maximum: 1000 },
-        targetCpuUtilization: { type: 'number', minimum: 10, maximum: 100 },
-        targetMemoryUtilization: { type: 'number', minimum: 10, maximum: 100 }
-      }
-    },
-    logging: LOGGING_SCHEMA,
-    monitoring: MONITORING_SCHEMA,
-    diagnostics: {
-      type: 'object',
-      additionalProperties: false,
-      properties: {
-        enableExecuteCommand: { type: 'boolean', default: false }
-      },
-      default: {
-        enableExecuteCommand: false
-      }
-    },
-    tags: { type: 'object', additionalProperties: { type: 'string' }, default: {} }
-  }
-};
+// Export schema loaded from Config.schema.json
+export const ECS_EC2_SERVICE_CONFIG_SCHEMA: ComponentConfigSchema = configSchemaJson as ComponentConfigSchema;
 
 export class EcsEc2ServiceConfigBuilder extends ConfigBuilder<EcsEc2ServiceConfig> {
   constructor(context: ComponentContext, spec: ComponentSpec) {
@@ -270,6 +165,15 @@ export class EcsEc2ServiceConfigBuilder extends ConfigBuilder<EcsEc2ServiceConfi
       diagnostics: {
         enableExecuteCommand: false
       },
+      observability: {
+        xray: { enabled: false, mode: 'centralized' },
+        adot: { enabled: false, mode: 'centralized', version: 'v0.35.0' },
+        dashboard: { enabled: true, widgets: ['cpu', 'memory', 'tasks', 'logs'] }
+      },
+      network: {
+        egressPolicy: 'allow-all',
+        vpcEndpoints: []
+      },
       tags: {}
     };
   }
@@ -303,7 +207,34 @@ export class EcsEc2ServiceConfigBuilder extends ConfigBuilder<EcsEc2ServiceConfi
       diagnostics: {
         enableExecuteCommand: config.diagnostics?.enableExecuteCommand ?? false
       },
+      observability: this.normaliseObservability(config.observability),
+      network: this.normaliseNetwork(config.network),
       tags: config.tags ?? {}
+    };
+  }
+
+  private normaliseObservability(observability?: Partial<EcsObservabilityConfig>): EcsObservabilityConfig {
+    return {
+      xray: {
+        enabled: observability?.xray?.enabled ?? false,
+        mode: observability?.xray?.mode ?? 'centralized'
+      },
+      adot: {
+        enabled: observability?.adot?.enabled ?? false,
+        mode: observability?.adot?.mode ?? 'centralized',
+        version: observability?.adot?.version ?? 'v0.35.0'
+      },
+      dashboard: {
+        enabled: observability?.dashboard?.enabled ?? true,
+        widgets: observability?.dashboard?.widgets ?? ['cpu', 'memory', 'tasks', 'logs']
+      }
+    };
+  }
+
+  private normaliseNetwork(network?: Partial<EcsNetworkConfig>): EcsNetworkConfig {
+    return {
+      egressPolicy: network?.egressPolicy ?? 'allow-all',
+      vpcEndpoints: network?.vpcEndpoints ?? []
     };
   }
 

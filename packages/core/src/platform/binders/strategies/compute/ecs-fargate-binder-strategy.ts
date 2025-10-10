@@ -9,7 +9,7 @@ import { ComponentBinding } from '../../component-binding.js';
 // Compliance framework branching removed; use binding.options/config instead
 
 export class EcsFargateBinderStrategy implements IBinderStrategy {
-  readonly supportedCapabilities = ['ecs:cluster', 'ecs:service', 'ecs:task-definition'];
+  readonly supportedCapabilities = ['ecs:cluster', 'ecs:service', 'ecs:task-definition', 'otel:environment'];
 
   async bind(
     sourceComponent: any,
@@ -52,6 +52,9 @@ export class EcsFargateBinderStrategy implements IBinderStrategy {
         break;
       case 'ecs:task-definition':
         await this.bindToTaskDefinition(sourceComponent, targetComponent, binding, context);
+        break;
+      case 'otel:environment':
+        this.bindTelemetryEnvironment(sourceComponent, targetComponent, binding);
         break;
       default:
         throw new Error(`Unsupported ECS Fargate capability: ${capability}. Supported capabilities: ${this.supportedCapabilities.join(', ')}`);
@@ -114,6 +117,26 @@ export class EcsFargateBinderStrategy implements IBinderStrategy {
     if (binding.options?.requireSecureNetworking === true) {
       await this.configureSecureNetworkAccess(sourceComponent, targetComponent, context, binding);
     }
+  }
+
+  private bindTelemetryEnvironment(
+    sourceComponent: any,
+    targetValues: Record<string, string>,
+    binding: ComponentBinding
+  ): void {
+    if (!targetValues || typeof targetValues !== 'object') {
+      throw new Error('Target component missing telemetry environment map for otel:environment binding');
+    }
+
+    const envOverrides = binding.env ?? {};
+
+    Object.entries(targetValues).forEach(([key, value]) => {
+      if (typeof value !== 'string') {
+        return;
+      }
+      const targetKey = envOverrides[key] ?? key;
+      sourceComponent.addEnvironment(targetKey, value);
+    });
   }
 
   private async bindToService(

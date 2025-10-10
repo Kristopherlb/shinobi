@@ -45,43 +45,58 @@ components:
 |----------|------|----------|-------------|
 | `name` | string | No | Component name (auto-generated if not provided) |
 | `description` | string | No | Component description for documentation |
-| `monitoring` | object | No | Monitoring and observability configuration |
+| `monitoring` | object | No | Monitoring configuration (always enabled) |
+| `observability` | object | No | Telemetry controls for logging, tracing, alarms, and dashboards |
 | `tags` | object | No | Additional resource tags |
 
 ### Monitoring Configuration
 
 | Property | Type | Required | Description |
 |----------|------|----------|-------------|
-| `enabled` | boolean | No | Enable monitoring (default: true) |
+| `enabled` | boolean | No | Must remain `true` to satisfy platform observability standards |
 | `detailedMetrics` | boolean | No | Enable detailed CloudWatch metrics |
+
+### Observability Configuration
+
+| Property | Type | Required | Description |
+|----------|------|----------|-------------|
+| `logging.retentionInDays` | number | No | Overrides Container Insights log retention (per compliance defaults) |
+| `alarms.notificationTopicArn` | string | No | SNS topic ARN for alarm notifications |
+| `dashboard.enabled` | boolean | No | Toggle publishing the ECS observability dashboard (default: true) |
+| `tracing.adotSidecar` | boolean | No | Advertise whether workloads should inject the ADOT sidecar (default: true) |
+| `tracing.collectorEndpoint` | string | No | Override OTLP collector endpoint advertised to workloads |
 
 ## Capabilities Provided
 
 This component provides the following capabilities for binding with other components:
 
-- `compute:ecs-cluster` - Main ecs-cluster capability
-- `monitoring:ecs-cluster` - Monitoring capability
+- `ecs:cluster` – Cluster metadata (ARNs, namespace, networking, observability defaults)
+- `observability:ecs-cluster` – Telemetry contract (OTEL env, log retention, dashboards, alarms)
+- `otel:environment` – Key/value map of OTEL environment variables for workloads bound to the cluster
 
 ## Construct Handles
 
 The following construct handles are available for use in `patches.ts`:
 
-- `main` - Main ecs-cluster construct
+- `cluster` – ECS cluster construct
+- `namespace` – Service Connect private DNS namespace
+- `autoScalingGroup` – EC2 capacity Auto Scaling Group (when configured)
+- `capacitySecurityGroup` – Security group applied to EC2 capacity instances
 
 ## Compliance Frameworks
 
 ### Commercial
 
 - Standard monitoring configuration
-- Basic resource tagging
-- Standard security settings
+- Container Insights retention defaults to 14 days
+- Basic resource tagging and IMDSv2 enforced on EC2 capacity when enabled
 
 ### FedRAMP Moderate/High
 
 - Enhanced monitoring with detailed metrics
-- Comprehensive audit logging
-- Stricter security configurations
-- Extended compliance tagging
+- CloudWatch Container Insights retention extended (90 days for Moderate, 365 for High)
+- EC2 capacity enforces IMDSv2, SSM enrollment, encrypted GP3 volumes, and private subnet placement
+- Extended compliance tagging and Spot capacity disabled by default
 
 ## Best Practices
 

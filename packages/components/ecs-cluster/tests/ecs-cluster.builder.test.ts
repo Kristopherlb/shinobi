@@ -1,6 +1,6 @@
 import { Stack } from 'aws-cdk-lib';
 import { ComponentContext, ComponentSpec } from '@shinobi/core/component-interfaces';
-import { EcsClusterComponentConfigBuilder, EcsClusterConfig } from '../ecs-cluster.builder.ts';
+import { EcsClusterComponentConfigBuilder, EcsClusterConfig } from '../src/ecs-cluster.builder.ts';
 
 const createContext = (
   overrides: Partial<ComponentContext> = {}
@@ -145,5 +145,29 @@ describe('EcsClusterComponentConfigBuilder__Validation', () => {
     const config = builder.buildSync();
 
     expect(config.capacity?.desiredSize).toBe(2);
+  });
+
+  it('MonitoringValidation__Disabled__Throws', () => {
+    const context = createContext();
+    const spec = createSpec({
+      monitoring: {
+        enabled: false
+      }
+    });
+
+    const builder = new EcsClusterComponentConfigBuilder({ context, spec });
+
+    expect(() => builder.buildSync()).toThrow('monitoring.enabled');
+  });
+
+  it('ComplianceDefaults__FedrampHigh__SetsObservabilityRetention', () => {
+    const context = createContext({ complianceFramework: 'fedramp-high' });
+    const spec = createSpec();
+
+    const builder = new EcsClusterComponentConfigBuilder({ context, spec });
+    const config = builder.buildSync();
+
+    expect(config.observability?.logging?.retentionInDays).toBe(365);
+    expect(config.monitoring?.enabled).toBeTruthy();
   });
 });

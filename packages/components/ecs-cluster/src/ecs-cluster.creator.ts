@@ -1,17 +1,21 @@
 /**
- * Creator for EcsEc2ServiceComponent Component
+ * Creator for EcsClusterComponent Component
  * 
  * Implements the ComponentCreator pattern as defined in the Platform Component API Contract.
  * Makes the component discoverable by the platform and provides factory methods.
  */
 
 import { Construct } from 'constructs';
-import { ComponentSpec, ComponentContext, IComponentCreator } from '@platform/contracts';
-import { EcsEc2ServiceComponent } from './ecs-ec2-service.component.ts';
-import { EcsEc2ServiceConfig, ECS_EC2_SERVICE_CONFIG_SCHEMA } from './ecs-ec2-service.builder.ts';
+import {
+  ComponentSpec,
+  ComponentContext,
+  IComponentCreator
+} from '@shinobi/core';
+import { EcsClusterComponent } from './ecs-cluster.component.ts';
+import { EcsClusterConfig, ECS_CLUSTER_CONFIG_SCHEMA } from './ecs-cluster.builder.ts';
 
 /**
- * Creator class for EcsEc2ServiceComponent component
+ * Creator class for EcsClusterComponent component
  * 
  * Responsible for:
  * - Component factory creation
@@ -19,22 +23,22 @@ import { EcsEc2ServiceConfig, ECS_EC2_SERVICE_CONFIG_SCHEMA } from './ecs-ec2-se
  * - Schema definition and validation
  * - Component type identification
  */
-export class EcsEc2ServiceComponentCreator implements IComponentCreator {
+export class EcsClusterComponentCreator implements IComponentCreator {
   
   /**
    * Component type identifier
    */
-  public readonly componentType = 'ecs-ec2-service';
+  public readonly componentType = 'ecs-cluster';
   
   /**
    * Component display name
    */
-  public readonly displayName = 'Ecs Ec2 Service Component';
+  public readonly displayName = 'Ecs Cluster Component';
   
   /**
    * Component description
    */
-  public readonly description = 'ECS EC2 Service Component';
+  public readonly description = 'ECS Cluster Component';
   
   /**
    * Component category for organization
@@ -50,7 +54,7 @@ export class EcsEc2ServiceComponentCreator implements IComponentCreator {
    * Component tags for discovery
    */
   public readonly tags = [
-    'ecs-ec2-service',
+    'ecs-cluster',
     'compute',
     'aws',
     'ecs'
@@ -59,7 +63,7 @@ export class EcsEc2ServiceComponentCreator implements IComponentCreator {
   /**
    * JSON Schema for component configuration validation
    */
-  public readonly configSchema = ECS_EC2_SERVICE_CONFIG_SCHEMA;
+  public readonly configSchema = ECS_CLUSTER_CONFIG_SCHEMA;
   
   /**
    * Factory method to create component instances
@@ -68,8 +72,8 @@ export class EcsEc2ServiceComponentCreator implements IComponentCreator {
     scope: Construct,
     spec: ComponentSpec,
     context: ComponentContext
-  ): EcsEc2ServiceComponent {
-    return new EcsEc2ServiceComponent(scope, spec.name, context, spec);
+  ): EcsClusterComponent {
+    return new EcsClusterComponent(scope, spec.name, context, spec);
   }
   
   /**
@@ -80,7 +84,7 @@ export class EcsEc2ServiceComponentCreator implements IComponentCreator {
     context: ComponentContext
   ): { valid: boolean; errors: string[] } {
     const errors: string[] = [];
-    const config = spec.config as EcsEc2ServiceConfig;
+    const config = spec.config as EcsClusterConfig;
     
     // Validate component name
     if (!spec.name || spec.name.length === 0) {
@@ -110,20 +114,20 @@ export class EcsEc2ServiceComponentCreator implements IComponentCreator {
    * Returns the capabilities this component provides when synthesized
    */
   public getProvidedCapabilities(): string[] {
-    return ['service:connect', 'otel:environment'];
+    return ['ecs:cluster', 'observability:ecs-cluster', 'otel:environment'];
   }
   
   /**
    * Returns the capabilities this component requires from other components
    */
   public getRequiredCapabilities(): string[] {
-    return [];
+    return ['network:vpc'];
   }
   
   /**
    * Returns construct handles that will be registered by this component
    */
   public getConstructHandles(): string[] {
-    return ['main', 'service', 'taskDefinition', 'securityGroup', 'logGroup'];
+    return ['cluster', 'namespace', 'autoScalingGroup', 'capacitySecurityGroup'];
   }
 }

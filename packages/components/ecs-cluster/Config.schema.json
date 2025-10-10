@@ -42,8 +42,8 @@
         "instanceType": {
           "type": "string",
           "description": "EC2 instance type for cluster instances",
-          "pattern": "^[a-z][0-9]*[a-z]*\\.[a-z0-9]+$",
-          "examples": ["t3.medium", "m5.large", "c5.xlarge"]
+          "pattern": "^[a-z][a-z0-9-]*\\.[a-z0-9]+$",
+          "examples": ["t3.medium", "m7i-flex.2xlarge", "c5.xlarge"]
         },
         "minSize": {
           "type": "integer",
@@ -72,6 +72,11 @@
           "type": "boolean",
           "description": "Enable detailed CloudWatch monitoring for instances",
           "default": false
+        },
+        "kmsKeyArn": {
+          "type": "string",
+          "description": "Customer-managed KMS key ARN used to encrypt EC2 capacity EBS volumes",
+          "pattern": "^arn:aws[a-zA-Z-]*:kms:[a-z0-9-]+:[0-9]{12}:key/[a-f0-9-]+$"
         }
       },
       "additionalProperties": false
@@ -94,8 +99,9 @@
       "properties": {
         "enabled": {
           "type": "boolean",
-          "description": "Enable monitoring",
-          "default": true
+          "const": true,
+          "default": true,
+          "description": "Monitoring is always enabled to satisfy platform observability requirements"
         },
         "detailedMetrics": {
           "type": "boolean",
@@ -109,6 +115,78 @@
         }
       },
       "additionalProperties": false
+    },
+    "observability": {
+      "type": "object",
+      "description": "Telemetry controls for logging, tracing, alarms, and dashboards",
+      "additionalProperties": false,
+      "properties": {
+        "logging": {
+          "type": "object",
+          "additionalProperties": false,
+          "properties": {
+            "retentionInDays": {
+              "type": "integer",
+              "minimum": 1,
+              "maximum": 3650,
+              "description": "Override the CloudWatch log retention period for Container Insights"
+            }
+          },
+          "default": {}
+        },
+        "alarms": {
+          "type": "object",
+          "additionalProperties": false,
+          "properties": {
+            "notificationTopicArn": {
+              "type": "string",
+              "description": "SNS topic ARN used for alarm notifications",
+              "pattern": "^arn:aws[a-zA-Z-]*:sns:[a-z0-9-]+:[0-9]{12}:[A-Za-z0-9-_]+$"
+            },
+            "severityOverrides": {
+              "type": "object",
+              "description": "Optional overrides for default alarm severities keyed by alarm identifier",
+              "additionalProperties": {
+                "type": "string"
+              }
+            }
+          },
+          "default": {}
+        },
+        "dashboard": {
+          "type": "object",
+          "additionalProperties": false,
+          "properties": {
+            "enabled": {
+              "type": "boolean",
+              "default": true,
+              "description": "Whether to publish the ECS observability dashboard"
+            },
+            "name": {
+              "type": "string",
+              "description": "Optional custom name for the generated dashboard"
+            }
+          },
+          "default": {}
+        },
+        "tracing": {
+          "type": "object",
+          "additionalProperties": false,
+          "properties": {
+            "adotSidecar": {
+              "type": "boolean",
+              "default": true,
+              "description": "Whether workloads should run with the ADOT sidecar"
+            },
+            "collectorEndpoint": {
+              "type": "string",
+              "description": "Override OTLP collector endpoint advertised to workloads"
+            }
+          },
+          "default": {}
+        }
+      },
+      "default": {}
     },
     "tags": {
       "type": "object",

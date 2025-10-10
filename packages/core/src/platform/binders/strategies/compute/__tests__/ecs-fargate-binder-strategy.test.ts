@@ -59,6 +59,29 @@ describe('EcsFargateBinderStrategy config-driven behavior', () => {
     // IAM statements present and not wildcard resource for cluster
     expect(source.policies.length).toBeGreaterThan(0);
   });
+
+  test('TelemetryEnvironment__OtelCapability__MapsEnvironmentVariables', async () => {
+    const strategy = new EcsFargateBinderStrategy();
+    const source = new MockComponent();
+    const target = {
+      OTEL_SERVICE_NAME: 'orders-ecs-cluster',
+      OTEL_EXPORTER_OTLP_ENDPOINT: 'https://otel.example.com:4317'
+    } as any;
+
+    const binding: ComponentBinding = {
+      from: 'worker',
+      to: 'cluster',
+      capability: 'otel:environment',
+      access: ['read'],
+      env: {
+        OTEL_EXPORTER_OTLP_ENDPOINT: 'CUSTOM_OTLP_ENDPOINT'
+      }
+    } as any;
+
+    const context: BindingContext = { region: 'us-east-1', accountId: '123456789012' } as any;
+    await strategy.bind(source as any, target as any, binding, context);
+
+    expect(source.env.OTEL_SERVICE_NAME).toBe('orders-ecs-cluster');
+    expect(source.env.CUSTOM_OTLP_ENDPOINT).toBe('https://otel.example.com:4317');
+  });
 });
-
-

@@ -1,7 +1,7 @@
 {
   "componentDefinition": {
     "name": "ecs-cluster",
-    "version": "1.0.0",
+    "version": "1.1.0",
     "description": "ECS Cluster component for the Platform - provides ECS clusters with Service Connect capability",
     "type": "infrastructure",
     "category": "compute",
@@ -18,7 +18,11 @@
           "required": true,
           "description": "Cloud Map namespace for service discovery",
           "pattern": "^[a-zA-Z][a-zA-Z0-9.-]*$",
-          "examples": ["internal", "my-app.internal", "services"]
+          "examples": [
+            "internal",
+            "my-app.internal",
+            "services"
+          ]
         }
       }
     },
@@ -31,8 +35,12 @@
           "type": "string",
           "required": true,
           "description": "EC2 instance type for cluster instances",
-          "pattern": "^[a-z][0-9]*[a-z]*\\.[a-z0-9]+$",
-          "examples": ["t3.medium", "m5.large", "c5.xlarge"]
+          "pattern": "^[a-z][a-z0-9-]*\\.[a-z0-9]+$",
+          "examples": [
+            "t3.medium",
+            "m7i-flex.2xlarge",
+            "c5.xlarge"
+          ]
         },
         "minSize": {
           "type": "number",
@@ -65,6 +73,12 @@
           "required": false,
           "description": "Enable detailed CloudWatch monitoring for instances",
           "default": false
+        },
+        "kmsKeyArn": {
+          "type": "string",
+          "required": false,
+          "description": "Customer-managed KMS key ARN used to encrypt EC2 instance volumes",
+          "pattern": "^arn:aws[a-zA-Z-]*:kms:[a-z0-9-]+:[0-9]{12}:key/[a-f0-9-]+$"
         }
       }
     },
@@ -89,8 +103,11 @@
       "properties": {
         "enabled": {
           "type": "boolean",
+          "enum": [
+            true
+          ],
           "default": true,
-          "description": "Enable monitoring"
+          "description": "Monitoring is always enabled to satisfy the platform observability standard"
         },
         "detailedMetrics": {
           "type": "boolean",
@@ -108,13 +125,78 @@
       "type": "object",
       "required": false,
       "description": "Additional resource tags",
-      "additionalProperties": { "type": "string" }
+      "additionalProperties": {
+        "type": "string"
+      }
+    },
+    "observability": {
+      "type": "object",
+      "required": false,
+      "description": "Telemetry controls for logging, alarms, dashboards, and tracing",
+      "properties": {
+        "logging": {
+          "type": "object",
+          "properties": {
+            "retentionInDays": {
+              "type": "integer",
+              "minimum": 1,
+              "maximum": 3650,
+              "description": "Override CloudWatch log retention for Container Insights"
+            }
+          },
+          "additionalProperties": false
+        },
+        "alarms": {
+          "type": "object",
+          "properties": {
+            "notificationTopicArn": {
+              "type": "string",
+              "description": "SNS topic ARN used for alarm notifications",
+              "pattern": "^arn:aws[a-zA-Z-]*:sns:[a-z0-9-]+:[0-9]{12}:[A-Za-z0-9-_]+$"
+            },
+            "severityOverrides": {
+              "type": "object",
+              "additionalProperties": {
+                "type": "string"
+              }
+            }
+          },
+          "additionalProperties": false
+        },
+        "dashboard": {
+          "type": "object",
+          "properties": {
+            "enabled": {
+              "type": "boolean",
+              "default": true
+            },
+            "name": {
+              "type": "string"
+            }
+          },
+          "additionalProperties": false
+        },
+        "tracing": {
+          "type": "object",
+          "properties": {
+            "adotSidecar": {
+              "type": "boolean",
+              "default": true
+            },
+            "collectorEndpoint": {
+              "type": "string"
+            }
+          },
+          "additionalProperties": false
+        }
+      },
+      "additionalProperties": false
     }
   },
   "capabilitiesProvided": [
     {
       "name": "ecs:cluster",
-      "description": "ECS Cluster capability providing cluster metadata and Service Connect information",
+      "description": "ECS Cluster capability providing cluster metadata, networking, and observability defaults",
       "dataShape": {
         "clusterName": "string",
         "clusterArn": "string",
@@ -123,7 +205,28 @@
         "namespaceArn": "string",
         "namespaceId": "string",
         "hasEc2Capacity": "boolean",
-        "capacityProviders": "string[]"
+        "capacityProviders": "string[]",
+        "capacitySecurityGroupId": "string?",
+        "observability": "{ containerInsightsEnabled: boolean, logRetentionInDays?: number, adotSidecarRequired: boolean, dashboardEnabled: boolean }",
+        "alarms": "{ notificationTopicArn?: string }"
+      }
+    },
+    {
+      "name": "observability:ecs-cluster",
+      "description": "Cluster-level observability contract including OTEL guidance, logging retention, and dashboard metadata",
+      "dataShape": {
+        "otelEnvironment": "Record<string,string>",
+        "logging": "{ containerInsights: boolean, retentionInDays?: number }",
+        "tracing": "{ adotSidecar: boolean, collectorEndpoint?: string }",
+        "dashboard": "{ enabled: boolean, name?: string }",
+        "alarms": "{ notificationTopicArn?: string, severityOverrides?: Record<string,string> }"
+      }
+    },
+    {
+      "name": "otel:environment",
+      "description": "Key/value map of OTEL environment variables to apply to workloads",
+      "dataShape": {
+        "variables": "Record<string,string>"
       }
     }
   ],
@@ -145,23 +248,61 @@
     }
   ],
   "complianceFramework": {
-    "supportedFrameworks": ["commercial", "fedramp-moderate", "fedramp-high"],
+    "supportedFrameworks": [
+      "commercial",
+      "fedramp-moderate",
+      "fedramp-high"
+    ],
     "defaultFramework": "commercial",
     "frameworkSpecificDefaults": {
       "commercial": {
         "containerInsights": true,
-        "monitoring": { "enabled": true, "detailedMetrics": false },
-        "capacity": { "enableMonitoring": false, "instanceType": "t3.small" }
+        "monitoring": {
+          "enabled": true,
+          "detailedMetrics": false
+        },
+        "capacity": {
+          "enableMonitoring": false,
+          "instanceType": "t3.small"
+        },
+        "observability": {
+          "logging": {
+            "retentionInDays": 14
+          }
+        }
       },
       "fedramp-moderate": {
         "containerInsights": true,
-        "monitoring": { "enabled": true, "detailedMetrics": true },
-        "capacity": { "enableMonitoring": true, "instanceType": "t3.medium" }
+        "monitoring": {
+          "enabled": true,
+          "detailedMetrics": true
+        },
+        "capacity": {
+          "enableMonitoring": true,
+          "instanceType": "t3.medium"
+        },
+        "observability": {
+          "logging": {
+            "retentionInDays": 90
+          }
+        }
       },
       "fedramp-high": {
         "containerInsights": true,
-        "monitoring": { "enabled": true, "detailedMetrics": true },
-        "capacity": { "enableMonitoring": true, "instanceType": "m5.large", "minSize": 2 }
+        "monitoring": {
+          "enabled": true,
+          "detailedMetrics": true
+        },
+        "capacity": {
+          "enableMonitoring": true,
+          "instanceType": "m5.large",
+          "minSize": 2
+        },
+        "observability": {
+          "logging": {
+            "retentionInDays": 365
+          }
+        }
       }
     }
   },
@@ -185,27 +326,65 @@
       "feature": "tagging",
       "description": "Automatic application of platform standard tags",
       "implementation": "All resources tagged with service, environment, and compliance metadata"
+    },
+    {
+      "feature": "imdsv2",
+      "description": "Enforces IMDSv2 on EC2 capacity instances",
+      "implementation": "Auto Scaling launch configurations require HttpTokens=required"
+    },
+    {
+      "feature": "ssm-managed",
+      "description": "EC2 capacity instances join SSM for patching and session management",
+      "implementation": "Instance role attaches AmazonSSMManagedInstanceCore"
+    },
+    {
+      "feature": "container-insights-retention",
+      "description": "CloudWatch Container Insights logs respect compliance-specific retention windows",
+      "implementation": "Custom log retention resources enforce retentionInDays"
     }
   ],
   "relevantStandardsControls": [
     {
       "standard": "AWS Foundational Security Best Practices",
-      "controls": ["ECS.1", "ECS.2", "ECS.3", "ECS.4", "ECS.5"],
+      "controls": [
+        "ECS.1",
+        "ECS.2",
+        "ECS.3",
+        "ECS.4",
+        "ECS.5"
+      ],
       "description": "ECS cluster security and monitoring best practices"
     },
     {
       "standard": "CIS AWS Foundations Benchmark",
-      "controls": ["2.1", "2.2", "2.3"],
+      "controls": [
+        "2.1",
+        "2.2",
+        "2.3"
+      ],
       "description": "Logging and monitoring requirements"
     },
     {
       "standard": "FedRAMP Moderate",
-      "controls": ["AC-2", "AC-3", "SC-7", "SC-13", "SI-4"],
+      "controls": [
+        "AC-2",
+        "AC-3",
+        "SC-7",
+        "SC-13",
+        "SI-4"
+      ],
       "description": "Access control, network security, encryption, and monitoring"
     },
     {
       "standard": "FedRAMP High",
-      "controls": ["AC-2", "AC-3", "SC-7", "SC-13", "SI-4", "SC-28"],
+      "controls": [
+        "AC-2",
+        "AC-3",
+        "SC-7",
+        "SC-13",
+        "SI-4",
+        "SC-28"
+      ],
       "description": "Enhanced security requirements for high-impact systems"
     }
   ],
@@ -224,6 +403,11 @@
       "handle": "autoScalingGroup",
       "description": "Auto Scaling Group for EC2 capacity (if configured)",
       "type": "aws-cdk-lib/aws-autoscaling.AutoScalingGroup"
+    },
+    {
+      "handle": "capacitySecurityGroup",
+      "description": "Security group applied to EC2 capacity instances",
+      "type": "aws-cdk-lib/aws-ec2.SecurityGroup"
     }
   ],
   "dependencies": [

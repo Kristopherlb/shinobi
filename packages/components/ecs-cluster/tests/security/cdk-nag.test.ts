@@ -2,8 +2,9 @@ import { App, Stack, Aspects } from 'aws-cdk-lib';
 import { Annotations, Match } from 'aws-cdk-lib/assertions';
 import { AwsSolutionsChecks } from 'cdk-nag';
 import * as ec2 from 'aws-cdk-lib/aws-ec2';
-import { EcsClusterComponent } from '../../ecs-cluster.component.ts';
-import { EcsClusterComponentConfigBuilder } from '../../ecs-cluster.builder.ts';
+import * as logs from 'aws-cdk-lib/aws-logs';
+import { EcsClusterComponent } from '../../src/ecs-cluster.component.ts';
+import { EcsClusterComponentConfigBuilder } from '../../src/ecs-cluster.builder.ts';
 import { ComponentContext, ComponentSpec } from '@shinobi/core/component-interfaces';
 
 const createContext = (stack: Stack, vpc: ec2.IVpc): ComponentContext => ({
@@ -60,7 +61,13 @@ describe('AwsSolutionsChecks__EcsCluster', () => {
     });
 
     const vpc = new ec2.Vpc(stack, 'TestVpc', {
+      ipAddresses: ec2.IpAddresses.cidr('10.2.0.0/16'),
       maxAzs: 2
+    });
+    const flowLogGroup = new logs.LogGroup(stack, 'VpcFlowLogs');
+    vpc.addFlowLog('VpcFlowLogs', {
+      destination: ec2.FlowLogDestination.toCloudWatchLogs(flowLogGroup),
+      trafficType: ec2.FlowLogTrafficType.ALL
     });
 
     const context = createContext(stack, vpc);
@@ -79,7 +86,6 @@ describe('AwsSolutionsChecks__EcsCluster', () => {
 
     Aspects.of(stack).add(new AwsSolutionsChecks({ verbose: true }));
     component.synth();
-    app.synth();
 
     const findings = Annotations.fromStack(stack).findError('*', Match.stringLikeRegexp('AwsSolutions-'));
     expect(findings).toEqual([]);

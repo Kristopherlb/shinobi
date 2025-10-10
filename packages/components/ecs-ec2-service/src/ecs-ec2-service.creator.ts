@@ -1,21 +1,17 @@
 /**
- * Creator for EcsClusterComponent Component
+ * Creator for EcsEc2ServiceComponent Component
  * 
  * Implements the ComponentCreator pattern as defined in the Platform Component API Contract.
  * Makes the component discoverable by the platform and provides factory methods.
  */
 
 import { Construct } from 'constructs';
-import {
-  ComponentSpec,
-  ComponentContext,
-  IComponentCreator
-} from '@shinobi/core';
-import { EcsClusterComponent } from './ecs-cluster.component.ts';
-import { EcsClusterConfig, ECS_CLUSTER_CONFIG_SCHEMA } from './ecs-cluster.builder.ts';
+import { ComponentSpec, ComponentContext, IComponentCreator } from '@platform/contracts';
+import { EcsEc2ServiceComponent } from './ecs-ec2-service.component.ts';
+import { EcsEc2ServiceConfig, ECS_EC2_SERVICE_CONFIG_SCHEMA } from './ecs-ec2-service.builder.ts';
 
 /**
- * Creator class for EcsClusterComponent component
+ * Creator class for EcsEc2ServiceComponent component
  * 
  * Responsible for:
  * - Component factory creation
@@ -23,48 +19,48 @@ import { EcsClusterConfig, ECS_CLUSTER_CONFIG_SCHEMA } from './ecs-cluster.build
  * - Schema definition and validation
  * - Component type identification
  */
-export class EcsClusterComponentCreator implements IComponentCreator {
-  
+export class EcsEc2ServiceComponentCreator implements IComponentCreator {
+
   /**
    * Component type identifier
    */
-  public readonly componentType = 'ecs-cluster';
-  
+  public readonly componentType = 'ecs-ec2-service';
+
   /**
    * Component display name
    */
-  public readonly displayName = 'Ecs Cluster Component';
-  
+  public readonly displayName = 'Ecs Ec2 Service Component';
+
   /**
    * Component description
    */
-  public readonly description = 'ECS Cluster Component';
-  
+  public readonly description = 'ECS EC2 Service Component';
+
   /**
    * Component category for organization
    */
   public readonly category = 'compute';
-  
+
   /**
    * AWS service this component manages
    */
   public readonly awsService = 'ECS';
-  
+
   /**
    * Component tags for discovery
    */
   public readonly tags = [
-    'ecs-cluster',
+    'ecs-ec2-service',
     'compute',
     'aws',
     'ecs'
   ];
-  
+
   /**
    * JSON Schema for component configuration validation
    */
-  public readonly configSchema = ECS_CLUSTER_CONFIG_SCHEMA;
-  
+  public readonly configSchema = ECS_EC2_SERVICE_CONFIG_SCHEMA;
+
   /**
    * Factory method to create component instances
    */
@@ -72,62 +68,61 @@ export class EcsClusterComponentCreator implements IComponentCreator {
     scope: Construct,
     spec: ComponentSpec,
     context: ComponentContext
-  ): EcsClusterComponent {
-    return new EcsClusterComponent(scope, spec.name, context, spec);
+  ): EcsEc2ServiceComponent {
+    return new EcsEc2ServiceComponent(scope, spec.name, context, spec);
   }
-  
+
   /**
    * Validates component specification beyond JSON Schema validation
    */
   public validateSpec(
-    spec: ComponentSpec, 
+    spec: ComponentSpec,
     context: ComponentContext
   ): { valid: boolean; errors: string[] } {
     const errors: string[] = [];
-    const config = spec.config as EcsClusterConfig;
-    
+    const config = spec.config as EcsEc2ServiceConfig;
+
     // Validate component name
     if (!spec.name || spec.name.length === 0) {
       errors.push('Component name is required');
     } else if (!/^[a-zA-Z][a-zA-Z0-9-_]*$/.test(spec.name)) {
       errors.push('Component name must start with a letter and contain only alphanumeric characters, hyphens, and underscores');
     }
-    
-    // TODO: Add component-specific validations here
-    
-    // Environment-specific validations
-    if (context.environment === 'prod') {
-      if (!config?.monitoring?.enabled) {
-        errors.push('Monitoring must be enabled in production environment');
+
+    // Compliance framework validations
+    // Note: Monitoring enablement is enforced via platform configuration files
+    // (config/fedramp-moderate.yml, config/fedramp-high.yml) rather than hardcoded logic
+    if (context.complianceFramework !== 'commercial') {
+      // FedRAMP deployments must have monitoring enabled (enforced via config defaults)
+      if (config?.monitoring?.enabled === false) {
+        errors.push('Monitoring cannot be explicitly disabled for FedRAMP compliance frameworks');
       }
-      
-      // TODO: Add production-specific validations
     }
-    
+
     return {
       valid: errors.length === 0,
       errors
     };
   }
-  
+
   /**
    * Returns the capabilities this component provides when synthesized
    */
   public getProvidedCapabilities(): string[] {
-    return ['ecs:cluster', 'observability:ecs-cluster', 'otel:environment'];
+    return ['service:connect', 'otel:environment'];
   }
-  
+
   /**
    * Returns the capabilities this component requires from other components
    */
   public getRequiredCapabilities(): string[] {
-    return ['network:vpc'];
+    return [];
   }
-  
+
   /**
    * Returns construct handles that will be registered by this component
    */
   public getConstructHandles(): string[] {
-    return ['cluster', 'namespace', 'autoScalingGroup'];
+    return ['main', 'service', 'taskDefinition', 'securityGroup', 'logGroup'];
   }
 }

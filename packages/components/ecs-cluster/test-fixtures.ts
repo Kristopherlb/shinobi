@@ -172,7 +172,7 @@ export class TestFixtureFactory {
   /**
    * Create a clean test environment with deterministic settings
    */
-  public static createTestEnvironment(): {
+  public static createTestEnvironment(options: { region?: string; account?: string } = {}): {
     app: cdk.App;
     stack: cdk.Stack;
     contexts: typeof TEST_CONTEXTS;
@@ -188,10 +188,13 @@ export class TestFixtureFactory {
       }
     });
 
+    const stackRegion = options.region ?? 'us-east-1';
+    const stackAccount = options.account ?? '123456789012';
+
     const stack = new cdk.Stack(app, `TestStack-${Date.now()}`, {
       env: {
-        account: '123456789012', // Deterministic test account
-        region: 'us-east-1'
+        account: stackAccount,
+        region: stackRegion
       },
       stackName: `test-stack-${TEST_SEED}`, // Deterministic stack name
       description: 'Test stack for ECS Service Connect components'

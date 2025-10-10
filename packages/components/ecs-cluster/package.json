@@ -3,22 +3,23 @@
   "version": "1.1.0",
   "description": "ECS Cluster component for the Shinobi platform with Service Connect support",
   "type": "module",
-  "main": "index.ts",
+  "main": "dist/index.js",
+  "types": "dist/index.d.ts",
   "exports": {
     ".": {
-      "import": "./index.ts",
-      "types": "./index.ts"
+      "import": "./dist/index.js",
+      "types": "./dist/index.d.ts"
     }
   },
   "scripts": {
-    "build": "tsc",
+    "build": "tsc -p tsconfig.json",
     "test": "jest",
     "test:watch": "jest --watch",
     "test:coverage": "jest --coverage",
     "lint": "eslint . --ext .ts",
     "lint:fix": "eslint . --ext .ts --fix",
     "format": "prettier --write .",
-    "validate": "tsc --noEmit",
+    "validate": "tsc --noEmit -p tsconfig.json",
     "audit": "npm audit",
     "clean": "rm -rf dist"
   },
@@ -79,6 +80,14 @@
   "publishConfig": {
     "access": "restricted",
     "registry": "https://npm.pkg.github.com"
+  },
+  "component": {
+    "type": "ecs-cluster",
+    "category": "compute",
+    "awsService": "ECS",
+    "stability": "experimental",
+    "author": "Shinobi Platform Team",
+    "version": "1.1.0"
   },
   "volta": {
     "node": "20.9.0",

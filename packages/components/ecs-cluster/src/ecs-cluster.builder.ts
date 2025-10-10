@@ -6,7 +6,7 @@
  */
 
 import { ConfigBuilder, ConfigBuilderContext } from '@shinobi/core';
-import ECS_CLUSTER_CONFIG_SCHEMA_JSON from './Config.schema.json' with { type: 'json' };
+import ECS_CLUSTER_CONFIG_SCHEMA_JSON from '../Config.schema.json' with { type: 'json' };
 
 /**
  * Configuration interface for ECS Cluster component
@@ -38,6 +38,8 @@ export interface EcsClusterConfig {
     keyName?: string;
     /** Enable detailed CloudWatch monitoring (optional, defaults to false) */
     enableMonitoring?: boolean;
+    /** Optional CMK used to encrypt instance volumes */
+    kmsKeyArn?: string;
   };
   
   /** Container Insights configuration (optional, defaults based on compliance) */
@@ -52,6 +54,25 @@ export interface EcsClusterConfig {
     detailedMetrics?: boolean;
     alarms?: {
       // TODO: Define component-specific alarm thresholds
+    };
+  };
+
+  /** Observability configuration for alarms, dashboards, and telemetry */
+  observability?: {
+    logging?: {
+      retentionInDays?: number;
+    };
+    alarms?: {
+      notificationTopicArn?: string;
+      severityOverrides?: Record<string, string>;
+    };
+    dashboard?: {
+      enabled?: boolean;
+      name?: string;
+    };
+    tracing?: {
+      adotSidecar?: boolean;
+      collectorEndpoint?: string;
     };
   };
   
@@ -100,6 +121,18 @@ export class EcsClusterComponentConfigBuilder extends ConfigBuilder<EcsClusterCo
         enabled: true,
         detailedMetrics: false
       },
+      observability: {
+        logging: {
+          retentionInDays: 30
+        },
+        alarms: {},
+        dashboard: {
+          enabled: true
+        },
+        tracing: {
+          adotSidecar: true
+        }
+      },
       tags: {}
     };
   }
@@ -124,6 +157,11 @@ export class EcsClusterComponentConfigBuilder extends ConfigBuilder<EcsClusterCo
             instanceType: 'm5.large', // Larger instances for compliance workloads
             minSize: 2, // High availability
             maxSize: 10 // Reasonable scale for compliance
+          },
+          observability: {
+            logging: {
+              retentionInDays: 365
+            }
           }
         };
         
@@ -139,6 +177,11 @@ export class EcsClusterComponentConfigBuilder extends ConfigBuilder<EcsClusterCo
             instanceType: 't3.medium', // Cost-balanced instances
             minSize: 1,
             maxSize: 5
+          },
+          observability: {
+            logging: {
+              retentionInDays: 90
+            }
           }
         };
         
@@ -154,6 +197,11 @@ export class EcsClusterComponentConfigBuilder extends ConfigBuilder<EcsClusterCo
             instanceType: 't3.small', // Cost-optimized instances
             minSize: 1,
             maxSize: 3
+          },
+          observability: {
+            logging: {
+              retentionInDays: 14
+            }
           }
         };
     }
@@ -162,6 +210,10 @@ export class EcsClusterComponentConfigBuilder extends ConfigBuilder<EcsClusterCo
   private validateConfig(config: EcsClusterConfig): void {
     if (!config.serviceConnect?.namespace?.trim()) {
       throw new Error('serviceConnect.namespace is required for ECS clusters');
+    }
+
+    if (config.monitoring?.enabled === false) {
+      throw new Error('monitoring.enabled cannot be set to false for ECS clusters');
     }
 
     if (config.capacity) {
@@ -176,6 +228,11 @@ export class EcsClusterComponentConfigBuilder extends ConfigBuilder<EcsClusterCo
           throw new Error('capacity.desiredSize must be between minSize and maxSize');
         }
       }
+    }
+
+    const retention = config.observability?.logging?.retentionInDays;
+    if (retention !== undefined && retention <= 0) {
+      throw new Error('observability.logging.retentionInDays must be greater than zero when provided');
     }
   }
 }

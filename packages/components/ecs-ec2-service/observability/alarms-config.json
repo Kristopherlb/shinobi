@@ -1,0 +1,350 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "title": "ECS EC2 Service Observability Configuration",
+  "description": "CloudWatch alarms, metrics, and dashboard configuration for ECS EC2 Service component",
+  "version": "1.0.0",
+  "alarms": {
+    "cpu": {
+      "description": "CPU utilization alarm configuration per compliance framework",
+      "commercial": {
+        "threshold": 80,
+        "evaluationPeriods": 3,
+        "datapointsToAlarm": 3,
+        "period": 300,
+        "statistic": "Average",
+        "comparisonOperator": "GreaterThanThreshold",
+        "treatMissingData": "notBreaching"
+      },
+      "fedramp-moderate": {
+        "threshold": 70,
+        "evaluationPeriods": 3,
+        "datapointsToAlarm": 2,
+        "period": 300,
+        "statistic": "Average",
+        "comparisonOperator": "GreaterThanThreshold",
+        "treatMissingData": "breaching"
+      },
+      "fedramp-high": {
+        "threshold": 60,
+        "evaluationPeriods": 2,
+        "datapointsToAlarm": 2,
+        "period": 60,
+        "statistic": "Average",
+        "comparisonOperator": "GreaterThanThreshold",
+        "treatMissingData": "breaching"
+      }
+    },
+    "memory": {
+      "description": "Memory utilization alarm configuration per compliance framework",
+      "commercial": {
+        "threshold": 85,
+        "evaluationPeriods": 3,
+        "datapointsToAlarm": 3,
+        "period": 300,
+        "statistic": "Average",
+        "comparisonOperator": "GreaterThanThreshold",
+        "treatMissingData": "notBreaching"
+      },
+      "fedramp-moderate": {
+        "threshold": 75,
+        "evaluationPeriods": 3,
+        "datapointsToAlarm": 2,
+        "period": 300,
+        "statistic": "Average",
+        "comparisonOperator": "GreaterThanThreshold",
+        "treatMissingData": "breaching"
+      },
+      "fedramp-high": {
+        "threshold": 70,
+        "evaluationPeriods": 2,
+        "datapointsToAlarm": 2,
+        "period": 60,
+        "statistic": "Average",
+        "comparisonOperator": "GreaterThanThreshold",
+        "treatMissingData": "breaching"
+      }
+    },
+    "taskCount": {
+      "description": "Running task count alarm for service availability",
+      "enabled": true,
+      "threshold": 1,
+      "evaluationPeriods": 2,
+      "period": 60,
+      "statistic": "Minimum",
+      "comparisonOperator": "LessThanThreshold",
+      "treatMissingData": "breaching"
+    }
+  },
+  "metrics": {
+    "standard": [
+      {
+        "namespace": "AWS/ECS",
+        "metricName": "CPUUtilization",
+        "dimensions": [
+          "ServiceName",
+          "ClusterName"
+        ],
+        "description": "Average CPU utilization across all tasks"
+      },
+      {
+        "namespace": "AWS/ECS",
+        "metricName": "MemoryUtilization",
+        "dimensions": [
+          "ServiceName",
+          "ClusterName"
+        ],
+        "description": "Average memory utilization across all tasks"
+      },
+      {
+        "namespace": "AWS/ECS",
+        "metricName": "DesiredTaskCount",
+        "dimensions": [
+          "ServiceName",
+          "ClusterName"
+        ],
+        "description": "Desired number of tasks"
+      },
+      {
+        "namespace": "AWS/ECS",
+        "metricName": "RunningTaskCount",
+        "dimensions": [
+          "ServiceName",
+          "ClusterName"
+        ],
+        "description": "Actual number of running tasks"
+      },
+      {
+        "namespace": "AWS/ECS",
+        "metricName": "PendingTaskCount",
+        "dimensions": [
+          "ServiceName",
+          "ClusterName"
+        ],
+        "description": "Number of tasks waiting to start"
+      }
+    ],
+    "custom": [
+      {
+        "namespace": "Shinobi/ECS",
+        "metricName": "ServiceConnectRequests",
+        "unit": "Count",
+        "description": "Number of requests via Service Connect"
+      },
+      {
+        "namespace": "Shinobi/ECS",
+        "metricName": "ServiceConnectLatency",
+        "unit": "Milliseconds",
+        "description": "Latency of Service Connect requests"
+      },
+      {
+        "namespace": "Shinobi/ECS",
+        "metricName": "HealthCheckFailures",
+        "unit": "Count",
+        "description": "Number of container health check failures"
+      }
+    ]
+  },
+  "dashboard": {
+    "name": "ECS-EC2-Service-{ServiceName}-{ComponentName}",
+    "refreshInterval": 60,
+    "widgets": [
+      {
+        "type": "metric",
+        "title": "CPU and Memory Utilization",
+        "width": 12,
+        "height": 6,
+        "metrics": [
+          [
+            "AWS/ECS",
+            "CPUUtilization",
+            {
+              "stat": "Average",
+              "yAxis": "left"
+            }
+          ],
+          [
+            ".",
+            "MemoryUtilization",
+            {
+              "stat": "Average",
+              "yAxis": "right"
+            }
+          ]
+        ]
+      },
+      {
+        "type": "metric",
+        "title": "Task Count",
+        "width": 12,
+        "height": 6,
+        "metrics": [
+          [
+            "AWS/ECS",
+            "DesiredTaskCount",
+            {
+              "stat": "Average"
+            }
+          ],
+          [
+            ".",
+            "RunningTaskCount",
+            {
+              "stat": "Average"
+            }
+          ],
+          [
+            ".",
+            "PendingTaskCount",
+            {
+              "stat": "Average"
+            }
+          ]
+        ]
+      },
+      {
+        "type": "metric",
+        "title": "Service Connect Performance",
+        "width": 12,
+        "height": 6,
+        "metrics": [
+          [
+            "Shinobi/ECS",
+            "ServiceConnectRequests",
+            {
+              "stat": "Sum"
+            }
+          ],
+          [
+            ".",
+            "ServiceConnectLatency",
+            {
+              "stat": "Average",
+              "yAxis": "right"
+            }
+          ]
+        ]
+      },
+      {
+        "type": "log",
+        "title": "Recent Errors",
+        "width": 12,
+        "height": 6,
+        "logGroupName": "/ecs/{ServiceName}/{ComponentName}",
+        "queryString": "fields @timestamp, @message | filter @message like /ERROR/ | sort @timestamp desc | limit 20"
+      }
+    ]
+  },
+  "logInsights": {
+    "queries": [
+      {
+        "name": "Error Rate by Time",
+        "queryString": "fields @timestamp, @message | filter level = 'ERROR' | stats count() by bin(5m)"
+      },
+      {
+        "name": "Top Error Messages",
+        "queryString": "fields @timestamp, @message | filter level = 'ERROR' | stats count() by @message | sort count desc | limit 10"
+      },
+      {
+        "name": "Request Latency Distribution",
+        "queryString": "fields @timestamp, performance.duration | filter performance.duration > 0 | stats avg(performance.duration), max(performance.duration), pct(performance.duration, 95), pct(performance.duration, 99)"
+      },
+      {
+        "name": "Task Health Status",
+        "queryString": "fields @timestamp, @message | filter @message like /health/ | stats count() by bin(1m)"
+      }
+    ]
+  },
+  "xray": {
+    "enabled": true,
+    "samplingRate": {
+      "commercial": 0.1,
+      "fedramp-moderate": 0.25,
+      "fedramp-high": 1.0
+    },
+    "annotations": [
+      "service.name",
+      "service.version",
+      "environment",
+      "compliance.framework",
+      "ecs.cluster",
+      "ecs.task-definition"
+    ]
+  },
+  "otel": {
+    "enabled": true,
+    "collectorVersion": "v0.35.0",
+    "exporters": [
+      "awsxray",
+      "awsemf",
+      "logging"
+    ],
+    "receivers": [
+      "otlp/grpc",
+      "otlp/http"
+    ],
+    "processors": [
+      "batch",
+      "memory_limiter",
+      "resource",
+      "attributes"
+    ]
+  },
+  "slo": {
+    "availability": {
+      "target": 99.9,
+      "measurement": "RunningTaskCount >= DesiredTaskCount",
+      "period": "30d"
+    },
+    "latency": {
+      "target": {
+        "p50": 100,
+        "p95": 500,
+        "p99": 1000
+      },
+      "unit": "milliseconds",
+      "period": "30d"
+    },
+    "errorRate": {
+      "target": 0.1,
+      "measurement": "ERROR logs / total requests * 100",
+      "unit": "percent",
+      "period": "30d"
+    }
+  },
+  "notifications": {
+    "critical": {
+      "description": "Critical alarms requiring immediate action",
+      "alarms": [
+        "cpu-critical",
+        "memory-critical",
+        "zero-tasks"
+      ],
+      "channels": [
+        "pagerduty",
+        "slack-critical"
+      ]
+    },
+    "warning": {
+      "description": "Warning alarms requiring investigation",
+      "alarms": [
+        "cpu-high",
+        "memory-high",
+        "task-count-low"
+      ],
+      "channels": [
+        "slack-alerts",
+        "email"
+      ]
+    },
+    "info": {
+      "description": "Informational alerts for monitoring",
+      "alarms": [
+        "autoscaling-events",
+        "deployment-events"
+      ],
+      "channels": [
+        "slack-monitoring"
+      ]
+    }
+  }
+}
