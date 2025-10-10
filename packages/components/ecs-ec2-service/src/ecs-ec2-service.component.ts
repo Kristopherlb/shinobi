@@ -259,7 +259,244 @@ export class EcsEc2ServiceComponent extends BaseComponent {
     });
 
     this.registerCapability('otel:environment', otelEnvVars);
+    
+    // Apply telemetry collectors if configured
+    this.applyTelemetryCollectors();
+    
+    // Create CloudWatch alarms
     this.createEcsServiceAlarms();
+    
+    // Create CloudWatch Dashboard if enabled
+    if (this.config.observability?.dashboard?.enabled !== false) {
+      this.createServiceDashboard();
+    }
+  }
+
+  private applyTelemetryCollectors(): void {
+    // X-Ray Daemon configuration
+    if (this.config.observability?.xray?.enabled) {
+      if (this.config.observability.xray.mode === 'sidecar') {
+        this.addXRayDaemonSidecar();
+      } else {
+        this.configureXRayRemote();
+      }
+    }
+
+    // ADOT Collector configuration
+    if (this.config.observability?.adot?.enabled) {
+      if (this.config.observability.adot.mode === 'sidecar') {
+        this.addAdotCollectorSidecar();
+      } else {
+        this.configureAdotRemote();
+      }
+    }
+  }
+
+  private addXRayDaemonSidecar(): void {
+    if (!this.taskDefinition || !this.logGroup) {
+      return;
+    }
+
+    const xrayContainer = this.taskDefinition.addContainer('XRayDaemon', {
+      image: ecs.ContainerImage.fromRegistry('amazon/aws-xray-daemon:latest'),
+      cpu: 128,
+      memoryLimitMiB: 256,
+      logging: ecs.LogDrivers.awsLogs({
+        streamPrefix: 'xray',
+        logGroup: this.logGroup
+      }),
+      essential: false  // Don't kill task if daemon fails
+    });
+
+    xrayContainer.addPortMappings({
+      containerPort: 2000,
+      protocol: ecs.Protocol.UDP
+    });
+
+    // Grant X-Ray permissions to task role
+    this.taskDefinition.taskRole.addManagedPolicy(
+      iam.ManagedPolicy.fromAwsManagedPolicyName('AWSXRayDaemonWriteAccess')
+    );
+
+    // Configure application container to use sidecar
+    const appContainer = this.taskDefinition.defaultContainer;
+    if (appContainer) {
+      appContainer.addEnvironment('AWS_XRAY_DAEMON_ADDRESS', 'localhost:2000');
+      appContainer.addEnvironment('AWS_XRAY_TRACING_NAME', this.context.serviceName);
+      appContainer.addEnvironment('AWS_XRAY_CONTEXT_MISSING', 'LOG_ERROR');
+    }
+
+    this.logComponentEvent('xray_sidecar_configured', 'X-Ray daemon sidecar added to task definition');
+  }
+
+  private configureXRayRemote(): void {
+    if (!this.taskDefinition) {
+      return;
+    }
+
+    // Use account-level X-Ray collector
+    const appContainer = this.taskDefinition.defaultContainer;
+    if (appContainer) {
+      appContainer.addEnvironment('AWS_XRAY_DAEMON_ADDRESS',
+        `xray-collector.${this.context.environment}.${this.context.region}.platform.local:2000`
+      );
+      appContainer.addEnvironment('AWS_XRAY_TRACING_NAME', this.context.serviceName);
+      appContainer.addEnvironment('AWS_XRAY_CONTEXT_MISSING', 'LOG_ERROR');
+    }
+
+    // Still need IAM permissions for centralized collector
+    this.taskDefinition.taskRole.addManagedPolicy(
+      iam.ManagedPolicy.fromAwsManagedPolicyName('AWSXRayDaemonWriteAccess')
+    );
+
+    this.logComponentEvent('xray_remote_configured', 'X-Ray configured to use centralized collector');
+  }
+
+  private addAdotCollectorSidecar(): void {
+    if (!this.taskDefinition || !this.logGroup) {
+      return;
+    }
+
+    const version = this.config.observability?.adot?.version ?? 'v0.35.0';
+    const adotContainer = this.taskDefinition.addContainer('ADOTCollector', {
+      image: ecs.ContainerImage.fromRegistry(
+        `public.ecr.aws/aws-observability/aws-otel-collector:${version}`
+      ),
+      cpu: 256,
+      memoryLimitMiB: 512,
+      logging: ecs.LogDrivers.awsLogs({
+        streamPrefix: 'adot',
+        logGroup: this.logGroup
+      }),
+      essential: false,
+      environment: {
+        'AOT_CONFIG_CONTENT': this.buildAdotConfig()
+      }
+    });
+
+    adotContainer.addPortMappings({
+      containerPort: 4317,
+      protocol: ecs.Protocol.TCP
+    });
+
+    adotContainer.addPortMappings({
+      containerPort: 4318,
+      protocol: ecs.Protocol.TCP
+    });
+
+    // Configure application container to send to ADOT sidecar
+    const appContainer = this.taskDefinition.defaultContainer;
+    if (appContainer) {
+      appContainer.addEnvironment('OTEL_EXPORTER_OTLP_ENDPOINT', 'http://localhost:4317');
+      appContainer.addEnvironment('OTEL_TRACES_EXPORTER', 'otlp');
+      appContainer.addEnvironment('OTEL_METRICS_EXPORTER', 'otlp');
+      appContainer.addContainerDependencies({
+        container: adotContainer,
+        condition: ecs.ContainerDependencyCondition.START
+      });
+    }
+
+    // Grant CloudWatch and X-Ray permissions for ADOT
+    this.taskDefinition.taskRole.addToPolicy(new iam.PolicyStatement({
+      actions: [
+        'logs:PutLogEvents',
+        'logs:CreateLogGroup',
+        'logs:CreateLogStream',
+        'logs:DescribeLogStreams',
+        'logs:DescribeLogGroups'
+      ],
+      resources: [`${this.logGroup.logGroupArn}:*`]
+    }));
+
+    this.taskDefinition.taskRole.addToPolicy(new iam.PolicyStatement({
+      actions: [
+        'xray:PutTraceSegments',
+        'xray:PutTelemetryRecords'
+      ],
+      resources: ['*']
+    }));
+
+    this.taskDefinition.taskRole.addToPolicy(new iam.PolicyStatement({
+      actions: [
+        'cloudwatch:PutMetricData'
+      ],
+      resources: ['*']
+    }));
+
+    this.logComponentEvent('adot_sidecar_configured', 'ADOT collector sidecar added to task definition', {
+      version
+    });
+  }
+
+  private buildAdotConfig(): string {
+    return JSON.stringify({
+      receivers: {
+        otlp: {
+          protocols: {
+            grpc: {
+              endpoint: '0.0.0.0:4317'
+            },
+            http: {
+              endpoint: '0.0.0.0:4318'
+            }
+          }
+        }
+      },
+      exporters: {
+        awsxray: {
+          region: this.context.region
+        },
+        awsemf: {
+          namespace: 'Shinobi/ECS',
+          region: this.context.region,
+          resource_to_telemetry_conversion: {
+            enabled: true
+          }
+        },
+        logging: {
+          loglevel: 'info'
+        }
+      },
+      service: {
+        pipelines: {
+          traces: {
+            receivers: ['otlp'],
+            exporters: ['awsxray', 'logging']
+          },
+          metrics: {
+            receivers: ['otlp'],
+            exporters: ['awsemf', 'logging']
+          }
+        }
+      }
+    });
+  }
+
+  private configureAdotRemote(): void {
+    if (!this.taskDefinition) {
+      return;
+    }
+
+    // Use account-level ADOT collector
+    const appContainer = this.taskDefinition.defaultContainer;
+    if (appContainer) {
+      appContainer.addEnvironment('OTEL_EXPORTER_OTLP_ENDPOINT',
+        `https://adot-collector.${this.context.environment}.${this.context.region}.platform.local:4317`
+      );
+      appContainer.addEnvironment('OTEL_TRACES_EXPORTER', 'otlp');
+      appContainer.addEnvironment('OTEL_METRICS_EXPORTER', 'otlp');
+    }
+
+    // Grant permissions for remote collector
+    this.taskDefinition.taskRole.addToPolicy(new iam.PolicyStatement({
+      actions: [
+        'xray:PutTraceSegments',
+        'xray:PutTelemetryRecords'
+      ],
+      resources: ['*']
+    }));
+
+    this.logComponentEvent('adot_remote_configured', 'ADOT configured to use centralized collector');
   }
 
   private createEcsServiceAlarms(): void {
