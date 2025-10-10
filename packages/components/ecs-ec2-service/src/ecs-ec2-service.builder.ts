@@ -166,12 +166,12 @@ export class EcsEc2ServiceConfigBuilder extends ConfigBuilder<EcsEc2ServiceConfi
         enableExecuteCommand: false
       },
       observability: {
-        xray: { enabled: false, mode: 'centralized' },
-        adot: { enabled: false, mode: 'centralized', version: 'v0.35.0' },
+        xray: { enabled: true, mode: 'centralized' },
+        adot: { enabled: true, mode: 'centralized', version: 'v0.35.0' },
         dashboard: { enabled: true, widgets: ['cpu', 'memory', 'tasks', 'logs'] }
       },
       network: {
-        egressPolicy: 'allow-all',
+        egressPolicy: 'vpc-only',
         vpcEndpoints: []
       },
       tags: {}
@@ -216,11 +216,11 @@ export class EcsEc2ServiceConfigBuilder extends ConfigBuilder<EcsEc2ServiceConfi
   private normaliseObservability(observability?: Partial<EcsObservabilityConfig>): EcsObservabilityConfig {
     return {
       xray: {
-        enabled: observability?.xray?.enabled ?? false,
+        enabled: observability?.xray?.enabled ?? true,
         mode: observability?.xray?.mode ?? 'centralized'
       },
       adot: {
-        enabled: observability?.adot?.enabled ?? false,
+        enabled: observability?.adot?.enabled ?? true,
         mode: observability?.adot?.mode ?? 'centralized',
         version: observability?.adot?.version ?? 'v0.35.0'
       },
@@ -233,7 +233,7 @@ export class EcsEc2ServiceConfigBuilder extends ConfigBuilder<EcsEc2ServiceConfi
 
   private normaliseNetwork(network?: Partial<EcsNetworkConfig>): EcsNetworkConfig {
     return {
-      egressPolicy: network?.egressPolicy ?? 'allow-all',
+      egressPolicy: network?.egressPolicy ?? 'vpc-only',
       vpcEndpoints: network?.vpcEndpoints ?? []
     };
   }

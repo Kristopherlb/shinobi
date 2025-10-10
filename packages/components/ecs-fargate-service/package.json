@@ -1,0 +1,66 @@
+{
+  "name": "@platform/ecs-fargate-service",
+  "version": "1.0.0",
+  "description": "ECS Fargate service component with Service Connect integration, blue-green deployment support, auto-scaling, and comprehensive CloudWatch monitoring for the Shinobi platform",
+  "main": "index.ts",
+  "types": "index.ts",
+  "license": "MIT",
+  "keywords": [
+    "aws",
+    "cdk",
+    "ecs",
+    "fargate",
+    "service-connect",
+    "containers",
+    "serverless",
+    "platform",
+    "shinobi",
+    "blue-green",
+    "deployment",
+    "auto-scaling",
+    "observability"
+  ],
+  "author": "Shinobi Platform Engineering",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/your-org/shinobi",
+    "directory": "packages/components/ecs-fargate-service"
+  },
+  "bugs": {
+    "url": "https://github.com/your-org/shinobi/issues"
+  },
+  "homepage": "https://github.com/your-org/shinobi/tree/main/packages/components/ecs-fargate-service#readme",
+  "dependencies": {
+    "@platform/contracts": "workspace:*",
+    "@shinobi/core": "workspace:*",
+    "aws-cdk-lib": "^2.100.0",
+    "constructs": "^10.0.0"
+  },
+  "devDependencies": {
+    "@types/jest": "^29.0.0",
+    "@types/node": "^20.0.0",
+    "cdk-nag": "^2.28.0",
+    "jest": "^29.0.0",
+    "ts-jest": "^29.0.0",
+    "typescript": "^5.0.0"
+  },
+  "peerDependencies": {
+    "aws-cdk-lib": "^2.100.0",
+    "constructs": "^10.0.0"
+  },
+  "scripts": {
+    "test": "jest",
+    "test:watch": "jest --watch",
+    "test:coverage": "jest --coverage",
+    "lint": "eslint . --ext .ts",
+    "build": "tsc --noEmit",
+    "validate": "npm run lint && npm run build && npm run test"
+  },
+  "engines": {
+    "node": ">=20.0.0",
+    "npm": ">=9.0.0"
+  },
+  "publishConfig": {
+    "access": "restricted"
+  }
+}

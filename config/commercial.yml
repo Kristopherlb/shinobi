@@ -773,6 +773,19 @@ defaults:
           evaluationPeriods: 3
     diagnostics:
       enableExecuteCommand: false
+    observability:
+      xray:
+        enabled: false # Cost optimization for commercial
+        mode: centralized
+      adot:
+        enabled: false # Cost optimization for commercial
+        mode: centralized
+        version: v0.35.0
+      dashboard:
+        enabled: true
+        widgets: ["cpu", "memory", "tasks", "logs"]
+    network:
+      egressPolicy: allow-all # Development-friendly default
 
   ssm-parameter:
     kind: string
@@ -1227,7 +1240,7 @@ defaults:
     backup:
       enabled: true
       retentionDays: 14
-      schedule: 'cron(0 5 * * ? *)'
+      schedule: "cron(0 5 * * ? *)"
     monitoring:
       enabled: true
       alarms:

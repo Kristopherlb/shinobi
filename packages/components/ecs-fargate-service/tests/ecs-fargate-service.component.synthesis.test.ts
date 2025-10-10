@@ -32,7 +32,7 @@ describe('EcsFargateServiceComponent synthesis', () => {
     } as ComponentContext;
   });
 
-  it('creates service, task definition, log group, and alarms using defaults', () => {
+  it('creates service, task definition, log group, alarms, and X-Ray sidecar', () => {
     const spec: ComponentSpec = {
       name: 'orders-api',
       type: 'ecs-fargate-service',
@@ -65,16 +65,19 @@ describe('EcsFargateServiceComponent synthesis', () => {
 
     const template = Template.fromStack(stack);
 
+    // Verify service properties
     template.hasResourceProperties('AWS::ECS::Service', {
       ServiceName: 'orders-orders-api',
       LaunchType: 'FARGATE',
       EnableExecuteCommand: true
     });
 
+    // Verify log group with retention
     template.hasResourceProperties('AWS::Logs::LogGroup', {
       RetentionInDays: 30
     });
 
+    // Verify CloudWatch alarms
     const alarmMap = template.findResources('AWS::CloudWatch::Alarm');
     const alarms = Object.values(alarmMap) as Array<{ Properties: any }>;
     expect(alarms).toHaveLength(3);
@@ -85,5 +88,128 @@ describe('EcsFargateServiceComponent synthesis', () => {
       expect.stringContaining('memory-high'),
       expect.stringContaining('tasks-low')
     ]));
+
+    // Verify X-Ray daemon sidecar is added
+    template.hasResourceProperties('AWS::ECS::TaskDefinition', {
+      ContainerDefinitions: expect.arrayContaining([
+        expect.objectContaining({
+          Name: 'xray-daemon',
+          Image: expect.stringContaining('xray')
+        })
+      ])
+    });
+
+    // Verify OTEL environment variables are injected
+    template.hasResourceProperties('AWS::ECS::TaskDefinition', {
+      ContainerDefinitions: expect.arrayContaining([
+        expect.objectContaining({
+          Name: 'Container',
+          Environment: expect.arrayContaining([
+            expect.objectContaining({
+              Name: 'OTEL_SERVICE_NAME',
+              Value: 'orders'
+            }),
+            expect.objectContaining({
+              Name: 'AWS_XRAY_DAEMON_ADDRESS',
+              Value: 'localhost:2000'
+            })
+          ])
+        })
+      ])
+    });
+
+    // Verify ephemeral storage is configured
+    template.hasResourceProperties('AWS::ECS::TaskDefinition', {
+      EphemeralStorage: {
+        SizeInGiB: 30 // Commercial default
+      }
+    });
+  });
+
+  it('creates KMS encryption for FedRAMP environments', () => {
+    const fedrampContext: ComponentContext = {
+      ...context,
+      complianceFramework: 'fedramp-moderate'
+    } as ComponentContext;
+
+    const spec: ComponentSpec = {
+      name: 'fedramp-api',
+      type: 'ecs-fargate-service',
+      config: {
+        cluster: cluster.clusterName,
+        image: {
+          repository: 'fedramp-api',
+          tag: 'v1.0.0'
+        },
+        serviceConnect: {
+          portMappingName: 'api',
+          namespace: 'internal.local'
+        }
+      }
+    };
+
+    const component = new EcsFargateServiceComponent(stack, 'FedRampService', fedrampContext, spec);
+    component.synth();
+
+    const template = Template.fromStack(stack);
+
+    // Verify KMS key is created
+    template.resourceCountIs('AWS::KMS::Key', 1);
+    template.hasResourceProperties('AWS::KMS::Key', {
+      EnableKeyRotation: true
+    });
+
+    // Verify log group uses KMS encryption
+    template.hasResourceProperties('AWS::Logs::LogGroup', {
+      KmsKeyId: expect.any(Object)
+    });
+
+    // Verify higher resource allocations
+    template.hasResourceProperties('AWS::ECS::TaskDefinition', {
+      Cpu: '512',
+      Memory: '1024',
+      EphemeralStorage: {
+        SizeInGiB: 50 // FedRAMP default
+      }
+    });
+
+    // Verify high availability
+    template.hasResourceProperties('AWS::ECS::Service', {
+      DesiredCount: 2
+    });
+  });
+
+  it('does not add default security group ingress rules', () => {
+    const spec: ComponentSpec = {
+      name: 'secure-api',
+      type: 'ecs-fargate-service',
+      config: {
+        cluster: cluster.clusterName,
+        image: {
+          repository: 'secure-api',
+          tag: 'latest'
+        },
+        serviceConnect: {
+          portMappingName: 'api',
+          namespace: 'internal.local'
+        }
+      }
+    };
+
+    const component = new EcsFargateServiceComponent(stack, 'SecureService', context, spec);
+    component.synth();
+
+    const template = Template.fromStack(stack);
+
+    // Verify security group exists
+    template.resourceCountIs('AWS::EC2::SecurityGroup', 1);
+
+    // Verify no ingress rules are added by default
+    // (ingress rules should be added by binder strategies only)
+    const sgResources = template.findResources('AWS::EC2::SecurityGroup');
+    const sg = Object.values(sgResources)[0] as any;
+
+    // SecurityGroupIngress should either not exist or be empty
+    expect(sg.Properties.SecurityGroupIngress || []).toHaveLength(0);
   });
 });

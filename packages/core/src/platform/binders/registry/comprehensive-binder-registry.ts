@@ -19,6 +19,7 @@ import { NeptuneBinderStrategy } from '../strategies/database/neptune-binder-str
 
 // Networking Services
 import { VpcBinderStrategy } from '../strategies/networking/vpc-binder-strategy.js';
+import { ServiceConnectBinderStrategy } from '../strategies/networking/service-connect-binder-strategy.js';
 
 // Analytics Services
 import { KinesisBinderStrategy } from '../strategies/analytics/kinesis-binder-strategy.js';
@@ -83,6 +84,7 @@ export class ComprehensiveBinderRegistry {
 
     // Networking Services
     this.register('vpc', new VpcBinderStrategy());
+    this.register('service:connect', new ServiceConnectBinderStrategy());
 
     // Analytics Services
     this.register('kinesis', new KinesisBinderStrategy());
@@ -176,7 +178,8 @@ export class ComprehensiveBinderRegistry {
         'iot-core'
       ],
       'Networking': [
-        'vpc'
+        'vpc',
+        'service:connect'
       ],
       'Analytics': [
         'kinesis',

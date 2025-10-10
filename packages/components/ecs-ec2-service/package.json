@@ -31,8 +31,8 @@
     "type-check": "tsc --noEmit"
   },
   "dependencies": {
-    "aws-cdk-lib": "^2.100.0",
-    "constructs": "^10.0.0",
+    "aws-cdk-lib": "^2.214.0",
+    "constructs": "^10.4.2",
     "@shinobi/core": "workspace:*",
     "@platform/contracts": "workspace:*"
   },
@@ -47,7 +47,7 @@
     "cdk-nag": "^2.27.0"
   },
   "peerDependencies": {
-    "aws-cdk-lib": "^2.100.0",
-    "constructs": "^10.0.0"
+    "aws-cdk-lib": "^2.214.0",
+    "constructs": "^10.4.2"
   }
 }

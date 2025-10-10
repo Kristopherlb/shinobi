@@ -126,7 +126,15 @@ export class EcsEc2ServiceComponent extends BaseComponent {
       if (!logging.logGroupName) {
         throw new Error('`config.logging.logGroupName` is required when `createLogGroup` is false.');
       }
-      return logs.LogGroup.fromLogGroupName(this, 'ImportedLogGroup', logging.logGroupName);
+      const imported = logs.LogGroup.fromLogGroupName(this, 'ImportedLogGroup', logging.logGroupName);
+
+      new logs.LogRetention(this, 'ImportedLogGroupRetention', {
+        logGroupName: logging.logGroupName,
+        retention: this.mapLogRetentionDays(logging.retentionInDays),
+        logGroupRegion: this.context.region
+      });
+
+      return imported;
     }
 
     const removalPolicy = logging.removalPolicy === 'destroy'
@@ -151,11 +159,12 @@ export class EcsEc2ServiceComponent extends BaseComponent {
 
   private createSecurityGroup(): void {
     const vpc = this.getVpcFromContext();
+    const egressPolicy = this.config.network?.egressPolicy ?? 'allow-all';
 
     this.securityGroup = new ec2.SecurityGroup(this, 'SecurityGroup', {
       vpc,
       description: `Security group for ${this.context.serviceName} ${this.spec.name}`,
-      allowAllOutbound: true
+      allowAllOutbound: egressPolicy === 'allow-all'
     });
 
     this.securityGroup.addIngressRule(
@@ -164,7 +173,49 @@ export class EcsEc2ServiceComponent extends BaseComponent {
       'Allow inbound traffic on service port'
     );
 
+    // Apply egress policy if not allow-all
+    this.applyEgressPolicy(vpc, egressPolicy);
+
     this.logResourceCreation('security-group', this.securityGroup.securityGroupId);
+  }
+
+  private applyEgressPolicy(vpc: ec2.IVpc, policy: string): void {
+    if (policy === 'allow-all') {
+      return; // Already configured in constructor
+    }
+
+    if (policy === 'vpc-only') {
+      this.securityGroup!.addEgressRule(
+        ec2.Peer.ipv4(vpc.vpcCidrBlock),
+        ec2.Port.allTraffic(),
+        'Allow all traffic within VPC'
+      );
+      this.logComponentEvent('egress_policy_applied', 'VPC-only egress policy configured');
+    }
+
+    if (policy === 'vpc-endpoints-only') {
+      // HTTPS to VPC CIDR (for VPC endpoints)
+      this.securityGroup!.addEgressRule(
+        ec2.Peer.ipv4(vpc.vpcCidrBlock),
+        ec2.Port.tcp(443),
+        'HTTPS to VPC endpoints'
+      );
+
+      // Add specific prefix list rules if provided
+      if (this.config.network?.vpcEndpoints && this.config.network.vpcEndpoints.length > 0) {
+        this.config.network.vpcEndpoints.forEach((prefixListId, index) => {
+          this.securityGroup!.addEgressRule(
+            ec2.Peer.prefixList(prefixListId),
+            ec2.Port.tcp(443),
+            `VPC Endpoint ${index + 1}: ${prefixListId}`
+          );
+        });
+      }
+
+      this.logComponentEvent('egress_policy_applied', 'VPC endpoints-only egress policy configured', {
+        prefixLists: this.config.network?.vpcEndpoints?.length ?? 0
+      });
+    }
   }
 
   private createEc2Service(): void {
@@ -259,13 +310,13 @@ export class EcsEc2ServiceComponent extends BaseComponent {
     });
 
     this.registerCapability('otel:environment', otelEnvVars);
-    
+
     // Apply telemetry collectors if configured
     this.applyTelemetryCollectors();
-    
+
     // Create CloudWatch alarms
     this.createEcsServiceAlarms();
-    
+
     // Create CloudWatch Dashboard if enabled
     if (this.config.observability?.dashboard?.enabled !== false) {
       this.createServiceDashboard();
@@ -565,6 +616,180 @@ export class EcsEc2ServiceComponent extends BaseComponent {
     }
   }
 
+  private createServiceDashboard(): void {
+    if (!this.service) {
+      return;
+    }
+
+    const cluster = this.getClusterFromBinding();
+    const serviceName = this.service.serviceName;
+    const widgets = this.config.observability?.dashboard?.widgets ?? ['cpu', 'memory', 'tasks', 'logs'];
+
+    const dashboard = new cloudwatch.Dashboard(this, 'ServiceDashboard', {
+      dashboardName: `${this.context.serviceName}-${this.spec.name}`,
+      periodOverride: cloudwatch.PeriodOverride.AUTO
+    });
+
+    const dashboardWidgets: cloudwatch.IWidget[] = [];
+
+    // CPU and Memory Widget
+    if (widgets.includes('cpu') || widgets.includes('memory')) {
+      const cpuMetric = new cloudwatch.Metric({
+        namespace: 'AWS/ECS',
+        metricName: 'CPUUtilization',
+        dimensionsMap: {
+          ServiceName: serviceName,
+          ClusterName: cluster.clusterName
+        },
+        statistic: 'Average',
+        period: cdk.Duration.minutes(5),
+        label: 'CPU %'
+      });
+
+      const memoryMetric = new cloudwatch.Metric({
+        namespace: 'AWS/ECS',
+        metricName: 'MemoryUtilization',
+        dimensionsMap: {
+          ServiceName: serviceName,
+          ClusterName: cluster.clusterName
+        },
+        statistic: 'Average',
+        period: cdk.Duration.minutes(5),
+        label: 'Memory %'
+      });
+
+      dashboardWidgets.push(
+        new cloudwatch.GraphWidget({
+          title: 'CPU and Memory Utilization',
+          width: 12,
+          height: 6,
+          left: [cpuMetric],
+          right: [memoryMetric],
+          leftYAxis: { min: 0, max: 100, label: 'CPU %' },
+          rightYAxis: { min: 0, max: 100, label: 'Memory %' }
+        })
+      );
+    }
+
+    // Task Count Widget
+    if (widgets.includes('tasks')) {
+      dashboardWidgets.push(
+        new cloudwatch.GraphWidget({
+          title: 'Task Count',
+          width: 12,
+          height: 6,
+          left: [
+            new cloudwatch.Metric({
+              namespace: 'AWS/ECS',
+              metricName: 'DesiredTaskCount',
+              dimensionsMap: { ServiceName: serviceName, ClusterName: cluster.clusterName },
+              label: 'Desired',
+              color: cloudwatch.Color.BLUE
+            }),
+            new cloudwatch.Metric({
+              namespace: 'AWS/ECS',
+              metricName: 'RunningTaskCount',
+              dimensionsMap: { ServiceName: serviceName, ClusterName: cluster.clusterName },
+              label: 'Running',
+              color: cloudwatch.Color.GREEN
+            }),
+            new cloudwatch.Metric({
+              namespace: 'AWS/ECS',
+              metricName: 'PendingTaskCount',
+              dimensionsMap: { ServiceName: serviceName, ClusterName: cluster.clusterName },
+              label: 'Pending',
+              color: cloudwatch.Color.ORANGE
+            })
+          ]
+        })
+      );
+    }
+
+    // Service Connect Widget
+    if (widgets.includes('service-connect')) {
+      dashboardWidgets.push(
+        new cloudwatch.GraphWidget({
+          title: 'Service Connect Metrics',
+          width: 12,
+          height: 6,
+          left: [
+            new cloudwatch.Metric({
+              namespace: 'Shinobi/ECS',
+              metricName: 'ServiceConnectRequests',
+              dimensionsMap: { ServiceName: serviceName },
+              statistic: 'Sum',
+              label: 'Requests'
+            })
+          ],
+          right: [
+            new cloudwatch.Metric({
+              namespace: 'Shinobi/ECS',
+              metricName: 'ServiceConnectLatency',
+              dimensionsMap: { ServiceName: serviceName },
+              statistic: 'Average',
+              label: 'Latency (ms)'
+            })
+          ]
+        })
+      );
+    }
+
+    // Log Insights Widget
+    if (widgets.includes('logs') && this.logGroup) {
+      dashboardWidgets.push(
+        new cloudwatch.LogQueryWidget({
+          title: 'Recent Errors',
+          width: 24,
+          height: 6,
+          logGroupNames: [this.logGroup.logGroupName],
+          queryString: `fields @timestamp, @message, level
+| filter level = "ERROR"
+| sort @timestamp desc
+| limit 20`
+        })
+      );
+    }
+
+    // Alarms Widget
+    if (widgets.includes('alarms')) {
+      dashboardWidgets.push(
+        new cloudwatch.AlarmStatusWidget({
+          title: 'Service Alarms',
+          width: 24,
+          height: 3,
+          alarms: [
+            cloudwatch.Alarm.fromAlarmArn(
+              this,
+              'DashboardCpuAlarm',
+              `arn:aws:cloudwatch:${this.context.region}:${this.context.accountId}:alarm:${this.context.serviceName}-${this.spec.name}-cpu-high`
+            ),
+            cloudwatch.Alarm.fromAlarmArn(
+              this,
+              'DashboardMemoryAlarm',
+              `arn:aws:cloudwatch:${this.context.region}:${this.context.accountId}:alarm:${this.context.serviceName}-${this.spec.name}-memory-high`
+            )
+          ]
+        })
+      );
+    }
+
+    // Add all widgets to dashboard
+    dashboard.addWidgets(...dashboardWidgets);
+
+    this.applyStandardTags(dashboard, {
+      'dashboard-type': 'service-monitoring',
+      'service-name': serviceName,
+      'cluster-name': cluster.clusterName
+    });
+
+    this.registerConstruct('dashboard', dashboard);
+
+    this.logComponentEvent('dashboard_created', 'CloudWatch Dashboard created', {
+      widgetCount: dashboardWidgets.length,
+      widgets: widgets.join(',')
+    });
+  }
+
   private applyServiceTags(): void {
     const standardTags = {
       'component-type': 'ecs-ec2-service',
@@ -576,21 +801,30 @@ export class EcsEc2ServiceComponent extends BaseComponent {
 
     if (this.service) {
       this.applyStandardTags(this.service, standardTags);
+      Object.entries(this.config.tags).forEach(([key, value]) => {
+        cdk.Tags.of(this.service!).add(key, value);
+      });
     }
 
     if (this.taskDefinition) {
       this.applyStandardTags(this.taskDefinition, standardTags);
+      Object.entries(this.config.tags).forEach(([key, value]) => {
+        cdk.Tags.of(this.taskDefinition!).add(key, value);
+      });
     }
 
     if (this.securityGroup) {
       this.applyStandardTags(this.securityGroup, standardTags);
+      Object.entries(this.config.tags).forEach(([key, value]) => {
+        cdk.Tags.of(this.securityGroup!).add(key, value);
+      });
     }
 
-    Object.entries(this.config.tags).forEach(([key, value]) => {
-      if (this.service) {
-        cdk.Tags.of(this.service).add(key, value);
-      }
-    });
+    if (this.createdLogGroup) {
+      Object.entries(this.config.tags).forEach(([key, value]) => {
+        cdk.Tags.of(this.createdLogGroup!).add(key, value);
+      });
+    }
   }
 
   private buildServiceConnectCapability() {
@@ -602,6 +836,7 @@ export class EcsEc2ServiceComponent extends BaseComponent {
       dnsName: `${this.spec.name}.${cluster.defaultCloudMapNamespace?.namespaceName}`,
       port: this.config.port,
       portMappingName: this.config.serviceConnect.portMappingName,
+      sgId: this.securityGroup!.securityGroupId,
       securityGroupId: this.securityGroup!.securityGroupId,
       internalEndpoint: `http://${this.spec.name}.internal:${this.config.port}`,
       computeType: 'EC2'

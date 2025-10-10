@@ -99,6 +99,14 @@ export class EcsEc2ServiceComponentCreator implements IComponentCreator {
       }
     }
 
+    if (config?.observability?.xray?.enabled === false) {
+      errors.push('Observability standard violation: X-Ray tracing cannot be disabled for ecs-ec2-service components');
+    }
+
+    if (config?.observability?.adot?.enabled === false) {
+      errors.push('Observability standard violation: ADOT telemetry cannot be disabled for ecs-ec2-service components');
+    }
+
     return {
       valid: errors.length === 0,
       errors

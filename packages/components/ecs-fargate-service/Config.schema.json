@@ -1,0 +1,505 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "$id": "https://platform.shinobi.internal/schemas/ecs-fargate-service/v1.0.0",
+  "title": "ECS Fargate Service Component Configuration",
+  "description": "Configuration schema for serverless ECS Fargate service with Service Connect, blue-green deployment, and comprehensive observability",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "cluster",
+    "image",
+    "serviceConnect"
+  ],
+  "properties": {
+    "cluster": {
+      "type": "string",
+      "minLength": 1,
+      "description": "ECS cluster name or ARN where the service will be deployed"
+    },
+    "image": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "repository"
+      ],
+      "properties": {
+        "repository": {
+          "type": "string",
+          "minLength": 1,
+          "description": "Container image repository (ECR URI or Docker Hub image name)"
+        },
+        "tag": {
+          "type": "string",
+          "default": "latest",
+          "description": "Container image tag"
+        }
+      }
+    },
+    "cpu": {
+      "type": "number",
+      "enum": [
+        256,
+        512,
+        1024,
+        2048,
+        4096,
+        8192,
+        16384
+      ],
+      "default": 256,
+      "description": "Task CPU units (1024 = 1 vCPU). Must be compatible with memory setting."
+    },
+    "memory": {
+      "type": "number",
+      "minimum": 512,
+      "maximum": 122880,
+      "default": 512,
+      "description": "Task memory in MiB. Must be compatible with CPU setting."
+    },
+    "port": {
+      "type": "number",
+      "minimum": 1,
+      "maximum": 65535,
+      "default": 8080,
+      "description": "Container port for the service"
+    },
+    "serviceConnect": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "portMappingName"
+      ],
+      "description": "ECS Service Connect configuration for service discovery",
+      "properties": {
+        "portMappingName": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 64,
+          "description": "Name for the port mapping (used for service discovery)"
+        },
+        "dnsName": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 253,
+          "description": "DNS name for service discovery (defaults to component name)"
+        },
+        "namespace": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 253,
+          "description": "Cloud Map namespace for service discovery (defaults to cluster namespace)"
+        }
+      }
+    },
+    "environment": {
+      "type": "object",
+      "additionalProperties": {
+        "type": "string"
+      },
+      "default": {},
+      "description": "Environment variables for the container"
+    },
+    "secrets": {
+      "type": "object",
+      "additionalProperties": {
+        "type": "string"
+      },
+      "default": {},
+      "description": "Secrets from AWS Secrets Manager (key: env var name, value: secret ARN)"
+    },
+    "taskRoleArn": {
+      "type": "string",
+      "description": "ARN of IAM role for the task (auto-created if not provided)"
+    },
+    "desiredCount": {
+      "type": "number",
+      "minimum": 0,
+      "maximum": 1000,
+      "default": 1,
+      "description": "Desired number of task instances"
+    },
+    "healthCheck": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "command"
+      ],
+      "description": "Container health check configuration",
+      "properties": {
+        "command": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          },
+          "minItems": 1,
+          "description": "Health check command (e.g., ['CMD-SHELL', 'curl -f http://localhost:8080/health || exit 1'])"
+        },
+        "intervalSeconds": {
+          "type": "number",
+          "minimum": 5,
+          "maximum": 300,
+          "default": 30,
+          "description": "Time between health checks in seconds"
+        },
+        "timeoutSeconds": {
+          "type": "number",
+          "minimum": 2,
+          "maximum": 60,
+          "default": 5,
+          "description": "Health check timeout in seconds"
+        },
+        "retries": {
+          "type": "number",
+          "minimum": 1,
+          "maximum": 10,
+          "default": 3,
+          "description": "Number of consecutive failures before marking unhealthy"
+        }
+      }
+    },
+    "autoScaling": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "minCapacity",
+        "maxCapacity"
+      ],
+      "description": "Auto-scaling configuration",
+      "properties": {
+        "minCapacity": {
+          "type": "number",
+          "minimum": 0,
+          "maximum": 1000,
+          "description": "Minimum number of tasks"
+        },
+        "maxCapacity": {
+          "type": "number",
+          "minimum": 1,
+          "maximum": 1000,
+          "description": "Maximum number of tasks"
+        },
+        "targetCpuUtilization": {
+          "type": "number",
+          "minimum": 10,
+          "maximum": 100,
+          "description": "Target CPU utilization percentage for scaling"
+        },
+        "targetMemoryUtilization": {
+          "type": "number",
+          "minimum": 10,
+          "maximum": 100,
+          "description": "Target memory utilization percentage for scaling"
+        }
+      }
+    },
+    "deploymentStrategy": {
+      "type": "object",
+      "additionalProperties": false,
+      "description": "Deployment strategy configuration",
+      "properties": {
+        "type": {
+          "type": "string",
+          "enum": [
+            "rolling",
+            "blue-green"
+          ],
+          "default": "rolling",
+          "description": "Deployment type"
+        },
+        "blueGreen": {
+          "type": "object",
+          "additionalProperties": false,
+          "description": "Blue-green deployment configuration (required if type is 'blue-green')",
+          "properties": {
+            "loadBalancer": {
+              "type": "object",
+              "additionalProperties": false,
+              "required": [
+                "productionPort"
+              ],
+              "properties": {
+                "productionPort": {
+                  "type": "number",
+                  "minimum": 1,
+                  "maximum": 65535,
+                  "description": "ALB production listener port"
+                },
+                "testPort": {
+                  "type": "number",
+                  "minimum": 1,
+                  "maximum": 65535,
+                  "description": "ALB test listener port (defaults to productionPort + 1)"
+                }
+              }
+            },
+            "trafficShifting": {
+              "type": "object",
+              "additionalProperties": false,
+              "properties": {
+                "initialPercentage": {
+                  "type": "number",
+                  "minimum": 0,
+                  "maximum": 100,
+                  "default": 10,
+                  "description": "Initial traffic percentage to shift to new version"
+                },
+                "waitTime": {
+                  "type": "number",
+                  "minimum": 1,
+                  "maximum": 1440,
+                  "default": 5,
+                  "description": "Wait time in minutes before completing traffic shift"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "logging": {
+      "type": "object",
+      "additionalProperties": false,
+      "description": "CloudWatch Logs configuration",
+      "properties": {
+        "createLogGroup": {
+          "type": "boolean",
+          "default": true,
+          "description": "Whether to create a new log group"
+        },
+        "logGroupName": {
+          "type": "string",
+          "description": "Custom log group name (defaults to /ecs/{service}/{component})"
+        },
+        "streamPrefix": {
+          "type": "string",
+          "default": "service",
+          "description": "Log stream prefix"
+        },
+        "retentionInDays": {
+          "type": "number",
+          "enum": [
+            1,
+            3,
+            5,
+            7,
+            14,
+            30,
+            60,
+            90,
+            120,
+            150,
+            180,
+            365,
+            400,
+            545,
+            731,
+            1827,
+            3653
+          ],
+          "default": 30,
+          "description": "Log retention period in days"
+        },
+        "removalPolicy": {
+          "type": "string",
+          "enum": [
+            "retain",
+            "destroy"
+          ],
+          "default": "retain",
+          "description": "What to do with logs when stack is deleted"
+        }
+      }
+    },
+    "monitoring": {
+      "type": "object",
+      "additionalProperties": false,
+      "description": "CloudWatch monitoring and alarms configuration",
+      "properties": {
+        "enabled": {
+          "type": "boolean",
+          "default": true,
+          "description": "Whether monitoring is enabled"
+        },
+        "alarms": {
+          "type": "object",
+          "additionalProperties": false,
+          "properties": {
+            "cpuUtilization": {
+              "$ref": "#/definitions/alarm"
+            },
+            "memoryUtilization": {
+              "$ref": "#/definitions/alarm"
+            },
+            "runningTaskCount": {
+              "$ref": "#/definitions/alarm"
+            }
+          }
+        }
+      }
+    },
+    "diagnostics": {
+      "type": "object",
+      "additionalProperties": false,
+      "description": "Diagnostic and troubleshooting features",
+      "properties": {
+        "enableExecuteCommand": {
+          "type": "boolean",
+          "default": false,
+          "description": "Enable ECS Exec for debugging (required for FedRAMP audit)"
+        }
+      }
+    },
+    "hardeningProfile": {
+      "type": "string",
+      "default": "baseline",
+      "description": "Security hardening profile"
+    },
+    "tags": {
+      "type": "object",
+      "additionalProperties": {
+        "type": "string"
+      },
+      "default": {},
+      "description": "Additional custom tags for resources"
+    }
+  },
+  "definitions": {
+    "alarm": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "enabled": {
+          "type": "boolean",
+          "default": false,
+          "description": "Whether this alarm is enabled"
+        },
+        "threshold": {
+          "type": "number",
+          "description": "Alarm threshold value"
+        },
+        "evaluationPeriods": {
+          "type": "number",
+          "minimum": 1,
+          "default": 2,
+          "description": "Number of periods to evaluate"
+        },
+        "periodMinutes": {
+          "type": "number",
+          "minimum": 1,
+          "default": 5,
+          "description": "Period length in minutes"
+        },
+        "comparisonOperator": {
+          "type": "string",
+          "enum": [
+            "gt",
+            "gte",
+            "lt",
+            "lte"
+          ],
+          "default": "gt",
+          "description": "Comparison operator (gt=greater than, gte=greater than or equal, lt=less than, lte=less than or equal)"
+        },
+        "treatMissingData": {
+          "type": "string",
+          "enum": [
+            "breaching",
+            "not-breaching",
+            "ignore",
+            "missing"
+          ],
+          "default": "not-breaching",
+          "description": "How to treat missing data points"
+        },
+        "statistic": {
+          "type": "string",
+          "default": "Average",
+          "description": "Metric statistic to evaluate"
+        },
+        "datapointsToAlarm": {
+          "type": "number",
+          "minimum": 1,
+          "description": "Number of datapoints that must be breaching to trigger alarm"
+        },
+        "tags": {
+          "type": "object",
+          "additionalProperties": {
+            "type": "string"
+          },
+          "description": "Tags for the alarm"
+        }
+      }
+    }
+  },
+  "examples": [
+    {
+      "name": "simple-api",
+      "description": "Basic API service with minimal configuration",
+      "config": {
+        "cluster": "shared-cluster",
+        "image": {
+          "repository": "123456789012.dkr.ecr.us-east-1.amazonaws.com/my-api",
+          "tag": "v1.0.0"
+        },
+        "serviceConnect": {
+          "portMappingName": "api"
+        }
+      }
+    },
+    {
+      "name": "production-api-with-autoscaling",
+      "description": "Production API with auto-scaling and blue-green deployment",
+      "config": {
+        "cluster": "prod-cluster",
+        "image": {
+          "repository": "123456789012.dkr.ecr.us-east-1.amazonaws.com/orders-api",
+          "tag": "v2.1.0"
+        },
+        "cpu": 1024,
+        "memory": 2048,
+        "desiredCount": 3,
+        "serviceConnect": {
+          "portMappingName": "orders-api",
+          "dnsName": "orders"
+        },
+        "autoScaling": {
+          "minCapacity": 3,
+          "maxCapacity": 10,
+          "targetCpuUtilization": 70,
+          "targetMemoryUtilization": 80
+        },
+        "deploymentStrategy": {
+          "type": "blue-green",
+          "blueGreen": {
+            "loadBalancer": {
+              "productionPort": 80,
+              "testPort": 8080
+            },
+            "trafficShifting": {
+              "initialPercentage": 10,
+              "waitTime": 5
+            }
+          }
+        },
+        "monitoring": {
+          "enabled": true,
+          "alarms": {
+            "cpuUtilization": {
+              "enabled": true,
+              "threshold": 80
+            },
+            "memoryUtilization": {
+              "enabled": true,
+              "threshold": 85
+            },
+            "runningTaskCount": {
+              "enabled": true,
+              "threshold": 3,
+              "comparisonOperator": "lt"
+            }
+          }
+        }
+      }
+    }
+  ]
+}

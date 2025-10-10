@@ -10,6 +10,7 @@ import * as ecs from 'aws-cdk-lib/aws-ecs';
 import * as ec2 from 'aws-cdk-lib/aws-ec2';
 import * as logs from 'aws-cdk-lib/aws-logs';
 import * as iam from 'aws-cdk-lib/aws-iam';
+import * as kms from 'aws-cdk-lib/aws-kms';
 import * as secretsmanager from 'aws-cdk-lib/aws-secretsmanager';
 import * as cloudwatch from 'aws-cdk-lib/aws-cloudwatch';
 import * as elbv2 from 'aws-cdk-lib/aws-elasticloadbalancingv2';
@@ -53,33 +54,33 @@ export class EcsFargateServiceComponent extends BaseComponent {
    */
   public synth(): void {
     this.logComponentEvent('synthesis_start', 'Starting ECS Fargate Service synthesis');
-    
+
     try {
       // Build configuration using ConfigBuilder
       this.configBuilder = new EcsFargateServiceComponentConfigBuilder(this.context, this.spec);
       this.config = this.configBuilder.buildSync();
-      
+
       // Validate CPU/Memory combination
       this.validateCpuMemoryCombination();
-      
+
       // Create task definition
       this.createTaskDefinition();
-      
+
       // Create security group
       this.createSecurityGroup();
-      
+
       // Create Fargate service
       this.createFargateService();
-      
+
       // Configure auto scaling if specified
       this.configureAutoScaling();
-      
+
       // Apply standard platform tags
       this.applyServiceTags();
-      
+
       // Configure OpenTelemetry observability (CloudWatch alarms)
       this._configureObservabilityForEcsService();
-      
+
       // Register constructs
       this.registerConstruct('service', this.service!);
       this.registerConstruct('taskDefinition', this.taskDefinition!);
@@ -87,10 +88,10 @@ export class EcsFargateServiceComponent extends BaseComponent {
       if (this.createdLogGroup) {
         this.registerConstruct('logGroup', this.createdLogGroup);
       }
-      
+
       // Register service:connect capability
       this.registerCapability('service:connect', this.buildServiceConnectCapability());
-      
+
       this.logComponentEvent('synthesis_complete', 'ECS Fargate Service synthesis completed successfully');
     } catch (error) {
       this.logError(error as Error, 'ECS Fargate Service synthesis');
@@ -119,7 +120,7 @@ export class EcsFargateServiceComponent extends BaseComponent {
   private validateCpuMemoryCombination(): void {
     const cpu = this.config!.cpu;
     const memory = this.config!.memory;
-    
+
     // Fargate CPU/Memory compatibility matrix
     const compatibleMemory: Record<number, number[]> = {
       256: [512, 1024, 2048],
@@ -128,7 +129,7 @@ export class EcsFargateServiceComponent extends BaseComponent {
       2048: [4096, 5120, 6144, 7168, 8192, 9216, 10240, 11264, 12288, 13312, 14336, 15360, 16384],
       4096: [8192, 9216, 10240, 11264, 12288, 13312, 14336, 15360, 16384, 17408, 18432, 19456, 20480, 21504, 22528, 23552, 24576, 25600, 26624, 27648, 28672, 29696, 30720],
     };
-    
+
     if (!compatibleMemory[cpu]?.includes(memory)) {
       throw new Error(
         `Invalid CPU/Memory combination: ${cpu} vCPU with ${memory} MB memory. ` +
@@ -138,7 +139,7 @@ export class EcsFargateServiceComponent extends BaseComponent {
   }
 
   /**
-   * Create Fargate task definition
+   * Create Fargate task definition with encryption and X-Ray support
    */
   private createTaskDefinition(): void {
     const logGroup = this.resolveLogGroup();
@@ -152,20 +153,36 @@ export class EcsFargateServiceComponent extends BaseComponent {
         assumedBy: new iam.ServicePrincipal('ecs-tasks.amazonaws.com'),
         description: `Task role for ${this.context.serviceName} ${this.spec.name}`,
       });
+
+      // Add X-Ray permissions for distributed tracing
+      taskRole.addManagedPolicy(
+        iam.ManagedPolicy.fromAwsManagedPolicyName('AWSXRayDaemonWriteAccess')
+      );
     }
 
-    // Create task definition
+    // Determine ephemeral storage size based on framework
+    const isFedRamp = this.context.complianceFramework?.startsWith('fedramp');
+    const ephemeralStorageGiB = isFedRamp ? 50 : 30;
+
+    // Create task definition with ephemeral storage encryption
     this.taskDefinition = new ecs.FargateTaskDefinition(this, 'TaskDefinition', {
       family: `${this.context.serviceName}-${this.spec.name}`,
       cpu: this.config!.cpu,
       memoryLimitMiB: this.config!.memory,
       taskRole: taskRole,
+      ephemeralStorageGiB: ephemeralStorageGiB,
     });
 
-    // Add container to task definition
-    const imageUri = this.config!.image.tag ? 
+    // Add container to task definition with OTEL environment variables
+    const imageUri = this.config!.image.tag ?
       `${this.config!.image.repository}:${this.config!.image.tag}` :
       `${this.config!.image.repository}:latest`;
+
+    // Build environment with OTEL configuration
+    const environment = {
+      ...this.config!.environment,
+      ...this.buildOtelEnvironment(),
+    };
 
     const container = this.taskDefinition.addContainer('Container', {
       image: ecs.ContainerImage.fromRegistry(imageUri),
@@ -173,9 +190,12 @@ export class EcsFargateServiceComponent extends BaseComponent {
         streamPrefix: this.config!.logging.streamPrefix || this.spec.name,
         logGroup
       }),
-      environment: this.config!.environment,
+      environment,
       secrets: this.buildSecretsFromConfig(),
     });
+
+    // Add X-Ray daemon sidecar for distributed tracing
+    this.addXRayDaemonSidecar(logGroup);
 
     // Add port mapping
     container.addPortMappings({
@@ -217,16 +237,21 @@ export class EcsFargateServiceComponent extends BaseComponent {
       ? cdk.RemovalPolicy.DESTROY
       : cdk.RemovalPolicy.RETAIN;
 
+    // Get KMS key for log encryption (required for FedRAMP)
+    const encryptionKey = this.getLogEncryptionKey();
+
     const logGroup = new logs.LogGroup(this, 'LogGroup', {
       logGroupName,
       retention: this.mapLogRetention(loggingConfig.retentionInDays),
-      removalPolicy
+      removalPolicy,
+      encryptionKey, // Add KMS encryption
     });
 
     this.applyStandardTags(logGroup, {
       'resource-type': 'log-group',
       'service-name': this.context.serviceName,
-      'component-name': this.spec.name
+      'component-name': this.spec.name,
+      'encrypted': encryptionKey ? 'true' : 'false'
     });
 
     this.logGroup = logGroup;
@@ -235,23 +260,64 @@ export class EcsFargateServiceComponent extends BaseComponent {
   }
 
   /**
+   * Get KMS key for log encryption (required for FedRAMP)
+   */
+  private getLogEncryptionKey(): kms.IKey | undefined {
+    const framework = this.context.complianceFramework;
+
+    // Commercial environments use AWS-managed encryption (default)
+    if (!framework || framework === 'commercial') {
+      return undefined;
+    }
+
+    // FedRAMP requires customer-managed CMK
+    if (framework.startsWith('fedramp')) {
+      // Check if KMS key is provided in context
+      if ((this.context as any).kmsKeyArn) {
+        return kms.Key.fromKeyArn(this, 'LogKmsKey', (this.context as any).kmsKeyArn);
+      }
+
+      // Create a new CMK for this service
+      const key = new kms.Key(this, 'LogEncryptionKey', {
+        description: `Log encryption key for ${this.context.serviceName} ${this.spec.name}`,
+        enableKeyRotation: true,
+        removalPolicy: cdk.RemovalPolicy.RETAIN, // Never delete encryption keys
+      });
+
+      this.applyStandardTags(key, {
+        'resource-type': 'kms-key',
+        'purpose': 'log-encryption',
+        'compliance-framework': framework
+      });
+
+      return key;
+    }
+
+    return undefined;
+  }
+
+  /**
    * Create security group for the service
+   * NOTE: Ingress rules are added by binder strategies, not here
+   * Per Platform Security Standard: least-privilege, no default VPC-wide access
    */
   private createSecurityGroup(): void {
     const vpc = this.getVpcFromContext();
-    
+
     this.securityGroup = new ec2.SecurityGroup(this, 'SecurityGroup', {
       vpc: vpc,
       description: `Security group for ${this.context.serviceName} ${this.spec.name}`,
-      allowAllOutbound: true, // Allow outbound traffic by default
+      allowAllOutbound: true, // Allow outbound traffic (can be restricted via config)
     });
 
-    // Allow inbound traffic on the service port from within VPC
-    this.securityGroup.addIngressRule(
-      ec2.Peer.ipv4(vpc.vpcCidrBlock),
-      ec2.Port.tcp(this.config!.port),
-      'Allow inbound traffic on service port'
-    );
+    // DO NOT add default ingress rules here
+    // Ingress rules are created by binder strategies when components bind to this service
+    // This ensures least-privilege: only explicitly bound sources can connect
+
+    this.applyStandardTags(this.securityGroup, {
+      'resource-type': 'security-group',
+      'ingress-policy': 'binder-managed'
+    });
 
     this.logResourceCreation('security-group', this.securityGroup.securityGroupId);
   }
@@ -294,7 +360,7 @@ export class EcsFargateServiceComponent extends BaseComponent {
 
     // Check deployment strategy and configure accordingly
     const isBlueGreenDeployment = this.config!.deploymentStrategy?.type === 'blue-green';
-    
+
     // Create the Fargate service
     const serviceConnectNamespace = this.config!.serviceConnect.namespace
       ?? cluster.defaultCloudMapNamespace?.namespaceName;
@@ -308,13 +374,13 @@ export class EcsFargateServiceComponent extends BaseComponent {
       taskDefinition: this.taskDefinition,
       desiredCount: this.config!.desiredCount,
       serviceName: `${this.context.serviceName}-${this.spec.name}`,
-      
+
       // Network configuration
       vpcSubnets: {
         subnetType: ec2.SubnetType.PRIVATE_WITH_EGRESS, // Private subnets for security
       },
       securityGroups: [this.securityGroup],
-      
+
       // Service Connect configuration
       serviceConnectConfiguration: {
         namespace: serviceConnectNamespace,
@@ -324,12 +390,12 @@ export class EcsFargateServiceComponent extends BaseComponent {
           port: this.config!.port,
         }],
       },
-      
+
       // Blue-green deployment configuration
       deploymentController: isBlueGreenDeployment ? {
         type: ecs.DeploymentControllerType.CODE_DEPLOY
       } : undefined,
-      
+
       // Enable circuit breaker for rolling deployment safety (not used for blue-green)
       enableExecuteCommand: this.config!.diagnostics.enableExecuteCommand,
     });
@@ -351,7 +417,7 @@ export class EcsFargateServiceComponent extends BaseComponent {
     }
 
     const autoScalingConfig = this.config!.autoScaling;
-    
+
     // Setup service auto scaling
     const scaling = this.service.autoScaleTaskCount({
       minCapacity: autoScalingConfig.minCapacity,
@@ -376,7 +442,7 @@ export class EcsFargateServiceComponent extends BaseComponent {
       });
     }
 
-    this.logComponentEvent('autoscaling_configured', 
+    this.logComponentEvent('autoscaling_configured',
       `Auto scaling configured: ${autoScalingConfig.minCapacity}-${autoScalingConfig.maxCapacity} tasks`);
   }
 
@@ -393,11 +459,11 @@ export class EcsFargateServiceComponent extends BaseComponent {
     if (this.service) {
       this.applyStandardTags(this.service, standardTags);
     }
-    
+
     if (this.taskDefinition) {
       this.applyStandardTags(this.taskDefinition, standardTags);
     }
-    
+
     if (this.securityGroup) {
       this.applyStandardTags(this.securityGroup, standardTags);
     }
@@ -418,7 +484,7 @@ export class EcsFargateServiceComponent extends BaseComponent {
   private buildServiceConnectCapability() {
     const cluster = this.getClusterFromBinding();
     const isBlueGreenDeployment = this.config!.deploymentStrategy?.type === 'blue-green';
-    
+
     const capability: any = {
       serviceName: this.spec.name,
       serviceArn: this.service!.serviceArn,
@@ -454,7 +520,7 @@ export class EcsFargateServiceComponent extends BaseComponent {
         testListener: {
           arn: this.blueGreenResources.testListener.listenerArn,
           port: this.config!.deploymentStrategy!.blueGreen!.loadBalancer!.testPort ||
-                (this.config!.deploymentStrategy!.blueGreen!.loadBalancer!.productionPort + 1)
+            (this.config!.deploymentStrategy!.blueGreen!.loadBalancer!.productionPort + 1)
         },
         trafficShifting: {
           initialPercentage: this.config!.deploymentStrategy!.blueGreen!.trafficShifting?.initialPercentage || 10,
@@ -464,6 +530,74 @@ export class EcsFargateServiceComponent extends BaseComponent {
     }
 
     return capability;
+  }
+
+  /**
+   * Build OTEL environment variables for observability
+   * Per Platform Observability Standard
+   */
+  private buildOtelEnvironment(): Record<string, string> {
+    const framework = this.context.complianceFramework || 'commercial';
+    const region = this.context.region;
+    const environment = this.context.environment;
+
+    return {
+      // OpenTelemetry configuration
+      'OTEL_EXPORTER_OTLP_ENDPOINT': `https://otel-collector.${environment}.${region}.platform.local:4317`,
+      'OTEL_SERVICE_NAME': this.context.serviceName,
+      'OTEL_SERVICE_VERSION': (this.context as any).serviceVersion || '1.0.0',
+      'OTEL_RESOURCE_ATTRIBUTES': [
+        `service.name=${this.context.serviceName}`,
+        `service.namespace=${this.spec.name}`,
+        `deployment.environment=${environment}`,
+        `cloud.provider=aws`,
+        `cloud.region=${region}`,
+        `cloud.platform=aws_ecs`,
+        `compliance.framework=${framework}`,
+      ].join(','),
+
+      // X-Ray integration
+      'AWS_XRAY_DAEMON_ADDRESS': 'localhost:2000',
+      'AWS_XRAY_CONTEXT_MISSING': 'LOG_ERROR',
+      'AWS_XRAY_TRACING_NAME': `${this.context.serviceName}-${this.spec.name}`,
+
+      // Trace propagation
+      'OTEL_PROPAGATORS': 'tracecontext,baggage,xray',
+      'OTEL_TRACES_SAMPLER': framework.startsWith('fedramp') ? 'always_on' : 'parentbased_traceidratio',
+      'OTEL_TRACES_SAMPLER_ARG': framework.startsWith('fedramp') ? '1.0' : '0.1',
+    };
+  }
+
+  /**
+   * Add X-Ray daemon sidecar container for distributed tracing
+   */
+  private addXRayDaemonSidecar(logGroup: logs.ILogGroup): void {
+    if (!this.taskDefinition) {
+      throw new Error('Task definition must be created before adding X-Ray sidecar');
+    }
+
+    const xrayContainer = this.taskDefinition.addContainer('xray-daemon', {
+      image: ecs.ContainerImage.fromRegistry('public.ecr.aws/xray/aws-xray-daemon:latest'),
+      cpu: 32,
+      memoryReservationMiB: 256,
+      essential: false, // Don't fail task if X-Ray daemon fails
+      logging: ecs.LogDrivers.awsLogs({
+        streamPrefix: 'xray',
+        logGroup: logGroup
+      }),
+      environment: {
+        'AWS_REGION': this.context.region,
+      },
+      user: '1337', // Non-root user for security
+    });
+
+    // X-Ray daemon listens on UDP port 2000
+    xrayContainer.addPortMappings({
+      containerPort: 2000,
+      protocol: ecs.Protocol.UDP,
+    });
+
+    this.logComponentEvent('xray_sidecar_added', 'X-Ray daemon sidecar added for distributed tracing');
   }
 
   /**
@@ -781,7 +915,7 @@ export class EcsFargateServiceComponent extends BaseComponent {
       });
     });
 
-    this.logComponentEvent('blue_green_configured', 
+    this.logComponentEvent('blue_green_configured',
       `Configured blue-green deployment with ALB and target groups`);
   }
 

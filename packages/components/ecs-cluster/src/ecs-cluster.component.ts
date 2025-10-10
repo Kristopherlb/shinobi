@@ -44,9 +44,9 @@ export class EcsClusterComponent extends BaseComponent {
   private resolvedClusterName?: string;
   private appliedLogRetentionInDays?: number;
   private observabilityAlarms: Array<{ id: string; alarm: cloudwatch.Alarm; severity: string }> = [];
-  private observabilityDashboard?: cloudwatch.Dashboard;
   private observabilityDashboardBody?: string;
   private observabilityDashboardName?: string;
+  private observabilityDashboard?: cloudwatch.Dashboard;
 
   constructor(scope: Construct, id: string, context: ComponentContext, spec: ComponentSpec) {
     super(scope, id, context, spec);
@@ -211,8 +211,18 @@ export class EcsClusterComponent extends BaseComponent {
       assumedBy: new iam.ServicePrincipal('ec2.amazonaws.com'),
       description: 'IAM role for ECS EC2 capacity instances'
     });
-    instanceRole.addManagedPolicy(iam.ManagedPolicy.fromAwsManagedPolicyName('service-role/AmazonEC2ContainerServiceforEC2Role'));
-    instanceRole.addManagedPolicy(iam.ManagedPolicy.fromAwsManagedPolicyName('AmazonSSMManagedInstanceCore'));
+
+    const partition = this.resolvePartition();
+    instanceRole.addManagedPolicy(iam.ManagedPolicy.fromManagedPolicyArn(
+      this,
+      'CapacityEcsManagedPolicy',
+      `arn:${partition}:iam::aws:policy/service-role/AmazonEC2ContainerServiceforEC2Role`
+    ));
+    instanceRole.addManagedPolicy(iam.ManagedPolicy.fromManagedPolicyArn(
+      this,
+      'CapacitySsmManagedPolicy',
+      `arn:${partition}:iam::aws:policy/AmazonSSMManagedInstanceCore`
+    ));
 
     let kmsKey: kms.IKey | undefined;
     if (capacityConfig.kmsKeyArn) {
@@ -243,13 +253,16 @@ export class EcsClusterComponent extends BaseComponent {
           deviceName: '/dev/xvda',
           volume: autoscaling.BlockDeviceVolume.ebs(50, {
             volumeType: autoscaling.EbsDeviceVolumeType.GP3,
-            encrypted: true,
-            kmsKey
+            encrypted: true
           })
         }
       ],
       userData: ec2.UserData.forLinux()
     });
+
+    if (kmsKey) {
+      this.applyKmsKeyToLaunchConfiguration(kmsKey);
+    }
 
     this.applyStandardTags(instanceRole, {
       'component-type': 'ecs-asg-role',
@@ -522,47 +535,10 @@ export class EcsClusterComponent extends BaseComponent {
     this.observabilityDashboardBody = body;
     this.observabilityDashboardName = dashboardName;
 
-    const dashboard = new cloudwatch.Dashboard(this, 'EcsClusterDashboard', {
-      dashboardName
+    this.observabilityDashboard = new cloudwatch.Dashboard(this, 'EcsClusterDashboard', {
+      dashboardName,
+      dashboardBody: body
     });
-
-    const clusterName = this.resolvedClusterName ?? `${this.context.serviceName}-${this.spec.name}`;
-    const region = cdk.Stack.of(this).region;
-
-    dashboard.addWidgets(
-      new cloudwatch.GraphWidget({
-        title: 'ECS Cluster CPU Utilization',
-        width: 12,
-        left: [
-          new cloudwatch.Metric({
-            namespace: 'AWS/ECS',
-            metricName: 'CPUUtilization',
-            statistic: 'Average',
-            dimensionsMap: {
-              ClusterName: clusterName
-            },
-            region
-          })
-        ]
-      }),
-      new cloudwatch.GraphWidget({
-        title: 'ECS Cluster Memory Utilization',
-        width: 12,
-        left: [
-          new cloudwatch.Metric({
-            namespace: 'AWS/ECS',
-            metricName: 'MemoryUtilization',
-            statistic: 'Average',
-            dimensionsMap: {
-              ClusterName: clusterName
-            },
-            region
-          })
-        ]
-      })
-    );
-
-    this.observabilityDashboard = dashboard;
   }
 
   private mapRetentionInDays(retentionInDays: number): { retention: logs.RetentionDays; applied: number } | undefined {
@@ -677,7 +653,7 @@ export class EcsClusterComponent extends BaseComponent {
 
   private buildDashboardBody(dashboardName: string): string {
     const clusterName = this.resolvedClusterName ?? `${this.context.serviceName}-${this.spec.name}`;
-    const region = cdk.Stack.of(this).region;
+    const region = this.context.region ?? cdk.Stack.of(this).region;
 
     const widgets = [
       {
@@ -865,6 +841,57 @@ export class EcsClusterComponent extends BaseComponent {
       enableKeyRotation: true,
       alias: `alias/${aliasSuffix}`
     });
+  }
+
+  private resolvePartition(): string {
+    const region = this.context.region ?? cdk.Stack.of(this).region;
+
+    if (!region || region === cdk.Aws.REGION) {
+      return cdk.Aws.PARTITION;
+    }
+
+    if (region.startsWith('us-gov-')) {
+      return 'aws-us-gov';
+    }
+
+    if (region.startsWith('cn-')) {
+      return 'aws-cn';
+    }
+
+    if (region.startsWith('us-iso-b-')) {
+      return 'aws-iso-b';
+    }
+
+    if (region.startsWith('us-iso-')) {
+      return 'aws-iso';
+    }
+
+    return 'aws';
+  }
+
+  private applyKmsKeyToLaunchConfiguration(kmsKey: kms.IKey): void {
+    if (!this.autoScalingGroup) {
+      return;
+    }
+
+    const launchConfig = this.autoScalingGroup.node.tryFindChild('LaunchConfig') as
+      | autoscaling.CfnLaunchConfiguration
+      | undefined;
+
+    if (launchConfig) {
+      launchConfig.addPropertyOverride('BlockDeviceMappings.0.Ebs.Encrypted', true);
+      launchConfig.addPropertyOverride('BlockDeviceMappings.0.Ebs.KmsKeyId', kmsKey.keyArn);
+      return;
+    }
+
+    const launchTemplate = this.autoScalingGroup.node.tryFindChild('LaunchTemplate') as
+      | autoscaling.CfnLaunchTemplate
+      | undefined;
+
+    if (launchTemplate) {
+      launchTemplate.addPropertyOverride('LaunchTemplateData.BlockDeviceMappings.0.Ebs.Encrypted', true);
+      launchTemplate.addPropertyOverride('LaunchTemplateData.BlockDeviceMappings.0.Ebs.KmsKeyId', kmsKey.keyArn);
+    }
   }
 
   private getComponentVersion(): string {

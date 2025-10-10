@@ -530,6 +530,9 @@ importers:
       '@typescript-eslint/parser':
         specifier: ^6.7.0
         version: 6.21.0(eslint@8.57.1)(typescript@5.9.2)
+      cdk-nag:
+        specifier: ^2.37.35
+        version: 2.37.35(aws-cdk-lib@2.214.0(constructs@10.4.2))(constructs@10.4.2)
       eslint:
         specifier: ^8.49.0
         version: 8.57.1
@@ -551,6 +554,9 @@ importers:
       aws-cdk-lib:
         specifier: ^2.214.0
         version: 2.214.0(constructs@10.4.2)
+      cdk-nag:
+        specifier: ^2.37.35
+        version: 2.37.35(aws-cdk-lib@2.214.0(constructs@10.4.2))(constructs@10.4.2)
       constructs:
         specifier: ^10.4.2
         version: 10.4.2
@@ -622,6 +628,9 @@ importers:
       aws-cdk-lib:
         specifier: ^2.214.0
         version: 2.214.0(constructs@10.4.2)
+      cdk-nag:
+        specifier: ^2.37.35
+        version: 2.37.35(aws-cdk-lib@2.214.0(constructs@10.4.2))(constructs@10.4.2)
       constructs:
         specifier: ^10.4.2
         version: 10.4.2
@@ -775,6 +784,9 @@ importers:
       aws-cdk-lib:
         specifier: ^2.100.0
         version: 2.214.0(constructs@10.4.2)
+      cdk-nag:
+        specifier: ^2.37.35
+        version: 2.37.35(aws-cdk-lib@2.214.0(constructs@10.4.2))(constructs@10.4.2)
       constructs:
         specifier: ^10.3.0
         version: 10.4.2
@@ -848,6 +860,9 @@ importers:
       '@platform/core-engine':
         specifier: workspace:*
         version: link:../../core-engine
+      '@shinobi/core':
+        specifier: workspace:*
+        version: link:../../core
       aws-cdk-lib:
         specifier: ^2.100.0
         version: 2.214.0(constructs@10.4.2)
@@ -891,6 +906,9 @@ importers:
       aws-cdk-lib:
         specifier: ^2.140.0
         version: 2.214.0(constructs@10.4.2)
+      cdk-nag:
+        specifier: ^2.37.35
+        version: 2.37.35(aws-cdk-lib@2.214.0(constructs@10.4.2))(constructs@10.4.2)
       constructs:
         specifier: ^10.3.0
         version: 10.4.2
@@ -911,27 +929,168 @@ importers:
         specifier: ^5.0.0
         version: 5.9.2
 
+  packages/components/ec2-instance:
+    dependencies:
+      '@platform/contracts':
+        specifier: workspace:*
+        version: link:../../contracts
+      '@shinobi/core':
+        specifier: workspace:*
+        version: link:../../core
+      aws-cdk-lib:
+        specifier: ^2.140.0
+        version: 2.214.0(constructs@10.4.2)
+      constructs:
+        specifier: ^10.3.0
+        version: 10.4.2
+    devDependencies:
+      '@types/jest':
+        specifier: ^29.5.0
+        version: 29.5.14
+      '@types/node':
+        specifier: ^20.0.0
+        version: 20.16.11
+      '@typescript-eslint/eslint-plugin':
+        specifier: ^6.0.0
+        version: 6.21.0(@typescript-eslint/parser@6.21.0(eslint@8.57.1)(typescript@5.9.2))(eslint@8.57.1)(typescript@5.9.2)
+      '@typescript-eslint/parser':
+        specifier: ^6.0.0
+        version: 6.21.0(eslint@8.57.1)(typescript@5.9.2)
+      eslint:
+        specifier: ^8.0.0
+        version: 8.57.1
+      jest:
+        specifier: ^29.5.0
+        version: 29.7.0(@types/node@20.16.11)(babel-plugin-macros@3.1.0)(ts-node@10.9.2(@swc/core@1.13.5(@swc/helpers@0.5.17))(@types/node@20.16.11)(typescript@5.9.2))
+      prettier:
+        specifier: ^3.0.0
+        version: 3.6.2
+      ts-jest:
+        specifier: ^29.1.0
+        version: 29.4.1(@babel/core@7.28.4)(@jest/transform@30.2.0)(@jest/types@30.2.0)(babel-jest@30.1.2(@babel/core@7.28.4))(esbuild@0.25.10)(jest-util@30.2.0)(jest@29.7.0(@types/node@20.16.11)(babel-plugin-macros@3.1.0)(ts-node@10.9.2(@swc/core@1.13.5(@swc/helpers@0.5.17))(@types/node@20.16.11)(typescript@5.9.2)))(typescript@5.9.2)
+      typescript:
+        specifier: ^5.0.0
+        version: 5.9.2
+
+  packages/components/ecr-repository:
+    dependencies:
+      '@shinobi/core':
+        specifier: workspace:*
+        version: link:../../core
+      aws-cdk-lib:
+        specifier: ^2.150.0
+        version: 2.214.0(constructs@10.4.2)
+      constructs:
+        specifier: ^10.3.0
+        version: 10.4.2
+      zod:
+        specifier: ^3.22.4
+        version: 3.25.76
+    devDependencies:
+      '@types/jest':
+        specifier: ^29.5.8
+        version: 29.5.14
+      '@types/node':
+        specifier: ^20.9.0
+        version: 20.16.11
+      '@typescript-eslint/eslint-plugin':
+        specifier: ^6.12.0
+        version: 6.21.0(@typescript-eslint/parser@6.21.0(eslint@8.57.1)(typescript@5.9.2))(eslint@8.57.1)(typescript@5.9.2)
+      '@typescript-eslint/parser':
+        specifier: ^6.12.0
+        version: 6.21.0(eslint@8.57.1)(typescript@5.9.2)
+      eslint:
+        specifier: ^8.54.0
+        version: 8.57.1
+      jest:
+        specifier: ^29.7.0
+        version: 29.7.0(@types/node@20.16.11)(babel-plugin-macros@3.1.0)(ts-node@10.9.2(@swc/core@1.13.5(@swc/helpers@0.5.17))(@types/node@20.16.11)(typescript@5.9.2))
+      prettier:
+        specifier: ^3.1.0
+        version: 3.6.2
+      ts-jest:
+        specifier: ^29.1.1
+        version: 29.4.1(@babel/core@7.28.4)(@jest/transform@30.2.0)(@jest/types@30.2.0)(babel-jest@30.1.2(@babel/core@7.28.4))(esbuild@0.25.10)(jest-util@30.2.0)(jest@29.7.0(@types/node@20.16.11)(babel-plugin-macros@3.1.0)(ts-node@10.9.2(@swc/core@1.13.5(@swc/helpers@0.5.17))(@types/node@20.16.11)(typescript@5.9.2)))(typescript@5.9.2)
+      typescript:
+        specifier: ^5.2.2
+        version: 5.9.2
+
   packages/components/ecs-cluster:
     dependencies:
-      '@platform/core-engine':
+      '@shinobi/core':
         specifier: workspace:*
-        version: link:../../core-engine
+        version: link:../../core
       aws-cdk-lib:
-        specifier: ^2.0.0
+        specifier: ^2.214.0
+        version: 2.214.0(constructs@10.4.2)
+      constructs:
+        specifier: ^10.4.2
+        version: 10.4.2
+    devDependencies:
+      '@types/jest':
+        specifier: ^29.5.8
+        version: 29.5.14
+      '@types/node':
+        specifier: ^20.9.0
+        version: 20.16.11
+      '@typescript-eslint/eslint-plugin':
+        specifier: ^6.12.0
+        version: 6.21.0(@typescript-eslint/parser@6.21.0(eslint@8.57.1)(typescript@5.9.2))(eslint@8.57.1)(typescript@5.9.2)
+      '@typescript-eslint/parser':
+        specifier: ^6.12.0
+        version: 6.21.0(eslint@8.57.1)(typescript@5.9.2)
+      eslint:
+        specifier: ^8.54.0
+        version: 8.57.1
+      jest:
+        specifier: ^29.7.0
+        version: 29.7.0(@types/node@20.16.11)(babel-plugin-macros@3.1.0)(ts-node@10.9.2(@swc/core@1.13.5(@swc/helpers@0.5.17))(@types/node@20.16.11)(typescript@5.9.2))
+      prettier:
+        specifier: ^3.1.0
+        version: 3.6.2
+      ts-jest:
+        specifier: ^29.1.1
+        version: 29.4.1(@babel/core@7.28.4)(@jest/transform@30.2.0)(@jest/types@30.2.0)(babel-jest@30.1.2(@babel/core@7.28.4))(esbuild@0.25.10)(jest-util@30.2.0)(jest@29.7.0(@types/node@20.16.11)(babel-plugin-macros@3.1.0)(ts-node@10.9.2(@swc/core@1.13.5(@swc/helpers@0.5.17))(@types/node@20.16.11)(typescript@5.9.2)))(typescript@5.9.2)
+      typescript:
+        specifier: ^5.2.2
+        version: 5.9.2
+
+  packages/components/ecs-ec2-service:
+    dependencies:
+      '@platform/contracts':
+        specifier: workspace:*
+        version: link:../../contracts
+      '@shinobi/core':
+        specifier: workspace:*
+        version: link:../../core
+      aws-cdk-lib:
+        specifier: ^2.100.0
         version: 2.214.0(constructs@10.4.2)
       constructs:
         specifier: ^10.0.0
         version: 10.4.2
     devDependencies:
-      '@types/jest':
-        specifier: ^29.0.0
-        version: 29.5.14
       '@types/node':
-        specifier: ^18.0.0
-        version: 18.14.6
+        specifier: ^20.0.0
+        version: 20.16.11
+      '@typescript-eslint/eslint-plugin':
+        specifier: ^6.0.0
+        version: 6.21.0(@typescript-eslint/parser@6.21.0(eslint@8.57.1)(typescript@5.9.2))(eslint@8.57.1)(typescript@5.9.2)
+      '@typescript-eslint/parser':
+        specifier: ^6.0.0
+        version: 6.21.0(eslint@8.57.1)(typescript@5.9.2)
+      cdk-nag:
+        specifier: ^2.27.0
+        version: 2.37.35(aws-cdk-lib@2.214.0(constructs@10.4.2))(constructs@10.4.2)
+      eslint:
+        specifier: ^8.0.0
+        version: 8.57.1
       jest:
         specifier: ^29.0.0
-        version: 29.7.0(@types/node@18.14.6)(babel-plugin-macros@3.1.0)(ts-node@10.9.2(@swc/core@1.13.5(@swc/helpers@0.5.17))(@types/node@18.14.6)(typescript@5.9.2))
+        version: 29.7.0(@types/node@20.16.11)(babel-plugin-macros@3.1.0)(ts-node@10.9.2(@swc/core@1.13.5(@swc/helpers@0.5.17))(@types/node@20.16.11)(typescript@5.9.2))
+      ts-jest:
+        specifier: ^29.0.0
+        version: 29.4.1(@babel/core@7.28.4)(@jest/transform@30.2.0)(@jest/types@30.2.0)(babel-jest@30.1.2(@babel/core@7.28.4))(esbuild@0.25.10)(jest-util@30.2.0)(jest@29.7.0(@types/node@20.16.11)(babel-plugin-macros@3.1.0)(ts-node@10.9.2(@swc/core@1.13.5(@swc/helpers@0.5.17))(@types/node@20.16.11)(typescript@5.9.2)))(typescript@5.9.2)
       typescript:
         specifier: ^5.0.0
         version: 5.9.2
@@ -12996,7 +13155,7 @@ snapshots:
       pathe: 1.1.2
       picocolors: 1.1.1
       sirv: 2.0.4
-      vitest: 1.6.1(@types/node@20.16.11)(@vitest/ui@1.6.1)(jsdom@23.2.0(bufferutil@4.0.9))(lightningcss@1.30.1)(terser@5.44.0)
+      vitest: 1.6.1(@types/node@24.4.0)(@vitest/ui@1.6.1)(jsdom@23.2.0(bufferutil@4.0.9))(lightningcss@1.30.1)(terser@5.44.0)
 
   '@vitest/utils@1.6.1':
     dependencies:

@@ -4,6 +4,8 @@ import {
   ComponentConfigSchema
 } from '@shinobi/core';
 import { ComponentContext, ComponentSpec } from '@platform/contracts';
+import * as fs from 'fs';
+import * as path from 'path';
 
 export type EcsFargateDeploymentStrategyType = 'rolling' | 'blue-green';
 
@@ -246,7 +248,13 @@ const DIAGNOSTICS_SCHEMA = {
   }
 };
 
-export const ECS_FARGATE_SERVICE_CONFIG_SCHEMA: ComponentConfigSchema = {
+// Load schema from standalone Config.schema.json file
+const schemaPath = path.join(__dirname, 'Config.schema.json');
+const schemaContent = fs.readFileSync(schemaPath, 'utf-8');
+export const ECS_FARGATE_SERVICE_CONFIG_SCHEMA: ComponentConfigSchema = JSON.parse(schemaContent);
+
+// Legacy inline schema (deprecated - keeping for backward compatibility)
+const LEGACY_SCHEMA = {
   type: 'object',
   additionalProperties: false,
   required: ['cluster', 'image', 'serviceConnect'],
@@ -329,11 +337,23 @@ export class EcsFargateServiceComponentConfigBuilder extends ConfigBuilder<EcsFa
   }
 
   protected getHardcodedFallbacks(): Partial<EcsFargateServiceConfig> {
+    const framework = this.builderContext.context.complianceFramework;
+
+    // Framework-aware defaults per Platform Configuration Standard 3.1
+    const isFedrampModerate = framework === 'fedramp-moderate';
+    const isFedrampHigh = framework === 'fedramp-high';
+    const isFedRamp = isFedrampModerate || isFedrampHigh;
+
     return {
-      cpu: 256,
-      memory: 512,
+      // Compute resources - scaled by framework
+      cpu: isFedrampHigh ? 1024 : isFedrampModerate ? 512 : 256,
+      memory: isFedrampHigh ? 2048 : isFedrampModerate ? 1024 : 512,
+
+      // High availability for FedRAMP
+      desiredCount: isFedRamp ? 2 : 1,
+
+      // Safe defaults
       port: 8080,
-      desiredCount: 1,
       image: {
         repository: 'public.ecr.aws/amazonlinux/amazonlinux',
         tag: 'latest'
@@ -346,29 +366,61 @@ export class EcsFargateServiceComponentConfigBuilder extends ConfigBuilder<EcsFa
       deploymentStrategy: {
         type: 'rolling'
       },
+
+      // Logging with framework-aware retention
       logging: {
         createLogGroup: true,
         streamPrefix: 'service',
-        retentionInDays: 30,
-        removalPolicy: 'retain'
+        retentionInDays: this.getMinRetentionForFramework(framework),
+        removalPolicy: isFedRamp ? 'retain' : 'destroy'
       },
+
+      // Monitoring with framework-aware thresholds
       monitoring: {
         enabled: true,
         alarms: {
-          cpuUtilization: { ...DEFAULT_ALARM_BASELINE },
-          memoryUtilization: { ...DEFAULT_ALARM_BASELINE },
+          cpuUtilization: {
+            ...DEFAULT_ALARM_BASELINE,
+            enabled: true,
+            threshold: isFedrampHigh ? 75 : isFedrampModerate ? 80 : 85
+          },
+          memoryUtilization: {
+            ...DEFAULT_ALARM_BASELINE,
+            enabled: true,
+            threshold: isFedrampHigh ? 80 : isFedrampModerate ? 85 : 90
+          },
           runningTaskCount: {
             ...DEFAULT_ALARM_BASELINE,
+            enabled: true,
+            threshold: isFedRamp ? 2 : 1,
             comparisonOperator: 'lt'
           }
         }
       },
+
+      // Diagnostics - ECS Exec required for FedRAMP audit
       diagnostics: {
-        enableExecuteCommand: false
+        enableExecuteCommand: isFedRamp
       },
+
       hardeningProfile: 'baseline',
       tags: {}
     } as Partial<EcsFargateServiceConfig>;
+  }
+
+  /**
+   * Get minimum log retention based on compliance framework
+   * Per Platform Logging Standard section on compliance requirements
+   */
+  private getMinRetentionForFramework(framework: string): number {
+    switch (framework) {
+      case 'fedramp-high':
+        return 2555; // 7 years
+      case 'fedramp-moderate':
+        return 1095; // 3 years
+      default:
+        return 30; // 30 days for commercial
+    }
   }
 
   public buildSync(): EcsFargateServiceConfig {
@@ -493,15 +545,15 @@ export class EcsFargateServiceComponentConfigBuilder extends ConfigBuilder<EcsFa
       blueGreen: {
         loadBalancer: loadBalancer
           ? {
-              productionPort: loadBalancer.productionPort,
-              testPort: loadBalancer.testPort ?? loadBalancer.productionPort + 1
-            }
+            productionPort: loadBalancer.productionPort,
+            testPort: loadBalancer.testPort ?? loadBalancer.productionPort + 1
+          }
           : undefined,
         trafficShifting: traffic
           ? {
-              initialPercentage: traffic.initialPercentage ?? 10,
-              waitTime: traffic.waitTime ?? 5
-            }
+            initialPercentage: traffic.initialPercentage ?? 10,
+            waitTime: traffic.waitTime ?? 5
+          }
           : undefined
       }
     };

@@ -82,7 +82,7 @@ defaults:
 
   ssm-parameter:
     kind: secureString
-    value: ''
+    value: ""
     values: []
     tier: advanced
     dataType: text
@@ -242,10 +242,10 @@ defaults:
     tags: {}
 
   glue-job:
-    glueVersion: '4.0'
+    glueVersion: "4.0"
     jobType: glueetl
     command:
-      pythonVersion: '3'
+      pythonVersion: "3"
       scriptArguments: {}
     connections: []
     maxConcurrentRuns: 5
@@ -255,10 +255,10 @@ defaults:
       workerType: G.4X
       numberOfWorkers: 50
     defaultArguments:
-      --enable-continuous-cloudwatch-log: 'true'
-      --enable-metrics: 'true'
-      --enable-spark-ui: 'true'
-      --enable-auto-scaling: 'true'
+      --enable-continuous-cloudwatch-log: "true"
+      --enable-metrics: "true"
+      --enable-spark-ui: "true"
+      --enable-auto-scaling: "true"
     nonOverridableArguments: {}
     security:
       encryption:
@@ -298,7 +298,7 @@ defaults:
       security-level: high
 
   elasticache-redis:
-    engineVersion: '7.0'
+    engineVersion: "7.0"
     nodeType: cache.r6g.xlarge
     numCacheNodes: 2
     port: 6379
@@ -312,8 +312,8 @@ defaults:
     parameterGroup:
       family: redis7
       parameters:
-        tcp-keepalive: '60'
-        timeout: '300'
+        tcp-keepalive: "60"
+        timeout: "300"
         maxmemory-policy: allkeys-lru
     encryption:
       atRest: true
@@ -324,9 +324,9 @@ defaults:
     backup:
       enabled: true
       retentionDays: 30
-      window: '01:00-03:00'
+      window: "01:00-03:00"
     maintenance:
-      window: 'sat:23:00-sun:01:00'
+      window: "sat:23:00-sun:01:00"
     multiAz:
       enabled: true
       automaticFailover: true
@@ -409,7 +409,7 @@ defaults:
       security-level: high
 
   eventbridge-rule-cron:
-    schedule: 'rate(5 minutes)'
+    schedule: "rate(5 minutes)"
     state: enabled
     deadLetterQueue:
       enabled: true
@@ -456,18 +456,18 @@ defaults:
     policies:
       - sid: DenyInsecureTransport
         effect: deny
-        actions: ['sns:*']
+        actions: ["sns:*"]
         conditions:
           Bool:
-            aws:SecureTransport: 'false'
+            aws:SecureTransport: "false"
       - sid: RestrictSourceIPs
         effect: deny
-        actions: ['sns:*']
+        actions: ["sns:*"]
         conditions:
           IpAddressIfExists:
-            aws:sourceIp: ['10.0.0.0/8', '172.16.0.0/12', '192.168.0.0/16']
+            aws:sourceIp: ["10.0.0.0/8", "172.16.0.0/12", "192.168.0.0/16"]
           Bool:
-            aws:ViaAWSService: 'false'
+            aws:ViaAWSService: "false"
       - sid: RequireMFAForAdmin
         effect: deny
         actions:
@@ -477,7 +477,7 @@ defaults:
           - sns:AddPermission
         conditions:
           BoolIfExists:
-            aws:MultiFactorAuthPresent: 'false'
+            aws:MultiFactorAuthPresent: "false"
     monitoring:
       enabled: true
       alarms:
@@ -541,7 +541,7 @@ defaults:
         evaluationPeriods: 3
         periodMinutes: 15
     tags:
-      'compliance-framework': 'fedramp-high'
+      "compliance-framework": "fedramp-high"
 
   cognito-user-pool:
     signIn:
@@ -918,6 +918,20 @@ defaults:
           evaluationPeriods: 2
     diagnostics:
       enableExecuteCommand: true
+    observability:
+      xray:
+        enabled: true # Full tracing required for FedRAMP High
+        mode: sidecar # Sidecar for better isolation
+      adot:
+        enabled: true # Full OpenTelemetry required
+        mode: sidecar # Sidecar for better isolation
+        version: v0.35.0
+      dashboard:
+        enabled: true
+        widgets: ["cpu", "memory", "tasks", "logs", "service-connect", "alarms"]
+    network:
+      egressPolicy: vpc-endpoints-only # Strictest egress policy
+      vpcEndpoints: [] # Populated by environment-specific configuration
 
   opensearch-domain:
     version: OpenSearch_2.7
@@ -1004,7 +1018,7 @@ defaults:
     accessPolicies:
       statements: []
     advancedOptions:
-      rest.action.multi.allow_explicit_index: 'false'
+      rest.action.multi.allow_explicit_index: "false"
     hardeningProfile: fedramp-high
     removalPolicy: retain
     tags:
@@ -1418,7 +1432,7 @@ defaults:
     backup:
       enabled: true
       retentionDays: 90
-      schedule: 'cron(0 2 * * ? *)'
+      schedule: "cron(0 2 * * ? *)"
     monitoring:
       enabled: true
       alarms:
@@ -1435,7 +1449,7 @@ defaults:
 
   rds-postgres:
     instance:
-      engineVersion: '15.4'
+      engineVersion: "15.4"
       instanceType: r5.xlarge
       allocatedStorage: 200
       multiAz: true

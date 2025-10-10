@@ -6,10 +6,10 @@
  */
 
 import { Construct } from 'constructs';
-import { 
-  ComponentSpec, 
-  ComponentContext, 
-  IComponentCreator 
+import {
+  ComponentSpec,
+  ComponentContext,
+  IComponentCreator
 } from '../@shinobi/core/component-interfaces.ts';
 import { EcsFargateServiceComponentComponent } from './ecs-fargate-service.component.ts';
 import { EcsFargateServiceConfig, ECS_FARGATE_SERVICE_CONFIG_SCHEMA } from './ecs-fargate-service.builder.ts';
@@ -24,111 +24,137 @@ import { EcsFargateServiceConfig, ECS_FARGATE_SERVICE_CONFIG_SCHEMA } from './ec
  * - Component type identification
  */
 export class EcsFargateServiceComponentCreator implements IComponentCreator {
-  
+
   /**
    * Component type identifier
    */
   public readonly componentType = 'ecs-fargate-service';
-  
+
+  /**
+   * Component version (semantic versioning)
+   */
+  public readonly version = '1.0.0';
+
+  /**
+   * Component stability level
+   */
+  public readonly stability = 'stable' as const;
+
   /**
    * Component display name
    */
-  public readonly displayName = 'Ecs Fargate Service Component';
-  
+  public readonly displayName = 'ECS Fargate Service';
+
   /**
    * Component description
    */
-  public readonly description = 'ECS Fargate Service Component';
-  
+  public readonly description = 'Serverless ECS Fargate service with Service Connect integration, blue-green deployment support, auto-scaling, and comprehensive CloudWatch monitoring';
+
   /**
    * Component category for organization
    */
   public readonly category = 'compute';
-  
+
   /**
    * AWS service this component manages
    */
   public readonly awsService = 'ECS';
-  
+
+  /**
+   * Supported compliance frameworks
+   */
+  public readonly complianceFrameworks = [
+    'commercial',
+    'fedramp-moderate',
+    'fedramp-high'
+  ];
+
   /**
    * Component tags for discovery
    */
   public readonly tags = [
-    'ecs-fargate-service',
+    'ecs',
+    'fargate',
+    'containers',
+    'service-connect',
     'compute',
+    'serverless',
     'aws',
-    'ecs'
+    'blue-green',
+    'auto-scaling'
   ];
-  
+
   /**
    * JSON Schema for component configuration validation
    */
   public readonly configSchema = ECS_FARGATE_SERVICE_CONFIG_SCHEMA;
-  
+
   /**
    * Factory method to create component instances
    */
   public createComponent(
-    scope: Construct, 
-    spec: ComponentSpec, 
+    scope: Construct,
+    spec: ComponentSpec,
     context: ComponentContext
   ): EcsFargateServiceComponentComponent {
     return new EcsFargateServiceComponentComponent(scope, spec, context);
   }
-  
+
   /**
    * Validates component specification beyond JSON Schema validation
    */
   public validateSpec(
-    spec: ComponentSpec, 
+    spec: ComponentSpec,
     context: ComponentContext
   ): { valid: boolean; errors: string[] } {
     const errors: string[] = [];
     const config = spec.config as EcsFargateServiceConfig;
-    
+
     // Validate component name
     if (!spec.name || spec.name.length === 0) {
       errors.push('Component name is required');
     } else if (!/^[a-zA-Z][a-zA-Z0-9-_]*$/.test(spec.name)) {
       errors.push('Component name must start with a letter and contain only alphanumeric characters, hyphens, and underscores');
     }
-    
+
     // TODO: Add component-specific validations here
-    
+
     // Environment-specific validations
     if (context.environment === 'prod') {
       if (!config?.monitoring?.enabled) {
         errors.push('Monitoring must be enabled in production environment');
       }
-      
+
       // TODO: Add production-specific validations
     }
-    
+
     return {
       valid: errors.length === 0,
       errors
     };
   }
-  
+
   /**
    * Returns the capabilities this component provides when synthesized
    */
   public getProvidedCapabilities(): string[] {
     return [
-      'compute:ecs-fargate-service',
-      'monitoring:ecs-fargate-service'
+      'service:connect', // Service Connect capability for service discovery
+      'compute:ecs-fargate', // Compute capability
+      'monitoring:ecs-service' // Monitoring capability
     ];
   }
-  
+
   /**
    * Returns the capabilities this component requires from other components
    */
   public getRequiredCapabilities(): string[] {
     return [
-      // TODO: Define required capabilities
+      'cluster:ecs', // Requires an ECS cluster
+      'network:vpc' // Requires a VPC
     ];
   }
-  
+
   /**
    * Returns construct handles that will be registered by this component
    */
