@@ -22,3 +22,10 @@ dist
 .nx/
 .cursor/rules/nx-rules.mdc
 .github/instructions/nx.instructions.md
+**/**.audit.md
+**/**/AUDIT-SUMMARY.md
+**/**/FINAL-STATUS.md
+**/**/FIXES-APPLIED.md
+**/**/REMEDIATION-SUMMARY.md
+**/**/SECURITY-ADVISORY.md
+**/**/Audit**
