@@ -46,6 +46,9 @@ export class DaggerConfigBuilder {
     // Minimal validation here; deep compliance is enforced by policy in the component.
     const cfg = this.acc as DaggerConfig;
     if (!cfg.capacity) throw new Error('capacity is required');
+    if (cfg.capacity.min > cfg.capacity.max) {
+      throw new Error('capacity.min cannot exceed capacity.max');
+    }
     if (!cfg.fipsMode && cfg.compliance?.forbidNonFipsAmi) {
       throw new Error('FIPS mode is required when forbidNonFipsAmi is enabled');
     }

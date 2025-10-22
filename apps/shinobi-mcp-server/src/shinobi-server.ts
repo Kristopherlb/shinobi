@@ -15,11 +15,23 @@ import {
   ReadResourceRequestSchema,
 } from '@modelcontextprotocol/sdk/types.js';
 import { ShinobiConfig } from './config.js';
-import { Logger } from '@shinobi/core';
+import { PlatformLogger as Logger, ComprehensiveBinderRegistry } from '@shinobi/core';
 import fs from 'node:fs';
 import path from 'node:path';
 import yaml from 'yaml';
 import { spawnSync } from 'node:child_process';
+
+// Import audit system
+import {
+  AuditOrchestrator,
+  AuditContextBuilder,
+  findWorkspaceRoot,
+  // New pack-based system
+  RuleRunner,
+  getAllPacks,
+  AuditRequest,
+  Suppression,
+} from './audits/index.js';
 
 /**
  * Platform KB Types
@@ -118,18 +130,47 @@ export class ShinobiMcpServer {
     await this.server.connect(transport);
 
     // Use platform logger instead of console
-    const logger = new Logger();
+    const logger = Logger.getLogger('shinobi-mcp-server');
     logger.info('Shinobi MCP Server started', {
-      service: 'shinobi-mcp-server',
-      transport: 'stdio'
+      data: {
+        service: 'shinobi-mcp-server',
+        transport: 'stdio'
+      }
     });
+  }
+
+  /**
+   * Find the workspace root by looking for package.json with workspaces
+   */
+  private findWorkspaceRoot(): string {
+    let currentDir = process.cwd();
+    
+    // Walk up the directory tree to find workspace root
+    while (currentDir !== path.dirname(currentDir)) {
+      const pkgPath = path.join(currentDir, 'package.json');
+      if (fs.existsSync(pkgPath)) {
+        try {
+          const pkg = JSON.parse(fs.readFileSync(pkgPath, 'utf8'));
+          // Check if this is the workspace root (has workspaces or pnpm-workspace.yaml)
+          if (pkg.workspaces || fs.existsSync(path.join(currentDir, 'pnpm-workspace.yaml'))) {
+            return currentDir;
+          }
+        } catch (error) {
+          // Continue searching
+        }
+      }
+      currentDir = path.dirname(currentDir);
+    }
+    
+    // Fallback to process.cwd() if not found
+    return process.cwd();
   }
 
   /**
    * Load Platform KB infrastructure
    */
   private async loadPlatformKB(): Promise<{ index: PlatformKBIndex; packs: PackMeta[] }> {
-    const kbRoot = path.join(process.cwd(), 'platform-kb');
+    const kbRoot = path.join(this.findWorkspaceRoot(), 'platform-kb');
 
     // Load index.json
     const indexPath = path.join(kbRoot, 'index.json');
@@ -1442,6 +1483,39 @@ describe('${className} Observability', () => {
             }
           },
           {
+            name: 'get_capability_catalog',
+            description: 'Get the platform capability vocabulary along with supporting binder strategies',
+            inputSchema: {
+              type: 'object',
+              properties: {
+                includeAliases: {
+                  type: 'boolean',
+                  description: 'Include service type aliases for each capability',
+                  default: false
+                }
+              }
+            }
+          },
+          {
+            name: 'get_binding_matrix',
+            description: 'Retrieve the supported binding matrix derived from registered binder strategies',
+            inputSchema: {
+              type: 'object',
+              properties: {
+                includeAliases: {
+                  type: 'boolean',
+                  description: 'Include service type aliases in the matrix response',
+                  default: false
+                },
+                includeRecommendations: {
+                  type: 'boolean',
+                  description: 'Include recommended follow-up actions for each binder',
+                  default: true
+                }
+              }
+            }
+          },
+          {
             name: 'get_component_patterns',
             description: 'Get opinionated blueprints and patterns for common use cases',
             inputSchema: {
@@ -2292,6 +2366,139 @@ describe('${className} Observability', () => {
                 }
               }
             }
+          },
+
+          // Platform Audit System (13 individual audits + orchestrator)
+          {
+            name: 'audit_schema_validation',
+            description: 'Audit component Config.schema.json files against platform API spec',
+            inputSchema: { type: 'object', properties: {} }
+          },
+          {
+            name: 'audit_tagging_standard',
+            description: 'Audit AWS resource tagging compliance with platform standards',
+            inputSchema: { type: 'object', properties: {} }
+          },
+          {
+            name: 'audit_logging_standard',
+            description: 'Audit structured logging compliance and CloudWatch configuration',
+            inputSchema: { type: 'object', properties: {} }
+          },
+          {
+            name: 'audit_observability_standard',
+            description: 'Audit X-Ray tracing, ADOT integration, and observability configuration',
+            inputSchema: { type: 'object', properties: {} }
+          },
+          {
+            name: 'audit_cdk_best_practices',
+            description: 'Audit CDK construct usage and AWS best practices',
+            inputSchema: { type: 'object', properties: {} }
+          },
+          {
+            name: 'audit_component_versioning',
+            description: 'Audit component semantic versioning and metadata completeness',
+            inputSchema: { type: 'object', properties: {} }
+          },
+          {
+            name: 'audit_configuration_precedence',
+            description: 'Audit configuration layer implementation and precedence chain',
+            inputSchema: { type: 'object', properties: {} }
+          },
+          {
+            name: 'audit_capability_binding',
+            description: 'Audit capability naming conventions and binder strategy coverage',
+            inputSchema: { type: 'object', properties: {} }
+          },
+          {
+            name: 'audit_dependency_graph',
+            description: 'Audit module dependencies and architecture layering',
+            inputSchema: { type: 'object', properties: {} }
+          },
+          {
+            name: 'audit_mcp_contract',
+            description: 'Audit MCP server endpoint implementation and response formats',
+            inputSchema: { type: 'object', properties: {} }
+          },
+          {
+            name: 'audit_security_compliance',
+            description: 'Audit security defaults and compliance by construction',
+            inputSchema: { type: 'object', properties: {} }
+          },
+          {
+            name: 'audit_testing_standard',
+            description: 'Audit test metadata, naming conventions, and oracle usage',
+            inputSchema: { type: 'object', properties: {} }
+          },
+          {
+            name: 'audit_iam_auditing',
+            description: 'Audit IAM policies for least privilege and no wildcards',
+            inputSchema: { type: 'object', properties: {} }
+          },
+          {
+            name: 'run_platform_audit',
+            description: 'Orchestrator to run multiple platform audits with aggregated reporting (LEGACY)',
+            inputSchema: {
+              type: 'object',
+              properties: {
+                audits: {
+                  type: 'array',
+                  items: { type: 'string' },
+                  description: 'Specific audits to run (e.g., ["schema", "tagging"]) or profile name'
+                },
+                profile: {
+                  type: 'string',
+                  enum: ['all', 'security', 'compliance', 'quality', 'observability', 'architecture'],
+                  description: 'Run predefined audit profile'
+                }
+              }
+            }
+          },
+
+          // NEW Pack-Based Audit System
+          {
+            name: 'run_audit',
+            description: 'Run platform audit using rule packs (cdk.out + AST + config) with suppressions support',
+            inputSchema: {
+              type: 'object',
+              properties: {
+                serviceId: {
+                  type: 'string',
+                  description: 'Service identifier'
+                },
+                envId: {
+                  type: 'string',
+                  description: 'Environment identifier'
+                },
+                cdkOut: {
+                  type: 'string',
+                  description: 'Path to cdk.out directory (default: ./cdk.out)'
+                },
+                scope: {
+                  type: 'array',
+                  items: {
+                    type: 'string',
+                    enum: ['template', 'code', 'repo', 'runtime']
+                  },
+                  description: 'Limit audit to specific scopes'
+                },
+                format: {
+                  type: 'string',
+                  enum: ['json', 'markdown'],
+                  default: 'json',
+                  description: 'Output format'
+                },
+                failLevel: {
+                  type: 'string',
+                  enum: ['warn', 'error', 'blocker'],
+                  default: 'error',
+                  description: 'Minimum severity to cause non-zero exit'
+                },
+                suppressionsFile: {
+                  type: 'string',
+                  description: 'Path to suppressions JSON file'
+                }
+              }
+            }
           }
         ]
       };
@@ -2305,6 +2512,18 @@ describe('${className} Observability', () => {
             uri: 'shinobi://components',
             name: 'Component Catalog',
             description: 'Catalog of all available platform components',
+            mimeType: 'application/json'
+          },
+          {
+            uri: 'shinobi://capabilities',
+            name: 'Capability Vocabulary',
+            description: 'Canonical platform capability registry with providers',
+            mimeType: 'application/json'
+          },
+          {
+            uri: 'shinobi://bindings',
+            name: 'Binding Matrix',
+            description: 'Supported bindings between source components and capabilities',
             mimeType: 'application/json'
           },
           {
@@ -2362,6 +2581,12 @@ describe('${className} Observability', () => {
               }
             ]
           };
+
+        case 'shinobi://capabilities':
+          return await this.getCapabilityCatalog({ includeAliases: false });
+
+        case 'shinobi://bindings':
+          return await this.getBindingMatrix({ includeAliases: false, includeRecommendations: true });
 
         case 'shinobi://services':
           return {
@@ -2446,6 +2671,12 @@ describe('${className} Observability', () => {
 
           case 'get_component_schema':
             return await this.getComponentSchema(args);
+
+          case 'get_capability_catalog':
+            return await this.getCapabilityCatalog(args);
+
+          case 'get_binding_matrix':
+            return await this.getBindingMatrix(args);
 
           case 'get_component_patterns':
             return await this.getComponentPatterns(args);
@@ -2586,6 +2817,40 @@ describe('${className} Observability', () => {
           case 'generate_exec_brief':
             return await this.generateExecBrief(args);
 
+          // Platform Audit System
+          case 'audit_schema_validation':
+            return await this.runAudit('schema');
+          case 'audit_tagging_standard':
+            return await this.runAudit('tagging');
+          case 'audit_logging_standard':
+            return await this.runAudit('logging');
+          case 'audit_observability_standard':
+            return await this.runAudit('observability');
+          case 'audit_cdk_best_practices':
+            return await this.runAudit('cdk-best-practices');
+          case 'audit_component_versioning':
+            return await this.runAudit('versioning');
+          case 'audit_configuration_precedence':
+            return await this.runAudit('configuration');
+          case 'audit_capability_binding':
+            return await this.runAudit('capability-binding');
+          case 'audit_dependency_graph':
+            return await this.runAudit('dependency-graph');
+          case 'audit_mcp_contract':
+            return await this.runAudit('mcp-contract');
+          case 'audit_security_compliance':
+            return await this.runAudit('security');
+          case 'audit_testing_standard':
+            return await this.runAudit('testing');
+          case 'audit_iam_auditing':
+            return await this.runAudit('iam');
+          case 'run_platform_audit':
+            return await this.runPlatformAuditOrchestrator(args);
+
+          // NEW Pack-Based Audit
+          case 'run_audit':
+            return await this.runPackBasedAudit(args);
+
           default:
             throw new Error(`Unknown tool: ${name}`);
         }
@@ -2698,7 +2963,8 @@ describe('${className} Observability', () => {
 
   // Tool implementation methods (stubs for now)
   private async getComponentCatalog(args: any): Promise<any> {
-    const componentRoot = path.join(process.cwd(), 'packages', 'components');
+    const workspaceRoot = this.findWorkspaceRoot();
+    const componentRoot = path.join(workspaceRoot, 'packages', 'components');
     const filter = (args?.filter as string | undefined)?.toLowerCase();
     const specificComponent = (args?.componentName as string | undefined)?.toLowerCase();
 
@@ -2732,7 +2998,7 @@ describe('${className} Observability', () => {
             };
           } catch (error) {
             Logger.getLogger('shinobi-mcp-server').warn(`Failed to load metadata for component ${dirName}`, {
-              error: (error as Error).message
+              data: { componentName: dirName, errorMessage: (error as Error).message }
             });
             return {
               name: dirName,
@@ -2766,7 +3032,7 @@ describe('${className} Observability', () => {
     return {
       content: [
         {
-          type: 'application/json',
+          type: 'text',
           text: JSON.stringify({ components: filteredComponents }, null, 2)
         }
       ]
@@ -2797,8 +3063,107 @@ describe('${className} Observability', () => {
     return {
       content: [
         {
-          type: 'application/json',
+          type: 'text',
           text: JSON.stringify(schema, null, 2)
+        }
+      ]
+    };
+  }
+
+  private async getCapabilityCatalog(args: { includeAliases?: boolean }): Promise<any> {
+    const includeAliases = args?.includeAliases ?? false;
+    const registry = new ComprehensiveBinderRegistry();
+
+    const strategyEntries = new Map<object, { primary: string; aliases: Set<string>; capabilities: string[] }>();
+
+    for (const serviceType of registry.getAllServiceTypes()) {
+      const strategy = registry.get(serviceType);
+      if (!strategy) {
+        continue;
+      }
+
+      if (!strategyEntries.has(strategy)) {
+        strategyEntries.set(strategy, {
+          primary: serviceType,
+          aliases: new Set<string>(),
+          capabilities: strategy.supportedCapabilities
+        });
+      } else if (includeAliases) {
+        strategyEntries.get(strategy)!.aliases.add(serviceType);
+      }
+    }
+
+    const capabilityMap = new Map<string, { providers: Set<string>; aliases: Set<string> }>();
+
+    for (const entry of strategyEntries.values()) {
+      for (const capability of entry.capabilities) {
+        if (!capabilityMap.has(capability)) {
+          capabilityMap.set(capability, { providers: new Set<string>(), aliases: new Set<string>() });
+        }
+        const bucket = capabilityMap.get(capability)!;
+        bucket.providers.add(entry.primary);
+        if (includeAliases) {
+          entry.aliases.forEach(alias => bucket.aliases.add(alias));
+        }
+      }
+    }
+
+    const capabilities = Array.from(capabilityMap.entries())
+      .map(([capability, data]) => ({
+        capability,
+        providers: Array.from(data.providers).sort(),
+        aliases: includeAliases ? Array.from(data.aliases).sort() : undefined
+      }))
+      .sort((a, b) => a.capability.localeCompare(b.capability));
+
+    return {
+      content: [
+        {
+          type: 'text',
+          text: JSON.stringify({ capabilities }, null, 2)
+        }
+      ]
+    };
+  }
+
+  private async getBindingMatrix(args: { includeAliases?: boolean; includeRecommendations?: boolean }): Promise<any> {
+    const includeAliases = args?.includeAliases ?? false;
+    const includeRecommendations = args?.includeRecommendations ?? true;
+
+    const registry = new ComprehensiveBinderRegistry();
+    const strategyEntries = new Map<object, { primary: string; aliases: Set<string>; capabilities: string[]; recommendations: string[] }>();
+
+    for (const serviceType of registry.getAllServiceTypes()) {
+      const strategy = registry.get(serviceType);
+      if (!strategy) {
+        continue;
+      }
+
+      if (!strategyEntries.has(strategy)) {
+        const recommendations = includeRecommendations ? registry.getBindingRecommendations(serviceType) : [];
+        strategyEntries.set(strategy, {
+          primary: serviceType,
+          aliases: new Set<string>(),
+          capabilities: strategy.supportedCapabilities,
+          recommendations
+        });
+      } else if (includeAliases) {
+        strategyEntries.get(strategy)!.aliases.add(serviceType);
+      }
+    }
+
+    const bindings = Array.from(strategyEntries.values()).map(entry => ({
+      serviceType: entry.primary,
+      aliases: includeAliases ? Array.from(entry.aliases).sort() : undefined,
+      supportedCapabilities: entry.capabilities,
+      recommendations: includeRecommendations ? entry.recommendations : undefined
+    }));
+
+    return {
+      content: [
+        {
+          type: 'text',
+          text: JSON.stringify({ bindings }, null, 2)
         }
       ]
     };
@@ -2815,7 +3180,7 @@ describe('${className} Observability', () => {
     return {
       content: [
         {
-          type: 'application/json',
+          type: 'text',
           text: JSON.stringify({ patterns: filteredPatterns }, null, 2)
         }
       ]
@@ -2838,7 +3203,7 @@ describe('${className} Observability', () => {
     return {
       content: [
         {
-          type: 'application/json',
+          type: 'text',
           text: JSON.stringify(pattern, null, 2)
         }
       ]
@@ -2904,7 +3269,7 @@ describe('${className} Observability', () => {
     return {
       content: [
         {
-          type: 'application/json',
+          type: 'text',
           text: JSON.stringify({
             manifestPath,
             nodes,
@@ -2965,7 +3330,7 @@ describe('${className} Observability', () => {
         data = entry.name.toLowerCase().endsWith('.json') ? JSON.parse(raw) : yaml.parse(raw);
       } catch (error) {
         Logger.getLogger('shinobi-mcp-server').warn(`Failed to parse pattern file ${fullPath}`, {
-          error: (error as Error).message
+          data: { filePath: fullPath, errorMessage: (error as Error).message }
         });
         continue;
       }
@@ -4367,5 +4732,122 @@ describe('${className} Observability', () => {
         }
       ]
     };
+  }
+
+  /**
+   * Run a single audit by ID
+   */
+  private async runAudit(auditId: string): Promise<any> {
+    try {
+      const workspaceRoot = this.findWorkspaceRoot();
+      const contextBuilder = new AuditContextBuilder(workspaceRoot);
+      const context = contextBuilder.build();
+      contextBuilder.validateContext(context);
+
+      const orchestrator = new AuditOrchestrator();
+      const audit = orchestrator.getAudit(auditId);
+
+      if (!audit) {
+        throw new Error(`Unknown audit: ${auditId}`);
+      }
+
+      const result = await audit.execute(context);
+
+      return {
+        content: [
+          {
+            type: 'text',
+            text: JSON.stringify(result, null, 2)
+          }
+        ]
+      };
+    } catch (error) {
+      throw new Error(`Failed to run audit ${auditId}: ${(error as Error).message}`);
+    }
+  }
+
+  /**
+   * Run platform audit orchestrator (LEGACY)
+   */
+  private async runPlatformAuditOrchestrator(args: any): Promise<any> {
+    try {
+      const workspaceRoot = this.findWorkspaceRoot();
+      const contextBuilder = new AuditContextBuilder(workspaceRoot);
+      const context = contextBuilder.build();
+      contextBuilder.validateContext(context);
+
+      const orchestrator = new AuditOrchestrator();
+
+      // Determine what to run
+      let selection: string | string[];
+
+      if (args.profile) {
+        selection = args.profile;
+      } else if (args.audits && Array.isArray(args.audits)) {
+        selection = args.audits;
+      } else {
+        selection = 'all';
+      }
+
+      const result = await orchestrator.run(selection, context);
+
+      return {
+        content: [
+          {
+            type: 'text',
+            text: JSON.stringify(result, null, 2)
+          }
+        ]
+      };
+    } catch (error) {
+      throw new Error(`Failed to run platform audit: ${(error as Error).message}`);
+    }
+  }
+
+  /**
+   * Run pack-based audit (NEW - uses cdk.out + AST + suppressions)
+   */
+  private async runPackBasedAudit(args: any): Promise<any> {
+    try {
+      const workspaceRoot = this.findWorkspaceRoot();
+
+      // Build audit request
+      const request: AuditRequest = {
+        workspaceRoot,
+        cdkOut: args.cdkOut || path.join(workspaceRoot, 'cdk.out'),
+        serviceId: args.serviceId,
+        envId: args.envId,
+        scope: args.scope,
+        format: args.format || 'json',
+        failLevel: args.failLevel || 'error',
+      };
+
+      // Load suppressions if file provided
+      if (args.suppressionsFile) {
+        const suppressionsPath = path.join(workspaceRoot, args.suppressionsFile);
+        if (fs.existsSync(suppressionsPath)) {
+          const content = fs.readFileSync(suppressionsPath, 'utf8');
+          request.suppressions = JSON.parse(content) as Suppression[];
+        }
+      }
+
+      // Get all rule packs
+      const packs = getAllPacks();
+
+      // Run audit
+      const runner = new RuleRunner(request);
+      const result = await runner.run(packs);
+
+      return {
+        content: [
+          {
+            type: 'text',
+            text: JSON.stringify(result, null, 2)
+          }
+        ]
+      };
+    } catch (error) {
+      throw new Error(`Failed to run pack-based audit: ${(error as Error).message}`);
+    }
   }
 }

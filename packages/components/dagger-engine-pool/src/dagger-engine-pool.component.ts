@@ -21,6 +21,7 @@ import { DaggerConfigBuilder } from './dagger-engine-pool.builder.js';
  */
 export class DaggerEnginePool extends BaseComponent {
   private readonly config: DaggerConfig;
+  private observabilityEnvironment?: Record<string, string>;
 
   constructor(
     scope: Construct,
@@ -61,6 +62,14 @@ export class DaggerEnginePool extends BaseComponent {
     const launchTemplate = this.createLaunchTemplate(securityGroup, kmsKey, artifactsBucket, logGroup);
     const asg = this.createAutoScalingGroup(vpc, launchTemplate);
     const nlb = this.createNetworkLoadBalancer(vpc, asg);
+
+    this.observabilityEnvironment = this.configureObservability(asg, {
+      serviceName: `${this.context.serviceName}-dagger-engine`,
+      customAttributes: {
+        'component.type': 'dagger-engine-pool',
+        'compliance.framework': this.context.complianceFramework
+      }
+    });
 
     // 4) Apply compliance tags to all resources
     this.applyComplianceTags(kmsKey, {
@@ -143,6 +152,11 @@ export class DaggerEnginePool extends BaseComponent {
     this.registerCapability('logging:cloudwatch', {
       logGroupName: logGroup.logGroupName,
       logGroupArn: logGroup.logGroupArn
+    });
+    this.registerCapability('observability:dagger-engine-pool', {
+      otelEnvironment: this.observabilityEnvironment ?? {},
+      logGroupName: logGroup.logGroupName,
+      otlpEndpoint: this.config.observability?.otlpEndpoint
     });
   }
 
@@ -428,4 +442,3 @@ export class DaggerEnginePool extends BaseComponent {
     if (tags.environment) cdk.Tags.of(construct).add('platform:environment', tags.environment);
   }
 }
-

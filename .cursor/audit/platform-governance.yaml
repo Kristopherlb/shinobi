@@ -1,141 +1,282 @@
-# Platform Governance Audit Rules
-# Enforces architectural patterns, security standards, and compliance requirements
+version: 1
+name: Platform Governance & Contribution — Audit Rules (PGC-1.0)
+owner: platform-engineering
+last_updated: 2025-10-22
+
+# Reference standard document
+standard_ref: docs/platform-standards/platform-governance-and-contribution-guideline.md
 
 defaults:
-  meta_sidecar_suffixes: [".meta.json", ".meta.yaml", ".meta.yml"]
-  test_globs: ["**/*.test.ts", "**/*.spec.ts", "**/tests/**/*.ts"]
-  component_globs: ["packages/components/**/*.ts", "src/components/**/*.ts"]
-  config_globs: ["**/*.config.*", "**/config/**/*"]
+  component_globs:
+    - "packages/components/**/*.ts"
+    - "!**/*.test.ts"
+    - "!**/*.spec.ts"
+  component_paths:
+    - "packages/components/*"
+  core_globs:
+    - "packages/core/**/*.ts"
+    - "!**/*.test.ts"
 
 rules:
-  - id: "GOV-001"
-    title: "Component Architecture Compliance"
-    message: "Components must follow BaseComponent pattern and implement required interfaces"
-    severity: "error"
-    scope_glob: "${defaults.component_globs}"
+
+  # ─────────────────────────────────────────
+  # 0) Document control
+  # ─────────────────────────────────────────
+  - id: PGC-000
+    title: Governance standard document present
+    severity: warn
+    scope_glob: .
+    must_exist:
+      - docs/platform-standards/platform-governance-and-contribution-guideline.md
+    message: "Include the canonical governance guideline in-repo."
+
+  # ─────────────────────────────────────────
+  # 1) Component Architecture - Principle: Components are Contracts
+  # ─────────────────────────────────────────
+  - id: PGC-001
+    title: Components extend BaseComponent
+    severity: error
+    scope_glob: "packages/components/*/src/*.component.ts"
     must_match:
-      - pattern: "extends BaseComponent"
-        file: "*.ts"
-      - pattern: "implements IComponent"
-        file: "*.ts"
+      - pattern: "class\\s+\\w+Component\\s+extends\\s+BaseComponent"
+    message: "All components MUST extend BaseComponent per §1 'Components are Contracts'."
+
+  - id: PGC-002
+    title: Components have versioned schema
+    severity: error
+    scope_glob: ${defaults.component_paths}
     must_exist:
       - "Config.schema.json"
+    message: "Every component must define a versioned schema for inputs per §2 'Define clear, versioned schema'."
+
+  - id: PGC-003
+    title: Components expose clear interface
+    severity: warn
+    scope_glob: "packages/components/*/src/*.component.ts"
+    must_match:
+      - pattern: "getCapabilities\\(|_registerCapability\\("
+    message: "Components should expose outputs via clear interfaces (getCapabilities) per §2."
+
+  # ─────────────────────────────────────────
+  # 2) Configuration over Code - NO Environment-Specific Logic
+  # ─────────────────────────────────────────
+  - id: PGC-101
+    title: No hardcoded environment logic in components
+    severity: error
+    scope_glob: ${defaults.component_globs}
+    must_not_match:
+      - pattern: "if\\s*\\(.*environment\\s*===\\s*['\"]prod|production|dev|development|staging"
+      - pattern: "switch\\s*\\(.*environment\\)"
+      - pattern: "process\\.env\\.NODE_ENV\\s*===\\s*['\"]prod|production"
+    message: "Components must NOT contain environment-specific logic. Use configuration layers instead per §2 'NO Environment-Specific Logic'."
+
+  - id: PGC-102
+    title: No hardcoded compliance framework checks
+    severity: error
+    scope_glob: ${defaults.component_globs}
+    must_not_match:
+      - pattern: "if\\s*\\(.*complianceFramework\\s*===\\s*['\"]fedramp"
+      - pattern: "if\\s*\\(.*framework\\s*===\\s*['\"]commercial|fedramp"
+    message: "Components must NOT check compliance frameworks directly. Configuration should be injected via ConfigBuilder per §2."
+
+  - id: PGC-103
+    title: Components use ConfigBuilder for settings
+    severity: error
+    scope_glob: "packages/components/*/src/*.component.ts"
+    must_match:
+      - pattern: "ConfigBuilder|builder\\.build|getConfig"
+    message: "Components must use ConfigBuilder to receive configuration, not hardcode values per §1 'Configuration over Code'."
+
+  # ─────────────────────────────────────────
+  # 3) NO Application-Specific Logic
+  # ─────────────────────────────────────────
+  - id: PGC-201
+    title: No application-specific business logic in components
+    severity: error
+    scope_glob: ${defaults.component_globs}
+    must_not_match:
+      - pattern: "// .*specific to.*app|application"
+      - pattern: "// TODO.*only for.*service"
+    message: "Components must be generic and reusable, not contain app-specific logic per §2 'NO Application-Specific Logic'."
+
+  - id: PGC-202
+    title: Components encapsulate single logical resource
+    severity: warn
+    scope_glob: "packages/components/*/src/*.component.ts"
+    must_not_match:
+      - pattern: "new\\s+s3\\.Bucket.*new\\s+rds\\.Database"
+      - pattern: "new\\s+lambda\\.Function.*new\\s+dynamodb\\.Table"
+    message: "Each component should encapsulate one logical AWS service/resource per §2 'Encapsulate one logical AWS service'."
+
+  # ─────────────────────────────────────────
+  # 4) Compliance by Construction
+  # ─────────────────────────────────────────
+  - id: PGC-301
+    title: Components apply standard tags automatically
+    severity: error
+    scope_glob: "packages/components/*/src/*.component.ts"
+    must_match:
+      - pattern: "_applyStandardTags\\("
+    message: "Components must automatically apply standard tags per §1 'Compliance by Construction' and §2 'Embed platform-wide standards'."
+
+  - id: PGC-302
+    title: Components enable encryption by default
+    severity: warn
+    scope_glob: ${defaults.component_globs}
+    must_match:
+      - pattern: "encryption|encrypted"
+        when_exists: "s3\\.Bucket|rds\\.Database|dynamodb\\.Table|kms\\.Key"
+    message: "Components should enable encryption at rest by default per §2 'Embed platform-wide standards'."
+
+  - id: PGC-303
+    title: S3 components block public access by default
+    severity: error
+    scope_glob: "packages/components/s3-bucket/**/*.ts"
+    must_match:
+      - pattern: "blockPublicAccess"
+    message: "S3 bucket components must block public access by default per §2 'security hardening'."
+
+  # ─────────────────────────────────────────
+  # 5) Isolate and Insulate - Self-Contained Components
+  # ─────────────────────────────────────────
+  - id: PGC-401
+    title: Components do not import other components
+    severity: error
+    scope_glob: "packages/components/*/src/*.ts"
+    must_not_match:
+      - pattern: "from\\s+['\"]@platform/components-"
+      - pattern: "from\\s+['\"]\\.\\./.*/packages/components/"
+    message: "Components must be self-contained and not depend on other components per §1 'Isolate and Insulate'."
+
+  - id: PGC-402
+    title: Components have comprehensive tests
+    severity: error
+    scope_glob: ${defaults.component_paths}
+    must_exist:
+      - "tests/"
+    message: "Components must include comprehensive tests within their own directory per §2 'Write comprehensive tests'."
+
+  - id: PGC-403
+    title: No direct component instantiation
+    severity: error
+    scope_glob: ${defaults.component_globs}
+    must_not_match:
+      - pattern: "new\\s+[A-Z]\\w+Component\\("
+        exclude_self: true
+    message: "Components should not instantiate other components directly. Use binds and Resolver Engine per §1 'Isolate and Insulate'."
+
+  # ─────────────────────────────────────────
+  # 6) NO Pass-Through Properties
+  # ─────────────────────────────────────────
+  - id: PGC-501
+    title: Components provide opinionated abstractions
+    severity: info
+    scope_glob: "packages/components/*/Config.schema.json"
+    message: "Component schemas should expose only safe, compliant, necessary config (not all L1 properties) per §2 'DO NOT create pass-through properties'."
+
+  # ─────────────────────────────────────────
+  # 7) BaseComponent Sanctity
+  # ─────────────────────────────────────────
+  - id: PGC-601
+    title: BaseComponent changes require justification
+    severity: error
+    scope_glob: "packages/core/**/base-component.ts"
+    message: "BaseComponent is sacred and should be modified rarely per §3. Any changes require architectural review."
+
+  - id: PGC-602
+    title: No component-subset logic in BaseComponent
+    severity: error
+    scope_glob: "packages/core/**/base-component.ts"
+    must_not_match:
+      - pattern: "network|database|storage|compute"
+        within: "class\\s+BaseComponent"
+    message: "BaseComponent must not contain logic specific to component subsets per §3. Use intermediate abstract classes instead."
+
+  # ─────────────────────────────────────────
+  # 8) Platform Services Pattern
+  # ─────────────────────────────────────────
+  - id: PGC-701
+    title: Cross-cutting concerns use Platform Services
+    severity: info
+    scope_glob: ${defaults.core_globs}
+    must_match:
+      - pattern: "Service|service"
+        when_exists: "observability|monitoring|logging"
+    message: "Cross-cutting concerns should be injectable Platform Services per §4, not in BaseComponent."
+
+  # ─────────────────────────────────────────
+  # 9) Component Versioning
+  # ─────────────────────────────────────────
+  - id: PGC-801
+    title: Components follow semantic versioning
+    severity: error
+    scope_glob: "packages/components/*/package.json"
+    must_match:
+      - pattern: '"version"\\s*:\\s*"\\d+\\.\\d+\\.\\d+"'
+    message: "Component versions must follow semantic versioning (MAJOR.MINOR.PATCH)."
+
+  - id: PGC-802
+    title: Components have changelog
+    severity: warn
+    scope_glob: ${defaults.component_paths}
+    must_exist:
+      - "CHANGELOG.md"
+    message: "Components should maintain a CHANGELOG.md for version history tracking."
+
+  # ─────────────────────────────────────────
+  # 10) Backward Compatibility
+  # ─────────────────────────────────────────
+  - id: PGC-901
+    title: Schema changes are backward compatible
+    severity: warn
+    scope_glob: "packages/components/*/Config.schema.json"
+    message: "Schema changes should be backward-compatible whenever possible per §1 'Components are Contracts'."
+
+  # ─────────────────────────────────────────
+  # 11) Component Package Structure (additional best practices)
+  # ─────────────────────────────────────────
+  - id: PGC-1001
+    title: Components have README documentation
+    severity: error
+    scope_glob: ${defaults.component_paths}
+    must_exist:
       - "README.md"
+    message: "Every component must have README.md with usage documentation."
 
-  - id: "GOV-002"
-    title: "Security Configuration Standards"
-    message: "Security configurations must be properly defined and validated"
-    severity: "error"
-    scope_glob: "packages/components/**/*.ts"
-    must_match:
-      - pattern: "encryption.*enabled.*true"
-        file: "*.ts"
-      - pattern: "publicAccess.*false"
-        file: "*.ts"
-    must_not_match:
-      - pattern: "wildcard.*\\*"
-        file: "*.ts"
-
-  - id: "GOV-003"
-    title: "Compliance Framework Support"
-    message: "Components must support compliance framework configuration"
-    severity: "error"
-    scope_glob: "packages/components/**/*.ts"
-    must_match:
-      - pattern: "complianceFramework.*ComplianceFramework"
-        file: "*.ts"
-      - pattern: "fedramp.*moderate|high"
-        file: "*.ts"
-
-  - id: "GOV-004"
-    title: "Resource Tagging Requirements"
-    message: "All resources must have proper tagging configuration"
-    severity: "warn"
-    scope_glob: "packages/components/**/*.ts"
-    must_match:
-      - pattern: "tags.*Service.*Environment.*Owner"
-        file: "*.ts"
-    allow_if_metadata_includes:
-      key: "exemptions"
-      any: ["no-tags-required"]
-
-  - id: "GOV-005"
-    title: "IAM Policy Validation"
-    message: "IAM policies must follow least privilege principles"
-    severity: "error"
-    scope_glob: "packages/components/**/*.ts"
-    must_not_match:
-      - pattern: "Effect.*Allow.*Action.*\\*.*Resource.*\\*"
-        file: "*.ts"
-      - pattern: "Principal.*\\*"
-        file: "*.ts"
-
-  - id: "GOV-006"
-    title: "Configuration Schema Validation"
-    message: "Components must have valid JSON Schema definitions"
-    severity: "error"
-    scope_glob: "packages/components/**/*"
+  - id: PGC-1002
+    title: Components export public API via index.ts
+    severity: error
+    scope_glob: ${defaults.component_paths}
     must_exist:
-      - "Config.schema.json"
-    must_match:
-      - pattern: '"type".*"object"'
-        file: "Config.schema.json"
-      - pattern: '"properties"'
-        file: "Config.schema.json"
+      - "src/index.ts"
+    message: "Components must export public API through src/index.ts."
 
-  - id: "GOV-007"
-    title: "Documentation Requirements"
-    message: "Components must have comprehensive documentation"
-    severity: "warn"
-    scope_glob: "packages/components/**/*"
-    must_exist:
-      - "README.md"
+  - id: PGC-1003
+    title: Components implement IComponent interface
+    severity: error
+    scope_glob: "packages/components/*/src/*.component.ts"
     must_match:
-      - pattern: "## Overview"
-        file: "README.md"
-      - pattern: "## Configuration"
-        file: "README.md"
-      - pattern: "## Examples"
-        file: "README.md"
+      - pattern: "implements\\s+IComponent"
+    message: "Component classes must implement the IComponent interface."
 
-  - id: "GOV-008"
-    title: "TypeScript Strict Mode"
-    message: "TypeScript files must use strict mode and proper typing"
-    severity: "error"
-    scope_glob: "packages/components/**/*.ts"
-    must_match:
-      - pattern: "strict.*true"
-        file: "tsconfig.json"
+  # ─────────────────────────────────────────
+  # 12) Security Configuration Standards (additional)
+  # ─────────────────────────────────────────
+  - id: PGC-1101
+    title: No secrets in source code
+    severity: error
+    scope_glob: ${defaults.component_globs}
     must_not_match:
-      - pattern: "any.*="
-        file: "*.ts"
-    conditional:
-      requires_pattern: "packages/components/.*\\.ts$"
+      - pattern: "password\\s*:\\s*['\"][^{$]"
+      - pattern: "secret\\s*:\\s*['\"][^{$]"
+      - pattern: "apiKey\\s*:\\s*['\"][^{$]"
+    message: "Never hardcode secrets in source code. Use Secrets Manager."
 
-  - id: "GOV-009"
-    title: "Error Handling Standards"
-    message: "Components must implement proper error handling"
-    severity: "warn"
-    scope_glob: "packages/components/**/*.ts"
-    must_match:
-      - pattern: "try.*catch|throw.*Error"
-        file: "*.ts"
+  - id: PGC-1102
+    title: Components use secure defaults
+    severity: error
+    scope_glob: ${defaults.component_globs}
     must_not_match:
-      - pattern: "console\\.log.*error|console\\.error"
-        file: "*.ts"
-    conditional:
-      requires_pattern: "packages/components/.*\\.ts$"
-
-  - id: "GOV-010"
-    title: "Dependency Management"
-    message: "Dependencies must be properly declared and managed"
-    severity: "error"
-    scope_glob: "packages/components/**/*"
-    must_exist:
-      - "package.json"
-    must_match:
-      - pattern: '"dependencies"|"devDependencies"'
-        file: "package.json"
-    must_not_match:
-      - pattern: '"version".*"latest"'
-        file: "package.json"
+      - pattern: "publicReadAccess:\\s*true"
+      - pattern: "publicWriteAccess:\\s*true"
+    message: "Components must use secure defaults (no public access unless explicitly configured)."

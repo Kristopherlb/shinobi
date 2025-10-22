@@ -142,6 +142,29 @@ defaults:
       enableApiKey: true
       requireAuthorization: true
 
+  deployment-bundle-pipeline:
+    artifactoryHost: artifactory.gov.company.com
+    ociRepoBundles: artifactory.gov.company.com/bundles
+    ociRepoImages: artifactory.gov.company.com/images
+    signing:
+      keyless: false
+      kmsKeyId: kms://aws-kms/alias/platform-cosign-fedramp-moderate
+      fulcioUrl: https://fulcio.sigstore.dev
+      rekorUrl: https://rekor.sigstore.dev
+    security:
+      failOnCritical: true
+      onlyFixed: true
+      addCpesIfNone: true
+    bundle:
+      includeCdkOutput: true
+      includeTestReports: true
+      includeCoverage: true
+      includePolicyReports: true
+    runner:
+      image: registry/org/platform-runner:1.5.0
+      nodeVersion: "20.12.2"
+      fipsMode: true
+
   auto-scaling-group:
     launchTemplate:
       instanceType: t3.medium
@@ -196,10 +219,10 @@ defaults:
     tags: {}
 
   glue-job:
-    glueVersion: '4.0'
+    glueVersion: "4.0"
     jobType: glueetl
     command:
-      pythonVersion: '3'
+      pythonVersion: "3"
       scriptArguments: {}
     connections: []
     maxConcurrentRuns: 3
@@ -209,9 +232,9 @@ defaults:
       workerType: G.2X
       numberOfWorkers: 20
     defaultArguments:
-      --enable-continuous-cloudwatch-log: 'true'
-      --enable-metrics: 'true'
-      --enable-spark-ui: 'true'
+      --enable-continuous-cloudwatch-log: "true"
+      --enable-metrics: "true"
+      --enable-spark-ui: "true"
     nonOverridableArguments: {}
     security:
       encryption:
@@ -245,7 +268,7 @@ defaults:
       monitoring: enabled
 
   elasticache-redis:
-    engineVersion: '7.0'
+    engineVersion: "7.0"
     nodeType: cache.r6g.large
     numCacheNodes: 2
     port: 6379
@@ -259,8 +282,8 @@ defaults:
     parameterGroup:
       family: redis7
       parameters:
-        tcp-keepalive: '60'
-        timeout: '300'
+        tcp-keepalive: "60"
+        timeout: "300"
     encryption:
       atRest: true
       inTransit: true
@@ -270,9 +293,9 @@ defaults:
     backup:
       enabled: true
       retentionDays: 14
-      window: '02:00-04:00'
+      window: "02:00-04:00"
     maintenance:
-      window: 'sun:01:00-sun:02:00'
+      window: "sun:01:00-sun:02:00"
     multiAz:
       enabled: true
       automaticFailover: true
@@ -342,7 +365,7 @@ defaults:
         statistic: Sum
       cloudWatchLogs:
         enabled: true
-        retentionDays: 90
+        retentionDays: 1827
         removalPolicy: retain
     deadLetterQueue:
       enabled: true
@@ -352,7 +375,7 @@ defaults:
       compliance-framework: fedramp-moderate
 
   eventbridge-rule-cron:
-    schedule: 'rate(5 minutes)'
+    schedule: "rate(5 minutes)"
     state: enabled
     deadLetterQueue:
       enabled: true
@@ -397,18 +420,18 @@ defaults:
     policies:
       - sid: DenyInsecureTransport
         effect: deny
-        actions: ['sns:*']
+        actions: ["sns:*"]
         conditions:
           Bool:
-            aws:SecureTransport: 'false'
+            aws:SecureTransport: "false"
       - sid: RequireAuthentication
         effect: deny
-        actions: ['sns:*']
+        actions: ["sns:*"]
         conditions:
           Bool:
-            aws:PrincipalIsAWSService: 'false'
+            aws:PrincipalIsAWSService: "false"
           Null:
-            aws:userid: 'true'
+            aws:userid: "true"
     monitoring:
       enabled: true
       alarms:
@@ -464,7 +487,7 @@ defaults:
         evaluationPeriods: 3
         periodMinutes: 15
     tags:
-      'compliance-framework': 'fedramp-moderate'
+      "compliance-framework": "fedramp-moderate"
 
   cognito-user-pool:
     signIn:
@@ -699,6 +722,21 @@ defaults:
     tags:
       compliance: fedramp-moderate
 
+  feature-flag:
+    enabled: true
+    flagType: boolean
+    monitoring:
+      enabled: true
+      detailedMetrics: true
+      alarms:
+        evaluationLatencyMs: 500
+        errorRatePercent: 5
+    providerConfig:
+      awsAppConfig:
+        deploymentStrategyId: progressive-rollout
+    tags:
+      compliance: fedramp-moderate
+
   secrets-manager:
     automaticRotation:
       enabled: true
@@ -833,10 +871,23 @@ defaults:
           evaluationPeriods: 3
     diagnostics:
       enableExecuteCommand: true
+    observability:
+      xray:
+        enabled: true # Enhanced tracing for FedRAMP Moderate
+        mode: centralized # Use account-level collector for cost efficiency
+      adot:
+        enabled: true # Full OpenTelemetry support
+        mode: centralized
+        version: v0.35.0
+      dashboard:
+        enabled: true
+        widgets: ["cpu", "memory", "tasks", "logs", "alarms"]
+    network:
+      egressPolicy: vpc-only # More restrictive for FedRAMP
 
   ssm-parameter:
     kind: secureString
-    value: ''
+    value: ""
     values: []
     tier: advanced
     dataType: text
@@ -930,7 +981,7 @@ defaults:
     accessPolicies:
       statements: []
     advancedOptions:
-      rest.action.multi.allow_explicit_index: 'true'
+      rest.action.multi.allow_explicit_index: "true"
     hardeningProfile: fedramp-moderate
     removalPolicy: retain
     tags:
@@ -955,11 +1006,7 @@ defaults:
       securityGroup:
         create: true
         securityGroupId:
-        ingressRules:
-          - port: 2049
-            protocol: tcp
-            cidr: 10.0.0.0/8
-            description: NFS access from trusted networks
+        ingressRules: []
     lifecycle:
       transitionToIA: AFTER_30_DAYS
       transitionToPrimary: AFTER_1_ACCESS
@@ -1324,7 +1371,7 @@ defaults:
     backup:
       enabled: true
       retentionDays: 30
-      schedule: 'cron(0 3 * * ? *)'
+      schedule: "cron(0 3 * * ? *)"
     monitoring:
       enabled: true
       alarms:
@@ -1341,7 +1388,7 @@ defaults:
 
   rds-postgres:
     instance:
-      engineVersion: '15.4'
+      engineVersion: "15.4"
       instanceType: r5.large
       allocatedStorage: 100
       multiAz: true

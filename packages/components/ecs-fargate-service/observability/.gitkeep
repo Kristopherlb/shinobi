@@ -1,0 +1,10 @@
+# Observability Configuration
+
+This folder contains observability configuration for the ECS Fargate Service component:
+
+- `dashboards/` - CloudWatch/Grafana dashboard definitions
+- `alarms/` - CloudWatch alarm configurations  
+- `traces/` - X-Ray sampling rules and trace configuration
+
+These files are generated during component synthesis and used by the platform's observability service.
+

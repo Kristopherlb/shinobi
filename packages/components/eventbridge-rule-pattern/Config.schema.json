@@ -1,0 +1,389 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "$id": "https://platform.shinobi.dev/schemas/components/eventbridge-rule-pattern/v1.0.0",
+  "title": "EventBridge Rule Pattern Configuration",
+  "description": "Configuration schema for EventBridge pattern-based rule component with mandatory dead letter queue, CloudWatch logging, and comprehensive monitoring support",
+  "type": "object",
+  "required": [
+    "deadLetterQueue",
+    "eventPattern",
+    "monitoring"
+  ],
+  "additionalProperties": false,
+  "properties": {
+    "ruleName": {
+      "type": "string",
+      "description": "Custom name for the EventBridge rule. Defaults to {serviceName}-{componentName}. Invalid characters are replaced with hyphens and truncated to 64 characters.",
+      "maxLength": 64
+    },
+    "description": {
+      "type": "string",
+      "description": "Human-readable description of the rule's purpose",
+      "maxLength": 512
+    },
+    "state": {
+      "type": "string",
+      "enum": [
+        "enabled",
+        "disabled"
+      ],
+      "description": "Initial state of the rule. Set to 'disabled' to create the rule without activating it.",
+      "default": "enabled"
+    },
+    "eventPattern": {
+      "type": "object",
+      "description": "EventBridge event pattern for filtering events. See AWS EventBridge documentation for pattern syntax.",
+      "minProperties": 1
+    },
+    "eventBus": {
+      "type": "object",
+      "description": "Custom event bus configuration. Omit to use the default event bus.",
+      "additionalProperties": false,
+      "properties": {
+        "name": {
+          "type": "string",
+          "description": "Name of an existing event bus in the same account and region"
+        },
+        "arn": {
+          "type": "string",
+          "description": "ARN of an event bus for cross-account or cross-region access. Takes precedence over 'name'.",
+          "pattern": "^arn:aws[a-z-]*:events:[a-z0-9-]+:[0-9]{12}:event-bus/.+$"
+        }
+      }
+    },
+    "input": {
+      "type": "object",
+      "description": "Input transformation configuration for rule targets",
+      "additionalProperties": false,
+      "properties": {
+        "type": {
+          "type": "string",
+          "enum": [
+            "constant",
+            "path",
+            "transformer"
+          ],
+          "description": "Type of input transformation to apply"
+        },
+        "value": {
+          "type": "string",
+          "description": "Static JSON string when type is 'constant'"
+        },
+        "path": {
+          "type": "string",
+          "description": "JSONPath expression when type is 'path'"
+        },
+        "transformer": {
+          "type": "object",
+          "description": "Input transformer configuration for complex transformations",
+          "additionalProperties": false,
+          "properties": {
+            "inputPathsMap": {
+              "type": "object",
+              "description": "Map of variable names to JSONPath expressions",
+              "additionalProperties": {
+                "type": "string"
+              }
+            },
+            "inputTemplate": {
+              "type": "string",
+              "description": "Template string using variables from inputPathsMap"
+            }
+          },
+          "required": [
+            "inputTemplate"
+          ]
+        }
+      },
+      "required": [
+        "type"
+      ]
+    },
+    "deadLetterQueue": {
+      "type": "object",
+      "description": "Dead letter queue configuration for failed event deliveries (required for resilient event-driven design)",
+      "additionalProperties": false,
+      "required": [
+        "enabled"
+      ],
+      "properties": {
+        "enabled": {
+          "type": "boolean",
+          "description": "Enable dead letter queue for capturing failed events (required: true)",
+          "default": true
+        },
+        "maxRetryAttempts": {
+          "type": "number",
+          "description": "Number of times to retry failed deliveries before sending to DLQ",
+          "minimum": 0,
+          "maximum": 185,
+          "default": 3
+        },
+        "retentionDays": {
+          "type": "number",
+          "description": "Number of days to retain messages in the DLQ",
+          "minimum": 1,
+          "maximum": 14,
+          "default": 14
+        }
+      }
+    },
+    "monitoring": {
+      "type": "object",
+      "description": "CloudWatch monitoring and alarming configuration (required per platform observability standard)",
+      "additionalProperties": false,
+      "required": [
+        "enabled",
+        "cloudWatchLogs"
+      ],
+      "properties": {
+        "enabled": {
+          "type": "boolean",
+          "description": "Master switch for all monitoring features (required: true)",
+          "default": true
+        },
+        "failedInvocations": {
+          "$ref": "#/definitions/AlarmConfig",
+          "description": "Alarm configuration for failed rule invocations",
+          "default": {
+            "enabled": true,
+            "threshold": 5,
+            "evaluationPeriods": 2,
+            "periodMinutes": 5,
+            "comparisonOperator": "gte",
+            "treatMissingData": "not-breaching",
+            "statistic": "Sum"
+          }
+        },
+        "invocations": {
+          "$ref": "#/definitions/AlarmConfig",
+          "description": "Alarm configuration for total invocation volume",
+          "default": {
+            "enabled": false,
+            "threshold": 0,
+            "evaluationPeriods": 3,
+            "periodMinutes": 5,
+            "comparisonOperator": "lte",
+            "treatMissingData": "breaching",
+            "statistic": "Sum"
+          }
+        },
+        "matchedEvents": {
+          "$ref": "#/definitions/AlarmConfig",
+          "description": "Alarm configuration for matched event volume",
+          "default": {
+            "enabled": false,
+            "threshold": 0,
+            "evaluationPeriods": 1,
+            "periodMinutes": 5,
+            "comparisonOperator": "gt",
+            "treatMissingData": "not-breaching",
+            "statistic": "Sum"
+          }
+        },
+        "deadLetterQueueMessages": {
+          "$ref": "#/definitions/AlarmConfig",
+          "description": "Alarm configuration for DLQ message backlog (requires DLQ enabled)",
+          "default": {
+            "enabled": true,
+            "threshold": 1,
+            "evaluationPeriods": 1,
+            "periodMinutes": 5,
+            "comparisonOperator": "gte",
+            "treatMissingData": "not-breaching",
+            "statistic": "Sum"
+          }
+        },
+        "cloudWatchLogs": {
+          "type": "object",
+          "description": "CloudWatch Logs configuration for event logging (required)",
+          "additionalProperties": false,
+          "required": [
+            "enabled"
+          ],
+          "properties": {
+            "enabled": {
+              "type": "boolean",
+              "description": "Enable CloudWatch Logs delivery for matched events (required: true)",
+              "default": true
+            },
+            "logGroupName": {
+              "type": "string",
+              "description": "Custom log group name. Defaults to /aws/platform/events/{serviceName}-{componentName}-{ruleName}.",
+              "pattern": "^[/a-zA-Z0-9._-]+$"
+            },
+            "retentionDays": {
+              "type": "number",
+              "description": "Log retention period in days. Defaults are compliance-aware: commercial=365, fedramp-moderate=1095, fedramp-high=2555",
+              "enum": [
+                1,
+                3,
+                5,
+                7,
+                14,
+                30,
+                60,
+                90,
+                120,
+                150,
+                180,
+                365,
+                400,
+                545,
+                731,
+                1095,
+                1827,
+                2555,
+                3653
+              ],
+              "default": 365
+            },
+            "removalPolicy": {
+              "type": "string",
+              "enum": [
+                "retain",
+                "destroy"
+              ],
+              "description": "Policy for log group deletion when stack is deleted. Defaults: commercial=retain, fedramp=retain",
+              "default": "retain"
+            }
+          }
+        }
+      }
+    },
+    "tags": {
+      "type": "object",
+      "description": "Additional resource tags to apply (merged with standard platform tags)",
+      "additionalProperties": {
+        "type": "string"
+      }
+    }
+  },
+  "definitions": {
+    "AlarmConfig": {
+      "type": "object",
+      "description": "CloudWatch Alarm configuration",
+      "additionalProperties": false,
+      "properties": {
+        "enabled": {
+          "type": "boolean",
+          "description": "Enable this alarm",
+          "default": false
+        },
+        "threshold": {
+          "type": "number",
+          "description": "Alarm threshold value",
+          "minimum": 0,
+          "default": 0
+        },
+        "evaluationPeriods": {
+          "type": "number",
+          "description": "Number of periods to evaluate",
+          "minimum": 1,
+          "default": 1
+        },
+        "periodMinutes": {
+          "type": "number",
+          "description": "Period length in minutes",
+          "minimum": 1,
+          "default": 5
+        },
+        "comparisonOperator": {
+          "type": "string",
+          "enum": [
+            "gt",
+            "gte",
+            "lt",
+            "lte"
+          ],
+          "description": "Comparison operator: gt (>), gte (>=), lt (<), lte (<=)",
+          "default": "gte"
+        },
+        "treatMissingData": {
+          "type": "string",
+          "enum": [
+            "breaching",
+            "not-breaching",
+            "ignore",
+            "missing"
+          ],
+          "description": "How to treat missing data points",
+          "default": "not-breaching"
+        },
+        "statistic": {
+          "type": "string",
+          "enum": [
+            "Average",
+            "Sum",
+            "Minimum",
+            "Maximum"
+          ],
+          "description": "Metric statistic to evaluate",
+          "default": "Sum"
+        }
+      }
+    }
+  },
+  "examples": [
+    {
+      "description": "Minimal FedRAMP-compliant configuration for EC2 state change events",
+      "eventPattern": {
+        "source": [
+          "aws.ec2"
+        ],
+        "detail-type": [
+          "EC2 Instance State-change Notification"
+        ]
+      },
+      "deadLetterQueue": {
+        "enabled": true
+      },
+      "monitoring": {
+        "enabled": true,
+        "cloudWatchLogs": {
+          "enabled": true
+        }
+      }
+    },
+    {
+      "description": "Full-featured configuration with all alarms for FedRAMP High",
+      "eventPattern": {
+        "source": [
+          "com.myapp.orders"
+        ],
+        "detail-type": [
+          "Order Placed"
+        ],
+        "detail": {
+          "amount": [
+            {
+              "numeric": [
+                ">",
+                1000
+              ]
+            }
+          ]
+        }
+      },
+      "monitoring": {
+        "enabled": true,
+        "failedInvocations": {
+          "enabled": true,
+          "threshold": 5,
+          "evaluationPeriods": 2,
+          "periodMinutes": 5,
+          "comparisonOperator": "gte"
+        },
+        "cloudWatchLogs": {
+          "enabled": true,
+          "retentionDays": 2555
+        }
+      },
+      "deadLetterQueue": {
+        "enabled": true,
+        "maxRetryAttempts": 3,
+        "retentionDays": 14
+      }
+    }
+  ]
+}

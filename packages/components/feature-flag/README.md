@@ -1,6 +1,6 @@
 # FeatureFlagComponent Component
 
-Feature Flag Component with comprehensive security, monitoring, and compliance features.
+Feature Flag Component with comprehensive security, monitoring, and compliance features. The implementation adheres to the Platform Feature Flagging & Canary Deployment Standard v1.0 and the OpenFeature provider contract.
 
 ## Overview
 
@@ -28,39 +28,44 @@ owner: platform-team
 complianceFramework: commercial
 
 components:
-  - name: my-feature-flag
+  - name: checkout-flag
     type: feature-flag
     config:
-      description: "Production feature-flag instance"
+      flagKey: checkout_experience
+      flagType: boolean
+      defaultValue: false
+      description: "Production feature flag controlling the new checkout workflow"
       monitoring:
         enabled: true
         detailedMetrics: true
+      targetingRules:
+        percentage: 25
+      tags:
+        data-classification: internal
 ```
 
 ## Configuration Reference
 
-### Root Configuration
+The definitive schema lives at `Config.schema.json` and is served through the MCP `/platform/components/feature-flag/schema` endpoint. Key properties are summarised below:
 
 | Property | Type | Required | Description |
 |----------|------|----------|-------------|
-| `name` | string | No | Component name (auto-generated if not provided) |
-| `description` | string | No | Component description for documentation |
-| `monitoring` | object | No | Monitoring and observability configuration |
-| `tags` | object | No | Additional resource tags |
+| `flagKey` | string | Yes | Unique identifier for the flag; used by OpenFeature clients. |
+| `flagType` | enum(`boolean`, `string`, `number`, `object`) | Yes | Determines the validation shape for defaults, variants, and targeting values. |
+| `defaultValue` | union | Yes | Fallback value when no targeting rule matches or the provider is unavailable. |
+| `enabled` | boolean | No | Enables or disables the flag at creation (defaults to `true`). |
+| `targetingRules` | object | No | Progressive delivery settings: `percentage`, `conditions[]`, `variants[]`. |
+| `providerConfig` | object | No | Provider-specific overrides (AppConfig constraints, LaunchDarkly tags, Flagsmith defaults). |
+| `monitoring` | object | No | Observability controls. `detailedMetrics` automatically enables per-request telemetry for regulated frameworks. |
+| `tags` | object | No | Additional tags merged with the mandatory platform tags. Custom values extend the auto-applied keys `feature-flag-key`, `feature-flag-type`, and `openfeature-standard`. |
 
-### Monitoring Configuration
-
-| Property | Type | Required | Description |
-|----------|------|----------|-------------|
-| `enabled` | boolean | No | Enable monitoring (default: true) |
-| `detailedMetrics` | boolean | No | Enable detailed CloudWatch metrics |
+See the [observability playbook](./observability/README.md) for the default telemetry emitted by the component.
 
 ## Capabilities Provided
 
 This component provides the following capabilities for binding with other components:
 
-- `feature-flags:feature-flag` - Main feature-flag capability
-- `monitoring:feature-flag` - Monitoring capability
+- `feature-flags:flag` — Feature flag definition exposed to binder strategies.
 
 ## Construct Handles
 
@@ -72,24 +77,24 @@ The following construct handles are available for use in `patches.ts`:
 
 ### Commercial
 
-- Standard monitoring configuration
-- Basic resource tagging
-- Standard security settings
+- Monitoring enabled by default with optional detailed metrics.
+- Standard platform tagging plus feature flag metadata tags.
+- Uses the platform progressive rollout strategy defined in `config/commercial.yml`.
 
 ### FedRAMP Moderate/High
 
-- Enhanced monitoring with detailed metrics
-- Comprehensive audit logging
-- Stricter security configurations
-- Extended compliance tagging
+- Detailed metrics automatically enabled.
+- Deployment alarms (`monitoring.alarms`) recommended to enforce latency/error thresholds.
+- Hosted configuration versions inherit platform-managed KMS encryption policies supplied by the OpenFeature provider.
 
 ## Best Practices
 
 1. **Always enable monitoring** in production environments
 2. **Use descriptive names** for better resource identification
 3. **Configure appropriate tags** for cost allocation and governance
-4. **Review compliance requirements** for your environment
-5. **Test configurations** in development before production deployment
+4. **Bind compute components via the `ComputeToOpenFeatureStrategy`** to ensure environment variables and telemetry are wired automatically.
+5. **Review compliance requirements** for your environment
+6. **Test configurations** in development before production deployment
 
 ## Development
 

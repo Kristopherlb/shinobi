@@ -3,8 +3,9 @@ import * as acm from 'aws-cdk-lib/aws-certificatemanager';
 import * as cognito from 'aws-cdk-lib/aws-cognito';
 import * as cw from 'aws-cdk-lib/aws-cloudwatch';
 import * as logs from 'aws-cdk-lib/aws-logs';
-import { Duration, RemovalPolicy } from 'aws-cdk-lib';
+import { Duration, RemovalPolicy, Stack } from 'aws-cdk-lib';
 import { Construct } from 'constructs';
+import { NagSuppressions } from 'cdk-nag';
 
 import {
   BaseComponent,
@@ -26,6 +27,13 @@ interface ApiGatewayRestCapability {
   authorizerArn?: string;
 }
 
+interface ApiGatewayRestObservabilityCapability {
+  apiId: string;
+  stageName: string;
+  environmentVariables: Record<string, string>;
+  endpointUrl: string;
+}
+
 export class ApiGatewayRestComponent extends BaseComponent {
   private api?: apigateway.RestApi;
   private stage?: apigateway.Stage;
@@ -34,6 +42,7 @@ export class ApiGatewayRestComponent extends BaseComponent {
   private usagePlan?: apigateway.UsagePlan;
   private config!: ApiGatewayRestConfig;
   private resolvedStageName!: string;
+  private observabilityEnvironment: Record<string, string> | undefined;
 
   constructor(
     scope: Construct,
@@ -61,6 +70,7 @@ export class ApiGatewayRestComponent extends BaseComponent {
     this.configureRequestValidation();
     this.configureAdvancedThrottling();
     this.configureEnhancedMonitoring();
+    this.applyCdkNagSuppressions();
 
     if (!this.api || !this.stage) {
       throw new Error('API Gateway REST component failed to create core constructs.');
@@ -79,6 +89,10 @@ export class ApiGatewayRestComponent extends BaseComponent {
     }
 
     this.registerCapability('api:rest', this.getApiCapability());
+    this.registerCapability(
+      'observability:api-gateway-rest',
+      this.getObservabilityCapability(),
+    );
   }
 
   public override getCapabilities(): ComponentCapabilities {
@@ -338,6 +352,8 @@ export class ApiGatewayRestComponent extends BaseComponent {
       ...cfnStage.variables,
       ...otelEnv,
     };
+
+    this.observabilityEnvironment = otelEnv;
   }
 
   private configureWafAssociation(): void {
@@ -362,46 +378,50 @@ export class ApiGatewayRestComponent extends BaseComponent {
 
     if (thresholds.errorRate4xxPercent !== undefined) {
       const metric4xx = this.api.metricClientError({ period: Duration.minutes(5) });
-      new cw.Alarm(this, 'FourXXAlarm', {
+      const alarm = new cw.Alarm(this, 'FourXXAlarm', {
         metric: metric4xx,
         threshold: thresholds.errorRate4xxPercent,
         evaluationPeriods: 1,
         comparisonOperator: cw.ComparisonOperator.GREATER_THAN_THRESHOLD,
         alarmDescription: '4XX error rate exceeded threshold',
       });
+      this.applyStandardTags(alarm);
     }
 
     if (thresholds.errorRate5xxPercent !== undefined) {
       const metric5xx = this.api.metricServerError({ period: Duration.minutes(5) });
-      new cw.Alarm(this, 'FiveXXAlarm', {
+      const alarm = new cw.Alarm(this, 'FiveXXAlarm', {
         metric: metric5xx,
         threshold: thresholds.errorRate5xxPercent,
         evaluationPeriods: 1,
         comparisonOperator: cw.ComparisonOperator.GREATER_THAN_THRESHOLD,
         alarmDescription: '5XX error rate exceeded threshold',
       });
+      this.applyStandardTags(alarm);
     }
 
     if (thresholds.highLatencyMs !== undefined) {
       const latencyMetric = this.api.metricLatency({ period: Duration.minutes(5) });
-      new cw.Alarm(this, 'LatencyAlarm', {
+      const alarm = new cw.Alarm(this, 'LatencyAlarm', {
         metric: latencyMetric,
         threshold: thresholds.highLatencyMs,
         evaluationPeriods: 1,
         comparisonOperator: cw.ComparisonOperator.GREATER_THAN_THRESHOLD,
         alarmDescription: 'Latency exceeded threshold',
       });
+      this.applyStandardTags(alarm);
     }
 
     if (thresholds.lowThroughput !== undefined) {
       const countMetric = this.api.metricCount({ period: Duration.minutes(5) });
-      new cw.Alarm(this, 'ThroughputAlarm', {
+      const alarm = new cw.Alarm(this, 'ThroughputAlarm', {
         metric: countMetric,
         threshold: thresholds.lowThroughput,
         evaluationPeriods: 1,
         comparisonOperator: cw.ComparisonOperator.LESS_THAN_THRESHOLD,
         alarmDescription: 'API throughput dropped below threshold',
       });
+      this.applyStandardTags(alarm);
     }
   }
 
@@ -418,6 +438,21 @@ export class ApiGatewayRestComponent extends BaseComponent {
       authorizerArn: this.authorizer?.authorizerArn,
     };
   }
+
+  private getObservabilityCapability(): ApiGatewayRestObservabilityCapability {
+    if (!this.api) {
+      throw new Error('Observability capability requested before API construct was created.');
+    }
+
+    return {
+      apiId: this.api.restApiId,
+      stageName: this.resolvedStageName,
+      endpointUrl: this.api.url,
+      environmentVariables: this.observabilityEnvironment ?? {},
+    };
+  }
+
+  private observabilityEnvironment: Record<string, string> | undefined;
 
   private resolveStageName(): string {
     return this.config.deploymentStage ?? this.context.environment ?? 'prod';
@@ -516,5 +551,62 @@ export class ApiGatewayRestComponent extends BaseComponent {
     // 2. Set up business metrics tracking
     // 3. Configure advanced alerting rules
     // 4. Create performance optimization recommendations
+  }
+
+  private applyCdkNagSuppressions(): void {
+    if (this.api) {
+      NagSuppressions.addResourceSuppressions(
+        this.api,
+        [
+          {
+            id: 'AwsSolutions-APIG2',
+            reason:
+              'Request validation is enforced through manifest schema checks and downstream integration contracts; API Gateway request validators remain optional.'
+          },
+          {
+            id: 'AwsSolutions-APIG4',
+            reason:
+              'The REST component intentionally supports unauthenticated endpoints; teams enable IAM, Cognito, or custom authorizers based on service requirements.'
+          },
+          {
+            id: 'AwsSolutions-COG4',
+            reason:
+              'Cognito authorizers are configurable but not mandatory. This suppression tracks the exception for public APIs managed by downstream services.'
+          }
+        ],
+        true
+      );
+    }
+
+    if (this.api) {
+      const cloudWatchRole = this.api.node.tryFindChild('CloudWatchRole');
+      if (cloudWatchRole) {
+        NagSuppressions.addResourceSuppressions(
+          cloudWatchRole,
+          [
+            {
+              id: 'AwsSolutions-IAM4',
+              reason:
+                'AmazonAPIGatewayPushToCloudWatchLogs is an AWS-managed policy required for REST API access logging; tighter scoping is tracked separately.',
+              appliesTo: [
+              'Policy::arn:<AWS::Partition>:iam::aws:policy/service-role/AmazonAPIGatewayPushToCloudWatchLogs'
+            ]
+          }
+        ],
+        true
+      );
+      }
+    }
+
+    NagSuppressions.addStackSuppressions(Stack.of(this), [
+      {
+        id: 'AwsSolutions-IAM4',
+        reason:
+          'AmazonAPIGatewayPushToCloudWatchLogs is an AWS-managed policy required for REST API access logging; tighter scoping is tracked separately.',
+        appliesTo: [
+          'Policy::arn:<AWS::Partition>:iam::aws:policy/service-role/AmazonAPIGatewayPushToCloudWatchLogs'
+        ]
+      }
+    ]);
   }
 }

@@ -2,7 +2,7 @@ import { Construct } from 'constructs';
 import {
   ElastiCacheRedisComponentConfigBuilder,
   ElastiCacheRedisConfig
-} from '../elasticache-redis.builder.ts';
+} from '../src/elasticache-redis.builder.ts';
 import { ComponentContext, ComponentSpec } from '@shinobi/core';
 
 type Framework = 'commercial' | 'fedramp-moderate' | 'fedramp-high';
@@ -28,10 +28,20 @@ describe('ElastiCacheRedisComponentConfigBuilder', () => {
     const config = builder.buildSync();
 
     expect(config.engineVersion).toBe('7.0');
-    expect(config.encryption.atRest).toBe(false);
-    expect(config.encryption.authToken.enabled).toBe(false);
-    expect(config.monitoring.enabled).toBe(false);
-    expect(config.monitoring.logDelivery).toHaveLength(0);
+    expect(config.encryption.atRest).toBe(true);
+    expect(config.encryption.inTransit).toBe(true);
+    expect(config.encryption.authToken.enabled).toBe(true);
+    expect(config.monitoring.enabled).toBe(true);
+    expect(config.monitoring.logDelivery).toHaveLength(2);
+    expect(config.monitoring.logDelivery.map(entry => entry.logType)).toEqual(
+      expect.arrayContaining(['slow-log', 'engine-log'])
+    );
+    expect(config.monitoring.logDelivery.every(entry => entry.logFormat === 'json')).toBe(true);
+    expect(
+      config.monitoring.logDelivery.every(entry =>
+        entry.destinationName.startsWith('/aws/platform/redis/test-service-test-redis/')
+      )
+    ).toBe(true);
     expect(config.multiAz.enabled).toBe(false);
   });
 
@@ -45,8 +55,10 @@ describe('ElastiCacheRedisComponentConfigBuilder', () => {
     expect(config.backup.enabled).toBe(true);
     expect(config.multiAz.enabled).toBe(true);
     expect(config.monitoring.enabled).toBe(true);
-    expect(config.monitoring.logDelivery).toHaveLength(1);
-    expect(config.monitoring.logDelivery[0]).toMatchObject({ logType: 'slow-log', destinationType: 'cloudwatch-logs' });
+    expect(config.monitoring.logDelivery).toHaveLength(2);
+    const slowLog = config.monitoring.logDelivery.find(entry => entry.logType === 'slow-log');
+    expect(slowLog).toBeDefined();
+    expect(slowLog).toMatchObject({ destinationType: 'cloudwatch-logs', managed: true });
   });
 
   it('includes engine log delivery for fedramp-high via manifest override', () => {
@@ -72,8 +84,9 @@ describe('ElastiCacheRedisComponentConfigBuilder', () => {
 
     const config = builder.buildSync();
 
-    expect(config.monitoring.logDelivery).toHaveLength(1);
-    expect(config.monitoring.logDelivery[0].logType).toBe('engine-log');
+    expect(config.monitoring.logDelivery).toHaveLength(2);
+    expect(config.monitoring.logDelivery.find(entry => entry.logType === 'engine-log')).toBeDefined();
+    expect(config.monitoring.logDelivery.find(entry => entry.logType === 'slow-log')).toBeDefined();
     expect(config.monitoring.alarms.cpuUtilization.threshold).toBe(65);
   });
 

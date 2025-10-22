@@ -1,6 +1,6 @@
 {
   "name": "@platform/components-cognito-user-pool",
-  "version": "0.1.0",
+  "version": "1.0.0",
   "description": "Cognito User Pool component with AI-ready authentication patterns and compliance support",
   "main": "./dist/index.js",
   "types": "./dist/index.d.ts",
@@ -25,7 +25,7 @@
   "scripts": {
     "build": "tsc -p tsconfig.lib.json",
     "clean": "rm -rf dist",
-    "test": "jest -c ../../../../jest.preset.ts --roots=./tests",
+    "test": "jest",
     "lint": "eslint src/**/*.ts",
     "lint:fix": "eslint src/**/*.ts --fix"
   },

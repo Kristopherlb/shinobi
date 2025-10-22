@@ -1,6 +1,6 @@
 {
   "name": "@platform/auto-scaling-group",
-  "version": "1.0.0",
+  "version": "1.0.1",
   "description": "Auto Scaling Group component for the Shinobi platform",
   "type": "module",
   "main": "dist/index.js",
@@ -23,7 +23,8 @@
   "license": "MIT",
   "dependencies": {
     "@shinobi/core": "workspace:*",
-    "@platform/contracts": "workspace:*"
+    "@platform/contracts": "workspace:*",
+    "cdk-nag": "^2.37.35"
   },
   "peerDependencies": {
     "aws-cdk-lib": "^2.214.0",

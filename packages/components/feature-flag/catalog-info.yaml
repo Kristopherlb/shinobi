@@ -25,10 +25,9 @@ spec:
       category: platform
       description: Feature flag component providing rule evaluation, audit trails, and compliance alignment.
       capabilities:
-        - feature:flag
+        - feature-flags:flag
       awsServices:
-        - dynamodb
-        - lambda
+        - appconfig
         - cloudwatch
       tags:
         required:

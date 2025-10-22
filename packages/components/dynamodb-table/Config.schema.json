@@ -5,7 +5,15 @@
   "type": "object",
   "additionalProperties": false,
   "required": [
-    "partitionKey"
+    "partitionKey",
+    "billingMode",
+    "tableClass",
+    "pointInTimeRecovery",
+    "encryption",
+    "backup",
+    "monitoring",
+    "hardeningProfile",
+    "tags"
   ],
   "properties": {
     "tableName": {
@@ -94,24 +102,29 @@
           "properties": {
             "minReadCapacity": {
               "type": "number",
-              "minimum": 1
+              "minimum": 1,
+              "description": "Minimum allowed read capacity when auto scaling is enabled"
             },
             "maxReadCapacity": {
               "type": "number",
-              "minimum": 1
+              "minimum": 1,
+              "description": "Maximum allowed read capacity when auto scaling is enabled"
             },
             "minWriteCapacity": {
               "type": "number",
-              "minimum": 1
+              "minimum": 1,
+              "description": "Minimum allowed write capacity when auto scaling is enabled"
             },
             "maxWriteCapacity": {
               "type": "number",
-              "minimum": 1
+              "minimum": 1,
+              "description": "Maximum allowed write capacity when auto scaling is enabled"
             },
             "targetUtilizationPercent": {
               "type": "number",
               "minimum": 20,
-              "maximum": 90
+              "maximum": 90,
+              "description": "Target capacity utilisation percentage used by scaling policies"
             }
           }
         }
@@ -419,7 +432,8 @@
       "properties": {
         "enabled": {
           "type": "boolean",
-          "default": false
+          "default": true,
+          "description": "Enable CloudWatch monitoring and alarms"
         },
         "alarms": {
           "type": "object",
@@ -478,6 +492,67 @@
                 }
               }
             },
+            "consumedReadCapacity": {
+              "type": "object",
+              "additionalProperties": false,
+              "properties": {
+                "enabled": {
+                  "type": "boolean",
+                  "default": false,
+                  "description": "Enable alarm for consumed read capacity utilisation"
+                },
+                "threshold": {
+                  "type": "number",
+                  "description": "Capacity utilisation percentage that triggers the alarm"
+                },
+                "evaluationPeriods": {
+                  "type": "number",
+                  "minimum": 1,
+                  "default": 3,
+                  "description": "Number of periods to evaluate for the read capacity alarm"
+                },
+                "periodMinutes": {
+                  "type": "number",
+                  "minimum": 1,
+                  "default": 5,
+                  "description": "Metric evaluation period in minutes"
+                },
+                "comparisonOperator": {
+                  "type": "string",
+                  "enum": [
+                    "gt",
+                    "gte",
+                    "lt",
+                    "lte"
+                  ],
+                  "default": "gt",
+                  "description": "Comparison operator for the read capacity alarm"
+                },
+                "treatMissingData": {
+                  "type": "string",
+                  "enum": [
+                    "breaching",
+                    "not-breaching",
+                    "ignore",
+                    "missing"
+                  ],
+                  "default": "not-breaching",
+                  "description": "Missing data treatment for the read capacity alarm"
+                },
+                "statistic": {
+                  "type": "string",
+                  "default": "Average",
+                  "description": "Statistic used when evaluating consumed read capacity"
+                },
+                "tags": {
+                  "type": "object",
+                  "additionalProperties": {
+                    "type": "string"
+                  },
+                  "description": "Additional tags applied to the read capacity alarm"
+                }
+              }
+            },
             "writeThrottle": {
               "type": "object",
               "additionalProperties": false,
@@ -528,6 +603,67 @@
                   "additionalProperties": {
                     "type": "string"
                   }
+                }
+              }
+            },
+            "consumedWriteCapacity": {
+              "type": "object",
+              "additionalProperties": false,
+              "properties": {
+                "enabled": {
+                  "type": "boolean",
+                  "default": false,
+                  "description": "Enable alarm for consumed write capacity utilisation"
+                },
+                "threshold": {
+                  "type": "number",
+                  "description": "Capacity utilisation percentage that triggers the alarm"
+                },
+                "evaluationPeriods": {
+                  "type": "number",
+                  "minimum": 1,
+                  "default": 3,
+                  "description": "Number of periods to evaluate for the write capacity alarm"
+                },
+                "periodMinutes": {
+                  "type": "number",
+                  "minimum": 1,
+                  "default": 5,
+                  "description": "Metric evaluation period in minutes"
+                },
+                "comparisonOperator": {
+                  "type": "string",
+                  "enum": [
+                    "gt",
+                    "gte",
+                    "lt",
+                    "lte"
+                  ],
+                  "default": "gt",
+                  "description": "Comparison operator for the write capacity alarm"
+                },
+                "treatMissingData": {
+                  "type": "string",
+                  "enum": [
+                    "breaching",
+                    "not-breaching",
+                    "ignore",
+                    "missing"
+                  ],
+                  "default": "not-breaching",
+                  "description": "Missing data treatment for the write capacity alarm"
+                },
+                "statistic": {
+                  "type": "string",
+                  "default": "Average",
+                  "description": "Statistic used when evaluating consumed write capacity"
+                },
+                "tags": {
+                  "type": "object",
+                  "additionalProperties": {
+                    "type": "string"
+                  },
+                  "description": "Additional tags applied to the write capacity alarm"
                 }
               }
             },
@@ -593,6 +729,11 @@
     },
     "hardeningProfile": {
       "type": "string",
+      "enum": [
+        "baseline",
+        "hardened",
+        "stig"
+      ],
       "description": "Abstract security posture identifier for downstream consumers"
     },
     "tags": {
@@ -603,5 +744,54 @@
       "default": {},
       "description": "Additional tags for the DynamoDB table"
     }
-  }
+  },
+  "allOf": [
+    {
+      "if": {
+        "properties": {
+          "encryption": {
+            "properties": {
+              "type": {
+                "const": "customer-managed"
+              }
+            },
+            "required": ["type"]
+          }
+        }
+      },
+      "then": {
+        "anyOf": [
+          {
+            "properties": {
+              "encryption": {
+                "properties": {
+                  "kmsKeyArn": {
+                    "type": "string"
+                  }
+                },
+                "required": ["kmsKeyArn"]
+              }
+            }
+          },
+          {
+            "properties": {
+              "encryption": {
+                "properties": {
+                  "customerManagedKey": {
+                    "properties": {
+                      "create": {
+                        "const": true
+                      }
+                    },
+                    "required": ["create"]
+                  }
+                },
+                "required": ["customerManagedKey"]
+              }
+            }
+          }
+        ]
+      }
+    }
+  ]
 }

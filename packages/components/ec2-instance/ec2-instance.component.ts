@@ -14,12 +14,12 @@ import * as cloudwatch from 'aws-cdk-lib/aws-cloudwatch';
 import * as cdk from 'aws-cdk-lib';
 import { Construct } from 'constructs';
 // File system operations are now handled by the abstract ConfigBuilder base class
-import { BaseComponent } from '../@shinobi/core/component.ts';
 import {
+  BaseComponent,
   ComponentSpec,
   ComponentContext,
   ComponentCapabilities
-} from '../@shinobi/core/component-interfaces.ts';
+} from '@shinobi/core';
 import { Ec2InstanceComponentConfigBuilder, Ec2InstanceConfig } from './ec2-instance.builder.ts';
 
 
@@ -33,6 +33,7 @@ export class Ec2InstanceComponent extends BaseComponent {
   private instanceProfile?: iam.InstanceProfile;
   private role?: iam.Role;
   private kmsKey?: kms.Key;
+  private logGroup?: logs.LogGroup;
   private config?: Ec2InstanceConfig;
 
   constructor(scope: Construct, id: string, context: ComponentContext, spec: ComponentSpec) {
@@ -52,16 +53,19 @@ export class Ec2InstanceComponent extends BaseComponent {
       this.config = configBuilder.buildSync();
 
       // Step 2: Create helper resources (KMS key for compliance)
-      this.createKmsKeyIfNeeded();
+    this.createKmsKeyIfNeeded();
 
-      // Step 3: Create IAM role and instance profile
-      this.createInstanceRole();
+    // Step 3: Create IAM role and instance profile
+    this.createInstanceRole();
 
-      // Step 4: Create security group
-      this.createSecurityGroup();
+    // Step 4: Create security group
+    this.createSecurityGroup();
 
-      // Step 5: Create EC2 instance
-      this.createInstance();
+    // Step 4b: Create log group for structured logging
+    this.createInstanceLogGroup();
+
+    // Step 5: Create EC2 instance
+    this.createInstance();
 
       // Apply compliance hardening
       this.applyComplianceHardening();
@@ -177,6 +181,20 @@ export class Ec2InstanceComponent extends BaseComponent {
 
     // Apply basic security rules
     this.applySecurityGroupRules();
+  }
+
+  private createInstanceLogGroup(): void {
+    const retention = this.resolveLogRetention();
+    const logGroupName = `/aws/ec2/${this.context.serviceName}/${this.spec.name}`;
+
+    this.logGroup = new logs.LogGroup(this, 'InstanceLogs', {
+      logGroupName,
+      retention,
+      removalPolicy: cdk.RemovalPolicy.RETAIN
+    });
+
+    this.applyStandardTags(this.logGroup);
+    this.registerConstruct('logGroup', this.logGroup);
   }
 
   /**
@@ -349,24 +367,27 @@ export class Ec2InstanceComponent extends BaseComponent {
    * Apply security group rules
    */
   private applySecurityGroupRules(): void {
-    if (this.context.complianceFramework === 'commercial') {
-      // Allow SSH from anywhere (not recommended for production)
-      this.securityGroup!.addIngressRule(
-        ec2.Peer.anyIpv4(),
-        ec2.Port.tcp(22),
-        'SSH access'
-      );
-    } else {
-      // Restrict SSH to VPC only
-      const vpcCidr = this.config!.vpc?.vpcId ? '10.0.0.0/16' : '172.31.0.0/16';
-      this.securityGroup!.addIngressRule(
-        ec2.Peer.ipv4(vpcCidr),
-        ec2.Port.tcp(22),
-        'SSH access from VPC only'
-      );
+    const additionalCidrs = new Set(this.config?.security?.allowedSshCidrs ?? []);
+
+    if (this.isComplianceFramework()) {
+      const vpcCidr = this.config?.vpc?.vpcId ? '10.0.0.0/16' : '172.31.0.0/16';
+      additionalCidrs.add(vpcCidr);
     }
 
-    // Allow HTTPS outbound for updates and package downloads
+    if (additionalCidrs.size === 0) {
+      this.getLogger('component.ec2-instance').warn('No SSH ingress rules configured; instance will only accept connections from attached security groups.', {
+        component: this.spec.name
+      });
+    } else {
+      for (const cidr of additionalCidrs) {
+        this.securityGroup!.addIngressRule(
+          cidr === '0.0.0.0/0' ? ec2.Peer.anyIpv4() : ec2.Peer.ipv4(cidr),
+          ec2.Port.tcp(22),
+          `SSH access from ${cidr}`
+        );
+      }
+    }
+
     if (this.isComplianceFramework()) {
       this.securityGroup!.addEgressRule(
         ec2.Peer.anyIpv4(),
@@ -381,6 +402,7 @@ export class Ec2InstanceComponent extends BaseComponent {
    */
   private buildUserData(): ec2.UserData {
     const userData = ec2.UserData.forLinux();
+    const logGroupName = this.logGroup?.logGroupName ?? `/aws/ec2/${this.context.serviceName}/${this.spec.name}`;
 
     // Add custom user data script if provided
     if (this.config!.userData?.script) {
@@ -413,7 +435,7 @@ export class Ec2InstanceComponent extends BaseComponent {
                 collect_list: [
                   {
                     file_path: '/var/log/messages',
-                    log_group_name: `/aws/ec2/${this.context.serviceName}`,
+                    log_group_name: logGroupName,
                     log_stream_name: '{instance_id}/messages'
                   }
                 ]
@@ -484,6 +506,8 @@ export class Ec2InstanceComponent extends BaseComponent {
       }
     });
 
+    this.injectOtelEnvironmentVariables(otelEnvVars);
+
     // Store OTel environment variables for EC2 user data
     // These will be applied to the instance via user data script
     this.registerCapability('otel:environment', otelEnvVars);
@@ -507,6 +531,7 @@ export class Ec2InstanceComponent extends BaseComponent {
       datapointsToAlarm: 2,
       treatMissingData: cloudwatch.TreatMissingData.NOT_BREACHING
     });
+    this.applyStandardTags(cpuAlarm);
 
     // System Status Check Failed Alarm - alerts on underlying hardware issues  
     const systemCheckAlarm = new cloudwatch.Alarm(this, 'SystemStatusCheckAlarm', {
@@ -525,6 +550,7 @@ export class Ec2InstanceComponent extends BaseComponent {
       datapointsToAlarm: 1,
       treatMissingData: cloudwatch.TreatMissingData.NOT_BREACHING
     });
+    this.applyStandardTags(systemCheckAlarm);
 
     // Instance Status Check Failed Alarm - alerts on instance-level configuration issues
     const instanceCheckAlarm = new cloudwatch.Alarm(this, 'InstanceStatusCheckAlarm', {
@@ -543,6 +569,7 @@ export class Ec2InstanceComponent extends BaseComponent {
       datapointsToAlarm: 1,
       treatMissingData: cloudwatch.TreatMissingData.NOT_BREACHING
     });
+    this.applyStandardTags(instanceCheckAlarm);
 
     // Apply compliance-specific alarm thresholds
     if (this.context.complianceFramework === 'fedramp-moderate' || this.context.complianceFramework === 'fedramp-high') {
@@ -637,7 +664,7 @@ export class Ec2InstanceComponent extends BaseComponent {
 
   private shouldEnableEbsEncryption(): boolean {
     // Config has already been built through proper precedence chain
-    return this.config?.storage?.encrypted ?? false;
+    return this.config?.storage?.encrypted ?? true;
   }
 
   private shouldEnableDetailedMonitoring(): boolean {
@@ -664,6 +691,22 @@ export class Ec2InstanceComponent extends BaseComponent {
 
     // Use latest Amazon Linux 2023
     return ec2.MachineImage.latestAmazonLinux2023();
+  }
+
+  private resolveLogRetention(): logs.RetentionDays {
+    const retention = this.config?.monitoring?.logRetentionInDays ?? 90;
+
+    if (retention <= 1) return logs.RetentionDays.ONE_DAY;
+    if (retention <= 7) return logs.RetentionDays.ONE_WEEK;
+    if (retention <= 30) return logs.RetentionDays.ONE_MONTH;
+    if (retention <= 90) return logs.RetentionDays.THREE_MONTHS;
+    if (retention <= 180) return logs.RetentionDays.SIX_MONTHS;
+    if (retention <= 365) return logs.RetentionDays.ONE_YEAR;
+    if (retention <= 365 * 3) return logs.RetentionDays.THREE_YEARS;
+    if (retention <= 365 * 5) return logs.RetentionDays.FIVE_YEARS;
+    if (retention <= 365 * 7) return logs.RetentionDays.SEVEN_YEARS;
+    if (retention <= 365 * 10) return logs.RetentionDays.TEN_YEARS;
+    return logs.RetentionDays.INFINITE;
   }
 
   private getVpcSubnets(): ec2.SubnetSelection {
@@ -693,6 +736,28 @@ export class Ec2InstanceComponent extends BaseComponent {
       default:
         return ec2.EbsDeviceVolumeType.GP3;
     }
+  }
+
+  private injectOtelEnvironmentVariables(envVars: Record<string, string>): void {
+    if (!this.instance || Object.keys(envVars).length === 0) {
+      return;
+    }
+
+    const exportLines = Object.entries(envVars).map(([key, value]) => {
+      const sanitized = value.replace(/"/g, '\\"');
+      return `export ${key}="${sanitized}"`;
+    });
+
+    this.instance.userData.addCommands(
+      '# Configure OpenTelemetry environment variables',
+      "cat <<'OTEL_ENV' >/etc/profile.d/otel.sh",
+      ...exportLines,
+      'OTEL_ENV',
+      'chmod 0644 /etc/profile.d/otel.sh',
+      "cat <<'OTEL_ENV' >> /etc/environment",
+      ...exportLines,
+      'OTEL_ENV'
+    );
   }
 
 }

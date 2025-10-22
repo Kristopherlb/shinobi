@@ -1,0 +1,504 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "$id": "https://platform.shinobi.internal/schemas/efs-filesystem/v1.0.0",
+  "title": "EFS Filesystem Component Configuration",
+  "description": "Configuration schema for Amazon EFS filesystem with encryption, lifecycle management, monitoring, and FedRAMP compliance",
+  "type": "object",
+  "additionalProperties": false,
+  "properties": {
+    "fileSystemName": {
+      "type": "string",
+      "description": "Name of the EFS filesystem (auto-generated from service/component name if not provided)"
+    },
+    "performanceMode": {
+      "type": "string",
+      "enum": [
+        "generalPurpose",
+        "maxIO"
+      ],
+      "default": "generalPurpose",
+      "description": "Performance mode: generalPurpose for latency-sensitive workloads, maxIO for highly parallel workloads"
+    },
+    "throughputMode": {
+      "type": "string",
+      "enum": [
+        "bursting",
+        "provisioned",
+        "elastic"
+      ],
+      "default": "bursting",
+      "description": "Throughput mode: bursting scales with size, provisioned allows fixed throughput, elastic auto-scales"
+    },
+    "provisionedThroughputMibps": {
+      "type": "number",
+      "minimum": 1,
+      "maximum": 1024,
+      "description": "Provisioned throughput in MiB/s (required if throughputMode is 'provisioned')"
+    },
+    "encryption": {
+      "type": "object",
+      "additionalProperties": false,
+      "description": "Encryption configuration for data at rest and in transit",
+      "properties": {
+        "enabled": {
+          "type": "boolean",
+          "default": true,
+          "description": "Enable encryption at rest (required for FedRAMP)"
+        },
+        "encryptInTransit": {
+          "type": "boolean",
+          "default": false,
+          "description": "Enable TLS encryption for NFS mount traffic (required for FedRAMP)"
+        },
+        "kmsKeyArn": {
+          "type": "string",
+          "description": "ARN of existing KMS key for encryption"
+        },
+        "customerManagedKey": {
+          "type": "object",
+          "additionalProperties": false,
+          "properties": {
+            "create": {
+              "type": "boolean",
+              "default": false,
+              "description": "Create a new customer-managed CMK for this filesystem"
+            },
+            "alias": {
+              "type": "string",
+              "description": "Alias for the customer-managed key"
+            },
+            "enableRotation": {
+              "type": "boolean",
+              "default": true,
+              "description": "Enable automatic key rotation (recommended)"
+            }
+          },
+          "required": [
+            "create",
+            "enableRotation"
+          ]
+        }
+      },
+      "required": [
+        "enabled",
+        "encryptInTransit",
+        "customerManagedKey"
+      ]
+    },
+    "vpc": {
+      "type": "object",
+      "additionalProperties": false,
+      "description": "VPC configuration for EFS mount targets",
+      "properties": {
+        "enabled": {
+          "type": "boolean",
+          "description": "Enable VPC mount targets"
+        },
+        "vpcId": {
+          "type": "string",
+          "description": "VPC ID where mount targets will be created"
+        },
+        "subnetIds": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          },
+          "default": [],
+          "description": "Subnet IDs for mount targets (uses private subnets if not specified)"
+        },
+        "securityGroup": {
+          "type": "object",
+          "additionalProperties": false,
+          "description": "Security group configuration",
+          "properties": {
+            "create": {
+              "type": "boolean",
+              "description": "Create a new security group"
+            },
+            "securityGroupId": {
+              "type": "string",
+              "description": "Existing security group ID to use"
+            },
+            "description": {
+              "type": "string",
+              "description": "Security group description"
+            },
+            "ingressRules": {
+              "type": "array",
+              "items": {
+                "type": "object",
+                "required": [
+                  "port",
+                  "cidr"
+                ],
+                "properties": {
+                  "port": {
+                    "type": "number",
+                    "minimum": 1,
+                    "maximum": 65535,
+                    "description": "Port number (2049 for NFS)"
+                  },
+                  "protocol": {
+                    "type": "string",
+                    "enum": [
+                      "tcp",
+                      "udp"
+                    ],
+                    "default": "tcp"
+                  },
+                  "cidr": {
+                    "type": "string",
+                    "description": "Source CIDR (MUST NOT be 0.0.0.0/0 - security violation)"
+                  },
+                  "description": {
+                    "type": "string"
+                  }
+                }
+              },
+              "default": []
+            }
+          },
+          "required": [
+            "create",
+            "ingressRules"
+          ]
+        }
+      },
+      "required": [
+        "enabled",
+        "subnetIds",
+        "securityGroup"
+      ]
+    },
+    "lifecycle": {
+      "type": "object",
+      "additionalProperties": false,
+      "description": "Lifecycle policy for cost optimization",
+      "properties": {
+        "transitionToIA": {
+          "type": "string",
+          "enum": [
+            "AFTER_7_DAYS",
+            "AFTER_14_DAYS",
+            "AFTER_30_DAYS",
+            "AFTER_60_DAYS",
+            "AFTER_90_DAYS"
+          ],
+          "description": "Transition infrequently accessed files to IA storage class"
+        },
+        "transitionToPrimary": {
+          "type": "string",
+          "enum": [
+            "AFTER_1_ACCESS"
+          ],
+          "description": "Transition files back to primary storage after first access"
+        }
+      }
+    },
+    "backups": {
+      "type": "object",
+      "additionalProperties": false,
+      "description": "Automatic backup configuration",
+      "properties": {
+        "enabled": {
+          "type": "boolean",
+          "default": false,
+          "description": "Enable AWS Backup integration (required for production and FedRAMP)"
+        }
+      },
+      "required": [
+        "enabled"
+      ]
+    },
+    "logging": {
+      "type": "object",
+      "additionalProperties": false,
+      "description": "CloudWatch Logs configuration",
+      "properties": {
+        "access": {
+          "$ref": "#/definitions/logConfig",
+          "description": "Access logs for file operations"
+        },
+        "audit": {
+          "$ref": "#/definitions/logConfig",
+          "description": "Audit logs for compliance"
+        }
+      },
+      "required": [
+        "access",
+        "audit"
+      ]
+    },
+    "monitoring": {
+      "type": "object",
+      "additionalProperties": false,
+      "description": "CloudWatch monitoring and alarms",
+      "properties": {
+        "enabled": {
+          "type": "boolean",
+          "default": false,
+          "description": "Enable CloudWatch monitoring (required for production and FedRAMP)"
+        },
+        "alarms": {
+          "type": "object",
+          "additionalProperties": false,
+          "properties": {
+            "storageUtilization": {
+              "$ref": "#/definitions/alarm"
+            },
+            "clientConnections": {
+              "$ref": "#/definitions/alarm"
+            },
+            "burstCreditBalance": {
+              "$ref": "#/definitions/alarm"
+            }
+          },
+          "required": [
+            "storageUtilization",
+            "clientConnections",
+            "burstCreditBalance"
+          ]
+        }
+      },
+      "required": [
+        "enabled",
+        "alarms"
+      ]
+    },
+    "filesystemPolicy": {
+      "type": "object",
+      "description": "IAM resource policy for the filesystem (use to enforce TLS, least-privilege access)"
+    },
+    "removalPolicy": {
+      "type": "string",
+      "enum": [
+        "retain",
+        "destroy"
+      ],
+      "default": "retain",
+      "description": "What to do when stack is deleted (always retain for production)"
+    },
+    "hardeningProfile": {
+      "type": "string",
+      "default": "baseline",
+      "description": "Security hardening profile"
+    },
+    "tags": {
+      "type": "object",
+      "additionalProperties": {
+        "type": "string"
+      },
+      "default": {},
+      "description": "Additional custom tags"
+    }
+  },
+  "required": [
+    "fileSystemName",
+    "performanceMode",
+    "throughputMode",
+    "encryption",
+    "vpc",
+    "lifecycle",
+    "backups",
+    "logging",
+    "monitoring",
+    "removalPolicy",
+    "hardeningProfile",
+    "tags"
+  ],
+  "definitions": {
+    "logConfig": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "enabled": {
+          "type": "boolean",
+          "default": false
+        },
+        "createLogGroup": {
+          "type": "boolean",
+          "default": true
+        },
+        "logGroupName": {
+          "type": "string"
+        },
+        "retentionInDays": {
+          "type": "number",
+          "minimum": 1,
+          "default": 90
+        },
+        "removalPolicy": {
+          "type": "string",
+          "enum": [
+            "retain",
+            "destroy"
+          ],
+          "default": "destroy"
+        },
+        "tags": {
+          "type": "object",
+          "additionalProperties": {
+            "type": "string"
+          },
+          "default": {}
+        }
+      },
+      "required": [
+        "enabled",
+        "createLogGroup",
+        "retentionInDays",
+        "removalPolicy",
+        "tags"
+      ]
+    },
+    "alarm": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "enabled": {
+          "type": "boolean",
+          "default": false
+        },
+        "threshold": {
+          "type": "number"
+        },
+        "evaluationPeriods": {
+          "type": "number",
+          "minimum": 1,
+          "default": 1
+        },
+        "periodMinutes": {
+          "type": "number",
+          "minimum": 1,
+          "default": 5
+        },
+        "comparisonOperator": {
+          "type": "string",
+          "enum": [
+            "gt",
+            "gte",
+            "lt",
+            "lte"
+          ],
+          "default": "gt"
+        },
+        "treatMissingData": {
+          "type": "string",
+          "enum": [
+            "breaching",
+            "not-breaching",
+            "ignore",
+            "missing"
+          ],
+          "default": "not-breaching"
+        },
+        "statistic": {
+          "type": "string",
+          "default": "Average"
+        },
+        "tags": {
+          "type": "object",
+          "additionalProperties": {
+            "type": "string"
+          },
+          "default": {}
+        }
+      },
+      "required": [
+        "enabled",
+        "evaluationPeriods",
+        "periodMinutes",
+        "comparisonOperator",
+        "treatMissingData",
+        "statistic",
+        "tags"
+      ]
+    }
+  },
+  "examples": [
+    {
+      "name": "simple-filesystem",
+      "description": "Basic EFS filesystem with encryption",
+      "config": {
+        "vpc": {
+          "enabled": true,
+          "vpcId": "vpc-0abc123",
+          "securityGroup": {
+            "create": true,
+            "ingressRules": [
+              {
+                "port": 2049,
+                "cidr": "10.0.0.0/16",
+                "description": "NFS from application subnet"
+              }
+            ]
+          }
+        },
+        "encryption": {
+          "enabled": true,
+          "encryptInTransit": true
+        },
+        "backups": {
+          "enabled": true
+        }
+      }
+    },
+    {
+      "name": "fedramp-moderate-filesystem",
+      "description": "FedRAMP Moderate compliant filesystem",
+      "config": {
+        "vpc": {
+          "enabled": true,
+          "vpcId": "vpc-fedramp123",
+          "securityGroup": {
+            "create": true,
+            "ingressRules": [
+              {
+                "port": 2049,
+                "cidr": "10.100.0.0/16",
+                "description": "NFS from secure application tier"
+              }
+            ]
+          }
+        },
+        "encryption": {
+          "enabled": true,
+          "encryptInTransit": true,
+          "customerManagedKey": {
+            "create": true,
+            "alias": "efs-filesystem-key",
+            "enableRotation": true
+          }
+        },
+        "backups": {
+          "enabled": true
+        },
+        "logging": {
+          "access": {
+            "enabled": true,
+            "retentionInDays": 1095
+          },
+          "audit": {
+            "enabled": true,
+            "retentionInDays": 1095,
+            "removalPolicy": "retain"
+          }
+        },
+        "monitoring": {
+          "enabled": true,
+          "alarms": {
+            "storageUtilization": {
+              "enabled": true,
+              "threshold": 1099511627776
+            },
+            "burstCreditBalance": {
+              "enabled": true,
+              "threshold": 128,
+              "comparisonOperator": "lt"
+            }
+          }
+        }
+      }
+    }
+  ]
+}

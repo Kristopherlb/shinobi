@@ -2,7 +2,7 @@
   "dashboard": {
     "name": "ECS Cluster - Service Connect Monitoring",
     "description": "Comprehensive monitoring dashboard for ECS clusters with Service Connect capability",
-    "version": "1.0.0",
+    "version": "1.1.0",
     "panels": [
       {
         "id": "cluster-overview",

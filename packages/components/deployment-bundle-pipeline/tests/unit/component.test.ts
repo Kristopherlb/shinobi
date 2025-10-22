@@ -2,16 +2,30 @@
  * Unit tests for Deployment Bundle Pipeline Component
  */
 
-import { Template } from 'aws-cdk-lib/assertions';
 import { Stack } from 'aws-cdk-lib';
+import { Template } from 'aws-cdk-lib/assertions';
 import { DeploymentBundlePipelineComponent } from '../../src/deployment-bundle-pipeline.component.ts';
+import { DeploymentBundlePipelineBuilder } from '../../src/deployment-bundle-pipeline.builder.ts';
 
 describe('DeploymentBundlePipelineComponent', () => {
   let component: DeploymentBundlePipelineComponent;
+  let stack: Stack;
   let context: any;
   let spec: any;
+  let platformConfigSpy: jest.SpyInstance;
+  let loggerStub: { info: jest.Mock; error: jest.Mock; warn: jest.Mock };
 
   beforeEach(() => {
+    stack = new Stack(undefined, 'TestStack');
+    platformConfigSpy = jest
+      .spyOn(DeploymentBundlePipelineBuilder.prototype as any, '_loadPlatformConfiguration')
+      .mockReturnValue({ defaults: { 'deployment-bundle-pipeline': {} } });
+    loggerStub = {
+      info: jest.fn(),
+      error: jest.fn(),
+      warn: jest.fn()
+    };
+    jest.spyOn(DeploymentBundlePipelineComponent.prototype, 'getLogger').mockReturnValue(loggerStub as any);
     context = {
       account: '123456789012',
       region: 'us-east-1',
@@ -20,28 +34,40 @@ describe('DeploymentBundlePipelineComponent', () => {
     };
 
     spec = {
-      service: 'test-service',
-      versionTag: '1.0.0',
-      artifactoryHost: 'artifactory.test.com',
-      ociRepoBundles: 'artifactory.test.com/bundles'
+      type: 'deployment-bundle-pipeline',
+      name: 'deployment-bundle',
+      config: {
+        service: 'test-service',
+        environment: 'dev',
+        versionTag: '1.0.0',
+        artifactoryHost: 'artifactory.test.com',
+        ociRepoBundles: 'artifactory.test.com/bundles'
+      }
     };
+  });
+
+  afterEach(() => {
+    jest.restoreAllMocks();
   });
 
   describe('Component Creation', () => {
     it('should create component with valid configuration', () => {
-      component = new DeploymentBundlePipelineComponent({}, 'test-component', context, spec);
+      component = new DeploymentBundlePipelineComponent(stack, 'test-component', context, spec);
       expect(component).toBeDefined();
       expect(component.getType()).toBe('deployment-bundle-pipeline');
     });
 
     it('should throw error with missing required fields', () => {
       const invalidSpec = {
-        service: 'test-service'
-        // missing versionTag and artifactoryHost
+        type: 'deployment-bundle-pipeline',
+        name: 'deployment-bundle',
+        config: {
+          service: 'test-service'
+        }
       };
 
       expect(() => {
-        new DeploymentBundlePipelineComponent({}, 'test-component', context, invalidSpec);
+        new DeploymentBundlePipelineComponent(stack, 'test-component', context, invalidSpec);
       }).toThrow();
     });
   });
@@ -50,20 +76,23 @@ describe('DeploymentBundlePipelineComponent', () => {
     it('should use component override over environment defaults', () => {
       const specWithOverride = {
         ...spec,
-        environment: 'prod',
-        signing: {
-          keyless: false,
-          kmsKeyId: 'kms://aws-kms/alias/test-key'
+        config: {
+          ...spec.config,
+          environment: 'prod',
+          signing: {
+            keyless: false,
+            kmsKeyId: 'kms://aws-kms/alias/test-key'
+          }
         }
       };
 
-      component = new DeploymentBundlePipelineComponent({}, 'test-component', context, specWithOverride);
+      component = new DeploymentBundlePipelineComponent(stack, 'test-component', context, specWithOverride);
       // This would test that the component uses the override values
       expect(component).toBeDefined();
     });
 
     it('should use environment defaults when no override provided', () => {
-      component = new DeploymentBundlePipelineComponent({}, 'test-component', context, spec);
+      component = new DeploymentBundlePipelineComponent(stack, 'test-component', context, spec);
       // This would test that the component uses environment defaults
       expect(component).toBeDefined();
     });
@@ -76,7 +105,7 @@ describe('DeploymentBundlePipelineComponent', () => {
         complianceFramework: 'fedramp-moderate'
       };
 
-      component = new DeploymentBundlePipelineComponent({}, 'test-component', fedrampContext, spec);
+      component = new DeploymentBundlePipelineComponent(stack, 'test-component', fedrampContext, spec);
       // This would test that FedRAMP Moderate defaults are applied
       expect(component).toBeDefined();
     });
@@ -87,7 +116,7 @@ describe('DeploymentBundlePipelineComponent', () => {
         complianceFramework: 'fedramp-high'
       };
 
-      component = new DeploymentBundlePipelineComponent({}, 'test-component', fedrampHighContext, spec);
+      component = new DeploymentBundlePipelineComponent(stack, 'test-component', fedrampHighContext, spec);
       // This would test that FedRAMP High defaults are applied
       expect(component).toBeDefined();
     });
@@ -98,7 +127,7 @@ describe('DeploymentBundlePipelineComponent', () => {
         complianceFramework: 'iso27001'
       };
 
-      component = new DeploymentBundlePipelineComponent({}, 'test-component', isoContext, spec);
+      component = new DeploymentBundlePipelineComponent(stack, 'test-component', isoContext, spec);
       // This would test that ISO 27001 defaults are applied
       expect(component).toBeDefined();
     });
@@ -109,7 +138,7 @@ describe('DeploymentBundlePipelineComponent', () => {
         complianceFramework: 'soc2'
       };
 
-      component = new DeploymentBundlePipelineComponent({}, 'test-component', soc2Context, spec);
+      component = new DeploymentBundlePipelineComponent(stack, 'test-component', soc2Context, spec);
       // This would test that SOC 2 defaults are applied
       expect(component).toBeDefined();
     });
@@ -122,7 +151,7 @@ describe('DeploymentBundlePipelineComponent', () => {
         complianceFramework: 'fedramp-high'
       };
 
-      component = new DeploymentBundlePipelineComponent({}, 'test-component', regulatedContext, spec);
+      component = new DeploymentBundlePipelineComponent(stack, 'test-component', regulatedContext, spec);
       // This would test that FIPS mode is enabled
       expect(component).toBeDefined();
     });
@@ -133,13 +162,13 @@ describe('DeploymentBundlePipelineComponent', () => {
         complianceFramework: 'fedramp-moderate'
       };
 
-      component = new DeploymentBundlePipelineComponent({}, 'test-component', regulatedContext, spec);
+      component = new DeploymentBundlePipelineComponent(stack, 'test-component', regulatedContext, spec);
       // This would test that KMS signing is used
       expect(component).toBeDefined();
     });
 
     it('should use keyless signing for commercial environments', () => {
-      component = new DeploymentBundlePipelineComponent({}, 'test-component', context, spec);
+      component = new DeploymentBundlePipelineComponent(stack, 'test-component', context, spec);
       // This would test that keyless signing is used
       expect(component).toBeDefined();
     });
@@ -147,7 +176,7 @@ describe('DeploymentBundlePipelineComponent', () => {
 
   describe('Bundle Creation', () => {
     it('should create bundle with all required artifacts', async () => {
-      component = new DeploymentBundlePipelineComponent({}, 'test-component', context, spec);
+      component = new DeploymentBundlePipelineComponent(stack, 'test-component', context, spec);
 
       // Mock the synthesis process
       jest.spyOn(component as any, 'buildService').mockResolvedValue(undefined);
@@ -173,7 +202,7 @@ describe('DeploymentBundlePipelineComponent', () => {
     });
 
     it('should fail if build process fails', async () => {
-      component = new DeploymentBundlePipelineComponent({}, 'test-component', context, spec);
+      component = new DeploymentBundlePipelineComponent(stack, 'test-component', context, spec);
 
       // Mock build failure
       jest.spyOn(component as any, 'buildService').mockRejectedValue(new Error('Build failed'));
@@ -182,7 +211,7 @@ describe('DeploymentBundlePipelineComponent', () => {
     });
 
     it('should fail if tests fail', async () => {
-      component = new DeploymentBundlePipelineComponent({}, 'test-component', context, spec);
+      component = new DeploymentBundlePipelineComponent(stack, 'test-component', context, spec);
 
       // Mock test failure
       jest.spyOn(component as any, 'buildService').mockResolvedValue(undefined);
@@ -194,7 +223,7 @@ describe('DeploymentBundlePipelineComponent', () => {
 
   describe('SBOM Generation', () => {
     it('should generate workspace SBOM', async () => {
-      component = new DeploymentBundlePipelineComponent({}, 'test-component', context, spec);
+      component = new DeploymentBundlePipelineComponent(stack, 'test-component', context, spec);
 
       const sbomPath = await (component as any).generateWorkspaceSBOM();
       expect(sbomPath).toContain('workspace');
@@ -207,7 +236,7 @@ describe('DeploymentBundlePipelineComponent', () => {
         ociRepoImages: 'artifactory.test.com/images'
       };
 
-      component = new DeploymentBundlePipelineComponent({}, 'test-component', context, specWithImages);
+      component = new DeploymentBundlePipelineComponent(stack, 'test-component', context, specWithImages);
 
       const imageSBOMs = await (component as any).generateImageSBOMs();
       expect(Array.isArray(imageSBOMs)).toBe(true);
@@ -216,7 +245,7 @@ describe('DeploymentBundlePipelineComponent', () => {
 
   describe('Vulnerability Scanning', () => {
     it('should scan workspace for vulnerabilities', async () => {
-      component = new DeploymentBundlePipelineComponent({}, 'test-component', context, spec);
+      component = new DeploymentBundlePipelineComponent(stack, 'test-component', context, spec);
 
       const scanResult = await (component as any).scanWorkspace();
       expect(scanResult).toHaveProperty('tool', 'grype');
@@ -225,7 +254,7 @@ describe('DeploymentBundlePipelineComponent', () => {
     });
 
     it('should fail if critical vulnerabilities are found', async () => {
-      component = new DeploymentBundlePipelineComponent({}, 'test-component', context, spec);
+      component = new DeploymentBundlePipelineComponent(stack, 'test-component', context, spec);
 
       // Mock scan with critical vulnerabilities
       jest.spyOn(component as any, 'scanWorkspace').mockResolvedValue({
@@ -246,7 +275,7 @@ describe('DeploymentBundlePipelineComponent', () => {
 
   describe('Compliance Reporting', () => {
     it('should generate compliance report', async () => {
-      component = new DeploymentBundlePipelineComponent({}, 'test-component', context, spec);
+      component = new DeploymentBundlePipelineComponent(stack, 'test-component', context, spec);
 
       const report = await (component as any).createComplianceReport();
       expect(report).toHaveProperty('framework');
@@ -260,7 +289,7 @@ describe('DeploymentBundlePipelineComponent', () => {
         complianceFramework: 'fedramp-moderate'
       };
 
-      component = new DeploymentBundlePipelineComponent({}, 'test-component', fedrampContext, spec);
+      component = new DeploymentBundlePipelineComponent(stack, 'test-component', fedrampContext, spec);
 
       const report = await (component as any).createComplianceReport();
       expect(report.framework).toBe('fedramp-moderate');
@@ -269,7 +298,7 @@ describe('DeploymentBundlePipelineComponent', () => {
 
   describe('Signing and Attestation', () => {
     it('should sign bundle with cosign', async () => {
-      component = new DeploymentBundlePipelineComponent({}, 'test-component', context, spec);
+      component = new DeploymentBundlePipelineComponent(stack, 'test-component', context, spec);
 
       await (component as any).signBundle();
       // This would verify that cosign signing was called
@@ -277,7 +306,7 @@ describe('DeploymentBundlePipelineComponent', () => {
     });
 
     it('should create SLSA provenance attestation', async () => {
-      component = new DeploymentBundlePipelineComponent({}, 'test-component', context, spec);
+      component = new DeploymentBundlePipelineComponent(stack, 'test-component', context, spec);
 
       const provenance = await (component as any).generateProvenancePredicate();
       expect(provenance).toHaveProperty('buildType');
@@ -286,7 +315,7 @@ describe('DeploymentBundlePipelineComponent', () => {
     });
 
     it('should attach SBOMs as referrers', async () => {
-      component = new DeploymentBundlePipelineComponent({}, 'test-component', context, spec);
+      component = new DeploymentBundlePipelineComponent(stack, 'test-component', context, spec);
 
       await (component as any).attachSBOMs();
       // This would verify that SBOMs were attached
@@ -296,7 +325,7 @@ describe('DeploymentBundlePipelineComponent', () => {
 
   describe('Bundle Manifest', () => {
     it('should create bundle manifest with all required fields', async () => {
-      component = new DeploymentBundlePipelineComponent({}, 'test-component', context, spec);
+      component = new DeploymentBundlePipelineComponent(stack, 'test-component', context, spec);
 
       const manifest = await (component as any).createBundleManifest();
       expect(manifest).toHaveProperty('schema', 'v1');
@@ -313,7 +342,7 @@ describe('DeploymentBundlePipelineComponent', () => {
   describe('Error Handling', () => {
     it('should handle missing context gracefully', () => {
       expect(() => {
-        new DeploymentBundlePipelineComponent({}, 'test-component', null, spec);
+        new DeploymentBundlePipelineComponent(stack, 'test-component', null, spec);
       }).toThrow();
     });
 
@@ -324,7 +353,11 @@ describe('DeploymentBundlePipelineComponent', () => {
       };
 
       expect(() => {
-        new DeploymentBundlePipelineComponent({}, 'test-component', context, invalidSpec);
+        const invalidSpecShape = {
+          ...spec,
+          config: invalidSpec
+        };
+        new DeploymentBundlePipelineComponent(stack, 'test-component', context, invalidSpecShape);
       }).toThrow();
     });
 
@@ -335,14 +368,18 @@ describe('DeploymentBundlePipelineComponent', () => {
       };
 
       expect(() => {
-        new DeploymentBundlePipelineComponent({}, 'test-component', context, invalidSpec);
+        const invalidSpecShape = {
+          ...spec,
+          config: invalidSpec
+        };
+        new DeploymentBundlePipelineComponent(stack, 'test-component', context, invalidSpecShape);
       }).toThrow();
     });
   });
 
   describe('Capability Registration', () => {
     it('should register bundle capabilities', async () => {
-      component = new DeploymentBundlePipelineComponent({}, 'test-component', context, spec);
+      component = new DeploymentBundlePipelineComponent(stack, 'test-component', context, spec);
 
       // Mock the synthesis process
       jest.spyOn(component as any, 'buildService').mockResolvedValue(undefined);

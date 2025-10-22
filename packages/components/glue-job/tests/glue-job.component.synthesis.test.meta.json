@@ -1,0 +1,137 @@
+{
+  "tests": [
+    {
+      "id": "TP-glue-job-synth-001",
+      "level": "integration",
+      "capability": "Synthesize commercial Glue job without optional controls",
+      "oracle": "contract",
+      "invariants": [
+        "No KMS key or security configuration created when encryption disabled",
+        "Monitoring alarms omitted when monitoring disabled"
+      ],
+      "fixtures": [
+        "In-memory CDK App",
+        "Commercial config defaults"
+      ],
+      "inputs": {
+        "shape": "ComponentContext (commercial) + Spec with minimal config",
+        "notes": "Validates baseline resource synthesis"
+      },
+      "risks": [
+        "Regression reintroducing encryption or alarms unexpectedly"
+      ],
+      "dependencies": [
+        "aws-cdk-lib",
+        "@shinobi/core BaseComponent"
+      ],
+      "evidence": [
+        "packages/components/glue-job/tests/glue-job.component.synthesis.test.ts#L43"
+      ],
+      "compliance_refs": [
+        "std://configuration"
+      ],
+      "ai_generated": false,
+      "human_reviewed_by": "platform-engineering"
+    },
+    {
+      "id": "TP-glue-job-synth-002",
+      "level": "integration",
+      "capability": "Synthesize FedRAMP High Glue job with hardened controls",
+      "oracle": "contract",
+      "invariants": [
+        "Customer-managed KMS key created and applied",
+        "Monitoring alarms and additional log groups provisioned"
+      ],
+      "fixtures": [
+        "In-memory CDK App",
+        "FedRAMP High defaults from platform config"
+      ],
+      "inputs": {
+        "shape": "ComponentContext (fedramp-high) + Spec with minimal config",
+        "notes": "Validates hardened compliance posture"
+      },
+      "risks": [
+        "Compliance regression for FedRAMP High workloads"
+      ],
+      "dependencies": [
+        "aws-cdk-lib",
+        "@shinobi/core BaseComponent"
+      ],
+      "evidence": [
+        "packages/components/glue-job/tests/glue-job.component.synthesis.test.ts#L66"
+      ],
+      "compliance_refs": [
+        "std://configuration",
+        "pack://aws.fedramp-high",
+        "std://observability"
+      ],
+      "ai_generated": false,
+      "human_reviewed_by": "platform-engineering"
+    },
+    {
+      "id": "TP-glue-job-synth-003",
+      "level": "integration",
+      "capability": "Respect manifest overrides for retries and logging",
+      "oracle": "contract",
+      "invariants": [
+        "Custom retry count applied",
+        "Custom log group name and retention honored"
+      ],
+      "fixtures": [
+        "In-memory CDK App",
+        "FedRAMP Moderate defaults with manifest overrides"
+      ],
+      "inputs": {
+        "shape": "ComponentContext (fedramp-moderate) + Spec overrides",
+        "notes": "Ensures precedence chain results persist through synthesis"
+      },
+      "risks": [
+        "Loss of override behavior causing misconfiguration"
+      ],
+      "dependencies": [
+        "aws-cdk-lib",
+        "@shinobi/core BaseComponent"
+      ],
+      "evidence": [
+        "packages/components/glue-job/tests/glue-job.component.synthesis.test.ts#L94"
+      ],
+      "compliance_refs": [
+        "std://configuration"
+      ],
+      "ai_generated": false,
+      "human_reviewed_by": "platform-engineering"
+    },
+    {
+      "id": "TP-glue-job-synth-004",
+      "level": "unit",
+      "capability": "Reject production manifests with monitoring disabled",
+      "oracle": "exact",
+      "invariants": [
+        "validateSpec returns actionable error for monitoring disabled in prod"
+      ],
+      "fixtures": [
+        "ComponentContext (prod, fedramp-moderate)",
+        "Component spec with monitoring disabled"
+      ],
+      "inputs": {
+        "shape": "ComponentSpec + ComponentContext for validation",
+        "notes": "Validates guardrail before synthesis"
+      ],
+      "risks": [
+        "Monitoring disabled in production leading to compliance gaps"
+      ],
+      "dependencies": [
+        "GlueJobComponentCreator"
+      ],
+      "evidence": [
+        "packages/components/glue-job/tests/glue-job.component.synthesis.test.ts#L118"
+      ],
+      "compliance_refs": [
+        "std://observability",
+        "pack://aws.global.monitoring"
+      ],
+      "ai_generated": false,
+      "human_reviewed_by": "platform-engineering"
+    }
+  ]
+}

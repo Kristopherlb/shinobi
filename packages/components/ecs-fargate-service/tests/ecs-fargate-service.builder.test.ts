@@ -1,6 +1,6 @@
 import * as cdk from 'aws-cdk-lib';
 import { ComponentContext, ComponentSpec } from '@platform/contracts';
-import { EcsFargateServiceComponentConfigBuilder } from '../ecs-fargate-service.builder.ts';
+import { EcsFargateServiceComponentConfigBuilder } from '@shinobi/components/ecs-fargate-service/src/ecs-fargate-service.builder';
 
 describe('EcsFargateServiceComponentConfigBuilder', () => {
   const scope = new cdk.Stack();
@@ -28,20 +28,26 @@ describe('EcsFargateServiceComponentConfigBuilder', () => {
     }
   };
 
-  it('applies commercial defaults', () => {
+  it('applies commercial defaults with framework-aware values', () => {
     const builder = new EcsFargateServiceComponentConfigBuilder(baseContext, baseSpec);
     const config = builder.buildSync();
 
     expect(config.cpu).toBe(256);
     expect(config.memory).toBe(512);
     expect(config.port).toBe(8080);
+    expect(config.desiredCount).toBe(1);
+    expect(config.logging.retentionInDays).toBe(30); // 30 days for commercial
     expect(config.logging.removalPolicy).toBe('destroy');
     expect(config.diagnostics.enableExecuteCommand).toBe(false);
+    expect(config.monitoring.enabled).toBe(true);
+    expect(config.monitoring.alarms.cpuUtilization.enabled).toBe(true);
     expect(config.monitoring.alarms.cpuUtilization.threshold).toBe(85);
+    expect(config.monitoring.alarms.memoryUtilization.threshold).toBe(90);
     expect(config.serviceConnect.dnsName).toBe('orders-api');
+    expect(config.network.allowAllOutbound).toBe(false);
   });
 
-  it('applies fedramp-moderate defaults', () => {
+  it('applies fedramp-moderate defaults with stricter requirements', () => {
     const context: ComponentContext = {
       ...baseContext,
       complianceFramework: 'fedramp-moderate'
@@ -49,16 +55,25 @@ describe('EcsFargateServiceComponentConfigBuilder', () => {
 
     const builder = new EcsFargateServiceComponentConfigBuilder(context, baseSpec);
     const config = builder.buildSync();
-
+    // Higher resource allocations for FedRAMP
     expect(config.cpu).toBe(512);
     expect(config.memory).toBe(1024);
-    expect(config.logging.retentionInDays).toBe(365);
+    expect(config.desiredCount).toBe(2); // High availability
+
+    // Longer log retention (3 years for FedRAMP Moderate)
+    expect(config.logging.retentionInDays).toBe(1096);
     expect(config.logging.removalPolicy).toBe('retain');
+
+    // ECS Exec enabled for audit
     expect(config.diagnostics.enableExecuteCommand).toBe(true);
+
+    // Stricter monitoring thresholds
     expect(config.monitoring.alarms.cpuUtilization.threshold).toBe(80);
+    expect(config.monitoring.alarms.memoryUtilization.threshold).toBe(85);
+    expect(config.monitoring.alarms.runningTaskCount.threshold).toBe(2);
   });
 
-  it('applies fedramp-high defaults', () => {
+  it('applies fedramp-high defaults with maximum security', () => {
     const context: ComponentContext = {
       ...baseContext,
       complianceFramework: 'fedramp-high'
@@ -66,12 +81,22 @@ describe('EcsFargateServiceComponentConfigBuilder', () => {
 
     const builder = new EcsFargateServiceComponentConfigBuilder(context, baseSpec);
     const config = builder.buildSync();
-
+    // Maximum resource allocations
     expect(config.cpu).toBe(1024);
     expect(config.memory).toBe(2048);
     expect(config.desiredCount).toBe(2);
-    expect(config.monitoring.alarms.runningTaskCount.threshold).toBe(2);
+
+    // 7 year log retention for FedRAMP High
+    expect(config.logging.retentionInDays).toBe(2557);
+    expect(config.logging.removalPolicy).toBe('retain');
+
+    // ECS Exec enabled
+    expect(config.diagnostics.enableExecuteCommand).toBe(true);
+
+    // Strictest monitoring thresholds
+    expect(config.monitoring.alarms.cpuUtilization.threshold).toBe(70);
     expect(config.monitoring.alarms.memoryUtilization.threshold).toBe(75);
+    expect(config.monitoring.alarms.runningTaskCount.threshold).toBe(2);
   });
 
   it('respects manifest overrides', () => {
@@ -87,6 +112,9 @@ describe('EcsFargateServiceComponentConfigBuilder', () => {
         },
         diagnostics: {
           enableExecuteCommand: true
+        },
+        network: {
+          allowAllOutbound: true
         }
       }
     };
@@ -98,5 +126,6 @@ describe('EcsFargateServiceComponentConfigBuilder', () => {
     expect(config.memory).toBe(4096);
     expect(config.logging.retentionInDays).toBe(90);
     expect(config.diagnostics.enableExecuteCommand).toBe(true);
+    expect(config.network.allowAllOutbound).toBe(true);
   });
 });

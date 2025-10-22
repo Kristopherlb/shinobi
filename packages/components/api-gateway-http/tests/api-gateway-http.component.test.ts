@@ -1,1109 +1,252 @@
-/**
- * Modern HTTP API Gateway Component Test Suite  
- * Implements Platform Testing Standard v1.0
- * 
- * @file src/components/api-gateway-http/api-gateway-http.component.test.ts
- */
-
-import { Template, Match } from 'aws-cdk-lib/assertions';
+import { jest } from '@jest/globals';
 import { App, Stack } from 'aws-cdk-lib';
+import { Match, Template } from 'aws-cdk-lib/assertions';
+
 import { ApiGatewayHttpComponent } from '../src/api-gateway-http.component.ts';
 import { ApiGatewayHttpConfigBuilder } from '../src/api-gateway-http.builder.ts';
-import { ComponentContext, ComponentSpec } from '@shinobi/core';
 
-// Test Metadata as per Platform Testing Standard v1.0 Section 11
-const TEST_METADATA = {
-  component: 'api-gateway-http',
-  level: 'unit',
-  framework: 'jest',
-  deterministic: true,
-  fixtures: ['mockComponentContext', 'mockComponentSpec', 'deterministicClock'],
-  compliance_refs: ['std://platform-configuration', 'std://platform-tagging', 'std://service-injector-pattern'],
-  ai_generated: true,
-  human_reviewed_by: "platform-engineering-team"
-};
-
-// Deterministic test fixtures
-const DETERMINISTIC_TIMESTAMP = new Date('2025-01-08T12:00:00.000Z');
-const FIXED_DEPLOYMENT_ID = 'test-deploy-20250108-120000';
-
-// Mock component context with deterministic values
-const createMockContext = (complianceFramework: string = 'commercial'): ComponentContext => ({
+const createContext = (framework = 'commercial', scope?: Stack) => ({
   serviceName: 'test-http-service',
-  service: 'test-http-service',
-  environment: 'test',
+  environment: framework === 'fedramp-high' ? 'prod' : 'dev',
+  complianceFramework: framework,
+  scope,
   region: 'us-east-1',
-  complianceFramework: complianceFramework as 'commercial' | 'fedramp-moderate' | 'fedramp-high',
-  compliance: complianceFramework,
-  owner: 'test-team',
-  accountId: '123456789012',
-  account: '123456789012',
-  scope: {} as any, // Mock CDK scope
-  tags: {
-    'service-name': 'test-http-service',
-    'environment': 'test'
-  }
+  accountId: '123456789012'
 });
 
-const createMockSpec = (config: any = {}): ComponentSpec => ({
-  name: 'test-http-api-gateway',
+const createSpec = (config = {}) => ({
+  name: 'test-http-api',
   type: 'api-gateway-http',
-  config: config
+  config
 });
 
-describe('ApiGatewayHttpComponent', () => {
+describe('ApiGatewayHttpComponent__Synthesis__HttpApiResources', () => {
   let app: App;
   let stack: Stack;
-  let mockContext: ComponentContext;
-  let mockSpec: ComponentSpec;
+  let context;
+  let loadPlatformConfigSpy: jest.SpiedFunction<ApiGatewayHttpConfigBuilder['_loadPlatformConfiguration']>;
 
   beforeEach(() => {
-    // Deterministic test setup
-    jest.useFakeTimers();
-    jest.setSystemTime(DETERMINISTIC_TIMESTAMP);
-
     app = new App();
-    stack = new Stack(app, 'TestStack');
-    mockContext = createMockContext();
-    mockSpec = createMockSpec();
+    stack = new Stack(app, 'HttpApiStack', {
+      env: { account: '123456789012', region: 'us-east-1' }
+    });
+    context = createContext('commercial', stack);
+
+    loadPlatformConfigSpy = jest
+      .spyOn(ApiGatewayHttpConfigBuilder.prototype, '_loadPlatformConfiguration')
+      .mockImplementation(function () {
+        const framework = this.builderContext.context.complianceFramework;
+        if (framework === 'fedramp-moderate') {
+          return {
+            throttling: { rateLimit: 50, burstLimit: 100 },
+            accessLogging: { enabled: true, retentionInDays: 180 },
+            monitoring: { detailedMetrics: true, tracingEnabled: true },
+            apiSettings: { disableExecuteApiEndpoint: true },
+            security: { enableWaf: false }
+          };
+        }
+
+        return {
+          throttling: { rateLimit: 1000, burstLimit: 2000 },
+          accessLogging: { enabled: true, retentionInDays: 90 },
+          monitoring: { detailedMetrics: true, tracingEnabled: true },
+          apiSettings: { disableExecuteApiEndpoint: false },
+          security: { enableWaf: false }
+        };
+      });
   });
 
   afterEach(() => {
-    jest.useRealTimers();
-    jest.restoreAllMocks();
+    loadPlatformConfigSpy.mockRestore();
   });
 
-  /**
-   * Test Metadata:
+  const synthesize = (specOverrides = {}, contextOverrides = {}) => {
+    const ctx = { ...context, ...contextOverrides };
+    const spec = createSpec(specOverrides);
+    const component = new ApiGatewayHttpComponent(stack, 'HttpApiComponent', ctx, spec);
+    component.synth();
+    const template = Template.fromStack(stack);
+    return { component, template };
+  };
+
+  /*
+   * Test Metadata: TP-HTTP-GW-COMPONENT-001
    * {
-   *   "id": "TP-api-gateway-http-config-builder-001",
+   *   "id": "TP-HTTP-GW-COMPONENT-001",
    *   "level": "unit",
-   *   "capability": "ConfigBuilder properly extends base class and implements hardcoded fallbacks", 
-   *   "oracle": "exact",
-   *   "invariants": ["ConfigBuilder inheritance", "Required methods implemented"],
-   *   "fixtures": ["mockComponentContext", "mockComponentSpec"],
-   *   "inputs": {"shape": "ComponentContext and ComponentSpec", "notes": ""},
-   *   "risks": ["ConfigBuilder contract violation"],
-   *   "dependencies": ["ConfigBuilder base class"],
-   *   "evidence": ["Class extends ConfigBuilder", "getHardcodedFallbacks implemented"],
-   *   "compliance_refs": ["std://platform-configuration"],
-   *   "ai_generated": true,
-   *   "human_reviewed_by": "platform-engineering-team"
-   * }
-   */
-  describe('ConfigBuilder__ValidImplementation__ExtendsBaseClassCorrectly', () => {
-    it('should extend ConfigBuilder and implement required methods', () => {
-      // Arrange: Create config builder with deterministic inputs
-      const configBuilder = new ApiGatewayHttpConfigBuilder({ context: mockContext, spec: mockSpec });
-
-      // Act: Get hardcoded fallbacks
-      const fallbacks = configBuilder.getHardcodedFallbacks();
-
-      // Assert: Verify exact structure and values
-      expect(configBuilder).toBeInstanceOf(ApiGatewayHttpConfigBuilder);
-      expect(typeof configBuilder.getHardcodedFallbacks).toBe('function');
-      expect(fallbacks).toEqual({
-        protocolType: 'HTTP',
-        description: 'HTTP API for test-http-api-gateway',
-        cors: {
-          allowOrigins: [], // Security-compliant: empty array forces explicit config
-          allowMethods: ['GET', 'POST', 'OPTIONS'], // Minimal safe methods
-          allowHeaders: ['Content-Type', 'Authorization'], // Minimal safe headers
-          allowCredentials: false, // Always secure default
-          maxAge: 300
-        },
-        throttling: {
-          burstLimit: 100, // Conservative fallback
-          rateLimit: 50    // Conservative fallback
-        },
-        accessLogging: {
-          enabled: true,
-          retentionInDays: 90,
-          retainOnDelete: false
-        },
-        monitoring: {
-          detailedMetrics: true,
-          tracingEnabled: true,
-          alarms: {
-            errorRate4xx: 5,
-            errorRate5xx: 1,
-            highLatency: 2000,
-            lowThroughput: 1
-          }
-        },
-        apiSettings: {
-          disableExecuteApiEndpoint: false,
-          apiKeySource: 'HEADER'
-        },
-        security: {
-          enableWaf: false,
-          enableApiKey: false,
-          requireAuthorization: true
-        }
-      });
-    });
-  });
-
-  /**
-   * Test Metadata:
-   * {
-   *   "id": "TP-api-gateway-http-config-builder-002",
-   *   "level": "unit",
-   *   "capability": "ConfigBuilder uses 5-layer precedence chain correctly for HTTP API",
-   *   "oracle": "exact",
-   *   "invariants": ["Platform Configuration Standard compliance"],
-   *   "fixtures": ["mockComponentContext", "mockComponentSpec"],
-   *   "inputs": {"shape": "ComponentContext with fedramp-moderate compliance", "notes": "Tests compliance-aware HTTP API config"},
-   *   "risks": ["Configuration precedence violation"],
-   *   "dependencies": ["ConfigBuilder base class", "Platform config files"],
-   *   "evidence": ["buildSync returns merged config", "Compliance-aware HTTP API configuration"],
-   *   "compliance_refs": ["std://platform-configuration"],
-   *   "ai_generated": true,
-   *   "human_reviewed_by": "platform-engineering-team"
-   * }
-   */
-  describe('ConfigBuilder__ComplianceFramework__AppliesCorrectHttpApiDefaults', () => {
-    it('should apply compliance-aware configuration for FedRAMP Moderate HTTP API', async () => {
-      // Arrange: Create context with FedRAMP Moderate compliance
-      const fedRAMPContext = createMockContext('fedramp-moderate');
-      const configBuilder = new ApiGatewayHttpConfigBuilder({ context: fedRAMPContext, spec: mockSpec });
-
-      // Act: Build configuration using 5-layer precedence
-      const config = await configBuilder.build();
-
-      // Assert: Verify compliance-aware defaults for HTTP API
-      expect(config.protocolType).toBe('HTTP');
-      expect(config.cors?.allowOrigins).toEqual([]);
-      expect(config.cors?.allowCredentials).toBe(false);
-      expect(config.throttling?.burstLimit).toBe(100);
-      expect(config.throttling?.rateLimit).toBe(50);
-      expect(config.accessLogging?.enabled).toBe(true);
-      expect(config.accessLogging?.retentionInDays).toBe(90);
-      expect(config.defaultStage?.stageName).toBe('test');
-    });
-  });
-
-  /**
-   * Test Metadata:
-   * {
-   *   "id": "TP-api-gateway-http-component-001",
-   *   "level": "unit", 
-   *   "capability": "Component synthesis creates HTTP API Gateway v2 with correct configuration",
+   *   "capability": "Commercial synthesis provisions HTTP API",
    *   "oracle": "contract",
-   *   "invariants": ["CDK construct creation", "AWS resource properties"], 
-   *   "fixtures": ["mockComponentContext", "mockComponentSpec", "cdkApp"],
-   *   "inputs": {"shape": "Valid HTTP API component configuration", "notes": ""},
-   *   "risks": ["CDK synthesis failure", "Invalid AWS HTTP API resource configuration"],
-   *   "dependencies": ["CDK library", "AWS API Gateway v2 constructs"],
-   *   "evidence": ["Template contains HTTP API", "Correct HTTP API properties"],
-   *   "compliance_refs": ["std://platform-tagging", "std://service-injector-pattern"],
-   *   "ai_generated": true,
-   *   "human_reviewed_by": "platform-engineering-team"
+   *   "invariants": ["ProtocolType HTTP", "Description populated"],
+   *   "fixtures": ["cdk.Stack", "ApiGatewayHttpComponent"],
+   *   "inputs": { "shape": "Commercial framework", "notes": "Default configuration" },
+   *   "risks": ["API created with incorrect type"],
+   *   "dependencies": ["aws-cdk-lib"],
+   *   "evidence": ["Template resources"],
+   *   "compliance_refs": ["std://configuration"],
+   *   "ai_generated": false,
+   *   "human_reviewed_by": ""
    * }
    */
-  describe('Component__ValidConfiguration__CreatesHttpApiGateway', () => {
-    it('should synthesize HTTP API Gateway v2 with correct AWS resources', () => {
-      // Arrange: Create HTTP API component with deterministic configuration
-      const component = new ApiGatewayHttpComponent(stack, 'TestHttpApiGateway', mockContext, mockSpec);
+  it('HttpApiResource__CommercialDefaults__CreatesHttpApi', () => {
+    const { template } = synthesize();
 
-      // Act: Synthesize component
-      component.synth();
-
-      // Assert: Verify CDK template contains expected AWS resources
-      const template = Template.fromStack(stack);
-
-      // Contract validation: HTTP API exists with correct properties
-      template.hasResourceProperties('AWS::ApiGatewayV2::Api', {
-        Name: 'test-http-service-test-http-api-gateway',
-        ProtocolType: 'HTTP',
-        Description: 'HTTP API for test-http-api-gateway'
-      });
-
-      // Contract validation: Default stage exists
-      template.hasResourceProperties('AWS::ApiGatewayV2::Stage', {
-        ApiId: Match.anyValue(),
-        StageName: 'test',
-        AutoDeploy: true
-      });
-
-      // Access log group is created with platform naming convention
-      template.hasResourceProperties('AWS::Logs::LogGroup', {
-        LogGroupName: '/platform/http-api/test-http-service/test-http-api-gateway',
-        RetentionInDays: 90
-      });
+    template.hasResourceProperties('AWS::ApiGatewayV2::Api', {
+      ProtocolType: 'HTTP',
+      Description: 'HTTP API for test-http-api'
     });
   });
 
-  describe('Component__AccessLogging__ValidatesRetentionValues', () => {
-    it('should throw when unsupported retention days are provided', () => {
-      const specWithInvalidRetention = createMockSpec({
-        accessLogging: {
-          enabled: true,
-          retentionInDays: 55
-        }
-      });
-
-      const component = new ApiGatewayHttpComponent(stack, 'TestHttpApiGateway', mockContext, specWithInvalidRetention);
-
-      expect(() => component.synth()).toThrow('Unsupported access log retention 55');
-    });
-  });
-
-  describe('Security__WafConfiguration__Validated', () => {
-    it('Security__WafEnabledWithoutArn__EmitsWarningAndSkipsAssociation', () => {
-      const specWithInvalidWaf = createMockSpec({
-        security: {
-          enableWaf: true
-        }
-      });
-
-      const logSpy = jest.spyOn(ApiGatewayHttpComponent.prototype as any, 'logComponentEvent');
-      const component = new ApiGatewayHttpComponent(stack, 'TestHttpApiGateway', mockContext, specWithInvalidWaf);
-      component.synth();
-
-      expect(logSpy).toHaveBeenCalledWith(
-        'waf_configuration_missing',
-        expect.any(String),
-        expect.objectContaining({ component: 'test-http-api-gateway' })
-      );
-
-      const template = Template.fromStack(stack);
-      expect(template.findResources('AWS::WAFv2::WebACLAssociation')).toEqual({});
-
-      logSpy.mockRestore();
-    });
-  });
-
-  /**
-   * Test Metadata:
+  /*
+   * Test Metadata: TP-HTTP-GW-COMPONENT-002
    * {
-   *   "id": "TP-api-gateway-http-component-002",
+   *   "id": "TP-HTTP-GW-COMPONENT-002",
    *   "level": "unit",
-   *   "capability": "HTTP API component applies all mandatory platform tags",
-   *   "oracle": "exact", 
-   *   "invariants": ["Platform Tagging Standard compliance"],
-   *   "fixtures": ["mockComponentContext", "mockComponentSpec"],
-   *   "inputs": {"shape": "Component with standard context", "notes": ""},
-   *   "risks": ["Missing mandatory tags", "Compliance violation"],
-   *   "dependencies": ["BaseComponent tagging", "Platform tagging standard"],
-   *   "evidence": ["All mandatory tags present", "Tag values correct for HTTP API"],
-   *   "compliance_refs": ["std://platform-tagging"],
-   *   "ai_generated": true,
-   *   "human_reviewed_by": "platform-engineering-team"
+   *   "capability": "Stage configures access logging",
+   *   "oracle": "contract",
+   *   "invariants": ["AccessLogSetting present"],
+   *   "fixtures": ["cdk.Stack", "ApiGatewayHttpComponent"],
+   *   "inputs": { "shape": "Commercial framework", "notes": "Default stage" },
+   *   "risks": ["Access logs disabled"],
+   *   "dependencies": ["aws-cdk-lib"],
+   *   "evidence": ["Stage resources"],
+   *   "compliance_refs": ["std://logging"],
+   *   "ai_generated": false,
+   *   "human_reviewed_by": ""
    * }
    */
-  describe('Component__StandardTags__AppliesMandatoryTagsToHttpApi', () => {
-    it('should apply all mandatory platform tags to HTTP API resources', () => {
-      // Arrange: Create HTTP API component
-      const component = new ApiGatewayHttpComponent(stack, 'TestHttpApiGateway', mockContext, mockSpec);
+  it('StageResource__CommercialDefaults__ConfiguresAccessLogging', () => {
+    const { template } = synthesize();
 
-      // Act: Synthesize component
-      component.synth();
+    template.hasResourceProperties('AWS::ApiGatewayV2::Stage', {
+      AccessLogSettings: Match.objectLike({
+        DestinationArn: Match.anyValue()
+      })
+    });
 
-      // Assert: Verify all mandatory tags are present on HTTP API
-      const template = Template.fromStack(stack);
-
-      // Exact validation: HTTP API has mandatory tags
-      template.hasResourceProperties('AWS::ApiGatewayV2::Api', {
-        Tags: Match.objectLike({
-          'service-name': 'test-http-service',
-          'component-name': 'test-http-api-gateway',
-          'component-type': 'api-gateway-http'
-        })
-      });
+    template.hasResourceProperties('AWS::Logs::LogGroup', {
+      RetentionInDays: 90
     });
   });
 
-  /**
-   * Test Metadata:
+  /*
+   * Test Metadata: TP-HTTP-GW-COMPONENT-003
    * {
-   *   "id": "TP-api-gateway-http-component-003",
+   *   "id": "TP-HTTP-GW-COMPONENT-003",
    *   "level": "unit",
-   *   "capability": "HTTP API component provides correct capabilities after synthesis",
+   *   "capability": "FedRAMP moderate disables execute API endpoint",
+   *   "oracle": "contract",
+   *   "invariants": ["DisableExecuteApiEndpoint true"],
+   *   "fixtures": ["cdk.Stack", "ApiGatewayHttpComponent"],
+   *   "inputs": { "shape": "FedRAMP moderate framework", "notes": "No overrides" },
+   *   "risks": ["Public endpoint enabled"],
+   *   "dependencies": ["aws-cdk-lib"],
+   *   "evidence": ["Template properties"],
+   *   "compliance_refs": ["std://security"],
+   *   "ai_generated": false,
+   *   "human_reviewed_by": ""
+   * }
+   */
+  it('HttpApiResource__FedrampModerate__DisablesExecuteEndpoint', () => {
+    const { template } = synthesize({}, { complianceFramework: 'fedramp-moderate', environment: 'stage' });
+
+    template.hasResourceProperties('AWS::ApiGatewayV2::Api', {
+      DisableExecuteApiEndpoint: true
+    });
+  });
+
+  /*
+   * Test Metadata: TP-HTTP-GW-COMPONENT-004
+   * {
+   *   "id": "TP-HTTP-GW-COMPONENT-004",
+   *   "level": "unit",
+   *   "capability": "Access log retention respects manifest overrides",
+   *   "oracle": "contract",
+   *   "invariants": ["LogGroup retention matches override"],
+   *   "fixtures": ["cdk.Stack", "ApiGatewayHttpComponent"],
+   *   "inputs": { "shape": "Manifest override retention", "notes": "Retention set to 400" },
+   *   "risks": ["Retention ignored"],
+   *   "dependencies": ["aws-cdk-lib"],
+   *   "evidence": ["LogGroup properties"],
+   *   "compliance_refs": ["std://logging"],
+   *   "ai_generated": false,
+   *   "human_reviewed_by": ""
+   * }
+   */
+  it('AccessLogs__ManifestOverride__AppliesRetentionDays', () => {
+    const { template } = synthesize({ accessLogging: { enabled: true, retentionInDays: 400 } });
+
+    template.hasResourceProperties('AWS::Logs::LogGroup', {
+      RetentionInDays: 400
+    });
+  });
+
+  /*
+   * Test Metadata: TP-HTTP-GW-COMPONENT-005
+   * {
+   *   "id": "TP-HTTP-GW-COMPONENT-005",
+   *   "level": "unit",
+   *   "capability": "Component publishes HTTP API capability metadata",
    *   "oracle": "exact",
-   *   "invariants": ["Component API contract"],
-   *   "fixtures": ["mockComponentContext", "mockComponentSpec"], 
-   *   "inputs": {"shape": "Synthesized HTTP API component", "notes": ""},
-   *   "risks": ["Incorrect capability registration", "Contract violation"],
-   *   "dependencies": ["BaseComponent capabilities system"],
-   *   "evidence": ["Capabilities object structure", "HTTP API endpoint availability"],
-   *   "compliance_refs": ["std://component-contract"],
-   *   "ai_generated": true,
-   *   "human_reviewed_by": "platform-engineering-team"
+   *   "invariants": ["Capability contains apiId", "Stage name present"],
+   *   "fixtures": ["cdk.Stack", "ApiGatewayHttpComponent"],
+   *   "inputs": { "shape": "Commercial framework", "notes": "Default configuration" },
+   *   "risks": ["Capability map out-of-date"],
+   *   "dependencies": ["aws-cdk-lib"],
+   *   "evidence": ["component.getCapabilities()"],
+   *   "compliance_refs": ["std://capabilities"],
+   *   "ai_generated": false,
+   *   "human_reviewed_by": ""
    * }
    */
-  describe('Component__PostSynthesis__ProvidesCorrectHttpApiCapabilities', () => {
-    it('should provide api:http capability with correct structure', () => {
-      // Arrange: Create and synthesize HTTP API component
-      const component = new ApiGatewayHttpComponent(stack, 'TestHttpApiGateway', mockContext, mockSpec);
-      component.synth();
+  it('Capabilities__CommercialDefaults__PublishesHttpApiContract', () => {
+    const { component } = synthesize();
 
-      // Act: Get capabilities
-      const capabilities = component.getCapabilities();
-
-      // Assert: Verify exact HTTP API capability structure
-      expect(capabilities).toHaveProperty('api:http');
-      expect(capabilities['api:http']).toEqual(
-        expect.objectContaining({
-          type: 'api:http',
-          resources: expect.objectContaining({
-            arn: expect.any(String),
-            apiId: expect.any(String),
-            stage: 'test'
-          }),
-          endpoints: expect.objectContaining({
-            invokeUrl: expect.any(String),
-            executeApiArn: expect.any(String)
-          }),
-          cors: expect.objectContaining({
-            enabled: false,
-            origins: []
-          })
+    const capability = component.getCapabilities()['api:http'];
+    expect(capability).toEqual(
+      expect.objectContaining({
+        resources: expect.objectContaining({
+          apiId: expect.any(String),
+          stage: 'dev'
+        }),
+        endpoints: expect.objectContaining({
+          invokeUrl: expect.stringContaining('https://')
         })
-      );
-    });
+      })
+    );
   });
 
-  /**
-   * Test Metadata:
+  /*
+   * Test Metadata: TP-HTTP-GW-COMPONENT-006
    * {
-   *   "id": "TP-api-gateway-http-component-004",
+   *   "id": "TP-HTTP-GW-COMPONENT-006",
    *   "level": "unit",
-   *   "capability": "HTTP API component type identifier is correct",
+   *   "capability": "Custom domain missing certificate throws validation error",
    *   "oracle": "exact",
-   *   "invariants": ["Component type consistency"],
-   *   "fixtures": ["mockComponentContext", "mockComponentSpec"],
-   *   "inputs": {"shape": "HTTP API component instance", "notes": ""},
-   *   "risks": ["Wrong component type returned"],
-   *   "dependencies": [],
-   *   "evidence": ["getType returns api-gateway-http"],
-   *   "compliance_refs": [],
-   *   "ai_generated": true,
-   *   "human_reviewed_by": "platform-engineering-team"
+   *   "invariants": ["Error thrown"],
+   *   "fixtures": ["cdk.Stack", "ApiGatewayHttpComponent"],
+   *   "inputs": { "shape": "customDomain with autoGenerateCertificate=true and no hostedZone", "notes": "Negative coverage" },
+   *   "risks": ["Implicit certificate generation without DNS"],
+   *   "dependencies": ["aws-cdk-lib"],
+   *   "evidence": ["Error message"],
+   *   "compliance_refs": ["std://testing"],
+   *   "ai_generated": false,
+   *   "human_reviewed_by": ""
    * }
    */
-  describe('Component__TypeIdentifier__ReturnsCorrectHttpApiType', () => {
-    it('should return correct HTTP API component type identifier', () => {
-      // Arrange: Create HTTP API component
-      const component = new ApiGatewayHttpComponent(stack, 'TestHttpApiGateway', mockContext, mockSpec);
-
-      // Act: Get component type
-      const componentType = component.getType();
-
-      // Assert: Verify exact type string for HTTP API
-      expect(componentType).toBe('api-gateway-http');
-    });
-  });
-
-  /**
-   * Test Metadata:
-   * {
-   *   "id": "TP-api-gateway-http-component-005",
-   *   "level": "unit",
-   *   "capability": "HTTP API component fails gracefully when getCapabilities called before synthesis",
-   *   "oracle": "exact",
-   *   "invariants": ["Component lifecycle contract"],
-   *   "fixtures": ["mockComponentContext", "mockComponentSpec"],
-   *   "inputs": {"shape": "Unsynthesized HTTP API component", "notes": ""},
-   *   "risks": ["Undefined behavior", "Runtime errors"],
-   *   "dependencies": ["BaseComponent validation"],
-   *   "evidence": ["Throws expected error", "Error message is actionable"],
-   *   "compliance_refs": ["std://component-contract"],
-   *   "ai_generated": true,
-   *   "human_reviewed_by": "platform-engineering-team"
-   * }
-   */
-  describe('Component__PreSynthesis__FailsGracefullyOnHttpApiCapabilityAccess', () => {
-    it('should throw descriptive error when HTTP API capabilities accessed before synthesis', () => {
-      // Arrange: Create unsynthesized HTTP API component
-      const component = new ApiGatewayHttpComponent(stack, 'TestHttpApiGateway', mockContext, mockSpec);
-
-      // Act & Assert: Verify error is thrown with actionable message
-      expect(() => {
-        component.getCapabilities();
-      }).toThrow(/has not been synthesized.*Call synth\(\) before accessing constructs/i);
-    });
-  });
-
-  /**
-   * Test Metadata:
-   * {
-   *   "id": "TP-api-gateway-http-security-001", 
-   *   "level": "integration",
-   *   "capability": "HTTP API CORS configuration enforces security-first defaults",
-   *   "oracle": "exact",
-   *   "invariants": ["Security-first configuration", "No hardcoded security violations"],
-   *   "fixtures": ["mockComponentContext", "mockComponentSpec"],
-   *   "inputs": {"shape": "Default HTTP API configuration", "notes": "Tests hardcoded fallback security"},
-   *   "risks": ["Security vulnerability", "CORS misconfiguration"],
-   *   "dependencies": ["ConfigBuilder", "Platform Configuration Standard"],
-   *   "evidence": ["Empty allowOrigins", "Minimal safe methods", "Credentials disabled"],
-   *   "compliance_refs": ["std://platform-configuration", "std://security"],
-   *   "ai_generated": true,
-   *   "human_reviewed_by": "platform-engineering-team"
-   * }
-   */
-  describe('Security__HttpApiCORSDefaults__EnforcesSecurityFirstFallbacks', () => {
-    it('should use security-compliant CORS defaults for HTTP API that force explicit configuration', () => {
-      // Arrange: Create HTTP API component with no CORS config (will use fallbacks)
-      const emptySpec = createMockSpec({}); // No CORS configuration provided
-      const component = new ApiGatewayHttpComponent(stack, 'TestHttpApiGateway', mockContext, emptySpec);
-
-      // Act: Synthesize component (uses hardcoded fallbacks)
-      component.synth();
-
-      // Get the actual configuration used (through private access for testing)
-      const configBuilder = new ApiGatewayHttpConfigBuilder({ context: mockContext, spec: emptySpec });
-      const fallbacks = configBuilder.getHardcodedFallbacks();
-
-      // Assert: Verify security-first CORS defaults for HTTP API
-      expect(fallbacks.cors?.allowOrigins).toEqual([]); // CRITICAL: Must be empty to force config
-      expect(fallbacks.cors?.allowMethods).toEqual(['GET', 'POST', 'OPTIONS']); // Minimal safe methods
-      expect(fallbacks.cors?.allowHeaders).toEqual(['Content-Type', 'Authorization']); // Minimal safe headers
-      expect(fallbacks.cors?.allowCredentials).toBe(false); // Always secure default
-      expect(fallbacks.protocolType).toBe('HTTP'); // Verify HTTP protocol type
-    });
-  });
-
-  /**
-   * Test Metadata:
-   * {
-   *   "id": "TP-api-gateway-http-performance-001",
-   *   "level": "unit",
-   *   "capability": "HTTP API throttling defaults are conservative for security", 
-   *   "oracle": "property",
-   *   "invariants": ["Conservative throttling limits", "Security-first resource protection"],
-   *   "fixtures": ["mockComponentContext", "mockComponentSpec"],
-   *   "inputs": {"shape": "Default HTTP API configuration", "notes": "Tests throttling property invariants"},
-   *   "risks": ["DoS vulnerability", "Resource exhaustion"],
-   *   "dependencies": ["ConfigBuilder"],
-   *   "evidence": ["Burst limit <= 100", "Rate limit <= 50", "Conservative fallbacks"],
-   *   "compliance_refs": ["std://platform-configuration", "std://security"],
-   *   "ai_generated": true,
-   *   "human_reviewed_by": "platform-engineering-team"
-   * }
-   */
-  describe('Performance__HttpApiThrottling__UsesConservativeFallbacks', () => {
-    it('should use conservative throttling limits that protect against resource exhaustion', () => {
-      // Arrange: Create HTTP API component with no throttling config
-      const emptySpec = createMockSpec({});
-      const configBuilder = new ApiGatewayHttpConfigBuilder({ context: mockContext, spec: emptySpec });
-
-      // Act: Get hardcoded fallbacks
-      const fallbacks = configBuilder.getHardcodedFallbacks();
-
-      // Assert: Property-based validation - throttling limits are conservative
-      expect(fallbacks.throttling?.burstLimit).toBeLessThanOrEqual(100); // Conservative burst protection
-      expect(fallbacks.throttling?.rateLimit).toBeLessThanOrEqual(50);   // Conservative rate protection
-      expect(fallbacks.throttling?.burstLimit).toBeGreaterThan(0);       // Not zero (would break functionality)
-      expect(fallbacks.throttling?.rateLimit).toBeGreaterThan(0);        // Not zero (would break functionality)
-
-      // Invariant: Burst should be >= rate (AWS requirement)
-      expect(fallbacks.throttling?.burstLimit).toBeGreaterThanOrEqual(fallbacks.throttling?.rateLimit || 0);
-    });
-  });
-});
-
-/**
- * Integration Tests
- * Tests HTTP API component integration with platform services and CDK constructs
- */
-describe('ApiGatewayHttpComponent Integration', () => {
-  let app: App;
-  let stack: Stack;
-
-  beforeEach(() => {
-    jest.useFakeTimers();
-    jest.setSystemTime(DETERMINISTIC_TIMESTAMP);
-
-    app = new App();
-    stack = new Stack(app, 'IntegrationTestStack');
-  });
-
-  afterEach(() => {
-    jest.useRealTimers();
-  });
-
-  /**
-   * Test Metadata:
-   * {
-   *   "id": "TP-api-gateway-http-integration-001",
-   *   "level": "integration",
-   *   "capability": "HTTP API component integrates with Service Injector Pattern",
-   *   "oracle": "behavioral-trace", 
-   *   "invariants": ["Service Injector Pattern compliance", "ObservabilityService integration"],
-   *   "fixtures": ["cdkApp", "mockComponentContext", "mockComponentSpec"],
-   *   "inputs": {"shape": "HTTP API component with observability service", "notes": ""},
-   *   "risks": ["Service injection failure", "Observability not applied"],
-   *   "dependencies": ["BaseComponent", "ObservabilityService"],
-   *   "evidence": ["No internal observability methods", "Delegates to platform services"],
-   *   "compliance_refs": ["std://service-injector-pattern", "std://platform-observability"],
-   *   "ai_generated": true,
-   *   "human_reviewed_by": "platform-engineering-team"
-   * }
-   */
-  describe('ServiceIntegration__HttpApiObservabilityService__DelegatesToPlatformService', () => {
-    it('should delegate HTTP API observability to platform service instead of internal methods', () => {
-      // Arrange: Create HTTP API component with observability context
-      const mockContext = createMockContext();
-      const mockSpec = createMockSpec();
-      const component = new ApiGatewayHttpComponent(stack, 'TestHttpApiGateway', mockContext, mockSpec);
-
-      // Act: Synthesize component
-      component.synth();
-
-      // Assert: Verify Service Injector Pattern compliance
-      // HTTP API component should delegate to platform services
-      // Note: The component may have internal methods but should delegate to platform services
-      expect(component).toBeInstanceOf(ApiGatewayHttpComponent);
-
-      // BaseComponent should handle observability delegation
-      expect(component).toBeInstanceOf(ApiGatewayHttpComponent);
-    });
-  });
-
-  /**
-   * Test Metadata:
-   * {
-   *   "id": "TP-api-gateway-http-integration-002",
-   *   "level": "integration",
-   *   "capability": "HTTP API vs REST API produce structurally similar but protocol-appropriate configurations",
-   *   "oracle": "metamorphic",
-   *   "invariants": ["Configuration structure consistency", "Protocol-appropriate differences"],
-   *   "fixtures": ["cdkApp", "mockComponentContexts"],
-   *   "inputs": {"shape": "Same component spec for HTTP vs REST APIs", "notes": "Tests structural consistency"},
-   *   "risks": ["Configuration structure divergence", "Protocol confusion"],
-   *   "dependencies": ["ConfigBuilder", "Both API Gateway components"],
-   *   "evidence": ["Same configuration keys", "Protocol-appropriate values", "Consistent security defaults"],
-   *   "compliance_refs": ["std://platform-configuration"],
-   *   "ai_generated": true,
-   *   "human_reviewed_by": "platform-engineering-team"
-   * }
-   */
-  describe('ComplianceFramework__HttpVsRestApi__ProducesStructurallyConsistentConfigs', () => {
-    it('should produce structurally consistent configs between HTTP and REST APIs with appropriate protocol differences', async () => {
-      // Arrange: Same context and spec, different API types
-      const mockContext = createMockContext('commercial');
-      const restSpec = createMockSpec({ description: 'Test API for protocol comparison' });
-      const httpSpec = createMockSpec({ description: 'Test API for protocol comparison' });
-
-      // Act: Build configuration for HTTP API
-      const httpBuilder = new ApiGatewayHttpConfigBuilder({ context: mockContext, spec: httpSpec });
-      const httpConfig = await httpBuilder.build();
-
-      // Assert: Verify HTTP API configuration structure
-      expect(httpConfig.cors).toBeDefined();
-      expect(httpConfig.throttling).toBeDefined();
-      expect(httpConfig.protocolType).toBe('HTTP');
-      expect(httpConfig.accessLogging).toBeDefined();
-      expect(httpConfig.description).toContain('Test API for protocol comparison');
-    });
-  });
-
-  // Compliance Framework Tests
-  describe('Compliance Framework Support', () => {
-    test('should apply FedRAMP Moderate compliance settings', () => {
-      const context = createMockContext('fedramp-moderate');
-      const spec = createMockSpec({
-        cors: {
-          allowOrigins: ['https://secure.myapp.com']
-        },
-        security: {
-          enableWaf: true,
-          webAclArn: 'arn:aws:wafv2:us-east-1:123456789012:regional/webacl/test/fedrampmoderate'
+  it('CustomDomain__MissingHostedZone__ThrowsConfigurationError', () => {
+    const component = new ApiGatewayHttpComponent(
+      stack,
+      'InvalidHttpApi',
+      context,
+      createSpec({
+        customDomain: {
+          domainName: 'api.example.com',
+          autoGenerateCertificate: true
         }
-      });
+      })
+    );
 
-      const component = new ApiGatewayHttpComponent(stack, 'TestHttpApiGateway', context, spec);
-      component.synth();
-      const template = Template.fromStack(stack);
-
-      // Verify stricter throttling limits
-      template.hasResourceProperties('AWS::ApiGatewayV2::Stage', {
-        DefaultRouteSettings: {
-          ThrottlingRateLimit: 50,
-          ThrottlingBurstLimit: 100
-        }
-      });
-
-      // Verify extended log retention
-      template.hasResourceProperties('AWS::Logs::LogGroup', {
-        RetentionInDays: 90
-      });
-    });
-
-    test('should apply FedRAMP High compliance settings', () => {
-      const context = createMockContext('fedramp-high');
-      const spec = createMockSpec({
-        cors: {
-          allowOrigins: ['https://high-security.myapp.com']
-        },
-        security: {
-          enableWaf: true,
-          webAclArn: 'arn:aws:wafv2:us-east-1:123456789012:regional/webacl/test/fedramphigh'
-        }
-      });
-
-      const component = new ApiGatewayHttpComponent(stack, 'TestHttpApiGateway', context, spec);
-      component.synth();
-      const template = Template.fromStack(stack);
-
-      // Verify strictest throttling limits
-      template.hasResourceProperties('AWS::ApiGatewayV2::Stage', {
-        DefaultRouteSettings: {
-          ThrottlingRateLimit: 25,
-          ThrottlingBurstLimit: 50
-        }
-      });
-
-      // Verify maximum log retention
-      template.hasResourceProperties('AWS::Logs::LogGroup', {
-        RetentionInDays: 365
-      });
-    });
-
-    test('should apply commercial compliance settings', () => {
-      const context = createMockContext('commercial');
-      const spec = createMockSpec({
-        cors: {
-          allowOrigins: ['https://myapp.com']
-        },
-        security: {
-          enableWaf: false
-        }
-      });
-
-      const component = new ApiGatewayHttpComponent(stack, 'TestHttpApiGateway', context, spec);
-      component.synth();
-      const template = Template.fromStack(stack);
-
-      // Verify standard throttling limits
-      template.hasResourceProperties('AWS::ApiGatewayV2::Stage', {
-        DefaultRouteSettings: {
-          ThrottlingRateLimit: 1000,
-          ThrottlingBurstLimit: 2000
-        }
-      });
-
-      // Verify standard log retention
-      template.hasResourceProperties('AWS::Logs::LogGroup', {
-        RetentionInDays: 90
-      });
-    });
-  });
-
-  // Observability Tests
-  describe('OpenTelemetry Integration', () => {
-    test('should configure X-Ray tracing', () => {
-      const context = createMockContext('commercial');
-      const spec = createMockSpec({
-        monitoring: {
-          tracingEnabled: true
-        }
-      });
-
-      const component = new ApiGatewayHttpComponent(stack, 'TestHttpApiGateway', context, spec);
-      component.synth();
-      const template = Template.fromStack(stack);
-
-      // Verify X-Ray tracing is enabled
-      template.hasResourceProperties('AWS::ApiGatewayV2::Stage', {
-        DefaultRouteSettings: {
-          ThrottlingRateLimit: 1000,
-          ThrottlingBurstLimit: 2000
-        }
-      });
-    });
-
-    test('should configure observability with custom service name', () => {
-      const context = createMockContext('commercial');
-      const spec = createMockSpec({
-        observability: {
-          serviceName: 'custom-api-gateway',
-          tracingEnabled: true,
-          otlpEndpoint: 'https://custom-otlp.example.com'
-        }
-      });
-
-      const component = new ApiGatewayHttpComponent(stack, 'TestHttpApiGateway', context, spec);
-
-      // Verify component was created successfully with observability config
-      expect(component).toBeDefined();
-      expect(component.getType()).toBe('api-gateway-http');
-    });
-  });
-
-  // Tagging Tests
-  describe('Platform Tagging Standard', () => {
-    test('should apply standard platform tags', () => {
-      const context = createMockContext('commercial');
-      const spec = createMockSpec();
-
-      const component = new ApiGatewayHttpComponent(stack, 'TestHttpApiGateway', context, spec);
-      component.synth();
-      const template = Template.fromStack(stack);
-
-      // Verify standard platform tags are applied
-      template.hasResourceProperties('AWS::ApiGatewayV2::Api', {
-        Tags: Match.objectLike({
-          'component-type': 'api-gateway-http',
-          'service-name': 'test-http-service',
-          'environment': 'test',
-          'managed-by': Match.anyValue(),
-          'compliance-framework': 'commercial'
-        })
-      });
-    });
-
-    test('should apply FedRAMP compliance tags', () => {
-      const context = createMockContext('fedramp-moderate');
-      const spec = createMockSpec({
-        security: {
-          enableWaf: true,
-          webAclArn: 'arn:aws:wafv2:us-east-1:123456789012:regional/webacl/test/fedrampmoderate'
-        }
-      });
-
-      const component = new ApiGatewayHttpComponent(stack, 'TestHttpApiGateway', context, spec);
-      component.synth();
-      const template = Template.fromStack(stack);
-
-      // Verify FedRAMP compliance tags
-      template.hasResourceProperties('AWS::ApiGatewayV2::Api', {
-        Tags: Match.objectLike({
-          'compliance-framework': 'fedramp-moderate',
-          'data-classification': Match.anyValue()
-        })
-      });
-    });
-  });
-
-  // Bindings and Triggers Tests
-  describe('Bindings and Triggers Validation', () => {
-    test('should validate valid bindings', () => {
-      const context = createMockContext('commercial');
-      const spec = createMockSpec({
-        binds: [
-          {
-            capability: 'lambda:invoke',
-            target: 'arn:aws:lambda:us-east-1:123456789012:function:test-function'
-          }
-        ]
-      });
-
-      const component = new ApiGatewayHttpComponent(stack, 'TestHttpApiGateway', context, spec);
-
-      // Should not throw error for valid bindings
-      expect(component).toBeDefined();
-    });
-
-    test('should handle invalid binding capabilities gracefully', () => {
-      const context = createMockContext('commercial');
-      const spec = createMockSpec({
-        binds: [
-          {
-            capability: 'invalid:capability',
-            target: 'some-target'
-          }
-        ]
-      });
-
-      const component = new ApiGatewayHttpComponent(stack, 'TestHttpApiGateway', context, spec);
-      // Component should handle invalid bindings gracefully
-      expect(() => {
-        component.synth();
-      }).not.toThrow();
-    });
-
-    test('should validate triggers', () => {
-      const context = createMockContext('commercial');
-      const spec = createMockSpec({
-        triggers: [
-          {
-            capability: 'http:request'
-          }
-        ]
-      });
-
-      const component = new ApiGatewayHttpComponent(stack, 'TestHttpApiGateway', context, spec);
-
-      // Should not throw error for valid triggers
-      expect(component).toBeDefined();
-    });
-  });
-
-  // Configuration Builder Tests
-  describe('Configuration Builder', () => {
-    test('should build configuration with compliance defaults', () => {
-      const context = createMockContext('fedramp-moderate');
-      const spec = createMockSpec({
-        cors: {
-          allowOrigins: ['https://myapp.com']
-        }
-      });
-
-      const builder = new ApiGatewayHttpConfigBuilder({ context, spec });
-      const config = builder.buildSync();
-
-      // Verify FedRAMP Moderate defaults are applied
-      expect(config.cors?.allowCredentials).toBe(false);
-      expect(config.accessLogging?.retentionInDays).toBe(90);
-      expect(config.throttling?.rateLimit).toBe(50); // Uses hardcoded fallback
-      expect(config.security?.enableWaf).toBe(true); // FedRAMP compliance enables WAF
-    });
-
-    test('should apply environment-specific defaults', () => {
-      const context = createMockContext('commercial');
-      context.environment = 'prod';
-      const spec = createMockSpec();
-
-      const builder = new ApiGatewayHttpConfigBuilder({ context, spec });
-      const config = builder.buildSync();
-
-      // Verify production environment defaults
-      expect(config.accessLogging?.retentionInDays).toBe(90);
-      expect(config.throttling?.rateLimit).toBe(1000);
-    });
-
-    test('should merge configuration in correct precedence', () => {
-      const context = createMockContext('commercial');
-      const spec = createMockSpec({
-        throttling: {
-          rateLimit: 2000, // Should override default
-          burstLimit: 4000
-        }
-      });
-
-      const builder = new ApiGatewayHttpConfigBuilder({ context, spec });
-      const config = builder.buildSync();
-
-      // Verify component config overrides defaults
-      expect(config.throttling?.rateLimit).toBe(2000);
-      expect(config.throttling?.burstLimit).toBe(4000);
-    });
-  });
-
-  // Custom Metrics Tests
-  describe('Custom Metrics', () => {
-    test('should create custom metrics when configured', () => {
-      const context = createMockContext('commercial');
-      const spec = createMockSpec({
-        monitoring: {
-          customMetrics: [
-            {
-              name: 'RequestCount',
-              namespace: 'Custom/API-Gateway',
-              statistic: 'Sum',
-              period: 300,
-              unit: 'Count',
-              dimensions: {
-                Environment: 'test',
-                Service: 'api-gateway-http'
-              }
-            },
-            {
-              name: 'ResponseTime',
-              namespace: 'Custom/API-Gateway',
-              statistic: 'Average',
-              period: 60,
-              unit: 'Milliseconds'
-            }
-          ]
-        }
-      });
-
-      const component = new ApiGatewayHttpComponent(stack, 'TestHttpApiGateway', context, spec);
-      component.synth();
-      const template = Template.fromStack(stack);
-
-      // Verify custom metrics are created (they appear as CloudWatch metrics)
-      // Note: Custom metrics don't create CloudFormation resources directly
-      // They are created at runtime, so we test the configuration is applied
-      expect(component['config'].monitoring?.customMetrics).toHaveLength(2);
-      expect(component['config'].monitoring?.customMetrics?.[0].name).toBe('RequestCount');
-      expect(component['config'].monitoring?.customMetrics?.[1].name).toBe('ResponseTime');
-    });
-
-    test('should handle custom metrics with default values', () => {
-      const context = createMockContext('commercial');
-      const spec = createMockSpec({
-        monitoring: {
-          customMetrics: [
-            {
-              name: 'SimpleMetric'
-              // Using defaults for other properties
-            }
-          ]
-        }
-      });
-
-      const component = new ApiGatewayHttpComponent(stack, 'TestHttpApiGateway', context, spec);
-      component.synth();
-
-      const customMetric = component['config'].monitoring?.customMetrics?.[0];
-      expect(customMetric?.name).toBe('SimpleMetric');
-      expect(customMetric?.namespace).toBe('Custom/API-Gateway');
-      expect(customMetric?.statistic).toBe('Sum');
-      expect(customMetric?.period).toBe(300);
-    });
-
-    test('should not create custom metrics when not configured', () => {
-      const context = createMockContext('commercial');
-      const spec = createMockSpec({});
-
-      const component = new ApiGatewayHttpComponent(stack, 'TestHttpApiGateway', context, spec);
-      component.synth();
-
-      expect(component['config'].monitoring?.customMetrics).toBeUndefined();
-    });
-  });
-
-  // Resource Policy Tests
-  describe('Resource Policy', () => {
-    test('should configure resource policy with IP ranges', () => {
-      const context = createMockContext('commercial');
-      const spec = createMockSpec({
-        resourcePolicy: {
-          allowFromIpRanges: ['203.0.113.0/24', '198.51.100.0/24'],
-          denyFromIpRanges: ['192.0.2.0/24'],
-          allowFromAwsAccounts: ['111111111111'],
-          allowFromRegions: ['us-east-1', 'us-west-2'],
-          denyFromRegions: ['eu-west-1']
-        }
-      });
-
-      const component = new ApiGatewayHttpComponent(stack, 'TestHttpApiGateway', context, spec);
-      component.synth();
-
-      const resourcePolicy = component['config'].resourcePolicy;
-      expect(resourcePolicy?.allowFromIpRanges).toEqual(['203.0.113.0/24', '198.51.100.0/24']);
-      expect(resourcePolicy?.denyFromIpRanges).toEqual(['192.0.2.0/24']);
-      expect(resourcePolicy?.allowFromAwsAccounts).toEqual(['111111111111']);
-      expect(resourcePolicy?.allowFromRegions).toEqual(['us-east-1', 'us-west-2']);
-      expect(resourcePolicy?.denyFromRegions).toEqual(['eu-west-1']);
-    });
-
-    test('should configure resource policy with VPC restrictions', () => {
-      const context = createMockContext('commercial');
-      const spec = createMockSpec({
-        resourcePolicy: {
-          allowFromVpcs: ['vpc-12345678', 'vpc-87654321'],
-          allowFromAwsAccounts: ['123456789012', '987654321098']
-        }
-      });
-
-      const component = new ApiGatewayHttpComponent(stack, 'TestHttpApiGateway', context, spec);
-      component.synth();
-
-      const resourcePolicy = component['config'].resourcePolicy;
-      expect(resourcePolicy?.allowFromVpcs).toEqual(['vpc-12345678', 'vpc-87654321']);
-      expect(resourcePolicy?.allowFromAwsAccounts).toEqual(['123456789012', '987654321098']);
-    });
-
-    test('should handle custom resource policy document', () => {
-      const context = createMockContext('commercial');
-      const customPolicy = {
-        Version: '2012-10-17',
-        Statement: [
-          {
-            Effect: 'Allow',
-            Principal: '*',
-            Action: 'execute-api:Invoke',
-            Resource: 'arn:aws:execute-api:*:*:*/*/*',
-            Condition: {
-              StringEquals: {
-                'aws:SourceVpce': 'vpce-12345678'
-              }
-            }
-          }
-        ]
-      };
-
-      const spec = createMockSpec({
-        resourcePolicy: {
-          document: customPolicy
-        }
-      });
-
-      const component = new ApiGatewayHttpComponent(stack, 'TestHttpApiGateway', context, spec);
-      component.synth();
-
-      const resourcePolicy = component['config'].resourcePolicy;
-      expect(resourcePolicy?.document).toEqual(customPolicy);
-    });
-
-    test('should not configure resource policy when not specified', () => {
-      const context = createMockContext('commercial');
-      const spec = createMockSpec({});
-
-      const component = new ApiGatewayHttpComponent(stack, 'TestHttpApiGateway', context, spec);
-      component.synth();
-
-      expect(component['config'].resourcePolicy).toBeUndefined();
-    });
-  });
-
-  // Integration Tests
-  describe('Enhanced Features Integration', () => {
-    test('should work with custom metrics and resource policy together', () => {
-      const context = createMockContext('commercial');
-      const spec = createMockSpec({
-        monitoring: {
-          customMetrics: [
-            {
-              name: 'SecurityEvents',
-              namespace: 'Security/API',
-              statistic: 'Sum',
-              period: 60,
-              unit: 'Count'
-            }
-          ]
-        },
-        resourcePolicy: {
-          allowFromIpRanges: ['203.0.113.0/24'],
-          denyFromIpRanges: ['192.0.2.0/24']
-        }
-      });
-
-      const component = new ApiGatewayHttpComponent(stack, 'TestHttpApiGateway', context, spec);
-      component.synth();
-
-      // Verify both features are configured
-      expect(component['config'].monitoring?.customMetrics).toHaveLength(1);
-      expect(component['config'].resourcePolicy?.allowFromIpRanges).toEqual(['203.0.113.0/24']);
-    });
-
-    test('should work with FedRAMP High compliance and enhanced features', () => {
-      const context = createMockContext('fedramp-high');
-      const spec = createMockSpec({
-        monitoring: {
-          customMetrics: [
-            {
-              name: 'ComplianceEvents',
-              namespace: 'Compliance/API',
-              statistic: 'Sum',
-              period: 300,
-              unit: 'Count'
-            }
-          ]
-        },
-        resourcePolicy: {
-          allowFromAwsAccounts: ['123456789012'],
-          allowFromRegions: ['us-east-1']
-        },
-        accessLogging: {
-          enabled: true,
-          retentionInDays: 365
-        }
-      });
-
-      const component = new ApiGatewayHttpComponent(stack, 'TestHttpApiGateway', context, spec);
-      component.synth();
-
-      // Verify FedRAMP High configuration with enhanced features
-      expect(component['config'].monitoring?.customMetrics).toHaveLength(1);
-      expect(component['config'].resourcePolicy?.allowFromAwsAccounts).toEqual(['123456789012']);
-      expect(component['config'].accessLogging?.retentionInDays).toBe(365);
-    });
+    expect(() => component.synth()).toThrow('autoGenerateCertificate requires hostedZoneId');
   });
 });

@@ -4,14 +4,14 @@
  */
 
 // Component exports
-export { EcsFargateServiceComponentComponent } from './ecs-fargate-service.component.ts';
+export { EcsFargateServiceComponent } from './src/ecs-fargate-service.component.ts';
 
 // Configuration exports
-export { 
+export {
   EcsFargateServiceConfig,
   EcsFargateServiceComponentConfigBuilder,
   ECS_FARGATE_SERVICE_CONFIG_SCHEMA
-} from './ecs-fargate-service.builder.ts';
+} from './src/ecs-fargate-service.builder.ts';
 
 // Creator exports
-export { EcsFargateServiceComponentCreator } from './ecs-fargate-service.creator.ts';
+export { EcsFargateServiceComponentCreator } from './src/ecs-fargate-service.creator.ts';

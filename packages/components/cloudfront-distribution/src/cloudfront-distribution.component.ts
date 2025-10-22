@@ -34,6 +34,7 @@ export class CloudFrontDistributionComponent extends BaseComponent {
   private distribution?: cloudfront.Distribution;
   private origin?: cloudfront.IOrigin;
   private config?: CloudFrontDistributionConfig;
+  private observabilityTelemetry?: Record<string, any>;
 
   constructor(scope: Construct, id: string, context: ComponentContext, spec: ComponentSpec) {
     super(scope, id, context, spec);
@@ -68,6 +69,7 @@ export class CloudFrontDistributionComponent extends BaseComponent {
       this.registerConstruct('distribution', this.distribution!);
       const capability = this.buildCapability();
       this.registerCapability('cloudfront:distribution', capability);
+      this.registerCapability('observability:cloudfront-distribution', this.observabilityTelemetry ?? {});
 
       this.logComponentEvent('observability_registered', 'Recorded CloudFront telemetry directives', {
         telemetry: capability.telemetry
@@ -368,6 +370,7 @@ export class CloudFrontDistributionComponent extends BaseComponent {
    */
   private buildCapability(): Record<string, any> {
     const telemetry = this.buildTelemetryDirectives();
+    this.observabilityTelemetry = telemetry;
 
     return {
       type: 'cloudfront:distribution',

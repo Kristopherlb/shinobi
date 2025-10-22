@@ -1,22 +1,25 @@
 import {
   EfsFilesystemComponentConfigBuilder,
   EfsFilesystemConfig
-} from '../efs-filesystem.builder.ts';
-import { ComponentContext, ComponentSpec } from '../../../platform/contracts/component-interfaces.ts';
+} from '../src/efs-filesystem.builder.ts';
+import { ComponentContext, ComponentSpec } from '@shinobi/core';
 
-const createContext = (framework: string = 'commercial'): ComponentContext => ({
-  serviceName: 'files-service',
-  owner: 'platform-team',
-  environment: 'dev',
-  complianceFramework: framework,
-  region: 'us-east-1',
-  account: '123456789012',
-  tags: {
-    'service-name': 'files-service',
+const createContext = (framework?: string): ComponentContext => {
+  const fw = framework || 'commercial';
+  return {
+    serviceName: 'files-service',
+    owner: 'platform-team',
     environment: 'dev',
-    'compliance-framework': framework
-  }
-});
+    complianceFramework: fw,
+    region: 'us-east-1',
+    account: '123456789012',
+    tags: {
+      'service-name': 'files-service',
+      environment: 'dev',
+      'compliance-framework': fw
+    }
+  } as ComponentContext;
+};
 
 const createSpec = (config: Partial<EfsFilesystemConfig> = {}): ComponentSpec => ({
   name: 'shared-efs',
@@ -25,7 +28,7 @@ const createSpec = (config: Partial<EfsFilesystemConfig> = {}): ComponentSpec =>
 });
 
 describe('EfsFilesystemComponentConfigBuilder', () => {
-  it('normalises commercial defaults', () => {
+  it('normalises commercial defaults with secure configuration', () => {
     const builder = new EfsFilesystemComponentConfigBuilder({
       context: createContext('commercial'),
       spec: createSpec()
@@ -36,25 +39,50 @@ describe('EfsFilesystemComponentConfigBuilder', () => {
     expect(config.performanceMode).toBe('generalPurpose');
     expect(config.throughputMode).toBe('bursting');
     expect(config.encryption.enabled).toBe(true);
-    expect(config.encryption.encryptInTransit).toBe(false);
-    expect(config.vpc.securityGroup.ingressRules[0].port).toBe(2049);
+    expect(config.encryption.encryptInTransit).toBe(false); // Not required for commercial
+
+    // ✅ SECURITY FIX: No default ingress rules
+    expect(config.vpc.securityGroup.ingressRules).toHaveLength(0);
+
+    // Monitoring disabled for dev (enabled for prod)
     expect(config.monitoring.enabled).toBe(false);
+    expect(config.backups.enabled).toBe(false);
     expect(config.hardeningProfile).toBe('baseline');
+
+    // Log retention: 90 days for access, 365 for audit in commercial baseline
+    expect(config.logging.access.retentionInDays).toBe(90);
+    expect(config.logging.audit.retentionInDays).toBe(365);
   });
 
-  it('applies fedramp-high platform defaults', () => {
+  it('applies fedramp-high platform defaults with maximum security', () => {
     const builder = new EfsFilesystemComponentConfigBuilder({
       context: createContext('fedramp-high'),
       spec: createSpec()
     });
     const config = builder.buildSync();
 
+    // Encryption: at rest and in transit
+    expect(config.encryption.enabled).toBe(true);
     expect(config.encryption.encryptInTransit).toBe(true);
+
+    // FedRAMP requirements
     expect(config.backups.enabled).toBe(true);
     expect(config.monitoring.enabled).toBe(true);
-    expect(config.hardeningProfile).toBe('fedramp-high');
+    expect(config.logging.access.enabled).toBe(true);
     expect(config.logging.audit.enabled).toBe(true);
+
+    // Log retention rounded up to the nearest supported CloudWatch retention (10 years)
+    expect(config.logging.access.retentionInDays).toBe(3653);
+    expect(config.logging.audit.retentionInDays).toBe(3653);
+    expect(config.logging.access.removalPolicy).toBe('retain');
+    expect(config.logging.audit.removalPolicy).toBe('retain');
+
+    // Retention policy
     expect(config.removalPolicy).toBe('retain');
+    expect(config.hardeningProfile).toBe('fedramp-high');
+
+    // ✅ Security: No default ingress rules
+    expect(config.vpc.securityGroup.ingressRules).toHaveLength(0);
   });
 
   it('honours manifest overrides for provisioned throughput and custom networking', () => {

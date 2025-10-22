@@ -794,5 +794,8 @@
       },
       "description": "Tags to apply to the load balancer"
     }
-  }
+  },
+  "required": [
+    "listeners"
+  ]
 }

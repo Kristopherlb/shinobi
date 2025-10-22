@@ -1,0 +1,22 @@
+components:
+  - name: telemetry-agent
+    type: ecs-fargate-service
+    config:
+      cluster: shared-ecs-cluster
+      image:
+        repository: 123456789012.dkr.ecr.us-east-1.amazonaws.com/telemetry-agent
+        tag: 2.5.1
+      cpu: 512
+      memory: 1024
+      port: 4317
+      serviceConnect:
+        portMappingName: otel
+      network:
+        allowAllOutbound: true
+      logging:
+        retentionInDays: 1096
+      monitoring:
+        alarms:
+          runningTaskCount:
+            threshold: 2
+            comparisonOperator: lt

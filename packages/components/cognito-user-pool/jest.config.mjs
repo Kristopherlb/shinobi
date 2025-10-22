@@ -1,30 +1,14 @@
+import path from 'node:path';
+import url from 'node:url';
+import baseConfig from '../../../jest.config.mjs';
+
+const __dirname = path.dirname(url.fileURLToPath(import.meta.url));
+
 export default {
-  displayName: 'cognito-user-pool',
-  preset: '../../../jest.preset.mjs',
-  testEnvironment: 'node',
-  transform: {
-    '^.+\\.[tj]s$': ['ts-jest', { tsconfig: '<rootDir>/tsconfig.spec.json' }],
-  },
-  moduleFileExtensions: ['ts', 'js', 'html'],
-  coverageDirectory: '../../../coverage/packages/components/cognito-user-pool',
-  testMatch: [
-    '<rootDir>/tests/**/*.test.ts',
-    '<rootDir>/tests/**/*.spec.ts'
-  ],
-  setupFilesAfterEnv: ['<rootDir>/tests/setup.ts'],
-  collectCoverageFrom: [
-    'src/**/*.ts',
-    '!**/*.d.ts',
-    '!**/*.test.ts',
-    '!**/*.spec.ts',
-    '!**/node_modules/**'
-  ],
-  coverageThreshold: {
-    global: {
-      branches: 80,
-      functions: 80,
-      lines: 80,
-      statements: 80
-    }
-  }
+  ...baseConfig,
+  displayName: '@platform/components-cognito-user-pool',
+  rootDir: path.resolve(__dirname, '../../..'),
+  roots: [__dirname],
+  collectCoverageFrom: ['src/**/*.{ts,tsx}', '!src/**/*.d.ts'],
+  coverageDirectory: path.join(__dirname, 'coverage')
 };

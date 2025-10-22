@@ -1,31 +1,36 @@
 import { Template, Match } from 'aws-cdk-lib/assertions';
 import { App, Stack } from 'aws-cdk-lib';
-import { EfsFilesystemComponent } from '../efs-filesystem.component.ts';
-import { EfsFilesystemConfig } from '../efs-filesystem.builder.ts';
-import { ComponentContext, ComponentSpec } from '../../../platform/contracts/component-interfaces.ts';
+import { EfsFilesystemComponent } from '../src/efs-filesystem.component.ts';
+import { EfsFilesystemConfig } from '../src/efs-filesystem.builder.ts';
+import { ComponentContext, ComponentSpec } from '@shinobi/core';
 
 const VPC_ID = 'vpc-0abc123def4567890';
 const CONTEXT_KEY = `vpcProvider:account=123456789012:filter.vpcId=${VPC_ID}:region=us-east-1`;
 
-const createContext = (framework: string = 'commercial'): ComponentContext => ({
-  serviceName: 'files-service',
-  owner: 'platform-team',
-  environment: 'dev',
-  complianceFramework: framework,
-  region: 'us-east-1',
-  account: '123456789012',
-  tags: {
-    'service-name': 'files-service',
+const createContext = (framework?: string): ComponentContext => {
+  const fw = framework || 'commercial';
+  return {
+    serviceName: 'files-service',
+    owner: 'platform-team',
     environment: 'dev',
-    'compliance-framework': framework
-  }
-});
+    complianceFramework: fw,
+    region: 'us-east-1',
+    account: '123456789012',
+    tags: {
+      'service-name': 'files-service',
+      environment: 'dev',
+      'compliance-framework': fw
+    }
+  } as ComponentContext;
+};
 
-const createSpec = (config: Partial<EfsFilesystemConfig> | Record<string, any>): ComponentSpec => ({
-  name: 'shared-efs',
-  type: 'efs-filesystem',
-  config
-});
+const createSpec = (config: Partial<EfsFilesystemConfig> | Record<string, any>): ComponentSpec => {
+  return {
+    name: 'shared-efs',
+    type: 'efs-filesystem',
+    config
+  };
+};
 
 const synthesizeComponent = (context: ComponentContext, spec: ComponentSpec) => {
   const app = new App();
@@ -107,7 +112,19 @@ describe('EfsFilesystemComponent synthesis', () => {
       FileSystemTags: Match.arrayWith([
         Match.objectLike({ Key: 'backups-enabled', Value: 'true' })
       ]),
-      BackupPolicy: { Status: 'ENABLED' }
+      BackupPolicy: { Status: 'ENABLED' },
+      FileSystemPolicy: Match.objectLike({
+        Statement: Match.arrayWith([
+          Match.objectLike({
+            Effect: 'Deny',
+            Condition: Match.objectLike({
+              Bool: {
+                'aws:SecureTransport': 'false'
+              }
+            })
+          })
+        ])
+      })
     });
 
     template.hasResourceProperties('AWS::EC2::SecurityGroup', {
@@ -118,6 +135,7 @@ describe('EfsFilesystemComponent synthesis', () => {
     });
 
     expect(component.getCapabilities()['storage:efs']).toBeDefined();
+    expect(component.getCapabilities()['efs:file-system']).toBeDefined();
   });
 
   it('enables monitoring and logging when requested', () => {

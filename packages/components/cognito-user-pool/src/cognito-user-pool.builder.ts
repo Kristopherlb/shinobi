@@ -1,6 +1,6 @@
 import { ConfigBuilder, ConfigBuilderContext } from '@shinobi/core';
 import { ComponentContext, ComponentSpec } from '@platform/contracts';
-import COGNITO_USER_POOL_CONFIG_SCHEMA from './Config.schema.json' with { type: 'json' };
+import COGNITO_USER_POOL_CONFIG_SCHEMA from '../Config.schema.json' with { type: 'json' };
 
 export type AdvancedSecurityMode = 'off' | 'audit' | 'enforced';
 export type MfaMode = 'off' | 'optional' | 'required';
@@ -265,6 +265,7 @@ export class CognitoUserPoolComponentConfigBuilder extends ConfigBuilder<Cognito
     const accountRecovery = { ...DEFAULT_ACCOUNT_RECOVERY, ...(config.accountRecovery ?? {}) };
     const deviceTracking = { ...DEFAULT_DEVICE_TRACKING, ...(config.deviceTracking ?? {}) };
     const monitoring = this.normaliseMonitoring(config.monitoring);
+    const advancedSecurityMode = this.normaliseAdvancedSecurityMode(config.advancedSecurityMode);
 
     return {
       userPoolName: config.userPoolName,
@@ -278,7 +279,7 @@ export class CognitoUserPoolComponentConfigBuilder extends ConfigBuilder<Cognito
       sms: config.sms,
       triggers: config.triggers,
       deviceTracking,
-      advancedSecurityMode: config.advancedSecurityMode ?? 'audit',
+      advancedSecurityMode,
       featurePlan: config.featurePlan ?? 'plus',
       deletionProtection: config.deletionProtection ?? false,
       removalPolicy: config.removalPolicy ?? 'destroy',
@@ -300,6 +301,14 @@ export class CognitoUserPoolComponentConfigBuilder extends ConfigBuilder<Cognito
     }
 
     return clone;
+  }
+
+  private normaliseAdvancedSecurityMode(mode?: string): AdvancedSecurityMode {
+    if (mode === 'off' || mode === 'audit' || mode === 'enforced') {
+      return mode;
+    }
+
+    return 'audit';
   }
 
   private normaliseAppClients(appClients?: AppClientConfig[]): AppClientConfig[] {

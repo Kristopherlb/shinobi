@@ -1,45 +1,96 @@
 {
-  "name": "@platform/components-ecs-cluster",
-  "version": "1.0.0",
-  "description": "ECS Cluster component for the Platform - provides ECS clusters with Service Connect capability",
+  "name": "@shinobi/components-ecs-cluster",
+  "version": "1.1.0",
+  "description": "ECS Cluster component for the Shinobi platform with Service Connect support",
+  "type": "module",
   "main": "dist/index.js",
   "types": "dist/index.d.ts",
+  "exports": {
+    ".": {
+      "import": "./dist/index.js",
+      "types": "./dist/index.d.ts"
+    }
+  },
   "scripts": {
-    "build": "tsc",
+    "build": "tsc -p tsconfig.json",
     "test": "jest",
-    "lint": "eslint src/**/*.ts",
+    "test:watch": "jest --watch",
+    "test:coverage": "jest --coverage",
+    "lint": "eslint . --ext .ts",
+    "lint:fix": "eslint . --ext .ts --fix",
+    "format": "prettier --write .",
+    "validate": "tsc --noEmit -p tsconfig.json",
+    "audit": "npm audit",
     "clean": "rm -rf dist"
   },
   "keywords": [
+    "shinobi",
     "aws",
     "ecs",
     "cluster",
     "service-connect",
-    "platform",
-    "cdk"
+    "cdk",
+    "infrastructure",
+    "component",
+    "observability"
   ],
-  "author": "Platform Team",
+  "author": "Shinobi Platform Team",
   "license": "MIT",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/your-org/shinobi.git",
+    "directory": "packages/components/ecs-cluster"
+  },
+  "bugs": {
+    "url": "https://github.com/your-org/shinobi/issues"
+  },
+  "homepage": "https://github.com/your-org/shinobi/tree/main/packages/components/ecs-cluster#readme",
+  "engines": {
+    "node": ">=20.0.0",
+    "npm": ">=10.0.0"
+  },
   "dependencies": {
-    "aws-cdk-lib": "^2.0.0",
-    "constructs": "^10.0.0"
+    "@shinobi/core": "workspace:*",
+    "aws-cdk-lib": "^2.214.0",
+    "constructs": "^10.4.2"
   },
   "devDependencies": {
-    "@types/jest": "^29.0.0",
-    "@types/node": "^18.0.0",
-    "jest": "^29.0.0",
-    "typescript": "^5.0.0"
-  },
-  "peerDependencies": {
-    "@platform/core-engine": "workspace:*"
+    "@types/jest": "^29.5.8",
+    "@types/node": "^20.9.0",
+    "@typescript-eslint/eslint-plugin": "^6.12.0",
+    "@typescript-eslint/parser": "^6.12.0",
+    "eslint": "^8.54.0",
+    "jest": "^29.7.0",
+    "prettier": "^3.1.0",
+    "ts-jest": "^29.1.1",
+    "typescript": "^5.2.2"
   },
   "files": [
-    "dist/",
-    "README.md",
-    "package.json"
+    "dist/**/*",
+    "src/**/*",
+    "*.ts",
+    "*.json",
+    "*.md",
+    "*.yaml",
+    "*.yml",
+    "observability/**/*",
+    "audit/**/*",
+    "tests/**/*"
   ],
   "publishConfig": {
-    "access": "restricted"
+    "access": "restricted",
+    "registry": "https://npm.pkg.github.com"
   },
-  "type": "module"
+  "component": {
+    "type": "ecs-cluster",
+    "category": "compute",
+    "awsService": "ECS",
+    "stability": "experimental",
+    "author": "Shinobi Platform Team",
+    "version": "1.1.0"
+  },
+  "volta": {
+    "node": "20.9.0",
+    "npm": "10.2.3"
+  }
 }

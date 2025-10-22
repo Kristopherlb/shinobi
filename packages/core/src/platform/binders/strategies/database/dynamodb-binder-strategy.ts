@@ -9,7 +9,7 @@ import { ComponentBinding } from '../../component-binding.js';
 // Compliance framework branching removed; use binding.options/config instead
 
 export class DynamoDbBinderStrategy implements IBinderStrategy {
-  readonly supportedCapabilities = ['dynamodb:table', 'dynamodb:index', 'dynamodb:stream'];
+  readonly supportedCapabilities = ['db:dynamodb', 'dynamodb:table', 'dynamodb:index', 'dynamodb:stream'];
 
   async bind(
     sourceComponent: any,
@@ -44,6 +44,7 @@ export class DynamoDbBinderStrategy implements IBinderStrategy {
     const { capability, access } = binding;
 
     switch (capability) {
+      case 'db:dynamodb':
       case 'dynamodb:table':
         await this.bindToTable(sourceComponent, targetComponent, binding, context);
         break;
@@ -151,6 +152,20 @@ export class DynamoDbBinderStrategy implements IBinderStrategy {
     // Configure billing mode
     sourceComponent.addEnvironment('DYNAMODB_BILLING_MODE', targetComponent.billingMode || 'PAY_PER_REQUEST');
 
+    if (targetComponent.sseSpecification?.sseEnabled) {
+      sourceComponent.addEnvironment('DYNAMODB_SSE_ENABLED', 'true');
+      if (targetComponent.sseSpecification.sseType) {
+        sourceComponent.addEnvironment('DYNAMODB_SSE_TYPE', targetComponent.sseSpecification.sseType);
+      }
+      if (targetComponent.sseSpecification.kmsMasterKeyId) {
+        sourceComponent.addEnvironment('DYNAMODB_KMS_KEY_ID', targetComponent.sseSpecification.kmsMasterKeyId);
+      }
+    }
+
+    if (targetComponent.pointInTimeRecoverySpecification?.pointInTimeRecoveryEnabled) {
+      sourceComponent.addEnvironment('DYNAMODB_PITR_ENABLED', 'true');
+    }
+
     // Configure secure access when requested via options/config
     if (binding.options?.requireSecureAccess === true) {
       await this.configureSecureTableAccess(sourceComponent, targetComponent, context, binding);
@@ -257,7 +272,10 @@ export class DynamoDbBinderStrategy implements IBinderStrategy {
 
     // Inject stream environment variables
     sourceComponent.addEnvironment('DYNAMODB_STREAM_ARN', targetComponent.streamArn);
-    sourceComponent.addEnvironment('DYNAMODB_STREAM_LABEL', targetComponent.streamLabel);
+    const streamLabel = targetComponent.streamLabel || this.deriveStreamLabel(targetComponent.streamArn);
+    if (streamLabel) {
+      sourceComponent.addEnvironment('DYNAMODB_STREAM_LABEL', streamLabel);
+    }
     sourceComponent.addEnvironment('DYNAMODB_STREAM_VIEW_TYPE', targetComponent.streamViewType);
 
     // Configure stream processing
@@ -307,35 +325,30 @@ export class DynamoDbBinderStrategy implements IBinderStrategy {
     return match;
   }
 
+  private deriveStreamLabel(streamArn: string | undefined): string | undefined {
+    if (!streamArn) {
+      return undefined;
+    }
+    const parts = streamArn.split('/');
+    return parts.length > 0 ? parts[parts.length - 1] : undefined;
+  }
+
   private async configureSecureTableAccess(
     sourceComponent: any,
     targetComponent: any,
     context: BindingContext,
     binding?: ComponentBinding
   ): Promise<void> {
-    // Configure encryption at rest
-    if (targetComponent.sseSpecification?.sseEnabled) {
-      sourceComponent.addEnvironment('DYNAMODB_SSE_ENABLED', 'true');
-      sourceComponent.addEnvironment('DYNAMODB_SSE_TYPE', targetComponent.sseSpecification.sseType);
-
-      if (targetComponent.sseSpecification.kmsMasterKeyId) {
-        sourceComponent.addEnvironment('DYNAMODB_KMS_KEY_ID', targetComponent.sseSpecification.kmsMasterKeyId);
-
-        // Grant KMS permissions
-        sourceComponent.addToRolePolicy({
-          Effect: 'Allow',
-          Action: [
-            'kms:Decrypt',
-            'kms:GenerateDataKey'
-          ],
-          Resource: targetComponent.sseSpecification.kmsMasterKeyId
-        });
-      }
-    }
-
-    // Configure point-in-time recovery for compliance
-    if (targetComponent.pointInTimeRecoverySpecification?.pointInTimeRecoveryEnabled) {
-      sourceComponent.addEnvironment('DYNAMODB_PITR_ENABLED', 'true');
+    // Grant encryption permissions when a CMK is used
+    if (targetComponent.sseSpecification?.sseEnabled && targetComponent.sseSpecification.kmsMasterKeyId) {
+      sourceComponent.addToRolePolicy({
+        Effect: 'Allow',
+        Action: [
+          'kms:Decrypt',
+          'kms:GenerateDataKey'
+        ],
+        Resource: targetComponent.sseSpecification.kmsMasterKeyId
+      });
     }
 
     // Configure backup retention when specified via options or target policy

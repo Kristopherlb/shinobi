@@ -202,6 +202,27 @@ This section is the definitive registry of all officially supported capabilities
 
 **Example Providers**: `cognito-user-pool`
 
+### Event & Integration Capabilities
+
+#### `eventbridge:rule-pattern`
+
+**Definition**: Represents an EventBridge rule that filters events based on a pattern, with mandatory dead-letter queue and monitoring per platform standards.
+
+**Data Shape Contract**:
+| Field | Type | Description & CDK Source |
+| :--- | :--- | :--- |
+| ruleName | string | The name of the EventBridge rule. From `rule.ruleName`. |
+| ruleArn | string | The ARN of the EventBridge rule. From `rule.ruleArn`. |
+| state | string | Current state of the rule ('enabled' or 'disabled'). From component config. |
+| eventBus | string | Name or ARN of the event bus. From component config or 'default'. |
+| deadLetterQueue | object | Dead letter queue details: `{ queueUrl, queueArn, encrypted, encryptionKeyArn? }`. From `queue.queueUrl`, `queue.queueArn`, and optional CMK ARN. |
+| logGroup | object | CloudWatch Logs details: `{ logGroupName, logGroupArn, encrypted, encryptionKeyArn? }`. From `logGroup.logGroupName`, `logGroup.logGroupArn`, and optional CMK ARN. |
+| monitoring | object | Monitoring configuration: `{ alarmsConfigured }`. Array of alarm IDs that were created. |
+
+**Example Providers**: `eventbridge-rule-pattern`
+
+**Compliance Notes**: This capability enforces mandatory monitoring and dead-letter queuing per platform observability and resilience standards. Log retention and KMS encryption are automatically configured based on the compliance framework (commercial, fedramp-moderate, fedramp-high).
+
 ## 5. Examples in Practice
 
 This standard comes to life in the `service.yml` manifest, where a developer uses a capability key in a binds directive.

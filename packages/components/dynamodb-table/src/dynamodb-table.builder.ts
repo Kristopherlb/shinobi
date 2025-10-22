@@ -73,7 +73,9 @@ export interface DynamoDbMonitoringConfig {
   enabled?: boolean;
   alarms?: {
     readThrottle?: DynamoDbMonitoringAlarmConfig;
+    consumedReadCapacity?: DynamoDbMonitoringAlarmConfig;
     writeThrottle?: DynamoDbMonitoringAlarmConfig;
+    consumedWriteCapacity?: DynamoDbMonitoringAlarmConfig;
     systemErrors?: DynamoDbMonitoringAlarmConfig;
   };
 }
@@ -87,6 +89,8 @@ export interface DynamoDbEncryptionConfig {
     enableRotation?: boolean;
   };
 }
+
+export type HardeningProfile = 'baseline' | 'hardened' | 'stig';
 
 export interface DynamoDbTableConfig {
   tableName: string;
@@ -109,7 +113,7 @@ export interface DynamoDbTableConfig {
   encryption: DynamoDbEncryptionConfig;
   backup: DynamoDbBackupConfig;
   monitoring: DynamoDbMonitoringConfig;
-  hardeningProfile: string;
+  hardeningProfile: HardeningProfile;
   tags: Record<string, string>;
 }
 
@@ -189,7 +193,7 @@ export class DynamoDbTableComponentConfigBuilder extends ConfigBuilder<DynamoDbT
     return {
       billingMode: 'pay-per-request',
       tableClass: 'standard',
-      pointInTimeRecovery: false,
+      pointInTimeRecovery: true,
       timeToLive: { enabled: false },
       stream: { enabled: false, viewType: 'new-and-old-images' },
       globalSecondaryIndexes: [],
@@ -198,11 +202,11 @@ export class DynamoDbTableComponentConfigBuilder extends ConfigBuilder<DynamoDbT
         type: 'aws-managed'
       },
       backup: {
-        enabled: false,
+        enabled: true,
         retentionDays: 7
       },
       monitoring: {
-        enabled: false,
+        enabled: true,
         alarms: {}
       },
       hardeningProfile: 'baseline',
@@ -231,30 +235,41 @@ export class DynamoDbTableComponentConfigBuilder extends ConfigBuilder<DynamoDbT
     };
   }
 
+  private normaliseProvisionedConfig(
+    provisioned?: DynamoDbProvisionedThroughputConfig
+  ): DynamoDbProvisionedThroughputConfig {
+    const readCapacity = provisioned?.readCapacity ?? 5;
+    const writeCapacity = provisioned?.writeCapacity ?? 5;
+    const autoScaling = provisioned?.autoScaling ?? {};
+
+    return {
+      readCapacity,
+      writeCapacity,
+      autoScaling: {
+        minReadCapacity: autoScaling.minReadCapacity ?? readCapacity,
+        maxReadCapacity: autoScaling.maxReadCapacity ?? readCapacity * 10,
+        minWriteCapacity: autoScaling.minWriteCapacity ?? writeCapacity,
+        maxWriteCapacity: autoScaling.maxWriteCapacity ?? writeCapacity * 10,
+        targetUtilizationPercent: autoScaling.targetUtilizationPercent ?? 70
+      }
+    };
+  }
+
   private normaliseConfig(config: DynamoDbTableConfig): DynamoDbTableConfig {
     const specName = this.builderContext.spec.name;
     const tableName = config.tableName ?? `${this.builderContext.context.serviceName}-${specName}`;
+    const tableProvisioned = config.billingMode === 'provisioned'
+      ? this.normaliseProvisionedConfig(config.provisioned)
+      : undefined;
 
     return {
       tableName,
       partitionKey: config.partitionKey,
       sortKey: config.sortKey,
       billingMode: config.billingMode ?? 'pay-per-request',
-      provisioned: config.billingMode === 'provisioned'
-        ? {
-          readCapacity: config.provisioned?.readCapacity ?? 5,
-          writeCapacity: config.provisioned?.writeCapacity ?? 5,
-          autoScaling: {
-            minReadCapacity: config.provisioned?.autoScaling?.minReadCapacity ?? config.provisioned?.readCapacity ?? 5,
-            maxReadCapacity: config.provisioned?.autoScaling?.maxReadCapacity ?? (config.provisioned?.readCapacity ?? 5) * 10,
-            minWriteCapacity: config.provisioned?.autoScaling?.minWriteCapacity ?? config.provisioned?.writeCapacity ?? 5,
-            maxWriteCapacity: config.provisioned?.autoScaling?.maxWriteCapacity ?? (config.provisioned?.writeCapacity ?? 5) * 10,
-            targetUtilizationPercent: config.provisioned?.autoScaling?.targetUtilizationPercent ?? 70
-          }
-        }
-        : undefined,
+      provisioned: tableProvisioned,
       tableClass: config.tableClass ?? 'standard',
-      pointInTimeRecovery: config.pointInTimeRecovery ?? false,
+      pointInTimeRecovery: config.pointInTimeRecovery ?? true,
       timeToLive: {
         enabled: config.timeToLive?.enabled ?? false,
         attributeName: config.timeToLive?.enabled ? config.timeToLive?.attributeName : undefined
@@ -268,26 +283,20 @@ export class DynamoDbTableComponentConfigBuilder extends ConfigBuilder<DynamoDbT
         partitionKey: index.partitionKey,
         sortKey: index.sortKey,
         projectionType: index.projectionType ?? 'all',
-        nonKeyAttributes: index.nonKeyAttributes ?? [],
-        provisioned: index.provisioned
-          ? {
-            readCapacity: index.provisioned.readCapacity,
-            writeCapacity: index.provisioned.writeCapacity,
-            autoScaling: {
-              minReadCapacity: index.provisioned.autoScaling?.minReadCapacity ?? index.provisioned.readCapacity,
-              maxReadCapacity: index.provisioned.autoScaling?.maxReadCapacity ?? index.provisioned.readCapacity * 10,
-              minWriteCapacity: index.provisioned.autoScaling?.minWriteCapacity ?? index.provisioned.writeCapacity,
-              maxWriteCapacity: index.provisioned.autoScaling?.maxWriteCapacity ?? index.provisioned.writeCapacity * 10,
-              targetUtilizationPercent: index.provisioned.autoScaling?.targetUtilizationPercent ?? 70
-            }
-          }
+        nonKeyAttributes: index.nonKeyAttributes && index.nonKeyAttributes.length > 0
+          ? index.nonKeyAttributes
+          : undefined,
+        provisioned: index.provisioned || tableProvisioned
+          ? this.normaliseProvisionedConfig(index.provisioned ?? tableProvisioned)
           : undefined
       })),
       localSecondaryIndexes: (config.localSecondaryIndexes ?? []).map(index => ({
         indexName: index.indexName,
         sortKey: index.sortKey,
         projectionType: index.projectionType ?? 'all',
-        nonKeyAttributes: index.nonKeyAttributes ?? []
+        nonKeyAttributes: index.nonKeyAttributes && index.nonKeyAttributes.length > 0
+          ? index.nonKeyAttributes
+          : undefined
       })),
       encryption: {
         type: config.encryption.type ?? 'aws-managed',
@@ -304,19 +313,28 @@ export class DynamoDbTableComponentConfigBuilder extends ConfigBuilder<DynamoDbT
         schedule: config.backup.schedule
       },
       monitoring: {
-        enabled: config.monitoring.enabled ?? false,
+        enabled: config.monitoring.enabled ?? true,
         alarms: {
           readThrottle: this.normaliseAlarm(config.monitoring.alarms?.readThrottle, {
-            enabled: config.monitoring.enabled ?? false,
+            enabled: config.monitoring.enabled ?? true,
             threshold: 1,
             evaluationPeriods: 2,
             periodMinutes: 5,
             comparisonOperator: 'gte',
             treatMissingData: 'not-breaching',
             statistic: 'Sum'
+          }),
+          consumedReadCapacity: this.normaliseAlarm(config.monitoring.alarms?.consumedReadCapacity, {
+            enabled: config.monitoring.enabled ?? true,
+            threshold: 80,
+            evaluationPeriods: 3,
+            periodMinutes: 5,
+            comparisonOperator: 'gt',
+            treatMissingData: 'not-breaching',
+            statistic: 'Average'
           }),
           writeThrottle: this.normaliseAlarm(config.monitoring.alarms?.writeThrottle, {
-            enabled: config.monitoring.enabled ?? false,
+            enabled: config.monitoring.enabled ?? true,
             threshold: 1,
             evaluationPeriods: 2,
             periodMinutes: 5,
@@ -324,8 +342,17 @@ export class DynamoDbTableComponentConfigBuilder extends ConfigBuilder<DynamoDbT
             treatMissingData: 'not-breaching',
             statistic: 'Sum'
           }),
+          consumedWriteCapacity: this.normaliseAlarm(config.monitoring.alarms?.consumedWriteCapacity, {
+            enabled: config.monitoring.enabled ?? true,
+            threshold: 80,
+            evaluationPeriods: 3,
+            periodMinutes: 5,
+            comparisonOperator: 'gt',
+            treatMissingData: 'not-breaching',
+            statistic: 'Average'
+          }),
           systemErrors: this.normaliseAlarm(config.monitoring.alarms?.systemErrors, {
-            enabled: config.monitoring.enabled ?? false,
+            enabled: config.monitoring.enabled ?? true,
             threshold: 1,
             evaluationPeriods: 1,
             periodMinutes: 5,

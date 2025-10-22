@@ -4,7 +4,7 @@
  * Factory for creating and validating deployment bundle pipeline instances
  */
 
-import { IComponentCreator } from '@platform/core';
+import { IComponentCreator } from '@shinobi/core';
 import { DeploymentBundlePipelineComponent } from './deployment-bundle-pipeline.component.js';
 import { DeploymentBundleConfig } from './types.js';
 

@@ -5,6 +5,17 @@ All notable changes to the Application Load Balancer component will be documente
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [1.1.0] - 2025-10-05
+
+### Added
+- Introduced `cdk-nag` enforcement with targeted suppressions and CI tests to keep AWS Solutions rules in compliance.
+- Registered an observability capability and telemetry wiring so ALB metrics and alarms surface through platform tooling.
+- Hardened integration tests to cover private VPC lookups and listener validation.
+
+### Changed
+- Tightened `Config.schema.json` to enforce listener/target group requirements before synthesis.
+- Updated Jest configuration to align with the shared SWC preset and avoid ESM parsing issues in package tests.
+
 ## [1.0.0] - 2024-01-XX
 
 ### Added

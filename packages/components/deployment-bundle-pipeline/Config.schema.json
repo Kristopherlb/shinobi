@@ -1,0 +1,210 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "title": "Deployment Bundle Pipeline Configuration",
+  "description": "Configuration schema for the Deployment Bundle Pipeline component",
+  "type": "object",
+  "additionalProperties": false,
+  "properties": {
+    "service": {
+      "type": "string",
+      "description": "Service name for the bundle",
+      "minLength": 1
+    },
+    "environment": {
+      "type": "string",
+      "description": "Deployment environment",
+      "enum": [
+        "dev",
+        "staging",
+        "prod"
+      ]
+    },
+    "versionTag": {
+      "type": "string",
+      "description": "Version tag for the build (semver or build identifier)",
+      "minLength": 1
+    },
+    "artifactoryHost": {
+      "type": "string",
+      "description": "Artifactory host URL for bundle publishing",
+      "format": "uri"
+    },
+    "ociRepoBundles": {
+      "type": "string",
+      "description": "OCI repository URI for bundle artifacts",
+      "pattern": "^[a-z0-9]+([._-][a-z0-9]+)*/[a-z0-9]+([._-][a-z0-9]+)*$"
+    },
+    "ociRepoImages": {
+      "type": "string",
+      "description": "Optional OCI repository URI for container images",
+      "pattern": "^[a-z0-9]+([._-][a-z0-9]+)*/[a-z0-9]+([._-][a-z0-9]+)*$"
+    },
+    "complianceFramework": {
+      "type": "string",
+      "description": "Compliance framework to apply",
+      "enum": [
+        "commercial",
+        "fedramp-moderate",
+        "fedramp-high",
+        "iso27001",
+        "soc2"
+      ],
+      "default": "commercial"
+    },
+    "signing": {
+      "type": "object",
+      "description": "Signing configuration",
+      "additionalProperties": false,
+      "properties": {
+        "keyless": {
+          "type": "boolean",
+          "description": "Enable keyless signing via OIDC",
+          "default": true
+        },
+        "kmsKeyId": {
+          "type": "string",
+          "description": "KMS key identifier to use for signed builds",
+          "pattern": "^kms://[a-zA-Z0-9/_+=.@:-]+$"
+        },
+        "fulcioUrl": {
+          "type": "string",
+          "description": "Fulcio endpoint for keyless signing",
+          "format": "uri",
+          "default": "https://fulcio.sigstore.dev"
+        },
+        "rekorUrl": {
+          "type": "string",
+          "description": "Rekor transparency log endpoint",
+          "format": "uri",
+          "default": "https://rekor.sigstore.dev"
+        }
+      }
+    },
+    "security": {
+      "type": "object",
+      "description": "Security scanning configuration",
+      "additionalProperties": false,
+      "properties": {
+        "failOnCritical": {
+          "type": "boolean",
+          "description": "Fail the pipeline on critical vulnerabilities",
+          "default": true
+        },
+        "onlyFixed": {
+          "type": "boolean",
+          "description": "Only report vulnerabilities that have fixes",
+          "default": false
+        },
+        "addCpesIfNone": {
+          "type": "boolean",
+          "description": "Inject fallback CPEs when scans return none",
+          "default": true
+        }
+      }
+    },
+    "bundle": {
+      "type": "object",
+      "description": "Bundle content toggles",
+      "additionalProperties": false,
+      "properties": {
+        "includeCdkOutput": {
+          "type": "boolean",
+          "description": "Include CDK synthesis output",
+          "default": true
+        },
+        "includeTestReports": {
+          "type": "boolean",
+          "description": "Include test reports in the bundle",
+          "default": true
+        },
+        "includeCoverage": {
+          "type": "boolean",
+          "description": "Include coverage reports",
+          "default": true
+        },
+        "includePolicyReports": {
+          "type": "boolean",
+          "description": "Include policy compliance reports",
+          "default": true
+        }
+      }
+    },
+    "runner": {
+      "type": "object",
+      "description": "Runner image configuration",
+      "additionalProperties": false,
+      "properties": {
+        "image": {
+          "type": "string",
+          "description": "Container image for executing the pipeline",
+          "minLength": 1,
+          "default": "registry/org/platform-runner:1.5.0"
+        },
+        "nodeVersion": {
+          "type": "string",
+          "description": "Node.js version used within the runner",
+          "pattern": "^\\d+\\.\\d+\\.\\d+$",
+          "default": "20.12.2"
+        },
+        "fipsMode": {
+          "type": "boolean",
+          "description": "Enable FIPS mode for the runner",
+          "default": false
+        }
+      }
+    }
+  },
+  "required": [
+    "service",
+    "environment",
+    "versionTag",
+    "artifactoryHost",
+    "ociRepoBundles"
+  ],
+  "allOf": [
+    {
+      "if": {
+        "properties": {
+          "signing": {
+            "properties": {
+              "keyless": {
+                "const": true
+              }
+            },
+            "required": ["keyless"]
+          }
+        }
+      },
+      "then": {
+        "properties": {
+          "signing": {
+            "not": {
+              "required": ["kmsKeyId"]
+            }
+          }
+        }
+      }
+    },
+    {
+      "if": {
+        "properties": {
+          "signing": {
+            "properties": {
+              "keyless": {
+                "const": false
+              }
+            },
+            "required": ["keyless"]
+          }
+        }
+      },
+      "then": {
+        "properties": {
+          "signing": {
+            "required": ["kmsKeyId"]
+          }
+        }
+      }
+    }
+  ]
+}

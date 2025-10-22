@@ -25,6 +25,7 @@ describe('Comprehensive Binder Strategies', () => {
       expect(serviceTypes).toContain('neptune');
       expect(serviceTypes).toContain('vpc');
       expect(serviceTypes).toContain('kinesis');
+      expect(serviceTypes).toContain('service:connect');
       // Note: s3-bucket and rds-postgres would be included when their strategies are available
     });
 
@@ -36,6 +37,7 @@ describe('Comprehensive Binder Strategies', () => {
       expect(categories.Database).toContain('dynamodb');
       expect(categories.Database).toContain('neptune');
       expect(categories.Networking).toContain('vpc');
+      expect(categories.Networking).toContain('service:connect');
       expect(categories.Analytics).toContain('kinesis');
       // Note: Storage and Messaging categories would be populated when strategies are available
     });
@@ -46,6 +48,7 @@ describe('Comprehensive Binder Strategies', () => {
       expect(registry.validateBinding('neptune', 'neptune:cluster')).toBe(true);
       expect(registry.validateBinding('vpc', 'vpc:network')).toBe(true);
       expect(registry.validateBinding('kinesis', 'kinesis:stream')).toBe(true);
+      expect(registry.validateBinding('service:connect', 'service:connect')).toBe(true);
       expect(registry.validateBinding('invalid-service', 'invalid:capability')).toBe(false);
     });
   });
@@ -77,6 +80,12 @@ describe('Comprehensive Binder Strategies', () => {
       expect(strategy).toBeDefined();
       expect(strategy?.supportedCapabilities).toContain('kinesis:stream');
       expect(strategy?.supportedCapabilities).toContain('kinesis:firehose');
+    });
+
+    it('should have Service Connect strategy available', () => {
+      const strategy = registry.get('service:connect');
+      expect(strategy).toBeDefined();
+      expect(strategy?.supportedCapabilities).toContain('service:connect');
     });
   });
 

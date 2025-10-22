@@ -68,7 +68,7 @@ Platform defaults for Commercial, FedRAMP Moderate, and FedRAMP High live in `co
 | `environment` | map<string,string> | `{}` | Additional container environment variables |
 | `secrets` | map<string,string> | `{}` | Map of env key → Secrets Manager ARN |
 | `taskRoleArn` | string | auto-created | Reuse an existing IAM role if supplied |
-| `desiredCount` | number | Framework default | Used when autoscaling is not configured |
+| `desiredCount` | number | Framework default | Used when autoscaling is not configured (builder enforces a minimum of 2 for FedRAMP profiles) |
 
 ### Auto Scaling
 
@@ -93,7 +93,7 @@ Supports `rolling` (default) and `blue-green`. The latter requires ALB details a
 | `logging.createLogGroup` | true | Provision a new CloudWatch Log Group |
 | `logging.logGroupName` | `/ecs/<service>/<component>` | Override when integrating with central logging |
 | `logging.streamPrefix` | `service` | Passed to the AWS Logs driver |
-| `logging.retentionInDays` | Framework default (30/365/731) | Must be one of the supported CloudWatch retention enums |
+| `logging.retentionInDays` | Framework default (30 commercial / 1096 FedRAMP Moderate / 2557 FedRAMP High) | Must be one of the supported CloudWatch retention enums (1, 3, 5, 7, 14, 30, 60, 90, 120, 150, 180, 365, 400, 545, 731, 1096, 1827, 2192, 2557, 3653) |
 | `logging.removalPolicy` | `destroy` (Commercial) / `retain` (FedRAMP) | Controls log data lifecycle |
 
 ### Monitoring
@@ -109,6 +109,12 @@ Each alarm supports overrides for `evaluationPeriods`, `periodMinutes`, `compari
 ### Diagnostics
 
 `diagnostics.enableExecuteCommand` toggles AWS Exec Command. Commercial defaults to `false`; FedRAMP profiles default to `true`.
+
+### Network
+
+| Property | Type | Default | Notes |
+| --- | --- | --- | --- |
+| `network.allowAllOutbound` | boolean | `false` | Flip to `true` if the workload needs unrestricted egress; otherwise the Builder keeps outbound rules scoped to discovered dependencies for least-privilege networking. |
 
 ### Tags & Hardening
 
@@ -135,6 +141,8 @@ corepack pnpm exec jest --runTestsByPath \
   packages/components/ecs-fargate-service/tests/ecs-fargate-service.builder.test.ts \
   packages/components/ecs-fargate-service/tests/ecs-fargate-service.component.synthesis.test.ts
 ```
+
+See `examples/network-allow-all-outbound.yml` for an end-to-end manifest illustrating the network configuration override.
 
 ## Related Standards
 

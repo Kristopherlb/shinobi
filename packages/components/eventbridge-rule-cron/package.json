@@ -1,0 +1,54 @@
+{
+  "name": "@shinobi/component-eventbridge-rule-cron",
+  "version": "1.0.0",
+  "description": "EventBridge scheduled rules with configuration-driven logging, DLQ, and alarms",
+  "main": "index.ts",
+  "types": "index.ts",
+  "keywords": [
+    "eventbridge",
+    "cron",
+    "scheduler",
+    "events",
+    "aws",
+    "platform"
+  ],
+  "author": "Platform Engineering",
+  "license": "MIT",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/project42/shinobi.git",
+    "directory": "packages/components/eventbridge-rule-cron"
+  },
+  "peerDependencies": {
+    "@shinobi/core": "workspace:*",
+    "aws-cdk-lib": "^2.0.0",
+    "constructs": "^10.0.0"
+  },
+  "devDependencies": {
+    "@types/node": "^20.0.0",
+    "typescript": "^5.0.0"
+  },
+  "scripts": {
+    "build": "tsc",
+    "test": "jest",
+    "lint": "eslint .",
+    "type-check": "tsc --noEmit"
+  },
+  "publishConfig": {
+    "access": "restricted"
+  },
+  "componentMetadata": {
+    "type": "eventbridge-rule-cron",
+    "category": "events",
+    "awsService": "EVENTS",
+    "capabilities": [
+      "eventbridge:rule-cron"
+    ],
+    "complianceFrameworks": [
+      "commercial",
+      "fedramp-moderate",
+      "fedramp-high"
+    ],
+    "stability": "production"
+  }
+}

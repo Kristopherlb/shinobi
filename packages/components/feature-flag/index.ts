@@ -3,15 +3,10 @@
  * Feature Flag Component
  */
 
-// Component exports
-export { FeatureFlagComponentComponent } from './feature-flag.component.ts';
-
-// Configuration exports
-export { 
+export { FeatureFlagComponent } from './src/feature-flag.component.ts';
+export {
   FeatureFlagConfig,
-  FeatureFlagComponentConfigBuilder,
+  FeatureFlagConfigBuilder,
   FEATURE_FLAG_CONFIG_SCHEMA
-} from './feature-flag.builder.ts';
-
-// Creator exports
-export { FeatureFlagComponentCreator } from './feature-flag.creator.ts';
+} from './src/feature-flag.builder.ts';
+export { FeatureFlagComponentCreator } from './src/feature-flag.creator.ts';

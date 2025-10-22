@@ -3,7 +3,7 @@
  * Validates the configuration precedence chain and compliance defaults.
  */
 
-import { GlueJobComponentConfigBuilder, GlueJobConfig } from '../glue-job.builder.ts';
+import { GlueJobComponentConfigBuilder, GlueJobConfig } from '../src/glue-job.builder.ts';
 import { ComponentContext, ComponentSpec } from '@shinobi/core';
 import { Construct } from 'constructs';
 
@@ -30,7 +30,7 @@ const createSpec = (config: Partial<GlueJobConfig> = {}): ComponentSpec => ({
 });
 
 describe('GlueJobComponentConfigBuilder', () => {
-  it('applies commercial defaults', () => {
+  it('BuildCommercialDefaults__NoOverrides__ReturnsHardenedBaseline', () => {
     const builder = new GlueJobComponentConfigBuilder(createMockContext('commercial'), createSpec());
 
     const config = builder.buildSync();
@@ -45,7 +45,7 @@ describe('GlueJobComponentConfigBuilder', () => {
     expect(config.monitoring.enabled).toBe(false);
   });
 
-  it('applies fedramp-moderate hardened defaults', () => {
+  it('BuildFedRAMPModerateDefaults__FrameworkOverrides__EnablesComplianceControls', () => {
     const builder = new GlueJobComponentConfigBuilder(createMockContext('fedramp-moderate'), createSpec());
     const config = builder.buildSync();
 
@@ -66,7 +66,7 @@ describe('GlueJobComponentConfigBuilder', () => {
     expect(config.monitoring.enabled).toBe(true);
   });
 
-  it('applies fedramp-high hardened defaults', () => {
+  it('BuildFedRAMPHighDefaults__HardenedProfiles__EnforcesAuditRetention', () => {
     const builder = new GlueJobComponentConfigBuilder(createMockContext('fedramp-high'), createSpec());
     const config = builder.buildSync();
 
@@ -84,7 +84,7 @@ describe('GlueJobComponentConfigBuilder', () => {
     expect(config.monitoring.enabled).toBe(true);
   });
 
-  it('allows manifest overrides to win over defaults', () => {
+  it('BuildConfig__ManifestOverrides__RespectsHigherPrecedence', () => {
     const builder = new GlueJobComponentConfigBuilder(
       createMockContext('fedramp-moderate'),
       createSpec({
@@ -120,7 +120,7 @@ describe('GlueJobComponentConfigBuilder', () => {
     expect(config.defaultArguments['--enable-metrics']).toBe('false');
   });
 
-  it('requires scriptLocation to be provided', () => {
+  it('BuildConfig__MissingScriptLocation__ThrowsValidationError', () => {
     const context = createMockContext();
     const spec: ComponentSpec = { name: 'missing-script', type: 'glue-job', config: {} };
     const builder = new GlueJobComponentConfigBuilder(context, spec);
