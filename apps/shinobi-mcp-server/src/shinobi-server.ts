@@ -21,6 +21,18 @@ import path from 'node:path';
 import yaml from 'yaml';
 import { spawnSync } from 'node:child_process';
 
+// Import audit system
+import {
+  AuditOrchestrator,
+  AuditContextBuilder,
+  findWorkspaceRoot,
+  // New pack-based system
+  RuleRunner,
+  getAllPacks,
+  AuditRequest,
+  Suppression,
+} from './audits/index.js';
+
 /**
  * Platform KB Types
  */
@@ -2354,6 +2366,139 @@ describe('${className} Observability', () => {
                 }
               }
             }
+          },
+
+          // Platform Audit System (13 individual audits + orchestrator)
+          {
+            name: 'audit_schema_validation',
+            description: 'Audit component Config.schema.json files against platform API spec',
+            inputSchema: { type: 'object', properties: {} }
+          },
+          {
+            name: 'audit_tagging_standard',
+            description: 'Audit AWS resource tagging compliance with platform standards',
+            inputSchema: { type: 'object', properties: {} }
+          },
+          {
+            name: 'audit_logging_standard',
+            description: 'Audit structured logging compliance and CloudWatch configuration',
+            inputSchema: { type: 'object', properties: {} }
+          },
+          {
+            name: 'audit_observability_standard',
+            description: 'Audit X-Ray tracing, ADOT integration, and observability configuration',
+            inputSchema: { type: 'object', properties: {} }
+          },
+          {
+            name: 'audit_cdk_best_practices',
+            description: 'Audit CDK construct usage and AWS best practices',
+            inputSchema: { type: 'object', properties: {} }
+          },
+          {
+            name: 'audit_component_versioning',
+            description: 'Audit component semantic versioning and metadata completeness',
+            inputSchema: { type: 'object', properties: {} }
+          },
+          {
+            name: 'audit_configuration_precedence',
+            description: 'Audit configuration layer implementation and precedence chain',
+            inputSchema: { type: 'object', properties: {} }
+          },
+          {
+            name: 'audit_capability_binding',
+            description: 'Audit capability naming conventions and binder strategy coverage',
+            inputSchema: { type: 'object', properties: {} }
+          },
+          {
+            name: 'audit_dependency_graph',
+            description: 'Audit module dependencies and architecture layering',
+            inputSchema: { type: 'object', properties: {} }
+          },
+          {
+            name: 'audit_mcp_contract',
+            description: 'Audit MCP server endpoint implementation and response formats',
+            inputSchema: { type: 'object', properties: {} }
+          },
+          {
+            name: 'audit_security_compliance',
+            description: 'Audit security defaults and compliance by construction',
+            inputSchema: { type: 'object', properties: {} }
+          },
+          {
+            name: 'audit_testing_standard',
+            description: 'Audit test metadata, naming conventions, and oracle usage',
+            inputSchema: { type: 'object', properties: {} }
+          },
+          {
+            name: 'audit_iam_auditing',
+            description: 'Audit IAM policies for least privilege and no wildcards',
+            inputSchema: { type: 'object', properties: {} }
+          },
+          {
+            name: 'run_platform_audit',
+            description: 'Orchestrator to run multiple platform audits with aggregated reporting (LEGACY)',
+            inputSchema: {
+              type: 'object',
+              properties: {
+                audits: {
+                  type: 'array',
+                  items: { type: 'string' },
+                  description: 'Specific audits to run (e.g., ["schema", "tagging"]) or profile name'
+                },
+                profile: {
+                  type: 'string',
+                  enum: ['all', 'security', 'compliance', 'quality', 'observability', 'architecture'],
+                  description: 'Run predefined audit profile'
+                }
+              }
+            }
+          },
+
+          // NEW Pack-Based Audit System
+          {
+            name: 'run_audit',
+            description: 'Run platform audit using rule packs (cdk.out + AST + config) with suppressions support',
+            inputSchema: {
+              type: 'object',
+              properties: {
+                serviceId: {
+                  type: 'string',
+                  description: 'Service identifier'
+                },
+                envId: {
+                  type: 'string',
+                  description: 'Environment identifier'
+                },
+                cdkOut: {
+                  type: 'string',
+                  description: 'Path to cdk.out directory (default: ./cdk.out)'
+                },
+                scope: {
+                  type: 'array',
+                  items: {
+                    type: 'string',
+                    enum: ['template', 'code', 'repo', 'runtime']
+                  },
+                  description: 'Limit audit to specific scopes'
+                },
+                format: {
+                  type: 'string',
+                  enum: ['json', 'markdown'],
+                  default: 'json',
+                  description: 'Output format'
+                },
+                failLevel: {
+                  type: 'string',
+                  enum: ['warn', 'error', 'blocker'],
+                  default: 'error',
+                  description: 'Minimum severity to cause non-zero exit'
+                },
+                suppressionsFile: {
+                  type: 'string',
+                  description: 'Path to suppressions JSON file'
+                }
+              }
+            }
           }
         ]
       };
@@ -2671,6 +2816,40 @@ describe('${className} Observability', () => {
 
           case 'generate_exec_brief':
             return await this.generateExecBrief(args);
+
+          // Platform Audit System
+          case 'audit_schema_validation':
+            return await this.runAudit('schema');
+          case 'audit_tagging_standard':
+            return await this.runAudit('tagging');
+          case 'audit_logging_standard':
+            return await this.runAudit('logging');
+          case 'audit_observability_standard':
+            return await this.runAudit('observability');
+          case 'audit_cdk_best_practices':
+            return await this.runAudit('cdk-best-practices');
+          case 'audit_component_versioning':
+            return await this.runAudit('versioning');
+          case 'audit_configuration_precedence':
+            return await this.runAudit('configuration');
+          case 'audit_capability_binding':
+            return await this.runAudit('capability-binding');
+          case 'audit_dependency_graph':
+            return await this.runAudit('dependency-graph');
+          case 'audit_mcp_contract':
+            return await this.runAudit('mcp-contract');
+          case 'audit_security_compliance':
+            return await this.runAudit('security');
+          case 'audit_testing_standard':
+            return await this.runAudit('testing');
+          case 'audit_iam_auditing':
+            return await this.runAudit('iam');
+          case 'run_platform_audit':
+            return await this.runPlatformAuditOrchestrator(args);
+
+          // NEW Pack-Based Audit
+          case 'run_audit':
+            return await this.runPackBasedAudit(args);
 
           default:
             throw new Error(`Unknown tool: ${name}`);
@@ -4553,5 +4732,122 @@ describe('${className} Observability', () => {
         }
       ]
     };
+  }
+
+  /**
+   * Run a single audit by ID
+   */
+  private async runAudit(auditId: string): Promise<any> {
+    try {
+      const workspaceRoot = this.findWorkspaceRoot();
+      const contextBuilder = new AuditContextBuilder(workspaceRoot);
+      const context = contextBuilder.build();
+      contextBuilder.validateContext(context);
+
+      const orchestrator = new AuditOrchestrator();
+      const audit = orchestrator.getAudit(auditId);
+
+      if (!audit) {
+        throw new Error(`Unknown audit: ${auditId}`);
+      }
+
+      const result = await audit.execute(context);
+
+      return {
+        content: [
+          {
+            type: 'text',
+            text: JSON.stringify(result, null, 2)
+          }
+        ]
+      };
+    } catch (error) {
+      throw new Error(`Failed to run audit ${auditId}: ${(error as Error).message}`);
+    }
+  }
+
+  /**
+   * Run platform audit orchestrator (LEGACY)
+   */
+  private async runPlatformAuditOrchestrator(args: any): Promise<any> {
+    try {
+      const workspaceRoot = this.findWorkspaceRoot();
+      const contextBuilder = new AuditContextBuilder(workspaceRoot);
+      const context = contextBuilder.build();
+      contextBuilder.validateContext(context);
+
+      const orchestrator = new AuditOrchestrator();
+
+      // Determine what to run
+      let selection: string | string[];
+
+      if (args.profile) {
+        selection = args.profile;
+      } else if (args.audits && Array.isArray(args.audits)) {
+        selection = args.audits;
+      } else {
+        selection = 'all';
+      }
+
+      const result = await orchestrator.run(selection, context);
+
+      return {
+        content: [
+          {
+            type: 'text',
+            text: JSON.stringify(result, null, 2)
+          }
+        ]
+      };
+    } catch (error) {
+      throw new Error(`Failed to run platform audit: ${(error as Error).message}`);
+    }
+  }
+
+  /**
+   * Run pack-based audit (NEW - uses cdk.out + AST + suppressions)
+   */
+  private async runPackBasedAudit(args: any): Promise<any> {
+    try {
+      const workspaceRoot = this.findWorkspaceRoot();
+
+      // Build audit request
+      const request: AuditRequest = {
+        workspaceRoot,
+        cdkOut: args.cdkOut || path.join(workspaceRoot, 'cdk.out'),
+        serviceId: args.serviceId,
+        envId: args.envId,
+        scope: args.scope,
+        format: args.format || 'json',
+        failLevel: args.failLevel || 'error',
+      };
+
+      // Load suppressions if file provided
+      if (args.suppressionsFile) {
+        const suppressionsPath = path.join(workspaceRoot, args.suppressionsFile);
+        if (fs.existsSync(suppressionsPath)) {
+          const content = fs.readFileSync(suppressionsPath, 'utf8');
+          request.suppressions = JSON.parse(content) as Suppression[];
+        }
+      }
+
+      // Get all rule packs
+      const packs = getAllPacks();
+
+      // Run audit
+      const runner = new RuleRunner(request);
+      const result = await runner.run(packs);
+
+      return {
+        content: [
+          {
+            type: 'text',
+            text: JSON.stringify(result, null, 2)
+          }
+        ]
+      };
+    } catch (error) {
+      throw new Error(`Failed to run pack-based audit: ${(error as Error).message}`);
+    }
   }
 }
