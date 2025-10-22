@@ -365,7 +365,7 @@ defaults:
         statistic: Sum
       cloudWatchLogs:
         enabled: true
-        retentionDays: 90
+        retentionDays: 1827
         removalPolicy: retain
     deadLetterQueue:
       enabled: true

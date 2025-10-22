@@ -2,15 +2,16 @@
  * EventBridge Rule Pattern Component
  *
  * Creates an EventBridge rule that filters events based on a configuration-driven
- * pattern. Dead-letter queues, logging, and monitoring behaviour are resolved
- * entirely via the EventBridgeRulePatternComponentConfigBuilder so the component
- * never inspects the compliance framework directly.
+ * pattern. Dead-letter queues, logging, and monitoring are mandatory per platform
+ * standards. Configuration is resolved via EventBridgeRulePatternComponentConfigBuilder
+ * with compliance-aware defaults for FedRAMP deployments.
  */
 
 import * as events from 'aws-cdk-lib/aws-events';
 import * as sqs from 'aws-cdk-lib/aws-sqs';
 import * as cloudwatch from 'aws-cdk-lib/aws-cloudwatch';
 import * as logs from 'aws-cdk-lib/aws-logs';
+import * as kms from 'aws-cdk-lib/aws-kms';
 import * as cdk from 'aws-cdk-lib';
 import { Construct } from 'constructs';
 import {
@@ -25,7 +26,7 @@ import {
   AlarmTreatMissingData,
   EventBridgeRulePatternComponentConfigBuilder,
   EventBridgeRulePatternConfig
-} from './eventbridge-rule-pattern.builder.ts';
+} from './eventbridge-rule-pattern.builder';
 
 interface CreatedAlarm {
   id: string;
@@ -36,6 +37,8 @@ export class EventBridgeRulePatternComponent extends BaseComponent {
   private rule?: events.Rule;
   private deadLetterQueue?: sqs.Queue;
   private logGroup?: logs.LogGroup;
+  private logEncryptionKey?: kms.Key;
+  private dlqEncryptionKey?: kms.Key;
   private config?: EventBridgeRulePatternConfig;
   private readonly createdAlarms: CreatedAlarm[] = [];
 
@@ -54,8 +57,21 @@ export class EventBridgeRulePatternComponent extends BaseComponent {
         ruleName: this.config.ruleName,
         eventBus: this.config.eventBus?.name ?? this.config.eventBus?.arn ?? 'default',
         monitoringEnabled: this.config.monitoring.enabled,
-        dlqEnabled: this.config.deadLetterQueue.enabled
+        dlqEnabled: this.config.deadLetterQueue.enabled,
+        complianceFramework: this.context.complianceFramework
       });
+
+      // Monitoring and DLQ are now mandatory - verify config
+      if (!this.config.monitoring.enabled || !this.config.monitoring.cloudWatchLogs.enabled) {
+        throw new Error('Monitoring and CloudWatch Logs are mandatory per platform observability standard');
+      }
+
+      if (!this.config.deadLetterQueue.enabled) {
+        throw new Error('Dead letter queue is mandatory for resilient event-driven design');
+      }
+
+      // Prepare encryption keys (compliance-aware)
+      this.prepareEncryptionKeys();
 
       this.createDeadLetterQueue();
       this.createLogGroup();
@@ -64,13 +80,15 @@ export class EventBridgeRulePatternComponent extends BaseComponent {
 
       this.registerConstruct('main', this.rule!);
       this.registerConstruct('rule', this.rule!);
+      this.registerConstruct('deadLetterQueue', this.deadLetterQueue!);
+      this.registerConstruct('logGroup', this.logGroup!);
 
-      if (this.deadLetterQueue) {
-        this.registerConstruct('deadLetterQueue', this.deadLetterQueue);
+      if (this.logEncryptionKey) {
+        this.registerConstruct('kms:logs', this.logEncryptionKey);
       }
 
-      if (this.logGroup) {
-        this.registerConstruct('logGroup', this.logGroup);
+      if (this.dlqEncryptionKey) {
+        this.registerConstruct('kms:dlq', this.dlqEncryptionKey);
       }
 
       this.createdAlarms.forEach(({ id, alarm }) => {
@@ -81,7 +99,9 @@ export class EventBridgeRulePatternComponent extends BaseComponent {
 
       this.logComponentEvent('synthesis_complete', 'EventBridge rule pattern synthesized successfully', {
         ruleName: this.rule!.ruleName,
-        alarmsConfigured: this.createdAlarms.length
+        alarmsConfigured: this.createdAlarms.length,
+        logEncryption: !!this.logEncryptionKey,
+        dlqEncryption: !!this.dlqEncryptionKey
       });
     } catch (error) {
       this.logError(error as Error, 'eventbridge-rule-pattern:synth', {
@@ -100,49 +120,99 @@ export class EventBridgeRulePatternComponent extends BaseComponent {
     return 'eventbridge-rule-pattern';
   }
 
-  private createDeadLetterQueue(): void {
-    const dlqConfig = this.config!.deadLetterQueue;
-    if (!dlqConfig.enabled) {
+  private prepareEncryptionKeys(): void {
+    const framework = (this.context.complianceFramework ?? 'commercial').toLowerCase();
+    const requiresCustomerManagedKey = framework === 'fedramp-moderate' || framework === 'fedramp-high';
+
+    if (!requiresCustomerManagedKey) {
+      this.logEncryptionKey = undefined;
+      this.dlqEncryptionKey = undefined;
       return;
     }
+
+    const baseId = `${this.context.serviceName}-${this.spec.name}`;
+
+    this.logEncryptionKey = new kms.Key(this, 'LogEncryptionKey', {
+      description: `EventBridge rule log encryption key for ${baseId}`,
+      enableKeyRotation: true,
+      removalPolicy: cdk.RemovalPolicy.RETAIN
+    });
+
+    this.applyStandardTags(this.logEncryptionKey, {
+      'key-usage': 'log-encryption',
+      'compliance-framework': framework
+    });
+
+    this.logResourceCreation('kms-log-key', this.logEncryptionKey.keyId, {
+      framework,
+      rotation: true
+    });
+
+    this.dlqEncryptionKey = new kms.Key(this, 'DlqEncryptionKey', {
+      description: `EventBridge rule DLQ encryption key for ${baseId}`,
+      enableKeyRotation: true,
+      removalPolicy: cdk.RemovalPolicy.RETAIN
+    });
+
+    this.applyStandardTags(this.dlqEncryptionKey, {
+      'key-usage': 'dlq-encryption',
+      'compliance-framework': framework
+    });
+
+    this.logResourceCreation('kms-dlq-key', this.dlqEncryptionKey.keyId, {
+      framework,
+      rotation: true
+    });
+  }
+
+  private createDeadLetterQueue(): void {
+    const dlqConfig = this.config!.deadLetterQueue;
 
     this.deadLetterQueue = new sqs.Queue(this, 'DeadLetterQueue', {
       queueName: `${this.context.serviceName}-${this.spec.name}-dlq`,
       retentionPeriod: cdk.Duration.days(dlqConfig.retentionDays),
-      visibilityTimeout: cdk.Duration.minutes(5)
+      visibilityTimeout: cdk.Duration.minutes(5),
+      encryption: this.dlqEncryptionKey ? sqs.QueueEncryption.KMS : sqs.QueueEncryption.KMS_MANAGED,
+      encryptionMasterKey: this.dlqEncryptionKey
     });
 
     this.applyStandardTags(this.deadLetterQueue, {
-      'queue-type': 'dead-letter'
+      'queue-type': 'dead-letter',
+      encrypted: this.dlqEncryptionKey ? 'true' : 'false'
     });
 
     this.logResourceCreation('dead-letter-queue', this.deadLetterQueue.queueName, {
       retentionDays: dlqConfig.retentionDays,
-      maxRetryAttempts: dlqConfig.maxRetryAttempts
+      maxRetryAttempts: dlqConfig.maxRetryAttempts,
+      encrypted: !!this.dlqEncryptionKey
     });
   }
 
   private createLogGroup(): void {
     const logsConfig = this.config!.monitoring.cloudWatchLogs;
-    if (!logsConfig.enabled) {
-      return;
+    const logGroupName = logsConfig.logGroupName ?? `/aws/platform/events/${this.context.serviceName}-${this.spec.name}-${this.config!.ruleName}`;
+
+    if (this.isFedramp() && logsConfig.removalPolicy === 'destroy') {
+      throw new Error('CloudWatch Logs removalPolicy must be retain for FedRAMP deployments.');
     }
 
-    const logGroupName = logsConfig.logGroupName ?? `/aws/events/rule/${this.context.serviceName}-${this.spec.name}`;
     this.logGroup = new logs.LogGroup(this, 'RuleLogGroup', {
       logGroupName,
       retention: this.mapLogRetentionDays(logsConfig.retentionDays),
-      removalPolicy: logsConfig.removalPolicy === 'retain' ? cdk.RemovalPolicy.RETAIN : cdk.RemovalPolicy.DESTROY
+      removalPolicy: logsConfig.removalPolicy === 'retain' ? cdk.RemovalPolicy.RETAIN : cdk.RemovalPolicy.DESTROY,
+      encryptionKey: this.logEncryptionKey
     });
 
     this.applyStandardTags(this.logGroup, {
       'log-type': 'eventbridge',
-      'rule-name': this.config!.ruleName
+      'rule-name': this.config!.ruleName,
+      encrypted: this.logEncryptionKey ? 'true' : 'false'
     });
 
     this.logResourceCreation('log-group', logGroupName, {
       retentionDays: logsConfig.retentionDays,
-      removalPolicy: logsConfig.removalPolicy
+      removalPolicy: logsConfig.removalPolicy,
+      encrypted: !!this.logEncryptionKey
     });
   }
 
@@ -179,10 +249,7 @@ export class EventBridgeRulePatternComponent extends BaseComponent {
   }
 
   private configureMonitoring(): void {
-    if (!this.config!.monitoring.enabled) {
-      return;
-    }
-
+    // Monitoring is now mandatory - always configure
     const ruleName = this.rule!.ruleName;
 
     this.createAlarm('failedInvocations', this.config!.monitoring.failedInvocations, {
@@ -206,21 +273,18 @@ export class EventBridgeRulePatternComponent extends BaseComponent {
       dimensions: { RuleName: ruleName }
     });
 
-    if (this.deadLetterQueue) {
-      this.createAlarm('deadLetterQueueMessages', this.config!.monitoring.deadLetterQueueMessages, {
-        namespace: 'AWS/SQS',
-        metricName: 'ApproximateNumberOfVisibleMessages',
-        statistic: this.config!.monitoring.deadLetterQueueMessages.statistic,
-        dimensions: { QueueName: this.deadLetterQueue.queueName }
-      });
-    }
+    this.createAlarm('deadLetterQueueMessages', this.config!.monitoring.deadLetterQueueMessages, {
+      namespace: 'AWS/SQS',
+      metricName: 'ApproximateNumberOfVisibleMessages',
+      statistic: this.config!.monitoring.deadLetterQueueMessages.statistic,
+      dimensions: { QueueName: this.deadLetterQueue!.queueName }
+    });
 
-    if (this.createdAlarms.length > 0) {
-      this.logComponentEvent('observability_configured', 'Monitoring configured for EventBridge rule', {
-        ruleName,
-        alarmsCreated: this.createdAlarms.length
-      });
-    }
+    this.logComponentEvent('observability_configured', 'Monitoring configured for EventBridge rule', {
+      ruleName,
+      alarmsCreated: this.createdAlarms.length,
+      logGroupEncrypted: !!this.kmsKey
+    });
   }
 
   private createAlarm(id: string, config: AlarmConfig, metricProps: { namespace: string; metricName: string; statistic: string; dimensions: Record<string, string>; }): void {
@@ -286,13 +350,27 @@ export class EventBridgeRulePatternComponent extends BaseComponent {
       ruleArn: this.rule!.ruleArn,
       state: this.config!.state,
       eventBus: this.config!.eventBus?.name ?? this.config!.eventBus?.arn ?? 'default',
-      deadLetterQueue: this.deadLetterQueue
-        ? {
-            queueUrl: this.deadLetterQueue.queueUrl,
-            queueArn: this.deadLetterQueue.queueArn
-          }
-        : undefined
+      deadLetterQueue: {
+        queueUrl: this.deadLetterQueue!.queueUrl,
+        queueArn: this.deadLetterQueue!.queueArn,
+        encrypted: !!this.dlqEncryptionKey,
+        encryptionKeyArn: this.dlqEncryptionKey?.keyArn
+      },
+      logGroup: {
+        logGroupName: this.logGroup!.logGroupName,
+        logGroupArn: this.logGroup!.logGroupArn,
+        encrypted: !!this.logEncryptionKey,
+        encryptionKeyArn: this.logEncryptionKey?.keyArn
+      },
+      monitoring: {
+        alarmsConfigured: this.createdAlarms.map(a => a.id)
+      }
     };
+  }
+
+  private isFedramp(): boolean {
+    const framework = (this.context.complianceFramework ?? '').toLowerCase();
+    return framework === 'fedramp-moderate' || framework === 'fedramp-high';
   }
 
   private toPascal(value: string): string {

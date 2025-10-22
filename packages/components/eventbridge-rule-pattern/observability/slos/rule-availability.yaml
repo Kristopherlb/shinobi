@@ -1,0 +1,36 @@
+apiVersion: observability.shinobi.dev/v1alpha1
+kind: ServiceLevelObjective
+metadata:
+  name: eventbridge-rule-availability
+  component: eventbridge-rule-pattern
+spec:
+  description: Ensure EventBridge rule invocations succeed with minimal failures.
+  objectivePercent: 99.9
+  window: 30d
+  indicators:
+    - type: burn-rate
+      metric: aws.events.failed_invocations
+      aggregation: sum
+      query: |
+        SELECT SUM(FailedInvocations) AS failed
+        FROM aws.events
+        WHERE RuleName = '${rule_name}'
+        GROUP BY bin(5m)
+      threshold: 5
+    - type: ratio
+      numerator:
+        metric: aws.events.failed_invocations
+      denominator:
+        metric: aws.events.invocations
+  alerting:
+    burnRates:
+      - window: 1h
+        threshold: 14
+      - window: 6h
+        threshold: 7
+  reporting:
+    owner: platform-engineering
+    complianceFrameworks:
+      - commercial
+      - fedramp-moderate
+      - fedramp-high

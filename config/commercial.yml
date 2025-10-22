@@ -297,9 +297,9 @@ defaults:
   eventbridge-rule-pattern:
     state: enabled
     monitoring:
-      enabled: false
+      enabled: true
       failedInvocations:
-        enabled: false
+        enabled: true
         threshold: 5
         evaluationPeriods: 2
         periodMinutes: 5
@@ -323,7 +323,7 @@ defaults:
         treatMissingData: breaching
         statistic: Sum
       deadLetterQueueMessages:
-        enabled: false
+        enabled: true
         threshold: 1
         evaluationPeriods: 1
         periodMinutes: 5
@@ -331,11 +331,11 @@ defaults:
         treatMissingData: not-breaching
         statistic: Sum
       cloudWatchLogs:
-        enabled: false
-        retentionDays: 30
-        removalPolicy: destroy
+        enabled: true
+        retentionDays: 365
+        removalPolicy: retain
     deadLetterQueue:
-      enabled: false
+      enabled: true
       maxRetryAttempts: 3
       retentionDays: 14
     tags: {}

@@ -1,0 +1,53 @@
+{
+  "widgets": [
+    {
+      "type": "metric",
+      "width": 12,
+      "height": 6,
+      "properties": {
+        "title": "Event Throughput",
+        "view": "timeSeries",
+        "region": "${region}",
+        "stat": "Sum",
+        "period": 300,
+        "metrics": [
+          [ "AWS/Events", "Invocations", "RuleName", "${rule_name}", { "label": "Invocations" } ],
+          [ ".", "MatchedEvents", ".", ".", { "label": "Matched Events" } ]
+        ]
+      }
+    },
+    {
+      "type": "metric",
+      "width": 12,
+      "height": 6,
+      "properties": {
+        "title": "Error Signals",
+        "view": "timeSeries",
+        "region": "${region}",
+        "stat": "Sum",
+        "period": 300,
+        "metrics": [
+          [ "AWS/Events", "FailedInvocations", "RuleName", "${rule_name}", { "label": "Failed Invocations" } ],
+          [ "AWS/Events", "ThrottledRules", "RuleName", "${rule_name}", { "label": "Throttled" } ],
+          [ "AWS/SQS", "ApproximateNumberOfMessagesVisible", "QueueName", "${dlq_name}", { "label": "DLQ Backlog", "stat": "Maximum" } ]
+        ]
+      }
+    },
+    {
+      "type": "metric",
+      "width": 24,
+      "height": 6,
+      "properties": {
+        "title": "Latency & Matching Trends",
+        "view": "timeSeries",
+        "region": "${region}",
+        "stat": "Average",
+        "period": 60,
+        "metrics": [
+          [ "AWS/Events", "TriggeredRules", "RuleName", "${rule_name}", { "label": "Triggered Rules" } ],
+          [ "AWS/Events", "Invocations", "RuleName", "${rule_name}", { "label": "Invocations (p95)", "stat": "p95" } ]
+        ]
+      }
+    }
+  ]
+}

@@ -2,18 +2,19 @@
   "$schema": "http://json-schema.org/draft-07/schema#",
   "$id": "https://platform.shinobi.dev/schemas/components/eventbridge-rule-pattern/v1.0.0",
   "title": "EventBridge Rule Pattern Configuration",
-  "description": "Configuration schema for EventBridge pattern-based rule component with dead letter queue, CloudWatch logging, and comprehensive monitoring support",
+  "description": "Configuration schema for EventBridge pattern-based rule component with mandatory dead letter queue, CloudWatch logging, and comprehensive monitoring support",
   "type": "object",
   "required": [
-    "eventPattern"
+    "deadLetterQueue",
+    "eventPattern",
+    "monitoring"
   ],
   "additionalProperties": false,
   "properties": {
     "ruleName": {
       "type": "string",
       "description": "Custom name for the EventBridge rule. Defaults to {serviceName}-{componentName}. Invalid characters are replaced with hyphens and truncated to 64 characters.",
-      "maxLength": 64,
-      "pattern": "^[a-zA-Z0-9._-]+$"
+      "maxLength": 64
     },
     "description": {
       "type": "string",
@@ -100,13 +101,16 @@
     },
     "deadLetterQueue": {
       "type": "object",
-      "description": "Dead letter queue configuration for failed event deliveries",
+      "description": "Dead letter queue configuration for failed event deliveries (required for resilient event-driven design)",
       "additionalProperties": false,
+      "required": [
+        "enabled"
+      ],
       "properties": {
         "enabled": {
           "type": "boolean",
-          "description": "Enable dead letter queue for capturing failed events",
-          "default": false
+          "description": "Enable dead letter queue for capturing failed events (required: true)",
+          "default": true
         },
         "maxRetryAttempts": {
           "type": "number",
@@ -126,48 +130,91 @@
     },
     "monitoring": {
       "type": "object",
-      "description": "CloudWatch monitoring and alarming configuration",
+      "description": "CloudWatch monitoring and alarming configuration (required per platform observability standard)",
       "additionalProperties": false,
+      "required": [
+        "enabled",
+        "cloudWatchLogs"
+      ],
       "properties": {
         "enabled": {
           "type": "boolean",
-          "description": "Master switch for all monitoring features",
-          "default": false
+          "description": "Master switch for all monitoring features (required: true)",
+          "default": true
         },
         "failedInvocations": {
           "$ref": "#/definitions/AlarmConfig",
-          "description": "Alarm configuration for failed rule invocations"
+          "description": "Alarm configuration for failed rule invocations",
+          "default": {
+            "enabled": true,
+            "threshold": 5,
+            "evaluationPeriods": 2,
+            "periodMinutes": 5,
+            "comparisonOperator": "gte",
+            "treatMissingData": "not-breaching",
+            "statistic": "Sum"
+          }
         },
         "invocations": {
           "$ref": "#/definitions/AlarmConfig",
-          "description": "Alarm configuration for total invocation volume"
+          "description": "Alarm configuration for total invocation volume",
+          "default": {
+            "enabled": false,
+            "threshold": 0,
+            "evaluationPeriods": 3,
+            "periodMinutes": 5,
+            "comparisonOperator": "lte",
+            "treatMissingData": "breaching",
+            "statistic": "Sum"
+          }
         },
         "matchedEvents": {
           "$ref": "#/definitions/AlarmConfig",
-          "description": "Alarm configuration for matched event volume"
+          "description": "Alarm configuration for matched event volume",
+          "default": {
+            "enabled": false,
+            "threshold": 0,
+            "evaluationPeriods": 1,
+            "periodMinutes": 5,
+            "comparisonOperator": "gt",
+            "treatMissingData": "not-breaching",
+            "statistic": "Sum"
+          }
         },
         "deadLetterQueueMessages": {
           "$ref": "#/definitions/AlarmConfig",
-          "description": "Alarm configuration for DLQ message backlog (requires DLQ enabled)"
+          "description": "Alarm configuration for DLQ message backlog (requires DLQ enabled)",
+          "default": {
+            "enabled": true,
+            "threshold": 1,
+            "evaluationPeriods": 1,
+            "periodMinutes": 5,
+            "comparisonOperator": "gte",
+            "treatMissingData": "not-breaching",
+            "statistic": "Sum"
+          }
         },
         "cloudWatchLogs": {
           "type": "object",
-          "description": "CloudWatch Logs configuration for event logging",
+          "description": "CloudWatch Logs configuration for event logging (required)",
           "additionalProperties": false,
+          "required": [
+            "enabled"
+          ],
           "properties": {
             "enabled": {
               "type": "boolean",
-              "description": "Enable CloudWatch Logs delivery for matched events",
-              "default": false
+              "description": "Enable CloudWatch Logs delivery for matched events (required: true)",
+              "default": true
             },
             "logGroupName": {
               "type": "string",
-              "description": "Custom log group name. Defaults to /aws/events/rule/{serviceName}-{componentName}",
+              "description": "Custom log group name. Defaults to /aws/platform/events/{serviceName}-{componentName}-{ruleName}.",
               "pattern": "^[/a-zA-Z0-9._-]+$"
             },
             "retentionDays": {
               "type": "number",
-              "description": "Log retention period in days",
+              "description": "Log retention period in days. Defaults are compliance-aware: commercial=365, fedramp-moderate=1095, fedramp-high=2555",
               "enum": [
                 1,
                 3,
@@ -184,10 +231,12 @@
                 400,
                 545,
                 731,
+                1095,
                 1827,
+                2555,
                 3653
               ],
-              "default": 30
+              "default": 365
             },
             "removalPolicy": {
               "type": "string",
@@ -195,8 +244,8 @@
                 "retain",
                 "destroy"
               ],
-              "description": "Policy for log group deletion when stack is deleted",
-              "default": "destroy"
+              "description": "Policy for log group deletion when stack is deleted. Defaults: commercial=retain, fedramp=retain",
+              "default": "retain"
             }
           }
         }
@@ -224,7 +273,8 @@
         "threshold": {
           "type": "number",
           "description": "Alarm threshold value",
-          "minimum": 0
+          "minimum": 0,
+          "default": 0
         },
         "evaluationPeriods": {
           "type": "number",
@@ -276,7 +326,7 @@
   },
   "examples": [
     {
-      "description": "Minimal configuration for EC2 state change events",
+      "description": "Minimal FedRAMP-compliant configuration for EC2 state change events",
       "eventPattern": {
         "source": [
           "aws.ec2"
@@ -284,10 +334,19 @@
         "detail-type": [
           "EC2 Instance State-change Notification"
         ]
+      },
+      "deadLetterQueue": {
+        "enabled": true
+      },
+      "monitoring": {
+        "enabled": true,
+        "cloudWatchLogs": {
+          "enabled": true
+        }
       }
     },
     {
-      "description": "Full-featured configuration with monitoring for FedRAMP",
+      "description": "Full-featured configuration with all alarms for FedRAMP High",
       "eventPattern": {
         "source": [
           "com.myapp.orders"
@@ -317,7 +376,7 @@
         },
         "cloudWatchLogs": {
           "enabled": true,
-          "retentionDays": 90
+          "retentionDays": 2555
         }
       },
       "deadLetterQueue": {

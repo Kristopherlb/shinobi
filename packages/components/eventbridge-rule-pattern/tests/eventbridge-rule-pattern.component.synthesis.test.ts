@@ -2,8 +2,8 @@ import { App, Stack } from 'aws-cdk-lib';
 import { Template, Match } from 'aws-cdk-lib/assertions';
 import { Construct } from 'constructs';
 import { ComponentContext, ComponentSpec } from '@shinobi/core';
-import { EventBridgeRulePatternComponent } from '../eventbridge-rule-pattern.component.ts';
-import { EventBridgeRulePatternConfig } from '../eventbridge-rule-pattern.builder.ts';
+import { EventBridgeRulePatternComponent } from '../src/eventbridge-rule-pattern.component';
+import { EventBridgeRulePatternConfig } from '../src/eventbridge-rule-pattern.builder';
 
 type Framework = 'commercial' | 'fedramp-moderate' | 'fedramp-high';
 
@@ -21,6 +21,8 @@ const spec = (config: Partial<EventBridgeRulePatternConfig> = {}): ComponentSpec
   type: 'eventbridge-rule-pattern',
   config: {
     eventPattern: { source: ['aws.ec2'] },
+    deadLetterQueue: { enabled: true },
+    monitoring: { enabled: true, cloudWatchLogs: { enabled: true } },
     ...config
   }
 });
@@ -38,29 +40,60 @@ const synthesize = (framework: Framework, config?: Partial<EventBridgeRulePatter
 };
 
 describe('EventBridgeRulePatternComponent synthesis', () => {
-  it('creates a commercial rule without DLQ or logging by default', () => {
+  it('creates a commercial rule with mandatory DLQ and logging', () => {
     const { template, component } = synthesize('commercial');
 
     template.hasResourceProperties('AWS::Events::Rule', Match.objectLike({
       State: 'ENABLED'
     }));
 
-    template.resourceCountIs('AWS::SQS::Queue', 0);
-    template.resourceCountIs('AWS::Logs::LogGroup', 0);
-
-    expect(component.getCapabilityData()['eventbridge:rule-pattern'].state).toBe('enabled');
-  });
-
-  it('enables DLQ and logging for fedramp-high defaults', () => {
-    const { template, component } = synthesize('fedramp-high');
-
+    // Monitoring and DLQ are now mandatory
     template.resourceCountIs('AWS::SQS::Queue', 1);
+    template.resourceCountIs('AWS::Logs::LogGroup', 1);
+    template.resourceCountIs('AWS::KMS::Key', 0);
+
     template.hasResourceProperties('AWS::Logs::LogGroup', Match.objectLike({
-      RetentionInDays: 365
+      RetentionInDays: 365 // Commercial: 1 year
     }));
 
     const capability = component.getCapabilityData()['eventbridge:rule-pattern'];
-    expect(capability.deadLetterQueue).toBeDefined();
+    expect(capability.state).toBe('enabled');
+    expect(capability.deadLetterQueue.encrypted).toBe(false);
+    expect(capability.logGroup.encrypted).toBe(false);
+  });
+
+  it('creates customer-managed keys and uses 3-year retention for fedramp-moderate', () => {
+    const { template, component } = synthesize('fedramp-moderate');
+
+    template.resourceCountIs('AWS::SQS::Queue', 1);
+    template.resourceCountIs('AWS::KMS::Key', 2); // Separate keys for logs and DLQ
+    
+    template.hasResourceProperties('AWS::Logs::LogGroup', Match.objectLike({
+      RetentionInDays: 1827 // FedRAMP Moderate: 5 years (>= requirement)
+    }));
+
+    template.hasResourceProperties('AWS::KMS::Key', Match.objectLike({
+      EnableKeyRotation: true
+    }));
+
+    const capability = component.getCapabilityData()['eventbridge:rule-pattern'];
+    expect(capability.deadLetterQueue.encrypted).toBe(true);
+    expect(capability.logGroup.encrypted).toBe(true);
+    expect(capability.logGroup.encryptionKeyArn).toBeDefined();
+  });
+
+  it('creates customer-managed keys and uses 7-year retention for fedramp-high', () => {
+    const { template } = synthesize('fedramp-high');
+
+    template.resourceCountIs('AWS::KMS::Key', 2);
+    
+    template.hasResourceProperties('AWS::Logs::LogGroup', Match.objectLike({
+      RetentionInDays: 3653 // FedRAMP High: 10 years (>= requirement)
+    }));
+
+    template.hasResourceProperties('AWS::KMS::Key', Match.objectLike({
+      EnableKeyRotation: true
+    }));
   });
 
   it('honours manifest overrides for monitoring alarms', () => {
@@ -115,5 +148,32 @@ describe('EventBridgeRulePatternComponent synthesis', () => {
     template.hasResourceProperties('AWS::Logs::LogGroup', Match.objectLike({
       RetentionInDays: 60
     }));
+  });
+
+  it('sanitizes rule names in synthesized resources', () => {
+    const { template } = synthesize('commercial', {
+      ruleName: 'my@special#rule!'
+    });
+
+    template.hasResourceProperties('AWS::Events::Rule', Match.objectLike({
+      Name: 'my-special-rule-'
+    }));
+  });
+
+  it('rejects destructive log removal policy in fedramp-high', () => {
+    const app = new App();
+    const stack = new Stack(app, 'TestStack-Invalid');
+    const context = baseContext('fedramp-high');
+    const component = new EventBridgeRulePatternComponent(stack, 'Rule-invalid', context, spec({
+      monitoring: {
+        enabled: true,
+        cloudWatchLogs: {
+          enabled: true,
+          removalPolicy: 'destroy'
+        }
+      }
+    }));
+
+    expect(() => component.synth()).toThrow(/removalPolicy must be retain/);
   });
 });

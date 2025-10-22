@@ -1,9 +1,27 @@
 {
   "name": "@shinobi/component-eventbridge-rule-pattern",
   "version": "1.0.0",
-  "description": "EventBridge pattern-based rule component with dead letter queue, CloudWatch logging, and comprehensive monitoring support",
-  "main": "index.js",
-  "types": "index.d.ts",
+  "description": "EventBridge pattern-based rule component with mandatory dead letter queue, CloudWatch logging, and comprehensive monitoring support per platform standards",
+  "type": "module",
+  "main": "dist/index.js",
+  "types": "dist/index.d.ts",
+  "files": [
+    "dist/**/*",
+    "Config.schema.json",
+    "README.md",
+    "catalog-info.yaml",
+    "observability/**/*",
+    "Audit/**/*"
+  ],
+  "exports": {
+    ".": {
+      "import": "./dist/index.js",
+      "types": "./dist/index.d.ts"
+    },
+    "./schema": {
+      "import": "./Config.schema.json"
+    }
+  },
   "keywords": [
     "shinobi",
     "eventbridge",
@@ -12,7 +30,9 @@
     "events",
     "event-driven",
     "pattern-matching",
-    "serverless"
+    "serverless",
+    "fedramp",
+    "compliance"
   ],
   "author": "Platform Engineering <platform@shinobi.dev>",
   "license": "MIT",
@@ -26,11 +46,11 @@
   },
   "homepage": "https://github.com/project42/shinobi/tree/main/packages/components/eventbridge-rule-pattern#readme",
   "engines": {
-    "node": ">=20.0.0"
+    "node": ">=20.0.0",
+    "npm": ">=10.0.0"
   },
   "dependencies": {
     "@shinobi/core": "workspace:*",
-    "@shinobi/contracts": "workspace:*",
     "aws-cdk-lib": "^2.100.0",
     "constructs": "^10.0.0"
   },
@@ -39,17 +59,18 @@
     "constructs": "^10.0.0"
   },
   "devDependencies": {
+    "@types/jest": "^29.5.12",
     "@types/node": "^20.0.0",
-    "typescript": "^5.0.0",
-    "cdk-nag": "^2.28.0"
+    "eslint": "^8.57.0",
+    "jest": "^29.7.0",
+    "ts-jest": "^29.1.1",
+    "typescript": "^5.0.0"
   },
   "scripts": {
-    "build": "tsc",
+    "build": "tsc -p tsconfig.json",
     "test": "jest",
-    "test:watch": "jest --watch",
-    "test:coverage": "jest --coverage",
-    "lint": "eslint . --ext .ts",
-    "lint:fix": "eslint . --ext .ts --fix"
+    "lint": "eslint src/**/*.ts",
+    "typecheck": "tsc --noEmit"
   },
   "publishConfig": {
     "access": "restricted"
@@ -62,7 +83,8 @@
     "awsServices": [
       "EVENTBRIDGE",
       "CLOUDWATCH",
-      "SQS"
+      "SQS",
+      "KMS"
     ],
     "complianceFrameworks": [
       "commercial",
@@ -78,7 +100,15 @@
       "pattern",
       "events",
       "integration",
-      "automation"
+      "automation",
+      "compliance",
+      "fedramp"
+    ],
+    "securityFeatures": [
+      "kms-encryption",
+      "mandatory-dlq",
+      "mandatory-monitoring",
+      "compliance-aware-retention"
     ]
   }
 }

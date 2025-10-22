@@ -397,7 +397,7 @@ defaults:
         statistic: Sum
       cloudWatchLogs:
         enabled: true
-        retentionDays: 365
+        retentionDays: 3653
         removalPolicy: retain
     deadLetterQueue:
       enabled: true
@@ -436,7 +436,7 @@ defaults:
           statistic: Sum
       cloudWatchLogs:
         enabled: true
-        retentionDays: 365
+        retentionDays: 3653
         removalPolicy: retain
     tags:
       compliance-framework: fedramp-high

@@ -7,9 +7,9 @@ This directory contains comprehensive observability documentation for the EventB
 The EventBridge Rule Pattern component provides built-in observability through:
 - CloudWatch Metrics (automatic)
 - CloudWatch Alarms (configurable)
-- CloudWatch Logs (optional)
+- CloudWatch Logs (mandatory, encrypted)
 - Structured logging (component lifecycle)
-- Dead Letter Queue monitoring
+- Dead Letter Queue monitoring (mandatory)
 
 ## Table of Contents
 
@@ -193,16 +193,16 @@ alarm.addAlarmAction(new cloudwatch_actions.SnsAction(topic));
 
 ### Log Configuration
 
-CloudWatch Logs can capture matched events for audit and debugging.
+CloudWatch Logs capture matched events for audit and debugging and are mandatory under the platform standard. FedRAMP deployments automatically switch to customer-managed CMKs and longer retention windows.
 
-**Configuration:**
+**Configuration (defaults shown):**
 ```yaml
 monitoring:
   cloudWatchLogs:
     enabled: true
-    logGroupName: /platform/events/my-service/my-rule  # Optional custom name
-    retentionDays: 90  # Commercial: 30, FedRAMP-Moderate: 90, FedRAMP-High: 365
-    removalPolicy: retain  # retain or destroy
+    logGroupName: /aws/platform/events/${serviceName}-${componentName}-${ruleName}
+    retentionDays: 365  # Automatically elevated to 1827/3653 for FedRAMP
+    removalPolicy: retain
 ```
 
 ### Log Format
@@ -249,9 +249,9 @@ fields @timestamp, source, detail
 
 | Framework | Default Retention | Configurable Range |
 |-----------|-------------------|-------------------|
-| Commercial | 30 days | 1-3653 days |
-| FedRAMP Moderate | 90 days | 90-3653 days |
-| FedRAMP High | 365 days | 365-3653 days (7 years) |
+| Commercial | 365 days (1 year) | 1-3653 days |
+| FedRAMP Moderate | 1827 days (5 years) | 1827-3653 days |
+| FedRAMP High | 3653 days (10 years) | 3653 days |
 
 ---
 
@@ -581,6 +581,13 @@ aws cloudwatch put-dashboard \
   --dashboard-body file://dashboard.json
 ```
 
+### Packaged Observability Assets
+
+- `dashboards/rule-operations.json` — baseline dashboard template referenced above.
+- `runbooks/failed-invocations.md` — playbook for handling sustained `FailedInvocations` alarms.
+- `runbooks/dlq-backlog.md` — guidance for diagnosing and draining DLQ backlog.
+- `slos/rule-availability.yaml` — 99.9% availability service-level objective definition.
+
 ---
 
 ## Troubleshooting
@@ -760,4 +767,3 @@ For questions, issues, or suggestions about observability features:
 - GitHub Issues: https://github.com/project42/shinobi/issues
 - Platform Slack: #platform-observability
 - Documentation: https://docs.shinobi.dev/observability
-
