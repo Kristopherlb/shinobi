@@ -57,6 +57,10 @@ export class ServiceConnectBinderStrategy implements IBinderStrategy {
       throw new Error('Source component must expose a security group for service:connect bindings');
     }
 
+    if (!targetSecurityGroup) {
+      throw new Error('Target component must expose or declare a security group for service:connect bindings');
+    }
+
     targetSecurityGroup.addIngressRule(
       sourceSecurityGroup,
       ec2.Port.tcp(listenerPort),

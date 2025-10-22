@@ -6,8 +6,9 @@
 
 import { App, Stack } from 'aws-cdk-lib';
 import { Template, Match } from 'aws-cdk-lib/assertions';
-import { GlueJobComponent } from '../glue-job.component.ts';
-import { GlueJobConfig } from '../glue-job.builder.ts';
+import { GlueJobComponent } from '../src/glue-job.component.ts';
+import { GlueJobConfig } from '../src/glue-job.builder.ts';
+import { GlueJobComponentCreator } from '../src/glue-job.creator.ts';
 import { ComponentContext, ComponentSpec } from '@shinobi/core';
 
 const BASE_SCRIPT_LOCATION = 's3://test-bucket/scripts/job.py';
@@ -21,9 +22,13 @@ const createSpec = (config: Partial<GlueJobConfig> = {}): ComponentSpec => ({
   }
 });
 
-const createContext = (stack: Stack, complianceFramework: 'commercial' | 'fedramp-moderate' | 'fedramp-high'): ComponentContext => ({
+const createContext = (
+  stack: Stack,
+  complianceFramework: 'commercial' | 'fedramp-moderate' | 'fedramp-high',
+  environment: ComponentContext['environment'] = 'dev'
+): ComponentContext => ({
   serviceName: 'test-service',
-  environment: 'dev',
+  environment,
   complianceFramework,
   scope: stack,
   region: 'us-east-1',
@@ -49,7 +54,7 @@ const synthesize = (
 };
 
 describe('GlueJobComponent synthesis', () => {
-  it('synthesizes commercial configuration without encryption or monitoring', () => {
+  it('SynthCommercialDefaults__BaselineConfig__OmitsOptionalControls', () => {
     const { template, component } = synthesize('commercial');
 
     template.hasResourceProperties('AWS::Glue::Job', Match.objectLike({
@@ -70,7 +75,7 @@ describe('GlueJobComponent synthesis', () => {
     expect(capabilities['etl:glue-job'].monitoringEnabled).toBe(false);
   });
 
-  it('creates encryption resources and alarms for fedramp-high', () => {
+  it('SynthFedRAMPHigh__HardenedDefaults__CreatesEncryptionAndAlarms', () => {
     const { template, component } = synthesize('fedramp-high');
 
     template.hasResourceProperties('AWS::Glue::Job', Match.objectLike({
@@ -105,7 +110,7 @@ describe('GlueJobComponent synthesis', () => {
     expect(capability.kmsKeyArn).toBeDefined();
   });
 
-  it('honours manifest overrides for logging groups and retries', () => {
+  it('SynthConfig__ManifestOverrides__AppliesCustomLoggingAndRetries', () => {
     const { template, component } = synthesize('fedramp-moderate', {
       maxRetries: 2,
       logging: {
@@ -129,5 +134,26 @@ describe('GlueJobComponent synthesis', () => {
     }));
 
     expect(component.getConstruct('logGroup:custom')).toBeDefined();
+  });
+});
+
+describe('GlueJobComponentCreator validation', () => {
+  it('ValidateSpec__MonitoringDisabledInProd__FailsWithActionableError', () => {
+    const creator = new GlueJobComponentCreator();
+    const app = new App();
+    const stack = new Stack(app, 'ValidateStack');
+    const context = createContext(stack, 'fedramp-moderate', 'prod');
+    const spec = createSpec({
+      monitoring: {
+        enabled: false
+      }
+    });
+
+    const result = creator.validateSpec(spec, context);
+
+    expect(result.valid).toBe(false);
+    expect(result.errors).toEqual(
+      expect.arrayContaining(['Monitoring must remain enabled in production workloads.'])
+    );
   });
 });

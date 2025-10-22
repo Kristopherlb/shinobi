@@ -1,0 +1,303 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "title": "Glue Job Component Configuration",
+  "description": "Configuration schema for the Glue Job component following the Platform Component API contract and AWS MCP schema guidelines.",
+  "type": "object",
+  "additionalProperties": false,
+  "properties": {
+    "jobName": {
+      "type": "string",
+      "description": "Override the generated job name. Defaults to {serviceName}-{componentName}.",
+      "pattern": "^[a-zA-Z0-9_-]+$"
+    },
+    "description": {
+      "type": "string",
+      "description": "Human-readable description of the Glue job."
+    },
+    "glueVersion": {
+      "type": "string",
+      "description": "Glue version to target for the job runtime.",
+      "enum": ["1.0", "2.0", "3.0", "4.0"]
+    },
+    "jobType": {
+      "type": "string",
+      "description": "Glue job command type.",
+      "enum": ["glueetl", "gluestreaming", "pythonshell", "glueray"]
+    },
+    "roleArn": {
+      "type": "string",
+      "description": "Optional execution role ARN. If omitted the component will create a role."
+    },
+    "scriptLocation": {
+      "type": "string",
+      "description": "S3 URI of the Glue job script."
+    },
+    "command": {
+      "$ref": "#/definitions/commandConfig",
+      "description": "Glue job command configuration."
+    },
+    "connections": {
+      "type": "array",
+      "description": "Optional Glue connections to attach to the job.",
+      "items": {
+        "type": "string"
+      }
+    },
+    "maxConcurrentRuns": {
+      "type": "number",
+      "description": "Maximum number of concurrent job runs allowed.",
+      "minimum": 1,
+      "maximum": 1000
+    },
+    "maxRetries": {
+      "type": "number",
+      "description": "Number of retries Glue should attempt for failed runs.",
+      "minimum": 0,
+      "maximum": 10
+    },
+    "timeout": {
+      "type": "number",
+      "description": "Maximum job run time in minutes.",
+      "minimum": 1,
+      "maximum": 2880
+    },
+    "notificationProperty": {
+      "type": "object",
+      "description": "Notification delay configuration.",
+      "additionalProperties": false,
+      "properties": {
+        "notifyDelayAfter": {
+          "type": "number",
+          "minimum": 1,
+          "description": "Number of minutes to wait before sending delay notifications."
+        }
+      }
+    },
+    "executionProperty": {
+      "type": "object",
+      "description": "Overrides for execution concurrency.",
+      "additionalProperties": false,
+      "properties": {
+        "maxConcurrentRuns": {
+          "type": "number",
+          "minimum": 1,
+          "maximum": 1000,
+          "description": "Maximum number of concurrent runs Glue should permit."
+        }
+      }
+    },
+    "workerConfiguration": {
+      "$ref": "#/definitions/workerConfiguration",
+      "description": "Worker type and scaling configuration."
+    },
+    "defaultArguments": {
+      "type": "object",
+      "description": "Arguments merged with the platform defaults. Values must be strings.",
+      "additionalProperties": {
+        "type": "string"
+      }
+    },
+    "nonOverridableArguments": {
+      "type": "object",
+      "description": "Arguments that cannot be overridden by job invocation parameters.",
+      "additionalProperties": {
+        "type": "string"
+      }
+    },
+    "security": {
+      "$ref": "#/definitions/securityConfig",
+      "description": "Security configuration including encryption strategy."
+    },
+    "logging": {
+      "$ref": "#/definitions/loggingConfig",
+      "description": "Log group configuration for Glue job outputs."
+    },
+    "monitoring": {
+      "$ref": "#/definitions/monitoringConfig",
+      "description": "Monitoring and alarm thresholds for the Glue job."
+    },
+    "tags": {
+      "type": "object",
+      "description": "Additional user-defined tags merged with platform standard tags.",
+      "additionalProperties": {
+        "type": "string"
+      }
+    }
+  },
+  "required": ["scriptLocation"],
+  "definitions": {
+    "commandConfig": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "pythonVersion": {
+          "type": "string",
+          "enum": ["2", "3", "3.6", "3.7", "3.9", "3.10"],
+          "default": "3",
+          "description": "Python runtime version to execute the job script."
+        },
+        "scriptArguments": {
+          "type": "object",
+          "description": "Command-line arguments passed to the Glue job script.",
+          "additionalProperties": {
+            "type": "string"
+          }
+        }
+      }
+    },
+    "workerConfiguration": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "workerType": {
+          "type": "string",
+          "enum": ["Standard", "G.1X", "G.2X", "G.4X", "G.8X", "Z.2X"],
+          "description": "Glue worker type used for the job."
+        },
+        "numberOfWorkers": {
+          "type": "number",
+          "minimum": 1,
+          "maximum": 299,
+          "description": "Number of Glue workers to provision."
+        }
+      }
+    },
+    "loggingGroupConfig": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["id"],
+      "properties": {
+        "id": {
+          "type": "string",
+          "description": "Identifier for the log group (used in construct handles)."
+        },
+        "enabled": {
+          "type": "boolean",
+          "description": "Whether this log group should be created."
+        },
+        "logGroupSuffix": {
+          "type": "string",
+          "description": "Suffix appended to the generated log group name."
+        },
+        "retentionDays": {
+          "type": "number",
+          "minimum": 1,
+          "description": "CloudWatch Logs retention in days."
+        },
+        "removalPolicy": {
+          "type": "string",
+          "enum": ["retain", "destroy"],
+          "description": "Removal policy applied to the log group."
+        }
+      }
+    },
+    "loggingConfig": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "groups": {
+          "type": "array",
+          "minItems": 1,
+          "description": "Collection of log groups to create for the job.",
+          "items": {
+            "$ref": "#/definitions/loggingGroupConfig"
+          }
+        }
+      }
+    },
+    "monitoringConfig": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "enabled": {
+          "type": "boolean",
+          "description": "Whether monitoring and alarms are enabled."
+        },
+        "jobFailure": {
+          "$ref": "#/definitions/monitoringFailureConfig"
+        },
+        "jobDuration": {
+          "$ref": "#/definitions/monitoringDurationConfig"
+        }
+      }
+    },
+    "monitoringFailureConfig": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "threshold": {
+          "type": "number",
+          "minimum": 0,
+          "description": "Number of failed tasks needed to trigger the alarm."
+        },
+        "evaluationPeriods": {
+          "type": "number",
+          "minimum": 1,
+          "description": "Number of periods over which data is compared to the threshold."
+        },
+        "periodMinutes": {
+          "type": "number",
+          "minimum": 1,
+          "description": "Evaluation period length in minutes."
+        }
+      }
+    },
+    "monitoringDurationConfig": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "thresholdMs": {
+          "type": "number",
+          "minimum": 1,
+          "description": "Glue job duration threshold in milliseconds."
+        },
+        "evaluationPeriods": {
+          "type": "number",
+          "minimum": 1,
+          "description": "Number of periods over which data is compared to the threshold."
+        },
+        "periodMinutes": {
+          "type": "number",
+          "minimum": 1,
+          "description": "Evaluation period length in minutes."
+        }
+      }
+    },
+    "encryptionConfig": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "enabled": {
+          "type": "boolean",
+          "description": "Enable Glue job encryption."
+        },
+        "kmsKeyArn": {
+          "type": "string",
+          "description": "ARN of an existing KMS key to use for encryption."
+        },
+        "createCustomerManagedKey": {
+          "type": "boolean",
+          "description": "Whether to create a customer managed key when no ARN is provided."
+        },
+        "removalPolicy": {
+          "type": "string",
+          "enum": ["retain", "destroy"],
+          "description": "Removal policy for the managed KMS key."
+        }
+      }
+    },
+    "securityConfig": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "securityConfigurationName": {
+          "type": "string",
+          "description": "Name of an existing Glue security configuration."
+        },
+        "encryption": {
+          "$ref": "#/definitions/encryptionConfig"
+        }
+      }
+    }
+  }
+}

@@ -9,14 +9,14 @@
 
 import { ShinobiMcpServer } from './shinobi-server.js';
 import { ShinobiConfig } from './config.js';
-import { Logger } from '@shinobi/core';
+import { PlatformLogger as Logger } from '@shinobi/core';
 import { pathToFileURL } from 'node:url';
 
 /**
  * Main function to start the Shinobi MCP Server
  */
 async function main(): Promise<void> {
-  const logger = new Logger();
+  const logger = Logger.getLogger('shinobi-mcp-server');
 
   try {
     // Load configuration from environment or use defaults
@@ -27,16 +27,14 @@ async function main(): Promise<void> {
     await server.start();
 
     logger.info('Shinobi MCP Server started successfully', {
-      service: 'shinobi-mcp-server',
-      version: config.api?.version || '1.0',
-      environment: process.env.NODE_ENV || 'development'
+      data: {
+        service: 'shinobi-mcp-server',
+        version: config.api?.version || '1.0',
+        environment: process.env.NODE_ENV || 'development'
+      }
     });
   } catch (error) {
-    logger.error('Failed to start Shinobi MCP Server', {
-      service: 'shinobi-mcp-server',
-      error: error instanceof Error ? error.message : String(error),
-      stack: error instanceof Error ? error.stack : undefined
-    });
+    logger.error('Failed to start Shinobi MCP Server', error instanceof Error ? error : new Error(String(error)));
     process.exit(1);
   }
 }
@@ -127,20 +125,24 @@ function loadConfigFromEnvironment(): ShinobiConfig {
 }
 
 // Handle graceful shutdown
-const logger = new Logger();
+const logger = Logger.getLogger('shinobi-mcp-server');
 
 process.on('SIGINT', () => {
   logger.info('Received SIGINT, shutting down gracefully...', {
-    service: 'shinobi-mcp-server',
-    signal: 'SIGINT'
+    data: {
+      service: 'shinobi-mcp-server',
+      signal: 'SIGINT'
+    }
   });
   process.exit(0);
 });
 
 process.on('SIGTERM', () => {
   logger.info('Received SIGTERM, shutting down gracefully...', {
-    service: 'shinobi-mcp-server',
-    signal: 'SIGTERM'
+    data: {
+      service: 'shinobi-mcp-server',
+      signal: 'SIGTERM'
+    }
   });
   process.exit(0);
 });
@@ -148,11 +150,7 @@ process.on('SIGTERM', () => {
 const entryHref = process.argv[1] ? pathToFileURL(process.argv[1]).href : undefined;
 if (entryHref === import.meta.url) {
   main().catch((error) => {
-    logger.error('Unhandled error', {
-      service: 'shinobi-mcp-server',
-      error: error instanceof Error ? error.message : String(error),
-      stack: error instanceof Error ? error.stack : undefined
-    });
+    logger.error('Unhandled error', error instanceof Error ? error : new Error(String(error)));
     process.exit(1);
   });
 }

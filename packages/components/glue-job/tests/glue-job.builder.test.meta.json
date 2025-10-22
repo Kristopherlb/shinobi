@@ -1,0 +1,165 @@
+{
+  "tests": [
+    {
+      "id": "TP-glue-job-config-001",
+      "level": "unit",
+      "capability": "Resolve commercial hardened defaults without overrides",
+      "oracle": "exact",
+      "invariants": [
+        "Default arguments always include Glue catalog enablement",
+        "Monitoring disabled by default for commercial framework"
+      ],
+      "fixtures": [
+        "MockConfigContext: commercial",
+        "Minimal component spec with scriptLocation"
+      ],
+      "inputs": {
+        "shape": "ConfigBuilderContext + ComponentSpec",
+        "notes": "No manifest overrides; validates pure defaults"
+      },
+      "risks": [
+        "Regression: accidental change to commercial baseline configuration"
+      ],
+      "dependencies": [
+        "@shinobi/core ConfigBuilder"
+      ],
+      "evidence": [
+        "packages/components/glue-job/tests/glue-job.builder.test.ts#L33"
+      ],
+      "compliance_refs": [
+        "std://configuration"
+      ],
+      "ai_generated": false,
+      "human_reviewed_by": "platform-engineering"
+    },
+    {
+      "id": "TP-glue-job-config-002",
+      "level": "unit",
+      "capability": "Enforce FedRAMP Moderate defaults",
+      "oracle": "exact",
+      "invariants": [
+        "Encryption enabled with customer-managed key flag",
+        "Compliance log group retained for 365 days"
+      ],
+      "fixtures": [
+        "MockConfigContext: fedramp-moderate",
+        "Minimal component spec"
+      ],
+      "inputs": {
+        "shape": "ConfigBuilderContext + ComponentSpec",
+        "notes": "No manifest overrides; asserts FedRAMP defaults"
+      },
+      "risks": [
+        "Compliance regression for FedRAMP Moderate deployments"
+      ],
+      "dependencies": [
+        "@shinobi/core ConfigBuilder"
+      ],
+      "evidence": [
+        "packages/components/glue-job/tests/glue-job.builder.test.ts#L45"
+      ],
+      "compliance_refs": [
+        "std://configuration",
+        "pack://aws.fedramp-moderate"
+      ],
+      "ai_generated": false,
+      "human_reviewed_by": "platform-engineering"
+    },
+    {
+      "id": "TP-glue-job-config-003",
+      "level": "unit",
+      "capability": "Apply FedRAMP High hardened profile",
+      "oracle": "exact",
+      "invariants": [
+        "Audit log group retention at 3650 days",
+        "Worker configuration scaled per hardened defaults"
+      ],
+      "fixtures": [
+        "MockConfigContext: fedramp-high",
+        "Minimal component spec"
+      ],
+      "inputs": {
+        "shape": "ConfigBuilderContext + ComponentSpec",
+        "notes": "Validates high baseline for encryption and monitoring"
+      },
+      "risks": [
+        "Loss of FedRAMP High hardened settings"
+      ],
+      "dependencies": [
+        "@shinobi/core ConfigBuilder"
+      ],
+      "evidence": [
+        "packages/components/glue-job/tests/glue-job.builder.test.ts#L63"
+      ],
+      "compliance_refs": [
+        "std://configuration",
+        "pack://aws.fedramp-high"
+      ],
+      "ai_generated": false,
+      "human_reviewed_by": "platform-engineering"
+    },
+    {
+      "id": "TP-glue-job-config-004",
+      "level": "unit",
+      "capability": "Allow manifest overrides to win over defaults",
+      "oracle": "exact",
+      "invariants": [
+        "Manifest values override platform defaults",
+        "Logging group overrides respected verbatim"
+      ],
+      "fixtures": [
+        "MockConfigContext: fedramp-moderate",
+        "Component spec with override map"
+      ],
+      "inputs": {
+        "shape": "ConfigBuilderContext + ComponentSpec with overrides",
+        "notes": "Overrides include logging, retries, worker configuration"
+      },
+      "risks": [
+        "Regression in configuration precedence chain"
+      ],
+      "dependencies": [
+        "@shinobi/core ConfigBuilder"
+      ],
+      "evidence": [
+        "packages/components/glue-job/tests/glue-job.builder.test.ts#L84"
+      ],
+      "compliance_refs": [
+        "std://configuration"
+      ],
+      "ai_generated": false,
+      "human_reviewed_by": "platform-engineering"
+    },
+    {
+      "id": "TP-glue-job-config-005",
+      "level": "unit",
+      "capability": "Reject configs missing mandatory scriptLocation",
+      "oracle": "exact",
+      "invariants": [
+        "Builder throws before returning invalid configuration"
+      ],
+      "fixtures": [
+        "MockConfigContext: commercial",
+        "Component spec missing scriptLocation"
+      ],
+      "inputs": {
+        "shape": "ConfigBuilderContext + ComponentSpec without scriptLocation",
+        "notes": "Exercises negative validation path"
+      },
+      "risks": [
+        "Undetected invalid configuration leading to runtime failure"
+      ],
+      "dependencies": [
+        "@shinobi/core ConfigBuilder"
+      ],
+      "evidence": [
+        "packages/components/glue-job/tests/glue-job.builder.test.ts#L122"
+      ],
+      "compliance_refs": [
+        "std://configuration"
+      ],
+      "ai_generated": false,
+      "human_reviewed_by": "platform-engineering"
+    }
+  ]
+}

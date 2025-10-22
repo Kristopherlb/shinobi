@@ -1,0 +1,236 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "title": "Feature Flag Component Config",
+  "description": "Declarative configuration for provisioning an individual feature flag within an OpenFeature compatible provider.",
+  "type": "object",
+  "additionalProperties": false,
+  "properties": {
+    "name": {
+      "type": "string",
+      "description": "Optional component instance name (defaults to the manifest component name).",
+      "pattern": "^[a-zA-Z][a-zA-Z0-9-_]*$",
+      "maxLength": 128
+    },
+    "description": {
+      "type": "string",
+      "description": "Human friendly description of the flag's purpose.",
+      "maxLength": 1024
+    },
+    "flagKey": {
+      "type": "string",
+      "description": "Unique identifier for the feature flag. Used as the lookup key at runtime.",
+      "pattern": "^[a-zA-Z][a-zA-Z0-9_-]*$",
+      "minLength": 1,
+      "maxLength": 100
+    },
+    "flagType": {
+      "type": "string",
+      "description": "Data type of the flag value. Determines how variants and defaults are validated.",
+      "enum": ["boolean", "string", "number", "object"],
+      "default": "boolean"
+    },
+    "defaultValue": {
+      "description": "Default value returned when no targeting rule is matched or the provider is unavailable.",
+      "oneOf": [
+        { "type": "boolean" },
+        { "type": "string" },
+        { "type": "number" },
+        { "type": "object" }
+      ]
+    },
+    "enabled": {
+      "type": "boolean",
+      "description": "Whether the flag is enabled by default.",
+      "default": true
+    },
+    "targetingRules": {
+      "type": "object",
+      "description": "Progressive delivery configuration for percentage rollouts, contextual targeting, and multi-variant experiments.",
+      "additionalProperties": false,
+      "properties": {
+        "percentage": {
+          "type": "number",
+          "description": "Percentage of traffic that should receive the default variant (0-100).",
+          "minimum": 0,
+          "maximum": 100
+        },
+        "conditions": {
+          "type": "array",
+          "description": "Context based targeting rules evaluated by the provider.",
+          "items": {
+            "type": "object",
+            "additionalProperties": false,
+            "required": ["attribute", "operator", "value"],
+            "properties": {
+              "attribute": {
+                "type": "string",
+                "description": "Context attribute used for evaluation (e.g., userTier, region).",
+                "minLength": 1
+              },
+              "operator": {
+                "type": "string",
+                "description": "Comparison operator supported by the provider.",
+                "enum": [
+                  "equals",
+                  "not_equals",
+                  "in",
+                  "not_in",
+                  "contains",
+                  "starts_with",
+                  "ends_with"
+                ]
+              },
+              "value": {
+                "description": "Value the operator evaluates against.",
+                "oneOf": [
+                  { "type": "string" },
+                  { "type": "number" },
+                  { "type": "boolean" },
+                  { "type": "array" },
+                  { "type": "object" }
+                ]
+              },
+              "variant": {
+                "type": "string",
+                "description": "Optional variant name to serve when the condition matches.",
+                "minLength": 1
+              }
+            }
+          }
+        },
+        "variants": {
+          "type": "array",
+          "description": "Named variants for multi-value flags (string/object). Each variant must define a weight.",
+          "items": {
+            "type": "object",
+            "additionalProperties": false,
+            "required": ["name", "value", "weight"],
+            "properties": {
+              "name": {
+                "type": "string",
+                "description": "Unique identifier for the variant.",
+                "minLength": 1,
+                "maxLength": 64
+              },
+              "value": {
+                "description": "Value served when this variant is selected.",
+                "oneOf": [
+                  { "type": "string" },
+                  { "type": "number" },
+                  { "type": "boolean" },
+                  { "type": "object" }
+                ]
+              },
+              "weight": {
+                "type": "number",
+                "description": "Relative percentage weight (0-100). All variants should total 100.",
+                "minimum": 0,
+                "maximum": 100
+              }
+            }
+          }
+        }
+      }
+    },
+    "providerConfig": {
+      "type": "object",
+      "description": "Provider specific configuration options.",
+      "additionalProperties": false,
+      "properties": {
+        "awsAppConfig": {
+          "type": "object",
+          "description": "AWS AppConfig configuration overrides.",
+          "additionalProperties": false,
+          "properties": {
+            "constraints": {
+              "type": "object",
+              "description": "JSON schema fragment used to validate flag values at deployment time.",
+              "additionalProperties": true
+            },
+            "deploymentStrategyId": {
+              "type": "string",
+              "description": "Custom deployment strategy identifier to use for feature rollout."
+            },
+            "kmsKeyArn": {
+              "type": "string",
+              "description": "KMS key ARN enforcing encryption for hosted configuration versions."
+            }
+          }
+        },
+        "launchDarkly": {
+          "type": "object",
+          "description": "LaunchDarkly specific metadata.",
+          "additionalProperties": false,
+          "properties": {
+            "tags": {
+              "type": "array",
+              "description": "LaunchDarkly tags attached to the flag.",
+              "items": { "type": "string" }
+            },
+            "temporary": {
+              "type": "boolean",
+              "description": "Marks the flag as temporary to support cleanup workflows."
+            }
+          }
+        },
+        "flagsmith": {
+          "type": "object",
+          "description": "Flagsmith specific options.",
+          "additionalProperties": false,
+          "properties": {
+            "description": {
+              "type": "string",
+              "description": "Override description stored in Flagsmith."
+            },
+            "initialValue": {
+              "type": "string",
+              "description": "Initial value when the flag is created."
+            }
+          }
+        }
+      }
+    },
+    "monitoring": {
+      "type": "object",
+      "description": "Monitoring and observability configuration for the flag workflow.",
+      "additionalProperties": false,
+      "properties": {
+        "enabled": {
+          "type": "boolean",
+          "description": "Enables monitoring integration for the flag.",
+          "default": true
+        },
+        "detailedMetrics": {
+          "type": "boolean",
+          "description": "Publishes extended CloudWatch metrics for evaluation latency and errors.",
+          "default": false
+        },
+        "alarms": {
+          "type": "object",
+          "description": "Flag specific alarm thresholds used by observability recipes.",
+          "additionalProperties": false,
+          "properties": {
+            "evaluationLatencyMs": {
+              "type": "number",
+              "description": "Maximum allowed evaluation latency before triggering an alarm."
+            },
+            "errorRatePercent": {
+              "type": "number",
+              "description": "Maximum allowed flag evaluation error rate percentage.",
+              "minimum": 0,
+              "maximum": 100
+            }
+          }
+        }
+      }
+    },
+    "tags": {
+      "type": "object",
+      "description": "Additional tags merged with the platform mandatory tag set. Custom values supplement the automatically applied keys `feature-flag-key`, `feature-flag-type`, and `openfeature-standard`.",
+      "additionalProperties": {
+        "type": "string"
+      }
+    }
+  },
+  "required": ["flagKey", "flagType", "defaultValue"]
+}

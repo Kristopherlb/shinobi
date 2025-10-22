@@ -784,6 +784,21 @@ defaults:
     tags:
       compliance: fedramp-high
 
+  feature-flag:
+    enabled: true
+    flagType: boolean
+    monitoring:
+      enabled: true
+      detailedMetrics: true
+      alarms:
+        evaluationLatencyMs: 250
+        errorRatePercent: 2
+    providerConfig:
+      awsAppConfig:
+        deploymentStrategyId: progressive-rollout
+    tags:
+      compliance: fedramp-high
+
   secrets-manager:
     automaticRotation:
       enabled: true

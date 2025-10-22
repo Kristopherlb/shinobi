@@ -15,8 +15,7 @@ import {
   ReadResourceRequestSchema,
 } from '@modelcontextprotocol/sdk/types.js';
 import { ShinobiConfig } from './config.js';
-import { Logger } from '@shinobi/core';
-import { ComprehensiveBinderRegistry } from '@shinobi/core/platform/binders/registry/comprehensive-binder-registry.js';
+import { PlatformLogger as Logger, ComprehensiveBinderRegistry } from '@shinobi/core';
 import fs from 'node:fs';
 import path from 'node:path';
 import yaml from 'yaml';
@@ -119,18 +118,47 @@ export class ShinobiMcpServer {
     await this.server.connect(transport);
 
     // Use platform logger instead of console
-    const logger = new Logger();
+    const logger = Logger.getLogger('shinobi-mcp-server');
     logger.info('Shinobi MCP Server started', {
-      service: 'shinobi-mcp-server',
-      transport: 'stdio'
+      data: {
+        service: 'shinobi-mcp-server',
+        transport: 'stdio'
+      }
     });
+  }
+
+  /**
+   * Find the workspace root by looking for package.json with workspaces
+   */
+  private findWorkspaceRoot(): string {
+    let currentDir = process.cwd();
+    
+    // Walk up the directory tree to find workspace root
+    while (currentDir !== path.dirname(currentDir)) {
+      const pkgPath = path.join(currentDir, 'package.json');
+      if (fs.existsSync(pkgPath)) {
+        try {
+          const pkg = JSON.parse(fs.readFileSync(pkgPath, 'utf8'));
+          // Check if this is the workspace root (has workspaces or pnpm-workspace.yaml)
+          if (pkg.workspaces || fs.existsSync(path.join(currentDir, 'pnpm-workspace.yaml'))) {
+            return currentDir;
+          }
+        } catch (error) {
+          // Continue searching
+        }
+      }
+      currentDir = path.dirname(currentDir);
+    }
+    
+    // Fallback to process.cwd() if not found
+    return process.cwd();
   }
 
   /**
    * Load Platform KB infrastructure
    */
   private async loadPlatformKB(): Promise<{ index: PlatformKBIndex; packs: PackMeta[] }> {
-    const kbRoot = path.join(process.cwd(), 'platform-kb');
+    const kbRoot = path.join(this.findWorkspaceRoot(), 'platform-kb');
 
     // Load index.json
     const indexPath = path.join(kbRoot, 'index.json');
@@ -2756,7 +2784,8 @@ describe('${className} Observability', () => {
 
   // Tool implementation methods (stubs for now)
   private async getComponentCatalog(args: any): Promise<any> {
-    const componentRoot = path.join(process.cwd(), 'packages', 'components');
+    const workspaceRoot = this.findWorkspaceRoot();
+    const componentRoot = path.join(workspaceRoot, 'packages', 'components');
     const filter = (args?.filter as string | undefined)?.toLowerCase();
     const specificComponent = (args?.componentName as string | undefined)?.toLowerCase();
 
@@ -2790,7 +2819,7 @@ describe('${className} Observability', () => {
             };
           } catch (error) {
             Logger.getLogger('shinobi-mcp-server').warn(`Failed to load metadata for component ${dirName}`, {
-              error: (error as Error).message
+              data: { componentName: dirName, errorMessage: (error as Error).message }
             });
             return {
               name: dirName,
@@ -2824,7 +2853,7 @@ describe('${className} Observability', () => {
     return {
       content: [
         {
-          type: 'application/json',
+          type: 'text',
           text: JSON.stringify({ components: filteredComponents }, null, 2)
         }
       ]
@@ -2855,7 +2884,7 @@ describe('${className} Observability', () => {
     return {
       content: [
         {
-          type: 'application/json',
+          type: 'text',
           text: JSON.stringify(schema, null, 2)
         }
       ]
@@ -2911,7 +2940,7 @@ describe('${className} Observability', () => {
     return {
       content: [
         {
-          type: 'application/json',
+          type: 'text',
           text: JSON.stringify({ capabilities }, null, 2)
         }
       ]
@@ -2954,7 +2983,7 @@ describe('${className} Observability', () => {
     return {
       content: [
         {
-          type: 'application/json',
+          type: 'text',
           text: JSON.stringify({ bindings }, null, 2)
         }
       ]
@@ -2972,7 +3001,7 @@ describe('${className} Observability', () => {
     return {
       content: [
         {
-          type: 'application/json',
+          type: 'text',
           text: JSON.stringify({ patterns: filteredPatterns }, null, 2)
         }
       ]
@@ -2995,7 +3024,7 @@ describe('${className} Observability', () => {
     return {
       content: [
         {
-          type: 'application/json',
+          type: 'text',
           text: JSON.stringify(pattern, null, 2)
         }
       ]
@@ -3061,7 +3090,7 @@ describe('${className} Observability', () => {
     return {
       content: [
         {
-          type: 'application/json',
+          type: 'text',
           text: JSON.stringify({
             manifestPath,
             nodes,
@@ -3122,7 +3151,7 @@ describe('${className} Observability', () => {
         data = entry.name.toLowerCase().endsWith('.json') ? JSON.parse(raw) : yaml.parse(raw);
       } catch (error) {
         Logger.getLogger('shinobi-mcp-server').warn(`Failed to parse pattern file ${fullPath}`, {
-          error: (error as Error).message
+          data: { filePath: fullPath, errorMessage: (error as Error).message }
         });
         continue;
       }

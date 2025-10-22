@@ -5,4 +5,5 @@
  */
 
 export * from './s3-advanced-features.service.js';
-export * from './s3-bucket.validator.js';
+// Export only the validator class, not its internal types to avoid conflicts
+export { S3BucketValidator } from './s3-bucket.validator.js';

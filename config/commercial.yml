@@ -645,6 +645,17 @@ defaults:
       retrieverServicePrincipal: lambda.amazonaws.com
     tags: {}
 
+  feature-flag:
+    enabled: true
+    flagType: boolean
+    monitoring:
+      enabled: true
+      detailedMetrics: false
+    providerConfig:
+      awsAppConfig:
+        deploymentStrategyId: progressive-rollout
+    tags: {}
+
   secrets-manager:
     automaticRotation:
       enabled: false

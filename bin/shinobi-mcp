@@ -1,0 +1,24 @@
+#!/usr/bin/env bash
+# Shinobi MCP Server Launcher
+# This wrapper script resolves the project path dynamically
+
+# Get the directory where this script is located
+SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+
+# Project root is one level up from bin/
+PROJECT_ROOT="$(dirname "$SCRIPT_DIR")"
+
+# Path to the MCP server
+MCP_SERVER="$PROJECT_ROOT/apps/shinobi-mcp-server/dist/index.js"
+
+# Check if the server exists
+if [ ! -f "$MCP_SERVER" ]; then
+    echo "❌ Error: Shinobi MCP Server not found at $MCP_SERVER" >&2
+    echo "Run 'pnpm mcp:build' from the project root to build it." >&2
+    exit 1
+fi
+
+# Launch the server
+exec node "$MCP_SERVER" "$@"
+
+
