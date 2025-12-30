@@ -1,0 +1,306 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "title": "IAM Role Component Configuration",
+  "type": "object",
+  "additionalProperties": false,
+  "properties": {
+    "roleName": {
+      "type": "string",
+      "description": "Name of the role (will be auto-generated if not provided)",
+      "pattern": "^[a-zA-Z0-9+=,.@_-]+$",
+      "maxLength": 64
+    },
+    "description": {
+      "type": "string",
+      "description": "Description of the role",
+      "maxLength": 1000
+    },
+    "assumedBy": {
+      "type": "array",
+      "description": "Services or entities that can assume this role",
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "properties": {
+          "service": {
+            "type": "string",
+            "description": "AWS service principal (e.g., lambda.amazonaws.com)"
+          },
+          "accountId": {
+            "type": "string",
+            "description": "AWS account ID for cross-account access",
+            "pattern": "^[0-9]{12}$"
+          },
+          "roleArn": {
+            "type": "string",
+            "description": "ARN of an IAM role that can assume this role"
+          },
+          "federatedProvider": {
+            "type": "string",
+            "description": "Federated identity provider ARN"
+          }
+        }
+      }
+    },
+    "managedPolicies": {
+      "type": "array",
+      "description": "Managed policy ARNs to attach to the role",
+      "items": {
+        "type": "string",
+        "description": "ARN of an AWS managed or customer managed policy"
+      }
+    },
+    "inlinePolicies": {
+      "type": "array",
+      "description": "Inline policies to attach to the role",
+      "items": {
+        "type": "object",
+        "required": ["name", "document"],
+        "additionalProperties": false,
+        "properties": {
+          "name": {
+            "type": "string",
+            "description": "Name of the inline policy"
+          },
+          "document": {
+            "type": "object",
+            "description": "IAM policy document in standard AWS format"
+          }
+        }
+      }
+    },
+    "maxSessionDuration": {
+      "type": "number",
+      "description": "Maximum session duration in seconds",
+      "minimum": 3600,
+      "maximum": 43200,
+      "default": 3600
+    },
+    "externalId": {
+      "type": "string",
+      "description": "External ID for cross-account role assumption",
+      "maxLength": 1224
+    },
+    "path": {
+      "type": "string",
+      "description": "IAM path for the role",
+      "pattern": "^/(?:[a-zA-Z0-9/_-]+/)?$",
+      "default": "/"
+    },
+    "permissionsBoundary": {
+      "type": "string",
+      "description": "ARN of the permissions boundary policy to attach"
+    },
+    "tags": {
+      "type": "object",
+      "description": "Additional tags to apply to the role",
+      "additionalProperties": {
+        "type": "string"
+      }
+    },
+    "logging": {
+      "type": "object",
+      "description": "Logging configuration for IAM role operations",
+      "additionalProperties": false,
+      "properties": {
+        "access": {
+          "$ref": "#/definitions/logConfig",
+          "description": "Access log configuration"
+        },
+        "audit": {
+          "$ref": "#/definitions/logConfig",
+          "description": "Audit log configuration"
+        }
+      }
+    },
+    "monitoring": {
+      "type": "object",
+      "description": "Monitoring and observability configuration",
+      "additionalProperties": false,
+      "properties": {
+        "enabled": {
+          "type": "boolean",
+          "description": "Enable monitoring for this role",
+          "default": false
+        },
+        "detailedMetrics": {
+          "type": "boolean",
+          "description": "Enable detailed CloudWatch metrics",
+          "default": false
+        },
+        "sessionAlarm": {
+          "type": "object",
+          "description": "CloudWatch alarm for session duration monitoring",
+          "additionalProperties": false,
+          "properties": {
+            "enabled": {
+              "type": "boolean",
+              "description": "Enable session duration alarm",
+              "default": false
+            },
+            "thresholdMinutes": {
+              "type": "number",
+              "description": "Threshold in minutes for session duration alarm",
+              "minimum": 1
+            },
+            "evaluationPeriods": {
+              "type": "number",
+              "description": "Number of evaluation periods for the alarm",
+              "minimum": 1,
+              "default": 1
+            },
+            "periodMinutes": {
+              "type": "number",
+              "description": "Alarm evaluation period in minutes",
+              "minimum": 1,
+              "default": 60
+            },
+            "treatMissingData": {
+              "type": "string",
+              "description": "How to treat missing data in the alarm",
+              "enum": ["not-breaching", "breaching", "ignore", "missing"],
+              "default": "not-breaching"
+            },
+            "tags": {
+              "type": "object",
+              "description": "Additional tags for the alarm",
+              "additionalProperties": {
+                "type": "string"
+              }
+            }
+          }
+        }
+      }
+    },
+    "controls": {
+      "type": "object",
+      "description": "Security and compliance control settings",
+      "additionalProperties": false,
+      "properties": {
+          "requireInstanceProfile": {
+          "type": "boolean",
+          "description": "Create an instance profile for EC2 instances",
+          "default": false
+        },
+        "enforceBoundary": {
+          "type": "boolean",
+          "description": "Enforce that a permissions boundary must be provided",
+          "default": false
+        },
+        "denyInsecureTransport": {
+          "type": "boolean",
+          "description": "Deny all actions when SecureTransport is false",
+          "default": false
+        },
+        "trustPolicies": {
+          "type": "object",
+          "description": "Trust policy security controls",
+          "additionalProperties": false,
+          "properties": {
+            "enforceMfa": {
+              "type": "boolean",
+              "description": "Require MFA for role assumption",
+              "default": false
+            },
+            "allowExternalId": {
+              "type": "boolean",
+              "description": "Allow external ID in trust policy",
+              "default": false
+            },
+            "externalIdCondition": {
+              "type": "string",
+              "description": "Required external ID value for role assumption"
+            },
+            "allowedServicePrincipals": {
+              "type": "array",
+              "description": "List of allowed service principals (restricts to only these)",
+              "items": {
+                "type": "string"
+              }
+            }
+          }
+        },
+        "additionalStatements": {
+          "type": "array",
+          "description": "Additional policy statements to add to the role",
+          "items": {
+            "type": "object",
+            "required": ["effect", "actions"],
+            "additionalProperties": false,
+            "properties": {
+              "sid": {
+                "type": "string",
+                "description": "Statement ID for the policy statement"
+              },
+              "effect": {
+                "type": "string",
+                "description": "Effect of the policy statement",
+                "enum": ["Allow", "Deny"]
+              },
+              "actions": {
+                "type": "array",
+                "description": "IAM actions affected by this statement",
+                "items": {
+                  "type": "string"
+                },
+                "minItems": 1
+              },
+              "resources": {
+                "type": "array",
+                "description": "Resource ARNs affected by this statement",
+                "items": {
+                  "type": "string"
+                }
+              },
+              "conditions": {
+                "type": "object",
+                "description": "IAM condition keys for this statement"
+              }
+            }
+          }
+        }
+      }
+    }
+  },
+  "definitions": {
+    "logConfig": {
+      "type": "object",
+      "description": "CloudWatch Logs group configuration",
+      "additionalProperties": false,
+      "properties": {
+        "enabled": {
+          "type": "boolean",
+          "description": "Enable log group creation",
+          "default": false
+        },
+        "logGroupName": {
+          "type": "string",
+          "description": "Custom log group name (auto-generated if not provided)"
+        },
+        "logGroupNameSuffix": {
+          "type": "string",
+          "description": "Suffix to append to auto-generated log group name"
+        },
+        "retentionInDays": {
+          "type": "number",
+          "description": "Log retention period in days",
+          "minimum": 1,
+          "enum": [1, 3, 5, 7, 14, 30, 60, 90, 120, 150, 180, 365, 400, 545, 731, 1827, 3653]
+        },
+        "removalPolicy": {
+          "type": "string",
+          "description": "Removal policy for the log group",
+          "enum": ["retain", "destroy"],
+          "default": "retain"
+        },
+        "tags": {
+          "type": "object",
+          "description": "Additional tags for the log group",
+          "additionalProperties": {
+            "type": "string"
+          }
+        }
+      }
+    }
+  }
+}

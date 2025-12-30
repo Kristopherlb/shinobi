@@ -88,9 +88,6 @@
       "@platform/contracts/*": [
         "packages/core/src/platform/contracts/*"
       ],
-      "@platform/logger": [
-        "packages/core/src/platform/logger/src/index.ts"
-      ],
       "@platform/components/*": [
         "packages/components/*/src"
       ],

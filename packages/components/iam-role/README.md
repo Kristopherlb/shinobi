@@ -27,17 +27,18 @@ components:
     type: iam-role
     config:
       description: "IAM role for web server EC2 instances"
-      role:
-        assumedBy:
-          service: ec2.amazonaws.com
-        inlinePolicies:
-          s3Access:
-            statements:
-              - effect: Allow
-                actions:
+      assumedBy:
+        - service: ec2.amazonaws.com
+      inlinePolicies:
+        - name: s3Access
+          document:
+            Version: "2012-10-17"
+            Statement:
+              - Effect: Allow
+                Action:
                   - s3:GetObject
                   - s3:PutObject
-                resources:
+                Resource:
                   - arn:aws:s3:::my-app-bucket/*
 ```
 
@@ -49,17 +50,18 @@ components:
     type: iam-role
     config:
       description: "Role for external service access"
-      role:
-        assumedBy:
-          account: "987654321098"
+      assumedBy:
+        - accountId: "987654321098"
           externalId: "unique-external-id"
-        inlinePolicies:
-          readOnlyAccess:
-            statements:
-              - effect: Allow
-                actions:
+      inlinePolicies:
+        - name: readOnlyAccess
+          document:
+            Version: "2012-10-17"
+            Statement:
+              - Effect: Allow
+                Action:
                   - s3:GetObject
-                resources:
+                Resource:
                   - arn:aws:s3:::shared-bucket/*
 ```
 
@@ -71,19 +73,20 @@ components:
     type: iam-role
     config:
       description: "Execution role for Lambda functions"
-      role:
-        assumedBy:
-          service: lambda.amazonaws.com
-        managedPolicies:
-          - arn:aws:iam::aws:policy/service-role/AWSLambdaBasicExecutionRole
-        inlinePolicies:
-          dynamoAccess:
-            statements:
-              - effect: Allow
-                actions:
+      assumedBy:
+        - service: lambda.amazonaws.com
+      managedPolicies:
+        - arn:aws:iam::aws:policy/service-role/AWSLambdaBasicExecutionRole
+      inlinePolicies:
+        - name: dynamoAccess
+          document:
+            Version: "2012-10-17"
+            Statement:
+              - Effect: Allow
+                Action:
                   - dynamodb:GetItem
                   - dynamodb:PutItem
-                resources:
+                Resource:
                   - arn:aws:dynamodb:*:*:table/MyTable
 ```
 
@@ -95,21 +98,23 @@ components:
     type: iam-role
     config:
       description: "FedRAMP compliant role"
-      role:
-        assumedBy:
-          service: ec2.amazonaws.com
-        inlinePolicies:
-          minimalAccess:
-            statements:
-              - effect: Allow
-                actions:
+      assumedBy:
+        - service: ec2.amazonaws.com
+      inlinePolicies:
+        - name: minimalAccess
+          document:
+            Version: "2012-10-17"
+            Statement:
+              - Effect: Allow
+                Action:
                   - s3:GetObject
-                resources:
+                Resource:
                   - arn:aws:s3:::approved-bucket/*
-      compliance:
-        permissionsBoundary: true
-        requireMfa: true
-        leastPrivilege: true
+      permissionsBoundary: arn:aws:iam::123456789012:policy/FedRampBoundary
+      controls:
+        enforceBoundary: true
+        trustPolicies:
+          enforceMfa: true
 ```
 
 ## Configuration Reference
@@ -118,59 +123,70 @@ components:
 
 | Property | Type | Required | Description |
 |----------|------|----------|-------------|
-| `name` | string | No | Component name (auto-generated if not provided) |
-| `description` | string | No | Component description |
-| `role` | object | Yes | IAM role configuration |
-| `compliance` | object | No | Compliance and security settings |
-| `tags` | object | No | Custom tags to apply to the role |
-
-### Role Configuration
-
-| Property | Type | Required | Description |
-|----------|------|----------|-------------|
-| `assumedBy` | object | Yes | Principal that can assume this role |
-| `inlinePolicies` | object | No | Inline policies attached to the role |
+| `roleName` | string | No | Explicit IAM role name override |
+| `description` | string | No | Role description |
+| `assumedBy` | array | No | Principals that can assume this role |
+| `inlinePolicies` | array | No | Inline policies to attach |
 | `managedPolicies` | array | No | Managed policy ARNs to attach |
-| `maxSessionDuration` | number | No | Maximum session duration in seconds (3600-43200) |
-| `path` | string | No | Path for the role (default: "/") |
+| `maxSessionDuration` | number | No | Maximum session duration (seconds) |
+| `path` | string | No | IAM role path (default `/`) |
+| `permissionsBoundary` | string | No | ARN of permissions boundary to enforce |
+| `logging` | object | No | Access/audit log configuration |
+| `monitoring` | object | No | Session duration alarm configuration |
+| `controls` | object | No | Compliance hardening controls |
+| `tags` | object | No | Additional tags to merge onto the role |
 
-### AssumedBy Configuration
+### Assumed Principals
 
-| Property | Type | Required | Description |
-|----------|------|----------|-------------|
-| `service` | string | No* | AWS service principal (e.g., "ec2.amazonaws.com") |
-| `account` | string | No* | AWS account ID for cross-account access |
-| `externalId` | string | No | External ID for cross-account access |
-| `arn` | string | No* | Custom ARN principal |
+Each entry in `assumedBy` can supply one of `service`, `accountId`, `roleArn`, or `federatedProvider`. At least one field must be provided per entry.
 
-*At least one of `service`, `account`, or `arn` must be provided.
+```yaml
+assumedBy:
+  - service: lambda.amazonaws.com
+  - accountId: "987654321098"
+    externalId: "partner-external-id"
+```
 
 ### Inline Policies
 
+Inline policies follow the standard IAM policy document shape. Multiple policies can be specified.
+
 ```yaml
 inlinePolicies:
-  policyName:
-    statements:
-      - effect: Allow | Deny
-        actions:
-          - action1
-          - action2
-        resources:
-          - resource1
-          - resource2
-        conditions:  # Optional
-          StringEquals:
-            key: value
+  - name: allowSecretsManager
+    document:
+      Version: "2012-10-17"
+      Statement:
+        - Effect: Allow
+          Action:
+            - secretsmanager:GetSecretValue
+          Resource:
+            - arn:aws:secretsmanager:us-east-1:123456789012:secret:my-secret-*
+```
+
+### Controls
+
+```yaml
+controls:
+  requireInstanceProfile: true
+  enforceBoundary: true
+  denyInsecureTransport: true
+  trustPolicies:
+    enforceMfa: true
+    allowedServicePrincipals:
+      - ecs-tasks.amazonaws.com
+    externalIdCondition: "my-required-external-id"
 ```
 
 ### Compliance Configuration
 
 | Property | Type | Default | Description |
 |----------|------|---------|-------------|
-| `permissionsBoundary` | boolean | false | Enable permissions boundary |
-| `permissionsBoundaryArn` | string | - | Custom permissions boundary ARN |
-| `leastPrivilege` | boolean | true | Enable least privilege enforcement |
-| `requireMfa` | boolean | false | Require MFA for role assumption |
+| `permissionsBoundary` | string | - | ARN of the permissions boundary policy to enforce |
+| `controls.enforceBoundary` | boolean | false | Enforce that a permissions boundary must be supplied |
+| `controls.trustPolicies.enforceMfa` | boolean | false | Require MFA for `sts:AssumeRole` |
+| `controls.trustPolicies.allowedServicePrincipals` | array | [] | Restrict trusted AWS service principals |
+| `controls.denyInsecureTransport` | boolean | false | Deny requests where `aws:SecureTransport` is false |
 
 ## Component Binding
 
@@ -186,9 +202,8 @@ components:
   - name: web-server-role
     type: iam-role
     config:
-      role:
-        assumedBy:
-          service: ec2.amazonaws.com
+      assumedBy:
+        - service: ec2.amazonaws.com
 ```
 
 ### Supported Bindings
@@ -205,19 +220,21 @@ components:
 ## Compliance Frameworks
 
 ### Commercial
-- No permissions boundary by default
-- Least privilege enforcement enabled
-- MFA not required for service roles
+- Session duration limited to 1 hour by default
+- Audit logging optional but recommended
+- Trust policy MFA enforcement disabled by default
 
 ### FedRAMP Moderate
-- Permissions boundary automatically applied
-- Least privilege enforcement enabled
-- Enhanced security settings
+- Permissions boundary required
+- Audit logging enabled with 1-year retention
+- Trust policy enforces MFA for role assumption
+- Session alarm created (threshold 15 minutes)
 
 ### FedRAMP High
-- Permissions boundary automatically applied
-- MFA requirements enforced
-- Strictest security settings
+- All FedRAMP Moderate controls, plus:
+  - Session alarm enabled with tighter thresholds
+  - Deny insecure transport statements added
+  - Default permissions boundary sourced from platform configuration
 
 ## Environment Variables
 

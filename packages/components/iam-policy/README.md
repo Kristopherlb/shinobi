@@ -1,136 +1,186 @@
-# IamPolicyComponent Component
+# IAM Policy Component
 
-IAM Policy Component with comprehensive security, monitoring, and compliance features.
+AWS IAM Policy component for granular access control with least privilege security patterns. Supports both managed and inline policies with compliance-aware configuration.
 
-## Overview
+## Features
 
-The IamPolicyComponent component provides:
+- ✅ **Policy Types**: Managed and inline IAM policies
+- ✅ **Policy Templates**: Pre-defined templates for common use cases
+- ✅ **Custom Policies**: Full control with policy documents
+- ✅ **Least Privilege**: No wildcard templates, scoped permissions
+- ✅ **Compliance Controls**: Deny insecure transport, MFA enforcement
+- ✅ **Monitoring**: CloudWatch alarms for policy usage
+- ✅ **Logging**: Structured logs for usage, compliance, and audit
+- ✅ **Auto-Attachment**: Managed policies auto-attach to groups/roles/users
+- ✅ **ConfigBuilder Pattern**: 5-layer precedence chain
 
-- **Production-ready** iam policy component functionality
-- **Comprehensive compliance** (Commercial, FedRAMP Moderate/High)
-- **Integrated monitoring** and observability
-- **Security-first** configuration
-- **Platform integration** with other components
+## Usage
 
-### Category: security
-
-### AWS Service: IAM
-
-This component manages IAM resources and provides a simplified, secure interface for common use cases.
-
-## Usage Example
-
-### Basic Configuration
+### Managed Policy with Template
 
 ```yaml
-service: my-service
-owner: platform-team
-complianceFramework: commercial
-
 components:
-  - name: my-iam-policy
+  - name: read-only-policy
     type: iam-policy
     config:
-      description: "Production iam-policy instance"
-      monitoring:
-        enabled: true
-        detailedMetrics: true
+      policyType: managed
+      description: Read-only access to common AWS services
+      policyTemplate:
+        type: read-only
+        resources:
+          - arn:aws:s3:::my-bucket/*
+          - arn:aws:dynamodb:*:*:table/my-table
+      roles:
+        - my-lambda-role
+        - my-ecs-task-role
 ```
 
-## Configuration Reference
+### Managed Policy with Custom Document
 
-### Root Configuration
+```yaml
+components:
+  - name: custom-s3-policy
+    type: iam-policy
+    config:
+      policyType: managed
+      description: Custom S3 access policy
+      policyDocument:
+        Version: "2012-10-17"
+        Statement:
+          - Sid: AllowS3Read
+            Effect: Allow
+            Action:
+              - s3:GetObject
+              - s3:ListBucket
+            Resource:
+              - arn:aws:s3:::my-bucket
+              - arn:aws:s3:::my-bucket/*
+      users:
+        - service-account
+```
 
-| Property | Type | Required | Description |
-|----------|------|----------|-------------|
-| `name` | string | No | Component name (auto-generated if not provided) |
-| `description` | string | No | Component description for documentation |
-| `monitoring` | object | No | Monitoring and observability configuration |
-| `logging` | object | No | CloudWatch log group configuration for policy activity |
-| `controls` | object | No | Compliance guardrail statements applied to the policy |
-| `tags` | object | No | Additional resource tags |
+### Inline Policy (Manual Attachment)
 
-### Monitoring Configuration
+```yaml
+components:
+  - name: inline-lambda-policy
+    type: iam-policy
+    config:
+      policyType: inline
+      policyTemplate:
+        type: lambda-execution
+```
 
-| Property | Type | Required | Description |
-|----------|------|----------|-------------|
-| `enabled` | boolean | No | Enable monitoring (default driven by platform config) |
-| `detailedMetrics` | boolean | No | Enable detailed CloudWatch metrics |
-| `usageAlarm.enabled` | boolean | No | Enable IAM policy usage alarm |
-| `usageAlarm.threshold` | number | No | Sum of policy invocations before alarming |
-| `usageAlarm.evaluationPeriods` | number | No | Consecutive periods exceeding the threshold |
-| `usageAlarm.periodMinutes` | number | No | Evaluation period length in minutes |
-| `usageAlarm.treatMissingData` | enum | No | Alarm behaviour for missing datapoints |
+**Note**: Inline policies must be manually attached in `patches.ts`:
 
-### Logging Configuration
+```typescript
+const policy = myService.getComponent('inline-lambda-policy').getConstruct('policy') as iam.Policy;
+const role = myService.getComponent('my-lambda-role').getConstruct('role') as iam.Role;
+role.attachInlinePolicy(policy);
+```
 
-| Property | Type | Required | Description |
-|----------|------|----------|-------------|
-| `logging.usage.enabled` | boolean | No | Emit usage log group (default per platform config) |
-| `logging.usage.retentionInDays` | number | No | Log retention in days |
-| `logging.usage.removalPolicy` | enum(`retain`,`destroy`) | No | Removal policy for the usage log group |
-| `logging.compliance.enabled` | boolean | No | Emit compliance log group (FedRAMP defaults) |
-| `logging.audit.enabled` | boolean | No | Emit long-term audit log group (FedRAMP High) |
+## Policy Templates
 
-### Controls Configuration
+### `read-only`
+Read-only access to common AWS services (CloudWatch, EC2, S3, IAM describe operations).
 
-| Property | Type | Required | Description |
-|----------|------|----------|-------------|
-| `controls.denyInsecureTransport` | boolean | No | Adds a deny statement for insecure transport |
-| `controls.requireMfaForActions` | string[] | No | Sensitive actions that require MFA |
-| `controls.additionalStatements` | object[] | No | Additional policy statements injected by governance |
+### `lambda-execution`
+Lambda execution role permissions (CloudWatch Logs write).
 
-## Capabilities Provided
+### `ecs-task`
+ECS task execution permissions (ECR pull, CloudWatch Logs write).
 
-This component provides the following capabilities for binding with other components:
+### `s3-access`
+S3 bucket operations (GetObject, PutObject, DeleteObject, ListBucket).
 
-- `security:iam-policy` - Main iam-policy capability
-- `monitoring:iam-policy` - Monitoring capability
+### `rds-access`
+RDS database access (Describe, connect).
+
+### `dynamodb-access`
+DynamoDB table operations (CRUD, Query, Scan, Batch operations).
+
+### `custom`
+Empty template - use with `additionalStatements` for fully custom policies.
+
+## Configuration Options
+
+| Field | Type | Required | Description |
+|-------|------|----------|-------------|
+| `policyType` | `'managed' \| 'inline'` | ✅ | Type of policy to create |
+| `policyName` | `string` | ❌ | Policy name (auto-generated if not provided) |
+| `description` | `string` | ❌ | Policy description |
+| `path` | `string` | ❌ | IAM path (managed only, default: `/`) |
+| `policyDocument` | `object` | ⚠️ | Raw policy document (XOR with template) |
+| `policyTemplate` | `object` | ⚠️ | Policy template spec (XOR with document) |
+| `groups` | `string[]` | ❌ | Groups to attach to (managed only) |
+| `roles` | `string[]` | ❌ | Roles to attach to (managed only) |
+| `users` | `string[]` | ❌ | Users to attach to (managed only) |
+| `logging` | `object` | ❌ | CloudWatch Logs configuration |
+| `monitoring` | `object` | ❌ | CloudWatch alarms configuration |
+| `controls` | `object` | ❌ | Compliance controls |
+| `tags` | `object` | ❌ | Resource tags (managed only) |
+
+## Compliance Controls
+
+### Deny Insecure Transport
+```yaml
+controls:
+  denyInsecureTransport: true
+```
+Denies all transport-relevant service actions (S3, SQS, SNS, etc.) over non-TLS connections.
+
+### Require MFA for Actions
+```yaml
+controls:
+  requireMfaForActions:
+    - iam:DeleteUser
+    - iam:CreateAccessKey
+    - s3:DeleteBucket
+```
+Requires MFA for specified sensitive actions.
+
+## Monitoring
+
+```yaml
+monitoring:
+  enabled: true
+  usageAlarm:
+    enabled: true
+    threshold: 1000
+    evaluationPeriods: 2
+    periodMinutes: 60
+```
 
 ## Construct Handles
 
-The following construct handles are available for use in `patches.ts`:
+- `main`: Primary policy construct (ManagedPolicy or Policy)
+- `policy`: Alias for main
+- `usageLogGroup`: Usage log group (if enabled)
+- `complianceLogGroup`: Compliance log group (if enabled)
+- `auditLogGroup`: Audit log group (if enabled)
+- `policyUsageAlarm`: Usage alarm (if enabled)
 
-- `main` - Main iam-policy construct
+## Capabilities
 
-## Compliance Frameworks
+- `iam:policy`: IAM policy capability with ARN/ref
 
-### Commercial
+## Limitations
 
-- Standard monitoring configuration
-- Basic resource tagging
-- Standard security settings
+- **Inline policies do NOT support**:
+  - Resource tags (AWS limitation)
+  - Auto-attachment to groups/roles/users
+  - Must be manually attached in `patches.ts`
+  
+- **Tags** only work on managed policies
+- **Path** only applies to managed policies
 
-### FedRAMP Moderate/High
+## Compliance
 
-- Enhanced monitoring with detailed metrics
-- Comprehensive audit logging
-- Stricter security configurations
-- Extended compliance tagging
+Supports three compliance frameworks:
+- **Commercial**: Baseline security
+- **FedRAMP Moderate**: Enhanced controls
+- **FedRAMP High**: Maximum security with extended log retention
 
-## Best Practices
+## License
 
-1. **Always enable monitoring** in production environments
-2. **Use descriptive names** for better resource identification
-3. **Configure appropriate tags** for cost allocation and governance
-4. **Review compliance requirements** for your environment
-5. **Test configurations** in development before production deployment
-
-## Development
-
-### Running Tests
-
-```bash
-# Run all tests for this component
-npm test -- --testPathPattern=iam-policy
-
-# Run only builder tests
-npm test -- --testPathPattern=iam-policy.builder
-
-# Run only synthesis tests
-npm test -- --testPathPattern=iam-policy.component.synthesis
-```
-
----
-
-*Generated by Component Completion Script*
+MIT

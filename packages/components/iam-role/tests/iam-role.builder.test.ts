@@ -3,8 +3,8 @@
  * Implements Platform Testing Standard v1.0 - ConfigBuilder Testing
  */
 
-import { IamRoleConfigBuilder, IamRoleConfig } from '../src/iam-role.builder.ts';
-import { ComponentContext, ComponentSpec } from '../../@shinobi/core/component-interfaces.ts';
+import { IamRoleComponentConfigBuilder, IamRoleConfig } from '../src/iam-role.builder.ts';
+import { ComponentContext, ComponentSpec } from '@platform/contracts';
 import { Stack } from 'aws-cdk-lib';
 
 const createMockContext = (
@@ -41,14 +41,13 @@ describe('IamRoleConfigBuilder', () => {
       const context = createMockContext();
       const spec = createMockSpec();
       
-      const builder = new IamRoleConfigBuilder({ context, spec });
+      const builder = new IamRoleComponentConfigBuilder(context, spec);
       const config = builder.buildSync();
       
       // Verify hardcoded fallbacks are applied
-      expect(config.role.assumedBy.service).toBe('ec2.amazonaws.com');
-      expect(config.role.maxSessionDuration).toBe(3600);
-      expect(config.role.path).toBe('/');
-      expect(config.compliance?.leastPrivilege).toBe(true);
+      expect(config.assumedBy).toEqual([]);
+      expect(config.maxSessionDuration).toBe(3600);
+      expect(config.path).toBe('/');
       expect(config.tags).toBeDefined();
     });
     
@@ -60,22 +59,22 @@ describe('IamRoleConfigBuilder', () => {
       const context = createMockContext('commercial');
       const spec = createMockSpec();
       
-      const builder = new IamRoleConfigBuilder({ context, spec });
+      const builder = new IamRoleComponentConfigBuilder(context, spec);
       const config = builder.buildSync();
       
-      expect(config.compliance?.permissionsBoundary).toBe(false);
-      expect(config.compliance?.requireMfa).toBe(false);
+      expect(config.controls?.enforceBoundary).toBe(false);
+      expect(config.controls?.trustPolicies?.enforceMfa).toBe(false);
     });
     
     it('should apply FedRAMP compliance defaults', () => {
       const context = createMockContext('fedramp-moderate');
       const spec = createMockSpec();
       
-      const builder = new IamRoleConfigBuilder({ context, spec });
+      const builder = new IamRoleComponentConfigBuilder(context, spec);
       const config = builder.buildSync();
       
-      expect(config.compliance?.permissionsBoundary).toBe(true);
-      expect(config.compliance?.requireMfa).toBe(true);
+      expect(config.controls?.enforceBoundary).toBe(true);
+      expect(config.controls?.trustPolicies?.enforceMfa).toBe(true);
     });
     
   });
@@ -85,20 +84,20 @@ describe('IamRoleConfigBuilder', () => {
     it('should apply component overrides over platform defaults', () => {
       const context = createMockContext('commercial');
       const spec = createMockSpec({
-        role: {
-          assumedBy: {
+        assumedBy: [
+          {
             service: 'lambda.amazonaws.com'
-          },
-          maxSessionDuration: 7200
-        }
+          }
+        ],
+        maxSessionDuration: 7200
       });
       
-      const builder = new IamRoleConfigBuilder({ context, spec });
+      const builder = new IamRoleComponentConfigBuilder(context, spec);
       const config = builder.buildSync();
       
       // Verify component config overrides platform defaults
-      expect(config.role.assumedBy.service).toBe('lambda.amazonaws.com');
-      expect(config.role.maxSessionDuration).toBe(7200);
+      expect(config.assumedBy?.[0]?.service).toBe('lambda.amazonaws.com');
+      expect(config.maxSessionDuration).toBe(7200);
     });
     
   });

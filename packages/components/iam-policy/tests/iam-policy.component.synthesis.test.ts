@@ -5,9 +5,9 @@
 
 import { Template, Match } from 'aws-cdk-lib/assertions';
 import { App, Stack } from 'aws-cdk-lib';
-import { IamPolicyComponentComponent } from '../iam-policy.component.ts';
-import { IamPolicyConfig } from '../iam-policy.builder.ts';
-import { ComponentContext, ComponentSpec } from '../../../platform/contracts/component-interfaces.ts';
+import { IamPolicyComponentComponent } from '../iam-policy.component.js';
+import { IamPolicyConfig } from '../iam-policy.builder.js';
+import { ComponentContext, ComponentSpec } from '@platform/contracts';
 
 jest.mock('@platform/logger', () => ({
   Logger: {
@@ -42,7 +42,14 @@ const createMockContext = (
 const createMockSpec = (config: Partial<IamPolicyConfig> = {}): ComponentSpec => ({
   name: 'test-iam-policy',
   type: 'iam-policy',
-  config
+  config: {
+    // Minimal valid config to pass validation
+    policyType: 'managed',
+    policyTemplate: {
+      type: 'read-only'
+    },
+    ...config
+  }
 });
 
 const synthesizeComponent = (

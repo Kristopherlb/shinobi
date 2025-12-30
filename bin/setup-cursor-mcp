@@ -1,0 +1,64 @@
+#!/usr/bin/env bash
+# Setup Cursor MCP configuration for Shinobi
+# Each developer runs this once to configure their local Cursor
+
+set -e
+
+SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+PROJECT_ROOT="$(dirname "$SCRIPT_DIR")"
+MCP_CONFIG="$HOME/.cursor/mcp.json"
+
+echo "🥷 Shinobi MCP Setup for Cursor"
+echo "================================"
+echo ""
+echo "Project root: $PROJECT_ROOT"
+echo "MCP config: $MCP_CONFIG"
+echo ""
+
+# Backup existing config
+if [ -f "$MCP_CONFIG" ]; then
+    BACKUP="$MCP_CONFIG.backup.$(date +%Y%m%d_%H%M%S)"
+    cp "$MCP_CONFIG" "$BACKUP"
+    echo "✅ Backed up existing config to: $BACKUP"
+fi
+
+# Read existing config or create new
+if [ -f "$MCP_CONFIG" ]; then
+    EXISTING_CONFIG=$(cat "$MCP_CONFIG")
+else
+    EXISTING_CONFIG='{}'
+    mkdir -p "$(dirname "$MCP_CONFIG")"
+fi
+
+# Generate new shinobi config entry
+cat > /tmp/shinobi-mcp-entry.json << EOF
+{
+  "command": "$PROJECT_ROOT/bin/shinobi-mcp-docker",
+  "env": {
+    "NODE_ENV": "development"
+  }
+}
+EOF
+
+# Merge configs (simple approach - you can use jq for better merging)
+echo "✅ Generated MCP config entry"
+echo ""
+echo "Add this to your $MCP_CONFIG:"
+echo ""
+echo '{
+  "mcpServers": {
+    "shinobi": '
+cat /tmp/shinobi-mcp-entry.json
+echo '  }
+}'
+echo ""
+echo "Or run: cat /tmp/shinobi-mcp-entry.json"
+echo ""
+echo "Then restart Cursor (Cmd+Q, relaunch)"
+
+rm /tmp/shinobi-mcp-entry.json
+
+
+
+
+

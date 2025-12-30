@@ -1450,3 +1450,30 @@ defaults:
       logExports:
         - postgresql
     hardeningProfile: hardened
+  iam-role:
+    maxSessionDuration: 3600
+    path: "/"
+    logging:
+      access:
+        enabled: true
+        retentionInDays: 180
+        removalPolicy: retain
+      audit:
+        enabled: true
+        retentionInDays: 365
+        removalPolicy: retain
+    monitoring:
+      enabled: true
+      sessionAlarm:
+        enabled: true
+        thresholdMinutes: 15
+        evaluationPeriods: 1
+        treatMissingData: not-breaching
+    controls:
+      requireInstanceProfile: true
+      enforceBoundary: true
+      denyInsecureTransport: true
+      trustPolicies:
+        enforceMfa: true
+        allowExternalId: false
+        allowedServicePrincipals: []

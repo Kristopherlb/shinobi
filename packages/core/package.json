@@ -13,6 +13,7 @@
     "access": "public"
   },
   "dependencies": {
+    "@platform/logger": "workspace:*",
     "@aws-sdk/client-cloudformation": "^3.637.0",
     "ajv": "^8.17.1",
     "ajv-formats": "^3.0.1",

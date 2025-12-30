@@ -56,6 +56,30 @@ defaults:
     removalPolicy: destroy
     tags: {}
 
+  iam-role:
+    maxSessionDuration: 3600
+    path: "/"
+    logging:
+      access:
+        enabled: false
+        retentionInDays: 90
+        removalPolicy: destroy
+    monitoring:
+      enabled: false
+      sessionAlarm:
+        enabled: false
+        thresholdMinutes: 15
+        evaluationPeriods: 1
+        treatMissingData: not-breaching
+    controls:
+      requireInstanceProfile: false
+      enforceBoundary: false
+      denyInsecureTransport: false
+      trustPolicies:
+        enforceMfa: false
+        allowExternalId: true
+        allowedServicePrincipals: []
+
   vpc:
     cidr: 10.0.0.0/16
     maxAzs: 2

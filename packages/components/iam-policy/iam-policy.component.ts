@@ -11,7 +11,7 @@ import * as cloudwatch from 'aws-cdk-lib/aws-cloudwatch';
 import * as cdk from 'aws-cdk-lib';
 import { Construct } from 'constructs';
 import {
-  Component,
+  BaseComponent,
   ComponentSpec,
   ComponentContext,
   ComponentCapabilities
@@ -21,14 +21,18 @@ import {
   IamPolicyComponentConfigBuilder,
   IamPolicyLogConfig,
   IamPolicyControlsConfig
-} from './iam-policy.builder.ts';
+} from './iam-policy.builder.js';
 
 /**
  * IAM Policy Component implementing Component API Contract v1.0
  */
-export class IamPolicyComponent extends Component {
+export class IamPolicyComponent extends BaseComponent {
   private policy?: iam.ManagedPolicy | iam.Policy;
   private config?: IamPolicyConfig;
+  private usageLogGroup?: logs.LogGroup;
+  private complianceLogGroup?: logs.LogGroup;
+  private auditLogGroup?: logs.LogGroup;
+  private policyUsageAlarm?: cloudwatch.Alarm;
 
   constructor(scope: Construct, id: string, context: ComponentContext, spec: ComponentSpec) {
     super(scope, id, context, spec);
@@ -57,7 +61,23 @@ export class IamPolicyComponent extends Component {
       this.applyLoggingConfiguration();
       this.configureObservabilityForPolicy();
     
+      // Register constructs
+      this.registerConstruct('main', this.policy!);
       this.registerConstruct('policy', this.policy!);
+      
+      if (this.usageLogGroup) {
+        this.registerConstruct('usageLogGroup', this.usageLogGroup);
+      }
+      if (this.complianceLogGroup) {
+        this.registerConstruct('complianceLogGroup', this.complianceLogGroup);
+      }
+      if (this.auditLogGroup) {
+        this.registerConstruct('auditLogGroup', this.auditLogGroup);
+      }
+      if (this.policyUsageAlarm) {
+        this.registerConstruct('policyUsageAlarm', this.policyUsageAlarm);
+      }
+    
       this.registerCapability('iam:policy', this.buildPolicyCapability());
     
       const duration = Date.now() - startTime;
@@ -101,29 +121,32 @@ export class IamPolicyComponent extends Component {
         document: policyDocument
       });
 
+      // Only managed policies support tags
       this.applyStandardTags(this.policy, {
         'policy-type': 'managed',
         'policy-name': policyName,
         'statements-count': policyDocument.statementCount.toString()
       });
+      
+      if (this.config!.tags) {
+        Object.entries(this.config!.tags).forEach(([key, value]) => {
+          cdk.Tags.of(this.policy!).add(key, value);
+        });
+      }
     } else {
-      // For inline policies, we'll create them when attaching to entities
+      // For inline policies - note: IAM::Policy resources do NOT support tags
       this.policy = new iam.Policy(this, 'Policy', {
         policyName: policyName,
         document: policyDocument
       });
-
-      this.applyStandardTags(this.policy, {
-        'policy-type': 'inline',
-        'policy-name': policyName,
-        'statements-count': policyDocument.statementCount.toString()
-      });
-    }
-
-    if (this.config!.tags) {
-      Object.entries(this.config!.tags).forEach(([key, value]) => {
-        cdk.Tags.of(this.policy!).add(key, value);
-      });
+      
+      // Inline policies cannot be tagged - AWS limitation
+      if (this.config!.tags && Object.keys(this.config!.tags).length > 0) {
+        this.logComponentEvent('tags_not_supported', 'Tags specified for inline policy but AWS::IAM::Policy does not support tags', {
+          policyName,
+          tagsCount: Object.keys(this.config!.tags).length
+        });
+      }
     }
     
     this.logResourceCreation('iam-policy', policyName, {
@@ -138,6 +161,15 @@ export class IamPolicyComponent extends Component {
 
     // Add statements from policy document
     if (this.config!.policyDocument) {
+      // Null check for Statement array
+      if (!this.config!.policyDocument.Statement || !Array.isArray(this.config!.policyDocument.Statement)) {
+        throw new Error('policyDocument must have a Statement array');
+      }
+      
+      if (this.config!.policyDocument.Statement.length === 0) {
+        throw new Error('policyDocument.Statement cannot be empty');
+      }
+      
       statements = this.config!.policyDocument.Statement.map(stmt => 
         new iam.PolicyStatement({
           sid: stmt.Sid,
@@ -158,6 +190,10 @@ export class IamPolicyComponent extends Component {
     // Add control statements from configuration
     const controlStatements = this.buildControlStatements();
     statements.push(...controlStatements);
+
+    if (statements.length === 0) {
+      throw new Error('Policy must have at least one statement');
+    }
 
     return new iam.PolicyDocument({
       statements: statements
@@ -244,33 +280,30 @@ export class IamPolicyComponent extends Component {
         }));
         break;
 
-      case 'power-user':
+      case 'dynamodb-access':
         statements.push(new iam.PolicyStatement({
-          sid: 'PowerUserAccess',
+          sid: 'DynamoDBAccess',
           effect: iam.Effect.ALLOW,
-          actions: ['*'],
-          resources: ['*']
-        }));
-        statements.push(new iam.PolicyStatement({
-          sid: 'DenyIAMAccess',
-          effect: iam.Effect.DENY,
           actions: [
-            'iam:*',
-            'organizations:*',
-            'account:*'
+            'dynamodb:GetItem',
+            'dynamodb:PutItem',
+            'dynamodb:UpdateItem',
+            'dynamodb:DeleteItem',
+            'dynamodb:Query',
+            'dynamodb:Scan',
+            'dynamodb:BatchGetItem',
+            'dynamodb:BatchWriteItem'
           ],
-          resources: ['*']
+          resources: resources
         }));
         break;
 
-      case 'admin':
-        statements.push(new iam.PolicyStatement({
-          sid: 'AdministratorAccess',
-          effect: iam.Effect.ALLOW,
-          actions: ['*'],
-          resources: ['*']
-        }));
+      case 'custom':
+        // Custom template - no default statements, only additionalStatements
         break;
+
+      default:
+        throw new Error(`Unknown policy template type: ${template.type}. Supported types: read-only, lambda-execution, ecs-task, s3-access, rds-access, dynamodb-access, custom`);
     }
 
     // Add additional statements from template
@@ -298,24 +331,38 @@ export class IamPolicyComponent extends Component {
   }
 
   private attachPolicyToEntities(): void {
-    if (!this.policy || !(this.policy instanceof iam.ManagedPolicy)) {
+    if (!this.policy) {
+      return;
+    }
+
+    // Only managed policies support direct attachment
+    // Inline policies must be attached via patches.ts using getConstruct('policy')
+    if (this.config!.policyType !== 'managed') {
+      if ((this.config?.groups && this.config.groups.length > 0) || 
+          (this.config?.roles && this.config.roles.length > 0) || 
+          (this.config?.users && this.config.users.length > 0)) {
+        this.logComponentEvent('inline_attachment_skipped', 'Inline policies cannot be auto-attached. Use patches.ts to attach via getConstruct("policy")', {
+          policyName: this.buildPolicyName(),
+          requestedAttachments: (this.config.groups?.length || 0) + (this.config.roles?.length || 0) + (this.config.users?.length || 0)
+        });
+      }
       return;
     }
 
     const managedPolicy = this.policy as iam.ManagedPolicy;
 
-    this.config?.groups?.forEach(groupName => {
-      const group = iam.Group.fromGroupName(this, `Group${groupName}`, groupName);
+    this.config?.groups?.forEach((groupName, index) => {
+      const group = iam.Group.fromGroupName(this, `Group${index}`, groupName);
       group.addManagedPolicy(managedPolicy);
     });
 
-    this.config?.roles?.forEach(roleName => {
-      const role = iam.Role.fromRoleName(this, `Role${roleName}`, roleName);
+    this.config?.roles?.forEach((roleName, index) => {
+      const role = iam.Role.fromRoleName(this, `Role${index}`, roleName);
       role.addManagedPolicy(managedPolicy);
     });
 
-    this.config?.users?.forEach(userName => {
-      const user = iam.User.fromUserName(this, `User${userName}`, userName);
+    this.config?.users?.forEach((userName, index) => {
+      const user = iam.User.fromUserName(this, `User${index}`, userName);
       user.addManagedPolicy(managedPolicy);
     });
   }
@@ -329,10 +376,19 @@ export class IamPolicyComponent extends Component {
     const statements: iam.PolicyStatement[] = [];
 
     if (controls.denyInsecureTransport) {
+      // Scope to transport-relevant services, not all actions
       statements.push(new iam.PolicyStatement({
         sid: 'DenyInsecureTransport',
         effect: iam.Effect.DENY,
-        actions: ['*'],
+        actions: [
+          's3:*',
+          'sqs:*',
+          'sns:*',
+          'kinesis:*',
+          'dynamodb:*',
+          'rds:*',
+          'secretsmanager:*'
+        ],
         resources: ['*'],
         conditions: {
           Bool: {
@@ -343,13 +399,14 @@ export class IamPolicyComponent extends Component {
     }
 
     if (controls.requireMfaForActions && controls.requireMfaForActions.length > 0) {
+      // Use Bool not BoolIfExists to properly enforce MFA
       statements.push(new iam.PolicyStatement({
         sid: 'RequireMFAForSensitiveActions',
         effect: iam.Effect.DENY,
         actions: controls.requireMfaForActions,
         resources: ['*'],
         conditions: {
-          BoolIfExists: {
+          Bool: {
             'aws:MultiFactorAuthPresent': 'false'
           }
         }
@@ -385,14 +442,14 @@ export class IamPolicyComponent extends Component {
       return;
     }
 
-    this.createLogGroupFromConfig('UsageLogGroup', logging.usage, '', 'usageLogGroup');
-    this.createLogGroupFromConfig('ComplianceLogGroup', logging.compliance, 'compliance', 'complianceLogGroup');
-    this.createLogGroupFromConfig('AuditLogGroup', logging.audit, 'audit', 'auditLogGroup');
+    this.usageLogGroup = this.createLogGroupFromConfig('UsageLogGroup', logging.usage, '', 'usage');
+    this.complianceLogGroup = this.createLogGroupFromConfig('ComplianceLogGroup', logging.compliance, 'compliance', 'compliance');
+    this.auditLogGroup = this.createLogGroupFromConfig('AuditLogGroup', logging.audit, 'audit', 'audit');
   }
 
-  private createLogGroupFromConfig(id: string, config: IamPolicyLogConfig | undefined, defaultSuffix: string, registerKey: string): void {
+  private createLogGroupFromConfig(id: string, config: IamPolicyLogConfig | undefined, defaultSuffix: string, logType: string): logs.LogGroup | undefined {
     if (!config?.enabled) {
-      return;
+      return undefined;
     }
 
     const policyName = this.buildPolicyName();
@@ -406,17 +463,13 @@ export class IamPolicyComponent extends Component {
       removalPolicy: this.resolveRemovalPolicy(config.removalPolicy)
     });
 
-    const baseTags = {
-      'log-type': registerKey.replace(/LogGroup$/i, '').replace(/[A-Z]/g, letter => `-${letter.toLowerCase()}`).replace(/^-/, ''),
-      'policy-name': policyName
-    };
-
     this.applyStandardTags(logGroup, {
-      ...baseTags,
+      'log-type': logType,
+      'policy-name': policyName,
       ...(config.tags ?? {})
     });
 
-    this.registerConstruct(registerKey, logGroup);
+    return logGroup;
   }
 
   private resolveLogRetention(retentionInDays?: number): logs.RetentionDays | undefined {
@@ -424,19 +477,33 @@ export class IamPolicyComponent extends Component {
       return undefined;
     }
 
-    const retentionMap = logs.RetentionDays as unknown as Record<number, logs.RetentionDays>;
-    const retention = retentionMap[retentionInDays];
-
-    if (retention) {
-      return retention;
+    // Map retention days to CloudWatch enum values
+    switch (retentionInDays) {
+      case 1: return logs.RetentionDays.ONE_DAY;
+      case 3: return logs.RetentionDays.THREE_DAYS;
+      case 5: return logs.RetentionDays.FIVE_DAYS;
+      case 7: return logs.RetentionDays.ONE_WEEK;
+      case 14: return logs.RetentionDays.TWO_WEEKS;
+      case 30: return logs.RetentionDays.ONE_MONTH;
+      case 60: return logs.RetentionDays.TWO_MONTHS;
+      case 90: return logs.RetentionDays.THREE_MONTHS;
+      case 120: return logs.RetentionDays.FOUR_MONTHS;
+      case 150: return logs.RetentionDays.FIVE_MONTHS;
+      case 180: return logs.RetentionDays.SIX_MONTHS;
+      case 365: return logs.RetentionDays.ONE_YEAR;
+      case 400: return logs.RetentionDays.THIRTEEN_MONTHS;
+      case 545: return logs.RetentionDays.EIGHTEEN_MONTHS;
+      case 731: return logs.RetentionDays.TWO_YEARS;
+      case 1827: return logs.RetentionDays.FIVE_YEARS;
+      case 3653: return logs.RetentionDays.TEN_YEARS;
+      default:
+        this.logComponentEvent('log_retention_defaulted', 'Unsupported log retention requested; defaulting to 90 days', {
+          requestedRetentionInDays: retentionInDays,
+          defaultApplied: 90,
+          complianceFramework: this.context.complianceFramework
+        });
+        return logs.RetentionDays.THREE_MONTHS;
     }
-
-    this.logComponentEvent('log_retention_defaulted', 'Unsupported log retention requested for IAM policy log group', {
-      requestedRetentionInDays: retentionInDays,
-      defaultApplied: logs.RetentionDays.THREE_MONTHS
-    });
-
-    return logs.RetentionDays.THREE_MONTHS;
   }
 
   private resolveRemovalPolicy(removalPolicy?: string): cdk.RemovalPolicy {
@@ -447,14 +514,24 @@ export class IamPolicyComponent extends Component {
   }
 
   private buildPolicyCapability(): any {
-    const policyArn = this.policy instanceof iam.ManagedPolicy ?
-      (this.policy as iam.ManagedPolicy).managedPolicyArn :
-      (this.policy as iam.Policy).policyName;
-
-    return {
-      policyArn,
-      policyName: this.buildPolicyName()
-    };
+    if (this.policy instanceof iam.ManagedPolicy) {
+      // Managed policies have real ARNs
+      return {
+        policyArn: this.policy.managedPolicyArn,
+        policyName: this.policy.managedPolicyName,
+        policyType: 'managed'
+      };
+    } else {
+      // Inline policies don't have ARNs - return serializable reference
+      // Note: To use inline policy in patches.ts, call getConstruct('policy')
+      return {
+        policyRef: this.policy!.node.path,
+        policyName: (this.policy as iam.Policy).policyName,
+        policyType: 'inline',
+        // Provide construct ID for getConstruct() lookup
+        constructId: 'policy'
+      };
+    }
   }
 
   private configureObservabilityForPolicy(): void {
@@ -468,42 +545,17 @@ export class IamPolicyComponent extends Component {
       return;
     }
 
-    const policyName = this.buildPolicyName();
-    const threshold = usageAlarmConfig.threshold ?? 1000;
-    const evaluationPeriods = usageAlarmConfig.evaluationPeriods ?? 2;
-    const periodMinutes = usageAlarmConfig.periodMinutes ?? 60;
-
-    const policyUsageAlarm = new cloudwatch.Alarm(this, 'PolicyUsageAlarm', {
-      alarmName: `${this.context.serviceName}-${this.spec.name}-policy-usage`,
-      alarmDescription: 'IAM policy usage monitoring alarm',
-      metric: new cloudwatch.Metric({
-        namespace: 'AWS/IAM',
-        metricName: 'PolicyUsage',
-        dimensionsMap: { PolicyName: policyName },
-        statistic: 'Sum',
-        period: cdk.Duration.minutes(periodMinutes)
-      }),
-      threshold,
-      evaluationPeriods,
-      comparisonOperator: cloudwatch.ComparisonOperator.GREATER_THAN_THRESHOLD,
-      treatMissingData: this.resolveTreatMissingData(usageAlarmConfig.treatMissingData)
+    // NOTE: AWS/IAM namespace does not publish a PolicyUsage metric
+    // IAM monitoring requires CloudTrail event-based metrics
+    // This alarm is disabled until a valid metric source is configured
+    
+    this.logComponentEvent('observability_skipped', 'IAM policy usage monitoring not available - AWS/IAM namespace does not provide PolicyUsage metric. Use CloudTrail event metrics instead.', {
+      policyName: this.buildPolicyName(),
+      recommendation: 'Configure CloudTrail log metric filter for iam:AttachPolicy, iam:PutPolicy events'
     });
-
-    this.applyStandardTags(policyUsageAlarm, {
-      'alarm-type': 'policy-usage',
-      'metric-type': 'security',
-      'threshold': threshold.toString(),
-      ...(usageAlarmConfig.tags ?? {})
-    });
-
-    this.registerConstruct('policyUsageAlarm', policyUsageAlarm);
-
-    this.logComponentEvent('observability_configured', 'IAM policy monitoring configured', {
-      policyName,
-      threshold,
-      evaluationPeriods,
-      periodMinutes
-    });
+    
+    // TODO: Implement CloudTrail-based metric filter alarm when CloudTrail integration is available
+    // For now, monitoring is logged but not enforced to avoid INSUFFICIENT_DATA alarms
   }
 
   private resolveTreatMissingData(value?: string): cloudwatch.TreatMissingData {
@@ -520,4 +572,5 @@ export class IamPolicyComponent extends Component {
   }
 }
 
+// Export alias for backward compatibility
 export { IamPolicyComponent as IamPolicyComponentComponent };

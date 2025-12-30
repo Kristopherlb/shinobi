@@ -36,14 +36,14 @@ rules:
     conditional:
       requires_pattern: "\\bgetPlatformDefaults\\s*\\("
     must_not_match:
-      - pattern: 'allowOrigins\\s*:\\s*\\[\\s*["'"]\\*["'"]\\s*\\]'
+      - pattern: "allowOrigins\\\\s*:\\\\s*\\\\[\\\\s*[\"']\\\\*[\"']\\\\s*\\\\]"
       - pattern: 'https?://'
       - pattern: '\\b\\d{1,3}(?:\\.\\d{1,3}){3}\\b'              # IPv4
       - pattern: '([0-9a-f]{0,4}:){2,7}[0-9a-f]{0,4}'            # IPv6 (loose)
       - pattern: '\\b(\\d{1,2}|1\\d|2\\d|3[0-2])\\b\\s*/\\s*\\d{1,2}' # CIDRish
       - pattern: '(Audience|audience|scope|Scopes|jwt|JWKS|clientSecret|clientId)'
       - pattern: '(postgres(ql)?|mysql|mongodb)://'
-      - pattern: '(certificateArn|kmsKeyArn|domainName)\\s*:\\s*["''][^"']+["'']'
+      - pattern: "(certificateArn|kmsKeyArn|domainName)\\\\s*:\\\\s*[\"'][^\"']+[\"']"
       - pattern: '\\binstance(Class|Size)\\s*:\\s*db\\.[tr]\\d'   # env-sized hardcodes
     message: "Layer 1 fallbacks must be minimal/safe; env-sensitive values belong in Layers 2–5."
 
@@ -54,14 +54,14 @@ rules:
     conditional:
       requires_pattern: "\\bgetHardcodedFallbacks\\s*\\("
     must_not_match:
-      - pattern: 'allowOrigins\\s*:\\s*\\[\\s*["'"]\\*["'"]\\s*\\]'
+      - pattern: "allowOrigins\\\\s*:\\\\s*\\\\[\\\\s*[\"']\\\\*[\"']\\\\s*\\\\]"
       - pattern: 'https?://'
       - pattern: '\\b\\d{1,3}(?:\\.\\d{1,3}){3}\\b'
       - pattern: '([0-9a-f]{0,4}:){2,7}[0-9a-f]{0,4}'
       - pattern: '\\b(\\d{1,2}|1\\d|2\\d|3[0-2])\\b\\s*/\\s*\\d{1,2}'
       - pattern: '(Audience|audience|scope|Scopes|jwt|JWKS|clientSecret|clientId)'
       - pattern: '(postgres(ql)?|mysql|mongodb)://'
-      - pattern: '(certificateArn|kmsKeyArn|domainName)\\s*:\\s*["''][^"']+["'']'
+      - pattern: "(certificateArn|kmsKeyArn|domainName)\\\\s*:\\\\s*[\"'][^\"']+[\"']"
       - pattern: '\\binstance(Class|Size)\\s*:\\s*db\\.[tr]\\d'
     message: "Same rule as CFG-010, for builders using getHardcodedFallbacks()."
 
@@ -117,7 +117,7 @@ rules:
     conditional:
       requires_pattern: "type:\\s*ssm-parameter"
     must_not_match:
-      - pattern: 'value\\s*:\\s*["''].*(sk_live|sk_test|secret|password|token|apikey).*["'']'
+      - pattern: "value\\\\s*:\\\\s*[\"'].*(sk_live|sk_test|secret|password|token|apikey).*[\"']"
     message: "Sensitive values belong in Secrets Manager, not SSM Parameter Store."
 
   - id: CFG-031
@@ -151,8 +151,8 @@ rules:
       - pattern: '(?<![A-Z_])AWS_SECRET_ACCESS_KEY\\b'
       - pattern: '\\bAKIA[0-9A-Z]{16}\\b'
       - pattern: '-----BEGIN (RSA|EC|OPENSSH) PRIVATE KEY-----'
-      - pattern: 'password\\s*[:=]\\s*["''][^"']+["'']'
-      - pattern: '\\b(secret|token|apikey|api_key)\\s*[:=]\\s*["''][^"']+["'']'
+      - pattern: "password\\\\s*[:=]\\\\s*[\"'][^\"']+[\"']"
+      - pattern: "\\\\b(secret|token|apikey|api_key)\\\\s*[:=]\\\\s*[\"'][^\"']+[\"']"
     message: "Secrets must live in Secrets Manager; config holds names/ARNs only."
 
   # ─────────────────────────────────────────
@@ -186,7 +186,7 @@ rules:
     scope_glob: "config/*.y?(a)ml"
     must_not_match:
       - pattern: 'https?://'
-      - pattern: '\\b(password|secret|token|apikey|api_key)\\b\\s*:\\s*["''][^"']+["'']'
+      - pattern: "\\\\b(password|secret|token|apikey|api_key)\\\\b\\\\s*:\\\\s*[\"'][^\"']+[\"']"
     message: "Framework defaults are governance, not live endpoints or secrets."
 
   # ─────────────────────────────────────────

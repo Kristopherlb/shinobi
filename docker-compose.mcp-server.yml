@@ -10,6 +10,7 @@ services:
       - "3000:3000"
     environment:
       - NODE_ENV=development
+      - PORT=3000
       - SHINOBI_COMPUTE_MODE=ecs
       - SHINOBI_CPU=512
       - SHINOBI_MEMORY=1024
@@ -22,6 +23,10 @@ services:
       - ./platform-kb:/app/platform-kb:ro
       # Mount components for live catalog updates
       - ./packages/components:/app/packages/components:ro
+      # Mount docs for MCP documentation tools
+      - ./docs:/app/docs:ro
+      # Mount audit files for compliance checks
+      - ./.cursor:/app/.cursor:ro
     restart: unless-stopped
     stdin_open: true
     tty: true

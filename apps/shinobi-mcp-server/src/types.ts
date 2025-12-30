@@ -27,3 +27,29 @@ export interface ServiceManifest {
   bindings?: ServiceManifestBinding[];
   policies?: Record<string, any>;
 }
+
+/**
+ * MCP Tool Definition
+ */
+export interface ToolDefinition {
+  name: string;
+  description: string;
+  inputSchema: object;
+}
+
+/**
+ * Domain context passed to all tool handlers
+ */
+export interface DomainContext {
+  workspaceRoot: string;
+  logger?: any;
+}
+
+/**
+ * Unified Domain Module Interface
+ * Supports both function-based and class-based implementations
+ */
+export interface DomainModule {
+  getToolDefinitions(): ToolDefinition[];
+  handleToolCall(name: string, args: any, context: DomainContext): Promise<any>;
+}

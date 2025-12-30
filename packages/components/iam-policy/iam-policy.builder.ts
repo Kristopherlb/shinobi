@@ -13,6 +13,36 @@ import {
 import { ComponentContext, ComponentSpec } from '@platform/contracts';
 
 export type IamPolicyRemovalPolicy = 'retain' | 'destroy';
+export type IamPolicyType = 'managed' | 'inline';
+export type PolicyTemplateType = 
+  | 'read-only'
+  | 'lambda-execution'
+  | 'ecs-task'
+  | 's3-access'
+  | 'rds-access'
+  | 'dynamodb-access'
+  | 'custom';
+
+// ===== TYPE DEFINITIONS =====
+
+export interface PolicyStatementSpec {
+  Sid?: string;
+  Effect: 'Allow' | 'Deny';
+  Action: string | string[];
+  Resource?: string | string[];
+  Condition?: Record<string, any>;
+}
+
+export interface PolicyDocumentSpec {
+  Version?: string;
+  Statement: PolicyStatementSpec[];
+}
+
+export interface PolicyTemplateSpec {
+  type: PolicyTemplateType;
+  resources?: string[];
+  additionalStatements?: PolicyStatementSpec[];
+}
 
 export interface IamPolicyLogConfig {
   enabled?: boolean;
@@ -54,11 +84,20 @@ export interface IamPolicyMonitoringConfig {
  * Configuration interface for IamPolicyComponent component
  */
 export interface IamPolicyConfig {
-  /** Component name (optional, will be auto-generated) */
-  name?: string;
-  
-  /** Component description */
+  // Core policy fields
+  policyName?: string;
+  policyType: IamPolicyType;
   description?: string;
+  path?: string;
+  
+  // Policy content (mutually exclusive with template)
+  policyDocument?: PolicyDocumentSpec;
+  policyTemplate?: PolicyTemplateSpec;
+  
+  // Attachment targets (only for managed policies)
+  groups?: string[];
+  roles?: string[];
+  users?: string[];
   
   /** Logging and audit configuration */
   logging?: {
@@ -75,26 +114,59 @@ export interface IamPolicyConfig {
   
   /** Tagging configuration */
   tags?: Record<string, string>;
-  
-  // TODO: Add component-specific configuration properties
 }
 
 /**
  * JSON Schema for IamPolicyComponent configuration validation
  */
 export const IAM_POLICY_CONFIG_SCHEMA: ComponentConfigSchema = {
+  $schema: 'http://json-schema.org/draft-07/schema#',
+  title: 'IAM Policy Component Configuration',
   type: 'object',
+  required: ['policyType'],
   properties: {
-    name: {
+    policyName: {
       type: 'string',
-      description: 'Component name (optional, will be auto-generated from component name)',
-      pattern: '^[a-zA-Z][a-zA-Z0-9-_]*$',
+      description: 'Name of the IAM policy (optional, will be auto-generated)',
+      pattern: '^[a-zA-Z0-9+=,.@_-]+$',
       maxLength: 128
+    },
+    policyType: {
+      type: 'string',
+      enum: ['managed', 'inline'],
+      description: 'Type of IAM policy to create'
     },
     description: {
       type: 'string',
-      description: 'Component description for documentation',
-      maxLength: 1024
+      description: 'Policy description for documentation',
+      maxLength: 1000
+    },
+    path: {
+      type: 'string',
+      description: 'Path for the policy (managed policies only)',
+      pattern: '^(/|/[a-zA-Z0-9+=,.@_-]+/)$',
+      default: '/'
+    },
+    policyDocument: {
+      $ref: '#/definitions/policyDocument'
+    },
+    policyTemplate: {
+      $ref: '#/definitions/policyTemplate'
+    },
+    groups: {
+      type: 'array',
+      description: 'IAM groups to attach policy to (managed only)',
+      items: { type: 'string' }
+    },
+    roles: {
+      type: 'array',
+      description: 'IAM roles to attach policy to (managed only)',
+      items: { type: 'string' }
+    },
+    users: {
+      type: 'array',
+      description: 'IAM users to attach policy to (managed only)',
+      items: { type: 'string' }
     },
     monitoring: {
       type: 'object',
@@ -187,7 +259,80 @@ export const IAM_POLICY_CONFIG_SCHEMA: ComponentConfigSchema = {
     }
   },
   additionalProperties: false,
+  oneOf: [
+    {
+      required: ['policyDocument'],
+      not: { required: ['policyTemplate'] }
+    },
+    {
+      required: ['policyTemplate'],
+      not: { required: ['policyDocument'] }
+    }
+  ],
   definitions: {
+    policyDocument: {
+      type: 'object',
+      description: 'IAM policy document in standard AWS format',
+      required: ['Statement'],
+      properties: {
+        Version: { type: 'string', default: '2012-10-17' },
+        Statement: {
+          type: 'array',
+          minItems: 1,
+          items: {
+            type: 'object',
+            required: ['Effect', 'Action'],
+            properties: {
+              Sid: { type: 'string' },
+              Effect: { type: 'string', enum: ['Allow', 'Deny'] },
+              Action: {
+                oneOf: [
+                  { type: 'string' },
+                  { type: 'array', items: { type: 'string' }, minItems: 1 }
+                ]
+              },
+              Resource: {
+                oneOf: [
+                  { type: 'string' },
+                  { type: 'array', items: { type: 'string' } }
+                ]
+              },
+              Condition: { type: 'object' }
+            }
+          }
+        }
+      }
+    },
+    policyTemplate: {
+      type: 'object',
+      description: 'Pre-defined policy template',
+      required: ['type'],
+      properties: {
+        type: {
+          type: 'string',
+          enum: [
+            'read-only',
+            'lambda-execution',
+            'ecs-task',
+            's3-access',
+            'rds-access',
+            'dynamodb-access',
+            'custom'
+          ],
+          description: 'Template type - custom allows empty base with additionalStatements'
+        },
+        resources: {
+          type: 'array',
+          items: { type: 'string' },
+          description: 'Resource ARNs to scope template to (defaults to wildcard if not specified)'
+        },
+        additionalStatements: {
+          type: 'array',
+          description: 'Additional policy statements to merge with template',
+          items: { $ref: '#/definitions/policyDocument/properties/Statement/items' }
+        }
+      }
+    },
     logConfig: {
       type: 'object',
       additionalProperties: false,
@@ -195,8 +340,12 @@ export const IAM_POLICY_CONFIG_SCHEMA: ComponentConfigSchema = {
         enabled: { type: 'boolean', default: false },
         logGroupName: { type: 'string' },
         logGroupNameSuffix: { type: 'string' },
-        retentionInDays: { type: 'number', minimum: 1 },
-        removalPolicy: { type: 'string', enum: ['retain', 'destroy'] },
+        retentionInDays: {
+          type: 'number',
+          enum: [1, 3, 5, 7, 14, 30, 60, 90, 120, 150, 180, 365, 400, 545, 731, 1827, 3653],
+          description: 'CloudWatch Logs retention period in days'
+        },
+        removalPolicy: { type: 'string', enum: ['retain', 'destroy'], default: 'retain' },
         tags: {
           type: 'object',
           additionalProperties: { type: 'string' }
@@ -228,6 +377,11 @@ export class IamPolicyComponentConfigBuilder extends ConfigBuilder<IamPolicyConf
    */
   protected getHardcodedFallbacks(): Partial<IamPolicyConfig> {
     return {
+      policyType: 'managed',
+      path: '/',
+      groups: [],
+      roles: [],
+      users: [],
       monitoring: {
         enabled: false,
         detailedMetrics: false,
@@ -257,12 +411,41 @@ export class IamPolicyComponentConfigBuilder extends ConfigBuilder<IamPolicyConf
 
   public buildSync(): IamPolicyConfig {
     const resolved = super.buildSync() as IamPolicyConfig;
+    
+    // Validation: must have either policyDocument or policyTemplate
+    if (!resolved.policyDocument && !resolved.policyTemplate) {
+      throw new Error('IamPolicyConfig must specify either policyDocument or policyTemplate');
+    }
+    
+    // Validation: can't have both
+    if (resolved.policyDocument && resolved.policyTemplate) {
+      throw new Error('IamPolicyConfig cannot specify both policyDocument and policyTemplate');
+    }
+    
+    // Validation: inline policies cannot have attachments
+    if (resolved.policyType === 'inline' && 
+        ((resolved.groups && resolved.groups.length > 0) || 
+         (resolved.roles && resolved.roles.length > 0) || 
+         (resolved.users && resolved.users.length > 0))) {
+      throw new Error('Inline policies cannot specify groups, roles, or users. Attachments are only supported for managed policies.');
+    }
+    
+    // Validation: policyName length
+    if (resolved.policyName && resolved.policyName.length > 128) {
+      throw new Error(`Policy name exceeds maximum length of 128 characters: ${resolved.policyName}`);
+    }
+    
     return this.normaliseConfig(resolved);
   }
 
   private normaliseConfig(config: IamPolicyConfig): IamPolicyConfig {
     return {
       ...config,
+      policyType: config.policyType || 'managed',
+      path: config.path || '/',
+      groups: config.groups || [],
+      roles: config.roles || [],
+      users: config.users || [],
       monitoring: {
         enabled: config.monitoring?.enabled ?? false,
         detailedMetrics: config.monitoring?.detailedMetrics ?? false,
@@ -276,34 +459,30 @@ export class IamPolicyComponentConfigBuilder extends ConfigBuilder<IamPolicyConf
         }
       },
       logging: {
-        usage: {
-          enabled: config.logging?.usage?.enabled ?? false,
-          logGroupName: config.logging?.usage?.logGroupName,
-          logGroupNameSuffix: config.logging?.usage?.logGroupNameSuffix,
-          retentionInDays: config.logging?.usage?.retentionInDays ?? 90,
-          removalPolicy: config.logging?.usage?.removalPolicy ?? 'destroy',
-          tags: config.logging?.usage?.tags ?? {}
-        },
-        compliance: config.logging?.compliance
-          ? {
-            enabled: config.logging?.compliance?.enabled ?? false,
-            logGroupName: config.logging?.compliance?.logGroupName,
-            logGroupNameSuffix: config.logging?.compliance?.logGroupNameSuffix,
-            retentionInDays: config.logging?.compliance?.retentionInDays,
-            removalPolicy: config.logging?.compliance?.removalPolicy ?? 'retain',
-            tags: config.logging?.compliance?.tags ?? {}
-          }
-          : undefined,
-        audit: config.logging?.audit
-          ? {
-            enabled: config.logging?.audit?.enabled ?? false,
-            logGroupName: config.logging?.audit?.logGroupName,
-            logGroupNameSuffix: config.logging?.audit?.logGroupNameSuffix,
-            retentionInDays: config.logging?.audit?.retentionInDays,
-            removalPolicy: config.logging?.audit?.removalPolicy ?? 'retain',
-            tags: config.logging?.audit?.tags ?? {}
-          }
-          : undefined
+        usage: config.logging?.usage ? {
+          enabled: config.logging.usage.enabled ?? false,
+          logGroupName: config.logging.usage.logGroupName,
+          logGroupNameSuffix: config.logging.usage.logGroupNameSuffix,
+          retentionInDays: config.logging.usage.retentionInDays ?? 90,
+          removalPolicy: config.logging.usage.removalPolicy ?? 'destroy',
+          tags: config.logging.usage.tags ?? {}
+        } : undefined,
+        compliance: config.logging?.compliance ? {
+          enabled: config.logging.compliance.enabled ?? false,
+          logGroupName: config.logging.compliance.logGroupName,
+          logGroupNameSuffix: config.logging.compliance.logGroupNameSuffix,
+          retentionInDays: config.logging.compliance.retentionInDays ?? 365,
+          removalPolicy: config.logging.compliance.removalPolicy ?? 'retain',
+          tags: config.logging.compliance.tags ?? {}
+        } : undefined,
+        audit: config.logging?.audit ? {
+          enabled: config.logging.audit.enabled ?? false,
+          logGroupName: config.logging.audit.logGroupName,
+          logGroupNameSuffix: config.logging.audit.logGroupNameSuffix,
+          retentionInDays: config.logging.audit.retentionInDays ?? 365,
+          removalPolicy: config.logging.audit.removalPolicy ?? 'retain',
+          tags: config.logging.audit.tags ?? {}
+        } : undefined
       },
       controls: {
         denyInsecureTransport: config.controls?.denyInsecureTransport ?? false,

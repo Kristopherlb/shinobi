@@ -10,9 +10,9 @@ import {
   ComponentSpec, 
   ComponentContext, 
   IComponentCreator 
-} from '../../platform/contracts/component-interfaces.ts';
-import { IamPolicyComponentComponent } from './iam-policy.component.ts';
-import { IamPolicyConfig, IAM_POLICY_CONFIG_SCHEMA } from './iam-policy.builder.ts';
+} from '@platform/contracts';
+import { IamPolicyComponent } from './iam-policy.component.js';
+import { IamPolicyConfig, IAM_POLICY_CONFIG_SCHEMA } from './iam-policy.builder.js';
 
 /**
  * Creator class for IamPolicyComponent component
@@ -72,8 +72,10 @@ export class IamPolicyComponentCreator implements IComponentCreator {
     scope: Construct, 
     spec: ComponentSpec, 
     context: ComponentContext
-  ): IamPolicyComponentComponent {
-    return new IamPolicyComponentComponent(scope, spec, context);
+  ): IamPolicyComponent {
+    // Construct ID is the spec.name
+    const id = spec.name;
+    return new IamPolicyComponent(scope, id, context, spec);
   }
   
   /**
@@ -93,15 +95,33 @@ export class IamPolicyComponentCreator implements IComponentCreator {
       errors.push('Component name must start with a letter and contain only alphanumeric characters, hyphens, and underscores');
     }
     
-    // TODO: Add component-specific validations here
+    // Validate policyType is provided
+    if (!config?.policyType) {
+      errors.push('policyType is required (must be "managed" or "inline")');
+    }
+    
+    // Validate either policyDocument or policyTemplate is provided
+    if (!config?.policyDocument && !config?.policyTemplate) {
+      errors.push('Must specify either policyDocument or policyTemplate');
+    }
+    
+    // Validate both are not provided
+    if (config?.policyDocument && config?.policyTemplate) {
+      errors.push('Cannot specify both policyDocument and policyTemplate - choose one');
+    }
+    
+    // Validate inline policies don't have attachments
+    if (config?.policyType === 'inline') {
+      if (config.groups?.length || config.roles?.length || config.users?.length) {
+        errors.push('Inline policies cannot specify groups, roles, or users. Use patches.ts for attachment.');
+      }
+    }
     
     // Environment-specific validations
     if (context.environment === 'prod') {
       if (!config?.monitoring?.enabled) {
         errors.push('Monitoring must be enabled in production environment');
       }
-      
-      // TODO: Add production-specific validations
     }
     
     return {
@@ -115,8 +135,7 @@ export class IamPolicyComponentCreator implements IComponentCreator {
    */
   public getProvidedCapabilities(): string[] {
     return [
-      'security:iam-policy',
-      'monitoring:iam-policy'
+      'iam:policy'
     ];
   }
   
@@ -124,9 +143,7 @@ export class IamPolicyComponentCreator implements IComponentCreator {
    * Returns the capabilities this component requires from other components
    */
   public getRequiredCapabilities(): string[] {
-    return [
-      // TODO: Define required capabilities
-    ];
+    return [];
   }
   
   /**
@@ -134,8 +151,12 @@ export class IamPolicyComponentCreator implements IComponentCreator {
    */
   public getConstructHandles(): string[] {
     return [
-      'main'
-      // TODO: Add additional construct handles if needed
+      'main',
+      'policy',
+      'usageLogGroup',
+      'complianceLogGroup',
+      'auditLogGroup',
+      'policyUsageAlarm'
     ];
   }
 }

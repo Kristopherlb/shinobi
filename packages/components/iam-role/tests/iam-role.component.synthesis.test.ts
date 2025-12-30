@@ -7,7 +7,7 @@ import { Template, Match } from 'aws-cdk-lib/assertions';
 import { App, Stack } from 'aws-cdk-lib';
 import { IamRoleComponent } from '../src/iam-role.component.ts';
 import { IamRoleConfig } from '../src/iam-role.builder.ts';
-import { ComponentContext, ComponentSpec } from '../../@shinobi/core/component-interfaces.ts';
+import { ComponentContext, ComponentSpec } from '@platform/contracts';
 
 const createMockContext = (
   complianceFramework: 'commercial' | 'fedramp-moderate' | 'fedramp-high' = 'commercial',
@@ -59,10 +59,10 @@ describe('IamRoleComponent Synthesis', () => {
       
       const { template, component } = synthesizeComponent(context, spec);
       
-      // TODO: Add specific CloudFormation resource assertions
-      // Verify component was created
       expect(component).toBeDefined();
       expect(component.getType()).toBe('iam-role');
+      const templateJson = template.toJSON();
+      expect(templateJson.Resources).toBeDefined();
     });
     
   });
@@ -77,8 +77,8 @@ describe('IamRoleComponent Synthesis', () => {
       
       const capabilities = component.getCapabilities();
       
-      // Verify component-specific capabilities
-      expect(capabilities).toBeDefined();
+      expect(capabilities['iam:assumeRole']).toBeDefined();
+      expect(capabilities['iam:assumeRole'].roleArn).toBeDefined();
     });
     
     it('should register construct handles for patches.ts access', () => {
@@ -87,10 +87,49 @@ describe('IamRoleComponent Synthesis', () => {
       
       const { component } = synthesizeComponent(context, spec);
       
-      // Verify main construct is registered
-      expect(component.getConstruct('main')).toBeDefined();
+      expect(component.getConstruct('role')).toBeDefined();
     });
     
   });
   
 });
+  describe('Logging and Monitoring Configuration', () => {
+    it('should create audit log group when enabled', () => {
+      const context = createMockContext('commercial');
+      const spec = createMockSpec({
+        logging: {
+          audit: {
+            enabled: true,
+            retentionInDays: 365,
+            removalPolicy: 'retain'
+          }
+        }
+      });
+
+      const { template } = synthesizeComponent(context, spec);
+
+      template.hasResourceProperties('AWS::Logs::LogGroup', {
+        LogGroupName: Match.stringLikeRegexp('/aws/iam/role/'),
+        RetentionInDays: 365
+      });
+    });
+
+    it('should create session alarm when monitoring enabled', () => {
+      const context = createMockContext('commercial');
+      const spec = createMockSpec({
+        monitoring: {
+          enabled: true,
+          sessionAlarm: {
+            enabled: true,
+            thresholdMinutes: 10
+          }
+        }
+      });
+
+      const { template } = synthesizeComponent(context, spec);
+
+      template.hasResourceProperties('AWS::CloudWatch::Alarm', {
+        AlarmDescription: 'IAM role session duration threshold exceeded'
+      });
+    });
+  });

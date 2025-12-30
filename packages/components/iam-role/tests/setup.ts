@@ -60,36 +60,19 @@ jest.mock('aws-cdk-lib/assertions', () => ({
 }));
 
 // Mock platform contracts
-jest.mock('../../@shinobi/core/component', () => ({
-  BaseComponent: jest.fn().mockImplementation(function(this: any) {
+jest.mock('@shinobi/core', () => ({
+  BaseComponent: jest.fn().mockImplementation(function (this: any) {
     this.applyStandardTags = jest.fn();
     this.registerConstruct = jest.fn();
     this.registerCapability = jest.fn();
-    this.synth = jest.fn();
-    this.getConstruct = jest.fn().mockImplementation((handle: string) => {
-      if (handle === 'role' || handle === 'main') {
-        return {
-          roleArn: 'arn:aws:iam::123456789012:role/test-role',
-          roleName: 'test-role',
-          roleId: 'AROA1234567890EXAMPLE'
-        };
-      }
-      throw new Error(`Unknown construct handle: ${handle}`);
-    });
-    this.getCapabilities = jest.fn().mockReturnValue({
-      'iam:assumeRole': {
-        roleArn: 'arn:aws:iam::123456789012:role/test-role',
-        roleName: 'test-role',
-        principal: 'ec2.amazonaws.com'
-      }
-    });
-    this.getOutputs = jest.fn().mockReturnValue({
-      roleArn: 'arn:aws:iam::123456789012:role/test-role',
-      roleName: 'test-role',
-      roleId: 'AROA1234567890EXAMPLE'
-    });
-    this.node = {
-      id: 'test-component'
-    };
+    this.validateSynthesized = jest.fn();
+    this.logComponentEvent = jest.fn();
+    this.logPerformanceMetric = jest.fn();
+    this.logResourceCreation = jest.fn();
+    this.logError = jest.fn();
+    this.capabilities = {};
+    this.context = {};
+    this.spec = {};
+    this.getConstruct = jest.fn();
   })
 }));

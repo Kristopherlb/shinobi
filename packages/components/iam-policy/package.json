@@ -1,0 +1,42 @@
+{
+  "name": "@platform/iam-policy",
+  "version": "1.0.0",
+  "description": "Platform component for AWS IAM Policy management with least privilege security patterns and compliance-aware configuration",
+  "main": "dist/index.js",
+  "types": "dist/index.d.ts",
+  "scripts": {
+    "build": "tsc",
+    "test": "jest",
+    "test:watch": "jest --watch",
+    "test:coverage": "jest --coverage"
+  },
+  "keywords": [
+    "aws",
+    "cdk",
+    "iam",
+    "policy",
+    "security",
+    "compliance",
+    "platform",
+    "component",
+    "shinobi"
+  ],
+  "author": "Platform Engineering Team",
+  "license": "MIT",
+  "dependencies": {
+    "@platform/contracts": "workspace:*",
+    "@shinobi/core": "workspace:*",
+    "aws-cdk-lib": "^2.0.0",
+    "constructs": "^10.0.0"
+  },
+  "devDependencies": {
+    "@types/jest": "^29.0.0",
+    "@types/node": "^20.0.0",
+    "jest": "^29.0.0",
+    "ts-jest": "^29.0.0",
+    "typescript": "^5.0.0"
+  },
+  "type": "module"
+}
+
+
