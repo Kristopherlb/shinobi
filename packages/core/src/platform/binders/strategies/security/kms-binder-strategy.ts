@@ -50,7 +50,7 @@ export class KmsBinderStrategy extends UnifiedBinderStrategyBase {
 
   protected async doBind(context: BindingContext): Promise<Omit<EnhancedBindingResult, 'compliance'>> {
     const { source, target, directive } = context;
-    const { capability, access } = directive;
+    const { capability } = directive;
 
     // Validate inputs
     if (!target) {
@@ -59,18 +59,20 @@ export class KmsBinderStrategy extends UnifiedBinderStrategyBase {
     if (!capability) {
       throw new Error('Binding capability is required');
     }
-    if (!access || !Array.isArray(access)) {
-      throw new Error('Binding access array is required');
-    }
 
+    // Normalize access to array (directive.access is a single AccessLevel string)
+    // KMS accepts standard AccessLevel values: 'read', 'write', 'admin'
+    // These map to KMS-specific permissions internally
+    const access = directive.access ? [directive.access] : [];
+    
     // Validate access patterns
-    const validAccessTypes = ['read', 'write', 'admin', 'encrypt', 'decrypt', 'process'];
+    const validAccessTypes = ['read', 'write', 'admin', 'readwrite'];
     const invalidAccess = access.filter(a => !validAccessTypes.includes(a));
     if (invalidAccess.length > 0) {
       throw new Error(`Invalid access types for KMS binding: ${invalidAccess.join(', ')}. Valid types: ${validAccessTypes.join(', ')}`);
     }
     if (access.length === 0) {
-      throw new Error('Access array cannot be empty for KMS binding');
+      throw new Error('Access cannot be empty for KMS binding');
     }
 
     // Get target capability data
