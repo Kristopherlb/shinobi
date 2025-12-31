@@ -41,7 +41,6 @@
   "author": "Shinobi Platform Team",
   "license": "MIT",
   "dependencies": {
-    "@platform/contracts": "workspace:*",
     "@shinobi/core": "workspace:*",
     "aws-cdk-lib": "^2.100.0",
     "constructs": "^10.3.0",

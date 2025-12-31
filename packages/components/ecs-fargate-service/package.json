@@ -32,7 +32,6 @@
   },
   "homepage": "https://github.com/your-org/shinobi/tree/main/packages/components/ecs-fargate-service#readme",
   "dependencies": {
-    "@platform/contracts": "workspace:*",
     "@shinobi/core": "workspace:*",
     "aws-cdk-lib": "^2.100.0",
     "constructs": "^10.0.0"

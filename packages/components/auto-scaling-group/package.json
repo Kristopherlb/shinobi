@@ -24,7 +24,6 @@
   "license": "MIT",
   "dependencies": {
     "@shinobi/core": "workspace:*",
-    "@platform/contracts": "workspace:*",
     "cdk-nag": "^2.37.35"
   },
   "peerDependencies": {

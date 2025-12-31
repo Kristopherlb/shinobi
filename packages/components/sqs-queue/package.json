@@ -9,7 +9,6 @@
     "test": "jest"
   },
   "dependencies": {
-    "@platform/contracts": "workspace:*",
     "@shinobi/core": "workspace:*"
   },
   "devDependencies": {},
