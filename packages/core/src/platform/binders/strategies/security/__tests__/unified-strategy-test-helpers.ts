@@ -11,11 +11,8 @@
  */
 
 import { Construct } from 'constructs';
-import type { IComponent } from '../../../../platform/contracts/index.js';
-import type { ComponentSpec, ComponentContext, ComponentCapabilities } from '../../../../platform/contracts/index.js';
-import type { BindingContext, EnhancedBindingResult } from '../../../../platform/contracts/platform-binding-trigger-spec.js';
-import type { IUnifiedBinderStrategy } from '../../../../platform/contracts/platform-binding-trigger-spec.js';
-import type { AccessLevel } from '../../../../platform/contracts/platform-binding-trigger-spec.js';
+import type { IComponent, ComponentSpec, ComponentContext, ComponentCapabilities } from '../../../../../platform/contracts/index.js';
+import type { BindingContext, EnhancedBindingResult, IUnifiedBinderStrategy, AccessLevel } from '../../../../../platform/contracts/platform-binding-trigger-spec.js';
 
 /**
  * Deterministic test constants (fixed values for reproducibility)
@@ -51,16 +48,17 @@ export function createMockSourceComponent(type: string = 'lambda-api', name: str
     binds: []
   };
 
+  // Create a minimal Construct for the mock
+  const construct = new Construct(undefined as any, `${name}-construct`);
+
   const context: ComponentContext = {
     serviceName: TEST_CONSTANTS.SERVICE_NAME,
     environment: TEST_CONSTANTS.ENVIRONMENT,
     complianceFramework: TEST_CONSTANTS.COMPLIANCE_FRAMEWORK,
     region: TEST_CONSTANTS.REGION,
-    accountId: TEST_CONSTANTS.ACCOUNT_ID
+    accountId: TEST_CONSTANTS.ACCOUNT_ID,
+    scope: construct
   };
-
-  // Create a minimal Construct for the mock
-  const construct = new Construct(undefined as any, `${name}-construct`);
 
   return {
     spec,
@@ -114,15 +112,16 @@ export function createMockTargetComponent(
     binds: []
   };
 
+  const construct = new Construct(undefined as any, `${name}-construct`);
+
   const context: ComponentContext = {
     serviceName: TEST_CONSTANTS.SERVICE_NAME,
     environment: TEST_CONSTANTS.ENVIRONMENT,
     complianceFramework: TEST_CONSTANTS.COMPLIANCE_FRAMEWORK,
     region: TEST_CONSTANTS.REGION,
-    accountId: TEST_CONSTANTS.ACCOUNT_ID
+    accountId: TEST_CONSTANTS.ACCOUNT_ID,
+    scope: construct
   };
-
-  const construct = new Construct(undefined as any, `${name}-construct`);
 
   return {
     spec,
@@ -170,7 +169,7 @@ export function createBindingContext(options: {
   source?: IComponent;
   target?: IComponent;
   capability: string;
-  access?: AccessLevel;
+  access?: 'read' | 'write' | 'readwrite' | 'admin';
   options?: Record<string, any>;
   env?: Record<string, string>;
   complianceFramework?: string;
