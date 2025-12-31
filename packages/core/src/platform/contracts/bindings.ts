@@ -1,6 +1,27 @@
 /**
  * Core binding contracts and types
- * Thin re-export wrapper for canonical binding interfaces
+ * 
+ * Central type hub for bindings — re-exports canonical interfaces, defines capability
+ * vocabularies, data shapes, IAM/SG rules, and compliance types.
+ * 
+ * EXTENSIBILITY FOR EXTERNAL USERS
+ * 
+ * Users without codebase access can extend the platform via configuration:
+ * 
+ * 1. Custom Compliance Frameworks/Rules
+ *    → Provide custom YAML config via context.options.complianceConfigPath
+ *    → Or runtime override via context.options.complianceRulesOverride
+ *    → Framework names are extensible via config (no code changes needed)
+ * 
+ * 2. Custom Capabilities
+ *    → Use any string in 'capability' field (e.g., 'db:snowflake', 'storage:gcs')
+ *    → Provide target data via custom labels or metadata
+ *    → Falls back to CustomCapabilityData type for type safety
+ *    → Strategies should handle unknown capabilities gracefully via canHandle()
+ * 
+ * 3. Custom Target Data
+ *    → Falls back to CustomCapabilityData in union
+ *    → Type system will accept any object with 'type' field
  */
 
 import type {
@@ -11,6 +32,7 @@ import type {
   IBinderMatrix
 } from './platform-binding-trigger-spec.js';
 import type { IComponent } from './component-interfaces.js';
+import type { PolicyStatement } from 'aws-cdk-lib/aws-iam';
 
 // Re-export canonical binding interfaces
 export type {
@@ -26,7 +48,7 @@ export type {
 // COMPLIANCE FRAMEWORK TYPES
 // =============================================================================
 
-export type ComplianceFramework = 'commercial' | 'fedramp-moderate' | 'fedramp-high';
+export type ComplianceFramework = 'commercial' | 'fedramp-moderate' | 'fedramp-high' | 'hipaa';
 
 export type ComponentType = 's3-bucket' | 'lambda-api' | 'rds-postgres' | 'ec2-instance' | 'dynamodb-table' | 'sqs-queue' | 'sns-topic';
 
@@ -50,6 +72,12 @@ export type Capability =
   | LambdaCapability
   | ApiCapability
   | MonitoringCapability;
+
+/**
+ * Note: External users can use custom capability strings (e.g., 'db:snowflake', 'storage:gcs')
+ * by specifying them directly in the directive. The type system will fall back to string.
+ * Strategies should handle unknown capabilities gracefully via canHandle().
+ */
 
 // =============================================================================
 // CAPABILITY DATA TYPES
@@ -188,6 +216,15 @@ export interface ApiGatewayCapabilityData {
   };
 }
 
+/**
+ * Custom capability data escape hatch for external users
+ * Allows any capability type not defined in the core platform
+ */
+export interface CustomCapabilityData {
+  type: string; // e.g., 'db:snowflake', 'storage:gcs', 'cache:memcached'
+  [key: string]: unknown; // Flexible structure for custom providers
+}
+
 export type CapabilityData =
   | PostgresCapabilityData
   | MySQLCapabilityData
@@ -196,7 +233,8 @@ export type CapabilityData =
   | SNSCapabilityData
   | RedisCapabilityData
   | LambdaCapabilityData
-  | ApiGatewayCapabilityData;
+  | ApiGatewayCapabilityData
+  | CustomCapabilityData; // Escape hatch for external extensibility
 
 // =============================================================================
 // SECURITY GROUP RULES
@@ -222,7 +260,7 @@ export interface SecurityGroupRule {
 // =============================================================================
 
 export interface IamPolicy {
-  statement: any; // PolicyStatement from aws-cdk-lib/aws-iam
+  statement: PolicyStatement; // CDK PolicyStatement for type safety
   description: string;
   complianceRequirement: string;
 }
@@ -241,12 +279,13 @@ export interface ComplianceAction {
 }
 
 // =============================================================================
-// ENHANCED BINDING INTERFACES (LEGACY - DEPRECATED)
+// ENHANCED BINDING INTERFACES (LEGACY ENHANCED SYSTEM)
 // =============================================================================
 
-// These interfaces are kept for backward compatibility but should be migrated to
-// the canonical interfaces in platform-binding-trigger-spec.ts
-
+/**
+ * Enhanced binding context used by the legacy enhanced binder system.
+ * The unified system uses BindingContext from platform-binding-trigger-spec.ts.
+ */
 export interface EnhancedBindingContext<T extends ComplianceFramework = ComplianceFramework> {
   source: IComponent;
   target: IComponent;
@@ -257,6 +296,11 @@ export interface EnhancedBindingContext<T extends ComplianceFramework = Complian
   options?: Record<string, unknown>;
 }
 
+/**
+ * Enhanced binding result used by the legacy enhanced binder system.
+ * The unified system uses EnhancedBindingResult from platform-binding-trigger-spec.ts
+ * which includes a mandatory compliance block.
+ */
 export interface EnhancedBindingResult {
   readonly environmentVariables: Readonly<Record<string, string>>;
   readonly iamPolicies: ReadonlyArray<IamPolicy>;

@@ -1,84 +1,154 @@
 /**
- * DynamoDB Binder Strategy
- * Handles NoSQL database bindings for Amazon DynamoDB
+ * DynamoDB Binder Strategy (Unified)
+ * Handles NoSQL database bindings for Amazon DynamoDB with mandatory compliance enforcement
  */
 
-import { IBinderStrategy } from '../binder-strategy.js';
-import { ComponentBinding, BindingRuntimeContext } from '../../types.js';
-// Compliance framework branching removed; use binding.options/config instead
+import { UnifiedBinderStrategyBase } from '../../../contracts/unified-binder-strategy-base.js';
+import type { BindingContext, EnhancedBindingResult, CompatibilityEntry } from '../../../contracts/platform-binding-trigger-spec.js';
+import type { IamPolicy } from '../../../contracts/bindings.js';
+import { PolicyStatement, Effect } from 'aws-cdk-lib/aws-iam';
 
-export class DynamoDbBinderStrategy implements IBinderStrategy {
-  readonly supportedCapabilities = ['db:dynamodb', 'dynamodb:table', 'dynamodb:index', 'dynamodb:stream'];
+export class DynamoDbBinderStrategy extends UnifiedBinderStrategyBase {
+  readonly supportedCapabilities = ['db:dynamodb', 'dynamodb:table', 'dynamodb:index', 'dynamodb:stream', 'dynamodb:backup'];
 
-  async bind(
-    sourceComponent: any,
-    targetComponent: any,
-    binding: ComponentBinding,
-    context: BindingRuntimeContext
-  ): Promise<void> {
+  getStrategyName(): string {
+    return 'DynamoDB Binder Strategy';
+  }
+
+  canHandle(sourceType: string, targetCapability: string): boolean {
+    return this.supportedCapabilities.includes(targetCapability);
+  }
+
+  getCompatibilityMatrix(): CompatibilityEntry[] {
+    return [
+      {
+        sourceType: '*',
+        targetType: 'dynamodb:table',
+        capability: 'db:dynamodb',
+        supportedAccess: ['read', 'write', 'readwrite', 'admin'],
+        description: 'Bind to DynamoDB table for NoSQL database operations',
+        examples: ['lambda-api -> db:dynamodb (read/write)']
+      },
+      {
+        sourceType: '*',
+        targetType: 'dynamodb:table',
+        capability: 'dynamodb:table',
+        supportedAccess: ['read', 'write', 'readwrite', 'admin'],
+        description: 'Bind to DynamoDB table (alias for db:dynamodb)',
+        examples: ['lambda-api -> dynamodb:table (read)']
+      },
+      {
+        sourceType: '*',
+        targetType: 'dynamodb:index',
+        capability: 'dynamodb:index',
+        supportedAccess: ['read', 'write'],
+        description: 'Bind to DynamoDB index (GSI or LSI) for query operations',
+        examples: ['lambda-api -> dynamodb:index (read)']
+      },
+      {
+        sourceType: '*',
+        targetType: 'dynamodb:stream',
+        capability: 'dynamodb:stream',
+        supportedAccess: ['read', 'write'],
+        description: 'Bind to DynamoDB stream for change data capture',
+        examples: ['lambda-api -> dynamodb:stream (read)']
+      },
+      {
+        sourceType: '*',
+        targetType: 'dynamodb:table',
+        capability: 'dynamodb:backup',
+        supportedAccess: ['read', 'write'],
+        description: 'Bind to DynamoDB table for backup and restore operations',
+        examples: ['lambda-backup -> dynamodb:backup (read)']
+      }
+    ];
+  }
+
+  protected async doBind(context: BindingContext): Promise<Omit<EnhancedBindingResult, 'compliance'>> {
+    const { source, target, directive } = context;
+    const { capability } = directive;
+
     // Validate inputs
-    if (!targetComponent) {
-      throw new Error('Target component is required for DynamoDB table binding');
+    if (!target) {
+      throw new Error('Target component is required for DynamoDB binding');
     }
-    if (!binding?.capability) {
+    if (!capability) {
       throw new Error('Binding capability is required');
     }
-    if (!binding?.access || !Array.isArray(binding.access)) {
-      throw new Error('Binding access array is required');
-    }
-    if (!context?.region || !context?.accountId) {
-      throw new Error('Missing required context properties for ARN construction: region, accountId');
-    }
 
-    // Validate access patterns
-    const validAccessTypes = ['read', 'write', 'admin', 'encrypt', 'decrypt', 'backup', 'process'];
-    const invalidAccess = binding.access.filter(a => !validAccessTypes.includes(a));
+    // Normalize access to array (directive.access is a single AccessLevel string)
+    const access = directive.access ? [directive.access] : [];
+
+    // Validate access patterns (only standard AccessLevel values are allowed)
+    const validAccessTypes = ['read', 'write', 'readwrite', 'admin'];
+    const invalidAccess = access.filter(a => !validAccessTypes.includes(a));
     if (invalidAccess.length > 0) {
-      throw new Error(`Invalid access types for DynamoDB table binding: ${invalidAccess.join(', ')}. Valid types: ${validAccessTypes.join(', ')}`);
+      throw new Error(`Invalid access types for DynamoDB binding: ${invalidAccess.join(', ')}. Valid types: ${validAccessTypes.join(', ')}`);
     }
-    if (binding.access.length === 0) {
-      throw new Error('Access array cannot be empty for DynamoDB table binding');
+    if (access.length === 0) {
+      throw new Error('Access cannot be empty for DynamoDB binding');
     }
 
-    const { capability, access } = binding;
+    // Get target capability data
+    const targetCapabilities = target.getCapabilities();
+    const targetCapabilityData = targetCapabilities[capability];
+    if (!targetCapabilityData) {
+      throw new Error(`Target component does not provide capability '${capability}'`);
+    }
 
+    // Route to appropriate binding method
     switch (capability) {
       case 'db:dynamodb':
       case 'dynamodb:table':
-        await this.bindToTable(sourceComponent, targetComponent, binding, context);
-        break;
+        return await this.bindToTable(context, targetCapabilityData, access);
       case 'dynamodb:index':
-        await this.bindToIndex(sourceComponent, targetComponent, binding, context);
-        break;
+        return await this.bindToIndex(context, targetCapabilityData, access);
       case 'dynamodb:stream':
-        await this.bindToStream(sourceComponent, targetComponent, binding, context);
-        break;
+        return await this.bindToStream(context, targetCapabilityData, access);
+      case 'dynamodb:backup':
+        return await this.bindToBackup(context, targetCapabilityData, access);
       default:
         throw new Error(`Unsupported DynamoDB capability: ${capability}. Supported capabilities: ${this.supportedCapabilities.join(', ')}`);
     }
   }
 
+  /**
+   * Bind to DynamoDB table
+   * 
+   * @param context - Binding context
+   * @param targetData - Expected structure:
+   *   - tableArn (required): string - ARN of the DynamoDB table
+   *   - tableName (required): string - Name of the DynamoDB table
+   *   - tableStatus?: string - Status of the table (e.g., 'ACTIVE')
+   *   - keySchema?: object - Key schema definition
+   *   - attributeDefinitions?: object[] - Attribute definitions
+   *   - billingMode?: string - Billing mode ('PAY_PER_REQUEST' or 'PROVISIONED')
+   *   - sseSpecification?: { sseEnabled: boolean; sseType?: string; kmsMasterKeyId?: string }
+   *   - pointInTimeRecoverySpecification?: { pointInTimeRecoveryEnabled: boolean }
+   *   - globalTableVersion?: string - Global table version
+   * @param access - Array of access levels (read, write, admin, backup)
+   * @returns Enhanced binding result without compliance block
+   */
   private async bindToTable(
-    sourceComponent: any,
-    targetComponent: any,
-    binding: ComponentBinding,
-    context: BindingRuntimeContext
-  ): Promise<void> {
-    // Validate required target component properties
-    if (!targetComponent?.tableArn) {
+    context: BindingContext,
+    targetData: any,
+    access: string[]
+  ): Promise<Omit<EnhancedBindingResult, 'compliance'>> {
+    if (!targetData?.tableArn) {
       throw new Error('Target component missing required tableArn property for DynamoDB table binding');
     }
-    if (!targetComponent?.tableName) {
+    if (!targetData?.tableName) {
       throw new Error('Target component missing required tableName property for DynamoDB table binding');
     }
 
-    const { access } = binding;
+    const environmentVariables: Record<string, string> = {};
+    const iamPolicies: IamPolicy[] = [];
 
     // Grant table access permissions
-    if (access.includes('read')) {
-      sourceComponent.addToRolePolicy({
-        Effect: 'Allow',
-        Action: [
+    if (access.includes('read') || access.includes('readwrite')) {
+      const statement = new PolicyStatement({
+        effect: Effect.ALLOW,
+        actions: [
           'dynamodb:GetItem',
           'dynamodb:BatchGetItem',
           'dynamodb:Query',
@@ -86,37 +156,70 @@ export class DynamoDbBinderStrategy implements IBinderStrategy {
           'dynamodb:DescribeTable',
           'dynamodb:ListTables'
         ],
-        Resource: [
-          targetComponent.tableArn,
-          `${targetComponent.tableArn}/index/*`
+        resources: [
+          targetData.tableArn,
+          `${targetData.tableArn}/index/*`
         ]
+      });
+      iamPolicies.push({
+        statement,
+        description: 'DynamoDB table read access permissions',
+        complianceRequirement: 'Least privilege IAM access'
       });
     }
 
-    if (access.includes('write')) {
-      sourceComponent.addToRolePolicy({
-        Effect: 'Allow',
-        Action: [
+    if (access.includes('write') || access.includes('readwrite') || access.includes('admin')) {
+      const statement = new PolicyStatement({
+        effect: Effect.ALLOW,
+        actions: [
           'dynamodb:PutItem',
           'dynamodb:BatchWriteItem',
           'dynamodb:UpdateItem',
-          'dynamodb:DeleteItem',
-          'dynamodb:CreateTable',
-          'dynamodb:UpdateTable',
-          'dynamodb:DeleteTable'
+          'dynamodb:DeleteItem'
         ],
-        Resource: [
-          targetComponent.tableArn,
-          `${targetComponent.tableArn}/index/*`
+        resources: [
+          targetData.tableArn,
+          `${targetData.tableArn}/index/*`
         ]
+      });
+      iamPolicies.push({
+        statement,
+        description: 'DynamoDB table write access permissions',
+        complianceRequirement: 'Least privilege IAM access'
       });
     }
 
-    // Grant backup and restore permissions
-    if (access.includes('backup')) {
-      sourceComponent.addToRolePolicy({
-        Effect: 'Allow',
-        Action: [
+    if (access.includes('admin')) {
+      const statement = new PolicyStatement({
+        effect: Effect.ALLOW,
+        actions: [
+          'dynamodb:CreateTable',
+          'dynamodb:UpdateTable',
+          'dynamodb:DeleteTable',
+          'dynamodb:DescribeTable',
+          'dynamodb:DescribeTimeToLive',
+          'dynamodb:ListTables'
+        ],
+        resources: [targetData.tableArn]
+      });
+      iamPolicies.push({
+        statement,
+        description: 'DynamoDB table administration permissions',
+        complianceRequirement: 'Least privilege IAM access'
+      });
+    }
+
+    // Grant backup and restore permissions (note: backup is not a standard AccessLevel,
+    // but admin access includes backup permissions)
+    if (access.includes('admin')) {
+      // Extract region and account from table ARN if possible, otherwise use wildcard
+      const arnParts = targetData.tableArn?.match(/^arn:aws:dynamodb:([^:]+):(\d+):table\//);
+      const region = arnParts?.[1] || '*';
+      const accountId = arnParts?.[2] || '*';
+      
+      const statement = new PolicyStatement({
+        effect: Effect.ALLOW,
+        actions: [
           'dynamodb:CreateBackup',
           'dynamodb:DeleteBackup',
           'dynamodb:DescribeBackup',
@@ -124,79 +227,139 @@ export class DynamoDbBinderStrategy implements IBinderStrategy {
           'dynamodb:RestoreTableFromBackup',
           'dynamodb:RestoreTableToPointInTime'
         ],
-        Resource: [
-          targetComponent.tableArn,
-          `arn:aws:dynamodb:${context.region}:${context.accountId}:table/${targetComponent.tableName}/backup/*`
+        resources: [
+          targetData.tableArn,
+          `arn:aws:dynamodb:${region}:${accountId}:table/${targetData.tableName}/backup/*`
         ]
+      });
+      iamPolicies.push({
+        statement,
+        description: 'DynamoDB backup and restore permissions',
+        complianceRequirement: 'Data protection and recovery'
       });
     }
 
-    // Inject table environment variables
-    sourceComponent.addEnvironment('DYNAMODB_TABLE_NAME', targetComponent.tableName);
-    sourceComponent.addEnvironment('DYNAMODB_TABLE_ARN', targetComponent.tableArn);
-    if (targetComponent?.tableStatus) {
-      sourceComponent.addEnvironment('DYNAMODB_TABLE_STATUS', targetComponent.tableStatus);
+    // Set table environment variables
+    environmentVariables['DYNAMODB_TABLE_NAME'] = targetData.tableName;
+    environmentVariables['DYNAMODB_TABLE_ARN'] = targetData.tableArn;
+    if (targetData.tableStatus) {
+      environmentVariables['DYNAMODB_TABLE_STATUS'] = targetData.tableStatus;
     }
-    sourceComponent.addEnvironment('DYNAMODB_REGION', context.region);
+    // Extract region from table ARN if available
+    const arnParts = targetData.tableArn?.match(/^arn:aws:dynamodb:([^:]+):/);
+    if (arnParts?.[1]) {
+      environmentVariables['DYNAMODB_REGION'] = arnParts[1];
+    }
 
     // Configure table metadata
-    if (targetComponent?.keySchema) {
-      sourceComponent.addEnvironment('DYNAMODB_KEY_SCHEMA', JSON.stringify(targetComponent.keySchema));
+    if (targetData.keySchema) {
+      environmentVariables['DYNAMODB_KEY_SCHEMA'] = JSON.stringify(targetData.keySchema);
     }
-
-    if (targetComponent?.attributeDefinitions) {
-      sourceComponent.addEnvironment('DYNAMODB_ATTRIBUTE_DEFINITIONS', JSON.stringify(targetComponent.attributeDefinitions));
+    if (targetData.attributeDefinitions) {
+      environmentVariables['DYNAMODB_ATTRIBUTE_DEFINITIONS'] = JSON.stringify(targetData.attributeDefinitions);
     }
 
     // Configure billing mode
-    sourceComponent.addEnvironment('DYNAMODB_BILLING_MODE', targetComponent.billingMode || 'PAY_PER_REQUEST');
+    environmentVariables['DYNAMODB_BILLING_MODE'] = targetData.billingMode || 'PAY_PER_REQUEST';
 
-    if (targetComponent.sseSpecification?.sseEnabled) {
-      sourceComponent.addEnvironment('DYNAMODB_SSE_ENABLED', 'true');
-      if (targetComponent.sseSpecification.sseType) {
-        sourceComponent.addEnvironment('DYNAMODB_SSE_TYPE', targetComponent.sseSpecification.sseType);
+    // Configure server-side encryption
+    if (targetData.sseSpecification?.sseEnabled) {
+      environmentVariables['DYNAMODB_SSE_ENABLED'] = 'true';
+      if (targetData.sseSpecification.sseType) {
+        environmentVariables['DYNAMODB_SSE_TYPE'] = targetData.sseSpecification.sseType;
       }
-      if (targetComponent.sseSpecification.kmsMasterKeyId) {
-        sourceComponent.addEnvironment('DYNAMODB_KMS_KEY_ID', targetComponent.sseSpecification.kmsMasterKeyId);
+      if (targetData.sseSpecification.kmsMasterKeyId) {
+        environmentVariables['DYNAMODB_KMS_KEY_ID'] = targetData.sseSpecification.kmsMasterKeyId;
+
+        // Grant KMS permissions for encryption
+        const kmsStatement = new PolicyStatement({
+          effect: Effect.ALLOW,
+          actions: [
+            'kms:Decrypt',
+            'kms:GenerateDataKey'
+          ],
+          resources: [targetData.sseSpecification.kmsMasterKeyId]
+        });
+        iamPolicies.push({
+          statement: kmsStatement,
+          description: 'KMS permissions for DynamoDB encryption',
+          complianceRequirement: 'Encryption at rest'
+        });
       }
     }
 
-    if (targetComponent.pointInTimeRecoverySpecification?.pointInTimeRecoveryEnabled) {
-      sourceComponent.addEnvironment('DYNAMODB_PITR_ENABLED', 'true');
+    // Configure point-in-time recovery
+    if (targetData.pointInTimeRecoverySpecification?.pointInTimeRecoveryEnabled) {
+      environmentVariables['DYNAMODB_PITR_ENABLED'] = 'true';
     }
 
     // Configure secure access when requested via options/config
-    if (binding.options?.requireSecureAccess === true) {
-      await this.configureSecureTableAccess(sourceComponent, targetComponent, context, binding);
+    if (context.directive.options?.requireSecureAccess === true) {
+      await this.configureSecureTableAccess(context, targetData, environmentVariables, iamPolicies);
     }
+
+    return {
+      environmentVariables,
+      iamPolicies,
+      securityGroupRules: []
+    };
   }
 
+  /**
+   * Bind to DynamoDB index
+   * 
+   * @param context - Binding context
+   * @param targetData - Expected structure:
+   *   - indexArn (required): string - ARN of the DynamoDB index
+   *   - indexName (required): string - Name of the index
+   *   - indexStatus?: string - Status of the index
+   *   - indexType?: string - Type of index ('GSI' or 'LSI')
+   *   - keySchema?: object - Index key schema
+   *   - projection?: object - Index projection configuration
+   *   - tableArn?: string - ARN of the parent table
+   * @param access - Array of access levels (read, write)
+   * @returns Enhanced binding result without compliance block
+   */
   private async bindToIndex(
-    sourceComponent: any,
-    targetComponent: any,
-    binding: ComponentBinding,
-    context: BindingRuntimeContext
-  ): Promise<void> {
-    const resolvedIndex = this.resolveIndexTarget(targetComponent, binding);
-    const { access } = binding;
+    context: BindingContext,
+    targetData: any,
+    access: string[]
+  ): Promise<Omit<EnhancedBindingResult, 'compliance'>> {
+    // Resolve index target (may be array or single object)
+    const resolvedIndex = this.resolveIndexTarget(targetData, context);
+
+    if (!resolvedIndex?.indexArn) {
+      throw new Error('Target component missing required indexArn property for DynamoDB index binding');
+    }
+    if (!resolvedIndex?.indexName) {
+      throw new Error('Target component missing required indexName property for DynamoDB index binding');
+    }
+
+    const environmentVariables: Record<string, string> = {};
+    const iamPolicies: IamPolicy[] = [];
 
     // Grant index access permissions
-    if (access.includes('read')) {
-      sourceComponent.addToRolePolicy({
-        Effect: 'Allow',
-        Action: [
+    if (access.includes('read') || access.includes('readwrite')) {
+      const statement = new PolicyStatement({
+        effect: Effect.ALLOW,
+        actions: [
           'dynamodb:Query',
           'dynamodb:Scan',
           'dynamodb:DescribeTable'
         ],
-        Resource: resolvedIndex.indexArn
+        resources: [resolvedIndex.indexArn]
+      });
+      iamPolicies.push({
+        statement,
+        description: 'DynamoDB index read access permissions',
+        complianceRequirement: 'Least privilege IAM access'
       });
     }
 
-    if (access.includes('write')) {
-      sourceComponent.addToRolePolicy({
-        Effect: 'Allow',
-        Action: [
+    if (access.includes('write') || access.includes('readwrite')) {
+      const statement = new PolicyStatement({
+        effect: Effect.ALLOW,
+        actions: [
           'dynamodb:CreateGlobalSecondaryIndex',
           'dynamodb:UpdateGlobalSecondaryIndex',
           'dynamodb:DeleteGlobalSecondaryIndex',
@@ -204,104 +367,254 @@ export class DynamoDbBinderStrategy implements IBinderStrategy {
           'dynamodb:UpdateLocalSecondaryIndex',
           'dynamodb:DeleteLocalSecondaryIndex'
         ],
-        Resource: resolvedIndex.indexArn
+        resources: [resolvedIndex.indexArn]
+      });
+      iamPolicies.push({
+        statement,
+        description: 'DynamoDB index write access permissions',
+        complianceRequirement: 'Least privilege IAM access'
       });
     }
 
-    // Inject index environment variables
-    sourceComponent.addEnvironment('DYNAMODB_INDEX_NAME', resolvedIndex.indexName);
-    sourceComponent.addEnvironment('DYNAMODB_INDEX_ARN', resolvedIndex.indexArn);
-    sourceComponent.addEnvironment('DYNAMODB_INDEX_STATUS', resolvedIndex.indexStatus);
-    sourceComponent.addEnvironment('DYNAMODB_INDEX_TYPE', resolvedIndex.indexType);
+    // Set index environment variables
+    environmentVariables['DYNAMODB_INDEX_NAME'] = resolvedIndex.indexName;
+    environmentVariables['DYNAMODB_INDEX_ARN'] = resolvedIndex.indexArn;
+    if (resolvedIndex.indexStatus) {
+      environmentVariables['DYNAMODB_INDEX_STATUS'] = resolvedIndex.indexStatus;
+    }
+    if (resolvedIndex.indexType) {
+      environmentVariables['DYNAMODB_INDEX_TYPE'] = resolvedIndex.indexType;
+    }
 
     // Configure index metadata
     if (resolvedIndex.keySchema) {
-      sourceComponent.addEnvironment('DYNAMODB_INDEX_KEY_SCHEMA', JSON.stringify(resolvedIndex.keySchema));
+      environmentVariables['DYNAMODB_INDEX_KEY_SCHEMA'] = JSON.stringify(resolvedIndex.keySchema);
+    }
+    if (resolvedIndex.projection) {
+      environmentVariables['DYNAMODB_INDEX_PROJECTION'] = JSON.stringify(resolvedIndex.projection);
     }
 
-    if (resolvedIndex.projection) {
-      sourceComponent.addEnvironment('DYNAMODB_INDEX_PROJECTION', JSON.stringify(resolvedIndex.projection));
-    }
+    return {
+      environmentVariables,
+      iamPolicies,
+      securityGroupRules: []
+    };
   }
 
+  /**
+   * Bind to DynamoDB stream
+   * 
+   * @param context - Binding context
+   * @param targetData - Expected structure:
+   *   - streamArn (required): string - ARN of the DynamoDB stream
+   *   - streamViewType?: string - Stream view type (e.g., 'KEYS_ONLY', 'NEW_AND_OLD_IMAGES')
+   *   - streamLabel?: string - Stream label
+   *   - lambdaTriggerArn?: string - ARN of Lambda function triggered by stream
+   * @param access - Array of access levels (read, write)
+   * @returns Enhanced binding result without compliance block
+   */
   private async bindToStream(
-    sourceComponent: any,
-    targetComponent: any,
-    binding: ComponentBinding,
-    context: BindingRuntimeContext
-  ): Promise<void> {
-    const { access } = binding;
+    context: BindingContext,
+    targetData: any,
+    access: string[]
+  ): Promise<Omit<EnhancedBindingResult, 'compliance'>> {
+    if (!targetData?.streamArn) {
+      throw new Error('Target component missing required streamArn property for DynamoDB stream binding');
+    }
+
+    const environmentVariables: Record<string, string> = {};
+    const iamPolicies: IamPolicy[] = [];
 
     // Grant stream access permissions
-    if (access.includes('read')) {
-      sourceComponent.addToRolePolicy({
-        Effect: 'Allow',
-        Action: [
+    if (access.includes('read') || access.includes('readwrite')) {
+      const statement = new PolicyStatement({
+        effect: Effect.ALLOW,
+        actions: [
           'dynamodb:DescribeStream',
           'dynamodb:GetRecords',
           'dynamodb:GetShardIterator',
           'dynamodb:ListStreams'
         ],
-        Resource: targetComponent.streamArn
+        resources: [targetData.streamArn]
+      });
+      iamPolicies.push({
+        statement,
+        description: 'DynamoDB stream read access permissions',
+        complianceRequirement: 'Least privilege IAM access'
       });
     }
 
-    if (access.includes('write')) {
-      sourceComponent.addToRolePolicy({
-        Effect: 'Allow',
-        Action: [
+    if (access.includes('write') || access.includes('readwrite')) {
+      const statement = new PolicyStatement({
+        effect: Effect.ALLOW,
+        actions: [
           'dynamodb:UpdateTable',
           'dynamodb:EnableStreaming',
           'dynamodb:DisableStreaming'
         ],
-        Resource: targetComponent.streamArn
+        resources: [targetData.streamArn]
+      });
+      iamPolicies.push({
+        statement,
+        description: 'DynamoDB stream write access permissions',
+        complianceRequirement: 'Least privilege IAM access'
       });
     }
 
-    // Grant Lambda permissions for stream processing
-    if (access.includes('process')) {
-      sourceComponent.addToRolePolicy({
-        Effect: 'Allow',
-        Action: [
-          'lambda:InvokeFunction'
-        ],
-        Resource: sourceComponent.functionArn
-      });
-    }
-
-    // Inject stream environment variables
-    sourceComponent.addEnvironment('DYNAMODB_STREAM_ARN', targetComponent.streamArn);
-    const streamLabel = targetComponent.streamLabel || this.deriveStreamLabel(targetComponent.streamArn);
+    // Set stream environment variables
+    environmentVariables['DYNAMODB_STREAM_ARN'] = targetData.streamArn;
+    const streamLabel = targetData.streamLabel || this.deriveStreamLabel(targetData.streamArn);
     if (streamLabel) {
-      sourceComponent.addEnvironment('DYNAMODB_STREAM_LABEL', streamLabel);
+      environmentVariables['DYNAMODB_STREAM_LABEL'] = streamLabel;
     }
-    sourceComponent.addEnvironment('DYNAMODB_STREAM_VIEW_TYPE', targetComponent.streamViewType);
+    if (targetData.streamViewType) {
+      environmentVariables['DYNAMODB_STREAM_VIEW_TYPE'] = targetData.streamViewType;
+    }
 
     // Configure stream processing
-    if (targetComponent.lambdaTriggerArn) {
-      sourceComponent.addEnvironment('DYNAMODB_LAMBDA_TRIGGER_ARN', targetComponent.lambdaTriggerArn);
-      sourceComponent.addEnvironment('DYNAMODB_LAMBDA_TRIGGER_ENABLED', 'true');
+    if (targetData.lambdaTriggerArn) {
+      environmentVariables['DYNAMODB_LAMBDA_TRIGGER_ARN'] = targetData.lambdaTriggerArn;
+      environmentVariables['DYNAMODB_LAMBDA_TRIGGER_ENABLED'] = 'true';
+
+      // Grant Lambda invoke permissions for stream processing
+      const lambdaStatement = new PolicyStatement({
+        effect: Effect.ALLOW,
+        actions: ['lambda:InvokeFunction'],
+        resources: [targetData.lambdaTriggerArn]
+      });
+      iamPolicies.push({
+        statement: lambdaStatement,
+        description: 'Lambda invocation permissions for DynamoDB stream processing',
+        complianceRequirement: 'Stream processing automation'
+      });
     }
+
+    return {
+      environmentVariables,
+      iamPolicies,
+      securityGroupRules: []
+    };
   }
 
-  private resolveIndexTarget(targetComponent: any, binding: ComponentBinding): any {
+  /**
+   * Bind to DynamoDB backup
+   * 
+   * @param context - Binding context
+   * @param targetData - Expected structure:
+   *   - tableArn (required): string - ARN of the DynamoDB table
+   *   - tableName (required): string - Name of the DynamoDB table
+   *   - backupPlanArn?: string - ARN of the AWS Backup plan (optional)
+   * @param access - Array of access levels (read, write)
+   * @returns Enhanced binding result without compliance block
+   */
+  private async bindToBackup(
+    context: BindingContext,
+    targetData: any,
+    access: string[]
+  ): Promise<Omit<EnhancedBindingResult, 'compliance'>> {
+    if (!targetData?.tableArn) {
+      throw new Error('Target component missing required tableArn property for DynamoDB backup binding');
+    }
+    if (!targetData?.tableName) {
+      throw new Error('Target component missing required tableName property for DynamoDB backup binding');
+    }
+
+    const environmentVariables: Record<string, string> = {};
+    const iamPolicies: IamPolicy[] = [];
+
+    // Extract region and account from table ARN
+    const arnParts = targetData.tableArn?.match(/^arn:aws:dynamodb:([^:]+):(\d+):table\//);
+    const region = arnParts?.[1] || '*';
+    const accountId = arnParts?.[2] || '*';
+
+    // Grant backup read permissions (list, describe backups)
+    if (access.includes('read') || access.includes('readwrite')) {
+      const statement = new PolicyStatement({
+        effect: Effect.ALLOW,
+        actions: [
+          'dynamodb:DescribeBackup',
+          'dynamodb:ListBackups',
+          'dynamodb:DescribeContinuousBackups',
+          'dynamodb:ListContributorInsights'
+        ],
+        resources: [
+          targetData.tableArn,
+          `arn:aws:dynamodb:${region}:${accountId}:table/${targetData.tableName}/backup/*`
+        ]
+      });
+      iamPolicies.push({
+        statement,
+        description: 'DynamoDB backup read access permissions',
+        complianceRequirement: 'Data protection and recovery'
+      });
+    }
+
+    // Grant backup write permissions (create, delete, restore)
+    if (access.includes('write') || access.includes('readwrite')) {
+      const statement = new PolicyStatement({
+        effect: Effect.ALLOW,
+        actions: [
+          'dynamodb:CreateBackup',
+          'dynamodb:DeleteBackup',
+          'dynamodb:RestoreTableFromBackup',
+          'dynamodb:RestoreTableToPointInTime'
+        ],
+        resources: [
+          targetData.tableArn,
+          `arn:aws:dynamodb:${region}:${accountId}:table/${targetData.tableName}/backup/*`
+        ]
+      });
+      iamPolicies.push({
+        statement,
+        description: 'DynamoDB backup write access permissions',
+        complianceRequirement: 'Data protection and recovery'
+      });
+    }
+
+    // Set backup environment variables
+    environmentVariables['DYNAMODB_TABLE_NAME'] = targetData.tableName;
+    environmentVariables['DYNAMODB_TABLE_ARN'] = targetData.tableArn;
+    if (targetData.backupPlanArn) {
+      environmentVariables['DYNAMODB_BACKUP_PLAN_ARN'] = targetData.backupPlanArn;
+    }
+    if (arnParts?.[1]) {
+      environmentVariables['DYNAMODB_REGION'] = arnParts[1];
+    }
+
+    return {
+      environmentVariables,
+      iamPolicies,
+      securityGroupRules: []
+    };
+  }
+
+  /**
+   * Resolve index target from capability data
+   * Handles both array of indexes and single index object
+   */
+  private resolveIndexTarget(targetData: any, context: BindingContext): any {
     const extractRequestedName = (): string | undefined => {
-      const options: any = (binding as any).options ?? {};
-      const metadata: any = (binding as any).metadata ?? {};
-      return options.indexName || options.name || metadata.indexName || metadata.name;
+      const options: any = context.directive.options ?? {};
+      return options.indexName || options.name;
     };
 
-    if (Array.isArray(targetComponent)) {
-      return this.pickIndex(targetComponent, extractRequestedName);
+    // If targetData is an array of indexes
+    if (Array.isArray(targetData)) {
+      return this.pickIndex(targetData, extractRequestedName);
     }
 
-    if (Array.isArray(targetComponent?.indexes)) {
-      return this.pickIndex(targetComponent.indexes, extractRequestedName);
+    // If targetData has an indexes array
+    if (Array.isArray(targetData?.indexes)) {
+      return this.pickIndex(targetData.indexes, extractRequestedName);
     }
 
-    return targetComponent;
+    // Assume targetData is the index object itself
+    return targetData;
   }
 
+  /**
+   * Pick index from array based on requested name
+   */
   private pickIndex(indexes: any[], getRequestedName: () => string | undefined): any {
     if (indexes.length === 0) {
       throw new Error('No DynamoDB indexes were provided by the target component capability.');
@@ -324,6 +637,9 @@ export class DynamoDbBinderStrategy implements IBinderStrategy {
     return match;
   }
 
+  /**
+   * Derive stream label from stream ARN
+   */
   private deriveStreamLabel(streamArn: string | undefined): string | undefined {
     if (!streamArn) {
       return undefined;
@@ -332,50 +648,87 @@ export class DynamoDbBinderStrategy implements IBinderStrategy {
     return parts.length > 0 ? parts[parts.length - 1] : undefined;
   }
 
+  /**
+   * Configure secure table access features
+   * Applies additional security configurations when requireSecureAccess is enabled
+   */
   private async configureSecureTableAccess(
-    sourceComponent: any,
-    targetComponent: any,
-    context: BindingRuntimeContext,
-    binding?: ComponentBinding
+    context: BindingContext,
+    targetData: any,
+    environmentVariables: Record<string, string>,
+    iamPolicies: IamPolicy[]
   ): Promise<void> {
-    // Grant encryption permissions when a CMK is used
-    if (targetComponent.sseSpecification?.sseEnabled && targetComponent.sseSpecification.kmsMasterKeyId) {
-      sourceComponent.addToRolePolicy({
-        Effect: 'Allow',
-        Action: [
-          'kms:Decrypt',
-          'kms:GenerateDataKey'
-        ],
-        Resource: targetComponent.sseSpecification.kmsMasterKeyId
-      });
+    // Configure backup retention when specified via options
+    if (context.directive.options?.backupRetentionDays !== undefined) {
+      const retention = String(context.directive.options.backupRetentionDays);
+      environmentVariables['DYNAMODB_BACKUP_RETENTION_DAYS'] = retention;
     }
 
-    // Configure backup retention when specified via options or target policy
-    if ((binding?.options && binding.options.backupRetentionDays !== undefined) || targetComponent.backupPolicy) {
-      const retention = (binding?.options?.backupRetentionDays ?? 7).toString();
-      sourceComponent.addEnvironment('DYNAMODB_BACKUP_RETENTION_DAYS', retention);
+    // PITR enablement check: Verify point-in-time recovery is enabled when specification is present
+    if (targetData.pointInTimeRecoverySpecification) {
+      const pitrEnabled = targetData.pointInTimeRecoverySpecification.pointInTimeRecoveryEnabled === true;
+      if (!pitrEnabled) {
+        // Log warning but don't fail - this is a compliance recommendation
+        // The compliance evaluator will catch this via compliance rules
+        environmentVariables['DYNAMODB_PITR_WARNING'] = 'Point-in-time recovery specification present but not enabled';
+      }
+      // Ensure PITR environment variable reflects actual state
+      environmentVariables['DYNAMODB_PITR_ENABLED'] = pitrEnabled ? 'true' : 'false';
     }
 
     // Configure global tables for high availability
-    if (targetComponent.globalTableVersion) {
-      sourceComponent.addEnvironment('DYNAMODB_GLOBAL_TABLE_VERSION', targetComponent.globalTableVersion);
+    if (targetData.globalTableVersion) {
+      environmentVariables['DYNAMODB_GLOBAL_TABLE_VERSION'] = targetData.globalTableVersion;
 
       // Grant global table permissions
-      sourceComponent.addToRolePolicy({
-        Effect: 'Allow',
-        Action: [
+      const statement = new PolicyStatement({
+        effect: Effect.ALLOW,
+        actions: [
           'dynamodb:DescribeGlobalTable',
           'dynamodb:DescribeGlobalTableSettings',
           'dynamodb:UpdateGlobalTable',
           'dynamodb:UpdateGlobalTableSettings'
         ],
-        Resource: targetComponent.tableArn
+        resources: [targetData.tableArn]
+      });
+      iamPolicies.push({
+        statement,
+        description: 'DynamoDB global table permissions',
+        complianceRequirement: 'High availability and disaster recovery'
       });
     }
 
+    // Add contributor identity permissions for multi-account replication
+    // This is needed for DynamoDB global tables with cross-account replication via AWS Resource Access Manager (RAM)
+    if (targetData.contributorInsightsEnabled || context.directive.options?.enableContributorInsights === true) {
+      const contributorStatement = new PolicyStatement({
+        effect: Effect.ALLOW,
+        actions: [
+          'dynamodb:DescribeContributorInsights',
+          'dynamodb:ListContributorInsights'
+        ],
+        resources: [targetData.tableArn]
+      });
+      iamPolicies.push({
+        statement: contributorStatement,
+        description: 'DynamoDB contributor insights permissions for multi-account replication',
+        complianceRequirement: 'Cross-account resource access'
+      });
+
+      environmentVariables['DYNAMODB_CONTRIBUTOR_INSIGHTS_ENABLED'] = 'true';
+    }
+
+    // If contributor identities are explicitly provided, grant additional permissions
+    if (context.directive.options?.contributorIdentities && Array.isArray(context.directive.options.contributorIdentities)) {
+      // For RAM-based resource sharing, contributor identities need describe permissions
+      // Note: Actual RAM permissions are managed at the resource share level, not IAM
+      // This documents the intent for compliance auditing
+      environmentVariables['DYNAMODB_CONTRIBUTOR_IDENTITIES'] = JSON.stringify(context.directive.options.contributorIdentities);
+    }
+
     // Configure VPC endpoints for private access when requested
-    if (binding?.options?.enableVpcEndpoint === true) {
-      sourceComponent.addEnvironment('DYNAMODB_VPC_ENDPOINT_ENABLED', 'true');
+    if (context.directive.options?.enableVpcEndpoint === true) {
+      environmentVariables['DYNAMODB_VPC_ENDPOINT_ENABLED'] = 'true';
     }
   }
 }

@@ -8,6 +8,8 @@
  */
 
 import { IComponent } from './component-interfaces.js';
+import type { IamPolicy, SecurityGroupRule, ComplianceAction } from './bindings.js';
+import type { ComplianceViolation } from './compliance-enforcer.js';
 
 /**
  * Fundamental interaction types in the platform
@@ -156,6 +158,43 @@ export interface BindingResult {
 }
 
 /**
+ * Enhanced binding result with mandatory compliance validation
+ * 
+ * Extends the base BindingResult with structured compliance reporting,
+ * IAM policies, security group rules, and mandatory compliance status.
+ * All bindings must return this structure with populated compliance block.
+ */
+export interface EnhancedBindingResult {
+  environmentVariables: Record<string, string>;
+  iamPolicies: Array<IamPolicy>; // from bindings.ts (includes statement, description, complianceRequirement)
+  securityGroupRules: Array<SecurityGroupRule>; // from bindings.ts
+  
+  // Mandatory — always populated (machine-readable for audits)
+  compliance: {
+    status: 'compliant' | 'non-compliant' | 'partially-compliant';
+    framework: string; // e.g., 'fedramp-high', 'hipaa'
+    actionsTaken: ComplianceAction[]; // from bindings.ts
+    violations?: ComplianceViolation[]; // from compliance-enforcer.ts
+  };
+  
+  metrics?: Record<string, unknown>;
+  metadata?: Record<string, unknown>;
+}
+
+/**
+ * Compliance error thrown when binding fails compliance validation
+ */
+export class ComplianceError extends Error {
+  constructor(
+    public readonly violations: ComplianceViolation[],
+    message = 'Compliance validation failed'
+  ) {
+    super(message);
+    this.name = 'ComplianceError';
+  }
+}
+
+/**
  * Result of trigger operations
  */
 export interface TriggerResult {
@@ -171,6 +210,9 @@ export interface TriggerResult {
 
 /**
  * Binder strategy interface for handling outbound connections
+ * 
+ * This is the base interface. For new implementations, use IUnifiedBinderStrategy
+ * which extends this interface with compliance enforcement and enhanced results.
  */
 export interface IBinderStrategy {
   canHandle(sourceType: string, targetCapability: string): boolean;
@@ -185,6 +227,53 @@ export interface ITriggerStrategy {
   canHandle(sourceType: string, targetType: string, eventType: string): boolean;
   trigger(context: TriggerContext): TriggerResult;
   getCompatibilityMatrix(): TriggerCompatibilityEntry[];
+}
+
+/**
+ * Unified Binder Strategy Interface
+ * 
+ * The canonical interface for all binder strategies with mandatory compliance enforcement.
+ * This interface implements the same contract as IBinderStrategy but with async bind()
+ * and enhanced results. It does not extend IBinderStrategy due to incompatible bind()
+ * signatures (sync vs async).
+ * 
+ * Key features:
+ * - Mandatory compliance validation based on context.complianceFramework
+ * - Enhanced binding results with structured compliance reporting
+ * - Compatibility matrix support
+ * - Config-driven compliance (no framework branching in code)
+ * 
+ * @see IBinderStrategy - Base interface (preserved for reference, sync bind)
+ */
+export interface IUnifiedBinderStrategy {
+  /**
+   * Capabilities this strategy supports - used for registry-level filtering
+   */
+  readonly supportedCapabilities: string[];
+
+  /**
+   * Check if this strategy can handle the given source type and capability
+   * @param sourceType - Type of the source component
+   * @param targetCapability - Target capability type
+   * @returns true if this strategy can handle the binding
+   */
+  canHandle(sourceType: string, targetCapability: string): boolean;
+
+  /**
+   * Performs the binding with mandatory compliance enforcement.
+   * Compliance rules are selected based on context.complianceFramework
+   * (e.g., 'fedramp-moderate', 'fedramp-high', 'hipaa') — NO hard-coded branching.
+   * 
+   * @param context - Binding context with source, target, directive, and compliance framework
+   * @returns Promise resolving to enhanced binding result with compliance validation
+   */
+  bind(context: BindingContext): Promise<EnhancedBindingResult>;
+
+  /**
+   * Get compatibility matrix entries for this strategy
+   * @returns Array of compatibility entries
+   */
+  getCompatibilityMatrix(): CompatibilityEntry[];
 }
 
 /**
