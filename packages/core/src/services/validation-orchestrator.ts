@@ -1,6 +1,8 @@
 /**
  * Validation Orchestrator - Command pattern implementation
- * Implements Principle 7: Clear Class Roles - This is a "Service/Manager" for orchestration
+ * 
+ * Implements Principle 7: Clear Class Roles - This is a "Service/Manager" for orchestration.
+ * See docs/architecture/design-principles.md for the complete set of architectural principles.
  */
 import { Logger } from '../platform/logger/src/index.js';
 import { ManifestParser } from './manifest-parser.js';

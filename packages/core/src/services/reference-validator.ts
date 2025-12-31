@@ -1,6 +1,8 @@
 /**
  * Reference Validator Service - Single responsibility for semantic validation
- * Implements Principle 4: Single Responsibility Principle
+ * 
+ * Implements Principle 4: Single Responsibility Principle.
+ * See docs/architecture/design-principles.md for the complete set of architectural principles.
  */
 import { Logger } from '../platform/logger/src/index.js';
 

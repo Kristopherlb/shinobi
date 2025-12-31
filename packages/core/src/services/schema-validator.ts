@@ -1,7 +1,8 @@
 /**
  * Schema Validator Service - Single responsibility for JSON Schema validation
- * Implements Principle 4: Single Responsibility Principle
- * Enhanced with component-specific schema validation
+ * 
+ * Implements Principle 4: Single Responsibility Principle.
+ * See docs/architecture/design-principles.md for the complete set of architectural principles.
  */
 import AjvImport, { type Ajv as AjvInstance, type ErrorObject } from 'ajv';
 import addFormatsImport from 'ajv-formats';

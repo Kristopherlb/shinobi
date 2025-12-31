@@ -1,6 +1,8 @@
 /**
  * Manifest Parser Service - Single responsibility for YAML parsing
- * Implements Principle 4: Single Responsibility Principle
+ * 
+ * Implements Principle 4: Single Responsibility Principle.
+ * See docs/architecture/design-principles.md for the complete set of architectural principles.
  */
 import * as fs from 'fs/promises';
 import * as path from 'path';

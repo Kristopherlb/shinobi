@@ -1,6 +1,8 @@
 /**
  * Composition Root - The single place where all dependencies are wired together
- * This implements Principle 2: The Composition Root pattern
+ * 
+ * This implements Principle 2: The Composition Root pattern.
+ * See docs/architecture/design-principles.md for the complete set of architectural principles.
  */
 import { Logger } from './console-logger.js';
 import { FileDiscovery } from './utils/file-discovery.js';
