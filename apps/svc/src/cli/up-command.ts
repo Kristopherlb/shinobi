@@ -89,7 +89,18 @@ export class UpCommand {
       const manifest: SimpleManifest = await readManifest({ manifestPath });
       const environment = options.env ?? manifest.environment ?? 'dev';
       const region = String(options.region ?? manifest.region ?? process.env.CDK_DEFAULT_REGION ?? 'us-east-1');
-      const accountId = String(options.account ?? manifest.accountId ?? process.env.CDK_DEFAULT_ACCOUNT ?? '123456789012');
+      
+      // Account ID resolution: prefer explicit option, then manifest, then environment variable
+      // Fail early if we can't determine account ID (no fake fallback)
+      const accountId = options.account ?? manifest.accountId ?? process.env.CDK_DEFAULT_ACCOUNT;
+      if (!accountId) {
+        return {
+          success: false,
+          exitCode: 2,
+          error: 'Could not determine AWS account ID. Set via --account, manifest accountId, or CDK_DEFAULT_ACCOUNT environment variable.'
+        };
+      }
+      
       const stackName = options.stack ?? `${manifest.service}-${environment}`;
 
       if (options.profile) {
@@ -137,7 +148,7 @@ export class UpCommand {
           logger.warn('Deployment cancelled by user.');
           return {
             success: false,
-            exitCode: 1,
+            exitCode: 2, // User cancellation is a precondition failure, not a deployment failure
             error: 'Operation cancelled'
           };
         }
@@ -164,7 +175,7 @@ export class UpCommand {
         }
         return {
           success: false,
-          exitCode: 2,
+          exitCode: 1, // Deployment failure (CDK errors, AWS API failures)
           error: error instanceof Error ? error.message : 'Deployment failed'
         };
       }
@@ -208,7 +219,7 @@ export class UpCommand {
       this.dependencies.logger.error('Deploy failed', error);
       return {
         success: false,
-        exitCode: 2,
+        exitCode: 1, // Deployment failure (CDK errors, AWS API failures, unexpected errors)
         error: message
       };
     }
