@@ -382,7 +382,11 @@ describe('S3BinderStrategy', () => {
       expect(kmsPolicy!.statement.actions).toContain('kms:DescribeKey');
       expect(kmsPolicy!.statement.resources).toContain(kmsKeyId);
 
-      // Supporting invariants
+      // Supporting invariants: KMS conditions include ViaService for S3 service restriction
+      expect(kmsPolicy!.statement.conditions).toBeDefined();
+      expect(kmsPolicy!.statement.conditions?.StringEquals).toBeDefined();
+      expect(kmsPolicy!.statement.conditions?.StringEquals?.['kms:ViaService']).toBe('s3.us-east-1.amazonaws.com');
+      expect(kmsPolicy!.statement.conditions?.StringEquals?.['aws:RequestedRegion']).toBe('us-east-1');
       expect(result.environmentVariables['S3_KMS_KEY_ID']).toBe(kmsKeyId);
       expect(result.environmentVariables['S3_ENCRYPTION_ENABLED']).toBe('true');
     });
@@ -523,6 +527,88 @@ describe('S3BinderStrategy', () => {
       // Primary assertion: Access logging environment variables are set
       expect(result.environmentVariables['S3_ACCESS_LOGGING_ENABLED']).toBe('true');
       expect(result.environmentVariables['S3_ACCESS_LOGGING_TARGET_BUCKET']).toBe('arn:aws:s3:::logs-bucket');
+
+      // Note: s3:PutBucketLogging permission is only granted for admin access
+      // See S3Bind__AdminAccessWithLogging__GrantsLoggingPermission test
+    });
+  });
+
+  describe('S3Bind__AdminAccessWithLogging__GrantsLoggingPermission', () => {
+    const metadata = {
+      id: 'TP-binders-s3-007a',
+      level: 'unit' as const,
+      capability: 'Grants s3:PutBucketLogging permission for admin access when access logging target bucket is configured',
+      oracle: 'exact' as const,
+      determinism: 'deterministic' as const,
+      naming: {
+        pattern: 'Feature__Condition__ExpectedOutcome',
+        feature: 'S3Bind',
+        condition: 'AdminAccessWithLogging',
+        outcome: 'GrantsLoggingPermission'
+      },
+      invariants: [
+        's3:PutBucketLogging permission is granted for admin access when accessLogging.targetBucket is set',
+        'Logging policy includes region and HTTPS conditions',
+        'Permission is only granted when all conditions are met (admin + enabled + targetBucket)'
+      ],
+      fixtures: ['MockSourceComponent', 'MockTargetComponent'],
+      inputs: {
+        shape: 'BindingContext with storage:s3 capability, admin access, and access logging with target bucket',
+        notes: 'Admin access with access logging configuration requires PutBucketLogging permission'
+      },
+      risks: [],
+      dependencies: [],
+      evidence: [],
+      compliance_refs: [],
+      ai_generated: true,
+      human_reviewed_by: 'Platform Engineering'
+    };
+
+    test('S3Bind__AdminAccessWithLogging__GrantsLoggingPermission', async () => {
+      const strategy = new S3BinderStrategy();
+      const source = createMockSourceComponent();
+      const target = createMockTargetComponent('s3-bucket', {
+        'storage:s3': {
+          type: 'storage:s3',
+          resources: {
+            arn: 'arn:aws:s3:::test-bucket',
+            name: 'test-bucket',
+            region: 'us-east-1'
+          },
+          encryption: {
+            enabled: true
+          },
+          versioning: {
+            enabled: false
+          },
+          accessLogging: {
+            enabled: true,
+            targetBucket: 'arn:aws:s3:::logs-bucket'
+          }
+        }
+      });
+
+      const context = createBindingContext({
+        source,
+        target,
+        capability: 'storage:s3',
+        access: 'admin'
+      });
+
+      const result = await executeUnifiedBinding(strategy, context);
+
+      // Primary assertion: PutBucketLogging permission is granted for admin access with logging target
+      const loggingPolicy = result.iamPolicies.find(p => p.description.includes('access logging configuration'));
+      expect(loggingPolicy).toBeDefined();
+      expect(loggingPolicy!.statement.actions).toContain('s3:PutBucketLogging');
+      expect(loggingPolicy!.statement.resources).toContain('arn:aws:s3:::test-bucket');
+
+      // Supporting invariants: Logging policy includes security conditions
+      expect(loggingPolicy!.statement.conditions).toBeDefined();
+      expect(loggingPolicy!.statement.conditions?.StringEquals).toBeDefined();
+      expect(loggingPolicy!.statement.conditions?.StringEquals?.['aws:RequestedRegion']).toBe('us-east-1');
+      expect(loggingPolicy!.statement.conditions?.Bool).toBeDefined();
+      expect(loggingPolicy!.statement.conditions?.Bool?.['aws:SecureTransport']).toBe('true');
     });
   });
 

@@ -202,6 +202,18 @@ export class S3BinderStrategy extends UnifiedBinderStrategyBase {
     const encryption = targetData.encryption || { enabled: false };
     if (encryption.enabled && (encryption as any).kmsKeyId) {
       const kmsKeyId = (encryption as any).kmsKeyId;
+      // Build KMS conditions with ViaService (always required) and optional region scoping
+      // ViaService restricts KMS usage to the S3 service, providing defense-in-depth
+      const kmsConditions: Record<string, any> = {
+        StringEquals: {
+          'kms:ViaService': `s3.${bucketRegion}.amazonaws.com`
+        }
+      };
+      // Add region condition for additional security (bucketRegion is validated as required)
+      if (bucketRegion) {
+        kmsConditions.StringEquals['aws:RequestedRegion'] = bucketRegion;
+      }
+      
       const kmsPolicy = new PolicyStatement({
         effect: Effect.ALLOW,
         actions: [
@@ -210,11 +222,7 @@ export class S3BinderStrategy extends UnifiedBinderStrategyBase {
           'kms:DescribeKey'
         ],
         resources: [kmsKeyId],
-        conditions: bucketRegion ? {
-          StringEquals: {
-            'aws:RequestedRegion': bucketRegion
-          }
-        } : undefined
+        conditions: kmsConditions
       });
 
       iamPolicies.push({
@@ -223,10 +231,56 @@ export class S3BinderStrategy extends UnifiedBinderStrategyBase {
         complianceRequirement: 'Encryption at rest'
       });
     }
+
+    // Access logging permissions for admin access
+    // Note: s3:PutBucketLogging is required to configure access logging target
+    const primaryAccess = access[0] || 'read';
+    if (primaryAccess === 'admin' && targetData.accessLogging?.enabled && targetData.accessLogging.targetBucket) {
+      const loggingPolicy = new PolicyStatement({
+        effect: Effect.ALLOW,
+        actions: ['s3:PutBucketLogging'],
+        resources: [bucketArn],
+        conditions: {
+          StringEquals: bucketRegion ? {
+            'aws:RequestedRegion': bucketRegion
+          } : undefined,
+          Bool: {
+            'aws:SecureTransport': 'true'
+          }
+        }
+      });
+
+      iamPolicies.push({
+        statement: loggingPolicy,
+        description: 'S3 bucket access logging configuration permissions',
+        complianceRequirement: 'Audit logging'
+      });
+    }
   }
 
   /**
    * Get S3 actions based on access level
+   * 
+   * Note on multipart upload permissions:
+   * - AbortMultipartUpload and ListMultipartUploadParts are required for write operations
+   *   on large objects (>5MB) which automatically use multipart uploads. Without these,
+   *   large file uploads will fail.
+   * 
+   * Note on admin-level permissions:
+   * - PutBucketPolicy, GetBucketPolicy, DeleteBucketPolicy are high-privilege actions
+   *   that allow modifying bucket-level security policies. These are included by default
+   *   for admin access but should be reviewed for compliance requirements.
+   *   DESIGN CONSIDERATION: Future enhancement could require explicit opt-in via binding
+   *   directive options (e.g., { allowBucketPolicyManagement: true }) or a separate
+   *   capability (e.g., 'storage:s3-policy-admin') to provide finer-grained access control.
+   * - PutBucketAcl and GetBucketAcl are included for ACL management but ACLs are generally
+   *   discouraged in favor of bucket policies. Consider deprecating if ACLs are not required.
+   * 
+   * Future extensibility (acceptable for core scope):
+   * - S3 event notifications (s3:PutBucketNotification, s3:GetBucketNotification) are not
+   *   included but could be added if bucket notification configuration is needed.
+   * - S3 replication permissions (s3:ReplicateObject, s3:ReplicateDelete, etc.) are not
+   *   included but could be added if cross-region replication is required.
    */
   private getS3ActionsForAccess(access: string[]): string[] {
     // Handle array - typically just one access level, but handle all cases
@@ -241,6 +295,7 @@ export class S3BinderStrategy extends UnifiedBinderStrategyBase {
           's3:GetObjectVersionAcl'
         ];
       case 'write':
+        // Includes multipart upload permissions for large object support (>5MB)
         return [
           's3:PutObject',
           's3:PutObjectAcl',
@@ -250,6 +305,7 @@ export class S3BinderStrategy extends UnifiedBinderStrategyBase {
           's3:ListMultipartUploadParts'
         ];
       case 'readwrite':
+        // Includes multipart upload permissions for large object support (>5MB)
         return [
           's3:GetObject',
           's3:GetObjectVersion',
@@ -263,6 +319,8 @@ export class S3BinderStrategy extends UnifiedBinderStrategyBase {
           's3:ListMultipartUploadParts'
         ];
       case 'admin':
+        // Includes multipart upload permissions for large object support (>5MB)
+        // Includes high-privilege bucket policy and ACL management actions
         return [
           's3:GetObject',
           's3:GetObjectVersion',
