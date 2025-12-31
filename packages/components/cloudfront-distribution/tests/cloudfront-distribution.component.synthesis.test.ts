@@ -24,13 +24,14 @@ import { ComponentContext, ComponentSpec } from '../../../core/src/platform/cont
 const DETERMINISTIC_TIMESTAMP = new Date('2025-01-08T12:00:00.000Z');
 
 // Helper factories
-const createMockContext = (framework: string): ComponentContext => ({
+const createMockContext = (framework: 'commercial' | 'fedramp-moderate' | 'fedramp-high', scope: Stack): ComponentContext => ({
   serviceName: 'test-service',
   owner: 'platform-team',
   environment: 'dev',
   complianceFramework: framework,
   region: 'us-east-1',
-  account: '123456789012',
+  accountId: '123456789012',
+  scope,
   tags: {
     'service-name': 'test-service',
     environment: 'dev',
@@ -66,7 +67,9 @@ describe('CloudFrontDistributionComponent', () => {
   describe('ComponentSynthesis__CommercialMode__CreatesBasicDistribution', () => {
     it('ComponentSynthesis__CommercialDefaults__CreatesCloudFrontDistribution', () => {
       // Test Metadata: {"id":"TP-cloudfront-distribution-synthesis-001","level":"unit","capability":"Component synthesis creates commercial distribution with baseline defaults","oracle":"contract","invariants":["CloudFront distribution created with correct price class","Default cache behavior uses redirect-to-https"],"fixtures":["createMockContext","createMockSpec","synthesize"],"inputs":{"shape":"Commercial context with minimal config","notes":"Tests basic synthesis path"},"risks":["Missing required resources"],"dependencies":["aws-cdk-lib"],"evidence":["AWS::CloudFront::Distribution present","PriceClass=PriceClass_100","ViewerProtocolPolicy=redirect-to-https"],"compliance_refs":["std://platform-tagging"],"ai_generated":true,"human_reviewed_by":"Platform Engineering Team"}
-      const { template } = synthesize(createMockContext('commercial'), createMockSpec());
+      const app = new App();
+      const stack = new Stack(app, 'TestStack');
+      const { template } = synthesize(createMockContext('commercial', stack), createMockSpec());
 
       template.hasResourceProperties('AWS::CloudFront::Distribution', {
         DistributionConfig: Match.objectLike({
@@ -80,7 +83,9 @@ describe('CloudFrontDistributionComponent', () => {
 
     it('ComponentSynthesis__FedRampHighDefaults__AppliesHardenedConfiguration', () => {
       // Test Metadata: {"id":"TP-cloudfront-distribution-synthesis-002","level":"unit","capability":"Component synthesis applies FedRAMP High hardened settings","oracle":"contract","invariants":["CloudFront distribution uses PriceClass_All","Default cache behavior uses https-only","Logging configured with bucket and include cookies"],"fixtures":["createMockContext","createMockSpec","synthesize"],"inputs":{"shape":"FedRAMP High context","notes":"Tests compliance-specific synthesis"},"risks":["Missing compliance controls"],"dependencies":["config/fedramp-high.yml"],"evidence":["PriceClass=PriceClass_All","ViewerProtocolPolicy=https-only","Logging.Bucket present","Logging.IncludeCookies=true"],"compliance_refs":["std://platform-security"],"ai_generated":true,"human_reviewed_by":"Platform Engineering Team"}
-      const { template } = synthesize(createMockContext('fedramp-high'), createMockSpec());
+      const app = new App();
+      const stack = new Stack(app, 'TestStack');
+      const { template } = synthesize(createMockContext('fedramp-high', stack), createMockSpec());
 
       template.hasResourceProperties('AWS::CloudFront::Distribution', {
         DistributionConfig: Match.objectLike({
@@ -100,8 +105,10 @@ describe('CloudFrontDistributionComponent', () => {
   describe('ComponentSynthesis__ManifestOverrides__RespectsUserConfiguration', () => {
     it('ComponentSynthesis__CustomOriginAndBehavior__CreatesConfiguredDistribution', () => {
       // Test Metadata: {"id":"TP-cloudfront-distribution-synthesis-003","level":"unit","capability":"Component synthesis respects manifest overrides for origin and behaviors","oracle":"contract","invariants":["CloudFront distribution uses custom origin configuration","Default cache behavior configured with custom methods","Logging configured with custom bucket"],"fixtures":["createMockContext","createMockSpec","synthesize"],"inputs":{"shape":"Commercial context with custom origin and behavior","notes":"Tests manifest override synthesis"},"risks":["Incorrect configuration application"],"dependencies":["aws-cdk-lib"],"evidence":["DefaultCacheBehavior.ViewerProtocolPolicy=redirect-to-https","DefaultCacheBehavior.AllowedMethods includes POST","Logging present"],"compliance_refs":["std://platform-tagging"],"ai_generated":true,"human_reviewed_by":"Platform Engineering Team"}
+      const app = new App();
+      const stack = new Stack(app, 'TestStack');
       const { template } = synthesize(
-        createMockContext('commercial'),
+        createMockContext('commercial', stack),
         createMockSpec({
           origin: {
             type: 'custom',
@@ -139,8 +146,10 @@ describe('CloudFrontDistributionComponent', () => {
 
     it('ComponentSynthesis__CapabilityRegistration__ProvidesCorrectCapabilities', () => {
       // Test Metadata: {"id":"TP-cloudfront-distribution-synthesis-004","level":"unit","capability":"Component synthesis provides correct capabilities after synthesis","oracle":"exact","invariants":["CloudFront distribution capability registered","Capability contains origin type and hardening profile","Telemetry includes metrics and logging configuration"],"fixtures":["createMockContext","createMockSpec","synthesize"],"inputs":{"shape":"Commercial context with custom configuration","notes":"Tests capability registration"},"risks":["Incorrect capability data"],"dependencies":["aws-cdk-lib"],"evidence":["capability.originType=custom","capability.hardeningProfile=baseline","telemetry.metrics contains 4xxErrorRate"],"compliance_refs":["std://platform-capability"],"ai_generated":true,"human_reviewed_by":"Platform Engineering Team"}
+      const app = new App();
+      const stack = new Stack(app, 'TestStack');
       const { component } = synthesize(
-        createMockContext('commercial'),
+        createMockContext('commercial', stack),
         createMockSpec({
           origin: {
             type: 'custom',

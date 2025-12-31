@@ -1,4 +1,5 @@
-import { ComponentContext, ComponentSpec, IComponentCreator } from '@platform/contracts';
+import { Construct } from 'constructs';
+import { ComponentContext, ComponentSpec, IComponentCreator } from '@shinobi/core';
 import { DaggerEnginePool } from './dagger-engine-pool.component.js';
 import { DaggerEnginePoolProps } from './types.js';
 
@@ -13,24 +14,33 @@ export class DaggerEnginePoolCreator implements IComponentCreator {
    * Creates a new DaggerEnginePool component instance.
    */
   public createComponent(
-    scope: any, // REVIEW: Should be properly typed as Construct
-    id: string,
-    context: ComponentContext,
-    spec: ComponentSpec
+    spec: ComponentSpec,
+    context: ComponentContext
   ): DaggerEnginePool {
+    if (!context.scope) {
+      throw new Error('ComponentContext.scope is required to create dagger-engine-pool components');
+    }
+
     // Extract component-specific props from spec
     const props: DaggerEnginePoolProps = {
       overrides: spec.config || {}
     };
 
-    return new DaggerEnginePool(scope, id, context, spec, props);
+    return new DaggerEnginePool(context.scope as Construct, spec.name, context, spec, props);
+  }
+
+  /**
+   * Processes a component specification (alias for createComponent).
+   */
+  public processComponent(spec: ComponentSpec, context: ComponentContext): DaggerEnginePool {
+    return this.createComponent(spec, context);
   }
 
   /**
    * Validates the component specification for this component type.
    * Performs additional validation beyond JSON Schema.
    */
-  public validateSpec(spec: ComponentSpec): void {
+  public validateSpec(spec: ComponentSpec, context: ComponentContext): void {
     if (!spec.config) {
       throw new Error('DaggerEnginePool requires configuration');
     }
