@@ -20,8 +20,15 @@ export class LambdaApiComponentCreator implements IComponentCreator {
   public readonly tags = ['lambda', 'api-gateway', 'compute'];
   public readonly configSchema = LAMBDA_API_CONFIG_SCHEMA;
 
-  public createComponent(scope: Construct, spec: ComponentSpec, context: ComponentContext): LambdaApiComponent {
-    return new LambdaApiComponent(scope, spec.name, context, spec);
+  public createComponent(spec: ComponentSpec, context: ComponentContext): LambdaApiComponent {
+    if (!context.scope) {
+      throw new Error('ComponentContext.scope is required to create lambda-api components');
+    }
+    return new LambdaApiComponent(context.scope as Construct, spec.name, context, spec);
+  }
+
+  public processComponent(spec: ComponentSpec, context: ComponentContext): LambdaApiComponent {
+    return this.createComponent(spec, context);
   }
 
   public validateSpec(spec: ComponentSpec): { valid: boolean; errors: string[] } {

@@ -1,8 +1,16 @@
 import {
   ConfigBuilder,
   ConfigBuilderContext,
-  ComponentConfigSchema
+  ComponentConfigSchema,
+  DeadLetterQueueConfig,
+  SqsEventSourceConfig,
+  EventBridgeEventSourceConfig,
+  PerformanceOptimizationConfig,
+  CircuitBreakerConfig
 } from '@shinobi/core';
+import configSchema from '../Config.schema.json' with { type: 'json' };
+
+export const LAMBDA_API_CONFIG_SCHEMA: ComponentConfigSchema = configSchema as ComponentConfigSchema;
 
 export type LambdaRuntime =
   | 'nodejs20.x'
@@ -118,6 +126,17 @@ export interface LambdaApiConfig {
   reservedConcurrency?: number;
   ephemeralStorageMb: number;
   kmsKeyArn?: string;
+  deadLetterQueue?: DeadLetterQueueConfig;
+  eventSources?: {
+    sqs?: SqsEventSourceConfig;
+    eventBridge?: EventBridgeEventSourceConfig;
+  };
+  performanceOptimizations?: PerformanceOptimizationConfig;
+  circuitBreaker?: CircuitBreakerConfig;
+  encryption?: {
+    enabled: boolean;
+    kmsKeyId?: string;
+  };
   logging: {
     logRetentionDays: number;
     logFormat: LambdaLogFormat;
@@ -140,224 +159,6 @@ export interface LambdaApiConfig {
   api: LambdaApiGatewayConfig;
 }
 
-const ALARM_SCHEMA: ComponentConfigSchema = {
-  type: 'object',
-  additionalProperties: false,
-  properties: {
-    enabled: { type: 'boolean' },
-    threshold: { type: 'number' },
-    evaluationPeriods: { type: 'number', minimum: 1 },
-    periodMinutes: { type: 'number', minimum: 1 },
-    comparisonOperator: { type: 'string', enum: ['gt', 'gte', 'lt', 'lte'] },
-    treatMissingData: { type: 'string', enum: ['breaching', 'not-breaching', 'ignore', 'missing'] },
-    statistic: { type: 'string', enum: ['Sum', 'Average', 'Minimum', 'Maximum'] },
-    tags: {
-      type: 'object',
-      additionalProperties: { type: 'string' }
-    }
-  }
-};
-
-const MONITORING_SCHEMA: ComponentConfigSchema = {
-  type: 'object',
-  additionalProperties: false,
-  properties: {
-    enabled: { type: 'boolean' },
-    alarms: {
-      type: 'object',
-      additionalProperties: false,
-      properties: {
-        lambdaErrors: ALARM_SCHEMA,
-        lambdaThrottles: ALARM_SCHEMA,
-        lambdaDuration: ALARM_SCHEMA,
-        api4xxErrors: ALARM_SCHEMA,
-        api5xxErrors: ALARM_SCHEMA
-      }
-    }
-  }
-};
-
-const DEPLOYMENT_SCHEMA: ComponentConfigSchema = {
-  type: 'object',
-  additionalProperties: false,
-  properties: {
-    codePath: { type: 'string' },
-    assetHash: { type: 'string' },
-    inlineFallbackEnabled: { type: 'boolean' }
-  },
-  required: ['codePath']
-};
-
-const VPC_SCHEMA: ComponentConfigSchema = {
-  type: 'object',
-  additionalProperties: false,
-  properties: {
-    enabled: { type: 'boolean' },
-    vpcId: { type: 'string' },
-    subnetIds: {
-      type: 'array',
-      items: { type: 'string' }
-    },
-    securityGroupIds: {
-      type: 'array',
-      items: { type: 'string' }
-    }
-  }
-};
-
-const ACCESS_LOGGING_SCHEMA: ComponentConfigSchema = {
-  type: 'object',
-  additionalProperties: false,
-  properties: {
-    enabled: { type: 'boolean' },
-    retentionDays: { type: 'number', minimum: 1 },
-    logFormat: { type: 'string', enum: ['json', 'xml'] },
-    logGroupName: { type: 'string' },
-    prefix: { type: 'string' }
-  }
-};
-
-const CORS_SCHEMA: ComponentConfigSchema = {
-  type: 'object',
-  additionalProperties: false,
-  properties: {
-    enabled: { type: 'boolean' },
-    allowOrigins: {
-      type: 'array',
-      items: { type: 'string' }
-    },
-    allowHeaders: {
-      type: 'array',
-      items: { type: 'string' }
-    },
-    allowMethods: {
-      type: 'array',
-      items: { type: 'string' }
-    },
-    allowCredentials: { type: 'boolean' }
-  }
-};
-
-const USAGE_PLAN_SCHEMA: ComponentConfigSchema = {
-  type: 'object',
-  additionalProperties: false,
-  properties: {
-    enabled: { type: 'boolean' },
-    name: { type: 'string' },
-    throttle: {
-      type: 'object',
-      additionalProperties: false,
-      properties: {
-        rateLimit: { type: 'number', minimum: 0 },
-        burstLimit: { type: 'number', minimum: 0 }
-      }
-    },
-    quota: {
-      type: 'object',
-      additionalProperties: false,
-      properties: {
-        limit: { type: 'number', minimum: 1 },
-        period: { type: 'string', enum: ['DAY', 'WEEK', 'MONTH'] }
-      }
-    }
-  }
-};
-
-const API_GATEWAY_SCHEMA: ComponentConfigSchema = {
-  type: 'object',
-  additionalProperties: false,
-  properties: {
-    type: { type: 'string', enum: ['rest'] },
-    name: { type: 'string' },
-    description: { type: 'string' },
-    stageName: { type: 'string' },
-    metricsEnabled: { type: 'boolean' },
-    tracingEnabled: { type: 'boolean' },
-    apiKeyRequired: { type: 'boolean' },
-    throttling: {
-      type: 'object',
-      additionalProperties: false,
-      properties: {
-        burstLimit: { type: 'number', minimum: 0 },
-        rateLimit: { type: 'number', minimum: 0 }
-      }
-    },
-    usagePlan: USAGE_PLAN_SCHEMA,
-    logging: ACCESS_LOGGING_SCHEMA,
-    cors: CORS_SCHEMA
-  }
-};
-
-const OBSERVABILITY_SCHEMA: ComponentConfigSchema = {
-  type: 'object',
-  additionalProperties: false,
-  properties: {
-    otelEnabled: { type: 'boolean' },
-    otelLayerArn: { type: 'string' },
-    otelResourceAttributes: {
-      type: 'object',
-      additionalProperties: { type: 'string' }
-    }
-  }
-};
-
-export const LAMBDA_API_CONFIG_SCHEMA: ComponentConfigSchema = {
-  type: 'object',
-  title: 'Lambda API Component Configuration',
-  additionalProperties: false,
-  properties: {
-    functionName: { type: 'string' },
-    handler: { type: 'string' },
-    runtime: { type: 'string', enum: ['nodejs20.x', 'nodejs18.x', 'python3.11', 'python3.10', 'python3.9'] },
-    architecture: { type: 'string', enum: ['x86_64', 'arm64'] },
-    memorySize: { type: 'number', minimum: 128, maximum: 10240 },
-    timeoutSeconds: { type: 'number', minimum: 1, maximum: 900 },
-    description: { type: 'string' },
-    environment: {
-      type: 'object',
-      additionalProperties: { type: 'string' }
-    },
-    reservedConcurrency: { type: 'number', minimum: 1 },
-    ephemeralStorageMb: { type: 'number', minimum: 512, maximum: 10240 },
-    kmsKeyArn: { type: 'string' },
-    logging: {
-      type: 'object',
-      additionalProperties: false,
-      properties: {
-        logRetentionDays: { type: 'number', minimum: 1 },
-        logFormat: { type: 'string', enum: ['TEXT', 'JSON'] },
-        systemLogLevel: { type: 'string', enum: ['INFO', 'WARN', 'ERROR'] },
-        applicationLogLevel: { type: 'string', enum: ['DEBUG', 'INFO', 'WARN', 'ERROR'] }
-      }
-    },
-    tracing: {
-      type: 'object',
-      additionalProperties: false,
-      properties: {
-        mode: { type: 'string', enum: ['Active', 'PassThrough'] }
-      }
-    },
-    deployment: DEPLOYMENT_SCHEMA,
-    vpc: VPC_SCHEMA,
-    observability: OBSERVABILITY_SCHEMA,
-    monitoring: MONITORING_SCHEMA,
-    securityTools: {
-      type: 'object',
-      additionalProperties: false,
-      properties: {
-        falco: { type: 'boolean' }
-      }
-    },
-    hardeningProfile: { type: 'string' },
-    removalPolicy: { type: 'string', enum: ['retain', 'destroy'] },
-    tags: {
-      type: 'object',
-      additionalProperties: { type: 'string' }
-    },
-    api: API_GATEWAY_SCHEMA
-  },
-  required: ['handler', 'deployment', 'api', 'logging', 'monitoring', 'observability']
-};
 
 const HARDENED_FALLBACKS: LambdaApiConfig = {
   functionName: 'lambda-api-function',

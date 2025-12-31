@@ -1,6 +1,6 @@
 import { Stack } from 'aws-cdk-lib';
-import { IamRoleComponentConfigBuilder, IamRoleConfig } from '../../src/iam-role.builder.ts';
-import { ComponentContext, ComponentSpec } from '@platform/contracts';
+import { IamRoleComponentConfigBuilder, IamRoleConfig } from '../../src/index.js';
+import { ComponentContext, ComponentSpec } from '@shinobi/core';
 
 const createContext = (
   complianceFramework: ComponentContext['complianceFramework'] = 'commercial'

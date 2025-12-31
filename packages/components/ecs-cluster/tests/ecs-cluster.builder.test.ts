@@ -1,6 +1,6 @@
 import { Stack } from 'aws-cdk-lib';
-import { ComponentContext, ComponentSpec } from '@shinobi/core/component-interfaces';
-import { EcsClusterComponentConfigBuilder, EcsClusterConfig } from '../src/ecs-cluster.builder.ts';
+import { ComponentContext, ComponentSpec } from '@shinobi/core';
+import { EcsClusterComponentConfigBuilder, EcsClusterConfig } from '../src/ecs-cluster.builder.js';
 
 const createContext = (
   overrides: Partial<ComponentContext> = {}
@@ -34,7 +34,7 @@ describe('EcsClusterComponentConfigBuilder__Validation', () => {
 
   beforeEach(() => {
     platformConfigSpy = jest
-      .spyOn(EcsClusterComponentConfigBuilder.prototype, '_loadPlatformConfiguration')
+      .spyOn(EcsClusterComponentConfigBuilder.prototype as any, '_loadPlatformConfiguration')
       .mockImplementation(() => ({}));
   });
 

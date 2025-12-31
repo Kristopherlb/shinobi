@@ -26,7 +26,7 @@ import {
   LambdaApiAlarmConfig
 } from './lambda-api.builder.js';
 import { LambdaApiValidator } from '../validation/lambda-api.validator.js';
-import { LambdaAdvancedFeaturesService } from '@shinobi/core/platform/services/lambda-advanced-features';
+import { LambdaAdvancedFeaturesService } from '@shinobi/core';
 
 /**
  * Lambda API Component
@@ -46,6 +46,7 @@ export class LambdaApiComponent extends BaseComponent {
   private accessLogGroup?: logs.LogGroup;
   private functionLogGroup?: logs.LogGroup;
   private usagePlan?: apigw.UsagePlan;
+  private usagePlanName?: string;
   private config?: LambdaApiConfig;
   private advancedFeatures?: LambdaAdvancedFeaturesService;
 
@@ -92,7 +93,7 @@ export class LambdaApiComponent extends BaseComponent {
 
     // Initialize advanced features using platform service
     this.advancedFeatures = LambdaAdvancedFeaturesService.createForApi(
-      this.scope,
+      this,
       this.lambdaFunction,
       this.context
     );
@@ -231,18 +232,16 @@ export class LambdaApiComponent extends BaseComponent {
       reservedConcurrentExecutions: this.config!.reservedConcurrency,
       tracing: this.config!.tracing.mode === 'Active' ? lambda.Tracing.ACTIVE : lambda.Tracing.PASS_THROUGH,
       ephemeralStorageSize: cdk.Size.mebibytes(this.config!.ephemeralStorageMb),
-      logGroup: this.functionLogGroup
+      logGroup: this.functionLogGroup,
+      ...(this.config?.kmsKeyArn && {
+        environmentEncryption: kms.Key.fromKeyArn(this, 'LambdaEnvironmentKey', this.config.kmsKeyArn)
+      }),
+      ...(vpc && {
+        vpc,
+        vpcSubnets: subnets ? { subnets } : undefined,
+        securityGroups: securityGroups && securityGroups.length > 0 ? securityGroups : undefined
+      })
     };
-
-    if (this.config?.kmsKeyArn) {
-      props.environmentEncryption = kms.Key.fromKeyArn(this, 'LambdaEnvironmentKey', this.config.kmsKeyArn);
-    }
-
-    if (vpc) {
-      props.vpc = vpc;
-      props.vpcSubnets = subnets ? { subnets } : undefined;
-      props.securityGroups = securityGroups && securityGroups.length > 0 ? securityGroups : undefined;
-    }
 
     const lambdaFunction = new lambda.Function(this, 'LambdaApiFunction', props);
     lambdaFunction.applyRemovalPolicy(removalPolicy);
@@ -427,8 +426,10 @@ export class LambdaApiComponent extends BaseComponent {
       return;
     }
 
+    this.usagePlanName = usagePlanConfig.name ?? `${this.context.serviceName}-${this.spec.name}-usage-plan`;
+    
     this.usagePlan = restApi.addUsagePlan('LambdaApiUsagePlan', {
-      name: usagePlanConfig.name ?? `${this.context.serviceName}-${this.spec.name}-usage-plan`,
+      name: this.usagePlanName,
       throttle: usagePlanConfig.throttle
         ? {
           rateLimit: usagePlanConfig.throttle.rateLimit,
@@ -438,7 +439,7 @@ export class LambdaApiComponent extends BaseComponent {
       quota: usagePlanConfig.quota
         ? {
           limit: usagePlanConfig.quota.limit,
-          period: usagePlanConfig.quota.period
+          period: this.mapQuotaPeriod(usagePlanConfig.quota.period)
         }
         : undefined
     });
@@ -449,8 +450,8 @@ export class LambdaApiComponent extends BaseComponent {
       ...this.config!.tags
     };
 
-    if (this.usagePlan.usagePlanName) {
-      usagePlanTags['usage-plan'] = this.usagePlan.usagePlanName;
+    if (this.usagePlanName) {
+      usagePlanTags['usage-plan'] = this.usagePlanName;
     }
 
     this.applyStandardTags(this.usagePlan, usagePlanTags);
@@ -625,8 +626,7 @@ export class LambdaApiComponent extends BaseComponent {
     }
 
     const otelEnv = this.configureObservability(lambdaFunction, {
-      serviceName: this.spec.name,
-      componentType: this.getType()
+      serviceName: this.spec.name
     });
 
     Object.entries(otelEnv).forEach(([key, value]) => {
@@ -659,7 +659,7 @@ export class LambdaApiComponent extends BaseComponent {
       usagePlan: this.usagePlan
         ? {
           usagePlanId: this.usagePlan.usagePlanId,
-          usagePlanName: this.usagePlan.usagePlanName
+          usagePlanName: this.usagePlanName
         }
         : undefined
     };
@@ -683,6 +683,18 @@ export class LambdaApiComponent extends BaseComponent {
 
   private mapArchitecture(architecture: LambdaArchitecture): lambda.Architecture {
     return architecture === 'arm64' ? lambda.Architecture.ARM_64 : lambda.Architecture.X86_64;
+  }
+
+  private mapQuotaPeriod(period: 'DAY' | 'WEEK' | 'MONTH'): apigw.Period {
+    switch (period) {
+      case 'DAY':
+        return apigw.Period.DAY;
+      case 'WEEK':
+        return apigw.Period.WEEK;
+      case 'MONTH':
+      default:
+        return apigw.Period.MONTH;
+    }
   }
 
   private mapComparisonOperator(operator: string): cloudwatch.ComparisonOperator {
@@ -778,7 +790,7 @@ export class LambdaApiComponent extends BaseComponent {
     if (this.config.vpc?.enabled || this.config.encryption?.enabled) {
       this.advancedFeatures.configureSecurityEnhancements({
         vpc: this.config.vpc,
-        encryption: this.config.encryption,
+        encryption: this.config.encryption ?? { enabled: false },
         secretsManager: {
           enabled: false // Not implemented in lambda-api yet
         }

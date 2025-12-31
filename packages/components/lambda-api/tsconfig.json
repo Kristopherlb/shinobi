@@ -1,11 +1,14 @@
 {
   "extends": "../../../tsconfig.base.json",
   "compilerOptions": {
+    "rootDir": ".",
+    "outDir": "../../../dist/packages/components/lambda-api",
+    "composite": true,
+    "declaration": true,
+    "declarationMap": true,
     "target": "ES2022",
     "module": "NodeNext",
     "moduleResolution": "NodeNext",
-    "declaration": true,
-    "outDir": "../../../dist/packages/components/lambda-api",
     "strict": true,
     "esModuleInterop": true,
     "skipLibCheck": true,
@@ -18,11 +21,17 @@
   "include": [
     "index.ts",
     "Config.schema.json",
-    "src/**/*"
+    "src/**/*",
+    "validation/**/*"
   ],
   "exclude": [
     "dist",
     "node_modules",
     "**/*.test.ts"
+  ],
+  "references": [
+    {
+      "path": "../../core/tsconfig.json"
+    }
   ]
 }
