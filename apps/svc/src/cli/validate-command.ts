@@ -19,12 +19,14 @@
  * - 2: Validation failed (syntax errors, schema violations, missing files)
  */
 
+import * as path from 'path';
 import { Logger } from './console-logger.js';
 import { ValidationOrchestrator } from '@shinobi/core';
 import { FileDiscovery } from './utils/file-discovery.js';
 
 export interface ValidateOptions {
   file?: string;
+  json?: boolean;
 }
 
 export interface ValidateResult {
@@ -50,9 +52,9 @@ export class ValidateCommand {
     this.dependencies.logger.debug('Starting validate command', { data: options });
 
     try {
-      // Discover manifest file
+      // Discover manifest file - resolve to absolute path if provided
       const manifestPath = options.file 
-        ? options.file 
+        ? path.resolve(options.file)
         : await this.dependencies.fileDiscovery.findManifest('.');
 
       if (!manifestPath) {
@@ -63,32 +65,46 @@ export class ValidateCommand {
         };
       }
 
-      this.dependencies.logger.info(`Validating manifest: ${manifestPath}`);
+      // Ensure we log the absolute path (fileDiscovery may return absolute, but resolve to be safe)
+      const resolvedPath = path.isAbsolute(manifestPath) 
+        ? manifestPath 
+        : path.resolve(manifestPath);
+      
+      if (!options.json) {
+        this.dependencies.logger.info(`Validating manifest: ${resolvedPath}`);
+      }
 
       // Run validation pipeline (stages 1-2: parsing and schema validation)
       const result = await this.dependencies.pipeline.validate(manifestPath);
       
-      this.dependencies.logger.success('Manifest validation completed successfully');
+      // Prepare result data (consistent for both JSON and human-readable output)
+      const manifest = result.manifest || {};
+      const warnings = result.warnings || [];
       
-      if (result.warnings && result.warnings.length > 0) {
-        this.dependencies.logger.warn(`Found ${result.warnings.length} warning(s):`);
-        result.warnings.forEach((warning: string) => {
-          this.dependencies.logger.warn(`  - ${warning}`);
-        });
-      }
+      // Human-readable output (skip if JSON mode)
+      if (!options.json) {
+        this.dependencies.logger.success('Manifest validation completed successfully');
+        
+        if (warnings.length > 0) {
+          this.dependencies.logger.warn(`Found ${warnings.length} warning(s):`);
+          warnings.forEach((warning: string) => {
+            this.dependencies.logger.warn(`  - ${warning}`);
+          });
+        }
 
-      this.dependencies.logger.info('Validation summary:');
-      this.dependencies.logger.info(`  Service: ${result.manifest.service}`);
-      this.dependencies.logger.info(`  Owner: ${result.manifest.owner}`);
-      this.dependencies.logger.info(`  Compliance Framework: ${result.manifest.complianceFramework || 'commercial'}`);
-      this.dependencies.logger.info(`  Components: ${result.manifest.components?.length || 0}`);
+        this.dependencies.logger.info('Validation summary:');
+        this.dependencies.logger.info(`  Service: ${manifest.service ?? 'unknown'}`);
+        this.dependencies.logger.info(`  Owner: ${manifest.owner ?? 'unknown'}`);
+        this.dependencies.logger.info(`  Compliance Framework: ${manifest.complianceFramework ?? 'commercial'}`);
+        this.dependencies.logger.info(`  Components: ${manifest.components?.length ?? 0}`);
+      }
 
       return {
         success: true,
         exitCode: 0,
         data: {
-          manifest: result.manifest,
-          warnings: result.warnings || []
+          manifest,
+          warnings
         }
       };
 
