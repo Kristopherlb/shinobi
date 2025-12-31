@@ -232,8 +232,10 @@ export interface ITriggerStrategy {
 /**
  * Unified Binder Strategy Interface
  * 
- * Extends the base IBinderStrategy interface with mandatory compliance enforcement
- * and enhanced binding results. This is the canonical interface for all binder strategies.
+ * The canonical interface for all binder strategies with mandatory compliance enforcement.
+ * This interface implements the same contract as IBinderStrategy but with async bind()
+ * and enhanced results. It does not extend IBinderStrategy due to incompatible bind()
+ * signatures (sync vs async).
  * 
  * Key features:
  * - Mandatory compliance validation based on context.complianceFramework
@@ -241,13 +243,21 @@ export interface ITriggerStrategy {
  * - Compatibility matrix support
  * - Config-driven compliance (no framework branching in code)
  * 
- * @see IBinderStrategy - Base interface (preserved for reference)
+ * @see IBinderStrategy - Base interface (preserved for reference, sync bind)
  */
-export interface IUnifiedBinderStrategy extends IBinderStrategy {
+export interface IUnifiedBinderStrategy {
   /**
    * Capabilities this strategy supports - used for registry-level filtering
    */
   readonly supportedCapabilities: string[];
+
+  /**
+   * Check if this strategy can handle the given source type and capability
+   * @param sourceType - Type of the source component
+   * @param targetCapability - Target capability type
+   * @returns true if this strategy can handle the binding
+   */
+  canHandle(sourceType: string, targetCapability: string): boolean;
 
   /**
    * Performs the binding with mandatory compliance enforcement.
@@ -258,6 +268,12 @@ export interface IUnifiedBinderStrategy extends IBinderStrategy {
    * @returns Promise resolving to enhanced binding result with compliance validation
    */
   bind(context: BindingContext): Promise<EnhancedBindingResult>;
+
+  /**
+   * Get compatibility matrix entries for this strategy
+   * @returns Array of compatibility entries
+   */
+  getCompatibilityMatrix(): CompatibilityEntry[];
 }
 
 /**
