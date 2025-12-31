@@ -27,13 +27,58 @@ const formatDisplayName = (value: string): string =>
     .map(part => part.charAt(0).toUpperCase() + part.slice(1))
     .join(' ');
 
+/**
+ * Find the monorepo root by walking up from a starting directory
+ * Looks for common monorepo marker files: pnpm-workspace.yaml, nx.json, turbo.json, rush.json
+ * For package.json, also checks for workspaces field
+ */
+async function findRepoRoot(startDir: string): Promise<string> {
+  let current = path.resolve(startDir);
+  const root = path.parse(current).root;
+
+  while (current !== root) {
+    // Check for common monorepo marker files
+    const markerFiles = ['pnpm-workspace.yaml', 'nx.json', 'turbo.json', 'rush.json'];
+    for (const marker of markerFiles) {
+      try {
+        await fs.access(path.join(current, marker));
+        return current; // Found a monorepo marker
+      } catch {
+        // Continue checking other markers
+      }
+    }
+
+    // Check package.json for workspaces field
+    try {
+      const packageJsonPath = path.join(current, 'package.json');
+      await fs.access(packageJsonPath);
+      const packageJsonContent = await fs.readFile(packageJsonPath, 'utf8');
+      const packageJson = JSON.parse(packageJsonContent);
+      if (packageJson.workspaces) {
+        return current; // Found workspace root
+      }
+    } catch {
+      // Not a workspace root, continue
+    }
+
+    current = path.dirname(current);
+  }
+
+  // Fallback: return the starting directory if no root found
+  return startDir;
+}
+
 const moduleDir = path.dirname(fileURLToPath(import.meta.url));
-const rootDir = path.resolve(moduleDir, '../../../../../');
+let rootDirCache: string | null = null;
 
 export const loadComponentCatalog = async (
   options?: ComponentCatalogOptions
 ): Promise<ComponentCatalogEntry[]> => {
-  const componentsDir = path.join(rootDir, 'packages/components');
+  // Cache root directory resolution to avoid repeated filesystem traversal
+  if (!rootDirCache) {
+    rootDirCache = await findRepoRoot(moduleDir);
+  }
+  const componentsDir = path.join(rootDirCache, 'packages/components');
 
   let dirEntries: Dirent[];
   try {
@@ -95,16 +140,15 @@ export const loadComponentCatalog = async (
         catalog?.metadata?.description ?? catalog?.spec?.metadata?.platform?.description;
       const category = catalog?.spec?.type ?? catalog?.spec?.metadata?.platform?.category;
 
-      const capabilities: string[] = Array.isArray(catalog?.spec?.metadata?.platform?.capabilities)
-        ? catalog.spec.metadata.platform.capabilities
-        : [];
+      // Safe access to nested properties using local variables
+      const rawCapabilities = catalog?.spec?.metadata?.platform?.capabilities;
+      const capabilities: string[] = Array.isArray(rawCapabilities) ? rawCapabilities : [];
 
-      const metadataTags: string[] = Array.isArray(catalog?.metadata?.tags)
-        ? catalog.metadata.tags
-        : [];
-      const platformTags: string[] = Array.isArray(catalog?.spec?.metadata?.platform?.tags?.required)
-        ? catalog.spec.metadata.platform.tags.required
-        : [];
+      const rawMetadataTags = catalog?.metadata?.tags;
+      const metadataTags: string[] = Array.isArray(rawMetadataTags) ? rawMetadataTags : [];
+      
+      const rawPlatformTags = catalog?.spec?.metadata?.platform?.tags?.required;
+      const platformTags: string[] = Array.isArray(rawPlatformTags) ? rawPlatformTags : [];
       const tags = Array.from(new Set([...metadataTags, ...platformTags]));
 
       entries.push({
