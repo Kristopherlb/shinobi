@@ -17,26 +17,98 @@
 
 import { Command } from 'commander';
 import { CompositionRoot } from './composition-root.js';
-import { loadComponentCatalog } from './utils/component-catalog.js';
+import { Logger } from './console-logger.js';
+import { loadComponentCatalog, ComponentCatalogEntry } from './utils/component-catalog.js';
 import { loadComponentCreators, ComponentCreatorEntry } from './utils/component-loader.js';
+
+// Extract PlatformComponentCreator type from component-loader
+type PlatformComponentCreator = ComponentCreatorEntry['creator'];
 
 interface CatalogOptions {
   all?: boolean;
   json?: boolean;
 }
 
+/**
+ * Enriched catalog entry with creator and required capabilities
+ */
+interface EnrichedCatalogEntry {
+  entry: ComponentCatalogEntry;
+  creator?: PlatformComponentCreator;
+  requiredCapabilities?: string[];
+}
+
+/**
+ * Catalog entry with required capabilities for output
+ */
+interface CatalogOutputEntry extends ComponentCatalogEntry {
+  requiredCapabilities?: string[];
+}
+
+/**
+ * Result data structure for catalog command
+ */
+interface CatalogResultData {
+  entries: CatalogOutputEntry[];
+  count: number;
+}
+
 export interface CatalogResult {
   success: boolean;
   exitCode: number;
-  data?: {
-    entries: Array<{ entry: any; creator?: any }>;
-    count: number;
-  };
+  data?: CatalogResultData;
   error?: string;
 }
 
 export class CatalogCommand {
-  constructor(private readonly logger: { info: (msg: string) => void; warn: (msg: string) => void }) {}
+  constructor(private readonly logger: Logger) {}
+
+  /**
+   * Helper method to extract required capabilities from a creator
+   */
+  private getRequiredCapabilities(creator?: PlatformComponentCreator): string[] {
+    if (!creator) {
+      return [];
+    }
+
+    // Type guard: check if creator has getRequiredCapabilities method
+    if (typeof (creator as any).getRequiredCapabilities === 'function') {
+      const capabilities = (creator as any).getRequiredCapabilities();
+      return Array.isArray(capabilities) ? capabilities : [];
+    }
+
+    return [];
+  }
+
+  /**
+   * Helper method to enrich catalog entries with creator information and required capabilities
+   */
+  private enrichEntries(
+    catalogEntries: ComponentCatalogEntry[],
+    creatorMap: Map<string, ComponentCreatorEntry> | undefined
+  ): EnrichedCatalogEntry[] {
+    return catalogEntries.map(entry => {
+      const creatorEntry = creatorMap?.get(entry.componentType);
+      const creator = creatorEntry?.creator;
+      const requiredCapabilities = this.getRequiredCapabilities(creator);
+
+      return {
+        entry,
+        creator,
+        requiredCapabilities: requiredCapabilities.length > 0 ? requiredCapabilities : undefined
+      };
+    });
+  }
+
+  /**
+   * Convert enriched entries to output format
+   */
+  private toOutputEntries(enrichedEntries: EnrichedCatalogEntry[]): CatalogOutputEntry[] {
+    return enrichedEntries.map(({ entry, requiredCapabilities }) => ({
+      ...entry,
+      requiredCapabilities
+    }));
+  }
 
   async execute(options: CatalogOptions): Promise<CatalogResult> {
     try {
@@ -51,12 +123,10 @@ export class CatalogCommand {
         creatorMap = undefined;
       }
 
-      const entries = catalogEntries.map(entry => {
-        const creator = creatorMap?.get(entry.componentType)?.creator;
-        return { entry, creator };
-      });
+      // Enrich all entries with creator information and required capabilities
+      const enrichedEntries = this.enrichEntries(catalogEntries, creatorMap);
 
-      if (entries.length === 0) {
+      if (enrichedEntries.length === 0) {
         this.logger.info('No components found in the registry.');
         return {
           success: true,
@@ -65,6 +135,9 @@ export class CatalogCommand {
         };
       }
 
+      // Convert to output format (consistent for both JSON and human-readable)
+      const outputEntries = this.toOutputEntries(enrichedEntries);
+
       // Format output
       if (options.json || process.env.CI) {
         // JSON output will be handled by CLI entry point
@@ -72,16 +145,16 @@ export class CatalogCommand {
           success: true,
           exitCode: 0,
           data: {
-            entries: entries.map(({ entry }) => ({ entry })),
-            count: entries.length
+            entries: outputEntries,
+            count: outputEntries.length
           }
         };
       }
 
       // Human-readable output
-      entries
+      enrichedEntries
         .sort((a, b) => a.entry.displayName.localeCompare(b.entry.displayName))
-        .forEach(({ entry, creator }, index) => {
+        .forEach(({ entry, requiredCapabilities }, index) => {
           const lines: string[] = [];
           lines.push(`${index + 1}. ${entry.displayName} (${entry.componentType})`);
           if (entry.description) {
@@ -94,10 +167,7 @@ export class CatalogCommand {
             : '     • None documented';
           lines.push('   Capabilities:\n' + capabilities);
 
-          const requiredCapabilities = creator && typeof (creator as any).getRequiredCapabilities === 'function'
-            ? (creator as any).getRequiredCapabilities()
-            : [];
-          if (Array.isArray(requiredCapabilities) && requiredCapabilities.length > 0) {
+          if (requiredCapabilities && requiredCapabilities.length > 0) {
             lines.push(
               '   Requires:\n' + requiredCapabilities.map((cap: string) => `     • ${cap}`).join('\n')
             );
@@ -111,12 +181,15 @@ export class CatalogCommand {
           this.logger.info('');
         });
 
-      this.logger.info(`${entries.length} component${entries.length === 1 ? '' : 's'} available.`);
+      this.logger.info(`${enrichedEntries.length} component${enrichedEntries.length === 1 ? '' : 's'} available.`);
 
       return {
         success: true,
         exitCode: 0,
-        data: { entries, count: entries.length }
+        data: {
+          entries: outputEntries,
+          count: outputEntries.length
+        }
       };
     } catch (error) {
       const message = error instanceof Error ? error.message : String(error);
@@ -150,13 +223,16 @@ export const createCatalogCommand = (): Command => {
 
       if (result.success) {
         if (options.json && result.data) {
-          console.log(JSON.stringify(result.data.entries.map(({ entry }) => entry), null, 2));
+          // JSON output to stdout (appropriate for structured output)
+          console.log(JSON.stringify(result.data.entries, null, 2));
         }
         process.exit(result.exitCode);
       } else {
         if (options.json && result.error) {
+          // JSON error output to stderr (appropriate for structured output)
           console.error(JSON.stringify({ error: result.error }, null, 2));
         } else {
+          // Use logger for human-readable error messages
           dependencies.logger.error(result.error || 'Catalog command failed');
         }
         process.exit(result.exitCode);

@@ -36,14 +36,24 @@ export interface ApplicationDependencies {
 
 export class CompositionRoot {
   private _dependencies: ApplicationDependencies | null = null;
+  private _loggerConfig: { verbose: boolean; ci: boolean } | null = null;
 
   /**
    * Create all application dependencies - called once at startup
+   * 
+   * This method implements a singleton pattern for the CLI application lifecycle.
+   * Dependencies are created once and cached. If called again with different
+   * configuration, it will return the cached dependencies (defensive: prevents
+   * reconfiguration during a single CLI run).
    */
   createDependencies(loggerConfig: { verbose: boolean; ci: boolean }): ApplicationDependencies {
     if (this._dependencies) {
+      // Return cached dependencies - CLI runs once, so reconfiguration is not needed
       return this._dependencies;
     }
+
+    // Store config to prevent accidental reconfiguration
+    this._loggerConfig = loggerConfig;
 
     // Create core utilities (no dependencies)
     const logger = new Logger();
@@ -54,6 +64,12 @@ export class CompositionRoot {
 
     // Create enhanced schema validation services
     // Create focused services (single responsibility)
+    // 
+    // Note: Core services from @shinobi/core expect PlatformLogger interface,
+    // while CLI commands use the full Logger class (which wraps PlatformLogger).
+    // This is an adapter pattern: logger.platformLogger provides the interface
+    // that core services require, while CLI commands get the full Logger with
+    // CLI-specific methods (success, warn, etc.).
     const manifestParser = new ManifestParser({ logger: logger.platformLogger });
     const schemaValidator = new SchemaValidator({ logger: logger.platformLogger, schemaManager });
     const contextHydrator = new ContextHydrator({ logger: logger.platformLogger });
@@ -91,6 +107,14 @@ export class CompositionRoot {
 
   /**
    * Create CLI commands with their dependencies injected
+   * 
+   * Note: Each command explicitly declares its dependencies (Principle 1: Strict DI).
+   * While some commands share common dependencies (e.g., fileDiscovery, logger),
+   * we keep them explicit rather than using a base interface. This ensures:
+   * - Each command's dependencies are clear and visible
+   * - No hidden dependencies or assumptions
+   * - Easy to see what each command actually needs
+   * - Better testability (can mock exactly what's needed)
    */
   createValidateCommand(dependencies: ApplicationDependencies): ValidateCommand {
     return new ValidateCommand({
