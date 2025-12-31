@@ -1,6 +1,6 @@
 import { Stack } from 'aws-cdk-lib';
 import { Template, Match } from 'aws-cdk-lib/assertions';
-import { IamRoleComponent } from '../../src/';
+import { IamRoleComponent } from '../../src/index.js';
 import { ComponentContext, ComponentSpec } from '@shinobi/core';
 
 const createContext = (
