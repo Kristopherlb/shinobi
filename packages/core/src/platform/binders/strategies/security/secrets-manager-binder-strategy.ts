@@ -59,17 +59,35 @@ export class SecretsManagerBinderStrategy extends UnifiedBinderStrategyBase {
       throw new Error(`Target component does not provide capability '${capability}'`);
     }
 
+    // Normalize access to array
+    const access = Array.isArray(directive.access) ? directive.access : (directive.access ? [directive.access] : []);
+
     // Route to appropriate binding method
     switch (capability) {
       case 'secretsmanager:secret':
-        return await this.bindToSecret(context, targetCapabilityData, directive.access || []);
+        return await this.bindToSecret(context, targetCapabilityData, access);
       case 'secretsmanager:rotation':
-        return await this.bindToRotation(context, targetCapabilityData, directive.access || []);
+        return await this.bindToRotation(context, targetCapabilityData, access);
       default:
         throw new Error(`Unsupported Secrets Manager capability: ${capability}. Supported capabilities: ${this.supportedCapabilities.join(', ')}`);
     }
   }
 
+  /**
+   * Bind to Secrets Manager secret
+   * 
+   * @param context - Binding context
+   * @param targetData - Expected structure:
+   *   - secretArn (required): string - ARN of the secret
+   *   - name?: string - Secret name
+   *   - description?: string - Secret description
+   *   - versionId?: string - Specific version ID
+   *   - versionStages?: string[] - Version stages array
+   *   - kmsKeyId?: string - KMS key ID for encryption (when requireSecureAccess is true)
+   *   - resourcePolicy?: object - Resource-based policy (when requireSecureAccess is true)
+   *   - autoRotationDays?: number - Automatic rotation interval (when requireSecureAccess is true)
+   * @param access - Array of access levels (read, write, admin)
+   */
   private async bindToSecret(
     context: BindingContext,
     targetData: any,
@@ -170,6 +188,17 @@ export class SecretsManagerBinderStrategy extends UnifiedBinderStrategyBase {
     };
   }
 
+  /**
+   * Bind to Secrets Manager rotation configuration
+   * 
+   * @param context - Binding context
+   * @param targetData - Expected structure:
+   *   - secretArn (required): string - ARN of the secret
+   *   - rotationLambdaArn?: string - ARN of Lambda function for rotation
+   *   - rotationSchedule?: string - Rotation schedule expression
+   *   - rotationRules?: object - Rotation rules with automaticallyAfterDays and optional duration
+   * @param access - Array of access levels (read, write)
+   */
   private async bindToRotation(
     context: BindingContext,
     targetData: any,
@@ -257,6 +286,16 @@ export class SecretsManagerBinderStrategy extends UnifiedBinderStrategyBase {
     };
   }
 
+  /**
+   * Build secure access configuration for Secrets Manager
+   * 
+   * @param context - Binding context
+   * @param targetData - Expected structure:
+   *   - kmsKeyId?: string - KMS key ID for encryption
+   *   - resourcePolicy?: object - Resource-based policy JSON
+   *   - autoRotationDays?: number - Automatic rotation interval in days
+   * @returns Secure access configuration with environment variables and IAM policies
+   */
   private async buildSecureSecretAccessConfig(
     context: BindingContext,
     targetData: any

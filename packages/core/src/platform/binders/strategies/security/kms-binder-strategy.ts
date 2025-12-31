@@ -93,6 +93,24 @@ export class KmsBinderStrategy extends UnifiedBinderStrategyBase {
     }
   }
 
+  /**
+   * Bind to KMS key
+   * 
+   * @param context - Binding context
+   * @param targetData - Expected structure:
+   *   - keyArn (required): string - ARN of the KMS key
+   *   - keyId (required): string - ID of the KMS key
+   *   - description?: string - Key description
+   *   - keyUsage?: string - Key usage (default: 'ENCRYPT_DECRYPT')
+   *   - keySpec?: string - Key specification (default: 'SYMMETRIC_DEFAULT')
+   *   - origin?: string - Key origin (default: 'AWS_KMS')
+   *   - keyPolicy?: object - Key policy JSON (when requireSecureAccess is true)
+   *   - enableKeyRotation?: boolean - Enable automatic rotation (when requireSecureAccess is true)
+   *   - multiRegion?: boolean - Multi-region key flag (when requireSecureAccess is true)
+   *   - primaryRegion?: string - Primary region for multi-region keys
+   *   - enableFipsEndpoint?: boolean - Use FIPS endpoint (when requireSecureAccess is true)
+   * @param access - Array of access levels (read, write, admin, encrypt, decrypt)
+   */
   private async bindToKey(
     context: BindingContext,
     targetData: any,
@@ -213,6 +231,16 @@ export class KmsBinderStrategy extends UnifiedBinderStrategyBase {
     };
   }
 
+  /**
+   * Bind to KMS key alias
+   * 
+   * @param context - Binding context
+   * @param targetData - Expected structure:
+   *   - aliasArn (required): string - ARN of the alias
+   *   - aliasName?: string - Alias name
+   *   - targetKeyId?: string - Target key ID the alias points to
+   * @param access - Array of access levels (read, write)
+   */
   private async bindToAlias(
     context: BindingContext,
     targetData: any,
@@ -277,6 +305,18 @@ export class KmsBinderStrategy extends UnifiedBinderStrategyBase {
     };
   }
 
+  /**
+   * Bind to KMS grant
+   * 
+   * @param context - Binding context
+   * @param targetData - Expected structure:
+   *   - keyArn (required): string - ARN of the KMS key
+   *   - grantId?: string - Grant ID
+   *   - grantToken?: string - Grant token
+   *   - granteePrincipal?: string - Principal receiving the grant
+   *   - operations?: string[] - Array of allowed operations
+   * @param access - Array of access levels (read, write)
+   */
   private async bindToGrant(
     context: BindingContext,
     targetData: any,
@@ -349,6 +389,19 @@ export class KmsBinderStrategy extends UnifiedBinderStrategyBase {
     };
   }
 
+  /**
+   * Build secure access configuration for KMS key
+   * 
+   * @param context - Binding context
+   * @param targetData - Expected structure:
+   *   - keyArn: string - ARN of the KMS key
+   *   - keyPolicy?: object - Key policy JSON
+   *   - enableKeyRotation?: boolean - Enable automatic key rotation
+   *   - multiRegion?: boolean - Multi-region key flag
+   *   - primaryRegion?: string - Primary region for multi-region keys
+   *   - enableFipsEndpoint?: boolean - Use FIPS endpoint
+   * @returns Secure access configuration with environment variables and IAM policies
+   */
   private async buildSecureKeyAccessConfig(
     context: BindingContext,
     targetData: any
