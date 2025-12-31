@@ -19,7 +19,8 @@ import {
 import {
   IamRoleConfig,
   IamRoleComponentConfigBuilder,
-  IamRoleLogConfig
+  IamRoleLogConfig,
+  IamRoleTrustControl
 } from './iam-role.builder.js';
 
 /**
@@ -247,7 +248,7 @@ export class IamRoleComponent extends BaseComponent {
       }));
     }
 
-    this.applyTrustPolicyControls(controls.trustPolicies);
+    this.applyTrustPolicyControls(controls?.trustPolicies);
 
     if (controls.requireInstanceProfile) {
       this.instanceProfile = new iam.CfnInstanceProfile(this, 'InstanceProfile', {
@@ -257,7 +258,7 @@ export class IamRoleComponent extends BaseComponent {
     }
   }
 
-  private applyTrustPolicyControls(trustControls?: IamRoleConfig['controls']['trustPolicies']): void {
+  private applyTrustPolicyControls(trustControls?: IamRoleTrustControl): void {
     if (!trustControls || !this.role?.assumeRolePolicy) {
       return;
     }

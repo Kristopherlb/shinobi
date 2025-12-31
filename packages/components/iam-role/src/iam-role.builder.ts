@@ -12,6 +12,9 @@ import {
   ComponentConfigSchema
 } from '@shinobi/core';
 import { ComponentContext, ComponentSpec } from '@shinobi/core';
+import configSchema from '../Config.schema.json' with { type: 'json' };
+
+export const IAM_ROLE_CONFIG_SCHEMA: ComponentConfigSchema = configSchema as ComponentConfigSchema;
 
 export type IamRoleRemovalPolicy = 'retain' | 'destroy';
 
@@ -82,218 +85,6 @@ export interface IamRoleConfig {
   };
 }
 
-export const IAM_ROLE_CONFIG_SCHEMA: ComponentConfigSchema = {
-  type: 'object',
-  additionalProperties: false,
-  properties: {
-    roleName: {
-      type: 'string',
-      description: 'Name of the role (will be auto-generated if not provided)',
-      pattern: '^[a-zA-Z0-9+=,.@_-]+$',
-      maxLength: 64
-    },
-    description: {
-      type: 'string',
-      description: 'Description of the role',
-      maxLength: 1000
-    },
-    assumedBy: {
-      type: 'array',
-      description: 'Services or entities that can assume this role',
-      items: {
-        type: 'object',
-        additionalProperties: false,
-        properties: {
-          service: { type: 'string' },
-          accountId: { type: 'string', pattern: '^[0-9]{12}$' },
-          roleArn: { type: 'string' },
-          federatedProvider: { type: 'string' }
-        }
-      }
-    },
-    managedPolicies: {
-      type: 'array',
-      items: { type: 'string' },
-      description: 'Managed policy ARNs to attach'
-    },
-    inlinePolicies: {
-      type: 'array',
-      items: {
-        type: 'object',
-        required: ['name', 'document'],
-        additionalProperties: false,
-        properties: {
-          name: { type: 'string' },
-          document: { type: 'object' }
-        }
-      }
-    },
-    maxSessionDuration: {
-      type: 'number',
-      minimum: 3600,
-      maximum: 43200,
-      description: 'Maximum session duration in seconds'
-    },
-    externalId: {
-      type: 'string',
-      description: 'External ID for cross-account role assumption',
-      maxLength: 1224
-    },
-    path: {
-      type: 'string',
-      description: 'IAM path for the role',
-      pattern: '^(?:/|/[a-zA-Z0-9/_-]*/)$',
-      default: '/'
-    },
-    permissionsBoundary: {
-      type: 'string',
-      description: 'ARN of the permissions boundary policy to attach'
-    },
-    tags: {
-      type: 'object',
-      description: 'Additional tags to apply to the role',
-      additionalProperties: {
-        type: 'string'
-      }
-    },
-    logging: {
-      type: 'object',
-      description: 'Logging configuration for IAM role operations',
-      additionalProperties: false,
-      properties: {
-        access: {
-          $ref: '#/definitions/logConfig',
-          description: 'Access log configuration'
-        },
-        audit: {
-          $ref: '#/definitions/logConfig',
-          description: 'Audit log configuration'
-        }
-      }
-    },
-    monitoring: {
-      type: 'object',
-      description: 'Monitoring and observability configuration',
-      additionalProperties: false,
-      properties: {
-        enabled: {
-          type: 'boolean',
-          description: 'Enable monitoring for this role',
-          default: false
-        },
-        detailedMetrics: {
-          type: 'boolean',
-          description: 'Enable detailed CloudWatch metrics',
-          default: false
-        },
-        sessionAlarm: {
-          type: 'object',
-          description: 'Session duration alarm configuration',
-          additionalProperties: false,
-          properties: {
-            enabled: { type: 'boolean', default: false },
-            thresholdMinutes: { type: 'number', minimum: 1 },
-            evaluationPeriods: { type: 'number', minimum: 1, default: 1 },
-            treatMissingData: {
-              type: 'string',
-              enum: ['not-breaching', 'breaching', 'ignore', 'missing'],
-              default: 'not-breaching'
-            },
-            tags: {
-              type: 'object',
-              additionalProperties: { type: 'string' }
-            }
-          }
-        }
-      }
-    },
-    controls: {
-      type: 'object',
-      description: 'Compliance control configuration',
-      additionalProperties: false,
-      properties: {
-        requireInstanceProfile: { type: 'boolean', default: false },
-        enforceBoundary: { type: 'boolean', default: false },
-        denyInsecureTransport: { type: 'boolean', default: false },
-        trustPolicies: {
-          type: 'object',
-          additionalProperties: false,
-          properties: {
-            enforceMfa: { type: 'boolean', default: false },
-            allowExternalId: { type: 'boolean', default: false },
-            externalIdCondition: { type: 'string' },
-            allowedServicePrincipals: {
-              type: 'array',
-              items: { type: 'string' }
-            }
-          }
-        },
-        additionalStatements: {
-          type: 'array',
-          items: {
-            type: 'object',
-            required: ['effect', 'actions'],
-            additionalProperties: false,
-            properties: {
-              sid: { type: 'string' },
-              effect: { type: 'string', enum: ['Allow', 'Deny'] },
-              actions: {
-                type: 'array',
-                items: { type: 'string' }
-              },
-              resources: {
-                type: 'array',
-                items: { type: 'string' }
-              },
-              conditions: { type: 'object' }
-            }
-          }
-        }
-      }
-    }
-  },
-  definitions: {
-    logConfig: {
-      type: 'object',
-      description: 'CloudWatch Logs group configuration',
-      additionalProperties: false,
-      properties: {
-        enabled: {
-          type: 'boolean',
-          description: 'Enable log group creation',
-          default: false
-        },
-        logGroupName: {
-          type: 'string',
-          description: 'Custom log group name (auto-generated if not provided)'
-        },
-        logGroupNameSuffix: {
-          type: 'string',
-          description: 'Suffix to append to auto-generated log group name'
-        },
-        retentionInDays: {
-          type: 'number',
-          description: 'Log retention period in days',
-          minimum: 1,
-          enum: [1, 3, 5, 7, 14, 30, 60, 90, 120, 150, 180, 365, 400, 545, 731, 1827, 3653]
-        },
-        removalPolicy: {
-          type: 'string',
-          description: 'Removal policy for the log group',
-          enum: ['retain', 'destroy'],
-          default: 'retain'
-        },
-        tags: {
-          type: 'object',
-          description: 'Additional tags for the log group',
-          additionalProperties: {
-            type: 'string'
-          }
-        }
-      }
-    }
-  }
-};
 
 export class IamRoleComponentConfigBuilder extends ConfigBuilder<IamRoleConfig> {
   constructor(context: ComponentContext, spec: ComponentSpec) {
@@ -340,34 +131,9 @@ export class IamRoleComponentConfigBuilder extends ConfigBuilder<IamRoleConfig> 
     };
   }
 
-  protected getComplianceFrameworkDefaults(): Partial<IamRoleConfig> {
-    const framework = this.builderContext.context.complianceFramework;
-
-    if (framework === 'fedramp-high') {
-      // FedRAMP High requires a permissions boundary by default
-      // Use a platform-managed boundary policy ARN
-      return {
-        permissionsBoundary: `arn:aws:iam::${this.builderContext.context.accountId}:policy/platform-fedramp-high-permissions-boundary`
-      };
-    }
-
-    return {};
-  }
-
   public buildSync(): IamRoleConfig {
-    // Get compliance framework defaults and merge them
-    const complianceDefaults = this.getComplianceFrameworkDefaults();
     const resolved = super.buildSync() as IamRoleConfig;
-    
-    // Merge compliance defaults (they take precedence over hardcoded fallbacks but can be overridden)
-    const merged = {
-      ...resolved,
-      ...complianceDefaults,
-      // Preserve existing config values if they're set
-      permissionsBoundary: resolved.permissionsBoundary ?? complianceDefaults.permissionsBoundary
-    };
-    
-    return this.normaliseConfig(merged);
+    return this.normaliseConfig(resolved);
   }
 
   private normaliseConfig(config: IamRoleConfig): IamRoleConfig {
