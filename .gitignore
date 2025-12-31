@@ -1,31 +1,38 @@
-.DS_Store
+# Dependencies
 node_modules/
+**/node_modules/
+
+# Build outputs
+dist/
+**/dist/
+**/dist-types/
+**/coverage/
+*.tsbuildinfo
+**/*.tsbuildinfo
+
+# Package manager lock files (we use PNPM)
+package-lock.json
 .package-lock.json
-FINAL_QUALITY_REPORT.md
-OBSERVABILITY_SERVICE_FEEDBACK_FIXES.md
-TEST_SUITE_SUMMARY.md
-LOGGING_SERVICE_IMPLEMENTATION_REPORT.md
-docs/backlog/
-FEEDBACK_IMPLEMENTATION_REPORT.md
-docs/backlog/ephemeral-local-environment-spec.md
-feedback
-TODO.md
-dist
-**/dist
-**/node_modules
-**/coverage
-**/dist-types
-**/dist-types/**
-**/node_modules/**
-**/coverage/**
+yarn.lock
+
+# Legacy files
+workspace.json
+
+# Environment variables
 .env
+.env.local
+.env.*.local
+
+# NX
 .nx/
-.cursor/rules/nx-rules.mdc
-.github/instructions/nx.instructions.md
-**/**.audit.md
-**/**/AUDIT-SUMMARY.md
-**/**/FINAL-STATUS.md
-**/**/FIXES-APPLIED.md
-**/**/REMEDIATION-SUMMARY.md
-**/**/SECURITY-ADVISORY.md
-**/**/Audit**
+
+# OS files
+.DS_Store
+Thumbs.db
+
+# IDE
+.idea/
+.vscode/
+*.swp
+*.swo
+*~

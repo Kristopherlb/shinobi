@@ -1,0 +1,42 @@
+{
+  "name": "eventbridge-rule-pattern",
+  "root": "packages/components/eventbridge-rule-pattern",
+  "sourceRoot": "packages/components/eventbridge-rule-pattern/src",
+  "projectType": "library",
+  "tags": [
+    "type:lib",
+    "scope:components",
+    "scope:eventbridge-rule-pattern"
+  ],
+  "targets": {
+    "build": {
+      "executor": "nx:run-commands",
+      "options": {
+        "command": "tsc -p packages/components/eventbridge-rule-pattern/tsconfig.json"
+      },
+      "outputs": [
+        "{workspaceRoot}/dist/packages/components/eventbridge-rule-pattern"
+      ]
+    },
+    "test": {
+      "executor": "@nx/jest:jest",
+      "options": {
+        "jestConfig": "packages/components/eventbridge-rule-pattern/jest.config.mjs",
+        "passWithNoTests": true
+      }
+    },
+    "lint": {
+      "executor": "nx:run-commands",
+      "options": {
+        "command": "eslint packages/components/eventbridge-rule-pattern --ext .ts"
+      }
+    },
+    "typecheck": {
+      "executor": "nx:run-commands",
+      "options": {
+        "command": "tsc --noEmit -p packages/components/eventbridge-rule-pattern/tsconfig.json"
+      }
+    }
+  }
+}
+

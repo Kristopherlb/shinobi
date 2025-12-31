@@ -2,9 +2,6 @@
   "name": "workspace",
   "version": "1.0.0",
   "main": "index.js",
-  "workspaces": [
-    "packages/*"
-  ],
   "scripts": {
     "build": "nx run-many -t build --all",
     "test": "nx run-many -t test --all",

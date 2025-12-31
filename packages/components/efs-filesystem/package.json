@@ -1,6 +1,7 @@
 {
   "name": "@platform/efs-filesystem",
   "version": "1.0.0",
+  "private": true,
   "description": "Amazon EFS filesystem component with encryption, lifecycle management, monitoring, and FedRAMP compliance for the Shinobi platform",
   "type": "module",
   "main": "./dist/index.js",

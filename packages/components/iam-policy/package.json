@@ -1,6 +1,7 @@
 {
   "name": "@platform/iam-policy",
   "version": "1.0.0",
+  "private": true,
   "description": "Platform component for AWS IAM Policy management with least privilege security patterns and compliance-aware configuration",
   "main": "dist/index.js",
   "types": "dist/index.d.ts",

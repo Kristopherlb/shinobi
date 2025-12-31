@@ -1,6 +1,7 @@
 {
   "name": "@platform/auto-scaling-group",
   "version": "1.0.1",
+  "private": true,
   "description": "Auto Scaling Group component for the Shinobi platform",
   "type": "module",
   "main": "dist/index.js",

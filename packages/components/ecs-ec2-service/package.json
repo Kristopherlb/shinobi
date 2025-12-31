@@ -1,6 +1,7 @@
 {
   "name": "@shinobi/component-ecs-ec2-service",
   "version": "1.0.0",
+  "private": true,
   "description": "ECS EC2 Service component with Service Connect integration, autoscaling, and comprehensive observability for the Shinobi platform",
   "main": "index.ts",
   "types": "index.ts",

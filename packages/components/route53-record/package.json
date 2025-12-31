@@ -1,6 +1,7 @@
 {
   "name": "@shinobi/route53-record",
   "version": "1.0.0",
+  "private": true,
   "description": "Platform component for AWS Route 53 DNS record management with reference resolution",
   "main": "dist/index.js",
   "types": "dist/index.d.ts",

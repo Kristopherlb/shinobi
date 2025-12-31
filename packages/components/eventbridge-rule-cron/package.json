@@ -1,6 +1,7 @@
 {
   "name": "@shinobi/component-eventbridge-rule-cron",
   "version": "1.0.0",
+  "private": true,
   "description": "EventBridge scheduled rules with configuration-driven logging, DLQ, and alarms",
   "main": "index.ts",
   "types": "index.ts",

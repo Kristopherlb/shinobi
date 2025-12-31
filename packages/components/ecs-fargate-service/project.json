@@ -1,0 +1,42 @@
+{
+  "name": "ecs-fargate-service",
+  "root": "packages/components/ecs-fargate-service",
+  "sourceRoot": "packages/components/ecs-fargate-service/src",
+  "projectType": "library",
+  "tags": [
+    "type:lib",
+    "scope:components",
+    "scope:ecs-fargate-service"
+  ],
+  "targets": {
+    "build": {
+      "executor": "nx:run-commands",
+      "options": {
+        "command": "tsc --noEmit -p packages/components/ecs-fargate-service/tsconfig.json"
+      },
+      "outputs": [
+        "{workspaceRoot}/dist/packages/components/ecs-fargate-service"
+      ]
+    },
+    "test": {
+      "executor": "@nx/jest:jest",
+      "options": {
+        "jestConfig": "packages/components/ecs-fargate-service/jest.config.mjs",
+        "passWithNoTests": true
+      }
+    },
+    "lint": {
+      "executor": "nx:run-commands",
+      "options": {
+        "command": "eslint packages/components/ecs-fargate-service --ext .ts"
+      }
+    },
+    "typecheck": {
+      "executor": "nx:run-commands",
+      "options": {
+        "command": "tsc --noEmit -p packages/components/ecs-fargate-service/tsconfig.json"
+      }
+    }
+  }
+}
+

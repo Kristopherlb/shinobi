@@ -1,6 +1,7 @@
 {
   "name": "@platform/components-cognito-user-pool",
   "version": "1.0.0",
+  "private": true,
   "description": "Cognito User Pool component with AI-ready authentication patterns and compliance support",
   "main": "./dist/index.js",
   "types": "./dist/index.d.ts",

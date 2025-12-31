@@ -1,0 +1,42 @@
+{
+  "name": "cloudfront-distribution",
+  "root": "packages/components/cloudfront-distribution",
+  "sourceRoot": "packages/components/cloudfront-distribution/src",
+  "projectType": "library",
+  "tags": [
+    "type:lib",
+    "scope:components",
+    "scope:cloudfront-distribution"
+  ],
+  "targets": {
+    "build": {
+      "executor": "nx:run-commands",
+      "options": {
+        "command": "tsc -p packages/components/cloudfront-distribution/tsconfig.json"
+      },
+      "outputs": [
+        "{workspaceRoot}/dist/packages/components/cloudfront-distribution"
+      ]
+    },
+    "test": {
+      "executor": "@nx/jest:jest",
+      "options": {
+        "jestConfig": "packages/components/cloudfront-distribution/jest.config.mjs",
+        "passWithNoTests": true
+      }
+    },
+    "lint": {
+      "executor": "nx:run-commands",
+      "options": {
+        "command": "eslint packages/components/cloudfront-distribution --ext .ts"
+      }
+    },
+    "typecheck": {
+      "executor": "nx:run-commands",
+      "options": {
+        "command": "tsc --noEmit -p packages/components/cloudfront-distribution/tsconfig.json"
+      }
+    }
+  }
+}
+

@@ -1,9 +1,6 @@
 packages:
-  - "packages/*"
-  - "packages/*/*"
-  - "packages/*/*/*"
-  - "tools/*"
-  - "apps/*"
+  - "packages/**"
+  - "apps/**"
 
 onlyBuiltDependencies:
   - "@swc/core"

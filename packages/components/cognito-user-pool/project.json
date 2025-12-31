@@ -1,0 +1,42 @@
+{
+  "name": "cognito-user-pool",
+  "root": "packages/components/cognito-user-pool",
+  "sourceRoot": "packages/components/cognito-user-pool/src",
+  "projectType": "library",
+  "tags": [
+    "type:lib",
+    "scope:components",
+    "scope:cognito-user-pool"
+  ],
+  "targets": {
+    "build": {
+      "executor": "nx:run-commands",
+      "options": {
+        "command": "tsc -p packages/components/cognito-user-pool/tsconfig.lib.json"
+      },
+      "outputs": [
+        "{workspaceRoot}/dist/packages/components/cognito-user-pool"
+      ]
+    },
+    "test": {
+      "executor": "@nx/jest:jest",
+      "options": {
+        "jestConfig": "packages/components/cognito-user-pool/jest.config.mjs",
+        "passWithNoTests": true
+      }
+    },
+    "lint": {
+      "executor": "nx:run-commands",
+      "options": {
+        "command": "eslint packages/components/cognito-user-pool --ext .ts"
+      }
+    },
+    "typecheck": {
+      "executor": "nx:run-commands",
+      "options": {
+        "command": "tsc --noEmit -p packages/components/cognito-user-pool/tsconfig.lib.json"
+      }
+    }
+  }
+}
+

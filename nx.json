@@ -1,5 +1,9 @@
 {
-  "extends": "nx/presets/npm.json",
+  "extends": "nx/presets/pnpm.json",
+  "packageManager": "pnpm",
+  "affected": {
+    "defaultBase": "main"
+  },
   "namedInputs": {
     "default": [
       "{projectRoot}/**/*",

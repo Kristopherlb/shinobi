@@ -1,6 +1,7 @@
 {
   "name": "@shinobi/security-group-import",
   "version": "1.0.0",
+  "private": true,
   "description": "Platform component for importing existing AWS Security Groups via SSM parameters",
   "main": "dist/index.js",
   "types": "dist/index.d.ts",

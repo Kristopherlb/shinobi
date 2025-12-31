@@ -1,6 +1,7 @@
 {
   "name": "@shinobi/cloudfront-distribution",
   "version": "1.0.0",
+  "private": true,
   "description": "CloudFront Distribution Component for Shinobi Platform - Global CDN edge distribution with configurable origins, behaviors, and security controls",
   "type": "module",
   "main": "dist/index.js",

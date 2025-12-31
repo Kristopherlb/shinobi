@@ -1,0 +1,42 @@
+{
+  "name": "eventbridge-rule-cron",
+  "root": "packages/components/eventbridge-rule-cron",
+  "sourceRoot": "packages/components/eventbridge-rule-cron/src",
+  "projectType": "library",
+  "tags": [
+    "type:lib",
+    "scope:components",
+    "scope:eventbridge-rule-cron"
+  ],
+  "targets": {
+    "build": {
+      "executor": "nx:run-commands",
+      "options": {
+        "command": "tsc -p packages/components/eventbridge-rule-cron/tsconfig.json"
+      },
+      "outputs": [
+        "{workspaceRoot}/dist/packages/components/eventbridge-rule-cron"
+      ]
+    },
+    "test": {
+      "executor": "@nx/jest:jest",
+      "options": {
+        "jestConfig": "packages/components/eventbridge-rule-cron/jest.config.mjs",
+        "passWithNoTests": true
+      }
+    },
+    "lint": {
+      "executor": "nx:run-commands",
+      "options": {
+        "command": "eslint packages/components/eventbridge-rule-cron --ext .ts"
+      }
+    },
+    "typecheck": {
+      "executor": "nx:run-commands",
+      "options": {
+        "command": "tsc --noEmit -p packages/components/eventbridge-rule-cron/tsconfig.json"
+      }
+    }
+  }
+}
+

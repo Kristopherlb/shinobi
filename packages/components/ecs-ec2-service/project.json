@@ -1,0 +1,42 @@
+{
+  "name": "ecs-ec2-service",
+  "root": "packages/components/ecs-ec2-service",
+  "sourceRoot": "packages/components/ecs-ec2-service/src",
+  "projectType": "library",
+  "tags": [
+    "type:lib",
+    "scope:components",
+    "scope:ecs-ec2-service"
+  ],
+  "targets": {
+    "build": {
+      "executor": "nx:run-commands",
+      "options": {
+        "command": "tsc -p packages/components/ecs-ec2-service/tsconfig.json"
+      },
+      "outputs": [
+        "{workspaceRoot}/dist/packages/components/ecs-ec2-service"
+      ]
+    },
+    "test": {
+      "executor": "@nx/jest:jest",
+      "options": {
+        "jestConfig": "packages/components/ecs-ec2-service/jest.config.mjs",
+        "passWithNoTests": true
+      }
+    },
+    "lint": {
+      "executor": "nx:run-commands",
+      "options": {
+        "command": "eslint packages/components/ecs-ec2-service --ext .ts"
+      }
+    },
+    "typecheck": {
+      "executor": "nx:run-commands",
+      "options": {
+        "command": "tsc --noEmit -p packages/components/ecs-ec2-service/tsconfig.json"
+      }
+    }
+  }
+}
+

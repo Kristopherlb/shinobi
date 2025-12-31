@@ -1,0 +1,42 @@
+{
+  "name": "auto-scaling-group",
+  "root": "packages/components/auto-scaling-group",
+  "sourceRoot": "packages/components/auto-scaling-group/src",
+  "projectType": "library",
+  "tags": [
+    "type:lib",
+    "scope:components",
+    "scope:auto-scaling-group"
+  ],
+  "targets": {
+    "build": {
+      "executor": "nx:run-commands",
+      "options": {
+        "command": "tsc -p packages/components/auto-scaling-group/tsconfig.json"
+      },
+      "outputs": [
+        "{workspaceRoot}/dist/packages/components/auto-scaling-group"
+      ]
+    },
+    "test": {
+      "executor": "@nx/jest:jest",
+      "options": {
+        "jestConfig": "packages/components/auto-scaling-group/jest.config.mjs",
+        "passWithNoTests": true
+      }
+    },
+    "lint": {
+      "executor": "nx:run-commands",
+      "options": {
+        "command": "eslint packages/components/auto-scaling-group --ext .ts"
+      }
+    },
+    "typecheck": {
+      "executor": "nx:run-commands",
+      "options": {
+        "command": "tsc --noEmit -p packages/components/auto-scaling-group/tsconfig.json"
+      }
+    }
+  }
+}
+

@@ -1,0 +1,42 @@
+{
+  "name": "elasticache-redis",
+  "root": "packages/components/elasticache-redis",
+  "sourceRoot": "packages/components/elasticache-redis/src",
+  "projectType": "library",
+  "tags": [
+    "type:lib",
+    "scope:components",
+    "scope:elasticache-redis"
+  ],
+  "targets": {
+    "build": {
+      "executor": "nx:run-commands",
+      "options": {
+        "command": "tsc -p packages/components/elasticache-redis/tsconfig.json"
+      },
+      "outputs": [
+        "{workspaceRoot}/dist/packages/components/elasticache-redis"
+      ]
+    },
+    "test": {
+      "executor": "@nx/jest:jest",
+      "options": {
+        "jestConfig": "packages/components/elasticache-redis/jest.config.mjs",
+        "passWithNoTests": true
+      }
+    },
+    "lint": {
+      "executor": "nx:run-commands",
+      "options": {
+        "command": "eslint packages/components/elasticache-redis --ext .ts"
+      }
+    },
+    "typecheck": {
+      "executor": "nx:run-commands",
+      "options": {
+        "command": "tsc --noEmit -p packages/components/elasticache-redis/tsconfig.json"
+      }
+    }
+  }
+}
+

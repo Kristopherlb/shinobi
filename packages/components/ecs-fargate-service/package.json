@@ -1,6 +1,7 @@
 {
   "name": "@platform/ecs-fargate-service",
   "version": "1.0.0",
+  "private": true,
   "description": "ECS Fargate service component with Service Connect integration, blue-green deployment support, auto-scaling, and comprehensive CloudWatch monitoring for the Shinobi platform",
   "main": "index.ts",
   "types": "index.ts",

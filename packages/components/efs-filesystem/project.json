@@ -1,0 +1,42 @@
+{
+  "name": "efs-filesystem",
+  "root": "packages/components/efs-filesystem",
+  "sourceRoot": "packages/components/efs-filesystem/src",
+  "projectType": "library",
+  "tags": [
+    "type:lib",
+    "scope:components",
+    "scope:efs-filesystem"
+  ],
+  "targets": {
+    "build": {
+      "executor": "nx:run-commands",
+      "options": {
+        "command": "tsc -p packages/components/efs-filesystem/tsconfig.json"
+      },
+      "outputs": [
+        "{workspaceRoot}/dist/packages/components/efs-filesystem"
+      ]
+    },
+    "test": {
+      "executor": "@nx/jest:jest",
+      "options": {
+        "jestConfig": "packages/components/efs-filesystem/jest.config.mjs",
+        "passWithNoTests": true
+      }
+    },
+    "lint": {
+      "executor": "nx:run-commands",
+      "options": {
+        "command": "eslint packages/components/efs-filesystem --ext .ts"
+      }
+    },
+    "typecheck": {
+      "executor": "nx:run-commands",
+      "options": {
+        "command": "tsc --noEmit -p packages/components/efs-filesystem/tsconfig.json"
+      }
+    }
+  }
+}
+

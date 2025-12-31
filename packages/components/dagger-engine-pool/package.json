@@ -1,6 +1,7 @@
 {
   "name": "@platform/dagger-engine-pool",
   "version": "1.0.0",
+  "private": true,
   "description": "Dagger Engine Pool component for private, FIPS/STIG-friendly CI/CD infrastructure",
   "license": "Apache-2.0",
   "type": "module",

@@ -1,6 +1,7 @@
 {
   "name": "@shinobi/component-elasticache-redis",
   "version": "1.0.0",
+  "private": true,
   "description": "Managed Redis cluster with encryption, subnet groups, and monitoring baselines",
   "type": "module",
   "main": "dist/index.js",

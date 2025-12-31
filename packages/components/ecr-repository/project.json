@@ -1,0 +1,42 @@
+{
+  "name": "ecr-repository",
+  "root": "packages/components/ecr-repository",
+  "sourceRoot": "packages/components/ecr-repository/src",
+  "projectType": "library",
+  "tags": [
+    "type:lib",
+    "scope:components",
+    "scope:ecr-repository"
+  ],
+  "targets": {
+    "build": {
+      "executor": "nx:run-commands",
+      "options": {
+        "command": "tsc -p packages/components/ecr-repository/tsconfig.json"
+      },
+      "outputs": [
+        "{workspaceRoot}/dist/packages/components/ecr-repository"
+      ]
+    },
+    "test": {
+      "executor": "@nx/jest:jest",
+      "options": {
+        "jestConfig": "packages/components/ecr-repository/jest.config.mjs",
+        "passWithNoTests": true
+      }
+    },
+    "lint": {
+      "executor": "nx:run-commands",
+      "options": {
+        "command": "eslint packages/components/ecr-repository --ext .ts"
+      }
+    },
+    "typecheck": {
+      "executor": "nx:run-commands",
+      "options": {
+        "command": "tsc --noEmit -p packages/components/ecr-repository/tsconfig.json"
+      }
+    }
+  }
+}
+
