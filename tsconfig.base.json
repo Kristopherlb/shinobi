@@ -90,12 +90,6 @@
       ],
       "@platform/components/*": [
         "packages/components/*/src"
-      ],
-      "@platform/constructs/*": [
-        "packages/constructs/*/src"
-      ],
-      "@cdk-lib/*": [
-        "packages/constructs/*/src"
       ]
     }
   },

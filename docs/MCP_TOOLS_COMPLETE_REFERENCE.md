@@ -2,7 +2,9 @@
 
 ## 🥷🏻 Overview
 
-The Shinobi MCP Server provides **40+ tools across 11 categories** and **7 rich resources** for comprehensive platform intelligence. This document provides the complete reference from the actual source code.
+The Shinobi MCP Server provides **61 tools across 12 categories** and **9 rich resources** for comprehensive platform intelligence. This document provides the complete reference from the actual source code.
+
+**Latest Update:** Added comprehensive Platform Audit System with 13 individual audit tools + orchestrator.
 
 ## 📋 Complete Tool Catalog
 
@@ -64,6 +66,36 @@ The Shinobi MCP Server provides **40+ tools across 11 categories** and **7 rich 
 - `get_governance_scorecard` - Get composite score with trendlines
 - `get_portfolio_map` - Get portfolio map with posture and risks
 - `generate_exec_brief` - Generate executive brief with outcomes and risks
+
+### **12. Platform Audit System (14 tools) 🆕**
+- `audit_schema_validation` - Audit Config.schema.json files against platform API spec
+- `audit_tagging_standard` - Audit AWS resource tagging compliance
+- `audit_logging_standard` - Audit structured logging and CloudWatch configuration
+- `audit_observability_standard` - Audit X-Ray tracing, ADOT, and metrics
+- `audit_cdk_best_practices` - Audit CDK construct usage and AWS best practices
+- `audit_component_versioning` - Audit semantic versioning and metadata
+- `audit_configuration_precedence` - Audit configuration layer implementation
+- `audit_capability_binding` - Audit capability naming and binder coverage
+- `audit_dependency_graph` - Audit module dependencies and architecture
+- `audit_mcp_contract` - Audit MCP server endpoint implementation
+- `audit_security_compliance` - Audit security defaults and compliance
+- `audit_testing_standard` - Audit test metadata, naming, and oracles
+- `audit_iam_auditing` - Audit IAM policies for least privilege
+- `run_platform_audit` - **Orchestrator** to run multiple audits with profiles
+
+**Audit Profiles:**
+- `all` - Run all 13 audits
+- `security` - Security-focused audits (security, iam, tagging, logging)
+- `compliance` - Compliance audits (security, iam, config, tagging, logging, observability)
+- `quality` - Code quality audits (testing, cdk-best-practices, dependency-graph, versioning)
+- `observability` - Observability audits (observability, logging)
+- `architecture` - Architecture audits (dependency-graph, capability-binding, mcp-contract, schema)
+
+Each audit:
+- Validates against machine-readable YAML rules in `.cursor/audit/`
+- References platform standard documents in `docs/platform-standards/`
+- Generates detailed markdown reports in `reports/` directory
+- Returns structured JSON results via MCP
 
 ## 🔧 Component Generation Tools (Additional)
 - `generate_component` - Generate complete platform component following compliance pipeline

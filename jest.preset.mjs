@@ -9,7 +9,6 @@ const presetDir = path.dirname(url.fileURLToPath(import.meta.url));
 
 export default {
   ...basePreset,
-  resolver: path.join(presetDir, 'tools/jest-resolver.cjs'),
   testEnvironment: 'node',
   testEnvironmentOptions: {
     customExportConditions: ['node', 'default']

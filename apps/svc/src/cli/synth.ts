@@ -1,11 +1,15 @@
 import { Command } from 'commander';
 import * as path from 'path';
 import * as fsp from 'fs/promises';
+import * as fs from 'fs';
+import { fileURLToPath } from 'url';
 import {
   readManifest,
   synthesizeService,
   SimpleManifest
 } from './utils/service-synthesizer.js';
+
+const __dirname = path.dirname(fileURLToPath(import.meta.url));
 
 interface SynthOptions {
   file?: string;
@@ -35,7 +39,53 @@ export const createSynthCommand = (): Command => {
     .option('--include-experimental', 'Include non-production components when resolving creators', false)
     .action(async (options: SynthOptions) => {
       try {
-        const manifestPath = path.resolve(options.file ?? 'service.yml');
+        // Resolve manifest path - try current dir first, then repo root
+        let manifestPath: string;
+        if (options.file) {
+          // Try resolving from current working directory first
+          const cwdPath = path.resolve(process.cwd(), options.file);
+          if (fs.existsSync(cwdPath)) {
+            manifestPath = cwdPath;
+          } else {
+            // Try resolving as absolute path
+            const absPath = path.resolve(options.file);
+            if (fs.existsSync(absPath)) {
+              manifestPath = absPath;
+            } else {
+              // Try resolving from repo root (find by looking for root package.json)
+              let repoRoot = process.cwd();
+              while (repoRoot !== path.dirname(repoRoot)) {
+                if (fs.existsSync(path.join(repoRoot, 'package.json'))) {
+                  const rootPackageJson = JSON.parse(fs.readFileSync(path.join(repoRoot, 'package.json'), 'utf8'));
+                  if (rootPackageJson.workspaces || rootPackageJson.name === 'workspace') {
+                    break; // Found monorepo root
+                  }
+                }
+                repoRoot = path.dirname(repoRoot);
+              }
+              const repoPath = path.resolve(repoRoot, options.file);
+              if (fs.existsSync(repoPath)) {
+                manifestPath = repoPath;
+              } else {
+                manifestPath = absPath; // Will fail with proper error
+              }
+            }
+          }
+        } else {
+          // Default: look for service.yml starting from cwd, walking up to repo root
+          let searchDir = process.cwd();
+          while (searchDir !== path.dirname(searchDir)) {
+            const candidate = path.join(searchDir, 'service.yml');
+            if (fs.existsSync(candidate)) {
+              manifestPath = candidate;
+              break;
+            }
+            searchDir = path.dirname(searchDir);
+          }
+          if (!manifestPath!) {
+            manifestPath = path.resolve(process.cwd(), 'service.yml');
+          }
+        }
         const manifest: SimpleManifest = await readManifest({ manifestPath });
         const environment = options.env ?? manifest.environment ?? 'dev';
         const region = options.region ?? manifest.region ?? 'us-east-1';

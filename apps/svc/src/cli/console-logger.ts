@@ -1,10 +1,10 @@
 import { randomUUID } from 'crypto';
 import {
-  Logger as PlatformLogger,
+  PlatformLogger,
   type LoggerOptions,
-  type LogLevel,
+  type PlatformLogLevel as LogLevel,
   type Timer
-} from '@platform/logger';
+} from '@shinobi/core';
 
 type PlatformLoggerInstance = InstanceType<typeof PlatformLogger>;
 

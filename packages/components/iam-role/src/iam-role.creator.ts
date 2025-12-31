@@ -9,9 +9,9 @@ import {
   ComponentSpec,
   IComponent,
   IComponentCreator
-} from '@platform/contracts';
-import { IamRoleComponent } from './iam-role.component.ts';
-import { IamRoleConfig, IAM_ROLE_CONFIG_SCHEMA } from './iam-role.builder.ts';
+} from '@shinobi/core';
+import { IamRoleComponent } from './iam-role.component.js';
+import { IamRoleConfig, IAM_ROLE_CONFIG_SCHEMA } from './iam-role.builder.js';
 
 export class IamRoleComponentCreator implements IComponentCreator {
   public readonly componentType = 'iam-role';

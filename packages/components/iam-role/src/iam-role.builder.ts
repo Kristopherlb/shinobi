@@ -11,7 +11,7 @@ import {
   ConfigBuilderContext,
   ComponentConfigSchema
 } from '@shinobi/core';
-import { ComponentContext, ComponentSpec } from '@platform/contracts';
+import { ComponentContext, ComponentSpec } from '@shinobi/core';
 
 export type IamRoleRemovalPolicy = 'retain' | 'destroy';
 
@@ -142,7 +142,7 @@ export const IAM_ROLE_CONFIG_SCHEMA: ComponentConfigSchema = {
     path: {
       type: 'string',
       description: 'IAM path for the role',
-      pattern: '^/(?:[a-zA-Z0-9/_-]+/)?$',
+      pattern: '^(?:/|/[a-zA-Z0-9/_-]*/)$',
       default: '/'
     },
     permissionsBoundary: {
@@ -340,9 +340,34 @@ export class IamRoleComponentConfigBuilder extends ConfigBuilder<IamRoleConfig> 
     };
   }
 
+  protected getComplianceFrameworkDefaults(): Partial<IamRoleConfig> {
+    const framework = this.builderContext.context.complianceFramework;
+
+    if (framework === 'fedramp-high') {
+      // FedRAMP High requires a permissions boundary by default
+      // Use a platform-managed boundary policy ARN
+      return {
+        permissionsBoundary: `arn:aws:iam::${this.builderContext.context.accountId}:policy/platform-fedramp-high-permissions-boundary`
+      };
+    }
+
+    return {};
+  }
+
   public buildSync(): IamRoleConfig {
+    // Get compliance framework defaults and merge them
+    const complianceDefaults = this.getComplianceFrameworkDefaults();
     const resolved = super.buildSync() as IamRoleConfig;
-    return this.normaliseConfig(resolved);
+    
+    // Merge compliance defaults (they take precedence over hardcoded fallbacks but can be overridden)
+    const merged = {
+      ...resolved,
+      ...complianceDefaults,
+      // Preserve existing config values if they're set
+      permissionsBoundary: resolved.permissionsBoundary ?? complianceDefaults.permissionsBoundary
+    };
+    
+    return this.normaliseConfig(merged);
   }
 
   private normaliseConfig(config: IamRoleConfig): IamRoleConfig {

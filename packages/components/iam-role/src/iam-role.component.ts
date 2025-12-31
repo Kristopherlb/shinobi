@@ -15,12 +15,12 @@ import {
   ComponentSpec,
   ComponentContext,
   ComponentCapabilities
-} from '@platform/contracts';
+} from '@shinobi/core';
 import {
   IamRoleConfig,
   IamRoleComponentConfigBuilder,
   IamRoleLogConfig
-} from './iam-role.builder.ts';
+} from './iam-role.builder.js';
 
 /**
  * IAM Role Component implementing Component API Contract v1.0
@@ -188,9 +188,9 @@ export class IamRoleComponent extends BaseComponent {
   /**
    * Build role name
    */
-  private buildRoleName(): string | undefined {
-    if (this.config!.roleName) {
-      return this.config!.roleName;
+  private buildRoleName(): string {
+    if (this.config?.roleName) {
+      return this.config.roleName;
     }
     return `${this.context.serviceName}-${this.spec.name}`;
   }
@@ -257,7 +257,7 @@ export class IamRoleComponent extends BaseComponent {
     }
   }
 
-  private applyTrustPolicyControls(trustControls?: ReturnType<IamRoleComponentConfigBuilder['buildSync']>['controls']['trustPolicies']): void {
+  private applyTrustPolicyControls(trustControls?: IamRoleConfig['controls']['trustPolicies']): void {
     if (!trustControls || !this.role?.assumeRolePolicy) {
       return;
     }
@@ -373,7 +373,7 @@ export class IamRoleComponent extends BaseComponent {
       return;
     }
 
-    const periodMinutes = monitoring.sessionAlarm.periodMinutes ?? 60;
+    const evaluationPeriods = monitoring.sessionAlarm.evaluationPeriods ?? 1;
     const threshold = monitoring.sessionAlarm.thresholdMinutes ?? 15;
 
     this.sessionAlarm = new cloudwatch.Alarm(this, 'RoleSessionAlarm', {
@@ -386,7 +386,7 @@ export class IamRoleComponent extends BaseComponent {
           RoleName: this.role.roleName
         },
         statistic: 'Sum',
-        period: cdk.Duration.minutes(periodMinutes)
+        period: cdk.Duration.minutes(60) // CloudWatch alarm period is fixed at 60 minutes
       }),
       threshold,
       evaluationPeriods: monitoring.sessionAlarm.evaluationPeriods ?? 1,
@@ -439,16 +439,8 @@ export class IamRoleComponent extends BaseComponent {
       return undefined;
     }
 
-    const retention = (logs.RetentionDays as unknown as Record<number, logs.RetentionDays>)[retentionInDays];
-    if (retention) {
-      return retention;
-    }
-
-    this.logComponentEvent('log_retention_defaulted', 'Unsupported log retention requested; defaulting to 90 days', {
-      requestedRetentionInDays: retentionInDays
-    });
-
-    return logs.RetentionDays.THREE_MONTHS;
+    // Use the inherited mapLogRetentionDays method from BaseComponent
+    return this.mapLogRetentionDays(retentionInDays);
   }
 
   private resolveRemovalPolicy(removalPolicy?: string): cdk.RemovalPolicy {

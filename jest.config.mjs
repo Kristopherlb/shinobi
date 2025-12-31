@@ -4,7 +4,6 @@ import url from 'node:url';
 const __dirname = path.dirname(url.fileURLToPath(import.meta.url));
 
 export default {
-  resolver: path.join(__dirname, 'tools/jest-resolver.cjs'),
   testEnvironment: 'node',
   testEnvironmentOptions: {
     customExportConditions: ['node', 'default']
@@ -32,8 +31,24 @@ export default {
   },
   transformIgnorePatterns: ['node_modules/(?!(uuid|@aws-sdk)/)'],
   moduleFileExtensions: ['ts', 'tsx', 'js', 'jsx', 'mjs', 'json', 'node'],
-  modulePathIgnorePatterns: ['[\\\\/]dist[\\\\/]', '<rootDir>/tmp/', '<rootDir>/tmp-shinobi/'],
-  watchPathIgnorePatterns: ['[\\\\/]dist[\\\\/]', '<rootDir>/tmp/', '<rootDir>/tmp-shinobi/'],
+  modulePathIgnorePatterns: [
+    '[\\\\/]dist[\\\\/]',
+    '<rootDir>/tmp/',
+    '<rootDir>/tmp-shinobi/',
+    // Ignore nested package.json files that cause Haste map collisions
+    '<rootDir>/packages/core/src/platform/logger/package.json'
+  ],
+  watchPathIgnorePatterns: [
+    '[\\\\/]dist[\\\\/]',
+    '<rootDir>/tmp/',
+    '<rootDir>/tmp-shinobi/',
+    '<rootDir>/packages/core/src/platform/logger/package.json'
+  ],
+  // Configure Haste map to handle duplicate package names
+  haste: {
+    throwOnModuleCollision: false,
+    computeSha1: false
+  },
   moduleNameMapper: {
     '^(?:\\.{1,2}/)+platform/contracts/(.+)\\.js$': '<rootDir>/packages/core/src/platform/contracts/$1.ts',
     '^(\\.{1,2}/(?:.*/)?src/.+)\\.js$': '$1.ts',
@@ -55,7 +70,6 @@ export default {
     '^@shinobi/components/(.+)/(.+)$': '<rootDir>/packages/components/$1/$2.ts',
     '^@shinobi/components/(.+)/src/(.+)$': '<rootDir>/packages/components/$1/src/$2.ts',
     '^@shinobi/core/contracts/(.+)$': '<rootDir>/packages/core/src/platform/contracts/$1',
-    '^@binders/(.+)$': '<rootDir>/tests/__mocks__/binders/$1.ts',
     '^@shinobi/standards-otel/observability-handlers$': '<rootDir>/packages/standards/otel/observability-handlers/src/index.ts'
   },
   collectCoverageFrom: ['packages/*/src/**/*.{ts,tsx}', '!packages/*/src/**/*.d.ts'],

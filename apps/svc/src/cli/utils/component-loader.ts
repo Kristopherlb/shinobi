@@ -70,6 +70,12 @@ export const loadComponentCreators = async (
     if (fs.existsSync(primaryIndex)) {
       candidatePaths.push(primaryIndex);
     }
+    
+    // Also check src/index.ts which exports the creator
+    const srcIndex = path.join(componentRoot, 'src/index.ts');
+    if (fs.existsSync(srcIndex)) {
+      candidatePaths.push(srcIndex);
+    }
 
     const creatorGlob = globSync('src/**/*creator.ts', {
       cwd: componentRoot,
@@ -90,11 +96,19 @@ export const loadComponentCreators = async (
     }
 
     if (!moduleExports) {
+      // Debug: log which paths were tried
+      if (packageDir === 'iam-role') {
+        console.warn(`[DEBUG] Failed to load module for ${packageName}. Tried source: ${sourceCandidates.slice(0, 3).join(', ')}...`);
+      }
       continue;
     }
 
     const creator = findCreatorExport(moduleExports ?? {});
     if (!creator) {
+      // Debug: log what exports were found
+      if (packageDir === 'iam-role') {
+        console.warn(`[DEBUG] Creator not found in exports for ${packageName}. Exports: ${Object.keys(moduleExports).join(', ')}`);
+      }
       continue;
     }
 
@@ -237,6 +251,19 @@ const loadFirstResolvedModule = async (candidatePaths: string[]): Promise<Record
     } catch (error) {
       if ((error as NodeJS.ErrnoException)?.code === 'ENOENT') {
         continue;
+      }
+      // Debug: log import errors for iam-role to understand what's failing
+      if (candidate.includes('iam-role') && candidate.endsWith('.ts')) {
+        try {
+          const err = error as any;
+          const errorMsg = err?.message || err?.toString() || String(error) || 'Unknown error';
+          console.warn(`[DEBUG] Failed to import TS source ${candidate}:`, errorMsg);
+          if (err?.code) {
+            console.warn(`[DEBUG] Error code:`, err.code);
+          }
+        } catch {
+          // Ignore logging errors
+        }
       }
     }
   }

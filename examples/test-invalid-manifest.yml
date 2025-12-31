@@ -1,8 +1,0 @@
-service: test-api
-owner: test-team
-complianceFramework: commercial
-components:
-  - name: test-invalid-component
-    type: invalid-component-type
-    config:
-      someProperty: true

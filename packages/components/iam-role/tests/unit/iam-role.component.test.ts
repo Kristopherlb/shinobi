@@ -80,7 +80,7 @@ describe('IamRoleComponent', () => {
       ManagedPolicyArns: Match.arrayWith(['arn:aws:iam::aws:policy/CloudWatchLogsFullAccess'])
     });
     template.hasResourceProperties('AWS::IAM::Policy', {
-      PolicyName: Match.stringLikeRegexp('InlinePolicy0'),
+      PolicyName: 'allowS3',
       PolicyDocument: Match.objectLike({
         Statement: Match.arrayWith([
           Match.objectLike({

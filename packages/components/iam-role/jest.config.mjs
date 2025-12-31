@@ -1,19 +1,15 @@
+import path from 'node:path';
+import url from 'node:url';
+import baseConfig from '../../../jest.config.mjs';
+
+const __dirname = path.dirname(url.fileURLToPath(import.meta.url));
+const rootDir = path.resolve(__dirname, '../../..');
+
 export default {
+  ...baseConfig,
   displayName: '@platform/components-iam-role',
-  testEnvironment: 'node',
-  transform: {
-    '^.+\\.tsx?$': [
-      'ts-jest',
-      {
-        tsconfig: '<rootDir>/tsconfig.test.json'
-      }
-    ]
-  },
-  moduleFileExtensions: ['ts', 'tsx', 'js'],
-  moduleNameMapper: {
-    '^@shinobi/core$': '<rootDir>/../../core/dist/index.js',
-    '^@shinobi/(.*)$': '<rootDir>/../../$1/dist/index.js',
-    '^@platform/(.*)$': '<rootDir>/../../$1/src'
-  },
-  collectCoverageFrom: ['src/**/*.{ts,tsx}', '!src/**/*.d.ts']
+  rootDir,
+  testMatch: ['<rootDir>/packages/components/iam-role/tests/**/*.test.ts'],
+  collectCoverageFrom: ['packages/components/iam-role/src/**/*.{ts,tsx}', '!packages/components/iam-role/src/**/*.d.ts'],
+  coverageDirectory: path.join(rootDir, 'packages/components/iam-role/coverage')
 };
