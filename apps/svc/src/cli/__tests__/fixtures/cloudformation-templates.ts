@@ -121,3 +121,4 @@ export function createTemplateForDiff(): {
   return { current, desired };
 }
 
+

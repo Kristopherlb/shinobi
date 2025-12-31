@@ -15,6 +15,10 @@ package-lock.json
 .package-lock.json
 yarn.lock
 
+# PNPM store (local package cache - should not be committed)
+.pnpm-store/
+**/.pnpm-store/
+
 # Legacy files
 workspace.json
 
