@@ -23,7 +23,7 @@ export function createValidateCommand(): Command {
 
   command
     .description('Parse and validate the service.yml without connecting to AWS')
-    .option('-f, --file <file>', 'Path to service.yml file')
+    .option('-f, --file <manifest>', 'Path to service manifest file')
     .option('--json', 'Emit validation results as JSON')
     .action(async (options, cmd) => {
       const parent: any = cmd.parent || {};
