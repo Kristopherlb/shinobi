@@ -23,6 +23,7 @@ export function createPlanCommand(): Command {
     .description('Generate a comprehensive plan of changes and configurations')
     .option('-f, --file <manifest>', 'Path to service manifest file')
     .option('-e, --env <environment>', 'Environment to plan for', 'dev')
+    .option('--json', 'Emit plan results as JSON')
     .action(async (options, cmd) => {
       const parent: any = cmd.parent || {};
       const rootOpts = parent.opts ? parent.opts() : {};
@@ -32,9 +33,27 @@ export function createPlanCommand(): Command {
       });
 
       const planCommand = root.createPlanCommand(dependencies);
-      const result = await planCommand.execute({ file: options.file, env: options.env });
+      const result = await planCommand.execute({ 
+        file: options.file, 
+        env: options.env,
+        json: options.json
+      });
 
-      if (!result.success) {
+      if (result.success) {
+        if (options.json && result.data) {
+          // JSON output to stdout (appropriate for structured output)
+          console.log(JSON.stringify({
+            resolvedManifest: result.data.resolvedManifest,
+            warnings: result.data.warnings,
+            structuredData: result.data.structuredData
+          }, null, 2));
+        }
+        process.exit(result.exitCode);
+      } else {
+        if (options.json && result.error) {
+          // JSON error output to stderr (appropriate for structured output)
+          console.error(JSON.stringify({ error: result.error }, null, 2));
+        }
         process.exit(result.exitCode);
       }
     });
