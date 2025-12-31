@@ -78,24 +78,80 @@ export class Logger {
     return { ...this.currentConfig };
   }
 
+  /**
+   * Check if running in CI mode
+   */
+  get isCi(): boolean {
+    return this.ci;
+  }
+
   info(message: string, options?: LoggerOptions): void {
     this.capture('INFO', message, options?.data);
-    this.baseLogger.info(message, options);
+    
+    if (this.ci) {
+      // CI mode: structured JSON output only (via baseLogger)
+      this.baseLogger.info(message, options);
+    } else {
+      // Interactive mode: human-readable output only
+      // Logs are still captured via capture() for testing
+      console.log(`ℹ️  ${message}`);
+      if (options?.data && this.verbose) {
+        console.log(JSON.stringify(options.data, null, 2));
+      }
+    }
   }
 
   success(message: string, data?: any): void {
     this.capture('SUCCESS', message, data);
-    this.baseLogger.info(message, this.buildOptions({ status: 'success', ...toObject(data) }));
+    
+    if (this.ci) {
+      // CI mode: structured JSON output only (via baseLogger)
+      this.baseLogger.info(message, this.buildOptions({ status: 'success', ...toObject(data) }));
+    } else {
+      // Interactive mode: human-readable output only
+      // Logs are still captured via capture() for testing
+      console.log(`✅ ${message}`);
+      if (data && this.verbose) {
+        console.log(JSON.stringify(data, null, 2));
+      }
+    }
   }
 
   warn(message: string, options?: LoggerOptions): void {
     this.capture('WARN', message, options?.data);
-    this.baseLogger.warn(message, options);
+    
+    if (this.ci) {
+      // CI mode: structured JSON output only (via baseLogger)
+      this.baseLogger.warn(message, options);
+    } else {
+      // Interactive mode: human-readable output only
+      // Logs are still captured via capture() for testing
+      console.warn(`⚠️  ${message}`);
+      if (options?.data && this.verbose) {
+        console.warn(JSON.stringify(options.data, null, 2));
+      }
+    }
   }
 
   error(message: string, error?: Error | any, options?: LoggerOptions): void {
     this.capture('ERROR', message, error);
-    this.baseLogger.error(message, error, options);
+    
+    if (this.ci) {
+      // CI mode: structured JSON output only (via baseLogger)
+      this.baseLogger.error(message, error, options);
+    } else {
+      // Interactive mode: human-readable output only
+      // Logs are still captured via capture() for testing
+      console.error(`❌ ${message}`);
+      if (error instanceof Error) {
+        console.error(error.stack || error.message);
+      } else if (error && this.verbose) {
+        console.error(JSON.stringify(error, null, 2));
+      }
+      if (options?.data && this.verbose) {
+        console.error(JSON.stringify(options.data, null, 2));
+      }
+    }
   }
 
   debug(message: string, options?: LoggerOptions): void {
@@ -104,15 +160,38 @@ export class Logger {
     }
 
     this.capture('DEBUG', message, options?.data);
-    this.baseLogger.debug(message, options);
+    
+    if (this.ci) {
+      // CI mode: structured JSON output only (via baseLogger)
+      this.baseLogger.debug(message, options);
+    } else {
+      // Interactive mode: human-readable output only
+      // Logs are still captured via capture() for testing
+      console.log(`🔍 ${message}`);
+      if (options?.data) {
+        console.log(JSON.stringify(options.data, null, 2));
+      }
+    }
   }
 
   trace(message: string, options?: LoggerOptions): void {
     if (!this.verbose) {
       return;
     }
+    
     this.capture('TRACE', message, options?.data);
-    this.baseLogger.trace(message, options);
+    
+    if (this.ci) {
+      // CI mode: structured JSON output only (via baseLogger)
+      this.baseLogger.trace(message, options);
+    } else {
+      // Interactive mode: human-readable output only
+      // Logs are still captured via capture() for testing
+      console.log(`🔎 ${message}`);
+      if (options?.data) {
+        console.log(JSON.stringify(options.data, null, 2));
+      }
+    }
   }
 
   isDebugEnabled(): boolean {
@@ -172,14 +251,19 @@ export class Logger {
   }
 }
 
+/**
+ * Convert data to a plain object for structured logging
+ * Handles primitives, objects, and null/undefined
+ */
 function toObject(data?: any): Record<string, unknown> | undefined {
   if (data === undefined || data === null) {
     return undefined;
   }
 
-  if (typeof data === 'object') {
+  if (typeof data === 'object' && !Array.isArray(data) && !(data instanceof Error)) {
     return data as Record<string, unknown>;
   }
 
+  // Wrap primitives and arrays in a value property
   return { value: data };
 }

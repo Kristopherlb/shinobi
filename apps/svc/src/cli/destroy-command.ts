@@ -7,26 +7,22 @@
  * - Discovers the service manifest and resolves stack names
  * - Optionally prompts for user confirmation before deletion
  * - Deletes CloudFormation stacks via AWS SDK
- * - Waits for stack deletion to complete
- * - Handles force deletion for stacks with retention policies
+ * - Waits for stack deletion to complete with proper polling
  *
  * This command performs destructive operations and should be used with caution.
  * It requires explicit confirmation unless the `--yes` flag is provided.
  *
  * Exit codes:
- * - 0: Stack deletion successful
- * - 1: Stack deletion failed (AWS API errors)
- * - 2: User cancelled or missing manifest
+ * - 0: Stack deletion successful (or stack already deleted)
+ * - 1: Stack deletion failed (AWS API errors, unexpected errors)
+ * - 2: Precondition failed (user cancelled, missing manifest, invalid configuration)
  */
 
 import * as path from 'path';
-import * as os from 'os';
-import * as fsp from 'fs/promises';
 import inquirer from 'inquirer';
 import {
   CloudFormationClient,
-  DeleteStackCommand,
-  DescribeStacksCommand
+  DeleteStackCommand
 } from '@aws-sdk/client-cloudformation';
 import { waitUntilStackDeleteComplete } from '@aws-sdk/client-cloudformation';
 import { FileDiscovery } from '@shinobi/core';
@@ -42,7 +38,6 @@ export interface DestroyOptions {
   stack?: string;
   yes?: boolean;
   json?: boolean;
-  force?: boolean;
 }
 
 export interface DestroyResult {
@@ -91,8 +86,20 @@ export class DestroyCommand {
 
       const manifest: SimpleManifest = await readManifest({ manifestPath });
       const environment = options.env ?? manifest.environment ?? 'dev';
-      const region = String(options.region ?? manifest.region ?? process.env.CDK_DEFAULT_REGION ?? 'us-east-1');
-      const accountId = String(options.account ?? manifest.accountId ?? process.env.CDK_DEFAULT_ACCOUNT ?? '123456789012');
+      
+      // Resolve region with safe fallback (us-east-1 is acceptable default)
+      const region = options.region ?? manifest.region ?? process.env.CDK_DEFAULT_REGION ?? 'us-east-1';
+      
+      // Resolve account ID - fail early if cannot be determined (no fake fallback)
+      const accountId = options.account ?? manifest.accountId ?? process.env.CDK_DEFAULT_ACCOUNT;
+      if (!accountId) {
+        return {
+          success: false,
+          exitCode: 2,
+          error: 'Could not determine AWS account ID. Set via --account, manifest accountId, or CDK_DEFAULT_ACCOUNT environment variable.'
+        };
+      }
+      
       const stackName = options.stack ?? `${manifest.service}-${environment}`;
 
       if (options.profile) {
@@ -122,8 +129,8 @@ export class DestroyCommand {
           logger.warn('Destroy cancelled by user.');
           return {
             success: false,
-            exitCode: 1,
-            error: 'Operation cancelled'
+            exitCode: 2,
+            error: 'Operation cancelled by user'
           };
         }
       }
@@ -175,9 +182,14 @@ export class DestroyCommand {
     } catch (error) {
       const message = error instanceof Error ? error.message : 'Unknown error occurred';
       this.dependencies.logger.error('Destroy failed', error);
+      
+      // Determine exit code based on error type
+      // AWS errors and unexpected errors → exit code 1
+      // Precondition errors (missing manifest, bad config) → exit code 2
+      // Since we're in catch-all, assume it's an AWS/unexpected error
       return {
         success: false,
-        exitCode: 2,
+        exitCode: 1,
         error: message
       };
     }
