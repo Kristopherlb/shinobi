@@ -218,6 +218,35 @@ interface NetworkFirewallCapabilityData {
   firewallPolicyArn?: string;
 }
 
+/**
+ * VPC Endpoint capability data structure
+ * @property type - Capability type identifier
+ * @property vpcEndpointId - VPC Endpoint identifier
+ * @property vpcEndpointArn - VPC Endpoint ARN
+ * @property vpcId - VPC identifier
+ * @property serviceName - AWS service name (e.g., 'com.amazonaws.region.s3')
+ * @property endpointType - Endpoint type ('Gateway' | 'Interface' | 'GatewayLoadBalancer')
+ * @property state - Endpoint state (e.g., 'available')
+ * @property dnsEntries - DNS entries for the endpoint (optional)
+ * @property policyDocument - VPC endpoint policy document (optional)
+ * @property privateDnsEnabled - Whether private DNS is enabled (optional)
+ */
+interface VpcEndpointCapabilityData {
+  type: 'vpc:endpoint';
+  vpcEndpointId: string;
+  vpcEndpointArn: string;
+  vpcId: string;
+  serviceName: string;
+  endpointType: 'Gateway' | 'Interface' | 'GatewayLoadBalancer';
+  state: string;
+  dnsEntries?: Array<{
+    dnsName: string;
+    hostedZoneId: string;
+  }>;
+  policyDocument?: string;
+  privateDnsEnabled?: boolean;
+}
+
 type VpcCapabilityData =
   | VpcNetworkCapabilityData
   | VpcSubnetCapabilityData
@@ -227,7 +256,8 @@ type VpcCapabilityData =
   | VpcNetworkAclCapabilityData
   | VpcPeeringCapabilityData
   | TransitGatewayCapabilityData
-  | NetworkFirewallCapabilityData;
+  | NetworkFirewallCapabilityData
+  | VpcEndpointCapabilityData;
 
 export class VpcBinderStrategy extends UnifiedBinderStrategyBase {
   readonly supportedCapabilities = [
@@ -241,7 +271,8 @@ export class VpcBinderStrategy extends UnifiedBinderStrategyBase {
     'vpc:nacl',
     'vpc:peering',
     'tgw:transit-gateway',
-    'vpc:network-firewall'
+    'vpc:network-firewall',
+    'vpc:endpoint'
   ];
 
   getStrategyName(): string {
@@ -341,6 +372,14 @@ export class VpcBinderStrategy extends UnifiedBinderStrategyBase {
         supportedAccess: ['read', 'write', 'readwrite', 'admin'],
         description: 'Bind to Network Firewall for advanced threat protection',
         examples: ['vpc -> vpc:network-firewall (read)']
+      },
+      {
+        sourceType: '*',
+        targetType: 'vpc',
+        capability: 'vpc:endpoint',
+        supportedAccess: ['read', 'write', 'readwrite', 'admin'],
+        description: 'Bind to VPC Endpoint for private AWS service access',
+        examples: ['lambda-api -> vpc:endpoint (read)', 'ecs-task -> vpc:endpoint (read)']
       }
     ];
   }
@@ -396,6 +435,8 @@ export class VpcBinderStrategy extends UnifiedBinderStrategyBase {
       return this.bindToTransitGateway(context, targetCapabilityData, access);
     } else if (capability === 'vpc:network-firewall') {
       return this.bindToNetworkFirewall(context, targetCapabilityData, access);
+    } else if (capability === 'vpc:endpoint') {
+      return this.bindToVpcEndpoint(context, targetCapabilityData, access);
     } else {
       throw new Error(`Unsupported VPC capability: ${capability}`);
     }
@@ -840,6 +881,66 @@ export class VpcBinderStrategy extends UnifiedBinderStrategyBase {
   }
 
   /**
+   * Bind to VPC Endpoint
+   */
+  private bindToVpcEndpoint(
+    context: BindingContext,
+    targetData: unknown,
+    access: string[]
+  ): Omit<EnhancedBindingResult, 'compliance'> {
+    if (!this.isVpcEndpointCapabilityData(targetData)) {
+      throw new Error('Invalid VPC Endpoint capability data structure');
+    }
+
+    const iamPolicies: IamPolicy[] = [];
+    const environmentVariables: Record<string, string> = {};
+
+    // Determine primary access level for action mapping
+    const primaryAccess = access.includes('admin') ? 'admin' : access.includes('readwrite') ? 'readwrite' : access.includes('write') ? 'write' : 'read';
+
+    // Create IAM policies based on access level
+    const actions = this.getVpcEndpointActionsForAccess(primaryAccess);
+    if (actions.length > 0) {
+      iamPolicies.push({
+        statement: new PolicyStatement({
+          effect: Effect.ALLOW,
+          actions: actions,
+          resources: [targetData.vpcEndpointArn]
+        }),
+        description: `VPC Endpoint ${primaryAccess} access`,
+        complianceRequirement: `VPC Endpoint ${primaryAccess} access policy`
+      });
+    }
+
+    // Set environment variables
+    environmentVariables['VPC_ENDPOINT_ID'] = targetData.vpcEndpointId;
+    environmentVariables['VPC_ENDPOINT_ARN'] = targetData.vpcEndpointArn;
+    environmentVariables['VPC_ENDPOINT_VPC_ID'] = targetData.vpcId;
+    environmentVariables['VPC_ENDPOINT_SERVICE_NAME'] = targetData.serviceName;
+    environmentVariables['VPC_ENDPOINT_TYPE'] = targetData.endpointType;
+    environmentVariables['VPC_ENDPOINT_STATE'] = targetData.state;
+
+    if (targetData.privateDnsEnabled !== undefined) {
+      environmentVariables['VPC_ENDPOINT_PRIVATE_DNS_ENABLED'] = targetData.privateDnsEnabled.toString();
+    }
+
+    // Set DNS entries (first entry is typically the primary DNS name)
+    if (targetData.dnsEntries && targetData.dnsEntries.length > 0) {
+      environmentVariables['VPC_ENDPOINT_DNS_NAME'] = targetData.dnsEntries[0].dnsName;
+      environmentVariables['VPC_ENDPOINT_HOSTED_ZONE_ID'] = targetData.dnsEntries[0].hostedZoneId;
+      if (targetData.dnsEntries.length > 1) {
+        environmentVariables['VPC_ENDPOINT_DNS_ENTRIES'] = JSON.stringify(targetData.dnsEntries);
+      }
+    }
+
+    return {
+      iamPolicies,
+      environmentVariables,
+      securityGroupRules: []
+    };
+  }
+
+  /**
    * Bind to Network Firewall
    */
   private bindToNetworkFirewall(
@@ -1170,6 +1271,43 @@ export class VpcBinderStrategy extends UnifiedBinderStrategyBase {
   }
 
   /**
+   * Get EC2 actions for VPC Endpoint access level
+   */
+  private getVpcEndpointActionsForAccess(access: string): string[] {
+    switch (access) {
+      case 'read':
+        return [
+          'ec2:DescribeVpcEndpoints',
+          'ec2:DescribeVpcEndpointServices',
+          'ec2:DescribePrefixLists'
+        ];
+      case 'write':
+      case 'readwrite':
+        return [
+          'ec2:DescribeVpcEndpoints',
+          'ec2:DescribeVpcEndpointServices',
+          'ec2:DescribePrefixLists',
+          'ec2:CreateVpcEndpoint',
+          'ec2:ModifyVpcEndpoint',
+          'ec2:DeleteVpcEndpoint'
+        ];
+      case 'admin':
+        return [
+          'ec2:DescribeVpcEndpoints',
+          'ec2:DescribeVpcEndpointServices',
+          'ec2:DescribePrefixLists',
+          'ec2:CreateVpcEndpoint',
+          'ec2:ModifyVpcEndpoint',
+          'ec2:DeleteVpcEndpoint',
+          'ec2:CreateTags',
+          'ec2:DeleteTags'
+        ];
+      default:
+        return [];
+    }
+  }
+
+  /**
    * Get EC2 actions for Transit Gateway access level
    */
   private getTransitGatewayActionsForAccess(access: string): string[] {
@@ -1303,10 +1441,10 @@ export class VpcBinderStrategy extends UnifiedBinderStrategyBase {
         statement: new PolicyStatement({
           effect: Effect.ALLOW,
           actions: [
-            'logs:CreateLogGroup',
-            'logs:CreateLogStream',
-            'logs:PutLogEvents'
-          ],
+          'logs:CreateLogGroup',
+          'logs:CreateLogStream',
+          'logs:PutLogEvents'
+        ],
           resources: ['arn:aws:logs:*:*:log-group:/aws/vpc/flowlogs:*']
         }),
         description: 'CloudWatch Logs permissions for VPC Flow Logs',
@@ -1437,6 +1575,20 @@ export class VpcBinderStrategy extends UnifiedBinderStrategyBase {
       typeof d.firewallId === 'string' &&
       typeof d.vpcId === 'string' &&
       typeof d.status === 'string'
+    );
+  }
+
+  private isVpcEndpointCapabilityData(data: unknown): data is VpcEndpointCapabilityData {
+    if (!data || typeof data !== 'object') return false;
+    const d = data as Record<string, unknown>;
+    return (
+      d.type === 'vpc:endpoint' &&
+      typeof d.vpcEndpointId === 'string' &&
+      typeof d.vpcEndpointArn === 'string' &&
+      typeof d.vpcId === 'string' &&
+      typeof d.serviceName === 'string' &&
+      typeof d.endpointType === 'string' &&
+      typeof d.state === 'string'
     );
   }
 }

@@ -137,7 +137,7 @@ describe('VpcBinderStrategy', () => {
       const context = createBindingContext({
         source,
         target,
-        capability: 'vpc:network',
+      capability: 'vpc:network',
         access: 'write'
       });
 
@@ -186,18 +186,18 @@ describe('VpcBinderStrategy', () => {
     };
 
     test('VpcBind__VpcNetworkFlowLogsEnabled__GrantsCloudWatchLogsPermissions', async () => {
-      const strategy = new VpcBinderStrategy();
+    const strategy = new VpcBinderStrategy();
       const source = createMockSourceComponent();
       const target = createMockTargetComponent('vpc', {
         'vpc:network': {
           type: 'vpc:network',
           vpcId: 'vpc-12345678',
           vpcArn: 'arn:aws:ec2:us-east-1:123456789012:vpc/vpc-12345678',
-          cidrBlock: '10.0.0.0/16',
-          state: 'available',
-          isDefault: false,
-          flowLogsEnabled: true,
-          vpcEndpoints: ['s3', 'dynamodb']
+      cidrBlock: '10.0.0.0/16',
+      state: 'available',
+      isDefault: false,
+      flowLogsEnabled: true,
+      vpcEndpoints: ['s3', 'dynamodb']
         }
       });
 
@@ -222,8 +222,8 @@ describe('VpcBinderStrategy', () => {
       expect(result.environmentVariables['VPC_FLOW_LOGS_ENABLED']).toBe('true');
       expect(result.environmentVariables['VPC_ENDPOINTS_ENABLED']).toBe('true');
       expect(result.environmentVariables['VPC_ENDPOINT_SERVICES']).toBe('s3,dynamodb');
-    });
   });
+});
 
   describe('VpcBind__NetVpcAlias__HandlesAliasCapability', () => {
     const metadata = {
@@ -1328,9 +1328,211 @@ describe('VpcBinderStrategy', () => {
     });
   });
 
-  describe('VpcBind__MissingRequiredFields__ThrowsActionableError', () => {
+  describe('VpcBind__ValidVpcEndpointAccess__ReturnsVpcEndpointEnvVars', () => {
     const metadata = {
       id: 'TP-binders-vpc-021',
+      level: 'unit' as const,
+      capability: 'Returns VPC Endpoint environment variables for valid VPC endpoint access',
+      oracle: 'exact' as const,
+      determinism: 'deterministic' as const,
+      naming: {
+        pattern: 'Feature__Condition__ExpectedOutcome',
+        feature: 'VpcBind',
+        condition: 'ValidVpcEndpointAccess',
+        outcome: 'ReturnsVpcEndpointEnvVars'
+      },
+      invariants: [
+        'Environment variables include VPC endpoint ID, ARN, VPC ID, service name, type, and state',
+        'IAM policies include VPC endpoint read actions (DescribeVpcEndpoints, DescribeVpcEndpointServices)',
+        'Security group rules array is empty'
+      ],
+      fixtures: ['MockSourceComponent', 'MockTargetComponent'],
+      inputs: {
+        shape: 'BindingContext with vpc:endpoint capability and read access',
+        notes: 'Basic VPC endpoint read access binding'
+      },
+      risks: [],
+      dependencies: [],
+      evidence: [],
+      compliance_refs: [],
+      ai_generated: true,
+      human_reviewed_by: 'Platform Engineering'
+    };
+
+    test('VpcBind__ValidVpcEndpointAccess__ReturnsVpcEndpointEnvVars', async () => {
+      const strategy = new VpcBinderStrategy();
+      const source = createMockSourceComponent();
+      const target = createMockTargetComponent('vpc-endpoint', {
+        'vpc:endpoint': {
+          type: 'vpc:endpoint',
+          vpcEndpointId: 'vpce-1234567890abcdef0',
+          vpcEndpointArn: 'arn:aws:ec2:us-east-1:123456789012:vpc-endpoint/vpce-1234567890abcdef0',
+          vpcId: 'vpc-12345678',
+          serviceName: 'com.amazonaws.us-east-1.s3',
+          endpointType: 'Gateway',
+          state: 'available'
+        }
+      });
+
+      const context = createBindingContext({
+        source,
+        target,
+        capability: 'vpc:endpoint',
+        access: 'read'
+      });
+
+      const result = await executeUnifiedBinding(strategy, context);
+
+      // Primary assertion: VPC Endpoint environment variables are set
+      expect(result.environmentVariables['VPC_ENDPOINT_ID']).toBe('vpce-1234567890abcdef0');
+      expect(result.environmentVariables['VPC_ENDPOINT_ARN']).toBe('arn:aws:ec2:us-east-1:123456789012:vpc-endpoint/vpce-1234567890abcdef0');
+      expect(result.environmentVariables['VPC_ENDPOINT_VPC_ID']).toBe('vpc-12345678');
+      expect(result.environmentVariables['VPC_ENDPOINT_SERVICE_NAME']).toBe('com.amazonaws.us-east-1.s3');
+      expect(result.environmentVariables['VPC_ENDPOINT_TYPE']).toBe('Gateway');
+      expect(result.environmentVariables['VPC_ENDPOINT_STATE']).toBe('available');
+      expect(result.iamPolicies[0].statement.actions).toContain('ec2:DescribeVpcEndpoints');
+      expect(result.iamPolicies[0].statement.actions).toContain('ec2:DescribeVpcEndpointServices');
+      expect(result.securityGroupRules).toEqual([]);
+    });
+  });
+
+  describe('VpcBind__VpcEndpointWriteAccess__GrantsVpcEndpointWriteActions', () => {
+    const metadata = {
+      id: 'TP-binders-vpc-022',
+      level: 'unit' as const,
+      capability: 'Grants VPC Endpoint write actions including CreateVpcEndpoint and ModifyVpcEndpoint for write access',
+      oracle: 'exact' as const,
+      determinism: 'deterministic' as const,
+      naming: {
+        pattern: 'Feature__Condition__ExpectedOutcome',
+        feature: 'VpcBind',
+        condition: 'VpcEndpointWriteAccess',
+        outcome: 'GrantsVpcEndpointWriteActions'
+      },
+      invariants: [
+        'IAM policies include VPC endpoint write actions (CreateVpcEndpoint, ModifyVpcEndpoint, DeleteVpcEndpoint)',
+        'Read actions are included in write access'
+      ],
+      fixtures: ['MockSourceComponent', 'MockTargetComponent'],
+      inputs: {
+        shape: 'BindingContext with vpc:endpoint capability and write access',
+        notes: 'VPC endpoint write access with full endpoint management permissions'
+      },
+      risks: [],
+      dependencies: [],
+      evidence: [],
+      compliance_refs: [],
+      ai_generated: true,
+      human_reviewed_by: 'Platform Engineering'
+    };
+
+    test('VpcBind__VpcEndpointWriteAccess__GrantsVpcEndpointWriteActions', async () => {
+      const strategy = new VpcBinderStrategy();
+      const source = createMockSourceComponent();
+      const target = createMockTargetComponent('vpc-endpoint', {
+        'vpc:endpoint': {
+          type: 'vpc:endpoint',
+          vpcEndpointId: 'vpce-1234567890abcdef0',
+          vpcEndpointArn: 'arn:aws:ec2:us-east-1:123456789012:vpc-endpoint/vpce-1234567890abcdef0',
+          vpcId: 'vpc-12345678',
+          serviceName: 'com.amazonaws.us-east-1.dynamodb',
+          endpointType: 'Interface',
+          state: 'available'
+        }
+      });
+
+      const context = createBindingContext({
+        source,
+        target,
+        capability: 'vpc:endpoint',
+        access: 'write'
+      });
+
+      const result = await executeUnifiedBinding(strategy, context);
+
+      // Primary assertion: Write actions are granted
+      const writePolicy = result.iamPolicies.find(p => p.description.includes('VPC Endpoint'));
+      expect(writePolicy).toBeDefined();
+      expect(writePolicy!.statement.actions).toContain('ec2:CreateVpcEndpoint');
+      expect(writePolicy!.statement.actions).toContain('ec2:ModifyVpcEndpoint');
+      expect(writePolicy!.statement.actions).toContain('ec2:DeleteVpcEndpoint');
+      expect(writePolicy!.statement.actions).toContain('ec2:DescribeVpcEndpoints');
+      expect(writePolicy!.statement.actions).toContain('ec2:DescribeVpcEndpointServices');
+    });
+  });
+
+  describe('VpcBind__VpcEndpointWithDnsEntries__SetsDnsEnvironmentVariables', () => {
+    const metadata = {
+      id: 'TP-binders-vpc-023',
+      level: 'unit' as const,
+      capability: 'Sets DNS entry environment variables when DNS entries are provided in VPC endpoint capability data',
+      oracle: 'exact' as const,
+      determinism: 'deterministic' as const,
+      naming: {
+        pattern: 'Feature__Condition__ExpectedOutcome',
+        feature: 'VpcBind',
+        condition: 'VpcEndpointWithDnsEntries',
+        outcome: 'SetsDnsEnvironmentVariables'
+      },
+      invariants: [
+        'First DNS entry is set as primary DNS name and hosted zone ID',
+        'Multiple DNS entries are serialized to JSON in VPC_ENDPOINT_DNS_ENTRIES',
+        'Private DNS enabled flag is set when provided'
+      ],
+      fixtures: ['MockSourceComponent', 'MockTargetComponent'],
+      inputs: {
+        shape: 'BindingContext with vpc:endpoint capability including DNS entries and private DNS enabled',
+        notes: 'VPC endpoint with DNS configuration'
+      },
+      risks: [],
+      dependencies: [],
+      evidence: [],
+      compliance_refs: [],
+      ai_generated: true,
+      human_reviewed_by: 'Platform Engineering'
+    };
+
+    test('VpcBind__VpcEndpointWithDnsEntries__SetsDnsEnvironmentVariables', async () => {
+      const strategy = new VpcBinderStrategy();
+      const source = createMockSourceComponent();
+      const dnsEntries = [
+        { dnsName: 'vpce-1234567890abcdef0-abc123.vpce-svc-123456789.us-east-1.vpce.amazonaws.com', hostedZoneId: 'Z1234567890ABC' },
+        { dnsName: 'vpce-1234567890abcdef0-xyz789.vpce-svc-123456789.us-east-1.vpce.amazonaws.com', hostedZoneId: 'Z1234567890XYZ' }
+      ];
+      const target = createMockTargetComponent('vpc-endpoint', {
+        'vpc:endpoint': {
+          type: 'vpc:endpoint',
+          vpcEndpointId: 'vpce-1234567890abcdef0',
+          vpcEndpointArn: 'arn:aws:ec2:us-east-1:123456789012:vpc-endpoint/vpce-1234567890abcdef0',
+          vpcId: 'vpc-12345678',
+          serviceName: 'com.amazonaws.us-east-1.s3',
+          endpointType: 'Interface',
+          state: 'available',
+          dnsEntries,
+          privateDnsEnabled: true
+        }
+      });
+
+      const context = createBindingContext({
+        source,
+        target,
+        capability: 'vpc:endpoint',
+        access: 'read'
+      });
+
+      const result = await executeUnifiedBinding(strategy, context);
+
+      // Primary assertion: DNS environment variables are set
+      expect(result.environmentVariables['VPC_ENDPOINT_DNS_NAME']).toBe(dnsEntries[0].dnsName);
+      expect(result.environmentVariables['VPC_ENDPOINT_HOSTED_ZONE_ID']).toBe(dnsEntries[0].hostedZoneId);
+      expect(result.environmentVariables['VPC_ENDPOINT_DNS_ENTRIES']).toBe(JSON.stringify(dnsEntries));
+      expect(result.environmentVariables['VPC_ENDPOINT_PRIVATE_DNS_ENABLED']).toBe('true');
+    });
+  });
+
+  describe('VpcBind__MissingRequiredFields__ThrowsActionableError', () => {
+    const metadata = {
+      id: 'TP-binders-vpc-024',
       level: 'unit' as const,
       capability: 'Throws actionable error when required capability data fields are missing',
       oracle: 'exact' as const,
@@ -1384,7 +1586,7 @@ describe('VpcBinderStrategy', () => {
 
   describe('VpcBind__CommercialCompliance__ReturnsComplianceBlock', () => {
     const metadata = {
-      id: 'TP-binders-vpc-022',
+      id: 'TP-binders-vpc-025',
       level: 'unit' as const,
       capability: 'Returns compliance block with commercial framework for commercial compliance context',
       oracle: 'exact' as const,
