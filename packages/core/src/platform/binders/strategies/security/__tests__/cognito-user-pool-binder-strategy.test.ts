@@ -188,7 +188,7 @@ describe('CognitoUserPoolBinderStrategy', () => {
       const context = createBindingContext({
         source,
         target,
-      capability: 'auth:user-pool',
+        capability: 'auth:user-pool',
         access: 'read',
         options: {
           clientName: 'mobile-app'
@@ -243,7 +243,7 @@ describe('CognitoUserPoolBinderStrategy', () => {
       const context = createBindingContext({
         source,
         target,
-      capability: 'auth:identity-provider',
+        capability: 'auth:identity-provider',
         access: 'read'
       });
 

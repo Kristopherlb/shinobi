@@ -9,7 +9,7 @@ import type { IamPolicy } from '../../../contracts/bindings.js';
 import { PolicyStatement, Effect } from 'aws-cdk-lib/aws-iam';
 
 export class DynamoDbBinderStrategy extends UnifiedBinderStrategyBase {
-  readonly supportedCapabilities = ['db:dynamodb', 'dynamodb:table', 'dynamodb:index', 'dynamodb:stream'];
+  readonly supportedCapabilities = ['db:dynamodb', 'dynamodb:table', 'dynamodb:index', 'dynamodb:stream', 'dynamodb:backup'];
 
   getStrategyName(): string {
     return 'DynamoDB Binder Strategy';
@@ -52,6 +52,14 @@ export class DynamoDbBinderStrategy extends UnifiedBinderStrategyBase {
         supportedAccess: ['read', 'write'],
         description: 'Bind to DynamoDB stream for change data capture',
         examples: ['lambda-api -> dynamodb:stream (read)']
+      },
+      {
+        sourceType: '*',
+        targetType: 'dynamodb:table',
+        capability: 'dynamodb:backup',
+        supportedAccess: ['read', 'write'],
+        description: 'Bind to DynamoDB table for backup and restore operations',
+        examples: ['lambda-backup -> dynamodb:backup (read)']
       }
     ];
   }
@@ -71,8 +79,8 @@ export class DynamoDbBinderStrategy extends UnifiedBinderStrategyBase {
     // Normalize access to array (directive.access is a single AccessLevel string)
     const access = directive.access ? [directive.access] : [];
 
-    // Validate access patterns
-    const validAccessTypes = ['read', 'write', 'readwrite', 'admin', 'backup'];
+    // Validate access patterns (only standard AccessLevel values are allowed)
+    const validAccessTypes = ['read', 'write', 'readwrite', 'admin'];
     const invalidAccess = access.filter(a => !validAccessTypes.includes(a));
     if (invalidAccess.length > 0) {
       throw new Error(`Invalid access types for DynamoDB binding: ${invalidAccess.join(', ')}. Valid types: ${validAccessTypes.join(', ')}`);
@@ -97,6 +105,8 @@ export class DynamoDbBinderStrategy extends UnifiedBinderStrategyBase {
         return await this.bindToIndex(context, targetCapabilityData, access);
       case 'dynamodb:stream':
         return await this.bindToStream(context, targetCapabilityData, access);
+      case 'dynamodb:backup':
+        return await this.bindToBackup(context, targetCapabilityData, access);
       default:
         throw new Error(`Unsupported DynamoDB capability: ${capability}. Supported capabilities: ${this.supportedCapabilities.join(', ')}`);
     }
@@ -199,8 +209,9 @@ export class DynamoDbBinderStrategy extends UnifiedBinderStrategyBase {
       });
     }
 
-    // Grant backup and restore permissions
-    if (access.includes('backup')) {
+    // Grant backup and restore permissions (note: backup is not a standard AccessLevel,
+    // but admin access includes backup permissions)
+    if (access.includes('admin')) {
       // Extract region and account from table ARN if possible, otherwise use wildcard
       const arnParts = targetData.tableArn?.match(/^arn:aws:dynamodb:([^:]+):(\d+):table\//);
       const region = arnParts?.[1] || '*';
@@ -486,6 +497,98 @@ export class DynamoDbBinderStrategy extends UnifiedBinderStrategyBase {
   }
 
   /**
+   * Bind to DynamoDB backup
+   * 
+   * @param context - Binding context
+   * @param targetData - Expected structure:
+   *   - tableArn (required): string - ARN of the DynamoDB table
+   *   - tableName (required): string - Name of the DynamoDB table
+   *   - backupPlanArn?: string - ARN of the AWS Backup plan (optional)
+   * @param access - Array of access levels (read, write)
+   * @returns Enhanced binding result without compliance block
+   */
+  private async bindToBackup(
+    context: BindingContext,
+    targetData: any,
+    access: string[]
+  ): Promise<Omit<EnhancedBindingResult, 'compliance'>> {
+    if (!targetData?.tableArn) {
+      throw new Error('Target component missing required tableArn property for DynamoDB backup binding');
+    }
+    if (!targetData?.tableName) {
+      throw new Error('Target component missing required tableName property for DynamoDB backup binding');
+    }
+
+    const environmentVariables: Record<string, string> = {};
+    const iamPolicies: IamPolicy[] = [];
+
+    // Extract region and account from table ARN
+    const arnParts = targetData.tableArn?.match(/^arn:aws:dynamodb:([^:]+):(\d+):table\//);
+    const region = arnParts?.[1] || '*';
+    const accountId = arnParts?.[2] || '*';
+
+    // Grant backup read permissions (list, describe backups)
+    if (access.includes('read') || access.includes('readwrite')) {
+      const statement = new PolicyStatement({
+        effect: Effect.ALLOW,
+        actions: [
+          'dynamodb:DescribeBackup',
+          'dynamodb:ListBackups',
+          'dynamodb:DescribeContinuousBackups',
+          'dynamodb:ListContributorInsights'
+        ],
+        resources: [
+          targetData.tableArn,
+          `arn:aws:dynamodb:${region}:${accountId}:table/${targetData.tableName}/backup/*`
+        ]
+      });
+      iamPolicies.push({
+        statement,
+        description: 'DynamoDB backup read access permissions',
+        complianceRequirement: 'Data protection and recovery'
+      });
+    }
+
+    // Grant backup write permissions (create, delete, restore)
+    if (access.includes('write') || access.includes('readwrite')) {
+      const statement = new PolicyStatement({
+        effect: Effect.ALLOW,
+        actions: [
+          'dynamodb:CreateBackup',
+          'dynamodb:DeleteBackup',
+          'dynamodb:RestoreTableFromBackup',
+          'dynamodb:RestoreTableToPointInTime'
+        ],
+        resources: [
+          targetData.tableArn,
+          `arn:aws:dynamodb:${region}:${accountId}:table/${targetData.tableName}/backup/*`
+        ]
+      });
+      iamPolicies.push({
+        statement,
+        description: 'DynamoDB backup write access permissions',
+        complianceRequirement: 'Data protection and recovery'
+      });
+    }
+
+    // Set backup environment variables
+    environmentVariables['DYNAMODB_TABLE_NAME'] = targetData.tableName;
+    environmentVariables['DYNAMODB_TABLE_ARN'] = targetData.tableArn;
+    if (targetData.backupPlanArn) {
+      environmentVariables['DYNAMODB_BACKUP_PLAN_ARN'] = targetData.backupPlanArn;
+    }
+    if (arnParts?.[1]) {
+      environmentVariables['DYNAMODB_REGION'] = arnParts[1];
+    }
+
+    return {
+      environmentVariables,
+      iamPolicies,
+      securityGroupRules: []
+    };
+  }
+
+  /**
    * Resolve index target from capability data
    * Handles both array of indexes and single index object
    */
@@ -561,6 +664,18 @@ export class DynamoDbBinderStrategy extends UnifiedBinderStrategyBase {
       environmentVariables['DYNAMODB_BACKUP_RETENTION_DAYS'] = retention;
     }
 
+    // PITR enablement check: Verify point-in-time recovery is enabled when specification is present
+    if (targetData.pointInTimeRecoverySpecification) {
+      const pitrEnabled = targetData.pointInTimeRecoverySpecification.pointInTimeRecoveryEnabled === true;
+      if (!pitrEnabled) {
+        // Log warning but don't fail - this is a compliance recommendation
+        // The compliance evaluator will catch this via compliance rules
+        environmentVariables['DYNAMODB_PITR_WARNING'] = 'Point-in-time recovery specification present but not enabled';
+      }
+      // Ensure PITR environment variable reflects actual state
+      environmentVariables['DYNAMODB_PITR_ENABLED'] = pitrEnabled ? 'true' : 'false';
+    }
+
     // Configure global tables for high availability
     if (targetData.globalTableVersion) {
       environmentVariables['DYNAMODB_GLOBAL_TABLE_VERSION'] = targetData.globalTableVersion;
@@ -581,6 +696,34 @@ export class DynamoDbBinderStrategy extends UnifiedBinderStrategyBase {
         description: 'DynamoDB global table permissions',
         complianceRequirement: 'High availability and disaster recovery'
       });
+    }
+
+    // Add contributor identity permissions for multi-account replication
+    // This is needed for DynamoDB global tables with cross-account replication via AWS Resource Access Manager (RAM)
+    if (targetData.contributorInsightsEnabled || context.directive.options?.enableContributorInsights === true) {
+      const contributorStatement = new PolicyStatement({
+        effect: Effect.ALLOW,
+        actions: [
+          'dynamodb:DescribeContributorInsights',
+          'dynamodb:ListContributorInsights'
+        ],
+        resources: [targetData.tableArn]
+      });
+      iamPolicies.push({
+        statement: contributorStatement,
+        description: 'DynamoDB contributor insights permissions for multi-account replication',
+        complianceRequirement: 'Cross-account resource access'
+      });
+
+      environmentVariables['DYNAMODB_CONTRIBUTOR_INSIGHTS_ENABLED'] = 'true';
+    }
+
+    // If contributor identities are explicitly provided, grant additional permissions
+    if (context.directive.options?.contributorIdentities && Array.isArray(context.directive.options.contributorIdentities)) {
+      // For RAM-based resource sharing, contributor identities need describe permissions
+      // Note: Actual RAM permissions are managed at the resource share level, not IAM
+      // This documents the intent for compliance auditing
+      environmentVariables['DYNAMODB_CONTRIBUTOR_IDENTITIES'] = JSON.stringify(context.directive.options.contributorIdentities);
     }
 
     // Configure VPC endpoints for private access when requested

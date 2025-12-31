@@ -55,7 +55,7 @@ describe('KmsBinderStrategy', () => {
       const context = createBindingContext({
         source,
         target,
-      capability: 'kms:key',
+        capability: 'kms:key',
         access: 'read'
       });
 
@@ -114,7 +114,7 @@ describe('KmsBinderStrategy', () => {
       const context = createBindingContext({
         source,
         target,
-      capability: 'kms:key',
+        capability: 'kms:key',
         access: 'read' // Standard AccessLevel
       });
 

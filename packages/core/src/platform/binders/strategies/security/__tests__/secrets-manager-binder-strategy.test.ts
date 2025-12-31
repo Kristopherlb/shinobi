@@ -97,7 +97,7 @@ describe('SecretsManagerBinderStrategy', () => {
     };
 
     test('SecretsBind__ReadAccess__GrantsGetSecretValueAction', async () => {
-    const strategy = new SecretsManagerBinderStrategy();
+      const strategy = new SecretsManagerBinderStrategy();
       const source = createMockSourceComponent();
       const target = createMockTargetComponent('secret', {
         'secretsmanager:secret': {
