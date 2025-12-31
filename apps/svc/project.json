@@ -33,16 +33,25 @@
     },
     "test": {
       "executor": "@nx/jest:jest",
+      "outputs": [
+        "{options.outputPath}"
+      ],
       "options": {
-        "jestConfig": "apps/svc/jest.config.mjs"
+        "jestConfig": "apps/svc/jest.config.mjs",
+        "passWithNoTests": true,
+        "outputPath": "coverage/apps/shinobi"
       }
     },
     "lint": {
       "executor": "@nx/eslint:lint",
+      "outputs": [
+        "{options.outputPath}"
+      ],
       "options": {
         "lintFilePatterns": [
           "apps/svc/src/**/*.ts"
-        ]
+        ],
+        "format": "stylish"
       }
     }
   }
