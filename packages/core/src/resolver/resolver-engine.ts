@@ -7,17 +7,16 @@ import { Logger as PlatformLogger } from '../platform/logger/src/index.js';
 import { ComponentFactoryBuilder } from '../platform/contracts/components/component-factory.js';
 import { IComponent } from '../platform/contracts/index.js';
 import { ComponentContext as FactoryComponentContext } from '../platform/contracts/components/component-context.js';
-import { ComprehensiveBinderRegistry } from '../platform/binders/registry/comprehensive-binder-registry.js';
-import { ComponentBinding } from '../platform/binders/types.js';
-import { BindingRuntimeContext } from '../platform/binders/types.js';
 import { Component } from '../platform/contracts/component.js';
+import { UnifiedBinderRegistry } from '../platform/binders/registry/unified-binder-registry.js';
+import type { BindingContext, EnhancedBindingResult } from '../platform/contracts/platform-binding-trigger-spec.js';
 import * as cdk from 'aws-cdk-lib';
 import * as path from 'path';
 import * as fs from 'fs';
 
 export interface ResolverEngineDependencies {
   logger: PlatformLogger;
-  binderRegistry?: ComprehensiveBinderRegistry;
+  binderRegistry: UnifiedBinderRegistry;
 }
 
 export interface SynthesisResult {
@@ -28,7 +27,7 @@ export interface SynthesisResult {
     source: string;
     target: string;
     capability: string;
-    result: any;
+    result: EnhancedBindingResult;
   }>;
   patchesApplied: boolean;
   synthesisTime: number;
@@ -39,10 +38,7 @@ export interface SynthesisResult {
  * Orchestrates the complete two-phase process of synthesizing and binding components
  */
 export class ResolverEngine {
-  private binderRegistry: ComprehensiveBinderRegistry;
-
   constructor(private dependencies: ResolverEngineDependencies) {
-    this.binderRegistry = dependencies.binderRegistry || new ComprehensiveBinderRegistry();
   }
 
   /**
@@ -184,16 +180,16 @@ export class ResolverEngine {
 
   /**
    * Phase 3: Binding
-   * Resolves component bindings using Strategy pattern
+   * Resolves component bindings using unified binder strategies
    */
   private async bindComponents(
     components: IComponent[],
     outputsMap: Map<string, any>,
     validatedConfig: any
-  ): Promise<Array<any>> {
+  ): Promise<Array<{ source: string; target: string; capability: string; result: EnhancedBindingResult }>> {
     this.dependencies.logger.debug('Phase 3: Component Binding');
 
-    const bindings: Array<any> = [];
+    const bindings: Array<{ source: string; target: string; capability: string; result: EnhancedBindingResult }> = [];
 
     // AC-RS3.1: Iterate through components that have binds directive
     for (const component of components) {
@@ -210,44 +206,41 @@ export class ResolverEngine {
             throw new Error(`Cannot resolve binding target for directive: ${JSON.stringify(bindDirective)}`);
           }
 
-          // Select correct binder using Platform Binders
-          const platformBindingContext: BindingRuntimeContext = {
-            region: process.env.CDK_DEFAULT_REGION || 'us-east-1',
-            accountId: process.env.CDK_DEFAULT_ACCOUNT || '123456789012',
-            complianceFramework: (validatedConfig.complianceFramework || 'commercial') as 'commercial' | 'fedramp-moderate' | 'fedramp-high',
-            environment: process.env.NODE_ENV || 'dev',
-            tags: {
-              Service: validatedConfig.service,
-              Environment: process.env.NODE_ENV || 'dev'
-            }
-          };
+          // Find strategy that can handle this binding
+          const strategy = this.dependencies.binderRegistry.findStrategyForBinding(
+            component.getType(),
+            bindDirective.capability
+          );
 
-          const platformBinding: ComponentBinding = {
-            from: component.spec.name,
-            to: target.component.spec.name,
-            capability: bindDirective.capability,
-            access: Array.isArray(bindDirective.access) ? bindDirective.access : [bindDirective.access || 'read'],
-            env: bindDirective.env,
-            options: bindDirective.options
-          };
-
-          // Use platform binders instead of core-engine strategies
-          const strategy = this.binderRegistry.get(bindDirective.capability);
           if (!strategy) {
-            throw new Error(`No binding strategy found for capability: ${bindDirective.capability}`);
+            throw new Error(
+              `No unified strategy found for capability '${bindDirective.capability}' ` +
+              `from source type '${component.getType()}'`
+            );
           }
 
-          await strategy.bind(component, target.component, platformBinding, platformBindingContext);
+          // Create binding context for unified strategy
+          const bindingContext: BindingContext = {
+            source: component,
+            target: target.component,
+            directive: bindDirective,
+            environment: process.env.NODE_ENV || 'dev',
+            complianceFramework: validatedConfig.complianceFramework || 'commercial'
+          };
+
+          // Execute binding with mandatory compliance enforcement
+          const result = await strategy.bind(bindingContext);
 
           bindings.push({
             source: component.spec.name,
             target: target.component.spec.name,
             capability: bindDirective.capability,
-            result: { success: true }
+            result: result
           });
 
           this.dependencies.logger.debug(
-            `Bound ${component.spec.name} -> ${target.component.spec.name} (${bindDirective.capability})`
+            `Bound ${component.spec.name} -> ${target.component.spec.name} (${bindDirective.capability}) ` +
+            `[Compliance: ${result.compliance.status}]`
           );
 
         } catch (error) {
