@@ -25,8 +25,5 @@ export { Logger as PlatformLogger } from './platform/logger/src/index.js';
 export type { LoggerOptions, LogEvent, LogContext, LogData, Timer } from './platform/logger/src/index.js';
 export type { LogLevel as PlatformLogLevel } from './platform/logger/src/index.js';
 
-// Export binder registry for MCP server
-export { ComprehensiveBinderRegistry } from './platform/binders/registry/comprehensive-binder-registry.js';
-
 
 // add other re-exports as needed
