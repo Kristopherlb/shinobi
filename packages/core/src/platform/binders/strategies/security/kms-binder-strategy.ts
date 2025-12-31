@@ -366,6 +366,7 @@ export class KmsBinderStrategy extends UnifiedBinderStrategyBase {
     }
 
     // Set grant environment variables with safe handling
+    environmentVariables['KMS_KEY_ARN'] = targetData.keyArn; // Required for grant operations
     if (targetData.grantId) {
       environmentVariables['KMS_GRANT_ID'] = targetData.grantId;
     }

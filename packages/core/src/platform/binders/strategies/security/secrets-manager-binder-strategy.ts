@@ -259,6 +259,9 @@ export class SecretsManagerBinderStrategy extends UnifiedBinderStrategyBase {
       });
     }
 
+    // Set secret ARN (required for rotation operations)
+    environmentVariables['SECRETS_MANAGER_SECRET_ARN'] = targetData.secretArn;
+
     // Configure rotation rules
     if (targetData.rotationRules) {
       const rules = targetData.rotationRules;

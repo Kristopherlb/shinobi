@@ -196,8 +196,8 @@ export class CertificateBinderStrategy extends UnifiedBinderStrategyBase {
     const environmentVariables: Record<string, string> = {};
     const iamPolicies: IamPolicy[] = [];
 
-    // Grant validation permissions
-    if (access.includes('validate')) {
+    // Grant validation permissions (read maps to validate for validation capability)
+    if (access.includes('validate') || access.includes('read')) {
       const statement = new PolicyStatement({
         effect: Effect.ALLOW,
         actions: [
@@ -269,8 +269,8 @@ export class CertificateBinderStrategy extends UnifiedBinderStrategyBase {
     const environmentVariables: Record<string, string> = {};
     const iamPolicies: IamPolicy[] = [];
 
-    // Grant monitoring permissions
-    if (access.includes('monitor')) {
+    // Grant monitoring permissions (read maps to monitor for monitoring capability)
+    if (access.includes('monitor') || access.includes('read')) {
       const statement = new PolicyStatement({
         effect: Effect.ALLOW,
         actions: [

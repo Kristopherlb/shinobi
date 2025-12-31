@@ -305,4 +305,386 @@ describe('SecretsManagerBinderStrategy', () => {
       expect(result.compliance.status).toBe('compliant');
     });
   });
+
+  describe('SecretsBind__WriteAccess__GrantsWriteActions', () => {
+    const metadata = {
+      id: 'TP-binders-secrets-006',
+      level: 'unit' as const,
+      capability: 'Grants write IAM actions for secretsmanager:secret capability with write access',
+      oracle: 'exact' as const,
+      invariants: [
+        'PolicyStatement includes secretsmanager:UpdateSecret',
+        'PolicyStatement includes secretsmanager:PutSecretValue',
+        'PolicyStatement resources match secretArn'
+      ],
+      fixtures: ['MockSourceComponent', 'MockTargetComponent', 'SecretsManagerSecretCapabilityData'],
+      inputs: {
+        shape: 'BindingContext with secretsmanager:secret capability and write access',
+        notes: 'Tests write access level grants'
+      },
+      risks: [],
+      dependencies: [],
+      evidence: [],
+      compliance_refs: ['docs/platform-standards/platform-iam-auditing-standard.md'],
+      ai_generated: true,
+      human_reviewed_by: 'Platform Engineering'
+    };
+
+    test('SecretsBind__WriteAccess__GrantsWriteActions', async () => {
+      const strategy = new SecretsManagerBinderStrategy();
+      const source = createMockSourceComponent();
+      const target = createMockTargetComponent('secret', {
+        'secretsmanager:secret': {
+          secretArn: TEST_CONSTANTS.SECRET_ARN,
+          name: 'test-secret'
+        }
+      });
+
+      const context = createBindingContext({
+        source,
+        target,
+        capability: 'secretsmanager:secret',
+        access: 'write'
+      });
+
+      const result = await executeUnifiedBinding(strategy, context);
+
+      assertEnhancedBindingResult(result);
+
+      // Primary assertion: IAM policies include write actions
+      const writePolicy = result.iamPolicies.find(policy => {
+        const statementJson = policy.statement.toStatementJson();
+        const actions = statementJson.Action as string[];
+        return actions.includes('secretsmanager:UpdateSecret');
+      });
+
+      expect(writePolicy).toBeDefined();
+      const statementJson = writePolicy!.statement.toStatementJson();
+      const actions = statementJson.Action as string[];
+      
+      expect(actions).toContain('secretsmanager:UpdateSecret');
+      expect(actions).toContain('secretsmanager:PutSecretValue');
+      expect(actions).toContain('secretsmanager:CreateSecret');
+      expect(actions).toContain('secretsmanager:DeleteSecret');
+    });
+  });
+
+  describe('SecretsBind__AdminAccess__GrantsAdminActions', () => {
+    const metadata = {
+      id: 'TP-binders-secrets-007',
+      level: 'unit' as const,
+      capability: 'Grants admin IAM actions for secretsmanager:secret capability with admin access',
+      oracle: 'exact' as const,
+      invariants: [
+        'PolicyStatement includes secretsmanager:TagResource',
+        'PolicyStatement includes secretsmanager:PutResourcePolicy',
+        'PolicyStatement resources match secretArn'
+      ],
+      fixtures: ['MockSourceComponent', 'MockTargetComponent', 'SecretsManagerSecretCapabilityData'],
+      inputs: {
+        shape: 'BindingContext with secretsmanager:secret capability and admin access',
+        notes: 'Tests admin access level grants'
+      },
+      risks: [],
+      dependencies: [],
+      evidence: [],
+      compliance_refs: ['docs/platform-standards/platform-iam-auditing-standard.md'],
+      ai_generated: true,
+      human_reviewed_by: 'Platform Engineering'
+    };
+
+    test('SecretsBind__AdminAccess__GrantsAdminActions', async () => {
+      const strategy = new SecretsManagerBinderStrategy();
+      const source = createMockSourceComponent();
+      const target = createMockTargetComponent('secret', {
+        'secretsmanager:secret': {
+          secretArn: TEST_CONSTANTS.SECRET_ARN,
+          name: 'test-secret'
+        }
+      });
+
+      const context = createBindingContext({
+        source,
+        target,
+        capability: 'secretsmanager:secret',
+        access: 'admin'
+      });
+
+      const result = await executeUnifiedBinding(strategy, context);
+
+      assertEnhancedBindingResult(result);
+
+      // Primary assertion: IAM policies include admin actions
+      const adminPolicy = result.iamPolicies.find(policy => {
+        const statementJson = policy.statement.toStatementJson();
+        const actions = statementJson.Action as string[];
+        return actions.includes('secretsmanager:TagResource');
+      });
+
+      expect(adminPolicy).toBeDefined();
+      const statementJson = adminPolicy!.statement.toStatementJson();
+      const actions = statementJson.Action as string[];
+      
+      expect(actions).toContain('secretsmanager:TagResource');
+      expect(actions).toContain('secretsmanager:UntagResource');
+      expect(actions).toContain('secretsmanager:PutResourcePolicy');
+      expect(actions).toContain('secretsmanager:GetResourcePolicy');
+      expect(actions).toContain('secretsmanager:DeleteResourcePolicy');
+      expect(actions).toContain('secretsmanager:RestoreSecret');
+    });
+  });
+
+  describe('SecretsBind__RotationReadAccess__GrantsReadActions', () => {
+    const metadata = {
+      id: 'TP-binders-secrets-008',
+      level: 'unit' as const,
+      capability: 'Grants read IAM actions for secretsmanager:rotation capability with read access',
+      oracle: 'exact' as const,
+      invariants: [
+        'PolicyStatement includes secretsmanager:DescribeSecret',
+        'PolicyStatement includes secretsmanager:GetSecretValue',
+        'PolicyStatement resources match secretArn'
+      ],
+      fixtures: ['MockSourceComponent', 'MockTargetComponent', 'SecretsManagerRotationCapabilityData'],
+      inputs: {
+        shape: 'BindingContext with secretsmanager:rotation capability and read access',
+        notes: 'Tests rotation capability with read access level'
+      },
+      risks: [],
+      dependencies: [],
+      evidence: [],
+      compliance_refs: ['docs/platform-standards/platform-iam-auditing-standard.md'],
+      ai_generated: true,
+      human_reviewed_by: 'Platform Engineering'
+    };
+
+    test('SecretsBind__RotationReadAccess__GrantsReadActions', async () => {
+      const strategy = new SecretsManagerBinderStrategy();
+      const source = createMockSourceComponent();
+      const target = createMockTargetComponent('secret-rotation', {
+        'secretsmanager:rotation': {
+          secretArn: TEST_CONSTANTS.SECRET_ARN,
+          rotationLambdaArn: 'arn:aws:lambda:us-east-1:123456789012:function:rotation-function'
+        }
+      });
+
+      const context = createBindingContext({
+        source,
+        target,
+        capability: 'secretsmanager:rotation',
+        access: 'read'
+      });
+
+      const result = await executeUnifiedBinding(strategy, context);
+
+      assertEnhancedBindingResult(result);
+
+      // Primary assertion: IAM policies include read actions for rotation
+      const readPolicy = result.iamPolicies.find(policy => {
+        const statementJson = policy.statement.toStatementJson();
+        const actions = statementJson.Action as string[];
+        return actions.includes('secretsmanager:DescribeSecret');
+      });
+
+      expect(readPolicy).toBeDefined();
+      const statementJson = readPolicy!.statement.toStatementJson();
+      const actions = statementJson.Action as string[];
+      
+      expect(actions).toContain('secretsmanager:DescribeSecret');
+      expect(actions).toContain('secretsmanager:GetSecretValue');
+      
+      const resources = Array.isArray(statementJson.Resource) 
+        ? statementJson.Resource 
+        : [statementJson.Resource];
+      expect(resources).toContain(TEST_CONSTANTS.SECRET_ARN);
+    });
+  });
+
+  describe('SecretsBind__RotationWithDuration__SetsRotationDurationEnvVar', () => {
+    const metadata = {
+      id: 'TP-binders-secrets-009',
+      level: 'unit' as const,
+      capability: 'Sets SECRETS_MANAGER_ROTATION_DURATION environment variable when rotationRules.duration is provided',
+      oracle: 'exact' as const,
+      invariants: [
+        'Environment variable SECRETS_MANAGER_ROTATION_DURATION is set',
+        'Environment variable value matches rotationRules.duration'
+      ],
+      fixtures: ['MockSourceComponent', 'MockTargetComponent', 'SecretsManagerRotationCapabilityData'],
+      inputs: {
+        shape: 'BindingContext with secretsmanager:rotation capability and rotationRules.duration',
+        notes: 'Tests rotationRules.duration handling'
+      },
+      risks: [],
+      dependencies: [],
+      evidence: [],
+      compliance_refs: ['docs/platform-standards/platform-iam-auditing-standard.md'],
+      ai_generated: true,
+      human_reviewed_by: 'Platform Engineering'
+    };
+
+    test('SecretsBind__RotationWithDuration__SetsRotationDurationEnvVar', async () => {
+      const strategy = new SecretsManagerBinderStrategy();
+      const source = createMockSourceComponent();
+      const target = createMockTargetComponent('secret-rotation', {
+        'secretsmanager:rotation': {
+          secretArn: TEST_CONSTANTS.SECRET_ARN,
+          rotationLambdaArn: 'arn:aws:lambda:us-east-1:123456789012:function:rotation-function',
+          rotationRules: {
+            automaticallyAfterDays: 30,
+            duration: 'P7D'
+          }
+        }
+      });
+
+      const context = createBindingContext({
+        source,
+        target,
+        capability: 'secretsmanager:rotation',
+        access: 'write'
+      });
+
+      const result = await executeUnifiedBinding(strategy, context);
+
+      assertEnhancedBindingResult(result);
+
+      // Primary assertion: Rotation duration environment variable is set
+      expect(result.environmentVariables.SECRETS_MANAGER_ROTATION_DURATION).toBe('P7D');
+      expect(result.environmentVariables.SECRETS_MANAGER_ROTATION_ENABLED).toBe('true');
+      expect(result.environmentVariables.SECRETS_MANAGER_ROTATION_DAYS).toBe('30');
+    });
+  });
+
+  describe('SecretsBind__RotationWithSchedule__SetsRotationScheduleEnvVar', () => {
+    const metadata = {
+      id: 'TP-binders-secrets-010',
+      level: 'unit' as const,
+      capability: 'Sets SECRETS_MANAGER_ROTATION_SCHEDULE environment variable when rotationSchedule is provided',
+      oracle: 'exact' as const,
+      invariants: [
+        'Environment variable SECRETS_MANAGER_ROTATION_SCHEDULE is set',
+        'Environment variable value matches rotationSchedule'
+      ],
+      fixtures: ['MockSourceComponent', 'MockTargetComponent', 'SecretsManagerRotationCapabilityData'],
+      inputs: {
+        shape: 'BindingContext with secretsmanager:rotation capability and rotationSchedule',
+        notes: 'Tests rotationSchedule handling'
+      },
+      risks: [],
+      dependencies: [],
+      evidence: [],
+      compliance_refs: ['docs/platform-standards/platform-iam-auditing-standard.md'],
+      ai_generated: true,
+      human_reviewed_by: 'Platform Engineering'
+    };
+
+    test('SecretsBind__RotationWithSchedule__SetsRotationScheduleEnvVar', async () => {
+      const strategy = new SecretsManagerBinderStrategy();
+      const source = createMockSourceComponent();
+      const target = createMockTargetComponent('secret-rotation', {
+        'secretsmanager:rotation': {
+          secretArn: TEST_CONSTANTS.SECRET_ARN,
+          rotationLambdaArn: 'arn:aws:lambda:us-east-1:123456789012:function:rotation-function',
+          rotationSchedule: 'rate(30 days)'
+        }
+      });
+
+      const context = createBindingContext({
+        source,
+        target,
+        capability: 'secretsmanager:rotation',
+        access: 'write'
+      });
+
+      const result = await executeUnifiedBinding(strategy, context);
+
+      assertEnhancedBindingResult(result);
+
+      // Primary assertion: Rotation schedule environment variable is set
+      expect(result.environmentVariables.SECRETS_MANAGER_ROTATION_SCHEDULE).toBe('rate(30 days)');
+      expect(result.environmentVariables.SECRETS_MANAGER_ROTATION_LAMBDA_ARN).toBe('arn:aws:lambda:us-east-1:123456789012:function:rotation-function');
+    });
+  });
+
+  describe('SecretsBind__SecureAccessEnabled__AppliesSecureConfig', () => {
+    const metadata = {
+      id: 'TP-binders-secrets-011',
+      level: 'unit' as const,
+      capability: 'Applies buildSecureSecretAccessConfig when requireSecureAccess option is true',
+      oracle: 'exact' as const,
+      invariants: [
+        'Environment variable SECRETS_MANAGER_AUDIT_LOGGING_ENABLED is set to true',
+        'IAM policies include KMS permissions when kmsKeyId is provided',
+        'IAM policies include CloudTrail logging permissions'
+      ],
+      fixtures: ['MockSourceComponent', 'MockTargetComponent', 'SecretsManagerSecretCapabilityData'],
+      inputs: {
+        shape: 'BindingContext with secretsmanager:secret capability, requireSecureAccess=true, and kmsKeyId',
+        notes: 'Tests buildSecureSecretAccessConfig method execution'
+      },
+      risks: [],
+      dependencies: [],
+      evidence: [],
+      compliance_refs: ['docs/platform-standards/platform-iam-auditing-standard.md'],
+      ai_generated: true,
+      human_reviewed_by: 'Platform Engineering'
+    };
+
+    test('SecretsBind__SecureAccessEnabled__AppliesSecureConfig', async () => {
+      const strategy = new SecretsManagerBinderStrategy();
+      const source = createMockSourceComponent();
+      const target = createMockTargetComponent('secret', {
+        'secretsmanager:secret': {
+          secretArn: TEST_CONSTANTS.SECRET_ARN,
+          name: 'test-secret',
+          kmsKeyId: 'arn:aws:kms:us-east-1:123456789012:key/12345678-1234-1234-1234-123456789012',
+          resourcePolicy: { Version: '2012-10-17', Statement: [] },
+          autoRotationDays: 90
+        }
+      });
+
+      const context = createBindingContext({
+        source,
+        target,
+        capability: 'secretsmanager:secret',
+        access: 'read',
+        options: {
+          requireSecureAccess: true
+        }
+      });
+
+      const result = await executeUnifiedBinding(strategy, context);
+
+      assertEnhancedBindingResult(result);
+
+      // Primary assertion: Secure access configuration is applied
+      expect(result.environmentVariables.SECRETS_MANAGER_AUDIT_LOGGING_ENABLED).toBe('true');
+      expect(result.environmentVariables.SECRETS_MANAGER_KMS_KEY_ID).toBe('arn:aws:kms:us-east-1:123456789012:key/12345678-1234-1234-1234-123456789012');
+      expect(result.environmentVariables.SECRETS_MANAGER_RESOURCE_POLICY).toBe(JSON.stringify({ Version: '2012-10-17', Statement: [] }));
+      expect(result.environmentVariables.SECRETS_MANAGER_AUTO_ROTATION_REQUIRED).toBe('true');
+      expect(result.environmentVariables.SECRETS_MANAGER_ROTATION_INTERVAL_DAYS).toBe('90');
+
+      // Assert KMS permissions are granted
+      const kmsPolicy = result.iamPolicies.find(policy => {
+        const statementJson = policy.statement.toStatementJson();
+        const actions = statementJson.Action as string[];
+        return actions.includes('kms:Decrypt');
+      });
+      expect(kmsPolicy).toBeDefined();
+
+      // Assert CloudTrail logging permissions are granted
+      const logsPolicy = result.iamPolicies.find(policy => {
+        const statementJson = policy.statement.toStatementJson();
+        const actions = statementJson.Action as string[];
+        return actions.includes('logs:CreateLogGroup');
+      });
+      expect(logsPolicy).toBeDefined();
+      
+      const logsStatementJson = logsPolicy!.statement.toStatementJson();
+      const logsActions = logsStatementJson.Action as string[];
+      expect(logsActions).toContain('logs:CreateLogGroup');
+      expect(logsActions).toContain('logs:CreateLogStream');
+      expect(logsActions).toContain('logs:PutLogEvents');
+    });
+  });
 });

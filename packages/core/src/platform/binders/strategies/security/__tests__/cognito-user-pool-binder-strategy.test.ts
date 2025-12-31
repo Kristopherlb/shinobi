@@ -399,4 +399,180 @@ describe('CognitoUserPoolBinderStrategy', () => {
       expect(adminManagePolicy).toBeDefined();
     });
   });
+
+  describe('CognitoBind__MissingCapability__ThrowsActionableError', () => {
+    const metadata = {
+      id: 'TP-binders-cognito-007',
+      level: 'unit' as const,
+      capability: 'Throws actionable error when target component does not provide the requested capability',
+      oracle: 'exact' as const,
+      invariants: [
+        'Error message includes the capability name',
+        'Error message is actionable (includes context)'
+      ],
+      fixtures: ['MockSourceComponent', 'MockTargetComponent'],
+      inputs: {
+        shape: 'BindingContext with capability that target does not provide',
+        notes: 'Target component missing the requested capability in getCapabilities()'
+      },
+      risks: [],
+      dependencies: [],
+      evidence: [],
+      compliance_refs: [],
+      ai_generated: true,
+      human_reviewed_by: 'Platform Engineering'
+    };
+
+    test('CognitoBind__MissingCapability__ThrowsActionableError', async () => {
+      const strategy = new CognitoUserPoolBinderStrategy();
+      const source = createMockSourceComponent();
+      // Target component without the requested capability
+      const target = createMockTargetComponent('user-pool', {
+        // Empty capabilities - doesn't have 'auth:user-pool'
+      });
+
+      const context = createBindingContext({
+        source,
+        target,
+        capability: 'auth:user-pool',
+        access: 'read'
+      });
+
+      // Primary assertion: Error is thrown with actionable message
+      await expect(executeUnifiedBinding(strategy, context)).rejects.toThrow();
+
+      // Invariant: Error message should include the capability name
+      try {
+        await executeUnifiedBinding(strategy, context);
+        fail('Expected error to be thrown');
+      } catch (error: any) {
+        expect(error.message).toBeDefined();
+        expect(typeof error.message).toBe('string');
+        // Error should mention the capability
+        expect(error.message).toContain('auth:user-pool');
+        expect(error.message.toLowerCase()).toMatch(/does not provide capability/);
+      }
+    });
+  });
+
+  describe('CognitoBind__IdentityProviderWithUserPoolArn__AppliesAccessPolicies', () => {
+    const metadata = {
+      id: 'TP-binders-cognito-008',
+      level: 'unit' as const,
+      capability: 'Applies access policies when userPoolArn is provided in identity provider binding',
+      oracle: 'exact' as const,
+      invariants: [
+        'IAM policies are applied when userPoolArn is present',
+        'Policies use the correct userPoolArn resource',
+        'Access policies match the requested access level'
+      ],
+      fixtures: ['MockSourceComponent', 'MockTargetComponent', 'CognitoIdentityProviderCapabilityData'],
+      inputs: {
+        shape: 'BindingContext with auth:identity-provider capability and userPoolArn',
+        notes: 'Tests that userPoolArn triggers buildAccessPolicies in bindToIdentityProvider'
+      },
+      risks: [],
+      dependencies: [],
+      evidence: [],
+      compliance_refs: ['docs/platform-standards/platform-iam-auditing-standard.md'],
+      ai_generated: true,
+      human_reviewed_by: 'Platform Engineering'
+    };
+
+    test('CognitoBind__IdentityProviderWithUserPoolArn__AppliesAccessPolicies', async () => {
+      const strategy = new CognitoUserPoolBinderStrategy();
+      const source = createMockSourceComponent();
+      const target = createMockTargetComponent('identity-provider', {
+        'auth:identity-provider': {
+          userPoolProviderName: 'SAML',
+          userPoolProviderUrl: 'https://saml.example.com',
+          userPoolArn: TEST_CONSTANTS.USER_POOL_ARN
+        }
+      });
+
+      const context = createBindingContext({
+        source,
+        target,
+        capability: 'auth:identity-provider',
+        access: 'read'
+      });
+
+      const result = await executeUnifiedBinding(strategy, context);
+
+      assertEnhancedBindingResult(result);
+
+      // Primary assertion: IAM policies are applied when userPoolArn is present
+      expect(result.iamPolicies.length).toBeGreaterThan(0);
+      
+      // Verify policies use the correct ARN
+      const policy = result.iamPolicies[0];
+      const statementJson = policy.statement.toStatementJson();
+      const resources = Array.isArray(statementJson.Resource) 
+        ? statementJson.Resource 
+        : [statementJson.Resource];
+      expect(resources).toContain(TEST_CONSTANTS.USER_POOL_ARN);
+    });
+  });
+
+  describe('CognitoBind__IdentityProviderWithEnvOverrides__AppliesCustomEnvVars', () => {
+    const metadata = {
+      id: 'TP-binders-cognito-009',
+      level: 'unit' as const,
+      capability: 'Applies custom environment variable overrides from directive.env in identity provider binding',
+      oracle: 'exact' as const,
+      invariants: [
+        'Custom environment variables from directive.env are applied',
+        'Standard environment variables are still present',
+        'Custom variables override standard variables if they conflict'
+      ],
+      fixtures: ['MockSourceComponent', 'MockTargetComponent', 'CognitoIdentityProviderCapabilityData'],
+      inputs: {
+        shape: 'BindingContext with auth:identity-provider capability and directive.env overrides',
+        notes: 'Tests context.directive.env handling in bindToIdentityProvider'
+      },
+      risks: [],
+      dependencies: [],
+      evidence: [],
+      compliance_refs: [],
+      ai_generated: true,
+      human_reviewed_by: 'Platform Engineering'
+    };
+
+    test('CognitoBind__IdentityProviderWithEnvOverrides__AppliesCustomEnvVars', async () => {
+      const strategy = new CognitoUserPoolBinderStrategy();
+      const source = createMockSourceComponent();
+      const target = createMockTargetComponent('identity-provider', {
+        'auth:identity-provider': {
+          userPoolProviderName: 'Google',
+          userPoolProviderUrl: 'https://accounts.google.com'
+        }
+      });
+
+      const context = createBindingContext({
+        source,
+        target,
+        capability: 'auth:identity-provider',
+        access: 'read',
+        env: {
+          'CUSTOM_IDP_CONFIG': 'custom-value',
+          'ANOTHER_CUSTOM_VAR': 'another-value',
+          'COGNITO_IDP_NAME': 'OverriddenName' // Should override standard var
+        }
+      });
+
+      const result = await executeUnifiedBinding(strategy, context);
+
+      assertEnhancedBindingResult(result);
+
+      // Primary assertion: Custom environment variables are applied
+      expect(result.environmentVariables.CUSTOM_IDP_CONFIG).toBe('custom-value');
+      expect(result.environmentVariables.ANOTHER_CUSTOM_VAR).toBe('another-value');
+      
+      // Custom env vars override standard vars
+      expect(result.environmentVariables.COGNITO_IDP_NAME).toBe('OverriddenName');
+      
+      // Standard vars are still present (except overridden ones)
+      expect(result.environmentVariables.COGNITO_IDP_URL).toBe('https://accounts.google.com');
+    });
+  });
 });
