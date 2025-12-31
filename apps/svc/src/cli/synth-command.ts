@@ -176,9 +176,8 @@ export class SynthCommand {
         components: synthResult.components
       };
 
-      if (options.json) {
-        console.log(JSON.stringify(data, null, 2));
-      } else {
+      // Human-readable output (skip if JSON mode - JSON output handled by command factory)
+      if (!options.json) {
         logger.success(`Synthesis completed for ${manifest.service} (${environment})`);
         logger.info(`Output directory: ${synthResult.outputDir}`);
         if (stacks.length === 0) {

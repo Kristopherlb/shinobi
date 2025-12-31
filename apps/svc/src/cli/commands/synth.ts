@@ -19,7 +19,7 @@ export function createSynthCommand(): Command {
 
   command
     .description('Synthesize a service manifest into AWS CDK templates')
-    .option('--file, -f <file>', 'Path to service manifest', 'service.yml')
+    .option('-f, --file <manifest>', 'Path to service manifest file', 'service.yml')
     .option('--env <environment>', 'Target environment (defaults to manifest value or dev)')
     .option('--region <region>', 'AWS region (defaults to CDK_DEFAULT_REGION or us-east-1)')
     .option('--account <account>', 'AWS account ID (defaults to CDK_DEFAULT_ACCOUNT, required if not set)')
@@ -45,7 +45,18 @@ export function createSynthCommand(): Command {
         includeExperimental: options.includeExperimental
       });
 
-      if (!result.success) {
+      if (result.success) {
+        if (options.json && result.data) {
+          // JSON output to stdout (appropriate for structured output)
+          console.log(JSON.stringify(result.data, null, 2));
+        }
+        // Always exit on success to ensure reliable process termination
+        process.exit(result.exitCode);
+      } else {
+        if (options.json && result.error) {
+          // JSON error output to stderr (appropriate for structured output)
+          console.error(JSON.stringify({ error: result.error }, null, 2));
+        }
         process.exit(result.exitCode);
       }
     });
