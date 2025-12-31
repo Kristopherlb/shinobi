@@ -3,8 +3,7 @@
  */
 
 import { EksBinderStrategy } from '../eks-binder-strategy.js';
-import type { BindingContext } from '../../../binding-context.js';
-import type { ComponentBinding } from '../../../component-binding.js';
+import type { ComponentBinding, BindingRuntimeContext } from '../../../types.js';
 
 class MockComponent {
   public env: Record<string, string> = {};
@@ -40,7 +39,7 @@ describe('EksBinderStrategy config-driven behavior', () => {
     const binding: ComponentBinding = {
       from: 'svc', to: 'eks1', capability: 'eks:cluster', access: ['read', 'write'], env: {}
     } as any;
-    const context: BindingContext = { region: 'us-east-1', accountId: '123456789012', environment: 'test' } as any;
+    const context: BindingRuntimeContext = { region: 'us-east-1', accountId: '123456789012', environment: 'test' } as any;
 
     await strategy.bind(source as any, target as any, binding, context);
 

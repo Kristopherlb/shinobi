@@ -3,8 +3,8 @@
  * Defines the contract for all binder strategies
  */
 
-import { BindingContext } from '../binding-context.js';
-import { ComponentBinding } from '../component-binding.js';
+import { ComponentBinding, BindingRuntimeContext } from '../types.js';
+import { ComponentBinding, BindingRuntimeContext } from '../../types.js';
 
 export interface IBinderStrategy {
   readonly supportedCapabilities: string[];
@@ -13,6 +13,6 @@ export interface IBinderStrategy {
     sourceComponent: any,
     targetComponent: any,
     binding: ComponentBinding,
-    context: BindingContext
+    context: BindingRuntimeContext
   ): Promise<void>;
 }

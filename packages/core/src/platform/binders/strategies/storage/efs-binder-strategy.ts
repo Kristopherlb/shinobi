@@ -4,8 +4,7 @@
  */
 
 import { IBinderStrategy } from '../binder-strategy.js';
-import { BindingContext } from '../../binding-context.js';
-import { ComponentBinding } from '../../component-binding.js';
+import { ComponentBinding, BindingRuntimeContext } from '../../types.js';
 // Compliance framework branching removed; use binding.options/config instead
 
 export class EfsBinderStrategy implements IBinderStrategy {
@@ -15,7 +14,7 @@ export class EfsBinderStrategy implements IBinderStrategy {
     sourceComponent: any,
     targetComponent: any,
     binding: ComponentBinding,
-    context: BindingContext
+    context: BindingRuntimeContext
   ): Promise<void> {
     const { capability, access } = binding;
 
@@ -38,7 +37,7 @@ export class EfsBinderStrategy implements IBinderStrategy {
     sourceComponent: any,
     targetComponent: any,
     binding: ComponentBinding,
-    context: BindingContext
+    context: BindingRuntimeContext
   ): Promise<void> {
     const { access } = binding;
 
@@ -89,7 +88,7 @@ export class EfsBinderStrategy implements IBinderStrategy {
     sourceComponent: any,
     targetComponent: any,
     binding: ComponentBinding,
-    context: BindingContext
+    context: BindingRuntimeContext
   ): Promise<void> {
     const { access } = binding;
 
@@ -132,7 +131,7 @@ export class EfsBinderStrategy implements IBinderStrategy {
     sourceComponent: any,
     targetComponent: any,
     binding: ComponentBinding,
-    context: BindingContext
+    context: BindingRuntimeContext
   ): Promise<void> {
     const { access } = binding;
 
@@ -180,7 +179,7 @@ export class EfsBinderStrategy implements IBinderStrategy {
   private async configureSecureFileSystemAccess(
     sourceComponent: any,
     targetComponent: any,
-    context: BindingContext
+    context: BindingRuntimeContext
   ): Promise<void> {
     // Configure encryption at rest
     if (targetComponent.encrypted) {

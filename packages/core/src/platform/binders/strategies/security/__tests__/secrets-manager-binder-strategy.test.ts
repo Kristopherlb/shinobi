@@ -3,8 +3,7 @@
  */
 
 import { SecretsManagerBinderStrategy } from '../secrets-manager-binder-strategy.js';
-import type { BindingContext } from '../../../binding-context.js';
-import type { ComponentBinding } from '../../../component-binding.js';
+import type { ComponentBinding, BindingRuntimeContext } from '../../../types.js';
 
 class MockComponent {
   public env: Record<string, string> = {};
@@ -41,7 +40,7 @@ describe('SecretsManagerBinderStrategy config-driven behavior', () => {
       from: 'api', to: 'secret', capability: 'secretsmanager:secret', access: ['read', 'write'], env: {},
       options: { requireSecureAccess: true }
     } as any;
-    const context: BindingContext = { region: 'us-east-1', accountId: '123456789012', environment: 'test' } as any;
+    const context: BindingRuntimeContext = { region: 'us-east-1', accountId: '123456789012', environment: 'test' } as any;
 
     await strategy.bind(source as any, target as any, binding, context);
 
@@ -78,7 +77,7 @@ describe('SecretsManagerBinderStrategy config-driven behavior', () => {
       from: 'api', to: 'secret', capability: 'secretsmanager:secret', access: ['read'], env: {},
       options: { requireSecureAccess: true }
     } as any;
-    const context: BindingContext = { region: 'us-east-1', accountId: '123456789012', environment: 'test' } as any;
+    const context: BindingRuntimeContext = { region: 'us-east-1', accountId: '123456789012', environment: 'test' } as any;
 
     await strategy.bind(source as any, target as any, binding, context);
 

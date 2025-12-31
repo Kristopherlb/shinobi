@@ -1,6 +1,5 @@
 import { IBinderStrategy } from '../binder-strategy.js';
-import { BindingContext } from '../../binding-context.js';
-import { ComponentBinding } from '../../component-binding.js';
+import { ComponentBinding, BindingRuntimeContext } from '../../types.js';
 
 interface CognitoClientSummary {
   clientId: string;
@@ -23,7 +22,7 @@ export class CognitoUserPoolBinderStrategy implements IBinderStrategy {
     sourceComponent: any,
     targetComponent: CognitoUserPoolCapability,
     binding: ComponentBinding,
-    _context: BindingContext
+    _context: BindingRuntimeContext
   ): Promise<void> {
     if (!targetComponent) {
       throw new Error('Target component payload is required for Cognito bindings');

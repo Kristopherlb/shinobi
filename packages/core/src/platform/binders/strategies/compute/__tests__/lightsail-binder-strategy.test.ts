@@ -3,8 +3,7 @@
  */
 
 import { LightsailBinderStrategy } from '../lightsail-binder-strategy.js';
-import type { BindingContext } from '../../../binding-context.js';
-import type { ComponentBinding } from '../../../component-binding.js';
+import type { ComponentBinding, BindingRuntimeContext } from '../../../types.js';
 
 class MockComponent {
   public env: Record<string, string> = {};
@@ -46,7 +45,7 @@ describe('LightsailBinderStrategy config-driven behavior', () => {
       from: 'svc', to: 'db1', capability: 'lightsail:database', access: ['read', 'write'], env: {},
       options: { requireSecureAccess: true, backupRetentionDays: 14 }
     } as any;
-    const context: BindingContext = { region: 'us-east-1', accountId: '123456789012', environment: 'test' } as any;
+    const context: BindingRuntimeContext = { region: 'us-east-1', accountId: '123456789012', environment: 'test' } as any;
 
     await strategy.bind(source as any, target as any, binding, context);
 

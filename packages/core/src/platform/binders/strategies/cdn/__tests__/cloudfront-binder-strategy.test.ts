@@ -3,8 +3,7 @@
  */
 
 import { CloudFrontBinderStrategy } from '../cloudfront-binder-strategy.js';
-import type { BindingContext } from '../../../binding-context.js';
-import type { ComponentBinding } from '../../../component-binding.js';
+import type { ComponentBinding, BindingRuntimeContext } from '../../../types.js';
 
 class MockComponent {
   public env: Record<string, string> = {};
@@ -43,7 +42,7 @@ describe('CloudFrontBinderStrategy config-driven behavior', () => {
       from: 'app', to: 'cdn', capability: 'cloudfront:distribution', access: ['read', 'write'], env: {},
       options: { requireSecureAccess: true, edgeLocationsUsOnly: true }
     } as any;
-    const context: BindingContext = { region: 'us-east-1', accountId: '123456789012', environment: 'test' } as any;
+    const context: BindingRuntimeContext = { region: 'us-east-1', accountId: '123456789012', environment: 'test' } as any;
 
     await strategy.bind(source as any, target as any, binding, context);
 

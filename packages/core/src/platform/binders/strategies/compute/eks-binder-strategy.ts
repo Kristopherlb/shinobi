@@ -4,8 +4,7 @@
  */
 
 import { IBinderStrategy } from '../binder-strategy.js';
-import { BindingContext } from '../../binding-context.js';
-import { ComponentBinding } from '../../component-binding.js';
+import { ComponentBinding, BindingRuntimeContext } from '../../types.js';
 // Compliance framework branching removed; use binding.options/config instead
 
 export class EksBinderStrategy implements IBinderStrategy {
@@ -15,7 +14,7 @@ export class EksBinderStrategy implements IBinderStrategy {
     sourceComponent: any,
     targetComponent: any,
     binding: ComponentBinding,
-    context: BindingContext
+    context: BindingRuntimeContext
   ): Promise<void> {
     const { capability, access } = binding;
 
@@ -41,7 +40,7 @@ export class EksBinderStrategy implements IBinderStrategy {
     sourceComponent: any,
     targetComponent: any,
     binding: ComponentBinding,
-    context: BindingContext
+    context: BindingRuntimeContext
   ): Promise<void> {
     const { access } = binding;
 
@@ -100,7 +99,7 @@ export class EksBinderStrategy implements IBinderStrategy {
     sourceComponent: any,
     targetComponent: any,
     binding: ComponentBinding,
-    context: BindingContext
+    context: BindingRuntimeContext
   ): Promise<void> {
     const { access } = binding;
 
@@ -138,7 +137,7 @@ export class EksBinderStrategy implements IBinderStrategy {
     sourceComponent: any,
     targetComponent: any,
     binding: ComponentBinding,
-    context: BindingContext
+    context: BindingRuntimeContext
   ): Promise<void> {
     const { access } = binding;
 
@@ -166,7 +165,7 @@ export class EksBinderStrategy implements IBinderStrategy {
     sourceComponent: any,
     targetComponent: any,
     binding: ComponentBinding,
-    context: BindingContext
+    context: BindingRuntimeContext
   ): Promise<void> {
     const { access } = binding;
 
@@ -194,7 +193,7 @@ export class EksBinderStrategy implements IBinderStrategy {
   private async configureServiceMeshAccess(
     sourceComponent: any,
     targetComponent: any,
-    context: BindingContext
+    context: BindingRuntimeContext
   ): Promise<void> {
     // Configure AWS App Mesh for secure service-to-service communication
     sourceComponent.addEnvironment('APPMESH_VIRTUAL_NODE_NAME', targetComponent.virtualNodeName);

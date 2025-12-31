@@ -8,8 +8,8 @@ import { ComponentFactoryBuilder } from '../platform/contracts/components/compon
 import { IComponent } from '../platform/contracts/index.js';
 import { ComponentContext as FactoryComponentContext } from '../platform/contracts/components/component-context.js';
 import { ComprehensiveBinderRegistry } from '../platform/binders/registry/comprehensive-binder-registry.js';
-import { ComponentBinding } from '../platform/binders/component-binding.js';
-import { BindingContext as PlatformBindingContext } from '../platform/binders/binding-context.js';
+import { ComponentBinding } from '../platform/binders/types.js';
+import { BindingRuntimeContext } from '../platform/binders/types.js';
 import { Component } from '../platform/contracts/component.js';
 import * as cdk from 'aws-cdk-lib';
 import * as path from 'path';
@@ -211,7 +211,7 @@ export class ResolverEngine {
           }
 
           // Select correct binder using Platform Binders
-          const platformBindingContext: PlatformBindingContext = {
+          const platformBindingContext: BindingRuntimeContext = {
             region: process.env.CDK_DEFAULT_REGION || 'us-east-1',
             accountId: process.env.CDK_DEFAULT_ACCOUNT || '123456789012',
             complianceFramework: (validatedConfig.complianceFramework || 'commercial') as 'commercial' | 'fedramp-moderate' | 'fedramp-high',

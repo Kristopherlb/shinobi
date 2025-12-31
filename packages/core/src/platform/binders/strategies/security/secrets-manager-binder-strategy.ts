@@ -4,8 +4,7 @@
  */
 
 import { IBinderStrategy } from '../binder-strategy.js';
-import { BindingContext } from '../../binding-context.js';
-import { ComponentBinding } from '../../component-binding.js';
+import { ComponentBinding, BindingRuntimeContext } from '../../types.js';
 // Compliance framework branching removed; use binding.options/config instead
 
 export class SecretsManagerBinderStrategy implements IBinderStrategy {
@@ -15,7 +14,7 @@ export class SecretsManagerBinderStrategy implements IBinderStrategy {
     sourceComponent: any,
     targetComponent: any,
     binding: ComponentBinding,
-    context: BindingContext
+    context: BindingRuntimeContext
   ): Promise<void> {
     const { capability, access } = binding;
 
@@ -35,7 +34,7 @@ export class SecretsManagerBinderStrategy implements IBinderStrategy {
     sourceComponent: any,
     targetComponent: any,
     binding: ComponentBinding,
-    context: BindingContext
+    context: BindingRuntimeContext
   ): Promise<void> {
     const { access } = binding;
 
@@ -104,7 +103,7 @@ export class SecretsManagerBinderStrategy implements IBinderStrategy {
     sourceComponent: any,
     targetComponent: any,
     binding: ComponentBinding,
-    context: BindingContext
+    context: BindingRuntimeContext
   ): Promise<void> {
     const { access } = binding;
 
@@ -162,7 +161,7 @@ export class SecretsManagerBinderStrategy implements IBinderStrategy {
   private async configureSecureSecretAccess(
     sourceComponent: any,
     targetComponent: any,
-    context: BindingContext
+    context: BindingRuntimeContext
   ): Promise<void> {
     // Configure KMS encryption
     if (targetComponent.kmsKeyId) {

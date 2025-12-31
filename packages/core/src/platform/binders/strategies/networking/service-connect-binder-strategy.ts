@@ -6,8 +6,7 @@
 
 import * as ec2 from 'aws-cdk-lib/aws-ec2';
 import { IBinderStrategy } from '../binder-strategy.js';
-import { BindingContext } from '../../binding-context.js';
-import { ComponentBinding } from '../../component-binding.js';
+import { ComponentBinding, BindingRuntimeContext } from '../../types.js';
 
 export class ServiceConnectBinderStrategy implements IBinderStrategy {
   readonly supportedCapabilities = ['service:connect'];
@@ -16,7 +15,7 @@ export class ServiceConnectBinderStrategy implements IBinderStrategy {
     sourceComponent: any,
     targetComponent: any,
     binding: ComponentBinding,
-    _context: BindingContext
+    _context: BindingRuntimeContext
   ): Promise<void> {
     if (!targetComponent?.getCapabilities || typeof targetComponent.getCapabilities !== 'function') {
       throw new Error('Target component does not expose capabilities for service:connect binding');

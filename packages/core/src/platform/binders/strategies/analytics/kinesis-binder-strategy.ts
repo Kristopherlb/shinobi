@@ -4,8 +4,7 @@
  */
 
 import { IBinderStrategy } from '../binder-strategy.js';
-import { BindingContext } from '../../binding-context.js';
-import { ComponentBinding } from '../../component-binding.js';
+import { ComponentBinding, BindingRuntimeContext } from '../../types.js';
 
 export class KinesisBinderStrategy implements IBinderStrategy {
   readonly supportedCapabilities = ['kinesis:stream', 'kinesis:analytics', 'kinesis:firehose'];
@@ -14,7 +13,7 @@ export class KinesisBinderStrategy implements IBinderStrategy {
     sourceComponent: any,
     targetComponent: any,
     binding: ComponentBinding,
-    context: BindingContext
+    context: BindingRuntimeContext
   ): Promise<void> {
     const { capability, access } = binding;
 
@@ -37,7 +36,7 @@ export class KinesisBinderStrategy implements IBinderStrategy {
     sourceComponent: any,
     targetComponent: any,
     binding: ComponentBinding,
-    context: BindingContext
+    context: BindingRuntimeContext
   ): Promise<void> {
     const { access } = binding;
 
@@ -123,7 +122,7 @@ export class KinesisBinderStrategy implements IBinderStrategy {
     sourceComponent: any,
     targetComponent: any,
     binding: ComponentBinding,
-    context: BindingContext
+    context: BindingRuntimeContext
   ): Promise<void> {
     const { access } = binding;
 
@@ -187,7 +186,7 @@ export class KinesisBinderStrategy implements IBinderStrategy {
     sourceComponent: any,
     targetComponent: any,
     binding: ComponentBinding,
-    context: BindingContext
+    context: BindingRuntimeContext
   ): Promise<void> {
     const { access } = binding;
 
@@ -269,7 +268,7 @@ export class KinesisBinderStrategy implements IBinderStrategy {
     sourceComponent: any,
     targetComponent: any,
     binding: ComponentBinding,
-    context: BindingContext
+    context: BindingRuntimeContext
   ): Promise<void> {
     // Configure enhanced monitoring
     sourceComponent.addEnvironment('KINESIS_STREAM_MONITORING_ENABLED', 'true');
@@ -298,7 +297,7 @@ export class KinesisBinderStrategy implements IBinderStrategy {
   private async configureSecureFirehoseAccess(
     sourceComponent: any,
     targetComponent: any,
-    context: BindingContext
+    context: BindingRuntimeContext
   ): Promise<void> {
     // Configure server-side encryption for S3 destinations
     if (targetComponent.s3DestinationConfiguration?.encryptionConfiguration) {

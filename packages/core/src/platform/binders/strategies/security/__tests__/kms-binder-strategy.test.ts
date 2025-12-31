@@ -3,8 +3,7 @@
  */
 
 import { KmsBinderStrategy } from '../kms-binder-strategy.js';
-import type { BindingContext } from '../../../binding-context.js';
-import type { ComponentBinding } from '../../../component-binding.js';
+import type { ComponentBinding, BindingRuntimeContext } from '../../../types.js';
 
 class MockComponent {
   public env: Record<string, string> = {};
@@ -54,7 +53,7 @@ describe('KmsBinderStrategy config-driven behavior', () => {
       options: { requireSecureAccess: true }
     } as any;
 
-    const context: BindingContext = {
+    const context: BindingRuntimeContext = {
       region: 'us-east-1',
       accountId: '123456789012',
       environment: 'test'
@@ -107,7 +106,7 @@ describe('KmsBinderStrategy config-driven behavior', () => {
       options: { requireSecureAccess: true }
     } as any;
 
-    const context: BindingContext = {
+    const context: BindingRuntimeContext = {
       region: 'us-east-1',
       accountId: '123456789012',
       environment: 'test'

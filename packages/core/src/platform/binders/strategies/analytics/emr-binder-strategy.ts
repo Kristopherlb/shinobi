@@ -4,8 +4,7 @@
  */
 
 import { IBinderStrategy } from '../binder-strategy.js';
-import { BindingContext } from '../../binding-context.js';
-import { ComponentBinding } from '../../component-binding.js';
+import { ComponentBinding, BindingRuntimeContext } from '../../types.js';
 
 export class EmrBinderStrategy implements IBinderStrategy {
   readonly supportedCapabilities = ['emr:cluster', 'emr:step', 'emr:notebook'];
@@ -14,7 +13,7 @@ export class EmrBinderStrategy implements IBinderStrategy {
     sourceComponent: any,
     targetComponent: any,
     binding: ComponentBinding,
-    context: BindingContext
+    context: BindingRuntimeContext
   ): Promise<void> {
     const { capability, access } = binding;
 
@@ -37,7 +36,7 @@ export class EmrBinderStrategy implements IBinderStrategy {
     sourceComponent: any,
     targetComponent: any,
     binding: ComponentBinding,
-    context: BindingContext
+    context: BindingRuntimeContext
   ): Promise<void> {
     const { access } = binding;
 
@@ -117,7 +116,7 @@ export class EmrBinderStrategy implements IBinderStrategy {
     sourceComponent: any,
     targetComponent: any,
     binding: ComponentBinding,
-    context: BindingContext
+    context: BindingRuntimeContext
   ): Promise<void> {
     const { access } = binding;
 
@@ -180,7 +179,7 @@ export class EmrBinderStrategy implements IBinderStrategy {
     sourceComponent: any,
     targetComponent: any,
     binding: ComponentBinding,
-    context: BindingContext
+    context: BindingRuntimeContext
   ): Promise<void> {
     const { access } = binding;
 
@@ -242,7 +241,7 @@ export class EmrBinderStrategy implements IBinderStrategy {
     sourceComponent: any,
     targetComponent: any,
     binding: ComponentBinding,
-    context: BindingContext
+    context: BindingRuntimeContext
   ): Promise<void> {
     // Configure encryption at rest
     if (targetComponent.encryptionConfiguration) {

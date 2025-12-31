@@ -3,8 +3,7 @@
  */
 
 import { DynamoDbBinderStrategy } from '../dynamodb-binder-strategy.js';
-import type { BindingContext } from '../../../binding-context.js';
-import type { ComponentBinding } from '../../../component-binding.js';
+import type { ComponentBinding, BindingRuntimeContext } from '../../../types.js';
 
 // Minimal mock component capturing env vars and IAM policies
 class MockComponent {
@@ -59,7 +58,7 @@ describe('DynamoDbBinderStrategy config-driven behavior', () => {
       options: { requireSecureAccess: true, backupRetentionDays: 30, enableVpcEndpoint: true }
     } as any;
 
-    const context: BindingContext = {
+    const context: BindingRuntimeContext = {
       region: 'us-east-1',
       accountId: '123456789012',
       environment: 'test'
@@ -123,7 +122,7 @@ describe('DynamoDbBinderStrategy config-driven behavior', () => {
       options: { requireSecureAccess: false }
     } as any;
 
-    const context: BindingContext = {
+    const context: BindingRuntimeContext = {
       region: 'us-east-1',
       accountId: '123456789012',
       environment: 'test'

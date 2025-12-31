@@ -4,8 +4,7 @@
  */
 
 import { IBinderStrategy } from '../binder-strategy.js';
-import { BindingContext } from '../../binding-context.js';
-import { ComponentBinding } from '../../component-binding.js';
+import { ComponentBinding, BindingRuntimeContext } from '../../types.js';
 // Compliance framework branching removed; use binding.options/config instead
 
 export class LightsailBinderStrategy implements IBinderStrategy {
@@ -15,7 +14,7 @@ export class LightsailBinderStrategy implements IBinderStrategy {
     sourceComponent: any,
     targetComponent: any,
     binding: ComponentBinding,
-    context: BindingContext
+    context: BindingRuntimeContext
   ): Promise<void> {
     const { capability, access } = binding;
 
@@ -41,7 +40,7 @@ export class LightsailBinderStrategy implements IBinderStrategy {
     sourceComponent: any,
     targetComponent: any,
     binding: ComponentBinding,
-    context: BindingContext
+    context: BindingRuntimeContext
   ): Promise<void> {
     const { access } = binding;
 
@@ -109,7 +108,7 @@ export class LightsailBinderStrategy implements IBinderStrategy {
     sourceComponent: any,
     targetComponent: any,
     binding: ComponentBinding,
-    context: BindingContext
+    context: BindingRuntimeContext
   ): Promise<void> {
     const { access } = binding;
 
@@ -172,7 +171,7 @@ export class LightsailBinderStrategy implements IBinderStrategy {
     sourceComponent: any,
     targetComponent: any,
     binding: ComponentBinding,
-    context: BindingContext
+    context: BindingRuntimeContext
   ): Promise<void> {
     const { access } = binding;
 
@@ -228,7 +227,7 @@ export class LightsailBinderStrategy implements IBinderStrategy {
     sourceComponent: any,
     targetComponent: any,
     binding: ComponentBinding,
-    context: BindingContext
+    context: BindingRuntimeContext
   ): Promise<void> {
     const { access } = binding;
 
@@ -292,7 +291,7 @@ export class LightsailBinderStrategy implements IBinderStrategy {
   private async configureSecureInstanceAccess(
     sourceComponent: any,
     targetComponent: any,
-    context: BindingContext
+    context: BindingRuntimeContext
   ): Promise<void> {
     // Configure secure SSH access
     if (targetComponent.sshKeyName) {
@@ -317,7 +316,7 @@ export class LightsailBinderStrategy implements IBinderStrategy {
   private async configureSecureDatabaseAccess(
     sourceComponent: any,
     targetComponent: any,
-    context: BindingContext,
+    context: BindingRuntimeContext,
     binding?: ComponentBinding
   ): Promise<void> {
     // Configure encrypted connections

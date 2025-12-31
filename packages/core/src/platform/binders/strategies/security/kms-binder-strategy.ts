@@ -4,8 +4,7 @@
  */
 
 import { IBinderStrategy } from '../binder-strategy.js';
-import { BindingContext } from '../../binding-context.js';
-import { ComponentBinding } from '../../component-binding.js';
+import { ComponentBinding, BindingRuntimeContext } from '../../types.js';
 // Compliance framework branching removed; use binding.options/config instead
 
 export class KmsBinderStrategy implements IBinderStrategy {
@@ -15,7 +14,7 @@ export class KmsBinderStrategy implements IBinderStrategy {
     sourceComponent: any,
     targetComponent: any,
     binding: ComponentBinding,
-    context: BindingContext
+    context: BindingRuntimeContext
   ): Promise<void> {
     // Validate inputs
     if (!targetComponent) {
@@ -62,7 +61,7 @@ export class KmsBinderStrategy implements IBinderStrategy {
     sourceComponent: any,
     targetComponent: any,
     binding: ComponentBinding,
-    context: BindingContext
+    context: BindingRuntimeContext
   ): Promise<void> {
     // Validate required target component properties
     if (!targetComponent?.keyArn) {
@@ -154,7 +153,7 @@ export class KmsBinderStrategy implements IBinderStrategy {
     sourceComponent: any,
     targetComponent: any,
     binding: ComponentBinding,
-    context: BindingContext
+    context: BindingRuntimeContext
   ): Promise<void> {
     const { access } = binding;
 
@@ -192,7 +191,7 @@ export class KmsBinderStrategy implements IBinderStrategy {
     sourceComponent: any,
     targetComponent: any,
     binding: ComponentBinding,
-    context: BindingContext
+    context: BindingRuntimeContext
   ): Promise<void> {
     // Validate required target component properties
     if (!targetComponent?.keyArn) {
@@ -248,7 +247,7 @@ export class KmsBinderStrategy implements IBinderStrategy {
   private async configureSecureKeyAccess(
     sourceComponent: any,
     targetComponent: any,
-    context: BindingContext
+    context: BindingRuntimeContext
   ): Promise<void> {
     // Configure key policy for access control
     if (targetComponent.keyPolicy) {

@@ -3,8 +3,7 @@
  */
 
 import { EcsFargateBinderStrategy } from '../ecs-fargate-binder-strategy.js';
-import type { BindingContext } from '../../../binding-context.js';
-import type { ComponentBinding } from '../../../component-binding.js';
+import type { ComponentBinding, BindingRuntimeContext } from '../../../types.js';
 
 class MockSecurityGroup {
   public rules: any[] = [];
@@ -47,7 +46,7 @@ describe('EcsFargateBinderStrategy config-driven behavior', () => {
       from: 'api', to: 'cluster', capability: 'ecs:cluster', access: ['read', 'write'], env: {},
       options: { requireSecureNetworking: true, enablePrivateEcsEndpoint: true }
     } as any;
-    const context: BindingContext = { region: 'us-east-1', accountId: '123456789012', environment: 'test' } as any;
+    const context: BindingRuntimeContext = { region: 'us-east-1', accountId: '123456789012', environment: 'test' } as any;
 
     await strategy.bind(source as any, target as any, binding, context);
 
@@ -78,7 +77,7 @@ describe('EcsFargateBinderStrategy config-driven behavior', () => {
       }
     } as any;
 
-    const context: BindingContext = { region: 'us-east-1', accountId: '123456789012' } as any;
+    const context: BindingRuntimeContext = { region: 'us-east-1', accountId: '123456789012' } as any;
     await strategy.bind(source as any, target as any, binding, context);
 
     expect(source.env.OTEL_SERVICE_NAME).toBe('orders-ecs-cluster');

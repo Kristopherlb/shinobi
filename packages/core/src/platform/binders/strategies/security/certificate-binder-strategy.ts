@@ -4,8 +4,7 @@
  */
 
 import { IBinderStrategy } from '../binder-strategy.js';
-import { BindingContext } from '../../binding-context.js';
-import { ComponentBinding } from '../../component-binding.js';
+import { ComponentBinding, BindingRuntimeContext } from '../../types.js';
 
 export class CertificateBinderStrategy implements IBinderStrategy {
   readonly supportedCapabilities = ['certificate:acm', 'certificate:validation', 'certificate:monitoring'];
@@ -14,7 +13,7 @@ export class CertificateBinderStrategy implements IBinderStrategy {
     sourceComponent: any,
     targetComponent: any,
     binding: ComponentBinding,
-    context: BindingContext
+    context: BindingRuntimeContext
   ): Promise<void> {
     // Validate inputs
     if (!targetComponent) {
@@ -61,7 +60,7 @@ export class CertificateBinderStrategy implements IBinderStrategy {
     sourceComponent: any,
     targetComponent: any,
     binding: ComponentBinding,
-    context: BindingContext
+    context: BindingRuntimeContext
   ): Promise<void> {
     const { access } = binding;
 
@@ -131,7 +130,7 @@ export class CertificateBinderStrategy implements IBinderStrategy {
     sourceComponent: any,
     targetComponent: any,
     binding: ComponentBinding,
-    context: BindingContext
+    context: BindingRuntimeContext
   ): Promise<void> {
     const { access } = binding;
 
@@ -180,7 +179,7 @@ export class CertificateBinderStrategy implements IBinderStrategy {
     sourceComponent: any,
     targetComponent: any,
     binding: ComponentBinding,
-    context: BindingContext
+    context: BindingRuntimeContext
   ): Promise<void> {
     const { access } = binding;
 
@@ -229,7 +228,7 @@ export class CertificateBinderStrategy implements IBinderStrategy {
   private async configureSecureCertificateUsage(
     sourceComponent: any,
     targetComponent: any,
-    context: BindingContext
+    context: BindingRuntimeContext
   ): Promise<void> {
     // Add certificate transparency logging configuration
     sourceComponent.addEnvironment('CERTIFICATE_TRANSPARENCY_ENABLED', 'true');
@@ -247,7 +246,7 @@ export class CertificateBinderStrategy implements IBinderStrategy {
   private async configureValidationSettings(
     sourceComponent: any,
     targetComponent: any,
-    context: BindingContext
+    context: BindingRuntimeContext
   ): Promise<void> {
     // Add validation timeout settings
     sourceComponent.addEnvironment('CERTIFICATE_VALIDATION_TIMEOUT', '300');
@@ -264,7 +263,7 @@ export class CertificateBinderStrategy implements IBinderStrategy {
   private async configureMonitoringSettings(
     sourceComponent: any,
     targetComponent: any,
-    context: BindingContext
+    context: BindingRuntimeContext
   ): Promise<void> {
     // Add monitoring configuration
     sourceComponent.addEnvironment('CERTIFICATE_MONITORING_ENABLED', 'true');

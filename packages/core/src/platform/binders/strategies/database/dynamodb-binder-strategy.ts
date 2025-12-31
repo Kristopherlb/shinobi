@@ -4,8 +4,7 @@
  */
 
 import { IBinderStrategy } from '../binder-strategy.js';
-import { BindingContext } from '../../binding-context.js';
-import { ComponentBinding } from '../../component-binding.js';
+import { ComponentBinding, BindingRuntimeContext } from '../../types.js';
 // Compliance framework branching removed; use binding.options/config instead
 
 export class DynamoDbBinderStrategy implements IBinderStrategy {
@@ -15,7 +14,7 @@ export class DynamoDbBinderStrategy implements IBinderStrategy {
     sourceComponent: any,
     targetComponent: any,
     binding: ComponentBinding,
-    context: BindingContext
+    context: BindingRuntimeContext
   ): Promise<void> {
     // Validate inputs
     if (!targetComponent) {
@@ -63,7 +62,7 @@ export class DynamoDbBinderStrategy implements IBinderStrategy {
     sourceComponent: any,
     targetComponent: any,
     binding: ComponentBinding,
-    context: BindingContext
+    context: BindingRuntimeContext
   ): Promise<void> {
     // Validate required target component properties
     if (!targetComponent?.tableArn) {
@@ -176,7 +175,7 @@ export class DynamoDbBinderStrategy implements IBinderStrategy {
     sourceComponent: any,
     targetComponent: any,
     binding: ComponentBinding,
-    context: BindingContext
+    context: BindingRuntimeContext
   ): Promise<void> {
     const resolvedIndex = this.resolveIndexTarget(targetComponent, binding);
     const { access } = binding;
@@ -229,7 +228,7 @@ export class DynamoDbBinderStrategy implements IBinderStrategy {
     sourceComponent: any,
     targetComponent: any,
     binding: ComponentBinding,
-    context: BindingContext
+    context: BindingRuntimeContext
   ): Promise<void> {
     const { access } = binding;
 
@@ -336,7 +335,7 @@ export class DynamoDbBinderStrategy implements IBinderStrategy {
   private async configureSecureTableAccess(
     sourceComponent: any,
     targetComponent: any,
-    context: BindingContext,
+    context: BindingRuntimeContext,
     binding?: ComponentBinding
   ): Promise<void> {
     // Grant encryption permissions when a CMK is used

@@ -4,8 +4,7 @@
  */
 
 import { IBinderStrategy } from '../binder-strategy.js';
-import { BindingContext } from '../../binding-context.js';
-import { ComponentBinding } from '../../component-binding.js';
+import { ComponentBinding, BindingRuntimeContext } from '../../types.js';
 // Compliance framework branching removed; use binding.options/config instead
 
 export class EcsFargateBinderStrategy implements IBinderStrategy {
@@ -15,7 +14,7 @@ export class EcsFargateBinderStrategy implements IBinderStrategy {
     sourceComponent: any,
     targetComponent: any,
     binding: ComponentBinding,
-    context: BindingContext
+    context: BindingRuntimeContext
   ): Promise<void> {
     // Validate inputs
     if (!targetComponent) {
@@ -65,7 +64,7 @@ export class EcsFargateBinderStrategy implements IBinderStrategy {
     sourceComponent: any,
     targetComponent: any,
     binding: ComponentBinding,
-    context: BindingContext
+    context: BindingRuntimeContext
   ): Promise<void> {
     // Validate required target component properties
     if (!targetComponent?.clusterArn) {
@@ -143,7 +142,7 @@ export class EcsFargateBinderStrategy implements IBinderStrategy {
     sourceComponent: any,
     targetComponent: any,
     binding: ComponentBinding,
-    context: BindingContext
+    context: BindingRuntimeContext
   ): Promise<void> {
     // Validate required target component properties
     if (!targetComponent?.serviceArn) {
@@ -202,7 +201,7 @@ export class EcsFargateBinderStrategy implements IBinderStrategy {
     sourceComponent: any,
     targetComponent: any,
     binding: ComponentBinding,
-    context: BindingContext
+    context: BindingRuntimeContext
   ): Promise<void> {
     // Validate required target component properties
     if (!targetComponent?.taskDefinitionArn) {
@@ -244,7 +243,7 @@ export class EcsFargateBinderStrategy implements IBinderStrategy {
   private async configureSecureNetworkAccess(
     sourceComponent: any,
     targetComponent: any,
-    context: BindingContext,
+    context: BindingRuntimeContext,
     binding?: ComponentBinding
   ): Promise<void> {
     // Ensure secure network access when requested (no framework branching)
