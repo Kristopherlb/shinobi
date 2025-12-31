@@ -4,9 +4,8 @@ import { Command } from 'commander';
 import { registerInventoryCommand } from './inventory.js';
 import { CompositionRoot } from './composition-root.js';
 import { createUpCommand } from './commands/up.js';
-import { createMigrateCommand } from './commands/migrate.js';
 import { createCatalogCommand } from './catalog.js';
-import { createSynthCommand } from './synth.js';
+import { createSynthCommand } from './commands/synth.js';
 import { createDiffCommand } from './commands/diff.js';
 import { createDestroyCommand } from './commands/destroy.js';
 
@@ -121,9 +120,6 @@ program.addCommand(createDestroyCommand());
 
 // shinobi up command (uses dedicated command factory)
 program.addCommand(createUpCommand());
-
-// shinobi migrate command (interactive migration helper)
-program.addCommand(createMigrateCommand());
 
 // Global error handler
 process.on('uncaughtException', (error) => {

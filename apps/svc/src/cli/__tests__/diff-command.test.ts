@@ -1,8 +1,8 @@
 import path from 'path';
 import os from 'os';
 import fs from 'fs';
-import { DiffCommand } from '../diff.js';
-import type { DiffOptions } from '../diff.js';
+import { DiffCommand } from '../diff-command.js';
+import type { DiffOptions } from '../diff-command.js';
 import type { Logger } from '../console-logger.js';
 import type { FileDiscovery } from '@shinobi/core';
 

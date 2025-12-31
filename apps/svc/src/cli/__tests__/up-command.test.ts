@@ -1,7 +1,7 @@
 import path from 'path';
 import os from 'os';
-import { UpCommand } from '../up.js';
-import type { UpOptions } from '../up.js';
+import { UpCommand } from '../up-command.js';
+import type { UpOptions } from '../up-command.js';
 import type { Logger } from '../console-logger.js';
 import type { FileDiscovery } from '@shinobi/core';
 jest.mock('../utils/service-synthesizer.js', () => ({

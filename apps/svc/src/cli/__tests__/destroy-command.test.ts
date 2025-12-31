@@ -1,7 +1,7 @@
 import path from 'path';
 import os from 'os';
-import { DestroyCommand } from '../destroy.js';
-import type { DestroyOptions } from '../destroy.js';
+import { DestroyCommand } from '../destroy-command.js';
+import type { DestroyOptions } from '../destroy-command.js';
 import type { Logger } from '../console-logger.js';
 import type { FileDiscovery } from '@shinobi/core';
 jest.mock('../utils/service-synthesizer.js', () => ({

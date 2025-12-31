@@ -13,10 +13,11 @@ import {
   ValidationOrchestrator
 } from '@shinobi/core';
 import { ValidateCommand } from './validate.js';
-import { PlanCommand } from './plan.js';
-import { DiffCommand } from './diff.js';
-import { DestroyCommand } from './destroy.js';
-import { UpCommand } from './up.js';
+import { PlanCommand } from './plan-command.js';
+import { DiffCommand } from './diff-command.js';
+import { DestroyCommand } from './destroy-command.js';
+import { UpCommand } from './up-command.js';
+import { SynthCommand } from './synth-command.js';
 import { ExecutionContextManager } from './execution-context-manager.js';
 
 export interface ApplicationDependencies {
@@ -120,6 +121,13 @@ export class CompositionRoot {
 
   createUpCommand(dependencies: ApplicationDependencies): UpCommand {
     return new UpCommand({
+      fileDiscovery: dependencies.fileDiscovery,
+      logger: dependencies.logger
+    });
+  }
+
+  createSynthCommand(dependencies: ApplicationDependencies): SynthCommand {
+    return new SynthCommand({
       fileDiscovery: dependencies.fileDiscovery,
       logger: dependencies.logger
     });
