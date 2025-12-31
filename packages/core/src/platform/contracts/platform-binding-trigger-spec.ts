@@ -8,6 +8,8 @@
  */
 
 import { IComponent } from './component-interfaces.js';
+import type { IamPolicy, SecurityGroupRule, ComplianceAction } from './bindings.js';
+import type { ComplianceViolation } from './compliance-enforcer.js';
 
 /**
  * Fundamental interaction types in the platform
@@ -156,6 +158,43 @@ export interface BindingResult {
 }
 
 /**
+ * Enhanced binding result with mandatory compliance validation
+ * 
+ * Extends the base BindingResult with structured compliance reporting,
+ * IAM policies, security group rules, and mandatory compliance status.
+ * All bindings must return this structure with populated compliance block.
+ */
+export interface EnhancedBindingResult {
+  environmentVariables: Record<string, string>;
+  iamPolicies: Array<IamPolicy>; // from bindings.ts (includes statement, description, complianceRequirement)
+  securityGroupRules: Array<SecurityGroupRule>; // from bindings.ts
+  
+  // Mandatory — always populated (machine-readable for audits)
+  compliance: {
+    status: 'compliant' | 'non-compliant' | 'partially-compliant';
+    framework: string; // e.g., 'fedramp-high', 'hipaa'
+    actionsTaken: ComplianceAction[]; // from bindings.ts
+    violations?: ComplianceViolation[]; // from compliance-enforcer.ts
+  };
+  
+  metrics?: Record<string, unknown>;
+  metadata?: Record<string, unknown>;
+}
+
+/**
+ * Compliance error thrown when binding fails compliance validation
+ */
+export class ComplianceError extends Error {
+  constructor(
+    public readonly violations: ComplianceViolation[],
+    message = 'Compliance validation failed'
+  ) {
+    super(message);
+    this.name = 'ComplianceError';
+  }
+}
+
+/**
  * Result of trigger operations
  */
 export interface TriggerResult {
@@ -171,6 +210,9 @@ export interface TriggerResult {
 
 /**
  * Binder strategy interface for handling outbound connections
+ * 
+ * This is the base interface. For new implementations, use IUnifiedBinderStrategy
+ * which extends this interface with compliance enforcement and enhanced results.
  */
 export interface IBinderStrategy {
   canHandle(sourceType: string, targetCapability: string): boolean;
@@ -185,6 +227,37 @@ export interface ITriggerStrategy {
   canHandle(sourceType: string, targetType: string, eventType: string): boolean;
   trigger(context: TriggerContext): TriggerResult;
   getCompatibilityMatrix(): TriggerCompatibilityEntry[];
+}
+
+/**
+ * Unified Binder Strategy Interface
+ * 
+ * Extends the base IBinderStrategy interface with mandatory compliance enforcement
+ * and enhanced binding results. This is the canonical interface for all binder strategies.
+ * 
+ * Key features:
+ * - Mandatory compliance validation based on context.complianceFramework
+ * - Enhanced binding results with structured compliance reporting
+ * - Compatibility matrix support
+ * - Config-driven compliance (no framework branching in code)
+ * 
+ * @see IBinderStrategy - Base interface (preserved for reference)
+ */
+export interface IUnifiedBinderStrategy extends IBinderStrategy {
+  /**
+   * Capabilities this strategy supports - used for registry-level filtering
+   */
+  readonly supportedCapabilities: string[];
+
+  /**
+   * Performs the binding with mandatory compliance enforcement.
+   * Compliance rules are selected based on context.complianceFramework
+   * (e.g., 'fedramp-moderate', 'fedramp-high', 'hipaa') — NO hard-coded branching.
+   * 
+   * @param context - Binding context with source, target, directive, and compliance framework
+   * @returns Promise resolving to enhanced binding result with compliance validation
+   */
+  bind(context: BindingContext): Promise<EnhancedBindingResult>;
 }
 
 /**
