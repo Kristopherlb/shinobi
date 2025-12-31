@@ -59,8 +59,8 @@ export class SecretsManagerBinderStrategy extends UnifiedBinderStrategyBase {
       throw new Error(`Target component does not provide capability '${capability}'`);
     }
 
-    // Normalize access to array
-    const access = Array.isArray(directive.access) ? directive.access : (directive.access ? [directive.access] : []);
+    // Normalize access to array (directive.access is a single AccessLevel string)
+    const access = directive.access ? [directive.access] : [];
 
     // Route to appropriate binding method
     switch (capability) {
