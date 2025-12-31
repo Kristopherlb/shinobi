@@ -16,8 +16,8 @@
  * Exit codes:
  * - 0: No differences found
  * - 3: Differences found (propagated for CI/CD integration)
- * - 1: Diff operation failed (AWS API errors, synthesis failures)
- * - 2: Missing manifest or stack not found
+ * - 1: Diff operation failed (AWS API errors, synthesis failures, unexpected errors)
+ * - 2: Precondition failed (missing manifest, invalid configuration)
  */
 
 import * as path from 'path';
@@ -104,6 +104,8 @@ export class DiffCommand {
 
   async execute(options: DiffOptions): Promise<DiffResult> {
     const logger = this.dependencies.logger;
+    let outputDir: string | undefined;
+    let shouldCleanupOutput = false;
 
     try {
       const manifestPath = options.file
@@ -120,17 +122,26 @@ export class DiffCommand {
 
       const manifest: SimpleManifest = await readManifest({ manifestPath });
       const environment = options.env ?? manifest.environment ?? 'dev';
-      const region = options.region ?? manifest.region ?? 'us-east-1';
-      const accountId = options.account ?? manifest.accountId ?? '123456789012';
+      
+      // Resolve region with safe fallback (us-east-1 is acceptable default)
+      const region = options.region ?? manifest.region ?? process.env.CDK_DEFAULT_REGION ?? 'us-east-1';
+      
+      // Resolve account ID - fail early if cannot be determined (no fake fallback)
+      const accountId = options.account ?? manifest.accountId ?? process.env.CDK_DEFAULT_ACCOUNT;
+      if (!accountId) {
+        return {
+          success: false,
+          exitCode: 2,
+          error: 'Could not determine AWS account ID. Set via --account, manifest accountId, or CDK_DEFAULT_ACCOUNT environment variable.'
+        };
+      }
+      
       const profile = options.profile;
 
       if (profile) {
         process.env.AWS_PROFILE = profile;
         logger.info(`Using AWS profile: ${profile}`);
       }
-
-      let outputDir: string;
-      let shouldCleanupOutput = false;
 
       if (options.output) {
         outputDir = path.resolve(options.output);
@@ -190,7 +201,8 @@ export class DiffCommand {
         }
       }
 
-      const data = {
+      // Return flat structure matching DiffResult interface
+      return {
         success: true,
         exitCode: diff.hasChanges ? 3 : 0,
         data: {
@@ -202,25 +214,31 @@ export class DiffCommand {
           components: synthResult.components,
           keptArtifacts: !shouldCleanupOutput
         }
-      } as DiffResult;
-
-      if (shouldCleanupOutput) {
-        try {
-          await fsp.rm(outputDir, { recursive: true, force: true });
-        } catch (cleanupError) {
-          logger.warn(`Failed to remove temporary directory ${outputDir}: ${(cleanupError as Error).message}`);
-        }
-      }
-
-      return data;
+      };
     } catch (error) {
       const message = error instanceof Error ? error.message : 'Unknown error occurred';
       this.dependencies.logger.error('Diff failed', error);
+      
+      // Determine exit code based on error type
+      // AWS errors and unexpected errors → exit code 1
+      // Precondition errors (missing manifest, bad config) → exit code 2
+      // Since we're in catch-all, assume it's an AWS/unexpected error
       return {
         success: false,
-        exitCode: 2,
+        exitCode: 1,
         error: message
       };
+    } finally {
+      // Ensure cleanup happens even if there's an early return or error
+      if (shouldCleanupOutput && outputDir) {
+        try {
+          await fsp.rm(outputDir, { recursive: true, force: true });
+        } catch (cleanupError) {
+          this.dependencies.logger.warn(
+            `Failed to remove temporary directory ${outputDir}: ${(cleanupError as Error).message}`
+          );
+        }
+      }
     }
   }
 }
