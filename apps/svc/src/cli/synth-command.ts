@@ -83,35 +83,36 @@ export class SynthCommand {
       if (options.file) {
         // Try resolving from current working directory first
         const cwdPath = path.resolve(process.cwd(), options.file);
-        if (fs.existsSync(cwdPath)) {
+        try {
+          await fsp.access(cwdPath, fs.constants.F_OK);
           manifestPath = cwdPath;
-        } else {
+        } catch {
           // Try resolving as absolute path
           const absPath = path.resolve(options.file);
-          if (fs.existsSync(absPath)) {
+          try {
+            await fsp.access(absPath, fs.constants.F_OK);
             manifestPath = absPath;
-          } else {
-            // Try resolving from repo root (find by looking for root package.json)
+          } catch {
+            // Try resolving from repo root (simplified: walk up until no parent)
             let repoRoot = process.cwd();
-            while (repoRoot !== path.dirname(repoRoot)) {
-              if (fs.existsSync(path.join(repoRoot, 'package.json'))) {
-                const rootPackageJson = JSON.parse(fs.readFileSync(path.join(repoRoot, 'package.json'), 'utf8'));
-                if (rootPackageJson.workspaces || rootPackageJson.name === 'workspace') {
-                  break; // Found monorepo root
-                }
-              }
-              repoRoot = path.dirname(repoRoot);
+            let parent = path.dirname(repoRoot);
+            while (repoRoot !== parent) {
+              repoRoot = parent;
+              parent = path.dirname(repoRoot);
             }
+            // Found filesystem root - use it as repo root
             const repoPath = path.resolve(repoRoot, options.file);
-            if (fs.existsSync(repoPath)) {
+            try {
+              await fsp.access(repoPath, fs.constants.F_OK);
               manifestPath = repoPath;
-            } else {
-              manifestPath = absPath; // Will fail with proper error
+            } catch {
+              manifestPath = absPath; // Will fail with proper error below
             }
           }
         }
       } else {
         // Default: look for service.yml starting from cwd, walking up to repo root
+        // fileDiscovery is designed for this and handles monorepo detection properly
         const foundManifest = await this.dependencies.fileDiscovery.findManifest('.');
         if (foundManifest) {
           manifestPath = foundManifest;
@@ -120,7 +121,10 @@ export class SynthCommand {
         }
       }
 
-      if (!fs.existsSync(manifestPath)) {
+      // Verify manifest file exists
+      try {
+        await fsp.access(manifestPath, fs.constants.F_OK);
+      } catch {
         return {
           success: false,
           exitCode: 2,
@@ -130,8 +134,19 @@ export class SynthCommand {
 
       const manifest: SimpleManifest = await readManifest({ manifestPath });
       const environment = options.env ?? manifest.environment ?? 'dev';
-      const region = options.region ?? manifest.region ?? 'us-east-1';
-      const accountId = options.account ?? manifest.accountId ?? '123456789012';
+      const region = options.region ?? manifest.region ?? process.env.CDK_DEFAULT_REGION ?? 'us-east-1';
+      
+      // Account ID resolution: prefer explicit option, then manifest, then environment variable
+      // Fail early if we can't determine account ID (no fake fallback)
+      const accountId = options.account ?? manifest.accountId ?? process.env.CDK_DEFAULT_ACCOUNT;
+      if (!accountId) {
+        return {
+          success: false,
+          exitCode: 2,
+          error: 'Could not determine AWS account ID. Set via --account, manifest accountId, or CDK_DEFAULT_ACCOUNT environment variable.'
+        };
+      }
+      
       const outputDir = path.resolve(options.output ?? 'cdk.out');
 
       await ensureOutputDir(outputDir);
