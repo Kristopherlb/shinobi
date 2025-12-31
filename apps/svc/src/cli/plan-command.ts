@@ -25,6 +25,7 @@ import { ExecutionContextManager } from './execution-context-manager.js';
 export interface PlanOptions {
   file?: string;
   env?: string;
+  json?: boolean;
 }
 
 export interface PlanResult {
@@ -69,10 +70,13 @@ export class PlanCommand {
 
       const planResult = executionContext.planResult;
 
+      // Note: Full synthesis (template generation) is deferred to `synth` or `up` commands.
+      // Here we only preview the resolved configuration without generating CDK constructs.
+      // The formatter primarily uses resolvedManifest, so empty components array is acceptable.
       const synthesisResult = {
         resolvedManifest: planResult.resolvedManifest,
         synthesisTime: 0,
-        components: [],
+        components: [], // Empty - full synthesis not performed in plan command
         bindings: planResult.resolvedManifest.binds || [],
         patchesApplied: false
       };
