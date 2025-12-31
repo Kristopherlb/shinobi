@@ -17,6 +17,7 @@
  * commands need the same execution context (e.g., plan followed by synth).
  */
 
+import * as path from 'path';
 import { ValidationOrchestrator, type PlanResult } from '@shinobi/core';
 import { FileDiscovery } from './utils/file-discovery.js';
 import { Logger } from './console-logger.js';
@@ -44,15 +45,29 @@ export class ExecutionContextManager {
 
   constructor(private readonly dependencies: ExecutionContextDependencies) {}
 
+  /**
+   * Resolves and caches the execution context for the given manifest and environment.
+   * Subsequent calls with the same inputs return the cached result.
+   * 
+   * The logger context is updated on every resolve to ensure consistency,
+   * even when using cached results.
+   * 
+   * @param options - Options specifying manifest path and environment
+   * @returns Resolved execution context with plan results
+   */
   async resolve(options: ExecutionContextOptions = {}): Promise<ResolvedExecutionContext> {
     const manifestPath = await this.resolveManifestPath(options.manifestPath);
     const environment = options.environment ?? 'dev';
     const cacheKey = `${manifestPath}::${environment}`;
 
+    // Check cache first
     if (this.cacheKey === cacheKey && this.cachedContext) {
+      // Update logger context even on cache hit to ensure consistency
+      this.updateLoggerContext(this.cachedContext);
       return this.cachedContext;
     }
 
+    // Cache miss: compute new context
     const planResult = await this.dependencies.pipeline.plan(manifestPath, environment);
 
     const resolvedContext: ResolvedExecutionContext = {
@@ -61,30 +76,43 @@ export class ExecutionContextManager {
       planResult
     };
 
+    // Update cache
     this.cacheKey = cacheKey;
     this.cachedContext = resolvedContext;
 
+    // Update logger context with resolved values
     this.updateLoggerContext(resolvedContext);
 
     return resolvedContext;
   }
 
+  /**
+   * Clears the cached context. Useful for testing or when manifest changes.
+   */
   reset(): void {
     this.cacheKey = undefined;
     this.cachedContext = undefined;
   }
 
+  /**
+   * Resolves manifest path to an absolute, normalized path.
+   * Ensures cache keys are stable regardless of input form (relative vs absolute).
+   */
   private async resolveManifestPath(explicitPath?: string): Promise<string> {
+    let pathToResolve: string;
+
     if (explicitPath) {
-      return explicitPath;
+      pathToResolve = explicitPath;
+    } else {
+      const discovered = await this.dependencies.fileDiscovery.findManifest('.');
+      if (!discovered) {
+        throw new Error('No service.yml found in this directory or any parent directories.');
+      }
+      pathToResolve = discovered;
     }
 
-    const discovered = await this.dependencies.fileDiscovery.findManifest('.');
-    if (!discovered) {
-      throw new Error('No service.yml found in this directory or any parent directories.');
-    }
-
-    return discovered;
+    // Normalize to absolute path for stable cache keys
+    return path.resolve(pathToResolve);
   }
 
   private updateLoggerContext(context: ResolvedExecutionContext): void {
