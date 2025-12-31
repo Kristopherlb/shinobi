@@ -69,11 +69,13 @@ export function createDiffCommand(): Command {
             keptArtifacts: result.data.keptArtifacts
           }, null, 2));
         }
-        // Exit code 3 indicates differences found – propagate so CI can act on it
-        if (result.exitCode !== 0) {
-          process.exit(result.exitCode);
-        }
+        // Exit code 0: No differences found
+        // Exit code 3: Differences found (propagated for CI/CD integration)
+        process.exit(result.exitCode);
       } else {
+        if (options.json && result.error) {
+          console.error(JSON.stringify({ error: result.error }, null, 2));
+        }
         process.exit(result.exitCode);
       }
     });

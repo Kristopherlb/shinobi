@@ -1,3 +1,5 @@
+import { isDeepStrictEqual } from 'util';
+
 export interface ResourceDiff {
   resource: string;
   changePaths: string[];
@@ -51,7 +53,9 @@ const collectChanges = (
     return;
   }
 
-  if (currentValue === desiredValue) {
+  // Use deep equality check to correctly compare objects and arrays
+  // This prevents false positives when objects have identical content but different references
+  if (isDeepStrictEqual(currentValue, desiredValue)) {
     return;
   }
 
@@ -114,6 +118,14 @@ const describeResourceDiff = (
   };
 };
 
+/**
+ * Diff two CloudFormation templates and identify changes in Resources and Outputs
+ * 
+ * Note: This function only compares Resources and Outputs sections, as these are the
+ * most critical sections that affect infrastructure state. Other sections (Parameters,
+ * Mappings, Conditions, Metadata) are intentionally excluded as they rarely change
+ * meaningfully and would add noise to the diff output.
+ */
 export const diffCloudFormationTemplates = (
   stackName: string,
   currentTemplateInput: any | undefined,
@@ -184,6 +196,14 @@ export const diffCloudFormationTemplates = (
       changedOutputs.push(diff);
     }
   }
+
+  // Sort all arrays for consistent, deterministic output
+  addedResources.sort();
+  removedResources.sort();
+  changedResources.sort((a, b) => a.resource.localeCompare(b.resource));
+  addedOutputs.sort();
+  removedOutputs.sort();
+  changedOutputs.sort((a, b) => a.resource.localeCompare(b.resource));
 
   return {
     stackName,

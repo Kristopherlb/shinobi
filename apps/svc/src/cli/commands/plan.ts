@@ -48,6 +48,7 @@ export function createPlanCommand(): Command {
             structuredData: result.data.structuredData
           }, null, 2));
         }
+        // Always exit on success to ensure reliable process termination
         process.exit(result.exitCode);
       } else {
         if (options.json && result.error) {
