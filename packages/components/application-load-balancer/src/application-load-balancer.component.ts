@@ -10,7 +10,7 @@ import {
   ComponentSpec,
   ComponentContext,
   ComponentCapabilities
-} from '@platform/contracts';
+} from '@shinobi/core';
 import {
   ApplicationLoadBalancerComponentConfigBuilder,
   ApplicationLoadBalancerConfig,

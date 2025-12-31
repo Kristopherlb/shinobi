@@ -1,4 +1,4 @@
-import { Logger } from '@platform/logger';
+import { Logger } from '../../logger/src/index.js';
 import { ComponentContext, ComponentSpec } from '../../contracts/component-interfaces.js';
 import { GovernanceMetadata } from '../governance/index.js';
 
