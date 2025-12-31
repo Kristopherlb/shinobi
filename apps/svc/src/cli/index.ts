@@ -17,5 +17,5 @@ export * from './cli.js';
 export * from './composition-root.js';
 
 // Export individual commands
-export * from './validate.js';
+export * from './validate-command.js';
 export * from './plan-command.js';

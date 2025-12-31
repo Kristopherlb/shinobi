@@ -14,7 +14,7 @@ import {
   SchemaValidator,
   ValidationOrchestrator
 } from '@shinobi/core';
-import { ValidateCommand } from './validate.js';
+import { ValidateCommand } from './validate-command.js';
 import { PlanCommand } from './plan-command.js';
 import { DiffCommand } from './diff-command.js';
 import { DestroyCommand } from './destroy-command.js';

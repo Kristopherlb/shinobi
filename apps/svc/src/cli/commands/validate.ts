@@ -1,0 +1,45 @@
+/**
+ * Validate Command Factory
+ *
+ * Creates a Commander.js command for `shinobi validate`, which parses and
+ * validates service manifests without connecting to AWS by:
+ * - Discovering the service manifest file
+ * - Parsing YAML and validating syntax
+ * - Validating against JSON Schema
+ * - Validating component references
+ * - Hydrating context and environment resolution
+ *
+ * This command does not connect to AWS and is safe to run for validation.
+ *
+ * @returns A configured Commander.js Command instance
+ */
+
+import { Command } from 'commander';
+import { CompositionRoot } from '../composition-root.js';
+
+export function createValidateCommand(): Command {
+  const root = new CompositionRoot();
+  const command = new Command('validate');
+
+  command
+    .description('Parse and validate the service.yml without connecting to AWS')
+    .option('-f, --file <file>', 'Path to service.yml file')
+    .action(async (options, cmd) => {
+      const parent: any = cmd.parent || {};
+      const rootOpts = parent.opts ? parent.opts() : {};
+      const dependencies = root.createDependencies({
+        verbose: !!rootOpts.verbose,
+        ci: !!rootOpts.ci
+      });
+
+      const validateCommand = root.createValidateCommand(dependencies);
+      const result = await validateCommand.execute({ file: options.file });
+
+      if (!result.success) {
+        process.exit(result.exitCode);
+      }
+    });
+
+  return command;
+}
+

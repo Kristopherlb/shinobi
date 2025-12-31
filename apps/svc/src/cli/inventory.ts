@@ -19,9 +19,6 @@ const chalk = {
   yellow: (text: string) => text
 };
 
-const logger = new Logger('shinobi.cli.inventory');
-logger.configure({ verbose: false, ci: false });
-
 interface ConstructUsage {
   type: string;
   count: number;
@@ -66,7 +63,7 @@ export class InventoryCommand {
   private targetDirectory: string = '';
   private analysis: InventoryAnalysis;
 
-  constructor() {
+  constructor(private readonly logger: Logger) {
     this.project = new Project();
     this.analysis = {
       rawInventory: new Map(),
@@ -87,8 +84,8 @@ export class InventoryCommand {
   public async execute(directory: string, options: any): Promise<void> {
     this.targetDirectory = path.resolve(directory);
     
-    logger.info(chalk.cyan('🔍 Platform Inventory Tool v1.0'));
-    logger.info(chalk.gray(`Analyzing directory: ${this.targetDirectory}`));
+    this.logger.info(chalk.cyan('🔍 Platform Inventory Tool v1.0'));
+    this.logger.info(chalk.gray(`Analyzing directory: ${this.targetDirectory}`));
     
     try {
       // Phase 1: Discovery - Scan all TypeScript files
@@ -100,11 +97,11 @@ export class InventoryCommand {
       // Phase 3: Report Generation - Create INVENTORY_REPORT.md
       await this.generateReport();
       
-      logger.info(chalk.green('✅ Inventory analysis complete!'));
-      logger.info(chalk.cyan(`📄 Report generated: ${path.join(this.targetDirectory, 'INVENTORY_REPORT.md')}`));
+      this.logger.info(chalk.green('✅ Inventory analysis complete!'));
+      this.logger.info(chalk.cyan(`📄 Report generated: ${path.join(this.targetDirectory, 'INVENTORY_REPORT.md')}`));
       
     } catch (error) {
-      logger.error(chalk.red('❌ Inventory analysis failed:'), error);
+      this.logger.error(chalk.red('❌ Inventory analysis failed:'), error);
       throw error;
     }
   }
@@ -113,18 +110,18 @@ export class InventoryCommand {
    * Phase 1: Discover all CDK construct usages
    */
   private async discoverConstructs(): Promise<void> {
-    logger.info(chalk.yellow('📂 Phase 1: Discovering CDK constructs...'));
+    this.logger.info(chalk.yellow('📂 Phase 1: Discovering CDK constructs...'));
     
     // Add all TypeScript files to the project
     const tsFiles = this.findTypeScriptFiles(this.targetDirectory);
     this.project.addSourceFilesAtPaths(tsFiles);
     
     this.analysis.summary.totalFiles = tsFiles.length;
-    logger.info(chalk.gray(`Found ${tsFiles.length} TypeScript files`));
+    this.logger.info(chalk.gray(`Found ${tsFiles.length} TypeScript files`));
     
     // Show first few files if verbose
     if (this.analysis.summary.totalFiles <= 20) {
-      logger.debug(`Files to analyze: ${tsFiles.map(f => path.relative(this.targetDirectory, f)).join(', ')}`);
+      this.logger.debug(`Files to analyze: ${tsFiles.map(f => path.relative(this.targetDirectory, f)).join(', ')}`);
     }
     
     // Analyze each source file
@@ -136,7 +133,7 @@ export class InventoryCommand {
     this.analysis.summary.totalConstructs = Array.from(this.analysis.rawInventory.values())
       .reduce((total, usage) => total + usage.count, 0);
     
-    logger.info(chalk.green(`✅ Found ${this.analysis.summary.totalConstructs} construct usages of ${this.analysis.summary.uniqueConstructTypes} types`));
+    this.logger.info(chalk.green(`✅ Found ${this.analysis.summary.totalConstructs} construct usages of ${this.analysis.summary.uniqueConstructTypes} types`));
   }
 
   /**
@@ -171,7 +168,7 @@ export class InventoryCommand {
     const importDeclarations = sourceFile.getImportDeclarations();
     
     // Debug import processing if needed
-    logger.debug(`Processing imports in ${relativePath}: found ${importDeclarations.length} declarations`);
+    this.logger.debug(`Processing imports in ${relativePath}: found ${importDeclarations.length} declarations`);
     
     for (const importDecl of importDeclarations) {
       const moduleSpecifier = importDecl.getModuleSpecifierValue();
@@ -191,7 +188,7 @@ export class InventoryCommand {
                 }
               }
             } catch (error) {
-              logger.debug(`Error accessing namedImports in ${relativePath}:`, {
+              this.logger.debug(`Error accessing namedImports in ${relativePath}:`, {
                 data: {
                   error: error instanceof Error ? error.message : String(error)
                 }
@@ -213,7 +210,7 @@ export class InventoryCommand {
                 cdkImports.add(namespaceImport.name);
               }
             } catch (error) {
-              logger.debug(`Error accessing namespaceImport in ${relativePath}:`, {
+              this.logger.debug(`Error accessing namespaceImport in ${relativePath}:`, {
                 data: {
                   error: error instanceof Error ? error.message : String(error)
                 }
@@ -319,7 +316,7 @@ export class InventoryCommand {
    * Phase 2: Analyze patterns of co-located constructs with enhanced algorithms
    */
   private async analyzePatterns(): Promise<void> {
-    logger.info(chalk.yellow('🔍 Phase 2: Analyzing construct patterns...'));
+    this.logger.info(chalk.yellow('🔍 Phase 2: Analyzing construct patterns...'));
     
     // Group constructs by file to find co-location patterns
     const fileConstructs = new Map<string, string[]>();
@@ -362,7 +359,7 @@ export class InventoryCommand {
     this.identifyRelatedPatterns();
     
     this.analysis.summary.patternsFound = this.analysis.patterns.length;
-    logger.info(chalk.green(`✅ Identified ${this.analysis.patterns.length} recurring patterns with enhanced analysis`));
+    this.logger.info(chalk.green(`✅ Identified ${this.analysis.patterns.length} recurring patterns with enhanced analysis`));
   }
 
   /**
@@ -950,7 +947,7 @@ export class InventoryCommand {
    * Phase 3: Generate the INVENTORY_REPORT.md
    */
   private async generateReport(): Promise<void> {
-    logger.info(chalk.yellow('📄 Phase 3: Generating inventory report...'));
+    this.logger.info(chalk.yellow('📄 Phase 3: Generating inventory report...'));
     
     const reportPath = path.join(this.targetDirectory, 'INVENTORY_REPORT.md');
     const timestamp = new Date().toISOString();
@@ -1219,14 +1216,14 @@ export class InventoryCommand {
 /**
  * Register the inventory command with Commander
  */
-export function registerInventoryCommand(program: Command): void {
+export function registerInventoryCommand(program: Command, logger: Logger): void {
   program
     .command('inventory')
     .description('Analyze CDK codebase and identify component opportunities')
     .argument('<directory>', 'Directory to analyze (e.g., ../my-service or ./)')
     .option('--output <path>', 'Custom output path for the report', 'INVENTORY_REPORT.md')
     .action(async (directory: string, options: any) => {
-      const inventoryTool = new InventoryCommand();
+      const inventoryTool = new InventoryCommand(logger);
       await inventoryTool.execute(directory, options);
     });
 }

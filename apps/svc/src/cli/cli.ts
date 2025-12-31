@@ -25,6 +25,8 @@
 import { Command } from 'commander';
 import { registerInventoryCommand } from './inventory.js';
 import { CompositionRoot } from './composition-root.js';
+import { createValidateCommand } from './commands/validate.js';
+import { createPlanCommand } from './commands/plan.js';
 import { createUpCommand } from './commands/up.js';
 import { createCatalogCommand } from './catalog.js';
 import { createSynthCommand } from './commands/synth.js';
@@ -55,6 +57,7 @@ program
   .option('--verbose, -v', 'Enable verbose logging')
   .option('--ci', 'Enable CI mode (structured JSON output)');
 
+// Helper to resolve dependencies from command context
 const resolveDependencies = (command: Command) => {
   const optsWithGlobals =
     (command as any).optsWithGlobals?.() ??
@@ -70,63 +73,15 @@ const resolveDependencies = (command: Command) => {
   return { dependencies, globalOpts };
 };
 
-const emitCliResult = (result: CliResult, globalOpts: GlobalCliOptions, loggerName: string) => {
-  if (result.success) {
-    if (globalOpts.ci && result.data !== undefined) {
-      console.log(
-        JSON.stringify({
-          level: 'result',
-          logger: loggerName,
-          data: result.data,
-          timestamp: new Date().toISOString()
-        })
-      );
-    }
-    return;
-  }
-
-  const message = result.error ?? 'Command execution failed';
-  if (globalOpts.ci) {
-    console.error(
-      JSON.stringify({
-        level: 'error',
-        logger: loggerName,
-        message,
-        exitCode: result.exitCode,
-        timestamp: new Date().toISOString()
-      })
-    );
-  }
-  process.exit(result.exitCode);
-};
-
 // shinobi validate command
-program
-  .command('validate')
-  .description('Parse and validate the service.yml without connecting to AWS')
-  .option('--file, -f <file>', 'Path to service.yml file')
-  .action(async (options, command) => {
-    const { dependencies, globalOpts } = resolveDependencies(command);
-    const validateCommand = compositionRoot.createValidateCommand(dependencies);
-    const result = await validateCommand.execute(options);
-    emitCliResult(result, globalOpts, 'shinobi.cli.validate');
-  });
+program.addCommand(createValidateCommand());
 
 // shinobi plan command
-program
-  .command('plan')
-  .description('Perform full validation and output resolved configuration')
-  .option('--file, -f <file>', 'Path to service.yml file')
-  .option('--env <env>', 'Target environment', 'dev')
-  .action(async (options, command) => {
-    const { dependencies, globalOpts } = resolveDependencies(command);
-    const planCommand = compositionRoot.createPlanCommand(dependencies);
-    const result = await planCommand.execute(options);
-    emitCliResult(result, globalOpts, 'shinobi.cli.plan');
-  });
+program.addCommand(createPlanCommand());
 
 // shinobi inventory command
-registerInventoryCommand(program);
+const { dependencies: inventoryDeps } = resolveDependencies(program);
+registerInventoryCommand(program, inventoryDeps.logger);
 
 // shinobi catalog command
 program.addCommand(createCatalogCommand());
