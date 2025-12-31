@@ -4,7 +4,6 @@
  */
 import { Logger } from './utils/logger.js';
 import { FileDiscovery } from './utils/file-discovery.js';
-import { TemplateEngine } from './templates/template-engine.js';
 import {
   ContextHydrator,
   ManifestParser,
@@ -13,20 +12,17 @@ import {
   SchemaValidator,
   ValidationOrchestrator
 } from '@shinobi/core';
-import { InitCommand } from './init.js';
 import { ValidateCommand } from './validate.js';
 import { PlanCommand } from './plan.js';
 import { DiffCommand } from './diff.js';
 import { DestroyCommand } from './destroy.js';
 import { UpCommand } from './up.js';
-import inquirer from 'inquirer';
 import { ExecutionContextManager } from './execution-context-manager.js';
 
 export interface ApplicationDependencies {
   logger: Logger;
   validationOrchestrator: ValidationOrchestrator;
   fileDiscovery: FileDiscovery;
-  templateEngine: TemplateEngine;
   schemaManager: SchemaManager;
   manifestParser: ManifestParser;
   schemaValidator: SchemaValidator;
@@ -52,7 +48,6 @@ export class CompositionRoot {
 
     const fileDiscovery = new FileDiscovery();
     const schemaManager = new SchemaManager();
-    const templateEngine = new TemplateEngine({ logger });
 
     // Create enhanced schema validation services
     // Create focused services (single responsibility)
@@ -80,7 +75,6 @@ export class CompositionRoot {
       logger,
       validationOrchestrator,
       fileDiscovery,
-      templateEngine,
       schemaManager,
       manifestParser,
       schemaValidator,
@@ -95,15 +89,6 @@ export class CompositionRoot {
   /**
    * Create CLI commands with their dependencies injected
    */
-  createInitCommand(dependencies: ApplicationDependencies): InitCommand {
-    return new InitCommand({
-      templateEngine: dependencies.templateEngine,
-      fileDiscovery: dependencies.fileDiscovery,
-      logger: dependencies.logger,
-      prompter: inquirer
-    });
-  }
-
   createValidateCommand(dependencies: ApplicationDependencies): ValidateCommand {
     return new ValidateCommand({
       pipeline: dependencies.validationOrchestrator,

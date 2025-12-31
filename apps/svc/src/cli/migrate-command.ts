@@ -9,7 +9,7 @@ import {
   MigrationEngine,
   MigrationOptions,
   MigrationResult,
-  Logger as CoreEngineLogger
+  PlatformLogger
 } from '@shinobi/core';
 import { Logger } from './utils/logger.js';
 import * as fs from 'fs';
@@ -89,7 +89,7 @@ async function runMigration(options: any, logger: Logger): Promise<void> {
   }
 
   // Execute migration
-  const migrationEngine = new MigrationEngine(new CoreEngineLogger());
+  const migrationEngine = new MigrationEngine(PlatformLogger.getLogger('migration-engine'));
   const result = await executeMigration(migrationEngine, migrationOptions, logger);
 
   // Display results

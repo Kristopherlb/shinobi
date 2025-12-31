@@ -2,32 +2,6 @@
   "$schema": "./node_modules/nx/schemas/workspace-schema.json",
   "version": 2,
   "projects": {
-    "core-engine": {
-      "root": "packages/core-engine",
-      "sourceRoot": "packages/core-engine/src",
-      "projectType": "library",
-      "targets": {
-        "build": {
-          "executor": "nx:run-commands",
-          "options": {
-            "command": "tsc -p packages/core-engine/tsconfig.json"
-          }
-        },
-        "test": {
-          "executor": "@nx/jest:jest",
-          "options": {
-            "jestConfig": "packages/core-engine/jest.config.mjs",
-            "passWithNoTests": true
-          }
-        },
-        "lint": {
-          "executor": "nx:run-commands",
-          "options": {
-            "command": "eslint packages/core-engine --ext .ts"
-          }
-        }
-      }
-    },
     "contracts": {
       "root": "packages/contracts",
       "sourceRoot": "packages/contracts/src",
@@ -154,32 +128,6 @@
           "executor": "nx:run-commands",
           "options": {
             "command": "eslint packages/components/api-gateway-rest --ext .ts"
-          }
-        }
-      }
-    },
-    "infrastructure": {
-      "root": "packages/infrastructure",
-      "sourceRoot": "packages/infrastructure/src",
-      "projectType": "application",
-      "targets": {
-        "build": {
-          "executor": "nx:run-commands",
-          "options": {
-            "command": "tsc -p packages/infrastructure/tsconfig.json"
-          }
-        },
-        "test": {
-          "executor": "@nx/jest:jest",
-          "options": {
-            "jestConfig": "packages/infrastructure/jest.config.mjs",
-            "passWithNoTests": true
-          }
-        },
-        "lint": {
-          "executor": "nx:run-commands",
-          "options": {
-            "command": "eslint packages/infrastructure --ext .ts"
           }
         }
       }

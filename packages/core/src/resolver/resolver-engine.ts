@@ -3,7 +3,7 @@
  * Core orchestrator for translating validated configuration into CDK constructs
  */
 
-import { Logger } from '../core-engine/logger.js';
+import { Logger as PlatformLogger } from '../platform/logger/src/index.js';
 import { ComponentFactoryBuilder } from '../platform/contracts/components/component-factory.js';
 import { IComponent } from '../platform/contracts/index.js';
 import { ComponentContext as FactoryComponentContext } from '../platform/contracts/components/component-context.js';
@@ -16,7 +16,7 @@ import * as path from 'path';
 import * as fs from 'fs';
 
 export interface ResolverEngineDependencies {
-  logger: Logger;
+  logger: PlatformLogger;
   binderRegistry?: ComprehensiveBinderRegistry;
 }
 
@@ -83,7 +83,7 @@ export class ResolverEngine {
       // Phase 5: Final Assembly (AC-RS5.1)
       const synthesisTime = Date.now() - startTime;
 
-      this.dependencies.logger.success(`Synthesis completed in ${synthesisTime}ms`);
+      this.dependencies.logger.info(`Synthesis completed in ${synthesisTime}ms`);
       this.dependencies.logger.info(`  Components: ${components.length}`);
       this.dependencies.logger.info(`  Bindings: ${bindings.length}`);
       this.dependencies.logger.info(`  Patches Applied: ${patchesApplied}`);
@@ -170,7 +170,7 @@ export class ResolverEngine {
 
         // Log capability details for debugging
         Object.keys(capabilities).forEach(capabilityKey => {
-          this.dependencies.logger.debug(`  Capability: ${capabilityKey}`, capabilities[capabilityKey]);
+          this.dependencies.logger.debug(`  Capability: ${capabilityKey}`, { data: capabilities[capabilityKey] });
         });
 
       } catch (error) {
@@ -348,11 +348,11 @@ export class ResolverEngine {
 
         await patchesModule.applyPatches(patchContext);
 
-        this.dependencies.logger.success('Successfully applied patches');
+        this.dependencies.logger.info('Successfully applied patches');
 
         // Log patch info if available
         if (patchesModule.patchInfo) {
-          this.dependencies.logger.info('Patch Info:', patchesModule.patchInfo);
+          this.dependencies.logger.info('Patch Info:', { data: patchesModule.patchInfo });
         }
 
         return true;

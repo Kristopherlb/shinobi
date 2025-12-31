@@ -64,24 +64,6 @@
       "@shinobi/standards-iam-audit/*": [
         "packages/standards/iam-audit/src/*"
       ],
-      "@shinobi/standards-logging": [
-        "packages/standards/logging/src/index.ts"
-      ],
-      "@shinobi/standards-logging/*": [
-        "packages/standards/logging/src/*"
-      ],
-      "@shinobi/standards-otel": [
-        "packages/standards/otel/src/index.ts"
-      ],
-      "@shinobi/standards-otel/*": [
-        "packages/standards/otel/src/*"
-      ],
-      "@shinobi/standards-tagging": [
-        "packages/standards/tagging/src/index.ts"
-      ],
-      "@shinobi/standards-tagging/*": [
-        "packages/standards/tagging/src/*"
-      ],
       "@platform/contracts": [
         "packages/core/src/platform/contracts/index.ts"
       ],

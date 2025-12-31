@@ -102,7 +102,7 @@ export class DaggerEnginePoolCreator implements IComponentCreator {
    */
   public getDependencies(): string[] {
     return [
-      '@platform/core-engine',
+      '@shinobi/core',
       '@platform/contracts',
       '@platform/tagging-service'
     ];

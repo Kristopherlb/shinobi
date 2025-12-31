@@ -12,7 +12,6 @@ export * from './reference-validator.js';
 // Export parsing and configuration services
 export * from './manifest-parser.js';
 export * from './context-hydrator.js';
-export * from './config-loader.js';
 
 // Export utility services
 export * from './file-discovery.js';

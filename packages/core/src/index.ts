@@ -13,7 +13,6 @@ export { ManifestParser } from './services/manifest-parser.js';
 export { ContextHydrator } from './services/context-hydrator.js';
 export { ValidationOrchestrator } from './services/validation-orchestrator.js';
 export type { PlanResult } from './services/validation-orchestrator.js';
-export { ConfigLoader } from './services/config-loader.js';
 export { FileDiscovery } from './services/file-discovery.js';
 export { PlanOutputFormatter } from './services/plan-output-formatter.js';
 export { SchemaManager } from './services/schema-manager.js';
@@ -21,11 +20,7 @@ export { SchemaManager } from './services/schema-manager.js';
 // Export other core modules
 export * from './resolver/index.js';
 
-// Export core engine (including Logger) - avoid conflicts with resolver
-export { Logger, LogLevel } from './core-engine/logger.js';
-export type { LogEntry } from './core-engine/logger.js';
-
-// Export platform logger with distinct name to avoid conflicts
+// Export platform logger
 export { Logger as PlatformLogger } from './platform/logger/src/index.js';
 export type { LoggerOptions, LogEvent, LogContext, LogData, Timer } from './platform/logger/src/index.js';
 export type { LogLevel as PlatformLogLevel } from './platform/logger/src/index.js';

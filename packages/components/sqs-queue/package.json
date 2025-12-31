@@ -9,8 +9,8 @@
     "test": "jest"
   },
   "dependencies": {
-    "@platform/core-engine": "workspace:*",
-    "@platform/contracts": "workspace:*"
+    "@platform/contracts": "workspace:*",
+    "@shinobi/core": "workspace:*"
   },
   "devDependencies": {},
   "type": "module"

@@ -13,7 +13,7 @@ const testMetadata = {
     "notes": "Uses deterministic test data with frozen configuration"
   },
   "risks": ["External AWS service dependencies", "CDK synthesis complexity"],
-  "dependencies": ["aws-cdk-lib", "@platform/core-engine", "@platform/contracts"],
+  "dependencies": ["aws-cdk-lib", "@shinobi/core", "@platform/contracts"],
   "evidence": ["CDK Template assertions", "Resource property validation"],
   "compliance_refs": ["std://encryption", "std://tagging", "std://networking"],
   "ai_generated": false,

@@ -1,5 +1,5 @@
 import { DaggerConfig } from './types.ts';
-import { ConfigBuilder } from '@platform/core-engine';
+import { ConfigBuilder } from '@shinobi/core';
 
 /**
  * Builder merges configuration using the platform precedence chain:

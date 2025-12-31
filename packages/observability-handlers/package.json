@@ -1,8 +1,0 @@
-{
-  "name": "@shinobi/observability-handlers",
-  "version": "0.0.1",
-  "private": true,
-  "main": "../../dist/packages/observability-handlers/index.js",
-  "types": "../../dist/packages/observability-handlers/index.d.ts",
-  "type": "module"
-}

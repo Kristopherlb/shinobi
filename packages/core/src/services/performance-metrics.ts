@@ -296,7 +296,6 @@ export function withPerformanceTiming<T>(
  * Performance thresholds for common platform operations
  */
 export const PLATFORM_PERFORMANCE_THRESHOLDS = {
-  'config-loader.getTemplateConfig': { warningMs: 100, errorMs: 500, criticalMs: 1000 },
   'context-hydrator.hydrateContext': { warningMs: 200, errorMs: 1000, criticalMs: 2000 },
   'enhanced-schema-validator.validateManifest': { warningMs: 500, errorMs: 2000, criticalMs: 5000 },
   'file-discovery.findManifest': { warningMs: 100, errorMs: 500, criticalMs: 1000 },

@@ -23,7 +23,7 @@ import * as cdk from 'aws-cdk-lib';
 import { Construct } from 'constructs';
 import { Template, Match } from 'aws-cdk-lib/assertions';
 import { ResolverEngine } from '../../resolver/resolver-engine.js';
-import { Logger } from '../../core-engine/logger.js';
+import { Logger as PlatformLogger } from '../../platform/logger/src/index.js';
 import { ComprehensiveBinderRegistry } from '../../platform/binders/registry/comprehensive-binder-registry.js';
 import { ComponentFactoryBuilder } from '../../platform/contracts/components/component-factory.js';
 import { ComponentRegistry } from '../../platform/contracts/components/component-registry.js';
@@ -196,12 +196,12 @@ class TestManifestFactory {
 }
 
 describe('ManifestSynthesis__ErrorHandling__IntegrationTests', () => {
-  let logger: Logger;
+  let logger: PlatformLogger;
   let resolverEngine: ResolverEngine;
 
   beforeEach(() => {
     // Create logger
-    logger = new Logger();
+    logger = PlatformLogger.getLogger('test-resolver-engine');
 
     // Create resolver engine with dependencies
     const binderRegistry = new ComprehensiveBinderRegistry();

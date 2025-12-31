@@ -1,6 +1,6 @@
 import { Key } from 'aws-cdk-lib/aws-kms';
 
-// Mock implementation of @platform/core-engine for testing
+// Mock implementation of @shinobi/core for testing
 export abstract class BaseComponent {
   protected constructs = new Map();
   protected capabilities = {};

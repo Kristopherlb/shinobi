@@ -29,7 +29,6 @@
   "author": "Platform Engineering Team",
   "license": "MIT",
   "dependencies": {
-    "@platform/core-engine": "workspace:*",
     "@platform/contracts": "workspace:*",
     "@shinobi/core": "workspace:*",
     "aws-cdk-lib": "^2.100.0",

@@ -79,21 +79,6 @@ const emitCliResult = (result: CliResult, globalOpts: GlobalCliOptions, loggerNa
   process.exit(result.exitCode);
 };
 
-// shinobi init command
-program
-  .command('init')
-  .description('Scaffold a new service from a template')
-  .option('--name <name>', 'Service name')
-  .option('--owner <owner>', 'Service owner/team')
-  .option('--framework <framework>', 'Compliance framework', 'commercial')
-  .option('--pattern <pattern>', 'Initial pattern', 'empty')
-  .action(async (options, command) => {
-    const { dependencies, globalOpts } = resolveDependencies(command);
-    const initCommand = compositionRoot.createInitCommand(dependencies);
-    const result = await initCommand.execute(options);
-    emitCliResult(result, globalOpts, 'shinobi.cli.init');
-  });
-
 // shinobi validate command
 program
   .command('validate')
