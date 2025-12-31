@@ -3,7 +3,7 @@ import os from 'os';
 import fs from 'fs';
 import { DiffCommand } from '../diff.js';
 import type { DiffOptions } from '../diff.js';
-import type { Logger } from '../utils/logger.js';
+import type { Logger } from '../console-logger.js';
 import type { FileDiscovery } from '@shinobi/core';
 
 jest.mock('../utils/service-synthesizer.js', () => ({

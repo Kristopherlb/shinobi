@@ -3,7 +3,7 @@ import * as fsp from 'fs/promises';
 import inquirer from 'inquirer';
 import { AwsCdkCli, RequireApproval } from '@aws-cdk/cli-lib-alpha';
 import { FileDiscovery } from '@shinobi/core';
-import { Logger } from './utils/logger.js';
+import { Logger } from './console-logger.js';
 import {
   readManifest,
   synthesizeService,

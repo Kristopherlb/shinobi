@@ -11,7 +11,7 @@ import {
   MigrationResult,
   PlatformLogger
 } from '@shinobi/core';
-import { Logger } from './utils/logger.js';
+import { Logger } from './console-logger.js';
 import * as fs from 'fs';
 import * as path from 'path';
 

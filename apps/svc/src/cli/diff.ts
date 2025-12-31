@@ -6,7 +6,7 @@ import {
   CloudFormationClient,
   GetTemplateCommand
 } from '@aws-sdk/client-cloudformation';
-import { Logger } from './utils/logger.js';
+import { Logger } from './console-logger.js';
 import { FileDiscovery } from './utils/file-discovery.js';
 import {
   synthesizeService,

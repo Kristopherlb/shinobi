@@ -2,7 +2,7 @@ import path from 'path';
 import os from 'os';
 import { UpCommand } from '../up.js';
 import type { UpOptions } from '../up.js';
-import type { Logger } from '../utils/logger.js';
+import type { Logger } from '../console-logger.js';
 import type { FileDiscovery } from '@shinobi/core';
 jest.mock('../utils/service-synthesizer.js', () => ({
   readManifest: jest.fn(),

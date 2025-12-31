@@ -1,4 +1,4 @@
-import { Logger } from './utils/logger.js';
+import { Logger } from './console-logger.js';
 import { FileDiscovery } from './utils/file-discovery.js';
 
 export interface DeployOptions {

@@ -9,7 +9,7 @@ import {
 } from '@aws-sdk/client-cloudformation';
 import { waitUntilStackDeleteComplete } from '@aws-sdk/client-cloudformation';
 import { FileDiscovery } from '@shinobi/core';
-import { Logger } from './utils/logger.js';
+import { Logger } from './console-logger.js';
 import { readManifest, SimpleManifest } from './utils/service-synthesizer.js';
 
 export interface DestroyOptions {

@@ -1,4 +1,4 @@
-import { Logger } from './utils/logger.js';
+import { Logger } from './console-logger.js';
 import { PlanOutputFormatter } from '@shinobi/core';
 import { ExecutionContextManager } from './execution-context-manager.js';
 

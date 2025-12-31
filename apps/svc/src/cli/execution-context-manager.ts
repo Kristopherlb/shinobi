@@ -1,6 +1,6 @@
 import { ValidationOrchestrator, type PlanResult } from '@shinobi/core';
 import { FileDiscovery } from './utils/file-discovery.js';
-import { Logger } from './utils/logger.js';
+import { Logger } from './console-logger.js';
 
 export interface ExecutionContextOptions {
   manifestPath?: string;

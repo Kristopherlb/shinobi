@@ -2,7 +2,7 @@
  * Composition Root - The single place where all dependencies are wired together
  * This implements Principle 2: The Composition Root pattern
  */
-import { Logger } from './utils/logger.js';
+import { Logger } from './console-logger.js';
 import { FileDiscovery } from './utils/file-discovery.js';
 import {
   ContextHydrator,
