@@ -1,5 +1,5 @@
 {
-  "name": "@platform/components-vpc",
+  "name": "@shinobi/components-vpc",
   "root": "packages/components/vpc",
   "sourceRoot": "packages/components/vpc/src",
   "projectType": "library",
@@ -42,7 +42,8 @@
     }
   },
   "tags": [
-    "type:lib",
-    "scope:components"
+    "scope:shinobi",
+    "type:component",
+    "infra:aws"
   ]
 }

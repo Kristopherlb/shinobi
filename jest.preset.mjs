@@ -7,8 +7,11 @@ const { nxPreset, default: _ignoredDefault, ...basePreset } = rawPreset ?? {};
 
 const presetDir = path.dirname(url.fileURLToPath(import.meta.url));
 
+// Remove coverageReporters from basePreset - coverage handled via Nx target options
+const { coverageReporters, ...presetWithoutCoverage } = basePreset ?? {};
+
 export default {
-  ...basePreset,
+  ...presetWithoutCoverage,
   testEnvironment: 'node',
   testEnvironmentOptions: {
     customExportConditions: ['node', 'default']

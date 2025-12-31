@@ -1,5 +1,5 @@
 {
-  "name": "@platform/ec2-instance",
+  "name": "@shinobi/components-ec2-instance",
   "version": "1.0.0",
   "private": true,
   "description": "EC2 Instance Component implementing Component API Contract v1.0 with comprehensive security, monitoring, and compliance features",
@@ -7,11 +7,9 @@
   "types": "dist/index.d.ts",
   "scripts": {
     "build": "tsc",
-    "test": "jest",
     "lint": "eslint src/**/*.ts",
     "clean": "rm -rf dist",
-    "audit": "npm audit",
-    "compliance-test": "jest --testPathPattern=compliance"
+    "audit": "npm audit"
   },
   "keywords": [
     "ec2",

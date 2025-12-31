@@ -1,5 +1,5 @@
 {
-  "name": "@platform/components-lambda-api",
+  "name": "@shinobi/components-lambda-api",
   "sourceRoot": "packages/components/lambda-api/src",
   "targets": {
     "build": {
@@ -32,7 +32,8 @@
     }
   },
   "tags": [
-    "scope:components",
-    "type:library"
+    "scope:shinobi",
+    "type:component",
+    "infra:aws"
   ]
 }

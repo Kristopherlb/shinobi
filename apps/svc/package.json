@@ -7,8 +7,7 @@
   },
   "scripts": {
     "build": "tsc -p tsconfig.app.json",
-    "start": "TS_NODE_PROJECT=tsconfig.app.json node --loader ts-node/esm src/main.ts",
-    "test": "jest"
+    "start": "TS_NODE_PROJECT=tsconfig.app.json node --loader ts-node/esm src/main.ts"
   },
   "dependencies": {
     "@shinobi/core": "workspace:*",

@@ -1,5 +1,5 @@
 {
-  "name": "@platform/components-waf-web-acl",
+  "name": "@shinobi/components-waf-web-acl",
   "root": "packages/components/waf-web-acl",
   "sourceRoot": "packages/components/waf-web-acl/src",
   "projectType": "library",
@@ -42,7 +42,8 @@
     }
   },
   "tags": [
-    "type:lib",
-    "scope:components"
+    "scope:shinobi",
+    "type:component",
+    "infra:aws"
   ]
 }

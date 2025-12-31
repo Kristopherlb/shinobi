@@ -1,5 +1,5 @@
 {
-  "name": "@platform/logger",
+  "name": "@shinobi/core-logger",
   "type": "module",
   "main": "../../../../../../packages/core/dist/platform/logger/src/index.js"
 }

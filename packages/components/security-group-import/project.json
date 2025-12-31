@@ -1,5 +1,5 @@
 {
-  "name": "@platform/components-security-group-import",
+  "name": "@shinobi/components-security-group-import",
   "root": "packages/components/security-group-import",
   "sourceRoot": "packages/components/security-group-import/src",
   "projectType": "library",
@@ -42,7 +42,8 @@
     }
   },
   "tags": [
-    "type:lib",
-    "scope:components"
+    "scope:shinobi",
+    "type:component",
+    "infra:aws"
   ]
 }

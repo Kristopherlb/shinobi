@@ -1,5 +1,5 @@
 {
-  "name": "@shinobi/waf-web-acl",
+  "name": "@shinobi/components-waf-web-acl",
   "version": "0.1.0",
   "private": true,
   "description": "CDK L3 component for waf-web-acl",
@@ -7,8 +7,6 @@
   "types": "dist/index.d.ts",
   "scripts": {
     "build": "tsc",
-    "test": "jest",
-    "test:watch": "jest --watch",
     "lint": "eslint src/**/*.ts",
     "lint:fix": "eslint src/**/*.ts --fix"
   },

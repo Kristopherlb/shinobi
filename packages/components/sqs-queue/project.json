@@ -1,5 +1,5 @@
 {
-  "name": "@platform/components-sqs-queue",
+  "name": "@shinobi/components-sqs-queue",
   "root": "packages/components/sqs-queue",
   "sourceRoot": "packages/components/sqs-queue/src",
   "projectType": "library",
@@ -42,7 +42,8 @@
     }
   },
   "tags": [
-    "type:lib",
-    "scope:components"
+    "scope:shinobi",
+    "type:component",
+    "infra:aws"
   ]
 }

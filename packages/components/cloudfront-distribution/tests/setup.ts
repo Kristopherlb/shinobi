@@ -9,7 +9,7 @@ if (process.cwd() !== repoRoot) {
 }
 
 // Mock the platform logger
-jest.mock('@platform/logger', () => ({
+jest.mock('@shinobi/core-logger', () => ({
   Logger: {
     getLogger: () => ({
       info: jest.fn(),

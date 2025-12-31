@@ -1,5 +1,5 @@
 {
-  "name": "@platform/components-deployment-bundle-pipeline",
+  "name": "@shinobi/components-deployment-bundle-pipeline",
   "root": "packages/components/deployment-bundle-pipeline",
   "sourceRoot": "packages/components/deployment-bundle-pipeline/src",
   "projectType": "library",
@@ -42,7 +42,8 @@
     }
   },
   "tags": [
-    "type:lib",
-    "scope:components"
+    "scope:shinobi",
+    "type:component",
+    "infra:aws"
   ]
 }

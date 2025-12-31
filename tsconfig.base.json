@@ -70,7 +70,7 @@
       "@platform/contracts/*": [
         "packages/core/src/platform/contracts/*"
       ],
-      "@platform/components/*": [
+      "@shinobi/components/*": [
         "packages/components/*/src"
       ]
     }

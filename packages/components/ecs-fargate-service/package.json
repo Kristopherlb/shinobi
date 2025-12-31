@@ -1,5 +1,5 @@
 {
-  "name": "@platform/ecs-fargate-service",
+  "name": "@shinobi/components-ecs-fargate-service",
   "version": "1.0.0",
   "private": true,
   "description": "ECS Fargate service component with Service Connect integration, blue-green deployment support, auto-scaling, and comprehensive CloudWatch monitoring for the Shinobi platform",
@@ -49,12 +49,9 @@
     "constructs": "^10.0.0"
   },
   "scripts": {
-    "test": "jest",
-    "test:watch": "jest --watch",
-    "test:coverage": "jest --coverage",
     "lint": "eslint . --ext .ts",
     "build": "tsc --noEmit",
-    "validate": "npm run lint && npm run build && npm run test"
+    "validate": "npm run lint && npm run build"
   },
   "engines": {
     "node": ">=20.0.0",

@@ -1,10 +1,11 @@
 {
-  "name": "shinobi",
+  "name": "@shinobi/cli",
   "sourceRoot": "apps/svc/src",
   "projectType": "application",
   "tags": [
+    "scope:shinobi",
     "type:app",
-    "scope:cli"
+    "type:cli"
   ],
   "targets": {
     "build": {
@@ -28,7 +29,7 @@
     "serve": {
       "executor": "@nx/node:execute",
       "options": {
-        "buildTarget": "shinobi:build"
+        "buildTarget": "@shinobi/cli:build"
       }
     },
     "test": {

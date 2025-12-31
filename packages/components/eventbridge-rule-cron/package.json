@@ -1,5 +1,5 @@
 {
-  "name": "@shinobi/component-eventbridge-rule-cron",
+  "name": "@shinobi/components-eventbridge-rule-cron",
   "version": "1.0.0",
   "private": true,
   "description": "EventBridge scheduled rules with configuration-driven logging, DLQ, and alarms",
@@ -31,7 +31,6 @@
   },
   "scripts": {
     "build": "tsc",
-    "test": "jest",
     "lint": "eslint .",
     "type-check": "tsc --noEmit"
   },

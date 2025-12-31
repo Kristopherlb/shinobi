@@ -1,5 +1,5 @@
 {
-  "name": "@platform/components-api-gateway-rest",
+  "name": "@shinobi/components-api-gateway-rest",
   "version": "1.0.0",
   "private": true,
   "description": "AWS API Gateway REST component with platform compliance, logging, and observability standards.",
@@ -7,7 +7,6 @@
   "types": "../../dist/packages/components/api-gateway-rest/index.d.ts",
   "scripts": {
     "build": "tsc -p tsconfig.json",
-    "test": "jest",
     "lint": "eslint . --ext .ts",
     "clean": "rm -rf dist coverage"
   },

@@ -1,12 +1,12 @@
 {
-  "name": "auto-scaling-group",
+  "name": "@shinobi/components-auto-scaling-group",
   "root": "packages/components/auto-scaling-group",
   "sourceRoot": "packages/components/auto-scaling-group/src",
   "projectType": "library",
   "tags": [
-    "type:lib",
-    "scope:components",
-    "scope:auto-scaling-group"
+    "scope:shinobi",
+    "type:component",
+    "infra:aws"
   ],
   "targets": {
     "build": {

@@ -1,5 +1,5 @@
 {
-  "name": "@shinobi/cloudfront-distribution",
+  "name": "@shinobi/components-cloudfront-distribution",
   "version": "1.0.0",
   "private": true,
   "description": "CloudFront Distribution Component for Shinobi Platform - Global CDN edge distribution with configurable origins, behaviors, and security controls",
@@ -14,7 +14,6 @@
   ],
   "scripts": {
     "build": "tsc -p tsconfig.json",
-    "test": "jest",
     "lint": "eslint src/**/*.ts",
     "typecheck": "tsc --noEmit"
   },

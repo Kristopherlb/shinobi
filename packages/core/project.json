@@ -1,5 +1,5 @@
 {
-  "name": "core",
+  "name": "@shinobi/core",
   "root": "packages/core",
   "sourceRoot": "packages/core/src",
   "projectType": "library",
@@ -42,7 +42,7 @@
     }
   },
   "tags": [
-    "type:lib",
-    "scope:core"
+    "scope:shinobi",
+    "type:core"
   ]
 }

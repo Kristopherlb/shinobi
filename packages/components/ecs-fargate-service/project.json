@@ -1,12 +1,12 @@
 {
-  "name": "ecs-fargate-service",
+  "name": "@shinobi/components-ecs-fargate-service",
   "root": "packages/components/ecs-fargate-service",
   "sourceRoot": "packages/components/ecs-fargate-service/src",
   "projectType": "library",
   "tags": [
-    "type:lib",
-    "scope:components",
-    "scope:ecs-fargate-service"
+    "scope:shinobi",
+    "type:component",
+    "infra:aws"
   ],
   "targets": {
     "build": {

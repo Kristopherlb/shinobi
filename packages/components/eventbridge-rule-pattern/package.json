@@ -1,5 +1,5 @@
 {
-  "name": "@shinobi/component-eventbridge-rule-pattern",
+  "name": "@shinobi/components-eventbridge-rule-pattern",
   "version": "1.0.0",
   "private": true,
   "description": "EventBridge pattern-based rule component with mandatory dead letter queue, CloudWatch logging, and comprehensive monitoring support per platform standards",
@@ -69,7 +69,6 @@
   },
   "scripts": {
     "build": "tsc -p tsconfig.json",
-    "test": "jest",
     "lint": "eslint src/**/*.ts",
     "typecheck": "tsc --noEmit"
   },

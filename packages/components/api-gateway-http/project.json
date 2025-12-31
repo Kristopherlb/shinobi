@@ -1,12 +1,12 @@
 {
-  "name": "api-gateway-http",
+  "name": "@shinobi/components-api-gateway-http",
   "root": "packages/components/api-gateway-http",
   "sourceRoot": "packages/components/api-gateway-http/src",
   "projectType": "library",
   "tags": [
-    "type:lib",
-    "scope:components",
-    "scope:api-gateway-http"
+    "scope:shinobi",
+    "type:component",
+    "infra:aws"
   ],
   "targets": {
     "build": {

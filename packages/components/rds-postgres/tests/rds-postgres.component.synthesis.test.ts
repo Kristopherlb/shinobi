@@ -5,7 +5,7 @@
  */
 
 jest.mock(
-  '@platform/logger',
+  '@shinobi/core-logger',
   () => ({
     Logger: {
       getLogger: () => ({

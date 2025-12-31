@@ -1,5 +1,5 @@
 {
-  "name": "certificate-manager",
+  "name": "@shinobi/components-certificate-manager",
   "root": "packages/components/certificate-manager",
   "sourceRoot": "packages/components/certificate-manager",
   "projectType": "library",
@@ -31,7 +31,8 @@
     }
   },
   "tags": [
-    "type:lib",
-    "scope:components"
+    "scope:shinobi",
+    "type:component",
+    "infra:aws"
   ]
 }

@@ -1,12 +1,12 @@
 {
-  "name": "ec2-instance",
+  "name": "@shinobi/components-ec2-instance",
   "root": "packages/components/ec2-instance",
   "sourceRoot": "packages/components/ec2-instance/src",
   "projectType": "library",
   "tags": [
-    "type:lib",
-    "scope:components",
-    "scope:ec2-instance"
+    "scope:shinobi",
+    "type:component",
+    "infra:aws"
   ],
   "targets": {
     "build": {

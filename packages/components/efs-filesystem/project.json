@@ -1,12 +1,12 @@
 {
-  "name": "efs-filesystem",
+  "name": "@shinobi/components-efs-filesystem",
   "root": "packages/components/efs-filesystem",
   "sourceRoot": "packages/components/efs-filesystem/src",
   "projectType": "library",
   "tags": [
-    "type:lib",
-    "scope:components",
-    "scope:efs-filesystem"
+    "scope:shinobi",
+    "type:component",
+    "infra:aws"
   ],
   "targets": {
     "build": {

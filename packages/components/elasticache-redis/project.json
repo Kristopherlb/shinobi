@@ -1,12 +1,12 @@
 {
-  "name": "elasticache-redis",
+  "name": "@shinobi/components-elasticache-redis",
   "root": "packages/components/elasticache-redis",
   "sourceRoot": "packages/components/elasticache-redis/src",
   "projectType": "library",
   "tags": [
-    "type:lib",
-    "scope:components",
-    "scope:elasticache-redis"
+    "scope:shinobi",
+    "type:component",
+    "infra:aws"
   ],
   "targets": {
     "build": {

@@ -9,7 +9,7 @@ import { IamPolicyComponentComponent } from '../iam-policy.component.js';
 import { IamPolicyConfig } from '../iam-policy.builder.js';
 import { ComponentContext, ComponentSpec } from '@platform/contracts';
 
-jest.mock('@platform/logger', () => ({
+jest.mock('@shinobi/core-logger', () => ({
   Logger: {
     setGlobalContext: jest.fn(),
     getLogger: jest.fn(() => ({

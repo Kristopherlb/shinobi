@@ -1,5 +1,5 @@
 {
-  "name": "@platform/components-api-gateway-http",
+  "name": "@shinobi/components-api-gateway-http",
   "version": "1.0.0",
   "private": true,
   "description": "AWS API Gateway v2 HTTP API component with compliance, observability, and security features",
@@ -7,9 +7,6 @@
   "types": "../../dist/packages/components/api-gateway-http/index.d.ts",
   "scripts": {
     "build": "tsc -p tsconfig.json",
-    "test": "jest",
-    "test:watch": "jest --watch",
-    "test:coverage": "jest --coverage",
     "lint": "eslint . --ext .ts",
     "lint:fix": "eslint . --ext .ts --fix",
     "clean": "rm -rf dist coverage"

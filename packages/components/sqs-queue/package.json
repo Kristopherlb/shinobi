@@ -1,12 +1,11 @@
 {
-  "name": "@platform/sqs-queue",
+  "name": "@shinobi/components-sqs-queue",
   "version": "0.0.1",
   "private": true,
   "main": "dist/packages/components/sqs-queue/index.js",
   "types": "dist/packages/components/sqs-queue/index.d.ts",
   "scripts": {
-    "build": "tsc -p tsconfig.json",
-    "test": "jest"
+    "build": "tsc -p tsconfig.json"
   },
   "dependencies": {
     "@shinobi/core": "workspace:*"

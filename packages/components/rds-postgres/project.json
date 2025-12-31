@@ -1,5 +1,5 @@
 {
-  "name": "@platform/components-rds-postgres",
+  "name": "@shinobi/components-rds-postgres",
   "root": "packages/components/rds-postgres",
   "sourceRoot": "packages/components/rds-postgres/src",
   "projectType": "library",
@@ -42,7 +42,8 @@
     }
   },
   "tags": [
-    "type:lib",
-    "scope:components"
+    "scope:shinobi",
+    "type:component",
+    "infra:aws"
   ]
 }

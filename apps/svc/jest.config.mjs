@@ -22,16 +22,8 @@ export default {
     '<rootDir>/src/**/*.(test|spec).[jt]s?(x)'
   ],
 
-  // Transform and module handling
-  transform: {
-    '^.+\\.(ts|mts|js|jsx)$': [
-      'ts-jest',
-      {
-        tsconfig: '<rootDir>/tsconfig.spec.json',
-        isolatedModules: true // Faster compilation
-      }
-    ]
-  },
+  // Transform and module handling - using @swc/jest for consistency with preset
+  // Note: If advanced decorator metadata is needed, ts-jest can be used instead
 
   moduleFileExtensions: ['ts', 'mts', 'js', 'mjs', 'jsx', 'json', 'node'],
 
@@ -49,17 +41,8 @@ export default {
     '^@platform/(.*)$': '<rootDir>/../../packages/$1/src'
   },
 
-  // Coverage settings
-  collectCoverage: true,
-  coverageDirectory: path.join(__dirname, '../../coverage/apps/svc'),
-  coverageReporters: ['text', 'lcov', 'html', 'json'],
-  coveragePathIgnorePatterns: [
-    '/node_modules/',
-    '/dist/',
-    '/__tests__/',
-    '\\.d\\.ts$',
-    'src/main.ts' // Exclude entrypoint if not tested
-  ],
+  // Coverage settings - moved to Nx target options in project.json
+  // Remove collectCoverage from here to use Nx target options instead
 
   // Performance & reliability
   maxWorkers: '50%',

@@ -1,14 +1,14 @@
 {
-  "name": "s3-bucket",
+  "name": "@shinobi/components-s3-bucket",
   "sourceRoot": "packages/components/s3-bucket",
   "projectType": "library",
   "implicitDependencies": [
-    "core"
+    "@shinobi/core"
   ],
   "tags": [
-    "type:lib",
-    "scope:components",
-    "scope:s3-bucket"
+    "scope:shinobi",
+    "type:component",
+    "infra:aws"
   ],
   "targets": {
     "build": {

@@ -1,4 +1,4 @@
-// Mock implementation of @platform/logger for testing
+// Mock implementation of @shinobi/core-logger for testing
 export const Logger = {
   getLogger: () => ({
     info: jest.fn(),

@@ -1,5 +1,5 @@
 jest.mock(
-  '@platform/logger',
+  '@shinobi/core-logger',
   () => ({
     Logger: {
       getLogger: () => ({ info: jest.fn(), warn: jest.fn(), error: jest.fn(), debug: jest.fn() }),

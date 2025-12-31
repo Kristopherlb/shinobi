@@ -1,36 +1,12 @@
 import path from 'node:path';
 import url from 'node:url';
+import preset from './jest.preset.mjs';
 
 const __dirname = path.dirname(url.fileURLToPath(import.meta.url));
 
 export default {
-  testEnvironment: 'node',
-  testEnvironmentOptions: {
-    customExportConditions: ['node', 'default']
-  },
-  extensionsToTreatAsEsm: ['.ts', '.tsx'],
-  transform: {
-    '^.+\\.[tj]sx?$': [
-      '@swc/jest',
-      {
-        jsc: {
-          parser: {
-            syntax: 'typescript',
-            tsx: true,
-            decorators: true
-          },
-          target: 'es2022',
-          keepClassNames: true
-        },
-        module: {
-          type: 'es6'
-        },
-        sourceMaps: true
-      }
-    ]
-  },
-  transformIgnorePatterns: ['node_modules/(?!(uuid|@aws-sdk)/)'],
-  moduleFileExtensions: ['ts', 'tsx', 'js', 'jsx', 'mjs', 'json', 'node'],
+  ...preset,
+  // Root-level overrides (minimal - most config comes from preset)
   modulePathIgnorePatterns: [
     '[\\\\/]dist[\\\\/]',
     '<rootDir>/tmp/',
@@ -38,37 +14,6 @@ export default {
     // Ignore nested package.json files that cause Haste map collisions
     '<rootDir>/packages/core/src/platform/logger/package.json'
   ],
-  watchPathIgnorePatterns: [
-    '[\\\\/]dist[\\\\/]',
-    '<rootDir>/tmp/',
-    '<rootDir>/tmp-shinobi/',
-    '<rootDir>/packages/core/src/platform/logger/package.json'
-  ],
-  // Configure Haste map to handle duplicate package names
-  haste: {
-    throwOnModuleCollision: false,
-    computeSha1: false
-  },
-  moduleNameMapper: {
-    '^(?:\\.{1,2}/)+platform/contracts/(.+)\\.js$': '<rootDir>/packages/core/src/platform/contracts/$1.ts',
-    '^(\\.{1,2}/(?:.*/)?src/.+)\\.js$': '$1.ts',
-    '^(\\.{1,2}/)(component|config-builder|bindings|platform-binding-trigger-spec|trigger-interfaces|binder-matrix|openfeature-interfaces|platform-services|logging-interfaces|artifacts)\\.js$': '$1$2.ts',
-    '^(\\.{1,2}/.*services/.+)\\.js$': '$1.ts',
-    '^(\\.{1,2}/.*\\.service)\\.js$': '$1.ts',
-    '^@platform/contracts$': '<rootDir>/packages/core/src/platform/contracts/index.ts',
-    '^@platform/logger$': '<rootDir>/packages/core/src/platform/logger/src/index.ts',
-    '^@platform/(.+)$': '<rootDir>/packages/components/$1/src/index.ts',
-    '^@shinobi/core$': '<rootDir>/packages/core/src/index.ts',
-    '^@shinobi/standards-iam-audit$': '<rootDir>/packages/standards/iam-audit/src/index.ts',
-    '^@shinobi/standards-deprecation$': '<rootDir>/packages/standards/deprecation/src/index.ts',
-    '^@shinobi/mcp-server$': '<rootDir>/apps/shinobi-mcp-server/src/index.ts',
-    '^@shinobi/observability-handlers$': '<rootDir>/packages/observability-handlers/src/index.ts',
-    '^@shinobi/components/(.+)/(.+)$': '<rootDir>/packages/components/$1/$2.ts',
-    '^@shinobi/components/(.+)/src/(.+)$': '<rootDir>/packages/components/$1/src/$2.ts',
-    '^@shinobi/core/contracts/(.+)$': '<rootDir>/packages/core/src/platform/contracts/$1',
-  },
-  collectCoverageFrom: ['packages/*/src/**/*.{ts,tsx}', '!packages/*/src/**/*.d.ts'],
-  coverageDirectory: path.join(__dirname, 'coverage'),
-  coverageReporters: ['text', 'lcov', 'html'],
-  coverageProvider: 'v8'
+  // Coverage configuration moved to Nx target options in project.json files
+  // Remove root-level coverage config to avoid conflicts with Nx executor
 };

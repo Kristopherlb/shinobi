@@ -1,12 +1,12 @@
 {
-  "name": "eventbridge-rule-cron",
+  "name": "@shinobi/components-eventbridge-rule-cron",
   "root": "packages/components/eventbridge-rule-cron",
   "sourceRoot": "packages/components/eventbridge-rule-cron/src",
   "projectType": "library",
   "tags": [
-    "type:lib",
-    "scope:components",
-    "scope:eventbridge-rule-cron"
+    "scope:shinobi",
+    "type:component",
+    "infra:aws"
   ],
   "targets": {
     "build": {

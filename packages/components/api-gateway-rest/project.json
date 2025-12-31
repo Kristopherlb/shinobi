@@ -1,5 +1,5 @@
 {
-  "name": "api-gateway-rest",
+  "name": "@shinobi/components-api-gateway-rest",
   "root": "packages/components/api-gateway-rest",
   "sourceRoot": "packages/components/api-gateway-rest",
   "projectType": "library",
@@ -44,7 +44,8 @@
     }
   },
   "tags": [
-    "type:lib",
-    "scope:components"
+    "scope:shinobi",
+    "type:component",
+    "infra:aws"
   ]
 }

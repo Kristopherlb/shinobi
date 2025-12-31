@@ -1,12 +1,12 @@
 {
-  "name": "ecr-repository",
+  "name": "@shinobi/components-ecr-repository",
   "root": "packages/components/ecr-repository",
   "sourceRoot": "packages/components/ecr-repository/src",
   "projectType": "library",
   "tags": [
-    "type:lib",
-    "scope:components",
-    "scope:ecr-repository"
+    "scope:shinobi",
+    "type:component",
+    "infra:aws"
   ],
   "targets": {
     "build": {

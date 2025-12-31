@@ -1,12 +1,12 @@
 {
-  "name": "cognito-user-pool",
+  "name": "@shinobi/components-cognito-user-pool",
   "root": "packages/components/cognito-user-pool",
   "sourceRoot": "packages/components/cognito-user-pool/src",
   "projectType": "library",
   "tags": [
-    "type:lib",
-    "scope:components",
-    "scope:cognito-user-pool"
+    "scope:shinobi",
+    "type:component",
+    "infra:aws"
   ],
   "targets": {
     "build": {

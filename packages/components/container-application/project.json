@@ -1,5 +1,5 @@
 {
-  "name": "@platform/components-container-application",
+  "name": "@shinobi/components-container-application",
   "root": "packages/components/container-application",
   "sourceRoot": "packages/components/container-application/src",
   "projectType": "library",
@@ -42,7 +42,8 @@
     }
   },
   "tags": [
-    "type:lib",
-    "scope:components"
+    "scope:shinobi",
+    "type:component",
+    "infra:aws"
   ]
 }

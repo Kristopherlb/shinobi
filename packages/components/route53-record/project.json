@@ -1,5 +1,5 @@
 {
-  "name": "@platform/components-route53-record",
+  "name": "@shinobi/components-route53-record",
   "root": "packages/components/route53-record",
   "sourceRoot": "packages/components/route53-record/src",
   "projectType": "library",
@@ -42,7 +42,8 @@
     }
   },
   "tags": [
-    "type:lib",
-    "scope:components"
+    "scope:shinobi",
+    "type:component",
+    "infra:aws"
   ]
 }

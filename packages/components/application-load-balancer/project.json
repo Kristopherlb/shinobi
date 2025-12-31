@@ -1,5 +1,5 @@
 {
-  "name": "application-load-balancer",
+  "name": "@shinobi/components-application-load-balancer",
   "root": "packages/components/application-load-balancer",
   "sourceRoot": "packages/components/application-load-balancer",
   "projectType": "library",
@@ -44,7 +44,8 @@
     }
   },
   "tags": [
-    "type:lib",
-    "scope:components"
+    "scope:shinobi",
+    "type:component",
+    "infra:aws"
   ]
 }

@@ -28,9 +28,5 @@ export type { LogLevel as PlatformLogLevel } from './platform/logger/src/index.j
 // Export binder registry for MCP server
 export { ComprehensiveBinderRegistry } from './platform/binders/registry/comprehensive-binder-registry.js';
 
-// Export migration (avoiding conflicts with contracts)
-export * from './migration/migration-engine.js';
-export * from './migration/cloudformation-analyzer.js';
-export * from './migration/resource-mapper.js';
-export * from './migration/migration-reporter.js';
+
 // add other re-exports as needed

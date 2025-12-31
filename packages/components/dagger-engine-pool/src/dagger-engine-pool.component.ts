@@ -11,7 +11,7 @@ import * as acm from 'aws-cdk-lib/aws-certificatemanager';
 import * as cdk from 'aws-cdk-lib';
 import { BaseComponent } from '@shinobi/core';
 import { ComponentContext, ComponentSpec } from '@platform/contracts';
-// import { applyComplianceTags } from '@platform/tagging-service';
+// import { applyComplianceTags } from '@shinobi/core-tagging';
 import { DaggerConfig, DaggerOutputs, DaggerEnginePoolProps } from './types.js';
 import { DaggerConfigBuilder } from './dagger-engine-pool.builder.js';
 

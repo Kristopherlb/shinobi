@@ -1,5 +1,5 @@
 {
-  "name": "@platform/components-dagger-engine-pool",
+  "name": "@shinobi/components-dagger-engine-pool",
   "root": "packages/components/dagger-engine-pool",
   "sourceRoot": "packages/components/dagger-engine-pool/src",
   "projectType": "library",
@@ -42,7 +42,8 @@
     }
   },
   "tags": [
-    "type:lib",
-    "scope:components"
+    "scope:shinobi",
+    "type:component",
+    "infra:aws"
   ]
 }

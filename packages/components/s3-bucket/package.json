@@ -1,5 +1,5 @@
 {
-  "name": "@platform/components-s3-bucket",
+  "name": "@shinobi/components-s3-bucket",
   "version": "0.0.1",
   "private": true,
   "type": "module",
@@ -30,7 +30,6 @@
   },
   "scripts": {
     "build": "tsc -p tsconfig.json",
-    "clean": "rm -rf dist",
-    "test": "jest -c ../../../../jest.preset.ts --roots=./tests"
+    "clean": "rm -rf dist"
   }
 }

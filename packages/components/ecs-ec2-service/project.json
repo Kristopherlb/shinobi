@@ -1,12 +1,12 @@
 {
-  "name": "ecs-ec2-service",
+  "name": "@shinobi/components-ecs-ec2-service",
   "root": "packages/components/ecs-ec2-service",
   "sourceRoot": "packages/components/ecs-ec2-service/src",
   "projectType": "library",
   "tags": [
-    "type:lib",
-    "scope:components",
-    "scope:ecs-ec2-service"
+    "scope:shinobi",
+    "type:component",
+    "infra:aws"
   ],
   "targets": {
     "build": {

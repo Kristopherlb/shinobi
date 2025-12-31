@@ -1,12 +1,12 @@
 {
-  "name": "cloudfront-distribution",
+  "name": "@shinobi/components-cloudfront-distribution",
   "root": "packages/components/cloudfront-distribution",
   "sourceRoot": "packages/components/cloudfront-distribution/src",
   "projectType": "library",
   "tags": [
-    "type:lib",
-    "scope:components",
-    "scope:cloudfront-distribution"
+    "scope:shinobi",
+    "type:component",
+    "infra:aws"
   ],
   "targets": {
     "build": {

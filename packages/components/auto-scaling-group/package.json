@@ -1,5 +1,5 @@
 {
-  "name": "@platform/auto-scaling-group",
+  "name": "@shinobi/components-auto-scaling-group",
   "version": "1.0.1",
   "private": true,
   "description": "Auto Scaling Group component for the Shinobi platform",
@@ -8,7 +8,6 @@
   "types": "dist/index.d.ts",
   "scripts": {
     "build": "tsc -p tsconfig.json",
-    "test": "jest",
     "lint": "eslint src/**/*.ts",
     "typecheck": "tsc --noEmit"
   },

@@ -104,7 +104,7 @@ export class DaggerEnginePoolCreator implements IComponentCreator {
     return [
       '@shinobi/core',
       '@platform/contracts',
-      '@platform/tagging-service'
+      '@shinobi/core-tagging'
     ];
   }
 }

@@ -1,12 +1,11 @@
 {
-  "name": "@platform/rds-postgres",
+  "name": "@shinobi/components-rds-postgres",
   "version": "0.0.1",
   "private": true,
   "main": "dist/packages/components/rds-postgres/index.js",
   "types": "dist/packages/components/rds-postgres/index.d.ts",
   "scripts": {
-    "build": "tsc -p tsconfig.json",
-    "test": "jest"
+    "build": "tsc -p tsconfig.json"
   },
   "dependencies": {
     "@shinobi/core": "workspace:*"

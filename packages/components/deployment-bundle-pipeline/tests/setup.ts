@@ -160,7 +160,7 @@ export const ConfigBuilder = class MockConfigBuilder {
 };
 
 // Mock the platform core modules
-jest.mock('@platform/core', () => ({
+jest.mock('@shinobi/core', () => ({
   BaseComponent: class MockBaseComponent {
     context: any;
     spec: any;

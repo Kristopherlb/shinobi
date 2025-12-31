@@ -1,5 +1,5 @@
 {
-  "name": "@platform/components-container-application",
+  "name": "@shinobi/components-container-application",
   "version": "1.1.0",
   "private": true,
   "description": "Production-grade containerized application component for the Shinobi platform",
@@ -14,9 +14,6 @@
   },
   "scripts": {
     "build": "tsc",
-    "test": "jest",
-    "test:watch": "jest --watch",
-    "test:coverage": "jest --coverage",
     "lint": "eslint src/**/*.ts",
     "lint:fix": "eslint src/**/*.ts --fix",
     "clean": "rm -rf dist coverage"

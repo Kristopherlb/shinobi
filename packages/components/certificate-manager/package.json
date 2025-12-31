@@ -1,5 +1,5 @@
 {
-  "name": "@platform/components-certificate-manager",
+  "name": "@shinobi/components-certificate-manager",
   "version": "1.0.1",
   "private": true,
   "description": "Certificate Manager component provisioning ACM certificates with platform logging and monitoring standards.",
@@ -7,7 +7,6 @@
   "types": "../../dist/packages/components/certificate-manager/index.d.ts",
   "scripts": {
     "build": "tsc -p tsconfig.json",
-    "test": "jest",
     "lint": "eslint . --ext .ts",
     "clean": "rm -rf dist coverage"
   },

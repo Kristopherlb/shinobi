@@ -1,5 +1,5 @@
 {
-  "name": "@platform/components-lambda-api",
+  "name": "@shinobi/components-lambda-api",
   "version": "0.0.1",
   "private": true,
   "type": "module",
@@ -29,7 +29,6 @@
   },
   "scripts": {
     "build": "tsc -p tsconfig.lib.json",
-    "clean": "rimraf dist",
-    "test": "jest -c ../../../../jest.preset.ts --roots=./src"
+    "clean": "rimraf dist"
   }
 }

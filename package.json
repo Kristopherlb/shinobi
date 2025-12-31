@@ -1,6 +1,7 @@
 {
   "name": "workspace",
   "version": "1.0.0",
+  "private": true,
   "main": "index.js",
   "scripts": {
     "build": "nx run-many -t build --all",
@@ -14,7 +15,7 @@
     "affected:typecheck": "nx affected -t typecheck",
     "shinobi": "pnpm --filter @shinobi/cli start",
     "test:watch": "jest --watch",
-    "test:coverage": "jest --coverage",
+    "test:coverage": "nx run-many -t test --all --coverage",
     "mcp:build": "pnpm --filter @shinobi/mcp-server build",
     "mcp:start": "pnpm --filter @shinobi/mcp-server start"
   },

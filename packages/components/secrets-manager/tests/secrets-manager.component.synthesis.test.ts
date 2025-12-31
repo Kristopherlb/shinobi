@@ -9,7 +9,7 @@ import { SecretsManagerComponentComponent } from '../secrets-manager.component.t
 import { SecretsManagerComponentConfigBuilder, SecretsManagerConfig } from '../secrets-manager.builder.ts';
 import { ComponentContext, ComponentSpec } from '../../../platform/contracts/component-interfaces.ts';
 
-jest.mock('@platform/logger', () => ({
+jest.mock('@shinobi/core-logger', () => ({
   Logger: {
     setGlobalContext: jest.fn(),
     getLogger: jest.fn(() => ({

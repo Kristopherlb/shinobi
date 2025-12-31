@@ -1,5 +1,5 @@
 {
-  "name": "@platform/components-iam-role",
+  "name": "@shinobi/components-iam-role",
   "root": "packages/components/iam-role",
   "sourceRoot": "packages/components/iam-role/src",
   "projectType": "library",
@@ -42,7 +42,8 @@
     }
   },
   "tags": [
-    "type:lib",
-    "scope:components"
+    "scope:shinobi",
+    "type:component",
+    "infra:aws"
   ]
 }

@@ -1,12 +1,12 @@
 {
-  "name": "dynamodb-table",
+  "name": "@shinobi/components-dynamodb-table",
   "root": "packages/components/dynamodb-table",
   "sourceRoot": "packages/components/dynamodb-table/src",
   "projectType": "library",
   "tags": [
-    "type:lib",
-    "scope:components",
-    "scope:dynamodb-table"
+    "scope:shinobi",
+    "type:component",
+    "infra:aws"
   ],
   "targets": {
     "build": {
