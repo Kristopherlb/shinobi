@@ -116,7 +116,11 @@ export class CatalogCommand {
 
       let creatorMap: Map<string, ComponentCreatorEntry> | undefined;
       try {
-        creatorMap = await loadComponentCreators({ includeNonProduction: options.all, autoBuild: false });
+        creatorMap = await loadComponentCreators({ 
+          includeNonProduction: options.all, 
+          autoBuild: false,
+          logger: this.logger
+        });
       } catch (loadError) {
         const message = loadError instanceof Error ? loadError.message : String(loadError);
         this.logger.warn(`Continuing without component creators: ${message}`);

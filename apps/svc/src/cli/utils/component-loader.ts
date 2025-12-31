@@ -5,14 +5,29 @@ import * as path from 'path';
 import { fileURLToPath, pathToFileURL } from 'url';
 import { sync as globSync } from 'glob';
 import { loadComponentCatalog, ComponentCatalogEntry, formatCatalogDisplayName } from './component-catalog.js';
+import { findRepoRoot } from './repo-root.js';
 import type { IComponentCreator } from '@shinobi/core';
+import type { Logger } from '../console-logger.js';
 
 interface LoadCreatorsOptions {
   includeNonProduction?: boolean;
   autoBuild?: boolean;
+  logger?: Logger;
 }
 
 type PlatformComponentCreator = IComponentCreator & { componentType: string };
+
+/**
+ * Loose interface for creator metadata that may be present on creator instances
+ * Used for safe property access when catalog metadata is unavailable
+ */
+interface LooseCreatorMetadata {
+  displayName?: string;
+  description?: string;
+  category?: string;
+  tags?: string[];
+  getProvidedCapabilities?: () => string[];
+}
 
 export interface ComponentCreatorEntry {
   entry: ComponentCatalogEntry;
@@ -20,7 +35,7 @@ export interface ComponentCreatorEntry {
 }
 
 const moduleDir = path.dirname(fileURLToPath(import.meta.url));
-const rootDir = path.resolve(moduleDir, '../../../../../');
+let rootDirCache: string | null = null;
 const canImportTypeScript = Boolean(
   process.env.TS_NODE_PROJECT ||
   process.env.TS_NODE_COMPILER_OPTIONS ||
@@ -30,7 +45,11 @@ const canImportTypeScript = Boolean(
 export const loadComponentCreators = async (
   options?: LoadCreatorsOptions
 ): Promise<Map<string, ComponentCreatorEntry>> => {
-  const componentsDir = path.join(rootDir, 'packages/components');
+  // Cache root directory resolution to avoid repeated filesystem traversal
+  if (!rootDirCache) {
+    rootDirCache = await findRepoRoot(moduleDir);
+  }
+  const componentsDir = path.join(rootDirCache, 'packages/components');
   const catalogEntries = await loadComponentCatalog({ includeNonProduction: true });
   const catalogByType = new Map<string, ComponentCatalogEntry>(catalogEntries.map(entry => [entry.componentType, entry]));
 
@@ -84,30 +103,35 @@ export const loadComponentCreators = async (
     candidatePaths.push(...creatorGlob);
 
     const sourceCandidates = buildSourceCandidates(candidatePaths);
-    let moduleExports = await loadFirstResolvedModule(sourceCandidates);
+    let moduleExports = await loadFirstResolvedModule(sourceCandidates, options?.logger);
 
     if (!moduleExports) {
-      const distCandidates = buildDistCandidates(rootDir, componentRoot, packageDir, candidatePaths);
-      moduleExports = await loadFirstResolvedModule(distCandidates);
+      const distCandidates = buildDistCandidates(rootDirCache, componentRoot, packageDir, candidatePaths);
+      moduleExports = await loadFirstResolvedModule(distCandidates, options?.logger);
     }
 
     if (!moduleExports && options?.autoBuild) {
-      console.warn(`Component package ${packageName} is not built; skipping. Set TEMPLATE_CONFIG_PATH or run build first.`);
+      const message = `Component package ${packageName} is not built; skipping. Set TEMPLATE_CONFIG_PATH or run build first.`;
+      if (options.logger) {
+        options.logger.warn(message);
+      } else {
+        console.warn(message);
+      }
     }
 
     if (!moduleExports) {
-      // Debug: log which paths were tried
-      if (packageDir === 'iam-role') {
-        console.warn(`[DEBUG] Failed to load module for ${packageName}. Tried source: ${sourceCandidates.slice(0, 3).join(', ')}...`);
+      // Debug: log which paths were tried (only in debug mode or for specific packages)
+      if (packageDir === 'iam-role' && options?.logger) {
+        options.logger.debug(`Failed to load module for ${packageName}. Tried source: ${sourceCandidates.slice(0, 3).join(', ')}...`);
       }
       continue;
     }
 
     const creator = findCreatorExport(moduleExports ?? {});
     if (!creator) {
-      // Debug: log what exports were found
-      if (packageDir === 'iam-role') {
-        console.warn(`[DEBUG] Creator not found in exports for ${packageName}. Exports: ${Object.keys(moduleExports).join(', ')}`);
+      // Debug: log what exports were found (only in debug mode or for specific packages)
+      if (packageDir === 'iam-role' && options?.logger) {
+        options.logger.debug(`Creator not found in exports for ${packageName}. Exports: ${Object.keys(moduleExports).join(', ')}`);
       }
       continue;
     }
@@ -118,15 +142,17 @@ export const loadComponentCreators = async (
       continue;
     }
 
-    const displayName = catalogEntry?.displayName ?? (creator as any).displayName ?? formatCatalogDisplayName(creator.componentType);
-    const description = catalogEntry?.description ?? (creator as any).description;
-    const category = catalogEntry?.category ?? (creator as any).category;
+    // Safe access to creator metadata using loose interface
+    const creatorMetadata = creator as unknown as LooseCreatorMetadata;
+    const displayName = catalogEntry?.displayName ?? creatorMetadata.displayName ?? formatCatalogDisplayName(creator.componentType);
+    const description = catalogEntry?.description ?? creatorMetadata.description;
+    const category = catalogEntry?.category ?? creatorMetadata.category;
 
     let capabilities: string[] = [];
     if (catalogEntry?.capabilities?.length) {
       capabilities = catalogEntry.capabilities;
-    } else if (typeof (creator as any).getProvidedCapabilities === 'function') {
-      const provided = (creator as any).getProvidedCapabilities();
+    } else if (typeof creatorMetadata.getProvidedCapabilities === 'function') {
+      const provided = creatorMetadata.getProvidedCapabilities();
       if (Array.isArray(provided)) {
         capabilities = provided;
       }
@@ -135,8 +161,8 @@ export const loadComponentCreators = async (
     let tags: string[] = [];
     if (catalogEntry?.tags?.length) {
       tags = catalogEntry.tags;
-    } else if (Array.isArray((creator as any).tags)) {
-      tags = (creator as any).tags;
+    } else if (Array.isArray(creatorMetadata.tags)) {
+      tags = creatorMetadata.tags;
     }
 
     const entry: ComponentCatalogEntry = {
@@ -238,7 +264,10 @@ const buildDistRelativePaths = (relative: string): string[] => {
   return results;
 };
 
-const loadFirstResolvedModule = async (candidatePaths: string[]): Promise<Record<string, any> | undefined> => {
+const loadFirstResolvedModule = async (
+  candidatePaths: string[],
+  logger?: Logger
+): Promise<Record<string, any> | undefined> => {
   for (const candidate of candidatePaths) {
     try {
       const stat = await fsp.stat(candidate);
@@ -252,14 +281,14 @@ const loadFirstResolvedModule = async (candidatePaths: string[]): Promise<Record
       if ((error as NodeJS.ErrnoException)?.code === 'ENOENT') {
         continue;
       }
-      // Debug: log import errors for iam-role to understand what's failing
-      if (candidate.includes('iam-role') && candidate.endsWith('.ts')) {
+      // Debug: log import errors for iam-role to understand what's failing (only if logger provided)
+      if (candidate.includes('iam-role') && candidate.endsWith('.ts') && logger) {
         try {
           const err = error as any;
           const errorMsg = err?.message || err?.toString() || String(error) || 'Unknown error';
-          console.warn(`[DEBUG] Failed to import TS source ${candidate}:`, errorMsg);
+          logger.debug(`Failed to import TS source ${candidate}: ${errorMsg}`);
           if (err?.code) {
-            console.warn(`[DEBUG] Error code:`, err.code);
+            logger.debug(`Error code: ${err.code}`);
           }
         } catch {
           // Ignore logging errors
