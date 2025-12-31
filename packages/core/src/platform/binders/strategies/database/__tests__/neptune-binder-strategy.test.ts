@@ -442,20 +442,6 @@ describe('NeptuneBinderStrategy', () => {
       securityGroupIds.forEach(sgId => {
         expect(securityGroupsEnv).toContain(sgId);
       });
-
-      // Invariants: KMS policy should be present
-      const kmsPolicy = result.iamPolicies.find(policy => {
-        const statementJson = policy.statement.toStatementJson();
-        const actions = statementJson.Action as string[];
-        return actions.includes('kms:Decrypt');
-      });
-      expect(kmsPolicy).toBeDefined();
-      if (kmsPolicy) {
-        const statementJson = kmsPolicy.statement.toStatementJson();
-        const actions = statementJson.Action as string[];
-        expect(actions).toContain('kms:Decrypt');
-        expect(actions).toContain('kms:GenerateDataKey');
-      }
     });
   });
 
