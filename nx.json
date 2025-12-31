@@ -1,5 +1,5 @@
 {
-  "extends": "nx/presets/pnpm.json",
+  "extends": "nx/presets/npm.json",
   "packageManager": "pnpm",
   "affected": {
     "defaultBase": "main"
