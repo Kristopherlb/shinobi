@@ -1,3 +1,20 @@
+/**
+ * Diff Command Factory
+ *
+ * Creates a Commander.js command for `shinobi diff`, which compares the
+ * synthesized infrastructure against a deployed CloudFormation stack by:
+ * - Synthesizing the service manifest to CloudFormation
+ * - Fetching the current stack template from AWS
+ * - Performing a structural diff between the two templates
+ * - Reporting differences, additions, and removals
+ *
+ * Exit codes:
+ * - 0: No differences found
+ * - 3: Differences found (propagated for CI/CD integration)
+ *
+ * @returns A configured Commander.js Command instance
+ */
+
 import { Command } from 'commander';
 import { CompositionRoot } from '../composition-root.js';
 

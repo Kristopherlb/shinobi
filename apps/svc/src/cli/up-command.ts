@@ -1,3 +1,25 @@
+/**
+ * Up Command
+ *
+ * Implements the `shinobi up` command, which deploys infrastructure to AWS
+ * using AWS CDK CLI primitives. This command:
+ *
+ * - Synthesizes the service manifest to CloudFormation templates
+ * - Optionally prompts for user confirmation before deployment
+ * - Executes CDK deploy with appropriate approval requirements
+ * - Handles stack creation and updates
+ * - Manages synthesized asset directories
+ *
+ * This is the primary deployment command for the platform. It wraps the AWS
+ * CDK CLI to provide a consistent interface while maintaining compatibility
+ * with CDK's deployment mechanisms.
+ *
+ * Exit codes:
+ * - 0: Deployment successful
+ * - 1: Deployment failed (CDK errors, AWS API failures)
+ * - 2: User cancelled deployment or missing manifest
+ */
+
 import * as path from 'path';
 import * as fsp from 'fs/promises';
 import inquirer from 'inquirer';

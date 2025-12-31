@@ -1,3 +1,24 @@
+/**
+ * Validate Command
+ *
+ * Implements the `shinobi validate` command, which parses and validates service
+ * manifests without connecting to AWS. This command performs:
+ *
+ * - Manifest file discovery (searches current and parent directories)
+ * - YAML parsing and syntax validation
+ * - JSON Schema validation against platform schemas
+ * - Component reference validation
+ * - Context hydration and environment resolution
+ *
+ * This command is safe to run in CI/CD pipelines as it performs no AWS API calls
+ * and has no side effects. It returns a standardized result object that can be
+ * consumed programmatically.
+ *
+ * Exit codes:
+ * - 0: Validation successful
+ * - 2: Validation failed (syntax errors, schema violations, missing files)
+ */
+
 import { Logger } from './console-logger.js';
 import { ValidationOrchestrator } from '@shinobi/core';
 import { FileDiscovery } from './utils/file-discovery.js';

@@ -1,6 +1,15 @@
 /**
- * @platform/cli - Platform CLI Tools
- * Command line interface for scaffolding, validation, and planning
+ * CLI Module Exports
+ *
+ * Main export file for the Shinobi Platform CLI module. Re-exports all
+ * public APIs including:
+ *
+ * - Main CLI application (cli.ts)
+ * - Composition Root for dependency injection
+ * - Individual command implementations
+ *
+ * This module serves as the public API surface for programmatic access to
+ * CLI functionality.
  */
 
 // Export main CLI application

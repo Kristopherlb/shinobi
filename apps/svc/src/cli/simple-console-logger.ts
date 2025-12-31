@@ -1,3 +1,21 @@
+/**
+ * Simple Console Logger
+ *
+ * A lightweight, minimal logger implementation for CLI commands. This logger
+ * provides basic console output with support for verbose mode and CI-friendly
+ * JSON output. It maintains an in-memory log buffer for programmatic access.
+ *
+ * This is a simpler alternative to the full ConsoleLogger, suitable for
+ * commands that don't need the full structured logging capabilities of the
+ * platform logger.
+ *
+ * Features:
+ * - Basic log levels: info, warn, error, success, debug
+ * - Verbose mode for detailed output
+ * - CI mode with structured JSON output
+ * - In-memory log capture
+ */
+
 export interface LoggerConfig {
   verbose: boolean;
   ci: boolean;

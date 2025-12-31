@@ -1,3 +1,26 @@
+/**
+ * Synth Command
+ *
+ * Implements the `shinobi synth` command, which synthesizes a service manifest
+ * into AWS CDK templates. This command:
+ *
+ * - Resolves the service manifest file
+ * - Synthesizes the manifest to CDK constructs
+ * - Generates CloudFormation templates
+ * - Outputs synthesis results (stacks, components, output directory)
+ * - Supports JSON output for programmatic consumption
+ *
+ * This command does not deploy anything to AWS. It's useful for:
+ * - Validating that manifests synthesize correctly
+ * - Generating templates for external deployment tools
+ * - Inspecting the generated CloudFormation templates
+ *
+ * Exit codes:
+ * - 0: Synthesis successful
+ * - 1: Synthesis failed (CDK errors, component errors)
+ * - 2: Missing manifest file
+ */
+
 import * as path from 'path';
 import * as fsp from 'fs/promises';
 import * as fs from 'fs';

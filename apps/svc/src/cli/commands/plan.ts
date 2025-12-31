@@ -1,3 +1,17 @@
+/**
+ * Plan Command Factory
+ *
+ * Creates a Commander.js command for `shinobi plan`, which generates a
+ * comprehensive plan of changes and configurations by:
+ * - Parsing and validating the service manifest
+ * - Resolving all component configurations
+ * - Outputting the resolved configuration for review
+ *
+ * This command does not connect to AWS and is safe to run for validation.
+ *
+ * @returns A configured Commander.js Command instance
+ */
+
 import { Command } from 'commander';
 import { CompositionRoot } from '../composition-root.js';
 

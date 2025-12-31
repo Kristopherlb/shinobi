@@ -1,3 +1,20 @@
+/**
+ * Catalog Command Factory
+ *
+ * Creates a Commander.js command for `shinobi catalog`, which lists all
+ * available platform components that are ready for use. The catalog displays:
+ *
+ * - Component type identifiers (e.g., "s3-bucket", "rds-postgres")
+ * - Component descriptions and capabilities
+ * - Production readiness status
+ * - Component metadata (version, compliance support, etc.)
+ *
+ * The command can optionally include non-production components and output
+ * results as JSON for programmatic consumption.
+ *
+ * @returns A configured Commander.js Command instance
+ */
+
 import { Command } from 'commander';
 import { loadComponentCatalog } from './utils/component-catalog.js';
 import { loadComponentCreators, ComponentCreatorEntry } from './utils/component-loader.js';

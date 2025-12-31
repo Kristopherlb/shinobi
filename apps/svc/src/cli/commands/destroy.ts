@@ -1,3 +1,19 @@
+/**
+ * Destroy Command Factory
+ *
+ * Creates a Commander.js command for `shinobi destroy`, which tears down
+ * deployed infrastructure by:
+ * - Discovering the service manifest and resolving stack names
+ * - Optionally prompting for user confirmation before deletion
+ * - Deleting CloudFormation stacks via AWS SDK
+ * - Waiting for stack deletion to complete
+ *
+ * This command performs destructive operations and requires explicit
+ * confirmation unless the `--yes` flag is provided.
+ *
+ * @returns A configured Commander.js Command instance
+ */
+
 import { Command } from 'commander';
 import { CompositionRoot } from '../composition-root.js';
 

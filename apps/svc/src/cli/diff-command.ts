@@ -1,3 +1,25 @@
+/**
+ * Diff Command
+ *
+ * Implements the `shinobi diff` command, which compares synthesized
+ * infrastructure against deployed CloudFormation stacks. This command:
+ *
+ * - Synthesizes the service manifest to CloudFormation templates
+ * - Fetches the current stack template from AWS
+ * - Performs a structural diff between the two templates
+ * - Reports differences, additions, and removals
+ * - Supports JSON output for CI/CD integration
+ *
+ * This command is useful for previewing changes before deployment and for
+ * detecting drift between the manifest and deployed infrastructure.
+ *
+ * Exit codes:
+ * - 0: No differences found
+ * - 3: Differences found (propagated for CI/CD integration)
+ * - 1: Diff operation failed (AWS API errors, synthesis failures)
+ * - 2: Missing manifest or stack not found
+ */
+
 import * as path from 'path';
 import * as os from 'os';
 import * as fsp from 'fs/promises';

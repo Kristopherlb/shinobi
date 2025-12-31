@@ -1,5 +1,27 @@
 #!/usr/bin/env node
 
+/**
+ * Shinobi Platform CLI
+ *
+ * Main entry point for the Shinobi Platform command-line interface. This module
+ * sets up the Commander.js program, registers all CLI commands, and handles
+ * global options and error handling.
+ *
+ * Commands:
+ * - validate: Parse and validate service manifests
+ * - plan: Generate deployment plans with resolved configuration
+ * - synth: Synthesize manifests to CloudFormation templates
+ * - up: Deploy infrastructure using AWS CDK CLI
+ * - diff: Compare synthesized templates against deployed stacks
+ * - destroy: Tear down deployed infrastructure
+ * - inventory: Analyze component usage and patterns
+ * - catalog: List available platform components
+ *
+ * Global Options:
+ * - --verbose, -v: Enable verbose logging
+ * - --ci: Enable CI mode with structured JSON output
+ */
+
 import { Command } from 'commander';
 import { registerInventoryCommand } from './inventory.js';
 import { CompositionRoot } from './composition-root.js';

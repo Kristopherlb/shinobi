@@ -1,3 +1,23 @@
+/**
+ * Plan Command
+ *
+ * Implements the `shinobi plan` command, which generates a comprehensive
+ * deployment plan by:
+ *
+ * - Parsing and validating the service manifest
+ * - Resolving all component configurations through the 5-layer precedence chain
+ * - Hydrating environment-specific context
+ * - Formatting output for human-readable or JSON consumption
+ *
+ * The plan command does not connect to AWS and is safe to run for validation
+ * and preview purposes. It outputs the fully resolved configuration that would
+ * be used during deployment.
+ *
+ * Exit codes:
+ * - 0: Plan generation successful
+ * - 2: Plan generation failed (validation errors, missing files)
+ */
+
 import { Logger } from './console-logger.js';
 import { PlanOutputFormatter } from '@shinobi/core';
 import { ExecutionContextManager } from './execution-context-manager.js';

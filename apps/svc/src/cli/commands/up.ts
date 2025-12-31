@@ -1,3 +1,18 @@
+/**
+ * Up Command Factory
+ *
+ * Creates a Commander.js command for `shinobi up`, which deploys the
+ * service to AWS using AWS CDK CLI primitives by:
+ * - Synthesizing the service manifest to CloudFormation templates
+ * - Optionally prompting for user confirmation
+ * - Executing CDK deploy with appropriate approval requirements
+ * - Managing stack creation and updates
+ *
+ * This is the primary deployment command for the platform.
+ *
+ * @returns A configured Commander.js Command instance
+ */
+
 import { Command } from 'commander';
 import { CompositionRoot } from '../composition-root.js';
 

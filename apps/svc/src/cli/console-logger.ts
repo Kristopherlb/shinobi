@@ -1,3 +1,22 @@
+/**
+ * Console Logger
+ *
+ * CLI-specific logger that wraps the platform's structured logger to provide
+ * ergonomic helpers for command implementations. This logger bridges the gap
+ * between the platform's structured logging (JSON) and CLI-friendly output
+ * (human-readable messages with emoji indicators).
+ *
+ * Features:
+ * - Dual-mode output: human-readable for interactive use, JSON for CI mode
+ * - Log level filtering based on verbose flag
+ * - Success/warn/error/info/debug methods with consistent formatting
+ * - Structured data support with optional verbose JSON output
+ * - Log capture for testing and programmatic access
+ *
+ * The logger automatically switches to structured JSON output when `--ci` flag
+ * is set, making it suitable for CI/CD pipeline integration.
+ */
+
 import { randomUUID } from 'crypto';
 import {
   PlatformLogger,

@@ -1,3 +1,22 @@
+/**
+ * Execution Context Manager
+ *
+ * Manages the execution context for CLI commands by resolving and caching
+ * the resolved manifest and plan results. This service:
+ *
+ * - Discovers and resolves manifest file paths
+ * - Executes the validation pipeline to generate plan results
+ * - Caches resolved contexts to avoid redundant processing
+ * - Provides a consistent interface for commands that need execution context
+ *
+ * The execution context includes the fully resolved manifest with all
+ * environment-specific values applied, making it suitable for commands that
+ * need to operate on the final, resolved configuration.
+ *
+ * This service implements caching to improve performance when multiple
+ * commands need the same execution context (e.g., plan followed by synth).
+ */
+
 import { ValidationOrchestrator, type PlanResult } from '@shinobi/core';
 import { FileDiscovery } from './utils/file-discovery.js';
 import { Logger } from './console-logger.js';
