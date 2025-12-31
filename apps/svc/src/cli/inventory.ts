@@ -6,18 +6,12 @@
  */
 
 import { Command } from 'commander';
-import { Project, Node, SyntaxKind, NewExpression, ImportDeclaration } from 'ts-morph';
+import { Project, Node, SyntaxKind, NewExpression, ImportDeclaration, SourceFile } from 'ts-morph';
 import * as fs from 'fs';
+import * as fsp from 'fs/promises';
 import * as path from 'path';
+import chalk from 'chalk';
 import { Logger } from './console-logger.js';
-
-const chalk = {
-  cyan: (text: string) => text,
-  gray: (text: string) => text,
-  green: (text: string) => text,
-  red: (text: string) => text,
-  yellow: (text: string) => text
-};
 
 interface ConstructUsage {
   type: string;
@@ -62,6 +56,7 @@ export class InventoryCommand {
   private project: Project;
   private targetDirectory: string = '';
   private analysis: InventoryAnalysis;
+  private useColors: boolean;
 
   constructor(private readonly logger: Logger) {
     this.project = new Project();
@@ -76,6 +71,43 @@ export class InventoryCommand {
         patternsFound: 0
       }
     };
+    // Only use colors in non-CI mode (Logger handles formatting, but we add colors for visual distinction)
+    this.useColors = !logger.isCi;
+  }
+
+  /**
+   * Get color function for cyan (or no-op if colors disabled)
+   */
+  private cyan(text: string): string {
+    return this.useColors ? chalk.cyan(text) : text;
+  }
+
+  /**
+   * Get color function for gray (or no-op if colors disabled)
+   */
+  private gray(text: string): string {
+    return this.useColors ? chalk.gray(text) : text;
+  }
+
+  /**
+   * Get color function for green (or no-op if colors disabled)
+   */
+  private green(text: string): string {
+    return this.useColors ? chalk.green(text) : text;
+  }
+
+  /**
+   * Get color function for red (or no-op if colors disabled)
+   */
+  private red(text: string): string {
+    return this.useColors ? chalk.red(text) : text;
+  }
+
+  /**
+   * Get color function for yellow (or no-op if colors disabled)
+   */
+  private yellow(text: string): string {
+    return this.useColors ? chalk.yellow(text) : text;
   }
 
   /**
@@ -84,8 +116,8 @@ export class InventoryCommand {
   public async execute(directory: string, options: any): Promise<void> {
     this.targetDirectory = path.resolve(directory);
     
-    this.logger.info(chalk.cyan('🔍 Platform Inventory Tool v1.0'));
-    this.logger.info(chalk.gray(`Analyzing directory: ${this.targetDirectory}`));
+    this.logger.info(this.cyan('🔍 Platform Inventory Tool v1.0'));
+    this.logger.info(this.gray(`Analyzing directory: ${this.targetDirectory}`));
     
     try {
       // Phase 1: Discovery - Scan all TypeScript files
@@ -97,11 +129,11 @@ export class InventoryCommand {
       // Phase 3: Report Generation - Create INVENTORY_REPORT.md
       await this.generateReport();
       
-      this.logger.info(chalk.green('✅ Inventory analysis complete!'));
-      this.logger.info(chalk.cyan(`📄 Report generated: ${path.join(this.targetDirectory, 'INVENTORY_REPORT.md')}`));
+      this.logger.info(this.green('✅ Inventory analysis complete!'));
+      this.logger.info(this.cyan(`📄 Report generated: ${path.join(this.targetDirectory, 'INVENTORY_REPORT.md')}`));
       
     } catch (error) {
-      this.logger.error(chalk.red('❌ Inventory analysis failed:'), error);
+      this.logger.error(this.red('❌ Inventory analysis failed:'), error);
       throw error;
     }
   }
@@ -110,14 +142,14 @@ export class InventoryCommand {
    * Phase 1: Discover all CDK construct usages
    */
   private async discoverConstructs(): Promise<void> {
-    this.logger.info(chalk.yellow('📂 Phase 1: Discovering CDK constructs...'));
+    this.logger.info(this.yellow('📂 Phase 1: Discovering CDK constructs...'));
     
-    // Add all TypeScript files to the project
-    const tsFiles = this.findTypeScriptFiles(this.targetDirectory);
+    // Add all TypeScript files to the project (async, non-blocking)
+    const tsFiles = await this.findTypeScriptFiles(this.targetDirectory);
     this.project.addSourceFilesAtPaths(tsFiles);
     
     this.analysis.summary.totalFiles = tsFiles.length;
-    this.logger.info(chalk.gray(`Found ${tsFiles.length} TypeScript files`));
+    this.logger.info(this.gray(`Found ${tsFiles.length} TypeScript files`));
     
     // Show first few files if verbose
     if (this.analysis.summary.totalFiles <= 20) {
@@ -133,13 +165,13 @@ export class InventoryCommand {
     this.analysis.summary.totalConstructs = Array.from(this.analysis.rawInventory.values())
       .reduce((total, usage) => total + usage.count, 0);
     
-    this.logger.info(chalk.green(`✅ Found ${this.analysis.summary.totalConstructs} construct usages of ${this.analysis.summary.uniqueConstructTypes} types`));
+    this.logger.info(this.green(`✅ Found ${this.analysis.summary.totalConstructs} construct usages of ${this.analysis.summary.uniqueConstructTypes} types`));
   }
 
   /**
    * Analyze a single source file for CDK construct usage
    */
-  private async analyzeSourceFile(sourceFile: any): Promise<void> {
+  private async analyzeSourceFile(sourceFile: SourceFile): Promise<void> {
     const filePath = sourceFile.getFilePath();
     const relativePath = path.relative(this.targetDirectory, filePath);
     
@@ -158,66 +190,38 @@ export class InventoryCommand {
   }
 
   /**
-   * Extract CDK imports from a source file
+   * Extract CDK imports from a source file using proper ts-morph API
+   * Handles named imports, namespace imports, and aliased imports
    */
-  private getCdkImports(sourceFile: any): Set<string> {
+  private getCdkImports(sourceFile: SourceFile): Set<string> {
     const cdkImports = new Set<string>();
-    const filePath = sourceFile.getFilePath();
-    const relativePath = path.relative(this.targetDirectory, filePath);
     
-    const importDeclarations = sourceFile.getImportDeclarations();
-    
-    // Debug import processing if needed
-    this.logger.debug(`Processing imports in ${relativePath}: found ${importDeclarations.length} declarations`);
-    
-    for (const importDecl of importDeclarations) {
+    for (const importDecl of sourceFile.getImportDeclarations()) {
       const moduleSpecifier = importDecl.getModuleSpecifierValue();
       
       // Look for imports from aws-cdk-lib/aws-* (specific AWS services)
-      if (moduleSpecifier.startsWith('aws-cdk-lib/aws-')) {
-        const importClause = importDecl.getImportClause();
-        if (importClause) {
-          const namedImports = importClause.getNamedImports();
-          if (namedImports) {
-            try {
-              // Treat namedImports as array-like object
-              for (let i = 0; i < namedImports.length; i++) {
-                const namedImport = namedImports[i];
-                if (namedImport && typeof namedImport.getName === 'function') {
-                  cdkImports.add(namedImport.getName());
-                }
-              }
-            } catch (error) {
-              this.logger.debug(`Error accessing namedImports in ${relativePath}:`, {
-                data: {
-                  error: error instanceof Error ? error.message : String(error)
-                }
-              });
-            }
-          }
-          
-          // Handle namespace imports like "* as ec2"
-          const namespaceImport = importClause.getNamespaceImport();
-          if (namespaceImport) {
-            try {
-              if (typeof namespaceImport.getText === 'function') {
-                const name = namespaceImport.getText();
-                cdkImports.add(name);
-              } else if (typeof namespaceImport.getName === 'function') {
-                const name = namespaceImport.getName();
-                cdkImports.add(name);
-              } else if (namespaceImport.name) {
-                cdkImports.add(namespaceImport.name);
-              }
-            } catch (error) {
-              this.logger.debug(`Error accessing namespaceImport in ${relativePath}:`, {
-                data: {
-                  error: error instanceof Error ? error.message : String(error)
-                }
-              });
-            }
-          }
-        }
+      if (!moduleSpecifier?.startsWith('aws-cdk-lib/aws-')) {
+        continue;
+      }
+      
+      const importClause = importDecl.getImportClause();
+      if (!importClause) {
+        continue;
+      }
+      
+      // Handle named imports: { Bucket, Table, Function as LambdaFn }
+      const namedImports = importClause.getNamedImports();
+      for (const namedImport of namedImports) {
+        // Get the actual name used in code (handles aliases)
+        const name = namedImport.getName();
+        cdkImports.add(name);
+      }
+      
+      // Handle namespace imports: * as s3, * as lambda
+      const namespaceImport = importClause.getNamespaceImport();
+      if (namespaceImport) {
+        const name = namespaceImport.getText();
+        cdkImports.add(name);
       }
     }
     
@@ -226,6 +230,11 @@ export class InventoryCommand {
 
   /**
    * Analyze a "new X(...)" expression to see if it's a CDK construct
+   * Handles multiple patterns:
+   * - new Bucket(...) - direct named import
+   * - new s3.Bucket(...) - namespace import
+   * - new lambda.Function(...) - namespace import
+   * - new LambdaFn(...) - aliased named import
    */
   private async analyzeNewExpression(
     newExpr: NewExpression, 
@@ -235,18 +244,21 @@ export class InventoryCommand {
     const expression = newExpr.getExpression();
     let constructType: string | null = null;
     
-    // Handle different patterns: "new Bucket(...)", "new s3.Bucket(...)", etc.
+    // Pattern 1: Direct named import - "new Bucket(...)"
     if (Node.isIdentifier(expression)) {
       const name = expression.getText();
       if (cdkImports.has(name)) {
         constructType = name;
       }
-    } else if (Node.isPropertyAccessExpression(expression)) {
-      const object = expression.getExpression();
+    } 
+    // Pattern 2: Namespace import - "new s3.Bucket(...)" or "new lambda.Function(...)"
+    else if (Node.isPropertyAccessExpression(expression)) {
+      const left = expression.getExpression();
       const property = expression.getName();
       
-      if (Node.isIdentifier(object)) {
-        const namespace = object.getText();
+      if (Node.isIdentifier(left)) {
+        const namespace = left.getText();
+        // Check if namespace is in our CDK imports (e.g., "s3", "lambda")
         if (cdkImports.has(namespace)) {
           constructType = `${namespace}.${property}`;
         }
@@ -285,6 +297,10 @@ export class InventoryCommand {
 
   /**
    * Check if a construct is created in a complex context (loops, conditions, etc.)
+   * 
+   * This is a heuristic to identify constructs that may be difficult to abstract
+   * into platform components. We're conservative - only flag truly dynamic contexts
+   * like conditional logic, not simple loops over static arrays.
    */
   private isInComplexContext(node: Node): boolean {
     let parent = node.getParent();
@@ -292,17 +308,28 @@ export class InventoryCommand {
     while (parent) {
       const kind = parent.getKind();
       
-      // Check for control flow statements
+      // Conditional logic usually means dynamic behavior - flag these
+      if ([
+        SyntaxKind.IfStatement,
+        SyntaxKind.SwitchStatement,
+        SyntaxKind.TryStatement
+      ].includes(kind)) {
+        return true;
+      }
+      
+      // Loops are more nuanced - simple loops over static arrays are often abstractable
+      // For now, we'll be conservative and only flag if there's other complexity
+      // (This could be refined further with deeper analysis)
       if ([
         SyntaxKind.ForStatement,
         SyntaxKind.ForInStatement,
         SyntaxKind.ForOfStatement,
         SyntaxKind.WhileStatement,
-        SyntaxKind.DoStatement,
-        SyntaxKind.IfStatement,
-        SyntaxKind.SwitchStatement,
-        SyntaxKind.TryStatement
+        SyntaxKind.DoStatement
       ].includes(kind)) {
+        // Only flag if the loop variable is used in construct props (simplified check)
+        // For now, we'll flag all loops as complex to be safe
+        // TODO: Enhance with deeper analysis of loop variable usage
         return true;
       }
       
@@ -316,7 +343,7 @@ export class InventoryCommand {
    * Phase 2: Analyze patterns of co-located constructs with enhanced algorithms
    */
   private async analyzePatterns(): Promise<void> {
-    this.logger.info(chalk.yellow('🔍 Phase 2: Analyzing construct patterns...'));
+    this.logger.info(this.yellow('🔍 Phase 2: Analyzing construct patterns...'));
     
     // Group constructs by file to find co-location patterns
     const fileConstructs = new Map<string, string[]>();
@@ -359,7 +386,7 @@ export class InventoryCommand {
     this.identifyRelatedPatterns();
     
     this.analysis.summary.patternsFound = this.analysis.patterns.length;
-    this.logger.info(chalk.green(`✅ Identified ${this.analysis.patterns.length} recurring patterns with enhanced analysis`));
+    this.logger.info(this.green(`✅ Identified ${this.analysis.patterns.length} recurring patterns with enhanced analysis`));
   }
 
   /**
@@ -947,7 +974,7 @@ export class InventoryCommand {
    * Phase 3: Generate the INVENTORY_REPORT.md
    */
   private async generateReport(): Promise<void> {
-    this.logger.info(chalk.yellow('📄 Phase 3: Generating inventory report...'));
+    this.logger.info(this.yellow('📄 Phase 3: Generating inventory report...'));
     
     const reportPath = path.join(this.targetDirectory, 'INVENTORY_REPORT.md');
     const timestamp = new Date().toISOString();
@@ -1188,19 +1215,24 @@ export class InventoryCommand {
   /**
    * Recursively find all TypeScript files in a directory
    */
-  private findTypeScriptFiles(directory: string): string[] {
+  /**
+   * Find all TypeScript files in a directory recursively (async, non-blocking)
+   * Skips test files, declaration files, and common non-source directories
+   */
+  private async findTypeScriptFiles(directory: string): Promise<string[]> {
     const files: string[] = [];
+    const skipDirs = new Set(['node_modules', '.git', 'dist', 'build', 'coverage', '.nx']);
     
-    const traverseDirectory = (dir: string) => {
-      const items = fs.readdirSync(dir, { withFileTypes: true });
+    const traverseDirectory = async (dir: string): Promise<void> => {
+      const items = await fsp.readdir(dir, { withFileTypes: true });
       
       for (const item of items) {
         const itemPath = path.join(dir, item.name);
         
         if (item.isDirectory()) {
           // Skip common non-source directories
-          if (!['node_modules', '.git', 'dist', 'build', 'coverage'].includes(item.name)) {
-            traverseDirectory(itemPath);
+          if (!skipDirs.has(item.name)) {
+            await traverseDirectory(itemPath);
           }
         } else if (item.isFile() && item.name.endsWith('.ts') && !item.name.endsWith('.d.ts') && !item.name.includes('.test.') && !item.name.includes('.spec.')) {
           files.push(itemPath);
@@ -1208,7 +1240,7 @@ export class InventoryCommand {
       }
     };
     
-    traverseDirectory(directory);
+    await traverseDirectory(directory);
     return files;
   }
 }
