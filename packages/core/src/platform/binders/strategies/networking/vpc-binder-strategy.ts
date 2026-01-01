@@ -220,16 +220,36 @@ interface NetworkFirewallCapabilityData {
 
 /**
  * VPC Endpoint capability data structure
+ * 
+ * VPC Endpoints enable private access to AWS services without traversing the public internet.
+ * This is critical for compliance (FedRAMP, HIPAA) and security (no internet egress required).
+ * 
+ * Endpoint Types:
+ * - Gateway: S3 and DynamoDB only. Works via route tables (automatic route injection).
+ * - Interface: Most AWS services (Lambda, KMS, Secrets Manager, etc.). Requires security groups.
+ * - GatewayLoadBalancer: Advanced use cases with third-party security appliances.
+ * 
+ * Private Service Access Patterns:
+ * - Gateway endpoints: Routes automatically added to associated route tables
+ * - Interface endpoints: Require security group rules allowing HTTPS (443) from source SGs
+ * - Private DNS: When enabled, service names resolve to private IPs (e.g., s3.amazonaws.com -> vpce-xxx.s3.us-east-1.vpce.amazonaws.com)
+ * 
+ * Security Considerations:
+ * - Interface endpoints require security group ingress rules (use SecurityGroupRuleBinderStrategy)
+ * - Gateway endpoints require route table associations (handled at component level)
+ * - Private DNS must be enabled for seamless service resolution without code changes
+ * - Endpoint policies can restrict access to specific resources (policyDocument field)
+ * 
  * @property type - Capability type identifier
  * @property vpcEndpointId - VPC Endpoint identifier
  * @property vpcEndpointArn - VPC Endpoint ARN
  * @property vpcId - VPC identifier
- * @property serviceName - AWS service name (e.g., 'com.amazonaws.region.s3')
+ * @property serviceName - AWS service name (e.g., 'com.amazonaws.us-east-1.s3', 'com.amazonaws.us-east-1.secretsmanager')
  * @property endpointType - Endpoint type ('Gateway' | 'Interface' | 'GatewayLoadBalancer')
  * @property state - Endpoint state (e.g., 'available')
- * @property dnsEntries - DNS entries for the endpoint (optional)
- * @property policyDocument - VPC endpoint policy document (optional)
- * @property privateDnsEnabled - Whether private DNS is enabled (optional)
+ * @property dnsEntries - DNS entries for the endpoint (optional, required for Interface endpoints with private DNS)
+ * @property policyDocument - VPC endpoint policy document (optional, JSON policy string for resource-level access control)
+ * @property privateDnsEnabled - Whether private DNS is enabled (optional, recommended for Interface endpoints)
  */
 interface VpcEndpointCapabilityData {
   type: 'vpc:endpoint';
@@ -438,7 +458,7 @@ export class VpcBinderStrategy extends UnifiedBinderStrategyBase {
     } else if (capability === 'vpc:endpoint') {
       return this.bindToVpcEndpoint(context, targetCapabilityData, access);
     } else {
-      throw new Error(`Unsupported VPC capability: ${capability}`);
+        throw new Error(`Unsupported VPC capability: ${capability}`);
     }
   }
 
@@ -881,7 +901,21 @@ export class VpcBinderStrategy extends UnifiedBinderStrategyBase {
   }
 
   /**
-   * Bind to VPC Endpoint
+   * Bind to VPC Endpoint for private AWS service access
+   * 
+   * This method generates IAM permissions and environment variables for accessing AWS services
+   * via VPC endpoints without internet traversal. Critical for compliance and security.
+   * 
+   * For Interface endpoints, security group rules must be configured separately:
+   * - Use SecurityGroupRuleBinderStrategy to generate ingress rules (allow HTTPS 443 from source SGs)
+   * - Interface endpoints require explicit security group associations
+   * 
+   * For Gateway endpoints (S3, DynamoDB), route table associations are handled at component level.
+   * 
+   * @param context - Binding context with source, target, and directive
+   * @param targetData - VPC Endpoint capability data
+   * @param access - Access levels (read, write, readwrite, admin)
+   * @returns Enhanced binding result with IAM policies and environment variables
    */
   private bindToVpcEndpoint(
     context: BindingContext,
