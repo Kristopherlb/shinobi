@@ -7,5 +7,9 @@
 export * from './resolver-engine.js';
 export * from './binder-registry.js';
 
+// Export unified binder registry and factory
+export { UnifiedBinderRegistry } from '../platform/binders/registry/unified-binder-registry.js';
+export { createUnifiedBinderRegistry } from '../platform/binders/registry/create-unified-registry.js';
+
 // Export concrete binders
 export * from './binders/concrete-binders.js';
