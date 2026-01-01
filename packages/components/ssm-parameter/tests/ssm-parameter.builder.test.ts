@@ -82,26 +82,4 @@ describe('SsmParameterComponentConfigBuilder', () => {
     expect(config.tags.team).toBe('platform');
   });
 
-  it('derives name and values when provided via legacy parameterName field', () => {
-    const spec: ComponentSpec = {
-      name: 'legacy-parameter',
-      type: 'ssm-parameter',
-      config: {
-        // @ts-expect-error backwards compat field
-        parameterName: '/legacy/name',
-        kind: 'stringList',
-        value: 'one,two,three'
-      }
-    };
-
-    const builder = new SsmParameterComponentConfigBuilder({
-      context: createContext('commercial'),
-      spec
-    });
-
-    const config = builder.buildSync();
-
-    expect(config.name).toBe('/legacy/name');
-    expect(config.values).toEqual(['one', 'two', 'three']);
-  });
 });

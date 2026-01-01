@@ -5,7 +5,6 @@
 
 // Export main resolver engine
 export * from './resolver-engine.js';
-export * from './binder-registry.js';
 
 // Export unified binder registry and factory
 export { UnifiedBinderRegistry } from '../platform/binders/registry/unified-binder-registry.js';

@@ -20,10 +20,9 @@ describe('EcsFargateBinderStrategy', () => {
       level: 'unit' as const,
       capability: 'Returns ECS cluster environment variables for valid cluster access',
       oracle: 'exact' as const,
-        feature: 'EcsBind',
-        condition: 'ValidClusterAccess',
-        outcome: 'ReturnsClusterEnvVars'
-      },
+      feature: 'EcsBind',
+      condition: 'ValidClusterAccess',
+      outcome: 'ReturnsClusterEnvVars',
       invariants: [
         'Returns EnhancedBindingResult with compliance block',
         'Environment variables include ECS_CLUSTER_NAME, ECS_CLUSTER_ARN, AWS_REGION',
@@ -82,10 +81,9 @@ describe('EcsFargateBinderStrategy', () => {
       level: 'unit' as const,
       capability: 'Grants ECS cluster write actions including CreateService and UpdateService for write access',
       oracle: 'exact' as const,
-        feature: 'EcsBind',
-        condition: 'ClusterWriteAccess',
-        outcome: 'GrantsClusterWriteActions'
-      },
+      feature: 'EcsBind',
+      condition: 'ClusterWriteAccess',
+      outcome: 'GrantsClusterWriteActions',
       invariants: [
         'IAM policies include ECS write actions (CreateService, UpdateService, DeleteService, RegisterTaskDefinition)',
         'Read actions are included in write access',
@@ -118,7 +116,7 @@ describe('EcsFargateBinderStrategy', () => {
       const context = createBindingContext({
         source,
         target,
-      capability: 'ecs:cluster',
+        capability: 'ecs:cluster',
         access: 'write'
       });
 
@@ -141,10 +139,9 @@ describe('EcsFargateBinderStrategy', () => {
       level: 'unit' as const,
       capability: 'Returns ECS service environment variables for valid service access',
       oracle: 'exact' as const,
-        feature: 'EcsBind',
-        condition: 'ValidServiceAccess',
-        outcome: 'ReturnsServiceEnvVars'
-      },
+      feature: 'EcsBind',
+      condition: 'ValidServiceAccess',
+      outcome: 'ReturnsServiceEnvVars',
       invariants: [
         'Environment variables include ECS_SERVICE_NAME, ECS_SERVICE_ARN, ECS_CLUSTER_NAME',
         'IAM policies include ECS service read actions (DescribeServices, ListTasks, DescribeTasks)',
@@ -201,10 +198,9 @@ describe('EcsFargateBinderStrategy', () => {
       level: 'unit' as const,
       capability: 'Grants ECS service write actions including UpdateService and StopTask for write access',
       oracle: 'exact' as const,
-        feature: 'EcsBind',
-        condition: 'ServiceWriteAccess',
-        outcome: 'GrantsServiceWriteActions'
-      },
+      feature: 'EcsBind',
+      condition: 'ServiceWriteAccess',
+      outcome: 'GrantsServiceWriteActions',
       invariants: [
         'IAM policies include ECS service write actions (UpdateService, DeleteService, StopTask, StartTask)',
         'Read actions are included in write access',
@@ -260,10 +256,9 @@ describe('EcsFargateBinderStrategy', () => {
       level: 'unit' as const,
       capability: 'Returns ECS task definition environment variables for valid task definition access',
       oracle: 'exact' as const,
-        feature: 'EcsBind',
-        condition: 'ValidTaskDefinitionAccess',
-        outcome: 'ReturnsTaskDefinitionEnvVars'
-      },
+      feature: 'EcsBind',
+      condition: 'ValidTaskDefinitionAccess',
+      outcome: 'ReturnsTaskDefinitionEnvVars',
       invariants: [
         'Environment variables include ECS_TASK_DEFINITION_ARN',
         'Task definition family and revision are included if present',
@@ -318,10 +313,9 @@ describe('EcsFargateBinderStrategy', () => {
       level: 'unit' as const,
       capability: 'Grants ECS task definition write actions including RegisterTaskDefinition for write access',
       oracle: 'exact' as const,
-        feature: 'EcsBind',
-        condition: 'TaskDefinitionWriteAccess',
-        outcome: 'GrantsTaskDefinitionWriteActions'
-      },
+      feature: 'EcsBind',
+      condition: 'TaskDefinitionWriteAccess',
+      outcome: 'GrantsTaskDefinitionWriteActions',
       invariants: [
         'IAM policies include ECS task definition write actions (RegisterTaskDefinition, DeregisterTaskDefinition)',
         'Read actions are included in write access'
@@ -340,7 +334,7 @@ describe('EcsFargateBinderStrategy', () => {
     };
 
     test('EcsBind__TaskDefinitionWriteAccess__GrantsTaskDefinitionWriteActions', async () => {
-    const strategy = new EcsFargateBinderStrategy();
+      const strategy = new EcsFargateBinderStrategy();
       const source = createMockSourceComponent();
       const target = createMockTargetComponent('ecs-task-definition', {
         'ecs:task-definition': {
@@ -373,10 +367,9 @@ describe('EcsFargateBinderStrategy', () => {
       level: 'unit' as const,
       capability: 'Returns OpenTelemetry environment variables for observability configuration',
       oracle: 'exact' as const,
-        feature: 'EcsBind',
-        condition: 'ValidOtelEnvironmentAccess',
-        outcome: 'ReturnsOtelEnvVars'
-      },
+      feature: 'EcsBind',
+      condition: 'ValidOtelEnvironmentAccess',
+      outcome: 'ReturnsOtelEnvVars',
       invariants: [
         'Environment variables include OpenTelemetry configuration (OTEL_EXPORTER_OTLP_ENDPOINT, OTEL_SERVICE_NAME, OTEL_RESOURCE_ATTRIBUTES)',
         'IAM policies array is empty (observability configuration only)',
@@ -435,10 +428,9 @@ describe('EcsFargateBinderStrategy', () => {
       level: 'unit' as const,
       capability: 'Grants optional CloudWatch Logs permissions when enableCloudWatchPermissions option is set',
       oracle: 'exact' as const,
-        feature: 'EcsBind',
-        condition: 'OtelEnvironmentWithCloudWatchPermissions',
-        outcome: 'GrantsCloudWatchActions'
-      },
+      feature: 'EcsBind',
+      condition: 'OtelEnvironmentWithCloudWatchPermissions',
+      outcome: 'GrantsCloudWatchActions',
       invariants: [
         'IAM policies include CloudWatch Logs actions (CreateLogGroup, CreateLogStream, PutLogEvents, DescribeLogStreams) when option enabled',
         'IAM policies are empty when option is not enabled'
@@ -496,10 +488,9 @@ describe('EcsFargateBinderStrategy', () => {
       level: 'unit' as const,
       capability: 'Applies custom environment variable mappings when provided via directive.env',
       oracle: 'exact' as const,
-        feature: 'EcsBind',
-        condition: 'OtelEnvironmentWithEnvOverrides',
-        outcome: 'AppliesCustomMappings'
-      },
+      feature: 'EcsBind',
+      condition: 'OtelEnvironmentWithEnvOverrides',
+      outcome: 'AppliesCustomMappings',
       invariants: [
         'Custom env var keys override default OpenTelemetry variable names',
         'All OpenTelemetry configuration is still present'
@@ -518,7 +509,7 @@ describe('EcsFargateBinderStrategy', () => {
     };
 
     test('EcsBind__OtelEnvironmentWithEnvOverrides__AppliesCustomMappings', async () => {
-    const strategy = new EcsFargateBinderStrategy();
+      const strategy = new EcsFargateBinderStrategy();
       const source = createMockSourceComponent();
       const target = createMockTargetComponent('otel-environment', {
         'otel:environment': {
@@ -531,9 +522,9 @@ describe('EcsFargateBinderStrategy', () => {
       const context = createBindingContext({
         source,
         target,
-      capability: 'otel:environment',
+        capability: 'otel:environment',
         access: 'read',
-      env: {
+        env: {
           'OTEL_EXPORTER_OTLP_ENDPOINT': 'CUSTOM_OTEL_ENDPOINT',
           'OTEL_SERVICE_NAME': 'CUSTOM_SERVICE_NAME'
         }
@@ -555,10 +546,9 @@ describe('EcsFargateBinderStrategy', () => {
       level: 'unit' as const,
       capability: 'Sets capacity providers environment variable when capacity providers are provided',
       oracle: 'exact' as const,
-        feature: 'EcsBind',
-        condition: 'ClusterWithCapacityProviders',
-        outcome: 'SetsCapacityProvidersEnvVar'
-      },
+      feature: 'EcsBind',
+      condition: 'ClusterWithCapacityProviders',
+      outcome: 'SetsCapacityProvidersEnvVar',
       invariants: [
         'ECS_CAPACITY_PROVIDERS environment variable is set with comma-separated values',
         'ECS_EXEC_ENABLED is set when executeCommandEnabled is provided'
@@ -610,10 +600,9 @@ describe('EcsFargateBinderStrategy', () => {
       level: 'unit' as const,
       capability: 'Throws actionable error when required capability data fields are missing',
       oracle: 'exact' as const,
-        feature: 'EcsBind',
-        condition: 'MissingRequiredFields',
-        outcome: 'ThrowsError'
-      },
+      feature: 'EcsBind',
+      condition: 'MissingRequiredFields',
+      outcome: 'ThrowsError',
       invariants: [
         'Error message indicates missing field name',
         'Error message is descriptive and actionable',
@@ -661,10 +650,9 @@ describe('EcsFargateBinderStrategy', () => {
       level: 'unit' as const,
       capability: 'Throws actionable error when invalid access types are provided',
       oracle: 'exact' as const,
-        feature: 'EcsBind',
-        condition: 'InvalidAccessType',
-        outcome: 'ThrowsError'
-      },
+      feature: 'EcsBind',
+      condition: 'InvalidAccessType',
+      outcome: 'ThrowsError',
       invariants: [
         'Error message lists invalid access types',
         'Error message indicates valid access types',
@@ -718,10 +706,9 @@ describe('EcsFargateBinderStrategy', () => {
       level: 'unit' as const,
       capability: 'Returns compliance block with commercial framework',
       oracle: 'exact' as const,
-        feature: 'EcsBind',
-        condition: 'CommercialCompliance',
-        outcome: 'ReturnsComplianceBlock'
-      },
+      feature: 'EcsBind',
+      condition: 'CommercialCompliance',
+      outcome: 'ReturnsComplianceBlock',
       invariants: [
         'Compliance block status is one of: compliant, non-compliant, partially-compliant',
         'Compliance framework is set correctly',

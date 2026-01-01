@@ -266,63 +266,6 @@ const schemaPath = path.join(__dirname, '..', 'Config.schema.json');
 const schemaContent = fs.readFileSync(schemaPath, 'utf-8');
 export const ECS_FARGATE_SERVICE_CONFIG_SCHEMA: ComponentConfigSchema = JSON.parse(schemaContent);
 
-// Legacy inline schema (deprecated - keeping for backward compatibility)
-const LEGACY_SCHEMA = {
-  type: 'object',
-  additionalProperties: false,
-  required: ['cluster', 'image', 'serviceConnect'],
-  properties: {
-    cluster: { type: 'string', minLength: 1 },
-    image: {
-      type: 'object',
-      additionalProperties: false,
-      required: ['repository'],
-      properties: {
-        repository: { type: 'string', minLength: 1 },
-        tag: { type: 'string', default: 'latest' }
-      }
-    },
-    cpu: { type: 'number', enum: [256, 512, 1024, 2048, 4096, 8192, 16384], default: 256 },
-    memory: { type: 'number', minimum: 512, maximum: 122880, default: 512 },
-    port: { type: 'number', minimum: 1, maximum: 65535, default: 8080 },
-    serviceConnect: {
-      type: 'object',
-      additionalProperties: false,
-      required: ['portMappingName'],
-      properties: {
-        portMappingName: { type: 'string', minLength: 1, maxLength: 64 },
-        dnsName: { type: 'string', minLength: 1, maxLength: 253 },
-        namespace: { type: 'string', minLength: 1, maxLength: 253 }
-      }
-    },
-    environment: {
-      type: 'object',
-      additionalProperties: { type: 'string' },
-      default: {}
-    },
-    secrets: {
-      type: 'object',
-      additionalProperties: { type: 'string' },
-      default: {}
-    },
-    taskRoleArn: { type: 'string' },
-    desiredCount: { type: 'number', minimum: 0, maximum: 1000, default: 1 },
-    healthCheck: HEALTH_CHECK_SCHEMA,
-    autoScaling: AUTOSCALING_SCHEMA,
-    deploymentStrategy: DEPLOYMENT_STRATEGY_SCHEMA,
-    logging: LOGGING_SCHEMA,
-    monitoring: MONITORING_SCHEMA,
-    diagnostics: DIAGNOSTICS_SCHEMA,
-    network: NETWORK_SCHEMA,
-    hardeningProfile: { type: 'string', default: 'baseline' },
-    tags: {
-      type: 'object',
-      additionalProperties: { type: 'string' },
-      default: {}
-    }
-  }
-};
-
 type AlarmDefaults = {
   enabled: boolean;
   threshold: number;

@@ -20,10 +20,9 @@ describe('ElasticBeanstalkBinderStrategy', () => {
       level: 'unit' as const,
       capability: 'Returns Elastic Beanstalk application environment variables for valid application access',
       oracle: 'exact' as const,
-        feature: 'ElasticBeanstalkBind',
-        condition: 'ValidApplicationAccess',
-        outcome: 'ReturnsApplicationEnvVars'
-      },
+      feature: 'ElasticBeanstalkBind',
+      condition: 'ValidApplicationAccess',
+      outcome: 'ReturnsApplicationEnvVars',
       invariants: [
         'Returns EnhancedBindingResult with compliance block',
         'Environment variables include EB_APPLICATION_NAME, EB_APPLICATION_ARN',
@@ -97,10 +96,9 @@ describe('ElasticBeanstalkBinderStrategy', () => {
       level: 'unit' as const,
       capability: 'Grants Elastic Beanstalk application write actions including CreateApplication and UpdateApplication for write access',
       oracle: 'exact' as const,
-        feature: 'ElasticBeanstalkBind',
-        condition: 'ApplicationWriteAccess',
-        outcome: 'GrantsApplicationWriteActions'
-      },
+      feature: 'ElasticBeanstalkBind',
+      condition: 'ApplicationWriteAccess',
+      outcome: 'GrantsApplicationWriteActions',
       invariants: [
         'IAM policies include Elastic Beanstalk application write actions (CreateApplication, UpdateApplication, DeleteApplication)',
         'Read actions are included in write access',
@@ -155,10 +153,9 @@ describe('ElasticBeanstalkBinderStrategy', () => {
       level: 'unit' as const,
       capability: 'Returns Elastic Beanstalk environment environment variables for valid environment access',
       oracle: 'exact' as const,
-        feature: 'ElasticBeanstalkBind',
-        condition: 'ValidEnvironmentAccess',
-        outcome: 'ReturnsEnvironmentEnvVars'
-      },
+      feature: 'ElasticBeanstalkBind',
+      condition: 'ValidEnvironmentAccess',
+      outcome: 'ReturnsEnvironmentEnvVars',
       invariants: [
         'Environment variables include EB_ENVIRONMENT_NAME, EB_ENVIRONMENT_ARN, EB_ENVIRONMENT_URL, EB_ENVIRONMENT_STATUS',
         'IAM policies include Elastic Beanstalk environment read actions',
@@ -237,10 +234,9 @@ describe('ElasticBeanstalkBinderStrategy', () => {
       level: 'unit' as const,
       capability: 'Grants Elastic Beanstalk environment write actions including CreateEnvironment and UpdateEnvironment for write access',
       oracle: 'exact' as const,
-        feature: 'ElasticBeanstalkBind',
-        condition: 'EnvironmentWriteAccess',
-        outcome: 'GrantsEnvironmentWriteActions'
-      },
+      feature: 'ElasticBeanstalkBind',
+      condition: 'EnvironmentWriteAccess',
+      outcome: 'GrantsEnvironmentWriteActions',
       invariants: [
         'IAM policies include Elastic Beanstalk environment write actions (CreateEnvironment, UpdateEnvironment, TerminateEnvironment)',
         'Read actions are included in write access',
@@ -279,7 +275,7 @@ describe('ElasticBeanstalkBinderStrategy', () => {
       const context = createBindingContext({
         source,
         target,
-      capability: 'elasticbeanstalk:environment',
+        capability: 'elasticbeanstalk:environment',
         access: 'write'
       });
 
@@ -301,10 +297,9 @@ describe('ElasticBeanstalkBinderStrategy', () => {
       level: 'unit' as const,
       capability: 'Returns Elastic Beanstalk version environment variables for valid version access',
       oracle: 'exact' as const,
-        feature: 'ElasticBeanstalkBind',
-        condition: 'ValidVersionAccess',
-        outcome: 'ReturnsVersionEnvVars'
-      },
+      feature: 'ElasticBeanstalkBind',
+      condition: 'ValidVersionAccess',
+      outcome: 'ReturnsVersionEnvVars',
       invariants: [
         'Environment variables include EB_VERSION_LABEL, EB_VERSION_ARN',
         'IAM policies include Elastic Beanstalk version read actions',
@@ -378,10 +373,9 @@ describe('ElasticBeanstalkBinderStrategy', () => {
       level: 'unit' as const,
       capability: 'Configures VPC networking, SSL certificate, and auto scaling when secure networking is enabled',
       oracle: 'exact' as const,
-        feature: 'ElasticBeanstalkBind',
-        condition: 'SecureNetworkingEnabled',
-        outcome: 'ConfiguresVpcSslAutoScaling'
-      },
+      feature: 'ElasticBeanstalkBind',
+      condition: 'SecureNetworkingEnabled',
+      outcome: 'ConfiguresVpcSslAutoScaling',
       invariants: [
         'Environment variables include EB_VPC_ID, EB_SUBNETS, EB_SECURITY_GROUPS when VPC is configured',
         'Environment variables include EB_SSL_CERTIFICATE_ARN and EB_LOAD_BALANCER_ARN when provided',
@@ -402,7 +396,7 @@ describe('ElasticBeanstalkBinderStrategy', () => {
     };
 
     test('ElasticBeanstalkBind__SecureNetworkingEnabled__ConfiguresVpcSslAutoScaling', async () => {
-    const strategy = new ElasticBeanstalkBinderStrategy();
+      const strategy = new ElasticBeanstalkBinderStrategy();
       const source = createMockSourceComponent();
       const target = createMockTargetComponent('elasticbeanstalk-environment', {
         'elasticbeanstalk:environment': {
@@ -411,7 +405,7 @@ describe('ElasticBeanstalkBinderStrategy', () => {
           environmentName: 'test-env',
           environmentId: 'e-abc123',
           endpointUrl: 'https://test-env.elasticbeanstalk.com',
-      status: 'Ready',
+          status: 'Ready',
           health: 'Ok',
           platformVersion: '64bit Amazon Linux 2 v3.4.0 running Python 3.8',
           solutionStackName: '64bit Amazon Linux 2 v3.4.0 running Python 3.8',
@@ -419,12 +413,12 @@ describe('ElasticBeanstalkBinderStrategy', () => {
           subnets: ['subnet-123', 'subnet-456'],
           securityGroups: ['sg-123', 'sg-456'],
           loadBalancerArn: 'arn:aws:elasticloadbalancing:us-east-1:123456789012:loadbalancer/app/test-lb/abc123',
-      loadBalancerType: 'application',
+          loadBalancerType: 'application',
           sslCertificateArn: 'arn:aws:acm:us-east-1:123456789012:certificate/abc123',
           autoScalingGroups: ['test-app-test-env-asg'],
           encryptionKeyArn: 'arn:aws:kms:us-east-1:123456789012:key/abc123',
-      healthCheckUrl: '/health',
-      healthCheckTimeout: 30
+          healthCheckUrl: '/health',
+          healthCheckTimeout: 30
         }
       });
 
@@ -479,10 +473,9 @@ describe('ElasticBeanstalkBinderStrategy', () => {
       level: 'unit' as const,
       capability: 'Grants CodeBuild permissions when build configuration includes CodeBuild service role',
       oracle: 'exact' as const,
-        feature: 'ElasticBeanstalkBind',
-        condition: 'CodeBuildIntegration',
-        outcome: 'GrantsCodeBuildPermissions'
-      },
+      feature: 'ElasticBeanstalkBind',
+      condition: 'CodeBuildIntegration',
+      outcome: 'GrantsCodeBuildPermissions',
       invariants: [
         'CodeBuild permissions are granted when codeBuildServiceRole is provided',
         'IAM PassRole permission is granted for CodeBuild service role',
@@ -552,10 +545,9 @@ describe('ElasticBeanstalkBinderStrategy', () => {
       level: 'unit' as const,
       capability: 'Grants CodePipeline permissions when CodePipeline integration is enabled',
       oracle: 'exact' as const,
-        feature: 'ElasticBeanstalkBind',
-        condition: 'CodePipelineIntegration',
-        outcome: 'GrantsCodePipelinePermissions'
-      },
+      feature: 'ElasticBeanstalkBind',
+      condition: 'CodePipelineIntegration',
+      outcome: 'GrantsCodePipelinePermissions',
       invariants: [
         'CodePipeline permissions are granted when enableCodePipeline option is true',
         'Environment variable EB_CODEPIPELINE_ENABLED is set to true',

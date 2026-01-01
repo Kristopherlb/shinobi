@@ -9,7 +9,7 @@
 
 import { IComponent } from './component-interfaces.js';
 import type { IamPolicy, SecurityGroupRule, ComplianceAction } from './bindings.js';
-import type { ComplianceViolation } from './compliance-enforcer.js';
+import type { ComplianceViolation } from './compliance/compliance-violation.js';
 
 /**
  * Fundamental interaction types in the platform
@@ -174,7 +174,7 @@ export interface EnhancedBindingResult {
     status: 'compliant' | 'non-compliant' | 'partially-compliant';
     framework: string; // e.g., 'fedramp-high', 'hipaa'
     actionsTaken: ComplianceAction[]; // from bindings.ts
-    violations?: ComplianceViolation[]; // from compliance-enforcer.ts
+    violations?: ComplianceViolation[]; // from compliance-violation.ts
   };
   
   metrics?: Record<string, unknown>;

@@ -20,6 +20,9 @@ describe('AppRunnerBinderStrategy', () => {
       level: 'unit' as const,
       capability: 'Returns App Runner service environment variables for valid service access',
       oracle: 'exact' as const,
+      determinism: 'deterministic' as const,
+      naming: {
+        pattern: 'Feature__Condition__ExpectedOutcome',
         feature: 'AppRunnerBind',
         condition: 'ValidServiceAccess',
         outcome: 'ReturnsServiceEnvVars'
@@ -100,6 +103,9 @@ describe('AppRunnerBinderStrategy', () => {
       level: 'unit' as const,
       capability: 'Grants App Runner service write actions including CreateService and UpdateService for write access',
       oracle: 'exact' as const,
+      determinism: 'deterministic' as const,
+      naming: {
+        pattern: 'Feature__Condition__ExpectedOutcome',
         feature: 'AppRunnerBind',
         condition: 'ServiceWriteAccess',
         outcome: 'GrantsServiceWriteActions'
@@ -163,6 +169,9 @@ describe('AppRunnerBinderStrategy', () => {
       level: 'unit' as const,
       capability: 'Applies default port (8080) when port is not specified',
       oracle: 'exact' as const,
+      determinism: 'deterministic' as const,
+      naming: {
+        pattern: 'Feature__Condition__ExpectedOutcome',
         feature: 'AppRunnerBind',
         condition: 'ServicePortDefault',
         outcome: 'DefaultsTo8080'
@@ -232,7 +241,7 @@ describe('AppRunnerBinderStrategy', () => {
       const context = createBindingContext({
         source,
         target,
-      capability: 'apprunner:service',
+        capability: 'apprunner:service',
         access: 'read'
       });
 
@@ -251,6 +260,9 @@ describe('AppRunnerBinderStrategy', () => {
       level: 'unit' as const,
       capability: 'Configures VPC connector, SSL certificate, and auto scaling when secure networking is enabled',
       oracle: 'exact' as const,
+      determinism: 'deterministic' as const,
+      naming: {
+        pattern: 'Feature__Condition__ExpectedOutcome',
         feature: 'AppRunnerBind',
         condition: 'SecureNetworkingEnabled',
         outcome: 'ConfiguresVpcSslAutoScaling'
@@ -274,20 +286,20 @@ describe('AppRunnerBinderStrategy', () => {
     };
 
     test('AppRunnerBind__SecureNetworkingEnabled__ConfiguresVpcSslAutoScaling', async () => {
-    const strategy = new AppRunnerBinderStrategy();
+      const strategy = new AppRunnerBinderStrategy();
       const source = createMockSourceComponent();
       const target = createMockTargetComponent('apprunner-service', {
         'apprunner:service': {
           type: 'apprunner:service',
-      serviceArn: 'arn:aws:apprunner:us-east-1:123456789012:service/app/abcd',
-      serviceName: 'app',
-      serviceUrl: 'https://app.awsapprunner.com',
-      serviceId: 'abcd',
-      ecrRepositoryArn: 'arn:aws:ecr:us-east-1:123456789012:repository/app',
-      vpcConnectorArn: 'arn:aws:apprunner:us-east-1:123456789012:vpcconnector/vpc-conn',
-      customDomain: 'app.example.com',
-      sslCertificateArn: 'arn:aws:acm:us-east-1:123456789012:certificate/xyz',
-      autoScalingConfigurationArn: 'arn:aws:apprunner:us-east-1:123456789012:autoscalingconfig/asc'
+          serviceArn: 'arn:aws:apprunner:us-east-1:123456789012:service/app/abcd',
+          serviceName: 'app',
+          serviceUrl: 'https://app.awsapprunner.com',
+          serviceId: 'abcd',
+          ecrRepositoryArn: 'arn:aws:ecr:us-east-1:123456789012:repository/app',
+          vpcConnectorArn: 'arn:aws:apprunner:us-east-1:123456789012:vpcconnector/vpc-conn',
+          customDomain: 'app.example.com',
+          sslCertificateArn: 'arn:aws:acm:us-east-1:123456789012:certificate/xyz',
+          autoScalingConfigurationArn: 'arn:aws:apprunner:us-east-1:123456789012:autoscalingconfig/asc'
         }
       });
 
@@ -335,6 +347,9 @@ describe('AppRunnerBinderStrategy', () => {
       level: 'unit' as const,
       capability: 'Configures custom domain and SSL certificate when provided with secure networking',
       oracle: 'exact' as const,
+      determinism: 'deterministic' as const,
+      naming: {
+        pattern: 'Feature__Condition__ExpectedOutcome',
         feature: 'AppRunnerBind',
         condition: 'CustomDomainSsl',
         outcome: 'ConfiguresDomainAndCertificate'
@@ -445,6 +460,9 @@ describe('AppRunnerBinderStrategy', () => {
       level: 'unit' as const,
       capability: 'ECR policy is scoped to specific repository ARN for least privilege',
       oracle: 'exact' as const,
+      determinism: 'deterministic' as const,
+      naming: {
+        pattern: 'Feature__Condition__ExpectedOutcome',
         feature: 'AppRunnerBind',
         condition: 'EcrPolicyResourceScoping',
         outcome: 'ScopesToRepositoryArn'
@@ -511,6 +529,9 @@ describe('AppRunnerBinderStrategy', () => {
       level: 'unit' as const,
       capability: 'Service policy is scoped to specific service ARN for least privilege',
       oracle: 'exact' as const,
+      determinism: 'deterministic' as const,
+      naming: {
+        pattern: 'Feature__Condition__ExpectedOutcome',
         feature: 'AppRunnerBind',
         condition: 'ServicePolicyResourceScoping',
         outcome: 'ScopesToServiceArn'
@@ -604,6 +625,9 @@ describe('AppRunnerBinderStrategy', () => {
       level: 'unit' as const,
       capability: 'Returns App Runner connection environment variables for valid connection access',
       oracle: 'exact' as const,
+      determinism: 'deterministic' as const,
+      naming: {
+        pattern: 'Feature__Condition__ExpectedOutcome',
         feature: 'AppRunnerBind',
         condition: 'ValidConnectionAccess',
         outcome: 'ReturnsConnectionEnvVars'
@@ -673,6 +697,9 @@ describe('AppRunnerBinderStrategy', () => {
       level: 'unit' as const,
       capability: 'Grants App Runner connection write actions including CreateConnection and UpdateConnection for write access',
       oracle: 'exact' as const,
+      determinism: 'deterministic' as const,
+      naming: {
+        pattern: 'Feature__Condition__ExpectedOutcome',
         feature: 'AppRunnerBind',
         condition: 'ConnectionWriteAccess',
         outcome: 'GrantsConnectionWriteActions'
@@ -733,6 +760,9 @@ describe('AppRunnerBinderStrategy', () => {
       level: 'unit' as const,
       capability: 'Applies default branch name (main) when branch is not specified',
       oracle: 'exact' as const,
+      determinism: 'deterministic' as const,
+      naming: {
+        pattern: 'Feature__Condition__ExpectedOutcome',
         feature: 'AppRunnerBind',
         condition: 'ConnectionBranchDefault',
         outcome: 'DefaultsToMain'
@@ -790,6 +820,9 @@ describe('AppRunnerBinderStrategy', () => {
       level: 'unit' as const,
       capability: 'Throws error when capability data structure is invalid',
       oracle: 'exact' as const,
+      determinism: 'deterministic' as const,
+      naming: {
+        pattern: 'Feature__Condition__ExpectedOutcome',
         feature: 'AppRunnerBind',
         condition: 'InvalidCapabilityData',
         outcome: 'ThrowsError'

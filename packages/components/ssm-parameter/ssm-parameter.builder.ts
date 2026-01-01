@@ -58,7 +58,6 @@ export const SSM_PARAMETER_CONFIG_SCHEMA: ComponentConfigSchema = {
   additionalProperties: false,
   properties: {
     name: { type: 'string', minLength: 1, maxLength: 2048 },
-    parameterName: { type: 'string', minLength: 1, maxLength: 2048 },
     description: { type: 'string', maxLength: 1024 },
     kind: { type: 'string', enum: ['string', 'stringList', 'secureString'] },
     value: { type: 'string', maxLength: 4096 },
@@ -108,7 +107,7 @@ export class SsmParameterComponentConfigBuilder extends ConfigBuilder<SsmParamet
   }
 
   public buildSync(): SsmParameterComponentConfig {
-    const resolved = super.buildSync() as Partial<SsmParameterComponentConfig> & { parameterName?: string };
+    const resolved = super.buildSync() as Partial<SsmParameterComponentConfig>;
     return this.normalise(resolved);
   }
 
@@ -116,10 +115,9 @@ export class SsmParameterComponentConfigBuilder extends ConfigBuilder<SsmParamet
     return SSM_PARAMETER_CONFIG_SCHEMA;
   }
 
-  private normalise(config: Partial<SsmParameterComponentConfig> & { parameterName?: string }): SsmParameterComponentConfig {
-    const legacyName = config.parameterName;
+  private normalise(config: Partial<SsmParameterComponentConfig>): SsmParameterComponentConfig {
     const configuredName = config.name && config.name.trim().length > 0 ? config.name : undefined;
-    const name = this.normaliseName(configuredName ?? legacyName);
+    const name = this.normaliseName(configuredName);
 
     const kind = (config.kind ?? DEFAULT_CONFIG.kind) as SsmParameterKind;
     const tier = (config.tier ?? (kind === 'secureString' ? 'advanced' : DEFAULT_CONFIG.tier)) as SsmParameterTier;
