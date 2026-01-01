@@ -848,7 +848,7 @@ describe('EfsBinderStrategy', () => {
       const context = createBindingContext({
         source,
         target,
-        capability: 'efs:file-system',
+      capability: 'efs:file-system',
         access: 'read'
       });
 
@@ -957,7 +957,7 @@ describe('EfsBinderStrategy', () => {
     };
 
     test('EfsBind__HardeningProfileSet__SetsHardeningEnvVar', async () => {
-      const strategy = new EfsBinderStrategy();
+    const strategy = new EfsBinderStrategy();
       const source = createMockSourceComponent();
       const target = createMockTargetComponent('efs-filesystem', {
         'storage:efs': {
@@ -967,8 +967,8 @@ describe('EfsBinderStrategy', () => {
           fileSystemName: 'test-efs',
           dnsName: 'fs-12345678.efs.us-east-1.amazonaws.com',
           lifecycleState: 'available',
-          performanceMode: 'generalPurpose',
-          throughputMode: 'bursting',
+      performanceMode: 'generalPurpose',
+      throughputMode: 'bursting',
           encryption: {
             atRest: false,
             inTransit: false

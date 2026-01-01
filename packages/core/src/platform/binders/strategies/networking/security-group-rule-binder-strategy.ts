@@ -65,16 +65,18 @@ export class SecurityGroupRuleBinderStrategy extends UnifiedBinderStrategyBase {
   getCompatibilityMatrix(): CompatibilityEntry[] {
     return [
       {
-        sourceTypes: ['*'],
+        sourceType: '*',
+        targetType: '*',
         capability: 'security-group:rule',
         supportedAccess: ['read', 'write', 'readwrite'],
-        notes: 'Generates security group ingress/egress rules. Rules specified in directive.options.rules'
+        description: 'Generates security group ingress/egress rules. Rules specified in directive.options.rules'
       },
       {
-        sourceTypes: ['*'],
+        sourceType: '*',
+        targetType: '*',
         capability: 'network:security-group-rule',
         supportedAccess: ['read', 'write', 'readwrite'],
-        notes: 'Alias for security-group:rule'
+        description: 'Alias for security-group:rule'
       }
     ];
   }
