@@ -27,9 +27,6 @@ export type { BindingContext, BindingResult, IBinderStrategy } from './platform-
 // Export trigger system interfaces
 export * from './trigger-interfaces.js';
 
-// Export binder matrix implementation
-export * from './binder-matrix.js';
-
 // Export OpenFeature standard interfaces
 export * from './openfeature-interfaces.js';
 

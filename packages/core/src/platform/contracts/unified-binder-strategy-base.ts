@@ -20,7 +20,7 @@ import {
   CompatibilityEntry
 } from './platform-binding-trigger-spec.js';
 import type { ComplianceFramework } from './bindings.js';
-import type { ComplianceViolation } from './compliance-enforcer.js';
+import type { ComplianceViolation } from './compliance/compliance-violation.js';
 import type { ComplianceAction } from './bindings.js';
 import {
   loadComplianceRules,

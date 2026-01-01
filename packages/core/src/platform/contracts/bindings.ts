@@ -279,37 +279,6 @@ export interface ComplianceAction {
 }
 
 // =============================================================================
-// ENHANCED BINDING INTERFACES (LEGACY ENHANCED SYSTEM)
-// =============================================================================
-
-/**
- * Enhanced binding context used by the legacy enhanced binder system.
- * The unified system uses BindingContext from platform-binding-trigger-spec.ts.
- */
-export interface EnhancedBindingContext<T extends ComplianceFramework = ComplianceFramework> {
-  source: IComponent;
-  target: IComponent;
-  directive: any; // BindingDirective
-  environment: string;
-  complianceFramework: T;
-  targetCapabilityData: CapabilityData;
-  options?: Record<string, unknown>;
-}
-
-/**
- * Enhanced binding result used by the legacy enhanced binder system.
- * The unified system uses EnhancedBindingResult from platform-binding-trigger-spec.ts
- * which includes a mandatory compliance block.
- */
-export interface EnhancedBindingResult {
-  readonly environmentVariables: Readonly<Record<string, string>>;
-  readonly iamPolicies: ReadonlyArray<IamPolicy>;
-  readonly securityGroupRules: ReadonlyArray<SecurityGroupRule>;
-  readonly complianceActions: ReadonlyArray<ComplianceAction>;
-  readonly metadata?: Readonly<Record<string, unknown>>;
-}
-
-// =============================================================================
 // BINDING METADATA
 // =============================================================================
 

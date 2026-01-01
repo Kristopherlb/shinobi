@@ -20,6 +20,9 @@ describe('LightsailBinderStrategy', () => {
       level: 'unit' as const,
       capability: 'Returns Lightsail instance environment variables for valid instance access',
       oracle: 'exact' as const,
+      determinism: 'deterministic' as const,
+      naming: {
+        pattern: 'Feature__Condition__ExpectedOutcome',
         feature: 'LightsailBind',
         condition: 'ValidInstanceAccess',
         outcome: 'ReturnsInstanceEnvVars'
@@ -93,6 +96,9 @@ describe('LightsailBinderStrategy', () => {
       level: 'unit' as const,
       capability: 'Grants Lightsail instance write actions including CreateInstances and UpdateInstance for write access',
       oracle: 'exact' as const,
+      determinism: 'deterministic' as const,
+      naming: {
+        pattern: 'Feature__Condition__ExpectedOutcome',
         feature: 'LightsailBind',
         condition: 'InstanceWriteAccess',
         outcome: 'GrantsInstanceWriteActions'
@@ -154,6 +160,9 @@ describe('LightsailBinderStrategy', () => {
       level: 'unit' as const,
       capability: 'Returns Lightsail database environment variables for valid database access',
       oracle: 'exact' as const,
+      determinism: 'deterministic' as const,
+      naming: {
+        pattern: 'Feature__Condition__ExpectedOutcome',
         feature: 'LightsailBind',
         condition: 'ValidDatabaseAccess',
         outcome: 'ReturnsDatabaseEnvVars'
@@ -197,7 +206,7 @@ describe('LightsailBinderStrategy', () => {
       const context = createBindingContext({
         source,
         target,
-      capability: 'lightsail:database',
+        capability: 'lightsail:database',
         access: 'read'
       });
 
@@ -227,6 +236,9 @@ describe('LightsailBinderStrategy', () => {
       level: 'unit' as const,
       capability: 'Returns Lightsail load balancer environment variables for valid load balancer access',
       oracle: 'exact' as const,
+      determinism: 'deterministic' as const,
+      naming: {
+        pattern: 'Feature__Condition__ExpectedOutcome',
         feature: 'LightsailBind',
         condition: 'ValidLoadBalancerAccess',
         outcome: 'ReturnsLoadBalancerEnvVars'
@@ -297,6 +309,9 @@ describe('LightsailBinderStrategy', () => {
       level: 'unit' as const,
       capability: 'Returns Lightsail container service environment variables for valid container service access',
       oracle: 'exact' as const,
+      determinism: 'deterministic' as const,
+      naming: {
+        pattern: 'Feature__Condition__ExpectedOutcome',
         feature: 'LightsailBind',
         condition: 'ValidContainerServiceAccess',
         outcome: 'ReturnsContainerServiceEnvVars'
@@ -373,6 +388,9 @@ describe('LightsailBinderStrategy', () => {
       level: 'unit' as const,
       capability: 'Configures secure access features when requireSecureAccess is enabled',
       oracle: 'exact' as const,
+      determinism: 'deterministic' as const,
+      naming: {
+        pattern: 'Feature__Condition__ExpectedOutcome',
         feature: 'LightsailBind',
         condition: 'SecureAccessEnabled',
         outcome: 'ConfiguresSecureFeatures'
@@ -443,7 +461,7 @@ describe('LightsailBinderStrategy', () => {
     });
 
     test('LightsailBind__SecureDatabaseAccess__ConfiguresSecureDatabaseFeatures', async () => {
-    const strategy = new LightsailBinderStrategy();
+      const strategy = new LightsailBinderStrategy();
       const source = createMockSourceComponent();
       const target = createMockTargetComponent('lightsail-database', {
         'lightsail:database': {
@@ -456,7 +474,7 @@ describe('LightsailBinderStrategy', () => {
             address: 'test-db.abc123.us-east-1.rds.amazonaws.com',
             port: 3306
           },
-      backupRetentionEnabled: true,
+          backupRetentionEnabled: true,
           parameterApplyStatus: 'applied',
           preferredMaintenanceWindow: 'mon:03:00-mon:04:00'
         }
@@ -492,6 +510,9 @@ describe('LightsailBinderStrategy', () => {
       level: 'unit' as const,
       capability: 'Returns Lightsail static IP environment variables for valid static IP access',
       oracle: 'exact' as const,
+      determinism: 'deterministic' as const,
+      naming: {
+        pattern: 'Feature__Condition__ExpectedOutcome',
         feature: 'LightsailBind',
         condition: 'ValidStaticIpAccess',
         outcome: 'ReturnsStaticIpEnvVars'
@@ -560,6 +581,9 @@ describe('LightsailBinderStrategy', () => {
       level: 'unit' as const,
       capability: 'Returns Lightsail distribution environment variables for valid distribution access',
       oracle: 'exact' as const,
+      determinism: 'deterministic' as const,
+      naming: {
+        pattern: 'Feature__Condition__ExpectedOutcome',
         feature: 'LightsailBind',
         condition: 'ValidDistributionAccess',
         outcome: 'ReturnsDistributionEnvVars'

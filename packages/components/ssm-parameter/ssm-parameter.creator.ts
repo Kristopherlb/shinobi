@@ -33,7 +33,7 @@ export class SsmParameterComponentCreator implements IComponentCreator {
       errors.push('Component name must start with a letter and contain only alphanumeric characters, hyphens, or underscores.');
     }
 
-    const name = config?.name ?? (config as any)?.parameterName;
+    const name = config?.name;
     if (!name || name.toString().trim().length === 0) {
       errors.push('`config.name` is required for SSM parameters.');
     }
