@@ -1,109 +1,238 @@
 /**
- * EventBridge Binder Strategy
- * Handles event-driven architecture bindings for Amazon EventBridge
+ * EventBridge Binder Strategy (Unified)
+ * Handles event-driven architecture bindings for Amazon EventBridge with mandatory compliance enforcement
  */
 
-import { IBinderStrategy } from '../binder-strategy.js';
-import { ComponentBinding, BindingRuntimeContext } from '../../types.js';
-// Compliance framework branching removed; use binding.options/config instead
+import { UnifiedBinderStrategyBase } from '../../../contracts/unified-binder-strategy-base.js';
+import type { BindingContext, EnhancedBindingResult, CompatibilityEntry } from '../../../contracts/platform-binding-trigger-spec.js';
+import type { IamPolicy } from '../../../contracts/bindings.js';
+import { PolicyStatement, Effect } from 'aws-cdk-lib/aws-iam';
 
-export class EventBridgeBinderStrategy implements IBinderStrategy {
+export class EventBridgeBinderStrategy extends UnifiedBinderStrategyBase {
   readonly supportedCapabilities = ['eventbridge:event-bus', 'eventbridge:rule', 'eventbridge:connection'];
 
-  async bind(
-    sourceComponent: any,
-    targetComponent: any,
-    binding: ComponentBinding,
-    context: BindingRuntimeContext
-  ): Promise<void> {
-    const { capability, access } = binding;
+  getStrategyName(): string {
+    return 'EventBridge Binder Strategy';
+  }
 
+  canHandle(sourceType: string, targetCapability: string): boolean {
+    return this.supportedCapabilities.includes(targetCapability);
+  }
+
+  getCompatibilityMatrix(): CompatibilityEntry[] {
+    return [
+      {
+        sourceType: '*',
+        targetType: 'eventbridge:event-bus',
+        capability: 'eventbridge:event-bus',
+        supportedAccess: ['read', 'write', 'readwrite'],
+        description: 'Bind to EventBridge event bus for publishing and consuming events',
+        examples: ['lambda-api -> eventbridge:event-bus (write)', 'ecs-task -> eventbridge:event-bus (read)']
+      },
+      {
+        sourceType: '*',
+        targetType: 'eventbridge:rule',
+        capability: 'eventbridge:rule',
+        supportedAccess: ['read', 'write', 'readwrite'],
+        description: 'Bind to EventBridge rule for event routing and filtering',
+        examples: ['lambda-api -> eventbridge:rule (readwrite)']
+      },
+      {
+        sourceType: '*',
+        targetType: 'eventbridge:connection',
+        capability: 'eventbridge:connection',
+        supportedAccess: ['read', 'write', 'readwrite'],
+        description: 'Bind to EventBridge connection for API destination integrations',
+        examples: ['lambda-api -> eventbridge:connection (read)']
+      }
+    ];
+  }
+
+  protected async doBind(context: BindingContext): Promise<Omit<EnhancedBindingResult, 'compliance'>> {
+    const { source, target, directive } = context;
+    const { capability } = directive;
+
+    // Validate inputs
+    if (!target) {
+      throw new Error('Target component is required for EventBridge binding');
+    }
+    if (!capability) {
+      throw new Error('Binding capability is required');
+    }
+
+    // Normalize access to array (directive.access is a single AccessLevel string)
+    const access = directive.access ? [directive.access] : [];
+
+    // Validate access patterns
+    const validAccessTypes = ['read', 'write', 'readwrite'];
+    const invalidAccess = access.filter(a => !validAccessTypes.includes(a));
+    if (invalidAccess.length > 0) {
+      throw new Error(`Invalid access types for EventBridge binding: ${invalidAccess.join(', ')}. Valid types: ${validAccessTypes.join(', ')}`);
+    }
+    if (access.length === 0) {
+      throw new Error('Access cannot be empty for EventBridge binding');
+    }
+
+    // Get target capability data
+    const targetCapabilities = target.getCapabilities();
+    const targetCapabilityData = targetCapabilities[capability];
+    if (!targetCapabilityData) {
+      throw new Error(`Target component does not provide capability '${capability}'`);
+    }
+
+    // Route to appropriate binding method
     switch (capability) {
       case 'eventbridge:event-bus':
-        await this.bindToEventBus(sourceComponent, targetComponent, binding, context);
-        break;
+        return await this.bindToEventBus(context, targetCapabilityData, access);
       case 'eventbridge:rule':
-        await this.bindToRule(sourceComponent, targetComponent, binding, context);
-        break;
+        return await this.bindToRule(context, targetCapabilityData, access);
       case 'eventbridge:connection':
-        await this.bindToConnection(sourceComponent, targetComponent, binding, context);
-        break;
+        return await this.bindToConnection(context, targetCapabilityData, access);
       default:
-        throw new Error(`Unsupported EventBridge capability: ${capability}`);
+        throw new Error(`Unsupported EventBridge capability: ${capability}. Supported capabilities: ${this.supportedCapabilities.join(', ')}`);
     }
   }
 
+  /**
+   * Bind to EventBridge event bus
+   * 
+   * @param context - Binding context
+   * @param targetData - Expected structure:
+   *   - eventBusArn (required): string - ARN of the event bus
+   *   - eventBusName (required): string - Name of the event bus
+   *   - policy?: string - Event bus policy JSON
+   *   - kmsKeyId?: string - KMS key ID for encryption (when requireSecureAccess is true)
+   *   - deadLetterConfig?: { arn: string } - Dead letter queue configuration (when requireSecureAccess is true)
+   *   - retryPolicy?: object - Retry policy configuration (when requireSecureAccess is true)
+   *   - enableVpcEndpoint?: boolean - Enable VPC endpoint (when requireSecureAccess is true)
+   *   - enableEventFiltering?: boolean - Enable event filtering (when requireSecureAccess is true)
+   * @param access - Array of access levels (read, write, readwrite)
+   */
   private async bindToEventBus(
-    sourceComponent: any,
-    targetComponent: any,
-    binding: ComponentBinding,
-    context: BindingRuntimeContext
-  ): Promise<void> {
-    const { access } = binding;
+    context: BindingContext,
+    targetData: any,
+    access: string[]
+  ): Promise<Omit<EnhancedBindingResult, 'compliance'>> {
+    // Validate required target properties
+    if (!targetData?.eventBusArn) {
+      throw new Error('Target component missing required eventBusArn property for EventBridge event bus binding');
+    }
+    if (!targetData?.eventBusName) {
+      throw new Error('Target component missing required eventBusName property for EventBridge event bus binding');
+    }
+
+    const environmentVariables: Record<string, string> = {};
+    const iamPolicies: IamPolicy[] = [];
 
     // Grant event bus access permissions
-    if (access.includes('read')) {
-      sourceComponent.addToRolePolicy({
-        Effect: 'Allow',
-        Action: [
+    if (access.includes('read') || access.includes('readwrite')) {
+      const statement = new PolicyStatement({
+        effect: Effect.ALLOW,
+        actions: [
           'events:DescribeEventBus',
           'events:ListEventBuses',
           'events:ListRules'
         ],
-        Resource: targetComponent.eventBusArn
+        resources: [targetData.eventBusArn]
+      });
+      iamPolicies.push({
+        statement,
+        description: 'EventBridge event bus read access permissions',
+        complianceRequirement: 'Least privilege IAM access'
       });
     }
 
-    if (access.includes('write')) {
-      sourceComponent.addToRolePolicy({
-        Effect: 'Allow',
-        Action: [
+    if (access.includes('write') || access.includes('readwrite')) {
+      const statement = new PolicyStatement({
+        effect: Effect.ALLOW,
+        actions: [
           'events:CreateEventBus',
           'events:DeleteEventBus',
           'events:PutEvents',
           'events:PutPermission',
           'events:RemovePermission'
         ],
-        Resource: targetComponent.eventBusArn
+        resources: [targetData.eventBusArn]
+      });
+      iamPolicies.push({
+        statement,
+        description: 'EventBridge event bus write access permissions',
+        complianceRequirement: 'Least privilege IAM access'
       });
     }
 
-    // Inject event bus environment variables
-    sourceComponent.addEnvironment('EVENTBRIDGE_EVENT_BUS_NAME', targetComponent.eventBusName);
-    sourceComponent.addEnvironment('EVENTBRIDGE_EVENT_BUS_ARN', targetComponent.eventBusArn);
-    sourceComponent.addEnvironment('EVENTBRIDGE_EVENT_BUS_POLICY', targetComponent.policy);
+    // Set event bus environment variables
+    environmentVariables['EVENTBRIDGE_EVENT_BUS_NAME'] = targetData.eventBusName;
+    environmentVariables['EVENTBRIDGE_EVENT_BUS_ARN'] = targetData.eventBusArn;
+    if (targetData.policy) {
+      environmentVariables['EVENTBRIDGE_EVENT_BUS_POLICY'] = targetData.policy;
+    }
 
     // Configure secure access when requested via options/config
-    if (binding.options?.requireSecureAccess === true) {
-      await this.configureSecureEventBusAccess(sourceComponent, targetComponent, context);
+    if (context.directive.options?.requireSecureAccess === true) {
+      const secureConfig = await this.buildSecureEventBusAccessConfig(context, targetData);
+      Object.assign(environmentVariables, secureConfig.environmentVariables);
+      iamPolicies.push(...secureConfig.iamPolicies);
     }
+
+    return {
+      environmentVariables,
+      iamPolicies,
+      securityGroupRules: []
+    };
   }
 
+  /**
+   * Bind to EventBridge rule
+   * 
+   * @param context - Binding context
+   * @param targetData - Expected structure:
+   *   - ruleName (required): string - Name of the rule
+   *   - ruleArn (required): string - ARN of the rule
+   *   - state?: string - Rule state (e.g., 'ENABLED', 'DISABLED')
+   *   - scheduleExpression?: string - Schedule expression for scheduled rules
+   *   - eventPattern?: object - Event pattern JSON for event-based rules
+   *   - targets?: Array<{ arn: string, id?: string }> - Rule targets
+   * @param access - Array of access levels (read, write, readwrite)
+   */
   private async bindToRule(
-    sourceComponent: any,
-    targetComponent: any,
-    binding: ComponentBinding,
-    context: BindingRuntimeContext
-  ): Promise<void> {
-    const { access } = binding;
+    context: BindingContext,
+    targetData: any,
+    access: string[]
+  ): Promise<Omit<EnhancedBindingResult, 'compliance'>> {
+    // Validate required target properties
+    if (!targetData?.ruleName) {
+      throw new Error('Target component missing required ruleName property for EventBridge rule binding');
+    }
+    if (!targetData?.ruleArn) {
+      throw new Error('Target component missing required ruleArn property for EventBridge rule binding');
+    }
+
+    const environmentVariables: Record<string, string> = {};
+    const iamPolicies: IamPolicy[] = [];
 
     // Grant rule access permissions
-    if (access.includes('read')) {
-      sourceComponent.addToRolePolicy({
-        Effect: 'Allow',
-        Action: [
+    if (access.includes('read') || access.includes('readwrite')) {
+      const statement = new PolicyStatement({
+        effect: Effect.ALLOW,
+        actions: [
           'events:DescribeRule',
           'events:ListRules',
           'events:ListTargetsByRule'
         ],
-        Resource: targetComponent.ruleArn
+        resources: [targetData.ruleArn]
+      });
+      iamPolicies.push({
+        statement,
+        description: 'EventBridge rule read access permissions',
+        complianceRequirement: 'Least privilege IAM access'
       });
     }
 
-    if (access.includes('write')) {
-      sourceComponent.addToRolePolicy({
-        Effect: 'Allow',
-        Action: [
+    if (access.includes('write') || access.includes('readwrite')) {
+      const statement = new PolicyStatement({
+        effect: Effect.ALLOW,
+        actions: [
           'events:PutRule',
           'events:DeleteRule',
           'events:PutTargets',
@@ -111,181 +240,299 @@ export class EventBridgeBinderStrategy implements IBinderStrategy {
           'events:EnableRule',
           'events:DisableRule'
         ],
-        Resource: targetComponent.ruleArn
+        resources: [targetData.ruleArn]
+      });
+      iamPolicies.push({
+        statement,
+        description: 'EventBridge rule write access permissions',
+        complianceRequirement: 'Least privilege IAM access'
       });
     }
 
-    // Grant target invocation permissions
-    if (access.includes('invoke')) {
-      targetComponent.targets?.forEach((target: any) => {
-        if (target.arn.includes('lambda:')) {
-          sourceComponent.addToRolePolicy({
-            Effect: 'Allow',
-            Action: [
-              'lambda:InvokeFunction'
-            ],
-            Resource: target.arn
-          });
-        } else if (target.arn.includes('sqs:')) {
-          sourceComponent.addToRolePolicy({
-            Effect: 'Allow',
-            Action: [
-              'sqs:SendMessage'
-            ],
-            Resource: target.arn
-          });
-        } else if (target.arn.includes('sns:')) {
-          sourceComponent.addToRolePolicy({
-            Effect: 'Allow',
-            Action: [
-              'sns:Publish'
-            ],
-            Resource: target.arn
-          });
+    // Grant target invocation permissions when targets are specified
+    if (targetData.targets && Array.isArray(targetData.targets)) {
+      for (const target of targetData.targets) {
+        if (target.arn) {
+          if (target.arn.includes('lambda:')) {
+            const statement = new PolicyStatement({
+              effect: Effect.ALLOW,
+              actions: ['lambda:InvokeFunction'],
+              resources: [target.arn]
+            });
+            iamPolicies.push({
+              statement,
+              description: 'EventBridge rule Lambda target invocation permissions',
+              complianceRequirement: 'Least privilege IAM access'
+            });
+          } else if (target.arn.includes('sqs:')) {
+            const statement = new PolicyStatement({
+              effect: Effect.ALLOW,
+              actions: ['sqs:SendMessage'],
+              resources: [target.arn]
+            });
+            iamPolicies.push({
+              statement,
+              description: 'EventBridge rule SQS target permissions',
+              complianceRequirement: 'Least privilege IAM access'
+            });
+          } else if (target.arn.includes('sns:')) {
+            const statement = new PolicyStatement({
+              effect: Effect.ALLOW,
+              actions: ['sns:Publish'],
+              resources: [target.arn]
+            });
+            iamPolicies.push({
+              statement,
+              description: 'EventBridge rule SNS target permissions',
+              complianceRequirement: 'Least privilege IAM access'
+            });
+          }
         }
-      });
+      }
     }
 
-    // Inject rule environment variables
-    sourceComponent.addEnvironment('EVENTBRIDGE_RULE_NAME', targetComponent.ruleName);
-    sourceComponent.addEnvironment('EVENTBRIDGE_RULE_ARN', targetComponent.ruleArn);
-    sourceComponent.addEnvironment('EVENTBRIDGE_RULE_STATE', targetComponent.state);
-    sourceComponent.addEnvironment('EVENTBRIDGE_RULE_SCHEDULE_EXPRESSION', targetComponent.scheduleExpression);
-
-    // Configure event pattern
-    if (targetComponent.eventPattern) {
-      sourceComponent.addEnvironment('EVENTBRIDGE_EVENT_PATTERN', JSON.stringify(targetComponent.eventPattern));
+    // Set rule environment variables
+    environmentVariables['EVENTBRIDGE_RULE_NAME'] = targetData.ruleName;
+    environmentVariables['EVENTBRIDGE_RULE_ARN'] = targetData.ruleArn;
+    if (targetData.state) {
+      environmentVariables['EVENTBRIDGE_RULE_STATE'] = targetData.state;
+    }
+    if (targetData.scheduleExpression) {
+      environmentVariables['EVENTBRIDGE_RULE_SCHEDULE_EXPRESSION'] = targetData.scheduleExpression;
+    }
+    if (targetData.eventPattern) {
+      environmentVariables['EVENTBRIDGE_EVENT_PATTERN'] = JSON.stringify(targetData.eventPattern);
+    }
+    if (targetData.targets && Array.isArray(targetData.targets)) {
+      environmentVariables['EVENTBRIDGE_TARGETS'] = JSON.stringify(targetData.targets);
     }
 
-    // Configure targets
-    if (targetComponent.targets) {
-      sourceComponent.addEnvironment('EVENTBRIDGE_TARGETS', JSON.stringify(targetComponent.targets));
-    }
+    return {
+      environmentVariables,
+      iamPolicies,
+      securityGroupRules: []
+    };
   }
 
+  /**
+   * Bind to EventBridge connection
+   * 
+   * @param context - Binding context
+   * @param targetData - Expected structure:
+   *   - connectionName (required): string - Name of the connection
+   *   - connectionArn (required): string - ARN of the connection
+   *   - connectionState?: string - Connection state (e.g., 'CREATING', 'AUTHORIZED', 'DEAUTHORIZED')
+   *   - authorizationType?: string - Authorization type (e.g., 'API_KEY', 'BASIC', 'OAUTH_CLIENT_CREDENTIALS')
+   *   - authParameters?: object - Authorization parameters
+   *   - apiDestinationArn?: string - API destination ARN
+   *   - apiDestination?: { name?: string, endpoint?: string, httpMethod?: string, invocationRateLimitPerSecond?: number } - API destination details
+   * @param access - Array of access levels (read, write, readwrite)
+   */
   private async bindToConnection(
-    sourceComponent: any,
-    targetComponent: any,
-    binding: ComponentBinding,
-    context: BindingRuntimeContext
-  ): Promise<void> {
-    const { access } = binding;
+    context: BindingContext,
+    targetData: any,
+    access: string[]
+  ): Promise<Omit<EnhancedBindingResult, 'compliance'>> {
+    // Validate required target properties
+    if (!targetData?.connectionName) {
+      throw new Error('Target component missing required connectionName property for EventBridge connection binding');
+    }
+    if (!targetData?.connectionArn) {
+      throw new Error('Target component missing required connectionArn property for EventBridge connection binding');
+    }
+
+    const environmentVariables: Record<string, string> = {};
+    const iamPolicies: IamPolicy[] = [];
 
     // Grant connection access permissions
-    if (access.includes('read')) {
-      sourceComponent.addToRolePolicy({
-        Effect: 'Allow',
-        Action: [
+    if (access.includes('read') || access.includes('readwrite')) {
+      const statement = new PolicyStatement({
+        effect: Effect.ALLOW,
+        actions: [
           'events:DescribeConnection',
           'events:ListConnections'
         ],
-        Resource: targetComponent.connectionArn
+        resources: [targetData.connectionArn]
+      });
+      iamPolicies.push({
+        statement,
+        description: 'EventBridge connection read access permissions',
+        complianceRequirement: 'Least privilege IAM access'
       });
     }
 
-    if (access.includes('write')) {
-      sourceComponent.addToRolePolicy({
-        Effect: 'Allow',
-        Action: [
+    if (access.includes('write') || access.includes('readwrite')) {
+      const statement = new PolicyStatement({
+        effect: Effect.ALLOW,
+        actions: [
           'events:CreateConnection',
           'events:DeleteConnection',
           'events:UpdateConnection'
         ],
-        Resource: targetComponent.connectionArn
+        resources: [targetData.connectionArn]
+      });
+      iamPolicies.push({
+        statement,
+        description: 'EventBridge connection write access permissions',
+        complianceRequirement: 'Least privilege IAM access'
       });
     }
 
-    // Grant API destination permissions
-    if (targetComponent.apiDestinationArn) {
-      sourceComponent.addToRolePolicy({
-        Effect: 'Allow',
-        Action: [
+    // Grant API destination permissions if specified
+    if (targetData.apiDestinationArn) {
+      const statement = new PolicyStatement({
+        effect: Effect.ALLOW,
+        actions: [
           'events:DescribeApiDestination',
           'events:ListApiDestinations',
           'events:UpdateApiDestination'
         ],
-        Resource: targetComponent.apiDestinationArn
+        resources: [targetData.apiDestinationArn]
+      });
+      iamPolicies.push({
+        statement,
+        description: 'EventBridge API destination permissions',
+        complianceRequirement: 'Least privilege IAM access'
       });
     }
 
-    // Inject connection environment variables
-    sourceComponent.addEnvironment('EVENTBRIDGE_CONNECTION_NAME', targetComponent.connectionName);
-    sourceComponent.addEnvironment('EVENTBRIDGE_CONNECTION_ARN', targetComponent.connectionArn);
-    sourceComponent.addEnvironment('EVENTBRIDGE_CONNECTION_STATE', targetComponent.connectionState);
-    sourceComponent.addEnvironment('EVENTBRIDGE_CONNECTION_AUTHORIZATION_TYPE', targetComponent.authorizationType);
-
-    // Configure authorization parameters
-    if (targetComponent.authParameters) {
-      sourceComponent.addEnvironment('EVENTBRIDGE_AUTH_PARAMETERS', JSON.stringify(targetComponent.authParameters));
+    // Set connection environment variables
+    environmentVariables['EVENTBRIDGE_CONNECTION_NAME'] = targetData.connectionName;
+    environmentVariables['EVENTBRIDGE_CONNECTION_ARN'] = targetData.connectionArn;
+    if (targetData.connectionState) {
+      environmentVariables['EVENTBRIDGE_CONNECTION_STATE'] = targetData.connectionState;
+    }
+    if (targetData.authorizationType) {
+      environmentVariables['EVENTBRIDGE_CONNECTION_AUTHORIZATION_TYPE'] = targetData.authorizationType;
+    }
+    if (targetData.authParameters) {
+      environmentVariables['EVENTBRIDGE_AUTH_PARAMETERS'] = JSON.stringify(targetData.authParameters);
+    }
+    if (targetData.apiDestinationArn) {
+      environmentVariables['EVENTBRIDGE_API_DESTINATION_ARN'] = targetData.apiDestinationArn;
+    }
+    // Add API destination details if provided
+    if (targetData.apiDestination) {
+      if (targetData.apiDestination.name) {
+        environmentVariables['EVENTBRIDGE_API_DESTINATION_NAME'] = targetData.apiDestination.name;
+      }
+      if (targetData.apiDestination.endpoint) {
+        environmentVariables['EVENTBRIDGE_API_DESTINATION_ENDPOINT'] = targetData.apiDestination.endpoint;
+      }
+      if (targetData.apiDestination.httpMethod) {
+        environmentVariables['EVENTBRIDGE_API_DESTINATION_HTTP_METHOD'] = targetData.apiDestination.httpMethod;
+      }
+      if (targetData.apiDestination.invocationRateLimitPerSecond) {
+        environmentVariables['EVENTBRIDGE_API_DESTINATION_RATE_LIMIT'] = targetData.apiDestination.invocationRateLimitPerSecond.toString();
+      }
     }
 
-    // Configure API destination
-    if (targetComponent.apiDestinationArn) {
-      sourceComponent.addEnvironment('EVENTBRIDGE_API_DESTINATION_ARN', targetComponent.apiDestinationArn);
-    }
+    return {
+      environmentVariables,
+      iamPolicies,
+      securityGroupRules: []
+    };
   }
 
-  private async configureSecureEventBusAccess(
-    sourceComponent: any,
-    targetComponent: any,
-    context: BindingRuntimeContext
-  ): Promise<void> {
+  /**
+   * Build secure access configuration for EventBridge event bus
+   * 
+   * @param context - Binding context
+   * @param targetData - Expected structure:
+   *   - eventBusArn: string - ARN of the event bus
+   *   - kmsKeyId?: string - KMS key ID for encryption
+   *   - deadLetterConfig?: { arn: string } - Dead letter queue configuration
+   *   - retryPolicy?: object - Retry policy configuration
+   *   - enableVpcEndpoint?: boolean - Enable VPC endpoint
+   *   - enableEventFiltering?: boolean - Enable event filtering
+   * @returns Secure access configuration with environment variables and IAM policies
+   */
+  private async buildSecureEventBusAccessConfig(
+    context: BindingContext,
+    targetData: any
+  ): Promise<{ environmentVariables: Record<string, string>; iamPolicies: IamPolicy[] }> {
+    const environmentVariables: Record<string, string> = {};
+    const iamPolicies: IamPolicy[] = [];
+    const region = (context.target.context as any)?.region || process.env.AWS_REGION || 'us-east-1';
+    const accountId = (context.target.context as any)?.accountId || '*';
+
     // Configure encryption at rest
-    if (targetComponent.kmsKeyId) {
-      sourceComponent.addEnvironment('EVENTBRIDGE_KMS_KEY_ID', targetComponent.kmsKeyId);
+    if (targetData.kmsKeyId) {
+      environmentVariables['EVENTBRIDGE_KMS_KEY_ID'] = targetData.kmsKeyId;
 
       // Grant KMS permissions
-      sourceComponent.addToRolePolicy({
-        Effect: 'Allow',
-        Action: [
+      const kmsStatement = new PolicyStatement({
+        effect: Effect.ALLOW,
+        actions: [
           'kms:Decrypt',
           'kms:GenerateDataKey'
         ],
-        Resource: targetComponent.kmsKeyId
+        resources: [targetData.kmsKeyId]
+      });
+      iamPolicies.push({
+        statement: kmsStatement,
+        description: 'KMS permissions for EventBridge encryption',
+        complianceRequirement: 'Encryption at rest'
       });
     }
 
     // Configure dead letter queue for failed events
-    if (targetComponent.deadLetterConfig) {
-      sourceComponent.addEnvironment('EVENTBRIDGE_DEAD_LETTER_QUEUE_ARN', targetComponent.deadLetterConfig.arn);
+    if (targetData.deadLetterConfig?.arn) {
+      const dlqArn = targetData.deadLetterConfig.arn;
+      environmentVariables['EVENTBRIDGE_DEAD_LETTER_QUEUE_ARN'] = dlqArn;
 
-      // Grant SQS permissions for dead letter queue
-      sourceComponent.addToRolePolicy({
-        Effect: 'Allow',
-        Action: [
-          'sqs:SendMessage'
-        ],
-        Resource: targetComponent.deadLetterConfig.arn
-      });
+      // Grant SQS permissions for dead letter queue (if target is SQS)
+      if (dlqArn.includes(':sqs:') || dlqArn.startsWith('arn:aws:sqs:')) {
+        const sqsStatement = new PolicyStatement({
+          effect: Effect.ALLOW,
+          actions: [
+            'sqs:SendMessage',
+            'sqs:GetQueueAttributes'
+          ],
+          resources: [dlqArn]
+        });
+        iamPolicies.push({
+          statement: sqsStatement,
+          description: 'SQS permissions for EventBridge dead letter queue',
+          complianceRequirement: 'Resilience and error handling'
+        });
+      }
     }
 
     // Configure retry policy
-    if (targetComponent.retryPolicy) {
-      sourceComponent.addEnvironment('EVENTBRIDGE_RETRY_POLICY', JSON.stringify(targetComponent.retryPolicy));
+    if (targetData.retryPolicy) {
+      environmentVariables['EVENTBRIDGE_RETRY_POLICY'] = JSON.stringify(targetData.retryPolicy);
     }
 
     // Configure audit logging for compliance
-    sourceComponent.addEnvironment('EVENTBRIDGE_AUDIT_LOGGING_ENABLED', 'true');
+    environmentVariables['EVENTBRIDGE_AUDIT_LOGGING_ENABLED'] = 'true';
 
-    // Grant CloudTrail permissions for audit logging
-    sourceComponent.addToRolePolicy({
-      Effect: 'Allow',
-      Action: [
+    // Grant CloudWatch Logs permissions for audit logging
+    const logsStatement = new PolicyStatement({
+      effect: Effect.ALLOW,
+      actions: [
         'logs:CreateLogGroup',
         'logs:CreateLogStream',
         'logs:PutLogEvents'
       ],
-      Resource: `arn:aws:logs:${context.region}:${context.accountId}:log-group:/aws/events/*`
+      resources: [`arn:aws:logs:${region}:${accountId}:log-group:/aws/events/*`]
+    });
+    iamPolicies.push({
+      statement: logsStatement,
+      description: 'CloudWatch Logs permissions for EventBridge audit logging',
+      complianceRequirement: 'Audit logging and compliance'
     });
 
     // Configure VPC endpoints when requested
-    if ((targetComponent as any)?.enableVpcEndpoint === true) {
-      sourceComponent.addEnvironment('EVENTBRIDGE_VPC_ENDPOINT_ENABLED', 'true');
+    if (targetData.enableVpcEndpoint === true) {
+      environmentVariables['EVENTBRIDGE_VPC_ENDPOINT_ENABLED'] = 'true';
     }
 
     // Configure event filtering when requested
-    if ((targetComponent as any)?.enableEventFiltering === true) {
-      sourceComponent.addEnvironment('EVENTBRIDGE_EVENT_FILTERING_ENABLED', 'true');
+    if (targetData.enableEventFiltering === true) {
+      environmentVariables['EVENTBRIDGE_EVENT_FILTERING_ENABLED'] = 'true';
     }
+
+    return { environmentVariables, iamPolicies };
   }
 }
