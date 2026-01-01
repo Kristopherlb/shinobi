@@ -20,13 +20,6 @@ describe('VpcBinderStrategy', () => {
       level: 'unit' as const,
       capability: 'Returns enhanced binding result with IAM policies and environment variables for valid VPC network access',
       oracle: 'exact' as const,
-      determinism: 'deterministic' as const,
-      naming: {
-        pattern: 'Feature__Condition__ExpectedOutcome',
-        feature: 'VpcBind',
-        condition: 'ValidVpcNetworkAccess',
-        outcome: 'ReturnsEnhancedResult'
-      },
       invariants: [
         'Returns EnhancedBindingResult with compliance block',
         'IAM policies include VPC read actions',
@@ -95,13 +88,6 @@ describe('VpcBinderStrategy', () => {
       level: 'unit' as const,
       capability: 'Grants VPC write actions including CreateVpc and ModifyVpcAttribute for write access',
       oracle: 'exact' as const,
-      determinism: 'deterministic' as const,
-      naming: {
-        pattern: 'Feature__Condition__ExpectedOutcome',
-        feature: 'VpcBind',
-        condition: 'VpcNetworkWriteAccess',
-        outcome: 'GrantsWriteActions'
-      },
       invariants: [
         'IAM policies include VPC write actions (CreateVpc, ModifyVpcAttribute, DeleteVpc)',
         'VPC endpoint actions are included (CreateVpcEndpoint, ModifyVpcEndpoint)',
@@ -160,9 +146,6 @@ describe('VpcBinderStrategy', () => {
       level: 'unit' as const,
       capability: 'Grants CloudWatch Logs permissions when flow logs are enabled and requireSecureAccess is true',
       oracle: 'exact' as const,
-      determinism: 'deterministic' as const,
-      naming: {
-        pattern: 'Feature__Condition__ExpectedOutcome',
         feature: 'VpcBind',
         condition: 'VpcNetworkFlowLogsEnabled',
         outcome: 'GrantsCloudWatchLogsPermissions'
@@ -231,9 +214,6 @@ describe('VpcBinderStrategy', () => {
       level: 'unit' as const,
       capability: 'Handles net:vpc alias capability correctly',
       oracle: 'exact' as const,
-      determinism: 'deterministic' as const,
-      naming: {
-        pattern: 'Feature__Condition__ExpectedOutcome',
         feature: 'VpcBind',
         condition: 'NetVpcAlias',
         outcome: 'HandlesAliasCapability'
@@ -290,9 +270,6 @@ describe('VpcBinderStrategy', () => {
       level: 'unit' as const,
       capability: 'Returns subnet environment variables for valid subnet access',
       oracle: 'exact' as const,
-      determinism: 'deterministic' as const,
-      naming: {
-        pattern: 'Feature__Condition__ExpectedOutcome',
         feature: 'VpcBind',
         condition: 'ValidSubnetAccess',
         outcome: 'ReturnsSubnetEnvVars'
@@ -358,9 +335,6 @@ describe('VpcBinderStrategy', () => {
       level: 'unit' as const,
       capability: 'Grants subnet write actions including CreateSubnet and ModifySubnetAttribute for write access',
       oracle: 'exact' as const,
-      determinism: 'deterministic' as const,
-      naming: {
-        pattern: 'Feature__Condition__ExpectedOutcome',
         feature: 'VpcBind',
         condition: 'SubnetWriteAccess',
         outcome: 'GrantsSubnetWriteActions'
@@ -422,9 +396,6 @@ describe('VpcBinderStrategy', () => {
       level: 'unit' as const,
       capability: 'Returns security group environment variables for valid security group access',
       oracle: 'exact' as const,
-      determinism: 'deterministic' as const,
-      naming: {
-        pattern: 'Feature__Condition__ExpectedOutcome',
         feature: 'VpcBind',
         condition: 'ValidSecurityGroupAccess',
         outcome: 'ReturnsSecurityGroupEnvVars'
@@ -492,9 +463,6 @@ describe('VpcBinderStrategy', () => {
       level: 'unit' as const,
       capability: 'Grants security group write actions including AuthorizeSecurityGroupIngress for write access',
       oracle: 'exact' as const,
-      determinism: 'deterministic' as const,
-      naming: {
-        pattern: 'Feature__Condition__ExpectedOutcome',
         feature: 'VpcBind',
         condition: 'SecurityGroupWriteAccess',
         outcome: 'GrantsSecurityGroupWriteActions'
@@ -556,9 +524,6 @@ describe('VpcBinderStrategy', () => {
       level: 'unit' as const,
       capability: 'Returns route table environment variables for valid route table access',
       oracle: 'exact' as const,
-      determinism: 'deterministic' as const,
-      naming: {
-        pattern: 'Feature__Condition__ExpectedOutcome',
         feature: 'VpcBind',
         condition: 'ValidRouteTableAccess',
         outcome: 'ReturnsRouteTableEnvVars'
@@ -620,9 +585,6 @@ describe('VpcBinderStrategy', () => {
       level: 'unit' as const,
       capability: 'Grants route table write actions including CreateRoute and ReplaceRoute for write access',
       oracle: 'exact' as const,
-      determinism: 'deterministic' as const,
-      naming: {
-        pattern: 'Feature__Condition__ExpectedOutcome',
         feature: 'VpcBind',
         condition: 'RouteTableWriteAccess',
         outcome: 'GrantsRouteTableWriteActions'
@@ -681,9 +643,6 @@ describe('VpcBinderStrategy', () => {
       level: 'unit' as const,
       capability: 'Returns NAT Gateway environment variables for valid NAT Gateway access',
       oracle: 'exact' as const,
-      determinism: 'deterministic' as const,
-      naming: {
-        pattern: 'Feature__Condition__ExpectedOutcome',
         feature: 'VpcBind',
         condition: 'ValidNatGatewayAccess',
         outcome: 'ReturnsNatGatewayEnvVars'
@@ -747,9 +706,6 @@ describe('VpcBinderStrategy', () => {
       level: 'unit' as const,
       capability: 'Grants NAT Gateway write actions including CreateNatGateway and AllocateAddress for write access',
       oracle: 'exact' as const,
-      determinism: 'deterministic' as const,
-      naming: {
-        pattern: 'Feature__Condition__ExpectedOutcome',
         feature: 'VpcBind',
         condition: 'NatGatewayWriteAccess',
         outcome: 'GrantsNatGatewayWriteActions'
@@ -811,9 +767,6 @@ describe('VpcBinderStrategy', () => {
       level: 'unit' as const,
       capability: 'Returns Network ACL environment variables for valid Network ACL access',
       oracle: 'exact' as const,
-      determinism: 'deterministic' as const,
-      naming: {
-        pattern: 'Feature__Condition__ExpectedOutcome',
         feature: 'VpcBind',
         condition: 'ValidNetworkAclAccess',
         outcome: 'ReturnsNetworkAclEnvVars'
@@ -877,9 +830,6 @@ describe('VpcBinderStrategy', () => {
       level: 'unit' as const,
       capability: 'Grants Network ACL write actions including CreateNetworkAcl and CreateNetworkAclEntry for write access',
       oracle: 'exact' as const,
-      determinism: 'deterministic' as const,
-      naming: {
-        pattern: 'Feature__Condition__ExpectedOutcome',
         feature: 'VpcBind',
         condition: 'NetworkAclWriteAccess',
         outcome: 'GrantsNetworkAclWriteActions'
@@ -939,9 +889,6 @@ describe('VpcBinderStrategy', () => {
       level: 'unit' as const,
       capability: 'Returns VPC Peering environment variables for valid peering connection access',
       oracle: 'exact' as const,
-      determinism: 'deterministic' as const,
-      naming: {
-        pattern: 'Feature__Condition__ExpectedOutcome',
         feature: 'VpcBind',
         condition: 'ValidPeeringAccess',
         outcome: 'ReturnsPeeringEnvVars'
@@ -1016,9 +963,6 @@ describe('VpcBinderStrategy', () => {
       level: 'unit' as const,
       capability: 'Grants VPC Peering write actions including CreateVpcPeeringConnection and AcceptVpcPeeringConnection for write access',
       oracle: 'exact' as const,
-      determinism: 'deterministic' as const,
-      naming: {
-        pattern: 'Feature__Condition__ExpectedOutcome',
         feature: 'VpcBind',
         condition: 'PeeringWriteAccess',
         outcome: 'GrantsPeeringWriteActions'
@@ -1079,9 +1023,6 @@ describe('VpcBinderStrategy', () => {
       level: 'unit' as const,
       capability: 'Returns Transit Gateway environment variables for valid Transit Gateway access',
       oracle: 'exact' as const,
-      determinism: 'deterministic' as const,
-      naming: {
-        pattern: 'Feature__Condition__ExpectedOutcome',
         feature: 'VpcBind',
         condition: 'ValidTransitGatewayAccess',
         outcome: 'ReturnsTransitGatewayEnvVars'
@@ -1145,9 +1086,6 @@ describe('VpcBinderStrategy', () => {
       level: 'unit' as const,
       capability: 'Grants Transit Gateway write actions including CreateTransitGateway and CreateTransitGatewayVpcAttachment for write access',
       oracle: 'exact' as const,
-      determinism: 'deterministic' as const,
-      naming: {
-        pattern: 'Feature__Condition__ExpectedOutcome',
         feature: 'VpcBind',
         condition: 'TransitGatewayWriteAccess',
         outcome: 'GrantsTransitGatewayWriteActions'
@@ -1206,9 +1144,6 @@ describe('VpcBinderStrategy', () => {
       level: 'unit' as const,
       capability: 'Returns Network Firewall environment variables for valid Network Firewall access',
       oracle: 'exact' as const,
-      determinism: 'deterministic' as const,
-      naming: {
-        pattern: 'Feature__Condition__ExpectedOutcome',
         feature: 'VpcBind',
         condition: 'ValidNetworkFirewallAccess',
         outcome: 'ReturnsNetworkFirewallEnvVars'
@@ -1271,9 +1206,6 @@ describe('VpcBinderStrategy', () => {
       level: 'unit' as const,
       capability: 'Grants Network Firewall write actions including CreateFirewall and UpdateFirewallPolicy for write access',
       oracle: 'exact' as const,
-      determinism: 'deterministic' as const,
-      naming: {
-        pattern: 'Feature__Condition__ExpectedOutcome',
         feature: 'VpcBind',
         condition: 'NetworkFirewallWriteAccess',
         outcome: 'GrantsNetworkFirewallWriteActions'
@@ -1334,9 +1266,6 @@ describe('VpcBinderStrategy', () => {
       level: 'unit' as const,
       capability: 'Returns VPC Endpoint environment variables for valid VPC endpoint access',
       oracle: 'exact' as const,
-      determinism: 'deterministic' as const,
-      naming: {
-        pattern: 'Feature__Condition__ExpectedOutcome',
         feature: 'VpcBind',
         condition: 'ValidVpcEndpointAccess',
         outcome: 'ReturnsVpcEndpointEnvVars'
@@ -1402,9 +1331,6 @@ describe('VpcBinderStrategy', () => {
       level: 'unit' as const,
       capability: 'Grants VPC Endpoint write actions including CreateVpcEndpoint and ModifyVpcEndpoint for write access',
       oracle: 'exact' as const,
-      determinism: 'deterministic' as const,
-      naming: {
-        pattern: 'Feature__Condition__ExpectedOutcome',
         feature: 'VpcBind',
         condition: 'VpcEndpointWriteAccess',
         outcome: 'GrantsVpcEndpointWriteActions'
@@ -1467,9 +1393,6 @@ describe('VpcBinderStrategy', () => {
       level: 'unit' as const,
       capability: 'Sets DNS entry environment variables when DNS entries are provided in VPC endpoint capability data',
       oracle: 'exact' as const,
-      determinism: 'deterministic' as const,
-      naming: {
-        pattern: 'Feature__Condition__ExpectedOutcome',
         feature: 'VpcBind',
         condition: 'VpcEndpointWithDnsEntries',
         outcome: 'SetsDnsEnvironmentVariables'
@@ -1536,9 +1459,6 @@ describe('VpcBinderStrategy', () => {
       level: 'unit' as const,
       capability: 'Throws actionable error when required capability data fields are missing',
       oracle: 'exact' as const,
-      determinism: 'deterministic' as const,
-      naming: {
-        pattern: 'Feature__Condition__ExpectedOutcome',
         feature: 'VpcBind',
         condition: 'MissingRequiredFields',
         outcome: 'ThrowsActionableError'
@@ -1590,9 +1510,6 @@ describe('VpcBinderStrategy', () => {
       level: 'unit' as const,
       capability: 'Returns compliance block with commercial framework for commercial compliance context',
       oracle: 'exact' as const,
-      determinism: 'deterministic' as const,
-      naming: {
-        pattern: 'Feature__Condition__ExpectedOutcome',
         feature: 'VpcBind',
         condition: 'CommercialCompliance',
         outcome: 'ReturnsComplianceBlock'

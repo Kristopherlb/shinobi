@@ -21,13 +21,6 @@ describe('SecurityGroupBinderStrategy', () => {
       level: 'unit' as const,
       capability: 'Returns enhanced binding result with security group ID and metadata for valid security group import access',
       oracle: 'exact' as const,
-      determinism: 'deterministic' as const,
-      naming: {
-        pattern: 'Feature__Condition__ExpectedOutcome',
-        feature: 'SecurityGroupBind',
-        condition: 'ValidSecurityGroupImportAccess',
-        outcome: 'ReturnsEnhancedResult'
-      },
       invariants: [
         'Returns EnhancedBindingResult with compliance block',
         'Environment variables include security group ID and VPC ID',
@@ -91,13 +84,6 @@ describe('SecurityGroupBinderStrategy', () => {
       level: 'unit' as const,
       capability: 'Sets SSM parameter name environment variable when SSM parameter is provided in capability data',
       oracle: 'exact' as const,
-      determinism: 'deterministic' as const,
-      naming: {
-        pattern: 'Feature__Condition__ExpectedOutcome',
-        feature: 'SecurityGroupBind',
-        condition: 'SsmParameterHandling',
-        outcome: 'SetsSsmParameterEnvVar'
-      },
       invariants: [
         'SECURITY_GROUP_SSM_PARAMETER environment variable is set when ssmParameterName is present',
         'Other environment variables are still set correctly',
@@ -148,9 +134,6 @@ describe('SecurityGroupBinderStrategy', () => {
       level: 'unit' as const,
       capability: 'Sets cross-account/cross-region environment variables when region and accountId are provided',
       oracle: 'exact' as const,
-      determinism: 'deterministic' as const,
-      naming: {
-        pattern: 'Feature__Condition__ExpectedOutcome',
         feature: 'SecurityGroupBind',
         condition: 'CrossAccountBinding',
         outcome: 'SetsCrossAccountEnvVars'
@@ -210,9 +193,6 @@ describe('SecurityGroupBinderStrategy', () => {
       level: 'unit' as const,
       capability: 'Grants EC2 describe permissions when includeDiscovery option is enabled',
       oracle: 'exact' as const,
-      determinism: 'deterministic' as const,
-      naming: {
-        pattern: 'Feature__Condition__ExpectedOutcome',
         feature: 'SecurityGroupBind',
         condition: 'DiscoveryPermissions',
         outcome: 'GrantsDescribeActions'
@@ -272,9 +252,6 @@ describe('SecurityGroupBinderStrategy', () => {
       level: 'unit' as const,
       capability: 'Handles security:security-group alias capability correctly',
       oracle: 'exact' as const,
-      determinism: 'deterministic' as const,
-      naming: {
-        pattern: 'Feature__Condition__ExpectedOutcome',
         feature: 'SecurityGroupBind',
         condition: 'SecuritySecurityGroupAlias',
         outcome: 'HandlesAliasCapability'
@@ -328,9 +305,6 @@ describe('SecurityGroupBinderStrategy', () => {
       level: 'unit' as const,
       capability: 'Throws actionable error when securityGroupId is missing from capability data',
       oracle: 'exact' as const,
-      determinism: 'deterministic' as const,
-      naming: {
-        pattern: 'Feature__Condition__ExpectedOutcome',
         feature: 'SecurityGroupBind',
         condition: 'MissingSecurityGroupId',
         outcome: 'ThrowsError'
@@ -382,9 +356,6 @@ describe('SecurityGroupBinderStrategy', () => {
       level: 'unit' as const,
       capability: 'Sets standard environment variables when optional fields are omitted from capability data',
       oracle: 'exact' as const,
-      determinism: 'deterministic' as const,
-      naming: {
-        pattern: 'Feature__Condition__ExpectedOutcome',
         feature: 'SecurityGroupBind',
         condition: 'OptionalFieldsOmitted',
         outcome: 'SetsStandardEnvVars'
@@ -444,9 +415,6 @@ describe('SecurityGroupBinderStrategy', () => {
       level: 'unit' as const,
       capability: 'Returns compliance block with commercial framework for commercial compliance context',
       oracle: 'exact' as const,
-      determinism: 'deterministic' as const,
-      naming: {
-        pattern: 'Feature__Condition__ExpectedOutcome',
         feature: 'SecurityGroupBind',
         condition: 'CommercialCompliance',
         outcome: 'ReturnsComplianceBlock'
@@ -504,9 +472,6 @@ describe('SecurityGroupBinderStrategy', () => {
       level: 'unit' as const,
       capability: 'Throws actionable error when capability data structure is invalid',
       oracle: 'exact' as const,
-      determinism: 'deterministic' as const,
-      naming: {
-        pattern: 'Feature__Condition__ExpectedOutcome',
         feature: 'SecurityGroupBind',
         condition: 'InvalidCapabilityData',
         outcome: 'ThrowsError'
@@ -557,9 +522,6 @@ describe('SecurityGroupBinderStrategy', () => {
       level: 'unit' as const,
       capability: 'Returns empty security group rules array (rules handled separately)',
       oracle: 'exact' as const,
-      determinism: 'deterministic' as const,
-      naming: {
-        pattern: 'Feature__Condition__ExpectedOutcome',
         feature: 'SecurityGroupBind',
         condition: 'SecurityGroupRules',
         outcome: 'ReturnsEmptyArray'

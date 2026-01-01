@@ -20,13 +20,6 @@ describe('EksBinderStrategy', () => {
       level: 'unit' as const,
       capability: 'Returns EKS cluster environment variables for valid cluster access',
       oracle: 'exact' as const,
-      determinism: 'deterministic' as const,
-      naming: {
-        pattern: 'Feature__Condition__ExpectedOutcome',
-        feature: 'EksBind',
-        condition: 'ValidClusterAccess',
-        outcome: 'ReturnsClusterEnvVars'
-      },
       invariants: [
         'Returns EnhancedBindingResult with compliance block',
         'Environment variables include EKS_CLUSTER_NAME, EKS_CLUSTER_ARN, EKS_CLUSTER_ENDPOINT',
@@ -48,15 +41,15 @@ describe('EksBinderStrategy', () => {
     };
 
     test('EksBind__ValidClusterAccess__ReturnsClusterEnvVars', async () => {
-      const strategy = new EksBinderStrategy();
+    const strategy = new EksBinderStrategy();
       const source = createMockSourceComponent();
       const target = createMockTargetComponent('eks-cluster', {
         'eks:cluster': {
           type: 'eks:cluster',
           clusterArn: 'arn:aws:eks:us-east-1:123456789012:cluster/test-cluster',
           clusterName: 'test-cluster',
-          clusterEndpoint: 'https://ABC.gr7.us-east-1.eks.amazonaws.com',
-          clusterCertificateAuthority: 'BASE64CACERT'
+      clusterEndpoint: 'https://ABC.gr7.us-east-1.eks.amazonaws.com',
+      clusterCertificateAuthority: 'BASE64CACERT'
         }
       });
 
@@ -99,13 +92,6 @@ describe('EksBinderStrategy', () => {
       level: 'unit' as const,
       capability: 'Grants EKS cluster write actions including CreateNodegroup and UpdateClusterConfig for write access',
       oracle: 'exact' as const,
-      determinism: 'deterministic' as const,
-      naming: {
-        pattern: 'Feature__Condition__ExpectedOutcome',
-        feature: 'EksBind',
-        condition: 'ClusterWriteAccess',
-        outcome: 'GrantsClusterWriteActions'
-      },
       invariants: [
         'IAM policies include EKS write actions (CreateNodegroup, UpdateNodegroup, DeleteNodegroup, UpdateClusterConfig)',
         'Read actions are included in write access',
@@ -162,13 +148,6 @@ describe('EksBinderStrategy', () => {
       level: 'unit' as const,
       capability: 'Returns EKS node group environment variables for valid node group access',
       oracle: 'exact' as const,
-      determinism: 'deterministic' as const,
-      naming: {
-        pattern: 'Feature__Condition__ExpectedOutcome',
-        feature: 'EksBind',
-        condition: 'ValidNodeGroupAccess',
-        outcome: 'ReturnsNodeGroupEnvVars'
-      },
       invariants: [
         'Environment variables include EKS_NODEGROUP_NAME, EKS_NODEGROUP_ARN, EKS_CLUSTER_NAME',
         'IAM policies include EKS node group read actions',
@@ -231,13 +210,6 @@ describe('EksBinderStrategy', () => {
       level: 'unit' as const,
       capability: 'Returns EKS pod environment variables for valid pod access',
       oracle: 'exact' as const,
-      determinism: 'deterministic' as const,
-      naming: {
-        pattern: 'Feature__Condition__ExpectedOutcome',
-        feature: 'EksBind',
-        condition: 'ValidPodAccess',
-        outcome: 'ReturnsPodEnvVars'
-      },
       invariants: [
         'Environment variables include KUBERNETES_NAMESPACE, EKS_CLUSTER_NAME, EKS_CLUSTER_ARN',
         'IAM policies include Kubernetes API access (AccessKubernetesApi)',
@@ -301,13 +273,6 @@ describe('EksBinderStrategy', () => {
       level: 'unit' as const,
       capability: 'Returns Kubernetes service environment variables for valid service access',
       oracle: 'exact' as const,
-      determinism: 'deterministic' as const,
-      naming: {
-        pattern: 'Feature__Condition__ExpectedOutcome',
-        feature: 'EksBind',
-        condition: 'ValidServiceAccess',
-        outcome: 'ReturnsServiceEnvVars'
-      },
       invariants: [
         'Environment variables include KUBERNETES_SERVICE_NAME, EKS_CLUSTER_NAME, EKS_CLUSTER_ARN',
         'IAM policies include Kubernetes API access (AccessKubernetesApi)',
@@ -375,13 +340,6 @@ describe('EksBinderStrategy', () => {
       level: 'unit' as const,
       capability: 'Configures AWS App Mesh when service mesh is enabled',
       oracle: 'exact' as const,
-      determinism: 'deterministic' as const,
-      naming: {
-        pattern: 'Feature__Condition__ExpectedOutcome',
-        feature: 'EksBind',
-        condition: 'ServiceMeshEnabled',
-        outcome: 'ConfiguresAppMesh'
-      },
       invariants: [
         'Environment variables include APPMESH_VIRTUAL_NODE_NAME and APPMESH_MESH_NAME when provided',
         'IAM policies include App Mesh describe actions',
@@ -498,13 +456,6 @@ describe('EksBinderStrategy', () => {
       level: 'unit' as const,
       capability: 'Uses default namespace "default" when namespace is not provided for pod binding',
       oracle: 'exact' as const,
-      determinism: 'deterministic' as const,
-      naming: {
-        pattern: 'Feature__Condition__ExpectedOutcome',
-        feature: 'EksBind',
-        condition: 'PodNamespaceDefault',
-        outcome: 'UsesDefaultNamespace'
-      },
       invariants: [
         'KUBERNETES_NAMESPACE defaults to "default" when not provided',
         'Pod binding works correctly without explicit namespace'
@@ -558,13 +509,6 @@ describe('EksBinderStrategy', () => {
       level: 'unit' as const,
       capability: 'Applies default port (80) and protocol (TCP) when not specified',
       oracle: 'exact' as const,
-      determinism: 'deterministic' as const,
-      naming: {
-        pattern: 'Feature__Condition__ExpectedOutcome',
-        feature: 'EksBind',
-        condition: 'ServiceDefaults',
-        outcome: 'AppliesPortProtocolDefaults'
-      },
       invariants: [
         'Service port defaults to 80 if not provided',
         'Service protocol defaults to TCP if not provided',
@@ -680,13 +624,6 @@ describe('EksBinderStrategy', () => {
       level: 'unit' as const,
       capability: 'Exposes scaling configuration environment variables for node groups',
       oracle: 'exact' as const,
-      determinism: 'deterministic' as const,
-      naming: {
-        pattern: 'Feature__Condition__ExpectedOutcome',
-        feature: 'EksBind',
-        condition: 'NodeGroupScalingConfig',
-        outcome: 'ExposesScalingEnvVars'
-      },
       invariants: [
         'Scaling config env vars are always exposed (empty string if not configured)',
         'MIN_SIZE, MAX_SIZE, DESIRED_SIZE are set when scaling config is provided'
@@ -775,13 +712,6 @@ describe('EksBinderStrategy', () => {
       level: 'unit' as const,
       capability: 'Requires allowAdminOperations opt-in for high-privilege admin actions',
       oracle: 'exact' as const,
-      determinism: 'deterministic' as const,
-      naming: {
-        pattern: 'Feature__Condition__ExpectedOutcome',
-        feature: 'EksBind',
-        condition: 'AdminAccessOptIn',
-        outcome: 'RequiresAllowAdminOperations'
-      },
       invariants: [
         'Admin access without allowAdminOperations excludes high-privilege actions (TagResource, AssociateIdentityProviderConfig)',
         'Admin access with allowAdminOperations includes all high-privilege actions'

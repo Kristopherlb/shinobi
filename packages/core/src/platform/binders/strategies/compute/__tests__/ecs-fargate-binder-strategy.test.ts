@@ -20,9 +20,6 @@ describe('EcsFargateBinderStrategy', () => {
       level: 'unit' as const,
       capability: 'Returns ECS cluster environment variables for valid cluster access',
       oracle: 'exact' as const,
-      determinism: 'deterministic' as const,
-      naming: {
-        pattern: 'Feature__Condition__ExpectedOutcome',
         feature: 'EcsBind',
         condition: 'ValidClusterAccess',
         outcome: 'ReturnsClusterEnvVars'
@@ -85,9 +82,6 @@ describe('EcsFargateBinderStrategy', () => {
       level: 'unit' as const,
       capability: 'Grants ECS cluster write actions including CreateService and UpdateService for write access',
       oracle: 'exact' as const,
-      determinism: 'deterministic' as const,
-      naming: {
-        pattern: 'Feature__Condition__ExpectedOutcome',
         feature: 'EcsBind',
         condition: 'ClusterWriteAccess',
         outcome: 'GrantsClusterWriteActions'
@@ -147,9 +141,6 @@ describe('EcsFargateBinderStrategy', () => {
       level: 'unit' as const,
       capability: 'Returns ECS service environment variables for valid service access',
       oracle: 'exact' as const,
-      determinism: 'deterministic' as const,
-      naming: {
-        pattern: 'Feature__Condition__ExpectedOutcome',
         feature: 'EcsBind',
         condition: 'ValidServiceAccess',
         outcome: 'ReturnsServiceEnvVars'
@@ -210,9 +201,6 @@ describe('EcsFargateBinderStrategy', () => {
       level: 'unit' as const,
       capability: 'Grants ECS service write actions including UpdateService and StopTask for write access',
       oracle: 'exact' as const,
-      determinism: 'deterministic' as const,
-      naming: {
-        pattern: 'Feature__Condition__ExpectedOutcome',
         feature: 'EcsBind',
         condition: 'ServiceWriteAccess',
         outcome: 'GrantsServiceWriteActions'
@@ -272,9 +260,6 @@ describe('EcsFargateBinderStrategy', () => {
       level: 'unit' as const,
       capability: 'Returns ECS task definition environment variables for valid task definition access',
       oracle: 'exact' as const,
-      determinism: 'deterministic' as const,
-      naming: {
-        pattern: 'Feature__Condition__ExpectedOutcome',
         feature: 'EcsBind',
         condition: 'ValidTaskDefinitionAccess',
         outcome: 'ReturnsTaskDefinitionEnvVars'
@@ -333,9 +318,6 @@ describe('EcsFargateBinderStrategy', () => {
       level: 'unit' as const,
       capability: 'Grants ECS task definition write actions including RegisterTaskDefinition for write access',
       oracle: 'exact' as const,
-      determinism: 'deterministic' as const,
-      naming: {
-        pattern: 'Feature__Condition__ExpectedOutcome',
         feature: 'EcsBind',
         condition: 'TaskDefinitionWriteAccess',
         outcome: 'GrantsTaskDefinitionWriteActions'
@@ -391,9 +373,6 @@ describe('EcsFargateBinderStrategy', () => {
       level: 'unit' as const,
       capability: 'Returns OpenTelemetry environment variables for observability configuration',
       oracle: 'exact' as const,
-      determinism: 'deterministic' as const,
-      naming: {
-        pattern: 'Feature__Condition__ExpectedOutcome',
         feature: 'EcsBind',
         condition: 'ValidOtelEnvironmentAccess',
         outcome: 'ReturnsOtelEnvVars'
@@ -456,9 +435,6 @@ describe('EcsFargateBinderStrategy', () => {
       level: 'unit' as const,
       capability: 'Grants optional CloudWatch Logs permissions when enableCloudWatchPermissions option is set',
       oracle: 'exact' as const,
-      determinism: 'deterministic' as const,
-      naming: {
-        pattern: 'Feature__Condition__ExpectedOutcome',
         feature: 'EcsBind',
         condition: 'OtelEnvironmentWithCloudWatchPermissions',
         outcome: 'GrantsCloudWatchActions'
@@ -520,9 +496,6 @@ describe('EcsFargateBinderStrategy', () => {
       level: 'unit' as const,
       capability: 'Applies custom environment variable mappings when provided via directive.env',
       oracle: 'exact' as const,
-      determinism: 'deterministic' as const,
-      naming: {
-        pattern: 'Feature__Condition__ExpectedOutcome',
         feature: 'EcsBind',
         condition: 'OtelEnvironmentWithEnvOverrides',
         outcome: 'AppliesCustomMappings'
@@ -582,9 +555,6 @@ describe('EcsFargateBinderStrategy', () => {
       level: 'unit' as const,
       capability: 'Sets capacity providers environment variable when capacity providers are provided',
       oracle: 'exact' as const,
-      determinism: 'deterministic' as const,
-      naming: {
-        pattern: 'Feature__Condition__ExpectedOutcome',
         feature: 'EcsBind',
         condition: 'ClusterWithCapacityProviders',
         outcome: 'SetsCapacityProvidersEnvVar'
@@ -640,9 +610,6 @@ describe('EcsFargateBinderStrategy', () => {
       level: 'unit' as const,
       capability: 'Throws actionable error when required capability data fields are missing',
       oracle: 'exact' as const,
-      determinism: 'deterministic' as const,
-      naming: {
-        pattern: 'Feature__Condition__ExpectedOutcome',
         feature: 'EcsBind',
         condition: 'MissingRequiredFields',
         outcome: 'ThrowsError'
@@ -694,9 +661,6 @@ describe('EcsFargateBinderStrategy', () => {
       level: 'unit' as const,
       capability: 'Throws actionable error when invalid access types are provided',
       oracle: 'exact' as const,
-      determinism: 'deterministic' as const,
-      naming: {
-        pattern: 'Feature__Condition__ExpectedOutcome',
         feature: 'EcsBind',
         condition: 'InvalidAccessType',
         outcome: 'ThrowsError'
@@ -754,9 +718,6 @@ describe('EcsFargateBinderStrategy', () => {
       level: 'unit' as const,
       capability: 'Returns compliance block with commercial framework',
       oracle: 'exact' as const,
-      determinism: 'deterministic' as const,
-      naming: {
-        pattern: 'Feature__Condition__ExpectedOutcome',
         feature: 'EcsBind',
         condition: 'CommercialCompliance',
         outcome: 'ReturnsComplianceBlock'

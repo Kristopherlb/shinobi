@@ -20,13 +20,6 @@ describe('SecurityGroupRuleBinderStrategy', () => {
       level: 'unit' as const,
       capability: 'Returns security group rules when rules are explicitly provided in directive.options.rules',
       oracle: 'exact' as const,
-      determinism: 'deterministic' as const,
-      naming: {
-        pattern: 'Feature__Condition__ExpectedOutcome',
-        feature: 'SecurityGroupRuleBind',
-        condition: 'ValidRuleWithExplicitRules',
-        outcome: 'ReturnsSecurityGroupRules'
-      },
       invariants: [
         'Returns EnhancedBindingResult with compliance block',
         'securityGroupRules array contains the specified rules',
@@ -97,9 +90,6 @@ describe('SecurityGroupRuleBinderStrategy', () => {
       level: 'unit' as const,
       capability: 'Returns multiple security group rules when multiple rules are specified',
       oracle: 'exact' as const,
-      determinism: 'deterministic' as const,
-      naming: {
-        pattern: 'Feature__Condition__ExpectedOutcome',
         feature: 'SecurityGroupRuleBind',
         condition: 'MultipleRules',
         outcome: 'ReturnsAllRules'
@@ -172,9 +162,6 @@ describe('SecurityGroupRuleBinderStrategy', () => {
       level: 'unit' as const,
       capability: 'Returns security group rule when using shorthand directive.options format',
       oracle: 'exact' as const,
-      determinism: 'deterministic' as const,
-      naming: {
-        pattern: 'Feature__Condition__ExpectedOutcome',
         feature: 'SecurityGroupRuleBind',
         condition: 'ShorthandRuleSpecification',
         outcome: 'ReturnsRule'
@@ -238,9 +225,6 @@ describe('SecurityGroupRuleBinderStrategy', () => {
       level: 'unit' as const,
       capability: 'Returns ingress rule when source component exposes security group capability',
       oracle: 'exact' as const,
-      determinism: 'deterministic' as const,
-      naming: {
-        pattern: 'Feature__Condition__ExpectedOutcome',
         feature: 'SecurityGroupRuleBind',
         condition: 'InferredFromSourceCapabilities',
         outcome: 'ReturnsIngressRule'
@@ -316,9 +300,6 @@ describe('SecurityGroupRuleBinderStrategy', () => {
       level: 'unit' as const,
       capability: 'Throws actionable error when targetSecurityGroupId is missing',
       oracle: 'exact' as const,
-      determinism: 'deterministic' as const,
-      naming: {
-        pattern: 'Feature__Condition__ExpectedOutcome',
         feature: 'SecurityGroupRuleBind',
         condition: 'MissingTargetSecurityGroupId',
         outcome: 'ThrowsError'
@@ -368,9 +349,6 @@ describe('SecurityGroupRuleBinderStrategy', () => {
       level: 'unit' as const,
       capability: 'Throws actionable error when no rules can be generated (missing rules, peer, and source capabilities)',
       oracle: 'exact' as const,
-      determinism: 'deterministic' as const,
-      naming: {
-        pattern: 'Feature__Condition__ExpectedOutcome',
         feature: 'SecurityGroupRuleBind',
         condition: 'MissingRulesSpecification',
         outcome: 'ThrowsError'
@@ -421,9 +399,6 @@ describe('SecurityGroupRuleBinderStrategy', () => {
       level: 'unit' as const,
       capability: 'Returns security group rule with CIDR peer when CIDR is specified',
       oracle: 'exact' as const,
-      determinism: 'deterministic' as const,
-      naming: {
-        pattern: 'Feature__Condition__ExpectedOutcome',
         feature: 'SecurityGroupRuleBind',
         condition: 'CidrPeer',
         outcome: 'ReturnsRuleWithCidrPeer'
@@ -487,9 +462,6 @@ describe('SecurityGroupRuleBinderStrategy', () => {
       level: 'unit' as const,
       capability: 'Handles network:security-group-rule alias capability correctly',
       oracle: 'exact' as const,
-      determinism: 'deterministic' as const,
-      naming: {
-        pattern: 'Feature__Condition__ExpectedOutcome',
         feature: 'SecurityGroupRuleBind',
         condition: 'NetworkAliasCapability',
         outcome: 'HandlesAlias'
@@ -552,9 +524,6 @@ describe('SecurityGroupRuleBinderStrategy', () => {
       level: 'unit' as const,
       capability: 'Returns compliance block with commercial framework',
       oracle: 'exact' as const,
-      determinism: 'deterministic' as const,
-      naming: {
-        pattern: 'Feature__Condition__ExpectedOutcome',
         feature: 'SecurityGroupRuleBind',
         condition: 'CommercialCompliance',
         outcome: 'ReturnsComplianceBlock'

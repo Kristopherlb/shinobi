@@ -20,9 +20,6 @@ describe('BatchBinderStrategy', () => {
       level: 'unit' as const,
       capability: 'Returns Batch job queue environment variables for valid job queue access',
       oracle: 'exact' as const,
-      determinism: 'deterministic' as const,
-      naming: {
-        pattern: 'Feature__Condition__ExpectedOutcome',
         feature: 'BatchBind',
         condition: 'ValidJobQueueAccess',
         outcome: 'ReturnsJobQueueEnvVars'
@@ -92,9 +89,6 @@ describe('BatchBinderStrategy', () => {
       level: 'unit' as const,
       capability: 'Grants Batch job queue write actions including SubmitJob and UpdateJobQueue for write access',
       oracle: 'exact' as const,
-      determinism: 'deterministic' as const,
-      naming: {
-        pattern: 'Feature__Condition__ExpectedOutcome',
         feature: 'BatchBind',
         condition: 'JobQueueWriteAccess',
         outcome: 'GrantsJobQueueWriteActions'
@@ -156,9 +150,6 @@ describe('BatchBinderStrategy', () => {
       level: 'unit' as const,
       capability: 'Returns Batch compute environment environment variables for valid compute environment access',
       oracle: 'exact' as const,
-      determinism: 'deterministic' as const,
-      naming: {
-        pattern: 'Feature__Condition__ExpectedOutcome',
         feature: 'BatchBind',
         condition: 'ValidComputeEnvironmentAccess',
         outcome: 'ReturnsComputeEnvironmentEnvVars'
@@ -236,9 +227,6 @@ describe('BatchBinderStrategy', () => {
       level: 'unit' as const,
       capability: 'Returns Batch job definition environment variables for valid job definition access',
       oracle: 'exact' as const,
-      determinism: 'deterministic' as const,
-      naming: {
-        pattern: 'Feature__Condition__ExpectedOutcome',
         feature: 'BatchBind',
         condition: 'ValidJobDefinitionAccess',
         outcome: 'ReturnsJobDefinitionEnvVars'
@@ -316,9 +304,6 @@ describe('BatchBinderStrategy', () => {
       level: 'unit' as const,
       capability: 'Returns Batch job environment variables for valid job access',
       oracle: 'exact' as const,
-      determinism: 'deterministic' as const,
-      naming: {
-        pattern: 'Feature__Condition__ExpectedOutcome',
         feature: 'BatchBind',
         condition: 'ValidJobAccess',
         outcome: 'ReturnsJobEnvVars'
@@ -360,7 +345,7 @@ describe('BatchBinderStrategy', () => {
       const context = createBindingContext({
         source,
         target,
-        capability: 'batch:job',
+      capability: 'batch:job',
         access: 'read'
       });
 
@@ -390,9 +375,6 @@ describe('BatchBinderStrategy', () => {
       level: 'unit' as const,
       capability: 'Configures VPC networking, encryption, and secrets when secure networking is enabled',
       oracle: 'exact' as const,
-      determinism: 'deterministic' as const,
-      naming: {
-        pattern: 'Feature__Condition__ExpectedOutcome',
         feature: 'BatchBind',
         condition: 'SecureNetworkingEnabled',
         outcome: 'ConfiguresVpcEncryptionSecrets'
@@ -417,7 +399,7 @@ describe('BatchBinderStrategy', () => {
     };
 
     test('BatchBind__SecureNetworkingEnabled__ConfiguresVpcEncryptionSecrets', async () => {
-      const strategy = new BatchBinderStrategy();
+    const strategy = new BatchBinderStrategy();
       const source = createMockSourceComponent();
       const target = createMockTargetComponent('batch-job', {
         'batch:job': {
@@ -480,9 +462,6 @@ describe('BatchBinderStrategy', () => {
       level: 'unit' as const,
       capability: 'Exposes array job and retry strategy configuration as environment variables',
       oracle: 'exact' as const,
-      determinism: 'deterministic' as const,
-      naming: {
-        pattern: 'Feature__Condition__ExpectedOutcome',
         feature: 'BatchBind',
         condition: 'ArrayJobAndRetryStrategy',
         outcome: 'ExposesConfiguration'

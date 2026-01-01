@@ -20,9 +20,6 @@ describe('ElasticBeanstalkBinderStrategy', () => {
       level: 'unit' as const,
       capability: 'Returns Elastic Beanstalk application environment variables for valid application access',
       oracle: 'exact' as const,
-      determinism: 'deterministic' as const,
-      naming: {
-        pattern: 'Feature__Condition__ExpectedOutcome',
         feature: 'ElasticBeanstalkBind',
         condition: 'ValidApplicationAccess',
         outcome: 'ReturnsApplicationEnvVars'
@@ -100,9 +97,6 @@ describe('ElasticBeanstalkBinderStrategy', () => {
       level: 'unit' as const,
       capability: 'Grants Elastic Beanstalk application write actions including CreateApplication and UpdateApplication for write access',
       oracle: 'exact' as const,
-      determinism: 'deterministic' as const,
-      naming: {
-        pattern: 'Feature__Condition__ExpectedOutcome',
         feature: 'ElasticBeanstalkBind',
         condition: 'ApplicationWriteAccess',
         outcome: 'GrantsApplicationWriteActions'
@@ -161,9 +155,6 @@ describe('ElasticBeanstalkBinderStrategy', () => {
       level: 'unit' as const,
       capability: 'Returns Elastic Beanstalk environment environment variables for valid environment access',
       oracle: 'exact' as const,
-      determinism: 'deterministic' as const,
-      naming: {
-        pattern: 'Feature__Condition__ExpectedOutcome',
         feature: 'ElasticBeanstalkBind',
         condition: 'ValidEnvironmentAccess',
         outcome: 'ReturnsEnvironmentEnvVars'
@@ -246,9 +237,6 @@ describe('ElasticBeanstalkBinderStrategy', () => {
       level: 'unit' as const,
       capability: 'Grants Elastic Beanstalk environment write actions including CreateEnvironment and UpdateEnvironment for write access',
       oracle: 'exact' as const,
-      determinism: 'deterministic' as const,
-      naming: {
-        pattern: 'Feature__Condition__ExpectedOutcome',
         feature: 'ElasticBeanstalkBind',
         condition: 'EnvironmentWriteAccess',
         outcome: 'GrantsEnvironmentWriteActions'
@@ -291,7 +279,7 @@ describe('ElasticBeanstalkBinderStrategy', () => {
       const context = createBindingContext({
         source,
         target,
-        capability: 'elasticbeanstalk:environment',
+      capability: 'elasticbeanstalk:environment',
         access: 'write'
       });
 
@@ -313,9 +301,6 @@ describe('ElasticBeanstalkBinderStrategy', () => {
       level: 'unit' as const,
       capability: 'Returns Elastic Beanstalk version environment variables for valid version access',
       oracle: 'exact' as const,
-      determinism: 'deterministic' as const,
-      naming: {
-        pattern: 'Feature__Condition__ExpectedOutcome',
         feature: 'ElasticBeanstalkBind',
         condition: 'ValidVersionAccess',
         outcome: 'ReturnsVersionEnvVars'
@@ -393,9 +378,6 @@ describe('ElasticBeanstalkBinderStrategy', () => {
       level: 'unit' as const,
       capability: 'Configures VPC networking, SSL certificate, and auto scaling when secure networking is enabled',
       oracle: 'exact' as const,
-      determinism: 'deterministic' as const,
-      naming: {
-        pattern: 'Feature__Condition__ExpectedOutcome',
         feature: 'ElasticBeanstalkBind',
         condition: 'SecureNetworkingEnabled',
         outcome: 'ConfiguresVpcSslAutoScaling'
@@ -420,7 +402,7 @@ describe('ElasticBeanstalkBinderStrategy', () => {
     };
 
     test('ElasticBeanstalkBind__SecureNetworkingEnabled__ConfiguresVpcSslAutoScaling', async () => {
-      const strategy = new ElasticBeanstalkBinderStrategy();
+    const strategy = new ElasticBeanstalkBinderStrategy();
       const source = createMockSourceComponent();
       const target = createMockTargetComponent('elasticbeanstalk-environment', {
         'elasticbeanstalk:environment': {
@@ -429,7 +411,7 @@ describe('ElasticBeanstalkBinderStrategy', () => {
           environmentName: 'test-env',
           environmentId: 'e-abc123',
           endpointUrl: 'https://test-env.elasticbeanstalk.com',
-          status: 'Ready',
+      status: 'Ready',
           health: 'Ok',
           platformVersion: '64bit Amazon Linux 2 v3.4.0 running Python 3.8',
           solutionStackName: '64bit Amazon Linux 2 v3.4.0 running Python 3.8',
@@ -437,12 +419,12 @@ describe('ElasticBeanstalkBinderStrategy', () => {
           subnets: ['subnet-123', 'subnet-456'],
           securityGroups: ['sg-123', 'sg-456'],
           loadBalancerArn: 'arn:aws:elasticloadbalancing:us-east-1:123456789012:loadbalancer/app/test-lb/abc123',
-          loadBalancerType: 'application',
+      loadBalancerType: 'application',
           sslCertificateArn: 'arn:aws:acm:us-east-1:123456789012:certificate/abc123',
           autoScalingGroups: ['test-app-test-env-asg'],
           encryptionKeyArn: 'arn:aws:kms:us-east-1:123456789012:key/abc123',
-          healthCheckUrl: '/health',
-          healthCheckTimeout: 30
+      healthCheckUrl: '/health',
+      healthCheckTimeout: 30
         }
       });
 
@@ -497,9 +479,6 @@ describe('ElasticBeanstalkBinderStrategy', () => {
       level: 'unit' as const,
       capability: 'Grants CodeBuild permissions when build configuration includes CodeBuild service role',
       oracle: 'exact' as const,
-      determinism: 'deterministic' as const,
-      naming: {
-        pattern: 'Feature__Condition__ExpectedOutcome',
         feature: 'ElasticBeanstalkBind',
         condition: 'CodeBuildIntegration',
         outcome: 'GrantsCodeBuildPermissions'
@@ -573,9 +552,6 @@ describe('ElasticBeanstalkBinderStrategy', () => {
       level: 'unit' as const,
       capability: 'Grants CodePipeline permissions when CodePipeline integration is enabled',
       oracle: 'exact' as const,
-      determinism: 'deterministic' as const,
-      naming: {
-        pattern: 'Feature__Condition__ExpectedOutcome',
         feature: 'ElasticBeanstalkBind',
         condition: 'CodePipelineIntegration',
         outcome: 'GrantsCodePipelinePermissions'
