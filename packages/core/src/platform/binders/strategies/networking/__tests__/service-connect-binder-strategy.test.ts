@@ -20,13 +20,6 @@ describe('ServiceConnectBinderStrategy', () => {
       level: 'unit' as const,
       capability: 'Returns enhanced binding result with security group rules and environment variables for valid Service Connect access',
       oracle: 'exact' as const,
-      determinism: 'deterministic' as const,
-      naming: {
-        pattern: 'Feature__Condition__ExpectedOutcome',
-        feature: 'ServiceConnectBind',
-        condition: 'ValidServiceConnectAccess',
-        outcome: 'ReturnsEnhancedResult'
-      },
       invariants: [
         'Returns EnhancedBindingResult with compliance block',
         'Security group rules include ingress and egress rules',
@@ -96,9 +89,6 @@ describe('ServiceConnectBinderStrategy', () => {
       level: 'unit' as const,
       capability: 'Creates bidirectional security group rules (ingress on target, egress on source) for Service Connect binding',
       oracle: 'exact' as const,
-      determinism: 'deterministic' as const,
-      naming: {
-        pattern: 'Feature__Condition__ExpectedOutcome',
         feature: 'ServiceConnectBind',
         condition: 'SecurityGroupRules',
         outcome: 'CreatesBidirectionalRules'
@@ -159,9 +149,6 @@ describe('ServiceConnectBinderStrategy', () => {
       level: 'unit' as const,
       capability: 'Handles sgId field alias in addition to securityGroupId for Service Connect capability data',
       oracle: 'exact' as const,
-      determinism: 'deterministic' as const,
-      naming: {
-        pattern: 'Feature__Condition__ExpectedOutcome',
         feature: 'ServiceConnectBind',
         condition: 'SgIdAlias',
         outcome: 'HandlesSgIdField'
@@ -222,9 +209,6 @@ describe('ServiceConnectBinderStrategy', () => {
       level: 'unit' as const,
       capability: 'Applies custom environment variable mappings from directive.env for Service Connect binding',
       oracle: 'exact' as const,
-      determinism: 'deterministic' as const,
-      naming: {
-        pattern: 'Feature__Condition__ExpectedOutcome',
         feature: 'ServiceConnectBind',
         condition: 'CustomEnvMappings',
         outcome: 'AppliesCustomVariables'
@@ -290,9 +274,6 @@ describe('ServiceConnectBinderStrategy', () => {
       level: 'unit' as const,
       capability: 'Sets environment variables when source security group ID is missing (rules handled separately)',
       oracle: 'exact' as const,
-      determinism: 'deterministic' as const,
-      naming: {
-        pattern: 'Feature__Condition__ExpectedOutcome',
         feature: 'ServiceConnectBind',
         condition: 'MissingSourceSecurityGroupId',
         outcome: 'SetsEnvVarsOnly'
@@ -352,9 +333,6 @@ describe('ServiceConnectBinderStrategy', () => {
       level: 'unit' as const,
       capability: 'Throws actionable error when target security group ID is missing from capability data',
       oracle: 'exact' as const,
-      determinism: 'deterministic' as const,
-      naming: {
-        pattern: 'Feature__Condition__ExpectedOutcome',
         feature: 'ServiceConnectBind',
         condition: 'MissingTargetSecurityGroupId',
         outcome: 'ThrowsError'
@@ -410,9 +388,6 @@ describe('ServiceConnectBinderStrategy', () => {
       level: 'unit' as const,
       capability: 'Throws actionable error when port is missing from capability data',
       oracle: 'exact' as const,
-      determinism: 'deterministic' as const,
-      naming: {
-        pattern: 'Feature__Condition__ExpectedOutcome',
         feature: 'ServiceConnectBind',
         condition: 'MissingPort',
         outcome: 'ThrowsError'
@@ -468,9 +443,6 @@ describe('ServiceConnectBinderStrategy', () => {
       level: 'unit' as const,
       capability: 'Sets standard environment variables when optional fields are omitted from capability data',
       oracle: 'exact' as const,
-      determinism: 'deterministic' as const,
-      naming: {
-        pattern: 'Feature__Condition__ExpectedOutcome',
         feature: 'ServiceConnectBind',
         condition: 'OptionalFieldsOmitted',
         outcome: 'SetsStandardEnvVars'
@@ -536,9 +508,6 @@ describe('ServiceConnectBinderStrategy', () => {
       level: 'unit' as const,
       capability: 'Returns compliance block with commercial framework for commercial compliance context',
       oracle: 'exact' as const,
-      determinism: 'deterministic' as const,
-      naming: {
-        pattern: 'Feature__Condition__ExpectedOutcome',
         feature: 'ServiceConnectBind',
         condition: 'CommercialCompliance',
         outcome: 'ReturnsComplianceBlock'
@@ -600,9 +569,6 @@ describe('ServiceConnectBinderStrategy', () => {
       level: 'unit' as const,
       capability: 'Throws actionable error when capability data structure is invalid',
       oracle: 'exact' as const,
-      determinism: 'deterministic' as const,
-      naming: {
-        pattern: 'Feature__Condition__ExpectedOutcome',
         feature: 'ServiceConnectBind',
         condition: 'InvalidCapabilityData',
         outcome: 'ThrowsError'
