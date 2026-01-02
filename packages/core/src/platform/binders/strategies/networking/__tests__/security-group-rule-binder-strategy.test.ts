@@ -90,10 +90,9 @@ describe('SecurityGroupRuleBinderStrategy', () => {
       level: 'unit' as const,
       capability: 'Returns multiple security group rules when multiple rules are specified',
       oracle: 'exact' as const,
-        feature: 'SecurityGroupRuleBind',
-        condition: 'MultipleRules',
-        outcome: 'ReturnsAllRules'
-      },
+      feature: 'SecurityGroupRuleBind',
+      condition: 'MultipleRules',
+      outcome: 'ReturnsAllRules',
       invariants: [
         'All specified rules are included in securityGroupRules array',
         'Rule count matches the number of rules provided',
@@ -162,10 +161,9 @@ describe('SecurityGroupRuleBinderStrategy', () => {
       level: 'unit' as const,
       capability: 'Returns security group rule when using shorthand directive.options format',
       oracle: 'exact' as const,
-        feature: 'SecurityGroupRuleBind',
-        condition: 'ShorthandRuleSpecification',
-        outcome: 'ReturnsRule'
-      },
+      feature: 'SecurityGroupRuleBind',
+      condition: 'ShorthandRuleSpecification',
+      outcome: 'ReturnsRule',
       invariants: [
         'Single rule is generated from shorthand options',
         'Peer is correctly parsed (string SG ID converted to object)',
@@ -225,10 +223,9 @@ describe('SecurityGroupRuleBinderStrategy', () => {
       level: 'unit' as const,
       capability: 'Returns ingress rule when source component exposes security group capability',
       oracle: 'exact' as const,
-        feature: 'SecurityGroupRuleBind',
-        condition: 'InferredFromSourceCapabilities',
-        outcome: 'ReturnsIngressRule'
-      },
+      feature: 'SecurityGroupRuleBind',
+      condition: 'InferredFromSourceCapabilities',
+      outcome: 'ReturnsIngressRule',
       invariants: [
         'Rule is inferred from source component security group capability',
         'Default rule type is ingress',
@@ -300,10 +297,9 @@ describe('SecurityGroupRuleBinderStrategy', () => {
       level: 'unit' as const,
       capability: 'Throws actionable error when targetSecurityGroupId is missing',
       oracle: 'exact' as const,
-        feature: 'SecurityGroupRuleBind',
-        condition: 'MissingTargetSecurityGroupId',
-        outcome: 'ThrowsError'
-      },
+      feature: 'SecurityGroupRuleBind',
+      condition: 'MissingTargetSecurityGroupId',
+      outcome: 'ThrowsError',
       invariants: [
         'Error message indicates missing targetSecurityGroupId',
         'Error is thrown before rule generation'
@@ -349,10 +345,9 @@ describe('SecurityGroupRuleBinderStrategy', () => {
       level: 'unit' as const,
       capability: 'Throws actionable error when no rules can be generated (missing rules, peer, and source capabilities)',
       oracle: 'exact' as const,
-        feature: 'SecurityGroupRuleBind',
-        condition: 'MissingRulesSpecification',
-        outcome: 'ThrowsError'
-      },
+      feature: 'SecurityGroupRuleBind',
+      condition: 'MissingRulesSpecification',
+      outcome: 'ThrowsError',
       invariants: [
         'Error message indicates missing rules specification',
         'Error provides guidance on how to specify rules'
@@ -399,10 +394,9 @@ describe('SecurityGroupRuleBinderStrategy', () => {
       level: 'unit' as const,
       capability: 'Returns security group rule with CIDR peer when CIDR is specified',
       oracle: 'exact' as const,
-        feature: 'SecurityGroupRuleBind',
-        condition: 'CidrPeer',
-        outcome: 'ReturnsRuleWithCidrPeer'
-      },
+      feature: 'SecurityGroupRuleBind',
+      condition: 'CidrPeer',
+      outcome: 'ReturnsRuleWithCidrPeer',
       invariants: [
         'Peer kind is cidr',
         'CIDR block is correctly specified',
@@ -462,10 +456,9 @@ describe('SecurityGroupRuleBinderStrategy', () => {
       level: 'unit' as const,
       capability: 'Handles network:security-group-rule alias capability correctly',
       oracle: 'exact' as const,
-        feature: 'SecurityGroupRuleBind',
-        condition: 'NetworkAliasCapability',
-        outcome: 'HandlesAlias'
-      },
+      feature: 'SecurityGroupRuleBind',
+      condition: 'NetworkAliasCapability',
+      outcome: 'HandlesAlias',
       invariants: [
         'Alias capability is handled identically to security-group:rule',
         'Rules are generated correctly for alias capability'
@@ -524,10 +517,9 @@ describe('SecurityGroupRuleBinderStrategy', () => {
       level: 'unit' as const,
       capability: 'Returns compliance block with commercial framework',
       oracle: 'exact' as const,
-        feature: 'SecurityGroupRuleBind',
-        condition: 'CommercialCompliance',
-        outcome: 'ReturnsComplianceBlock'
-      },
+      feature: 'SecurityGroupRuleBind',
+      condition: 'CommercialCompliance',
+      outcome: 'ReturnsComplianceBlock',
       invariants: [
         'Compliance block status is one of: compliant, non-compliant, partially-compliant',
         'Compliance framework is set correctly',
