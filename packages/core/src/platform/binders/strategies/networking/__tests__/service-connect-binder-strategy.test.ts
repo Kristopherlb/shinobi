@@ -89,10 +89,9 @@ describe('ServiceConnectBinderStrategy', () => {
       level: 'unit' as const,
       capability: 'Creates bidirectional security group rules (ingress on target, egress on source) for Service Connect binding',
       oracle: 'exact' as const,
-        feature: 'ServiceConnectBind',
-        condition: 'SecurityGroupRules',
-        outcome: 'CreatesBidirectionalRules'
-      },
+      feature: 'ServiceConnectBind',
+      condition: 'SecurityGroupRules',
+      outcome: 'CreatesBidirectionalRules',
       invariants: [
         'Ingress rule on target security group allows traffic from source security group',
         'Egress rule on source security group allows traffic to target security group',
@@ -149,10 +148,9 @@ describe('ServiceConnectBinderStrategy', () => {
       level: 'unit' as const,
       capability: 'Handles sgId field alias in addition to securityGroupId for Service Connect capability data',
       oracle: 'exact' as const,
-        feature: 'ServiceConnectBind',
-        condition: 'SgIdAlias',
-        outcome: 'HandlesSgIdField'
-      },
+      feature: 'ServiceConnectBind',
+      condition: 'SgIdAlias',
+      outcome: 'HandlesSgIdField',
       invariants: [
         'Strategy accepts both securityGroupId and sgId fields',
         'Security group rules reference the correct target security group ID',
@@ -209,10 +207,9 @@ describe('ServiceConnectBinderStrategy', () => {
       level: 'unit' as const,
       capability: 'Applies custom environment variable mappings from directive.env for Service Connect binding',
       oracle: 'exact' as const,
-        feature: 'ServiceConnectBind',
-        condition: 'CustomEnvMappings',
-        outcome: 'AppliesCustomVariables'
-      },
+      feature: 'ServiceConnectBind',
+      condition: 'CustomEnvMappings',
+      outcome: 'AppliesCustomVariables',
       invariants: [
         'Custom environment variables are set from directive.env mappings',
         'Standard environment variables are still set',
@@ -274,10 +271,9 @@ describe('ServiceConnectBinderStrategy', () => {
       level: 'unit' as const,
       capability: 'Sets environment variables when source security group ID is missing (rules handled separately)',
       oracle: 'exact' as const,
-        feature: 'ServiceConnectBind',
-        condition: 'MissingSourceSecurityGroupId',
-        outcome: 'SetsEnvVarsOnly'
-      },
+      feature: 'ServiceConnectBind',
+      condition: 'MissingSourceSecurityGroupId',
+      outcome: 'SetsEnvVarsOnly',
       invariants: [
         'Binding completes successfully with only environment variables',
         'Security group rules array is empty (rules handled via patches)',
@@ -333,10 +329,9 @@ describe('ServiceConnectBinderStrategy', () => {
       level: 'unit' as const,
       capability: 'Throws actionable error when target security group ID is missing from capability data',
       oracle: 'exact' as const,
-        feature: 'ServiceConnectBind',
-        condition: 'MissingTargetSecurityGroupId',
-        outcome: 'ThrowsError'
-      },
+      feature: 'ServiceConnectBind',
+      condition: 'MissingTargetSecurityGroupId',
+      outcome: 'ThrowsError',
       invariants: [
         'Error message indicates securityGroupId or sgId is required',
         'Error message is descriptive and actionable',
@@ -388,10 +383,9 @@ describe('ServiceConnectBinderStrategy', () => {
       level: 'unit' as const,
       capability: 'Throws actionable error when port is missing from capability data',
       oracle: 'exact' as const,
-        feature: 'ServiceConnectBind',
-        condition: 'MissingPort',
-        outcome: 'ThrowsError'
-      },
+      feature: 'ServiceConnectBind',
+      condition: 'MissingPort',
+      outcome: 'ThrowsError',
       invariants: [
         'Error message indicates port is required',
         'Error message is descriptive and actionable',
@@ -443,10 +437,9 @@ describe('ServiceConnectBinderStrategy', () => {
       level: 'unit' as const,
       capability: 'Sets standard environment variables when optional fields are omitted from capability data',
       oracle: 'exact' as const,
-        feature: 'ServiceConnectBind',
-        condition: 'OptionalFieldsOmitted',
-        outcome: 'SetsStandardEnvVars'
-      },
+      feature: 'ServiceConnectBind',
+      condition: 'OptionalFieldsOmitted',
+      outcome: 'SetsStandardEnvVars',
       invariants: [
         'Required environment variables are always set (DNS name, port, service name)',
         'Optional environment variables are omitted when not present',
@@ -508,10 +501,9 @@ describe('ServiceConnectBinderStrategy', () => {
       level: 'unit' as const,
       capability: 'Returns compliance block with commercial framework for commercial compliance context',
       oracle: 'exact' as const,
-        feature: 'ServiceConnectBind',
-        condition: 'CommercialCompliance',
-        outcome: 'ReturnsComplianceBlock'
-      },
+      feature: 'ServiceConnectBind',
+      condition: 'CommercialCompliance',
+      outcome: 'ReturnsComplianceBlock',
       invariants: [
         'Compliance block status is one of: compliant, non-compliant, partially-compliant',
         'Compliance framework is set correctly',
@@ -569,10 +561,9 @@ describe('ServiceConnectBinderStrategy', () => {
       level: 'unit' as const,
       capability: 'Throws actionable error when capability data structure is invalid',
       oracle: 'exact' as const,
-        feature: 'ServiceConnectBind',
-        condition: 'InvalidCapabilityData',
-        outcome: 'ThrowsError'
-      },
+      feature: 'ServiceConnectBind',
+      condition: 'InvalidCapabilityData',
+      outcome: 'ThrowsError',
       invariants: [
         'Error message indicates invalid capability data structure',
         'Error message is descriptive and actionable',

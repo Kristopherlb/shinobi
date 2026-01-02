@@ -123,7 +123,7 @@ describe('VpcBinderStrategy', () => {
       const context = createBindingContext({
         source,
         target,
-      capability: 'vpc:network',
+        capability: 'vpc:network',
         access: 'write'
       });
 
@@ -146,10 +146,9 @@ describe('VpcBinderStrategy', () => {
       level: 'unit' as const,
       capability: 'Grants CloudWatch Logs permissions when flow logs are enabled and requireSecureAccess is true',
       oracle: 'exact' as const,
-        feature: 'VpcBind',
-        condition: 'VpcNetworkFlowLogsEnabled',
-        outcome: 'GrantsCloudWatchLogsPermissions'
-      },
+      feature: 'VpcBind',
+      condition: 'VpcNetworkFlowLogsEnabled',
+      outcome: 'GrantsCloudWatchLogsPermissions',
       invariants: [
         'CloudWatch Logs policy is included when flowLogsEnabled is true and requireSecureAccess is true',
         'Logs permissions include CreateLogGroup, CreateLogStream, PutLogEvents',
@@ -176,11 +175,11 @@ describe('VpcBinderStrategy', () => {
           type: 'vpc:network',
           vpcId: 'vpc-12345678',
           vpcArn: 'arn:aws:ec2:us-east-1:123456789012:vpc/vpc-12345678',
-      cidrBlock: '10.0.0.0/16',
-      state: 'available',
-      isDefault: false,
-      flowLogsEnabled: true,
-      vpcEndpoints: ['s3', 'dynamodb']
+          cidrBlock: '10.0.0.0/16',
+          state: 'available',
+          isDefault: false,
+          flowLogsEnabled: true,
+          vpcEndpoints: ['s3', 'dynamodb']
         }
       });
 
@@ -214,10 +213,9 @@ describe('VpcBinderStrategy', () => {
       level: 'unit' as const,
       capability: 'Handles net:vpc alias capability correctly',
       oracle: 'exact' as const,
-        feature: 'VpcBind',
-        condition: 'NetVpcAlias',
-        outcome: 'HandlesAliasCapability'
-      },
+      feature: 'VpcBind',
+      condition: 'NetVpcAlias',
+      outcome: 'HandlesAliasCapability',
       invariants: [
         'Strategy handles net:vpc capability alias',
         'Binding result is identical to vpc:network capability'
@@ -270,10 +268,9 @@ describe('VpcBinderStrategy', () => {
       level: 'unit' as const,
       capability: 'Returns subnet environment variables for valid subnet access',
       oracle: 'exact' as const,
-        feature: 'VpcBind',
-        condition: 'ValidSubnetAccess',
-        outcome: 'ReturnsSubnetEnvVars'
-      },
+      feature: 'VpcBind',
+      condition: 'ValidSubnetAccess',
+      outcome: 'ReturnsSubnetEnvVars',
       invariants: [
         'Environment variables include subnet ID, ARN, CIDR block, AZ, and type',
         'IAM policies include subnet read actions',
@@ -335,10 +332,9 @@ describe('VpcBinderStrategy', () => {
       level: 'unit' as const,
       capability: 'Grants subnet write actions including CreateSubnet and ModifySubnetAttribute for write access',
       oracle: 'exact' as const,
-        feature: 'VpcBind',
-        condition: 'SubnetWriteAccess',
-        outcome: 'GrantsSubnetWriteActions'
-      },
+      feature: 'VpcBind',
+      condition: 'SubnetWriteAccess',
+      outcome: 'GrantsSubnetWriteActions',
       invariants: [
         'IAM policies include subnet write actions (CreateSubnet, ModifySubnetAttribute, DeleteSubnet)',
         'CIDR block association actions are included'
@@ -396,10 +392,9 @@ describe('VpcBinderStrategy', () => {
       level: 'unit' as const,
       capability: 'Returns security group environment variables for valid security group access',
       oracle: 'exact' as const,
-        feature: 'VpcBind',
-        condition: 'ValidSecurityGroupAccess',
-        outcome: 'ReturnsSecurityGroupEnvVars'
-      },
+      feature: 'VpcBind',
+      condition: 'ValidSecurityGroupAccess',
+      outcome: 'ReturnsSecurityGroupEnvVars',
       invariants: [
         'Environment variables include security group ID, ARN, name, description, and VPC ID',
         'IAM policies include security group read actions',
@@ -463,10 +458,9 @@ describe('VpcBinderStrategy', () => {
       level: 'unit' as const,
       capability: 'Grants security group write actions including AuthorizeSecurityGroupIngress for write access',
       oracle: 'exact' as const,
-        feature: 'VpcBind',
-        condition: 'SecurityGroupWriteAccess',
-        outcome: 'GrantsSecurityGroupWriteActions'
-      },
+      feature: 'VpcBind',
+      condition: 'SecurityGroupWriteAccess',
+      outcome: 'GrantsSecurityGroupWriteActions',
       invariants: [
         'IAM policies include security group write actions (CreateSecurityGroup, AuthorizeSecurityGroupIngress/Egress)',
         'Revoke actions are included for rule removal'
@@ -524,10 +518,9 @@ describe('VpcBinderStrategy', () => {
       level: 'unit' as const,
       capability: 'Returns route table environment variables for valid route table access',
       oracle: 'exact' as const,
-        feature: 'VpcBind',
-        condition: 'ValidRouteTableAccess',
-        outcome: 'ReturnsRouteTableEnvVars'
-      },
+      feature: 'VpcBind',
+      condition: 'ValidRouteTableAccess',
+      outcome: 'ReturnsRouteTableEnvVars',
       invariants: [
         'Environment variables include route table ID, ARN, and VPC ID',
         'IAM policies include route table read actions',
@@ -585,10 +578,9 @@ describe('VpcBinderStrategy', () => {
       level: 'unit' as const,
       capability: 'Grants route table write actions including CreateRoute and ReplaceRoute for write access',
       oracle: 'exact' as const,
-        feature: 'VpcBind',
-        condition: 'RouteTableWriteAccess',
-        outcome: 'GrantsRouteTableWriteActions'
-      },
+      feature: 'VpcBind',
+      condition: 'RouteTableWriteAccess',
+      outcome: 'GrantsRouteTableWriteActions',
       invariants: [
         'IAM policies include route table write actions (CreateRouteTable, CreateRoute, ReplaceRoute)',
         'Association actions are included'
@@ -643,10 +635,9 @@ describe('VpcBinderStrategy', () => {
       level: 'unit' as const,
       capability: 'Returns NAT Gateway environment variables for valid NAT Gateway access',
       oracle: 'exact' as const,
-        feature: 'VpcBind',
-        condition: 'ValidNatGatewayAccess',
-        outcome: 'ReturnsNatGatewayEnvVars'
-      },
+      feature: 'VpcBind',
+      condition: 'ValidNatGatewayAccess',
+      outcome: 'ReturnsNatGatewayEnvVars',
       invariants: [
         'Environment variables include NAT Gateway ID, ARN, state, subnet ID, and connectivity type',
         'IAM policies include NAT Gateway read actions',
@@ -706,10 +697,9 @@ describe('VpcBinderStrategy', () => {
       level: 'unit' as const,
       capability: 'Grants NAT Gateway write actions including CreateNatGateway and AllocateAddress for write access',
       oracle: 'exact' as const,
-        feature: 'VpcBind',
-        condition: 'NatGatewayWriteAccess',
-        outcome: 'GrantsNatGatewayWriteActions'
-      },
+      feature: 'VpcBind',
+      condition: 'NatGatewayWriteAccess',
+      outcome: 'GrantsNatGatewayWriteActions',
       invariants: [
         'IAM policies include NAT Gateway write actions (CreateNatGateway, DeleteNatGateway)',
         'Elastic IP actions are included (AllocateAddress, ReleaseAddress)',
@@ -767,10 +757,9 @@ describe('VpcBinderStrategy', () => {
       level: 'unit' as const,
       capability: 'Returns Network ACL environment variables for valid Network ACL access',
       oracle: 'exact' as const,
-        feature: 'VpcBind',
-        condition: 'ValidNetworkAclAccess',
-        outcome: 'ReturnsNetworkAclEnvVars'
-      },
+      feature: 'VpcBind',
+      condition: 'ValidNetworkAclAccess',
+      outcome: 'ReturnsNetworkAclEnvVars',
       invariants: [
         'Environment variables include Network ACL ID, ARN, VPC ID, and isDefault flag',
         'IAM policies include Network ACL read actions',
@@ -830,10 +819,9 @@ describe('VpcBinderStrategy', () => {
       level: 'unit' as const,
       capability: 'Grants Network ACL write actions including CreateNetworkAcl and CreateNetworkAclEntry for write access',
       oracle: 'exact' as const,
-        feature: 'VpcBind',
-        condition: 'NetworkAclWriteAccess',
-        outcome: 'GrantsNetworkAclWriteActions'
-      },
+      feature: 'VpcBind',
+      condition: 'NetworkAclWriteAccess',
+      outcome: 'GrantsNetworkAclWriteActions',
       invariants: [
         'IAM policies include Network ACL write actions (CreateNetworkAcl, CreateNetworkAclEntry, ReplaceNetworkAclEntry)',
         'Association actions are included'
@@ -889,10 +877,9 @@ describe('VpcBinderStrategy', () => {
       level: 'unit' as const,
       capability: 'Returns VPC Peering environment variables for valid peering connection access',
       oracle: 'exact' as const,
-        feature: 'VpcBind',
-        condition: 'ValidPeeringAccess',
-        outcome: 'ReturnsPeeringEnvVars'
-      },
+      feature: 'VpcBind',
+      condition: 'ValidPeeringAccess',
+      outcome: 'ReturnsPeeringEnvVars',
       invariants: [
         'Environment variables include peering connection ID, ARN, VPC IDs, and status',
         'IAM policies include peering connection read actions',
@@ -963,10 +950,9 @@ describe('VpcBinderStrategy', () => {
       level: 'unit' as const,
       capability: 'Grants VPC Peering write actions including CreateVpcPeeringConnection and AcceptVpcPeeringConnection for write access',
       oracle: 'exact' as const,
-        feature: 'VpcBind',
-        condition: 'PeeringWriteAccess',
-        outcome: 'GrantsPeeringWriteActions'
-      },
+      feature: 'VpcBind',
+      condition: 'PeeringWriteAccess',
+      outcome: 'GrantsPeeringWriteActions',
       invariants: [
         'IAM policies include peering write actions (CreateVpcPeeringConnection, AcceptVpcPeeringConnection, DeleteVpcPeeringConnection)',
         'Modify options actions are included'
@@ -1023,10 +1009,9 @@ describe('VpcBinderStrategy', () => {
       level: 'unit' as const,
       capability: 'Returns Transit Gateway environment variables for valid Transit Gateway access',
       oracle: 'exact' as const,
-        feature: 'VpcBind',
-        condition: 'ValidTransitGatewayAccess',
-        outcome: 'ReturnsTransitGatewayEnvVars'
-      },
+      feature: 'VpcBind',
+      condition: 'ValidTransitGatewayAccess',
+      outcome: 'ReturnsTransitGatewayEnvVars',
       invariants: [
         'Environment variables include Transit Gateway ID, ARN, state, and route table IDs',
         'IAM policies include Transit Gateway read actions',
@@ -1086,10 +1071,9 @@ describe('VpcBinderStrategy', () => {
       level: 'unit' as const,
       capability: 'Grants Transit Gateway write actions including CreateTransitGateway and CreateTransitGatewayVpcAttachment for write access',
       oracle: 'exact' as const,
-        feature: 'VpcBind',
-        condition: 'TransitGatewayWriteAccess',
-        outcome: 'GrantsTransitGatewayWriteActions'
-      },
+      feature: 'VpcBind',
+      condition: 'TransitGatewayWriteAccess',
+      outcome: 'GrantsTransitGatewayWriteActions',
       invariants: [
         'IAM policies include Transit Gateway write actions (CreateTransitGateway, CreateTransitGatewayVpcAttachment)',
         'Route table association and propagation actions are included'
@@ -1144,10 +1128,9 @@ describe('VpcBinderStrategy', () => {
       level: 'unit' as const,
       capability: 'Returns Network Firewall environment variables for valid Network Firewall access',
       oracle: 'exact' as const,
-        feature: 'VpcBind',
-        condition: 'ValidNetworkFirewallAccess',
-        outcome: 'ReturnsNetworkFirewallEnvVars'
-      },
+      feature: 'VpcBind',
+      condition: 'ValidNetworkFirewallAccess',
+      outcome: 'ReturnsNetworkFirewallEnvVars',
       invariants: [
         'Environment variables include firewall name, ARN, ID, VPC ID, status, and policy ARN',
         'IAM policies include Network Firewall read actions'
@@ -1206,10 +1189,9 @@ describe('VpcBinderStrategy', () => {
       level: 'unit' as const,
       capability: 'Grants Network Firewall write actions including CreateFirewall and UpdateFirewallPolicy for write access',
       oracle: 'exact' as const,
-        feature: 'VpcBind',
-        condition: 'NetworkFirewallWriteAccess',
-        outcome: 'GrantsNetworkFirewallWriteActions'
-      },
+      feature: 'VpcBind',
+      condition: 'NetworkFirewallWriteAccess',
+      outcome: 'GrantsNetworkFirewallWriteActions',
       invariants: [
         'IAM policies include Network Firewall write actions (CreateFirewall, DeleteFirewall, UpdateFirewallPolicy)',
         'Policy management actions are included'
@@ -1266,10 +1248,9 @@ describe('VpcBinderStrategy', () => {
       level: 'unit' as const,
       capability: 'Returns VPC Endpoint environment variables for valid VPC endpoint access',
       oracle: 'exact' as const,
-        feature: 'VpcBind',
-        condition: 'ValidVpcEndpointAccess',
-        outcome: 'ReturnsVpcEndpointEnvVars'
-      },
+      feature: 'VpcBind',
+      condition: 'ValidVpcEndpointAccess',
+      outcome: 'ReturnsVpcEndpointEnvVars',
       invariants: [
         'Environment variables include VPC endpoint ID, ARN, VPC ID, service name, type, and state',
         'IAM policies include VPC endpoint read actions (DescribeVpcEndpoints, DescribeVpcEndpointServices)',
@@ -1331,10 +1312,9 @@ describe('VpcBinderStrategy', () => {
       level: 'unit' as const,
       capability: 'Grants VPC Endpoint write actions including CreateVpcEndpoint and ModifyVpcEndpoint for write access',
       oracle: 'exact' as const,
-        feature: 'VpcBind',
-        condition: 'VpcEndpointWriteAccess',
-        outcome: 'GrantsVpcEndpointWriteActions'
-      },
+      feature: 'VpcBind',
+      condition: 'VpcEndpointWriteAccess',
+      outcome: 'GrantsVpcEndpointWriteActions',
       invariants: [
         'IAM policies include VPC endpoint write actions (CreateVpcEndpoint, ModifyVpcEndpoint, DeleteVpcEndpoint)',
         'Read actions are included in write access'
@@ -1393,10 +1373,9 @@ describe('VpcBinderStrategy', () => {
       level: 'unit' as const,
       capability: 'Sets DNS entry environment variables when DNS entries are provided in VPC endpoint capability data',
       oracle: 'exact' as const,
-        feature: 'VpcBind',
-        condition: 'VpcEndpointWithDnsEntries',
-        outcome: 'SetsDnsEnvironmentVariables'
-      },
+      feature: 'VpcBind',
+      condition: 'VpcEndpointWithDnsEntries',
+      outcome: 'SetsDnsEnvironmentVariables',
       invariants: [
         'First DNS entry is set as primary DNS name and hosted zone ID',
         'Multiple DNS entries are serialized to JSON in VPC_ENDPOINT_DNS_ENTRIES',
@@ -1459,10 +1438,9 @@ describe('VpcBinderStrategy', () => {
       level: 'unit' as const,
       capability: 'Throws actionable error when required capability data fields are missing',
       oracle: 'exact' as const,
-        feature: 'VpcBind',
-        condition: 'MissingRequiredFields',
-        outcome: 'ThrowsActionableError'
-      },
+      feature: 'VpcBind',
+      condition: 'MissingRequiredFields',
+      outcome: 'ThrowsActionableError',
       invariants: [
         'Error message indicates missing field name',
         'Error message is descriptive and actionable',
@@ -1510,10 +1488,9 @@ describe('VpcBinderStrategy', () => {
       level: 'unit' as const,
       capability: 'Returns compliance block with commercial framework for commercial compliance context',
       oracle: 'exact' as const,
-        feature: 'VpcBind',
-        condition: 'CommercialCompliance',
-        outcome: 'ReturnsComplianceBlock'
-      },
+      feature: 'VpcBind',
+      condition: 'CommercialCompliance',
+      outcome: 'ReturnsComplianceBlock',
       invariants: [
         'Compliance block status is one of: compliant, non-compliant, partially-compliant',
         'Compliance framework is set correctly',

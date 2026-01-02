@@ -134,10 +134,9 @@ describe('SecurityGroupBinderStrategy', () => {
       level: 'unit' as const,
       capability: 'Sets cross-account/cross-region environment variables when region and accountId are provided',
       oracle: 'exact' as const,
-        feature: 'SecurityGroupBind',
-        condition: 'CrossAccountBinding',
-        outcome: 'SetsCrossAccountEnvVars'
-      },
+      feature: 'SecurityGroupBind',
+      condition: 'CrossAccountBinding',
+      outcome: 'SetsCrossAccountEnvVars',
       invariants: [
         'SECURITY_GROUP_REGION environment variable is set when region is present',
         'SECURITY_GROUP_ACCOUNT_ID environment variable is set when accountId is present',
@@ -193,10 +192,9 @@ describe('SecurityGroupBinderStrategy', () => {
       level: 'unit' as const,
       capability: 'Grants EC2 describe permissions when includeDiscovery option is enabled',
       oracle: 'exact' as const,
-        feature: 'SecurityGroupBind',
-        condition: 'DiscoveryPermissions',
-        outcome: 'GrantsDescribeActions'
-      },
+      feature: 'SecurityGroupBind',
+      condition: 'DiscoveryPermissions',
+      outcome: 'GrantsDescribeActions',
       invariants: [
         'IAM policy is created with DescribeSecurityGroups and DescribeSecurityGroupRules actions',
         'Policy is scoped to the specific security group ARN',
@@ -252,10 +250,9 @@ describe('SecurityGroupBinderStrategy', () => {
       level: 'unit' as const,
       capability: 'Handles security:security-group alias capability correctly',
       oracle: 'exact' as const,
-        feature: 'SecurityGroupBind',
-        condition: 'SecuritySecurityGroupAlias',
-        outcome: 'HandlesAliasCapability'
-      },
+      feature: 'SecurityGroupBind',
+      condition: 'SecuritySecurityGroupAlias',
+      outcome: 'HandlesAliasCapability',
       invariants: [
         'Binding succeeds with security:security-group capability',
         'Environment variables are set correctly',
@@ -305,10 +302,9 @@ describe('SecurityGroupBinderStrategy', () => {
       level: 'unit' as const,
       capability: 'Throws actionable error when securityGroupId is missing from capability data',
       oracle: 'exact' as const,
-        feature: 'SecurityGroupBind',
-        condition: 'MissingSecurityGroupId',
-        outcome: 'ThrowsError'
-      },
+      feature: 'SecurityGroupBind',
+      condition: 'MissingSecurityGroupId',
+      outcome: 'ThrowsError',
       invariants: [
         'Error message indicates securityGroupId is required',
         'Error message is descriptive and actionable',
@@ -356,10 +352,9 @@ describe('SecurityGroupBinderStrategy', () => {
       level: 'unit' as const,
       capability: 'Sets standard environment variables when optional fields are omitted from capability data',
       oracle: 'exact' as const,
-        feature: 'SecurityGroupBind',
-        condition: 'OptionalFieldsOmitted',
-        outcome: 'SetsStandardEnvVars'
-      },
+      feature: 'SecurityGroupBind',
+      condition: 'OptionalFieldsOmitted',
+      outcome: 'SetsStandardEnvVars',
       invariants: [
         'Required environment variables are always set (SECURITY_GROUP_ID)',
         'Optional environment variables are omitted when not present',
@@ -415,10 +410,9 @@ describe('SecurityGroupBinderStrategy', () => {
       level: 'unit' as const,
       capability: 'Returns compliance block with commercial framework for commercial compliance context',
       oracle: 'exact' as const,
-        feature: 'SecurityGroupBind',
-        condition: 'CommercialCompliance',
-        outcome: 'ReturnsComplianceBlock'
-      },
+      feature: 'SecurityGroupBind',
+      condition: 'CommercialCompliance',
+      outcome: 'ReturnsComplianceBlock',
       invariants: [
         'Compliance block status is one of: compliant, non-compliant, partially-compliant',
         'Compliance framework is set correctly',
@@ -472,10 +466,9 @@ describe('SecurityGroupBinderStrategy', () => {
       level: 'unit' as const,
       capability: 'Throws actionable error when capability data structure is invalid',
       oracle: 'exact' as const,
-        feature: 'SecurityGroupBind',
-        condition: 'InvalidCapabilityData',
-        outcome: 'ThrowsError'
-      },
+      feature: 'SecurityGroupBind',
+      condition: 'InvalidCapabilityData',
+      outcome: 'ThrowsError',
       invariants: [
         'Error message indicates invalid capability data structure',
         'Error message is descriptive and actionable',
@@ -522,10 +515,9 @@ describe('SecurityGroupBinderStrategy', () => {
       level: 'unit' as const,
       capability: 'Returns empty security group rules array (rules handled separately)',
       oracle: 'exact' as const,
-        feature: 'SecurityGroupBind',
-        condition: 'SecurityGroupRules',
-        outcome: 'ReturnsEmptyArray'
-      },
+      feature: 'SecurityGroupBind',
+      condition: 'SecurityGroupRules',
+      outcome: 'ReturnsEmptyArray',
       invariants: [
         'Security group rules array is always empty',
         'Rules are handled separately via patches or components',
