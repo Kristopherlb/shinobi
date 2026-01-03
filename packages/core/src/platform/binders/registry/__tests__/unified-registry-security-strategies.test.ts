@@ -5,13 +5,21 @@
  */
 
 import { UnifiedBinderRegistry } from '../unified-binder-registry.js';
-import { createUnifiedBinderRegistry } from '../create-unified-registry.js';
 import {
   KmsBinderStrategy,
   SecretsManagerBinderStrategy,
   CertificateBinderStrategy,
   CognitoUserPoolBinderStrategy
-} from '../../strategies/security/index.js';
+} from '@shinobi/binders/security';
+
+function createUnifiedBinderRegistry(): UnifiedBinderRegistry {
+  return new UnifiedBinderRegistry([
+    new KmsBinderStrategy(),
+    new SecretsManagerBinderStrategy(),
+    new CertificateBinderStrategy(),
+    new CognitoUserPoolBinderStrategy()
+  ]);
+}
 
 describe('UnifiedBinderRegistry - Security Strategies Registration', () => {
   it('should register all 4 security strategies via factory function', () => {

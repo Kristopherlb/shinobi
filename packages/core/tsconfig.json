@@ -12,6 +12,8 @@
     "dist",
     "node_modules",
     "**/*.test.ts",
+    "**/*.spec.ts",
+    "**/__tests__/**",
     "src/platform/contracts/binder-example.ts",
     "src/platform/contracts/binder-integration.ts",
     "src/platform/contracts/enhanced-binder-example.ts",

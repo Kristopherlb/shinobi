@@ -1,0 +1,32 @@
+{
+  "name": "@shinobi/binders",
+  "version": "workspace:*",
+  "type": "module",
+  "main": "dist/index.js",
+  "types": "dist/index.d.ts",
+  "dependencies": {
+    "@shinobi/core": "workspace:*"
+  },
+  "peerDependencies": {
+    "aws-cdk-lib": "^2.214.0",
+    "constructs": "^10.4.2",
+    "typescript": "^5.9.2"
+  },
+  "exports": {
+    ".": "./dist/index.js",
+    "./analytics": "./dist/strategies/analytics/index.js",
+    "./api": "./dist/strategies/api/index.js",
+    "./cdn": "./dist/strategies/cdn/index.js",
+    "./compute": "./dist/strategies/compute/index.js",
+    "./database": "./dist/strategies/database/index.js",
+    "./iot": "./dist/strategies/iot/index.js",
+    "./messaging": "./dist/strategies/messaging/index.js",
+    "./ml": "./dist/strategies/ml/index.js",
+    "./mobile": "./dist/strategies/mobile/index.js",
+    "./networking": "./dist/strategies/networking/index.js",
+    "./security": "./dist/strategies/security/index.js",
+    "./storage": "./dist/strategies/storage/index.js",
+    "./*": "./dist/*"
+  }
+}
+

@@ -1,0 +1,17 @@
+{
+  "extends": ["../../.eslintrc.json"],
+  "rules": {
+    "no-restricted-imports": [
+      "error",
+      {
+        "patterns": [
+          {
+            "group": ["**/strategies/*/"],
+            "message": "Cross-category imports are not allowed. Import from category index files only, or use '@shinobi/core' for contracts."
+          }
+        ]
+      }
+    ]
+  }
+}
+

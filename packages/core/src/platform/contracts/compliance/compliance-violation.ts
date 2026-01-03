@@ -13,4 +13,3 @@ export interface ComplianceViolation {
   remediation: string;
   context?: Record<string, any>;
 }
-

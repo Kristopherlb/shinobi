@@ -1,0 +1,53 @@
+{
+  "$schema": "http://json-schema.org/schema",
+  "cli": "nx",
+  "id": "new-binder",
+  "title": "Generate a new binder strategy",
+  "type": "object",
+  "properties": {
+    "binderName": {
+      "type": "string",
+      "description": "Name of the binder strategy (e.g., 'Eks' will generate EksBinderStrategy)",
+      "$default": {
+        "$source": "argv",
+        "index": 0
+      },
+      "x-prompt": "What is the name of the binder strategy? (e.g., 'Eks')"
+    },
+    "category": {
+      "type": "string",
+      "description": "Category for the binder strategy (can be any string - new categories will be auto-created)",
+      "x-prompt": "Which category? (enter existing or new category name, e.g., 'compute', 'monitoring', 'audit')"
+    },
+    "mainCapability": {
+      "type": "string",
+      "description": "Primary capability this binder handles (e.g., 'eks:cluster')",
+      "x-prompt": "What is the main capability? (e.g., 'eks:cluster')"
+    },
+    "supportedAccess": {
+      "type": "array",
+      "description": "Supported access levels",
+      "items": {
+        "type": "string",
+        "enum": ["read", "write", "readwrite", "admin", "invoke", "publish", "subscribe"]
+      },
+      "default": ["read", "write"],
+      "x-prompt": {
+        "message": "Which access levels are supported? (comma-separated)",
+        "type": "list",
+        "multiselect": true,
+        "items": [
+          { "value": "read", "label": "Read" },
+          { "value": "write", "label": "Write" },
+          { "value": "readwrite", "label": "Read/Write" },
+          { "value": "admin", "label": "Admin" },
+          { "value": "invoke", "label": "Invoke" },
+          { "value": "publish", "label": "Publish" },
+          { "value": "subscribe", "label": "Subscribe" }
+        ]
+      }
+    }
+  },
+  "required": ["binderName", "category", "mainCapability"]
+}
+

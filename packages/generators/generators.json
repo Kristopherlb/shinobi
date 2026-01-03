@@ -1,0 +1,13 @@
+{
+  "$schema": "http://json-schema.org/schema",
+  "name": "generators",
+  "version": "0.0.1",
+  "generators": {
+    "new-binder": {
+      "factory": "./src/generators/new-binder/generator",
+      "schema": "./src/generators/new-binder/schema.json",
+      "description": "Generate a new binder strategy in @shinobi/binders"
+    }
+  }
+}
+

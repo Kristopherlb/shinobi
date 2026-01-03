@@ -64,6 +64,15 @@
       "@shinobi/standards-iam-audit/*": [
         "packages/standards/iam-audit/src/*"
       ],
+      "@shinobi/binders": [
+        "packages/binders/src/index.ts"
+      ],
+      "@shinobi/binders/*": [
+        "packages/binders/src/*"
+      ],
+      "@shinobi/generators": [
+        "packages/generators/src/index.ts"
+      ],
       "@platform/contracts": [
         "packages/core/src/platform/contracts/index.ts"
       ],
