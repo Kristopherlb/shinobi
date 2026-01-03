@@ -13,27 +13,27 @@ import {
   executeUnifiedBinding,
   assertEnhancedBindingResult,
   TEST_CONSTANTS
-} from '@shinobi/binders/security/__tests__/unified-strategy-test-helpers';
+} from './unified-strategy-test-helpers.js';
 import type { EnhancedBindingResult } from '@shinobi/core';
 
 describe('InspectorBinderStrategy', () => {
-  describe('InspectorBind__ValidAccess__ReturnsEnhancedResult', () => {
+  describe('InspectorBind__ScanReadAccess__ReturnsEnhancedResult', () => {
     const metadata = {
       id: 'TP-binders-security-inspector-001',
       level: 'unit' as const,
       capability: 'Returns EnhancedBindingResult with all required fields including compliance block',
       oracle: 'exact' as const,
       determinism: 'deterministic' as const,
-      naming: { pattern: 'InspectorBind__Condition__Outcome', example: 'InspectorBind__ValidAccess__ReturnsEnhancedResult' },
+      naming: { pattern: 'InspectorBind__Condition__Outcome', example: 'InspectorBind__ScanReadAccess__ReturnsEnhancedResult' },
       invariants: [
         'result.compliance.status exists and is one of compliant|non-compliant|partially-compliant',
-        'result.environmentVariables contains expected keys',
-        'result.iamPolicies is an array',
+        'result.environmentVariables contains AWS_INSPECTOR_SCAN_ARN',
+        'result.iamPolicies is an array with read actions',
         'result.securityGroupRules is an array'
       ],
       fixtures: ['MockSourceComponent', 'MockTargetComponent', 'security:inspector-scanCapabilityData'],
       inputs: {
-        shape: 'BindingContext with security:inspector-scan capability',
+        shape: 'BindingContext with security:inspector-scan capability and read access',
         notes: 'Basic valid binding with read access'
       },
       risks: [],
@@ -44,17 +44,17 @@ describe('InspectorBinderStrategy', () => {
       human_reviewed_by: 'Platform Engineering'
     };
 
-    test('InspectorBind__ValidAccess__ReturnsEnhancedResult', async () => {
+    test('InspectorBind__ScanReadAccess__ReturnsEnhancedResult', async () => {
       const strategy = new InspectorBinderStrategy();
-      const source = createMockSourceComponent('lambda-api', 'test-source');
+      const source = createMockSourceComponent('lambda-security', 'test-source');
       
-      // TODO: Update with actual target component type and capability data
-      const target = createMockTargetComponent('test-target', {
+      const target = createMockTargetComponent('inspector', {
         'security:inspector-scan': {
-          type: 'security:inspector-scan',
-          resources: {
-            arn: 'arn:aws:service:us-east-1:123456789012:resource/test',
-          },
+          scanArn: 'arn:aws:inspector2:us-east-1:123456789012:scan/test-scan',
+          findingsBucket: 'inspector-findings-bucket',
+          scanTargetArn: 'arn:aws:ec2:us-east-1:123456789012:instance/i-1234567890abcdef0',
+          scanType: 'EC2',
+          scanStatus: 'COMPLETED'
         },
       });
 
@@ -67,20 +67,235 @@ describe('InspectorBinderStrategy', () => {
 
       const result = await executeUnifiedBinding(strategy, context);
 
-      assertEnhancedBindingResult(result, {
-        shouldHaveIamPolicies: true,
-        shouldHaveEnvironmentVariables: true,
-        shouldHaveCompliance: true,
-      });
+      assertEnhancedBindingResult(result);
 
-      // TODO: Add specific assertions for this binder strategy
-      expect(result.iamPolicies).toBeDefined();
-      expect(result.environmentVariables).toBeDefined();
-      expect(result.compliance).toBeDefined();
-      expect(result.compliance.status).toBeDefined();
+      expect(result.environmentVariables.AWS_INSPECTOR_SCAN_ARN).toBe('arn:aws:inspector2:us-east-1:123456789012:scan/test-scan');
+      expect(result.environmentVariables.AWS_INSPECTOR_FINDINGS_BUCKET).toBe('inspector-findings-bucket');
+      expect(result.environmentVariables.AWS_INSPECTOR_SCAN_TARGET_ARN).toBe('arn:aws:ec2:us-east-1:123456789012:instance/i-1234567890abcdef0');
+      expect(result.environmentVariables.AWS_INSPECTOR_SCAN_TYPE).toBe('EC2');
+      expect(result.environmentVariables.AWS_INSPECTOR_SCAN_STATUS).toBe('COMPLETED');
+      expect(result.iamPolicies.length).toBeGreaterThan(0);
+      expect(['compliant', 'non-compliant', 'partially-compliant']).toContain(result.compliance.status);
     });
   });
 
-  // TODO: Add more test cases as needed
+  describe('InspectorBind__ScanWithAllFields__ExposesAllEnvironmentVariables', () => {
+    const metadata = {
+      id: 'TP-binders-security-inspector-005',
+      level: 'unit' as const,
+      capability: 'Exposes all optional environment variables when provided in target data',
+      oracle: 'exact' as const,
+      determinism: 'deterministic' as const,
+      naming: { pattern: 'InspectorBind__Condition__Outcome', example: 'InspectorBind__ScanWithAllFields__ExposesAllEnvironmentVariables' },
+      invariants: [
+        'Environment variables include scan filter and schedule',
+        'Environment variables include finding severity and count'
+      ],
+      fixtures: ['MockSourceComponent', 'MockTargetComponent', 'security:inspector-scanCapabilityData'],
+      inputs: {
+        shape: 'BindingContext with security:inspector-scan capability with all optional fields',
+        notes: 'Tests comprehensive field exposure'
+      },
+      risks: [],
+      dependencies: [],
+      evidence: [],
+      compliance_refs: ['docs/platform-standards/platform-iam-auditing-standard.md'],
+      ai_generated: true,
+      human_reviewed_by: 'Platform Engineering'
+    };
+
+    test('InspectorBind__ScanWithAllFields__ExposesAllEnvironmentVariables', async () => {
+      const strategy = new InspectorBinderStrategy();
+      const source = createMockSourceComponent('lambda-security', 'test-source');
+      
+      const target = createMockTargetComponent('inspector', {
+        'security:inspector-scan': {
+          scanArn: 'arn:aws:inspector2:us-east-1:123456789012:scan/test-scan',
+          scanFilter: { severity: ['CRITICAL', 'HIGH'] },
+          scanSchedule: 'cron(0 0 * * ? *)',
+          findingSeverity: 'CRITICAL',
+          findingCount: 15
+        },
+      });
+
+      const context = createBindingContext({
+        source,
+        target,
+        capability: 'security:inspector-scan',
+        access: 'read'
+      });
+
+      const result = await executeUnifiedBinding(strategy, context);
+
+      assertEnhancedBindingResult(result);
+
+      expect(result.environmentVariables.AWS_INSPECTOR_SCAN_FILTER).toBeDefined();
+      expect(result.environmentVariables.AWS_INSPECTOR_SCAN_SCHEDULE).toBe('cron(0 0 * * ? *)');
+      expect(result.environmentVariables.AWS_INSPECTOR_FINDING_SEVERITY).toBe('CRITICAL');
+      expect(result.environmentVariables.AWS_INSPECTOR_FINDING_COUNT).toBe('15');
+    });
+  });
+
+  describe('InspectorBind__ScanWriteAccess__ReturnsWritePolicies', () => {
+    const metadata = {
+      id: 'TP-binders-security-inspector-002',
+      level: 'unit' as const,
+      capability: 'Returns IAM policies with write actions for write access',
+      oracle: 'exact' as const,
+      determinism: 'deterministic' as const,
+      naming: { pattern: 'InspectorBind__Condition__Outcome', example: 'InspectorBind__ScanWriteAccess__ReturnsWritePolicies' },
+      invariants: [
+        'IAM policies include inspector2:StartScan',
+        'IAM policies include inspector2:UpdateFindings'
+      ],
+      fixtures: ['MockSourceComponent', 'MockTargetComponent', 'security:inspector-scanCapabilityData'],
+      inputs: {
+        shape: 'BindingContext with security:inspector-scan capability and write access',
+        notes: 'Tests write access IAM policy generation'
+      },
+      risks: [],
+      dependencies: [],
+      evidence: [],
+      compliance_refs: ['docs/platform-standards/platform-iam-auditing-standard.md'],
+      ai_generated: true,
+      human_reviewed_by: 'Platform Engineering'
+    };
+
+    test('InspectorBind__ScanWriteAccess__ReturnsWritePolicies', async () => {
+      const strategy = new InspectorBinderStrategy();
+      const source = createMockSourceComponent('lambda-security', 'test-source');
+      
+      const target = createMockTargetComponent('inspector', {
+        'security:inspector-scan': {
+          scanArn: 'arn:aws:inspector2:us-east-1:123456789012:scan/test-scan'
+        },
+      });
+
+      const context = createBindingContext({
+        source,
+        target,
+        capability: 'security:inspector-scan',
+        access: 'write'
+      });
+
+      const result = await executeUnifiedBinding(strategy, context);
+
+      assertEnhancedBindingResult(result);
+      
+      const writePolicy = result.iamPolicies.find(p => 
+        p.description.includes('write')
+      );
+      expect(writePolicy).toBeDefined();
+      expect(writePolicy?.statement.actions).toContain('inspector2:StartScan');
+    });
+  });
+
+  describe('InspectorBind__WithSecureAccess__AddsAutoRemediationPolicies', () => {
+    const metadata = {
+      id: 'TP-binders-security-inspector-003',
+      level: 'unit' as const,
+      capability: 'Adds auto-remediation IAM policies when requireSecureAccess option is provided',
+      oracle: 'exact' as const,
+      determinism: 'deterministic' as const,
+      naming: { pattern: 'InspectorBind__Condition__Outcome', example: 'InspectorBind__WithSecureAccess__AddsAutoRemediationPolicies' },
+      invariants: [
+        'IAM policies include lambda:InvokeFunction',
+        'IAM policies include Security Hub integration'
+      ],
+      fixtures: ['MockSourceComponent', 'MockTargetComponent', 'security:inspector-scanCapabilityData'],
+      inputs: {
+        shape: 'BindingContext with security:inspector-scan capability and requireSecureAccess option',
+        notes: 'Tests secure hooks support'
+      },
+      risks: [],
+      dependencies: [],
+      evidence: [],
+      compliance_refs: ['docs/platform-standards/platform-iam-auditing-standard.md'],
+      ai_generated: true,
+      human_reviewed_by: 'Platform Engineering'
+    };
+
+    test('InspectorBind__WithSecureAccess__AddsAutoRemediationPolicies', async () => {
+      const strategy = new InspectorBinderStrategy();
+      const source = createMockSourceComponent('lambda-security', 'test-source');
+      
+      const target = createMockTargetComponent('inspector', {
+        'security:inspector-scan': {
+          scanArn: 'arn:aws:inspector2:us-east-1:123456789012:scan/test-scan'
+        },
+      });
+
+      const context = createBindingContext({
+        source,
+        target,
+        capability: 'security:inspector-scan',
+        access: 'read',
+        options: {
+          requireSecureAccess: true
+        }
+      });
+
+      const result = await executeUnifiedBinding(strategy, context);
+
+      assertEnhancedBindingResult(result);
+      
+      const autoRemediationPolicy = result.iamPolicies.find(p => 
+        p.description.includes('Auto-remediation')
+      );
+      expect(autoRemediationPolicy).toBeDefined();
+      expect(autoRemediationPolicy?.statement.actions).toContain('lambda:InvokeFunction');
+      
+      const securityHubPolicy = result.iamPolicies.find(p => 
+        p.description.includes('Security Hub')
+      );
+      expect(securityHubPolicy).toBeDefined();
+    });
+  });
+
+  describe('InspectorBind__MissingScanArn__ThrowsError', () => {
+    const metadata = {
+      id: 'TP-binders-security-inspector-004',
+      level: 'unit' as const,
+      capability: 'Throws error when required scanArn property is missing',
+      oracle: 'exact' as const,
+      determinism: 'deterministic' as const,
+      naming: { pattern: 'InspectorBind__Condition__Outcome', example: 'InspectorBind__MissingScanArn__ThrowsError' },
+      invariants: [
+        'Error message includes "missing required scanArn"',
+        'Error is thrown before binding completes'
+      ],
+      fixtures: ['MockSourceComponent', 'MockTargetComponent'],
+      inputs: {
+        shape: 'BindingContext with security:inspector-scan capability but missing scanArn',
+        notes: 'Tests validation error handling'
+      },
+      risks: [],
+      dependencies: [],
+      evidence: [],
+      compliance_refs: ['docs/platform-standards/platform-iam-auditing-standard.md'],
+      ai_generated: true,
+      human_reviewed_by: 'Platform Engineering'
+    };
+
+    test('InspectorBind__MissingScanArn__ThrowsError', async () => {
+      const strategy = new InspectorBinderStrategy();
+      const source = createMockSourceComponent('lambda-security', 'test-source');
+      
+      const target = createMockTargetComponent('inspector', {
+        'security:inspector-scan': {
+          // Missing scanArn
+        },
+      });
+
+      const context = createBindingContext({
+        source,
+        target,
+        capability: 'security:inspector-scan',
+        access: 'read'
+      });
+
+      await expect(executeUnifiedBinding(strategy, context)).rejects.toThrow('missing required scanArn');
+    });
+  });
 });
 
