@@ -11,4 +11,5 @@ export { EksBinderStrategy } from './eks-binder-strategy.js';
 export { ElasticBeanstalkBinderStrategy } from './elastic-beanstalk-binder-strategy.js';
 export { LambdaBinderStrategy } from './lambda-binder-strategy.js';
 export { LightsailBinderStrategy } from './lightsail-binder-strategy.js';
-
+export { Ec2BinderStrategy } from './ec2-binder-strategy.js';
+export { AutoScalingBinderStrategy } from './autoscaling-binder-strategy.js';

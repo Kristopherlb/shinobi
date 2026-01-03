@@ -5,4 +5,4 @@
  */
 
 export { ApiGatewayBinderStrategy } from './api-gateway-binder-strategy.js';
-
+export { AppConfigBinderStrategy } from './appconfig-binder-strategy.js';
