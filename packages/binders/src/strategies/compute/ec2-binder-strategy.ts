@@ -68,6 +68,12 @@ export class Ec2BinderStrategy extends UnifiedBinderStrategyBase {
    *   - availabilityZone (optional): string - AZ
    *   - privateIpAddress (optional): string - Private IP address
    *   - publicIpAddress (optional): string - Public IP address
+   *   - volumeIds (optional): string[] - Attached EBS volume IDs
+   *   - networkInterfaceIds (optional): string[] - Network interface IDs
+   *   - iamInstanceProfileArn (optional): string - IAM instance profile ARN
+   *   - iamInstanceProfileName (optional): string - IAM instance profile name
+   *   - iamRoleName (optional): string - IAM role name
+   *   - userData (optional): string - User data (base64 encoded)
    * @returns Enhanced binding result (without compliance block)
    */
   private async bindToEc2(
@@ -99,9 +105,14 @@ export class Ec2BinderStrategy extends UnifiedBinderStrategyBase {
         'ec2:DescribeImages',
         'ec2:DescribeSnapshots',
         'ec2:DescribeVolumes',
+        'ec2:DescribeVolumeAttachments',
         'ec2:DescribeNetworkInterfaces',
+        'ec2:DescribeNetworkInterfaceAttribute',
         'ec2:DescribeSecurityGroups',
-        'ec2:DescribeTags'
+        'ec2:DescribeTags',
+        'ec2:DescribeIamInstanceProfileAssociations',
+        'iam:GetInstanceProfile',
+        'iam:GetRole'
       );
     }
 
@@ -118,14 +129,22 @@ export class Ec2BinderStrategy extends UnifiedBinderStrategyBase {
 
     if (access === 'admin') {
       // Admin access: Full control including termination
+      // TODO: Consider gating TerminateInstances behind an option for safety
       actions.push(
         'ec2:TerminateInstances',
         'ec2:AttachVolume',
         'ec2:DetachVolume',
+        'ec2:AttachNetworkInterface',
+        'ec2:DetachNetworkInterface',
         'ec2:ModifyInstanceAttribute',
         'ec2:ResetInstanceAttribute',
         'ec2:AssignPrivateIpAddresses',
-        'ec2:UnassignPrivateIpAddresses'
+        'ec2:UnassignPrivateIpAddresses',
+        'ec2:AssociateIamInstanceProfile',
+        'ec2:DisassociateIamInstanceProfile',
+        'ec2:ReplaceIamInstanceProfileAssociation',
+        'ssm:StartSession',
+        'ssm:SendCommand'
       );
     }
 
@@ -174,6 +193,34 @@ export class Ec2BinderStrategy extends UnifiedBinderStrategyBase {
     
     if (targetData.publicIpAddress) {
       environmentVariables['EC2_PUBLIC_IP_ADDRESS'] = targetData.publicIpAddress;
+    }
+    
+    // EBS volume attachments
+    if (targetData.volumeIds && Array.isArray(targetData.volumeIds)) {
+      environmentVariables['EC2_VOLUME_IDS'] = targetData.volumeIds.join(',');
+      environmentVariables['EC2_VOLUME_COUNT'] = targetData.volumeIds.length.toString();
+    }
+    
+    // Network interface attachments
+    if (targetData.networkInterfaceIds && Array.isArray(targetData.networkInterfaceIds)) {
+      environmentVariables['EC2_NETWORK_INTERFACE_IDS'] = targetData.networkInterfaceIds.join(',');
+      environmentVariables['EC2_NETWORK_INTERFACE_COUNT'] = targetData.networkInterfaceIds.length.toString();
+    }
+    
+    // Instance profile (IAM role)
+    if (targetData.iamInstanceProfileArn) {
+      environmentVariables['EC2_IAM_INSTANCE_PROFILE_ARN'] = targetData.iamInstanceProfileArn;
+    }
+    if (targetData.iamInstanceProfileName) {
+      environmentVariables['EC2_IAM_INSTANCE_PROFILE_NAME'] = targetData.iamInstanceProfileName;
+    }
+    if (targetData.iamRoleName) {
+      environmentVariables['EC2_IAM_ROLE_NAME'] = targetData.iamRoleName;
+    }
+    
+    // User data (base64 encoded, applications should decode)
+    if (targetData.userData) {
+      environmentVariables['EC2_USER_DATA'] = targetData.userData;
     }
 
     return {

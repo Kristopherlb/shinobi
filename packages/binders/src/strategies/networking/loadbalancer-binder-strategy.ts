@@ -67,6 +67,13 @@ export class LoadBalancerBinderStrategy extends UnifiedBinderStrategyBase {
    *   - state (optional): string - Load balancer state
    *   - targetGroupArns (optional): string[] - Target group ARNs
    *   - listenerArns (optional): string[] - Listener ARNs
+   *   - listenerRuleArns (optional): string[] - Listener rule ARNs
+   *   - certificateArns (optional): string[] - Certificate ARNs
+   *   - wafWebAclArn (optional): string - WAF WebACL ARN
+   *   - securityGroupIds (optional): string[] - Security group IDs (for VPC-linked LBs)
+   *   - subnetIds (optional): string[] - Subnet IDs (for VPC-linked LBs)
+   *   - accessLogS3Bucket (optional): string - S3 bucket for access logs
+   *   - accessLogS3Prefix (optional): string - S3 prefix for access logs
    * @returns Enhanced binding result (without compliance block)
    */
   private async bindToLoadBalancer(
@@ -100,7 +107,10 @@ export class LoadBalancerBinderStrategy extends UnifiedBinderStrategyBase {
         'elasticloadbalancing:DescribeListenerCertificates',
         'elasticloadbalancing:DescribeRules',
         'elasticloadbalancing:DescribeTags',
-        'elasticloadbalancing:DescribeAccountLimits'
+        'elasticloadbalancing:DescribeAccountLimits',
+        'elasticloadbalancing:DescribeSSLPolicies',
+        'wafv2:GetWebACL',
+        'wafv2:GetWebACLForResource'
       );
     }
 
@@ -122,6 +132,7 @@ export class LoadBalancerBinderStrategy extends UnifiedBinderStrategyBase {
 
     if (access === 'admin') {
       // Admin access: Full control including create/delete
+      // TODO: Consider gating CreateLoadBalancer/DeleteLoadBalancer behind an option for safety
       actions.push(
         'elasticloadbalancing:CreateLoadBalancer',
         'elasticloadbalancing:DeleteLoadBalancer',
@@ -134,7 +145,10 @@ export class LoadBalancerBinderStrategy extends UnifiedBinderStrategyBase {
         'elasticloadbalancing:AddListenerCertificates',
         'elasticloadbalancing:RemoveListenerCertificates',
         'elasticloadbalancing:SetSecurityGroups',
-        'elasticloadbalancing:SetSubnets'
+        'elasticloadbalancing:SetSubnets',
+        'wafv2:AssociateWebACL',
+        'wafv2:DisassociateWebACL',
+        'elasticloadbalancing:ModifyLoadBalancerAttributes'
       );
     }
 
@@ -203,6 +217,40 @@ export class LoadBalancerBinderStrategy extends UnifiedBinderStrategyBase {
     if (targetData.listenerArns && Array.isArray(targetData.listenerArns)) {
       environmentVariables['LOAD_BALANCER_LISTENER_ARNS'] = targetData.listenerArns.join(',');
       environmentVariables['LOAD_BALANCER_LISTENER_COUNT'] = targetData.listenerArns.length.toString();
+    }
+    
+    // Listener rule ARNs
+    if (targetData.listenerRuleArns && Array.isArray(targetData.listenerRuleArns)) {
+      environmentVariables['LOAD_BALANCER_LISTENER_RULE_ARNS'] = targetData.listenerRuleArns.join(',');
+      environmentVariables['LOAD_BALANCER_LISTENER_RULE_COUNT'] = targetData.listenerRuleArns.length.toString();
+    }
+    
+    // Certificate ARNs
+    if (targetData.certificateArns && Array.isArray(targetData.certificateArns)) {
+      environmentVariables['LOAD_BALANCER_CERTIFICATE_ARNS'] = targetData.certificateArns.join(',');
+    }
+    
+    // WAF WebACL ARN
+    if (targetData.wafWebAclArn) {
+      environmentVariables['LOAD_BALANCER_WAF_WEB_ACL_ARN'] = targetData.wafWebAclArn;
+    }
+    
+    // Security groups (for VPC-linked LBs)
+    if (targetData.securityGroupIds && Array.isArray(targetData.securityGroupIds)) {
+      environmentVariables['LOAD_BALANCER_SECURITY_GROUP_IDS'] = targetData.securityGroupIds.join(',');
+    }
+    
+    // Subnets (for VPC-linked LBs)
+    if (targetData.subnetIds && Array.isArray(targetData.subnetIds)) {
+      environmentVariables['LOAD_BALANCER_SUBNET_IDS'] = targetData.subnetIds.join(',');
+    }
+    
+    // Access log configuration
+    if (targetData.accessLogS3Bucket) {
+      environmentVariables['LOAD_BALANCER_ACCESS_LOG_S3_BUCKET'] = targetData.accessLogS3Bucket;
+    }
+    if (targetData.accessLogS3Prefix) {
+      environmentVariables['LOAD_BALANCER_ACCESS_LOG_S3_PREFIX'] = targetData.accessLogS3Prefix;
     }
 
     return {

@@ -69,6 +69,12 @@ export class AutoScalingBinderStrategy extends UnifiedBinderStrategyBase {
    *   - launchTemplateId (optional): string - Launch template ID
    *   - healthCheckType (optional): string - Health check type
    *   - healthCheckGracePeriod (optional): number - Health check grace period
+   *   - scalingPolicyArns (optional): string[] - Scaling policy ARNs
+   *   - scheduledActionNames (optional): string[] - Scheduled action names
+   *   - instanceRefreshId (optional): string - Instance refresh ID
+   *   - warmPoolSize (optional): number - Warm pool size
+   *   - warmPoolMinSize (optional): number - Warm pool minimum size
+   *   - scalingAlarmArns (optional): string[] - CloudWatch alarm ARNs for scaling
    * @returns Enhanced binding result (without compliance block)
    */
   private async bindToGroup(
@@ -103,7 +109,11 @@ export class AutoScalingBinderStrategy extends UnifiedBinderStrategyBase {
         'autoscaling:DescribeTags',
         'autoscaling:DescribeLifecycleHooks',
         'autoscaling:DescribePolicies',
-        'autoscaling:DescribeAdjustmentTypes'
+        'autoscaling:DescribeAdjustmentTypes',
+        'autoscaling:DescribeInstanceRefreshes',
+        'autoscaling:DescribeWarmPool',
+        'cloudwatch:DescribeAlarms',
+        'cloudwatch:GetMetricStatistics'
       );
     }
 
@@ -122,12 +132,17 @@ export class AutoScalingBinderStrategy extends UnifiedBinderStrategyBase {
         'autoscaling:PutLifecycleHook',
         'autoscaling:DeleteLifecycleHook',
         'autoscaling:RecordLifecycleActionHeartbeat',
-        'autoscaling:CompleteLifecycleAction'
+        'autoscaling:CompleteLifecycleAction',
+        'autoscaling:StartInstanceRefresh',
+        'autoscaling:CancelInstanceRefresh',
+        'autoscaling:PutWarmPool',
+        'autoscaling:DeleteWarmPool'
       );
     }
 
     if (access === 'admin') {
       // Admin access: Full control including create/delete
+      // TODO: Consider gating CreateAutoScalingGroup/DeleteAutoScalingGroup behind an option for safety
       actions.push(
         'autoscaling:CreateAutoScalingGroup',
         'autoscaling:DeleteAutoScalingGroup',
@@ -191,6 +206,34 @@ export class AutoScalingBinderStrategy extends UnifiedBinderStrategyBase {
     
     if (targetData.healthCheckGracePeriod !== undefined) {
       environmentVariables['AUTOSCALING_HEALTH_CHECK_GRACE_PERIOD'] = targetData.healthCheckGracePeriod.toString();
+    }
+    
+    // Scaling policies
+    if (targetData.scalingPolicyArns && Array.isArray(targetData.scalingPolicyArns)) {
+      environmentVariables['AUTOSCALING_SCALING_POLICY_ARNS'] = targetData.scalingPolicyArns.join(',');
+    }
+    
+    // Scheduled actions
+    if (targetData.scheduledActionNames && Array.isArray(targetData.scheduledActionNames)) {
+      environmentVariables['AUTOSCALING_SCHEDULED_ACTION_NAMES'] = targetData.scheduledActionNames.join(',');
+    }
+    
+    // Instance refresh
+    if (targetData.instanceRefreshId) {
+      environmentVariables['AUTOSCALING_INSTANCE_REFRESH_ID'] = targetData.instanceRefreshId;
+    }
+    
+    // Warm pool
+    if (targetData.warmPoolSize !== undefined) {
+      environmentVariables['AUTOSCALING_WARM_POOL_SIZE'] = targetData.warmPoolSize.toString();
+    }
+    if (targetData.warmPoolMinSize !== undefined) {
+      environmentVariables['AUTOSCALING_WARM_POOL_MIN_SIZE'] = targetData.warmPoolMinSize.toString();
+    }
+    
+    // CloudWatch alarm ARNs for scaling
+    if (targetData.scalingAlarmArns && Array.isArray(targetData.scalingAlarmArns)) {
+      environmentVariables['AUTOSCALING_SCALING_ALARM_ARNS'] = targetData.scalingAlarmArns.join(',');
     }
 
     return {

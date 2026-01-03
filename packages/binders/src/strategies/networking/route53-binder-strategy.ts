@@ -66,6 +66,13 @@ export class Route53BinderStrategy extends UnifiedBinderStrategyBase {
    *   - recordName (optional): string - DNS record name
    *   - recordValue (optional): string - DNS record value
    *   - ttl (optional): number - TTL in seconds
+   *   - healthCheckId (optional): string - Health check ID
+   *   - resolverRuleId (optional): string - Resolver rule ID
+   *   - aliasTarget (optional): { dnsName: string, hostedZoneId: string, evaluateTargetHealth?: boolean } - Alias record target
+   *   - failover (optional): string - Failover configuration ('PRIMARY' or 'SECONDARY')
+   *   - callerReference (optional): string - Caller reference
+   *   - isPrivateZone (optional): boolean - Whether the hosted zone is private
+   *   - resources.hostedZoneArn (optional): string - Hosted zone ARN
    * @returns Enhanced binding result (without compliance block)
    */
   private async bindToRoute53(
@@ -99,7 +106,15 @@ export class Route53BinderStrategy extends UnifiedBinderStrategyBase {
         'route53:ListTagsForResources',
         'route53:GetHostedZoneCount',
         'route53:ListHostedZonesByName',
-        'route53:TestDNSAnswer'
+        'route53:TestDNSAnswer',
+        'route53:GetHealthCheck',
+        'route53:ListHealthChecks',
+        'route53:GetHealthCheckStatus',
+        'route53:ListResourceRecordSets',
+        'route53:GetHostedZone',
+        'route53:ListResolverRules',
+        'route53:GetResolverRule',
+        'route53:ListResolverRuleAssociations'
       );
     }
 
@@ -107,12 +122,17 @@ export class Route53BinderStrategy extends UnifiedBinderStrategyBase {
       // Write access: Manage DNS records
       actions.push(
         'route53:ChangeResourceRecordSets',
-        'route53:ChangeTagsForResource'
+        'route53:ChangeTagsForResource',
+        'route53:CreateHealthCheck',
+        'route53:UpdateHealthCheck',
+        'route53:DeleteHealthCheck',
+        'route53:ChangeHealthCheckStatus'
       );
     }
 
     if (access === 'admin') {
       // Admin access: Full control including create/delete hosted zones
+      // TODO: Consider gating CreateHostedZone/DeleteHostedZone behind an option for safety
       actions.push(
         'route53:CreateHostedZone',
         'route53:DeleteHostedZone',
@@ -121,7 +141,11 @@ export class Route53BinderStrategy extends UnifiedBinderStrategyBase {
         'route53:DisassociateVPCFromHostedZone',
         'route53:CreateReusableDelegationSet',
         'route53:DeleteReusableDelegationSet',
-        'route53:ListReusableDelegationSets'
+        'route53:ListReusableDelegationSets',
+        'route53:CreateResolverRule',
+        'route53:DeleteResolverRule',
+        'route53:AssociateResolverRule',
+        'route53:DisassociateResolverRule'
       );
     }
 
@@ -165,6 +189,49 @@ export class Route53BinderStrategy extends UnifiedBinderStrategyBase {
     
     if (targetData.ttl !== undefined) {
       environmentVariables['ROUTE53_TTL'] = targetData.ttl.toString();
+    }
+    
+    // Health check ID
+    if (targetData.healthCheckId) {
+      environmentVariables['ROUTE53_HEALTH_CHECK_ID'] = targetData.healthCheckId;
+    }
+    
+    // Resolver rule ID
+    if (targetData.resolverRuleId) {
+      environmentVariables['ROUTE53_RESOLVER_RULE_ID'] = targetData.resolverRuleId;
+    }
+    
+    // Alias record target
+    if (targetData.aliasTarget) {
+      if (targetData.aliasTarget.dnsName) {
+        environmentVariables['ROUTE53_ALIAS_TARGET_DNS_NAME'] = targetData.aliasTarget.dnsName;
+      }
+      if (targetData.aliasTarget.hostedZoneId) {
+        environmentVariables['ROUTE53_ALIAS_TARGET_HOSTED_ZONE_ID'] = targetData.aliasTarget.hostedZoneId;
+      }
+      if (targetData.aliasTarget.evaluateTargetHealth !== undefined) {
+        environmentVariables['ROUTE53_ALIAS_EVALUATE_TARGET_HEALTH'] = targetData.aliasTarget.evaluateTargetHealth.toString();
+      }
+    }
+    
+    // Failover configuration
+    if (targetData.failover) {
+      environmentVariables['ROUTE53_FAILOVER'] = targetData.failover; // PRIMARY or SECONDARY
+    }
+    
+    // Caller reference
+    if (targetData.callerReference) {
+      environmentVariables['ROUTE53_CALLER_REFERENCE'] = targetData.callerReference;
+    }
+    
+    // Private zone flag
+    if (targetData.isPrivateZone !== undefined) {
+      environmentVariables['ROUTE53_IS_PRIVATE_ZONE'] = targetData.isPrivateZone.toString();
+    }
+    
+    // Hosted zone ARN (for reference)
+    if (targetData.resources.hostedZoneArn) {
+      environmentVariables['ROUTE53_HOSTED_ZONE_ARN'] = targetData.resources.hostedZoneArn;
     }
 
     return {

@@ -67,6 +67,9 @@ export class ParameterStoreBinderStrategy extends UnifiedBinderStrategyBase {
    *   - keyId (optional): string - KMS key ID for SecureString parameters
    *   - version (optional): number - Parameter version
    *   - tier (optional): string - Parameter tier ('Standard', 'Advanced', 'Intelligent-Tiering')
+   *   - lastModifiedDate (optional): string - Last modified date (ISO 8601 format)
+   *   - labels (optional): string[] - Parameter labels
+   *   - versionHistoryCount (optional): number - Number of versions in history
    * @returns Enhanced binding result (without compliance block)
    */
   private async bindToParameter(
@@ -95,19 +98,20 @@ export class ParameterStoreBinderStrategy extends UnifiedBinderStrategyBase {
     let actions: string[] = [];
     
     if (access === 'read') {
-      // Read access: Get parameters
+      // Read access: Get parameters (including hierarchical path support via GetParametersByPath)
       actions.push(
         'ssm:GetParameter',
         'ssm:GetParameters',
         'ssm:GetParametersByPath',
         'ssm:DescribeParameters',
         'ssm:GetParameterHistory',
-        'ssm:GetParameterHistory'
+        'ssm:ListTagsForResource'
       );
     }
 
     if (access === 'write') {
-      // Write access: Manage parameters
+      // Write access: Manage parameters (create/update, but DeleteParameter is included)
+      // TODO: Consider gating DeleteParameter behind a separate access level or option for safety
       actions.push(
         'ssm:GetParameter',
         'ssm:GetParameters',
@@ -116,9 +120,11 @@ export class ParameterStoreBinderStrategy extends UnifiedBinderStrategyBase {
         'ssm:PutParameter',
         'ssm:DeleteParameter',
         'ssm:DeleteParameters',
+        'ssm:GetParameterHistory',
         'ssm:LabelParameterVersion',
         'ssm:RemoveTagsFromResource',
-        'ssm:AddTagsToResource'
+        'ssm:AddTagsToResource',
+        'ssm:ListTagsForResource'
       );
     }
 
@@ -174,9 +180,25 @@ export class ParameterStoreBinderStrategy extends UnifiedBinderStrategyBase {
     if (targetData.tier) {
       environmentVariables['SSM_PARAMETER_TIER'] = targetData.tier;
     }
+    
+    // Last modified date
+    if (targetData.lastModifiedDate) {
+      environmentVariables['SSM_PARAMETER_LAST_MODIFIED_DATE'] = targetData.lastModifiedDate;
+    }
+    
+    // Parameter labels
+    if (targetData.labels && Array.isArray(targetData.labels)) {
+      environmentVariables['SSM_PARAMETER_LABELS'] = targetData.labels.join(',');
+    }
+    
+    // Parameter version history count
+    if (targetData.versionHistoryCount !== undefined) {
+      environmentVariables['SSM_PARAMETER_VERSION_HISTORY_COUNT'] = targetData.versionHistoryCount.toString();
+    }
 
     // Note: Parameter value is intentionally NOT included in environment variables for security reasons
     // Applications should use AWS SDK to retrieve parameter values at runtime
+    // Note: Hierarchical path support is available via GetParametersByPath action (already included)
 
     return {
       iamPolicies,
