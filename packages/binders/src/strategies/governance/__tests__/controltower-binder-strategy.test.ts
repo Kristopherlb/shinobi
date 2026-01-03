@@ -58,12 +58,12 @@ describe('ControlTowerBinderStrategy', () => {
         },
       });
 
-      const context = createBindingContext(
+      const context = createBindingContext({
         source,
         target,
-        'governance:control-tower',
-        'read'
-      );
+        capability: 'governance:control-tower',
+        access: 'read'
+      });
 
       const result = await executeUnifiedBinding(strategy, context);
 

@@ -58,12 +58,12 @@ describe('CloudWatchBinderStrategy', () => {
         },
       });
 
-      const context = createBindingContext(
+      const context = createBindingContext({
         source,
         target,
-        'monitoring:cloudwatch-dashboard',
-        'read'
-      );
+        capability: 'monitoring:cloudwatch-dashboard',
+        access: 'read'
+      });
 
       const result = await executeUnifiedBinding(strategy, context);
 

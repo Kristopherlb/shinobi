@@ -51,7 +51,7 @@ export class AccessAnalyzerBinderStrategy extends UnifiedBinderStrategyBase {
       throw new Error(`Target component does not provide capability '${capability}'`);
     }
 
-    return await this.bindToAccess-analyzer(context, targetCapabilityData);
+    return await this.bindToAccessAnalyzer(context, targetCapabilityData);
   }
 
   /**
@@ -61,7 +61,7 @@ export class AccessAnalyzerBinderStrategy extends UnifiedBinderStrategyBase {
    * @param targetData - Target capability data
    * @returns Enhanced binding result (without compliance block)
    */
-  private async bindToAccess-analyzer(
+  private async bindToAccessAnalyzer(
     context: BindingContext,
     targetData: any
   ): Promise<Omit<EnhancedBindingResult, 'compliance'>> {

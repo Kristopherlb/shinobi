@@ -58,12 +58,12 @@ describe('LoadBalancerBinderStrategy', () => {
         },
       });
 
-      const context = createBindingContext(
+      const context = createBindingContext({
         source,
         target,
-        'network:load-balancer',
-        'read'
-      );
+        capability: 'network:load-balancer',
+        access: 'read'
+      });
 
       const result = await executeUnifiedBinding(strategy, context);
 

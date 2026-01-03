@@ -51,7 +51,7 @@ export class FirewallManagerBinderStrategy extends UnifiedBinderStrategyBase {
       throw new Error(`Target component does not provide capability '${capability}'`);
     }
 
-    return await this.bindToFirewall-manager-policy(context, targetCapabilityData);
+    return await this.bindToFirewallManagerPolicy(context, targetCapabilityData);
   }
 
   /**
@@ -61,7 +61,7 @@ export class FirewallManagerBinderStrategy extends UnifiedBinderStrategyBase {
    * @param targetData - Target capability data
    * @returns Enhanced binding result (without compliance block)
    */
-  private async bindToFirewall-manager-policy(
+  private async bindToFirewallManagerPolicy(
     context: BindingContext,
     targetData: any
   ): Promise<Omit<EnhancedBindingResult, 'compliance'>> {

@@ -51,7 +51,7 @@ export class GuardDutyBinderStrategy extends UnifiedBinderStrategyBase {
       throw new Error(`Target component does not provide capability '${capability}'`);
     }
 
-    return await this.bindToGuardduty-detector(context, targetCapabilityData);
+    return await this.bindToGuardDutyDetector(context, targetCapabilityData);
   }
 
   /**
@@ -61,7 +61,7 @@ export class GuardDutyBinderStrategy extends UnifiedBinderStrategyBase {
    * @param targetData - Target capability data
    * @returns Enhanced binding result (without compliance block)
    */
-  private async bindToGuardduty-detector(
+  private async bindToGuardDutyDetector(
     context: BindingContext,
     targetData: any
   ): Promise<Omit<EnhancedBindingResult, 'compliance'>> {

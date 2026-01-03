@@ -58,12 +58,12 @@ describe('ServiceCatalogBinderStrategy', () => {
         },
       });
 
-      const context = createBindingContext(
+      const context = createBindingContext({
         source,
         target,
-        'catalog:portfolio',
-        'read'
-      );
+        capability: 'catalog:portfolio',
+        access: 'read'
+      });
 
       const result = await executeUnifiedBinding(strategy, context);
 

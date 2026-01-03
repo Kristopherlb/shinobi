@@ -14,7 +14,6 @@ import {
   assertEnhancedBindingResult,
   TEST_CONSTANTS
 } from './unified-strategy-test-helpers.js';
-import type { EnhancedBindingResult } from '@shinobi/core'platform-binding-trigger-spec.js';
 
 describe('KmsBinderStrategy', () => {
   describe('KmsBind__ValidKeyAccess__ReturnsEnhancedResultWithCompliance', () => {

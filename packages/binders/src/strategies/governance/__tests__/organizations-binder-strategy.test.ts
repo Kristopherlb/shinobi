@@ -58,12 +58,12 @@ describe('OrganizationsBinderStrategy', () => {
         },
       });
 
-      const context = createBindingContext(
+      const context = createBindingContext({
         source,
         target,
-        'org:scp',
-        'read'
-      );
+        capability: 'org:scp',
+        access: 'read'
+      });
 
       const result = await executeUnifiedBinding(strategy, context);
 

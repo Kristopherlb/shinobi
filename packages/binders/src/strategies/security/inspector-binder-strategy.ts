@@ -51,7 +51,7 @@ export class InspectorBinderStrategy extends UnifiedBinderStrategyBase {
       throw new Error(`Target component does not provide capability '${capability}'`);
     }
 
-    return await this.bindToInspector-scan(context, targetCapabilityData);
+    return await this.bindToInspectorScan(context, targetCapabilityData);
   }
 
   /**
@@ -61,7 +61,7 @@ export class InspectorBinderStrategy extends UnifiedBinderStrategyBase {
    * @param targetData - Target capability data
    * @returns Enhanced binding result (without compliance block)
    */
-  private async bindToInspector-scan(
+  private async bindToInspectorScan(
     context: BindingContext,
     targetData: any
   ): Promise<Omit<EnhancedBindingResult, 'compliance'>> {

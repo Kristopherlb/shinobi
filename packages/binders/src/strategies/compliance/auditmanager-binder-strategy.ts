@@ -51,7 +51,7 @@ export class AuditManagerBinderStrategy extends UnifiedBinderStrategyBase {
       throw new Error(`Target component does not provide capability '${capability}'`);
     }
 
-    return await this.bindToAudit-manager-framework(context, targetCapabilityData);
+    return await this.bindToAuditManagerFramework(context, targetCapabilityData);
   }
 
   /**
@@ -61,7 +61,7 @@ export class AuditManagerBinderStrategy extends UnifiedBinderStrategyBase {
    * @param targetData - Target capability data
    * @returns Enhanced binding result (without compliance block)
    */
-  private async bindToAudit-manager-framework(
+  private async bindToAuditManagerFramework(
     context: BindingContext,
     targetData: any
   ): Promise<Omit<EnhancedBindingResult, 'compliance'>> {

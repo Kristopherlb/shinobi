@@ -58,12 +58,12 @@ describe('AutoScalingBinderStrategy', () => {
         },
       });
 
-      const context = createBindingContext(
+      const context = createBindingContext({
         source,
         target,
-        'autoscaling:group',
-        'read'
-      );
+        capability: 'autoscaling:group',
+        access: 'read'
+      });
 
       const result = await executeUnifiedBinding(strategy, context);
 

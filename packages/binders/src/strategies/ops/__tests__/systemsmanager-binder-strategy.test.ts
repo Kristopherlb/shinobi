@@ -58,12 +58,12 @@ describe('SystemsManagerBinderStrategy', () => {
         },
       });
 
-      const context = createBindingContext(
+      const context = createBindingContext({
         source,
         target,
-        'ops:ssm-automation',
-        'read'
-      );
+        capability: 'ops:ssm-automation',
+        access: 'read'
+      });
 
       const result = await executeUnifiedBinding(strategy, context);
 

@@ -11,8 +11,8 @@
  */
 
 import { Construct } from 'constructs';
-import type { IComponent, ComponentSpec, ComponentContext, ComponentCapabilities } from '@shinobi/core'index.js';
-import type { BindingContext, EnhancedBindingResult, IUnifiedBinderStrategy, AccessLevel } from '@shinobi/core'platform-binding-trigger-spec.js';
+import type { IComponent, ComponentSpec, ComponentContext, ComponentCapabilities } from '@shinobi/core/index.js';
+import type { BindingContext, EnhancedBindingResult, IUnifiedBinderStrategy, AccessLevel } from '@shinobi/core/platform-binding-trigger-spec.js';
 
 /**
  * Deterministic test constants (fixed values for reproducibility)

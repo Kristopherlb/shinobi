@@ -58,12 +58,12 @@ describe('BudgetsBinderStrategy', () => {
         },
       });
 
-      const context = createBindingContext(
+      const context = createBindingContext({
         source,
         target,
-        'governance:budgets-budget',
-        'read'
-      );
+        capability: 'governance:budgets-budget',
+        access: 'read'
+      });
 
       const result = await executeUnifiedBinding(strategy, context);
 

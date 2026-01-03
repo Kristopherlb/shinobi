@@ -58,12 +58,12 @@ describe('GuardDutyBinderStrategy', () => {
         },
       });
 
-      const context = createBindingContext(
+      const context = createBindingContext({
         source,
         target,
-        'security:guardduty-detector',
-        'read'
-      );
+        capability: 'security:guardduty-detector',
+        access: 'read'
+      });
 
       const result = await executeUnifiedBinding(strategy, context);
 

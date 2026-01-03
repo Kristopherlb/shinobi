@@ -58,12 +58,12 @@ describe('ConfigBinderStrategy', () => {
         },
       });
 
-      const context = createBindingContext(
+      const context = createBindingContext({
         source,
         target,
-        'compliance:config-rule',
-        'read'
-      );
+        capability: 'compliance:config-rule',
+        access: 'read'
+      });
 
       const result = await executeUnifiedBinding(strategy, context);
 

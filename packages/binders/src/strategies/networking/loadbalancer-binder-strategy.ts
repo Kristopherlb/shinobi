@@ -51,7 +51,7 @@ export class LoadBalancerBinderStrategy extends UnifiedBinderStrategyBase {
       throw new Error(`Target component does not provide capability '${capability}'`);
     }
 
-    return await this.bindToLoad-balancer(context, targetCapabilityData);
+    return await this.bindToLoadBalancer(context, targetCapabilityData);
   }
 
   /**
@@ -61,7 +61,7 @@ export class LoadBalancerBinderStrategy extends UnifiedBinderStrategyBase {
    * @param targetData - Target capability data
    * @returns Enhanced binding result (without compliance block)
    */
-  private async bindToLoad-balancer(
+  private async bindToLoadBalancer(
     context: BindingContext,
     targetData: any
   ): Promise<Omit<EnhancedBindingResult, 'compliance'>> {

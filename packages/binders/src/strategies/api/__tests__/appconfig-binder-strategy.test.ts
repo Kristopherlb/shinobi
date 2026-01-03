@@ -58,12 +58,12 @@ describe('AppConfigBinderStrategy', () => {
         },
       });
 
-      const context = createBindingContext(
+      const context = createBindingContext({
         source,
         target,
-        'config:appconfig',
-        'read'
-      );
+        capability: 'config:appconfig',
+        access: 'read'
+      });
 
       const result = await executeUnifiedBinding(strategy, context);
 

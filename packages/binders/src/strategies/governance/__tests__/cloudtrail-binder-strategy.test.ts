@@ -58,12 +58,12 @@ describe('CloudTrailBinderStrategy', () => {
         },
       });
 
-      const context = createBindingContext(
+      const context = createBindingContext({
         source,
         target,
-        'audit:cloudtrail-trail',
-        'read'
-      );
+        capability: 'audit:cloudtrail-trail',
+        access: 'read'
+      });
 
       const result = await executeUnifiedBinding(strategy, context);
 

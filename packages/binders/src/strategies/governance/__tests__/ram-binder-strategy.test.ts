@@ -58,12 +58,12 @@ describe('RAMBinderStrategy', () => {
         },
       });
 
-      const context = createBindingContext(
+      const context = createBindingContext({
         source,
         target,
-        'governance:ram-resource-share',
-        'read'
-      );
+        capability: 'governance:ram-resource-share',
+        access: 'read'
+      });
 
       const result = await executeUnifiedBinding(strategy, context);
 

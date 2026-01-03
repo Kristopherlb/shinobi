@@ -51,7 +51,7 @@ export class CloudWatchBinderStrategy extends UnifiedBinderStrategyBase {
       throw new Error(`Target component does not provide capability '${capability}'`);
     }
 
-    return await this.bindToCloudwatch-dashboard(context, targetCapabilityData);
+    return await this.bindToCloudWatchDashboard(context, targetCapabilityData);
   }
 
   /**
@@ -61,7 +61,7 @@ export class CloudWatchBinderStrategy extends UnifiedBinderStrategyBase {
    * @param targetData - Target capability data
    * @returns Enhanced binding result (without compliance block)
    */
-  private async bindToCloudwatch-dashboard(
+  private async bindToCloudWatchDashboard(
     context: BindingContext,
     targetData: any
   ): Promise<Omit<EnhancedBindingResult, 'compliance'>> {

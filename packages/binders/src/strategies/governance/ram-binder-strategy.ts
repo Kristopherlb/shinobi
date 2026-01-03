@@ -51,7 +51,7 @@ export class RAMBinderStrategy extends UnifiedBinderStrategyBase {
       throw new Error(`Target component does not provide capability '${capability}'`);
     }
 
-    return await this.bindToRam-resource-share(context, targetCapabilityData);
+    return await this.bindToRamResourceShare(context, targetCapabilityData);
   }
 
   /**
@@ -61,7 +61,7 @@ export class RAMBinderStrategy extends UnifiedBinderStrategyBase {
    * @param targetData - Target capability data
    * @returns Enhanced binding result (without compliance block)
    */
-  private async bindToRam-resource-share(
+  private async bindToRamResourceShare(
     context: BindingContext,
     targetData: any
   ): Promise<Omit<EnhancedBindingResult, 'compliance'>> {

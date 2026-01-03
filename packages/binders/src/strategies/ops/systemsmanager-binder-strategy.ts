@@ -51,7 +51,7 @@ export class SystemsManagerBinderStrategy extends UnifiedBinderStrategyBase {
       throw new Error(`Target component does not provide capability '${capability}'`);
     }
 
-    return await this.bindToSsm-automation(context, targetCapabilityData);
+    return await this.bindToSsmAutomation(context, targetCapabilityData);
   }
 
   /**
@@ -61,7 +61,7 @@ export class SystemsManagerBinderStrategy extends UnifiedBinderStrategyBase {
    * @param targetData - Target capability data
    * @returns Enhanced binding result (without compliance block)
    */
-  private async bindToSsm-automation(
+  private async bindToSsmAutomation(
     context: BindingContext,
     targetData: any
   ): Promise<Omit<EnhancedBindingResult, 'compliance'>> {

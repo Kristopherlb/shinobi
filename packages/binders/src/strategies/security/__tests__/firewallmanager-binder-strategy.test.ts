@@ -58,12 +58,12 @@ describe('FirewallManagerBinderStrategy', () => {
         },
       });
 
-      const context = createBindingContext(
+      const context = createBindingContext({
         source,
         target,
-        'security:firewall-manager-policy',
-        'read'
-      );
+        capability: 'security:firewall-manager-policy',
+        access: 'read'
+      });
 
       const result = await executeUnifiedBinding(strategy, context);
 

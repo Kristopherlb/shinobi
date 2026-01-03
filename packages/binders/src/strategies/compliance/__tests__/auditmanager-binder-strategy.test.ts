@@ -58,12 +58,12 @@ describe('AuditManagerBinderStrategy', () => {
         },
       });
 
-      const context = createBindingContext(
+      const context = createBindingContext({
         source,
         target,
-        'compliance:audit-manager-framework',
-        'read'
-      );
+        capability: 'compliance:audit-manager-framework',
+        access: 'read'
+      });
 
       const result = await executeUnifiedBinding(strategy, context);
 

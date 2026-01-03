@@ -58,12 +58,12 @@ describe('Ec2BinderStrategy', () => {
         },
       });
 
-      const context = createBindingContext(
+      const context = createBindingContext({
         source,
         target,
-        'compute:ec2',
-        'read'
-      );
+        capability: 'compute:ec2',
+        access: 'read'
+      });
 
       const result = await executeUnifiedBinding(strategy, context);
 

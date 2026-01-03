@@ -58,12 +58,12 @@ describe('InspectorBinderStrategy', () => {
         },
       });
 
-      const context = createBindingContext(
+      const context = createBindingContext({
         source,
         target,
-        'security:inspector-scan',
-        'read'
-      );
+        capability: 'security:inspector-scan',
+        access: 'read'
+      });
 
       const result = await executeUnifiedBinding(strategy, context);
 

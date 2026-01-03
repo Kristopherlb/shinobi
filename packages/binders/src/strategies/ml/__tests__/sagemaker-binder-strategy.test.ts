@@ -14,7 +14,6 @@ import {
   assertEnhancedBindingResult,
   TEST_CONSTANTS
 } from '../../security/__tests__/unified-strategy-test-helpers.js';
-import type { EnhancedBindingResult } from '@shinobi/core'platform-binding-trigger-spec.js';
 
 describe('SageMakerBinderStrategy', () => {
   describe('SageMakerBind__NotebookReadAccess__ReturnsEnhancedResultWithCompliance', () => {

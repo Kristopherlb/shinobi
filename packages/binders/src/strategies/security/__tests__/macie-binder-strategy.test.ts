@@ -58,12 +58,12 @@ describe('MacieBinderStrategy', () => {
         },
       });
 
-      const context = createBindingContext(
+      const context = createBindingContext({
         source,
         target,
-        'security:macie-job',
-        'read'
-      );
+        capability: 'security:macie-job',
+        access: 'read'
+      });
 
       const result = await executeUnifiedBinding(strategy, context);
 

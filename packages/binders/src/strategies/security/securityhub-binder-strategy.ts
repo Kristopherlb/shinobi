@@ -51,7 +51,7 @@ export class SecurityHubBinderStrategy extends UnifiedBinderStrategyBase {
       throw new Error(`Target component does not provide capability '${capability}'`);
     }
 
-    return await this.bindToSecurityhub-hub(context, targetCapabilityData);
+    return await this.bindToSecurityHubHub(context, targetCapabilityData);
   }
 
   /**
@@ -61,7 +61,7 @@ export class SecurityHubBinderStrategy extends UnifiedBinderStrategyBase {
    * @param targetData - Target capability data
    * @returns Enhanced binding result (without compliance block)
    */
-  private async bindToSecurityhub-hub(
+  private async bindToSecurityHubHub(
     context: BindingContext,
     targetData: any
   ): Promise<Omit<EnhancedBindingResult, 'compliance'>> {

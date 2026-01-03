@@ -58,12 +58,12 @@ describe('Route53BinderStrategy', () => {
         },
       });
 
-      const context = createBindingContext(
+      const context = createBindingContext({
         source,
         target,
-        'dns:route53',
-        'read'
-      );
+        capability: 'dns:route53',
+        access: 'read'
+      });
 
       const result = await executeUnifiedBinding(strategy, context);
 

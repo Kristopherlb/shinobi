@@ -58,12 +58,12 @@ describe('SecurityHubBinderStrategy', () => {
         },
       });
 
-      const context = createBindingContext(
+      const context = createBindingContext({
         source,
         target,
-        'security:securityhub-hub',
-        'read'
-      );
+        capability: 'security:securityhub-hub',
+        access: 'read'
+      });
 
       const result = await executeUnifiedBinding(strategy, context);
 

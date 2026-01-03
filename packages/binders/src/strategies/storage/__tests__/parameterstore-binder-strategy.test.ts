@@ -58,12 +58,12 @@ describe('ParameterStoreBinderStrategy', () => {
         },
       });
 
-      const context = createBindingContext(
+      const context = createBindingContext({
         source,
         target,
-        'ssm:parameter',
-        'read'
-      );
+        capability: 'ssm:parameter',
+        access: 'read'
+      });
 
       const result = await executeUnifiedBinding(strategy, context);
 

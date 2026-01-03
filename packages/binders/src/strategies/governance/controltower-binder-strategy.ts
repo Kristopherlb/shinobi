@@ -51,7 +51,7 @@ export class ControlTowerBinderStrategy extends UnifiedBinderStrategyBase {
       throw new Error(`Target component does not provide capability '${capability}'`);
     }
 
-    return await this.bindToControl-tower(context, targetCapabilityData);
+    return await this.bindToControlTower(context, targetCapabilityData);
   }
 
   /**
@@ -61,7 +61,7 @@ export class ControlTowerBinderStrategy extends UnifiedBinderStrategyBase {
    * @param targetData - Target capability data
    * @returns Enhanced binding result (without compliance block)
    */
-  private async bindToControl-tower(
+  private async bindToControlTower(
     context: BindingContext,
     targetData: any
   ): Promise<Omit<EnhancedBindingResult, 'compliance'>> {

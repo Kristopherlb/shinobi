@@ -58,12 +58,12 @@ describe('BackupBinderStrategy', () => {
         },
       });
 
-      const context = createBindingContext(
+      const context = createBindingContext({
         source,
         target,
-        'governance:backup-vault',
-        'read'
-      );
+        capability: 'governance:backup-vault',
+        access: 'read'
+      });
 
       const result = await executeUnifiedBinding(strategy, context);
 

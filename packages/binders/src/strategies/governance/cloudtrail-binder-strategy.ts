@@ -51,7 +51,7 @@ export class CloudTrailBinderStrategy extends UnifiedBinderStrategyBase {
       throw new Error(`Target component does not provide capability '${capability}'`);
     }
 
-    return await this.bindToCloudtrail-trail(context, targetCapabilityData);
+    return await this.bindToCloudTrailTrail(context, targetCapabilityData);
   }
 
   /**
@@ -61,7 +61,7 @@ export class CloudTrailBinderStrategy extends UnifiedBinderStrategyBase {
    * @param targetData - Target capability data
    * @returns Enhanced binding result (without compliance block)
    */
-  private async bindToCloudtrail-trail(
+  private async bindToCloudTrailTrail(
     context: BindingContext,
     targetData: any
   ): Promise<Omit<EnhancedBindingResult, 'compliance'>> {

@@ -58,12 +58,12 @@ describe('AccessAnalyzerBinderStrategy', () => {
         },
       });
 
-      const context = createBindingContext(
+      const context = createBindingContext({
         source,
         target,
-        'security:access-analyzer',
-        'read'
-      );
+        capability: 'security:access-analyzer',
+        access: 'read'
+      });
 
       const result = await executeUnifiedBinding(strategy, context);
 
