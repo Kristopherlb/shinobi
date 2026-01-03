@@ -26,8 +26,8 @@ export class ServiceCatalogBinderStrategy extends UnifiedBinderStrategyBase {
         targetType: '*',
         capability: 'catalog:portfolio',
         supportedAccess: ['read', 'write', 'admin'],
-        description: 'TODO: Add description for catalog:portfolio binding',
-        examples: ['TODO: Add examples']
+        description: 'Bind to Service Catalog portfolios for standardized product provisioning',
+        examples: ['lambda-governance -> catalog:portfolio (read)', 'lambda-catalog -> catalog:portfolio (write)']
       }
     ];
   }
@@ -58,45 +58,230 @@ export class ServiceCatalogBinderStrategy extends UnifiedBinderStrategyBase {
    * Bind to catalog:portfolio
    * 
    * @param context - Binding context
-   * @param targetData - Target capability data
+   * @param targetData - Expected structure:
+   *   - portfolioArn (required): string - Portfolio ARN
+   *   - portfolioId (optional): string - Portfolio ID
+   *   - portfolioName (optional): string - Portfolio name
+   *   - productId (optional): string - Product ID
+   *   - provisioningArtifactId (optional): string - Provisioning artifact ID
+   *   - orgId (optional): string - Organization ID (for OU-level portfolios)
+   *   - constraintId (optional): string - Constraint ID (launch, notification, template, stackset)
+   *   - tagOptionId (optional): string - Tag option ID
+   *   - launchRoleArn (optional): string - Launch role ARN
+   *   - principalArn (optional): string - Principal ARN (for principal association)
+   *   - acceptedPortfolioStatus (optional): string - Accepted portfolio status
    * @returns Enhanced binding result (without compliance block)
    */
   private async bindToPortfolio(
     context: BindingContext,
     targetData: any
   ): Promise<Omit<EnhancedBindingResult, 'compliance'>> {
-    const { source, directive } = context;
-    const { access } = directive;
+    const { directive } = context;
+    const { access, options } = directive;
+
+    if (!targetData?.portfolioArn) {
+      throw new Error('Target component missing required portfolioArn property for catalog:portfolio binding');
+    }
 
     const iamPolicies: IamPolicy[] = [];
-    const environmentVariables: Record<string, string> = {};
-    const securityGroupRules: any[] = [];
+    const environmentVariables: Record<string, string> = {
+      AWS_SERVICE_CATALOG_PORTFOLIO_ARN: targetData.portfolioArn
+    };
 
-    // TODO: Implement IAM policy generation based on access level
-    // Example:
-    // if (access === 'read' || access === 'readwrite') {
-    //   iamPolicies.push({
-    //     statements: [
-    //       new PolicyStatement({
-    //         effect: Effect.ALLOW,
-    //         actions: ['catalog:portfolio:Get*', 'catalog:portfolio:Describe*'],
-    //         resources: [targetData.resources?.arn || '*'],
-    //       }),
-    //     ],
-    //     complianceRequirement: 'TODO: Add compliance requirement string',
-    //   });
-    // }
+    if (targetData.portfolioId) {
+      environmentVariables.AWS_SERVICE_CATALOG_PORTFOLIO_ID = targetData.portfolioId;
+    }
 
-    // TODO: Add environment variables
-    // Example:
-    // if (targetData.resources?.arn) {
-    //   environmentVariables['<%= mainCapability.toUpperCase().replace(/:/g, '_') %>_ARN'] = targetData.resources.arn;
-    // }
+    if (targetData.portfolioName) {
+      environmentVariables.AWS_SERVICE_CATALOG_PORTFOLIO_NAME = targetData.portfolioName;
+    }
+
+    if (targetData.productId) {
+      environmentVariables.AWS_SERVICE_CATALOG_PRODUCT_ID = targetData.productId;
+    }
+
+    if (targetData.provisioningArtifactId) {
+      environmentVariables.AWS_SERVICE_CATALOG_PROVISIONING_ARTIFACT_ID = targetData.provisioningArtifactId;
+    }
+
+    if (targetData.orgId) {
+      environmentVariables.AWS_ORGANIZATIONS_ID = targetData.orgId;
+    }
+
+    if (targetData.constraintId) {
+      environmentVariables.AWS_SERVICE_CATALOG_CONSTRAINT_ID = targetData.constraintId;
+    }
+
+    if (targetData.tagOptionId) {
+      environmentVariables.AWS_SERVICE_CATALOG_TAG_OPTION_ID = targetData.tagOptionId;
+    }
+
+    if (targetData.launchRoleArn) {
+      environmentVariables.AWS_SERVICE_CATALOG_LAUNCH_ROLE_ARN = targetData.launchRoleArn;
+    }
+
+    if (targetData.principalArn) {
+      environmentVariables.AWS_SERVICE_CATALOG_PRINCIPAL_ARN = targetData.principalArn;
+    }
+
+    if (targetData.acceptedPortfolioStatus) {
+      environmentVariables.AWS_SERVICE_CATALOG_ACCEPTED_PORTFOLIO_STATUS = targetData.acceptedPortfolioStatus;
+    }
+
+    // IAM policies for Service Catalog portfolio operations
+    if (access === 'read' || access === 'readwrite') {
+      iamPolicies.push({
+        statement: new PolicyStatement({
+          effect: Effect.ALLOW,
+          actions: [
+            'servicecatalog:DescribePortfolio',
+            'servicecatalog:ListPortfolios',
+            'servicecatalog:ListPortfolioAccess',
+            'servicecatalog:DescribeProduct',
+            'servicecatalog:ListProducts',
+            'servicecatalog:DescribeProvisioningArtifact',
+            'servicecatalog:ListProvisioningArtifacts'
+          ],
+          resources: [targetData.portfolioArn]
+        }),
+        description: 'Service Catalog portfolio read access',
+        complianceRequirement: 'Least privilege IAM access for Service Catalog read operations'
+      });
+    }
+
+    if (access === 'write' || access === 'readwrite' || access === 'admin') {
+      iamPolicies.push({
+        statement: new PolicyStatement({
+          effect: Effect.ALLOW,
+          actions: [
+            'servicecatalog:CreatePortfolio',
+            'servicecatalog:UpdatePortfolio',
+            'servicecatalog:DeletePortfolio',
+            'servicecatalog:AssociatePrincipalWithPortfolio',
+            'servicecatalog:DisassociatePrincipalFromPortfolio',
+            'servicecatalog:AssociateProductWithPortfolio',
+            'servicecatalog:DisassociateProductFromPortfolio',
+            'servicecatalog:CreateProduct',
+            'servicecatalog:UpdateProduct',
+            'servicecatalog:DeleteProduct',
+            'servicecatalog:CreateProvisioningArtifact',
+            'servicecatalog:UpdateProvisioningArtifact',
+            'servicecatalog:DeleteProvisioningArtifact'
+          ],
+          resources: [targetData.portfolioArn]
+        }),
+        description: 'Service Catalog portfolio write access',
+        complianceRequirement: 'Least privilege IAM access for Service Catalog write operations'
+      });
+
+      // Constraint and tag option support
+      if (targetData.constraintId || options?.requireSecureAccess) {
+        iamPolicies.push({
+          statement: new PolicyStatement({
+            effect: Effect.ALLOW,
+            actions: [
+              'servicecatalog:CreateConstraint',
+              'servicecatalog:UpdateConstraint',
+              'servicecatalog:DeleteConstraint',
+              'servicecatalog:DescribeConstraint',
+              'servicecatalog:ListConstraintsForPortfolio'
+            ],
+            resources: [targetData.portfolioArn]
+          }),
+          description: 'Service Catalog constraint management',
+          complianceRequirement: 'Least privilege IAM access for constraint operations'
+        });
+      }
+
+      if (targetData.tagOptionId || options?.requireSecureAccess) {
+        iamPolicies.push({
+          statement: new PolicyStatement({
+            effect: Effect.ALLOW,
+            actions: [
+              'servicecatalog:CreateTagOption',
+              'servicecatalog:UpdateTagOption',
+              'servicecatalog:DeleteTagOption',
+              'servicecatalog:AssociateTagOptionWithResource',
+              'servicecatalog:DisassociateTagOptionFromResource',
+              'servicecatalog:ListTagOptions'
+            ],
+            resources: ['*']
+          }),
+          description: 'Service Catalog tag option management',
+          complianceRequirement: 'Least privilege IAM access for tag option operations'
+        });
+      }
+
+      // Launch role and principal association
+      if (targetData.launchRoleArn || targetData.principalArn) {
+        iamPolicies.push({
+          statement: new PolicyStatement({
+            effect: Effect.ALLOW,
+            actions: [
+              'servicecatalog:AssociatePrincipalWithPortfolio',
+              'servicecatalog:DisassociatePrincipalFromPortfolio',
+              'servicecatalog:ListPrincipalsForPortfolio',
+              'iam:PassRole'
+            ],
+            resources: [targetData.launchRoleArn || targetData.principalArn || '*']
+          }),
+          description: 'Service Catalog launch role and principal association',
+          complianceRequirement: 'Least privilege IAM access for principal operations'
+        });
+      }
+    }
+
+    // Accepted portfolio status
+    if (targetData.acceptedPortfolioStatus && (access === 'read' || access === 'readwrite')) {
+      iamPolicies.push({
+        statement: new PolicyStatement({
+          effect: Effect.ALLOW,
+          actions: [
+            'servicecatalog:ListAcceptedPortfolioShares',
+            'servicecatalog:AcceptPortfolioShare',
+            'servicecatalog:RejectPortfolioShare'
+          ],
+          resources: [targetData.portfolioArn]
+        }),
+        description: 'Service Catalog accepted portfolio status access',
+        complianceRequirement: 'Least privilege IAM access for portfolio share operations'
+      });
+    }
+
+    // Admin access (full Service Catalog permissions)
+    if (access === 'admin' && options?.requireFullAdminAccess) {
+      iamPolicies.push({
+        statement: new PolicyStatement({
+          effect: Effect.ALLOW,
+          actions: ['servicecatalog:*'],
+          resources: ['*']
+        }),
+        description: 'Service Catalog admin access',
+        complianceRequirement: 'Full admin access to Service Catalog (requires explicit requireFullAdminAccess option)'
+      });
+    }
+
+    // Organizations integration for OU-level portfolios
+    if (options?.requireSecureAccess && targetData.orgId) {
+      iamPolicies.push({
+        statement: new PolicyStatement({
+          effect: Effect.ALLOW,
+          actions: [
+            'organizations:DescribeOrganization',
+            'organizations:ListAccounts',
+            'organizations:ListOrganizationalUnitsForParent'
+          ],
+          resources: ['*']
+        }),
+        description: 'Organizations access for OU-level portfolios',
+        complianceRequirement: 'Least privilege IAM access for Organizations integration'
+      });
+    }
 
     return {
       iamPolicies,
       environmentVariables,
-      securityGroupRules,
+      securityGroupRules: []
     };
   }
 }

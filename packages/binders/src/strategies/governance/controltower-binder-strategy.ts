@@ -26,8 +26,8 @@ export class ControlTowerBinderStrategy extends UnifiedBinderStrategyBase {
         targetType: '*',
         capability: 'governance:control-tower',
         supportedAccess: ['read', 'write', 'admin'],
-        description: 'TODO: Add description for governance:control-tower binding',
-        examples: ['TODO: Add examples']
+        description: 'Bind to AWS Control Tower for landing zone management and guardrails',
+        examples: ['lambda-governance -> governance:control-tower (read)', 'lambda-platform -> governance:control-tower (admin)']
       }
     ];
   }
@@ -58,45 +58,196 @@ export class ControlTowerBinderStrategy extends UnifiedBinderStrategyBase {
    * Bind to governance:control-tower
    * 
    * @param context - Binding context
-   * @param targetData - Target capability data
+   * @param targetData - Expected structure:
+   *   - landingZoneArn (required): string - Landing zone ARN
+   *   - landingZoneId (optional): string - Landing zone ID
+   *   - baselineVersion (optional): string - Baseline version
+   *   - controlStatuses (optional): object - Control statuses (JSON)
+   *   - orgId (optional): string - Organization ID
+   *   - guardrailStatus (optional): string - Guardrail status (ENABLED, DISABLED, PENDING)
+   *   - controlOperationId (optional): string - Control operation ID
+   *   - delegatedAdminAccountId (optional): string - Delegated admin account ID
+   *   - enabledControls (optional): string[] - List of enabled control ARNs
    * @returns Enhanced binding result (without compliance block)
    */
   private async bindToControlTower(
     context: BindingContext,
     targetData: any
   ): Promise<Omit<EnhancedBindingResult, 'compliance'>> {
-    const { source, directive } = context;
-    const { access } = directive;
+    const { directive } = context;
+    const { access, options } = directive;
+
+    if (!targetData?.landingZoneArn) {
+      throw new Error('Target component missing required landingZoneArn property for governance:control-tower binding');
+    }
 
     const iamPolicies: IamPolicy[] = [];
-    const environmentVariables: Record<string, string> = {};
-    const securityGroupRules: any[] = [];
+    const environmentVariables: Record<string, string> = {
+      AWS_CONTROL_TOWER_LANDING_ZONE_ARN: targetData.landingZoneArn
+    };
 
-    // TODO: Implement IAM policy generation based on access level
-    // Example:
-    // if (access === 'read' || access === 'readwrite') {
-    //   iamPolicies.push({
-    //     statements: [
-    //       new PolicyStatement({
-    //         effect: Effect.ALLOW,
-    //         actions: ['governance:control-tower:Get*', 'governance:control-tower:Describe*'],
-    //         resources: [targetData.resources?.arn || '*'],
-    //       }),
-    //     ],
-    //     complianceRequirement: 'TODO: Add compliance requirement string',
-    //   });
-    // }
+    if (targetData.landingZoneId) {
+      environmentVariables.AWS_CONTROL_TOWER_LANDING_ZONE_ID = targetData.landingZoneId;
+    }
 
-    // TODO: Add environment variables
-    // Example:
-    // if (targetData.resources?.arn) {
-    //   environmentVariables['<%= mainCapability.toUpperCase().replace(/:/g, '_') %>_ARN'] = targetData.resources.arn;
-    // }
+    if (targetData.baselineVersion) {
+      environmentVariables.AWS_CONTROL_TOWER_BASELINE_VERSION = targetData.baselineVersion;
+    }
+
+    if (targetData.controlStatuses) {
+      environmentVariables.AWS_CONTROL_TOWER_CONTROL_STATUSES = JSON.stringify(targetData.controlStatuses);
+    }
+
+    if (targetData.orgId) {
+      environmentVariables.AWS_ORGANIZATIONS_ID = targetData.orgId;
+    }
+
+    if (targetData.guardrailStatus) {
+      environmentVariables.AWS_CONTROL_TOWER_GUARDRAIL_STATUS = targetData.guardrailStatus;
+    }
+
+    if (targetData.controlOperationId) {
+      environmentVariables.AWS_CONTROL_TOWER_CONTROL_OPERATION_ID = targetData.controlOperationId;
+    }
+
+    if (targetData.delegatedAdminAccountId) {
+      environmentVariables.AWS_CONTROL_TOWER_DELEGATED_ADMIN_ACCOUNT_ID = targetData.delegatedAdminAccountId;
+    }
+
+    if (targetData.enabledControls && Array.isArray(targetData.enabledControls)) {
+      environmentVariables.AWS_CONTROL_TOWER_ENABLED_CONTROLS = targetData.enabledControls.join(',');
+    }
+
+    // IAM policies for Control Tower operations
+    if (access === 'read' || access === 'readwrite') {
+      iamPolicies.push({
+        statement: new PolicyStatement({
+          effect: Effect.ALLOW,
+          actions: [
+            'controltower:GetLandingZone',
+            'controltower:ListLandingZones',
+            'controltower:GetControlOperation',
+            'controltower:ListEnabledControls',
+            'controltower:GetEnabledControl',
+            'controltower:ListBaselines'
+          ],
+          resources: [targetData.landingZoneArn]
+        }),
+        description: 'Control Tower read access',
+        complianceRequirement: 'Least privilege IAM access for Control Tower read operations'
+      });
+    }
+
+    if (access === 'write' || access === 'readwrite' || access === 'admin') {
+      iamPolicies.push({
+        statement: new PolicyStatement({
+          effect: Effect.ALLOW,
+          actions: [
+            'controltower:CreateLandingZone',
+            'controltower:UpdateLandingZone',
+            'controltower:DeleteLandingZone',
+            'controltower:EnableControl',
+            'controltower:DisableControl',
+            'controltower:CreateAccount',
+            'controltower:UpdateAccount',
+            'controltower:DeleteAccount'
+          ],
+          resources: [targetData.landingZoneArn]
+        }),
+        description: 'Control Tower write access',
+        complianceRequirement: 'Least privilege IAM access for Control Tower write operations'
+      });
+    }
+
+    // Admin access (full Control Tower permissions)
+    if (access === 'admin' && options?.requireFullAdminAccess) {
+      iamPolicies.push({
+        statement: new PolicyStatement({
+          effect: Effect.ALLOW,
+          actions: ['controltower:*'],
+          resources: ['*']
+        }),
+        description: 'Control Tower admin access',
+        complianceRequirement: 'Full admin access to Control Tower (requires explicit requireFullAdminAccess option)'
+      });
+    }
+
+    // Guardrail status and control operation exposure
+    if (targetData.guardrailStatus || targetData.controlOperationId) {
+      if (access === 'read' || access === 'readwrite') {
+        iamPolicies.push({
+          statement: new PolicyStatement({
+            effect: Effect.ALLOW,
+            actions: [
+              'controltower:GetGuardrail',
+              'controltower:ListGuardrails',
+              'controltower:GetControlOperation',
+              'controltower:ListControlOperations'
+            ],
+            resources: [targetData.landingZoneArn]
+          }),
+          description: 'Control Tower guardrail and control operation read access',
+          complianceRequirement: 'Least privilege IAM access for guardrail and control operation read operations'
+        });
+      }
+    }
+
+    // Delegated admin and baseline version enforcement
+    if (targetData.delegatedAdminAccountId || options?.requireSecureAccess) {
+      iamPolicies.push({
+        statement: new PolicyStatement({
+          effect: Effect.ALLOW,
+          actions: [
+            'controltower:EnableControl',
+            'controltower:DisableControl',
+            'controltower:GetEnabledControl'
+          ],
+          resources: [targetData.landingZoneArn]
+        }),
+        description: 'Control Tower delegated admin and baseline enforcement',
+        complianceRequirement: 'Least privilege IAM access for delegated admin operations'
+      });
+    }
+
+    // Enabled controls list
+    if (targetData.enabledControls && (access === 'read' || access === 'readwrite')) {
+      iamPolicies.push({
+        statement: new PolicyStatement({
+          effect: Effect.ALLOW,
+          actions: [
+            'controltower:ListEnabledControls',
+            'controltower:GetEnabledControl'
+          ],
+          resources: [targetData.landingZoneArn]
+        }),
+        description: 'Control Tower enabled controls list access',
+        complianceRequirement: 'Least privilege IAM access for enabled controls read operations'
+      });
+    }
+
+    // Organizations integration for account factory
+    if (options?.requireSecureAccess) {
+      iamPolicies.push({
+        statement: new PolicyStatement({
+          effect: Effect.ALLOW,
+          actions: [
+            'organizations:DescribeOrganization',
+            'organizations:ListAccounts',
+            'organizations:ListOrganizationalUnitsForParent',
+            'organizations:CreateAccount',
+            'organizations:InviteAccountToOrganization'
+          ],
+          resources: ['*']
+        }),
+        description: 'Organizations access for Control Tower account factory',
+        complianceRequirement: 'Least privilege IAM access for Organizations integration'
+      });
+    }
 
     return {
       iamPolicies,
       environmentVariables,
-      securityGroupRules,
+      securityGroupRules: []
     };
   }
 }

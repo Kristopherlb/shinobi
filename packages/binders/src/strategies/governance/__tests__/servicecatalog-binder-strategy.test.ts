@@ -46,15 +46,15 @@ describe('ServiceCatalogBinderStrategy', () => {
 
     test('ServiceCatalogBind__ValidAccess__ReturnsEnhancedResult', async () => {
       const strategy = new ServiceCatalogBinderStrategy();
-      const source = createMockSourceComponent('lambda-api', 'test-source');
+      const source = createMockSourceComponent('lambda-governance', 'test-source');
       
-      // TODO: Update with actual target component type and capability data
-      const target = createMockTargetComponent('test-target', {
+      const target = createMockTargetComponent('servicecatalog', {
         'catalog:portfolio': {
-          type: 'catalog:portfolio',
-          resources: {
-            arn: 'arn:aws:service:us-east-1:123456789012:resource/test',
-          },
+          portfolioArn: 'arn:aws:catalog:us-east-1:123456789012:portfolio/port-1234567890',
+          portfolioId: 'port-1234567890',
+          portfolioName: 'test-portfolio',
+          productId: 'prod-1234567890',
+          orgId: 'o-1234567890'
         },
       });
 
@@ -67,17 +67,15 @@ describe('ServiceCatalogBinderStrategy', () => {
 
       const result = await executeUnifiedBinding(strategy, context);
 
-      assertEnhancedBindingResult(result, {
-        shouldHaveIamPolicies: true,
-        shouldHaveEnvironmentVariables: true,
-        shouldHaveCompliance: true,
-      });
+      assertEnhancedBindingResult(result);
 
-      // TODO: Add specific assertions for this binder strategy
-      expect(result.iamPolicies).toBeDefined();
-      expect(result.environmentVariables).toBeDefined();
-      expect(result.compliance).toBeDefined();
-      expect(result.compliance.status).toBeDefined();
+      expect(result.environmentVariables.AWS_SERVICE_CATALOG_PORTFOLIO_ARN).toBe('arn:aws:catalog:us-east-1:123456789012:portfolio/port-1234567890');
+      expect(result.environmentVariables.AWS_SERVICE_CATALOG_PORTFOLIO_ID).toBe('port-1234567890');
+      expect(result.environmentVariables.AWS_SERVICE_CATALOG_PORTFOLIO_NAME).toBe('test-portfolio');
+      expect(result.environmentVariables.AWS_SERVICE_CATALOG_PRODUCT_ID).toBe('prod-1234567890');
+      expect(result.environmentVariables.AWS_ORGANIZATIONS_ID).toBe('o-1234567890');
+      expect(result.iamPolicies.length).toBeGreaterThan(0);
+      expect(['compliant', 'non-compliant', 'partially-compliant']).toContain(result.compliance.status);
     });
   });
 

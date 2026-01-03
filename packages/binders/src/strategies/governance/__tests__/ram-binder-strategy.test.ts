@@ -46,15 +46,15 @@ describe('RAMBinderStrategy', () => {
 
     test('RAMBind__ValidAccess__ReturnsEnhancedResult', async () => {
       const strategy = new RAMBinderStrategy();
-      const source = createMockSourceComponent('lambda-api', 'test-source');
+      const source = createMockSourceComponent('lambda-networking', 'test-source');
       
-      // TODO: Update with actual target component type and capability data
-      const target = createMockTargetComponent('test-target', {
+      const target = createMockTargetComponent('ram', {
         'governance:ram-resource-share': {
-          type: 'governance:ram-resource-share',
-          resources: {
-            arn: 'arn:aws:service:us-east-1:123456789012:resource/test',
-          },
+          resourceShareArn: 'arn:aws:ram:us-east-1:123456789012:resource-share/test-share',
+          resourceShareName: 'test-share',
+          principalId: '123456789012',
+          resourceArn: 'arn:aws:ec2:us-east-1:123456789012:subnet/subnet-12345678',
+          permissionType: 'read-only'
         },
       });
 
@@ -67,17 +67,15 @@ describe('RAMBinderStrategy', () => {
 
       const result = await executeUnifiedBinding(strategy, context);
 
-      assertEnhancedBindingResult(result, {
-        shouldHaveIamPolicies: true,
-        shouldHaveEnvironmentVariables: true,
-        shouldHaveCompliance: true,
-      });
+      assertEnhancedBindingResult(result);
 
-      // TODO: Add specific assertions for this binder strategy
-      expect(result.iamPolicies).toBeDefined();
-      expect(result.environmentVariables).toBeDefined();
-      expect(result.compliance).toBeDefined();
-      expect(result.compliance.status).toBeDefined();
+      expect(result.environmentVariables.AWS_RAM_RESOURCE_SHARE_ARN).toBe('arn:aws:ram:us-east-1:123456789012:resource-share/test-share');
+      expect(result.environmentVariables.AWS_RAM_RESOURCE_SHARE_NAME).toBe('test-share');
+      expect(result.environmentVariables.AWS_RAM_PRINCIPAL_ID).toBe('123456789012');
+      expect(result.environmentVariables.AWS_RAM_RESOURCE_ARN).toBe('arn:aws:ec2:us-east-1:123456789012:subnet/subnet-12345678');
+      expect(result.environmentVariables.AWS_RAM_PERMISSION_TYPE).toBe('read-only');
+      expect(result.iamPolicies.length).toBeGreaterThan(0);
+      expect(['compliant', 'non-compliant', 'partially-compliant']).toContain(result.compliance.status);
     });
   });
 

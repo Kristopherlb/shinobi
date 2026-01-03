@@ -46,15 +46,14 @@ describe('ControlTowerBinderStrategy', () => {
 
     test('ControlTowerBind__ValidAccess__ReturnsEnhancedResult', async () => {
       const strategy = new ControlTowerBinderStrategy();
-      const source = createMockSourceComponent('lambda-api', 'test-source');
+      const source = createMockSourceComponent('lambda-governance', 'test-source');
       
-      // TODO: Update with actual target component type and capability data
-      const target = createMockTargetComponent('test-target', {
+      const target = createMockTargetComponent('controltower', {
         'governance:control-tower': {
-          type: 'governance:control-tower',
-          resources: {
-            arn: 'arn:aws:service:us-east-1:123456789012:resource/test',
-          },
+          landingZoneArn: 'arn:aws:controltower:us-east-1::landingzone/test-landing-zone',
+          landingZoneId: 'test-landing-zone-id',
+          baselineVersion: '3.0',
+          orgId: 'o-1234567890'
         },
       });
 
@@ -67,17 +66,14 @@ describe('ControlTowerBinderStrategy', () => {
 
       const result = await executeUnifiedBinding(strategy, context);
 
-      assertEnhancedBindingResult(result, {
-        shouldHaveIamPolicies: true,
-        shouldHaveEnvironmentVariables: true,
-        shouldHaveCompliance: true,
-      });
+      assertEnhancedBindingResult(result);
 
-      // TODO: Add specific assertions for this binder strategy
-      expect(result.iamPolicies).toBeDefined();
-      expect(result.environmentVariables).toBeDefined();
-      expect(result.compliance).toBeDefined();
-      expect(result.compliance.status).toBeDefined();
+      expect(result.environmentVariables.AWS_CONTROL_TOWER_LANDING_ZONE_ARN).toBe('arn:aws:controltower:us-east-1::landingzone/test-landing-zone');
+      expect(result.environmentVariables.AWS_CONTROL_TOWER_LANDING_ZONE_ID).toBe('test-landing-zone-id');
+      expect(result.environmentVariables.AWS_CONTROL_TOWER_BASELINE_VERSION).toBe('3.0');
+      expect(result.environmentVariables.AWS_ORGANIZATIONS_ID).toBe('o-1234567890');
+      expect(result.iamPolicies.length).toBeGreaterThan(0);
+      expect(['compliant', 'non-compliant', 'partially-compliant']).toContain(result.compliance.status);
     });
   });
 
