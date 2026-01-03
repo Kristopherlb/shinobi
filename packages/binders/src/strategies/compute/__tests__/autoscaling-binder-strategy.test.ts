@@ -13,7 +13,7 @@ import {
   executeUnifiedBinding,
   assertEnhancedBindingResult,
   TEST_CONSTANTS
-} from '@shinobi/binders/security/__tests__/unified-strategy-test-helpers';
+} from '../../security/__tests__/unified-strategy-test-helpers.js';
 import type { EnhancedBindingResult } from '@shinobi/core';
 
 describe('AutoScalingBinderStrategy', () => {

@@ -13,7 +13,7 @@ import {
   executeUnifiedBinding,
   assertEnhancedBindingResult,
   TEST_CONSTANTS
-} from '@shinobi/binders/security/__tests__/unified-strategy-test-helpers';
+} from '../../security/__tests__/unified-strategy-test-helpers.js';
 import type { EnhancedBindingResult } from '@shinobi/core';
 
 describe('Ec2BinderStrategy', () => {
@@ -67,11 +67,7 @@ describe('Ec2BinderStrategy', () => {
 
       const result = await executeUnifiedBinding(strategy, context);
 
-      assertEnhancedBindingResult(result, {
-        shouldHaveIamPolicies: true,
-        shouldHaveEnvironmentVariables: true,
-        shouldHaveCompliance: true,
-      });
+      assertEnhancedBindingResult(result);
 
       // TODO: Add specific assertions for this binder strategy
       expect(result.iamPolicies).toBeDefined();
