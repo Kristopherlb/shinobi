@@ -26,8 +26,8 @@ export class WafBinderStrategy extends UnifiedBinderStrategyBase {
         targetType: '*',
         capability: 'security:waf',
         supportedAccess: ['read', 'write', 'admin'],
-        description: 'TODO: Add description for security:waf binding',
-        examples: ['TODO: Add examples']
+        description: 'Bind to WAF Web ACL for web application firewall protection',
+        examples: ['api-gateway -> security:waf (read)', 'alb -> security:waf (read)', 'app-runner -> security:waf (read)']
       }
     ];
   }
@@ -55,10 +55,20 @@ export class WafBinderStrategy extends UnifiedBinderStrategyBase {
   }
 
   /**
-   * Bind to security:waf
+   * Bind to WAF Web ACL
    * 
    * @param context - Binding context
-   * @param targetData - Target capability data
+   * @param targetData - Expected structure:
+   *   - webAclArn (required): string - ARN of the WAF Web ACL
+   *   - webAclId (optional): string - ID of the WAF Web ACL
+   *   - scope (optional): string - Scope of the Web ACL (CLOUDFRONT or REGIONAL)
+   *   - defaultAction (optional): string - Default action (allow or block)
+   *   - webAclName (optional): string - Name of the Web ACL
+   *   - managedRuleGroups (optional): number - Count of managed rule groups
+   *   - customRules (optional): number - Count of custom rules
+   *   - loggingDestinationArn (optional): string - ARN of logging destination (CloudWatch/S3/Kinesis)
+   *   - loggingEnabled (optional): boolean - Whether logging is enabled
+   *   - loggingDestinationType (optional): string - Type of logging destination (cloudwatch/s3/kinesis-firehose)
    * @returns Enhanced binding result (without compliance block)
    */
   private async bindToWaf(
@@ -66,32 +76,180 @@ export class WafBinderStrategy extends UnifiedBinderStrategyBase {
     targetData: any
   ): Promise<Omit<EnhancedBindingResult, 'compliance'>> {
     const { source, directive } = context;
-    const { access } = directive;
+    const { access, options } = directive;
+
+    // Validate required target properties
+    if (!targetData?.webAclArn) {
+      throw new Error('Target component missing required webAclArn property for WAF binding');
+    }
 
     const iamPolicies: IamPolicy[] = [];
     const environmentVariables: Record<string, string> = {};
     const securityGroupRules: any[] = [];
 
-    // TODO: Implement IAM policy generation based on access level
-    // Example:
-    // if (access === 'read' || access === 'readwrite') {
-    //   iamPolicies.push({
-    //     statements: [
-    //       new PolicyStatement({
-    //         effect: Effect.ALLOW,
-    //         actions: ['security:waf:Get*', 'security:waf:Describe*'],
-    //         resources: [targetData.resources?.arn || '*'],
-    //       }),
-    //     ],
-    //     complianceRequirement: 'TODO: Add compliance requirement string',
-    //   });
-    // }
+    // Grant WAF read permissions
+    if (access === 'read' || access === 'write' || access === 'admin' || access === 'readwrite') {
+      const statement = new PolicyStatement({
+        effect: Effect.ALLOW,
+        actions: [
+          'wafv2:GetWebACL',
+          'wafv2:GetWebACLForResource',
+          'wafv2:ListResourcesForWebACL'
+        ],
+        resources: [targetData.webAclArn]
+      });
+      iamPolicies.push({
+        statement,
+        description: 'WAF Web ACL read permissions',
+        complianceRequirement: 'Least privilege IAM access'
+      });
+    }
 
-    // TODO: Add environment variables
-    // Example:
-    // if (targetData.resources?.arn) {
-    //   environmentVariables['<%= mainCapability.toUpperCase().replace(/:/g, '_') %>_ARN'] = targetData.resources.arn;
-    // }
+    // Grant WAF write permissions (associate/disassociate) - UpdateWebACL gated behind option
+    if (access === 'write' || access === 'admin' || access === 'readwrite') {
+      const writeActions = [
+        'wafv2:AssociateWebACL',
+        'wafv2:DisassociateWebACL'
+      ];
+
+      // Include UpdateWebACL only if option is set
+      if (options?.allowWebAclUpdates === true) {
+        writeActions.push('wafv2:UpdateWebACL');
+      }
+
+      const statement = new PolicyStatement({
+        effect: Effect.ALLOW,
+        actions: writeActions,
+        resources: [targetData.webAclArn]
+      });
+      iamPolicies.push({
+        statement,
+        description: options?.allowWebAclUpdates === true
+          ? 'WAF Web ACL write permissions (including updates)'
+          : 'WAF Web ACL write permissions (associate/disassociate only)',
+        complianceRequirement: 'Least privilege IAM access'
+      });
+    }
+
+    // Grant WAF admin permissions (create, delete) - gated behind option
+    if (access === 'admin' && options?.allowWebAclManagement === true) {
+      const statement = new PolicyStatement({
+        effect: Effect.ALLOW,
+        actions: [
+          'wafv2:CreateWebACL',
+          'wafv2:DeleteWebACL'
+        ],
+        resources: [targetData.webAclArn]
+      });
+      iamPolicies.push({
+        statement,
+        description: 'WAF Web ACL admin permissions (create/delete)',
+        complianceRequirement: 'Least privilege IAM access - Web ACL management gated behind allowWebAclManagement option'
+      });
+    }
+
+    // Grant WAF logging permissions if logging is enabled
+    if (targetData.loggingEnabled && targetData.loggingDestinationArn) {
+      const loggingActions: string[] = ['wafv2:GetLoggingConfiguration', 'wafv2:ListLoggingConfigurations'];
+
+      // Add write permissions for logging configuration if write/admin access
+      if (access === 'write' || access === 'admin' || access === 'readwrite') {
+        loggingActions.push('wafv2:PutLoggingConfiguration', 'wafv2:DeleteLoggingConfiguration');
+      }
+
+      const statement = new PolicyStatement({
+        effect: Effect.ALLOW,
+        actions: loggingActions,
+        resources: [targetData.webAclArn]
+      });
+      iamPolicies.push({
+        statement,
+        description: 'WAF logging configuration permissions',
+        complianceRequirement: 'Least privilege IAM access'
+      });
+
+      // Grant permissions to write to logging destination based on type
+      if (targetData.loggingDestinationType === 'cloudwatch' && targetData.loggingDestinationArn) {
+        const logsStatement = new PolicyStatement({
+          effect: Effect.ALLOW,
+          actions: ['logs:CreateLogStream', 'logs:PutLogEvents'],
+          resources: [targetData.loggingDestinationArn]
+        });
+        iamPolicies.push({
+          statement: logsStatement,
+          description: 'CloudWatch Logs permissions for WAF logging',
+          complianceRequirement: 'Least privilege IAM access'
+        });
+      } else if (targetData.loggingDestinationType === 's3' && targetData.loggingDestinationArn) {
+        const s3Statement = new PolicyStatement({
+          effect: Effect.ALLOW,
+          actions: ['s3:PutObject'],
+          resources: [`${targetData.loggingDestinationArn}/*`]
+        });
+        iamPolicies.push({
+          statement: s3Statement,
+          description: 'S3 permissions for WAF logging',
+          complianceRequirement: 'Least privilege IAM access'
+        });
+      } else if (targetData.loggingDestinationType === 'kinesis-firehose' && targetData.loggingDestinationArn) {
+        const firehoseStatement = new PolicyStatement({
+          effect: Effect.ALLOW,
+          actions: ['firehose:PutRecord', 'firehose:PutRecordBatch'],
+          resources: [targetData.loggingDestinationArn]
+        });
+        iamPolicies.push({
+          statement: firehoseStatement,
+          description: 'Kinesis Firehose permissions for WAF logging',
+          complianceRequirement: 'Least privilege IAM access'
+        });
+      }
+    }
+
+    // Set environment variables
+    environmentVariables['WAF_WEB_ACL_ARN'] = targetData.webAclArn;
+    
+    if (targetData.webAclId) {
+      environmentVariables['WAF_WEB_ACL_ID'] = targetData.webAclId;
+    }
+    
+    if (targetData.scope) {
+      environmentVariables['WAF_WEB_ACL_SCOPE'] = targetData.scope;
+    }
+    
+    if (targetData.defaultAction) {
+      environmentVariables['WAF_WEB_ACL_DEFAULT_ACTION'] = targetData.defaultAction;
+    }
+    
+    if (targetData.webAclName) {
+      environmentVariables['WAF_WEB_ACL_NAME'] = targetData.webAclName;
+    }
+
+    // Expose rule group information
+    if (targetData.managedRuleGroups !== undefined) {
+      environmentVariables['WAF_WEB_ACL_MANAGED_RULE_GROUPS_COUNT'] = targetData.managedRuleGroups.toString();
+    }
+
+    if (targetData.customRules !== undefined) {
+      environmentVariables['WAF_WEB_ACL_CUSTOM_RULES_COUNT'] = targetData.customRules.toString();
+    }
+
+    const totalRules = (targetData.managedRuleGroups || 0) + (targetData.customRules || 0);
+    if (totalRules > 0) {
+      environmentVariables['WAF_WEB_ACL_TOTAL_RULES_COUNT'] = totalRules.toString();
+    }
+
+    // Expose logging configuration
+    if (targetData.loggingEnabled !== undefined) {
+      environmentVariables['WAF_WEB_ACL_LOGGING_ENABLED'] = targetData.loggingEnabled ? 'true' : 'false';
+    }
+
+    if (targetData.loggingDestinationArn) {
+      environmentVariables['WAF_WEB_ACL_LOGGING_DESTINATION_ARN'] = targetData.loggingDestinationArn;
+    }
+
+    if (targetData.loggingDestinationType) {
+      environmentVariables['WAF_WEB_ACL_LOGGING_DESTINATION_TYPE'] = targetData.loggingDestinationType;
+    }
 
     return {
       iamPolicies,
