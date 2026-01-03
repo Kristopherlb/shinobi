@@ -30,7 +30,10 @@ import {
   SecretsManagerBinderStrategy,
   CertificateBinderStrategy,
   CognitoUserPoolBinderStrategy
-} from '@shinobi/core';
+} from '@shinobi/binders';
+
+// Or import from category-specific exports:
+// import { KmsBinderStrategy } from '@shinobi/binders/security';
 
 const registry = new UnifiedBinderRegistry([
   new KmsBinderStrategy(),

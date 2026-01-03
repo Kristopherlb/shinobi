@@ -1,0 +1,26 @@
+{
+  "name": "@shinobi/binders",
+  "root": "packages/binders",
+  "sourceRoot": "packages/binders/src",
+  "projectType": "library",
+  "tags": ["scope:binders", "type:lib"],
+  "targets": {
+    "build": {
+      "executor": "@nx/js:tsc",
+      "options": {
+        "outputPath": "dist/packages/binders",
+        "main": "packages/binders/src/index.ts",
+        "tsConfig": "packages/binders/tsconfig.lib.json",
+        "assets": []
+      }
+    },
+    "test": {
+      "executor": "@nx/jest:jest",
+      "options": {
+        "jestConfig": "packages/binders/jest.config.mjs",
+        "passWithNoTests": true
+      }
+    }
+  }
+}
+

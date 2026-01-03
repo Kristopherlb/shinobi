@@ -19,7 +19,7 @@ import {
   SecretsManagerBinderStrategy,
   CertificateBinderStrategy,
   CognitoUserPoolBinderStrategy
-} from '../strategies/security/index.js';
+} from '@shinobi/binders/security';
 
 /**
  * Create a UnifiedBinderRegistry with all security strategies registered

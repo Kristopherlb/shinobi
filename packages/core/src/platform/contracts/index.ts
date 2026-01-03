@@ -22,7 +22,10 @@ export * from './config-builder.js';
 export * from './bindings.js';
 export * from './platform-binding-trigger-spec.js';
 // re-export BindingContext, BindingResult and IBinderStrategy from the spec to avoid duplicate definitions
-export type { BindingContext, BindingResult, IBinderStrategy } from './platform-binding-trigger-spec.js';
+export type { BindingContext, BindingResult, IBinderStrategy, EnhancedBindingResult, IUnifiedBinderStrategy, CompatibilityEntry } from './platform-binding-trigger-spec.js';
+
+// Export unified binder strategy base class
+export { UnifiedBinderStrategyBase } from './unified-binder-strategy-base.js';
 
 // Export trigger system interfaces
 export * from './trigger-interfaces.js';

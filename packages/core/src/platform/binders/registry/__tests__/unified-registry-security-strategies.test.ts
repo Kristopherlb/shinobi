@@ -11,7 +11,7 @@ import {
   SecretsManagerBinderStrategy,
   CertificateBinderStrategy,
   CognitoUserPoolBinderStrategy
-} from '../../strategies/security/index.js';
+} from '@shinobi/binders/security';
 
 describe('UnifiedBinderRegistry - Security Strategies Registration', () => {
   it('should register all 4 security strategies via factory function', () => {

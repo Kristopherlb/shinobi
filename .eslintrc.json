@@ -60,6 +60,12 @@
                   "scope:components",
                   "scope:contracts"
                 ]
+              },
+              {
+                "sourceTag": "scope:binders",
+                "onlyDependOnLibsWithTags": [
+                  "scope:core"
+                ]
               }
             ]
           }
