@@ -26,8 +26,8 @@ export class Route53BinderStrategy extends UnifiedBinderStrategyBase {
         targetType: '*',
         capability: 'dns:route53',
         supportedAccess: ['read', 'write', 'admin'],
-        description: 'TODO: Add description for dns:route53 binding',
-        examples: ['TODO: Add examples']
+        description: 'Bind to Route53 hosted zones and DNS records for read-only access, record management, or full administrative access',
+        examples: ['lambda-dns-lookup -> dns:route53 (read)', 'lambda-dns-update -> dns:route53 (write)', 'lambda-dns-admin -> dns:route53 (admin)']
       }
     ];
   }
@@ -58,45 +58,119 @@ export class Route53BinderStrategy extends UnifiedBinderStrategyBase {
    * Bind to dns:route53
    * 
    * @param context - Binding context
-   * @param targetData - Target capability data
+   * @param targetData - Expected structure (Route53CapabilityData):
+   *   - type: 'dns:route53'
+   *   - resources (required): { hostedZoneId: string, hostedZoneName?: string }
+   *   - nameServers (optional): string[] - Name servers for the hosted zone
+   *   - recordType (optional): string - DNS record type (A, AAAA, CNAME, etc.)
+   *   - recordName (optional): string - DNS record name
+   *   - recordValue (optional): string - DNS record value
+   *   - ttl (optional): number - TTL in seconds
    * @returns Enhanced binding result (without compliance block)
    */
   private async bindToRoute53(
     context: BindingContext,
     targetData: any
   ): Promise<Omit<EnhancedBindingResult, 'compliance'>> {
-    const { source, directive } = context;
+    // Validate required target properties
+    if (!targetData?.resources?.hostedZoneId) {
+      throw new Error('Target component missing required resources.hostedZoneId property for Route53 binding');
+    }
+
+    const { directive } = context;
     const { access } = directive;
 
     const iamPolicies: IamPolicy[] = [];
     const environmentVariables: Record<string, string> = {};
-    const securityGroupRules: any[] = [];
+    const hostedZoneId = targetData.resources.hostedZoneId;
+    const hostedZoneArn = `arn:aws:route53:::hostedzone/${hostedZoneId}`;
 
-    // TODO: Implement IAM policy generation based on access level
-    // Example:
-    // if (access === 'read' || access === 'readwrite') {
-    //   iamPolicies.push({
-    //     statements: [
-    //       new PolicyStatement({
-    //         effect: Effect.ALLOW,
-    //         actions: ['dns:route53:Get*', 'dns:route53:Describe*'],
-    //         resources: [targetData.resources?.arn || '*'],
-    //       }),
-    //     ],
-    //     complianceRequirement: 'TODO: Add compliance requirement string',
-    //   });
-    // }
+    // Determine IAM actions based on access level
+    let actions: string[] = [];
+    
+    if (access === 'read' || access === 'readwrite' || access === 'admin') {
+      // Read access: Get hosted zone and record information
+      actions.push(
+        'route53:GetHostedZone',
+        'route53:ListHostedZones',
+        'route53:ListResourceRecordSets',
+        'route53:GetChange',
+        'route53:ListTagsForResource',
+        'route53:ListTagsForResources',
+        'route53:GetHostedZoneCount',
+        'route53:ListHostedZonesByName',
+        'route53:TestDNSAnswer'
+      );
+    }
 
-    // TODO: Add environment variables
-    // Example:
-    // if (targetData.resources?.arn) {
-    //   environmentVariables['<%= mainCapability.toUpperCase().replace(/:/g, '_') %>_ARN'] = targetData.resources.arn;
-    // }
+    if (access === 'write' || access === 'readwrite' || access === 'admin') {
+      // Write access: Manage DNS records
+      actions.push(
+        'route53:ChangeResourceRecordSets',
+        'route53:ChangeTagsForResource'
+      );
+    }
+
+    if (access === 'admin') {
+      // Admin access: Full control including create/delete hosted zones
+      actions.push(
+        'route53:CreateHostedZone',
+        'route53:DeleteHostedZone',
+        'route53:UpdateHostedZoneComment',
+        'route53:AssociateVPCWithHostedZone',
+        'route53:DisassociateVPCFromHostedZone',
+        'route53:CreateReusableDelegationSet',
+        'route53:DeleteReusableDelegationSet',
+        'route53:ListReusableDelegationSets'
+      );
+    }
+
+    // Create IAM policy
+    if (actions.length > 0) {
+      // Route53 uses hosted zone ARNs for resource-level permissions
+      iamPolicies.push({
+        statement: new PolicyStatement({
+          effect: Effect.ALLOW,
+          actions: [...new Set(actions)], // Remove duplicates
+          resources: [hostedZoneArn]
+        }),
+        description: `Route53 hosted zone ${access} access`,
+        complianceRequirement: `Least privilege IAM access for Route53 hosted zone ${access} operations`
+      });
+    }
+
+    // Set environment variables
+    environmentVariables['ROUTE53_HOSTED_ZONE_ID'] = hostedZoneId;
+    
+    if (targetData.resources.hostedZoneName) {
+      environmentVariables['ROUTE53_HOSTED_ZONE_NAME'] = targetData.resources.hostedZoneName;
+    }
+    
+    if (targetData.nameServers && Array.isArray(targetData.nameServers)) {
+      environmentVariables['ROUTE53_NAME_SERVERS'] = targetData.nameServers.join(',');
+      environmentVariables['ROUTE53_NAME_SERVER_COUNT'] = targetData.nameServers.length.toString();
+    }
+    
+    if (targetData.recordType) {
+      environmentVariables['ROUTE53_RECORD_TYPE'] = targetData.recordType;
+    }
+    
+    if (targetData.recordName) {
+      environmentVariables['ROUTE53_RECORD_NAME'] = targetData.recordName;
+    }
+    
+    if (targetData.recordValue) {
+      environmentVariables['ROUTE53_RECORD_VALUE'] = targetData.recordValue;
+    }
+    
+    if (targetData.ttl !== undefined) {
+      environmentVariables['ROUTE53_TTL'] = targetData.ttl.toString();
+    }
 
     return {
       iamPolicies,
       environmentVariables,
-      securityGroupRules,
+      securityGroupRules: [],
     };
   }
 }

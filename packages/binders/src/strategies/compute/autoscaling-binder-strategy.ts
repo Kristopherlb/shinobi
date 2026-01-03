@@ -26,8 +26,8 @@ export class AutoScalingBinderStrategy extends UnifiedBinderStrategyBase {
         targetType: '*',
         capability: 'autoscaling:group',
         supportedAccess: ['read', 'write', 'admin'],
-        description: 'TODO: Add description for autoscaling:group binding',
-        examples: ['TODO: Add examples']
+        description: 'Bind to Auto Scaling groups for read-only access, scaling control (set desired capacity), or full administrative access',
+        examples: ['lambda-monitoring -> autoscaling:group (read)', 'lambda-automation -> autoscaling:group (write)', 'lambda-admin -> autoscaling:group (admin)']
       }
     ];
   }
@@ -58,45 +58,145 @@ export class AutoScalingBinderStrategy extends UnifiedBinderStrategyBase {
    * Bind to autoscaling:group
    * 
    * @param context - Binding context
-   * @param targetData - Target capability data
+   * @param targetData - Expected structure (AutoScalingGroupCapabilityData):
+   *   - type: 'autoscaling:group'
+   *   - resources (required): { autoScalingGroupName: string, arn?: string }
+   *   - minSize (optional): number - Minimum size
+   *   - maxSize (optional): number - Maximum size
+   *   - desiredCapacity (optional): number - Desired capacity
+   *   - availabilityZones (optional): string[] - Availability zones
+   *   - launchConfigurationName (optional): string - Launch configuration name
+   *   - launchTemplateId (optional): string - Launch template ID
+   *   - healthCheckType (optional): string - Health check type
+   *   - healthCheckGracePeriod (optional): number - Health check grace period
    * @returns Enhanced binding result (without compliance block)
    */
   private async bindToGroup(
     context: BindingContext,
     targetData: any
   ): Promise<Omit<EnhancedBindingResult, 'compliance'>> {
-    const { source, directive } = context;
+    // Validate required target properties
+    if (!targetData?.resources?.autoScalingGroupName) {
+      throw new Error('Target component missing required resources.autoScalingGroupName property for Auto Scaling group binding');
+    }
+
+    const { directive } = context;
     const { access } = directive;
 
     const iamPolicies: IamPolicy[] = [];
     const environmentVariables: Record<string, string> = {};
-    const securityGroupRules: any[] = [];
+    const autoScalingGroupName = targetData.resources.autoScalingGroupName;
+    const autoScalingGroupArn = targetData.resources.arn || `arn:aws:autoscaling:*:*:autoScalingGroup:*:autoScalingGroupName/${autoScalingGroupName}`;
 
-    // TODO: Implement IAM policy generation based on access level
-    // Example:
-    // if (access === 'read' || access === 'readwrite') {
-    //   iamPolicies.push({
-    //     statements: [
-    //       new PolicyStatement({
-    //         effect: Effect.ALLOW,
-    //         actions: ['autoscaling:group:Get*', 'autoscaling:group:Describe*'],
-    //         resources: [targetData.resources?.arn || '*'],
-    //       }),
-    //     ],
-    //     complianceRequirement: 'TODO: Add compliance requirement string',
-    //   });
-    // }
+    // Determine IAM actions based on access level
+    let actions: string[] = [];
+    
+    if (access === 'read' || access === 'readwrite' || access === 'admin') {
+      // Read access: Describe Auto Scaling groups and related resources
+      actions.push(
+        'autoscaling:DescribeAutoScalingGroups',
+        'autoscaling:DescribeLaunchConfigurations',
+        'autoscaling:DescribeLaunchTemplates',
+        'autoscaling:DescribeScalingActivities',
+        'autoscaling:DescribeScalingProcessTypes',
+        'autoscaling:DescribeScheduledActions',
+        'autoscaling:DescribeTags',
+        'autoscaling:DescribeLifecycleHooks',
+        'autoscaling:DescribePolicies',
+        'autoscaling:DescribeAdjustmentTypes'
+      );
+    }
 
-    // TODO: Add environment variables
-    // Example:
-    // if (targetData.resources?.arn) {
-    //   environmentVariables['<%= mainCapability.toUpperCase().replace(/:/g, '_') %>_ARN'] = targetData.resources.arn;
-    // }
+    if (access === 'write' || access === 'readwrite' || access === 'admin') {
+      // Write access: Control scaling operations
+      actions.push(
+        'autoscaling:SetDesiredCapacity',
+        'autoscaling:UpdateAutoScalingGroup',
+        'autoscaling:ExecutePolicy',
+        'autoscaling:PutScalingPolicy',
+        'autoscaling:DeletePolicy',
+        'autoscaling:PutScheduledUpdateGroupAction',
+        'autoscaling:DeleteScheduledAction',
+        'autoscaling:TerminateInstanceInAutoScalingGroup',
+        'autoscaling:SetInstanceHealth',
+        'autoscaling:PutLifecycleHook',
+        'autoscaling:DeleteLifecycleHook',
+        'autoscaling:RecordLifecycleActionHeartbeat',
+        'autoscaling:CompleteLifecycleAction'
+      );
+    }
+
+    if (access === 'admin') {
+      // Admin access: Full control including create/delete
+      actions.push(
+        'autoscaling:CreateAutoScalingGroup',
+        'autoscaling:DeleteAutoScalingGroup',
+        'autoscaling:CreateLaunchConfiguration',
+        'autoscaling:DeleteLaunchConfiguration',
+        'autoscaling:AttachInstances',
+        'autoscaling:DetachInstances',
+        'autoscaling:EnterStandby',
+        'autoscaling:ExitStandby',
+        'autoscaling:ResumeProcesses',
+        'autoscaling:SuspendProcesses'
+      );
+    }
+
+    // Create IAM policy
+    if (actions.length > 0) {
+      iamPolicies.push({
+        statement: new PolicyStatement({
+          effect: Effect.ALLOW,
+          actions: [...new Set(actions)], // Remove duplicates
+          resources: [autoScalingGroupArn]
+        }),
+        description: `Auto Scaling group ${access} access`,
+        complianceRequirement: `Least privilege IAM access for Auto Scaling group ${access} operations`
+      });
+    }
+
+    // Set environment variables
+    environmentVariables['AUTOSCALING_GROUP_NAME'] = autoScalingGroupName;
+    if (targetData.resources.arn) {
+      environmentVariables['AUTOSCALING_GROUP_ARN'] = targetData.resources.arn;
+    }
+    
+    if (targetData.minSize !== undefined) {
+      environmentVariables['AUTOSCALING_MIN_SIZE'] = targetData.minSize.toString();
+    }
+    
+    if (targetData.maxSize !== undefined) {
+      environmentVariables['AUTOSCALING_MAX_SIZE'] = targetData.maxSize.toString();
+    }
+    
+    if (targetData.desiredCapacity !== undefined) {
+      environmentVariables['AUTOSCALING_DESIRED_CAPACITY'] = targetData.desiredCapacity.toString();
+    }
+    
+    if (targetData.availabilityZones && Array.isArray(targetData.availabilityZones)) {
+      environmentVariables['AUTOSCALING_AVAILABILITY_ZONES'] = targetData.availabilityZones.join(',');
+    }
+    
+    if (targetData.launchConfigurationName) {
+      environmentVariables['AUTOSCALING_LAUNCH_CONFIGURATION_NAME'] = targetData.launchConfigurationName;
+    }
+    
+    if (targetData.launchTemplateId) {
+      environmentVariables['AUTOSCALING_LAUNCH_TEMPLATE_ID'] = targetData.launchTemplateId;
+    }
+    
+    if (targetData.healthCheckType) {
+      environmentVariables['AUTOSCALING_HEALTH_CHECK_TYPE'] = targetData.healthCheckType;
+    }
+    
+    if (targetData.healthCheckGracePeriod !== undefined) {
+      environmentVariables['AUTOSCALING_HEALTH_CHECK_GRACE_PERIOD'] = targetData.healthCheckGracePeriod.toString();
+    }
 
     return {
       iamPolicies,
       environmentVariables,
-      securityGroupRules,
+      securityGroupRules: [],
     };
   }
 }

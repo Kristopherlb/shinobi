@@ -5,7 +5,7 @@
  * following Platform Testing Standard v1.0
  */
 
-import { UnifiedBinderRegistry, createUnifiedBinderRegistry } from '@shinobi/core';
+import { UnifiedBinderRegistry } from '@shinobi/core';
 import {
   KmsBinderStrategy,
   SecretsManagerBinderStrategy,
@@ -50,7 +50,12 @@ describe('Unified Security Strategies Integration', () => {
     };
 
     test('SecurityStrategies__RegistryLookup__FindsAllStrategies', () => {
-      const registry = createUnifiedBinderRegistry();
+      const registry = new UnifiedBinderRegistry([
+        new KmsBinderStrategy(),
+        new SecretsManagerBinderStrategy(),
+        new CertificateBinderStrategy(),
+        new CognitoUserPoolBinderStrategy()
+      ]);
 
       // Primary assertion: All KMS capabilities are discoverable
       expect(registry.hasStrategy('kms:key')).toBe(true);
@@ -123,7 +128,12 @@ describe('Unified Security Strategies Integration', () => {
       // Full ResolverEngine integration would require component synthesis
       // For now, we test the binding execution directly via strategies
       
-      const registry = createUnifiedBinderRegistry();
+      const registry = new UnifiedBinderRegistry([
+        new KmsBinderStrategy(),
+        new SecretsManagerBinderStrategy(),
+        new CertificateBinderStrategy(),
+        new CognitoUserPoolBinderStrategy()
+      ]);
 
       // Execute bindings for all 4 strategies
       const kmsContext = createBindingContext({
@@ -230,7 +240,12 @@ describe('Unified Security Strategies Integration', () => {
     };
 
     test('SecurityStrategies__ComplianceFrameworkPropagation__AppliesToAllStrategies', async () => {
-      const registry = createUnifiedBinderRegistry();
+      const registry = new UnifiedBinderRegistry([
+        new KmsBinderStrategy(),
+        new SecretsManagerBinderStrategy(),
+        new CertificateBinderStrategy(),
+        new CognitoUserPoolBinderStrategy()
+      ]);
       const frameworks = ['commercial', 'fedramp-moderate', 'fedramp-high'] as const;
 
       for (const framework of frameworks) {

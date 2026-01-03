@@ -48,12 +48,12 @@ describe('Ec2BinderStrategy', () => {
       const strategy = new Ec2BinderStrategy();
       const source = createMockSourceComponent('lambda-api', 'test-source');
       
-      // TODO: Update with actual target component type and capability data
       const target = createMockTargetComponent('test-target', {
         'compute:ec2': {
           type: 'compute:ec2',
           resources: {
-            arn: 'arn:aws:service:us-east-1:123456789012:resource/test',
+            arn: 'arn:aws:ec2:us-east-1:123456789012:instance/i-1234567890abcdef0',
+            instanceId: 'i-1234567890abcdef0',
           },
         },
       });

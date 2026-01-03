@@ -48,12 +48,12 @@ describe('LoadBalancerBinderStrategy', () => {
       const strategy = new LoadBalancerBinderStrategy();
       const source = createMockSourceComponent('lambda-api', 'test-source');
       
-      // TODO: Update with actual target component type and capability data
       const target = createMockTargetComponent('test-target', {
         'network:load-balancer': {
           type: 'network:load-balancer',
           resources: {
-            arn: 'arn:aws:service:us-east-1:123456789012:resource/test',
+            arn: 'arn:aws:elasticloadbalancing:us-east-1:123456789012:loadbalancer/app/test-lb/1234567890abcdef',
+            loadBalancerArn: 'arn:aws:elasticloadbalancing:us-east-1:123456789012:loadbalancer/app/test-lb/1234567890abcdef',
           },
         },
       });

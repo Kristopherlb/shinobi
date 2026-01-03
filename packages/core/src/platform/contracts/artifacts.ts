@@ -238,7 +238,7 @@ export interface ValidationResult {
   valid: boolean;
   errors: ValidationError[];
   warnings: ValidationWarning[];
-  complianceErrors: ComplianceError[];
+  complianceErrors: ComplianceErrorData[];
 }
 
 export interface ValidationError {
@@ -255,7 +255,7 @@ export interface ValidationWarning {
   recommendation?: string;
 }
 
-export interface ComplianceError {
+export interface ComplianceErrorData {
   componentId: string;
   controlId: string;
   message: string;

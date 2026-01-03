@@ -48,12 +48,12 @@ describe('AutoScalingBinderStrategy', () => {
       const strategy = new AutoScalingBinderStrategy();
       const source = createMockSourceComponent('lambda-api', 'test-source');
       
-      // TODO: Update with actual target component type and capability data
       const target = createMockTargetComponent('test-target', {
         'autoscaling:group': {
           type: 'autoscaling:group',
           resources: {
-            arn: 'arn:aws:service:us-east-1:123456789012:resource/test',
+            arn: 'arn:aws:autoscaling:us-east-1:123456789012:autoScalingGroup:uuid:autoScalingGroupName/test-asg',
+            autoScalingGroupName: 'test-asg',
           },
         },
       });

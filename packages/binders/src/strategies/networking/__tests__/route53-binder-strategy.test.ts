@@ -48,12 +48,12 @@ describe('Route53BinderStrategy', () => {
       const strategy = new Route53BinderStrategy();
       const source = createMockSourceComponent('lambda-api', 'test-source');
       
-      // TODO: Update with actual target component type and capability data
       const target = createMockTargetComponent('test-target', {
         'dns:route53': {
           type: 'dns:route53',
           resources: {
-            arn: 'arn:aws:service:us-east-1:123456789012:resource/test',
+            arn: 'arn:aws:route53:::hostedzone/Z1234567890ABC',
+            hostedZoneId: 'Z1234567890ABC',
           },
         },
       });

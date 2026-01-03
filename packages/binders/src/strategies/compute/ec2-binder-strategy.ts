@@ -26,8 +26,8 @@ export class Ec2BinderStrategy extends UnifiedBinderStrategyBase {
         targetType: '*',
         capability: 'compute:ec2',
         supportedAccess: ['read', 'write', 'admin'],
-        description: 'TODO: Add description for compute:ec2 binding',
-        examples: ['TODO: Add examples']
+        description: 'Bind to EC2 instances for read-only access, instance control (start/stop/reboot), or full administrative access',
+        examples: ['lambda-monitoring -> compute:ec2 (read)', 'lambda-automation -> compute:ec2 (write)', 'lambda-admin -> compute:ec2 (admin)']
       }
     ];
   }
@@ -58,45 +58,128 @@ export class Ec2BinderStrategy extends UnifiedBinderStrategyBase {
    * Bind to compute:ec2
    * 
    * @param context - Binding context
-   * @param targetData - Target capability data
+   * @param targetData - Expected structure (Ec2CapabilityData):
+   *   - type: 'compute:ec2'
+   *   - resources (required): { instanceId: string, arn?: string }
+   *   - instanceType (optional): string - Instance type (e.g., 't3.micro')
+   *   - state (optional): string - Instance state (e.g., 'running', 'stopped')
+   *   - vpcId (optional): string - VPC ID
+   *   - subnetId (optional): string - Subnet ID
+   *   - availabilityZone (optional): string - AZ
+   *   - privateIpAddress (optional): string - Private IP address
+   *   - publicIpAddress (optional): string - Public IP address
    * @returns Enhanced binding result (without compliance block)
    */
   private async bindToEc2(
     context: BindingContext,
     targetData: any
   ): Promise<Omit<EnhancedBindingResult, 'compliance'>> {
-    const { source, directive } = context;
+    // Validate required target properties
+    if (!targetData?.resources?.instanceId) {
+      throw new Error('Target component missing required resources.instanceId property for EC2 binding');
+    }
+
+    const { directive } = context;
     const { access } = directive;
 
     const iamPolicies: IamPolicy[] = [];
     const environmentVariables: Record<string, string> = {};
-    const securityGroupRules: any[] = [];
+    const instanceId = targetData.resources.instanceId;
+    const instanceArn = targetData.resources.arn || `arn:aws:ec2:*:*:instance/${instanceId}`;
 
-    // TODO: Implement IAM policy generation based on access level
-    // Example:
-    // if (access === 'read' || access === 'readwrite') {
-    //   iamPolicies.push({
-    //     statements: [
-    //       new PolicyStatement({
-    //         effect: Effect.ALLOW,
-    //         actions: ['compute:ec2:Get*', 'compute:ec2:Describe*'],
-    //         resources: [targetData.resources?.arn || '*'],
-    //       }),
-    //     ],
-    //     complianceRequirement: 'TODO: Add compliance requirement string',
-    //   });
-    // }
+    // Determine IAM actions based on access level
+    let actions: string[] = [];
+    
+    if (access === 'read' || access === 'readwrite' || access === 'admin') {
+      // Read access: Describe instances and related resources
+      actions.push(
+        'ec2:DescribeInstances',
+        'ec2:DescribeInstanceStatus',
+        'ec2:DescribeInstanceAttribute',
+        'ec2:DescribeImages',
+        'ec2:DescribeSnapshots',
+        'ec2:DescribeVolumes',
+        'ec2:DescribeNetworkInterfaces',
+        'ec2:DescribeSecurityGroups',
+        'ec2:DescribeTags'
+      );
+    }
 
-    // TODO: Add environment variables
-    // Example:
-    // if (targetData.resources?.arn) {
-    //   environmentVariables['<%= mainCapability.toUpperCase().replace(/:/g, '_') %>_ARN'] = targetData.resources.arn;
-    // }
+    if (access === 'write' || access === 'readwrite' || access === 'admin') {
+      // Write access: Control instance lifecycle
+      actions.push(
+        'ec2:StartInstances',
+        'ec2:StopInstances',
+        'ec2:RebootInstances',
+        'ec2:CreateTags',
+        'ec2:ModifyInstanceAttribute'
+      );
+    }
+
+    if (access === 'admin') {
+      // Admin access: Full control including termination
+      actions.push(
+        'ec2:TerminateInstances',
+        'ec2:AttachVolume',
+        'ec2:DetachVolume',
+        'ec2:ModifyInstanceAttribute',
+        'ec2:ResetInstanceAttribute',
+        'ec2:AssignPrivateIpAddresses',
+        'ec2:UnassignPrivateIpAddresses'
+      );
+    }
+
+    // Create IAM policy
+    if (actions.length > 0) {
+      iamPolicies.push({
+        statement: new PolicyStatement({
+          effect: Effect.ALLOW,
+          actions: [...new Set(actions)], // Remove duplicates
+          resources: [instanceArn]
+        }),
+        description: `EC2 instance ${access} access`,
+        complianceRequirement: `Least privilege IAM access for EC2 instance ${access} operations`
+      });
+    }
+
+    // Set environment variables
+    environmentVariables['EC2_INSTANCE_ID'] = instanceId;
+    if (targetData.resources.arn) {
+      environmentVariables['EC2_INSTANCE_ARN'] = targetData.resources.arn;
+    }
+    
+    if (targetData.instanceType) {
+      environmentVariables['EC2_INSTANCE_TYPE'] = targetData.instanceType;
+    }
+    
+    if (targetData.state) {
+      environmentVariables['EC2_INSTANCE_STATE'] = targetData.state;
+    }
+    
+    if (targetData.vpcId) {
+      environmentVariables['EC2_VPC_ID'] = targetData.vpcId;
+    }
+    
+    if (targetData.subnetId) {
+      environmentVariables['EC2_SUBNET_ID'] = targetData.subnetId;
+    }
+    
+    if (targetData.availabilityZone) {
+      environmentVariables['EC2_AVAILABILITY_ZONE'] = targetData.availabilityZone;
+    }
+    
+    if (targetData.privateIpAddress) {
+      environmentVariables['EC2_PRIVATE_IP_ADDRESS'] = targetData.privateIpAddress;
+    }
+    
+    if (targetData.publicIpAddress) {
+      environmentVariables['EC2_PUBLIC_IP_ADDRESS'] = targetData.publicIpAddress;
+    }
 
     return {
       iamPolicies,
       environmentVariables,
-      securityGroupRules,
+      securityGroupRules: [],
     };
   }
 }

@@ -1,6 +1,6 @@
-import { LogLevel, Logger } from '../../core-engine/logger';
-import { CloudFormationResource, StackAnalysisResult } from '../cloudformation-analyzer';
-import { ResourceMapper } from '../resource-mapper';
+import { LogLevel, Logger } from '../../core-engine/logger.js';
+import { CloudFormationResource, StackAnalysisResult } from '../cloudformation-analyzer.js';
+import { ResourceMapper } from '../resource-mapper.js';
 
 describe('ResourceMapper dependency optimization', () => {
   const buildAnalysisResult = (resources: CloudFormationResource[]): StackAnalysisResult => ({

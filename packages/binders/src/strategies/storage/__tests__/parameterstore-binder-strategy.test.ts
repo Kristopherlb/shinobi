@@ -48,12 +48,12 @@ describe('ParameterStoreBinderStrategy', () => {
       const strategy = new ParameterStoreBinderStrategy();
       const source = createMockSourceComponent('lambda-api', 'test-source');
       
-      // TODO: Update with actual target component type and capability data
       const target = createMockTargetComponent('test-target', {
         'ssm:parameter': {
           type: 'ssm:parameter',
           resources: {
-            arn: 'arn:aws:service:us-east-1:123456789012:resource/test',
+            arn: 'arn:aws:ssm:us-east-1:123456789012:parameter/test-param',
+            parameterName: '/test-param',
           },
         },
       });
