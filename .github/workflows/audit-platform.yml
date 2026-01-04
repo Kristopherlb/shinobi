@@ -22,12 +22,15 @@ jobs:
         uses: actions/setup-node@v4
         with:
           node-version: '20'
+          cache: 'pnpm'  # Ensures pnpm is available even when Node.js is cached
 
       - name: Enable Corepack and install pnpm
         run: |
           corepack enable
           corepack prepare pnpm@latest --activate
-          pnpm --version
+          # Explicitly add pnpm to PATH for subsequent steps
+          echo "$(corepack which pnpm | xargs dirname)" >> $GITHUB_PATH
+          echo "pnpm version: $(pnpm --version)"
 
       - name: Cache pnpm store
         uses: actions/cache@v4
