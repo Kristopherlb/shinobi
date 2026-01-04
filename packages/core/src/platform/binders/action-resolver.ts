@@ -109,7 +109,7 @@ export function resolveActions(
   // Resolve actions based on type
   if (typeof directive.actions === 'string') {
     // Profile name (shorthand syntax)
-    const profileActions = resolveActionProfile(directive.actions, context.complianceFramework);
+    const profileActions = resolveActionProfile(directive.actions, context.complianceFramework as ComplianceFramework);
     
     if (!profileActions) {
       throw new Error(
@@ -136,7 +136,7 @@ export function resolveActions(
   validateServicePrefix(resolvedActions, servicePrefix);
   
   // Validate wildcard actions (framework-specific)
-  validateWildcardActions(resolvedActions, context.complianceFramework);
+  validateWildcardActions(resolvedActions, context.complianceFramework as ComplianceFramework);
   
   return resolvedActions;
 }

@@ -7,7 +7,7 @@
  * - security:waf-rule - WAF rule groups and web ACLs
  */
 
-import { UnifiedBinderStrategyBase } from '@shinobi/core';
+import { UnifiedBinderStrategyBase, resolveActions } from '@shinobi/core';
 import type { BindingContext, EnhancedBindingResult, CompatibilityEntry } from '@shinobi/core';
 import type { IamPolicy } from '@shinobi/core';
 import { PolicyStatement, Effect } from 'aws-cdk-lib/aws-iam';
@@ -131,54 +131,75 @@ export class FirewallManagerBinderStrategy extends UnifiedBinderStrategyBase {
       environmentVariables.AWS_FIREWALL_MANAGER_REMEDIATION_ENABLED = String(targetData.remediationEnabled);
     }
 
-    // IAM policies for Firewall Manager operations
-    if (access === 'read' || access === 'readwrite') {
+    // Handle granular actions override or use multi-statement approach
+    if (context.directive.actions) {
+      const resolvedActions = resolveActions(
+        context.directive,
+        context,
+        (acc) => this.getFirewallManagerActionsForAccess(acc, options),
+        'fms'
+      );
+
       iamPolicies.push({
         statement: new PolicyStatement({
           effect: Effect.ALLOW,
-          actions: [
-            'fms:GetPolicy',
-            'fms:ListPolicies',
-            'fms:GetComplianceDetail',
-            'fms:ListComplianceStatus',
-            'fms:GetProtectionStatus'
-          ],
+          actions: resolvedActions,
           resources: ['*']
         }),
-        description: 'Firewall Manager policy read access',
-        complianceRequirement: 'Least privilege IAM access for Firewall Manager read operations'
+        description: 'Firewall Manager access (granular actions)',
+        complianceRequirement: 'Least privilege IAM access for Firewall Manager operations'
       });
-    }
-
-    if (access === 'write' || access === 'readwrite' || access === 'admin') {
-      iamPolicies.push({
-        statement: new PolicyStatement({
-          effect: Effect.ALLOW,
-          actions: [
-            'fms:PutPolicy',
-            'fms:DeletePolicy',
-            'fms:AssociateAdminAccount',
-            'fms:DisassociateAdminAccount'
-          ],
-          resources: ['*']
-        }),
-        description: 'Firewall Manager policy write access',
-        complianceRequirement: 'Least privilege IAM access for Firewall Manager write operations'
-      });
-    }
-
-    // Admin access (full FMS permissions)
-    if (access === 'admin') {
-      if (options?.requireFullAdminAccess) {
+    } else {
+      // Coarse access levels: use multi-statement approach (backward compatible)
+      // IAM policies for Firewall Manager operations
+      if (access === 'read' || access === 'readwrite') {
         iamPolicies.push({
           statement: new PolicyStatement({
             effect: Effect.ALLOW,
-            actions: ['fms:*'],
+            actions: [
+              'fms:GetPolicy',
+              'fms:ListPolicies',
+              'fms:GetComplianceDetail',
+              'fms:ListComplianceStatus',
+              'fms:GetProtectionStatus'
+            ],
             resources: ['*']
           }),
-          description: 'Full Firewall Manager admin access',
-          complianceRequirement: 'Admin access: Full Firewall Manager permissions (requires requireFullAdminAccess option)'
+          description: 'Firewall Manager policy read access',
+          complianceRequirement: 'Least privilege IAM access for Firewall Manager read operations'
         });
+      }
+
+      if (access === 'write' || access === 'readwrite' || access === 'admin') {
+        iamPolicies.push({
+          statement: new PolicyStatement({
+            effect: Effect.ALLOW,
+            actions: [
+              'fms:PutPolicy',
+              'fms:DeletePolicy',
+              'fms:AssociateAdminAccount',
+              'fms:DisassociateAdminAccount'
+            ],
+            resources: ['*']
+          }),
+          description: 'Firewall Manager policy write access',
+          complianceRequirement: 'Least privilege IAM access for Firewall Manager write operations'
+        });
+      }
+
+      // Admin access (full FMS permissions)
+      if (access === 'admin') {
+        if (options?.requireFullAdminAccess) {
+          iamPolicies.push({
+            statement: new PolicyStatement({
+              effect: Effect.ALLOW,
+              actions: ['fms:*'],
+              resources: ['*']
+            }),
+            description: 'Full Firewall Manager admin access',
+            complianceRequirement: 'Admin access: Full Firewall Manager permissions (requires requireFullAdminAccess option)'
+          });
+        }
       }
     }
 
@@ -337,6 +358,57 @@ export class FirewallManagerBinderStrategy extends UnifiedBinderStrategyBase {
       environmentVariables,
       securityGroupRules: []
     };
+  }
+
+  /**
+   * Get Firewall Manager actions based on access level
+   * Used by resolveActions to compute base actions from coarse access level
+   */
+  private getFirewallManagerActionsForAccess(access: string, options?: Record<string, any>): string[] {
+    const actions: string[] = [];
+
+    switch (access) {
+      case 'read':
+      case 'readwrite':
+        actions.push(
+          'fms:GetPolicy',
+          'fms:ListPolicies',
+          'fms:GetComplianceDetail',
+          'fms:ListComplianceStatus',
+          'fms:GetProtectionStatus'
+        );
+        break;
+      case 'write':
+      case 'admin':
+        actions.push(
+          'fms:PutPolicy',
+          'fms:DeletePolicy',
+          'fms:AssociateAdminAccount',
+          'fms:DisassociateAdminAccount'
+        );
+        break;
+    }
+
+    // For readwrite, combine read and write
+    if (access === 'readwrite') {
+      actions.push(
+        'fms:PutPolicy',
+        'fms:DeletePolicy',
+        'fms:AssociateAdminAccount',
+        'fms:DisassociateAdminAccount'
+      );
+    }
+
+    // For admin with requireFullAdminAccess, add wildcard (but this would fail validation in FedRAMP)
+    if (access === 'admin' && options?.requireFullAdminAccess) {
+      actions.push('fms:*');
+    }
+
+    if (actions.length === 0) {
+      throw new Error(`Unsupported Firewall Manager access level: ${access}`);
+    }
+
+    return actions;
   }
 }
 

@@ -585,5 +585,118 @@ describe('IamRoleBinderStrategy', () => {
       );
     });
   });
+
+  describe('IamRoleBind__CustomActionsOverride__ReplacesCoarseActions', () => {
+    const metadata = {
+      id: 'TP-binders-iamrole-018',
+      level: 'unit' as const,
+      capability: 'Custom actions override replaces default coarse-grained actions',
+      oracle: 'exact' as const,
+      determinism: 'deterministic' as const,
+      naming: { pattern: 'IamRoleBind__Condition__Outcome', example: 'IamRoleBind__CustomActionsOverride__ReplacesCoarseActions' },
+      invariants: [
+        'IAM policy actions match provided custom actions',
+        'Default coarse access actions are not present',
+        'Single policy statement is generated'
+      ],
+      fixtures: ['MockSourceComponent', 'MockTargetComponent', 'IamRoleCapabilityData'],
+      inputs: {
+        shape: 'BindingContext with iam:role capability and directive.actions array',
+        notes: 'Granular actions override test'
+      },
+      risks: [],
+      dependencies: ['action-resolver'],
+      evidence: [],
+      compliance_refs: ['docs/platform-standards/platform-iam-auditing-standard.md'],
+      ai_generated: true,
+      human_reviewed_by: 'Platform Engineering'
+    };
+
+    test('IamRoleBind__CustomActionsOverride__ReplacesCoarseActions', async () => {
+      const strategy = new IamRoleBinderStrategy();
+      const roleArn = 'arn:aws:iam::123456789012:role/test-role';
+      const target = createMockTargetComponent('iam-role', {
+        'iam:role': {
+          roleArn,
+          roleName: 'test-role'
+        }
+      });
+
+      const customActions = ['iam:GetRole', 'iam:ListRolePolicies'];
+      const context = createBindingContext({
+        source: createMockSourceComponent(),
+        target,
+        capability: 'iam:role',
+        access: 'read',
+        actions: customActions
+      });
+
+      const result = await executeUnifiedBinding(strategy, context);
+
+      assertEnhancedBindingResult(result);
+
+      expect(result.iamPolicies.length).toBeGreaterThan(0);
+      const policy = result.iamPolicies.find(p => p.description.includes('granular actions'));
+      expect(policy).toBeDefined();
+      
+      const statementJson = policy!.statement.toStatementJson();
+      const actions = Array.isArray(statementJson.Action)
+        ? statementJson.Action
+        : [statementJson.Action];
+
+      expect(actions).toEqual(expect.arrayContaining(customActions));
+      expect(actions.length).toBe(customActions.length);
+    });
+  });
+
+  describe('IamRoleBind__InvalidActionPrefix__ThrowsPrefixMismatchError', () => {
+    const metadata = {
+      id: 'TP-binders-iamrole-019',
+      level: 'unit' as const,
+      capability: 'Throws error when custom actions have mismatched service prefix',
+      oracle: 'exact' as const,
+      determinism: 'deterministic' as const,
+      naming: { pattern: 'IamRoleBind__Condition__Outcome', example: 'IamRoleBind__InvalidActionPrefix__ThrowsPrefixMismatchError' },
+      invariants: [
+        'Error message indicates mismatched prefix',
+        'Error is thrown by action-resolver'
+      ],
+      fixtures: ['MockSourceComponent', 'MockTargetComponent', 'IamRoleCapabilityData'],
+      inputs: {
+        shape: 'BindingContext with iam:role capability and directive.actions with invalid prefix',
+        notes: 'Error case - invalid action prefix'
+      },
+      risks: ['Incorrect IAM policy generation'],
+      dependencies: ['action-resolver'],
+      evidence: [],
+      compliance_refs: ['docs/platform-standards/platform-iam-auditing-standard.md'],
+      ai_generated: true,
+      human_reviewed_by: 'Platform Engineering'
+    };
+
+    test('IamRoleBind__InvalidActionPrefix__ThrowsPrefixMismatchError', async () => {
+      const strategy = new IamRoleBinderStrategy();
+      const roleArn = 'arn:aws:iam::123456789012:role/test-role';
+      const target = createMockTargetComponent('iam-role', {
+        'iam:role': {
+          roleArn,
+          roleName: 'test-role'
+        }
+      });
+
+      const invalidActions = ['s3:GetObject']; // Invalid prefix for IAM
+      const context = createBindingContext({
+        source: createMockSourceComponent(),
+        target,
+        capability: 'iam:role',
+        access: 'read',
+        actions: invalidActions
+      });
+
+      await expect(executeUnifiedBinding(strategy, context)).rejects.toThrow(
+        "Actions must match service prefix 'iam:'"
+      );
+    });
+  });
 });
 

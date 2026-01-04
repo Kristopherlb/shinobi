@@ -3,7 +3,7 @@
  * Handles iam:role bindings with mandatory compliance enforcement
  */
 
-import { UnifiedBinderStrategyBase } from '@shinobi/core';
+import { UnifiedBinderStrategyBase, resolveActions } from '@shinobi/core';
 import type { BindingContext, EnhancedBindingResult, CompatibilityEntry } from '@shinobi/core';
 import type { IamPolicy } from '@shinobi/core';
 import { PolicyStatement, Effect } from 'aws-cdk-lib/aws-iam';
@@ -89,8 +89,32 @@ export class IamRoleBinderStrategy extends UnifiedBinderStrategyBase {
     const environmentVariables: Record<string, string> = {};
     const securityGroupRules: any[] = [];
 
-    // Grant role assumption permissions
-    if (access === 'read' || access === 'write' || access === 'admin' || access === 'readwrite') {
+    // Handle granular actions override or use multi-statement approach
+    if (directive.actions) {
+      const resolvedActions = resolveActions(
+        directive,
+        context,
+        (acc) => this.getIamRoleActionsForAccess(acc, options),
+        'iam'
+      );
+
+      // For granular actions, create a single policy statement
+      // Note: AssumeRole conditions (externalId) are not applied in granular mode
+      // Users must specify all required actions including sts:AssumeRole if needed
+      const statement = new PolicyStatement({
+        effect: Effect.ALLOW,
+        actions: resolvedActions,
+        resources: [targetData.roleArn]
+      });
+      iamPolicies.push({
+        statement,
+        description: 'IAM role access permissions (granular actions)',
+        complianceRequirement: 'Least privilege IAM access'
+      });
+    } else {
+      // Coarse access levels: use multi-statement approach (backward compatible)
+      // Grant role assumption permissions
+      if (access === 'read' || access === 'write' || access === 'admin' || access === 'readwrite') {
       const assumeRoleStatement = new PolicyStatement({
         effect: Effect.ALLOW,
         actions: ['sts:AssumeRole'],
@@ -171,6 +195,7 @@ export class IamRoleBinderStrategy extends UnifiedBinderStrategyBase {
         complianceRequirement: 'Least privilege IAM access - role management gated behind allowRoleManagement option'
       });
     }
+    }
 
     // Set environment variables
     environmentVariables['IAM_ROLE_ARN'] = targetData.roleArn;
@@ -246,6 +271,80 @@ export class IamRoleBinderStrategy extends UnifiedBinderStrategyBase {
       environmentVariables,
       securityGroupRules,
     };
+  }
+
+  /**
+   * Get IAM role actions based on access level
+   * Used by resolveActions to compute base actions from coarse access level
+   * 
+   * @param access - Access level (read, write, admin, readwrite)
+   * @param options - Binding options (for allowRoleManagement flag)
+   * @returns Array of IAM action strings (includes sts:AssumeRole for all levels)
+   */
+  private getIamRoleActionsForAccess(access: string, options?: Record<string, any>): string[] {
+    const actions: string[] = [];
+
+    // All access levels include AssumeRole (read permissions)
+    actions.push('sts:AssumeRole');
+
+    switch (access) {
+      case 'read':
+      case 'readwrite':
+        actions.push(
+          'iam:GetRole',
+          'iam:GetRolePolicy',
+          'iam:ListRolePolicies',
+          'iam:ListAttachedRolePolicies',
+          'iam:ListInstanceProfilesForRole'
+        );
+        break;
+      case 'write':
+      case 'admin':
+        actions.push(
+          'iam:UpdateRole',
+          'iam:UpdateRoleDescription',
+          'iam:PutRolePolicy',
+          'iam:DeleteRolePolicy',
+          'iam:AttachRolePolicy',
+          'iam:DetachRolePolicy',
+          'iam:TagRole',
+          'iam:UntagRole'
+        );
+        break;
+    }
+
+    // For readwrite, combine read and write
+    if (access === 'readwrite') {
+      actions.push(
+        'iam:GetRole',
+        'iam:GetRolePolicy',
+        'iam:ListRolePolicies',
+        'iam:ListAttachedRolePolicies',
+        'iam:ListInstanceProfilesForRole',
+        'iam:UpdateRole',
+        'iam:UpdateRoleDescription',
+        'iam:PutRolePolicy',
+        'iam:DeleteRolePolicy',
+        'iam:AttachRolePolicy',
+        'iam:DetachRolePolicy',
+        'iam:TagRole',
+        'iam:UntagRole'
+      );
+    }
+
+    // For admin with allowRoleManagement, add create/delete
+    if (access === 'admin' && options?.allowRoleManagement === true) {
+      actions.push(
+        'iam:CreateRole',
+        'iam:DeleteRole'
+      );
+    }
+
+    if (actions.length === 0) {
+      throw new Error(`Unsupported IAM role access level: ${access}`);
+    }
+
+    return actions;
   }
 }
 

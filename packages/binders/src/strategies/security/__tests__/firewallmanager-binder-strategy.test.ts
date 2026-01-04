@@ -396,5 +396,114 @@ describe('FirewallManagerBinderStrategy', () => {
       await expect(executeUnifiedBinding(strategy, context)).rejects.toThrow('missing required webAclArn');
     });
   });
+
+  describe('FirewallManagerBind__CustomActionsOverride__ReplacesCoarseActions', () => {
+    const metadata = {
+      id: 'TP-binders-firewallmanager-015',
+      level: 'unit' as const,
+      capability: 'Custom actions override replaces default coarse-grained actions',
+      oracle: 'exact' as const,
+      determinism: 'deterministic' as const,
+      naming: { pattern: 'FirewallManagerBind__Condition__Outcome', example: 'FirewallManagerBind__CustomActionsOverride__ReplacesCoarseActions' },
+      invariants: [
+        'IAM policy actions match provided custom actions',
+        'Default coarse access actions are not present',
+        'Single policy statement is generated'
+      ],
+      fixtures: ['MockSourceComponent', 'MockTargetComponent'],
+      inputs: {
+        shape: 'BindingContext with security:firewall-manager-policy capability and directive.actions array',
+        notes: 'Granular actions override test'
+      },
+      risks: [],
+      dependencies: ['action-resolver'],
+      evidence: [],
+      compliance_refs: ['docs/platform-standards/platform-iam-auditing-standard.md'],
+      ai_generated: true,
+      human_reviewed_by: 'Platform Engineering'
+    };
+
+    test('FirewallManagerBind__CustomActionsOverride__ReplacesCoarseActions', async () => {
+      const strategy = new FirewallManagerBinderStrategy();
+      const target = createMockTargetComponent('firewall-manager-policy', {
+        'security:firewall-manager-policy': {
+          policyArn: 'arn:aws:fms:us-east-1:123456789012:policy/policy-12345678'
+        }
+      });
+
+      const customActions = ['fms:GetPolicy', 'fms:ListPolicies'];
+      const context = createBindingContext({
+        source: createMockSourceComponent(),
+        target,
+        capability: 'security:firewall-manager-policy',
+        access: 'read',
+        actions: customActions
+      });
+
+      const result = await executeUnifiedBinding(strategy, context);
+
+      assertEnhancedBindingResult(result);
+
+      expect(result.iamPolicies.length).toBeGreaterThan(0);
+      const policy = result.iamPolicies.find(p => p.description.includes('granular actions'));
+      expect(policy).toBeDefined();
+      
+      const statementJson = policy!.statement.toStatementJson();
+      const actions = Array.isArray(statementJson.Action)
+        ? statementJson.Action
+        : [statementJson.Action];
+
+      expect(actions).toEqual(expect.arrayContaining(customActions));
+      expect(actions.length).toBe(customActions.length);
+    });
+  });
+
+  describe('FirewallManagerBind__InvalidActionPrefix__ThrowsPrefixMismatchError', () => {
+    const metadata = {
+      id: 'TP-binders-firewallmanager-016',
+      level: 'unit' as const,
+      capability: 'Throws error when custom actions have mismatched service prefix',
+      oracle: 'exact' as const,
+      determinism: 'deterministic' as const,
+      naming: { pattern: 'FirewallManagerBind__Condition__Outcome', example: 'FirewallManagerBind__InvalidActionPrefix__ThrowsPrefixMismatchError' },
+      invariants: [
+        'Error message indicates mismatched prefix',
+        'Error is thrown by action-resolver'
+      ],
+      fixtures: ['MockSourceComponent', 'MockTargetComponent'],
+      inputs: {
+        shape: 'BindingContext with security:firewall-manager-policy capability and directive.actions with invalid prefix',
+        notes: 'Error case - invalid action prefix'
+      },
+      risks: ['Incorrect IAM policy generation'],
+      dependencies: ['action-resolver'],
+      evidence: [],
+      compliance_refs: ['docs/platform-standards/platform-iam-auditing-standard.md'],
+      ai_generated: true,
+      human_reviewed_by: 'Platform Engineering'
+    };
+
+    test('FirewallManagerBind__InvalidActionPrefix__ThrowsPrefixMismatchError', async () => {
+      const strategy = new FirewallManagerBinderStrategy();
+      const target = createMockTargetComponent('firewall-manager-policy', {
+        'security:firewall-manager-policy': {
+          policyArn: 'arn:aws:fms:us-east-1:123456789012:policy/policy-12345678'
+        }
+      });
+
+      const invalidActions = ['s3:GetObject']; // Invalid prefix for Firewall Manager
+      const context = createBindingContext({
+        source: createMockSourceComponent(),
+        target,
+        capability: 'security:firewall-manager-policy',
+        access: 'read',
+        actions: invalidActions
+      });
+
+      await expect(executeUnifiedBinding(strategy, context)).rejects.toThrow(
+        "Actions must match service prefix 'fms:'"
+      );
+    });
+  });
 });
 

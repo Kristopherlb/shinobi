@@ -6,7 +6,7 @@
  * findings export, and zone of trust configuration with org-wide support.
  */
 
-import { UnifiedBinderStrategyBase } from '@shinobi/core';
+import { UnifiedBinderStrategyBase, resolveActions } from '@shinobi/core';
 import type { BindingContext, EnhancedBindingResult, CompatibilityEntry } from '@shinobi/core';
 import type { IamPolicy } from '@shinobi/core';
 import { PolicyStatement, Effect } from 'aws-cdk-lib/aws-iam';
@@ -116,59 +116,80 @@ export class AccessAnalyzerBinderStrategy extends UnifiedBinderStrategyBase {
       environmentVariables.AWS_ACCESS_ANALYZER_EXTERNAL_ACCESS_COUNT = String(targetData.externalAccessCount);
     }
 
-    // IAM policies for Access Analyzer operations
-    if (access === 'read' || access === 'readwrite') {
+    // Handle granular actions override or use multi-statement approach
+    if (context.directive.actions) {
+      const resolvedActions = resolveActions(
+        context.directive,
+        context,
+        (acc) => this.getAccessAnalyzerActionsForAccess(acc, options),
+        'access-analyzer'
+      );
+
       iamPolicies.push({
         statement: new PolicyStatement({
           effect: Effect.ALLOW,
-          actions: [
-            'access-analyzer:GetAnalyzer',
-            'access-analyzer:ListAnalyzers',
-            'access-analyzer:ListFindings',
-            'access-analyzer:GetFinding',
-            'access-analyzer:ListFindingsV2',
-            'access-analyzer:GetFindingV2'
-          ],
+          actions: resolvedActions,
           resources: ['*']
         }),
-        description: 'Access Analyzer read access',
-        complianceRequirement: 'Least privilege IAM access for Access Analyzer read operations'
+        description: 'Access Analyzer access (granular actions)',
+        complianceRequirement: 'Least privilege IAM access for Access Analyzer operations'
       });
-    }
-
-    if (access === 'write' || access === 'readwrite' || access === 'admin') {
-      iamPolicies.push({
-        statement: new PolicyStatement({
-          effect: Effect.ALLOW,
-          actions: [
-            'access-analyzer:CreateAnalyzer',
-            'access-analyzer:UpdateAnalyzer',
-            'access-analyzer:DeleteAnalyzer',
-            'access-analyzer:ArchiveFindings',
-            'access-analyzer:UnarchiveFindings',
-            'access-analyzer:UpdateFindings',
-            'access-analyzer:StartResourceScan',
-            'access-analyzer:ApplyArchiveRule'
-          ],
-          resources: ['*']
-        }),
-        description: 'Access Analyzer write access',
-        complianceRequirement: 'Least privilege IAM access for Access Analyzer write operations'
-      });
-    }
-
-    // Admin access (full Access Analyzer permissions)
-    if (access === 'admin') {
-      if (options?.requireFullAdminAccess) {
+    } else {
+      // Coarse access levels: use multi-statement approach (backward compatible)
+      // IAM policies for Access Analyzer operations
+      if (access === 'read' || access === 'readwrite') {
         iamPolicies.push({
           statement: new PolicyStatement({
             effect: Effect.ALLOW,
-            actions: ['access-analyzer:*'],
+            actions: [
+              'access-analyzer:GetAnalyzer',
+              'access-analyzer:ListAnalyzers',
+              'access-analyzer:ListFindings',
+              'access-analyzer:GetFinding',
+              'access-analyzer:ListFindingsV2',
+              'access-analyzer:GetFindingV2'
+            ],
             resources: ['*']
           }),
-          description: 'Full Access Analyzer admin access',
-          complianceRequirement: 'Admin access: Full Access Analyzer permissions (requires requireFullAdminAccess option)'
+          description: 'Access Analyzer read access',
+          complianceRequirement: 'Least privilege IAM access for Access Analyzer read operations'
         });
+      }
+
+      if (access === 'write' || access === 'readwrite' || access === 'admin') {
+        iamPolicies.push({
+          statement: new PolicyStatement({
+            effect: Effect.ALLOW,
+            actions: [
+              'access-analyzer:CreateAnalyzer',
+              'access-analyzer:UpdateAnalyzer',
+              'access-analyzer:DeleteAnalyzer',
+              'access-analyzer:ArchiveFindings',
+              'access-analyzer:UnarchiveFindings',
+              'access-analyzer:UpdateFindings',
+              'access-analyzer:StartResourceScan',
+              'access-analyzer:ApplyArchiveRule'
+            ],
+            resources: ['*']
+          }),
+          description: 'Access Analyzer write access',
+          complianceRequirement: 'Least privilege IAM access for Access Analyzer write operations'
+        });
+      }
+
+      // Admin access (full Access Analyzer permissions)
+      if (access === 'admin') {
+        if (options?.requireFullAdminAccess) {
+          iamPolicies.push({
+            statement: new PolicyStatement({
+              effect: Effect.ALLOW,
+              actions: ['access-analyzer:*'],
+              resources: ['*']
+            }),
+            description: 'Full Access Analyzer admin access',
+            complianceRequirement: 'Admin access: Full Access Analyzer permissions (requires requireFullAdminAccess option)'
+          });
+        }
       }
     }
 
@@ -227,6 +248,65 @@ export class AccessAnalyzerBinderStrategy extends UnifiedBinderStrategyBase {
       environmentVariables,
       securityGroupRules: []
     };
+  }
+
+  /**
+   * Get Access Analyzer actions based on access level
+   * Used by resolveActions to compute base actions from coarse access level
+   */
+  private getAccessAnalyzerActionsForAccess(access: string, options?: Record<string, any>): string[] {
+    const actions: string[] = [];
+
+    switch (access) {
+      case 'read':
+      case 'readwrite':
+        actions.push(
+          'access-analyzer:GetAnalyzer',
+          'access-analyzer:ListAnalyzers',
+          'access-analyzer:ListFindings',
+          'access-analyzer:GetFinding',
+          'access-analyzer:ListTagsForResource'
+        );
+        break;
+      case 'write':
+      case 'admin':
+        actions.push(
+          'access-analyzer:CreateAnalyzer',
+          'access-analyzer:UpdateAnalyzer',
+          'access-analyzer:DeleteAnalyzer',
+          'access-analyzer:ArchiveFindings',
+          'access-analyzer:UnarchiveFindings',
+          'access-analyzer:UpdateFindings',
+          'access-analyzer:StartResourceScan',
+          'access-analyzer:ApplyArchiveRule'
+        );
+        break;
+    }
+
+    // For readwrite, combine read and write
+    if (access === 'readwrite') {
+      actions.push(
+        'access-analyzer:CreateAnalyzer',
+        'access-analyzer:UpdateAnalyzer',
+        'access-analyzer:DeleteAnalyzer',
+        'access-analyzer:ArchiveFindings',
+        'access-analyzer:UnarchiveFindings',
+        'access-analyzer:UpdateFindings',
+        'access-analyzer:StartResourceScan',
+        'access-analyzer:ApplyArchiveRule'
+      );
+    }
+
+    // For admin with requireFullAdminAccess, add wildcard (but this would fail validation in FedRAMP)
+    if (access === 'admin' && options?.requireFullAdminAccess) {
+      actions.push('access-analyzer:*');
+    }
+
+    if (actions.length === 0) {
+      throw new Error(`Unsupported Access Analyzer access level: ${access}`);
+    }
+
+    return actions;
   }
 }
 

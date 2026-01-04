@@ -7,7 +7,7 @@
  * - security:securityhub-standard - Security standards (CIS, PCI DSS, NIST, etc.)
  */
 
-import { UnifiedBinderStrategyBase } from '@shinobi/core';
+import { UnifiedBinderStrategyBase, resolveActions } from '@shinobi/core';
 import type { BindingContext, EnhancedBindingResult, CompatibilityEntry } from '@shinobi/core';
 import type { IamPolicy } from '@shinobi/core';
 import { PolicyStatement, Effect } from 'aws-cdk-lib/aws-iam';
@@ -116,48 +116,69 @@ export class SecurityHubBinderStrategy extends UnifiedBinderStrategyBase {
       environmentVariables.AWS_SECURITYHUB_CONTROL_STATUSES = JSON.stringify(targetData.controlStatuses);
     }
 
-    // IAM policies for Security Hub operations
-    if (access === 'read' || access === 'readwrite') {
-      iamPolicies.push({
-        statement: new PolicyStatement({
-          effect: Effect.ALLOW,
-          actions: [
-            'securityhub:GetFindings',
-            'securityhub:BatchGetFindings',
-            'securityhub:ListFindings',
-            'securityhub:DescribeHub',
-            'securityhub:DescribeProducts',
-            'securityhub:DescribeStandards',
-            'securityhub:DescribeStandardsControls',
-            'securityhub:GetEnabledStandards',
-            'securityhub:GetInsights'
-          ],
-          resources: ['*']
-        }),
-        description: 'Security Hub read access',
-        complianceRequirement: 'Least privilege IAM access for Security Hub read operations'
-      });
-    }
+    // Handle granular actions override or use multi-statement approach
+    if (context.directive.actions) {
+      const resolvedActions = resolveActions(
+        context.directive,
+        context,
+        (acc) => this.getSecurityHubActionsForAccess(acc),
+        'securityhub'
+      );
 
-    if (access === 'write' || access === 'readwrite' || access === 'admin') {
       iamPolicies.push({
         statement: new PolicyStatement({
           effect: Effect.ALLOW,
-          actions: [
-            'securityhub:EnableSecurityHub',
-            'securityhub:DisableSecurityHub',
-            'securityhub:UpdateSecurityHubConfiguration',
-            'securityhub:BatchUpdateFindings',
-            'securityhub:BatchImportFindings',
-            'securityhub:CreateInsight',
-            'securityhub:UpdateInsight',
-            'securityhub:DeleteInsight'
-          ],
+          actions: resolvedActions,
           resources: ['*']
         }),
-        description: 'Security Hub write access',
-        complianceRequirement: 'Least privilege IAM access for Security Hub write operations'
+        description: 'Security Hub access (granular actions)',
+        complianceRequirement: 'Least privilege IAM access for Security Hub operations'
       });
+    } else {
+      // Coarse access levels: use multi-statement approach (backward compatible)
+      // IAM policies for Security Hub operations
+      if (access === 'read' || access === 'readwrite') {
+        iamPolicies.push({
+          statement: new PolicyStatement({
+            effect: Effect.ALLOW,
+            actions: [
+              'securityhub:GetFindings',
+              'securityhub:BatchGetFindings',
+              'securityhub:ListFindings',
+              'securityhub:DescribeHub',
+              'securityhub:DescribeProducts',
+              'securityhub:DescribeStandards',
+              'securityhub:DescribeStandardsControls',
+              'securityhub:GetEnabledStandards',
+              'securityhub:GetInsights'
+            ],
+            resources: ['*']
+          }),
+          description: 'Security Hub read access',
+          complianceRequirement: 'Least privilege IAM access for Security Hub read operations'
+        });
+      }
+
+      if (access === 'write' || access === 'readwrite' || access === 'admin') {
+        iamPolicies.push({
+          statement: new PolicyStatement({
+            effect: Effect.ALLOW,
+            actions: [
+              'securityhub:EnableSecurityHub',
+              'securityhub:DisableSecurityHub',
+              'securityhub:UpdateSecurityHubConfiguration',
+              'securityhub:BatchUpdateFindings',
+              'securityhub:BatchImportFindings',
+              'securityhub:CreateInsight',
+              'securityhub:UpdateInsight',
+              'securityhub:DeleteInsight'
+            ],
+            resources: ['*']
+          }),
+          description: 'Security Hub write access',
+          complianceRequirement: 'Least privilege IAM access for Security Hub write operations'
+        });
+      }
     }
 
     // Findings suppression support
