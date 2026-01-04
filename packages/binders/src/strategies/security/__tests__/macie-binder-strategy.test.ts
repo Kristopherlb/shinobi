@@ -294,5 +294,117 @@ describe('MacieBinderStrategy', () => {
       await expect(executeUnifiedBinding(strategy, context)).rejects.toThrow('missing required jobId');
     });
   });
+
+  describe('MacieBind__CustomActionsOverride__ReplacesCoarseActions', () => {
+    const metadata = {
+      id: 'TP-binders-security-macie-010',
+      level: 'unit' as const,
+      capability: 'Custom actions override replaces default Macie actions',
+      oracle: 'exact' as const,
+      determinism: 'deterministic' as const,
+      naming: { pattern: 'MacieBind__Condition__Outcome', example: 'MacieBind__CustomActionsOverride__ReplacesCoarseActions' },
+      invariants: [
+        'IAM policy actions match provided custom actions array',
+        'Default Macie actions are not included when custom actions provided',
+        'Actions array is used directly (replaces coarse access)'
+      ],
+      fixtures: ['MockSourceComponent', 'MockTargetComponent', 'MacieJobCapabilityData'],
+      inputs: {
+        shape: 'BindingContext with security:macie-job capability and directive.actions array',
+        notes: 'Granular actions override test'
+      },
+      risks: [],
+      dependencies: [],
+      evidence: [],
+      compliance_refs: ['docs/platform-standards/platform-iam-auditing-standard.md'],
+      ai_generated: true,
+      human_reviewed_by: 'Platform Engineering'
+    };
+
+    test('MacieBind__CustomActionsOverride__ReplacesCoarseActions', async () => {
+      const strategy = new MacieBinderStrategy();
+      const target = createMockTargetComponent('macie-job', {
+        'security:macie-job': {
+          jobId: 'test-job-id',
+          jobArn: 'arn:aws:macie2:us-east-1:123456789012:classification-job/test-job-id'
+        }
+      });
+
+      const customActions = ['macie2:GetClassificationJob', 'macie2:ListFindings'];
+      const context = createBindingContext({
+        source: createMockSourceComponent(),
+        target,
+        capability: 'security:macie-job',
+        access: 'read',
+        actions: customActions
+      });
+
+      const result = await executeUnifiedBinding(strategy, context);
+
+      assertEnhancedBindingResult(result);
+
+      expect(result.iamPolicies.length).toBeGreaterThan(0);
+      const policy = result.iamPolicies.find(p => p.description.includes('granular actions'));
+      expect(policy).toBeDefined();
+      
+      const statementJson = policy!.statement.toStatementJson();
+      const actions = Array.isArray(statementJson.Action)
+        ? statementJson.Action
+        : [statementJson.Action];
+
+      expect(actions).toEqual(expect.arrayContaining(customActions));
+      expect(actions.length).toBe(customActions.length);
+    });
+  });
+
+  describe('MacieBind__InvalidActionPrefix__ThrowsPrefixMismatchError', () => {
+    const metadata = {
+      id: 'TP-binders-security-macie-011',
+      level: 'unit' as const,
+      capability: 'Throws error when actions array contains actions with wrong service prefix',
+      oracle: 'exact' as const,
+      determinism: 'deterministic' as const,
+      naming: { pattern: 'MacieBind__Condition__Outcome', example: 'MacieBind__InvalidActionPrefix__ThrowsPrefixMismatchError' },
+      invariants: [
+        'Error message indicates service prefix mismatch',
+        'Error specifies which actions are mismatched',
+        'Binding fails before IAM policy generation'
+      ],
+      fixtures: ['MockSourceComponent', 'MockTargetComponent', 'MacieJobCapabilityData'],
+      inputs: {
+        shape: 'BindingContext with security:macie-job capability and directive.actions containing non-macie2 actions',
+        notes: 'Error case - invalid action prefix for Macie binder'
+      },
+      risks: [],
+      dependencies: [],
+      evidence: [],
+      compliance_refs: ['docs/platform-standards/platform-iam-auditing-standard.md'],
+      ai_generated: true,
+      human_reviewed_by: 'Platform Engineering'
+    };
+
+    test('MacieBind__InvalidActionPrefix__ThrowsPrefixMismatchError', async () => {
+      const strategy = new MacieBinderStrategy();
+      const target = createMockTargetComponent('macie-job', {
+        'security:macie-job': {
+          jobId: 'test-job-id',
+          jobArn: 'arn:aws:macie2:us-east-1:123456789012:classification-job/test-job-id'
+        }
+      });
+
+      const invalidActions = ['s3:GetObject']; // Wrong service prefix
+      const context = createBindingContext({
+        source: createMockSourceComponent(),
+        target,
+        capability: 'security:macie-job',
+        access: 'read',
+        actions: invalidActions
+      });
+
+      await expect(executeUnifiedBinding(strategy, context)).rejects.toThrow(
+        "Actions must match service prefix 'macie2:'"
+      );
+    });
+  });
 });
 

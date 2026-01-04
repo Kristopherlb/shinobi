@@ -406,4 +406,116 @@ describe('GuardDutyBinderStrategy', () => {
       await expect(executeUnifiedBinding(strategy, context)).rejects.toThrow(/detectorId/);
     });
   });
+
+  describe('GuardDutyBind__CustomActionsOverride__ReplacesCoarseActions', () => {
+    const metadata = {
+      id: 'TP-binders-security-guardduty-010',
+      level: 'unit' as const,
+      capability: 'Custom actions override replaces default GuardDuty actions',
+      oracle: 'exact' as const,
+      determinism: 'deterministic' as const,
+      naming: { pattern: 'GuardDutyBind__Condition__Outcome', example: 'GuardDutyBind__CustomActionsOverride__ReplacesCoarseActions' },
+      invariants: [
+        'IAM policy actions match provided custom actions array',
+        'Default GuardDuty actions are not included when custom actions provided',
+        'Actions array is used directly (replaces coarse access)'
+      ],
+      fixtures: ['MockSourceComponent', 'MockTargetComponent', 'GuardDutyDetectorCapabilityData'],
+      inputs: {
+        shape: 'BindingContext with security:guardduty-detector capability and directive.actions array',
+        notes: 'Granular actions override test'
+      },
+      risks: [],
+      dependencies: [],
+      evidence: [],
+      compliance_refs: ['docs/platform-standards/platform-iam-auditing-standard.md'],
+      ai_generated: true,
+      human_reviewed_by: 'Platform Engineering'
+    };
+
+    test('GuardDutyBind__CustomActionsOverride__ReplacesCoarseActions', async () => {
+      const strategy = new GuardDutyBinderStrategy();
+      const target = createMockTargetComponent('guardduty-detector', {
+        'security:guardduty-detector': {
+          detectorId: 'test-detector-id',
+          detectorArn: 'arn:aws:guardduty:us-east-1:123456789012:detector/test-detector-id'
+        }
+      });
+
+      const customActions = ['guardduty:GetDetector', 'guardduty:ListFindings'];
+      const context = createBindingContext({
+        source: createMockSourceComponent(),
+        target,
+        capability: 'security:guardduty-detector',
+        access: 'read',
+        actions: customActions
+      });
+
+      const result = await executeUnifiedBinding(strategy, context);
+
+      assertEnhancedBindingResult(result);
+
+      expect(result.iamPolicies.length).toBeGreaterThan(0);
+      const policy = result.iamPolicies.find(p => p.description.includes('granular actions'));
+      expect(policy).toBeDefined();
+      
+      const statementJson = policy!.statement.toStatementJson();
+      const actions = Array.isArray(statementJson.Action)
+        ? statementJson.Action
+        : [statementJson.Action];
+
+      expect(actions).toEqual(expect.arrayContaining(customActions));
+      expect(actions.length).toBe(customActions.length);
+    });
+  });
+
+  describe('GuardDutyBind__InvalidActionPrefix__ThrowsPrefixMismatchError', () => {
+    const metadata = {
+      id: 'TP-binders-security-guardduty-011',
+      level: 'unit' as const,
+      capability: 'Throws error when actions array contains actions with wrong service prefix',
+      oracle: 'exact' as const,
+      determinism: 'deterministic' as const,
+      naming: { pattern: 'GuardDutyBind__Condition__Outcome', example: 'GuardDutyBind__InvalidActionPrefix__ThrowsPrefixMismatchError' },
+      invariants: [
+        'Error message indicates service prefix mismatch',
+        'Error specifies which actions are mismatched',
+        'Binding fails before IAM policy generation'
+      ],
+      fixtures: ['MockSourceComponent', 'MockTargetComponent', 'GuardDutyDetectorCapabilityData'],
+      inputs: {
+        shape: 'BindingContext with security:guardduty-detector capability and directive.actions containing non-guardduty actions',
+        notes: 'Error case - invalid action prefix for GuardDuty binder'
+      },
+      risks: [],
+      dependencies: [],
+      evidence: [],
+      compliance_refs: ['docs/platform-standards/platform-iam-auditing-standard.md'],
+      ai_generated: true,
+      human_reviewed_by: 'Platform Engineering'
+    };
+
+    test('GuardDutyBind__InvalidActionPrefix__ThrowsPrefixMismatchError', async () => {
+      const strategy = new GuardDutyBinderStrategy();
+      const target = createMockTargetComponent('guardduty-detector', {
+        'security:guardduty-detector': {
+          detectorId: 'test-detector-id',
+          detectorArn: 'arn:aws:guardduty:us-east-1:123456789012:detector/test-detector-id'
+        }
+      });
+
+      const invalidActions = ['s3:GetObject']; // Wrong service prefix
+      const context = createBindingContext({
+        source: createMockSourceComponent(),
+        target,
+        capability: 'security:guardduty-detector',
+        access: 'read',
+        actions: invalidActions
+      });
+
+      await expect(executeUnifiedBinding(strategy, context)).rejects.toThrow(
+        "Actions must match service prefix 'guardduty:'"
+      );
+    });
+  });
 });

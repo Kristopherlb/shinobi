@@ -3,7 +3,7 @@
  * Handles Cognito User Pool bindings for AWS Cognito with mandatory compliance enforcement
  */
 
-import { UnifiedBinderStrategyBase } from '@shinobi/core';
+import { UnifiedBinderStrategyBase, resolveActions } from '@shinobi/core';
 import type { BindingContext, EnhancedBindingResult, CompatibilityEntry } from '@shinobi/core';
 import type { IamPolicy } from '@shinobi/core';
 import { PolicyStatement, Effect } from 'aws-cdk-lib/aws-iam';
@@ -154,9 +154,30 @@ export class CognitoUserPoolBinderStrategy extends UnifiedBinderStrategyBase {
       }
     }
 
-    // Apply access policies
-    const accessPolicies = this.buildAccessPolicies(userPoolArn, access);
-    iamPolicies.push(...accessPolicies);
+    // Handle granular actions override or use multi-statement approach
+    if (context.directive.actions) {
+      const resolvedActions = resolveActions(
+        context.directive,
+        context,
+        (acc) => this.getCognitoActionsForAccess(acc),
+        'cognito-idp'
+      );
+
+      iamPolicies.push({
+        statement: new PolicyStatement({
+          effect: Effect.ALLOW,
+          actions: resolvedActions,
+          resources: [userPoolArn]
+        }),
+        description: 'Cognito User Pool access (granular actions)',
+        complianceRequirement: 'Authentication and authorization'
+      });
+    } else {
+      // Coarse access levels: use multi-statement approach (backward compatible)
+      // Apply access policies
+      const accessPolicies = this.buildAccessPolicies(userPoolArn, access);
+      iamPolicies.push(...accessPolicies);
+    }
 
     // Apply custom environment variable overrides from directive
     if (context.directive.env) {
@@ -204,8 +225,29 @@ export class CognitoUserPoolBinderStrategy extends UnifiedBinderStrategyBase {
 
     // Identity provider bindings utilize the same policy surface as user pool
     if (userPoolArn) {
-      const accessPolicies = this.buildAccessPolicies(userPoolArn, access);
-      iamPolicies.push(...accessPolicies);
+      // Handle granular actions override or use multi-statement approach
+      if (context.directive.actions) {
+        const resolvedActions = resolveActions(
+          context.directive,
+          context,
+          (acc) => this.getCognitoActionsForAccess(acc),
+          'cognito-idp'
+        );
+
+        iamPolicies.push({
+          statement: new PolicyStatement({
+            effect: Effect.ALLOW,
+            actions: resolvedActions,
+            resources: [userPoolArn]
+          }),
+          description: 'Cognito Identity Provider access (granular actions)',
+          complianceRequirement: 'Authentication and authorization'
+        });
+      } else {
+        // Coarse access levels: use multi-statement approach (backward compatible)
+        const accessPolicies = this.buildAccessPolicies(userPoolArn, access);
+        iamPolicies.push(...accessPolicies);
+      }
     }
 
     // Apply custom environment variable overrides from directive
@@ -324,5 +366,52 @@ export class CognitoUserPoolBinderStrategy extends UnifiedBinderStrategyBase {
     }
 
     return policies;
+  }
+
+  /**
+   * Get Cognito actions based on access level
+   * Used by resolveActions to compute base actions from coarse access level
+   */
+  private getCognitoActionsForAccess(access: string): string[] {
+    const actions: string[] = [];
+
+    if (access === 'authenticate') {
+      actions.push(
+        'cognito-idp:InitiateAuth',
+        'cognito-idp:RespondToAuthChallenge',
+        'cognito-idp:GlobalSignOut',
+        'cognito-idp:RevokeToken',
+        'cognito-idp:SignUp'
+      );
+    }
+
+    if (access === 'read') {
+      actions.push(
+        'cognito-idp:DescribeUserPool',
+        'cognito-idp:ListUsers',
+        'cognito-idp:AdminGetUser',
+        'cognito-idp:ListUserPoolClients'
+      );
+    }
+
+    if (access === 'manage') {
+      actions.push(
+        'cognito-idp:AdminCreateUser',
+        'cognito-idp:AdminUpdateUserAttributes',
+        'cognito-idp:AdminDeleteUser',
+        'cognito-idp:AdminSetUserPassword',
+        'cognito-idp:AdminAddUserToGroup',
+        'cognito-idp:AdminRemoveUserFromGroup',
+        'cognito-idp:CreateUserPoolClient',
+        'cognito-idp:UpdateUserPoolClient',
+        'cognito-idp:DeleteUserPoolClient'
+      );
+    }
+
+    if (actions.length === 0) {
+      throw new Error(`Unsupported Cognito access level: ${access}`);
+    }
+
+    return actions;
   }
 }

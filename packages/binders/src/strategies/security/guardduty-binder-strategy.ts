@@ -7,7 +7,7 @@
  * - security:guardduty-malware-protection - Malware protection for EBS volumes and S3
  */
 
-import { UnifiedBinderStrategyBase } from '@shinobi/core';
+import { UnifiedBinderStrategyBase, resolveActions } from '@shinobi/core';
 import type { BindingContext, EnhancedBindingResult, CompatibilityEntry } from '@shinobi/core';
 import type { IamPolicy } from '@shinobi/core';
 import { PolicyStatement, Effect } from 'aws-cdk-lib/aws-iam';
@@ -122,47 +122,68 @@ export class GuardDutyBinderStrategy extends UnifiedBinderStrategyBase {
       environmentVariables.AWS_GUARDDUTY_FINDING_TYPES = targetData.findingTypes.join(',');
     }
 
-    // IAM policies for GuardDuty detector operations
-    if (access === 'read' || access === 'readwrite') {
-      iamPolicies.push({
-        statement: new PolicyStatement({
-          effect: Effect.ALLOW,
-          actions: [
-            'guardduty:GetDetector',
-            'guardduty:ListDetectors',
-            'guardduty:ListFindings',
-            'guardduty:GetFindings',
-            'guardduty:DescribeOrganizationConfiguration',
-            'guardduty:ListMembers'
-          ],
-          resources: [`arn:aws:guardduty:*:*:detector/${targetData.detectorId}`]
-        }),
-        description: 'GuardDuty detector read access',
-        complianceRequirement: 'Least privilege IAM access for GuardDuty read operations'
-      });
-    }
+    // Handle granular actions override or use multi-statement approach
+    if (context.directive.actions) {
+      const resolvedActions = resolveActions(
+        context.directive,
+        context,
+        (acc) => this.getGuardDutyActionsForAccess(acc),
+        'guardduty'
+      );
 
-    if (access === 'write' || access === 'readwrite' || access === 'admin') {
       iamPolicies.push({
         statement: new PolicyStatement({
           effect: Effect.ALLOW,
-          actions: [
-            'guardduty:CreateDetector',
-            'guardduty:UpdateDetector',
-            'guardduty:DeleteDetector',
-            'guardduty:UpdateOrganizationConfiguration',
-            'guardduty:CreateMembers',
-            'guardduty:InviteMembers',
-            'guardduty:DisassociateMembers',
-            'guardduty:DeleteMembers',
-            'guardduty:ArchiveFindings',
-            'guardduty:UnarchiveFindings'
-          ],
+          actions: resolvedActions,
           resources: [`arn:aws:guardduty:*:*:detector/${targetData.detectorId}`]
         }),
-        description: 'GuardDuty detector write access',
-        complianceRequirement: 'Least privilege IAM access for GuardDuty write operations'
+        description: 'GuardDuty detector access (granular actions)',
+        complianceRequirement: 'Least privilege IAM access for GuardDuty operations'
       });
+    } else {
+      // Coarse access levels: use multi-statement approach (backward compatible)
+      // IAM policies for GuardDuty detector operations
+      if (access === 'read' || access === 'readwrite') {
+        iamPolicies.push({
+          statement: new PolicyStatement({
+            effect: Effect.ALLOW,
+            actions: [
+              'guardduty:GetDetector',
+              'guardduty:ListDetectors',
+              'guardduty:ListFindings',
+              'guardduty:GetFindings',
+              'guardduty:DescribeOrganizationConfiguration',
+              'guardduty:ListMembers'
+            ],
+            resources: [`arn:aws:guardduty:*:*:detector/${targetData.detectorId}`]
+          }),
+          description: 'GuardDuty detector read access',
+          complianceRequirement: 'Least privilege IAM access for GuardDuty read operations'
+        });
+      }
+
+      if (access === 'write' || access === 'readwrite' || access === 'admin') {
+        iamPolicies.push({
+          statement: new PolicyStatement({
+            effect: Effect.ALLOW,
+            actions: [
+              'guardduty:CreateDetector',
+              'guardduty:UpdateDetector',
+              'guardduty:DeleteDetector',
+              'guardduty:UpdateOrganizationConfiguration',
+              'guardduty:CreateMembers',
+              'guardduty:InviteMembers',
+              'guardduty:DisassociateMembers',
+              'guardduty:DeleteMembers',
+              'guardduty:ArchiveFindings',
+              'guardduty:UnarchiveFindings'
+            ],
+            resources: [`arn:aws:guardduty:*:*:detector/${targetData.detectorId}`]
+          }),
+          description: 'GuardDuty detector write access',
+          complianceRequirement: 'Least privilege IAM access for GuardDuty write operations'
+        });
+      }
     }
 
     // S3 access for findings export
@@ -362,6 +383,41 @@ export class GuardDutyBinderStrategy extends UnifiedBinderStrategyBase {
       environmentVariables,
       securityGroupRules: []
     };
+  }
+
+  /**
+   * Get GuardDuty actions based on access level
+   * Used by resolveActions to compute base actions from coarse access level
+   */
+  private getGuardDutyActionsForAccess(access: string): string[] {
+    switch (access) {
+      case 'read':
+      case 'readwrite':
+        return [
+          'guardduty:GetDetector',
+          'guardduty:ListDetectors',
+          'guardduty:ListFindings',
+          'guardduty:GetFindings',
+          'guardduty:DescribeOrganizationConfiguration',
+          'guardduty:ListMembers'
+        ];
+      case 'write':
+      case 'admin':
+        return [
+          'guardduty:CreateDetector',
+          'guardduty:UpdateDetector',
+          'guardduty:DeleteDetector',
+          'guardduty:UpdateOrganizationConfiguration',
+          'guardduty:CreateMembers',
+          'guardduty:InviteMembers',
+          'guardduty:DisassociateMembers',
+          'guardduty:DeleteMembers',
+          'guardduty:ArchiveFindings',
+          'guardduty:UnarchiveFindings'
+        ];
+      default:
+        throw new Error(`Unsupported GuardDuty access level: ${access}`);
+    }
   }
 }
 

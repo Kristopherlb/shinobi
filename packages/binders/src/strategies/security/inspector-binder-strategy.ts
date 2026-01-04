@@ -6,7 +6,7 @@
  * and findings export with org-wide delegated admin support.
  */
 
-import { UnifiedBinderStrategyBase } from '@shinobi/core';
+import { UnifiedBinderStrategyBase, resolveActions } from '@shinobi/core';
 import type { BindingContext, EnhancedBindingResult, CompatibilityEntry } from '@shinobi/core';
 import type { IamPolicy } from '@shinobi/core';
 import { PolicyStatement, Effect } from 'aws-cdk-lib/aws-iam';
@@ -121,45 +121,66 @@ export class InspectorBinderStrategy extends UnifiedBinderStrategyBase {
       environmentVariables.AWS_INSPECTOR_FINDING_COUNT = String(targetData.findingCount);
     }
 
-    // IAM policies for Inspector scan operations
-    if (access === 'read' || access === 'readwrite') {
-      iamPolicies.push({
-        statement: new PolicyStatement({
-          effect: Effect.ALLOW,
-          actions: [
-            'inspector2:GetFindings',
-            'inspector2:ListFindings',
-            'inspector2:GetScan',
-            'inspector2:ListScans',
-            'inspector2:DescribeFindings',
-            'inspector2:GetFindingsReportStatus'
-          ],
-          resources: ['*']
-        }),
-        description: 'Inspector scan read access',
-        complianceRequirement: 'Least privilege IAM access for Inspector read operations'
-      });
-    }
+    // Handle granular actions override or use multi-statement approach
+    if (context.directive.actions) {
+      const resolvedActions = resolveActions(
+        context.directive,
+        context,
+        (acc) => this.getInspectorActionsForAccess(acc),
+        'inspector2'
+      );
 
-    if (access === 'write' || access === 'readwrite' || access === 'admin') {
       iamPolicies.push({
         statement: new PolicyStatement({
           effect: Effect.ALLOW,
-          actions: [
-            'inspector2:StartScan',
-            'inspector2:StopScan',
-            'inspector2:UpdateFilter',
-            'inspector2:CreateFilter',
-            'inspector2:DeleteFilter',
-            'inspector2:UpdateFindings',
-            'inspector2:BatchGetAccountStatus',
-            'inspector2:BatchGetCodeSnippet'
-          ],
+          actions: resolvedActions,
           resources: ['*']
         }),
-        description: 'Inspector scan write access',
-        complianceRequirement: 'Least privilege IAM access for Inspector write operations'
+        description: 'Inspector scan access (granular actions)',
+        complianceRequirement: 'Least privilege IAM access for Inspector operations'
       });
+    } else {
+      // Coarse access levels: use multi-statement approach (backward compatible)
+      // IAM policies for Inspector scan operations
+      if (access === 'read' || access === 'readwrite') {
+        iamPolicies.push({
+          statement: new PolicyStatement({
+            effect: Effect.ALLOW,
+            actions: [
+              'inspector2:GetFindings',
+              'inspector2:ListFindings',
+              'inspector2:GetScan',
+              'inspector2:ListScans',
+              'inspector2:DescribeFindings',
+              'inspector2:GetFindingsReportStatus'
+            ],
+            resources: ['*']
+          }),
+          description: 'Inspector scan read access',
+          complianceRequirement: 'Least privilege IAM access for Inspector read operations'
+        });
+      }
+
+      if (access === 'write' || access === 'readwrite' || access === 'admin') {
+        iamPolicies.push({
+          statement: new PolicyStatement({
+            effect: Effect.ALLOW,
+            actions: [
+              'inspector2:StartScan',
+              'inspector2:StopScan',
+              'inspector2:UpdateFilter',
+              'inspector2:CreateFilter',
+              'inspector2:DeleteFilter',
+              'inspector2:UpdateFindings',
+              'inspector2:BatchGetAccountStatus',
+              'inspector2:BatchGetCodeSnippet'
+            ],
+            resources: ['*']
+          }),
+          description: 'Inspector scan write access',
+          complianceRequirement: 'Least privilege IAM access for Inspector write operations'
+        });
+      }
     }
 
     // S3 access for findings export
@@ -273,6 +294,39 @@ export class InspectorBinderStrategy extends UnifiedBinderStrategyBase {
       environmentVariables,
       securityGroupRules: []
     };
+  }
+
+  /**
+   * Get Inspector actions based on access level
+   * Used by resolveActions to compute base actions from coarse access level
+   */
+  private getInspectorActionsForAccess(access: string): string[] {
+    switch (access) {
+      case 'read':
+      case 'readwrite':
+        return [
+          'inspector2:GetFindings',
+          'inspector2:ListFindings',
+          'inspector2:GetScan',
+          'inspector2:ListScans',
+          'inspector2:DescribeFindings',
+          'inspector2:GetFindingsReportStatus'
+        ];
+      case 'write':
+      case 'admin':
+        return [
+          'inspector2:StartScan',
+          'inspector2:StopScan',
+          'inspector2:UpdateFilter',
+          'inspector2:CreateFilter',
+          'inspector2:DeleteFilter',
+          'inspector2:UpdateFindings',
+          'inspector2:BatchGetAccountStatus',
+          'inspector2:BatchGetCodeSnippet'
+        ];
+      default:
+        throw new Error(`Unsupported Inspector access level: ${access}`);
+    }
   }
 }
 

@@ -6,7 +6,7 @@
  * and org-wide discovery patterns with delegated admin support.
  */
 
-import { UnifiedBinderStrategyBase } from '@shinobi/core';
+import { UnifiedBinderStrategyBase, resolveActions } from '@shinobi/core';
 import type { BindingContext, EnhancedBindingResult, CompatibilityEntry } from '@shinobi/core';
 import type { IamPolicy } from '@shinobi/core';
 import { PolicyStatement, Effect } from 'aws-cdk-lib/aws-iam';
@@ -126,42 +126,63 @@ export class MacieBinderStrategy extends UnifiedBinderStrategyBase {
       environmentVariables.AWS_MACIE_FINDING_SEVERITY = targetData.findingSeverity;
     }
 
-    // IAM policies for Macie job operations
-    if (access === 'read' || access === 'readwrite') {
-      iamPolicies.push({
-        statement: new PolicyStatement({
-          effect: Effect.ALLOW,
-          actions: [
-            'macie2:GetClassificationJob',
-            'macie2:ListClassificationJobs',
-            'macie2:GetFindings',
-            'macie2:ListFindings',
-            'macie2:DescribeBuckets',
-            'macie2:GetSensitiveDataOccurrences'
-          ],
-          resources: ['*']
-        }),
-        description: 'Macie job read access',
-        complianceRequirement: 'Least privilege IAM access for Macie read operations'
-      });
-    }
+    // Handle granular actions override or use multi-statement approach
+    if (context.directive.actions) {
+      const resolvedActions = resolveActions(
+        context.directive,
+        context,
+        (acc) => this.getMacieActionsForAccess(acc),
+        'macie2'
+      );
 
-    if (access === 'write' || access === 'readwrite' || access === 'admin') {
       iamPolicies.push({
         statement: new PolicyStatement({
           effect: Effect.ALLOW,
-          actions: [
-            'macie2:CreateClassificationJob',
-            'macie2:UpdateClassificationJob',
-            'macie2:UpdateFindings',
-            'macie2:ArchiveFindings',
-            'macie2:UnarchiveFindings'
-          ],
+          actions: resolvedActions,
           resources: ['*']
         }),
-        description: 'Macie job write access',
-        complianceRequirement: 'Least privilege IAM access for Macie write operations'
+        description: 'Macie job access (granular actions)',
+        complianceRequirement: 'Least privilege IAM access for Macie operations'
       });
+    } else {
+      // Coarse access levels: use multi-statement approach (backward compatible)
+      // IAM policies for Macie job operations
+      if (access === 'read' || access === 'readwrite') {
+        iamPolicies.push({
+          statement: new PolicyStatement({
+            effect: Effect.ALLOW,
+            actions: [
+              'macie2:GetClassificationJob',
+              'macie2:ListClassificationJobs',
+              'macie2:GetFindings',
+              'macie2:ListFindings',
+              'macie2:DescribeBuckets',
+              'macie2:GetSensitiveDataOccurrences'
+            ],
+            resources: ['*']
+          }),
+          description: 'Macie job read access',
+          complianceRequirement: 'Least privilege IAM access for Macie read operations'
+        });
+      }
+
+      if (access === 'write' || access === 'readwrite' || access === 'admin') {
+        iamPolicies.push({
+          statement: new PolicyStatement({
+            effect: Effect.ALLOW,
+            actions: [
+              'macie2:CreateClassificationJob',
+              'macie2:UpdateClassificationJob',
+              'macie2:UpdateFindings',
+              'macie2:ArchiveFindings',
+              'macie2:UnarchiveFindings'
+            ],
+            resources: ['*']
+          }),
+          description: 'Macie job write access',
+          complianceRequirement: 'Least privilege IAM access for Macie write operations'
+        });
+      }
     }
 
     // S3 access for bucket scanning
@@ -282,6 +303,36 @@ export class MacieBinderStrategy extends UnifiedBinderStrategyBase {
       environmentVariables,
       securityGroupRules: []
     };
+  }
+
+  /**
+   * Get Macie actions based on access level
+   * Used by resolveActions to compute base actions from coarse access level
+   */
+  private getMacieActionsForAccess(access: string): string[] {
+    switch (access) {
+      case 'read':
+      case 'readwrite':
+        return [
+          'macie2:GetClassificationJob',
+          'macie2:ListClassificationJobs',
+          'macie2:GetFindings',
+          'macie2:ListFindings',
+          'macie2:DescribeBuckets',
+          'macie2:GetSensitiveDataOccurrences'
+        ];
+      case 'write':
+      case 'admin':
+        return [
+          'macie2:CreateClassificationJob',
+          'macie2:UpdateClassificationJob',
+          'macie2:UpdateFindings',
+          'macie2:ArchiveFindings',
+          'macie2:UnarchiveFindings'
+        ];
+      default:
+        throw new Error(`Unsupported Macie access level: ${access}`);
+    }
   }
 }
 
