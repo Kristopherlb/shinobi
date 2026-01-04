@@ -190,7 +190,7 @@ describe('SageMakerBinderStrategy', () => {
       const context = createBindingContext({
         target,
         capability: 'sagemaker:endpoint',
-        access: 'async-invoke'
+        access: 'invoke'
       });
 
       const result = await executeUnifiedBinding(strategy, context);
