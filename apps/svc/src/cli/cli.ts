@@ -29,6 +29,7 @@ import { createValidateCommand } from './commands/validate.js';
 import { createPlanCommand } from './commands/plan.js';
 import { createUpCommand } from './commands/up.js';
 import { createCatalogCommand } from './catalog.js';
+import { createBindersCatalogCommand } from './binders-catalog-command.js';
 import { createSynthCommand } from './commands/synth.js';
 import { createDiffCommand } from './commands/diff.js';
 import { createDestroyCommand } from './commands/destroy.js';
@@ -85,6 +86,12 @@ registerInventoryCommand(program, inventoryDeps.logger);
 
 // shinobi catalog command
 program.addCommand(createCatalogCommand());
+
+// shinobi binders command (subcommand for binder catalog)
+const bindersCommand = new Command('binders')
+  .description('Manage and explore binder strategies');
+bindersCommand.addCommand(createBindersCatalogCommand());
+program.addCommand(bindersCommand);
 
 // shinobi synth command
 program.addCommand(createSynthCommand());

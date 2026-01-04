@@ -642,6 +642,18 @@ export class OrganizationsBinderStrategy extends UnifiedBinderStrategyBase {
       AWS_ORGANIZATIONS_MASTER_ACCOUNT_ID: targetData.masterAccountId
     };
 
+    if (targetData.accountId) {
+      environmentVariables.AWS_ORGANIZATIONS_ACCOUNT_ID = targetData.accountId;
+    }
+
+    if (targetData.accountName) {
+      environmentVariables.AWS_ORGANIZATIONS_ACCOUNT_NAME = targetData.accountName;
+    }
+
+    if (targetData.accountEmail) {
+      environmentVariables.AWS_ORGANIZATIONS_ACCOUNT_EMAIL = targetData.accountEmail;
+    }
+
     // Handle granular actions override or use multi-statement approach
     if (context.directive.actions) {
       const resolvedActions = resolveActions(
