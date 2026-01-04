@@ -627,4 +627,545 @@ describe('DynamoDbBinderStrategy', () => {
       expect(actions.length).toBe(customActions.length);
     });
   });
+
+  describe('DynamoBind__IndexWriteAccess__GrantsWriteActions', () => {
+    const metadata = {
+      id: 'TP-binders-dynamodb-011',
+      level: 'unit' as const,
+      capability: 'Index write access grants DynamoDB index write actions',
+      oracle: 'exact' as const,
+      determinism: 'deterministic' as const,
+      naming: { pattern: 'DynamoBind__Condition__Outcome', example: 'DynamoBind__IndexWriteAccess__GrantsWriteActions' },
+      invariants: [
+        'IAM policies include DynamoDB write actions for index',
+        'Write actions include UpdateItem and PutItem'
+      ],
+      fixtures: ['MockSourceComponent', 'MockTargetComponent'],
+      inputs: {
+        shape: 'BindingContext with dynamodb:index capability and write access',
+        notes: 'Index write access test'
+      },
+      risks: [],
+      dependencies: [],
+      evidence: [],
+      compliance_refs: ['docs/platform-standards/platform-iam-auditing-standard.md'],
+      ai_generated: true,
+      human_reviewed_by: 'Platform Engineering'
+    };
+
+    test('DynamoBind__IndexWriteAccess__GrantsWriteActions', async () => {
+      const strategy = new DynamoDbBinderStrategy();
+      const indexArn = 'arn:aws:dynamodb:us-east-1:123456789012:table/test-table/index/test-index';
+      const target = createMockTargetComponent('dynamodb-index', {
+        'dynamodb:index': {
+          indexArn,
+          indexName: 'test-index',
+          indexType: 'GSI'
+        }
+      });
+
+      const context = createBindingContext({
+        source: createMockSourceComponent('lambda-api', 'test-source'),
+        target,
+        capability: 'dynamodb:index',
+        access: 'write'
+      });
+
+      const result = await executeUnifiedBinding(strategy, context);
+
+      assertEnhancedBindingResult(result);
+
+      const policy = result.iamPolicies.find(p => p.description.includes('write access'));
+      expect(policy).toBeDefined();
+      
+      const statementJson = policy!.statement.toStatementJson();
+      const actions = Array.isArray(statementJson.Action)
+        ? statementJson.Action
+        : [statementJson.Action];
+
+      // Index write access grants index management actions, not table item actions
+      expect(actions).toContain('dynamodb:CreateGlobalSecondaryIndex');
+      expect(actions).toContain('dynamodb:UpdateGlobalSecondaryIndex');
+      expect(actions).toContain('dynamodb:DeleteGlobalSecondaryIndex');
+    });
+  });
+
+  describe('DynamoBind__IndexMissingIndexArn__ThrowsError', () => {
+    const metadata = {
+      id: 'TP-binders-dynamodb-012',
+      level: 'unit' as const,
+      capability: 'Missing indexArn throws error',
+      oracle: 'exact' as const,
+      determinism: 'deterministic' as const,
+      naming: { pattern: 'DynamoBind__Condition__Outcome', example: 'DynamoBind__IndexMissingIndexArn__ThrowsError' },
+      invariants: [
+        'Error message indicates missing indexArn',
+        'Error is thrown before binding completes'
+      ],
+      fixtures: ['MockSourceComponent', 'MockTargetComponent'],
+      inputs: {
+        shape: 'BindingContext with dynamodb:index capability but missing indexArn',
+        notes: 'Error case test'
+      },
+      risks: [],
+      dependencies: [],
+      evidence: [],
+      compliance_refs: [],
+      ai_generated: true,
+      human_reviewed_by: 'Platform Engineering'
+    };
+
+    test('DynamoBind__IndexMissingIndexArn__ThrowsError', async () => {
+      const strategy = new DynamoDbBinderStrategy();
+      const target = createMockTargetComponent('dynamodb-index', {
+        'dynamodb:index': {
+          // Missing indexArn
+          indexName: 'test-index'
+        } as any
+      });
+
+      const context = createBindingContext({
+        source: createMockSourceComponent('lambda-api', 'test-source'),
+        target,
+        capability: 'dynamodb:index',
+        access: 'read'
+      });
+
+      await expect(executeUnifiedBinding(strategy, context)).rejects.toThrow(
+        'missing required indexArn property'
+      );
+    });
+  });
+
+  describe('DynamoBind__StreamWriteAccess__GrantsWriteActions', () => {
+    const metadata = {
+      id: 'TP-binders-dynamodb-013',
+      level: 'unit' as const,
+      capability: 'Stream write access grants DynamoDB stream write actions',
+      oracle: 'exact' as const,
+      determinism: 'deterministic' as const,
+      naming: { pattern: 'DynamoBind__Condition__Outcome', example: 'DynamoBind__StreamWriteAccess__GrantsWriteActions' },
+      invariants: [
+        'IAM policies include DynamoDB stream write actions',
+        'Write actions include EnableStreaming and DisableStreaming'
+      ],
+      fixtures: ['MockSourceComponent', 'MockTargetComponent'],
+      inputs: {
+        shape: 'BindingContext with dynamodb:stream capability and write access',
+        notes: 'Stream write access test'
+      },
+      risks: [],
+      dependencies: [],
+      evidence: [],
+      compliance_refs: ['docs/platform-standards/platform-iam-auditing-standard.md'],
+      ai_generated: true,
+      human_reviewed_by: 'Platform Engineering'
+    };
+
+    test('DynamoBind__StreamWriteAccess__GrantsWriteActions', async () => {
+      const strategy = new DynamoDbBinderStrategy();
+      const streamArn = 'arn:aws:dynamodb:us-east-1:123456789012:table/test-table/stream/2024-01-01T00:00:00.000';
+      const target = createMockTargetComponent('dynamodb-stream', {
+        'dynamodb:stream': {
+          streamArn,
+          streamViewType: 'NEW_AND_OLD_IMAGES'
+        }
+      });
+
+      const context = createBindingContext({
+        source: createMockSourceComponent('lambda-api', 'test-source'),
+        target,
+        capability: 'dynamodb:stream',
+        access: 'write'
+      });
+
+      const result = await executeUnifiedBinding(strategy, context);
+
+      assertEnhancedBindingResult(result);
+
+      const policy = result.iamPolicies.find(p => p.description.includes('stream write access'));
+      expect(policy).toBeDefined();
+      
+      const statementJson = policy!.statement.toStatementJson();
+      const actions = Array.isArray(statementJson.Action)
+        ? statementJson.Action
+        : [statementJson.Action];
+
+      expect(actions).toContain('dynamodb:EnableStreaming');
+      expect(actions).toContain('dynamodb:DisableStreaming');
+    });
+  });
+
+  describe('DynamoBind__StreamWithLambdaTrigger__GrantsLambdaInvokePermissions', () => {
+    const metadata = {
+      id: 'TP-binders-dynamodb-014',
+      level: 'unit' as const,
+      capability: 'Stream with lambdaTriggerArn grants Lambda invoke permissions',
+      oracle: 'exact' as const,
+      determinism: 'deterministic' as const,
+      naming: { pattern: 'DynamoBind__Condition__Outcome', example: 'DynamoBind__StreamWithLambdaTrigger__GrantsLambdaInvokePermissions' },
+      invariants: [
+        'IAM policies include Lambda invoke permissions when lambdaTriggerArn is provided',
+        'Environment variables include DYNAMODB_LAMBDA_TRIGGER_ENABLED'
+      ],
+      fixtures: ['MockSourceComponent', 'MockTargetComponent'],
+      inputs: {
+        shape: 'BindingContext with dynamodb:stream capability and lambdaTriggerArn',
+        notes: 'Lambda trigger permissions test'
+      },
+      risks: [],
+      dependencies: [],
+      evidence: [],
+      compliance_refs: ['docs/platform-standards/platform-iam-auditing-standard.md'],
+      ai_generated: true,
+      human_reviewed_by: 'Platform Engineering'
+    };
+
+    test('DynamoBind__StreamWithLambdaTrigger__GrantsLambdaInvokePermissions', async () => {
+      const strategy = new DynamoDbBinderStrategy();
+      const streamArn = 'arn:aws:dynamodb:us-east-1:123456789012:table/test-table/stream/2024-01-01T00:00:00.000';
+      const lambdaTriggerArn = 'arn:aws:lambda:us-east-1:123456789012:function:stream-processor';
+      const target = createMockTargetComponent('dynamodb-stream', {
+        'dynamodb:stream': {
+          streamArn,
+          lambdaTriggerArn
+        }
+      });
+
+      const context = createBindingContext({
+        source: createMockSourceComponent('lambda-api', 'test-source'),
+        target,
+        capability: 'dynamodb:stream',
+        access: 'read'
+      });
+
+      const result = await executeUnifiedBinding(strategy, context);
+
+      assertEnhancedBindingResult(result);
+
+      expect(result.environmentVariables.DYNAMODB_LAMBDA_TRIGGER_ENABLED).toBe('true');
+      expect(result.environmentVariables.DYNAMODB_LAMBDA_TRIGGER_ARN).toBe(lambdaTriggerArn);
+
+      const policy = result.iamPolicies.find(p => p.description.includes('Lambda invocation'));
+      expect(policy).toBeDefined();
+      
+      const statementJson = policy!.statement.toStatementJson();
+      const actions = Array.isArray(statementJson.Action)
+        ? statementJson.Action
+        : [statementJson.Action];
+
+      expect(actions).toContain('lambda:InvokeFunction');
+    });
+  });
+
+  describe('DynamoBind__StreamMissingStreamArn__ThrowsError', () => {
+    const metadata = {
+      id: 'TP-binders-dynamodb-015',
+      level: 'unit' as const,
+      capability: 'Missing streamArn throws error',
+      oracle: 'exact' as const,
+      determinism: 'deterministic' as const,
+      naming: { pattern: 'DynamoBind__Condition__Outcome', example: 'DynamoBind__StreamMissingStreamArn__ThrowsError' },
+      invariants: [
+        'Error message indicates missing streamArn',
+        'Error is thrown before binding completes'
+      ],
+      fixtures: ['MockSourceComponent', 'MockTargetComponent'],
+      inputs: {
+        shape: 'BindingContext with dynamodb:stream capability but missing streamArn',
+        notes: 'Error case test'
+      },
+      risks: [],
+      dependencies: [],
+      evidence: [],
+      compliance_refs: [],
+      ai_generated: true,
+      human_reviewed_by: 'Platform Engineering'
+    };
+
+    test('DynamoBind__StreamMissingStreamArn__ThrowsError', async () => {
+      const strategy = new DynamoDbBinderStrategy();
+      const target = createMockTargetComponent('dynamodb-stream', {
+        'dynamodb:stream': {
+          // Missing streamArn
+        } as any
+      });
+
+      const context = createBindingContext({
+        source: createMockSourceComponent('lambda-api', 'test-source'),
+        target,
+        capability: 'dynamodb:stream',
+        access: 'read'
+      });
+
+      await expect(executeUnifiedBinding(strategy, context)).rejects.toThrow(
+        'missing required streamArn property'
+      );
+    });
+  });
+
+  describe('DynamoBind__BackupReadAccess__ReturnsEnhancedResult', () => {
+    const metadata = {
+      id: 'TP-binders-dynamodb-016',
+      level: 'unit' as const,
+      capability: 'Backup read access returns enhanced result',
+      oracle: 'exact' as const,
+      determinism: 'deterministic' as const,
+      naming: { pattern: 'DynamoBind__Condition__Outcome', example: 'DynamoBind__BackupReadAccess__ReturnsEnhancedResult' },
+      invariants: [
+        'Environment variables are set correctly',
+        'IAM policies include DynamoDB backup read actions'
+      ],
+      fixtures: ['MockSourceComponent', 'MockTargetComponent'],
+      inputs: {
+        shape: 'BindingContext with dynamodb:backup capability and read access',
+        notes: 'Backup read access test'
+      },
+      risks: [],
+      dependencies: [],
+      evidence: [],
+      compliance_refs: ['docs/platform-standards/platform-iam-auditing-standard.md'],
+      ai_generated: true,
+      human_reviewed_by: 'Platform Engineering'
+    };
+
+    test('DynamoBind__BackupReadAccess__ReturnsEnhancedResult', async () => {
+      const strategy = new DynamoDbBinderStrategy();
+      const tableArn = 'arn:aws:dynamodb:us-east-1:123456789012:table/test-table';
+      const target = createMockTargetComponent('dynamodb-table', {
+        'dynamodb:backup': {
+          tableArn,
+          tableName: 'test-table',
+          backupPlanArn: 'arn:aws:backup:us-east-1:123456789012:backup-plan:test-plan'
+        }
+      });
+
+      const context = createBindingContext({
+        source: createMockSourceComponent('lambda-backup', 'test-source'),
+        target,
+        capability: 'dynamodb:backup',
+        access: 'read'
+      });
+
+      const result = await executeUnifiedBinding(strategy, context);
+
+      assertEnhancedBindingResult(result);
+
+      expect(result.environmentVariables.DYNAMODB_TABLE_ARN).toBe(tableArn);
+      expect(result.environmentVariables.DYNAMODB_TABLE_NAME).toBe('test-table');
+      expect(result.environmentVariables.DYNAMODB_BACKUP_PLAN_ARN).toBe('arn:aws:backup:us-east-1:123456789012:backup-plan:test-plan');
+      expect(result.environmentVariables.DYNAMODB_REGION).toBe('us-east-1');
+
+      const policy = result.iamPolicies.find(p => p.description.includes('backup read access'));
+      expect(policy).toBeDefined();
+      
+      const statementJson = policy!.statement.toStatementJson();
+      const actions = Array.isArray(statementJson.Action)
+        ? statementJson.Action
+        : [statementJson.Action];
+
+      expect(actions).toContain('dynamodb:DescribeBackup');
+      expect(actions).toContain('dynamodb:ListBackups');
+    });
+  });
+
+  describe('DynamoBind__BackupWriteAccess__GrantsWriteActions', () => {
+    const metadata = {
+      id: 'TP-binders-dynamodb-017',
+      level: 'unit' as const,
+      capability: 'Backup write access grants DynamoDB backup write actions',
+      oracle: 'exact' as const,
+      determinism: 'deterministic' as const,
+      naming: { pattern: 'DynamoBind__Condition__Outcome', example: 'DynamoBind__BackupWriteAccess__GrantsWriteActions' },
+      invariants: [
+        'IAM policies include DynamoDB backup write actions',
+        'Write actions include CreateBackup and RestoreTableFromBackup'
+      ],
+      fixtures: ['MockSourceComponent', 'MockTargetComponent'],
+      inputs: {
+        shape: 'BindingContext with dynamodb:backup capability and write access',
+        notes: 'Backup write access test'
+      },
+      risks: [],
+      dependencies: [],
+      evidence: [],
+      compliance_refs: ['docs/platform-standards/platform-iam-auditing-standard.md'],
+      ai_generated: true,
+      human_reviewed_by: 'Platform Engineering'
+    };
+
+    test('DynamoBind__BackupWriteAccess__GrantsWriteActions', async () => {
+      const strategy = new DynamoDbBinderStrategy();
+      const tableArn = 'arn:aws:dynamodb:us-east-1:123456789012:table/test-table';
+      const target = createMockTargetComponent('dynamodb-table', {
+        'dynamodb:backup': {
+          tableArn,
+          tableName: 'test-table'
+        }
+      });
+
+      const context = createBindingContext({
+        source: createMockSourceComponent('lambda-backup', 'test-source'),
+        target,
+        capability: 'dynamodb:backup',
+        access: 'write'
+      });
+
+      const result = await executeUnifiedBinding(strategy, context);
+
+      assertEnhancedBindingResult(result);
+
+      const policy = result.iamPolicies.find(p => p.description.includes('backup write access'));
+      expect(policy).toBeDefined();
+      
+      const statementJson = policy!.statement.toStatementJson();
+      const actions = Array.isArray(statementJson.Action)
+        ? statementJson.Action
+        : [statementJson.Action];
+
+      expect(actions).toContain('dynamodb:CreateBackup');
+      expect(actions).toContain('dynamodb:RestoreTableFromBackup');
+      expect(actions).toContain('dynamodb:DeleteBackup');
+    });
+  });
+
+  describe('DynamoBind__BackupMissingTableArn__ThrowsError', () => {
+    const metadata = {
+      id: 'TP-binders-dynamodb-018',
+      level: 'unit' as const,
+      capability: 'Backup missing tableArn throws error',
+      oracle: 'exact' as const,
+      determinism: 'deterministic' as const,
+      naming: { pattern: 'DynamoBind__Condition__Outcome', example: 'DynamoBind__BackupMissingTableArn__ThrowsError' },
+      invariants: [
+        'Error message indicates missing tableArn for backup',
+        'Error is thrown before binding completes'
+      ],
+      fixtures: ['MockSourceComponent', 'MockTargetComponent'],
+      inputs: {
+        shape: 'BindingContext with dynamodb:backup capability but missing tableArn',
+        notes: 'Error case test for backup'
+      },
+      risks: [],
+      dependencies: [],
+      evidence: [],
+      compliance_refs: [],
+      ai_generated: true,
+      human_reviewed_by: 'Platform Engineering'
+    };
+
+    test('DynamoBind__BackupMissingTableArn__ThrowsError', async () => {
+      const strategy = new DynamoDbBinderStrategy();
+      const target = createMockTargetComponent('dynamodb-table', {
+        'dynamodb:backup': {
+          // Missing tableArn
+          tableName: 'test-table'
+        } as any
+      });
+
+      const context = createBindingContext({
+        source: createMockSourceComponent('lambda-backup', 'test-source'),
+        target,
+        capability: 'dynamodb:backup',
+        access: 'read'
+      });
+
+      await expect(executeUnifiedBinding(strategy, context)).rejects.toThrow(
+        'missing required tableArn property'
+      );
+    });
+  });
+
+  describe('DynamoBind__InvalidAccessType__ThrowsError', () => {
+    const metadata = {
+      id: 'TP-binders-dynamodb-019',
+      level: 'unit' as const,
+      capability: 'Invalid access type throws error',
+      oracle: 'exact' as const,
+      determinism: 'deterministic' as const,
+      naming: { pattern: 'DynamoBind__Condition__Outcome', example: 'DynamoBind__InvalidAccessType__ThrowsError' },
+      invariants: [
+        'Error message indicates invalid access type',
+        'Error lists valid access types'
+      ],
+      fixtures: ['MockSourceComponent', 'MockTargetComponent'],
+      inputs: {
+        shape: 'BindingContext with invalid access type',
+        notes: 'Error case test'
+      },
+      risks: [],
+      dependencies: [],
+      evidence: [],
+      compliance_refs: [],
+      ai_generated: true,
+      human_reviewed_by: 'Platform Engineering'
+    };
+
+    test('DynamoBind__InvalidAccessType__ThrowsError', async () => {
+      const strategy = new DynamoDbBinderStrategy();
+      const target = createMockTargetComponent('dynamodb-table', {
+        'db:dynamodb': {
+          tableArn: 'arn:aws:dynamodb:us-east-1:123456789012:table/test-table',
+          tableName: 'test-table'
+        }
+      });
+
+      const context = createBindingContext({
+        source: createMockSourceComponent('lambda-api', 'test-source'),
+        target,
+        capability: 'db:dynamodb',
+        access: 'invalid-access' as any
+      });
+
+      await expect(executeUnifiedBinding(strategy, context)).rejects.toThrow(
+        'Invalid access types for DynamoDB binding'
+      );
+    });
+  });
+
+  describe('DynamoBind__UnsupportedCapability__ThrowsError', () => {
+    const metadata = {
+      id: 'TP-binders-dynamodb-020',
+      level: 'unit' as const,
+      capability: 'Unsupported capability throws error',
+      oracle: 'exact' as const,
+      determinism: 'deterministic' as const,
+      naming: { pattern: 'DynamoBind__Condition__Outcome', example: 'DynamoBind__UnsupportedCapability__ThrowsError' },
+      invariants: [
+        'Error message indicates unsupported capability',
+        'Error lists supported capabilities'
+      ],
+      fixtures: ['MockSourceComponent', 'MockTargetComponent'],
+      inputs: {
+        shape: 'BindingContext with unsupported capability',
+        notes: 'Error case test'
+      },
+      risks: [],
+      dependencies: [],
+      evidence: [],
+      compliance_refs: [],
+      ai_generated: true,
+      human_reviewed_by: 'Platform Engineering'
+    };
+
+    test('DynamoBind__UnsupportedCapability__ThrowsError', async () => {
+      const strategy = new DynamoDbBinderStrategy();
+      const target = createMockTargetComponent('dynamodb-table', {
+        'dynamodb:invalid': {
+          tableArn: 'arn:aws:dynamodb:us-east-1:123456789012:table/test-table'
+        }
+      });
+
+      const context = createBindingContext({
+        source: createMockSourceComponent('lambda-api', 'test-source'),
+        target,
+        capability: 'dynamodb:invalid',
+        access: 'read'
+      });
+
+      await expect(executeUnifiedBinding(strategy, context)).rejects.toThrow(
+        'Unsupported DynamoDB capability'
+      );
+    });
+  });
 });
