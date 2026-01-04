@@ -29,6 +29,10 @@ import {
   getRuleConfig,
   type ComplianceRulesConfig
 } from './compliance/rules.js';
+import {
+  validateResourcesForStatements,
+  extractServicePrefix
+} from '../binders/resource-validator.js';
 
 /**
  * Abstract base class for unified binder strategies
@@ -96,6 +100,38 @@ export abstract class UnifiedBinderStrategyBase implements IUnifiedBinderStrateg
     // Execute the binding (subclass implementation)
     const bindingResult = await this.doBind(context);
 
+    // SECURITY: Validate resources in IAM policies
+    // This prevents over-privileged access through wildcard resources
+    try {
+      const capability = context.directive.capability;
+      const servicePrefix = extractServicePrefix(capability) || capability.split(':')[0];
+      
+      // Validate all IAM policy statements
+      const statements = bindingResult.iamPolicies.map(policy => policy.statement);
+      validateResourcesForStatements(statements, servicePrefix);
+    } catch (error) {
+      if (error instanceof Error && error.name === 'ResourceValidationError') {
+        // Convert to ComplianceError for consistent error handling
+        throw new ComplianceError(
+          [{
+            type: 'security',
+            severity: 'error',
+            description: error.message,
+            ruleId: 'wildcardResourceRestriction',
+            framework: framework,
+            remediation: 'Specify explicit resource ARNs instead of wildcards',
+            context: {
+              source: context.source?.getName() || 'unknown',
+              target: context.target?.getName() || 'unknown',
+              capability: context.directive?.capability || 'unknown'
+            }
+          }],
+          `Resource validation failed: ${error.message}`
+        );
+      }
+      throw error;
+    }
+
     // Run compliance validation using loaded rules
     const complianceStatus = this.evaluateCompliance(
       framework,
@@ -141,12 +177,62 @@ export abstract class UnifiedBinderStrategyBase implements IUnifiedBinderStrateg
   /**
    * Get compliance rules override from context.options
    * 
+   * SECURITY: Override is restricted to 'commercial' framework only.
+   * FedRAMP frameworks (fedramp-moderate, fedramp-high) reject overrides
+   * to prevent compliance violations.
+   * 
    * @param context - Binding context
-   * @returns Rules override if present, undefined otherwise
+   * @returns Rules override if present and allowed, undefined otherwise
+   * @throws ComplianceError if override attempted in non-commercial framework
    */
   protected getRulesOverride(context: BindingContext): ComplianceRulesConfig | undefined {
     const options = context.directive?.options || {};
-    return options.complianceRulesOverride as ComplianceRulesConfig | undefined;
+    const override = options.complianceRulesOverride as ComplianceRulesConfig | undefined;
+    
+    if (!override) {
+      return undefined;
+    }
+    
+    // Resolve framework to check restrictions
+    const framework = this.resolveComplianceFramework(context);
+    
+    // Restrict override to commercial framework only
+    if (framework !== 'commercial') {
+      // Audit log: compliance override attempt in restricted framework
+      const auditMessage = `Compliance rules override rejected: framework '${framework}' does not allow overrides. ` +
+        `Override is only permitted in 'commercial' framework. ` +
+        `Source: ${context.source?.getName() || 'unknown'}, ` +
+        `Target: ${context.target?.getName() || 'unknown'}, ` +
+        `Capability: ${context.directive?.capability || 'unknown'}`;
+      
+      console.warn(`[COMPLIANCE-AUDIT] ${auditMessage}`);
+      
+      throw new ComplianceError(
+        [{
+          type: 'security',
+          severity: 'error',
+          description: `Compliance rules override is not allowed in ${framework} framework. ` +
+            `Override is only permitted in 'commercial' framework for development/testing purposes.`,
+          ruleId: 'complianceOverrideRestriction',
+          framework: framework,
+          remediation: 'Remove complianceRulesOverride from directive.options or use commercial framework',
+          context: {
+            source: context.source?.getName() || 'unknown',
+            target: context.target?.getName() || 'unknown',
+            capability: context.directive?.capability || 'unknown'
+          }
+        }],
+        `Compliance override rejected for framework: ${framework}`
+      );
+    }
+    
+    // Audit log: override allowed in commercial framework
+    console.info(`[COMPLIANCE-AUDIT] Compliance rules override allowed in commercial framework. ` +
+      `Source: ${context.source?.getName() || 'unknown'}, ` +
+      `Target: ${context.target?.getName() || 'unknown'}, ` +
+      `Capability: ${context.directive?.capability || 'unknown'}`);
+    
+    return override;
   }
 
   /**

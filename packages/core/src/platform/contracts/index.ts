@@ -43,3 +43,7 @@ export * from './logging-interfaces.js';
 
 // Export artifact contracts
 export * from './artifacts.js';
+
+// Export networking utilities
+export { applySecurityGroupTags, validateSecurityGroupTags } from '../networking/security-group-tagging.js';
+export { CrossStackRuleManager, type CrossStackRuleSpec } from '../networking/cross-stack-rule-manager.js';

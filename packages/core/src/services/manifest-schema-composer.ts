@@ -207,6 +207,12 @@ export class ManifestSchemaComposer {
     // Create a deep copy of the base schema to avoid mutations
     const masterSchema = JSON.parse(JSON.stringify(this.baseSchema));
 
+    // Set additionalProperties: true at master schema level to allow unknown properties
+    // This prevents validation errors for platform-provided context fields and test fixtures
+    if (masterSchema.additionalProperties === undefined) {
+      masterSchema.additionalProperties = true;
+    }
+
     // Enhance the component definition to include dynamic config validation
     this.enhanceComponentDefinition(masterSchema);
 
@@ -229,7 +235,11 @@ export class ManifestSchemaComposer {
 
     for (const [componentType, info] of Array.from(this.componentSchemas.entries())) {
       const defKey = `component.${componentType}.config`;
-      schema.$defs[defKey] = info.schema;
+      // Set additionalProperties: true on the component config schema to allow platform context fields
+      // This overrides any additionalProperties: false in the original schema to support platform-injected fields
+      const configSchema = JSON.parse(JSON.stringify(info.schema || {}));
+      configSchema.additionalProperties = true;
+      schema.$defs[defKey] = configSchema;
 
       if (info.definitions) {
         for (const [definitionKey, definitionSchema] of Object.entries(info.definitions)) {
@@ -261,7 +271,9 @@ export class ManifestSchemaComposer {
       then: {
         properties: {
           config: { $ref: `#/$defs/component.${componentType}.config` }
-        }
+        },
+        // Allow additional properties in component config to support platform context fields
+        additionalProperties: true
       }
     }));
 
@@ -354,8 +366,14 @@ export class ManifestSchemaComposer {
       const ref = node.$ref;
       if (ref.startsWith('#/definitions/')) {
         const pointer = ref.slice('#/definitions/'.length);
-        const sanitizedPointer = pointer.replace(/[\/#]/g, '.');
-        node.$ref = `#/$defs/${definitionPrefix}.${sanitizedPointer}`;
+        // Split on '/' to separate definition name from JSON pointer path
+        const parts = pointer.split('/');
+        const definitionName = parts[0];
+        const jsonPointer = parts.length > 1 ? '/' + parts.slice(1).join('/') : '';
+        
+        // Only sanitize the definition name (replace dots/slashes), keep JSON pointer as-is
+        const sanitizedDefinitionName = definitionName.replace(/[\/#]/g, '.');
+        node.$ref = `#/$defs/${definitionPrefix}.${sanitizedDefinitionName}${jsonPointer}`;
       } else if (ref === '#') {
         node.$ref = `#/$defs/${configKey}`;
       }

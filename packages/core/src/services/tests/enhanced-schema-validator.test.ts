@@ -437,16 +437,16 @@ describe('EnhancedSchemaValidator', () => {
         "human_reviewed_by": "Platform Engineering Team"
       };
 
-      // Given: Manifest with component missing required fields
+      // Given: Manifest with component missing required fields (name or type)
       const incompleteManifest = {
         service: 'test-service',
         owner: 'test-team',
         components: [
           {
-            name: 'test-component',
+            // Missing required 'name' field
             type: 'ec2-instance',
             config: {
-              // Missing required ami field
+              instanceType: 't3.micro'
             }
           }
         ]
@@ -455,12 +455,16 @@ describe('EnhancedSchemaValidator', () => {
       // When: Manifest is validated
       const result = await validator.validateManifest(incompleteManifest);
 
-      // Then: Required field errors are reported
+      // Then: Required field errors are reported for missing 'name'
       expect(result.valid).toBe(false);
       expect(result.errors.length).toBeGreaterThan(0);
 
       const requiredErrors = result.errors.filter((e: any) => e.rule === 'required');
       expect(requiredErrors.length).toBeGreaterThan(0);
+      
+      // Verify the error is about missing 'name' field
+      const nameError = requiredErrors.find((e: any) => e.path.includes('name'));
+      expect(nameError).toBeDefined();
     });
   });
 

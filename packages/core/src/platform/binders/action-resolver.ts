@@ -14,6 +14,10 @@
 import type { BindingDirective, BindingContext } from '../contracts/platform-binding-trigger-spec.js';
 import type { ComplianceFramework } from '../contracts/bindings.js';
 import { resolveActionProfile } from './action-profiles.js';
+import {
+  validateActionsAgainstAllowList,
+  areCustomActionsAllowed
+} from './action-allow-lists.js';
 
 /**
  * Check if an action string contains wildcard patterns
@@ -125,6 +129,45 @@ export function resolveActions(
       throw new Error('Actions array cannot be empty. Provide at least one action or omit the actions field.');
     }
     
+    const framework = context.complianceFramework as ComplianceFramework;
+    
+    // Check for wildcards FIRST (before custom action check) to provide specific error messages
+    const wildcardActions = directive.actions.filter(isWildcardAction);
+    if (wildcardActions.length > 0 && (framework === 'fedramp-moderate' || framework === 'fedramp-high')) {
+      throw new Error(
+        `Wildcard actions are not allowed in ${framework} framework. ` +
+        `Found wildcard actions: ${wildcardActions.join(', ')}. ` +
+        `Use explicit action lists or action profiles instead.`
+      );
+    }
+    
+    // Then check if custom actions are allowed (for non-wildcard actions in FedRAMP)
+    if (!areCustomActionsAllowed(framework)) {
+      // Audit log: custom actions rejected in FedRAMP frameworks
+      const sourceName = context.source && typeof context.source.getName === 'function' 
+        ? context.source.getName() 
+        : 'unknown';
+      const targetName = context.target && typeof context.target.getName === 'function'
+        ? context.target.getName()
+        : 'unknown';
+      
+      console.error(
+        `[COMPLIANCE-AUDIT] Custom actions rejected in ${framework} framework. ` +
+        `Only action profiles are allowed. ` +
+        `Source: ${sourceName}, ` +
+        `Target: ${targetName}, ` +
+        `Capability: ${directive.capability || 'unknown'}, ` +
+        `Actions: ${directive.actions.join(', ')}`
+      );
+      
+      throw new Error(
+        `Custom actions are not allowed in ${framework} framework. ` +
+        `Only action profiles are permitted. ` +
+        `Use an action profile (string) instead of an actions array. ` +
+        `Available profiles can be found in config/${framework}.yml under actionProfiles.`
+      );
+    }
+    
     resolvedActions = directive.actions;
   } else {
     throw new Error(
@@ -135,8 +178,39 @@ export function resolveActions(
   // Validate service prefix match
   validateServicePrefix(resolvedActions, servicePrefix);
   
-  // Validate wildcard actions (framework-specific)
-  validateWildcardActions(resolvedActions, context.complianceFramework as ComplianceFramework);
+  // Get framework for remaining validations
+  const framework = context.complianceFramework as ComplianceFramework;
+  
+  // Validate wildcard actions (framework-specific) - only for commercial framework now
+  // (FedRAMP frameworks already checked wildcards above)
+  if (framework === 'commercial') {
+    validateWildcardActions(resolvedActions, framework);
+  }
+  
+  // SECURITY: Validate actions against allow-list
+  // This prevents privilege escalation through action injection
+  try {
+    validateActionsAgainstAllowList(resolvedActions, servicePrefix, framework);
+  } catch (error) {
+    // Audit log: action rejected by allow-list
+    const sourceName = context.source && typeof context.source.getName === 'function' 
+      ? context.source.getName() 
+      : 'unknown';
+    const targetName = context.target && typeof context.target.getName === 'function'
+      ? context.target.getName()
+      : 'unknown';
+    
+    console.error(
+      `[COMPLIANCE-AUDIT] Action(s) rejected by allow-list. ` +
+      `Source: ${sourceName}, ` +
+      `Target: ${targetName}, ` +
+      `Capability: ${directive.capability || 'unknown'}, ` +
+      `Service: ${servicePrefix}, ` +
+      `Framework: ${framework}, ` +
+      `Error: ${error instanceof Error ? error.message : 'Unknown error'}`
+    );
+    throw error;
+  }
   
   return resolvedActions;
 }

@@ -60,6 +60,10 @@ class TestBinderStrategy extends UnifiedBinderStrategyBase {
   ): Promise<EnhancedBindingResult['compliance']> {
     return this.evaluateCompliance(framework, context, bindingResult, undefined, undefined);
   }
+
+  public testGetRulesOverride(context: BindingContext): any {
+    return this.getRulesOverride(context);
+  }
 }
 
 describe('UnifiedBinderStrategyBase', () => {
@@ -823,6 +827,243 @@ describe('UnifiedBinderStrategyBase', () => {
       expect(Array.isArray(compliance.actionsTaken)).toBe(true);
       // Unknown rules don't generate violations, so status should be compliant or partially-compliant
       expect(compliance.status).not.toBe('non-compliant');
+    });
+  });
+
+  describe('UnifiedBase__ComplianceOverride__RestrictedToCommercial', () => {
+    const metadata = {
+      id: 'TP-binders-base-009',
+      level: 'unit' as const,
+      capability: 'Compliance override is restricted to commercial framework only',
+      oracle: 'exact' as const,
+      invariants: [
+        'Override allowed in commercial framework',
+        'Override rejected in fedramp-moderate framework',
+        'Override rejected in fedramp-high framework',
+        'ComplianceError thrown with proper violation details'
+      ],
+      fixtures: ['TestBinderStrategy', 'BindingContext'],
+      inputs: {
+        shape: 'BindingContext with complianceRulesOverride in different frameworks',
+        notes: 'Tests compliance override restrictions'
+      },
+      risks: [],
+      dependencies: [],
+      evidence: [],
+      compliance_refs: ['docs/security/binder-security-hardening-plan.md'],
+      ai_generated: true,
+      human_reviewed_by: 'Platform Engineering'
+    };
+
+    test('UnifiedBase__ComplianceOverride__AllowedInCommercial', () => {
+      const construct = new Construct(undefined as any, 'test-construct');
+      const context: BindingContext = {
+        source: {
+          spec: { name: 'test-source', type: 'lambda-api', config: {}, binds: [] } as ComponentSpec,
+          context: {
+            serviceName: 'test-service',
+            environment: 'test',
+            complianceFramework: 'commercial',
+            scope: construct
+          } as ComponentContext,
+          node: construct.node,
+          synth: () => {},
+          getCapabilities: () => ({}),
+          getType: () => 'lambda-api',
+          getName: () => 'test-source',
+          getId: () => 'test-source-id',
+          getServiceName: () => 'test-service',
+          getCapabilityData: () => ({}),
+          getConstruct: () => undefined,
+          _getSecurityGroupHandle: () => undefined
+        } as IComponent,
+        target: {
+          spec: { name: 'test-target', type: 'test-capability', config: {}, binds: [] } as ComponentSpec,
+          context: {
+            serviceName: 'test-service',
+            environment: 'test',
+            complianceFramework: 'commercial',
+            scope: construct
+          } as ComponentContext,
+          node: construct.node,
+          synth: () => {},
+          getCapabilities: () => ({}),
+          getType: () => 'test-capability',
+          getName: () => 'test-target',
+          getId: () => 'test-target-id',
+          getServiceName: () => 'test-service',
+          getCapabilityData: () => ({}),
+          getConstruct: () => undefined,
+          _getSecurityGroupHandle: () => undefined
+        } as IComponent,
+        directive: {
+          capability: 'test:capability',
+          access: 'read',
+          options: {
+            complianceRulesOverride: {
+              testRule: {
+                categories: ['all'],
+                severity: 'error'
+              }
+            }
+          }
+        },
+        environment: 'test',
+        complianceFramework: 'commercial'
+      };
+
+      // Override should be allowed in commercial framework
+      const override = strategy.testGetRulesOverride(context);
+      expect(override).toBeDefined();
+      expect(override.testRule).toBeDefined();
+    });
+
+    test('UnifiedBase__ComplianceOverride__RejectedInFedrampModerate', () => {
+      const construct = new Construct(undefined as any, 'test-construct');
+      const context: BindingContext = {
+        source: {
+          spec: { name: 'test-source', type: 'lambda-api', config: {}, binds: [] } as ComponentSpec,
+          context: {
+            serviceName: 'test-service',
+            environment: 'test',
+            complianceFramework: 'fedramp-moderate',
+            scope: construct
+          } as ComponentContext,
+          node: construct.node,
+          synth: () => {},
+          getCapabilities: () => ({}),
+          getType: () => 'lambda-api',
+          getName: () => 'test-source',
+          getId: () => 'test-source-id',
+          getServiceName: () => 'test-service',
+          getCapabilityData: () => ({}),
+          getConstruct: () => undefined,
+          _getSecurityGroupHandle: () => undefined
+        } as IComponent,
+        target: {
+          spec: { name: 'test-target', type: 'test-capability', config: {}, binds: [] } as ComponentSpec,
+          context: {
+            serviceName: 'test-service',
+            environment: 'test',
+            complianceFramework: 'fedramp-moderate',
+            scope: construct
+          } as ComponentContext,
+          node: construct.node,
+          synth: () => {},
+          getCapabilities: () => ({}),
+          getType: () => 'test-capability',
+          getName: () => 'test-target',
+          getId: () => 'test-target-id',
+          getServiceName: () => 'test-service',
+          getCapabilityData: () => ({}),
+          getConstruct: () => undefined,
+          _getSecurityGroupHandle: () => undefined
+        } as IComponent,
+        directive: {
+          capability: 'test:capability',
+          access: 'read',
+          options: {
+            complianceRulesOverride: {
+              testRule: {
+                categories: ['all'],
+                severity: 'error'
+              }
+            }
+          }
+        },
+        environment: 'test',
+        complianceFramework: 'fedramp-moderate'
+      };
+
+      // Override should be rejected in fedramp-moderate
+      expect(() => {
+        strategy.testGetRulesOverride(context);
+      }).toThrow('Compliance override rejected for framework: fedramp-moderate');
+
+      try {
+        strategy.testGetRulesOverride(context);
+      } catch (error: any) {
+        expect(error.name).toBe('ComplianceError');
+        expect(error.violations).toBeDefined();
+        expect(error.violations.length).toBe(1);
+        expect(error.violations[0].ruleId).toBe('complianceOverrideRestriction');
+        expect(error.violations[0].severity).toBe('error');
+        expect(error.violations[0].framework).toBe('fedramp-moderate');
+      }
+    });
+
+    test('UnifiedBase__ComplianceOverride__RejectedInFedrampHigh', () => {
+      const construct = new Construct(undefined as any, 'test-construct');
+      const context: BindingContext = {
+        source: {
+          spec: { name: 'test-source', type: 'lambda-api', config: {}, binds: [] } as ComponentSpec,
+          context: {
+            serviceName: 'test-service',
+            environment: 'test',
+            complianceFramework: 'fedramp-high',
+            scope: construct
+          } as ComponentContext,
+          node: construct.node,
+          synth: () => {},
+          getCapabilities: () => ({}),
+          getType: () => 'lambda-api',
+          getName: () => 'test-source',
+          getId: () => 'test-source-id',
+          getServiceName: () => 'test-service',
+          getCapabilityData: () => ({}),
+          getConstruct: () => undefined,
+          _getSecurityGroupHandle: () => undefined
+        } as IComponent,
+        target: {
+          spec: { name: 'test-target', type: 'test-capability', config: {}, binds: [] } as ComponentSpec,
+          context: {
+            serviceName: 'test-service',
+            environment: 'test',
+            complianceFramework: 'fedramp-high',
+            scope: construct
+          } as ComponentContext,
+          node: construct.node,
+          synth: () => {},
+          getCapabilities: () => ({}),
+          getType: () => 'test-capability',
+          getName: () => 'test-target',
+          getId: () => 'test-target-id',
+          getServiceName: () => 'test-service',
+          getCapabilityData: () => ({}),
+          getConstruct: () => undefined,
+          _getSecurityGroupHandle: () => undefined
+        } as IComponent,
+        directive: {
+          capability: 'test:capability',
+          access: 'read',
+          options: {
+            complianceRulesOverride: {
+              testRule: {
+                categories: ['all'],
+                severity: 'error'
+              }
+            }
+          }
+        },
+        environment: 'test',
+        complianceFramework: 'fedramp-high'
+      };
+
+      // Override should be rejected in fedramp-high
+      expect(() => {
+        strategy.testGetRulesOverride(context);
+      }).toThrow('Compliance override rejected for framework: fedramp-high');
+
+      try {
+        strategy.testGetRulesOverride(context);
+      } catch (error: any) {
+        expect(error.name).toBe('ComplianceError');
+        expect(error.violations).toBeDefined();
+        expect(error.violations.length).toBe(1);
+        expect(error.violations[0].ruleId).toBe('complianceOverrideRestriction');
+        expect(error.violations[0].severity).toBe('error');
+        expect(error.violations[0].framework).toBe('fedramp-high');
+      }
     });
   });
 });

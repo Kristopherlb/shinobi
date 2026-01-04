@@ -12,6 +12,50 @@ actionProfiles:
   lambda-async-invoke:
     - lambda:InvokeFunction
 
+# Action Allow-Lists
+# Defines which IAM actions are allowed for each service prefix
+# Actions not in these lists will be rejected (unless using action profiles)
+actionAllowLists:
+  sqs:
+    - sqs:ReceiveMessage
+    - sqs:DeleteMessage
+    - sqs:ChangeMessageVisibility
+    - sqs:GetQueueAttributes
+    - sqs:SendMessage
+    - sqs:GetQueueUrl
+  lambda:
+    - lambda:InvokeFunction
+    - lambda:GetFunction
+    - lambda:GetFunctionConfiguration
+  s3:
+    - s3:GetObject
+    - s3:PutObject
+    - s3:DeleteObject
+    - s3:ListBucket
+    - s3:GetBucketLocation
+    - s3:GetBucketVersioning
+  kms:
+    - kms:Decrypt
+    - kms:Encrypt
+    - kms:GenerateDataKey
+    - kms:DescribeKey
+  dynamodb:
+    - dynamodb:GetItem
+    - dynamodb:PutItem
+    - dynamodb:UpdateItem
+    - dynamodb:DeleteItem
+    - dynamodb:Query
+    - dynamodb:Scan
+  sns:
+    - sns:Publish
+    - sns:Subscribe
+    - sns:GetTopicAttributes
+  ec2:
+    - ec2:DescribeSecurityGroups
+    - ec2:DescribeInstances
+    - ec2:DescribeVpcs
+    - ec2:DescribeSubnets
+
 defaults:
   logging:
     enabled: true

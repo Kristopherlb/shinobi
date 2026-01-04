@@ -10,6 +10,8 @@ import { ComponentContext as FactoryComponentContext } from '../platform/contrac
 import { Component } from '../platform/contracts/component.js';
 import { UnifiedBinderRegistry } from '../platform/binders/registry/unified-binder-registry.js';
 import type { BindingContext, EnhancedBindingResult } from '../platform/contracts/platform-binding-trigger-spec.js';
+import { DirectiveSchemaValidator } from '../platform/contracts/directive-schema-validator.js';
+import { SecurityGroupRulePostProcessor } from './security-group-rule-post-processor.js';
 import * as cdk from 'aws-cdk-lib';
 import * as path from 'path';
 import * as fs from 'fs';
@@ -72,6 +74,20 @@ export class ResolverEngine {
 
       // Phase 3: Binding (AC-RS3.1, AC-RS3.2)
       const bindings = await this.bindComponents(components, outputsMap, validatedConfig);
+
+      // Phase 3.5: Security Group Rule Post-Processing (SG-006)
+      // Apply securityGroupRules from binding results to target security groups
+      const sgRuleResult = SecurityGroupRulePostProcessor.process(
+        bindings, 
+        stack, 
+        components,
+        validatedConfig.service
+      );
+      this.dependencies.logger.info(
+        `Security Group Rules: ${sgRuleResult.rulesApplied} applied, ` +
+        `${sgRuleResult.securityGroupsAffected} SGs affected, ` +
+        `${sgRuleResult.crossStackRules} cross-stack rules deferred`
+      );
 
       // Phase 4: Patching (AC-RS4.1, AC-RS4.2)
       const patchesApplied = await this.applyPatches(stack, components, validatedConfig);
@@ -206,15 +222,29 @@ export class ResolverEngine {
             throw new Error(`Cannot resolve binding target for directive: ${JSON.stringify(bindDirective)}`);
           }
 
+          // SECURITY: Validate directive before binding execution
+          // This prevents injection attacks through directive.options and directive.env
+          let validatedDirective: typeof bindDirective;
+          try {
+            validatedDirective = DirectiveSchemaValidator.validate(bindDirective, bindDirective.capability);
+          } catch (error) {
+            if (error instanceof Error && error.name === 'DirectiveValidationError') {
+              throw new Error(
+                `Directive validation failed for binding ${component.spec.name} -> ${bindDirective.to || bindDirective.select ? 'selector' : 'unknown'}: ${error.message}`
+              );
+            }
+            throw error;
+          }
+
           // Find strategy that can handle this binding
           const strategy = this.dependencies.binderRegistry.findStrategyForBinding(
             component.getType(),
-            bindDirective.capability
+            validatedDirective.capability
           );
 
           if (!strategy) {
             throw new Error(
-              `No unified strategy found for capability '${bindDirective.capability}' ` +
+              `No unified strategy found for capability '${validatedDirective.capability}' ` +
               `from source type '${component.getType()}'`
             );
           }
@@ -223,7 +253,7 @@ export class ResolverEngine {
           const bindingContext: BindingContext = {
             source: component,
             target: target.component,
-            directive: bindDirective,
+            directive: validatedDirective,
             environment: process.env.NODE_ENV || 'dev',
             complianceFramework: validatedConfig.complianceFramework || 'commercial'
           };
@@ -234,18 +264,20 @@ export class ResolverEngine {
           bindings.push({
             source: component.spec.name,
             target: target.component.spec.name,
-            capability: bindDirective.capability,
+            capability: validatedDirective.capability,
             result: result
           });
 
           this.dependencies.logger.debug(
-            `Bound ${component.spec.name} -> ${target.component.spec.name} (${bindDirective.capability}) ` +
+            `Bound ${component.spec.name} -> ${target.component.spec.name} (${validatedDirective.capability}) ` +
             `[Compliance: ${result.compliance.status}]`
           );
 
         } catch (error) {
+          // Use bindDirective in error message since validatedDirective may not be assigned if validation failed
+          const targetDesc = bindDirective.to || (bindDirective.select ? 'selector' : 'unknown');
           throw new Error(
-            `Failed to bind ${component.spec.name} -> ${bindDirective.to || 'selector'}: ${error instanceof Error ? error.message : 'Unknown error'}`
+            `Failed to bind ${component.spec.name} -> ${targetDesc}: ${error instanceof Error ? error.message : 'Unknown error'}`
           );
         }
       }

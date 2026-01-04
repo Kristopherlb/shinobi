@@ -344,10 +344,12 @@ export class EnhancedSchemaValidator {
 
   /**
    * Validate required fields for a component
+   * Checks both top-level component fields and component config required fields from schema
    */
   private validateRequiredFields(component: any): ValidationError[] {
     const errors: ValidationError[] = [];
 
+    // Validate top-level required fields
     if (!component.name) {
       errors.push({
         path: 'components[].name',
@@ -366,6 +368,32 @@ export class EnhancedSchemaValidator {
         componentType: component.type,
         severity: 'error'
       });
+    }
+
+    // Validate component config required fields from schema
+    if (component.type && component.config) {
+      const componentSchemaInfo = this.dependencies.schemaComposer.getComponentSchema(component.type);
+      if (componentSchemaInfo?.schema) {
+        const requiredFields = componentSchemaInfo.schema.required || [];
+        // Filter out platform-provided context fields that are injected later
+        const configRequiredFields = requiredFields.filter(
+          (field: string) => !['serviceName', 'environment', 'complianceFramework'].includes(field)
+        );
+
+        for (const field of configRequiredFields) {
+          // Check if field is missing or undefined (but allow null for optional fields)
+          if (component.config[field] === undefined) {
+            errors.push({
+              path: `components[${component.name || '?'}].config.${field}`,
+              message: `Required field '${field}' is missing in component config`,
+              rule: 'required',
+              componentType: component.type,
+              componentName: component.name,
+              severity: 'error'
+            });
+          }
+        }
+      }
     }
 
     return errors;

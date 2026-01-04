@@ -24,7 +24,7 @@ import { Construct } from 'constructs';
 import { Template, Match } from 'aws-cdk-lib/assertions';
 import { ResolverEngine } from '../../resolver/resolver-engine.js';
 import { Logger as PlatformLogger } from '../../platform/logger/src/index.js';
-import { ComprehensiveBinderRegistry } from '../../platform/binders/registry/comprehensive-binder-registry.js';
+import { UnifiedBinderRegistry } from '../../platform/binders/registry/unified-binder-registry.js';
 import { ComponentFactoryBuilder } from '../../platform/contracts/components/component-factory.js';
 import { ComponentRegistry } from '../../platform/contracts/components/component-registry.js';
 import { IComponent } from '../../platform/contracts/index.js';
@@ -204,7 +204,7 @@ describe('ManifestSynthesis__ErrorHandling__IntegrationTests', () => {
     logger = PlatformLogger.getLogger('test-resolver-engine');
 
     // Create resolver engine with dependencies
-    const binderRegistry = new ComprehensiveBinderRegistry();
+    const binderRegistry = new UnifiedBinderRegistry();
     resolverEngine = new ResolverEngine({
       logger,
       binderRegistry

@@ -43,7 +43,7 @@ export default {
   watchPathIgnorePatterns: ['[\\\\/]dist[\\\\/]', '<rootDir>/tmp/', '<rootDir>/tmp-shinobi/'],
   moduleNameMapper: {
     ...(basePreset?.moduleNameMapper ?? {}),
-    '^(?:\\.{1,2}/)+platform/contracts/(.+)\\.js$': '<rootDir>/packages/core/src/platform/contracts/$1.ts',
+    '^(?:\\.{1,2}/)+platform/contracts/(.+)\\.js$': '<rootDir>/src/platform/contracts/$1.ts',
     '^(\\.{1,2}/(?:.*/)?src/.+)\\.js$': '$1.ts'
   },
 };

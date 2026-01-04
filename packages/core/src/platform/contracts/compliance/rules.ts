@@ -42,7 +42,11 @@ export interface ComplianceRulesConfig {
  * Supports:
  * - Built-in packs (config/commercial.yml, config/fedramp-moderate.yml, etc.)
  * - Custom user packs via customConfigPath
- * - Escape hatch via rulesOverride in context.options
+ * - Escape hatch via rulesOverride in context.options (commercial framework only)
+ * 
+ * SECURITY: Rules override is restricted to 'commercial' framework only.
+ * FedRAMP frameworks (fedramp-moderate, fedramp-high) reject overrides
+ * to prevent compliance violations.
  * 
  * Expected YAML structure:
  * ```yaml
@@ -59,16 +63,33 @@ export interface ComplianceRulesConfig {
  * 
  * @param framework - Compliance framework name
  * @param customConfigPath - Optional path to custom config file
- * @param rulesOverride - Optional runtime override rules
+ * @param rulesOverride - Optional runtime override rules (commercial framework only)
  * @returns Compliance rules configuration map
+ * @throws Error if override attempted in non-commercial framework
  */
 export function loadComplianceRules(
   framework: ComplianceFramework,
   customConfigPath?: string,
   rulesOverride?: ComplianceRulesConfig
 ): ComplianceRulesConfig {
-  // Priority 1: User override (escape hatch)
+  // Priority 1: User override (escape hatch) - restricted to commercial framework
   if (rulesOverride) {
+    // Validate framework restriction
+    if (framework !== 'commercial') {
+      const errorMessage = `Compliance rules override is not allowed in ${framework} framework. ` +
+        `Override is only permitted in 'commercial' framework for development/testing purposes. ` +
+        `This restriction prevents compliance violations in production frameworks.`;
+      
+      // Audit log
+      console.error(`[COMPLIANCE-AUDIT] ${errorMessage}`);
+      
+      throw new Error(errorMessage);
+    }
+    
+    // Audit log: override allowed in commercial framework
+    console.info(`[COMPLIANCE-AUDIT] Compliance rules override applied in commercial framework. ` +
+      `Override contains ${Object.keys(rulesOverride).length} rule(s).`);
+    
     return rulesOverride;
   }
   

@@ -17,7 +17,11 @@
     "test:watch": "jest --watch",
     "test:coverage": "nx run-many -t test --all --coverage",
     "mcp:build": "pnpm --filter @shinobi/mcp-server build",
-    "mcp:start": "pnpm --filter @shinobi/mcp-server start"
+    "mcp:start": "pnpm --filter @shinobi/mcp-server start",
+    "check:deps": "node ./scripts/check-deps.mjs",
+    "audit:platform": "echo '⚠️  Platform audit not yet implemented. See README.md for planned audit capabilities.' && exit 0",
+    "audit:platform:strict": "echo '⚠️  Platform audit not yet implemented. See README.md for planned audit capabilities.' && exit 0",
+    "audit:platform:json": "echo '{\"status\":\"not_implemented\",\"message\":\"Platform audit not yet implemented\"}' && exit 0"
   },
   "keywords": [],
   "author": "",

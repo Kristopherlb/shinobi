@@ -5,12 +5,10 @@
  */
 
 import { UnifiedBinderRegistry } from '../unified-binder-registry.js';
-import {
-  KmsBinderStrategy,
-  SecretsManagerBinderStrategy,
-  CertificateBinderStrategy,
-  CognitoUserPoolBinderStrategy
-} from '@shinobi/binders/security';
+import { KmsBinderStrategy } from '../../../../../../binders/src/strategies/security/kms-binder-strategy.js';
+import { SecretsManagerBinderStrategy } from '../../../../../../binders/src/strategies/security/secrets-manager-binder-strategy.js';
+import { CertificateBinderStrategy } from '../../../../../../binders/src/strategies/security/certificate-binder-strategy.js';
+import { CognitoUserPoolBinderStrategy } from '../../../../../../binders/src/strategies/security/cognito-user-pool-binder-strategy.js';
 
 function createUnifiedBinderRegistry(): UnifiedBinderRegistry {
   return new UnifiedBinderRegistry([
@@ -104,8 +102,8 @@ describe('UnifiedBinderRegistry - Security Strategies Registration', () => {
     expect(capabilities).toContain('auth:user-pool');
     expect(capabilities).toContain('auth:identity-provider');
 
-    // Should have 11 total capabilities (3 KMS + 2 Secrets + 3 Certificate + 2 Cognito)
-    expect(capabilities.length).toBe(11);
+    // Should have 10 total capabilities (3 KMS + 2 Secrets + 3 Certificate + 2 Cognito)
+    expect(capabilities.length).toBe(10);
   });
 
   it('should allow manual registration of strategies', () => {

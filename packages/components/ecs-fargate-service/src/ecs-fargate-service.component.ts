@@ -17,13 +17,13 @@ import * as elbv2 from 'aws-cdk-lib/aws-elasticloadbalancingv2';
 import * as cdk from 'aws-cdk-lib';
 import { Construct } from 'constructs';
 import { NagSuppressions } from 'cdk-nag';
-import { BaseComponent } from '@shinobi/core';
+import { BaseComponent, applySecurityGroupTags } from '@shinobi/core';
 import { ComponentSpec, ComponentContext, ComponentCapabilities } from '@platform/contracts';
 import {
   EcsFargateServiceComponentConfigBuilder,
   EcsFargateServiceConfig,
   EcsFargateAlarmConfig
-} from './ecs-fargate-service.builder.ts';
+} from './ecs-fargate-service.builder.js';
 
 /**
  * ECS Fargate Service Component implementing Component API Contract v1.0 and
@@ -376,6 +376,12 @@ export class EcsFargateServiceComponent extends BaseComponent {
       'resource-type': 'security-group',
       'ingress-policy': 'binder-managed'
     });
+    
+    // Apply additional security-group-specific tags
+    applySecurityGroupTags(this.securityGroup, {
+      ingressPolicy: 'binder-managed',
+      tier: 'app'
+    });
 
     this.logResourceCreation('security-group', this.securityGroup.securityGroupId);
   }
@@ -619,7 +625,7 @@ export class EcsFargateServiceComponent extends BaseComponent {
         logGroup: logGroup
       }),
       environment: {
-        'AWS_REGION': this.context.region,
+        'AWS_REGION': this.context.region ?? cdk.Stack.of(this).region,
       },
       user: '1337', // Non-root user for security
     });
@@ -776,11 +782,11 @@ export class EcsFargateServiceComponent extends BaseComponent {
 
     const otelEnv = this.configureObservability(this.service, {
       serviceName: `${this.context.serviceName}-${this.spec.name}`,
-      componentType: this.getType(),
       customAttributes: {
         'ecs.launch-type': 'FARGATE',
         'ecs.task-definition': this.taskDefinition?.family ?? 'unknown',
-        'service.connect.name': this.config.serviceConnect.portMappingName
+        'service.connect.name': this.config.serviceConnect.portMappingName,
+        'component.type': this.getType()
       }
     });
 
@@ -868,7 +874,7 @@ export class EcsFargateServiceComponent extends BaseComponent {
         'cluster-name': clusterName
       });
 
-      if (this.config.tags) {
+      if (this.config?.tags) {
         Object.entries(this.config.tags).forEach(([key, value]) => {
           cdk.Tags.of(alarm).add(key, value);
         });
@@ -930,8 +936,8 @@ export class EcsFargateServiceComponent extends BaseComponent {
       targetType: elbv2.TargetType.IP, // Required for Fargate
       healthCheck: {
         enabled: true,
-        interval: cdk.Duration.seconds(this.config!.healthCheck?.interval || 30),
-        timeout: cdk.Duration.seconds(this.config!.healthCheck?.timeout || 5),
+        interval: cdk.Duration.seconds(this.config!.healthCheck?.intervalSeconds || 30),
+        timeout: cdk.Duration.seconds(this.config!.healthCheck?.timeoutSeconds || 5),
         unhealthyThresholdCount: this.config!.healthCheck?.retries || 3,
         path: '/health', // Standard health check path
         protocol: elbv2.Protocol.HTTP
@@ -947,8 +953,8 @@ export class EcsFargateServiceComponent extends BaseComponent {
       targetType: elbv2.TargetType.IP, // Required for Fargate
       healthCheck: {
         enabled: true,
-        interval: cdk.Duration.seconds(this.config!.healthCheck?.interval || 30),
-        timeout: cdk.Duration.seconds(this.config!.healthCheck?.timeout || 5),
+        interval: cdk.Duration.seconds(this.config!.healthCheck?.intervalSeconds || 30),
+        timeout: cdk.Duration.seconds(this.config!.healthCheck?.timeoutSeconds || 5),
         unhealthyThresholdCount: this.config!.healthCheck?.retries || 3,
         path: '/health', // Standard health check path
         protocol: elbv2.Protocol.HTTP

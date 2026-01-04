@@ -210,13 +210,28 @@ export class RdsBinderStrategy extends UnifiedBinderStrategyBase {
     });
 
     // KMS access for secrets decryption (always required when using Secrets Manager)
+    // SECURITY: Wildcard resources are not allowed for KMS (sensitive service).
+    // If targetData.kmsKeyId is provided, use explicit ARN. Otherwise, this will fail validation.
+    // TODO: Fix this to require explicit KMS key ARN from targetData or directive.options
+    const kmsKeyArn = targetData.kmsKeyId 
+      ? (targetData.kmsKeyId.startsWith('arn:') ? targetData.kmsKeyId : `arn:aws:kms:${region || '*'}:*:key/${targetData.kmsKeyId}`)
+      : undefined;
+    
+    if (!kmsKeyArn) {
+      throw new Error(
+        'KMS key ARN is required for RDS database secrets. ' +
+        'Provide kmsKeyId in target capability data or directive.options. ' +
+        'Wildcard resources are not allowed for KMS (sensitive service).'
+      );
+    }
+    
     const kmsStatement = new PolicyStatement({
       effect: Effect.ALLOW,
       actions: [
         'kms:Decrypt',
         'kms:DescribeKey'
       ],
-      resources: ['*'], // Secrets Manager uses service-managed keys or customer keys
+      resources: [kmsKeyArn], // Explicit ARN required for KMS
       conditions: region ? {
         StringEquals: {
           'aws:RequestedRegion': region
