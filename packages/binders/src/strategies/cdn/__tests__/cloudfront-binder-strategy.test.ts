@@ -978,4 +978,126 @@ describe('CloudFrontBinderStrategy', () => {
       expect(encryptionPolicy!.statement.actions).toContain('cloudfront:ListFieldLevelEncryptionConfigs');
     });
   });
+
+  describe('CloudFrontBind__CustomActionsOverride__ReplacesCoarseActions', () => {
+    const metadata = {
+      id: 'TP-binders-cloudfront-010',
+      level: 'unit' as const,
+      capability: 'Custom actions override replaces default CloudFront distribution actions',
+      oracle: 'exact' as const,
+      determinism: 'deterministic' as const,
+      naming: { pattern: 'CloudFrontBind__Condition__Outcome', example: 'CloudFrontBind__CustomActionsOverride__ReplacesCoarseActions' },
+      invariants: [
+        'IAM policy actions match provided custom actions array',
+        'Default CloudFront actions are not included when custom actions provided',
+        'Actions array is used directly (replaces coarse access)'
+      ],
+      fixtures: ['MockSourceComponent', 'MockTargetComponent', 'CloudFrontDistributionCapabilityData'],
+      inputs: {
+        shape: 'BindingContext with cloudfront:distribution capability and directive.actions array',
+        notes: 'Granular actions override test'
+      },
+      risks: [],
+      dependencies: [],
+      evidence: [],
+      compliance_refs: ['docs/platform-standards/platform-iam-auditing-standard.md'],
+      ai_generated: true,
+      human_reviewed_by: 'Platform Engineering'
+    };
+
+    test('CloudFrontBind__CustomActionsOverride__ReplacesCoarseActions', async () => {
+      const strategy = new CloudFrontBinderStrategy();
+      const target = createMockTargetComponent('cloudfront-distribution', {
+        'cloudfront:distribution': {
+          type: 'cloudfront:distribution',
+          distributionArn: 'arn:aws:cloudfront::123456789012:distribution/E1234567890ABC',
+          distributionId: 'E1234567890ABC',
+          domainName: 'd1234567890abc.cloudfront.net',
+          status: 'Deployed',
+          enabled: true,
+          priceClass: 'PriceClass_All'
+        }
+      });
+
+      const customActions = ['cloudfront:GetDistribution', 'cloudfront:ListDistributions'];
+      const context = createBindingContext({
+        source: createMockSourceComponent(),
+        target,
+        capability: 'cloudfront:distribution',
+        access: 'read',
+        actions: customActions
+      });
+
+      const result = await executeUnifiedBinding(strategy, context);
+
+      assertEnhancedBindingResult(result);
+
+      expect(result.iamPolicies.length).toBeGreaterThan(0);
+      const policy = result.iamPolicies.find(p => p.description.includes('granular actions'));
+      expect(policy).toBeDefined();
+      
+      const statementJson = policy!.statement.toStatementJson();
+      const actions = Array.isArray(statementJson.Action)
+        ? statementJson.Action
+        : [statementJson.Action];
+
+      expect(actions).toEqual(expect.arrayContaining(customActions));
+      expect(actions.length).toBe(customActions.length);
+    });
+  });
+
+  describe('CloudFrontBind__InvalidActionPrefix__ThrowsPrefixMismatchError', () => {
+    const metadata = {
+      id: 'TP-binders-cloudfront-011',
+      level: 'unit' as const,
+      capability: 'Throws error when actions array contains actions with wrong service prefix',
+      oracle: 'exact' as const,
+      determinism: 'deterministic' as const,
+      naming: { pattern: 'CloudFrontBind__Condition__Outcome', example: 'CloudFrontBind__InvalidActionPrefix__ThrowsPrefixMismatchError' },
+      invariants: [
+        'Error message indicates service prefix mismatch',
+        'Error specifies which actions are mismatched',
+        'Binding fails before IAM policy generation'
+      ],
+      fixtures: ['MockSourceComponent', 'MockTargetComponent', 'CloudFrontDistributionCapabilityData'],
+      inputs: {
+        shape: 'BindingContext with cloudfront:distribution capability and directive.actions containing non-cloudfront actions',
+        notes: 'Error case - invalid action prefix for CloudFront binder'
+      },
+      risks: [],
+      dependencies: [],
+      evidence: [],
+      compliance_refs: ['docs/platform-standards/platform-iam-auditing-standard.md'],
+      ai_generated: true,
+      human_reviewed_by: 'Platform Engineering'
+    };
+
+    test('CloudFrontBind__InvalidActionPrefix__ThrowsPrefixMismatchError', async () => {
+      const strategy = new CloudFrontBinderStrategy();
+      const target = createMockTargetComponent('cloudfront-distribution', {
+        'cloudfront:distribution': {
+          type: 'cloudfront:distribution',
+          distributionArn: 'arn:aws:cloudfront::123456789012:distribution/E1234567890ABC',
+          distributionId: 'E1234567890ABC',
+          domainName: 'd1234567890abc.cloudfront.net',
+          status: 'Deployed',
+          enabled: true,
+          priceClass: 'PriceClass_All'
+        }
+      });
+
+      const invalidActions = ['s3:GetObject']; // Wrong service prefix
+      const context = createBindingContext({
+        source: createMockSourceComponent(),
+        target,
+        capability: 'cloudfront:distribution',
+        access: 'read',
+        actions: invalidActions
+      });
+
+      await expect(executeUnifiedBinding(strategy, context)).rejects.toThrow(
+        "Actions must match service prefix 'cloudfront:'"
+      );
+    });
+  });
 });

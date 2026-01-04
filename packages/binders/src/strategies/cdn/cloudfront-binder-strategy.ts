@@ -3,7 +3,7 @@
  * Handles content delivery network bindings for Amazon CloudFront with mandatory compliance enforcement
  */
 
-import { UnifiedBinderStrategyBase } from '@shinobi/core';
+import { UnifiedBinderStrategyBase, resolveActions } from '@shinobi/core';
 import type { BindingContext, EnhancedBindingResult, CompatibilityEntry } from '@shinobi/core';
 import type { IamPolicy } from '@shinobi/core';
 import { PolicyStatement, Effect } from 'aws-cdk-lib/aws-iam';
@@ -439,35 +439,59 @@ export class CloudFrontBinderStrategy extends UnifiedBinderStrategyBase {
     // Determine primary access level
     const primaryAccess = access.includes('readwrite') ? 'readwrite' : access.includes('write') ? 'write' : 'read';
 
-    // Create IAM policies based on access level
-    const actions = this.getCloudFrontDistributionActionsForAccess(primaryAccess);
-    if (actions.length > 0) {
-      iamPolicies.push({
-        statement: new PolicyStatement({
-          effect: Effect.ALLOW,
-          actions: actions,
-          resources: [targetData.distributionArn]
-        }),
-        description: `CloudFront distribution ${primaryAccess} access`,
-        complianceRequirement: `CloudFront distribution ${primaryAccess} access policy`
-      });
-    }
+    // Handle granular actions override or use multi-statement approach
+    if (context.directive.actions) {
+      const resolvedActions = resolveActions(
+        context.directive,
+        context,
+        (acc) => this.getCloudFrontDistributionActionsForAccess(acc),
+        'cloudfront'
+      );
 
-    // Grant invalidation permissions if write access
-    if (primaryAccess === 'write' || primaryAccess === 'readwrite') {
+      // Get resources from target data
+      const resources = [targetData.distributionArn];
+
       iamPolicies.push({
         statement: new PolicyStatement({
           effect: Effect.ALLOW,
-          actions: [
-            'cloudfront:CreateInvalidation',
-            'cloudfront:GetInvalidation',
-            'cloudfront:ListInvalidations'
-          ],
-          resources: [targetData.distributionArn]
+          actions: resolvedActions,
+          resources
         }),
-        description: 'CloudFront invalidation permissions',
-        complianceRequirement: 'CloudFront cache invalidation for content updates'
+        description: 'CloudFront distribution access (granular actions)',
+        complianceRequirement: 'CloudFront distribution access policy'
       });
+    } else {
+      // Coarse access levels: use existing multi-statement approach (backward compatible)
+      // Create IAM policies based on access level
+      const actions = this.getCloudFrontDistributionActionsForAccess(primaryAccess);
+      if (actions.length > 0) {
+        iamPolicies.push({
+          statement: new PolicyStatement({
+            effect: Effect.ALLOW,
+            actions: actions,
+            resources: [targetData.distributionArn]
+          }),
+          description: `CloudFront distribution ${primaryAccess} access`,
+          complianceRequirement: `CloudFront distribution ${primaryAccess} access policy`
+        });
+      }
+
+      // Grant invalidation permissions if write access
+      if (primaryAccess === 'write' || primaryAccess === 'readwrite') {
+        iamPolicies.push({
+          statement: new PolicyStatement({
+            effect: Effect.ALLOW,
+            actions: [
+              'cloudfront:CreateInvalidation',
+              'cloudfront:GetInvalidation',
+              'cloudfront:ListInvalidations'
+            ],
+            resources: [targetData.distributionArn]
+          }),
+          description: 'CloudFront invalidation permissions',
+          complianceRequirement: 'CloudFront cache invalidation for content updates'
+        });
+      }
     }
 
     // Grant S3 access for S3 origins
@@ -541,18 +565,41 @@ export class CloudFrontBinderStrategy extends UnifiedBinderStrategyBase {
     // Determine primary access level
     const primaryAccess = access.includes('readwrite') ? 'readwrite' : access.includes('write') ? 'write' : 'read';
 
-    // Create IAM policies based on access level
-    const actions = this.getCloudFrontOriginActionsForAccess(primaryAccess);
-    if (actions.length > 0 && targetData.originRequestPolicyArn) {
+    // Handle granular actions override or use multi-statement approach
+    if (context.directive.actions) {
+      const resolvedActions = resolveActions(
+        context.directive,
+        context,
+        (acc) => this.getCloudFrontOriginActionsForAccess(acc),
+        'cloudfront'
+      );
+
+      // Get resources from target data
+      const resources = targetData.originRequestPolicyArn ? [targetData.originRequestPolicyArn] : ['*'];
+
       iamPolicies.push({
         statement: new PolicyStatement({
           effect: Effect.ALLOW,
-          actions: actions,
-          resources: [targetData.originRequestPolicyArn]
+          actions: resolvedActions,
+          resources
         }),
-        description: `CloudFront origin ${primaryAccess} access`,
-        complianceRequirement: `CloudFront origin ${primaryAccess} access policy`
+        description: 'CloudFront origin access (granular actions)',
+        complianceRequirement: 'CloudFront origin access policy'
       });
+    } else {
+      // Coarse access levels: use existing helper method (backward compatible)
+      const actions = this.getCloudFrontOriginActionsForAccess(primaryAccess);
+      if (actions.length > 0 && targetData.originRequestPolicyArn) {
+        iamPolicies.push({
+          statement: new PolicyStatement({
+            effect: Effect.ALLOW,
+            actions: actions,
+            resources: [targetData.originRequestPolicyArn]
+          }),
+          description: `CloudFront origin ${primaryAccess} access`,
+          complianceRequirement: `CloudFront origin ${primaryAccess} access policy`
+        });
+      }
     }
 
     // Set environment variables
@@ -602,18 +649,41 @@ export class CloudFrontBinderStrategy extends UnifiedBinderStrategyBase {
     // Determine primary access level
     const primaryAccess = access.includes('readwrite') ? 'readwrite' : access.includes('write') ? 'write' : 'read';
 
-    // Create IAM policies based on access level
-    const actions = this.getCloudFrontCachePolicyActionsForAccess(primaryAccess);
-    if (actions.length > 0) {
+    // Handle granular actions override or use multi-statement approach
+    if (context.directive.actions) {
+      const resolvedActions = resolveActions(
+        context.directive,
+        context,
+        (acc) => this.getCloudFrontCachePolicyActionsForAccess(acc),
+        'cloudfront'
+      );
+
+      // Get resources from target data
+      const resources = [targetData.cachePolicyArn];
+
       iamPolicies.push({
         statement: new PolicyStatement({
           effect: Effect.ALLOW,
-          actions: actions,
-          resources: [targetData.cachePolicyArn]
+          actions: resolvedActions,
+          resources
         }),
-        description: `CloudFront cache policy ${primaryAccess} access`,
-        complianceRequirement: `CloudFront cache policy ${primaryAccess} access policy`
+        description: 'CloudFront cache policy access (granular actions)',
+        complianceRequirement: 'CloudFront cache policy access policy'
       });
+    } else {
+      // Coarse access levels: use existing helper method (backward compatible)
+      const actions = this.getCloudFrontCachePolicyActionsForAccess(primaryAccess);
+      if (actions.length > 0) {
+        iamPolicies.push({
+          statement: new PolicyStatement({
+            effect: Effect.ALLOW,
+            actions: actions,
+            resources: [targetData.cachePolicyArn]
+          }),
+          description: `CloudFront cache policy ${primaryAccess} access`,
+          complianceRequirement: `CloudFront cache policy ${primaryAccess} access policy`
+        });
+      }
     }
 
     // Set environment variables
@@ -677,18 +747,41 @@ export class CloudFrontBinderStrategy extends UnifiedBinderStrategyBase {
     // Determine primary access level
     const primaryAccess = access.includes('readwrite') ? 'readwrite' : access.includes('write') ? 'write' : 'read';
 
-    // Create IAM policies based on access level
-    const actions = this.getCloudFrontFunctionActionsForAccess(primaryAccess);
-    if (actions.length > 0) {
+    // Handle granular actions override or use multi-statement approach
+    if (context.directive.actions) {
+      const resolvedActions = resolveActions(
+        context.directive,
+        context,
+        (acc) => this.getCloudFrontFunctionActionsForAccess(acc),
+        'cloudfront'
+      );
+
+      // Get resources from target data
+      const resources = [targetData.functionArn];
+
       iamPolicies.push({
         statement: new PolicyStatement({
           effect: Effect.ALLOW,
-          actions: actions,
-          resources: [targetData.functionArn]
+          actions: resolvedActions,
+          resources
         }),
-        description: `CloudFront Function ${primaryAccess} access`,
-        complianceRequirement: `CloudFront Function ${primaryAccess} access policy`
+        description: 'CloudFront Function access (granular actions)',
+        complianceRequirement: 'CloudFront Function access policy'
       });
+    } else {
+      // Coarse access levels: use existing helper method (backward compatible)
+      const actions = this.getCloudFrontFunctionActionsForAccess(primaryAccess);
+      if (actions.length > 0) {
+        iamPolicies.push({
+          statement: new PolicyStatement({
+            effect: Effect.ALLOW,
+            actions: actions,
+            resources: [targetData.functionArn]
+          }),
+          description: `CloudFront Function ${primaryAccess} access`,
+          complianceRequirement: `CloudFront Function ${primaryAccess} access policy`
+        });
+      }
     }
 
     // Set environment variables
@@ -806,18 +899,41 @@ export class CloudFrontBinderStrategy extends UnifiedBinderStrategyBase {
     // Determine primary access level
     const primaryAccess = access.includes('readwrite') ? 'readwrite' : access.includes('write') ? 'write' : 'read';
 
-    // Create IAM policies based on access level
-    const actions = this.getCloudFrontResponseHeadersPolicyActionsForAccess(primaryAccess);
-    if (actions.length > 0) {
+    // Handle granular actions override or use multi-statement approach
+    if (context.directive.actions) {
+      const resolvedActions = resolveActions(
+        context.directive,
+        context,
+        (acc) => this.getCloudFrontResponseHeadersPolicyActionsForAccess(acc),
+        'cloudfront'
+      );
+
+      // Get resources from target data
+      const resources = [targetData.responseHeadersPolicyArn];
+
       iamPolicies.push({
         statement: new PolicyStatement({
           effect: Effect.ALLOW,
-          actions: actions,
-          resources: [targetData.responseHeadersPolicyArn]
+          actions: resolvedActions,
+          resources
         }),
-        description: `CloudFront response headers policy ${primaryAccess} access`,
-        complianceRequirement: `CloudFront response headers policy ${primaryAccess} access policy`
+        description: 'CloudFront response headers policy access (granular actions)',
+        complianceRequirement: 'CloudFront response headers policy access policy'
       });
+    } else {
+      // Coarse access levels: use existing helper method (backward compatible)
+      const actions = this.getCloudFrontResponseHeadersPolicyActionsForAccess(primaryAccess);
+      if (actions.length > 0) {
+        iamPolicies.push({
+          statement: new PolicyStatement({
+            effect: Effect.ALLOW,
+            actions: actions,
+            resources: [targetData.responseHeadersPolicyArn]
+          }),
+          description: `CloudFront response headers policy ${primaryAccess} access`,
+          complianceRequirement: `CloudFront response headers policy ${primaryAccess} access policy`
+        });
+      }
     }
 
     // Set environment variables
@@ -904,18 +1020,41 @@ export class CloudFrontBinderStrategy extends UnifiedBinderStrategyBase {
     // Determine primary access level
     const primaryAccess = access.includes('readwrite') ? 'readwrite' : access.includes('write') ? 'write' : 'read';
 
-    // Create IAM policies based on access level
-    const actions = this.getCloudFrontFieldLevelEncryptionActionsForAccess(primaryAccess);
-    if (actions.length > 0) {
+    // Handle granular actions override or use multi-statement approach
+    if (context.directive.actions) {
+      const resolvedActions = resolveActions(
+        context.directive,
+        context,
+        (acc) => this.getCloudFrontFieldLevelEncryptionActionsForAccess(acc),
+        'cloudfront'
+      );
+
+      // Get resources from target data
+      const resources = [targetData.fieldLevelEncryptionArn];
+
       iamPolicies.push({
         statement: new PolicyStatement({
           effect: Effect.ALLOW,
-          actions: actions,
-          resources: [targetData.fieldLevelEncryptionArn]
+          actions: resolvedActions,
+          resources
         }),
-        description: `CloudFront field-level encryption ${primaryAccess} access`,
-        complianceRequirement: `CloudFront field-level encryption ${primaryAccess} access policy`
+        description: 'CloudFront field-level encryption access (granular actions)',
+        complianceRequirement: 'CloudFront field-level encryption access policy'
       });
+    } else {
+      // Coarse access levels: use existing helper method (backward compatible)
+      const actions = this.getCloudFrontFieldLevelEncryptionActionsForAccess(primaryAccess);
+      if (actions.length > 0) {
+        iamPolicies.push({
+          statement: new PolicyStatement({
+            effect: Effect.ALLOW,
+            actions: actions,
+            resources: [targetData.fieldLevelEncryptionArn]
+          }),
+          description: `CloudFront field-level encryption ${primaryAccess} access`,
+          complianceRequirement: `CloudFront field-level encryption ${primaryAccess} access policy`
+        });
+      }
     }
 
     // Set environment variables
