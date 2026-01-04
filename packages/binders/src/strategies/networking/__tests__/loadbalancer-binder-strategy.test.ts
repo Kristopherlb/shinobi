@@ -140,5 +140,110 @@ describe('LoadBalancerBinderStrategy', () => {
       expect(actions.length).toBe(customActions.length);
     });
   });
+
+  describe('LoadBalancerBind__WriteAccess__GrantsWriteActions', () => {
+    const metadata = {
+      id: 'TP-binders-networking-loadbalancer-003',
+      level: 'unit' as const,
+      capability: 'Write access grants Load Balancer write actions',
+      oracle: 'exact' as const,
+      determinism: 'deterministic' as const,
+      naming: { pattern: 'LoadBalancerBind__Condition__Outcome', example: 'LoadBalancerBind__WriteAccess__GrantsWriteActions' },
+      invariants: [
+        'IAM policies include Load Balancer write actions',
+        'Write actions include CreateLoadBalancer and ModifyLoadBalancerAttributes'
+      ],
+      fixtures: ['MockSourceComponent', 'MockTargetComponent'],
+      inputs: {
+        shape: 'BindingContext with network:load-balancer capability and write access',
+        notes: 'Write access test'
+      },
+      risks: [],
+      dependencies: [],
+      evidence: [],
+      compliance_refs: ['docs/platform-standards/platform-iam-auditing-standard.md'],
+      ai_generated: true,
+      human_reviewed_by: 'Platform Engineering'
+    };
+
+    test('LoadBalancerBind__WriteAccess__GrantsWriteActions', async () => {
+      const strategy = new LoadBalancerBinderStrategy();
+      const target = createMockTargetComponent('load-balancer', {
+        'network:load-balancer': {
+          resources: {
+            loadBalancerArn: 'arn:aws:elasticloadbalancing:us-east-1:123456789012:loadbalancer/app/test-lb/1234567890abcdef'
+          }
+        }
+      });
+
+      const context = createBindingContext({
+        source: createMockSourceComponent('lambda-api', 'test-source'),
+        target,
+        capability: 'network:load-balancer',
+        access: 'write'
+      });
+
+      const result = await executeUnifiedBinding(strategy, context);
+
+      assertEnhancedBindingResult(result);
+
+      const policy = result.iamPolicies[0];
+      const statementJson = policy.statement.toStatementJson();
+      const actions = Array.isArray(statementJson.Action)
+        ? statementJson.Action
+        : [statementJson.Action];
+
+      expect(actions).toContain('elasticloadbalancing:ModifyLoadBalancerAttributes');
+      expect(actions).toContain('elasticloadbalancing:RegisterTargets');
+    });
+  });
+
+  describe('LoadBalancerBind__MissingLoadBalancerArn__ThrowsError', () => {
+    const metadata = {
+      id: 'TP-binders-networking-loadbalancer-004',
+      level: 'unit' as const,
+      capability: 'Missing loadBalancerArn throws error',
+      oracle: 'exact' as const,
+      determinism: 'deterministic' as const,
+      naming: { pattern: 'LoadBalancerBind__Condition__Outcome', example: 'LoadBalancerBind__MissingLoadBalancerArn__ThrowsError' },
+      invariants: [
+        'Error message indicates missing loadBalancerArn',
+        'Error is thrown before binding completes'
+      ],
+      fixtures: ['MockSourceComponent', 'MockTargetComponent'],
+      inputs: {
+        shape: 'BindingContext with network:load-balancer capability but missing loadBalancerArn',
+        notes: 'Error case test'
+      },
+      risks: [],
+      dependencies: [],
+      evidence: [],
+      compliance_refs: [],
+      ai_generated: true,
+      human_reviewed_by: 'Platform Engineering'
+    };
+
+    test('LoadBalancerBind__MissingLoadBalancerArn__ThrowsError', async () => {
+      const strategy = new LoadBalancerBinderStrategy();
+      const target = createMockTargetComponent('load-balancer', {
+        'network:load-balancer': {
+          resources: {
+            // Missing loadBalancerArn
+          } as any
+        }
+      });
+
+      const context = createBindingContext({
+        source: createMockSourceComponent('lambda-api', 'test-source'),
+        target,
+        capability: 'network:load-balancer',
+        access: 'read'
+      });
+
+      await expect(executeUnifiedBinding(strategy, context)).rejects.toThrow(
+        'missing required resources.loadBalancerArn property'
+      );
+    });
+  });
 });
 

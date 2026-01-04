@@ -416,5 +416,382 @@ describe('OrganizationsBinderStrategy', () => {
       expect(actions).not.toContain('organizations:DescribeOrganization');
     });
   });
+
+  describe('OrganizationsBind__ScpWriteAccess__GrantsWriteActions', () => {
+    const metadata = {
+      id: 'TP-binders-governance-organizations-008',
+      level: 'unit' as const,
+      capability: 'SCP write access grants Organizations write actions',
+      oracle: 'exact' as const,
+      determinism: 'deterministic' as const,
+      naming: { pattern: 'OrganizationsBind__Condition__Outcome', example: 'OrganizationsBind__ScpWriteAccess__GrantsWriteActions' },
+      invariants: [
+        'IAM policies include Organizations write actions',
+        'Write actions include CreatePolicy and AttachPolicy'
+      ],
+      fixtures: ['MockSourceComponent', 'MockTargetComponent'],
+      inputs: {
+        shape: 'BindingContext with org:scp capability and write access',
+        notes: 'SCP write access test'
+      },
+      risks: [],
+      dependencies: [],
+      evidence: [],
+      compliance_refs: ['docs/platform-standards/platform-iam-auditing-standard.md'],
+      ai_generated: true,
+      human_reviewed_by: 'Platform Engineering'
+    };
+
+    test('OrganizationsBind__ScpWriteAccess__GrantsWriteActions', async () => {
+      const strategy = new OrganizationsBinderStrategy();
+      const target = createMockTargetComponent('organizations', {
+        'org:scp': {
+          orgId: 'o-1234567890',
+          masterAccountId: '111111111111'
+        }
+      });
+
+      const context = createBindingContext({
+        source: createMockSourceComponent('lambda-governance', 'test-source'),
+        target,
+        capability: 'org:scp',
+        access: 'write'
+      });
+
+      const result = await executeUnifiedBinding(strategy, context);
+
+      assertEnhancedBindingResult(result);
+
+      const policy = result.iamPolicies.find(p => p.description.includes('write access'));
+      expect(policy).toBeDefined();
+      
+      const statementJson = policy!.statement.toStatementJson();
+      const actions = Array.isArray(statementJson.Action)
+        ? statementJson.Action
+        : [statementJson.Action];
+
+      expect(actions).toContain('organizations:CreatePolicy');
+      expect(actions).toContain('organizations:AttachPolicy');
+    });
+  });
+
+  describe('OrganizationsBind__TagPolicyReadAccess__ReturnsEnhancedResult', () => {
+    const metadata = {
+      id: 'TP-binders-governance-organizations-009',
+      level: 'unit' as const,
+      capability: 'Tag policy read access returns enhanced result',
+      oracle: 'exact' as const,
+      determinism: 'deterministic' as const,
+      naming: { pattern: 'OrganizationsBind__Condition__Outcome', example: 'OrganizationsBind__TagPolicyReadAccess__ReturnsEnhancedResult' },
+      invariants: [
+        'Environment variables are set correctly',
+        'IAM policies include tag policy read actions'
+      ],
+      fixtures: ['MockSourceComponent', 'MockTargetComponent'],
+      inputs: {
+        shape: 'BindingContext with org:tag-policy capability and read access',
+        notes: 'Tag policy read access test'
+      },
+      risks: [],
+      dependencies: [],
+      evidence: [],
+      compliance_refs: ['docs/platform-standards/platform-iam-auditing-standard.md'],
+      ai_generated: true,
+      human_reviewed_by: 'Platform Engineering'
+    };
+
+    test('OrganizationsBind__TagPolicyReadAccess__ReturnsEnhancedResult', async () => {
+      const strategy = new OrganizationsBinderStrategy();
+      const target = createMockTargetComponent('organizations', {
+        'org:tag-policy': {
+          orgId: 'o-1234567890',
+          masterAccountId: '111111111111',
+          tagPolicyId: 'p-1234567890'
+        }
+      });
+
+      const context = createBindingContext({
+        source: createMockSourceComponent('lambda-governance', 'test-source'),
+        target,
+        capability: 'org:tag-policy',
+        access: 'read'
+      });
+
+      const result = await executeUnifiedBinding(strategy, context);
+
+      assertEnhancedBindingResult(result);
+
+      expect(result.environmentVariables.AWS_ORGANIZATIONS_ID).toBe('o-1234567890');
+      expect(result.environmentVariables.AWS_ORGANIZATIONS_MASTER_ACCOUNT_ID).toBe('111111111111');
+
+      const policy = result.iamPolicies.find(p => p.description.includes('tag policy read access'));
+      expect(policy).toBeDefined();
+      
+      const statementJson = policy!.statement.toStatementJson();
+      const actions = Array.isArray(statementJson.Action)
+        ? statementJson.Action
+        : [statementJson.Action];
+
+      expect(actions).toContain('organizations:DescribePolicy');
+      expect(actions).toContain('organizations:ListPolicies');
+    });
+  });
+
+  describe('OrganizationsBind__TagPolicyMissingOrgId__ThrowsError', () => {
+    const metadata = {
+      id: 'TP-binders-governance-organizations-010',
+      level: 'unit' as const,
+      capability: 'Tag policy missing orgId throws error',
+      oracle: 'exact' as const,
+      determinism: 'deterministic' as const,
+      naming: { pattern: 'OrganizationsBind__Condition__Outcome', example: 'OrganizationsBind__TagPolicyMissingOrgId__ThrowsError' },
+      invariants: [
+        'Error message indicates missing orgId for tag policy',
+        'Error is thrown before binding completes'
+      ],
+      fixtures: ['MockSourceComponent', 'MockTargetComponent'],
+      inputs: {
+        shape: 'BindingContext with org:tag-policy capability but missing orgId',
+        notes: 'Error case test'
+      },
+      risks: [],
+      dependencies: [],
+      evidence: [],
+      compliance_refs: [],
+      ai_generated: true,
+      human_reviewed_by: 'Platform Engineering'
+    };
+
+    test('OrganizationsBind__TagPolicyMissingOrgId__ThrowsError', async () => {
+      const strategy = new OrganizationsBinderStrategy();
+      const target = createMockTargetComponent('organizations', {
+        'org:tag-policy': {
+          // Missing orgId
+          masterAccountId: '111111111111'
+        } as any
+      });
+
+      const context = createBindingContext({
+        source: createMockSourceComponent('lambda-governance', 'test-source'),
+        target,
+        capability: 'org:tag-policy',
+        access: 'read'
+      });
+
+      await expect(executeUnifiedBinding(strategy, context)).rejects.toThrow(
+        'missing required orgId property'
+      );
+    });
+  });
+
+  describe('OrganizationsBind__BackupPolicyReadAccess__ReturnsEnhancedResult', () => {
+    const metadata = {
+      id: 'TP-binders-governance-organizations-011',
+      level: 'unit' as const,
+      capability: 'Backup policy read access returns enhanced result',
+      oracle: 'exact' as const,
+      determinism: 'deterministic' as const,
+      naming: { pattern: 'OrganizationsBind__Condition__Outcome', example: 'OrganizationsBind__BackupPolicyReadAccess__ReturnsEnhancedResult' },
+      invariants: [
+        'Environment variables are set correctly',
+        'IAM policies include backup policy read actions'
+      ],
+      fixtures: ['MockSourceComponent', 'MockTargetComponent'],
+      inputs: {
+        shape: 'BindingContext with org:backup-policy capability and read access',
+        notes: 'Backup policy read access test'
+      },
+      risks: [],
+      dependencies: [],
+      evidence: [],
+      compliance_refs: ['docs/platform-standards/platform-iam-auditing-standard.md'],
+      ai_generated: true,
+      human_reviewed_by: 'Platform Engineering'
+    };
+
+    test('OrganizationsBind__BackupPolicyReadAccess__ReturnsEnhancedResult', async () => {
+      const strategy = new OrganizationsBinderStrategy();
+      const target = createMockTargetComponent('organizations', {
+        'org:backup-policy': {
+          orgId: 'o-1234567890',
+          masterAccountId: '111111111111'
+        }
+      });
+
+      const context = createBindingContext({
+        source: createMockSourceComponent('lambda-governance', 'test-source'),
+        target,
+        capability: 'org:backup-policy',
+        access: 'read'
+      });
+
+      const result = await executeUnifiedBinding(strategy, context);
+
+      assertEnhancedBindingResult(result);
+
+      expect(result.environmentVariables.AWS_ORGANIZATIONS_ID).toBe('o-1234567890');
+      
+      const policy = result.iamPolicies.find(p => p.description.includes('backup policy read access'));
+      expect(policy).toBeDefined();
+    });
+  });
+
+  describe('OrganizationsBind__OuReadAccess__ReturnsEnhancedResult', () => {
+    const metadata = {
+      id: 'TP-binders-governance-organizations-012',
+      level: 'unit' as const,
+      capability: 'OU read access returns enhanced result',
+      oracle: 'exact' as const,
+      determinism: 'deterministic' as const,
+      naming: { pattern: 'OrganizationsBind__Condition__Outcome', example: 'OrganizationsBind__OuReadAccess__ReturnsEnhancedResult' },
+      invariants: [
+        'Environment variables are set correctly',
+        'IAM policies include OU read actions'
+      ],
+      fixtures: ['MockSourceComponent', 'MockTargetComponent'],
+      inputs: {
+        shape: 'BindingContext with org:ou capability and read access',
+        notes: 'OU read access test'
+      },
+      risks: [],
+      dependencies: [],
+      evidence: [],
+      compliance_refs: ['docs/platform-standards/platform-iam-auditing-standard.md'],
+      ai_generated: true,
+      human_reviewed_by: 'Platform Engineering'
+    };
+
+    test('OrganizationsBind__OuReadAccess__ReturnsEnhancedResult', async () => {
+      const strategy = new OrganizationsBinderStrategy();
+      const target = createMockTargetComponent('organizations', {
+        'org:ou': {
+          orgId: 'o-1234567890',
+          masterAccountId: '111111111111',
+          ouId: 'ou-1234-567890ab',
+          rootId: 'r-1234',
+          ouPath: 'r-1234/ou-1234-567890ab'
+        }
+      });
+
+      const context = createBindingContext({
+        source: createMockSourceComponent('lambda-governance', 'test-source'),
+        target,
+        capability: 'org:ou',
+        access: 'read'
+      });
+
+      const result = await executeUnifiedBinding(strategy, context);
+
+      assertEnhancedBindingResult(result);
+
+      expect(result.environmentVariables.AWS_ORGANIZATIONS_ID).toBe('o-1234567890');
+      expect(result.environmentVariables.AWS_ORGANIZATIONS_OU_ID).toBe('ou-1234-567890ab');
+      expect(result.environmentVariables.AWS_ORGANIZATIONS_ROOT_ID).toBe('r-1234');
+      expect(result.environmentVariables.AWS_ORGANIZATIONS_OU_PATH).toBe('r-1234/ou-1234-567890ab');
+      
+      const policy = result.iamPolicies.find(p => p.description.includes('OU read access'));
+      expect(policy).toBeDefined();
+    });
+  });
+
+  describe('OrganizationsBind__AccountReadAccess__ReturnsEnhancedResult', () => {
+    const metadata = {
+      id: 'TP-binders-governance-organizations-013',
+      level: 'unit' as const,
+      capability: 'Account read access returns enhanced result',
+      oracle: 'exact' as const,
+      determinism: 'deterministic' as const,
+      naming: { pattern: 'OrganizationsBind__Condition__Outcome', example: 'OrganizationsBind__AccountReadAccess__ReturnsEnhancedResult' },
+      invariants: [
+        'Environment variables are set correctly',
+        'IAM policies include account read actions'
+      ],
+      fixtures: ['MockSourceComponent', 'MockTargetComponent'],
+      inputs: {
+        shape: 'BindingContext with org:account capability and read access',
+        notes: 'Account read access test'
+      },
+      risks: [],
+      dependencies: [],
+      evidence: [],
+      compliance_refs: ['docs/platform-standards/platform-iam-auditing-standard.md'],
+      ai_generated: true,
+      human_reviewed_by: 'Platform Engineering'
+    };
+
+    test('OrganizationsBind__AccountReadAccess__ReturnsEnhancedResult', async () => {
+      const strategy = new OrganizationsBinderStrategy();
+      const target = createMockTargetComponent('organizations', {
+        'org:account': {
+          orgId: 'o-1234567890',
+          masterAccountId: '111111111111',
+          accountId: '222222222222'
+        }
+      });
+
+      const context = createBindingContext({
+        source: createMockSourceComponent('lambda-governance', 'test-source'),
+        target,
+        capability: 'org:account',
+        access: 'read'
+      });
+
+      const result = await executeUnifiedBinding(strategy, context);
+
+      assertEnhancedBindingResult(result);
+
+      expect(result.environmentVariables.AWS_ORGANIZATIONS_ID).toBe('o-1234567890');
+      expect(result.environmentVariables.AWS_ORGANIZATIONS_ACCOUNT_ID).toBe('222222222222');
+      
+      const policy = result.iamPolicies.find(p => p.description.includes('account read access'));
+      expect(policy).toBeDefined();
+    });
+  });
+
+  describe('OrganizationsBind__UnsupportedCapability__ThrowsError', () => {
+    const metadata = {
+      id: 'TP-binders-governance-organizations-014',
+      level: 'unit' as const,
+      capability: 'Unsupported capability throws error',
+      oracle: 'exact' as const,
+      determinism: 'deterministic' as const,
+      naming: { pattern: 'OrganizationsBind__Condition__Outcome', example: 'OrganizationsBind__UnsupportedCapability__ThrowsError' },
+      invariants: [
+        'Error message indicates unsupported capability',
+        'Error lists supported capabilities'
+      ],
+      fixtures: ['MockSourceComponent', 'MockTargetComponent'],
+      inputs: {
+        shape: 'BindingContext with unsupported capability',
+        notes: 'Error case test'
+      },
+      risks: [],
+      dependencies: [],
+      evidence: [],
+      compliance_refs: [],
+      ai_generated: true,
+      human_reviewed_by: 'Platform Engineering'
+    };
+
+    test('OrganizationsBind__UnsupportedCapability__ThrowsError', async () => {
+      const strategy = new OrganizationsBinderStrategy();
+      const target = createMockTargetComponent('organizations', {
+        'org:invalid': {
+          orgId: 'o-1234567890'
+        }
+      });
+
+      const context = createBindingContext({
+        source: createMockSourceComponent('lambda-governance', 'test-source'),
+        target,
+        capability: 'org:invalid',
+        access: 'read'
+      });
+
+      await expect(executeUnifiedBinding(strategy, context)).rejects.toThrow(
+        'Unsupported Organizations capability'
+      );
+    });
+  });
 });
 

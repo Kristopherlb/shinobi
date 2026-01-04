@@ -140,5 +140,110 @@ describe('Route53BinderStrategy', () => {
       expect(actions.length).toBe(customActions.length);
     });
   });
+
+  describe('Route53Bind__WriteAccess__GrantsWriteActions', () => {
+    const metadata = {
+      id: 'TP-binders-networking-route53-003',
+      level: 'unit' as const,
+      capability: 'Write access grants Route53 write actions',
+      oracle: 'exact' as const,
+      determinism: 'deterministic' as const,
+      naming: { pattern: 'Route53Bind__Condition__Outcome', example: 'Route53Bind__WriteAccess__GrantsWriteActions' },
+      invariants: [
+        'IAM policies include Route53 write actions',
+        'Write actions include ChangeResourceRecordSets'
+      ],
+      fixtures: ['MockSourceComponent', 'MockTargetComponent'],
+      inputs: {
+        shape: 'BindingContext with dns:route53 capability and write access',
+        notes: 'Write access test'
+      },
+      risks: [],
+      dependencies: [],
+      evidence: [],
+      compliance_refs: ['docs/platform-standards/platform-iam-auditing-standard.md'],
+      ai_generated: true,
+      human_reviewed_by: 'Platform Engineering'
+    };
+
+    test('Route53Bind__WriteAccess__GrantsWriteActions', async () => {
+      const strategy = new Route53BinderStrategy();
+      const target = createMockTargetComponent('route53-zone', {
+        'dns:route53': {
+          resources: {
+            hostedZoneId: 'Z1234567890ABC'
+          }
+        }
+      });
+
+      const context = createBindingContext({
+        source: createMockSourceComponent('lambda-api', 'test-source'),
+        target,
+        capability: 'dns:route53',
+        access: 'write'
+      });
+
+      const result = await executeUnifiedBinding(strategy, context);
+
+      assertEnhancedBindingResult(result);
+
+      const policy = result.iamPolicies[0];
+      const statementJson = policy.statement.toStatementJson();
+      const actions = Array.isArray(statementJson.Action)
+        ? statementJson.Action
+        : [statementJson.Action];
+
+      expect(actions).toContain('route53:ChangeResourceRecordSets');
+      expect(actions).toContain('route53:ChangeTagsForResource');
+    });
+  });
+
+  describe('Route53Bind__MissingHostedZoneId__ThrowsError', () => {
+    const metadata = {
+      id: 'TP-binders-networking-route53-004',
+      level: 'unit' as const,
+      capability: 'Missing hostedZoneId throws error',
+      oracle: 'exact' as const,
+      determinism: 'deterministic' as const,
+      naming: { pattern: 'Route53Bind__Condition__Outcome', example: 'Route53Bind__MissingHostedZoneId__ThrowsError' },
+      invariants: [
+        'Error message indicates missing hostedZoneId',
+        'Error is thrown before binding completes'
+      ],
+      fixtures: ['MockSourceComponent', 'MockTargetComponent'],
+      inputs: {
+        shape: 'BindingContext with dns:route53 capability but missing hostedZoneId',
+        notes: 'Error case test'
+      },
+      risks: [],
+      dependencies: [],
+      evidence: [],
+      compliance_refs: [],
+      ai_generated: true,
+      human_reviewed_by: 'Platform Engineering'
+    };
+
+    test('Route53Bind__MissingHostedZoneId__ThrowsError', async () => {
+      const strategy = new Route53BinderStrategy();
+      const target = createMockTargetComponent('route53-zone', {
+        'dns:route53': {
+          resources: {
+            // Missing hostedZoneId
+          } as any
+        }
+      });
+
+      const context = createBindingContext({
+        source: createMockSourceComponent('lambda-api', 'test-source'),
+        target,
+        capability: 'dns:route53',
+        access: 'read'
+      });
+
+      await expect(executeUnifiedBinding(strategy, context)).rejects.toThrow(
+        'missing required resources.hostedZoneId property'
+      );
+    });
+  });
 });
 

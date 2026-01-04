@@ -141,5 +141,108 @@ describe('ServiceCatalogBinderStrategy', () => {
       expect(actions).not.toContain('servicecatalog:DescribeProduct');
     });
   });
+
+  describe('ServiceCatalogBind__WriteAccess__GrantsWriteActions', () => {
+    const metadata = {
+      id: 'TP-binders-governance-servicecatalog-003',
+      level: 'unit' as const,
+      capability: 'Write access grants Service Catalog write actions',
+      oracle: 'exact' as const,
+      determinism: 'deterministic' as const,
+      naming: { pattern: 'ServiceCatalogBind__Condition__Outcome', example: 'ServiceCatalogBind__WriteAccess__GrantsWriteActions' },
+      invariants: [
+        'IAM policies include Service Catalog write actions',
+        'Write actions include CreatePortfolio and UpdatePortfolio'
+      ],
+      fixtures: ['MockSourceComponent', 'MockTargetComponent'],
+      inputs: {
+        shape: 'BindingContext with catalog:portfolio capability and write access',
+        notes: 'Write access test'
+      },
+      risks: [],
+      dependencies: [],
+      evidence: [],
+      compliance_refs: ['docs/platform-standards/platform-iam-auditing-standard.md'],
+      ai_generated: true,
+      human_reviewed_by: 'Platform Engineering'
+    };
+
+    test('ServiceCatalogBind__WriteAccess__GrantsWriteActions', async () => {
+      const strategy = new ServiceCatalogBinderStrategy();
+      const target = createMockTargetComponent('servicecatalog', {
+        'catalog:portfolio': {
+          portfolioArn: 'arn:aws:catalog:us-east-1:123456789012:portfolio/port-1234567890abc'
+        }
+      });
+
+      const context = createBindingContext({
+        source: createMockSourceComponent('lambda-governance', 'test-source'),
+        target,
+        capability: 'catalog:portfolio',
+        access: 'write'
+      });
+
+      const result = await executeUnifiedBinding(strategy, context);
+
+      assertEnhancedBindingResult(result);
+
+      const policy = result.iamPolicies.find(p => p.description.includes('write access'));
+      expect(policy).toBeDefined();
+      
+      const statementJson = policy!.statement.toStatementJson();
+      const actions = Array.isArray(statementJson.Action)
+        ? statementJson.Action
+        : [statementJson.Action];
+
+      expect(actions).toContain('servicecatalog:CreatePortfolio');
+      expect(actions).toContain('servicecatalog:UpdatePortfolio');
+    });
+  });
+
+  describe('ServiceCatalogBind__MissingPortfolioArn__ThrowsError', () => {
+    const metadata = {
+      id: 'TP-binders-governance-servicecatalog-004',
+      level: 'unit' as const,
+      capability: 'Missing portfolioArn throws error',
+      oracle: 'exact' as const,
+      determinism: 'deterministic' as const,
+      naming: { pattern: 'ServiceCatalogBind__Condition__Outcome', example: 'ServiceCatalogBind__MissingPortfolioArn__ThrowsError' },
+      invariants: [
+        'Error message indicates missing portfolioArn',
+        'Error is thrown before binding completes'
+      ],
+      fixtures: ['MockSourceComponent', 'MockTargetComponent'],
+      inputs: {
+        shape: 'BindingContext with catalog:portfolio capability but missing portfolioArn',
+        notes: 'Error case test'
+      },
+      risks: [],
+      dependencies: [],
+      evidence: [],
+      compliance_refs: [],
+      ai_generated: true,
+      human_reviewed_by: 'Platform Engineering'
+    };
+
+    test('ServiceCatalogBind__MissingPortfolioArn__ThrowsError', async () => {
+      const strategy = new ServiceCatalogBinderStrategy();
+      const target = createMockTargetComponent('servicecatalog', {
+        'catalog:portfolio': {
+          // Missing portfolioArn
+        } as any
+      });
+
+      const context = createBindingContext({
+        source: createMockSourceComponent('lambda-governance', 'test-source'),
+        target,
+        capability: 'catalog:portfolio',
+        access: 'read'
+      });
+
+      await expect(executeUnifiedBinding(strategy, context)).rejects.toThrow(
+        'missing required portfolioArn property'
+      );
+    });
+  });
 });
 

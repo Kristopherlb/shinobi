@@ -139,5 +139,108 @@ describe('ControlTowerBinderStrategy', () => {
       expect(actions).not.toContain('controltower:ListEnabledControls');
     });
   });
+
+  describe('ControlTowerBind__WriteAccess__GrantsWriteActions', () => {
+    const metadata = {
+      id: 'TP-binders-governance-controltower-003',
+      level: 'unit' as const,
+      capability: 'Write access grants Control Tower write actions',
+      oracle: 'exact' as const,
+      determinism: 'deterministic' as const,
+      naming: { pattern: 'ControlTowerBind__Condition__Outcome', example: 'ControlTowerBind__WriteAccess__GrantsWriteActions' },
+      invariants: [
+        'IAM policies include Control Tower write actions',
+        'Write actions include CreateLandingZone and UpdateLandingZone'
+      ],
+      fixtures: ['MockSourceComponent', 'MockTargetComponent'],
+      inputs: {
+        shape: 'BindingContext with governance:control-tower capability and write access',
+        notes: 'Write access test'
+      },
+      risks: [],
+      dependencies: [],
+      evidence: [],
+      compliance_refs: ['docs/platform-standards/platform-iam-auditing-standard.md'],
+      ai_generated: true,
+      human_reviewed_by: 'Platform Engineering'
+    };
+
+    test('ControlTowerBind__WriteAccess__GrantsWriteActions', async () => {
+      const strategy = new ControlTowerBinderStrategy();
+      const target = createMockTargetComponent('controltower', {
+        'governance:control-tower': {
+          landingZoneArn: 'arn:aws:controltower:us-east-1::landingzone/test-lz'
+        }
+      });
+
+      const context = createBindingContext({
+        source: createMockSourceComponent('lambda-governance', 'test-source'),
+        target,
+        capability: 'governance:control-tower',
+        access: 'write'
+      });
+
+      const result = await executeUnifiedBinding(strategy, context);
+
+      assertEnhancedBindingResult(result);
+
+      const policy = result.iamPolicies.find(p => p.description.includes('write access'));
+      expect(policy).toBeDefined();
+      
+      const statementJson = policy!.statement.toStatementJson();
+      const actions = Array.isArray(statementJson.Action)
+        ? statementJson.Action
+        : [statementJson.Action];
+
+      expect(actions).toContain('controltower:CreateLandingZone');
+      expect(actions).toContain('controltower:UpdateLandingZone');
+    });
+  });
+
+  describe('ControlTowerBind__MissingLandingZoneArn__ThrowsError', () => {
+    const metadata = {
+      id: 'TP-binders-governance-controltower-004',
+      level: 'unit' as const,
+      capability: 'Missing landingZoneArn throws error',
+      oracle: 'exact' as const,
+      determinism: 'deterministic' as const,
+      naming: { pattern: 'ControlTowerBind__Condition__Outcome', example: 'ControlTowerBind__MissingLandingZoneArn__ThrowsError' },
+      invariants: [
+        'Error message indicates missing landingZoneArn',
+        'Error is thrown before binding completes'
+      ],
+      fixtures: ['MockSourceComponent', 'MockTargetComponent'],
+      inputs: {
+        shape: 'BindingContext with governance:control-tower capability but missing landingZoneArn',
+        notes: 'Error case test'
+      },
+      risks: [],
+      dependencies: [],
+      evidence: [],
+      compliance_refs: [],
+      ai_generated: true,
+      human_reviewed_by: 'Platform Engineering'
+    };
+
+    test('ControlTowerBind__MissingLandingZoneArn__ThrowsError', async () => {
+      const strategy = new ControlTowerBinderStrategy();
+      const target = createMockTargetComponent('controltower', {
+        'governance:control-tower': {
+          // Missing landingZoneArn
+        } as any
+      });
+
+      const context = createBindingContext({
+        source: createMockSourceComponent('lambda-governance', 'test-source'),
+        target,
+        capability: 'governance:control-tower',
+        access: 'read'
+      });
+
+      await expect(executeUnifiedBinding(strategy, context)).rejects.toThrow(
+        'missing required landingZoneArn property'
+      );
+    });
+  });
 });
 
