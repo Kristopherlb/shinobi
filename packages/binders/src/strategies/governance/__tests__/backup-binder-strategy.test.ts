@@ -132,5 +132,69 @@ describe('BackupBinderStrategy', () => {
       expect(result.environmentVariables.AWS_BACKUP_RULE_ID).toBe('test-rule-id');
     });
   });
+
+  describe('BackupBind__CustomActionsOverride__ReplacesCoarseActions', () => {
+    const metadata = {
+      id: 'TP-binders-governance-backup-003',
+      level: 'unit' as const,
+      capability: 'Custom actions override replaces default Backup vault actions',
+      oracle: 'exact' as const,
+      determinism: 'deterministic' as const,
+      naming: { pattern: 'BackupBind__Condition__Outcome', example: 'BackupBind__CustomActionsOverride__ReplacesCoarseActions' },
+      invariants: [
+        'IAM policy actions match provided custom actions array',
+        'Default Backup actions are not included when custom actions provided',
+        'Actions array is used directly (replaces coarse access)'
+      ],
+      fixtures: ['MockSourceComponent', 'MockTargetComponent'],
+      inputs: {
+        shape: 'BindingContext with governance:backup-vault capability and directive.actions array',
+        notes: 'Granular actions override test'
+      },
+      risks: [],
+      dependencies: ['action-resolver'],
+      evidence: [],
+      compliance_refs: ['docs/platform-standards/platform-iam-auditing-standard.md'],
+      ai_generated: true,
+      human_reviewed_by: 'Platform Engineering'
+    };
+
+    test('BackupBind__CustomActionsOverride__ReplacesCoarseActions', async () => {
+      const strategy = new BackupBinderStrategy();
+      const customActions = ['backup:DescribeBackupVault', 'backup:ListBackupVaults'];
+      const target = createMockTargetComponent('backup', {
+        'governance:backup-vault': {
+          backupVaultArn: 'arn:aws:backup:us-east-1:123456789012:backup-vault:test-vault',
+          backupVaultName: 'test-vault'
+        },
+      });
+
+      const context = createBindingContext({
+        source: createMockSourceComponent('lambda-backup', 'test-source'),
+        target,
+        capability: 'governance:backup-vault',
+        access: 'read',
+        actions: customActions
+      });
+
+      const result = await executeUnifiedBinding(strategy, context);
+
+      assertEnhancedBindingResult(result);
+
+      expect(result.iamPolicies.length).toBeGreaterThan(0);
+      const policy = result.iamPolicies.find(p => p.description.includes('granular actions'));
+      expect(policy).toBeDefined();
+      
+      const statementJson = policy!.statement.toStatementJson();
+      const actions = Array.isArray(statementJson.Action)
+        ? statementJson.Action
+        : [statementJson.Action];
+
+      // Primary assertion: Custom actions are used, default actions are not
+      expect(actions).toEqual(customActions);
+      expect(actions).not.toContain('backup:ListRecoveryPointsByBackupVault');
+      expect(actions).not.toContain('backup:GetRecoveryPointRestoreMetadata');
+    });
+  });
 });
 

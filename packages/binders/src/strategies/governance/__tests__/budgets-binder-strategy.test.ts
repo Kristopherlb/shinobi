@@ -186,5 +186,68 @@ describe('BudgetsBinderStrategy', () => {
       expect(result.environmentVariables.AWS_ORGANIZATIONS_ID).toBe('o-1234567890');
     });
   });
+
+  describe('BudgetsBind__CustomActionsOverride__ReplacesCoarseActions', () => {
+    const metadata = {
+      id: 'TP-binders-governance-budgets-004',
+      level: 'unit' as const,
+      capability: 'Custom actions override replaces default Budgets actions',
+      oracle: 'exact' as const,
+      determinism: 'deterministic' as const,
+      naming: { pattern: 'BudgetsBind__Condition__Outcome', example: 'BudgetsBind__CustomActionsOverride__ReplacesCoarseActions' },
+      invariants: [
+        'IAM policy actions match provided custom actions array',
+        'Default Budgets actions are not included when custom actions provided',
+        'Actions array is used directly (replaces coarse access)'
+      ],
+      fixtures: ['MockSourceComponent', 'MockTargetComponent'],
+      inputs: {
+        shape: 'BindingContext with governance:budgets-budget capability and directive.actions array',
+        notes: 'Granular actions override test'
+      },
+      risks: [],
+      dependencies: ['action-resolver'],
+      evidence: [],
+      compliance_refs: ['docs/platform-standards/platform-iam-auditing-standard.md'],
+      ai_generated: true,
+      human_reviewed_by: 'Platform Engineering'
+    };
+
+    test('BudgetsBind__CustomActionsOverride__ReplacesCoarseActions', async () => {
+      const strategy = new BudgetsBinderStrategy();
+      const customActions = ['budgets:ViewBudget', 'budgets:DescribeBudget'];
+      const target = createMockTargetComponent('budgets', {
+        'governance:budgets-budget': {
+          budgetArn: 'arn:aws:budgets::123456789012:budget/test-budget'
+        },
+      });
+
+      const context = createBindingContext({
+        source: createMockSourceComponent('lambda-governance', 'test-source'),
+        target,
+        capability: 'governance:budgets-budget',
+        access: 'read',
+        actions: customActions
+      });
+
+      const result = await executeUnifiedBinding(strategy, context);
+
+      assertEnhancedBindingResult(result);
+
+      expect(result.iamPolicies.length).toBeGreaterThan(0);
+      const policy = result.iamPolicies.find(p => p.description.includes('granular actions'));
+      expect(policy).toBeDefined();
+      
+      const statementJson = policy!.statement.toStatementJson();
+      const actions = Array.isArray(statementJson.Action)
+        ? statementJson.Action
+        : [statementJson.Action];
+
+      // Primary assertion: Custom actions are used, default actions are not
+      expect(actions).toEqual(customActions);
+      expect(actions).not.toContain('budgets:DescribeBudgets');
+      expect(actions).not.toContain('budgets:DescribeBudgetPerformanceHistory');
+    });
+  });
 });
 

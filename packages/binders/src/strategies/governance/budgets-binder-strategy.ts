@@ -7,7 +7,7 @@
  * - governance:budgets-action - Budget actions (e.g., stop EC2 instances, apply IAM policy)
  */
 
-import { UnifiedBinderStrategyBase } from '@shinobi/core';
+import { UnifiedBinderStrategyBase, resolveActions } from '@shinobi/core';
 import type { BindingContext, EnhancedBindingResult, CompatibilityEntry } from '@shinobi/core';
 import type { IamPolicy } from '@shinobi/core';
 import { PolicyStatement, Effect } from 'aws-cdk-lib/aws-iam';
@@ -147,52 +147,74 @@ export class BudgetsBinderStrategy extends UnifiedBinderStrategyBase {
       environmentVariables.AWS_ORGANIZATIONS_OU_ID = targetData.ouId;
     }
 
-    // IAM policies for budget operations
-    if (access === 'read' || access === 'readwrite') {
-      iamPolicies.push({
-        statement: new PolicyStatement({
-          effect: Effect.ALLOW,
-          actions: [
-            'budgets:ViewBudget',
-            'budgets:DescribeBudget',
-            'budgets:DescribeBudgets',
-            'budgets:DescribeBudgetPerformanceHistory'
-          ],
-          resources: [targetData.budgetArn]
-        }),
-        description: 'AWS Budgets read access',
-        complianceRequirement: 'Least privilege IAM access for AWS Budgets read operations'
-      });
-    }
+    // Handle granular actions override or use multi-statement approach
+    if (context.directive.actions) {
+      // Granular actions provided: create single statement with resolved actions
+      const resolvedActions = resolveActions(
+        context.directive,
+        context,
+        (acc) => this.getBudgetsBudgetActionsForAccess(acc),
+        'budgets'
+      );
 
-    if (access === 'write' || access === 'readwrite' || access === 'admin') {
-      iamPolicies.push({
-        statement: new PolicyStatement({
-          effect: Effect.ALLOW,
-          actions: [
-            'budgets:ModifyBudget',
-            'budgets:CreateBudget',
-            'budgets:DeleteBudget',
-            'budgets:UpdateBudget'
-          ],
-          resources: [targetData.budgetArn]
-        }),
-        description: 'AWS Budgets write access',
-        complianceRequirement: 'Least privilege IAM access for AWS Budgets write operations'
+      const statement = new PolicyStatement({
+        effect: Effect.ALLOW,
+        actions: resolvedActions,
+        resources: [targetData.budgetArn]
       });
-    }
+      iamPolicies.push({
+        statement,
+        description: 'AWS Budgets budget access permissions (granular actions)',
+        complianceRequirement: 'Least privilege IAM access'
+      });
+    } else {
+      // Coarse access levels: use multi-statement approach (backward compatible)
+      if (access === 'read' || access === 'readwrite') {
+        iamPolicies.push({
+          statement: new PolicyStatement({
+            effect: Effect.ALLOW,
+            actions: [
+              'budgets:ViewBudget',
+              'budgets:DescribeBudget',
+              'budgets:DescribeBudgets',
+              'budgets:DescribeBudgetPerformanceHistory'
+            ],
+            resources: [targetData.budgetArn]
+          }),
+          description: 'AWS Budgets read access',
+          complianceRequirement: 'Least privilege IAM access for AWS Budgets read operations'
+        });
+      }
 
-    // Admin access (full budgets permissions)
-    if (access === 'admin' && options?.requireFullAdminAccess) {
-      iamPolicies.push({
-        statement: new PolicyStatement({
-          effect: Effect.ALLOW,
-          actions: ['budgets:*'],
-          resources: ['*']
-        }),
-        description: 'AWS Budgets admin access',
-        complianceRequirement: 'Full admin access to AWS Budgets (requires explicit requireFullAdminAccess option)'
-      });
+      if (access === 'write' || access === 'readwrite' || access === 'admin') {
+        iamPolicies.push({
+          statement: new PolicyStatement({
+            effect: Effect.ALLOW,
+            actions: [
+              'budgets:ModifyBudget',
+              'budgets:CreateBudget',
+              'budgets:DeleteBudget',
+              'budgets:UpdateBudget'
+            ],
+            resources: [targetData.budgetArn]
+          }),
+          description: 'AWS Budgets write access',
+          complianceRequirement: 'Least privilege IAM access for AWS Budgets write operations'
+        });
+      }
+
+      // Admin access (full budgets permissions)
+      if (access === 'admin' && options?.requireFullAdminAccess) {
+        iamPolicies.push({
+          statement: new PolicyStatement({
+            effect: Effect.ALLOW,
+            actions: ['budgets:*'],
+            resources: ['*']
+          }),
+          description: 'AWS Budgets admin access',
+          complianceRequirement: 'Full admin access to AWS Budgets (requires explicit requireFullAdminAccess option)'
+        });
+      }
     }
 
     // SNS access for budget alerts
@@ -296,90 +318,112 @@ export class BudgetsBinderStrategy extends UnifiedBinderStrategyBase {
       environmentVariables.AWS_BUDGETS_BUDGET_ARN = targetData.budgetArn;
     }
 
-    // IAM policies for budget action operations
-    if (access === 'read' || access === 'readwrite') {
-      iamPolicies.push({
-        statement: new PolicyStatement({
-          effect: Effect.ALLOW,
-          actions: [
-            'budgets:ViewBudgetAction',
-            'budgets:DescribeBudgetAction',
-            'budgets:DescribeBudgetActionsForBudget',
-            'budgets:DescribeBudgetActionsForAccount'
-          ],
-          resources: [targetData.actionArn]
-        }),
-        description: 'AWS Budgets action read access',
-        complianceRequirement: 'Least privilege IAM access for AWS Budgets action read operations'
-      });
-    }
+    // Handle granular actions override or use multi-statement approach
+    if (context.directive.actions) {
+      // Granular actions provided: create single statement with resolved actions
+      const resolvedActions = resolveActions(
+        context.directive,
+        context,
+        (acc) => this.getBudgetsActionActionsForAccess(acc),
+        'budgets'
+      );
 
-    if (access === 'write' || access === 'readwrite' || access === 'admin') {
-      iamPolicies.push({
-        statement: new PolicyStatement({
-          effect: Effect.ALLOW,
-          actions: [
-            'budgets:ModifyBudgetAction',
-            'budgets:CreateBudgetAction',
-            'budgets:DeleteBudgetAction',
-            'budgets:ExecuteBudgetAction',
-            'budgets:UpdateBudgetAction'
-          ],
-          resources: [targetData.actionArn]
-        }),
-        description: 'AWS Budgets action write access',
-        complianceRequirement: 'Least privilege IAM access for AWS Budgets action write operations'
+      const statement = new PolicyStatement({
+        effect: Effect.ALLOW,
+        actions: resolvedActions,
+        resources: [targetData.actionArn]
       });
-    }
-
-    // Additional permissions for action execution
-    if (options?.requireSecureAccess) {
-      // IAM policy application permissions (if action type is APPLY_IAM_POLICY)
-      if (targetData.actionType === 'APPLY_IAM_POLICY' || !targetData.actionType) {
+      iamPolicies.push({
+        statement,
+        description: 'AWS Budgets action access permissions (granular actions)',
+        complianceRequirement: 'Least privilege IAM access'
+      });
+    } else {
+      // Coarse access levels: use multi-statement approach (backward compatible)
+      if (access === 'read' || access === 'readwrite') {
         iamPolicies.push({
           statement: new PolicyStatement({
             effect: Effect.ALLOW,
             actions: [
-              'iam:PutUserPolicy',
-              'iam:PutRolePolicy',
-              'iam:AttachUserPolicy',
-              'iam:AttachRolePolicy'
+              'budgets:ViewBudgetAction',
+              'budgets:DescribeBudgetAction',
+              'budgets:DescribeBudgetActionsForBudget',
+              'budgets:DescribeBudgetActionsForAccount'
             ],
-            resources: ['*']
+            resources: [targetData.actionArn]
           }),
-          description: 'IAM policy application permissions for budget actions',
-          complianceRequirement: 'Least privilege IAM access for budget action IAM policy application'
+          description: 'AWS Budgets action read access',
+          complianceRequirement: 'Least privilege IAM access for AWS Budgets action read operations'
         });
       }
 
-      // SSM document execution permissions (if action type is RUN_SSM_DOCUMENTS)
-      if (targetData.actionType === 'RUN_SSM_DOCUMENTS') {
+      if (access === 'write' || access === 'readwrite' || access === 'admin') {
         iamPolicies.push({
           statement: new PolicyStatement({
             effect: Effect.ALLOW,
             actions: [
-              'ssm:SendCommand',
-              'ssm:GetCommandInvocation'
+              'budgets:ModifyBudgetAction',
+              'budgets:CreateBudgetAction',
+              'budgets:DeleteBudgetAction',
+              'budgets:ExecuteBudgetAction',
+              'budgets:UpdateBudgetAction'
             ],
-            resources: ['*']
+            resources: [targetData.actionArn]
           }),
-          description: 'SSM document execution permissions for budget actions',
-          complianceRequirement: 'Least privilege IAM access for budget action SSM document execution'
+          description: 'AWS Budgets action write access',
+          complianceRequirement: 'Least privilege IAM access for AWS Budgets action write operations'
         });
       }
-    }
 
-    // Admin access (full budgets permissions)
-    if (access === 'admin' && options?.requireFullAdminAccess) {
-      iamPolicies.push({
-        statement: new PolicyStatement({
-          effect: Effect.ALLOW,
-          actions: ['budgets:*'],
-          resources: ['*']
-        }),
-        description: 'AWS Budgets admin access',
-        complianceRequirement: 'Full admin access to AWS Budgets (requires explicit requireFullAdminAccess option)'
-      });
+      // Additional permissions for action execution
+      if (options?.requireSecureAccess) {
+        // IAM policy application permissions (if action type is APPLY_IAM_POLICY)
+        if (targetData.actionType === 'APPLY_IAM_POLICY' || !targetData.actionType) {
+          iamPolicies.push({
+            statement: new PolicyStatement({
+              effect: Effect.ALLOW,
+              actions: [
+                'iam:PutUserPolicy',
+                'iam:PutRolePolicy',
+                'iam:AttachUserPolicy',
+                'iam:AttachRolePolicy'
+              ],
+              resources: ['*']
+            }),
+            description: 'IAM policy application permissions for budget actions',
+            complianceRequirement: 'Least privilege IAM access for budget action IAM policy application'
+          });
+        }
+
+        // SSM document execution permissions (if action type is RUN_SSM_DOCUMENTS)
+        if (targetData.actionType === 'RUN_SSM_DOCUMENTS') {
+          iamPolicies.push({
+            statement: new PolicyStatement({
+              effect: Effect.ALLOW,
+              actions: [
+                'ssm:SendCommand',
+                'ssm:GetCommandInvocation'
+              ],
+              resources: ['*']
+            }),
+            description: 'SSM document execution permissions for budget actions',
+            complianceRequirement: 'Least privilege IAM access for budget action SSM document execution'
+          });
+        }
+      }
+
+      // Admin access (full budgets permissions)
+      if (access === 'admin' && options?.requireFullAdminAccess) {
+        iamPolicies.push({
+          statement: new PolicyStatement({
+            effect: Effect.ALLOW,
+            actions: ['budgets:*'],
+            resources: ['*']
+          }),
+          description: 'AWS Budgets admin access',
+          complianceRequirement: 'Full admin access to AWS Budgets (requires explicit requireFullAdminAccess option)'
+        });
+      }
     }
 
     return {
@@ -387,6 +431,94 @@ export class BudgetsBinderStrategy extends UnifiedBinderStrategyBase {
       environmentVariables,
       securityGroupRules: []
     };
+  }
+
+  /**
+   * Get Budgets budget actions based on access level
+   * Used by resolveActions to compute base actions from coarse access level
+   * 
+   * @param access - Access level (read, write, readwrite, admin)
+   * @returns Array of IAM action strings
+   */
+  private getBudgetsBudgetActionsForAccess(access: string): string[] {
+    switch (access) {
+      case 'read':
+        return [
+          'budgets:ViewBudget',
+          'budgets:DescribeBudget',
+          'budgets:DescribeBudgets',
+          'budgets:DescribeBudgetPerformanceHistory'
+        ];
+      case 'write':
+        return [
+          'budgets:ModifyBudget',
+          'budgets:CreateBudget',
+          'budgets:DeleteBudget',
+          'budgets:UpdateBudget'
+        ];
+      case 'readwrite':
+        return [
+          'budgets:ViewBudget',
+          'budgets:DescribeBudget',
+          'budgets:DescribeBudgets',
+          'budgets:DescribeBudgetPerformanceHistory',
+          'budgets:ModifyBudget',
+          'budgets:CreateBudget',
+          'budgets:DeleteBudget',
+          'budgets:UpdateBudget'
+        ];
+      case 'admin':
+        return [
+          'budgets:*'
+        ];
+      default:
+        throw new Error(`Unsupported Budgets budget access level: ${access}`);
+    }
+  }
+
+  /**
+   * Get Budgets action actions based on access level
+   * Used by resolveActions to compute base actions from coarse access level
+   * 
+   * @param access - Access level (read, write, readwrite, admin)
+   * @returns Array of IAM action strings
+   */
+  private getBudgetsActionActionsForAccess(access: string): string[] {
+    switch (access) {
+      case 'read':
+        return [
+          'budgets:ViewBudgetAction',
+          'budgets:DescribeBudgetAction',
+          'budgets:DescribeBudgetActionsForBudget',
+          'budgets:DescribeBudgetActionsForAccount'
+        ];
+      case 'write':
+        return [
+          'budgets:ModifyBudgetAction',
+          'budgets:CreateBudgetAction',
+          'budgets:DeleteBudgetAction',
+          'budgets:ExecuteBudgetAction',
+          'budgets:UpdateBudgetAction'
+        ];
+      case 'readwrite':
+        return [
+          'budgets:ViewBudgetAction',
+          'budgets:DescribeBudgetAction',
+          'budgets:DescribeBudgetActionsForBudget',
+          'budgets:DescribeBudgetActionsForAccount',
+          'budgets:ModifyBudgetAction',
+          'budgets:CreateBudgetAction',
+          'budgets:DeleteBudgetAction',
+          'budgets:ExecuteBudgetAction',
+          'budgets:UpdateBudgetAction'
+        ];
+      case 'admin':
+        return [
+          'budgets:*'
+        ];
+      default:
+        throw new Error(`Unsupported Budgets action access level: ${access}`);
+    }
   }
 }
 

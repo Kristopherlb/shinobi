@@ -10,7 +10,7 @@
  * - CloudTrail Lake integration for SQL queries
  */
 
-import { UnifiedBinderStrategyBase } from '@shinobi/core';
+import { UnifiedBinderStrategyBase, resolveActions } from '@shinobi/core';
 import type { BindingContext, EnhancedBindingResult, CompatibilityEntry } from '@shinobi/core';
 import type { IamPolicy } from '@shinobi/core';
 import { PolicyStatement, Effect } from 'aws-cdk-lib/aws-iam';
@@ -123,79 +123,101 @@ export class CloudTrailBinderStrategy extends UnifiedBinderStrategyBase {
       environmentVariables.AWS_CLOUDTRAIL_LOG_FILE_VALIDATION_ENABLED = String(targetData.logFileValidationEnabled);
     }
 
-    // IAM policies for CloudTrail operations
-    if (access === 'read' || access === 'readwrite') {
-      iamPolicies.push({
-        statement: new PolicyStatement({
-          effect: Effect.ALLOW,
-          actions: [
-            'cloudtrail:GetTrail',
-            'cloudtrail:DescribeTrails',
-            'cloudtrail:GetTrailStatus',
-            'cloudtrail:ListTrails',
-            'cloudtrail:LookupEvents',
-            'cloudtrail:GetEventSelectors',
-            'cloudtrail:GetInsightSelectors'
-          ],
-          resources: [targetData.trailArn]
-        }),
-        description: 'CloudTrail trail read access',
-        complianceRequirement: 'Least privilege IAM access for CloudTrail read operations'
-      });
+    // Handle granular actions override or use multi-statement approach
+    if (context.directive.actions) {
+      // Granular actions provided: create single statement with resolved actions
+      const resolvedActions = resolveActions(
+        context.directive,
+        context,
+        (acc) => this.getCloudTrailActionsForAccess(acc),
+        'cloudtrail'
+      );
 
-      // S3 read access for log files
-      iamPolicies.push({
-        statement: new PolicyStatement({
-          effect: Effect.ALLOW,
-          actions: [
-            's3:GetObject',
-            's3:ListBucket'
-          ],
-          resources: [
-            `arn:aws:s3:::${targetData.s3BucketName}`,
-            `arn:aws:s3:::${targetData.s3BucketName}/*`
-          ]
-        }),
-        description: 'S3 bucket read access for CloudTrail logs',
-        complianceRequirement: 'Least privilege IAM access for reading CloudTrail log files'
+      const statement = new PolicyStatement({
+        effect: Effect.ALLOW,
+        actions: resolvedActions,
+        resources: [targetData.trailArn]
       });
-    }
+      iamPolicies.push({
+        statement,
+        description: 'CloudTrail trail access permissions (granular actions)',
+        complianceRequirement: 'Least privilege IAM access'
+      });
+    } else {
+      // Coarse access levels: use multi-statement approach (backward compatible)
+      if (access === 'read' || access === 'readwrite') {
+        iamPolicies.push({
+          statement: new PolicyStatement({
+            effect: Effect.ALLOW,
+            actions: [
+              'cloudtrail:GetTrail',
+              'cloudtrail:DescribeTrails',
+              'cloudtrail:GetTrailStatus',
+              'cloudtrail:ListTrails',
+              'cloudtrail:LookupEvents',
+              'cloudtrail:GetEventSelectors',
+              'cloudtrail:GetInsightSelectors'
+            ],
+            resources: [targetData.trailArn]
+          }),
+          description: 'CloudTrail trail read access',
+          complianceRequirement: 'Least privilege IAM access for CloudTrail read operations'
+        });
 
-    if (access === 'write' || access === 'readwrite' || access === 'admin') {
-      iamPolicies.push({
-        statement: new PolicyStatement({
-          effect: Effect.ALLOW,
-          actions: [
-            'cloudtrail:CreateTrail',
-            'cloudtrail:UpdateTrail',
-            'cloudtrail:DeleteTrail',
-            'cloudtrail:StartLogging',
-            'cloudtrail:StopLogging',
-            'cloudtrail:PutEventSelectors',
-            'cloudtrail:PutInsightSelectors'
-          ],
-          resources: [targetData.trailArn]
-        }),
-        description: 'CloudTrail trail write access',
-        complianceRequirement: 'Least privilege IAM access for CloudTrail write operations'
-      });
+        // S3 read access for log files
+        iamPolicies.push({
+          statement: new PolicyStatement({
+            effect: Effect.ALLOW,
+            actions: [
+              's3:GetObject',
+              's3:ListBucket'
+            ],
+            resources: [
+              `arn:aws:s3:::${targetData.s3BucketName}`,
+              `arn:aws:s3:::${targetData.s3BucketName}/*`
+            ]
+          }),
+          description: 'S3 bucket read access for CloudTrail logs',
+          complianceRequirement: 'Least privilege IAM access for reading CloudTrail log files'
+        });
+      }
 
-      // S3 write access for log delivery
-      iamPolicies.push({
-        statement: new PolicyStatement({
-          effect: Effect.ALLOW,
-          actions: [
-            's3:PutObject',
-            's3:GetBucketAcl'
-          ],
-          resources: [
-            `arn:aws:s3:::${targetData.s3BucketName}/*`,
-            `arn:aws:s3:::${targetData.s3BucketName}`
-          ]
-        }),
-        description: 'S3 bucket write access for CloudTrail log delivery',
-        complianceRequirement: 'Least privilege IAM access for CloudTrail log delivery'
-      });
+      if (access === 'write' || access === 'readwrite' || access === 'admin') {
+        iamPolicies.push({
+          statement: new PolicyStatement({
+            effect: Effect.ALLOW,
+            actions: [
+              'cloudtrail:CreateTrail',
+              'cloudtrail:UpdateTrail',
+              'cloudtrail:DeleteTrail',
+              'cloudtrail:StartLogging',
+              'cloudtrail:StopLogging',
+              'cloudtrail:PutEventSelectors',
+              'cloudtrail:PutInsightSelectors'
+            ],
+            resources: [targetData.trailArn]
+          }),
+          description: 'CloudTrail trail write access',
+          complianceRequirement: 'Least privilege IAM access for CloudTrail write operations'
+        });
+
+        // S3 write access for log delivery
+        iamPolicies.push({
+          statement: new PolicyStatement({
+            effect: Effect.ALLOW,
+            actions: [
+              's3:PutObject',
+              's3:GetBucketAcl'
+            ],
+            resources: [
+              `arn:aws:s3:::${targetData.s3BucketName}/*`,
+              `arn:aws:s3:::${targetData.s3BucketName}`
+            ]
+          }),
+          description: 'S3 bucket write access for CloudTrail log delivery',
+          complianceRequirement: 'Least privilege IAM access for CloudTrail log delivery'
+        });
+      }
     }
 
     // CloudWatch Logs integration (if enabled)
@@ -344,6 +366,61 @@ export class CloudTrailBinderStrategy extends UnifiedBinderStrategyBase {
       environmentVariables,
       securityGroupRules: []
     };
+  }
+
+  /**
+   * Get CloudTrail actions based on access level
+   * Used by resolveActions to compute base actions from coarse access level
+   * 
+   * @param access - Access level (read, write, readwrite, admin)
+   * @returns Array of IAM action strings
+   */
+  private getCloudTrailActionsForAccess(access: string): string[] {
+    switch (access) {
+      case 'read':
+        return [
+          'cloudtrail:GetTrail',
+          'cloudtrail:DescribeTrails',
+          'cloudtrail:GetTrailStatus',
+          'cloudtrail:ListTrails',
+          'cloudtrail:LookupEvents',
+          'cloudtrail:GetEventSelectors',
+          'cloudtrail:GetInsightSelectors'
+        ];
+      case 'write':
+        return [
+          'cloudtrail:CreateTrail',
+          'cloudtrail:UpdateTrail',
+          'cloudtrail:DeleteTrail',
+          'cloudtrail:StartLogging',
+          'cloudtrail:StopLogging',
+          'cloudtrail:PutEventSelectors',
+          'cloudtrail:PutInsightSelectors'
+        ];
+      case 'readwrite':
+        return [
+          'cloudtrail:GetTrail',
+          'cloudtrail:DescribeTrails',
+          'cloudtrail:GetTrailStatus',
+          'cloudtrail:ListTrails',
+          'cloudtrail:LookupEvents',
+          'cloudtrail:GetEventSelectors',
+          'cloudtrail:GetInsightSelectors',
+          'cloudtrail:CreateTrail',
+          'cloudtrail:UpdateTrail',
+          'cloudtrail:DeleteTrail',
+          'cloudtrail:StartLogging',
+          'cloudtrail:StopLogging',
+          'cloudtrail:PutEventSelectors',
+          'cloudtrail:PutInsightSelectors'
+        ];
+      case 'admin':
+        return [
+          'cloudtrail:*'
+        ];
+      default:
+        throw new Error(`Unsupported CloudTrail access level: ${access}`);
+    }
   }
 }
 

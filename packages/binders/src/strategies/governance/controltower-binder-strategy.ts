@@ -3,7 +3,7 @@
  * Handles governance:control-tower bindings with mandatory compliance enforcement
  */
 
-import { UnifiedBinderStrategyBase } from '@shinobi/core';
+import { UnifiedBinderStrategyBase, resolveActions } from '@shinobi/core';
 import type { BindingContext, EnhancedBindingResult, CompatibilityEntry } from '@shinobi/core';
 import type { IamPolicy } from '@shinobi/core';
 import { PolicyStatement, Effect } from 'aws-cdk-lib/aws-iam';
@@ -118,58 +118,80 @@ export class ControlTowerBinderStrategy extends UnifiedBinderStrategyBase {
       environmentVariables.AWS_CONTROL_TOWER_ENABLED_CONTROLS = targetData.enabledControls.join(',');
     }
 
-    // IAM policies for Control Tower operations
-    if (access === 'read' || access === 'readwrite') {
-      iamPolicies.push({
-        statement: new PolicyStatement({
-          effect: Effect.ALLOW,
-          actions: [
-            'controltower:GetLandingZone',
-            'controltower:ListLandingZones',
-            'controltower:GetControlOperation',
-            'controltower:ListEnabledControls',
-            'controltower:GetEnabledControl',
-            'controltower:ListBaselines'
-          ],
-          resources: [targetData.landingZoneArn]
-        }),
-        description: 'Control Tower read access',
-        complianceRequirement: 'Least privilege IAM access for Control Tower read operations'
-      });
-    }
+    // Handle granular actions override or use multi-statement approach
+    if (context.directive.actions) {
+      // Granular actions provided: create single statement with resolved actions
+      const resolvedActions = resolveActions(
+        context.directive,
+        context,
+        (acc) => this.getControlTowerActionsForAccess(acc),
+        'controltower'
+      );
 
-    if (access === 'write' || access === 'readwrite' || access === 'admin') {
-      iamPolicies.push({
-        statement: new PolicyStatement({
-          effect: Effect.ALLOW,
-          actions: [
-            'controltower:CreateLandingZone',
-            'controltower:UpdateLandingZone',
-            'controltower:DeleteLandingZone',
-            'controltower:EnableControl',
-            'controltower:DisableControl',
-            'controltower:CreateAccount',
-            'controltower:UpdateAccount',
-            'controltower:DeleteAccount'
-          ],
-          resources: [targetData.landingZoneArn]
-        }),
-        description: 'Control Tower write access',
-        complianceRequirement: 'Least privilege IAM access for Control Tower write operations'
+      const statement = new PolicyStatement({
+        effect: Effect.ALLOW,
+        actions: resolvedActions,
+        resources: [targetData.landingZoneArn]
       });
-    }
+      iamPolicies.push({
+        statement,
+        description: 'Control Tower access permissions (granular actions)',
+        complianceRequirement: 'Least privilege IAM access'
+      });
+    } else {
+      // Coarse access levels: use multi-statement approach (backward compatible)
+      if (access === 'read' || access === 'readwrite') {
+        iamPolicies.push({
+          statement: new PolicyStatement({
+            effect: Effect.ALLOW,
+            actions: [
+              'controltower:GetLandingZone',
+              'controltower:ListLandingZones',
+              'controltower:GetControlOperation',
+              'controltower:ListEnabledControls',
+              'controltower:GetEnabledControl',
+              'controltower:ListBaselines'
+            ],
+            resources: [targetData.landingZoneArn]
+          }),
+          description: 'Control Tower read access',
+          complianceRequirement: 'Least privilege IAM access for Control Tower read operations'
+        });
+      }
 
-    // Admin access (full Control Tower permissions)
-    if (access === 'admin' && options?.requireFullAdminAccess) {
-      iamPolicies.push({
-        statement: new PolicyStatement({
-          effect: Effect.ALLOW,
-          actions: ['controltower:*'],
-          resources: ['*']
-        }),
-        description: 'Control Tower admin access',
-        complianceRequirement: 'Full admin access to Control Tower (requires explicit requireFullAdminAccess option)'
-      });
+      if (access === 'write' || access === 'readwrite' || access === 'admin') {
+        iamPolicies.push({
+          statement: new PolicyStatement({
+            effect: Effect.ALLOW,
+            actions: [
+              'controltower:CreateLandingZone',
+              'controltower:UpdateLandingZone',
+              'controltower:DeleteLandingZone',
+              'controltower:EnableControl',
+              'controltower:DisableControl',
+              'controltower:CreateAccount',
+              'controltower:UpdateAccount',
+              'controltower:DeleteAccount'
+            ],
+            resources: [targetData.landingZoneArn]
+          }),
+          description: 'Control Tower write access',
+          complianceRequirement: 'Least privilege IAM access for Control Tower write operations'
+        });
+      }
+
+      // Admin access (full Control Tower permissions)
+      if (access === 'admin' && options?.requireFullAdminAccess) {
+        iamPolicies.push({
+          statement: new PolicyStatement({
+            effect: Effect.ALLOW,
+            actions: ['controltower:*'],
+            resources: ['*']
+          }),
+          description: 'Control Tower admin access',
+          complianceRequirement: 'Full admin access to Control Tower (requires explicit requireFullAdminAccess option)'
+        });
+      }
     }
 
     // Guardrail status and control operation exposure
@@ -249,6 +271,61 @@ export class ControlTowerBinderStrategy extends UnifiedBinderStrategyBase {
       environmentVariables,
       securityGroupRules: []
     };
+  }
+
+  /**
+   * Get Control Tower actions based on access level
+   * Used by resolveActions to compute base actions from coarse access level
+   * 
+   * @param access - Access level (read, write, readwrite, admin)
+   * @returns Array of IAM action strings
+   */
+  private getControlTowerActionsForAccess(access: string): string[] {
+    switch (access) {
+      case 'read':
+        return [
+          'controltower:GetLandingZone',
+          'controltower:ListLandingZones',
+          'controltower:GetControlOperation',
+          'controltower:ListEnabledControls',
+          'controltower:GetEnabledControl',
+          'controltower:ListBaselines'
+        ];
+      case 'write':
+        return [
+          'controltower:CreateLandingZone',
+          'controltower:UpdateLandingZone',
+          'controltower:DeleteLandingZone',
+          'controltower:EnableControl',
+          'controltower:DisableControl',
+          'controltower:CreateAccount',
+          'controltower:UpdateAccount',
+          'controltower:DeleteAccount'
+        ];
+      case 'readwrite':
+        return [
+          'controltower:GetLandingZone',
+          'controltower:ListLandingZones',
+          'controltower:GetControlOperation',
+          'controltower:ListEnabledControls',
+          'controltower:GetEnabledControl',
+          'controltower:ListBaselines',
+          'controltower:CreateLandingZone',
+          'controltower:UpdateLandingZone',
+          'controltower:DeleteLandingZone',
+          'controltower:EnableControl',
+          'controltower:DisableControl',
+          'controltower:CreateAccount',
+          'controltower:UpdateAccount',
+          'controltower:DeleteAccount'
+        ];
+      case 'admin':
+        return [
+          'controltower:*'
+        ];
+      default:
+        throw new Error(`Unsupported Control Tower access level: ${access}`);
+    }
   }
 }
 

@@ -7,7 +7,7 @@
  * - governance:backup-plan - Backup plans (schedule, lifecycle, rules)
  */
 
-import { UnifiedBinderStrategyBase } from '@shinobi/core';
+import { UnifiedBinderStrategyBase, resolveActions } from '@shinobi/core';
 import type { BindingContext, EnhancedBindingResult, CompatibilityEntry } from '@shinobi/core';
 import type { IamPolicy } from '@shinobi/core';
 import { PolicyStatement, Effect } from 'aws-cdk-lib/aws-iam';
@@ -141,61 +141,83 @@ export class BackupBinderStrategy extends UnifiedBinderStrategyBase {
       environmentVariables.AWS_BACKUP_COPY_JOB_ID = targetData.copyJobId;
     }
 
-    // IAM policies for backup vault operations
-    if (access === 'read' || access === 'readwrite') {
-      iamPolicies.push({
-        statement: new PolicyStatement({
-          effect: Effect.ALLOW,
-          actions: [
-            'backup:DescribeBackupVault',
-            'backup:ListBackupVaults',
-            'backup:ListRecoveryPointsByBackupVault',
-            'backup:GetRecoveryPointRestoreMetadata',
-            'backup:GetBackupVaultAccessPolicy',
-            'backup:GetBackupVaultNotifications'
-          ],
-          resources: [targetData.backupVaultArn]
-        }),
-        description: 'AWS Backup vault read access',
-        complianceRequirement: 'Least privilege IAM access for AWS Backup vault read operations'
-      });
-    }
+    // Handle granular actions override or use multi-statement approach
+    if (context.directive.actions) {
+      // Granular actions provided: create single statement with resolved actions
+      const resolvedActions = resolveActions(
+        context.directive,
+        context,
+        (acc) => this.getBackupVaultActionsForAccess(acc),
+        'backup'
+      );
 
-    if (access === 'write' || access === 'readwrite' || access === 'admin') {
-      iamPolicies.push({
-        statement: new PolicyStatement({
-          effect: Effect.ALLOW,
-          actions: [
-            'backup:CreateBackupVault',
-            'backup:UpdateBackupVault',
-            'backup:DeleteBackupVault',
-            'backup:PutBackupVaultAccessPolicy',
-            'backup:DeleteBackupVaultAccessPolicy',
-            'backup:PutBackupVaultNotifications',
-            'backup:DeleteBackupVaultNotifications',
-            'backup:StartBackupJob',
-            'backup:StartRestoreJob',
-            'backup:StartCopyJob',
-            'backup:StopBackupJob'
-          ],
-          resources: [targetData.backupVaultArn]
-        }),
-        description: 'AWS Backup vault write access',
-        complianceRequirement: 'Least privilege IAM access for AWS Backup vault write operations'
+      const statement = new PolicyStatement({
+        effect: Effect.ALLOW,
+        actions: resolvedActions,
+        resources: [targetData.backupVaultArn]
       });
-    }
+      iamPolicies.push({
+        statement,
+        description: 'AWS Backup vault access permissions (granular actions)',
+        complianceRequirement: 'Least privilege IAM access'
+      });
+    } else {
+      // Coarse access levels: use multi-statement approach (backward compatible)
+      if (access === 'read' || access === 'readwrite') {
+        iamPolicies.push({
+          statement: new PolicyStatement({
+            effect: Effect.ALLOW,
+            actions: [
+              'backup:DescribeBackupVault',
+              'backup:ListBackupVaults',
+              'backup:ListRecoveryPointsByBackupVault',
+              'backup:GetRecoveryPointRestoreMetadata',
+              'backup:GetBackupVaultAccessPolicy',
+              'backup:GetBackupVaultNotifications'
+            ],
+            resources: [targetData.backupVaultArn]
+          }),
+          description: 'AWS Backup vault read access',
+          complianceRequirement: 'Least privilege IAM access for AWS Backup vault read operations'
+        });
+      }
 
-    // Admin access (full Backup permissions)
-    if (access === 'admin' && options?.requireFullAdminAccess) {
-      iamPolicies.push({
-        statement: new PolicyStatement({
-          effect: Effect.ALLOW,
-          actions: ['backup:*'],
-          resources: ['*']
-        }),
-        description: 'AWS Backup admin access',
-        complianceRequirement: 'Full admin access to AWS Backup (requires explicit requireFullAdminAccess option)'
-      });
+      if (access === 'write' || access === 'readwrite' || access === 'admin') {
+        iamPolicies.push({
+          statement: new PolicyStatement({
+            effect: Effect.ALLOW,
+            actions: [
+              'backup:CreateBackupVault',
+              'backup:UpdateBackupVault',
+              'backup:DeleteBackupVault',
+              'backup:PutBackupVaultAccessPolicy',
+              'backup:DeleteBackupVaultAccessPolicy',
+              'backup:PutBackupVaultNotifications',
+              'backup:DeleteBackupVaultNotifications',
+              'backup:StartBackupJob',
+              'backup:StartRestoreJob',
+              'backup:StartCopyJob',
+              'backup:StopBackupJob'
+            ],
+            resources: [targetData.backupVaultArn]
+          }),
+          description: 'AWS Backup vault write access',
+          complianceRequirement: 'Least privilege IAM access for AWS Backup vault write operations'
+        });
+      }
+
+      // Admin access (full Backup permissions)
+      if (access === 'admin' && options?.requireFullAdminAccess) {
+        iamPolicies.push({
+          statement: new PolicyStatement({
+            effect: Effect.ALLOW,
+            actions: ['backup:*'],
+            resources: ['*']
+          }),
+          description: 'AWS Backup admin access',
+          complianceRequirement: 'Full admin access to AWS Backup (requires explicit requireFullAdminAccess option)'
+        });
+      }
     }
 
     // KMS encryption for backup vault
@@ -342,64 +364,86 @@ export class BackupBinderStrategy extends UnifiedBinderStrategyBase {
       environmentVariables.AWS_BACKUP_RECOVERY_POINT_ARN = targetData.recoveryPointArn;
     }
 
-    // IAM policies for backup plan operations
-    if (access === 'read' || access === 'readwrite') {
-      iamPolicies.push({
-        statement: new PolicyStatement({
-          effect: Effect.ALLOW,
-          actions: [
-            'backup:GetBackupPlan',
-            'backup:ListBackupPlans',
-            'backup:DescribeBackupPlan',
-            'backup:ListBackupSelections',
-            'backup:GetBackupSelection',
-            'backup:DescribeBackupJob',
-            'backup:ListBackupJobs',
-            'backup:GetBackupReportPlan',
-            'backup:ListBackupReportPlans'
-          ],
-          resources: [targetData.backupPlanArn]
-        }),
-        description: 'AWS Backup plan read access',
-        complianceRequirement: 'Least privilege IAM access for AWS Backup plan read operations'
-      });
-    }
+    // Handle granular actions override or use multi-statement approach
+    if (context.directive.actions) {
+      // Granular actions provided: create single statement with resolved actions
+      const resolvedActions = resolveActions(
+        context.directive,
+        context,
+        (acc) => this.getBackupPlanActionsForAccess(acc),
+        'backup'
+      );
 
-    if (access === 'write' || access === 'readwrite' || access === 'admin') {
-      iamPolicies.push({
-        statement: new PolicyStatement({
-          effect: Effect.ALLOW,
-          actions: [
-            'backup:CreateBackupPlan',
-            'backup:UpdateBackupPlan',
-            'backup:DeleteBackupPlan',
-            'backup:CreateBackupSelection',
-            'backup:UpdateBackupSelection',
-            'backup:DeleteBackupSelection',
-            'backup:StartBackupJob',
-            'backup:StartRestoreJob',
-            'backup:CreateBackupReportPlan',
-            'backup:UpdateBackupReportPlan',
-            'backup:DeleteBackupReportPlan'
-          ],
-          resources: [targetData.backupPlanArn]
-        }),
-        description: 'AWS Backup plan write access',
-        complianceRequirement: 'Least privilege IAM access for AWS Backup plan write operations'
+      const statement = new PolicyStatement({
+        effect: Effect.ALLOW,
+        actions: resolvedActions,
+        resources: [targetData.backupPlanArn]
       });
-    }
+      iamPolicies.push({
+        statement,
+        description: 'AWS Backup plan access permissions (granular actions)',
+        complianceRequirement: 'Least privilege IAM access'
+      });
+    } else {
+      // Coarse access levels: use multi-statement approach (backward compatible)
+      if (access === 'read' || access === 'readwrite') {
+        iamPolicies.push({
+          statement: new PolicyStatement({
+            effect: Effect.ALLOW,
+            actions: [
+              'backup:GetBackupPlan',
+              'backup:ListBackupPlans',
+              'backup:DescribeBackupPlan',
+              'backup:ListBackupSelections',
+              'backup:GetBackupSelection',
+              'backup:DescribeBackupJob',
+              'backup:ListBackupJobs',
+              'backup:GetBackupReportPlan',
+              'backup:ListBackupReportPlans'
+            ],
+            resources: [targetData.backupPlanArn]
+          }),
+          description: 'AWS Backup plan read access',
+          complianceRequirement: 'Least privilege IAM access for AWS Backup plan read operations'
+        });
+      }
 
-    // Admin access (full Backup permissions)
-    if (access === 'admin' && options?.requireFullAdminAccess) {
-      iamPolicies.push({
-        statement: new PolicyStatement({
-          effect: Effect.ALLOW,
-          actions: ['backup:*'],
-          resources: ['*']
-        }),
-        description: 'AWS Backup admin access',
-        complianceRequirement: 'Full admin access to AWS Backup (requires explicit requireFullAdminAccess option)'
-      });
+      if (access === 'write' || access === 'readwrite' || access === 'admin') {
+        iamPolicies.push({
+          statement: new PolicyStatement({
+            effect: Effect.ALLOW,
+            actions: [
+              'backup:CreateBackupPlan',
+              'backup:UpdateBackupPlan',
+              'backup:DeleteBackupPlan',
+              'backup:CreateBackupSelection',
+              'backup:UpdateBackupSelection',
+              'backup:DeleteBackupSelection',
+              'backup:StartBackupJob',
+              'backup:StartRestoreJob',
+              'backup:CreateBackupReportPlan',
+              'backup:UpdateBackupReportPlan',
+              'backup:DeleteBackupReportPlan'
+            ],
+            resources: [targetData.backupPlanArn]
+          }),
+          description: 'AWS Backup plan write access',
+          complianceRequirement: 'Least privilege IAM access for AWS Backup plan write operations'
+        });
+      }
+
+      // Admin access (full Backup permissions)
+      if (access === 'admin' && options?.requireFullAdminAccess) {
+        iamPolicies.push({
+          statement: new PolicyStatement({
+            effect: Effect.ALLOW,
+            actions: ['backup:*'],
+            resources: ['*']
+          }),
+          description: 'AWS Backup admin access',
+          complianceRequirement: 'Full admin access to AWS Backup (requires explicit requireFullAdminAccess option)'
+        });
+      }
     }
 
     // Org-wide backup policies integration (via OrganizationsBinderStrategy)
@@ -424,6 +468,134 @@ export class BackupBinderStrategy extends UnifiedBinderStrategyBase {
       environmentVariables,
       securityGroupRules: []
     };
+  }
+
+  /**
+   * Get Backup vault actions based on access level
+   * Used by resolveActions to compute base actions from coarse access level
+   * 
+   * @param access - Access level (read, write, readwrite, admin)
+   * @returns Array of IAM action strings
+   */
+  private getBackupVaultActionsForAccess(access: string): string[] {
+    switch (access) {
+      case 'read':
+        return [
+          'backup:DescribeBackupVault',
+          'backup:ListBackupVaults',
+          'backup:ListRecoveryPointsByBackupVault',
+          'backup:GetRecoveryPointRestoreMetadata',
+          'backup:GetBackupVaultAccessPolicy',
+          'backup:GetBackupVaultNotifications'
+        ];
+      case 'write':
+        return [
+          'backup:CreateBackupVault',
+          'backup:UpdateBackupVault',
+          'backup:DeleteBackupVault',
+          'backup:PutBackupVaultAccessPolicy',
+          'backup:DeleteBackupVaultAccessPolicy',
+          'backup:PutBackupVaultNotifications',
+          'backup:DeleteBackupVaultNotifications',
+          'backup:StartBackupJob',
+          'backup:StartRestoreJob',
+          'backup:StartCopyJob',
+          'backup:StopBackupJob'
+        ];
+      case 'readwrite':
+        return [
+          'backup:DescribeBackupVault',
+          'backup:ListBackupVaults',
+          'backup:ListRecoveryPointsByBackupVault',
+          'backup:GetRecoveryPointRestoreMetadata',
+          'backup:GetBackupVaultAccessPolicy',
+          'backup:GetBackupVaultNotifications',
+          'backup:CreateBackupVault',
+          'backup:UpdateBackupVault',
+          'backup:DeleteBackupVault',
+          'backup:PutBackupVaultAccessPolicy',
+          'backup:DeleteBackupVaultAccessPolicy',
+          'backup:PutBackupVaultNotifications',
+          'backup:DeleteBackupVaultNotifications',
+          'backup:StartBackupJob',
+          'backup:StartRestoreJob',
+          'backup:StartCopyJob',
+          'backup:StopBackupJob'
+        ];
+      case 'admin':
+        return [
+          'backup:*'
+        ];
+      default:
+        throw new Error(`Unsupported Backup vault access level: ${access}`);
+    }
+  }
+
+  /**
+   * Get Backup plan actions based on access level
+   * Used by resolveActions to compute base actions from coarse access level
+   * 
+   * @param access - Access level (read, write, readwrite, admin)
+   * @returns Array of IAM action strings
+   */
+  private getBackupPlanActionsForAccess(access: string): string[] {
+    switch (access) {
+      case 'read':
+        return [
+          'backup:GetBackupPlan',
+          'backup:ListBackupPlans',
+          'backup:DescribeBackupPlan',
+          'backup:ListBackupSelections',
+          'backup:GetBackupSelection',
+          'backup:DescribeBackupJob',
+          'backup:ListBackupJobs',
+          'backup:GetBackupReportPlan',
+          'backup:ListBackupReportPlans'
+        ];
+      case 'write':
+        return [
+          'backup:CreateBackupPlan',
+          'backup:UpdateBackupPlan',
+          'backup:DeleteBackupPlan',
+          'backup:CreateBackupSelection',
+          'backup:UpdateBackupSelection',
+          'backup:DeleteBackupSelection',
+          'backup:StartBackupJob',
+          'backup:StartRestoreJob',
+          'backup:CreateBackupReportPlan',
+          'backup:UpdateBackupReportPlan',
+          'backup:DeleteBackupReportPlan'
+        ];
+      case 'readwrite':
+        return [
+          'backup:GetBackupPlan',
+          'backup:ListBackupPlans',
+          'backup:DescribeBackupPlan',
+          'backup:ListBackupSelections',
+          'backup:GetBackupSelection',
+          'backup:DescribeBackupJob',
+          'backup:ListBackupJobs',
+          'backup:GetBackupReportPlan',
+          'backup:ListBackupReportPlans',
+          'backup:CreateBackupPlan',
+          'backup:UpdateBackupPlan',
+          'backup:DeleteBackupPlan',
+          'backup:CreateBackupSelection',
+          'backup:UpdateBackupSelection',
+          'backup:DeleteBackupSelection',
+          'backup:StartBackupJob',
+          'backup:StartRestoreJob',
+          'backup:CreateBackupReportPlan',
+          'backup:UpdateBackupReportPlan',
+          'backup:DeleteBackupReportPlan'
+        ];
+      case 'admin':
+        return [
+          'backup:*'
+        ];
+      default:
+        throw new Error(`Unsupported Backup plan access level: ${access}`);
+    }
   }
 }
 

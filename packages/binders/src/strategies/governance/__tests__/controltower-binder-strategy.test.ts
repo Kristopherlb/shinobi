@@ -77,6 +77,67 @@ describe('ControlTowerBinderStrategy', () => {
     });
   });
 
-  // TODO: Add more test cases as needed
+  describe('ControlTowerBind__CustomActionsOverride__ReplacesCoarseActions', () => {
+    const metadata = {
+      id: 'TP-binders-governance-controltower-002',
+      level: 'unit' as const,
+      capability: 'Custom actions override replaces default Control Tower actions',
+      oracle: 'exact' as const,
+      determinism: 'deterministic' as const,
+      naming: { pattern: 'ControlTowerBind__Condition__Outcome', example: 'ControlTowerBind__CustomActionsOverride__ReplacesCoarseActions' },
+      invariants: [
+        'IAM policy actions match provided custom actions array',
+        'Default Control Tower actions are not included when custom actions provided',
+        'Actions array is used directly (replaces coarse access)'
+      ],
+      fixtures: ['MockSourceComponent', 'MockTargetComponent'],
+      inputs: {
+        shape: 'BindingContext with governance:control-tower capability and directive.actions array',
+        notes: 'Granular actions override test'
+      },
+      risks: [],
+      dependencies: ['action-resolver'],
+      evidence: [],
+      compliance_refs: ['docs/platform-standards/platform-iam-auditing-standard.md'],
+      ai_generated: true,
+      human_reviewed_by: 'Platform Engineering'
+    };
+
+    test('ControlTowerBind__CustomActionsOverride__ReplacesCoarseActions', async () => {
+      const strategy = new ControlTowerBinderStrategy();
+      const customActions = ['controltower:GetLandingZone', 'controltower:ListLandingZones'];
+      const target = createMockTargetComponent('controltower', {
+        'governance:control-tower': {
+          landingZoneArn: 'arn:aws:controltower:us-east-1::landingzone/test-landing-zone'
+        },
+      });
+
+      const context = createBindingContext({
+        source: createMockSourceComponent('lambda-governance', 'test-source'),
+        target,
+        capability: 'governance:control-tower',
+        access: 'read',
+        actions: customActions
+      });
+
+      const result = await executeUnifiedBinding(strategy, context);
+
+      assertEnhancedBindingResult(result);
+
+      expect(result.iamPolicies.length).toBeGreaterThan(0);
+      const policy = result.iamPolicies.find(p => p.description.includes('granular actions'));
+      expect(policy).toBeDefined();
+      
+      const statementJson = policy!.statement.toStatementJson();
+      const actions = Array.isArray(statementJson.Action)
+        ? statementJson.Action
+        : [statementJson.Action];
+
+      // Primary assertion: Custom actions are used, default actions are not
+      expect(actions).toEqual(customActions);
+      expect(actions).not.toContain('controltower:GetControlOperation');
+      expect(actions).not.toContain('controltower:ListEnabledControls');
+    });
+  });
 });
 
