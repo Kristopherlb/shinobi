@@ -1283,4 +1283,38 @@ describe('DynamoDbBinderStrategy', () => {
       );
     });
   });
+
+  describe('DynamoBind__TableAdminAccessWithBackup__GrantsBackupPermissions', () => {
+    test('DynamoBind__TableAdminAccessWithBackup__GrantsBackupPermissions', async () => {
+      const strategy = new DynamoDbBinderStrategy();
+      const target = createMockTargetComponent('dynamodb-table', {
+        'db:dynamodb': {
+          tableArn: 'arn:aws:dynamodb:us-east-1:123456789012:table/test-table',
+          tableName: 'test-table'
+        }
+      });
+
+      const context = createBindingContext({
+        source: createMockSourceComponent('lambda-backup', 'test-source'),
+        target,
+        capability: 'db:dynamodb',
+        access: 'admin'
+      });
+
+      const result = await executeUnifiedBinding(strategy, context);
+
+      assertEnhancedBindingResult(result);
+      
+      const backupPolicy = result.iamPolicies.find(p => 
+        p.description.includes('backup and restore')
+      );
+      expect(backupPolicy).toBeDefined();
+      const statementJson = backupPolicy!.statement.toStatementJson();
+      const actions = Array.isArray(statementJson.Action) 
+        ? statementJson.Action 
+        : [statementJson.Action];
+      expect(actions).toContain('dynamodb:CreateBackup');
+      expect(actions).toContain('dynamodb:RestoreTableFromBackup');
+    });
+  });
 });
