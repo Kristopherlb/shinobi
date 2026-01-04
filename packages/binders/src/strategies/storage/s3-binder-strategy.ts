@@ -3,7 +3,7 @@
  * Handles object storage bindings for Amazon S3 with mandatory compliance enforcement
  */
 
-import { UnifiedBinderStrategyBase } from '@shinobi/core';
+import { UnifiedBinderStrategyBase, resolveActions } from '@shinobi/core';
 import type { BindingContext, EnhancedBindingResult, CompatibilityEntry } from '@shinobi/core';
 import type { IamPolicy, S3CapabilityData } from '@shinobi/core';
 import { PolicyStatement, Effect } from 'aws-cdk-lib/aws-iam';
@@ -148,12 +148,19 @@ export class S3BinderStrategy extends UnifiedBinderStrategyBase {
     const bucketArn = targetData.resources.arn;
     const bucketRegion = targetData.resources.region;
 
-    // Base S3 access policy with least-privilege principle
-    const s3Actions = this.getS3ActionsForAccess(access);
+    // Resolve actions (granular override or coarse access)
+    // Normalize access array to single string for resolveActions
+    const primaryAccess = access[0] || 'read';
+    const resolvedActions = resolveActions(
+      context.directive,
+      context,
+      (acc) => this.getS3ActionsForAccess([acc]),
+      's3'
+    );
 
     const basePolicy = new PolicyStatement({
       effect: Effect.ALLOW,
-      actions: s3Actions,
+      actions: resolvedActions,
       resources: [
         bucketArn,
         `${bucketArn}/*` // Allow access to objects within the bucket
@@ -234,7 +241,6 @@ export class S3BinderStrategy extends UnifiedBinderStrategyBase {
 
     // Access logging permissions for admin access
     // Note: s3:PutBucketLogging is required to configure access logging target
-    const primaryAccess = access[0] || 'read';
     if (primaryAccess === 'admin' && targetData.accessLogging?.enabled && targetData.accessLogging.targetBucket) {
       const loggingPolicy = new PolicyStatement({
         effect: Effect.ALLOW,
@@ -284,9 +290,9 @@ export class S3BinderStrategy extends UnifiedBinderStrategyBase {
    */
   private getS3ActionsForAccess(access: string[]): string[] {
     // Handle array - typically just one access level, but handle all cases
-    const primaryAccess = access[0] || 'read';
+    const accessLevel = access[0] || 'read';
     
-    switch (primaryAccess) {
+    switch (accessLevel) {
       case 'read':
         return [
           's3:GetObject',
@@ -339,7 +345,7 @@ export class S3BinderStrategy extends UnifiedBinderStrategyBase {
           's3:DeleteBucketPolicy'
         ];
       default:
-        throw new Error(`Unsupported S3 access level: ${primaryAccess}`);
+        throw new Error(`Unsupported S3 access level: ${accessLevel}`);
     }
   }
 

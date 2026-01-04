@@ -169,7 +169,8 @@ export function createBindingContext(options: {
   source?: IComponent;
   target?: IComponent;
   capability: string;
-  access?: 'read' | 'write' | 'readwrite' | 'admin';
+  access?: 'read' | 'write' | 'readwrite' | 'admin' | 'invoke';
+  actions?: string | string[];
   options?: Record<string, any>;
   env?: Record<string, string>;
   complianceFramework?: string;
@@ -185,7 +186,8 @@ export function createBindingContext(options: {
       capability: options.capability,
       access: options.access ?? 'read',
       options: options.options,
-      env: options.env
+      env: options.env,
+      ...(options.actions !== undefined && { actions: options.actions })
     },
     environment: options.environment ?? TEST_CONSTANTS.ENVIRONMENT,
     complianceFramework: (options.complianceFramework ?? TEST_CONSTANTS.COMPLIANCE_FRAMEWORK) as any

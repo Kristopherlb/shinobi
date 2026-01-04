@@ -3,7 +3,7 @@
  * Handles Key Management Service bindings for AWS KMS with mandatory compliance enforcement
  */
 
-import { UnifiedBinderStrategyBase } from '@shinobi/core';
+import { UnifiedBinderStrategyBase, resolveActions } from '@shinobi/core';
 import type { BindingContext, EnhancedBindingResult, CompatibilityEntry } from '@shinobi/core';
 import type { IamPolicy } from '@shinobi/core';
 import { PolicyStatement, Effect } from 'aws-cdk-lib/aws-iam';
@@ -129,82 +129,106 @@ export class KmsBinderStrategy extends UnifiedBinderStrategyBase {
     const environmentVariables: Record<string, string> = {};
     const iamPolicies: IamPolicy[] = [];
 
-    // Grant key access permissions
-    if (access.includes('read')) {
+    // Handle granular actions override or use multi-statement approach
+    if (context.directive.actions) {
+      // Granular actions provided: create single statement with resolved actions
+      const primaryAccess = access[0] || 'read';
+      const resolvedActions = resolveActions(
+        context.directive,
+        context,
+        (acc) => this.getKmsKeyActionsForAccess(acc),
+        'kms'
+      );
+
       const statement = new PolicyStatement({
         effect: Effect.ALLOW,
-        actions: [
-          'kms:DescribeKey',
-          'kms:GetKeyPolicy',
-          'kms:ListKeys',
-          'kms:ListAliases'
-        ],
+        actions: resolvedActions,
         resources: [targetData.keyArn]
       });
       iamPolicies.push({
         statement,
-        description: 'KMS key read access permissions',
+        description: 'KMS key access permissions (granular actions)',
         complianceRequirement: 'Least privilege IAM access'
       });
-    }
+    } else {
+      // Coarse access levels: use multi-statement approach (backward compatible)
+      // Grant key access permissions
+      if (access.includes('read')) {
+        const statement = new PolicyStatement({
+          effect: Effect.ALLOW,
+          actions: [
+            'kms:DescribeKey',
+            'kms:GetKeyPolicy',
+            'kms:ListKeys',
+            'kms:ListAliases'
+          ],
+          resources: [targetData.keyArn]
+        });
+        iamPolicies.push({
+          statement,
+          description: 'KMS key read access permissions',
+          complianceRequirement: 'Least privilege IAM access'
+        });
+      }
 
-    if (access.includes('write')) {
-      const statement = new PolicyStatement({
-        effect: Effect.ALLOW,
-        actions: [
-          'kms:CreateKey',
-          'kms:DeleteKey',
-          'kms:UpdateKeyDescription',
-          'kms:PutKeyPolicy'
-        ],
-        resources: [targetData.keyArn]
-      });
-      iamPolicies.push({
-        statement,
-        description: 'KMS key write access permissions',
-        complianceRequirement: 'Least privilege IAM access'
-      });
-    }
+      if (access.includes('write')) {
+        const statement = new PolicyStatement({
+          effect: Effect.ALLOW,
+          actions: [
+            'kms:CreateKey',
+            'kms:DeleteKey',
+            'kms:UpdateKeyDescription',
+            'kms:PutKeyPolicy'
+          ],
+          resources: [targetData.keyArn]
+        });
+        iamPolicies.push({
+          statement,
+          description: 'KMS key write access permissions',
+          complianceRequirement: 'Least privilege IAM access'
+        });
+      }
 
-    // Grant encryption/decryption permissions
-    if (access.includes('encrypt') || access.includes('decrypt')) {
-      const statement = new PolicyStatement({
-        effect: Effect.ALLOW,
-        actions: [
-          'kms:Encrypt',
-          'kms:Decrypt',
-          'kms:ReEncrypt*',
-          'kms:GenerateDataKey',
-          'kms:GenerateDataKeyWithoutPlaintext'
-        ],
-        resources: [targetData.keyArn]
-      });
-      iamPolicies.push({
-        statement,
-        description: 'KMS encryption/decryption permissions',
-        complianceRequirement: 'Encryption at rest and in transit'
-      });
-    }
+      // Grant encryption/decryption permissions
+      if (access.includes('encrypt') || access.includes('decrypt')) {
+        const statement = new PolicyStatement({
+          effect: Effect.ALLOW,
+          actions: [
+            'kms:Encrypt',
+            'kms:Decrypt',
+            'kms:ReEncrypt*',
+            'kms:GenerateDataKey',
+            'kms:GenerateDataKeyWithoutPlaintext'
+          ],
+          resources: [targetData.keyArn]
+        });
+        iamPolicies.push({
+          statement,
+          description: 'KMS encryption/decryption permissions',
+          complianceRequirement: 'Encryption at rest and in transit'
+        });
+      }
 
-    // Grant key management permissions
-    if (access.includes('admin')) {
-      const statement = new PolicyStatement({
-        effect: Effect.ALLOW,
-        actions: [
-          'kms:EnableKey',
-          'kms:DisableKey',
-          'kms:ScheduleKeyDeletion',
-          'kms:CancelKeyDeletion',
-          'kms:TagResource',
-          'kms:UntagResource'
-        ],
-        resources: [targetData.keyArn]
-      });
-      iamPolicies.push({
-        statement,
-        description: 'KMS key administration permissions',
-        complianceRequirement: 'Least privilege IAM access'
-      });
+      // Grant key management permissions
+      if (access.includes('admin')) {
+        const statement = new PolicyStatement({
+          effect: Effect.ALLOW,
+          actions: [
+            'kms:EnableKey',
+            'kms:DisableKey',
+            'kms:ScheduleKeyDeletion',
+            'kms:CancelKeyDeletion',
+            'kms:TagResource',
+            'kms:UntagResource'
+          ],
+          resources: [targetData.keyArn]
+        });
+        iamPolicies.push({
+          statement,
+          description: 'KMS key administration permissions',
+          complianceRequirement: 'Least privilege IAM access'
+        });
+      }
     }
 
     // Set key environment variables
@@ -390,6 +414,50 @@ export class KmsBinderStrategy extends UnifiedBinderStrategyBase {
       iamPolicies,
       securityGroupRules: []
     };
+  }
+
+  /**
+   * Get KMS key actions based on access level
+   * Used by resolveActions to compute base actions from coarse access level
+   * 
+   * Note: For encrypt/decrypt operations, use granular actions or include 'encrypt'/'decrypt' in access array
+   * 
+   * @param access - Access level (read, write, admin)
+   * @returns Array of IAM action strings
+   */
+  private getKmsKeyActionsForAccess(access: string): string[] {
+    switch (access) {
+      case 'read':
+        return [
+          'kms:DescribeKey',
+          'kms:GetKeyPolicy',
+          'kms:ListKeys',
+          'kms:ListAliases'
+        ];
+      case 'write':
+        return [
+          'kms:CreateKey',
+          'kms:DeleteKey',
+          'kms:UpdateKeyDescription',
+          'kms:PutKeyPolicy'
+        ];
+      case 'admin':
+        return [
+          'kms:EnableKey',
+          'kms:DisableKey',
+          'kms:ScheduleKeyDeletion',
+          'kms:CancelKeyDeletion',
+          'kms:TagResource',
+          'kms:UntagResource',
+          'kms:Encrypt',
+          'kms:Decrypt',
+          'kms:ReEncrypt*',
+          'kms:GenerateDataKey',
+          'kms:GenerateDataKeyWithoutPlaintext'
+        ];
+      default:
+        throw new Error(`Unsupported KMS access level: ${access}`);
+    }
   }
 
   /**

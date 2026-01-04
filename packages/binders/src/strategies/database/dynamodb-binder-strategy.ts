@@ -3,7 +3,7 @@
  * Handles NoSQL database bindings for Amazon DynamoDB with mandatory compliance enforcement
  */
 
-import { UnifiedBinderStrategyBase } from '@shinobi/core';
+import { UnifiedBinderStrategyBase, resolveActions } from '@shinobi/core';
 import type { BindingContext, EnhancedBindingResult, CompatibilityEntry } from '@shinobi/core';
 import type { IamPolicy } from '@shinobi/core';
 import { PolicyStatement, Effect } from 'aws-cdk-lib/aws-iam';
@@ -144,18 +144,20 @@ export class DynamoDbBinderStrategy extends UnifiedBinderStrategyBase {
     const environmentVariables: Record<string, string> = {};
     const iamPolicies: IamPolicy[] = [];
 
-    // Grant table access permissions
-    if (access.includes('read') || access.includes('readwrite')) {
+    // Handle granular actions override or use multi-statement approach
+    if (context.directive.actions) {
+      // Granular actions provided: create single statement with resolved actions
+      const primaryAccess = access[0] || 'read';
+      const resolvedActions = resolveActions(
+        context.directive,
+        context,
+        (acc) => this.getDynamoDbTableActionsForAccess(acc),
+        'dynamodb'
+      );
+
       const statement = new PolicyStatement({
         effect: Effect.ALLOW,
-        actions: [
-          'dynamodb:GetItem',
-          'dynamodb:BatchGetItem',
-          'dynamodb:Query',
-          'dynamodb:Scan',
-          'dynamodb:DescribeTable',
-          'dynamodb:ListTables'
-        ],
+        actions: resolvedActions,
         resources: [
           targetData.tableArn,
           `${targetData.tableArn}/index/*`
@@ -163,50 +165,74 @@ export class DynamoDbBinderStrategy extends UnifiedBinderStrategyBase {
       });
       iamPolicies.push({
         statement,
-        description: 'DynamoDB table read access permissions',
+        description: 'DynamoDB table access permissions (granular actions)',
         complianceRequirement: 'Least privilege IAM access'
       });
-    }
+    } else {
+      // Coarse access levels: use multi-statement approach (backward compatible)
+      if (access.includes('read') || access.includes('readwrite')) {
+        const statement = new PolicyStatement({
+          effect: Effect.ALLOW,
+          actions: [
+            'dynamodb:GetItem',
+            'dynamodb:BatchGetItem',
+            'dynamodb:Query',
+            'dynamodb:Scan',
+            'dynamodb:DescribeTable',
+            'dynamodb:ListTables'
+          ],
+          resources: [
+            targetData.tableArn,
+            `${targetData.tableArn}/index/*`
+          ]
+        });
+        iamPolicies.push({
+          statement,
+          description: 'DynamoDB table read access permissions',
+          complianceRequirement: 'Least privilege IAM access'
+        });
+      }
 
-    if (access.includes('write') || access.includes('readwrite') || access.includes('admin')) {
-      const statement = new PolicyStatement({
-        effect: Effect.ALLOW,
-        actions: [
-          'dynamodb:PutItem',
-          'dynamodb:BatchWriteItem',
-          'dynamodb:UpdateItem',
-          'dynamodb:DeleteItem'
-        ],
-        resources: [
-          targetData.tableArn,
-          `${targetData.tableArn}/index/*`
-        ]
-      });
-      iamPolicies.push({
-        statement,
-        description: 'DynamoDB table write access permissions',
-        complianceRequirement: 'Least privilege IAM access'
-      });
-    }
+      if (access.includes('write') || access.includes('readwrite') || access.includes('admin')) {
+        const statement = new PolicyStatement({
+          effect: Effect.ALLOW,
+          actions: [
+            'dynamodb:PutItem',
+            'dynamodb:BatchWriteItem',
+            'dynamodb:UpdateItem',
+            'dynamodb:DeleteItem'
+          ],
+          resources: [
+            targetData.tableArn,
+            `${targetData.tableArn}/index/*`
+          ]
+        });
+        iamPolicies.push({
+          statement,
+          description: 'DynamoDB table write access permissions',
+          complianceRequirement: 'Least privilege IAM access'
+        });
+      }
 
-    if (access.includes('admin')) {
-      const statement = new PolicyStatement({
-        effect: Effect.ALLOW,
-        actions: [
-          'dynamodb:CreateTable',
-          'dynamodb:UpdateTable',
-          'dynamodb:DeleteTable',
-          'dynamodb:DescribeTable',
-          'dynamodb:DescribeTimeToLive',
-          'dynamodb:ListTables'
-        ],
-        resources: [targetData.tableArn]
-      });
-      iamPolicies.push({
-        statement,
-        description: 'DynamoDB table administration permissions',
-        complianceRequirement: 'Least privilege IAM access'
-      });
+      if (access.includes('admin')) {
+        const statement = new PolicyStatement({
+          effect: Effect.ALLOW,
+          actions: [
+            'dynamodb:CreateTable',
+            'dynamodb:UpdateTable',
+            'dynamodb:DeleteTable',
+            'dynamodb:DescribeTable',
+            'dynamodb:DescribeTimeToLive',
+            'dynamodb:ListTables'
+          ],
+          resources: [targetData.tableArn]
+        });
+        iamPolicies.push({
+          statement,
+          description: 'DynamoDB table administration permissions',
+          complianceRequirement: 'Least privilege IAM access'
+        });
+      }
     }
 
     // Grant backup and restore permissions (note: backup is not a standard AccessLevel,
@@ -338,42 +364,64 @@ export class DynamoDbBinderStrategy extends UnifiedBinderStrategyBase {
     const environmentVariables: Record<string, string> = {};
     const iamPolicies: IamPolicy[] = [];
 
-    // Grant index access permissions
-    if (access.includes('read') || access.includes('readwrite')) {
-      const statement = new PolicyStatement({
-        effect: Effect.ALLOW,
-        actions: [
-          'dynamodb:Query',
-          'dynamodb:Scan',
-          'dynamodb:DescribeTable'
-        ],
-        resources: [resolvedIndex.indexArn]
-      });
-      iamPolicies.push({
-        statement,
-        description: 'DynamoDB index read access permissions',
-        complianceRequirement: 'Least privilege IAM access'
-      });
-    }
+    // Handle granular actions override or use multi-statement approach
+    if (context.directive.actions) {
+      const primaryAccess = access[0] || 'read';
+      const resolvedActions = resolveActions(
+        context.directive,
+        context,
+        (acc) => this.getDynamoDbIndexActionsForAccess(acc),
+        'dynamodb'
+      );
 
-    if (access.includes('write') || access.includes('readwrite')) {
       const statement = new PolicyStatement({
         effect: Effect.ALLOW,
-        actions: [
-          'dynamodb:CreateGlobalSecondaryIndex',
-          'dynamodb:UpdateGlobalSecondaryIndex',
-          'dynamodb:DeleteGlobalSecondaryIndex',
-          'dynamodb:CreateLocalSecondaryIndex',
-          'dynamodb:UpdateLocalSecondaryIndex',
-          'dynamodb:DeleteLocalSecondaryIndex'
-        ],
+        actions: resolvedActions,
         resources: [resolvedIndex.indexArn]
       });
       iamPolicies.push({
         statement,
-        description: 'DynamoDB index write access permissions',
+        description: 'DynamoDB index access permissions (granular actions)',
         complianceRequirement: 'Least privilege IAM access'
       });
+    } else {
+      // Coarse access levels: use multi-statement approach (backward compatible)
+      if (access.includes('read') || access.includes('readwrite')) {
+        const statement = new PolicyStatement({
+          effect: Effect.ALLOW,
+          actions: [
+            'dynamodb:Query',
+            'dynamodb:Scan',
+            'dynamodb:DescribeTable'
+          ],
+          resources: [resolvedIndex.indexArn]
+        });
+        iamPolicies.push({
+          statement,
+          description: 'DynamoDB index read access permissions',
+          complianceRequirement: 'Least privilege IAM access'
+        });
+      }
+
+      if (access.includes('write') || access.includes('readwrite')) {
+        const statement = new PolicyStatement({
+          effect: Effect.ALLOW,
+          actions: [
+            'dynamodb:CreateGlobalSecondaryIndex',
+            'dynamodb:UpdateGlobalSecondaryIndex',
+            'dynamodb:DeleteGlobalSecondaryIndex',
+            'dynamodb:CreateLocalSecondaryIndex',
+            'dynamodb:UpdateLocalSecondaryIndex',
+            'dynamodb:DeleteLocalSecondaryIndex'
+          ],
+          resources: [resolvedIndex.indexArn]
+        });
+        iamPolicies.push({
+          statement,
+          description: 'DynamoDB index write access permissions',
+          complianceRequirement: 'Least privilege IAM access'
+        });
+      }
     }
 
     // Set index environment variables
@@ -425,40 +473,62 @@ export class DynamoDbBinderStrategy extends UnifiedBinderStrategyBase {
     const environmentVariables: Record<string, string> = {};
     const iamPolicies: IamPolicy[] = [];
 
-    // Grant stream access permissions
-    if (access.includes('read') || access.includes('readwrite')) {
-      const statement = new PolicyStatement({
-        effect: Effect.ALLOW,
-        actions: [
-          'dynamodb:DescribeStream',
-          'dynamodb:GetRecords',
-          'dynamodb:GetShardIterator',
-          'dynamodb:ListStreams'
-        ],
-        resources: [targetData.streamArn]
-      });
-      iamPolicies.push({
-        statement,
-        description: 'DynamoDB stream read access permissions',
-        complianceRequirement: 'Least privilege IAM access'
-      });
-    }
+    // Handle granular actions override or use coarse access
+    if (context.directive.actions) {
+      const primaryAccess = access[0] || 'read';
+      const resolvedActions = resolveActions(
+        context.directive,
+        context,
+        (acc) => this.getDynamoDbStreamActionsForAccess(acc),
+        'dynamodb'
+      );
 
-    if (access.includes('write') || access.includes('readwrite')) {
       const statement = new PolicyStatement({
         effect: Effect.ALLOW,
-        actions: [
-          'dynamodb:UpdateTable',
-          'dynamodb:EnableStreaming',
-          'dynamodb:DisableStreaming'
-        ],
+        actions: resolvedActions,
         resources: [targetData.streamArn]
       });
       iamPolicies.push({
         statement,
-        description: 'DynamoDB stream write access permissions',
+        description: 'DynamoDB stream access permissions (granular actions)',
         complianceRequirement: 'Least privilege IAM access'
       });
+    } else {
+      // Coarse access levels (backward compatible)
+      if (access.includes('read') || access.includes('readwrite')) {
+        const statement = new PolicyStatement({
+          effect: Effect.ALLOW,
+          actions: [
+            'dynamodb:DescribeStream',
+            'dynamodb:GetRecords',
+            'dynamodb:GetShardIterator',
+            'dynamodb:ListStreams'
+          ],
+          resources: [targetData.streamArn]
+        });
+        iamPolicies.push({
+          statement,
+          description: 'DynamoDB stream read access permissions',
+          complianceRequirement: 'Least privilege IAM access'
+        });
+      }
+
+      if (access.includes('write') || access.includes('readwrite')) {
+        const statement = new PolicyStatement({
+          effect: Effect.ALLOW,
+          actions: [
+            'dynamodb:UpdateTable',
+            'dynamodb:EnableStreaming',
+            'dynamodb:DisableStreaming'
+          ],
+          resources: [targetData.streamArn]
+        });
+        iamPolicies.push({
+          statement,
+          description: 'DynamoDB stream write access permissions',
+          complianceRequirement: 'Least privilege IAM access'
+        });
+      }
     }
 
     // Set stream environment variables
@@ -527,38 +597,19 @@ export class DynamoDbBinderStrategy extends UnifiedBinderStrategyBase {
     const region = arnParts?.[1] || '*';
     const accountId = arnParts?.[2] || '*';
 
-    // Grant backup read permissions (list, describe backups)
-    if (access.includes('read') || access.includes('readwrite')) {
-      const statement = new PolicyStatement({
-        effect: Effect.ALLOW,
-        actions: [
-          'dynamodb:DescribeBackup',
-          'dynamodb:ListBackups',
-          'dynamodb:DescribeContinuousBackups',
-          'dynamodb:ListContributorInsights'
-        ],
-        resources: [
-          targetData.tableArn,
-          `arn:aws:dynamodb:${region}:${accountId}:table/${targetData.tableName}/backup/*`
-        ]
-      });
-      iamPolicies.push({
-        statement,
-        description: 'DynamoDB backup read access permissions',
-        complianceRequirement: 'Data protection and recovery'
-      });
-    }
+    // Handle granular actions override or use multi-statement approach
+    if (context.directive.actions) {
+      const primaryAccess = access[0] || 'read';
+      const resolvedActions = resolveActions(
+        context.directive,
+        context,
+        (acc) => this.getDynamoDbBackupActionsForAccess(acc),
+        'dynamodb'
+      );
 
-    // Grant backup write permissions (create, delete, restore)
-    if (access.includes('write') || access.includes('readwrite')) {
       const statement = new PolicyStatement({
         effect: Effect.ALLOW,
-        actions: [
-          'dynamodb:CreateBackup',
-          'dynamodb:DeleteBackup',
-          'dynamodb:RestoreTableFromBackup',
-          'dynamodb:RestoreTableToPointInTime'
-        ],
+        actions: resolvedActions,
         resources: [
           targetData.tableArn,
           `arn:aws:dynamodb:${region}:${accountId}:table/${targetData.tableName}/backup/*`
@@ -566,9 +617,52 @@ export class DynamoDbBinderStrategy extends UnifiedBinderStrategyBase {
       });
       iamPolicies.push({
         statement,
-        description: 'DynamoDB backup write access permissions',
+        description: 'DynamoDB backup access permissions (granular actions)',
         complianceRequirement: 'Data protection and recovery'
       });
+    } else {
+      // Coarse access levels: use multi-statement approach (backward compatible)
+      if (access.includes('read') || access.includes('readwrite')) {
+        const statement = new PolicyStatement({
+          effect: Effect.ALLOW,
+          actions: [
+            'dynamodb:DescribeBackup',
+            'dynamodb:ListBackups',
+            'dynamodb:DescribeContinuousBackups',
+            'dynamodb:ListContributorInsights'
+          ],
+          resources: [
+            targetData.tableArn,
+            `arn:aws:dynamodb:${region}:${accountId}:table/${targetData.tableName}/backup/*`
+          ]
+        });
+        iamPolicies.push({
+          statement,
+          description: 'DynamoDB backup read access permissions',
+          complianceRequirement: 'Data protection and recovery'
+        });
+      }
+
+      if (access.includes('write') || access.includes('readwrite')) {
+        const statement = new PolicyStatement({
+          effect: Effect.ALLOW,
+          actions: [
+            'dynamodb:CreateBackup',
+            'dynamodb:DeleteBackup',
+            'dynamodb:RestoreTableFromBackup',
+            'dynamodb:RestoreTableToPointInTime'
+          ],
+          resources: [
+            targetData.tableArn,
+            `arn:aws:dynamodb:${region}:${accountId}:table/${targetData.tableName}/backup/*`
+          ]
+        });
+        iamPolicies.push({
+          statement,
+          description: 'DynamoDB backup write access permissions',
+          complianceRequirement: 'Data protection and recovery'
+        });
+      }
     }
 
     // Set backup environment variables
@@ -729,6 +823,171 @@ export class DynamoDbBinderStrategy extends UnifiedBinderStrategyBase {
     // Configure VPC endpoints for private access when requested
     if (context.directive.options?.enableVpcEndpoint === true) {
       environmentVariables['DYNAMODB_VPC_ENDPOINT_ENABLED'] = 'true';
+    }
+  }
+
+  /**
+   * Get DynamoDB table actions based on access level
+   * Used by resolveActions to compute base actions from coarse access level
+   * 
+   * @param access - Access level (read, write, readwrite, admin)
+   * @returns Array of IAM action strings
+   */
+  private getDynamoDbTableActionsForAccess(access: string): string[] {
+    switch (access) {
+      case 'read':
+        return [
+          'dynamodb:GetItem',
+          'dynamodb:BatchGetItem',
+          'dynamodb:Query',
+          'dynamodb:Scan',
+          'dynamodb:DescribeTable',
+          'dynamodb:ListTables'
+        ];
+      case 'write':
+        return [
+          'dynamodb:PutItem',
+          'dynamodb:BatchWriteItem',
+          'dynamodb:UpdateItem',
+          'dynamodb:DeleteItem'
+        ];
+      case 'readwrite':
+        return [
+          'dynamodb:GetItem',
+          'dynamodb:BatchGetItem',
+          'dynamodb:Query',
+          'dynamodb:Scan',
+          'dynamodb:DescribeTable',
+          'dynamodb:ListTables',
+          'dynamodb:PutItem',
+          'dynamodb:BatchWriteItem',
+          'dynamodb:UpdateItem',
+          'dynamodb:DeleteItem'
+        ];
+      case 'admin':
+        return [
+          'dynamodb:CreateTable',
+          'dynamodb:UpdateTable',
+          'dynamodb:DeleteTable',
+          'dynamodb:DescribeTable',
+          'dynamodb:DescribeTimeToLive',
+          'dynamodb:ListTables',
+          'dynamodb:GetItem',
+          'dynamodb:BatchGetItem',
+          'dynamodb:Query',
+          'dynamodb:Scan',
+          'dynamodb:PutItem',
+          'dynamodb:BatchWriteItem',
+          'dynamodb:UpdateItem',
+          'dynamodb:DeleteItem'
+        ];
+      default:
+        throw new Error(`Unsupported DynamoDB access level: ${access}`);
+    }
+  }
+
+  /**
+   * Get DynamoDB index actions based on access level
+   */
+  private getDynamoDbIndexActionsForAccess(access: string): string[] {
+    switch (access) {
+      case 'read':
+        return [
+          'dynamodb:Query',
+          'dynamodb:Scan',
+          'dynamodb:DescribeTable'
+        ];
+      case 'write':
+        return [
+          'dynamodb:CreateGlobalSecondaryIndex',
+          'dynamodb:UpdateGlobalSecondaryIndex',
+          'dynamodb:DeleteGlobalSecondaryIndex',
+          'dynamodb:CreateLocalSecondaryIndex',
+          'dynamodb:UpdateLocalSecondaryIndex',
+          'dynamodb:DeleteLocalSecondaryIndex'
+        ];
+      case 'readwrite':
+        return [
+          'dynamodb:Query',
+          'dynamodb:Scan',
+          'dynamodb:DescribeTable',
+          'dynamodb:CreateGlobalSecondaryIndex',
+          'dynamodb:UpdateGlobalSecondaryIndex',
+          'dynamodb:DeleteGlobalSecondaryIndex',
+          'dynamodb:CreateLocalSecondaryIndex',
+          'dynamodb:UpdateLocalSecondaryIndex',
+          'dynamodb:DeleteLocalSecondaryIndex'
+        ];
+      default:
+        throw new Error(`Unsupported DynamoDB index access level: ${access}`);
+    }
+  }
+
+  /**
+   * Get DynamoDB stream actions based on access level
+   */
+  private getDynamoDbStreamActionsForAccess(access: string): string[] {
+    switch (access) {
+      case 'read':
+        return [
+          'dynamodb:DescribeStream',
+          'dynamodb:GetRecords',
+          'dynamodb:GetShardIterator',
+          'dynamodb:ListStreams'
+        ];
+      case 'write':
+        return [
+          'dynamodb:UpdateTable',
+          'dynamodb:EnableStreaming',
+          'dynamodb:DisableStreaming'
+        ];
+      case 'readwrite':
+        return [
+          'dynamodb:DescribeStream',
+          'dynamodb:GetRecords',
+          'dynamodb:GetShardIterator',
+          'dynamodb:ListStreams',
+          'dynamodb:UpdateTable',
+          'dynamodb:EnableStreaming',
+          'dynamodb:DisableStreaming'
+        ];
+      default:
+        throw new Error(`Unsupported DynamoDB stream access level: ${access}`);
+    }
+  }
+
+  /**
+   * Get DynamoDB backup actions based on access level
+   */
+  private getDynamoDbBackupActionsForAccess(access: string): string[] {
+    switch (access) {
+      case 'read':
+        return [
+          'dynamodb:DescribeBackup',
+          'dynamodb:ListBackups',
+          'dynamodb:DescribeContinuousBackups',
+          'dynamodb:ListContributorInsights'
+        ];
+      case 'write':
+        return [
+          'dynamodb:CreateBackup',
+          'dynamodb:DeleteBackup',
+          'dynamodb:RestoreTableFromBackup',
+          'dynamodb:RestoreTableToPointInTime'
+        ];
+      case 'readwrite':
+        return [
+          'dynamodb:DescribeBackup',
+          'dynamodb:ListBackups',
+          'dynamodb:DescribeContinuousBackups',
+          'dynamodb:ListContributorInsights',
+          'dynamodb:CreateBackup',
+          'dynamodb:DeleteBackup',
+          'dynamodb:RestoreTableFromBackup',
+          'dynamodb:RestoreTableToPointInTime'
+        ];
+      default:
+        throw new Error(`Unsupported DynamoDB backup access level: ${access}`);
     }
   }
 }

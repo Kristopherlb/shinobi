@@ -27,6 +27,10 @@ export type { BindingContext, BindingResult, IBinderStrategy, EnhancedBindingRes
 // Export unified binder strategy base class
 export { UnifiedBinderStrategyBase } from './unified-binder-strategy-base.js';
 
+// Export binder utilities
+export { resolveActions } from '../binders/action-resolver.js';
+export { loadActionProfiles, resolveActionProfile, type ActionProfilesConfig } from '../binders/action-profiles.js';
+
 // Export trigger system interfaces
 export * from './trigger-interfaces.js';
 

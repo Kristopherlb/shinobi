@@ -1,3 +1,17 @@
+actionProfiles:
+  # SQS Profiles
+  sqs-consumer:
+    - sqs:ReceiveMessage
+    - sqs:DeleteMessage
+    - sqs:ChangeMessageVisibility
+    - sqs:GetQueueAttributes
+  sqs-producer:
+    - sqs:SendMessage
+    - sqs:GetQueueAttributes
+  # Lambda Profiles
+  lambda-async-invoke:
+    - lambda:InvokeFunction
+
 defaults:
   logging:
     enabled: true

@@ -3,7 +3,7 @@
  * Handles messaging bindings for Amazon SQS and SNS with mandatory compliance enforcement
  */
 
-import { UnifiedBinderStrategyBase } from '@shinobi/core';
+import { UnifiedBinderStrategyBase, resolveActions } from '@shinobi/core';
 import type { BindingContext, EnhancedBindingResult, CompatibilityEntry } from '@shinobi/core';
 import type { IamPolicy } from '@shinobi/core';
 import { PolicyStatement, Effect } from 'aws-cdk-lib/aws-iam';
@@ -124,54 +124,79 @@ export class QueueBinderStrategy extends UnifiedBinderStrategyBase {
       throw new Error(`Invalid access level for SQS: ${access}. Valid levels: ${validAccess.join(', ')}`);
     }
 
-    // Grant SQS read permissions
-    if (access === 'read' || access === 'readwrite') {
-      const statement = new PolicyStatement({
-        effect: Effect.ALLOW,
-        actions: [
-          'sqs:ReceiveMessage',
-          'sqs:GetQueueAttributes',
-          'sqs:GetQueueUrl',
-          'sqs:DeleteMessage',
-          'sqs:ChangeMessageVisibility'
-        ],
-        resources: [targetData.resources.arn]
-      });
-      iamPolicies.push({
-        statement,
-        description: 'SQS queue read access permissions',
-        complianceRequirement: 'Least privilege IAM access'
-      });
-    }
+    // Check if granular actions are provided
+    const hasGranularActions = !!context.directive.actions;
 
-    // Grant SQS write permissions
-    if (access === 'write' || access === 'readwrite') {
-      const isFifoQueue = targetData.resources.queueName.endsWith('.fifo') || 
-                         targetData.fifoQueue === true ||
-                         targetData.queueType === 'FIFO';
-      
-      const writeActions = ['sqs:SendMessage', 'sqs:GetQueueAttributes', 'sqs:GetQueueUrl'];
-      
-      // FIFO queues require additional actions for batch operations and deduplication
-      if (isFifoQueue) {
-        writeActions.push('sqs:SendMessageBatch');
-        environmentVariables['SQS_QUEUE_TYPE'] = 'FIFO';
-        environmentVariables['SQS_CONTENT_BASED_DEDUPLICATION'] = 
-          targetData.contentBasedDeduplication === true ? 'true' : 'false';
-      }
-      
+    if (hasGranularActions) {
+      // Use granular actions - create single policy statement with resolved actions
+      const resolvedActions = resolveActions(
+        context.directive,
+        context,
+        (acc) => this.getSqsActionsForAccess(acc),
+        'sqs'
+      );
+
       const statement = new PolicyStatement({
         effect: Effect.ALLOW,
-        actions: writeActions,
+        actions: resolvedActions,
         resources: [targetData.resources.arn]
       });
       iamPolicies.push({
         statement,
-        description: isFifoQueue 
-          ? 'SQS FIFO queue write access permissions (with batch and deduplication support)'
-          : 'SQS queue write access permissions',
+        description: 'SQS queue access permissions (granular actions)',
         complianceRequirement: 'Least privilege IAM access'
       });
+    } else {
+      // Use coarse access levels - create separate statements for read/write (existing behavior)
+      // Grant SQS read permissions
+      if (access === 'read' || access === 'readwrite') {
+        const statement = new PolicyStatement({
+          effect: Effect.ALLOW,
+          actions: [
+            'sqs:ReceiveMessage',
+            'sqs:GetQueueAttributes',
+            'sqs:GetQueueUrl',
+            'sqs:DeleteMessage',
+            'sqs:ChangeMessageVisibility'
+          ],
+          resources: [targetData.resources.arn]
+        });
+        iamPolicies.push({
+          statement,
+          description: 'SQS queue read access permissions',
+          complianceRequirement: 'Least privilege IAM access'
+        });
+      }
+
+      // Grant SQS write permissions
+      if (access === 'write' || access === 'readwrite') {
+        const isFifoQueue = targetData.resources.queueName.endsWith('.fifo') || 
+                           targetData.fifoQueue === true ||
+                           targetData.queueType === 'FIFO';
+        
+        const writeActions = ['sqs:SendMessage', 'sqs:GetQueueAttributes', 'sqs:GetQueueUrl'];
+        
+        // FIFO queues require additional actions for batch operations and deduplication
+        if (isFifoQueue) {
+          writeActions.push('sqs:SendMessageBatch');
+          environmentVariables['SQS_QUEUE_TYPE'] = 'FIFO';
+          environmentVariables['SQS_CONTENT_BASED_DEDUPLICATION'] = 
+            targetData.contentBasedDeduplication === true ? 'true' : 'false';
+        }
+        
+        const statement = new PolicyStatement({
+          effect: Effect.ALLOW,
+          actions: writeActions,
+          resources: [targetData.resources.arn]
+        });
+        iamPolicies.push({
+          statement,
+          description: isFifoQueue 
+            ? 'SQS FIFO queue write access permissions (with batch and deduplication support)'
+            : 'SQS queue write access permissions',
+          complianceRequirement: 'Least privilege IAM access'
+        });
+      }
     }
 
     // Set SQS environment variables
@@ -260,6 +285,43 @@ export class QueueBinderStrategy extends UnifiedBinderStrategyBase {
       iamPolicies,
       securityGroupRules: []
     };
+  }
+
+  /**
+   * Get SQS actions based on access level
+   * Used by resolveActions to compute base actions from coarse access level
+   * 
+   * @param access - Access level (read, write, readwrite)
+   * @returns Array of IAM action strings
+   */
+  private getSqsActionsForAccess(access: string): string[] {
+    switch (access) {
+      case 'read':
+        return [
+          'sqs:ReceiveMessage',
+          'sqs:GetQueueAttributes',
+          'sqs:GetQueueUrl',
+          'sqs:DeleteMessage',
+          'sqs:ChangeMessageVisibility'
+        ];
+      case 'write':
+        return [
+          'sqs:SendMessage',
+          'sqs:GetQueueAttributes',
+          'sqs:GetQueueUrl'
+        ];
+      case 'readwrite':
+        return [
+          'sqs:ReceiveMessage',
+          'sqs:GetQueueAttributes',
+          'sqs:GetQueueUrl',
+          'sqs:DeleteMessage',
+          'sqs:ChangeMessageVisibility',
+          'sqs:SendMessage'
+        ];
+      default:
+        throw new Error(`Unsupported SQS access level: ${access}`);
+    }
   }
 
   /**

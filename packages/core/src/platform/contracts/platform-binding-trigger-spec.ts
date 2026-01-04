@@ -44,6 +44,11 @@ export interface BindingDirective extends ComponentSelector {
   capability: string;
   /** Access level required for the binding */
   access: Exclude<AccessLevel, 'invoke' | 'publish' | 'subscribe'>;
+  /** Optional granular IAM actions override. If provided, replaces the actions from the coarse access level.
+   * Can be either a string (action profile name) or array of action strings (e.g., ['sqs:ReceiveMessage', 'sqs:DeleteMessage']).
+   * Profile names are resolved from framework-specific config files.
+   */
+  actions?: string | string[];
   /** Custom environment variable mappings */
   env?: Record<string, string>;
   /** Additional binding options */

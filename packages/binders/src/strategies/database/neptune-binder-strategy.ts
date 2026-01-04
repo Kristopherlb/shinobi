@@ -3,7 +3,7 @@
  * Handles graph database bindings for Amazon Neptune with mandatory compliance enforcement
  */
 
-import { UnifiedBinderStrategyBase } from '@shinobi/core';
+import { UnifiedBinderStrategyBase, resolveActions } from '@shinobi/core';
 import type { BindingContext, EnhancedBindingResult, CompatibilityEntry } from '@shinobi/core';
 import type { IamPolicy } from '@shinobi/core';
 import { PolicyStatement, Effect } from 'aws-cdk-lib/aws-iam';
@@ -143,41 +143,63 @@ export class NeptuneBinderStrategy extends UnifiedBinderStrategyBase {
     const environmentVariables: Record<string, string> = {};
     const iamPolicies: IamPolicy[] = [];
 
-    // Grant cluster access permissions
-    if (access.includes('read') || access.includes('readwrite')) {
-      const statement = new PolicyStatement({
-        effect: Effect.ALLOW,
-        actions: [
-          'rds:DescribeDBClusters',
-          'rds:DescribeDBClusterEndpoints',
-          'rds:DescribeDBClusterParameters'
-        ],
-        resources: [targetData.clusterArn]
-      });
-      iamPolicies.push({
-        statement,
-        description: 'Neptune cluster read access permissions',
-        complianceRequirement: 'Least privilege IAM access'
-      });
-    }
+    // Handle granular actions override or use multi-statement approach
+    if (context.directive.actions) {
+      const primaryAccess = access[0] || 'read';
+      const resolvedActions = resolveActions(
+        context.directive,
+        context,
+        (acc) => this.getNeptuneClusterActionsForAccess(acc),
+        'rds' // Neptune uses RDS actions
+      );
 
-    if (access.includes('write') || access.includes('readwrite')) {
       const statement = new PolicyStatement({
         effect: Effect.ALLOW,
-        actions: [
-          'rds:CreateDBCluster',
-          'rds:ModifyDBCluster',
-          'rds:DeleteDBCluster',
-          'rds:StartDBCluster',
-          'rds:StopDBCluster'
-        ],
+        actions: resolvedActions,
         resources: [targetData.clusterArn]
       });
       iamPolicies.push({
         statement,
-        description: 'Neptune cluster write access permissions',
+        description: 'Neptune cluster access permissions (granular actions)',
         complianceRequirement: 'Least privilege IAM access'
       });
+    } else {
+      // Coarse access levels: use multi-statement approach (backward compatible)
+      if (access.includes('read') || access.includes('readwrite')) {
+        const statement = new PolicyStatement({
+          effect: Effect.ALLOW,
+          actions: [
+            'rds:DescribeDBClusters',
+            'rds:DescribeDBClusterEndpoints',
+            'rds:DescribeDBClusterParameters'
+          ],
+          resources: [targetData.clusterArn]
+        });
+        iamPolicies.push({
+          statement,
+          description: 'Neptune cluster read access permissions',
+          complianceRequirement: 'Least privilege IAM access'
+        });
+      }
+
+      if (access.includes('write') || access.includes('readwrite')) {
+        const statement = new PolicyStatement({
+          effect: Effect.ALLOW,
+          actions: [
+            'rds:CreateDBCluster',
+            'rds:ModifyDBCluster',
+            'rds:DeleteDBCluster',
+            'rds:StartDBCluster',
+            'rds:StopDBCluster'
+          ],
+          resources: [targetData.clusterArn]
+        });
+        iamPolicies.push({
+          statement,
+          description: 'Neptune cluster write access permissions',
+          complianceRequirement: 'Least privilege IAM access'
+        });
+      }
     }
 
     // Set cluster environment variables
@@ -239,41 +261,63 @@ export class NeptuneBinderStrategy extends UnifiedBinderStrategyBase {
     const environmentVariables: Record<string, string> = {};
     const iamPolicies: IamPolicy[] = [];
 
-    // Grant instance access permissions
-    if (access.includes('read') || access.includes('readwrite')) {
-      const statement = new PolicyStatement({
-        effect: Effect.ALLOW,
-        actions: [
-          'rds:DescribeDBInstances',
-          'rds:DescribeDBInstanceStatus'
-        ],
-        resources: [targetData.instanceArn]
-      });
-      iamPolicies.push({
-        statement,
-        description: 'Neptune instance read access permissions',
-        complianceRequirement: 'Least privilege IAM access'
-      });
-    }
+    // Handle granular actions override or use multi-statement approach
+    if (context.directive.actions) {
+      const primaryAccess = access[0] || 'read';
+      const resolvedActions = resolveActions(
+        context.directive,
+        context,
+        (acc) => this.getNeptuneInstanceActionsForAccess(acc),
+        'rds' // Neptune uses RDS actions
+      );
 
-    if (access.includes('write') || access.includes('readwrite')) {
       const statement = new PolicyStatement({
         effect: Effect.ALLOW,
-        actions: [
-          'rds:CreateDBInstance',
-          'rds:ModifyDBInstance',
-          'rds:DeleteDBInstance',
-          'rds:RebootDBInstance',
-          'rds:StartDBInstance',
-          'rds:StopDBInstance'
-        ],
+        actions: resolvedActions,
         resources: [targetData.instanceArn]
       });
       iamPolicies.push({
         statement,
-        description: 'Neptune instance write access permissions',
+        description: 'Neptune instance access permissions (granular actions)',
         complianceRequirement: 'Least privilege IAM access'
       });
+    } else {
+      // Coarse access levels: use multi-statement approach (backward compatible)
+      if (access.includes('read') || access.includes('readwrite')) {
+        const statement = new PolicyStatement({
+          effect: Effect.ALLOW,
+          actions: [
+            'rds:DescribeDBInstances',
+            'rds:DescribeDBInstanceStatus'
+          ],
+          resources: [targetData.instanceArn]
+        });
+        iamPolicies.push({
+          statement,
+          description: 'Neptune instance read access permissions',
+          complianceRequirement: 'Least privilege IAM access'
+        });
+      }
+
+      if (access.includes('write') || access.includes('readwrite')) {
+        const statement = new PolicyStatement({
+          effect: Effect.ALLOW,
+          actions: [
+            'rds:CreateDBInstance',
+            'rds:ModifyDBInstance',
+            'rds:DeleteDBInstance',
+            'rds:RebootDBInstance',
+            'rds:StartDBInstance',
+            'rds:StopDBInstance'
+          ],
+          resources: [targetData.instanceArn]
+        });
+        iamPolicies.push({
+          statement,
+          description: 'Neptune instance write access permissions',
+          complianceRequirement: 'Least privilege IAM access'
+        });
+      }
     }
 
     // Set instance environment variables
@@ -386,38 +430,19 @@ export class NeptuneBinderStrategy extends UnifiedBinderStrategyBase {
     const iamPolicies: IamPolicy[] = [];
     const { region, accountId } = context.source.context;
 
-    // Grant backup read permissions (describe, list snapshots)
-    if (access.includes('read') || access.includes('readwrite')) {
-      const statement = new PolicyStatement({
-        effect: Effect.ALLOW,
-        actions: [
-          'rds:DescribeDBClusterSnapshots',
-          'rds:DescribeDBClusters',
-          'rds:ListTagsForResource'
-        ],
-        resources: [
-          targetData.clusterArn,
-          `arn:aws:rds:${region}:${accountId}:cluster-snapshot:${targetData.clusterIdentifier}-*`
-        ]
-      });
-      iamPolicies.push({
-        statement,
-        description: 'Neptune backup read access permissions',
-        complianceRequirement: 'Data protection and recovery'
-      });
-    }
+    // Handle granular actions override or use multi-statement approach
+    if (context.directive.actions) {
+      const primaryAccess = access[0] || 'read';
+      const resolvedActions = resolveActions(
+        context.directive,
+        context,
+        (acc) => this.getNeptuneBackupActionsForAccess(acc),
+        'rds' // Neptune uses RDS actions
+      );
 
-    // Grant backup write permissions (create, delete, restore snapshots)
-    if (access.includes('write') || access.includes('readwrite')) {
       const statement = new PolicyStatement({
         effect: Effect.ALLOW,
-        actions: [
-          'rds:CreateDBClusterSnapshot',
-          'rds:DeleteDBClusterSnapshot',
-          'rds:RestoreDBClusterFromSnapshot',
-          'rds:RestoreDBClusterToPointInTime',
-          'rds:CopyDBClusterSnapshot'
-        ],
+        actions: resolvedActions,
         resources: [
           targetData.clusterArn,
           `arn:aws:rds:${region}:${accountId}:cluster-snapshot:${targetData.clusterIdentifier}-*`
@@ -425,9 +450,52 @@ export class NeptuneBinderStrategy extends UnifiedBinderStrategyBase {
       });
       iamPolicies.push({
         statement,
-        description: 'Neptune backup write access permissions',
+        description: 'Neptune backup access permissions (granular actions)',
         complianceRequirement: 'Data protection and recovery'
       });
+    } else {
+      // Coarse access levels: use multi-statement approach (backward compatible)
+      if (access.includes('read') || access.includes('readwrite')) {
+        const statement = new PolicyStatement({
+          effect: Effect.ALLOW,
+          actions: [
+            'rds:DescribeDBClusterSnapshots',
+            'rds:DescribeDBClusters',
+            'rds:ListTagsForResource'
+          ],
+          resources: [
+            targetData.clusterArn,
+            `arn:aws:rds:${region}:${accountId}:cluster-snapshot:${targetData.clusterIdentifier}-*`
+          ]
+        });
+        iamPolicies.push({
+          statement,
+          description: 'Neptune backup read access permissions',
+          complianceRequirement: 'Data protection and recovery'
+        });
+      }
+
+      if (access.includes('write') || access.includes('readwrite')) {
+        const statement = new PolicyStatement({
+          effect: Effect.ALLOW,
+          actions: [
+            'rds:CreateDBClusterSnapshot',
+            'rds:DeleteDBClusterSnapshot',
+            'rds:RestoreDBClusterFromSnapshot',
+            'rds:RestoreDBClusterToPointInTime',
+            'rds:CopyDBClusterSnapshot'
+          ],
+          resources: [
+            targetData.clusterArn,
+            `arn:aws:rds:${region}:${accountId}:cluster-snapshot:${targetData.clusterIdentifier}-*`
+          ]
+        });
+        iamPolicies.push({
+          statement,
+          description: 'Neptune backup write access permissions',
+          complianceRequirement: 'Data protection and recovery'
+        });
+      }
     }
 
     // Set backup environment variables
@@ -545,6 +613,112 @@ export class NeptuneBinderStrategy extends UnifiedBinderStrategyBase {
     // Configure performance insights for monitoring
     if (targetData.performanceInsightsEnabled === true) {
       environmentVariables['NEPTUNE_PERFORMANCE_INSIGHTS_ENABLED'] = 'true';
+    }
+  }
+
+  /**
+   * Get Neptune cluster actions based on access level
+   * Used by resolveActions to compute base actions from coarse access level
+   */
+  private getNeptuneClusterActionsForAccess(access: string): string[] {
+    switch (access) {
+      case 'read':
+        return [
+          'rds:DescribeDBClusters',
+          'rds:DescribeDBClusterEndpoints',
+          'rds:DescribeDBClusterParameters'
+        ];
+      case 'write':
+        return [
+          'rds:CreateDBCluster',
+          'rds:ModifyDBCluster',
+          'rds:DeleteDBCluster',
+          'rds:StartDBCluster',
+          'rds:StopDBCluster'
+        ];
+      case 'readwrite':
+        return [
+          'rds:DescribeDBClusters',
+          'rds:DescribeDBClusterEndpoints',
+          'rds:DescribeDBClusterParameters',
+          'rds:CreateDBCluster',
+          'rds:ModifyDBCluster',
+          'rds:DeleteDBCluster',
+          'rds:StartDBCluster',
+          'rds:StopDBCluster'
+        ];
+      default:
+        throw new Error(`Unsupported Neptune cluster access level: ${access}`);
+    }
+  }
+
+  /**
+   * Get Neptune instance actions based on access level
+   */
+  private getNeptuneInstanceActionsForAccess(access: string): string[] {
+    switch (access) {
+      case 'read':
+        return [
+          'rds:DescribeDBInstances',
+          'rds:DescribeDBInstanceStatus'
+        ];
+      case 'write':
+        return [
+          'rds:CreateDBInstance',
+          'rds:ModifyDBInstance',
+          'rds:DeleteDBInstance',
+          'rds:RebootDBInstance',
+          'rds:StartDBInstance',
+          'rds:StopDBInstance'
+        ];
+      case 'readwrite':
+        return [
+          'rds:DescribeDBInstances',
+          'rds:DescribeDBInstanceStatus',
+          'rds:CreateDBInstance',
+          'rds:ModifyDBInstance',
+          'rds:DeleteDBInstance',
+          'rds:RebootDBInstance',
+          'rds:StartDBInstance',
+          'rds:StopDBInstance'
+        ];
+      default:
+        throw new Error(`Unsupported Neptune instance access level: ${access}`);
+    }
+  }
+
+  /**
+   * Get Neptune backup actions based on access level
+   */
+  private getNeptuneBackupActionsForAccess(access: string): string[] {
+    switch (access) {
+      case 'read':
+        return [
+          'rds:DescribeDBClusterSnapshots',
+          'rds:DescribeDBClusters',
+          'rds:ListTagsForResource'
+        ];
+      case 'write':
+        return [
+          'rds:CreateDBClusterSnapshot',
+          'rds:DeleteDBClusterSnapshot',
+          'rds:RestoreDBClusterFromSnapshot',
+          'rds:RestoreDBClusterToPointInTime',
+          'rds:CopyDBClusterSnapshot'
+        ];
+      case 'readwrite':
+        return [
+          'rds:DescribeDBClusterSnapshots',
+          'rds:DescribeDBClusters',
+          'rds:ListTagsForResource',
+          'rds:CreateDBClusterSnapshot',
+          'rds:DeleteDBClusterSnapshot',
+          'rds:RestoreDBClusterFromSnapshot',
+          'rds:RestoreDBClusterToPointInTime',
+          'rds:CopyDBClusterSnapshot'
+        ];
+      default:
+        throw new Error(`Unsupported Neptune backup access level: ${access}`);
     }
   }
 }

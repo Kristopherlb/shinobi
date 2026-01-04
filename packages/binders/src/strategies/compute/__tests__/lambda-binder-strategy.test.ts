@@ -1106,5 +1106,130 @@ describe('LambdaBinderStrategy', () => {
       expect(result.environmentVariables.LAMBDA_RESERVED_CONCURRENT_EXECUTIONS).toBe('10');
     });
   });
+
+  describe('LambdaBind__CustomActionsOverride__ReplacesInvokeAction', () => {
+    const metadata = {
+      id: 'TP-binders-compute-lambda-017',
+      level: 'unit' as const,
+      capability: 'Custom actions override replaces default lambda:InvokeFunction action',
+      oracle: 'exact' as const,
+      determinism: 'deterministic' as const,
+      naming: { pattern: 'LambdaBind__Condition__Outcome', example: 'LambdaBind__CustomActionsOverride__ReplacesInvokeAction' },
+      invariants: [
+        'IAM policy actions match provided custom actions array',
+        'Default lambda:InvokeFunction is not included when custom actions provided',
+        'Actions array is used directly (replaces coarse access)'
+      ],
+      fixtures: ['MockSourceComponent', 'MockTargetComponent', 'LambdaCapabilityData'],
+      inputs: {
+        shape: 'BindingContext with lambda:function capability and directive.actions array',
+        notes: 'Granular actions override test'
+      },
+      risks: [],
+      dependencies: [],
+      evidence: [],
+      compliance_refs: ['docs/platform-standards/platform-iam-auditing-standard.md'],
+      ai_generated: true,
+      human_reviewed_by: 'Platform Engineering'
+    };
+
+    test('LambdaBind__CustomActionsOverride__ReplacesInvokeAction', async () => {
+      const strategy = new LambdaBinderStrategy();
+      const functionArn = 'arn:aws:lambda:us-east-1:123456789012:function:test-function';
+      const target = createMockTargetComponent('lambda-api', {
+        'lambda:function': {
+          type: 'lambda:function',
+          resources: {
+            arn: functionArn,
+            functionName: 'test-function',
+            version: '$LATEST'
+          },
+          environment: {}
+        }
+      });
+
+      const context = createBindingContext({
+        source: createMockSourceComponent(),
+        target,
+        capability: 'lambda:function',
+        access: 'invoke' as any,
+        actions: ['lambda:InvokeFunction'] // Explicit actions override
+      });
+
+      const result = await executeUnifiedBinding(strategy, context);
+
+      assertEnhancedBindingResult(result);
+
+      // Primary assertion: IAM policy uses the provided actions
+      expect(result.iamPolicies.length).toBeGreaterThan(0);
+      
+      const policy = result.iamPolicies[0];
+      const statementJson = policy.statement.toStatementJson();
+      
+      const actions = Array.isArray(statementJson.Action) 
+        ? statementJson.Action 
+        : [statementJson.Action];
+      
+      // Should contain the explicit action
+      expect(actions).toContain('lambda:InvokeFunction');
+      expect(actions.length).toBe(1);
+    });
+  });
+
+  describe('LambdaBind__InvalidActionPrefix__ThrowsPrefixMismatchError', () => {
+    const metadata = {
+      id: 'TP-binders-compute-lambda-018',
+      level: 'unit' as const,
+      capability: 'Throws error when actions array contains actions with wrong service prefix',
+      oracle: 'exact' as const,
+      determinism: 'deterministic' as const,
+      naming: { pattern: 'LambdaBind__Condition__Outcome', example: 'LambdaBind__InvalidActionPrefix__ThrowsPrefixMismatchError' },
+      invariants: [
+        'Error message indicates service prefix mismatch',
+        'Error specifies which actions are mismatched',
+        'Binding fails before IAM policy generation'
+      ],
+      fixtures: ['MockSourceComponent', 'MockTargetComponent', 'LambdaCapabilityData'],
+      inputs: {
+        shape: 'BindingContext with lambda:function capability and directive.actions containing non-lambda actions',
+        notes: 'Error case - invalid action prefix for Lambda binder'
+      },
+      risks: [],
+      dependencies: [],
+      evidence: [],
+      compliance_refs: ['docs/platform-standards/platform-iam-auditing-standard.md'],
+      ai_generated: true,
+      human_reviewed_by: 'Platform Engineering'
+    };
+
+    test('LambdaBind__InvalidActionPrefix__ThrowsPrefixMismatchError', async () => {
+      const strategy = new LambdaBinderStrategy();
+      const functionArn = 'arn:aws:lambda:us-east-1:123456789012:function:test-function';
+      const target = createMockTargetComponent('lambda-api', {
+        'lambda:function': {
+          type: 'lambda:function',
+          resources: {
+            arn: functionArn,
+            functionName: 'test-function',
+            version: '$LATEST'
+          },
+          environment: {}
+        }
+      });
+
+      const context = createBindingContext({
+        source: createMockSourceComponent(),
+        target,
+        capability: 'lambda:function',
+        access: 'invoke' as any,
+        actions: ['s3:GetObject'] // Wrong service prefix
+      });
+
+      // Primary assertion: Error is thrown with prefix mismatch message
+      await expect(executeUnifiedBinding(strategy, context)).rejects.toThrow(
+        /Actions must match service prefix 'lambda:'/
+      );
+    });
+  });
 });
 

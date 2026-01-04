@@ -161,6 +161,23 @@
             "admin"
           ]
         },
+        "actions": {
+          "description": "Optional granular IAM actions override. If provided, replaces the actions from the coarse access level. Can be either a string (action profile name) or array of action strings.",
+          "oneOf": [
+            {
+              "type": "string",
+              "description": "Action profile name (e.g., 'sqs-consumer')"
+            },
+            {
+              "type": "array",
+              "items": {
+                "type": "string"
+              },
+              "minItems": 1,
+              "description": "Array of IAM action strings (e.g., ['sqs:ReceiveMessage', 'sqs:DeleteMessage'])"
+            }
+          ]
+        },
         "env": {
           "type": "object",
           "description": "Optional custom names for injected environment variables."

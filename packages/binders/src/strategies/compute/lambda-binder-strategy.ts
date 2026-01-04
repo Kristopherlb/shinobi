@@ -3,7 +3,7 @@
  * Handles Lambda function invocation bindings with mandatory compliance enforcement
  */
 
-import { UnifiedBinderStrategyBase } from '@shinobi/core';
+import { UnifiedBinderStrategyBase, resolveActions } from '@shinobi/core';
 import type { BindingContext, EnhancedBindingResult, CompatibilityEntry } from '@shinobi/core';
 import type { IamPolicy } from '@shinobi/core';
 import { PolicyStatement, Effect } from 'aws-cdk-lib/aws-iam';
@@ -53,8 +53,11 @@ export class LambdaBinderStrategy extends UnifiedBinderStrategyBase {
     }
 
     // Validate access level for Lambda
-    if (directive.access !== 'invoke' as any) {
-      throw new Error(`Invalid access level for Lambda: ${directive.access}. Only 'invoke' is supported`);
+    // Allow coarse 'invoke' or custom granular override via actions field
+    // Note: directive.access type excludes 'invoke', so we check as string at runtime
+    const accessStr = directive.access as string;
+    if (accessStr !== 'invoke' && (!directive.actions || (Array.isArray(directive.actions) && directive.actions.length === 0))) {
+      throw new Error(`Invalid access level for Lambda: ${accessStr}. Use 'invoke' or provide explicit 'actions' array.`);
     }
 
     // Get target capability data
@@ -102,18 +105,17 @@ export class LambdaBinderStrategy extends UnifiedBinderStrategyBase {
     const isAsyncInvoke = options.asyncInvoke === true || options.invocationType === 'async';
     const isEventInvoke = options.eventInvoke === true || options.invocationType === 'event';
 
-    // Grant Lambda invoke permissions
-    const actions: string[] = ['lambda:InvokeFunction'];
-    
-    // Add async invoke permissions if needed
-    if (isAsyncInvoke || isEventInvoke) {
-      // Async invoke uses the same InvokeFunction action but with different invocation type
-      // No additional actions needed, but we document it in the policy description
-    }
+    // Resolve actions (granular override or coarse access)
+    const resolvedActions = resolveActions(
+      context.directive,
+      context,
+      (acc) => this.getLambdaActionsForAccess(acc),
+      'lambda'
+    );
 
     const statement = new PolicyStatement({
       effect: Effect.ALLOW,
-      actions,
+      actions: resolvedActions,
       resources: [
         targetData.resources.arn,
         // Include version-specific ARN if version is provided
@@ -222,6 +224,22 @@ export class LambdaBinderStrategy extends UnifiedBinderStrategyBase {
       iamPolicies,
       securityGroupRules: []
     };
+  }
+
+  /**
+   * Get Lambda actions based on access level
+   * Used by resolveActions to compute base actions from coarse access level
+   * 
+   * @param access - Access level (invoke)
+   * @returns Array of IAM action strings
+   */
+  private getLambdaActionsForAccess(access: string): string[] {
+    if (access === 'invoke') {
+      return ['lambda:InvokeFunction'];
+    }
+    // If granular actions are provided, this method won't be called for validation
+    // but we still need to handle invalid access levels gracefully
+    throw new Error(`Unsupported Lambda access level: ${access}. Use 'invoke' or provide explicit 'actions' array.`);
   }
 }
 
