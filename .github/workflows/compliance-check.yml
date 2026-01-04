@@ -26,8 +26,17 @@ jobs:
 
     - name: Enable Corepack and install pnpm
       run: |
-        corepack enable
+        # Ensure corepack is enabled (works even with cached Node.js)
+        corepack enable || true
+        # Prepare and activate pnpm
         corepack prepare pnpm@latest --activate
+        # Verify pnpm is in PATH and working
+        export PATH="$PATH:$(corepack pnpm --version 2>&1 | head -1 || echo '')"
+        pnpm --version || {
+          echo "Corepack pnpm not available, installing via npm"
+          npm install -g pnpm@latest
+        }
+        echo "pnpm version: $(pnpm --version)"
 
     - name: Cache pnpm store
       uses: actions/cache@v4
