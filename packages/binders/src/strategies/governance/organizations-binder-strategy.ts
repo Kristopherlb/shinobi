@@ -12,7 +12,7 @@
  * - org:service-linked-role - Service-linked roles for delegated admin
  */
 
-import { UnifiedBinderStrategyBase } from '@shinobi/core';
+import { UnifiedBinderStrategyBase, resolveActions } from '@shinobi/core';
 import type { BindingContext, EnhancedBindingResult, CompatibilityEntry } from '@shinobi/core';
 import type { IamPolicy } from '@shinobi/core';
 import { PolicyStatement, Effect } from 'aws-cdk-lib/aws-iam';
@@ -182,43 +182,65 @@ export class OrganizationsBinderStrategy extends UnifiedBinderStrategyBase {
       environmentVariables.AWS_ORGANIZATIONS_OU_PATH = targetData.ouPath;
     }
 
-    // IAM policies for Organizations SCP operations
-    if (access === 'read' || access === 'readwrite') {
-      iamPolicies.push({
-        statement: new PolicyStatement({
-          effect: Effect.ALLOW,
-          actions: [
-            'organizations:DescribePolicy',
-            'organizations:ListPolicies',
-            'organizations:ListPoliciesForTarget',
-            'organizations:DescribeOrganization',
-            'organizations:ListRoots'
-          ],
-          resources: ['*']
-        }),
-        description: 'Organizations SCP read access',
-        complianceRequirement: 'Least privilege IAM access for Organizations read operations'
-      });
-    }
+    // Handle granular actions override or use multi-statement approach
+    if (context.directive.actions) {
+      // Granular actions provided: create single statement with resolved actions
+      const resolvedActions = resolveActions(
+        context.directive,
+        context,
+        (acc) => this.getScpActionsForAccess(acc),
+        'organizations'
+      );
 
-    if (access === 'write' || access === 'readwrite' || access === 'admin') {
-      iamPolicies.push({
-        statement: new PolicyStatement({
-          effect: Effect.ALLOW,
-          actions: [
-            'organizations:CreatePolicy',
-            'organizations:UpdatePolicy',
-            'organizations:DeletePolicy',
-            'organizations:AttachPolicy',
-            'organizations:DetachPolicy',
-            'organizations:EnablePolicyType',
-            'organizations:DisablePolicyType'
-          ],
-          resources: ['*']
-        }),
-        description: 'Organizations SCP write access',
-        complianceRequirement: 'Least privilege IAM access for Organizations write operations'
+      const statement = new PolicyStatement({
+        effect: Effect.ALLOW,
+        actions: resolvedActions,
+        resources: ['*']
       });
+      iamPolicies.push({
+        statement,
+        description: 'Organizations SCP access permissions (granular actions)',
+        complianceRequirement: 'Least privilege IAM access'
+      });
+    } else {
+      // Coarse access levels: use multi-statement approach (backward compatible)
+      if (access === 'read' || access === 'readwrite') {
+        iamPolicies.push({
+          statement: new PolicyStatement({
+            effect: Effect.ALLOW,
+            actions: [
+              'organizations:DescribePolicy',
+              'organizations:ListPolicies',
+              'organizations:ListPoliciesForTarget',
+              'organizations:DescribeOrganization',
+              'organizations:ListRoots'
+            ],
+            resources: ['*']
+          }),
+          description: 'Organizations SCP read access',
+          complianceRequirement: 'Least privilege IAM access for Organizations read operations'
+        });
+      }
+
+      if (access === 'write' || access === 'readwrite' || access === 'admin') {
+        iamPolicies.push({
+          statement: new PolicyStatement({
+            effect: Effect.ALLOW,
+            actions: [
+              'organizations:CreatePolicy',
+              'organizations:UpdatePolicy',
+              'organizations:DeletePolicy',
+              'organizations:AttachPolicy',
+              'organizations:DetachPolicy',
+              'organizations:EnablePolicyType',
+              'organizations:DisablePolicyType'
+            ],
+            resources: ['*']
+          }),
+          description: 'Organizations SCP write access',
+          complianceRequirement: 'Least privilege IAM access for Organizations write operations'
+        });
+      }
     }
 
     // Delegated admin support
@@ -321,38 +343,58 @@ export class OrganizationsBinderStrategy extends UnifiedBinderStrategyBase {
       AWS_ORGANIZATIONS_MASTER_ACCOUNT_ID: targetData.masterAccountId
     };
 
-    if (access === 'read' || access === 'readwrite') {
-      iamPolicies.push({
-        statement: new PolicyStatement({
-          effect: Effect.ALLOW,
-          actions: [
-            'organizations:DescribePolicy',
-            'organizations:ListPolicies',
-            'organizations:ListPoliciesForTarget'
-          ],
-          resources: ['*']
-        }),
-        description: 'Organizations tag policy read access',
-        complianceRequirement: 'Least privilege IAM access for tag policy read operations'
+    // Handle granular actions override or use multi-statement approach
+    if (context.directive.actions) {
+      const resolvedActions = resolveActions(
+        context.directive,
+        context,
+        (acc) => this.getTagPolicyActionsForAccess(acc),
+        'organizations'
+      );
+      const statement = new PolicyStatement({
+        effect: Effect.ALLOW,
+        actions: resolvedActions,
+        resources: ['*']
       });
-    }
+      iamPolicies.push({
+        statement,
+        description: 'Organizations tag policy access permissions (granular actions)',
+        complianceRequirement: 'Least privilege IAM access'
+      });
+    } else {
+      if (access === 'read' || access === 'readwrite') {
+        iamPolicies.push({
+          statement: new PolicyStatement({
+            effect: Effect.ALLOW,
+            actions: [
+              'organizations:DescribePolicy',
+              'organizations:ListPolicies',
+              'organizations:ListPoliciesForTarget'
+            ],
+            resources: ['*']
+          }),
+          description: 'Organizations tag policy read access',
+          complianceRequirement: 'Least privilege IAM access for tag policy read operations'
+        });
+      }
 
-    if (access === 'write' || access === 'readwrite' || access === 'admin') {
-      iamPolicies.push({
-        statement: new PolicyStatement({
-          effect: Effect.ALLOW,
-          actions: [
-            'organizations:CreatePolicy',
-            'organizations:UpdatePolicy',
-            'organizations:DeletePolicy',
-            'organizations:AttachPolicy',
-            'organizations:DetachPolicy'
-          ],
-          resources: ['*']
-        }),
-        description: 'Organizations tag policy write access',
-        complianceRequirement: 'Least privilege IAM access for tag policy write operations'
-      });
+      if (access === 'write' || access === 'readwrite' || access === 'admin') {
+        iamPolicies.push({
+          statement: new PolicyStatement({
+            effect: Effect.ALLOW,
+            actions: [
+              'organizations:CreatePolicy',
+              'organizations:UpdatePolicy',
+              'organizations:DeletePolicy',
+              'organizations:AttachPolicy',
+              'organizations:DetachPolicy'
+            ],
+            resources: ['*']
+          }),
+          description: 'Organizations tag policy write access',
+          complianceRequirement: 'Least privilege IAM access for tag policy write operations'
+        });
+      }
     }
 
     return {
@@ -391,38 +433,58 @@ export class OrganizationsBinderStrategy extends UnifiedBinderStrategyBase {
       AWS_ORGANIZATIONS_MASTER_ACCOUNT_ID: targetData.masterAccountId
     };
 
-    if (access === 'read' || access === 'readwrite') {
-      iamPolicies.push({
-        statement: new PolicyStatement({
-          effect: Effect.ALLOW,
-          actions: [
-            'organizations:DescribePolicy',
-            'organizations:ListPolicies',
-            'organizations:ListPoliciesForTarget'
-          ],
-          resources: ['*']
-        }),
-        description: 'Organizations backup policy read access',
-        complianceRequirement: 'Least privilege IAM access for backup policy read operations'
+    // Handle granular actions override or use multi-statement approach
+    if (context.directive.actions) {
+      const resolvedActions = resolveActions(
+        context.directive,
+        context,
+        (acc) => this.getBackupPolicyActionsForAccess(acc),
+        'organizations'
+      );
+      const statement = new PolicyStatement({
+        effect: Effect.ALLOW,
+        actions: resolvedActions,
+        resources: ['*']
       });
-    }
+      iamPolicies.push({
+        statement,
+        description: 'Organizations backup policy access permissions (granular actions)',
+        complianceRequirement: 'Least privilege IAM access'
+      });
+    } else {
+      if (access === 'read' || access === 'readwrite') {
+        iamPolicies.push({
+          statement: new PolicyStatement({
+            effect: Effect.ALLOW,
+            actions: [
+              'organizations:DescribePolicy',
+              'organizations:ListPolicies',
+              'organizations:ListPoliciesForTarget'
+            ],
+            resources: ['*']
+          }),
+          description: 'Organizations backup policy read access',
+          complianceRequirement: 'Least privilege IAM access for backup policy read operations'
+        });
+      }
 
-    if (access === 'write' || access === 'readwrite' || access === 'admin') {
-      iamPolicies.push({
-        statement: new PolicyStatement({
-          effect: Effect.ALLOW,
-          actions: [
-            'organizations:CreatePolicy',
-            'organizations:UpdatePolicy',
-            'organizations:DeletePolicy',
-            'organizations:AttachPolicy',
-            'organizations:DetachPolicy'
-          ],
-          resources: ['*']
-        }),
-        description: 'Organizations backup policy write access',
-        complianceRequirement: 'Least privilege IAM access for backup policy write operations'
-      });
+      if (access === 'write' || access === 'readwrite' || access === 'admin') {
+        iamPolicies.push({
+          statement: new PolicyStatement({
+            effect: Effect.ALLOW,
+            actions: [
+              'organizations:CreatePolicy',
+              'organizations:UpdatePolicy',
+              'organizations:DeletePolicy',
+              'organizations:AttachPolicy',
+              'organizations:DetachPolicy'
+            ],
+            resources: ['*']
+          }),
+          description: 'Organizations backup policy write access',
+          complianceRequirement: 'Least privilege IAM access for backup policy write operations'
+        });
+      }
     }
 
     return {
@@ -475,51 +537,71 @@ export class OrganizationsBinderStrategy extends UnifiedBinderStrategyBase {
       environmentVariables.AWS_ORGANIZATIONS_OU_PATH = targetData.ouPath;
     }
 
-    if (access === 'read' || access === 'readwrite') {
-      iamPolicies.push({
-        statement: new PolicyStatement({
-          effect: Effect.ALLOW,
-          actions: [
-            'organizations:DescribeOrganizationalUnit',
-            'organizations:ListOrganizationalUnitsForParent',
-            'organizations:ListRoots',
-            'organizations:ListChildren'
-          ],
-          resources: ['*']
-        }),
-        description: 'Organizations OU read access',
-        complianceRequirement: 'Least privilege IAM access for OU read operations'
+    // Handle granular actions override or use multi-statement approach
+    if (context.directive.actions) {
+      const resolvedActions = resolveActions(
+        context.directive,
+        context,
+        (acc) => this.getOuActionsForAccess(acc),
+        'organizations'
+      );
+      const statement = new PolicyStatement({
+        effect: Effect.ALLOW,
+        actions: resolvedActions,
+        resources: ['*']
       });
-    }
+      iamPolicies.push({
+        statement,
+        description: 'Organizations OU access permissions (granular actions)',
+        complianceRequirement: 'Least privilege IAM access'
+      });
+    } else {
+      if (access === 'read' || access === 'readwrite') {
+        iamPolicies.push({
+          statement: new PolicyStatement({
+            effect: Effect.ALLOW,
+            actions: [
+              'organizations:DescribeOrganizationalUnit',
+              'organizations:ListOrganizationalUnitsForParent',
+              'organizations:ListRoots',
+              'organizations:ListChildren'
+            ],
+            resources: ['*']
+          }),
+          description: 'Organizations OU read access',
+          complianceRequirement: 'Least privilege IAM access for OU read operations'
+        });
+      }
 
-    if (access === 'write' || access === 'readwrite' || access === 'admin') {
-      iamPolicies.push({
-        statement: new PolicyStatement({
-          effect: Effect.ALLOW,
-          actions: [
-            'organizations:CreateOrganizationalUnit',
-            'organizations:UpdateOrganizationalUnit',
-            'organizations:DeleteOrganizationalUnit',
-            'organizations:MoveAccount'
-          ],
-          resources: ['*']
-        }),
-        description: 'Organizations OU write access',
-        complianceRequirement: 'Least privilege IAM access for OU write operations'
-      });
-    }
+      if (access === 'write' || access === 'readwrite' || access === 'admin') {
+        iamPolicies.push({
+          statement: new PolicyStatement({
+            effect: Effect.ALLOW,
+            actions: [
+              'organizations:CreateOrganizationalUnit',
+              'organizations:UpdateOrganizationalUnit',
+              'organizations:DeleteOrganizationalUnit',
+              'organizations:MoveAccount'
+            ],
+            resources: ['*']
+          }),
+          description: 'Organizations OU write access',
+          complianceRequirement: 'Least privilege IAM access for OU write operations'
+        });
+      }
 
-    // Gate admin access behind explicit option
-    if (access === 'admin' && options?.requireFullAdminAccess) {
-      iamPolicies.push({
-        statement: new PolicyStatement({
-          effect: Effect.ALLOW,
-          actions: ['organizations:*'],
-          resources: ['*']
-        }),
-        description: 'Organizations OU admin access',
-        complianceRequirement: 'Full Organizations access for admin operations (explicitly requested)'
-      });
+      // Gate admin access behind explicit option
+      if (access === 'admin' && options?.requireFullAdminAccess) {
+        iamPolicies.push({
+          statement: new PolicyStatement({
+            effect: Effect.ALLOW,
+            actions: ['organizations:*'],
+            resources: ['*']
+          }),
+          description: 'Organizations OU admin access',
+          complianceRequirement: 'Full Organizations access for admin operations (explicitly requested)'
+        });
+      }
     }
 
     return {
@@ -560,37 +642,57 @@ export class OrganizationsBinderStrategy extends UnifiedBinderStrategyBase {
       AWS_ORGANIZATIONS_MASTER_ACCOUNT_ID: targetData.masterAccountId
     };
 
-    if (access === 'read' || access === 'readwrite') {
-      iamPolicies.push({
-        statement: new PolicyStatement({
-          effect: Effect.ALLOW,
-          actions: [
-            'organizations:DescribeAccount',
-            'organizations:ListAccounts',
-            'organizations:ListAccountsForParent'
-          ],
-          resources: ['*']
-        }),
-        description: 'Organizations account read access',
-        complianceRequirement: 'Least privilege IAM access for account read operations'
+    // Handle granular actions override or use multi-statement approach
+    if (context.directive.actions) {
+      const resolvedActions = resolveActions(
+        context.directive,
+        context,
+        (acc) => this.getAccountActionsForAccess(acc),
+        'organizations'
+      );
+      const statement = new PolicyStatement({
+        effect: Effect.ALLOW,
+        actions: resolvedActions,
+        resources: ['*']
       });
-    }
+      iamPolicies.push({
+        statement,
+        description: 'Organizations account access permissions (granular actions)',
+        complianceRequirement: 'Least privilege IAM access'
+      });
+    } else {
+      if (access === 'read' || access === 'readwrite') {
+        iamPolicies.push({
+          statement: new PolicyStatement({
+            effect: Effect.ALLOW,
+            actions: [
+              'organizations:DescribeAccount',
+              'organizations:ListAccounts',
+              'organizations:ListAccountsForParent'
+            ],
+            resources: ['*']
+          }),
+          description: 'Organizations account read access',
+          complianceRequirement: 'Least privilege IAM access for account read operations'
+        });
+      }
 
-    if (access === 'write' || access === 'readwrite' || access === 'admin') {
-      iamPolicies.push({
-        statement: new PolicyStatement({
-          effect: Effect.ALLOW,
-          actions: [
-            'organizations:CreateAccount',
-            'organizations:CloseAccount',
-            'organizations:MoveAccount',
-            'organizations:UpdateAccount'
-          ],
-          resources: ['*']
-        }),
-        description: 'Organizations account write access',
-        complianceRequirement: 'Least privilege IAM access for account write operations'
-      });
+      if (access === 'write' || access === 'readwrite' || access === 'admin') {
+        iamPolicies.push({
+          statement: new PolicyStatement({
+            effect: Effect.ALLOW,
+            actions: [
+              'organizations:CreateAccount',
+              'organizations:CloseAccount',
+              'organizations:MoveAccount',
+              'organizations:UpdateAccount'
+            ],
+            resources: ['*']
+          }),
+          description: 'Organizations account write access',
+          complianceRequirement: 'Least privilege IAM access for account write operations'
+        });
+      }
     }
 
     return {
@@ -629,34 +731,54 @@ export class OrganizationsBinderStrategy extends UnifiedBinderStrategyBase {
       AWS_ORGANIZATIONS_MASTER_ACCOUNT_ID: targetData.masterAccountId
     };
 
-    if (access === 'read' || access === 'readwrite') {
-      iamPolicies.push({
-        statement: new PolicyStatement({
-          effect: Effect.ALLOW,
-          actions: [
-            'organizations:ListAWSServiceAccessForOrganization',
-            'organizations:DescribeOrganization'
-          ],
-          resources: ['*']
-        }),
-        description: 'Organizations AI services opt-out read access',
-        complianceRequirement: 'Least privilege IAM access for AI services opt-out read operations'
+    // Handle granular actions override or use multi-statement approach
+    if (context.directive.actions) {
+      const resolvedActions = resolveActions(
+        context.directive,
+        context,
+        (acc) => this.getAiServicesOptOutActionsForAccess(acc),
+        'organizations'
+      );
+      const statement = new PolicyStatement({
+        effect: Effect.ALLOW,
+        actions: resolvedActions,
+        resources: ['*']
       });
-    }
+      iamPolicies.push({
+        statement,
+        description: 'Organizations AI services opt-out access permissions (granular actions)',
+        complianceRequirement: 'Least privilege IAM access'
+      });
+    } else {
+      if (access === 'read' || access === 'readwrite') {
+        iamPolicies.push({
+          statement: new PolicyStatement({
+            effect: Effect.ALLOW,
+            actions: [
+              'organizations:ListAWSServiceAccessForOrganization',
+              'organizations:DescribeOrganization'
+            ],
+            resources: ['*']
+          }),
+          description: 'Organizations AI services opt-out read access',
+          complianceRequirement: 'Least privilege IAM access for AI services opt-out read operations'
+        });
+      }
 
-    if (access === 'write' || access === 'readwrite' || access === 'admin') {
-      iamPolicies.push({
-        statement: new PolicyStatement({
-          effect: Effect.ALLOW,
-          actions: [
-            'organizations:EnableAWSServiceAccess',
-            'organizations:DisableAWSServiceAccess'
-          ],
-          resources: ['*']
-        }),
-        description: 'Organizations AI services opt-out write access',
-        complianceRequirement: 'Least privilege IAM access for AI services opt-out write operations'
-      });
+      if (access === 'write' || access === 'readwrite' || access === 'admin') {
+        iamPolicies.push({
+          statement: new PolicyStatement({
+            effect: Effect.ALLOW,
+            actions: [
+              'organizations:EnableAWSServiceAccess',
+              'organizations:DisableAWSServiceAccess'
+            ],
+            resources: ['*']
+          }),
+          description: 'Organizations AI services opt-out write access',
+          complianceRequirement: 'Least privilege IAM access for AI services opt-out write operations'
+        });
+      }
     }
 
     return {
@@ -695,37 +817,57 @@ export class OrganizationsBinderStrategy extends UnifiedBinderStrategyBase {
       AWS_ORGANIZATIONS_MASTER_ACCOUNT_ID: targetData.masterAccountId
     };
 
-    if (access === 'read' || access === 'readwrite') {
-      iamPolicies.push({
-        statement: new PolicyStatement({
-          effect: Effect.ALLOW,
-          actions: [
-            'organizations:ListAWSServiceAccessForOrganization',
-            'iam:GetRole',
-            'iam:ListRoles'
-          ],
-          resources: ['*']
-        }),
-        description: 'Organizations service-linked role read access',
-        complianceRequirement: 'Least privilege IAM access for service-linked role read operations'
+    // Handle granular actions override or use multi-statement approach
+    if (context.directive.actions) {
+      const resolvedActions = resolveActions(
+        context.directive,
+        context,
+        (acc) => this.getServiceLinkedRoleActionsForAccess(acc),
+        'organizations'
+      );
+      const statement = new PolicyStatement({
+        effect: Effect.ALLOW,
+        actions: resolvedActions,
+        resources: ['*']
       });
-    }
+      iamPolicies.push({
+        statement,
+        description: 'Organizations service-linked role access permissions (granular actions)',
+        complianceRequirement: 'Least privilege IAM access'
+      });
+    } else {
+      if (access === 'read' || access === 'readwrite') {
+        iamPolicies.push({
+          statement: new PolicyStatement({
+            effect: Effect.ALLOW,
+            actions: [
+              'organizations:ListAWSServiceAccessForOrganization',
+              'iam:GetRole',
+              'iam:ListRoles'
+            ],
+            resources: ['*']
+          }),
+          description: 'Organizations service-linked role read access',
+          complianceRequirement: 'Least privilege IAM access for service-linked role read operations'
+        });
+      }
 
-    if (access === 'write' || access === 'readwrite' || access === 'admin') {
-      iamPolicies.push({
-        statement: new PolicyStatement({
-          effect: Effect.ALLOW,
-          actions: [
-            'organizations:EnableAWSServiceAccess',
-            'organizations:DisableAWSServiceAccess',
-            'iam:CreateServiceLinkedRole',
-            'iam:DeleteServiceLinkedRole'
-          ],
-          resources: ['*']
-        }),
-        description: 'Organizations service-linked role write access',
-        complianceRequirement: 'Least privilege IAM access for service-linked role write operations'
-      });
+      if (access === 'write' || access === 'readwrite' || access === 'admin') {
+        iamPolicies.push({
+          statement: new PolicyStatement({
+            effect: Effect.ALLOW,
+            actions: [
+              'organizations:EnableAWSServiceAccess',
+              'organizations:DisableAWSServiceAccess',
+              'iam:CreateServiceLinkedRole',
+              'iam:DeleteServiceLinkedRole'
+            ],
+            resources: ['*']
+          }),
+          description: 'Organizations service-linked role write access',
+          complianceRequirement: 'Least privilege IAM access for service-linked role write operations'
+        });
+      }
     }
 
     return {
@@ -733,6 +875,265 @@ export class OrganizationsBinderStrategy extends UnifiedBinderStrategyBase {
       environmentVariables,
       securityGroupRules: []
     };
+  }
+
+  /**
+   * Get SCP actions based on access level
+   * Used by resolveActions to compute base actions from coarse access level
+   * 
+   * @param access - Access level (read, write, readwrite, admin)
+   * @returns Array of IAM action strings
+   */
+  private getScpActionsForAccess(access: string): string[] {
+    switch (access) {
+      case 'read':
+        return [
+          'organizations:DescribePolicy',
+          'organizations:ListPolicies',
+          'organizations:ListPoliciesForTarget',
+          'organizations:DescribeOrganization',
+          'organizations:ListRoots'
+        ];
+      case 'write':
+        return [
+          'organizations:CreatePolicy',
+          'organizations:UpdatePolicy',
+          'organizations:DeletePolicy',
+          'organizations:AttachPolicy',
+          'organizations:DetachPolicy',
+          'organizations:EnablePolicyType',
+          'organizations:DisablePolicyType'
+        ];
+      case 'readwrite':
+        return [
+          'organizations:DescribePolicy',
+          'organizations:ListPolicies',
+          'organizations:ListPoliciesForTarget',
+          'organizations:DescribeOrganization',
+          'organizations:ListRoots',
+          'organizations:CreatePolicy',
+          'organizations:UpdatePolicy',
+          'organizations:DeletePolicy',
+          'organizations:AttachPolicy',
+          'organizations:DetachPolicy',
+          'organizations:EnablePolicyType',
+          'organizations:DisablePolicyType'
+        ];
+      case 'admin':
+        return ['organizations:*'];
+      default:
+        throw new Error(`Unsupported SCP access level: ${access}`);
+    }
+  }
+
+  /**
+   * Get tag policy actions based on access level
+   */
+  private getTagPolicyActionsForAccess(access: string): string[] {
+    switch (access) {
+      case 'read':
+        return [
+          'organizations:DescribePolicy',
+          'organizations:ListPolicies',
+          'organizations:ListPoliciesForTarget'
+        ];
+      case 'write':
+        return [
+          'organizations:CreatePolicy',
+          'organizations:UpdatePolicy',
+          'organizations:DeletePolicy',
+          'organizations:AttachPolicy',
+          'organizations:DetachPolicy'
+        ];
+      case 'readwrite':
+        return [
+          'organizations:DescribePolicy',
+          'organizations:ListPolicies',
+          'organizations:ListPoliciesForTarget',
+          'organizations:CreatePolicy',
+          'organizations:UpdatePolicy',
+          'organizations:DeletePolicy',
+          'organizations:AttachPolicy',
+          'organizations:DetachPolicy'
+        ];
+      case 'admin':
+        return ['organizations:*'];
+      default:
+        throw new Error(`Unsupported tag policy access level: ${access}`);
+    }
+  }
+
+  /**
+   * Get backup policy actions based on access level
+   */
+  private getBackupPolicyActionsForAccess(access: string): string[] {
+    switch (access) {
+      case 'read':
+        return [
+          'organizations:DescribePolicy',
+          'organizations:ListPolicies',
+          'organizations:ListPoliciesForTarget'
+        ];
+      case 'write':
+        return [
+          'organizations:CreatePolicy',
+          'organizations:UpdatePolicy',
+          'organizations:DeletePolicy',
+          'organizations:AttachPolicy',
+          'organizations:DetachPolicy'
+        ];
+      case 'readwrite':
+        return [
+          'organizations:DescribePolicy',
+          'organizations:ListPolicies',
+          'organizations:ListPoliciesForTarget',
+          'organizations:CreatePolicy',
+          'organizations:UpdatePolicy',
+          'organizations:DeletePolicy',
+          'organizations:AttachPolicy',
+          'organizations:DetachPolicy'
+        ];
+      case 'admin':
+        return ['organizations:*'];
+      default:
+        throw new Error(`Unsupported backup policy access level: ${access}`);
+    }
+  }
+
+  /**
+   * Get OU actions based on access level
+   */
+  private getOuActionsForAccess(access: string): string[] {
+    switch (access) {
+      case 'read':
+        return [
+          'organizations:DescribeOrganizationalUnit',
+          'organizations:ListOrganizationalUnitsForParent',
+          'organizations:ListRoots',
+          'organizations:ListChildren'
+        ];
+      case 'write':
+        return [
+          'organizations:CreateOrganizationalUnit',
+          'organizations:UpdateOrganizationalUnit',
+          'organizations:DeleteOrganizationalUnit',
+          'organizations:MoveAccount'
+        ];
+      case 'readwrite':
+        return [
+          'organizations:DescribeOrganizationalUnit',
+          'organizations:ListOrganizationalUnitsForParent',
+          'organizations:ListRoots',
+          'organizations:ListChildren',
+          'organizations:CreateOrganizationalUnit',
+          'organizations:UpdateOrganizationalUnit',
+          'organizations:DeleteOrganizationalUnit',
+          'organizations:MoveAccount'
+        ];
+      case 'admin':
+        return ['organizations:*'];
+      default:
+        throw new Error(`Unsupported OU access level: ${access}`);
+    }
+  }
+
+  /**
+   * Get account actions based on access level
+   */
+  private getAccountActionsForAccess(access: string): string[] {
+    switch (access) {
+      case 'read':
+        return [
+          'organizations:DescribeAccount',
+          'organizations:ListAccounts',
+          'organizations:ListAccountsForParent'
+        ];
+      case 'write':
+        return [
+          'organizations:CreateAccount',
+          'organizations:CloseAccount',
+          'organizations:MoveAccount',
+          'organizations:UpdateAccount'
+        ];
+      case 'readwrite':
+        return [
+          'organizations:DescribeAccount',
+          'organizations:ListAccounts',
+          'organizations:ListAccountsForParent',
+          'organizations:CreateAccount',
+          'organizations:CloseAccount',
+          'organizations:MoveAccount',
+          'organizations:UpdateAccount'
+        ];
+      case 'admin':
+        return ['organizations:*'];
+      default:
+        throw new Error(`Unsupported account access level: ${access}`);
+    }
+  }
+
+  /**
+   * Get AI services opt-out actions based on access level
+   */
+  private getAiServicesOptOutActionsForAccess(access: string): string[] {
+    switch (access) {
+      case 'read':
+        return [
+          'organizations:ListAWSServiceAccessForOrganization',
+          'organizations:DescribeOrganization'
+        ];
+      case 'write':
+        return [
+          'organizations:EnableAWSServiceAccess',
+          'organizations:DisableAWSServiceAccess'
+        ];
+      case 'readwrite':
+        return [
+          'organizations:ListAWSServiceAccessForOrganization',
+          'organizations:DescribeOrganization',
+          'organizations:EnableAWSServiceAccess',
+          'organizations:DisableAWSServiceAccess'
+        ];
+      case 'admin':
+        return ['organizations:*'];
+      default:
+        throw new Error(`Unsupported AI services opt-out access level: ${access}`);
+    }
+  }
+
+  /**
+   * Get service-linked role actions based on access level
+   */
+  private getServiceLinkedRoleActionsForAccess(access: string): string[] {
+    switch (access) {
+      case 'read':
+        return [
+          'organizations:ListAWSServiceAccessForOrganization',
+          'iam:GetRole',
+          'iam:ListRoles'
+        ];
+      case 'write':
+        return [
+          'organizations:EnableAWSServiceAccess',
+          'organizations:DisableAWSServiceAccess',
+          'iam:CreateServiceLinkedRole',
+          'iam:DeleteServiceLinkedRole'
+        ];
+      case 'readwrite':
+        return [
+          'organizations:ListAWSServiceAccessForOrganization',
+          'iam:GetRole',
+          'iam:ListRoles',
+          'organizations:EnableAWSServiceAccess',
+          'organizations:DisableAWSServiceAccess',
+          'iam:CreateServiceLinkedRole',
+          'iam:DeleteServiceLinkedRole'
+        ];
+      case 'admin':
+        return ['organizations:*', 'iam:*'];
+      default:
+        throw new Error(`Unsupported service-linked role access level: ${access}`);
+    }
   }
 }
 

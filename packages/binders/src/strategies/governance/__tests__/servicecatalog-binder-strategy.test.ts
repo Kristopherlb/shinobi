@@ -79,6 +79,67 @@ describe('ServiceCatalogBinderStrategy', () => {
     });
   });
 
-  // TODO: Add more test cases as needed
+  describe('ServiceCatalogBind__CustomActionsOverride__ReplacesCoarseActions', () => {
+    const metadata = {
+      id: 'TP-binders-governance-servicecatalog-002',
+      level: 'unit' as const,
+      capability: 'Custom actions override replaces default Service Catalog actions',
+      oracle: 'exact' as const,
+      determinism: 'deterministic' as const,
+      naming: { pattern: 'ServiceCatalogBind__Condition__Outcome', example: 'ServiceCatalogBind__CustomActionsOverride__ReplacesCoarseActions' },
+      invariants: [
+        'IAM policy actions match provided custom actions array',
+        'Default Service Catalog actions are not included when custom actions provided',
+        'Actions array is used directly (replaces coarse access)'
+      ],
+      fixtures: ['MockSourceComponent', 'MockTargetComponent'],
+      inputs: {
+        shape: 'BindingContext with catalog:portfolio capability and directive.actions array',
+        notes: 'Granular actions override test'
+      },
+      risks: [],
+      dependencies: ['action-resolver'],
+      evidence: [],
+      compliance_refs: ['docs/platform-standards/platform-iam-auditing-standard.md'],
+      ai_generated: true,
+      human_reviewed_by: 'Platform Engineering'
+    };
+
+    test('ServiceCatalogBind__CustomActionsOverride__ReplacesCoarseActions', async () => {
+      const strategy = new ServiceCatalogBinderStrategy();
+      const customActions = ['servicecatalog:DescribePortfolio', 'servicecatalog:ListPortfolios'];
+      const target = createMockTargetComponent('servicecatalog', {
+        'catalog:portfolio': {
+          portfolioArn: 'arn:aws:catalog:us-east-1:123456789012:portfolio/port-1234567890'
+        },
+      });
+
+      const context = createBindingContext({
+        source: createMockSourceComponent('lambda-governance', 'test-source'),
+        target,
+        capability: 'catalog:portfolio',
+        access: 'read',
+        actions: customActions
+      });
+
+      const result = await executeUnifiedBinding(strategy, context);
+
+      assertEnhancedBindingResult(result);
+
+      expect(result.iamPolicies.length).toBeGreaterThan(0);
+      const policy = result.iamPolicies.find(p => p.description.includes('granular actions'));
+      expect(policy).toBeDefined();
+      
+      const statementJson = policy!.statement.toStatementJson();
+      const actions = Array.isArray(statementJson.Action)
+        ? statementJson.Action
+        : [statementJson.Action];
+
+      // Primary assertion: Custom actions are used, default actions are not
+      expect(actions).toEqual(customActions);
+      expect(actions).not.toContain('servicecatalog:ListPortfolioAccess');
+      expect(actions).not.toContain('servicecatalog:DescribeProduct');
+    });
+  });
 });
 

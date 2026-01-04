@@ -3,7 +3,7 @@
  * Handles catalog:portfolio bindings with mandatory compliance enforcement
  */
 
-import { UnifiedBinderStrategyBase } from '@shinobi/core';
+import { UnifiedBinderStrategyBase, resolveActions } from '@shinobi/core';
 import type { BindingContext, EnhancedBindingResult, CompatibilityEntry } from '@shinobi/core';
 import type { IamPolicy } from '@shinobi/core';
 import { PolicyStatement, Effect } from 'aws-cdk-lib/aws-iam';
@@ -128,51 +128,73 @@ export class ServiceCatalogBinderStrategy extends UnifiedBinderStrategyBase {
       environmentVariables.AWS_SERVICE_CATALOG_ACCEPTED_PORTFOLIO_STATUS = targetData.acceptedPortfolioStatus;
     }
 
-    // IAM policies for Service Catalog portfolio operations
-    if (access === 'read' || access === 'readwrite') {
-      iamPolicies.push({
-        statement: new PolicyStatement({
-          effect: Effect.ALLOW,
-          actions: [
-            'servicecatalog:DescribePortfolio',
-            'servicecatalog:ListPortfolios',
-            'servicecatalog:ListPortfolioAccess',
-            'servicecatalog:DescribeProduct',
-            'servicecatalog:ListProducts',
-            'servicecatalog:DescribeProvisioningArtifact',
-            'servicecatalog:ListProvisioningArtifacts'
-          ],
-          resources: [targetData.portfolioArn]
-        }),
-        description: 'Service Catalog portfolio read access',
-        complianceRequirement: 'Least privilege IAM access for Service Catalog read operations'
-      });
-    }
+    // Handle granular actions override or use multi-statement approach
+    if (context.directive.actions) {
+      // Granular actions provided: create single statement with resolved actions
+      const resolvedActions = resolveActions(
+        context.directive,
+        context,
+        (acc) => this.getServiceCatalogActionsForAccess(acc),
+        'servicecatalog'
+      );
 
-    if (access === 'write' || access === 'readwrite' || access === 'admin') {
-      iamPolicies.push({
-        statement: new PolicyStatement({
-          effect: Effect.ALLOW,
-          actions: [
-            'servicecatalog:CreatePortfolio',
-            'servicecatalog:UpdatePortfolio',
-            'servicecatalog:DeletePortfolio',
-            'servicecatalog:AssociatePrincipalWithPortfolio',
-            'servicecatalog:DisassociatePrincipalFromPortfolio',
-            'servicecatalog:AssociateProductWithPortfolio',
-            'servicecatalog:DisassociateProductFromPortfolio',
-            'servicecatalog:CreateProduct',
-            'servicecatalog:UpdateProduct',
-            'servicecatalog:DeleteProduct',
-            'servicecatalog:CreateProvisioningArtifact',
-            'servicecatalog:UpdateProvisioningArtifact',
-            'servicecatalog:DeleteProvisioningArtifact'
-          ],
-          resources: [targetData.portfolioArn]
-        }),
-        description: 'Service Catalog portfolio write access',
-        complianceRequirement: 'Least privilege IAM access for Service Catalog write operations'
+      const statement = new PolicyStatement({
+        effect: Effect.ALLOW,
+        actions: resolvedActions,
+        resources: [targetData.portfolioArn]
       });
+      iamPolicies.push({
+        statement,
+        description: 'Service Catalog portfolio access permissions (granular actions)',
+        complianceRequirement: 'Least privilege IAM access'
+      });
+    } else {
+      // Coarse access levels: use multi-statement approach (backward compatible)
+      if (access === 'read' || access === 'readwrite') {
+        iamPolicies.push({
+          statement: new PolicyStatement({
+            effect: Effect.ALLOW,
+            actions: [
+              'servicecatalog:DescribePortfolio',
+              'servicecatalog:ListPortfolios',
+              'servicecatalog:ListPortfolioAccess',
+              'servicecatalog:DescribeProduct',
+              'servicecatalog:ListProducts',
+              'servicecatalog:DescribeProvisioningArtifact',
+              'servicecatalog:ListProvisioningArtifacts'
+            ],
+            resources: [targetData.portfolioArn]
+          }),
+          description: 'Service Catalog portfolio read access',
+          complianceRequirement: 'Least privilege IAM access for Service Catalog read operations'
+        });
+      }
+
+      if (access === 'write' || access === 'readwrite' || access === 'admin') {
+        iamPolicies.push({
+          statement: new PolicyStatement({
+            effect: Effect.ALLOW,
+            actions: [
+              'servicecatalog:CreatePortfolio',
+              'servicecatalog:UpdatePortfolio',
+              'servicecatalog:DeletePortfolio',
+              'servicecatalog:AssociatePrincipalWithPortfolio',
+              'servicecatalog:DisassociatePrincipalFromPortfolio',
+              'servicecatalog:AssociateProductWithPortfolio',
+              'servicecatalog:DisassociateProductFromPortfolio',
+              'servicecatalog:CreateProduct',
+              'servicecatalog:UpdateProduct',
+              'servicecatalog:DeleteProduct',
+              'servicecatalog:CreateProvisioningArtifact',
+              'servicecatalog:UpdateProvisioningArtifact',
+              'servicecatalog:DeleteProvisioningArtifact'
+            ],
+            resources: [targetData.portfolioArn]
+          }),
+          description: 'Service Catalog portfolio write access',
+          complianceRequirement: 'Least privilege IAM access for Service Catalog write operations'
+        });
+      }
 
       // Constraint and tag option support
       if (targetData.constraintId || options?.requireSecureAccess) {
@@ -283,6 +305,73 @@ export class ServiceCatalogBinderStrategy extends UnifiedBinderStrategyBase {
       environmentVariables,
       securityGroupRules: []
     };
+  }
+
+  /**
+   * Get Service Catalog actions based on access level
+   * Used by resolveActions to compute base actions from coarse access level
+   * 
+   * @param access - Access level (read, write, readwrite, admin)
+   * @returns Array of IAM action strings
+   */
+  private getServiceCatalogActionsForAccess(access: string): string[] {
+    switch (access) {
+      case 'read':
+        return [
+          'servicecatalog:DescribePortfolio',
+          'servicecatalog:ListPortfolios',
+          'servicecatalog:ListPortfolioAccess',
+          'servicecatalog:DescribeProduct',
+          'servicecatalog:ListProducts',
+          'servicecatalog:DescribeProvisioningArtifact',
+          'servicecatalog:ListProvisioningArtifacts'
+        ];
+      case 'write':
+        return [
+          'servicecatalog:CreatePortfolio',
+          'servicecatalog:UpdatePortfolio',
+          'servicecatalog:DeletePortfolio',
+          'servicecatalog:AssociatePrincipalWithPortfolio',
+          'servicecatalog:DisassociatePrincipalFromPortfolio',
+          'servicecatalog:AssociateProductWithPortfolio',
+          'servicecatalog:DisassociateProductFromPortfolio',
+          'servicecatalog:CreateProduct',
+          'servicecatalog:UpdateProduct',
+          'servicecatalog:DeleteProduct',
+          'servicecatalog:CreateProvisioningArtifact',
+          'servicecatalog:UpdateProvisioningArtifact',
+          'servicecatalog:DeleteProvisioningArtifact'
+        ];
+      case 'readwrite':
+        return [
+          'servicecatalog:DescribePortfolio',
+          'servicecatalog:ListPortfolios',
+          'servicecatalog:ListPortfolioAccess',
+          'servicecatalog:DescribeProduct',
+          'servicecatalog:ListProducts',
+          'servicecatalog:DescribeProvisioningArtifact',
+          'servicecatalog:ListProvisioningArtifacts',
+          'servicecatalog:CreatePortfolio',
+          'servicecatalog:UpdatePortfolio',
+          'servicecatalog:DeletePortfolio',
+          'servicecatalog:AssociatePrincipalWithPortfolio',
+          'servicecatalog:DisassociatePrincipalFromPortfolio',
+          'servicecatalog:AssociateProductWithPortfolio',
+          'servicecatalog:DisassociateProductFromPortfolio',
+          'servicecatalog:CreateProduct',
+          'servicecatalog:UpdateProduct',
+          'servicecatalog:DeleteProduct',
+          'servicecatalog:CreateProvisioningArtifact',
+          'servicecatalog:UpdateProvisioningArtifact',
+          'servicecatalog:DeleteProvisioningArtifact'
+        ];
+      case 'admin':
+        return [
+          'servicecatalog:*'
+        ];
+      default:
+        throw new Error(`Unsupported Service Catalog access level: ${access}`);
+    }
   }
 }
 

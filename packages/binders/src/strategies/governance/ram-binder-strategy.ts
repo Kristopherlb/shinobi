@@ -7,7 +7,7 @@
  * - org:ram-share - Organization-wide resource sharing
  */
 
-import { UnifiedBinderStrategyBase } from '@shinobi/core';
+import { UnifiedBinderStrategyBase, resolveActions } from '@shinobi/core';
 import type { BindingContext, EnhancedBindingResult, CompatibilityEntry } from '@shinobi/core';
 import type { IamPolicy } from '@shinobi/core';
 import { PolicyStatement, Effect } from 'aws-cdk-lib/aws-iam';
@@ -141,76 +141,98 @@ export class RAMBinderStrategy extends UnifiedBinderStrategyBase {
       environmentVariables.AWS_RAM_RESOURCE_SHARE_STATUS = targetData.status;
     }
 
-    // IAM policies for RAM resource share operations
-    if (access === 'read' || access === 'readwrite') {
-      iamPolicies.push({
-        statement: new PolicyStatement({
-          effect: Effect.ALLOW,
-          actions: [
-            'ram:GetResourceShare',
-            'ram:ListResourceShares',
-            'ram:GetResourceShareAssociations',
-            'ram:ListResourceShareAssociations',
-            'ram:GetResourceShareInvitations',
-            'ram:ListResourceShareInvitations',
-            'ram:ListPrincipals',
-            'ram:ListResources'
-          ],
-          resources: [targetData.resourceShareArn]
-        }),
-        description: 'AWS RAM resource share read access',
-        complianceRequirement: 'Least privilege IAM access for AWS RAM read operations'
-      });
-    }
+    // Handle granular actions override or use multi-statement approach
+    if (context.directive.actions) {
+      // Granular actions provided: create single statement with resolved actions
+      const resolvedActions = resolveActions(
+        context.directive,
+        context,
+        (acc) => this.getRamResourceShareActionsForAccess(acc),
+        'ram'
+      );
 
-    if (access === 'write' || access === 'readwrite' || access === 'admin') {
-      iamPolicies.push({
-        statement: new PolicyStatement({
-          effect: Effect.ALLOW,
-          actions: [
-            'ram:CreateResourceShare',
-            'ram:UpdateResourceShare',
-            'ram:DeleteResourceShare',
-            'ram:AssociateResourceShare',
-            'ram:DisassociateResourceShare',
-            'ram:AcceptResourceShareInvitation',
-            'ram:RejectResourceShareInvitation'
-          ],
-          resources: [targetData.resourceShareArn]
-        }),
-        description: 'AWS RAM resource share write access',
-        complianceRequirement: 'Least privilege IAM access for AWS RAM write operations'
+      const statement = new PolicyStatement({
+        effect: Effect.ALLOW,
+        actions: resolvedActions,
+        resources: [targetData.resourceShareArn]
       });
-
-      // Resource share invitation acceptance/rejection
-      if (targetData.invitationId) {
+      iamPolicies.push({
+        statement,
+        description: 'AWS RAM resource share access permissions (granular actions)',
+        complianceRequirement: 'Least privilege IAM access'
+      });
+    } else {
+      // Coarse access levels: use multi-statement approach (backward compatible)
+      if (access === 'read' || access === 'readwrite') {
         iamPolicies.push({
           statement: new PolicyStatement({
             effect: Effect.ALLOW,
             actions: [
-              'ram:AcceptResourceShareInvitation',
-              'ram:RejectResourceShareInvitation',
-              'ram:GetResourceShareInvitations'
+              'ram:GetResourceShare',
+              'ram:ListResourceShares',
+              'ram:GetResourceShareAssociations',
+              'ram:ListResourceShareAssociations',
+              'ram:GetResourceShareInvitations',
+              'ram:ListResourceShareInvitations',
+              'ram:ListPrincipals',
+              'ram:ListResources'
             ],
             resources: [targetData.resourceShareArn]
           }),
-          description: 'RAM resource share invitation management',
-          complianceRequirement: 'Least privilege IAM access for resource share invitation operations'
+          description: 'AWS RAM resource share read access',
+          complianceRequirement: 'Least privilege IAM access for AWS RAM read operations'
         });
       }
-    }
 
-    // Admin access (full RAM permissions)
-    if (access === 'admin' && options?.requireFullAdminAccess) {
-      iamPolicies.push({
-        statement: new PolicyStatement({
-          effect: Effect.ALLOW,
-          actions: ['ram:*'],
-          resources: ['*']
-        }),
-        description: 'AWS RAM admin access',
-        complianceRequirement: 'Full admin access to AWS RAM (requires explicit requireFullAdminAccess option)'
-      });
+      if (access === 'write' || access === 'readwrite' || access === 'admin') {
+        iamPolicies.push({
+          statement: new PolicyStatement({
+            effect: Effect.ALLOW,
+            actions: [
+              'ram:CreateResourceShare',
+              'ram:UpdateResourceShare',
+              'ram:DeleteResourceShare',
+              'ram:AssociateResourceShare',
+              'ram:DisassociateResourceShare',
+              'ram:AcceptResourceShareInvitation',
+              'ram:RejectResourceShareInvitation'
+            ],
+            resources: [targetData.resourceShareArn]
+          }),
+          description: 'AWS RAM resource share write access',
+          complianceRequirement: 'Least privilege IAM access for AWS RAM write operations'
+        });
+
+        // Resource share invitation acceptance/rejection
+        if (targetData.invitationId) {
+          iamPolicies.push({
+            statement: new PolicyStatement({
+              effect: Effect.ALLOW,
+              actions: [
+                'ram:AcceptResourceShareInvitation',
+                'ram:RejectResourceShareInvitation',
+                'ram:GetResourceShareInvitations'
+              ],
+              resources: [targetData.resourceShareArn]
+            }),
+            description: 'RAM resource share invitation management',
+            complianceRequirement: 'Least privilege IAM access for resource share invitation operations'
+          });
+        }
+      }
+
+      // Admin access (full RAM permissions)
+      if (access === 'admin' && options?.requireFullAdminAccess) {
+        iamPolicies.push({
+          statement: new PolicyStatement({
+            effect: Effect.ALLOW,
+            actions: ['ram:*'],
+            resources: ['*']
+          }),
+          description: 'AWS RAM admin access',
+          complianceRequirement: 'Full admin access to AWS RAM (requires explicit requireFullAdminAccess option)'
+        });
+      }
     }
 
     // Org-only sharing restriction
@@ -294,44 +316,66 @@ export class RAMBinderStrategy extends UnifiedBinderStrategyBase {
       environmentVariables.AWS_RAM_RESOURCE_ARN = targetData.resourceArn;
     }
 
-    // IAM policies for org-wide RAM operations
-    if (access === 'read' || access === 'readwrite') {
-      iamPolicies.push({
-        statement: new PolicyStatement({
-          effect: Effect.ALLOW,
-          actions: [
-            'ram:GetResourceShare',
-            'ram:ListResourceShares',
-            'ram:GetResourceShareAssociations',
-            'organizations:DescribeOrganization',
-            'organizations:ListAccounts',
-            'organizations:ListOrganizationalUnitsForParent'
-          ],
-          resources: [targetData.resourceShareArn, '*']
-        }),
-        description: 'AWS RAM org-wide read access',
-        complianceRequirement: 'Least privilege IAM access for AWS RAM org-wide read operations'
-      });
-    }
+    // Handle granular actions override or use multi-statement approach
+    if (context.directive.actions) {
+      // Granular actions provided: create single statement with resolved actions
+      const resolvedActions = resolveActions(
+        context.directive,
+        context,
+        (acc) => this.getOrgRamShareActionsForAccess(acc),
+        'ram'
+      );
 
-    if (access === 'write' || access === 'readwrite' || access === 'admin') {
-      iamPolicies.push({
-        statement: new PolicyStatement({
-          effect: Effect.ALLOW,
-          actions: [
-            'ram:CreateResourceShare',
-            'ram:UpdateResourceShare',
-            'ram:AssociateResourceShare',
-            'ram:DisassociateResourceShare',
-            'organizations:DescribeOrganization',
-            'organizations:ListAccounts',
-            'organizations:ListOrganizationalUnitsForParent'
-          ],
-          resources: [targetData.resourceShareArn, '*']
-        }),
-        description: 'AWS RAM org-wide write access',
-        complianceRequirement: 'Least privilege IAM access for AWS RAM org-wide write operations'
+      const statement = new PolicyStatement({
+        effect: Effect.ALLOW,
+        actions: resolvedActions,
+        resources: [targetData.resourceShareArn, '*']
       });
+      iamPolicies.push({
+        statement,
+        description: 'AWS RAM org-wide access permissions (granular actions)',
+        complianceRequirement: 'Least privilege IAM access'
+      });
+    } else {
+      // Coarse access levels: use multi-statement approach (backward compatible)
+      if (access === 'read' || access === 'readwrite') {
+        iamPolicies.push({
+          statement: new PolicyStatement({
+            effect: Effect.ALLOW,
+            actions: [
+              'ram:GetResourceShare',
+              'ram:ListResourceShares',
+              'ram:GetResourceShareAssociations',
+              'organizations:DescribeOrganization',
+              'organizations:ListAccounts',
+              'organizations:ListOrganizationalUnitsForParent'
+            ],
+            resources: [targetData.resourceShareArn, '*']
+          }),
+          description: 'AWS RAM org-wide read access',
+          complianceRequirement: 'Least privilege IAM access for AWS RAM org-wide read operations'
+        });
+      }
+
+      if (access === 'write' || access === 'readwrite' || access === 'admin') {
+        iamPolicies.push({
+          statement: new PolicyStatement({
+            effect: Effect.ALLOW,
+            actions: [
+              'ram:CreateResourceShare',
+              'ram:UpdateResourceShare',
+              'ram:AssociateResourceShare',
+              'ram:DisassociateResourceShare',
+              'organizations:DescribeOrganization',
+              'organizations:ListAccounts',
+              'organizations:ListOrganizationalUnitsForParent'
+            ],
+            resources: [targetData.resourceShareArn, '*']
+          }),
+          description: 'AWS RAM org-wide write access',
+          complianceRequirement: 'Least privilege IAM access for AWS RAM org-wide write operations'
+        });
+      }
     }
 
     return {
@@ -339,6 +383,105 @@ export class RAMBinderStrategy extends UnifiedBinderStrategyBase {
       environmentVariables,
       securityGroupRules: []
     };
+  }
+
+  /**
+   * Get RAM resource share actions based on access level
+   * Used by resolveActions to compute base actions from coarse access level
+   * 
+   * @param access - Access level (read, write, readwrite, admin)
+   * @returns Array of IAM action strings
+   */
+  private getRamResourceShareActionsForAccess(access: string): string[] {
+    switch (access) {
+      case 'read':
+        return [
+          'ram:GetResourceShare',
+          'ram:ListResourceShares',
+          'ram:GetResourceShareAssociations',
+          'ram:ListResourceShareAssociations',
+          'ram:GetResourceShareInvitations',
+          'ram:ListResourceShareInvitations',
+          'ram:ListPrincipals',
+          'ram:ListResources'
+        ];
+      case 'write':
+        return [
+          'ram:CreateResourceShare',
+          'ram:UpdateResourceShare',
+          'ram:DeleteResourceShare',
+          'ram:AssociateResourceShare',
+          'ram:DisassociateResourceShare',
+          'ram:AcceptResourceShareInvitation',
+          'ram:RejectResourceShareInvitation'
+        ];
+      case 'readwrite':
+        return [
+          'ram:GetResourceShare',
+          'ram:ListResourceShares',
+          'ram:GetResourceShareAssociations',
+          'ram:ListResourceShareAssociations',
+          'ram:GetResourceShareInvitations',
+          'ram:ListResourceShareInvitations',
+          'ram:ListPrincipals',
+          'ram:ListResources',
+          'ram:CreateResourceShare',
+          'ram:UpdateResourceShare',
+          'ram:DeleteResourceShare',
+          'ram:AssociateResourceShare',
+          'ram:DisassociateResourceShare',
+          'ram:AcceptResourceShareInvitation',
+          'ram:RejectResourceShareInvitation'
+        ];
+      case 'admin':
+        return [
+          'ram:*'
+        ];
+      default:
+        throw new Error(`Unsupported RAM resource share access level: ${access}`);
+    }
+  }
+
+  /**
+   * Get org-wide RAM share actions based on access level
+   * Used by resolveActions to compute base actions from coarse access level
+   * Note: Organizations actions are kept separate for different resource
+   * 
+   * @param access - Access level (read, write, readwrite, admin)
+   * @returns Array of IAM action strings (RAM actions only)
+   */
+  private getOrgRamShareActionsForAccess(access: string): string[] {
+    switch (access) {
+      case 'read':
+        return [
+          'ram:GetResourceShare',
+          'ram:ListResourceShares',
+          'ram:GetResourceShareAssociations'
+        ];
+      case 'write':
+        return [
+          'ram:CreateResourceShare',
+          'ram:UpdateResourceShare',
+          'ram:AssociateResourceShare',
+          'ram:DisassociateResourceShare'
+        ];
+      case 'readwrite':
+        return [
+          'ram:GetResourceShare',
+          'ram:ListResourceShares',
+          'ram:GetResourceShareAssociations',
+          'ram:CreateResourceShare',
+          'ram:UpdateResourceShare',
+          'ram:AssociateResourceShare',
+          'ram:DisassociateResourceShare'
+        ];
+      case 'admin':
+        return [
+          'ram:*'
+        ];
+      default:
+        throw new Error(`Unsupported org-wide RAM share access level: ${access}`);
+    }
   }
 }
 

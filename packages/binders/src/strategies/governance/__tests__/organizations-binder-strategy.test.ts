@@ -352,5 +352,69 @@ describe('OrganizationsBinderStrategy', () => {
       await expect(executeUnifiedBinding(strategy, context)).rejects.toThrow(/orgId/);
     });
   });
+
+  describe('OrganizationsBind__CustomActionsOverride__ReplacesCoarseActions', () => {
+    const metadata = {
+      id: 'TP-binders-governance-organizations-003',
+      level: 'unit' as const,
+      capability: 'Custom actions override replaces default Organizations SCP actions',
+      oracle: 'exact' as const,
+      determinism: 'deterministic' as const,
+      naming: { pattern: 'OrganizationsBind__Condition__Outcome', example: 'OrganizationsBind__CustomActionsOverride__ReplacesCoarseActions' },
+      invariants: [
+        'IAM policy actions match provided custom actions array',
+        'Default Organizations actions are not included when custom actions provided',
+        'Actions array is used directly (replaces coarse access)'
+      ],
+      fixtures: ['MockSourceComponent', 'MockTargetComponent'],
+      inputs: {
+        shape: 'BindingContext with org:scp capability and directive.actions array',
+        notes: 'Granular actions override test'
+      },
+      risks: [],
+      dependencies: ['action-resolver'],
+      evidence: [],
+      compliance_refs: ['docs/platform-standards/platform-iam-auditing-standard.md'],
+      ai_generated: true,
+      human_reviewed_by: 'Platform Engineering'
+    };
+
+    test('OrganizationsBind__CustomActionsOverride__ReplacesCoarseActions', async () => {
+      const strategy = new OrganizationsBinderStrategy();
+      const customActions = ['organizations:DescribePolicy', 'organizations:ListPolicies'];
+      const target = createMockTargetComponent('organizations', {
+        'org:scp': {
+          orgId: 'o-1234567890',
+          masterAccountId: '111111111111'
+        },
+      });
+
+      const context = createBindingContext({
+        source: createMockSourceComponent('lambda-governance', 'test-source'),
+        target,
+        capability: 'org:scp',
+        access: 'read',
+        actions: customActions
+      });
+
+      const result = await executeUnifiedBinding(strategy, context);
+
+      assertEnhancedBindingResult(result);
+
+      expect(result.iamPolicies.length).toBeGreaterThan(0);
+      const policy = result.iamPolicies.find(p => p.description.includes('granular actions'));
+      expect(policy).toBeDefined();
+      
+      const statementJson = policy!.statement.toStatementJson();
+      const actions = Array.isArray(statementJson.Action)
+        ? statementJson.Action
+        : [statementJson.Action];
+
+      // Primary assertion: Custom actions are used, default actions are not
+      expect(actions).toEqual(customActions);
+      expect(actions).not.toContain('organizations:ListPoliciesForTarget');
+      expect(actions).not.toContain('organizations:DescribeOrganization');
+    });
+  });
 });
 
