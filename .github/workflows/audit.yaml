@@ -36,18 +36,5 @@ jobs:
       - name: Install dependencies (pnpm)
         run: pnpm install --frozen-lockfile --loglevel=verbose
       
-      - name: Run governance audit
-        run: pnpm run audit:gov --loglevel=verbose
-      
-      - name: Run testing audit
-        run: pnpm run audit:test --loglevel=verbose
-      
-      - name: Run observability audit
-        run: pnpm run audit:otel --loglevel=verbose
-      
-      - name: Run comprehensive audit
-        run: pnpm run audit:all --loglevel=verbose -- --base origin/main --format pretty
-      
-      - name: Run strict audit (warnings as errors)
-        run: pnpm run audit:all:strict --loglevel=verbose -- --base origin/main --format pretty
-        continue-on-error: true
+      - name: Run platform audit (strict mode)
+        run: pnpm run audit:platform:strict --loglevel=verbose
