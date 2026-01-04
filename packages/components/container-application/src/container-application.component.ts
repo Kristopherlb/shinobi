@@ -14,7 +14,8 @@ import {
   BaseComponent,
   ComponentCapabilities,
   ComponentContext,
-  ComponentSpec
+  ComponentSpec,
+  applySecurityGroupTags
 } from '@shinobi/core';
 import {
   ContainerApplicationComponentConfigBuilder,
@@ -172,9 +173,15 @@ export class ContainerApplicationComponent extends BaseComponent {
       description: `${application.name} container application security group`
     });
 
-    this.tagResource(securityGroup, {
+    this.applyStandardTags(securityGroup, {
       'component': this.getType(),
       'purpose': 'service'
+    });
+
+    // Apply security-group-specific tags (SG-009)
+    applySecurityGroupTags(securityGroup, {
+      ingressPolicy: 'binder-managed',
+      tier: 'app'
     });
 
     this.managedServiceSecurityGroup = true;

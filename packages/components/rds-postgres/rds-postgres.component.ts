@@ -21,7 +21,8 @@ import {
   Component,
   ComponentSpec,
   ComponentContext,
-  ComponentCapabilities
+  ComponentCapabilities,
+  applySecurityGroupTags
 } from '@platform/contracts';
 import {
   RdsPostgresComponentConfigBuilder,
@@ -299,6 +300,13 @@ export class RdsPostgresComponent extends Component {
     this.applyStandardTags(this.securityGroup, {
       'security-group-type': 'database',
       'database-engine': 'postgres'
+    });
+
+    // Apply security-group-specific tags (SG-009)
+    applySecurityGroupTags(this.securityGroup, {
+      ingressPolicy: 'binder-managed',
+      tier: 'db'
+    });
     });
 
     const ingressCidrs = networking.ingressCidrs ?? [];

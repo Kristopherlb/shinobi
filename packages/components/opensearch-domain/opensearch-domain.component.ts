@@ -10,7 +10,8 @@ import {
   Component,
   ComponentSpec,
   ComponentContext,
-  ComponentCapabilities
+  ComponentCapabilities,
+  applySecurityGroupTags
 } from '@platform/contracts';
 import {
   OpenSearchDomainComponentConfigBuilder,
@@ -125,6 +126,12 @@ export class OpenSearchDomainComponent extends Component {
     this.applyStandardTags(securityGroup, {
       'resource-type': 'security-group',
       'opensearch-domain': this.config.domainName
+    });
+
+    // Apply security-group-specific tags (SG-009)
+    applySecurityGroupTags(securityGroup, {
+      ingressPolicy: 'manual',
+      tier: 'data'
     });
 
     this.logResourceCreation('security-group', securityGroup.securityGroupId);

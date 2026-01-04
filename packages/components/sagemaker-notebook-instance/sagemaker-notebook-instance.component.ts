@@ -13,7 +13,7 @@ import * as cloudwatch from 'aws-cdk-lib/aws-cloudwatch';
 import * as kms from 'aws-cdk-lib/aws-kms';
 import * as cdk from 'aws-cdk-lib';
 import { Construct } from 'constructs';
-import { BaseComponent } from '../@shinobi/core.ts';
+import { BaseComponent, applySecurityGroupTags } from '../@shinobi/core.ts';
 import { ComponentSpec, ComponentContext, ComponentCapabilities } from '../@shinobi/core/component-interfaces.ts';
 import { SageMakerNotebookInstanceConfig, SageMakerNotebookInstanceComponentConfigBuilder } from './sagemaker-notebook-instance.builder.ts';
 
@@ -146,6 +146,12 @@ export class SageMakerNotebookInstanceComponent extends BaseComponent {
         vpc: ec2.Vpc.fromLookup(this, 'Vpc', { vpcId: this.config!.vpcId }),
         description: `Security group for ${this.buildNotebookInstanceName()} SageMaker notebook`,
         allowAllOutbound: this.config!.directInternetAccess === 'Enabled'
+      });
+
+      // Apply security-group-specific tags (SG-009)
+      applySecurityGroupTags(this.securityGroup, {
+        ingressPolicy: 'manual',
+        tier: 'data'
       });
 
       // Allow HTTPS outbound for package downloads and Git access

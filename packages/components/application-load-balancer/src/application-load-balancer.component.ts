@@ -9,7 +9,8 @@ import {
   Component,
   ComponentSpec,
   ComponentContext,
-  ComponentCapabilities
+  ComponentCapabilities,
+  applySecurityGroupTags
 } from '@shinobi/core';
 import {
   ApplicationLoadBalancerComponentConfigBuilder,
@@ -133,9 +134,21 @@ export class ApplicationLoadBalancerComponent extends Component {
         );
       });
 
+      // Apply security-group-specific tags (SG-009)
+      applySecurityGroupTags(securityGroup, {
+        ingressPolicy: 'manual',
+        tier: 'web'
+      });
+
       this.applyStandardTags(securityGroup, {
         'resource-type': 'security-group',
         'alb-name': this.config!.loadBalancerName
+      });
+
+      // Apply security-group-specific tags (SG-009)
+      applySecurityGroupTags(securityGroup, {
+        ingressPolicy: 'manual',
+        tier: 'web'
       });
 
       this.logResourceCreation('security-group', securityGroup.securityGroupId);

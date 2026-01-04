@@ -9,7 +9,7 @@ import * as iam from 'aws-cdk-lib/aws-iam';
 import * as route53 from 'aws-cdk-lib/aws-route53';
 import * as acm from 'aws-cdk-lib/aws-certificatemanager';
 import * as cdk from 'aws-cdk-lib';
-import { BaseComponent, ComponentContext, ComponentSpec } from '@shinobi/core';
+import { BaseComponent, ComponentContext, ComponentSpec, applySecurityGroupTags } from '@shinobi/core';
 // import { applyComplianceTags } from '@shinobi/core-tagging';
 import { DaggerConfig, DaggerOutputs, DaggerEnginePoolProps } from './types.js';
 import { DaggerConfigBuilder } from './dagger-engine-pool.builder.js';
@@ -235,6 +235,12 @@ export class DaggerEnginePool extends BaseComponent {
       ec2.Port.tcp(8443),
       'Dagger Engine mTLS endpoint'
     );
+
+    // Apply security-group-specific tags (SG-009)
+    applySecurityGroupTags(sg, {
+      ingressPolicy: 'manual',
+      tier: 'app'
+    });
 
     // Allow outbound HTTPS for AWS services
     sg.addEgressRule(

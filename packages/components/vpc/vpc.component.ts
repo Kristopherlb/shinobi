@@ -10,7 +10,7 @@ import * as logs from 'aws-cdk-lib/aws-logs';
 import * as iam from 'aws-cdk-lib/aws-iam';
 import * as cdk from 'aws-cdk-lib';
 import { Construct } from 'constructs';
-import { BaseComponent } from '@shinobi/core';
+import { BaseComponent, applySecurityGroupTags } from '@shinobi/core';
 import { ComponentSpec, ComponentContext, ComponentCapabilities } from '@platform/contracts';
 import { VpcConfig, VpcConfigBuilder } from './vpc.builder.ts';
 
@@ -238,6 +238,10 @@ export class VpcComponent extends BaseComponent {
       allowAllOutbound: false
     });
     this.applyStandardTags(webSecurityGroup, { 'security-group': 'web' });
+    applySecurityGroupTags(webSecurityGroup, {
+      ingressPolicy: 'tier-based',
+      tier: 'web'
+    });
 
     webSecurityGroup.addIngressRule(
       ec2.Peer.anyIpv4(),
@@ -258,6 +262,10 @@ export class VpcComponent extends BaseComponent {
       allowAllOutbound: false
     });
     this.applyStandardTags(appSecurityGroup, { 'security-group': 'app' });
+    applySecurityGroupTags(appSecurityGroup, {
+      ingressPolicy: 'tier-based',
+      tier: 'app'
+    });
 
     appSecurityGroup.addIngressRule(
       webSecurityGroup,
@@ -272,6 +280,10 @@ export class VpcComponent extends BaseComponent {
       allowAllOutbound: false
     });
     this.applyStandardTags(dbSecurityGroup, { 'security-group': 'database' });
+    applySecurityGroupTags(dbSecurityGroup, {
+      ingressPolicy: 'tier-based',
+      tier: 'db'
+    });
 
     dbSecurityGroup.addIngressRule(
       appSecurityGroup,

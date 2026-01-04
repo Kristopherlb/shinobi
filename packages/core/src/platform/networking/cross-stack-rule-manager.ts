@@ -215,6 +215,28 @@ export class CrossStackRuleManager {
   }
 
   /**
+   * Get SSM parameter path prefix for all network rules
+   * 
+   * @returns SSM parameter path prefix
+   */
+  static getRulePathPrefix(): string {
+    return '/shinobi/network-rules';
+  }
+
+  /**
+   * Get all rule storage keys for a service
+   * 
+   * @param serviceName - Service name
+   * @returns Array of SSM parameter keys for this service's rules
+   */
+  static getRuleKeysForService(serviceName: string): string[] {
+    // This would need to query SSM at runtime to get all parameters
+    // For CDK synthesis, we can't query SSM directly
+    // This is a helper for documentation/runtime scripts
+    return [];
+  }
+
+  /**
    * Mark rule for deletion (when binding is removed)
    * 
    * @param stack - CDK stack
@@ -235,6 +257,68 @@ export class CrossStackRuleManager {
       `[CrossStackRuleManager] Rule marked for deletion: ${parameterKey}. ` +
       `Network-rules stack should remove this rule on next deployment.`
     );
+  }
+
+  /**
+   * Create network-rules stack from rule specs
+   * 
+   * NOTE: This method requires rule specs to be provided. To read from SSM Parameter Store
+   * at runtime, use a Lambda Custom Resource or deploy the network-rules stack separately
+   * with a script that queries SSM and passes the specs to this method.
+   * 
+   * Example usage:
+   * ```typescript
+   * // In a separate deployment script or CLI command
+   * const ssm = new AWS.SSM();
+   * const params = await ssm.getParametersByPath({
+   *   Path: '/shinobi/network-rules',
+   *   Recursive: true
+   * }).promise();
+   * 
+   * const ruleSpecs = params.Parameters.map(p => JSON.parse(p.Value!));
+   * const app = new cdk.App();
+   * CrossStackRuleManager.createNetworkRulesStack(app, ruleSpecs);
+   * ```
+   * 
+   * @param app - CDK app
+   * @param ruleSpecs - Array of rule specifications to apply (read from SSM at runtime)
+   * @param stackName - Name for the network rules stack
+   * @returns CDK stack with rule constructs
+   */
+  static createNetworkRulesStack(
+    app: cdk.App,
+    ruleSpecs: CrossStackRuleSpec[],
+    stackName: string = 'NetworkRulesStack'
+  ): cdk.Stack {
+    const stack = new cdk.Stack(app, stackName, {
+      description: 'Cross-stack security group rules - applies rules from all services',
+      tags: {
+        ManagedBy: 'shinobi',
+        Purpose: 'cross-stack-security-group-rules'
+      }
+    });
+
+    // Group rules by target security group
+    const rulesByTarget = new Map<string, CrossStackRuleSpec[]>();
+    for (const spec of ruleSpecs) {
+      const targetId = spec.targetSecurityGroupId;
+      if (!rulesByTarget.has(targetId)) {
+        rulesByTarget.set(targetId, []);
+      }
+      rulesByTarget.get(targetId)!.push(spec);
+    }
+
+    // Apply rules to each target security group
+    for (const [targetSecurityGroupId, specs] of rulesByTarget.entries()) {
+      // Deduplicate rules (same peer, port, protocol, type)
+      const uniqueRules = this.deduplicateRules(specs);
+
+      for (const spec of uniqueRules) {
+        this.applyRuleToSecurityGroup(spec, targetSecurityGroupId, stack);
+      }
+    }
+
+    return stack;
   }
 }
 
