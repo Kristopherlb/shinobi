@@ -40,6 +40,7 @@ export class ContainerApplicationComponent extends BaseComponent {
   private otelEnvironment: Record<string, string> = {};
   private managedServiceSecurityGroup = false;
   private observabilityAlarms: cloudwatch.Alarm[] = [];
+  private alarmMetadata: Map<cloudwatch.Alarm, { metricName: string; namespace: string }> = new Map();
 
   constructor(scope: Construct, id: string, context: ComponentContext, spec: ComponentSpec) {
     super(scope, id, context, spec);
@@ -539,6 +540,8 @@ export class ContainerApplicationComponent extends BaseComponent {
       'alarm-type': 'cpu-utilization'
     });
     this.observabilityAlarms.push(cpuAlarm);
+    // Store metric metadata for capability registration
+    this.alarmMetadata.set(cpuAlarm, { metricName: 'CPUUtilization', namespace: 'AWS/ECS' });
 
     const memoryAlarm = new cloudwatch.Alarm(this, 'MemoryHighAlarm', {
       alarmName: `${this.context.serviceName}-${this.spec.name}-memory-high`,
@@ -554,6 +557,8 @@ export class ContainerApplicationComponent extends BaseComponent {
       'alarm-type': 'memory-utilization'
     });
     this.observabilityAlarms.push(memoryAlarm);
+    // Store metric metadata for capability registration
+    this.alarmMetadata.set(memoryAlarm, { metricName: 'MemoryUtilization', namespace: 'AWS/ECS' });
   }
 
   private registerConstructs(): void {
@@ -611,12 +616,15 @@ export class ContainerApplicationComponent extends BaseComponent {
       this.registerCapability('observability:container-application', {
         otelEnvironment: this.otelEnvironment,
         logGroupName: this.logGroup?.logGroupName,
-        alarms: this.observabilityAlarms.map(alarm => ({
-          alarmName: alarm.alarmName,
-          alarmArn: alarm.alarmArn,
-          metricName: alarm.metric.metricName,
-          namespace: alarm.metric.namespace
-        })),
+        alarms: this.observabilityAlarms.map(alarm => {
+          const metadata = this.alarmMetadata.get(alarm);
+          return {
+            alarmName: alarm.alarmName,
+            alarmArn: alarm.alarmArn,
+            metricName: metadata?.metricName ?? 'Unknown',
+            namespace: metadata?.namespace ?? 'Unknown'
+          };
+        }),
         monitoringEnabled: this.config.observability.enabled
       });
     }
