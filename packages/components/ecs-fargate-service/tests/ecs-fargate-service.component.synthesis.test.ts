@@ -3,7 +3,7 @@ import * as ec2 from 'aws-cdk-lib/aws-ec2';
 import * as ecs from 'aws-cdk-lib/aws-ecs';
 import { Match, Template } from 'aws-cdk-lib/assertions';
 import { ComponentContext, ComponentSpec } from '@platform/contracts';
-import { EcsFargateServiceComponent } from '@shinobi/components/ecs-fargate-service/src/ecs-fargate-service.component';
+import { EcsFargateServiceComponent } from '../src/ecs-fargate-service.component';
 
 describe('EcsFargateServiceComponent synthesis', () => {
   let app: cdk.App;
@@ -203,5 +203,47 @@ describe('EcsFargateServiceComponent synthesis', () => {
 
     // SecurityGroupIngress should either not exist or be empty
     expect(sg.Properties.SecurityGroupIngress || []).toHaveLength(0);
+  });
+
+  it('applies required security group tags (SG-009)', () => {
+    const spec: ComponentSpec = {
+      name: 'tagged-api',
+      type: 'ecs-fargate-service',
+      config: {
+        cluster: cluster.clusterName,
+        image: {
+          repository: 'tagged-api',
+          tag: 'latest'
+        },
+        serviceConnect: {
+          portMappingName: 'api',
+          namespace: 'internal.local'
+        }
+      }
+    };
+
+    const component = new EcsFargateServiceComponent(stack, 'TaggedService', context, spec);
+    component.synth();
+
+    const template = Template.fromStack(stack);
+
+    // Verify security group exists
+    template.resourceCountIs('AWS::EC2::SecurityGroup', 1);
+
+    // Verify required security group tags are present
+    // Required tags: resource-type, ingress-policy
+    // Use arrayContaining to allow tags in any order
+    const sgResources = template.findResources('AWS::EC2::SecurityGroup');
+    const sg = Object.values(sgResources)[0] as any;
+    const tags = sg.Properties?.Tags || [];
+    
+    const tagMap = tags.reduce((acc: Record<string, string>, tag: { Key: string; Value: string }) => {
+      acc[tag.Key] = tag.Value;
+      return acc;
+    }, {});
+    
+    expect(tagMap['resource-type']).toBe('security-group');
+    expect(tagMap['ingress-policy']).toBeDefined();
+    expect(['binder-managed', 'manual', 'tier-based']).toContain(tagMap['ingress-policy']);
   });
 });

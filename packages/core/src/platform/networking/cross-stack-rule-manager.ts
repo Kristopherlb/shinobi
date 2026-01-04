@@ -74,53 +74,6 @@ export class CrossStackRuleManager {
   }
 
   /**
-   * Create network rules stack that applies all cross-stack rules
-   * 
-   * This stack should be deployed independently or as part of shared infrastructure.
-   * It reads all rule specs from SSM Parameter Store and applies them to target SGs.
-   * 
-   * @param app - CDK app
-   * @param ruleSpecs - Array of rule specifications to apply
-   * @param stackName - Name for the network rules stack
-   * @returns CDK stack with rule constructs
-   */
-  static createNetworkRulesStack(
-    app: cdk.App,
-    ruleSpecs: CrossStackRuleSpec[],
-    stackName: string = 'NetworkRulesStack'
-  ): cdk.Stack {
-    const stack = new cdk.Stack(app, stackName, {
-      description: 'Cross-stack security group rules - applies rules from all services',
-      tags: {
-        ManagedBy: 'shinobi',
-        Purpose: 'cross-stack-security-group-rules'
-      }
-    });
-
-    // Group rules by target security group
-    const rulesByTarget = new Map<string, CrossStackRuleSpec[]>();
-    for (const spec of ruleSpecs) {
-      const targetId = spec.targetSecurityGroupId;
-      if (!rulesByTarget.has(targetId)) {
-        rulesByTarget.set(targetId, []);
-      }
-      rulesByTarget.get(targetId)!.push(spec);
-    }
-
-    // Apply rules to each target security group
-    for (const [targetSecurityGroupId, specs] of rulesByTarget.entries()) {
-      // Deduplicate rules (same peer, port, protocol, type)
-      const uniqueRules = this.deduplicateRules(specs);
-
-      for (const spec of uniqueRules) {
-        this.applyRuleToSecurityGroup(spec, targetSecurityGroupId, stack);
-      }
-    }
-
-    return stack;
-  }
-
-  /**
    * Deduplicate rules based on content (peer, port, protocol, type)
    * 
    * @param specs - Array of rule specifications

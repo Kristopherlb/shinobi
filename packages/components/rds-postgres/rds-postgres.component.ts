@@ -307,7 +307,6 @@ export class RdsPostgresComponent extends Component {
       ingressPolicy: 'binder-managed',
       tier: 'db'
     });
-    });
 
     const ingressCidrs = networking.ingressCidrs ?? [];
     const port = networking.port ?? 5432;

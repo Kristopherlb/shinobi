@@ -22,17 +22,18 @@ jest.mock(
 
 import { App, Stack } from 'aws-cdk-lib';
 import { Match, Template } from 'aws-cdk-lib/assertions';
-import { RdsPostgresComponent } from '../rds-postgres.component.ts';
-import { RdsPostgresConfig } from '../rds-postgres.builder.ts';
-import { ComponentContext, ComponentSpec } from '../../../platform/contracts/component-interfaces.ts';
+import { RdsPostgresComponent } from '../rds-postgres.component.js';
+import { RdsPostgresConfig } from '../rds-postgres.builder.js';
+import { ComponentContext, ComponentSpec } from '../../../core/src/platform/contracts/component-interfaces.js';
 
-const createMockContext = (framework: string): ComponentContext => ({
+const createMockContext = (framework: 'commercial' | 'fedramp-moderate' | 'fedramp-high'): ComponentContext => ({
   serviceName: 'checkout',
   owner: 'platform-team',
   environment: 'dev',
   complianceFramework: framework,
   region: 'us-east-1',
   account: '123456789012',
+  scope: {} as any, // Will be replaced with actual stack in synthesize function
   tags: {
     'service-name': 'checkout',
     environment: 'dev',
@@ -48,8 +49,14 @@ const createMockSpec = (config: Partial<RdsPostgresConfig> = {}): ComponentSpec 
 
 const synthesize = (context: ComponentContext, spec: ComponentSpec) => {
   const app = new App();
-  const stack = new Stack(app, 'TestStack');
-  const component = new RdsPostgresComponent(stack, spec.name, context, spec);
+  const stack = new Stack(app, 'TestStack', {
+    env: {
+      account: context.account || '123456789012',
+      region: context.region || 'us-east-1'
+    }
+  });
+  const contextWithScope = { ...context, scope: stack };
+  const component = new RdsPostgresComponent(stack, spec.name, contextWithScope, spec);
   component.synth();
   return { component, template: Template.fromStack(stack) };
 };
@@ -122,5 +129,28 @@ describe('RdsPostgresComponent synthesis', () => {
 
     const capabilities = component.getCapabilities();
     expect(capabilities['db:postgres'].securityProfile).toBe('baseline');
+  });
+
+  it('applies required security group tags (SG-009)', () => {
+    const { template } = synthesize(createMockContext('commercial'), createMockSpec());
+
+    // Verify security group exists
+    template.resourceCountIs('AWS::EC2::SecurityGroup', 1);
+
+    // Verify required security group tags are present
+    // Required tags: resource-type, ingress-policy
+    // Extract tags into a map to avoid order dependencies
+    const sgResources = template.findResources('AWS::EC2::SecurityGroup');
+    const sg = Object.values(sgResources)[0] as any;
+    const tags = sg.Properties?.Tags || [];
+    
+    const tagMap = tags.reduce((acc: Record<string, string>, tag: { Key: string; Value: string }) => {
+      acc[tag.Key] = tag.Value;
+      return acc;
+    }, {});
+    
+    expect(tagMap['resource-type']).toBe('security-group');
+    expect(tagMap['ingress-policy']).toBeDefined();
+    expect(['binder-managed', 'manual', 'tier-based']).toContain(tagMap['ingress-policy']);
   });
 });

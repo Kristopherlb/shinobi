@@ -7,12 +7,13 @@ const rootDir = path.resolve(__dirname, '../../..');
 
 export default {
   ...preset,
-  displayName: '@platform/components-rds-postgres',
+  displayName: '@shinobi/components-ecs-fargate-service',
   rootDir,
-  testMatch: ['<rootDir>/packages/components/rds-postgres/tests/**/*.test.ts'],
-  collectCoverageFrom: ['packages/components/rds-postgres/src/**/*.{ts,tsx}', '!packages/components/rds-postgres/src/**/*.d.ts'],
-  coverageDirectory: path.join(rootDir, 'packages/components/rds-postgres/coverage'),
+  testMatch: ['<rootDir>/packages/components/ecs-fargate-service/tests/**/*.test.ts'],
+  collectCoverageFrom: ['packages/components/ecs-fargate-service/src/**/*.{ts,tsx}', '!packages/components/ecs-fargate-service/src/**/*.d.ts'],
+  coverageDirectory: path.join(rootDir, 'packages/components/ecs-fargate-service/coverage'),
   moduleNameMapper: {
+    // Include preset mappers first
     ...preset.moduleNameMapper,
     // Override problematic preset mapper for workspace root structure
     '^(?:\\.{1,2}/)+platform/contracts/(.+)\\.js$': '<rootDir>/packages/core/src/platform/contracts/$1.ts',
@@ -24,3 +25,4 @@ export default {
     '^@platform/(.*)$': '<rootDir>/packages/$1/src'
   }
 };
+

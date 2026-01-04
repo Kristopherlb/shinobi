@@ -12,7 +12,7 @@ import { Annotations, Match } from 'aws-cdk-lib/assertions';
 import { AwsSolutionsChecks, NagSuppressions } from 'cdk-nag';
 import { Aspects } from 'aws-cdk-lib';
 import { ComponentContext, ComponentSpec } from '@platform/contracts';
-import { EcsFargateServiceComponent } from '@shinobi/components/ecs-fargate-service/src/ecs-fargate-service.component';
+import { EcsFargateServiceComponent } from '../../src/ecs-fargate-service.component';
 
 describe('EcsFargateServiceComponent - CDK Nag Security Validation', () => {
   let app: cdk.App;
