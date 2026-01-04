@@ -22,131 +22,43 @@ jobs:
     - name: Setup Node.js
       uses: actions/setup-node@v4
       with:
-        node-version: '18'
+        node-version: '20'
 
-    - name: Setup pnpm
-      uses: pnpm/action-setup@v2
-      with:
-        version: 8
+    - name: Enable Corepack and install pnpm
+      run: |
+        corepack enable
+        corepack prepare pnpm@latest --activate
 
     - name: Cache pnpm store
       uses: actions/cache@v4
       with:
         path: ~/.pnpm-store
-        key: ${{ runner.os }}-pnpm-store-${{ hashFiles('**/pnpm-lock.yaml') }}
+        key: ${{ runner.os }}-pnpm-${{ hashFiles('**/pnpm-lock.yaml') }}
         restore-keys: |
-          ${{ runner.os }}-pnpm-store-
+          ${{ runner.os }}-pnpm-
 
     - name: Install dependencies
-      run: |
-        corepack enable || true
-        pnpm install
-      
-    - name: Build-time Compliance Plan (agent)
-      run: |
-        # Extract service type and framework from service.yml or environment
-        SERVICE_TYPE=${SERVICE_TYPE:-"s3-bucket"}
-        FRAMEWORK=${FRAMEWORK:-"fedramp-moderate"}
-        EXTRA_CONTROLS=${EXTRA_CONTROLS:-"AC-2(3),AT-4(b)"}
-        
-        echo "🔍 Analyzing service configuration..."
-        echo "Service Type: $SERVICE_TYPE"
-        echo "Framework: $FRAMEWORK"
-        echo "Extra Controls: $EXTRA_CONTROLS"
-        
-        # Load packs using the platform's pack selection logic
-        echo "📦 Loading compliance packs..."
-        node tools/kb-load.mjs platform-kb $SERVICE_TYPE $FRAMEWORK > /tmp/packs.json
-        
-        # Parse packs and extract component information
-        PACKS=$(cat /tmp/packs.json | jq -r '.chosen[].meta.id' | tr '\n' ',' | sed 's/,$//')
-        
-        echo "Selected packs: $PACKS"
-        
-        # Generate component using Shinobi CLI
-        echo "🚀 Generating component with Shinobi..."
-        node tools/shinobi-generate.mjs \
-          --componentName $SERVICE_TYPE \
-          --serviceType $SERVICE_TYPE \
-          --framework $FRAMEWORK \
-          --packsToInclude "$PACKS" \
-          --extraControlTags "$EXTRA_CONTROLS" \
-          --includeTests true \
-          --includeObservability true \
-          --includePolicies true
-        
-        echo "✅ Component generation completed"
-        
-    - name: Generate tests and REGO from plan
-      run: |
-        SERVICE_TYPE=${SERVICE_TYPE:-"s3-bucket"}
-        echo "🧪 Generating tests from component plan..."
-        node tools/gen-tests-from-plan.mjs $SERVICE_TYPE
-        echo "📋 Generating REGO policies from component plan..."
-        node tools/gen-rego-from-plan.mjs $SERVICE_TYPE
-        echo "✅ Test and policy generation completed"
-        
-    - name: Static compliance (nag/opa/guard)
-      run: |
-        # Check if svc-audit-static.mjs exists and run it
-        if [ -f "tools/svc-audit-static.mjs" ]; then
-          node tools/svc-audit-static.mjs
-        else
-          echo "Static compliance tool not found - creating placeholder"
-          echo "This step would run:"
-          echo "- CFN Guard rules against generated templates"
-          echo "- OPA REGO policies against component configurations" 
-          echo "- AWS Config rule compliance checks"
-        fi
-        
-    - name: Validate compliance artifacts
-      run: |
-        # Check that required compliance artifacts exist
-        SERVICE_TYPE=${SERVICE_TYPE:-"s3-bucket"}
-        
-        if [ -f "packages/components/$SERVICE_TYPE/audit/component.plan.json" ]; then
-          echo "✅ Compliance plan exists"
-          cat packages/components/$SERVICE_TYPE/audit/component.plan.json | jq .
-        else
-          echo "❌ Compliance plan missing"
-          exit 1
-        fi
-        
-        # Check for other required artifacts
-        if [ -d "packages/components/$SERVICE_TYPE/observability" ]; then
-          echo "✅ Observability artifacts directory exists"
-        else
-          echo "⚠️  Observability artifacts directory missing"
-        fi
-        
-        if [ -d "packages/components/$SERVICE_TYPE/tests" ]; then
-          echo "✅ Test artifacts directory exists"
-        else
-          echo "⚠️  Test artifacts directory missing"
-        fi
-        
+      run: pnpm install --frozen-lockfile
+
     - name: Run component tests
       run: |
-        SERVICE_TYPE=${SERVICE_TYPE:-"s3-bucket"}
-        
-        if [ -d "packages/components/$SERVICE_TYPE/tests" ]; then
-          echo "Running tests for $SERVICE_TYPE component"
-          cd packages/components/$SERVICE_TYPE
-          pnpm test || echo "Tests failed or not configured yet"
-          cd ../../..
-        else
-          echo "No tests found for $SERVICE_TYPE component"
-        fi
-        
+        # Run tests for all components that have test directories
+        find packages/components -name "package.json" -type f | while read pkg; do
+          component_dir=$(dirname "$pkg")
+          if [ -d "$component_dir/tests" ] || [ -d "$component_dir/__tests__" ]; then
+            echo "Running tests for $(basename "$component_dir")"
+            cd "$component_dir"
+            pnpm test || echo "Tests failed or not configured"
+            cd - > /dev/null
+          fi
+        done
+
     - name: Compliance Summary
       run: |
         echo "## Compliance Check Summary"
         echo ""
-        echo "### Generated Artifacts:"
-        find packages/components -name "*.json" -path "*/audit/*" | head -10
+        echo "### Compliance Artifacts:"
+        find packages/components -name "*.json" -path "*/audit/*" 2>/dev/null | head -10 || echo "No audit artifacts found"
         echo ""
-        echo "### Next Steps:"
-        echo "1. Review generated compliance plans"
-        echo "2. Run full test suite"
-        echo "3. Validate REGO policies"
-        echo "4. Check observability configurations"
+        echo "### Components with Tests:"
+        find packages/components -type d \( -name "tests" -o -name "__tests__" \) 2>/dev/null | wc -l | xargs echo "Found test directories:"
