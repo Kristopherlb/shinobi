@@ -3,7 +3,7 @@
  * Handles event-driven architecture bindings for Amazon EventBridge with mandatory compliance enforcement
  */
 
-import { UnifiedBinderStrategyBase } from '@shinobi/core';
+import { UnifiedBinderStrategyBase, resolveActions } from '@shinobi/core';
 import type { BindingContext, EnhancedBindingResult, CompatibilityEntry } from '@shinobi/core';
 import type { IamPolicy } from '@shinobi/core';
 import { PolicyStatement, Effect } from 'aws-cdk-lib/aws-iam';
@@ -124,39 +124,27 @@ export class EventBridgeBinderStrategy extends UnifiedBinderStrategyBase {
     const environmentVariables: Record<string, string> = {};
     const iamPolicies: IamPolicy[] = [];
 
-    // Grant event bus access permissions
-    if (access.includes('read') || access.includes('readwrite')) {
-      const statement = new PolicyStatement({
-        effect: Effect.ALLOW,
-        actions: [
-          'events:DescribeEventBus',
-          'events:ListEventBuses',
-          'events:ListRules'
-        ],
-        resources: [targetData.eventBusArn]
-      });
-      iamPolicies.push({
-        statement,
-        description: 'EventBridge event bus read access permissions',
-        complianceRequirement: 'Least privilege IAM access'
-      });
-    }
+    // Determine primary access level for action mapping
+    const primaryAccess = access.includes('readwrite') ? 'readwrite' : access.includes('write') ? 'write' : 'read';
 
-    if (access.includes('write') || access.includes('readwrite')) {
+    // Resolve actions (granular override or coarse access)
+    const resolvedActions = resolveActions(
+      context.directive,
+      context,
+      (acc) => this.getEventBusActionsForAccess(acc),
+      'events'
+    );
+
+    // Grant event bus access permissions
+    if (resolvedActions.length > 0) {
       const statement = new PolicyStatement({
         effect: Effect.ALLOW,
-        actions: [
-          'events:CreateEventBus',
-          'events:DeleteEventBus',
-          'events:PutEvents',
-          'events:PutPermission',
-          'events:RemovePermission'
-        ],
+        actions: resolvedActions,
         resources: [targetData.eventBusArn]
       });
       iamPolicies.push({
         statement,
-        description: 'EventBridge event bus write access permissions',
+        description: `EventBridge event bus ${primaryAccess} access permissions`,
         complianceRequirement: 'Least privilege IAM access'
       });
     }
@@ -211,40 +199,27 @@ export class EventBridgeBinderStrategy extends UnifiedBinderStrategyBase {
     const environmentVariables: Record<string, string> = {};
     const iamPolicies: IamPolicy[] = [];
 
-    // Grant rule access permissions
-    if (access.includes('read') || access.includes('readwrite')) {
-      const statement = new PolicyStatement({
-        effect: Effect.ALLOW,
-        actions: [
-          'events:DescribeRule',
-          'events:ListRules',
-          'events:ListTargetsByRule'
-        ],
-        resources: [targetData.ruleArn]
-      });
-      iamPolicies.push({
-        statement,
-        description: 'EventBridge rule read access permissions',
-        complianceRequirement: 'Least privilege IAM access'
-      });
-    }
+    // Determine primary access level for action mapping
+    const primaryAccess = access.includes('readwrite') ? 'readwrite' : access.includes('write') ? 'write' : 'read';
 
-    if (access.includes('write') || access.includes('readwrite')) {
+    // Resolve actions (granular override or coarse access)
+    const resolvedActions = resolveActions(
+      context.directive,
+      context,
+      (acc) => this.getEventBridgeRuleActionsForAccess(acc),
+      'events'
+    );
+
+    // Grant rule access permissions
+    if (resolvedActions.length > 0) {
       const statement = new PolicyStatement({
         effect: Effect.ALLOW,
-        actions: [
-          'events:PutRule',
-          'events:DeleteRule',
-          'events:PutTargets',
-          'events:RemoveTargets',
-          'events:EnableRule',
-          'events:DisableRule'
-        ],
+        actions: resolvedActions,
         resources: [targetData.ruleArn]
       });
       iamPolicies.push({
         statement,
-        description: 'EventBridge rule write access permissions',
+        description: `EventBridge rule ${primaryAccess} access permissions`,
         complianceRequirement: 'Least privilege IAM access'
       });
     }
@@ -344,36 +319,27 @@ export class EventBridgeBinderStrategy extends UnifiedBinderStrategyBase {
     const environmentVariables: Record<string, string> = {};
     const iamPolicies: IamPolicy[] = [];
 
-    // Grant connection access permissions
-    if (access.includes('read') || access.includes('readwrite')) {
-      const statement = new PolicyStatement({
-        effect: Effect.ALLOW,
-        actions: [
-          'events:DescribeConnection',
-          'events:ListConnections'
-        ],
-        resources: [targetData.connectionArn]
-      });
-      iamPolicies.push({
-        statement,
-        description: 'EventBridge connection read access permissions',
-        complianceRequirement: 'Least privilege IAM access'
-      });
-    }
+    // Determine primary access level for action mapping
+    const primaryAccess = access.includes('readwrite') ? 'readwrite' : access.includes('write') ? 'write' : 'read';
 
-    if (access.includes('write') || access.includes('readwrite')) {
+    // Resolve actions (granular override or coarse access)
+    const resolvedActions = resolveActions(
+      context.directive,
+      context,
+      (acc) => this.getEventBridgeConnectionActionsForAccess(acc),
+      'events'
+    );
+
+    // Grant connection access permissions
+    if (resolvedActions.length > 0) {
       const statement = new PolicyStatement({
         effect: Effect.ALLOW,
-        actions: [
-          'events:CreateConnection',
-          'events:DeleteConnection',
-          'events:UpdateConnection'
-        ],
+        actions: resolvedActions,
         resources: [targetData.connectionArn]
       });
       iamPolicies.push({
         statement,
-        description: 'EventBridge connection write access permissions',
+        description: `EventBridge connection ${primaryAccess} access permissions`,
         complianceRequirement: 'Least privilege IAM access'
       });
     }
@@ -534,5 +500,96 @@ export class EventBridgeBinderStrategy extends UnifiedBinderStrategyBase {
     }
 
     return { environmentVariables, iamPolicies };
+  }
+
+  /**
+   * Get EventBridge event bus actions based on access level
+   * Used by resolveActions to compute base actions from coarse access level
+   * 
+   * @param access - Access level (read, write, readwrite)
+   * @returns Array of IAM action strings
+   */
+  private getEventBusActionsForAccess(access: string): string[] {
+    const actions: string[] = [];
+    
+    if (access === 'read' || access === 'readwrite') {
+      actions.push(
+        'events:DescribeEventBus',
+        'events:ListEventBuses',
+        'events:ListRules'
+      );
+    }
+
+    if (access === 'write' || access === 'readwrite') {
+      actions.push(
+        'events:CreateEventBus',
+        'events:DeleteEventBus',
+        'events:PutEvents',
+        'events:PutPermission',
+        'events:RemovePermission'
+      );
+    }
+
+    return actions;
+  }
+
+  /**
+   * Get EventBridge rule actions based on access level
+   * Used by resolveActions to compute base actions from coarse access level
+   * 
+   * @param access - Access level (read, write, readwrite)
+   * @returns Array of IAM action strings
+   */
+  private getEventBridgeRuleActionsForAccess(access: string): string[] {
+    const actions: string[] = [];
+    
+    if (access === 'read' || access === 'readwrite') {
+      actions.push(
+        'events:DescribeRule',
+        'events:ListRules',
+        'events:ListTargetsByRule'
+      );
+    }
+
+    if (access === 'write' || access === 'readwrite') {
+      actions.push(
+        'events:PutRule',
+        'events:DeleteRule',
+        'events:PutTargets',
+        'events:RemoveTargets',
+        'events:EnableRule',
+        'events:DisableRule'
+      );
+    }
+
+    return actions;
+  }
+
+  /**
+   * Get EventBridge connection actions based on access level
+   * Used by resolveActions to compute base actions from coarse access level
+   * 
+   * @param access - Access level (read, write, readwrite)
+   * @returns Array of IAM action strings
+   */
+  private getEventBridgeConnectionActionsForAccess(access: string): string[] {
+    const actions: string[] = [];
+    
+    if (access === 'read' || access === 'readwrite') {
+      actions.push(
+        'events:DescribeConnection',
+        'events:ListConnections'
+      );
+    }
+
+    if (access === 'write' || access === 'readwrite') {
+      actions.push(
+        'events:CreateConnection',
+        'events:DeleteConnection',
+        'events:UpdateConnection'
+      );
+    }
+
+    return actions;
   }
 }

@@ -3,7 +3,7 @@
  * Handles workflow orchestration bindings for AWS Step Functions with mandatory compliance enforcement
  */
 
-import { UnifiedBinderStrategyBase } from '@shinobi/core';
+import { UnifiedBinderStrategyBase, resolveActions } from '@shinobi/core';
 import type { BindingContext, EnhancedBindingResult, CompatibilityEntry } from '@shinobi/core';
 import type { IamPolicy } from '@shinobi/core';
 import { PolicyStatement, Effect } from 'aws-cdk-lib/aws-iam';
@@ -126,46 +126,27 @@ export class StepFunctionsBinderStrategy extends UnifiedBinderStrategyBase {
     const environmentVariables: Record<string, string> = {};
     const iamPolicies: IamPolicy[] = [];
 
-    // Grant state machine access permissions
-    if (access.includes('read') || access.includes('readwrite')) {
-      const statement = new PolicyStatement({
-        effect: Effect.ALLOW,
-        actions: [
-          'states:DescribeStateMachine',
-          'states:ListStateMachines',
-          'states:DescribeExecution'
-        ],
-        resources: [targetData.stateMachineArn]
-      });
-      iamPolicies.push({
-        statement,
-        description: 'Step Functions state machine read access permissions',
-        complianceRequirement: 'Least privilege IAM access'
-      });
-    }
+    // Determine primary access level for action mapping
+    const primaryAccess = access.includes('readwrite') ? 'readwrite' : access.includes('write') ? 'write' : 'read';
 
-    if (access.includes('write') || access.includes('readwrite')) {
-      const actions = [
-        'states:CreateStateMachine',
-        'states:DeleteStateMachine',
-        'states:UpdateStateMachine',
-        'states:StartExecution',
-        'states:StopExecution'
-      ];
-      
-      // Add synchronous execution support for Express workflows
-      if (targetData.type === 'EXPRESS') {
-        actions.push('states:StartSyncExecution');
-      }
-      
+    // Resolve actions (granular override or coarse access)
+    let resolvedActions = resolveActions(
+      context.directive,
+      context,
+      (acc) => this.getStateMachineActionsForAccess(acc, targetData.type),
+      'states'
+    );
+
+    // Grant state machine access permissions
+    if (resolvedActions.length > 0) {
       const statement = new PolicyStatement({
         effect: Effect.ALLOW,
-        actions,
+        actions: resolvedActions,
         resources: [targetData.stateMachineArn]
       });
       iamPolicies.push({
         statement,
-        description: 'Step Functions state machine write access permissions',
+        description: `Step Functions state machine ${primaryAccess} access permissions`,
         complianceRequirement: 'Least privilege IAM access'
       });
     }
@@ -241,38 +222,27 @@ export class StepFunctionsBinderStrategy extends UnifiedBinderStrategyBase {
     const environmentVariables: Record<string, string> = {};
     const iamPolicies: IamPolicy[] = [];
 
-    // Grant execution access permissions
-    if (access.includes('read') || access.includes('readwrite')) {
-      const statement = new PolicyStatement({
-        effect: Effect.ALLOW,
-        actions: [
-          'states:DescribeExecution',
-          'states:ListExecutions',
-          'states:GetExecutionHistory'
-        ],
-        resources: [targetData.executionArn]
-      });
-      iamPolicies.push({
-        statement,
-        description: 'Step Functions execution read access permissions',
-        complianceRequirement: 'Least privilege IAM access'
-      });
-    }
+    // Determine primary access level for action mapping
+    const primaryAccess = access.includes('readwrite') ? 'readwrite' : access.includes('write') ? 'write' : 'read';
 
-    if (access.includes('write') || access.includes('readwrite')) {
+    // Resolve actions (granular override or coarse access)
+    const resolvedActions = resolveActions(
+      context.directive,
+      context,
+      (acc) => this.getExecutionActionsForAccess(acc),
+      'states'
+    );
+
+    // Grant execution access permissions
+    if (resolvedActions.length > 0) {
       const statement = new PolicyStatement({
         effect: Effect.ALLOW,
-        actions: [
-          'states:StartExecution',
-          'states:StopExecution',
-          'states:TagResource',
-          'states:UntagResource'
-        ],
+        actions: resolvedActions,
         resources: [targetData.executionArn]
       });
       iamPolicies.push({
         statement,
-        description: 'Step Functions execution write access permissions',
+        description: `Step Functions execution ${primaryAccess} access permissions`,
         complianceRequirement: 'Least privilege IAM access'
       });
     }
@@ -332,37 +302,27 @@ export class StepFunctionsBinderStrategy extends UnifiedBinderStrategyBase {
     const environmentVariables: Record<string, string> = {};
     const iamPolicies: IamPolicy[] = [];
 
-    // Grant activity access permissions
-    if (access.includes('read') || access.includes('readwrite')) {
-      const statement = new PolicyStatement({
-        effect: Effect.ALLOW,
-        actions: [
-          'states:DescribeActivity',
-          'states:ListActivities'
-        ],
-        resources: [targetData.activityArn]
-      });
-      iamPolicies.push({
-        statement,
-        description: 'Step Functions activity read access permissions',
-        complianceRequirement: 'Least privilege IAM access'
-      });
-    }
+    // Determine primary access level for action mapping
+    const primaryAccess = access.includes('readwrite') ? 'readwrite' : access.includes('write') ? 'write' : 'read';
 
-    if (access.includes('write') || access.includes('readwrite')) {
+    // Resolve actions (granular override or coarse access)
+    const resolvedActions = resolveActions(
+      context.directive,
+      context,
+      (acc) => this.getActivityActionsForAccess(acc),
+      'states'
+    );
+
+    // Grant activity access permissions
+    if (resolvedActions.length > 0) {
       const statement = new PolicyStatement({
         effect: Effect.ALLOW,
-        actions: [
-          'states:CreateActivity',
-          'states:DeleteActivity',
-          'states:TagResource',
-          'states:UntagResource'
-        ],
+        actions: resolvedActions,
         resources: [targetData.activityArn]
       });
       iamPolicies.push({
         statement,
-        description: 'Step Functions activity write access permissions',
+        description: `Step Functions activity ${primaryAccess} access permissions`,
         complianceRequirement: 'Least privilege IAM access'
       });
     }
@@ -524,5 +484,101 @@ export class StepFunctionsBinderStrategy extends UnifiedBinderStrategyBase {
     environmentVariables['STEP_FUNCTIONS_AUDIT_LOGGING_ENABLED'] = 'true';
 
     return { environmentVariables, iamPolicies };
+  }
+
+  /**
+   * Get Step Functions state machine actions based on access level
+   * Used by resolveActions to compute base actions from coarse access level
+   * 
+   * @param access - Access level (read, write, readwrite)
+   * @param stateMachineType - State machine type (STANDARD, EXPRESS)
+   * @returns Array of IAM action strings
+   */
+  private getStateMachineActionsForAccess(access: string, stateMachineType?: string): string[] {
+    const actions: string[] = [];
+    
+    if (access === 'read' || access === 'readwrite') {
+      actions.push(
+        'states:DescribeStateMachine',
+        'states:ListStateMachines',
+        'states:DescribeExecution'
+      );
+    }
+
+    if (access === 'write' || access === 'readwrite') {
+      actions.push(
+        'states:CreateStateMachine',
+        'states:DeleteStateMachine',
+        'states:UpdateStateMachine',
+        'states:StartExecution',
+        'states:StopExecution'
+      );
+      
+      // Add synchronous execution support for Express workflows
+      if (stateMachineType === 'EXPRESS') {
+        actions.push('states:StartSyncExecution');
+      }
+    }
+
+    return actions;
+  }
+
+  /**
+   * Get Step Functions execution actions based on access level
+   * Used by resolveActions to compute base actions from coarse access level
+   * 
+   * @param access - Access level (read, write, readwrite)
+   * @returns Array of IAM action strings
+   */
+  private getExecutionActionsForAccess(access: string): string[] {
+    const actions: string[] = [];
+    
+    if (access === 'read' || access === 'readwrite') {
+      actions.push(
+        'states:DescribeExecution',
+        'states:ListExecutions',
+        'states:GetExecutionHistory'
+      );
+    }
+
+    if (access === 'write' || access === 'readwrite') {
+      actions.push(
+        'states:StartExecution',
+        'states:StopExecution',
+        'states:TagResource',
+        'states:UntagResource'
+      );
+    }
+
+    return actions;
+  }
+
+  /**
+   * Get Step Functions activity actions based on access level
+   * Used by resolveActions to compute base actions from coarse access level
+   * 
+   * @param access - Access level (read, write, readwrite)
+   * @returns Array of IAM action strings
+   */
+  private getActivityActionsForAccess(access: string): string[] {
+    const actions: string[] = [];
+    
+    if (access === 'read' || access === 'readwrite') {
+      actions.push(
+        'states:DescribeActivity',
+        'states:ListActivities'
+      );
+    }
+
+    if (access === 'write' || access === 'readwrite') {
+      actions.push(
+        'states:CreateActivity',
+        'states:DeleteActivity',
+        'states:TagResource',
+        'states:UntagResource'
+      );
+    }
+
+    return actions;
   }
 }

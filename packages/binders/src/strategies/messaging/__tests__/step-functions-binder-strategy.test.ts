@@ -577,4 +577,66 @@ describe('StepFunctionsBinderStrategy', () => {
       }
     });
   });
+
+  describe('StepFunctionsBind__CustomActionsOverride__ReplacesCoarseActions', () => {
+    const metadata = {
+      id: 'TP-binders-messaging-stepfunctions-010',
+      level: 'unit' as const,
+      capability: 'Custom actions override replaces default Step Functions actions',
+      oracle: 'exact' as const,
+      determinism: 'deterministic' as const,
+      naming: { pattern: 'StepFunctionsBind__Condition__Outcome', example: 'StepFunctionsBind__CustomActionsOverride__ReplacesCoarseActions' },
+      invariants: [
+        'IAM policy actions match provided custom actions array',
+        'Default Step Functions actions are not included when custom actions provided',
+        'Actions array is used directly (replaces coarse access)'
+      ],
+      fixtures: ['MockSourceComponent', 'MockTargetComponent'],
+      inputs: {
+        shape: 'BindingContext with states:state-machine capability and directive.actions array',
+        notes: 'Granular actions override test'
+      },
+      risks: [],
+      dependencies: ['action-resolver'],
+      evidence: [],
+      compliance_refs: ['docs/platform-standards/platform-iam-auditing-standard.md'],
+      ai_generated: true,
+      human_reviewed_by: 'Platform Engineering'
+    };
+
+    test('StepFunctionsBind__CustomActionsOverride__ReplacesCoarseActions', async () => {
+      const strategy = new StepFunctionsBinderStrategy();
+      const customActions = ['states:StartExecution', 'states:DescribeStateMachine'];
+      const target = createMockTargetComponent('stepfunctions-state-machine', {
+        'states:state-machine': {
+          stateMachineArn: 'arn:aws:states:us-east-1:123456789012:stateMachine:test-machine',
+          stateMachineName: 'test-machine'
+        }
+      });
+
+      const context = createBindingContext({
+        source: createMockSourceComponent(),
+        target,
+        capability: 'states:state-machine',
+        access: 'read',
+        actions: customActions
+      });
+
+      const result = await executeUnifiedBinding(strategy, context);
+
+      assertEnhancedBindingResult(result);
+
+      expect(result.iamPolicies.length).toBeGreaterThan(0);
+      const policy = result.iamPolicies.find(p => p.description.includes('state machine'));
+      expect(policy).toBeDefined();
+      
+      const statementJson = policy!.statement.toStatementJson();
+      const actions = Array.isArray(statementJson.Action)
+        ? statementJson.Action
+        : [statementJson.Action];
+
+      expect(actions).toEqual(expect.arrayContaining(customActions));
+      expect(actions.length).toBe(customActions.length);
+    });
+  });
 });
