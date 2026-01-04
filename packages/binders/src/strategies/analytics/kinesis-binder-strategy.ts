@@ -3,7 +3,7 @@
  * Handles real-time data streaming bindings for Amazon Kinesis with mandatory compliance enforcement
  */
 
-import { UnifiedBinderStrategyBase } from '@shinobi/core';
+import { UnifiedBinderStrategyBase, resolveActions } from '@shinobi/core';
 import type { BindingContext, EnhancedBindingResult, CompatibilityEntry } from '@shinobi/core';
 import type { IamPolicy } from '@shinobi/core';
 import { PolicyStatement, Effect } from 'aws-cdk-lib/aws-iam';
@@ -234,18 +234,41 @@ export class KinesisBinderStrategy extends UnifiedBinderStrategyBase {
     // Determine primary access level
     const primaryAccess = access.includes('readwrite') ? 'readwrite' : access.includes('write') ? 'write' : 'read';
 
-    // Create IAM policies based on access level
-    const actions = this.getKinesisStreamActionsForAccess(primaryAccess, context);
-    if (actions.actions.length > 0) {
+    // Handle granular actions override or use multi-statement approach
+    if (context.directive.actions) {
+      const resolvedActions = resolveActions(
+        context.directive,
+        context,
+        (acc) => this.getKinesisStreamActionsForAccess(acc, context).actions,
+        'kinesis'
+      );
+
+      // Get resources from target data
+      const resources = targetData.streamArn ? [targetData.streamArn] : ['*'];
+
       iamPolicies.push({
         statement: new PolicyStatement({
           effect: Effect.ALLOW,
-          actions: actions.actions,
-          resources: actions.resources
+          actions: resolvedActions,
+          resources
         }),
-        description: `Kinesis stream ${primaryAccess} access`,
-        complianceRequirement: `Kinesis stream ${primaryAccess} access policy`
+        description: 'Kinesis stream access (granular actions)',
+        complianceRequirement: 'Kinesis stream access policy'
       });
+    } else {
+      // Coarse access levels: use existing helper method (backward compatible)
+      const actions = this.getKinesisStreamActionsForAccess(primaryAccess, context);
+      if (actions.actions.length > 0) {
+        iamPolicies.push({
+          statement: new PolicyStatement({
+            effect: Effect.ALLOW,
+            actions: actions.actions,
+            resources: actions.resources
+          }),
+          description: `Kinesis stream ${primaryAccess} access`,
+          complianceRequirement: `Kinesis stream ${primaryAccess} access policy`
+        });
+      }
     }
 
     // Grant Lambda permissions for stream processing if process access is requested
@@ -327,18 +350,41 @@ export class KinesisBinderStrategy extends UnifiedBinderStrategyBase {
     // Determine primary access level
     const primaryAccess = access.includes('readwrite') ? 'readwrite' : access.includes('write') ? 'write' : 'read';
 
-    // Create IAM policies based on access level
-    const actions = this.getKinesisAnalyticsActionsForAccess(primaryAccess, context);
-    if (actions.actions.length > 0) {
+    // Handle granular actions override or use multi-statement approach
+    if (context.directive.actions) {
+      const resolvedActions = resolveActions(
+        context.directive,
+        context,
+        (acc) => this.getKinesisAnalyticsActionsForAccess(acc, context).actions,
+        'kinesisanalytics'
+      );
+
+      // Get resources from target data
+      const resources = targetData.applicationArn ? [targetData.applicationArn] : ['*'];
+
       iamPolicies.push({
         statement: new PolicyStatement({
           effect: Effect.ALLOW,
-          actions: actions.actions,
-          resources: actions.resources
+          actions: resolvedActions,
+          resources
         }),
-        description: `Kinesis Analytics ${primaryAccess} access`,
-        complianceRequirement: `Kinesis Analytics ${primaryAccess} access policy`
+        description: 'Kinesis Analytics access (granular actions)',
+        complianceRequirement: 'Kinesis Analytics access policy'
       });
+    } else {
+      // Coarse access levels: use existing helper method (backward compatible)
+      const actions = this.getKinesisAnalyticsActionsForAccess(primaryAccess, context);
+      if (actions.actions.length > 0) {
+        iamPolicies.push({
+          statement: new PolicyStatement({
+            effect: Effect.ALLOW,
+            actions: actions.actions,
+            resources: actions.resources
+          }),
+          description: `Kinesis Analytics ${primaryAccess} access`,
+          complianceRequirement: `Kinesis Analytics ${primaryAccess} access policy`
+        });
+      }
     }
 
     // Grant CloudWatch Logs permissions
@@ -399,18 +445,41 @@ export class KinesisBinderStrategy extends UnifiedBinderStrategyBase {
     // Determine primary access level
     const primaryAccess = access.includes('readwrite') ? 'readwrite' : access.includes('write') ? 'write' : 'read';
 
-    // Create IAM policies based on access level
-    const actions = this.getKinesisFirehoseActionsForAccess(primaryAccess, context);
-    if (actions.actions.length > 0) {
+    // Handle granular actions override or use multi-statement approach
+    if (context.directive.actions) {
+      const resolvedActions = resolveActions(
+        context.directive,
+        context,
+        (acc) => this.getKinesisFirehoseActionsForAccess(acc, context).actions,
+        'firehose'
+      );
+
+      // Get resources from target data
+      const resources = targetData.deliveryStreamArn ? [targetData.deliveryStreamArn] : ['*'];
+
       iamPolicies.push({
         statement: new PolicyStatement({
           effect: Effect.ALLOW,
-          actions: actions.actions,
-          resources: actions.resources
+          actions: resolvedActions,
+          resources
         }),
-        description: `Kinesis Firehose ${primaryAccess} access`,
-        complianceRequirement: `Kinesis Firehose ${primaryAccess} access policy`
+        description: 'Kinesis Firehose access (granular actions)',
+        complianceRequirement: 'Kinesis Firehose access policy'
       });
+    } else {
+      // Coarse access levels: use existing helper method (backward compatible)
+      const actions = this.getKinesisFirehoseActionsForAccess(primaryAccess, context);
+      if (actions.actions.length > 0) {
+        iamPolicies.push({
+          statement: new PolicyStatement({
+            effect: Effect.ALLOW,
+            actions: actions.actions,
+            resources: actions.resources
+          }),
+          description: `Kinesis Firehose ${primaryAccess} access`,
+          complianceRequirement: `Kinesis Firehose ${primaryAccess} access policy`
+        });
+      }
     }
 
     // Grant S3 permissions for data delivery
@@ -503,18 +572,41 @@ export class KinesisBinderStrategy extends UnifiedBinderStrategyBase {
     // Determine primary access level
     const primaryAccess = access.includes('readwrite') ? 'readwrite' : access.includes('write') ? 'write' : 'read';
 
-    // Create IAM policies based on access level
-    const actions = this.getKinesisVideoStreamsActionsForAccess(primaryAccess, context);
-    if (actions.actions.length > 0) {
+    // Handle granular actions override or use multi-statement approach
+    if (context.directive.actions) {
+      const resolvedActions = resolveActions(
+        context.directive,
+        context,
+        (acc) => this.getKinesisVideoStreamsActionsForAccess(acc, context).actions,
+        'kinesisvideo'
+      );
+
+      // Get resources from target data
+      const resources = targetData.streamArn ? [targetData.streamArn] : ['*'];
+
       iamPolicies.push({
         statement: new PolicyStatement({
           effect: Effect.ALLOW,
-          actions: actions.actions,
-          resources: actions.resources
+          actions: resolvedActions,
+          resources
         }),
-        description: `Kinesis Video Streams ${primaryAccess} access`,
-        complianceRequirement: `Kinesis Video Streams ${primaryAccess} access policy`
+        description: 'Kinesis Video Streams access (granular actions)',
+        complianceRequirement: 'Kinesis Video Streams access policy'
       });
+    } else {
+      // Coarse access levels: use existing helper method (backward compatible)
+      const actions = this.getKinesisVideoStreamsActionsForAccess(primaryAccess, context);
+      if (actions.actions.length > 0) {
+        iamPolicies.push({
+          statement: new PolicyStatement({
+            effect: Effect.ALLOW,
+            actions: actions.actions,
+            resources: actions.resources
+          }),
+          description: `Kinesis Video Streams ${primaryAccess} access`,
+          complianceRequirement: `Kinesis Video Streams ${primaryAccess} access policy`
+        });
+      }
     }
 
     // Set environment variables (targetData is now narrowed by type guard)

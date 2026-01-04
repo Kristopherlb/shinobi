@@ -3,7 +3,7 @@
  * Handles big data processing bindings for Amazon EMR with mandatory compliance enforcement
  */
 
-import { UnifiedBinderStrategyBase } from '@shinobi/core';
+import { UnifiedBinderStrategyBase, resolveActions } from '@shinobi/core';
 import type { BindingContext, EnhancedBindingResult, CompatibilityEntry } from '@shinobi/core';
 import type { IamPolicy } from '@shinobi/core';
 import { PolicyStatement, Effect } from 'aws-cdk-lib/aws-iam';
@@ -258,18 +258,41 @@ export class EmrBinderStrategy extends UnifiedBinderStrategyBase {
     // Determine primary access level
     const primaryAccess = access.includes('readwrite') ? 'readwrite' : access.includes('write') ? 'write' : 'read';
 
-    // Create IAM policies based on access level
-    const actions = this.getEmrClusterActionsForAccess(primaryAccess, context);
-    if (actions.actions.length > 0) {
+    // Handle granular actions override or use multi-statement approach
+    if (context.directive.actions) {
+      const resolvedActions = resolveActions(
+        context.directive,
+        context,
+        (acc) => this.getEmrClusterActionsForAccess(acc, context).actions,
+        'elasticmapreduce'
+      );
+
+      // Get resources from target data
+      const resources = targetData.clusterArn ? [targetData.clusterArn] : ['*'];
+
       iamPolicies.push({
         statement: new PolicyStatement({
           effect: Effect.ALLOW,
-          actions: actions.actions,
-          resources: actions.resources
+          actions: resolvedActions,
+          resources
         }),
-        description: `EMR cluster ${primaryAccess} access`,
-        complianceRequirement: `EMR cluster ${primaryAccess} access policy`
+        description: 'EMR cluster access (granular actions)',
+        complianceRequirement: 'EMR cluster access policy'
       });
+    } else {
+      // Coarse access levels: use existing helper method (backward compatible)
+      const actions = this.getEmrClusterActionsForAccess(primaryAccess, context);
+      if (actions.actions.length > 0) {
+        iamPolicies.push({
+          statement: new PolicyStatement({
+            effect: Effect.ALLOW,
+            actions: actions.actions,
+            resources: actions.resources
+          }),
+          description: `EMR cluster ${primaryAccess} access`,
+          complianceRequirement: `EMR cluster ${primaryAccess} access policy`
+        });
+      }
     }
 
     // Grant EC2 permissions for cluster management
@@ -353,18 +376,41 @@ export class EmrBinderStrategy extends UnifiedBinderStrategyBase {
     // Determine primary access level
     const primaryAccess = access.includes('readwrite') ? 'readwrite' : access.includes('write') ? 'write' : 'read';
 
-    // Create IAM policies based on access level
-    const actions = this.getEmrStepActionsForAccess(primaryAccess, context);
-    if (actions.actions.length > 0) {
+    // Handle granular actions override or use multi-statement approach
+    if (context.directive.actions) {
+      const resolvedActions = resolveActions(
+        context.directive,
+        context,
+        (acc) => this.getEmrStepActionsForAccess(acc, context).actions,
+        'elasticmapreduce'
+      );
+
+      // Get resources from target data
+      const resources = targetData.stepArn ? [targetData.stepArn] : ['*'];
+
       iamPolicies.push({
         statement: new PolicyStatement({
           effect: Effect.ALLOW,
-          actions: actions.actions,
-          resources: actions.resources
+          actions: resolvedActions,
+          resources
         }),
-        description: `EMR step ${primaryAccess} access`,
-        complianceRequirement: `EMR step ${primaryAccess} access policy`
+        description: 'EMR step access (granular actions)',
+        complianceRequirement: 'EMR step access policy'
       });
+    } else {
+      // Coarse access levels: use existing helper method (backward compatible)
+      const actions = this.getEmrStepActionsForAccess(primaryAccess, context);
+      if (actions.actions.length > 0) {
+        iamPolicies.push({
+          statement: new PolicyStatement({
+            effect: Effect.ALLOW,
+            actions: actions.actions,
+            resources: actions.resources
+          }),
+          description: `EMR step ${primaryAccess} access`,
+          complianceRequirement: `EMR step ${primaryAccess} access policy`
+        });
+      }
     }
 
     // Grant S3 permissions for step artifacts
@@ -423,18 +469,41 @@ export class EmrBinderStrategy extends UnifiedBinderStrategyBase {
     // Determine primary access level
     const primaryAccess = access.includes('readwrite') ? 'readwrite' : access.includes('write') ? 'write' : 'read';
 
-    // Create IAM policies based on access level
-    const actions = this.getEmrNotebookActionsForAccess(primaryAccess, context);
-    if (actions.actions.length > 0) {
+    // Handle granular actions override or use multi-statement approach
+    if (context.directive.actions) {
+      const resolvedActions = resolveActions(
+        context.directive,
+        context,
+        (acc) => this.getEmrNotebookActionsForAccess(acc, context).actions,
+        'elasticmapreduce'
+      );
+
+      // Get resources from target data
+      const resources = targetData.notebookExecutionId ? [`arn:aws:elasticmapreduce:*:*:notebook-execution/${targetData.notebookExecutionId}`] : ['*'];
+
       iamPolicies.push({
         statement: new PolicyStatement({
           effect: Effect.ALLOW,
-          actions: actions.actions,
-          resources: actions.resources
+          actions: resolvedActions,
+          resources
         }),
-        description: `EMR notebook ${primaryAccess} access`,
-        complianceRequirement: `EMR notebook ${primaryAccess} access policy`
+        description: 'EMR notebook access (granular actions)',
+        complianceRequirement: 'EMR notebook access policy'
       });
+    } else {
+      // Coarse access levels: use existing helper method (backward compatible)
+      const actions = this.getEmrNotebookActionsForAccess(primaryAccess, context);
+      if (actions.actions.length > 0) {
+        iamPolicies.push({
+          statement: new PolicyStatement({
+            effect: Effect.ALLOW,
+            actions: actions.actions,
+            resources: actions.resources
+          }),
+          description: `EMR notebook ${primaryAccess} access`,
+          complianceRequirement: `EMR notebook ${primaryAccess} access policy`
+        });
+      }
     }
 
     // Grant S3 permissions for notebook storage
@@ -492,18 +561,41 @@ export class EmrBinderStrategy extends UnifiedBinderStrategyBase {
     // Determine primary access level
     const primaryAccess = access.includes('readwrite') ? 'readwrite' : access.includes('write') ? 'write' : 'read';
 
-    // Create IAM policies based on access level
-    const actions = this.getEmrServerlessActionsForAccess(primaryAccess, context);
-    if (actions.actions.length > 0) {
+    // Handle granular actions override or use multi-statement approach
+    if (context.directive.actions) {
+      const resolvedActions = resolveActions(
+        context.directive,
+        context,
+        (acc) => this.getEmrServerlessActionsForAccess(acc, context).actions,
+        'emr-serverless'
+      );
+
+      // Get resources from target data
+      const resources = targetData.applicationArn ? [targetData.applicationArn] : ['*'];
+
       iamPolicies.push({
         statement: new PolicyStatement({
           effect: Effect.ALLOW,
-          actions: actions.actions,
-          resources: actions.resources
+          actions: resolvedActions,
+          resources
         }),
-        description: `EMR Serverless ${primaryAccess} access`,
-        complianceRequirement: `EMR Serverless ${primaryAccess} access policy`
+        description: 'EMR Serverless access (granular actions)',
+        complianceRequirement: 'EMR Serverless access policy'
       });
+    } else {
+      // Coarse access levels: use existing helper method (backward compatible)
+      const actions = this.getEmrServerlessActionsForAccess(primaryAccess, context);
+      if (actions.actions.length > 0) {
+        iamPolicies.push({
+          statement: new PolicyStatement({
+            effect: Effect.ALLOW,
+            actions: actions.actions,
+            resources: actions.resources
+          }),
+          description: `EMR Serverless ${primaryAccess} access`,
+          complianceRequirement: `EMR Serverless ${primaryAccess} access policy`
+        });
+      }
     }
 
     // Set environment variables
