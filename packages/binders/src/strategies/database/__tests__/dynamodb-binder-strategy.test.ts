@@ -1168,4 +1168,119 @@ describe('DynamoDbBinderStrategy', () => {
       );
     });
   });
+
+  describe('DynamoBind__TableWithMetadata__SetsMetadataEnvVars', () => {
+    test('DynamoBind__TableWithMetadata__SetsMetadataEnvVars', async () => {
+      const strategy = new DynamoDbBinderStrategy();
+      const keySchema = { hashKey: 'id', rangeKey: 'timestamp' };
+      const attributeDefinitions = [
+        { name: 'id', type: 'S' },
+        { name: 'timestamp', type: 'N' }
+      ];
+      const target = createMockTargetComponent('dynamodb-table', {
+        'db:dynamodb': {
+          tableArn: 'arn:aws:dynamodb:us-east-1:123456789012:table/test-table',
+          tableName: 'test-table',
+          keySchema,
+          attributeDefinitions,
+          billingMode: 'PROVISIONED',
+          tableStatus: 'ACTIVE'
+        }
+      });
+
+      const context = createBindingContext({
+        source: createMockSourceComponent('lambda-api', 'test-source'),
+        target,
+        capability: 'db:dynamodb',
+        access: 'read'
+      });
+
+      const result = await executeUnifiedBinding(strategy, context);
+
+      assertEnhancedBindingResult(result);
+      expect(result.environmentVariables.DYNAMODB_KEY_SCHEMA).toBe(JSON.stringify(keySchema));
+      expect(result.environmentVariables.DYNAMODB_ATTRIBUTE_DEFINITIONS).toBe(JSON.stringify(attributeDefinitions));
+      expect(result.environmentVariables.DYNAMODB_BILLING_MODE).toBe('PROVISIONED');
+      expect(result.environmentVariables.DYNAMODB_TABLE_STATUS).toBe('ACTIVE');
+    });
+  });
+
+  describe('DynamoBind__TableReadWriteAccess__GrantsReadAndWriteActions', () => {
+    test('DynamoBind__TableReadWriteAccess__GrantsReadAndWriteActions', async () => {
+      const strategy = new DynamoDbBinderStrategy();
+      const target = createMockTargetComponent('dynamodb-table', {
+        'db:dynamodb': {
+          tableArn: 'arn:aws:dynamodb:us-east-1:123456789012:table/test-table',
+          tableName: 'test-table'
+        }
+      });
+
+      const context = createBindingContext({
+        source: createMockSourceComponent('lambda-api', 'test-source'),
+        target,
+        capability: 'db:dynamodb',
+        access: 'readwrite'
+      });
+
+      const result = await executeUnifiedBinding(strategy, context);
+
+      assertEnhancedBindingResult(result);
+      
+      const readPolicy = result.iamPolicies.find(p => 
+        p.description.includes('read access')
+      );
+      expect(readPolicy).toBeDefined();
+      
+      const writePolicy = result.iamPolicies.find(p => 
+        p.description.includes('write access')
+      );
+      expect(writePolicy).toBeDefined();
+    });
+  });
+
+  describe('DynamoBind__TableMissingTableName__ThrowsError', () => {
+    test('DynamoBind__TableMissingTableName__ThrowsError', async () => {
+      const strategy = new DynamoDbBinderStrategy();
+      const target = createMockTargetComponent('dynamodb-table', {
+        'db:dynamodb': {
+          tableArn: 'arn:aws:dynamodb:us-east-1:123456789012:table/test-table'
+          // Missing tableName
+        }
+      });
+
+      const context = createBindingContext({
+        source: createMockSourceComponent('lambda-api', 'test-source'),
+        target,
+        capability: 'db:dynamodb',
+        access: 'read'
+      });
+
+      await expect(executeUnifiedBinding(strategy, context)).rejects.toThrow(
+        'Target component missing required tableName property'
+      );
+    });
+  });
+
+  describe('DynamoBind__TableEmptyAccess__ThrowsError', () => {
+    test('DynamoBind__TableEmptyAccess__ThrowsError', async () => {
+      const strategy = new DynamoDbBinderStrategy();
+      const target = createMockTargetComponent('dynamodb-table', {
+        'db:dynamodb': {
+          tableArn: 'arn:aws:dynamodb:us-east-1:123456789012:table/test-table',
+          tableName: 'test-table'
+        }
+      });
+
+      const context = createBindingContext({
+        source: createMockSourceComponent('lambda-api', 'test-source'),
+        target,
+        capability: 'db:dynamodb'
+        // access is undefined, which should cause an error
+      });
+
+      await expect(executeUnifiedBinding(strategy, context)).rejects.toThrow(
+        'Access cannot be empty for DynamoDB binding'
+      );
+    });
+  });
 });

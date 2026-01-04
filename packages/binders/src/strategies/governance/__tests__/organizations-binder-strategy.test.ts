@@ -1393,5 +1393,260 @@ describe('OrganizationsBinderStrategy', () => {
       expect(actions).toContain('iam:DeleteServiceLinkedRole');
     });
   });
+
+  describe('OrganizationsBind__ScpWithAutoEnablement__AddsAutoEnablementPolicies', () => {
+    test('OrganizationsBind__ScpWithAutoEnablement__AddsAutoEnablementPolicies', async () => {
+      const strategy = new OrganizationsBinderStrategy();
+      const target = createMockTargetComponent('organizations', {
+        'org:scp': {
+          orgId: 'o-1234567890',
+          masterAccountId: '111111111111'
+        }
+      });
+
+      const context = createBindingContext({
+        source: createMockSourceComponent('lambda-governance', 'test-source'),
+        target,
+        capability: 'org:scp',
+        access: 'write',
+        options: { autoEnablement: true }
+      });
+
+      const result = await executeUnifiedBinding(strategy, context);
+
+      assertEnhancedBindingResult(result);
+
+      const policy = result.iamPolicies.find(p => p.description.includes('auto-enablement'));
+      expect(policy).toBeDefined();
+      const statementJson = policy!.statement.toStatementJson();
+      const actions = Array.isArray(statementJson.Action) 
+        ? statementJson.Action 
+        : [statementJson.Action];
+      expect(actions).toContain('organizations:CreateAccount');
+      expect(actions).toContain('organizations:EnableAWSServiceAccess');
+    });
+  });
+
+  describe('OrganizationsBind__ScpWithEnableAllFeatures__AddsFeatureEnablementPolicies', () => {
+    test('OrganizationsBind__ScpWithEnableAllFeatures__AddsFeatureEnablementPolicies', async () => {
+      const strategy = new OrganizationsBinderStrategy();
+      const target = createMockTargetComponent('organizations', {
+        'org:scp': {
+          orgId: 'o-1234567890',
+          masterAccountId: '111111111111'
+        }
+      });
+
+      const context = createBindingContext({
+        source: createMockSourceComponent('lambda-governance', 'test-source'),
+        target,
+        capability: 'org:scp',
+        access: 'write',
+        options: { enableAllFeatures: true }
+      });
+
+      const result = await executeUnifiedBinding(strategy, context);
+
+      assertEnhancedBindingResult(result);
+
+      const policy = result.iamPolicies.find(p => p.description.includes('feature enablement'));
+      expect(policy).toBeDefined();
+      const statementJson = policy!.statement.toStatementJson();
+      const actions = Array.isArray(statementJson.Action) 
+        ? statementJson.Action 
+        : [statementJson.Action];
+      expect(actions).toContain('organizations:EnableAllFeatures');
+    });
+  });
+
+  describe('OrganizationsBind__ScpAdminAccessWithRequireFullAdminAccess__GrantsFullAdminPolicy', () => {
+    test('OrganizationsBind__ScpAdminAccessWithRequireFullAdminAccess__GrantsFullAdminPolicy', async () => {
+      const strategy = new OrganizationsBinderStrategy();
+      const target = createMockTargetComponent('organizations', {
+        'org:scp': {
+          orgId: 'o-1234567890',
+          masterAccountId: '111111111111'
+        }
+      });
+
+      const context = createBindingContext({
+        source: createMockSourceComponent('lambda-governance', 'test-source'),
+        target,
+        capability: 'org:scp',
+        access: 'admin',
+        options: { requireFullAdminAccess: true }
+      });
+
+      const result = await executeUnifiedBinding(strategy, context);
+
+      assertEnhancedBindingResult(result);
+
+      const policy = result.iamPolicies.find(p => p.description.includes('admin access'));
+      expect(policy).toBeDefined();
+      const statementJson = policy!.statement.toStatementJson();
+      expect(statementJson.Action).toBe('organizations:*');
+    });
+  });
+
+  describe('OrganizationsBind__TagPolicyMissingMasterAccountId__ThrowsError', () => {
+    test('OrganizationsBind__TagPolicyMissingMasterAccountId__ThrowsError', async () => {
+      const strategy = new OrganizationsBinderStrategy();
+      const target = createMockTargetComponent('organizations', {
+        'org:tag-policy': {
+          orgId: 'o-1234567890'
+          // Missing masterAccountId
+        }
+      });
+
+      const context = createBindingContext({
+        source: createMockSourceComponent('lambda-governance', 'test-source'),
+        target,
+        capability: 'org:tag-policy',
+        access: 'read'
+      });
+
+      await expect(executeUnifiedBinding(strategy, context)).rejects.toThrow(
+        'Target component missing required masterAccountId property'
+      );
+    });
+  });
+
+  describe('OrganizationsBind__BackupPolicyMissingMasterAccountId__ThrowsError', () => {
+    test('OrganizationsBind__BackupPolicyMissingMasterAccountId__ThrowsError', async () => {
+      const strategy = new OrganizationsBinderStrategy();
+      const target = createMockTargetComponent('organizations', {
+        'org:backup-policy': {
+          orgId: 'o-1234567890'
+          // Missing masterAccountId
+        }
+      });
+
+      const context = createBindingContext({
+        source: createMockSourceComponent('lambda-governance', 'test-source'),
+        target,
+        capability: 'org:backup-policy',
+        access: 'read'
+      });
+
+      await expect(executeUnifiedBinding(strategy, context)).rejects.toThrow(
+        'Target component missing required masterAccountId property'
+      );
+    });
+  });
+
+  describe('OrganizationsBind__OuMissingMasterAccountId__ThrowsError', () => {
+    test('OrganizationsBind__OuMissingMasterAccountId__ThrowsError', async () => {
+      const strategy = new OrganizationsBinderStrategy();
+      const target = createMockTargetComponent('organizations', {
+        'org:ou': {
+          orgId: 'o-1234567890'
+          // Missing masterAccountId
+        }
+      });
+
+      const context = createBindingContext({
+        source: createMockSourceComponent('lambda-governance', 'test-source'),
+        target,
+        capability: 'org:ou',
+        access: 'read'
+      });
+
+      await expect(executeUnifiedBinding(strategy, context)).rejects.toThrow(
+        'Target component missing required masterAccountId property'
+      );
+    });
+  });
+
+  describe('OrganizationsBind__AccountMissingMasterAccountId__ThrowsError', () => {
+    test('OrganizationsBind__AccountMissingMasterAccountId__ThrowsError', async () => {
+      const strategy = new OrganizationsBinderStrategy();
+      const target = createMockTargetComponent('organizations', {
+        'org:account': {
+          orgId: 'o-1234567890'
+          // Missing masterAccountId
+        }
+      });
+
+      const context = createBindingContext({
+        source: createMockSourceComponent('lambda-governance', 'test-source'),
+        target,
+        capability: 'org:account',
+        access: 'read'
+      });
+
+      await expect(executeUnifiedBinding(strategy, context)).rejects.toThrow(
+        'Target component missing required masterAccountId property'
+      );
+    });
+  });
+
+  describe('OrganizationsBind__AiServicesOptOutMissingMasterAccountId__ThrowsError', () => {
+    test('OrganizationsBind__AiServicesOptOutMissingMasterAccountId__ThrowsError', async () => {
+      const strategy = new OrganizationsBinderStrategy();
+      const target = createMockTargetComponent('organizations', {
+        'org:ai-services-opt-out': {
+          orgId: 'o-1234567890'
+          // Missing masterAccountId
+        }
+      });
+
+      const context = createBindingContext({
+        source: createMockSourceComponent('lambda-governance', 'test-source'),
+        target,
+        capability: 'org:ai-services-opt-out',
+        access: 'read'
+      });
+
+      await expect(executeUnifiedBinding(strategy, context)).rejects.toThrow(
+        'Target component missing required masterAccountId property'
+      );
+    });
+  });
+
+  describe('OrganizationsBind__ServiceLinkedRoleMissingMasterAccountId__ThrowsError', () => {
+    test('OrganizationsBind__ServiceLinkedRoleMissingMasterAccountId__ThrowsError', async () => {
+      const strategy = new OrganizationsBinderStrategy();
+      const target = createMockTargetComponent('organizations', {
+        'org:service-linked-role': {
+          orgId: 'o-1234567890'
+          // Missing masterAccountId
+        }
+      });
+
+      const context = createBindingContext({
+        source: createMockSourceComponent('lambda-governance', 'test-source'),
+        target,
+        capability: 'org:service-linked-role',
+        access: 'read'
+      });
+
+      await expect(executeUnifiedBinding(strategy, context)).rejects.toThrow(
+        'Target component missing required masterAccountId property'
+      );
+    });
+  });
+
+  describe('OrganizationsBind__ScpMissingMasterAccountId__ThrowsError', () => {
+    test('OrganizationsBind__ScpMissingMasterAccountId__ThrowsError', async () => {
+      const strategy = new OrganizationsBinderStrategy();
+      const target = createMockTargetComponent('organizations', {
+        'org:scp': {
+          orgId: 'o-1234567890'
+          // Missing masterAccountId
+        }
+      });
+
+      const context = createBindingContext({
+        source: createMockSourceComponent('lambda-governance', 'test-source'),
+        target,
+        capability: 'org:scp',
+        access: 'read'
+      });
+
+      await expect(executeUnifiedBinding(strategy, context)).rejects.toThrow(
+        'Target component missing required masterAccountId property'
+      );
+    });
+  });
 });
 

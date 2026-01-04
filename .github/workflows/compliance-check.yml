@@ -40,7 +40,7 @@ jobs:
     - name: Install dependencies
       run: |
         corepack enable || true
-        pnpm install --frozen-lockfile
+        pnpm install
       
     - name: Build-time Compliance Plan (agent)
       run: |
