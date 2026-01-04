@@ -21,6 +21,9 @@ jobs:
         run: |
           corepack enable
           corepack prepare pnpm@latest --activate
+          # Explicitly add pnpm to PATH for subsequent steps
+          echo "$(corepack which pnpm | xargs dirname)" >> $GITHUB_PATH
+          echo "pnpm version: $(pnpm --version)"
       
       - name: Install ripgrep
         run: sudo apt-get update && sudo apt-get install -y ripgrep
