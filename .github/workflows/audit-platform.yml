@@ -22,8 +22,21 @@ jobs:
         uses: actions/setup-node@v4
         with:
           node-version: '20'
-          cache: 'npm'
-          
+
+      - name: Enable Corepack and install pnpm
+        run: |
+          corepack enable
+          corepack prepare pnpm@latest --activate
+          pnpm --version
+
+      - name: Cache pnpm store
+        uses: actions/cache@v4
+        with:
+          path: ~/.pnpm-store
+          key: ${{ runner.os }}-pnpm-${{ hashFiles('**/pnpm-lock.yaml') }}
+          restore-keys: |
+            ${{ runner.os }}-pnpm-
+
       - name: Install system dependencies
         run: |
           echo "Installing ripgrep (required for platform audit CLI)..."
@@ -31,15 +44,15 @@ jobs:
           sudo apt-get install -y ripgrep
           echo "Verifying ripgrep installation..."
           rg --version
-          
+
       - name: Install dependencies
-        run: npm ci
-        
+        run: pnpm install --frozen-lockfile
+
       - name: Check system dependencies
-        run: npm run check:deps
-        
+        run: pnpm run check:deps
+
       - name: Run platform audit
-        run: npm run audit:platform:strict
+        run: pnpm run audit:platform:strict
         
       - name: Upload audit results
         if: failure()
