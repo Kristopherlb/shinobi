@@ -28,8 +28,16 @@ jobs:
           node-version: '20'
           cache: 'pnpm'  # Enables caching of the pnpm store for faster installs
 
+      - name: Verify environment
+        run: |
+          echo "Node.js version: $(node --version)"
+          echo "pnpm version: $(pnpm --version)"
+          echo "Working directory: $(pwd)"
+          echo "Git branch: $(git rev-parse --abbrev-ref HEAD || echo 'N/A')"
+
       - name: Install system dependencies
         run: |
+          set -x  # Enable verbose shell output
           echo "Installing ripgrep (required for platform audit CLI)..."
           sudo apt-get update
           sudo apt-get install -y ripgrep
@@ -37,13 +45,13 @@ jobs:
           rg --version
 
       - name: Install dependencies
-        run: pnpm install --frozen-lockfile
+        run: pnpm install --frozen-lockfile --loglevel=verbose
 
       - name: Check system dependencies
-        run: pnpm run check:deps
+        run: pnpm run check:deps --loglevel=verbose
 
       - name: Run platform audit
-        run: pnpm run audit:platform:strict
+        run: pnpm run audit:platform:strict --loglevel=verbose
         
       - name: Upload audit results
         if: failure()

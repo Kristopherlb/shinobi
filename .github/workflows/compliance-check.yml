@@ -29,8 +29,15 @@ jobs:
         node-version: '20'
         cache: 'pnpm'  # Enables caching of the pnpm store for faster installs
 
+    - name: Verify environment
+      run: |
+        echo "Node.js version: $(node --version)"
+        echo "pnpm version: $(pnpm --version)"
+        echo "Working directory: $(pwd)"
+        echo "Git branch: $(git rev-parse --abbrev-ref HEAD || echo 'N/A')"
+
     - name: Install dependencies
-      run: pnpm install --frozen-lockfile
+      run: pnpm install --frozen-lockfile --loglevel=verbose
 
     - name: Select knowledge base packs
       id: select-packs
@@ -49,12 +56,13 @@ jobs:
     - name: Run component tests
       run: |
         # Run tests for all components that have test directories
+        set -x  # Enable verbose shell output
         find packages/components -name "package.json" -type f | while read pkg; do
           component_dir=$(dirname "$pkg")
           if [ -d "$component_dir/tests" ] || [ -d "$component_dir/__tests__" ]; then
             echo "Running tests for $(basename "$component_dir")"
             cd "$component_dir"
-            pnpm test || echo "Tests failed or not configured"
+            pnpm test --loglevel=verbose || echo "Tests failed or not configured"
             cd - > /dev/null
           fi
         done

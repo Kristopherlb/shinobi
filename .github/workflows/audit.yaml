@@ -21,24 +21,33 @@ jobs:
           node-version: '20'
           cache: 'pnpm'  # Enables caching of the pnpm store for faster installs
       
+      - name: Verify environment
+        run: |
+          echo "Node.js version: $(node --version)"
+          echo "pnpm version: $(pnpm --version)"
+          echo "Working directory: $(pwd)"
+          echo "Git branch: $(git rev-parse --abbrev-ref HEAD || echo 'N/A')"
+      
       - name: Install ripgrep
-        run: sudo apt-get update && sudo apt-get install -y ripgrep
+        run: |
+          set -x  # Enable verbose shell output
+          sudo apt-get update && sudo apt-get install -y ripgrep
       
       - name: Install dependencies (pnpm)
-        run: pnpm install --frozen-lockfile
+        run: pnpm install --frozen-lockfile --loglevel=verbose
       
       - name: Run governance audit
-        run: pnpm run audit:gov
+        run: pnpm run audit:gov --loglevel=verbose
       
       - name: Run testing audit
-        run: pnpm run audit:test
+        run: pnpm run audit:test --loglevel=verbose
       
       - name: Run observability audit
-        run: pnpm run audit:otel
+        run: pnpm run audit:otel --loglevel=verbose
       
       - name: Run comprehensive audit
-        run: pnpm run audit:all -- --base origin/main --format pretty
+        run: pnpm run audit:all --loglevel=verbose -- --base origin/main --format pretty
       
       - name: Run strict audit (warnings as errors)
-        run: pnpm run audit:all:strict -- --base origin/main --format pretty
+        run: pnpm run audit:all:strict --loglevel=verbose -- --base origin/main --format pretty
         continue-on-error: true
