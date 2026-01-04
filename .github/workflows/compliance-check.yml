@@ -40,6 +40,20 @@ jobs:
     - name: Install dependencies
       run: pnpm install --frozen-lockfile
 
+    - name: Select knowledge base packs
+      id: select-packs
+      run: |
+        SERVICE_TYPE="${SERVICE_TYPE:-s3-bucket}"
+        FRAMEWORK="${FRAMEWORK:-fedramp-moderate}"
+        if [ -f "tools/select-packs.mjs" ]; then
+          node tools/select-packs.mjs platform-kb "$SERVICE_TYPE" "$FRAMEWORK" > /tmp/packs.json
+        else
+          echo "{\"chosen\":[{\"meta\":{\"id\":\"$SERVICE_TYPE\"}}],\"framework\":\"$FRAMEWORK\"}" > /tmp/packs.json
+          echo "Warning: tools/select-packs.mjs not found — using fallback packs.json"
+        fi
+        echo "Selected packs:"
+        cat /tmp/packs.json | jq '.' || cat /tmp/packs.json
+
     - name: Run component tests
       run: |
         # Run tests for all components that have test directories
