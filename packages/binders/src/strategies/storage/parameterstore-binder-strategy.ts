@@ -3,7 +3,7 @@
  * Handles ssm:parameter bindings with mandatory compliance enforcement
  */
 
-import { UnifiedBinderStrategyBase } from '@shinobi/core';
+import { UnifiedBinderStrategyBase, resolveActions } from '@shinobi/core';
 import type { BindingContext, EnhancedBindingResult, CompatibilityEntry } from '@shinobi/core';
 import type { IamPolicy } from '@shinobi/core';
 import { PolicyStatement, Effect } from 'aws-cdk-lib/aws-iam';
@@ -94,46 +94,20 @@ export class ParameterStoreBinderStrategy extends UnifiedBinderStrategyBase {
     const parameterName = targetData.resources.parameterName;
     const parameterArn = targetData.resources.parameterArn || `arn:aws:ssm:*:*:parameter/${parameterName}`;
 
-    // Determine IAM actions based on access level
-    let actions: string[] = [];
-    
-    if (access === 'read') {
-      // Read access: Get parameters (including hierarchical path support via GetParametersByPath)
-      actions.push(
-        'ssm:GetParameter',
-        'ssm:GetParameters',
-        'ssm:GetParametersByPath',
-        'ssm:DescribeParameters',
-        'ssm:GetParameterHistory',
-        'ssm:ListTagsForResource'
-      );
-    }
-
-    if (access === 'write') {
-      // Write access: Manage parameters (create/update, but DeleteParameter is included)
-      // TODO: Consider gating DeleteParameter behind a separate access level or option for safety
-      actions.push(
-        'ssm:GetParameter',
-        'ssm:GetParameters',
-        'ssm:GetParametersByPath',
-        'ssm:DescribeParameters',
-        'ssm:PutParameter',
-        'ssm:DeleteParameter',
-        'ssm:DeleteParameters',
-        'ssm:GetParameterHistory',
-        'ssm:LabelParameterVersion',
-        'ssm:RemoveTagsFromResource',
-        'ssm:AddTagsToResource',
-        'ssm:ListTagsForResource'
-      );
-    }
+    // Handle granular actions override or use coarse access levels
+    const resolvedActions = resolveActions(
+      context.directive,
+      context,
+      (acc) => this.getParameterStoreActionsForAccess(acc),
+      'ssm'
+    );
 
     // Create IAM policy
-    if (actions.length > 0) {
+    if (resolvedActions.length > 0) {
       iamPolicies.push({
         statement: new PolicyStatement({
           effect: Effect.ALLOW,
-          actions: [...new Set(actions)], // Remove duplicates
+          actions: resolvedActions,
           resources: [parameterArn]
         }),
         description: `Parameter Store parameter ${access} access`,
@@ -205,6 +179,48 @@ export class ParameterStoreBinderStrategy extends UnifiedBinderStrategyBase {
       environmentVariables,
       securityGroupRules: [],
     };
+  }
+
+  /**
+   * Get Parameter Store actions based on access level
+   * Used by resolveActions to compute base actions from coarse access level
+   * 
+   * @param access - Access level (read, write)
+   * @returns Array of IAM action strings
+   */
+  private getParameterStoreActionsForAccess(access: string): string[] {
+    if (access === 'read') {
+      // Read access: Get parameters (including hierarchical path support via GetParametersByPath)
+      return [
+        'ssm:GetParameter',
+        'ssm:GetParameters',
+        'ssm:GetParametersByPath',
+        'ssm:DescribeParameters',
+        'ssm:GetParameterHistory',
+        'ssm:ListTagsForResource'
+      ];
+    }
+
+    if (access === 'write') {
+      // Write access: Manage parameters (create/update, but DeleteParameter is included)
+      // TODO: Consider gating DeleteParameter behind a separate access level or option for safety
+      return [
+        'ssm:GetParameter',
+        'ssm:GetParameters',
+        'ssm:GetParametersByPath',
+        'ssm:DescribeParameters',
+        'ssm:PutParameter',
+        'ssm:DeleteParameter',
+        'ssm:DeleteParameters',
+        'ssm:GetParameterHistory',
+        'ssm:LabelParameterVersion',
+        'ssm:RemoveTagsFromResource',
+        'ssm:AddTagsToResource',
+        'ssm:ListTagsForResource'
+      ];
+    }
+
+    throw new Error(`Unsupported Parameter Store access level: ${access}. Only 'read' and 'write' are supported`);
   }
 }
 

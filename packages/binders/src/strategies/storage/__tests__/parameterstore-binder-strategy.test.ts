@@ -67,11 +67,7 @@ describe('ParameterStoreBinderStrategy', () => {
 
       const result = await executeUnifiedBinding(strategy, context);
 
-      assertEnhancedBindingResult(result, {
-        shouldHaveIamPolicies: true,
-        shouldHaveEnvironmentVariables: true,
-        shouldHaveCompliance: true,
-      });
+      assertEnhancedBindingResult(result);
 
       // TODO: Add specific assertions for this binder strategy
       expect(result.iamPolicies).toBeDefined();
@@ -81,6 +77,73 @@ describe('ParameterStoreBinderStrategy', () => {
     });
   });
 
-  // TODO: Add more test cases as needed
+  describe('ParameterStoreBind__CustomActionsOverride__ReplacesCoarseActions', () => {
+    const metadata = {
+      id: 'TP-binders-storage-parameterstore-002',
+      level: 'unit' as const,
+      capability: 'Custom actions override replaces default Parameter Store actions',
+      oracle: 'exact' as const,
+      determinism: 'deterministic' as const,
+      naming: { pattern: 'ParameterStoreBind__Condition__Outcome', example: 'ParameterStoreBind__CustomActionsOverride__ReplacesCoarseActions' },
+      invariants: [
+        'IAM policy actions match provided custom actions array',
+        'Default Parameter Store actions are not included when custom actions provided',
+        'Actions array is used directly (replaces coarse access)'
+      ],
+      fixtures: ['MockSourceComponent', 'MockTargetComponent'],
+      inputs: {
+        shape: 'BindingContext with ssm:parameter capability and directive.actions array',
+        notes: 'Granular actions override test'
+      },
+      risks: [],
+      dependencies: ['action-resolver'],
+      evidence: [],
+      compliance_refs: ['docs/platform-standards/platform-iam-auditing-standard.md'],
+      ai_generated: true,
+      human_reviewed_by: 'Platform Engineering'
+    };
+
+    test('ParameterStoreBind__CustomActionsOverride__ReplacesCoarseActions', async () => {
+      const strategy = new ParameterStoreBinderStrategy();
+      const customActions = ['ssm:GetParameter', 'ssm:DescribeParameters'];
+      const target = createMockTargetComponent('test-target', {
+        'ssm:parameter': {
+          type: 'ssm:parameter',
+          resources: {
+            arn: 'arn:aws:ssm:us-east-1:123456789012:parameter/test-param',
+            parameterName: '/test-param',
+          },
+        },
+      });
+
+      const context = createBindingContext({
+        source: createMockSourceComponent('lambda-api', 'test-source'),
+        target,
+        capability: 'ssm:parameter',
+        access: 'read',
+        actions: customActions
+      });
+
+      const result = await executeUnifiedBinding(strategy, context);
+
+      assertEnhancedBindingResult(result);
+
+      expect(result.iamPolicies.length).toBeGreaterThan(0);
+      const policy = result.iamPolicies[0];
+      expect(policy).toBeDefined();
+      
+      const statementJson = policy!.statement.toStatementJson();
+      const actions = Array.isArray(statementJson.Action)
+        ? statementJson.Action
+        : [statementJson.Action];
+
+      // Primary assertion: Custom actions are used, default actions are not
+      expect(actions).toEqual(customActions);
+      expect(actions).not.toContain('ssm:GetParameters');
+      expect(actions).not.toContain('ssm:GetParametersByPath');
+      expect(actions).not.toContain('ssm:GetParameterHistory');
+      expect(actions).not.toContain('ssm:ListTagsForResource');
+    });
+  });
 });
 

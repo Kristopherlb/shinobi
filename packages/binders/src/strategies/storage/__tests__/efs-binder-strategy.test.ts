@@ -993,4 +993,80 @@ describe('EfsBinderStrategy', () => {
       expect(result.environmentVariables['EFS_SECURITY_GROUP_ID']).toBe('sg-1234567890abcdef0');
     });
   });
+
+  describe('EfsBind__CustomActionsOverride__ReplacesCoarseActions', () => {
+    const metadata = {
+      id: 'TP-binders-efs-014',
+      level: 'unit' as const,
+      capability: 'Custom actions override replaces default EFS actions',
+      oracle: 'exact' as const,
+      determinism: 'deterministic' as const,
+      naming: { pattern: 'EfsBind__Condition__Outcome', example: 'EfsBind__CustomActionsOverride__ReplacesCoarseActions' },
+      invariants: [
+        'IAM policy actions match provided custom actions array',
+        'Default EFS actions are not included when custom actions provided',
+        'Actions array is used directly (replaces coarse access)'
+      ],
+      fixtures: ['MockSourceComponent', 'MockTargetComponent'],
+      inputs: {
+        shape: 'BindingContext with storage:efs capability and directive.actions array',
+        notes: 'Granular actions override test'
+      },
+      risks: [],
+      dependencies: ['action-resolver'],
+      evidence: [],
+      compliance_refs: ['docs/platform-standards/platform-iam-auditing-standard.md'],
+      ai_generated: true,
+      human_reviewed_by: 'Platform Engineering'
+    };
+
+    test('EfsBind__CustomActionsOverride__ReplacesCoarseActions', async () => {
+      const strategy = new EfsBinderStrategy();
+      const customActions = ['elasticfilesystem:DescribeFileSystems', 'elasticfilesystem:DescribeMountTargets'];
+      const target = createMockTargetComponent('efs-filesystem', {
+        'storage:efs': {
+          type: 'storage:efs',
+          fileSystemId: 'fs-12345678',
+          fileSystemArn: 'arn:aws:elasticfilesystem:us-east-1:123456789012:file-system/fs-12345678',
+          fileSystemName: 'test-efs',
+          dnsName: 'fs-12345678.efs.us-east-1.amazonaws.com',
+          lifecycleState: 'available',
+          performanceMode: 'generalPurpose',
+          throughputMode: 'bursting',
+          encryption: {
+            atRest: false,
+            inTransit: false
+          },
+          backupsEnabled: false
+        }
+      });
+
+      const context = createBindingContext({
+        source: createMockSourceComponent(),
+        target,
+        capability: 'storage:efs',
+        access: 'read',
+        actions: customActions
+      });
+
+      const result = await executeUnifiedBinding(strategy, context);
+
+      assertEnhancedBindingResult(result);
+
+      expect(result.iamPolicies.length).toBeGreaterThan(0);
+      const policy = result.iamPolicies[0];
+      expect(policy).toBeDefined();
+      
+      const statementJson = policy!.statement.toStatementJson();
+      const actions = Array.isArray(statementJson.Action)
+        ? statementJson.Action
+        : [statementJson.Action];
+
+      // Primary assertion: Custom actions are used, default actions are not
+      expect(actions).toEqual(customActions);
+      expect(actions).not.toContain('elasticfilesystem:ClientMount');
+      expect(actions).not.toContain('elasticfilesystem:ClientWrite');
+      expect(actions).not.toContain('elasticfilesystem:ClientRootAccess');
+    });
+  });
 });

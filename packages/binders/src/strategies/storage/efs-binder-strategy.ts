@@ -3,7 +3,7 @@
  * Handles Elastic File System bindings for Amazon EFS with mandatory compliance enforcement
  */
 
-import { UnifiedBinderStrategyBase } from '@shinobi/core';
+import { UnifiedBinderStrategyBase, resolveActions } from '@shinobi/core';
 import type { BindingContext, EnhancedBindingResult, CompatibilityEntry } from '@shinobi/core';
 import type { IamPolicy, SecurityGroupRule } from '@shinobi/core';
 import { PolicyStatement, Effect } from 'aws-cdk-lib/aws-iam';
@@ -174,25 +174,53 @@ export class EfsBinderStrategy extends UnifiedBinderStrategyBase {
     const { region } = context.source.context;
     const primaryAccess = access[0] || 'read';
 
-    // Base EFS access policy with least-privilege principle
-    const efsActions = this.getEfsActionsForAccess(access);
+    // Handle granular actions override or use multi-statement approach
+    if (context.directive.actions) {
+      // Granular actions provided: create single statement with resolved actions
+      const resolvedActions = resolveActions(
+        context.directive,
+        context,
+        (acc) => this.getEfsActionsForAccess([acc]),
+        'elasticfilesystem'
+      );
 
-    const basePolicy = new PolicyStatement({
-      effect: Effect.ALLOW,
-      actions: efsActions,
-      resources: [fileSystemArn],
-      conditions: region ? {
-        StringEquals: {
-          'aws:RequestedRegion': region
-        }
-      } : undefined
-    });
+      const basePolicy = new PolicyStatement({
+        effect: Effect.ALLOW,
+        actions: resolvedActions,
+        resources: [fileSystemArn],
+        conditions: region ? {
+          StringEquals: {
+            'aws:RequestedRegion': region
+          }
+        } : undefined
+      });
 
-    iamPolicies.push({
-      statement: basePolicy,
-      description: `EFS ${primaryAccess} access permissions`,
-      complianceRequirement: 'Least privilege IAM access'
-    });
+      iamPolicies.push({
+        statement: basePolicy,
+        description: 'EFS file system access permissions (granular actions)',
+        complianceRequirement: 'Least privilege IAM access'
+      });
+    } else {
+      // Coarse access levels: use existing approach (backward compatible)
+      const efsActions = this.getEfsActionsForAccess(access);
+
+      const basePolicy = new PolicyStatement({
+        effect: Effect.ALLOW,
+        actions: efsActions,
+        resources: [fileSystemArn],
+        conditions: region ? {
+          StringEquals: {
+            'aws:RequestedRegion': region
+          }
+        } : undefined
+      });
+
+      iamPolicies.push({
+        statement: basePolicy,
+        description: `EFS ${primaryAccess} access permissions`,
+        complianceRequirement: 'Least privilege IAM access'
+      });
+    }
 
     // KMS permissions if file system encryption uses KMS (default encryption to disabled if not provided)
     const encryption = targetData.encryption || { atRest: false, inTransit: false };
@@ -276,6 +304,10 @@ export class EfsBinderStrategy extends UnifiedBinderStrategyBase {
 
   /**
    * Get EFS actions based on access level
+   * Used by resolveActions to compute base actions from coarse access level
+   * 
+   * @param access - Array of access levels (read, write, readwrite, admin)
+   * @returns Array of IAM action strings
    */
   private getEfsActionsForAccess(access: string[]): string[] {
     // Handle array - typically just one access level, but handle all cases
