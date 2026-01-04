@@ -486,6 +486,69 @@ describe('AuditManagerBinderStrategy', () => {
       );
     });
   });
+
+  describe('AuditManagerBind__CustomActionsOverride__ReplacesCoarseActions', () => {
+    const metadata = {
+      id: 'TP-binders-compliance-auditmanager-003',
+      level: 'unit' as const,
+      capability: 'Custom actions override replaces default Audit Manager framework actions',
+      oracle: 'exact' as const,
+      determinism: 'deterministic' as const,
+      naming: { pattern: 'AuditManagerBind__Condition__Outcome', example: 'AuditManagerBind__CustomActionsOverride__ReplacesCoarseActions' },
+      invariants: [
+        'IAM policy actions match provided custom actions array',
+        'Default Audit Manager actions are not included when custom actions provided',
+        'Actions array is used directly (replaces coarse access)'
+      ],
+      fixtures: ['MockSourceComponent', 'MockTargetComponent'],
+      inputs: {
+        shape: 'BindingContext with compliance:audit-manager-framework capability and directive.actions array',
+        notes: 'Granular actions override test'
+      },
+      risks: [],
+      dependencies: ['action-resolver'],
+      evidence: [],
+      compliance_refs: ['docs/platform-standards/platform-iam-auditing-standard.md'],
+      ai_generated: true,
+      human_reviewed_by: 'Platform Engineering'
+    };
+
+    test('AuditManagerBind__CustomActionsOverride__ReplacesCoarseActions', async () => {
+      const strategy = new AuditManagerBinderStrategy();
+      const customActions = ['auditmanager:GetFramework', 'auditmanager:ListFrameworks'];
+      const target = createMockTargetComponent('auditmanager', {
+        'compliance:audit-manager-framework': {
+          frameworkArn: 'arn:aws:auditmanager:us-east-1:123456789012:framework/test-framework'
+        },
+      });
+
+      const context = createBindingContext({
+        source: createMockSourceComponent('lambda-compliance', 'test-source'),
+        target,
+        capability: 'compliance:audit-manager-framework',
+        access: 'read',
+        actions: customActions
+      });
+
+      const result = await executeUnifiedBinding(strategy, context);
+
+      assertEnhancedBindingResult(result);
+
+      expect(result.iamPolicies.length).toBeGreaterThan(0);
+      const policy = result.iamPolicies.find(p => p.description.includes('granular actions'));
+      expect(policy).toBeDefined();
+      
+      const statementJson = policy!.statement.toStatementJson();
+      const actions = Array.isArray(statementJson.Action)
+        ? statementJson.Action
+        : [statementJson.Action];
+
+      // Primary assertion: Custom actions are used, default actions are not
+      expect(actions).toEqual(customActions);
+      expect(actions).not.toContain('auditmanager:GetControl');
+      expect(actions).not.toContain('auditmanager:ListControls');
+    });
+  });
 });
 
 

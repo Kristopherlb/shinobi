@@ -10,7 +10,7 @@
  * - Compliance status reporting
  */
 
-import { UnifiedBinderStrategyBase } from '@shinobi/core';
+import { UnifiedBinderStrategyBase, resolveActions } from '@shinobi/core';
 import type { BindingContext, EnhancedBindingResult, CompatibilityEntry } from '@shinobi/core';
 import type { IamPolicy } from '@shinobi/core';
 import { PolicyStatement, Effect } from 'aws-cdk-lib/aws-iam';
@@ -136,8 +136,27 @@ export class ConfigBinderStrategy extends UnifiedBinderStrategyBase {
       environmentVariables.AWS_CONFIG_EVALUATION_RESULTS = JSON.stringify(targetData.evaluationResults);
     }
 
-    // IAM policies for Config rule operations
-    if (access === 'read' || access === 'readwrite') {
+    // Handle granular actions override or use multi-statement approach
+    if (context.directive.actions) {
+      const resolvedActions = resolveActions(
+        context.directive,
+        context,
+        (acc) => this.getConfigRuleActionsForAccess(acc),
+        'config'
+      );
+      const statement = new PolicyStatement({
+        effect: Effect.ALLOW,
+        actions: resolvedActions,
+        resources: ['*']
+      });
+      iamPolicies.push({
+        statement,
+        description: 'AWS Config rule access permissions (granular actions)',
+        complianceRequirement: 'Least privilege IAM access'
+      });
+    } else {
+      // Coarse access levels: use multi-statement approach (backward compatible)
+      if (access === 'read' || access === 'readwrite') {
       iamPolicies.push({
         statement: new PolicyStatement({
           effect: Effect.ALLOW,
@@ -316,12 +335,90 @@ export class ConfigBinderStrategy extends UnifiedBinderStrategyBase {
         complianceRequirement: 'Least privilege IAM access for KMS encryption'
       });
     }
+    }
 
     return {
       iamPolicies,
       environmentVariables,
       securityGroupRules: []
     };
+  }
+
+  /**
+   * Get Config rule actions based on access level
+   * Used by resolveActions to compute base actions from coarse access level
+   * 
+   * @param access - Access level (read, write, readwrite, admin)
+   * @returns Array of IAM action strings
+   */
+  private getConfigRuleActionsForAccess(access: string): string[] {
+    switch (access) {
+      case 'read':
+        return [
+          'config:DescribeConfigRules',
+          'config:GetConfigRule',
+          'config:DescribeConfigRuleEvaluationStatus',
+          'config:GetComplianceDetailsByConfigRule',
+          'config:GetComplianceSummaryByConfigRule',
+          'config:DescribeComplianceByConfigRule',
+          'config:DescribeComplianceByResource',
+          'config:GetResourceConfigHistory',
+          'config:GetComplianceDetailsByResource',
+          'config:ListDiscoveredResources',
+          'config:DescribeDeliveryChannels',
+          'config:DescribeConfigurationRecorders',
+          'config:DescribeConfigurationRecorderStatus',
+          'config:DescribeDeliveryChannelStatus'
+        ];
+      case 'write':
+        return [
+          'config:PutConfigRule',
+          'config:DeleteConfigRule',
+          'config:StartConfigRulesEvaluation',
+          'config:PutEvaluations',
+          'config:PutRemediationConfigurations',
+          'config:DeleteRemediationConfiguration',
+          'config:PutConfigurationRecorder',
+          'config:PutDeliveryChannel',
+          'config:StartConfigurationRecorder',
+          'config:StopConfigurationRecorder',
+          'config:TagResource',
+          'config:UntagResource'
+        ];
+      case 'readwrite':
+        return [
+          'config:DescribeConfigRules',
+          'config:GetConfigRule',
+          'config:DescribeConfigRuleEvaluationStatus',
+          'config:GetComplianceDetailsByConfigRule',
+          'config:GetComplianceSummaryByConfigRule',
+          'config:DescribeComplianceByConfigRule',
+          'config:DescribeComplianceByResource',
+          'config:GetResourceConfigHistory',
+          'config:GetComplianceDetailsByResource',
+          'config:ListDiscoveredResources',
+          'config:DescribeDeliveryChannels',
+          'config:DescribeConfigurationRecorders',
+          'config:DescribeConfigurationRecorderStatus',
+          'config:DescribeDeliveryChannelStatus',
+          'config:PutConfigRule',
+          'config:DeleteConfigRule',
+          'config:StartConfigRulesEvaluation',
+          'config:PutEvaluations',
+          'config:PutRemediationConfigurations',
+          'config:DeleteRemediationConfiguration',
+          'config:PutConfigurationRecorder',
+          'config:PutDeliveryChannel',
+          'config:StartConfigurationRecorder',
+          'config:StopConfigurationRecorder',
+          'config:TagResource',
+          'config:UntagResource'
+        ];
+      case 'admin':
+        return ['config:*'];
+      default:
+        throw new Error(`Unsupported Config rule access level: ${access}`);
+    }
   }
 }
 

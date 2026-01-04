@@ -7,7 +7,7 @@
  * - compliance:audit-manager-assessment - Assessments with evidence collection
  */
 
-import { UnifiedBinderStrategyBase } from '@shinobi/core';
+import { UnifiedBinderStrategyBase, resolveActions } from '@shinobi/core';
 import type { BindingContext, EnhancedBindingResult, CompatibilityEntry } from '@shinobi/core';
 import type { IamPolicy } from '@shinobi/core';
 import { PolicyStatement, Effect } from 'aws-cdk-lib/aws-iam';
@@ -101,55 +101,75 @@ export class AuditManagerBinderStrategy extends UnifiedBinderStrategyBase {
       AWS_AUDIT_MANAGER_FRAMEWORK_ARN: targetData.frameworkArn
     };
 
-    // IAM policies for Audit Manager framework operations
-    if (access === 'read' || access === 'readwrite' || access === 'admin') {
-      iamPolicies.push({
-        statement: new PolicyStatement({
-          effect: Effect.ALLOW,
-          actions: [
-            'auditmanager:GetFramework',
-            'auditmanager:ListFrameworks',
-            'auditmanager:GetControl',
-            'auditmanager:ListControls',
-            'auditmanager:ListControlDomainInsights',
-            'auditmanager:ListControlInsightsByControlDomain'
-          ],
-          resources: [targetData.frameworkArn]
-        }),
-        description: 'Audit Manager framework read access',
-        complianceRequirement: 'Least privilege IAM access for Audit Manager framework read operations'
+    // Handle granular actions override or use multi-statement approach
+    if (context.directive.actions) {
+      const resolvedActions = resolveActions(
+        context.directive,
+        context,
+        (acc) => this.getAuditManagerFrameworkActionsForAccess(acc),
+        'auditmanager'
+      );
+      const statement = new PolicyStatement({
+        effect: Effect.ALLOW,
+        actions: resolvedActions,
+        resources: [targetData.frameworkArn]
       });
-    }
+      iamPolicies.push({
+        statement,
+        description: 'Audit Manager framework access permissions (granular actions)',
+        complianceRequirement: 'Least privilege IAM access'
+      });
+    } else {
+      // Coarse access levels: use multi-statement approach (backward compatible)
+      if (access === 'read' || access === 'readwrite' || access === 'admin') {
+        iamPolicies.push({
+          statement: new PolicyStatement({
+            effect: Effect.ALLOW,
+            actions: [
+              'auditmanager:GetFramework',
+              'auditmanager:ListFrameworks',
+              'auditmanager:GetControl',
+              'auditmanager:ListControls',
+              'auditmanager:ListControlDomainInsights',
+              'auditmanager:ListControlInsightsByControlDomain'
+            ],
+            resources: [targetData.frameworkArn]
+          }),
+          description: 'Audit Manager framework read access',
+          complianceRequirement: 'Least privilege IAM access for Audit Manager framework read operations'
+        });
+      }
 
-    if (access === 'write' || access === 'readwrite' || access === 'admin') {
-      iamPolicies.push({
-        statement: new PolicyStatement({
-          effect: Effect.ALLOW,
-          actions: [
-            'auditmanager:CreateFramework',
-            'auditmanager:UpdateFramework',
-            'auditmanager:DeleteFramework',
-            'auditmanager:AssociateAssessmentReportEvidenceFolder',
-            'auditmanager:DisassociateAssessmentReportEvidenceFolder'
-          ],
-          resources: [targetData.frameworkArn]
-        }),
-        description: 'Audit Manager framework write access',
-        complianceRequirement: 'Least privilege IAM access for Audit Manager framework write operations'
-      });
-    }
+      if (access === 'write' || access === 'readwrite' || access === 'admin') {
+        iamPolicies.push({
+          statement: new PolicyStatement({
+            effect: Effect.ALLOW,
+            actions: [
+              'auditmanager:CreateFramework',
+              'auditmanager:UpdateFramework',
+              'auditmanager:DeleteFramework',
+              'auditmanager:AssociateAssessmentReportEvidenceFolder',
+              'auditmanager:DisassociateAssessmentReportEvidenceFolder'
+            ],
+            resources: [targetData.frameworkArn]
+          }),
+          description: 'Audit Manager framework write access',
+          complianceRequirement: 'Least privilege IAM access for Audit Manager framework write operations'
+        });
+      }
 
-    // Gate admin access behind explicit option
-    if (access === 'admin' && options?.requireFullAdminAccess) {
-      iamPolicies.push({
-        statement: new PolicyStatement({
-          effect: Effect.ALLOW,
-          actions: ['auditmanager:*'],
-          resources: ['*']
-        }),
-        description: 'Audit Manager admin access',
-        complianceRequirement: 'Full Audit Manager access for admin operations (explicitly requested)'
-      });
+      // Gate admin access behind explicit option
+      if (access === 'admin' && options?.requireFullAdminAccess) {
+        iamPolicies.push({
+          statement: new PolicyStatement({
+            effect: Effect.ALLOW,
+            actions: ['auditmanager:*'],
+            resources: ['*']
+          }),
+          description: 'Audit Manager admin access',
+          complianceRequirement: 'Full Audit Manager access for admin operations (explicitly requested)'
+        });
+      }
     }
 
     // Secure hooks support
@@ -273,50 +293,70 @@ export class AuditManagerBinderStrategy extends UnifiedBinderStrategyBase {
       environmentVariables.AWS_AUDIT_MANAGER_CONTROL_ID = targetData.controlId;
     }
 
-    // IAM policies for Audit Manager assessment operations
-    if (access === 'read' || access === 'readwrite' || access === 'admin') {
-      iamPolicies.push({
-        statement: new PolicyStatement({
-          effect: Effect.ALLOW,
-          actions: [
-            'auditmanager:GetAssessment',
-            'auditmanager:ListAssessments',
-            'auditmanager:GetEvidence',
-            'auditmanager:ListEvidence',
-            'auditmanager:GetEvidenceByEvidenceFolder',
-            'auditmanager:GetEvidenceFoldersByAssessment',
-            'auditmanager:GetAssessmentReportUrl',
-            'auditmanager:GetInsights',
-            'auditmanager:GetInsightsByAssessment'
-          ],
-          resources: ['*']
-        }),
-        description: 'Audit Manager assessment read access',
-        complianceRequirement: 'Least privilege IAM access for Audit Manager assessment read operations'
+    // Handle granular actions override or use multi-statement approach
+    if (context.directive.actions) {
+      const resolvedActions = resolveActions(
+        context.directive,
+        context,
+        (acc) => this.getAuditManagerAssessmentActionsForAccess(acc),
+        'auditmanager'
+      );
+      const statement = new PolicyStatement({
+        effect: Effect.ALLOW,
+        actions: resolvedActions,
+        resources: ['*']
       });
-    }
+      iamPolicies.push({
+        statement,
+        description: 'Audit Manager assessment access permissions (granular actions)',
+        complianceRequirement: 'Least privilege IAM access'
+      });
+    } else {
+      // Coarse access levels: use multi-statement approach (backward compatible)
+      if (access === 'read' || access === 'readwrite' || access === 'admin') {
+        iamPolicies.push({
+          statement: new PolicyStatement({
+            effect: Effect.ALLOW,
+            actions: [
+              'auditmanager:GetAssessment',
+              'auditmanager:ListAssessments',
+              'auditmanager:GetEvidence',
+              'auditmanager:ListEvidence',
+              'auditmanager:GetEvidenceByEvidenceFolder',
+              'auditmanager:GetEvidenceFoldersByAssessment',
+              'auditmanager:GetAssessmentReportUrl',
+              'auditmanager:GetInsights',
+              'auditmanager:GetInsightsByAssessment'
+            ],
+            resources: ['*']
+          }),
+          description: 'Audit Manager assessment read access',
+          complianceRequirement: 'Least privilege IAM access for Audit Manager assessment read operations'
+        });
+      }
 
-    if (access === 'write' || access === 'readwrite' || access === 'admin') {
-      iamPolicies.push({
-        statement: new PolicyStatement({
-          effect: Effect.ALLOW,
-          actions: [
-            'auditmanager:CreateAssessment',
-            'auditmanager:UpdateAssessment',
-            'auditmanager:DeleteAssessment',
-            'auditmanager:CreateAssessmentReport',
-            'auditmanager:UpdateAssessmentStatus',
-            'auditmanager:BatchCreateDelegationByAssessment',
-            'auditmanager:BatchDeleteDelegationByAssessment',
-            'auditmanager:BatchImportEvidenceToAssessmentControl',
-            'auditmanager:RegisterAccount',
-            'auditmanager:RegisterOrganizationAdminAccount'
-          ],
-          resources: ['*']
-        }),
-        description: 'Audit Manager assessment write access',
-        complianceRequirement: 'Least privilege IAM access for Audit Manager assessment write operations'
-      });
+      if (access === 'write' || access === 'readwrite' || access === 'admin') {
+        iamPolicies.push({
+          statement: new PolicyStatement({
+            effect: Effect.ALLOW,
+            actions: [
+              'auditmanager:CreateAssessment',
+              'auditmanager:UpdateAssessment',
+              'auditmanager:DeleteAssessment',
+              'auditmanager:CreateAssessmentReport',
+              'auditmanager:UpdateAssessmentStatus',
+              'auditmanager:BatchCreateDelegationByAssessment',
+              'auditmanager:BatchDeleteDelegationByAssessment',
+              'auditmanager:BatchImportEvidenceToAssessmentControl',
+              'auditmanager:RegisterAccount',
+              'auditmanager:RegisterOrganizationAdminAccount'
+            ],
+            resources: ['*']
+          }),
+          description: 'Audit Manager assessment write access',
+          complianceRequirement: 'Least privilege IAM access for Audit Manager assessment write operations'
+        });
+      }
     }
 
     // Delegated admin support
@@ -457,6 +497,112 @@ export class AuditManagerBinderStrategy extends UnifiedBinderStrategyBase {
       environmentVariables,
       securityGroupRules: []
     };
+  }
+
+  /**
+   * Get Audit Manager framework actions based on access level
+   * Used by resolveActions to compute base actions from coarse access level
+   * 
+   * @param access - Access level (read, write, readwrite, admin)
+   * @returns Array of IAM action strings
+   */
+  private getAuditManagerFrameworkActionsForAccess(access: string): string[] {
+    switch (access) {
+      case 'read':
+        return [
+          'auditmanager:GetFramework',
+          'auditmanager:ListFrameworks',
+          'auditmanager:GetControl',
+          'auditmanager:ListControls',
+          'auditmanager:ListControlDomainInsights',
+          'auditmanager:ListControlInsightsByControlDomain'
+        ];
+      case 'write':
+        return [
+          'auditmanager:CreateFramework',
+          'auditmanager:UpdateFramework',
+          'auditmanager:DeleteFramework',
+          'auditmanager:AssociateAssessmentReportEvidenceFolder',
+          'auditmanager:DisassociateAssessmentReportEvidenceFolder'
+        ];
+      case 'readwrite':
+        return [
+          'auditmanager:GetFramework',
+          'auditmanager:ListFrameworks',
+          'auditmanager:GetControl',
+          'auditmanager:ListControls',
+          'auditmanager:ListControlDomainInsights',
+          'auditmanager:ListControlInsightsByControlDomain',
+          'auditmanager:CreateFramework',
+          'auditmanager:UpdateFramework',
+          'auditmanager:DeleteFramework',
+          'auditmanager:AssociateAssessmentReportEvidenceFolder',
+          'auditmanager:DisassociateAssessmentReportEvidenceFolder'
+        ];
+      case 'admin':
+        return ['auditmanager:*'];
+      default:
+        throw new Error(`Unsupported Audit Manager framework access level: ${access}`);
+    }
+  }
+
+  /**
+   * Get Audit Manager assessment actions based on access level
+   */
+  private getAuditManagerAssessmentActionsForAccess(access: string): string[] {
+    switch (access) {
+      case 'read':
+        return [
+          'auditmanager:GetAssessment',
+          'auditmanager:ListAssessments',
+          'auditmanager:GetEvidence',
+          'auditmanager:ListEvidence',
+          'auditmanager:GetEvidenceByEvidenceFolder',
+          'auditmanager:GetEvidenceFoldersByAssessment',
+          'auditmanager:GetAssessmentReportUrl',
+          'auditmanager:GetInsights',
+          'auditmanager:GetInsightsByAssessment'
+        ];
+      case 'write':
+        return [
+          'auditmanager:CreateAssessment',
+          'auditmanager:UpdateAssessment',
+          'auditmanager:DeleteAssessment',
+          'auditmanager:CreateAssessmentReport',
+          'auditmanager:UpdateAssessmentStatus',
+          'auditmanager:BatchCreateDelegationByAssessment',
+          'auditmanager:BatchDeleteDelegationByAssessment',
+          'auditmanager:BatchImportEvidenceToAssessmentControl',
+          'auditmanager:RegisterAccount',
+          'auditmanager:RegisterOrganizationAdminAccount'
+        ];
+      case 'readwrite':
+        return [
+          'auditmanager:GetAssessment',
+          'auditmanager:ListAssessments',
+          'auditmanager:GetEvidence',
+          'auditmanager:ListEvidence',
+          'auditmanager:GetEvidenceByEvidenceFolder',
+          'auditmanager:GetEvidenceFoldersByAssessment',
+          'auditmanager:GetAssessmentReportUrl',
+          'auditmanager:GetInsights',
+          'auditmanager:GetInsightsByAssessment',
+          'auditmanager:CreateAssessment',
+          'auditmanager:UpdateAssessment',
+          'auditmanager:DeleteAssessment',
+          'auditmanager:CreateAssessmentReport',
+          'auditmanager:UpdateAssessmentStatus',
+          'auditmanager:BatchCreateDelegationByAssessment',
+          'auditmanager:BatchDeleteDelegationByAssessment',
+          'auditmanager:BatchImportEvidenceToAssessmentControl',
+          'auditmanager:RegisterAccount',
+          'auditmanager:RegisterOrganizationAdminAccount'
+        ];
+      case 'admin':
+        return ['auditmanager:*'];
+      default:
+        throw new Error(`Unsupported Audit Manager assessment access level: ${access}`);
+    }
   }
 }
 
