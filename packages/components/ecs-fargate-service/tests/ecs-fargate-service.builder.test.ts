@@ -44,7 +44,8 @@ describe('EcsFargateServiceComponentConfigBuilder', () => {
     expect(config.monitoring.alarms.cpuUtilization.threshold).toBe(85);
     expect(config.monitoring.alarms.memoryUtilization.threshold).toBe(90);
     expect(config.serviceConnect.dnsName).toBe('orders-api');
-    expect(config.network.allowAllOutbound).toBe(false);
+    expect(config.network).toBeDefined();
+    expect(config.network!.allowAllOutbound).toBe(false);
   });
 
   it('applies fedramp-moderate defaults with stricter requirements', () => {
@@ -126,6 +127,7 @@ describe('EcsFargateServiceComponentConfigBuilder', () => {
     expect(config.memory).toBe(4096);
     expect(config.logging.retentionInDays).toBe(90);
     expect(config.diagnostics.enableExecuteCommand).toBe(true);
-    expect(config.network.allowAllOutbound).toBe(true);
+    expect(config.network).toBeDefined();
+    expect(config.network!.allowAllOutbound).toBe(true);
   });
 });
