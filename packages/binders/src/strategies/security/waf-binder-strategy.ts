@@ -3,7 +3,7 @@
  * Handles security:waf bindings with mandatory compliance enforcement
  */
 
-import { UnifiedBinderStrategyBase } from '@shinobi/core';
+import { UnifiedBinderStrategyBase, resolveActions } from '@shinobi/core';
 import type { BindingContext, EnhancedBindingResult, CompatibilityEntry } from '@shinobi/core';
 import type { IamPolicy } from '@shinobi/core';
 import { PolicyStatement, Effect } from 'aws-cdk-lib/aws-iam';
@@ -87,8 +87,29 @@ export class WafBinderStrategy extends UnifiedBinderStrategyBase {
     const environmentVariables: Record<string, string> = {};
     const securityGroupRules: any[] = [];
 
-    // Grant WAF read permissions
-    if (access === 'read' || access === 'write' || access === 'admin' || access === 'readwrite') {
+    // Handle granular actions override or use multi-statement approach
+    if (context.directive.actions) {
+      const resolvedActions = resolveActions(
+        context.directive,
+        context,
+        (acc) => this.getWafActionsForAccess(acc, options),
+        'wafv2'
+      );
+
+      const statement = new PolicyStatement({
+        effect: Effect.ALLOW,
+        actions: resolvedActions,
+        resources: [targetData.webAclArn]
+      });
+      iamPolicies.push({
+        statement,
+        description: 'WAF Web ACL access permissions (granular actions)',
+        complianceRequirement: 'Least privilege IAM access'
+      });
+    } else {
+      // Coarse access levels: use multi-statement approach (backward compatible)
+      // Grant WAF read permissions
+      if (access === 'read' || access === 'write' || access === 'admin' || access === 'readwrite') {
       const statement = new PolicyStatement({
         effect: Effect.ALLOW,
         actions: [
@@ -146,6 +167,7 @@ export class WafBinderStrategy extends UnifiedBinderStrategyBase {
         description: 'WAF Web ACL admin permissions (create/delete)',
         complianceRequirement: 'Least privilege IAM access - Web ACL management gated behind allowWebAclManagement option'
       });
+    }
     }
 
     // Grant WAF logging permissions if logging is enabled
@@ -256,6 +278,51 @@ export class WafBinderStrategy extends UnifiedBinderStrategyBase {
       environmentVariables,
       securityGroupRules,
     };
+  }
+
+  /**
+   * Get WAF actions based on access level
+   * Used by resolveActions to compute base actions from coarse access level
+   */
+  private getWafActionsForAccess(access: string, options?: Record<string, any>): string[] {
+    const actions: string[] = [];
+
+    switch (access) {
+      case 'read':
+      case 'readwrite':
+      case 'write':
+      case 'admin':
+        actions.push(
+          'wafv2:GetWebACL',
+          'wafv2:GetWebACLForResource',
+          'wafv2:ListResourcesForWebACL'
+        );
+        break;
+    }
+
+    if (access === 'write' || access === 'admin' || access === 'readwrite') {
+      actions.push(
+        'wafv2:AssociateWebACL',
+        'wafv2:DisassociateWebACL'
+      );
+
+      if (options?.allowWebAclUpdates === true) {
+        actions.push('wafv2:UpdateWebACL');
+      }
+    }
+
+    if (access === 'admin' && options?.allowWebAclManagement === true) {
+      actions.push(
+        'wafv2:CreateWebACL',
+        'wafv2:DeleteWebACL'
+      );
+    }
+
+    if (actions.length === 0) {
+      throw new Error(`Unsupported WAF access level: ${access}`);
+    }
+
+    return actions;
   }
 }
 

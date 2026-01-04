@@ -544,5 +544,117 @@ describe('WafBinderStrategy', () => {
       );
     });
   });
+
+  describe('WafBind__CustomActionsOverride__ReplacesCoarseActions', () => {
+    const metadata = {
+      id: 'TP-binders-security-waf-010',
+      level: 'unit' as const,
+      capability: 'Custom actions override replaces default WAF actions',
+      oracle: 'exact' as const,
+      determinism: 'deterministic' as const,
+      naming: { pattern: 'WafBind__Condition__Outcome', example: 'WafBind__CustomActionsOverride__ReplacesCoarseActions' },
+      invariants: [
+        'IAM policy actions match provided custom actions array',
+        'Default WAF actions are not included when custom actions provided',
+        'Actions array is used directly (replaces coarse access)'
+      ],
+      fixtures: ['MockSourceComponent', 'MockTargetComponent', 'WafWebAclCapabilityData'],
+      inputs: {
+        shape: 'BindingContext with security:waf capability and directive.actions array',
+        notes: 'Granular actions override test'
+      },
+      risks: [],
+      dependencies: [],
+      evidence: [],
+      compliance_refs: ['docs/platform-standards/platform-iam-auditing-standard.md'],
+      ai_generated: true,
+      human_reviewed_by: 'Platform Engineering'
+    };
+
+    test('WafBind__CustomActionsOverride__ReplacesCoarseActions', async () => {
+      const strategy = new WafBinderStrategy();
+      const target = createMockTargetComponent('waf-web-acl', {
+        'security:waf': {
+          webAclArn: WAF_WEB_ACL_ARN,
+          webAclId: WAF_WEB_ACL_ID
+        }
+      });
+
+      const customActions = ['wafv2:GetWebACL', 'wafv2:ListResourcesForWebACL'];
+      const context = createBindingContext({
+        source: createMockSourceComponent(),
+        target,
+        capability: 'security:waf',
+        access: 'read',
+        actions: customActions
+      });
+
+      const result = await executeUnifiedBinding(strategy, context);
+
+      assertEnhancedBindingResult(result);
+
+      expect(result.iamPolicies.length).toBeGreaterThan(0);
+      const policy = result.iamPolicies.find(p => p.description.includes('granular actions'));
+      expect(policy).toBeDefined();
+      
+      const statementJson = policy!.statement.toStatementJson();
+      const actions = Array.isArray(statementJson.Action)
+        ? statementJson.Action
+        : [statementJson.Action];
+
+      expect(actions).toEqual(expect.arrayContaining(customActions));
+      expect(actions.length).toBe(customActions.length);
+    });
+  });
+
+  describe('WafBind__InvalidActionPrefix__ThrowsPrefixMismatchError', () => {
+    const metadata = {
+      id: 'TP-binders-security-waf-011',
+      level: 'unit' as const,
+      capability: 'Throws error when actions array contains actions with wrong service prefix',
+      oracle: 'exact' as const,
+      determinism: 'deterministic' as const,
+      naming: { pattern: 'WafBind__Condition__Outcome', example: 'WafBind__InvalidActionPrefix__ThrowsPrefixMismatchError' },
+      invariants: [
+        'Error message indicates service prefix mismatch',
+        'Error specifies which actions are mismatched',
+        'Binding fails before IAM policy generation'
+      ],
+      fixtures: ['MockSourceComponent', 'MockTargetComponent', 'WafWebAclCapabilityData'],
+      inputs: {
+        shape: 'BindingContext with security:waf capability and directive.actions containing non-wafv2 actions',
+        notes: 'Error case - invalid action prefix for WAF binder'
+      },
+      risks: [],
+      dependencies: [],
+      evidence: [],
+      compliance_refs: ['docs/platform-standards/platform-iam-auditing-standard.md'],
+      ai_generated: true,
+      human_reviewed_by: 'Platform Engineering'
+    };
+
+    test('WafBind__InvalidActionPrefix__ThrowsPrefixMismatchError', async () => {
+      const strategy = new WafBinderStrategy();
+      const target = createMockTargetComponent('waf-web-acl', {
+        'security:waf': {
+          webAclArn: WAF_WEB_ACL_ARN,
+          webAclId: WAF_WEB_ACL_ID
+        }
+      });
+
+      const invalidActions = ['s3:GetObject']; // Wrong service prefix
+      const context = createBindingContext({
+        source: createMockSourceComponent(),
+        target,
+        capability: 'security:waf',
+        access: 'read',
+        actions: invalidActions
+      });
+
+      await expect(executeUnifiedBinding(strategy, context)).rejects.toThrow(
+        "Actions must match service prefix 'wafv2:'"
+      );
+    });
+  });
 });
 

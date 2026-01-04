@@ -3,7 +3,7 @@
  * Handles ACM certificate bindings for AWS Certificate Manager with mandatory compliance enforcement
  */
 
-import { UnifiedBinderStrategyBase } from '@shinobi/core';
+import { UnifiedBinderStrategyBase, resolveActions } from '@shinobi/core';
 import type { BindingContext, EnhancedBindingResult, CompatibilityEntry } from '@shinobi/core';
 import type { IamPolicy } from '@shinobi/core';
 import { PolicyStatement, Effect } from 'aws-cdk-lib/aws-iam';
@@ -116,39 +116,63 @@ export class CertificateBinderStrategy extends UnifiedBinderStrategyBase {
     const environmentVariables: Record<string, string> = {};
     const iamPolicies: IamPolicy[] = [];
 
-    // Grant certificate access permissions
-    if (access.includes('read') || access.includes('use')) {
+    // Handle granular actions override or use multi-statement approach
+    if (context.directive.actions) {
+      // For certificate binder, access is an array, so we need to get the first one or use a default
+      const accessLevel = Array.isArray(access) ? access[0] : access;
+      const resolvedActions = resolveActions(
+        context.directive,
+        context,
+        (acc) => this.getCertificateActionsForAccess(acc),
+        'acm'
+      );
+
       const statement = new PolicyStatement({
         effect: Effect.ALLOW,
-        actions: [
-          'acm:DescribeCertificate',
-          'acm:ListCertificates',
-          'acm:GetCertificate'
-        ],
+        actions: resolvedActions,
         resources: [targetData.certificateArn]
       });
       iamPolicies.push({
         statement,
-        description: 'ACM certificate read/use access permissions',
+        description: 'ACM certificate access permissions (granular actions)',
         complianceRequirement: 'Encryption in transit'
       });
-    }
+    } else {
+      // Coarse access levels: use multi-statement approach (backward compatible)
+      // Grant certificate access permissions
+      if (access.includes('read') || access.includes('use')) {
+        const statement = new PolicyStatement({
+          effect: Effect.ALLOW,
+          actions: [
+            'acm:DescribeCertificate',
+            'acm:ListCertificates',
+            'acm:GetCertificate'
+          ],
+          resources: [targetData.certificateArn]
+        });
+        iamPolicies.push({
+          statement,
+          description: 'ACM certificate read/use access permissions',
+          complianceRequirement: 'Encryption in transit'
+        });
+      }
 
-    if (access.includes('write')) {
-      const statement = new PolicyStatement({
-        effect: Effect.ALLOW,
-        actions: [
-          'acm:DeleteCertificate',
-          'acm:UpdateCertificateOptions',
-          'acm:RenewCertificate'
-        ],
-        resources: [targetData.certificateArn]
-      });
-      iamPolicies.push({
-        statement,
-        description: 'ACM certificate write access permissions',
-        complianceRequirement: 'Least privilege IAM access'
-      });
+      if (access.includes('write')) {
+        const statement = new PolicyStatement({
+          effect: Effect.ALLOW,
+          actions: [
+            'acm:DeleteCertificate',
+            'acm:UpdateCertificateOptions',
+            'acm:RenewCertificate'
+          ],
+          resources: [targetData.certificateArn]
+        });
+        iamPolicies.push({
+          statement,
+          description: 'ACM certificate write access permissions',
+          complianceRequirement: 'Least privilege IAM access'
+        });
+      }
     }
 
     // Set certificate environment variables
@@ -437,5 +461,38 @@ export class CertificateBinderStrategy extends UnifiedBinderStrategyBase {
     }
 
     return { environmentVariables };
+  }
+
+  /**
+   * Get ACM certificate actions based on access level
+   * Used by resolveActions to compute base actions from coarse access level
+   */
+  private getCertificateActionsForAccess(access: string): string[] {
+    switch (access) {
+      case 'read':
+      case 'use':
+        return [
+          'acm:DescribeCertificate',
+          'acm:ListCertificates',
+          'acm:GetCertificate'
+        ];
+      case 'write':
+        return [
+          'acm:DeleteCertificate',
+          'acm:UpdateCertificateOptions',
+          'acm:RenewCertificate'
+        ];
+      case 'readwrite':
+        return [
+          'acm:DescribeCertificate',
+          'acm:ListCertificates',
+          'acm:GetCertificate',
+          'acm:DeleteCertificate',
+          'acm:UpdateCertificateOptions',
+          'acm:RenewCertificate'
+        ];
+      default:
+        throw new Error(`Unsupported ACM certificate access level: ${access}`);
+    }
   }
 }
