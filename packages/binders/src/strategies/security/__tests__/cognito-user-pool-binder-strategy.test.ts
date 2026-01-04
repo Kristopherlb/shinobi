@@ -616,7 +616,7 @@ describe('CognitoUserPoolBinderStrategy', () => {
         source: createMockSourceComponent(),
         target,
         capability: 'auth:user-pool',
-        access: 'authenticate',
+        access: 'read',
         actions: customActions
       });
 
@@ -678,7 +678,7 @@ describe('CognitoUserPoolBinderStrategy', () => {
         source: createMockSourceComponent(),
         target,
         capability: 'auth:user-pool',
-        access: 'authenticate',
+        access: 'read',
         actions: invalidActions
       });
 
