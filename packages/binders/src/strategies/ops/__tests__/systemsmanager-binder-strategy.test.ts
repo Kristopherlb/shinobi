@@ -434,4 +434,67 @@ describe('SystemsManagerBinderStrategy', () => {
       );
     });
   });
+
+  describe('SystemsManagerBind__CustomActionsOverride__ReplacesCoarseActions', () => {
+    const metadata = {
+      id: 'TP-binders-ops-systemsmanager-007',
+      level: 'unit' as const,
+      capability: 'Custom actions override replaces default SSM automation actions',
+      oracle: 'exact' as const,
+      determinism: 'deterministic' as const,
+      naming: { pattern: 'SystemsManagerBind__Condition__Outcome', example: 'SystemsManagerBind__CustomActionsOverride__ReplacesCoarseActions' },
+      invariants: [
+        'IAM policy actions match provided custom actions array',
+        'Default SSM automation actions are not included when custom actions provided',
+        'Actions array is used directly (replaces coarse access)'
+      ],
+      fixtures: ['MockSourceComponent', 'MockTargetComponent'],
+      inputs: {
+        shape: 'BindingContext with ops:ssm-automation capability and directive.actions array',
+        notes: 'Granular actions override test'
+      },
+      risks: [],
+      dependencies: ['action-resolver'],
+      evidence: [],
+      compliance_refs: ['docs/platform-standards/platform-iam-auditing-standard.md'],
+      ai_generated: true,
+      human_reviewed_by: 'Platform Engineering'
+    };
+
+    test('SystemsManagerBind__CustomActionsOverride__ReplacesCoarseActions', async () => {
+      const strategy = new SystemsManagerBinderStrategy();
+      const customActions = ['ssm:GetDocument', 'ssm:DescribeDocument'];
+      const target = createMockTargetComponent('ssm', {
+        'ops:ssm-automation': {
+          documentName: 'test-document'
+        },
+      });
+
+      const context = createBindingContext({
+        source: createMockSourceComponent('lambda-automation', 'test-source'),
+        target,
+        capability: 'ops:ssm-automation',
+        access: 'read',
+        actions: customActions
+      });
+
+      const result = await executeUnifiedBinding(strategy, context);
+
+      assertEnhancedBindingResult(result);
+
+      expect(result.iamPolicies.length).toBeGreaterThan(0);
+      const policy = result.iamPolicies.find(p => p.description.includes('granular actions'));
+      expect(policy).toBeDefined();
+      
+      const statementJson = policy!.statement.toStatementJson();
+      const actions = Array.isArray(statementJson.Action)
+        ? statementJson.Action
+        : [statementJson.Action];
+
+      // Primary assertion: Custom actions are used, default actions are not
+      expect(actions).toEqual(customActions);
+      expect(actions).not.toContain('ssm:ListDocuments');
+      expect(actions).not.toContain('ssm:StartAutomationExecution');
+    });
+  });
 });

@@ -3,7 +3,7 @@
  * Handles IoT device management bindings for AWS IoT Core with mandatory compliance enforcement
  */
 
-import { UnifiedBinderStrategyBase } from '@shinobi/core';
+import { UnifiedBinderStrategyBase, resolveActions } from '@shinobi/core';
 import type { BindingContext, EnhancedBindingResult, CompatibilityEntry } from '@shinobi/core';
 import type { IamPolicy } from '@shinobi/core';
 import { PolicyStatement, Effect } from 'aws-cdk-lib/aws-iam';
@@ -155,42 +155,66 @@ export class IoTCoreBinderStrategy extends UnifiedBinderStrategyBase {
     const region = (context.target.context as any)?.region || process.env.AWS_REGION || 'us-east-1';
     const accountId = (context.target.context as any)?.accountId || '*';
 
-    // Grant thing access permissions
-    if (access.includes('read') || access.includes('readwrite') || access.includes('admin')) {
-      const statement = new PolicyStatement({
-        effect: Effect.ALLOW,
-        actions: [
-          'iot:DescribeThing',
-          'iot:ListThings',
-          'iot:DescribeThingGroup',
-          'iot:ListThingGroups'
-        ],
-        resources: [targetData.thingArn]
-      });
-      iamPolicies.push({
-        statement,
-        description: 'IoT thing read access permissions',
-        complianceRequirement: 'Least privilege IAM access'
-      });
-    }
+    // Handle granular actions override or use multi-statement approach
+    if (context.directive.actions) {
+      // Granular actions provided: create single statement with resolved actions
+      const primaryAccess = access[0] || 'read';
+      const resolvedActions = resolveActions(
+        context.directive,
+        context,
+        (acc) => this.getIoTThingActionsForAccess(acc),
+        'iot'
+      );
 
-    if (access.includes('write') || access.includes('readwrite') || access.includes('admin')) {
       const statement = new PolicyStatement({
         effect: Effect.ALLOW,
-        actions: [
-          'iot:CreateThing',
-          'iot:DeleteThing',
-          'iot:UpdateThing',
-          'iot:AttachThingPrincipal',
-          'iot:DetachThingPrincipal'
-        ],
+        actions: resolvedActions,
         resources: [targetData.thingArn]
       });
       iamPolicies.push({
         statement,
-        description: 'IoT thing write access permissions',
+        description: 'IoT thing access permissions (granular actions)',
         complianceRequirement: 'Least privilege IAM access'
       });
+    } else {
+      // Coarse access levels: use multi-statement approach (backward compatible)
+      // Grant thing access permissions
+      if (access.includes('read') || access.includes('readwrite') || access.includes('admin')) {
+        const statement = new PolicyStatement({
+          effect: Effect.ALLOW,
+          actions: [
+            'iot:DescribeThing',
+            'iot:ListThings',
+            'iot:DescribeThingGroup',
+            'iot:ListThingGroups'
+          ],
+          resources: [targetData.thingArn]
+        });
+        iamPolicies.push({
+          statement,
+          description: 'IoT thing read access permissions',
+          complianceRequirement: 'Least privilege IAM access'
+        });
+      }
+
+      if (access.includes('write') || access.includes('readwrite') || access.includes('admin')) {
+        const statement = new PolicyStatement({
+          effect: Effect.ALLOW,
+          actions: [
+            'iot:CreateThing',
+            'iot:DeleteThing',
+            'iot:UpdateThing',
+            'iot:AttachThingPrincipal',
+            'iot:DetachThingPrincipal'
+          ],
+          resources: [targetData.thingArn]
+        });
+        iamPolicies.push({
+          statement,
+          description: 'IoT thing write access permissions',
+          complianceRequirement: 'Least privilege IAM access'
+        });
+      }
     }
 
     // Grant device shadow permissions (shadow access is implicit with thing access, but can be explicit)
@@ -271,38 +295,62 @@ export class IoTCoreBinderStrategy extends UnifiedBinderStrategyBase {
     const environmentVariables: Record<string, string> = {};
     const iamPolicies: IamPolicy[] = [];
 
-    // Grant certificate access permissions
-    if (access.includes('read') || access.includes('readwrite')) {
-      const statement = new PolicyStatement({
-        effect: Effect.ALLOW,
-        actions: [
-          'iot:DescribeCertificate',
-          'iot:ListCertificates'
-        ],
-        resources: [targetData.certificateArn]
-      });
-      iamPolicies.push({
-        statement,
-        description: 'IoT certificate read access permissions',
-        complianceRequirement: 'Least privilege IAM access'
-      });
-    }
+    // Handle granular actions override or use multi-statement approach
+    if (context.directive.actions) {
+      // Granular actions provided: create single statement with resolved actions
+      const primaryAccess = access[0] || 'read';
+      const resolvedActions = resolveActions(
+        context.directive,
+        context,
+        (acc) => this.getIoTCertificateActionsForAccess(acc),
+        'iot'
+      );
 
-    if (access.includes('write') || access.includes('readwrite')) {
       const statement = new PolicyStatement({
         effect: Effect.ALLOW,
-        actions: [
-          'iot:CreateCertificateFromCsr',
-          'iot:DeleteCertificate',
-          'iot:UpdateCertificate'
-        ],
+        actions: resolvedActions,
         resources: [targetData.certificateArn]
       });
       iamPolicies.push({
         statement,
-        description: 'IoT certificate write access permissions',
+        description: 'IoT certificate access permissions (granular actions)',
         complianceRequirement: 'Least privilege IAM access'
       });
+    } else {
+      // Coarse access levels: use multi-statement approach (backward compatible)
+      // Grant certificate access permissions
+      if (access.includes('read') || access.includes('readwrite')) {
+        const statement = new PolicyStatement({
+          effect: Effect.ALLOW,
+          actions: [
+            'iot:DescribeCertificate',
+            'iot:ListCertificates'
+          ],
+          resources: [targetData.certificateArn]
+        });
+        iamPolicies.push({
+          statement,
+          description: 'IoT certificate read access permissions',
+          complianceRequirement: 'Least privilege IAM access'
+        });
+      }
+
+      if (access.includes('write') || access.includes('readwrite')) {
+        const statement = new PolicyStatement({
+          effect: Effect.ALLOW,
+          actions: [
+            'iot:CreateCertificateFromCsr',
+            'iot:DeleteCertificate',
+            'iot:UpdateCertificate'
+          ],
+          resources: [targetData.certificateArn]
+        });
+        iamPolicies.push({
+          statement,
+          description: 'IoT certificate write access permissions',
+          complianceRequirement: 'Least privilege IAM access'
+        });
+      }
     }
 
     // Grant certificate policy permissions (for attaching/detaching policies)
@@ -369,41 +417,65 @@ export class IoTCoreBinderStrategy extends UnifiedBinderStrategyBase {
     const accountId = (context.target.context as any)?.accountId || '*';
     const policyArn = targetData.policyArn || `arn:aws:iot:${region}:${accountId}:policy/${targetData.policyName}`;
 
-    // Grant policy access permissions
-    if (access.includes('read') || access.includes('readwrite')) {
-      const statement = new PolicyStatement({
-        effect: Effect.ALLOW,
-        actions: [
-          'iot:GetPolicy',
-          'iot:ListPolicies',
-          'iot:ListPolicyVersions'
-        ],
-        resources: [policyArn]
-      });
-      iamPolicies.push({
-        statement,
-        description: 'IoT policy read access permissions',
-        complianceRequirement: 'Least privilege IAM access'
-      });
-    }
+    // Handle granular actions override or use multi-statement approach
+    if (context.directive.actions) {
+      // Granular actions provided: create single statement with resolved actions
+      const primaryAccess = access[0] || 'read';
+      const resolvedActions = resolveActions(
+        context.directive,
+        context,
+        (acc) => this.getIoTPolicyActionsForAccess(acc),
+        'iot'
+      );
 
-    if (access.includes('write') || access.includes('readwrite')) {
       const statement = new PolicyStatement({
         effect: Effect.ALLOW,
-        actions: [
-          'iot:CreatePolicy',
-          'iot:DeletePolicy',
-          'iot:CreatePolicyVersion',
-          'iot:DeletePolicyVersion',
-          'iot:SetDefaultPolicyVersion'
-        ],
+        actions: resolvedActions,
         resources: [policyArn]
       });
       iamPolicies.push({
         statement,
-        description: 'IoT policy write access permissions',
+        description: 'IoT policy access permissions (granular actions)',
         complianceRequirement: 'Least privilege IAM access'
       });
+    } else {
+      // Coarse access levels: use multi-statement approach (backward compatible)
+      // Grant policy access permissions
+      if (access.includes('read') || access.includes('readwrite')) {
+        const statement = new PolicyStatement({
+          effect: Effect.ALLOW,
+          actions: [
+            'iot:GetPolicy',
+            'iot:ListPolicies',
+            'iot:ListPolicyVersions'
+          ],
+          resources: [policyArn]
+        });
+        iamPolicies.push({
+          statement,
+          description: 'IoT policy read access permissions',
+          complianceRequirement: 'Least privilege IAM access'
+        });
+      }
+
+      if (access.includes('write') || access.includes('readwrite')) {
+        const statement = new PolicyStatement({
+          effect: Effect.ALLOW,
+          actions: [
+            'iot:CreatePolicy',
+            'iot:DeletePolicy',
+            'iot:CreatePolicyVersion',
+            'iot:DeletePolicyVersion',
+            'iot:SetDefaultPolicyVersion'
+          ],
+          resources: [policyArn]
+        });
+        iamPolicies.push({
+          statement,
+          description: 'IoT policy write access permissions',
+          complianceRequirement: 'Least privilege IAM access'
+        });
+      }
     }
 
     // Set policy environment variables
@@ -449,40 +521,64 @@ export class IoTCoreBinderStrategy extends UnifiedBinderStrategyBase {
     const environmentVariables: Record<string, string> = {};
     const iamPolicies: IamPolicy[] = [];
 
-    // Grant rule access permissions
-    if (access.includes('read') || access.includes('readwrite')) {
-      const statement = new PolicyStatement({
-        effect: Effect.ALLOW,
-        actions: [
-          'iot:GetTopicRule',
-          'iot:ListTopicRules'
-        ],
-        resources: [targetData.ruleArn]
-      });
-      iamPolicies.push({
-        statement,
-        description: 'IoT topic rule read access permissions',
-        complianceRequirement: 'Least privilege IAM access'
-      });
-    }
+    // Handle granular actions override or use multi-statement approach
+    if (context.directive.actions) {
+      // Granular actions provided: create single statement with resolved actions
+      const primaryAccess = access[0] || 'read';
+      const resolvedActions = resolveActions(
+        context.directive,
+        context,
+        (acc) => this.getIoTTopicRuleActionsForAccess(acc),
+        'iot'
+      );
 
-    if (access.includes('write') || access.includes('readwrite')) {
       const statement = new PolicyStatement({
         effect: Effect.ALLOW,
-        actions: [
-          'iot:CreateTopicRule',
-          'iot:DeleteTopicRule',
-          'iot:ReplaceTopicRule',
-          'iot:EnableTopicRule',
-          'iot:DisableTopicRule'
-        ],
+        actions: resolvedActions,
         resources: [targetData.ruleArn]
       });
       iamPolicies.push({
         statement,
-        description: 'IoT topic rule write access permissions',
+        description: 'IoT topic rule access permissions (granular actions)',
         complianceRequirement: 'Least privilege IAM access'
       });
+    } else {
+      // Coarse access levels: use multi-statement approach (backward compatible)
+      // Grant rule access permissions
+      if (access.includes('read') || access.includes('readwrite')) {
+        const statement = new PolicyStatement({
+          effect: Effect.ALLOW,
+          actions: [
+            'iot:GetTopicRule',
+            'iot:ListTopicRules'
+          ],
+          resources: [targetData.ruleArn]
+        });
+        iamPolicies.push({
+          statement,
+          description: 'IoT topic rule read access permissions',
+          complianceRequirement: 'Least privilege IAM access'
+        });
+      }
+
+      if (access.includes('write') || access.includes('readwrite')) {
+        const statement = new PolicyStatement({
+          effect: Effect.ALLOW,
+          actions: [
+            'iot:CreateTopicRule',
+            'iot:DeleteTopicRule',
+            'iot:ReplaceTopicRule',
+            'iot:EnableTopicRule',
+            'iot:DisableTopicRule'
+          ],
+          resources: [targetData.ruleArn]
+        });
+        iamPolicies.push({
+          statement,
+          description: 'IoT topic rule write access permissions',
+          complianceRequirement: 'Least privilege IAM access'
+        });
+      }
     }
 
     // Grant action permissions for rule actions
@@ -585,41 +681,65 @@ export class IoTCoreBinderStrategy extends UnifiedBinderStrategyBase {
     const accountId = (context.target.context as any)?.accountId || '*';
     const thingGroupArn = targetData.thingGroupArn || `arn:aws:iot:${region}:${accountId}:thinggroup/${targetData.thingGroupName}`;
 
-    // Grant thing group access permissions
-    if (access.includes('read') || access.includes('readwrite')) {
-      const statement = new PolicyStatement({
-        effect: Effect.ALLOW,
-        actions: [
-          'iot:DescribeThingGroup',
-          'iot:ListThingGroups',
-          'iot:ListThingsInThingGroup'
-        ],
-        resources: [thingGroupArn]
-      });
-      iamPolicies.push({
-        statement,
-        description: 'IoT thing group read access permissions',
-        complianceRequirement: 'Least privilege IAM access'
-      });
-    }
+    // Handle granular actions override or use multi-statement approach
+    if (context.directive.actions) {
+      // Granular actions provided: create single statement with resolved actions
+      const primaryAccess = access[0] || 'read';
+      const resolvedActions = resolveActions(
+        context.directive,
+        context,
+        (acc) => this.getIoTThingGroupActionsForAccess(acc),
+        'iot'
+      );
 
-    if (access.includes('write') || access.includes('readwrite')) {
       const statement = new PolicyStatement({
         effect: Effect.ALLOW,
-        actions: [
-          'iot:CreateThingGroup',
-          'iot:DeleteThingGroup',
-          'iot:UpdateThingGroup',
-          'iot:AddThingToThingGroup',
-          'iot:RemoveThingFromThingGroup'
-        ],
+        actions: resolvedActions,
         resources: [thingGroupArn]
       });
       iamPolicies.push({
         statement,
-        description: 'IoT thing group write access permissions',
+        description: 'IoT thing group access permissions (granular actions)',
         complianceRequirement: 'Least privilege IAM access'
       });
+    } else {
+      // Coarse access levels: use multi-statement approach (backward compatible)
+      // Grant thing group access permissions
+      if (access.includes('read') || access.includes('readwrite')) {
+        const statement = new PolicyStatement({
+          effect: Effect.ALLOW,
+          actions: [
+            'iot:DescribeThingGroup',
+            'iot:ListThingGroups',
+            'iot:ListThingsInThingGroup'
+          ],
+          resources: [thingGroupArn]
+        });
+        iamPolicies.push({
+          statement,
+          description: 'IoT thing group read access permissions',
+          complianceRequirement: 'Least privilege IAM access'
+        });
+      }
+
+      if (access.includes('write') || access.includes('readwrite')) {
+        const statement = new PolicyStatement({
+          effect: Effect.ALLOW,
+          actions: [
+            'iot:CreateThingGroup',
+            'iot:DeleteThingGroup',
+            'iot:UpdateThingGroup',
+            'iot:AddThingToThingGroup',
+            'iot:RemoveThingFromThingGroup'
+          ],
+          resources: [thingGroupArn]
+        });
+        iamPolicies.push({
+          statement,
+          description: 'IoT thing group write access permissions',
+          complianceRequirement: 'Least privilege IAM access'
+        });
+      }
     }
 
     // Set thing group environment variables
@@ -666,42 +786,66 @@ export class IoTCoreBinderStrategy extends UnifiedBinderStrategyBase {
     const accountId = (context.target.context as any)?.accountId || '*';
     const jobArn = targetData.jobArn || `arn:aws:iot:${region}:${accountId}:job/${targetData.jobId}`;
 
-    // Grant job access permissions
-    if (access.includes('read') || access.includes('readwrite')) {
-      const statement = new PolicyStatement({
-        effect: Effect.ALLOW,
-        actions: [
-          'iot:DescribeJob',
-          'iot:DescribeJobExecution',
-          'iot:ListJobs',
-          'iot:ListJobExecutionsForThing'
-        ],
-        resources: [jobArn]
-      });
-      iamPolicies.push({
-        statement,
-        description: 'IoT job read access permissions',
-        complianceRequirement: 'Least privilege IAM access'
-      });
-    }
+    // Handle granular actions override or use multi-statement approach
+    if (context.directive.actions) {
+      // Granular actions provided: create single statement with resolved actions
+      const primaryAccess = access[0] || 'read';
+      const resolvedActions = resolveActions(
+        context.directive,
+        context,
+        (acc) => this.getIoTJobActionsForAccess(acc),
+        'iot'
+      );
 
-    if (access.includes('write') || access.includes('readwrite')) {
       const statement = new PolicyStatement({
         effect: Effect.ALLOW,
-        actions: [
-          'iot:CreateJob',
-          'iot:DeleteJob',
-          'iot:UpdateJob',
-          'iot:CancelJob',
-          'iot:UpdateJobExecution'
-        ],
+        actions: resolvedActions,
         resources: [jobArn]
       });
       iamPolicies.push({
         statement,
-        description: 'IoT job write access permissions',
+        description: 'IoT job access permissions (granular actions)',
         complianceRequirement: 'Least privilege IAM access'
       });
+    } else {
+      // Coarse access levels: use multi-statement approach (backward compatible)
+      // Grant job access permissions
+      if (access.includes('read') || access.includes('readwrite')) {
+        const statement = new PolicyStatement({
+          effect: Effect.ALLOW,
+          actions: [
+            'iot:DescribeJob',
+            'iot:DescribeJobExecution',
+            'iot:ListJobs',
+            'iot:ListJobExecutionsForThing'
+          ],
+          resources: [jobArn]
+        });
+        iamPolicies.push({
+          statement,
+          description: 'IoT job read access permissions',
+          complianceRequirement: 'Least privilege IAM access'
+        });
+      }
+
+      if (access.includes('write') || access.includes('readwrite')) {
+        const statement = new PolicyStatement({
+          effect: Effect.ALLOW,
+          actions: [
+            'iot:CreateJob',
+            'iot:DeleteJob',
+            'iot:UpdateJob',
+            'iot:CancelJob',
+            'iot:UpdateJobExecution'
+          ],
+          resources: [jobArn]
+        });
+        iamPolicies.push({
+          statement,
+          description: 'IoT job write access permissions',
+          complianceRequirement: 'Least privilege IAM access'
+        });
+      }
     }
 
     // Set job environment variables
@@ -815,5 +959,237 @@ export class IoTCoreBinderStrategy extends UnifiedBinderStrategyBase {
     });
 
     return { environmentVariables, iamPolicies };
+  }
+
+  /**
+   * Get IoT thing actions based on access level
+   * Used by resolveActions to compute base actions from coarse access level
+   * 
+   * @param access - Access level (read, write, readwrite, admin)
+   * @returns Array of IAM action strings
+   */
+  private getIoTThingActionsForAccess(access: string): string[] {
+    switch (access) {
+      case 'read':
+        return [
+          'iot:DescribeThing',
+          'iot:ListThings',
+          'iot:DescribeThingGroup',
+          'iot:ListThingGroups'
+        ];
+      case 'write':
+        return [
+          'iot:CreateThing',
+          'iot:DeleteThing',
+          'iot:UpdateThing',
+          'iot:AttachThingPrincipal',
+          'iot:DetachThingPrincipal'
+        ];
+      case 'readwrite':
+        return [
+          'iot:DescribeThing',
+          'iot:ListThings',
+          'iot:DescribeThingGroup',
+          'iot:ListThingGroups',
+          'iot:CreateThing',
+          'iot:DeleteThing',
+          'iot:UpdateThing',
+          'iot:AttachThingPrincipal',
+          'iot:DetachThingPrincipal'
+        ];
+      case 'admin':
+        return ['iot:*'];
+      default:
+        throw new Error(`Unsupported IoT thing access level: ${access}`);
+    }
+  }
+
+  /**
+   * Get IoT certificate actions based on access level
+   * Used by resolveActions to compute base actions from coarse access level
+   * 
+   * @param access - Access level (read, write, readwrite)
+   * @returns Array of IAM action strings
+   */
+  private getIoTCertificateActionsForAccess(access: string): string[] {
+    switch (access) {
+      case 'read':
+        return [
+          'iot:DescribeCertificate',
+          'iot:ListCertificates'
+        ];
+      case 'write':
+        return [
+          'iot:CreateCertificateFromCsr',
+          'iot:DeleteCertificate',
+          'iot:UpdateCertificate'
+        ];
+      case 'readwrite':
+        return [
+          'iot:DescribeCertificate',
+          'iot:ListCertificates',
+          'iot:CreateCertificateFromCsr',
+          'iot:DeleteCertificate',
+          'iot:UpdateCertificate'
+        ];
+      default:
+        throw new Error(`Unsupported IoT certificate access level: ${access}`);
+    }
+  }
+
+  /**
+   * Get IoT policy actions based on access level
+   * Used by resolveActions to compute base actions from coarse access level
+   * 
+   * @param access - Access level (read, write, readwrite)
+   * @returns Array of IAM action strings
+   */
+  private getIoTPolicyActionsForAccess(access: string): string[] {
+    switch (access) {
+      case 'read':
+        return [
+          'iot:GetPolicy',
+          'iot:ListPolicies',
+          'iot:ListPolicyVersions'
+        ];
+      case 'write':
+        return [
+          'iot:CreatePolicy',
+          'iot:DeletePolicy',
+          'iot:CreatePolicyVersion',
+          'iot:DeletePolicyVersion',
+          'iot:SetDefaultPolicyVersion'
+        ];
+      case 'readwrite':
+        return [
+          'iot:GetPolicy',
+          'iot:ListPolicies',
+          'iot:ListPolicyVersions',
+          'iot:CreatePolicy',
+          'iot:DeletePolicy',
+          'iot:CreatePolicyVersion',
+          'iot:DeletePolicyVersion',
+          'iot:SetDefaultPolicyVersion'
+        ];
+      default:
+        throw new Error(`Unsupported IoT policy access level: ${access}`);
+    }
+  }
+
+  /**
+   * Get IoT topic rule actions based on access level
+   * Used by resolveActions to compute base actions from coarse access level
+   * 
+   * @param access - Access level (read, write, readwrite)
+   * @returns Array of IAM action strings
+   */
+  private getIoTTopicRuleActionsForAccess(access: string): string[] {
+    switch (access) {
+      case 'read':
+        return [
+          'iot:GetTopicRule',
+          'iot:ListTopicRules'
+        ];
+      case 'write':
+        return [
+          'iot:CreateTopicRule',
+          'iot:DeleteTopicRule',
+          'iot:ReplaceTopicRule',
+          'iot:EnableTopicRule',
+          'iot:DisableTopicRule'
+        ];
+      case 'readwrite':
+        return [
+          'iot:GetTopicRule',
+          'iot:ListTopicRules',
+          'iot:CreateTopicRule',
+          'iot:DeleteTopicRule',
+          'iot:ReplaceTopicRule',
+          'iot:EnableTopicRule',
+          'iot:DisableTopicRule'
+        ];
+      default:
+        throw new Error(`Unsupported IoT topic rule access level: ${access}`);
+    }
+  }
+
+  /**
+   * Get IoT thing group actions based on access level
+   * Used by resolveActions to compute base actions from coarse access level
+   * 
+   * @param access - Access level (read, write, readwrite)
+   * @returns Array of IAM action strings
+   */
+  private getIoTThingGroupActionsForAccess(access: string): string[] {
+    switch (access) {
+      case 'read':
+        return [
+          'iot:DescribeThingGroup',
+          'iot:ListThingGroups',
+          'iot:ListThingsInThingGroup'
+        ];
+      case 'write':
+        return [
+          'iot:CreateThingGroup',
+          'iot:DeleteThingGroup',
+          'iot:UpdateThingGroup',
+          'iot:AddThingToThingGroup',
+          'iot:RemoveThingFromThingGroup'
+        ];
+      case 'readwrite':
+        return [
+          'iot:DescribeThingGroup',
+          'iot:ListThingGroups',
+          'iot:ListThingsInThingGroup',
+          'iot:CreateThingGroup',
+          'iot:DeleteThingGroup',
+          'iot:UpdateThingGroup',
+          'iot:AddThingToThingGroup',
+          'iot:RemoveThingFromThingGroup'
+        ];
+      default:
+        throw new Error(`Unsupported IoT thing group access level: ${access}`);
+    }
+  }
+
+  /**
+   * Get IoT job actions based on access level
+   * Used by resolveActions to compute base actions from coarse access level
+   * 
+   * @param access - Access level (read, write, readwrite)
+   * @returns Array of IAM action strings
+   */
+  private getIoTJobActionsForAccess(access: string): string[] {
+    switch (access) {
+      case 'read':
+        return [
+          'iot:DescribeJob',
+          'iot:DescribeJobExecution',
+          'iot:ListJobs',
+          'iot:ListJobExecutionsForThing'
+        ];
+      case 'write':
+        return [
+          'iot:CreateJob',
+          'iot:DeleteJob',
+          'iot:UpdateJob',
+          'iot:CancelJob',
+          'iot:UpdateJobExecution'
+        ];
+      case 'readwrite':
+        return [
+          'iot:DescribeJob',
+          'iot:DescribeJobExecution',
+          'iot:ListJobs',
+          'iot:ListJobExecutionsForThing',
+          'iot:CreateJob',
+          'iot:DeleteJob',
+          'iot:UpdateJob',
+          'iot:CancelJob',
+          'iot:UpdateJobExecution'
+        ];
+      default:
+        throw new Error(`Unsupported IoT job access level: ${access}`);
+    }
   }
 }

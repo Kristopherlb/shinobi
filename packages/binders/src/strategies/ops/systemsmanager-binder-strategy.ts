@@ -10,7 +10,7 @@
  * - Parameter Store integration
  */
 
-import { UnifiedBinderStrategyBase } from '@shinobi/core';
+import { UnifiedBinderStrategyBase, resolveActions } from '@shinobi/core';
 import type { BindingContext, EnhancedBindingResult, CompatibilityEntry } from '@shinobi/core';
 import type { IamPolicy } from '@shinobi/core';
 import { PolicyStatement, Effect } from 'aws-cdk-lib/aws-iam';
@@ -130,91 +130,118 @@ export class SystemsManagerBinderStrategy extends UnifiedBinderStrategyBase {
       environmentVariables.AWS_SSM_INVENTORY_ENABLED = String(targetData.inventoryEnabled);
     }
 
-    // IAM policies for SSM operations
-    if (access === 'read' || access === 'readwrite' || access === 'admin') {
-      const readActions = [
-        'ssm:GetDocument',
-        'ssm:DescribeDocument',
-        'ssm:ListDocuments',
-        'ssm:DescribeInstanceInformation',
-        'ssm:GetCommandInvocation',
-        'ssm:ListCommandInvocations',
-        'ssm:DescribeInstanceAssociationsStatus',
-        'ssm:GetAutomationExecution',
-        'ssm:DescribeAutomationExecutions',
-        'ssm:DescribeAutomationStepExecutions'
-      ];
+    // Handle granular actions override or use multi-statement approach
+    if (context.directive.actions) {
+      // Granular actions provided: create single statement with resolved actions
+      const resolvedActions = resolveActions(
+        context.directive,
+        context,
+        (acc) => this.getSsmAutomationActionsForAccess(acc),
+        'ssm'
+      );
 
-      // Add Session Manager actions if enabled
-      if (targetData.sessionManagerEnabled) {
-        readActions.push(
-          'ssm:StartSession',
-          'ssm:TerminateSession',
-          'ssm:DescribeSessions',
-          'ssm:ResumeSession'
-        );
+      const statement = new PolicyStatement({
+        effect: Effect.ALLOW,
+        actions: resolvedActions,
+        resources: [
+          `arn:aws:ssm:*:*:document/${targetData.documentName}`,
+          `arn:aws:ssm:*:*:automation-execution/*`,
+          'arn:aws:ec2:*:*:instance/*'
+        ]
+      });
+      iamPolicies.push({
+        statement,
+        description: 'SSM automation access permissions (granular actions)',
+        complianceRequirement: 'Least privilege IAM access'
+      });
+    } else {
+      // Coarse access levels: use multi-statement approach (backward compatible)
+      // IAM policies for SSM operations
+      if (access === 'read' || access === 'readwrite' || access === 'admin') {
+        const readActions = [
+          'ssm:GetDocument',
+          'ssm:DescribeDocument',
+          'ssm:ListDocuments',
+          'ssm:DescribeInstanceInformation',
+          'ssm:GetCommandInvocation',
+          'ssm:ListCommandInvocations',
+          'ssm:DescribeInstanceAssociationsStatus',
+          'ssm:GetAutomationExecution',
+          'ssm:DescribeAutomationExecutions',
+          'ssm:DescribeAutomationStepExecutions'
+        ];
+
+        // Add Session Manager actions if enabled
+        if (targetData.sessionManagerEnabled) {
+          readActions.push(
+            'ssm:StartSession',
+            'ssm:TerminateSession',
+            'ssm:DescribeSessions',
+            'ssm:ResumeSession'
+          );
+        }
+
+        // Add Inventory actions if enabled
+        if (targetData.inventoryEnabled) {
+          readActions.push(
+            'ssm:GetInventory',
+            'ssm:GetInventorySchema',
+            'ssm:ListInventoryEntries',
+            'ssm:ListResourceDataSync'
+          );
+        }
+
+        iamPolicies.push({
+          statement: new PolicyStatement({
+            effect: Effect.ALLOW,
+            actions: readActions,
+            resources: [
+              `arn:aws:ssm:*:*:document/${targetData.documentName}`,
+              `arn:aws:ssm:*:*:automation-execution/*`,
+              'arn:aws:ec2:*:*:instance/*'
+            ]
+          }),
+          description: 'SSM read access',
+          complianceRequirement: 'Least privilege IAM access for SSM read operations'
+        });
       }
 
-      // Add Inventory actions if enabled
-      if (targetData.inventoryEnabled) {
-        readActions.push(
-          'ssm:GetInventory',
-          'ssm:GetInventorySchema',
-          'ssm:ListInventoryEntries',
-          'ssm:ListResourceDataSync'
-        );
+      if (access === 'write' || access === 'readwrite' || access === 'admin') {
+        iamPolicies.push({
+          statement: new PolicyStatement({
+            effect: Effect.ALLOW,
+            actions: [
+              'ssm:SendCommand',
+              'ssm:StartAutomationExecution',
+              'ssm:StopAutomationExecution',
+              'ssm:CreateDocument',
+              'ssm:UpdateDocument',
+              'ssm:DeleteDocument',
+              'ssm:ModifyDocumentPermission'
+            ],
+            resources: [
+              `arn:aws:ssm:*:*:document/${targetData.documentName}`,
+              `arn:aws:ssm:*:*:automation-execution/*`,
+              'arn:aws:ec2:*:*:instance/*'
+            ]
+          }),
+          description: 'SSM write access',
+          complianceRequirement: 'Least privilege IAM access for SSM write operations'
+        });
       }
 
-      iamPolicies.push({
-        statement: new PolicyStatement({
-          effect: Effect.ALLOW,
-          actions: readActions,
-          resources: [
-            `arn:aws:ssm:*:*:document/${targetData.documentName}`,
-            `arn:aws:ssm:*:*:automation-execution/*`,
-            'arn:aws:ec2:*:*:instance/*'
-          ]
-        }),
-        description: 'SSM read access',
-        complianceRequirement: 'Least privilege IAM access for SSM read operations'
-      });
-    }
-
-    if (access === 'write' || access === 'readwrite' || access === 'admin') {
-      iamPolicies.push({
-        statement: new PolicyStatement({
-          effect: Effect.ALLOW,
-          actions: [
-            'ssm:SendCommand',
-            'ssm:StartAutomationExecution',
-            'ssm:StopAutomationExecution',
-            'ssm:CreateDocument',
-            'ssm:UpdateDocument',
-            'ssm:DeleteDocument',
-            'ssm:ModifyDocumentPermission'
-          ],
-          resources: [
-            `arn:aws:ssm:*:*:document/${targetData.documentName}`,
-            `arn:aws:ssm:*:*:automation-execution/*`,
-            'arn:aws:ec2:*:*:instance/*'
-          ]
-        }),
-        description: 'SSM write access',
-        complianceRequirement: 'Least privilege IAM access for SSM write operations'
-      });
-    }
-
-    // Gate admin access behind explicit option
-    if (access === 'admin' && options?.requireFullAdminAccess) {
-      iamPolicies.push({
-        statement: new PolicyStatement({
-          effect: Effect.ALLOW,
-          actions: ['ssm:*'],
-          resources: ['*']
-        }),
-        description: 'SSM admin access',
-        complianceRequirement: 'Full SSM access for admin operations (explicitly requested)'
-      });
+      // Gate admin access behind explicit option
+      if (access === 'admin' && options?.requireFullAdminAccess) {
+        iamPolicies.push({
+          statement: new PolicyStatement({
+            effect: Effect.ALLOW,
+            actions: ['ssm:*'],
+            resources: ['*']
+          }),
+          description: 'SSM admin access',
+          complianceRequirement: 'Full SSM access for admin operations (explicitly requested)'
+        });
+      }
     }
 
     // Secure hooks support
@@ -299,6 +326,45 @@ export class SystemsManagerBinderStrategy extends UnifiedBinderStrategyBase {
       environmentVariables,
       securityGroupRules: []
     };
+  }
+
+  /**
+   * Get SSM automation actions based on access level
+   * Used by resolveActions to compute base actions from coarse access level
+   * 
+   * @param access - Access level (read, write, admin)
+   * @returns Array of IAM action strings
+   */
+  private getSsmAutomationActionsForAccess(access: string): string[] {
+    switch (access) {
+      case 'read':
+        return [
+          'ssm:GetDocument',
+          'ssm:DescribeDocument',
+          'ssm:ListDocuments',
+          'ssm:DescribeInstanceInformation',
+          'ssm:GetCommandInvocation',
+          'ssm:ListCommandInvocations',
+          'ssm:DescribeInstanceAssociationsStatus',
+          'ssm:GetAutomationExecution',
+          'ssm:DescribeAutomationExecutions',
+          'ssm:DescribeAutomationStepExecutions'
+        ];
+      case 'write':
+        return [
+          'ssm:SendCommand',
+          'ssm:StartAutomationExecution',
+          'ssm:StopAutomationExecution',
+          'ssm:CreateDocument',
+          'ssm:UpdateDocument',
+          'ssm:DeleteDocument',
+          'ssm:ModifyDocumentPermission'
+        ];
+      case 'admin':
+        return ['ssm:*'];
+      default:
+        throw new Error(`Unsupported SSM automation access level: ${access}`);
+    }
   }
 }
 

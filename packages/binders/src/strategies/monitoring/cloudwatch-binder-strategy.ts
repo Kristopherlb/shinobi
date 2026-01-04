@@ -7,7 +7,7 @@
  * - monitoring:cloudwatch-alarm - Metric alarms (threshold, anomaly detection)
  */
 
-import { UnifiedBinderStrategyBase } from '@shinobi/core';
+import { UnifiedBinderStrategyBase, resolveActions } from '@shinobi/core';
 import type { BindingContext, EnhancedBindingResult, CompatibilityEntry } from '@shinobi/core';
 import type { IamPolicy } from '@shinobi/core';
 import { PolicyStatement, Effect } from 'aws-cdk-lib/aws-iam';
@@ -121,39 +121,62 @@ export class CloudWatchBinderStrategy extends UnifiedBinderStrategyBase {
       environmentVariables.AWS_CLOUDWATCH_METRIC_WIDGETS = JSON.stringify(targetData.metricWidgets);
     }
 
-    // IAM policies for CloudWatch dashboard operations
-    if (access === 'read' || access === 'readwrite' || access === 'admin') {
-      iamPolicies.push({
-        statement: new PolicyStatement({
-          effect: Effect.ALLOW,
-          actions: [
-            'cloudwatch:GetDashboard',
-            'cloudwatch:ListDashboards',
-            'cloudwatch:GetMetricStatistics',
-            'cloudwatch:GetMetricData',
-            'cloudwatch:ListMetrics'
-          ],
-          resources: ['*']
-        }),
-        description: 'CloudWatch dashboard read access',
-        complianceRequirement: 'Least privilege IAM access for CloudWatch dashboard read operations'
-      });
-    }
+    // Handle granular actions override or use multi-statement approach
+    if (context.directive.actions) {
+      // Granular actions provided: create single statement with resolved actions
+      const resolvedActions = resolveActions(
+        context.directive,
+        context,
+        (acc) => this.getCloudWatchDashboardActionsForAccess(acc),
+        'cloudwatch'
+      );
 
-    if (access === 'write' || access === 'readwrite' || access === 'admin') {
+      const statement = new PolicyStatement({
+        effect: Effect.ALLOW,
+        actions: resolvedActions,
+        resources: ['*']
+      });
       iamPolicies.push({
-        statement: new PolicyStatement({
-          effect: Effect.ALLOW,
-          actions: [
-            'cloudwatch:PutDashboard',
-            'cloudwatch:DeleteDashboards',
-            'cloudwatch:PutMetricData'
+        statement,
+        description: 'CloudWatch dashboard access permissions (granular actions)',
+        complianceRequirement: 'Least privilege IAM access'
+      });
+    } else {
+      // Coarse access levels: use multi-statement approach (backward compatible)
+      // IAM policies for CloudWatch dashboard operations
+      if (access === 'read' || access === 'readwrite' || access === 'admin') {
+        iamPolicies.push({
+          statement: new PolicyStatement({
+            effect: Effect.ALLOW,
+            actions: [
+              'cloudwatch:GetDashboard',
+              'cloudwatch:ListDashboards',
+              'cloudwatch:GetMetricStatistics',
+              'cloudwatch:GetMetricData',
+              'cloudwatch:ListMetrics'
+            ],
+            resources: ['*']
+          }),
+          description: 'CloudWatch dashboard read access',
+          complianceRequirement: 'Least privilege IAM access for CloudWatch dashboard read operations'
+        });
+      }
+
+      if (access === 'write' || access === 'readwrite' || access === 'admin') {
+        iamPolicies.push({
+          statement: new PolicyStatement({
+            effect: Effect.ALLOW,
+            actions: [
+              'cloudwatch:PutDashboard',
+              'cloudwatch:DeleteDashboards',
+              'cloudwatch:PutMetricData'
           ],
           resources: ['*']
         }),
         description: 'CloudWatch dashboard write access',
         complianceRequirement: 'Least privilege IAM access for CloudWatch dashboard write operations'
       });
+    }
     }
 
     // Gate admin access behind explicit option
@@ -387,6 +410,67 @@ export class CloudWatchBinderStrategy extends UnifiedBinderStrategyBase {
       environmentVariables,
       securityGroupRules: []
     };
+  }
+
+  /**
+   * Get CloudWatch dashboard actions based on access level
+   * Used by resolveActions to compute base actions from coarse access level
+   * 
+   * @param access - Access level (read, write, admin)
+   * @returns Array of IAM action strings
+   */
+  private getCloudWatchDashboardActionsForAccess(access: string): string[] {
+    switch (access) {
+      case 'read':
+        return [
+          'cloudwatch:GetDashboard',
+          'cloudwatch:ListDashboards',
+          'cloudwatch:GetMetricStatistics',
+          'cloudwatch:GetMetricData',
+          'cloudwatch:ListMetrics'
+        ];
+      case 'write':
+        return [
+          'cloudwatch:PutDashboard',
+          'cloudwatch:DeleteDashboards',
+          'cloudwatch:PutMetricData'
+        ];
+      case 'admin':
+        return ['cloudwatch:*'];
+      default:
+        throw new Error(`Unsupported CloudWatch dashboard access level: ${access}`);
+    }
+  }
+
+  /**
+   * Get CloudWatch alarm actions based on access level
+   * Used by resolveActions to compute base actions from coarse access level
+   * 
+   * @param access - Access level (read, write, admin)
+   * @returns Array of IAM action strings
+   */
+  private getCloudWatchAlarmActionsForAccess(access: string): string[] {
+    switch (access) {
+      case 'read':
+        return [
+          'cloudwatch:DescribeAlarms',
+          'cloudwatch:DescribeAlarmsForMetric',
+          'cloudwatch:GetMetricStatistics',
+          'cloudwatch:GetMetricData',
+          'cloudwatch:ListMetrics'
+        ];
+      case 'write':
+        return [
+          'cloudwatch:PutMetricAlarm',
+          'cloudwatch:DeleteAlarms',
+          'cloudwatch:PutMetricData',
+          'cloudwatch:SetAlarmState'
+        ];
+      case 'admin':
+        return ['cloudwatch:*'];
+      default:
+        throw new Error(`Unsupported CloudWatch alarm access level: ${access}`);
+    }
   }
 }
 
