@@ -1264,6 +1264,7 @@ describe('DynamoDbBinderStrategy', () => {
   describe('DynamoBind__TableEmptyAccess__ThrowsError', () => {
     test('DynamoBind__TableEmptyAccess__ThrowsError', async () => {
       const strategy = new DynamoDbBinderStrategy();
+      const source = createMockSourceComponent('lambda-api', 'test-source');
       const target = createMockTargetComponent('dynamodb-table', {
         'db:dynamodb': {
           tableArn: 'arn:aws:dynamodb:us-east-1:123456789012:table/test-table',
@@ -1271,12 +1272,17 @@ describe('DynamoDbBinderStrategy', () => {
         }
       });
 
-      const context = createBindingContext({
-        source: createMockSourceComponent('lambda-api', 'test-source'),
+      // Create context directly with undefined access to test the error path
+      const context: BindingContext = {
+        source,
         target,
-        capability: 'db:dynamodb'
-        // access is undefined, which should cause an error
-      });
+        directive: {
+          capability: 'db:dynamodb'
+          // access is explicitly undefined
+        },
+        environment: 'test',
+        complianceFramework: 'commercial'
+      };
 
       await expect(executeUnifiedBinding(strategy, context)).rejects.toThrow(
         'Access cannot be empty for DynamoDB binding'
