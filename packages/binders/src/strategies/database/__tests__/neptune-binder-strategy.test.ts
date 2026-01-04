@@ -931,4 +931,70 @@ describe('NeptuneBinderStrategy', () => {
       expect(Array.isArray(result.compliance.actionsTaken)).toBe(true);
     });
   });
+
+  describe('NeptuneBind__CustomActionsOverride__ReplacesCoarseActions', () => {
+    const metadata = {
+      id: 'TP-binders-neptune-010',
+      level: 'unit' as const,
+      capability: 'Custom actions override replaces default Neptune cluster actions',
+      oracle: 'exact' as const,
+      determinism: 'deterministic' as const,
+      naming: { pattern: 'NeptuneBind__Condition__Outcome', example: 'NeptuneBind__CustomActionsOverride__ReplacesCoarseActions' },
+      invariants: [
+        'IAM policy actions match provided custom actions array',
+        'Default Neptune cluster actions are not included when custom actions provided',
+        'Actions array is used directly (replaces coarse access)'
+      ],
+      fixtures: ['MockSourceComponent', 'MockTargetComponent'],
+      inputs: {
+        shape: 'BindingContext with neptune:cluster capability and directive.actions array',
+        notes: 'Granular actions override test'
+      },
+      risks: [],
+      dependencies: ['action-resolver'],
+      evidence: [],
+      compliance_refs: ['docs/platform-standards/platform-iam-auditing-standard.md'],
+      ai_generated: true,
+      human_reviewed_by: 'Platform Engineering'
+    };
+
+    test('NeptuneBind__CustomActionsOverride__ReplacesCoarseActions', async () => {
+      const strategy = new NeptuneBinderStrategy();
+      const customActions = ['rds:DescribeDBClusters', 'rds:DescribeDBClusterEndpoints'];
+      const clusterArn = 'arn:aws:rds:us-east-1:123456789012:cluster:graphdb';
+      const target = createMockTargetComponent('neptune-cluster', {
+        'neptune:cluster': {
+          clusterArn,
+          clusterIdentifier: 'graphdb',
+          clusterEndpoint: 'graphdb.cluster-xyz.us-east-1.neptune.amazonaws.com',
+          port: 8182
+        }
+      });
+
+      const context = createBindingContext({
+        source: createMockSourceComponent('lambda-api', 'test-source'),
+        target,
+        capability: 'neptune:cluster',
+        access: 'read',
+        actions: customActions
+      });
+
+      const result = await executeUnifiedBinding(strategy, context);
+
+      assertEnhancedBindingResult(result);
+
+      expect(result.iamPolicies.length).toBeGreaterThan(0);
+      const policy = result.iamPolicies.find(p => p.description.includes('granular actions'));
+      expect(policy).toBeDefined();
+      
+      const statementJson = policy!.statement.toStatementJson();
+      const actions = Array.isArray(statementJson.Action)
+        ? statementJson.Action
+        : [statementJson.Action];
+
+      // Primary assertion: Custom actions are used, default actions are not
+      expect(actions).toEqual(expect.arrayContaining(customActions));
+      expect(actions.length).toBe(customActions.length);
+    });
+  });
 });

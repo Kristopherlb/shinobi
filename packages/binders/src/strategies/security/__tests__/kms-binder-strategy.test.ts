@@ -772,4 +772,68 @@ describe('KmsBinderStrategy', () => {
       expect(['compliant', 'non-compliant', 'partially-compliant']).toContain(result.compliance.status);
     });
   });
+
+  describe('KmsBind__CustomActionsOverride__ReplacesCoarseActions', () => {
+    const metadata = {
+      id: 'TP-binders-kms-010',
+      level: 'unit' as const,
+      capability: 'Custom actions override replaces default KMS key actions',
+      oracle: 'exact' as const,
+      determinism: 'deterministic' as const,
+      naming: { pattern: 'KmsBind__Condition__Outcome', example: 'KmsBind__CustomActionsOverride__ReplacesCoarseActions' },
+      invariants: [
+        'IAM policy actions match provided custom actions array',
+        'Default KMS key actions are not included when custom actions provided',
+        'Actions array is used directly (replaces coarse access)'
+      ],
+      fixtures: ['MockSourceComponent', 'MockTargetComponent'],
+      inputs: {
+        shape: 'BindingContext with kms:key capability and directive.actions array',
+        notes: 'Granular actions override test'
+      },
+      risks: [],
+      dependencies: ['action-resolver'],
+      evidence: [],
+      compliance_refs: ['docs/platform-standards/platform-iam-auditing-standard.md'],
+      ai_generated: true,
+      human_reviewed_by: 'Platform Engineering'
+    };
+
+    test('KmsBind__CustomActionsOverride__ReplacesCoarseActions', async () => {
+      const strategy = new KmsBinderStrategy();
+      const customActions = ['kms:Decrypt', 'kms:DescribeKey'];
+      const keyArn = TEST_CONSTANTS.KMS_KEY_ARN;
+      const target = createMockTargetComponent('kms-key', {
+        'kms:key': {
+          keyArn,
+          keyId: TEST_CONSTANTS.KMS_KEY_ID
+        }
+      });
+
+      const context = createBindingContext({
+        source: createMockSourceComponent('lambda-api', 'test-source'),
+        target,
+        capability: 'kms:key',
+        access: 'read',
+        actions: customActions
+      });
+
+      const result = await executeUnifiedBinding(strategy, context);
+
+      assertEnhancedBindingResult(result);
+
+      expect(result.iamPolicies.length).toBeGreaterThan(0);
+      const policy = result.iamPolicies.find(p => p.description.includes('granular actions'));
+      expect(policy).toBeDefined();
+      
+      const statementJson = policy!.statement.toStatementJson();
+      const actions = Array.isArray(statementJson.Action)
+        ? statementJson.Action
+        : [statementJson.Action];
+
+      // Primary assertion: Custom actions are used, default actions are not
+      expect(actions).toEqual(expect.arrayContaining(customActions));
+      expect(actions.length).toBe(customActions.length);
+    });
+  });
 });

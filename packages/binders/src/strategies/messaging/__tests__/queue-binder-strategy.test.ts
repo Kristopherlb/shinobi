@@ -990,5 +990,77 @@ describe('QueueBinderStrategy', () => {
       expect(actions.some(a => a.includes('ConfirmSubscription'))).toBe(true);
     });
   });
+
+  describe('QueueBind__CustomActionsOverride__ReplacesCoarseActions', () => {
+    const metadata = {
+      id: 'TP-binders-messaging-010',
+      level: 'unit' as const,
+      capability: 'Custom actions override replaces default SQS queue actions',
+      oracle: 'exact' as const,
+      determinism: 'deterministic' as const,
+      naming: { pattern: 'QueueBind__Condition__Outcome', example: 'QueueBind__CustomActionsOverride__ReplacesCoarseActions' },
+      invariants: [
+        'IAM policy actions match provided custom actions array',
+        'Default SQS queue actions are not included when custom actions provided',
+        'Actions array is used directly (replaces coarse access)'
+      ],
+      fixtures: ['MockSourceComponent', 'MockTargetComponent'],
+      inputs: {
+        shape: 'BindingContext with messaging:sqs capability and directive.actions array',
+        notes: 'Granular actions override test'
+      },
+      risks: [],
+      dependencies: ['action-resolver'],
+      evidence: [],
+      compliance_refs: ['docs/platform-standards/platform-iam-auditing-standard.md'],
+      ai_generated: true,
+      human_reviewed_by: 'Platform Engineering'
+    };
+
+    test('QueueBind__CustomActionsOverride__ReplacesCoarseActions', async () => {
+      const strategy = new QueueBinderStrategy();
+      const customActions = ['sqs:ReceiveMessage', 'sqs:GetQueueAttributes'];
+      const queueArn = 'arn:aws:sqs:us-east-1:123456789012:test-queue';
+      const queueUrl = 'https://sqs.us-east-1.amazonaws.com/123456789012/test-queue';
+      const target = createMockTargetComponent('sqs-queue', {
+        'messaging:sqs': {
+          type: 'messaging:sqs',
+          resources: {
+            arn: queueArn,
+            queueUrl,
+            queueName: 'test-queue'
+          },
+          encryption: {
+            enabled: false
+          }
+        }
+      });
+
+      const context = createBindingContext({
+        source: createMockSourceComponent('lambda-api', 'test-source'),
+        target,
+        capability: 'messaging:sqs',
+        access: 'read',
+        actions: customActions
+      });
+
+      const result = await executeUnifiedBinding(strategy, context);
+
+      assertEnhancedBindingResult(result);
+
+      expect(result.iamPolicies.length).toBeGreaterThan(0);
+      const policy = result.iamPolicies.find(p => p.description.includes('granular actions'));
+      expect(policy).toBeDefined();
+      
+      const statementJson = policy!.statement.toStatementJson();
+      const actions = Array.isArray(statementJson.Action)
+        ? statementJson.Action
+        : [statementJson.Action];
+
+      // Primary assertion: Custom actions are used, default actions are not
+      expect(actions).toEqual(expect.arrayContaining(customActions));
+      expect(actions.length).toBe(customActions.length);
+    });
+  });
 });
 
