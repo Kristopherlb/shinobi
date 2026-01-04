@@ -3,7 +3,7 @@
  * Handles API Gateway REST and HTTP API bindings with mandatory compliance enforcement
  */
 
-import { UnifiedBinderStrategyBase } from '@shinobi/core';
+import { UnifiedBinderStrategyBase, resolveActions } from '@shinobi/core';
 import type { BindingContext, EnhancedBindingResult, CompatibilityEntry } from '@shinobi/core';
 import type { IamPolicy } from '@shinobi/core';
 import { PolicyStatement, Effect } from 'aws-cdk-lib/aws-iam';
@@ -144,48 +144,75 @@ export class ApiGatewayBinderStrategy extends UnifiedBinderStrategyBase {
       throw new Error(`Invalid access level for API Gateway: ${access}. Valid levels: ${validAccess.join(', ')}`);
     }
 
-    // Grant API Gateway read permissions
-    if (access === 'read' || access === 'readwrite') {
-      const statement = new PolicyStatement({
-        effect: Effect.ALLOW,
-        actions: [
-          'apigateway:GET',
-          'apigateway:HEAD',
-          'apigateway:OPTIONS'
-        ],
-        resources: [
-          targetData.endpoints.executeApiArn,
-          `${targetData.resources.arn}/*`
-        ]
-      });
-      iamPolicies.push({
-        statement,
-        description: `API Gateway ${apiType} API read access permissions`,
-        complianceRequirement: 'Least privilege IAM access'
-      });
-    }
+    // Handle granular actions override or use multi-statement approach
+    if (context.directive.actions) {
+      const resolvedActions = resolveActions(
+        context.directive,
+        context,
+        (acc) => this.getApiGatewayActionsForAccess(acc),
+        'apigateway'
+      );
 
-    // Grant API Gateway write permissions (invoke)
-    if (access === 'write' || access === 'readwrite') {
-      const statement = new PolicyStatement({
-        effect: Effect.ALLOW,
-        actions: [
-          'execute-api:Invoke',
-          'apigateway:POST',
-          'apigateway:PUT',
-          'apigateway:PATCH',
-          'apigateway:DELETE'
-        ],
-        resources: [
-          targetData.endpoints.executeApiArn,
-          `${targetData.resources.arn}/*`
-        ]
-      });
+      // Get resources from target data
+      const resources = [
+        targetData.endpoints.executeApiArn,
+        `${targetData.resources.arn}/*`
+      ];
+
       iamPolicies.push({
-        statement,
-        description: `API Gateway ${apiType} API invoke/write access permissions`,
+        statement: new PolicyStatement({
+          effect: Effect.ALLOW,
+          actions: resolvedActions,
+          resources
+        }),
+        description: `API Gateway ${apiType} API access (granular actions)`,
         complianceRequirement: 'Least privilege IAM access'
       });
+    } else {
+      // Coarse access levels: use existing multi-statement approach (backward compatible)
+      // Grant API Gateway read permissions
+      if (access === 'read' || access === 'readwrite') {
+        const statement = new PolicyStatement({
+          effect: Effect.ALLOW,
+          actions: [
+            'apigateway:GET',
+            'apigateway:HEAD',
+            'apigateway:OPTIONS'
+          ],
+          resources: [
+            targetData.endpoints.executeApiArn,
+            `${targetData.resources.arn}/*`
+          ]
+        });
+        iamPolicies.push({
+          statement,
+          description: `API Gateway ${apiType} API read access permissions`,
+          complianceRequirement: 'Least privilege IAM access'
+        });
+      }
+
+      // Grant API Gateway write permissions (invoke)
+      if (access === 'write' || access === 'readwrite') {
+        const statement = new PolicyStatement({
+          effect: Effect.ALLOW,
+          actions: [
+            'execute-api:Invoke',
+            'apigateway:POST',
+            'apigateway:PUT',
+            'apigateway:PATCH',
+            'apigateway:DELETE'
+          ],
+          resources: [
+            targetData.endpoints.executeApiArn,
+            `${targetData.resources.arn}/*`
+          ]
+        });
+        iamPolicies.push({
+          statement,
+          description: `API Gateway ${apiType} API invoke/write access permissions`,
+          complianceRequirement: 'Least privilege IAM access'
+        });
+      }
     }
 
     // Set API Gateway environment variables
@@ -254,6 +281,33 @@ export class ApiGatewayBinderStrategy extends UnifiedBinderStrategyBase {
       iamPolicies,
       securityGroupRules: []
     };
+  }
+
+  /**
+   * Get API Gateway actions for access level
+   */
+  private getApiGatewayActionsForAccess(access: string): string[] {
+    const actions: string[] = [];
+
+    if (access === 'read' || access === 'readwrite') {
+      actions.push(
+        'apigateway:GET',
+        'apigateway:HEAD',
+        'apigateway:OPTIONS'
+      );
+    }
+
+    if (access === 'write' || access === 'readwrite') {
+      actions.push(
+        'execute-api:Invoke',
+        'apigateway:POST',
+        'apigateway:PUT',
+        'apigateway:PATCH',
+        'apigateway:DELETE'
+      );
+    }
+
+    return actions;
   }
 }
 

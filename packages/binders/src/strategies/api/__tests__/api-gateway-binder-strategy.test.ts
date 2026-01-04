@@ -744,5 +744,143 @@ describe('ApiGatewayBinderStrategy', () => {
       expect(result.environmentVariables.MY_API_URL).toBe(invokeUrl);
     });
   });
+
+  describe('ApiGatewayBind__CustomActionsOverride__ReplacesCoarseActions', () => {
+    const metadata = {
+      id: 'TP-binders-api-010',
+      level: 'unit' as const,
+      capability: 'Custom actions override replaces default API Gateway actions',
+      oracle: 'exact' as const,
+      determinism: 'deterministic' as const,
+      naming: { pattern: 'ApiGatewayBind__Condition__Outcome', example: 'ApiGatewayBind__CustomActionsOverride__ReplacesCoarseActions' },
+      invariants: [
+        'IAM policy actions match provided custom actions array',
+        'Default API Gateway actions are not included when custom actions provided',
+        'Actions array is used directly (replaces coarse access)'
+      ],
+      fixtures: ['MockSourceComponent', 'MockTargetComponent', 'ApiGatewayCapabilityData'],
+      inputs: {
+        shape: 'BindingContext with api:rest capability and directive.actions array',
+        notes: 'Granular actions override test'
+      },
+      risks: [],
+      dependencies: [],
+      evidence: [],
+      compliance_refs: ['docs/platform-standards/platform-iam-auditing-standard.md'],
+      ai_generated: true,
+      human_reviewed_by: 'Platform Engineering'
+    };
+
+    test('ApiGatewayBind__CustomActionsOverride__ReplacesCoarseActions', async () => {
+      const strategy = new ApiGatewayBinderStrategy();
+      const apiId = 'abc123def456';
+      const apiArn = `arn:aws:apigateway:us-east-1::/restapis/${apiId}`;
+      const invokeUrl = 'https://abc123def456.execute-api.us-east-1.amazonaws.com/prod';
+      const executeApiArn = `arn:aws:execute-api:us-east-1:123456789012:${apiId}/prod/*/*`;
+
+      const target = createMockTargetComponent('api-gateway-rest', {
+        'api:rest': {
+          type: 'api:rest',
+          resources: {
+            arn: apiArn,
+            apiId: apiId,
+            stage: 'prod'
+          },
+          endpoints: {
+            invokeUrl: invokeUrl,
+            executeApiArn: executeApiArn
+          }
+        }
+      });
+
+      const customActions = ['apigateway:GET', 'apigateway:HEAD'];
+      const context = createBindingContext({
+        source: createMockSourceComponent(),
+        target,
+        capability: 'api:rest',
+        access: 'read',
+        actions: customActions
+      });
+
+      const result = await executeUnifiedBinding(strategy, context);
+
+      assertEnhancedBindingResult(result);
+
+      expect(result.iamPolicies.length).toBeGreaterThan(0);
+      const policy = result.iamPolicies.find(p => p.description.includes('granular actions'));
+      expect(policy).toBeDefined();
+      
+      const statementJson = policy!.statement.toStatementJson();
+      const actions = Array.isArray(statementJson.Action)
+        ? statementJson.Action
+        : [statementJson.Action];
+
+      expect(actions).toEqual(expect.arrayContaining(customActions));
+      expect(actions.length).toBe(customActions.length);
+    });
+  });
+
+  describe('ApiGatewayBind__InvalidActionPrefix__ThrowsPrefixMismatchError', () => {
+    const metadata = {
+      id: 'TP-binders-api-011',
+      level: 'unit' as const,
+      capability: 'Throws error when actions array contains actions with wrong service prefix',
+      oracle: 'exact' as const,
+      determinism: 'deterministic' as const,
+      naming: { pattern: 'ApiGatewayBind__Condition__Outcome', example: 'ApiGatewayBind__InvalidActionPrefix__ThrowsPrefixMismatchError' },
+      invariants: [
+        'Error message indicates service prefix mismatch',
+        'Error specifies which actions are mismatched',
+        'Binding fails before IAM policy generation'
+      ],
+      fixtures: ['MockSourceComponent', 'MockTargetComponent', 'ApiGatewayCapabilityData'],
+      inputs: {
+        shape: 'BindingContext with api:rest capability and directive.actions containing non-apigateway actions',
+        notes: 'Error case - invalid action prefix for API Gateway binder'
+      },
+      risks: [],
+      dependencies: [],
+      evidence: [],
+      compliance_refs: ['docs/platform-standards/platform-iam-auditing-standard.md'],
+      ai_generated: true,
+      human_reviewed_by: 'Platform Engineering'
+    };
+
+    test('ApiGatewayBind__InvalidActionPrefix__ThrowsPrefixMismatchError', async () => {
+      const strategy = new ApiGatewayBinderStrategy();
+      const apiId = 'abc123def456';
+      const apiArn = `arn:aws:apigateway:us-east-1::/restapis/${apiId}`;
+      const invokeUrl = 'https://abc123def456.execute-api.us-east-1.amazonaws.com/prod';
+      const executeApiArn = `arn:aws:execute-api:us-east-1:123456789012:${apiId}/prod/*/*`;
+
+      const target = createMockTargetComponent('api-gateway-rest', {
+        'api:rest': {
+          type: 'api:rest',
+          resources: {
+            arn: apiArn,
+            apiId: apiId,
+            stage: 'prod'
+          },
+          endpoints: {
+            invokeUrl: invokeUrl,
+            executeApiArn: executeApiArn
+          }
+        }
+      });
+
+      const invalidActions = ['s3:GetObject']; // Wrong service prefix
+      const context = createBindingContext({
+        source: createMockSourceComponent(),
+        target,
+        capability: 'api:rest',
+        access: 'read',
+        actions: invalidActions
+      });
+
+      await expect(executeUnifiedBinding(strategy, context)).rejects.toThrow(
+        "Actions must match service prefix 'apigateway:'"
+      );
+    });
+  });
 });
 

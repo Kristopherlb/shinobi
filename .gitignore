@@ -33,7 +33,7 @@ workspace.json
 # OS files
 .DS_Store
 Thumbs.db
-
+BINDER_UPDATE_STATUS
 # IDE
 .idea/
 .vscode/
@@ -44,3 +44,4 @@ Thumbs.db
 docs/*
 *.audit.md
 *audit.md
+packages/binders/BINDER_UPDATE_STATUS.md

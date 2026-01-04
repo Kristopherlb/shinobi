@@ -9,7 +9,7 @@
  * - Feature flags and runtime configuration
  */
 
-import { UnifiedBinderStrategyBase } from '@shinobi/core';
+import { UnifiedBinderStrategyBase, resolveActions } from '@shinobi/core';
 import type { BindingContext, EnhancedBindingResult, CompatibilityEntry } from '@shinobi/core';
 import type { IamPolicy } from '@shinobi/core';
 import { PolicyStatement, Effect } from 'aws-cdk-lib/aws-iam';
@@ -124,63 +124,90 @@ export class AppConfigBinderStrategy extends UnifiedBinderStrategyBase {
       environmentVariables.AWS_APPCONFIG_ROLLOUT_STRATEGY = JSON.stringify(targetData.rolloutStrategy);
     }
 
-    // IAM policies for AppConfig operations
-    if (access === 'read' || access === 'write') {
-      iamPolicies.push({
-        statement: new PolicyStatement({
-          effect: Effect.ALLOW,
-          actions: [
-            'appconfig:GetApplication',
-            'appconfig:GetConfiguration',
-            'appconfig:GetConfigurationProfile',
-            'appconfig:GetDeployment',
-            'appconfig:GetDeploymentStrategy',
-            'appconfig:GetEnvironment',
-            'appconfig:ListApplications',
-            'appconfig:ListConfigurationProfiles',
-            'appconfig:ListDeployments',
-            'appconfig:ListEnvironments',
-            'appconfig:ListDeploymentStrategies',
-            'appconfig:ValidateConfiguration'
-          ],
-          resources: [
-            `arn:aws:appconfig:*:*:application/${targetData.applicationId}`,
-            `arn:aws:appconfig:*:*:application/${targetData.applicationId}/*`
-          ]
-        }),
-        description: 'AppConfig read access',
-        complianceRequirement: 'Least privilege IAM access for AppConfig read operations'
-      });
-    }
+    // Handle granular actions override or use multi-statement approach
+    if (context.directive.actions) {
+      const resolvedActions = resolveActions(
+        context.directive,
+        context,
+        (acc) => this.getAppConfigActionsForAccess(acc),
+        'appconfig'
+      );
 
-    if (access === 'write') {
+      // Get resources from target data
+      const resources = [
+        `arn:aws:appconfig:*:*:application/${targetData.applicationId}`,
+        `arn:aws:appconfig:*:*:application/${targetData.applicationId}/*`
+      ];
+
       iamPolicies.push({
         statement: new PolicyStatement({
           effect: Effect.ALLOW,
-          actions: [
-            'appconfig:CreateApplication',
-            'appconfig:UpdateApplication',
-            'appconfig:DeleteApplication',
-            'appconfig:CreateConfigurationProfile',
-            'appconfig:UpdateConfigurationProfile',
-            'appconfig:DeleteConfigurationProfile',
-            'appconfig:CreateDeploymentStrategy',
-            'appconfig:UpdateDeploymentStrategy',
-            'appconfig:DeleteDeploymentStrategy',
-            'appconfig:CreateEnvironment',
-            'appconfig:UpdateEnvironment',
-            'appconfig:DeleteEnvironment',
-            'appconfig:StartDeployment',
-            'appconfig:StopDeployment'
-          ],
-          resources: [
-            `arn:aws:appconfig:*:*:application/${targetData.applicationId}`,
-            `arn:aws:appconfig:*:*:application/${targetData.applicationId}/*`
-          ]
+          actions: resolvedActions,
+          resources
         }),
-        description: 'AppConfig write access',
-        complianceRequirement: 'Least privilege IAM access for AppConfig write operations'
+        description: 'AppConfig access (granular actions)',
+        complianceRequirement: 'Least privilege IAM access for AppConfig operations'
       });
+    } else {
+      // Coarse access levels: use existing multi-statement approach (backward compatible)
+      // IAM policies for AppConfig operations
+      if (access === 'read' || access === 'write') {
+        iamPolicies.push({
+          statement: new PolicyStatement({
+            effect: Effect.ALLOW,
+            actions: [
+              'appconfig:GetApplication',
+              'appconfig:GetConfiguration',
+              'appconfig:GetConfigurationProfile',
+              'appconfig:GetDeployment',
+              'appconfig:GetDeploymentStrategy',
+              'appconfig:GetEnvironment',
+              'appconfig:ListApplications',
+              'appconfig:ListConfigurationProfiles',
+              'appconfig:ListDeployments',
+              'appconfig:ListEnvironments',
+              'appconfig:ListDeploymentStrategies',
+              'appconfig:ValidateConfiguration'
+            ],
+            resources: [
+              `arn:aws:appconfig:*:*:application/${targetData.applicationId}`,
+              `arn:aws:appconfig:*:*:application/${targetData.applicationId}/*`
+            ]
+          }),
+          description: 'AppConfig read access',
+          complianceRequirement: 'Least privilege IAM access for AppConfig read operations'
+        });
+      }
+
+      if (access === 'write') {
+        iamPolicies.push({
+          statement: new PolicyStatement({
+            effect: Effect.ALLOW,
+            actions: [
+              'appconfig:CreateApplication',
+              'appconfig:UpdateApplication',
+              'appconfig:DeleteApplication',
+              'appconfig:CreateConfigurationProfile',
+              'appconfig:UpdateConfigurationProfile',
+              'appconfig:DeleteConfigurationProfile',
+              'appconfig:CreateDeploymentStrategy',
+              'appconfig:UpdateDeploymentStrategy',
+              'appconfig:DeleteDeploymentStrategy',
+              'appconfig:CreateEnvironment',
+              'appconfig:UpdateEnvironment',
+              'appconfig:DeleteEnvironment',
+              'appconfig:StartDeployment',
+              'appconfig:StopDeployment'
+            ],
+            resources: [
+              `arn:aws:appconfig:*:*:application/${targetData.applicationId}`,
+              `arn:aws:appconfig:*:*:application/${targetData.applicationId}/*`
+            ]
+          }),
+          description: 'AppConfig write access',
+          complianceRequirement: 'Least privilege IAM access for AppConfig write operations'
+        });
+      }
     }
 
     // Secure hooks support
@@ -240,6 +267,51 @@ export class AppConfigBinderStrategy extends UnifiedBinderStrategyBase {
       environmentVariables,
       securityGroupRules: []
     };
+  }
+
+  /**
+   * Get AppConfig actions for access level
+   */
+  private getAppConfigActionsForAccess(access: string): string[] {
+    const actions: string[] = [];
+
+    if (access === 'read' || access === 'write') {
+      actions.push(
+        'appconfig:GetApplication',
+        'appconfig:GetConfiguration',
+        'appconfig:GetConfigurationProfile',
+        'appconfig:GetDeployment',
+        'appconfig:GetDeploymentStrategy',
+        'appconfig:GetEnvironment',
+        'appconfig:ListApplications',
+        'appconfig:ListConfigurationProfiles',
+        'appconfig:ListDeployments',
+        'appconfig:ListEnvironments',
+        'appconfig:ListDeploymentStrategies',
+        'appconfig:ValidateConfiguration'
+      );
+    }
+
+    if (access === 'write') {
+      actions.push(
+        'appconfig:CreateApplication',
+        'appconfig:UpdateApplication',
+        'appconfig:DeleteApplication',
+        'appconfig:CreateConfigurationProfile',
+        'appconfig:UpdateConfigurationProfile',
+        'appconfig:DeleteConfigurationProfile',
+        'appconfig:CreateDeploymentStrategy',
+        'appconfig:UpdateDeploymentStrategy',
+        'appconfig:DeleteDeploymentStrategy',
+        'appconfig:CreateEnvironment',
+        'appconfig:UpdateEnvironment',
+        'appconfig:DeleteEnvironment',
+        'appconfig:StartDeployment',
+        'appconfig:StopDeployment'
+      );
+    }
+
+    return actions;
   }
 }
 
