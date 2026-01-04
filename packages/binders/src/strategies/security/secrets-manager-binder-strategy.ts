@@ -3,7 +3,7 @@
  * Handles secrets management bindings for AWS Secrets Manager with mandatory compliance enforcement
  */
 
-import { UnifiedBinderStrategyBase } from '@shinobi/core';
+import { UnifiedBinderStrategyBase, resolveActions } from '@shinobi/core';
 import type { BindingContext, EnhancedBindingResult, CompatibilityEntry } from '@shinobi/core';
 import type { IamPolicy } from '@shinobi/core';
 import { PolicyStatement, Effect } from 'aws-cdk-lib/aws-iam';
@@ -100,60 +100,83 @@ export class SecretsManagerBinderStrategy extends UnifiedBinderStrategyBase {
     const environmentVariables: Record<string, string> = {};
     const iamPolicies: IamPolicy[] = [];
 
-    // Grant secret access permissions
-    if (access.includes('read')) {
+    // Handle granular actions override or use multi-statement approach
+    if (context.directive.actions) {
+      const primaryAccess = access[0] || 'read';
+      const resolvedActions = resolveActions(
+        context.directive,
+        context,
+        (acc) => this.getSecretsManagerSecretActionsForAccess(acc),
+        'secretsmanager'
+      );
+
       const statement = new PolicyStatement({
         effect: Effect.ALLOW,
-        actions: [
-          'secretsmanager:GetSecretValue',
-          'secretsmanager:DescribeSecret'
-        ],
+        actions: resolvedActions,
         resources: [targetData.secretArn]
       });
       iamPolicies.push({
         statement,
-        description: 'Secrets Manager secret read access permissions',
+        description: 'Secrets Manager secret access permissions (granular actions)',
         complianceRequirement: 'Secrets access with least privilege'
       });
-    }
+    } else {
+      // Coarse access levels: use multi-statement approach (backward compatible)
+      // Grant secret access permissions
+      if (access.includes('read')) {
+        const statement = new PolicyStatement({
+          effect: Effect.ALLOW,
+          actions: [
+            'secretsmanager:GetSecretValue',
+            'secretsmanager:DescribeSecret'
+          ],
+          resources: [targetData.secretArn]
+        });
+        iamPolicies.push({
+          statement,
+          description: 'Secrets Manager secret read access permissions',
+          complianceRequirement: 'Secrets access with least privilege'
+        });
+      }
 
-    if (access.includes('write')) {
-      const statement = new PolicyStatement({
-        effect: Effect.ALLOW,
-        actions: [
-          'secretsmanager:CreateSecret',
-          'secretsmanager:UpdateSecret',
-          'secretsmanager:DeleteSecret',
-          'secretsmanager:PutSecretValue'
-        ],
-        resources: [targetData.secretArn]
-      });
-      iamPolicies.push({
-        statement,
-        description: 'Secrets Manager secret write access permissions',
-        complianceRequirement: 'Secrets management with least privilege'
-      });
-    }
+      if (access.includes('write')) {
+        const statement = new PolicyStatement({
+          effect: Effect.ALLOW,
+          actions: [
+            'secretsmanager:CreateSecret',
+            'secretsmanager:UpdateSecret',
+            'secretsmanager:DeleteSecret',
+            'secretsmanager:PutSecretValue'
+          ],
+          resources: [targetData.secretArn]
+        });
+        iamPolicies.push({
+          statement,
+          description: 'Secrets Manager secret write access permissions',
+          complianceRequirement: 'Secrets management with least privilege'
+        });
+      }
 
-    // Grant additional permissions for secret management
-    if (access.includes('admin')) {
-      const statement = new PolicyStatement({
-        effect: Effect.ALLOW,
-        actions: [
-          'secretsmanager:RestoreSecret',
-          'secretsmanager:TagResource',
-          'secretsmanager:UntagResource',
-          'secretsmanager:GetResourcePolicy',
-          'secretsmanager:PutResourcePolicy',
-          'secretsmanager:DeleteResourcePolicy'
-        ],
-        resources: [targetData.secretArn]
-      });
-      iamPolicies.push({
-        statement,
-        description: 'Secrets Manager secret administration permissions',
-        complianceRequirement: 'Least privilege IAM access'
-      });
+      // Grant additional permissions for secret management
+      if (access.includes('admin')) {
+        const statement = new PolicyStatement({
+          effect: Effect.ALLOW,
+          actions: [
+            'secretsmanager:RestoreSecret',
+            'secretsmanager:TagResource',
+            'secretsmanager:UntagResource',
+            'secretsmanager:GetResourcePolicy',
+            'secretsmanager:PutResourcePolicy',
+            'secretsmanager:DeleteResourcePolicy'
+          ],
+          resources: [targetData.secretArn]
+        });
+        iamPolicies.push({
+          statement,
+          description: 'Secrets Manager secret administration permissions',
+          complianceRequirement: 'Least privilege IAM access'
+        });
+      }
     }
 
     // Set secret environment variables
@@ -211,38 +234,61 @@ export class SecretsManagerBinderStrategy extends UnifiedBinderStrategyBase {
     const environmentVariables: Record<string, string> = {};
     const iamPolicies: IamPolicy[] = [];
 
-    // Grant rotation access permissions
-    if (access.includes('read')) {
-      const statement = new PolicyStatement({
-        effect: Effect.ALLOW,
-        actions: [
-          'secretsmanager:DescribeSecret',
-          'secretsmanager:GetSecretValue'
-        ],
-        resources: [targetData.secretArn]
-      });
-      iamPolicies.push({
-        statement,
-        description: 'Secrets Manager rotation read access permissions',
-        complianceRequirement: 'Secret rotation monitoring'
-      });
-    }
+    // Handle granular actions override or use multi-statement approach
+    if (context.directive.actions) {
+      const primaryAccess = access[0] || 'read';
+      const resolvedActions = resolveActions(
+        context.directive,
+        context,
+        (acc) => this.getSecretsManagerRotationActionsForAccess(acc),
+        'secretsmanager'
+      );
 
-    if (access.includes('write')) {
       const statement = new PolicyStatement({
         effect: Effect.ALLOW,
-        actions: [
-          'secretsmanager:RotateSecret',
-          'secretsmanager:UpdateSecret',
-          'secretsmanager:PutSecretValue'
-        ],
+        actions: resolvedActions,
         resources: [targetData.secretArn]
       });
       iamPolicies.push({
         statement,
-        description: 'Secrets Manager rotation write access permissions',
-        complianceRequirement: 'Automatic secret rotation'
+        description: 'Secrets Manager rotation access permissions (granular actions)',
+        complianceRequirement: 'Secret rotation with least privilege'
       });
+    } else {
+      // Coarse access levels: use multi-statement approach (backward compatible)
+      // Grant rotation access permissions
+      if (access.includes('read')) {
+        const statement = new PolicyStatement({
+          effect: Effect.ALLOW,
+          actions: [
+            'secretsmanager:DescribeSecret',
+            'secretsmanager:GetSecretValue'
+          ],
+          resources: [targetData.secretArn]
+        });
+        iamPolicies.push({
+          statement,
+          description: 'Secrets Manager rotation read access permissions',
+          complianceRequirement: 'Secret rotation monitoring'
+        });
+      }
+
+      if (access.includes('write')) {
+        const statement = new PolicyStatement({
+          effect: Effect.ALLOW,
+          actions: [
+            'secretsmanager:RotateSecret',
+            'secretsmanager:UpdateSecret',
+            'secretsmanager:PutSecretValue'
+          ],
+          resources: [targetData.secretArn]
+        });
+        iamPolicies.push({
+          statement,
+          description: 'Secrets Manager rotation write access permissions',
+          complianceRequirement: 'Automatic secret rotation'
+        });
+      }
     }
 
     // Grant Lambda permissions for rotation function
