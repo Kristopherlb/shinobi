@@ -1541,4 +1541,70 @@ describe('VpcBinderStrategy', () => {
       expect(Array.isArray(result.compliance.actionsTaken)).toBe(true);
     });
   });
+
+  describe('VpcBind__CustomActionsOverride__ReplacesCoarseActions', () => {
+    const metadata = {
+      id: 'TP-binders-networking-vpc-010',
+      level: 'unit' as const,
+      capability: 'Custom actions override replaces default VPC actions',
+      oracle: 'exact' as const,
+      determinism: 'deterministic' as const,
+      naming: { pattern: 'VpcBind__Condition__Outcome', example: 'VpcBind__CustomActionsOverride__ReplacesCoarseActions' },
+      invariants: [
+        'IAM policy actions match provided custom actions array',
+        'Default VPC actions are not included when custom actions provided',
+        'Actions array is used directly (replaces coarse access)'
+      ],
+      fixtures: ['MockSourceComponent', 'MockTargetComponent'],
+      inputs: {
+        shape: 'BindingContext with vpc:network capability and directive.actions array',
+        notes: 'Granular actions override test'
+      },
+      risks: [],
+      dependencies: ['action-resolver'],
+      evidence: [],
+      compliance_refs: ['docs/platform-standards/platform-iam-auditing-standard.md'],
+      ai_generated: true,
+      human_reviewed_by: 'Platform Engineering'
+    };
+
+    test('VpcBind__CustomActionsOverride__ReplacesCoarseActions', async () => {
+      const strategy = new VpcBinderStrategy();
+      const customActions = ['ec2:DescribeVpcs', 'ec2:DescribeVpcAttribute'];
+      const target = createMockTargetComponent('vpc', {
+        'vpc:network': {
+          type: 'vpc:network',
+          vpcId: 'vpc-12345678',
+          vpcArn: 'arn:aws:ec2:us-east-1:123456789012:vpc/vpc-12345678',
+          cidrBlock: '10.0.0.0/16',
+          state: 'available',
+          isDefault: false
+        }
+      });
+
+      const context = createBindingContext({
+        source: createMockSourceComponent(),
+        target,
+        capability: 'vpc:network',
+        access: 'read',
+        actions: customActions
+      });
+
+      const result = await executeUnifiedBinding(strategy, context);
+
+      assertEnhancedBindingResult(result);
+
+      expect(result.iamPolicies.length).toBeGreaterThan(0);
+      const policy = result.iamPolicies[0];
+      expect(policy).toBeDefined();
+      
+      const statementJson = policy!.statement.toStatementJson();
+      const actions = Array.isArray(statementJson.Action)
+        ? statementJson.Action
+        : [statementJson.Action];
+
+      expect(actions).toEqual(expect.arrayContaining(customActions));
+      expect(actions.length).toBe(customActions.length);
+    });
+  });
 });

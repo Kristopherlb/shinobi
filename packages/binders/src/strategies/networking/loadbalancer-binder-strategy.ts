@@ -3,7 +3,7 @@
  * Handles network:load-balancer bindings with mandatory compliance enforcement
  */
 
-import { UnifiedBinderStrategyBase } from '@shinobi/core';
+import { UnifiedBinderStrategyBase, resolveActions } from '@shinobi/core';
 import type { BindingContext, EnhancedBindingResult, CompatibilityEntry } from '@shinobi/core';
 import type { IamPolicy } from '@shinobi/core';
 import { PolicyStatement, Effect } from 'aws-cdk-lib/aws-iam';
@@ -92,72 +92,20 @@ export class LoadBalancerBinderStrategy extends UnifiedBinderStrategyBase {
     const environmentVariables: Record<string, string> = {};
     const loadBalancerArn = targetData.resources.loadBalancerArn;
 
-    // Determine IAM actions based on access level
-    let actions: string[] = [];
-    
-    if (access === 'read' || access === 'readwrite' || access === 'admin') {
-      // Read access: Describe load balancers and related resources
-      actions.push(
-        'elasticloadbalancing:DescribeLoadBalancers',
-        'elasticloadbalancing:DescribeLoadBalancerAttributes',
-        'elasticloadbalancing:DescribeTargetGroups',
-        'elasticloadbalancing:DescribeTargetGroupAttributes',
-        'elasticloadbalancing:DescribeTargetHealth',
-        'elasticloadbalancing:DescribeListeners',
-        'elasticloadbalancing:DescribeListenerCertificates',
-        'elasticloadbalancing:DescribeRules',
-        'elasticloadbalancing:DescribeTags',
-        'elasticloadbalancing:DescribeAccountLimits',
-        'elasticloadbalancing:DescribeSSLPolicies',
-        'wafv2:GetWebACL',
-        'wafv2:GetWebACLForResource'
-      );
-    }
-
-    if (access === 'write' || access === 'readwrite' || access === 'admin') {
-      // Write access: Manage targets and attributes
-      actions.push(
-        'elasticloadbalancing:RegisterTargets',
-        'elasticloadbalancing:DeregisterTargets',
-        'elasticloadbalancing:ModifyLoadBalancerAttributes',
-        'elasticloadbalancing:ModifyTargetGroup',
-        'elasticloadbalancing:ModifyTargetGroupAttributes',
-        'elasticloadbalancing:ModifyListener',
-        'elasticloadbalancing:ModifyRule',
-        'elasticloadbalancing:SetRulePriorities',
-        'elasticloadbalancing:AddTags',
-        'elasticloadbalancing:RemoveTags'
-      );
-    }
-
-    if (access === 'admin') {
-      // Admin access: Full control including create/delete
-      // TODO: Consider gating CreateLoadBalancer/DeleteLoadBalancer behind an option for safety
-      actions.push(
-        'elasticloadbalancing:CreateLoadBalancer',
-        'elasticloadbalancing:DeleteLoadBalancer',
-        'elasticloadbalancing:CreateTargetGroup',
-        'elasticloadbalancing:DeleteTargetGroup',
-        'elasticloadbalancing:CreateListener',
-        'elasticloadbalancing:DeleteListener',
-        'elasticloadbalancing:CreateRule',
-        'elasticloadbalancing:DeleteRule',
-        'elasticloadbalancing:AddListenerCertificates',
-        'elasticloadbalancing:RemoveListenerCertificates',
-        'elasticloadbalancing:SetSecurityGroups',
-        'elasticloadbalancing:SetSubnets',
-        'wafv2:AssociateWebACL',
-        'wafv2:DisassociateWebACL',
-        'elasticloadbalancing:ModifyLoadBalancerAttributes'
-      );
-    }
+    // Resolve actions (granular override or coarse access)
+    const resolvedActions = resolveActions(
+      context.directive,
+      context,
+      (acc) => this.getLoadBalancerActionsForAccess(acc),
+      'elasticloadbalancing'
+    );
 
     // Create IAM policy
-    if (actions.length > 0) {
+    if (resolvedActions.length > 0) {
       iamPolicies.push({
         statement: new PolicyStatement({
           effect: Effect.ALLOW,
-          actions: [...new Set(actions)], // Remove duplicates
+          actions: resolvedActions,
           resources: [loadBalancerArn]
         }),
         description: `Load Balancer ${access} access`,
@@ -258,6 +206,76 @@ export class LoadBalancerBinderStrategy extends UnifiedBinderStrategyBase {
       environmentVariables,
       securityGroupRules: [],
     };
+  }
+
+  /**
+   * Get Load Balancer actions based on access level
+   * Used by resolveActions to compute base actions from coarse access level
+   * 
+   * @param access - Access level (read, write, readwrite, admin)
+   * @returns Array of IAM action strings
+   */
+  private getLoadBalancerActionsForAccess(access: string): string[] {
+    const actions: string[] = [];
+    
+    if (access === 'read' || access === 'readwrite' || access === 'admin') {
+      // Read access: Describe load balancers and related resources
+      actions.push(
+        'elasticloadbalancing:DescribeLoadBalancers',
+        'elasticloadbalancing:DescribeLoadBalancerAttributes',
+        'elasticloadbalancing:DescribeTargetGroups',
+        'elasticloadbalancing:DescribeTargetGroupAttributes',
+        'elasticloadbalancing:DescribeTargetHealth',
+        'elasticloadbalancing:DescribeListeners',
+        'elasticloadbalancing:DescribeListenerCertificates',
+        'elasticloadbalancing:DescribeRules',
+        'elasticloadbalancing:DescribeTags',
+        'elasticloadbalancing:DescribeAccountLimits',
+        'elasticloadbalancing:DescribeSSLPolicies',
+        'wafv2:GetWebACL',
+        'wafv2:GetWebACLForResource'
+      );
+    }
+
+    if (access === 'write' || access === 'readwrite' || access === 'admin') {
+      // Write access: Manage targets and attributes
+      actions.push(
+        'elasticloadbalancing:RegisterTargets',
+        'elasticloadbalancing:DeregisterTargets',
+        'elasticloadbalancing:ModifyLoadBalancerAttributes',
+        'elasticloadbalancing:ModifyTargetGroup',
+        'elasticloadbalancing:ModifyTargetGroupAttributes',
+        'elasticloadbalancing:ModifyListener',
+        'elasticloadbalancing:ModifyRule',
+        'elasticloadbalancing:SetRulePriorities',
+        'elasticloadbalancing:AddTags',
+        'elasticloadbalancing:RemoveTags'
+      );
+    }
+
+    if (access === 'admin') {
+      // Admin access: Full control including create/delete
+      // TODO: Consider gating CreateLoadBalancer/DeleteLoadBalancer behind an option for safety
+      actions.push(
+        'elasticloadbalancing:CreateLoadBalancer',
+        'elasticloadbalancing:DeleteLoadBalancer',
+        'elasticloadbalancing:CreateTargetGroup',
+        'elasticloadbalancing:DeleteTargetGroup',
+        'elasticloadbalancing:CreateListener',
+        'elasticloadbalancing:DeleteListener',
+        'elasticloadbalancing:CreateRule',
+        'elasticloadbalancing:DeleteRule',
+        'elasticloadbalancing:AddListenerCertificates',
+        'elasticloadbalancing:RemoveListenerCertificates',
+        'elasticloadbalancing:SetSecurityGroups',
+        'elasticloadbalancing:SetSubnets',
+        'wafv2:AssociateWebACL',
+        'wafv2:DisassociateWebACL',
+        'elasticloadbalancing:ModifyLoadBalancerAttributes'
+      );
+    }
+
+    return [...new Set(actions)]; // Remove duplicates
   }
 }
 

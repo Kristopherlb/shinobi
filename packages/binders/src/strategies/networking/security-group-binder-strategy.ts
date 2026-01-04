@@ -16,7 +16,7 @@
  * - Consistent pattern with other network bindings (RDS, EFS, Neptune)
  */
 
-import { UnifiedBinderStrategyBase } from '@shinobi/core';
+import { UnifiedBinderStrategyBase, resolveActions } from '@shinobi/core';
 import type { BindingContext, EnhancedBindingResult, CompatibilityEntry } from '@shinobi/core';
 import type { IamPolicy } from '@shinobi/core';
 import { PolicyStatement, Effect } from 'aws-cdk-lib/aws-iam';
@@ -132,18 +132,25 @@ export class SecurityGroupBinderStrategy extends UnifiedBinderStrategyBase {
     // Optional: Add EC2 describe permissions for runtime validation/discovery
     // This is useful when components need to validate security group existence or query metadata
     if (directive.options?.includeDiscovery === true) {
-      iamPolicies.push({
-        statement: new PolicyStatement({
-          effect: Effect.ALLOW,
-          actions: [
-            'ec2:DescribeSecurityGroups',
-            'ec2:DescribeSecurityGroupRules'
-          ],
-          resources: [`arn:aws:ec2:*:*:security-group/${securityGroupId}`]
-        }),
-        description: 'Security group discovery and validation permissions',
-        complianceRequirement: 'Security group metadata access for runtime validation'
-      });
+      // Resolve actions (granular override or coarse access)
+      const resolvedActions = resolveActions(
+        context.directive,
+        context,
+        (acc) => this.getSecurityGroupDiscoveryActionsForAccess(acc),
+        'ec2'
+      );
+
+      if (resolvedActions.length > 0) {
+        iamPolicies.push({
+          statement: new PolicyStatement({
+            effect: Effect.ALLOW,
+            actions: resolvedActions,
+            resources: [`arn:aws:ec2:*:*:security-group/${securityGroupId}`]
+          }),
+          description: 'Security group discovery and validation permissions',
+          complianceRequirement: 'Security group metadata access for runtime validation'
+        });
+      }
     }
 
     // Note: Security group rules (ingress/egress) are not generated here because the SecurityGroupRule
@@ -193,6 +200,23 @@ export class SecurityGroupBinderStrategy extends UnifiedBinderStrategyBase {
     }
 
     return false;
+  }
+
+  /**
+   * Get Security Group discovery actions based on access level
+   * Used by resolveActions to compute base actions from coarse access level
+   * 
+   * @param access - Access level (read)
+   * @returns Array of IAM action strings
+   */
+  private getSecurityGroupDiscoveryActionsForAccess(access: string): string[] {
+    if (access === 'read') {
+      return [
+        'ec2:DescribeSecurityGroups',
+        'ec2:DescribeSecurityGroupRules'
+      ];
+    }
+    return [];
   }
 }
 

@@ -61,7 +61,7 @@ export class ApplicationLoadBalancerComponent extends Component {
       }
 
       this.targetGroups.forEach(tg => this.registerConstruct(`targetGroup:${tg.targetGroupName}`, tg));
-      this.listeners.forEach(listener => this.registerConstruct(`listener:${listener.listenerPort}`, listener));
+      this.listeners.forEach(listener => this.registerConstruct(`listener:${listener.port}`, listener));
 
       this.registerCapability('net:load-balancer', this.buildLoadBalancerCapability());
       this.registerCapability('net:load-balancer-target', this.buildTargetCapability());
@@ -468,12 +468,12 @@ export class ApplicationLoadBalancerComponent extends Component {
     return policy === 'retain' ? cdk.RemovalPolicy.RETAIN : cdk.RemovalPolicy.DESTROY;
   }
 
-  private resolvePort(rule: { port: number; protocol?: string }): ec2.IPort {
+  private resolvePort(rule: { port: number; protocol?: string }): ec2.Port {
     switch (rule.protocol) {
       case 'udp':
         return ec2.Port.udp(rule.port);
       case 'icmp':
-        return ec2.Port.icmpTypeAndCode();
+        return ec2.Port.allIcmp();
       default:
         return ec2.Port.tcp(rule.port);
     }
@@ -488,10 +488,10 @@ export class ApplicationLoadBalancerComponent extends Component {
       ipAddressType: this.config!.ipAddressType,
       monitoringEnabled: this.config!.monitoring.enabled,
       hardeningProfile: this.config!.hardeningProfile,
-      listeners: this.listeners.map(listener => ({
+      listeners: this.listeners.map((listener, index) => ({
         arn: listener.listenerArn,
-        port: listener.listenerPort,
-        protocol: listener.listenerProtocol?.toString()
+        port: listener.port,
+        protocol: this.config!.listeners[index].protocol
       }))
     };
   }
@@ -516,14 +516,13 @@ export class ApplicationLoadBalancerComponent extends Component {
       observability: this.config!.observability,
       accessLogs: this.config!.accessLogs,
       accessLogBucketName: this.config!.accessLogs.bucketName ?? this.createdAccessLogsBucket?.bucketName,
-      logGroupName: this.accessLogGroup?.logGroupName,
-      listeners: this.listeners.map(listener => ({
-        port: listener.listenerPort,
-        protocol: listener.listenerProtocol?.toString()
+      listeners: this.listeners.map((listener, index) => ({
+        port: listener.port,
+        protocol: this.config!.listeners[index].protocol
       })),
-      targetGroups: this.targetGroups.map(targetGroup => ({
+      targetGroups: this.targetGroups.map((targetGroup, index) => ({
         name: targetGroup.targetGroupName,
-        targetType: targetGroup.targetType
+        targetType: this.config!.targetGroups[index]?.targetType ?? 'instance'
       })),
       tags: this.config!.tags,
       telemetry
@@ -707,9 +706,9 @@ export class ApplicationLoadBalancerComponent extends Component {
       logging,
       tracing,
       custom: {
-        listeners: this.listeners.map(listener => ({
-          port: listener.listenerPort,
-          protocol: listener.listenerProtocol?.toString()
+        listeners: this.listeners.map((listener, index) => ({
+          port: listener.port,
+          protocol: this.config!.listeners[index].protocol
         })),
         targetGroups: this.targetGroups.map(targetGroup => ({
           arn: targetGroup.targetGroupArn,

@@ -3,7 +3,7 @@
  * Handles dns:route53 bindings with mandatory compliance enforcement
  */
 
-import { UnifiedBinderStrategyBase } from '@shinobi/core';
+import { UnifiedBinderStrategyBase, resolveActions } from '@shinobi/core';
 import type { BindingContext, EnhancedBindingResult, CompatibilityEntry } from '@shinobi/core';
 import type { IamPolicy } from '@shinobi/core';
 import { PolicyStatement, Effect } from 'aws-cdk-lib/aws-iam';
@@ -92,70 +92,21 @@ export class Route53BinderStrategy extends UnifiedBinderStrategyBase {
     const hostedZoneId = targetData.resources.hostedZoneId;
     const hostedZoneArn = `arn:aws:route53:::hostedzone/${hostedZoneId}`;
 
-    // Determine IAM actions based on access level
-    let actions: string[] = [];
-    
-    if (access === 'read' || access === 'readwrite' || access === 'admin') {
-      // Read access: Get hosted zone and record information
-      actions.push(
-        'route53:GetHostedZone',
-        'route53:ListHostedZones',
-        'route53:ListResourceRecordSets',
-        'route53:GetChange',
-        'route53:ListTagsForResource',
-        'route53:ListTagsForResources',
-        'route53:GetHostedZoneCount',
-        'route53:ListHostedZonesByName',
-        'route53:TestDNSAnswer',
-        'route53:GetHealthCheck',
-        'route53:ListHealthChecks',
-        'route53:GetHealthCheckStatus',
-        'route53:ListResourceRecordSets',
-        'route53:GetHostedZone',
-        'route53:ListResolverRules',
-        'route53:GetResolverRule',
-        'route53:ListResolverRuleAssociations'
-      );
-    }
-
-    if (access === 'write' || access === 'readwrite' || access === 'admin') {
-      // Write access: Manage DNS records
-      actions.push(
-        'route53:ChangeResourceRecordSets',
-        'route53:ChangeTagsForResource',
-        'route53:CreateHealthCheck',
-        'route53:UpdateHealthCheck',
-        'route53:DeleteHealthCheck',
-        'route53:ChangeHealthCheckStatus'
-      );
-    }
-
-    if (access === 'admin') {
-      // Admin access: Full control including create/delete hosted zones
-      // TODO: Consider gating CreateHostedZone/DeleteHostedZone behind an option for safety
-      actions.push(
-        'route53:CreateHostedZone',
-        'route53:DeleteHostedZone',
-        'route53:UpdateHostedZoneComment',
-        'route53:AssociateVPCWithHostedZone',
-        'route53:DisassociateVPCFromHostedZone',
-        'route53:CreateReusableDelegationSet',
-        'route53:DeleteReusableDelegationSet',
-        'route53:ListReusableDelegationSets',
-        'route53:CreateResolverRule',
-        'route53:DeleteResolverRule',
-        'route53:AssociateResolverRule',
-        'route53:DisassociateResolverRule'
-      );
-    }
+    // Resolve actions (granular override or coarse access)
+    const resolvedActions = resolveActions(
+      context.directive,
+      context,
+      (acc) => this.getRoute53ActionsForAccess(acc),
+      'route53'
+    );
 
     // Create IAM policy
-    if (actions.length > 0) {
+    if (resolvedActions.length > 0) {
       // Route53 uses hosted zone ARNs for resource-level permissions
       iamPolicies.push({
         statement: new PolicyStatement({
           effect: Effect.ALLOW,
-          actions: [...new Set(actions)], // Remove duplicates
+          actions: resolvedActions,
           resources: [hostedZoneArn]
         }),
         description: `Route53 hosted zone ${access} access`,
@@ -239,6 +190,71 @@ export class Route53BinderStrategy extends UnifiedBinderStrategyBase {
       environmentVariables,
       securityGroupRules: [],
     };
+  }
+
+  /**
+   * Get Route53 actions based on access level
+   * Used by resolveActions to compute base actions from coarse access level
+   * 
+   * @param access - Access level (read, write, readwrite, admin)
+   * @returns Array of IAM action strings
+   */
+  private getRoute53ActionsForAccess(access: string): string[] {
+    const actions: string[] = [];
+    
+    if (access === 'read' || access === 'readwrite' || access === 'admin') {
+      // Read access: Get hosted zone and record information
+      actions.push(
+        'route53:GetHostedZone',
+        'route53:ListHostedZones',
+        'route53:ListResourceRecordSets',
+        'route53:GetChange',
+        'route53:ListTagsForResource',
+        'route53:ListTagsForResources',
+        'route53:GetHostedZoneCount',
+        'route53:ListHostedZonesByName',
+        'route53:TestDNSAnswer',
+        'route53:GetHealthCheck',
+        'route53:ListHealthChecks',
+        'route53:GetHealthCheckStatus',
+        'route53:ListResolverRules',
+        'route53:GetResolverRule',
+        'route53:ListResolverRuleAssociations'
+      );
+    }
+
+    if (access === 'write' || access === 'readwrite' || access === 'admin') {
+      // Write access: Manage DNS records
+      actions.push(
+        'route53:ChangeResourceRecordSets',
+        'route53:ChangeTagsForResource',
+        'route53:CreateHealthCheck',
+        'route53:UpdateHealthCheck',
+        'route53:DeleteHealthCheck',
+        'route53:ChangeHealthCheckStatus'
+      );
+    }
+
+    if (access === 'admin') {
+      // Admin access: Full control including create/delete hosted zones
+      // TODO: Consider gating CreateHostedZone/DeleteHostedZone behind an option for safety
+      actions.push(
+        'route53:CreateHostedZone',
+        'route53:DeleteHostedZone',
+        'route53:UpdateHostedZoneComment',
+        'route53:AssociateVPCWithHostedZone',
+        'route53:DisassociateVPCFromHostedZone',
+        'route53:CreateReusableDelegationSet',
+        'route53:DeleteReusableDelegationSet',
+        'route53:ListReusableDelegationSets',
+        'route53:CreateResolverRule',
+        'route53:DeleteResolverRule',
+        'route53:AssociateResolverRule',
+        'route53:DisassociateResolverRule'
+      );
+    }
+
+    return [...new Set(actions)]; // Remove duplicates
   }
 }
 

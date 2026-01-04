@@ -560,5 +560,70 @@ describe('SecurityGroupBinderStrategy', () => {
       expect(result.environmentVariables['SECURITY_GROUP_ID']).toBe('sg-rules-test123');
     });
   });
+
+  describe('SecurityGroupBind__CustomActionsOverride__ReplacesDiscoveryActions', () => {
+    const metadata = {
+      id: 'TP-binders-networking-securitygroup-010',
+      level: 'unit' as const,
+      capability: 'Custom actions override replaces default Security Group discovery actions',
+      oracle: 'exact' as const,
+      determinism: 'deterministic' as const,
+      naming: { pattern: 'SecurityGroupBind__Condition__Outcome', example: 'SecurityGroupBind__CustomActionsOverride__ReplacesDiscoveryActions' },
+      invariants: [
+        'IAM policy actions match provided custom actions array',
+        'Default Security Group discovery actions are not included when custom actions provided',
+        'Actions array is used directly (replaces coarse access)'
+      ],
+      fixtures: ['MockSourceComponent', 'MockTargetComponent'],
+      inputs: {
+        shape: 'BindingContext with security-group:import capability, includeDiscovery=true, and directive.actions array',
+        notes: 'Granular actions override test for discovery actions'
+      },
+      risks: [],
+      dependencies: ['action-resolver'],
+      evidence: [],
+      compliance_refs: ['docs/platform-standards/platform-iam-auditing-standard.md'],
+      ai_generated: true,
+      human_reviewed_by: 'Platform Engineering'
+    };
+
+    test('SecurityGroupBind__CustomActionsOverride__ReplacesDiscoveryActions', async () => {
+      const strategy = new SecurityGroupBinderStrategy();
+      const customActions = ['ec2:DescribeSecurityGroups'];
+      const target = createMockTargetComponent('security-group-import', {
+        'security-group:import': {
+          type: 'security-group:import',
+          securityGroupId: 'sg-test123'
+        }
+      });
+
+      const context = createBindingContext({
+        source: createMockSourceComponent(),
+        target,
+        capability: 'security-group:import',
+        access: 'read',
+        options: {
+          includeDiscovery: true
+        },
+        actions: customActions
+      });
+
+      const result = await executeUnifiedBinding(strategy, context);
+
+      assertEnhancedBindingResult(result);
+
+      expect(result.iamPolicies.length).toBeGreaterThan(0);
+      const policy = result.iamPolicies.find(p => p.description.includes('discovery'));
+      expect(policy).toBeDefined();
+      
+      const statementJson = policy!.statement.toStatementJson();
+      const actions = Array.isArray(statementJson.Action)
+        ? statementJson.Action
+        : [statementJson.Action];
+
+      expect(actions).toEqual(expect.arrayContaining(customActions));
+      expect(actions.length).toBe(customActions.length);
+    });
+  });
 });
 

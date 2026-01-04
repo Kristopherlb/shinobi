@@ -3,7 +3,7 @@
  * Handles Virtual Private Cloud bindings for Amazon VPC with mandatory compliance enforcement
  */
 
-import { UnifiedBinderStrategyBase } from '@shinobi/core';
+import { UnifiedBinderStrategyBase, resolveActions } from '@shinobi/core';
 import type { BindingContext, EnhancedBindingResult, CompatibilityEntry } from '@shinobi/core';
 import type { IamPolicy, SecurityGroupRule } from '@shinobi/core';
 import { PolicyStatement, Effect } from 'aws-cdk-lib/aws-iam';
@@ -480,13 +480,20 @@ export class VpcBinderStrategy extends UnifiedBinderStrategyBase {
     // Determine primary access level for action mapping
     const primaryAccess = access.includes('admin') ? 'admin' : access.includes('readwrite') ? 'readwrite' : access.includes('write') ? 'write' : 'read';
 
+    // Resolve actions (granular override or coarse access)
+    const resolvedActions = resolveActions(
+      context.directive,
+      context,
+      (acc) => this.getVpcNetworkActionsForAccess(acc),
+      'ec2'
+    );
+
     // Create IAM policies based on access level
-    const actions = this.getVpcNetworkActionsForAccess(primaryAccess);
-    if (actions.length > 0) {
+    if (resolvedActions.length > 0) {
       iamPolicies.push({
         statement: new PolicyStatement({
           effect: Effect.ALLOW,
-          actions: actions,
+          actions: resolvedActions,
           resources: [targetData.vpcArn]
         }),
         description: `VPC network ${primaryAccess} access`,
@@ -539,13 +546,20 @@ export class VpcBinderStrategy extends UnifiedBinderStrategyBase {
     // Determine primary access level for action mapping
     const primaryAccess = access.includes('admin') ? 'admin' : access.includes('readwrite') ? 'readwrite' : access.includes('write') ? 'write' : 'read';
 
+    // Resolve actions (granular override or coarse access)
+    const resolvedActions = resolveActions(
+      context.directive,
+      context,
+      (acc) => this.getVpcSubnetActionsForAccess(acc),
+      'ec2'
+    );
+
     // Create IAM policies based on access level
-    const actions = this.getVpcSubnetActionsForAccess(primaryAccess);
-    if (actions.length > 0) {
+    if (resolvedActions.length > 0) {
       iamPolicies.push({
         statement: new PolicyStatement({
           effect: Effect.ALLOW,
-          actions: actions,
+          actions: resolvedActions,
           resources: [targetData.subnetArn]
         }),
         description: `VPC subnet ${primaryAccess} access`,
@@ -588,13 +602,20 @@ export class VpcBinderStrategy extends UnifiedBinderStrategyBase {
     // Determine primary access level for action mapping
     const primaryAccess = access.includes('admin') ? 'admin' : access.includes('readwrite') ? 'readwrite' : access.includes('write') ? 'write' : 'read';
 
+    // Resolve actions (granular override or coarse access)
+    const resolvedActions = resolveActions(
+      context.directive,
+      context,
+      (acc) => this.getVpcSecurityGroupActionsForAccess(acc),
+      'ec2'
+    );
+
     // Create IAM policies based on access level
-    const actions = this.getVpcSecurityGroupActionsForAccess(primaryAccess);
-    if (actions.length > 0) {
+    if (resolvedActions.length > 0) {
       iamPolicies.push({
         statement: new PolicyStatement({
           effect: Effect.ALLOW,
-          actions: actions,
+          actions: resolvedActions,
           resources: [targetData.securityGroupArn]
         }),
         description: `VPC security group ${primaryAccess} access`,
@@ -646,13 +667,20 @@ export class VpcBinderStrategy extends UnifiedBinderStrategyBase {
     // Determine primary access level for action mapping
     const primaryAccess = access.includes('admin') ? 'admin' : access.includes('readwrite') ? 'readwrite' : access.includes('write') ? 'write' : 'read';
 
+    // Resolve actions (granular override or coarse access)
+    const resolvedActions = resolveActions(
+      context.directive,
+      context,
+      (acc) => this.getVpcRouteTableActionsForAccess(acc),
+      'ec2'
+    );
+
     // Create IAM policies based on access level
-    const actions = this.getVpcRouteTableActionsForAccess(primaryAccess);
-    if (actions.length > 0) {
+    if (resolvedActions.length > 0) {
       iamPolicies.push({
         statement: new PolicyStatement({
           effect: Effect.ALLOW,
-          actions: actions,
+          actions: resolvedActions,
           resources: [targetData.routeTableArn]
         }),
         description: `VPC route table ${primaryAccess} access`,
@@ -698,9 +726,16 @@ export class VpcBinderStrategy extends UnifiedBinderStrategyBase {
     // Determine primary access level for action mapping
     const primaryAccess = access.includes('admin') ? 'admin' : access.includes('readwrite') ? 'readwrite' : access.includes('write') ? 'write' : 'read';
 
+    // Resolve actions (granular override or coarse access)
+    const resolvedActions = resolveActions(
+      context.directive,
+      context,
+      (acc) => this.getVpcNatGatewayActionsForAccess(acc),
+      'ec2'
+    );
+
     // Create IAM policies based on access level
-    const actions = this.getVpcNatGatewayActionsForAccess(primaryAccess);
-    if (actions.length > 0) {
+    if (resolvedActions.length > 0) {
       const resources = [targetData.natGatewayArn];
       // For write access, also include elastic IP resources (wildcard since region/accountId not in context)
       if (primaryAccess === 'write' || primaryAccess === 'admin' || primaryAccess === 'readwrite') {
@@ -711,7 +746,7 @@ export class VpcBinderStrategy extends UnifiedBinderStrategyBase {
       iamPolicies.push({
         statement: new PolicyStatement({
           effect: Effect.ALLOW,
-          actions: actions,
+          actions: resolvedActions,
           resources: resources
         }),
         description: `VPC NAT Gateway ${primaryAccess} access`,
@@ -755,13 +790,20 @@ export class VpcBinderStrategy extends UnifiedBinderStrategyBase {
     // Determine primary access level for action mapping
     const primaryAccess = access.includes('admin') ? 'admin' : access.includes('readwrite') ? 'readwrite' : access.includes('write') ? 'write' : 'read';
 
+    // Resolve actions (granular override or coarse access)
+    const resolvedActions = resolveActions(
+      context.directive,
+      context,
+      (acc) => this.getVpcNetworkAclActionsForAccess(acc),
+      'ec2'
+    );
+
     // Create IAM policies based on access level
-    const actions = this.getVpcNetworkAclActionsForAccess(primaryAccess);
-    if (actions.length > 0) {
+    if (resolvedActions.length > 0) {
       iamPolicies.push({
         statement: new PolicyStatement({
           effect: Effect.ALLOW,
-          actions: actions,
+          actions: resolvedActions,
           resources: [targetData.networkAclArn]
         }),
         description: `VPC Network ACL ${primaryAccess} access`,
@@ -804,13 +846,20 @@ export class VpcBinderStrategy extends UnifiedBinderStrategyBase {
     // Determine primary access level for action mapping
     const primaryAccess = access.includes('admin') ? 'admin' : access.includes('readwrite') ? 'readwrite' : access.includes('write') ? 'write' : 'read';
 
+    // Resolve actions (granular override or coarse access)
+    const resolvedActions = resolveActions(
+      context.directive,
+      context,
+      (acc) => this.getVpcPeeringActionsForAccess(acc),
+      'ec2'
+    );
+
     // Create IAM policies based on access level
-    const actions = this.getVpcPeeringActionsForAccess(primaryAccess);
-    if (actions.length > 0) {
+    if (resolvedActions.length > 0) {
       iamPolicies.push({
         statement: new PolicyStatement({
           effect: Effect.ALLOW,
-          actions: actions,
+          actions: resolvedActions,
           resources: [targetData.peeringConnectionArn]
         }),
         description: `VPC Peering ${primaryAccess} access`,
@@ -862,13 +911,20 @@ export class VpcBinderStrategy extends UnifiedBinderStrategyBase {
     // Determine primary access level for action mapping
     const primaryAccess = access.includes('admin') ? 'admin' : access.includes('readwrite') ? 'readwrite' : access.includes('write') ? 'write' : 'read';
 
+    // Resolve actions (granular override or coarse access)
+    const resolvedActions = resolveActions(
+      context.directive,
+      context,
+      (acc) => this.getTransitGatewayActionsForAccess(acc),
+      'ec2'
+    );
+
     // Create IAM policies based on access level
-    const actions = this.getTransitGatewayActionsForAccess(primaryAccess);
-    if (actions.length > 0) {
+    if (resolvedActions.length > 0) {
       iamPolicies.push({
         statement: new PolicyStatement({
           effect: Effect.ALLOW,
-          actions: actions,
+          actions: resolvedActions,
           resources: [targetData.transitGatewayArn]
         }),
         description: `Transit Gateway ${primaryAccess} access`,
@@ -932,13 +988,20 @@ export class VpcBinderStrategy extends UnifiedBinderStrategyBase {
     // Determine primary access level for action mapping
     const primaryAccess = access.includes('admin') ? 'admin' : access.includes('readwrite') ? 'readwrite' : access.includes('write') ? 'write' : 'read';
 
+    // Resolve actions (granular override or coarse access)
+    const resolvedActions = resolveActions(
+      context.directive,
+      context,
+      (acc) => this.getVpcEndpointActionsForAccess(acc),
+      'ec2'
+    );
+
     // Create IAM policies based on access level
-    const actions = this.getVpcEndpointActionsForAccess(primaryAccess);
-    if (actions.length > 0) {
+    if (resolvedActions.length > 0) {
       iamPolicies.push({
         statement: new PolicyStatement({
           effect: Effect.ALLOW,
-          actions: actions,
+          actions: resolvedActions,
           resources: [targetData.vpcEndpointArn]
         }),
         description: `VPC Endpoint ${primaryAccess} access`,
@@ -992,13 +1055,20 @@ export class VpcBinderStrategy extends UnifiedBinderStrategyBase {
     // Determine primary access level for action mapping
     const primaryAccess = access.includes('admin') ? 'admin' : access.includes('readwrite') ? 'readwrite' : access.includes('write') ? 'write' : 'read';
 
+    // Resolve actions (granular override or coarse access)
+    const resolvedActions = resolveActions(
+      context.directive,
+      context,
+      (acc) => this.getNetworkFirewallActionsForAccess(acc),
+      'network-firewall'
+    );
+
     // Create IAM policies based on access level
-    const actions = this.getNetworkFirewallActionsForAccess(primaryAccess);
-    if (actions.length > 0) {
+    if (resolvedActions.length > 0) {
       iamPolicies.push({
         statement: new PolicyStatement({
           effect: Effect.ALLOW,
-          actions: actions,
+          actions: resolvedActions,
           resources: [targetData.firewallArn]
         }),
         description: `Network Firewall ${primaryAccess} access`,
