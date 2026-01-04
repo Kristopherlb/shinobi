@@ -19,20 +19,15 @@ jobs:
     - name: Checkout code
       uses: actions/checkout@v4
       
+    - name: Install pnpm
+      uses: pnpm/action-setup@v4
+      # Version is automatically read from package.json "packageManager" field
+
     - name: Setup Node.js
       uses: actions/setup-node@v4
       with:
         node-version: '20'
-        cache: 'pnpm'  # This ensures pnpm is available even when Node.js is cached
-
-    - name: Enable Corepack and install pnpm
-      run: |
-        # Enable corepack (ensures pnpm works via corepack)
-        corepack enable
-        corepack prepare pnpm@latest --activate
-        # Explicitly add pnpm to PATH for subsequent steps
-        echo "$(corepack which pnpm | xargs dirname)" >> $GITHUB_PATH
-        echo "pnpm version: $(pnpm --version)"
+        cache: 'pnpm'  # Enables caching of the pnpm store for faster installs
 
     - name: Install dependencies
       run: pnpm install --frozen-lockfile

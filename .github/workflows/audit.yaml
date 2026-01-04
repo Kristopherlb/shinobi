@@ -12,18 +12,14 @@ jobs:
         with:
           fetch-depth: 0  # Fetch full history for diff checks
       
+      - name: Install pnpm
+        uses: pnpm/action-setup@v4
+        # Version is automatically read from package.json "packageManager" field
+      
       - uses: actions/setup-node@v4
         with: 
           node-version: '20'
-          cache: 'pnpm'
-      
-      - name: Enable Corepack and prepare pnpm
-        run: |
-          corepack enable
-          corepack prepare pnpm@latest --activate
-          # Explicitly add pnpm to PATH for subsequent steps
-          echo "$(corepack which pnpm | xargs dirname)" >> $GITHUB_PATH
-          echo "pnpm version: $(pnpm --version)"
+          cache: 'pnpm'  # Enables caching of the pnpm store for faster installs
       
       - name: Install ripgrep
         run: sudo apt-get update && sudo apt-get install -y ripgrep

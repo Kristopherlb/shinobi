@@ -18,27 +18,15 @@ jobs:
         with:
           fetch-depth: 0  # Need full history for diff checks
           
+      - name: Install pnpm
+        uses: pnpm/action-setup@v4
+        # Version is automatically read from package.json "packageManager" field
+
       - name: Setup Node.js
         uses: actions/setup-node@v4
         with:
           node-version: '20'
-          cache: 'pnpm'  # Ensures pnpm is available even when Node.js is cached
-
-      - name: Enable Corepack and install pnpm
-        run: |
-          corepack enable
-          corepack prepare pnpm@latest --activate
-          # Explicitly add pnpm to PATH for subsequent steps
-          echo "$(corepack which pnpm | xargs dirname)" >> $GITHUB_PATH
-          echo "pnpm version: $(pnpm --version)"
-
-      - name: Cache pnpm store
-        uses: actions/cache@v4
-        with:
-          path: ~/.pnpm-store
-          key: ${{ runner.os }}-pnpm-${{ hashFiles('**/pnpm-lock.yaml') }}
-          restore-keys: |
-            ${{ runner.os }}-pnpm-
+          cache: 'pnpm'  # Enables caching of the pnpm store for faster installs
 
       - name: Install system dependencies
         run: |
