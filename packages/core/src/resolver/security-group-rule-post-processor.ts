@@ -140,6 +140,7 @@ export class SecurityGroupRulePostProcessor {
     // Phase 3: Apply rules to security groups via CDK constructs
     let rulesApplied = 0;
     let crossStackRules = 0;
+    let securityGroupsAffected = 0;
     
     for (const group of ruleGroups) {
       // Check if target security group is in the same stack
@@ -179,6 +180,7 @@ export class SecurityGroupRulePostProcessor {
       }
       
       // Apply rules to security group in current stack
+      securityGroupsAffected++; // Only count same-stack security groups
       for (const rule of group.rules) {
         try {
           this.applyRuleToSecurityGroup(rule, group.targetSecurityGroupId, stack);
@@ -195,7 +197,7 @@ export class SecurityGroupRulePostProcessor {
     
     return {
       rulesApplied,
-      securityGroupsAffected: ruleGroups.length,
+      securityGroupsAffected,
       crossStackRules
     };
   }
