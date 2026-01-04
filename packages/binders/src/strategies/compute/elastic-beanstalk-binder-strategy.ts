@@ -3,7 +3,7 @@
  * Handles application deployment platform bindings for AWS Elastic Beanstalk with mandatory compliance enforcement
  */
 
-import { UnifiedBinderStrategyBase } from '@shinobi/core';
+import { UnifiedBinderStrategyBase, resolveActions } from '@shinobi/core';
 import type { BindingContext, EnhancedBindingResult, CompatibilityEntry } from '@shinobi/core';
 import type { IamPolicy } from '@shinobi/core';
 import { PolicyStatement, Effect } from 'aws-cdk-lib/aws-iam';
@@ -215,13 +215,20 @@ export class ElasticBeanstalkBinderStrategy extends UnifiedBinderStrategyBase {
     // Determine primary access level
     const primaryAccess = access.includes('readwrite') ? 'readwrite' : access.includes('write') ? 'write' : 'read';
 
+    // Resolve actions (granular override or coarse access)
+    const resolvedActions = resolveActions(
+      context.directive,
+      context,
+      (acc) => this.getElasticBeanstalkApplicationActionsForAccess(acc),
+      'elasticbeanstalk'
+    );
+
     // Create IAM policies based on access level
-    const actions = this.getElasticBeanstalkApplicationActionsForAccess(primaryAccess);
-    if (actions.length > 0) {
+    if (resolvedActions.length > 0) {
       iamPolicies.push({
         statement: new PolicyStatement({
           effect: Effect.ALLOW,
-          actions: actions,
+          actions: resolvedActions,
           resources: [targetData.applicationArn]
         }),
         description: `Elastic Beanstalk application ${primaryAccess} access`,
@@ -284,13 +291,20 @@ export class ElasticBeanstalkBinderStrategy extends UnifiedBinderStrategyBase {
     // Determine primary access level
     const primaryAccess = access.includes('readwrite') ? 'readwrite' : access.includes('write') ? 'write' : 'read';
 
+    // Resolve actions (granular override or coarse access)
+    const resolvedActions = resolveActions(
+      context.directive,
+      context,
+      (acc) => this.getElasticBeanstalkEnvironmentActionsForAccess(acc),
+      'elasticbeanstalk'
+    );
+
     // Create IAM policies based on access level
-    const actions = this.getElasticBeanstalkEnvironmentActionsForAccess(primaryAccess);
-    if (actions.length > 0) {
+    if (resolvedActions.length > 0) {
       iamPolicies.push({
         statement: new PolicyStatement({
           effect: Effect.ALLOW,
-          actions: actions,
+          actions: resolvedActions,
           resources: [targetData.environmentArn]
         }),
         description: `Elastic Beanstalk environment ${primaryAccess} access`,
@@ -373,13 +387,20 @@ export class ElasticBeanstalkBinderStrategy extends UnifiedBinderStrategyBase {
     // Determine primary access level
     const primaryAccess = access.includes('readwrite') ? 'readwrite' : access.includes('write') ? 'write' : 'read';
 
+    // Resolve actions (granular override or coarse access)
+    const resolvedActions = resolveActions(
+      context.directive,
+      context,
+      (acc) => this.getElasticBeanstalkVersionActionsForAccess(acc),
+      'elasticbeanstalk'
+    );
+
     // Create IAM policies based on access level
-    const actions = this.getElasticBeanstalkVersionActionsForAccess(primaryAccess);
-    if (actions.length > 0) {
+    if (resolvedActions.length > 0) {
       iamPolicies.push({
         statement: new PolicyStatement({
           effect: Effect.ALLOW,
-          actions: actions,
+          actions: resolvedActions,
           resources: [targetData.applicationArn]
         }),
         description: `Elastic Beanstalk version ${primaryAccess} access`,

@@ -81,6 +81,69 @@ describe('AutoScalingBinderStrategy', () => {
     });
   });
 
-  // TODO: Add more test cases as needed
+  describe('AutoScalingBind__CustomActionsOverride__ReplacesCoarseActions', () => {
+    const metadata = {
+      id: 'TP-binders-compute-autoscaling-010',
+      level: 'unit' as const,
+      capability: 'Custom actions override replaces default Auto Scaling actions',
+      oracle: 'exact' as const,
+      determinism: 'deterministic' as const,
+      naming: { pattern: 'AutoScalingBind__Condition__Outcome', example: 'AutoScalingBind__CustomActionsOverride__ReplacesCoarseActions' },
+      invariants: [
+        'IAM policy actions match provided custom actions array',
+        'Default Auto Scaling actions are not included when custom actions provided',
+        'Actions array is used directly (replaces coarse access)'
+      ],
+      fixtures: ['MockSourceComponent', 'MockTargetComponent'],
+      inputs: {
+        shape: 'BindingContext with autoscaling:group capability and directive.actions array',
+        notes: 'Granular actions override test'
+      },
+      risks: [],
+      dependencies: ['action-resolver'],
+      evidence: [],
+      compliance_refs: ['docs/platform-standards/platform-iam-auditing-standard.md'],
+      ai_generated: true,
+      human_reviewed_by: 'Platform Engineering'
+    };
+
+    test('AutoScalingBind__CustomActionsOverride__ReplacesCoarseActions', async () => {
+      const strategy = new AutoScalingBinderStrategy();
+      const customActions = ['autoscaling:DescribeAutoScalingGroups', 'autoscaling:DescribeScalingActivities'];
+      const target = createMockTargetComponent('test-target', {
+        'autoscaling:group': {
+          type: 'autoscaling:group',
+          resources: {
+            arn: 'arn:aws:autoscaling:us-east-1:123456789012:autoScalingGroup:uuid:autoScalingGroupName/test-asg',
+            autoScalingGroupName: 'test-asg',
+          },
+        },
+      });
+
+      const context = createBindingContext({
+        source: createMockSourceComponent(),
+        target,
+        capability: 'autoscaling:group',
+        access: 'read',
+        actions: customActions
+      });
+
+      const result = await executeUnifiedBinding(strategy, context);
+
+      assertEnhancedBindingResult(result);
+
+      expect(result.iamPolicies.length).toBeGreaterThan(0);
+      const policy = result.iamPolicies[0];
+      expect(policy).toBeDefined();
+      
+      const statementJson = policy!.statement.toStatementJson();
+      const actions = Array.isArray(statementJson.Action)
+        ? statementJson.Action
+        : [statementJson.Action];
+
+      expect(actions).toEqual(expect.arrayContaining(customActions));
+      expect(actions.length).toBe(customActions.length);
+    });
+  });
 });
 

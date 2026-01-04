@@ -3,7 +3,7 @@
  * Handles autoscaling:group bindings with mandatory compliance enforcement
  */
 
-import { UnifiedBinderStrategyBase } from '@shinobi/core';
+import { UnifiedBinderStrategyBase, resolveActions } from '@shinobi/core';
 import type { BindingContext, EnhancedBindingResult, CompatibilityEntry } from '@shinobi/core';
 import type { IamPolicy } from '@shinobi/core';
 import { PolicyStatement, Effect } from 'aws-cdk-lib/aws-iam';
@@ -94,75 +94,20 @@ export class AutoScalingBinderStrategy extends UnifiedBinderStrategyBase {
     const autoScalingGroupName = targetData.resources.autoScalingGroupName;
     const autoScalingGroupArn = targetData.resources.arn || `arn:aws:autoscaling:*:*:autoScalingGroup:*:autoScalingGroupName/${autoScalingGroupName}`;
 
-    // Determine IAM actions based on access level
-    let actions: string[] = [];
-    
-    if (access === 'read' || access === 'readwrite' || access === 'admin') {
-      // Read access: Describe Auto Scaling groups and related resources
-      actions.push(
-        'autoscaling:DescribeAutoScalingGroups',
-        'autoscaling:DescribeLaunchConfigurations',
-        'autoscaling:DescribeLaunchTemplates',
-        'autoscaling:DescribeScalingActivities',
-        'autoscaling:DescribeScalingProcessTypes',
-        'autoscaling:DescribeScheduledActions',
-        'autoscaling:DescribeTags',
-        'autoscaling:DescribeLifecycleHooks',
-        'autoscaling:DescribePolicies',
-        'autoscaling:DescribeAdjustmentTypes',
-        'autoscaling:DescribeInstanceRefreshes',
-        'autoscaling:DescribeWarmPool',
-        'cloudwatch:DescribeAlarms',
-        'cloudwatch:GetMetricStatistics'
-      );
-    }
-
-    if (access === 'write' || access === 'readwrite' || access === 'admin') {
-      // Write access: Control scaling operations
-      actions.push(
-        'autoscaling:SetDesiredCapacity',
-        'autoscaling:UpdateAutoScalingGroup',
-        'autoscaling:ExecutePolicy',
-        'autoscaling:PutScalingPolicy',
-        'autoscaling:DeletePolicy',
-        'autoscaling:PutScheduledUpdateGroupAction',
-        'autoscaling:DeleteScheduledAction',
-        'autoscaling:TerminateInstanceInAutoScalingGroup',
-        'autoscaling:SetInstanceHealth',
-        'autoscaling:PutLifecycleHook',
-        'autoscaling:DeleteLifecycleHook',
-        'autoscaling:RecordLifecycleActionHeartbeat',
-        'autoscaling:CompleteLifecycleAction',
-        'autoscaling:StartInstanceRefresh',
-        'autoscaling:CancelInstanceRefresh',
-        'autoscaling:PutWarmPool',
-        'autoscaling:DeleteWarmPool'
-      );
-    }
-
-    if (access === 'admin') {
-      // Admin access: Full control including create/delete
-      // TODO: Consider gating CreateAutoScalingGroup/DeleteAutoScalingGroup behind an option for safety
-      actions.push(
-        'autoscaling:CreateAutoScalingGroup',
-        'autoscaling:DeleteAutoScalingGroup',
-        'autoscaling:CreateLaunchConfiguration',
-        'autoscaling:DeleteLaunchConfiguration',
-        'autoscaling:AttachInstances',
-        'autoscaling:DetachInstances',
-        'autoscaling:EnterStandby',
-        'autoscaling:ExitStandby',
-        'autoscaling:ResumeProcesses',
-        'autoscaling:SuspendProcesses'
-      );
-    }
+    // Resolve actions (granular override or coarse access)
+    const resolvedActions = resolveActions(
+      context.directive,
+      context,
+      (acc) => this.getAutoScalingActionsForAccess(acc),
+      'autoscaling'
+    );
 
     // Create IAM policy
-    if (actions.length > 0) {
+    if (resolvedActions.length > 0) {
       iamPolicies.push({
         statement: new PolicyStatement({
           effect: Effect.ALLOW,
-          actions: [...new Set(actions)], // Remove duplicates
+          actions: resolvedActions,
           resources: [autoScalingGroupArn]
         }),
         description: `Auto Scaling group ${access} access`,
@@ -241,6 +186,79 @@ export class AutoScalingBinderStrategy extends UnifiedBinderStrategyBase {
       environmentVariables,
       securityGroupRules: [],
     };
+  }
+
+  /**
+   * Get Auto Scaling actions based on access level
+   * Used by resolveActions to compute base actions from coarse access level
+   * 
+   * @param access - Access level (read, write, readwrite, admin)
+   * @returns Array of IAM action strings
+   */
+  private getAutoScalingActionsForAccess(access: string): string[] {
+    const actions: string[] = [];
+    
+    if (access === 'read' || access === 'readwrite' || access === 'admin') {
+      // Read access: Describe Auto Scaling groups and related resources
+      actions.push(
+        'autoscaling:DescribeAutoScalingGroups',
+        'autoscaling:DescribeLaunchConfigurations',
+        'autoscaling:DescribeLaunchTemplates',
+        'autoscaling:DescribeScalingActivities',
+        'autoscaling:DescribeScalingProcessTypes',
+        'autoscaling:DescribeScheduledActions',
+        'autoscaling:DescribeTags',
+        'autoscaling:DescribeLifecycleHooks',
+        'autoscaling:DescribePolicies',
+        'autoscaling:DescribeAdjustmentTypes',
+        'autoscaling:DescribeInstanceRefreshes',
+        'autoscaling:DescribeWarmPool',
+        'cloudwatch:DescribeAlarms',
+        'cloudwatch:GetMetricStatistics'
+      );
+    }
+
+    if (access === 'write' || access === 'readwrite' || access === 'admin') {
+      // Write access: Control scaling operations
+      actions.push(
+        'autoscaling:SetDesiredCapacity',
+        'autoscaling:UpdateAutoScalingGroup',
+        'autoscaling:ExecutePolicy',
+        'autoscaling:PutScalingPolicy',
+        'autoscaling:DeletePolicy',
+        'autoscaling:PutScheduledUpdateGroupAction',
+        'autoscaling:DeleteScheduledAction',
+        'autoscaling:TerminateInstanceInAutoScalingGroup',
+        'autoscaling:SetInstanceHealth',
+        'autoscaling:PutLifecycleHook',
+        'autoscaling:DeleteLifecycleHook',
+        'autoscaling:RecordLifecycleActionHeartbeat',
+        'autoscaling:CompleteLifecycleAction',
+        'autoscaling:StartInstanceRefresh',
+        'autoscaling:CancelInstanceRefresh',
+        'autoscaling:PutWarmPool',
+        'autoscaling:DeleteWarmPool'
+      );
+    }
+
+    if (access === 'admin') {
+      // Admin access: Full control including create/delete
+      // TODO: Consider gating CreateAutoScalingGroup/DeleteAutoScalingGroup behind an option for safety
+      actions.push(
+        'autoscaling:CreateAutoScalingGroup',
+        'autoscaling:DeleteAutoScalingGroup',
+        'autoscaling:CreateLaunchConfiguration',
+        'autoscaling:DeleteLaunchConfiguration',
+        'autoscaling:AttachInstances',
+        'autoscaling:DetachInstances',
+        'autoscaling:EnterStandby',
+        'autoscaling:ExitStandby',
+        'autoscaling:ResumeProcesses',
+        'autoscaling:SuspendProcesses'
+      );
+    }
+
+    return [...new Set(actions)]; // Remove duplicates
   }
 }
 

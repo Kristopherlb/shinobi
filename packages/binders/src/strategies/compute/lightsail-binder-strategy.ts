@@ -3,7 +3,7 @@
  * Handles virtual private server bindings for Amazon Lightsail with mandatory compliance enforcement
  */
 
-import { UnifiedBinderStrategyBase } from '@shinobi/core';
+import { UnifiedBinderStrategyBase, resolveActions } from '@shinobi/core';
 import type { BindingContext, EnhancedBindingResult, CompatibilityEntry } from '@shinobi/core';
 import type { IamPolicy } from '@shinobi/core';
 import { PolicyStatement, Effect } from 'aws-cdk-lib/aws-iam';
@@ -315,13 +315,20 @@ export class LightsailBinderStrategy extends UnifiedBinderStrategyBase {
     // Determine primary access level
     const primaryAccess = access.includes('readwrite') ? 'readwrite' : access.includes('write') ? 'write' : 'read';
 
+    // Resolve actions (granular override or coarse access)
+    const resolvedActions = resolveActions(
+      context.directive,
+      context,
+      (acc) => this.getLightsailInstanceActionsForAccess(acc),
+      'lightsail'
+    );
+
     // Create IAM policies based on access level
-    const actions = this.getLightsailInstanceActionsForAccess(primaryAccess);
-    if (actions.length > 0) {
+    if (resolvedActions.length > 0) {
       iamPolicies.push({
         statement: new PolicyStatement({
           effect: Effect.ALLOW,
-          actions: actions,
+          actions: resolvedActions,
           resources: [targetData.instanceArn]
         }),
         description: `Lightsail instance ${primaryAccess} access`,
@@ -397,13 +404,20 @@ export class LightsailBinderStrategy extends UnifiedBinderStrategyBase {
     // Determine primary access level
     const primaryAccess = access.includes('readwrite') ? 'readwrite' : access.includes('write') ? 'write' : 'read';
 
+    // Resolve actions (granular override or coarse access)
+    const resolvedActions = resolveActions(
+      context.directive,
+      context,
+      (acc) => this.getLightsailDatabaseActionsForAccess(acc),
+      'lightsail'
+    );
+
     // Create IAM policies based on access level
-    const actions = this.getLightsailDatabaseActionsForAccess(primaryAccess);
-    if (actions.length > 0) {
+    if (resolvedActions.length > 0) {
       iamPolicies.push({
         statement: new PolicyStatement({
           effect: Effect.ALLOW,
-          actions: actions,
+          actions: resolvedActions,
           resources: [targetData.databaseArn]
         }),
         description: `Lightsail database ${primaryAccess} access`,
@@ -466,13 +480,20 @@ export class LightsailBinderStrategy extends UnifiedBinderStrategyBase {
     // Determine primary access level
     const primaryAccess = access.includes('readwrite') ? 'readwrite' : access.includes('write') ? 'write' : 'read';
 
+    // Resolve actions (granular override or coarse access)
+    const resolvedActions = resolveActions(
+      context.directive,
+      context,
+      (acc) => this.getLightsailLoadBalancerActionsForAccess(acc),
+      'lightsail'
+    );
+
     // Create IAM policies based on access level
-    const actions = this.getLightsailLoadBalancerActionsForAccess(primaryAccess);
-    if (actions.length > 0) {
+    if (resolvedActions.length > 0) {
       iamPolicies.push({
         statement: new PolicyStatement({
           effect: Effect.ALLOW,
-          actions: actions,
+          actions: resolvedActions,
           resources: [targetData.loadBalancerArn]
         }),
         description: `Lightsail load balancer ${primaryAccess} access`,
@@ -526,13 +547,20 @@ export class LightsailBinderStrategy extends UnifiedBinderStrategyBase {
     // Determine primary access level
     const primaryAccess = access.includes('readwrite') ? 'readwrite' : access.includes('write') ? 'write' : 'read';
 
+    // Resolve actions (granular override or coarse access)
+    const resolvedActions = resolveActions(
+      context.directive,
+      context,
+      (acc) => this.getLightsailContainerServiceActionsForAccess(acc),
+      'lightsail'
+    );
+
     // Create IAM policies based on access level
-    const actions = this.getLightsailContainerServiceActionsForAccess(primaryAccess);
-    if (actions.length > 0) {
+    if (resolvedActions.length > 0) {
       iamPolicies.push({
         statement: new PolicyStatement({
           effect: Effect.ALLOW,
-          actions: actions,
+          actions: resolvedActions,
           resources: [targetData.containerServiceArn]
         }),
         description: `Lightsail container service ${primaryAccess} access`,
@@ -599,13 +627,20 @@ export class LightsailBinderStrategy extends UnifiedBinderStrategyBase {
     // Determine primary access level
     const primaryAccess = access.includes('readwrite') ? 'readwrite' : access.includes('write') ? 'write' : 'read';
 
+    // Resolve actions (granular override or coarse access)
+    const resolvedActions = resolveActions(
+      context.directive,
+      context,
+      (acc) => this.getLightsailStaticIpActionsForAccess(acc),
+      'lightsail'
+    );
+
     // Create IAM policies based on access level
-    const actions = this.getLightsailStaticIpActionsForAccess(primaryAccess);
-    if (actions.length > 0) {
+    if (resolvedActions.length > 0) {
       iamPolicies.push({
         statement: new PolicyStatement({
           effect: Effect.ALLOW,
-          actions: actions,
+          actions: resolvedActions,
           resources: [targetData.staticIpArn]
         }),
         description: `Lightsail static IP ${primaryAccess} access`,
@@ -648,13 +683,20 @@ export class LightsailBinderStrategy extends UnifiedBinderStrategyBase {
     // Determine primary access level
     const primaryAccess = access.includes('readwrite') ? 'readwrite' : access.includes('write') ? 'write' : 'read';
 
+    // Resolve actions (granular override or coarse access)
+    const resolvedActions = resolveActions(
+      context.directive,
+      context,
+      (acc) => this.getLightsailDistributionActionsForAccess(acc),
+      'lightsail'
+    );
+
     // Create IAM policies based on access level
-    const actions = this.getLightsailDistributionActionsForAccess(primaryAccess);
-    if (actions.length > 0) {
+    if (resolvedActions.length > 0) {
       iamPolicies.push({
         statement: new PolicyStatement({
           effect: Effect.ALLOW,
-          actions: actions,
+          actions: resolvedActions,
           resources: [targetData.distributionArn]
         }),
         description: `Lightsail distribution ${primaryAccess} access`,

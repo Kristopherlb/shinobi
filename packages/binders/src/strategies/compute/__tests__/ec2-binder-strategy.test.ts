@@ -77,6 +77,69 @@ describe('Ec2BinderStrategy', () => {
     });
   });
 
-  // TODO: Add more test cases as needed
+  describe('Ec2Bind__CustomActionsOverride__ReplacesCoarseActions', () => {
+    const metadata = {
+      id: 'TP-binders-compute-ec2-010',
+      level: 'unit' as const,
+      capability: 'Custom actions override replaces default EC2 actions',
+      oracle: 'exact' as const,
+      determinism: 'deterministic' as const,
+      naming: { pattern: 'Ec2Bind__Condition__Outcome', example: 'Ec2Bind__CustomActionsOverride__ReplacesCoarseActions' },
+      invariants: [
+        'IAM policy actions match provided custom actions array',
+        'Default EC2 actions are not included when custom actions provided',
+        'Actions array is used directly (replaces coarse access)'
+      ],
+      fixtures: ['MockSourceComponent', 'MockTargetComponent'],
+      inputs: {
+        shape: 'BindingContext with compute:ec2 capability and directive.actions array',
+        notes: 'Granular actions override test'
+      },
+      risks: [],
+      dependencies: ['action-resolver'],
+      evidence: [],
+      compliance_refs: ['docs/platform-standards/platform-iam-auditing-standard.md'],
+      ai_generated: true,
+      human_reviewed_by: 'Platform Engineering'
+    };
+
+    test('Ec2Bind__CustomActionsOverride__ReplacesCoarseActions', async () => {
+      const strategy = new Ec2BinderStrategy();
+      const customActions = ['ec2:DescribeInstances', 'ec2:DescribeInstanceStatus'];
+      const target = createMockTargetComponent('test-target', {
+        'compute:ec2': {
+          type: 'compute:ec2',
+          resources: {
+            instanceId: 'i-1234567890abcdef0',
+            arn: 'arn:aws:ec2:us-east-1:123456789012:instance/i-1234567890abcdef0'
+          }
+        }
+      });
+
+      const context = createBindingContext({
+        source: createMockSourceComponent(),
+        target,
+        capability: 'compute:ec2',
+        access: 'read',
+        actions: customActions
+      });
+
+      const result = await executeUnifiedBinding(strategy, context);
+
+      assertEnhancedBindingResult(result);
+
+      expect(result.iamPolicies.length).toBeGreaterThan(0);
+      const policy = result.iamPolicies[0];
+      expect(policy).toBeDefined();
+      
+      const statementJson = policy!.statement.toStatementJson();
+      const actions = Array.isArray(statementJson.Action)
+        ? statementJson.Action
+        : [statementJson.Action];
+
+      expect(actions).toEqual(expect.arrayContaining(customActions));
+      expect(actions.length).toBe(customActions.length);
+    });
+  });
 });
 

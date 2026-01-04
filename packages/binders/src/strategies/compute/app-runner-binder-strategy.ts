@@ -3,7 +3,7 @@
  * Handles containerized web application bindings for AWS App Runner with mandatory compliance enforcement
  */
 
-import { UnifiedBinderStrategyBase } from '@shinobi/core';
+import { UnifiedBinderStrategyBase, resolveActions } from '@shinobi/core';
 import type { BindingContext, EnhancedBindingResult, CompatibilityEntry } from '@shinobi/core';
 import type { IamPolicy } from '@shinobi/core';
 import { PolicyStatement, Effect } from 'aws-cdk-lib/aws-iam';
@@ -169,13 +169,20 @@ export class AppRunnerBinderStrategy extends UnifiedBinderStrategyBase {
     // Determine primary access level for action mapping
     const primaryAccess = access.includes('admin') ? 'admin' : access.includes('readwrite') ? 'readwrite' : access.includes('write') ? 'write' : 'read';
 
+    // Resolve actions (granular override or coarse access)
+    const resolvedActions = resolveActions(
+      context.directive,
+      context,
+      (acc) => this.getAppRunnerServiceActionsForAccess(acc),
+      'apprunner'
+    );
+
     // Create IAM policies based on access level
-    const actions = this.getAppRunnerServiceActionsForAccess(primaryAccess);
-    if (actions.length > 0) {
+    if (resolvedActions.length > 0) {
       iamPolicies.push({
         statement: new PolicyStatement({
           effect: Effect.ALLOW,
-          actions: actions,
+          actions: resolvedActions,
           resources: [targetData.serviceArn]
         }),
         description: `App Runner service ${primaryAccess} access`,
@@ -253,13 +260,20 @@ export class AppRunnerBinderStrategy extends UnifiedBinderStrategyBase {
     // Determine primary access level for action mapping
     const primaryAccess = access.includes('readwrite') ? 'readwrite' : access.includes('write') ? 'write' : 'read';
 
+    // Resolve actions (granular override or coarse access)
+    const resolvedActions = resolveActions(
+      context.directive,
+      context,
+      (acc) => this.getAppRunnerConnectionActionsForAccess(acc),
+      'apprunner'
+    );
+
     // Create IAM policies based on access level
-    const actions = this.getAppRunnerConnectionActionsForAccess(primaryAccess);
-    if (actions.length > 0) {
+    if (resolvedActions.length > 0) {
       iamPolicies.push({
         statement: new PolicyStatement({
           effect: Effect.ALLOW,
-          actions: actions,
+          actions: resolvedActions,
           resources: [targetData.connectionArn]
         }),
         description: `App Runner connection ${primaryAccess} access`,

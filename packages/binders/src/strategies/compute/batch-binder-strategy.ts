@@ -3,7 +3,7 @@
  * Handles batch computing workload bindings for AWS Batch with mandatory compliance enforcement
  */
 
-import { UnifiedBinderStrategyBase } from '@shinobi/core';
+import { UnifiedBinderStrategyBase, resolveActions } from '@shinobi/core';
 import type { BindingContext, EnhancedBindingResult, CompatibilityEntry } from '@shinobi/core';
 import type { IamPolicy } from '@shinobi/core';
 import { PolicyStatement, Effect } from 'aws-cdk-lib/aws-iam';
@@ -252,14 +252,28 @@ export class BatchBinderStrategy extends UnifiedBinderStrategyBase {
     // Determine primary access level
     const primaryAccess = access.includes('readwrite') ? 'readwrite' : access.includes('write') ? 'write' : 'read';
 
+    // Get base actions and resources
+    const baseActions = this.getBatchJobQueueActionsForAccess(primaryAccess, context);
+    
+    // Resolve actions (granular override or coarse access)
+    const resolvedActions = resolveActions(
+      context.directive,
+      context,
+      (acc) => this.getBatchJobQueueActionsForAccess(acc, context).actions,
+      'batch'
+    );
+
+    // Use resolved actions if granular override provided, otherwise use base actions
+    // Resources always come from base (they're capability-specific)
+    const finalActions = context.directive.actions ? resolvedActions : baseActions.actions;
+
     // Create IAM policies based on access level
-    const actions = this.getBatchJobQueueActionsForAccess(primaryAccess, context);
-    if (actions.actions.length > 0) {
+    if (finalActions.length > 0) {
       iamPolicies.push({
         statement: new PolicyStatement({
           effect: Effect.ALLOW,
-          actions: actions.actions,
-          resources: actions.resources
+          actions: finalActions,
+          resources: baseActions.resources
         }),
         description: `Batch job queue ${primaryAccess} access`,
         complianceRequirement: `Batch job queue ${primaryAccess} access policy`
@@ -304,13 +318,20 @@ export class BatchBinderStrategy extends UnifiedBinderStrategyBase {
     // Determine primary access level
     const primaryAccess = access.includes('readwrite') ? 'readwrite' : access.includes('write') ? 'write' : 'read';
 
+    // Resolve actions (granular override or coarse access)
+    const resolvedActions = resolveActions(
+      context.directive,
+      context,
+      (acc) => this.getBatchComputeEnvironmentActionsForAccess(acc),
+      'batch'
+    );
+
     // Create IAM policies based on access level
-    const actions = this.getBatchComputeEnvironmentActionsForAccess(primaryAccess);
-    if (actions.length > 0) {
+    if (resolvedActions.length > 0) {
       iamPolicies.push({
         statement: new PolicyStatement({
           effect: Effect.ALLOW,
-          actions: actions,
+          actions: resolvedActions,
           resources: [targetData.computeEnvironmentArn]
         }),
         description: `Batch compute environment ${primaryAccess} access`,
@@ -395,13 +416,20 @@ export class BatchBinderStrategy extends UnifiedBinderStrategyBase {
     // Determine primary access level
     const primaryAccess = access.includes('readwrite') ? 'readwrite' : access.includes('write') ? 'write' : 'read';
 
+    // Resolve actions (granular override or coarse access)
+    const resolvedActions = resolveActions(
+      context.directive,
+      context,
+      (acc) => this.getBatchJobDefinitionActionsForAccess(acc),
+      'batch'
+    );
+
     // Create IAM policies based on access level
-    const actions = this.getBatchJobDefinitionActionsForAccess(primaryAccess);
-    if (actions.length > 0) {
+    if (resolvedActions.length > 0) {
       iamPolicies.push({
         statement: new PolicyStatement({
           effect: Effect.ALLOW,
-          actions: actions,
+          actions: resolvedActions,
           resources: [targetData.jobDefinitionArn]
         }),
         description: `Batch job definition ${primaryAccess} access`,
@@ -469,13 +497,20 @@ export class BatchBinderStrategy extends UnifiedBinderStrategyBase {
     // Determine primary access level
     const primaryAccess = access.includes('readwrite') ? 'readwrite' : access.includes('write') ? 'write' : 'read';
 
+    // Resolve actions (granular override or coarse access)
+    const resolvedActions = resolveActions(
+      context.directive,
+      context,
+      (acc) => this.getBatchJobActionsForAccess(acc),
+      'batch'
+    );
+
     // Create IAM policies based on access level
-    const actions = this.getBatchJobActionsForAccess(primaryAccess);
-    if (actions.length > 0) {
+    if (resolvedActions.length > 0) {
       iamPolicies.push({
         statement: new PolicyStatement({
           effect: Effect.ALLOW,
-          actions: actions,
+          actions: resolvedActions,
           resources: [targetData.jobArn]
         }),
         description: `Batch job ${primaryAccess} access`,

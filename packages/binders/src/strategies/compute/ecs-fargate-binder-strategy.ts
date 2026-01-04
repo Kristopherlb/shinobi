@@ -3,7 +3,7 @@
  * Handles container orchestration bindings for AWS ECS Fargate with mandatory compliance enforcement
  */
 
-import { UnifiedBinderStrategyBase } from '@shinobi/core';
+import { UnifiedBinderStrategyBase, resolveActions } from '@shinobi/core';
 import type { BindingContext, EnhancedBindingResult, CompatibilityEntry } from '@shinobi/core';
 import type { IamPolicy } from '@shinobi/core';
 import { PolicyStatement, Effect } from 'aws-cdk-lib/aws-iam';
@@ -203,14 +203,27 @@ export class EcsFargateBinderStrategy extends UnifiedBinderStrategyBase {
     // Determine primary access level for action mapping
     const primaryAccess = access.includes('admin') ? 'admin' : access.includes('readwrite') ? 'readwrite' : access.includes('write') ? 'write' : 'read';
 
+    // Get base actions and resources
+    const baseActions = this.getEcsClusterActionsForAccess(primaryAccess, context);
+    
+    // Resolve actions (granular override or coarse access)
+    const resolvedActions = resolveActions(
+      context.directive,
+      context,
+      (acc) => this.getEcsClusterActionsForAccess(acc, context).actions,
+      'ecs'
+    );
+
+    // Use resolved actions if granular override provided, otherwise use base actions
+    const finalActions = context.directive.actions ? resolvedActions : baseActions.actions;
+
     // Create IAM policies based on access level
-    const actions = this.getEcsClusterActionsForAccess(primaryAccess, context);
-    if (actions.actions.length > 0) {
+    if (finalActions.length > 0) {
       iamPolicies.push({
         statement: new PolicyStatement({
           effect: Effect.ALLOW,
-          actions: actions.actions,
-          resources: actions.resources
+          actions: finalActions,
+          resources: baseActions.resources
         }),
         description: `ECS cluster ${primaryAccess} access`,
         complianceRequirement: `ECS cluster ${primaryAccess} access policy`
@@ -277,14 +290,27 @@ export class EcsFargateBinderStrategy extends UnifiedBinderStrategyBase {
     // Determine primary access level for action mapping
     const primaryAccess = access.includes('admin') ? 'admin' : access.includes('readwrite') ? 'readwrite' : access.includes('write') ? 'write' : 'read';
 
+    // Get base actions and resources
+    const baseActions = this.getEcsServiceActionsForAccess(primaryAccess, context, targetData.clusterName);
+    
+    // Resolve actions (granular override or coarse access)
+    const resolvedActions = resolveActions(
+      context.directive,
+      context,
+      (acc) => this.getEcsServiceActionsForAccess(acc, context, targetData.clusterName).actions,
+      'ecs'
+    );
+
+    // Use resolved actions if granular override provided, otherwise use base actions
+    const finalActions = context.directive.actions ? resolvedActions : baseActions.actions;
+
     // Create IAM policies based on access level
-    const actions = this.getEcsServiceActionsForAccess(primaryAccess, context, targetData.clusterName);
-    if (actions.actions.length > 0) {
+    if (finalActions.length > 0) {
       iamPolicies.push({
         statement: new PolicyStatement({
           effect: Effect.ALLOW,
-          actions: actions.actions,
-          resources: actions.resources
+          actions: finalActions,
+          resources: baseActions.resources
         }),
         description: `ECS service ${primaryAccess} access`,
         complianceRequirement: `ECS service ${primaryAccess} access policy`
@@ -338,13 +364,20 @@ export class EcsFargateBinderStrategy extends UnifiedBinderStrategyBase {
     // Determine primary access level for action mapping
     const primaryAccess = access.includes('admin') ? 'admin' : access.includes('readwrite') ? 'readwrite' : access.includes('write') ? 'write' : 'read';
 
+    // Resolve actions (granular override or coarse access)
+    const resolvedActions = resolveActions(
+      context.directive,
+      context,
+      (acc) => this.getEcsTaskDefinitionActionsForAccess(acc),
+      'ecs'
+    );
+
     // Create IAM policies based on access level
-    const actions = this.getEcsTaskDefinitionActionsForAccess(primaryAccess);
-    if (actions.length > 0) {
+    if (resolvedActions.length > 0) {
       iamPolicies.push({
         statement: new PolicyStatement({
           effect: Effect.ALLOW,
-          actions: actions,
+          actions: resolvedActions,
           resources: [targetData.taskDefinitionArn]
         }),
         description: `ECS task definition ${primaryAccess} access`,

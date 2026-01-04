@@ -3,7 +3,7 @@
  * Handles compute:ec2 bindings with mandatory compliance enforcement
  */
 
-import { UnifiedBinderStrategyBase } from '@shinobi/core';
+import { UnifiedBinderStrategyBase, resolveActions } from '@shinobi/core';
 import type { BindingContext, EnhancedBindingResult, CompatibilityEntry } from '@shinobi/core';
 import type { IamPolicy } from '@shinobi/core';
 import { PolicyStatement, Effect } from 'aws-cdk-lib/aws-iam';
@@ -93,67 +93,20 @@ export class Ec2BinderStrategy extends UnifiedBinderStrategyBase {
     const instanceId = targetData.resources.instanceId;
     const instanceArn = targetData.resources.arn || `arn:aws:ec2:*:*:instance/${instanceId}`;
 
-    // Determine IAM actions based on access level
-    let actions: string[] = [];
-    
-    if (access === 'read' || access === 'readwrite' || access === 'admin') {
-      // Read access: Describe instances and related resources
-      actions.push(
-        'ec2:DescribeInstances',
-        'ec2:DescribeInstanceStatus',
-        'ec2:DescribeInstanceAttribute',
-        'ec2:DescribeImages',
-        'ec2:DescribeSnapshots',
-        'ec2:DescribeVolumes',
-        'ec2:DescribeVolumeAttachments',
-        'ec2:DescribeNetworkInterfaces',
-        'ec2:DescribeNetworkInterfaceAttribute',
-        'ec2:DescribeSecurityGroups',
-        'ec2:DescribeTags',
-        'ec2:DescribeIamInstanceProfileAssociations',
-        'iam:GetInstanceProfile',
-        'iam:GetRole'
-      );
-    }
-
-    if (access === 'write' || access === 'readwrite' || access === 'admin') {
-      // Write access: Control instance lifecycle
-      actions.push(
-        'ec2:StartInstances',
-        'ec2:StopInstances',
-        'ec2:RebootInstances',
-        'ec2:CreateTags',
-        'ec2:ModifyInstanceAttribute'
-      );
-    }
-
-    if (access === 'admin') {
-      // Admin access: Full control including termination
-      // TODO: Consider gating TerminateInstances behind an option for safety
-      actions.push(
-        'ec2:TerminateInstances',
-        'ec2:AttachVolume',
-        'ec2:DetachVolume',
-        'ec2:AttachNetworkInterface',
-        'ec2:DetachNetworkInterface',
-        'ec2:ModifyInstanceAttribute',
-        'ec2:ResetInstanceAttribute',
-        'ec2:AssignPrivateIpAddresses',
-        'ec2:UnassignPrivateIpAddresses',
-        'ec2:AssociateIamInstanceProfile',
-        'ec2:DisassociateIamInstanceProfile',
-        'ec2:ReplaceIamInstanceProfileAssociation',
-        'ssm:StartSession',
-        'ssm:SendCommand'
-      );
-    }
+    // Resolve actions (granular override or coarse access)
+    const resolvedActions = resolveActions(
+      context.directive,
+      context,
+      (acc) => this.getEc2ActionsForAccess(acc),
+      'ec2'
+    );
 
     // Create IAM policy
-    if (actions.length > 0) {
+    if (resolvedActions.length > 0) {
       iamPolicies.push({
         statement: new PolicyStatement({
           effect: Effect.ALLOW,
-          actions: [...new Set(actions)], // Remove duplicates
+          actions: resolvedActions,
           resources: [instanceArn]
         }),
         description: `EC2 instance ${access} access`,
@@ -228,6 +181,71 @@ export class Ec2BinderStrategy extends UnifiedBinderStrategyBase {
       environmentVariables,
       securityGroupRules: [],
     };
+  }
+
+  /**
+   * Get EC2 actions based on access level
+   * Used by resolveActions to compute base actions from coarse access level
+   * 
+   * @param access - Access level (read, write, readwrite, admin)
+   * @returns Array of IAM action strings
+   */
+  private getEc2ActionsForAccess(access: string): string[] {
+    const actions: string[] = [];
+    
+    if (access === 'read' || access === 'readwrite' || access === 'admin') {
+      // Read access: Describe instances and related resources
+      actions.push(
+        'ec2:DescribeInstances',
+        'ec2:DescribeInstanceStatus',
+        'ec2:DescribeInstanceAttribute',
+        'ec2:DescribeImages',
+        'ec2:DescribeSnapshots',
+        'ec2:DescribeVolumes',
+        'ec2:DescribeVolumeAttachments',
+        'ec2:DescribeNetworkInterfaces',
+        'ec2:DescribeNetworkInterfaceAttribute',
+        'ec2:DescribeSecurityGroups',
+        'ec2:DescribeTags',
+        'ec2:DescribeIamInstanceProfileAssociations',
+        'iam:GetInstanceProfile',
+        'iam:GetRole'
+      );
+    }
+
+    if (access === 'write' || access === 'readwrite' || access === 'admin') {
+      // Write access: Control instance lifecycle
+      actions.push(
+        'ec2:StartInstances',
+        'ec2:StopInstances',
+        'ec2:RebootInstances',
+        'ec2:CreateTags',
+        'ec2:ModifyInstanceAttribute'
+      );
+    }
+
+    if (access === 'admin') {
+      // Admin access: Full control including termination
+      // TODO: Consider gating TerminateInstances behind an option for safety
+      actions.push(
+        'ec2:TerminateInstances',
+        'ec2:AttachVolume',
+        'ec2:DetachVolume',
+        'ec2:AttachNetworkInterface',
+        'ec2:DetachNetworkInterface',
+        'ec2:ModifyInstanceAttribute',
+        'ec2:ResetInstanceAttribute',
+        'ec2:AssignPrivateIpAddresses',
+        'ec2:UnassignPrivateIpAddresses',
+        'ec2:AssociateIamInstanceProfile',
+        'ec2:DisassociateIamInstanceProfile',
+        'ec2:ReplaceIamInstanceProfileAssociation',
+        'ssm:StartSession',
+        'ssm:SendCommand'
+      );
+    }
+
+    return [...new Set(actions)]; // Remove duplicates
   }
 }
 

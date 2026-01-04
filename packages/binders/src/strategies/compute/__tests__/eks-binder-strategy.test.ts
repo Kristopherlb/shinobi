@@ -794,4 +794,68 @@ describe('EksBinderStrategy', () => {
       expect(clusterPolicy!.statement.actions).toContain('eks:AssociateIdentityProviderConfig');
     });
   });
+
+  describe('EksBind__CustomActionsOverride__ReplacesCoarseActions', () => {
+    const metadata = {
+      id: 'TP-binders-compute-eks-010',
+      level: 'unit' as const,
+      capability: 'Custom actions override replaces default EKS actions',
+      oracle: 'exact' as const,
+      determinism: 'deterministic' as const,
+      naming: { pattern: 'EksBind__Condition__Outcome', example: 'EksBind__CustomActionsOverride__ReplacesCoarseActions' },
+      invariants: [
+        'IAM policy actions match provided custom actions array',
+        'Default EKS actions are not included when custom actions provided',
+        'Actions array is used directly (replaces coarse access)'
+      ],
+      fixtures: ['MockSourceComponent', 'MockTargetComponent'],
+      inputs: {
+        shape: 'BindingContext with eks:cluster capability and directive.actions array',
+        notes: 'Granular actions override test'
+      },
+      risks: [],
+      dependencies: ['action-resolver'],
+      evidence: [],
+      compliance_refs: ['docs/platform-standards/platform-iam-auditing-standard.md'],
+      ai_generated: true,
+      human_reviewed_by: 'Platform Engineering'
+    };
+
+    test('EksBind__CustomActionsOverride__ReplacesCoarseActions', async () => {
+      const strategy = new EksBinderStrategy();
+      const customActions = ['eks:DescribeCluster', 'eks:ListClusters'];
+      const target = createMockTargetComponent('eks-cluster', {
+        'eks:cluster': {
+          type: 'eks:cluster',
+          clusterArn: 'arn:aws:eks:us-east-1:123456789012:cluster/test-cluster',
+          clusterName: 'test-cluster',
+          clusterEndpoint: 'https://test-cluster.yl4.us-east-1.eks.amazonaws.com'
+        }
+      });
+
+      const context = createBindingContext({
+        source: createMockSourceComponent(),
+        target,
+        capability: 'eks:cluster',
+        access: 'read',
+        actions: customActions
+      });
+
+      const result = await executeUnifiedBinding(strategy, context);
+
+      assertEnhancedBindingResult(result);
+
+      expect(result.iamPolicies.length).toBeGreaterThan(0);
+      const policy = result.iamPolicies.find(p => p.description.includes('cluster'));
+      expect(policy).toBeDefined();
+      
+      const statementJson = policy!.statement.toStatementJson();
+      const actions = Array.isArray(statementJson.Action)
+        ? statementJson.Action
+        : [statementJson.Action];
+
+      expect(actions).toEqual(expect.arrayContaining(customActions));
+      expect(actions.length).toBe(customActions.length);
+    });
+  });
 });

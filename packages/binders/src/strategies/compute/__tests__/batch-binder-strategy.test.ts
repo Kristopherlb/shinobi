@@ -602,4 +602,69 @@ describe('BatchBinderStrategy', () => {
       expect(result.environmentVariables['BATCH_RETRY_STRATEGY']).toBeUndefined();
     });
   });
+
+  describe('BatchBind__CustomActionsOverride__ReplacesCoarseActions', () => {
+    const metadata = {
+      id: 'TP-binders-compute-batch-010',
+      level: 'unit' as const,
+      capability: 'Custom actions override replaces default Batch actions',
+      oracle: 'exact' as const,
+      determinism: 'deterministic' as const,
+      naming: { pattern: 'BatchBind__Condition__Outcome', example: 'BatchBind__CustomActionsOverride__ReplacesCoarseActions' },
+      invariants: [
+        'IAM policy actions match provided custom actions array',
+        'Default Batch actions are not included when custom actions provided',
+        'Actions array is used directly (replaces coarse access)'
+      ],
+      fixtures: ['MockSourceComponent', 'MockTargetComponent'],
+      inputs: {
+        shape: 'BindingContext with batch:job-queue capability and directive.actions array',
+        notes: 'Granular actions override test'
+      },
+      risks: [],
+      dependencies: ['action-resolver'],
+      evidence: [],
+      compliance_refs: ['docs/platform-standards/platform-iam-auditing-standard.md'],
+      ai_generated: true,
+      human_reviewed_by: 'Platform Engineering'
+    };
+
+    test('BatchBind__CustomActionsOverride__ReplacesCoarseActions', async () => {
+      const strategy = new BatchBinderStrategy();
+      const customActions = ['batch:DescribeJobQueues', 'batch:ListJobs'];
+      const target = createMockTargetComponent('batch-job-queue', {
+        'batch:job-queue': {
+          type: 'batch:job-queue',
+          jobQueueArn: 'arn:aws:batch:us-east-1:123456789012:job-queue/test-queue',
+          jobQueueName: 'test-queue',
+          priority: 1,
+          state: 'ENABLED'
+        }
+      });
+
+      const context = createBindingContext({
+        source: createMockSourceComponent(),
+        target,
+        capability: 'batch:job-queue',
+        access: 'read',
+        actions: customActions
+      });
+
+      const result = await executeUnifiedBinding(strategy, context);
+
+      assertEnhancedBindingResult(result);
+
+      expect(result.iamPolicies.length).toBeGreaterThan(0);
+      const policy = result.iamPolicies.find(p => p.description.includes('job queue'));
+      expect(policy).toBeDefined();
+      
+      const statementJson = policy!.statement.toStatementJson();
+      const actions = Array.isArray(statementJson.Action)
+        ? statementJson.Action
+        : [statementJson.Action];
+
+      expect(actions).toEqual(expect.arrayContaining(customActions));
+      expect(actions.length).toBe(customActions.length);
+    });
+  });
 });
