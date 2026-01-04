@@ -997,4 +997,380 @@ describe('NeptuneBinderStrategy', () => {
       expect(actions.length).toBe(customActions.length);
     });
   });
+
+  describe('NeptuneBind__InstanceWriteAccess__GrantsRDSWriteActions', () => {
+    const metadata = {
+      id: 'TP-binders-neptune-016',
+      level: 'unit' as const,
+      capability: 'Instance write access grants RDS write actions',
+      oracle: 'exact' as const,
+      determinism: 'deterministic' as const,
+      naming: { pattern: 'NeptuneBind__Condition__Outcome', example: 'NeptuneBind__InstanceWriteAccess__GrantsRDSWriteActions' },
+      invariants: [
+        'IAM policies include RDS instance write actions',
+        'Write actions include CreateDBInstance and ModifyDBInstance'
+      ],
+      fixtures: ['MockSourceComponent', 'MockTargetComponent'],
+      inputs: {
+        shape: 'BindingContext with neptune:instance capability and write access',
+        notes: 'Instance write access test'
+      },
+      risks: [],
+      dependencies: [],
+      evidence: [],
+      compliance_refs: ['docs/platform-standards/platform-iam-auditing-standard.md'],
+      ai_generated: true,
+      human_reviewed_by: 'Platform Engineering'
+    };
+
+    test('NeptuneBind__InstanceWriteAccess__GrantsRDSWriteActions', async () => {
+      const strategy = new NeptuneBinderStrategy();
+      const instanceArn = 'arn:aws:rds:us-east-1:123456789012:db:graphdb-instance-1';
+      const target = createMockTargetComponent('neptune-instance', {
+        'neptune:instance': {
+          instanceArn,
+          instanceIdentifier: 'graphdb-instance-1',
+          clusterIdentifier: 'graphdb',
+          endpoint: 'graphdb-instance-1.cluster-xyz.us-east-1.neptune.amazonaws.com',
+          port: 8182
+        }
+      });
+
+      const context = createBindingContext({
+        source: createMockSourceComponent('lambda-api', 'test-source'),
+        target,
+        capability: 'neptune:instance',
+        access: 'write'
+      });
+
+      const result = await executeUnifiedBinding(strategy, context);
+
+      assertEnhancedBindingResult(result);
+
+      const policy = result.iamPolicies.find(p => p.description.includes('instance write access'));
+      expect(policy).toBeDefined();
+      
+      const statementJson = policy!.statement.toStatementJson();
+      const actions = Array.isArray(statementJson.Action)
+        ? statementJson.Action
+        : [statementJson.Action];
+
+      expect(actions).toContain('rds:CreateDBInstance');
+      expect(actions).toContain('rds:ModifyDBInstance');
+      expect(actions).toContain('rds:DeleteDBInstance');
+    });
+  });
+
+  describe('NeptuneBind__BackupReadAccess__ReturnsEnhancedResult', () => {
+    const metadata = {
+      id: 'TP-binders-neptune-017',
+      level: 'unit' as const,
+      capability: 'Backup read access returns enhanced result',
+      oracle: 'exact' as const,
+      determinism: 'deterministic' as const,
+      naming: { pattern: 'NeptuneBind__Condition__Outcome', example: 'NeptuneBind__BackupReadAccess__ReturnsEnhancedResult' },
+      invariants: [
+        'Environment variables are set correctly',
+        'IAM policies include Neptune backup read actions'
+      ],
+      fixtures: ['MockSourceComponent', 'MockTargetComponent'],
+      inputs: {
+        shape: 'BindingContext with neptune:backup capability and read access',
+        notes: 'Backup read access test'
+      },
+      risks: [],
+      dependencies: [],
+      evidence: [],
+      compliance_refs: ['docs/platform-standards/platform-iam-auditing-standard.md'],
+      ai_generated: true,
+      human_reviewed_by: 'Platform Engineering'
+    };
+
+    test('NeptuneBind__BackupReadAccess__ReturnsEnhancedResult', async () => {
+      const strategy = new NeptuneBinderStrategy();
+      const clusterArn = 'arn:aws:rds:us-east-1:123456789012:cluster:graphdb';
+      const target = createMockTargetComponent('neptune-cluster', {
+        'neptune:backup': {
+          clusterArn,
+          clusterIdentifier: 'graphdb',
+          backupRetentionPeriod: 7,
+          snapshotIdentifier: 'graphdb-snapshot-1'
+        }
+      });
+
+      const context = createBindingContext({
+        source: createMockSourceComponent('lambda-backup', 'test-source'),
+        target,
+        capability: 'neptune:backup',
+        access: 'read'
+      });
+
+      const result = await executeUnifiedBinding(strategy, context);
+
+      assertEnhancedBindingResult(result);
+
+      expect(result.environmentVariables.NEPTUNE_CLUSTER_ARN).toBe(clusterArn);
+      expect(result.environmentVariables.NEPTUNE_CLUSTER_IDENTIFIER).toBe('graphdb');
+      expect(result.environmentVariables.NEPTUNE_BACKUP_RETENTION_DAYS).toBe('7');
+      expect(result.environmentVariables.NEPTUNE_SNAPSHOT_IDENTIFIER).toBe('graphdb-snapshot-1');
+
+      const policy = result.iamPolicies.find(p => p.description.includes('backup read access'));
+      expect(policy).toBeDefined();
+      
+      const statementJson = policy!.statement.toStatementJson();
+      const actions = Array.isArray(statementJson.Action)
+        ? statementJson.Action
+        : [statementJson.Action];
+
+      expect(actions).toContain('rds:DescribeDBClusterSnapshots');
+      expect(actions).toContain('rds:DescribeDBClusters');
+    });
+  });
+
+  describe('NeptuneBind__BackupWriteAccess__GrantsWriteActions', () => {
+    const metadata = {
+      id: 'TP-binders-neptune-018',
+      level: 'unit' as const,
+      capability: 'Backup write access grants Neptune backup write actions',
+      oracle: 'exact' as const,
+      determinism: 'deterministic' as const,
+      naming: { pattern: 'NeptuneBind__Condition__Outcome', example: 'NeptuneBind__BackupWriteAccess__GrantsWriteActions' },
+      invariants: [
+        'IAM policies include Neptune backup write actions',
+        'Write actions include CreateDBClusterSnapshot and RestoreDBClusterFromSnapshot'
+      ],
+      fixtures: ['MockSourceComponent', 'MockTargetComponent'],
+      inputs: {
+        shape: 'BindingContext with neptune:backup capability and write access',
+        notes: 'Backup write access test'
+      },
+      risks: [],
+      dependencies: [],
+      evidence: [],
+      compliance_refs: ['docs/platform-standards/platform-iam-auditing-standard.md'],
+      ai_generated: true,
+      human_reviewed_by: 'Platform Engineering'
+    };
+
+    test('NeptuneBind__BackupWriteAccess__GrantsWriteActions', async () => {
+      const strategy = new NeptuneBinderStrategy();
+      const clusterArn = 'arn:aws:rds:us-east-1:123456789012:cluster:graphdb';
+      const target = createMockTargetComponent('neptune-cluster', {
+        'neptune:backup': {
+          clusterArn,
+          clusterIdentifier: 'graphdb'
+        }
+      });
+
+      const context = createBindingContext({
+        source: createMockSourceComponent('lambda-backup', 'test-source'),
+        target,
+        capability: 'neptune:backup',
+        access: 'write'
+      });
+
+      const result = await executeUnifiedBinding(strategy, context);
+
+      assertEnhancedBindingResult(result);
+
+      const policy = result.iamPolicies.find(p => p.description.includes('backup write access'));
+      expect(policy).toBeDefined();
+      
+      const statementJson = policy!.statement.toStatementJson();
+      const actions = Array.isArray(statementJson.Action)
+        ? statementJson.Action
+        : [statementJson.Action];
+
+      expect(actions).toContain('rds:CreateDBClusterSnapshot');
+      expect(actions).toContain('rds:RestoreDBClusterFromSnapshot');
+      expect(actions).toContain('rds:DeleteDBClusterSnapshot');
+    });
+  });
+
+  describe('NeptuneBind__InstanceMissingInstanceArn__ThrowsError', () => {
+    const metadata = {
+      id: 'TP-binders-neptune-019',
+      level: 'unit' as const,
+      capability: 'Missing instanceArn throws error',
+      oracle: 'exact' as const,
+      determinism: 'deterministic' as const,
+      naming: { pattern: 'NeptuneBind__Condition__Outcome', example: 'NeptuneBind__InstanceMissingInstanceArn__ThrowsError' },
+      invariants: [
+        'Error message indicates missing instanceArn',
+        'Error is thrown before binding completes'
+      ],
+      fixtures: ['MockSourceComponent', 'MockTargetComponent'],
+      inputs: {
+        shape: 'BindingContext with neptune:instance capability but missing instanceArn',
+        notes: 'Error case test'
+      },
+      risks: [],
+      dependencies: [],
+      evidence: [],
+      compliance_refs: [],
+      ai_generated: true,
+      human_reviewed_by: 'Platform Engineering'
+    };
+
+    test('NeptuneBind__InstanceMissingInstanceArn__ThrowsError', async () => {
+      const strategy = new NeptuneBinderStrategy();
+      const target = createMockTargetComponent('neptune-instance', {
+        'neptune:instance': {
+          // Missing instanceArn
+          instanceIdentifier: 'graphdb-instance-1'
+        } as any
+      });
+
+      const context = createBindingContext({
+        source: createMockSourceComponent('lambda-api', 'test-source'),
+        target,
+        capability: 'neptune:instance',
+        access: 'read'
+      });
+
+      await expect(executeUnifiedBinding(strategy, context)).rejects.toThrow(
+        'missing required instanceArn property'
+      );
+    });
+  });
+
+  describe('NeptuneBind__QueryMissingQueryEndpoint__ThrowsError', () => {
+    const metadata = {
+      id: 'TP-binders-neptune-020',
+      level: 'unit' as const,
+      capability: 'Missing queryEndpoint throws error',
+      oracle: 'exact' as const,
+      determinism: 'deterministic' as const,
+      naming: { pattern: 'NeptuneBind__Condition__Outcome', example: 'NeptuneBind__QueryMissingQueryEndpoint__ThrowsError' },
+      invariants: [
+        'Error message indicates missing queryEndpoint',
+        'Error is thrown before binding completes'
+      ],
+      fixtures: ['MockSourceComponent', 'MockTargetComponent'],
+      inputs: {
+        shape: 'BindingContext with neptune:query capability but missing queryEndpoint',
+        notes: 'Error case test'
+      },
+      risks: [],
+      dependencies: [],
+      evidence: [],
+      compliance_refs: [],
+      ai_generated: true,
+      human_reviewed_by: 'Platform Engineering'
+    };
+
+    test('NeptuneBind__QueryMissingQueryEndpoint__ThrowsError', async () => {
+      const strategy = new NeptuneBinderStrategy();
+      const target = createMockTargetComponent('neptune-query', {
+        'neptune:query': {
+          // Missing queryEndpoint
+          port: 8182
+        } as any
+      });
+
+      const context = createBindingContext({
+        source: createMockSourceComponent('lambda-api', 'test-source'),
+        target,
+        capability: 'neptune:query',
+        access: 'read'
+      });
+
+      await expect(executeUnifiedBinding(strategy, context)).rejects.toThrow(
+        'missing required queryEndpoint property'
+      );
+    });
+  });
+
+  describe('NeptuneBind__BackupMissingClusterArn__ThrowsError', () => {
+    const metadata = {
+      id: 'TP-binders-neptune-021',
+      level: 'unit' as const,
+      capability: 'Backup missing clusterArn throws error',
+      oracle: 'exact' as const,
+      determinism: 'deterministic' as const,
+      naming: { pattern: 'NeptuneBind__Condition__Outcome', example: 'NeptuneBind__BackupMissingClusterArn__ThrowsError' },
+      invariants: [
+        'Error message indicates missing clusterArn for backup',
+        'Error is thrown before binding completes'
+      ],
+      fixtures: ['MockSourceComponent', 'MockTargetComponent'],
+      inputs: {
+        shape: 'BindingContext with neptune:backup capability but missing clusterArn',
+        notes: 'Error case test for backup'
+      },
+      risks: [],
+      dependencies: [],
+      evidence: [],
+      compliance_refs: [],
+      ai_generated: true,
+      human_reviewed_by: 'Platform Engineering'
+    };
+
+    test('NeptuneBind__BackupMissingClusterArn__ThrowsError', async () => {
+      const strategy = new NeptuneBinderStrategy();
+      const target = createMockTargetComponent('neptune-cluster', {
+        'neptune:backup': {
+          // Missing clusterArn
+          clusterIdentifier: 'graphdb'
+        } as any
+      });
+
+      const context = createBindingContext({
+        source: createMockSourceComponent('lambda-backup', 'test-source'),
+        target,
+        capability: 'neptune:backup',
+        access: 'read'
+      });
+
+      await expect(executeUnifiedBinding(strategy, context)).rejects.toThrow(
+        'missing required clusterArn property'
+      );
+    });
+  });
+
+  describe('NeptuneBind__UnsupportedCapability__ThrowsError', () => {
+    const metadata = {
+      id: 'TP-binders-neptune-022',
+      level: 'unit' as const,
+      capability: 'Unsupported capability throws error',
+      oracle: 'exact' as const,
+      determinism: 'deterministic' as const,
+      naming: { pattern: 'NeptuneBind__Condition__Outcome', example: 'NeptuneBind__UnsupportedCapability__ThrowsError' },
+      invariants: [
+        'Error message indicates unsupported capability',
+        'Error lists supported capabilities'
+      ],
+      fixtures: ['MockSourceComponent', 'MockTargetComponent'],
+      inputs: {
+        shape: 'BindingContext with unsupported capability',
+        notes: 'Error case test'
+      },
+      risks: [],
+      dependencies: [],
+      evidence: [],
+      compliance_refs: [],
+      ai_generated: true,
+      human_reviewed_by: 'Platform Engineering'
+    };
+
+    test('NeptuneBind__UnsupportedCapability__ThrowsError', async () => {
+      const strategy = new NeptuneBinderStrategy();
+      const target = createMockTargetComponent('neptune-cluster', {
+        'neptune:invalid': {
+          clusterArn: 'arn:aws:rds:us-east-1:123456789012:cluster:graphdb'
+        }
+      });
+
+      const context = createBindingContext({
+        source: createMockSourceComponent('lambda-api', 'test-source'),
+        target,
+        capability: 'neptune:invalid',
+        access: 'read'
+      });
+
+      await expect(executeUnifiedBinding(strategy, context)).rejects.toThrow(
+        'Unsupported Neptune capability'
+      );
+    });
+  });
 });
