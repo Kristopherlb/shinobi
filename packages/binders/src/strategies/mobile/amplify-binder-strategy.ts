@@ -3,7 +3,7 @@
  * Handles mobile/web development platform bindings for Amazon Amplify with mandatory compliance enforcement
  */
 
-import { UnifiedBinderStrategyBase } from '@shinobi/core';
+import { UnifiedBinderStrategyBase, resolveActions } from '@shinobi/core';
 import type { BindingContext, EnhancedBindingResult, CompatibilityEntry } from '@shinobi/core';
 import type { IamPolicy } from '@shinobi/core';
 import { PolicyStatement, Effect } from 'aws-cdk-lib/aws-iam';
@@ -179,58 +179,81 @@ export class AmplifyBinderStrategy extends UnifiedBinderStrategyBase {
     const region = context.target.context?.region || context.environment || 'us-east-1';
     const accountId = context.target.context?.accountId || '*';
 
-    // Grant app access permissions
-    if (access.includes('read') || access.includes('readwrite')) {
+    // Handle granular actions override or use multi-statement approach
+    if (context.directive.actions) {
+      // Granular actions provided: create single statement with resolved actions
+      const resolvedActions = resolveActions(
+        context.directive,
+        context,
+        (acc) => this.getAmplifyAppActionsForAccess(acc),
+        'amplify'
+      );
+
       const statement = new PolicyStatement({
         effect: Effect.ALLOW,
-        actions: [
-          'amplify:GetApp',
-          'amplify:ListApps',
-          'amplify:ListBranches',
-          'amplify:GetBranch'
-        ],
+        actions: resolvedActions,
         resources: [targetData.appArn]
       });
       iamPolicies.push({
         statement,
-        description: 'Amplify app read access permissions',
+        description: 'Amplify app access permissions (granular actions)',
         complianceRequirement: 'Least privilege IAM access'
       });
-    }
+    } else {
+      // Coarse access levels: use multi-statement approach (backward compatible)
+      // Grant app access permissions
+      if (access.includes('read') || access.includes('readwrite')) {
+        const statement = new PolicyStatement({
+          effect: Effect.ALLOW,
+          actions: [
+            'amplify:GetApp',
+            'amplify:ListApps',
+            'amplify:ListBranches',
+            'amplify:GetBranch'
+          ],
+          resources: [targetData.appArn]
+        });
+        iamPolicies.push({
+          statement,
+          description: 'Amplify app read access permissions',
+          complianceRequirement: 'Least privilege IAM access'
+        });
+      }
 
-    if (access.includes('write') || access.includes('readwrite')) {
-      const statement = new PolicyStatement({
-        effect: Effect.ALLOW,
-        actions: [
-          'amplify:CreateApp',
-          'amplify:DeleteApp',
-          'amplify:UpdateApp'
-        ],
-        resources: [targetData.appArn]
-      });
-      iamPolicies.push({
-        statement,
-        description: 'Amplify app write access permissions',
-        complianceRequirement: 'Least privilege IAM access'
-      });
-    }
+      if (access.includes('write') || access.includes('readwrite')) {
+        const statement = new PolicyStatement({
+          effect: Effect.ALLOW,
+          actions: [
+            'amplify:CreateApp',
+            'amplify:DeleteApp',
+            'amplify:UpdateApp'
+          ],
+          resources: [targetData.appArn]
+        });
+        iamPolicies.push({
+          statement,
+          description: 'Amplify app write access permissions',
+          complianceRequirement: 'Least privilege IAM access'
+        });
+      }
 
-    // Grant deployment permissions
-    if (access.includes('deploy') || access.includes('readwrite')) {
-      const statement = new PolicyStatement({
-        effect: Effect.ALLOW,
-        actions: [
-          'amplify:StartDeployment',
-          'amplify:StopDeployment',
-          'amplify:GetJob'
-        ],
-        resources: [targetData.appArn]
-      });
-      iamPolicies.push({
-        statement,
-        description: 'Amplify app deployment permissions',
-        complianceRequirement: 'Deployment access'
-      });
+      // Grant deployment permissions
+      if (access.includes('deploy') || access.includes('readwrite')) {
+        const statement = new PolicyStatement({
+          effect: Effect.ALLOW,
+          actions: [
+            'amplify:StartDeployment',
+            'amplify:StopDeployment',
+            'amplify:GetJob'
+          ],
+          resources: [targetData.appArn]
+        });
+        iamPolicies.push({
+          statement,
+          description: 'Amplify app deployment permissions',
+          complianceRequirement: 'Deployment access'
+        });
+      }
     }
 
     // Grant S3 access for build artifacts
@@ -315,57 +338,80 @@ export class AmplifyBinderStrategy extends UnifiedBinderStrategyBase {
     const environmentVariables: Record<string, string> = {};
     const iamPolicies: IamPolicy[] = [];
 
-    // Grant branch access permissions
-    if (access.includes('read') || access.includes('readwrite')) {
+    // Handle granular actions override or use multi-statement approach
+    if (context.directive.actions) {
+      // Granular actions provided: create single statement with resolved actions
+      const resolvedActions = resolveActions(
+        context.directive,
+        context,
+        (acc) => this.getAmplifyBranchActionsForAccess(acc),
+        'amplify'
+      );
+
       const statement = new PolicyStatement({
         effect: Effect.ALLOW,
-        actions: [
-          'amplify:GetBranch',
-          'amplify:ListBranches',
-          'amplify:GetJob'
-        ],
+        actions: resolvedActions,
         resources: [targetData.branchArn]
       });
       iamPolicies.push({
         statement,
-        description: 'Amplify branch read access permissions',
+        description: 'Amplify branch access permissions (granular actions)',
         complianceRequirement: 'Least privilege IAM access'
       });
-    }
+    } else {
+      // Coarse access levels: use multi-statement approach (backward compatible)
+      // Grant branch access permissions
+      if (access.includes('read') || access.includes('readwrite')) {
+        const statement = new PolicyStatement({
+          effect: Effect.ALLOW,
+          actions: [
+            'amplify:GetBranch',
+            'amplify:ListBranches',
+            'amplify:GetJob'
+          ],
+          resources: [targetData.branchArn]
+        });
+        iamPolicies.push({
+          statement,
+          description: 'Amplify branch read access permissions',
+          complianceRequirement: 'Least privilege IAM access'
+        });
+      }
 
-    if (access.includes('write') || access.includes('readwrite')) {
-      const statement = new PolicyStatement({
-        effect: Effect.ALLOW,
-        actions: [
-          'amplify:CreateBranch',
-          'amplify:DeleteBranch',
-          'amplify:UpdateBranch'
-        ],
-        resources: [targetData.branchArn]
-      });
-      iamPolicies.push({
-        statement,
-        description: 'Amplify branch write access permissions',
-        complianceRequirement: 'Least privilege IAM access'
-      });
-    }
+      if (access.includes('write') || access.includes('readwrite')) {
+        const statement = new PolicyStatement({
+          effect: Effect.ALLOW,
+          actions: [
+            'amplify:CreateBranch',
+            'amplify:DeleteBranch',
+            'amplify:UpdateBranch'
+          ],
+          resources: [targetData.branchArn]
+        });
+        iamPolicies.push({
+          statement,
+          description: 'Amplify branch write access permissions',
+          complianceRequirement: 'Least privilege IAM access'
+        });
+      }
 
-    // Grant deployment permissions
-    if (access.includes('deploy') || access.includes('readwrite')) {
-      const statement = new PolicyStatement({
-        effect: Effect.ALLOW,
-        actions: [
-          'amplify:StartDeployment',
-          'amplify:StopDeployment',
-          'amplify:GetJob'
-        ],
-        resources: [targetData.branchArn]
-      });
-      iamPolicies.push({
-        statement,
-        description: 'Amplify branch deployment permissions',
-        complianceRequirement: 'Deployment access'
-      });
+      // Grant deployment permissions
+      if (access.includes('deploy') || access.includes('readwrite')) {
+        const statement = new PolicyStatement({
+          effect: Effect.ALLOW,
+          actions: [
+            'amplify:StartDeployment',
+            'amplify:StopDeployment',
+            'amplify:GetJob'
+          ],
+          resources: [targetData.branchArn]
+        });
+        iamPolicies.push({
+          statement,
+          description: 'Amplify branch deployment permissions',
+          complianceRequirement: 'Deployment access'
+        });
+      }
     }
 
     // Set branch environment variables
@@ -439,38 +485,61 @@ export class AmplifyBinderStrategy extends UnifiedBinderStrategyBase {
     const environmentVariables: Record<string, string> = {};
     const iamPolicies: IamPolicy[] = [];
 
-    // Grant domain access permissions
-    if (access.includes('read') || access.includes('readwrite')) {
-      const statement = new PolicyStatement({
-        effect: Effect.ALLOW,
-        actions: [
-          'amplify:GetDomainAssociation',
-          'amplify:ListDomainAssociations'
-        ],
-        resources: [targetData.domainAssociationArn]
-      });
-      iamPolicies.push({
-        statement,
-        description: 'Amplify domain read access permissions',
-        complianceRequirement: 'Least privilege IAM access'
-      });
-    }
+    // Handle granular actions override or use multi-statement approach
+    if (context.directive.actions) {
+      // Granular actions provided: create single statement with resolved actions
+      const resolvedActions = resolveActions(
+        context.directive,
+        context,
+        (acc) => this.getAmplifyDomainActionsForAccess(acc),
+        'amplify'
+      );
 
-    if (access.includes('write') || access.includes('readwrite')) {
       const statement = new PolicyStatement({
         effect: Effect.ALLOW,
-        actions: [
-          'amplify:CreateDomainAssociation',
-          'amplify:DeleteDomainAssociation',
-          'amplify:UpdateDomainAssociation'
-        ],
+        actions: resolvedActions,
         resources: [targetData.domainAssociationArn]
       });
       iamPolicies.push({
         statement,
-        description: 'Amplify domain write access permissions',
+        description: 'Amplify domain access permissions (granular actions)',
         complianceRequirement: 'Least privilege IAM access'
       });
+    } else {
+      // Coarse access levels: use multi-statement approach (backward compatible)
+      // Grant domain access permissions
+      if (access.includes('read') || access.includes('readwrite')) {
+        const statement = new PolicyStatement({
+          effect: Effect.ALLOW,
+          actions: [
+            'amplify:GetDomainAssociation',
+            'amplify:ListDomainAssociations'
+          ],
+          resources: [targetData.domainAssociationArn]
+        });
+        iamPolicies.push({
+          statement,
+          description: 'Amplify domain read access permissions',
+          complianceRequirement: 'Least privilege IAM access'
+        });
+      }
+
+      if (access.includes('write') || access.includes('readwrite')) {
+        const statement = new PolicyStatement({
+          effect: Effect.ALLOW,
+          actions: [
+            'amplify:CreateDomainAssociation',
+            'amplify:DeleteDomainAssociation',
+            'amplify:UpdateDomainAssociation'
+          ],
+          resources: [targetData.domainAssociationArn]
+        });
+        iamPolicies.push({
+          statement,
+          description: 'Amplify domain write access permissions',
+          complianceRequirement: 'Least privilege IAM access'
+        });
+      }
     }
 
     // Grant SSL certificate permissions
@@ -566,39 +635,62 @@ export class AmplifyBinderStrategy extends UnifiedBinderStrategyBase {
     const environmentVariables: Record<string, string> = {};
     const iamPolicies: IamPolicy[] = [];
 
-    // Grant backend environment access permissions
-    if (access.includes('read') || access.includes('readwrite')) {
-      const statement = new PolicyStatement({
-        effect: Effect.ALLOW,
-        actions: [
-          'amplifybackend:GetBackend',
-          'amplifybackend:ListBackendJobs'
-        ],
-        resources: [targetData.backendEnvironmentArn]
-      });
-      iamPolicies.push({
-        statement,
-        description: 'Amplify backend environment read access permissions',
-        complianceRequirement: 'Least privilege IAM access'
-      });
-    }
+    // Handle granular actions override or use multi-statement approach
+    if (context.directive.actions) {
+      // Granular actions provided: create single statement with resolved actions
+      const resolvedActions = resolveActions(
+        context.directive,
+        context,
+        (acc) => this.getAmplifyBackendEnvironmentActionsForAccess(acc),
+        'amplifybackend'
+      );
 
-    if (access.includes('write') || access.includes('readwrite')) {
       const statement = new PolicyStatement({
         effect: Effect.ALLOW,
-        actions: [
-          'amplifybackend:CreateBackend',
-          'amplifybackend:DeleteBackend',
-          'amplifybackend:UpdateBackend',
-          'amplifybackend:CloneBackend'
-        ],
+        actions: resolvedActions,
         resources: [targetData.backendEnvironmentArn]
       });
       iamPolicies.push({
         statement,
-        description: 'Amplify backend environment write access permissions',
+        description: 'Amplify backend environment access permissions (granular actions)',
         complianceRequirement: 'Least privilege IAM access'
       });
+    } else {
+      // Coarse access levels: use multi-statement approach (backward compatible)
+      // Grant backend environment access permissions
+      if (access.includes('read') || access.includes('readwrite')) {
+        const statement = new PolicyStatement({
+          effect: Effect.ALLOW,
+          actions: [
+            'amplifybackend:GetBackend',
+            'amplifybackend:ListBackendJobs'
+          ],
+          resources: [targetData.backendEnvironmentArn]
+        });
+        iamPolicies.push({
+          statement,
+          description: 'Amplify backend environment read access permissions',
+          complianceRequirement: 'Least privilege IAM access'
+        });
+      }
+
+      if (access.includes('write') || access.includes('readwrite')) {
+        const statement = new PolicyStatement({
+          effect: Effect.ALLOW,
+          actions: [
+            'amplifybackend:CreateBackend',
+            'amplifybackend:DeleteBackend',
+            'amplifybackend:UpdateBackend',
+            'amplifybackend:CloneBackend'
+          ],
+          resources: [targetData.backendEnvironmentArn]
+        });
+        iamPolicies.push({
+          statement,
+          description: 'Amplify backend environment write access permissions',
+          complianceRequirement: 'Least privilege IAM access'
+        });
+      }
     }
 
     // Set backend environment variables
@@ -649,39 +741,62 @@ export class AmplifyBinderStrategy extends UnifiedBinderStrategyBase {
     const environmentVariables: Record<string, string> = {};
     const iamPolicies: IamPolicy[] = [];
 
-    // Grant backend Auth access permissions
-    if (access.includes('read') || access.includes('readwrite')) {
+    // Handle granular actions override or use multi-statement approach
+    if (context.directive.actions) {
+      // Granular actions provided: create single statement with resolved actions
+      const resolvedActions = resolveActions(
+        context.directive,
+        context,
+        (acc) => this.getAmplifyBackendAuthActionsForAccess(acc),
+        'amplifybackend'
+      );
+
       const statement = new PolicyStatement({
         effect: Effect.ALLOW,
-        actions: [
-          'amplifybackend:GetBackendAuth',
-          'cognito-idp:DescribeUserPool',
-          'cognito-idp:ListUserPools'
-        ],
+        actions: resolvedActions,
         resources: targetData.userPoolArn ? [targetData.userPoolArn] : ['*']
       });
       iamPolicies.push({
         statement,
-        description: 'Amplify backend Auth read access permissions',
+        description: 'Amplify backend Auth access permissions (granular actions)',
         complianceRequirement: 'Least privilege IAM access'
       });
-    }
+    } else {
+      // Coarse access levels: use multi-statement approach (backward compatible)
+      // Grant backend Auth access permissions
+      if (access.includes('read') || access.includes('readwrite')) {
+        const statement = new PolicyStatement({
+          effect: Effect.ALLOW,
+          actions: [
+            'amplifybackend:GetBackendAuth',
+            'cognito-idp:DescribeUserPool',
+            'cognito-idp:ListUserPools'
+          ],
+          resources: targetData.userPoolArn ? [targetData.userPoolArn] : ['*']
+        });
+        iamPolicies.push({
+          statement,
+          description: 'Amplify backend Auth read access permissions',
+          complianceRequirement: 'Least privilege IAM access'
+        });
+      }
 
-    if (access.includes('write') || access.includes('readwrite')) {
-      const statement = new PolicyStatement({
-        effect: Effect.ALLOW,
-        actions: [
-          'amplifybackend:UpdateBackendAuth',
-          'amplifybackend:CreateBackendAuth',
-          'amplifybackend:DeleteBackendAuth'
-        ],
-        resources: ['*'] // Amplify backend resources don't have ARNs in the same way
-      });
-      iamPolicies.push({
-        statement,
-        description: 'Amplify backend Auth write access permissions',
-        complianceRequirement: 'Least privilege IAM access'
-      });
+      if (access.includes('write') || access.includes('readwrite')) {
+        const statement = new PolicyStatement({
+          effect: Effect.ALLOW,
+          actions: [
+            'amplifybackend:UpdateBackendAuth',
+            'amplifybackend:CreateBackendAuth',
+            'amplifybackend:DeleteBackendAuth'
+          ],
+          resources: ['*'] // Amplify backend resources don't have ARNs in the same way
+        });
+        iamPolicies.push({
+          statement,
+          description: 'Amplify backend Auth write access permissions',
+          complianceRequirement: 'Least privilege IAM access'
+        });
+      }
     }
 
     // Set backend Auth environment variables
@@ -731,39 +846,62 @@ export class AmplifyBinderStrategy extends UnifiedBinderStrategyBase {
     const environmentVariables: Record<string, string> = {};
     const iamPolicies: IamPolicy[] = [];
 
-    // Grant backend API access permissions
-    if (access.includes('read') || access.includes('readwrite')) {
+    // Handle granular actions override or use multi-statement approach
+    if (context.directive.actions) {
+      // Granular actions provided: create single statement with resolved actions
+      const resolvedActions = resolveActions(
+        context.directive,
+        context,
+        (acc) => this.getAmplifyBackendApiActionsForAccess(acc),
+        'amplifybackend'
+      );
+
       const statement = new PolicyStatement({
         effect: Effect.ALLOW,
-        actions: [
-          'amplifybackend:GetBackendAPI',
-          'appsync:GetGraphqlApi',
-          'appsync:ListGraphqlApis'
-        ],
+        actions: resolvedActions,
         resources: targetData.graphqlApiArn ? [targetData.graphqlApiArn] : ['*']
       });
       iamPolicies.push({
         statement,
-        description: 'Amplify backend API read access permissions',
+        description: 'Amplify backend API access permissions (granular actions)',
         complianceRequirement: 'Least privilege IAM access'
       });
-    }
+    } else {
+      // Coarse access levels: use multi-statement approach (backward compatible)
+      // Grant backend API access permissions
+      if (access.includes('read') || access.includes('readwrite')) {
+        const statement = new PolicyStatement({
+          effect: Effect.ALLOW,
+          actions: [
+            'amplifybackend:GetBackendAPI',
+            'appsync:GetGraphqlApi',
+            'appsync:ListGraphqlApis'
+          ],
+          resources: targetData.graphqlApiArn ? [targetData.graphqlApiArn] : ['*']
+        });
+        iamPolicies.push({
+          statement,
+          description: 'Amplify backend API read access permissions',
+          complianceRequirement: 'Least privilege IAM access'
+        });
+      }
 
-    if (access.includes('write') || access.includes('readwrite')) {
-      const statement = new PolicyStatement({
-        effect: Effect.ALLOW,
-        actions: [
-          'amplifybackend:UpdateBackendAPI',
-          'amplifybackend:CreateBackendAPI',
-          'amplifybackend:DeleteBackendAPI'
-        ],
-        resources: ['*'] // Amplify backend resources don't have ARNs in the same way
-      });
-      iamPolicies.push({
-        statement,
-        description: 'Amplify backend API write access permissions',
-        complianceRequirement: 'Least privilege IAM access'
-      });
+      if (access.includes('write') || access.includes('readwrite')) {
+        const statement = new PolicyStatement({
+          effect: Effect.ALLOW,
+          actions: [
+            'amplifybackend:UpdateBackendAPI',
+            'amplifybackend:CreateBackendAPI',
+            'amplifybackend:DeleteBackendAPI'
+          ],
+          resources: ['*'] // Amplify backend resources don't have ARNs in the same way
+        });
+        iamPolicies.push({
+          statement,
+          description: 'Amplify backend API write access permissions',
+          complianceRequirement: 'Least privilege IAM access'
+        });
+      }
     }
 
     // Set backend API environment variables
@@ -815,19 +953,19 @@ export class AmplifyBinderStrategy extends UnifiedBinderStrategyBase {
     const region = context.target.context?.region || context.environment || 'us-east-1';
     const accountId = context.target.context?.accountId || '*';
 
-    // Grant backend Storage access permissions
-    if (access.includes('read') || access.includes('readwrite')) {
-      const actions = ['amplifybackend:GetBackendStorage'];
-      if (targetData.storageType === 'S3' || targetData.bucketName) {
-        actions.push('s3:GetObject', 's3:ListBucket');
-      }
-      if (targetData.storageType === 'DynamoDB' || targetData.tableName) {
-        actions.push('dynamodb:GetItem', 'dynamodb:Query', 'dynamodb:Scan');
-      }
+    // Handle granular actions override or use multi-statement approach
+    if (context.directive.actions) {
+      // Granular actions provided: create single statement with resolved actions
+      const resolvedActions = resolveActions(
+        context.directive,
+        context,
+        (acc) => this.getAmplifyBackendStorageActionsForAccess(acc),
+        'amplifybackend'
+      );
 
       const statement = new PolicyStatement({
         effect: Effect.ALLOW,
-        actions,
+        actions: resolvedActions,
         resources: [
           '*', // Amplify backend resources
           ...(targetData.bucketName ? [`arn:aws:s3:::${targetData.bucketName}`, `arn:aws:s3:::${targetData.bucketName}/*`] : []),
@@ -836,38 +974,65 @@ export class AmplifyBinderStrategy extends UnifiedBinderStrategyBase {
       });
       iamPolicies.push({
         statement,
-        description: 'Amplify backend Storage read access permissions',
+        description: 'Amplify backend Storage access permissions (granular actions)',
         complianceRequirement: 'Least privilege IAM access'
       });
-    }
+    } else {
+      // Coarse access levels: use multi-statement approach (backward compatible)
+      // Grant backend Storage access permissions
+      if (access.includes('read') || access.includes('readwrite')) {
+        const actions = ['amplifybackend:GetBackendStorage'];
+        if (targetData.storageType === 'S3' || targetData.bucketName) {
+          actions.push('s3:GetObject', 's3:ListBucket');
+        }
+        if (targetData.storageType === 'DynamoDB' || targetData.tableName) {
+          actions.push('dynamodb:GetItem', 'dynamodb:Query', 'dynamodb:Scan');
+        }
 
-    if (access.includes('write') || access.includes('readwrite')) {
-      const actions = [
-        'amplifybackend:UpdateBackendStorage',
-        'amplifybackend:CreateBackendStorage',
-        'amplifybackend:DeleteBackendStorage'
-      ];
-      if (targetData.storageType === 'S3' || targetData.bucketName) {
-        actions.push('s3:PutObject', 's3:DeleteObject');
-      }
-      if (targetData.storageType === 'DynamoDB' || targetData.tableName) {
-        actions.push('dynamodb:PutItem', 'dynamodb:UpdateItem', 'dynamodb:DeleteItem');
+        const statement = new PolicyStatement({
+          effect: Effect.ALLOW,
+          actions,
+          resources: [
+            '*', // Amplify backend resources
+            ...(targetData.bucketName ? [`arn:aws:s3:::${targetData.bucketName}`, `arn:aws:s3:::${targetData.bucketName}/*`] : []),
+            ...(targetData.tableName ? [`arn:aws:dynamodb:${region}:${accountId}:table/${targetData.tableName}`] : [])
+          ]
+        });
+        iamPolicies.push({
+          statement,
+          description: 'Amplify backend Storage read access permissions',
+          complianceRequirement: 'Least privilege IAM access'
+        });
       }
 
-      const statement = new PolicyStatement({
-        effect: Effect.ALLOW,
-        actions,
-        resources: [
-          '*', // Amplify backend resources
-          ...(targetData.bucketName ? [`arn:aws:s3:::${targetData.bucketName}`, `arn:aws:s3:::${targetData.bucketName}/*`] : []),
-          ...(targetData.tableName ? [`arn:aws:dynamodb:${region}:${accountId}:table/${targetData.tableName}`] : [])
-        ]
-      });
-      iamPolicies.push({
-        statement,
-        description: 'Amplify backend Storage write access permissions',
-        complianceRequirement: 'Least privilege IAM access'
-      });
+      if (access.includes('write') || access.includes('readwrite')) {
+        const actions = [
+          'amplifybackend:UpdateBackendStorage',
+          'amplifybackend:CreateBackendStorage',
+          'amplifybackend:DeleteBackendStorage'
+        ];
+        if (targetData.storageType === 'S3' || targetData.bucketName) {
+          actions.push('s3:PutObject', 's3:DeleteObject');
+        }
+        if (targetData.storageType === 'DynamoDB' || targetData.tableName) {
+          actions.push('dynamodb:PutItem', 'dynamodb:UpdateItem', 'dynamodb:DeleteItem');
+        }
+
+        const statement = new PolicyStatement({
+          effect: Effect.ALLOW,
+          actions,
+          resources: [
+            '*', // Amplify backend resources
+            ...(targetData.bucketName ? [`arn:aws:s3:::${targetData.bucketName}`, `arn:aws:s3:::${targetData.bucketName}/*`] : []),
+            ...(targetData.tableName ? [`arn:aws:dynamodb:${region}:${accountId}:table/${targetData.tableName}`] : [])
+          ]
+        });
+        iamPolicies.push({
+          statement,
+          description: 'Amplify backend Storage write access permissions',
+          complianceRequirement: 'Least privilege IAM access'
+        });
+      }
     }
 
     // Set backend Storage environment variables
@@ -971,5 +1136,181 @@ export class AmplifyBinderStrategy extends UnifiedBinderStrategyBase {
     // Audit logging uses the same CloudWatch Logs infrastructure
 
     return { environmentVariables, iamPolicies };
+  }
+
+  /**
+   * Get Amplify app actions based on access level
+   * Used by resolveActions to compute base actions from coarse access level
+   */
+  private getAmplifyAppActionsForAccess(access: string): string[] {
+    switch (access) {
+      case 'read':
+      case 'readwrite':
+        return [
+          'amplify:GetApp',
+          'amplify:ListApps',
+          'amplify:ListBranches',
+          'amplify:GetBranch'
+        ];
+      case 'write':
+        return [
+          'amplify:CreateApp',
+          'amplify:DeleteApp',
+          'amplify:UpdateApp'
+        ];
+      case 'deploy':
+        return [
+          'amplify:StartDeployment',
+          'amplify:StopDeployment',
+          'amplify:GetJob'
+        ];
+      default:
+        throw new Error(`Unsupported Amplify app access level: ${access}`);
+    }
+  }
+
+  /**
+   * Get Amplify branch actions based on access level
+   * Used by resolveActions to compute base actions from coarse access level
+   */
+  private getAmplifyBranchActionsForAccess(access: string): string[] {
+    switch (access) {
+      case 'read':
+      case 'readwrite':
+        return [
+          'amplify:GetBranch',
+          'amplify:ListBranches',
+          'amplify:GetJob'
+        ];
+      case 'write':
+        return [
+          'amplify:CreateBranch',
+          'amplify:DeleteBranch',
+          'amplify:UpdateBranch'
+        ];
+      case 'deploy':
+        return [
+          'amplify:StartDeployment',
+          'amplify:StopDeployment',
+          'amplify:GetJob'
+        ];
+      default:
+        throw new Error(`Unsupported Amplify branch access level: ${access}`);
+    }
+  }
+
+  /**
+   * Get Amplify domain actions based on access level
+   * Used by resolveActions to compute base actions from coarse access level
+   */
+  private getAmplifyDomainActionsForAccess(access: string): string[] {
+    switch (access) {
+      case 'read':
+      case 'readwrite':
+        return [
+          'amplify:GetDomainAssociation',
+          'amplify:ListDomainAssociations'
+        ];
+      case 'write':
+        return [
+          'amplify:CreateDomainAssociation',
+          'amplify:DeleteDomainAssociation',
+          'amplify:UpdateDomainAssociation'
+        ];
+      default:
+        throw new Error(`Unsupported Amplify domain access level: ${access}`);
+    }
+  }
+
+  /**
+   * Get Amplify backend environment actions based on access level
+   * Used by resolveActions to compute base actions from coarse access level
+   */
+  private getAmplifyBackendEnvironmentActionsForAccess(access: string): string[] {
+    switch (access) {
+      case 'read':
+      case 'readwrite':
+        return [
+          'amplifybackend:GetBackend',
+          'amplifybackend:ListBackendJobs'
+        ];
+      case 'write':
+        return [
+          'amplifybackend:CreateBackend',
+          'amplifybackend:DeleteBackend',
+          'amplifybackend:UpdateBackend',
+          'amplifybackend:CloneBackend'
+        ];
+      default:
+        throw new Error(`Unsupported Amplify backend environment access level: ${access}`);
+    }
+  }
+
+  /**
+   * Get Amplify backend Auth actions based on access level
+   * Used by resolveActions to compute base actions from coarse access level
+   */
+  private getAmplifyBackendAuthActionsForAccess(access: string): string[] {
+    switch (access) {
+      case 'read':
+      case 'readwrite':
+        return [
+          'amplifybackend:GetBackendAuth',
+          'cognito-idp:DescribeUserPool',
+          'cognito-idp:ListUserPools'
+        ];
+      case 'write':
+        return [
+          'amplifybackend:UpdateBackendAuth',
+          'amplifybackend:CreateBackendAuth',
+          'amplifybackend:DeleteBackendAuth'
+        ];
+      default:
+        throw new Error(`Unsupported Amplify backend Auth access level: ${access}`);
+    }
+  }
+
+  /**
+   * Get Amplify backend API actions based on access level
+   * Used by resolveActions to compute base actions from coarse access level
+   */
+  private getAmplifyBackendApiActionsForAccess(access: string): string[] {
+    switch (access) {
+      case 'read':
+      case 'readwrite':
+        return [
+          'amplifybackend:GetBackendAPI',
+          'appsync:GetGraphqlApi',
+          'appsync:ListGraphqlApis'
+        ];
+      case 'write':
+        return [
+          'amplifybackend:UpdateBackendAPI',
+          'amplifybackend:CreateBackendAPI',
+          'amplifybackend:DeleteBackendAPI'
+        ];
+      default:
+        throw new Error(`Unsupported Amplify backend API access level: ${access}`);
+    }
+  }
+
+  /**
+   * Get Amplify backend Storage actions based on access level
+   * Used by resolveActions to compute base actions from coarse access level
+   */
+  private getAmplifyBackendStorageActionsForAccess(access: string): string[] {
+    switch (access) {
+      case 'read':
+      case 'readwrite':
+        return ['amplifybackend:GetBackendStorage'];
+      case 'write':
+        return [
+          'amplifybackend:UpdateBackendStorage',
+          'amplifybackend:CreateBackendStorage',
+          'amplifybackend:DeleteBackendStorage'
+        ];
+      default:
+        throw new Error(`Unsupported Amplify backend Storage access level: ${access}`);
+    }
   }
 }

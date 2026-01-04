@@ -3,7 +3,7 @@
  * Handles machine learning bindings for Amazon SageMaker with mandatory compliance enforcement
  */
 
-import { UnifiedBinderStrategyBase } from '@shinobi/core';
+import { UnifiedBinderStrategyBase, resolveActions } from '@shinobi/core';
 import type { BindingContext, EnhancedBindingResult, CompatibilityEntry } from '@shinobi/core';
 import type { IamPolicy } from '@shinobi/core';
 import { PolicyStatement, Effect } from 'aws-cdk-lib/aws-iam';
@@ -176,40 +176,63 @@ export class SageMakerBinderStrategy extends UnifiedBinderStrategyBase {
     const region = context.target.context?.region || context.environment || 'us-east-1';
     const accountId = context.target.context?.accountId || '*';
 
-    // Grant notebook access permissions
-    if (access.includes('read') || access.includes('readwrite')) {
-      const statement = new PolicyStatement({
-        effect: Effect.ALLOW,
-        actions: [
-          'sagemaker:DescribeNotebookInstance',
-          'sagemaker:ListNotebookInstances'
-        ],
-        resources: [targetData.notebookInstanceArn]
-      });
-      iamPolicies.push({
-        statement,
-        description: 'SageMaker notebook read access permissions',
-        complianceRequirement: 'Least privilege IAM access'
-      });
-    }
+    // Handle granular actions override or use multi-statement approach
+    if (context.directive.actions) {
+      // Granular actions provided: create single statement with resolved actions
+      const resolvedActions = resolveActions(
+        context.directive,
+        context,
+        (acc) => this.getSagemakerNotebookActionsForAccess(acc),
+        'sagemaker'
+      );
 
-    if (access.includes('write') || access.includes('readwrite')) {
       const statement = new PolicyStatement({
         effect: Effect.ALLOW,
-        actions: [
-          'sagemaker:CreateNotebookInstance',
-          'sagemaker:DeleteNotebookInstance',
-          'sagemaker:UpdateNotebookInstance',
-          'sagemaker:StartNotebookInstance',
-          'sagemaker:StopNotebookInstance'
-        ],
+        actions: resolvedActions,
         resources: [targetData.notebookInstanceArn]
       });
       iamPolicies.push({
         statement,
-        description: 'SageMaker notebook write access permissions',
+        description: 'SageMaker notebook access permissions (granular actions)',
         complianceRequirement: 'Least privilege IAM access'
       });
+    } else {
+      // Coarse access levels: use multi-statement approach (backward compatible)
+      // Grant notebook access permissions
+      if (access.includes('read') || access.includes('readwrite')) {
+        const statement = new PolicyStatement({
+          effect: Effect.ALLOW,
+          actions: [
+            'sagemaker:DescribeNotebookInstance',
+            'sagemaker:ListNotebookInstances'
+          ],
+          resources: [targetData.notebookInstanceArn]
+        });
+        iamPolicies.push({
+          statement,
+          description: 'SageMaker notebook read access permissions',
+          complianceRequirement: 'Least privilege IAM access'
+        });
+      }
+
+      if (access.includes('write') || access.includes('readwrite')) {
+        const statement = new PolicyStatement({
+          effect: Effect.ALLOW,
+          actions: [
+            'sagemaker:CreateNotebookInstance',
+            'sagemaker:DeleteNotebookInstance',
+            'sagemaker:UpdateNotebookInstance',
+            'sagemaker:StartNotebookInstance',
+            'sagemaker:StopNotebookInstance'
+          ],
+          resources: [targetData.notebookInstanceArn]
+        });
+        iamPolicies.push({
+          statement,
+          description: 'SageMaker notebook write access permissions',
+          complianceRequirement: 'Least privilege IAM access'
+        });
+      }
     }
 
     // Grant ECR access for container images
@@ -303,37 +326,60 @@ export class SageMakerBinderStrategy extends UnifiedBinderStrategyBase {
     const environmentVariables: Record<string, string> = {};
     const iamPolicies: IamPolicy[] = [];
 
-    // Grant model access permissions
-    if (access.includes('read') || access.includes('readwrite')) {
-      const statement = new PolicyStatement({
-        effect: Effect.ALLOW,
-        actions: [
-          'sagemaker:DescribeModel',
-          'sagemaker:ListModels'
-        ],
-        resources: [targetData.modelArn]
-      });
-      iamPolicies.push({
-        statement,
-        description: 'SageMaker model read access permissions',
-        complianceRequirement: 'Least privilege IAM access'
-      });
-    }
+    // Handle granular actions override or use multi-statement approach
+    if (context.directive.actions) {
+      // Granular actions provided: create single statement with resolved actions
+      const resolvedActions = resolveActions(
+        context.directive,
+        context,
+        (acc) => this.getSagemakerModelActionsForAccess(acc),
+        'sagemaker'
+      );
 
-    if (access.includes('write') || access.includes('readwrite')) {
       const statement = new PolicyStatement({
         effect: Effect.ALLOW,
-        actions: [
-          'sagemaker:CreateModel',
-          'sagemaker:DeleteModel'
-        ],
+        actions: resolvedActions,
         resources: [targetData.modelArn]
       });
       iamPolicies.push({
         statement,
-        description: 'SageMaker model write access permissions',
+        description: 'SageMaker model access permissions (granular actions)',
         complianceRequirement: 'Least privilege IAM access'
       });
+    } else {
+      // Coarse access levels: use multi-statement approach (backward compatible)
+      // Grant model access permissions
+      if (access.includes('read') || access.includes('readwrite')) {
+        const statement = new PolicyStatement({
+          effect: Effect.ALLOW,
+          actions: [
+            'sagemaker:DescribeModel',
+            'sagemaker:ListModels'
+          ],
+          resources: [targetData.modelArn]
+        });
+        iamPolicies.push({
+          statement,
+          description: 'SageMaker model read access permissions',
+          complianceRequirement: 'Least privilege IAM access'
+        });
+      }
+
+      if (access.includes('write') || access.includes('readwrite')) {
+        const statement = new PolicyStatement({
+          effect: Effect.ALLOW,
+          actions: [
+            'sagemaker:CreateModel',
+            'sagemaker:DeleteModel'
+          ],
+          resources: [targetData.modelArn]
+        });
+        iamPolicies.push({
+          statement,
+          description: 'SageMaker model write access permissions',
+          complianceRequirement: 'Least privilege IAM access'
+        });
+      }
     }
 
     // Grant ECR access for model containers
@@ -431,86 +477,109 @@ export class SageMakerBinderStrategy extends UnifiedBinderStrategyBase {
       resources.push(targetData.endpointConfigArn);
     }
 
-    // Grant endpoint access permissions
-    if (access.includes('read') || access.includes('readwrite')) {
+    // Handle granular actions override or use multi-statement approach
+    if (context.directive.actions) {
+      // Granular actions provided: create single statement with resolved actions
+      const resolvedActions = resolveActions(
+        context.directive,
+        context,
+        (acc) => this.getSagemakerEndpointActionsForAccess(acc),
+        'sagemaker'
+      );
+
       const statement = new PolicyStatement({
         effect: Effect.ALLOW,
-        actions: [
-          'sagemaker:DescribeEndpoint',
-          'sagemaker:DescribeEndpointConfig',
-          'sagemaker:ListEndpoints'
-        ],
+        actions: resolvedActions,
         resources
       });
       iamPolicies.push({
         statement,
-        description: 'SageMaker endpoint read access permissions',
+        description: 'SageMaker endpoint access permissions (granular actions)',
         complianceRequirement: 'Least privilege IAM access'
       });
-    }
-
-    if (access.includes('write') || access.includes('readwrite')) {
-      const statement = new PolicyStatement({
-        effect: Effect.ALLOW,
-        actions: [
-          'sagemaker:CreateEndpoint',
-          'sagemaker:DeleteEndpoint',
-          'sagemaker:UpdateEndpoint',
-          'sagemaker:CreateEndpointConfig',
-          'sagemaker:DeleteEndpointConfig'
-        ],
-        resources
-      });
-      iamPolicies.push({
-        statement,
-        description: 'SageMaker endpoint write access permissions',
-        complianceRequirement: 'Least privilege IAM access'
-      });
-    }
-
-    // Grant invoke permissions for endpoint (synchronous)
-    if (access.includes('invoke') || access.includes('readwrite')) {
-      const statement = new PolicyStatement({
-        effect: Effect.ALLOW,
-        actions: ['sagemaker-runtime:InvokeEndpoint'],
-        resources: [targetData.endpointArn]
-      });
-      iamPolicies.push({
-        statement,
-        description: 'SageMaker endpoint synchronous invoke permissions',
-        complianceRequirement: 'Inference access'
-      });
-    }
-
-    // Grant async invoke permissions for endpoint
-    if (access.includes('async-invoke') || access.includes('readwrite')) {
-      const asyncStatement = new PolicyStatement({
-        effect: Effect.ALLOW,
-        actions: ['sagemaker-runtime:InvokeEndpointAsync'],
-        resources: [targetData.endpointArn]
-      });
-      iamPolicies.push({
-        statement: asyncStatement,
-        description: 'SageMaker endpoint asynchronous invoke permissions',
-        complianceRequirement: 'Asynchronous inference access'
-      });
-
-      // Async invoke requires S3 permissions for input/output locations
-      if (targetData.asyncInferenceConfig?.outputConfig?.s3OutputPath) {
-        const s3Statement = new PolicyStatement({
+    } else {
+      // Coarse access levels: use multi-statement approach (backward compatible)
+      // Grant endpoint access permissions
+      if (access.includes('read') || access.includes('readwrite')) {
+        const statement = new PolicyStatement({
           effect: Effect.ALLOW,
-          actions: ['s3:PutObject', 's3:GetObject'],
-          resources: [
-            targetData.asyncInferenceConfig.outputConfig.s3OutputPath,
-            `${targetData.asyncInferenceConfig.outputConfig.s3OutputPath}/*`
-          ]
+          actions: [
+            'sagemaker:DescribeEndpoint',
+            'sagemaker:DescribeEndpointConfig',
+            'sagemaker:ListEndpoints'
+          ],
+          resources
         });
         iamPolicies.push({
-          statement: s3Statement,
-          description: 'S3 permissions for SageMaker async inference input/output',
-          complianceRequirement: 'Async inference data storage'
+          statement,
+          description: 'SageMaker endpoint read access permissions',
+          complianceRequirement: 'Least privilege IAM access'
         });
       }
+
+      if (access.includes('write') || access.includes('readwrite')) {
+        const statement = new PolicyStatement({
+          effect: Effect.ALLOW,
+          actions: [
+            'sagemaker:CreateEndpoint',
+            'sagemaker:DeleteEndpoint',
+            'sagemaker:UpdateEndpoint',
+            'sagemaker:CreateEndpointConfig',
+            'sagemaker:DeleteEndpointConfig'
+          ],
+          resources
+        });
+        iamPolicies.push({
+          statement,
+          description: 'SageMaker endpoint write access permissions',
+          complianceRequirement: 'Least privilege IAM access'
+        });
+      }
+
+      // Grant invoke permissions for endpoint (synchronous)
+      if (access.includes('invoke') || access.includes('readwrite')) {
+        const statement = new PolicyStatement({
+          effect: Effect.ALLOW,
+          actions: ['sagemaker-runtime:InvokeEndpoint'],
+          resources: [targetData.endpointArn]
+        });
+        iamPolicies.push({
+          statement,
+          description: 'SageMaker endpoint synchronous invoke permissions',
+          complianceRequirement: 'Inference access'
+        });
+      }
+
+      // Grant async invoke permissions for endpoint
+      if (access.includes('async-invoke') || access.includes('readwrite')) {
+        const asyncStatement = new PolicyStatement({
+          effect: Effect.ALLOW,
+          actions: ['sagemaker-runtime:InvokeEndpointAsync'],
+          resources: [targetData.endpointArn]
+        });
+        iamPolicies.push({
+          statement: asyncStatement,
+          description: 'SageMaker endpoint asynchronous invoke permissions',
+          complianceRequirement: 'Asynchronous inference access'
+        });
+      }
+    }
+
+    // Async invoke requires S3 permissions for input/output locations
+    if (targetData.asyncInferenceConfig?.outputConfig?.s3OutputPath) {
+      const s3Statement = new PolicyStatement({
+        effect: Effect.ALLOW,
+        actions: ['s3:PutObject', 's3:GetObject'],
+        resources: [
+          targetData.asyncInferenceConfig.outputConfig.s3OutputPath,
+          `${targetData.asyncInferenceConfig.outputConfig.s3OutputPath}/*`
+        ]
+      });
+      iamPolicies.push({
+        statement: s3Statement,
+        description: 'S3 permissions for SageMaker async inference input/output',
+        complianceRequirement: 'Async inference data storage'
+      });
     }
 
     // Set endpoint environment variables
@@ -583,37 +652,60 @@ export class SageMakerBinderStrategy extends UnifiedBinderStrategyBase {
     const environmentVariables: Record<string, string> = {};
     const iamPolicies: IamPolicy[] = [];
 
-    // Grant training job access permissions
-    if (access.includes('read') || access.includes('readwrite')) {
-      const statement = new PolicyStatement({
-        effect: Effect.ALLOW,
-        actions: [
-          'sagemaker:DescribeTrainingJob',
-          'sagemaker:ListTrainingJobs'
-        ],
-        resources: [targetData.trainingJobArn]
-      });
-      iamPolicies.push({
-        statement,
-        description: 'SageMaker training job read access permissions',
-        complianceRequirement: 'Least privilege IAM access'
-      });
-    }
+    // Handle granular actions override or use multi-statement approach
+    if (context.directive.actions) {
+      // Granular actions provided: create single statement with resolved actions
+      const resolvedActions = resolveActions(
+        context.directive,
+        context,
+        (acc) => this.getSagemakerTrainingJobActionsForAccess(acc),
+        'sagemaker'
+      );
 
-    if (access.includes('write') || access.includes('readwrite')) {
       const statement = new PolicyStatement({
         effect: Effect.ALLOW,
-        actions: [
-          'sagemaker:CreateTrainingJob',
-          'sagemaker:StopTrainingJob'
-        ],
+        actions: resolvedActions,
         resources: [targetData.trainingJobArn]
       });
       iamPolicies.push({
         statement,
-        description: 'SageMaker training job write access permissions',
+        description: 'SageMaker training job access permissions (granular actions)',
         complianceRequirement: 'Least privilege IAM access'
       });
+    } else {
+      // Coarse access levels: use multi-statement approach (backward compatible)
+      // Grant training job access permissions
+      if (access.includes('read') || access.includes('readwrite')) {
+        const statement = new PolicyStatement({
+          effect: Effect.ALLOW,
+          actions: [
+            'sagemaker:DescribeTrainingJob',
+            'sagemaker:ListTrainingJobs'
+          ],
+          resources: [targetData.trainingJobArn]
+        });
+        iamPolicies.push({
+          statement,
+          description: 'SageMaker training job read access permissions',
+          complianceRequirement: 'Least privilege IAM access'
+        });
+      }
+
+      if (access.includes('write') || access.includes('readwrite')) {
+        const statement = new PolicyStatement({
+          effect: Effect.ALLOW,
+          actions: [
+            'sagemaker:CreateTrainingJob',
+            'sagemaker:StopTrainingJob'
+          ],
+          resources: [targetData.trainingJobArn]
+        });
+        iamPolicies.push({
+          statement,
+          description: 'SageMaker training job write access permissions',
+          complianceRequirement: 'Least privilege IAM access'
+        });
+      }
     }
 
     // Grant S3 access for training data and output
@@ -702,40 +794,63 @@ export class SageMakerBinderStrategy extends UnifiedBinderStrategyBase {
     const environmentVariables: Record<string, string> = {};
     const iamPolicies: IamPolicy[] = [];
 
-    // Grant domain access permissions
-    if (access.includes('read') || access.includes('readwrite')) {
-      const statement = new PolicyStatement({
-        effect: Effect.ALLOW,
-        actions: [
-          'sagemaker:DescribeDomain',
-          'sagemaker:ListDomains',
-          'sagemaker:ListUserProfiles',
-          'sagemaker:ListApps'
-        ],
-        resources: [targetData.domainArn]
-      });
-      iamPolicies.push({
-        statement,
-        description: 'SageMaker Studio domain read access permissions',
-        complianceRequirement: 'Least privilege IAM access'
-      });
-    }
+    // Handle granular actions override or use multi-statement approach
+    if (context.directive.actions) {
+      // Granular actions provided: create single statement with resolved actions
+      const resolvedActions = resolveActions(
+        context.directive,
+        context,
+        (acc) => this.getSagemakerStudioDomainActionsForAccess(acc),
+        'sagemaker'
+      );
 
-    if (access.includes('write') || access.includes('readwrite')) {
       const statement = new PolicyStatement({
         effect: Effect.ALLOW,
-        actions: [
-          'sagemaker:CreateDomain',
-          'sagemaker:DeleteDomain',
-          'sagemaker:UpdateDomain'
-        ],
+        actions: resolvedActions,
         resources: [targetData.domainArn]
       });
       iamPolicies.push({
         statement,
-        description: 'SageMaker Studio domain write access permissions',
+        description: 'SageMaker Studio domain access permissions (granular actions)',
         complianceRequirement: 'Least privilege IAM access'
       });
+    } else {
+      // Coarse access levels: use multi-statement approach (backward compatible)
+      // Grant domain access permissions
+      if (access.includes('read') || access.includes('readwrite')) {
+        const statement = new PolicyStatement({
+          effect: Effect.ALLOW,
+          actions: [
+            'sagemaker:DescribeDomain',
+            'sagemaker:ListDomains',
+            'sagemaker:ListUserProfiles',
+            'sagemaker:ListApps'
+          ],
+          resources: [targetData.domainArn]
+        });
+        iamPolicies.push({
+          statement,
+          description: 'SageMaker Studio domain read access permissions',
+          complianceRequirement: 'Least privilege IAM access'
+        });
+      }
+
+      if (access.includes('write') || access.includes('readwrite')) {
+        const statement = new PolicyStatement({
+          effect: Effect.ALLOW,
+          actions: [
+            'sagemaker:CreateDomain',
+            'sagemaker:DeleteDomain',
+            'sagemaker:UpdateDomain'
+          ],
+          resources: [targetData.domainArn]
+        });
+        iamPolicies.push({
+          statement,
+          description: 'SageMaker Studio domain write access permissions',
+          complianceRequirement: 'Least privilege IAM access'
+        });
+      }
     }
 
     // Set domain environment variables
@@ -789,38 +904,61 @@ export class SageMakerBinderStrategy extends UnifiedBinderStrategyBase {
     const environmentVariables: Record<string, string> = {};
     const iamPolicies: IamPolicy[] = [];
 
-    // Grant user profile access permissions
-    if (access.includes('read') || access.includes('readwrite')) {
-      const statement = new PolicyStatement({
-        effect: Effect.ALLOW,
-        actions: [
-          'sagemaker:DescribeUserProfile',
-          'sagemaker:ListUserProfiles'
-        ],
-        resources: [targetData.userProfileArn]
-      });
-      iamPolicies.push({
-        statement,
-        description: 'SageMaker Studio user profile read access permissions',
-        complianceRequirement: 'Least privilege IAM access'
-      });
-    }
+    // Handle granular actions override or use multi-statement approach
+    if (context.directive.actions) {
+      // Granular actions provided: create single statement with resolved actions
+      const resolvedActions = resolveActions(
+        context.directive,
+        context,
+        (acc) => this.getSagemakerStudioUserProfileActionsForAccess(acc),
+        'sagemaker'
+      );
 
-    if (access.includes('write') || access.includes('readwrite')) {
       const statement = new PolicyStatement({
         effect: Effect.ALLOW,
-        actions: [
-          'sagemaker:CreateUserProfile',
-          'sagemaker:DeleteUserProfile',
-          'sagemaker:UpdateUserProfile'
-        ],
+        actions: resolvedActions,
         resources: [targetData.userProfileArn]
       });
       iamPolicies.push({
         statement,
-        description: 'SageMaker Studio user profile write access permissions',
+        description: 'SageMaker Studio user profile access permissions (granular actions)',
         complianceRequirement: 'Least privilege IAM access'
       });
+    } else {
+      // Coarse access levels: use multi-statement approach (backward compatible)
+      // Grant user profile access permissions
+      if (access.includes('read') || access.includes('readwrite')) {
+        const statement = new PolicyStatement({
+          effect: Effect.ALLOW,
+          actions: [
+            'sagemaker:DescribeUserProfile',
+            'sagemaker:ListUserProfiles'
+          ],
+          resources: [targetData.userProfileArn]
+        });
+        iamPolicies.push({
+          statement,
+          description: 'SageMaker Studio user profile read access permissions',
+          complianceRequirement: 'Least privilege IAM access'
+        });
+      }
+
+      if (access.includes('write') || access.includes('readwrite')) {
+        const statement = new PolicyStatement({
+          effect: Effect.ALLOW,
+          actions: [
+            'sagemaker:CreateUserProfile',
+            'sagemaker:DeleteUserProfile',
+            'sagemaker:UpdateUserProfile'
+          ],
+          resources: [targetData.userProfileArn]
+        });
+        iamPolicies.push({
+          statement,
+          description: 'SageMaker Studio user profile write access permissions',
+          complianceRequirement: 'Least privilege IAM access'
+        });
+      }
     }
 
     // Set user profile environment variables
@@ -872,37 +1010,60 @@ export class SageMakerBinderStrategy extends UnifiedBinderStrategyBase {
     const environmentVariables: Record<string, string> = {};
     const iamPolicies: IamPolicy[] = [];
 
-    // Grant processing job access permissions
-    if (access.includes('read') || access.includes('readwrite')) {
-      const statement = new PolicyStatement({
-        effect: Effect.ALLOW,
-        actions: [
-          'sagemaker:DescribeProcessingJob',
-          'sagemaker:ListProcessingJobs'
-        ],
-        resources: [targetData.processingJobArn]
-      });
-      iamPolicies.push({
-        statement,
-        description: 'SageMaker processing job read access permissions',
-        complianceRequirement: 'Least privilege IAM access'
-      });
-    }
+    // Handle granular actions override or use multi-statement approach
+    if (context.directive.actions) {
+      // Granular actions provided: create single statement with resolved actions
+      const resolvedActions = resolveActions(
+        context.directive,
+        context,
+        (acc) => this.getSagemakerProcessingJobActionsForAccess(acc),
+        'sagemaker'
+      );
 
-    if (access.includes('write') || access.includes('readwrite')) {
       const statement = new PolicyStatement({
         effect: Effect.ALLOW,
-        actions: [
-          'sagemaker:CreateProcessingJob',
-          'sagemaker:StopProcessingJob'
-        ],
+        actions: resolvedActions,
         resources: [targetData.processingJobArn]
       });
       iamPolicies.push({
         statement,
-        description: 'SageMaker processing job write access permissions',
+        description: 'SageMaker processing job access permissions (granular actions)',
         complianceRequirement: 'Least privilege IAM access'
       });
+    } else {
+      // Coarse access levels: use multi-statement approach (backward compatible)
+      // Grant processing job access permissions
+      if (access.includes('read') || access.includes('readwrite')) {
+        const statement = new PolicyStatement({
+          effect: Effect.ALLOW,
+          actions: [
+            'sagemaker:DescribeProcessingJob',
+            'sagemaker:ListProcessingJobs'
+          ],
+          resources: [targetData.processingJobArn]
+        });
+        iamPolicies.push({
+          statement,
+          description: 'SageMaker processing job read access permissions',
+          complianceRequirement: 'Least privilege IAM access'
+        });
+      }
+
+      if (access.includes('write') || access.includes('readwrite')) {
+        const statement = new PolicyStatement({
+          effect: Effect.ALLOW,
+          actions: [
+            'sagemaker:CreateProcessingJob',
+            'sagemaker:StopProcessingJob'
+          ],
+          resources: [targetData.processingJobArn]
+        });
+        iamPolicies.push({
+          statement,
+          description: 'SageMaker processing job write access permissions',
+          complianceRequirement: 'Least privilege IAM access'
+        });
+      }
     }
 
     // Grant S3 access for processing inputs
@@ -1036,5 +1197,174 @@ export class SageMakerBinderStrategy extends UnifiedBinderStrategyBase {
     });
 
     return { environmentVariables, iamPolicies };
+  }
+
+  /**
+   * Get SageMaker notebook actions based on access level
+   * Used by resolveActions to compute base actions from coarse access level
+   */
+  private getSagemakerNotebookActionsForAccess(access: string): string[] {
+    switch (access) {
+      case 'read':
+      case 'readwrite':
+        return [
+          'sagemaker:DescribeNotebookInstance',
+          'sagemaker:ListNotebookInstances'
+        ];
+      case 'write':
+        return [
+          'sagemaker:CreateNotebookInstance',
+          'sagemaker:DeleteNotebookInstance',
+          'sagemaker:UpdateNotebookInstance',
+          'sagemaker:StartNotebookInstance',
+          'sagemaker:StopNotebookInstance'
+        ];
+      default:
+        throw new Error(`Unsupported SageMaker notebook access level: ${access}`);
+    }
+  }
+
+  /**
+   * Get SageMaker model actions based on access level
+   * Used by resolveActions to compute base actions from coarse access level
+   */
+  private getSagemakerModelActionsForAccess(access: string): string[] {
+    switch (access) {
+      case 'read':
+      case 'readwrite':
+        return [
+          'sagemaker:DescribeModel',
+          'sagemaker:ListModels'
+        ];
+      case 'write':
+        return [
+          'sagemaker:CreateModel',
+          'sagemaker:DeleteModel'
+        ];
+      default:
+        throw new Error(`Unsupported SageMaker model access level: ${access}`);
+    }
+  }
+
+  /**
+   * Get SageMaker endpoint actions based on access level
+   * Used by resolveActions to compute base actions from coarse access level
+   */
+  private getSagemakerEndpointActionsForAccess(access: string): string[] {
+    switch (access) {
+      case 'read':
+      case 'readwrite':
+        return [
+          'sagemaker:DescribeEndpoint',
+          'sagemaker:DescribeEndpointConfig',
+          'sagemaker:ListEndpoints'
+        ];
+      case 'write':
+        return [
+          'sagemaker:CreateEndpoint',
+          'sagemaker:DeleteEndpoint',
+          'sagemaker:UpdateEndpoint',
+          'sagemaker:CreateEndpointConfig',
+          'sagemaker:DeleteEndpointConfig'
+        ];
+      case 'invoke':
+        return ['sagemaker-runtime:InvokeEndpoint'];
+      case 'async-invoke':
+        return ['sagemaker-runtime:InvokeEndpointAsync'];
+      default:
+        throw new Error(`Unsupported SageMaker endpoint access level: ${access}`);
+    }
+  }
+
+  /**
+   * Get SageMaker training job actions based on access level
+   * Used by resolveActions to compute base actions from coarse access level
+   */
+  private getSagemakerTrainingJobActionsForAccess(access: string): string[] {
+    switch (access) {
+      case 'read':
+      case 'readwrite':
+        return [
+          'sagemaker:DescribeTrainingJob',
+          'sagemaker:ListTrainingJobs'
+        ];
+      case 'write':
+        return [
+          'sagemaker:CreateTrainingJob',
+          'sagemaker:StopTrainingJob'
+        ];
+      default:
+        throw new Error(`Unsupported SageMaker training job access level: ${access}`);
+    }
+  }
+
+  /**
+   * Get SageMaker Studio domain actions based on access level
+   * Used by resolveActions to compute base actions from coarse access level
+   */
+  private getSagemakerStudioDomainActionsForAccess(access: string): string[] {
+    switch (access) {
+      case 'read':
+      case 'readwrite':
+        return [
+          'sagemaker:DescribeDomain',
+          'sagemaker:ListDomains',
+          'sagemaker:ListUserProfiles',
+          'sagemaker:ListApps'
+        ];
+      case 'write':
+        return [
+          'sagemaker:CreateDomain',
+          'sagemaker:DeleteDomain',
+          'sagemaker:UpdateDomain'
+        ];
+      default:
+        throw new Error(`Unsupported SageMaker Studio domain access level: ${access}`);
+    }
+  }
+
+  /**
+   * Get SageMaker Studio user profile actions based on access level
+   * Used by resolveActions to compute base actions from coarse access level
+   */
+  private getSagemakerStudioUserProfileActionsForAccess(access: string): string[] {
+    switch (access) {
+      case 'read':
+      case 'readwrite':
+        return [
+          'sagemaker:DescribeUserProfile',
+          'sagemaker:ListUserProfiles'
+        ];
+      case 'write':
+        return [
+          'sagemaker:CreateUserProfile',
+          'sagemaker:DeleteUserProfile',
+          'sagemaker:UpdateUserProfile'
+        ];
+      default:
+        throw new Error(`Unsupported SageMaker Studio user profile access level: ${access}`);
+    }
+  }
+
+  /**
+   * Get SageMaker processing job actions based on access level
+   * Used by resolveActions to compute base actions from coarse access level
+   */
+  private getSagemakerProcessingJobActionsForAccess(access: string): string[] {
+    switch (access) {
+      case 'read':
+      case 'readwrite':
+        return [
+          'sagemaker:DescribeProcessingJob',
+          'sagemaker:ListProcessingJobs'
+        ];
+      case 'write':
+        return [
+          'sagemaker:CreateProcessingJob',
+          'sagemaker:StopProcessingJob'
+        ];
+      default:
+        throw new Error(`Unsupported SageMaker processing job access level: ${access}`);
+    }
   }
 }
