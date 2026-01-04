@@ -4,7 +4,7 @@
  */
 
 import { UnifiedBinderStrategyBase, resolveActions } from '@shinobi/core';
-import type { BindingContext, EnhancedBindingResult, CompatibilityEntry } from '@shinobi/core';
+import type { BindingContext, EnhancedBindingResult, CompatibilityEntry, AccessLevel } from '@shinobi/core';
 import type { IamPolicy } from '@shinobi/core';
 import { PolicyStatement, Effect } from 'aws-cdk-lib/aws-iam';
 
@@ -33,7 +33,7 @@ export class AmplifyBinderStrategy extends UnifiedBinderStrategyBase {
         sourceType: '*',
         targetType: 'amplify:app',
         capability: 'amplify:app',
-        supportedAccess: ['read', 'write', 'readwrite', 'deploy'],
+        supportedAccess: ['read', 'write', 'readwrite', 'deploy'] as AccessLevel[],
         description: 'Bind to Amplify app for web/mobile application hosting',
         examples: ['lambda-api -> amplify:app (read)', 'ci-cd -> amplify:app (deploy)']
       },
@@ -41,7 +41,7 @@ export class AmplifyBinderStrategy extends UnifiedBinderStrategyBase {
         sourceType: '*',
         targetType: 'amplify:branch',
         capability: 'amplify:branch',
-        supportedAccess: ['read', 'write', 'readwrite', 'deploy'],
+        supportedAccess: ['read', 'write', 'readwrite', 'deploy'] as AccessLevel[],
         description: 'Bind to Amplify branch for environment-specific deployments',
         examples: ['lambda-api -> amplify:branch (read)', 'ci-cd -> amplify:branch (deploy)']
       },

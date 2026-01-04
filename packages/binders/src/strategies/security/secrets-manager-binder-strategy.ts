@@ -405,4 +405,73 @@ export class SecretsManagerBinderStrategy extends UnifiedBinderStrategyBase {
 
     return { environmentVariables, iamPolicies };
   }
+
+  /**
+   * Get Secrets Manager secret actions based on access level
+   * Used by resolveActions to compute base actions from coarse access level
+   * 
+   * @param access - Access level (read, write, admin, readwrite)
+   * @returns Array of IAM action strings
+   */
+  private getSecretsManagerSecretActionsForAccess(access: string): string[] {
+    switch (access) {
+      case 'read':
+        return [
+          'secretsmanager:GetSecretValue',
+          'secretsmanager:DescribeSecret'
+        ];
+      case 'write':
+        return [
+          'secretsmanager:CreateSecret',
+          'secretsmanager:UpdateSecret',
+          'secretsmanager:DeleteSecret',
+          'secretsmanager:PutSecretValue'
+        ];
+      case 'admin':
+        return [
+          'secretsmanager:RestoreSecret',
+          'secretsmanager:TagResource',
+          'secretsmanager:UntagResource',
+          'secretsmanager:GetResourcePolicy',
+          'secretsmanager:PutResourcePolicy',
+          'secretsmanager:DeleteResourcePolicy'
+        ];
+      case 'readwrite':
+        return [
+          'secretsmanager:GetSecretValue',
+          'secretsmanager:DescribeSecret',
+          'secretsmanager:CreateSecret',
+          'secretsmanager:UpdateSecret',
+          'secretsmanager:DeleteSecret',
+          'secretsmanager:PutSecretValue'
+        ];
+      default:
+        throw new Error(`Unsupported Secrets Manager secret access level: ${access}`);
+    }
+  }
+
+  /**
+   * Get Secrets Manager rotation actions based on access level
+   * Used by resolveActions to compute base actions from coarse access level
+   * 
+   * @param access - Access level (read, write)
+   * @returns Array of IAM action strings
+   */
+  private getSecretsManagerRotationActionsForAccess(access: string): string[] {
+    switch (access) {
+      case 'read':
+        return [
+          'secretsmanager:DescribeSecret',
+          'secretsmanager:GetSecretValue'
+        ];
+      case 'write':
+        return [
+          'secretsmanager:RotateSecret',
+          'secretsmanager:UpdateSecret',
+          'secretsmanager:PutSecretValue'
+        ];
+      default:
+        throw new Error(`Unsupported Secrets Manager rotation access level: ${access}`);
+    }
+  }
 }

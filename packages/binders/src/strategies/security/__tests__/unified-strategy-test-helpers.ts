@@ -12,7 +12,7 @@
 
 import { Construct } from 'constructs';
 import type { IComponent, ComponentSpec, ComponentContext, ComponentCapabilities } from '@shinobi/core/index.js';
-import type { BindingContext, EnhancedBindingResult, IUnifiedBinderStrategy, AccessLevel } from '@shinobi/core/platform-binding-trigger-spec.js';
+import type { BindingContext, EnhancedBindingResult, IUnifiedBinderStrategy, AccessLevel } from '@shinobi/core';
 
 /**
  * Deterministic test constants (fixed values for reproducibility)
@@ -179,12 +179,17 @@ export function createBindingContext(options: {
   const source = options.source ?? createMockSourceComponent();
   const target = options.target ?? createMockTargetComponent('target', {});
 
+  // Filter out 'invoke' from access if provided (BindingDirective doesn't allow it)
+  const bindingAccess = options.access && options.access !== 'invoke' 
+    ? options.access 
+    : (options.access ?? 'read');
+
   return {
     source,
     target,
     directive: {
       capability: options.capability,
-      access: options.access ?? 'read',
+      access: bindingAccess as 'read' | 'write' | 'readwrite' | 'admin',
       options: options.options,
       env: options.env,
       ...(options.actions !== undefined && { actions: options.actions })

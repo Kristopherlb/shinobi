@@ -352,5 +352,75 @@ export class SecurityHubBinderStrategy extends UnifiedBinderStrategyBase {
       securityGroupRules: []
     };
   }
+
+  /**
+   * Get Security Hub actions based on access level
+   * Used by resolveActions to compute base actions from coarse access level
+   * 
+   * @param access - Access level (read, write, admin, readwrite)
+   * @returns Array of IAM action strings
+   */
+  private getSecurityHubActionsForAccess(access: string): string[] {
+    switch (access) {
+      case 'read':
+        return [
+          'securityhub:GetFindings',
+          'securityhub:BatchGetFindings',
+          'securityhub:ListFindings',
+          'securityhub:DescribeHub',
+          'securityhub:DescribeProducts',
+          'securityhub:DescribeStandards',
+          'securityhub:DescribeStandardsControls',
+          'securityhub:GetEnabledStandards',
+          'securityhub:GetInsights'
+        ];
+      case 'write':
+        return [
+          'securityhub:EnableSecurityHub',
+          'securityhub:DisableSecurityHub',
+          'securityhub:UpdateSecurityHubConfiguration',
+          'securityhub:BatchUpdateFindings',
+          'securityhub:BatchImportFindings',
+          'securityhub:CreateInsight',
+          'securityhub:UpdateInsight',
+          'securityhub:DeleteInsight'
+        ];
+      case 'admin':
+        return [
+          'securityhub:EnableSecurityHub',
+          'securityhub:DisableSecurityHub',
+          'securityhub:UpdateSecurityHubConfiguration',
+          'securityhub:BatchUpdateFindings',
+          'securityhub:BatchImportFindings',
+          'securityhub:CreateInsight',
+          'securityhub:UpdateInsight',
+          'securityhub:DeleteInsight',
+          'securityhub:EnableOrganizationAdminAccount',
+          'securityhub:DisableOrganizationAdminAccount'
+        ];
+      case 'readwrite':
+        return [
+          'securityhub:GetFindings',
+          'securityhub:BatchGetFindings',
+          'securityhub:ListFindings',
+          'securityhub:DescribeHub',
+          'securityhub:DescribeProducts',
+          'securityhub:DescribeStandards',
+          'securityhub:DescribeStandardsControls',
+          'securityhub:GetEnabledStandards',
+          'securityhub:GetInsights',
+          'securityhub:EnableSecurityHub',
+          'securityhub:DisableSecurityHub',
+          'securityhub:UpdateSecurityHubConfiguration',
+          'securityhub:BatchUpdateFindings',
+          'securityhub:BatchImportFindings',
+          'securityhub:CreateInsight',
+          'securityhub:UpdateInsight',
+          'securityhub:DeleteInsight'
+        ];
+      default:
+        throw new Error(`Unsupported Security Hub access level: ${access}`);
+    }
+  }
 }
 

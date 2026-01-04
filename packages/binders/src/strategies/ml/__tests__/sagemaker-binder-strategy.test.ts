@@ -462,4 +462,365 @@ describe('SageMakerBinderStrategy', () => {
       expect(actions.length).toBe(customActions.length);
     });
   });
+
+  describe('SageMakerBind__ModelWriteAccess__GrantsModelWriteActions', () => {
+    test('SageMakerBind__ModelWriteAccess__GrantsModelWriteActions', async () => {
+      const strategy = new SageMakerBinderStrategy();
+      const modelArn = 'arn:aws:sagemaker:us-east-1:123456789012:model/test-model';
+      const target = createMockTargetComponent('sagemaker-model', {
+        'sagemaker:model': {
+          modelArn,
+          modelName: 'test-model'
+        }
+      });
+
+      const context = createBindingContext({
+        target,
+        capability: 'sagemaker:model',
+        access: 'write'
+      });
+
+      const result = await executeUnifiedBinding(strategy, context);
+
+      assertEnhancedBindingResult(result);
+      const writePolicy = result.iamPolicies.find(p => 
+        p.description.includes('write')
+      );
+      expect(writePolicy).toBeDefined();
+      const statementJson = writePolicy!.statement.toStatementJson();
+      const actions = Array.isArray(statementJson.Action) 
+        ? statementJson.Action 
+        : [statementJson.Action];
+      expect(actions).toContain('sagemaker:CreateModel');
+      expect(actions).toContain('sagemaker:DeleteModel');
+    });
+  });
+
+  describe('SageMakerBind__ModelWithECRAndS3__GrantsECRAndS3Permissions', () => {
+    test('SageMakerBind__ModelWithECRAndS3__GrantsECRAndS3Permissions', async () => {
+      const strategy = new SageMakerBinderStrategy();
+      const modelArn = 'arn:aws:sagemaker:us-east-1:123456789012:model/test-model';
+      const target = createMockTargetComponent('sagemaker-model', {
+        'sagemaker:model': {
+          modelArn,
+          modelName: 'test-model',
+          primaryContainer: {
+            image: '123456789012.dkr.ecr.us-east-1.amazonaws.com/model:latest',
+            modelDataUrl: 's3://bucket/model.tar.gz',
+            environment: { MODEL_ENV: 'test' }
+          }
+        }
+      });
+
+      const context = createBindingContext({
+        target,
+        capability: 'sagemaker:model',
+        access: 'read'
+      });
+
+      const result = await executeUnifiedBinding(strategy, context);
+
+      assertEnhancedBindingResult(result);
+      
+      const ecrPolicy = result.iamPolicies.find(p => 
+        p.description.includes('ECR')
+      );
+      expect(ecrPolicy).toBeDefined();
+      
+      const s3Policy = result.iamPolicies.find(p => 
+        p.description.includes('model artifacts')
+      );
+      expect(s3Policy).toBeDefined();
+      
+      expect(result.environmentVariables.SAGEMAKER_MODEL_IMAGE).toBe('123456789012.dkr.ecr.us-east-1.amazonaws.com/model:latest');
+      expect(result.environmentVariables.SAGEMAKER_MODEL_DATA_URL).toBe('s3://bucket/model.tar.gz');
+    });
+  });
+
+  describe('SageMakerBind__EndpointReadAccess__GrantsEndpointReadActions', () => {
+    test('SageMakerBind__EndpointReadAccess__GrantsEndpointReadActions', async () => {
+      const strategy = new SageMakerBinderStrategy();
+      const endpointArn = 'arn:aws:sagemaker:us-east-1:123456789012:endpoint/test-endpoint';
+      const target = createMockTargetComponent('sagemaker-endpoint', {
+        'sagemaker:endpoint': {
+          endpointArn,
+          endpointName: 'test-endpoint'
+        }
+      });
+
+      const context = createBindingContext({
+        target,
+        capability: 'sagemaker:endpoint',
+        access: 'read'
+      });
+
+      const result = await executeUnifiedBinding(strategy, context);
+
+      assertEnhancedBindingResult(result);
+      const readPolicy = result.iamPolicies.find(p => 
+        p.description.includes('read')
+      );
+      expect(readPolicy).toBeDefined();
+      const statementJson = readPolicy!.statement.toStatementJson();
+      const actions = Array.isArray(statementJson.Action) 
+        ? statementJson.Action 
+        : [statementJson.Action];
+      expect(actions).toContain('sagemaker:DescribeEndpoint');
+      expect(actions).toContain('sagemaker:ListEndpoints');
+    });
+  });
+
+  describe('SageMakerBind__EndpointWriteAccess__GrantsEndpointWriteActions', () => {
+    test('SageMakerBind__EndpointWriteAccess__GrantsEndpointWriteActions', async () => {
+      const strategy = new SageMakerBinderStrategy();
+      const endpointArn = 'arn:aws:sagemaker:us-east-1:123456789012:endpoint/test-endpoint';
+      const target = createMockTargetComponent('sagemaker-endpoint', {
+        'sagemaker:endpoint': {
+          endpointArn,
+          endpointName: 'test-endpoint'
+        }
+      });
+
+      const context = createBindingContext({
+        target,
+        capability: 'sagemaker:endpoint',
+        access: 'write'
+      });
+
+      const result = await executeUnifiedBinding(strategy, context);
+
+      assertEnhancedBindingResult(result);
+      const writePolicy = result.iamPolicies.find(p => 
+        p.description.includes('write')
+      );
+      expect(writePolicy).toBeDefined();
+      const statementJson = writePolicy!.statement.toStatementJson();
+      const actions = Array.isArray(statementJson.Action) 
+        ? statementJson.Action 
+        : [statementJson.Action];
+      expect(actions).toContain('sagemaker:CreateEndpoint');
+      expect(actions).toContain('sagemaker:DeleteEndpoint');
+    });
+  });
+
+  describe('SageMakerBind__TrainingJobWriteAccess__GrantsTrainingJobWriteActions', () => {
+    test('SageMakerBind__TrainingJobWriteAccess__GrantsTrainingJobWriteActions', async () => {
+      const strategy = new SageMakerBinderStrategy();
+      const trainingJobArn = 'arn:aws:sagemaker:us-east-1:123456789012:training-job/test-job';
+      const target = createMockTargetComponent('sagemaker-training-job', {
+        'sagemaker:training-job': {
+          trainingJobArn,
+          trainingJobName: 'test-job'
+        }
+      });
+
+      const context = createBindingContext({
+        target,
+        capability: 'sagemaker:training-job',
+        access: 'write'
+      });
+
+      const result = await executeUnifiedBinding(strategy, context);
+
+      assertEnhancedBindingResult(result);
+      const writePolicy = result.iamPolicies.find(p => 
+        p.description.includes('write')
+      );
+      expect(writePolicy).toBeDefined();
+      const statementJson = writePolicy!.statement.toStatementJson();
+      const actions = Array.isArray(statementJson.Action) 
+        ? statementJson.Action 
+        : [statementJson.Action];
+      expect(actions).toContain('sagemaker:CreateTrainingJob');
+      expect(actions).toContain('sagemaker:StopTrainingJob');
+    });
+  });
+
+  describe('SageMakerBind__TrainingJobWithS3Config__GrantsS3Permissions', () => {
+    test('SageMakerBind__TrainingJobWithS3Config__GrantsS3Permissions', async () => {
+      const strategy = new SageMakerBinderStrategy();
+      const trainingJobArn = 'arn:aws:sagemaker:us-east-1:123456789012:training-job/test-job';
+      const target = createMockTargetComponent('sagemaker-training-job', {
+        'sagemaker:training-job': {
+          trainingJobArn,
+          trainingJobName: 'test-job',
+          inputDataConfig: [{
+            dataSource: {
+              s3DataSource: {
+                s3Uri: 's3://bucket/training-data'
+              }
+            }
+          }],
+          outputDataConfig: {
+            s3OutputPath: 's3://bucket/output'
+          }
+        }
+      });
+
+      const context = createBindingContext({
+        target,
+        capability: 'sagemaker:training-job',
+        access: 'read'
+      });
+
+      const result = await executeUnifiedBinding(strategy, context);
+
+      assertEnhancedBindingResult(result);
+      
+      const inputS3Policy = result.iamPolicies.find(p => 
+        p.description.includes('training input data')
+      );
+      expect(inputS3Policy).toBeDefined();
+      
+      const outputS3Policy = result.iamPolicies.find(p => 
+        p.description.includes('training output data')
+      );
+      expect(outputS3Policy).toBeDefined();
+    });
+  });
+
+  describe('SageMakerBind__StudioDomainWriteAccess__GrantsDomainWriteActions', () => {
+    test('SageMakerBind__StudioDomainWriteAccess__GrantsDomainWriteActions', async () => {
+      const strategy = new SageMakerBinderStrategy();
+      const domainArn = 'arn:aws:sagemaker:us-east-1:123456789012:domain/d-test';
+      const target = createMockTargetComponent('sagemaker-studio-domain', {
+        'sagemaker:studio-domain': {
+          domainId: 'd-test',
+          domainArn,
+          domainName: 'test-domain'
+        }
+      });
+
+      const context = createBindingContext({
+        target,
+        capability: 'sagemaker:studio-domain',
+        access: 'write'
+      });
+
+      const result = await executeUnifiedBinding(strategy, context);
+
+      assertEnhancedBindingResult(result);
+      const writePolicy = result.iamPolicies.find(p => 
+        p.description.includes('write')
+      );
+      expect(writePolicy).toBeDefined();
+      const statementJson = writePolicy!.statement.toStatementJson();
+      const actions = Array.isArray(statementJson.Action) 
+        ? statementJson.Action 
+        : [statementJson.Action];
+      expect(actions).toContain('sagemaker:CreateDomain');
+      expect(actions).toContain('sagemaker:DeleteDomain');
+    });
+  });
+
+  describe('SageMakerBind__StudioUserProfileWriteAccess__GrantsUserProfileWriteActions', () => {
+    test('SageMakerBind__StudioUserProfileWriteAccess__GrantsUserProfileWriteActions', async () => {
+      const strategy = new SageMakerBinderStrategy();
+      const userProfileArn = 'arn:aws:sagemaker:us-east-1:123456789012:user-profile/d-test/user';
+      const target = createMockTargetComponent('sagemaker-studio-user-profile', {
+        'sagemaker:studio-user-profile': {
+          userProfileName: 'user',
+          userProfileArn
+        }
+      });
+
+      const context = createBindingContext({
+        target,
+        capability: 'sagemaker:studio-user-profile',
+        access: 'write'
+      });
+
+      const result = await executeUnifiedBinding(strategy, context);
+
+      assertEnhancedBindingResult(result);
+      const writePolicy = result.iamPolicies.find(p => 
+        p.description.includes('write')
+      );
+      expect(writePolicy).toBeDefined();
+      const statementJson = writePolicy!.statement.toStatementJson();
+      const actions = Array.isArray(statementJson.Action) 
+        ? statementJson.Action 
+        : [statementJson.Action];
+      expect(actions).toContain('sagemaker:CreateUserProfile');
+      expect(actions).toContain('sagemaker:DeleteUserProfile');
+    });
+  });
+
+  describe('SageMakerBind__ProcessingJobWriteAccess__GrantsProcessingJobWriteActions', () => {
+    test('SageMakerBind__ProcessingJobWriteAccess__GrantsProcessingJobWriteActions', async () => {
+      const strategy = new SageMakerBinderStrategy();
+      const processingJobArn = 'arn:aws:sagemaker:us-east-1:123456789012:processing-job/test-job';
+      const target = createMockTargetComponent('sagemaker-processing-job', {
+        'sagemaker:processing-job': {
+          processingJobArn,
+          processingJobName: 'test-job'
+        }
+      });
+
+      const context = createBindingContext({
+        target,
+        capability: 'sagemaker:processing-job',
+        access: 'write'
+      });
+
+      const result = await executeUnifiedBinding(strategy, context);
+
+      assertEnhancedBindingResult(result);
+      const writePolicy = result.iamPolicies.find(p => 
+        p.description.includes('write')
+      );
+      expect(writePolicy).toBeDefined();
+      const statementJson = writePolicy!.statement.toStatementJson();
+      const actions = Array.isArray(statementJson.Action) 
+        ? statementJson.Action 
+        : [statementJson.Action];
+      expect(actions).toContain('sagemaker:CreateProcessingJob');
+      expect(actions).toContain('sagemaker:StopProcessingJob');
+    });
+  });
+
+  describe('SageMakerBind__ProcessingJobWithS3Config__GrantsS3Permissions', () => {
+    test('SageMakerBind__ProcessingJobWithS3Config__GrantsS3Permissions', async () => {
+      const strategy = new SageMakerBinderStrategy();
+      const processingJobArn = 'arn:aws:sagemaker:us-east-1:123456789012:processing-job/test-job';
+      const target = createMockTargetComponent('sagemaker-processing-job', {
+        'sagemaker:processing-job': {
+          processingJobArn,
+          processingJobName: 'test-job',
+          processingInputs: [{
+            s3Input: {
+              s3Uri: 's3://bucket/input'
+            }
+          }],
+          processingOutputConfig: {
+            outputs: [{
+              s3Output: {
+                s3Uri: 's3://bucket/output'
+              }
+            }]
+          }
+        }
+      });
+
+      const context = createBindingContext({
+        target,
+        capability: 'sagemaker:processing-job',
+        access: 'read'
+      });
+
+      const result = await executeUnifiedBinding(strategy, context);
+
+      assertEnhancedBindingResult(result);
+      
+      const inputS3Policy = result.iamPolicies.find(p => 
+        p.description.includes('processing input data')
+      );
+      expect(inputS3Policy).toBeDefined();
+      
+      const outputS3Policy = result.iamPolicies.find(p => 
+        p.description.includes('processing output data')
+      );
+      expect(outputS3Policy).toBeDefined();
+    });
+  });
 });

@@ -4,7 +4,7 @@
  */
 
 import { UnifiedBinderStrategyBase, resolveActions } from '@shinobi/core';
-import type { BindingContext, EnhancedBindingResult, CompatibilityEntry } from '@shinobi/core';
+import type { BindingContext, EnhancedBindingResult, CompatibilityEntry, AccessLevel } from '@shinobi/core';
 import type { IamPolicy } from '@shinobi/core';
 import { PolicyStatement, Effect } from 'aws-cdk-lib/aws-iam';
 
@@ -347,17 +347,18 @@ export class QueueBinderStrategy extends UnifiedBinderStrategyBase {
     }
 
     const { access } = context.directive;
+    const accessLevel = access as AccessLevel; // SNS supports 'publish' and 'subscribe' which are excluded from BindingDirective but valid at runtime
     const environmentVariables: Record<string, string> = {};
     const iamPolicies: IamPolicy[] = [];
 
     // Validate access level for SNS
     const validAccess = ['publish', 'subscribe'];
-    if (!validAccess.includes(access)) {
-      throw new Error(`Invalid access level for SNS: ${access}. Valid levels: ${validAccess.join(', ')}`);
+    if (!validAccess.includes(accessLevel)) {
+      throw new Error(`Invalid access level for SNS: ${accessLevel}. Valid levels: ${validAccess.join(', ')}`);
     }
 
     // Grant SNS publish permissions
-    if (access === 'publish') {
+    if (accessLevel === 'publish') {
       const statement = new PolicyStatement({
         effect: Effect.ALLOW,
         actions: [
@@ -374,7 +375,7 @@ export class QueueBinderStrategy extends UnifiedBinderStrategyBase {
     }
 
     // Grant SNS subscribe permissions
-    if (access === 'subscribe') {
+    if (accessLevel === 'subscribe') {
       const statement = new PolicyStatement({
         effect: Effect.ALLOW,
         actions: [

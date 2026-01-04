@@ -793,5 +793,605 @@ describe('OrganizationsBinderStrategy', () => {
       );
     });
   });
+
+  describe('OrganizationsBind__TagPolicyWriteAccess__GrantsWriteActions', () => {
+    const metadata = {
+      id: 'TP-binders-governance-organizations-015',
+      level: 'unit' as const,
+      capability: 'Tag policy write access grants write actions',
+      oracle: 'exact' as const,
+      determinism: 'deterministic' as const,
+      naming: { pattern: 'OrganizationsBind__Condition__Outcome', example: 'OrganizationsBind__TagPolicyWriteAccess__GrantsWriteActions' },
+      invariants: [
+        'IAM policies include tag policy write actions',
+        'Write actions include CreatePolicy, UpdatePolicy, DeletePolicy'
+      ],
+      fixtures: ['MockSourceComponent', 'MockTargetComponent'],
+      inputs: {
+        shape: 'BindingContext with org:tag-policy capability and write access',
+        notes: 'Tag policy write access test'
+      },
+      risks: [],
+      dependencies: [],
+      evidence: [],
+      compliance_refs: ['docs/platform-standards/platform-iam-auditing-standard.md'],
+      ai_generated: true,
+      human_reviewed_by: 'Platform Engineering'
+    };
+
+    test('OrganizationsBind__TagPolicyWriteAccess__GrantsWriteActions', async () => {
+      const strategy = new OrganizationsBinderStrategy();
+      const target = createMockTargetComponent('organizations', {
+        'org:tag-policy': {
+          orgId: 'o-1234567890',
+          masterAccountId: '111111111111'
+        }
+      });
+
+      const context = createBindingContext({
+        source: createMockSourceComponent('lambda-governance', 'test-source'),
+        target,
+        capability: 'org:tag-policy',
+        access: 'write'
+      });
+
+      const result = await executeUnifiedBinding(strategy, context);
+
+      assertEnhancedBindingResult(result);
+
+      const policy = result.iamPolicies.find(p => p.description.includes('tag policy write access'));
+      expect(policy).toBeDefined();
+      
+      const statementJson = policy!.statement.toStatementJson();
+      const actions = Array.isArray(statementJson.Action)
+        ? statementJson.Action
+        : [statementJson.Action];
+
+      expect(actions).toContain('organizations:CreatePolicy');
+      expect(actions).toContain('organizations:UpdatePolicy');
+      expect(actions).toContain('organizations:DeletePolicy');
+    });
+  });
+
+  describe('OrganizationsBind__BackupPolicyWriteAccess__GrantsWriteActions', () => {
+    const metadata = {
+      id: 'TP-binders-governance-organizations-016',
+      level: 'unit' as const,
+      capability: 'Backup policy write access grants write actions',
+      oracle: 'exact' as const,
+      determinism: 'deterministic' as const,
+      naming: { pattern: 'OrganizationsBind__Condition__Outcome', example: 'OrganizationsBind__BackupPolicyWriteAccess__GrantsWriteActions' },
+      invariants: [
+        'IAM policies include backup policy write actions',
+        'Write actions include CreatePolicy, UpdatePolicy, DeletePolicy'
+      ],
+      fixtures: ['MockSourceComponent', 'MockTargetComponent'],
+      inputs: {
+        shape: 'BindingContext with org:backup-policy capability and write access',
+        notes: 'Backup policy write access test'
+      },
+      risks: [],
+      dependencies: [],
+      evidence: [],
+      compliance_refs: ['docs/platform-standards/platform-iam-auditing-standard.md'],
+      ai_generated: true,
+      human_reviewed_by: 'Platform Engineering'
+    };
+
+    test('OrganizationsBind__BackupPolicyWriteAccess__GrantsWriteActions', async () => {
+      const strategy = new OrganizationsBinderStrategy();
+      const target = createMockTargetComponent('organizations', {
+        'org:backup-policy': {
+          orgId: 'o-1234567890',
+          masterAccountId: '111111111111'
+        }
+      });
+
+      const context = createBindingContext({
+        source: createMockSourceComponent('lambda-governance', 'test-source'),
+        target,
+        capability: 'org:backup-policy',
+        access: 'write'
+      });
+
+      const result = await executeUnifiedBinding(strategy, context);
+
+      assertEnhancedBindingResult(result);
+
+      const policy = result.iamPolicies.find(p => p.description.includes('backup policy write access'));
+      expect(policy).toBeDefined();
+      
+      const statementJson = policy!.statement.toStatementJson();
+      const actions = Array.isArray(statementJson.Action)
+        ? statementJson.Action
+        : [statementJson.Action];
+
+      expect(actions).toContain('organizations:CreatePolicy');
+      expect(actions).toContain('organizations:UpdatePolicy');
+      expect(actions).toContain('organizations:DeletePolicy');
+    });
+  });
+
+  describe('OrganizationsBind__BackupPolicyMissingOrgId__ThrowsError', () => {
+    const metadata = {
+      id: 'TP-binders-governance-organizations-017',
+      level: 'unit' as const,
+      capability: 'Backup policy missing orgId throws error',
+      oracle: 'exact' as const,
+      determinism: 'deterministic' as const,
+      naming: { pattern: 'OrganizationsBind__Condition__Outcome', example: 'OrganizationsBind__BackupPolicyMissingOrgId__ThrowsError' },
+      invariants: [
+        'Error message indicates missing orgId for backup policy',
+        'Error is thrown before binding completes'
+      ],
+      fixtures: ['MockSourceComponent', 'MockTargetComponent'],
+      inputs: {
+        shape: 'BindingContext with org:backup-policy capability but missing orgId',
+        notes: 'Error case test'
+      },
+      risks: [],
+      dependencies: [],
+      evidence: [],
+      compliance_refs: [],
+      ai_generated: true,
+      human_reviewed_by: 'Platform Engineering'
+    };
+
+    test('OrganizationsBind__BackupPolicyMissingOrgId__ThrowsError', async () => {
+      const strategy = new OrganizationsBinderStrategy();
+      const target = createMockTargetComponent('organizations', {
+        'org:backup-policy': {
+          // Missing orgId
+          masterAccountId: '111111111111'
+        } as any
+      });
+
+      const context = createBindingContext({
+        source: createMockSourceComponent('lambda-governance', 'test-source'),
+        target,
+        capability: 'org:backup-policy',
+        access: 'read'
+      });
+
+      await expect(executeUnifiedBinding(strategy, context)).rejects.toThrow(
+        'missing required orgId property'
+      );
+    });
+  });
+
+  describe('OrganizationsBind__OuWriteAccess__GrantsWriteActions', () => {
+    const metadata = {
+      id: 'TP-binders-governance-organizations-018',
+      level: 'unit' as const,
+      capability: 'OU write access grants write actions',
+      oracle: 'exact' as const,
+      determinism: 'deterministic' as const,
+      naming: { pattern: 'OrganizationsBind__Condition__Outcome', example: 'OrganizationsBind__OuWriteAccess__GrantsWriteActions' },
+      invariants: [
+        'IAM policies include OU write actions',
+        'Write actions include CreateOrganizationalUnit, UpdateOrganizationalUnit, DeleteOrganizationalUnit'
+      ],
+      fixtures: ['MockSourceComponent', 'MockTargetComponent'],
+      inputs: {
+        shape: 'BindingContext with org:ou capability and write access',
+        notes: 'OU write access test'
+      },
+      risks: [],
+      dependencies: [],
+      evidence: [],
+      compliance_refs: ['docs/platform-standards/platform-iam-auditing-standard.md'],
+      ai_generated: true,
+      human_reviewed_by: 'Platform Engineering'
+    };
+
+    test('OrganizationsBind__OuWriteAccess__GrantsWriteActions', async () => {
+      const strategy = new OrganizationsBinderStrategy();
+      const target = createMockTargetComponent('organizations', {
+        'org:ou': {
+          orgId: 'o-1234567890',
+          masterAccountId: '111111111111'
+        }
+      });
+
+      const context = createBindingContext({
+        source: createMockSourceComponent('lambda-governance', 'test-source'),
+        target,
+        capability: 'org:ou',
+        access: 'write'
+      });
+
+      const result = await executeUnifiedBinding(strategy, context);
+
+      assertEnhancedBindingResult(result);
+
+      const policy = result.iamPolicies.find(p => p.description.includes('OU write access'));
+      expect(policy).toBeDefined();
+      
+      const statementJson = policy!.statement.toStatementJson();
+      const actions = Array.isArray(statementJson.Action)
+        ? statementJson.Action
+        : [statementJson.Action];
+
+      expect(actions).toContain('organizations:CreateOrganizationalUnit');
+      expect(actions).toContain('organizations:UpdateOrganizationalUnit');
+      expect(actions).toContain('organizations:DeleteOrganizationalUnit');
+    });
+  });
+
+  describe('OrganizationsBind__OuMissingOrgId__ThrowsError', () => {
+    const metadata = {
+      id: 'TP-binders-governance-organizations-019',
+      level: 'unit' as const,
+      capability: 'OU missing orgId throws error',
+      oracle: 'exact' as const,
+      determinism: 'deterministic' as const,
+      naming: { pattern: 'OrganizationsBind__Condition__Outcome', example: 'OrganizationsBind__OuMissingOrgId__ThrowsError' },
+      invariants: [
+        'Error message indicates missing orgId for OU',
+        'Error is thrown before binding completes'
+      ],
+      fixtures: ['MockSourceComponent', 'MockTargetComponent'],
+      inputs: {
+        shape: 'BindingContext with org:ou capability but missing orgId',
+        notes: 'Error case test'
+      },
+      risks: [],
+      dependencies: [],
+      evidence: [],
+      compliance_refs: [],
+      ai_generated: true,
+      human_reviewed_by: 'Platform Engineering'
+    };
+
+    test('OrganizationsBind__OuMissingOrgId__ThrowsError', async () => {
+      const strategy = new OrganizationsBinderStrategy();
+      const target = createMockTargetComponent('organizations', {
+        'org:ou': {
+          // Missing orgId
+          masterAccountId: '111111111111'
+        } as any
+      });
+
+      const context = createBindingContext({
+        source: createMockSourceComponent('lambda-governance', 'test-source'),
+        target,
+        capability: 'org:ou',
+        access: 'read'
+      });
+
+      await expect(executeUnifiedBinding(strategy, context)).rejects.toThrow(
+        'missing required orgId property'
+      );
+    });
+  });
+
+  describe('OrganizationsBind__AccountWriteAccess__GrantsWriteActions', () => {
+    const metadata = {
+      id: 'TP-binders-governance-organizations-020',
+      level: 'unit' as const,
+      capability: 'Account write access grants write actions',
+      oracle: 'exact' as const,
+      determinism: 'deterministic' as const,
+      naming: { pattern: 'OrganizationsBind__Condition__Outcome', example: 'OrganizationsBind__AccountWriteAccess__GrantsWriteActions' },
+      invariants: [
+        'IAM policies include account write actions',
+        'Write actions include CreateAccount, CloseAccount, UpdateAccount'
+      ],
+      fixtures: ['MockSourceComponent', 'MockTargetComponent'],
+      inputs: {
+        shape: 'BindingContext with org:account capability and write access',
+        notes: 'Account write access test'
+      },
+      risks: [],
+      dependencies: [],
+      evidence: [],
+      compliance_refs: ['docs/platform-standards/platform-iam-auditing-standard.md'],
+      ai_generated: true,
+      human_reviewed_by: 'Platform Engineering'
+    };
+
+    test('OrganizationsBind__AccountWriteAccess__GrantsWriteActions', async () => {
+      const strategy = new OrganizationsBinderStrategy();
+      const target = createMockTargetComponent('organizations', {
+        'org:account': {
+          orgId: 'o-1234567890',
+          masterAccountId: '111111111111'
+        }
+      });
+
+      const context = createBindingContext({
+        source: createMockSourceComponent('lambda-governance', 'test-source'),
+        target,
+        capability: 'org:account',
+        access: 'write'
+      });
+
+      const result = await executeUnifiedBinding(strategy, context);
+
+      assertEnhancedBindingResult(result);
+
+      const policy = result.iamPolicies.find(p => p.description.includes('account write access'));
+      expect(policy).toBeDefined();
+      
+      const statementJson = policy!.statement.toStatementJson();
+      const actions = Array.isArray(statementJson.Action)
+        ? statementJson.Action
+        : [statementJson.Action];
+
+      expect(actions).toContain('organizations:CreateAccount');
+      expect(actions).toContain('organizations:CloseAccount');
+      expect(actions).toContain('organizations:UpdateAccount');
+    });
+  });
+
+  describe('OrganizationsBind__AccountMissingOrgId__ThrowsError', () => {
+    const metadata = {
+      id: 'TP-binders-governance-organizations-021',
+      level: 'unit' as const,
+      capability: 'Account missing orgId throws error',
+      oracle: 'exact' as const,
+      determinism: 'deterministic' as const,
+      naming: { pattern: 'OrganizationsBind__Condition__Outcome', example: 'OrganizationsBind__AccountMissingOrgId__ThrowsError' },
+      invariants: [
+        'Error message indicates missing orgId for account',
+        'Error is thrown before binding completes'
+      ],
+      fixtures: ['MockSourceComponent', 'MockTargetComponent'],
+      inputs: {
+        shape: 'BindingContext with org:account capability but missing orgId',
+        notes: 'Error case test'
+      },
+      risks: [],
+      dependencies: [],
+      evidence: [],
+      compliance_refs: [],
+      ai_generated: true,
+      human_reviewed_by: 'Platform Engineering'
+    };
+
+    test('OrganizationsBind__AccountMissingOrgId__ThrowsError', async () => {
+      const strategy = new OrganizationsBinderStrategy();
+      const target = createMockTargetComponent('organizations', {
+        'org:account': {
+          // Missing orgId
+          masterAccountId: '111111111111'
+        } as any
+      });
+
+      const context = createBindingContext({
+        source: createMockSourceComponent('lambda-governance', 'test-source'),
+        target,
+        capability: 'org:account',
+        access: 'read'
+      });
+
+      await expect(executeUnifiedBinding(strategy, context)).rejects.toThrow(
+        'missing required orgId property'
+      );
+    });
+  });
+
+  describe('OrganizationsBind__AiServicesOptOutReadAccess__ReturnsEnhancedResult', () => {
+    const metadata = {
+      id: 'TP-binders-governance-organizations-022',
+      level: 'unit' as const,
+      capability: 'AI services opt-out read access returns enhanced result',
+      oracle: 'exact' as const,
+      determinism: 'deterministic' as const,
+      naming: { pattern: 'OrganizationsBind__Condition__Outcome', example: 'OrganizationsBind__AiServicesOptOutReadAccess__ReturnsEnhancedResult' },
+      invariants: [
+        'Environment variables are set correctly',
+        'IAM policies include AI services opt-out read actions'
+      ],
+      fixtures: ['MockSourceComponent', 'MockTargetComponent'],
+      inputs: {
+        shape: 'BindingContext with org:ai-services-opt-out capability and read access',
+        notes: 'AI services opt-out read access test'
+      },
+      risks: [],
+      dependencies: [],
+      evidence: [],
+      compliance_refs: ['docs/platform-standards/platform-iam-auditing-standard.md'],
+      ai_generated: true,
+      human_reviewed_by: 'Platform Engineering'
+    };
+
+    test('OrganizationsBind__AiServicesOptOutReadAccess__ReturnsEnhancedResult', async () => {
+      const strategy = new OrganizationsBinderStrategy();
+      const target = createMockTargetComponent('organizations', {
+        'org:ai-services-opt-out': {
+          orgId: 'o-1234567890',
+          masterAccountId: '111111111111'
+        }
+      });
+
+      const context = createBindingContext({
+        source: createMockSourceComponent('lambda-governance', 'test-source'),
+        target,
+        capability: 'org:ai-services-opt-out',
+        access: 'read'
+      });
+
+      const result = await executeUnifiedBinding(strategy, context);
+
+      assertEnhancedBindingResult(result);
+
+      expect(result.environmentVariables.AWS_ORGANIZATIONS_ID).toBe('o-1234567890');
+      expect(result.environmentVariables.AWS_ORGANIZATIONS_MASTER_ACCOUNT_ID).toBe('111111111111');
+      
+      const policy = result.iamPolicies.find(p => p.description.includes('AI services opt-out read access'));
+      expect(policy).toBeDefined();
+    });
+  });
+
+  describe('OrganizationsBind__AiServicesOptOutWriteAccess__GrantsWriteActions', () => {
+    const metadata = {
+      id: 'TP-binders-governance-organizations-023',
+      level: 'unit' as const,
+      capability: 'AI services opt-out write access grants write actions',
+      oracle: 'exact' as const,
+      determinism: 'deterministic' as const,
+      naming: { pattern: 'OrganizationsBind__Condition__Outcome', example: 'OrganizationsBind__AiServicesOptOutWriteAccess__GrantsWriteActions' },
+      invariants: [
+        'IAM policies include AI services opt-out write actions',
+        'Write actions include EnableAWSServiceAccess, DisableAWSServiceAccess'
+      ],
+      fixtures: ['MockSourceComponent', 'MockTargetComponent'],
+      inputs: {
+        shape: 'BindingContext with org:ai-services-opt-out capability and write access',
+        notes: 'AI services opt-out write access test'
+      },
+      risks: [],
+      dependencies: [],
+      evidence: [],
+      compliance_refs: ['docs/platform-standards/platform-iam-auditing-standard.md'],
+      ai_generated: true,
+      human_reviewed_by: 'Platform Engineering'
+    };
+
+    test('OrganizationsBind__AiServicesOptOutWriteAccess__GrantsWriteActions', async () => {
+      const strategy = new OrganizationsBinderStrategy();
+      const target = createMockTargetComponent('organizations', {
+        'org:ai-services-opt-out': {
+          orgId: 'o-1234567890',
+          masterAccountId: '111111111111'
+        }
+      });
+
+      const context = createBindingContext({
+        source: createMockSourceComponent('lambda-governance', 'test-source'),
+        target,
+        capability: 'org:ai-services-opt-out',
+        access: 'write'
+      });
+
+      const result = await executeUnifiedBinding(strategy, context);
+
+      assertEnhancedBindingResult(result);
+
+      const policy = result.iamPolicies.find(p => p.description.includes('AI services opt-out write access'));
+      expect(policy).toBeDefined();
+      
+      const statementJson = policy!.statement.toStatementJson();
+      const actions = Array.isArray(statementJson.Action)
+        ? statementJson.Action
+        : [statementJson.Action];
+
+      expect(actions).toContain('organizations:EnableAWSServiceAccess');
+      expect(actions).toContain('organizations:DisableAWSServiceAccess');
+    });
+  });
+
+  describe('OrganizationsBind__ServiceLinkedRoleReadAccess__ReturnsEnhancedResult', () => {
+    const metadata = {
+      id: 'TP-binders-governance-organizations-024',
+      level: 'unit' as const,
+      capability: 'Service-linked role read access returns enhanced result',
+      oracle: 'exact' as const,
+      determinism: 'deterministic' as const,
+      naming: { pattern: 'OrganizationsBind__Condition__Outcome', example: 'OrganizationsBind__ServiceLinkedRoleReadAccess__ReturnsEnhancedResult' },
+      invariants: [
+        'Environment variables are set correctly',
+        'IAM policies include service-linked role read actions'
+      ],
+      fixtures: ['MockSourceComponent', 'MockTargetComponent'],
+      inputs: {
+        shape: 'BindingContext with org:service-linked-role capability and read access',
+        notes: 'Service-linked role read access test'
+      },
+      risks: [],
+      dependencies: [],
+      evidence: [],
+      compliance_refs: ['docs/platform-standards/platform-iam-auditing-standard.md'],
+      ai_generated: true,
+      human_reviewed_by: 'Platform Engineering'
+    };
+
+    test('OrganizationsBind__ServiceLinkedRoleReadAccess__ReturnsEnhancedResult', async () => {
+      const strategy = new OrganizationsBinderStrategy();
+      const target = createMockTargetComponent('organizations', {
+        'org:service-linked-role': {
+          orgId: 'o-1234567890',
+          masterAccountId: '111111111111'
+        }
+      });
+
+      const context = createBindingContext({
+        source: createMockSourceComponent('lambda-governance', 'test-source'),
+        target,
+        capability: 'org:service-linked-role',
+        access: 'read'
+      });
+
+      const result = await executeUnifiedBinding(strategy, context);
+
+      assertEnhancedBindingResult(result);
+
+      expect(result.environmentVariables.AWS_ORGANIZATIONS_ID).toBe('o-1234567890');
+      expect(result.environmentVariables.AWS_ORGANIZATIONS_MASTER_ACCOUNT_ID).toBe('111111111111');
+      
+      const policy = result.iamPolicies.find(p => p.description.includes('service-linked role read access'));
+      expect(policy).toBeDefined();
+    });
+  });
+
+  describe('OrganizationsBind__ServiceLinkedRoleWriteAccess__GrantsWriteActions', () => {
+    const metadata = {
+      id: 'TP-binders-governance-organizations-025',
+      level: 'unit' as const,
+      capability: 'Service-linked role write access grants write actions',
+      oracle: 'exact' as const,
+      determinism: 'deterministic' as const,
+      naming: { pattern: 'OrganizationsBind__Condition__Outcome', example: 'OrganizationsBind__ServiceLinkedRoleWriteAccess__GrantsWriteActions' },
+      invariants: [
+        'IAM policies include service-linked role write actions',
+        'Write actions include EnableAWSServiceAccess, CreateServiceLinkedRole, DeleteServiceLinkedRole'
+      ],
+      fixtures: ['MockSourceComponent', 'MockTargetComponent'],
+      inputs: {
+        shape: 'BindingContext with org:service-linked-role capability and write access',
+        notes: 'Service-linked role write access test'
+      },
+      risks: [],
+      dependencies: [],
+      evidence: [],
+      compliance_refs: ['docs/platform-standards/platform-iam-auditing-standard.md'],
+      ai_generated: true,
+      human_reviewed_by: 'Platform Engineering'
+    };
+
+    test('OrganizationsBind__ServiceLinkedRoleWriteAccess__GrantsWriteActions', async () => {
+      const strategy = new OrganizationsBinderStrategy();
+      const target = createMockTargetComponent('organizations', {
+        'org:service-linked-role': {
+          orgId: 'o-1234567890',
+          masterAccountId: '111111111111'
+        }
+      });
+
+      const context = createBindingContext({
+        source: createMockSourceComponent('lambda-governance', 'test-source'),
+        target,
+        capability: 'org:service-linked-role',
+        access: 'write'
+      });
+
+      const result = await executeUnifiedBinding(strategy, context);
+
+      assertEnhancedBindingResult(result);
+
+      const policy = result.iamPolicies.find(p => p.description.includes('service-linked role write access'));
+      expect(policy).toBeDefined();
+      
+      const statementJson = policy!.statement.toStatementJson();
+      const actions = Array.isArray(statementJson.Action)
+        ? statementJson.Action
+        : [statementJson.Action];
+
+      expect(actions).toContain('organizations:EnableAWSServiceAccess');
+      expect(actions).toContain('iam:CreateServiceLinkedRole');
+      expect(actions).toContain('iam:DeleteServiceLinkedRole');
+    });
+  });
 });
 
