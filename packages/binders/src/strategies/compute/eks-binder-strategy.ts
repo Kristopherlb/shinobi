@@ -234,7 +234,7 @@ export class EksBinderStrategy extends UnifiedBinderStrategyBase {
     const resolvedActions = resolveActions(
       context.directive,
       context,
-      (acc) => this.getEksClusterActionsForAccess(acc, context).actions,
+      (acc: string) => this.getEksClusterActionsForAccess(acc, context).actions,
       'eks'
     );
 
@@ -338,7 +338,7 @@ export class EksBinderStrategy extends UnifiedBinderStrategyBase {
     const resolvedActions = resolveActions(
       context.directive,
       context,
-      (acc) => this.getEksNodeGroupActionsForAccess(acc, context),
+      (acc: string) => this.getEksNodeGroupActionsForAccess(acc, context),
       'eks'
     );
 

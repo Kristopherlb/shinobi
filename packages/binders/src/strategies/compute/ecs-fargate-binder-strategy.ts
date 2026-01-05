@@ -210,7 +210,7 @@ export class EcsFargateBinderStrategy extends UnifiedBinderStrategyBase {
     const resolvedActions = resolveActions(
       context.directive,
       context,
-      (acc) => this.getEcsClusterActionsForAccess(acc, context).actions,
+      (acc: string) => this.getEcsClusterActionsForAccess(acc, context).actions,
       'ecs'
     );
 
@@ -297,7 +297,7 @@ export class EcsFargateBinderStrategy extends UnifiedBinderStrategyBase {
     const resolvedActions = resolveActions(
       context.directive,
       context,
-      (acc) => this.getEcsServiceActionsForAccess(acc, context, targetData.clusterName).actions,
+      (acc: string) => this.getEcsServiceActionsForAccess(acc, context, targetData.clusterName).actions,
       'ecs'
     );
 
@@ -368,7 +368,7 @@ export class EcsFargateBinderStrategy extends UnifiedBinderStrategyBase {
     const resolvedActions = resolveActions(
       context.directive,
       context,
-      (acc) => this.getEcsTaskDefinitionActionsForAccess(acc),
+      (acc: string) => this.getEcsTaskDefinitionActionsForAccess(acc),
       'ecs'
     );
 

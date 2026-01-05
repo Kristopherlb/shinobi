@@ -319,7 +319,7 @@ export class LightsailBinderStrategy extends UnifiedBinderStrategyBase {
     const resolvedActions = resolveActions(
       context.directive,
       context,
-      (acc) => this.getLightsailInstanceActionsForAccess(acc),
+      (acc: string) => this.getLightsailInstanceActionsForAccess(acc),
       'lightsail'
     );
 
@@ -408,7 +408,7 @@ export class LightsailBinderStrategy extends UnifiedBinderStrategyBase {
     const resolvedActions = resolveActions(
       context.directive,
       context,
-      (acc) => this.getLightsailDatabaseActionsForAccess(acc),
+      (acc: string) => this.getLightsailDatabaseActionsForAccess(acc),
       'lightsail'
     );
 
@@ -484,7 +484,7 @@ export class LightsailBinderStrategy extends UnifiedBinderStrategyBase {
     const resolvedActions = resolveActions(
       context.directive,
       context,
-      (acc) => this.getLightsailLoadBalancerActionsForAccess(acc),
+      (acc: string) => this.getLightsailLoadBalancerActionsForAccess(acc),
       'lightsail'
     );
 

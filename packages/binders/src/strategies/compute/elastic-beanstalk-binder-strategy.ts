@@ -219,7 +219,7 @@ export class ElasticBeanstalkBinderStrategy extends UnifiedBinderStrategyBase {
     const resolvedActions = resolveActions(
       context.directive,
       context,
-      (acc) => this.getElasticBeanstalkApplicationActionsForAccess(acc),
+      (acc: string) => this.getElasticBeanstalkApplicationActionsForAccess(acc),
       'elasticbeanstalk'
     );
 
@@ -295,7 +295,7 @@ export class ElasticBeanstalkBinderStrategy extends UnifiedBinderStrategyBase {
     const resolvedActions = resolveActions(
       context.directive,
       context,
-      (acc) => this.getElasticBeanstalkEnvironmentActionsForAccess(acc),
+      (acc: string) => this.getElasticBeanstalkEnvironmentActionsForAccess(acc),
       'elasticbeanstalk'
     );
 
@@ -391,7 +391,7 @@ export class ElasticBeanstalkBinderStrategy extends UnifiedBinderStrategyBase {
     const resolvedActions = resolveActions(
       context.directive,
       context,
-      (acc) => this.getElasticBeanstalkVersionActionsForAccess(acc),
+      (acc: string) => this.getElasticBeanstalkVersionActionsForAccess(acc),
       'elasticbeanstalk'
     );
 

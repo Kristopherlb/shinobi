@@ -322,7 +322,7 @@ export class BatchBinderStrategy extends UnifiedBinderStrategyBase {
     const resolvedActions = resolveActions(
       context.directive,
       context,
-      (acc) => this.getBatchComputeEnvironmentActionsForAccess(acc),
+      (acc: string) => this.getBatchComputeEnvironmentActionsForAccess(acc),
       'batch'
     );
 
@@ -420,7 +420,7 @@ export class BatchBinderStrategy extends UnifiedBinderStrategyBase {
     const resolvedActions = resolveActions(
       context.directive,
       context,
-      (acc) => this.getBatchJobDefinitionActionsForAccess(acc),
+      (acc: string) => this.getBatchJobDefinitionActionsForAccess(acc),
       'batch'
     );
 
@@ -501,7 +501,7 @@ export class BatchBinderStrategy extends UnifiedBinderStrategyBase {
     const resolvedActions = resolveActions(
       context.directive,
       context,
-      (acc) => this.getBatchJobActionsForAccess(acc),
+      (acc: string) => this.getBatchJobActionsForAccess(acc),
       'batch'
     );
 
