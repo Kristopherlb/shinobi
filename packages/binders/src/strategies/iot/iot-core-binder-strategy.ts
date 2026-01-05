@@ -162,7 +162,7 @@ export class IoTCoreBinderStrategy extends UnifiedBinderStrategyBase {
       const resolvedActions = resolveActions(
         context.directive,
         context,
-        (acc) => this.getIoTThingActionsForAccess(acc),
+        (acc: string) => this.getIoTThingActionsForAccess(acc),
         'iot'
       );
 
@@ -302,7 +302,7 @@ export class IoTCoreBinderStrategy extends UnifiedBinderStrategyBase {
       const resolvedActions = resolveActions(
         context.directive,
         context,
-        (acc) => this.getIoTCertificateActionsForAccess(acc),
+        (acc: string) => this.getIoTCertificateActionsForAccess(acc),
         'iot'
       );
 
@@ -424,7 +424,7 @@ export class IoTCoreBinderStrategy extends UnifiedBinderStrategyBase {
       const resolvedActions = resolveActions(
         context.directive,
         context,
-        (acc) => this.getIoTPolicyActionsForAccess(acc),
+        (acc: string) => this.getIoTPolicyActionsForAccess(acc),
         'iot'
       );
 
@@ -528,7 +528,7 @@ export class IoTCoreBinderStrategy extends UnifiedBinderStrategyBase {
       const resolvedActions = resolveActions(
         context.directive,
         context,
-        (acc) => this.getIoTTopicRuleActionsForAccess(acc),
+        (acc: string) => this.getIoTTopicRuleActionsForAccess(acc),
         'iot'
       );
 
@@ -688,7 +688,7 @@ export class IoTCoreBinderStrategy extends UnifiedBinderStrategyBase {
       const resolvedActions = resolveActions(
         context.directive,
         context,
-        (acc) => this.getIoTThingGroupActionsForAccess(acc),
+        (acc: string) => this.getIoTThingGroupActionsForAccess(acc),
         'iot'
       );
 
@@ -793,7 +793,7 @@ export class IoTCoreBinderStrategy extends UnifiedBinderStrategyBase {
       const resolvedActions = resolveActions(
         context.directive,
         context,
-        (acc) => this.getIoTJobActionsForAccess(acc),
+        (acc: string) => this.getIoTJobActionsForAccess(acc),
         'iot'
       );
 

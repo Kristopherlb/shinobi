@@ -326,7 +326,7 @@ export class EventBridgeBinderStrategy extends UnifiedBinderStrategyBase {
     const resolvedActions = resolveActions(
       context.directive,
       context,
-      (acc) => this.getEventBridgeConnectionActionsForAccess(acc),
+      (acc: string) => this.getEventBridgeConnectionActionsForAccess(acc),
       'events'
     );
 

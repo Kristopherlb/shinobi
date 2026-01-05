@@ -149,7 +149,7 @@ export class NeptuneBinderStrategy extends UnifiedBinderStrategyBase {
       const resolvedActions = resolveActions(
         context.directive,
         context,
-        (acc) => this.getNeptuneClusterActionsForAccess(acc),
+        (acc: string) => this.getNeptuneClusterActionsForAccess(acc),
         'rds' // Neptune uses RDS actions
       );
 
@@ -267,7 +267,7 @@ export class NeptuneBinderStrategy extends UnifiedBinderStrategyBase {
       const resolvedActions = resolveActions(
         context.directive,
         context,
-        (acc) => this.getNeptuneInstanceActionsForAccess(acc),
+        (acc: string) => this.getNeptuneInstanceActionsForAccess(acc),
         'rds' // Neptune uses RDS actions
       );
 
@@ -436,7 +436,7 @@ export class NeptuneBinderStrategy extends UnifiedBinderStrategyBase {
       const resolvedActions = resolveActions(
         context.directive,
         context,
-        (acc) => this.getNeptuneBackupActionsForAccess(acc),
+        (acc: string) => this.getNeptuneBackupActionsForAccess(acc),
         'rds' // Neptune uses RDS actions
       );
 

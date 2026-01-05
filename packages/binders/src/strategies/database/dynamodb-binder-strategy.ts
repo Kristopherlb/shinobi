@@ -151,7 +151,7 @@ export class DynamoDbBinderStrategy extends UnifiedBinderStrategyBase {
       const resolvedActions = resolveActions(
         context.directive,
         context,
-        (acc) => this.getDynamoDbTableActionsForAccess(acc),
+        (acc: string) => this.getDynamoDbTableActionsForAccess(acc),
         'dynamodb'
       );
 
@@ -370,7 +370,7 @@ export class DynamoDbBinderStrategy extends UnifiedBinderStrategyBase {
       const resolvedActions = resolveActions(
         context.directive,
         context,
-        (acc) => this.getDynamoDbIndexActionsForAccess(acc),
+        (acc: string) => this.getDynamoDbIndexActionsForAccess(acc),
         'dynamodb'
       );
 
@@ -479,7 +479,7 @@ export class DynamoDbBinderStrategy extends UnifiedBinderStrategyBase {
       const resolvedActions = resolveActions(
         context.directive,
         context,
-        (acc) => this.getDynamoDbStreamActionsForAccess(acc),
+        (acc: string) => this.getDynamoDbStreamActionsForAccess(acc),
         'dynamodb'
       );
 
@@ -603,7 +603,7 @@ export class DynamoDbBinderStrategy extends UnifiedBinderStrategyBase {
       const resolvedActions = resolveActions(
         context.directive,
         context,
-        (acc) => this.getDynamoDbBackupActionsForAccess(acc),
+        (acc: string) => this.getDynamoDbBackupActionsForAccess(acc),
         'dynamodb'
       );
 
