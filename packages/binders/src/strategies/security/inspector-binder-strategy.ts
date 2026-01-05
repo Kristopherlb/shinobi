@@ -126,7 +126,7 @@ export class InspectorBinderStrategy extends UnifiedBinderStrategyBase {
       const resolvedActions = resolveActions(
         context.directive,
         context,
-        (acc) => this.getInspectorActionsForAccess(acc),
+        (acc: string) => this.getInspectorActionsForAccess(acc),
         'inspector2'
       );
 

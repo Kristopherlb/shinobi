@@ -141,7 +141,7 @@ export class ConfigBinderStrategy extends UnifiedBinderStrategyBase {
       const resolvedActions = resolveActions(
         context.directive,
         context,
-        (acc) => this.getConfigRuleActionsForAccess(acc),
+        (acc: string) => this.getConfigRuleActionsForAccess(acc),
         'config'
       );
       const statement = new PolicyStatement({

@@ -106,7 +106,7 @@ export class SecretsManagerBinderStrategy extends UnifiedBinderStrategyBase {
       const resolvedActions = resolveActions(
         context.directive,
         context,
-        (acc) => this.getSecretsManagerSecretActionsForAccess(acc),
+        (acc: string) => this.getSecretsManagerSecretActionsForAccess(acc),
         'secretsmanager'
       );
 
@@ -240,7 +240,7 @@ export class SecretsManagerBinderStrategy extends UnifiedBinderStrategyBase {
       const resolvedActions = resolveActions(
         context.directive,
         context,
-        (acc) => this.getSecretsManagerRotationActionsForAccess(acc),
+        (acc: string) => this.getSecretsManagerRotationActionsForAccess(acc),
         'secretsmanager'
       );
 

@@ -106,7 +106,7 @@ export class AuditManagerBinderStrategy extends UnifiedBinderStrategyBase {
       const resolvedActions = resolveActions(
         context.directive,
         context,
-        (acc) => this.getAuditManagerFrameworkActionsForAccess(acc),
+        (acc: string) => this.getAuditManagerFrameworkActionsForAccess(acc),
         'auditmanager'
       );
       const statement = new PolicyStatement({
@@ -298,7 +298,7 @@ export class AuditManagerBinderStrategy extends UnifiedBinderStrategyBase {
       const resolvedActions = resolveActions(
         context.directive,
         context,
-        (acc) => this.getAuditManagerAssessmentActionsForAccess(acc),
+        (acc: string) => this.getAuditManagerAssessmentActionsForAccess(acc),
         'auditmanager'
       );
       const statement = new PolicyStatement({

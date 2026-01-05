@@ -484,7 +484,7 @@ export class VpcBinderStrategy extends UnifiedBinderStrategyBase {
     const resolvedActions = resolveActions(
       context.directive,
       context,
-      (acc) => this.getVpcNetworkActionsForAccess(acc),
+      (acc: string) => this.getVpcNetworkActionsForAccess(acc),
       'ec2'
     );
 
@@ -550,7 +550,7 @@ export class VpcBinderStrategy extends UnifiedBinderStrategyBase {
     const resolvedActions = resolveActions(
       context.directive,
       context,
-      (acc) => this.getVpcSubnetActionsForAccess(acc),
+      (acc: string) => this.getVpcSubnetActionsForAccess(acc),
       'ec2'
     );
 
@@ -606,7 +606,7 @@ export class VpcBinderStrategy extends UnifiedBinderStrategyBase {
     const resolvedActions = resolveActions(
       context.directive,
       context,
-      (acc) => this.getVpcSecurityGroupActionsForAccess(acc),
+      (acc: string) => this.getVpcSecurityGroupActionsForAccess(acc),
       'ec2'
     );
 
@@ -671,7 +671,7 @@ export class VpcBinderStrategy extends UnifiedBinderStrategyBase {
     const resolvedActions = resolveActions(
       context.directive,
       context,
-      (acc) => this.getVpcRouteTableActionsForAccess(acc),
+      (acc: string) => this.getVpcRouteTableActionsForAccess(acc),
       'ec2'
     );
 
@@ -730,7 +730,7 @@ export class VpcBinderStrategy extends UnifiedBinderStrategyBase {
     const resolvedActions = resolveActions(
       context.directive,
       context,
-      (acc) => this.getVpcNatGatewayActionsForAccess(acc),
+      (acc: string) => this.getVpcNatGatewayActionsForAccess(acc),
       'ec2'
     );
 
@@ -794,7 +794,7 @@ export class VpcBinderStrategy extends UnifiedBinderStrategyBase {
     const resolvedActions = resolveActions(
       context.directive,
       context,
-      (acc) => this.getVpcNetworkAclActionsForAccess(acc),
+      (acc: string) => this.getVpcNetworkAclActionsForAccess(acc),
       'ec2'
     );
 
@@ -850,7 +850,7 @@ export class VpcBinderStrategy extends UnifiedBinderStrategyBase {
     const resolvedActions = resolveActions(
       context.directive,
       context,
-      (acc) => this.getVpcPeeringActionsForAccess(acc),
+      (acc: string) => this.getVpcPeeringActionsForAccess(acc),
       'ec2'
     );
 
@@ -915,7 +915,7 @@ export class VpcBinderStrategy extends UnifiedBinderStrategyBase {
     const resolvedActions = resolveActions(
       context.directive,
       context,
-      (acc) => this.getTransitGatewayActionsForAccess(acc),
+      (acc: string) => this.getTransitGatewayActionsForAccess(acc),
       'ec2'
     );
 
@@ -992,7 +992,7 @@ export class VpcBinderStrategy extends UnifiedBinderStrategyBase {
     const resolvedActions = resolveActions(
       context.directive,
       context,
-      (acc) => this.getVpcEndpointActionsForAccess(acc),
+      (acc: string) => this.getVpcEndpointActionsForAccess(acc),
       'ec2'
     );
 
@@ -1059,7 +1059,7 @@ export class VpcBinderStrategy extends UnifiedBinderStrategyBase {
     const resolvedActions = resolveActions(
       context.directive,
       context,
-      (acc) => this.getNetworkFirewallActionsForAccess(acc),
+      (acc: string) => this.getNetworkFirewallActionsForAccess(acc),
       'network-firewall'
     );
 

@@ -180,7 +180,7 @@ export class EfsBinderStrategy extends UnifiedBinderStrategyBase {
       const resolvedActions = resolveActions(
         context.directive,
         context,
-        (acc) => this.getEfsActionsForAccess([acc]),
+        (acc: string) => this.getEfsActionsForAccess([acc]),
         'elasticfilesystem'
       );
 

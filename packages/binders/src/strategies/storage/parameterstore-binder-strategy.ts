@@ -98,7 +98,7 @@ export class ParameterStoreBinderStrategy extends UnifiedBinderStrategyBase {
     const resolvedActions = resolveActions(
       context.directive,
       context,
-      (acc) => this.getParameterStoreActionsForAccess(acc),
+      (acc: string) => this.getParameterStoreActionsForAccess(acc),
       'ssm'
     );
 

@@ -134,7 +134,7 @@ export class ServiceCatalogBinderStrategy extends UnifiedBinderStrategyBase {
       const resolvedActions = resolveActions(
         context.directive,
         context,
-        (acc) => this.getServiceCatalogActionsForAccess(acc),
+        (acc: string) => this.getServiceCatalogActionsForAccess(acc),
         'servicecatalog'
       );
 

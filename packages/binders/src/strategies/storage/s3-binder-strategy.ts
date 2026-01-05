@@ -154,7 +154,7 @@ export class S3BinderStrategy extends UnifiedBinderStrategyBase {
     const resolvedActions = resolveActions(
       context.directive,
       context,
-      (acc) => this.getS3ActionsForAccess([acc]),
+      (acc: string) => this.getS3ActionsForAccess([acc]),
       's3'
     );
 
