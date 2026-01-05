@@ -143,6 +143,12 @@ function extractServiceFromStatement(statement: PolicyStatement): string | null 
 export function validateResources(statement: PolicyStatement, defaultServicePrefix?: string): void {
   const resources = statement.resources || [];
   
+  // DENY policies with wildcards are a valid AWS IAM security pattern
+  // (e.g., "Deny all except X"). Skip validation for DENY statements.
+  if (statement.effect === 'Deny') {
+    return;
+  }
+  
   // Extract service from statement actions, fallback to default
   const servicePrefix = extractServiceFromStatement(statement) || defaultServicePrefix;
   

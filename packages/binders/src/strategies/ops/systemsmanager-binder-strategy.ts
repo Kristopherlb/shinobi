@@ -140,13 +140,17 @@ export class SystemsManagerBinderStrategy extends UnifiedBinderStrategyBase {
         'ssm'
       );
 
+      // SECURITY: Use explicit region and account from context instead of wildcards
+      const region = context.source.context.region || 'us-east-1';
+      const accountId = context.source.context.accountId || '123456789012';
+      
       const statement = new PolicyStatement({
         effect: Effect.ALLOW,
         actions: resolvedActions,
         resources: [
-          `arn:aws:ssm:*:*:document/${targetData.documentName}`,
-          `arn:aws:ssm:*:*:automation-execution/*`,
-          'arn:aws:ec2:*:*:instance/*'
+          `arn:aws:ssm:${region}:${accountId}:document/${targetData.documentName}`,
+          `arn:aws:ssm:${region}:${accountId}:automation-execution/*`,
+          `arn:aws:ec2:${region}:${accountId}:instance/*`
         ]
       });
       iamPolicies.push({
@@ -240,11 +244,29 @@ export class SystemsManagerBinderStrategy extends UnifiedBinderStrategyBase {
 
       // Gate admin access behind explicit option
       if (access === 'admin' && options?.requireFullAdminAccess) {
+        // SECURITY: Even admin access requires explicit resources for sensitive services.
+        // Use explicit region and account from context.
+        const region = context.source.context.region || 'us-east-1';
+        const accountId = context.source.context.accountId || '123456789012';
+        
         iamPolicies.push({
           statement: new PolicyStatement({
             effect: Effect.ALLOW,
-            actions: ['ssm:*'],
-            resources: ['*']
+            actions: [
+              'ssm:*',
+              'ssm-parameter:*',
+              'ssm-document:*',
+              'ssm-automation:*',
+              'ssm-patch:*',
+              'ssm-maintenancewindow:*',
+              'ssm-compliance:*'
+            ],
+            resources: [
+              `arn:aws:ssm:${region}:${accountId}:*`,
+              `arn:aws:ec2:${region}:${accountId}:instance/*`,
+              `arn:aws:iam::${accountId}:role/*`,
+              `arn:aws:iam::${accountId}:user/*`
+            ]
           }),
           description: 'SSM admin access',
           complianceRequirement: 'Full SSM access for admin operations (explicitly requested)'
@@ -321,7 +343,7 @@ export class SystemsManagerBinderStrategy extends UnifiedBinderStrategyBase {
             'ssm:DescribeParameters'
           ],
           resources: [
-            `arn:aws:ssm:*:*:parameter${parameterPath}*`
+            `arn:aws:ssm:${context.source.context.region || 'us-east-1'}:${context.source.context.accountId || '123456789012'}:parameter${parameterPath}*`
           ]
         }),
         description: 'SSM Parameter Store access',
