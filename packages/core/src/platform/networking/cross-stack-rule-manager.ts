@@ -16,6 +16,9 @@
 
 import * as ssm from 'aws-cdk-lib/aws-ssm';
 import * as cdk from 'aws-cdk-lib';
+import * as lambda from 'aws-cdk-lib/aws-lambda';
+import * as iam from 'aws-cdk-lib/aws-iam';
+import * as cr from 'aws-cdk-lib/custom-resources';
 import { CfnSecurityGroupIngress, CfnSecurityGroupEgress } from 'aws-cdk-lib/aws-ec2';
 import type { SecurityGroupRule } from '../contracts/bindings.js';
 
@@ -36,9 +39,27 @@ export interface CrossStackRuleSpec {
 /**
  * Rule storage key format in SSM Parameter Store
  * Format: /shinobi/network-rules/{service}/{bindingId}
+ * 
+ * Both serviceName and bindingId are sanitized to ensure valid SSM parameter names.
+ * SSM parameter names can only contain: .-_/ and alphanumeric characters.
+ * SSM parameter names have a 2048 character limit.
  */
 function getRuleStorageKey(serviceName: string, bindingId: string): string {
-  return `/shinobi/network-rules/${serviceName}/${bindingId}`;
+  // Sanitize both serviceName and bindingId - SSM only allows .-_/ and alphanumeric
+  const sanitizedServiceName = serviceName.replace(/[^a-zA-Z0-9.\-_/]/g, '-');
+  const sanitizedBindingId = bindingId.replace(/[^a-zA-Z0-9.\-_/]/g, '-');
+  const parameterKey = `/shinobi/network-rules/${sanitizedServiceName}/${sanitizedBindingId}`;
+  
+  // Validate length (SSM parameter names have 2048 char limit)
+  // Warn at 2000 to leave room for path and provide early warning
+  if (parameterKey.length > 2000) {
+    console.warn(
+      `[CrossStackRuleManager] SSM parameter name exceeds 2000 chars (${parameterKey.length}): ${parameterKey.substring(0, 100)}... ` +
+      `Consider shortening service name or binding ID. SSM limit is 2048 characters.`
+    );
+  }
+  
+  return parameterKey;
 }
 
 /**
@@ -59,10 +80,9 @@ export class CrossStackRuleManager {
     serviceName: string,
     ruleSpec: CrossStackRuleSpec
   ): void {
-    // Sanitize parameter name - SSM only allows .-_/ and alphanumeric
-    // Replace colons and other invalid characters with hyphens
-    const sanitizedBindingId = ruleSpec.bindingId.replace(/[^a-zA-Z0-9.\-_/]/g, '-');
-    const parameterKey = getRuleStorageKey(serviceName, sanitizedBindingId);
+    // getRuleStorageKey() handles sanitization of both serviceName and bindingId
+    // SSM only allows .-_/ and alphanumeric characters in parameter names
+    const parameterKey = getRuleStorageKey(serviceName, ruleSpec.bindingId);
     
     // Store rule spec as JSON in SSM Parameter Store
     new ssm.StringParameter(stack, `CrossStackRule-${ruleSpec.ruleId}`, {
@@ -87,11 +107,15 @@ export class CrossStackRuleManager {
       if (!seen.has(key)) {
         seen.set(key, spec);
       } else {
-        // Rule already exists - keep the first one, log conflict
+        // Rule already exists - keep the first one, log conflict with full metadata
+        const existingSpec = seen.get(key)!;
         console.warn(
           `[CrossStackRuleManager] Duplicate rule detected for SG ${spec.targetSecurityGroupId}. ` +
-          `Keeping first occurrence from ${seen.get(key)!.sourceComponent}. ` +
-          `Conflicting rule from ${spec.sourceComponent} will be ignored.`
+          `Keeping first occurrence: bindingId=${existingSpec.bindingId}, ` +
+          `source=${existingSpec.sourceComponent}->${existingSpec.targetComponent}. ` +
+          `Conflicting rule ignored: bindingId=${spec.bindingId}, ` +
+          `source=${spec.sourceComponent}->${spec.targetComponent}. ` +
+          `Rule: ${spec.rule.type} ${spec.rule.peer.kind} ${spec.rule.port.protocol}:${spec.rule.port.from}-${spec.rule.port.to}`
         );
       }
     }
@@ -192,9 +216,17 @@ export class CrossStackRuleManager {
   /**
    * Mark rule for deletion (when binding is removed)
    * 
+   * Creates a Custom Resource that deletes the SSM parameter, which will cause
+   * the rule to be removed in the next network-rules stack deployment.
+   * 
+   * **Trade-off: Delayed Revocation**
+   * Rules remain active until the network-rules stack is redeployed after this
+   * SSM parameter is deleted. This provides eventual consistency and is acceptable
+   * for most use cases. For immediate revocation, see SG-011 (EventBridge-triggered cleanup).
+   * 
    * @param stack - CDK stack
-   * @param serviceName - Source service name
-   * @param bindingId - Binding ID to remove
+   * @param serviceName - Source service name (will be sanitized)
+   * @param bindingId - Binding ID to remove (will be sanitized)
    */
   static markRuleForDeletion(
     stack: cdk.Stack,
@@ -202,22 +234,95 @@ export class CrossStackRuleManager {
     bindingId: string
   ): void {
     const parameterKey = getRuleStorageKey(serviceName, bindingId);
+    const sanitizedBindingId = bindingId.replace(/[^a-zA-Z0-9.\-_/]/g, '-');
+    const constructId = `DeleteCrossStackRule-${sanitizedBindingId}`;
     
-    // Delete SSM parameter (this will cause rule to be removed in next network-rules stack deployment)
-    // Note: CDK doesn't have a direct way to delete parameters, so we use a custom resource
-    // or mark it for deletion. For now, we'll log and let the network-rules stack handle cleanup.
+    // Create Lambda function for deleting SSM parameter
+    const deleteFunction = new lambda.Function(stack, `${constructId}-Function`, {
+      runtime: lambda.Runtime.PYTHON_3_12,
+      handler: 'index.handler',
+      code: lambda.Code.fromInline(`
+import boto3
+import cfnresponse
+
+def handler(event, context):
+    ssm = boto3.client('ssm')
+    parameter_name = event['ResourceProperties']['ParameterName']
+    request_type = event['RequestType']
+    
+    try:
+        if request_type == 'Create' or request_type == 'Update':
+            # Delete the SSM parameter when Custom Resource is created/updated
+            # This marks the binding rule for deletion
+            try:
+                ssm.delete_parameter(Name=parameter_name)
+                print(f'Deleted SSM parameter: {parameter_name}')
+            except ssm.exceptions.ParameterNotFound:
+                # Parameter already deleted or doesn't exist - that's fine
+                print(f'Parameter {parameter_name} not found, already deleted or never existed')
+            
+            cfnresponse.send(event, context, cfnresponse.SUCCESS, {})
+        elif request_type == 'Delete':
+            # Custom Resource is being deleted - nothing to do
+            # The SSM parameter was already deleted on Create/Update
+            cfnresponse.send(event, context, cfnresponse.SUCCESS, {})
+        else:
+            cfnresponse.send(event, context, cfnresponse.SUCCESS, {})
+    except Exception as e:
+        print(f'Error: {str(e)}')
+        cfnresponse.send(event, context, cfnresponse.FAILED, {})
+      `),
+      timeout: cdk.Duration.seconds(30),
+      description: `Deletes SSM parameter for cross-stack security group rule: ${bindingId}`
+    });
+    
+    // Grant permission to delete SSM parameter
+    deleteFunction.addToRolePolicy(new iam.PolicyStatement({
+      effect: iam.Effect.ALLOW,
+      actions: [
+        'ssm:DeleteParameter',
+        'ssm:GetParameter'
+      ],
+      resources: [
+        `arn:aws:ssm:${stack.region}:${stack.account}:parameter${parameterKey}`
+      ]
+    }));
+    
+    // Create Provider and Custom Resource to trigger deletion
+    const provider = new cr.Provider(stack, `${constructId}-Provider`, {
+      onEventHandler: deleteFunction
+    });
+    
+    new cdk.CustomResource(stack, constructId, {
+      serviceToken: provider.serviceToken,
+      properties: {
+        ParameterName: parameterKey
+      },
+      removalPolicy: cdk.RemovalPolicy.DESTROY
+    });
+    
+    // Log for debugging
     console.info(
       `[CrossStackRuleManager] Rule marked for deletion: ${parameterKey}. ` +
-      `Network-rules stack should remove this rule on next deployment.`
+      `Custom Resource will delete SSM parameter on stack deployment.`
     );
   }
 
   /**
    * Create network-rules stack from rule specs
    * 
-   * NOTE: This method requires rule specs to be provided. To read from SSM Parameter Store
-   * at runtime, use a Lambda Custom Resource or deploy the network-rules stack separately
-   * with a script that queries SSM and passes the specs to this method.
+   * **Deployment Model:**
+   * This method requires rule specs to be provided. CDK synthesis happens at build time,
+   * so we cannot dynamically query SSM Parameter Store during synthesis. Instead, use an
+   * external script or CLI tool to query SSM at runtime and pass the specs to this method.
+   * 
+   * **Why External Script?**
+   * - CDK synthesis is static - constructs must be known at synthesis time
+   * - SSM parameters are dynamic - created/updated at deployment time
+   * - Custom Resources that create other resources are complex and not recommended
+   * 
+   * **Future Enhancement:**
+   * See SG-012 for a reusable CLI tool that wraps this pattern.
    * 
    * Example usage:
    * ```typescript

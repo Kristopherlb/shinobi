@@ -86,7 +86,8 @@ export class ResolverEngine {
       this.dependencies.logger.info(
         `Security Group Rules: ${sgRuleResult.rulesApplied} applied, ` +
         `${sgRuleResult.securityGroupsAffected} SGs affected, ` +
-        `${sgRuleResult.crossStackRules} cross-stack rules deferred`
+        `${sgRuleResult.crossStackRules} cross-stack rules deferred, ` +
+        `${sgRuleResult.rulesRemoved} rules removed`
       );
 
       // Phase 4: Patching (AC-RS4.1, AC-RS4.2)

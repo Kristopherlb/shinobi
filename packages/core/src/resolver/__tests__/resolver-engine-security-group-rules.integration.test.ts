@@ -153,6 +153,7 @@ describe('SecurityGroupRulePostProcessor__Integration', () => {
       expect(result.rulesApplied).toBe(2);
       expect(result.securityGroupsAffected).toBe(1);
       expect(result.crossStackRules).toBe(0);
+      expect(result.rulesRemoved).toBe(0); // No previous bindings
 
       // Synthesize and verify CDK template
       const template = Template.fromStack(stack);
@@ -259,6 +260,7 @@ describe('SecurityGroupRulePostProcessor__Integration', () => {
       expect(result.rulesApplied).toBe(0); // No direct rules applied
       expect(result.securityGroupsAffected).toBe(0);
       expect(result.crossStackRules).toBe(1); // One cross-stack rule
+      expect(result.rulesRemoved).toBe(0); // No previous bindings
 
       // Synthesize and verify CDK template
       const template = Template.fromStack(stack);
@@ -289,6 +291,117 @@ describe('SecurityGroupRulePostProcessor__Integration', () => {
       expect(value.rule.port.protocol).toBe('tcp');
       expect(value.sourceComponent).toBe('source-component');
       expect(value.targetComponent).toBe('target-component');
+    });
+  });
+
+  describe('SGPostProcessor__RuleRemoval__CreatesDeletionResource', () => {
+    const metadata = {
+      id: 'TP-INTEGRATION-SG-RULES-003',
+      level: 'integration' as const,
+      capability: 'Rule removal when bindings are deleted',
+      oracle: 'exact' as const,
+      invariants: [
+        'Removed bindings trigger Custom Resource creation',
+        'Custom Resource deletes SSM parameters for cross-stack rules',
+        'Same-stack rules are handled automatically by CDK'
+      ],
+      fixtures: ['SecurityGroupRulePostProcessor', 'CDK Stack', 'Custom Resource'],
+      inputs: {
+        shape: 'Current bindings and previous binding IDs with removed bindings',
+        notes: 'Tests rule removal functionality end-to-end'
+      },
+      risks: ['Custom Resource Lambda execution'],
+      dependencies: ['SecurityGroupRulePostProcessor', 'CrossStackRuleManager'],
+      evidence: ['Custom Resource constructs', 'Lambda functions'],
+      compliance_refs: ['docs/tickets/security-groups/SG-006-binding-result-post-processor.md'],
+      ai_generated: true,
+      human_reviewed_by: 'Platform Engineering'
+    };
+
+    it('SGPostProcessor__RuleRemoval__CreatesDeletionResource', () => {
+      const app = new cdk.App();
+      const stack = new cdk.Stack(app, 'TestStack', {
+        env: {
+          account: '123456789012',
+          region: 'us-east-1'
+        }
+      });
+
+      // Current bindings (one binding remains)
+      const bindings = [
+        {
+          source: 'service-a',
+          target: 'service-b',
+          capability: 'security-group:rule',
+          result: {
+            environmentVariables: {
+              'SECURITY_GROUP_RULE_TARGET_SG_ID': 'sg-otherstack123'
+            },
+            iamPolicies: [],
+            securityGroupRules: [
+              {
+                type: 'ingress' as const,
+                peer: { kind: 'sg' as const, id: 'sg-source123' },
+                port: { from: 443, to: 443, protocol: 'tcp' as const },
+                description: 'Allow HTTPS'
+              }
+            ],
+            compliance: {
+              status: 'compliant' as const,
+              framework: 'commercial',
+              actionsTaken: []
+            }
+          } as EnhancedBindingResult
+        }
+      ];
+
+      // Previous bindings (one was removed)
+      const previousBindingIds = [
+        'service-a-service-b-security-group:rule', // Current (still exists)
+        'service-c-service-b-security-group:rule'  // Removed
+      ];
+
+      // Mock components (empty - simulating cross-stack scenario)
+      const mockComponents: any[] = [];
+
+      // Process bindings through post-processor
+      const result = SecurityGroupRulePostProcessor.process(
+        bindings,
+        stack,
+        mockComponents,
+        'test-service',
+        previousBindingIds
+      );
+
+      // Verify post-processor results
+      expect(result.rulesApplied).toBe(0); // Cross-stack, so no direct rules
+      expect(result.crossStackRules).toBe(1); // One cross-stack rule stored
+      expect(result.rulesRemoved).toBe(1); // One binding was removed
+
+      // Synthesize and verify CDK template
+      const template = Template.fromStack(stack);
+
+      // Verify SSM parameter was created for current rule
+      template.resourceCountIs('AWS::SSM::Parameter', 1);
+
+      // Verify Custom Resource was created for deletion
+      // Note: Provider may create additional Custom Resources for framework
+      const customResources = template.findResources('AWS::CloudFormation::CustomResource');
+      expect(Object.keys(customResources).length).toBeGreaterThanOrEqual(1);
+
+      // Verify Lambda function was created for deletion
+      // Note: Provider may create additional Lambdas for framework
+      const lambdaResources = template.findResources('AWS::Lambda::Function');
+      expect(Object.keys(lambdaResources).length).toBeGreaterThanOrEqual(1);
+      
+      // Verify at least one Lambda has the expected description
+      const lambdaDescriptions = Object.values(lambdaResources).map((r: any) => 
+        r.Properties?.Description || ''
+      );
+      const hasDeletionLambda = lambdaDescriptions.some((desc: string) => 
+        desc.includes('Deletes SSM parameter for cross-stack security group rule')
+      );
+      expect(hasDeletionLambda).toBe(true);
     });
   });
 });

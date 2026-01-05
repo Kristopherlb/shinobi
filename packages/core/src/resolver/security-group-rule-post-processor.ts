@@ -46,6 +46,7 @@ export interface SecurityGroupRulePostProcessorResult {
   rulesApplied: number;
   securityGroupsAffected: number;
   crossStackRules: number;
+  rulesRemoved: number;
 }
 
 /**
@@ -61,6 +62,7 @@ export class SecurityGroupRulePostProcessor {
    * @param stack - CDK stack to add rule constructs to
    * @param components - Array of components for resolving security group IDs
    * @param serviceName - Service name for cross-stack rule storage
+   * @param previousBindingIds - Optional array of binding IDs from previous synthesis run (for rule removal)
    * @returns Post-processor result with statistics
    */
   static process(
@@ -72,7 +74,8 @@ export class SecurityGroupRulePostProcessor {
     }>,
     stack: cdk.Stack,
     components: any[],
-    serviceName?: string
+    serviceName?: string,
+    previousBindingIds?: string[]
   ): SecurityGroupRulePostProcessorResult {
     // Phase 1: Collect all security group rules from binding results
     const allRules: TrackedSecurityGroupRule[] = [];
@@ -126,13 +129,12 @@ export class SecurityGroupRulePostProcessor {
       }
     }
     
-    if (allRules.length === 0) {
-      return {
-        rulesApplied: 0,
-        securityGroupsAffected: 0,
-        crossStackRules: 0
-      };
-    }
+    // Phase 1.5: Track current binding IDs and handle rule removal
+    const currentBindingIds = new Set<string>();
+    const crossStackBindingIds = new Set<string>();
+    const effectiveServiceName = serviceName || 
+                                stack.stackName.split('-')[0] || 
+                                'default-service';
     
     // Phase 2: Group rules by target security group ID
     const ruleGroups = this.groupRulesByTargetSecurityGroup(allRules);
@@ -152,11 +154,11 @@ export class SecurityGroupRulePostProcessor {
         crossStackRules += group.rules.length;
         
         // Store cross-stack rules in SSM Parameter Store for network-rules stack
-        const effectiveServiceName = serviceName || 
-                                    stack.stackName.split('-')[0] || 
-                                    'default-service';
-        
         for (const rule of group.rules) {
+          // Track this binding ID for removal detection
+          currentBindingIds.add(rule.bindingId);
+          crossStackBindingIds.add(rule.bindingId);
+          
           const ruleSpec: CrossStackRuleSpec = {
             ruleId: this.generateRuleId(rule),
             targetSecurityGroupId: group.targetSecurityGroupId,
@@ -179,6 +181,11 @@ export class SecurityGroupRulePostProcessor {
         continue;
       }
       
+      // Track same-stack binding IDs (for completeness, though same-stack rules are auto-removed by CDK)
+      for (const rule of group.rules) {
+        currentBindingIds.add(rule.bindingId);
+      }
+      
       // Apply rules to security group in current stack
       securityGroupsAffected++; // Only count same-stack security groups
       for (const rule of group.rules) {
@@ -195,10 +202,35 @@ export class SecurityGroupRulePostProcessor {
       }
     }
     
+    // Phase 4: Handle rule removal for deleted bindings
+    let rulesRemoved = 0;
+    if (previousBindingIds && previousBindingIds.length > 0) {
+      const previousBindingSet = new Set(previousBindingIds);
+      
+      // Find bindings that existed before but not now (deleted bindings)
+      for (const previousBindingId of previousBindingSet) {
+        if (!currentBindingIds.has(previousBindingId)) {
+          // This binding was removed - delete its cross-stack rules
+          // Note: We mark all removed bindings for deletion since we can't determine
+          // if they were cross-stack without additional state. This is idempotent -
+          // if the SSM parameter doesn't exist, the deletion will be a no-op.
+          // Same-stack rules are automatically removed by CDK when constructs
+          // are not in the template, so we only need to handle cross-stack rules here.
+          CrossStackRuleManager.markRuleForDeletion(
+            stack,
+            effectiveServiceName,
+            previousBindingId
+          );
+          rulesRemoved++;
+        }
+      }
+    }
+    
     return {
       rulesApplied,
       securityGroupsAffected,
-      crossStackRules
+      crossStackRules,
+      rulesRemoved
     };
   }
   
@@ -278,9 +310,11 @@ export class SecurityGroupRulePostProcessor {
     stack: cdk.Stack
   ): void {
     // Create unique ID for the rule construct
-    // Use hash of rule content to ensure idempotency
+    // Include bindingId in hash to ensure uniqueness per binding, not just per rule content
+    // This prevents collisions when the same rule is applied by different bindings
     const ruleHash = this.hashRule(rule);
-    const constructId = `SGRule-${ruleHash.substring(0, 8)}`;
+    const bindingHash = this.simpleHash(rule.bindingId);
+    const constructId = `SGRule-${ruleHash.substring(0, 8)}-${bindingHash.substring(0, 4)}`;
     
     // Prepare peer configuration
     let peerConfig: any;
@@ -335,10 +369,19 @@ export class SecurityGroupRulePostProcessor {
       target: rule.targetSecurityGroupId
     });
     
-    // Simple hash function (for idempotency, not cryptographic security)
+    return this.simpleHash(content);
+  }
+
+  /**
+   * Simple hash function (for idempotency, not cryptographic security)
+   * 
+   * @param input - String to hash
+   * @returns Hash string
+   */
+  private static simpleHash(input: string): string {
     let hash = 0;
-    for (let i = 0; i < content.length; i++) {
-      const char = content.charCodeAt(i);
+    for (let i = 0; i < input.length; i++) {
+      const char = input.charCodeAt(i);
       hash = ((hash << 5) - hash) + char;
       hash = hash & hash; // Convert to 32-bit integer
     }

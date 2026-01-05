@@ -103,6 +103,7 @@ describe('SecurityGroupRulePostProcessor', () => {
 
       expect(result.rulesApplied).toBe(2);
       expect(result.securityGroupsAffected).toBe(1); // Both rules target same SG
+      expect(result.rulesRemoved).toBe(0); // No previous bindings
     });
   });
 
@@ -180,6 +181,7 @@ describe('SecurityGroupRulePostProcessor', () => {
       const result = SecurityGroupRulePostProcessor.process(bindings, stack, [mockComponent]);
 
       expect(result.rulesApplied).toBe(2);
+      expect(result.rulesRemoved).toBe(0); // No previous bindings
       
       // Verify constructs were created (check stack for constructs)
       const constructs = stack.node.children.filter(
@@ -248,6 +250,7 @@ describe('SecurityGroupRulePostProcessor', () => {
 
       expect(result.rulesApplied).toBe(0);
       expect(result.securityGroupsAffected).toBe(0);
+      expect(result.rulesRemoved).toBe(0);
     });
   });
 
@@ -301,6 +304,189 @@ describe('SecurityGroupRulePostProcessor', () => {
 
       expect(result.rulesApplied).toBe(0);
       expect(result.securityGroupsAffected).toBe(0);
+      expect(result.rulesRemoved).toBe(0);
+    });
+  });
+
+  describe('SGPostProcessor__RemovedBindings__MarksForDeletion', () => {
+    const metadata = {
+      id: 'TP-sg-postprocessor-005',
+      level: 'unit' as const,
+      capability: 'Marks cross-stack rules for deletion when bindings are removed',
+      oracle: 'exact' as const,
+      invariants: [
+        'Removed bindings trigger rule deletion',
+        'Cross-stack rules are marked for deletion via Custom Resource',
+        'Same-stack rules are handled automatically by CDK',
+        'No errors when previous bindings list is empty'
+      ],
+      fixtures: ['SecurityGroupRulePostProcessor', 'CrossStackRuleManager'],
+      inputs: {
+        shape: 'Current bindings and previous binding IDs',
+        notes: 'Tests rule removal when bindings are deleted'
+      },
+      risks: ['Custom Resource creation complexity'],
+      dependencies: ['CrossStackRuleManager.markRuleForDeletion'],
+      evidence: ['Custom Resource constructs in stack'],
+      compliance_refs: ['docs/tickets/security-groups/SG-006-binding-result-post-processor.md'],
+      ai_generated: true,
+      human_reviewed_by: 'Platform Engineering'
+    };
+
+    test('SGPostProcessor__RemovedBindings__MarksForDeletion', () => {
+      const app = new App();
+      const stack = new Stack(app, 'TestStack');
+
+      // Current bindings (one binding)
+      const bindings = [
+        {
+          source: 'service-a',
+          target: 'service-b',
+          capability: 'security-group:rule',
+          result: {
+            environmentVariables: {
+              'SECURITY_GROUP_RULE_TARGET_SG_ID': 'sg-target123'
+            },
+            iamPolicies: [],
+            securityGroupRules: [
+              {
+                type: 'ingress' as const,
+                peer: { kind: 'sg' as const, id: 'sg-source123' },
+                port: { from: 443, to: 443, protocol: 'tcp' as const },
+                description: 'Allow HTTPS from source'
+              }
+            ],
+            compliance: {
+              status: 'compliant' as const,
+              framework: 'commercial',
+              actionsTaken: []
+            }
+          } as EnhancedBindingResult
+        }
+      ];
+
+      // Previous bindings (two bindings - one was removed)
+      const previousBindingIds = [
+        'service-a-service-b-security-group:rule', // Current binding (still exists)
+        'service-c-service-b-security-group:rule'  // Removed binding
+      ];
+
+      const mockComponent = {
+        getCapabilities: () => ({
+          'security-group:rule': {
+            securityGroupId: 'sg-target123'
+          }
+        })
+      };
+
+      const result = SecurityGroupRulePostProcessor.process(
+        bindings,
+        stack,
+        [mockComponent],
+        'test-service',
+        previousBindingIds
+      );
+
+      expect(result.rulesApplied).toBe(1);
+      expect(result.rulesRemoved).toBe(1); // One binding was removed
+
+      // Verify Custom Resource was created for deletion
+      // The bindingId 'service-c-service-b-security-group:rule' gets sanitized to 'service-c-service-b-security-group-rule'
+      const customResources = stack.node.findAll().filter(
+        construct => construct.node.id.startsWith('DeleteCrossStackRule-service-c-service-b-security-group-rule')
+      );
+      // Should have exactly 1 Custom Resource for deletion (Provider may create nested constructs, but our CR should be unique)
+      expect(customResources.length).toBeGreaterThanOrEqual(1);
+      
+      // Verify the main Custom Resource exists (not just nested Provider constructs)
+      const mainCustomResource = customResources.find(
+        construct => construct.node.id === 'DeleteCrossStackRule-service-c-service-b-security-group-rule'
+      );
+      expect(mainCustomResource).toBeDefined();
+    });
+  });
+
+  describe('SGPostProcessor__NoPreviousBindings__NoRemovals', () => {
+    const metadata = {
+      id: 'TP-sg-postprocessor-006',
+      level: 'unit' as const,
+      capability: 'Handles case when no previous bindings exist',
+      oracle: 'exact' as const,
+      invariants: [
+        'No errors when previousBindingIds is undefined',
+        'No errors when previousBindingIds is empty array',
+        'rulesRemoved is 0 when no previous bindings'
+      ],
+      fixtures: ['SecurityGroupRulePostProcessor'],
+      inputs: {
+        shape: 'Current bindings without previous binding IDs',
+        notes: 'Tests graceful handling of missing previous state'
+      },
+      risks: [],
+      dependencies: [],
+      evidence: [],
+      compliance_refs: ['docs/tickets/security-groups/SG-006-binding-result-post-processor.md'],
+      ai_generated: true,
+      human_reviewed_by: 'Platform Engineering'
+    };
+
+    test('SGPostProcessor__NoPreviousBindings__NoRemovals', () => {
+      const app = new App();
+      const stack = new Stack(app, 'TestStack');
+
+      const bindings = [
+        {
+          source: 'service-a',
+          target: 'service-b',
+          capability: 'security-group:rule',
+          result: {
+            environmentVariables: {
+              'SECURITY_GROUP_RULE_TARGET_SG_ID': 'sg-target123'
+            },
+            iamPolicies: [],
+            securityGroupRules: [
+              {
+                type: 'ingress' as const,
+                peer: { kind: 'sg' as const, id: 'sg-source123' },
+                port: { from: 443, to: 443, protocol: 'tcp' as const },
+                description: 'Allow HTTPS'
+              }
+            ],
+            compliance: {
+              status: 'compliant' as const,
+              framework: 'commercial',
+              actionsTaken: []
+            }
+          } as EnhancedBindingResult
+        }
+      ];
+
+      const mockComponent = {
+        getCapabilities: () => ({
+          'security-group:rule': {
+            securityGroupId: 'sg-target123'
+          }
+        })
+      };
+
+      // Test with undefined previousBindingIds
+      const result1 = SecurityGroupRulePostProcessor.process(
+        bindings,
+        stack,
+        [mockComponent]
+      );
+      expect(result1.rulesRemoved).toBe(0);
+
+      // Test with empty array - use a new stack to avoid construct ID conflicts
+      const stack2 = new Stack(app, 'TestStack2');
+      const result2 = SecurityGroupRulePostProcessor.process(
+        bindings,
+        stack2,
+        [mockComponent],
+        'test-service',
+        []
+      );
+      expect(result2.rulesRemoved).toBe(0);
     });
   });
 });
