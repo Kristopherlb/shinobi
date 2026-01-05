@@ -11,12 +11,14 @@ import { SchemaManager } from './schema-manager.js';
 import { SchemaErrorFormatter } from './schema-error-formatter.js';
 import { EnhancedSchemaValidator, ValidationResult } from './enhanced-schema-validator.js';
 import { ManifestSchemaComposer } from './manifest-schema-composer.js';
+import type { UnifiedBinderRegistry } from '../platform/binders/registry/unified-binder-registry.js';
 
 export interface SchemaValidatorDependencies {
   logger: Logger;
   schemaManager: SchemaManager;
   enhancedValidator?: EnhancedSchemaValidator;
   schemaComposer?: ManifestSchemaComposer;
+  binderRegistry?: UnifiedBinderRegistry;
 }
 
 /**
@@ -45,7 +47,8 @@ export class SchemaValidator {
 
       this.enhancedValidator = new EnhancedSchemaValidator({
         logger: this.dependencies.logger,
-        schemaComposer: this.dependencies.schemaComposer
+        schemaComposer: this.dependencies.schemaComposer,
+        binderRegistry: this.dependencies.binderRegistry
       });
     } else {
       this.enhancedValidator = this.dependencies.enhancedValidator;

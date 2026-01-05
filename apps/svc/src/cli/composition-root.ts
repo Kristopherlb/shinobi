@@ -12,7 +12,8 @@ import {
   ReferenceValidator,
   SchemaManager,
   SchemaValidator,
-  ValidationOrchestrator
+  ValidationOrchestrator,
+  createUnifiedBinderRegistry
 } from '@shinobi/core';
 import { ValidateCommand } from './validate-command.js';
 import { PlanCommand } from './plan-command.js';
@@ -62,6 +63,9 @@ export class CompositionRoot {
     const fileDiscovery = new FileDiscovery();
     const schemaManager = new SchemaManager();
 
+    // Create binder registry for binding directive validation
+    const binderRegistry = createUnifiedBinderRegistry();
+
     // Create enhanced schema validation services
     // Create focused services (single responsibility)
     // 
@@ -71,7 +75,11 @@ export class CompositionRoot {
     // that core services require, while CLI commands get the full Logger with
     // CLI-specific methods (success, warn, etc.).
     const manifestParser = new ManifestParser({ logger: logger.platformLogger });
-    const schemaValidator = new SchemaValidator({ logger: logger.platformLogger, schemaManager });
+    const schemaValidator = new SchemaValidator({ 
+      logger: logger.platformLogger, 
+      schemaManager,
+      binderRegistry
+    });
     const contextHydrator = new ContextHydrator({ logger: logger.platformLogger });
     const referenceValidator = new ReferenceValidator({ logger: logger.platformLogger });
 

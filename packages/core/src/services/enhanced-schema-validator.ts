@@ -9,10 +9,15 @@ import { Logger } from '../platform/logger/src/index.js';
 import { ManifestSchemaComposer } from './manifest-schema-composer.js';
 import { SchemaErrorFormatter } from './schema-error-formatter.js';
 import { withPerformanceTiming } from './performance-metrics.js';
+import { BindingDirectiveValidator } from './binding-directive-validator.js';
+import type { UnifiedBinderRegistry } from '../platform/binders/registry/unified-binder-registry.js';
+import type { ComplianceFramework } from '../platform/contracts/bindings.js';
 
 export interface EnhancedSchemaValidatorDependencies {
   logger: Logger;
   schemaComposer: ManifestSchemaComposer;
+  binderRegistry?: UnifiedBinderRegistry;
+  complianceFramework?: ComplianceFramework;
 }
 
 export interface ValidationError {
@@ -121,6 +126,22 @@ export class EnhancedSchemaValidator {
         for (const componentResult of componentValidationResults) {
           errors.push(...componentResult.errors);
           warnings.push(...componentResult.warnings);
+        }
+
+        // Perform binding directive validation if binder registry is available
+        // Compliance framework is extracted from manifest
+        if (this.dependencies.binderRegistry) {
+          try {
+            const complianceFramework = this.extractComplianceFramework(manifest);
+            const bindingErrors = await this.validateBindingDirectives(manifest, complianceFramework);
+            errors.push(...bindingErrors.filter(e => e.severity === 'error'));
+            warnings.push(...bindingErrors.filter(e => e.severity === 'warning'));
+          } catch (error) {
+            // Log but don't fail validation if binding validation crashes
+            this.dependencies.logger.warn(
+              `Binding directive validation failed: ${error instanceof Error ? error.message : 'Unknown error'}`
+            );
+          }
         }
 
         const overallValid = valid && errors.length === 0;
@@ -504,5 +525,37 @@ export class EnhancedSchemaValidator {
    */
   getSchemaStats(): any {
     return this.dependencies.schemaComposer.getSchemaStats();
+  }
+
+  /**
+   * Extract compliance framework from manifest
+   */
+  private extractComplianceFramework(manifest: any): ComplianceFramework {
+    // Try manifest-level complianceFramework first
+    if (manifest.complianceFramework) {
+      return manifest.complianceFramework as ComplianceFramework;
+    }
+
+    // Try environment variable
+    const envFramework = process.env.SHINOBI_DEFAULT_COMPLIANCE_FRAMEWORK;
+    if (envFramework) {
+      return envFramework as ComplianceFramework;
+    }
+
+    // Default fallback
+    return 'commercial';
+  }
+
+  /**
+   * Validate binding directives in the manifest
+   */
+  private async validateBindingDirectives(manifest: any, complianceFramework: ComplianceFramework): Promise<ValidationError[]> {
+    // Create binding validator with current manifest's compliance framework
+    const bindingValidator = new BindingDirectiveValidator({
+      binderRegistry: this.dependencies.binderRegistry!,
+      complianceFramework
+    });
+
+    return await bindingValidator.validateBindingDirectives(manifest);
   }
 }
