@@ -132,7 +132,7 @@ export class QueueBinderStrategy extends UnifiedBinderStrategyBase {
       const resolvedActions = resolveActions(
         context.directive,
         context,
-        (acc) => this.getSqsActionsForAccess(acc),
+        (acc: string) => this.getSqsActionsForAccess(acc),
         'sqs'
       );
 

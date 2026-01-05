@@ -136,7 +136,7 @@ export class SystemsManagerBinderStrategy extends UnifiedBinderStrategyBase {
       const resolvedActions = resolveActions(
         context.directive,
         context,
-        (acc) => this.getSsmAutomationActionsForAccess(acc),
+        (acc: string) => this.getSsmAutomationActionsForAccess(acc),
         'ssm'
       );
 

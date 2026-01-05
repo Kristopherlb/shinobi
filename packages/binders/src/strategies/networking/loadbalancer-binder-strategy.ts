@@ -96,7 +96,7 @@ export class LoadBalancerBinderStrategy extends UnifiedBinderStrategyBase {
     const resolvedActions = resolveActions(
       context.directive,
       context,
-      (acc) => this.getLoadBalancerActionsForAccess(acc),
+      (acc: string) => this.getLoadBalancerActionsForAccess(acc),
       'elasticloadbalancing'
     );
 

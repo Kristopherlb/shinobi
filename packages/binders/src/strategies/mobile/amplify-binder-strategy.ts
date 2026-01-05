@@ -185,7 +185,7 @@ export class AmplifyBinderStrategy extends UnifiedBinderStrategyBase {
       const resolvedActions = resolveActions(
         context.directive,
         context,
-        (acc) => this.getAmplifyAppActionsForAccess(acc),
+        (acc: string) => this.getAmplifyAppActionsForAccess(acc),
         'amplify'
       );
 
@@ -344,7 +344,7 @@ export class AmplifyBinderStrategy extends UnifiedBinderStrategyBase {
       const resolvedActions = resolveActions(
         context.directive,
         context,
-        (acc) => this.getAmplifyBranchActionsForAccess(acc),
+        (acc: string) => this.getAmplifyBranchActionsForAccess(acc),
         'amplify'
       );
 
@@ -491,7 +491,7 @@ export class AmplifyBinderStrategy extends UnifiedBinderStrategyBase {
       const resolvedActions = resolveActions(
         context.directive,
         context,
-        (acc) => this.getAmplifyDomainActionsForAccess(acc),
+        (acc: string) => this.getAmplifyDomainActionsForAccess(acc),
         'amplify'
       );
 
@@ -641,7 +641,7 @@ export class AmplifyBinderStrategy extends UnifiedBinderStrategyBase {
       const resolvedActions = resolveActions(
         context.directive,
         context,
-        (acc) => this.getAmplifyBackendEnvironmentActionsForAccess(acc),
+        (acc: string) => this.getAmplifyBackendEnvironmentActionsForAccess(acc),
         'amplifybackend'
       );
 
@@ -747,7 +747,7 @@ export class AmplifyBinderStrategy extends UnifiedBinderStrategyBase {
       const resolvedActions = resolveActions(
         context.directive,
         context,
-        (acc) => this.getAmplifyBackendAuthActionsForAccess(acc),
+        (acc: string) => this.getAmplifyBackendAuthActionsForAccess(acc),
         'amplifybackend'
       );
 
@@ -852,7 +852,7 @@ export class AmplifyBinderStrategy extends UnifiedBinderStrategyBase {
       const resolvedActions = resolveActions(
         context.directive,
         context,
-        (acc) => this.getAmplifyBackendApiActionsForAccess(acc),
+        (acc: string) => this.getAmplifyBackendApiActionsForAccess(acc),
         'amplifybackend'
       );
 
@@ -959,7 +959,7 @@ export class AmplifyBinderStrategy extends UnifiedBinderStrategyBase {
       const resolvedActions = resolveActions(
         context.directive,
         context,
-        (acc) => this.getAmplifyBackendStorageActionsForAccess(acc),
+        (acc: string) => this.getAmplifyBackendStorageActionsForAccess(acc),
         'amplifybackend'
       );
 

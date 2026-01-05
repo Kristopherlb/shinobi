@@ -121,7 +121,7 @@ export class SecurityHubBinderStrategy extends UnifiedBinderStrategyBase {
       const resolvedActions = resolveActions(
         context.directive,
         context,
-        (acc) => this.getSecurityHubActionsForAccess(acc),
+        (acc: string) => this.getSecurityHubActionsForAccess(acc),
         'securityhub'
       );
 

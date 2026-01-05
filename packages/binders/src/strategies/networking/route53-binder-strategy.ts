@@ -96,7 +96,7 @@ export class Route53BinderStrategy extends UnifiedBinderStrategyBase {
     const resolvedActions = resolveActions(
       context.directive,
       context,
-      (acc) => this.getRoute53ActionsForAccess(acc),
+      (acc: string) => this.getRoute53ActionsForAccess(acc),
       'route53'
     );
 

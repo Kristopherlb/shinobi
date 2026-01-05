@@ -121,7 +121,7 @@ export class AccessAnalyzerBinderStrategy extends UnifiedBinderStrategyBase {
       const resolvedActions = resolveActions(
         context.directive,
         context,
-        (acc) => this.getAccessAnalyzerActionsForAccess(acc, options),
+        (acc: string) => this.getAccessAnalyzerActionsForAccess(acc, options),
         'access-analyzer'
       );
 

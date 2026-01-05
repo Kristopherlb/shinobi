@@ -136,7 +136,7 @@ export class SecurityGroupBinderStrategy extends UnifiedBinderStrategyBase {
       const resolvedActions = resolveActions(
         context.directive,
         context,
-        (acc) => this.getSecurityGroupDiscoveryActionsForAccess(acc),
+        (acc: string) => this.getSecurityGroupDiscoveryActionsForAccess(acc),
         'ec2'
       );
 

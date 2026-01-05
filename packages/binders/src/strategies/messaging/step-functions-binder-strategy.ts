@@ -133,7 +133,7 @@ export class StepFunctionsBinderStrategy extends UnifiedBinderStrategyBase {
     let resolvedActions = resolveActions(
       context.directive,
       context,
-      (acc) => this.getStateMachineActionsForAccess(acc, targetData.type),
+      (acc: string) => this.getStateMachineActionsForAccess(acc, targetData.type),
       'states'
     );
 
@@ -229,7 +229,7 @@ export class StepFunctionsBinderStrategy extends UnifiedBinderStrategyBase {
     const resolvedActions = resolveActions(
       context.directive,
       context,
-      (acc) => this.getExecutionActionsForAccess(acc),
+      (acc: string) => this.getExecutionActionsForAccess(acc),
       'states'
     );
 
@@ -309,7 +309,7 @@ export class StepFunctionsBinderStrategy extends UnifiedBinderStrategyBase {
     const resolvedActions = resolveActions(
       context.directive,
       context,
-      (acc) => this.getActivityActionsForAccess(acc),
+      (acc: string) => this.getActivityActionsForAccess(acc),
       'states'
     );
 

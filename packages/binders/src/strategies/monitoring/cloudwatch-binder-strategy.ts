@@ -127,7 +127,7 @@ export class CloudWatchBinderStrategy extends UnifiedBinderStrategyBase {
       const resolvedActions = resolveActions(
         context.directive,
         context,
-        (acc) => this.getCloudWatchDashboardActionsForAccess(acc),
+        (acc: string) => this.getCloudWatchDashboardActionsForAccess(acc),
         'cloudwatch'
       );
 

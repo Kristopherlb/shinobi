@@ -182,7 +182,7 @@ export class SageMakerBinderStrategy extends UnifiedBinderStrategyBase {
       const resolvedActions = resolveActions(
         context.directive,
         context,
-        (acc) => this.getSagemakerNotebookActionsForAccess(acc),
+        (acc: string) => this.getSagemakerNotebookActionsForAccess(acc),
         'sagemaker'
       );
 
@@ -332,7 +332,7 @@ export class SageMakerBinderStrategy extends UnifiedBinderStrategyBase {
       const resolvedActions = resolveActions(
         context.directive,
         context,
-        (acc) => this.getSagemakerModelActionsForAccess(acc),
+        (acc: string) => this.getSagemakerModelActionsForAccess(acc),
         'sagemaker'
       );
 
@@ -483,7 +483,7 @@ export class SageMakerBinderStrategy extends UnifiedBinderStrategyBase {
       const resolvedActions = resolveActions(
         context.directive,
         context,
-        (acc) => this.getSagemakerEndpointActionsForAccess(acc),
+        (acc: string) => this.getSagemakerEndpointActionsForAccess(acc),
         'sagemaker'
       );
 
@@ -658,7 +658,7 @@ export class SageMakerBinderStrategy extends UnifiedBinderStrategyBase {
       const resolvedActions = resolveActions(
         context.directive,
         context,
-        (acc) => this.getSagemakerTrainingJobActionsForAccess(acc),
+        (acc: string) => this.getSagemakerTrainingJobActionsForAccess(acc),
         'sagemaker'
       );
 
@@ -800,7 +800,7 @@ export class SageMakerBinderStrategy extends UnifiedBinderStrategyBase {
       const resolvedActions = resolveActions(
         context.directive,
         context,
-        (acc) => this.getSagemakerStudioDomainActionsForAccess(acc),
+        (acc: string) => this.getSagemakerStudioDomainActionsForAccess(acc),
         'sagemaker'
       );
 
@@ -910,7 +910,7 @@ export class SageMakerBinderStrategy extends UnifiedBinderStrategyBase {
       const resolvedActions = resolveActions(
         context.directive,
         context,
-        (acc) => this.getSagemakerStudioUserProfileActionsForAccess(acc),
+        (acc: string) => this.getSagemakerStudioUserProfileActionsForAccess(acc),
         'sagemaker'
       );
 
@@ -1016,7 +1016,7 @@ export class SageMakerBinderStrategy extends UnifiedBinderStrategyBase {
       const resolvedActions = resolveActions(
         context.directive,
         context,
-        (acc) => this.getSagemakerProcessingJobActionsForAccess(acc),
+        (acc: string) => this.getSagemakerProcessingJobActionsForAccess(acc),
         'sagemaker'
       );
 
