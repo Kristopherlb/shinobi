@@ -18,5 +18,10 @@
     "src/platform/contracts/binder-integration.ts",
     "src/platform/contracts/enhanced-binder-example.ts",
     "src/platform/contracts/observability/observability-example.ts"
+  ],
+  "references": [
+    {
+      "path": "../binders/tsconfig.lib.json"
+    }
   ]
 }
