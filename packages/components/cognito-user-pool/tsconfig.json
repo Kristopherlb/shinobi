@@ -12,12 +12,14 @@
   },
   "include": [
     "src/**/*.ts",
-    "tests/**/*.ts",
     "Config.schema.json"
   ],
   "exclude": [
     "node_modules",
     "dist",
-    "**/*.test.ts"
+    "tests/**/*",
+    "**/*.test.ts",
+    "**/*.spec.ts",
+    "**/__tests__/**"
   ]
 }

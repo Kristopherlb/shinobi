@@ -9,12 +9,15 @@
   },
   "include": [
     "src/**/*",
-    "tests/**/*.ts",
     "Config.schema.json"
   ],
   "exclude": [
     "dist",
-    "node_modules"
+    "node_modules",
+    "tests/**/*",
+    "**/*.test.ts",
+    "**/*.spec.ts",
+    "**/__tests__/**"
   ],
   "references": [
     {
