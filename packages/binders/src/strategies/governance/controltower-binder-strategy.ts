@@ -124,7 +124,7 @@ export class ControlTowerBinderStrategy extends UnifiedBinderStrategyBase {
       const resolvedActions = resolveActions(
         context.directive,
         context,
-        (acc) => this.getControlTowerActionsForAccess(acc),
+        (acc: string) => this.getControlTowerActionsForAccess(acc),
         'controltower'
       );
 

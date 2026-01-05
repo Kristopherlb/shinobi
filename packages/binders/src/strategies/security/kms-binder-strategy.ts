@@ -136,7 +136,7 @@ export class KmsBinderStrategy extends UnifiedBinderStrategyBase {
       const resolvedActions = resolveActions(
         context.directive,
         context,
-        (acc) => this.getKmsKeyActionsForAccess(acc),
+        (acc: string) => this.getKmsKeyActionsForAccess(acc),
         'kms'
       );
 

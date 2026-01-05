@@ -159,7 +159,7 @@ export class CognitoUserPoolBinderStrategy extends UnifiedBinderStrategyBase {
       const resolvedActions = resolveActions(
         context.directive,
         context,
-        (acc) => this.getCognitoActionsForAccess(acc),
+        (acc: string) => this.getCognitoActionsForAccess(acc),
         'cognito-idp'
       );
 
@@ -230,7 +230,7 @@ export class CognitoUserPoolBinderStrategy extends UnifiedBinderStrategyBase {
         const resolvedActions = resolveActions(
           context.directive,
           context,
-          (acc) => this.getCognitoActionsForAccess(acc),
+          (acc: string) => this.getCognitoActionsForAccess(acc),
           'cognito-idp'
         );
 

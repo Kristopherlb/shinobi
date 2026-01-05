@@ -92,7 +92,7 @@ export class WafBinderStrategy extends UnifiedBinderStrategyBase {
       const resolvedActions = resolveActions(
         context.directive,
         context,
-        (acc) => this.getWafActionsForAccess(acc, options),
+        (acc: string) => this.getWafActionsForAccess(acc, options),
         'wafv2'
       );
 

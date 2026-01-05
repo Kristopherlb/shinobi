@@ -147,7 +147,7 @@ export class BackupBinderStrategy extends UnifiedBinderStrategyBase {
       const resolvedActions = resolveActions(
         context.directive,
         context,
-        (acc) => this.getBackupVaultActionsForAccess(acc),
+        (acc: string) => this.getBackupVaultActionsForAccess(acc),
         'backup'
       );
 
@@ -370,7 +370,7 @@ export class BackupBinderStrategy extends UnifiedBinderStrategyBase {
       const resolvedActions = resolveActions(
         context.directive,
         context,
-        (acc) => this.getBackupPlanActionsForAccess(acc),
+        (acc: string) => this.getBackupPlanActionsForAccess(acc),
         'backup'
       );
 

@@ -147,7 +147,7 @@ export class RAMBinderStrategy extends UnifiedBinderStrategyBase {
       const resolvedActions = resolveActions(
         context.directive,
         context,
-        (acc) => this.getRamResourceShareActionsForAccess(acc),
+        (acc: string) => this.getRamResourceShareActionsForAccess(acc),
         'ram'
       );
 
@@ -322,7 +322,7 @@ export class RAMBinderStrategy extends UnifiedBinderStrategyBase {
       const resolvedActions = resolveActions(
         context.directive,
         context,
-        (acc) => this.getOrgRamShareActionsForAccess(acc),
+        (acc: string) => this.getOrgRamShareActionsForAccess(acc),
         'ram'
       );
 

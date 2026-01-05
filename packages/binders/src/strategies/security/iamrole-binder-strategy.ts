@@ -94,7 +94,7 @@ export class IamRoleBinderStrategy extends UnifiedBinderStrategyBase {
       const resolvedActions = resolveActions(
         directive,
         context,
-        (acc) => this.getIamRoleActionsForAccess(acc, options),
+        (acc: string) => this.getIamRoleActionsForAccess(acc, options),
         'iam'
       );
 

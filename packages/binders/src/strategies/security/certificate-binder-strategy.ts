@@ -123,7 +123,7 @@ export class CertificateBinderStrategy extends UnifiedBinderStrategyBase {
       const resolvedActions = resolveActions(
         context.directive,
         context,
-        (acc) => this.getCertificateActionsForAccess(acc),
+        (acc: string) => this.getCertificateActionsForAccess(acc),
         'acm'
       );
 

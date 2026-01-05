@@ -129,7 +129,7 @@ export class CloudTrailBinderStrategy extends UnifiedBinderStrategyBase {
       const resolvedActions = resolveActions(
         context.directive,
         context,
-        (acc) => this.getCloudTrailActionsForAccess(acc),
+        (acc: string) => this.getCloudTrailActionsForAccess(acc),
         'cloudtrail'
       );
 

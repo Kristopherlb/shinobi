@@ -127,7 +127,7 @@ export class GuardDutyBinderStrategy extends UnifiedBinderStrategyBase {
       const resolvedActions = resolveActions(
         context.directive,
         context,
-        (acc) => this.getGuardDutyActionsForAccess(acc),
+        (acc: string) => this.getGuardDutyActionsForAccess(acc),
         'guardduty'
       );
 

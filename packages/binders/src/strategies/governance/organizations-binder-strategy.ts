@@ -188,7 +188,7 @@ export class OrganizationsBinderStrategy extends UnifiedBinderStrategyBase {
       const resolvedActions = resolveActions(
         context.directive,
         context,
-        (acc) => this.getScpActionsForAccess(acc),
+        (acc: string) => this.getScpActionsForAccess(acc),
         'organizations'
       );
 
@@ -348,7 +348,7 @@ export class OrganizationsBinderStrategy extends UnifiedBinderStrategyBase {
       const resolvedActions = resolveActions(
         context.directive,
         context,
-        (acc) => this.getTagPolicyActionsForAccess(acc),
+        (acc: string) => this.getTagPolicyActionsForAccess(acc),
         'organizations'
       );
       const statement = new PolicyStatement({
@@ -438,7 +438,7 @@ export class OrganizationsBinderStrategy extends UnifiedBinderStrategyBase {
       const resolvedActions = resolveActions(
         context.directive,
         context,
-        (acc) => this.getBackupPolicyActionsForAccess(acc),
+        (acc: string) => this.getBackupPolicyActionsForAccess(acc),
         'organizations'
       );
       const statement = new PolicyStatement({
@@ -542,7 +542,7 @@ export class OrganizationsBinderStrategy extends UnifiedBinderStrategyBase {
       const resolvedActions = resolveActions(
         context.directive,
         context,
-        (acc) => this.getOuActionsForAccess(acc),
+        (acc: string) => this.getOuActionsForAccess(acc),
         'organizations'
       );
       const statement = new PolicyStatement({
@@ -659,7 +659,7 @@ export class OrganizationsBinderStrategy extends UnifiedBinderStrategyBase {
       const resolvedActions = resolveActions(
         context.directive,
         context,
-        (acc) => this.getAccountActionsForAccess(acc),
+        (acc: string) => this.getAccountActionsForAccess(acc),
         'organizations'
       );
       const statement = new PolicyStatement({
@@ -748,7 +748,7 @@ export class OrganizationsBinderStrategy extends UnifiedBinderStrategyBase {
       const resolvedActions = resolveActions(
         context.directive,
         context,
-        (acc) => this.getAiServicesOptOutActionsForAccess(acc),
+        (acc: string) => this.getAiServicesOptOutActionsForAccess(acc),
         'organizations'
       );
       const statement = new PolicyStatement({
@@ -834,7 +834,7 @@ export class OrganizationsBinderStrategy extends UnifiedBinderStrategyBase {
       const resolvedActions = resolveActions(
         context.directive,
         context,
-        (acc) => this.getServiceLinkedRoleActionsForAccess(acc),
+        (acc: string) => this.getServiceLinkedRoleActionsForAccess(acc),
         'organizations'
       );
       const statement = new PolicyStatement({

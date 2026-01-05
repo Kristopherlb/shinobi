@@ -136,7 +136,7 @@ export class FirewallManagerBinderStrategy extends UnifiedBinderStrategyBase {
       const resolvedActions = resolveActions(
         context.directive,
         context,
-        (acc) => this.getFirewallManagerActionsForAccess(acc, options),
+        (acc: string) => this.getFirewallManagerActionsForAccess(acc, options),
         'fms'
       );
 

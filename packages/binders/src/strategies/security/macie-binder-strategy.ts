@@ -131,7 +131,7 @@ export class MacieBinderStrategy extends UnifiedBinderStrategyBase {
       const resolvedActions = resolveActions(
         context.directive,
         context,
-        (acc) => this.getMacieActionsForAccess(acc),
+        (acc: string) => this.getMacieActionsForAccess(acc),
         'macie2'
       );
 
