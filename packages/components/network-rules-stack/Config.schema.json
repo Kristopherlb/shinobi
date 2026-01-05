@@ -1,0 +1,46 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "type": "object",
+  "title": "Network Rules Stack Configuration",
+  "description": "Configuration for Network Rules Stack component that applies cross-stack security group rules from SSM Parameter Store",
+  "required": [],
+  "properties": {
+    "name": {
+      "type": "string",
+      "description": "Component name (optional, will be auto-generated from component name)",
+      "pattern": "^[a-zA-Z][a-zA-Z0-9-_]*$",
+      "maxLength": 128
+    },
+    "description": {
+      "type": "string",
+      "description": "Component description for documentation",
+      "maxLength": 500
+    },
+    "ssmPathPrefix": {
+      "type": "string",
+      "description": "SSM Parameter Store path prefix for network rules",
+      "pattern": "^/[a-zA-Z0-9._/-]+$",
+      "minLength": 1,
+      "maxLength": 2048,
+      "default": "/shinobi/network-rules",
+      "examples": ["/shinobi/network-rules", "/custom/path/network-rules"]
+    },
+    "tags": {
+      "type": "object",
+      "description": "Tagging configuration for cost allocation, ownership, etc.",
+      "additionalProperties": {
+        "type": "string",
+        "maxLength": 256
+      },
+      "examples": [
+        {
+          "Team": "Platform Engineering",
+          "CostCenter": "Infrastructure",
+          "Purpose": "Cross-stack networking"
+        }
+      ]
+    }
+  },
+  "additionalProperties": false
+}
+

@@ -1,0 +1,94 @@
+{
+  "name": "@shinobi/components-network-rules-stack",
+  "version": "1.0.0",
+  "private": true,
+  "description": "Network Rules Stack component for the Shinobi platform - applies cross-stack security group rules from SSM Parameter Store",
+  "type": "module",
+  "main": "dist/index.js",
+  "types": "dist/index.d.ts",
+  "exports": {
+    ".": {
+      "import": "./dist/index.js",
+      "types": "./dist/index.d.ts"
+    }
+  },
+  "scripts": {
+    "build": "tsc -p tsconfig.json",
+    "lint": "eslint . --ext .ts",
+    "lint:fix": "eslint . --ext .ts --fix",
+    "format": "prettier --write .",
+    "validate": "tsc --noEmit -p tsconfig.json",
+    "audit": "npm audit",
+    "clean": "rm -rf dist"
+  },
+  "keywords": [
+    "shinobi",
+    "aws",
+    "network-rules",
+    "security-groups",
+    "cross-stack",
+    "ssm",
+    "cdk",
+    "infrastructure",
+    "component",
+    "networking"
+  ],
+  "author": "Shinobi Platform Team",
+  "license": "MIT",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/your-org/shinobi.git",
+    "directory": "packages/components/network-rules-stack"
+  },
+  "bugs": {
+    "url": "https://github.com/your-org/shinobi/issues"
+  },
+  "homepage": "https://github.com/your-org/shinobi/tree/main/packages/components/network-rules-stack#readme",
+  "engines": {
+    "node": ">=20.0.0",
+    "npm": ">=10.0.0"
+  },
+  "dependencies": {
+    "@shinobi/core": "workspace:*",
+    "aws-cdk-lib": "^2.214.0",
+    "constructs": "^10.4.2"
+  },
+  "devDependencies": {
+    "@types/jest": "^29.5.8",
+    "@types/node": "^20.9.0",
+    "@typescript-eslint/eslint-plugin": "^6.12.0",
+    "@typescript-eslint/parser": "^6.12.0",
+    "eslint": "^8.54.0",
+    "jest": "^29.7.0",
+    "prettier": "^3.1.0",
+    "ts-jest": "^29.1.1",
+    "typescript": "^5.2.2"
+  },
+  "files": [
+    "dist/**/*",
+    "src/**/*",
+    "*.ts",
+    "*.json",
+    "*.md",
+    "*.yaml",
+    "*.yml",
+    "tests/**/*"
+  ],
+  "publishConfig": {
+    "access": "restricted",
+    "registry": "https://npm.pkg.github.com"
+  },
+  "component": {
+    "type": "network-rules-stack",
+    "category": "networking",
+    "awsService": "EC2",
+    "stability": "experimental",
+    "author": "Shinobi Platform Team",
+    "version": "1.0.0"
+  },
+  "volta": {
+    "node": "20.9.0",
+    "npm": "10.2.3"
+  }
+}
+

@@ -311,33 +311,19 @@ def handler(event, context):
   /**
    * Create network-rules stack from rule specs
    * 
-   * **Deployment Model:**
-   * This method requires rule specs to be provided. CDK synthesis happens at build time,
-   * so we cannot dynamically query SSM Parameter Store during synthesis. Instead, use an
-   * external script or CLI tool to query SSM at runtime and pass the specs to this method.
-   * 
-   * **Why External Script?**
-   * - CDK synthesis is static - constructs must be known at synthesis time
-   * - SSM parameters are dynamic - created/updated at deployment time
-   * - Custom Resources that create other resources are complex and not recommended
-   * 
-   * **Future Enhancement:**
-   * See SG-012 for a reusable CLI tool that wraps this pattern.
-   * 
-   * Example usage:
-   * ```typescript
-   * // In a separate deployment script or CLI command
-   * const ssm = new AWS.SSM();
-   * const params = await ssm.getParametersByPath({
-   *   Path: '/shinobi/network-rules',
-   *   Recursive: true
-   * }).promise();
-   * 
-   * const ruleSpecs = params.Parameters.map(p => JSON.parse(p.Value!));
-   * const app = new cdk.App();
-   * CrossStackRuleManager.createNetworkRulesStack(app, ruleSpecs);
+   * **DEPRECATED**: This method is deprecated. Use the `network-rules-stack` component instead.
+   * Declare it in your service manifest:
+   * ```yaml
+   * components:
+   *   - name: network-rules-stack
+   *     type: network-rules-stack
+   *     config:
+   *       ssmPathPrefix: "/shinobi/network-rules"
    * ```
    * 
+   * This method is kept for backward compatibility and testing purposes only.
+   * 
+   * @deprecated Use the `network-rules-stack` component instead. See `@shinobi/components-network-rules-stack`.
    * @param app - CDK app
    * @param ruleSpecs - Array of rule specifications to apply (read from SSM at runtime)
    * @param stackName - Name for the network rules stack
