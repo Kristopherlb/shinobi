@@ -8,7 +8,9 @@ export * from './resolver-engine.js';
 
 // Export unified binder registry
 export { UnifiedBinderRegistry } from '../platform/binders/registry/unified-binder-registry.js';
-export { createUnifiedBinderRegistry } from '../platform/binders/registry/unified-binder-registry-factory.js';
+// Factory is now in binders - do NOT re-export from core to avoid pulling in binders source
+// Import directly from @shinobi/binders instead:
+// import { createUnifiedBinderRegistry } from '@shinobi/binders';
 
 // Export concrete binders
 export * from './binders/concrete-binders.js';

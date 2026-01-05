@@ -18,6 +18,7 @@ export * from './strategies/ops/index.js';
 export * from './strategies/monitoring/index.js';
 // Re-export core contracts – consumers never reference @shinobi/core directly
 export {
+  UnifiedBinderRegistry,
   UnifiedBinderStrategyBase,
   type BindingContext,
   type EnhancedBindingResult,
@@ -25,4 +26,6 @@ export {
   type CompatibilityEntry,
   type IUnifiedBinderStrategy,
 } from '@shinobi/core';
+// Export factory
+export { createUnifiedBinderRegistry } from './registry/unified-binder-registry-factory.js';
 

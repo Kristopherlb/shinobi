@@ -5,7 +5,7 @@
  * correctly discovers, filters, and instantiates all binder strategies.
  */
 
-import { createUnifiedBinderRegistry } from '../unified-binder-registry-factory.js';
+import { createUnifiedBinderRegistry } from '@shinobi/binders';
 import { UnifiedBinderRegistry } from '../unified-binder-registry.js';
 import { UnifiedBinderStrategyBase } from '../../../contracts/unified-binder-strategy-base.js';
 import type { IUnifiedBinderStrategy } from '../../../contracts/platform-binding-trigger-spec.js';

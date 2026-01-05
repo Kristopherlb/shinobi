@@ -8,7 +8,7 @@
  */
 
 import { UnifiedBinderStrategyBase, resolveActions } from '@shinobi/core';
-import type { BindingContext, EnhancedBindingResult, CompatibilityEntry } from '@shinobi/core';
+import type { BindingContext, EnhancedBindingResult, CompatibilityEntry, AccessLevel } from '@shinobi/core';
 import type { IamPolicy } from '@shinobi/core';
 import { PolicyStatement, Effect } from 'aws-cdk-lib/aws-iam';
 
@@ -153,7 +153,7 @@ export class BudgetsBinderStrategy extends UnifiedBinderStrategyBase {
       const resolvedActions = resolveActions(
         context.directive,
         context,
-        (acc) => this.getBudgetsBudgetActionsForAccess(acc),
+        (acc: string) => this.getBudgetsBudgetActionsForAccess(acc as AccessLevel),
         'budgets'
       );
 
@@ -324,7 +324,7 @@ export class BudgetsBinderStrategy extends UnifiedBinderStrategyBase {
       const resolvedActions = resolveActions(
         context.directive,
         context,
-        (acc) => this.getBudgetsActionActionsForAccess(acc),
+        (acc: string) => this.getBudgetsActionActionsForAccess(acc as AccessLevel),
         'budgets'
       );
 

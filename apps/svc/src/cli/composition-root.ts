@@ -12,9 +12,9 @@ import {
   ReferenceValidator,
   SchemaManager,
   SchemaValidator,
-  ValidationOrchestrator,
-  createUnifiedBinderRegistry
+  ValidationOrchestrator
 } from '@shinobi/core';
+import { createUnifiedBinderRegistry } from '@shinobi/binders';
 import { ValidateCommand } from './validate-command.js';
 import { PlanCommand } from './plan-command.js';
 import { DiffCommand } from './diff-command.js';

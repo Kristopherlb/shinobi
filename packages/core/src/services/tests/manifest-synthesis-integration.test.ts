@@ -24,7 +24,7 @@ import { Construct } from 'constructs';
 import { Template, Match } from 'aws-cdk-lib/assertions';
 import { ResolverEngine } from '../../resolver/resolver-engine.js';
 import { Logger as PlatformLogger } from '../../platform/logger/src/index.js';
-import { createUnifiedBinderRegistry } from '../../platform/binders/registry/unified-binder-registry-factory.js';
+import { createUnifiedBinderRegistry } from '@shinobi/binders';
 import { ComponentFactoryBuilder } from '../../platform/contracts/components/component-factory.js';
 import { ComponentRegistry } from '../../platform/contracts/components/component-registry.js';
 import { IComponent } from '../../platform/contracts/index.js';

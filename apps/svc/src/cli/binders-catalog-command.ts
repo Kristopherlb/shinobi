@@ -20,7 +20,8 @@
 import { Command } from 'commander';
 import { CompositionRoot } from './composition-root.js';
 import { Logger } from './console-logger.js';
-import { UnifiedBinderRegistry, createUnifiedBinderRegistry } from '@shinobi/core';
+import { UnifiedBinderRegistry } from '@shinobi/core';
+import { createUnifiedBinderRegistry } from '@shinobi/binders';
 import type { IUnifiedBinderStrategy, CompatibilityEntry } from '@shinobi/core';
 
 interface BinderCatalogOptions {

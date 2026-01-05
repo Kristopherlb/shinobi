@@ -1,17 +1,22 @@
 {
   "extends": "../../tsconfig.base.json",
   "compilerOptions": {
-    "outDir": "dist"
+    "outDir": "./dist",
+    "rootDir": "./src",
+    "composite": true,
+    "skipLibCheck": true
   },
-  "include": [
-    "src/**/*"
-  ],
+  "include": ["src/**/*"],
   "exclude": [
-    "src/**/*.test.ts",
-    "src/**/*.spec.ts",
-    "src/platform/contracts/enhanced-binder-example.ts",
+    "dist",
+    "node_modules",
+    "**/*.test.ts",
+    "**/*.spec.ts",
+    "**/__tests__/**",
     "src/platform/contracts/binder-example.ts",
     "src/platform/contracts/binder-integration.ts",
+    "src/platform/contracts/enhanced-binder-example.ts",
     "src/platform/contracts/observability/observability-example.ts"
-  ]
+  ],
+  "references": []
 }

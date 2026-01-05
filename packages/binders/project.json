@@ -4,15 +4,18 @@
   "sourceRoot": "packages/binders/src",
   "projectType": "library",
   "tags": ["scope:binders", "type:lib"],
+  "implicitDependencies": [
+    "@shinobi/core"
+  ],
   "targets": {
     "build": {
-      "executor": "@nx/js:tsc",
+      "executor": "nx:run-commands",
       "options": {
-        "outputPath": "dist/packages/binders",
-        "main": "packages/binders/src/index.ts",
-        "tsConfig": "packages/binders/tsconfig.lib.json",
-        "assets": []
-      }
+        "command": "tsc --build packages/binders/tsconfig.lib.json"
+      },
+      "outputs": [
+        "{projectRoot}/dist"
+      ]
     },
     "test": {
       "executor": "@nx/jest:jest",

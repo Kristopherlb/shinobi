@@ -15,17 +15,16 @@
  * 
  * Usage:
  * ```typescript
- * import { createUnifiedBinderRegistry } from '@shinobi/core';
+ * import { createUnifiedBinderRegistry } from '@shinobi/binders';
  * 
- * const registry = createUnifiedBinderRegistry();
+ * const registry = await createUnifiedBinderRegistry();
  * // Registry now contains all discovered binder strategies
  * ```
  */
 
-import * as AllBinders from '@shinobi/binders';
-import { UnifiedBinderRegistry } from './unified-binder-registry.js';
-import { UnifiedBinderStrategyBase } from '../../contracts/unified-binder-strategy-base.js';
-import type { IUnifiedBinderStrategy } from '../../contracts/platform-binding-trigger-spec.js';
+import { UnifiedBinderRegistry } from '@shinobi/core';
+import { UnifiedBinderStrategyBase } from '@shinobi/core';
+import type { IUnifiedBinderStrategy } from '@shinobi/core';
 
 /**
  * Create a UnifiedBinderRegistry with all discovered binder strategies
@@ -36,7 +35,9 @@ import type { IUnifiedBinderStrategy } from '../../contracts/platform-binding-tr
  * 
  * @returns UnifiedBinderRegistry instance with all discovered strategies registered
  */
-export function createUnifiedBinderRegistry(): UnifiedBinderRegistry {
+export async function createUnifiedBinderRegistry(): Promise<UnifiedBinderRegistry> {
+  // Dynamic import - prevents TypeScript from resolving binders source during compilation
+  const AllBinders = await import('@shinobi/binders');
   const discoveredStrategies: IUnifiedBinderStrategy[] = [];
   
   // Iterate through all exports from @shinobi/binders namespace

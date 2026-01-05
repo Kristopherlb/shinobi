@@ -6,7 +6,7 @@
 import { EnhancedSchemaValidator } from '../enhanced-schema-validator.js';
 import { ManifestSchemaComposer } from '../manifest-schema-composer.js';
 import { Logger } from '../../platform/logger/src/index.js';
-import { createUnifiedBinderRegistry } from '../../platform/binders/registry/unified-binder-registry-factory.js';
+import { createUnifiedBinderRegistry } from '@shinobi/binders';
 
 describe('Binding Directive Validation Integration', () => {
   let validator: EnhancedSchemaValidator;
