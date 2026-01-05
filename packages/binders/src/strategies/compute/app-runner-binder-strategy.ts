@@ -173,7 +173,7 @@ export class AppRunnerBinderStrategy extends UnifiedBinderStrategyBase {
     const resolvedActions = resolveActions(
       context.directive,
       context,
-      (acc) => this.getAppRunnerServiceActionsForAccess(acc),
+      (acc: string) => this.getAppRunnerServiceActionsForAccess(acc),
       'apprunner'
     );
 
@@ -264,7 +264,7 @@ export class AppRunnerBinderStrategy extends UnifiedBinderStrategyBase {
     const resolvedActions = resolveActions(
       context.directive,
       context,
-      (acc) => this.getAppRunnerConnectionActionsForAccess(acc),
+      (acc: string) => this.getAppRunnerConnectionActionsForAccess(acc),
       'apprunner'
     );
 

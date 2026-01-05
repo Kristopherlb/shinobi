@@ -98,7 +98,7 @@ export class AutoScalingBinderStrategy extends UnifiedBinderStrategyBase {
     const resolvedActions = resolveActions(
       context.directive,
       context,
-      (acc) => this.getAutoScalingActionsForAccess(acc),
+      (acc: string) => this.getAutoScalingActionsForAccess(acc),
       'autoscaling'
     );
 

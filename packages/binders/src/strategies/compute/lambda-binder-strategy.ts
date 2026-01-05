@@ -109,7 +109,7 @@ export class LambdaBinderStrategy extends UnifiedBinderStrategyBase {
     const resolvedActions = resolveActions(
       context.directive,
       context,
-      (acc) => this.getLambdaActionsForAccess(acc),
+      (acc: string) => this.getLambdaActionsForAccess(acc),
       'lambda'
     );
 

@@ -259,7 +259,7 @@ export class BatchBinderStrategy extends UnifiedBinderStrategyBase {
     const resolvedActions = resolveActions(
       context.directive,
       context,
-      (acc) => this.getBatchJobQueueActionsForAccess(acc, context).actions,
+      (acc: string) => this.getBatchJobQueueActionsForAccess(acc, context).actions,
       'batch'
     );
 

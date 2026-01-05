@@ -97,7 +97,7 @@ export class Ec2BinderStrategy extends UnifiedBinderStrategyBase {
     const resolvedActions = resolveActions(
       context.directive,
       context,
-      (acc) => this.getEc2ActionsForAccess(acc),
+      (acc: string) => this.getEc2ActionsForAccess(acc),
       'ec2'
     );
 
