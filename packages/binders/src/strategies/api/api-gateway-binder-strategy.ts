@@ -149,7 +149,7 @@ export class ApiGatewayBinderStrategy extends UnifiedBinderStrategyBase {
       const resolvedActions = resolveActions(
         context.directive,
         context,
-        (acc) => this.getApiGatewayActionsForAccess(acc),
+        (acc: string) => this.getApiGatewayActionsForAccess(acc),
         'apigateway'
       );
 

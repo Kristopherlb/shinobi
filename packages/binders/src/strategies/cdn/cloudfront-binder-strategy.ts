@@ -444,7 +444,7 @@ export class CloudFrontBinderStrategy extends UnifiedBinderStrategyBase {
       const resolvedActions = resolveActions(
         context.directive,
         context,
-        (acc) => this.getCloudFrontDistributionActionsForAccess(acc),
+        (acc: string) => this.getCloudFrontDistributionActionsForAccess(acc),
         'cloudfront'
       );
 
@@ -570,7 +570,7 @@ export class CloudFrontBinderStrategy extends UnifiedBinderStrategyBase {
       const resolvedActions = resolveActions(
         context.directive,
         context,
-        (acc) => this.getCloudFrontOriginActionsForAccess(acc),
+        (acc: string) => this.getCloudFrontOriginActionsForAccess(acc),
         'cloudfront'
       );
 
@@ -654,7 +654,7 @@ export class CloudFrontBinderStrategy extends UnifiedBinderStrategyBase {
       const resolvedActions = resolveActions(
         context.directive,
         context,
-        (acc) => this.getCloudFrontCachePolicyActionsForAccess(acc),
+        (acc: string) => this.getCloudFrontCachePolicyActionsForAccess(acc),
         'cloudfront'
       );
 
@@ -752,7 +752,7 @@ export class CloudFrontBinderStrategy extends UnifiedBinderStrategyBase {
       const resolvedActions = resolveActions(
         context.directive,
         context,
-        (acc) => this.getCloudFrontFunctionActionsForAccess(acc),
+        (acc: string) => this.getCloudFrontFunctionActionsForAccess(acc),
         'cloudfront'
       );
 
@@ -904,7 +904,7 @@ export class CloudFrontBinderStrategy extends UnifiedBinderStrategyBase {
       const resolvedActions = resolveActions(
         context.directive,
         context,
-        (acc) => this.getCloudFrontResponseHeadersPolicyActionsForAccess(acc),
+        (acc: string) => this.getCloudFrontResponseHeadersPolicyActionsForAccess(acc),
         'cloudfront'
       );
 
@@ -1025,7 +1025,7 @@ export class CloudFrontBinderStrategy extends UnifiedBinderStrategyBase {
       const resolvedActions = resolveActions(
         context.directive,
         context,
-        (acc) => this.getCloudFrontFieldLevelEncryptionActionsForAccess(acc),
+        (acc: string) => this.getCloudFrontFieldLevelEncryptionActionsForAccess(acc),
         'cloudfront'
       );
 

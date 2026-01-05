@@ -263,7 +263,7 @@ export class EmrBinderStrategy extends UnifiedBinderStrategyBase {
       const resolvedActions = resolveActions(
         context.directive,
         context,
-        (acc) => this.getEmrClusterActionsForAccess(acc, context).actions,
+        (acc: string) => this.getEmrClusterActionsForAccess(acc, context).actions,
         'elasticmapreduce'
       );
 
@@ -393,7 +393,7 @@ export class EmrBinderStrategy extends UnifiedBinderStrategyBase {
       const resolvedActions = resolveActions(
         context.directive,
         context,
-        (acc) => this.getEmrStepActionsForAccess(acc, context).actions,
+        (acc: string) => this.getEmrStepActionsForAccess(acc, context).actions,
         'elasticmapreduce'
       );
 
@@ -486,7 +486,7 @@ export class EmrBinderStrategy extends UnifiedBinderStrategyBase {
       const resolvedActions = resolveActions(
         context.directive,
         context,
-        (acc) => this.getEmrNotebookActionsForAccess(acc, context).actions,
+        (acc: string) => this.getEmrNotebookActionsForAccess(acc, context).actions,
         'elasticmapreduce'
       );
 
@@ -578,7 +578,7 @@ export class EmrBinderStrategy extends UnifiedBinderStrategyBase {
       const resolvedActions = resolveActions(
         context.directive,
         context,
-        (acc) => this.getEmrServerlessActionsForAccess(acc, context).actions,
+        (acc: string) => this.getEmrServerlessActionsForAccess(acc, context).actions,
         'emr-serverless'
       );
 

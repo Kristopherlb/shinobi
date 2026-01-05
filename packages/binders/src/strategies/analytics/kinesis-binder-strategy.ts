@@ -239,7 +239,7 @@ export class KinesisBinderStrategy extends UnifiedBinderStrategyBase {
       const resolvedActions = resolveActions(
         context.directive,
         context,
-        (acc) => this.getKinesisStreamActionsForAccess(acc, context).actions,
+        (acc: string) => this.getKinesisStreamActionsForAccess(acc, context).actions,
         'kinesis'
       );
 
@@ -355,7 +355,7 @@ export class KinesisBinderStrategy extends UnifiedBinderStrategyBase {
       const resolvedActions = resolveActions(
         context.directive,
         context,
-        (acc) => this.getKinesisAnalyticsActionsForAccess(acc, context).actions,
+        (acc: string) => this.getKinesisAnalyticsActionsForAccess(acc, context).actions,
         'kinesisanalytics'
       );
 
@@ -450,7 +450,7 @@ export class KinesisBinderStrategy extends UnifiedBinderStrategyBase {
       const resolvedActions = resolveActions(
         context.directive,
         context,
-        (acc) => this.getKinesisFirehoseActionsForAccess(acc, context).actions,
+        (acc: string) => this.getKinesisFirehoseActionsForAccess(acc, context).actions,
         'firehose'
       );
 
@@ -577,7 +577,7 @@ export class KinesisBinderStrategy extends UnifiedBinderStrategyBase {
       const resolvedActions = resolveActions(
         context.directive,
         context,
-        (acc) => this.getKinesisVideoStreamsActionsForAccess(acc, context).actions,
+        (acc: string) => this.getKinesisVideoStreamsActionsForAccess(acc, context).actions,
         'kinesisvideo'
       );
 

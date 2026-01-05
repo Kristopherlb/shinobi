@@ -129,7 +129,7 @@ export class AppConfigBinderStrategy extends UnifiedBinderStrategyBase {
       const resolvedActions = resolveActions(
         context.directive,
         context,
-        (acc) => this.getAppConfigActionsForAccess(acc),
+        (acc: string) => this.getAppConfigActionsForAccess(acc),
         'appconfig'
       );
 
