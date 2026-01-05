@@ -21,33 +21,6 @@
     "preserveSymlinks": true,
     "baseUrl": ".",
     "paths": {
-      "@shinobi/core/component": [
-        "packages/core/src/platform/contracts/component.ts"
-      ],
-      "@shinobi/core/component-interfaces": [
-        "packages/core/src/platform/contracts/component-interfaces.ts"
-      ],
-      "@shinobi/core/config-builder": [
-        "packages/core/src/platform/contracts/config-builder.ts"
-      ],
-      "@shinobi/core/logging-interfaces": [
-        "packages/core/src/platform/contracts/logging-interfaces.ts"
-      ],
-      "@shinobi/core/platform/contracts": [
-        "packages/core/src/platform/contracts/index.ts"
-      ],
-      "@shinobi/core/platform/contracts/*": [
-        "packages/core/src/platform/contracts/*"
-      ],
-      "@shinobi/core/platform-services": [
-        "packages/core/src/platform/contracts/platform-services.ts"
-      ],
-      "@shinobi/core": [
-        "packages/core/src/index.ts"
-      ],
-      "@shinobi/core/*": [
-        "packages/core/src/*"
-      ],
       "@shinobi/observability-handlers": [
         "packages/observability-handlers/src/index.ts"
       ],

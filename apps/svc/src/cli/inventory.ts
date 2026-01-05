@@ -182,7 +182,7 @@ export class InventoryCommand {
     }
     
     // Find all "new X(...)" expressions
-    const newExpressions = sourceFile.getDescendantsOfKind(SyntaxKind.NewExpression);
+    const newExpressions = sourceFile.getDescendantsOfKind(SyntaxKind.NewExpression) as NewExpression[];
     
     for (const newExpr of newExpressions) {
       await this.analyzeNewExpression(newExpr, cdkImports, relativePath);

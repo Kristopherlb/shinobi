@@ -7,18 +7,14 @@
   ],
   "targets": {
       "build": {
-        "executor": "nx:run-commands",
+        "executor": "@nx/js:tsc",
         "options": {
-          "command": "tsc --build packages/core/tsconfig.lib.json"
+          "main": "src/index.ts",
+          "outputPath": "dist/packages/core",
+          "tsConfig": "packages/core/tsconfig.lib.json",
+          "generatePackageJson": true
         },
-      "inputs": [
-        "default",
-        "{projectRoot}/tsconfig.lib.json",
-        "{projectRoot}/src/**"
-      ],
-      "outputs": [
-        "{projectRoot}/dist"
-      ]
+        "outputs": ["{options.outputPath}"]
     },
     "typecheck": {
       "executor": "nx:run-commands",

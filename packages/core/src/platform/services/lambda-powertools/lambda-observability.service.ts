@@ -8,9 +8,9 @@
  * and provides a single interface for observability configuration.
  */
 
-import { BaseComponent } from '@shinobi/core';
-import { PlatformServiceContext } from '@shinobi/core/platform-services';
-import { ObservabilityConfig } from '@shinobi/core/platform/contracts';
+import { BaseComponent } from '../../contracts/component.js';
+import { PlatformServiceContext } from '../../contracts/platform-services.js';
+import { ObservabilityConfig } from '../../contracts/index.js';
 import { LambdaPowertoolsExtensionHandler, LambdaPowertoolsConfig } from './lambda-powertools-extension.handler.js';
 
 /**

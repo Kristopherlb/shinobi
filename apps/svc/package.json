@@ -12,6 +12,10 @@
   "dependencies": {
     "@shinobi/core": "workspace:*",
     "@shinobi/binders": "workspace:*",
+    "@aws-sdk/client-cloudformation": "^3.637.0",
+    "@aws-sdk/client-ssm": "^3.637.0",
+    "@smithy/smithy-client": "^4.10.2",
+    "@smithy/types": "^4.11.0",
     "tsconfig-paths": "^4.2.0",
     "ts-node": "^10.9.2"
   },

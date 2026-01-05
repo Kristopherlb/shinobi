@@ -2,11 +2,11 @@
   "extends": "../../tsconfig.base.json",
   "compilerOptions": {
     "outDir": "./dist",
+    "rootDir": "./src",
     "composite": true,
-    "skipLibCheck": true,
     "declaration": true,
     "declarationMap": true,
-    "preserveSymlinks": true
+    "skipLibCheck": true
   },
   "include": ["src/**/*"],
   "exclude": [
@@ -19,6 +19,5 @@
     "src/platform/contracts/binder-integration.ts",
     "src/platform/contracts/enhanced-binder-example.ts",
     "src/platform/contracts/observability/observability-example.ts"
-  ],
-  "references": []
+  ]
 }

@@ -5,7 +5,7 @@
  * security, compliance, and operational requirements.
  */
 
-import { ComponentContext } from '@shinobi/core';
+import type { ComponentContext } from '../../contracts/component-interfaces.js';
 
 export interface ValidationError {
   field: string;

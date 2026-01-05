@@ -9,6 +9,8 @@ dist/
 **/coverage/
 *.tsbuildinfo
 **/*.tsbuildinfo
+tmp/
+**/tmp/
 
 # Package manager lock files (we use PNPM)
 package-lock.json

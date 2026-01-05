@@ -131,12 +131,24 @@ importers:
 
   apps/svc:
     dependencies:
+      '@aws-sdk/client-cloudformation':
+        specifier: ^3.637.0
+        version: 3.962.0
+      '@aws-sdk/client-ssm':
+        specifier: ^3.637.0
+        version: 3.962.0
       '@shinobi/binders':
         specifier: workspace:*
         version: link:../../packages/binders
       '@shinobi/core':
         specifier: workspace:*
         version: link:../../packages/core
+      '@smithy/smithy-client':
+        specifier: ^4.10.2
+        version: 4.10.2
+      '@smithy/types':
+        specifier: ^4.11.0
+        version: 4.11.0
       ts-node:
         specifier: ^10.9.2
         version: 10.9.2(@swc/core@1.15.8)(@types/node@24.10.4)(typescript@5.9.3)

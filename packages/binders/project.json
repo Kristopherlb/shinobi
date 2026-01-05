@@ -9,9 +9,12 @@
   ],
   "targets": {
     "build": {
-  "executor": "nx:run-commands",
+      "executor": "@nx/js:tsc",
   "options": {
-    "command": "tsc --build packages/binders/tsconfig.lib.json"
+        "main": "packages/binders/src/index.ts",
+        "outputPath": "dist/packages/binders",
+        "tsConfig": "packages/binders/tsconfig.lib.json",
+        "generatePackageJson": true
   },
   "dependsOn": [
     {
@@ -19,7 +22,7 @@
       "projects": ["@shinobi/core"]
     }
   ],
-  "outputs": ["{projectRoot}/dist"]
+      "outputs": ["{options.outputPath}"]
 },
     "test": {
       "executor": "@nx/jest:jest",

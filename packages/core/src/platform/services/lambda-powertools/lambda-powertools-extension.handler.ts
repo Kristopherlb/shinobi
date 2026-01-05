@@ -10,9 +10,9 @@
 
 import * as lambda from 'aws-cdk-lib/aws-lambda';
 import * as iam from 'aws-cdk-lib/aws-iam';
-import { BaseComponent } from '@shinobi/core';
-import { PlatformServiceContext } from '@shinobi/core/platform-services';
-import { ObservabilityConfig } from '@shinobi/core/platform/contracts';
+import { BaseComponent } from '../../contracts/component.js';
+import { PlatformServiceContext } from '../../contracts/platform-services.js';
+import { ObservabilityConfig } from '../../contracts/index.js';
 
 /**
  * Configuration for Lambda Powertools integration.

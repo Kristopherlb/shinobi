@@ -9,14 +9,9 @@
     "composite": true,
     "preserveSymlinks": true,
     "module": "ESNext",
-    "moduleResolution": "Node",
+    "moduleResolution": "Bundler",
     "baseUrl": "../../",
-    "paths": {
-      "@shinobi/core": ["packages/core/src/index.ts"],
-      "@shinobi/core/*": ["packages/core/src/*"],
-      "@shinobi/binders": ["packages/binders/src/index.ts"],
-      "@shinobi/binders/*": ["packages/binders/src/*"]
-    }
+    "skipLibCheck": true
   },
   "include": [
     "src/**/*.ts"

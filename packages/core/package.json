@@ -2,8 +2,8 @@
   "name": "@shinobi/core",
   "version": "0.1.0",
   "type": "module",
-  "main": "dist/index.js",
-  "types": "dist/index.d.ts",
+  "main": "src/index.js",
+  "types": "src/index.d.ts",
   "scripts": {
     "build": "tsc -p tsconfig.lib.json",
     "postbuild": "mkdir -p dist/services && cp src/services/service-manifest.schema.json dist/services/service-manifest.schema.json"
