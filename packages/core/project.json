@@ -10,11 +10,8 @@
     "build": {
       "executor": "nx:run-commands",
       "options": {
-        "command": "tsc --build packages/core/tsconfig.json"
+        "command": "tsc -p packages/core/tsconfig.json"
       },
-      "dependsOn": [
-        "^build"
-      ],
       "inputs": [
         "default",
         "{projectRoot}/tsconfig.json",
