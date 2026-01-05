@@ -1,0 +1,25 @@
+# Full Platform Service Example
+#
+# This example shows a complete platform infrastructure service configuration
+# with tags, compliance framework, and all optional fields configured.
+
+service: platform-infrastructure
+owner: Platform Engineering
+complianceFramework: fedramp-moderate
+environment: production
+region: us-east-1
+
+components:
+  - name: network-rules-stack
+    type: network-rules-stack
+    config:
+      description: "Centralized cross-stack security group rules management"
+      ssmPathPrefix: "/shinobi/network-rules"
+      tags:
+        Team: "Platform Engineering"
+        CostCenter: "Infrastructure"
+        ManagedBy: "shinobi"
+        Purpose: "cross-stack-security-group-rules"
+        Environment: "production"
+        ComplianceFramework: "fedramp-moderate"
+

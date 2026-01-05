@@ -1,0 +1,19 @@
+# Custom SSM Path Example
+#
+# This example demonstrates how to configure a custom SSM Parameter Store
+# path prefix for network rules. This is useful when you need to organize
+# rules by environment, region, or organization.
+
+service: platform-network-rules
+owner: Platform Engineering
+complianceFramework: commercial
+environment: production
+region: us-east-1
+
+components:
+  - name: cross-stack-rules
+    type: network-rules-stack
+    config:
+      description: "Cross-stack security group rules from all services"
+      ssmPathPrefix: "/my-org/network-rules/production"
+
