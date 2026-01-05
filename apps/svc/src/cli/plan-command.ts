@@ -91,7 +91,7 @@ export class PlanCommand {
       formatted.userFriendlySummary
         .split('\n')
         .filter(Boolean)
-        .forEach((line) => this.dependencies.logger.info(line));
+        .forEach((line: string) => this.dependencies.logger.info(line));
 
       if (planResult.warnings.length > 0) {
         planResult.warnings.forEach((warning: string) => this.dependencies.logger.warn(warning));

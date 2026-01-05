@@ -130,7 +130,7 @@ export class BinderCatalogCommand {
       // Apply source filter if specified
       let filteredCompatibility = compatibility;
       if (options.source) {
-        filteredCompatibility = compatibility.filter(entry =>
+        filteredCompatibility = compatibility.filter((entry: CompatibilityEntry) =>
           entry.sourceType === options.source || entry.sourceType === '*'
         );
         if (filteredCompatibility.length === 0) {
@@ -160,7 +160,7 @@ export class BinderCatalogCommand {
   async execute(options: BinderCatalogOptions): Promise<BinderCatalogResult> {
     try {
       // Use runtime discovery factory to create registry with all binder strategies
-      const registry = createUnifiedBinderRegistry();
+      const registry = await createUnifiedBinderRegistry();
 
       if (registry.getStrategyCount() === 0) {
         this.logger.info('No binder strategies found.');
@@ -266,7 +266,7 @@ export const createBindersCatalogCommand = (): Command => {
     .action(async (options: BinderCatalogOptions, cmd) => {
       const parent: any = cmd.parent || {};
       const rootOpts = parent.opts ? parent.opts() : {};
-      const dependencies = root.createDependencies({
+      const dependencies = await root.createDependencies({
         verbose: !!rootOpts.verbose,
         ci: !!rootOpts.ci
       });

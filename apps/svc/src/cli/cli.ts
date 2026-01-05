@@ -59,7 +59,7 @@ program
   .option('--ci', 'Enable CI mode (structured JSON output)');
 
 // Helper to resolve dependencies from command context
-const resolveDependencies = (command: Command) => {
+const resolveDependencies = async (command: Command) => {
   const optsWithGlobals =
     (command as any).optsWithGlobals?.() ??
     (command.parent as any)?.optsWithGlobals?.() ??
@@ -67,7 +67,7 @@ const resolveDependencies = (command: Command) => {
     command.opts?.() ??
     {};
   const globalOpts = optsWithGlobals as GlobalCliOptions;
-  const dependencies = compositionRoot.createDependencies({
+  const dependencies = await compositionRoot.createDependencies({
     verbose: !!globalOpts.verbose,
     ci: !!globalOpts.ci
   });
@@ -81,8 +81,10 @@ program.addCommand(createValidateCommand());
 program.addCommand(createPlanCommand());
 
 // shinobi inventory command
-const { dependencies: inventoryDeps } = resolveDependencies(program);
-registerInventoryCommand(program, inventoryDeps.logger);
+(async () => {
+  const { dependencies: inventoryDeps } = await resolveDependencies(program);
+  registerInventoryCommand(program, inventoryDeps.logger);
+})();
 
 // shinobi catalog command
 program.addCommand(createCatalogCommand());

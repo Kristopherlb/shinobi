@@ -48,7 +48,7 @@ export class CompositionRoot {
    * configuration, it will return the cached dependencies (defensive: prevents
    * reconfiguration during a single CLI run).
    */
-  createDependencies(loggerConfig: { verbose: boolean; ci: boolean }): ApplicationDependencies {
+  async createDependencies(loggerConfig: { verbose: boolean; ci: boolean }): Promise<ApplicationDependencies> {
     if (this._dependencies) {
       // Return cached dependencies - CLI runs once, so reconfiguration is not needed
       return this._dependencies;
@@ -65,7 +65,7 @@ export class CompositionRoot {
     const schemaManager = new SchemaManager();
 
     // Create binder registry for binding directive validation
-    const binderRegistry = createUnifiedBinderRegistry();
+    const binderRegistry = await createUnifiedBinderRegistry();
 
     // Create enhanced schema validation services
     // Create focused services (single responsibility)

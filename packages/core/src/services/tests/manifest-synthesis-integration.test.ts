@@ -199,12 +199,12 @@ describe('ManifestSynthesis__ErrorHandling__IntegrationTests', () => {
   let logger: PlatformLogger;
   let resolverEngine: ResolverEngine;
 
-  beforeEach(() => {
+  beforeEach(async () => {
     // Create logger
     logger = PlatformLogger.getLogger('test-resolver-engine');
 
     // Create resolver engine with dependencies using runtime discovery factory
-    const binderRegistry = createUnifiedBinderRegistry();
+    const binderRegistry = await createUnifiedBinderRegistry();
     resolverEngine = new ResolverEngine({
       logger,
       binderRegistry

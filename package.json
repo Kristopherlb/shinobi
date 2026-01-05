@@ -73,5 +73,10 @@
   "engines": {
     "node": ">=20.0.0"
   },
-  "packageManager": "pnpm@10.16.1"
+  "packageManager": "pnpm@10.16.1",
+  "pnpm": {
+    "peerDependencyRules": {
+      "ignoreMissing": ["@swc/core", "nx"]
+    }
+  }
 }

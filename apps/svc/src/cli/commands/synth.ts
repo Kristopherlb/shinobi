@@ -29,7 +29,7 @@ export function createSynthCommand(): Command {
     .action(async (options, cmd) => {
       const parent: any = cmd.parent || {};
       const rootOpts = parent.opts ? parent.opts() : {};
-      const dependencies = root.createDependencies({
+      const dependencies = await root.createDependencies({
         verbose: !!rootOpts.verbose,
         ci: !!rootOpts.ci
       });
