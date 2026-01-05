@@ -21,6 +21,7 @@ import { DiffCommand } from './diff-command.js';
 import { DestroyCommand } from './destroy-command.js';
 import { UpCommand } from './up-command.js';
 import { SynthCommand } from './synth-command.js';
+import { NetworkRulesCommand } from './network-rules-command.js';
 import { ExecutionContextManager } from './execution-context-manager.js';
 
 export interface ApplicationDependencies {
@@ -163,6 +164,12 @@ export class CompositionRoot {
   createSynthCommand(dependencies: ApplicationDependencies): SynthCommand {
     return new SynthCommand({
       fileDiscovery: dependencies.fileDiscovery,
+      logger: dependencies.logger
+    });
+  }
+
+  createNetworkRulesCommand(dependencies: ApplicationDependencies): NetworkRulesCommand {
+    return new NetworkRulesCommand({
       logger: dependencies.logger
     });
   }

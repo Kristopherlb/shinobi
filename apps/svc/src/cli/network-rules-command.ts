@@ -29,7 +29,11 @@ import { Logger } from './console-logger.js';
 export interface NetworkRulesOptions {
   region?: string;
   account?: string;
+  profile?: string;
   stackName?: string;
+  deploy?: boolean;
+  requireApproval?: 'never' | 'any-change' | 'broadening';
+  yes?: boolean;
   json?: boolean;
   outputDir?: string;
 }
