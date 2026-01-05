@@ -11,6 +11,7 @@
   },
   "dependencies": {
     "@shinobi/core": "workspace:*",
+    "@shinobi/binders": "workspace:*",
     "tsconfig-paths": "^4.2.0",
     "ts-node": "^10.9.2"
   },

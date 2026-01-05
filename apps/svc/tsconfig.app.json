@@ -6,7 +6,17 @@
     "declaration": true,
     "declarationMap": true,
     "sourceMap": true,
-    "composite": true
+    "composite": true,
+    "preserveSymlinks": true,
+    "module": "ESNext",
+    "moduleResolution": "Node",
+    "baseUrl": "../../",
+    "paths": {
+      "@shinobi/core": ["packages/core/src/index.ts"],
+      "@shinobi/core/*": ["packages/core/src/*"],
+      "@shinobi/binders": ["packages/binders/src/index.ts"],
+      "@shinobi/binders/*": ["packages/binders/src/*"]
+    }
   },
   "include": [
     "src/**/*.ts"
@@ -20,6 +30,9 @@
   "references": [
     {
       "path": "../../packages/core/tsconfig.lib.json"
+    },
+    {
+      "path": "../../packages/binders/tsconfig.lib.json"
     }
   ]
 }
