@@ -12,7 +12,7 @@ import * as secretsmanager from 'aws-cdk-lib/aws-secretsmanager';
 import * as cloudwatch from 'aws-cdk-lib/aws-cloudwatch';
 import * as cdk from 'aws-cdk-lib';
 import { Construct } from 'constructs';
-import { BaseComponent } from '@shinobi/core';
+import { BaseComponent, applySecurityGroupTags } from '@shinobi/core';
 import { ComponentSpec, ComponentContext, ComponentCapabilities } from '@platform/contracts';
 import {
   EcsEc2ServiceConfig,
@@ -175,6 +175,17 @@ export class EcsEc2ServiceComponent extends BaseComponent {
 
     // Apply egress policy if not allow-all
     this.applyEgressPolicy(vpc, egressPolicy);
+
+    // Apply standard tags
+    this.applyStandardTags(this.securityGroup, {
+      'resource-type': 'security-group'
+    });
+
+    // Apply security-group-specific tags (SG-009)
+    applySecurityGroupTags(this.securityGroup, {
+      ingressPolicy: 'binder-managed',
+      tier: 'app'
+    });
 
     this.logResourceCreation('security-group', this.securityGroup.securityGroupId);
   }

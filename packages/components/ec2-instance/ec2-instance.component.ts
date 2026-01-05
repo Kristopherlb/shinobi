@@ -18,7 +18,8 @@ import {
   BaseComponent,
   ComponentSpec,
   ComponentContext,
-  ComponentCapabilities
+  ComponentCapabilities,
+  applySecurityGroupTags
 } from '@shinobi/core';
 import { Ec2InstanceComponentConfigBuilder, Ec2InstanceConfig } from './ec2-instance.builder.ts';
 
@@ -177,6 +178,17 @@ export class Ec2InstanceComponent extends BaseComponent {
       vpc,
       description: `Security group for ${this.spec.name} EC2 instance`,
       allowAllOutbound: !this.isComplianceFramework() // Restrict outbound for compliance
+    });
+
+    // Apply standard tags
+    this.applyStandardTags(this.securityGroup, {
+      'resource-type': 'security-group'
+    });
+
+    // Apply security-group-specific tags (SG-009)
+    applySecurityGroupTags(this.securityGroup, {
+      ingressPolicy: 'binder-managed',
+      tier: 'app'
     });
 
     // Apply basic security rules

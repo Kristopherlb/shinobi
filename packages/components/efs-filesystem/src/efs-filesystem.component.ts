@@ -10,7 +10,8 @@ import {
   BaseComponent,
   ComponentSpec,
   ComponentContext,
-  ComponentCapabilities
+  ComponentCapabilities,
+  applySecurityGroupTags
 } from '@shinobi/core';
 import {
   EfsFilesystemComponentConfigBuilder,
@@ -150,6 +151,12 @@ export class EfsFilesystemComponent extends BaseComponent {
     this.applyStandardTags(securityGroup, {
       'resource-type': 'security-group',
       'efs-filesystem': this.config.fileSystemName
+    });
+
+    // Apply security-group-specific tags (SG-009)
+    applySecurityGroupTags(securityGroup, {
+      ingressPolicy: 'manual',
+      tier: 'data'
     });
 
     this.logResourceCreation('security-group', securityGroup.securityGroupId);

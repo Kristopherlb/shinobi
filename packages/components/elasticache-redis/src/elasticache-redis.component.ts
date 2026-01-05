@@ -18,7 +18,8 @@ import {
   BaseComponent,
   ComponentCapabilities,
   ComponentContext,
-  ComponentSpec
+  ComponentSpec,
+  applySecurityGroupTags
 } from '@shinobi/core';
 import {
   ElastiCacheRedisComponentConfigBuilder,
@@ -215,6 +216,12 @@ export class ElastiCacheRedisComponent extends BaseComponent {
     this.applyStandardTags(this.securityGroup, {
       'resource-type': 'security-group',
       'purpose': 'redis-access'
+    });
+
+    // Apply security-group-specific tags (SG-009)
+    applySecurityGroupTags(this.securityGroup, {
+      ingressPolicy: 'manual',
+      tier: 'data'
     });
 
     this.logResourceCreation('security-group', this.securityGroup.securityGroupId);

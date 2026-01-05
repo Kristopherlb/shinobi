@@ -15,7 +15,8 @@ import {
   BaseComponent,
   ComponentSpec,
   ComponentContext,
-  ComponentCapabilities
+  ComponentCapabilities,
+  applySecurityGroupTags
 } from '@shinobi/core';
 import {
   AutoScalingGroupConfig,
@@ -157,6 +158,12 @@ export class AutoScalingGroupComponent extends BaseComponent {
 
     this.applyStandardTags(this.securityGroup, {
       'resource-type': 'security-group'
+    });
+
+    // Apply security-group-specific tags (SG-009)
+    applySecurityGroupTags(this.securityGroup, {
+      ingressPolicy: 'binder-managed',
+      tier: 'app'
     });
 
     this.applySecurityGroupRules();

@@ -22,7 +22,8 @@ import {
   BaseComponent,
   ComponentSpec,
   ComponentContext,
-  ComponentCapabilities
+  ComponentCapabilities,
+  applySecurityGroupTags
 } from '@shinobi/core';
 import { EcsClusterConfig, EcsClusterComponentConfigBuilder } from './ecs-cluster.builder.ts';
 import alarmsConfig from '../observability/alarms-config.json' with { type: 'json' };
@@ -769,6 +770,13 @@ export class EcsClusterComponent extends BaseComponent {
         'component-name': this.spec.name,
         ...userTags
       });
+      
+      // Apply security-group-specific tags (SG-009)
+      applySecurityGroupTags(this.capacitySecurityGroup, {
+        ingressPolicy: 'binder-managed',
+        tier: 'app'
+      });
+      
       cdk.Tags.of(this.capacitySecurityGroup).add('component-name', this.spec.name);
     }
   }

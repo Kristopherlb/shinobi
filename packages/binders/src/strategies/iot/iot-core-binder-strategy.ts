@@ -921,13 +921,15 @@ export class IoTCoreBinderStrategy extends UnifiedBinderStrategyBase {
     environmentVariables['IOT_DEVICE_MONITORING_ENABLED'] = 'true';
 
     // Grant CloudWatch permissions for device metrics
+    // NOTE: cloudwatch:PutMetricData requires wildcard resources per AWS IAM documentation
+    // This is a legitimate use case for custom metrics that don't have specific ARNs
     const cloudWatchStatement = new PolicyStatement({
       effect: Effect.ALLOW,
       actions: [
         'cloudwatch:PutMetricData',
         'cloudwatch:GetMetricStatistics'
       ],
-      resources: ['*']
+      resources: ['*'] // Required by AWS for PutMetricData - cannot be scoped to specific metrics
     });
     iamPolicies.push({
       statement: cloudWatchStatement,
@@ -944,13 +946,15 @@ export class IoTCoreBinderStrategy extends UnifiedBinderStrategyBase {
     environmentVariables['IOT_DEVICE_DEFENDER_ENABLED'] = 'true';
 
     // Grant Device Defender permissions
+    // NOTE: IoT Device Defender metrics are account-scoped and don't have specific ARNs
+    // This wildcard is required for device metrics operations
     const deviceDefenderStatement = new PolicyStatement({
       effect: Effect.ALLOW,
       actions: [
         'iotdevice:GetDeviceMetrics',
         'iotdevice:ListDeviceMetrics'
       ],
-      resources: ['*']
+      resources: ['*'] // Required for account-scoped device metrics - no specific ARN available
     });
     iamPolicies.push({
       statement: deviceDefenderStatement,

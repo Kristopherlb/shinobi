@@ -151,10 +151,8 @@ export class NetworkRulesCommand {
       if (options.deploy) {
         logger.info('Deploying network-rules stack...');
 
-        const cdk = await AwsCdkCli.fromCdkAppDirectory(outputDir, {
-          app: 'node',
-          executable: 'cdk',
-          output: outputDir
+        const cdk = AwsCdkCli.fromCloudAssemblyDirectoryProducer({
+          produce: async () => outputDir
         });
 
         const requireApproval = options.requireApproval === 'never'
