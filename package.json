@@ -77,6 +77,7 @@
   "pnpm": {
     "peerDependencyRules": {
       "ignoreMissing": ["@swc/core", "nx"]
-    }
+    },
+    "hoistPattern": ["*"]
   }
 }
