@@ -1,5 +1,6 @@
 {
   "$schema": "http://json-schema.org/draft-07/schema#",
+  "$id": "https://platform.shinobi.internal/schemas/network-rules-stack/v1.0.0",
   "type": "object",
   "title": "Network Rules Stack Configuration",
   "description": "Configuration for Network Rules Stack component that applies cross-stack security group rules from SSM Parameter Store",
