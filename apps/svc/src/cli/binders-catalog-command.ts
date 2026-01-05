@@ -20,82 +20,8 @@
 import { Command } from 'commander';
 import { CompositionRoot } from './composition-root.js';
 import { Logger } from './console-logger.js';
-import { UnifiedBinderRegistry } from '@shinobi/core';
+import { UnifiedBinderRegistry, createUnifiedBinderRegistry } from '@shinobi/core';
 import type { IUnifiedBinderStrategy, CompatibilityEntry } from '@shinobi/core';
-// Import all binder strategies - using explicit imports for type safety
-import {
-  // Security
-  KmsBinderStrategy,
-  SecretsManagerBinderStrategy,
-  CertificateBinderStrategy,
-  CognitoUserPoolBinderStrategy,
-  IamRoleBinderStrategy,
-  WafBinderStrategy,
-  InspectorBinderStrategy,
-  MacieBinderStrategy,
-  GuardDutyBinderStrategy,
-  SecurityHubBinderStrategy,
-  FirewallManagerBinderStrategy,
-  AccessAnalyzerBinderStrategy,
-  // Database
-  DynamoDbBinderStrategy,
-  NeptuneBinderStrategy,
-  RdsBinderStrategy,
-  // Compute
-  AppRunnerBinderStrategy,
-  BatchBinderStrategy,
-  Ec2BinderStrategy,
-  EcsFargateBinderStrategy,
-  EksBinderStrategy,
-  ElasticBeanstalkBinderStrategy,
-  LambdaBinderStrategy,
-  LightsailBinderStrategy,
-  AutoScalingBinderStrategy,
-  // Networking
-  SecurityGroupBinderStrategy,
-  SecurityGroupRuleBinderStrategy,
-  ServiceConnectBinderStrategy,
-  VpcBinderStrategy,
-  Route53BinderStrategy,
-  LoadBalancerBinderStrategy,
-  // Storage
-  EfsBinderStrategy,
-  ParameterStoreBinderStrategy,
-  S3BinderStrategy,
-  // Messaging
-  EventBridgeBinderStrategy,
-  QueueBinderStrategy,
-  StepFunctionsBinderStrategy,
-  // ML
-  SageMakerBinderStrategy,
-  // Mobile
-  AmplifyBinderStrategy,
-  // IoT
-  IoTCoreBinderStrategy,
-  // API
-  ApiGatewayBinderStrategy,
-  AppConfigBinderStrategy,
-  // CDN
-  CloudFrontBinderStrategy,
-  // Analytics
-  EmrBinderStrategy,
-  KinesisBinderStrategy,
-  // Governance
-  BackupBinderStrategy,
-  BudgetsBinderStrategy,
-  CloudTrailBinderStrategy,
-  ControlTowerBinderStrategy,
-  OrganizationsBinderStrategy,
-  RAMBinderStrategy,
-  ServiceCatalogBinderStrategy,
-  // Compliance
-  AuditManagerBinderStrategy,
-  ConfigBinderStrategy,
-  // Ops
-  SystemsManagerBinderStrategy,
-  // Monitoring
-  CloudWatchBinderStrategy,
-} from '@shinobi/binders';
 
 interface BinderCatalogOptions {
   capability?: string;
@@ -123,85 +49,6 @@ interface BinderCatalogResult {
   data?: BinderCatalogData;
 }
 
-/**
- * Get all binder strategy instances
- * All unified strategies are stateless and can be instantiated safely
- */
-function getAllBinderStrategies(): IUnifiedBinderStrategy[] {
-  return [
-    // Security
-    new KmsBinderStrategy(),
-    new SecretsManagerBinderStrategy(),
-    new CertificateBinderStrategy(),
-    new CognitoUserPoolBinderStrategy(),
-    new IamRoleBinderStrategy(),
-    new WafBinderStrategy(),
-    new InspectorBinderStrategy(),
-    new MacieBinderStrategy(),
-    new GuardDutyBinderStrategy(),
-    new SecurityHubBinderStrategy(),
-    new FirewallManagerBinderStrategy(),
-    new AccessAnalyzerBinderStrategy(),
-    // Database
-    new DynamoDbBinderStrategy(),
-    new NeptuneBinderStrategy(),
-    new RdsBinderStrategy(),
-    // Compute
-    new AppRunnerBinderStrategy(),
-    new BatchBinderStrategy(),
-    new Ec2BinderStrategy(),
-    new EcsFargateBinderStrategy(),
-    new EksBinderStrategy(),
-    new ElasticBeanstalkBinderStrategy(),
-    new LambdaBinderStrategy(),
-    new LightsailBinderStrategy(),
-    new AutoScalingBinderStrategy(),
-    // Networking
-    new SecurityGroupBinderStrategy(),
-    new SecurityGroupRuleBinderStrategy(),
-    new ServiceConnectBinderStrategy(),
-    new VpcBinderStrategy(),
-    new Route53BinderStrategy(),
-    new LoadBalancerBinderStrategy(),
-    // Storage
-    new EfsBinderStrategy(),
-    new ParameterStoreBinderStrategy(),
-    new S3BinderStrategy(),
-    // Messaging
-    new EventBridgeBinderStrategy(),
-    new QueueBinderStrategy(),
-    new StepFunctionsBinderStrategy(),
-    // ML
-    new SageMakerBinderStrategy(),
-    // Mobile
-    new AmplifyBinderStrategy(),
-    // IoT
-    new IoTCoreBinderStrategy(),
-    // API
-    new ApiGatewayBinderStrategy(),
-    new AppConfigBinderStrategy(),
-    // CDN
-    new CloudFrontBinderStrategy(),
-    // Analytics
-    new EmrBinderStrategy(),
-    new KinesisBinderStrategy(),
-    // Governance
-    new BackupBinderStrategy(),
-    new BudgetsBinderStrategy(),
-    new CloudTrailBinderStrategy(),
-    new ControlTowerBinderStrategy(),
-    new OrganizationsBinderStrategy(),
-    new RAMBinderStrategy(),
-    new ServiceCatalogBinderStrategy(),
-    // Compliance
-    new AuditManagerBinderStrategy(),
-    new ConfigBinderStrategy(),
-    // Ops
-    new SystemsManagerBinderStrategy(),
-    // Monitoring
-    new CloudWatchBinderStrategy(),
-  ];
-}
 
 /**
  * Infer category from capability prefix (e.g., "security:kms" -> "security")
@@ -290,8 +137,13 @@ export class BinderCatalogCommand {
         }
       }
 
+      // getStrategyName() is on the base class, not the interface
+      const strategyName = ('getStrategyName' in strategy && typeof (strategy as any).getStrategyName === 'function')
+        ? (strategy as any).getStrategyName()
+        : strategy.constructor?.name || 'Unknown Strategy';
+
       entries.push({
-        strategyName: strategy.getStrategyName(),
+        strategyName,
         capabilities: capabilitiesList,
         compatibility: filteredCompatibility,
         category
@@ -306,11 +158,10 @@ export class BinderCatalogCommand {
 
   async execute(options: BinderCatalogOptions): Promise<BinderCatalogResult> {
     try {
-      // Get all binder strategies and create registry
-      const strategies = getAllBinderStrategies();
-      const registry = new UnifiedBinderRegistry(strategies);
+      // Use runtime discovery factory to create registry with all binder strategies
+      const registry = createUnifiedBinderRegistry();
 
-      if (strategies.length === 0) {
+      if (registry.getStrategyCount() === 0) {
         this.logger.info('No binder strategies found.');
         return {
           success: true,

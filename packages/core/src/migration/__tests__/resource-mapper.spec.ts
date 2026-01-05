@@ -1,8 +1,24 @@
 import { Logger as PlatformLogger } from '../../platform/logger/src/index.js';
-import { CloudFormationResource, StackAnalysisResult } from '../cloudformation-analyzer.js';
 // ResourceMapper doesn't exist - skip these tests
 // TODO: Remove this test file or implement ResourceMapper if needed
 const ResourceMapper: any = null;
+
+// Local type definitions (cloudformation-analyzer.js doesn't exist)
+interface CloudFormationResource {
+  logicalId: string;
+  type: string;
+  properties: Record<string, any>;
+}
+
+interface StackAnalysisResult {
+  stackName: string;
+  templatePath: string;
+  template: Record<string, any>;
+  resources: CloudFormationResource[];
+  outputs: Record<string, any>;
+  parameters: Record<string, any>;
+  metadata: Record<string, any>;
+}
 
 describe('ResourceMapper dependency optimization', () => {
   const buildAnalysisResult = (resources: CloudFormationResource[]): StackAnalysisResult => ({

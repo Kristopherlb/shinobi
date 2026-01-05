@@ -76,8 +76,11 @@ describe('createUnifiedBinderRegistry', () => {
       // Verify strategies have getStrategyName method
       const kmsStrategy = registry.findStrategy('kms:key');
       expect(kmsStrategy).not.toBeNull();
-      expect(typeof kmsStrategy?.getStrategyName).toBe('function');
-      expect(typeof kmsStrategy?.getStrategyName()).toBe('string');
+      if (kmsStrategy && 'getStrategyName' in kmsStrategy && typeof kmsStrategy.getStrategyName === 'function') {
+        expect(typeof kmsStrategy.getStrategyName()).toBe('string');
+      } else {
+        fail('Strategy should have getStrategyName method');
+      }
     });
 
     it('skips non-strategy exports', () => {
@@ -138,9 +141,8 @@ describe('createUnifiedBinderRegistry', () => {
         const strategy = registry.findStrategy(capability);
         expect(strategy).not.toBeNull();
         
-        if (strategy && 'getStrategyName' in strategy) {
-          expect(typeof strategy.getStrategyName).toBe('function');
-          const name = strategy.getStrategyName();
+        if (strategy && 'getStrategyName' in strategy && typeof (strategy as any).getStrategyName === 'function') {
+          const name = (strategy as any).getStrategyName();
           expect(typeof name).toBe('string');
           expect(name.length).toBeGreaterThan(0);
         }
@@ -164,6 +166,98 @@ describe('createUnifiedBinderRegistry', () => {
     it('returns null for unknown capabilities', () => {
       expect(registry.findStrategy('nonexistent:capability')).toBeNull();
       expect(registry.findStrategyForBinding('lambda-api', 'nonexistent:capability')).toBeNull();
+    });
+  });
+
+  describe('getAllUniqueStrategies', () => {
+    it('Registry__GetAllUniqueStrategies__ReturnsDeduplicatedArray', () => {
+      const metadata = {
+        id: 'TP-core-registry-001',
+        level: 'unit' as const,
+        capability: 'getAllUniqueStrategies returns deduplicated array of strategy instances',
+        oracle: 'exact' as const,
+        invariants: [
+          'Returned array contains unique strategy instances',
+          'Array length matches getStrategyCount()',
+          'All returned strategies implement IUnifiedBinderStrategy',
+          'No duplicate strategy instances in array'
+        ],
+        fixtures: ['UnifiedBinderRegistry', 'createUnifiedBinderRegistry'],
+        inputs: {
+          shape: 'UnifiedBinderRegistry with multiple strategies registered',
+          notes: 'Tests deduplication when a strategy handles multiple capabilities'
+        },
+        risks: [],
+        dependencies: [],
+        evidence: [],
+        compliance_refs: [],
+        ai_generated: true,
+        human_reviewed_by: 'Platform Engineering'
+      };
+
+      const uniqueStrategies = registry.getAllUniqueStrategies();
+      
+      // Verify it's an array
+      expect(Array.isArray(uniqueStrategies)).toBe(true);
+      
+      // Verify length matches getStrategyCount
+      expect(uniqueStrategies.length).toBe(registry.getStrategyCount());
+      
+      // Verify all are IUnifiedBinderStrategy instances
+      for (const strategy of uniqueStrategies) {
+        expect(strategy).toBeDefined();
+        expect(strategy.supportedCapabilities).toBeDefined();
+        expect(Array.isArray(strategy.supportedCapabilities)).toBe(true);
+        expect(typeof strategy.canHandle).toBe('function');
+        expect(typeof strategy.getCompatibilityMatrix).toBe('function');
+      }
+      
+      // Verify no duplicates (using Set comparison)
+      const uniqueSet = new Set(uniqueStrategies);
+      expect(uniqueSet.size).toBe(uniqueStrategies.length);
+      
+      // Verify all strategies are discoverable via their capabilities
+      for (const strategy of uniqueStrategies) {
+        let found = false;
+        for (const capability of strategy.supportedCapabilities) {
+          const foundStrategy = registry.findStrategy(capability);
+          if (foundStrategy === strategy) {
+            found = true;
+            break;
+          }
+        }
+        expect(found).toBe(true);
+      }
+    });
+
+    it('Registry__GetAllUniqueStrategies__MatchesCount', () => {
+      const metadata = {
+        id: 'TP-core-registry-002',
+        level: 'unit' as const,
+        capability: 'getAllUniqueStrategies array length matches getStrategyCount',
+        oracle: 'exact' as const,
+        invariants: [
+          'Array length equals getStrategyCount()',
+          'Count is consistent across multiple calls'
+        ],
+        fixtures: ['UnifiedBinderRegistry'],
+        inputs: {
+          shape: 'UnifiedBinderRegistry with discovered strategies',
+          notes: 'Tests consistency between getAllUniqueStrategies and getStrategyCount'
+        },
+        risks: [],
+        dependencies: [],
+        evidence: [],
+        compliance_refs: [],
+        ai_generated: true,
+        human_reviewed_by: 'Platform Engineering'
+      };
+
+      const strategies = registry.getAllUniqueStrategies();
+      const count = registry.getStrategyCount();
+      
+      expect(strategies.length).toBe(count);
+      expect(count).toBeGreaterThanOrEqual(55);
     });
   });
 });

@@ -130,6 +130,19 @@ export class UnifiedBinderRegistry {
   }
 
   /**
+   * Get all unique strategy instances
+   * 
+   * Returns an array of all unique strategy instances registered in the registry.
+   * Useful for metadata-only queries, health checks, and catalog generation.
+   * 
+   * @returns Array of unique strategy instances (deduplicated)
+   */
+  getAllUniqueStrategies(): IUnifiedBinderStrategy[] {
+    const uniqueStrategies = new Set(this.strategies.values());
+    return Array.from(uniqueStrategies);
+  }
+
+  /**
    * Helper to get a strategy name for logging/debugging
    */
   private getStrategyName(strategy: IUnifiedBinderStrategy): string {
