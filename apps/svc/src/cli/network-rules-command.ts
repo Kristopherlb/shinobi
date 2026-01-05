@@ -23,6 +23,7 @@ import * as fsp from 'fs/promises';
 import * as os from 'os';
 import { SSMClient, GetParametersByPathCommand } from '@aws-sdk/client-ssm';
 import { App } from 'aws-cdk-lib';
+import { AwsCdkCli, RequireApproval } from '@aws-cdk/cli-lib-alpha';
 import { CrossStackRuleManager, type CrossStackRuleSpec } from '@shinobi/core';
 import { Logger } from './console-logger.js';
 
@@ -160,7 +161,7 @@ export class NetworkRulesCommand {
           ? RequireApproval.NEVER
           : options.requireApproval === 'broadening'
           ? RequireApproval.BROADENING
-          : RequireApproval.ANY_CHANGE;
+          : RequireApproval.ANYCHANGE;
 
         await cdk.deploy({
           stacks: [stackName],
