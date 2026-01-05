@@ -191,14 +191,18 @@ export class SystemsManagerBinderStrategy extends UnifiedBinderStrategyBase {
           );
         }
 
+        // SECURITY: Use explicit region and account from context instead of wildcards
+        const region = context.source.context.region || 'us-east-1';
+        const accountId = context.source.context.accountId || '123456789012';
+        
         iamPolicies.push({
           statement: new PolicyStatement({
             effect: Effect.ALLOW,
             actions: readActions,
             resources: [
-              `arn:aws:ssm:*:*:document/${targetData.documentName}`,
-              `arn:aws:ssm:*:*:automation-execution/*`,
-              'arn:aws:ec2:*:*:instance/*'
+              `arn:aws:ssm:${region}:${accountId}:document/${targetData.documentName}`,
+              `arn:aws:ssm:${region}:${accountId}:automation-execution/*`,
+              `arn:aws:ec2:${region}:${accountId}:instance/*`
             ]
           }),
           description: 'SSM read access',
@@ -207,6 +211,10 @@ export class SystemsManagerBinderStrategy extends UnifiedBinderStrategyBase {
       }
 
       if (access === 'write' || access === 'readwrite' || access === 'admin') {
+        // SECURITY: Use explicit region and account from context instead of wildcards
+        const region = context.source.context.region || 'us-east-1';
+        const accountId = context.source.context.accountId || '123456789012';
+        
         iamPolicies.push({
           statement: new PolicyStatement({
             effect: Effect.ALLOW,
@@ -220,9 +228,9 @@ export class SystemsManagerBinderStrategy extends UnifiedBinderStrategyBase {
               'ssm:ModifyDocumentPermission'
             ],
             resources: [
-              `arn:aws:ssm:*:*:document/${targetData.documentName}`,
-              `arn:aws:ssm:*:*:automation-execution/*`,
-              'arn:aws:ec2:*:*:instance/*'
+              `arn:aws:ssm:${region}:${accountId}:document/${targetData.documentName}`,
+              `arn:aws:ssm:${region}:${accountId}:automation-execution/*`,
+              `arn:aws:ec2:${region}:${accountId}:instance/*`
             ]
           }),
           description: 'SSM write access',

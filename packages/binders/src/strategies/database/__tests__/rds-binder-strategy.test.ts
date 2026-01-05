@@ -63,7 +63,8 @@ describe('RdsBinderStrategy', () => {
             masterSecretArn: secretArn
           },
           securityGroups: ['sg-12345678'],
-          subnetGroup: 'postgres-subnet-group'
+          subnetGroup: 'postgres-subnet-group',
+          kmsKeyId: 'arn:aws:kms:us-east-1:123456789012:key/test-key-12345'
         }
       });
 
@@ -141,7 +142,8 @@ describe('RdsBinderStrategy', () => {
             masterSecretArn: secretArn
           },
           securityGroups: ['sg-12345678'],
-          subnetGroup: 'postgres-subnet-group'
+          subnetGroup: 'postgres-subnet-group',
+          kmsKeyId: 'arn:aws:kms:us-east-1:123456789012:key/test-key-12345'
         }
       });
 
@@ -247,7 +249,8 @@ describe('RdsBinderStrategy', () => {
             masterSecretArn: 'arn:aws:secretsmanager:us-east-1:123456789012:secret:mysql-credentials-abc123'
           },
           securityGroups: ['sg-12345678'],
-          subnetGroup: 'mysql-subnet-group'
+          subnetGroup: 'mysql-subnet-group',
+          kmsKeyId: 'arn:aws:kms:us-east-1:123456789012:key/test-key-12345'
         }
       });
 
@@ -317,7 +320,8 @@ describe('RdsBinderStrategy', () => {
             masterSecretArn: 'arn:aws:secretsmanager:us-east-1:123456789012:secret:aurora-credentials-abc123'
           },
           securityGroups: ['sg-12345678'],
-          subnetGroup: 'aurora-subnet-group'
+          subnetGroup: 'aurora-subnet-group',
+          kmsKeyId: 'arn:aws:kms:us-east-1:123456789012:key/test-key-12345'
         }
       });
 
@@ -396,7 +400,8 @@ describe('RdsBinderStrategy', () => {
             masterSecretArn: 'arn:aws:secretsmanager:us-east-1:123456789012:secret:postgres-credentials-abc123'
           },
           securityGroups: ['sg-target-67890'],
-          subnetGroup: 'postgres-subnet-group'
+          subnetGroup: 'postgres-subnet-group',
+          kmsKeyId: 'arn:aws:kms:us-east-1:123456789012:key/test-key-12345'
         }
       });
 
@@ -462,7 +467,8 @@ describe('RdsBinderStrategy', () => {
             masterSecretArn: 'arn:aws:secretsmanager:us-east-1:123456789012:secret:postgres-credentials-abc123'
           },
           securityGroups: ['sg-12345678'],
-          subnetGroup: 'postgres-subnet-group'
+          subnetGroup: 'postgres-subnet-group',
+          kmsKeyId: 'arn:aws:kms:us-east-1:123456789012:key/test-key-12345'
         }
       });
 
@@ -536,7 +542,8 @@ describe('RdsBinderStrategy', () => {
             masterSecretArn: 'arn:aws:secretsmanager:us-east-1:123456789012:secret:postgres-credentials-abc123'
           },
           securityGroups: ['sg-12345678'],
-          subnetGroup: 'postgres-subnet-group'
+          subnetGroup: 'postgres-subnet-group',
+          kmsKeyId: 'arn:aws:kms:us-east-1:123456789012:key/test-key-12345'
         }
       });
 
@@ -655,7 +662,8 @@ describe('RdsBinderStrategy', () => {
             masterSecretArn: 'arn:aws:secretsmanager:us-east-1:123456789012:secret:postgres-credentials-abc123'
           },
           securityGroups: ['sg-12345678'],
-          subnetGroup: 'postgres-subnet-group'
+          subnetGroup: 'postgres-subnet-group',
+          kmsKeyId: 'arn:aws:kms:us-east-1:123456789012:key/test-key-12345'
         }
       });
 

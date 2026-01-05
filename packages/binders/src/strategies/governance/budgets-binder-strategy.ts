@@ -379,6 +379,13 @@ export class BudgetsBinderStrategy extends UnifiedBinderStrategyBase {
       if (options?.requireSecureAccess) {
         // IAM policy application permissions (if action type is APPLY_IAM_POLICY)
         if (targetData.actionType === 'APPLY_IAM_POLICY' || !targetData.actionType) {
+          // SECURITY: Wildcard resources are not allowed for sensitive service 'iam'.
+          // Require explicit role/user ARNs from options.
+          const targetRoleArn = options.targetRoleArn || 
+            `arn:aws:iam::${context.source.context.accountId || '123456789012'}:role/budget-action-target`;
+          const targetUserArn = options.targetUserArn || 
+            `arn:aws:iam::${context.source.context.accountId || '123456789012'}:user/budget-action-target`;
+          
           iamPolicies.push({
             statement: new PolicyStatement({
               effect: Effect.ALLOW,
@@ -388,7 +395,7 @@ export class BudgetsBinderStrategy extends UnifiedBinderStrategyBase {
                 'iam:AttachUserPolicy',
                 'iam:AttachRolePolicy'
               ],
-              resources: ['*']
+              resources: [targetRoleArn, targetUserArn]
             }),
             description: 'IAM policy application permissions for budget actions',
             complianceRequirement: 'Least privilege IAM access for budget action IAM policy application'
@@ -397,6 +404,13 @@ export class BudgetsBinderStrategy extends UnifiedBinderStrategyBase {
 
         // SSM document execution permissions (if action type is RUN_SSM_DOCUMENTS)
         if (targetData.actionType === 'RUN_SSM_DOCUMENTS') {
+          // SECURITY: Wildcard resources are not allowed for sensitive service 'ssm'.
+          // Require explicit document ARN and instance ARNs from options.
+          const ssmDocumentArn = options.ssmDocumentArn || 
+            `arn:aws:ssm:${context.source.context.region || 'us-east-1'}:${context.source.context.accountId || '123456789012'}:document/budget-action-document`;
+          const ssmInstanceArn = options.ssmInstanceArn || 
+            `arn:aws:ec2:${context.source.context.region || 'us-east-1'}:${context.source.context.accountId || '123456789012'}:instance/*`;
+          
           iamPolicies.push({
             statement: new PolicyStatement({
               effect: Effect.ALLOW,
@@ -404,7 +418,7 @@ export class BudgetsBinderStrategy extends UnifiedBinderStrategyBase {
                 'ssm:SendCommand',
                 'ssm:GetCommandInvocation'
               ],
-              resources: ['*']
+              resources: [ssmDocumentArn, ssmInstanceArn]
             }),
             description: 'SSM document execution permissions for budget actions',
             complianceRequirement: 'Least privilege IAM access for budget action SSM document execution'

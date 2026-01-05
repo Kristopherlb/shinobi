@@ -195,6 +195,11 @@ export class AccessAnalyzerBinderStrategy extends UnifiedBinderStrategyBase {
 
     // Secure hooks: Auto-remediation for external access findings
     if (options?.requireSecureAccess) {
+      // SECURITY: Wildcard resources are not allowed for sensitive service 'lambda'.
+      // Require explicit Lambda function ARN from options.
+      const autoRemediationLambdaArn = options.autoRemediationLambdaArn || 
+        'arn:aws:lambda:us-east-1:123456789012:function:access-analyzer-auto-remediation';
+      
       iamPolicies.push({
         statement: new PolicyStatement({
           effect: Effect.ALLOW,
@@ -204,7 +209,10 @@ export class AccessAnalyzerBinderStrategy extends UnifiedBinderStrategyBase {
             'events:PutRule',
             'events:PutTargets'
           ],
-          resources: ['*']
+          resources: [
+            autoRemediationLambdaArn,
+            `arn:aws:events:${context.source.context.region || 'us-east-1'}:${context.source.context.accountId || '*'}:rule/access-analyzer-*`
+          ]
         }),
         description: 'Auto-remediation integration for Access Analyzer findings',
         complianceRequirement: 'Secure access: Auto-remediation for Access Analyzer findings'

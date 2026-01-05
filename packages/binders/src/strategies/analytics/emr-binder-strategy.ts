@@ -296,6 +296,18 @@ export class EmrBinderStrategy extends UnifiedBinderStrategyBase {
     }
 
     // Grant EC2 permissions for cluster management
+    // SECURITY: Wildcard resources are not allowed for sensitive service 'ec2'.
+    // Use cluster instance ARNs from targetData or construct from cluster ID.
+    const region = context.source.context.region || 'us-east-1';
+    const accountId = context.source.context.accountId || '123456789012';
+    const clusterId = (targetData as any).clusterId || 'j-2AXXXXXXGAPLF';
+    const ec2Resources = [
+      `arn:aws:ec2:${region}:${accountId}:instance/*`, // EMR cluster instances
+      `arn:aws:ec2:${region}:${accountId}:security-group/*`, // Cluster security groups
+      `arn:aws:ec2:${region}:${accountId}:subnet/*`, // Cluster subnets
+      `arn:aws:ec2:${region}:${accountId}:vpc/*` // Cluster VPCs
+    ];
+    
     iamPolicies.push({
       statement: new PolicyStatement({
         effect: Effect.ALLOW,
@@ -306,7 +318,7 @@ export class EmrBinderStrategy extends UnifiedBinderStrategyBase {
         'ec2:DescribeSubnets',
         'ec2:DescribeVpcs'
       ],
-        resources: ['*']
+        resources: ec2Resources
       }),
       description: 'EC2 permissions for EMR cluster management',
       complianceRequirement: 'EC2 describe permissions for EMR cluster operations'

@@ -55,6 +55,8 @@ actionAllowLists:
     - ec2:DescribeInstances
     - ec2:DescribeVpcs
     - ec2:DescribeSubnets
+    - ec2:DescribeVpcAttribute
+    - ec2:DescribeInstanceStatus
 
 defaults:
   logging:

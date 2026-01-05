@@ -99,6 +99,7 @@ export interface PostgresCapabilityData {
   };
   securityGroups: string[];
   subnetGroup: string;
+  kmsKeyId?: string;
 }
 
 export interface MySQLCapabilityData {
@@ -117,6 +118,7 @@ export interface MySQLCapabilityData {
   };
   securityGroups: string[];
   subnetGroup: string;
+  kmsKeyId?: string;
 }
 
 export interface S3CapabilityData {

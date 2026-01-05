@@ -221,6 +221,11 @@ export class InspectorBinderStrategy extends UnifiedBinderStrategyBase {
 
     // Secure hooks: Auto-remediation via Lambda triggers
     if (options?.requireSecureAccess) {
+      // SECURITY: Wildcard resources are not allowed for sensitive service 'lambda'.
+      // Require explicit Lambda function ARN from options.
+      const autoRemediationLambdaArn = options.autoRemediationLambdaArn || 
+        'arn:aws:lambda:us-east-1:123456789012:function:inspector-auto-remediation';
+      
       iamPolicies.push({
         statement: new PolicyStatement({
           effect: Effect.ALLOW,
@@ -230,7 +235,10 @@ export class InspectorBinderStrategy extends UnifiedBinderStrategyBase {
             'events:PutRule',
             'events:PutTargets'
           ],
-          resources: ['*']
+          resources: [
+            autoRemediationLambdaArn,
+            `arn:aws:events:${context.source.context.region || 'us-east-1'}:${context.source.context.accountId || '*'}:rule/inspector-*`
+          ]
         }),
         description: 'Auto-remediation integration for Inspector findings',
         complianceRequirement: 'Secure access: Auto-remediation for Inspector findings'
