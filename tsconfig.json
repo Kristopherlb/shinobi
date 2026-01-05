@@ -3,7 +3,8 @@
   "include": [
     "src/**/*",
     "packages/**/*",
-    "apps/**/*"
+    "apps/**/*",
+    "packages/**/*.json"
   ],
   "exclude": [
     "node_modules",
