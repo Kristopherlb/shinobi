@@ -5,10 +5,12 @@
  * Makes the component discoverable by the platform and provides factory methods.
  */
 
+import { Construct } from 'constructs';
 import {
   ComponentSpec,
   ComponentContext,
-  IComponentCreator
+  IComponentCreator,
+  IComponent
 } from '@shinobi/core';
 import { Ec2InstanceComponent } from './ec2-instance.component.js';
 import { Ec2InstanceConfig, EC2_INSTANCE_CONFIG_SCHEMA } from './ec2-instance.builder.js';
@@ -68,11 +70,24 @@ export class Ec2InstanceComponentCreator implements IComponentCreator {
    * Factory method to create component instances
    */
   public createComponent(
-    scope: Construct,
     spec: ComponentSpec,
     context: ComponentContext
-  ): Ec2InstanceComponent {
-    return new Ec2InstanceComponent(scope, spec, context);
+  ): IComponent {
+    const scope = context.scope as Construct | undefined;
+    if (!scope) {
+      throw new Error('ComponentContext.scope is required to create ec2-instance components');
+    }
+    return new Ec2InstanceComponent(scope, spec.name, context, spec);
+  }
+
+  /**
+   * Process component (alias for createComponent)
+   */
+  public processComponent(
+    spec: ComponentSpec,
+    context: ComponentContext
+  ): IComponent {
+    return this.createComponent(spec, context);
   }
 
   /**
