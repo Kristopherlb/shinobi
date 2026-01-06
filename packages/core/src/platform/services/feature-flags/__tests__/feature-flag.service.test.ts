@@ -13,9 +13,11 @@ const buildInMemoryProvider = () => new InMemoryProvider({
   }
 });
 
+import { afterEach, vi } from 'vitest';
+
 describe('FeatureFlagService', () => {
   afterEach(() => {
-    jest.useRealTimers();
+    vi.useRealTimers();
   });
 
   /**

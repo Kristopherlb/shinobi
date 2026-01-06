@@ -25,9 +25,12 @@
       "outputs": ["{options.outputPath}"]
 },
     "test": {
-      "executor": "@nx/jest:jest",
+      "executor": "@nx/vitest:test",
+      "outputs": [
+        "{projectRoot}/coverage"
+      ],
       "options": {
-        "jestConfig": "packages/binders/jest.config.mjs",
+        "config": "packages/binders/vitest.config.ts",
         "passWithNoTests": true
       }
     }

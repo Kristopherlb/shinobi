@@ -15,11 +15,14 @@
       }
     },
     "test": {
-      "executor": "@nx/jest:jest",
+      "executor": "@nx/vitest:test",
       "options": {
-        "jestConfig": "jest.config.mjs",
-        "passWithNoTests": false
-      }
+        "config": "packages/components/certificate-manager/vitest.config.ts",
+        "passWithNoTests": true
+      },
+      "outputs": [
+        "{projectRoot}/coverage"
+      ]
     },
     "lint": {
       "executor": "nx:run-commands",

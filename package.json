@@ -14,7 +14,7 @@
     "affected:lint": "nx affected -t lint",
     "affected:typecheck": "nx affected -t typecheck",
     "shinobi": "pnpm --filter @shinobi/cli start",
-    "test:watch": "jest --watch",
+    "test:watch": "vitest --watch",
     "test:coverage": "nx run-many -t test --all --coverage",
     "mcp:build": "pnpm --filter @shinobi/mcp-server build",
     "mcp:start": "pnpm --filter @shinobi/mcp-server start",
@@ -59,6 +59,7 @@
     "@nx/js": "^21.5.2",
     "@nx/node": "^21.5.2",
     "@nx/vite": "^21.5.2",
+    "@nx/vitest": "^22.3.3",
     "@swc/core": "^1.13.5",
     "@swc/jest": "^0.2.39",
     "@types/jest": "^29.5.0",
@@ -68,6 +69,7 @@
     "nx": "^21.5.2",
     "ts-node": "^10.9.2",
     "tsconfig-paths": "^4.2.0",
+    "vitest": "^2.1.8",
     "yaml": "^2.8.1"
   },
   "engines": {

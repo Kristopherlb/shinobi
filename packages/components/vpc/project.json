@@ -24,12 +24,12 @@
       }
     },
     "test": {
-      "executor": "@nx/jest:jest",
+      "executor": "@nx/vitest:test",
       "outputs": [
         "{projectRoot}/coverage"
       ],
       "options": {
-        "jestConfig": "packages/components/vpc/jest.config.mjs",
+        "config": "packages/components/vpc/vitest.config.ts",
         "passWithNoTests": true
       }
     },

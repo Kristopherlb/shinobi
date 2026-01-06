@@ -12,11 +12,14 @@
       }
     },
     "test": {
-      "executor": "nx:run-commands",
+      "executor": "@nx/vitest:test",
       "options": {
-        "command": "jest -c jest.preset.ts --roots=packages/components/lambda-api/src",
-        "cwd": "."
-      }
+        "config": "packages/components/lambda-api/vitest.config.ts",
+        "passWithNoTests": true
+      },
+      "outputs": [
+        "{projectRoot}/coverage"
+      ]
     },
     "clean": {
       "executor": "nx:run-commands",

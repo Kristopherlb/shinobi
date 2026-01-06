@@ -8,6 +8,7 @@
 import * as cdk from 'aws-cdk-lib';
 import * as cloudwatch from 'aws-cdk-lib/aws-cloudwatch';
 import { Template, Match } from 'aws-cdk-lib/assertions';
+import { vi } from 'vitest';
 import { ObservabilityService } from './observability.service.js';
 import { ComponentContext, ComponentSpec } from '../platform/contracts/component-interfaces.js';
 import { BaseComponent } from '../platform/contracts/component.js';
@@ -78,10 +79,10 @@ const TEST_CONTEXTS = { commercial: 'commercial', fedrampModerate: 'fedrampModer
  */
 // Mock logger
 const mockLogger = {
-  info: jest.fn(),
-  warn: jest.fn(),
-  error: jest.fn(),
-  debug: jest.fn()
+  info: vi.fn(),
+  warn: vi.fn(),
+  error: vi.fn(),
+  debug: vi.fn()
 };
 
 // Mock ECS components for testing
@@ -221,7 +222,7 @@ describe('ObservabilityService__EcsComponentSupport__ServiceInjectorPattern', ()
     );
 
     // Capture console output to verify no "unsupported type" messages
-    const consoleDebugSpy = jest.spyOn(console, 'debug').mockImplementation();
+    const consoleDebugSpy = vi.spyOn(console, 'debug').mockImplementation(() => {});
 
     // Apply observability service
     observabilityService.apply(clusterComponent);
@@ -268,7 +269,7 @@ describe('ObservabilityService__EcsComponentSupport__ServiceInjectorPattern', ()
       testEnv.specs.fargateService
     );
 
-    const consoleDebugSpy = jest.spyOn(console, 'debug').mockImplementation();
+    const consoleDebugSpy = vi.spyOn(console, 'debug').mockImplementation(() => {});
 
     observabilityService.apply(fargateComponent);
 
@@ -297,7 +298,7 @@ describe('ObservabilityService__EcsComponentSupport__ServiceInjectorPattern', ()
       testEnv.specs.ec2Service
     );
 
-    const consoleDebugSpy = jest.spyOn(console, 'debug').mockImplementation();
+    const consoleDebugSpy = vi.spyOn(console, 'debug').mockImplementation(() => {});
 
     observabilityService.apply(ec2Component);
 

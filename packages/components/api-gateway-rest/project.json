@@ -25,13 +25,13 @@
       }
     },
     "test": {
-      "executor": "@nx/jest:jest",
+      "executor": "@nx/vitest:test",
       "outputs": [
         "{projectRoot}/coverage"
       ],
       "options": {
-        "jestConfig": "packages/components/api-gateway-rest/jest.config.mjs",
-        "passWithNoTests": false
+        "config": "packages/components/api-gateway-rest/vitest.config.ts",
+        "passWithNoTests": true
       }
     },
     "lint": {

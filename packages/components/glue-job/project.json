@@ -12,10 +12,13 @@
       ]
     },
     "test": {
-      "executor": "nx:run-commands",
+      "executor": "@nx/vitest:test",
+      "outputs": [
+        "{projectRoot}/coverage"
+      ],
       "options": {
-        "command": "jest -c jest.preset.ts --roots=packages/components/glue-job/src",
-        "cwd": "."
+        "config": "packages/components/glue-job/vitest.config.ts",
+        "passWithNoTests": true
       }
     },
     "clean": {

@@ -24,12 +24,12 @@
       }
     },
     "test": {
-      "executor": "@nx/jest:jest",
+      "executor": "@nx/vitest:test",
       "outputs": [
         "{projectRoot}/coverage"
       ],
       "options": {
-        "jestConfig": "packages/components/dagger-engine-pool/jest.config.mjs",
+        "config": "packages/components/dagger-engine-pool/vitest.config.ts",
         "passWithNoTests": true
       }
     },

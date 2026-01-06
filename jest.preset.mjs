@@ -45,11 +45,7 @@ export default {
     ...(basePreset?.moduleNameMapper ?? {}),
     // Map .js imports to .ts for ESM compatibility in tests
     '^(\\.{1,2}/(?:.*/)?src/.+)\\.js$': '$1.ts',
-    // TEMPORARY WORKAROUND: Jest doesn't support 'development' condition in package.json exports
-    // This mapping is a bridge solution until Vitest migration (Phase 5c).
-    // All packages have proper 'exports' fields with 'development' condition (Phase 5a ✅),
-    // but Jest cannot resolve them natively. Vitest will remove the need for this.
+    // NOTE: @shinobi/core removed - now using Vitest with native package.json exports resolution
     // See docs/testing-workspace-resolution.md for details.
-    '^@shinobi/core$': '<rootDir>/packages/core/src/index.ts'
   },
 };

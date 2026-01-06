@@ -17,11 +17,14 @@
       ]
     },
     "test": {
-      "executor": "@nx/jest:jest",
+      "executor": "@nx/vitest:test",
       "options": {
-        "jestConfig": "packages/components/ecs-ec2-service/jest.config.mjs",
+        "config": "packages/components/ecs-ec2-service/vitest.config.ts",
         "passWithNoTests": true
-      }
+      },
+      "outputs": [
+        "{projectRoot}/coverage"
+      ]
     },
     "lint": {
       "executor": "nx:run-commands",
@@ -37,4 +40,3 @@
     }
   }
 }
-

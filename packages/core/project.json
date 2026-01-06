@@ -23,13 +23,12 @@
       }
     },
     "test": {
-      "executor": "@nx/jest:jest",
+      "executor": "@nx/vitest:test",
       "outputs": [
         "{projectRoot}/coverage"
       ],
       "options": {
-        "jestConfig": "packages/core/jest.config.mjs",
-        "passWithNoTests": true
+        "config": "packages/core/vitest.config.ts"
       }
     },
     "lint": {

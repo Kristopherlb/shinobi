@@ -17,9 +17,12 @@
       ]
     },
     "test": {
-      "executor": "@nx/jest:jest",
+      "executor": "@nx/vitest:test",
+      "outputs": [
+        "{projectRoot}/coverage"
+      ],
       "options": {
-        "jestConfig": "packages/components/eventbridge-rule-pattern/jest.config.mjs",
+        "config": "packages/components/eventbridge-rule-pattern/vitest.config.ts",
         "passWithNoTests": true
       }
     },
