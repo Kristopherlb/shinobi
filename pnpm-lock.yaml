@@ -991,6 +991,28 @@ importers:
         specifier: ^5.3.0
         version: 5.9.3
 
+  packages/components/kinesis-stream:
+    dependencies:
+      '@shinobi/core':
+        specifier: workspace:*
+        version: link:../../core
+      aws-cdk-lib:
+        specifier: ^2.100.0
+        version: 2.233.0(constructs@10.4.4)
+      constructs:
+        specifier: ^10.0.0
+        version: 10.4.4
+    devDependencies:
+      '@types/node':
+        specifier: ^20.0.0
+        version: 20.19.27
+      cdk-nag:
+        specifier: ^2.28.0
+        version: 2.37.55(aws-cdk-lib@2.233.0(constructs@10.4.4))(constructs@10.4.4)
+      typescript:
+        specifier: ^5.0.0
+        version: 5.9.3
+
   packages/components/lambda-api:
     dependencies:
       '@shinobi/core':
@@ -1002,6 +1024,28 @@ importers:
       constructs:
         specifier: ^10.4.2
         version: 10.4.4
+
+  packages/components/lambda-worker:
+    dependencies:
+      '@shinobi/core':
+        specifier: workspace:*
+        version: link:../../core
+      aws-cdk-lib:
+        specifier: ^2.100.0
+        version: 2.233.0(constructs@10.4.4)
+      constructs:
+        specifier: ^10.0.0
+        version: 10.4.4
+    devDependencies:
+      '@types/node':
+        specifier: ^20.0.0
+        version: 20.19.27
+      cdk-nag:
+        specifier: ^2.28.0
+        version: 2.37.55(aws-cdk-lib@2.233.0(constructs@10.4.4))(constructs@10.4.4)
+      typescript:
+        specifier: ^5.0.0
+        version: 5.9.3
 
   packages/components/network-rules-stack:
     dependencies:
@@ -1043,11 +1087,77 @@ importers:
         specifier: ^5.2.2
         version: 5.9.3
 
+  packages/components/openfeature-provider:
+    dependencies:
+      '@shinobi/core':
+        specifier: workspace:*
+        version: link:../../core
+      aws-cdk-lib:
+        specifier: ^2.100.0
+        version: 2.233.0(constructs@10.4.4)
+      constructs:
+        specifier: ^10.0.0
+        version: 10.4.4
+    devDependencies:
+      '@types/node':
+        specifier: ^20.0.0
+        version: 20.19.27
+      cdk-nag:
+        specifier: ^2.28.0
+        version: 2.37.55(aws-cdk-lib@2.233.0(constructs@10.4.4))(constructs@10.4.4)
+      typescript:
+        specifier: ^5.0.0
+        version: 5.9.3
+
+  packages/components/opensearch-domain:
+    dependencies:
+      '@shinobi/core':
+        specifier: workspace:*
+        version: link:../../core
+      aws-cdk-lib:
+        specifier: ^2.100.0
+        version: 2.233.0(constructs@10.4.4)
+      constructs:
+        specifier: ^10.0.0
+        version: 10.4.4
+    devDependencies:
+      '@types/node':
+        specifier: ^20.0.0
+        version: 20.19.27
+      cdk-nag:
+        specifier: ^2.28.0
+        version: 2.37.55(aws-cdk-lib@2.233.0(constructs@10.4.4))(constructs@10.4.4)
+      typescript:
+        specifier: ^5.0.0
+        version: 5.9.3
+
   packages/components/rds-postgres:
     dependencies:
       '@shinobi/core':
         specifier: workspace:*
         version: link:../../core
+
+  packages/components/route53-hosted-zone:
+    dependencies:
+      '@shinobi/core':
+        specifier: workspace:*
+        version: link:../../core
+      aws-cdk-lib:
+        specifier: ^2.100.0
+        version: 2.233.0(constructs@10.4.4)
+      constructs:
+        specifier: ^10.0.0
+        version: 10.4.4
+    devDependencies:
+      '@types/node':
+        specifier: ^20.0.0
+        version: 20.19.27
+      cdk-nag:
+        specifier: ^2.28.0
+        version: 2.37.55(aws-cdk-lib@2.233.0(constructs@10.4.4))(constructs@10.4.4)
+      typescript:
+        specifier: ^5.0.0
+        version: 5.9.3
 
   packages/components/route53-record:
     dependencies:
@@ -1091,6 +1201,50 @@ importers:
       constructs:
         specifier: ^10.4.2
         version: 10.4.4
+
+  packages/components/sagemaker-notebook-instance:
+    dependencies:
+      '@shinobi/core':
+        specifier: workspace:*
+        version: link:../../core
+      aws-cdk-lib:
+        specifier: ^2.100.0
+        version: 2.233.0(constructs@10.4.4)
+      constructs:
+        specifier: ^10.0.0
+        version: 10.4.4
+    devDependencies:
+      '@types/node':
+        specifier: ^20.0.0
+        version: 20.19.27
+      cdk-nag:
+        specifier: ^2.28.0
+        version: 2.37.55(aws-cdk-lib@2.233.0(constructs@10.4.4))(constructs@10.4.4)
+      typescript:
+        specifier: ^5.0.0
+        version: 5.9.3
+
+  packages/components/secrets-manager:
+    dependencies:
+      '@shinobi/core':
+        specifier: workspace:*
+        version: link:../../core
+      aws-cdk-lib:
+        specifier: ^2.100.0
+        version: 2.233.0(constructs@10.4.4)
+      constructs:
+        specifier: ^10.0.0
+        version: 10.4.4
+    devDependencies:
+      '@types/node':
+        specifier: ^20.0.0
+        version: 20.19.27
+      cdk-nag:
+        specifier: ^2.28.0
+        version: 2.37.55(aws-cdk-lib@2.233.0(constructs@10.4.4))(constructs@10.4.4)
+      typescript:
+        specifier: ^5.0.0
+        version: 5.9.3
 
   packages/components/security-group-import:
     dependencies:
@@ -1149,6 +1303,50 @@ importers:
       constructs:
         specifier: ^10.4.2
         version: 10.4.4
+
+  packages/components/static-website:
+    dependencies:
+      '@shinobi/core':
+        specifier: workspace:*
+        version: link:../../core
+      aws-cdk-lib:
+        specifier: ^2.100.0
+        version: 2.233.0(constructs@10.4.4)
+      constructs:
+        specifier: ^10.0.0
+        version: 10.4.4
+    devDependencies:
+      '@types/node':
+        specifier: ^20.0.0
+        version: 20.19.27
+      cdk-nag:
+        specifier: ^2.28.0
+        version: 2.37.55(aws-cdk-lib@2.233.0(constructs@10.4.4))(constructs@10.4.4)
+      typescript:
+        specifier: ^5.0.0
+        version: 5.9.3
+
+  packages/components/step-functions-statemachine:
+    dependencies:
+      '@shinobi/core':
+        specifier: workspace:*
+        version: link:../../core
+      aws-cdk-lib:
+        specifier: ^2.100.0
+        version: 2.233.0(constructs@10.4.4)
+      constructs:
+        specifier: ^10.0.0
+        version: 10.4.4
+    devDependencies:
+      '@types/node':
+        specifier: ^20.0.0
+        version: 20.19.27
+      cdk-nag:
+        specifier: ^2.28.0
+        version: 2.37.55(aws-cdk-lib@2.233.0(constructs@10.4.4))(constructs@10.4.4)
+      typescript:
+        specifier: ^5.0.0
+        version: 5.9.3
 
   packages/components/vpc:
     dependencies:
@@ -1269,9 +1467,6 @@ importers:
       '@types/inquirer':
         specifier: ^9.0.9
         version: 9.0.9
-      '@types/jest':
-        specifier: ^29.5.0
-        version: 29.5.14
       '@types/js-yaml':
         specifier: ^4.0.9
         version: 4.0.9
@@ -1284,12 +1479,6 @@ importers:
       '@types/node':
         specifier: ^24.3.1
         version: 24.10.4
-      jest:
-        specifier: ^29.7.0
-        version: 29.7.0(@types/node@24.10.4)(babel-plugin-macros@3.1.0)(ts-node@10.9.2(@swc/core@1.15.8)(@types/node@24.10.4)(typescript@5.9.3))
-      ts-jest:
-        specifier: ^29.1.1
-        version: 29.4.6(@babel/core@7.28.5)(@jest/transform@30.2.0)(@jest/types@30.2.0)(babel-jest@30.2.0(@babel/core@7.28.5))(jest-util@30.2.0)(jest@29.7.0(@types/node@24.10.4)(babel-plugin-macros@3.1.0)(ts-node@10.9.2(@swc/core@1.15.8)(@types/node@24.10.4)(typescript@5.9.3)))(typescript@5.9.3)
 
   packages/core/src/platform/logger: {}
 

@@ -12,6 +12,7 @@ import {
   ConfigBuilderContext,
   ComponentConfigSchema
 } from '@shinobi/core';
+import configSchema from './Config.schema.json' with { type: 'json' };
 
 export interface SecretsManagerGenerateSecretConfig {
   enabled?: boolean;
@@ -73,6 +74,9 @@ export interface SecretsManagerConfig {
   secretValue?: {
     secretStringValue?: string;
     secretBinaryValue?: Buffer;
+    secretArn?: string; // Reference to existing secret in Secrets Manager
+    generateSecret?: boolean; // Generate new secret
+    allowUnsafePlainText?: boolean; // Only for non-sensitive configuration values
   };
   generateSecret?: SecretsManagerGenerateSecretConfig;
   automaticRotation?: SecretsManagerRotationConfig;
@@ -83,255 +87,12 @@ export interface SecretsManagerConfig {
   accessPolicies?: SecretsManagerAccessPoliciesConfig;
 }
 
-export const SECRETS_MANAGER_CONFIG_SCHEMA: ComponentConfigSchema = {
-  type: 'object',
-  additionalProperties: false,
-  properties: {
-    secretName: {
-      type: 'string',
-      description: 'Name of the secret (auto-generated when omitted)',
-      pattern: '^[a-zA-Z0-9_./\\-]+$',
-      maxLength: 512
-    },
-    description: {
-      type: 'string',
-      description: 'Description of the secret',
-      maxLength: 2048
-    },
-    secretValue: {
-      type: 'object',
-      description: 'Initial secret value',
-      properties: {
-        secretStringValue: {
-          type: 'string',
-          description: 'Secret represented as plain text'
-        }
-      },
-      additionalProperties: false
-    },
-    generateSecret: {
-      type: 'object',
-      description: 'Automatic secret generation configuration',
-      properties: {
-        enabled: {
-          type: 'boolean',
-          default: false
-        },
-        excludeCharacters: {
-          type: 'string',
-          default: '"@/\\\''
-        },
-        includeSpace: {
-          type: 'boolean',
-          default: false
-        },
-        passwordLength: {
-          type: 'number',
-          minimum: 4,
-          maximum: 1024,
-          default: 32
-        },
-        requireEachIncludedType: {
-          type: 'boolean',
-          default: true
-        },
-        secretStringTemplate: {
-          type: 'string'
-        },
-        generateStringKey: {
-          type: 'string'
-        }
-      },
-      additionalProperties: false,
-      default: {
-        enabled: false,
-        excludeCharacters: '"@/\\\'',
-        includeSpace: false,
-        passwordLength: 32,
-        requireEachIncludedType: true
-      }
-    },
-    automaticRotation: {
-      type: 'object',
-      description: 'Automatic rotation configuration',
-      properties: {
-        enabled: {
-          type: 'boolean',
-          default: false
-        },
-        rotationLambda: {
-          type: 'object',
-          additionalProperties: false,
-          properties: {
-            functionArn: {
-              type: 'string'
-            },
-            createFunction: {
-              type: 'boolean',
-              default: false
-            },
-            runtime: {
-              type: 'string'
-            },
-            enableTracing: {
-              type: 'boolean',
-              default: false
-            }
-          },
-          default: {
-            createFunction: false,
-            enableTracing: false
-          }
-        },
-        schedule: {
-          type: 'object',
-          additionalProperties: false,
-          properties: {
-            automaticallyAfterDays: {
-              type: 'number',
-              minimum: 1,
-              maximum: 365,
-              default: 365
-            }
-          },
-          default: {
-            automaticallyAfterDays: 365
-          }
-        }
-      },
-      additionalProperties: false,
-      default: {
-        enabled: false,
-        rotationLambda: {
-          createFunction: false,
-          enableTracing: false
-        },
-        schedule: {
-          automaticallyAfterDays: 365
-        }
-      }
-    },
-    replicas: {
-      type: 'array',
-      description: 'Multi-region replica configuration',
-      items: {
-        type: 'object',
-        properties: {
-          region: {
-            type: 'string'
-          },
-          kmsKeyArn: {
-            type: 'string'
-          }
-        },
-        required: ['region'],
-        additionalProperties: false
-      },
-      default: []
-    },
-    encryption: {
-      type: 'object',
-      description: 'Encryption configuration',
-      properties: {
-        kmsKeyArn: {
-          type: 'string'
-        },
-        createCustomerManagedKey: {
-          type: 'boolean',
-          default: false
-        },
-        enableKeyRotation: {
-          type: 'boolean',
-          default: false
-        }
-      },
-      additionalProperties: false,
-      default: {
-        createCustomerManagedKey: false,
-        enableKeyRotation: false
-      }
-    },
-    recovery: {
-      type: 'object',
-      description: 'Deletion protection and recovery window settings',
-      properties: {
-        deletionProtection: {
-          type: 'boolean',
-          default: false
-        },
-        recoveryWindowInDays: {
-          type: 'number',
-          minimum: 7,
-          maximum: 30,
-          default: 30
-        }
-      },
-      additionalProperties: false,
-      default: {
-        deletionProtection: false,
-        recoveryWindowInDays: 30
-      }
-    },
-    monitoring: {
-      type: 'object',
-      description: 'Monitoring and alarm configuration',
-      properties: {
-        enabled: {
-          type: 'boolean',
-          default: false
-        },
-        rotationFailureThreshold: {
-          type: 'number',
-          minimum: 1,
-          default: 1
-        },
-        unusualAccessThresholdMs: {
-          type: 'number',
-          minimum: 100,
-          default: 5000
-        }
-      },
-      additionalProperties: false,
-      default: {
-        enabled: false,
-        rotationFailureThreshold: 1,
-        unusualAccessThresholdMs: 5000
-      }
-    },
-    accessPolicies: {
-      type: 'object',
-      description: 'Secret access policy controls',
-      properties: {
-        denyInsecureTransport: {
-          type: 'boolean',
-          default: true
-        },
-        restrictToVpce: {
-          type: 'boolean',
-          default: false
-        },
-        allowedVpceIds: {
-          type: 'array',
-          items: {
-            type: 'string'
-          },
-          default: []
-        },
-        requireTemporaryCredentials: {
-          type: 'boolean',
-          default: false
-        }
-      },
-      additionalProperties: false,
-      default: {
-        denyInsecureTransport: true,
-        restrictToVpce: false,
-        allowedVpceIds: [],
-        requireTemporaryCredentials: false
-      }
-    }
-  }
-};
+/**
+ * JSON Schema for Secrets Manager configuration validation
+ * 
+ * Schema is imported from Config.schema.json file per component standards.
+ */
+export const SECRETS_MANAGER_CONFIG_SCHEMA = configSchema as ComponentConfigSchema;
 
 export class SecretsManagerComponentConfigBuilder extends ConfigBuilder<SecretsManagerConfig> {
   constructor(options: ConfigBuilderContext) {
