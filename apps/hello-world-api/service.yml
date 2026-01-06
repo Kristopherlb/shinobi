@@ -37,6 +37,15 @@ components:
       allocatedStorage: 20
       instance:
         publiclyAccessible: true
+      networking:
+        vpcId: "vpc-0a27a068d4ca0b8f3"
+        vpcCidrBlock: "172.31.0.0/16"
+        availabilityZones:
+          - "us-west-2a"
+          - "us-west-2b"
+          - "us-west-2c"
+          - "us-west-2d"
+        useDefaultVpc: false
     binds:
       - to: api
         capability: db:postgres
