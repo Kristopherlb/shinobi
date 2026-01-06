@@ -16,6 +16,8 @@ import { RdsPostgresComponent } from './rds-postgres.component.js';
  * Creator for RDS Postgres components with Template Method governance
  */
 export class RdsPostgresCreator implements IComponentCreator {
+  public readonly componentType = 'rds-postgres';
+
   /**
    * Factory Method - creates the specific component
    */
