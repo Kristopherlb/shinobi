@@ -10,7 +10,7 @@ import {
   ComponentSpec, 
   ComponentContext, 
   IComponentCreator 
-} from '../../platform/contracts/component-interfaces.js';
+} from '@shinobi/core';
 import { OpenSearchDomainComponent } from './opensearch-domain.component.js';
 import { OpenSearchDomainConfig, OPENSEARCH_DOMAIN_CONFIG_SCHEMA } from './opensearch-domain.builder.js';
 

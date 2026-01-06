@@ -10,7 +10,7 @@ import {
   ComponentSpec, 
   ComponentContext, 
   IComponentCreator 
-} from '../../platform/contracts/component-interfaces.js';
+} from '@shinobi/core';
 import { Route53HostedZoneComponent } from './route53-hosted-zone.component.js';
 import { Route53HostedZoneConfig, ROUTE53_HOSTED_ZONE_CONFIG_SCHEMA } from './route53-hosted-zone.builder.js';
 

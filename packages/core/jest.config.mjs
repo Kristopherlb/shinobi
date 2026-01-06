@@ -14,10 +14,8 @@ export default {
   moduleFileExtensions: ['ts', 'tsx', 'js', 'jsx', 'json'],
   moduleNameMapper: {
     ...preset.moduleNameMapper,
-    '^@shinobi/core$': '<rootDir>/src',
-    '^@shinobi/(.*)$': '<rootDir>/../$1/src',
-    '^@platform/logger$': '<rootDir>/src/platform/logger/src/index.ts',
-    '^@platform/(.*)$': '<rootDir>/../$1/src'
+    // Map .js imports to .ts for ESM compatibility in tests
+    '^(\\.{1,2}/(?:.*/)?src/.+)\\.js$': '$1.ts'
   },
   collectCoverageFrom: ['src/**/*.{ts,tsx}', '!src/**/*.d.ts']
 };

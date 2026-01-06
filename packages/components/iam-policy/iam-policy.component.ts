@@ -15,7 +15,7 @@ import {
   ComponentSpec,
   ComponentContext,
   ComponentCapabilities
-} from '@platform/contracts';
+} from '@shinobi/core';
 import {
   IamPolicyConfig,
   IamPolicyComponentConfigBuilder,

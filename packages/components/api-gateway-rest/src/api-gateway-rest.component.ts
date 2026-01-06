@@ -452,8 +452,6 @@ export class ApiGatewayRestComponent extends BaseComponent {
     };
   }
 
-  private observabilityEnvironment: Record<string, string> | undefined;
-
   private resolveStageName(): string {
     return this.config.deploymentStage ?? this.context.environment ?? 'prod';
   }

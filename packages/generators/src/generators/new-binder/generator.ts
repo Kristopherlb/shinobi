@@ -5,7 +5,7 @@ import {
 } from '@nx/devkit';
 import { readFileSync } from 'fs';
 import { join } from 'path';
-import { NewBinderGeneratorSchema } from './schema';
+import { NewBinderGeneratorSchema } from './schema.js';
 
 function renderTemplate(template: string, vars: Record<string, any>): string {
   let result = template;

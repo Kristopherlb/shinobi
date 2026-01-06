@@ -10,7 +10,7 @@ import {
   ComponentSpec, 
   ComponentContext, 
   IComponentCreator 
-} from '../../platform/contracts/component-interfaces.js';
+} from '@shinobi/core';
 import { CognitoUserPoolComponent } from './cognito-user-pool.component.js';
 import { CognitoUserPoolConfig, COGNITO_USER_POOL_CONFIG_SCHEMA } from './cognito-user-pool.builder.js';
 
@@ -69,11 +69,17 @@ export class CognitoUserPoolComponentCreator implements IComponentCreator {
    * Factory method to create component instances
    */
   public createComponent(
-    scope: Construct,
     spec: ComponentSpec,
     context: ComponentContext
   ): CognitoUserPoolComponent {
-    return new CognitoUserPoolComponent(scope, spec.name, context, spec);
+    return new CognitoUserPoolComponent(context.scope, spec.name, context, spec);
+  }
+
+  public processComponent(
+    spec: ComponentSpec,
+    context: ComponentContext
+  ): CognitoUserPoolComponent {
+    return this.createComponent(spec, context);
   }
   
   /**

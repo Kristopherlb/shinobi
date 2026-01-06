@@ -525,7 +525,7 @@ export class ApiGatewayHttpComponent extends BaseComponent {
       ? {
           enabled: tracingConfig.tracingEnabled !== false,
           provider: 'xray',
-          samplingRate: tracingConfig.samplingRate ?? 0.1,
+          samplingRate: (tracingConfig as any).tracesSampling ?? 0.1,
           attributes: {
             'service.name': tracingConfig.serviceName ?? `${this.context.serviceName}-${this.spec.name}`,
             stage: stageName

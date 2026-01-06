@@ -124,10 +124,20 @@ export class EcrRepositoryComponent extends BaseComponent {
     }
 
     if (this.config.repositoryPolicy) {
-      const policyDocument = iam.PolicyDocument.fromJson(this.config.repositoryPolicy);
-      policyDocument.statements.forEach((statement) => {
-        this.repository!.addToResourcePolicy(statement);
-      });
+      // Convert JSON policy document to PolicyStatement objects
+      const policyJson = this.config.repositoryPolicy;
+      if (policyJson.Statement && Array.isArray(policyJson.Statement)) {
+        policyJson.Statement.forEach((stmt: any) => {
+          const statement = new iam.PolicyStatement({
+            sid: stmt.Sid,
+            effect: stmt.Effect === 'Allow' ? iam.Effect.ALLOW : iam.Effect.DENY,
+            actions: Array.isArray(stmt.Action) ? stmt.Action : [stmt.Action],
+            resources: stmt.Resource ? (Array.isArray(stmt.Resource) ? stmt.Resource : [stmt.Resource]) : undefined,
+            conditions: stmt.Condition
+          });
+          this.repository!.addToResourcePolicy(statement);
+        });
+      }
     }
     
     this.logResourceCreation('ecr-repository', this.config!.repositoryName, {
@@ -234,6 +244,8 @@ export class EcrRepositoryComponent extends BaseComponent {
         alarms: {
           pushRateAlarmArn?: string;
           repositorySizeAlarmArn?: string;
+          pushRateThreshold?: number;
+          repositorySizeThreshold?: number;
         };
         metrics: string[];
       }

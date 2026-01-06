@@ -7,7 +7,7 @@
 
 import { App, Stack, Aspects, Annotations, Match } from 'aws-cdk-lib';
 import { AwsSolutionsChecks, NagSuppressions } from 'cdk-nag';
-import { ComponentContext, ComponentSpec } from '@platform/contracts';
+import { ComponentContext, ComponentSpec } from '@shinobi/core';
 import { EcsEc2ServiceComponent } from '../../src/ecs-ec2-service.component';
 import * as ec2 from 'aws-cdk-lib/aws-ec2';
 import * as ecs from 'aws-cdk-lib/aws-ecs';

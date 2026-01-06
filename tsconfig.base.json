@@ -11,6 +11,7 @@
     "declarationMap": true,
     "sourceMap": true,
     "outDir": "dist",
+    "rootDir": ".",
     "strict": true,
     "esModuleInterop": true,
     "skipLibCheck": true,
@@ -18,46 +19,8 @@
     "downlevelIteration": true,
     "isolatedModules": true,
     "resolveJsonModule": true,
-    "preserveSymlinks": true,
-    "baseUrl": ".",
-    "paths": {
-      "@shinobi/observability-handlers": [
-        "packages/observability-handlers/src/index.ts"
-      ],
-      "@shinobi/observability-handlers/*": [
-        "packages/observability-handlers/src/*"
-      ],
-      "@shinobi/standards-deprecation": [
-        "packages/standards/deprecation/src/index.ts"
-      ],
-      "@shinobi/standards-deprecation/*": [
-        "packages/standards/deprecation/src/*"
-      ],
-      "@shinobi/standards-iam-audit": [
-        "packages/standards/iam-audit/src/index.ts"
-      ],
-      "@shinobi/standards-iam-audit/*": [
-        "packages/standards/iam-audit/src/*"
-      ],
-      "@shinobi/binders": [
-        "packages/binders/src/index.ts"
-      ],
-      "@shinobi/binders/*": [
-        "packages/binders/src/*"
-      ],
-      "@shinobi/generators": [
-        "packages/generators/src/index.ts"
-      ],
-      "@platform/contracts": [
-        "packages/core/src/platform/contracts/index.ts"
-      ],
-      "@platform/contracts/*": [
-        "packages/core/src/platform/contracts/*"
-      ],
-      "@shinobi/components/*": [
-        "packages/components/*/src"
-      ]
-    }
+    "preserveSymlinks": false,
+    "baseUrl": "."
   },
   "exclude": [
     "dist",

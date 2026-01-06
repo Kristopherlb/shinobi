@@ -1,4 +1,4 @@
-import { ComponentContext, ComponentSpec, IComponentCreator } from '@platform/contracts';
+import { ComponentContext, ComponentSpec, IComponentCreator } from '@shinobi/core';
 import { DaggerEnginePool } from './dagger-engine-pool.component.js';
 import { DaggerEnginePoolProps } from './types.js';
 

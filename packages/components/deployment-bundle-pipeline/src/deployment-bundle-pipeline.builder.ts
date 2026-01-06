@@ -251,11 +251,11 @@ export class DeploymentBundlePipelineBuilder extends ConfigBuilder<DeploymentBun
       throw new Error('OCI repository for bundles is required');
     }
 
-    if (config.environment && !SUPPORTED_ENVIRONMENTS.includes(config.environment)) {
+    if (config.environment && !SUPPORTED_ENVIRONMENTS.includes(config.environment as any)) {
       throw new Error(`Invalid environment. Must be one of: ${SUPPORTED_ENVIRONMENTS.join(', ')}`);
     }
 
-    if (config.complianceFramework && !SUPPORTED_FRAMEWORKS.includes(config.complianceFramework)) {
+    if (config.complianceFramework && !SUPPORTED_FRAMEWORKS.includes(config.complianceFramework as any)) {
       throw new Error(`Invalid compliance framework. Must be one of: ${SUPPORTED_FRAMEWORKS.join(', ')}`);
     }
 

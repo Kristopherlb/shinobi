@@ -18,7 +18,7 @@ import * as cdk from 'aws-cdk-lib';
 import { Construct } from 'constructs';
 import { NagSuppressions } from 'cdk-nag';
 import { BaseComponent, applySecurityGroupTags } from '@shinobi/core';
-import { ComponentSpec, ComponentContext, ComponentCapabilities } from '@platform/contracts';
+import { ComponentSpec, ComponentContext, ComponentCapabilities } from '@shinobi/core';
 import {
   EcsFargateServiceComponentConfigBuilder,
   EcsFargateServiceConfig,
@@ -960,6 +960,10 @@ export class EcsFargateServiceComponent extends BaseComponent {
         protocol: elbv2.Protocol.HTTP
       }
     });
+
+    if (!loadBalancerConfig) {
+      throw new Error('loadBalancerConfig is required but was undefined');
+    }
 
     // Create production listener
     const productionListener = alb.addListener('ProductionListener', {

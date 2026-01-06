@@ -27,18 +27,9 @@ export default {
 
   moduleFileExtensions: ['ts', 'mts', 'js', 'mjs', 'jsx', 'json', 'node'],
 
-  // Module path aliases (critical for monorepo imports)
+  // Module path aliases - removed path aliases, relying on package.json exports and workspace resolution
   moduleNameMapper: {
-    // Inherit from preset first
-    ...preset.moduleNameMapper,
-
-    // Shinobi core & packages
-    '^@shinobi/core$': '<rootDir>/../../packages/core/src/index.ts',
-    '^@shinobi/(.*)$': '<rootDir>/../../packages/$1/src',
-
-    // Platform aliases (if used)
-    '^@platform/logger$': '<rootDir>/../../packages/core/src/platform/logger/src/index.ts',
-    '^@platform/(.*)$': '<rootDir>/../../packages/$1/src'
+    ...preset.moduleNameMapper
   },
 
   // Coverage settings - moved to Nx target options in project.json

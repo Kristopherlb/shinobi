@@ -11,8 +11,7 @@ export default {
   rootDir,
   testMatch: ['<rootDir>/packages/components/ec2-instance/tests/**/*.test.ts'],
   moduleNameMapper: {
-    ...baseConfig.moduleNameMapper,
-    '^\\.\\./@shinobi/core/(.+)\\.ts$': '<rootDir>/packages/core/src/platform/contracts/$1.ts'
+    ...baseConfig.moduleNameMapper
   },
   collectCoverageFrom: ['packages/components/ec2-instance/src/**/*.{ts,tsx}', '!packages/components/ec2-instance/src/**/*.d.ts'],
   coverageDirectory: path.join(rootDir, 'packages/components/ec2-instance/coverage')

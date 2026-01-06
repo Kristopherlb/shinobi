@@ -11,7 +11,7 @@ import {
   ConfigBuilderContext,
   ComponentConfigSchema
 } from '@shinobi/core';
-import { ComponentContext, ComponentSpec } from '@platform/contracts';
+import { ComponentContext, ComponentSpec } from '@shinobi/core';
 
 export type HostedZoneType = 'public' | 'private';
 export type RemovalPolicyOption = 'retain' | 'destroy';

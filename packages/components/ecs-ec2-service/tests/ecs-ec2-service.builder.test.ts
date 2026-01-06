@@ -1,5 +1,5 @@
 import * as cdk from 'aws-cdk-lib';
-import { ComponentContext, ComponentSpec } from '@platform/contracts';
+import { ComponentContext, ComponentSpec } from '@shinobi/core';
 import { EcsEc2ServiceConfig, EcsEc2ServiceConfigBuilder } from '../src/ecs-ec2-service.builder';
 
 const createContext = (framework: 'commercial' | 'fedramp-moderate' | 'fedramp-high'): ComponentContext => ({

@@ -5,7 +5,7 @@
     "build": {
       "executor": "nx:run-commands",
       "options": {
-        "command": "tsc -p packages/components/application-load-balancer/tsconfig.json && node tools/cleanup-ts-build-artifacts.mjs"
+        "command": "tsc -p packages/components/application-load-balancer/tsconfig.json"
       },
       "inputs": [
         "default",

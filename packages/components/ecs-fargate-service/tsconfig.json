@@ -1,7 +1,12 @@
 {
   "extends": "../../../tsconfig.base.json",
   "compilerOptions": {
-    "outDir": "dist"
+    "rootDir": "src",
+    "outDir": "../../../dist/packages/components/ecs-fargate-service",
+    "composite": true,
+    "declaration": true,
+    "declarationMap": true,
+    "tsBuildInfoFile": "../../../dist/packages/components/ecs-fargate-service/tsconfig.tsbuildinfo"
   },
   "include": [
     "src/**/*"
@@ -13,6 +18,11 @@
     "**/*.test.ts",
     "**/*.spec.ts",
     "**/__tests__/**"
+  ],
+  "references": [
+    {
+      "path": "../../core/tsconfig.json"
+    }
   ]
 }
 

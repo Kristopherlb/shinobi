@@ -9,12 +9,12 @@
  */
 
 import { Construct, IConstruct } from 'constructs';
-import { BaseComponent } from '../../platform/contracts/component.js';
+import { BaseComponent } from '@shinobi/core';
 import {
   ComponentSpec,
   ComponentContext,
   ComponentCapabilities
-} from '../../platform/contracts/component-interfaces.js';
+} from '@shinobi/core';
 import { 
   SqsQueueNewConfig, 
   SqsQueueNewConfigBuilder 

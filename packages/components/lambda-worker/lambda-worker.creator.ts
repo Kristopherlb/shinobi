@@ -10,7 +10,7 @@ import {
   ComponentSpec, 
   ComponentContext, 
   IComponentCreator 
-} from '../../platform/contracts/component-interfaces.js';
+} from '@shinobi/core';
 import { LambdaWorkerComponent } from './lambda-worker.component.js';
 import { LambdaWorkerConfig, LAMBDA_WORKER_CONFIG_SCHEMA } from './lambda-worker.builder.js';
 

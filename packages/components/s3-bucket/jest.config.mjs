@@ -12,9 +12,9 @@ export default {
   testMatch: ['<rootDir>/packages/components/s3-bucket/tests/**/*.test.ts'],
   coverageDirectory: path.join(rootDir, 'coverage', 'packages', 'components', 's3-bucket'),
   moduleNameMapper: {
-    '^@platform/logger$': '<rootDir>/packages/components/s3-bucket/tests/__mocks__/platform-logger.ts',
-    '^@platform/contracts$': '<rootDir>/packages/core/src/platform/contracts/index.ts',
-    '^@platform/(.*)$': '<rootDir>/packages/$1/src',
-    '^@shinobi/observability-handlers$': '<rootDir>/packages/observability-handlers/src/index.ts'
+    // Map .js imports to .ts for ESM compatibility in tests
+    '^(\\.{1,2}/(?:.*/)?src/.+)\\.js$': '$1.ts',
+    // Mock for platform logger in tests
+    '^@platform/logger$': '<rootDir>/packages/components/s3-bucket/tests/__mocks__/platform-logger.ts'
   }
 };

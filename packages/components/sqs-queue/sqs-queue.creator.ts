@@ -14,7 +14,7 @@ import {
   ComponentSpec, 
   ComponentContext, 
   IComponentCreator 
-} from '../../platform/contracts/component-interfaces.js';
+} from '@shinobi/core';
 import { SqsQueueNewComponent } from './sqs-queue-new.component.js';
 import { SqsQueueNewConfig, SQS_QUEUE_NEW_CONFIG_SCHEMA } from './sqs-queue-new.builder.js';
 

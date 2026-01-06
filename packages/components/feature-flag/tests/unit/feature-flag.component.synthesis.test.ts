@@ -5,7 +5,7 @@
 
 import { App, Stack } from 'aws-cdk-lib';
 import { Match, Template } from 'aws-cdk-lib/assertions';
-import { ComponentCapabilities, ComponentContext, ComponentSpec } from '@platform/contracts';
+import { ComponentCapabilities, ComponentContext, ComponentSpec } from '@shinobi/core';
 import { FeatureFlagComponent } from '../../src/feature-flag.component.js';
 import { FeatureFlagConfig } from '../../src/feature-flag.builder.js';
 

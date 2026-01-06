@@ -8,7 +8,8 @@
     "declarationMap": true,
     "moduleResolution": "NodeNext",
     "resolveJsonModule": true,
-    "esModuleInterop": true
+    "esModuleInterop": true,
+    "tsBuildInfoFile": "../../../dist/packages/components/application-load-balancer/tsconfig.tsbuildinfo"
   },
   "include": [
     "index.ts",

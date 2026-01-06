@@ -2,10 +2,11 @@
   "extends": "../../../tsconfig.base.json",
   "compilerOptions": {
     "rootDir": ".",
-    "outDir": "dist",
+    "outDir": "../../../dist/packages/components/iam-role",
     "composite": true,
     "declaration": true,
-    "declarationMap": true
+    "declarationMap": true,
+    "tsBuildInfoFile": "../../../dist/packages/components/iam-role/tsconfig.tsbuildinfo"
   },
   "include": [
     "src/**/*",

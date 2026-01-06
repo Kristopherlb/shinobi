@@ -8,7 +8,8 @@
     "declarationMap": true,
     "moduleResolution": "NodeNext",
     "resolveJsonModule": true,
-    "esModuleInterop": true
+    "esModuleInterop": true,
+    "tsBuildInfoFile": "../../../dist/packages/components/certificate-manager/tsconfig.tsbuildinfo"
   },
   "include": [
     "index.ts",

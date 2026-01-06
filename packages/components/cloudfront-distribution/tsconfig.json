@@ -2,13 +2,12 @@
   "extends": "../../../tsconfig.base.json",
   "compilerOptions": {
     "rootDir": "./src",
-    "outDir": "./dist",
+    "outDir": "../../../dist/packages/components/cloudfront-distribution",
     "declaration": true,
     "declarationMap": true,
     "sourceMap": true,
     "composite": true,
-    "incremental": true,
-    "tsBuildInfoFile": "./dist/.tsbuildinfo"
+    "tsBuildInfoFile": "../../../dist/packages/components/cloudfront-distribution/tsconfig.tsbuildinfo"
   },
   "include": [
     "src/**/*.ts",

@@ -10,7 +10,7 @@ import {
   ComponentSpec,
   ComponentContext,
   IComponentCreator
-} from '../../platform/contracts/component-interfaces.js';
+} from '@shinobi/core';
 import { CloudFrontDistributionComponent } from './cloudfront-distribution.component.js';
 import { CloudFrontDistributionConfig, CLOUDFRONT_DISTRIBUTION_CONFIG_SCHEMA } from './cloudfront-distribution.builder.js';
 
@@ -69,11 +69,17 @@ export class CloudFrontDistributionComponentCreator implements IComponentCreator
    * Factory method to create component instances
    */
   public createComponent(
-    scope: Construct,
     spec: ComponentSpec,
     context: ComponentContext
   ): CloudFrontDistributionComponent {
-    return new CloudFrontDistributionComponent(scope, spec.name, context, spec);
+    return new CloudFrontDistributionComponent(context.scope, spec.name, context, spec);
+  }
+
+  public processComponent(
+    spec: ComponentSpec,
+    context: ComponentContext
+  ): CloudFrontDistributionComponent {
+    return this.createComponent(spec, context);
   }
   
   /**

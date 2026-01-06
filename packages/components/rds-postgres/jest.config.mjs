@@ -13,14 +13,6 @@ export default {
   collectCoverageFrom: ['packages/components/rds-postgres/src/**/*.{ts,tsx}', '!packages/components/rds-postgres/src/**/*.d.ts'],
   coverageDirectory: path.join(rootDir, 'packages/components/rds-postgres/coverage'),
   moduleNameMapper: {
-    ...preset.moduleNameMapper,
-    // Override problematic preset mapper for workspace root structure
-    '^(?:\\.{1,2}/)+platform/contracts/(.+)\\.js$': '<rootDir>/packages/core/src/platform/contracts/$1.ts',
-    // Override with our specific aliases (order matters - specific patterns first)
-    '^@shinobi/core-logger$': '<rootDir>/packages/core/src/platform/logger/src/index.ts',
-    '^@shinobi/core$': '<rootDir>/packages/core/src',
-    '^@shinobi/(.*)$': '<rootDir>/packages/$1/src',
-    '^@platform/contracts$': '<rootDir>/packages/core/src/platform/contracts/index.ts',
-    '^@platform/(.*)$': '<rootDir>/packages/$1/src'
+    ...preset.moduleNameMapper
   }
 };

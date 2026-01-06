@@ -10,7 +10,7 @@ import {
   ConfigBuilderContext,
   ComponentConfigSchema
 } from '@shinobi/core';
-import { ComponentContext, ComponentSpec } from '@platform/contracts';
+import { ComponentContext, ComponentSpec } from '@shinobi/core';
 
 export type IamPolicyRemovalPolicy = 'retain' | 'destroy';
 export type IamPolicyType = 'managed' | 'inline';
@@ -120,8 +120,6 @@ export interface IamPolicyConfig {
  * JSON Schema for IamPolicyComponent configuration validation
  */
 export const IAM_POLICY_CONFIG_SCHEMA: ComponentConfigSchema = {
-  $schema: 'http://json-schema.org/draft-07/schema#',
-  title: 'IAM Policy Component Configuration',
   type: 'object',
   required: ['policyType'],
   properties: {
@@ -259,16 +257,6 @@ export const IAM_POLICY_CONFIG_SCHEMA: ComponentConfigSchema = {
     }
   },
   additionalProperties: false,
-  oneOf: [
-    {
-      required: ['policyDocument'],
-      not: { required: ['policyTemplate'] }
-    },
-    {
-      required: ['policyTemplate'],
-      not: { required: ['policyDocument'] }
-    }
-  ],
   definitions: {
     policyDocument: {
       type: 'object',

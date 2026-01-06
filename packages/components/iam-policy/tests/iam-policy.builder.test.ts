@@ -4,7 +4,7 @@
  */
 
 import { IamPolicyComponentConfigBuilder, IamPolicyConfig } from '../iam-policy.builder.js';
-import { ComponentContext, ComponentSpec } from '@platform/contracts';
+import { ComponentContext, ComponentSpec } from '@shinobi/core';
 
 const createMockContext = (
   complianceFramework: string = 'commercial',

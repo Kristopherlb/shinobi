@@ -26,7 +26,8 @@
     "dist",
     "node_modules",
     "**/*.test.ts",
-    "tests"
+    "tests",
+    "src/sqs-queue.ts"
   ],
   "references": [
     {

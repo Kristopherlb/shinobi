@@ -4,8 +4,10 @@
  */
 
 export { EcsEc2ServiceComponent } from './src/ecs-ec2-service.component.js';
+export type {
+  EcsEc2ServiceConfig
+} from './src/ecs-ec2-service.builder.js';
 export {
-  EcsEc2ServiceConfig,
   EcsEc2ServiceConfigBuilder,
   ECS_EC2_SERVICE_CONFIG_SCHEMA
 } from './src/ecs-ec2-service.builder.js';

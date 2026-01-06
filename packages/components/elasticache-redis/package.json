@@ -4,8 +4,8 @@
   "private": true,
   "description": "Managed Redis cluster with encryption, subnet groups, and monitoring baselines",
   "type": "module",
-  "main": "dist/index.js",
-  "types": "dist/index.d.ts",
+  "main": "./dist/index.js",
+  "types": "./dist/index.d.ts",
   "files": [
     "dist/**/*",
     "Config.schema.json",
@@ -16,12 +16,14 @@
   ],
   "exports": {
     ".": {
-      "import": "./dist/index.js",
-      "types": "./dist/index.d.ts"
+      "types": "./dist/index.d.ts",
+      "import": "./dist/index.js"
     },
     "./schema": {
+      "types": "./Config.schema.json",
       "import": "./Config.schema.json"
-    }
+    },
+    "./package.json": "./package.json"
   },
   "keywords": [
     "redis",

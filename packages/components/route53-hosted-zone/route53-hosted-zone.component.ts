@@ -9,7 +9,7 @@ import {
   ComponentSpec,
   ComponentContext,
   ComponentCapabilities
-} from '@platform/contracts';
+} from '@shinobi/core';
 import {
   Route53HostedZoneComponentConfigBuilder,
   Route53HostedZoneConfig,

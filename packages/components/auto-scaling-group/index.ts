@@ -8,10 +8,10 @@ export { AutoScalingGroupComponent } from './src/auto-scaling-group.component.js
 
 // Configuration exports
 export {
-  AutoScalingGroupConfig,
   AutoScalingGroupComponentConfigBuilder,
   AUTO_SCALING_GROUP_CONFIG_SCHEMA
 } from './src/auto-scaling-group.builder.js';
+export type { AutoScalingGroupConfig } from './src/auto-scaling-group.builder.js';
 
 // Creator exports
 export { AutoScalingGroupComponentCreator } from './src/auto-scaling-group.creator.js';

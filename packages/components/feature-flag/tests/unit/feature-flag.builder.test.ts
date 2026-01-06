@@ -4,7 +4,7 @@
  */
 
 import { App, Stack } from 'aws-cdk-lib';
-import { ComponentContext, ComponentSpec } from '@platform/contracts';
+import { ComponentContext, ComponentSpec } from '@shinobi/core';
 import {
   FeatureFlagConfig,
   FeatureFlagConfigBuilder

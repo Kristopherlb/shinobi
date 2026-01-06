@@ -498,6 +498,10 @@ importers:
         version: 5.9.3
 
   packages/components/dagger-engine-pool:
+    dependencies:
+      '@shinobi/core':
+        specifier: workspace:*
+        version: link:../../core
     devDependencies:
       '@types/jest':
         specifier: ^29.5.12
@@ -1041,6 +1045,9 @@ importers:
 
   packages/components/route53-record:
     dependencies:
+      '@shinobi/core':
+        specifier: workspace:*
+        version: link:../../core
       aws-cdk-lib:
         specifier: ^2.0.0
         version: 2.233.0(constructs@10.4.4)
@@ -1081,6 +1088,9 @@ importers:
 
   packages/components/security-group-import:
     dependencies:
+      '@shinobi/core':
+        specifier: workspace:*
+        version: link:../../core
       aws-cdk-lib:
         specifier: ^2.0.0
         version: 2.233.0(constructs@10.4.4)

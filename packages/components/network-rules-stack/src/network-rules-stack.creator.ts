@@ -71,22 +71,20 @@ export class NetworkRulesStackComponentCreator implements IComponentCreator {
    * Factory method to create component instances
    */
   public createComponent(
-    scope: Construct,
     spec: ComponentSpec,
     context: ComponentContext
   ): NetworkRulesStackComponent {
-    return new NetworkRulesStackComponent(scope, spec.name, context, spec);
+    return new NetworkRulesStackComponent(context.scope, spec.name, context, spec);
   }
 
   /**
    * Process component (alias for createComponent)
    */
   public processComponent(
-    scope: Construct,
     spec: ComponentSpec,
     context: ComponentContext
   ): NetworkRulesStackComponent {
-    return this.createComponent(scope, spec, context);
+    return this.createComponent(spec, context);
   }
   
   /**

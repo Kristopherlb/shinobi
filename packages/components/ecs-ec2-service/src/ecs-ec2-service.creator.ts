@@ -6,7 +6,7 @@
  */
 
 import { Construct } from 'constructs';
-import { ComponentSpec, ComponentContext, IComponentCreator } from '@platform/contracts';
+import { ComponentSpec, ComponentContext, IComponentCreator } from '@shinobi/core';
 import { EcsEc2ServiceComponent } from './ecs-ec2-service.component.js';
 import { EcsEc2ServiceConfig, ECS_EC2_SERVICE_CONFIG_SCHEMA } from './ecs-ec2-service.builder.js';
 
@@ -65,11 +65,21 @@ export class EcsEc2ServiceComponentCreator implements IComponentCreator {
    * Factory method to create component instances
    */
   public createComponent(
-    scope: Construct,
     spec: ComponentSpec,
     context: ComponentContext
   ): EcsEc2ServiceComponent {
+    const scope = context.scope as Construct | undefined;
+    if (!scope) {
+      throw new Error('ComponentContext.scope is required to create ecs-ec2-service components');
+    }
     return new EcsEc2ServiceComponent(scope, spec.name, context, spec);
+  }
+
+  public processComponent(
+    spec: ComponentSpec,
+    context: ComponentContext
+  ): EcsEc2ServiceComponent {
+    return this.createComponent(spec, context);
   }
 
   /**

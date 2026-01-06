@@ -309,12 +309,11 @@ export class EfsFilesystemComponent extends BaseComponent {
       outOfInfrequentAccessPolicy: this.mapOutOfIAPolicy(this.config!.lifecycle.transitionToPrimary),
       enableAutomaticBackups: this.config!.backups.enabled,
       fileSystemPolicy: this.buildFileSystemPolicy(),
-      removalPolicy: this.mapRemovalPolicy(this.config!.removalPolicy)
+      removalPolicy: this.mapRemovalPolicy(this.config!.removalPolicy),
+      ...(this.config!.throughputMode === 'provisioned' && this.config!.provisionedThroughputMibps
+        ? { provisionedThroughputPerSecond: cdk.Size.mebibytes(this.config!.provisionedThroughputMibps) }
+        : {})
     };
-
-    if (this.config!.throughputMode === 'provisioned' && this.config!.provisionedThroughputMibps) {
-      fileSystemProps.provisionedThroughputPerSecond = cdk.Size.mebibytes(this.config!.provisionedThroughputMibps);
-    }
 
     this.fileSystem = new efs.FileSystem(this, 'EfsFileSystem', fileSystemProps);
 
@@ -452,8 +451,8 @@ export class EfsFilesystemComponent extends BaseComponent {
       },
       backupsEnabled: this.config!.backups.enabled,
       hardeningProfile: this.config!.hardeningProfile,
-      dnsName: this.fileSystem!.fileSystemDnsName,
-      lifecycleState: this.fileSystem!.fileSystemState,
+      dnsName: this.fileSystem!.fileSystemId,
+      lifecycleState: 'available',
       securityGroupId: securityGroup?.securityGroupId,
       logGroups: Object.entries(this.createdLogGroups).reduce<Record<string, string>>((acc, [channel, logGroup]) => {
         acc[channel] = logGroup.logGroupName;

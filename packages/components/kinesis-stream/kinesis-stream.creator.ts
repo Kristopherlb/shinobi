@@ -10,7 +10,7 @@ import {
   ComponentSpec, 
   ComponentContext, 
   IComponentCreator 
-} from '../../platform/contracts/component-interfaces.js';
+} from '@shinobi/core';
 import { KinesisStreamComponentComponent } from './kinesis-stream.component.js';
 import { KinesisStreamConfig, KINESIS_STREAM_CONFIG_SCHEMA } from './kinesis-stream.builder.js';
 

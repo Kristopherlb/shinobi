@@ -7,8 +7,10 @@
 export { DynamoDbTableComponent } from './dynamodb-table.component.js';
 
 // Configuration exports
+export type {
+  DynamoDbTableConfig
+} from './dynamodb-table.builder.js';
 export {
-  DynamoDbTableConfig,
   DynamoDbTableComponentConfigBuilder,
   DYNAMODB_TABLE_CONFIG_SCHEMA
 } from './dynamodb-table.builder.js';

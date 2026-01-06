@@ -4,9 +4,17 @@
     "module": "NodeNext",
     "rootDir": "src",
     "outDir": "dist",
-    "composite": true
+    "composite": true,
+    "declaration": true,
+    "declarationMap": true,
+    "tsBuildInfoFile": "./dist/tsconfig.tsbuildinfo"
   },
   "include": ["src/**/*"],
-  "exclude": ["dist", "node_modules", "**/node_modules/**"]
+  "exclude": ["dist", "node_modules", "**/node_modules/**"],
+  "references": [
+    {
+      "path": "../core/tsconfig.json"
+    }
+  ]
 }
 

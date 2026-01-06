@@ -93,11 +93,17 @@ export class EfsFilesystemComponentCreator implements IComponentCreator {
    * Factory method to create component instances
    */
   public createComponent(
-    scope: Construct,
     spec: ComponentSpec,
     context: ComponentContext
   ): EfsFilesystemComponent {
-    return new EfsFilesystemComponent(scope, spec.name, context, spec);
+    return new EfsFilesystemComponent(context.scope, spec.name, context, spec);
+  }
+
+  public processComponent(
+    spec: ComponentSpec,
+    context: ComponentContext
+  ): EfsFilesystemComponent {
+    return this.createComponent(spec, context);
   }
 
   /**

@@ -13,7 +13,7 @@ import * as cloudwatch from 'aws-cdk-lib/aws-cloudwatch';
 import * as cdk from 'aws-cdk-lib';
 import { Construct } from 'constructs';
 import { BaseComponent, applySecurityGroupTags } from '@shinobi/core';
-import { ComponentSpec, ComponentContext, ComponentCapabilities } from '@platform/contracts';
+import { ComponentSpec, ComponentContext, ComponentCapabilities } from '@shinobi/core';
 import {
   EcsEc2ServiceConfig,
   EcsEc2ServiceConfigBuilder,
@@ -311,8 +311,8 @@ export class EcsEc2ServiceComponent extends BaseComponent {
 
     const otelEnvVars = this.configureObservability(this.service, {
       serviceName: `${this.context.serviceName}-ecs-ec2-service`,
-      componentType: 'ecs-ec2-service',
       customAttributes: {
+        'component.type': 'ecs-ec2-service',
         'ecs.launch-type': 'EC2',
         'ecs.task-definition': this.taskDefinition.family,
         'container.port': this.config.port.toString(),
@@ -459,31 +459,34 @@ export class EcsEc2ServiceComponent extends BaseComponent {
     }
 
     // Grant CloudWatch and X-Ray permissions for ADOT
-    this.taskDefinition.taskRole.addToPolicy(new iam.PolicyStatement({
-      actions: [
-        'logs:PutLogEvents',
-        'logs:CreateLogGroup',
-        'logs:CreateLogStream',
-        'logs:DescribeLogStreams',
-        'logs:DescribeLogGroups'
-      ],
-      resources: [`${this.logGroup.logGroupArn}:*`]
-    }));
+    const taskRole = this.taskDefinition.taskRole as iam.Role;
+    if (taskRole) {
+      taskRole.addToPolicy(new iam.PolicyStatement({
+        actions: [
+          'logs:PutLogEvents',
+          'logs:CreateLogGroup',
+          'logs:CreateLogStream',
+          'logs:DescribeLogStreams',
+          'logs:DescribeLogGroups'
+        ],
+        resources: [`${this.logGroup.logGroupArn}:*`]
+      }));
 
-    this.taskDefinition.taskRole.addToPolicy(new iam.PolicyStatement({
-      actions: [
-        'xray:PutTraceSegments',
-        'xray:PutTelemetryRecords'
-      ],
-      resources: ['*']
-    }));
+      taskRole.addToPolicy(new iam.PolicyStatement({
+        actions: [
+          'xray:PutTraceSegments',
+          'xray:PutTelemetryRecords'
+        ],
+        resources: ['*']
+      }));
 
-    this.taskDefinition.taskRole.addToPolicy(new iam.PolicyStatement({
-      actions: [
-        'cloudwatch:PutMetricData'
-      ],
-      resources: ['*']
-    }));
+      taskRole.addToPolicy(new iam.PolicyStatement({
+        actions: [
+          'cloudwatch:PutMetricData'
+        ],
+        resources: ['*']
+      }));
+    }
 
     this.logComponentEvent('adot_sidecar_configured', 'ADOT collector sidecar added to task definition', {
       version
@@ -550,13 +553,16 @@ export class EcsEc2ServiceComponent extends BaseComponent {
     }
 
     // Grant permissions for remote collector
-    this.taskDefinition.taskRole.addToPolicy(new iam.PolicyStatement({
-      actions: [
-        'xray:PutTraceSegments',
-        'xray:PutTelemetryRecords'
-      ],
-      resources: ['*']
-    }));
+    const taskRole = this.taskDefinition.taskRole as iam.Role;
+    if (taskRole) {
+      taskRole.addToPolicy(new iam.PolicyStatement({
+        actions: [
+          'xray:PutTraceSegments',
+          'xray:PutTelemetryRecords'
+        ],
+        resources: ['*']
+      }));
+    }
 
     this.logComponentEvent('adot_remote_configured', 'ADOT configured to use centralized collector');
   }

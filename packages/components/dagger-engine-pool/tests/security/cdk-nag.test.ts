@@ -6,7 +6,7 @@ import * as logs from 'aws-cdk-lib/aws-logs';
 import { AwsSolutionsChecks } from 'cdk-nag';
 import { NagSuppressionHelper } from 'cdk-nag/lib/utils/nag-suppression-helper.js';
 import { DaggerEnginePool } from '../../dagger-engine-pool.component.js';
-import { ComponentContext, ComponentSpec } from '@platform/contracts';
+import { ComponentContext, ComponentSpec } from '@shinobi/core';
 import { DaggerConfig } from '../../types.js';
 
 describe('CDK Nag Security Tests', () => {

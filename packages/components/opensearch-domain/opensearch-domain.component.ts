@@ -12,7 +12,7 @@ import {
   ComponentContext,
   ComponentCapabilities,
   applySecurityGroupTags
-} from '@platform/contracts';
+} from '@shinobi/core';
 import {
   OpenSearchDomainComponentConfigBuilder,
   OpenSearchDomainConfig,

@@ -5,7 +5,8 @@
     "rootDir": ".",
     "composite": true,
     "declaration": true,
-    "declarationMap": true
+    "declarationMap": true,
+    "tsBuildInfoFile": "../../../dist/packages/components/s3-bucket/tsconfig.tsbuildinfo"
   },
   "include": [
     "index.ts",
