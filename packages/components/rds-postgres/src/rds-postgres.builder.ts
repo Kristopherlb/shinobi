@@ -135,6 +135,9 @@ export interface RdsPostgresConfig {
   observability?: RdsPostgresObservabilityConfig;
   tags?: Record<string, string>;
   hardeningProfile?: string;
+  
+  /** High-risk environment flag (set via platform config or service.yml) */
+  highRiskEnvironment?: boolean;
 }
 
 const LOG_CONFIG_DEFINITION = {
@@ -451,6 +454,84 @@ export class RdsPostgresComponentConfigBuilder extends ConfigBuilder<RdsPostgres
       tags: {},
       hardeningProfile: 'baseline'
     };
+  }
+
+  /**
+   * Layer 2: Compliance Framework Defaults
+   * 
+   * Provides sensible defaults based on risk assessment flags rather than framework checks.
+   * High-risk environment defaults can be set via:
+   * - Platform config files (`/config/{framework}.yml`) setting `highRiskEnvironment: true`
+   * - Service-level configuration in `service.yml`
+   * - Environment defaults
+   * 
+   * This ensures configuration is data-driven and risk-based, not framework-dependent.
+   */
+  protected getComplianceFrameworkDefaults(): Partial<RdsPostgresConfig> {
+    // Check if highRiskEnvironment flag is set in component config or platform config
+    const componentConfig = this.builderContext.spec.config as Partial<RdsPostgresConfig> | undefined;
+    let isHighRisk = componentConfig?.highRiskEnvironment ?? false;
+    
+    // Also check platform config if available (loaded by base class)
+    try {
+      const platformConfig = (this as any)._loadPlatformConfiguration();
+      if (platformConfig?.highRiskEnvironment) {
+        isHighRisk = true;
+      }
+    } catch {
+      // Platform config might not be available in tests, ignore
+    }
+    
+    if (isHighRisk) {
+      // Apply enhanced security defaults for high-risk environments
+      // These defaults align with FedRAMP Moderate/High requirements when highRiskEnvironment is set
+      return {
+        encryption: {
+          enabled: true,
+          customerManagedKey: {
+            create: true,
+            enableRotation: true
+          }
+        },
+        backup: {
+          retentionDays: 30, // Can be overridden to 90 for higher risk
+          copyTagsToSnapshots: true
+        },
+        instance: {
+          multiAz: true,
+          deletionProtection: true
+        },
+        monitoring: {
+          enhancedMonitoring: {
+            enabled: true,
+            intervalSeconds: 60
+          },
+          performanceInsights: {
+            enabled: true,
+            retentionDays: 7,
+            useCustomerManagedKey: true
+          }
+        },
+        logging: {
+          database: {
+            enabled: true,
+            retentionInDays: 1095, // 3 years (can be overridden to 2555 for higher risk)
+            removalPolicy: 'retain'
+          },
+          audit: {
+            enabled: true,
+            retentionInDays: 1095, // 3 years (can be overridden to 2555 for higher risk)
+            removalPolicy: 'retain'
+          }
+        },
+        security: {
+          iamAuthentication: true,
+          enforceSsl: true
+        }
+      };
+    }
+    
+    return {}; // Standard/default environment - use hardcoded fallbacks
   }
 
   public buildSync(): RdsPostgresConfig {
