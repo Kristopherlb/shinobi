@@ -2,7 +2,7 @@ import { Template, Match } from 'aws-cdk-lib/assertions';
 import { App, Stack } from 'aws-cdk-lib';
 import { Route53HostedZoneComponent } from '../route53-hosted-zone.component.js';
 import { Route53HostedZoneConfig } from '../route53-hosted-zone.builder.js';
-import { ComponentContext, ComponentSpec } from '../../../platform/contracts/component-interfaces.js';
+import { ComponentContext, ComponentSpec } from '@shinobi/core';
 
 const VPC_ID = 'vpc-0abc123def4567890';
 const CONTEXT_KEY = `vpcProvider:account=123456789012:filter.vpcId=${VPC_ID}:region=us-east-1`;

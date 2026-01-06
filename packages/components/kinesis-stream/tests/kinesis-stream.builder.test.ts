@@ -1,22 +1,41 @@
+import { describe, it, expect } from 'vitest';
+import { App, Stack, Environment } from 'aws-cdk-lib';
 import {
   KinesisStreamComponentConfigBuilder,
   KinesisStreamConfig
 } from '../kinesis-stream.builder.js';
-import { ComponentContext, ComponentSpec } from '../../../platform/contracts/component-interfaces.js';
+import { ComponentContext, ComponentSpec } from '@shinobi/core';
 
-const createMockContext = (framework: string = 'commercial'): ComponentContext => ({
-  serviceName: 'analytics-service',
-  owner: 'platform-team',
-  environment: 'dev',
-  complianceFramework: framework,
-  region: 'us-east-1',
-  account: '123456789012',
-  tags: {
-    'service-name': 'analytics-service',
+const createMockContext = (framework: string = 'commercial'): ComponentContext => {
+  const app = new App();
+  const stack = new Stack(app, 'TestStack', {
+    env: {
+      account: '123456789012',
+      region: 'us-east-1'
+    } as Environment
+  });
+
+  return {
+    serviceName: 'analytics-service',
+    owner: 'platform-team',
     environment: 'dev',
-    'compliance-framework': framework
-  }
-});
+    complianceFramework: framework as 'commercial' | 'fedramp-moderate' | 'fedramp-high',
+    region: 'us-east-1',
+    accountId: '123456789012',
+    scope: stack,
+    serviceLabels: {
+      'service-name': 'analytics-service',
+      owner: 'platform-team',
+      environment: 'dev',
+      'compliance-framework': framework
+    },
+    tags: {
+      'service-name': 'analytics-service',
+      environment: 'dev',
+      'compliance-framework': framework
+    }
+  };
+};
 
 const createMockSpec = (config: Partial<KinesisStreamConfig> = {}): ComponentSpec => ({
   name: 'events-stream',
@@ -101,5 +120,51 @@ describe('KinesisStreamComponentConfigBuilder', () => {
     expect(config.monitoring.alarms?.readProvisionedExceeded?.enabled).toBe(true);
     expect(config.monitoring.alarms?.readProvisionedExceeded?.threshold).toBe(1);
     expect(config.monitoring.alarms?.writeProvisionedExceeded?.enabled).toBe(false);
+  });
+
+  it('normalises PutRecord.Success rate alarm configuration', () => {
+    const builder = new KinesisStreamComponentConfigBuilder(
+      createMockContext('commercial'),
+      createMockSpec({
+        monitoring: {
+          enabled: true,
+          alarms: {
+            putRecordSuccessRate: {
+              enabled: true,
+              threshold: 200
+            }
+          }
+        }
+      })
+    );
+
+    const config = builder.buildSync();
+
+    expect(config.monitoring.alarms?.putRecordSuccessRate?.enabled).toBe(true);
+    expect(config.monitoring.alarms?.putRecordSuccessRate?.threshold).toBe(200);
+    expect(config.monitoring.alarms?.putRecordSuccessRate?.comparisonOperator).toBe('lt');
+  });
+
+  it('normalises GetRecords.Success rate alarm configuration', () => {
+    const builder = new KinesisStreamComponentConfigBuilder(
+      createMockContext('commercial'),
+      createMockSpec({
+        monitoring: {
+          enabled: true,
+          alarms: {
+            getRecordsSuccessRate: {
+              enabled: true,
+              threshold: 150
+            }
+          }
+        }
+      })
+    );
+
+    const config = builder.buildSync();
+
+    expect(config.monitoring.alarms?.getRecordsSuccessRate?.enabled).toBe(true);
+    expect(config.monitoring.alarms?.getRecordsSuccessRate?.threshold).toBe(150);
+    expect(config.monitoring.alarms?.getRecordsSuccessRate?.comparisonOperator).toBe('lt');
   });
 });

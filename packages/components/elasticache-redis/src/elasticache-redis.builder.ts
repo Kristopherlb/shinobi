@@ -319,7 +319,7 @@ const HARDENED_FALLBACKS: Partial<ElastiCacheRedisConfig> = {
   },
   security: {
     create: true,
-    securityGroupIds: [],
+    securityGroupIds: [], // Empty array - must be provided via config if security.create is false
     allowedCidrs: []
   },
   parameterGroup: {
@@ -361,6 +361,29 @@ export class ElastiCacheRedisComponentConfigBuilder extends ConfigBuilder<Elasti
 
   protected getHardcodedFallbacks(): Record<string, any> {
     return HARDENED_FALLBACKS;
+  }
+
+  /**
+   * Layer 2: Compliance Framework Defaults
+   * Security and compliance-specific configurations
+   */
+  protected getComplianceFrameworkDefaults(): Partial<ElastiCacheRedisConfig> {
+    const framework = this.builderContext.context.complianceFramework;
+
+    if (framework === 'fedramp-moderate' || framework === 'fedramp-high') {
+      return {
+        encryption: {
+          atRest: true, // Required for compliance
+          inTransit: true, // Required for compliance
+          authToken: {
+            enabled: true, // Required for compliance
+            removalPolicy: 'retain' as RemovalPolicyOption // FedRAMP requires retention for secrets
+          }
+        }
+      };
+    }
+
+    return {}; // Commercial defaults (removalPolicy from hardcoded fallbacks)
   }
 
   public buildSync(): ElastiCacheRedisConfig {
@@ -426,7 +449,7 @@ export class ElastiCacheRedisComponentConfigBuilder extends ConfigBuilder<Elasti
       },
       security: {
         create: config.security?.create ?? true,
-        securityGroupIds: config.security?.securityGroupIds ?? [],
+        securityGroupIds: config.security?.securityGroupIds ?? [], // Empty array - must be provided via config if security.create is false
         allowedCidrs: config.security?.allowedCidrs ?? []  // SECURITY: Force explicit CIDR configuration
       },
       parameterGroup: {

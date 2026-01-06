@@ -8,7 +8,7 @@ import * as cdk from 'aws-cdk-lib';
 import { Construct } from 'constructs';
 import { NagSuppressions } from 'cdk-nag';
 import {
-  Component,
+  BaseComponent,
   ComponentSpec,
   ComponentContext,
   ComponentCapabilities
@@ -21,7 +21,7 @@ import {
   DynamoDbGsiConfig
 } from './dynamodb-table.builder.js';
 
-export class DynamoDbTableComponent extends Component {
+export class DynamoDbTableComponent extends BaseComponent {
   private table?: dynamodb.Table;
   private kmsKey?: kms.IKey;
   private managedKmsKey?: kms.Key;
