@@ -1,0 +1,90 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "$id": "https://platform.shinobi.internal/schemas/security-group-import/v1.0.0",
+  "title": "Security Group Import Component Configuration",
+  "description": "Configuration schema for importing an existing AWS Security Group",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["securityGroup"],
+  "properties": {
+    "name": {
+      "type": "string",
+      "description": "Component name (optional, will be auto-generated from component name)",
+      "pattern": "^[a-zA-Z][a-zA-Z0-9-_]*$",
+      "maxLength": 128
+    },
+    "description": {
+      "type": "string",
+      "description": "Component description for documentation",
+      "maxLength": 500
+    },
+    "securityGroup": {
+      "type": "object",
+      "description": "Security Group import configuration",
+      "properties": {
+        "ssmParameterName": {
+          "type": "string",
+          "description": "SSM parameter name containing the security group ID",
+          "pattern": "^/[a-zA-Z0-9._-]+$",
+          "minLength": 1,
+          "maxLength": 2048
+        },
+        "region": {
+          "type": "string",
+          "description": "AWS region where the security group exists",
+          "pattern": "^[a-z0-9-]+$",
+          "maxLength": 20
+        },
+        "accountId": {
+          "type": "string",
+          "description": "AWS account ID where the security group exists",
+          "pattern": "^[0-9]{12}$"
+        },
+        "vpcId": {
+          "type": "string",
+          "description": "VPC ID where the security group exists (for validation)",
+          "pattern": "^vpc-[a-f0-9]{8,17}$"
+        },
+        "securityGroupName": {
+          "type": "string",
+          "description": "Security group name for reference (documentation only)",
+          "pattern": "^[a-zA-Z0-9._-]+$",
+          "maxLength": 255
+        }
+      },
+      "required": ["ssmParameterName"]
+    },
+    "validation": {
+      "type": "object",
+      "description": "Import validation settings",
+      "properties": {
+        "validateExistence": {
+          "type": "boolean",
+          "description": "Whether to validate the security group exists during synthesis",
+          "default": true
+        },
+        "validateVpc": {
+          "type": "boolean",
+          "description": "Whether to validate the security group is in the expected VPC",
+          "default": false
+        },
+        "validationTimeout": {
+          "type": "integer",
+          "description": "Custom validation timeout in seconds",
+          "minimum": 5,
+          "maximum": 300,
+          "default": 30
+        }
+      }
+    },
+    "tags": {
+      "type": "object",
+      "description": "Tagging configuration (for documentation purposes only)",
+      "additionalProperties": {
+        "type": "string",
+        "maxLength": 256
+      }
+    }
+  }
+}
+
