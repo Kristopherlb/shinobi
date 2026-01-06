@@ -5,7 +5,7 @@ import * as ec2 from 'aws-cdk-lib/aws-ec2';
 import * as cdk from 'aws-cdk-lib';
 import { Construct } from 'constructs';
 import {
-  Component,
+  BaseComponent,
   ComponentSpec,
   ComponentContext,
   ComponentCapabilities
@@ -17,7 +17,7 @@ import {
   VpcAssociationConfig
 } from './route53-hosted-zone.builder.js';
 
-export class Route53HostedZoneComponent extends Component {
+export class Route53HostedZoneComponent extends BaseComponent {
   private hostedZone?: route53.HostedZone | route53.PrivateHostedZone;
   private queryLogGroup?: logs.ILogGroup;
   private config?: Route53HostedZoneConfig;
@@ -29,6 +29,15 @@ export class Route53HostedZoneComponent extends Component {
   public synth(): void {
     const builder = new Route53HostedZoneComponentConfigBuilder(this.context, this.spec);
     this.config = builder.buildSync();
+
+    // Validate zoneName: log if trailing dot was stripped (already sanitized in builder)
+    const originalZoneName = this.spec.config?.zoneName as string | undefined;
+    if (originalZoneName && originalZoneName.trim().endsWith('.') && !this.config.zoneName.endsWith('.')) {
+      this.logComponentEvent('zone_name_sanitized', 'Trailing dot removed from zoneName', {
+        original: originalZoneName,
+        sanitized: this.config.zoneName
+      });
+    }
 
     this.logComponentEvent('config_resolved', 'Resolved hosted zone configuration', {
       zoneName: this.config.zoneName,
@@ -125,11 +134,17 @@ export class Route53HostedZoneComponent extends Component {
       });
 
       additionalVpcs.forEach((vpc, index) => {
-        privateZone.addVpc(vpc, { vpcRegion: this.config!.vpcAssociations[index + 1].region });
+        privateZone.addVpc(vpc);
       });
 
       if (this.queryLogGroup) {
-        privateZone.logQueryLogs(this.queryLogGroup);
+        new cdk.CfnResource(this, 'QueryLoggingConfig', {
+          type: 'AWS::Route53::QueryLoggingConfig',
+          properties: {
+            HostedZoneId: privateZone.hostedZoneId,
+            CloudWatchLogsLogGroupArn: this.queryLogGroup.logGroupArn
+          }
+        });
       }
 
       return privateZone;
@@ -140,7 +155,18 @@ export class Route53HostedZoneComponent extends Component {
     });
 
     if (this.queryLogGroup) {
-      publicZone.logQueryLogs(this.queryLogGroup);
+      // Use addQueryLogging() if available (CDK v2.100+), otherwise fall back to CfnResource
+      if ('addQueryLogging' in publicZone && typeof publicZone.addQueryLogging === 'function') {
+        publicZone.addQueryLogging(this.queryLogGroup);
+      } else {
+        new cdk.CfnResource(this, 'QueryLoggingConfig', {
+          type: 'AWS::Route53::QueryLoggingConfig',
+          properties: {
+            HostedZoneId: publicZone.hostedZoneId,
+            CloudWatchLogsLogGroupArn: this.queryLogGroup.logGroupArn
+          }
+        });
+      }
     }
 
     return publicZone;
@@ -159,6 +185,11 @@ export class Route53HostedZoneComponent extends Component {
     if (!this.config!.dnssec.enabled) {
       return;
     }
+
+    this.logComponentEvent('dnssec_enabled', 'DNSSEC enabled for hosted zone', {
+      zoneName: this.config!.zoneName,
+      hostedZoneId: this.hostedZone!.hostedZoneId
+    });
 
     new route53.CfnDNSSEC(this, 'HostedZoneDnssec', {
       hostedZoneId: this.hostedZone!.hostedZoneId
@@ -206,8 +237,9 @@ export class Route53HostedZoneComponent extends Component {
         return;
       }
 
+      const alarmName = this.makeAlarmName(alarm.id);
       const hostedZoneAlarm = new cloudwatch.Alarm(this, alarm.id, {
-        alarmName: `${this.context.serviceName}-${this.spec.name}-${this.toKebabCase(alarm.id)}`,
+        alarmName,
         alarmDescription: `Hosted zone alarm for ${alarm.id}`,
         metric: alarm.metric,
         threshold: alarm.config.threshold ?? alarm.defaultThreshold,
@@ -234,6 +266,8 @@ export class Route53HostedZoneComponent extends Component {
       zoneName: this.config!.zoneName,
       zoneType: this.config!.zoneType,
       dnssecEnabled: this.config!.dnssec.enabled,
+      queryLoggingEnabled: this.config!.queryLogging.enabled,
+      queryLogGroupArn: this.queryLogGroup?.logGroupArn,
       nameServers
     };
   }
@@ -290,5 +324,12 @@ export class Route53HostedZoneComponent extends Component {
 
   private toKebabCase(value: string): string {
     return value.replace(/([a-z0-9])([A-Z])/g, '$1-$2').toLowerCase();
+  }
+
+  /**
+   * Generate consistent alarm name following platform naming conventions
+   */
+  private makeAlarmName(alarmId: string): string {
+    return `${this.context.serviceName}-${this.spec.name}-${this.toKebabCase(alarmId)}`;
   }
 }

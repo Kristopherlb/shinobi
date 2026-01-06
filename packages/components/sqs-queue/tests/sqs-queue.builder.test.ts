@@ -107,7 +107,7 @@ describe('SqsQueueConfigBuilder', () => {
     
     it('should work with any compliance framework when highRiskEnvironment is set', () => {
       // Test that highRiskEnvironment works regardless of framework
-      const frameworks = ['commercial', 'fedramp-moderate', 'fedramp-high'];
+      const frameworks: Array<'commercial' | 'fedramp-moderate' | 'fedramp-high'> = ['commercial', 'fedramp-moderate', 'fedramp-high'];
       
       frameworks.forEach(framework => {
         const context = createMockContext(framework);

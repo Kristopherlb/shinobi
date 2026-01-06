@@ -12,6 +12,7 @@ import {
   ComponentConfigSchema
 } from '@shinobi/core';
 import { ComponentContext, ComponentSpec } from '@shinobi/core';
+import configSchema from './Config.schema.json' with { type: 'json' };
 
 export type HostedZoneType = 'public' | 'private';
 export type RemovalPolicyOption = 'retain' | 'destroy';
@@ -73,94 +74,7 @@ export interface Route53HostedZoneConfig {
   tags: Record<string, string>;
 }
 
-const VPC_ASSOCIATION_SCHEMA = {
-  type: 'object',
-  additionalProperties: false,
-  required: ['vpcId'],
-  properties: {
-    vpcId: { type: 'string' },
-    region: { type: 'string' }
-  }
-};
-
-const ALARM_SCHEMA = {
-  type: 'object',
-  additionalProperties: false,
-  properties: {
-    enabled: { type: 'boolean', default: false },
-    threshold: { type: 'number' },
-    evaluationPeriods: { type: 'number', minimum: 1, default: 1 },
-    periodMinutes: { type: 'number', minimum: 1, default: 5 },
-    comparisonOperator: { type: 'string', enum: ['gt', 'gte', 'lt', 'lte'], default: 'gt' },
-    treatMissingData: { type: 'string', enum: ['breaching', 'not-breaching', 'ignore', 'missing'], default: 'not-breaching' },
-    statistic: { type: 'string', default: 'Sum' },
-    tags: { type: 'object', additionalProperties: { type: 'string' }, default: {} }
-  }
-};
-
-export const ROUTE53_HOSTED_ZONE_CONFIG_SCHEMA: ComponentConfigSchema = {
-  type: 'object',
-  additionalProperties: false,
-  required: ['zoneName'],
-  properties: {
-    zoneName: { type: 'string' },
-    comment: { type: 'string' },
-    zoneType: { type: 'string', enum: ['public', 'private'], default: 'public' },
-    vpcAssociations: {
-      type: 'array',
-      items: VPC_ASSOCIATION_SCHEMA,
-      default: []
-    },
-    queryLogging: {
-      type: 'object',
-      additionalProperties: false,
-      properties: {
-        enabled: { type: 'boolean', default: false },
-        logGroupArn: { type: 'string' },
-        logGroupName: { type: 'string' },
-        retentionDays: { type: 'number', minimum: 1, default: 90 },
-        removalPolicy: { type: 'string', enum: ['retain', 'destroy'], default: 'destroy' }
-      },
-      default: {
-        enabled: false,
-        retentionDays: 90,
-        removalPolicy: 'destroy'
-      }
-    },
-    dnssec: {
-      type: 'object',
-      additionalProperties: false,
-      properties: {
-        enabled: { type: 'boolean', default: false }
-      },
-      default: {
-        enabled: false
-      }
-    },
-    monitoring: {
-      type: 'object',
-      additionalProperties: false,
-      properties: {
-        enabled: { type: 'boolean', default: false },
-        alarms: {
-          type: 'object',
-          additionalProperties: false,
-          properties: {
-            queryVolume: ALARM_SCHEMA,
-            healthCheckFailures: ALARM_SCHEMA
-          }
-        }
-      },
-      default: {
-        enabled: false,
-        alarms: {}
-      }
-    },
-    hardeningProfile: { type: 'string' },
-    removalPolicy: { type: 'string', enum: ['retain', 'destroy'], default: 'retain' },
-    tags: { type: 'object', additionalProperties: { type: 'string' }, default: {} }
-  }
-};
+export const ROUTE53_HOSTED_ZONE_CONFIG_SCHEMA: ComponentConfigSchema = configSchema as ComponentConfigSchema;
 
 const DEFAULT_ALARM_BASELINE: Required<Omit<HostedZoneAlarmConfig, 'tags'>> = {
   enabled: false,
@@ -298,6 +212,15 @@ export class Route53HostedZoneComponentConfigBuilder extends ConfigBuilder<Route
   }
 
   private sanitiseZoneName(zoneName: string): string {
-    return zoneName.trim().replace(/\.$/, '').toLowerCase();
+    const original = zoneName.trim();
+    const sanitised = original.replace(/\.$/, '').toLowerCase();
+    
+    // Log if trailing dot was stripped (for audit trail)
+    if (original.endsWith('.') && original !== sanitised) {
+      // Note: Builder doesn't have access to logger, so we'll log in component during config resolution
+      // This is a validation note that will be checked in the component
+    }
+    
+    return sanitised;
   }
 }
