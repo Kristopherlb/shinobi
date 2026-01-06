@@ -5,15 +5,31 @@
  * using CDK Nag rule packs (AwsSolutions and FedRAMP)
  */
 
-import { describe, it, expect, beforeEach } from 'vitest';
+import { describe, it, expect, beforeEach, afterEach } from 'vitest';
 import * as cdk from 'aws-cdk-lib';
 import { Annotations, Match } from 'aws-cdk-lib/assertions';
 import { AwsSolutionsChecks } from 'cdk-nag';
 import { Aspects } from 'aws-cdk-lib';
 import { ComponentContext, ComponentSpec } from '@shinobi/core';
-import { SqsQueueNewComponent } from '../../sqs-queue.component';
+import { SqsQueueComponent } from '../../sqs-queue.component';
+import { SqsQueueConfigBuilder } from '../../sqs-queue.builder';
 
-describe('SqsQueueNewComponent - CDK Nag Security Validation', () => {
+// Mock platform configuration loading to avoid requiring config files in tests
+import { vi } from 'vitest';
+
+let platformConfigSpy: any;
+
+beforeEach(() => {
+  platformConfigSpy = vi
+    .spyOn(SqsQueueConfigBuilder.prototype as any, '_loadPlatformConfiguration')
+    .mockImplementation(() => ({}));
+});
+
+afterEach(() => {
+  platformConfigSpy?.mockRestore();
+});
+
+describe('SqsQueueComponent - CDK Nag Security Validation', () => {
   let app: cdk.App;
   let stack: cdk.Stack;
   let context: ComponentContext;
@@ -42,7 +58,7 @@ describe('SqsQueueNewComponent - CDK Nag Security Validation', () => {
         config: {}
       };
 
-      const component = new SqsQueueNewComponent(stack, 'TestQueue', context, spec);
+      const component = new SqsQueueComponent(stack, 'TestQueue', context, spec);
       component.synth();
 
       // Apply CDK Nag
@@ -58,24 +74,46 @@ describe('SqsQueueNewComponent - CDK Nag Security Validation', () => {
     });
   });
 
-  describe('FedRAMP Moderate Framework', () => {
-    it('passes AwsSolutions security checks for FedRAMP Moderate', () => {
-      const fedrampContext: ComponentContext = {
-        ...context,
-        complianceFramework: 'fedramp-moderate'
+  describe('High Risk Environment - Enhanced Security', () => {
+    it('passes AwsSolutions security checks with highRiskEnvironment enabled', () => {
+      const spec: ComponentSpec = {
+        name: 'test-queue',
+        type: 'sqs-queue',
+        config: {
+          highRiskEnvironment: true // Enables encryption, DLQ, and detailed metrics
+        }
       };
 
+      const component = new SqsQueueComponent(stack, 'TestQueue', context, spec);
+      component.synth();
+
+      // Apply CDK Nag
+      Aspects.of(stack).add(new AwsSolutionsChecks({ verbose: true }));
+
+      // Check for errors
+      const errors = Annotations.fromStack(stack).findError(
+        '*',
+        Match.stringLikeRegexp('AwsSolutions-.*')
+      );
+
+      expect(errors).toHaveLength(0);
+    });
+    
+    it('passes AwsSolutions security checks with explicit encryption config', () => {
       const spec: ComponentSpec = {
         name: 'test-queue',
         type: 'sqs-queue',
         config: {
           encryption: {
             enabled: true
+          },
+          deadLetterQueue: {
+            enabled: true
           }
         }
       };
 
-      const component = new SqsQueueNewComponent(stack, 'TestQueue', fedrampContext, spec);
+      const component = new SqsQueueComponent(stack, 'TestQueue', context, spec);
       component.synth();
 
       // Apply CDK Nag
