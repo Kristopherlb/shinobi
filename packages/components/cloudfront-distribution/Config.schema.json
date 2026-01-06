@@ -51,6 +51,16 @@
             "type": "string"
           },
           "description": "Custom headers to send with origin requests"
+        },
+        "oacSigning": {
+          "type": "string",
+          "enum": [
+            "SIGV4_ALWAYS",
+            "SIGV4_NO_OVERRIDE",
+            "NEVER"
+          ],
+          "default": "SIGV4_ALWAYS",
+          "description": "Origin Access Control signing behavior (only applies to S3 origins). SIGV4_ALWAYS signs all requests, SIGV4_NO_OVERRIDE signs only if viewer request lacks Authorization header, NEVER disables signing."
         }
       }
     },
