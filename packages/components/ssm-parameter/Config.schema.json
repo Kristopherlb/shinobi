@@ -1,0 +1,99 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "$id": "https://platform.shinobi.internal/schemas/ssm-parameter/v1.0.0",
+  "title": "SSM Parameter Component Configuration",
+  "description": "Configuration schema for AWS Systems Manager Parameter Store component",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["name"],
+  "properties": {
+    "name": {
+      "type": "string",
+      "description": "Parameter name (e.g., /my-service/config)",
+      "minLength": 1,
+      "maxLength": 2048
+    },
+    "description": {
+      "type": "string",
+      "description": "Parameter description",
+      "maxLength": 1024
+    },
+    "kind": {
+      "type": "string",
+      "description": "Parameter type",
+      "enum": ["string", "stringList", "secureString"],
+      "default": "string"
+    },
+    "value": {
+      "type": "string",
+      "description": "Parameter value (for string type)",
+      "maxLength": 4096
+    },
+    "values": {
+      "type": "array",
+      "description": "Parameter values (for stringList type)",
+      "items": {
+        "type": "string",
+        "maxLength": 4096
+      }
+    },
+    "allowedPattern": {
+      "type": "string",
+      "description": "Regex pattern to validate parameter value"
+    },
+    "tier": {
+      "type": "string",
+      "description": "Parameter tier",
+      "enum": ["standard", "advanced"],
+      "default": "standard"
+    },
+    "dataType": {
+      "type": "string",
+      "description": "Parameter data type",
+      "enum": ["text", "aws:ec2:image"],
+      "default": "text"
+    },
+    "encryption": {
+      "type": "object",
+      "description": "Encryption configuration",
+      "additionalProperties": false,
+      "required": ["customerManagedKey"],
+      "properties": {
+        "customerManagedKey": {
+          "type": "object",
+          "description": "Customer-managed KMS key configuration",
+          "additionalProperties": false,
+          "required": ["enabled"],
+          "properties": {
+            "enabled": {
+              "type": "boolean",
+              "description": "Enable customer-managed KMS key"
+            },
+            "kmsKeyArn": {
+              "type": "string",
+              "description": "KMS key ARN (optional if create is true)"
+            },
+            "rotationEnabled": {
+              "type": "boolean",
+              "description": "Enable key rotation",
+              "default": false
+            },
+            "allowSsmService": {
+              "type": "boolean",
+              "description": "Allow SSM service to use the key",
+              "default": true
+            }
+          }
+        }
+      }
+    },
+    "tags": {
+      "type": "object",
+      "description": "Additional tags",
+      "additionalProperties": {
+        "type": "string"
+      }
+    }
+  }
+}
+

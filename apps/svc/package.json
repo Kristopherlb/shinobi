@@ -3,7 +3,7 @@
   "version": "0.1.0",
   "type": "module",
   "bin": {
-    "shinobi": "dist/apps/shinobi/main.js"
+    "shinobi": "src/main.js"
   },
   "scripts": {
     "build": "tsc -p tsconfig.app.json",
