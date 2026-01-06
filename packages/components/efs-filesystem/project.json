@@ -1,8 +1,6 @@
 {
   "name": "@shinobi/components-efs-filesystem",
-  "root": "packages/components/efs-filesystem",
   "sourceRoot": "packages/components/efs-filesystem/src",
-  "projectType": "library",
   "tags": [
     "scope:shinobi",
     "type:component",

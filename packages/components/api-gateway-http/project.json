@@ -1,8 +1,6 @@
 {
   "name": "@shinobi/components-api-gateway-http",
-  "root": "packages/components/api-gateway-http",
   "sourceRoot": "packages/components/api-gateway-http/src",
-  "projectType": "library",
   "tags": [
     "scope:shinobi",
     "type:component",

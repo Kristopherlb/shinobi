@@ -1,7 +1,6 @@
 {
   "name": "@shinobi/components-ecs-cluster",
   "sourceRoot": "packages/components/ecs-cluster/src",
-  "projectType": "library",
   "tags": [
     "scope:shinobi",
     "type:component",

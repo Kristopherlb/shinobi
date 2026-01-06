@@ -1,27 +1,26 @@
 {
   "name": "@shinobi/components-deployment-bundle-pipeline",
-  "root": "packages/components/deployment-bundle-pipeline",
   "sourceRoot": "packages/components/deployment-bundle-pipeline/src",
-  "projectType": "library",
   "targets": {
     "build": {
       "executor": "nx:run-commands",
       "options": {
-        "command": "tsc -b"
+        "command": "pnpm exec tsc -b packages/components/deployment-bundle-pipeline/tsconfig.build.json"
       },
-      "inputs": [
-        "default",
-        "{projectRoot}/tsconfig.json",
-        "{projectRoot}/src/**"
-      ],
       "outputs": [
-        "{projectRoot}/dist"
+        "{workspaceRoot}/dist/packages/components/deployment-bundle-pipeline"
       ]
     },
     "typecheck": {
       "executor": "nx:run-commands",
       "options": {
-        "command": "tsc --noEmit"
+        "command": "tsc -p packages/components/deployment-bundle-pipeline/tsconfig.json --noEmit"
+      }
+    },
+    "clean": {
+      "executor": "nx:run-commands",
+      "options": {
+        "command": "rimraf dist/packages/components/deployment-bundle-pipeline"
       }
     },
     "test": {

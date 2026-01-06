@@ -1,27 +1,26 @@
 {
   "name": "@shinobi/components-iam-role",
-  "root": "packages/components/iam-role",
   "sourceRoot": "packages/components/iam-role/src",
-  "projectType": "library",
   "targets": {
     "build": {
       "executor": "nx:run-commands",
       "options": {
-        "command": "tsc -b"
+        "command": "pnpm exec tsc -b packages/components/iam-role/tsconfig.build.json"
       },
-      "inputs": [
-        "default",
-        "{projectRoot}/tsconfig.json",
-        "{projectRoot}/src/**"
-      ],
       "outputs": [
-        "{projectRoot}/dist"
+        "{workspaceRoot}/dist/packages/components/iam-role"
       ]
     },
     "typecheck": {
       "executor": "nx:run-commands",
       "options": {
-        "command": "tsc --noEmit"
+        "command": "tsc -p packages/components/iam-role/tsconfig.json --noEmit"
+      }
+    },
+    "clean": {
+      "executor": "nx:run-commands",
+      "options": {
+        "command": "rimraf dist/packages/components/iam-role"
       }
     },
     "test": {

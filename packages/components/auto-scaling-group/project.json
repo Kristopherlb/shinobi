@@ -1,8 +1,6 @@
 {
   "name": "@shinobi/components-auto-scaling-group",
-  "root": "packages/components/auto-scaling-group",
   "sourceRoot": "packages/components/auto-scaling-group/src",
-  "projectType": "library",
   "tags": [
     "scope:shinobi",
     "type:component",

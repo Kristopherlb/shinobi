@@ -1,8 +1,6 @@
 {
   "name": "@shinobi/components-dynamodb-table",
-  "root": "packages/components/dynamodb-table",
   "sourceRoot": "packages/components/dynamodb-table/src",
-  "projectType": "library",
   "tags": [
     "scope:shinobi",
     "type:component",

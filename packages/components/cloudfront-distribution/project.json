@@ -1,8 +1,6 @@
 {
   "name": "@shinobi/components-cloudfront-distribution",
-  "root": "packages/components/cloudfront-distribution",
   "sourceRoot": "packages/components/cloudfront-distribution/src",
-  "projectType": "library",
   "tags": [
     "scope:shinobi",
     "type:component",

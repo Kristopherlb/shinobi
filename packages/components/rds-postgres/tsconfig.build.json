@@ -1,7 +1,40 @@
 {
-  "extends": "./tsconfig.json",
+  "extends": "../../../tsconfig.base.json",
   "compilerOptions": {
-    "composite": true
+    "rootDir": ".",
+    "outDir": "../../../dist/packages/components/rds-postgres",
+    "composite": true,
+    "declaration": true,
+    "declarationMap": true,
+    "target": "ES2022",
+    "module": "NodeNext",
+    "moduleResolution": "NodeNext",
+    "strict": true,
+    "esModuleInterop": true,
+    "skipLibCheck": true,
+    "resolveJsonModule": true,
+    "typeRoots": [
+      "../../../node_modules/@types",
+      "../../../packages/contracts/src"
+    ]
   },
-  "references": []
+  "include": [
+    "index.ts",
+    "Config.schema.json",
+    "*.ts",
+    "src/**/*",
+    "!**/*.test.ts"
+  ],
+  "exclude": [
+    "dist",
+    "node_modules",
+    "**/*.test.ts",
+    "tests",
+    "coverage"
+  ],
+  "references": [
+    {
+      "path": "../../core/tsconfig.json"
+    }
+  ]
 }

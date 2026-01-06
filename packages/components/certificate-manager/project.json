@@ -1,8 +1,6 @@
 {
   "name": "@shinobi/components-certificate-manager",
-  "root": "packages/components/certificate-manager",
   "sourceRoot": "packages/components/certificate-manager",
-  "projectType": "library",
   "targets": {
     "build": {
       "executor": "nx:run-commands",

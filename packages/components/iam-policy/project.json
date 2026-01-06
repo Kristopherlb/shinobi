@@ -1,8 +1,6 @@
 {
   "name": "@shinobi/components-iam-policy",
-  "root": "packages/components/iam-policy",
   "sourceRoot": "packages/components/iam-policy/src",
-  "projectType": "library",
   "tags": [
     "scope:shinobi",
     "type:component",

@@ -1,8 +1,6 @@
 {
   "name": "@shinobi/components-eventbridge-rule-cron",
-  "root": "packages/components/eventbridge-rule-cron",
   "sourceRoot": "packages/components/eventbridge-rule-cron/src",
-  "projectType": "library",
   "tags": [
     "scope:shinobi",
     "type:component",

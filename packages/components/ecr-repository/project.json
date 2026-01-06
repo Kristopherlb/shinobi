@@ -1,8 +1,6 @@
 {
   "name": "@shinobi/components-ecr-repository",
-  "root": "packages/components/ecr-repository",
   "sourceRoot": "packages/components/ecr-repository/src",
-  "projectType": "library",
   "tags": [
     "scope:shinobi",
     "type:component",

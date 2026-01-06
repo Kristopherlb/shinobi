@@ -1,7 +1,6 @@
 {
   "name": "@shinobi/components-network-rules-stack",
   "sourceRoot": "packages/components/network-rules-stack/src",
-  "projectType": "library",
   "tags": [
     "scope:shinobi",
     "type:component",

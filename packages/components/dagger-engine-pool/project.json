@@ -1,27 +1,26 @@
 {
   "name": "@shinobi/components-dagger-engine-pool",
-  "root": "packages/components/dagger-engine-pool",
   "sourceRoot": "packages/components/dagger-engine-pool/src",
-  "projectType": "library",
   "targets": {
     "build": {
       "executor": "nx:run-commands",
       "options": {
-        "command": "tsc -b"
+        "command": "pnpm exec tsc -b packages/components/dagger-engine-pool/tsconfig.build.json"
       },
-      "inputs": [
-        "default",
-        "{projectRoot}/tsconfig.json",
-        "{projectRoot}/src/**"
-      ],
       "outputs": [
-        "{projectRoot}/dist"
+        "{workspaceRoot}/dist/packages/components/dagger-engine-pool"
       ]
     },
     "typecheck": {
       "executor": "nx:run-commands",
       "options": {
-        "command": "tsc --noEmit"
+        "command": "tsc -p packages/components/dagger-engine-pool/tsconfig.json --noEmit"
+      }
+    },
+    "clean": {
+      "executor": "nx:run-commands",
+      "options": {
+        "command": "rimraf dist/packages/components/dagger-engine-pool"
       }
     },
     "test": {

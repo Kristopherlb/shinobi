@@ -1,8 +1,6 @@
 {
   "name": "@shinobi/components-ecs-ec2-service",
-  "root": "packages/components/ecs-ec2-service",
   "sourceRoot": "packages/components/ecs-ec2-service/src",
-  "projectType": "library",
   "tags": [
     "scope:shinobi",
     "type:component",
