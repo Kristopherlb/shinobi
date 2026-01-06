@@ -11,8 +11,8 @@ import {
   ComponentContext,
   IComponentCreator
 } from '@shinobi/core';
-import { EcsClusterComponent } from './ecs-cluster.component.ts';
-import { EcsClusterConfig, ECS_CLUSTER_CONFIG_SCHEMA } from './ecs-cluster.builder.ts';
+import { EcsClusterComponent } from './ecs-cluster.component.js';
+import { EcsClusterConfig, ECS_CLUSTER_CONFIG_SCHEMA } from './ecs-cluster.builder.js';
 
 /**
  * Creator class for EcsClusterComponent component
@@ -69,13 +69,26 @@ export class EcsClusterComponentCreator implements IComponentCreator {
    * Factory method to create component instances
    */
   public createComponent(
-    scope: Construct,
     spec: ComponentSpec,
     context: ComponentContext
   ): EcsClusterComponent {
+    const scope = context.scope as Construct | undefined;
+    if (!scope) {
+      throw new Error('ComponentContext.scope is required to create ecs-cluster components');
+    }
     return new EcsClusterComponent(scope, spec.name, context, spec);
   }
   
+  /**
+   * Process component (same as create for this component)
+   */
+  public processComponent(
+    spec: ComponentSpec,
+    context: ComponentContext
+  ): EcsClusterComponent {
+    return this.createComponent(spec, context);
+  }
+
   /**
    * Validates component specification beyond JSON Schema validation
    */

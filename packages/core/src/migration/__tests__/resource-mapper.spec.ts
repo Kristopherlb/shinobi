@@ -1,3 +1,4 @@
+import { vi } from 'vitest';
 import { Logger as PlatformLogger } from '../../platform/logger/src/index.js';
 // ResourceMapper doesn't exist - skip these tests
 // TODO: Remove this test file or implement ResourceMapper if needed
@@ -59,7 +60,7 @@ describe('ResourceMapper dependency optimization', () => {
       }
     ];
 
-    const stringifySpy = jest.spyOn(JSON, 'stringify');
+    const stringifySpy = vi.spyOn(JSON, 'stringify');
 
     await mapper.mapResources(buildAnalysisResult(resources), 'service', 'framework');
 
@@ -91,7 +92,7 @@ describe('ResourceMapper dependency optimization', () => {
 
     await mapper.mapResources(buildAnalysisResult(firstResources), 'service', 'framework');
 
-    const stringifySpy = jest.spyOn(JSON, 'stringify');
+    const stringifySpy = vi.spyOn(JSON, 'stringify');
 
     const secondResources: CloudFormationResource[] = [
       {

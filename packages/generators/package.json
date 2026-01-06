@@ -1,8 +1,17 @@
 {
   "name": "@shinobi/generators",
   "version": "workspace:*",
-  "main": "src/index.js",
+  "type": "module",
+  "main": "./dist/index.js",
+  "types": "./dist/index.d.ts",
   "generators": "./generators.json",
+  "exports": {
+    ".": {
+      "types": "./dist/index.d.ts",
+      "import": "./dist/index.js"
+    },
+    "./package.json": "./package.json"
+  },
   "dependencies": {
     "@nx/devkit": "^21.5.2",
     "@nx/plugin": "^21.5.2"

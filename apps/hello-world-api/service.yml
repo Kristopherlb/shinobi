@@ -2,8 +2,8 @@ service: hello-world-api
 owner: you
 complianceFramework: commercial
 environment: dev
-region: us-east-1
-accountId: "123456789012"  # Replace with your AWS account ID
+region: us-west-2
+accountId: "911871352725"
 
 components:
   - name: api
@@ -21,12 +21,8 @@ components:
         capability: iam:role
         access: read
 
-  - name: logs-group
-    type: cloudwatch-log-group
-    binds:
-      - to: api
-        capability: monitoring:logs
-        access: write
+  # Note: CloudWatch Log Groups are automatically created by lambda-api component
+  # No separate cloudwatch-log-group component is needed
 
   - name: protected-db
     type: rds-postgres

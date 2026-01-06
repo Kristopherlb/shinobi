@@ -28,6 +28,9 @@
     "url": "https://github.com/company/shinobi.git",
     "directory": "packages/components/dagger-engine-pool"
   },
+  "dependencies": {
+    "@shinobi/core": "workspace:*"
+  },
   "peerDependencies": {
     "aws-cdk-lib": "^2.143.0",
     "constructs": "^10.3.0"

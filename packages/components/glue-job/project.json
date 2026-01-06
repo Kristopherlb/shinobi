@@ -1,0 +1,43 @@
+{
+  "name": "@shinobi/components-glue-job",
+  "sourceRoot": "packages/components/glue-job/src",
+  "targets": {
+    "build": {
+      "executor": "nx:run-commands",
+      "options": {
+        "command": "pnpm exec tsc -b packages/components/glue-job/tsconfig.build.json"
+      },
+      "outputs": [
+        "{workspaceRoot}/dist/packages/components/glue-job"
+      ]
+    },
+    "test": {
+      "executor": "@nx/vitest:test",
+      "outputs": [
+        "{projectRoot}/coverage"
+      ],
+      "options": {
+        "config": "packages/components/glue-job/vitest.config.ts",
+        "passWithNoTests": true
+      }
+    },
+    "clean": {
+      "executor": "nx:run-commands",
+      "options": {
+        "command": "rimraf dist/packages/components/glue-job"
+      }
+    },
+    "typecheck": {
+      "executor": "nx:run-commands",
+      "options": {
+        "command": "tsc -p packages/components/glue-job/tsconfig.json --noEmit"
+      }
+    }
+  },
+  "tags": [
+    "scope:shinobi",
+    "type:component",
+    "infra:aws"
+  ]
+}
+

@@ -1,0 +1,28 @@
+{
+  "extends": "../../../tsconfig.base.json",
+  "compilerOptions": {
+    "rootDir": ".",
+    "outDir": "../../../dist/packages/components/eventbridge-rule-cron",
+    "composite": true,
+    "declaration": true,
+    "declarationMap": true,
+    "tsBuildInfoFile": "../../../dist/packages/components/eventbridge-rule-cron/tsconfig.tsbuildinfo"
+  },
+  "include": [
+    "*.ts",
+    "index.ts",
+    "src/**/*",
+    "Config.schema.json"
+  ],
+  "exclude": [
+    "dist",
+    "node_modules",
+    "**/*.test.ts",
+    "tests"
+  ],
+  "references": [
+    {
+      "path": "../../core/tsconfig.json"
+    }
+  ]
+}

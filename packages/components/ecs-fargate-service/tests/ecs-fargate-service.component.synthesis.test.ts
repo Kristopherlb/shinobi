@@ -2,7 +2,7 @@ import * as cdk from 'aws-cdk-lib';
 import * as ec2 from 'aws-cdk-lib/aws-ec2';
 import * as ecs from 'aws-cdk-lib/aws-ecs';
 import { Match, Template } from 'aws-cdk-lib/assertions';
-import { ComponentContext, ComponentSpec } from '@platform/contracts';
+import { ComponentContext, ComponentSpec } from '@shinobi/core';
 import { EcsFargateServiceComponent } from '../src/ecs-fargate-service.component';
 
 describe('EcsFargateServiceComponent synthesis', () => {

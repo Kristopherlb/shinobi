@@ -1,7 +1,6 @@
 {
   "name": "@shinobi/components-network-rules-stack",
   "sourceRoot": "packages/components/network-rules-stack/src",
-  "projectType": "library",
   "tags": [
     "scope:shinobi",
     "type:component",
@@ -20,11 +19,14 @@
       ]
     },
     "test": {
-      "executor": "@nx/jest:jest",
+      "executor": "@nx/vitest:test",
       "options": {
-        "jestConfig": "packages/components/network-rules-stack/jest.config.mjs",
+        "config": "packages/components/network-rules-stack/vitest.config.ts",
         "passWithNoTests": true
-      }
+      },
+      "outputs": [
+        "{projectRoot}/coverage"
+      ]
     },
     "lint": {
       "executor": "@nx/eslint:lint",
@@ -43,4 +45,3 @@
     }
   }
 }
-

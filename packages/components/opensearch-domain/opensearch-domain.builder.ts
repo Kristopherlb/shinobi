@@ -3,7 +3,7 @@ import {
   ConfigBuilderContext,
   ComponentConfigSchema
 } from '@shinobi/core';
-import { ComponentContext, ComponentSpec } from '@platform/contracts';
+import { ComponentContext, ComponentSpec } from '@shinobi/core';
 
 export type OpenSearchVolumeType = 'gp2' | 'gp3' | 'io1' | 'io2';
 export type OpenSearchRemovalPolicy = 'retain' | 'destroy';

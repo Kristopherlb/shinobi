@@ -4,11 +4,11 @@ import {
   ComponentSpec,
   IComponentCreator
 } from '@shinobi/core';
-import { EventBridgeRuleCronComponent } from './eventbridge-rule-cron.component.ts';
+import { EventBridgeRuleCronComponent } from './eventbridge-rule-cron.component.js';
 import {
   EVENTBRIDGE_RULE_CRON_CONFIG_SCHEMA,
   EventBridgeRuleCronConfig
-} from './eventbridge-rule-cron.builder.ts';
+} from './eventbridge-rule-cron.builder.js';
 
 export class EventBridgeRuleCronComponentCreator implements IComponentCreator {
   public readonly componentType = 'eventbridge-rule-cron';
@@ -19,8 +19,16 @@ export class EventBridgeRuleCronComponentCreator implements IComponentCreator {
   public readonly tags = ['eventbridge', 'cron', 'scheduler'];
   public readonly configSchema = EVENTBRIDGE_RULE_CRON_CONFIG_SCHEMA;
 
-  public createComponent(scope: Construct, spec: ComponentSpec, context: ComponentContext): EventBridgeRuleCronComponent {
+  public createComponent(spec: ComponentSpec, context: ComponentContext): EventBridgeRuleCronComponent {
+    const scope = context.scope as Construct | undefined;
+    if (!scope) {
+      throw new Error('ComponentContext.scope is required to create eventbridge-rule-cron components');
+    }
     return new EventBridgeRuleCronComponent(scope, spec.name, context, spec);
+  }
+
+  public processComponent(spec: ComponentSpec, context: ComponentContext): EventBridgeRuleCronComponent {
+    return this.createComponent(spec, context);
   }
 
   public validateSpec(spec: ComponentSpec): { valid: boolean; errors: string[] } {

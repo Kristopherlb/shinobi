@@ -10,7 +10,7 @@ import {
   ComponentSpec,
   ComponentContext,
   IComponentCreator
-} from '../../platform/contracts/component-interfaces.js';
+} from '@shinobi/core';
 import { DynamoDbTableComponent } from './dynamodb-table.component.js';
 import { DynamoDbTableConfig, DYNAMODB_TABLE_CONFIG_SCHEMA } from './dynamodb-table.builder.js';
 
@@ -69,11 +69,21 @@ export class DynamoDbTableComponentCreator implements IComponentCreator {
    * Factory method to create component instances
    */
   public createComponent(
-    scope: Construct,
     spec: ComponentSpec,
     context: ComponentContext
   ): DynamoDbTableComponent {
-    return new DynamoDbTableComponent(scope, spec, context);
+    const scope = context.scope as Construct | undefined;
+    if (!scope) {
+      throw new Error('ComponentContext.scope is required to create dynamodb-table components');
+    }
+    return new DynamoDbTableComponent(scope, spec.name, context, spec);
+  }
+
+  public processComponent(
+    spec: ComponentSpec,
+    context: ComponentContext
+  ): DynamoDbTableComponent {
+    return this.createComponent(spec, context);
   }
 
   /**

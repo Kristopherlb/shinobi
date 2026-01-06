@@ -9,10 +9,10 @@ export { SecurityGroupImportComponent } from './security-group-import.component.
 
 // Configuration builder and interfaces
 export { 
-  SecurityGroupImportConfig, 
   SecurityGroupImportConfigBuilder, 
   SECURITY_GROUP_IMPORT_CONFIG_SCHEMA 
 } from './security-group-import.builder.js';
+export type { SecurityGroupImportConfig } from './security-group-import.builder.js';
 
 // Component creator factory
 export { SecurityGroupImportCreator } from './security-group-import.creator.js';

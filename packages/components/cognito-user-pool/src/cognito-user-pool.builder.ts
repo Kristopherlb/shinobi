@@ -1,5 +1,5 @@
 import { ConfigBuilder, ConfigBuilderContext } from '@shinobi/core';
-import { ComponentContext, ComponentSpec } from '@platform/contracts';
+import { ComponentContext, ComponentSpec } from '@shinobi/core';
 import COGNITO_USER_POOL_CONFIG_SCHEMA from '../Config.schema.json' with { type: 'json' };
 
 export type AdvancedSecurityMode = 'off' | 'audit' | 'enforced';

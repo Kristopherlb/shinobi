@@ -11,8 +11,8 @@ import {
   ComponentContext,
   IComponentCreator
 } from '@shinobi/core';
-import { EfsFilesystemComponent } from './efs-filesystem.component.ts';
-import { EfsFilesystemConfig, EFS_FILESYSTEM_CONFIG_SCHEMA } from './efs-filesystem.builder.ts';
+import { EfsFilesystemComponent } from './efs-filesystem.component.js';
+import { EfsFilesystemConfig, EFS_FILESYSTEM_CONFIG_SCHEMA } from './efs-filesystem.builder.js';
 
 /**
  * Creator class for EfsFilesystemComponent component
@@ -93,11 +93,17 @@ export class EfsFilesystemComponentCreator implements IComponentCreator {
    * Factory method to create component instances
    */
   public createComponent(
-    scope: Construct,
     spec: ComponentSpec,
     context: ComponentContext
   ): EfsFilesystemComponent {
-    return new EfsFilesystemComponent(scope, spec.name, context, spec);
+    return new EfsFilesystemComponent(context.scope, spec.name, context, spec);
+  }
+
+  public processComponent(
+    spec: ComponentSpec,
+    context: ComponentContext
+  ): EfsFilesystemComponent {
+    return this.createComponent(spec, context);
   }
 
   /**

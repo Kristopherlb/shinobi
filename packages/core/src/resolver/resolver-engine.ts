@@ -350,7 +350,7 @@ export class ResolverEngine {
     this.dependencies.logger.debug('Phase 4: Patching');
 
     // AC-RS4.1: Check for existence of patches.ts file
-    const patchesPath = path.resolve(process.cwd(), 'patches.ts');
+    const patchesPath = path.resolve(process.cwd(), 'patches.js');
 
     if (!fs.existsSync(patchesPath)) {
       this.dependencies.logger.debug('No patches.ts file found - skipping patching phase');
@@ -359,7 +359,7 @@ export class ResolverEngine {
 
     try {
       // AC-RS4.2: If file exists, invoke patch functions
-      this.dependencies.logger.info('Applying patches from patches.ts');
+      this.dependencies.logger.info('Applying patches from patches.js');
 
       // Dynamic import of patches file
       const patchesModule = await import(patchesPath);

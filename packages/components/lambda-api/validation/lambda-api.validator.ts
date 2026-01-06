@@ -1,5 +1,5 @@
 import { ComponentContext, ComponentSpec } from '@shinobi/core';
-import { LambdaApiConfig } from '../src/lambda-api.builder.ts';
+import { LambdaApiConfig } from '../src/lambda-api.builder.js';
 
 export interface ValidationResult {
   isValid: boolean;
@@ -209,7 +209,7 @@ export class LambdaApiValidator {
     }
 
     // Encryption validation
-    if (config.encryption.enabled && !config.encryption.kmsKeyId) {
+    if (config.encryption?.enabled && !config.encryption.kmsKeyId) {
       warnings.push({
         code: 'LAMBDA_API_SEC_WARN_002',
         message: 'Encryption enabled but no KMS key specified',
@@ -253,8 +253,9 @@ export class LambdaApiValidator {
       });
     }
 
-    // Provisioned concurrency validation
-    if (config.provisionedConcurrency.enabled && config.provisionedConcurrency.minCapacity > 100) {
+    // Provisioned concurrency validation (if exists in performanceOptimizations)
+    if (config.performanceOptimizations?.provisionedConcurrency?.enabled && 
+        config.performanceOptimizations.provisionedConcurrency.minCapacity > 100) {
       warnings.push({
         code: 'LAMBDA_API_PERF_WARN_004',
         message: 'High provisioned concurrency may significantly increase costs',
@@ -282,7 +283,7 @@ export class LambdaApiValidator {
         });
       }
 
-      if (!config.encryption.enabled) {
+      if (!config.encryption?.enabled) {
         errors.push({
           code: 'LAMBDA_API_COMP_002',
           message: 'Encryption is required for FedRAMP compliance',
@@ -313,51 +314,53 @@ export class LambdaApiValidator {
       }
     }
 
-    // HIPAA compliance requirements
-    if (framework === 'hipaa') {
-      if (!config.encryption.enabled) {
-        errors.push({
-          code: 'LAMBDA_API_COMP_005',
-          message: 'Encryption is required for HIPAA compliance',
-          field: 'encryption.enabled',
-          severity: 'critical',
-          remediation: 'Enable encryption for HIPAA compliance'
-        });
-      }
+    // HIPAA compliance requirements (not currently supported in framework type)
+    // Note: HIPAA is not in the current complianceFramework type union
+    // if (framework === 'hipaa') {
+    //   if (!config.encryption?.enabled) {
+    //     errors.push({
+    //       code: 'LAMBDA_API_COMP_005',
+    //       message: 'Encryption is required for HIPAA compliance',
+    //       field: 'encryption.enabled',
+    //       severity: 'critical',
+    //       remediation: 'Enable encryption for HIPAA compliance'
+    //     });
+    //   }
+    //
+    //   if (config.api.logging.retentionDays < 90) {
+    //     errors.push({
+    //       code: 'LAMBDA_API_COMP_006',
+    //       message: 'Log retention must be at least 90 days for HIPAA compliance',
+    //       field: 'api.logging.retentionDays',
+    //       severity: 'high',
+    //       remediation: 'Set log retention to at least 90 days for HIPAA compliance'
+    //     });
+    //   }
+    // }
 
-      if (config.api.logging.retentionDays < 90) {
-        errors.push({
-          code: 'LAMBDA_API_COMP_006',
-          message: 'Log retention must be at least 90 days for HIPAA compliance',
-          field: 'api.logging.retentionDays',
-          severity: 'high',
-          remediation: 'Set log retention to at least 90 days for HIPAA compliance'
-        });
-      }
-    }
-
-    // SOX compliance requirements
-    if (framework === 'sox') {
-      if (!config.monitoring.enabled) {
-        errors.push({
-          code: 'LAMBDA_API_COMP_007',
-          message: 'Monitoring is required for SOX compliance',
-          field: 'monitoring.enabled',
-          severity: 'critical',
-          remediation: 'Enable monitoring for SOX compliance'
-        });
-      }
-
-      if (config.api.logging.retentionDays < 2555) { // 7 years
-        errors.push({
-          code: 'LAMBDA_API_COMP_008',
-          message: 'Log retention must be at least 7 years for SOX compliance',
-          field: 'api.logging.retentionDays',
-          severity: 'critical',
-          remediation: 'Set log retention to at least 7 years (2555 days) for SOX compliance'
-        });
-      }
-    }
+    // SOX compliance requirements (not currently supported in framework type)
+    // Note: SOX is not in the current complianceFramework type union
+    // if (framework === 'sox') {
+    //   if (!config.monitoring.enabled) {
+    //     errors.push({
+    //       code: 'LAMBDA_API_COMP_007',
+    //       message: 'Monitoring is required for SOX compliance',
+    //       field: 'monitoring.enabled',
+    //       severity: 'critical',
+    //       remediation: 'Enable monitoring for SOX compliance'
+    //     });
+    //   }
+    //
+    //   if (config.api.logging.retentionDays < 2555) { // 7 years
+    //     errors.push({
+    //       code: 'LAMBDA_API_COMP_008',
+    //       message: 'Log retention must be at least 7 years for SOX compliance',
+    //       field: 'api.logging.retentionDays',
+    //       severity: 'critical',
+    //       remediation: 'Set log retention to at least 7 years (2555 days) for SOX compliance'
+    //     });
+    //   }
+    // }
   }
 
   /**
@@ -464,15 +467,15 @@ export class LambdaApiValidator {
     const fedrampModerate = criticalErrors.length === 0 &&
       highErrors.length === 0 &&
       config.vpc.enabled &&
-      config.encryption.enabled &&
+      (config.encryption?.enabled ?? false) &&
       config.monitoring.enabled;
 
     // FedRAMP High compliance (same as Moderate for now)
     const fedrampHigh = fedrampModerate;
 
-    // HIPAA compliance
+    // HIPAA compliance (not currently supported in framework type)
     const hipaa = criticalErrors.length === 0 &&
-      config.encryption.enabled &&
+      (config.encryption?.enabled ?? false) &&
       config.api.logging.retentionDays >= 90;
 
     // SOX compliance

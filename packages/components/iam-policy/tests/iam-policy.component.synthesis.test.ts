@@ -7,7 +7,7 @@ import { Template, Match } from 'aws-cdk-lib/assertions';
 import { App, Stack } from 'aws-cdk-lib';
 import { IamPolicyComponentComponent } from '../iam-policy.component.js';
 import { IamPolicyConfig } from '../iam-policy.builder.js';
-import { ComponentContext, ComponentSpec } from '@platform/contracts';
+import { ComponentContext, ComponentSpec } from '@shinobi/core';
 
 jest.mock('@shinobi/core-logger', () => ({
   Logger: {

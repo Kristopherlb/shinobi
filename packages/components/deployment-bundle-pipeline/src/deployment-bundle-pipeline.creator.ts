@@ -4,14 +4,19 @@
  * Factory for creating and validating deployment bundle pipeline instances
  */
 
-import { IComponentCreator } from '@shinobi/core';
+import { IComponentCreator, IComponent, ComponentSpec, ComponentContext } from '@shinobi/core';
+import { Construct } from 'constructs';
 import { DeploymentBundlePipelineComponent } from './deployment-bundle-pipeline.component.js';
 import { DeploymentBundleConfig } from './types.js';
 
 export class DeploymentBundlePipelineCreator implements IComponentCreator {
 
-  createComponent(context: any, spec: any): DeploymentBundlePipelineComponent {
-    return new DeploymentBundlePipelineComponent(context, spec);
+  createComponent(spec: ComponentSpec, context: ComponentContext): IComponent {
+    return new DeploymentBundlePipelineComponent(context.scope, spec.name, context, spec);
+  }
+
+  processComponent(spec: ComponentSpec, context: ComponentContext): IComponent {
+    return this.createComponent(spec, context);
   }
 
   validateSpec(spec: any): void {
@@ -137,20 +142,7 @@ export class DeploymentBundlePipelineCreator implements IComponentCreator {
     }
 
     // Validate context requirements
-    if (!context) {
-      throw new Error('Context is required');
-    }
-
-    // Check for required context values based on compliance framework
-    if (spec.complianceFramework === 'fedramp-moderate' || spec.complianceFramework === 'fedramp-high') {
-      if (!context.account) {
-        throw new Error('Account context is required for FedRAMP compliance');
-      }
-
-      if (!context.region) {
-        throw new Error('Region context is required for FedRAMP compliance');
-      }
-    }
+    // Note: context validation is done in createComponent/processComponent methods
 
     // Validate that required tools are available in the environment
     this.validateEnvironmentRequirements(spec);

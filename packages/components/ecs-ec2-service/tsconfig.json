@@ -8,7 +8,8 @@
     "declarationMap": true,
     "moduleResolution": "NodeNext",
     "resolveJsonModule": true,
-    "esModuleInterop": true
+    "esModuleInterop": true,
+    "tsBuildInfoFile": "../../../dist/packages/components/ecs-ec2-service/tsconfig.tsbuildinfo"
   },
   "include": [
     "index.ts",
@@ -24,9 +25,6 @@
   "references": [
     {
       "path": "../../core/tsconfig.json"
-    },
-    {
-      "path": "../../contracts/tsconfig.json"
     }
   ]
 }

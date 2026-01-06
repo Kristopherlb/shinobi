@@ -2,8 +2,8 @@ import { jest } from '@jest/globals';
 import { App, Stack } from 'aws-cdk-lib';
 import { Match, Template } from 'aws-cdk-lib/assertions';
 
-import { ApiGatewayHttpComponent } from '../src/api-gateway-http.component.ts';
-import { ApiGatewayHttpConfigBuilder } from '../src/api-gateway-http.builder.ts';
+import { ApiGatewayHttpComponent } from '../src/api-gateway-http.component.js';
+import { ApiGatewayHttpConfigBuilder } from '../src/api-gateway-http.builder.js';
 
 const createContext = (framework = 'commercial', scope?: Stack) => ({
   serviceName: 'test-http-service',

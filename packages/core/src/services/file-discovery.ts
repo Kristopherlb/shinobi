@@ -1,12 +1,21 @@
+/**
+ * File Discovery Service - Single responsibility for manifest file discovery
+ * 
+ * Implements Principle 4: Single Responsibility Principle.
+ * See docs/architecture/design-principles.md for the complete set of architectural principles.
+ */
 import * as fs from 'fs/promises';
 import * as path from 'path';
-import { Logger } from '../platform/logger/src/index.js';
+import type { Logger } from '../platform/logger/src/index.js';
 import { ErrorMessages } from './error-message-utils.js';
 import { withPerformanceTiming } from './performance-metrics.js';
 
-const logger = Logger.getLogger('file-discovery');
+export interface FileDiscoveryDependencies {
+  logger: Logger;
+}
 
 export class FileDiscovery {
+  constructor(private dependencies: FileDiscoveryDependencies) {}
   /**
    * Discover service.yml by searching from current directory upwards to git root
    * FR-CLI-2: Configuration Discovery
@@ -15,7 +24,7 @@ export class FileDiscovery {
     return withPerformanceTiming(
       'file-discovery.findManifest',
       async () => {
-        logger.debug(`Searching for service.yml starting from: ${startDir}`);
+        this.dependencies.logger.debug(`Searching for service.yml starting from: ${startDir}`);
 
         let currentDir = path.resolve(startDir);
         const root = path.parse(currentDir).root;
@@ -27,7 +36,7 @@ export class FileDiscovery {
 
           try {
             await fs.access(manifestPathYml);
-            logger.debug(`Found manifest at: ${manifestPathYml}`);
+            this.dependencies.logger.debug(`Found manifest at: ${manifestPathYml}`);
             return manifestPathYml;
           } catch {
             // Try .yaml extension
@@ -35,7 +44,7 @@ export class FileDiscovery {
 
           try {
             await fs.access(manifestPathYaml);
-            logger.debug(`Found manifest at: ${manifestPathYaml}`);
+            this.dependencies.logger.debug(`Found manifest at: ${manifestPathYaml}`);
             return manifestPathYaml;
           } catch {
             // File doesn't exist, continue searching
@@ -44,7 +53,7 @@ export class FileDiscovery {
           // Check if we've reached a git repository root
           try {
             await fs.access(path.join(currentDir, '.git'));
-            logger.debug(`Reached git repository root at: ${currentDir}`);
+            this.dependencies.logger.debug(`Reached git repository root at: ${currentDir}`);
             break;
           } catch {
             // Not a git root, continue up
@@ -54,9 +63,9 @@ export class FileDiscovery {
         }
 
         // If the loop finishes, no manifest was found up to the root
-        logger.debug('No service.yml or service.yaml found in directory tree');
+        this.dependencies.logger.debug('No service.yml or service.yaml found in directory tree');
         if (!options?.silentOnMissing) {
-          logger.warn('No service.yml or service.yaml manifest file found in this project directory or its parents.');
+          this.dependencies.logger.warn('No service.yml or service.yaml manifest file found in this project directory or its parents.');
         }
         return null;
       },

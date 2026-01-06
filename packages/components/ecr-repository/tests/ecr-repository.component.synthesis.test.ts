@@ -1,10 +1,10 @@
 import { App, Stack } from 'aws-cdk-lib';
 import { Match, Template } from 'aws-cdk-lib/assertions';
-import { EcrRepositoryComponent } from '../ecr-repository.component.ts';
+import { EcrRepositoryComponent } from '../ecr-repository.component.js';
 import {
   EcrRepositoryComponentConfigBuilder,
   EcrRepositoryConfig
-} from '../ecr-repository.builder.ts';
+} from '../ecr-repository.builder.js';
 import {
   ComponentContext,
   ComponentSpec

@@ -3,6 +3,7 @@
  * Following Platform Testing Standard v1.0
  */
 
+import { vi } from 'vitest';
 import { ManifestSchemaComposer } from '../manifest-schema-composer.js';
 import { Logger } from '../../platform/logger/src/index.js';
 import * as fs from 'fs/promises';
@@ -251,7 +252,7 @@ describe('ManifestSchemaComposer', () => {
       };
 
       // Given: Mock logger to capture warnings
-      const logSpy = jest.spyOn(mockLogger, 'warn');
+      const logSpy = vi.spyOn(mockLogger, 'warn');
 
       // When: Schema composition encounters malformed schema
       const masterSchema = await composer.composeMasterSchema();

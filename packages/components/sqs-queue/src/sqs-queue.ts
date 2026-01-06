@@ -1,4 +1,4 @@
-import { ComponentSpec, ComponentConfig } from '@platform/contracts';
+import { ComponentSpec, ComponentConfig } from '@shinobi/core';
 
 export class SqsQueueComponent implements ComponentSpec {
   name = 'sqs-queue';

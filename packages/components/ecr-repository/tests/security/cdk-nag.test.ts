@@ -1,8 +1,8 @@
 import { App, Stack, Aspects } from 'aws-cdk-lib';
 import { Annotations, Match } from 'aws-cdk-lib/assertions';
 import { AwsSolutionsChecks } from 'cdk-nag';
-import { EcrRepositoryComponent } from '../../ecr-repository.component.ts';
-import { EcrRepositoryComponentConfigBuilder } from '../../ecr-repository.builder.ts';
+import { EcrRepositoryComponent } from '../../ecr-repository.component.js';
+import { EcrRepositoryComponentConfigBuilder } from '../../ecr-repository.builder.js';
 import { ComponentContext, ComponentSpec } from '@shinobi/core/component-interfaces';
 
 describe('AwsSolutionsChecks__EcrRepository', () => {

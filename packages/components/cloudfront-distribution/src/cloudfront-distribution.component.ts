@@ -475,9 +475,9 @@ export class CloudFrontDistributionComponent extends BaseComponent {
     );
 
     const logging = {
-      enabled: Boolean(this.config!.logging?.enabled && this.config!.logging?.bucketName),
+      enabled: Boolean(this.config!.logging?.enabled && this.config!.logging?.bucket),
       destination: 's3',
-      bucketName: this.config!.logging?.bucketName,
+      bucketName: this.config!.logging?.bucket,
       prefix: this.config!.logging?.prefix,
       includeCookies: this.config!.logging?.includeCookies ?? false
     };

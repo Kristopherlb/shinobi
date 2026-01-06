@@ -47,3 +47,8 @@ docs/*
 *.audit.md
 *audit.md
 packages/binders/BINDER_UPDATE_STATUS.md
+
+# Baseline captures
+baselines/
+baseline-*/
+.baseline-ref

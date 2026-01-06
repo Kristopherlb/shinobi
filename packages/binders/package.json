@@ -2,8 +2,8 @@
   "name": "@shinobi/binders",
   "version": "0.1.0",
   "type": "module",
-  "main": "dist/index.js",
-  "types": "dist/index.d.ts",
+  "main": "./dist/index.js",
+  "types": "./dist/index.d.ts",
   "dependencies": {
     "@shinobi/core": "workspace:*"
   },
@@ -13,20 +13,59 @@
     "typescript": "^5.9.2"
   },
   "exports": {
-    ".": "./dist/index.js",
-    "./analytics": "./dist/strategies/analytics/index.js",
-    "./api": "./dist/strategies/api/index.js",
-    "./cdn": "./dist/strategies/cdn/index.js",
-    "./compute": "./dist/strategies/compute/index.js",
-    "./database": "./dist/strategies/database/index.js",
-    "./iot": "./dist/strategies/iot/index.js",
-    "./messaging": "./dist/strategies/messaging/index.js",
-    "./ml": "./dist/strategies/ml/index.js",
-    "./mobile": "./dist/strategies/mobile/index.js",
-    "./networking": "./dist/strategies/networking/index.js",
-    "./security": "./dist/strategies/security/index.js",
-    "./storage": "./dist/strategies/storage/index.js",
-    "./*": "./dist/*"
+    ".": {
+      "types": "./dist/index.d.ts",
+      "import": "./dist/index.js"
+    },
+    "./analytics": {
+      "types": "./dist/strategies/analytics/index.d.ts",
+      "import": "./dist/strategies/analytics/index.js"
+    },
+    "./api": {
+      "types": "./dist/strategies/api/index.d.ts",
+      "import": "./dist/strategies/api/index.js"
+    },
+    "./cdn": {
+      "types": "./dist/strategies/cdn/index.d.ts",
+      "import": "./dist/strategies/cdn/index.js"
+    },
+    "./compute": {
+      "types": "./dist/strategies/compute/index.d.ts",
+      "import": "./dist/strategies/compute/index.js"
+    },
+    "./database": {
+      "types": "./dist/strategies/database/index.d.ts",
+      "import": "./dist/strategies/database/index.js"
+    },
+    "./iot": {
+      "types": "./dist/strategies/iot/index.d.ts",
+      "import": "./dist/strategies/iot/index.js"
+    },
+    "./messaging": {
+      "types": "./dist/strategies/messaging/index.d.ts",
+      "import": "./dist/strategies/messaging/index.js"
+    },
+    "./ml": {
+      "types": "./dist/strategies/ml/index.d.ts",
+      "import": "./dist/strategies/ml/index.js"
+    },
+    "./mobile": {
+      "types": "./dist/strategies/mobile/index.d.ts",
+      "import": "./dist/strategies/mobile/index.js"
+    },
+    "./networking": {
+      "types": "./dist/strategies/networking/index.d.ts",
+      "import": "./dist/strategies/networking/index.js"
+    },
+    "./security": {
+      "types": "./dist/strategies/security/index.d.ts",
+      "import": "./dist/strategies/security/index.js"
+    },
+    "./storage": {
+      "types": "./dist/strategies/storage/index.d.ts",
+      "import": "./dist/strategies/storage/index.js"
+    },
+    "./package.json": "./package.json"
   }
 }
 

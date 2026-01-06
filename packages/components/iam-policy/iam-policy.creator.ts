@@ -10,7 +10,7 @@ import {
   ComponentSpec, 
   ComponentContext, 
   IComponentCreator 
-} from '@platform/contracts';
+} from '@shinobi/core';
 import { IamPolicyComponent } from './iam-policy.component.js';
 import { IamPolicyConfig, IAM_POLICY_CONFIG_SCHEMA } from './iam-policy.builder.js';
 
@@ -69,13 +69,19 @@ export class IamPolicyComponentCreator implements IComponentCreator {
    * Factory method to create component instances
    */
   public createComponent(
-    scope: Construct, 
     spec: ComponentSpec, 
     context: ComponentContext
   ): IamPolicyComponent {
     // Construct ID is the spec.name
     const id = spec.name;
-    return new IamPolicyComponent(scope, id, context, spec);
+    return new IamPolicyComponent(context.scope, id, context, spec);
+  }
+
+  public processComponent(
+    spec: ComponentSpec,
+    context: ComponentContext
+  ): IamPolicyComponent {
+    return this.createComponent(spec, context);
   }
   
   /**

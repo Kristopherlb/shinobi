@@ -10,9 +10,9 @@ import {
   ComponentSpec, 
   ComponentContext, 
   IComponentCreator 
-} from '../@shinobi/core/component-interfaces.ts';
-import { VpcComponent } from './vpc.component.ts';
-import { VpcConfig, VPC_CONFIG_SCHEMA } from './vpc.builder.ts';
+} from '../@shinobi/core/component-interfaces.js';
+import { VpcComponent } from './vpc.component.js';
+import { VpcConfig, VPC_CONFIG_SCHEMA } from './vpc.builder.js';
 
 /**
  * Creator class for VPC component

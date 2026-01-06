@@ -3,7 +3,7 @@ import { Match, Annotations } from 'aws-cdk-lib/assertions';
 import { AwsSolutionsChecks } from 'cdk-nag';
 import * as ec2 from 'aws-cdk-lib/aws-ec2';
 import * as logs from 'aws-cdk-lib/aws-logs';
-import { AutoScalingGroupComponent } from '../../src/auto-scaling-group.component.ts';
+import { AutoScalingGroupComponent } from '../../src/auto-scaling-group.component.js';
 import type { ComponentContext, ComponentSpec } from '@shinobi/core';
 
 const createContext = (stack: Stack, vpc: ec2.IVpc): ComponentContext => ({

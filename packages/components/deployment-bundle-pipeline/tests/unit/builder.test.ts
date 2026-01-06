@@ -2,8 +2,8 @@
  * Unit tests for Deployment Bundle Pipeline Builder with the new ConfigBuilder integration.
  */
 
-import { DeploymentBundlePipelineBuilder } from '../../src/deployment-bundle-pipeline.builder.ts';
-import { DeploymentBundleConfig } from '../../src/types.ts';
+import { DeploymentBundlePipelineBuilder } from '../../src/deployment-bundle-pipeline.builder.js';
+import { DeploymentBundleConfig } from '../../src/types.js';
 
 const baseContext = {
   account: '123456789012',

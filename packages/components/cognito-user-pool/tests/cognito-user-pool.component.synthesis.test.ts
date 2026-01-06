@@ -5,9 +5,9 @@
 
 import { App, Stack } from 'aws-cdk-lib';
 import { Match, Template } from 'aws-cdk-lib/assertions';
-import { CognitoUserPoolComponent } from '../src/cognito-user-pool.component.ts';
-import { CognitoUserPoolConfig } from '../src/cognito-user-pool.builder.ts';
-import { ComponentContext, ComponentSpec } from '../../../platform/contracts/component-interfaces.ts';
+import { CognitoUserPoolComponent } from '../src/cognito-user-pool.component.js';
+import { CognitoUserPoolConfig } from '../src/cognito-user-pool.builder.js';
+import { ComponentContext, ComponentSpec } from '../../../platform/contracts/component-interfaces.js';
 
 // Deterministic test fixtures
 const DETERMINISTIC_TIMESTAMP = new Date('2025-01-08T12:00:00.000Z');

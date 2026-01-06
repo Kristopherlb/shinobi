@@ -1,8 +1,6 @@
 {
   "name": "@shinobi/components-elasticache-redis",
-  "root": "packages/components/elasticache-redis",
   "sourceRoot": "packages/components/elasticache-redis/src",
-  "projectType": "library",
   "tags": [
     "scope:shinobi",
     "type:component",
@@ -19,9 +17,12 @@
       ]
     },
     "test": {
-      "executor": "@nx/jest:jest",
+      "executor": "@nx/vitest:test",
+      "outputs": [
+        "{projectRoot}/coverage"
+      ],
       "options": {
-        "jestConfig": "packages/components/elasticache-redis/jest.config.mjs",
+        "config": "packages/components/elasticache-redis/vitest.config.ts",
         "passWithNoTests": true
       }
     },

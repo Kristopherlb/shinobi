@@ -1,8 +1,6 @@
 {
   "name": "@shinobi/components-ec2-instance",
-  "root": "packages/components/ec2-instance",
-  "sourceRoot": "packages/components/ec2-instance/src",
-  "projectType": "library",
+  "sourceRoot": "packages/components/ec2-instance",
   "tags": [
     "scope:shinobi",
     "type:component",
@@ -12,18 +10,21 @@
     "build": {
       "executor": "nx:run-commands",
       "options": {
-        "command": "tsc -p packages/components/ec2-instance/tsconfig.json"
+        "command": "pnpm exec tsc -b packages/components/ec2-instance/tsconfig.build.json"
       },
       "outputs": [
         "{workspaceRoot}/dist/packages/components/ec2-instance"
       ]
     },
     "test": {
-      "executor": "@nx/jest:jest",
+      "executor": "@nx/vitest:test",
       "options": {
-        "jestConfig": "packages/components/ec2-instance/jest.config.mjs",
+        "config": "packages/components/ec2-instance/vitest.config.ts",
         "passWithNoTests": true
-      }
+      },
+      "outputs": [
+        "{projectRoot}/coverage"
+      ]
     },
     "lint": {
       "executor": "nx:run-commands",
@@ -34,9 +35,14 @@
     "typecheck": {
       "executor": "nx:run-commands",
       "options": {
-        "command": "tsc --noEmit -p packages/components/ec2-instance/tsconfig.json"
+        "command": "tsc -p packages/components/ec2-instance/tsconfig.json --noEmit"
+      }
+    },
+    "clean": {
+      "executor": "nx:run-commands",
+      "options": {
+        "command": "rimraf dist/packages/components/ec2-instance"
       }
     }
   }
 }
-

@@ -12,7 +12,7 @@ import {
   ComponentSpec,
   ComponentContext,
   ComponentCapabilities
-} from '@platform/contracts';
+} from '@shinobi/core';
 import {
   DynamoDbTableComponentConfigBuilder,
   DynamoDbTableConfig,
@@ -68,7 +68,6 @@ export class DynamoDbTableComponent extends Component {
       this.configureMonitoring();
       this.configureObservabilityTelemetry();
       this.configureBackupPlan();
-      this.applyCdkNagSuppressions();
 
       this.registerConstruct('main', this.table!);
       this.registerConstruct('table', this.table!);
@@ -167,41 +166,29 @@ export class DynamoDbTableComponent extends Component {
     const props: dynamodb.TableProps = {
       tableName: this.config!.tableName,
       partitionKey: this.mapAttribute(this.config!.partitionKey),
+      sortKey: this.config!.sortKey ? this.mapAttribute(this.config!.sortKey) : undefined,
       billingMode: this.resolveBillingMode(),
+      readCapacity: this.config!.billingMode === 'provisioned' ? this.config!.provisioned?.readCapacity : undefined,
+      writeCapacity: this.config!.billingMode === 'provisioned' ? this.config!.provisioned?.writeCapacity : undefined,
       tableClass: this.resolveTableClass(),
       removalPolicy: cdk.RemovalPolicy.RETAIN,
       pointInTimeRecoverySpecification: this.config!.pointInTimeRecovery
         ? { pointInTimeRecoveryEnabled: true }
         : undefined,
       contributorInsightsSpecification: this.config!.monitoring.enabled
-        ? { enabled: true, mode: 'ACCESSED_AND_THROTTLED_KEYS' }
+        ? { enabled: true, mode: dynamodb.ContributorInsightsMode.ACCESSED_AND_THROTTLED_KEYS }
+        : undefined,
+      encryption: this.config!.encryption.type === 'customer-managed'
+        ? dynamodb.TableEncryption.CUSTOMER_MANAGED
+        : dynamodb.TableEncryption.AWS_MANAGED,
+      encryptionKey: this.kmsKey,
+      timeToLiveAttribute: this.config!.timeToLive?.enabled && this.config!.timeToLive.attributeName
+        ? this.config!.timeToLive.attributeName
+        : undefined,
+      stream: this.config!.stream?.enabled
+        ? this.resolveStreamView(this.config!.stream.viewType)
         : undefined
     };
-
-    if (this.config!.sortKey) {
-      props.sortKey = this.mapAttribute(this.config!.sortKey);
-    }
-
-    if (this.config!.billingMode === 'provisioned') {
-      props.readCapacity = this.config!.provisioned?.readCapacity;
-      props.writeCapacity = this.config!.provisioned?.writeCapacity;
-    }
-
-    props.encryption = this.config!.encryption.type === 'customer-managed'
-      ? dynamodb.TableEncryption.CUSTOMER_MANAGED
-      : dynamodb.TableEncryption.AWS_MANAGED;
-
-    if (this.kmsKey) {
-      props.encryptionKey = this.kmsKey;
-    }
-
-    if (this.config!.timeToLive?.enabled && this.config!.timeToLive.attributeName) {
-      props.timeToLiveAttribute = this.config!.timeToLive.attributeName;
-    }
-
-    if (this.config!.stream?.enabled) {
-      props.stream = this.resolveStreamView(this.config!.stream.viewType);
-    }
 
     this.table = new dynamodb.Table(this, 'Table', props);
 
@@ -516,7 +503,7 @@ export class DynamoDbTableComponent extends Component {
       customAttributes: {
         'aws.dynamodb.table.name': this.table.tableName,
         'aws.dynamodb.billing_mode': this.config!.billingMode,
-        'aws.dynamodb.encryption': this.config!.encryption.type,
+        'aws.dynamodb.encryption': this.config!.encryption.type ?? 'aws-managed',
         'aws.dynamodb.point_in_time_recovery': this.config!.pointInTimeRecovery ? 'true' : 'false'
       }
     });
@@ -590,7 +577,6 @@ export class DynamoDbTableComponent extends Component {
     });
 
     const backupSelection = backupPlan.addSelection('DynamoDbTableBackupSelection', {
-      selectionName: `${this.spec.name}-table`,
       resources: [backup.BackupResource.fromDynamoDbTable(this.table)],
       allowRestores: true
     });
@@ -651,17 +637,19 @@ export class DynamoDbTableComponent extends Component {
       ? this.table!.tableStreamArn.split('/').pop()
       : undefined;
 
-    const sseSpecification = cfnTable.sseSpecification
+    const sseSpec = cfnTable.sseSpecification as dynamodb.CfnTable.SSESpecificationProperty | undefined;
+    const sseSpecification = sseSpec
       ? {
-        sseEnabled: cfnTable.sseSpecification.sseEnabled,
-        sseType: cfnTable.sseSpecification.sseType,
-        kmsMasterKeyId: cfnTable.sseSpecification.kmsMasterKeyId
+        sseEnabled: sseSpec.sseEnabled,
+        sseType: sseSpec.sseType,
+        kmsMasterKeyId: sseSpec.kmsMasterKeyId
       }
       : undefined;
 
-    const pointInTimeRecoverySpecification = cfnTable.pointInTimeRecoverySpecification
+    const pitrSpec = cfnTable.pointInTimeRecoverySpecification as dynamodb.CfnTable.PointInTimeRecoverySpecificationProperty | undefined;
+    const pointInTimeRecoverySpecification = pitrSpec
       ? {
-        pointInTimeRecoveryEnabled: cfnTable.pointInTimeRecoverySpecification.pointInTimeRecoveryEnabled
+        pointInTimeRecoveryEnabled: pitrSpec.pointInTimeRecoveryEnabled
       }
       : undefined;
 

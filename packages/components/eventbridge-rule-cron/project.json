@@ -1,8 +1,6 @@
 {
   "name": "@shinobi/components-eventbridge-rule-cron",
-  "root": "packages/components/eventbridge-rule-cron",
   "sourceRoot": "packages/components/eventbridge-rule-cron/src",
-  "projectType": "library",
   "tags": [
     "scope:shinobi",
     "type:component",
@@ -19,9 +17,12 @@
       ]
     },
     "test": {
-      "executor": "@nx/jest:jest",
+      "executor": "@nx/vitest:test",
+      "outputs": [
+        "{projectRoot}/coverage"
+      ],
       "options": {
-        "jestConfig": "packages/components/eventbridge-rule-cron/jest.config.mjs",
+        "config": "packages/components/eventbridge-rule-cron/vitest.config.ts",
         "passWithNoTests": true
       }
     },

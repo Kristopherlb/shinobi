@@ -5,9 +5,9 @@
 
 import { Template, Match } from 'aws-cdk-lib/assertions';
 import { App, Stack } from 'aws-cdk-lib';
-import { SecretsManagerComponentComponent } from '../secrets-manager.component.ts';
-import { SecretsManagerComponentConfigBuilder, SecretsManagerConfig } from '../secrets-manager.builder.ts';
-import { ComponentContext, ComponentSpec } from '../../../platform/contracts/component-interfaces.ts';
+import { SecretsManagerComponentComponent } from '../secrets-manager.component.js';
+import { SecretsManagerComponentConfigBuilder, SecretsManagerConfig } from '../secrets-manager.builder.js';
+import { ComponentContext, ComponentSpec } from '../../../platform/contracts/component-interfaces.js';
 
 jest.mock('@shinobi/core-logger', () => ({
   Logger: {

@@ -33,12 +33,12 @@
       }
     },
     "test": {
-      "executor": "@nx/jest:jest",
+      "executor": "@nx/vitest:test",
       "outputs": [
         "{options.outputPath}"
       ],
       "options": {
-        "jestConfig": "apps/svc/jest.config.mjs",
+        "config": "apps/svc/vitest.config.ts",
         "passWithNoTests": true,
         "outputPath": "coverage/apps/shinobi"
       }

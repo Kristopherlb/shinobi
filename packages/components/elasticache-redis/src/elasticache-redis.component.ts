@@ -360,21 +360,25 @@ export class ElastiCacheRedisComponent extends BaseComponent {
     this.createdAlarms.push({ id, alarm });
   }
 
-  private buildLogDeliveryConfigurations(): elasticache.CfnReplicationGroup.LogDeliveryConfigurationProperty[] {
+  private buildLogDeliveryConfigurations(): elasticache.CfnReplicationGroup.LogDeliveryConfigurationRequestProperty[] {
     const enabledConfigs = this.config!.monitoring.logDelivery.filter(entry => entry.enabled);
     return enabledConfigs.map((entry: RedisLogDeliveryConfig, index) => {
-      const details: elasticache.CfnReplicationGroup.DestinationDetailsProperty = {};
+      let details: elasticache.CfnReplicationGroup.DestinationDetailsProperty;
       if (entry.destinationType === 'cloudwatch-logs') {
         const logGroup = this.ensureManagedLogGroup(entry, index);
         if (logGroup) {
           this.registerConstruct(`log-group:${entry.logType}:${index}`, logGroup);
         }
-        details.cloudWatchLogsDetails = {
-          logGroup: entry.destinationName
+        details = {
+          cloudWatchLogsDetails: {
+            logGroup: entry.destinationName
+          }
         };
       } else {
-        details.kinesisFirehoseDetails = {
-          deliveryStream: entry.destinationName
+        details = {
+          kinesisFirehoseDetails: {
+            deliveryStream: entry.destinationName
+          }
         };
       }
 
@@ -461,7 +465,7 @@ export class ElastiCacheRedisComponent extends BaseComponent {
     }
 
     return {
-      clusterId: this.replicationGroup!.attrReplicationGroupId,
+      clusterId: this.getClusterName(),
       clusterName: this.getClusterName(),
       engineVersion: this.config!.engineVersion,
       nodeType: this.config!.nodeType,

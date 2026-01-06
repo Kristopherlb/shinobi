@@ -4,11 +4,11 @@
  */
 
 import { App, Stack } from 'aws-cdk-lib';
-import { ComponentContext, ComponentSpec } from '@platform/contracts';
+import { ComponentContext, ComponentSpec } from '@shinobi/core';
 import {
   FeatureFlagConfig,
   FeatureFlagConfigBuilder
-} from '../../src/feature-flag.builder.ts';
+} from '../../src/feature-flag.builder.js';
 
 const createScope = () => {
   const app = new App();

@@ -72,11 +72,17 @@ export class AutoScalingGroupComponentCreator implements IComponentCreator {
    * Factory method to create component instances
    */
   public createComponent(
-    scope: Construct,
     spec: ComponentSpec,
     context: ComponentContext
   ): AutoScalingGroupComponent {
-    return new AutoScalingGroupComponent(scope, spec.name, context, spec);
+    return new AutoScalingGroupComponent(context.scope, spec.name, context, spec);
+  }
+
+  public processComponent(
+    spec: ComponentSpec,
+    context: ComponentContext
+  ): AutoScalingGroupComponent {
+    return this.createComponent(spec, context);
   }
   
   /**

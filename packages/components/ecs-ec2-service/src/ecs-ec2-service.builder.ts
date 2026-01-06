@@ -3,8 +3,8 @@ import {
   ConfigBuilderContext,
   ComponentConfigSchema
 } from '@shinobi/core';
-import { ComponentContext, ComponentSpec } from '@platform/contracts';
-import configSchemaJson from '../Config.schema.json';
+import { ComponentContext, ComponentSpec } from '@shinobi/core';
+import configSchemaJson from '../Config.schema.json' with { type: 'json' };
 
 export type EcsPlacementConstraintType = 'memberOf' | 'distinctInstance';
 export type EcsPlacementStrategyType = 'random' | 'spread' | 'binpack';

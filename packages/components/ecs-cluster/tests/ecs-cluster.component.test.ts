@@ -11,15 +11,15 @@ import * as ec2 from 'aws-cdk-lib/aws-ec2';
 import * as servicediscovery from 'aws-cdk-lib/aws-servicediscovery';
 import { Template, Match } from 'aws-cdk-lib/assertions';
 import { ComponentSpec } from '@shinobi/core/component-interfaces';
-import { EcsClusterComponent } from '../src/ecs-cluster.component.ts';
-import { EcsClusterComponentConfigBuilder } from '../src/ecs-cluster.builder.ts';
+import { EcsClusterComponent } from '../src/ecs-cluster.component.js';
+import { EcsClusterComponentConfigBuilder } from '../src/ecs-cluster.builder.js';
 import { 
   TestFixtureFactory, 
   TestAssertions, 
   PerformanceTestHelpers,
   TEST_CONTEXTS,
   TEST_SPECS 
-} from '../test-fixtures.ts';
+} from '../test-fixtures.js';
 
 let platformConfigSpy: jest.SpyInstance;
 

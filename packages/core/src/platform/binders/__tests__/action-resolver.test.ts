@@ -2,21 +2,21 @@
  * Tests for action resolver utility
  */
 
-import { describe, it, expect, beforeEach, jest } from '@jest/globals';
+import { describe, it, expect, beforeEach, vi } from 'vitest';
 import type { BindingDirective, BindingContext } from '../../contracts/platform-binding-trigger-spec.js';
 import type { ComplianceFramework } from '../../contracts/bindings.js';
 
 // Mock the action-profiles module before importing resolveActions
-const mockResolveActionProfile = jest.fn();
-jest.mock('../action-profiles.js', () => ({
-  loadActionProfiles: jest.fn(),
+const mockResolveActionProfile = vi.fn();
+vi.mock('../action-profiles.js', () => ({
+  loadActionProfiles: vi.fn(),
   resolveActionProfile: (profileName: string, framework: ComplianceFramework) => mockResolveActionProfile(profileName, framework)
 }));
 
 // Mock the action-allow-lists module
-const mockValidateActionsAgainstAllowList = jest.fn();
-const mockAreCustomActionsAllowed = jest.fn();
-jest.mock('../action-allow-lists.js', () => ({
+const mockValidateActionsAgainstAllowList = vi.fn();
+const mockAreCustomActionsAllowed = vi.fn();
+vi.mock('../action-allow-lists.js', () => ({
   validateActionsAgainstAllowList: (...args: any[]) => mockValidateActionsAgainstAllowList(...args),
   areCustomActionsAllowed: (...args: any[]) => mockAreCustomActionsAllowed(...args)
 }));
@@ -39,7 +39,7 @@ describe('resolveActions', () => {
     complianceFramework: 'commercial'
   };
 
-  const mockGetActionsForAccess = jest.fn((access: string): string[] => {
+  const mockGetActionsForAccess = vi.fn((access: string): string[] => {
     switch (access) {
       case 'read':
         return ['sqs:ReceiveMessage', 'sqs:DeleteMessage'];
@@ -53,7 +53,7 @@ describe('resolveActions', () => {
   });
 
   beforeEach(() => {
-    jest.clearAllMocks();
+    vi.clearAllMocks();
     
     // Set up default mock behavior for action profiles
     mockResolveActionProfile.mockImplementation((profileName: string, framework: ComplianceFramework) => {
@@ -309,7 +309,7 @@ describe('resolveActions', () => {
         actions: ['sqs:*']
       } as BindingDirective;
 
-      const consoleSpy = jest.spyOn(console, 'warn').mockImplementation();
+      const consoleSpy = vi.spyOn(console, 'warn').mockImplementation(() => {});
 
       // Mock allow-list validation to pass for wildcard actions
       mockValidateActionsAgainstAllowList.mockImplementation(() => {

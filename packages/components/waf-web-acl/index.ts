@@ -4,14 +4,14 @@
  */
 
 // Component exports
-export { WafWebAclComponent } from './waf-web-acl.component.ts';
+export { WafWebAclComponent } from './waf-web-acl.component.js';
 
 // Configuration exports
 export {
   WafWebAclComponentConfig,
   WafWebAclComponentConfigBuilder,
   WAF_WEB_ACL_CONFIG_SCHEMA
-} from './waf-web-acl.builder.ts';
+} from './waf-web-acl.builder.js';
 
 // Creator exports
-export { WafWebAclCreator } from './waf-web-acl.creator.ts';
+export { WafWebAclCreator } from './waf-web-acl.creator.js';

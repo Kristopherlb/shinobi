@@ -83,7 +83,7 @@ export interface EcsClusterConfig {
 /**
  * JSON Schema for ECS Cluster configuration validation
  */
-export const ECS_CLUSTER_CONFIG_SCHEMA = ECS_CLUSTER_CONFIG_SCHEMA_JSON as const;
+export const ECS_CLUSTER_CONFIG_SCHEMA = ECS_CLUSTER_CONFIG_SCHEMA_JSON;
 
 /**
  * ConfigBuilder for ECS Cluster component

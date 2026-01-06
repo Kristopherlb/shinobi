@@ -1,8 +1,6 @@
 {
   "name": "@shinobi/components-cognito-user-pool",
-  "root": "packages/components/cognito-user-pool",
   "sourceRoot": "packages/components/cognito-user-pool/src",
-  "projectType": "library",
   "tags": [
     "scope:shinobi",
     "type:component",
@@ -19,11 +17,14 @@
       ]
     },
     "test": {
-      "executor": "@nx/jest:jest",
+      "executor": "@nx/vitest:test",
       "options": {
-        "jestConfig": "packages/components/cognito-user-pool/jest.config.mjs",
+        "config": "packages/components/cognito-user-pool/vitest.config.ts",
         "passWithNoTests": true
-      }
+      },
+      "outputs": [
+        "{projectRoot}/coverage"
+      ]
     },
     "lint": {
       "executor": "nx:run-commands",
@@ -39,4 +40,3 @@
     }
   }
 }
-

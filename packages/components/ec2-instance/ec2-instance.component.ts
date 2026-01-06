@@ -21,7 +21,7 @@ import {
   ComponentCapabilities,
   applySecurityGroupTags
 } from '@shinobi/core';
-import { Ec2InstanceComponentConfigBuilder, Ec2InstanceConfig } from './ec2-instance.builder.ts';
+import { Ec2InstanceComponentConfigBuilder, Ec2InstanceConfig } from './ec2-instance.builder.js';
 
 
 
@@ -508,13 +508,11 @@ export class Ec2InstanceComponent extends BaseComponent {
     // Get standardized OpenTelemetry environment variables for EC2 instance
     const otelEnvVars = this.configureObservability(this.instance, {
       serviceName: `${this.context.serviceName}-ec2-instance`,
-      serviceVersion: '1.0.0',
-      componentType: 'ec2-instance',
-      complianceFramework: this.context.complianceFramework,
       customAttributes: {
         'instance.type': this.config!.instanceType || 't3.micro',
         'instance.architecture': 'x86_64',
-        'aws.region': this.context.region || 'us-east-1'
+        'aws.region': this.context.region || 'us-east-1',
+        'component.type': 'ec2-instance'
       }
     });
 

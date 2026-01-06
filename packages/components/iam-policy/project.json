@@ -1,8 +1,6 @@
 {
   "name": "@shinobi/components-iam-policy",
-  "root": "packages/components/iam-policy",
   "sourceRoot": "packages/components/iam-policy/src",
-  "projectType": "library",
   "tags": [
     "scope:shinobi",
     "type:component",
@@ -19,9 +17,12 @@
       ]
     },
     "test": {
-      "executor": "@nx/jest:jest",
+      "executor": "@nx/vitest:test",
+      "outputs": [
+        "{projectRoot}/coverage"
+      ],
       "options": {
-        "jestConfig": "packages/components/iam-policy/jest.config.mjs",
+        "config": "packages/components/iam-policy/vitest.config.ts",
         "passWithNoTests": true
       }
     },

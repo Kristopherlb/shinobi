@@ -9,13 +9,13 @@ import {
   ComponentSpec,
   ComponentContext,
   ComponentCapabilities
-} from '@platform/contracts';
+} from '@shinobi/core';
 import {
   Route53HostedZoneComponentConfigBuilder,
   Route53HostedZoneConfig,
   HostedZoneAlarmConfig,
   VpcAssociationConfig
-} from './route53-hosted-zone.builder.ts';
+} from './route53-hosted-zone.builder.js';
 
 export class Route53HostedZoneComponent extends Component {
   private hostedZone?: route53.HostedZone | route53.PrivateHostedZone;

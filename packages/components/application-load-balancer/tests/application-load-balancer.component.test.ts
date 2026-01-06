@@ -3,8 +3,8 @@ import { App, Stack } from 'aws-cdk-lib';
 import { Match, Template } from 'aws-cdk-lib/assertions';
 import * as ec2 from 'aws-cdk-lib/aws-ec2';
 
-import { ApplicationLoadBalancerComponent } from '../src/application-load-balancer.component.ts';
-import { ApplicationLoadBalancerComponentConfigBuilder } from '../src/application-load-balancer.builder.ts';
+import { ApplicationLoadBalancerComponent } from '../src/application-load-balancer.component.js';
+import { ApplicationLoadBalancerComponentConfigBuilder } from '../src/application-load-balancer.builder.js';
 
 const VPC_CONTEXT_KEY = 'vpcProvider:account=123456789012:filter.vpcId=vpc-0000:region=us-east-1';
 

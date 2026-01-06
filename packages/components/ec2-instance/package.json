@@ -3,8 +3,16 @@
   "version": "1.0.0",
   "private": true,
   "description": "EC2 Instance Component implementing Component API Contract v1.0 with comprehensive security, monitoring, and compliance features",
-  "main": "dist/index.js",
-  "types": "dist/index.d.ts",
+  "type": "module",
+  "main": "./dist/index.js",
+  "types": "./dist/index.d.ts",
+  "exports": {
+    ".": {
+      "types": "./dist/index.d.ts",
+      "import": "./dist/index.js"
+    },
+    "./package.json": "./package.json"
+  },
   "scripts": {
     "build": "tsc",
     "lint": "eslint src/**/*.ts",

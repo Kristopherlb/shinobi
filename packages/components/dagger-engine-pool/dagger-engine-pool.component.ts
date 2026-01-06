@@ -9,9 +9,9 @@ import * as iam from 'aws-cdk-lib/aws-iam';
 import * as route53 from 'aws-cdk-lib/aws-route53';
 import * as acm from 'aws-cdk-lib/aws-certificatemanager';
 import * as cdk from 'aws-cdk-lib';
-import { BaseComponent, ComponentContext, ComponentSpec } from '@platform/contracts';
-import { DaggerConfig, DaggerOutputs, DaggerEnginePoolProps } from './types.ts';
-import { DaggerConfigBuilder } from './dagger-engine-pool.builder.ts';
+import { BaseComponent, ComponentContext, ComponentSpec } from '@shinobi/core';
+import { DaggerConfig, DaggerOutputs, DaggerEnginePoolProps } from './types.js';
+import { DaggerConfigBuilder } from './dagger-engine-pool.builder.js';
 import { NagSuppressions } from 'cdk-nag';
 
 /**

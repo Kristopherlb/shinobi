@@ -18,7 +18,7 @@ import {
   SnsTopicConfig,
   TopicPolicyPrincipalConfig,
   TopicPolicyStatementConfig
-} from './sns-topic.builder.ts';
+} from './sns-topic.builder.js';
 
 interface CreatedAlarm {
   id: string;
@@ -138,7 +138,7 @@ export class SnsTopicComponent extends BaseComponent {
     cfnTopic.tracingConfig = this.config!.tracing;
 
     if (this.config!.deliveryPolicy) {
-      cfnTopic.deliveryPolicy = this.config!.deliveryPolicy;
+      cfnTopic.addPropertyOverride('DeliveryPolicy', this.config!.deliveryPolicy);
     }
 
     this.applyStandardTags(this.topic, {
@@ -201,7 +201,7 @@ export class SnsTopicComponent extends BaseComponent {
         break;
       case 'account':
         (principal.identifiers ?? []).forEach(identifier => {
-          statement.addAccountPrincipal(identifier);
+          statement.addAwsAccountPrincipal(identifier);
         });
         break;
       case 'any':

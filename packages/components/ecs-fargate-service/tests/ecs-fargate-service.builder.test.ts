@@ -1,5 +1,5 @@
 import * as cdk from 'aws-cdk-lib';
-import { ComponentContext, ComponentSpec } from '@platform/contracts';
+import { ComponentContext, ComponentSpec } from '@shinobi/core';
 import { EcsFargateServiceComponentConfigBuilder } from '../src/ecs-fargate-service.builder';
 
 describe('EcsFargateServiceComponentConfigBuilder', () => {

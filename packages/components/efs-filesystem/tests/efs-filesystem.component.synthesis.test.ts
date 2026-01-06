@@ -1,7 +1,7 @@
 import { Template, Match } from 'aws-cdk-lib/assertions';
 import { App, Stack } from 'aws-cdk-lib';
-import { EfsFilesystemComponent } from '../src/efs-filesystem.component.ts';
-import { EfsFilesystemConfig } from '../src/efs-filesystem.builder.ts';
+import { EfsFilesystemComponent } from '../src/efs-filesystem.component.js';
+import { EfsFilesystemConfig } from '../src/efs-filesystem.builder.js';
 import { ComponentContext, ComponentSpec } from '@shinobi/core';
 
 const VPC_ID = 'vpc-0abc123def4567890';

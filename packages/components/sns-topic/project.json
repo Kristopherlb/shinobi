@@ -1,0 +1,43 @@
+{
+  "name": "@shinobi/components-sns-topic",
+  "sourceRoot": "packages/components/sns-topic",
+  "targets": {
+    "build": {
+      "executor": "nx:run-commands",
+      "options": {
+        "command": "pnpm exec tsc -b packages/components/sns-topic/tsconfig.build.json"
+      },
+      "outputs": [
+        "{workspaceRoot}/dist/packages/components/sns-topic"
+      ]
+    },
+    "test": {
+      "executor": "@nx/vitest:test",
+      "outputs": [
+        "{projectRoot}/coverage"
+      ],
+      "options": {
+        "config": "packages/components/sns-topic/vitest.config.ts",
+        "passWithNoTests": true
+      }
+    },
+    "clean": {
+      "executor": "nx:run-commands",
+      "options": {
+        "command": "rimraf dist/packages/components/sns-topic"
+      }
+    },
+    "typecheck": {
+      "executor": "nx:run-commands",
+      "options": {
+        "command": "tsc -p packages/components/sns-topic/tsconfig.json --noEmit"
+      }
+    }
+  },
+  "tags": [
+    "scope:shinobi",
+    "type:component",
+    "infra:aws"
+  ]
+}
+

@@ -69,11 +69,17 @@ export class ApplicationLoadBalancerComponentCreator implements IComponentCreato
    * Factory method to create component instances
    */
   public createComponent(
-    scope: Construct,
     spec: ComponentSpec,
     context: ComponentContext
   ): ApplicationLoadBalancerComponent {
-    return new ApplicationLoadBalancerComponent(scope, spec.name, context, spec);
+    return new ApplicationLoadBalancerComponent(context.scope, spec.name, context, spec);
+  }
+
+  public processComponent(
+    spec: ComponentSpec,
+    context: ComponentContext
+  ): ApplicationLoadBalancerComponent {
+    return this.createComponent(spec, context);
   }
   
   /**

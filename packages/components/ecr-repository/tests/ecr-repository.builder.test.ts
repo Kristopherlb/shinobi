@@ -2,7 +2,7 @@ import { Stack } from 'aws-cdk-lib';
 import {
   EcrRepositoryComponentConfigBuilder,
   EcrRepositoryConfig
-} from '../ecr-repository.builder.ts';
+} from '../ecr-repository.builder.js';
 import {
   ComponentContext,
   ComponentSpec

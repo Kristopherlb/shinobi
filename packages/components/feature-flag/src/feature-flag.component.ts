@@ -7,19 +7,19 @@
 
 import * as appconfig from 'aws-cdk-lib/aws-appconfig';
 import { Construct } from 'constructs';
-import { BaseComponent } from '@shinobi/core';
 import {
+  BaseComponent,
   ComponentCapabilities,
   ComponentContext,
-  ComponentSpec,
-  FeatureFlagCapability
-} from '@platform/contracts';
+  ComponentSpec
+} from '@shinobi/core';
 import {
   FeatureFlagConfig,
   FeatureFlagConfigBuilder,
   FeatureFlagTargetingCondition,
-  FeatureFlagTargetingRules
-} from './feature-flag.builder.ts';
+  FeatureFlagTargetingRules,
+  FeatureFlagCapability
+} from './feature-flag.builder.js';
 
 export class FeatureFlagComponent extends BaseComponent {
   private hostedConfigurationVersion?: appconfig.CfnHostedConfigurationVersion;

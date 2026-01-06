@@ -1,7 +1,8 @@
-import { SqsQueueComponent } from './sqs-queue.js';
+// Note: SqsQueueComponent is deprecated, use SqsQueueNewComponent from the root index.ts
+// This builder is kept for backward compatibility but may be removed in future versions
 
 export class SqsQueueBuilder {
-  build(component: SqsQueueComponent) {
+  build(component: any) {
     // Placeholder: build AWS resources for the component
     return {
       queueName: `sqs-${component.name}`,
@@ -13,7 +14,7 @@ export class SqsQueueBuilder {
     };
   }
 
-  generateCloudFormation(component: SqsQueueComponent): any {
+  generateCloudFormation(component: any): any {
     // Placeholder: generate CloudFormation template
     return {
       Type: 'AWS::SQS::Queue',

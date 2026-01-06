@@ -4,14 +4,16 @@
  */
 
 // Component exports
-export { EcsClusterComponent } from './src/ecs-cluster.component.ts';
+export { EcsClusterComponent } from './src/ecs-cluster.component.js';
 
 // Configuration exports
 export {
-  EcsClusterConfig,
   EcsClusterComponentConfigBuilder,
   ECS_CLUSTER_CONFIG_SCHEMA
-} from './src/ecs-cluster.builder.ts';
+} from './src/ecs-cluster.builder.js';
+export type {
+  EcsClusterConfig
+} from './src/ecs-cluster.builder.js';
 
 // Creator exports
-export { EcsClusterComponentCreator } from './src/ecs-cluster.creator.ts';
+export { EcsClusterComponentCreator } from './src/ecs-cluster.creator.js';

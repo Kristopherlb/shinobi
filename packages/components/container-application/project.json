@@ -1,36 +1,35 @@
 {
   "name": "@shinobi/components-container-application",
-  "root": "packages/components/container-application",
   "sourceRoot": "packages/components/container-application/src",
-  "projectType": "library",
   "targets": {
     "build": {
       "executor": "nx:run-commands",
       "options": {
-        "command": "tsc -b"
+        "command": "pnpm exec tsc -b packages/components/container-application/tsconfig.build.json"
       },
-      "inputs": [
-        "default",
-        "{projectRoot}/tsconfig.json",
-        "{projectRoot}/src/**"
-      ],
       "outputs": [
-        "{projectRoot}/dist"
+        "{workspaceRoot}/dist/packages/components/container-application"
       ]
     },
     "typecheck": {
       "executor": "nx:run-commands",
       "options": {
-        "command": "tsc --noEmit"
+        "command": "tsc -p packages/components/container-application/tsconfig.json --noEmit"
+      }
+    },
+    "clean": {
+      "executor": "nx:run-commands",
+      "options": {
+        "command": "rimraf dist/packages/components/container-application"
       }
     },
     "test": {
-      "executor": "@nx/jest:jest",
+      "executor": "@nx/vitest:test",
       "outputs": [
         "{projectRoot}/coverage"
       ],
       "options": {
-        "jestConfig": "packages/components/container-application/jest.config.mjs",
+        "config": "packages/components/container-application/vitest.config.ts",
         "passWithNoTests": true
       }
     },

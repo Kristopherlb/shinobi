@@ -1,8 +1,6 @@
 {
   "name": "@shinobi/components-ecs-ec2-service",
-  "root": "packages/components/ecs-ec2-service",
   "sourceRoot": "packages/components/ecs-ec2-service/src",
-  "projectType": "library",
   "tags": [
     "scope:shinobi",
     "type:component",
@@ -19,11 +17,14 @@
       ]
     },
     "test": {
-      "executor": "@nx/jest:jest",
+      "executor": "@nx/vitest:test",
       "options": {
-        "jestConfig": "packages/components/ecs-ec2-service/jest.config.mjs",
+        "config": "packages/components/ecs-ec2-service/vitest.config.ts",
         "passWithNoTests": true
-      }
+      },
+      "outputs": [
+        "{projectRoot}/coverage"
+      ]
     },
     "lint": {
       "executor": "nx:run-commands",
@@ -39,4 +40,3 @@
     }
   }
 }
-

@@ -1,7 +1,6 @@
 {
   "name": "@shinobi/components-s3-bucket",
   "sourceRoot": "packages/components/s3-bucket",
-  "projectType": "library",
   "implicitDependencies": [
     "@shinobi/core"
   ],
@@ -21,11 +20,14 @@
       ]
     },
     "test": {
-      "executor": "@nx/jest:jest",
+      "executor": "@nx/vitest:test",
       "options": {
-        "jestConfig": "packages/components/s3-bucket/jest.config.mjs",
+        "config": "packages/components/s3-bucket/vitest.config.ts",
         "passWithNoTests": true
-      }
+      },
+      "outputs": [
+        "{projectRoot}/coverage"
+      ]
     },
     "lint": {
       "executor": "@nx/eslint:lint",

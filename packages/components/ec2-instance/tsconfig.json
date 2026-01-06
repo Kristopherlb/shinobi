@@ -1,0 +1,39 @@
+{
+  "extends": "../../../tsconfig.base.json",
+  "compilerOptions": {
+    "rootDir": ".",
+    "outDir": "../../../dist/packages/components/ec2-instance",
+    "composite": true,
+    "declaration": true,
+    "declarationMap": true,
+    "target": "ES2022",
+    "module": "NodeNext",
+    "moduleResolution": "NodeNext",
+    "strict": true,
+    "esModuleInterop": true,
+    "skipLibCheck": true,
+    "resolveJsonModule": true,
+    "typeRoots": [
+      "../../../node_modules/@types",
+      "../../../packages/contracts/src"
+    ]
+  },
+  "include": [
+    "index.ts",
+    "Config.schema.json",
+    "*.ts",
+    "!**/*.test.ts"
+  ],
+  "exclude": [
+    "dist",
+    "node_modules",
+    "**/*.test.ts",
+    "tests",
+    "coverage"
+  ],
+  "references": [
+    {
+      "path": "../../core/tsconfig.json"
+    }
+  ]
+}

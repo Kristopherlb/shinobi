@@ -1,8 +1,6 @@
 {
   "name": "@shinobi/components-efs-filesystem",
-  "root": "packages/components/efs-filesystem",
   "sourceRoot": "packages/components/efs-filesystem/src",
-  "projectType": "library",
   "tags": [
     "scope:shinobi",
     "type:component",
@@ -19,11 +17,14 @@
       ]
     },
     "test": {
-      "executor": "@nx/jest:jest",
+      "executor": "@nx/vitest:test",
       "options": {
-        "jestConfig": "packages/components/efs-filesystem/jest.config.mjs",
+        "config": "packages/components/efs-filesystem/vitest.config.ts",
         "passWithNoTests": true
-      }
+      },
+      "outputs": [
+        "{projectRoot}/coverage"
+      ]
     },
     "lint": {
       "executor": "nx:run-commands",
@@ -39,4 +40,3 @@
     }
   }
 }
-

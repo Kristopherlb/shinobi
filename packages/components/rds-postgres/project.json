@@ -1,36 +1,35 @@
 {
   "name": "@shinobi/components-rds-postgres",
-  "root": "packages/components/rds-postgres",
-  "sourceRoot": "packages/components/rds-postgres/src",
-  "projectType": "library",
+  "sourceRoot": "packages/components/rds-postgres",
   "targets": {
     "build": {
       "executor": "nx:run-commands",
       "options": {
-        "command": "tsc -b"
+        "command": "pnpm exec tsc -b packages/components/rds-postgres/tsconfig.build.json"
       },
-      "inputs": [
-        "default",
-        "{projectRoot}/tsconfig.json",
-        "{projectRoot}/src/**"
-      ],
       "outputs": [
-        "{projectRoot}/dist"
+        "{workspaceRoot}/dist/packages/components/rds-postgres"
       ]
     },
     "typecheck": {
       "executor": "nx:run-commands",
       "options": {
-        "command": "tsc --noEmit"
+        "command": "tsc -p packages/components/rds-postgres/tsconfig.json --noEmit"
+      }
+    },
+    "clean": {
+      "executor": "nx:run-commands",
+      "options": {
+        "command": "rimraf dist/packages/components/rds-postgres"
       }
     },
     "test": {
-      "executor": "@nx/jest:jest",
+      "executor": "@nx/vitest:test",
       "outputs": [
         "{projectRoot}/coverage"
       ],
       "options": {
-        "jestConfig": "packages/components/rds-postgres/jest.config.mjs",
+        "config": "packages/components/rds-postgres/vitest.config.ts",
         "passWithNoTests": true
       }
     },

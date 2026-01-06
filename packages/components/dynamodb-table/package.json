@@ -3,8 +3,16 @@
   "version": "1.0.1",
   "private": true,
   "description": "DynamoDB Table Component implementing Component API Contract v1.0",
-  "main": "dist/index.js",
-  "types": "dist/index.d.ts",
+  "type": "module",
+  "main": "./dist/index.js",
+  "types": "./dist/index.d.ts",
+  "exports": {
+    ".": {
+      "types": "./dist/index.d.ts",
+      "import": "./dist/index.js"
+    },
+    "./package.json": "./package.json"
+  },
   "scripts": {
     "build": "tsc",
     "lint": "eslint src/**/*.ts",

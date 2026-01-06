@@ -8,7 +8,8 @@
     "declarationMap": true,
     "moduleResolution": "NodeNext",
     "resolveJsonModule": true,
-    "esModuleInterop": true
+    "esModuleInterop": true,
+    "tsBuildInfoFile": "../../../dist/packages/components/auto-scaling-group/tsconfig.tsbuildinfo"
   },
   "include": [
     "index.ts",

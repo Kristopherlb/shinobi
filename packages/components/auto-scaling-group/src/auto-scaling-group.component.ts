@@ -248,7 +248,7 @@ export class AutoScalingGroupComponent extends BaseComponent {
     userData.addCommands(
       '# Configure OpenTelemetry observability',
       `echo 'export OTEL_SERVICE_NAME=${this.context.serviceName}' >> /etc/environment`,
-      `echo 'export OTEL_SERVICE_VERSION=${this.context.serviceVersion || "1.0.0"}' >> /etc/environment`,
+      `echo 'export OTEL_SERVICE_VERSION="1.0.0"' >> /etc/environment`,
       `echo 'export OTEL_RESOURCE_ATTRIBUTES="environment=${this.context.environment},region=${this.context.region},compliance.framework=${this.context.complianceFramework}"' >> /etc/environment`,
       `echo 'export OTEL_EXPORTER_OTLP_ENDPOINT=https://otel-collector.${this.context.environment}.${this.context.region}.platform.local:4317' >> /etc/environment`,
       '# Observability collector installation delegated to central binder',

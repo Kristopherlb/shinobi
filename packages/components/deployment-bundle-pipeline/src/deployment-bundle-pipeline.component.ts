@@ -541,6 +541,29 @@ export class DeploymentBundlePipelineComponent extends BaseComponent implements 
     this.registerCapability('observability:deployment-bundle', observabilityCapability);
   }
 
+  public getCapabilities(): any {
+    return {
+      'ci:deployment-bundle': {
+        service: this.config.service,
+        versionTag: this.config.versionTag,
+        bundleReference: this.getBundleReference()
+      },
+      'observability:deployment-bundle': {
+        service: this.config.service,
+        environment: this.config.environment,
+        reports: {
+          sbom: this.artifacts?.sboms,
+          security: this.artifacts?.vulnReports ?? [],
+          compliance: this.artifacts?.policyReports ?? [],
+          tests: this.artifacts?.testReports,
+          coverage: this.artifacts?.coverageReports
+        },
+        provenance: this.artifacts?.provenance,
+        versionTag: this.config.versionTag
+      }
+    };
+  }
+
   private getBundleReference(): string {
     if (this.manifest?.bundleDigest) {
       return `${this.config.ociRepoBundles}@${this.manifest.bundleDigest}`;

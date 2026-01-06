@@ -246,10 +246,7 @@ export class CognitoUserPoolComponent extends BaseComponent {
       advancedSecurityMode: this.config.advancedSecurityMode,
       alarms: this.alarms.map(alarm => ({
         alarmName: alarm.alarmName,
-        alarmArn: alarm.alarmArn,
-        evaluationPeriods: alarm.evaluationPeriods,
-        threshold: alarm.threshold,
-        comparisonOperator: alarm.comparisonOperator
+        alarmArn: alarm.alarmArn
       }))
     };
   }
@@ -482,7 +479,7 @@ export class CognitoUserPoolComponent extends BaseComponent {
     return cognito.UserPoolEmail.withSES({
       fromEmail: email.fromEmail,
       fromName: email.fromName,
-      replyToEmail: email.replyToEmail,
+      replyTo: email.replyToEmail,
       sesRegion: email.sesRegion,
       sesVerifiedDomain: email.sesVerifiedDomain
     });

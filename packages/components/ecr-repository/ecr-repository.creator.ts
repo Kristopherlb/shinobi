@@ -11,9 +11,16 @@ import {
   IComponentCreator
 } from '@shinobi/core';
 import { Construct } from 'constructs';
-import { EcrRepositoryComponent } from './ecr-repository.component.ts';
-import { EcrRepositoryConfig } from './ecr-repository.builder.ts';
-import { ECR_REPOSITORY_CONFIG_SCHEMA } from './Config.schema.json' with { type: 'json' };
+import { EcrRepositoryComponent } from './ecr-repository.component.js';
+import { EcrRepositoryConfig } from './ecr-repository.builder.js';
+import { readFileSync } from 'fs';
+import { join } from 'path';
+import { fileURLToPath } from 'url';
+
+const __dirname = fileURLToPath(new URL('.', import.meta.url));
+const ECR_REPOSITORY_CONFIG_SCHEMA = JSON.parse(
+  readFileSync(join(__dirname, 'Config.schema.json'), 'utf-8')
+);
 
 /**
  * Creator class for EcrRepositoryComponent component
@@ -70,11 +77,17 @@ export class EcrRepositoryComponentCreator implements IComponentCreator {
    * Factory method to create component instances
    */
   public createComponent(
-    scope: Construct,
     spec: ComponentSpec,
     context: ComponentContext
   ): EcrRepositoryComponent {
-    return new EcrRepositoryComponent(scope, spec.name, context, spec);
+    return new EcrRepositoryComponent(context.scope, spec.name, context, spec);
+  }
+
+  public processComponent(
+    spec: ComponentSpec,
+    context: ComponentContext
+  ): EcrRepositoryComponent {
+    return this.createComponent(spec, context);
   }
 
   /**

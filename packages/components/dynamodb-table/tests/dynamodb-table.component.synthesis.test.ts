@@ -11,9 +11,9 @@ jest.mock(
 
 import { App, Stack } from 'aws-cdk-lib';
 import { Match, Template } from 'aws-cdk-lib/assertions';
-import { DynamoDbTableComponent } from '../src/dynamodb-table.component.ts';
-import { DynamoDbTableConfig } from '../src/dynamodb-table.builder.ts';
-import { ComponentContext, ComponentSpec } from '../../../platform/contracts/component-interfaces.ts';
+import { DynamoDbTableComponent } from '../src/dynamodb-table.component.js';
+import { DynamoDbTableConfig } from '../src/dynamodb-table.builder.js';
+import { ComponentContext, ComponentSpec } from '../../../platform/contracts/component-interfaces.js';
 
 const createContext = (framework: string): ComponentContext => ({
   serviceName: 'orders-service',

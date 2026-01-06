@@ -252,10 +252,10 @@ export class ApplicationLoadBalancerComponentConfigBuilder extends ConfigBuilder
       monitoring: {
         enabled: true,
         alarms: {
-          http5xx: { ...DEFAULT_ALARM_BASELINE },
-          unhealthyHosts: { ...DEFAULT_ALARM_BASELINE },
-          connectionErrors: { ...DEFAULT_ALARM_BASELINE },
-          rejectedConnections: { ...DEFAULT_ALARM_BASELINE }
+          http5xx: { ...DEFAULT_ALARM_BASELINE, tags: {} },
+          unhealthyHosts: { ...DEFAULT_ALARM_BASELINE, tags: {} },
+          connectionErrors: { ...DEFAULT_ALARM_BASELINE, tags: {} },
+          rejectedConnections: { ...DEFAULT_ALARM_BASELINE, tags: {} }
         }
       },
       observability: {

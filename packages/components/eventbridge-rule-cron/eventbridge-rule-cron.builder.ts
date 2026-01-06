@@ -274,6 +274,10 @@ export class EventBridgeRuleCronComponentConfigBuilder extends ConfigBuilder<Eve
       throw new Error('input.transformer.inputTemplate is required when input.type is "transformer".');
     }
 
+    if (!input.type) {
+      throw new Error('input.type is required');
+    }
+
     return {
       type: input.type,
       value: input.value,

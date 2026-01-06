@@ -9,7 +9,7 @@
  * @service SQS
  */
 
-import { ConfigBuilder, ConfigBuilderContext } from '../../platform/contracts/config-builder.ts';
+import { ConfigBuilder, ConfigBuilderContext } from '@shinobi/core';
 
 /**
  * Configuration interface for SqsQueueNew component

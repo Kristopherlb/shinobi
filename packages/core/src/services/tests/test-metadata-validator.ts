@@ -145,7 +145,7 @@ export class TestMetadataValidator {
 
     try {
       const files = await fs.readdir(testDir);
-      const testFiles = files.filter(file => file.endsWith('.test.ts'));
+      const testFiles = files.filter(file => file.endsWith('.test.js'));
 
       for (const file of testFiles) {
         const filePath = path.join(testDir, file);

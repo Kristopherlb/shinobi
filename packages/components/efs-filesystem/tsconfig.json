@@ -1,12 +1,13 @@
 {
   "extends": "../../../tsconfig.base.json",
   "compilerOptions": {
-    "outDir": "./dist",
+    "outDir": "../../../dist/packages/components/efs-filesystem",
     "rootDir": "./src",
     "declaration": true,
     "declarationMap": true,
     "sourceMap": true,
-    "tsBuildInfoFile": "./dist/.tsbuildinfo"
+    "composite": true,
+    "tsBuildInfoFile": "../../../dist/packages/components/efs-filesystem/tsconfig.tsbuildinfo"
   },
   "include": [
     "src/**/*.ts",
@@ -16,5 +17,10 @@
     "tests/**/*",
     "dist",
     "node_modules"
+  ],
+  "references": [
+    {
+      "path": "../../core/tsconfig.json"
+    }
   ]
 }

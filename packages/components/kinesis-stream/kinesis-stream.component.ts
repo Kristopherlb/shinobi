@@ -8,13 +8,13 @@ import {
   ComponentSpec,
   ComponentContext,
   ComponentCapabilities
-} from '@platform/contracts';
+} from '@shinobi/core';
 import {
   KinesisStreamComponentConfigBuilder,
   KinesisStreamConfig,
   KinesisStreamAlarmConfig,
   KinesisStreamMonitoringConfig
-} from './kinesis-stream.builder.ts';
+} from './kinesis-stream.builder.js';
 
 export class KinesisStreamComponent extends Component {
   private stream?: kinesis.Stream;

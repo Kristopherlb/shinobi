@@ -6,9 +6,9 @@
  */
 
 import { Construct } from 'constructs';
-import { ComponentSpec, ComponentContext, IComponentCreator } from '@platform/contracts';
-import { EcsFargateServiceComponent } from './ecs-fargate-service.component.ts';
-import { EcsFargateServiceConfig, ECS_FARGATE_SERVICE_CONFIG_SCHEMA } from './ecs-fargate-service.builder.ts';
+import { ComponentSpec, ComponentContext, IComponentCreator } from '@shinobi/core';
+import { EcsFargateServiceComponent } from './ecs-fargate-service.component.js';
+import { EcsFargateServiceConfig, ECS_FARGATE_SERVICE_CONFIG_SCHEMA } from './ecs-fargate-service.builder.js';
 
 /**
  * Creator class for EcsFargateServiceComponent component
@@ -89,11 +89,17 @@ export class EcsFargateServiceComponentCreator implements IComponentCreator {
    * Factory method to create component instances
    */
   public createComponent(
-    scope: Construct,
     spec: ComponentSpec,
     context: ComponentContext
   ): EcsFargateServiceComponent {
-    return new EcsFargateServiceComponent(scope, spec.name, context, spec);
+    return new EcsFargateServiceComponent(context.scope, spec.name, context, spec);
+  }
+
+  public processComponent(
+    spec: ComponentSpec,
+    context: ComponentContext
+  ): EcsFargateServiceComponent {
+    return this.createComponent(spec, context);
   }
 
   /**

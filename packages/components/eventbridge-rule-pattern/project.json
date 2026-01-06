@@ -1,8 +1,6 @@
 {
   "name": "@shinobi/components-eventbridge-rule-pattern",
-  "root": "packages/components/eventbridge-rule-pattern",
   "sourceRoot": "packages/components/eventbridge-rule-pattern/src",
-  "projectType": "library",
   "tags": [
     "scope:shinobi",
     "type:component",
@@ -19,9 +17,12 @@
       ]
     },
     "test": {
-      "executor": "@nx/jest:jest",
+      "executor": "@nx/vitest:test",
+      "outputs": [
+        "{projectRoot}/coverage"
+      ],
       "options": {
-        "jestConfig": "packages/components/eventbridge-rule-pattern/jest.config.mjs",
+        "config": "packages/components/eventbridge-rule-pattern/vitest.config.ts",
         "passWithNoTests": true
       }
     },

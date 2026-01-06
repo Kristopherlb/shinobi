@@ -12,13 +12,13 @@ import {
   ComponentContext,
   ComponentCapabilities,
   applySecurityGroupTags
-} from '@platform/contracts';
+} from '@shinobi/core';
 import {
   OpenSearchDomainComponentConfigBuilder,
   OpenSearchDomainConfig,
   OpenSearchAlarmConfig,
   OpenSearchLogConfig
-} from './opensearch-domain.builder.ts';
+} from './opensearch-domain.builder.js';
 
 interface LoggingResources {
   slowSearch?: logs.ILogGroup;

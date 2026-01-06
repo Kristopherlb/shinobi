@@ -1,7 +1,6 @@
 {
   "name": "@shinobi/components-ecs-cluster",
   "sourceRoot": "packages/components/ecs-cluster/src",
-  "projectType": "library",
   "tags": [
     "scope:shinobi",
     "type:component",
@@ -20,11 +19,14 @@
       ]
     },
     "test": {
-      "executor": "@nx/jest:jest",
+      "executor": "@nx/vitest:test",
       "options": {
-        "jestConfig": "packages/components/ecs-cluster/jest.config.mjs",
+        "config": "packages/components/ecs-cluster/vitest.config.ts",
         "passWithNoTests": true
-      }
+      },
+      "outputs": [
+        "{projectRoot}/coverage"
+      ]
     },
     "lint": {
       "executor": "@nx/eslint:lint",

@@ -3,6 +3,7 @@
  * Following Platform Testing Standard v1.0
  */
 
+import { vi } from 'vitest';
 import { SchemaValidator } from '../schema-validator.js';
 import { SchemaManager } from '../schema-manager.js';
 import { EnhancedSchemaValidator } from '../enhanced-schema-validator.js';
@@ -129,7 +130,7 @@ describe('SchemaValidator (Enhanced)', () => {
 
       // Given: Mock enhanced validator that throws
       const failingEnhancedValidator = {
-        validateManifest: jest.fn().mockRejectedValue(new Error('Enhanced validation failed'))
+        validateManifest: vi.fn().mockRejectedValue(new Error('Enhanced validation failed'))
       };
 
       const validatorWithFailingEnhanced = new SchemaValidator({
@@ -289,11 +290,11 @@ describe('SchemaValidator (Enhanced)', () => {
       };
 
       // Given: Mock logger to capture warnings
-      const logSpy = jest.spyOn(mockLogger, 'warn');
+      const logSpy = vi.spyOn(mockLogger, 'warn');
 
       // Given: Mock enhanced validator that throws
       const failingEnhancedValidator = {
-        validateManifest: jest.fn().mockRejectedValue(new Error('Enhanced validation failed'))
+        validateManifest: vi.fn().mockRejectedValue(new Error('Enhanced validation failed'))
       };
 
       const validatorWithFailingEnhanced = new SchemaValidator({
@@ -348,12 +349,12 @@ describe('SchemaValidator (Enhanced)', () => {
 
       // Given: Mock schema manager that throws
       const failingSchemaManager = {
-        getBaseSchema: jest.fn().mockRejectedValue(new Error('Schema loading failed'))
+        getBaseSchema: vi.fn().mockRejectedValue(new Error('Schema loading failed'))
       };
 
       // Given: Mock enhanced validator that throws (to force fallback to basic validation)
       const failingEnhancedValidator = {
-        validateManifest: jest.fn().mockRejectedValue(new Error('Enhanced validation failed'))
+        validateManifest: vi.fn().mockRejectedValue(new Error('Enhanced validation failed'))
       };
 
       const validatorWithFailingSchemaManager = new SchemaValidator({

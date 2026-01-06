@@ -22,10 +22,9 @@ import {
 import {
   S3BucketConfig,
   S3BucketComponentConfigBuilder
-} from './s3-bucket.builder.ts';
-import { S3BucketValidator } from '@shinobi/core/platform/services/s3-advanced-features/s3-bucket.validator.ts';
-import { createS3AdvancedFeaturesService } from '@shinobi/core/platform/services/s3-advanced-features/s3-advanced-features.service.ts';
-import { createClamAvScanningService } from '@shinobi/core/platform/services/clamav-scanning/clamav-scanning.service.ts';
+} from './s3-bucket.builder.js';
+import { S3BucketValidator, createS3AdvancedFeaturesService } from '@shinobi/core';
+import { createClamAvScanningService } from '@shinobi/core';
 
 export class S3BucketComponent extends BaseComponent {
   private bucket?: s3.Bucket;

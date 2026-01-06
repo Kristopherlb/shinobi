@@ -10,7 +10,7 @@ import { Annotations, Match } from 'aws-cdk-lib/assertions';
 import { AwsSolutionsChecks } from 'cdk-nag';
 import { Aspects } from 'aws-cdk-lib';
 import { ComponentContext, ComponentSpec } from '@shinobi/core';
-import { EfsFilesystemComponent } from '../../src/efs-filesystem.component.ts';
+import { EfsFilesystemComponent } from '../../src/efs-filesystem.component.js';
 
 const VPC_ID = 'vpc-0abc123def4567890';
 const CONTEXT_KEY = `vpcProvider:account=123456789012:filter.vpcId=${VPC_ID}:region=us-east-1`;
