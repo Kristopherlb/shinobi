@@ -14,6 +14,7 @@ export { ContextHydrator } from './services/context-hydrator.js';
 export { ValidationOrchestrator } from './services/validation-orchestrator.js';
 export type { PlanResult } from './services/validation-orchestrator.js';
 export { FileDiscovery } from './services/file-discovery.js';
+export type { FileDiscoveryDependencies } from './services/file-discovery.js';
 export { PlanOutputFormatter } from './services/plan-output-formatter.js';
 export { SchemaManager } from './services/schema-manager.js';
 

@@ -3,7 +3,7 @@
   "compilerOptions": {
     "outDir": "./dist",
     "rootDir": "./src",
-    "tsBuildInfoFile": "./dist/tsconfig.tsbuildinfo"
+    "tsBuildInfoFile": "./dist/tsconfig.typecheck.tsbuildinfo"
   },
   "include": ["src/**/*"],
   "exclude": ["src/**/*.spec.ts", "src/**/*.test.ts"],

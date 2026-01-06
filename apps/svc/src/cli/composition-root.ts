@@ -61,7 +61,7 @@ export class CompositionRoot {
     const logger = new Logger();
     logger.configure(loggerConfig);
 
-    const fileDiscovery = new FileDiscovery();
+    const fileDiscovery = new FileDiscovery({ logger: logger.platformLogger });
     const schemaManager = new SchemaManager();
 
     // Create binder registry for binding directive validation

@@ -12,6 +12,7 @@ export default {
   testMatch: ['<rootDir>/packages/components/s3-bucket/tests/**/*.test.ts'],
   coverageDirectory: path.join(rootDir, 'coverage', 'packages', 'components', 's3-bucket'),
   moduleNameMapper: {
+    ...preset.moduleNameMapper,
     // Map .js imports to .ts for ESM compatibility in tests
     '^(\\.{1,2}/(?:.*/)?src/.+)\\.js$': '$1.ts',
     // Mock for platform logger in tests

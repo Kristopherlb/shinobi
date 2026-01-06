@@ -13,8 +13,8 @@ import type { IUnifiedBinderStrategy } from '../../../contracts/platform-binding
 describe('createUnifiedBinderRegistry', () => {
   let registry: UnifiedBinderRegistry;
 
-  beforeAll(() => {
-    registry = createUnifiedBinderRegistry();
+  beforeAll(async () => {
+    registry = await createUnifiedBinderRegistry();
   });
 
   describe('Basic Functionality', () => {
@@ -99,14 +99,14 @@ describe('createUnifiedBinderRegistry', () => {
   });
 
   describe('Error Handling', () => {
-    it('gracefully handles instantiation failures', () => {
+    it('gracefully handles instantiation failures', async () => {
       // Factory should not throw even if some strategies fail to instantiate
-      expect(() => createUnifiedBinderRegistry()).not.toThrow();
+      await expect(createUnifiedBinderRegistry()).resolves.toBeDefined();
     });
 
-    it('returns valid registry even if some strategies fail', () => {
+    it('returns valid registry even if some strategies fail', async () => {
       // Factory should return a registry with successfully discovered strategies
-      const registry = createUnifiedBinderRegistry();
+      const registry = await createUnifiedBinderRegistry();
       expect(registry).toBeInstanceOf(UnifiedBinderRegistry);
       expect(registry.getStrategyCount()).toBeGreaterThan(0);
     });
