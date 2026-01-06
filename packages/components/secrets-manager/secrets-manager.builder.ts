@@ -71,6 +71,7 @@ export interface SecretsManagerAccessPoliciesConfig {
 export interface SecretsManagerConfig {
   secretName?: string;
   description?: string;
+  highRiskEnvironment?: boolean; // Enable enhanced security defaults for high-risk environments
   secretValue?: {
     secretStringValue?: string;
     secretBinaryValue?: Buffer;
@@ -139,6 +140,58 @@ export class SecretsManagerComponentConfigBuilder extends ConfigBuilder<SecretsM
         requireTemporaryCredentials: false
       }
     };
+  }
+
+  /**
+   * Layer 2: Compliance Framework Defaults
+   * 
+   * Provides enhanced security defaults based on risk assessment flags rather than framework checks.
+   * High-risk environment defaults can be set via:
+   * - Platform config files (`/config/{framework}.yml`) setting `highRiskEnvironment: true`
+   * - Service-level configuration in `service.yml`
+   * - Environment defaults
+   * 
+   * This ensures configuration is data-driven and risk-based, not framework-dependent.
+   */
+  protected getComplianceFrameworkDefaults(): Partial<SecretsManagerConfig> {
+    // Check if highRiskEnvironment flag is set in component config or platform config
+    const componentConfig = this.builderContext.spec.config as Partial<SecretsManagerConfig> | undefined;
+    let isHighRisk = componentConfig?.highRiskEnvironment ?? false;
+    
+    // Also check platform config if available (loaded by base class)
+    try {
+      const platformConfig = (this as any)._loadPlatformConfiguration();
+      if (platformConfig?.highRiskEnvironment) {
+        isHighRisk = true;
+      }
+    } catch {
+      // Platform config might not be available in tests, ignore
+    }
+    
+    if (isHighRisk) {
+      // Apply enhanced security defaults for high-risk environments
+      // These defaults align with FedRAMP Moderate/High requirements when highRiskEnvironment is set
+      return {
+        automaticRotation: {
+          enabled: true,
+          schedule: {
+            automaticallyAfterDays: 90 // Moderate default; can be overridden to 30 for higher risk
+          }
+        },
+        encryption: {
+          createCustomerManagedKey: true,
+          enableKeyRotation: false // Can be enabled explicitly for higher risk scenarios
+        },
+        accessPolicies: {
+          restrictToVpce: true
+        },
+        monitoring: {
+          enabled: true
+        }
+      };
+    }
+    
+    return {}; // Standard/default environment - use hardcoded fallbacks
   }
 
   public buildSync(): SecretsManagerConfig {

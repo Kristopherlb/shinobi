@@ -267,9 +267,7 @@ def lambda_handler(event, context):
       };
     } else if (this.config?.secretValue?.secretArn) {
       // Use existing secret from Secrets Manager
-      secretProps.secretStringValue = secretsmanager.SecretValue.fromSecretArn(
-        this,
-        'SecretValue',
+      secretProps.secretStringValue = cdk.SecretValue.secretsManager(
         this.config.secretValue.secretArn
       );
     } else if (this.config?.secretValue?.generateSecret) {
@@ -296,7 +294,7 @@ def lambda_handler(event, context):
           complianceFramework: this.context.complianceFramework
         }
       });
-      secretProps.secretStringValue = secretsmanager.SecretValue.unsafePlainText(
+      secretProps.secretStringValue = cdk.SecretValue.unsafePlainText(
         this.config.secretValue.secretStringValue
       );
     } else if (this.config?.secretValue?.secretStringValue) {
@@ -352,7 +350,7 @@ def lambda_handler(event, context):
     this.logResourceCreation('secrets-manager-secret', this.secret.secretName ?? this.spec.name, {
       rotationEnabled: !!rotation?.enabled,
       replicaCount: this.config?.replicas?.length ?? 0,
-      customerManagedKey: kms.Key.isKey(this.kmsKey)
+      customerManagedKey: this.kmsKey instanceof kms.Key
     });
   }
 
@@ -529,7 +527,7 @@ def lambda_handler(event, context):
     const capability: Record<string, any> = {
       secretArn: this.secret!.secretArn,
       secretName: this.secret!.secretName,
-      secretFullArn: this.secret!.secretFullArn || this.secret!.secretArn
+      secretFullArn: this.secret!.secretArn // secretArn is already the full ARN in Secrets Manager
     };
 
     // Add versionId if available (for advanced bindings that need specific versions)
