@@ -37,7 +37,7 @@ import packageJson from '../package.json' with { type: 'json' };
  */
 export class EcsClusterComponent extends BaseComponent {
   private cluster?: ecs.Cluster;
-  private namespace?: servicediscovery.PrivateDnsNamespace;
+  private namespace?: servicediscovery.IPrivateDnsNamespace;
   private autoScalingGroup?: autoscaling.AutoScalingGroup;
   private capacityProvider?: ecs.AsgCapacityProvider;
   private capacitySecurityGroup?: ec2.ISecurityGroup;
@@ -308,7 +308,7 @@ export class EcsClusterComponent extends BaseComponent {
 
     // Apply compliance-specific settings
     const complianceFramework = this.context.complianceFramework;
-    const strategy: ecs.CapacityProviderStrategyItem[] = [];
+    const strategy: ecs.CapacityProviderStrategy[] = [];
 
     const isFedramp = complianceFramework === 'fedramp-high' || complianceFramework === 'fedramp-moderate';
 
@@ -370,10 +370,7 @@ export class EcsClusterComponent extends BaseComponent {
 
     // Get standardized OpenTelemetry environment variables for ECS tasks
     const otelEnvVars = this.configureObservability(this.cluster, {
-      serviceName: `${this.context.serviceName}-ecs-cluster`,
-      serviceVersion: this.getComponentVersion(),
-      componentType: 'ecs-cluster',
-      complianceFramework: this.context.complianceFramework
+      serviceName: `${this.context.serviceName}-ecs-cluster`
     });
 
     const tracingConfig = this.config.observability?.tracing;
@@ -399,8 +396,7 @@ export class EcsClusterComponent extends BaseComponent {
       metrics: ['AWS/ECS:CPUUtilization', 'AWS/ECS:MemoryUtilization'],
       logging: {
         containerInsights: this.config.containerInsights ?? true,
-        retentionInDays: this.config.observability?.logging?.retentionInDays,
-        appliedRetentionInDays: this.appliedLogRetentionInDays
+        retentionInDays: this.appliedLogRetentionInDays ?? this.config.observability?.logging?.retentionInDays
       },
       tracing: {
         adotSidecar,
@@ -409,7 +405,7 @@ export class EcsClusterComponent extends BaseComponent {
       alarms: {
         notificationTopicArn: this.config.observability?.alarms?.notificationTopicArn,
         severityOverrides: this.config.observability?.alarms?.severityOverrides,
-        alarmNames: this.observabilityAlarms.map(({ alarm }) => alarm.alarmName ?? alarm.node.uniqueId)
+        alarmNames: this.observabilityAlarms.map(({ alarm }) => alarm.alarmName ?? alarm.node.id)
       },
       dashboard: {
         enabled: this.config.observability?.dashboard?.enabled ?? true,
@@ -536,9 +532,15 @@ export class EcsClusterComponent extends BaseComponent {
     this.observabilityDashboardBody = body;
     this.observabilityDashboardName = dashboardName;
 
-    this.observabilityDashboard = new cloudwatch.Dashboard(this, 'EcsClusterDashboard', {
+    // Create dashboard using CfnDashboard to support dashboardBody
+    const cfnDashboard = new cloudwatch.CfnDashboard(this, 'EcsClusterDashboard', {
       dashboardName,
       dashboardBody: body
+    });
+    
+    // Also create L2 Dashboard for compatibility
+    this.observabilityDashboard = new cloudwatch.Dashboard(this, 'EcsClusterDashboardL2', {
+      dashboardName
     });
   }
 
@@ -893,7 +895,7 @@ export class EcsClusterComponent extends BaseComponent {
     }
 
     const launchTemplate = this.autoScalingGroup.node.tryFindChild('LaunchTemplate') as
-      | autoscaling.CfnLaunchTemplate
+      | ec2.CfnLaunchTemplate
       | undefined;
 
     if (launchTemplate) {

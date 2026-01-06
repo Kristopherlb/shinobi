@@ -8,9 +8,11 @@ export { EcsClusterComponent } from './src/ecs-cluster.component.js';
 
 // Configuration exports
 export {
-  EcsClusterConfig,
   EcsClusterComponentConfigBuilder,
   ECS_CLUSTER_CONFIG_SCHEMA
+} from './src/ecs-cluster.builder.js';
+export type {
+  EcsClusterConfig
 } from './src/ecs-cluster.builder.js';
 
 // Creator exports

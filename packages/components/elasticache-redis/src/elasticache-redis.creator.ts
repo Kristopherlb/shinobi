@@ -19,8 +19,16 @@ export class ElastiCacheRedisComponentCreator implements IComponentCreator {
   public readonly tags = ['redis', 'elasticache', 'cache'];
   public readonly configSchema = ELASTICACHE_REDIS_CONFIG_SCHEMA;
 
-  public createComponent(scope: Construct, spec: ComponentSpec, context: ComponentContext): ElastiCacheRedisComponent {
+  public createComponent(spec: ComponentSpec, context: ComponentContext): ElastiCacheRedisComponent {
+    const scope = context.scope as Construct | undefined;
+    if (!scope) {
+      throw new Error('ComponentContext.scope is required to create elasticache-redis components');
+    }
     return new ElastiCacheRedisComponent(scope, spec.name, context, spec);
+  }
+
+  public processComponent(spec: ComponentSpec, context: ComponentContext): ElastiCacheRedisComponent {
+    return this.createComponent(spec, context);
   }
 
   public validateSpec(spec: ComponentSpec, context: ComponentContext): { valid: boolean; errors: string[] } {

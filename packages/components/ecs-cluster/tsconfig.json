@@ -13,7 +13,9 @@
   "include": [
     "index.ts",
     "src/**/*.ts",
-    "Config.schema.json"
+    "Config.schema.json",
+    "observability/**/*.json",
+    "package.json"
   ],
   "exclude": [
     "dist",
