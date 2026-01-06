@@ -1,0 +1,369 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "$id": "https://platform.shinobi.internal/schemas/waf-web-acl/v1.0.0",
+  "title": "WAF Web ACL Component Configuration",
+  "description": "Configuration schema for AWS WAF Web ACL component with managed and custom rules",
+  "type": "object",
+  "additionalProperties": false,
+  "properties": {
+    "name": {
+      "type": "string",
+      "description": "Web ACL name"
+    },
+    "description": {
+      "type": "string",
+      "description": "Web ACL description"
+    },
+    "scope": {
+      "type": "string",
+      "description": "WAF scope",
+      "enum": ["REGIONAL", "CLOUDFRONT"],
+      "default": "REGIONAL"
+    },
+    "defaultAction": {
+      "type": "string",
+      "description": "Default action for requests",
+      "enum": ["allow", "block"],
+      "default": "allow"
+    },
+    "managedRuleGroups": {
+      "type": "array",
+      "description": "Managed rule groups",
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "properties": {
+          "name": {
+            "type": "string",
+            "description": "Rule group name"
+          },
+          "vendorName": {
+            "type": "string",
+            "description": "Vendor name (e.g., AWS)"
+          },
+          "priority": {
+            "type": "number",
+            "description": "Rule priority",
+            "minimum": 0
+          },
+          "overrideAction": {
+            "type": "string",
+            "description": "Override action",
+            "enum": ["none", "count"],
+            "default": "none"
+          },
+          "excludedRules": {
+            "type": "array",
+            "description": "Excluded rule names",
+            "items": {
+              "type": "string"
+            },
+            "default": []
+          },
+          "visibility": {
+            "type": "object",
+            "description": "Rule visibility configuration",
+            "additionalProperties": false,
+            "properties": {
+              "sampledRequestsEnabled": {
+                "type": "boolean",
+                "description": "Enable sampled requests logging"
+              },
+              "cloudWatchMetricsEnabled": {
+                "type": "boolean",
+                "description": "Enable CloudWatch metrics"
+              },
+              "metricName": {
+                "type": "string",
+                "description": "CloudWatch metric name"
+              }
+            }
+          }
+        },
+        "required": ["name", "vendorName", "priority"]
+      }
+    },
+    "customRules": {
+      "type": "array",
+      "description": "Custom rules",
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "properties": {
+          "name": {
+            "type": "string",
+            "description": "Rule name"
+          },
+          "priority": {
+            "type": "number",
+            "description": "Rule priority",
+            "minimum": 0
+          },
+          "action": {
+            "type": "string",
+            "description": "Rule action",
+            "enum": ["allow", "block", "count"]
+          },
+          "visibility": {
+            "type": "object",
+            "description": "Rule visibility configuration",
+            "additionalProperties": false,
+            "properties": {
+              "sampledRequestsEnabled": {
+                "type": "boolean",
+                "description": "Enable sampled requests logging"
+              },
+              "cloudWatchMetricsEnabled": {
+                "type": "boolean",
+                "description": "Enable CloudWatch metrics"
+              },
+              "metricName": {
+                "type": "string",
+                "description": "CloudWatch metric name"
+              }
+            }
+          },
+          "statement": {
+            "type": "object",
+            "description": "Rule statement",
+            "additionalProperties": false,
+            "properties": {
+              "type": {
+                "type": "string",
+                "description": "Statement type",
+                "enum": ["geo-match", "rate-based", "ip-set"]
+              },
+              "countryCodes": {
+                "type": "array",
+                "description": "Country codes (for geo-match)",
+                "items": {
+                  "type": "string"
+                }
+              },
+              "limit": {
+                "type": "number",
+                "description": "Rate limit (for rate-based)",
+                "minimum": 100
+              },
+              "aggregateKeyType": {
+                "type": "string",
+                "description": "Aggregate key type (for rate-based)",
+                "enum": ["IP", "FORWARDED_IP"]
+              },
+              "forwardedIpFallbackBehavior": {
+                "type": "string",
+                "description": "Forwarded IP fallback behavior",
+                "enum": ["MATCH", "NO_MATCH"]
+              },
+              "forwardedIpHeaderName": {
+                "type": "string",
+                "description": "Forwarded IP header name"
+              },
+              "arn": {
+                "type": "string",
+                "description": "IP set ARN (for ip-set)"
+              }
+            },
+            "required": ["type"]
+          }
+        },
+        "required": ["name", "priority", "action", "statement"]
+      }
+    },
+    "logging": {
+      "type": "object",
+      "description": "WAF logging configuration",
+      "additionalProperties": false,
+      "properties": {
+        "enabled": {
+          "type": "boolean",
+          "description": "Enable WAF logging",
+          "default": true
+        },
+        "destinationType": {
+          "type": "string",
+          "description": "Log destination type",
+          "enum": ["cloudwatch", "kinesis-firehose", "s3"],
+          "default": "cloudwatch"
+        },
+        "destinationArn": {
+          "type": "string",
+          "description": "Log destination ARN"
+        },
+        "logGroupName": {
+          "type": "string",
+          "description": "CloudWatch log group name (for cloudwatch destination)"
+        },
+        "retentionDays": {
+          "type": "number",
+          "description": "Log retention in days",
+          "minimum": 1,
+          "default": 365
+        },
+        "redactedFields": {
+          "type": "array",
+          "description": "Fields to redact in logs",
+          "items": {
+            "type": "object",
+            "additionalProperties": false,
+            "properties": {
+              "type": {
+                "type": "string",
+                "description": "Field type",
+                "enum": ["uri-path", "query-string", "header", "method", "body"]
+              },
+              "name": {
+                "type": "string",
+                "description": "Field name (for header type)"
+              }
+            },
+            "required": ["type"]
+          },
+          "default": []
+        }
+      }
+    },
+    "monitoring": {
+      "type": "object",
+      "description": "Monitoring configuration",
+      "additionalProperties": false,
+      "properties": {
+        "enabled": {
+          "type": "boolean",
+          "description": "Enable monitoring",
+          "default": true
+        },
+        "metricsEnabled": {
+          "type": "boolean",
+          "description": "Enable CloudWatch metrics",
+          "default": true
+        },
+        "detailedMetrics": {
+          "type": "boolean",
+          "description": "Enable detailed metrics",
+          "default": true
+        },
+        "sampledRequestsEnabled": {
+          "type": "boolean",
+          "description": "Enable sampled requests logging",
+          "default": true
+        },
+        "alarms": {
+          "type": "object",
+          "description": "CloudWatch alarms",
+          "additionalProperties": false,
+          "properties": {
+            "blockedRequests": {
+              "type": "object",
+              "description": "Blocked requests alarm",
+              "additionalProperties": false,
+              "properties": {
+                "enabled": {
+                  "type": "boolean",
+                  "default": true
+                },
+                "threshold": {
+                  "type": "number",
+                  "minimum": 0
+                },
+                "evaluationPeriods": {
+                  "type": "number",
+                  "minimum": 1,
+                  "default": 2
+                },
+                "periodMinutes": {
+                  "type": "number",
+                  "minimum": 1,
+                  "default": 5
+                },
+                "comparisonOperator": {
+                  "type": "string",
+                  "enum": ["gt", "gte", "lt", "lte"],
+                  "default": "gt"
+                },
+                "treatMissingData": {
+                  "type": "string",
+                  "enum": ["breaching", "not-breaching", "ignore", "missing"],
+                  "default": "not-breaching"
+                },
+                "statistic": {
+                  "type": "string",
+                  "enum": ["Sum", "Average", "Minimum", "Maximum"],
+                  "default": "Sum"
+                },
+                "tags": {
+                  "type": "object",
+                  "additionalProperties": {
+                    "type": "string"
+                  },
+                  "default": {}
+                }
+              }
+            },
+            "allowedRequests": {
+              "type": "object",
+              "description": "Allowed requests alarm",
+              "additionalProperties": false,
+              "properties": {
+                "enabled": {
+                  "type": "boolean",
+                  "default": false
+                },
+                "threshold": {
+                  "type": "number",
+                  "minimum": 0
+                },
+                "evaluationPeriods": {
+                  "type": "number",
+                  "minimum": 1,
+                  "default": 2
+                },
+                "periodMinutes": {
+                  "type": "number",
+                  "minimum": 1,
+                  "default": 5
+                },
+                "comparisonOperator": {
+                  "type": "string",
+                  "enum": ["gt", "gte", "lt", "lte"],
+                  "default": "gt"
+                },
+                "treatMissingData": {
+                  "type": "string",
+                  "enum": ["breaching", "not-breaching", "ignore", "missing"],
+                  "default": "not-breaching"
+                },
+                "statistic": {
+                  "type": "string",
+                  "enum": ["Sum", "Average", "Minimum", "Maximum"],
+                  "default": "Sum"
+                },
+                "tags": {
+                  "type": "object",
+                  "additionalProperties": {
+                    "type": "string"
+                  },
+                  "default": {}
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "removalPolicy": {
+      "type": "string",
+      "description": "Removal policy",
+      "enum": ["retain", "destroy"],
+      "default": "destroy"
+    },
+    "tags": {
+      "type": "object",
+      "description": "Additional tags",
+      "additionalProperties": {
+        "type": "string"
+      }
+    }
+  }
+}
+

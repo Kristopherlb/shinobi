@@ -10,7 +10,7 @@ environments:
     defaults:
       instanceSize: small
       enableDebug: true
-    highRiskEnvironment: false
+      highRiskEnvironment: false
 components:
   - name: api
     type: lambda-api
@@ -35,6 +35,8 @@ components:
     config:
       instanceClass: db.t3.micro
       allocatedStorage: 20
+      instance:
+        publiclyAccessible: true
     binds:
       - to: api
         capability: db:postgres

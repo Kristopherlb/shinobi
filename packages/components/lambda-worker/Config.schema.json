@@ -1,0 +1,491 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "$id": "https://platform.shinobi.internal/schemas/lambda-worker/v1.0.0",
+  "title": "Lambda Worker Component Configuration",
+  "description": "Configuration schema for AWS Lambda worker function component",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["handler"],
+  "properties": {
+    "functionName": {
+      "type": "string",
+      "description": "Lambda function name (optional, will be auto-generated)"
+    },
+    "handler": {
+      "type": "string",
+      "description": "Function handler (e.g., index.handler)"
+    },
+    "runtime": {
+      "type": "string",
+      "description": "Lambda runtime",
+      "enum": ["nodejs18.x", "nodejs20.x", "python3.9", "python3.10", "python3.11"],
+      "default": "nodejs20.x"
+    },
+    "architecture": {
+      "type": "string",
+      "description": "Lambda architecture",
+      "enum": ["x86_64", "arm64"],
+      "default": "x86_64"
+    },
+    "memorySize": {
+      "type": "number",
+      "description": "Memory size in MB",
+      "minimum": 128,
+      "maximum": 10240,
+      "default": 256
+    },
+    "timeoutSeconds": {
+      "type": "number",
+      "description": "Timeout in seconds",
+      "minimum": 1,
+      "maximum": 900,
+      "default": 300
+    },
+    "description": {
+      "type": "string",
+      "description": "Function description"
+    },
+    "codePath": {
+      "type": "string",
+      "description": "Path to function code",
+      "default": "./src"
+    },
+    "environment": {
+      "type": "object",
+      "description": "Environment variables",
+      "additionalProperties": {
+        "type": "string"
+      },
+      "default": {}
+    },
+    "reservedConcurrency": {
+      "type": "number",
+      "description": "Reserved concurrency",
+      "minimum": 0,
+      "maximum": 1000
+    },
+    "deadLetterQueue": {
+      "type": "object",
+      "description": "Dead letter queue configuration",
+      "additionalProperties": false,
+      "properties": {
+        "enabled": {
+          "type": "boolean",
+          "description": "Enable dead letter queue",
+          "default": false
+        },
+        "queueArn": {
+          "type": "string",
+          "description": "SQS queue ARN for DLQ"
+        },
+        "maxReceiveCount": {
+          "type": "number",
+          "description": "Maximum receive count before sending to DLQ",
+          "minimum": 1,
+          "maximum": 1000,
+          "default": 3
+        }
+      }
+    },
+    "eventSources": {
+      "type": "array",
+      "description": "Event source configurations",
+      "items": {
+        "anyOf": [
+          {
+            "type": "object",
+            "additionalProperties": false,
+            "properties": {
+              "type": {
+                "const": "sqs"
+              },
+              "queueArn": {
+                "type": "string"
+              },
+              "batchSize": {
+                "type": "number",
+                "minimum": 1,
+                "maximum": 1000
+              },
+              "enabled": {
+                "type": "boolean",
+                "default": true
+              },
+              "maximumBatchingWindowSeconds": {
+                "type": "number",
+                "minimum": 0,
+                "maximum": 300
+              },
+              "scalingConfig": {
+                "type": "object",
+                "additionalProperties": false,
+                "properties": {
+                  "maximumConcurrency": {
+                    "type": "number",
+                    "minimum": 1,
+                    "maximum": 1000
+                  }
+                }
+              }
+            },
+            "required": ["type", "queueArn"]
+          },
+          {
+            "type": "object",
+            "additionalProperties": false,
+            "properties": {
+              "type": {
+                "const": "eventBridge"
+              },
+              "scheduleExpression": {
+                "type": "string"
+              },
+              "input": {
+                "type": "object",
+                "default": {}
+              },
+              "enabled": {
+                "type": "boolean",
+                "default": true
+              }
+            },
+            "required": ["type", "scheduleExpression"]
+          },
+          {
+            "type": "object",
+            "additionalProperties": false,
+            "properties": {
+              "type": {
+                "const": "eventBridgePattern"
+              },
+              "eventBusArn": {
+                "type": "string"
+              },
+              "pattern": {
+                "type": "object"
+              },
+              "input": {
+                "type": "object",
+                "default": {}
+              },
+              "enabled": {
+                "type": "boolean",
+                "default": true
+              }
+            },
+            "required": ["type", "pattern"]
+          }
+        ]
+      },
+      "default": []
+    },
+    "vpc": {
+      "type": "object",
+      "description": "VPC configuration",
+      "additionalProperties": false,
+      "properties": {
+        "enabled": {
+          "type": "boolean",
+          "description": "Enable VPC configuration"
+        },
+        "vpcId": {
+          "type": "string",
+          "description": "VPC ID"
+        },
+        "subnetIds": {
+          "type": "array",
+          "description": "Subnet IDs",
+          "items": {
+            "type": "string"
+          },
+          "default": []
+        },
+        "securityGroupIds": {
+          "type": "array",
+          "description": "Security group IDs",
+          "items": {
+            "type": "string"
+          },
+          "default": []
+        }
+      },
+      "default": {
+        "enabled": false,
+        "subnetIds": [],
+        "securityGroupIds": []
+      }
+    },
+    "kmsKeyArn": {
+      "type": "string",
+      "description": "KMS key ARN for encryption"
+    },
+    "logging": {
+      "type": "object",
+      "description": "Logging configuration",
+      "additionalProperties": false,
+      "properties": {
+        "logRetentionDays": {
+          "type": "number",
+          "description": "CloudWatch log retention in days",
+          "minimum": 1,
+          "default": 30
+        },
+        "logFormat": {
+          "type": "string",
+          "description": "Log format",
+          "enum": ["TEXT", "JSON"],
+          "default": "JSON"
+        },
+        "systemLogLevel": {
+          "type": "string",
+          "description": "System log level",
+          "enum": ["INFO", "WARN", "ERROR"],
+          "default": "INFO"
+        },
+        "applicationLogLevel": {
+          "type": "string",
+          "description": "Application log level",
+          "enum": ["DEBUG", "INFO", "WARN", "ERROR"],
+          "default": "INFO"
+        }
+      }
+    },
+    "tracing": {
+      "type": "object",
+      "description": "X-Ray tracing configuration",
+      "additionalProperties": false,
+      "properties": {
+        "mode": {
+          "type": "string",
+          "description": "Tracing mode",
+          "enum": ["Active", "PassThrough"],
+          "default": "PassThrough"
+        }
+      },
+      "default": {
+        "mode": "PassThrough"
+      }
+    },
+    "observability": {
+      "type": "object",
+      "description": "OpenTelemetry observability configuration",
+      "additionalProperties": false,
+      "properties": {
+        "otelEnabled": {
+          "type": "boolean",
+          "description": "Enable OpenTelemetry",
+          "default": false
+        },
+        "otelLayerArn": {
+          "type": "string",
+          "description": "OpenTelemetry Lambda layer ARN"
+        },
+        "otelResourceAttributes": {
+          "type": "object",
+          "description": "OpenTelemetry resource attributes",
+          "additionalProperties": {
+            "type": "string"
+          },
+          "default": {}
+        }
+      },
+      "default": {
+        "otelEnabled": false,
+        "otelResourceAttributes": {}
+      }
+    },
+    "securityTools": {
+      "type": "object",
+      "description": "Security tools configuration",
+      "additionalProperties": false,
+      "properties": {
+        "falco": {
+          "type": "boolean",
+          "description": "Enable Falco runtime security",
+          "default": false
+        }
+      },
+      "default": {
+        "falco": false
+      }
+    },
+    "monitoring": {
+      "type": "object",
+      "description": "Monitoring and alarms configuration",
+      "additionalProperties": false,
+      "properties": {
+        "enabled": {
+          "type": "boolean",
+          "description": "Enable monitoring",
+          "default": false
+        },
+        "alarms": {
+          "type": "object",
+          "description": "CloudWatch alarms",
+          "additionalProperties": false,
+          "properties": {
+            "errors": {
+              "type": "object",
+              "description": "Error alarm configuration",
+              "additionalProperties": false,
+              "properties": {
+                "enabled": {
+                  "type": "boolean",
+                  "default": false
+                },
+                "threshold": {
+                  "type": "number"
+                },
+                "evaluationPeriods": {
+                  "type": "number",
+                  "minimum": 1,
+                  "default": 1
+                },
+                "periodMinutes": {
+                  "type": "number",
+                  "minimum": 1,
+                  "default": 5
+                },
+                "comparisonOperator": {
+                  "type": "string",
+                  "enum": ["gt", "gte", "lt", "lte"],
+                  "default": "gt"
+                },
+                "treatMissingData": {
+                  "type": "string",
+                  "enum": ["breaching", "not-breaching", "ignore", "missing"],
+                  "default": "not-breaching"
+                },
+                "statistic": {
+                  "type": "string",
+                  "default": "Sum"
+                },
+                "tags": {
+                  "type": "object",
+                  "additionalProperties": {
+                    "type": "string"
+                  },
+                  "default": {}
+                }
+              }
+            },
+            "throttles": {
+              "type": "object",
+              "description": "Throttle alarm configuration",
+              "additionalProperties": false,
+              "properties": {
+                "enabled": {
+                  "type": "boolean",
+                  "default": false
+                },
+                "threshold": {
+                  "type": "number"
+                },
+                "evaluationPeriods": {
+                  "type": "number",
+                  "minimum": 1,
+                  "default": 1
+                },
+                "periodMinutes": {
+                  "type": "number",
+                  "minimum": 1,
+                  "default": 5
+                },
+                "comparisonOperator": {
+                  "type": "string",
+                  "enum": ["gt", "gte", "lt", "lte"],
+                  "default": "gt"
+                },
+                "treatMissingData": {
+                  "type": "string",
+                  "enum": ["breaching", "not-breaching", "ignore", "missing"],
+                  "default": "not-breaching"
+                },
+                "statistic": {
+                  "type": "string",
+                  "default": "Sum"
+                },
+                "tags": {
+                  "type": "object",
+                  "additionalProperties": {
+                    "type": "string"
+                  },
+                  "default": {}
+                }
+              }
+            },
+            "duration": {
+              "type": "object",
+              "description": "Duration alarm configuration",
+              "additionalProperties": false,
+              "properties": {
+                "enabled": {
+                  "type": "boolean",
+                  "default": false
+                },
+                "threshold": {
+                  "type": "number"
+                },
+                "evaluationPeriods": {
+                  "type": "number",
+                  "minimum": 1,
+                  "default": 1
+                },
+                "periodMinutes": {
+                  "type": "number",
+                  "minimum": 1,
+                  "default": 5
+                },
+                "comparisonOperator": {
+                  "type": "string",
+                  "enum": ["gt", "gte", "lt", "lte"],
+                  "default": "gt"
+                },
+                "treatMissingData": {
+                  "type": "string",
+                  "enum": ["breaching", "not-breaching", "ignore", "missing"],
+                  "default": "not-breaching"
+                },
+                "statistic": {
+                  "type": "string",
+                  "default": "Average"
+                },
+                "tags": {
+                  "type": "object",
+                  "additionalProperties": {
+                    "type": "string"
+                  },
+                  "default": {}
+                }
+              }
+            }
+          }
+        }
+      },
+      "default": {
+        "enabled": false,
+        "alarms": {}
+      }
+    },
+    "hardeningProfile": {
+      "type": "string",
+      "description": "Security hardening profile",
+      "default": "baseline"
+    },
+    "removalPolicy": {
+      "type": "string",
+      "description": "Removal policy",
+      "enum": ["retain", "destroy"],
+      "default": "retain"
+    },
+    "tags": {
+      "type": "object",
+      "description": "Additional tags",
+      "additionalProperties": {
+        "type": "string"
+      },
+      "default": {}
+    }
+  }
+}
+
