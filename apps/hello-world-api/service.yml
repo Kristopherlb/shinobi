@@ -5,6 +5,12 @@ environment: dev
 region: us-west-2
 accountId: "911871352725"
 
+environments:
+  dev:
+    defaults:
+      instanceSize: small
+      enableDebug: true
+    highRiskEnvironment: false
 components:
   - name: api
     type: lambda-api

@@ -344,7 +344,7 @@ export class LambdaApiComponent extends BaseComponent {
 
     if (logConfig.enabled) {
       this.accessLogGroup = new logs.LogGroup(this, 'ApiAccessLogs', {
-        logGroupName: logConfig.logGroupName,
+        ...(logConfig.logGroupName && { logGroupName: logConfig.logGroupName }),
         retention: this.mapLogRetentionDays(logConfig.retentionDays),
         removalPolicy: this.config!.removalPolicy === 'destroy'
           ? cdk.RemovalPolicy.DESTROY
