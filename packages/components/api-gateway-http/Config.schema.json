@@ -883,6 +883,11 @@
         "integrationType",
         "target"
       ]
+    },
+    "highRiskEnvironment": {
+      "type": "boolean",
+      "description": "High-risk environment flag (set via platform config or service.yml). When true, applies enhanced security defaults aligned with FedRAMP requirements.",
+      "default": false
     }
   }
 }
