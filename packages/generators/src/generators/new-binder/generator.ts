@@ -78,7 +78,7 @@ export default async function newBinderGenerator(
   // Convert kebab-case/hyphenated to PascalCase (e.g., "backup-vault" -> "BackupVault")
   const capabilityNamePascal = capabilityName
     .split('-')
-    .map(part => part.charAt(0).toUpperCase() + part.slice(1).toLowerCase())
+    .map((part: string) => part.charAt(0).toUpperCase() + part.slice(1).toLowerCase())
     .join('');
   
   const bindMethodName = `bindTo${capabilityNamePascal}`;
