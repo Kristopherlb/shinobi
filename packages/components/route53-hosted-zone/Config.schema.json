@@ -1,0 +1,93 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "$id": "https://platform.shinobi.internal/schemas/route53-hosted-zone/v1.0.0",
+  "title": "Route53 Hosted Zone Component Configuration",
+  "description": "Configuration schema for AWS Route53 Hosted Zone component",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["zoneName"],
+  "definitions": {
+    "vpcAssociation": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["vpcId"],
+      "properties": {
+        "vpcId": { "type": "string" },
+        "region": { "type": "string" }
+      }
+    },
+    "alarmConfig": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "enabled": { "type": "boolean", "default": false },
+        "threshold": { "type": "number" },
+        "evaluationPeriods": { "type": "number", "minimum": 1, "default": 1 },
+        "periodMinutes": { "type": "number", "minimum": 1, "default": 5 },
+        "comparisonOperator": { "type": "string", "enum": ["gt", "gte", "lt", "lte"], "default": "gt" },
+        "treatMissingData": { "type": "string", "enum": ["breaching", "not-breaching", "ignore", "missing"], "default": "not-breaching" },
+        "statistic": { "type": "string", "default": "Sum" },
+        "tags": { "type": "object", "additionalProperties": { "type": "string" }, "default": {} }
+      }
+    }
+  },
+  "properties": {
+    "zoneName": { "type": "string" },
+    "comment": { "type": "string" },
+    "zoneType": { "type": "string", "enum": ["public", "private"], "default": "public" },
+    "vpcAssociations": {
+      "type": "array",
+      "items": { "$ref": "#/definitions/vpcAssociation" },
+      "default": []
+    },
+    "queryLogging": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "enabled": { "type": "boolean", "default": false },
+        "logGroupArn": { "type": "string" },
+        "logGroupName": { "type": "string" },
+        "retentionDays": { "type": "number", "minimum": 1, "default": 90 },
+        "removalPolicy": { "type": "string", "enum": ["retain", "destroy"], "default": "destroy" }
+      },
+      "default": {
+        "enabled": false,
+        "retentionDays": 90,
+        "removalPolicy": "destroy"
+      }
+    },
+    "dnssec": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "enabled": { "type": "boolean", "default": false }
+      },
+      "default": {
+        "enabled": false
+      }
+    },
+    "monitoring": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "enabled": { "type": "boolean", "default": false },
+        "alarms": {
+          "type": "object",
+          "additionalProperties": false,
+          "properties": {
+            "queryVolume": { "$ref": "#/definitions/alarmConfig" },
+            "healthCheckFailures": { "$ref": "#/definitions/alarmConfig" }
+          }
+        }
+      },
+      "default": {
+        "enabled": false,
+        "alarms": {}
+      }
+    },
+    "hardeningProfile": { "type": "string" },
+    "removalPolicy": { "type": "string", "enum": ["retain", "destroy"], "default": "retain" },
+    "tags": { "type": "object", "additionalProperties": { "type": "string" }, "default": {} }
+  }
+}
+
