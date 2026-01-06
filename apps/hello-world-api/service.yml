@@ -40,6 +40,11 @@ components:
       networking:
         vpcId: "vpc-0a27a068d4ca0b8f3"
         vpcCidrBlock: "172.31.0.0/16"
+        subnetIds:
+          - "subnet-03303aa6034ef2871"  # us-west-2a
+          - "subnet-0e6ebe2f4f161a068"  # us-west-2b
+          - "subnet-0f4d6794f1ab1967d"  # us-west-2c
+          - "subnet-0149bc8df6817cfad"  # us-west-2d
         availabilityZones:
           - "us-west-2a"
           - "us-west-2b"

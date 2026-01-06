@@ -221,7 +221,7 @@ export class LambdaApiComponent extends BaseComponent {
 
     const props: lambda.FunctionProps = {
       functionName: this.config!.functionName,
-      description: this.config!.description,
+      ...(this.config!.description && { description: this.config!.description }),
       handler: this.config!.handler,
       runtime,
       architecture,
@@ -229,7 +229,7 @@ export class LambdaApiComponent extends BaseComponent {
       timeout: cdk.Duration.seconds(this.config!.timeoutSeconds),
       code,
       environment: env,
-      reservedConcurrentExecutions: this.config!.reservedConcurrency,
+      ...(this.config!.reservedConcurrency && { reservedConcurrentExecutions: this.config!.reservedConcurrency }),
       tracing: this.config!.tracing.mode === 'Active' ? lambda.Tracing.ACTIVE : lambda.Tracing.PASS_THROUGH,
       ephemeralStorageSize: cdk.Size.mebibytes(this.config!.ephemeralStorageMb),
       logGroup: this.functionLogGroup,
