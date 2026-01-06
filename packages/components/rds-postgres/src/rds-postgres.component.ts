@@ -354,6 +354,27 @@ export class RdsPostgresComponent extends BaseComponent {
       ? this.kmsKey
       : undefined;
 
+    // Determine subnet selection based on VPC and publiclyAccessible setting
+    const publiclyAccessible = instanceConfig.publiclyAccessible ?? false;
+    let vpcSubnets: ec2.SubnetSelection | undefined;
+    
+    // If publicly accessible, use public subnets
+    if (publiclyAccessible) {
+      vpcSubnets = { subnetType: ec2.SubnetType.PUBLIC };
+    } else {
+      // Try to use private subnets, but fall back to public if none exist
+      // Check if private subnets exist by attempting to select them
+      const privateSubnets = this.vpc.selectSubnets({ subnetType: ec2.SubnetType.PRIVATE_WITH_EGRESS });
+      if (privateSubnets.subnets.length > 0) {
+        // Private subnets exist, use them
+        vpcSubnets = { subnetType: ec2.SubnetType.PRIVATE_WITH_EGRESS };
+      } else {
+        // No private subnets available, use public subnets as fallback
+        // This handles the case where the default VPC only has public subnets
+        vpcSubnets = { subnetType: ec2.SubnetType.PUBLIC };
+      }
+    }
+
     const props: rds.DatabaseInstanceProps = {
       engine: rds.DatabaseInstanceEngine.postgres({
         version: this.resolveEngineVersion()
@@ -361,6 +382,7 @@ export class RdsPostgresComponent extends BaseComponent {
       instanceType: new ec2.InstanceType(instanceConfig.instanceType ?? 't3.micro'),
       credentials: rds.Credentials.fromSecret(this.secret!),
       vpc: this.vpc,
+      vpcSubnets,
       securityGroups: [this.securityGroup!],
       databaseName: this.config!.dbName,
       allocatedStorage: instanceConfig.allocatedStorage ?? 20,

@@ -1,0 +1,238 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "$id": "https://platform.shinobi.internal/schemas/vpc/v1.0.0",
+  "title": "VPC Component Configuration",
+  "description": "Configuration schema for AWS VPC component with subnets, NAT gateways, and VPC endpoints",
+  "type": "object",
+  "additionalProperties": false,
+  "properties": {
+    "cidr": {
+      "type": "string",
+      "description": "CIDR block for the VPC",
+      "pattern": "^(?:[0-9]{1,3}\\.){3}[0-9]{1,3}/[0-9]{1,2}$",
+      "default": "10.0.0.0/16"
+    },
+    "maxAzs": {
+      "type": "number",
+      "description": "Maximum number of availability zones",
+      "minimum": 1,
+      "maximum": 6,
+      "default": 2
+    },
+    "natGateways": {
+      "type": "number",
+      "description": "Number of NAT gateways",
+      "minimum": 0,
+      "maximum": 6,
+      "default": 1
+    },
+    "flowLogs": {
+      "type": "object",
+      "description": "VPC Flow Logs configuration",
+      "additionalProperties": false,
+      "properties": {
+        "enabled": {
+          "type": "boolean",
+          "description": "Enable VPC Flow Logs",
+          "default": true
+        },
+        "retentionInDays": {
+          "type": "number",
+          "description": "CloudWatch log retention in days",
+          "enum": [1, 3, 5, 7, 14, 30, 60, 90, 120, 150, 180, 365, 400, 545, 731, 1827, 2555, 3653],
+          "default": 365
+        },
+        "removalPolicy": {
+          "type": "string",
+          "description": "Removal policy for flow logs",
+          "enum": ["retain", "destroy"],
+          "default": "retain"
+        }
+      }
+    },
+    "subnets": {
+      "type": "object",
+      "description": "Subnet configuration",
+      "additionalProperties": false,
+      "properties": {
+        "public": {
+          "type": "object",
+          "description": "Public subnet configuration",
+          "additionalProperties": false,
+          "properties": {
+            "cidrMask": {
+              "type": "number",
+              "description": "CIDR mask for public subnets",
+              "minimum": 16,
+              "maximum": 28
+            },
+            "name": {
+              "type": "string",
+              "description": "Subnet name prefix"
+            }
+          }
+        },
+        "private": {
+          "type": "object",
+          "description": "Private subnet configuration",
+          "additionalProperties": false,
+          "properties": {
+            "cidrMask": {
+              "type": "number",
+              "description": "CIDR mask for private subnets",
+              "minimum": 16,
+              "maximum": 28
+            },
+            "name": {
+              "type": "string",
+              "description": "Subnet name prefix"
+            }
+          }
+        },
+        "database": {
+          "type": "object",
+          "description": "Database subnet configuration",
+          "additionalProperties": false,
+          "properties": {
+            "cidrMask": {
+              "type": "number",
+              "description": "CIDR mask for database subnets",
+              "minimum": 16,
+              "maximum": 28
+            },
+            "name": {
+              "type": "string",
+              "description": "Subnet name prefix"
+            }
+          }
+        }
+      }
+    },
+    "vpcEndpoints": {
+      "type": "object",
+      "description": "VPC endpoint configuration",
+      "additionalProperties": false,
+      "properties": {
+        "s3": {
+          "type": "boolean",
+          "description": "Enable S3 VPC endpoint",
+          "default": false
+        },
+        "dynamodb": {
+          "type": "boolean",
+          "description": "Enable DynamoDB VPC endpoint",
+          "default": false
+        },
+        "secretsManager": {
+          "type": "boolean",
+          "description": "Enable Secrets Manager VPC endpoint",
+          "default": false
+        },
+        "kms": {
+          "type": "boolean",
+          "description": "Enable KMS VPC endpoint",
+          "default": false
+        },
+        "lambda": {
+          "type": "boolean",
+          "description": "Enable Lambda VPC endpoint",
+          "default": false
+        }
+      }
+    },
+    "dns": {
+      "type": "object",
+      "description": "DNS configuration",
+      "additionalProperties": false,
+      "properties": {
+        "enableDnsHostnames": {
+          "type": "boolean",
+          "description": "Enable DNS hostnames",
+          "default": true
+        },
+        "enableDnsSupport": {
+          "type": "boolean",
+          "description": "Enable DNS support",
+          "default": true
+        }
+      }
+    },
+    "monitoring": {
+      "type": "object",
+      "description": "Monitoring configuration",
+      "additionalProperties": false,
+      "properties": {
+        "enabled": {
+          "type": "boolean",
+          "description": "Enable monitoring",
+          "default": true
+        },
+        "detailedMetrics": {
+          "type": "boolean",
+          "description": "Enable detailed CloudWatch metrics",
+          "default": false
+        },
+        "alarms": {
+          "type": "object",
+          "description": "CloudWatch alarms",
+          "additionalProperties": false,
+          "properties": {
+            "natGatewayPacketDropThreshold": {
+              "type": "number",
+              "description": "NAT Gateway packet drop alarm threshold",
+              "default": 1000
+            },
+            "vpcFlowLogDeliveryFailures": {
+              "type": "number",
+              "description": "VPC Flow Log delivery failure alarm threshold",
+              "default": 10
+            }
+          }
+        }
+      }
+    },
+    "security": {
+      "type": "object",
+      "description": "Security configuration",
+      "additionalProperties": false,
+      "properties": {
+        "createDefaultSecurityGroups": {
+          "type": "boolean",
+          "description": "Create default security groups",
+          "default": true
+        },
+        "complianceNacls": {
+          "type": "object",
+          "description": "Network ACL compliance configuration",
+          "additionalProperties": false,
+          "properties": {
+            "enabled": {
+              "type": "boolean",
+              "description": "Enable compliance NACLs",
+              "default": false
+            },
+            "mode": {
+              "type": "string",
+              "description": "Compliance mode",
+              "enum": ["standard", "high"],
+              "default": "standard"
+            }
+          }
+        },
+        "restrictDefaultSecurityGroup": {
+          "type": "boolean",
+          "description": "Restrict default security group",
+          "default": false
+        }
+      }
+    },
+    "tags": {
+      "type": "object",
+      "description": "Additional tags",
+      "additionalProperties": {
+        "type": "string"
+      }
+    }
+  }
+}
+
