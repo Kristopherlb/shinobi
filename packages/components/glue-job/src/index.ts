@@ -7,8 +7,8 @@
 export { GlueJobComponent } from './glue-job.component.js';
 
 // Configuration exports
+export type { GlueJobConfig } from './glue-job.builder.js';
 export { 
-  GlueJobConfig,
   GlueJobComponentConfigBuilder,
   GLUE_JOB_CONFIG_SCHEMA
 } from './glue-job.builder.js';

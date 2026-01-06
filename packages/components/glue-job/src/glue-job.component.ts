@@ -229,13 +229,19 @@ export class GlueJobComponent extends BaseComponent {
       connections: this.config!.connections.length
         ? { connections: this.config!.connections }
         : undefined,
-      maxConcurrentRuns: this.config!.maxConcurrentRuns,
       maxRetries: this.config!.maxRetries,
       timeout: this.config!.timeout,
       notificationProperty: this.config!.notificationProperty?.notifyDelayAfter
         ? { notifyDelayAfter: this.config!.notificationProperty.notifyDelayAfter }
         : undefined,
-      executionProperty: this.config!.executionProperty,
+      executionProperty: this.config!.executionProperty
+        ? {
+            ...this.config!.executionProperty,
+            maxConcurrentRuns: this.config!.executionProperty.maxConcurrentRuns ?? this.config!.maxConcurrentRuns
+          }
+        : (this.config!.maxConcurrentRuns
+          ? { maxConcurrentRuns: this.config!.maxConcurrentRuns }
+          : undefined),
       workerType: this.config!.workerConfiguration.workerType,
       numberOfWorkers: this.config!.workerConfiguration.numberOfWorkers,
       securityConfiguration: this.securityConfigurationName,
