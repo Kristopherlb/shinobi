@@ -5,12 +5,12 @@ import {
   IComponentCreator,
   IComponent
 } from '@shinobi/core';
-import schemaJson from '../Config.schema.json' assert { type: 'json' };
-import { EventBridgeRulePatternComponent } from './eventbridge-rule-pattern.component';
+import schemaJson from '../Config.schema.json' with { type: 'json' };
+import { EventBridgeRulePatternComponent } from './eventbridge-rule-pattern.component.js';
 import {
   EVENTBRIDGE_RULE_PATTERN_CONFIG_SCHEMA,
   EventBridgeRulePatternConfig
-} from './eventbridge-rule-pattern.builder';
+} from './eventbridge-rule-pattern.builder.js';
 
 export class EventBridgeRulePatternComponentCreator implements IComponentCreator {
   public readonly componentType = 'eventbridge-rule-pattern';
@@ -23,8 +23,16 @@ export class EventBridgeRulePatternComponentCreator implements IComponentCreator
   public readonly configSchema = schemaJson;
   public readonly configSchemaInternal = EVENTBRIDGE_RULE_PATTERN_CONFIG_SCHEMA;
 
-  public createComponent(scope: Construct, spec: ComponentSpec, context: ComponentContext): IComponent {
+  public createComponent(spec: ComponentSpec, context: ComponentContext): IComponent {
+    const scope = context.scope as Construct | undefined;
+    if (!scope) {
+      throw new Error('ComponentContext.scope is required to create eventbridge-rule-pattern components');
+    }
     return new EventBridgeRulePatternComponent(scope, spec.name, context, spec);
+  }
+
+  public processComponent(spec: ComponentSpec, context: ComponentContext): IComponent {
+    return this.createComponent(spec, context);
   }
 
   public validateSpec(spec: ComponentSpec): { valid: boolean; errors: string[] } {

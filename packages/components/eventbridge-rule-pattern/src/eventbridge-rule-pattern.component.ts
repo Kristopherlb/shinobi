@@ -26,7 +26,7 @@ import {
   AlarmTreatMissingData,
   EventBridgeRulePatternComponentConfigBuilder,
   EventBridgeRulePatternConfig
-} from './eventbridge-rule-pattern.builder';
+} from './eventbridge-rule-pattern.builder.js';
 
 interface CreatedAlarm {
   id: string;
@@ -283,7 +283,7 @@ export class EventBridgeRulePatternComponent extends BaseComponent {
     this.logComponentEvent('observability_configured', 'Monitoring configured for EventBridge rule', {
       ruleName,
       alarmsCreated: this.createdAlarms.length,
-      logGroupEncrypted: !!this.kmsKey
+      logGroupEncrypted: !!this.logEncryptionKey
     });
   }
 
