@@ -174,7 +174,7 @@ export class SsmParameterComponentConfigBuilder extends ConfigBuilder<SsmParamet
     kind: SsmParameterKind
   ): SsmParameterEncryptionConfig {
     const defaults = DEFAULT_CONFIG.encryption.customerManagedKey;
-    const customerManaged = encryption?.customerManagedKey ?? {};
+    const customerManaged: Partial<CustomerManagedKeyConfig> = encryption?.customerManagedKey ?? {};
 
     const enabled =
       customerManaged.enabled ??

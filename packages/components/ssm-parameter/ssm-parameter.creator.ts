@@ -21,8 +21,16 @@ export class SsmParameterComponentCreator implements IComponentCreator {
   public readonly tags = ['ssm', 'parameter-store', 'configuration'];
   public readonly configSchema = SSM_PARAMETER_CONFIG_SCHEMA;
 
-  public createComponent(scope: Construct, spec: ComponentSpec, context: ComponentContext): SsmParameterComponent {
+  public createComponent(spec: ComponentSpec, context: ComponentContext): SsmParameterComponent {
+    const scope = context.scope as Construct | undefined;
+    if (!scope) {
+      throw new Error('ComponentContext.scope is required to create ssm-parameter components');
+    }
     return new SsmParameterComponent(scope, spec.name, context, spec);
+  }
+
+  public processComponent(spec: ComponentSpec, context: ComponentContext): SsmParameterComponent {
+    return this.createComponent(spec, context);
   }
 
   public validateSpec(spec: ComponentSpec): { valid: boolean; errors: string[] } {

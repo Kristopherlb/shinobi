@@ -1122,6 +1122,18 @@ importers:
         specifier: workspace:*
         version: link:../../core
 
+  packages/components/ssm-parameter:
+    dependencies:
+      '@shinobi/core':
+        specifier: workspace:*
+        version: link:../../core
+      aws-cdk-lib:
+        specifier: ^2.214.0
+        version: 2.233.0(constructs@10.4.4)
+      constructs:
+        specifier: ^10.4.2
+        version: 10.4.4
+
   packages/components/vpc:
     dependencies:
       aws-cdk-lib:

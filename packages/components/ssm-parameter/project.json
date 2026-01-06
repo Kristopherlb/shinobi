@@ -1,0 +1,40 @@
+{
+  "name": "@shinobi/components-ssm-parameter",
+  "sourceRoot": "packages/components/ssm-parameter",
+  "targets": {
+    "build": {
+      "executor": "nx:run-commands",
+      "options": {
+        "command": "pnpm exec tsc -b packages/components/ssm-parameter/tsconfig.build.json"
+      },
+      "outputs": [
+        "{workspaceRoot}/dist/packages/components/ssm-parameter"
+      ]
+    },
+    "test": {
+      "executor": "nx:run-commands",
+      "options": {
+        "command": "jest -c jest.preset.ts --roots=packages/components/ssm-parameter",
+        "cwd": "."
+      }
+    },
+    "clean": {
+      "executor": "nx:run-commands",
+      "options": {
+        "command": "rimraf dist/packages/components/ssm-parameter"
+      }
+    },
+    "typecheck": {
+      "executor": "nx:run-commands",
+      "options": {
+        "command": "tsc -p packages/components/ssm-parameter/tsconfig.json --noEmit"
+      }
+    }
+  },
+  "tags": [
+    "scope:shinobi",
+    "type:component",
+    "infra:aws"
+  ]
+}
+
