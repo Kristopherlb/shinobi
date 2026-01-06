@@ -6,8 +6,8 @@
 import './setup.js';
 import { Template, Match } from 'aws-cdk-lib/assertions';
 import { App, Stack } from 'aws-cdk-lib';
-import { SageMakerNotebookInstanceComponent } from '../sagemaker-notebook-instance.component.ts';
-import { SageMakerNotebookInstanceConfig } from '../sagemaker-notebook-instance.builder.ts';
+import { SageMakerNotebookInstanceComponent } from '../sagemaker-notebook-instance.component.js';
+import { SageMakerNotebookInstanceConfig } from '../sagemaker-notebook-instance.builder.js';
 import { ComponentContext, ComponentSpec } from '@platform/contracts';
 
 // Test metadata for Platform Testing Standard compliance

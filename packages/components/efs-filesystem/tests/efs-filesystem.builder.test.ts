@@ -1,7 +1,7 @@
 import {
   EfsFilesystemComponentConfigBuilder,
   EfsFilesystemConfig
-} from '../src/efs-filesystem.builder.ts';
+} from '../src/efs-filesystem.builder.js';
 import { ComponentContext, ComponentSpec } from '@shinobi/core';
 
 const createContext = (framework?: string): ComponentContext => {

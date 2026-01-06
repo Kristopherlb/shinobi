@@ -11,8 +11,8 @@ import {
   ComponentContext,
   IComponentCreator
 } from '@shinobi/core';
-import { EfsFilesystemComponent } from './efs-filesystem.component.ts';
-import { EfsFilesystemConfig, EFS_FILESYSTEM_CONFIG_SCHEMA } from './efs-filesystem.builder.ts';
+import { EfsFilesystemComponent } from './efs-filesystem.component.js';
+import { EfsFilesystemConfig, EFS_FILESYSTEM_CONFIG_SCHEMA } from './efs-filesystem.builder.js';
 
 /**
  * Creator class for EfsFilesystemComponent component

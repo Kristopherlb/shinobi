@@ -21,7 +21,7 @@ import {
   ComponentCapabilities,
   applySecurityGroupTags
 } from '@shinobi/core';
-import { Ec2InstanceComponentConfigBuilder, Ec2InstanceConfig } from './ec2-instance.builder.ts';
+import { Ec2InstanceComponentConfigBuilder, Ec2InstanceConfig } from './ec2-instance.builder.js';
 
 
 

@@ -18,7 +18,7 @@ import {
   ComponentContext,
   ComponentCapabilities
 } from '@shinobi/core';
-import { EcrRepositoryConfig, EcrRepositoryComponentConfigBuilder, ECR_REPOSITORY_CONFIG_SCHEMA } from './ecr-repository.builder.ts';
+import { EcrRepositoryConfig, EcrRepositoryComponentConfigBuilder, ECR_REPOSITORY_CONFIG_SCHEMA } from './ecr-repository.builder.js';
 
 
 /**

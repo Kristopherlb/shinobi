@@ -1,7 +1,7 @@
 import { App, Stack, Aspects } from 'aws-cdk-lib';
 import { Match, Annotations } from 'aws-cdk-lib/assertions';
 import { AwsSolutionsChecks } from 'cdk-nag';
-import { ApiGatewayRestComponent } from '../../src/api-gateway-rest.component.ts';
+import { ApiGatewayRestComponent } from '../../src/api-gateway-rest.component.js';
 import { ComponentContext, ComponentSpec } from '@shinobi/core';
 
 describe('AwsSolutionsChecks', () => {

@@ -16,9 +16,9 @@ jest.mock(
 
 import { App, Stack } from 'aws-cdk-lib';
 import { Match, Template } from 'aws-cdk-lib/assertions';
-import { CloudFrontDistributionComponent } from '../src/cloudfront-distribution.component.ts';
-import { CloudFrontDistributionConfig } from '../src/cloudfront-distribution.builder.ts';
-import { ComponentContext, ComponentSpec } from '../../../core/src/platform/contracts/component-interfaces.ts';
+import { CloudFrontDistributionComponent } from '../src/cloudfront-distribution.component.js';
+import { CloudFrontDistributionConfig } from '../src/cloudfront-distribution.builder.js';
+import { ComponentContext, ComponentSpec } from '../../../core/src/platform/contracts/component-interfaces.js';
 
 // Deterministic test fixtures
 const DETERMINISTIC_TIMESTAMP = new Date('2025-01-08T12:00:00.000Z');

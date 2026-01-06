@@ -1,5 +1,5 @@
 import { jest } from '@jest/globals';
-import { ApiGatewayRestConfigBuilder } from '../src/api-gateway-rest.builder.ts';
+import { ApiGatewayRestConfigBuilder } from '../src/api-gateway-rest.builder.js';
 
 const createContext = (framework = 'commercial') => ({
   serviceName: 'test-service',

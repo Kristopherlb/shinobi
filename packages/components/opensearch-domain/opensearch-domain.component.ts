@@ -18,7 +18,7 @@ import {
   OpenSearchDomainConfig,
   OpenSearchAlarmConfig,
   OpenSearchLogConfig
-} from './opensearch-domain.builder.ts';
+} from './opensearch-domain.builder.js';
 
 interface LoggingResources {
   slowSearch?: logs.ILogGroup;

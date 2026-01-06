@@ -3,8 +3,8 @@ import { Annotations, Match } from 'aws-cdk-lib/assertions';
 import { AwsSolutionsChecks } from 'cdk-nag';
 import * as ec2 from 'aws-cdk-lib/aws-ec2';
 import * as logs from 'aws-cdk-lib/aws-logs';
-import { EcsClusterComponent } from '../../src/ecs-cluster.component.ts';
-import { EcsClusterComponentConfigBuilder } from '../../src/ecs-cluster.builder.ts';
+import { EcsClusterComponent } from '../../src/ecs-cluster.component.js';
+import { EcsClusterComponentConfigBuilder } from '../../src/ecs-cluster.builder.js';
 import { ComponentContext, ComponentSpec } from '@shinobi/core/component-interfaces';
 
 const createContext = (stack: Stack, vpc: ec2.IVpc): ComponentContext => ({

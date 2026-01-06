@@ -1,4 +1,4 @@
-import { Ec2InstanceComponentConfigBuilder } from '../ec2-instance.builder.ts';
+import { Ec2InstanceComponentConfigBuilder } from '../ec2-instance.builder.js';
 
 const createContext = (framework = 'commercial') => ({
   serviceName: 'test-service',

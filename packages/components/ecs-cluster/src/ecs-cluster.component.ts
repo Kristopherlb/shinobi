@@ -25,7 +25,7 @@ import {
   ComponentCapabilities,
   applySecurityGroupTags
 } from '@shinobi/core';
-import { EcsClusterConfig, EcsClusterComponentConfigBuilder } from './ecs-cluster.builder.ts';
+import { EcsClusterConfig, EcsClusterComponentConfigBuilder } from './ecs-cluster.builder.js';
 import alarmsConfig from '../observability/alarms-config.json' with { type: 'json' };
 import dashboardTemplate from '../observability/otel-dashboard-template.json' with { type: 'json' };
 import packageJson from '../package.json' with { type: 'json' };

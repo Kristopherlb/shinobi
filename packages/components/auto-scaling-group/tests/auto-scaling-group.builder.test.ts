@@ -1,7 +1,7 @@
 import {
   AutoScalingGroupComponentConfigBuilder,
   AutoScalingGroupConfig
-} from '../src/auto-scaling-group.builder.ts';
+} from '../src/auto-scaling-group.builder.js';
 import { ComponentContext, ComponentSpec } from '@shinobi/core';
 
 const createContext = (

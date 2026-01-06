@@ -7,7 +7,7 @@ import {
 import {
   LambdaApiComponentConfigBuilder,
   LambdaApiConfig
-} from '../src/lambda-api.builder.ts';
+} from '../src/lambda-api.builder.js';
 
 const createContext = (
   framework: 'commercial' | 'fedramp-moderate' | 'fedramp-high' = 'commercial'

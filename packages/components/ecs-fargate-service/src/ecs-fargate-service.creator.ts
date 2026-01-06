@@ -7,8 +7,8 @@
 
 import { Construct } from 'constructs';
 import { ComponentSpec, ComponentContext, IComponentCreator } from '@platform/contracts';
-import { EcsFargateServiceComponent } from './ecs-fargate-service.component.ts';
-import { EcsFargateServiceConfig, ECS_FARGATE_SERVICE_CONFIG_SCHEMA } from './ecs-fargate-service.builder.ts';
+import { EcsFargateServiceComponent } from './ecs-fargate-service.component.js';
+import { EcsFargateServiceConfig, ECS_FARGATE_SERVICE_CONFIG_SCHEMA } from './ecs-fargate-service.builder.js';
 
 /**
  * Creator class for EcsFargateServiceComponent component

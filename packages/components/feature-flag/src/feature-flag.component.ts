@@ -19,7 +19,7 @@ import {
   FeatureFlagConfigBuilder,
   FeatureFlagTargetingCondition,
   FeatureFlagTargetingRules
-} from './feature-flag.builder.ts';
+} from './feature-flag.builder.js';
 
 export class FeatureFlagComponent extends BaseComponent {
   private hostedConfigurationVersion?: appconfig.CfnHostedConfigurationVersion;

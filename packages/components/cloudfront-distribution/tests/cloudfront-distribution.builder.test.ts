@@ -6,8 +6,8 @@
 import {
   CloudFrontDistributionComponentConfigBuilder,
   CloudFrontDistributionConfig
-} from '../src/cloudfront-distribution.builder.ts';
-import { ComponentContext, ComponentSpec } from '../../../core/src/platform/contracts/component-interfaces.ts';
+} from '../src/cloudfront-distribution.builder.js';
+import { ComponentContext, ComponentSpec } from '../../../core/src/platform/contracts/component-interfaces.js';
 
 // Deterministic test fixtures
 const DETERMINISTIC_TIMESTAMP = new Date('2025-01-08T12:00:00.000Z');

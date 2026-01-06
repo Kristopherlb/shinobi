@@ -9,16 +9,16 @@
  */
 
 import { Construct, IConstruct } from 'constructs';
-import { BaseComponent } from '../../platform/contracts/component.ts';
+import { BaseComponent } from '../../platform/contracts/component.js';
 import {
   ComponentSpec,
   ComponentContext,
   ComponentCapabilities
-} from '../../platform/contracts/component-interfaces.ts';
+} from '../../platform/contracts/component-interfaces.js';
 import { 
   SqsQueueNewConfig, 
   SqsQueueNewConfigBuilder 
-} from './sqs-queue-new.builder.ts';
+} from './sqs-queue-new.builder.js';
 
 // TODO: Import AWS CDK constructs for SQS
 // Example:

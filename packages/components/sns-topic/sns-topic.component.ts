@@ -18,7 +18,7 @@ import {
   SnsTopicConfig,
   TopicPolicyPrincipalConfig,
   TopicPolicyStatementConfig
-} from './sns-topic.builder.ts';
+} from './sns-topic.builder.js';
 
 interface CreatedAlarm {
   id: string;

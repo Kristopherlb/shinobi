@@ -5,9 +5,9 @@ import * as s3 from 'aws-cdk-lib/aws-s3';
 import * as logs from 'aws-cdk-lib/aws-logs';
 import { AwsSolutionsChecks } from 'cdk-nag';
 import { NagSuppressionHelper } from 'cdk-nag/lib/utils/nag-suppression-helper.js';
-import { DaggerEnginePool } from '../../dagger-engine-pool.component.ts';
+import { DaggerEnginePool } from '../../dagger-engine-pool.component.js';
 import { ComponentContext, ComponentSpec } from '@platform/contracts';
-import { DaggerConfig } from '../../types.ts';
+import { DaggerConfig } from '../../types.js';
 
 describe('CDK Nag Security Tests', () => {
   let app: App;

@@ -11,8 +11,8 @@ import {
   IComponentCreator
 } from '@shinobi/core';
 import { Construct } from 'constructs';
-import { EcrRepositoryComponent } from './ecr-repository.component.ts';
-import { EcrRepositoryConfig } from './ecr-repository.builder.ts';
+import { EcrRepositoryComponent } from './ecr-repository.component.js';
+import { EcrRepositoryConfig } from './ecr-repository.builder.js';
 import { ECR_REPOSITORY_CONFIG_SCHEMA } from './Config.schema.json' with { type: 'json' };
 
 /**

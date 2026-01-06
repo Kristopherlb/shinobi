@@ -8,7 +8,7 @@ import { ComponentContext, ComponentSpec } from '@platform/contracts';
 import {
   FeatureFlagConfig,
   FeatureFlagConfigBuilder
-} from '../../src/feature-flag.builder.ts';
+} from '../../src/feature-flag.builder.js';
 
 const createScope = () => {
   const app = new App();

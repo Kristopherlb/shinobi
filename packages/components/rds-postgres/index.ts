@@ -4,14 +4,14 @@
  */
 
 // Component exports
-export { RdsPostgresComponentComponent } from './rds-postgres.component.ts';
+export { RdsPostgresComponentComponent } from './rds-postgres.component.js';
 
 // Configuration exports
 export { 
   RdsPostgresConfig,
   RdsPostgresComponentConfigBuilder,
   RDS_POSTGRES_CONFIG_SCHEMA
-} from './rds-postgres.builder.ts';
+} from './rds-postgres.builder.js';
 
 // Creator exports
-export { RdsPostgresComponentCreator } from './rds-postgres.creator.ts';
+export { RdsPostgresComponentCreator } from './rds-postgres.creator.js';

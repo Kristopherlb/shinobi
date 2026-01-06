@@ -4,14 +4,14 @@
  */
 
 // Component exports
-export { SsmParameterComponent } from './ssm-parameter.component.ts';
+export { SsmParameterComponent } from './ssm-parameter.component.js';
 
 // Configuration exports
 export {
   SsmParameterComponentConfig,
   SsmParameterComponentConfigBuilder,
   SSM_PARAMETER_CONFIG_SCHEMA
-} from './ssm-parameter.builder.ts';
+} from './ssm-parameter.builder.js';
 
 // Creator exports
-export { SsmParameterCreator } from './ssm-parameter.creator.ts';
+export { SsmParameterCreator } from './ssm-parameter.creator.js';

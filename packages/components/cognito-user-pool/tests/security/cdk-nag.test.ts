@@ -5,8 +5,8 @@
 
 import { App, Stack, Aspects } from 'aws-cdk-lib';
 import { AwsSolutionsChecks } from 'cdk-nag';
-import { CognitoUserPoolComponent } from '../../src/cognito-user-pool.component.ts';
-import { ComponentContext, ComponentSpec } from '../../../platform/contracts/component-interfaces.ts';
+import { CognitoUserPoolComponent } from '../../src/cognito-user-pool.component.js';
+import { ComponentContext, ComponentSpec } from '../../../platform/contracts/component-interfaces.js';
 import { Match, Annotations } from 'aws-cdk-lib/assertions';
 
 // Deterministic test fixtures

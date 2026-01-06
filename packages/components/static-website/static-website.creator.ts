@@ -10,9 +10,9 @@ import {
   ComponentSpec, 
   ComponentContext, 
   IComponentCreator 
-} from '../@shinobi/core/component-interfaces.ts';
-import { StaticWebsiteComponent } from './static-website.component.ts';
-import { StaticWebsiteConfig, STATIC_WEBSITE_CONFIG_SCHEMA } from './static-website.builder.ts';
+} from '../@shinobi/core/component-interfaces.js';
+import { StaticWebsiteComponent } from './static-website.component.js';
+import { StaticWebsiteConfig, STATIC_WEBSITE_CONFIG_SCHEMA } from './static-website.builder.js';
 
 /**
  * Creator class for Static Website component

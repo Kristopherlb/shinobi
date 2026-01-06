@@ -18,7 +18,7 @@ import {
   EfsFilesystemConfig,
   EfsAlarmConfig,
   EfsLogConfig
-} from './efs-filesystem.builder.ts';
+} from './efs-filesystem.builder.js';
 
 interface LoggingResources {
   access?: logs.ILogGroup;

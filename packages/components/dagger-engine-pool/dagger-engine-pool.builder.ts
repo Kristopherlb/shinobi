@@ -1,4 +1,4 @@
-import { DaggerConfig } from './types.ts';
+import { DaggerConfig } from './types.js';
 import { ConfigBuilder } from '@shinobi/core';
 
 /**

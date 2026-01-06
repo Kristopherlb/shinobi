@@ -3,8 +3,8 @@ import { Template, Match } from 'aws-cdk-lib/assertions';
 import * as ec2 from 'aws-cdk-lib/aws-ec2';
 import { Construct } from 'constructs';
 import { ComponentContext, ComponentSpec } from '@shinobi/core';
-import { ElastiCacheRedisComponent } from '../src/elasticache-redis.component.ts';
-import { ElastiCacheRedisConfig } from '../src/elasticache-redis.builder.ts';
+import { ElastiCacheRedisComponent } from '../src/elasticache-redis.component.js';
+import { ElastiCacheRedisConfig } from '../src/elasticache-redis.builder.js';
 
 type Framework = 'commercial' | 'fedramp-moderate' | 'fedramp-high';
 

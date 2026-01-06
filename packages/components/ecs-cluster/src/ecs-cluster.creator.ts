@@ -11,8 +11,8 @@ import {
   ComponentContext,
   IComponentCreator
 } from '@shinobi/core';
-import { EcsClusterComponent } from './ecs-cluster.component.ts';
-import { EcsClusterConfig, ECS_CLUSTER_CONFIG_SCHEMA } from './ecs-cluster.builder.ts';
+import { EcsClusterComponent } from './ecs-cluster.component.js';
+import { EcsClusterConfig, ECS_CLUSTER_CONFIG_SCHEMA } from './ecs-cluster.builder.js';
 
 /**
  * Creator class for EcsClusterComponent component

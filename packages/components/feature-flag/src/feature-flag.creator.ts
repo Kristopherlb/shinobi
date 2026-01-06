@@ -1,10 +1,10 @@
 import { Construct } from 'constructs';
 import { ComponentContext, ComponentSpec, IComponentCreator } from '@platform/contracts';
-import { FeatureFlagComponent } from './feature-flag.component.ts';
+import { FeatureFlagComponent } from './feature-flag.component.js';
 import {
   FeatureFlagConfig,
   FEATURE_FLAG_CONFIG_SCHEMA
-} from './feature-flag.builder.ts';
+} from './feature-flag.builder.js';
 
 export class FeatureFlagComponentCreator implements IComponentCreator {
   public readonly componentType = 'feature-flag';

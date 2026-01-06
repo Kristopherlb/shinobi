@@ -144,7 +144,7 @@ export class StandardArtifactWriter implements ArtifactWriter {
 
     // Write patches file
     if (artifact.artifacts.patchesFile) {
-      const patchesFile = path.join(outputDir, 'patches.ts');
+      const patchesFile = path.join(outputDir, 'patches.js');
       await fs.promises.copyFile(artifact.artifacts.patchesFile, patchesFile);
       writtenFiles.push(patchesFile);
     }

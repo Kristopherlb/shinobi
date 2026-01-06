@@ -1,4 +1,4 @@
-import { ContainerApplicationComponentConfigBuilder } from '../src/container-application.builder.ts';
+import { ContainerApplicationComponentConfigBuilder } from '../src/container-application.builder.js';
 import type { ComponentContext, ComponentSpec } from '@shinobi/core';
 
 describe('ContainerApplicationComponentConfigBuilder', () => {

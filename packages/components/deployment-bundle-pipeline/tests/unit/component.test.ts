@@ -4,8 +4,8 @@
 
 import { Stack } from 'aws-cdk-lib';
 import { Template } from 'aws-cdk-lib/assertions';
-import { DeploymentBundlePipelineComponent } from '../../src/deployment-bundle-pipeline.component.ts';
-import { DeploymentBundlePipelineBuilder } from '../../src/deployment-bundle-pipeline.builder.ts';
+import { DeploymentBundlePipelineComponent } from '../../src/deployment-bundle-pipeline.component.js';
+import { DeploymentBundlePipelineBuilder } from '../../src/deployment-bundle-pipeline.builder.js';
 
 describe('DeploymentBundlePipelineComponent', () => {
   let component: DeploymentBundlePipelineComponent;

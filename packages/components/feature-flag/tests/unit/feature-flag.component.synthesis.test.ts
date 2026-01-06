@@ -6,8 +6,8 @@
 import { App, Stack } from 'aws-cdk-lib';
 import { Match, Template } from 'aws-cdk-lib/assertions';
 import { ComponentCapabilities, ComponentContext, ComponentSpec } from '@platform/contracts';
-import { FeatureFlagComponent } from '../../src/feature-flag.component.ts';
-import { FeatureFlagConfig } from '../../src/feature-flag.builder.ts';
+import { FeatureFlagComponent } from '../../src/feature-flag.component.js';
+import { FeatureFlagConfig } from '../../src/feature-flag.builder.js';
 
 const createSpec = (config: Partial<FeatureFlagConfig> = {}): ComponentSpec => ({
   name: 'checkout-feature',

@@ -20,8 +20,8 @@ const testMetadata = {
   "human_reviewed_by": "platform-team"
 };
 
-import { DaggerConfigBuilder } from '../../src/dagger-engine-pool.builder.ts';
-import { DaggerConfig } from '../../src/types.ts';
+import { DaggerConfigBuilder } from '../../src/dagger-engine-pool.builder.js';
+import { DaggerConfig } from '../../src/types.js';
 
 describe('DaggerConfigBuilder', () => {
   let builder: DaggerConfigBuilder;
