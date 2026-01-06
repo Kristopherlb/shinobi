@@ -22,8 +22,8 @@ jest.mock(
 
 import { App, Stack } from 'aws-cdk-lib';
 import { Match, Template } from 'aws-cdk-lib/assertions';
-import { RdsPostgresComponent } from '../rds-postgres.component.js';
-import { RdsPostgresConfig } from '../rds-postgres.builder.js';
+import { RdsPostgresComponent } from '../src/rds-postgres.component.js';
+import { RdsPostgresConfig } from '../src/rds-postgres.builder.js';
 import { ComponentContext, ComponentSpec } from '../../../core/src/platform/contracts/component-interfaces.js';
 
 const createMockContext = (framework: 'commercial' | 'fedramp-moderate' | 'fedramp-high'): ComponentContext => ({

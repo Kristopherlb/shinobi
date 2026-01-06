@@ -18,12 +18,12 @@ import * as cloudwatch from 'aws-cdk-lib/aws-cloudwatch';
 import * as cdk from 'aws-cdk-lib';
 import { Construct } from 'constructs';
 import {
-  Component,
+  BaseComponent,
   ComponentSpec,
   ComponentContext,
   ComponentCapabilities,
   applySecurityGroupTags
-} from '@platform/contracts';
+} from '@shinobi/core';
 import {
   RdsPostgresComponentConfigBuilder,
   RdsPostgresConfig,
@@ -35,7 +35,7 @@ import {
 /**
  * RDS PostgreSQL Component implementing Component API Contract v1.0
  */
-export class RdsPostgresComponent extends Component {
+export class RdsPostgresComponent extends BaseComponent {
   private database?: rds.DatabaseInstance;
   private secret?: secretsmanager.Secret;
   private securityGroup?: ec2.SecurityGroup;
@@ -189,13 +189,13 @@ export class RdsPostgresComponent extends Component {
     const encryption = this.config?.encryption;
     if (!encryption?.enabled) {
       if (encryption?.kmsKeyArn) {
-        this.kmsKey = kms.Key.fromKeyArn(this, 'ImportedEncryptionKey', encryption.kmsKeyArn);
+        this.kmsKey = kms.Key.fromKeyArn(this, 'ImportedEncryptionKey', encryption.kmsKeyArn) as kms.Key;
       }
       return;
     }
 
     if (encryption?.kmsKeyArn) {
-      this.kmsKey = kms.Key.fromKeyArn(this, 'ImportedEncryptionKey', encryption.kmsKeyArn);
+      this.kmsKey = kms.Key.fromKeyArn(this, 'ImportedEncryptionKey', encryption.kmsKeyArn) as kms.Key;
       return;
     }
 
@@ -272,7 +272,7 @@ export class RdsPostgresComponent extends Component {
     });
 
     this.applyStandardTags(this.parameterGroup, {
-      'parameter-group': this.parameterGroup.parameterGroupName,
+      'parameter-group': this.parameterGroup.node.id,
       'database-engine': 'postgres'
     });
   }
@@ -318,7 +318,7 @@ export class RdsPostgresComponent extends Component {
         'Default PostgreSQL access from VPC'
       );
     } else {
-      ingressCidrs.forEach((cidr, index) => {
+      ingressCidrs.forEach((cidr: string, index: number) => {
         this.securityGroup!.addIngressRule(
           ec2.Peer.ipv4(cidr),
           ec2.Port.tcp(port),
@@ -576,7 +576,7 @@ export class RdsPostgresComponent extends Component {
     }
 
     if (monitoringConfig.enhancedMonitoring?.enabled ?? false) {
-      cfnInstance.monitoringInterval = monitoringConfig.enhancedMonitoring.intervalSeconds ?? 60;
+      cfnInstance.monitoringInterval = monitoringConfig.enhancedMonitoring?.intervalSeconds ?? 60;
     } else {
       cfnInstance.monitoringInterval = 0;
     }
@@ -598,7 +598,7 @@ export class RdsPostgresComponent extends Component {
       return undefined;
     }
 
-    const days = this.config.monitoring.performanceInsights.retentionDays ?? 7;
+    const days = this.config?.monitoring?.performanceInsights?.retentionDays ?? 7;
     return days >= 2555
       ? rds.PerformanceInsightRetention.LONG_TERM
       : rds.PerformanceInsightRetention.DEFAULT;

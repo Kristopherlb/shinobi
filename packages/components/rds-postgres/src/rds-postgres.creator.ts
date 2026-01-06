@@ -3,12 +3,13 @@
  * Implements Template Method pattern for enterprise governance
  */
 
+import { Construct } from 'constructs';
 import { 
   ComponentSpec, 
   ComponentContext, 
   IComponent, 
   IComponentCreator 
-} from '@platform/contracts';
+} from '@shinobi/core';
 import { RdsPostgresComponent } from './rds-postgres.component.js';
 
 /**
@@ -19,7 +20,11 @@ export class RdsPostgresCreator implements IComponentCreator {
    * Factory Method - creates the specific component
    */
   createComponent(spec: ComponentSpec, context: ComponentContext): IComponent {
-    return new RdsPostgresComponent(spec, context);
+    const scope = context.scope as Construct | undefined;
+    if (!scope) {
+      throw new Error('ComponentContext.scope is required to create rds-postgres components');
+    }
+    return new RdsPostgresComponent(scope, spec.name, context, spec);
   }
 
   /**

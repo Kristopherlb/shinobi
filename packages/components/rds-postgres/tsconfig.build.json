@@ -21,7 +21,6 @@
   "include": [
     "index.ts",
     "Config.schema.json",
-    "*.ts",
     "src/**/*",
     "!**/*.test.ts"
   ],
