@@ -16,7 +16,7 @@ node dist/apps/shinobi/main.js validate --file apps/hello-world-api/service.yml
 node dist/apps/shinobi/main.js plan --file apps/hello-world-api/service.yml --env dev
 
 # 4. Synthesize
-node dist/apps/shinobi/main.js synth --file apps/hello-world-api/service.yml --env dev --account YOUR_ACCOUNT_ID
+node dist/apps/shinobi/main.js synth --file apps/hello-world-api/service.yml --env dev --account 911871352725
 
 # 5. Deploy (optional)
 node dist/apps/shinobi/main.js up --file apps/hello-world-api/service.yml --env dev --yes
@@ -37,7 +37,7 @@ This is a minimal test service that includes:
 
 ### Prerequisites
 
-1. **AWS Account ID**: Update `accountId` in `service.yml` with your AWS account ID
+1. **AWS Account ID**: Already configured in `service.yml` (911871352725, us-west-2)
 2. **AWS Credentials**: Configure AWS CLI with `aws configure` or set environment variables
 3. **Shinobi CLI**: Run from the monorepo root using `pnpm shinobi` (not a global command)
 
@@ -110,7 +110,7 @@ This will:
 
 ```bash
 # From monorepo root
-node dist/apps/shinobi/main.js synth --file apps/hello-world-api/service.yml --env dev --account YOUR_ACCOUNT_ID
+node dist/apps/shinobi/main.js synth --file apps/hello-world-api/service.yml --env dev --account 911871352725
 ```
 
 This will:
@@ -140,6 +140,7 @@ This will:
 
 ### Step 5: Verify Deployment
 
+**Quick Verification:**
 ```bash
 chmod +x verify.sh
 ./verify.sh
@@ -158,6 +159,36 @@ This script checks:
 - RDS instance configuration
 - CloudWatch log groups
 
+**Comprehensive Stack Testing:**
+
+For thorough correctness testing of your deployed AWS stack:
+
+```bash
+./test-stack.sh
+```
+
+Or:
+
+```bash
+npm run test-stack
+# or
+npm run test:aws
+```
+
+This comprehensive test script validates:
+- ✅ Stack status and health
+- ✅ Lambda function configuration (runtime, memory, handler)
+- ✅ Lambda function direct invocation
+- ✅ IAM role configuration and permissions
+- ✅ API Gateway endpoint functionality
+- ✅ API response validation
+- ✅ CloudWatch Logs configuration and recent activity
+- ✅ RDS instance configuration (class, status, storage)
+- ✅ Resource tagging compliance
+- ✅ Component bindings (Lambda→IAM, Lambda→Logs, Lambda→RDS)
+
+The script provides color-coded output with pass/fail/warning indicators and a final summary report.
+
 ## Testing the API
 
 After deployment, get the API URL from stack outputs:
@@ -165,7 +196,7 @@ After deployment, get the API URL from stack outputs:
 ```bash
 API_URL=$(aws cloudformation describe-stacks \
   --stack-name hello-world-api-dev \
-  --region us-east-1 \
+  --region us-west-2 \
   --query 'Stacks[0].Outputs[?OutputKey==`ApiUrl`].OutputValue' \
   --output text)
 
@@ -247,8 +278,8 @@ apps/hello-world-api/
 - Or use `--file` flag: `pnpm shinobi plan --file apps/hello-world-api/service.yml`
 
 ### "Could not determine AWS account ID"
-- Set `accountId` in `service.yml`
-- Or use `--account` flag: `pnpm shinobi synth --account 123456789012`
+- Set `accountId` in `service.yml` (currently: 911871352725)
+- Or use `--account` flag: `pnpm shinobi synth --account 911871352725`
 - Or set `CDK_DEFAULT_ACCOUNT` environment variable
 
 ### "Component type not found"
@@ -280,6 +311,6 @@ pnpm shinobi destroy --env dev --yes
 Or manually:
 
 ```bash
-aws cloudformation delete-stack --stack-name hello-world-api-dev --region us-east-1
+aws cloudformation delete-stack --stack-name hello-world-api-dev --region us-west-2
 ```
 

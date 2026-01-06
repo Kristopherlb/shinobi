@@ -8,8 +8,8 @@ set -e
 
 SERVICE="hello-world-api"
 STACK_NAME="${SERVICE}-dev"
-REGION="${AWS_REGION:-us-east-1}"
-ACCOUNT_ID="${AWS_ACCOUNT_ID:-123456789012}"
+REGION="${AWS_REGION:-us-west-2}"
+ACCOUNT_ID="${AWS_ACCOUNT_ID:-911871352725}"
 
 echo "🔍 Verifying deployed resources for ${SERVICE}..."
 echo "   Stack: ${STACK_NAME}"

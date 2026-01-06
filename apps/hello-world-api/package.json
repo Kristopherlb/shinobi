@@ -6,7 +6,9 @@
   "main": "src/index.js",
   "scripts": {
     "test": "echo \"No tests specified\" && exit 0",
-    "verify": "./verify.sh"
+    "verify": "./verify.sh",
+    "test-stack": "./test-stack.sh",
+    "test:aws": "./test-stack.sh"
   },
   "keywords": [
     "lambda",
