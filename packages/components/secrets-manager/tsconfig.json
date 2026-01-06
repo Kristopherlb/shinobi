@@ -6,11 +6,15 @@
     "composite": true,
     "declaration": true,
     "declarationMap": true,
+    "moduleResolution": "NodeNext",
+    "resolveJsonModule": true,
+    "esModuleInterop": true,
     "tsBuildInfoFile": "../../../dist/packages/components/secrets-manager/tsconfig.tsbuildinfo"
   },
   "include": [
     "*.ts",
-    "index.ts"
+    "index.ts",
+    "Config.schema.json"
   ],
   "exclude": [
     "dist",
