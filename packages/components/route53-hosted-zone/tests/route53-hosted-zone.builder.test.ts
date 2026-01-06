@@ -3,7 +3,7 @@ import {
   Route53HostedZoneComponentConfigBuilder,
   Route53HostedZoneConfig
 } from '../route53-hosted-zone.builder.js';
-import { ComponentContext, ComponentSpec } from '../../../platform/contracts/component-interfaces.js';
+import { ComponentContext, ComponentSpec } from '@shinobi/core';
 
 const createContext = (framework: string = 'commercial'): ComponentContext => {
   const app = new App();
@@ -90,6 +90,10 @@ describe('Route53HostedZoneComponentConfigBuilder', () => {
             queryVolume: {
               enabled: true,
               threshold: 5000
+            },
+            healthCheckFailures: {
+              enabled: true,
+              threshold: 10
             }
           }
         },

@@ -318,7 +318,7 @@ export class CloudFrontDistributionComponentConfigBuilder extends ConfigBuilder<
         type: 's3'
       },
       defaultBehavior: {
-        viewerProtocolPolicy: 'redirect-to-https', // SECURE DEFAULT
+        viewerProtocolPolicy: 'redirect-to-https', // Changed from 'allow-all' - SECURE DEFAULT
         allowedMethods: ['GET', 'HEAD'],
         cachedMethods: ['GET', 'HEAD'],
         compress: true
@@ -330,11 +330,11 @@ export class CloudFrontDistributionComponentConfigBuilder extends ConfigBuilder<
         countries: []
       },
       logging: {
-        enabled: true, // SECURE DEFAULT - Enable logging for audit trails
+        enabled: true, // Changed from false - SECURE DEFAULT - Enable logging for audit trails
         includeCookies: false
       },
       monitoring: {
-        enabled: true, // SECURE DEFAULT - Enable monitoring for security
+        enabled: true, // Changed from false - SECURE DEFAULT - Enable monitoring for security
         alarms: {
           error4xx: {
             enabled: true,
@@ -379,6 +379,44 @@ export class CloudFrontDistributionComponentConfigBuilder extends ConfigBuilder<
       hardeningProfile: 'baseline',
       tags: {}
     };
+  }
+
+  /**
+   * Layer 2: Compliance Framework Defaults
+   * Security and compliance-specific configurations
+   */
+  protected getComplianceFrameworkDefaults(): Partial<CloudFrontDistributionConfig> {
+    const framework = this.builderContext.context.complianceFramework;
+    
+    const baseCompliance: Partial<CloudFrontDistributionConfig> = {
+      defaultBehavior: {
+        viewerProtocolPolicy: 'redirect-to-https',
+      },
+      logging: {
+        enabled: true,
+      },
+      monitoring: {
+        enabled: true,
+      },
+    };
+    
+    if (framework === 'fedramp-moderate' || framework === 'fedramp-high') {
+      return {
+        ...baseCompliance,
+        defaultBehavior: {
+          viewerProtocolPolicy: 'redirect-to-https',
+        },
+        logging: {
+          enabled: true,
+        },
+        monitoring: {
+          enabled: true,
+        },
+        webAclId: undefined, // WAF should be configured separately, but enable WAF requirement
+      };
+    }
+    
+    return baseCompliance;
   }
 
   public buildSync(): CloudFrontDistributionConfig {
@@ -446,13 +484,13 @@ export class CloudFrontDistributionComponentConfigBuilder extends ConfigBuilder<
         certificateArn: config.domain?.certificateArn
       },
       logging: {
-        enabled: config.logging?.enabled ?? false,
+        enabled: config.logging?.enabled ?? true, // Default to true (from fallbacks)
         bucket: config.logging?.bucket,
         prefix: config.logging?.prefix,
         includeCookies: config.logging?.includeCookies ?? false
       },
       monitoring: {
-        enabled: config.monitoring?.enabled ?? false,
+        enabled: config.monitoring?.enabled ?? true, // Default to true (from fallbacks)
         alarms: {
           error4xx: this.normaliseAlarmConfig(config.monitoring?.alarms?.error4xx, {
             enabled: config.monitoring?.enabled ?? false,

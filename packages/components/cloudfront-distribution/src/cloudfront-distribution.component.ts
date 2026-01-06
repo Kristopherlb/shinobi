@@ -342,9 +342,7 @@ export class CloudFrontDistributionComponent extends BaseComponent {
   }
 
   /**
-   * Logging becomes a no-op when the manifest requests it but omits a bucket. Instead of failing the
-   * entire synthesis, we log a structured event and disable logging to avoid deploying an invalid
-   * distribution. Platform policy can escalate this scenario via CDK Nag or higher-level checks.
+   * Resolves the logging bucket. Creates a default bucket if logging is enabled but no bucket is provided.
    */
   private resolveLogBucket(): s3.IBucket | undefined {
     if (!this.config!.logging?.enabled) {
@@ -352,12 +350,33 @@ export class CloudFrontDistributionComponent extends BaseComponent {
     }
 
     const bucketName = this.config!.logging?.bucket;
-    if (!bucketName) {
-      this.logComponentEvent('logging_disabled', 'Logging requested without bucket; disabling logging to avoid synthesis failure');
-      return undefined;
+    if (bucketName) {
+      // Use existing bucket
+      return s3.Bucket.fromBucketName(this, 'LogBucket', bucketName);
     }
 
-    return s3.Bucket.fromBucketName(this, 'LogBucket', bucketName);
+    // Create default logging bucket if not provided
+    const defaultBucketName = `${this.context.serviceName}-cloudfront-logs-${this.context.region}`;
+    const logBucket = new s3.Bucket(this, 'LoggingBucket', {
+      bucketName: defaultBucketName,
+      blockPublicAccess: s3.BlockPublicAccess.BLOCK_ALL,
+      encryption: s3.BucketEncryption.S3_MANAGED,
+      versioned: false,
+      removalPolicy: cdk.RemovalPolicy.RETAIN
+    });
+
+    this.applyStandardTags(logBucket, {
+      'resource-type': 's3-bucket',
+      'purpose': 'cloudfront-logs'
+    });
+
+    this.registerConstruct('loggingBucket', logBucket);
+
+    this.logComponentEvent('logging_bucket_created', 'Created default CloudFront logging bucket', {
+      bucketName: defaultBucketName
+    });
+
+    return logBucket;
   }
 
   /**

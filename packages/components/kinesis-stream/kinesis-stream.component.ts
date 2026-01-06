@@ -4,7 +4,7 @@ import * as cloudwatch from 'aws-cdk-lib/aws-cloudwatch';
 import * as cdk from 'aws-cdk-lib';
 import { Construct } from 'constructs';
 import {
-  Component,
+  BaseComponent,
   ComponentSpec,
   ComponentContext,
   ComponentCapabilities
@@ -16,7 +16,7 @@ import {
   KinesisStreamMonitoringConfig
 } from './kinesis-stream.builder.js';
 
-export class KinesisStreamComponent extends Component {
+export class KinesisStreamComponent extends BaseComponent {
   private stream?: kinesis.Stream;
   private kmsKey?: kms.IKey;
   private managedKmsKey?: kms.Key;
@@ -32,6 +32,18 @@ export class KinesisStreamComponent extends Component {
     try {
       const builder = new KinesisStreamComponentConfigBuilder(this.context, this.spec);
       this.config = builder.buildSync();
+
+      // Warn if stream name is auto-generated (no explicit name provided)
+      const originalStreamName = (this.spec.config as any)?.streamName;
+      if (!originalStreamName) {
+        this.logComponentEvent('stream_name_auto_generated', 'Stream name auto-generated from component name', {
+          component: this.spec.name,
+          generatedName: this.config.streamName,
+          recommendation: 'Explicitly set streamName in component config for operational clarity',
+          environment: this.context.environment,
+          complianceFramework: this.context.complianceFramework
+        });
+      }
 
       this.logComponentEvent('config_resolved', 'Resolved Kinesis stream configuration', {
         streamName: this.config.streamName,
@@ -126,7 +138,14 @@ export class KinesisStreamComponent extends Component {
           props.encryptionKey = this.kmsKey;
         } else {
           props.encryption = kinesis.StreamEncryption.KMS_MANAGED;
-          this.logComponentEvent('encryption_fallback', 'Kinesis stream encryption set to AWS-managed KMS key');
+          this.logComponentEvent('encryption_fallback', 'Kinesis stream encryption falling back to AWS-managed KMS key', {
+            component: this.spec.name,
+            streamName: this.config!.streamName,
+            reason: 'Customer-managed key not configured or available',
+            recommendation: 'Configure encryption.customerManagedKey.create or encryption.kmsKeyArn for customer-managed encryption',
+            environment: this.context.environment,
+            complianceFramework: this.context.complianceFramework
+          });
         }
         break;
       case 'aws-managed':
@@ -196,6 +215,29 @@ export class KinesisStreamComponent extends Component {
       {
         alarmName: `${this.context.serviceName}-${this.spec.name}-write-provisioned`,
         metricName: 'WriteProvisionedThroughputExceeded',
+        statistic: 'Sum'
+      }
+    );
+
+    // Operational health alarms: PutRecord.Success and GetRecords.Success rates
+    this.createAlarm(
+      'PutRecordSuccessRateAlarm',
+      monitoring,
+      monitoring.alarms?.putRecordSuccessRate,
+      {
+        alarmName: `${this.context.serviceName}-${this.spec.name}-put-record-success-rate`,
+        metricName: 'PutRecord.Success',
+        statistic: 'Sum'
+      }
+    );
+
+    this.createAlarm(
+      'GetRecordsSuccessRateAlarm',
+      monitoring,
+      monitoring.alarms?.getRecordsSuccessRate,
+      {
+        alarmName: `${this.context.serviceName}-${this.spec.name}-get-records-success-rate`,
+        metricName: 'GetRecords.Success',
         statistic: 'Sum'
       }
     );
@@ -275,10 +317,14 @@ export class KinesisStreamComponent extends Component {
   }
 
   private buildCapability(): Record<string, any> {
+    // Build AWS Console URL for the stream
+    const streamUrl = `https://${this.context.region}.console.aws.amazon.com/kinesis/home?region=${this.context.region}#/streams/details/${this.stream!.streamName}`;
+
     return {
       type: 'stream:kinesis',
       streamName: this.stream!.streamName,
       streamArn: this.stream!.streamArn,
+      streamUrl,
       streamMode: this.config!.streamMode,
       shardCount: this.config!.shardCount,
       retentionHours: this.config!.retentionHours,

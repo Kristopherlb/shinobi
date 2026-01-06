@@ -213,10 +213,47 @@ export class AutoScalingGroupComponent extends BaseComponent {
   }
 
   private applySecurityGroupRules(): void {
-    // Security group rules are now configured via the vpc.securityGroupIds
-    // or through explicit configuration in the component spec
-    // No hardcoded rules - all access must be explicitly configured
-    this.logComponentEvent('security_group_configured', 'Security group created with no default ingress rules');
+    // Apply security group rules from config (no hardcoded rules)
+    if (this.config.vpc.securityGroupRules && this.config.vpc.securityGroupRules.length > 0) {
+      this.config.vpc.securityGroupRules.forEach((rule, index) => {
+        let peer: ec2.IPeer;
+        
+        if (rule.sourceSecurityGroupIds && rule.sourceSecurityGroupIds.length > 0) {
+          // Use security group as source
+          peer = ec2.Peer.securityGroupId(rule.sourceSecurityGroupIds[0]);
+        } else if (rule.cidrBlocks && rule.cidrBlocks.length > 0) {
+          // Use CIDR blocks as source
+          peer = ec2.Peer.ipv4(rule.cidrBlocks[0]);
+        } else {
+          // Default to VPC CIDR (most restrictive)
+          this.logComponentEvent('security_group_rule_skipped', 'Security group rule skipped - no source specified', {
+            ruleIndex: index,
+            description: rule.description
+          });
+          return;
+        }
+        
+        const port = rule.fromPort === rule.toPort
+          ? ec2.Port.tcp(rule.fromPort)
+          : ec2.Port.tcpRange(rule.fromPort, rule.toPort);
+        
+        this.securityGroup!.addIngressRule(
+          peer,
+          port,
+          rule.description
+        );
+        
+        this.logComponentEvent('security_group_rule_added', 'Added security group ingress rule', {
+          ruleIndex: index,
+          description: rule.description,
+          fromPort: rule.fromPort,
+          toPort: rule.toPort
+        });
+      });
+    } else {
+      // No rules configured - most restrictive default
+      this.logComponentEvent('security_group_configured', 'Security group created with no default ingress rules');
+    }
   }
 
   private buildUserData(): ec2.UserData {

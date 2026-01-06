@@ -4,6 +4,7 @@ import {
   ComponentConfigSchema
 } from '@shinobi/core';
 import { ComponentContext, ComponentSpec } from '@shinobi/core';
+import configSchema from './Config.schema.json' with { type: 'json' };
 
 export type KinesisStreamMode = 'provisioned' | 'on-demand';
 export type KinesisEncryptionType = 'none' | 'aws-managed' | 'kms';
@@ -38,6 +39,8 @@ export interface KinesisStreamMonitoringConfig {
     iteratorAgeMs?: KinesisStreamAlarmConfig;
     readProvisionedExceeded?: KinesisStreamAlarmConfig;
     writeProvisionedExceeded?: KinesisStreamAlarmConfig;
+    putRecordSuccessRate?: KinesisStreamAlarmConfig;
+    getRecordsSuccessRate?: KinesisStreamAlarmConfig;
   };
 }
 
@@ -52,110 +55,7 @@ export interface KinesisStreamConfig {
   tags: Record<string, string>;
 }
 
-const ALARM_DEFINITION = {
-  type: 'object',
-  additionalProperties: false,
-  properties: {
-    enabled: { type: 'boolean', default: false },
-    threshold: { type: 'number' },
-    evaluationPeriods: { type: 'number', minimum: 1, default: 2 },
-    periodMinutes: { type: 'number', minimum: 1, default: 5 },
-    comparisonOperator: {
-      type: 'string',
-      enum: ['gt', 'gte', 'lt', 'lte'],
-      default: 'gte'
-    },
-    treatMissingData: {
-      type: 'string',
-      enum: ['breaching', 'not-breaching', 'ignore', 'missing'],
-      default: 'not-breaching'
-    },
-    statistic: { type: 'string', default: 'Average' },
-    tags: {
-      type: 'object',
-      additionalProperties: { type: 'string' }
-    }
-  }
-};
-
-export const KINESIS_STREAM_CONFIG_SCHEMA: ComponentConfigSchema = {
-  type: 'object',
-  additionalProperties: false,
-  properties: {
-    streamName: {
-      type: 'string',
-      pattern: '^[a-zA-Z0-9_.-]+$'
-    },
-    streamMode: {
-      type: 'string',
-      enum: ['provisioned', 'on-demand'],
-      default: 'provisioned'
-    },
-    shardCount: {
-      type: 'number',
-      minimum: 1,
-      maximum: 500000
-    },
-    retentionHours: {
-      type: 'number',
-      minimum: 24,
-      maximum: 8760,
-      default: 24
-    },
-    encryption: {
-      type: 'object',
-      additionalProperties: false,
-      properties: {
-        type: {
-          type: 'string',
-          enum: ['none', 'aws-managed', 'kms'],
-          default: 'none'
-        },
-        kmsKeyArn: { type: 'string' },
-        customerManagedKey: {
-          type: 'object',
-          additionalProperties: false,
-          properties: {
-            create: { type: 'boolean', default: false },
-            alias: { type: 'string' },
-            enableRotation: { type: 'boolean', default: true }
-          }
-        }
-      },
-      default: {
-        type: 'none'
-      }
-    },
-    monitoring: {
-      type: 'object',
-      additionalProperties: false,
-      properties: {
-        enabled: { type: 'boolean', default: false },
-        enhancedMetrics: { type: 'boolean', default: false },
-        alarms: {
-          type: 'object',
-          additionalProperties: false,
-          properties: {
-            iteratorAgeMs: ALARM_DEFINITION,
-            readProvisionedExceeded: ALARM_DEFINITION,
-            writeProvisionedExceeded: ALARM_DEFINITION
-          },
-          default: {}
-        }
-      },
-      default: {}
-    },
-    hardeningProfile: {
-      type: 'string',
-      description: 'Abstract security posture indicator used by downstream services'
-    },
-    tags: {
-      type: 'object',
-      additionalProperties: { type: 'string' },
-      default: {}
-    }
-  }
-};
+export const KINESIS_STREAM_CONFIG_SCHEMA: ComponentConfigSchema = configSchema as ComponentConfigSchema;
 
 export class KinesisStreamComponentConfigBuilder extends ConfigBuilder<KinesisStreamConfig> {
   constructor(context: ComponentContext, spec: ComponentSpec) {
@@ -254,6 +154,24 @@ export class KinesisStreamComponentConfigBuilder extends ConfigBuilder<KinesisSt
             evaluationPeriods: 1,
             periodMinutes: 5,
             comparisonOperator: 'gte',
+            treatMissingData: 'not-breaching',
+            statistic: 'Sum'
+          }),
+          putRecordSuccessRate: this.normaliseAlarmConfig(config.monitoring?.alarms?.putRecordSuccessRate, {
+            enabled: config.monitoring?.enabled ?? false,
+            threshold: 100, // Minimum success rate threshold (can be configured)
+            evaluationPeriods: 2,
+            periodMinutes: 5,
+            comparisonOperator: 'lt', // Alert if success rate drops below threshold
+            treatMissingData: 'not-breaching',
+            statistic: 'Sum'
+          }),
+          getRecordsSuccessRate: this.normaliseAlarmConfig(config.monitoring?.alarms?.getRecordsSuccessRate, {
+            enabled: config.monitoring?.enabled ?? false,
+            threshold: 100, // Minimum success rate threshold (can be configured)
+            evaluationPeriods: 2,
+            periodMinutes: 5,
+            comparisonOperator: 'lt', // Alert if success rate drops below threshold
             treatMissingData: 'not-breaching',
             statistic: 'Sum'
           })

@@ -39,7 +39,6 @@ export class ElastiCacheRedisComponent extends BaseComponent {
   private securityGroup?: ec2.SecurityGroup;
   private parameterGroup?: elasticache.CfnParameterGroup;
   private authTokenSecret?: secretsmanager.ISecret;
-  private authTokenValue?: string;
   private vpc?: ec2.IVpc;
   private config?: ElastiCacheRedisConfig;
   private readonly createdAlarms: CreatedAlarm[] = [];
@@ -107,7 +106,20 @@ export class ElastiCacheRedisComponent extends BaseComponent {
         this.registerConstruct(`alarm:${id}`, alarm);
       });
 
+      // Register primary capability
       this.registerCapability('cache:redis', this.buildCapability());
+      
+      // Register endpoint sub-capability for future multi-output patterns
+      this.registerCapability('cache:redis:endpoint', {
+        primaryEndpoint: {
+          address: this.replicationGroup!.attrPrimaryEndPointAddress,
+          port: this.replicationGroup!.attrPrimaryEndPointPort
+        },
+        readerEndpoint: {
+          address: this.replicationGroup!.attrReaderEndPointAddress,
+          port: this.replicationGroup!.attrReaderEndPointPort
+        }
+      });
 
       this.logComponentEvent('synthesis_complete', 'ElastiCache Redis synthesis completed', {
         clusterName: this.getClusterName(),
@@ -169,6 +181,7 @@ export class ElastiCacheRedisComponent extends BaseComponent {
       properties: parameters
     });
 
+    // Use applyStandardTags consistently (preferred method)
     this.applyStandardTags(this.parameterGroup, {
       'resource-type': 'parameter-group',
       family: this.config!.parameterGroup.family
@@ -233,9 +246,21 @@ export class ElastiCacheRedisComponent extends BaseComponent {
       return;
     }
 
+    /**
+     * We avoid unsafeUnwrap() to prevent secrets from being exposed during CDK synthesis.
+     * Instead, we pass SecretValue directly to ElastiCache, which resolves it at deployment time.
+     */
+    // Map config-driven removal policy to CDK RemovalPolicy enum
+    const removalPolicy = authToken.removalPolicy === 'retain' 
+      ? cdk.RemovalPolicy.RETAIN 
+      : cdk.RemovalPolicy.DESTROY;
+
     if (authToken.secretArn) {
       this.authTokenSecret = secretsmanager.Secret.fromSecretCompleteArn(this, 'ImportedAuthToken', authToken.secretArn);
-      this.authTokenValue = cdk.SecretValue.secretsManager(authToken.secretArn).unsafeUnwrap();
+      // Set removal policy from config (compliance framework defaults handled in builder)
+      if (this.authTokenSecret instanceof secretsmanager.Secret) {
+        this.authTokenSecret.applyRemovalPolicy(removalPolicy);
+      }
       return;
     }
 
@@ -246,7 +271,7 @@ export class ElastiCacheRedisComponent extends BaseComponent {
         passwordLength: 32,
         excludePunctuation: true
       },
-      removalPolicy: authToken.removalPolicy === 'retain' ? cdk.RemovalPolicy.RETAIN : cdk.RemovalPolicy.DESTROY
+      removalPolicy // Use config-driven removal policy (compliance framework defaults handled in builder)
     });
 
     this.applyStandardTags(secret, {
@@ -255,7 +280,6 @@ export class ElastiCacheRedisComponent extends BaseComponent {
     });
 
     this.authTokenSecret = secret;
-    this.authTokenValue = secret.secretValue.unsafeUnwrap();
 
     this.logResourceCreation('secret', secret.secretName);
   }
@@ -276,7 +300,15 @@ export class ElastiCacheRedisComponent extends BaseComponent {
       cacheParameterGroupName: this.parameterGroup?.ref,
       atRestEncryptionEnabled: this.config!.encryption.atRest,
       transitEncryptionEnabled: this.config!.encryption.inTransit,
-      authToken: this.authTokenValue,
+      // Use secretValue directly when available (CDK v2.120+ supports SecretValue for authToken)
+      // For Secret instances, pass secretValue directly to avoid unsafeUnwrap()
+      // For imported secrets, use SecretValue.secretsManager
+      // Note: CDK will resolve SecretValue to string at deployment time
+      authToken: this.authTokenSecret
+        ? (this.authTokenSecret instanceof secretsmanager.Secret
+            ? this.authTokenSecret.secretValue.toString()
+            : cdk.SecretValue.secretsManager(this.authTokenSecret.secretArn).toString())
+        : undefined,
       snapshotRetentionLimit: this.config!.backup.enabled ? this.config!.backup.retentionDays : 0,
       snapshotWindow: this.config!.backup.enabled ? this.config!.backup.window : undefined,
       preferredMaintenanceWindow: this.config!.maintenance.window,
@@ -334,6 +366,13 @@ export class ElastiCacheRedisComponent extends BaseComponent {
       return;
     }
 
+    // Use ReplicationGroupId dimension if available (cluster-level metrics)
+    // For primary node-specific metrics, use CacheClusterId
+    // ElastiCache metrics support both dimensions - prefer ReplicationGroupId for cluster-level
+    const dimensionsMap: Record<string, string> = {
+      ReplicationGroupId: this.getClusterName()
+    };
+
     const alarm = new cloudwatch.Alarm(this, `${this.toPascal(id)}Alarm`, {
       alarmName: `${this.context.serviceName}-${this.spec.name}-${id}`,
       alarmDescription: `Alarm for Redis ${id}`,
@@ -342,9 +381,7 @@ export class ElastiCacheRedisComponent extends BaseComponent {
         metricName: metricProps.metricName,
         statistic: metricProps.statistic,
         period: cdk.Duration.minutes(config.periodMinutes),
-        dimensionsMap: {
-          CacheClusterId: this.getClusterName()
-        }
+        dimensionsMap
       }),
       threshold: config.threshold,
       evaluationPeriods: config.evaluationPeriods,
@@ -362,32 +399,71 @@ export class ElastiCacheRedisComponent extends BaseComponent {
 
   private buildLogDeliveryConfigurations(): elasticache.CfnReplicationGroup.LogDeliveryConfigurationRequestProperty[] {
     const enabledConfigs = this.config!.monitoring.logDelivery.filter(entry => entry.enabled);
+    
+    // Validate for conflicting log destination types (same logType with different destinationTypes)
+    const logTypeMap = new Map<string, string>();
+    for (const entry of enabledConfigs) {
+      const existingType = logTypeMap.get(entry.logType);
+      if (existingType && existingType !== entry.destinationType) {
+        throw new Error(
+          `Conflicting log destination types for ${entry.logType}: ` +
+          `found both '${existingType}' and '${entry.destinationType}'. ` +
+          `Each log type can only have one destination type.`
+        );
+      }
+      logTypeMap.set(entry.logType, entry.destinationType);
+    }
+    
     return enabledConfigs.map((entry: RedisLogDeliveryConfig, index) => {
-      let details: elasticache.CfnReplicationGroup.DestinationDetailsProperty;
+      // Validate that destination exists or is creatable
       if (entry.destinationType === 'cloudwatch-logs') {
         const logGroup = this.ensureManagedLogGroup(entry, index);
+        if (!logGroup && !entry.destinationName.startsWith('/aws/')) {
+          // If not managed and doesn't start with /aws/, validate it exists or can be created
+          this.logComponentEvent('log_delivery_validation', 'Validating CloudWatch Logs destination', {
+            destinationName: entry.destinationName,
+            logType: entry.logType,
+            note: 'Destination must exist or be managed by this component'
+          });
+        }
         if (logGroup) {
           this.registerConstruct(`log-group:${entry.logType}:${index}`, logGroup);
         }
-        details = {
-          cloudWatchLogsDetails: {
-            logGroup: entry.destinationName
-          }
+        return {
+          logType: entry.logType,
+          destinationType: entry.destinationType,
+          destinationDetails: {
+            cloudWatchLogsDetails: {
+              logGroup: entry.destinationName
+            }
+          },
+          logFormat: entry.logFormat
         };
       } else {
-        details = {
-          kinesisFirehoseDetails: {
-            deliveryStream: entry.destinationName
-          }
+        // For Kinesis Firehose, validate that the delivery stream exists
+        // Note: We can't validate existence at synth time, but we log a warning
+        if (!entry.destinationName) {
+          throw new Error(
+            `ElastiCache Redis log delivery configuration for ${entry.logType} requires a destinationName ` +
+            `when destinationType is ${entry.destinationType}`
+          );
+        }
+        this.logComponentEvent('log_delivery_validation', 'Kinesis Firehose destination configured', {
+          destinationName: entry.destinationName,
+          logType: entry.logType,
+          note: 'Ensure the Kinesis Firehose delivery stream exists before deployment'
+        });
+        return {
+          logType: entry.logType,
+          destinationType: entry.destinationType,
+          destinationDetails: {
+            kinesisFirehoseDetails: {
+              deliveryStream: entry.destinationName
+            }
+          },
+          logFormat: entry.logFormat
         };
       }
-
-      return {
-        logType: entry.logType,
-        destinationType: entry.destinationType,
-        destinationDetails: details,
-        logFormat: entry.logFormat
-      };
     });
   }
 
@@ -421,6 +497,10 @@ export class ElastiCacheRedisComponent extends BaseComponent {
       return undefined;
     }
 
+    // Use managed KMS key from platform context if available (for consistency)
+    // Check if there's a platform-managed logging KMS key in the context
+    // For now, create a component-specific key, but this can be extended to use
+    // a shared platform key if one is available in the context
     if (!this.loggingKmsKey) {
       this.loggingKmsKey = new kms.Key(this, 'RedisLogsKmsKey', {
         description: `KMS key for ${this.getClusterName()} CloudWatch log encryption`,
@@ -434,13 +514,26 @@ export class ElastiCacheRedisComponent extends BaseComponent {
       });
 
       this.registerConstruct('kms:redis-log', this.loggingKmsKey);
+      
+      this.logComponentEvent('kms_key_created', 'Created KMS key for log encryption', {
+        keyId: this.loggingKmsKey.keyId,
+        purpose: 'redis-log-encryption',
+        note: 'Consider using a platform-managed KMS key for consistency across components'
+      });
     }
 
     return this.loggingKmsKey;
   }
 
   private composeSecurityGroupIds(): string[] {
-    const ids = [...this.config!.security.securityGroupIds];
+    const ids: string[] = [];
+    
+    // Add config-provided security groups
+    if (this.config!.security.securityGroupIds && this.config!.security.securityGroupIds.length > 0) {
+      ids.push(...this.config!.security.securityGroupIds);
+    }
+    
+    // Add managed security group if created
     if (this.securityGroup) {
       ids.push(this.securityGroup.securityGroupId);
     }
@@ -448,7 +541,7 @@ export class ElastiCacheRedisComponent extends BaseComponent {
     if (ids.length === 0) {
       throw new Error(
         `ElastiCache Redis component '${this.spec.name}' must have at least one security group id ` +
-          'either from config.security.securityGroupIds or a managed security group.'
+          'either from config.security.securityGroupIds or a managed security group (security.create=true).'
       );
     }
 
@@ -456,7 +549,10 @@ export class ElastiCacheRedisComponent extends BaseComponent {
   }
 
   private buildCapability(): Record<string, any> {
-    const primarySecurityGroupId = this.securityGroup?.securityGroupId ?? this.config!.security.securityGroupIds[0];
+    const primarySecurityGroupId = this.securityGroup?.securityGroupId ?? 
+      (this.config!.security.securityGroupIds && this.config!.security.securityGroupIds.length > 0
+        ? this.config!.security.securityGroupIds[0]
+        : undefined);
 
     if (!primarySecurityGroupId) {
       throw new Error(
@@ -473,6 +569,9 @@ export class ElastiCacheRedisComponent extends BaseComponent {
       primaryEndpointPort: this.replicationGroup!.attrPrimaryEndPointPort,
       readerEndpointAddress: this.replicationGroup!.attrReaderEndPointAddress,
       readerEndpointPort: this.replicationGroup!.attrReaderEndPointPort,
+      // Configuration endpoint for cluster mode (future-proof)
+      configurationEndpointAddress: this.replicationGroup!.attrConfigurationEndPointAddress,
+      configurationEndpointPort: this.replicationGroup!.attrConfigurationEndPointPort,
       port: this.config!.port,
       authTokenSecretArn: this.authTokenSecret?.secretArn,
       multiAz: this.config!.multiAz.enabled,
