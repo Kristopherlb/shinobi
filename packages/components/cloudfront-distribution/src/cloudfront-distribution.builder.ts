@@ -462,7 +462,8 @@ export class CloudFrontDistributionComponentConfigBuilder extends ConfigBuilder<
         albDnsName: config.origin.albDnsName,
         customDomainName: config.origin.customDomainName,
         originPath: config.origin.originPath,
-        customHeaders: config.origin.customHeaders ?? {}
+        customHeaders: config.origin.customHeaders ?? {},
+        oacSigning: config.origin.oacSigning ?? 'SIGV4_ALWAYS'
       },
       defaultBehavior: {
         viewerProtocolPolicy: config.defaultBehavior?.viewerProtocolPolicy ?? 'redirect-to-https',
