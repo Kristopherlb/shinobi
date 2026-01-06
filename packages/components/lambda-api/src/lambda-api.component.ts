@@ -311,7 +311,15 @@ export class LambdaApiComponent extends BaseComponent {
       });
 
       exports.handler = async (event) => {
-        console.log('Inbound request', JSON.stringify(event));
+        // Structured logging for Lambda (console.log with JSON format)
+        console.log(JSON.stringify({
+          level: 'info',
+          message: 'Inbound request',
+          requestId: event?.requestContext?.requestId,
+          httpMethod: event?.httpMethod,
+          path: event?.path,
+          timestamp: new Date().toISOString()
+        }));
 
         if (event?.httpMethod === 'OPTIONS') {
           return buildResponse(200, {});

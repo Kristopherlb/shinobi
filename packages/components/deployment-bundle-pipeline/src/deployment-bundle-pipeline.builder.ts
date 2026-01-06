@@ -63,6 +63,8 @@ export class DeploymentBundlePipelineBuilder extends ConfigBuilder<DeploymentBun
         nodeVersion: '20.12.2',
         fipsMode: false
       }
+      // buildMetadata is optional - should be provided via environment/platform defaults (CI/CD)
+      // Component handles undefined with 'unknown' fallback
     };
   }
 

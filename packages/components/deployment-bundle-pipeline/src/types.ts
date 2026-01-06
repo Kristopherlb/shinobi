@@ -67,6 +67,16 @@ export interface DeploymentBundleConfig {
     /** Enable FIPS mode */
     fipsMode?: boolean;
   };
+
+  /** Build metadata (optional - should be provided via environment/platform defaults from CI/CD. Falls back to 'unknown' if not provided) */
+  buildMetadata?: {
+    /** Git commit SHA */
+    gitCommit?: string;
+    /** Git branch name */
+    gitBranch?: string;
+    /** Build invocation ID */
+    buildId?: string;
+  };
 }
 
 export interface BundleArtifacts {
