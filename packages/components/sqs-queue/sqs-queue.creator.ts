@@ -133,8 +133,8 @@ export class SqsQueueCreator implements IComponentCreator {
     if (config?.encryption?.enabled && !config?.encryption?.kmsKeyId) {
       // Note: KMS key will be auto-created if encryption is enabled and kmsKeyId is not provided
       // This is valid, so we don't error here
-    }
-    
+      }
+      
     // Validate DLQ configuration
     if (config?.deadLetterQueue?.enabled) {
       if (!config.deadLetterQueue.maxReceiveCount || config.deadLetterQueue.maxReceiveCount < 1) {
