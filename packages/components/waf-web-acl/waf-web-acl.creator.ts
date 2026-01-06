@@ -21,8 +21,16 @@ export class WafWebAclComponentCreator implements IComponentCreator {
   public readonly tags = ['waf', 'security', 'wafv2'];
   public readonly configSchema = WAF_WEB_ACL_CONFIG_SCHEMA;
 
-  public createComponent(scope: Construct, spec: ComponentSpec, context: ComponentContext): WafWebAclComponent {
+  public createComponent(spec: ComponentSpec, context: ComponentContext): WafWebAclComponent {
+    const scope = context.scope as Construct | undefined;
+    if (!scope) {
+      throw new Error('ComponentContext.scope is required to create waf-web-acl components');
+    }
     return new WafWebAclComponent(scope, spec.name, context, spec);
+  }
+
+  public processComponent(spec: ComponentSpec, context: ComponentContext): WafWebAclComponent {
+    return this.createComponent(spec, context);
   }
 
   public validateSpec(spec: ComponentSpec, _context: ComponentContext): { valid: boolean; errors: string[] } {
