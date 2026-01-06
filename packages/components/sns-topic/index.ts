@@ -2,9 +2,9 @@
 export { SnsTopicComponent } from './sns-topic.component.js';
 
 // Builder exports
+export type { SnsTopicConfig } from './sns-topic.builder.js';
 export {
   SnsTopicComponentConfigBuilder,
-  SnsTopicConfig,
   SNS_TOPIC_CONFIG_SCHEMA
 } from './sns-topic.builder.js';
 

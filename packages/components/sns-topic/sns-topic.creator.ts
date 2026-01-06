@@ -20,8 +20,16 @@ export class SnsTopicComponentCreator implements IComponentCreator {
   public readonly tags = ['sns', 'pubsub', 'messaging'];
   public readonly configSchema = SNS_TOPIC_CONFIG_SCHEMA;
 
-  public createComponent(scope: Construct, spec: ComponentSpec, context: ComponentContext): SnsTopicComponent {
+  public createComponent(spec: ComponentSpec, context: ComponentContext): SnsTopicComponent {
+    const scope = context.scope as Construct | undefined;
+    if (!scope) {
+      throw new Error('ComponentContext.scope is required to create sns-topic components');
+    }
     return new SnsTopicComponent(scope, spec.name, context, spec);
+  }
+
+  public processComponent(spec: ComponentSpec, context: ComponentContext): SnsTopicComponent {
+    return this.createComponent(spec, context);
   }
 
   public validateSpec(spec: ComponentSpec): { valid: boolean; errors: string[] } {
