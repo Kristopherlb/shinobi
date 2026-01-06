@@ -49,12 +49,22 @@ export interface AutoScalingGroupHealthCheckConfig {
   gracePeriod: number;
 }
 
+export interface AutoScalingGroupSecurityGroupRule {
+  description: string;
+  fromPort: number;
+  toPort: number;
+  protocol: string;
+  cidrBlocks?: string[];
+  sourceSecurityGroupIds?: string[];
+}
+
 export interface AutoScalingGroupVpcConfig {
   vpcId?: string;
   subnetIds?: string[];
   securityGroupIds?: string[];
   subnetType: 'PUBLIC' | 'PRIVATE_WITH_EGRESS';
   allowAllOutbound: boolean;
+  securityGroupRules?: AutoScalingGroupSecurityGroupRule[];
 }
 
 export interface AutoScalingGroupSecurityConfig {
@@ -167,7 +177,8 @@ export class AutoScalingGroupComponentConfigBuilder extends ConfigBuilder<AutoSc
       terminationPolicies: ['Default'],
       vpc: {
         subnetType: 'PRIVATE_WITH_EGRESS', // Default to private subnets for security
-        allowAllOutbound: false // Restrict outbound access by default
+        allowAllOutbound: false, // Changed from true - Restrict outbound access by default
+        securityGroupRules: [] // Empty by default - must be explicitly configured
       },
       security: {
         managedPolicies: [],
