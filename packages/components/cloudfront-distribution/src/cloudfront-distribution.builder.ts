@@ -50,6 +50,8 @@ export interface CloudFrontLoggingConfig {
   includeCookies?: boolean;
 }
 
+export type OACSigningOption = 'SIGV4_ALWAYS' | 'SIGV4_NO_OVERRIDE' | 'NEVER';
+
 export interface CloudFrontOriginConfig {
   type: OriginType;
   s3BucketName?: string;
@@ -57,6 +59,7 @@ export interface CloudFrontOriginConfig {
   customDomainName?: string;
   originPath?: string;
   customHeaders?: Record<string, string>;
+  oacSigning?: OACSigningOption; // Configurable OAC signing behavior (only applies to S3 origins)
 }
 
 export interface CloudFrontBehaviorConfig {
@@ -152,6 +155,12 @@ export const CLOUDFRONT_DISTRIBUTION_CONFIG_SCHEMA: ComponentConfigSchema = {
         customHeaders: {
           type: 'object',
           additionalProperties: { type: 'string' }
+        },
+        oacSigning: {
+          type: 'string',
+          enum: ['SIGV4_ALWAYS', 'SIGV4_NO_OVERRIDE', 'NEVER'],
+          default: 'SIGV4_ALWAYS',
+          description: 'Origin Access Control signing behavior (only applies to S3 origins). SIGV4_ALWAYS signs all requests, SIGV4_NO_OVERRIDE signs only if viewer request lacks Authorization header, NEVER disables signing.'
         }
       }
     },
@@ -162,7 +171,7 @@ export const CLOUDFRONT_DISTRIBUTION_CONFIG_SCHEMA: ComponentConfigSchema = {
         viewerProtocolPolicy: {
           type: 'string',
           enum: ['allow-all', 'redirect-to-https', 'https-only'],
-          default: 'allow-all'
+          default: 'redirect-to-https'
         },
         allowedMethods: {
           type: 'array',
@@ -315,7 +324,8 @@ export class CloudFrontDistributionComponentConfigBuilder extends ConfigBuilder<
     return {
       comment: 'Managed by Shinobi platform',
       origin: {
-        type: 's3'
+        type: 's3',
+        oacSigning: 'SIGV4_ALWAYS' // Safe default - sign all requests
       },
       defaultBehavior: {
         viewerProtocolPolicy: 'redirect-to-https', // Changed from 'allow-all' - SECURE DEFAULT
