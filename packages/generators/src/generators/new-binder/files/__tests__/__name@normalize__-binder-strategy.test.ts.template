@@ -5,6 +5,7 @@
  * All tests assert EnhancedBindingResult structure (return-based, not mutation-based)
  */
 
+import { describe, it, expect } from 'vitest';
 import { <%= className %> } from '../<%= normalizedName %>-binder-strategy.js';
 import {
   createMockSourceComponent,
@@ -44,7 +45,7 @@ describe('<%= className %>', () => {
       human_reviewed_by: 'Platform Engineering'
     };
 
-    test('<%= className.replace('BinderStrategy', '') %>Bind__ValidAccess__ReturnsEnhancedResult', async () => {
+    it('<%= className.replace('BinderStrategy', '') %>Bind__ValidAccess__ReturnsEnhancedResult', async () => {
       const strategy = new <%= className %>();
       const source = createMockSourceComponent('lambda-api', 'test-source');
       
