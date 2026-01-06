@@ -320,8 +320,8 @@ export class DeploymentBundlePipelineComponent extends BaseComponent implements 
       versionTag: this.config.versionTag,
       complianceFramework: this.config.complianceFramework || 'commercial',
       buildTimestamp: new Date().toISOString(),
-      gitCommit: process.env.GIT_COMMIT || 'unknown',
-      gitBranch: process.env.GIT_BRANCH || 'unknown',
+      gitCommit: this.config.buildMetadata?.gitCommit || 'unknown',
+      gitBranch: this.config.buildMetadata?.gitBranch || 'unknown',
       builderId: 'dagger-engine-pool',
       builderVersion: '1.0.0',
       daggerVersion: '1.0.0',
@@ -412,7 +412,7 @@ export class DeploymentBundlePipelineComponent extends BaseComponent implements 
     // This would generate the SLSA provenance predicate
     const predicate = {
       buildType: 'https://slsa.dev/provenance/v0.2',
-      buildInvocationID: process.env.BUILD_ID || 'unknown',
+      buildInvocationID: this.config.buildMetadata?.buildId || 'unknown',
       buildStartTime: new Date().toISOString(),
       buildFinishTime: new Date().toISOString(),
       builder: {
@@ -427,7 +427,7 @@ export class DeploymentBundlePipelineComponent extends BaseComponent implements 
         runner_image: this.config.runner?.image || 'registry/org/platform-runner:1.5.0'
       },
       metadata: {
-        invocationId: process.env.BUILD_ID || 'unknown',
+        invocationId: this.config.buildMetadata?.buildId || 'unknown',
         startedOn: new Date().toISOString(),
         finishedOn: new Date().toISOString(),
         reproducible: true,

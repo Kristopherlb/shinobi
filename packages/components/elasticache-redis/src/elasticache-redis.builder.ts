@@ -66,7 +66,7 @@ export interface RedisMonitoringConfig {
 
 export interface RedisSecurityConfig {
   create: boolean;
-  securityGroupIds: string[];
+  securityGroupIds?: string[]; // Optional - must be provided via config if security.create is false
   allowedCidrs: string[];
 }
 
@@ -319,7 +319,7 @@ const HARDENED_FALLBACKS: Partial<ElastiCacheRedisConfig> = {
   },
   security: {
     create: true,
-    securityGroupIds: [], // Empty array - must be provided via config if security.create is false
+    securityGroupIds: undefined, // No default security groups - must be provided via config if security.create is false
     allowedCidrs: []
   },
   parameterGroup: {
@@ -449,7 +449,7 @@ export class ElastiCacheRedisComponentConfigBuilder extends ConfigBuilder<Elasti
       },
       security: {
         create: config.security?.create ?? true,
-        securityGroupIds: config.security?.securityGroupIds ?? [], // Empty array - must be provided via config if security.create is false
+        securityGroupIds: config.security?.securityGroupIds ?? undefined, // No default - must be provided via config if security.create is false
         allowedCidrs: config.security?.allowedCidrs ?? []  // SECURITY: Force explicit CIDR configuration
       },
       parameterGroup: {
