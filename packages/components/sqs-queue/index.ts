@@ -1,5 +1,5 @@
 /**
- * @platform/sqs-queue-new - SqsQueueNew Component
+ * @platform/sqs-queue - SqsQueue Component
  * SQS message queue with compliance hardening and DLQ support
  * 
  * @author Platform Team
@@ -8,14 +8,14 @@
  */
 
 // Component exports
-export { SqsQueueNewComponent } from './sqs-queue-new.component.js';
+export { SqsQueueComponent } from './sqs-queue.component.js';
 
 // Configuration exports
 export { 
-  SqsQueueNewConfig,
-  SqsQueueNewConfigBuilder,
-  SQS_QUEUE_NEW_CONFIG_SCHEMA
-} from './sqs-queue-new.builder.js';
+  SqsQueueConfig,
+  SqsQueueConfigBuilder,
+  SQS_QUEUE_CONFIG_SCHEMA
+} from './sqs-queue.builder.js';
 
 // Creator exports
-export { SqsQueueNewCreator } from './sqs-queue-new.creator.js';
+export { SqsQueueCreator } from './sqs-queue.creator.js';

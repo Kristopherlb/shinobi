@@ -5,6 +5,7 @@
   "description": "Configuration schema for AWS SQS Queue component with compliance hardening and DLQ support",
   "type": "object",
   "additionalProperties": false,
+  "required": [],
   "properties": {
     "queueName": {
       "type": "string",
@@ -96,6 +97,11 @@
           "default": false
         }
       }
+    },
+    "highRiskEnvironment": {
+      "type": "boolean",
+      "description": "Enable enhanced security defaults for high-risk environments. When true, automatically enables encryption, dead letter queue, and detailed metrics. Can be set in platform config files or service.yml.",
+      "default": false
     },
     "tags": {
       "type": "object",
