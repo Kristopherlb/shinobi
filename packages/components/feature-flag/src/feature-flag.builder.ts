@@ -3,7 +3,7 @@ import {
   ConfigBuilderContext,
   ComponentConfigSchema
 } from '@shinobi/core';
-import { ComponentContext, ComponentSpec } from '@platform/contracts';
+import { ComponentContext, ComponentSpec } from '@shinobi/core';
 import schemaJson from '../Config.schema.json' with { type: 'json' };
 
 export type FeatureFlagType = 'boolean' | 'string' | 'number' | 'object';
@@ -63,6 +63,14 @@ export interface FeatureFlagConfig {
   providerConfig?: FeatureFlagProviderConfig;
   monitoring?: FeatureFlagMonitoringConfig;
   tags?: Record<string, string>;
+}
+
+export interface FeatureFlagCapability {
+  flagKey: string;
+  flagType: FeatureFlagType;
+  defaultValue: boolean | string | number | Record<string, unknown>;
+  description?: string;
+  targetingRules?: FeatureFlagTargetingRules;
 }
 
 export const FEATURE_FLAG_CONFIG_SCHEMA: ComponentConfigSchema = schemaJson as ComponentConfigSchema;

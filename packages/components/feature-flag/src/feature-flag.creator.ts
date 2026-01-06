@@ -1,5 +1,5 @@
 import { Construct } from 'constructs';
-import { ComponentContext, ComponentSpec, IComponentCreator } from '@platform/contracts';
+import { ComponentContext, ComponentSpec, IComponentCreator, IComponent } from '@shinobi/core';
 import { FeatureFlagComponent } from './feature-flag.component.js';
 import {
   FeatureFlagConfig,
@@ -15,8 +15,16 @@ export class FeatureFlagComponentCreator implements IComponentCreator {
   public readonly tags = ['feature-flag', 'feature-flags', 'appconfig', 'openfeature'];
   public readonly configSchema = FEATURE_FLAG_CONFIG_SCHEMA;
 
-  public createComponent(scope: Construct, spec: ComponentSpec, context: ComponentContext): FeatureFlagComponent {
+  public createComponent(spec: ComponentSpec, context: ComponentContext): IComponent {
+    const scope = context.scope as Construct | undefined;
+    if (!scope) {
+      throw new Error('ComponentContext.scope is required to create feature-flag components');
+    }
     return new FeatureFlagComponent(scope, spec.name, context, spec);
+  }
+
+  public processComponent(spec: ComponentSpec, context: ComponentContext): IComponent {
+    return this.createComponent(spec, context);
   }
 
   public validateSpec(spec: ComponentSpec, context: ComponentContext): { valid: boolean; errors: string[] } {

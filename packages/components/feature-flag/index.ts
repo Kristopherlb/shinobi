@@ -4,9 +4,6 @@
  */
 
 export { FeatureFlagComponent } from './src/feature-flag.component.js';
-export {
-  FeatureFlagConfig,
-  FeatureFlagConfigBuilder,
-  FEATURE_FLAG_CONFIG_SCHEMA
-} from './src/feature-flag.builder.js';
+export type { FeatureFlagConfig } from './src/feature-flag.builder.js';
+export { FeatureFlagConfigBuilder, FEATURE_FLAG_CONFIG_SCHEMA } from './src/feature-flag.builder.js';
 export { FeatureFlagComponentCreator } from './src/feature-flag.creator.js';

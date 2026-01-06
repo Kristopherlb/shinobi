@@ -1,0 +1,42 @@
+{
+  "name": "@shinobi/components-feature-flag",
+  "root": "packages/components/feature-flag",
+  "sourceRoot": "packages/components/feature-flag/src",
+  "projectType": "library",
+  "targets": {
+    "build": {
+      "executor": "nx:run-commands",
+      "options": {
+        "command": "pnpm exec tsc -b packages/components/feature-flag/tsconfig.build.json"
+      },
+      "outputs": [
+        "{workspaceRoot}/dist/packages/components/feature-flag"
+      ]
+    },
+    "test": {
+      "executor": "nx:run-commands",
+      "options": {
+        "command": "jest -c jest.preset.ts --roots=packages/components/feature-flag/src",
+        "cwd": "."
+      }
+    },
+    "clean": {
+      "executor": "nx:run-commands",
+      "options": {
+        "command": "rimraf dist/packages/components/feature-flag"
+      }
+    },
+    "typecheck": {
+      "executor": "nx:run-commands",
+      "options": {
+        "command": "tsc -p packages/components/feature-flag/tsconfig.json --noEmit"
+      }
+    }
+  },
+  "tags": [
+    "scope:shinobi",
+    "type:component",
+    "infra:aws"
+  ]
+}
+
