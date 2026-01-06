@@ -5,9 +5,11 @@
 
 export * from './src/lambda-api.component.js';
 export {
-  LambdaApiConfig,
   LambdaApiComponentConfigBuilder,
-  LAMBDA_API_CONFIG_SCHEMA,
+  LAMBDA_API_CONFIG_SCHEMA
+} from './src/lambda-api.builder.js';
+export type {
+  LambdaApiConfig,
   LambdaRuntime,
   LambdaArchitecture
 } from './src/lambda-api.builder.js';

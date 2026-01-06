@@ -8,7 +8,8 @@
   "include": [
     "index.ts",
     "Config.schema.json",
-    "src/**/*"
+    "src/**/*",
+    "validation/**/*"
   ],
   "references": [
     { "path": "../../core/tsconfig.lib.json" }
