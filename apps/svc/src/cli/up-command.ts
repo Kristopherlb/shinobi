@@ -110,8 +110,11 @@ export class UpCommand {
 
       let latestSynth: SynthesizeServiceResult | undefined;
 
+      // Use manifest directory as working directory to ensure relative paths resolve correctly
+      const manifestDir = path.dirname(manifestPath);
+
       const cli = AwsCdkCli.fromCloudAssemblyDirectoryProducer({
-        workingDirectory: process.cwd(),
+        workingDirectory: manifestDir,
         produce: async (context) => {
           const synthResult = await synthesizeService({
             manifestPath,
