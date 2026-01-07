@@ -1350,6 +1350,9 @@ importers:
 
   packages/components/vpc:
     dependencies:
+      '@shinobi/core':
+        specifier: workspace:*
+        version: link:../../core
       aws-cdk-lib:
         specifier: ^2.100.0
         version: 2.233.0(constructs@10.4.4)
@@ -1384,6 +1387,9 @@ importers:
 
   packages/components/waf-web-acl:
     dependencies:
+      '@shinobi/core':
+        specifier: workspace:*
+        version: link:../../core
       aws-cdk-lib:
         specifier: ^2.100.0
         version: 2.233.0(constructs@10.4.4)
