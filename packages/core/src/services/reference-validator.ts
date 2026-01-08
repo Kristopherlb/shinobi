@@ -46,6 +46,10 @@ export class ReferenceValidator {
     // Validate ${ref:...} references (AC-P4.1) - Critical enhancement
     this.validateRefExpressions(manifest, componentNames);
 
+    // Validate component reference ordering (AC-P4.4)
+    // Components using @component: references must have dependencies defined before them
+    this.validateComponentReferenceOrdering(manifest, componentNames);
+
     // Validate governance suppressions (AC-P4.3)
     if (manifest.governance?.cdkNag?.suppress) {
       manifest.governance.cdkNag.suppress.forEach((suppression: any, index: number) => {
@@ -109,5 +113,112 @@ export class ReferenceValidator {
     }
     const date = new Date(dateString);
     return !isNaN(date.getTime());
+  }
+
+  /**
+   * Validate component reference ordering
+   * 
+   * Components using @component:component-name references must have their
+   * dependencies defined before them in the manifest, since components
+   * are synthesized in manifest order.
+   * 
+   * This prevents synthesis-time errors when a component tries to resolve
+   * a reference to a component that hasn't been synthesized yet.
+   * 
+   * @param manifest - Service manifest
+   * @param componentNames - Set of all component names
+   */
+  private validateComponentReferenceOrdering(manifest: any, componentNames: Set<string>): void {
+    if (!manifest.components || !Array.isArray(manifest.components)) {
+      return;
+    }
+
+    // Build component name to index map for ordering checks
+    const componentIndexMap = new Map<string, number>();
+    manifest.components.forEach((component: any, index: number) => {
+      if (component.name) {
+        componentIndexMap.set(component.name, index);
+      }
+    });
+
+    // Check each component for @component: references
+    manifest.components.forEach((component: any, componentIndex: number) => {
+      const componentName = component.name;
+      if (!componentName) {
+        return;
+      }
+
+      // Extract all @component: references from component config
+      const componentReferences = this.extractComponentReferences(component.config || {});
+
+      // Validate each reference
+      componentReferences.forEach((referencedName: string, path: string) => {
+        // Check if referenced component exists
+        if (!componentNames.has(referencedName)) {
+          throw new Error(
+            `Component '${componentName}' references non-existent component '${referencedName}' ` +
+            `via @component: reference at ${path}. ` +
+            `Available components: ${Array.from(componentNames).join(', ')}`
+          );
+        }
+
+        // Check if referenced component is defined before this component
+        const referencedIndex = componentIndexMap.get(referencedName);
+        if (referencedIndex === undefined) {
+          // Shouldn't happen if componentNames check passed, but defensive
+          return;
+        }
+
+        if (referencedIndex >= componentIndex) {
+          throw new Error(
+            `Component '${componentName}' (at index ${componentIndex}) references component '${referencedName}' ` +
+            `(at index ${referencedIndex}) via @component: reference at ${path}. ` +
+            `Components are synthesized in manifest order, so dependencies must be defined first. ` +
+            `Move '${referencedName}' before '${componentName}' in service.yml.`
+          );
+        }
+      });
+    });
+  }
+
+  /**
+   * Recursively extract all @component: references from a configuration object
+   * 
+   * @param obj - Configuration object to search
+   * @param path - Current path in the object (for error messages)
+   * @param references - Map of component names to their paths
+   * @returns Map of component names to their paths in the config
+   */
+  private extractComponentReferences(
+    obj: any,
+    path: string = 'config',
+    references: Map<string, string> = new Map()
+  ): Map<string, string> {
+    if (typeof obj === 'string') {
+      // Check for @component:component-name pattern
+      if (obj.startsWith('@component:')) {
+        const componentName = obj.replace('@component:', '');
+        if (componentName) {
+          references.set(componentName, path);
+        }
+      }
+      return references;
+    }
+
+    if (Array.isArray(obj)) {
+      obj.forEach((item, index) => {
+        this.extractComponentReferences(item, `${path}[${index}]`, references);
+      });
+      return references;
+    }
+
+    if (obj && typeof obj === 'object') {
+      for (const [key, value] of Object.entries(obj)) {
+        this.extractComponentReferences(value, `${path}.${key}`, references);
+      }
+      return references;
+    }
+
+    return references;
   }
 }

@@ -105,12 +105,39 @@ export function resolveComponentConstruct<T extends Construct = Construct>(
     }
 
     // Get the construct using the registered handle
-    const construct = component.getConstruct(constructHandle);
+    // NOTE: This requires the component to be synthesized first.
+    // If the component hasn't been synthesized yet, getConstruct will fail.
+    // Components should be ordered in service.yml so dependencies are synthesized first.
+    let construct: Construct | undefined;
+    try {
+      construct = component.getConstruct(constructHandle);
+    } catch (error) {
+      // Component might not be synthesized yet - check if it's in the synthesis order
+      // getConstructHandles() is on BaseComponent, not IComponent interface
+      const componentWithHandles = component as any;
+      const handles = typeof componentWithHandles.getConstructHandles === 'function' 
+        ? componentWithHandles.getConstructHandles() 
+        : [];
+      if (handles.length === 0) {
+        throw new Error(
+          `Component '${componentName}' has not been synthesized yet. ` +
+          `Make sure '${componentName}' is defined before '${requestingComponentName}' in service.yml. ` +
+          `Components are synthesized in manifest order, so dependencies must come first.`
+        );
+      }
+      // Component is synthesized but construct handle doesn't exist
+      throw error;
+    }
     
     if (!construct) {
+      // getConstructHandles() is on BaseComponent, not IComponent interface
+      const componentWithHandles = component as any;
+      const handles = typeof componentWithHandles.getConstructHandles === 'function' 
+        ? componentWithHandles.getConstructHandles() 
+        : [];
       throw new Error(
         `Component '${componentName}' does not have a '${constructHandle}' construct registered. ` +
-        `Available handles: ${component.getConstructHandles().join(', ')}`
+        `Available handles: ${handles.length > 0 ? handles.join(', ') : 'none'}`
       );
     }
 
@@ -162,7 +189,7 @@ function findComponentInStack(
   }
 
   // If not found in direct children, search recursively (for nested stacks/components)
-  return findComponentRecursive(stack.node, componentName, expectedCapability);
+  return findComponentRecursive(stack, componentName, expectedCapability);
 }
 
 /**
@@ -178,7 +205,7 @@ function findComponentRecursive(
   componentName: string,
   expectedCapability?: string
 ): IComponent | undefined {
-  for (const child of node.children) {
+  for (const child of node.node.children) {
     if (child.node.id === componentName && isComponent(child)) {
       if (expectedCapability) {
         try {

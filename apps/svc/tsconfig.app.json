@@ -21,6 +21,7 @@
     "src/**/*.spec.ts",
     "src/**/*.stories.ts",
     "src/**/test-setup.ts",
+    "src/**/__tests__/**",
     "**/vitest.config.ts",
     "**/jest.config.ts"
   ],

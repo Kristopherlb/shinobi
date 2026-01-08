@@ -4,6 +4,7 @@
  * Provides utilities for creating mock FileDiscovery instances for testing.
  */
 
+import { vi } from 'vitest';
 import type { FileDiscovery } from '../../utils/file-discovery.js';
 
 /**
