@@ -1,0 +1,104 @@
+{
+  "tests": [
+    {
+      "id": "TP-openfeature-provider-synth-001",
+      "level": "integration",
+      "capability": "Synthesize AWS AppConfig resources when provider is aws-appconfig",
+      "oracle": "contract",
+      "invariants": [
+        "AppConfig Application created with correct name",
+        "AppConfig Environment created with correct name",
+        "AppConfig ConfigurationProfile created with FeatureFlags type",
+        "AppConfig DeploymentStrategy created with correct growth factor"
+      ],
+      "fixtures": [
+        "In-memory CDK App",
+        "ComponentContext (commercial)",
+        "ComponentSpec with default config"
+      ],
+      "inputs": {
+        "shape": "ComponentContext + ComponentSpec with default aws-appconfig provider",
+        "notes": "Validates baseline AppConfig resource synthesis"
+      },
+      "risks": [],
+      "dependencies": [
+        "aws-cdk-lib",
+        "@shinobi/core BaseComponent",
+        "aws-cdk-lib/assertions"
+      ],
+      "evidence": [
+        "packages/components/openfeature-provider/__tests__/openfeature-provider.component.synthesis.test.ts#L38"
+      ],
+      "compliance_refs": [
+        "std://platform-component-api-spec"
+      ],
+      "ai_generated": true,
+      "human_reviewed_by": "platform-engineering"
+    },
+    {
+      "id": "TP-openfeature-provider-synth-002",
+      "level": "integration",
+      "capability": "Register LaunchDarkly placeholder when configured",
+      "oracle": "contract",
+      "invariants": [
+        "Provider config construct registered",
+        "Capability exposes LaunchDarkly provider type"
+      ],
+      "fixtures": [
+        "In-memory CDK App",
+        "ComponentContext (commercial)",
+        "ComponentSpec with LaunchDarkly provider config"
+      ],
+      "inputs": {
+        "shape": "ComponentContext + ComponentSpec with LaunchDarkly provider configuration",
+        "notes": "Validates external provider capability registration"
+      },
+      "risks": [],
+      "dependencies": [
+        "aws-cdk-lib",
+        "@shinobi/core BaseComponent"
+      ],
+      "evidence": [
+        "packages/components/openfeature-provider/__tests__/openfeature-provider.component.synthesis.test.ts#L67"
+      ],
+      "compliance_refs": [
+        "std://platform-component-api-spec"
+      ],
+      "ai_generated": true,
+      "human_reviewed_by": "platform-engineering"
+    },
+    {
+      "id": "TP-openfeature-provider-synth-003",
+      "level": "integration",
+      "capability": "Expose Flagsmith configuration when selected",
+      "oracle": "contract",
+      "invariants": [
+        "Capability exposes Flagsmith provider type",
+        "Connection config includes environmentKey and apiUrl"
+      ],
+      "fixtures": [
+        "In-memory CDK App",
+        "ComponentContext (commercial)",
+        "ComponentSpec with Flagsmith provider config"
+      ],
+      "inputs": {
+        "shape": "ComponentContext + ComponentSpec with Flagsmith provider configuration",
+        "notes": "Validates Flagsmith capability exposure"
+      },
+      "risks": [],
+      "dependencies": [
+        "aws-cdk-lib",
+        "@shinobi/core BaseComponent"
+      ],
+      "evidence": [
+        "packages/components/openfeature-provider/__tests__/openfeature-provider.component.synthesis.test.ts#L88"
+      ],
+      "compliance_refs": [
+        "std://platform-component-api-spec"
+      ],
+      "ai_generated": true,
+      "human_reviewed_by": "platform-engineering"
+    }
+  ]
+}
+

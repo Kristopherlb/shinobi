@@ -5,7 +5,7 @@
 import {
   OpenFeatureProviderComponentConfigBuilder,
   OpenFeatureProviderComponentConfig
-} from '../openfeature-provider.builder.js';
+} from '../src/openfeature-provider.builder.js';
 import { ComponentContext, ComponentSpec } from '@shinobi/core';
 
 const createContext = (
@@ -35,7 +35,7 @@ const createSpec = (config: Partial<OpenFeatureProviderComponentConfig> = {}): C
 });
 
 describe('OpenFeatureProviderComponentConfigBuilder', () => {
-  it('applies platform defaults and derives names from context', () => {
+  it('ConfigBuilder__MinimalConfig__AppliesPlatformDefaults', () => {
     const context = createContext();
     const spec = createSpec();
 
@@ -55,7 +55,7 @@ describe('OpenFeatureProviderComponentConfigBuilder', () => {
     });
   });
 
-  it('allows component overrides for alternate providers', () => {
+  it('ConfigBuilder__ProviderOverride__AllowsComponentOverrides', () => {
     const context = createContext();
     const spec = createSpec({
       provider: 'launchdarkly',
@@ -80,7 +80,7 @@ describe('OpenFeatureProviderComponentConfigBuilder', () => {
     expect(config.tags.owner).toBe('platform');
   });
 
-  it('pulls FedRAMP Moderate overrides from platform configuration', () => {
+  it('ConfigBuilder__FedRAMPModerate__PullsPlatformOverrides', () => {
     const context = createContext('fedramp-moderate');
     const spec = createSpec();
 

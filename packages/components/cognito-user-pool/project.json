@@ -10,7 +10,8 @@
     "build": {
       "executor": "nx:run-commands",
       "options": {
-        "command": "tsc -p packages/components/cognito-user-pool/tsconfig.lib.json"
+        "command": "tsc -p packages/components/cognito-user-pool/tsconfig.lib.json",
+        "cwd": "{workspaceRoot}"
       },
       "outputs": [
         "{workspaceRoot}/dist/packages/components/cognito-user-pool"
@@ -29,13 +30,15 @@
     "lint": {
       "executor": "nx:run-commands",
       "options": {
-        "command": "eslint packages/components/cognito-user-pool --ext .ts"
+        "command": "eslint packages/components/cognito-user-pool --ext .ts",
+        "cwd": "{projectRoot}"
       }
     },
     "typecheck": {
       "executor": "nx:run-commands",
       "options": {
-        "command": "tsc --noEmit -p packages/components/cognito-user-pool/tsconfig.lib.json"
+        "command": "tsc --noEmit -p packages/components/cognito-user-pool/tsconfig.lib.json",
+        "cwd": "{workspaceRoot}"
       }
     }
   }

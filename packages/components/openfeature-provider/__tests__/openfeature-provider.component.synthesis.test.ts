@@ -4,8 +4,8 @@
 
 import { App, Stack } from 'aws-cdk-lib';
 import { Match, Template } from 'aws-cdk-lib/assertions';
-import { OpenFeatureProviderComponent } from '../openfeature-provider.component.js';
-import { OpenFeatureProviderComponentConfig } from '../openfeature-provider.builder.js';
+import { OpenFeatureProviderComponent } from '../src/openfeature-provider.component.js';
+import { OpenFeatureProviderComponentConfig } from '../src/openfeature-provider.builder.js';
 import { ComponentContext, ComponentSpec } from '@shinobi/core';
 
 const createContext = (
@@ -36,7 +36,7 @@ const createSpec = (config: Partial<OpenFeatureProviderComponentConfig> = {}): C
 });
 
 describe('OpenFeatureProviderComponent synthesis', () => {
-  it('creates AppConfig resources when provider is aws-appconfig', () => {
+  it('Synthesis__AwsAppConfigProvider__CreatesAppConfigResources', () => {
     const app = new App();
     const stack = new Stack(app, 'AppConfigStack');
     const context = createContext(stack, 'commercial');
@@ -64,7 +64,7 @@ describe('OpenFeatureProviderComponent synthesis', () => {
     }));
   });
 
-  it('registers LaunchDarkly placeholder when configured', () => {
+  it('Synthesis__LaunchDarklyProvider__RegistersPlaceholder', () => {
     const app = new App();
     const stack = new Stack(app, 'LaunchDarklyStack');
     const context = createContext(stack);
@@ -85,7 +85,7 @@ describe('OpenFeatureProviderComponent synthesis', () => {
     expect(capabilities['openfeature:provider'].providerType).toBe('launchdarkly');
   });
 
-  it('exposes flagsmith configuration when selected', () => {
+  it('Synthesis__FlagsmithProvider__ExposesConfiguration', () => {
     const app = new App();
     const stack = new Stack(app, 'FlagsmithStack');
     const context = createContext(stack);

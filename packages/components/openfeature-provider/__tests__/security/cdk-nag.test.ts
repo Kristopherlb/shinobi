@@ -11,8 +11,8 @@ import { Annotations, Match } from 'aws-cdk-lib/assertions';
 import { AwsSolutionsChecks } from 'cdk-nag';
 import { Aspects } from 'aws-cdk-lib';
 import { ComponentContext, ComponentSpec } from '@shinobi/core';
-import { OpenFeatureProviderComponentComponent } from '../index.js';
-import { OpenFeatureProviderComponentConfigBuilder } from '../openfeature-provider.builder.js';
+import { OpenFeatureProviderComponent } from '../../src/openfeature-provider.component.js';
+import { OpenFeatureProviderComponentConfigBuilder } from '../src/openfeature-provider.builder.js';
 import { vi } from 'vitest';
 
 let platformConfigSpy: any;
@@ -64,7 +64,7 @@ describe('OpenFeatureProviderComponent - CDK Nag Security Validation', () => {
         }
       };
 
-      const component = new OpenFeatureProviderComponentComponent(stack, 'TestProvider', context, spec);
+      const component = new OpenFeatureProviderComponent(stack, 'TestProvider', context, spec);
       component.synth();
 
       // Apply CDK Nag
@@ -81,7 +81,7 @@ describe('OpenFeatureProviderComponent - CDK Nag Security Validation', () => {
   });
 
   describe('High Risk Environment - Enhanced Security', () => {
-    it('passes AwsSolutions security checks with highRiskEnvironment enabled', () => {
+    it('Security__HighRiskEnvironment__PassesAwsSolutionsChecks', () => {
       const spec: ComponentSpec = {
         name: 'test-provider',
         type: 'openfeature-provider',
@@ -97,7 +97,7 @@ describe('OpenFeatureProviderComponent - CDK Nag Security Validation', () => {
         }
       };
 
-      const component = new OpenFeatureProviderComponentComponent(stack, 'TestProvider', context, spec);
+      const component = new OpenFeatureProviderComponent(stack, 'TestProvider', context, spec);
       component.synth();
 
       // Apply CDK Nag

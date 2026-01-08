@@ -1,21 +1,21 @@
 {
-  "name": "@shinobi/components-lambda-api",
-  "sourceRoot": "packages/components/lambda-api/src",
+  "name": "@shinobi/components-openfeature-provider",
+  "sourceRoot": "packages/components/openfeature-provider/src",
   "targets": {
     "build": {
       "executor": "nx:run-commands",
       "outputs": [
-        "{workspaceRoot}/dist/packages/components/lambda-api"
+        "{workspaceRoot}/dist/packages/components/openfeature-provider"
       ],
       "options": {
-        "command": "node_modules/.bin/tsc -b packages/components/lambda-api/tsconfig.build.json",
+        "command": "node_modules/.bin/tsc -b packages/components/openfeature-provider/tsconfig.build.json",
         "cwd": "{workspaceRoot}"
       }
     },
     "test": {
       "executor": "@nx/vitest:test",
       "options": {
-        "config": "packages/components/lambda-api/vitest.config.ts",
+        "config": "packages/components/openfeature-provider/vitest.config.ts",
         "passWithNoTests": true
       },
       "outputs": [
@@ -25,14 +25,14 @@
     "clean": {
       "executor": "nx:run-commands",
       "options": {
-        "command": "rimraf dist/packages/components/lambda-api",
+        "command": "rimraf dist/packages/components/openfeature-provider",
         "cwd": "{workspaceRoot}"
       }
     },
     "typecheck": {
       "executor": "nx:run-commands",
       "options": {
-        "command": "tsc -p packages/components/lambda-api/tsconfig.lib.json --noEmit",
+        "command": "tsc -p packages/components/openfeature-provider/tsconfig.lib.json --noEmit",
         "cwd": "{workspaceRoot}"
       }
     }

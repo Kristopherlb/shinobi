@@ -5,7 +5,8 @@
     "build": {
       "executor": "nx:run-commands",
       "options": {
-        "command": "pnpm exec tsc -b packages/components/glue-job/tsconfig.build.json"
+        "command": "node_modules/.bin/tsc -b packages/components/glue-job/tsconfig.build.json",
+        "cwd": "{workspaceRoot}"
       },
       "outputs": [
         "{workspaceRoot}/dist/packages/components/glue-job"
@@ -24,13 +25,15 @@
     "clean": {
       "executor": "nx:run-commands",
       "options": {
-        "command": "rimraf dist/packages/components/glue-job"
+        "command": "rimraf dist/packages/components/glue-job",
+        "cwd": "{workspaceRoot}"
       }
     },
     "typecheck": {
       "executor": "nx:run-commands",
       "options": {
-        "command": "tsc -p packages/components/glue-job/tsconfig.json --noEmit"
+        "command": "tsc -p packages/components/glue-job/tsconfig.json --noEmit",
+        "cwd": "{workspaceRoot}"
       }
     }
   },
@@ -40,4 +43,3 @@
     "infra:aws"
   ]
 }
-
