@@ -3,11 +3,37 @@
  * Tests component creator validation logic
  */
 
-import { describe, it, expect } from 'vitest';
+import { describe, it, expect, beforeEach, afterEach } from 'vitest';
 import { App, Stack, Environment } from 'aws-cdk-lib';
 import { SqsQueueCreator } from '../sqs-queue.creator.js';
 import { SqsQueueConfig } from '../sqs-queue.builder.js';
 import { ComponentContext, ComponentSpec } from '@shinobi/core';
+import { vi } from 'vitest';
+
+// Determinism controls (PTS-301, PTS-303)
+let rngSeed: number;
+let randomSpy: ReturnType<typeof vi.spyOn>;
+
+beforeEach(() => {
+  // Freeze clock for deterministic tests (PTS-301)
+  vi.useFakeTimers();
+  
+  // Seed RNG for reproducibility (PTS-303)
+  rngSeed = 12345;
+  randomSpy = vi.spyOn(Math, 'random').mockImplementation(() => {
+    // Simple LCG for deterministic randomness
+    const a = 1664525;
+    const c = 1013904223;
+    const m = 2 ** 32;
+    rngSeed = (a * rngSeed + c) % m;
+    return rngSeed / m;
+  });
+});
+
+afterEach(() => {
+  vi.useRealTimers();
+  randomSpy?.mockRestore();
+});
 
 const createMockContext = (
   complianceFramework: 'commercial' | 'fedramp-moderate' | 'fedramp-high' = 'commercial',
@@ -54,29 +80,29 @@ describe('SqsQueueCreator', () => {
   const creator = new SqsQueueCreator();
 
   describe('Component metadata', () => {
-    it('should have correct component type', () => {
+    it('ComponentMetadata__ComponentType__MatchesExpected', () => {
       expect(creator.componentType).toBe('sqs-queue');
     });
 
-    it('should have correct display name', () => {
+    it('ComponentMetadata__DisplayName__MatchesExpected', () => {
       expect(creator.displayName).toBe('SQS Queue');
     });
 
-    it('should have correct category', () => {
+    it('ComponentMetadata__Category__MatchesExpected', () => {
       expect(creator.category).toBe('messaging');
     });
 
-    it('should have correct AWS service', () => {
+    it('ComponentMetadata__AWSService__MatchesExpected', () => {
       expect(creator.awsService).toBe('SQS');
     });
 
-    it('should have config schema', () => {
+    it('ComponentMetadata__ConfigSchema__IsDefined', () => {
       expect(creator.configSchema).toBeDefined();
     });
   });
 
   describe('validateSpec', () => {
-    it('should validate component name', () => {
+    it('Validation__ValidComponentName__PassesValidation', () => {
       const context = createMockContext();
       const spec = createMockSpec();
       
@@ -85,7 +111,7 @@ describe('SqsQueueCreator', () => {
       expect(result.errors).toHaveLength(0);
     });
 
-    it('should reject invalid component name starting with number', () => {
+    it('Validation__NameStartsWithNumber__RejectsWithError', () => {
       const context = createMockContext();
       const spec: ComponentSpec = {
         name: '123-invalid-name',
@@ -99,7 +125,7 @@ describe('SqsQueueCreator', () => {
       expect(result.errors[0]).toContain('Component name must start with a letter');
     });
 
-    it('should reject component name with invalid characters', () => {
+    it('Validation__NameWithInvalidCharacters__RejectsWithError', () => {
       const context = createMockContext();
       const spec: ComponentSpec = {
         name: 'invalid@name',
@@ -113,7 +139,7 @@ describe('SqsQueueCreator', () => {
       expect(result.errors[0]).toContain('alphanumeric characters, hyphens, and underscores');
     });
 
-    it('should validate queue name pattern', () => {
+    it('Validation__ValidQueueName__PassesValidation', () => {
       const context = createMockContext();
       const spec = createMockSpec({
         queueName: 'valid-queue-name-123'
@@ -124,7 +150,7 @@ describe('SqsQueueCreator', () => {
       expect(result.errors).toHaveLength(0);
     });
 
-    it('should reject queue name with invalid characters', () => {
+    it('Validation__QueueNameWithInvalidCharacters__RejectsWithError', () => {
       const context = createMockContext();
       const spec = createMockSpec({
         queueName: 'invalid@queue#name'
@@ -136,7 +162,7 @@ describe('SqsQueueCreator', () => {
       expect(result.errors.some(e => e.includes('queueName must contain only alphanumeric'))).toBe(true);
     });
 
-    it('should reject queue name longer than 80 characters', () => {
+    it('Validation__QueueNameExceeds80Chars__RejectsWithError', () => {
       const context = createMockContext();
       const spec = createMockSpec({
         queueName: 'a'.repeat(81) // 81 characters
@@ -148,7 +174,7 @@ describe('SqsQueueCreator', () => {
       expect(result.errors.some(e => e.includes('queueName must be 80 characters or less'))).toBe(true);
     });
 
-    it('should reject empty queue name', () => {
+    it('Validation__EmptyQueueName__RejectsWithError', () => {
       const context = createMockContext();
       const spec = createMockSpec({
         queueName: ''
@@ -160,7 +186,7 @@ describe('SqsQueueCreator', () => {
       expect(result.errors.some(e => e.includes('queueName cannot be empty'))).toBe(true);
     });
 
-    it('should reject detailedMetrics when monitoring is disabled', () => {
+    it('Validation__DetailedMetricsWithoutMonitoring__RejectsWithError', () => {
       const context = createMockContext();
       const spec = createMockSpec({
         monitoring: {
@@ -175,7 +201,7 @@ describe('SqsQueueCreator', () => {
       expect(result.errors.some(e => e.includes('detailedMetrics cannot be enabled when monitoring is disabled'))).toBe(true);
     });
 
-    it('should validate DLQ configuration with valid maxReceiveCount', () => {
+    it('Validation__ValidDLQConfig__PassesValidation', () => {
       const context = createMockContext();
       const spec = createMockSpec({
         deadLetterQueue: {
@@ -189,7 +215,7 @@ describe('SqsQueueCreator', () => {
       expect(result.errors).toHaveLength(0);
     });
 
-    it('should reject DLQ with invalid maxReceiveCount', () => {
+    it('Validation__InvalidMaxReceiveCount__RejectsWithError', () => {
       const context = createMockContext();
       const spec = createMockSpec({
         deadLetterQueue: {
@@ -204,7 +230,7 @@ describe('SqsQueueCreator', () => {
       expect(result.errors.some(e => e.includes('maxReceiveCount must be at least 1'))).toBe(true);
     });
 
-    it('should allow DLQ without maxReceiveCount (uses default)', () => {
+    it('Validation__DLQWithoutMaxReceiveCount__UsesDefault', () => {
       const context = createMockContext();
       const spec = createMockSpec({
         deadLetterQueue: {
@@ -220,7 +246,7 @@ describe('SqsQueueCreator', () => {
   });
 
   describe('createComponent', () => {
-    it('should create component instance', () => {
+    it('ComponentCreation__ValidSpec__CreatesInstance', () => {
       const context = createMockContext();
       const spec = createMockSpec();
       
@@ -229,7 +255,7 @@ describe('SqsQueueCreator', () => {
       expect(component.getType()).toBe('sqs-queue');
     });
 
-    it('should create component via processComponent alias', () => {
+    it('ComponentCreation__ProcessComponentAlias__CreatesInstance', () => {
       const context = createMockContext();
       const spec = createMockSpec();
       
@@ -240,7 +266,7 @@ describe('SqsQueueCreator', () => {
   });
 
   describe('getProvidedCapabilities', () => {
-    it('should return correct capability types', () => {
+    it('CapabilityRegistration__GetProvidedCapabilities__ReturnsCorrectTypes', () => {
       const capabilities = creator.getProvidedCapabilities();
       expect(capabilities).toContain('messaging:sqs');
       expect(capabilities).toContain('messaging:sqs:dlq');
@@ -248,14 +274,14 @@ describe('SqsQueueCreator', () => {
   });
 
   describe('getRequiredCapabilities', () => {
-    it('should return empty array (no required capabilities)', () => {
+    it('CapabilityRegistration__GetRequiredCapabilities__ReturnsEmptyArray', () => {
       const capabilities = creator.getRequiredCapabilities();
       expect(capabilities).toEqual([]);
     });
   });
 
   describe('getConstructHandles', () => {
-    it('should return correct construct handles', () => {
+    it('ConstructHandles__GetConstructHandles__ReturnsCorrectHandles', () => {
       const handles = creator.getConstructHandles();
       expect(handles).toContain('main');
       expect(handles).toContain('deadLetterQueue');

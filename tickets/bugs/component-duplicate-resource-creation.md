@@ -835,3 +835,4 @@ describe('LambdaApiComponent - Binding Awareness', () => {
 - Consider adding a linting rule to detect components that create resources matching their bindable capabilities
 - Consider adding a pre-synthesis validation step that warns about potential duplicate resource creation
 
+

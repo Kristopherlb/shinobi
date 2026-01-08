@@ -14,13 +14,33 @@ import { vi, beforeEach, afterEach } from 'vitest';
 
 let platformConfigSpy: any;
 
+// Determinism controls (PTS-301, PTS-303)
+let rngSeed: number;
+let randomSpy: ReturnType<typeof vi.spyOn>;
+
 beforeEach(() => {
+  // Freeze clock for deterministic tests (PTS-301)
+  vi.useFakeTimers();
+  
+  // Seed RNG for reproducibility (PTS-303)
+  rngSeed = 12345;
+  randomSpy = vi.spyOn(Math, 'random').mockImplementation(() => {
+    // Simple LCG for deterministic randomness
+    const a = 1664525;
+    const c = 1013904223;
+    const m = 2 ** 32;
+    rngSeed = (a * rngSeed + c) % m;
+    return rngSeed / m;
+  });
+  
   platformConfigSpy = vi
     .spyOn(SqsQueueConfigBuilder.prototype as any, '_loadPlatformConfiguration')
     .mockImplementation(() => ({}));
 });
 
 afterEach(() => {
+  vi.useRealTimers();
+  randomSpy?.mockRestore();
   platformConfigSpy?.mockRestore();
 });
 
@@ -56,7 +76,7 @@ describe('SqsQueueConfigBuilder', () => {
   
   describe('Hardcoded Fallbacks (Layer 1)', () => {
     
-    it('should provide ultra-safe baseline configuration', () => {
+    it('HardcodedFallbacks__EmptyConfig__ProvidesUltraSafeBaseline', () => {
       const context = createMockContext();
       const spec = createMockSpec();
       
@@ -73,7 +93,7 @@ describe('SqsQueueConfigBuilder', () => {
   
   describe('High Risk Environment Defaults (Layer 2)', () => {
     
-    it('should apply standard defaults when highRiskEnvironment is false', () => {
+    it('HighRiskDefaults__FlagFalse__AppliesStandardDefaults', () => {
       const context = createMockContext('commercial');
       const spec = createMockSpec({
         highRiskEnvironment: false
@@ -89,7 +109,7 @@ describe('SqsQueueConfigBuilder', () => {
       expect(config.monitoring?.detailedMetrics).toBe(false);
     });
     
-    it('should apply enhanced security defaults when highRiskEnvironment is true', () => {
+    it('HighRiskDefaults__FlagTrue__AppliesEnhancedSecurityDefaults', () => {
       const context = createMockContext('commercial');
       const spec = createMockSpec({
         highRiskEnvironment: true
@@ -105,7 +125,7 @@ describe('SqsQueueConfigBuilder', () => {
       expect(config.monitoring?.detailedMetrics).toBe(true);
     });
     
-    it('should work with any compliance framework when highRiskEnvironment is set', () => {
+    it('HighRiskDefaults__AnyComplianceFramework__AppliesSameDefaults', () => {
       // Test that highRiskEnvironment works regardless of framework
       const frameworks: Array<'commercial' | 'fedramp-moderate' | 'fedramp-high'> = ['commercial', 'fedramp-moderate', 'fedramp-high'];
       
@@ -125,7 +145,7 @@ describe('SqsQueueConfigBuilder', () => {
       });
     });
     
-    it('should allow component overrides to disable high-risk defaults', () => {
+    it('PrecedenceChain__ComponentOverride__DisablesHighRiskDefaults', () => {
       const context = createMockContext('commercial');
       const spec = createMockSpec({
         highRiskEnvironment: true,
@@ -148,7 +168,7 @@ describe('SqsQueueConfigBuilder', () => {
   
   describe('5-Layer Precedence Chain', () => {
     
-    it('should apply component overrides over platform defaults', () => {
+    it('PrecedenceChain__ComponentOverride__TakesPrecedenceOverPlatformDefaults', () => {
       const context = createMockContext('commercial');
       const spec = createMockSpec({
         monitoring: {
@@ -165,7 +185,7 @@ describe('SqsQueueConfigBuilder', () => {
       expect(config.monitoring?.detailedMetrics).toBe(false);
     });
     
-    it('should merge nested configuration objects correctly', () => {
+    it('PrecedenceChain__NestedConfig__MergesCorrectly', () => {
       const context = createMockContext('commercial');
       const spec = createMockSpec({
         monitoring: {
@@ -183,7 +203,7 @@ describe('SqsQueueConfigBuilder', () => {
       expect(config.monitoring?.detailedMetrics).toBe(false);
     });
     
-    it('should respect highRiskEnvironment flag in precedence chain', () => {
+    it('PrecedenceChain__HighRiskFlag__RespectsInPrecedenceChain', () => {
       const context = createMockContext('commercial');
       const spec = createMockSpec({
         highRiskEnvironment: true,
@@ -206,7 +226,7 @@ describe('SqsQueueConfigBuilder', () => {
   
   describe('Schema Validation', () => {
     
-    it('should return the component schema', () => {
+    it('SchemaValidation__GetSchema__ReturnsValidSchema', () => {
       const context = createMockContext();
       const spec = createMockSpec();
       

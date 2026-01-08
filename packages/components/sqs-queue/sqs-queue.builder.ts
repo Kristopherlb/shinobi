@@ -35,6 +35,7 @@ export interface SqsQueueConfig {
   encryption?: {
     enabled?: boolean;
     kmsKeyId?: string;
+    enableKeyRotation?: boolean;
   };
   
   /** Dead letter queue configuration */
@@ -48,6 +49,10 @@ export interface SqsQueueConfig {
   monitoring?: {
     enabled?: boolean;
     detailedMetrics?: boolean;
+    dashboard?: {
+      enabled?: boolean;
+      name?: string;
+    };
     alarms?: {
       // TODO: Define component-specific alarm thresholds
     };
@@ -211,6 +216,7 @@ export class SqsQueueConfigBuilder extends ConfigBuilder<SqsQueueConfig> {
       const result = {
         encryption: {
           enabled: true, // Mandatory encryption for high-risk environments
+          enableKeyRotation: true, // Mandatory key rotation for high-risk environments
           // kmsKeyId will be auto-created if not provided
         },
         deadLetterQueue: {

@@ -14,8 +14,10 @@ import {
   BaseComponent,
   ComponentSpec,
   ComponentContext,
-  ComponentCapabilities
+  ComponentCapabilities,
+  resolveComponentConstruct
 } from '@shinobi/core';
+import type { IComponent } from '@shinobi/core';
 import {
   LambdaWorkerComponentConfigBuilder,
   LambdaWorkerConfig,
@@ -185,7 +187,9 @@ export class LambdaWorkerComponent extends BaseComponent {
       timeout: cdk.Duration.seconds(this.config!.timeoutSeconds),
       code,
       environment: this.buildEnvironment(),
-      reservedConcurrentExecutions: this.config!.reservedConcurrency,
+      ...(typeof this.config!.reservedConcurrency === 'number' && {
+        reservedConcurrentExecutions: this.config!.reservedConcurrency
+      }),
       tracing: this.config!.tracing.mode === 'Active' ? lambda.Tracing.ACTIVE : lambda.Tracing.PASS_THROUGH,
       logRetention: this.mapLogRetentionDays(this.config!.logging.logRetentionDays),
       logRetentionRetryOptions: {
@@ -216,12 +220,12 @@ export class LambdaWorkerComponent extends BaseComponent {
     this.applyCdkNagSuppressions(lambdaFunction);
 
     // Initialize advanced features using platform service
-    if (!this.lambdaFunction) {
+    if (!lambdaFunction) {
       throw new Error('Lambda function must be created before initializing advanced features');
     }
     this.advancedFeatures = LambdaAdvancedFeaturesService.createForWorker(
       this,
-      this.lambdaFunction,
+      lambdaFunction,
       this.context
     );
     this.configureAdvancedFeatures();
@@ -293,7 +297,48 @@ export class LambdaWorkerComponent extends BaseComponent {
       return;
     }
 
-    const queue = sqs.Queue.fromQueueArn(this, `LambdaWorkerQueue${index}`, source.queueArn);
+    // Resolve queue - support component references in format @component:component-name
+    let queue: sqs.IQueue;
+    let queueVisibilityTimeout: number | undefined;
+    
+    if (source.queueArn && source.queueArn.startsWith('@component:')) {
+      const componentName = source.queueArn.replace('@component:', '');
+      const result = this.resolveComponentQueueWithValidation(componentName, index);
+      queue = result.queue;
+      queueVisibilityTimeout = result.visibilityTimeout;
+    } else {
+      queue = sqs.Queue.fromQueueArn(this, `LambdaWorkerQueue${index}`, source.queueArn);
+      // For external queues, we can't validate visibility timeout
+      queueVisibilityTimeout = undefined;
+    }
+
+    // Validate visibility timeout constraint (AWS requirement)
+    if (queueVisibilityTimeout !== undefined && this.config) {
+      const lambdaTimeout = this.config.timeoutSeconds;
+      
+      if (queueVisibilityTimeout < lambdaTimeout) {
+        throw new Error(
+          `SQS queue visibility timeout (${queueVisibilityTimeout}s) must be >= Lambda timeout (${lambdaTimeout}s). ` +
+          `AWS requires queue visibility timeout >= function timeout. ` +
+          `Recommended: set queue visibility timeout to at least ${lambdaTimeout * 6}s (6x Lambda timeout) for retry safety.`
+        );
+      }
+      
+      // Warn if visibility timeout is less than 6x Lambda timeout (best practice)
+      if (queueVisibilityTimeout < lambdaTimeout * 6) {
+        this.logComponentEvent('validation_warning', 
+          `SQS queue visibility timeout (${queueVisibilityTimeout}s) is less than 6x Lambda timeout (${lambdaTimeout * 6}s). ` +
+          `Consider increasing to ${lambdaTimeout * 6}s for better retry safety.`,
+          {
+            field: 'eventSources',
+            severity: 'warning',
+            queueVisibilityTimeout,
+            lambdaTimeout,
+            recommendedTimeout: lambdaTimeout * 6
+          }
+        );
+      }
+    }
 
     const eventSource = new lambdaEventSources.SqsEventSource(queue, {
       batchSize: source.batchSize ?? 10,
@@ -305,6 +350,57 @@ export class LambdaWorkerComponent extends BaseComponent {
     });
 
     this.lambdaFunction!.addEventSource(eventSource);
+  }
+
+  /**
+   * Resolves a component reference to a queue construct with validation
+   * 
+   * Supports component references in the format @component:component-name
+   * by finding the component in the stack and retrieving its queue construct
+   * and visibility timeout for validation.
+   * 
+   * @param componentName - Name of the component to resolve
+   * @param index - Index for unique resource naming
+   * @returns Object with queue construct and visibility timeout
+   * @throws Error if component not found or doesn't provide messaging:sqs capability
+   */
+  private resolveComponentQueueWithValidation(componentName: string, index: number): { queue: sqs.IQueue; visibilityTimeout: number } {
+    // Use platform component resolver utility (similar to VPC resolver for ElastiCache/RDS)
+    // This ensures consistent resolution and avoids CloudFormation early validation errors
+    const component = resolveComponentConstruct<IComponent>(this, {
+      componentName,
+      constructHandle: 'main',
+      expectedCapability: 'messaging:sqs',
+      requestingComponentName: this.spec.name
+    });
+
+    // Get capabilities to extract visibility timeout
+    const capabilities = component.getCapabilities();
+    if (!capabilities || !capabilities['messaging:sqs']) {
+      throw new Error(`Component '${componentName}' does not provide 'messaging:sqs' capability`);
+    }
+
+    const sqsCapability = capabilities['messaging:sqs'] as any;
+    const visibilityTimeout = sqsCapability.visibilityTimeoutSeconds ?? 30;
+
+    // Get the queue construct (already validated by resolveComponentConstruct)
+    const queueConstruct = component.getConstruct('main') as sqs.IQueue;
+
+    // Verify it's an SQS queue
+    if (!(queueConstruct instanceof sqs.Queue) && !(queueConstruct as any).queueArn) {
+      throw new Error(`Component '${componentName}' main construct is not an SQS queue`);
+    }
+
+    // Add explicit dependency to ensure queue is created before EventSourceMapping
+    // (resolveComponentConstruct already adds a dependency, but we add it to the Lambda function specifically)
+    if (this.lambdaFunction && queueConstruct instanceof sqs.Queue) {
+      this.lambdaFunction.node.addDependency(queueConstruct);
+    }
+
+    return {
+      queue: queueConstruct as sqs.IQueue,
+      visibilityTimeout
+    };
   }
 
   /**

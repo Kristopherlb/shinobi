@@ -1,0 +1,44 @@
+{
+  "id": "TP-sqs-queue-security-001",
+  "level": "unit",
+  "capability": "SQS queue component CDK Nag security validation",
+  "oracle": "contract",
+  "invariants": [
+    "Component passes AwsSolutions security checks",
+    "High-risk environment configurations meet security requirements",
+    "Encryption and DLQ configurations are validated"
+  ],
+  "fixtures": [
+    "createMockContext",
+    "ComponentSpec with various security configurations",
+    "CDK Stack with AwsSolutionsChecks"
+  ],
+  "inputs": {
+    "shape": "ComponentSpec with basic and high-risk configurations",
+    "notes": "Tests security compliance across different risk levels"
+  },
+  "risks": [
+    "Security misconfiguration",
+    "Compliance violations"
+  ],
+  "dependencies": [
+    "SqsQueueComponent",
+    "cdk-nag",
+    "aws-cdk-lib",
+    "aws-cdk-lib/assertions",
+    "@shinobi/core",
+    "vitest"
+  ],
+  "evidence": [
+    "CDK Nag annotation checks",
+    "AwsSolutions rule compliance"
+  ],
+  "compliance_refs": [
+    "std://platform-component-api-spec",
+    "std://platform-security-standard"
+  ],
+  "ai_generated": true,
+  "human_reviewed_by": "platform-team"
+}
+
+

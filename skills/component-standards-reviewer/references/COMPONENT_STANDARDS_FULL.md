@@ -112,3 +112,4 @@ All tests MUST include metadata following Platform Testing Standard.
 
 For the complete specification, see `.cursor/rules/component-standards.mdc` in the codebase.
 
+

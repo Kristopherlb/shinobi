@@ -28,7 +28,10 @@ license: Apache-2.0
    - Determinism requirements (clock/RNG/I/O control)
    - Oracle usage and assertion patterns
    - Coverage and evidence requirements
-6. Provide specific remediation guidance based on violations found
+6. **For AWS best practices**: When violations are found, activate `devops-knowledge-base` skill to find AWS-recommended remediation from Config conformance packs
+   - Example: If S3 bucket lacks versioning, use `devops-knowledge-base` to find the AWS Config rule `s3-bucket-versioning-enabled` and its remediation guidance
+   - Example: If encryption is missing, use `devops-knowledge-base` to find FedRAMP compliance requirements for encryption
+7. Provide specific remediation guidance based on violations found, referencing AWS best practices when applicable
 
 Adapt these steps as needed for your specific review scenario (generation vs modification vs audit).
 

@@ -28,6 +28,7 @@ export type { LogLevel as PlatformLogLevel } from './platform/logger/src/index.j
 
 // Export platform utilities
 export { resolveVpcForSubnetGroups, resolveVpcForSecurityGroups } from './platform/utils/vpc-resolver.js';
+export { resolveComponentConstruct } from './platform/utils/component-resolver.js';
 export type { VpcResolutionOptions } from './platform/utils/vpc-resolver.js';
 
 // add other re-exports as needed

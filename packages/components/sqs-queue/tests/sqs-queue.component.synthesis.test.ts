@@ -15,14 +15,33 @@ import { ComponentContext, ComponentSpec } from '@shinobi/core';
 import { vi, beforeEach, afterEach } from 'vitest';
 
 let platformConfigSpy: any;
+let rngSeed: number;
+let randomSpy: ReturnType<typeof vi.spyOn>;
 
+// Determinism controls (PTS-301, PTS-303)
 beforeEach(() => {
+  // Freeze clock for deterministic tests (PTS-301)
+  vi.useFakeTimers();
+  
+  // Seed RNG for reproducibility (PTS-303)
+  rngSeed = 12345;
+  randomSpy = vi.spyOn(Math, 'random').mockImplementation(() => {
+    // Simple LCG for deterministic randomness
+    const a = 1664525;
+    const c = 1013904223;
+    const m = 2 ** 32;
+    rngSeed = (a * rngSeed + c) % m;
+    return rngSeed / m;
+  });
+  
   platformConfigSpy = vi
     .spyOn(SqsQueueConfigBuilder.prototype as any, '_loadPlatformConfiguration')
     .mockImplementation(() => ({}));
 });
 
 afterEach(() => {
+  vi.useRealTimers();
+  randomSpy?.mockRestore();
   platformConfigSpy?.mockRestore();
 });
 
@@ -102,7 +121,7 @@ describe('SqsQueueComponent Synthesis', () => {
   
   describe('Default Happy Path Synthesis', () => {
     
-    it('should synthesize basic sqs-queue with commercial compliance', () => {
+    it('Synthesis__CommercialCompliance__CreatesBasicQueue', () => {
       const context = createMockContext('commercial');
       const spec = createMockSpec();
       
@@ -125,7 +144,7 @@ describe('SqsQueueComponent Synthesis', () => {
       expect(component.getType()).toBe('sqs-queue');
     });
     
-    it('should apply standard platform tags', () => {
+    it('Tagging__StandardTags__AppliesToAllResources', () => {
       const context = createMockContext('commercial');
       const spec = createMockSpec();
       
@@ -153,7 +172,7 @@ describe('SqsQueueComponent Synthesis', () => {
     // Test removed to prevent Nx from reporting it as a failure
     // Will be re-added once the KmsMasterKeyId assertion issue is resolved
     
-    it('should use standard defaults when highRiskEnvironment is false', () => {
+    it('HighRiskHardening__FlagFalse__UsesStandardDefaults', () => {
       const context = createMockContext('commercial');
       const spec = createMockSpec({
         highRiskEnvironment: false
@@ -170,7 +189,7 @@ describe('SqsQueueComponent Synthesis', () => {
       });
     });
     
-    it('should work with highRiskEnvironment regardless of compliance framework', () => {
+    it('HighRiskHardening__AnyComplianceFramework__AppliesSameHardening', () => {
       // Test that highRiskEnvironment works across all frameworks
       const frameworks: Array<'commercial' | 'fedramp-moderate' | 'fedramp-high'> = ['commercial', 'fedramp-moderate', 'fedramp-high'];
       
@@ -194,7 +213,7 @@ describe('SqsQueueComponent Synthesis', () => {
   
   describe('Component Capabilities and Constructs', () => {
     
-    it('should register correct capabilities after synthesis', () => {
+    it('CapabilityRegistration__AfterSynthesis__RegistersCorrectCapabilities', () => {
       // #region agent log
       fetch('http://127.0.0.1:7242/ingest/31cd8a5c-c5a9-4c85-9dba-5f04dc91dc42',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'sqs-queue.component.synthesis.test.ts:199',message:'test: capabilities entry',data:{},timestamp:Date.now(),sessionId:'debug-session',runId:'run1',hypothesisId:'E'})}).catch(()=>{});
       // #endregion
@@ -219,7 +238,7 @@ describe('SqsQueueComponent Synthesis', () => {
       expect(capabilities['messaging:sqs']).toBeDefined();
     });
     
-    it('should register construct handles for patches.ts access', () => {
+    it('ConstructRegistration__AfterSynthesis__RegistersHandlesForPatches', () => {
       // #region agent log
       fetch('http://127.0.0.1:7242/ingest/31cd8a5c-c5a9-4c85-9dba-5f04dc91dc42',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'sqs-queue.component.synthesis.test.ts:212',message:'test: construct handles entry',data:{},timestamp:Date.now(),sessionId:'debug-session',runId:'run1',hypothesisId:'E'})}).catch(()=>{});
       // #endregion
@@ -252,7 +271,7 @@ describe('SqsQueueComponent Synthesis', () => {
       expect(handles).toContain('main');
     });
     
-    it('should register DLQ construct when highRiskEnvironment is enabled', () => {
+    it('ConstructRegistration__HighRiskEnabled__RegistersDLQConstruct', () => {
       const context = createMockContext('commercial');
       const spec = createMockSpec({
         highRiskEnvironment: true
@@ -272,7 +291,7 @@ describe('SqsQueueComponent Synthesis', () => {
   
   describe('Error Handling', () => {
     
-    it('should handle invalid configuration gracefully', () => {
+    it('ErrorHandling__InvalidConfiguration__HandlesGracefully', () => {
       const context = createMockContext('commercial');
       const spec = createMockSpec({
         // TODO: Add invalid configuration that should be caught

@@ -54,3 +54,4 @@
   "llm_judge_prompt": "Evaluate whether the agent's response to the input follows the test-driven-development skill instructions, implements the Red-Green-Refactor cycle correctly, ensures PTS-1.0 compliance, and handles edge cases appropriately. Check for forbidden patterns like writing code before tests or skipping metadata."
 }
 
+

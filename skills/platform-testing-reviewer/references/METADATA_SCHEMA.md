@@ -243,3 +243,4 @@ This document provides the JSON Schema for test metadata sidecars required by Pl
 3. **Arrays**: All array fields must be present (may be empty `[]`)
 4. **Strings**: All string fields must be non-empty (except `human_reviewed_by` when `ai_generated=false`)
 
+

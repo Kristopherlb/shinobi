@@ -143,7 +143,13 @@ const SQS_EVENT_SOURCE_SCHEMA = {
     {
       properties: {
         type: { const: 'sqs' },
-        queueArn: { type: 'string' },
+        queueArn: { 
+          type: 'string',
+          description: 'SQS queue ARN or component reference (@component:component-name). ' +
+            'IMPORTANT: The referenced queue\'s visibility timeout MUST be >= Lambda function timeout. ' +
+            'AWS requirement: queue visibility timeout >= function timeout. ' +
+            'Best practice: queue visibility timeout >= 6x function timeout for retry safety.'
+        },
         batchSize: { type: 'number', minimum: 1, maximum: 1000 },
         enabled: { type: 'boolean', default: true },
         maximumBatchingWindowSeconds: { type: 'number', minimum: 0, maximum: 300 },

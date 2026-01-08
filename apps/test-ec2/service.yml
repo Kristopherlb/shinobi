@@ -18,3 +18,4 @@ components:
       instanceType: t3.micro
       description: "Simple test EC2 instance"
 
+

@@ -1,0 +1,42 @@
+{
+  "id": "TP-sqs-queue-builder-001",
+  "level": "unit",
+  "capability": "SqsQueueConfigBuilder 5-layer precedence chain and risk-based defaults",
+  "oracle": "exact",
+  "invariants": [
+    "Hardcoded fallbacks provide safe defaults",
+    "High-risk environment enables encryption, DLQ, and detailed metrics",
+    "Component overrides take precedence over defaults",
+    "Configuration precedence: Override > Environment > Platform > Compliance > Hardcoded"
+  ],
+  "fixtures": [
+    "createMockContext",
+    "createMockSpec",
+    "SqsQueueConfigBuilder instance"
+  ],
+  "inputs": {
+    "shape": "Configuration objects with various precedence levels and risk flags",
+    "notes": "Uses deterministic test data with known configuration values"
+  },
+  "risks": [
+    "Configuration precedence logic complexity",
+    "Risk-based flag evaluation"
+  ],
+  "dependencies": [
+    "SqsQueueConfigBuilder",
+    "SqsQueueConfig types",
+    "@shinobi/core",
+    "vitest"
+  ],
+  "evidence": [
+    "Configuration object property assertions",
+    "Precedence chain verification"
+  ],
+  "compliance_refs": [
+    "std://platform-configuration-standard"
+  ],
+  "ai_generated": true,
+  "human_reviewed_by": "platform-team"
+}
+
+

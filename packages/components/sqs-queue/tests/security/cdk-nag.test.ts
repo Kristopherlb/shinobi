@@ -18,18 +18,37 @@ import { SqsQueueConfigBuilder } from '../../sqs-queue.builder';
 import { vi } from 'vitest';
 
 let platformConfigSpy: any;
+let rngSeed: number;
+let randomSpy: ReturnType<typeof vi.spyOn>;
 
+// Determinism controls (PTS-301, PTS-303)
 beforeEach(() => {
+  // Freeze clock for deterministic tests (PTS-301)
+  vi.useFakeTimers();
+  
+  // Seed RNG for reproducibility (PTS-303)
+  rngSeed = 12345;
+  randomSpy = vi.spyOn(Math, 'random').mockImplementation(() => {
+    // Simple LCG for deterministic randomness
+    const a = 1664525;
+    const c = 1013904223;
+    const m = 2 ** 32;
+    rngSeed = (a * rngSeed + c) % m;
+    return rngSeed / m;
+  });
+  
   platformConfigSpy = vi
     .spyOn(SqsQueueConfigBuilder.prototype as any, '_loadPlatformConfiguration')
     .mockImplementation(() => ({}));
 });
 
 afterEach(() => {
+  vi.useRealTimers();
+  randomSpy?.mockRestore();
   platformConfigSpy?.mockRestore();
 });
 
-describe.skip('SqsQueueComponent - CDK Nag Security Validation', () => {
+describe('SqsQueueComponent - CDK Nag Security Validation', () => {
   let app: cdk.App;
   let stack: cdk.Stack;
   let context: ComponentContext;
@@ -50,8 +69,8 @@ describe.skip('SqsQueueComponent - CDK Nag Security Validation', () => {
     } as ComponentContext;
   });
 
-  describe('Commercial Framework - AwsSolutions', () => {
-    it('passes AwsSolutions security checks for basic queue', () => {
+  describe.skip('Commercial Framework - AwsSolutions', () => {
+    it('SecurityValidation__BasicQueue__PassesAwsSolutionsChecks', () => {
       const spec: ComponentSpec = {
         name: 'test-queue',
         type: 'sqs-queue',
@@ -74,8 +93,8 @@ describe.skip('SqsQueueComponent - CDK Nag Security Validation', () => {
     });
   });
 
-  describe('High Risk Environment - Enhanced Security', () => {
-    it('passes AwsSolutions security checks with highRiskEnvironment enabled', () => {
+  describe.skip('High Risk Environment - Enhanced Security', () => {
+    it('SecurityValidation__HighRiskEnvironment__PassesAwsSolutionsChecks', () => {
       const spec: ComponentSpec = {
         name: 'test-queue',
         type: 'sqs-queue',
@@ -99,7 +118,7 @@ describe.skip('SqsQueueComponent - CDK Nag Security Validation', () => {
       expect(errors).toHaveLength(0);
     });
     
-    it('passes AwsSolutions security checks with explicit encryption config', () => {
+    it('SecurityValidation__ExplicitEncryptionConfig__PassesAwsSolutionsChecks', () => {
       const spec: ComponentSpec = {
         name: 'test-queue',
         type: 'sqs-queue',

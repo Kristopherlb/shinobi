@@ -1,0 +1,43 @@
+{
+  "id": "TP-sqs-queue-creator-001",
+  "level": "unit",
+  "capability": "SqsQueueCreator validation, component creation, and capability registration",
+  "oracle": "exact",
+  "invariants": [
+    "Creator metadata matches component type",
+    "Component validation rejects invalid names and configurations",
+    "Component creation succeeds with valid specs",
+    "Capability registration matches component capabilities"
+  ],
+  "fixtures": [
+    "createMockContext",
+    "createMockSpec",
+    "SqsQueueCreator instance"
+  ],
+  "inputs": {
+    "shape": "ComponentSpec with valid and invalid configurations",
+    "notes": "Tests include boundary values, invalid characters, and edge cases for validation"
+  },
+  "risks": [
+    "Validation logic complexity",
+    "Name pattern enforcement"
+  ],
+  "dependencies": [
+    "SqsQueueCreator",
+    "SqsQueueConfig types",
+    "@shinobi/core",
+    "vitest"
+  ],
+  "evidence": [
+    "Validation result assertions",
+    "Component metadata verification",
+    "Capability registration checks"
+  ],
+  "compliance_refs": [
+    "std://platform-component-api-spec"
+  ],
+  "ai_generated": true,
+  "human_reviewed_by": "platform-team"
+}
+
+
