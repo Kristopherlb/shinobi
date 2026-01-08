@@ -7,8 +7,10 @@
 export { Route53HostedZoneComponent } from './route53-hosted-zone.component.js';
 
 // Configuration exports
+export type { 
+  Route53HostedZoneConfig
+} from './route53-hosted-zone.builder.js';
 export { 
-  Route53HostedZoneConfig,
   Route53HostedZoneComponentConfigBuilder,
   ROUTE53_HOSTED_ZONE_CONFIG_SCHEMA
 } from './route53-hosted-zone.builder.js';

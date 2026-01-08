@@ -8,6 +8,15 @@ import * as fsp from 'fs/promises';
 import * as path from 'path';
 
 /**
+ * Ensure a directory exists, creating it recursively if needed
+ * 
+ * @param dir - Directory path to ensure exists
+ */
+export async function ensureOutputDir(dir: string): Promise<void> {
+  await fsp.mkdir(dir, { recursive: true });
+}
+
+/**
  * Recursively copy a directory and all its contents
  * 
  * @param src - Source directory path
@@ -15,7 +24,7 @@ import * as path from 'path';
  */
 export async function copyDirectory(src: string, dest: string): Promise<void> {
   const entries = await fsp.readdir(src, { withFileTypes: true });
-  await fsp.mkdir(dest, { recursive: true });
+  await ensureOutputDir(dest);
   
   for (const entry of entries) {
     const srcPath = path.join(src, entry.name);

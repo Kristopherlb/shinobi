@@ -32,6 +32,7 @@ import {
   synthesizeService,
   SimpleManifest
 } from './utils/service-synthesizer.js';
+import { ensureOutputDir } from './utils/file-utils.js';
 
 export interface SynthOptions {
   file?: string;
@@ -68,10 +69,6 @@ interface SynthDependencies {
   fileDiscovery: FileDiscovery;
   logger: Logger;
 }
-
-const ensureOutputDir = async (dir: string) => {
-  await fsp.mkdir(dir, { recursive: true });
-};
 
 export class SynthCommand {
   constructor(private readonly dependencies: SynthDependencies) {}

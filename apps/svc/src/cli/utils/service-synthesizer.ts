@@ -7,6 +7,7 @@ import * as cdk from 'aws-cdk-lib';
 import { CloudAssembly, CloudFormationStackArtifact } from 'aws-cdk-lib/cx-api';
 import { ComponentContext, ComponentSpec } from '@shinobi/core';
 import { loadComponentCreators, ComponentCreatorEntry } from './component-loader.js';
+import { ensureOutputDir } from './file-utils.js';
 
 export interface ManifestComponent {
   name: string;
@@ -86,10 +87,6 @@ export interface SynthesizeServiceResult {
   outputDir: string;
   components: SynthesizedComponentSummary[];
 }
-
-const ensureOutputDir = async (dir: string) => {
-  await fsp.mkdir(dir, { recursive: true });
-};
 
 export const synthesizeService = async (
   options: SynthesizeServiceOptions

@@ -1,11 +1,11 @@
 import { Command } from 'commander';
 import * as path from 'path';
-import * as fsp from 'fs/promises';
 import {
   readManifest,
   synthesizeService,
   SimpleManifest
 } from './utils/service-synthesizer.js';
+import { ensureOutputDir } from './utils/file-utils.js';
 
 interface SynthOptions {
   file?: string;
@@ -16,10 +16,6 @@ interface SynthOptions {
   json?: boolean;
   includeExperimental?: boolean;
 }
-
-const ensureOutputDir = async (dir: string) => {
-  await fsp.mkdir(dir, { recursive: true });
-};
 
 export const createSynthCommand = (): Command => {
   const command = new Command('synth');

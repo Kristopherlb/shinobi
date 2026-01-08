@@ -5,7 +5,6 @@
  * Makes the component discoverable by the platform and provides factory methods.
  */
 
-import { Construct } from 'constructs';
 import { 
   ComponentSpec, 
   ComponentContext, 
@@ -69,11 +68,20 @@ export class Route53HostedZoneComponentCreator implements IComponentCreator {
    * Factory method to create component instances
    */
   public createComponent(
-    scope: Construct, 
     spec: ComponentSpec, 
     context: ComponentContext
   ): Route53HostedZoneComponent {
-    return new Route53HostedZoneComponent(scope, spec.name, context, spec);
+    return new Route53HostedZoneComponent(context.scope, spec.name, context, spec);
+  }
+  
+  /**
+   * Process component (alias for createComponent)
+   */
+  public processComponent(
+    spec: ComponentSpec,
+    context: ComponentContext
+  ): Route53HostedZoneComponent {
+    return this.createComponent(spec, context);
   }
   
   /**
@@ -97,7 +105,7 @@ export class Route53HostedZoneComponentCreator implements IComponentCreator {
       errors.push('Hosted zone config requires a zoneName');
     }
 
-    if ((config?.zoneType === 'private' || config?.zoneType === 'PRIVATE') && (!config?.vpcAssociations || config.vpcAssociations.length === 0)) {
+    if (config?.zoneType === 'private' && (!config?.vpcAssociations || config.vpcAssociations.length === 0)) {
       errors.push('Private hosted zones must include at least one VPC association');
     }
     
