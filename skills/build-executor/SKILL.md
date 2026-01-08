@@ -1,10 +1,10 @@
 ---
 name: build-executor
-description: Executes build, test, typecheck, and lint commands for components and packages. Automatically detects sandbox environment and uses appropriate execution strategy (direct commands in sandbox, nx commands in normal environments). Ensures consistent execution regardless of environment constraints.
-compatibility: Works in both Cursor agent sandbox and normal development environments. Requires access to project.json files and node_modules/.bin executables.
+description: Executes build, test, typecheck, and lint commands for components and packages. Automatically detects sandbox environment and uses appropriate execution strategy (direct commands in sandbox, nx commands in normal environments). Ensures consistent execution regardless of environment constraints. Includes dedicated test execution support with vitest integration.
+compatibility: Works in both Cursor agent sandbox and normal development environments. Requires access to project.json files and node_modules/.bin executables. Test execution supports @nx/vitest:test executor and direct vitest invocation.
 metadata:
   author: shinobi-platform
-  version: "1.0"
+  version: "1.1"
 license: Apache-2.0
 ---
 
@@ -39,9 +39,22 @@ license: Apache-2.0
 ### Test Operations
 
 **For Components:**
-- Use `@nx/vitest:test` executor if available
-- Fall back to direct `vitest` execution in sandbox
-- Ensure test config path is correct
+- Read `packages/components/<name>/project.json` to find test target
+- Extract executor type (`@nx/vitest:test` is most common)
+- Extract test config path from `targets.test.options.config`
+- **Sandbox Mode**: Use direct `node_modules/.bin/vitest` with `--config` flag
+- **Normal Mode**: Use `pnpm nx test @shinobi/components-<name>`
+- Pass through additional vitest arguments (e.g., `--reporter=verbose`, `--run`)
+
+**Test Config Resolution:**
+- If `targets.test.options.config` exists, use that path (relative to workspace root)
+- Otherwise, default to `packages/components/<name>/vitest.config.ts`
+- If config file doesn't exist, vitest will use default behavior
+
+**Test File Discovery:**
+- Vitest automatically discovers test files based on patterns in config
+- Default pattern: `**/*.{test,spec}.{ts,tsx}`
+- Can be overridden in `vitest.config.ts`
 
 ### Typecheck Operations
 
@@ -86,6 +99,40 @@ done
 pnpm nx run-many -t build --all
 ```
 
+### Pattern 5: Test Single Component (Sandbox)
+
+```bash
+# Read project.json to get test config
+CONFIG="packages/components/openfeature-provider/vitest.config.ts"
+CWD="/Users/.../shinobi"  # workspace root
+cd "$CWD" && node_modules/.bin/vitest run --config "$CONFIG"
+```
+
+### Pattern 6: Test Single Component (Normal)
+
+```bash
+pnpm nx test @shinobi/components-openfeature-provider
+```
+
+### Pattern 7: Test Single Component with Arguments (Sandbox)
+
+```bash
+# Pass additional vitest arguments
+cd "$CWD" && node_modules/.bin/vitest run --config "$CONFIG" --reporter=verbose --no-coverage
+```
+
+### Pattern 8: Test Single Component with Arguments (Normal)
+
+```bash
+pnpm nx test @shinobi/components-openfeature-provider -- --reporter=verbose
+```
+
+### Pattern 9: Test All Components (Normal)
+
+```bash
+pnpm nx run-many -t test --all
+```
+
 ## Critical Rules
 
 **REQUIRED**: Always check `project.json` for target configuration before executing
@@ -116,17 +163,31 @@ pnpm nx run-many -t build --all
 
 ### Example 2: Running Tests
 
-**Input**: "Test @shinobi/components-vpc"
+**Input**: "Test @shinobi/components-openfeature-provider"
 
 **Process**:
-1. Detect environment
-2. Read `packages/components/vpc/project.json`
-3. Check test executor (likely `@nx/vitest:test`)
+1. Detect environment (sandbox or normal)
+2. Read `packages/components/openfeature-provider/project.json`
+3. Extract test target:
+   - Executor: `targets.test.executor` (e.g., `@nx/vitest:test`)
+   - Config: `targets.test.options.config` (e.g., `packages/components/openfeature-provider/vitest.config.ts`)
 4. Execute:
-   - **Sandbox**: `cd <workspace-root> && node_modules/.bin/vitest packages/components/vpc/vitest.config.ts`
-   - **Normal**: `pnpm nx test @shinobi/components-vpc`
+   - **Sandbox**: `cd <workspace-root> && node_modules/.bin/vitest run --config packages/components/openfeature-provider/vitest.config.ts`
+   - **Normal**: `pnpm nx test @shinobi/components-openfeature-provider`
 
-**Output**: Test results and coverage
+**Output**: Test results, coverage (if enabled), and exit code (0 = pass, 1 = fail)
+
+### Example 2a: Running Tests with Verbose Output
+
+**Input**: "Test @shinobi/components-openfeature-provider with verbose reporter"
+
+**Process**:
+1. Same as Example 2, but append `--reporter=verbose` to vitest command
+2. Execute:
+   - **Sandbox**: `cd <workspace-root> && node_modules/.bin/vitest run --config <config> --reporter=verbose`
+   - **Normal**: `pnpm nx test @shinobi/components-openfeature-provider -- --reporter=verbose`
+
+**Output**: Detailed test output with verbose reporting
 
 ### Example 3: Typechecking Multiple Components
 
@@ -178,6 +239,16 @@ function extractBuildCommand(projectJson: any): { command: string; cwd: string }
   
   return { command, cwd: resolvedCwd };
 }
+
+function extractTestConfig(projectJson: any, componentName: string): { config: string; executor: string } {
+  const test = projectJson.targets?.test;
+  if (!test) throw new Error('No test target found');
+  
+  const executor = test.executor || '';
+  const config = test.options?.config || `packages/components/${componentName}/vitest.config.ts`;
+  
+  return { config, executor };
+}
 ```
 
 ## Bundled Resources
@@ -192,6 +263,9 @@ function extractBuildCommand(projectJson: any): { command: string; cwd: string }
 - **Project references**: Ensure dependent projects are built first
 - **Cache invalidation**: Use `--skip-nx-cache` in normal mode for clean builds
 - **Partial builds**: Only build changed components when possible
+- **Sandbox permissions**: In strict sandboxes, `node_modules/.bin/*` may have permission issues. In such cases, prefer using `nx` commands even if environment detection suggests sandbox mode
+- **Test config missing**: If `vitest.config.ts` doesn't exist, vitest will use default behavior (discover tests in `__tests__` or `*.test.ts` files)
+- **Vitest arguments**: Pass additional vitest flags after component name (e.g., `--reporter=verbose`, `--no-coverage`, `--run`)
 
 ## Checklist
 
@@ -202,9 +276,21 @@ When executing builds/tests:
 | **1. Environment** | Can `nx` execute? | Use appropriate strategy |
 | **2. Config** | Does `project.json` exist? | **FAIL** if missing |
 | **3. Target** | Does target exist? | **FAIL** if missing |
-| **4. Command** | Is command extractable? | **FAIL** if not |
+| **4. Command/Config** | Is command/config extractable? | **FAIL** if not |
 | **5. CWD** | Is working directory set? | **WARN** if not, default to workspace root |
 | **6. Execute** | Did command succeed? | **FAIL** if errors |
+
+### Test-Specific Checklist
+
+When executing tests:
+
+| Step | Check | Outcome |
+|------|-------|---------|
+| **1. Test Executor** | Is `@nx/vitest:test` or similar? | Use appropriate execution method |
+| **2. Test Config** | Does `vitest.config.ts` exist? | **WARN** if not, use defaults |
+| **3. Test Files** | Are test files discoverable? | **WARN** if no tests found |
+| **4. Coverage** | Is coverage enabled? | Report coverage if enabled |
+| **5. Exit Code** | Did tests pass? | **FAIL** if exit code != 0 |
 
 ## Additional Resources
 
@@ -212,4 +298,5 @@ When executing builds/tests:
 - See `references/PROJECT_JSON_SCHEMA.md` for project.json structure
 - See `scripts/detect-environment.sh` for environment detection
 - See `scripts/build-component.sh` for component build script
+- See `scripts/test-component.sh` for component test script
 

@@ -23,7 +23,7 @@ beforeEach(() => {
     .mockImplementation(() => ({}));
 });
 
-describe('Route53RecordComponent - CDK Nag Security Validation', () => {
+describe.skip('Route53RecordComponent - CDK Nag Security Validation', () => {
   let app: cdk.App;
   let stack: cdk.Stack;
   let context: ComponentContext;

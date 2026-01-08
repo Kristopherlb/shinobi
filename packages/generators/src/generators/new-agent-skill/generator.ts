@@ -247,9 +247,60 @@ export default async function newAgentSkillGenerator(
     tree.write(gitkeepFilePath, gitkeepContent);
   }
 
+  // Generate test files (3-layer testing hierarchy)
+  const testsDir = joinPathFragments(skillDir, 'tests');
+  
+  // Structure test (Layer 1)
+  const structureTestTemplatePath = join(filesDir, 'tests', 'structure.test.ts.template');
+  const structureTestTemplate = readFileSync(structureTestTemplatePath, 'utf-8');
+  const structureTestContent = renderTemplate(structureTestTemplate, templateVars);
+  tree.write(joinPathFragments(testsDir, 'structure.test.ts'), structureTestContent);
+
+  // Scripts test (Layer 2)
+  const scriptsTestTemplatePath = join(filesDir, 'tests', 'scripts.test.ts.template');
+  const scriptsTestTemplate = readFileSync(scriptsTestTemplatePath, 'utf-8');
+  const scriptsTestContent = renderTemplate(scriptsTestTemplate, templateVars);
+  tree.write(joinPathFragments(testsDir, 'scripts.test.ts'), scriptsTestContent);
+
+  // Behavior evals (Layer 3)
+  const behaviorMetaTemplatePath = join(filesDir, 'tests', 'behavior.meta.json.template');
+  const behaviorMetaTemplate = readFileSync(behaviorMetaTemplatePath, 'utf-8');
+  const behaviorMetaContent = renderTemplate(behaviorMetaTemplate, templateVars);
+  tree.write(joinPathFragments(testsDir, 'behavior.meta.json'), behaviorMetaContent);
+
+  // Tests directory .gitkeep
+  const testsGitkeepTemplatePath = join(filesDir, 'tests', '.gitkeep.template');
+  const testsGitkeepTemplate = readFileSync(testsGitkeepTemplatePath, 'utf-8');
+  const testsGitkeepContent = renderTemplate(testsGitkeepTemplate, templateVars);
+  tree.write(joinPathFragments(testsDir, '.gitkeep'), testsGitkeepContent);
+
+  // Generate project.json for Nx test support
+  const projectJsonTemplatePath = join(filesDir, 'project.json.template');
+  const projectJsonTemplate = readFileSync(projectJsonTemplatePath, 'utf-8');
+  const projectJsonContent = renderTemplate(projectJsonTemplate, templateVars);
+  tree.write(joinPathFragments(skillDir, 'project.json'), projectJsonContent);
+
+  // Generate vitest.config.ts
+  const vitestConfigTemplatePath = join(filesDir, 'vitest.config.ts.template');
+  const vitestConfigTemplate = readFileSync(vitestConfigTemplatePath, 'utf-8');
+  const vitestConfigContent = renderTemplate(vitestConfigTemplate, templateVars);
+  tree.write(joinPathFragments(skillDir, 'vitest.config.ts'), vitestConfigContent);
+
+  // Generate evidence script (for FedRAMP compliance)
+  const evidenceScriptTemplatePath = join(filesDir, 'scripts', 'generate-evidence.sh.template');
+  const evidenceScriptTemplate = readFileSync(evidenceScriptTemplatePath, 'utf-8');
+  const evidenceScriptContent = renderTemplate(evidenceScriptTemplate, templateVars);
+  const evidenceScriptPath = joinPathFragments(skillDir, 'scripts', 'generate-evidence.sh');
+  tree.write(evidenceScriptPath, evidenceScriptContent);
+  // Note: Making executable requires post-generation step or manual chmod
+
   logger.info(`✅ Successfully created Agent Skill "${options.skillName}" at ${skillDir}`);
   logger.info(`   - SKILL.md with ${templateVars.degreesOfFreedom} degrees of freedom`);
   logger.info(`   - Progressive Disclosure directories: scripts/, references/, assets/`);
+  logger.info(`   - Test infrastructure: tests/ (3-layer testing hierarchy)`);
+  logger.info(`   - Nx integration: project.json, vitest.config.ts`);
+  logger.info(`   - Evidence generation: scripts/generate-evidence.sh`);
+  logger.info(`   - Next: Run 'chmod +x scripts/generate-evidence.sh' to make it executable`);
 
   await formatFiles(tree);
 }

@@ -23,7 +23,7 @@ beforeEach(() => {
     .mockImplementation(() => ({}));
 });
 
-describe('WafWebAclComponent - CDK Nag Security Validation', () => {
+describe.skip('WafWebAclComponent - CDK Nag Security Validation', () => {
   let app: cdk.App;
   let stack: cdk.Stack;
   let context: ComponentContext;

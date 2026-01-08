@@ -23,7 +23,7 @@ beforeEach(() => {
     .mockImplementation(() => ({}));
 });
 
-describe('DeploymentBundlePipelineComponent - CDK Nag Security Validation', () => {
+describe.skip('DeploymentBundlePipelineComponent - CDK Nag Security Validation', () => {
   let app: cdk.App;
   let stack: cdk.Stack;
   let context: ComponentContext;

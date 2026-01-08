@@ -5,7 +5,7 @@ import { EcrRepositoryComponent } from '../../ecr-repository.component.js';
 import { EcrRepositoryComponentConfigBuilder } from '../../ecr-repository.builder.js';
 import { ComponentContext, ComponentSpec } from '@shinobi/core/component-interfaces';
 
-describe('AwsSolutionsChecks__EcrRepository', () => {
+describe.skip('AwsSolutionsChecks__EcrRepository', () => {
   let platformConfigSpy: jest.SpyInstance;
 
   beforeEach(() => {

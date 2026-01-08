@@ -1,0 +1,25 @@
+# Tests Directory
+
+This directory contains test files for the <%= skillName %> skill, organized by testing layer:
+
+- **structure.test.ts**: Layer 1 - Structural validation (metadata, file layout, naming)
+- **scripts.test.ts**: Layer 2 - Deterministic unit tests for executable scripts
+- **behavior.meta.json**: Layer 3 - Behavioral evals (LLM-as-a-judge test cases)
+
+## Running Tests
+
+```bash
+# Run all tests
+pnpm nx test @shinobi/skill-<%= skillName %>
+
+# Run with coverage
+pnpm nx test @shinobi/skill-<%= skillName %> --coverage
+
+# Run specific test file
+pnpm nx test @shinobi/skill-<%= skillName %> -- tests/structure.test.ts
+```
+
+## Test Evidence
+
+After running tests, an `EVIDENCE.md` file is generated in the skill root with test results for FedRAMP compliance.
+
