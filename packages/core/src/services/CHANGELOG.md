@@ -63,13 +63,13 @@ environments:
 #### For CLI Usage
 ```bash
 # Enable strict schema validation
-SHINOBI_STRICT_SCHEMA_VALIDATION=true svc validate
+SHINOBI_STRICT_SCHEMA_VALIDATION=true shinobi validate
 
 # Enable verbose validation output
-SHINOBI_VERBOSE_VALIDATION=true svc validate
+SHINOBI_VERBOSE_VALIDATION=true shinobi validate
 
 # Override template config path
-TEMPLATE_CONFIG_PATH=/custom/path/templates.yaml svc init
+TEMPLATE_CONFIG_PATH=/custom/path/templates.yaml shinobi init
 ```
 
 ### Performance Expectations
@@ -102,7 +102,7 @@ Typical operation times (with performance metrics):
 
 Enable debug logging for detailed information:
 ```bash
-DEBUG=platform:* svc validate
+DEBUG=platform:* shinobi validate
 ```
 
 ### Future Considerations

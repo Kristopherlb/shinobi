@@ -23,8 +23,8 @@ Copy an example and modify it for your service:
 ```bash
 cp examples/simple-filesystem.yml my-service.yml
 # Edit my-service.yml
-svc validate --manifest my-service.yml
-svc plan --manifest my-service.yml --env dev
+shinobi validate --file my-service.yml
+shinobi plan --file my-service.yml --env dev
 ```
 
 ## Security Warning

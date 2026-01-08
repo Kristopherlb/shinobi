@@ -21,15 +21,90 @@ components:
       architecture: arm64
       memorySize: 512
       timeoutSeconds: 30
+      deployment:
+        codePath: ./src
+      logging:
+        logRetentionDays: 30
+        logFormat: JSON
+        systemLogLevel: INFO
+        applicationLogLevel: INFO
+      monitoring:
+        enabled: true
+        alarms:
+          lambdaErrors:
+            enabled: true
+            threshold: 1
+            evaluationPeriods: 1
+            periodMinutes: 1
+            comparisonOperator: gt
+            treatMissingData: breaching
+            statistic: Sum
+            tags: {}
+          lambdaThrottles:
+            enabled: true
+            threshold: 5
+            evaluationPeriods: 2
+            periodMinutes: 1
+            comparisonOperator: gt
+            treatMissingData: breaching
+            statistic: Sum
+            tags: {}
+          lambdaDuration:
+            enabled: true
+            threshold: 5000
+            evaluationPeriods: 2
+            periodMinutes: 1
+            comparisonOperator: gt
+            treatMissingData: breaching
+            statistic: Average
+            tags: {}
+          api4xxErrors:
+            enabled: true
+            threshold: 10
+            evaluationPeriods: 1
+            periodMinutes: 5
+            comparisonOperator: gt
+            treatMissingData: breaching
+            statistic: Sum
+            tags: {}
+          api5xxErrors:
+            enabled: true
+            threshold: 1
+            evaluationPeriods: 1
+            periodMinutes: 5
+            comparisonOperator: gt
+            treatMissingData: breaching
+            statistic: Sum
+            tags: {}
+      observability:
+        otelEnabled: true
+        otelResourceAttributes: {}
       api:
+        type: rest
         stageName: dev
+        metricsEnabled: true
+        tracingEnabled: true
+        apiKeyRequired: false
+        throttling:
+          burstLimit: 100
+          rateLimit: 50
+        usagePlan:
+          enabled: false
+        logging:
+          enabled: true
+          retentionDays: 90
+          logFormat: json
+          prefix: access/
         cors:
           enabled: true
           allowOrigins: ["*"]
+          allowHeaders: ["Content-Type", "Authorization"]
+          allowMethods: ["GET", "POST", "PUT", "DELETE", "OPTIONS"]
+          allowCredentials: false
     binds:
       - to: file-bucket
         capability: bucket:s3
-        access: read|write
+        access: readwrite
 
   - name: file-bucket
     type: s3-bucket

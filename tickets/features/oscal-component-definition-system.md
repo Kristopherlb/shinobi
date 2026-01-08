@@ -192,7 +192,7 @@ OSCAL Document Output
    - Evidence reference validation
 
 3. **CLI Integration**
-   - Add `svc generate oscal` command
+   - Add `shinobi generate oscal` command
    - Support for single component or all components
    - Output formatting options
 
@@ -213,16 +213,16 @@ OSCAL Document Output
 
 ```bash
 # Generate OSCAL for a single component
-svc generate oscal --component ecs-cluster --framework fedramp-moderate
+shinobi generate oscal --component ecs-cluster --framework fedramp-moderate
 
 # Generate OSCAL for all components
-svc generate oscal --all --framework fedramp-high
+shinobi generate oscal --all --framework fedramp-high
 
 # Generate with custom template
-svc generate oscal --component lambda-api --template custom-controls.json
+shinobi generate oscal --component lambda-api --template custom-controls.json
 
 # Validate existing OSCAL file
-svc validate oscal --file packages/components/ecs-cluster/audit/ecs-cluster.oscal.json
+shinobi validate oscal --file packages/components/ecs-cluster/audit/ecs-cluster.oscal.json
 ```
 
 ## Success Criteria

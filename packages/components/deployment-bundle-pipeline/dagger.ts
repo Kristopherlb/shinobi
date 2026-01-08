@@ -72,7 +72,7 @@ export async function buildAndTest(
     .withExec(["bash", "-lc", "pnpm i --frozen-lockfile"])
     .withExec(["bash", "-lc", "pnpm -w build"])
     .withExec(["bash", "-lc", "pnpm -w test --reporter=junit --reporter-options output=reports/junit.xml --coverage --coverageReporters=json --coverageReporters=lcov --coverageDirectory=coverage"])
-    .withExec(["bash", "-lc", "mkdir -p out && echo '{}' > out/plan.json"]) // Stub: replace with actual svc plan
+    .withExec(["bash", "-lc", "mkdir -p out && echo '{}' > out/plan.json"]) // Stub: replace with actual shinobi plan
     .withExec(["bash", "-lc", "mkdir -p cdk.out && echo 'CDK synthesis output' > cdk.out/synth.json"]); // Stub: replace with actual CDK synth
 
   return {

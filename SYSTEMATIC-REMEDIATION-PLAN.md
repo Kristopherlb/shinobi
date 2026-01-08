@@ -806,12 +806,12 @@
    ```bash
    pnpm build
    cd apps/hello-world-api
-   pnpm svc synth
+   pnpm shinobi synth
    ```
 
 3. **Run security audit:**
    ```bash
-   pnpm svc audit
+   pnpm shinobi audit
    ```
 
 4. **Verify no P0 issues remain:**
@@ -1414,7 +1414,7 @@ Manual OSCAL file updates are deferred. Current component-specific OSCAL snapsho
 
 3. **Run security audit:**
    ```bash
-   pnpm svc audit
+   pnpm shinobi audit
    ```
 
 4. **Verify no P1 issues remain**
@@ -1819,13 +1819,13 @@ Manual OSCAL file updates are deferred. Current component-specific OSCAL snapsho
 
 4. **Security Audit:**
    ```bash
-   pnpm svc audit
+   pnpm shinobi audit
    ```
 
 5. **CDK Synthesis:**
    ```bash
    cd apps/hello-world-api
-   pnpm svc synth
+   pnpm shinobi synth
    ```
 
 ### Continuous Validation

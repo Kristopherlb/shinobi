@@ -1,6 +1,6 @@
 /**
  * CLI Integration for Logical ID Preservation
- * Integrates logical ID preservation with the svc plan command
+ * Integrates logical ID preservation with the shinobi plan command
  */
 
 import { existsSync } from 'fs';
@@ -50,7 +50,7 @@ export class LogicalIdCliIntegration {
   }
 
   /**
-   * Execute logical ID preservation for svc plan command
+   * Execute logical ID preservation for shinobi plan command
    */
   async executeLogicalIdPreservation(
     stack: any, // CDK Stack
