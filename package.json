@@ -69,6 +69,7 @@
     "nx": "^21.5.2",
     "ts-node": "^10.9.2",
     "tsconfig-paths": "^4.2.0",
+    "vite": "^5.4.21",
     "vitest": "^2.1.8",
     "yaml": "^2.8.1"
   },
@@ -80,6 +81,9 @@
     "peerDependencyRules": {
       "ignoreMissing": ["@swc/core", "nx"]
     },
-    "hoistPattern": ["*"]
+    "hoistPattern": ["*"],
+    "overrides": {
+      "vite": "^5.4.21"
+    }
   }
 }
