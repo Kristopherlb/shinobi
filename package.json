@@ -39,8 +39,8 @@
     "ajv": "^8.17.1",
     "ajv-formats": "^3.0.1",
     "aws-cdk-lib": "^2.214.0",
-    "chalk": "^5.6.0",
     "cdk-nag": "^2.27.126",
+    "chalk": "^5.6.0",
     "commander": "^14.0.0",
     "constructs": "^10.4.2",
     "glob": "^11.0.3",
@@ -63,6 +63,7 @@
     "@swc/core": "^1.13.5",
     "@swc/jest": "^0.2.39",
     "@types/jest": "^29.5.0",
+    "@vitest/coverage-v8": "2.1.9",
     "eslint": "^8.0.0",
     "fast-glob": "^3.3.3",
     "jest": "^29.7.0",
@@ -79,9 +80,14 @@
   "packageManager": "pnpm@10.16.1",
   "pnpm": {
     "peerDependencyRules": {
-      "ignoreMissing": ["@swc/core", "nx"]
+      "ignoreMissing": [
+        "@swc/core",
+        "nx"
+      ]
     },
-    "hoistPattern": ["*"],
+    "hoistPattern": [
+      "*"
+    ],
     "overrides": {
       "vite": "^5.4.21"
     }

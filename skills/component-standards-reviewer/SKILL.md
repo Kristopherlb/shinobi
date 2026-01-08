@@ -22,7 +22,13 @@ license: Apache-2.0
    - Testing patterns (CDK-Nag, template assertions, triad matrix tests)
 3. Validate compliance with the 7 required Platform Standards
 4. Check for anti-patterns (compliance framework checks in component code, hardcoded values, etc.)
-5. Provide specific remediation guidance based on violations found
+5. **For test files**: Use the `platform-testing-reviewer` skill to validate test compliance with Platform Testing Standard (PTS-1.0)
+   - Test metadata sidecars (`.meta.json` files)
+   - Test naming conventions (`Feature__Condition__ExpectedOutcome`)
+   - Determinism requirements (clock/RNG/I/O control)
+   - Oracle usage and assertion patterns
+   - Coverage and evidence requirements
+6. Provide specific remediation guidance based on violations found
 
 Adapt these steps as needed for your specific review scenario (generation vs modification vs audit).
 
@@ -41,6 +47,7 @@ Adapt these steps as needed for your specific review scenario (generation vs mod
 8. Capability registration - registers at least one capability
 9. Construct registration - registers important constructs
 10. Test coverage - includes CDK-Nag, template assertions, triad tests
+11. **Test standards compliance** - Use `platform-testing-reviewer` skill to validate test files against PTS-1.0
 
 ## Examples
 
@@ -56,7 +63,11 @@ Adapt these steps as needed for your specific review scenario (generation vs mod
 5. Check all resources use `applyStandardTags()`
 6. Verify structured logging usage
 7. Check capability and construct registration
-8. Review test files for compliance
+8. Review test files for compliance:
+   - Use `platform-testing-reviewer` skill to validate test metadata, naming, determinism, and oracle usage
+   - Verify CDK-Nag tests exist and pass
+   - Check for triad matrix tests (commercial, fedramp-moderate, fedramp-high)
+   - Verify template assertions use proper patterns
 
 **Output**: Report of compliance status with specific line numbers for violations
 
@@ -72,7 +83,12 @@ Adapt these steps as needed for your specific review scenario (generation vs mod
 5. Apply standard tags to all resources
 6. Implement structured logging
 7. Register capabilities and constructs
-8. Create tests with CDK-Nag and template assertions
+8. Create tests with CDK-Nag and template assertions:
+   - Use `platform-testing-reviewer` skill to ensure tests follow PTS-1.0
+   - Create test metadata sidecars (`.meta.json`) for all test files
+   - Follow naming convention: `Feature__Condition__ExpectedOutcome`
+   - Include triad matrix tests for all compliance frameworks
+   - Ensure determinism (clock/RNG/I/O control)
 
 **Output**: Generated component code following all standards
 
@@ -94,4 +110,7 @@ Adapt these steps as needed for your specific review scenario (generation vs mod
 - See `references/PLATFORM_STANDARDS.md` for links to all 7 required Platform Standards
 - See `references/ANTI_PATTERNS.md` for common violations and fixes
 - Use `scripts/validate-component.sh` to validate component structure
+- **For test reviews**: Use `platform-testing-reviewer` skill to validate test compliance with Platform Testing Standard (PTS-1.0)
+  - Test metadata sidecars, naming conventions, determinism, oracle usage
+  - See `skills/platform-testing-reviewer/SKILL.md` for complete testing standard requirements
 

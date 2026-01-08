@@ -1,18 +1,19 @@
+import { describe, it, expect, beforeEach, afterEach, vi } from 'vitest';
 import path from 'path';
 import os from 'os';
 import { UpCommand } from '../up-command.js';
 import type { UpOptions } from '../up-command.js';
 import type { Logger } from '../console-logger.js';
-import type { FileDiscovery } from '@shinobi/core';
-jest.mock('../utils/service-synthesizer.js', () => ({
-  readManifest: jest.fn(),
-  synthesizeService: jest.fn()
+import type { FileDiscovery, SingletonResourceHandlerService } from '@shinobi/core';
+vi.mock('../utils/service-synthesizer.js', () => ({
+  readManifest: vi.fn(),
+  synthesizeService: vi.fn()
 }));
 
-const deployMock = jest.fn();
+const deployMock = vi.fn();
 let capturedProducer: any;
 
-jest.mock('@aws-cdk/cli-lib-alpha', () => ({
+vi.mock('@aws-cdk/cli-lib-alpha', () => ({
   AwsCdkCli: class {
     static fromCloudAssemblyDirectoryProducer(producer: any) {
       capturedProducer = producer;
@@ -21,9 +22,9 @@ jest.mock('@aws-cdk/cli-lib-alpha', () => ({
   }
 }));
 
-jest.mock('inquirer', () => ({
+vi.mock('inquirer', () => ({
   __esModule: true,
-  default: { prompt: jest.fn() }
+  default: { prompt: vi.fn() }
 }));
 
 import { readManifest, synthesizeService } from '../utils/service-synthesizer.js';
@@ -31,22 +32,26 @@ import inquirer from 'inquirer';
 
 describe('UpCommand', () => {
   const logger: Logger = {
-    info: jest.fn(),
-    warn: jest.fn(),
-    error: jest.fn(),
-    success: jest.fn()
+    info: vi.fn(),
+    warn: vi.fn(),
+    error: vi.fn(),
+    success: vi.fn()
   } as unknown as Logger;
 
   const fileDiscovery: FileDiscovery = {
-    findManifest: jest.fn()
+    findManifest: vi.fn()
   } as unknown as FileDiscovery;
 
-  const upCommand = new UpCommand({ fileDiscovery, logger });
+  const singletonResourceHandler: SingletonResourceHandlerService = {
+    postProcessTemplate: vi.fn().mockResolvedValue(undefined)
+  } as unknown as SingletonResourceHandlerService;
+
+  const upCommand = new UpCommand({ fileDiscovery, logger, singletonResourceHandler });
   const manifestPath = path.join(os.tmpdir(), 'service.yml');
 
-  const readManifestMock = readManifest as unknown as jest.Mock;
-  const synthesizeServiceMock = synthesizeService as unknown as jest.Mock;
-  const promptMock = inquirer.prompt as unknown as jest.Mock;
+  const readManifestMock = readManifest as unknown as vi.Mock;
+  const synthesizeServiceMock = synthesizeService as unknown as vi.Mock;
+  const promptMock = inquirer.prompt as unknown as vi.Mock;
 
   const baseOptions: UpOptions = {
     file: manifestPath,
@@ -57,10 +62,10 @@ describe('UpCommand', () => {
   };
 
   beforeEach(() => {
-    jest.clearAllMocks();
+    vi.clearAllMocks();
     deployMock.mockReset();
     capturedProducer = undefined;
-    (fileDiscovery.findManifest as jest.Mock).mockResolvedValue(manifestPath);
+    (fileDiscovery.findManifest as vi.Mock).mockResolvedValue(manifestPath);
     readManifestMock.mockResolvedValue({
       service: 'sample-service',
       environment: 'dev',
@@ -91,7 +96,7 @@ describe('UpCommand', () => {
     });
   });
 
-  it('deploys stack successfully', async () => {
+  it('Execute__ValidManifest__DeploysSuccessfully', async () => {
     const result = await upCommand.execute(baseOptions);
 
     expect(result.success).toBe(true);
@@ -99,13 +104,13 @@ describe('UpCommand', () => {
     expect(logger.success).toHaveBeenCalledWith('Deployment complete for sample-service-dev.');
   });
 
-  it('skips deploy when confirmation rejected', async () => {
+  it('Execute__ConfirmationRejected__SkipsDeploy', async () => {
     promptMock.mockResolvedValueOnce({ confirm: false });
 
     const result = await upCommand.execute({ ...baseOptions, yes: undefined, json: false });
 
     expect(result.success).toBe(false);
-    expect(result.exitCode).toBe(1);
+    expect(result.exitCode).toBe(2);
     expect(logger.warn).toHaveBeenCalledWith('Deployment cancelled by user.');
     expect(deployMock).not.toHaveBeenCalled();
   });

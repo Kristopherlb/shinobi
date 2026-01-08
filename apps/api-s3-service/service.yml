@@ -1,0 +1,42 @@
+service: api-s3-service
+owner: platform-team
+complianceFramework: commercial
+region: us-west-2
+accountId: "911871352725"
+
+environments:
+  dev:
+    defaults:
+      instanceSize: small
+      enableDebug: true
+      highRiskEnvironment: false
+
+components:
+  - name: file-storage-api
+    type: lambda-api
+    config:
+      functionName: file-storage-api
+      handler: src/handler.handler
+      runtime: nodejs20.x
+      architecture: arm64
+      memorySize: 512
+      timeoutSeconds: 30
+      api:
+        stageName: dev
+        cors:
+          enabled: true
+          allowOrigins: ["*"]
+    binds:
+      - to: file-bucket
+        capability: bucket:s3
+        access: read|write
+
+  - name: file-bucket
+    type: s3-bucket
+    config:
+      versioning: true
+      encryption:
+        type: AES256
+      monitoring:
+        enabled: true
+

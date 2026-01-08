@@ -45,6 +45,7 @@ license: Apache-2.0
 - **Sandbox Mode**: Use direct `node_modules/.bin/vitest` with `--config` flag
 - **Normal Mode**: Use `pnpm nx test @shinobi/components-<name>`
 - Pass through additional vitest arguments (e.g., `--reporter=verbose`, `--run`)
+- **After test execution**: Use `platform-testing-reviewer` skill to validate test compliance with Platform Testing Standard (PTS-1.0) if reviewing test results
 
 **Test Config Resolution:**
 - If `targets.test.options.config` exists, use that path (relative to workspace root)
@@ -177,6 +178,8 @@ pnpm nx run-many -t test --all
 
 **Output**: Test results, coverage (if enabled), and exit code (0 = pass, 1 = fail)
 
+**Note**: After test execution, consider using `platform-testing-reviewer` skill to validate test files against Platform Testing Standard (PTS-1.0) requirements, including metadata sidecars, naming conventions, and determinism checks.
+
 ### Example 2a: Running Tests with Verbose Output
 
 **Input**: "Test @shinobi/components-openfeature-provider with verbose reporter"
@@ -299,4 +302,7 @@ When executing tests:
 - See `scripts/detect-environment.sh` for environment detection
 - See `scripts/build-component.sh` for component build script
 - See `scripts/test-component.sh` for component test script
+- **For test validation**: Use `platform-testing-reviewer` skill to validate test compliance with Platform Testing Standard (PTS-1.0)
+  - Test metadata sidecars, naming conventions, determinism, oracle usage
+  - See `skills/platform-testing-reviewer/SKILL.md` for complete testing standard requirements
 

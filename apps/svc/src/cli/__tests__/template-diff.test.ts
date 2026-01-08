@@ -1,7 +1,8 @@
+import { describe, it, expect } from 'vitest';
 import { diffCloudFormationTemplates } from '../utils/template-diff.js';
 
 describe('diffCloudFormationTemplates', () => {
-  it('detects added resources when stack does not yet contain them', () => {
+  it('DiffCloudFormationTemplates__AddedResources__DetectsChanges', () => {
     const currentTemplate = {
       Resources: {
         ExistingBucket: { Type: 'AWS::S3::Bucket' }
@@ -28,7 +29,7 @@ describe('diffCloudFormationTemplates', () => {
     expect(diff.hasChanges).toBe(true);
   });
 
-  it('captures property modifications within a shared resource', () => {
+  it('DiffCloudFormationTemplates__PropertyModifications__CapturesChanges', () => {
     const currentTemplate = {
       Resources: {
         Func: {

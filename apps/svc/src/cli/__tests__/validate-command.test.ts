@@ -4,6 +4,7 @@
  * Tests for the validate command implementation.
  */
 
+import { describe, it, expect, beforeEach, afterEach, vi } from 'vitest';
 import { ValidateCommand } from '../validate-command.js';
 import { createMockLogger } from './helpers/mock-logger.js';
 import { createMockFileDiscovery } from './helpers/mock-file-discovery.js';
@@ -24,7 +25,7 @@ describe('ValidateCommand', () => {
     mockFileDiscovery = createMockFileDiscovery();
     
     mockPipeline = {
-      validate: jest.fn()
+      validate: vi.fn()
     } as any;
 
     validateCommand = new ValidateCommand({
@@ -41,10 +42,10 @@ describe('ValidateCommand', () => {
   });
 
   describe('manifest discovery', () => {
-    it('works with --file option', async () => {
+    it('ManifestDiscovery__FileOption__ResolvesManifest', async () => {
       const manifestPath = await writeManifestToTempDir(createValidManifest(), tempDir);
       
-      (mockPipeline.validate as jest.Mock).mockResolvedValue({
+      (mockPipeline.validate as vi.Mock).mockResolvedValue({
         manifest: createValidManifest(),
         warnings: []
       });
@@ -55,11 +56,11 @@ describe('ValidateCommand', () => {
       expect(mockFileDiscovery.findManifest).not.toHaveBeenCalled();
     });
 
-    it('works without --file option (uses fileDiscovery)', async () => {
+    it('ManifestDiscovery__NoFileOption__UsesFileDiscovery', async () => {
       const manifestPath = await writeManifestToTempDir(createValidManifest(), tempDir);
-      (mockFileDiscovery.findManifest as jest.Mock).mockResolvedValue(manifestPath);
+      (mockFileDiscovery.findManifest as vi.Mock).mockResolvedValue(manifestPath);
       
-      (mockPipeline.validate as jest.Mock).mockResolvedValue({
+      (mockPipeline.validate as vi.Mock).mockResolvedValue({
         manifest: createValidManifest(),
         warnings: []
       });
@@ -70,11 +71,11 @@ describe('ValidateCommand', () => {
       expect(mockFileDiscovery.findManifest).toHaveBeenCalledWith('.');
     });
 
-    it('--file resolved to absolute path', async () => {
+    it('ManifestDiscovery__RelativePath__ResolvesToAbsolute', async () => {
       const manifestPath = await writeManifestToTempDir(createValidManifest(), tempDir);
       const relativePath = './service.yml';
       
-      (mockPipeline.validate as jest.Mock).mockResolvedValue({
+      (mockPipeline.validate as vi.Mock).mockResolvedValue({
         manifest: createValidManifest(),
         warnings: []
       });
@@ -88,13 +89,13 @@ describe('ValidateCommand', () => {
   });
 
   describe('success cases', () => {
-    it('returns manifest and warnings on success', async () => {
+    it('Success__ValidManifest__ReturnsManifestAndWarnings', async () => {
       const manifestPath = await writeManifestToTempDir(createValidManifest(), tempDir);
       const manifest = createValidManifest();
       const warnings = ['Warning 1', 'Warning 2'];
       
-      (mockFileDiscovery.findManifest as jest.Mock).mockResolvedValue(manifestPath);
-      (mockPipeline.validate as jest.Mock).mockResolvedValue({
+      (mockFileDiscovery.findManifest as vi.Mock).mockResolvedValue(manifestPath);
+      (mockPipeline.validate as vi.Mock).mockResolvedValue({
         manifest,
         warnings
       });
@@ -107,11 +108,11 @@ describe('ValidateCommand', () => {
       expect(result.data?.warnings).toEqual(warnings);
     });
 
-    it('returns exitCode 0 on success', async () => {
+    it('Success__ValidManifest__ReturnsExitCode0', async () => {
       const manifestPath = await writeManifestToTempDir(createValidManifest(), tempDir);
       
-      (mockFileDiscovery.findManifest as jest.Mock).mockResolvedValue(manifestPath);
-      (mockPipeline.validate as jest.Mock).mockResolvedValue({
+      (mockFileDiscovery.findManifest as vi.Mock).mockResolvedValue(manifestPath);
+      (mockPipeline.validate as vi.Mock).mockResolvedValue({
         manifest: createValidManifest(),
         warnings: []
       });
@@ -124,11 +125,11 @@ describe('ValidateCommand', () => {
   });
 
   describe('failure cases', () => {
-    it('returns error and exitCode 2 on failure', async () => {
+    it('Failure__ValidationError__ReturnsErrorAndExitCode2', async () => {
       const manifestPath = await writeManifestToTempDir(createValidManifest(), tempDir);
       
-      (mockFileDiscovery.findManifest as jest.Mock).mockResolvedValue(manifestPath);
-      (mockPipeline.validate as jest.Mock).mockRejectedValue(new Error('Validation failed'));
+      (mockFileDiscovery.findManifest as vi.Mock).mockResolvedValue(manifestPath);
+      (mockPipeline.validate as vi.Mock).mockRejectedValue(new Error('Validation failed'));
 
       const result = await validateCommand.execute({});
 
@@ -137,8 +138,8 @@ describe('ValidateCommand', () => {
       expect(result.error).toContain('Validation failed');
     });
 
-    it('returns exitCode 2 when manifest not found', async () => {
-      (mockFileDiscovery.findManifest as jest.Mock).mockResolvedValue(null);
+    it('Failure__ManifestNotFound__ReturnsExitCode2', async () => {
+      (mockFileDiscovery.findManifest as vi.Mock).mockResolvedValue(null);
 
       const result = await validateCommand.execute({});
 
@@ -149,11 +150,11 @@ describe('ValidateCommand', () => {
   });
 
   describe('JSON mode', () => {
-    it('suppresses human output in JSON mode', async () => {
+    it('JsonMode__Enabled__SuppressesHumanOutput', async () => {
       const manifestPath = await writeManifestToTempDir(createValidManifest(), tempDir);
       
-      (mockFileDiscovery.findManifest as jest.Mock).mockResolvedValue(manifestPath);
-      (mockPipeline.validate as jest.Mock).mockResolvedValue({
+      (mockFileDiscovery.findManifest as vi.Mock).mockResolvedValue(manifestPath);
+      (mockPipeline.validate as vi.Mock).mockResolvedValue({
         manifest: createValidManifest(),
         warnings: []
       });
@@ -167,12 +168,12 @@ describe('ValidateCommand', () => {
   });
 
   describe('integration', () => {
-    it('valid manifest → success, human summary', async () => {
+    it('Integration__ValidManifest__ReturnsSuccessWithHumanSummary', async () => {
       const manifestPath = await writeManifestToTempDir(createValidManifest(), tempDir);
       const manifest = createValidManifest();
       
-      (mockFileDiscovery.findManifest as jest.Mock).mockResolvedValue(manifestPath);
-      (mockPipeline.validate as jest.Mock).mockResolvedValue({
+      (mockFileDiscovery.findManifest as vi.Mock).mockResolvedValue(manifestPath);
+      (mockPipeline.validate as vi.Mock).mockResolvedValue({
         manifest,
         warnings: []
       });
@@ -184,11 +185,11 @@ describe('ValidateCommand', () => {
       expect(logger.info).toHaveBeenCalledWith(expect.stringContaining('Validation summary'));
     });
 
-    it('invalid manifest → failure, clear error', async () => {
+    it('Integration__InvalidManifest__ReturnsFailureWithClearError', async () => {
       const manifestPath = await writeManifestToTempDir(createInvalidManifest(), tempDir);
       
-      (mockFileDiscovery.findManifest as jest.Mock).mockResolvedValue(manifestPath);
-      (mockPipeline.validate as jest.Mock).mockRejectedValue(new Error('Schema validation failed'));
+      (mockFileDiscovery.findManifest as vi.Mock).mockResolvedValue(manifestPath);
+      (mockPipeline.validate as vi.Mock).mockRejectedValue(new Error('Schema validation failed'));
 
       const result = await validateCommand.execute({});
 
@@ -198,12 +199,12 @@ describe('ValidateCommand', () => {
       expect(logger.error).toHaveBeenCalled();
     });
 
-    it('--json → structured output, no human logs', async () => {
+    it('Integration__JsonFlag__ReturnsStructuredOutputNoHumanLogs', async () => {
       const manifestPath = await writeManifestToTempDir(createValidManifest(), tempDir);
       const manifest = createValidManifest();
       
-      (mockFileDiscovery.findManifest as jest.Mock).mockResolvedValue(manifestPath);
-      (mockPipeline.validate as jest.Mock).mockResolvedValue({
+      (mockFileDiscovery.findManifest as vi.Mock).mockResolvedValue(manifestPath);
+      (mockPipeline.validate as vi.Mock).mockResolvedValue({
         manifest,
         warnings: ['Warning 1']
       });
@@ -219,11 +220,11 @@ describe('ValidateCommand', () => {
       expect(logger.info).not.toHaveBeenCalledWith(expect.stringContaining('Validation summary'));
     });
 
-    it('exit codes correct (0 success, 2 failure)', async () => {
+    it('Integration__VariousScenarios__ExitCodesCorrect', async () => {
       const manifestPath = await writeManifestToTempDir(createValidManifest(), tempDir);
       
-      (mockFileDiscovery.findManifest as jest.Mock).mockResolvedValue(manifestPath);
-      (mockPipeline.validate as jest.Mock).mockResolvedValue({
+      (mockFileDiscovery.findManifest as vi.Mock).mockResolvedValue(manifestPath);
+      (mockPipeline.validate as vi.Mock).mockResolvedValue({
         manifest: createValidManifest(),
         warnings: []
       });
@@ -231,7 +232,7 @@ describe('ValidateCommand', () => {
       const successResult = await validateCommand.execute({});
       expect(successResult.exitCode).toBe(0);
 
-      (mockPipeline.validate as jest.Mock).mockRejectedValue(new Error('Error'));
+      (mockPipeline.validate as vi.Mock).mockRejectedValue(new Error('Error'));
       const failureResult = await validateCommand.execute({});
       expect(failureResult.exitCode).toBe(2);
     });

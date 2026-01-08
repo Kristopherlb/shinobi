@@ -4,15 +4,16 @@
  * Tests for the synth command implementation.
  */
 
+import { describe, it, expect, beforeEach, afterEach, vi } from 'vitest';
 import { SynthCommand } from '../synth-command.js';
 import { createMockLogger } from './helpers/mock-logger.js';
 import { createMockFileDiscovery } from './helpers/mock-file-discovery.js';
 import { createTempDir, cleanupTempDir, writeManifestToTempDir } from './helpers/temp-dirs.js';
 import { createValidManifest } from './fixtures/manifests.js';
 
-jest.mock('../utils/service-synthesizer.js', () => ({
-  readManifest: jest.fn(),
-  synthesizeService: jest.fn()
+vi.mock('../utils/service-synthesizer.js', () => ({
+  readManifest: vi.fn(),
+  synthesizeService: vi.fn()
 }));
 
 import { readManifest, synthesizeService } from '../utils/service-synthesizer.js';
@@ -38,14 +39,14 @@ describe('SynthCommand', () => {
     if (tempDir) {
       await cleanupTempDir(tempDir);
     }
-    jest.clearAllMocks();
+    vi.clearAllMocks();
   });
 
   describe('manifest resolution', () => {
-    it('resolves explicit file path', async () => {
+    it('ManifestResolution__ExplicitPath__ResolvesCorrectly', async () => {
       const manifestPath = await writeManifestToTempDir(createValidManifest(), tempDir);
-      const readManifestMock = readManifest as jest.Mock;
-      const synthesizeServiceMock = synthesizeService as jest.Mock;
+      const readManifestMock = readManifest as vi.Mock;
+      const synthesizeServiceMock = synthesizeService as vi.Mock;
       
       readManifestMock.mockResolvedValue(createValidManifest());
       synthesizeServiceMock.mockResolvedValue({
@@ -60,12 +61,12 @@ describe('SynthCommand', () => {
       expect(readManifestMock).toHaveBeenCalled();
     });
 
-    it('uses fileDiscovery when file not provided', async () => {
+    it('ManifestResolution__NoFileProvided__UsesFileDiscovery', async () => {
       const manifestPath = await writeManifestToTempDir(createValidManifest(), tempDir);
-      (mockFileDiscovery.findManifest as jest.Mock).mockResolvedValue(manifestPath);
+      (mockFileDiscovery.findManifest as vi.Mock).mockResolvedValue(manifestPath);
       
-      const readManifestMock = readManifest as jest.Mock;
-      const synthesizeServiceMock = synthesizeService as jest.Mock;
+      const readManifestMock = readManifest as vi.Mock;
+      const synthesizeServiceMock = synthesizeService as vi.Mock;
       
       readManifestMock.mockResolvedValue(createValidManifest());
       synthesizeServiceMock.mockResolvedValue({
@@ -82,14 +83,14 @@ describe('SynthCommand', () => {
   });
 
   describe('account ID validation', () => {
-    it('fails when account ID cannot be determined', async () => {
+    it('AccountIdValidation__MissingAccountId__FailsWithExitCode2', async () => {
       const originalEnv = process.env.CDK_DEFAULT_ACCOUNT;
       delete process.env.CDK_DEFAULT_ACCOUNT;
       
       const manifestPath = await writeManifestToTempDir(createValidManifest(), tempDir);
-      (mockFileDiscovery.findManifest as jest.Mock).mockResolvedValue(manifestPath);
+      (mockFileDiscovery.findManifest as vi.Mock).mockResolvedValue(manifestPath);
       
-      const readManifestMock = readManifest as jest.Mock;
+      const readManifestMock = readManifest as vi.Mock;
       readManifestMock.mockResolvedValue({});
 
       const result = await synthCommand.execute({});
@@ -104,12 +105,12 @@ describe('SynthCommand', () => {
   });
 
   describe('integration', () => {
-    it('generates valid CDK assembly', async () => {
+    it('Integration__ValidManifest__GeneratesValidAssembly', async () => {
       const manifestPath = await writeManifestToTempDir(createValidManifest(), tempDir);
-      (mockFileDiscovery.findManifest as jest.Mock).mockResolvedValue(manifestPath);
+      (mockFileDiscovery.findManifest as vi.Mock).mockResolvedValue(manifestPath);
       
-      const readManifestMock = readManifest as jest.Mock;
-      const synthesizeServiceMock = synthesizeService as jest.Mock;
+      const readManifestMock = readManifest as vi.Mock;
+      const synthesizeServiceMock = synthesizeService as vi.Mock;
       
       process.env.CDK_DEFAULT_ACCOUNT = '123456789012';
       process.env.CDK_DEFAULT_REGION = 'us-east-1';
@@ -118,7 +119,10 @@ describe('SynthCommand', () => {
       synthesizeServiceMock.mockResolvedValue({
         manifest: createValidManifest(),
         outputDir: tempDir,
-        stacks: [{ id: 'test-stack' }],
+        assembly: {
+          stacks: [{ id: 'test-stack', templateFile: 'test-stack.template.json', displayName: 'test-stack' }],
+          directory: tempDir
+        },
         components: [{ name: 'test-component', type: 's3-bucket' }]
       });
 

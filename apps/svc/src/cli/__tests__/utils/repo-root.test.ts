@@ -4,6 +4,7 @@
  * Tests for the repository root detection utility.
  */
 
+import { describe, it, expect, beforeEach, afterEach } from 'vitest';
 import * as fs from 'fs/promises';
 import * as path from 'path';
 import { findRepoRoot } from '../../utils/repo-root.js';
@@ -23,7 +24,7 @@ describe('findRepoRoot', () => {
   });
 
   describe('monorepo marker detection', () => {
-    it('returns correct root for pnpm (pnpm-workspace.yaml)', async () => {
+    it('FindRepoRoot__PnpmWorkspaceYaml__ReturnsCorrectRoot', async () => {
       const rootDir = path.join(tempDir, 'repo');
       const subDir = path.join(rootDir, 'packages', 'app');
       
@@ -34,7 +35,7 @@ describe('findRepoRoot', () => {
       expect(result).toBe(rootDir);
     });
 
-    it('returns correct root for pnpm (pnpm-workspace.yml)', async () => {
+    it('FindRepoRoot__PnpmWorkspaceYml__ReturnsCorrectRoot', async () => {
       const rootDir = path.join(tempDir, 'repo');
       const subDir = path.join(rootDir, 'packages', 'app');
       
@@ -45,7 +46,7 @@ describe('findRepoRoot', () => {
       expect(result).toBe(rootDir);
     });
 
-    it('returns correct root for nx (nx.json)', async () => {
+    it('FindRepoRoot__NxJson__ReturnsCorrectRoot', async () => {
       const rootDir = path.join(tempDir, 'repo');
       const subDir = path.join(rootDir, 'apps', 'app');
       
@@ -56,7 +57,7 @@ describe('findRepoRoot', () => {
       expect(result).toBe(rootDir);
     });
 
-    it('returns correct root for turborepo (turbo.json)', async () => {
+    it('FindRepoRoot__TurboJson__ReturnsCorrectRoot', async () => {
       const rootDir = path.join(tempDir, 'repo');
       const subDir = path.join(rootDir, 'apps', 'app');
       
@@ -67,7 +68,7 @@ describe('findRepoRoot', () => {
       expect(result).toBe(rootDir);
     });
 
-    it('returns correct root for rush (rush.json)', async () => {
+    it('FindRepoRoot__RushJson__ReturnsCorrectRoot', async () => {
       const rootDir = path.join(tempDir, 'repo');
       const subDir = path.join(rootDir, 'apps', 'app');
       
@@ -78,7 +79,7 @@ describe('findRepoRoot', () => {
       expect(result).toBe(rootDir);
     });
 
-    it('returns correct root for yarn/npm workspaces (package.json with workspaces field)', async () => {
+    it('FindRepoRoot__PackageJsonWorkspaces__ReturnsCorrectRoot', async () => {
       const rootDir = path.join(tempDir, 'repo');
       const subDir = path.join(rootDir, 'packages', 'app');
       
@@ -92,7 +93,7 @@ describe('findRepoRoot', () => {
       expect(result).toBe(rootDir);
     });
 
-    it('returns resolved startDir when no markers found', async () => {
+    it('FindRepoRoot__NoMarkers__ReturnsResolvedStartDir', async () => {
       const subDir = path.join(tempDir, 'some', 'nested', 'dir');
       await fs.mkdir(subDir, { recursive: true });
 
@@ -102,7 +103,7 @@ describe('findRepoRoot', () => {
   });
 
   describe('edge cases', () => {
-    it('handles unreadable directories gracefully', async () => {
+    it('FindRepoRoot__UnreadableDirectories__HandlesGracefully', async () => {
       // On Unix systems, we can't easily test unreadable directories in a sandbox
       // This test verifies the function doesn't crash on edge cases
       const subDir = path.join(tempDir, 'readable', 'dir');
@@ -113,7 +114,7 @@ describe('findRepoRoot', () => {
       expect(typeof result).toBe('string');
     });
 
-    it('stops at filesystem root (does not traverse beyond /)', async () => {
+    it('FindRepoRoot__DeepNested__StopsAtFilesystemRoot', async () => {
       // Start from a deep nested directory
       const deepDir = path.join(tempDir, 'very', 'deep', 'nested', 'structure');
       await fs.mkdir(deepDir, { recursive: true });
@@ -125,7 +126,7 @@ describe('findRepoRoot', () => {
       expect(require('path').isAbsolute(result)).toBe(true);
     });
 
-    it('returns absolute path', async () => {
+    it('FindRepoRoot__AnyInput__ReturnsAbsolutePath', async () => {
       const subDir = path.join(tempDir, 'some', 'dir');
       await fs.mkdir(subDir, { recursive: true });
 
@@ -135,7 +136,7 @@ describe('findRepoRoot', () => {
   });
 
   describe('caching', () => {
-    it('caching works (memoization)', async () => {
+    it('FindRepoRoot__MultipleCalls__CachingWorks', async () => {
       const rootDir = path.join(tempDir, 'repo');
       const subDir = path.join(rootDir, 'packages', 'app');
       
@@ -154,7 +155,7 @@ describe('findRepoRoot', () => {
   });
 
   describe('priority order', () => {
-    it('prefers pnpm-workspace.yaml over other markers', async () => {
+    it('FindRepoRoot__MultipleMarkers__PrefersPnpmWorkspaceYaml', async () => {
       const rootDir = path.join(tempDir, 'repo');
       const subDir = path.join(rootDir, 'packages', 'app');
       

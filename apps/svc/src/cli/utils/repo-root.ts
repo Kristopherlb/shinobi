@@ -3,7 +3,7 @@ import * as path from 'path';
 
 /**
  * Find the monorepo root by walking up from a starting directory
- * Looks for common monorepo marker files: pnpm-workspace.yaml, nx.json, turbo.json, rush.json
+ * Looks for common monorepo marker files: pnpm-workspace.yaml, pnpm-workspace.yml, nx.json, turbo.json, rush.json
  * For package.json, also checks for workspaces field
  * 
  * This is a shared utility used by component catalog and loader to avoid hard-coded path traversal
@@ -14,7 +14,7 @@ export async function findRepoRoot(startDir: string): Promise<string> {
 
   while (current !== root) {
     // Check for common monorepo marker files
-    const markerFiles = ['pnpm-workspace.yaml', 'nx.json', 'turbo.json', 'rush.json'];
+    const markerFiles = ['pnpm-workspace.yaml', 'pnpm-workspace.yml', 'nx.json', 'turbo.json', 'rush.json'];
     for (const marker of markerFiles) {
       try {
         await fs.access(path.join(current, marker));

@@ -11,7 +11,7 @@ import type { FileDiscovery } from '../../utils/file-discovery.js';
  */
 export function createMockFileDiscovery(): FileDiscovery {
   return {
-    findManifest: jest.fn()
+    findManifest: vi.fn()
   } as unknown as FileDiscovery;
 }
 
@@ -20,7 +20,7 @@ export function createMockFileDiscovery(): FileDiscovery {
  */
 export function createFileDiscoveryWithManifest(manifestPath: string | null): FileDiscovery {
   return {
-    findManifest: jest.fn().mockResolvedValue(manifestPath)
+    findManifest: vi.fn().mockResolvedValue(manifestPath)
   } as unknown as FileDiscovery;
 }
 
