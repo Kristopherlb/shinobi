@@ -1328,7 +1328,7 @@ Remediation: None
 
 Requirement ID: V.1 TODO/Placeholder Sweep
 Status: FAIL
-Finding: Found TODO/placeholder code at packages/components/deployment-bundle-pipeline/dagger.ts:75 → .withExec(["bash", "-lc", "mkdir -p out && echo '{}' > out/plan.json"]) // Stub: replace with actual svc plan
+Finding: Found TODO/placeholder code at packages/components/deployment-bundle-pipeline/dagger.ts:75 → .withExec(["bash", "-lc", "mkdir -p out && echo '{}' > out/plan.json"]) // Stub: replace with actual shinobi plan
 Remediation: Resolve TODO/placeholder logic and replace vaporware sections with production-ready implementations/documentation.
 
 ## dynamodb-table
