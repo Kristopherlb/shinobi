@@ -10,7 +10,7 @@ import {
   ComponentSpec, 
   ComponentContext, 
   IComponentCreator 
-} from '../../@shinobi/core/component-interfaces.js';
+} from '@shinobi/core';
 import { SageMakerNotebookInstanceComponent } from './sagemaker-notebook-instance.component.js';
 import { SageMakerNotebookInstanceConfig, SAGEMAKER_NOTEBOOK_INSTANCE_CONFIG_SCHEMA } from './sagemaker-notebook-instance.builder.js';
 

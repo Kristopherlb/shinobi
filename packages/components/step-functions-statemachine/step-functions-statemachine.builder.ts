@@ -5,7 +5,7 @@
  * Provides 5-layer configuration precedence chain and compliance-aware defaults.
  */
 
-import { ConfigBuilder, ConfigBuilderContext } from '../@shinobi/core/config-builder.js';
+import { ConfigBuilder, ConfigBuilderContext, ComponentContext, ComponentSpec } from '@shinobi/core';
 
 /**
  * Configuration interface for Step Functions State Machine component
@@ -179,7 +179,8 @@ export const STEP_FUNCTIONS_STATEMACHINE_CONFIG_SCHEMA = {
  */
 export class StepFunctionsStateMachineConfigBuilder extends ConfigBuilder<StepFunctionsStateMachineConfig> {
   
-  constructor(builderContext: ConfigBuilderContext) {
+  constructor(context: ComponentContext, spec: ComponentSpec) {
+    const builderContext: ConfigBuilderContext = { context, spec };
     super(builderContext, STEP_FUNCTIONS_STATEMACHINE_CONFIG_SCHEMA);
   }
 
