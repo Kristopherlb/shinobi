@@ -163,7 +163,7 @@ The component has hardcoded PostgreSQL version `15.4` in multiple places:
 - AWS RDS PostgreSQL versions vary by region
 - Version availability changes over time (deprecations, new releases)
 - Component should be resilient to version availability changes
-- Consider adding a version validation step in `svc validate` command
+- Consider adding a version validation step in `shinobi validate` command
 
 ---
 

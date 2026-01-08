@@ -1,6 +1,6 @@
 # Shinobi Platform
 
-A minimal, production-quality MVP of the Shinobi platform with a CLI named `svc` and a composable core library.
+A minimal, production-quality MVP of the Shinobi platform with a `shinobi` CLI and a composable core library.
 
 ## Prerequisites
 
