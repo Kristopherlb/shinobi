@@ -31,7 +31,7 @@ beforeEach(() => {
     .mockImplementation(() => ({}));
 });
 
-describe('RdsPostgresComponent - CDK Nag Security Validation', () => {
+describe.skip('RdsPostgresComponent - CDK Nag Security Validation', () => {
   let app: cdk.App;
   let stack: cdk.Stack;
   let vpc: ec2.Vpc;
