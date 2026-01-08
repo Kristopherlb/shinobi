@@ -4,6 +4,7 @@
  * Tests for the Composition Root pattern implementation.
  */
 
+import { describe, it, expect, beforeEach } from 'vitest';
 import { CompositionRoot } from '../composition-root.js';
 
 describe('CompositionRoot', () => {
@@ -14,33 +15,33 @@ describe('CompositionRoot', () => {
   });
 
   describe('createDependencies', () => {
-    it('returns singleton (cached on second call)', () => {
-      const deps1 = root.createDependencies({ verbose: false, ci: false });
-      const deps2 = root.createDependencies({ verbose: false, ci: false });
+    it('CreateDependencies__SecondCall__ReturnsCachedInstance', async () => {
+      const deps1 = await root.createDependencies({ verbose: false, ci: false });
+      const deps2 = await root.createDependencies({ verbose: false, ci: false });
 
       expect(deps1).toBe(deps2);
       expect(deps1.logger).toBe(deps2.logger);
       expect(deps1.fileDiscovery).toBe(deps2.fileDiscovery);
     });
 
-    it('with different config returns cached instance (defensive behavior)', () => {
-      const deps1 = root.createDependencies({ verbose: false, ci: false });
-      const deps2 = root.createDependencies({ verbose: true, ci: true });
+    it('CreateDependencies__DifferentConfig__ReturnsCachedInstance', async () => {
+      const deps1 = await root.createDependencies({ verbose: false, ci: false });
+      const deps2 = await root.createDependencies({ verbose: true, ci: true });
 
       // Should return cached instance even with different config
       expect(deps1).toBe(deps2);
     });
 
-    it('logger configured with verbose/ci flags', () => {
-      const deps = root.createDependencies({ verbose: true, ci: true });
+    it('CreateDependencies__VerboseAndCiFlags__ConfiguresLogger', async () => {
+      const deps = await root.createDependencies({ verbose: true, ci: true });
       
       expect(deps.logger.getCurrentConfig().verbose).toBe(true);
       expect(deps.logger.getCurrentConfig().ci).toBe(true);
       expect(deps.logger.isCi).toBe(true);
     });
 
-    it('all command factories return correct command instances', () => {
-      const deps = root.createDependencies({ verbose: false, ci: false });
+    it('CreateDependencies__ValidDeps__AllCommandFactoriesReturnInstances', async () => {
+      const deps = await root.createDependencies({ verbose: false, ci: false });
 
       const validateCommand = root.createValidateCommand(deps);
       expect(validateCommand).toBeDefined();
@@ -67,8 +68,8 @@ describe('CompositionRoot', () => {
       expect(typeof synthCommand.execute).toBe('function');
     });
 
-    it('dependencies are correctly wired (logger.platformLogger used for core services)', () => {
-      const deps = root.createDependencies({ verbose: false, ci: false });
+    it('CreateDependencies__ValidDeps__DependenciesCorrectlyWired', async () => {
+      const deps = await root.createDependencies({ verbose: false, ci: false });
 
       // Core services should receive platformLogger, not the full Logger
       expect(deps.validationOrchestrator).toBeDefined();
@@ -83,8 +84,8 @@ describe('CompositionRoot', () => {
   });
 
   describe('integration', () => {
-    it('full object graph can be instantiated without errors', () => {
-      const deps = root.createDependencies({ verbose: false, ci: false });
+    it('Integration__FullObjectGraph__CanBeInstantiated', async () => {
+      const deps = await root.createDependencies({ verbose: false, ci: false });
 
       expect(deps.logger).toBeDefined();
       expect(deps.validationOrchestrator).toBeDefined();

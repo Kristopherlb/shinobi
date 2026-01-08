@@ -1,3 +1,4 @@
+import { describe, it, expect, vi, beforeEach } from 'vitest';
 import path from 'path';
 import os from 'os';
 import fs from 'fs';
@@ -6,39 +7,39 @@ import type { DiffOptions } from '../diff-command.js';
 import type { Logger } from '../console-logger.js';
 import type { FileDiscovery } from '@shinobi/core';
 
-jest.mock('../utils/service-synthesizer.js', () => ({
-  readManifest: jest.fn(),
-  synthesizeService: jest.fn()
+vi.mock('../utils/service-synthesizer.js', () => ({
+  readManifest: vi.fn(),
+  synthesizeService: vi.fn()
 }));
 
 import { readManifest, synthesizeService } from '../utils/service-synthesizer.js';
 
-const synthesizeServiceMock = synthesizeService as unknown as jest.Mock;
-const readManifestMock = readManifest as unknown as jest.Mock;
+const synthesizeServiceMock = synthesizeService as unknown as vi.Mock;
+const readManifestMock = readManifest as unknown as vi.Mock;
 
-const sendMock = jest.fn();
+const sendMock = vi.fn();
 
-jest.mock('@aws-sdk/client-cloudformation', () => {
+vi.mock('@aws-sdk/client-cloudformation', () => {
   return {
-    CloudFormationClient: jest.fn().mockImplementation(() => ({
+    CloudFormationClient: vi.fn().mockImplementation(() => ({
       send: sendMock
     })),
-    GetTemplateCommand: jest.fn().mockImplementation((args) => args)
+    GetTemplateCommand: vi.fn().mockImplementation((args) => args)
   };
 });
 
 describe('DiffCommand', () => {
   const logger: Logger = {
-    info: jest.fn(),
-    warn: jest.fn(),
-    error: jest.fn(),
-    success: jest.fn(),
-    debug: jest.fn(),
-    trace: jest.fn()
+    info: vi.fn(),
+    warn: vi.fn(),
+    error: vi.fn(),
+    success: vi.fn(),
+    debug: vi.fn(),
+    trace: vi.fn()
   } as unknown as Logger;
 
   const fileDiscovery: FileDiscovery = {
-    findManifest: jest.fn()
+    findManifest: vi.fn()
   } as unknown as FileDiscovery;
 
   const diffCommand = new DiffCommand({ fileDiscovery, logger });
@@ -52,8 +53,8 @@ describe('DiffCommand', () => {
   };
 
   beforeEach(() => {
-    jest.clearAllMocks();
-    (fileDiscovery.findManifest as jest.Mock).mockResolvedValue(manifestPath);
+    vi.clearAllMocks();
+    (fileDiscovery.findManifest as vi.Mock).mockResolvedValue(manifestPath);
     readManifestMock.mockResolvedValue({
       service: 'sample-service',
       environment: 'dev',
@@ -63,7 +64,7 @@ describe('DiffCommand', () => {
     });
   });
 
-  it('returns changes when stack does not exist', async () => {
+  it('Execute__StackMissing__ReturnsChanges', async () => {
     const desiredTemplate = {
       Resources: {
         NewResource: {
@@ -104,7 +105,7 @@ describe('DiffCommand', () => {
     expect(logger.warn).toHaveBeenCalledWith(expect.stringContaining('does not exist'));
   });
 
-  it('returns exit code 0 when templates match', async () => {
+  it('Execute__TemplatesMatch__ReturnsExitCode0', async () => {
     const template = {
       Resources: {
         Shared: {

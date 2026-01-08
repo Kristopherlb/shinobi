@@ -4,6 +4,7 @@
  * Tests for the execution context manager that caches resolved manifests and plan results.
  */
 
+import { describe, it, expect, beforeEach, afterEach, vi } from 'vitest';
 import { ExecutionContextManager } from '../execution-context-manager.js';
 import { createMockLogger } from './helpers/mock-logger.js';
 import { createMockFileDiscovery } from './helpers/mock-file-discovery.js';
@@ -24,7 +25,7 @@ describe('ExecutionContextManager', () => {
     mockFileDiscovery = createMockFileDiscovery();
     
     mockPipeline = {
-      plan: jest.fn()
+      plan: vi.fn()
     };
 
     manager = new ExecutionContextManager({
@@ -41,15 +42,15 @@ describe('ExecutionContextManager', () => {
   });
 
   describe('caching', () => {
-    it('works by manifestPath::environment key', async () => {
+    it('Caching__SameKey__ReturnsCachedResult', async () => {
       const manifestPath = await writeManifestToTempDir(createValidManifest(), tempDir);
-      (mockFileDiscovery.findManifest as jest.Mock).mockResolvedValue(manifestPath);
+      (mockFileDiscovery.findManifest as vi.Mock).mockResolvedValue(manifestPath);
 
       const mockPlanResult = {
         resolvedManifest: createValidManifest(),
         warnings: []
       };
-      (mockPipeline.plan as jest.Mock).mockResolvedValue(mockPlanResult);
+      (mockPipeline.plan as vi.Mock).mockResolvedValue(mockPlanResult);
 
       // First call - should call pipeline
       const result1 = await manager.resolve({ manifestPath, environment: 'dev' });
@@ -63,15 +64,15 @@ describe('ExecutionContextManager', () => {
       expect(result1.environment).toBe('dev');
     });
 
-    it('calls pipeline only on cache miss', async () => {
+    it('Caching__CacheMiss__CallsPipeline', async () => {
       const manifestPath = await writeManifestToTempDir(createValidManifest(), tempDir);
-      (mockFileDiscovery.findManifest as jest.Mock).mockResolvedValue(manifestPath);
+      (mockFileDiscovery.findManifest as vi.Mock).mockResolvedValue(manifestPath);
 
       const mockPlanResult = {
         resolvedManifest: createValidManifest(),
         warnings: []
       };
-      (mockPipeline.plan as jest.Mock).mockResolvedValue(mockPlanResult);
+      (mockPipeline.plan as vi.Mock).mockResolvedValue(mockPlanResult);
 
       await manager.resolve({ manifestPath, environment: 'dev' });
       await manager.resolve({ manifestPath, environment: 'dev' });
@@ -80,15 +81,15 @@ describe('ExecutionContextManager', () => {
       expect(mockPipeline.plan).toHaveBeenCalledTimes(1);
     });
 
-    it('returns cached result on cache hit', async () => {
+    it('Caching__CacheHit__ReturnsCachedResult', async () => {
       const manifestPath = await writeManifestToTempDir(createValidManifest(), tempDir);
-      (mockFileDiscovery.findManifest as jest.Mock).mockResolvedValue(manifestPath);
+      (mockFileDiscovery.findManifest as vi.Mock).mockResolvedValue(manifestPath);
 
       const mockPlanResult = {
         resolvedManifest: createValidManifest(),
         warnings: []
       };
-      (mockPipeline.plan as jest.Mock).mockResolvedValue(mockPlanResult);
+      (mockPipeline.plan as vi.Mock).mockResolvedValue(mockPlanResult);
 
       const result1 = await manager.resolve({ manifestPath, environment: 'dev' });
       const result2 = await manager.resolve({ manifestPath, environment: 'dev' });
@@ -97,15 +98,15 @@ describe('ExecutionContextManager', () => {
       expect(result1.planResult).toBe(result2.planResult);
     });
 
-    it('creates new cache entry for different environment', async () => {
+    it('Caching__DifferentEnvironment__CreatesNewCacheEntry', async () => {
       const manifestPath = await writeManifestToTempDir(createValidManifest(), tempDir);
-      (mockFileDiscovery.findManifest as jest.Mock).mockResolvedValue(manifestPath);
+      (mockFileDiscovery.findManifest as vi.Mock).mockResolvedValue(manifestPath);
 
       const mockPlanResult = {
         resolvedManifest: createValidManifest(),
         warnings: []
       };
-      (mockPipeline.plan as jest.Mock).mockResolvedValue(mockPlanResult);
+      (mockPipeline.plan as vi.Mock).mockResolvedValue(mockPlanResult);
 
       await manager.resolve({ manifestPath, environment: 'dev' });
       await manager.resolve({ manifestPath, environment: 'prod' });
@@ -115,15 +116,15 @@ describe('ExecutionContextManager', () => {
   });
 
   describe('reset', () => {
-    it('clears cache', async () => {
+    it('Reset__Called__ClearsCache', async () => {
       const manifestPath = await writeManifestToTempDir(createValidManifest(), tempDir);
-      (mockFileDiscovery.findManifest as jest.Mock).mockResolvedValue(manifestPath);
+      (mockFileDiscovery.findManifest as vi.Mock).mockResolvedValue(manifestPath);
 
       const mockPlanResult = {
         resolvedManifest: createValidManifest(),
         warnings: []
       };
-      (mockPipeline.plan as jest.Mock).mockResolvedValue(mockPlanResult);
+      (mockPipeline.plan as vi.Mock).mockResolvedValue(mockPlanResult);
 
       await manager.resolve({ manifestPath, environment: 'dev' });
       manager.reset();
@@ -134,19 +135,19 @@ describe('ExecutionContextManager', () => {
   });
 
   describe('updateLoggerContext', () => {
-    it('sets serviceName, compliance, environment', async () => {
+    it('UpdateLoggerContext__ResolvedManifest__SetsServiceNameComplianceEnvironment', async () => {
       const manifest = createValidManifest();
       manifest.service = 'test-service';
       manifest.complianceFramework = 'fedramp-moderate';
       
       const manifestPath = await writeManifestToTempDir(manifest, tempDir);
-      (mockFileDiscovery.findManifest as jest.Mock).mockResolvedValue(manifestPath);
+      (mockFileDiscovery.findManifest as vi.Mock).mockResolvedValue(manifestPath);
 
       const mockPlanResult = {
         resolvedManifest: manifest,
         warnings: []
       };
-      (mockPipeline.plan as jest.Mock).mockResolvedValue(mockPlanResult);
+      (mockPipeline.plan as vi.Mock).mockResolvedValue(mockPlanResult);
 
       await manager.resolve({ manifestPath, environment: 'dev' });
 
@@ -156,18 +157,18 @@ describe('ExecutionContextManager', () => {
       expect(config.environment).toBe('dev');
     });
 
-    it('logger context updated even on cache hit', async () => {
+    it('UpdateLoggerContext__CacheHit__UpdatesLoggerContext', async () => {
       const manifest = createValidManifest();
       manifest.service = 'test-service';
       
       const manifestPath = await writeManifestToTempDir(manifest, tempDir);
-      (mockFileDiscovery.findManifest as jest.Mock).mockResolvedValue(manifestPath);
+      (mockFileDiscovery.findManifest as vi.Mock).mockResolvedValue(manifestPath);
 
       const mockPlanResult = {
         resolvedManifest: manifest,
         warnings: []
       };
-      (mockPipeline.plan as jest.Mock).mockResolvedValue(mockPlanResult);
+      (mockPipeline.plan as vi.Mock).mockResolvedValue(mockPlanResult);
 
       await manager.resolve({ manifestPath, environment: 'dev' });
       
@@ -188,17 +189,17 @@ describe('ExecutionContextManager', () => {
   });
 
   describe('manifest path normalization', () => {
-    it('normalizes relative path to absolute', async () => {
+    it('ManifestPathNormalization__RelativePath__NormalizesToAbsolute', async () => {
       const manifestPath = await writeManifestToTempDir(createValidManifest(), tempDir);
       const relativePath = './service.yml';
       
-      (mockFileDiscovery.findManifest as jest.Mock).mockResolvedValue(manifestPath);
+      (mockFileDiscovery.findManifest as vi.Mock).mockResolvedValue(manifestPath);
 
       const mockPlanResult = {
         resolvedManifest: createValidManifest(),
         warnings: []
       };
-      (mockPipeline.plan as jest.Mock).mockResolvedValue(mockPlanResult);
+      (mockPipeline.plan as vi.Mock).mockResolvedValue(mockPlanResult);
 
       const result = await manager.resolve({ manifestPath: relativePath, environment: 'dev' });
 
@@ -206,38 +207,38 @@ describe('ExecutionContextManager', () => {
       expect(result.manifestPath).toBe(require('path').resolve(relativePath));
     });
 
-    it('preserves absolute paths', async () => {
+    it('ManifestPathNormalization__AbsolutePath__PreservesPath', async () => {
       const manifestPath = await writeManifestToTempDir(createValidManifest(), tempDir);
-      (mockFileDiscovery.findManifest as jest.Mock).mockResolvedValue(manifestPath);
+      (mockFileDiscovery.findManifest as vi.Mock).mockResolvedValue(manifestPath);
 
       const mockPlanResult = {
         resolvedManifest: createValidManifest(),
         warnings: []
       };
-      (mockPipeline.plan as jest.Mock).mockResolvedValue(mockPlanResult);
+      (mockPipeline.plan as vi.Mock).mockResolvedValue(mockPlanResult);
 
       const result = await manager.resolve({ manifestPath, environment: 'dev' });
 
       expect(result.manifestPath).toBe(manifestPath);
     });
 
-    it('uses fileDiscovery when manifestPath not provided', async () => {
+    it('ManifestPathNormalization__NoPathProvided__UsesFileDiscovery', async () => {
       const manifestPath = await writeManifestToTempDir(createValidManifest(), tempDir);
-      (mockFileDiscovery.findManifest as jest.Mock).mockResolvedValue(manifestPath);
+      (mockFileDiscovery.findManifest as vi.Mock).mockResolvedValue(manifestPath);
 
       const mockPlanResult = {
         resolvedManifest: createValidManifest(),
         warnings: []
       };
-      (mockPipeline.plan as jest.Mock).mockResolvedValue(mockPlanResult);
+      (mockPipeline.plan as vi.Mock).mockResolvedValue(mockPlanResult);
 
       await manager.resolve({ environment: 'dev' });
 
       expect(mockFileDiscovery.findManifest).toHaveBeenCalledWith('.');
     });
 
-    it('throws error when no manifest found', async () => {
-      (mockFileDiscovery.findManifest as jest.Mock).mockResolvedValue(null);
+    it('ManifestPathNormalization__NoManifestFound__ThrowsError', async () => {
+      (mockFileDiscovery.findManifest as vi.Mock).mockResolvedValue(null);
 
       await expect(manager.resolve({ environment: 'dev' })).rejects.toThrow(
         'No service.yml found'
@@ -246,15 +247,15 @@ describe('ExecutionContextManager', () => {
   });
 
   describe('integration', () => {
-    it('multiple commands share same resolved context', async () => {
+    it('Integration__MultipleCommands__ShareSameResolvedContext', async () => {
       const manifestPath = await writeManifestToTempDir(createValidManifest(), tempDir);
-      (mockFileDiscovery.findManifest as jest.Mock).mockResolvedValue(manifestPath);
+      (mockFileDiscovery.findManifest as vi.Mock).mockResolvedValue(manifestPath);
 
       const mockPlanResult = {
         resolvedManifest: createValidManifest(),
         warnings: []
       };
-      (mockPipeline.plan as jest.Mock).mockResolvedValue(mockPlanResult);
+      (mockPipeline.plan as vi.Mock).mockResolvedValue(mockPlanResult);
 
       const result1 = await manager.resolve({ manifestPath, environment: 'dev' });
       const result2 = await manager.resolve({ manifestPath, environment: 'dev' });
@@ -265,18 +266,18 @@ describe('ExecutionContextManager', () => {
       expect(mockPipeline.plan).toHaveBeenCalledTimes(1);
     });
 
-    it('logger context updated after first resolve', async () => {
+    it('Integration__FirstResolve__UpdatesLoggerContext', async () => {
       const manifest = createValidManifest();
       manifest.service = 'test-service';
       
       const manifestPath = await writeManifestToTempDir(manifest, tempDir);
-      (mockFileDiscovery.findManifest as jest.Mock).mockResolvedValue(manifestPath);
+      (mockFileDiscovery.findManifest as vi.Mock).mockResolvedValue(manifestPath);
 
       const mockPlanResult = {
         resolvedManifest: manifest,
         warnings: []
       };
-      (mockPipeline.plan as jest.Mock).mockResolvedValue(mockPlanResult);
+      (mockPipeline.plan as vi.Mock).mockResolvedValue(mockPlanResult);
 
       await manager.resolve({ manifestPath, environment: 'dev' });
 

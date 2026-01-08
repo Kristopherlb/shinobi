@@ -1,0 +1,49 @@
+service: api-db-service
+owner: platform-team
+complianceFramework: commercial
+region: us-west-2
+accountId: "911871352725"
+
+environments:
+  dev:
+    defaults:
+      instanceSize: small
+      enableDebug: true
+      highRiskEnvironment: false
+
+components:
+  - name: orders-api
+    type: lambda-api
+    config:
+      functionName: orders-api
+      handler: src/handler.handler
+      runtime: nodejs20.x
+      architecture: arm64
+      memorySize: 512
+      timeoutSeconds: 30
+      api:
+        stageName: dev
+        cors:
+          enabled: true
+          allowOrigins: ["*"]
+    binds:
+      - to: orders-db
+        capability: db:postgres
+        access: read|write
+
+  - name: orders-db
+    type: rds-postgres
+    config:
+      instance:
+        instanceType: db.t3.micro
+        allocatedStorage: 20
+        multiAz: false
+      backup:
+        retentionDays: 7
+      encryption:
+        enabled: true
+      logging:
+        database:
+          enabled: true
+          retentionInDays: 7
+

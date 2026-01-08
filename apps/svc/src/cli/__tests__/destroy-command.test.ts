@@ -1,26 +1,28 @@
+import { describe, it, expect, vi } from 'vitest';
 import path from 'path';
 import os from 'os';
 import { DestroyCommand } from '../destroy-command.js';
 import type { DestroyOptions } from '../destroy-command.js';
 import type { Logger } from '../console-logger.js';
 import type { FileDiscovery } from '@shinobi/core';
-jest.mock('../utils/service-synthesizer.js', () => ({
-  readManifest: jest.fn()
+
+vi.mock('../utils/service-synthesizer.js', () => ({
+  readManifest: vi.fn()
 }));
 
-jest.mock('@aws-sdk/client-cloudformation', () => {
-  const actual = jest.requireActual('@aws-sdk/client-cloudformation');
+vi.mock('@aws-sdk/client-cloudformation', async () => {
+  const actual = await vi.importActual('@aws-sdk/client-cloudformation');
   return {
     ...actual,
-    CloudFormationClient: jest.fn(),
-    DeleteStackCommand: jest.fn(),
-    waitUntilStackDeleteComplete: jest.fn()
+    CloudFormationClient: vi.fn(),
+    DeleteStackCommand: vi.fn(),
+    waitUntilStackDeleteComplete: vi.fn()
   };
 });
 
-jest.mock('inquirer', () => ({
+vi.mock('inquirer', () => ({
   __esModule: true,
-  default: { prompt: jest.fn() }
+  default: { prompt: vi.fn() }
 }));
 
 import { readManifest } from '../utils/service-synthesizer.js';
@@ -31,25 +33,25 @@ import {
 } from '@aws-sdk/client-cloudformation';
 import inquirer from 'inquirer';
 
-const readManifestMock = readManifest as unknown as jest.Mock;
-const promptMock = inquirer.prompt as unknown as jest.Mock;
+const readManifestMock = readManifest as unknown as ReturnType<typeof vi.fn>;
+const promptMock = inquirer.prompt as unknown as ReturnType<typeof vi.fn>;
 
-const sendMock = jest.fn();
-const waitUntilStackDeleteCompleteMock = waitUntilStackDeleteComplete as unknown as jest.Mock;
+const sendMock = vi.fn();
+const waitUntilStackDeleteCompleteMock = waitUntilStackDeleteComplete as unknown as ReturnType<typeof vi.fn>;
 
-(CloudFormationClient as unknown as jest.Mock).mockImplementation(() => ({ send: sendMock }));
-(DeleteStackCommand as unknown as jest.Mock).mockImplementation((args: any) => args);
+(CloudFormationClient as unknown as ReturnType<typeof vi.fn>).mockImplementation(() => ({ send: sendMock }));
+(DeleteStackCommand as unknown as ReturnType<typeof vi.fn>).mockImplementation((args: any) => args);
 
 describe('DestroyCommand', () => {
   const logger: Logger = {
-    info: jest.fn(),
-    warn: jest.fn(),
-    error: jest.fn(),
-    success: jest.fn()
+    info: vi.fn(),
+    warn: vi.fn(),
+    error: vi.fn(),
+    success: vi.fn()
   } as unknown as Logger;
 
   const fileDiscovery: FileDiscovery = {
-    findManifest: jest.fn()
+    findManifest: vi.fn()
   } as unknown as FileDiscovery;
 
   const destroyCommand = new DestroyCommand({ fileDiscovery, logger });
@@ -63,8 +65,8 @@ describe('DestroyCommand', () => {
   };
 
   beforeEach(() => {
-    jest.clearAllMocks();
-    (fileDiscovery.findManifest as jest.Mock).mockResolvedValue(manifestPath);
+    vi.clearAllMocks();
+    (fileDiscovery.findManifest as ReturnType<typeof vi.fn>).mockResolvedValue(manifestPath);
     readManifestMock.mockResolvedValue({
       service: 'sample-service',
       environment: 'dev',
@@ -74,7 +76,7 @@ describe('DestroyCommand', () => {
     promptMock.mockReset();
   });
 
-  it('returns success when stack delete succeeds', async () => {
+  it('Execute__StackDeleteSucceeds__ReturnsSuccess', async () => {
     sendMock.mockResolvedValueOnce({});
 
     const result = await destroyCommand.execute(baseOptions);
@@ -85,7 +87,7 @@ describe('DestroyCommand', () => {
     expect(logger.success).toHaveBeenCalledWith('Stack sample-service-dev deleted.');
   });
 
-  it('treats missing stack as success without deletion', async () => {
+  it('Execute__StackMissing__ReturnsSuccessWithoutDeletion', async () => {
     sendMock.mockRejectedValueOnce({
       name: 'ValidationError',
       message: 'Stack with id sample-service-dev does not exist'
@@ -98,13 +100,13 @@ describe('DestroyCommand', () => {
     expect(logger.info).toHaveBeenCalledWith(expect.stringContaining('does not exist'));
   });
 
-  it('fails when confirmation is required but not provided', async () => {
+  it('Execute__ConfirmationRejected__FailsWithExitCode2', async () => {
     promptMock.mockResolvedValue({ confirm: false });
 
     const result = await destroyCommand.execute({ ...baseOptions, yes: undefined, json: false });
 
     expect(result.success).toBe(false);
-    expect(result.exitCode).toBe(1);
+    expect(result.exitCode).toBe(2);
     expect(logger.warn).toHaveBeenCalledWith('Destroy cancelled by user.');
     promptMock.mockReset();
   });

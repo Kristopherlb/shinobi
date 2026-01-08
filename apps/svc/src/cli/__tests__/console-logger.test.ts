@@ -4,24 +4,20 @@
  * Tests for the CLI console logger implementation.
  */
 
+import { describe, it, expect, beforeEach, afterEach, vi } from 'vitest';
 import { Logger } from '../console-logger.js';
-
-// Mock console methods to verify output
-const originalConsoleLog = console.log;
-const originalConsoleWarn = console.warn;
-const originalConsoleError = console.error;
 
 describe('Logger', () => {
   let logger: Logger;
-  let consoleLogSpy: jest.SpyInstance;
-  let consoleWarnSpy: jest.SpyInstance;
-  let consoleErrorSpy: jest.SpyInstance;
+  let consoleLogSpy: ReturnType<typeof vi.spyOn>;
+  let consoleWarnSpy: ReturnType<typeof vi.spyOn>;
+  let consoleErrorSpy: ReturnType<typeof vi.spyOn>;
 
   beforeEach(() => {
     logger = new Logger('test-logger');
-    consoleLogSpy = jest.spyOn(console, 'log').mockImplementation();
-    consoleWarnSpy = jest.spyOn(console, 'warn').mockImplementation();
-    consoleErrorSpy = jest.spyOn(console, 'error').mockImplementation();
+    consoleLogSpy = vi.spyOn(console, 'log').mockImplementation(() => {});
+    consoleWarnSpy = vi.spyOn(console, 'warn').mockImplementation(() => {});
+    consoleErrorSpy = vi.spyOn(console, 'error').mockImplementation(() => {});
   });
 
   afterEach(() => {
@@ -31,7 +27,7 @@ describe('Logger', () => {
   });
 
   describe('configure', () => {
-    it('sets verbose/ci correctly', () => {
+    it('Configure__VerboseAndCiFlags__SetsConfigCorrectly', () => {
       logger.configure({ verbose: true, ci: true });
       
       expect(logger.getCurrentConfig().verbose).toBe(true);
@@ -39,7 +35,7 @@ describe('Logger', () => {
       expect(logger.isCi).toBe(true);
     });
 
-    it('merges config with existing values', () => {
+    it('Configure__ExistingConfig__MergesValues', () => {
       logger.configure({ verbose: true, ci: false });
       logger.configure({ verbose: true, ci: false, serviceName: 'test-service' });
       
@@ -51,7 +47,7 @@ describe('Logger', () => {
   });
 
   describe('debug and trace', () => {
-    it('only log when verbose = true', () => {
+    it('Debug__VerboseFalse__DoesNotLog', () => {
       logger.configure({ verbose: false, ci: false });
       
       logger.debug('debug message');
@@ -60,7 +56,7 @@ describe('Logger', () => {
       expect(consoleLogSpy).not.toHaveBeenCalled();
     });
 
-    it('log when verbose = true', () => {
+    it('Debug__VerboseTrue__LogsMessage', () => {
       logger.configure({ verbose: true, ci: false });
       
       logger.debug('debug message');
@@ -72,9 +68,9 @@ describe('Logger', () => {
   });
 
   describe('success', () => {
-    it('maps to info with status: success in CI mode', () => {
+    it('Success__CiMode__MapsToInfoWithStatus', () => {
       logger.configure({ verbose: false, ci: true });
-      const baseLoggerSpy = jest.spyOn(logger.platformLogger, 'info');
+      const baseLoggerSpy = vi.spyOn(logger.platformLogger, 'info');
       
       logger.success('Operation completed');
       
@@ -88,7 +84,7 @@ describe('Logger', () => {
       );
     });
 
-    it('outputs emoji in non-CI mode', () => {
+    it('Success__NonCiMode__OutputsEmoji', () => {
       logger.configure({ verbose: false, ci: false });
       
       logger.success('Operation completed');
@@ -98,7 +94,7 @@ describe('Logger', () => {
   });
 
   describe('capture', () => {
-    it('records all log levels correctly', () => {
+    it('Capture__AllLogLevels__RecordsCorrectly', () => {
       logger.configure({ verbose: true, ci: false });
       
       logger.info('info message');
@@ -118,7 +114,7 @@ describe('Logger', () => {
       expect(logs[5].level).toBe('TRACE');
     });
 
-    it('captures data with log entries', () => {
+    it('Capture__WithData__CapturesDataWithEntries', () => {
       logger.configure({ verbose: false, ci: false });
       
       logger.info('info message', { data: { key: 'value' } });
@@ -129,7 +125,7 @@ describe('Logger', () => {
   });
 
   describe('getLogs', () => {
-    it('returns correct captured entries', () => {
+    it('GetLogs__MultipleEntries__ReturnsCorrectEntries', () => {
       logger.configure({ verbose: false, ci: false });
       
       logger.info('message 1');
@@ -141,7 +137,7 @@ describe('Logger', () => {
       expect(logs[1].message).toBe('message 2');
     });
 
-    it('returns a copy of captured logs', () => {
+    it('GetLogs__MultipleCalls__ReturnsCopy', () => {
       logger.configure({ verbose: false, ci: false });
       
       logger.info('message 1');
@@ -154,7 +150,7 @@ describe('Logger', () => {
   });
 
   describe('updateContext', () => {
-    it('merges context properly', () => {
+    it('UpdateContext__NewContext__MergesProperly', () => {
       logger.configure({ verbose: false, ci: false });
       
       logger.updateContext({ serviceName: 'test-service', environment: 'dev' });
@@ -164,7 +160,7 @@ describe('Logger', () => {
       expect(config.environment).toBe('dev');
     });
 
-    it('preserves existing config when updating context', () => {
+    it('UpdateContext__PartialContext__PreservesExistingConfig', () => {
       logger.configure({ verbose: true, ci: false });
       
       // updateContext accepts Partial<Omit<LoggerConfig, 'verbose' | 'ci'>>
@@ -178,7 +174,7 @@ describe('Logger', () => {
   });
 
   describe('global context', () => {
-    it('sets service/version/instance/environment', () => {
+    it('GlobalContext__FullConfig__SetsAllFields', () => {
       logger.configure({
         verbose: false,
         ci: false,
@@ -199,8 +195,8 @@ describe('Logger', () => {
   });
 
   describe('human-readable formatting', () => {
-    it('uses emoji in non-CI mode', () => {
-      logger.configure({ verbose: false, ci: false });
+    it('HumanReadableFormatting__NonCiMode__UsesEmoji', () => {
+      logger.configure({ verbose: true, ci: false });
       
       logger.info('info message');
       logger.warn('warn message');
@@ -217,9 +213,9 @@ describe('Logger', () => {
       expect(consoleLogSpy).toHaveBeenCalledWith('🔎 trace message');
     });
 
-    it('does not use emoji in CI mode', () => {
+    it('HumanReadableFormatting__CiMode__DoesNotUseEmoji', () => {
       logger.configure({ verbose: false, ci: true });
-      const baseLoggerSpy = jest.spyOn(logger.platformLogger, 'info');
+      const baseLoggerSpy = vi.spyOn(logger.platformLogger, 'info');
       
       logger.info('info message');
       
@@ -229,9 +225,9 @@ describe('Logger', () => {
   });
 
   describe('structured JSON in CI mode', () => {
-    it('uses baseLogger in CI mode', () => {
+    it('StructuredJson__CiMode__UsesBaseLogger', () => {
       logger.configure({ verbose: false, ci: true });
-      const baseLoggerSpy = jest.spyOn(logger.platformLogger, 'info');
+      const baseLoggerSpy = vi.spyOn(logger.platformLogger, 'info');
       
       logger.info('info message', { data: { key: 'value' } });
       
@@ -241,7 +237,7 @@ describe('Logger', () => {
   });
 
   describe('isCi getter', () => {
-    it('returns correct value', () => {
+    it('IsCi__Configured__ReturnsCorrectValue', () => {
       logger.configure({ verbose: false, ci: true });
       expect(logger.isCi).toBe(true);
       
@@ -251,7 +247,7 @@ describe('Logger', () => {
   });
 
   describe('toObject utility', () => {
-    it('handles undefined', () => {
+    it('ToObject__Undefined__HandlesGracefully', () => {
       logger.configure({ verbose: false, ci: false });
       logger.info('message', { data: undefined });
       
@@ -259,7 +255,7 @@ describe('Logger', () => {
       expect(consoleLogSpy).toHaveBeenCalled();
     });
 
-    it('handles null', () => {
+    it('ToObject__Null__HandlesGracefully', () => {
       logger.configure({ verbose: false, ci: false });
       logger.info('message', { data: null });
       
@@ -267,7 +263,7 @@ describe('Logger', () => {
       expect(consoleLogSpy).toHaveBeenCalled();
     });
 
-    it('handles objects', () => {
+    it('ToObject__Objects__HandlesCorrectly', () => {
       logger.configure({ verbose: true, ci: false });
       logger.info('message', { data: { key: 'value' } });
       
@@ -275,21 +271,21 @@ describe('Logger', () => {
       expect(consoleLogSpy).toHaveBeenCalledWith(JSON.stringify({ key: 'value' }, null, 2));
     });
 
-    it('handles primitives', () => {
+    it('ToObject__Primitives__HandlesCorrectly', () => {
       logger.configure({ verbose: true, ci: false });
       logger.info('message', { data: 'string value' });
       
       expect(consoleLogSpy).toHaveBeenCalled();
     });
 
-    it('handles arrays', () => {
+    it('ToObject__Arrays__HandlesCorrectly', () => {
       logger.configure({ verbose: true, ci: false });
       logger.info('message', { data: [1, 2, 3] });
       
       expect(consoleLogSpy).toHaveBeenCalled();
     });
 
-    it('handles Error objects', () => {
+    it('ToObject__ErrorObjects__HandlesCorrectly', () => {
       logger.configure({ verbose: false, ci: false });
       const error = new Error('test error');
       

@@ -1,0 +1,24 @@
+{
+  "id": "TP-cli-destroy-command-001",
+  "level": "unit",
+  "capability": "Destroy command execution with stack deletion, confirmation prompts, and error handling",
+  "oracle": "exact",
+  "invariants": [
+    "Returns success when stack delete succeeds",
+    "Treats missing stack as success without deletion",
+    "Fails when confirmation is required but not provided",
+    "Exit codes correct (0 success, 2 failure)"
+  ],
+  "fixtures": ["MockCloudFormationClient", "MockInquirer", "MockLogger", "MockFileDiscovery"],
+  "inputs": {
+    "shape": "Destroy command options (file, env, region, account, yes, json)",
+    "notes": "Mocks CloudFormation client and inquirer prompts. No network I/O. No actual AWS calls."
+  },
+  "risks": [],
+  "dependencies": ["vitest", "@aws-sdk/client-cloudformation", "inquirer"],
+  "evidence": [],
+  "compliance_refs": [],
+  "ai_generated": true,
+  "human_reviewed_by": "platform-team"
+}
+

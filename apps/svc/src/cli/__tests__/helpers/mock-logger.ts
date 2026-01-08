@@ -4,6 +4,7 @@
  * Provides utilities for creating mock Logger instances for testing.
  */
 
+import { vi } from 'vitest';
 import type { Logger } from '../../console-logger.js';
 
 export interface CapturedLog {
@@ -14,28 +15,41 @@ export interface CapturedLog {
 }
 
 /**
- * Creates a mock Logger with all methods stubbed as Jest mocks
+ * Creates a mock Logger with all methods stubbed as Vitest mocks
+ * The mock tracks config state when updateContext is called
  */
 export function createMockLogger(): Logger {
+  let currentConfig: any = { verbose: false, ci: false };
+  
+  const updateContextMock = vi.fn((context: any) => {
+    currentConfig = { ...currentConfig, ...context };
+  });
+  
+  const getCurrentConfigMock = vi.fn(() => {
+    return { ...currentConfig };
+  });
+  
   return {
-    info: jest.fn(),
-    warn: jest.fn(),
-    error: jest.fn(),
-    success: jest.fn(),
-    debug: jest.fn(),
-    trace: jest.fn(),
-    configure: jest.fn(),
-    updateContext: jest.fn(),
-    getCurrentConfig: jest.fn().mockReturnValue({ verbose: false, ci: false }),
-    getLogs: jest.fn().mockReturnValue([]),
-    capture: jest.fn(),
+    info: vi.fn(),
+    warn: vi.fn(),
+    error: vi.fn(),
+    success: vi.fn(),
+    debug: vi.fn(),
+    trace: vi.fn(),
+    configure: vi.fn((config: any) => {
+      currentConfig = { ...currentConfig, ...config };
+    }),
+    updateContext: updateContextMock,
+    getCurrentConfig: getCurrentConfigMock,
+    getLogs: vi.fn().mockReturnValue([]),
+    capture: vi.fn(),
     isCi: false,
     platformLogger: {
-      info: jest.fn(),
-      warn: jest.fn(),
-      error: jest.fn(),
-      debug: jest.fn(),
-      trace: jest.fn()
+      info: vi.fn(),
+      warn: vi.fn(),
+      error: vi.fn(),
+      debug: vi.fn(),
+      trace: vi.fn()
     } as any
   } as unknown as Logger;
 }
@@ -96,11 +110,11 @@ export class CapturingLogger {
 
   get platformLogger(): any {
     return {
-      info: jest.fn(),
-      warn: jest.fn(),
-      error: jest.fn(),
-      debug: jest.fn(),
-      trace: jest.fn()
+      info: vi.fn(),
+      warn: vi.fn(),
+      error: vi.fn(),
+      debug: vi.fn(),
+      trace: vi.fn()
     };
   }
 }

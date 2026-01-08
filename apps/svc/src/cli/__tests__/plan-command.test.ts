@@ -4,6 +4,7 @@
  * Tests for the plan command implementation.
  */
 
+import { describe, it, expect, beforeEach, afterEach, vi } from 'vitest';
 import { PlanCommand } from '../plan-command.js';
 import { createMockLogger } from './helpers/mock-logger.js';
 import { createTempDir, cleanupTempDir, writeManifestToTempDir } from './helpers/temp-dirs.js';
@@ -21,7 +22,7 @@ describe('PlanCommand', () => {
     logger = createMockLogger();
     
     mockExecutionContext = {
-      resolve: jest.fn()
+      resolve: vi.fn()
     } as unknown as ExecutionContextManager;
 
     planCommand = new PlanCommand({
@@ -37,7 +38,7 @@ describe('PlanCommand', () => {
   });
 
   describe('caching', () => {
-    it('uses cached execution context', async () => {
+    it('Caching__SecondCall__UsesCachedContext', async () => {
       const manifestPath = await writeManifestToTempDir(createValidManifest(), tempDir);
       const mockContext = {
         manifestPath,
@@ -48,7 +49,7 @@ describe('PlanCommand', () => {
         }
       };
       
-      (mockExecutionContext.resolve as jest.Mock).mockResolvedValue(mockContext);
+      (mockExecutionContext.resolve as vi.Mock).mockResolvedValue(mockContext);
 
       await planCommand.execute({ file: manifestPath, env: 'dev' });
       await planCommand.execute({ file: manifestPath, env: 'dev' });
@@ -59,7 +60,7 @@ describe('PlanCommand', () => {
   });
 
   describe('JSON output', () => {
-    it('includes resolvedManifest, warnings, structuredData', async () => {
+    it('JsonOutput__ValidManifest__IncludesAllFields', async () => {
       const manifestPath = await writeManifestToTempDir(createValidManifest(), tempDir);
       const manifest = createValidManifest();
       const mockContext = {
@@ -71,7 +72,7 @@ describe('PlanCommand', () => {
         }
       };
       
-      (mockExecutionContext.resolve as jest.Mock).mockResolvedValue(mockContext);
+      (mockExecutionContext.resolve as vi.Mock).mockResolvedValue(mockContext);
 
       const result = await planCommand.execute({ file: manifestPath, env: 'dev', json: true });
 
@@ -83,7 +84,7 @@ describe('PlanCommand', () => {
   });
 
   describe('integration', () => {
-    it('valid manifest → resolved config output', async () => {
+    it('Integration__ValidManifest__ReturnsResolvedConfig', async () => {
       const manifestPath = await writeManifestToTempDir(createValidManifest(), tempDir);
       const manifest = createValidManifest();
       const mockContext = {
@@ -95,7 +96,7 @@ describe('PlanCommand', () => {
         }
       };
       
-      (mockExecutionContext.resolve as jest.Mock).mockResolvedValue(mockContext);
+      (mockExecutionContext.resolve as vi.Mock).mockResolvedValue(mockContext);
 
       const result = await planCommand.execute({ file: manifestPath, env: 'dev' });
 
@@ -104,7 +105,7 @@ describe('PlanCommand', () => {
       expect(logger.success).toHaveBeenCalledWith(expect.stringContaining('completed successfully'));
     });
 
-    it('warnings surfaced correctly', async () => {
+    it('Integration__ManifestWithWarnings__SurfacesWarnings', async () => {
       const manifestPath = await writeManifestToTempDir(createValidManifest(), tempDir);
       const mockContext = {
         manifestPath,
@@ -115,7 +116,7 @@ describe('PlanCommand', () => {
         }
       };
       
-      (mockExecutionContext.resolve as jest.Mock).mockResolvedValue(mockContext);
+      (mockExecutionContext.resolve as vi.Mock).mockResolvedValue(mockContext);
 
       await planCommand.execute({ file: manifestPath, env: 'dev' });
 
@@ -123,7 +124,7 @@ describe('PlanCommand', () => {
       expect(logger.warn).toHaveBeenCalledWith('Warning 2');
     });
 
-    it('--json → structured output', async () => {
+    it('Integration__JsonFlag__ReturnsStructuredOutput', async () => {
       const manifestPath = await writeManifestToTempDir(createValidManifest(), tempDir);
       const mockContext = {
         manifestPath,
@@ -134,7 +135,7 @@ describe('PlanCommand', () => {
         }
       };
       
-      (mockExecutionContext.resolve as jest.Mock).mockResolvedValue(mockContext);
+      (mockExecutionContext.resolve as vi.Mock).mockResolvedValue(mockContext);
 
       const result = await planCommand.execute({ file: manifestPath, env: 'dev', json: true });
 

@@ -4,6 +4,7 @@
  * Tests for the catalog command implementation.
  */
 
+import { describe, it, expect, vi } from 'vitest';
 import { CatalogCommand } from '../catalog.js';
 import { createMockLogger } from './helpers/mock-logger.js';
 import { createTempDir, cleanupTempDir } from './helpers/temp-dirs.js';
@@ -12,12 +13,12 @@ import {
   createComponentPackageWithCreator
 } from './fixtures/component-packages.js';
 
-jest.mock('../utils/component-catalog.js', () => ({
-  loadComponentCatalog: jest.fn()
+vi.mock('../utils/component-catalog.js', () => ({
+  loadComponentCatalog: vi.fn()
 }));
 
-jest.mock('../utils/component-loader.js', () => ({
-  loadComponentCreators: jest.fn()
+vi.mock('../utils/component-loader.js', () => ({
+  loadComponentCreators: vi.fn()
 }));
 
 import { loadComponentCatalog } from '../utils/component-catalog.js';
@@ -38,11 +39,11 @@ describe('CatalogCommand', () => {
     if (tempDir) {
       await cleanupTempDir(tempDir);
     }
-    jest.clearAllMocks();
+    vi.clearAllMocks();
   });
 
   describe('loading', () => {
-    it('loads component catalog correctly', async () => {
+    it('Loading__ValidCatalog__LoadsCorrectly', async () => {
       const mockEntries = [
         {
           componentType: 's3-bucket',
@@ -55,8 +56,8 @@ describe('CatalogCommand', () => {
         }
       ];
       
-      (loadComponentCatalog as jest.Mock).mockResolvedValue(mockEntries);
-      (loadComponentCreators as jest.Mock).mockResolvedValue(new Map());
+      (loadComponentCatalog as vi.Mock).mockResolvedValue(mockEntries);
+      (loadComponentCreators as vi.Mock).mockResolvedValue(new Map());
 
       const result = await catalogCommand.execute({});
 
@@ -65,7 +66,7 @@ describe('CatalogCommand', () => {
       expect(result.data?.count).toBe(1);
     });
 
-    it('enriches entries with creator information', async () => {
+    it('Loading__WithCreators__EnrichesEntries', async () => {
       const mockEntries = [
         {
           componentType: 's3-bucket',
@@ -86,8 +87,8 @@ describe('CatalogCommand', () => {
         }]
       ]);
       
-      (loadComponentCatalog as jest.Mock).mockResolvedValue(mockEntries);
-      (loadComponentCreators as jest.Mock).mockResolvedValue(mockCreators);
+      (loadComponentCatalog as vi.Mock).mockResolvedValue(mockEntries);
+      (loadComponentCreators as vi.Mock).mockResolvedValue(mockCreators);
 
       const result = await catalogCommand.execute({});
 
@@ -95,9 +96,9 @@ describe('CatalogCommand', () => {
       expect(result.data?.entries[0].requiredCapabilities).toEqual(['aws-s3']);
     });
 
-    it('filters by lifecycle (--all flag)', async () => {
-      (loadComponentCatalog as jest.Mock).mockResolvedValue([]);
-      (loadComponentCreators as jest.Mock).mockResolvedValue(new Map());
+    it('Loading__AllFlag__FiltersByLifecycle', async () => {
+      (loadComponentCatalog as vi.Mock).mockResolvedValue([]);
+      (loadComponentCreators as vi.Mock).mockResolvedValue(new Map());
 
       await catalogCommand.execute({ all: false });
       expect(loadComponentCatalog).toHaveBeenCalledWith({ includeNonProduction: false });
@@ -108,7 +109,7 @@ describe('CatalogCommand', () => {
   });
 
   describe('output format', () => {
-    it('JSON output format correct', async () => {
+    it('OutputFormat__JsonFlag__ReturnsJsonFormat', async () => {
       const mockEntries = [
         {
           componentType: 's3-bucket',
@@ -121,8 +122,8 @@ describe('CatalogCommand', () => {
         }
       ];
       
-      (loadComponentCatalog as jest.Mock).mockResolvedValue(mockEntries);
-      (loadComponentCreators as jest.Mock).mockResolvedValue(new Map());
+      (loadComponentCatalog as vi.Mock).mockResolvedValue(mockEntries);
+      (loadComponentCreators as vi.Mock).mockResolvedValue(new Map());
 
       const result = await catalogCommand.execute({ json: true });
 
@@ -131,7 +132,7 @@ describe('CatalogCommand', () => {
       expect(Array.isArray(result.data?.entries)).toBe(true);
     });
 
-    it('human-readable output format correct', async () => {
+    it('OutputFormat__NoJsonFlag__ReturnsHumanReadableFormat', async () => {
       const mockEntries = [
         {
           componentType: 's3-bucket',
@@ -146,8 +147,8 @@ describe('CatalogCommand', () => {
         }
       ];
       
-      (loadComponentCatalog as jest.Mock).mockResolvedValue(mockEntries);
-      (loadComponentCreators as jest.Mock).mockResolvedValue(new Map());
+      (loadComponentCatalog as vi.Mock).mockResolvedValue(mockEntries);
+      (loadComponentCreators as vi.Mock).mockResolvedValue(new Map());
 
       await catalogCommand.execute({});
 
@@ -156,7 +157,7 @@ describe('CatalogCommand', () => {
   });
 
   describe('integration', () => {
-    it('works with real component packages', async () => {
+    it('Integration__RealComponentPackages__WorksCorrectly', async () => {
       const mockEntries = [
         {
           componentType: 's3-bucket',
@@ -169,8 +170,8 @@ describe('CatalogCommand', () => {
         }
       ];
       
-      (loadComponentCatalog as jest.Mock).mockResolvedValue(mockEntries);
-      (loadComponentCreators as jest.Mock).mockResolvedValue(new Map());
+      (loadComponentCatalog as vi.Mock).mockResolvedValue(mockEntries);
+      (loadComponentCreators as vi.Mock).mockResolvedValue(new Map());
 
       const result = await catalogCommand.execute({});
 
@@ -178,7 +179,7 @@ describe('CatalogCommand', () => {
       expect(result.data?.entries).toBeDefined();
     });
 
-    it('handles missing creators gracefully', async () => {
+    it('Integration__MissingCreators__HandlesGracefully', async () => {
       const mockEntries = [
         {
           componentType: 's3-bucket',
@@ -191,8 +192,8 @@ describe('CatalogCommand', () => {
         }
       ];
       
-      (loadComponentCatalog as jest.Mock).mockResolvedValue(mockEntries);
-      (loadComponentCreators as jest.Mock).mockRejectedValue(new Error('Failed to load creators'));
+      (loadComponentCatalog as vi.Mock).mockResolvedValue(mockEntries);
+      (loadComponentCreators as vi.Mock).mockRejectedValue(new Error('Failed to load creators'));
 
       const result = await catalogCommand.execute({});
 
