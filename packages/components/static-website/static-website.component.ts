@@ -15,12 +15,12 @@ import * as targets from 'aws-cdk-lib/aws-route53-targets';
 import * as iam from 'aws-cdk-lib/aws-iam';
 import * as cdk from 'aws-cdk-lib';
 import { Construct } from 'constructs';
-import { BaseComponent } from '@shinobi/core';
 import {
+  BaseComponent,
   ComponentSpec,
   ComponentContext,
   ComponentCapabilities
-} from '../@shinobi/core/component-interfaces.js';
+} from '@shinobi/core';
 import {
   StaticWebsiteConfig,
   StaticWebsiteConfigBuilder,
@@ -46,9 +46,15 @@ export class StaticWebsiteComponent extends BaseComponent {
   }
 
   public synth(): void {
-    this.logger.info('Starting Static Website component synthesis', {
-      componentName: this.spec.name,
-      componentType: this.getType()
+    this.logComponentEvent('synthesis_start', 'Starting Static Website component synthesis', {
+      component: {
+        name: this.spec.name,
+        type: this.getType()
+      },
+      context: {
+        environment: this.context.environment,
+        complianceFramework: this.context.complianceFramework
+      }
     });
 
     try {
@@ -97,16 +103,15 @@ export class StaticWebsiteComponent extends BaseComponent {
       // Step 6: Register capabilities for component binding
       this.registerCapability('hosting:static', this.buildWebsiteCapability());
 
-      this.logger.info('Static Website component synthesis completed successfully', {
+      this.logComponentEvent('synthesis_complete', 'Static Website component synthesis completed successfully', {
         bucketName: this.bucket!.bucketName,
         distributionId: this.distribution?.distributionId,
         deploymentEnabled: this.config.deployment.enabled
       });
-
     } catch (error) {
-      this.logger.error('Static Website component synthesis failed', error as Error, {
-        componentName: this.spec.name,
-        componentType: this.getType()
+      this.logError(error as Error, 'component synthesis', {
+        componentType: 'static-website',
+        stage: 'synthesis'
       });
       throw error;
     }

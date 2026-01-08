@@ -149,7 +149,7 @@
           "properties": {
             "clamavScan": {
               "type": "boolean",
-              "description": "Enable the ClamAV virus scanning Lambda integration",
+              "description": "Placeholder for ClamAV virus scanning. ClamAV scanning requires the dedicated virus scanning component. This option is a placeholder for future integration. Use the dedicated clamav-scanner component for virus scanning capabilities.",
               "default": false
             }
           }

@@ -33,10 +33,20 @@ export class CognitoUserPoolComponent extends BaseComponent {
   }
 
   public synth(): void {
-    this.logComponentEvent('synthesis_start', 'Starting Cognito User Pool synthesis');
+    this.logComponentEvent('synthesis_start', 'Starting Cognito User Pool component synthesis', {
+      component: {
+        name: this.spec.name,
+        type: this.getType()
+      },
+      context: {
+        environment: this.context.environment,
+        complianceFramework: this.context.complianceFramework
+      }
+    });
 
-    const builder = new CognitoUserPoolComponentConfigBuilder(this.context, this.spec);
-    this.config = builder.buildSync();
+    try {
+      const builder = new CognitoUserPoolComponentConfigBuilder(this.context, this.spec);
+      this.config = builder.buildSync();
 
     this.createUserPool();
     this.createAppClients();
@@ -59,10 +69,17 @@ export class CognitoUserPoolComponent extends BaseComponent {
       monitoringEnabled: false
     });
 
-    this.logComponentEvent('synthesis_complete', 'Cognito User Pool synthesis completed', {
-      userPoolId: this.userPool!.userPoolId,
-      advancedSecurityMode: this.config.advancedSecurityMode
-    });
+      this.logComponentEvent('synthesis_complete', 'Cognito User Pool component synthesis completed successfully', {
+        userPoolId: this.userPool!.userPoolId,
+        advancedSecurityMode: this.config.advancedSecurityMode
+      });
+    } catch (error) {
+      this.logError(error as Error, 'component synthesis', {
+        componentType: 'cognito-user-pool',
+        stage: 'synthesis'
+      });
+      throw error;
+    }
   }
 
   public getCapabilities(): ComponentCapabilities {

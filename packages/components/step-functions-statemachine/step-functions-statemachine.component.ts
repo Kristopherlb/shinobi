@@ -11,8 +11,12 @@ import * as logs from 'aws-cdk-lib/aws-logs';
 import * as cloudwatch from 'aws-cdk-lib/aws-cloudwatch';
 import * as cdk from 'aws-cdk-lib';
 import { Construct } from 'constructs';
-import { BaseComponent } from '../@shinobi/core/component.js';
-import { ComponentSpec, ComponentContext, ComponentCapabilities } from '../@shinobi/core/component-interfaces.js';
+import {
+  BaseComponent,
+  ComponentSpec,
+  ComponentContext,
+  ComponentCapabilities
+} from '@shinobi/core';
 import { StepFunctionsStateMachineConfigBuilder, StepFunctionsStateMachineConfig } from './step-functions-statemachine.builder.js';
 
 // Configuration interface is now defined in the builder file
@@ -34,9 +38,15 @@ export class StepFunctionsStateMachineComponent extends BaseComponent {
   }
 
   public synth(): void {
-    this.logger.info('Starting Step Functions State Machine component synthesis', {
-      componentName: this.spec.name,
-      componentType: this.getType()
+    this.logComponentEvent('synthesis_start', 'Starting Step Functions State Machine component synthesis', {
+      component: {
+        name: this.spec.name,
+        type: this.getType()
+      },
+      context: {
+        environment: this.context.environment,
+        complianceFramework: this.context.complianceFramework
+      }
     });
 
     try {
@@ -69,15 +79,14 @@ export class StepFunctionsStateMachineComponent extends BaseComponent {
         stateMachineName: this.stateMachine!.stateMachineName
       });
 
-      this.logger.info('Step Functions State Machine component synthesis completed successfully', {
+      this.logComponentEvent('synthesis_complete', 'Step Functions State Machine component synthesis completed successfully', {
         stateMachineArn: this.stateMachine!.stateMachineArn,
         stateMachineName: this.stateMachine!.stateMachineName
       });
-
     } catch (error) {
-      this.logger.error('Step Functions State Machine component synthesis failed', error as Error, {
-        componentName: this.spec.name,
-        componentType: this.getType()
+      this.logError(error as Error, 'component synthesis', {
+        componentType: 'step-functions-statemachine',
+        stage: 'synthesis'
       });
       throw error;
     }

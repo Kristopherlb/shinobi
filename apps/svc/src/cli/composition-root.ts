@@ -12,7 +12,8 @@ import {
   ReferenceValidator,
   SchemaManager,
   SchemaValidator,
-  ValidationOrchestrator
+  ValidationOrchestrator,
+  SingletonResourceHandlerService
 } from '@shinobi/core';
 import { createUnifiedBinderRegistry } from '@shinobi/binders';
 import { ValidateCommand } from './validate-command.js';
@@ -34,6 +35,7 @@ export interface ApplicationDependencies {
   contextHydrator: ContextHydrator;
   referenceValidator: ReferenceValidator;
   executionContext: ExecutionContextManager;
+  singletonResourceHandler: SingletonResourceHandlerService;
 }
 
 export class CompositionRoot {
@@ -99,6 +101,10 @@ export class CompositionRoot {
       fileDiscovery
     });
 
+    const singletonResourceHandler = new SingletonResourceHandlerService({
+      logger: logger.platformLogger
+    });
+
     this._dependencies = {
       logger,
       validationOrchestrator,
@@ -108,7 +114,8 @@ export class CompositionRoot {
       schemaValidator,
       contextHydrator,
       referenceValidator,
-      executionContext
+      executionContext,
+      singletonResourceHandler
     };
 
     return this._dependencies;
@@ -157,7 +164,8 @@ export class CompositionRoot {
   createUpCommand(dependencies: ApplicationDependencies): UpCommand {
     return new UpCommand({
       fileDiscovery: dependencies.fileDiscovery,
-      logger: dependencies.logger
+      logger: dependencies.logger,
+      singletonResourceHandler: dependencies.singletonResourceHandler
     });
   }
 

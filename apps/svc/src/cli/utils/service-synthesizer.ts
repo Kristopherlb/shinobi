@@ -71,6 +71,7 @@ export interface SynthesizeServiceOptions {
   outputDir?: string;
   includeExperimental?: boolean;
   cliContext?: Record<string, any>;
+  stackName?: string;
 }
 
 export interface SynthesizedComponentSummary {
@@ -124,6 +125,10 @@ export const synthesizeService = async (
     ? path.resolve(options.outputDir)
     : await fsp.mkdtemp(path.join(os.tmpdir(), 'shinobi-synth-'));
 
+  // #region agent log
+  fetch('http://127.0.0.1:7242/ingest/31cd8a5c-c5a9-4c85-9dba-5f04dc91dc42',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'service-synthesizer.ts:124',message:'Determining output directory',data:{targetOutDir,providedOutputDir:options.outputDir,isTemp:!options.outputDir,absolutePath:path.resolve(targetOutDir),manifestPath:options.manifestPath,manifestPathAbsolute:path.resolve(options.manifestPath)},timestamp:Date.now(),sessionId:'debug-session',runId:'run15',hypothesisId:'H'})}).catch(()=>{});
+  // #endregion
+
   const previousOutdir = process.env.CDK_OUTDIR;
   process.env.CDK_OUTDIR = targetOutDir;
 
@@ -133,16 +138,18 @@ export const synthesizeService = async (
     outdir: targetOutDir,
     context: options.cliContext ?? {}
   });
-  const stackName = `${manifest.service}-${environment}`;
+  const stackName = options.stackName ?? `${manifest.service}-${environment}`;
   const stack = new cdk.Stack(app, stackName, {
     env: {
       account: accountId,
       region
     },
+    // Note: Stack-level tags removed to avoid conflicts with component tags.
+    // Component tags already provide service-name, owner, and environment tags.
+    // Stack tags are case-sensitive but AWS IAM tag keys are case-insensitive,
+    // causing conflicts between stack tags (Service, Owner, Environment) and
+    // component tags (service-name, owner, environment).
     tags: {
-      Service: manifest.service,
-      Owner: manifest.owner ?? 'unknown',
-      Environment: environment,
       ...manifest.tags
     }
   });
@@ -161,8 +168,10 @@ export const synthesizeService = async (
       region,
       accountId,
       owner: manifest.owner,
-      tags: manifest.tags
-    };
+      tags: manifest.tags,
+      // Store manifest path in context for logging/debugging (non-standard extension)
+      manifestPath: options.manifestPath
+    } as ComponentContext & { manifestPath?: string };
 
     const spec: ComponentSpec = {
       name: component.name,

@@ -20,9 +20,11 @@
  */
 
 import * as path from 'path';
+import * as fs from 'fs/promises';
 import { Logger } from './console-logger.js';
 import { ValidationOrchestrator } from '@shinobi/core';
 import { FileDiscovery } from './utils/file-discovery.js';
+import { findRepoRoot } from './utils/repo-root.js';
 
 export interface ValidateOptions {
   file?: string;
@@ -53,19 +55,46 @@ export class ValidateCommand {
 
     try {
       // Discover manifest file - resolve to absolute path if provided
-      const manifestPath = options.file 
-        ? path.resolve(options.file)
-        : await this.dependencies.fileDiscovery.findManifest('.');
-
-      if (!manifestPath) {
-        return {
-          success: false,
-          exitCode: 2,
-          error: 'No service.yml found in this directory or any parent directories.'
-        };
+      let manifestPath: string;
+      if (options.file) {
+        // Try resolving from current working directory first
+        const cwdPath = path.resolve(process.cwd(), options.file);
+        try {
+          await fs.access(cwdPath);
+          manifestPath = cwdPath;
+        } catch {
+          // Try resolving as absolute path
+          const absPath = path.isAbsolute(options.file) 
+            ? options.file 
+            : path.resolve(options.file);
+          try {
+            await fs.access(absPath);
+            manifestPath = absPath;
+          } catch {
+            // Try resolving from repo root
+            const repoRoot = await findRepoRoot(process.cwd());
+            const repoPath = path.resolve(repoRoot, options.file);
+            try {
+              await fs.access(repoPath);
+              manifestPath = repoPath;
+            } catch {
+              manifestPath = absPath; // Will fail with proper error below
+            }
+          }
+        }
+      } else {
+        const foundManifest = await this.dependencies.fileDiscovery.findManifest('.');
+        if (!foundManifest) {
+          return {
+            success: false,
+            exitCode: 2,
+            error: 'No service.yml found in this directory or any parent directories.'
+          };
+        }
+        manifestPath = foundManifest;
       }
 
-      // Ensure we log the absolute path (fileDiscovery may return absolute, but resolve to be safe)
+      // Ensure we log the absolute path
       const resolvedPath = path.isAbsolute(manifestPath) 
         ? manifestPath 
         : path.resolve(manifestPath);

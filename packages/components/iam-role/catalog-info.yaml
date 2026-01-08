@@ -8,7 +8,7 @@ metadata:
     platform.shinobi.dev/component-type: iam-role
 spec:
   type: library
-  lifecycle: experimental
+  lifecycle: production
   owner: group:default/platform-engineering
   system: system:default/shinobi
   metadata:

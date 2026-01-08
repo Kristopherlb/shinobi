@@ -118,3 +118,4 @@ describe('VpcComponent - CDK Nag Security Validation', () => {
   });
 });
 
+

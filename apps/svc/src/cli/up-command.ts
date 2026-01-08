@@ -24,7 +24,10 @@ import * as path from 'path';
 import * as fsp from 'fs/promises';
 import inquirer from 'inquirer';
 import { AwsCdkCli, RequireApproval } from '@aws-cdk/cli-lib-alpha';
-import { FileDiscovery } from '@shinobi/core';
+import {
+  FileDiscovery,
+  SingletonResourceHandlerService
+} from '@shinobi/core';
 import { Logger } from './console-logger.js';
 import {
   readManifest,
@@ -32,6 +35,7 @@ import {
   SimpleManifest,
   SynthesizeServiceResult
 } from './utils/service-synthesizer.js';
+import { copyDirectory } from './utils/file-utils.js';
 
 export interface UpOptions {
   file?: string;
@@ -45,6 +49,7 @@ export interface UpOptions {
   json?: boolean;
   includeExperimental?: boolean;
   retainAssetDir?: boolean;
+  saveSynthOutput?: string; // Directory path to save synth output (default: not saved)
 }
 
 export interface UpResult {
@@ -65,6 +70,7 @@ export interface UpResult {
 interface UpDependencies {
   fileDiscovery: FileDiscovery;
   logger: Logger;
+  singletonResourceHandler: SingletonResourceHandlerService;
 }
 
 export class UpCommand {
@@ -74,8 +80,9 @@ export class UpCommand {
     const logger = this.dependencies.logger;
 
     try {
+      // Resolve manifest path - FileDiscovery handles both file paths and directory searches
       const manifestPath = options.file
-        ? path.resolve(options.file)
+        ? await this.dependencies.fileDiscovery.findManifest(options.file)
         : await this.dependencies.fileDiscovery.findManifest('.');
 
       if (!manifestPath) {
@@ -122,9 +129,30 @@ export class UpCommand {
             region,
             accountId,
             includeExperimental: options.includeExperimental,
-            cliContext: context
+            cliContext: context,
+            stackName
           });
+          
           latestSynth = synthResult;
+          
+          // Post-process template to handle singleton AWS resources (e.g., ApiGateway Account)
+          await this.dependencies.singletonResourceHandler.postProcessTemplate({
+            assemblyDir: synthResult.assembly.directory,
+            stackId: synthResult.stack.id,
+            templateFileName: synthResult.stack.templateFile,
+            region
+          });
+          
+          // Save synth output if requested
+          if (options.saveSynthOutput) {
+            const saveDir = path.resolve(options.saveSynthOutput);
+            await copyDirectory(synthResult.assembly.directory, saveDir);
+            
+            if (!options.json) {
+              logger.info(`Synth output saved to: ${saveDir}`);
+            }
+          }
+          
           return synthResult.assembly.directory;
         }
       });
@@ -173,13 +201,17 @@ export class UpCommand {
           execute: true
         });
       } catch (error) {
+        const errorMessage = error instanceof Error ? error.message : String(error);
+        const errorStack = error instanceof Error ? error.stack : undefined;
+        
         if (!options.json) {
           logger.error('Deploy failed', error);
         }
+        
         return {
           success: false,
-          exitCode: 1, // Deployment failure (CDK errors, AWS API failures)
-          error: error instanceof Error ? error.message : 'Deployment failed'
+          exitCode: 1,
+          error: errorStack ? `${errorMessage}\n\nStack Trace:\n${errorStack}` : errorMessage
         };
       }
 

@@ -76,17 +76,17 @@ export class CertificateManagerComponent extends BaseComponent {
       this.registerCapability('observability:certificate', this.buildObservabilityCapability());
       this.applyCDKNagSuppressions();
 
-      this.logComponentEvent('synthesis_complete', 'Certificate Manager synthesis complete', {
+      this.logComponentEvent('synthesis_complete', 'Certificate Manager component synthesis completed successfully', {
         certificateArn: this.certificate!.certificateArn,
         domainName: this.config.domainName,
         keyAlgorithm: this.config.keyAlgorithm
       });
     } catch (error) {
-      this.logComponentEvent('synthesis_error', 'Certificate Manager synthesis failed', {
-        error: error instanceof Error ? error.message : String(error),
-        domainName: this.spec.config?.domainName
+      this.logError(error as Error, 'component synthesis', {
+        componentType: 'certificate-manager',
+        stage: 'synthesis'
       });
-      throw new Error(`Certificate Manager synthesis failed: ${error instanceof Error ? error.message : String(error)}`);
+      throw error;
     }
   }
 

@@ -4,6 +4,17 @@ import {
   ComponentConfigSchema
 } from '@shinobi/core';
 
+// Safe fetch wrapper for debug logging (handles cases where fetch is not available)
+const safeFetch = (url: string, options: any): void => {
+  try {
+    if (typeof fetch !== 'undefined') {
+      fetch(url, options).catch(() => {});
+    }
+  } catch {
+    // Ignore errors (fetch not available or other issues)
+  }
+};
+
 export type RemovalPolicyOption = 'retain' | 'destroy';
 export type RedisLogType = 'slow-log' | 'engine-log';
 export type RedisLogDestinationType = 'cloudwatch-logs' | 'kinesis-firehose';
@@ -74,6 +85,8 @@ export interface RedisVpcConfig {
   vpcId?: string;
   subnetIds: string[];
   subnetGroupName?: string;
+  useDefaultVpc?: boolean;
+  vpcCidrBlock?: string; // Required when using fromVpcAttributes() with SecurityGroup
 }
 
 export interface RedisParameterGroupConfig {
@@ -210,7 +223,13 @@ const VPC_SCHEMA: ComponentConfigSchema = {
       type: 'array',
       items: { type: 'string', pattern: '^subnet-[a-f0-9]+' }
     },
-    subnetGroupName: { type: 'string' }
+    subnetGroupName: { type: 'string' },
+    useDefaultVpc: { type: 'boolean', default: false },
+    vpcCidrBlock: {
+      type: 'string',
+      pattern: '^(?:[0-9]{1,3}\\.){3}[0-9]{1,3}/[0-9]{1,2}$',
+      description: 'VPC CIDR block. Required when using fromVpcAttributes() with SecurityGroup.'
+    }
   }
 };
 
@@ -315,7 +334,8 @@ const HARDENED_FALLBACKS: Partial<ElastiCacheRedisConfig> = {
   numCacheNodes: 1,
   port: 6379,
   vpc: {
-    subnetIds: []
+    subnetIds: [],
+    useDefaultVpc: false // Default to requiring explicit VPC ID
   },
   security: {
     create: true,
@@ -337,10 +357,10 @@ const HARDENED_FALLBACKS: Partial<ElastiCacheRedisConfig> = {
   backup: {
     enabled: true,
     retentionDays: 7,
-    window: '03:00-05:00'
+    window: '06:00-08:00' // Changed from 03:00-05:00 to avoid overlap with maintenance window (sun:03:00-sun:04:00)
   },
   maintenance: {
-    window: 'sun:03:00-sun:04:00'
+    window: 'sun:03:00-sun:04:00' // Maintenance window: Sunday 3:00-4:00 UTC (backup runs 06:00-08:00, no overlap)
   },
   multiAz: {
     enabled: false,
@@ -387,8 +407,25 @@ export class ElastiCacheRedisComponentConfigBuilder extends ConfigBuilder<Elasti
   }
 
   public buildSync(): ElastiCacheRedisConfig {
+    const componentName = this.builderContext.spec.name;
+    
+    // #region agent log
+    fetch('http://127.0.0.1:7242/ingest/31cd8a5c-c5a9-4c85-9dba-5f04dc91dc42',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'elasticache-redis.builder.ts:389',message:'ElastiCache builder.buildSync() entry',data:{componentName,specConfig:this.builderContext.spec.config},timestamp:Date.now(),sessionId:'debug-session',runId:'run10',hypothesisId:'J'})}).catch(()=>{});
+    // #endregion
+    
     const resolved = super.buildSync() as Partial<ElastiCacheRedisConfig>;
-    return this.normaliseConfig(resolved);
+    
+    // #region agent log
+    fetch('http://127.0.0.1:7242/ingest/31cd8a5c-c5a9-4c85-9dba-5f04dc91dc42',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'elasticache-redis.builder.ts:390',message:'Config resolved from precedence chain',data:{componentName,resolvedVpc:resolved.vpc,resolvedBackup:resolved.backup,resolvedMaintenance:resolved.maintenance},timestamp:Date.now(),sessionId:'debug-session',runId:'run10',hypothesisId:'J'})}).catch(()=>{});
+    // #endregion
+    
+    const normalized = this.normaliseConfig(resolved);
+    
+    // #region agent log
+    fetch('http://127.0.0.1:7242/ingest/31cd8a5c-c5a9-4c85-9dba-5f04dc91dc42',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'elasticache-redis.builder.ts:391',message:'Config normalized',data:{componentName,normalizedVpc:normalized.vpc,normalizedBackup:normalized.backup,normalizedMaintenance:normalized.maintenance,source:'normaliseConfig()'},timestamp:Date.now(),sessionId:'debug-session',runId:'run10',hypothesisId:'J'})}).catch(()=>{});
+    // #endregion
+    
+    return normalized;
   }
 
   public getSchema(): ComponentConfigSchema {
@@ -396,6 +433,12 @@ export class ElastiCacheRedisComponentConfigBuilder extends ConfigBuilder<Elasti
   }
 
   private normaliseConfig(config: Partial<ElastiCacheRedisConfig>): ElastiCacheRedisConfig {
+    const componentName = this.builderContext.spec.name;
+    
+    // #region agent log
+    fetch('http://127.0.0.1:7242/ingest/31cd8a5c-c5a9-4c85-9dba-5f04dc91dc42',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'elasticache-redis.builder.ts:404',message:'normaliseConfig() entry',data:{componentName,inputVpc:config.vpc,inputBackup:config.backup,inputMaintenance:config.maintenance},timestamp:Date.now(),sessionId:'debug-session',runId:'run10',hypothesisId:'J'})}).catch(()=>{});
+    // #endregion
+    
     const monitoring = config.monitoring ?? HARDENED_FALLBACKS.monitoring!;
 
     const alarms = {
@@ -435,7 +478,34 @@ export class ElastiCacheRedisComponentConfigBuilder extends ConfigBuilder<Elasti
       ensureManagedLog('engine-log');
     }
 
-    return {
+    // Determine VPC config source
+    const vpcId = config.vpc?.vpcId;
+    const subnetIds = config.vpc?.subnetIds ?? [];
+    const subnetGroupName = config.vpc?.subnetGroupName;
+    const useDefaultVpc = config.vpc?.useDefaultVpc ?? false;
+    const vpcCidrBlock = config.vpc?.vpcCidrBlock; // Required when using fromVpcAttributes() with SecurityGroup
+    
+    // #region agent log
+    fetch('http://127.0.0.1:7242/ingest/31cd8a5c-c5a9-4c85-9dba-5f04dc91dc42',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'elasticache-redis.builder.ts:475',message:'VPC config normalization',data:{componentName,vpcId,vpcIdSource:vpcId ? 'config.vpc.vpcId' : 'undefined',subnetIds,subnetIdsSource:subnetIds.length > 0 ? 'config.vpc.subnetIds' : 'default []',subnetIdsLength:subnetIds.length,subnetGroupName,subnetGroupNameSource:subnetGroupName ? 'config.vpc.subnetGroupName' : 'undefined',useDefaultVpc,vpcCidrBlock,vpcCidrBlockSource:vpcCidrBlock ? 'config.vpc.vpcCidrBlock' : 'undefined'},timestamp:Date.now(),sessionId:'debug-session',runId:'run18',hypothesisId:'P'})}).catch(()=>{});
+    // #endregion
+    
+    // Determine backup window source
+    const backupWindow = config.backup?.window ?? '06:00-08:00';
+    const backupWindowSource = config.backup?.window ? 'config.backup.window' : 'hardcoded fallback';
+    
+    // #region agent log
+    fetch('http://127.0.0.1:7242/ingest/31cd8a5c-c5a9-4c85-9dba-5f04dc91dc42',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'elasticache-redis.builder.ts:469',message:'Backup window normalization',data:{componentName,backupWindow,backupWindowSource,inputBackupWindow:config.backup?.window,hardcodedBackupWindow:HARDENED_FALLBACKS.backup?.window},timestamp:Date.now(),sessionId:'debug-session',runId:'run10',hypothesisId:'J'})}).catch(()=>{});
+    // #endregion
+    
+    // Determine maintenance window source
+    const maintenanceWindow = config.maintenance?.window ?? 'sun:03:00-sun:04:00';
+    const maintenanceWindowSource = config.maintenance?.window ? 'config.maintenance.window' : 'hardcoded fallback';
+    
+    // #region agent log
+    fetch('http://127.0.0.1:7242/ingest/31cd8a5c-c5a9-4c85-9dba-5f04dc91dc42',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'elasticache-redis.builder.ts:472',message:'Maintenance window normalization',data:{componentName,maintenanceWindow,maintenanceWindowSource,inputMaintenanceWindow:config.maintenance?.window,hardcodedMaintenanceWindow:HARDENED_FALLBACKS.maintenance?.window},timestamp:Date.now(),sessionId:'debug-session',runId:'run10',hypothesisId:'J'})}).catch(()=>{});
+    // #endregion
+
+    const normalized = {
       clusterName: config.clusterName,
       description: config.description,
       engineVersion: config.engineVersion ?? '7.0',
@@ -443,9 +513,11 @@ export class ElastiCacheRedisComponentConfigBuilder extends ConfigBuilder<Elasti
       numCacheNodes: config.numCacheNodes ?? 1,
       port: config.port ?? 6379,
       vpc: {
-        vpcId: config.vpc?.vpcId,
-        subnetIds: config.vpc?.subnetIds ?? [],
-        subnetGroupName: config.vpc?.subnetGroupName
+        vpcId: vpcId,
+        subnetIds: subnetIds,
+        subnetGroupName: subnetGroupName,
+        useDefaultVpc: useDefaultVpc,
+        vpcCidrBlock: vpcCidrBlock // Required when using fromVpcAttributes() with SecurityGroup
       },
       security: {
         create: config.security?.create ?? true,
@@ -460,10 +532,10 @@ export class ElastiCacheRedisComponentConfigBuilder extends ConfigBuilder<Elasti
       backup: {
         enabled: config.backup?.enabled ?? false,
         retentionDays: config.backup?.retentionDays ?? 1,
-        window: config.backup?.window ?? '03:00-05:00'
+        window: backupWindow
       },
       maintenance: {
-        window: config.maintenance?.window ?? 'sun:03:00-sun:04:00',
+        window: maintenanceWindow,
         notificationTopicArn: config.maintenance?.notificationTopicArn
       },
       multiAz: {
@@ -477,6 +549,12 @@ export class ElastiCacheRedisComponentConfigBuilder extends ConfigBuilder<Elasti
       },
       tags: config.tags ?? {}
     };
+    
+    // #region agent log
+    fetch('http://127.0.0.1:7242/ingest/31cd8a5c-c5a9-4c85-9dba-5f04dc91dc42',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'elasticache-redis.builder.ts:485',message:'normaliseConfig() complete',data:{componentName,normalizedVpc:normalized.vpc,normalizedBackup:normalized.backup,normalizedMaintenance:normalized.maintenance},timestamp:Date.now(),sessionId:'debug-session',runId:'run10',hypothesisId:'J'})}).catch(()=>{});
+    // #endregion
+    
+    return normalized;
   }
 
   private normaliseAlarm(alarm: Partial<RedisAlarmThresholdConfig> | undefined, defaults: RedisAlarmThresholdConfig): RedisAlarmThresholdConfig {

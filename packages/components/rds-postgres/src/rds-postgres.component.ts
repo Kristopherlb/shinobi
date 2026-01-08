@@ -22,7 +22,8 @@ import {
   ComponentSpec,
   ComponentContext,
   ComponentCapabilities,
-  applySecurityGroupTags
+  applySecurityGroupTags,
+  resolveVpcForSubnetGroups
 } from '@shinobi/core';
 import {
   RdsPostgresComponentConfigBuilder,
@@ -41,6 +42,7 @@ export class RdsPostgresComponent extends BaseComponent {
   private securityGroup?: ec2.SecurityGroup;
   private kmsKey?: kms.Key;
   private parameterGroup?: rds.ParameterGroup;
+  private subnetGroup?: rds.ISubnetGroup;
   private config?: RdsPostgresConfig;
   private vpc?: ec2.IVpc;
 
@@ -143,6 +145,9 @@ export class RdsPostgresComponent extends BaseComponent {
       }
       if (this.parameterGroup) {
         this.registerConstruct('parameterGroup', this.parameterGroup);
+      }
+      if (this.subnetGroup) {
+        this.registerConstruct('subnetGroup', this.subnetGroup);
       }
 
       this.registerCapability('db:postgres', this.buildDatabaseCapability());
@@ -283,19 +288,52 @@ export class RdsPostgresComponent extends BaseComponent {
   private createSecurityGroup(): void {
     const networking = this.config?.networking ?? {};
 
-    if (networking.vpcId) {
-      this.vpc = ec2.Vpc.fromLookup(this, 'Vpc', { vpcId: networking.vpcId });
-    } else if (networking.useDefaultVpc ?? true) {
-      this.vpc = ec2.Vpc.fromLookup(this, 'Vpc', { isDefault: true });
-    } else {
-      throw new Error('RDS Postgres component requires networking.vpcId or useDefaultVpc to be true.');
+
+    try {
+      // Use platform VPC resolver utility for consistent resolution across all components
+      const availabilityZones = networking.availabilityZones && networking.availabilityZones.length > 0
+        ? networking.availabilityZones
+        : this.getDefaultAvailabilityZones();
+
+      this.vpc = resolveVpcForSubnetGroups(this, 'Vpc', {
+        vpcId: networking.vpcId,
+        subnetIds: networking.subnetIds,
+        availabilityZones: availabilityZones,
+        region: this.context.region,
+        vpcCidrBlock: networking.vpcCidrBlock,
+        useDefaultVpc: networking.useDefaultVpc ?? true, // RDS defaults to true
+        context: this.context,
+        componentName: this.spec.name
+      });
+
+      // #region agent log
+      // Avoid accessing this.vpc.vpcId directly - it may trigger CDK validation requiring vpcCidrBlock
+      fetch('http://127.0.0.1:7242/ingest/31cd8a5c-c5a9-4c85-9dba-5f04dc91dc42',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'rds-postgres.component.ts:303',message:'VPC resolved via platform resolver',data:{vpcId:networking.vpcId,vpcType:'ImportedVpc2 (fromVpcAttributes)'},timestamp:Date.now(),sessionId:'debug-session',runId:'run19',hypothesisId:'Q'})}).catch(()=>{});
+      // #endregion
+    } catch (error) {
+      this.logError(
+        error as Error,
+        'rds-postgres:vpc-resolution',
+        {
+          guidance: 'Provide networking.vpcId, inject context.vpc, or set networking.useDefaultVpc to true.'
+        }
+      );
+      throw error;
     }
+
+    // #region agent log
+    fetch('http://127.0.0.1:7242/ingest/31cd8a5c-c5a9-4c85-9dba-5f04dc91dc42',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'rds-postgres.component.ts:326',message:'About to create SecurityGroup with VPC',data:{vpcId:networking.vpcId,hasVpc:!!this.vpc,vpcCidrBlockProvided:!!networking.vpcCidrBlock},timestamp:Date.now(),sessionId:'debug-session',runId:'run22',hypothesisId:'T'})}).catch(()=>{});
+    // #endregion
 
     this.securityGroup = new ec2.SecurityGroup(this, 'DatabaseSecurityGroup', {
       vpc: this.vpc,
       description: `Security group for ${this.config!.dbName} PostgreSQL database`,
       allowAllOutbound: false
     });
+
+    // #region agent log
+    fetch('http://127.0.0.1:7242/ingest/31cd8a5c-c5a9-4c85-9dba-5f04dc91dc42',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'rds-postgres.component.ts:333',message:'SecurityGroup created successfully',data:{vpcId:networking.vpcId,securityGroupId:this.securityGroup.securityGroupId},timestamp:Date.now(),sessionId:'debug-session',runId:'run1',hypothesisId:'C'})}).catch(()=>{});
+    // #endregion
 
     this.applyStandardTags(this.securityGroup, {
       'security-group-type': 'database',
@@ -311,11 +349,24 @@ export class RdsPostgresComponent extends BaseComponent {
     const ingressCidrs = networking.ingressCidrs ?? [];
     const port = networking.port ?? 5432;
 
-    if (ingressCidrs.length === 0 && this.vpc) {
+    // Use VPC CIDR from config if available
+    // If VPC was imported via attributes without CIDR, use ingressCidrs or default
+    // NOTE: We don't try to access this.vpc.vpcCidrBlock because fromVpcAttributes()
+    // without vpcCidrBlock will cause validation errors when accessing the property
+    const vpcCidr: string | undefined = networking.vpcCidrBlock;
+
+    if (ingressCidrs.length === 0 && vpcCidr) {
       this.securityGroup.addIngressRule(
-        ec2.Peer.ipv4(this.vpc.vpcCidrBlock),
+        ec2.Peer.ipv4(vpcCidr),
         ec2.Port.tcp(port),
         'Default PostgreSQL access from VPC'
+      );
+    } else if (ingressCidrs.length === 0) {
+      // Fallback to default CIDR if VPC CIDR is not available
+      this.securityGroup.addIngressRule(
+        ec2.Peer.ipv4('10.0.0.0/16'),
+        ec2.Port.tcp(port),
+        'Default PostgreSQL access (fallback CIDR)'
       );
     } else {
       ingressCidrs.forEach((cidr: string, index: number) => {
@@ -326,6 +377,135 @@ export class RdsPostgresComponent extends BaseComponent {
         );
       });
     }
+  }
+
+  /**
+   * Get default availability zones for the current region
+   * Returns at least 2 AZs for high availability
+   */
+  private getDefaultAvailabilityZones(): string[] {
+    const region = this.context.region || 'us-east-1';
+    // Extract region base (e.g., 'us-west-2' -> 'us-west-2')
+    const regionBase = region.split('-').slice(0, 2).join('-');
+    const regionNumber = region.split('-').pop() || '1';
+    
+    // Return at least 2 AZs for the region (most AWS regions have at least 2)
+    // Common pattern: {region}-{a,b,c,d}
+    // Return first 2-3 AZs (most regions have at least 2, many have 3+)
+    const azs: string[] = [];
+    for (let i = 0; i < 3; i++) {
+      const azSuffix = String.fromCharCode(97 + i); // 'a', 'b', 'c'
+      azs.push(`${regionBase}-${regionNumber}${azSuffix}`);
+    }
+    return azs;
+  }
+
+  /**
+   * Create DB subnet group when explicit subnet IDs are provided
+   * 
+   * Strategy:
+   * - If VPC is fromLookup() (fully resolved): Don't create subnet group, use vpcSubnets with Subnet.fromSubnetId()
+   * - If VPC is fromVpcAttributes() (no subnet info): Create subnet group with explicit subnet IDs as strings
+   * 
+   * Returns a custom ISubnetGroup wrapper that delegates to the CfnDBSubnetGroup,
+   * avoiding the need to use fromSubnetGroupName() which expects an existing subnet group
+   */
+  private createSubnetGroup(): rds.ISubnetGroup | undefined {
+    const networking = this.config?.networking ?? {};
+    
+    if (!networking.subnetIds || networking.subnetIds.length === 0) {
+      return undefined;
+    }
+
+    if (!this.vpc) {
+      throw new Error('RDS Postgres component attempted to create a subnet group before the VPC was initialised.');
+    }
+
+    // Always create subnet group when explicit subnet IDs are provided
+    // Using Subnet.fromSubnetId() causes early validation issues because it lacks route table info
+    // Creating a subnet group with string IDs allows CloudFormation to validate directly
+
+    const instanceConfig = this.config!.instance ?? {};
+    const removalPolicy = (instanceConfig.removalPolicy ?? 'destroy') === 'retain'
+      ? cdk.RemovalPolicy.RETAIN
+      : cdk.RemovalPolicy.DESTROY;
+
+    // #region agent log
+    fetch('http://127.0.0.1:7242/ingest/31cd8a5c-c5a9-4c85-9dba-5f04dc91dc42',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'rds-postgres.component.ts:407',message:'createSubnetGroup entry',data:{subnetIds:networking.subnetIds,vpcId:networking.vpcId,region:this.context.region,accountId:this.context.accountId},timestamp:Date.now(),sessionId:'debug-session',runId:'run3',hypothesisId:'A,B,C,D'})}).catch(()=>{});
+    // #endregion
+
+    // Use L1 CfnDBSubnetGroup with string subnet IDs (like ElastiCache pattern)
+    // This avoids CloudFormation early validation issues with Subnet references
+    // We'll use the L2 SubnetGroup.fromSubnetGroupName() to create an ISubnetGroup
+    // that DatabaseInstance can use, but we need to pass the actual name, not a ref
+    const subnetGroupName = `${this.spec.name}-subnet-group`;
+    
+    // #region agent log
+    // Avoid accessing this.vpc.vpcId - may trigger CDK validation requiring vpcCidrBlock
+    fetch('http://127.0.0.1:7242/ingest/31cd8a5c-c5a9-4c85-9dba-5f04dc91dc42',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'rds-postgres.component.ts:435',message:'Creating L1 CfnDBSubnetGroup with string subnet IDs',data:{subnetGroupName,subnetIds:networking.subnetIds,vpcId:networking.vpcId},timestamp:Date.now(),sessionId:'debug-session',runId:'run11',hypothesisId:'E'})}).catch(()=>{});
+    // #endregion
+
+    // Create L1 CfnDBSubnetGroup with string subnet IDs directly
+    // This passes subnet IDs as strings, not as subnet references, avoiding early validation issues
+    const cfnSubnetGroup = new rds.CfnDBSubnetGroup(this, 'SubnetGroup', {
+      dbSubnetGroupDescription: `DB subnet group for ${this.config!.dbName}`,
+      subnetIds: networking.subnetIds, // Pass as strings directly
+      dbSubnetGroupName: subnetGroupName // Explicit name
+    });
+
+    // Apply removal policy
+    if (removalPolicy === cdk.RemovalPolicy.RETAIN) {
+      cfnSubnetGroup.applyRemovalPolicy(cdk.RemovalPolicy.RETAIN);
+    }
+
+    // Apply standard tags
+    this.applyStandardTags(cfnSubnetGroup, {
+      'subnet-group-type': 'rds-db',
+      'database-name': this.config!.dbName
+    });
+
+    this.logResourceCreation('rds-subnet-group', cfnSubnetGroup.ref, {
+      subnetCount: networking.subnetIds.length,
+      subnetIds: networking.subnetIds
+    });
+
+    // #region agent log
+    fetch('http://127.0.0.1:7242/ingest/31cd8a5c-c5a9-4c85-9dba-5f04dc91dc42',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'rds-postgres.component.ts:443',message:'CfnDBSubnetGroup created, creating ISubnetGroup wrapper',data:{subnetGroupName,cfnRef:cfnSubnetGroup.ref,cfnLogicalId:cfnSubnetGroup.logicalId},timestamp:Date.now(),sessionId:'debug-session',runId:'run11',hypothesisId:'E'})}).catch(()=>{});
+    // #endregion
+
+    // Create ISubnetGroup wrapper that uses the actual subnet group name
+    // DatabaseInstance will use this to reference the subnet group in the template
+    // We use the explicit name (string) so DatabaseInstance can create a proper Ref
+    class CfnSubnetGroupWrapper extends Construct implements rds.ISubnetGroup {
+      public readonly subnetGroupName: string;
+
+      constructor(scope: Construct, id: string, private readonly cfnSubnetGroup: rds.CfnDBSubnetGroup, name: string) {
+        super(scope, id);
+        // Use the explicit subnet group name (string) so DatabaseInstance can reference it
+        // DatabaseInstance will use this name to create a Ref to the subnet group
+        this.subnetGroupName = name;
+      }
+
+      public get stack(): cdk.Stack {
+        return this.cfnSubnetGroup.stack;
+      }
+
+      public get env(): cdk.ResourceEnvironment {
+        return this.cfnSubnetGroup.env;
+      }
+
+      public applyRemovalPolicy(policy: cdk.RemovalPolicy): void {
+        this.cfnSubnetGroup.applyRemovalPolicy(policy);
+      }
+    }
+
+    const subnetGroup = new CfnSubnetGroupWrapper(this, 'SubnetGroupWrapper', cfnSubnetGroup, subnetGroupName);
+
+    // #region agent log
+    fetch('http://127.0.0.1:7242/ingest/31cd8a5c-c5a9-4c85-9dba-5f04dc91dc42',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'rds-postgres.component.ts:443',message:'ISubnetGroup wrapper created with explicit name',data:{subnetGroupName:subnetGroup.subnetGroupName,explicitName:subnetGroupName,cfnRef:cfnSubnetGroup.ref,nameType:typeof subnetGroup.subnetGroupName},timestamp:Date.now(),sessionId:'debug-session',runId:'run11',hypothesisId:'E'})}).catch(()=>{});
+    // #endregion
+
+    return subnetGroup;
   }
 
   /**
@@ -354,24 +534,49 @@ export class RdsPostgresComponent extends BaseComponent {
       ? this.kmsKey
       : undefined;
 
+    // Create explicit subnet group if subnet IDs are provided
+    // This ensures RDS has a valid subnet group even when VPC is imported via fromVpcAttributes()
+    this.subnetGroup = this.createSubnetGroup();
+
     // Determine subnet selection based on VPC and publiclyAccessible setting
+    // Only used when subnet group is not explicitly created
     const publiclyAccessible = instanceConfig.publiclyAccessible ?? false;
+    const networking = this.config?.networking ?? {};
     let vpcSubnets: ec2.SubnetSelection | undefined;
     
-    // If publicly accessible, use public subnets
-    if (publiclyAccessible) {
-      vpcSubnets = { subnetType: ec2.SubnetType.PUBLIC };
-    } else {
-      // Try to use private subnets, but fall back to public if none exist
-      // Check if private subnets exist by attempting to select them
-      const privateSubnets = this.vpc.selectSubnets({ subnetType: ec2.SubnetType.PRIVATE_WITH_EGRESS });
-      if (privateSubnets.subnets.length > 0) {
-        // Private subnets exist, use them
-        vpcSubnets = { subnetType: ec2.SubnetType.PRIVATE_WITH_EGRESS };
+    // Subnet group is created when explicit subnet IDs are provided
+    // Otherwise, determine subnet selection for automatic subnet group creation
+    if (!this.subnetGroup) {
+      // No explicit subnet IDs - determine subnet selection for automatic subnet group creation
+      // Check if VPC was created via fromVpcAttributes (no subnet info available)
+      // When using fromVpcAttributes, we can't select subnets by type
+      // RDS will use the default subnet group for the VPC
+      const isImportedVpc = networking.vpcId && !networking.useDefaultVpc;
+      
+      if (isImportedVpc) {
+        // For imported VPCs, don't specify vpcSubnets - let RDS use default subnet group
+        // This works because RDS will automatically use the VPC's default subnet group
+        vpcSubnets = undefined;
       } else {
-        // No private subnets available, use public subnets as fallback
-        // This handles the case where the default VPC only has public subnets
-        vpcSubnets = { subnetType: ec2.SubnetType.PUBLIC };
+        // For VPCs created via fromLookup, we can select by subnet type
+        if (publiclyAccessible) {
+          vpcSubnets = { subnetType: ec2.SubnetType.PUBLIC };
+        } else {
+          // Try to use private subnets, but fall back to public if none exist
+          try {
+            const privateSubnets = this.vpc.selectSubnets({ subnetType: ec2.SubnetType.PRIVATE_WITH_EGRESS });
+            if (privateSubnets.subnets.length > 0) {
+              vpcSubnets = { subnetType: ec2.SubnetType.PRIVATE_WITH_EGRESS };
+            } else {
+              // No private subnets available, use public subnets as fallback
+              vpcSubnets = { subnetType: ec2.SubnetType.PUBLIC };
+            }
+          } catch {
+            // If subnet selection fails, don't specify vpcSubnets
+            // RDS will use the default subnet group
+            vpcSubnets = undefined;
+          }
+        }
       }
     }
 
@@ -382,7 +587,16 @@ export class RdsPostgresComponent extends BaseComponent {
       instanceType: new ec2.InstanceType(instanceConfig.instanceType ?? 't3.micro'),
       credentials: rds.Credentials.fromSecret(this.secret!),
       vpc: this.vpc,
-      vpcSubnets,
+      // Use explicit subnet group if created, otherwise use vpcSubnets (mutually exclusive)
+      ...(this.subnetGroup 
+        ? (() => {
+            // #region agent log
+            fetch('http://127.0.0.1:7242/ingest/31cd8a5c-c5a9-4c85-9dba-5f04dc91dc42',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'rds-postgres.component.ts:577',message:'Using subnetGroup wrapper with explicit name',data:{subnetGroupName:this.subnetGroup.subnetGroupName,subnetGroupType:this.subnetGroup.constructor.name,nameType:typeof this.subnetGroup.subnetGroupName},timestamp:Date.now(),sessionId:'debug-session',runId:'run11',hypothesisId:'E'})}).catch(()=>{});
+            // #endregion
+            return { subnetGroup: this.subnetGroup };
+          })()
+        : { vpcSubnets }
+      ),
       securityGroups: [this.securityGroup!],
       databaseName: this.config!.dbName,
       allocatedStorage: instanceConfig.allocatedStorage ?? 20,
@@ -413,7 +627,7 @@ export class RdsPostgresComponent extends BaseComponent {
     this.applyStandardTags(this.database, {
       'database-name': this.config!.dbName,
       'database-engine': 'postgres',
-      'database-version': this.config!.instance?.engineVersion ?? '15.4',
+      'database-version': this.config!.instance?.engineVersion ?? '18.1',
       'instance-type': instanceConfig.instanceType ?? 't3.micro',
       'multi-az': (instanceConfig.multiAz ?? false).toString(),
       'backup-retention-days': (backupConfig.retentionDays ?? 7).toString()
@@ -578,7 +792,7 @@ export class RdsPostgresComponent extends BaseComponent {
     this.configureObservability(this.database, {
       customAttributes: {
         'database.engine': 'postgres',
-        'database.version': instanceConfig.engineVersion ?? '15.4',
+        'database.version': instanceConfig.engineVersion ?? '18.1',
         'database.name': this.config!.dbName,
         'database.instance.type': instanceConfig.instanceType ?? 't3.micro',
         'database.multi.az': (instanceConfig.multiAz ?? false).toString(),
@@ -610,8 +824,15 @@ export class RdsPostgresComponent extends BaseComponent {
 
 
   private resolveEngineVersion(): rds.PostgresEngineVersion {
-    const version = this.config?.instance?.engineVersion ?? '15.4';
-    const major = version.split('.')[0] ?? '15';
+    const rawVersion = this.config?.instance?.engineVersion ?? '18.1';
+    // Ensure version is always a string (YAML may parse 18.1 as a number)
+    const version = String(rawVersion);
+    const major = version.split('.')[0] ?? '18';
+    
+    // #region agent log
+    fetch('http://127.0.0.1:7242/ingest/31cd8a5c-c5a9-4c85-9dba-5f04dc91dc42',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'rds-postgres.component.ts:833',message:'resolveEngineVersion called',data:{rawVersion,configInstanceEngineVersion:this.config?.instance?.engineVersion,resolvedVersion:version,major,versionType:typeof rawVersion},timestamp:Date.now(),sessionId:'debug-session',runId:'run18',hypothesisId:'J'})}).catch(()=>{});
+    // #endregion
+    
     return rds.PostgresEngineVersion.of(version, major);
   }
 

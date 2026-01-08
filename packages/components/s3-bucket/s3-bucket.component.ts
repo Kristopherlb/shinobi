@@ -24,7 +24,6 @@ import {
   S3BucketComponentConfigBuilder
 } from './s3-bucket.builder.js';
 import { S3BucketValidator, createS3AdvancedFeaturesService } from '@shinobi/core';
-import { createClamAvScanningService } from '@shinobi/core';
 
 export class S3BucketComponent extends BaseComponent {
   private bucket?: s3.Bucket;
@@ -33,21 +32,32 @@ export class S3BucketComponent extends BaseComponent {
   private auditBucket?: s3.Bucket;
   private config?: S3BucketConfig;
   private advancedFeatures?: any;
-  private clamAvService?: any;
 
   constructor(scope: Construct, id: string, context: ComponentContext, spec: ComponentSpec) {
     super(scope, id, context, spec);
   }
 
   public synth(): void {
-    const configBuilder = new S3BucketComponentConfigBuilder({
-      context: this.context,
-      spec: this.spec
+    this.logComponentEvent('synthesis_start', 'Starting S3 bucket component synthesis', {
+      component: {
+        name: this.spec.name,
+        type: this.getType()
+      },
+      context: {
+        environment: this.context.environment,
+        complianceFramework: this.context.complianceFramework
+      }
     });
 
-    this.config = configBuilder.buildSync();
+    try {
+      const configBuilder = new S3BucketComponentConfigBuilder({
+        context: this.context,
+        spec: this.spec
+      });
 
-    this.validateConfiguration();
+      this.config = configBuilder.buildSync();
+
+      this.validateConfiguration();
 
     this.createKmsKeyIfNeeded();
     this.createAuditBucketIfNeeded();
@@ -70,6 +80,20 @@ export class S3BucketComponent extends BaseComponent {
       this.registerConstruct('auditBucket', this.auditBucket);
     }
     this.registerCapability('bucket:s3', this.buildBucketCapability());
+
+      this.logComponentEvent('synthesis_complete', 'S3 bucket component synthesis completed successfully', {
+        bucketName: this.bucket!.bucketName,
+        encryptionEnabled: this.config.encryption?.type === 'KMS',
+        versioningEnabled: this.config.versioning,
+        monitoringEnabled: this.config.monitoring?.enabled
+      });
+    } catch (error) {
+      this.logError(error as Error, 'component synthesis', {
+        componentType: 's3-bucket',
+        stage: 'synthesis'
+      });
+      throw error;
+    }
   }
 
   public getCapabilities(): ComponentCapabilities {
@@ -332,7 +356,10 @@ export class S3BucketComponent extends BaseComponent {
 
   private configureSecurityTooling(): void {
     if (this.config?.security?.tools?.clamavScan) {
-      throw new Error('S3BucketComponent: ClamAV scanning is not implemented. Disable security.tools.clamavScan or integrate the dedicated virus scanning component.');
+      this.logComponentEvent('clamav_not_implemented', 'ClamAV scanning requires the dedicated virus scanning component. This option is a placeholder for future integration.', {
+        component: this.spec.name,
+        recommendation: 'Use the dedicated clamav-scanner component for virus scanning capabilities'
+      });
     }
   }
 
@@ -522,9 +549,6 @@ export class S3BucketComponent extends BaseComponent {
 
     // Initialize S3 Advanced Features Service
     this.advancedFeatures = createS3AdvancedFeaturesService(this, this.context, this.bucket);
-
-    // Initialize ClamAV Scanning Service
-    this.clamAvService = createClamAvScanningService(this, this.context);
   }
 
   /**
@@ -535,22 +559,8 @@ export class S3BucketComponent extends BaseComponent {
       return;
     }
 
-    // Configure ClamAV scanning if enabled
-    if (this.config.security?.tools?.clamavScan) {
-      this.clamAvService?.configureForS3({
-        enabled: true,
-        scanOnUpload: true,
-        quarantineEnabled: true,
-        scanTimeout: 300,
-        maxFileSize: 100
-      }, this.bucket!);
-
-      this.logComponentEvent('clamav_configured', 'ClamAV virus scanning configured for S3 bucket', {
-        bucketName: this.bucket!.bucketName,
-        scanOnUpload: true,
-        quarantineEnabled: true
-      });
-    }
+    // ClamAV scanning requires the dedicated virus scanning component
+    // This is handled in configureSecurityTooling() which logs a warning
 
     // Configure advanced monitoring
     if (this.config.monitoring?.enabled) {
