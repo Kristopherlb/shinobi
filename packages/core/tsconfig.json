@@ -6,7 +6,12 @@
     "tsBuildInfoFile": "./dist/tsconfig.typecheck.tsbuildinfo"
   },
   "include": ["src/**/*"],
-  "exclude": ["src/**/*.spec.ts", "src/**/*.test.ts"],
+  "exclude": [
+    "src/**/*.spec.ts",
+    "src/**/*.test.ts",
+    "**/vitest.config.ts",
+    "**/jest.config.ts"
+  ],
   "references": [
     {
       "path": "./tsconfig.lib.json"

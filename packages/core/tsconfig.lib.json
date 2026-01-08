@@ -17,6 +17,8 @@
     "**/*.test.ts",
     "**/*.spec.ts",
     "**/__tests__/**",
+    "**/vitest.config.ts",
+    "**/jest.config.ts",
     "src/platform/contracts/binder-example.ts",
     "src/platform/contracts/binder-integration.ts",
     "src/platform/contracts/enhanced-binder-example.ts",

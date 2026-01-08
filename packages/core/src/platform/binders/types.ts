@@ -24,7 +24,7 @@ export interface ComponentBinding {
 export interface BindingRuntimeContext {
   region: string;
   accountId: string;
-  complianceFramework: 'commercial' | 'fedramp-moderate' | 'fedramp-high';
+  complianceFramework: string;
   environment?: string;
   tags?: Record<string, string>;
 }

@@ -248,72 +248,69 @@ def lambda_handler(event, context):
       );
     }
 
+    // Build props object directly - cannot assign to readonly properties
     const secretProps: secretsmanager.SecretProps = {
       secretName: this.buildSecretName(),
       description: this.config?.description,
       encryptionKey: this.kmsKey,
-      removalPolicy: cdk.RemovalPolicy.RETAIN
+      removalPolicy: cdk.RemovalPolicy.RETAIN,
+      generateSecretString: this.config?.generateSecret?.enabled
+        ? {
+            excludeCharacters: this.config.generateSecret.excludeCharacters,
+            includeSpace: this.config.generateSecret.includeSpace,
+            passwordLength: this.config.generateSecret.passwordLength,
+            requireEachIncludedType: this.config.generateSecret.requireEachIncludedType,
+            secretStringTemplate: this.config.generateSecret.secretStringTemplate,
+            generateStringKey: this.config.generateSecret.generateStringKey
+          }
+        : this.config?.secretValue?.generateSecret
+        ? {
+            secretStringTemplate: this.config.secretValue.secretStringValue || '{}',
+            generateStringKey: 'password',
+            excludeCharacters: '"@/\\\'',
+            includeSpace: false,
+            passwordLength: 32
+          }
+        : undefined,
+      secretStringValue: this.config?.secretValue?.secretArn
+        ? cdk.SecretValue.secretsManager(this.config.secretValue.secretArn)
+        : this.config?.secretValue?.allowUnsafePlainText && this.config?.secretValue?.secretStringValue
+        ? (() => {
+            /**
+             * SECURITY WARNING: Using unsafePlainText() exposes values in CloudFormation templates.
+             * Only use for non-sensitive configuration values. For secrets, use Secrets Manager references.
+             */
+            this.logComponentEvent('security_warning', 'Using unsafePlainText for secret value - audit trail', {
+              component: this.spec.name,
+              secretName: this.buildSecretName(),
+              warning: 'unsafePlainText exposes values in CloudFormation templates',
+              recommendation: 'Use secretArn to reference existing secrets or enable generateSecret for sensitive values',
+              context: {
+                environment: this.context.environment,
+                complianceFramework: this.context.complianceFramework
+              }
+            });
+            return cdk.SecretValue.unsafePlainText(this.config.secretValue.secretStringValue);
+          })()
+        : this.config?.secretValue?.secretStringValue
+        ? (() => {
+            // Default: treat as sensitive and require explicit allowUnsafePlainText
+            throw new Error(
+              'Direct secret string values are not allowed for security. ' +
+              'Use secretArn to reference an existing secret, enable generateSecret, ' +
+              'or set allowUnsafePlainText: true only for non-sensitive configuration values.'
+            );
+          })()
+        : undefined,
+      replicaRegions: this.config?.replicas && this.config.replicas.length > 0
+        ? this.config.replicas.map(replica => ({
+            region: replica.region,
+            encryptionKey: replica.kmsKeyArn
+              ? kms.Key.fromKeyArn(this, `ReplicaKey-${replica.region}`, replica.kmsKeyArn)
+              : undefined
+          }))
+        : undefined
     };
-
-    if (this.config?.generateSecret?.enabled) {
-      const generator = this.config.generateSecret;
-      secretProps.generateSecretString = {
-        excludeCharacters: generator.excludeCharacters,
-        includeSpace: generator.includeSpace,
-        passwordLength: generator.passwordLength,
-        requireEachIncludedType: generator.requireEachIncludedType,
-        secretStringTemplate: generator.secretStringTemplate,
-        generateStringKey: generator.generateStringKey
-      };
-    } else if (this.config?.secretValue?.secretArn) {
-      // Use existing secret from Secrets Manager
-      secretProps.secretStringValue = cdk.SecretValue.secretsManager(
-        this.config.secretValue.secretArn
-      );
-    } else if (this.config?.secretValue?.generateSecret) {
-      // Generate new secret
-      secretProps.generateSecretString = {
-        secretStringTemplate: this.config.secretValue.secretStringValue || '{}',
-        generateStringKey: 'password',
-        excludeCharacters: '"@/\\\'',
-        includeSpace: false,
-        passwordLength: 32
-      };
-    } else if (this.config?.secretValue?.allowUnsafePlainText && this.config?.secretValue?.secretStringValue) {
-      /**
-       * SECURITY WARNING: Using unsafePlainText() exposes values in CloudFormation templates.
-       * Only use for non-sensitive configuration values. For secrets, use Secrets Manager references.
-       */
-      this.logComponentEvent('security_warning', 'Using unsafePlainText for secret value - audit trail', {
-        component: this.spec.name,
-        secretName: this.buildSecretName(),
-        warning: 'unsafePlainText exposes values in CloudFormation templates',
-        recommendation: 'Use secretArn to reference existing secrets or enable generateSecret for sensitive values',
-        context: {
-          environment: this.context.environment,
-          complianceFramework: this.context.complianceFramework
-        }
-      });
-      secretProps.secretStringValue = cdk.SecretValue.unsafePlainText(
-        this.config.secretValue.secretStringValue
-      );
-    } else if (this.config?.secretValue?.secretStringValue) {
-      // Default: treat as sensitive and require explicit allowUnsafePlainText
-      throw new Error(
-        'Direct secret string values are not allowed for security. ' +
-        'Use secretArn to reference an existing secret, enable generateSecret, ' +
-        'or set allowUnsafePlainText: true only for non-sensitive configuration values.'
-      );
-    }
-
-    if (this.config?.replicas && this.config.replicas.length > 0) {
-      secretProps.replicaRegions = this.config.replicas.map(replica => ({
-        region: replica.region,
-        encryptionKey: replica.kmsKeyArn
-          ? kms.Key.fromKeyArn(this, `ReplicaKey-${replica.region}`, replica.kmsKeyArn)
-          : undefined
-      }));
-    }
 
     this.secret = new secretsmanager.Secret(this, 'Secret', secretProps);
 

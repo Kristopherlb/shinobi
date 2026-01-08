@@ -18,7 +18,9 @@
     "dist",
     "tests/**/*",
     "**/*.test.ts",
-    "**/*.spec.ts"
+    "**/*.spec.ts",
+    "**/vitest.config.ts",
+    "**/jest.config.ts"
   ],
   "references": [
     {

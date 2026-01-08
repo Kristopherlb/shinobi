@@ -4,7 +4,7 @@
  */
 
 // Component exports
-export { KinesisStreamComponentComponent } from './kinesis-stream.component.js';
+export { KinesisStreamComponent } from './kinesis-stream.component.js';
 
 // Configuration exports
 export type { KinesisStreamConfig } from './kinesis-stream.builder.js';

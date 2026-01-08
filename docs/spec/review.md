@@ -6,7 +6,7 @@
 
 ## 1) Executive Summary
 
-This project is a promising Internal Developer Platform (IDP) that wraps AWS CDK with a declarative **service manifest** and a curated **component library**, then layers on **compliance guardrails** and **policy‑as‑code**. The README outlines a developer‑first CLI (`svc init|validate|plan`), a library of “components” (e.g., `lambda-api`, `rds-postgres`, `s3-bucket`), **bindings** that auto‑generate least‑privilege IAM, and explicit support for **commercial / FedRAMP** posture—exactly the ingredients that move teams from DIY IaC to paved‑road delivery. ([GitHub][1])
+This project is a promising Internal Developer Platform (IDP) that wraps AWS CDK with a declarative **service manifest** and a curated **component library**, then layers on **compliance guardrails** and **policy‑as‑code**. The README outlines a developer‑first CLI (`shinobi init|validate|plan`), a library of “components” (e.g., `lambda-api`, `rds-postgres`, `s3-bucket`), **bindings** that auto‑generate least‑privilege IAM, and explicit support for **commercial / FedRAMP** posture—exactly the ingredients that move teams from DIY IaC to paved‑road delivery. ([GitHub][1])
 
 At the same time, to become enterprise‑grade, the platform should:
 

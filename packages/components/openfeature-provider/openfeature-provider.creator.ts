@@ -26,11 +26,20 @@ export class OpenFeatureProviderComponentCreator implements IComponentCreator {
   public readonly configSchema = OPENFEATURE_PROVIDER_CONFIG_SCHEMA;
 
   public createComponent(
-    scope: Construct,
     spec: ComponentSpec,
     context: ComponentContext
   ): IComponent {
-    return new OpenFeatureProviderComponent(scope, spec.name, context, spec);
+    if (!context.scope) {
+      throw new Error('ComponentContext.scope is required to create openfeature-provider components');
+    }
+    return new OpenFeatureProviderComponent(context.scope as Construct, spec.name, context, spec);
+  }
+
+  public processComponent(
+    spec: ComponentSpec,
+    context: ComponentContext
+  ): IComponent {
+    return this.createComponent(spec, context);
   }
 
   public validateSpec(

@@ -10,7 +10,7 @@ import {
   ComponentSpec, 
   ComponentContext, 
   IComponentCreator 
-} from '../@shinobi/core/component-interfaces.js';
+} from '@shinobi/core';
 import { VpcComponent } from './vpc.component.js';
 import { VpcConfig, VPC_CONFIG_SCHEMA } from './vpc.builder.js';
 
@@ -73,11 +73,23 @@ export class VpcCreator implements IComponentCreator {
    * Factory method to create component instances
    */
   public createComponent(
-    scope: Construct, 
     spec: ComponentSpec, 
     context: ComponentContext
   ): VpcComponent {
-    return new VpcComponent(scope, spec.name, context, spec);
+    if (!context.scope) {
+      throw new Error('ComponentContext.scope is required to create vpc components');
+    }
+    return new VpcComponent(context.scope as Construct, spec.name, context, spec);
+  }
+
+  /**
+   * Process component (alias for createComponent)
+   */
+  public processComponent(
+    spec: ComponentSpec,
+    context: ComponentContext
+  ): VpcComponent {
+    return this.createComponent(spec, context);
   }
   
   /**

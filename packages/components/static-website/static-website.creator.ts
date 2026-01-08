@@ -70,11 +70,20 @@ export class StaticWebsiteCreator implements IComponentCreator {
    * Factory method to create component instances
    */
   public createComponent(
-    scope: Construct, 
     spec: ComponentSpec, 
     context: ComponentContext
   ): StaticWebsiteComponent {
-    return new StaticWebsiteComponent(scope, spec.name, context, spec);
+    if (!context.scope) {
+      throw new Error('ComponentContext.scope is required to create static-website components');
+    }
+    return new StaticWebsiteComponent(context.scope as Construct, spec.name, context, spec);
+  }
+  
+  public processComponent(
+    spec: ComponentSpec,
+    context: ComponentContext
+  ): StaticWebsiteComponent {
+    return this.createComponent(spec, context);
   }
   
   /**

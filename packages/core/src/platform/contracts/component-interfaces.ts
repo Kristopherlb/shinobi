@@ -66,7 +66,7 @@ export interface ComponentContext {
   serviceName: string;
   service?: string;
   environment: string;
-  complianceFramework: 'commercial' | 'fedramp-moderate' | 'fedramp-high';
+  complianceFramework: string;
   compliance?: string;
   owner?: string;
   accountId?: string;

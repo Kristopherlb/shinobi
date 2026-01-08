@@ -30,7 +30,7 @@ import {
   RdsPostgresLogConfig,
   RdsPostgresMonitoringAlarmsConfig,
   RdsPostgresAlarmConfig
-} from './rds-postgres.builder.js';
+} from './src/rds-postgres.builder.js';
 
 /**
  * RDS PostgreSQL Component implementing Component API Contract v1.0
@@ -318,7 +318,7 @@ export class RdsPostgresComponent extends BaseComponent {
         'Default PostgreSQL access from VPC'
       );
     } else {
-      ingressCidrs.forEach((cidr, index) => {
+      ingressCidrs.forEach((cidr: string, index: number) => {
         this.securityGroup!.addIngressRule(
           ec2.Peer.ipv4(cidr),
           ec2.Port.tcp(port),

@@ -72,9 +72,12 @@ export class IamPolicyComponentCreator implements IComponentCreator {
     spec: ComponentSpec, 
     context: ComponentContext
   ): IamPolicyComponent {
+    if (!context.scope) {
+      throw new Error('ComponentContext.scope is required to create iam-policy components');
+    }
     // Construct ID is the spec.name
     const id = spec.name;
-    return new IamPolicyComponent(context.scope, id, context, spec);
+    return new IamPolicyComponent(context.scope as Construct, id, context, spec);
   }
 
   public processComponent(

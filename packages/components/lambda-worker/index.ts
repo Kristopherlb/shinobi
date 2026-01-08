@@ -3,15 +3,12 @@
  * Lambda Worker Component
  */
 
-// Component exports
-export { LambdaWorkerComponent } from './lambda-worker.component.js';
-
-// Configuration exports
-export { 
-  LambdaWorkerConfig,
+export * from './src/lambda-worker.component.js';
+export {
   LambdaWorkerComponentConfigBuilder,
   LAMBDA_WORKER_CONFIG_SCHEMA
-} from './lambda-worker.builder.js';
-
-// Creator exports
-export { LambdaWorkerComponentCreator } from './lambda-worker.creator.js';
+} from './src/lambda-worker.builder.js';
+export type {
+  LambdaWorkerConfig
+} from './src/lambda-worker.builder.js';
+export { LambdaWorkerComponentCreator } from './src/lambda-worker.creator.js';

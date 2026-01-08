@@ -2,7 +2,8 @@
 import fs from 'node:fs';
 import path from 'node:path';
 import yaml from 'yaml';
-import { aws_cloudwatch as cw, IResource, Stack, Duration } from 'aws-cdk-lib';
+import * as cdk from 'aws-cdk-lib';
+import { aws_cloudwatch as cw, aws_logs as logs, IResource, Stack, Duration } from 'aws-cdk-lib';
 
 export type Recipe = {
   service_type: string;
@@ -167,28 +168,28 @@ export function createLogGroup(
   stack: Stack,
   logGroupName: string,
   framework: string
-): cw.LogGroup {
+): logs.LogGroup {
   const retention = getFrameworkRetention(framework);
 
-  return new cw.LogGroup(stack, logGroupName.replace(/[^a-zA-Z0-9]/g, ''), {
+  return new logs.LogGroup(stack, logGroupName.replace(/[^a-zA-Z0-9]/g, ''), {
     logGroupName,
     retention: Duration.days(retention.logs),
-    removalPolicy: framework === 'commercial' ? 'destroy' : 'retain'
+    removalPolicy: framework === 'commercial' ? cdk.RemovalPolicy.DESTROY : cdk.RemovalPolicy.RETAIN
   });
 }
 
 // Helper to create metric filter
 export function createMetricFilter(
-  logGroup: cw.LogGroup,
+  logGroup: logs.LogGroup,
   filterName: string,
   filterPattern: string,
   metricName: string,
   metricNamespace: string,
   metricValue: string = '1'
-): cw.MetricFilter {
-  return new cw.MetricFilter(logGroup, filterName, {
+): logs.MetricFilter {
+  return new logs.MetricFilter(logGroup, filterName, {
     logGroup,
-    filterPattern: cw.FilterPattern.literal(filterPattern),
+    filterPattern: logs.FilterPattern.literal(filterPattern),
     metricNamespace,
     metricName,
     metricValue

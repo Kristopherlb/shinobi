@@ -120,40 +120,36 @@ export class KinesisStreamComponent extends BaseComponent {
   }
 
   private createStream(): void {
+    // Build props object directly - cannot assign to readonly properties
     const props: kinesis.StreamProps = {
       streamName: this.config!.streamName,
-      retentionPeriod: cdk.Duration.hours(this.config!.retentionHours)
+      retentionPeriod: cdk.Duration.hours(this.config!.retentionHours),
+      streamMode: this.config!.streamMode === 'on-demand' 
+        ? kinesis.StreamMode.ON_DEMAND 
+        : undefined,
+      shardCount: this.config!.streamMode === 'provisioned' 
+        ? (this.config!.shardCount ?? 1) 
+        : undefined,
+      encryption: this.config!.encryption.type === 'kms' && this.kmsKey
+        ? kinesis.StreamEncryption.KMS
+        : this.config!.encryption.type === 'aws-managed'
+        ? kinesis.StreamEncryption.MANAGED
+        : kinesis.StreamEncryption.UNENCRYPTED,
+      encryptionKey: this.config!.encryption.type === 'kms' && this.kmsKey
+        ? this.kmsKey
+        : undefined
     };
 
-    if (this.config!.streamMode === 'on-demand') {
-      props.streamMode = kinesis.StreamMode.ON_DEMAND;
-    } else {
-      props.shardCount = this.config!.shardCount ?? 1;
-    }
-
-    switch (this.config!.encryption.type) {
-      case 'kms':
-        if (this.kmsKey) {
-          props.encryption = kinesis.StreamEncryption.KMS;
-          props.encryptionKey = this.kmsKey;
-        } else {
-          props.encryption = kinesis.StreamEncryption.KMS_MANAGED;
-          this.logComponentEvent('encryption_fallback', 'Kinesis stream encryption falling back to AWS-managed KMS key', {
-            component: this.spec.name,
-            streamName: this.config!.streamName,
-            reason: 'Customer-managed key not configured or available',
-            recommendation: 'Configure encryption.customerManagedKey.create or encryption.kmsKeyArn for customer-managed encryption',
-            environment: this.context.environment,
-            complianceFramework: this.context.complianceFramework
-          });
-        }
-        break;
-      case 'aws-managed':
-        props.encryption = kinesis.StreamEncryption.MANAGED;
-        break;
-      default:
-        props.encryption = kinesis.StreamEncryption.UNENCRYPTED;
-        break;
+    // Log fallback if KMS requested but key not available
+    if (this.config!.encryption.type === 'kms' && !this.kmsKey) {
+      this.logComponentEvent('encryption_fallback', 'Kinesis stream encryption falling back to AWS-managed KMS key', {
+        component: this.spec.name,
+        streamName: this.config!.streamName,
+        reason: 'Customer-managed key not configured or available',
+        recommendation: 'Configure encryption.customerManagedKey.create or encryption.kmsKeyArn for customer-managed encryption',
+        environment: this.context.environment,
+        complianceFramework: this.context.complianceFramework
+      });
     }
 
     this.stream = new kinesis.Stream(this, 'KinesisStream', props);
@@ -163,7 +159,7 @@ export class KinesisStreamComponent extends BaseComponent {
       'shard-count': this.config!.streamMode === 'provisioned'
         ? (this.config!.shardCount ?? 1).toString()
         : 'on-demand',
-      'encryption': this.config!.encryption.type
+      'encryption': this.config!.encryption.type || 'unencrypted'
     });
 
     this.logResourceCreation('kinesis-stream', this.stream.streamName, {

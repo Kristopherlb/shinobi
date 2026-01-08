@@ -124,8 +124,6 @@ const LOGGING_SCHEMA: ComponentConfigSchema = {
 
 const STATIC_WEBSITE_CONFIG_SCHEMA: ComponentConfigSchema = {
   type: 'object',
-  title: 'Static Website Configuration',
-  description: 'Configuration for hosting a static website with S3 and CloudFront',
   additionalProperties: false,
   properties: {
     websiteName: { type: 'string' },

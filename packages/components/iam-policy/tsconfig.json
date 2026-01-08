@@ -9,7 +9,9 @@
     "tsBuildInfoFile": "../../../dist/packages/components/iam-policy/tsconfig.tsbuildinfo"
   },
   "include": [
-    "*.ts",
+    "*.component.ts",
+    "*.builder.ts",
+    "*.creator.ts",
     "index.ts",
     "Config.schema.json"
   ],
@@ -17,6 +19,9 @@
     "dist",
     "node_modules",
     "**/*.test.ts",
+    "**/*.spec.ts",
+    "vitest.config.ts",
+    "jest.config.ts",
     "tests"
   ],
   "references": [

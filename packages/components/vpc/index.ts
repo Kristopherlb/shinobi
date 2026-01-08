@@ -7,8 +7,8 @@
 export { VpcComponent } from './vpc.component.js';
 
 // Configuration exports
+export type { VpcConfig } from './vpc.builder.js';
 export { 
-  VpcConfig,
   VpcConfigBuilder,
   VPC_CONFIG_SCHEMA
 } from './vpc.builder.js';

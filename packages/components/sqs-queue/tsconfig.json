@@ -8,6 +8,10 @@
     "src/**/*"
   ],
   "exclude": [
-    "src/sqs-queue.ts"
+    "src/sqs-queue.ts",
+    "**/*.test.ts",
+    "**/*.spec.ts",
+    "**/vitest.config.ts",
+    "**/jest.config.ts"
   ]
 }
