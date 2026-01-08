@@ -1,0 +1,3089 @@
+{
+ "Resources": {
+  "filestorageapiLambdaApiExecutionLogs7B789FCD": {
+   "Type": "AWS::Logs::LogGroup",
+   "Properties": {
+    "RetentionInDays": 30,
+    "Tags": [
+     {
+      "Key": "backup-required",
+      "Value": "false"
+     },
+     {
+      "Key": "cloud-account",
+      "Value": "911871352725"
+     },
+     {
+      "Key": "cloud-provider",
+      "Value": "aws"
+     },
+     {
+      "Key": "cloud-region",
+      "Value": "us-west-2"
+     },
+     {
+      "Key": "compliance-framework",
+      "Value": "commercial"
+     },
+     {
+      "Key": "component-name",
+      "Value": "file-storage-api"
+     },
+     {
+      "Key": "component-type",
+      "Value": "lambda-api"
+     },
+     {
+      "Key": "cost-center",
+      "Value": "platform"
+     },
+     {
+      "Key": "data-classification",
+      "Value": "internal"
+     },
+     {
+      "Key": "deployment-id",
+      "Value": "deploy-20260108-005734"
+     },
+     {
+      "Key": "encryption-required",
+      "Value": "true"
+     },
+     {
+      "Key": "environment",
+      "Value": "dev"
+     },
+     {
+      "Key": "log-type",
+      "Value": "lambda-execution"
+     },
+     {
+      "Key": "managed-by",
+      "Value": "platform-engineering"
+     },
+     {
+      "Key": "monitoring-level",
+      "Value": "standard"
+     },
+     {
+      "Key": "owner",
+      "Value": "platform-engineering"
+     },
+     {
+      "Key": "platform",
+      "Value": "cdk-lib"
+     },
+     {
+      "Key": "platform-version",
+      "Value": "1.0.0"
+     },
+     {
+      "Key": "project",
+      "Value": "api-s3-service"
+     },
+     {
+      "Key": "retention-period",
+      "Value": "365-days"
+     },
+     {
+      "Key": "service-name",
+      "Value": "api-s3-service"
+     },
+     {
+      "Key": "service-version",
+      "Value": "1.0.0"
+     }
+    ]
+   },
+   "UpdateReplacePolicy": "Retain",
+   "DeletionPolicy": "Retain",
+   "Metadata": {
+    "cdk_nag": {
+     "rules_to_suppress": [
+      {
+       "reason": "Log group retention is configured based on compliance requirements and cost optimization needs.",
+       "id": "AwsSolutions-LOG1"
+      }
+     ]
+    }
+   }
+  },
+  "filestorageapiLambdaApiFunctionServiceRole20911D6D": {
+   "Type": "AWS::IAM::Role",
+   "Properties": {
+    "AssumeRolePolicyDocument": {
+     "Statement": [
+      {
+       "Action": "sts:AssumeRole",
+       "Effect": "Allow",
+       "Principal": {
+        "Service": "lambda.amazonaws.com"
+       }
+      }
+     ],
+     "Version": "2012-10-17"
+    },
+    "ManagedPolicyArns": [
+     {
+      "Fn::Join": [
+       "",
+       [
+        "arn:",
+        {
+         "Ref": "AWS::Partition"
+        },
+        ":iam::aws:policy/service-role/AWSLambdaBasicExecutionRole"
+       ]
+      ]
+     }
+    ],
+    "Tags": [
+     {
+      "Key": "architecture",
+      "Value": "arm64"
+     },
+     {
+      "Key": "backup-required",
+      "Value": "false"
+     },
+     {
+      "Key": "cloud-account",
+      "Value": "911871352725"
+     },
+     {
+      "Key": "cloud-provider",
+      "Value": "aws"
+     },
+     {
+      "Key": "cloud-region",
+      "Value": "us-west-2"
+     },
+     {
+      "Key": "compliance-framework",
+      "Value": "commercial"
+     },
+     {
+      "Key": "component-name",
+      "Value": "file-storage-api"
+     },
+     {
+      "Key": "component-type",
+      "Value": "lambda-api"
+     },
+     {
+      "Key": "cost-center",
+      "Value": "platform"
+     },
+     {
+      "Key": "data-classification",
+      "Value": "internal"
+     },
+     {
+      "Key": "deployment-id",
+      "Value": "deploy-20260108-005734"
+     },
+     {
+      "Key": "encryption-required",
+      "Value": "true"
+     },
+     {
+      "Key": "environment",
+      "Value": "dev"
+     },
+     {
+      "Key": "hardening-profile",
+      "Value": "baseline"
+     },
+     {
+      "Key": "lambda-runtime",
+      "Value": "nodejs20.x"
+     },
+     {
+      "Key": "managed-by",
+      "Value": "platform-engineering"
+     },
+     {
+      "Key": "monitoring-level",
+      "Value": "standard"
+     },
+     {
+      "Key": "owner",
+      "Value": "platform-engineering"
+     },
+     {
+      "Key": "platform",
+      "Value": "cdk-lib"
+     },
+     {
+      "Key": "platform-version",
+      "Value": "1.0.0"
+     },
+     {
+      "Key": "project",
+      "Value": "api-s3-service"
+     },
+     {
+      "Key": "retention-period",
+      "Value": "365-days"
+     },
+     {
+      "Key": "service-name",
+      "Value": "api-s3-service"
+     },
+     {
+      "Key": "service-version",
+      "Value": "1.0.0"
+     }
+    ]
+   }
+  },
+  "filestorageapiLambdaApiFunctionServiceRoleDefaultPolicy132EF244": {
+   "Type": "AWS::IAM::Policy",
+   "Properties": {
+    "PolicyDocument": {
+     "Statement": [
+      {
+       "Action": [
+        "xray:PutTraceSegments",
+        "xray:PutTelemetryRecords"
+       ],
+       "Effect": "Allow",
+       "Resource": "*"
+      }
+     ],
+     "Version": "2012-10-17"
+    },
+    "PolicyName": "filestorageapiLambdaApiFunctionServiceRoleDefaultPolicy132EF244",
+    "Roles": [
+     {
+      "Ref": "filestorageapiLambdaApiFunctionServiceRole20911D6D"
+     }
+    ]
+   }
+  },
+  "filestorageapiLambdaApiFunction613BA55C": {
+   "Type": "AWS::Lambda::Function",
+   "Properties": {
+    "Architectures": [
+     "arm64"
+    ],
+    "Code": {
+     "S3Bucket": "cdk-hnb659fds-assets-911871352725-us-west-2",
+     "S3Key": "9bdf656c07ed958e6443a06ebcbc0685b5079fdeafb9e9e2bd4a90d95cbf4b38.zip"
+    },
+    "Environment": {
+     "Variables": {
+      "SYSTEM_LOG_LEVEL": "INFO",
+      "APPLICATION_LOG_LEVEL": "INFO",
+      "AWS_LAMBDA_LOG_FORMAT": "JSON",
+      "AWS_LAMBDA_EXEC_WRAPPER": "/opt/otel-handler",
+      "OTEL_RESOURCE_ATTRIBUTES": "service.name=file-storage-api,service.version=1.0.0,deployment.environment=dev,cloud.provider=aws,cloud.region=us-west-2,compliance.framework=commercial",
+      "OTEL_EXPORTER_OTLP_ENDPOINT": "https://otel-collector.dev.us-west-2.platform.local:4317",
+      "OTEL_EXPORTER_OTLP_HEADERS": "authorization=Bearer ${OTEL_COLLECTOR_AUTH_TOKEN}",
+      "OTEL_SERVICE_NAME": "file-storage-api",
+      "OTEL_SERVICE_VERSION": "1.0.0",
+      "OTEL_TRACES_SAMPLER": "traceidratio:0.1",
+      "OTEL_METRICS_EXPORTER": "otlp",
+      "OTEL_LOGS_EXPORTER": "otlp",
+      "OTEL_PROPAGATORS": "tracecontext,baggage,xray",
+      "OTEL_INSTRUMENTATION_COMMON_DEFAULT_ENABLED": "true"
+     }
+    },
+    "EphemeralStorage": {
+     "Size": 512
+    },
+    "FunctionName": "file-storage-api",
+    "Handler": "src/handler.handler",
+    "LoggingConfig": {
+     "LogGroup": {
+      "Ref": "filestorageapiLambdaApiExecutionLogs7B789FCD"
+     }
+    },
+    "MemorySize": 512,
+    "Role": {
+     "Fn::GetAtt": [
+      "filestorageapiLambdaApiFunctionServiceRole20911D6D",
+      "Arn"
+     ]
+    },
+    "Runtime": "nodejs20.x",
+    "Tags": [
+     {
+      "Key": "architecture",
+      "Value": "arm64"
+     },
+     {
+      "Key": "backup-required",
+      "Value": "false"
+     },
+     {
+      "Key": "cloud-account",
+      "Value": "911871352725"
+     },
+     {
+      "Key": "cloud-provider",
+      "Value": "aws"
+     },
+     {
+      "Key": "cloud-region",
+      "Value": "us-west-2"
+     },
+     {
+      "Key": "compliance-framework",
+      "Value": "commercial"
+     },
+     {
+      "Key": "component-name",
+      "Value": "file-storage-api"
+     },
+     {
+      "Key": "component-type",
+      "Value": "lambda-api"
+     },
+     {
+      "Key": "cost-center",
+      "Value": "platform"
+     },
+     {
+      "Key": "data-classification",
+      "Value": "internal"
+     },
+     {
+      "Key": "deployment-id",
+      "Value": "deploy-20260108-005734"
+     },
+     {
+      "Key": "encryption-required",
+      "Value": "true"
+     },
+     {
+      "Key": "environment",
+      "Value": "dev"
+     },
+     {
+      "Key": "hardening-profile",
+      "Value": "baseline"
+     },
+     {
+      "Key": "lambda-runtime",
+      "Value": "nodejs20.x"
+     },
+     {
+      "Key": "managed-by",
+      "Value": "platform-engineering"
+     },
+     {
+      "Key": "monitoring-level",
+      "Value": "standard"
+     },
+     {
+      "Key": "owner",
+      "Value": "platform-engineering"
+     },
+     {
+      "Key": "platform",
+      "Value": "cdk-lib"
+     },
+     {
+      "Key": "platform-version",
+      "Value": "1.0.0"
+     },
+     {
+      "Key": "project",
+      "Value": "api-s3-service"
+     },
+     {
+      "Key": "retention-period",
+      "Value": "365-days"
+     },
+     {
+      "Key": "service-name",
+      "Value": "api-s3-service"
+     },
+     {
+      "Key": "service-version",
+      "Value": "1.0.0"
+     }
+    ],
+    "Timeout": 30,
+    "TracingConfig": {
+     "Mode": "Active"
+    }
+   },
+   "DependsOn": [
+    "filestorageapiLambdaApiFunctionServiceRoleDefaultPolicy132EF244",
+    "filestorageapiLambdaApiFunctionServiceRole20911D6D"
+   ],
+   "UpdateReplacePolicy": "Retain",
+   "DeletionPolicy": "Retain",
+   "Metadata": {
+    "cdk_nag": {
+     "rules_to_suppress": [
+      {
+       "reason": "Lambda runtime version may be intentionally set for compatibility with existing dependencies or legacy systems. Runtime updates should be planned and tested thoroughly.",
+       "id": "AwsSolutions-L1"
+      },
+      {
+       "reason": "Custom log retention policy is configured based on compliance requirements and cost optimization needs.",
+       "id": "AwsSolutions-L2"
+      },
+      {
+       "reason": "Environment variables are required for Lambda function configuration, including observability settings and service-specific parameters.",
+       "id": "AwsSolutions-L3"
+      },
+      {
+       "reason": "Memory allocation is optimized based on workload requirements and performance testing.",
+       "id": "AwsSolutions-L4"
+      },
+      {
+       "reason": "Timeout settings are configured based on workload characteristics and business requirements.",
+       "id": "AwsSolutions-L5"
+      },
+      {
+       "reason": "Lambda execution role uses AWS managed policies (AWSLambdaBasicExecutionRole) which are maintained by AWS and provide necessary permissions for Lambda runtime.",
+       "id": "AwsSolutions-IAM4"
+      },
+      {
+       "reason": "Wildcard permissions are required for Lambda runtime to access CloudWatch Logs and X-Ray tracing services. These are standard AWS Lambda permissions.",
+       "id": "AwsSolutions-IAM5"
+      }
+     ]
+    }
+   }
+  },
+  "filestorageapiApiAccessLogs5102DD8F": {
+   "Type": "AWS::Logs::LogGroup",
+   "Properties": {
+    "RetentionInDays": 90,
+    "Tags": [
+     {
+      "Key": "backup-required",
+      "Value": "false"
+     },
+     {
+      "Key": "cloud-account",
+      "Value": "911871352725"
+     },
+     {
+      "Key": "cloud-provider",
+      "Value": "aws"
+     },
+     {
+      "Key": "cloud-region",
+      "Value": "us-west-2"
+     },
+     {
+      "Key": "compliance-framework",
+      "Value": "commercial"
+     },
+     {
+      "Key": "component-name",
+      "Value": "file-storage-api"
+     },
+     {
+      "Key": "component-type",
+      "Value": "lambda-api"
+     },
+     {
+      "Key": "cost-center",
+      "Value": "platform"
+     },
+     {
+      "Key": "data-classification",
+      "Value": "internal"
+     },
+     {
+      "Key": "deployment-id",
+      "Value": "deploy-20260108-005734"
+     },
+     {
+      "Key": "encryption-required",
+      "Value": "true"
+     },
+     {
+      "Key": "environment",
+      "Value": "dev"
+     },
+     {
+      "Key": "log-type",
+      "Value": "api-access"
+     },
+     {
+      "Key": "managed-by",
+      "Value": "platform-engineering"
+     },
+     {
+      "Key": "monitoring-level",
+      "Value": "standard"
+     },
+     {
+      "Key": "owner",
+      "Value": "platform-engineering"
+     },
+     {
+      "Key": "platform",
+      "Value": "cdk-lib"
+     },
+     {
+      "Key": "platform-version",
+      "Value": "1.0.0"
+     },
+     {
+      "Key": "project",
+      "Value": "api-s3-service"
+     },
+     {
+      "Key": "retention-period",
+      "Value": "365-days"
+     },
+     {
+      "Key": "service-name",
+      "Value": "api-s3-service"
+     },
+     {
+      "Key": "service-version",
+      "Value": "1.0.0"
+     },
+     {
+      "Key": "stage",
+      "Value": "dev"
+     }
+    ]
+   },
+   "UpdateReplacePolicy": "Retain",
+   "DeletionPolicy": "Retain",
+   "Metadata": {
+    "cdk_nag": {
+     "rules_to_suppress": [
+      {
+       "reason": "API Gateway access log retention is configured based on compliance requirements and cost optimization needs.",
+       "id": "AwsSolutions-LOG1"
+      }
+     ]
+    }
+   }
+  },
+  "filestorageapiLambdaRestApi3C3F2A68": {
+   "Type": "AWS::ApiGateway::RestApi",
+   "Properties": {
+    "Description": "Lambda API component",
+    "Name": "api-s3-service-file-storage-api",
+    "Tags": [
+     {
+      "Key": "api-stage",
+      "Value": "dev"
+     },
+     {
+      "Key": "api-type",
+      "Value": "rest"
+     },
+     {
+      "Key": "backup-required",
+      "Value": "false"
+     },
+     {
+      "Key": "cloud-account",
+      "Value": "911871352725"
+     },
+     {
+      "Key": "cloud-provider",
+      "Value": "aws"
+     },
+     {
+      "Key": "cloud-region",
+      "Value": "us-west-2"
+     },
+     {
+      "Key": "compliance-framework",
+      "Value": "commercial"
+     },
+     {
+      "Key": "component-name",
+      "Value": "file-storage-api"
+     },
+     {
+      "Key": "component-type",
+      "Value": "lambda-api"
+     },
+     {
+      "Key": "cost-center",
+      "Value": "platform"
+     },
+     {
+      "Key": "data-classification",
+      "Value": "internal"
+     },
+     {
+      "Key": "deployment-id",
+      "Value": "deploy-20260108-005734"
+     },
+     {
+      "Key": "encryption-required",
+      "Value": "true"
+     },
+     {
+      "Key": "environment",
+      "Value": "dev"
+     },
+     {
+      "Key": "managed-by",
+      "Value": "platform-engineering"
+     },
+     {
+      "Key": "monitoring-level",
+      "Value": "standard"
+     },
+     {
+      "Key": "owner",
+      "Value": "platform-engineering"
+     },
+     {
+      "Key": "platform",
+      "Value": "cdk-lib"
+     },
+     {
+      "Key": "platform-version",
+      "Value": "1.0.0"
+     },
+     {
+      "Key": "project",
+      "Value": "api-s3-service"
+     },
+     {
+      "Key": "retention-period",
+      "Value": "365-days"
+     },
+     {
+      "Key": "service-name",
+      "Value": "api-s3-service"
+     },
+     {
+      "Key": "service-version",
+      "Value": "1.0.0"
+     }
+    ]
+   },
+   "Metadata": {
+    "cdk_nag": {
+     "rules_to_suppress": [
+      {
+       "reason": "API Gateway access logging is configured through CloudWatch Logs integration for compliance and monitoring requirements.",
+       "id": "AwsSolutions-APIG1"
+      },
+      {
+       "reason": "Request validation is implemented at the Lambda function level for better error handling and security.",
+       "id": "AwsSolutions-APIG2"
+      },
+      {
+       "reason": "API Gateway execution logging is configured through CloudWatch Logs for observability and compliance requirements.",
+       "id": "AwsSolutions-APIG3"
+      },
+      {
+       "reason": "API Gateway throttling is configured through usage plans and stage-level throttling for rate limiting and protection.",
+       "id": "AwsSolutions-APIG4"
+      }
+     ]
+    }
+   }
+  },
+  "filestorageapiLambdaRestApiCloudWatchRole96014FFD": {
+   "Type": "AWS::IAM::Role",
+   "Properties": {
+    "AssumeRolePolicyDocument": {
+     "Statement": [
+      {
+       "Action": "sts:AssumeRole",
+       "Effect": "Allow",
+       "Principal": {
+        "Service": "apigateway.amazonaws.com"
+       }
+      }
+     ],
+     "Version": "2012-10-17"
+    },
+    "ManagedPolicyArns": [
+     {
+      "Fn::Join": [
+       "",
+       [
+        "arn:",
+        {
+         "Ref": "AWS::Partition"
+        },
+        ":iam::aws:policy/service-role/AmazonAPIGatewayPushToCloudWatchLogs"
+       ]
+      ]
+     }
+    ],
+    "Tags": [
+     {
+      "Key": "api-stage",
+      "Value": "dev"
+     },
+     {
+      "Key": "api-type",
+      "Value": "rest"
+     },
+     {
+      "Key": "backup-required",
+      "Value": "false"
+     },
+     {
+      "Key": "cloud-account",
+      "Value": "911871352725"
+     },
+     {
+      "Key": "cloud-provider",
+      "Value": "aws"
+     },
+     {
+      "Key": "cloud-region",
+      "Value": "us-west-2"
+     },
+     {
+      "Key": "compliance-framework",
+      "Value": "commercial"
+     },
+     {
+      "Key": "component-name",
+      "Value": "file-storage-api"
+     },
+     {
+      "Key": "component-type",
+      "Value": "lambda-api"
+     },
+     {
+      "Key": "cost-center",
+      "Value": "platform"
+     },
+     {
+      "Key": "data-classification",
+      "Value": "internal"
+     },
+     {
+      "Key": "deployment-id",
+      "Value": "deploy-20260108-005734"
+     },
+     {
+      "Key": "encryption-required",
+      "Value": "true"
+     },
+     {
+      "Key": "environment",
+      "Value": "dev"
+     },
+     {
+      "Key": "managed-by",
+      "Value": "platform-engineering"
+     },
+     {
+      "Key": "monitoring-level",
+      "Value": "standard"
+     },
+     {
+      "Key": "owner",
+      "Value": "platform-engineering"
+     },
+     {
+      "Key": "platform",
+      "Value": "cdk-lib"
+     },
+     {
+      "Key": "platform-version",
+      "Value": "1.0.0"
+     },
+     {
+      "Key": "project",
+      "Value": "api-s3-service"
+     },
+     {
+      "Key": "retention-period",
+      "Value": "365-days"
+     },
+     {
+      "Key": "service-name",
+      "Value": "api-s3-service"
+     },
+     {
+      "Key": "service-version",
+      "Value": "1.0.0"
+     }
+    ]
+   },
+   "UpdateReplacePolicy": "Retain",
+   "DeletionPolicy": "Retain"
+  },
+  "filestorageapiLambdaRestApiAccountE1E133B3": {
+   "Type": "AWS::ApiGateway::Account",
+   "Properties": {
+    "CloudWatchRoleArn": {
+     "Fn::GetAtt": [
+      "filestorageapiLambdaRestApiCloudWatchRole96014FFD",
+      "Arn"
+     ]
+    }
+   },
+   "DependsOn": [
+    "filestorageapiLambdaRestApi3C3F2A68"
+   ],
+   "UpdateReplacePolicy": "Retain",
+   "DeletionPolicy": "Retain"
+  },
+  "filestorageapiLambdaRestApiDeployment7E3B6236bc37bfa9abe5e6d5fedc47b2e70e58d3": {
+   "Type": "AWS::ApiGateway::Deployment",
+   "Properties": {
+    "Description": "Lambda API component",
+    "RestApiId": {
+     "Ref": "filestorageapiLambdaRestApi3C3F2A68"
+    }
+   },
+   "DependsOn": [
+    "filestorageapiLambdaRestApiproxyANY25EA1016",
+    "filestorageapiLambdaRestApiproxyOPTIONSD7F75D9D",
+    "filestorageapiLambdaRestApiproxy3A52F15D",
+    "filestorageapiLambdaRestApiANYEADF9F2D",
+    "filestorageapiLambdaRestApiOPTIONSFE89E7E7"
+   ],
+   "Metadata": {
+    "aws:cdk:do-not-refactor": true
+   }
+  },
+  "filestorageapiLambdaRestApiDeploymentStagedev73E2059D": {
+   "Type": "AWS::ApiGateway::Stage",
+   "Properties": {
+    "AccessLogSetting": {
+     "DestinationArn": {
+      "Fn::GetAtt": [
+       "filestorageapiApiAccessLogs5102DD8F",
+       "Arn"
+      ]
+     },
+     "Format": "{\"requestId\":\"$context.requestId\",\"ip\":\"$context.identity.sourceIp\",\"user\":\"$context.identity.user\",\"caller\":\"$context.identity.caller\",\"requestTime\":\"$context.requestTime\",\"httpMethod\":\"$context.httpMethod\",\"resourcePath\":\"$context.resourcePath\",\"status\":\"$context.status\",\"protocol\":\"$context.protocol\",\"responseLength\":\"$context.responseLength\"}"
+    },
+    "DeploymentId": {
+     "Ref": "filestorageapiLambdaRestApiDeployment7E3B6236bc37bfa9abe5e6d5fedc47b2e70e58d3"
+    },
+    "MethodSettings": [
+     {
+      "DataTraceEnabled": true,
+      "HttpMethod": "*",
+      "LoggingLevel": "INFO",
+      "MetricsEnabled": true,
+      "ResourcePath": "/*",
+      "ThrottlingBurstLimit": 100,
+      "ThrottlingRateLimit": 50
+     }
+    ],
+    "RestApiId": {
+     "Ref": "filestorageapiLambdaRestApi3C3F2A68"
+    },
+    "StageName": "dev",
+    "Tags": [
+     {
+      "Key": "api-stage",
+      "Value": "dev"
+     },
+     {
+      "Key": "api-type",
+      "Value": "rest"
+     },
+     {
+      "Key": "backup-required",
+      "Value": "false"
+     },
+     {
+      "Key": "cloud-account",
+      "Value": "911871352725"
+     },
+     {
+      "Key": "cloud-provider",
+      "Value": "aws"
+     },
+     {
+      "Key": "cloud-region",
+      "Value": "us-west-2"
+     },
+     {
+      "Key": "compliance-framework",
+      "Value": "commercial"
+     },
+     {
+      "Key": "component-name",
+      "Value": "file-storage-api"
+     },
+     {
+      "Key": "component-type",
+      "Value": "lambda-api"
+     },
+     {
+      "Key": "cost-center",
+      "Value": "platform"
+     },
+     {
+      "Key": "data-classification",
+      "Value": "internal"
+     },
+     {
+      "Key": "deployment-id",
+      "Value": "deploy-20260108-005734"
+     },
+     {
+      "Key": "encryption-required",
+      "Value": "true"
+     },
+     {
+      "Key": "environment",
+      "Value": "dev"
+     },
+     {
+      "Key": "managed-by",
+      "Value": "platform-engineering"
+     },
+     {
+      "Key": "monitoring-level",
+      "Value": "standard"
+     },
+     {
+      "Key": "owner",
+      "Value": "platform-engineering"
+     },
+     {
+      "Key": "platform",
+      "Value": "cdk-lib"
+     },
+     {
+      "Key": "platform-version",
+      "Value": "1.0.0"
+     },
+     {
+      "Key": "project",
+      "Value": "api-s3-service"
+     },
+     {
+      "Key": "retention-period",
+      "Value": "365-days"
+     },
+     {
+      "Key": "service-name",
+      "Value": "api-s3-service"
+     },
+     {
+      "Key": "service-version",
+      "Value": "1.0.0"
+     }
+    ],
+    "TracingEnabled": true
+   },
+   "DependsOn": [
+    "filestorageapiLambdaRestApiAccountE1E133B3"
+   ]
+  },
+  "filestorageapiLambdaRestApiOPTIONSFE89E7E7": {
+   "Type": "AWS::ApiGateway::Method",
+   "Properties": {
+    "ApiKeyRequired": false,
+    "AuthorizationType": "NONE",
+    "HttpMethod": "OPTIONS",
+    "Integration": {
+     "IntegrationResponses": [
+      {
+       "ResponseParameters": {
+        "method.response.header.Access-Control-Allow-Headers": "'Content-Type,Authorization'",
+        "method.response.header.Access-Control-Allow-Origin": "'*'",
+        "method.response.header.Access-Control-Allow-Methods": "'GET,POST,PUT,DELETE,OPTIONS'"
+       },
+       "StatusCode": "204"
+      }
+     ],
+     "RequestTemplates": {
+      "application/json": "{ statusCode: 200 }"
+     },
+     "Type": "MOCK"
+    },
+    "MethodResponses": [
+     {
+      "ResponseParameters": {
+       "method.response.header.Access-Control-Allow-Headers": true,
+       "method.response.header.Access-Control-Allow-Origin": true,
+       "method.response.header.Access-Control-Allow-Methods": true
+      },
+      "StatusCode": "204"
+     }
+    ],
+    "ResourceId": {
+     "Fn::GetAtt": [
+      "filestorageapiLambdaRestApi3C3F2A68",
+      "RootResourceId"
+     ]
+    },
+    "RestApiId": {
+     "Ref": "filestorageapiLambdaRestApi3C3F2A68"
+    }
+   }
+  },
+  "filestorageapiLambdaRestApiproxy3A52F15D": {
+   "Type": "AWS::ApiGateway::Resource",
+   "Properties": {
+    "ParentId": {
+     "Fn::GetAtt": [
+      "filestorageapiLambdaRestApi3C3F2A68",
+      "RootResourceId"
+     ]
+    },
+    "PathPart": "{proxy+}",
+    "RestApiId": {
+     "Ref": "filestorageapiLambdaRestApi3C3F2A68"
+    }
+   }
+  },
+  "filestorageapiLambdaRestApiproxyOPTIONSD7F75D9D": {
+   "Type": "AWS::ApiGateway::Method",
+   "Properties": {
+    "ApiKeyRequired": false,
+    "AuthorizationType": "NONE",
+    "HttpMethod": "OPTIONS",
+    "Integration": {
+     "IntegrationResponses": [
+      {
+       "ResponseParameters": {
+        "method.response.header.Access-Control-Allow-Headers": "'Content-Type,Authorization'",
+        "method.response.header.Access-Control-Allow-Origin": "'*'",
+        "method.response.header.Access-Control-Allow-Methods": "'GET,POST,PUT,DELETE,OPTIONS'"
+       },
+       "StatusCode": "204"
+      }
+     ],
+     "RequestTemplates": {
+      "application/json": "{ statusCode: 200 }"
+     },
+     "Type": "MOCK"
+    },
+    "MethodResponses": [
+     {
+      "ResponseParameters": {
+       "method.response.header.Access-Control-Allow-Headers": true,
+       "method.response.header.Access-Control-Allow-Origin": true,
+       "method.response.header.Access-Control-Allow-Methods": true
+      },
+      "StatusCode": "204"
+     }
+    ],
+    "ResourceId": {
+     "Ref": "filestorageapiLambdaRestApiproxy3A52F15D"
+    },
+    "RestApiId": {
+     "Ref": "filestorageapiLambdaRestApi3C3F2A68"
+    }
+   }
+  },
+  "filestorageapiLambdaRestApiproxyANYApiPermissionapis3servicedevfilestorageapiLambdaRestApi0DBA7435ANYproxyF8028735": {
+   "Type": "AWS::Lambda::Permission",
+   "Properties": {
+    "Action": "lambda:InvokeFunction",
+    "FunctionName": {
+     "Fn::GetAtt": [
+      "filestorageapiLambdaApiFunction613BA55C",
+      "Arn"
+     ]
+    },
+    "Principal": "apigateway.amazonaws.com",
+    "SourceArn": {
+     "Fn::Join": [
+      "",
+      [
+       "arn:",
+       {
+        "Ref": "AWS::Partition"
+       },
+       ":execute-api:us-west-2:911871352725:",
+       {
+        "Ref": "filestorageapiLambdaRestApi3C3F2A68"
+       },
+       "/",
+       {
+        "Ref": "filestorageapiLambdaRestApiDeploymentStagedev73E2059D"
+       },
+       "/*/*"
+      ]
+     ]
+    }
+   }
+  },
+  "filestorageapiLambdaRestApiproxyANYApiPermissionTestapis3servicedevfilestorageapiLambdaRestApi0DBA7435ANYproxy267D74B9": {
+   "Type": "AWS::Lambda::Permission",
+   "Properties": {
+    "Action": "lambda:InvokeFunction",
+    "FunctionName": {
+     "Fn::GetAtt": [
+      "filestorageapiLambdaApiFunction613BA55C",
+      "Arn"
+     ]
+    },
+    "Principal": "apigateway.amazonaws.com",
+    "SourceArn": {
+     "Fn::Join": [
+      "",
+      [
+       "arn:",
+       {
+        "Ref": "AWS::Partition"
+       },
+       ":execute-api:us-west-2:911871352725:",
+       {
+        "Ref": "filestorageapiLambdaRestApi3C3F2A68"
+       },
+       "/test-invoke-stage/*/*"
+      ]
+     ]
+    }
+   }
+  },
+  "filestorageapiLambdaRestApiproxyANY25EA1016": {
+   "Type": "AWS::ApiGateway::Method",
+   "Properties": {
+    "ApiKeyRequired": false,
+    "AuthorizationType": "NONE",
+    "HttpMethod": "ANY",
+    "Integration": {
+     "IntegrationHttpMethod": "POST",
+     "Type": "AWS_PROXY",
+     "Uri": {
+      "Fn::Join": [
+       "",
+       [
+        "arn:",
+        {
+         "Ref": "AWS::Partition"
+        },
+        ":apigateway:us-west-2:lambda:path/2015-03-31/functions/",
+        {
+         "Fn::GetAtt": [
+          "filestorageapiLambdaApiFunction613BA55C",
+          "Arn"
+         ]
+        },
+        "/invocations"
+       ]
+      ]
+     }
+    },
+    "ResourceId": {
+     "Ref": "filestorageapiLambdaRestApiproxy3A52F15D"
+    },
+    "RestApiId": {
+     "Ref": "filestorageapiLambdaRestApi3C3F2A68"
+    }
+   }
+  },
+  "filestorageapiLambdaRestApiANYEADF9F2D": {
+   "Type": "AWS::ApiGateway::Method",
+   "Properties": {
+    "ApiKeyRequired": false,
+    "AuthorizationType": "NONE",
+    "HttpMethod": "ANY",
+    "Integration": {
+     "Type": "MOCK"
+    },
+    "ResourceId": {
+     "Fn::GetAtt": [
+      "filestorageapiLambdaRestApi3C3F2A68",
+      "RootResourceId"
+     ]
+    },
+    "RestApiId": {
+     "Ref": "filestorageapiLambdaRestApi3C3F2A68"
+    }
+   }
+  },
+  "filestorageapiLambdaErrorsAlarm5CD70050": {
+   "Type": "AWS::CloudWatch::Alarm",
+   "Properties": {
+    "AlarmDescription": "Lambda alarm for lambda-errors",
+    "AlarmName": "api-s3-service-file-storage-api-lambda-errors",
+    "ComparisonOperator": "GreaterThanThreshold",
+    "Dimensions": [
+     {
+      "Name": "FunctionName",
+      "Value": {
+       "Ref": "filestorageapiLambdaApiFunction613BA55C"
+      }
+     }
+    ],
+    "EvaluationPeriods": 1,
+    "MetricName": "Errors",
+    "Namespace": "AWS/Lambda",
+    "Period": 60,
+    "Statistic": "Sum",
+    "Tags": [
+     {
+      "Key": "alarm-id",
+      "Value": "lambda-errors"
+     },
+     {
+      "Key": "backup-required",
+      "Value": "false"
+     },
+     {
+      "Key": "cloud-account",
+      "Value": "911871352725"
+     },
+     {
+      "Key": "cloud-provider",
+      "Value": "aws"
+     },
+     {
+      "Key": "cloud-region",
+      "Value": "us-west-2"
+     },
+     {
+      "Key": "compliance-framework",
+      "Value": "commercial"
+     },
+     {
+      "Key": "component-name",
+      "Value": "file-storage-api"
+     },
+     {
+      "Key": "component-type",
+      "Value": "lambda-api"
+     },
+     {
+      "Key": "cost-center",
+      "Value": "platform"
+     },
+     {
+      "Key": "data-classification",
+      "Value": "internal"
+     },
+     {
+      "Key": "deployment-id",
+      "Value": "deploy-20260108-005734"
+     },
+     {
+      "Key": "encryption-required",
+      "Value": "true"
+     },
+     {
+      "Key": "environment",
+      "Value": "dev"
+     },
+     {
+      "Key": "managed-by",
+      "Value": "platform-engineering"
+     },
+     {
+      "Key": "monitoring-level",
+      "Value": "standard"
+     },
+     {
+      "Key": "owner",
+      "Value": "platform-engineering"
+     },
+     {
+      "Key": "platform",
+      "Value": "cdk-lib"
+     },
+     {
+      "Key": "platform-version",
+      "Value": "1.0.0"
+     },
+     {
+      "Key": "project",
+      "Value": "api-s3-service"
+     },
+     {
+      "Key": "resource-type",
+      "Value": "cloudwatch-alarm"
+     },
+     {
+      "Key": "retention-period",
+      "Value": "365-days"
+     },
+     {
+      "Key": "service-name",
+      "Value": "api-s3-service"
+     },
+     {
+      "Key": "service-version",
+      "Value": "1.0.0"
+     }
+    ],
+    "Threshold": 1,
+    "TreatMissingData": "breaching"
+   }
+  },
+  "filestorageapiLambdaThrottlesAlarmAF957FCF": {
+   "Type": "AWS::CloudWatch::Alarm",
+   "Properties": {
+    "AlarmDescription": "Lambda alarm for lambda-throttles",
+    "AlarmName": "api-s3-service-file-storage-api-lambda-throttles",
+    "ComparisonOperator": "GreaterThanThreshold",
+    "Dimensions": [
+     {
+      "Name": "FunctionName",
+      "Value": {
+       "Ref": "filestorageapiLambdaApiFunction613BA55C"
+      }
+     }
+    ],
+    "EvaluationPeriods": 2,
+    "MetricName": "Throttles",
+    "Namespace": "AWS/Lambda",
+    "Period": 60,
+    "Statistic": "Sum",
+    "Tags": [
+     {
+      "Key": "alarm-id",
+      "Value": "lambda-throttles"
+     },
+     {
+      "Key": "backup-required",
+      "Value": "false"
+     },
+     {
+      "Key": "cloud-account",
+      "Value": "911871352725"
+     },
+     {
+      "Key": "cloud-provider",
+      "Value": "aws"
+     },
+     {
+      "Key": "cloud-region",
+      "Value": "us-west-2"
+     },
+     {
+      "Key": "compliance-framework",
+      "Value": "commercial"
+     },
+     {
+      "Key": "component-name",
+      "Value": "file-storage-api"
+     },
+     {
+      "Key": "component-type",
+      "Value": "lambda-api"
+     },
+     {
+      "Key": "cost-center",
+      "Value": "platform"
+     },
+     {
+      "Key": "data-classification",
+      "Value": "internal"
+     },
+     {
+      "Key": "deployment-id",
+      "Value": "deploy-20260108-005734"
+     },
+     {
+      "Key": "encryption-required",
+      "Value": "true"
+     },
+     {
+      "Key": "environment",
+      "Value": "dev"
+     },
+     {
+      "Key": "managed-by",
+      "Value": "platform-engineering"
+     },
+     {
+      "Key": "monitoring-level",
+      "Value": "standard"
+     },
+     {
+      "Key": "owner",
+      "Value": "platform-engineering"
+     },
+     {
+      "Key": "platform",
+      "Value": "cdk-lib"
+     },
+     {
+      "Key": "platform-version",
+      "Value": "1.0.0"
+     },
+     {
+      "Key": "project",
+      "Value": "api-s3-service"
+     },
+     {
+      "Key": "resource-type",
+      "Value": "cloudwatch-alarm"
+     },
+     {
+      "Key": "retention-period",
+      "Value": "365-days"
+     },
+     {
+      "Key": "service-name",
+      "Value": "api-s3-service"
+     },
+     {
+      "Key": "service-version",
+      "Value": "1.0.0"
+     }
+    ],
+    "Threshold": 5,
+    "TreatMissingData": "breaching"
+   }
+  },
+  "filestorageapiLambdaDurationAlarm86733926": {
+   "Type": "AWS::CloudWatch::Alarm",
+   "Properties": {
+    "AlarmDescription": "Lambda alarm for lambda-duration",
+    "AlarmName": "api-s3-service-file-storage-api-lambda-duration",
+    "ComparisonOperator": "GreaterThanThreshold",
+    "Dimensions": [
+     {
+      "Name": "FunctionName",
+      "Value": {
+       "Ref": "filestorageapiLambdaApiFunction613BA55C"
+      }
+     }
+    ],
+    "EvaluationPeriods": 2,
+    "MetricName": "Duration",
+    "Namespace": "AWS/Lambda",
+    "Period": 60,
+    "Statistic": "Average",
+    "Tags": [
+     {
+      "Key": "alarm-id",
+      "Value": "lambda-duration"
+     },
+     {
+      "Key": "backup-required",
+      "Value": "false"
+     },
+     {
+      "Key": "cloud-account",
+      "Value": "911871352725"
+     },
+     {
+      "Key": "cloud-provider",
+      "Value": "aws"
+     },
+     {
+      "Key": "cloud-region",
+      "Value": "us-west-2"
+     },
+     {
+      "Key": "compliance-framework",
+      "Value": "commercial"
+     },
+     {
+      "Key": "component-name",
+      "Value": "file-storage-api"
+     },
+     {
+      "Key": "component-type",
+      "Value": "lambda-api"
+     },
+     {
+      "Key": "cost-center",
+      "Value": "platform"
+     },
+     {
+      "Key": "data-classification",
+      "Value": "internal"
+     },
+     {
+      "Key": "deployment-id",
+      "Value": "deploy-20260108-005734"
+     },
+     {
+      "Key": "encryption-required",
+      "Value": "true"
+     },
+     {
+      "Key": "environment",
+      "Value": "dev"
+     },
+     {
+      "Key": "managed-by",
+      "Value": "platform-engineering"
+     },
+     {
+      "Key": "monitoring-level",
+      "Value": "standard"
+     },
+     {
+      "Key": "owner",
+      "Value": "platform-engineering"
+     },
+     {
+      "Key": "platform",
+      "Value": "cdk-lib"
+     },
+     {
+      "Key": "platform-version",
+      "Value": "1.0.0"
+     },
+     {
+      "Key": "project",
+      "Value": "api-s3-service"
+     },
+     {
+      "Key": "resource-type",
+      "Value": "cloudwatch-alarm"
+     },
+     {
+      "Key": "retention-period",
+      "Value": "365-days"
+     },
+     {
+      "Key": "service-name",
+      "Value": "api-s3-service"
+     },
+     {
+      "Key": "service-version",
+      "Value": "1.0.0"
+     }
+    ],
+    "Threshold": 5000,
+    "TreatMissingData": "breaching"
+   }
+  },
+  "filestorageapiApi4xxAlarmF3973C7F": {
+   "Type": "AWS::CloudWatch::Alarm",
+   "Properties": {
+    "AlarmDescription": "API Gateway alarm for api-4xx",
+    "AlarmName": "api-s3-service-file-storage-api-api-4xx",
+    "ComparisonOperator": "GreaterThanThreshold",
+    "Dimensions": [
+     {
+      "Name": "ApiName",
+      "Value": "api-s3-service-file-storage-api"
+     }
+    ],
+    "EvaluationPeriods": 1,
+    "MetricName": "4XXError",
+    "Namespace": "AWS/ApiGateway",
+    "Period": 300,
+    "Statistic": "Sum",
+    "Tags": [
+     {
+      "Key": "alarm-id",
+      "Value": "api-4xx"
+     },
+     {
+      "Key": "backup-required",
+      "Value": "false"
+     },
+     {
+      "Key": "cloud-account",
+      "Value": "911871352725"
+     },
+     {
+      "Key": "cloud-provider",
+      "Value": "aws"
+     },
+     {
+      "Key": "cloud-region",
+      "Value": "us-west-2"
+     },
+     {
+      "Key": "compliance-framework",
+      "Value": "commercial"
+     },
+     {
+      "Key": "component-name",
+      "Value": "file-storage-api"
+     },
+     {
+      "Key": "component-type",
+      "Value": "lambda-api"
+     },
+     {
+      "Key": "cost-center",
+      "Value": "platform"
+     },
+     {
+      "Key": "data-classification",
+      "Value": "internal"
+     },
+     {
+      "Key": "deployment-id",
+      "Value": "deploy-20260108-005734"
+     },
+     {
+      "Key": "encryption-required",
+      "Value": "true"
+     },
+     {
+      "Key": "environment",
+      "Value": "dev"
+     },
+     {
+      "Key": "managed-by",
+      "Value": "platform-engineering"
+     },
+     {
+      "Key": "monitoring-level",
+      "Value": "standard"
+     },
+     {
+      "Key": "owner",
+      "Value": "platform-engineering"
+     },
+     {
+      "Key": "platform",
+      "Value": "cdk-lib"
+     },
+     {
+      "Key": "platform-version",
+      "Value": "1.0.0"
+     },
+     {
+      "Key": "project",
+      "Value": "api-s3-service"
+     },
+     {
+      "Key": "resource-type",
+      "Value": "cloudwatch-alarm"
+     },
+     {
+      "Key": "retention-period",
+      "Value": "365-days"
+     },
+     {
+      "Key": "service-name",
+      "Value": "api-s3-service"
+     },
+     {
+      "Key": "service-version",
+      "Value": "1.0.0"
+     }
+    ],
+    "Threshold": 10,
+    "TreatMissingData": "breaching"
+   }
+  },
+  "filestorageapiApi5xxAlarm8F5CBCF3": {
+   "Type": "AWS::CloudWatch::Alarm",
+   "Properties": {
+    "AlarmDescription": "API Gateway alarm for api-5xx",
+    "AlarmName": "api-s3-service-file-storage-api-api-5xx",
+    "ComparisonOperator": "GreaterThanThreshold",
+    "Dimensions": [
+     {
+      "Name": "ApiName",
+      "Value": "api-s3-service-file-storage-api"
+     }
+    ],
+    "EvaluationPeriods": 1,
+    "MetricName": "5XXError",
+    "Namespace": "AWS/ApiGateway",
+    "Period": 300,
+    "Statistic": "Sum",
+    "Tags": [
+     {
+      "Key": "alarm-id",
+      "Value": "api-5xx"
+     },
+     {
+      "Key": "backup-required",
+      "Value": "false"
+     },
+     {
+      "Key": "cloud-account",
+      "Value": "911871352725"
+     },
+     {
+      "Key": "cloud-provider",
+      "Value": "aws"
+     },
+     {
+      "Key": "cloud-region",
+      "Value": "us-west-2"
+     },
+     {
+      "Key": "compliance-framework",
+      "Value": "commercial"
+     },
+     {
+      "Key": "component-name",
+      "Value": "file-storage-api"
+     },
+     {
+      "Key": "component-type",
+      "Value": "lambda-api"
+     },
+     {
+      "Key": "cost-center",
+      "Value": "platform"
+     },
+     {
+      "Key": "data-classification",
+      "Value": "internal"
+     },
+     {
+      "Key": "deployment-id",
+      "Value": "deploy-20260108-005734"
+     },
+     {
+      "Key": "encryption-required",
+      "Value": "true"
+     },
+     {
+      "Key": "environment",
+      "Value": "dev"
+     },
+     {
+      "Key": "managed-by",
+      "Value": "platform-engineering"
+     },
+     {
+      "Key": "monitoring-level",
+      "Value": "standard"
+     },
+     {
+      "Key": "owner",
+      "Value": "platform-engineering"
+     },
+     {
+      "Key": "platform",
+      "Value": "cdk-lib"
+     },
+     {
+      "Key": "platform-version",
+      "Value": "1.0.0"
+     },
+     {
+      "Key": "project",
+      "Value": "api-s3-service"
+     },
+     {
+      "Key": "resource-type",
+      "Value": "cloudwatch-alarm"
+     },
+     {
+      "Key": "retention-period",
+      "Value": "365-days"
+     },
+     {
+      "Key": "service-name",
+      "Value": "api-s3-service"
+     },
+     {
+      "Key": "service-version",
+      "Value": "1.0.0"
+     }
+    ],
+    "Threshold": 1,
+    "TreatMissingData": "breaching"
+   }
+  },
+  "filebucketBucket507B560D": {
+   "Type": "AWS::S3::Bucket",
+   "Properties": {
+    "BucketEncryption": {
+     "ServerSideEncryptionConfiguration": [
+      {
+       "ServerSideEncryptionByDefault": {
+        "SSEAlgorithm": "AES256"
+       }
+      }
+     ]
+    },
+    "MetricsConfigurations": [
+     {
+      "Id": "EntireBucket"
+     }
+    ],
+    "PublicAccessBlockConfiguration": {
+     "BlockPublicAcls": true,
+     "BlockPublicPolicy": true,
+     "IgnorePublicAcls": true,
+     "RestrictPublicBuckets": true
+    },
+    "Tags": [
+     {
+      "Key": "backup-required",
+      "Value": "false"
+     },
+     {
+      "Key": "bucket-type",
+      "Value": "primary"
+     },
+     {
+      "Key": "cloud-account",
+      "Value": "911871352725"
+     },
+     {
+      "Key": "cloud-provider",
+      "Value": "aws"
+     },
+     {
+      "Key": "cloud-region",
+      "Value": "us-west-2"
+     },
+     {
+      "Key": "compliance-framework",
+      "Value": "commercial"
+     },
+     {
+      "Key": "component-name",
+      "Value": "file-bucket"
+     },
+     {
+      "Key": "component-type",
+      "Value": "s3-bucket"
+     },
+     {
+      "Key": "cost-center",
+      "Value": "platform"
+     },
+     {
+      "Key": "data-classification",
+      "Value": "internal"
+     },
+     {
+      "Key": "deployment-id",
+      "Value": "deploy-20260108-005734"
+     },
+     {
+      "Key": "encryption-required",
+      "Value": "true"
+     },
+     {
+      "Key": "environment",
+      "Value": "dev"
+     },
+     {
+      "Key": "managed-by",
+      "Value": "platform-engineering"
+     },
+     {
+      "Key": "monitoring-level",
+      "Value": "standard"
+     },
+     {
+      "Key": "owner",
+      "Value": "platform-engineering"
+     },
+     {
+      "Key": "platform",
+      "Value": "cdk-lib"
+     },
+     {
+      "Key": "platform-version",
+      "Value": "1.0.0"
+     },
+     {
+      "Key": "project",
+      "Value": "api-s3-service"
+     },
+     {
+      "Key": "public-access",
+      "Value": "false"
+     },
+     {
+      "Key": "retention-period",
+      "Value": "365-days"
+     },
+     {
+      "Key": "service-name",
+      "Value": "api-s3-service"
+     },
+     {
+      "Key": "service-version",
+      "Value": "1.0.0"
+     },
+     {
+      "Key": "versioning",
+      "Value": "true"
+     }
+    ],
+    "VersioningConfiguration": {
+     "Status": "Enabled"
+    }
+   },
+   "UpdateReplacePolicy": "Delete",
+   "DeletionPolicy": "Delete",
+   "Metadata": {
+    "cdk_nag": {
+     "rules_to_suppress": [
+      {
+       "reason": "S3 server access logging is configured through audit logging when compliance.auditLogging is enabled. This provides comprehensive access logging for compliance requirements.",
+       "id": "AwsSolutions-S1"
+      },
+      {
+       "reason": "S3 bucket public read access is controlled through the public configuration option. Block public access is enabled by default for security, but can be disabled for legitimate public bucket use cases.",
+       "id": "AwsSolutions-S2"
+      },
+      {
+       "reason": "S3 bucket versioning is enabled by default and can be configured through the versioning option. Object Lock requires versioning to be enabled.",
+       "id": "AwsSolutions-S3"
+      },
+      {
+       "reason": "S3 bucket encryption is configured through the encryption option with support for both S3-managed and KMS encryption. KMS encryption is required for FedRAMP compliance.",
+       "id": "AwsSolutions-S5"
+      },
+      {
+       "reason": "S3 bucket server-side encryption is configured through the encryption option. The component supports both AES256 and KMS encryption based on compliance requirements.",
+       "id": "AwsSolutions-S10"
+      }
+     ]
+    }
+   }
+  },
+  "filebucketBucketPolicyD96A379B": {
+   "Type": "AWS::S3::BucketPolicy",
+   "Properties": {
+    "Bucket": {
+     "Ref": "filebucketBucket507B560D"
+    },
+    "PolicyDocument": {
+     "Statement": [
+      {
+       "Action": "s3:*",
+       "Condition": {
+        "Bool": {
+         "aws:SecureTransport": "false"
+        }
+       },
+       "Effect": "Deny",
+       "Principal": {
+        "AWS": "*"
+       },
+       "Resource": [
+        {
+         "Fn::GetAtt": [
+          "filebucketBucket507B560D",
+          "Arn"
+         ]
+        },
+        {
+         "Fn::Join": [
+          "",
+          [
+           {
+            "Fn::GetAtt": [
+             "filebucketBucket507B560D",
+             "Arn"
+            ]
+           },
+           "/*"
+          ]
+         ]
+        }
+       ],
+       "Sid": "DenyInsecureTransport"
+      }
+     ],
+     "Version": "2012-10-17"
+    }
+   }
+  },
+  "filebucketS3ClientErrorsAlarm9BD4852F": {
+   "Type": "AWS::CloudWatch::Alarm",
+   "Properties": {
+    "AlarmDescription": "Alarm for S3 bucket client (4xx) errors",
+    "AlarmName": "api-s3-service-file-bucket-client-errors",
+    "ComparisonOperator": "GreaterThanThreshold",
+    "Dimensions": [
+     {
+      "Name": "BucketName",
+      "Value": {
+       "Ref": "filebucketBucket507B560D"
+      }
+     },
+     {
+      "Name": "FilterId",
+      "Value": "EntireBucket"
+     }
+    ],
+    "EvaluationPeriods": 2,
+    "MetricName": "4xxErrors",
+    "Namespace": "AWS/S3",
+    "Period": 300,
+    "Statistic": "Sum",
+    "Tags": [
+     {
+      "Key": "alarm-type",
+      "Value": "client-errors"
+     },
+     {
+      "Key": "backup-required",
+      "Value": "false"
+     },
+     {
+      "Key": "cloud-account",
+      "Value": "911871352725"
+     },
+     {
+      "Key": "cloud-provider",
+      "Value": "aws"
+     },
+     {
+      "Key": "cloud-region",
+      "Value": "us-west-2"
+     },
+     {
+      "Key": "compliance-framework",
+      "Value": "commercial"
+     },
+     {
+      "Key": "component-name",
+      "Value": "file-bucket"
+     },
+     {
+      "Key": "component-type",
+      "Value": "s3-bucket"
+     },
+     {
+      "Key": "cost-center",
+      "Value": "platform"
+     },
+     {
+      "Key": "data-classification",
+      "Value": "internal"
+     },
+     {
+      "Key": "deployment-id",
+      "Value": "deploy-20260108-005734"
+     },
+     {
+      "Key": "encryption-required",
+      "Value": "true"
+     },
+     {
+      "Key": "environment",
+      "Value": "dev"
+     },
+     {
+      "Key": "managed-by",
+      "Value": "platform-engineering"
+     },
+     {
+      "Key": "monitoring-level",
+      "Value": "standard"
+     },
+     {
+      "Key": "owner",
+      "Value": "platform-engineering"
+     },
+     {
+      "Key": "platform",
+      "Value": "cdk-lib"
+     },
+     {
+      "Key": "platform-version",
+      "Value": "1.0.0"
+     },
+     {
+      "Key": "project",
+      "Value": "api-s3-service"
+     },
+     {
+      "Key": "retention-period",
+      "Value": "365-days"
+     },
+     {
+      "Key": "service-name",
+      "Value": "api-s3-service"
+     },
+     {
+      "Key": "service-version",
+      "Value": "1.0.0"
+     },
+     {
+      "Key": "threshold",
+      "Value": "10"
+     }
+    ],
+    "Threshold": 10,
+    "TreatMissingData": "notBreaching"
+   },
+   "Metadata": {
+    "cdk_nag": {
+     "rules_to_suppress": [
+      {
+       "reason": "CloudWatch alarms for S3 buckets use appropriate evaluation periods and thresholds based on S3 service characteristics. Missing data is treated as not breaching to avoid false alarms.",
+       "id": "AwsSolutions-CW9"
+      }
+     ]
+    }
+   }
+  },
+  "filebucketS3ServerErrorsAlarmDBFF656A": {
+   "Type": "AWS::CloudWatch::Alarm",
+   "Properties": {
+    "AlarmDescription": "Alarm for S3 bucket server (5xx) errors",
+    "AlarmName": "api-s3-service-file-bucket-server-errors",
+    "ComparisonOperator": "GreaterThanOrEqualToThreshold",
+    "Dimensions": [
+     {
+      "Name": "BucketName",
+      "Value": {
+       "Ref": "filebucketBucket507B560D"
+      }
+     },
+     {
+      "Name": "FilterId",
+      "Value": "EntireBucket"
+     }
+    ],
+    "EvaluationPeriods": 1,
+    "MetricName": "5xxErrors",
+    "Namespace": "AWS/S3",
+    "Period": 300,
+    "Statistic": "Sum",
+    "Tags": [
+     {
+      "Key": "alarm-type",
+      "Value": "server-errors"
+     },
+     {
+      "Key": "backup-required",
+      "Value": "false"
+     },
+     {
+      "Key": "cloud-account",
+      "Value": "911871352725"
+     },
+     {
+      "Key": "cloud-provider",
+      "Value": "aws"
+     },
+     {
+      "Key": "cloud-region",
+      "Value": "us-west-2"
+     },
+     {
+      "Key": "compliance-framework",
+      "Value": "commercial"
+     },
+     {
+      "Key": "component-name",
+      "Value": "file-bucket"
+     },
+     {
+      "Key": "component-type",
+      "Value": "s3-bucket"
+     },
+     {
+      "Key": "cost-center",
+      "Value": "platform"
+     },
+     {
+      "Key": "data-classification",
+      "Value": "internal"
+     },
+     {
+      "Key": "deployment-id",
+      "Value": "deploy-20260108-005734"
+     },
+     {
+      "Key": "encryption-required",
+      "Value": "true"
+     },
+     {
+      "Key": "environment",
+      "Value": "dev"
+     },
+     {
+      "Key": "managed-by",
+      "Value": "platform-engineering"
+     },
+     {
+      "Key": "monitoring-level",
+      "Value": "standard"
+     },
+     {
+      "Key": "owner",
+      "Value": "platform-engineering"
+     },
+     {
+      "Key": "platform",
+      "Value": "cdk-lib"
+     },
+     {
+      "Key": "platform-version",
+      "Value": "1.0.0"
+     },
+     {
+      "Key": "project",
+      "Value": "api-s3-service"
+     },
+     {
+      "Key": "retention-period",
+      "Value": "365-days"
+     },
+     {
+      "Key": "service-name",
+      "Value": "api-s3-service"
+     },
+     {
+      "Key": "service-version",
+      "Value": "1.0.0"
+     },
+     {
+      "Key": "threshold",
+      "Value": "1"
+     }
+    ],
+    "Threshold": 1,
+    "TreatMissingData": "notBreaching"
+   },
+   "Metadata": {
+    "cdk_nag": {
+     "rules_to_suppress": [
+      {
+       "reason": "CloudWatch alarms for S3 buckets use appropriate evaluation periods and thresholds based on S3 service characteristics. Missing data is treated as not breaching to avoid false alarms.",
+       "id": "AwsSolutions-CW9"
+      }
+     ]
+    }
+   }
+  },
+  "filebucketS3DashboardE94A7AB6": {
+   "Type": "AWS::CloudWatch::Dashboard",
+   "Properties": {
+    "DashboardBody": {
+     "Fn::Join": [
+      "",
+      [
+       "{\"widgets\":[{\"type\":\"metric\",\"width\":12,\"height\":6,\"x\":0,\"y\":0,\"properties\":{\"view\":\"timeSeries\",\"title\":\"S3 Request Metrics\",\"region\":\"",
+       {
+        "Ref": "AWS::Region"
+       },
+       "\",\"metrics\":[[\"AWS/S3\",\"NumberOfObjects\",\"BucketName\",\"",
+       {
+        "Ref": "filebucketBucket507B560D"
+       },
+       "\"],[\"AWS/S3\",\"BucketSizeBytes\",\"BucketName\",\"",
+       {
+        "Ref": "filebucketBucket507B560D"
+       },
+       "\"]],\"yAxis\":{}}},{\"type\":\"metric\",\"width\":12,\"height\":6,\"x\":0,\"y\":6,\"properties\":{\"view\":\"timeSeries\",\"title\":\"S3 Error Rates\",\"region\":\"",
+       {
+        "Ref": "AWS::Region"
+       },
+       "\",\"metrics\":[[\"AWS/S3\",\"4xxErrors\",\"BucketName\",\"",
+       {
+        "Ref": "filebucketBucket507B560D"
+       },
+       "\"],[\"AWS/S3\",\"5xxErrors\",\"BucketName\",\"",
+       {
+        "Ref": "filebucketBucket507B560D"
+       },
+       "\"]],\"yAxis\":{}}}]}"
+      ]
+     ]
+    },
+    "DashboardName": "api-s3-service-s3-metrics"
+   }
+  },
+  "filebucketS3ErrorRateAlarmEC2A89AB": {
+   "Type": "AWS::CloudWatch::Alarm",
+   "Properties": {
+    "ComparisonOperator": "GreaterThanThreshold",
+    "Dimensions": [
+     {
+      "Name": "BucketName",
+      "Value": {
+       "Ref": "filebucketBucket507B560D"
+      }
+     }
+    ],
+    "EvaluationPeriods": 2,
+    "MetricName": "4xxErrors",
+    "Namespace": "AWS/S3",
+    "Period": 300,
+    "Statistic": "Average",
+    "Threshold": 10
+   },
+   "Metadata": {
+    "cdk_nag": {
+     "rules_to_suppress": [
+      {
+       "reason": "CloudWatch alarms for S3 buckets use appropriate evaluation periods and thresholds based on S3 service characteristics. Missing data is treated as not breaching to avoid false alarms.",
+       "id": "AwsSolutions-CW9"
+      }
+     ]
+    }
+   }
+  },
+  "fileprocessingqueueQueueEncryptionKey8625D1EF": {
+   "Type": "AWS::KMS::Key",
+   "Properties": {
+    "Description": "Encryption key for file-processing-queue SQS queue",
+    "EnableKeyRotation": false,
+    "KeyPolicy": {
+     "Statement": [
+      {
+       "Action": "kms:*",
+       "Effect": "Allow",
+       "Principal": {
+        "AWS": {
+         "Fn::Join": [
+          "",
+          [
+           "arn:",
+           {
+            "Ref": "AWS::Partition"
+           },
+           ":iam::911871352725:root"
+          ]
+         ]
+        }
+       },
+       "Resource": "*"
+      },
+      {
+       "Action": [
+        "kms:Decrypt",
+        "kms:GenerateDataKey*",
+        "kms:ReEncrypt*",
+        "kms:DescribeKey"
+       ],
+       "Effect": "Allow",
+       "Principal": {
+        "Service": "sqs.amazonaws.com"
+       },
+       "Resource": "*",
+       "Sid": "AllowSqsServiceAccess"
+      }
+     ],
+     "Version": "2012-10-17"
+    },
+    "KeySpec": "SYMMETRIC_DEFAULT",
+    "KeyUsage": "ENCRYPT_DECRYPT",
+    "Tags": [
+     {
+      "Key": "backup-required",
+      "Value": "false"
+     },
+     {
+      "Key": "cloud-account",
+      "Value": "911871352725"
+     },
+     {
+      "Key": "cloud-provider",
+      "Value": "aws"
+     },
+     {
+      "Key": "cloud-region",
+      "Value": "us-west-2"
+     },
+     {
+      "Key": "compliance-framework",
+      "Value": "commercial"
+     },
+     {
+      "Key": "component-name",
+      "Value": "file-processing-queue"
+     },
+     {
+      "Key": "component-type",
+      "Value": "sqs-queue"
+     },
+     {
+      "Key": "cost-center",
+      "Value": "platform"
+     },
+     {
+      "Key": "data-classification",
+      "Value": "internal"
+     },
+     {
+      "Key": "deployment-id",
+      "Value": "deploy-20260108-005734"
+     },
+     {
+      "Key": "encryption-required",
+      "Value": "true"
+     },
+     {
+      "Key": "environment",
+      "Value": "dev"
+     },
+     {
+      "Key": "managed-by",
+      "Value": "platform-engineering"
+     },
+     {
+      "Key": "monitoring-level",
+      "Value": "standard"
+     },
+     {
+      "Key": "owner",
+      "Value": "platform-engineering"
+     },
+     {
+      "Key": "platform",
+      "Value": "cdk-lib"
+     },
+     {
+      "Key": "platform-version",
+      "Value": "1.0.0"
+     },
+     {
+      "Key": "project",
+      "Value": "api-s3-service"
+     },
+     {
+      "Key": "retention-period",
+      "Value": "365-days"
+     },
+     {
+      "Key": "service-name",
+      "Value": "api-s3-service"
+     },
+     {
+      "Key": "service-version",
+      "Value": "1.0.0"
+     }
+    ]
+   },
+   "UpdateReplacePolicy": "Retain",
+   "DeletionPolicy": "Retain"
+  },
+  "fileprocessingqueueQueueEncryptionKeyAliasD67571AA": {
+   "Type": "AWS::KMS::Alias",
+   "Properties": {
+    "AliasName": "alias/api-s3-service-file-processing-queue-sqs-queue",
+    "TargetKeyId": {
+     "Fn::GetAtt": [
+      "fileprocessingqueueQueueEncryptionKey8625D1EF",
+      "Arn"
+     ]
+    }
+   }
+  },
+  "fileprocessingqueueDeadLetterQueue9F9535B9": {
+   "Type": "AWS::SQS::Queue",
+   "Properties": {
+    "KmsMasterKeyId": {
+     "Fn::GetAtt": [
+      "fileprocessingqueueQueueEncryptionKey8625D1EF",
+      "Arn"
+     ]
+    },
+    "MessageRetentionPeriod": 1209600,
+    "QueueName": "api-s3-service-file-processing-queue-dlq",
+    "Tags": [
+     {
+      "Key": "backup-required",
+      "Value": "false"
+     },
+     {
+      "Key": "cloud-account",
+      "Value": "911871352725"
+     },
+     {
+      "Key": "cloud-provider",
+      "Value": "aws"
+     },
+     {
+      "Key": "cloud-region",
+      "Value": "us-west-2"
+     },
+     {
+      "Key": "compliance-framework",
+      "Value": "commercial"
+     },
+     {
+      "Key": "component-name",
+      "Value": "file-processing-queue"
+     },
+     {
+      "Key": "component-type",
+      "Value": "sqs-queue"
+     },
+     {
+      "Key": "cost-center",
+      "Value": "platform"
+     },
+     {
+      "Key": "data-classification",
+      "Value": "internal"
+     },
+     {
+      "Key": "deployment-id",
+      "Value": "deploy-20260108-005734"
+     },
+     {
+      "Key": "encryption-required",
+      "Value": "true"
+     },
+     {
+      "Key": "environment",
+      "Value": "dev"
+     },
+     {
+      "Key": "managed-by",
+      "Value": "platform-engineering"
+     },
+     {
+      "Key": "monitoring-level",
+      "Value": "standard"
+     },
+     {
+      "Key": "owner",
+      "Value": "platform-engineering"
+     },
+     {
+      "Key": "platform",
+      "Value": "cdk-lib"
+     },
+     {
+      "Key": "platform-version",
+      "Value": "1.0.0"
+     },
+     {
+      "Key": "project",
+      "Value": "api-s3-service"
+     },
+     {
+      "Key": "retention-period",
+      "Value": "365-days"
+     },
+     {
+      "Key": "service-name",
+      "Value": "api-s3-service"
+     },
+     {
+      "Key": "service-version",
+      "Value": "1.0.0"
+     }
+    ]
+   },
+   "UpdateReplacePolicy": "Delete",
+   "DeletionPolicy": "Delete"
+  },
+  "fileprocessingqueueQueue032A39E4": {
+   "Type": "AWS::SQS::Queue",
+   "Properties": {
+    "KmsMasterKeyId": {
+     "Fn::GetAtt": [
+      "fileprocessingqueueQueueEncryptionKey8625D1EF",
+      "Arn"
+     ]
+    },
+    "MessageRetentionPeriod": 345600,
+    "ReceiveMessageWaitTimeSeconds": 0,
+    "RedrivePolicy": {
+     "deadLetterTargetArn": {
+      "Fn::GetAtt": [
+       "fileprocessingqueueDeadLetterQueue9F9535B9",
+       "Arn"
+      ]
+     },
+     "maxReceiveCount": 3
+    },
+    "Tags": [
+     {
+      "Key": "backup-required",
+      "Value": "false"
+     },
+     {
+      "Key": "cloud-account",
+      "Value": "911871352725"
+     },
+     {
+      "Key": "cloud-provider",
+      "Value": "aws"
+     },
+     {
+      "Key": "cloud-region",
+      "Value": "us-west-2"
+     },
+     {
+      "Key": "compliance-framework",
+      "Value": "commercial"
+     },
+     {
+      "Key": "component-name",
+      "Value": "file-processing-queue"
+     },
+     {
+      "Key": "component-type",
+      "Value": "sqs-queue"
+     },
+     {
+      "Key": "cost-center",
+      "Value": "platform"
+     },
+     {
+      "Key": "data-classification",
+      "Value": "internal"
+     },
+     {
+      "Key": "deployment-id",
+      "Value": "deploy-20260108-005734"
+     },
+     {
+      "Key": "encryption-required",
+      "Value": "true"
+     },
+     {
+      "Key": "environment",
+      "Value": "dev"
+     },
+     {
+      "Key": "managed-by",
+      "Value": "platform-engineering"
+     },
+     {
+      "Key": "monitoring-level",
+      "Value": "standard"
+     },
+     {
+      "Key": "owner",
+      "Value": "platform-engineering"
+     },
+     {
+      "Key": "platform",
+      "Value": "cdk-lib"
+     },
+     {
+      "Key": "platform-version",
+      "Value": "1.0.0"
+     },
+     {
+      "Key": "project",
+      "Value": "api-s3-service"
+     },
+     {
+      "Key": "retention-period",
+      "Value": "365-days"
+     },
+     {
+      "Key": "service-name",
+      "Value": "api-s3-service"
+     },
+     {
+      "Key": "service-version",
+      "Value": "1.0.0"
+     }
+    ],
+    "VisibilityTimeout": 30
+   },
+   "UpdateReplacePolicy": "Delete",
+   "DeletionPolicy": "Delete"
+  },
+  "fileprocessingqueueQueueDepthAlarm9B7B125B": {
+   "Type": "AWS::CloudWatch::Alarm",
+   "Properties": {
+    "AlarmDescription": "Alert when queue depth exceeds threshold for file-processing-queue",
+    "AlarmName": "api-s3-service-file-processing-queue-queue-depth-high",
+    "ComparisonOperator": "GreaterThanThreshold",
+    "Dimensions": [
+     {
+      "Name": "QueueName",
+      "Value": {
+       "Fn::GetAtt": [
+        "fileprocessingqueueQueue032A39E4",
+        "QueueName"
+       ]
+      }
+     }
+    ],
+    "EvaluationPeriods": 2,
+    "MetricName": "ApproximateNumberOfMessagesVisible",
+    "Namespace": "AWS/SQS",
+    "Period": 300,
+    "Statistic": "Average",
+    "Tags": [
+     {
+      "Key": "alarm-type",
+      "Value": "queue-depth"
+     },
+     {
+      "Key": "backup-required",
+      "Value": "false"
+     },
+     {
+      "Key": "cloud-account",
+      "Value": "911871352725"
+     },
+     {
+      "Key": "cloud-provider",
+      "Value": "aws"
+     },
+     {
+      "Key": "cloud-region",
+      "Value": "us-west-2"
+     },
+     {
+      "Key": "compliance-framework",
+      "Value": "commercial"
+     },
+     {
+      "Key": "component-name",
+      "Value": "file-processing-queue"
+     },
+     {
+      "Key": "component-type",
+      "Value": "sqs-queue"
+     },
+     {
+      "Key": "cost-center",
+      "Value": "platform"
+     },
+     {
+      "Key": "data-classification",
+      "Value": "internal"
+     },
+     {
+      "Key": "deployment-id",
+      "Value": "deploy-20260108-005734"
+     },
+     {
+      "Key": "encryption-required",
+      "Value": "true"
+     },
+     {
+      "Key": "environment",
+      "Value": "dev"
+     },
+     {
+      "Key": "managed-by",
+      "Value": "platform-engineering"
+     },
+     {
+      "Key": "metric",
+      "Value": "ApproximateNumberOfMessagesVisible"
+     },
+     {
+      "Key": "monitoring-level",
+      "Value": "standard"
+     },
+     {
+      "Key": "owner",
+      "Value": "platform-engineering"
+     },
+     {
+      "Key": "platform",
+      "Value": "cdk-lib"
+     },
+     {
+      "Key": "platform-version",
+      "Value": "1.0.0"
+     },
+     {
+      "Key": "project",
+      "Value": "api-s3-service"
+     },
+     {
+      "Key": "retention-period",
+      "Value": "365-days"
+     },
+     {
+      "Key": "service-name",
+      "Value": "api-s3-service"
+     },
+     {
+      "Key": "service-version",
+      "Value": "1.0.0"
+     }
+    ],
+    "Threshold": 1000,
+    "TreatMissingData": "notBreaching"
+   }
+  },
+  "fileprocessingqueueMessageAgeAlarmF8CD316B": {
+   "Type": "AWS::CloudWatch::Alarm",
+   "Properties": {
+    "AlarmDescription": "Alert when oldest message age exceeds threshold for file-processing-queue",
+    "AlarmName": "api-s3-service-file-processing-queue-message-age-high",
+    "ComparisonOperator": "GreaterThanThreshold",
+    "Dimensions": [
+     {
+      "Name": "QueueName",
+      "Value": {
+       "Fn::GetAtt": [
+        "fileprocessingqueueQueue032A39E4",
+        "QueueName"
+       ]
+      }
+     }
+    ],
+    "EvaluationPeriods": 2,
+    "MetricName": "ApproximateAgeOfOldestMessage",
+    "Namespace": "AWS/SQS",
+    "Period": 300,
+    "Statistic": "Maximum",
+    "Tags": [
+     {
+      "Key": "alarm-type",
+      "Value": "message-age"
+     },
+     {
+      "Key": "backup-required",
+      "Value": "false"
+     },
+     {
+      "Key": "cloud-account",
+      "Value": "911871352725"
+     },
+     {
+      "Key": "cloud-provider",
+      "Value": "aws"
+     },
+     {
+      "Key": "cloud-region",
+      "Value": "us-west-2"
+     },
+     {
+      "Key": "compliance-framework",
+      "Value": "commercial"
+     },
+     {
+      "Key": "component-name",
+      "Value": "file-processing-queue"
+     },
+     {
+      "Key": "component-type",
+      "Value": "sqs-queue"
+     },
+     {
+      "Key": "cost-center",
+      "Value": "platform"
+     },
+     {
+      "Key": "data-classification",
+      "Value": "internal"
+     },
+     {
+      "Key": "deployment-id",
+      "Value": "deploy-20260108-005734"
+     },
+     {
+      "Key": "encryption-required",
+      "Value": "true"
+     },
+     {
+      "Key": "environment",
+      "Value": "dev"
+     },
+     {
+      "Key": "managed-by",
+      "Value": "platform-engineering"
+     },
+     {
+      "Key": "metric",
+      "Value": "ApproximateAgeOfOldestMessage"
+     },
+     {
+      "Key": "monitoring-level",
+      "Value": "standard"
+     },
+     {
+      "Key": "owner",
+      "Value": "platform-engineering"
+     },
+     {
+      "Key": "platform",
+      "Value": "cdk-lib"
+     },
+     {
+      "Key": "platform-version",
+      "Value": "1.0.0"
+     },
+     {
+      "Key": "project",
+      "Value": "api-s3-service"
+     },
+     {
+      "Key": "retention-period",
+      "Value": "365-days"
+     },
+     {
+      "Key": "service-name",
+      "Value": "api-s3-service"
+     },
+     {
+      "Key": "service-version",
+      "Value": "1.0.0"
+     }
+    ],
+    "Threshold": 300,
+    "TreatMissingData": "notBreaching"
+   }
+  },
+  "fileprocessingqueueInFlightMessagesAlarm1460A560": {
+   "Type": "AWS::CloudWatch::Alarm",
+   "Properties": {
+    "AlarmDescription": "Alert when in-flight messages exceed threshold for file-processing-queue",
+    "AlarmName": "api-s3-service-file-processing-queue-in-flight-messages-high",
+    "ComparisonOperator": "GreaterThanThreshold",
+    "Dimensions": [
+     {
+      "Name": "QueueName",
+      "Value": {
+       "Fn::GetAtt": [
+        "fileprocessingqueueQueue032A39E4",
+        "QueueName"
+       ]
+      }
+     }
+    ],
+    "EvaluationPeriods": 2,
+    "MetricName": "ApproximateNumberOfMessagesNotVisible",
+    "Namespace": "AWS/SQS",
+    "Period": 300,
+    "Statistic": "Average",
+    "Tags": [
+     {
+      "Key": "alarm-type",
+      "Value": "in-flight-messages"
+     },
+     {
+      "Key": "backup-required",
+      "Value": "false"
+     },
+     {
+      "Key": "cloud-account",
+      "Value": "911871352725"
+     },
+     {
+      "Key": "cloud-provider",
+      "Value": "aws"
+     },
+     {
+      "Key": "cloud-region",
+      "Value": "us-west-2"
+     },
+     {
+      "Key": "compliance-framework",
+      "Value": "commercial"
+     },
+     {
+      "Key": "component-name",
+      "Value": "file-processing-queue"
+     },
+     {
+      "Key": "component-type",
+      "Value": "sqs-queue"
+     },
+     {
+      "Key": "cost-center",
+      "Value": "platform"
+     },
+     {
+      "Key": "data-classification",
+      "Value": "internal"
+     },
+     {
+      "Key": "deployment-id",
+      "Value": "deploy-20260108-005734"
+     },
+     {
+      "Key": "encryption-required",
+      "Value": "true"
+     },
+     {
+      "Key": "environment",
+      "Value": "dev"
+     },
+     {
+      "Key": "managed-by",
+      "Value": "platform-engineering"
+     },
+     {
+      "Key": "metric",
+      "Value": "ApproximateNumberOfMessagesNotVisible"
+     },
+     {
+      "Key": "monitoring-level",
+      "Value": "standard"
+     },
+     {
+      "Key": "owner",
+      "Value": "platform-engineering"
+     },
+     {
+      "Key": "platform",
+      "Value": "cdk-lib"
+     },
+     {
+      "Key": "platform-version",
+      "Value": "1.0.0"
+     },
+     {
+      "Key": "project",
+      "Value": "api-s3-service"
+     },
+     {
+      "Key": "retention-period",
+      "Value": "365-days"
+     },
+     {
+      "Key": "service-name",
+      "Value": "api-s3-service"
+     },
+     {
+      "Key": "service-version",
+      "Value": "1.0.0"
+     }
+    ],
+    "Threshold": 100,
+    "TreatMissingData": "notBreaching"
+   }
+  }
+ },
+ "Outputs": {
+  "filestorageapiLambdaRestApiEndpointC5BEE7A2": {
+   "Value": {
+    "Fn::Join": [
+     "",
+     [
+      "https://",
+      {
+       "Ref": "filestorageapiLambdaRestApi3C3F2A68"
+      },
+      ".execute-api.us-west-2.",
+      {
+       "Ref": "AWS::URLSuffix"
+      },
+      "/",
+      {
+       "Ref": "filestorageapiLambdaRestApiDeploymentStagedev73E2059D"
+      },
+      "/"
+     ]
+    ]
+   }
+  }
+ },
+ "Parameters": {
+  "BootstrapVersion": {
+   "Type": "AWS::SSM::Parameter::Value<String>",
+   "Default": "/cdk-bootstrap/hnb659fds/version",
+   "Description": "Version of the CDK Bootstrap resources in this environment, automatically retrieved from SSM Parameter Store. [cdk:skip]"
+  }
+ },
+ "Rules": {
+  "CheckBootstrapVersion": {
+   "Assertions": [
+    {
+     "Assert": {
+      "Fn::Not": [
+       {
+        "Fn::Contains": [
+         [
+          "1",
+          "2",
+          "3",
+          "4",
+          "5"
+         ],
+         {
+          "Ref": "BootstrapVersion"
+         }
+        ]
+       }
+      ]
+     },
+     "AssertDescription": "CDK bootstrap stack version 6 required. Please run 'cdk bootstrap' with a recent version of the CDK CLI."
+    }
+   ]
+  }
+ }
+}

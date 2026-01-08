@@ -130,3 +130,4 @@
 - `FileDiscovery.findManifest()` now handles both file paths and directory searches seamlessly
 - All refactored code follows platform standards and architectural patterns
 
+

@@ -1426,3 +1426,17 @@ defaults:
       logExports:
         - postgresql
     hardeningProfile: baseline
+
+  sqs-queue:
+    visibilityTimeoutSeconds: 30
+    messageRetentionDays: 4
+    receiveMessageWaitTimeSeconds: 0
+    encryption:
+      enabled: false
+    deadLetterQueue:
+      enabled: false
+      maxReceiveCount: 3
+      retentionDays: 14
+    monitoring:
+      enabled: true
+      detailedMetrics: false

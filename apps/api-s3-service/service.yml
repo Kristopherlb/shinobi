@@ -105,6 +105,9 @@ components:
       - to: file-bucket
         capability: bucket:s3
         access: readwrite
+      - to: file-processing-queue
+        capability: messaging:sqs
+        access: write
 
   - name: file-bucket
     type: s3-bucket
@@ -114,4 +117,81 @@ components:
         type: AES256
       monitoring:
         enabled: true
+
+  - name: file-processing-queue
+    type: sqs-queue
+    config:
+      description: "Queue for processing file upload notifications"
+      visibilityTimeoutSeconds: 360  # 6x Lambda timeout (60s) for retry safety
+      messageRetentionDays: 4
+      encryption:
+        enabled: true
+      deadLetterQueue:
+        enabled: true
+        maxReceiveCount: 3
+      monitoring:
+        enabled: true
+        detailedMetrics: true
+
+  - name: queue-processor
+    type: lambda-worker
+    config:
+      functionName: queue-processor
+      handler: handler.handler
+      runtime: nodejs20.x
+      architecture: arm64
+      memorySize: 512
+      timeoutSeconds: 60
+      deployment:
+        codePath: ./src/queue-processor
+      logging:
+        logRetentionDays: 30
+        logFormat: JSON
+        systemLogLevel: INFO
+        applicationLogLevel: INFO
+      monitoring:
+        enabled: true
+        alarms:
+          lambdaErrors:
+            enabled: true
+            threshold: 1
+            evaluationPeriods: 1
+            periodMinutes: 1
+            comparisonOperator: gt
+            treatMissingData: breaching
+            statistic: Sum
+            tags: {}
+          lambdaThrottles:
+            enabled: true
+            threshold: 5
+            evaluationPeriods: 2
+            periodMinutes: 1
+            comparisonOperator: gt
+            treatMissingData: breaching
+            statistic: Sum
+            tags: {}
+          lambdaDuration:
+            enabled: true
+            threshold: 50000
+            evaluationPeriods: 2
+            periodMinutes: 1
+            comparisonOperator: gt
+            treatMissingData: breaching
+            statistic: Average
+            tags: {}
+      observability:
+        otelEnabled: true
+        otelResourceAttributes: {}
+      eventSources:
+        - type: sqs
+          # Reference the SQS queue ARN from the file-processing-queue component
+          # Using component reference format: @component:component-name
+          queueArn: "@component:file-processing-queue"
+          batchSize: 10
+          enabled: true
+          maximumBatchingWindowSeconds: 5
+    binds:
+      - to: file-bucket
+        capability: bucket:s3
+        access: write
 

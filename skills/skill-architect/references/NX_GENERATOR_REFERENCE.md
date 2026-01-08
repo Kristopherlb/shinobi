@@ -158,3 +158,4 @@ This generator implements the [Agent Skills specification](https://agentskills.i
 - Progressive Disclosure directory structure
 - Anti-pattern avoidance (no README.md, CHANGELOG.md)
 
+

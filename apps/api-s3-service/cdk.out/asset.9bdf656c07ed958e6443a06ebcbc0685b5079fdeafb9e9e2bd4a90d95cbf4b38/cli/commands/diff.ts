@@ -1,0 +1,84 @@
+/**
+ * Diff Command Factory
+ *
+ * Creates a Commander.js command for `shinobi diff`, which compares the
+ * synthesized infrastructure against a deployed CloudFormation stack by:
+ * - Synthesizing the service manifest to CloudFormation
+ * - Fetching the current stack template from AWS
+ * - Performing a structural diff between the two templates
+ * - Reporting differences, additions, and removals
+ *
+ * Exit codes:
+ * - 0: No differences found
+ * - 3: Differences found (propagated for CI/CD integration)
+ *
+ * @returns A configured Commander.js Command instance
+ */
+
+import { Command } from 'commander';
+import { CompositionRoot } from '../composition-root.js';
+
+export function createDiffCommand(): Command {
+  const root = new CompositionRoot();
+  const command = new Command('diff');
+
+  command
+    .description('Diff synthesized infrastructure against deployed CloudFormation stack')
+    .option('-f, --file <manifest>', 'Path to service manifest file')
+    .option('-e, --env <environment>', 'Environment to target', 'dev')
+    .option('-r, --region <region>', 'AWS region override')
+    .option('-a, --account <accountId>', 'AWS account ID override')
+    .option('-p, --profile <profile>', 'AWS profile to use for credentials')
+    .option('-s, --stack <stackName>', 'Override CloudFormation stack name')
+    .option('--output <dir>', 'Write synthesized output to this directory instead of a temporary folder')
+    .option('--keep-output', 'Keep synthesized output when using a temporary directory')
+    .option('--json', 'Emit diff summary as JSON')
+    .option('--include-experimental', 'Include non-production components when resolving creators', false)
+    .action(async (options, cmd) => {
+      const parent: any = cmd.parent || {};
+      const rootOpts = parent.opts ? parent.opts() : {};
+      const dependencies = await root.createDependencies({
+        verbose: !!rootOpts.verbose,
+        ci: !!rootOpts.ci
+      });
+
+      const diffCommand = root.createDiffCommand(dependencies);
+      const result = await diffCommand.execute({
+        file: options.file,
+        env: options.env,
+        region: options.region,
+        account: options.account,
+        profile: options.profile,
+        stack: options.stack,
+        output: options.output,
+        keepOutput: options.keepOutput,
+        json: options.json,
+        includeExperimental: options.includeExperimental,
+        suppressLogSummary: !!options.json
+      });
+
+      if (result.success) {
+        if (options.json && result.data) {
+          console.log(JSON.stringify({
+            stackName: result.data.stackName,
+            stackExists: result.data.stackExists,
+            diff: result.data.diff,
+            synthesizedTemplatePath: result.data.synthesizedTemplatePath,
+            synthesizedAssetDirectory: result.data.synthesizedAssetDirectory,
+            components: result.data.components,
+            keptArtifacts: result.data.keptArtifacts
+          }, null, 2));
+        }
+        // Exit code 0: No differences found
+        // Exit code 3: Differences found (propagated for CI/CD integration)
+        process.exit(result.exitCode);
+      } else {
+        if (options.json && result.error) {
+          console.error(JSON.stringify({ error: result.error }, null, 2));
+        }
+        process.exit(result.exitCode);
+      }
+    });
+
+  return command;
+}

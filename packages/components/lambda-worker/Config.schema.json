@@ -100,7 +100,8 @@
                 "const": "sqs"
               },
               "queueArn": {
-                "type": "string"
+                "type": "string",
+                "description": "SQS queue ARN or component reference (@component:component-name). IMPORTANT: The referenced queue's visibility timeout MUST be >= Lambda function timeout. AWS requirement: queue visibility timeout >= function timeout. Best practice: queue visibility timeout >= 6x function timeout for retry safety."
               },
               "batchSize": {
                 "type": "number",
@@ -488,5 +489,6 @@
     }
   }
 }
+
 
 

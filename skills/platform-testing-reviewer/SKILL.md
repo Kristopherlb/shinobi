@@ -15,13 +15,14 @@ license: Apache-2.0
 ## Instructions
 
 1. Analyze the test file(s) to determine which Platform Testing Standard rules apply
-2. Review tests against PTS-1.0 requirements, checking:
+2. **Always use `test-driven-development` skill** when writing or reviewing tests to ensure TDD workflow compliance
+3. Review tests against PTS-1.0 requirements, checking:
    - Test metadata sidecars (required for all tests)
    - Naming conventions (Feature__Condition__ExpectedOutcome)
    - Determinism (clock/RNG/I/O control)
    - Oracle usage (single primary oracle per test)
    - Assertion patterns (contract-based, not internals)
-   - Negative/adversarial test cases
+   - Negative/adversarial test cases (including `negative_case_id` in metadata)
    - Coverage and evidence requirements
 3. Validate metadata completeness and format (TP-<service>-<feature>-NNN ID format)
 4. Check for AI-authored tests requiring human reviewer
@@ -48,6 +49,7 @@ Adapt these steps as needed for your specific review scenario (unit test vs inte
 - `compliance_refs`: Array of compliance standard references
 - `ai_generated`: Boolean (if true, requires `human_reviewed_by`)
 - `human_reviewed_by`: String (required if `ai_generated=true`)
+- `negative_case_id`: String (optional, recommended for negative tests) - Links to corresponding negative test case for mutation testing validation. Format: TP-<service>-<feature>-NNN. Example: For a test that verifies a component rejects invalid input, include `negative_case_id: "TP-rds-public-access-reject-001"` to link to the test that verifies public RDS instances are rejected.
 
 **Naming Convention**: Tests must follow `Feature__Condition__ExpectedOutcome` format.
 

@@ -1,0 +1,36 @@
+{
+  "name": "@shinobi/skill-devops-knowledge-base",
+  "sourceRoot": "skills/devops-knowledge-base",
+  "targets": {
+    "test": {
+      "executor": "@nx/vitest:test",
+      "options": {
+        "passWithNoTests": true,
+        "config": "skills/devops-knowledge-base/vitest.config.ts"
+      },
+      "outputs": [
+        "{projectRoot}/coverage"
+      ]
+    },
+    "validate": {
+      "executor": "nx:run-commands",
+      "options": {
+        "command": "pnpm nx test @shinobi/skill-devops-knowledge-base",
+        "cwd": "{workspaceRoot}"
+      }
+    },
+    "update": {
+      "executor": "nx:run-commands",
+      "options": {
+        "command": "./skills/devops-knowledge-base/scripts/fetch-conformance-packs.sh && ./skills/devops-knowledge-base/scripts/parse-conformance-packs.sh",
+        "cwd": "{workspaceRoot}"
+      },
+      "description": "Fetches latest AWS Config conformance packs and parses them into reference documentation"
+    }
+  },
+  "tags": [
+    "scope:shinobi",
+    "type:skill"
+  ]
+}
+

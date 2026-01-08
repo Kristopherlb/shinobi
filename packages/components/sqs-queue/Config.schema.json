@@ -20,7 +20,7 @@
     },
     "visibilityTimeoutSeconds": {
       "type": "integer",
-      "description": "Visibility timeout in seconds",
+      "description": "Visibility timeout in seconds. IMPORTANT: When used as a Lambda event source, this MUST be >= the Lambda function timeout. AWS requirement: queue visibility timeout >= function timeout. Best practice: set to at least 6x the Lambda timeout for retry safety.",
       "minimum": 0,
       "maximum": 43200,
       "default": 30
@@ -51,7 +51,12 @@
         },
         "kmsKeyId": {
           "type": "string",
-          "description": "KMS key ID or ARN for encryption (optional, will be created if needed for FedRAMP compliance)"
+          "description": "KMS key ID or ARN for encryption (optional, will be created if needed for high-risk environments)"
+        },
+        "enableKeyRotation": {
+          "type": "boolean",
+          "description": "Enable automatic KMS key rotation (recommended for high-risk environments)",
+          "default": false
         }
       }
     },
@@ -95,6 +100,23 @@
           "type": "boolean",
           "description": "Enable detailed CloudWatch metrics",
           "default": false
+        },
+        "dashboard": {
+          "type": "object",
+          "description": "CloudWatch dashboard configuration",
+          "additionalProperties": false,
+          "properties": {
+            "enabled": {
+              "type": "boolean",
+              "description": "Enable CloudWatch dashboard creation",
+              "default": true
+            },
+            "name": {
+              "type": "string",
+              "description": "Custom dashboard name (optional, auto-generated if not provided)",
+              "maxLength": 255
+            }
+          }
         }
       }
     },

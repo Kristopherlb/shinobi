@@ -207,3 +207,4 @@ The `__tests__/` convention is widely recognized in the JavaScript/TypeScript ec
 - Update component generator to create `__tests__/` by default
 - Add pre-commit hook to check for `tests/` directories
 
+

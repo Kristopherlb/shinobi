@@ -361,8 +361,8 @@ describe('Lambda Worker Validator Tests', () => {
 
     test('should validate event sources', () => {
       config.eventSources = [
-        { type: 'sqs', arn: 'arn:aws:sqs:us-east-1:123456789012:test-queue' },
-        { type: '', arn: 'arn:aws:sqs:us-east-1:123456789012:test-queue' } // Invalid type
+        { type: 'sqs', queueArn: 'arn:aws:sqs:us-east-1:123456789012:test-queue' },
+        { type: '', queueArn: 'arn:aws:sqs:us-east-1:123456789012:test-queue' } // Invalid type
       ];
       const validator = new LambdaWorkerValidator(context, config);
       const result = validator.validate();
@@ -370,7 +370,26 @@ describe('Lambda Worker Validator Tests', () => {
       expect(result.isValid).toBe(false);
       expect(result.errors).toHaveLength(1);
       expect(result.errors[0].field).toBe('eventSources[1]');
-      expect(result.errors[0].message).toContain('Event source must have both type and arn specified');
+      expect(result.errors[0].message).toContain('Event source must have type specified');
+    });
+
+    test('should document SQS visibility timeout constraint', () => {
+      // Note: SQS visibility timeout constraint is validated at synthesis time,
+      // not in the validator, because it requires resolving the queue component
+      // to get its visibility timeout. The constraint is:
+      // - Queue visibility timeout MUST be >= Lambda function timeout (AWS requirement)
+      // - Queue visibility timeout SHOULD be >= 6x Lambda function timeout (best practice)
+      // This constraint is enforced in LambdaWorkerComponent.configureSqsEventSource()
+      // and documented in Config.schema.json and lambda-worker.builder.ts
+      
+      config.eventSources = [
+        { type: 'sqs', queueArn: '@component:test-queue' }
+      ];
+      const validator = new LambdaWorkerValidator(context, config);
+      const result = validator.validate();
+
+      // Validator should pass (constraint validation happens at synthesis time)
+      expect(result.isValid).toBe(true);
     });
 
     test('should warn about disabled observability', () => {

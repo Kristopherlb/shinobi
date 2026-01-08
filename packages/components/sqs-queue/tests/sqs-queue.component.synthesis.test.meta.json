@@ -1,0 +1,39 @@
+{
+  "id": "TP-sqs-queue-synthesis-001",
+  "level": "unit",
+  "capability": "SQS queue component synthesis with default configuration",
+  "oracle": "contract",
+  "invariants": [
+    "Queue created with correct properties",
+    "Standard tags applied to all resources",
+    "Component type identifier is 'sqs-queue'"
+  ],
+  "fixtures": [
+    "createMockContext",
+    "createMockSpec",
+    "synthesizeComponent"
+  ],
+  "inputs": {
+    "shape": "ComponentSpec with minimal configuration",
+    "notes": "Commercial framework, default configuration"
+  },
+  "risks": [],
+  "dependencies": [
+    "aws-cdk-lib",
+    "aws-cdk-lib/assertions",
+    "@shinobi/core",
+    "vitest"
+  ],
+  "evidence": [
+    "Template.fromStack() assertions",
+    "Component.getType() verification"
+  ],
+  "compliance_refs": [
+    "std://platform-component-api-spec",
+    "std://platform-tagging-standard"
+  ],
+  "ai_generated": true,
+  "human_reviewed_by": "platform-team"
+}
+
+
