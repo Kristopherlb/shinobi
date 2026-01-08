@@ -7,6 +7,11 @@
       "factory": "./src/generators/new-binder/generator",
       "schema": "./src/generators/new-binder/schema.json",
       "description": "Generate a new binder strategy in @shinobi/binders"
+    },
+    "new-agent-skill": {
+      "factory": "./src/generators/new-agent-skill/generator",
+      "schema": "./src/generators/new-agent-skill/schema.json",
+      "description": "Generate a new Agent Skill following the Agent Skills specification"
     }
   }
 }

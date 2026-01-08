@@ -7,8 +7,8 @@
 export { CognitoUserPoolComponent } from './src/cognito-user-pool.component.js';
 
 // Configuration exports
+export type { CognitoUserPoolConfig } from './src/cognito-user-pool.builder.js';
 export {
-  CognitoUserPoolConfig,
   CognitoUserPoolComponentConfigBuilder,
   COGNITO_USER_POOL_CONFIG_SCHEMA
 } from './src/cognito-user-pool.builder.js';

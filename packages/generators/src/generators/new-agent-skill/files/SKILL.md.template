@@ -1,0 +1,59 @@
+---
+name: <%= skillName %>
+description: <%= description %>
+<% if (license) { %>license: <%= license %><% } %>
+<% if (compatibility) { %>compatibility: <%= compatibility %><% } %>
+<% if (author || version) { %>metadata:
+<% if (author) { %>  author: <%= author %><% } %>
+<% if (version) { %>  version: "<%= version %>"<% } %>
+<% } %>
+---
+
+# <%= skillName %>
+
+<% const dof = degreesOfFreedom || 'Medium'; %>
+<% if (dof === 'Low') { %>
+<!-- Degrees of Freedom: Low - Provide step-by-step, prescriptive instructions -->
+<% } else if (dof === 'High') { %>
+<!-- Degrees of Freedom: High - Provide principles and guardrails, let agent decide approach -->
+<% } else { %>
+<!-- Degrees of Freedom: Medium - Provide structure with some flexibility for agent adaptation -->
+<% } %>
+
+## Instructions
+
+<% if (dof === 'Low') { %>
+1. Step one (specific action)
+2. Step two (specific action)
+3. Step three (specific action)
+<% } else if (dof === 'High') { %>
+Follow these principles when implementing:
+
+- Principle 1: ...
+- Principle 2: ...
+- Guardrail: Never ...
+
+The agent should determine the specific approach based on context.
+<% } else { %>
+1. Analyze the context and determine...
+2. Apply the following approach...
+3. Validate that...
+
+Adapt these steps as needed for your specific use case.
+<% } %>
+
+## Examples
+
+- Input: ...
+- Output: ...
+
+## Bundled Resources
+
+- **Scripts**: Use `scripts/` for deterministic reliability. Load only when specific automation is needed.
+- **References**: Load `references/` files only when deep domain knowledge is required. Keep these files focused and small.
+- **Assets**: Use `assets/` for static templates, images, or data files. Reference these in instructions when needed.
+
+## Edge Cases
+
+<!-- Document common edge cases here -->
+

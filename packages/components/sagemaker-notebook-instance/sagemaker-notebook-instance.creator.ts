@@ -70,12 +70,15 @@ export class SageMakerNotebookInstanceComponentCreator implements IComponentCrea
   /**
    * Factory method to create component instances
    */
-  public createComponent(
-    scope: Construct, 
-    spec: ComponentSpec, 
-    context: ComponentContext
-  ): SageMakerNotebookInstanceComponent {
-    return new SageMakerNotebookInstanceComponent(scope, spec, context);
+  public createComponent(spec: ComponentSpec, context: ComponentContext): SageMakerNotebookInstanceComponent {
+    if (!context.scope) {
+      throw new Error('ComponentContext.scope is required to create sagemaker-notebook-instance components');
+    }
+    return new SageMakerNotebookInstanceComponent(context.scope as Construct, spec.name, context, spec);
+  }
+  
+  public processComponent(spec: ComponentSpec, context: ComponentContext): SageMakerNotebookInstanceComponent {
+    return this.createComponent(spec, context);
   }
   
   /**

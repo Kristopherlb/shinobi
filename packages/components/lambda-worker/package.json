@@ -11,6 +11,10 @@
       "types": "./dist/index.d.ts",
       "import": "./dist/index.js"
     },
+    "./schema": {
+      "types": "./Config.schema.json",
+      "import": "./Config.schema.json"
+    },
     "./package.json": "./package.json"
   },
   "license": "MIT",
@@ -39,8 +43,8 @@
     "constructs": "^10.0.0"
   },
   "scripts": {
-    "build": "tsc --noEmit",
-    "validate": "npm run build"
+    "build": "tsc -p tsconfig.lib.json",
+    "clean": "rimraf dist"
   },
   "engines": {
     "node": ">=20.0.0",

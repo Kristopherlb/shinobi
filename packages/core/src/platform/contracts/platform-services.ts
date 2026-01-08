@@ -79,7 +79,7 @@ export interface PlatformServiceContext {
   /** The service name and metadata */
   serviceName: string;
   environment: string;
-  complianceFramework: 'commercial' | 'fedramp-moderate' | 'fedramp-high';
+  complianceFramework: string;
   region: string;
   
   /** Platform logger instance for structured logging */

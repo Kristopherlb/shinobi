@@ -11,8 +11,8 @@
 export { SqsQueueComponent } from './sqs-queue.component.js';
 
 // Configuration exports
+export type { SqsQueueConfig } from './sqs-queue.builder.js';
 export { 
-  SqsQueueConfig,
   SqsQueueConfigBuilder,
   SQS_QUEUE_CONFIG_SCHEMA
 } from './sqs-queue.builder.js';

@@ -19,7 +19,11 @@
     "dist",
     "node_modules",
     "tests/**",
-    "coverage"
+    "coverage",
+    "**/*.test.ts",
+    "**/*.spec.ts",
+    "**/vitest.config.ts",
+    "**/jest.config.ts"
   ],
   "references": [
     { "path": "../../core/tsconfig.json" }

@@ -68,12 +68,15 @@ export class SecretsManagerComponentCreator implements IComponentCreator {
   /**
    * Factory method to create component instances
    */
-  public createComponent(
-    scope: Construct, 
-    spec: ComponentSpec, 
-    context: ComponentContext
-  ): SecretsManagerComponentComponent {
-    return new SecretsManagerComponentComponent(scope, spec.name, context, spec);
+  public createComponent(spec: ComponentSpec, context: ComponentContext): SecretsManagerComponentComponent {
+    if (!context.scope) {
+      throw new Error('ComponentContext.scope is required to create secrets-manager components');
+    }
+    return new SecretsManagerComponentComponent(context.scope as Construct, spec.name, context, spec);
+  }
+  
+  public processComponent(spec: ComponentSpec, context: ComponentContext): SecretsManagerComponentComponent {
+    return this.createComponent(spec, context);
   }
   
   /**

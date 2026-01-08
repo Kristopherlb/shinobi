@@ -69,11 +69,23 @@ export class StepFunctionsStateMachineCreator implements IComponentCreator {
    * Factory method to create component instances
    */
   public createComponent(
-    scope: Construct, 
     spec: ComponentSpec, 
     context: ComponentContext
   ): StepFunctionsStateMachineComponent {
-    return new StepFunctionsStateMachineComponent(scope, spec.name, context, spec);
+    if (!context.scope) {
+      throw new Error('ComponentContext.scope is required to create step-functions-statemachine components');
+    }
+    return new StepFunctionsStateMachineComponent(context.scope as Construct, spec.name, context, spec);
+  }
+
+  /**
+   * Process component (alias for createComponent)
+   */
+  public processComponent(
+    spec: ComponentSpec,
+    context: ComponentContext
+  ): StepFunctionsStateMachineComponent {
+    return this.createComponent(spec, context);
   }
   
   /**

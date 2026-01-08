@@ -69,11 +69,20 @@ export class LambdaWorkerComponentCreator implements IComponentCreator {
    * Factory method to create component instances
    */
   public createComponent(
-    scope: Construct, 
     spec: ComponentSpec, 
     context: ComponentContext
   ): LambdaWorkerComponent {
-    return new LambdaWorkerComponent(scope, spec.name, context, spec);
+    if (!context.scope) {
+      throw new Error('ComponentContext.scope is required to create lambda-worker components');
+    }
+    return new LambdaWorkerComponent(context.scope as Construct, spec.name, context, spec);
+  }
+  
+  public processComponent(
+    spec: ComponentSpec,
+    context: ComponentContext
+  ): LambdaWorkerComponent {
+    return this.createComponent(spec, context);
   }
   
   /**
@@ -140,3 +149,4 @@ export class LambdaWorkerComponentCreator implements IComponentCreator {
     ];
   }
 }
+

@@ -20,7 +20,9 @@
     "tests/**/*",
     "**/*.test.ts",
     "**/*.spec.ts",
-    "**/__tests__/**"
+    "**/__tests__/**",
+    "**/vitest.config.ts",
+    "**/jest.config.ts"
   ],
   "references": [
     {

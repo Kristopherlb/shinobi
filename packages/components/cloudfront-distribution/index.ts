@@ -4,7 +4,7 @@
  */
 
 // Component exports
-export { CloudFrontDistributionComponentComponent } from './src/cloudfront-distribution.component.js';
+export { CloudFrontDistributionComponent } from './src/cloudfront-distribution.component.js';
 
 // Configuration exports
 export {

@@ -10,7 +10,6 @@
   },
   "include": [
     "index.ts",
-    "*.ts",
     "*.component.ts",
     "*.builder.ts",
     "*.creator.ts"
@@ -18,7 +17,10 @@
   "exclude": [
     "dist",
     "node_modules",
-    "**/*.test.ts"
+    "**/*.test.ts",
+    "**/*.spec.ts",
+    "vitest.config.ts",
+    "jest.config.ts"
   ],
   "references": [
     { "path": "../../core/tsconfig.json" }

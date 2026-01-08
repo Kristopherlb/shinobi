@@ -4,7 +4,7 @@
  */
 
 // Component exports
-export { IamPolicyComponentComponent } from './iam-policy.component.js';
+export { IamPolicyComponent } from './iam-policy.component.js';
 
 // Configuration exports
 export { 

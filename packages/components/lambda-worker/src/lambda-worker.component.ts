@@ -21,9 +21,8 @@ import {
   LambdaWorkerConfig,
   LambdaEventSource
 } from './lambda-worker.builder.js';
-import { LambdaWorkerValidator } from './validation/lambda-worker.validator.js';
-import { LambdaAdvancedFeaturesService } from '@shinobi/core/platform/services/lambda-advanced-features';
-import { LambdaObservabilityService } from '@shinobi/core/platform/services/lambda-powertools';
+import { LambdaWorkerValidator } from '../validation/lambda-worker.validator.js';
+import { LambdaAdvancedFeaturesService, LambdaObservabilityService } from '@shinobi/core';
 
 /**
  * Lambda Worker Component
@@ -77,10 +76,7 @@ export class LambdaWorkerComponent extends BaseComponent {
     });
 
     try {
-      const builder = new LambdaWorkerComponentConfigBuilder({
-        context: this.context,
-        spec: this.spec
-      });
+      const builder = new LambdaWorkerComponentConfigBuilder(this.context, this.spec);
       this.config = builder.buildSync();
 
       // Validate configuration
@@ -97,7 +93,7 @@ export class LambdaWorkerComponent extends BaseComponent {
     this.lambdaFunction = this.createLambdaFunction();
     this.configureEventSources();
     this.configureMonitoring();
-    this.configureObservability();
+    this.configureObservabilityForLambda();
 
     this.registerConstruct('main', this.lambdaFunction);
     this.registerConstruct('lambdaFunction', this.lambdaFunction);
@@ -219,8 +215,15 @@ export class LambdaWorkerComponent extends BaseComponent {
     // Apply CDK Nag suppressions for Lambda-specific compliance
     this.applyCdkNagSuppressions(lambdaFunction);
 
-    // Initialize advanced features
-    this.advancedFeatures = new LambdaAdvancedFeatures(this, lambdaFunction);
+    // Initialize advanced features using platform service
+    if (!this.lambdaFunction) {
+      throw new Error('Lambda function must be created before initializing advanced features');
+    }
+    this.advancedFeatures = LambdaAdvancedFeaturesService.createForWorker(
+      this,
+      this.lambdaFunction,
+      this.context
+    );
     this.configureAdvancedFeatures();
 
     return lambdaFunction;
@@ -324,7 +327,7 @@ export class LambdaWorkerComponent extends BaseComponent {
     });
 
     rule.addTarget(new targets.LambdaFunction(this.lambdaFunction!, {
-      event: source.input ? targets.RuleTargetInput.fromObject(source.input) : undefined
+      event: source.input ? events.RuleTargetInput.fromObject(source.input) : undefined
     }));
 
     this.eventRules.push(rule);
@@ -355,7 +358,7 @@ export class LambdaWorkerComponent extends BaseComponent {
     });
 
     rule.addTarget(new targets.LambdaFunction(this.lambdaFunction!, {
-      event: source.input ? targets.RuleTargetInput.fromObject(source.input) : undefined
+      event: source.input ? events.RuleTargetInput.fromObject(source.input) : undefined
     }));
 
     this.eventRules.push(rule);
@@ -433,7 +436,7 @@ export class LambdaWorkerComponent extends BaseComponent {
    * Sets up OpenTelemetry integration, log formatting, and other observability
    * features based on the configuration.
    */
-  private configureObservability(): void {
+  private configureObservabilityForLambda(): void {
     if (!this.lambdaFunction) {
       return;
     }
@@ -562,34 +565,33 @@ export class LambdaWorkerComponent extends BaseComponent {
       logErrors: true
     });
 
-    // Configure performance optimizations
-    this.advancedFeatures.configurePerformanceOptimizations({
-      enableProvisionedConcurrency: this.config.provisionedConcurrency?.enabled ?? false,
-      provisionedConcurrencyCount: this.config.provisionedConcurrency?.count ?? 2,
-      enableReservedConcurrency: this.config.reservedConcurrency !== undefined,
-      reservedConcurrencyLimit: this.config.reservedConcurrency,
-      enableSnapStart: this.config.snapStart?.enabled ?? false
-    });
+    // Configure performance optimizations - note: lambda-worker config doesn't have these fields
+    // These would need to be added to LambdaWorkerConfig if needed
+    // For now, we skip performance optimizations for lambda-worker
 
     // Configure security enhancements
     this.advancedFeatures.configureSecurityEnhancements({
-      enableVPC: this.config.vpc?.enabled ?? false,
-      vpcConfig: this.config.vpc?.enabled ? {
-        vpcId: this.config.vpc.vpcId!,
-        subnetIds: this.config.vpc.subnetIds,
-        securityGroupIds: this.config.vpc.securityGroupIds
-      } : undefined,
-      enableKMS: !!this.config.kmsKeyArn,
-      kmsKeyArn: this.config.kmsKeyArn,
-      enableSecretsManager: !!this.config.secretsManager?.secretArn,
-      secretsManagerSecretArn: this.config.secretsManager?.secretArn
+      vpc: {
+        enabled: this.config.vpc?.enabled ?? false,
+        vpcId: this.config.vpc?.vpcId,
+        subnetIds: this.config.vpc?.subnetIds ?? [],
+        securityGroupIds: this.config.vpc?.securityGroupIds ?? []
+      },
+      encryption: {
+        enabled: !!this.config.kmsKeyArn,
+        kmsKeyId: this.config.kmsKeyArn
+      },
+      secretsManager: {
+        enabled: false,
+        secretArn: undefined
+      }
     });
 
     this.logComponentEvent('advanced_features_configured', 'Advanced Lambda features configured successfully', {
       dlqEnabled: this.config.deadLetterQueue?.enabled ?? false,
       vpcEnabled: this.config.vpc?.enabled ?? false,
       kmsEnabled: !!this.config.kmsKeyArn,
-      secretsManagerEnabled: !!this.config.secretsManager?.secretArn
+      secretsManagerEnabled: false
     });
   }
 
@@ -743,7 +745,7 @@ export class LambdaWorkerComponent extends BaseComponent {
   /**
    * Get the advanced features manager
    */
-  public getAdvancedFeatures(): LambdaAdvancedFeatures | undefined {
+  public getAdvancedFeatures(): LambdaAdvancedFeaturesService | undefined {
     return this.advancedFeatures;
   }
 
@@ -756,33 +758,19 @@ export class LambdaWorkerComponent extends BaseComponent {
 
   /**
    * Apply Lambda Powertools observability enhancements
+   * 
+   * NOTE: This requires proper PlatformServiceContext setup with logger and serviceRegistry.
+   * For now, observability is handled via configureObservabilityForLambda() method in synth().
+   * This method is a placeholder for future implementation.
    */
   public async applyPowertoolsObservability(): Promise<void> {
-    if (!this.lambdaFunction) {
-      throw new Error('Lambda function must be synthesized before applying Powertools observability');
-    }
-
-    const observabilityService = LambdaObservabilityService.createWorkerService(
-      this.context,
-      this.config!.functionName,
-      this.context.complianceFramework,
-      {
-        businessMetrics: true,
-        auditLogging: false,
-        logLevel: 'INFO'
-      }
-    );
-
-    const result = await observabilityService.applyObservability(this);
-
-    if (!result.success) {
-      throw new Error(`Failed to apply Powertools observability: ${result.error}`);
-    }
-
-    this.logComponentEvent('powertools_observability_applied', 'Lambda Powertools observability applied successfully', {
-      baseInstrumentationApplied: result.baseInstrumentation.instrumentationApplied,
-      powertoolsEnhancementsApplied: result.powertoolsEnhancements.instrumentationApplied,
-      totalExecutionTimeMs: result.totalExecutionTimeMs
+    // TODO: Implement proper PlatformServiceContext creation from ComponentContext
+    // Requires logger and serviceRegistry which are not available in ComponentContext
+    // For now, observability is configured via configureObservabilityForLambda() in synth()
+    this.logComponentEvent('powertools_observability_skipped', 'Lambda Powertools observability requires PlatformServiceContext setup', {
+      service: this.context.serviceName,
+      componentType: this.getType(),
+      componentName: this.spec.name
     });
   }
 
@@ -790,3 +778,4 @@ export class LambdaWorkerComponent extends BaseComponent {
     return value.replace(/([a-z0-9])([A-Z])/g, '$1-$2').toLowerCase();
   }
 }
+
