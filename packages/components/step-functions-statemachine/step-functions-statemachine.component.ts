@@ -51,10 +51,7 @@ export class StepFunctionsStateMachineComponent extends BaseComponent {
 
     try {
       // Step 1: Build configuration using ConfigBuilder
-      const configBuilder = new StepFunctionsStateMachineConfigBuilder({ 
-        context: this.context, 
-        spec: this.spec 
-      });
+      const configBuilder = new StepFunctionsStateMachineConfigBuilder(this.context, this.spec);
       this.config = configBuilder.buildSync();
 
       // Step 2: Create helper resources (if needed)

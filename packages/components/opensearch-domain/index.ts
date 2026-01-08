@@ -7,8 +7,8 @@
 export { OpenSearchDomainComponent } from './opensearch-domain.component.js';
 
 // Configuration exports
+export type { OpenSearchDomainConfig } from './opensearch-domain.builder.js';
 export { 
-  OpenSearchDomainConfig,
   OpenSearchDomainComponentConfigBuilder,
   OPENSEARCH_DOMAIN_CONFIG_SCHEMA
 } from './opensearch-domain.builder.js';

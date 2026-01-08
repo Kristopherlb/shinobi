@@ -7,8 +7,8 @@
 export { SecretsManagerComponentComponent } from './secrets-manager.component.js';
 
 // Configuration exports
+export type { SecretsManagerConfig } from './secrets-manager.builder.js';
 export { 
-  SecretsManagerConfig,
   SecretsManagerComponentConfigBuilder,
   SECRETS_MANAGER_CONFIG_SCHEMA
 } from './secrets-manager.builder.js';
