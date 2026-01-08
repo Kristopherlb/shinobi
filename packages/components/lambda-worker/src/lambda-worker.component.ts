@@ -340,16 +340,41 @@ export class LambdaWorkerComponent extends BaseComponent {
       }
     }
 
-    const eventSource = new lambdaEventSources.SqsEventSource(queue, {
+    // Create EventSourceMapping explicitly to ensure proper dependency on the queue
+    // This is critical for CloudFormation early validation to pass
+    const eventSourceMappingId = `SqsEventSource${index}`;
+    const eventSourceMapping = new lambda.EventSourceMapping(this, eventSourceMappingId, {
+      target: this.lambdaFunction!,
+      eventSourceArn: queue.queueArn,
       batchSize: source.batchSize ?? 10,
-      enabled: source.enabled ?? true,
+      enabled: source.enabled !== false,
       maxBatchingWindow: source.maximumBatchingWindowSeconds
         ? cdk.Duration.seconds(source.maximumBatchingWindowSeconds)
         : undefined,
-      maxConcurrency: source.scalingConfig?.maximumConcurrency
+      reportBatchItemFailures: true,
+      ...(source.scalingConfig?.maximumConcurrency && {
+        maxConcurrency: source.scalingConfig.maximumConcurrency
+      })
     });
 
-    this.lambdaFunction!.addEventSource(eventSource);
+    // CRITICAL: Grant SQS consume permissions to Lambda execution role
+    // This is required for Lambda to poll the SQS queue (receive, delete, get attributes)
+    // When using addEventSource with SqsEventSource, CDK automatically grants these permissions
+    // Since we're manually creating EventSourceMapping, we must grant them explicitly
+    queue.grantConsumeMessages(this.lambdaFunction!);
+
+    // CRITICAL: Explicitly add dependency on the queue to ensure CloudFormation early validation passes
+    // CloudFormation needs to see the queue resource exists before it can validate the EventSourceMapping
+    // We add the dependency unconditionally because resolved queues from components may be IQueue interfaces
+    // which still need explicit dependencies for CloudFormation to understand the relationship
+    const queueConstruct = queue as Construct;
+    eventSourceMapping.node.addDependency(queueConstruct);
+    
+    // Also ensure the dependency is on the queue's default child (the actual CloudFormation resource)
+    // This helps CloudFormation's early validation understand the resource exists in the template
+    if (queueConstruct.node.defaultChild) {
+      eventSourceMapping.node.addDependency(queueConstruct.node.defaultChild as Construct);
+    }
   }
 
   /**
@@ -365,14 +390,38 @@ export class LambdaWorkerComponent extends BaseComponent {
    * @throws Error if component not found or doesn't provide messaging:sqs capability
    */
   private resolveComponentQueueWithValidation(componentName: string, index: number): { queue: sqs.IQueue; visibilityTimeout: number } {
-    // Use platform component resolver utility (similar to VPC resolver for ElastiCache/RDS)
-    // This ensures consistent resolution and avoids CloudFormation early validation errors
-    const component = resolveComponentConstruct<IComponent>(this, {
-      componentName,
-      constructHandle: 'main',
-      expectedCapability: 'messaging:sqs',
-      requestingComponentName: this.spec.name
-    });
+    // Find the component first to get capabilities (for visibility timeout)
+    const stack = cdk.Stack.of(this);
+    let component: IComponent | undefined;
+    
+    for (const child of stack.node.children) {
+      if (child.node.id === componentName) {
+        const childComponent = child as any;
+        if (
+          typeof childComponent.getCapabilities === 'function' &&
+          typeof childComponent.getConstruct === 'function' &&
+          typeof childComponent.getType === 'function'
+        ) {
+          try {
+            const capabilities = childComponent.getCapabilities();
+            if (capabilities && capabilities['messaging:sqs']) {
+              component = childComponent as IComponent;
+              break;
+            }
+          } catch {
+            // Component might not be synthesized yet, continue searching
+            continue;
+          }
+        }
+      }
+    }
+
+    if (!component) {
+      throw new Error(
+        `Component '${componentName}' not found in stack or does not provide 'messaging:sqs' capability. ` +
+        `Make sure '${componentName}' is defined before '${this.spec.name}' in service.yml.`
+      );
+    }
 
     // Get capabilities to extract visibility timeout
     const capabilities = component.getCapabilities();
@@ -383,18 +432,39 @@ export class LambdaWorkerComponent extends BaseComponent {
     const sqsCapability = capabilities['messaging:sqs'] as any;
     const visibilityTimeout = sqsCapability.visibilityTimeoutSeconds ?? 30;
 
-    // Get the queue construct (already validated by resolveComponentConstruct)
-    const queueConstruct = component.getConstruct('main') as sqs.IQueue;
+    // Use platform component resolver utility to get the queue construct
+    // This ensures proper dependency management and avoids CloudFormation early validation errors
+    const queueConstruct = resolveComponentConstruct<sqs.IQueue>(this, {
+      componentName,
+      constructHandle: 'main',
+      expectedCapability: 'messaging:sqs',
+      requestingComponentName: this.spec.name
+    });
 
     // Verify it's an SQS queue
     if (!(queueConstruct instanceof sqs.Queue) && !(queueConstruct as any).queueArn) {
       throw new Error(`Component '${componentName}' main construct is not an SQS queue`);
     }
 
-    // Add explicit dependency to ensure queue is created before EventSourceMapping
-    // (resolveComponentConstruct already adds a dependency, but we add it to the Lambda function specifically)
-    if (this.lambdaFunction && queueConstruct instanceof sqs.Queue) {
+    // CRITICAL: Ensure explicit dependency at the component scope level
+    // This ensures CloudFormation understands the queue must exist before any resources
+    // that reference it (like EventSourceMapping) are created
+    // We add the dependency unconditionally because resolved queues may be IQueue interfaces
+    // which still need explicit dependencies for CloudFormation to understand the relationship
+    // Add dependency at component level so all resources we create depend on the queue
+    this.node.addDependency(queueConstruct);
+    
+    // Also add dependency on Lambda function to ensure queue is created first
+    if (this.lambdaFunction) {
       this.lambdaFunction.node.addDependency(queueConstruct);
+    }
+    
+    // Also ensure dependency on the queue's default child (the actual CloudFormation resource)
+    if (queueConstruct.node.defaultChild) {
+      this.node.addDependency(queueConstruct.node.defaultChild as Construct);
+      if (this.lambdaFunction) {
+        this.lambdaFunction.node.addDependency(queueConstruct.node.defaultChild as Construct);
+      }
     }
 
     return {

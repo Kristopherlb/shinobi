@@ -121,7 +121,7 @@ export const loadComponentCreators = async (
 
     if (!moduleExports) {
       // Debug: log which paths were tried (only in debug mode or for specific packages)
-      if (packageDir === 'iam-role' && options?.logger) {
+      if ((packageDir === 'iam-role' || packageDir === 'lambda-worker') && options?.logger) {
         options.logger.debug(`Failed to load module for ${packageName}. Tried source: ${sourceCandidates.slice(0, 3).join(', ')}...`);
       }
       continue;
@@ -194,7 +194,7 @@ export const loadComponentCreators = async (
       packageName
     };
 
-    if (packageName?.includes('iam-role')) {
+    if (packageName?.includes('iam-role') || packageName?.includes('lambda-worker')) {
       console.error(`[DEBUG] Registering creator: ${creator.componentType}`);
     }
     creators.set(creator.componentType, { entry, creator });
@@ -204,8 +204,8 @@ export const loadComponentCreators = async (
 };
 
 const findCreatorExport = (moduleExports: Record<string, any>, packageName?: string): PlatformComponentCreator | undefined => {
-  // Debug: log exports for iam-role
-  if (packageName?.includes('iam-role')) {
+  // Debug: log exports for iam-role and lambda-worker
+  if (packageName?.includes('iam-role') || packageName?.includes('lambda-worker')) {
     console.error(`[DEBUG] findCreatorExport for ${packageName}:`);
     console.error(`[DEBUG]   Exports keys: ${Object.keys(moduleExports).join(', ')}`);
     for (const [key, value] of Object.entries(moduleExports)) {
@@ -218,23 +218,23 @@ const findCreatorExport = (moduleExports: Record<string, any>, packageName?: str
       try {
         const instance = new exported();
         if (instance && typeof instance.createComponent === 'function' && typeof instance.componentType === 'string') {
-          if (packageName?.includes('iam-role')) {
-            console.error(`[DEBUG] Found creator: ${instance.componentType}`);
-          }
-          return instance as PlatformComponentCreator;
-        } else if (packageName?.includes('iam-role')) {
-          console.error(`[DEBUG] Instance check failed: hasCreateComponent=${typeof instance?.createComponent === 'function'}, componentType=${instance?.componentType}`);
+        if (packageName?.includes('iam-role') || packageName?.includes('lambda-worker')) {
+          console.error(`[DEBUG] Found creator: ${instance.componentType}`);
         }
-      } catch (error) {
-        if (packageName?.includes('iam-role')) {
-          console.error(`[DEBUG] Failed to instantiate: ${error}`);
-        }
+        return instance as PlatformComponentCreator;
+      } else if (packageName?.includes('iam-role') || packageName?.includes('lambda-worker')) {
+        console.error(`[DEBUG] Instance check failed: hasCreateComponent=${typeof instance?.createComponent === 'function'}, componentType=${instance?.componentType}`);
+      }
+    } catch (error) {
+      if (packageName?.includes('iam-role') || packageName?.includes('lambda-worker')) {
+        console.error(`[DEBUG] Failed to instantiate: ${error}`);
+      }
         continue;
       }
     }
   }
   
-  if (packageName?.includes('iam-role')) {
+  if (packageName?.includes('iam-role') || packageName?.includes('lambda-worker')) {
     console.error(`[DEBUG] No creator found in exports`);
   }
   return undefined;
