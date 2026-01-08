@@ -8,7 +8,8 @@
         "{workspaceRoot}/dist/packages/components/lambda-worker"
       ],
       "options": {
-        "command": "pnpm exec tsc -b packages/components/lambda-worker/tsconfig.build.json"
+        "command": "node_modules/.bin/tsc -b packages/components/lambda-worker/tsconfig.build.json",
+        "cwd": "{workspaceRoot}"
       }
     },
     "test": {
@@ -24,13 +25,15 @@
     "clean": {
       "executor": "nx:run-commands",
       "options": {
-        "command": "rimraf dist/packages/components/lambda-worker"
+        "command": "rimraf dist/packages/components/lambda-worker",
+        "cwd": "{workspaceRoot}"
       }
     },
     "typecheck": {
       "executor": "nx:run-commands",
       "options": {
-        "command": "tsc -p packages/components/lambda-worker/tsconfig.lib.json --noEmit"
+        "command": "tsc -p packages/components/lambda-worker/tsconfig.lib.json --noEmit",
+        "cwd": "{workspaceRoot}"
       }
     }
   },
@@ -40,4 +43,3 @@
     "infra:aws"
   ]
 }
-

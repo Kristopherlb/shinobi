@@ -5,7 +5,8 @@
     "build": {
       "executor": "nx:run-commands",
       "options": {
-        "command": "pnpm exec tsc -b packages/components/ssm-parameter/tsconfig.build.json"
+        "command": "node_modules/.bin/tsc -b packages/components/ssm-parameter/tsconfig.build.json",
+        "cwd": "{workspaceRoot}"
       },
       "outputs": [
         "{workspaceRoot}/dist/packages/components/ssm-parameter"
@@ -24,13 +25,15 @@
     "clean": {
       "executor": "nx:run-commands",
       "options": {
-        "command": "rimraf dist/packages/components/ssm-parameter"
+        "command": "rimraf dist/packages/components/ssm-parameter",
+        "cwd": "{workspaceRoot}"
       }
     },
     "typecheck": {
       "executor": "nx:run-commands",
       "options": {
-        "command": "tsc -p packages/components/ssm-parameter/tsconfig.json --noEmit"
+        "command": "tsc -p packages/components/ssm-parameter/tsconfig.json --noEmit",
+        "cwd": "{workspaceRoot}"
       }
     }
   },
@@ -40,4 +43,3 @@
     "infra:aws"
   ]
 }
-

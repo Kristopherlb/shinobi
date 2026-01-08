@@ -1,0 +1,81 @@
+{
+  "tests": [
+    {
+      "id": "TP-openfeature-provider-security-001",
+      "level": "integration",
+      "capability": "Pass AwsSolutions security checks for basic OpenFeature provider",
+      "oracle": "contract",
+      "invariants": [
+        "No AwsSolutions security rule violations",
+        "Component synthesizes without security errors"
+      ],
+      "fixtures": [
+        "In-memory CDK App",
+        "ComponentContext (commercial)",
+        "ComponentSpec with awsAppConfig provider"
+      ],
+      "inputs": {
+        "shape": "ComponentContext (commercial) + ComponentSpec with awsAppConfig",
+        "notes": "Validates CDK Nag AwsSolutions compliance"
+      },
+      "risks": [
+        "Security regression introducing AwsSolutions violations"
+      ],
+      "dependencies": [
+        "aws-cdk-lib",
+        "@shinobi/core BaseComponent",
+        "cdk-nag",
+        "aws-cdk-lib/assertions"
+      ],
+      "evidence": [
+        "packages/components/openfeature-provider/__tests__/security/cdk-nag.test.ts#L52"
+      ],
+      "compliance_refs": [
+        "std://platform-component-api-spec",
+        "pack://aws.cdk-nag"
+      ],
+      "ai_generated": true,
+      "human_reviewed_by": "platform-engineering"
+    },
+    {
+      "id": "TP-openfeature-provider-security-002",
+      "level": "integration",
+      "capability": "Pass AwsSolutions security checks with highRiskEnvironment enabled",
+      "oracle": "contract",
+      "invariants": [
+        "No AwsSolutions security rule violations",
+        "Component synthesizes with enhanced security controls",
+        "KMS key ARN applied when provided"
+      ],
+      "fixtures": [
+        "In-memory CDK App",
+        "ComponentContext (commercial)",
+        "ComponentSpec with highRiskEnvironment and KMS key"
+      ],
+      "inputs": {
+        "shape": "ComponentContext + ComponentSpec with highRiskEnvironment=true and KMS key ARN",
+        "notes": "Validates enhanced security posture compliance"
+      },
+      "risks": [
+        "Security regression for high-risk environments"
+      ],
+      "dependencies": [
+        "aws-cdk-lib",
+        "@shinobi/core BaseComponent",
+        "cdk-nag",
+        "aws-cdk-lib/assertions"
+      ],
+      "evidence": [
+        "packages/components/openfeature-provider/__tests__/security/cdk-nag.test.ts#L83"
+      ],
+      "compliance_refs": [
+        "std://platform-component-api-spec",
+        "pack://aws.cdk-nag",
+        "std://platform-configuration-standard"
+      ],
+      "ai_generated": true,
+      "human_reviewed_by": "platform-engineering"
+    }
+  ]
+}
+

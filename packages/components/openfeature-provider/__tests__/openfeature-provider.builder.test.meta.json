@@ -1,0 +1,106 @@
+{
+  "tests": [
+    {
+      "id": "TP-openfeature-provider-config-001",
+      "level": "unit",
+      "capability": "Apply platform defaults and derive names from context",
+      "oracle": "exact",
+      "invariants": [
+        "Provider defaults to aws-appconfig",
+        "Application name derived from service name",
+        "Environment name derived from context environment",
+        "Deployment strategy uses default progressive rollout"
+      ],
+      "fixtures": [
+        "MockConfigContext: commercial",
+        "Minimal component spec"
+      ],
+      "inputs": {
+        "shape": "ConfigBuilderContext + ComponentSpec with minimal config",
+        "notes": "Validates default configuration resolution"
+      },
+      "risks": [
+        "Regression: accidental change to commercial baseline configuration"
+      ],
+      "dependencies": [
+        "@shinobi/core ConfigBuilder"
+      ],
+      "evidence": [
+        "packages/components/openfeature-provider/__tests__/openfeature-provider.builder.test.ts#L37"
+      ],
+      "compliance_refs": [
+        "std://configuration"
+      ],
+      "ai_generated": true,
+      "human_reviewed_by": "platform-engineering"
+    },
+    {
+      "id": "TP-openfeature-provider-config-002",
+      "level": "unit",
+      "capability": "Allow component overrides for alternate providers",
+      "oracle": "exact",
+      "invariants": [
+        "Manifest provider override respected",
+        "LaunchDarkly configuration applied verbatim",
+        "User tags merged with platform tags"
+      ],
+      "fixtures": [
+        "MockConfigContext: commercial",
+        "Component spec with LaunchDarkly provider and tag overrides"
+      ],
+      "inputs": {
+        "shape": "ConfigBuilderContext + ComponentSpec with provider and tag overrides",
+        "notes": "Validates configuration precedence chain"
+      },
+      "risks": [
+        "Regression in configuration precedence chain"
+      ],
+      "dependencies": [
+        "@shinobi/core ConfigBuilder"
+      ],
+      "evidence": [
+        "packages/components/openfeature-provider/__tests__/openfeature-provider.builder.test.ts#L58"
+      ],
+      "compliance_refs": [
+        "std://configuration"
+      ],
+      "ai_generated": true,
+      "human_reviewed_by": "platform-engineering"
+    },
+    {
+      "id": "TP-openfeature-provider-config-003",
+      "level": "unit",
+      "capability": "Pull FedRAMP Moderate overrides from platform configuration",
+      "oracle": "exact",
+      "invariants": [
+        "Deployment duration increased for FedRAMP Moderate",
+        "Growth factor reduced for FedRAMP Moderate",
+        "Retriever service principal remains lambda.amazonaws.com"
+      ],
+      "fixtures": [
+        "MockConfigContext: fedramp-moderate",
+        "Minimal component spec"
+      ],
+      "inputs": {
+        "shape": "ConfigBuilderContext (fedramp-moderate) + ComponentSpec",
+        "notes": "Validates FedRAMP Moderate platform defaults"
+      },
+      "risks": [
+        "Compliance regression for FedRAMP Moderate deployments"
+      ],
+      "dependencies": [
+        "@shinobi/core ConfigBuilder"
+      ],
+      "evidence": [
+        "packages/components/openfeature-provider/__tests__/openfeature-provider.builder.test.ts#L83"
+      ],
+      "compliance_refs": [
+        "std://configuration",
+        "pack://aws.fedramp-moderate"
+      ],
+      "ai_generated": true,
+      "human_reviewed_by": "platform-engineering"
+    }
+  ]
+}
+

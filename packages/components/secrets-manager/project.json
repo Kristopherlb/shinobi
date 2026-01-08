@@ -5,7 +5,8 @@
     "build": {
       "executor": "nx:run-commands",
       "options": {
-        "command": "pnpm exec tsc -b packages/components/secrets-manager/tsconfig.json"
+        "command": "node_modules/.bin/tsc -b packages/components/secrets-manager/tsconfig.json",
+        "cwd": "{workspaceRoot}"
       },
       "outputs": [
         "{workspaceRoot}/dist/packages/components/secrets-manager"
@@ -14,13 +15,15 @@
     "typecheck": {
       "executor": "nx:run-commands",
       "options": {
-        "command": "tsc -p packages/components/secrets-manager/tsconfig.json --noEmit"
+        "command": "tsc -p packages/components/secrets-manager/tsconfig.json --noEmit",
+        "cwd": "{workspaceRoot}"
       }
     },
     "clean": {
       "executor": "nx:run-commands",
       "options": {
-        "command": "rimraf dist/packages/components/secrets-manager"
+        "command": "rimraf dist/packages/components/secrets-manager",
+        "cwd": "{workspaceRoot}"
       }
     },
     "test": {
@@ -36,7 +39,8 @@
     "lint": {
       "executor": "nx:run-commands",
       "options": {
-        "command": "eslint . --ext .ts,.tsx"
+        "command": "eslint . --ext .ts,.tsx",
+        "cwd": "{projectRoot}"
       }
     }
   },
@@ -46,5 +50,3 @@
     "infra:aws"
   ]
 }
-
-

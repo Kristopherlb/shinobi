@@ -5,13 +5,15 @@
     "build": {
       "executor": "nx:run-commands",
       "options": {
-        "command": "tsc -p packages/components/certificate-manager/tsconfig.json"
+        "command": "tsc -p packages/components/certificate-manager/tsconfig.json",
+        "cwd": "{workspaceRoot}"
       }
     },
     "typecheck": {
       "executor": "nx:run-commands",
       "options": {
-        "command": "tsc --noEmit -p packages/components/certificate-manager/tsconfig.json"
+        "command": "tsc --noEmit -p packages/components/certificate-manager/tsconfig.json",
+        "cwd": "{workspaceRoot}"
       }
     },
     "test": {
@@ -27,7 +29,8 @@
     "lint": {
       "executor": "nx:run-commands",
       "options": {
-        "command": "eslint packages/components/certificate-manager --ext .ts --no-ignore"
+        "command": "eslint packages/components/certificate-manager --ext .ts --no-ignore",
+        "cwd": "{projectRoot}"
       }
     }
   },

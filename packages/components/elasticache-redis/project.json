@@ -10,7 +10,8 @@
     "build": {
       "executor": "nx:run-commands",
       "options": {
-        "command": "tsc -p packages/components/elasticache-redis/tsconfig.json"
+        "command": "tsc -p packages/components/elasticache-redis/tsconfig.json",
+        "cwd": "{workspaceRoot}"
       },
       "outputs": [
         "{workspaceRoot}/dist/packages/components/elasticache-redis"
@@ -29,15 +30,16 @@
     "lint": {
       "executor": "nx:run-commands",
       "options": {
-        "command": "eslint packages/components/elasticache-redis --ext .ts"
+        "command": "eslint packages/components/elasticache-redis --ext .ts",
+        "cwd": "{projectRoot}"
       }
     },
     "typecheck": {
       "executor": "nx:run-commands",
       "options": {
-        "command": "tsc --noEmit -p packages/components/elasticache-redis/tsconfig.json"
+        "command": "tsc --noEmit -p packages/components/elasticache-redis/tsconfig.json",
+        "cwd": "{workspaceRoot}"
       }
     }
   }
 }
-

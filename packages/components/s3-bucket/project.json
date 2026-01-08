@@ -13,7 +13,8 @@
     "build": {
       "executor": "nx:run-commands",
       "options": {
-        "command": "tsc -p packages/core/tsconfig.lib.json && tsc -b packages/components/s3-bucket/tsconfig.json"
+        "command": "tsc -p packages/core/tsconfig.lib.json && tsc -b packages/components/s3-bucket/tsconfig.json",
+        "cwd": "{workspaceRoot}"
       },
       "outputs": [
         "{workspaceRoot}/dist/packages/components/s3-bucket"

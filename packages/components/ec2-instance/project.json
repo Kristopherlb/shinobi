@@ -10,7 +10,8 @@
     "build": {
       "executor": "nx:run-commands",
       "options": {
-        "command": "pnpm exec tsc -b packages/components/ec2-instance/tsconfig.build.json"
+        "command": "node_modules/.bin/tsc -b packages/components/ec2-instance/tsconfig.build.json",
+        "cwd": "{workspaceRoot}"
       },
       "outputs": [
         "{workspaceRoot}/dist/packages/components/ec2-instance"
@@ -29,19 +30,22 @@
     "lint": {
       "executor": "nx:run-commands",
       "options": {
-        "command": "eslint packages/components/ec2-instance --ext .ts"
+        "command": "eslint packages/components/ec2-instance --ext .ts",
+        "cwd": "{projectRoot}"
       }
     },
     "typecheck": {
       "executor": "nx:run-commands",
       "options": {
-        "command": "tsc -p packages/components/ec2-instance/tsconfig.json --noEmit"
+        "command": "tsc -p packages/components/ec2-instance/tsconfig.json --noEmit",
+        "cwd": "{workspaceRoot}"
       }
     },
     "clean": {
       "executor": "nx:run-commands",
       "options": {
-        "command": "rimraf dist/packages/components/ec2-instance"
+        "command": "rimraf dist/packages/components/ec2-instance",
+        "cwd": "{workspaceRoot}"
       }
     }
   }
