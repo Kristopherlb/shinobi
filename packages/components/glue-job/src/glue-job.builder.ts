@@ -3,6 +3,7 @@ import {
   ConfigBuilderContext,
   ComponentConfigSchema
 } from '@shinobi/core';
+import configSchema from '../Config.schema.json' with { type: 'json' };
 
 export type GlueJobType = 'glueetl' | 'gluestreaming' | 'pythonshell' | 'glueray';
 export type GlueWorkerType = 'Standard' | 'G.1X' | 'G.2X' | 'G.4X' | 'G.8X' | 'Z.2X';
@@ -198,91 +199,8 @@ const SECURITY_SCHEMA: ComponentConfigSchema = {
   }
 };
 
-export const GLUE_JOB_CONFIG_SCHEMA: ComponentConfigSchema = {
-  type: 'object',
-  additionalProperties: false,
-  required: ['scriptLocation'],
-  properties: {
-    jobName: {
-      type: 'string',
-      pattern: '^[a-zA-Z0-9_-]+$'
-    },
-    description: {
-      type: 'string'
-    },
-    glueVersion: {
-      type: 'string',
-      enum: ['1.0', '2.0', '3.0', '4.0']
-    },
-    jobType: {
-      type: 'string',
-      enum: ['glueetl', 'gluestreaming', 'pythonshell', 'glueray']
-    },
-    roleArn: {
-      type: 'string'
-    },
-    scriptLocation: {
-      type: 'string'
-    },
-    command: COMMAND_SCHEMA,
-    connections: {
-      type: 'array',
-      items: { type: 'string' }
-    },
-    maxConcurrentRuns: {
-      type: 'number',
-      minimum: 1,
-      maximum: 1000
-    },
-    maxRetries: {
-      type: 'number',
-      minimum: 0,
-      maximum: 10
-    },
-    timeout: {
-      type: 'number',
-      minimum: 1,
-      maximum: 2880
-    },
-    notificationProperty: {
-      type: 'object',
-      additionalProperties: false,
-      properties: {
-        notifyDelayAfter: {
-          type: 'number',
-          minimum: 1
-        }
-      }
-    },
-    executionProperty: {
-      type: 'object',
-      additionalProperties: false,
-      properties: {
-        maxConcurrentRuns: {
-          type: 'number',
-          minimum: 1,
-          maximum: 1000
-        }
-      }
-    },
-    workerConfiguration: WORKER_CONFIGURATION_SCHEMA,
-    defaultArguments: {
-      type: 'object',
-      additionalProperties: { type: 'string' }
-    },
-    nonOverridableArguments: {
-      type: 'object',
-      additionalProperties: { type: 'string' }
-    },
-    security: SECURITY_SCHEMA,
-    logging: LOGGING_SCHEMA,
-    monitoring: MONITORING_SCHEMA,
-    tags: {
-      type: 'object',
-      additionalProperties: { type: 'string' }
-    }
-  }
-};
+// Schema is now loaded from Config.schema.json
+export const GLUE_JOB_CONFIG_SCHEMA: ComponentConfigSchema = configSchema as ComponentConfigSchema;
 
 const DEFAULT_LOGGING_GROUPS: GlueJobLoggingGroupConfig[] = [
   {

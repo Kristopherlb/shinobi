@@ -44,19 +44,19 @@
       }
     },
     "maxConcurrentRuns": {
-      "type": "number",
+      "type": "integer",
       "description": "Maximum number of concurrent job runs allowed.",
       "minimum": 1,
       "maximum": 1000
     },
     "maxRetries": {
-      "type": "number",
+      "type": "integer",
       "description": "Number of retries Glue should attempt for failed runs.",
       "minimum": 0,
       "maximum": 10
     },
     "timeout": {
-      "type": "number",
+      "type": "integer",
       "description": "Maximum job run time in minutes.",
       "minimum": 1,
       "maximum": 2880
@@ -67,7 +67,7 @@
       "additionalProperties": false,
       "properties": {
         "notifyDelayAfter": {
-          "type": "number",
+          "type": "integer",
           "minimum": 1,
           "description": "Number of minutes to wait before sending delay notifications."
         }
@@ -79,7 +79,7 @@
       "additionalProperties": false,
       "properties": {
         "maxConcurrentRuns": {
-          "type": "number",
+          "type": "integer",
           "minimum": 1,
           "maximum": 1000,
           "description": "Maximum number of concurrent runs Glue should permit."
@@ -155,7 +155,7 @@
           "description": "Glue worker type used for the job."
         },
         "numberOfWorkers": {
-          "type": "number",
+          "type": "integer",
           "minimum": 1,
           "maximum": 299,
           "description": "Number of Glue workers to provision."
@@ -180,7 +180,7 @@
           "description": "Suffix appended to the generated log group name."
         },
         "retentionDays": {
-          "type": "number",
+          "type": "integer",
           "minimum": 1,
           "description": "CloudWatch Logs retention in days."
         },
@@ -231,12 +231,12 @@
           "description": "Number of failed tasks needed to trigger the alarm."
         },
         "evaluationPeriods": {
-          "type": "number",
+          "type": "integer",
           "minimum": 1,
           "description": "Number of periods over which data is compared to the threshold."
         },
         "periodMinutes": {
-          "type": "number",
+          "type": "integer",
           "minimum": 1,
           "description": "Evaluation period length in minutes."
         }
@@ -247,17 +247,17 @@
       "additionalProperties": false,
       "properties": {
         "thresholdMs": {
-          "type": "number",
+          "type": "integer",
           "minimum": 1,
           "description": "Glue job duration threshold in milliseconds."
         },
         "evaluationPeriods": {
-          "type": "number",
+          "type": "integer",
           "minimum": 1,
           "description": "Number of periods over which data is compared to the threshold."
         },
         "periodMinutes": {
-          "type": "number",
+          "type": "integer",
           "minimum": 1,
           "description": "Evaluation period length in minutes."
         }

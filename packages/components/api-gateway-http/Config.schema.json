@@ -225,7 +225,8 @@
         },
         "enableApiKey": {
           "type": "boolean",
-          "default": false
+          "default": false,
+          "description": "Note: API keys with usage plans are not supported by API Gateway HTTP APIs (v2). Use the api-gateway-rest component for API key support, or configure JWT/Lambda authorizers for HTTP APIs. This option is deprecated and will log a warning if enabled."
         },
         "requireAuthorization": {
           "type": "boolean",

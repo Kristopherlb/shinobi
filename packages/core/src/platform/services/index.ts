@@ -16,3 +16,4 @@ export * from './clamav-scanning/index.js';
 export * from './logging/index.js';
 export * from './security/index.js';
 export * from './compliance/index.js';
+export * from './singleton-resource-handler/index.js';

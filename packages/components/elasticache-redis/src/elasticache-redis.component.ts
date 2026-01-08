@@ -12,14 +12,17 @@ import * as secretsmanager from 'aws-cdk-lib/aws-secretsmanager';
 import * as cloudwatch from 'aws-cdk-lib/aws-cloudwatch';
 import * as logs from 'aws-cdk-lib/aws-logs';
 import * as kms from 'aws-cdk-lib/aws-kms';
+import * as iam from 'aws-cdk-lib/aws-iam';
 import * as cdk from 'aws-cdk-lib';
+import * as path from 'path';
 import { Construct } from 'constructs';
 import {
   BaseComponent,
   ComponentCapabilities,
   ComponentContext,
   ComponentSpec,
-  applySecurityGroupTags
+  applySecurityGroupTags,
+  resolveVpcForSubnetGroups
 } from '@shinobi/core';
 import {
   ElastiCacheRedisComponentConfigBuilder,
@@ -52,6 +55,7 @@ export class ElastiCacheRedisComponent extends BaseComponent {
     this.logComponentEvent('synthesis_start', 'Starting ElastiCache Redis synthesis');
 
     try {
+      
       const builder = new ElastiCacheRedisComponentConfigBuilder(this.context, this.spec);
       this.config = builder.buildSync();
 
@@ -144,29 +148,45 @@ export class ElastiCacheRedisComponent extends BaseComponent {
   }
 
   private resolveVpc(): void {
-    if (this.config!.vpc.vpcId) {
-      this.vpc = ec2.Vpc.fromLookup(this, 'VpcLookup', {
-        vpcId: this.config!.vpc.vpcId
+    const componentName = this.spec.name;
+    
+    // #region agent log
+    fetch('http://127.0.0.1:7242/ingest/31cd8a5c-c5a9-4c85-9dba-5f04dc91dc42',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'elasticache-redis.component.ts:166',message:'resolveVpc() entry - using platform VPC resolver',data:{componentName,configVpcId:this.config!.vpc.vpcId,configSubnetIds:this.config!.vpc.subnetIds,useDefaultVpc:this.config!.vpc.useDefaultVpc,hasContextVpc:!!this.context.vpc},timestamp:Date.now(),sessionId:'debug-session',runId:'run19',hypothesisId:'Q'})}).catch(()=>{});
+    // #endregion
+    
+    try {
+      // Use platform VPC resolver utility for consistent resolution across all components
+      this.vpc = resolveVpcForSubnetGroups(this, 'Vpc', {
+        vpcId: this.config!.vpc.vpcId,
+        subnetIds: this.config!.vpc.subnetIds,
+        availabilityZones: this.getDefaultAvailabilityZones(),
+        region: this.context.region,
+        vpcCidrBlock: this.config!.vpc.vpcCidrBlock, // Required when using fromVpcAttributes() with SecurityGroup
+        useDefaultVpc: this.config!.vpc.useDefaultVpc ?? false,
+        context: this.context,
+        componentName: componentName
       });
-      return;
+      
+      // #region agent log
+      // Avoid accessing this.vpc.vpcId or this.vpc.constructor.name - may trigger CDK validation requiring vpcCidrBlock
+      fetch('http://127.0.0.1:7242/ingest/31cd8a5c-c5a9-4c85-9dba-5f04dc91dc42',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'elasticache-redis.component.ts:175',message:'VPC resolved via platform resolver',data:{componentName,vpcId:this.config!.vpc.vpcId,vpcType:'ImportedVpc2 (fromVpcAttributes)',hasVpc:!!this.vpc},timestamp:Date.now(),sessionId:'debug-session',runId:'run19',hypothesisId:'Q'})}).catch(()=>{});
+      // #endregion
+    } catch (error) {
+      this.logError(
+        error as Error,
+        'elasticache-redis:vpc-resolution',
+        {
+          guidance: 'Provide config.vpc.vpcId, inject context.vpc, or set config.vpc.useDefaultVpc to true.'
+        }
+      );
+      throw error;
     }
+  }
 
-    if (this.context.vpc) {
-      this.vpc = this.context.vpc;
-      return;
-    }
-
-    this.logError(
-      new Error('Missing VPC context'),
-      'elasticache-redis:vpc-resolution',
-      {
-        guidance: 'Provide config.vpc.vpcId or inject context.vpc. Default VPC usage is prohibited.'
-      }
-    );
-    throw new Error(
-      `ElastiCache Redis component '${this.spec.name}' requires an explicit VPC. ` +
-        'Configure config.vpc.vpcId or provide context.vpc; default VPC lookup is not permitted.'
-    );
+  private getDefaultAvailabilityZones(): string[] {
+    const region = this.context.region ?? 'us-east-1';
+    // Default to 3 AZs for most regions
+    return [`${region}a`, `${region}b`, `${region}c`];
   }
 
   private createParameterGroupIfNeeded(): void {
@@ -191,22 +211,120 @@ export class ElastiCacheRedisComponent extends BaseComponent {
   }
 
   private createSubnetGroup(): void {
-    const providedSubnetIds = this.config!.vpc.subnetIds.length
-      ? this.config!.vpc.subnetIds
-      : this.vpc!.selectSubnets({ subnetType: ec2.SubnetType.PRIVATE_WITH_EGRESS }).subnetIds;
+    const componentName = this.spec.name;
+    const clusterName = this.getClusterName();
+    
+    // #region agent log
+    fetch('http://127.0.0.1:7242/ingest/31cd8a5c-c5a9-4c85-9dba-5f04dc91dc42',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'elasticache-redis.component.ts:239',message:'createSubnetGroup() entry',data:{componentName,clusterName,configVpcId:this.config!.vpc.vpcId,configSubnetIds:this.config!.vpc.subnetIds,configSubnetIdsLength:this.config!.vpc.subnetIds.length,useDefaultVpc:this.config!.vpc.useDefaultVpc,hasVpc:!!this.vpc,vpcType:this.vpc?.constructor?.name},timestamp:Date.now(),sessionId:'debug-session',runId:'run19',hypothesisId:'Q'})}).catch(()=>{});
+    // #endregion
+    
+    let providedSubnetIds: string[];
+    
+    if (this.config!.vpc.subnetIds.length > 0) {
+      // Priority 1: Use explicit subnet IDs from config
+      providedSubnetIds = this.config!.vpc.subnetIds;
+      
+      // #region agent log
+      const manifestPath = (this.context as any).manifestPath || 'unknown';
+      const manifestPathAbsolute = manifestPath !== 'unknown' ? path.resolve(manifestPath) : undefined;
+      fetch('http://127.0.0.1:7242/ingest/31cd8a5c-c5a9-4c85-9dba-5f04dc91dc42',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'elasticache-redis.component.ts:250',message:'Subnet IDs source: config.vpc.subnetIds (explicit)',data:{componentName,subnetIds:providedSubnetIds,source:'config.vpc.subnetIds',subnetIdsLength:providedSubnetIds.length,manifestPath,manifestPathAbsolute,configSource:'service.yml component config',configPath:manifestPath},timestamp:Date.now(),sessionId:'debug-session',runId:'run19',hypothesisId:'Q'})}).catch(()=>{});
+      // #endregion
+    } else if (this.config!.vpc.useDefaultVpc && this.vpc) {
+      // Priority 2: Default VPC - select private subnets from VPC
+      // When using fromLookup() for default VPC, we can select subnets by type
+      // because fromLookup() provides full VPC context (even though it runs after early validation)
+      try {
+        const selectedSubnets = this.vpc.selectSubnets({ subnetType: ec2.SubnetType.PRIVATE_WITH_EGRESS });
+        providedSubnetIds = selectedSubnets.subnetIds;
+        
+        // #region agent log
+        fetch('http://127.0.0.1:7242/ingest/31cd8a5c-c5a9-4c85-9dba-5f04dc91dc42',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'elasticache-redis.component.ts:258',message:'Subnet IDs source: default VPC private subnets (fromLookup)',data:{componentName,subnetIds:providedSubnetIds,source:'vpc.selectSubnets(PRIVATE_WITH_EGRESS)',subnetIdsLength:providedSubnetIds.length,vpcMethod:'fromLookup'},timestamp:Date.now(),sessionId:'debug-session',runId:'run19',hypothesisId:'Q'})}).catch(()=>{});
+        // #endregion
+        
+        if (providedSubnetIds.length === 0) {
+          // Fallback to public subnets if no private subnets found
+          const publicSubnets = this.vpc.selectSubnets({ subnetType: ec2.SubnetType.PUBLIC });
+          providedSubnetIds = publicSubnets.subnetIds;
+          
+          // #region agent log
+          fetch('http://127.0.0.1:7242/ingest/31cd8a5c-c5a9-4c85-9dba-5f04dc91dc42',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'elasticache-redis.component.ts:265',message:'Subnet IDs source: default VPC public subnets (fallback)',data:{componentName,subnetIds:providedSubnetIds,source:'vpc.selectSubnets(PUBLIC)',subnetIdsLength:providedSubnetIds.length,reason:'no private subnets found'},timestamp:Date.now(),sessionId:'debug-session',runId:'run19',hypothesisId:'Q'})}).catch(()=>{});
+          // #endregion
+        }
+      } catch (error) {
+        // If subnet selection fails, fall back to public subnets
+        const publicSubnets = this.vpc.selectSubnets({ subnetType: ec2.SubnetType.PUBLIC });
+        providedSubnetIds = publicSubnets.subnetIds;
+        
+        // #region agent log
+        fetch('http://127.0.0.1:7242/ingest/31cd8a5c-c5a9-4c85-9dba-5f04dc91dc42',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'elasticache-redis.component.ts:272',message:'Subnet IDs source: default VPC public subnets (error fallback)',data:{componentName,subnetIds:providedSubnetIds,source:'vpc.selectSubnets(PUBLIC)',subnetIdsLength:providedSubnetIds.length,error:error instanceof Error ? error.message : String(error)},timestamp:Date.now(),sessionId:'debug-session',runId:'run19',hypothesisId:'Q'})}).catch(()=>{});
+        // #endregion
+      }
+    } else {
+      // When using fromVpcAttributes() without explicit subnet IDs, we can't select subnets
+      // because the VPC doesn't have subnet information. Subnet IDs must be provided explicitly.
+      throw new Error(
+        `ElastiCache Redis component '${this.spec.name}' requires explicit subnet IDs when using an explicit VPC ID. ` +
+        'Please provide subnet IDs in config.vpc.subnetIds, or set config.vpc.useDefaultVpc to true to use the default VPC. ' +
+        'To find subnet IDs: aws ec2 describe-subnets --filters "Name=vpc-id,Values=${vpcId}" --query "Subnets[*].SubnetId" --output text'
+      );
+    }
+
+    // Set explicit subnet group name (like RDS pattern) to help CloudFormation early validation
+    // CloudFormation can validate explicit names better than auto-generated tokens
+    const explicitSubnetGroupName = this.config!.vpc.subnetGroupName ?? `${this.spec.name}-subnet-group`;
+    
+    // #region agent log
+    fetch('http://127.0.0.1:7242/ingest/31cd8a5c-c5a9-4c85-9dba-5f04dc91dc42',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'elasticache-redis.component.ts:285',message:'Subnet group name strategy - using explicit name for early validation',data:{componentName,clusterName,subnetGroupName:explicitSubnetGroupName,strategy:'explicit name (like RDS pattern)'},timestamp:Date.now(),sessionId:'debug-session',runId:'run21',hypothesisId:'S'})}).catch(()=>{});
+    // #endregion
+    
+    // Verify subnet IDs are literal strings (not tokens) for early validation
+    // CloudFormation early validation requires literal strings to validate subnet IDs exist
+    const subnetIdsAreTokens = providedSubnetIds.some(id => cdk.Token.isUnresolved(id));
+    const subnetIdsTypes = providedSubnetIds.map(id => ({ 
+      id, 
+      type: typeof id, 
+      isToken: cdk.Token.isUnresolved(id),
+      isString: typeof id === 'string',
+      startsWithSubnet: typeof id === 'string' && id.startsWith('subnet-')
+    }));
+    const vpcIdIsToken = cdk.Token.isUnresolved(this.config!.vpc.vpcId);
+    
+    // #region agent log
+    // Avoid accessing this.vpc.constructor.name - may trigger CDK validation requiring vpcCidrBlock
+    fetch('http://127.0.0.1:7242/ingest/31cd8a5c-c5a9-4c85-9dba-5f04dc91dc42',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'elasticache-redis.component.ts:295',message:'Creating CfnSubnetGroup - verifying subnet IDs and VPC ID are strings',data:{componentName,subnetGroupName:explicitSubnetGroupName || '(auto-generated)',subnetIds:providedSubnetIds,subnetIdsAreTokens,subnetIdsTypes,vpcId:this.config!.vpc.vpcId,vpcIdType:typeof this.config!.vpc.vpcId,vpcIdIsToken,vpcMethod:'ImportedVpc2 (fromVpcAttributes)'},timestamp:Date.now(),sessionId:'debug-session',runId:'run20',hypothesisId:'R'})}).catch(()=>{});
+    // #endregion
+    
+    if (subnetIdsAreTokens) {
+      throw new Error(
+        `ElastiCache Redis component '${componentName}' subnet IDs must be literal strings, not CloudFormation tokens. ` +
+        'This is required for CloudFormation early validation. Ensure subnet IDs come from config, not from VPC.selectSubnets() when using fromVpcAttributes().'
+      );
+    }
+    
+    if (vpcIdIsToken) {
+      // #region agent log
+      fetch('http://127.0.0.1:7242/ingest/31cd8a5c-c5a9-4c85-9dba-5f04dc91dc42',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'elasticache-redis.component.ts:305',message:'WARNING: VPC ID is a token - this may cause early validation issues',data:{componentName,vpcId:this.config!.vpc.vpcId},timestamp:Date.now(),sessionId:'debug-session',runId:'run20',hypothesisId:'R'})}).catch(()=>{});
+      // #endregion
+    }
 
     this.subnetGroup = new elasticache.CfnSubnetGroup(this, 'SubnetGroup', {
-      cacheSubnetGroupName: this.config!.vpc.subnetGroupName ?? `${this.getClusterName()}-subnet-group`,
-      description: `Subnet group for ${this.getClusterName()}`,
+      cacheSubnetGroupName: explicitSubnetGroupName, // Always set explicit name (like RDS pattern)
+      description: `Subnet group for ${clusterName}`,
       subnetIds: providedSubnetIds
     });
+    
+    // #region agent log
+    fetch('http://127.0.0.1:7242/ingest/31cd8a5c-c5a9-4c85-9dba-5f04dc91dc42',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'elasticache-redis.component.ts:312',message:'CfnSubnetGroup created successfully',data:{componentName,subnetGroupLogicalId:this.subnetGroup.logicalId,subnetIdsCount:providedSubnetIds.length,subnetIdsAreAllStrings:providedSubnetIds.every(id => typeof id === 'string')},timestamp:Date.now(),sessionId:'debug-session',runId:'run20',hypothesisId:'R'})}).catch(()=>{});
+    // #endregion
 
     this.applyStandardTags(this.subnetGroup, {
       'resource-type': 'subnet-group',
       'subnet-count': providedSubnetIds.length.toString()
     });
 
-    this.logResourceCreation('elasticache-subnet-group', this.subnetGroup.cacheSubnetGroupName!);
+    // Use explicit name if provided, otherwise use logical ID (CloudFormation will auto-generate the name)
+    const subnetGroupIdentifier = explicitSubnetGroupName || this.subnetGroup.node.id;
+    this.logResourceCreation('elasticache-subnet-group', subnetGroupIdentifier);
   }
 
   private createSecurityGroupIfNeeded(): void {
@@ -214,6 +332,11 @@ export class ElastiCacheRedisComponent extends BaseComponent {
     if (!security.create) {
       return;
     }
+
+    // #region agent log
+    // Avoid accessing this.vpc.constructor.name - may trigger CDK validation requiring vpcCidrBlock
+    fetch('http://127.0.0.1:7242/ingest/31cd8a5c-c5a9-4c85-9dba-5f04dc91dc42',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'elasticache-redis.component.ts:261',message:'createSecurityGroupIfNeeded entry',data:{hasVpc:!!this.vpc,vpcId:this.config!.vpc.vpcId,vpcType:'ImportedVpc2 (fromVpcAttributes)',vpcCidrBlockProvided:!!this.config!.vpc.vpcCidrBlock},timestamp:Date.now(),sessionId:'debug-session',runId:'run4',hypothesisId:'D'})}).catch(()=>{});
+    // #endregion
 
     this.securityGroup = new ec2.SecurityGroup(this, 'SecurityGroup', {
       vpc: this.vpc!,
@@ -287,6 +410,21 @@ export class ElastiCacheRedisComponent extends BaseComponent {
   private createReplicationGroup(): void {
     const logDeliveryConfigs = this.buildLogDeliveryConfigurations();
 
+    // #region agent log
+    fetch('http://127.0.0.1:7242/ingest/31cd8a5c-c5a9-4c85-9dba-5f04dc91dc42',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'elasticache-redis.component.ts:315',message:'Passing windows to CloudFormation',data:{snapshotWindow:this.config!.backup.enabled ? this.config!.backup.window : undefined,preferredMaintenanceWindow:this.config!.maintenance.window,backupEnabled:this.config!.backup.enabled,backupWindow:this.config!.backup.window},timestamp:Date.now(),sessionId:'debug-session',runId:'run1',hypothesisId:'B'})}).catch(()=>{});
+    // #endregion
+
+    const subnetGroupName = this.subnetGroup!.cacheSubnetGroupName;
+    const securityGroupIds = this.composeSecurityGroupIds();
+    
+    // Check if subnet group name is a token (unresolved) or literal string
+    const subnetGroupNameIsToken = cdk.Token.isUnresolved(subnetGroupName);
+    const subnetGroupNameValue = subnetGroupNameIsToken ? '(token)' : subnetGroupName;
+    
+    // #region agent log
+    fetch('http://127.0.0.1:7242/ingest/31cd8a5c-c5a9-4c85-9dba-5f04dc91dc42',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'elasticache-redis.component.ts:381',message:'Creating ReplicationGroup',data:{componentName:this.spec.name,subnetGroupName:subnetGroupNameValue,subnetGroupNameIsToken,subnetGroupNameType:typeof subnetGroupName,securityGroupIds,vpcId:this.config!.vpc.vpcId,subnetIds:this.config!.vpc.subnetIds,subnetGroupLogicalId:this.subnetGroup!.node.id},timestamp:Date.now(),sessionId:'debug-session',runId:'run13',hypothesisId:'M'})}).catch(()=>{});
+    // #endregion
+
     this.replicationGroup = new elasticache.CfnReplicationGroup(this, 'ReplicationGroup', {
       replicationGroupId: this.getClusterName(),
       replicationGroupDescription: this.config!.description ?? `Redis cluster for ${this.context.serviceName}`,
@@ -295,8 +433,8 @@ export class ElastiCacheRedisComponent extends BaseComponent {
       cacheNodeType: this.config!.nodeType,
       numCacheClusters: this.config!.numCacheNodes,
       port: this.config!.port,
-      cacheSubnetGroupName: this.subnetGroup!.cacheSubnetGroupName,
-      securityGroupIds: this.composeSecurityGroupIds(),
+      cacheSubnetGroupName: subnetGroupName,
+      securityGroupIds: securityGroupIds,
       cacheParameterGroupName: this.parameterGroup?.ref,
       atRestEncryptionEnabled: this.config!.encryption.atRest,
       transitEncryptionEnabled: this.config!.encryption.inTransit,
@@ -317,6 +455,14 @@ export class ElastiCacheRedisComponent extends BaseComponent {
       automaticFailoverEnabled: this.config!.multiAz.automaticFailover,
       logDeliveryConfigurations: logDeliveryConfigs.length ? logDeliveryConfigs : undefined
     });
+
+    // Explicitly add dependency on subnet group to ensure it's created first
+    if (this.subnetGroup) {
+      this.replicationGroup.addDependency(this.subnetGroup);
+      // #region agent log
+      fetch('http://127.0.0.1:7242/ingest/31cd8a5c-c5a9-4c85-9dba-5f04dc91dc42',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'elasticache-redis.component.ts:420',message:'Added dependency: ReplicationGroup depends on SubnetGroup',data:{componentName:this.spec.name,subnetGroupLogicalId:this.subnetGroup.node.id,replicationGroupLogicalId:this.replicationGroup.node.id},timestamp:Date.now(),sessionId:'debug-session',runId:'run13',hypothesisId:'M'})}).catch(()=>{});
+      // #endregion
+    }
 
     this.applyStandardTags(this.replicationGroup, {
       'resource-type': 'redis-cluster',
@@ -477,12 +623,19 @@ export class ElastiCacheRedisComponent extends BaseComponent {
       return undefined;
     }
 
+    const kmsKey = this.resolveLoggingKmsKey();
     const logGroup = new logs.LogGroup(this, `${this.toPascal(entry.logType)}LogGroup${index}`, {
       logGroupName: entry.destinationName,
       retention: this.mapLogRetentionDays(this.governanceMetadata.logRetentionDays),
-      encryptionKey: this.resolveLoggingKmsKey(),
+      encryptionKey: kmsKey,
       removalPolicy: cdk.RemovalPolicy.RETAIN
     });
+
+    // Ensure log group depends on KMS key policy being applied
+    // CloudWatch Logs needs the key policy to be in place before it can use the key
+    if (kmsKey) {
+      logGroup.node.addDependency(kmsKey);
+    }
 
     this.applyStandardTags(logGroup, {
       'resource-type': 'log-group',
@@ -507,6 +660,20 @@ export class ElastiCacheRedisComponent extends BaseComponent {
         enableKeyRotation: true,
         removalPolicy: cdk.RemovalPolicy.RETAIN
       });
+
+      // Grant CloudWatch Logs service permission to use the key for log group encryption
+      // Use the stack's region to ensure it's properly resolved (not a token)
+      const region = cdk.Stack.of(this).region ?? this.context.region ?? 'us-east-1';
+      this.loggingKmsKey.addToResourcePolicy(new iam.PolicyStatement({
+        sid: 'AllowCloudWatchLogs',
+        principals: [new iam.ServicePrincipal(`logs.${region}.amazonaws.com`)],
+        actions: [
+          'kms:Decrypt',
+          'kms:GenerateDataKey',
+          'kms:DescribeKey'
+        ],
+        resources: ['*'] // Required by CloudFormation for KMS key policy statements
+      }));
 
       this.applyStandardTags(this.loggingKmsKey, {
         'resource-type': 'kms-key',
@@ -581,7 +748,18 @@ export class ElastiCacheRedisComponent extends BaseComponent {
   }
 
   private getClusterName(): string {
-    return this.config!.clusterName ?? `${this.context.serviceName}-${this.spec.name}`;
+    const explicitClusterName = this.config!.clusterName;
+    // Include environment in generated name to ensure uniqueness across deployments
+    // ElastiCache cluster names must be unique within an AWS account and region
+    const generatedClusterName = `${this.context.serviceName}-${this.context.environment}-${this.spec.name}`;
+    const clusterName = explicitClusterName ?? generatedClusterName;
+    const clusterNameSource = explicitClusterName ? 'config.clusterName' : `generated from context.serviceName + context.environment + spec.name -> "${generatedClusterName}"`;
+    
+    // #region agent log
+    fetch('http://127.0.0.1:7242/ingest/31cd8a5c-c5a9-4c85-9dba-5f04dc91dc42',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'elasticache-redis.component.ts:687',message:'getClusterName()',data:{componentName:this.spec.name,explicitClusterName,generatedClusterName,clusterName,clusterNameSource,serviceName:this.context.serviceName,environment:this.context.environment},timestamp:Date.now(),sessionId:'debug-session',runId:'run10',hypothesisId:'J'})}).catch(()=>{});
+    // #endregion
+    
+    return clusterName;
   }
 
   private toPascal(value: string): string {

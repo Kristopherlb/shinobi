@@ -374,11 +374,11 @@ export class ApiGatewayHttpConfigBuilder extends ConfigBuilder<ApiGatewayHttpCon
       },
       apiSettings: {
         disableExecuteApiEndpoint: false,
-        apiKeySource: 'HEADER'
+        apiKeySource: 'HEADER' // Note: HTTP APIs don't support API keys - this is for documentation only
       },
       security: {
         enableWaf: false,
-        enableApiKey: false,
+        enableApiKey: false, // Note: HTTP APIs don't support API keys - use REST API component for API key support
         requireAuthorization: true
       }
     };
@@ -421,7 +421,7 @@ export class ApiGatewayHttpConfigBuilder extends ConfigBuilder<ApiGatewayHttpCon
         },
         security: {
           enableWaf: true,
-          enableApiKey: true,
+          enableApiKey: false, // HTTP APIs don't support API keys - use REST API component
           requireAuthorization: true
         },
         monitoring: {

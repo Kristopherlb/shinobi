@@ -26,6 +26,7 @@ import * as fsp from 'fs/promises';
 import * as fs from 'fs';
 import { Logger } from './console-logger.js';
 import { FileDiscovery } from './utils/file-discovery.js';
+import { findRepoRoot } from './utils/repo-root.js';
 import {
   readManifest,
   synthesizeService,
@@ -37,6 +38,7 @@ export interface SynthOptions {
   env?: string;
   region?: string;
   account?: string;
+  stack?: string;
   output?: string;
   json?: boolean;
   includeExperimental?: boolean;
@@ -78,35 +80,50 @@ export class SynthCommand {
     const logger = this.dependencies.logger;
 
     try {
-      // Resolve manifest path - try current dir first, then repo root
+      // Resolve manifest path - handle both file paths and directory searches
       let manifestPath: string;
       if (options.file) {
-        // Try resolving from current working directory first
-        const cwdPath = path.resolve(process.cwd(), options.file);
-        try {
-          await fsp.access(cwdPath, fs.constants.F_OK);
-          manifestPath = cwdPath;
-        } catch {
-          // Try resolving as absolute path
-          const absPath = path.resolve(options.file);
+        // Check if the provided path is a file (ends with .yml or .yaml)
+        const isFilePath = options.file.endsWith('.yml') || options.file.endsWith('.yaml');
+        
+        if (isFilePath) {
+          // It's a file path - resolve it relative to workspace root
+          const workspaceRoot = await findRepoRoot(process.cwd());
+          const resolvedPath = path.resolve(workspaceRoot, options.file);
+          
           try {
-            await fsp.access(absPath, fs.constants.F_OK);
-            manifestPath = absPath;
+            await fsp.access(resolvedPath, fs.constants.F_OK);
+            manifestPath = resolvedPath;
           } catch {
-            // Try resolving from repo root (simplified: walk up until no parent)
-            let repoRoot = process.cwd();
-            let parent = path.dirname(repoRoot);
-            while (repoRoot !== parent) {
-              repoRoot = parent;
-              parent = path.dirname(repoRoot);
-            }
-            // Found filesystem root - use it as repo root
-            const repoPath = path.resolve(repoRoot, options.file);
+            // Fallback: try resolving from current working directory
+            const cwdPath = path.resolve(process.cwd(), options.file);
             try {
-              await fsp.access(repoPath, fs.constants.F_OK);
-              manifestPath = repoPath;
+              await fsp.access(cwdPath, fs.constants.F_OK);
+              manifestPath = cwdPath;
             } catch {
-              manifestPath = absPath; // Will fail with proper error below
+              // Try resolving as absolute path
+              const absPath = path.resolve(options.file);
+              try {
+                await fsp.access(absPath, fs.constants.F_OK);
+                manifestPath = absPath;
+              } catch {
+                manifestPath = resolvedPath; // Will fail with proper error below
+              }
+            }
+          }
+        } else {
+          // It's a directory path - use fileDiscovery to search for service.yml
+          const foundManifest = await this.dependencies.fileDiscovery.findManifest(options.file);
+          if (foundManifest) {
+            manifestPath = foundManifest;
+          } else {
+            // Fallback: try resolving from current working directory
+            const cwdPath = path.resolve(process.cwd(), options.file);
+            try {
+              await fsp.access(cwdPath, fs.constants.F_OK);
+              manifestPath = cwdPath;
+            } catch {
+              manifestPath = path.resolve(process.cwd(), options.file); // Will fail with proper error below
             }
           }
         }
@@ -124,11 +141,20 @@ export class SynthCommand {
       // Verify manifest file exists
       try {
         await fsp.access(manifestPath, fs.constants.F_OK);
-      } catch {
+      } catch (error) {
+        const cwd = process.cwd();
+        const triedPaths = [
+          path.resolve(cwd, options.file || 'service.yml'),
+          path.resolve(options.file || 'service.yml'),
+          path.resolve(cwd, '..', '..', options.file || 'service.yml')
+        ];
         return {
           success: false,
           exitCode: 2,
-          error: `Service manifest not found: ${manifestPath}`
+          error: `Service manifest not found: ${manifestPath}\n` +
+                 `Current working directory: ${cwd}\n` +
+                 `Tried paths: ${triedPaths.join(', ')}\n` +
+                 `Error: ${error instanceof Error ? error.message : String(error)}`
         };
       }
 
@@ -148,6 +174,7 @@ export class SynthCommand {
       }
       
       const outputDir = path.resolve(options.output ?? 'cdk.out');
+      const stackName = options.stack ?? `${manifest.service}-${environment}`;
 
       await ensureOutputDir(outputDir);
 
@@ -157,7 +184,8 @@ export class SynthCommand {
         manifestPath,
         environment,
         region,
-        accountId,
+        accountId: String(accountId),
+        stackName,
         outputDir,
         includeExperimental: options.includeExperimental
       });

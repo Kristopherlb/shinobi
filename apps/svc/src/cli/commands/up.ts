@@ -33,6 +33,7 @@ export function createUpCommand(): Command {
     .option('--json', 'Emit CDK deploy output as JSON (requires --yes)')
     .option('--include-experimental', 'Include non-production components when resolving creators', false)
     .option('--retain-asset-dir', 'Keep the synthesized asset directory after deployment')
+    .option('--save-synth-output <directory>', 'Save the entire synth output to the specified directory')
     .action(async (options, cmd) => {
       const parent: any = cmd.parent || {};
       const rootOpts = parent.opts ? parent.opts() : {};
@@ -53,7 +54,8 @@ export function createUpCommand(): Command {
         yes: options.yes,
         json: options.json,
         includeExperimental: options.includeExperimental,
-        retainAssetDir: options.retainAssetDir
+        retainAssetDir: options.retainAssetDir,
+        saveSynthOutput: options.saveSynthOutput
       });
 
       if (result.success) {

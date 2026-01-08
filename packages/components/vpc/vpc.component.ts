@@ -35,7 +35,16 @@ export class VpcComponent extends BaseComponent {
    * Follows the 6-step synthesis process defined in Platform Component API Contract v1.1
    */
   public synth(): void {
-    this.logger.info(`Synthesizing VPC component: ${this.spec.name}`);
+    this.logComponentEvent('synthesis_start', 'Starting VPC component synthesis', {
+      component: {
+        name: this.spec.name,
+        type: this.getType()
+      },
+      context: {
+        environment: this.context.environment,
+        complianceFramework: this.context.complianceFramework
+      }
+    });
 
     try {
       // Step 1: Build configuration using ConfigBuilder
@@ -62,9 +71,15 @@ export class VpcComponent extends BaseComponent {
       // Step 6: Register capabilities for binding
       this.registerCapabilities();
 
-      this.logger.info(`VPC component ${this.spec.name} synthesized successfully.`);
+      this.logComponentEvent('synthesis_complete', 'VPC component synthesis completed successfully', {
+        vpcCreated: !!this.vpc,
+        flowLogsEnabled: !!this.flowLogGroup
+      });
     } catch (error) {
-      this.logger.error('VPC synthesis failed', { error: error instanceof Error ? error.message : error });
+      this.logError(error as Error, 'component synthesis', {
+        componentType: 'vpc',
+        stage: 'synthesis'
+      });
       throw error;
     }
   }

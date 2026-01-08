@@ -65,16 +65,28 @@ export class LambdaWorkerComponent extends BaseComponent {
    * @throws {Error} When required configuration is missing
    */
   public synth(): void {
-    const builder = new LambdaWorkerComponentConfigBuilder({
-      context: this.context,
-      spec: this.spec
+    this.logComponentEvent('synthesis_start', 'Starting Lambda Worker component synthesis', {
+      component: {
+        name: this.spec.name,
+        type: this.getType()
+      },
+      context: {
+        environment: this.context.environment,
+        complianceFramework: this.context.complianceFramework
+      }
     });
-    this.config = builder.buildSync();
 
-    // Validate configuration
-    this.validateConfiguration();
+    try {
+      const builder = new LambdaWorkerComponentConfigBuilder({
+        context: this.context,
+        spec: this.spec
+      });
+      this.config = builder.buildSync();
 
-    this.logComponentEvent('config_resolved', 'Resolved lambda worker configuration', {
+      // Validate configuration
+      this.validateConfiguration();
+
+      this.logComponentEvent('config_resolved', 'Resolved lambda worker configuration', {
       functionName: this.config.functionName,
       runtime: this.config.runtime,
       memory: this.config.memorySize,
@@ -93,13 +105,20 @@ export class LambdaWorkerComponent extends BaseComponent {
       this.registerConstruct(`eventRule:${index}`, rule);
     });
 
-    this.registerCapability('lambda:function', this.buildCapability());
+      this.registerCapability('lambda:function', this.buildCapability());
 
-    this.logComponentEvent('synthesis_complete', 'Lambda worker synthesis complete', {
-      functionArn: this.lambdaFunction.functionArn,
-      vpcEnabled: this.config.vpc?.enabled ?? false,
-      eventSources: this.config.eventSources.length
-    });
+      this.logComponentEvent('synthesis_complete', 'Lambda Worker component synthesis completed successfully', {
+        functionArn: this.lambdaFunction.functionArn,
+        vpcEnabled: this.config.vpc?.enabled ?? false,
+        eventSources: this.config.eventSources.length
+      });
+    } catch (error) {
+      this.logError(error as Error, 'component synthesis', {
+        componentType: 'lambda-worker',
+        stage: 'synthesis'
+      });
+      throw error;
+    }
   }
 
   /**
@@ -137,6 +156,29 @@ export class LambdaWorkerComponent extends BaseComponent {
 
     const code = lambda.Code.fromAsset(path.resolve(this.config!.codePath));
 
+    // Prepare VPC configuration if enabled
+    let vpc: ec2.IVpc | undefined;
+    let subnets: ec2.ISubnet[] | undefined;
+    let securityGroups: ec2.ISecurityGroup[] | undefined;
+
+    if (this.config?.vpc?.enabled) {
+      if (!this.config.vpc.vpcId) {
+        throw new Error('Lambda worker VPC configuration must include vpcId when enabled.');
+      }
+
+      vpc = ec2.Vpc.fromLookup(this, 'LambdaVpc', {
+        vpcId: this.config.vpc.vpcId
+      });
+
+      subnets = this.config.vpc.subnetIds.length > 0
+        ? this.config.vpc.subnetIds.map((subnetId, index) => ec2.Subnet.fromSubnetId(this, `LambdaSubnet${index}`, subnetId))
+        : vpc.privateSubnets;
+
+      securityGroups = this.config.vpc.securityGroupIds.map((sgId, index) =>
+        ec2.SecurityGroup.fromSecurityGroupId(this, `LambdaSecurityGroup${index}`, sgId)
+      );
+    }
+
     const props: lambda.FunctionProps = {
       functionName: this.config!.functionName,
       description: this.config!.description,
@@ -153,34 +195,16 @@ export class LambdaWorkerComponent extends BaseComponent {
       logRetentionRetryOptions: {
         base: cdk.Duration.seconds(2),
         maxRetries: 5
-      }
+      },
+      ...(this.config?.kmsKeyArn && {
+        environmentEncryption: kms.Key.fromKeyArn(this, 'LambdaEnvironmentKey', this.config.kmsKeyArn)
+      }),
+      ...(vpc && {
+        vpc,
+        vpcSubnets: subnets ? { subnets } : undefined,
+        securityGroups: securityGroups && securityGroups.length > 0 ? securityGroups : undefined
+      })
     };
-
-    if (this.config?.kmsKeyArn) {
-      props.environmentEncryption = kms.Key.fromKeyArn(this, 'LambdaEnvironmentKey', this.config.kmsKeyArn);
-    }
-
-    if (this.config?.vpc?.enabled) {
-      if (!this.config.vpc.vpcId) {
-        throw new Error('Lambda worker VPC configuration must include vpcId when enabled.');
-      }
-
-      const vpc = ec2.Vpc.fromLookup(this, 'LambdaVpc', {
-        vpcId: this.config.vpc.vpcId
-      });
-
-      const subnets = this.config.vpc.subnetIds.length > 0
-        ? this.config.vpc.subnetIds.map((subnetId, index) => ec2.Subnet.fromSubnetId(this, `LambdaSubnet${index}`, subnetId))
-        : vpc.privateSubnets;
-
-      const securityGroups = this.config.vpc.securityGroupIds.map((sgId, index) =>
-        ec2.SecurityGroup.fromSecurityGroupId(this, `LambdaSecurityGroup${index}`, sgId)
-      );
-
-      props.vpc = vpc;
-      props.vpcSubnets = { subnets };
-      props.securityGroups = securityGroups;
-    }
 
     const lambdaFunction = new lambda.Function(this, 'LambdaWorkerFunction', props);
     lambdaFunction.applyRemovalPolicy(this.config!.removalPolicy === 'destroy' ? cdk.RemovalPolicy.DESTROY : cdk.RemovalPolicy.RETAIN);

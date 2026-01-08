@@ -23,6 +23,7 @@ export function createSynthCommand(): Command {
     .option('--env <environment>', 'Target environment (defaults to manifest value or dev)')
     .option('--region <region>', 'AWS region (defaults to CDK_DEFAULT_REGION or us-east-1)')
     .option('--account <account>', 'AWS account ID (defaults to CDK_DEFAULT_ACCOUNT, required if not set)')
+    .option('-s, --stack <stackName>', 'Override CloudFormation stack name')
     .option('--output <dir>', 'CDK output directory', 'cdk.out')
     .option('--json', 'Emit synthesis summary as JSON')
     .option('--include-experimental', 'Include non-production components when resolving creators', false)
@@ -40,6 +41,7 @@ export function createSynthCommand(): Command {
         env: options.env,
         region: options.region,
         account: options.account,
+        stack: options.stack,
         output: options.output,
         json: options.json,
         includeExperimental: options.includeExperimental

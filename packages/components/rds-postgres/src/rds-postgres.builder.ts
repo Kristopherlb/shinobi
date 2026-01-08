@@ -96,6 +96,8 @@ export interface RdsPostgresSecurityConfig {
 export interface RdsPostgresNetworkingConfig {
   vpcId?: string;
   useDefaultVpc?: boolean;
+  availabilityZones?: string[];
+  vpcCidrBlock?: string;
   subnetIds?: string[];
   ingressCidrs?: string[];
   port?: number;
@@ -120,6 +122,8 @@ export interface RdsPostgresConfig {
   dbName: string;
   description?: string;
   username: string;
+  /** PostgreSQL engine version (convenience property that maps to instance.engineVersion) */
+  version?: string;
   instance?: RdsPostgresInstanceConfig;
   encryption?: RdsPostgresEncryptionConfig;
   backup?: RdsPostgresBackupConfig;
@@ -178,11 +182,16 @@ export const RDS_POSTGRES_CONFIG_SCHEMA: ComponentConfigSchema = {
       description: 'Master username for the database',
       pattern: '^[a-zA-Z][a-zA-Z0-9_\-]*$'
     },
+    version: {
+      type: 'string',
+      description: 'PostgreSQL engine version (e.g., 18.1). Maps to instance.engineVersion for convenience.',
+      default: '18.1'
+    },
     instance: {
       type: 'object',
       additionalProperties: false,
       properties: {
-        engineVersion: { type: 'string', default: '15.4' },
+        engineVersion: { type: 'string', default: '18.1' },
         instanceType: { type: 'string', default: 't3.micro' },
         allocatedStorage: { type: 'number', minimum: 20, default: 20 },
         maxAllocatedStorage: { type: 'number', minimum: 20 },
@@ -308,6 +317,17 @@ export const RDS_POSTGRES_CONFIG_SCHEMA: ComponentConfigSchema = {
       properties: {
         vpcId: { type: 'string' },
         useDefaultVpc: { type: 'boolean', default: true },
+        availabilityZones: {
+          type: 'array',
+          items: { type: 'string' },
+          description: 'Availability zones for the VPC. Required when using vpcId to avoid VPC lookup.',
+          default: []
+        },
+        vpcCidrBlock: {
+          type: 'string',
+          description: 'VPC CIDR block. Used for security group rules when VPC is imported via attributes.',
+          pattern: '^(?:[0-9]{1,3}\\.){3}[0-9]{1,3}/[0-9]{1,2}$'
+        },
         subnetIds: {
           type: 'array',
           items: { type: 'string' },
@@ -390,8 +410,9 @@ export class RdsPostgresComponentConfigBuilder extends ConfigBuilder<RdsPostgres
   protected getHardcodedFallbacks(): Partial<RdsPostgresConfig> {
     return {
       username: 'postgres',
+      version: '18.1',
       instance: {
-        engineVersion: '15.4',
+        engineVersion: '18.1',
         instanceType: 't3.micro',
         allocatedStorage: 20,
         multiAz: false,
@@ -555,6 +576,46 @@ export class RdsPostgresComponentConfigBuilder extends ConfigBuilder<RdsPostgres
     };
   }
 
+  /**
+   * Check if a database name is a PostgreSQL reserved word and transform it if needed.
+   * PostgreSQL reserved words cannot be used as database names in RDS.
+   */
+  private sanitizeDbName(dbName: string): string {
+    // Common PostgreSQL reserved keywords that cannot be used as database names
+    // Reference: https://www.postgresql.org/docs/current/sql-keywords-appendix.html
+    const reservedWords = new Set([
+      'database', 'user', 'table', 'select', 'insert', 'update', 'delete',
+      'create', 'drop', 'alter', 'index', 'view', 'schema', 'role', 'grant',
+      'revoke', 'commit', 'rollback', 'transaction', 'begin', 'end', 'savepoint',
+      'constraint', 'primary', 'foreign', 'key', 'references', 'check', 'unique',
+      'default', 'not', 'null', 'true', 'false', 'and', 'or', 'in', 'like',
+      'between', 'is', 'as', 'from', 'where', 'group', 'by', 'having', 'order',
+      'limit', 'offset', 'union', 'intersect', 'except', 'distinct', 'all',
+      'case', 'when', 'then', 'else', 'end', 'cast', 'type', 'function', 'procedure',
+      'trigger', 'sequence', 'temporary', 'temp', 'public', 'information', 'pg_'
+    ]);
+    
+    const normalizedName = dbName.toLowerCase();
+    const isReserved = reservedWords.has(normalizedName) || normalizedName.startsWith('pg_');
+    
+    // #region agent log
+    fetch('http://127.0.0.1:7242/ingest/31cd8a5c-c5a9-4c85-9dba-5f04dc91dc42',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'rds-postgres.builder.ts:590',message:'Sanitizing dbName',data:{originalDbName:dbName,normalizedName,isReserved},timestamp:Date.now(),sessionId:'debug-session',runId:'run17',hypothesisId:'B'})}).catch(()=>{});
+    // #endregion
+    
+    if (isReserved) {
+      // Append '_db' suffix to reserved words to make them safe
+      const sanitized = `${dbName}_db`;
+      
+      // #region agent log
+      fetch('http://127.0.0.1:7242/ingest/31cd8a5c-c5a9-4c85-9dba-5f04dc91dc42',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'rds-postgres.builder.ts:600',message:'Reserved word detected, transforming dbName',data:{originalDbName:dbName,sanitizedDbName:sanitized},timestamp:Date.now(),sessionId:'debug-session',runId:'run17',hypothesisId:'B'})}).catch(()=>{});
+      // #endregion
+      
+      return sanitized;
+    }
+    
+    return dbName;
+  }
+
   private normaliseConfig(config: RdsPostgresConfig): RdsPostgresConfig {
     const specName = this.builderContext.spec.name;
 
@@ -566,12 +627,32 @@ export class RdsPostgresComponentConfigBuilder extends ConfigBuilder<RdsPostgres
       tags: logConfig?.tags ?? defaults?.tags ?? {}
     });
 
+    // Support top-level 'version' property that maps to instance.engineVersion for convenience
+    // Priority: top-level version (user override) > instance.engineVersion (platform/default) > hardcoded fallback
+    const topLevelVersion = (config as any).version;
+    const instanceEngineVersion = config.instance?.engineVersion;
+    // Top-level version takes precedence over instance.engineVersion to allow user overrides
+    const engineVersion = topLevelVersion ?? instanceEngineVersion ?? '18.1';
+    
+    // #region agent log
+    fetch('http://127.0.0.1:7242/ingest/31cd8a5c-c5a9-4c85-9dba-5f04dc91dc42',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'rds-postgres.builder.ts:631',message:'Resolving engine version',data:{topLevelVersion,instanceEngineVersion,resolvedVersion:engineVersion,hasInstance:!!config.instance,instanceKeys:config.instance?Object.keys(config.instance):[]},timestamp:Date.now(),sessionId:'debug-session',runId:'run17',hypothesisId:'I'})}).catch(()=>{});
+    // #endregion
+    
+    // Generate dbName from component name if not explicitly provided
+    const rawDbName = config.dbName ?? specName.replace(/[^a-zA-Z0-9_]/g, '_');
+    // Sanitize dbName to avoid PostgreSQL reserved words
+    const generatedDbName = this.sanitizeDbName(rawDbName);
+    
+    // #region agent log
+    fetch('http://127.0.0.1:7242/ingest/31cd8a5c-c5a9-4c85-9dba-5f04dc91dc42',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'rds-postgres.builder.ts:638',message:'Generating dbName',data:{specName,configDbName:config.dbName,rawDbName,generatedDbName,hasExplicitDbName:!!config.dbName},timestamp:Date.now(),sessionId:'debug-session',runId:'run17',hypothesisId:'A'})}).catch(()=>{});
+    // #endregion
+    
     return {
-      dbName: config.dbName ?? specName.replace(/[^a-zA-Z0-9_]/g, '_'),
+      dbName: generatedDbName,
       description: config.description,
       username: config.username ?? 'postgres',
       instance: {
-        engineVersion: config.instance?.engineVersion ?? '15.4',
+        engineVersion: engineVersion,
         instanceType: config.instance?.instanceType ?? 't3.micro',
         allocatedStorage: config.instance?.allocatedStorage ?? 20,
         maxAllocatedStorage: config.instance?.maxAllocatedStorage,
@@ -669,6 +750,8 @@ export class RdsPostgresComponentConfigBuilder extends ConfigBuilder<RdsPostgres
       networking: {
         vpcId: config.networking?.vpcId,
         useDefaultVpc: config.networking?.useDefaultVpc ?? !config.networking?.vpcId,
+        availabilityZones: config.networking?.availabilityZones ?? [],
+        vpcCidrBlock: config.networking?.vpcCidrBlock,
         subnetIds: config.networking?.subnetIds ?? [],
         ingressCidrs: (config.networking?.ingressCidrs ?? []).length > 0
           ? config.networking!.ingressCidrs!

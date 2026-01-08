@@ -286,6 +286,17 @@ export class Route53RecordComponent extends BaseComponent {
    * Synthesize the component (required by BaseComponent)
    */
   public synth(): void {
+    this.logComponentEvent('synthesis_start', 'Starting Route53 Record component synthesis', {
+      component: {
+        name: this.spec.name,
+        type: this.getType()
+      },
+      context: {
+        environment: this.context.environment,
+        complianceFramework: this.context.complianceFramework
+      }
+    });
+
     try {
       // Step 1: Lookup hosted zone (does not create)
       const hostedZone = this._lookupHostedZone();
@@ -310,7 +321,17 @@ export class Route53RecordComponent extends BaseComponent {
 
       // Step 6: Configure observability for health checks
       this._configureObservabilityForDns();
+
+      this.logComponentEvent('synthesis_complete', 'Route53 Record component synthesis completed successfully', {
+        recordName: this.config.record.recordName,
+        recordType: this.config.record.recordType,
+        zoneName: this.config.record.zoneName
+      });
     } catch (error) {
+      this.logError(error as Error, 'component synthesis', {
+        componentType: 'route53-record',
+        stage: 'synthesis'
+      });
       throw error;
     }
   }

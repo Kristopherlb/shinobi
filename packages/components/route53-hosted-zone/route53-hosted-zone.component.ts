@@ -27,8 +27,20 @@ export class Route53HostedZoneComponent extends BaseComponent {
   }
 
   public synth(): void {
-    const builder = new Route53HostedZoneComponentConfigBuilder(this.context, this.spec);
-    this.config = builder.buildSync();
+    this.logComponentEvent('synthesis_start', 'Starting Route53 hosted zone component synthesis', {
+      component: {
+        name: this.spec.name,
+        type: this.getType()
+      },
+      context: {
+        environment: this.context.environment,
+        complianceFramework: this.context.complianceFramework
+      }
+    });
+
+    try {
+      const builder = new Route53HostedZoneComponentConfigBuilder(this.context, this.spec);
+      this.config = builder.buildSync();
 
     // Validate zoneName: log if trailing dot was stripped (already sanitized in builder)
     const originalZoneName = this.spec.config?.zoneName as string | undefined;
@@ -72,10 +84,18 @@ export class Route53HostedZoneComponent extends BaseComponent {
 
     this.registerCapability('dns:hosted-zone', this.buildCapability());
 
-    this.logComponentEvent('synthesis_complete', 'Route53 hosted zone synthesis complete', {
-      zoneName: this.config.zoneName,
-      zoneType: this.config.zoneType
-    });
+      this.logComponentEvent('synthesis_complete', 'Route53 hosted zone synthesis completed successfully', {
+        zoneName: this.config.zoneName,
+        zoneType: this.config.zoneType,
+        queryLoggingEnabled: this.config.queryLogging.enabled
+      });
+    } catch (error) {
+      this.logError(error as Error, 'component synthesis', {
+        componentType: 'route53-hosted-zone',
+        stage: 'synthesis'
+      });
+      throw error;
+    }
   }
 
   public getCapabilities(): ComponentCapabilities {
