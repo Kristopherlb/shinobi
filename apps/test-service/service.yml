@@ -1,0 +1,54 @@
+service: test-service-v2
+owner: platform-team
+complianceFramework: commercial
+region: us-west-2
+accountId: "911871352725"
+
+environments:
+  dev:
+    defaults:
+      instanceSize: small
+      enableDebug: true
+      highRiskEnvironment: false
+
+components:
+  - name: test-api-v2
+    type: lambda-api
+    config:
+      functionName: test-api
+      handler: handler.handler
+      runtime: nodejs20.x
+      architecture: arm64
+      memorySize: 512
+      timeoutSeconds: 30
+      deployment:
+        codePath: ./src
+      logging:
+        logRetentionDays: 30
+        logFormat: JSON
+        systemLogLevel: INFO
+        applicationLogLevel: INFO
+      monitoring:
+        enabled: false
+      observability:
+        otelEnabled: false
+      api:
+        type: rest
+        stageName: dev
+        metricsEnabled: false
+        tracingEnabled: false
+        apiKeyRequired: false
+        throttling:
+          burstLimit: 10
+          rateLimit: 5
+        usagePlan:
+          enabled: false
+        logging:
+          enabled: false
+        cors:
+          enabled: true
+          allowOrigins: ["*"]
+          allowHeaders: ["Content-Type"]
+          allowMethods: ["GET", "POST"]
+          allowCredentials: false
+

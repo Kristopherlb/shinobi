@@ -1,0 +1,2433 @@
+{
+ "Resources": {
+  "processingqueueQueue11330FE0": {
+   "Type": "AWS::SQS::Queue",
+   "Properties": {
+    "MessageRetentionPeriod": 345600,
+    "QueueName": "queue-processor-queue",
+    "ReceiveMessageWaitTimeSeconds": 20,
+    "SqsManagedSseEnabled": false,
+    "Tags": [
+     {
+      "Key": "backup-required",
+      "Value": "false"
+     },
+     {
+      "Key": "cloud-account",
+      "Value": "911871352725"
+     },
+     {
+      "Key": "cloud-provider",
+      "Value": "aws"
+     },
+     {
+      "Key": "cloud-region",
+      "Value": "us-west-2"
+     },
+     {
+      "Key": "compliance-framework",
+      "Value": "commercial"
+     },
+     {
+      "Key": "component-name",
+      "Value": "processing-queue"
+     },
+     {
+      "Key": "component-type",
+      "Value": "sqs-queue"
+     },
+     {
+      "Key": "cost-center",
+      "Value": "platform"
+     },
+     {
+      "Key": "data-classification",
+      "Value": "internal"
+     },
+     {
+      "Key": "deployment-id",
+      "Value": "deploy-20260109-172142"
+     },
+     {
+      "Key": "encryption-required",
+      "Value": "true"
+     },
+     {
+      "Key": "environment",
+      "Value": "dev"
+     },
+     {
+      "Key": "managed-by",
+      "Value": "platform-engineering"
+     },
+     {
+      "Key": "monitoring-level",
+      "Value": "standard"
+     },
+     {
+      "Key": "owner",
+      "Value": "platform-engineering"
+     },
+     {
+      "Key": "platform",
+      "Value": "cdk-lib"
+     },
+     {
+      "Key": "platform-version",
+      "Value": "1.0.0"
+     },
+     {
+      "Key": "project",
+      "Value": "queue-processor-service"
+     },
+     {
+      "Key": "retention-period",
+      "Value": "365-days"
+     },
+     {
+      "Key": "service-name",
+      "Value": "queue-processor-service"
+     },
+     {
+      "Key": "service-version",
+      "Value": "1.0.0"
+     }
+    ],
+    "VisibilityTimeout": 360
+   },
+   "UpdateReplacePolicy": "Delete",
+   "DeletionPolicy": "Delete",
+   "Metadata": {
+    "aws:cdk:path": "queue-processor-service-dev/processing-queue/Queue/Resource"
+   }
+  },
+  "processingqueueQueueDepthAlarm5DA17285": {
+   "Type": "AWS::CloudWatch::Alarm",
+   "Properties": {
+    "AlarmDescription": "Alert when queue depth exceeds threshold for processing-queue",
+    "AlarmName": "queue-processor-service-processing-queue-queue-depth-high",
+    "ComparisonOperator": "GreaterThanThreshold",
+    "Dimensions": [
+     {
+      "Name": "QueueName",
+      "Value": {
+       "Fn::GetAtt": [
+        "processingqueueQueue11330FE0",
+        "QueueName"
+       ]
+      }
+     }
+    ],
+    "EvaluationPeriods": 2,
+    "MetricName": "ApproximateNumberOfMessagesVisible",
+    "Namespace": "AWS/SQS",
+    "Period": 300,
+    "Statistic": "Average",
+    "Tags": [
+     {
+      "Key": "alarm-type",
+      "Value": "queue-depth"
+     },
+     {
+      "Key": "backup-required",
+      "Value": "false"
+     },
+     {
+      "Key": "cloud-account",
+      "Value": "911871352725"
+     },
+     {
+      "Key": "cloud-provider",
+      "Value": "aws"
+     },
+     {
+      "Key": "cloud-region",
+      "Value": "us-west-2"
+     },
+     {
+      "Key": "compliance-framework",
+      "Value": "commercial"
+     },
+     {
+      "Key": "component-name",
+      "Value": "processing-queue"
+     },
+     {
+      "Key": "component-type",
+      "Value": "sqs-queue"
+     },
+     {
+      "Key": "cost-center",
+      "Value": "platform"
+     },
+     {
+      "Key": "data-classification",
+      "Value": "internal"
+     },
+     {
+      "Key": "deployment-id",
+      "Value": "deploy-20260109-172142"
+     },
+     {
+      "Key": "encryption-required",
+      "Value": "true"
+     },
+     {
+      "Key": "environment",
+      "Value": "dev"
+     },
+     {
+      "Key": "managed-by",
+      "Value": "platform-engineering"
+     },
+     {
+      "Key": "metric",
+      "Value": "ApproximateNumberOfMessagesVisible"
+     },
+     {
+      "Key": "monitoring-level",
+      "Value": "standard"
+     },
+     {
+      "Key": "owner",
+      "Value": "platform-engineering"
+     },
+     {
+      "Key": "platform",
+      "Value": "cdk-lib"
+     },
+     {
+      "Key": "platform-version",
+      "Value": "1.0.0"
+     },
+     {
+      "Key": "project",
+      "Value": "queue-processor-service"
+     },
+     {
+      "Key": "retention-period",
+      "Value": "365-days"
+     },
+     {
+      "Key": "service-name",
+      "Value": "queue-processor-service"
+     },
+     {
+      "Key": "service-version",
+      "Value": "1.0.0"
+     }
+    ],
+    "Threshold": 1000,
+    "TreatMissingData": "notBreaching"
+   },
+   "Metadata": {
+    "aws:cdk:path": "queue-processor-service-dev/processing-queue/QueueDepthAlarm/Resource"
+   }
+  },
+  "processingqueueMessageAgeAlarmAFCCDAC3": {
+   "Type": "AWS::CloudWatch::Alarm",
+   "Properties": {
+    "AlarmDescription": "Alert when oldest message age exceeds threshold for processing-queue",
+    "AlarmName": "queue-processor-service-processing-queue-message-age-high",
+    "ComparisonOperator": "GreaterThanThreshold",
+    "Dimensions": [
+     {
+      "Name": "QueueName",
+      "Value": {
+       "Fn::GetAtt": [
+        "processingqueueQueue11330FE0",
+        "QueueName"
+       ]
+      }
+     }
+    ],
+    "EvaluationPeriods": 2,
+    "MetricName": "ApproximateAgeOfOldestMessage",
+    "Namespace": "AWS/SQS",
+    "Period": 300,
+    "Statistic": "Maximum",
+    "Tags": [
+     {
+      "Key": "alarm-type",
+      "Value": "message-age"
+     },
+     {
+      "Key": "backup-required",
+      "Value": "false"
+     },
+     {
+      "Key": "cloud-account",
+      "Value": "911871352725"
+     },
+     {
+      "Key": "cloud-provider",
+      "Value": "aws"
+     },
+     {
+      "Key": "cloud-region",
+      "Value": "us-west-2"
+     },
+     {
+      "Key": "compliance-framework",
+      "Value": "commercial"
+     },
+     {
+      "Key": "component-name",
+      "Value": "processing-queue"
+     },
+     {
+      "Key": "component-type",
+      "Value": "sqs-queue"
+     },
+     {
+      "Key": "cost-center",
+      "Value": "platform"
+     },
+     {
+      "Key": "data-classification",
+      "Value": "internal"
+     },
+     {
+      "Key": "deployment-id",
+      "Value": "deploy-20260109-172142"
+     },
+     {
+      "Key": "encryption-required",
+      "Value": "true"
+     },
+     {
+      "Key": "environment",
+      "Value": "dev"
+     },
+     {
+      "Key": "managed-by",
+      "Value": "platform-engineering"
+     },
+     {
+      "Key": "metric",
+      "Value": "ApproximateAgeOfOldestMessage"
+     },
+     {
+      "Key": "monitoring-level",
+      "Value": "standard"
+     },
+     {
+      "Key": "owner",
+      "Value": "platform-engineering"
+     },
+     {
+      "Key": "platform",
+      "Value": "cdk-lib"
+     },
+     {
+      "Key": "platform-version",
+      "Value": "1.0.0"
+     },
+     {
+      "Key": "project",
+      "Value": "queue-processor-service"
+     },
+     {
+      "Key": "retention-period",
+      "Value": "365-days"
+     },
+     {
+      "Key": "service-name",
+      "Value": "queue-processor-service"
+     },
+     {
+      "Key": "service-version",
+      "Value": "1.0.0"
+     }
+    ],
+    "Threshold": 300,
+    "TreatMissingData": "notBreaching"
+   },
+   "Metadata": {
+    "aws:cdk:path": "queue-processor-service-dev/processing-queue/MessageAgeAlarm/Resource"
+   }
+  },
+  "processingqueueInFlightMessagesAlarm233586D1": {
+   "Type": "AWS::CloudWatch::Alarm",
+   "Properties": {
+    "AlarmDescription": "Alert when in-flight messages exceed threshold for processing-queue",
+    "AlarmName": "queue-processor-service-processing-queue-in-flight-messages-high",
+    "ComparisonOperator": "GreaterThanThreshold",
+    "Dimensions": [
+     {
+      "Name": "QueueName",
+      "Value": {
+       "Fn::GetAtt": [
+        "processingqueueQueue11330FE0",
+        "QueueName"
+       ]
+      }
+     }
+    ],
+    "EvaluationPeriods": 2,
+    "MetricName": "ApproximateNumberOfMessagesNotVisible",
+    "Namespace": "AWS/SQS",
+    "Period": 300,
+    "Statistic": "Average",
+    "Tags": [
+     {
+      "Key": "alarm-type",
+      "Value": "in-flight-messages"
+     },
+     {
+      "Key": "backup-required",
+      "Value": "false"
+     },
+     {
+      "Key": "cloud-account",
+      "Value": "911871352725"
+     },
+     {
+      "Key": "cloud-provider",
+      "Value": "aws"
+     },
+     {
+      "Key": "cloud-region",
+      "Value": "us-west-2"
+     },
+     {
+      "Key": "compliance-framework",
+      "Value": "commercial"
+     },
+     {
+      "Key": "component-name",
+      "Value": "processing-queue"
+     },
+     {
+      "Key": "component-type",
+      "Value": "sqs-queue"
+     },
+     {
+      "Key": "cost-center",
+      "Value": "platform"
+     },
+     {
+      "Key": "data-classification",
+      "Value": "internal"
+     },
+     {
+      "Key": "deployment-id",
+      "Value": "deploy-20260109-172142"
+     },
+     {
+      "Key": "encryption-required",
+      "Value": "true"
+     },
+     {
+      "Key": "environment",
+      "Value": "dev"
+     },
+     {
+      "Key": "managed-by",
+      "Value": "platform-engineering"
+     },
+     {
+      "Key": "metric",
+      "Value": "ApproximateNumberOfMessagesNotVisible"
+     },
+     {
+      "Key": "monitoring-level",
+      "Value": "standard"
+     },
+     {
+      "Key": "owner",
+      "Value": "platform-engineering"
+     },
+     {
+      "Key": "platform",
+      "Value": "cdk-lib"
+     },
+     {
+      "Key": "platform-version",
+      "Value": "1.0.0"
+     },
+     {
+      "Key": "project",
+      "Value": "queue-processor-service"
+     },
+     {
+      "Key": "retention-period",
+      "Value": "365-days"
+     },
+     {
+      "Key": "service-name",
+      "Value": "queue-processor-service"
+     },
+     {
+      "Key": "service-version",
+      "Value": "1.0.0"
+     }
+    ],
+    "Threshold": 100,
+    "TreatMissingData": "notBreaching"
+   },
+   "Metadata": {
+    "aws:cdk:path": "queue-processor-service-dev/processing-queue/InFlightMessagesAlarm/Resource"
+   }
+  },
+  "processingqueueSqsQueueDashboardC64A1FBA": {
+   "Type": "AWS::CloudWatch::Dashboard",
+   "Properties": {
+    "DashboardBody": {
+     "Fn::Join": [
+      "",
+      [
+       "{\"periodOverride\":\"auto\",\"widgets\":[{\"type\":\"metric\",\"width\":12,\"height\":6,\"x\":0,\"y\":0,\"properties\":{\"view\":\"timeSeries\",\"title\":\"Queue Depth\",\"region\":\"",
+       {
+        "Ref": "AWS::Region"
+       },
+       "\",\"metrics\":[[\"AWS/SQS\",\"ApproximateNumberOfMessagesVisible\",\"QueueName\",\"",
+       {
+        "Fn::GetAtt": [
+         "processingqueueQueue11330FE0",
+         "QueueName"
+        ]
+       },
+       "\",{\"color\":\"#1f77b4\",\"label\":\"Messages Visible\"}]],\"yAxis\":{\"left\":{\"min\":0,\"label\":\"Messages\"}}}},{\"type\":\"metric\",\"width\":12,\"height\":6,\"x\":12,\"y\":0,\"properties\":{\"view\":\"timeSeries\",\"title\":\"Message Throughput\",\"region\":\"",
+       {
+        "Ref": "AWS::Region"
+       },
+       "\",\"metrics\":[[\"AWS/SQS\",\"NumberOfMessagesSent\",\"QueueName\",\"",
+       {
+        "Fn::GetAtt": [
+         "processingqueueQueue11330FE0",
+         "QueueName"
+        ]
+       },
+       "\",{\"color\":\"#2ca02c\",\"label\":\"Sent\",\"stat\":\"Sum\"}],[\"AWS/SQS\",\"NumberOfMessagesReceived\",\"QueueName\",\"",
+       {
+        "Fn::GetAtt": [
+         "processingqueueQueue11330FE0",
+         "QueueName"
+        ]
+       },
+       "\",{\"color\":\"#1f77b4\",\"label\":\"Received\",\"stat\":\"Sum\"}],[\"AWS/SQS\",\"NumberOfMessagesDeleted\",\"QueueName\",\"",
+       {
+        "Fn::GetAtt": [
+         "processingqueueQueue11330FE0",
+         "QueueName"
+        ]
+       },
+       "\",{\"color\":\"#ff7f0e\",\"label\":\"Deleted\",\"stat\":\"Sum\"}]],\"yAxis\":{\"left\":{\"min\":0,\"label\":\"Messages\"}}}},{\"type\":\"metric\",\"width\":12,\"height\":6,\"x\":0,\"y\":6,\"properties\":{\"view\":\"timeSeries\",\"title\":\"Message Age\",\"region\":\"",
+       {
+        "Ref": "AWS::Region"
+       },
+       "\",\"metrics\":[[\"AWS/SQS\",\"ApproximateAgeOfOldestMessage\",\"QueueName\",\"",
+       {
+        "Fn::GetAtt": [
+         "processingqueueQueue11330FE0",
+         "QueueName"
+        ]
+       },
+       "\",{\"color\":\"#d62728\",\"label\":\"Oldest Message Age\",\"stat\":\"Maximum\"}]],\"yAxis\":{\"left\":{\"min\":0,\"label\":\"Seconds\"}}}},{\"type\":\"metric\",\"width\":12,\"height\":6,\"x\":12,\"y\":6,\"properties\":{\"view\":\"timeSeries\",\"title\":\"In-Flight Messages\",\"region\":\"",
+       {
+        "Ref": "AWS::Region"
+       },
+       "\",\"metrics\":[[\"AWS/SQS\",\"ApproximateNumberOfMessagesNotVisible\",\"QueueName\",\"",
+       {
+        "Fn::GetAtt": [
+         "processingqueueQueue11330FE0",
+         "QueueName"
+        ]
+       },
+       "\",{\"color\":\"#9467bd\",\"label\":\"In-Flight\"}]],\"yAxis\":{\"left\":{\"min\":0,\"label\":\"Messages\"}}}},{\"type\":\"alarm\",\"width\":24,\"height\":3,\"x\":0,\"y\":12,\"properties\":{\"title\":\"Queue Alarms\",\"alarms\":[\"",
+       {
+        "Fn::GetAtt": [
+         "processingqueueQueueDepthAlarm5DA17285",
+         "Arn"
+        ]
+       },
+       "\",\"",
+       {
+        "Fn::GetAtt": [
+         "processingqueueMessageAgeAlarmAFCCDAC3",
+         "Arn"
+        ]
+       },
+       "\",\"",
+       {
+        "Fn::GetAtt": [
+         "processingqueueInFlightMessagesAlarm233586D1",
+         "Arn"
+        ]
+       },
+       "\"]}}]}"
+      ]
+     ]
+    },
+    "DashboardName": "queue-processor-service-processing-queue-sqs"
+   },
+   "Metadata": {
+    "aws:cdk:path": "queue-processor-service-dev/processing-queue/SqsQueueDashboard/Resource"
+   }
+  },
+  "databucketBucket3AA6DD16": {
+   "Type": "AWS::S3::Bucket",
+   "Properties": {
+    "BucketEncryption": {
+     "ServerSideEncryptionConfiguration": [
+      {
+       "ServerSideEncryptionByDefault": {
+        "SSEAlgorithm": "AES256"
+       }
+      }
+     ]
+    },
+    "BucketName": "queue-processor-service-bucket",
+    "PublicAccessBlockConfiguration": {
+     "BlockPublicAcls": true,
+     "BlockPublicPolicy": true,
+     "IgnorePublicAcls": true,
+     "RestrictPublicBuckets": true
+    },
+    "Tags": [
+     {
+      "Key": "backup-required",
+      "Value": "false"
+     },
+     {
+      "Key": "bucket-type",
+      "Value": "primary"
+     },
+     {
+      "Key": "cloud-account",
+      "Value": "911871352725"
+     },
+     {
+      "Key": "cloud-provider",
+      "Value": "aws"
+     },
+     {
+      "Key": "cloud-region",
+      "Value": "us-west-2"
+     },
+     {
+      "Key": "compliance-framework",
+      "Value": "commercial"
+     },
+     {
+      "Key": "component-name",
+      "Value": "data-bucket"
+     },
+     {
+      "Key": "component-type",
+      "Value": "s3-bucket"
+     },
+     {
+      "Key": "cost-center",
+      "Value": "platform"
+     },
+     {
+      "Key": "data-classification",
+      "Value": "internal"
+     },
+     {
+      "Key": "deployment-id",
+      "Value": "deploy-20260109-172142"
+     },
+     {
+      "Key": "encryption-required",
+      "Value": "true"
+     },
+     {
+      "Key": "environment",
+      "Value": "dev"
+     },
+     {
+      "Key": "managed-by",
+      "Value": "platform-engineering"
+     },
+     {
+      "Key": "monitoring-level",
+      "Value": "standard"
+     },
+     {
+      "Key": "owner",
+      "Value": "platform-engineering"
+     },
+     {
+      "Key": "platform",
+      "Value": "cdk-lib"
+     },
+     {
+      "Key": "platform-version",
+      "Value": "1.0.0"
+     },
+     {
+      "Key": "project",
+      "Value": "queue-processor-service"
+     },
+     {
+      "Key": "public-access",
+      "Value": "false"
+     },
+     {
+      "Key": "retention-period",
+      "Value": "365-days"
+     },
+     {
+      "Key": "service-name",
+      "Value": "queue-processor-service"
+     },
+     {
+      "Key": "service-version",
+      "Value": "1.0.0"
+     },
+     {
+      "Key": "versioning",
+      "Value": "true"
+     }
+    ],
+    "VersioningConfiguration": {
+     "Status": "Enabled"
+    }
+   },
+   "UpdateReplacePolicy": "Delete",
+   "DeletionPolicy": "Delete",
+   "Metadata": {
+    "aws:cdk:path": "queue-processor-service-dev/data-bucket/Bucket/Resource",
+    "cdk_nag": {
+     "rules_to_suppress": [
+      {
+       "reason": "S3 server access logging is configured through audit logging when compliance.auditLogging is enabled. This provides comprehensive access logging for compliance requirements.",
+       "id": "AwsSolutions-S1"
+      },
+      {
+       "reason": "S3 bucket public read access is controlled through the public configuration option. Block public access is enabled by default for security, but can be disabled for legitimate public bucket use cases.",
+       "id": "AwsSolutions-S2"
+      },
+      {
+       "reason": "S3 bucket versioning is enabled by default and can be configured through the versioning option. Object Lock requires versioning to be enabled.",
+       "id": "AwsSolutions-S3"
+      },
+      {
+       "reason": "S3 bucket encryption is configured through the encryption option with support for both S3-managed and KMS encryption. KMS encryption is required for FedRAMP compliance.",
+       "id": "AwsSolutions-S5"
+      },
+      {
+       "reason": "S3 bucket server-side encryption is configured through the encryption option. The component supports both AES256 and KMS encryption based on compliance requirements.",
+       "id": "AwsSolutions-S10"
+      }
+     ]
+    }
+   }
+  },
+  "databucketBucketPolicy4EB94D02": {
+   "Type": "AWS::S3::BucketPolicy",
+   "Properties": {
+    "Bucket": {
+     "Ref": "databucketBucket3AA6DD16"
+    },
+    "PolicyDocument": {
+     "Statement": [
+      {
+       "Action": "s3:*",
+       "Condition": {
+        "Bool": {
+         "aws:SecureTransport": "false"
+        }
+       },
+       "Effect": "Deny",
+       "Principal": {
+        "AWS": "*"
+       },
+       "Resource": [
+        {
+         "Fn::GetAtt": [
+          "databucketBucket3AA6DD16",
+          "Arn"
+         ]
+        },
+        {
+         "Fn::Join": [
+          "",
+          [
+           {
+            "Fn::GetAtt": [
+             "databucketBucket3AA6DD16",
+             "Arn"
+            ]
+           },
+           "/*"
+          ]
+         ]
+        }
+       ],
+       "Sid": "DenyInsecureTransport"
+      }
+     ],
+     "Version": "2012-10-17"
+    }
+   },
+   "Metadata": {
+    "aws:cdk:path": "queue-processor-service-dev/data-bucket/Bucket/Policy/Resource"
+   }
+  },
+  "apiLambdaApiExecutionLogs605C4FBE": {
+   "Type": "AWS::Logs::LogGroup",
+   "Properties": {
+    "RetentionInDays": 30,
+    "Tags": [
+     {
+      "Key": "backup-required",
+      "Value": "false"
+     },
+     {
+      "Key": "cloud-account",
+      "Value": "911871352725"
+     },
+     {
+      "Key": "cloud-provider",
+      "Value": "aws"
+     },
+     {
+      "Key": "cloud-region",
+      "Value": "us-west-2"
+     },
+     {
+      "Key": "compliance-framework",
+      "Value": "commercial"
+     },
+     {
+      "Key": "component-name",
+      "Value": "api"
+     },
+     {
+      "Key": "component-type",
+      "Value": "lambda-api"
+     },
+     {
+      "Key": "cost-center",
+      "Value": "platform"
+     },
+     {
+      "Key": "data-classification",
+      "Value": "internal"
+     },
+     {
+      "Key": "deployment-id",
+      "Value": "deploy-20260109-172142"
+     },
+     {
+      "Key": "encryption-required",
+      "Value": "true"
+     },
+     {
+      "Key": "environment",
+      "Value": "dev"
+     },
+     {
+      "Key": "log-type",
+      "Value": "lambda-execution"
+     },
+     {
+      "Key": "managed-by",
+      "Value": "platform-engineering"
+     },
+     {
+      "Key": "monitoring-level",
+      "Value": "standard"
+     },
+     {
+      "Key": "owner",
+      "Value": "platform-engineering"
+     },
+     {
+      "Key": "platform",
+      "Value": "cdk-lib"
+     },
+     {
+      "Key": "platform-version",
+      "Value": "1.0.0"
+     },
+     {
+      "Key": "project",
+      "Value": "queue-processor-service"
+     },
+     {
+      "Key": "retention-period",
+      "Value": "365-days"
+     },
+     {
+      "Key": "service-name",
+      "Value": "queue-processor-service"
+     },
+     {
+      "Key": "service-version",
+      "Value": "1.0.0"
+     }
+    ]
+   },
+   "UpdateReplacePolicy": "Retain",
+   "DeletionPolicy": "Retain",
+   "Metadata": {
+    "aws:cdk:path": "queue-processor-service-dev/api/LambdaApiExecutionLogs/Resource",
+    "cdk_nag": {
+     "rules_to_suppress": [
+      {
+       "reason": "Log group retention is configured based on compliance requirements and cost optimization needs.",
+       "id": "AwsSolutions-LOG1"
+      }
+     ]
+    }
+   }
+  },
+  "apiLambdaApiFunctionServiceRoleCDA23262": {
+   "Type": "AWS::IAM::Role",
+   "Properties": {
+    "AssumeRolePolicyDocument": {
+     "Statement": [
+      {
+       "Action": "sts:AssumeRole",
+       "Effect": "Allow",
+       "Principal": {
+        "Service": "lambda.amazonaws.com"
+       }
+      }
+     ],
+     "Version": "2012-10-17"
+    },
+    "ManagedPolicyArns": [
+     {
+      "Fn::Join": [
+       "",
+       [
+        "arn:",
+        {
+         "Ref": "AWS::Partition"
+        },
+        ":iam::aws:policy/service-role/AWSLambdaBasicExecutionRole"
+       ]
+      ]
+     }
+    ],
+    "Tags": [
+     {
+      "Key": "architecture",
+      "Value": "arm64"
+     },
+     {
+      "Key": "backup-required",
+      "Value": "false"
+     },
+     {
+      "Key": "cloud-account",
+      "Value": "911871352725"
+     },
+     {
+      "Key": "cloud-provider",
+      "Value": "aws"
+     },
+     {
+      "Key": "cloud-region",
+      "Value": "us-west-2"
+     },
+     {
+      "Key": "compliance-framework",
+      "Value": "commercial"
+     },
+     {
+      "Key": "component-name",
+      "Value": "api"
+     },
+     {
+      "Key": "component-type",
+      "Value": "lambda-api"
+     },
+     {
+      "Key": "cost-center",
+      "Value": "platform"
+     },
+     {
+      "Key": "data-classification",
+      "Value": "internal"
+     },
+     {
+      "Key": "deployment-id",
+      "Value": "deploy-20260109-172142"
+     },
+     {
+      "Key": "encryption-required",
+      "Value": "true"
+     },
+     {
+      "Key": "environment",
+      "Value": "dev"
+     },
+     {
+      "Key": "hardening-profile",
+      "Value": "baseline"
+     },
+     {
+      "Key": "lambda-runtime",
+      "Value": "nodejs20.x"
+     },
+     {
+      "Key": "managed-by",
+      "Value": "platform-engineering"
+     },
+     {
+      "Key": "monitoring-level",
+      "Value": "standard"
+     },
+     {
+      "Key": "owner",
+      "Value": "platform-engineering"
+     },
+     {
+      "Key": "platform",
+      "Value": "cdk-lib"
+     },
+     {
+      "Key": "platform-version",
+      "Value": "1.0.0"
+     },
+     {
+      "Key": "project",
+      "Value": "queue-processor-service"
+     },
+     {
+      "Key": "retention-period",
+      "Value": "365-days"
+     },
+     {
+      "Key": "service-name",
+      "Value": "queue-processor-service"
+     },
+     {
+      "Key": "service-version",
+      "Value": "1.0.0"
+     }
+    ]
+   },
+   "Metadata": {
+    "aws:cdk:path": "queue-processor-service-dev/api/LambdaApiFunction/ServiceRole/Resource"
+   }
+  },
+  "apiLambdaApiFunctionServiceRoleDefaultPolicy9ABEE2CD": {
+   "Type": "AWS::IAM::Policy",
+   "Properties": {
+    "PolicyDocument": {
+     "Statement": [
+      {
+       "Action": [
+        "xray:PutTraceSegments",
+        "xray:PutTelemetryRecords"
+       ],
+       "Effect": "Allow",
+       "Resource": "*"
+      }
+     ],
+     "Version": "2012-10-17"
+    },
+    "PolicyName": "apiLambdaApiFunctionServiceRoleDefaultPolicy9ABEE2CD",
+    "Roles": [
+     {
+      "Ref": "apiLambdaApiFunctionServiceRoleCDA23262"
+     }
+    ]
+   },
+   "Metadata": {
+    "aws:cdk:path": "queue-processor-service-dev/api/LambdaApiFunction/ServiceRole/DefaultPolicy/Resource"
+   }
+  },
+  "apiLambdaApiFunction8BE6F16B": {
+   "Type": "AWS::Lambda::Function",
+   "Properties": {
+    "Architectures": [
+     "arm64"
+    ],
+    "Code": {
+     "S3Bucket": "cdk-hnb659fds-assets-911871352725-us-west-2",
+     "S3Key": "37fd1b0f9a13d3fb8684845cb955253e27e27c6236c0db8d8b22845e85433511.zip"
+    },
+    "Environment": {
+     "Variables": {
+      "SQS_QUEUE_URL": "https://sqs.us-west-2.amazonaws.com/911871352725/queue-processor-queue",
+      "SYSTEM_LOG_LEVEL": "INFO",
+      "APPLICATION_LOG_LEVEL": "INFO",
+      "AWS_LAMBDA_LOG_FORMAT": "JSON",
+      "OTEL_EXPORTER_OTLP_ENDPOINT": "https://otel-collector.dev.us-west-2.platform.local:4317",
+      "OTEL_EXPORTER_OTLP_HEADERS": "authorization=Bearer ${OTEL_COLLECTOR_AUTH_TOKEN}",
+      "OTEL_SERVICE_NAME": "api",
+      "OTEL_SERVICE_VERSION": "1.0.0",
+      "OTEL_RESOURCE_ATTRIBUTES": "service.name=api,service.version=1.0.0,deployment.environment=dev,cloud.provider=aws,cloud.region=us-west-2,compliance.framework=commercial",
+      "OTEL_TRACES_SAMPLER": "traceidratio:0.1",
+      "OTEL_METRICS_EXPORTER": "otlp",
+      "OTEL_LOGS_EXPORTER": "otlp",
+      "OTEL_PROPAGATORS": "tracecontext,baggage,xray",
+      "OTEL_INSTRUMENTATION_COMMON_DEFAULT_ENABLED": "true"
+     }
+    },
+    "EphemeralStorage": {
+     "Size": 512
+    },
+    "FunctionName": "queue-processor-api",
+    "Handler": "api-handler.handler",
+    "LoggingConfig": {
+     "LogGroup": {
+      "Ref": "apiLambdaApiExecutionLogs605C4FBE"
+     }
+    },
+    "MemorySize": 512,
+    "Role": {
+     "Fn::GetAtt": [
+      "apiLambdaApiFunctionServiceRoleCDA23262",
+      "Arn"
+     ]
+    },
+    "Runtime": "nodejs20.x",
+    "Tags": [
+     {
+      "Key": "architecture",
+      "Value": "arm64"
+     },
+     {
+      "Key": "backup-required",
+      "Value": "false"
+     },
+     {
+      "Key": "cloud-account",
+      "Value": "911871352725"
+     },
+     {
+      "Key": "cloud-provider",
+      "Value": "aws"
+     },
+     {
+      "Key": "cloud-region",
+      "Value": "us-west-2"
+     },
+     {
+      "Key": "compliance-framework",
+      "Value": "commercial"
+     },
+     {
+      "Key": "component-name",
+      "Value": "api"
+     },
+     {
+      "Key": "component-type",
+      "Value": "lambda-api"
+     },
+     {
+      "Key": "cost-center",
+      "Value": "platform"
+     },
+     {
+      "Key": "data-classification",
+      "Value": "internal"
+     },
+     {
+      "Key": "deployment-id",
+      "Value": "deploy-20260109-172142"
+     },
+     {
+      "Key": "encryption-required",
+      "Value": "true"
+     },
+     {
+      "Key": "environment",
+      "Value": "dev"
+     },
+     {
+      "Key": "hardening-profile",
+      "Value": "baseline"
+     },
+     {
+      "Key": "lambda-runtime",
+      "Value": "nodejs20.x"
+     },
+     {
+      "Key": "managed-by",
+      "Value": "platform-engineering"
+     },
+     {
+      "Key": "monitoring-level",
+      "Value": "standard"
+     },
+     {
+      "Key": "owner",
+      "Value": "platform-engineering"
+     },
+     {
+      "Key": "platform",
+      "Value": "cdk-lib"
+     },
+     {
+      "Key": "platform-version",
+      "Value": "1.0.0"
+     },
+     {
+      "Key": "project",
+      "Value": "queue-processor-service"
+     },
+     {
+      "Key": "retention-period",
+      "Value": "365-days"
+     },
+     {
+      "Key": "service-name",
+      "Value": "queue-processor-service"
+     },
+     {
+      "Key": "service-version",
+      "Value": "1.0.0"
+     }
+    ],
+    "Timeout": 30,
+    "TracingConfig": {
+     "Mode": "Active"
+    }
+   },
+   "DependsOn": [
+    "apiLambdaApiFunctionServiceRoleDefaultPolicy9ABEE2CD",
+    "apiLambdaApiFunctionServiceRoleCDA23262"
+   ],
+   "UpdateReplacePolicy": "Retain",
+   "DeletionPolicy": "Retain",
+   "Metadata": {
+    "aws:cdk:path": "queue-processor-service-dev/api/LambdaApiFunction/Resource",
+    "aws:asset:path": "asset.37fd1b0f9a13d3fb8684845cb955253e27e27c6236c0db8d8b22845e85433511",
+    "aws:asset:is-bundled": false,
+    "aws:asset:property": "Code",
+    "cdk_nag": {
+     "rules_to_suppress": [
+      {
+       "reason": "Lambda runtime version may be intentionally set for compatibility with existing dependencies or legacy systems. Runtime updates should be planned and tested thoroughly.",
+       "id": "AwsSolutions-L1"
+      },
+      {
+       "reason": "Custom log retention policy is configured based on compliance requirements and cost optimization needs.",
+       "id": "AwsSolutions-L2"
+      },
+      {
+       "reason": "Environment variables are required for Lambda function configuration, including observability settings and service-specific parameters.",
+       "id": "AwsSolutions-L3"
+      },
+      {
+       "reason": "Memory allocation is optimized based on workload requirements and performance testing.",
+       "id": "AwsSolutions-L4"
+      },
+      {
+       "reason": "Timeout settings are configured based on workload characteristics and business requirements.",
+       "id": "AwsSolutions-L5"
+      },
+      {
+       "reason": "Lambda execution role uses AWS managed policies (AWSLambdaBasicExecutionRole) which are maintained by AWS and provide necessary permissions for Lambda runtime.",
+       "id": "AwsSolutions-IAM4"
+      },
+      {
+       "reason": "Wildcard permissions are required for Lambda runtime to access CloudWatch Logs and X-Ray tracing services. These are standard AWS Lambda permissions.",
+       "id": "AwsSolutions-IAM5"
+      }
+     ]
+    }
+   }
+  },
+  "apiApiAccessLogs093CF544": {
+   "Type": "AWS::Logs::LogGroup",
+   "Properties": {
+    "RetentionInDays": 7,
+    "Tags": [
+     {
+      "Key": "backup-required",
+      "Value": "false"
+     },
+     {
+      "Key": "cloud-account",
+      "Value": "911871352725"
+     },
+     {
+      "Key": "cloud-provider",
+      "Value": "aws"
+     },
+     {
+      "Key": "cloud-region",
+      "Value": "us-west-2"
+     },
+     {
+      "Key": "compliance-framework",
+      "Value": "commercial"
+     },
+     {
+      "Key": "component-name",
+      "Value": "api"
+     },
+     {
+      "Key": "component-type",
+      "Value": "lambda-api"
+     },
+     {
+      "Key": "cost-center",
+      "Value": "platform"
+     },
+     {
+      "Key": "data-classification",
+      "Value": "internal"
+     },
+     {
+      "Key": "deployment-id",
+      "Value": "deploy-20260109-172142"
+     },
+     {
+      "Key": "encryption-required",
+      "Value": "true"
+     },
+     {
+      "Key": "environment",
+      "Value": "dev"
+     },
+     {
+      "Key": "log-type",
+      "Value": "api-access"
+     },
+     {
+      "Key": "managed-by",
+      "Value": "platform-engineering"
+     },
+     {
+      "Key": "monitoring-level",
+      "Value": "standard"
+     },
+     {
+      "Key": "owner",
+      "Value": "platform-engineering"
+     },
+     {
+      "Key": "platform",
+      "Value": "cdk-lib"
+     },
+     {
+      "Key": "platform-version",
+      "Value": "1.0.0"
+     },
+     {
+      "Key": "project",
+      "Value": "queue-processor-service"
+     },
+     {
+      "Key": "retention-period",
+      "Value": "365-days"
+     },
+     {
+      "Key": "service-name",
+      "Value": "queue-processor-service"
+     },
+     {
+      "Key": "service-version",
+      "Value": "1.0.0"
+     },
+     {
+      "Key": "stage",
+      "Value": "dev"
+     }
+    ]
+   },
+   "UpdateReplacePolicy": "Retain",
+   "DeletionPolicy": "Retain",
+   "Metadata": {
+    "aws:cdk:path": "queue-processor-service-dev/api/ApiAccessLogs/Resource",
+    "cdk_nag": {
+     "rules_to_suppress": [
+      {
+       "reason": "API Gateway access log retention is configured based on compliance requirements and cost optimization needs.",
+       "id": "AwsSolutions-LOG1"
+      }
+     ]
+    }
+   }
+  },
+  "apiLambdaRestApiapi3DD8DE94": {
+   "Type": "AWS::ApiGateway::RestApi",
+   "Properties": {
+    "Description": "Lambda API component",
+    "Name": "queue-processor-service-api",
+    "Tags": [
+     {
+      "Key": "api-stage",
+      "Value": "dev"
+     },
+     {
+      "Key": "api-type",
+      "Value": "rest"
+     },
+     {
+      "Key": "backup-required",
+      "Value": "false"
+     },
+     {
+      "Key": "cloud-account",
+      "Value": "911871352725"
+     },
+     {
+      "Key": "cloud-provider",
+      "Value": "aws"
+     },
+     {
+      "Key": "cloud-region",
+      "Value": "us-west-2"
+     },
+     {
+      "Key": "compliance-framework",
+      "Value": "commercial"
+     },
+     {
+      "Key": "component-name",
+      "Value": "api"
+     },
+     {
+      "Key": "component-type",
+      "Value": "lambda-api"
+     },
+     {
+      "Key": "cost-center",
+      "Value": "platform"
+     },
+     {
+      "Key": "data-classification",
+      "Value": "internal"
+     },
+     {
+      "Key": "deployment-id",
+      "Value": "deploy-20260109-172142"
+     },
+     {
+      "Key": "encryption-required",
+      "Value": "true"
+     },
+     {
+      "Key": "environment",
+      "Value": "dev"
+     },
+     {
+      "Key": "managed-by",
+      "Value": "platform-engineering"
+     },
+     {
+      "Key": "monitoring-level",
+      "Value": "standard"
+     },
+     {
+      "Key": "owner",
+      "Value": "platform-engineering"
+     },
+     {
+      "Key": "platform",
+      "Value": "cdk-lib"
+     },
+     {
+      "Key": "platform-version",
+      "Value": "1.0.0"
+     },
+     {
+      "Key": "project",
+      "Value": "queue-processor-service"
+     },
+     {
+      "Key": "retention-period",
+      "Value": "365-days"
+     },
+     {
+      "Key": "service-name",
+      "Value": "queue-processor-service"
+     },
+     {
+      "Key": "service-version",
+      "Value": "1.0.0"
+     }
+    ]
+   },
+   "Metadata": {
+    "aws:cdk:path": "queue-processor-service-dev/api/LambdaRestApi-api/Resource",
+    "cdk_nag": {
+     "rules_to_suppress": [
+      {
+       "reason": "API Gateway access logging is configured through CloudWatch Logs integration for compliance and monitoring requirements.",
+       "id": "AwsSolutions-APIG1"
+      },
+      {
+       "reason": "Request validation is implemented at the Lambda function level for better error handling and security.",
+       "id": "AwsSolutions-APIG2"
+      },
+      {
+       "reason": "API Gateway execution logging is configured through CloudWatch Logs for observability and compliance requirements.",
+       "id": "AwsSolutions-APIG3"
+      },
+      {
+       "reason": "API Gateway throttling is configured through usage plans and stage-level throttling for rate limiting and protection.",
+       "id": "AwsSolutions-APIG4"
+      }
+     ]
+    }
+   }
+  },
+  "apiLambdaRestApiapiDeploymentA3AFDF0Bdf888f9e0b8649238c2ff1438aaeebea": {
+   "Type": "AWS::ApiGateway::Deployment",
+   "Properties": {
+    "Description": "Lambda API component",
+    "RestApiId": {
+     "Ref": "apiLambdaRestApiapi3DD8DE94"
+    }
+   },
+   "DependsOn": [
+    "apiLambdaRestApiapiproxyANYAE91E8E7",
+    "apiLambdaRestApiapiproxyOPTIONSA82CE5E6",
+    "apiLambdaRestApiapiproxy92EC0F7C",
+    "apiLambdaRestApiapiANYAE0E0724",
+    "apiLambdaRestApiapiOPTIONSCF397626"
+   ],
+   "Metadata": {
+    "aws:cdk:path": "queue-processor-service-dev/api/LambdaRestApi-api/Deployment/Resource",
+    "aws:cdk:do-not-refactor": true
+   }
+  },
+  "apiLambdaRestApiapiDeploymentStagedev070BF343": {
+   "Type": "AWS::ApiGateway::Stage",
+   "Properties": {
+    "AccessLogSetting": {
+     "DestinationArn": {
+      "Fn::GetAtt": [
+       "apiApiAccessLogs093CF544",
+       "Arn"
+      ]
+     },
+     "Format": "{\"requestId\":\"$context.requestId\",\"ip\":\"$context.identity.sourceIp\",\"user\":\"$context.identity.user\",\"caller\":\"$context.identity.caller\",\"requestTime\":\"$context.requestTime\",\"httpMethod\":\"$context.httpMethod\",\"resourcePath\":\"$context.resourcePath\",\"status\":\"$context.status\",\"protocol\":\"$context.protocol\",\"responseLength\":\"$context.responseLength\"}"
+    },
+    "DeploymentId": {
+     "Ref": "apiLambdaRestApiapiDeploymentA3AFDF0Bdf888f9e0b8649238c2ff1438aaeebea"
+    },
+    "MethodSettings": [
+     {
+      "DataTraceEnabled": true,
+      "HttpMethod": "*",
+      "LoggingLevel": "INFO",
+      "MetricsEnabled": false,
+      "ResourcePath": "/*",
+      "ThrottlingBurstLimit": 10,
+      "ThrottlingRateLimit": 5
+     }
+    ],
+    "RestApiId": {
+     "Ref": "apiLambdaRestApiapi3DD8DE94"
+    },
+    "StageName": "dev",
+    "Tags": [
+     {
+      "Key": "api-stage",
+      "Value": "dev"
+     },
+     {
+      "Key": "api-type",
+      "Value": "rest"
+     },
+     {
+      "Key": "backup-required",
+      "Value": "false"
+     },
+     {
+      "Key": "cloud-account",
+      "Value": "911871352725"
+     },
+     {
+      "Key": "cloud-provider",
+      "Value": "aws"
+     },
+     {
+      "Key": "cloud-region",
+      "Value": "us-west-2"
+     },
+     {
+      "Key": "compliance-framework",
+      "Value": "commercial"
+     },
+     {
+      "Key": "component-name",
+      "Value": "api"
+     },
+     {
+      "Key": "component-type",
+      "Value": "lambda-api"
+     },
+     {
+      "Key": "cost-center",
+      "Value": "platform"
+     },
+     {
+      "Key": "data-classification",
+      "Value": "internal"
+     },
+     {
+      "Key": "deployment-id",
+      "Value": "deploy-20260109-172142"
+     },
+     {
+      "Key": "encryption-required",
+      "Value": "true"
+     },
+     {
+      "Key": "environment",
+      "Value": "dev"
+     },
+     {
+      "Key": "managed-by",
+      "Value": "platform-engineering"
+     },
+     {
+      "Key": "monitoring-level",
+      "Value": "standard"
+     },
+     {
+      "Key": "owner",
+      "Value": "platform-engineering"
+     },
+     {
+      "Key": "platform",
+      "Value": "cdk-lib"
+     },
+     {
+      "Key": "platform-version",
+      "Value": "1.0.0"
+     },
+     {
+      "Key": "project",
+      "Value": "queue-processor-service"
+     },
+     {
+      "Key": "retention-period",
+      "Value": "365-days"
+     },
+     {
+      "Key": "service-name",
+      "Value": "queue-processor-service"
+     },
+     {
+      "Key": "service-version",
+      "Value": "1.0.0"
+     }
+    ],
+    "TracingEnabled": false
+   },
+   "Metadata": {
+    "aws:cdk:path": "queue-processor-service-dev/api/LambdaRestApi-api/DeploymentStage.dev/Resource"
+   }
+  },
+  "apiLambdaRestApiapiOPTIONSCF397626": {
+   "Type": "AWS::ApiGateway::Method",
+   "Properties": {
+    "ApiKeyRequired": false,
+    "AuthorizationType": "NONE",
+    "HttpMethod": "OPTIONS",
+    "Integration": {
+     "IntegrationResponses": [
+      {
+       "ResponseParameters": {
+        "method.response.header.Access-Control-Allow-Headers": "'Content-Type'",
+        "method.response.header.Access-Control-Allow-Origin": "'*'",
+        "method.response.header.Access-Control-Allow-Methods": "'GET,POST,PUT,PATCH,DELETE,OPTIONS'"
+       },
+       "StatusCode": "204"
+      }
+     ],
+     "RequestTemplates": {
+      "application/json": "{ statusCode: 200 }"
+     },
+     "Type": "MOCK"
+    },
+    "MethodResponses": [
+     {
+      "ResponseParameters": {
+       "method.response.header.Access-Control-Allow-Headers": true,
+       "method.response.header.Access-Control-Allow-Origin": true,
+       "method.response.header.Access-Control-Allow-Methods": true
+      },
+      "StatusCode": "204"
+     }
+    ],
+    "ResourceId": {
+     "Fn::GetAtt": [
+      "apiLambdaRestApiapi3DD8DE94",
+      "RootResourceId"
+     ]
+    },
+    "RestApiId": {
+     "Ref": "apiLambdaRestApiapi3DD8DE94"
+    }
+   },
+   "Metadata": {
+    "aws:cdk:path": "queue-processor-service-dev/api/LambdaRestApi-api/Default/OPTIONS/Resource"
+   }
+  },
+  "apiLambdaRestApiapiproxy92EC0F7C": {
+   "Type": "AWS::ApiGateway::Resource",
+   "Properties": {
+    "ParentId": {
+     "Fn::GetAtt": [
+      "apiLambdaRestApiapi3DD8DE94",
+      "RootResourceId"
+     ]
+    },
+    "PathPart": "{proxy+}",
+    "RestApiId": {
+     "Ref": "apiLambdaRestApiapi3DD8DE94"
+    }
+   },
+   "Metadata": {
+    "aws:cdk:path": "queue-processor-service-dev/api/LambdaRestApi-api/Default/{proxy+}/Resource"
+   }
+  },
+  "apiLambdaRestApiapiproxyOPTIONSA82CE5E6": {
+   "Type": "AWS::ApiGateway::Method",
+   "Properties": {
+    "ApiKeyRequired": false,
+    "AuthorizationType": "NONE",
+    "HttpMethod": "OPTIONS",
+    "Integration": {
+     "IntegrationResponses": [
+      {
+       "ResponseParameters": {
+        "method.response.header.Access-Control-Allow-Headers": "'Content-Type'",
+        "method.response.header.Access-Control-Allow-Origin": "'*'",
+        "method.response.header.Access-Control-Allow-Methods": "'GET,POST,PUT,PATCH,DELETE,OPTIONS'"
+       },
+       "StatusCode": "204"
+      }
+     ],
+     "RequestTemplates": {
+      "application/json": "{ statusCode: 200 }"
+     },
+     "Type": "MOCK"
+    },
+    "MethodResponses": [
+     {
+      "ResponseParameters": {
+       "method.response.header.Access-Control-Allow-Headers": true,
+       "method.response.header.Access-Control-Allow-Origin": true,
+       "method.response.header.Access-Control-Allow-Methods": true
+      },
+      "StatusCode": "204"
+     }
+    ],
+    "ResourceId": {
+     "Ref": "apiLambdaRestApiapiproxy92EC0F7C"
+    },
+    "RestApiId": {
+     "Ref": "apiLambdaRestApiapi3DD8DE94"
+    }
+   },
+   "Metadata": {
+    "aws:cdk:path": "queue-processor-service-dev/api/LambdaRestApi-api/Default/{proxy+}/OPTIONS/Resource"
+   }
+  },
+  "apiLambdaRestApiapiproxyANYApiPermissionqueueprocessorservicedevapiLambdaRestApiapiD67DF6E0ANYproxy387157DE": {
+   "Type": "AWS::Lambda::Permission",
+   "Properties": {
+    "Action": "lambda:InvokeFunction",
+    "FunctionName": {
+     "Fn::GetAtt": [
+      "apiLambdaApiFunction8BE6F16B",
+      "Arn"
+     ]
+    },
+    "Principal": "apigateway.amazonaws.com",
+    "SourceArn": {
+     "Fn::Join": [
+      "",
+      [
+       "arn:",
+       {
+        "Ref": "AWS::Partition"
+       },
+       ":execute-api:us-west-2:911871352725:",
+       {
+        "Ref": "apiLambdaRestApiapi3DD8DE94"
+       },
+       "/",
+       {
+        "Ref": "apiLambdaRestApiapiDeploymentStagedev070BF343"
+       },
+       "/*/*"
+      ]
+     ]
+    }
+   },
+   "Metadata": {
+    "aws:cdk:path": "queue-processor-service-dev/api/LambdaRestApi-api/Default/{proxy+}/ANY/ApiPermission.queueprocessorservicedevapiLambdaRestApiapiD67DF6E0.ANY..{proxy+}"
+   }
+  },
+  "apiLambdaRestApiapiproxyANYApiPermissionTestqueueprocessorservicedevapiLambdaRestApiapiD67DF6E0ANYproxyF791D7CC": {
+   "Type": "AWS::Lambda::Permission",
+   "Properties": {
+    "Action": "lambda:InvokeFunction",
+    "FunctionName": {
+     "Fn::GetAtt": [
+      "apiLambdaApiFunction8BE6F16B",
+      "Arn"
+     ]
+    },
+    "Principal": "apigateway.amazonaws.com",
+    "SourceArn": {
+     "Fn::Join": [
+      "",
+      [
+       "arn:",
+       {
+        "Ref": "AWS::Partition"
+       },
+       ":execute-api:us-west-2:911871352725:",
+       {
+        "Ref": "apiLambdaRestApiapi3DD8DE94"
+       },
+       "/test-invoke-stage/*/*"
+      ]
+     ]
+    }
+   },
+   "Metadata": {
+    "aws:cdk:path": "queue-processor-service-dev/api/LambdaRestApi-api/Default/{proxy+}/ANY/ApiPermission.Test.queueprocessorservicedevapiLambdaRestApiapiD67DF6E0.ANY..{proxy+}"
+   }
+  },
+  "apiLambdaRestApiapiproxyANYAE91E8E7": {
+   "Type": "AWS::ApiGateway::Method",
+   "Properties": {
+    "ApiKeyRequired": false,
+    "AuthorizationType": "NONE",
+    "HttpMethod": "ANY",
+    "Integration": {
+     "IntegrationHttpMethod": "POST",
+     "Type": "AWS_PROXY",
+     "Uri": {
+      "Fn::Join": [
+       "",
+       [
+        "arn:",
+        {
+         "Ref": "AWS::Partition"
+        },
+        ":apigateway:us-west-2:lambda:path/2015-03-31/functions/",
+        {
+         "Fn::GetAtt": [
+          "apiLambdaApiFunction8BE6F16B",
+          "Arn"
+         ]
+        },
+        "/invocations"
+       ]
+      ]
+     }
+    },
+    "ResourceId": {
+     "Ref": "apiLambdaRestApiapiproxy92EC0F7C"
+    },
+    "RestApiId": {
+     "Ref": "apiLambdaRestApiapi3DD8DE94"
+    }
+   },
+   "Metadata": {
+    "aws:cdk:path": "queue-processor-service-dev/api/LambdaRestApi-api/Default/{proxy+}/ANY/Resource"
+   }
+  },
+  "apiLambdaRestApiapiANYAE0E0724": {
+   "Type": "AWS::ApiGateway::Method",
+   "Properties": {
+    "ApiKeyRequired": false,
+    "AuthorizationType": "NONE",
+    "HttpMethod": "ANY",
+    "Integration": {
+     "Type": "MOCK"
+    },
+    "ResourceId": {
+     "Fn::GetAtt": [
+      "apiLambdaRestApiapi3DD8DE94",
+      "RootResourceId"
+     ]
+    },
+    "RestApiId": {
+     "Ref": "apiLambdaRestApiapi3DD8DE94"
+    }
+   },
+   "Metadata": {
+    "aws:cdk:path": "queue-processor-service-dev/api/LambdaRestApi-api/Default/ANY/Resource"
+   }
+  },
+  "workerLambdaWorkerFunctionServiceRoleBDC6B801": {
+   "Type": "AWS::IAM::Role",
+   "Properties": {
+    "AssumeRolePolicyDocument": {
+     "Statement": [
+      {
+       "Action": "sts:AssumeRole",
+       "Effect": "Allow",
+       "Principal": {
+        "Service": "lambda.amazonaws.com"
+       }
+      }
+     ],
+     "Version": "2012-10-17"
+    },
+    "ManagedPolicyArns": [
+     {
+      "Fn::Join": [
+       "",
+       [
+        "arn:",
+        {
+         "Ref": "AWS::Partition"
+        },
+        ":iam::aws:policy/service-role/AWSLambdaBasicExecutionRole"
+       ]
+      ]
+     }
+    ],
+    "Tags": [
+     {
+      "Key": "architecture",
+      "Value": "arm64"
+     },
+     {
+      "Key": "backup-required",
+      "Value": "false"
+     },
+     {
+      "Key": "cloud-account",
+      "Value": "911871352725"
+     },
+     {
+      "Key": "cloud-provider",
+      "Value": "aws"
+     },
+     {
+      "Key": "cloud-region",
+      "Value": "us-west-2"
+     },
+     {
+      "Key": "compliance-framework",
+      "Value": "commercial"
+     },
+     {
+      "Key": "component-name",
+      "Value": "worker"
+     },
+     {
+      "Key": "component-type",
+      "Value": "lambda-worker"
+     },
+     {
+      "Key": "cost-center",
+      "Value": "platform"
+     },
+     {
+      "Key": "data-classification",
+      "Value": "internal"
+     },
+     {
+      "Key": "deployment-id",
+      "Value": "deploy-20260109-172143"
+     },
+     {
+      "Key": "encryption-required",
+      "Value": "true"
+     },
+     {
+      "Key": "environment",
+      "Value": "dev"
+     },
+     {
+      "Key": "hardening-profile",
+      "Value": "baseline"
+     },
+     {
+      "Key": "lambda-runtime",
+      "Value": "nodejs20.x"
+     },
+     {
+      "Key": "managed-by",
+      "Value": "platform-engineering"
+     },
+     {
+      "Key": "monitoring-level",
+      "Value": "standard"
+     },
+     {
+      "Key": "owner",
+      "Value": "platform-engineering"
+     },
+     {
+      "Key": "platform",
+      "Value": "cdk-lib"
+     },
+     {
+      "Key": "platform-version",
+      "Value": "1.0.0"
+     },
+     {
+      "Key": "project",
+      "Value": "queue-processor-service"
+     },
+     {
+      "Key": "retention-period",
+      "Value": "365-days"
+     },
+     {
+      "Key": "service-name",
+      "Value": "queue-processor-service"
+     },
+     {
+      "Key": "service-version",
+      "Value": "1.0.0"
+     }
+    ]
+   },
+   "DependsOn": [
+    "processingqueueQueue11330FE0"
+   ],
+   "Metadata": {
+    "aws:cdk:path": "queue-processor-service-dev/worker/LambdaWorkerFunction/ServiceRole/Resource"
+   }
+  },
+  "workerLambdaWorkerFunctionServiceRoleDefaultPolicy13E80450": {
+   "Type": "AWS::IAM::Policy",
+   "Properties": {
+    "PolicyDocument": {
+     "Statement": [
+      {
+       "Action": [
+        "xray:PutTraceSegments",
+        "xray:PutTelemetryRecords"
+       ],
+       "Effect": "Allow",
+       "Resource": "*"
+      },
+      {
+       "Action": [
+        "sqs:ReceiveMessage",
+        "sqs:ChangeMessageVisibility",
+        "sqs:GetQueueUrl",
+        "sqs:DeleteMessage",
+        "sqs:GetQueueAttributes"
+       ],
+       "Effect": "Allow",
+       "Resource": {
+        "Fn::GetAtt": [
+         "processingqueueQueue11330FE0",
+         "Arn"
+        ]
+       }
+      }
+     ],
+     "Version": "2012-10-17"
+    },
+    "PolicyName": "workerLambdaWorkerFunctionServiceRoleDefaultPolicy13E80450",
+    "Roles": [
+     {
+      "Ref": "workerLambdaWorkerFunctionServiceRoleBDC6B801"
+     }
+    ]
+   },
+   "DependsOn": [
+    "processingqueueQueue11330FE0"
+   ],
+   "Metadata": {
+    "aws:cdk:path": "queue-processor-service-dev/worker/LambdaWorkerFunction/ServiceRole/DefaultPolicy/Resource"
+   }
+  },
+  "workerLambdaWorkerFunction8440C8A6": {
+   "Type": "AWS::Lambda::Function",
+   "Properties": {
+    "Architectures": [
+     "arm64"
+    ],
+    "Code": {
+     "S3Bucket": "cdk-hnb659fds-assets-911871352725-us-west-2",
+     "S3Key": "0a734018f85d58852cfd723de418b0e40e71bdf5b08ea1da07a4c3959d65a9b9.zip"
+    },
+    "Environment": {
+     "Variables": {
+      "SYSTEM_LOG_LEVEL": "INFO",
+      "APPLICATION_LOG_LEVEL": "INFO",
+      "AWS_LAMBDA_LOG_FORMAT": "JSON"
+     }
+    },
+    "FunctionName": "queue-processor-worker",
+    "Handler": "worker-handler.handler",
+    "MemorySize": 1024,
+    "Role": {
+     "Fn::GetAtt": [
+      "workerLambdaWorkerFunctionServiceRoleBDC6B801",
+      "Arn"
+     ]
+    },
+    "Runtime": "nodejs20.x",
+    "Tags": [
+     {
+      "Key": "architecture",
+      "Value": "arm64"
+     },
+     {
+      "Key": "backup-required",
+      "Value": "false"
+     },
+     {
+      "Key": "cloud-account",
+      "Value": "911871352725"
+     },
+     {
+      "Key": "cloud-provider",
+      "Value": "aws"
+     },
+     {
+      "Key": "cloud-region",
+      "Value": "us-west-2"
+     },
+     {
+      "Key": "compliance-framework",
+      "Value": "commercial"
+     },
+     {
+      "Key": "component-name",
+      "Value": "worker"
+     },
+     {
+      "Key": "component-type",
+      "Value": "lambda-worker"
+     },
+     {
+      "Key": "cost-center",
+      "Value": "platform"
+     },
+     {
+      "Key": "data-classification",
+      "Value": "internal"
+     },
+     {
+      "Key": "deployment-id",
+      "Value": "deploy-20260109-172143"
+     },
+     {
+      "Key": "encryption-required",
+      "Value": "true"
+     },
+     {
+      "Key": "environment",
+      "Value": "dev"
+     },
+     {
+      "Key": "hardening-profile",
+      "Value": "baseline"
+     },
+     {
+      "Key": "lambda-runtime",
+      "Value": "nodejs20.x"
+     },
+     {
+      "Key": "managed-by",
+      "Value": "platform-engineering"
+     },
+     {
+      "Key": "monitoring-level",
+      "Value": "standard"
+     },
+     {
+      "Key": "owner",
+      "Value": "platform-engineering"
+     },
+     {
+      "Key": "platform",
+      "Value": "cdk-lib"
+     },
+     {
+      "Key": "platform-version",
+      "Value": "1.0.0"
+     },
+     {
+      "Key": "project",
+      "Value": "queue-processor-service"
+     },
+     {
+      "Key": "retention-period",
+      "Value": "365-days"
+     },
+     {
+      "Key": "service-name",
+      "Value": "queue-processor-service"
+     },
+     {
+      "Key": "service-version",
+      "Value": "1.0.0"
+     }
+    ],
+    "Timeout": 60,
+    "TracingConfig": {
+     "Mode": "PassThrough"
+    }
+   },
+   "DependsOn": [
+    "processingqueueQueue11330FE0",
+    "workerLambdaWorkerFunctionServiceRoleDefaultPolicy13E80450",
+    "workerLambdaWorkerFunctionServiceRoleBDC6B801"
+   ],
+   "UpdateReplacePolicy": "Retain",
+   "DeletionPolicy": "Retain",
+   "Metadata": {
+    "aws:cdk:path": "queue-processor-service-dev/worker/LambdaWorkerFunction/Resource",
+    "aws:asset:path": "asset.0a734018f85d58852cfd723de418b0e40e71bdf5b08ea1da07a4c3959d65a9b9",
+    "aws:asset:is-bundled": false,
+    "aws:asset:property": "Code",
+    "cdk_nag": {
+     "rules_to_suppress": [
+      {
+       "reason": "Lambda runtime version may be intentionally set for compatibility with existing dependencies or legacy systems. Runtime updates should be planned and tested thoroughly.",
+       "id": "AwsSolutions-L1"
+      },
+      {
+       "reason": "Custom log retention policy is configured based on compliance requirements and cost optimization needs.",
+       "id": "AwsSolutions-L2"
+      },
+      {
+       "reason": "Environment variables are required for Lambda function configuration, including observability settings and service-specific parameters.",
+       "id": "AwsSolutions-L3"
+      },
+      {
+       "reason": "Memory allocation is optimized based on workload requirements and performance testing.",
+       "id": "AwsSolutions-L4"
+      },
+      {
+       "reason": "Timeout settings are configured based on workload characteristics and business requirements.",
+       "id": "AwsSolutions-L5"
+      },
+      {
+       "reason": "Dead letter queue configuration is handled by event source components (SQS, EventBridge) for better error handling and retry logic.",
+       "id": "AwsSolutions-L6"
+      },
+      {
+       "reason": "Lambda execution role uses AWS managed policies (AWSLambdaBasicExecutionRole) which are maintained by AWS and provide necessary permissions for Lambda runtime.",
+       "id": "AwsSolutions-IAM4"
+      },
+      {
+       "reason": "Wildcard permissions are required for Lambda runtime to access CloudWatch Logs and X-Ray tracing services. These are standard AWS Lambda permissions.",
+       "id": "AwsSolutions-IAM5"
+      }
+     ]
+    }
+   }
+  },
+  "workerLambdaWorkerFunctionLogRetention768B2783": {
+   "Type": "Custom::LogRetention",
+   "Properties": {
+    "ServiceToken": {
+     "Fn::GetAtt": [
+      "LogRetentionaae0aa3c5b4d4f87b02d85b201efdd8aFD4BFC8A",
+      "Arn"
+     ]
+    },
+    "LogGroupName": {
+     "Fn::Join": [
+      "",
+      [
+       "/aws/lambda/",
+       {
+        "Ref": "workerLambdaWorkerFunction8440C8A6"
+       }
+      ]
+     ]
+    },
+    "SdkRetry": {
+     "maxRetries": 5
+    },
+    "RetentionInDays": 30
+   },
+   "DependsOn": [
+    "processingqueueQueue11330FE0"
+   ],
+   "Metadata": {
+    "aws:cdk:path": "queue-processor-service-dev/worker/LambdaWorkerFunction/LogRetention/Resource"
+   }
+  },
+  "workerSqsEventSource00014E168": {
+   "Type": "AWS::Lambda::EventSourceMapping",
+   "Properties": {
+    "BatchSize": 10,
+    "Enabled": true,
+    "EventSourceArn": {
+     "Fn::GetAtt": [
+      "processingqueueQueue11330FE0",
+      "Arn"
+     ]
+    },
+    "FunctionName": {
+     "Ref": "workerLambdaWorkerFunction8440C8A6"
+    },
+    "FunctionResponseTypes": [
+     "ReportBatchItemFailures"
+    ]
+   },
+   "DependsOn": [
+    "processingqueueQueue11330FE0"
+   ],
+   "Metadata": {
+    "aws:cdk:path": "queue-processor-service-dev/worker/SqsEventSource0/Resource"
+   }
+  },
+  "LogRetentionaae0aa3c5b4d4f87b02d85b201efdd8aServiceRole9741ECFB": {
+   "Type": "AWS::IAM::Role",
+   "Properties": {
+    "AssumeRolePolicyDocument": {
+     "Statement": [
+      {
+       "Action": "sts:AssumeRole",
+       "Effect": "Allow",
+       "Principal": {
+        "Service": "lambda.amazonaws.com"
+       }
+      }
+     ],
+     "Version": "2012-10-17"
+    },
+    "ManagedPolicyArns": [
+     {
+      "Fn::Join": [
+       "",
+       [
+        "arn:",
+        {
+         "Ref": "AWS::Partition"
+        },
+        ":iam::aws:policy/service-role/AWSLambdaBasicExecutionRole"
+       ]
+      ]
+     }
+    ]
+   },
+   "Metadata": {
+    "aws:cdk:path": "queue-processor-service-dev/LogRetentionaae0aa3c5b4d4f87b02d85b201efdd8a/ServiceRole/Resource"
+   }
+  },
+  "LogRetentionaae0aa3c5b4d4f87b02d85b201efdd8aServiceRoleDefaultPolicyADDA7DEB": {
+   "Type": "AWS::IAM::Policy",
+   "Properties": {
+    "PolicyDocument": {
+     "Statement": [
+      {
+       "Action": [
+        "logs:PutRetentionPolicy",
+        "logs:DeleteRetentionPolicy"
+       ],
+       "Effect": "Allow",
+       "Resource": "*"
+      }
+     ],
+     "Version": "2012-10-17"
+    },
+    "PolicyName": "LogRetentionaae0aa3c5b4d4f87b02d85b201efdd8aServiceRoleDefaultPolicyADDA7DEB",
+    "Roles": [
+     {
+      "Ref": "LogRetentionaae0aa3c5b4d4f87b02d85b201efdd8aServiceRole9741ECFB"
+     }
+    ]
+   },
+   "Metadata": {
+    "aws:cdk:path": "queue-processor-service-dev/LogRetentionaae0aa3c5b4d4f87b02d85b201efdd8a/ServiceRole/DefaultPolicy/Resource"
+   }
+  },
+  "LogRetentionaae0aa3c5b4d4f87b02d85b201efdd8aFD4BFC8A": {
+   "Type": "AWS::Lambda::Function",
+   "Properties": {
+    "Handler": "index.handler",
+    "Runtime": "nodejs22.x",
+    "Timeout": 900,
+    "Code": {
+     "S3Bucket": "cdk-hnb659fds-assets-911871352725-us-west-2",
+     "S3Key": "2819175352ad1ce0dae768e83fc328fb70fb5f10b4a8ff0ccbcb791f02b0716d.zip"
+    },
+    "Role": {
+     "Fn::GetAtt": [
+      "LogRetentionaae0aa3c5b4d4f87b02d85b201efdd8aServiceRole9741ECFB",
+      "Arn"
+     ]
+    }
+   },
+   "DependsOn": [
+    "LogRetentionaae0aa3c5b4d4f87b02d85b201efdd8aServiceRoleDefaultPolicyADDA7DEB",
+    "LogRetentionaae0aa3c5b4d4f87b02d85b201efdd8aServiceRole9741ECFB"
+   ],
+   "Metadata": {
+    "aws:cdk:path": "queue-processor-service-dev/LogRetentionaae0aa3c5b4d4f87b02d85b201efdd8a/Resource",
+    "aws:asset:path": "asset.2819175352ad1ce0dae768e83fc328fb70fb5f10b4a8ff0ccbcb791f02b0716d",
+    "aws:asset:is-bundled": false,
+    "aws:asset:property": "Code"
+   }
+  },
+  "CDKMetadata": {
+   "Type": "AWS::CDK::Metadata",
+   "Properties": {
+    "Analytics": "v2:deflate64:H4sIAAAAAAAA/2WQQXLCMAxFz8LeqBR6AShtNzCl4QCMcNTE4NhpZJNmPLl7x04KdLrS+9K3LGkO88UCZhNseSrz81SrI4S9Q3kW2PIh8BdD+PDkSTx/mgS9kNr6vEUnSwhLjU0VawOskcujxSaPqavoBS8grLw8k4uFkYaws1rJ7pYe9SBWyNQLbQuGsLHFW2N9Ha1X3tgiI0fGKWt6obE65gjh1RsZM9F6zztqKsUc1cuFjNtb30jaYl0rU0TD/2wvFFYQMqvTCVK8jTxQ3O+AzOQYljEIrFWBjlrsIGTEblmr9HrENdXadhWZdI47tXdYpH8GyIjTLPEMYkuutOmwI+0a+939Wsb2ifv++lKkeWK3ccN372rv/riFsTnBiR8u80d4gtnkxEpNG2+cqgiyIf4AWMe7DyoCAAA="
+   },
+   "Metadata": {
+    "aws:cdk:path": "queue-processor-service-dev/CDKMetadata/Default"
+   }
+  }
+ },
+ "Outputs": {
+  "apiLambdaRestApiapiEndpointEDF5CACB": {
+   "Value": {
+    "Fn::Join": [
+     "",
+     [
+      "https://",
+      {
+       "Ref": "apiLambdaRestApiapi3DD8DE94"
+      },
+      ".execute-api.us-west-2.",
+      {
+       "Ref": "AWS::URLSuffix"
+      },
+      "/",
+      {
+       "Ref": "apiLambdaRestApiapiDeploymentStagedev070BF343"
+      },
+      "/"
+     ]
+    ]
+   }
+  }
+ },
+ "Parameters": {
+  "BootstrapVersion": {
+   "Type": "AWS::SSM::Parameter::Value<String>",
+   "Default": "/cdk-bootstrap/hnb659fds/version",
+   "Description": "Version of the CDK Bootstrap resources in this environment, automatically retrieved from SSM Parameter Store. [cdk:skip]"
+  }
+ },
+ "Rules": {
+  "CheckBootstrapVersion": {
+   "Assertions": [
+    {
+     "Assert": {
+      "Fn::Not": [
+       {
+        "Fn::Contains": [
+         [
+          "1",
+          "2",
+          "3",
+          "4",
+          "5"
+         ],
+         {
+          "Ref": "BootstrapVersion"
+         }
+        ]
+       }
+      ]
+     },
+     "AssertDescription": "CDK bootstrap stack version 6 required. Please run 'cdk bootstrap' with a recent version of the CDK CLI."
+    }
+   ]
+  }
+ }
+}

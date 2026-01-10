@@ -6,7 +6,7 @@ import * as cdk from 'aws-cdk-lib';
 import { Construct } from 'constructs';
 import { NagSuppressions } from 'cdk-nag';
 import {
-  Component,
+  BaseComponent,
   ComponentSpec,
   ComponentContext,
   ComponentCapabilities,
@@ -19,7 +19,7 @@ import {
   AlbTargetGroupConfig
 } from './application-load-balancer.builder.js';
 
-export class ApplicationLoadBalancerComponent extends Component {
+export class ApplicationLoadBalancerComponent extends BaseComponent {
   private loadBalancer?: elbv2.ApplicationLoadBalancer;
   private targetGroups: elbv2.ApplicationTargetGroup[] = [];
   private listeners: elbv2.ApplicationListener[] = [];

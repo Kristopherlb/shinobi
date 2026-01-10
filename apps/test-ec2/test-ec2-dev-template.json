@@ -1,0 +1,921 @@
+{
+ "Resources": {
+  "testinstanceInstanceRole9E76510F": {
+   "Type": "AWS::IAM::Role",
+   "Properties": {
+    "AssumeRolePolicyDocument": {
+     "Statement": [
+      {
+       "Action": "sts:AssumeRole",
+       "Effect": "Allow",
+       "Principal": {
+        "Service": "ec2.amazonaws.com"
+       }
+      }
+     ],
+     "Version": "2012-10-17"
+    },
+    "Description": "IAM role for test-instance EC2 instance",
+    "ManagedPolicyArns": [
+     {
+      "Fn::Join": [
+       "",
+       [
+        "arn:",
+        {
+         "Ref": "AWS::Partition"
+        },
+        ":iam::aws:policy/CloudWatchAgentServerPolicy"
+       ]
+      ]
+     }
+    ],
+    "Tags": [
+     {
+      "Key": "backup-required",
+      "Value": "false"
+     },
+     {
+      "Key": "cloud-account",
+      "Value": "911871352725"
+     },
+     {
+      "Key": "cloud-provider",
+      "Value": "aws"
+     },
+     {
+      "Key": "cloud-region",
+      "Value": "us-west-2"
+     },
+     {
+      "Key": "compliance-framework",
+      "Value": "commercial"
+     },
+     {
+      "Key": "component-name",
+      "Value": "test-instance"
+     },
+     {
+      "Key": "component-type",
+      "Value": "ec2-instance"
+     },
+     {
+      "Key": "cost-center",
+      "Value": "platform"
+     },
+     {
+      "Key": "data-classification",
+      "Value": "internal"
+     },
+     {
+      "Key": "deployment-id",
+      "Value": "deploy-20260109-093352"
+     },
+     {
+      "Key": "encryption-required",
+      "Value": "true"
+     },
+     {
+      "Key": "environment",
+      "Value": "dev"
+     },
+     {
+      "Key": "managed-by",
+      "Value": "platform-engineering"
+     },
+     {
+      "Key": "monitoring-level",
+      "Value": "standard"
+     },
+     {
+      "Key": "owner",
+      "Value": "platform-engineering"
+     },
+     {
+      "Key": "platform",
+      "Value": "cdk-lib"
+     },
+     {
+      "Key": "platform-version",
+      "Value": "1.0.0"
+     },
+     {
+      "Key": "project",
+      "Value": "test-ec2"
+     },
+     {
+      "Key": "retention-period",
+      "Value": "365-days"
+     },
+     {
+      "Key": "service-name",
+      "Value": "test-ec2"
+     },
+     {
+      "Key": "service-version",
+      "Value": "1.0.0"
+     }
+    ]
+   },
+   "Metadata": {
+    "aws:cdk:path": "test-ec2-dev/test-instance/InstanceRole/Resource"
+   }
+  },
+  "testinstanceInstanceRoleDefaultPolicy6BF18763": {
+   "Type": "AWS::IAM::Policy",
+   "Properties": {
+    "PolicyDocument": {
+     "Statement": [
+      {
+       "Action": [
+        "cloudwatch:PutMetricData",
+        "ec2:DescribeVolumes",
+        "ec2:DescribeTags",
+        "logs:PutLogEvents",
+        "logs:CreateLogGroup",
+        "logs:CreateLogStream"
+       ],
+       "Effect": "Allow",
+       "Resource": "*"
+      }
+     ],
+     "Version": "2012-10-17"
+    },
+    "PolicyName": "testinstanceInstanceRoleDefaultPolicy6BF18763",
+    "Roles": [
+     {
+      "Ref": "testinstanceInstanceRole9E76510F"
+     }
+    ]
+   },
+   "Metadata": {
+    "aws:cdk:path": "test-ec2-dev/test-instance/InstanceRole/DefaultPolicy/Resource"
+   }
+  },
+  "testinstanceInstanceProfile32A382E4": {
+   "Type": "AWS::IAM::InstanceProfile",
+   "Properties": {
+    "InstanceProfileName": "test-ec2-test-instance-profile",
+    "Roles": [
+     {
+      "Ref": "testinstanceInstanceRole9E76510F"
+     }
+    ]
+   },
+   "Metadata": {
+    "aws:cdk:path": "test-ec2-dev/test-instance/InstanceProfile/Resource"
+   }
+  },
+  "testinstanceInstanceSecurityGroupA203C0C3": {
+   "Type": "AWS::EC2::SecurityGroup",
+   "Properties": {
+    "GroupDescription": "Security group for test-instance EC2 instance",
+    "SecurityGroupEgress": [
+     {
+      "CidrIp": "0.0.0.0/0",
+      "Description": "Allow all outbound traffic by default",
+      "IpProtocol": "-1"
+     }
+    ],
+    "Tags": [
+     {
+      "Key": "backup-required",
+      "Value": "false"
+     },
+     {
+      "Key": "cloud-account",
+      "Value": "911871352725"
+     },
+     {
+      "Key": "cloud-provider",
+      "Value": "aws"
+     },
+     {
+      "Key": "cloud-region",
+      "Value": "us-west-2"
+     },
+     {
+      "Key": "compliance-framework",
+      "Value": "commercial"
+     },
+     {
+      "Key": "component-name",
+      "Value": "test-instance"
+     },
+     {
+      "Key": "component-type",
+      "Value": "ec2-instance"
+     },
+     {
+      "Key": "cost-center",
+      "Value": "platform"
+     },
+     {
+      "Key": "data-classification",
+      "Value": "internal"
+     },
+     {
+      "Key": "deployment-id",
+      "Value": "deploy-20260109-093352"
+     },
+     {
+      "Key": "encryption-required",
+      "Value": "true"
+     },
+     {
+      "Key": "environment",
+      "Value": "dev"
+     },
+     {
+      "Key": "ingress-policy",
+      "Value": "binder-managed"
+     },
+     {
+      "Key": "last-modified",
+      "Value": "2026-01-09T15:33:52.399Z"
+     },
+     {
+      "Key": "managed-by",
+      "Value": "platform-engineering"
+     },
+     {
+      "Key": "monitoring-level",
+      "Value": "standard"
+     },
+     {
+      "Key": "owner",
+      "Value": "platform-engineering"
+     },
+     {
+      "Key": "platform",
+      "Value": "cdk-lib"
+     },
+     {
+      "Key": "platform-version",
+      "Value": "1.0.0"
+     },
+     {
+      "Key": "project",
+      "Value": "test-ec2"
+     },
+     {
+      "Key": "resource-type",
+      "Value": "security-group"
+     },
+     {
+      "Key": "retention-period",
+      "Value": "365-days"
+     },
+     {
+      "Key": "service-name",
+      "Value": "test-ec2"
+     },
+     {
+      "Key": "service-version",
+      "Value": "1.0.0"
+     },
+     {
+      "Key": "tier",
+      "Value": "app"
+     }
+    ],
+    "VpcId": "vpc-0a27a068d4ca0b8f3"
+   },
+   "Metadata": {
+    "aws:cdk:path": "test-ec2-dev/test-instance/InstanceSecurityGroup/Resource"
+   }
+  },
+  "testinstanceInstanceLogs51B1F55B": {
+   "Type": "AWS::Logs::LogGroup",
+   "Properties": {
+    "LogGroupName": "/aws/ec2/test-ec2/test-instance",
+    "RetentionInDays": 90,
+    "Tags": [
+     {
+      "Key": "backup-required",
+      "Value": "false"
+     },
+     {
+      "Key": "cloud-account",
+      "Value": "911871352725"
+     },
+     {
+      "Key": "cloud-provider",
+      "Value": "aws"
+     },
+     {
+      "Key": "cloud-region",
+      "Value": "us-west-2"
+     },
+     {
+      "Key": "compliance-framework",
+      "Value": "commercial"
+     },
+     {
+      "Key": "component-name",
+      "Value": "test-instance"
+     },
+     {
+      "Key": "component-type",
+      "Value": "ec2-instance"
+     },
+     {
+      "Key": "cost-center",
+      "Value": "platform"
+     },
+     {
+      "Key": "data-classification",
+      "Value": "internal"
+     },
+     {
+      "Key": "deployment-id",
+      "Value": "deploy-20260109-093352"
+     },
+     {
+      "Key": "encryption-required",
+      "Value": "true"
+     },
+     {
+      "Key": "environment",
+      "Value": "dev"
+     },
+     {
+      "Key": "managed-by",
+      "Value": "platform-engineering"
+     },
+     {
+      "Key": "monitoring-level",
+      "Value": "standard"
+     },
+     {
+      "Key": "owner",
+      "Value": "platform-engineering"
+     },
+     {
+      "Key": "platform",
+      "Value": "cdk-lib"
+     },
+     {
+      "Key": "platform-version",
+      "Value": "1.0.0"
+     },
+     {
+      "Key": "project",
+      "Value": "test-ec2"
+     },
+     {
+      "Key": "retention-period",
+      "Value": "365-days"
+     },
+     {
+      "Key": "service-name",
+      "Value": "test-ec2"
+     },
+     {
+      "Key": "service-version",
+      "Value": "1.0.0"
+     }
+    ]
+   },
+   "UpdateReplacePolicy": "Retain",
+   "DeletionPolicy": "Retain",
+   "Metadata": {
+    "aws:cdk:path": "test-ec2-dev/test-instance/InstanceLogs/Resource"
+   }
+  },
+  "testinstanceInstanceInstanceProfile60A2151C": {
+   "Type": "AWS::IAM::InstanceProfile",
+   "Properties": {
+    "Roles": [
+     {
+      "Ref": "testinstanceInstanceRole9E76510F"
+     }
+    ]
+   },
+   "Metadata": {
+    "aws:cdk:path": "test-ec2-dev/test-instance/Instance/InstanceProfile"
+   }
+  },
+  "testinstanceInstance67902700": {
+   "Type": "AWS::EC2::Instance",
+   "Properties": {
+    "AvailabilityZone": "us-west-2a",
+    "BlockDeviceMappings": [
+     {
+      "DeviceName": "/dev/xvda",
+      "Ebs": {
+       "DeleteOnTermination": true,
+       "Encrypted": true,
+       "VolumeSize": 20,
+       "VolumeType": "gp3"
+      }
+     }
+    ],
+    "IamInstanceProfile": {
+     "Ref": "testinstanceInstanceInstanceProfile60A2151C"
+    },
+    "ImageId": {
+     "Ref": "SsmParameterValueawsserviceamiamazonlinuxlatestal2023amikernel61x8664C96584B6F00A464EAD1953AFF4B05118Parameter"
+    },
+    "InstanceType": "t3.micro",
+    "Monitoring": false,
+    "SecurityGroupIds": [
+     {
+      "Fn::GetAtt": [
+       "testinstanceInstanceSecurityGroupA203C0C3",
+       "GroupId"
+      ]
+     }
+    ],
+    "SourceDestCheck": true,
+    "SubnetId": "subnet-03303aa6034ef2871",
+    "Tags": [
+     {
+      "Key": "backup-required",
+      "Value": "false"
+     },
+     {
+      "Key": "cloud-account",
+      "Value": "911871352725"
+     },
+     {
+      "Key": "cloud-provider",
+      "Value": "aws"
+     },
+     {
+      "Key": "cloud-region",
+      "Value": "us-west-2"
+     },
+     {
+      "Key": "compliance-framework",
+      "Value": "commercial"
+     },
+     {
+      "Key": "component-name",
+      "Value": "test-instance"
+     },
+     {
+      "Key": "component-type",
+      "Value": "ec2-instance"
+     },
+     {
+      "Key": "cost-center",
+      "Value": "platform"
+     },
+     {
+      "Key": "data-classification",
+      "Value": "internal"
+     },
+     {
+      "Key": "deployment-id",
+      "Value": "deploy-20260109-093352"
+     },
+     {
+      "Key": "encryption-required",
+      "Value": "true"
+     },
+     {
+      "Key": "environment",
+      "Value": "dev"
+     },
+     {
+      "Key": "managed-by",
+      "Value": "platform-engineering"
+     },
+     {
+      "Key": "monitoring-level",
+      "Value": "standard"
+     },
+     {
+      "Key": "Name",
+      "Value": "test-ec2-dev/test-instance/Instance"
+     },
+     {
+      "Key": "owner",
+      "Value": "platform-engineering"
+     },
+     {
+      "Key": "platform",
+      "Value": "cdk-lib"
+     },
+     {
+      "Key": "platform-version",
+      "Value": "1.0.0"
+     },
+     {
+      "Key": "project",
+      "Value": "test-ec2"
+     },
+     {
+      "Key": "retention-period",
+      "Value": "365-days"
+     },
+     {
+      "Key": "service-name",
+      "Value": "test-ec2"
+     },
+     {
+      "Key": "service-version",
+      "Value": "1.0.0"
+     }
+    ],
+    "UserData": {
+     "Fn::Base64": "#!/bin/bash\n# Configure OpenTelemetry environment variables\ncat <<'OTEL_ENV' >/etc/profile.d/otel.sh\nexport OTEL_EXPORTER_OTLP_ENDPOINT=\"https://otel-collector.dev.us-west-2.platform.local:4317\"\nexport OTEL_EXPORTER_OTLP_HEADERS=\"authorization=Bearer ${OTEL_COLLECTOR_AUTH_TOKEN}\"\nexport OTEL_SERVICE_NAME=\"test-ec2-ec2-instance\"\nexport OTEL_SERVICE_VERSION=\"1.0.0\"\nexport OTEL_RESOURCE_ATTRIBUTES=\"service.name=test-ec2-ec2-instance,service.version=1.0.0,deployment.environment=dev,cloud.provider=aws,cloud.region=us-west-2,compliance.framework=commercial,instance.type=t3.micro,instance.architecture=x86_64,aws.region=us-west-2,component.type=ec2-instance\"\nexport OTEL_TRACES_SAMPLER=\"traceidratio:0.1\"\nexport OTEL_METRICS_EXPORTER=\"otlp\"\nexport OTEL_LOGS_EXPORTER=\"otlp\"\nexport OTEL_PROPAGATORS=\"tracecontext,baggage,xray\"\nexport OTEL_INSTRUMENTATION_COMMON_DEFAULT_ENABLED=\"true\"\nOTEL_ENV\nchmod 0644 /etc/profile.d/otel.sh\ncat <<'OTEL_ENV' >> /etc/environment\nexport OTEL_EXPORTER_OTLP_ENDPOINT=\"https://otel-collector.dev.us-west-2.platform.local:4317\"\nexport OTEL_EXPORTER_OTLP_HEADERS=\"authorization=Bearer ${OTEL_COLLECTOR_AUTH_TOKEN}\"\nexport OTEL_SERVICE_NAME=\"test-ec2-ec2-instance\"\nexport OTEL_SERVICE_VERSION=\"1.0.0\"\nexport OTEL_RESOURCE_ATTRIBUTES=\"service.name=test-ec2-ec2-instance,service.version=1.0.0,deployment.environment=dev,cloud.provider=aws,cloud.region=us-west-2,compliance.framework=commercial,instance.type=t3.micro,instance.architecture=x86_64,aws.region=us-west-2,component.type=ec2-instance\"\nexport OTEL_TRACES_SAMPLER=\"traceidratio:0.1\"\nexport OTEL_METRICS_EXPORTER=\"otlp\"\nexport OTEL_LOGS_EXPORTER=\"otlp\"\nexport OTEL_PROPAGATORS=\"tracecontext,baggage,xray\"\nexport OTEL_INSTRUMENTATION_COMMON_DEFAULT_ENABLED=\"true\"\nOTEL_ENV"
+    }
+   },
+   "DependsOn": [
+    "testinstanceInstanceRoleDefaultPolicy6BF18763",
+    "testinstanceInstanceRole9E76510F"
+   ],
+   "Metadata": {
+    "aws:cdk:path": "test-ec2-dev/test-instance/Instance/Resource"
+   }
+  },
+  "testinstanceCpuUtilizationAlarmF084814A": {
+   "Type": "AWS::CloudWatch::Alarm",
+   "Properties": {
+    "AlarmDescription": "High CPU utilization for EC2 instance test-instance",
+    "AlarmName": "test-ec2-test-instance-cpu-high",
+    "ComparisonOperator": "GreaterThanOrEqualToThreshold",
+    "DatapointsToAlarm": 2,
+    "Dimensions": [
+     {
+      "Name": "InstanceId",
+      "Value": {
+       "Ref": "testinstanceInstance67902700"
+      }
+     }
+    ],
+    "EvaluationPeriods": 3,
+    "MetricName": "CPUUtilization",
+    "Namespace": "AWS/EC2",
+    "Period": 300,
+    "Statistic": "Average",
+    "Tags": [
+     {
+      "Key": "backup-required",
+      "Value": "false"
+     },
+     {
+      "Key": "cloud-account",
+      "Value": "911871352725"
+     },
+     {
+      "Key": "cloud-provider",
+      "Value": "aws"
+     },
+     {
+      "Key": "cloud-region",
+      "Value": "us-west-2"
+     },
+     {
+      "Key": "compliance-framework",
+      "Value": "commercial"
+     },
+     {
+      "Key": "component-name",
+      "Value": "test-instance"
+     },
+     {
+      "Key": "component-type",
+      "Value": "ec2-instance"
+     },
+     {
+      "Key": "cost-center",
+      "Value": "platform"
+     },
+     {
+      "Key": "data-classification",
+      "Value": "internal"
+     },
+     {
+      "Key": "deployment-id",
+      "Value": "deploy-20260109-093352"
+     },
+     {
+      "Key": "encryption-required",
+      "Value": "true"
+     },
+     {
+      "Key": "environment",
+      "Value": "dev"
+     },
+     {
+      "Key": "managed-by",
+      "Value": "platform-engineering"
+     },
+     {
+      "Key": "monitoring-level",
+      "Value": "standard"
+     },
+     {
+      "Key": "owner",
+      "Value": "platform-engineering"
+     },
+     {
+      "Key": "platform",
+      "Value": "cdk-lib"
+     },
+     {
+      "Key": "platform-version",
+      "Value": "1.0.0"
+     },
+     {
+      "Key": "project",
+      "Value": "test-ec2"
+     },
+     {
+      "Key": "retention-period",
+      "Value": "365-days"
+     },
+     {
+      "Key": "service-name",
+      "Value": "test-ec2"
+     },
+     {
+      "Key": "service-version",
+      "Value": "1.0.0"
+     }
+    ],
+    "Threshold": 80,
+    "TreatMissingData": "notBreaching"
+   },
+   "Metadata": {
+    "aws:cdk:path": "test-ec2-dev/test-instance/CpuUtilizationAlarm/Resource"
+   }
+  },
+  "testinstanceSystemStatusCheckAlarm1D342BCB": {
+   "Type": "AWS::CloudWatch::Alarm",
+   "Properties": {
+    "AlarmDescription": "System status check failed for EC2 instance test-instance",
+    "AlarmName": "test-ec2-test-instance-system-check-failed",
+    "ComparisonOperator": "GreaterThanOrEqualToThreshold",
+    "DatapointsToAlarm": 1,
+    "Dimensions": [
+     {
+      "Name": "InstanceId",
+      "Value": {
+       "Ref": "testinstanceInstance67902700"
+      }
+     }
+    ],
+    "EvaluationPeriods": 2,
+    "MetricName": "StatusCheckFailed_System",
+    "Namespace": "AWS/EC2",
+    "Period": 300,
+    "Statistic": "Maximum",
+    "Tags": [
+     {
+      "Key": "backup-required",
+      "Value": "false"
+     },
+     {
+      "Key": "cloud-account",
+      "Value": "911871352725"
+     },
+     {
+      "Key": "cloud-provider",
+      "Value": "aws"
+     },
+     {
+      "Key": "cloud-region",
+      "Value": "us-west-2"
+     },
+     {
+      "Key": "compliance-framework",
+      "Value": "commercial"
+     },
+     {
+      "Key": "component-name",
+      "Value": "test-instance"
+     },
+     {
+      "Key": "component-type",
+      "Value": "ec2-instance"
+     },
+     {
+      "Key": "cost-center",
+      "Value": "platform"
+     },
+     {
+      "Key": "data-classification",
+      "Value": "internal"
+     },
+     {
+      "Key": "deployment-id",
+      "Value": "deploy-20260109-093352"
+     },
+     {
+      "Key": "encryption-required",
+      "Value": "true"
+     },
+     {
+      "Key": "environment",
+      "Value": "dev"
+     },
+     {
+      "Key": "managed-by",
+      "Value": "platform-engineering"
+     },
+     {
+      "Key": "monitoring-level",
+      "Value": "standard"
+     },
+     {
+      "Key": "owner",
+      "Value": "platform-engineering"
+     },
+     {
+      "Key": "platform",
+      "Value": "cdk-lib"
+     },
+     {
+      "Key": "platform-version",
+      "Value": "1.0.0"
+     },
+     {
+      "Key": "project",
+      "Value": "test-ec2"
+     },
+     {
+      "Key": "retention-period",
+      "Value": "365-days"
+     },
+     {
+      "Key": "service-name",
+      "Value": "test-ec2"
+     },
+     {
+      "Key": "service-version",
+      "Value": "1.0.0"
+     }
+    ],
+    "Threshold": 1,
+    "TreatMissingData": "notBreaching"
+   },
+   "Metadata": {
+    "aws:cdk:path": "test-ec2-dev/test-instance/SystemStatusCheckAlarm/Resource"
+   }
+  },
+  "testinstanceInstanceStatusCheckAlarmDBC5F93D": {
+   "Type": "AWS::CloudWatch::Alarm",
+   "Properties": {
+    "AlarmDescription": "Instance status check failed for EC2 instance test-instance",
+    "AlarmName": "test-ec2-test-instance-instance-check-failed",
+    "ComparisonOperator": "GreaterThanOrEqualToThreshold",
+    "DatapointsToAlarm": 1,
+    "Dimensions": [
+     {
+      "Name": "InstanceId",
+      "Value": {
+       "Ref": "testinstanceInstance67902700"
+      }
+     }
+    ],
+    "EvaluationPeriods": 2,
+    "MetricName": "StatusCheckFailed_Instance",
+    "Namespace": "AWS/EC2",
+    "Period": 300,
+    "Statistic": "Maximum",
+    "Tags": [
+     {
+      "Key": "backup-required",
+      "Value": "false"
+     },
+     {
+      "Key": "cloud-account",
+      "Value": "911871352725"
+     },
+     {
+      "Key": "cloud-provider",
+      "Value": "aws"
+     },
+     {
+      "Key": "cloud-region",
+      "Value": "us-west-2"
+     },
+     {
+      "Key": "compliance-framework",
+      "Value": "commercial"
+     },
+     {
+      "Key": "component-name",
+      "Value": "test-instance"
+     },
+     {
+      "Key": "component-type",
+      "Value": "ec2-instance"
+     },
+     {
+      "Key": "cost-center",
+      "Value": "platform"
+     },
+     {
+      "Key": "data-classification",
+      "Value": "internal"
+     },
+     {
+      "Key": "deployment-id",
+      "Value": "deploy-20260109-093352"
+     },
+     {
+      "Key": "encryption-required",
+      "Value": "true"
+     },
+     {
+      "Key": "environment",
+      "Value": "dev"
+     },
+     {
+      "Key": "managed-by",
+      "Value": "platform-engineering"
+     },
+     {
+      "Key": "monitoring-level",
+      "Value": "standard"
+     },
+     {
+      "Key": "owner",
+      "Value": "platform-engineering"
+     },
+     {
+      "Key": "platform",
+      "Value": "cdk-lib"
+     },
+     {
+      "Key": "platform-version",
+      "Value": "1.0.0"
+     },
+     {
+      "Key": "project",
+      "Value": "test-ec2"
+     },
+     {
+      "Key": "retention-period",
+      "Value": "365-days"
+     },
+     {
+      "Key": "service-name",
+      "Value": "test-ec2"
+     },
+     {
+      "Key": "service-version",
+      "Value": "1.0.0"
+     }
+    ],
+    "Threshold": 1,
+    "TreatMissingData": "notBreaching"
+   },
+   "Metadata": {
+    "aws:cdk:path": "test-ec2-dev/test-instance/InstanceStatusCheckAlarm/Resource"
+   }
+  },
+  "CDKMetadata": {
+   "Type": "AWS::CDK::Metadata",
+   "Properties": {
+    "Analytics": "v2:deflate64:H4sIAAAAAAAA/12MzQ6CMBCEn4V7WRV9AePBmHgg+ABmLYtWStf0R2KavrtBxKin+XZ2ZgoolkuYZ9i7XNZtrtUJ4sGjbAX27hgVdhAr1iQ2jXlpyVrJx3C+aWecRyOptNyoMfhnJUGygHggGazyj63lcBtiv8ZU+h5IQvPZQdzz+dOaOAmpOdQ9enmBuNZou+H9gpRERY6DHedKtNiRJ5uE4Zrg6mb3YgErmGdXp1Rug/GqI6hGfQLuX/z1FQEAAA=="
+   },
+   "Metadata": {
+    "aws:cdk:path": "test-ec2-dev/CDKMetadata/Default"
+   }
+  }
+ },
+ "Parameters": {
+  "SsmParameterValueawsserviceamiamazonlinuxlatestal2023amikernel61x8664C96584B6F00A464EAD1953AFF4B05118Parameter": {
+   "Type": "AWS::SSM::Parameter::Value<AWS::EC2::Image::Id>",
+   "Default": "/aws/service/ami-amazon-linux-latest/al2023-ami-kernel-6.1-x86_64"
+  },
+  "BootstrapVersion": {
+   "Type": "AWS::SSM::Parameter::Value<String>",
+   "Default": "/cdk-bootstrap/hnb659fds/version",
+   "Description": "Version of the CDK Bootstrap resources in this environment, automatically retrieved from SSM Parameter Store. [cdk:skip]"
+  }
+ },
+ "Rules": {
+  "CheckBootstrapVersion": {
+   "Assertions": [
+    {
+     "Assert": {
+      "Fn::Not": [
+       {
+        "Fn::Contains": [
+         [
+          "1",
+          "2",
+          "3",
+          "4",
+          "5"
+         ],
+         {
+          "Ref": "BootstrapVersion"
+         }
+        ]
+       }
+      ]
+     },
+     "AssertDescription": "CDK bootstrap stack version 6 required. Please run 'cdk bootstrap' with a recent version of the CDK CLI."
+    }
+   ]
+  }
+ }
+}
