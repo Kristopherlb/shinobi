@@ -797,6 +797,14 @@ defaults:
         retrieverServicePrincipal: lambda.amazonaws.com
       tags:
         compliance: fedramp-high
+
+    ai-provider:
+      provider: bedrock
+      model: anthropic.claude-3-haiku-20240307-v1:0
+      auth:
+        type: aws
+      tags:
+        compliance: fedramp-high
   
     feature-flag:
       enabled: true

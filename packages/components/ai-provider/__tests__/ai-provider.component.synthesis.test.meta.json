@@ -1,0 +1,27 @@
+{
+  "tests": [
+    {
+      "id": "TP-ai-provider-synth-001",
+      "level": "integration",
+      "capability": "AI provider component registers ai:provider capability",
+      "oracle": "exact",
+      "invariants": [
+        "Bedrock capabilities include AWS auth type",
+        "Local Ollama capabilities omit AWS region data"
+      ],
+      "fixtures": ["createContext", "createSpec", "CDK Stack"],
+      "inputs": {
+        "shape": "ComponentContext + ComponentSpec",
+        "notes": "Synthesizes AI provider component capabilities for bedrock and ollama providers."
+      },
+      "risks": ["Missing capability data breaks downstream bindings"],
+      "dependencies": ["@shinobi/core BaseComponent"],
+      "evidence": [
+        "packages/components/ai-provider/__tests__/ai-provider.component.synthesis.test.ts#L37"
+      ],
+      "compliance_refs": ["std://platform-capabilities"],
+      "ai_generated": true,
+      "human_reviewed_by": "Platform Engineering Team"
+    }
+  ]
+}

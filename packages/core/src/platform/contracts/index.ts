@@ -39,6 +39,8 @@ export * from './trigger-interfaces.js';
 
 // Export OpenFeature standard interfaces
 export * from './openfeature-interfaces.js';
+// Export AI provider interfaces
+export * from './ai-provider-interfaces.js';
 
 // Export platform services interfaces
 export * from './platform-services.js';

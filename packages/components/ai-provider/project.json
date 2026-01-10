@@ -1,0 +1,45 @@
+{
+  "name": "@shinobi/components-ai-provider",
+  "sourceRoot": "packages/components/ai-provider/src",
+  "targets": {
+    "build": {
+      "executor": "nx:run-commands",
+      "outputs": [
+        "{workspaceRoot}/dist/packages/components/ai-provider"
+      ],
+      "options": {
+        "command": "node_modules/.bin/tsc -b packages/components/ai-provider/tsconfig.build.json",
+        "cwd": "{workspaceRoot}"
+      }
+    },
+    "test": {
+      "executor": "@nx/vitest:test",
+      "options": {
+        "config": "packages/components/ai-provider/vitest.config.ts",
+        "passWithNoTests": true
+      },
+      "outputs": [
+        "{projectRoot}/coverage"
+      ]
+    },
+    "clean": {
+      "executor": "nx:run-commands",
+      "options": {
+        "command": "rimraf dist/packages/components/ai-provider",
+        "cwd": "{workspaceRoot}"
+      }
+    },
+    "typecheck": {
+      "executor": "nx:run-commands",
+      "options": {
+        "command": "tsc -p packages/components/ai-provider/tsconfig.lib.json --noEmit",
+        "cwd": "{workspaceRoot}"
+      }
+    }
+  },
+  "tags": [
+    "scope:shinobi",
+    "type:component",
+    "infra:aws"
+  ]
+}

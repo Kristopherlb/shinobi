@@ -1,0 +1,22 @@
+{
+  "extends": "../../../tsconfig.base.json",
+  "compilerOptions": {
+    "rootDir": ".",
+    "outDir": "../../../dist/packages/components/ai-provider",
+    "composite": true,
+    "declaration": true,
+    "declarationMap": true,
+    "sourceMap": true,
+    "tsBuildInfoFile": "../../../dist/packages/components/ai-provider/tsconfig.tsbuildinfo"
+  },
+  "include": [
+    "index.ts",
+    "src/**/*.ts",
+    "Config.schema.json"
+  ],
+  "exclude": [
+    "**/*.test.ts",
+    "**/*.spec.ts",
+    "**/vitest.config.ts"
+  ]
+}
