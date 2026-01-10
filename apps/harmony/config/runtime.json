@@ -1,0 +1,28 @@
+{
+  "app": {
+    "name": "harmony"
+  },
+  "mcp": {
+    "clientName": "shinobi-harmony-client",
+    "clientVersion": "0.1.0",
+    "serverName": "shinobi-harmony",
+    "serverVersion": "0.1.0",
+    "serverCommand": "node",
+    "serverEntry": "src/mcp/server.js"
+  },
+  "temporal": {
+    "taskQueue": "harmony",
+    "workflowIdPrefix": "harmony"
+  },
+  "defaults": {
+    "goal": "Analyze repository",
+    "repositoryUrl": "https://github.com/modelcontextprotocol/servers"
+  },
+  "llm": {
+    "provider": "openai",
+    "model": "gpt-4o-mini",
+    "temperature": 0.2,
+    "maxRetries": 2,
+    "apiBaseUrl": "https://api.openai.com/v1"
+  }
+}

@@ -1,17 +1,29 @@
+import { z } from "zod";
 import { ToolResultSchema } from "./state.js";
+import { buildReviewPrompt } from "../llm/prompts.js";
+import { generateStructuredOutput } from "../llm/structured.js";
 
-export function reviewAnalysis(result) {
-  const parsed = ToolResultSchema.parse(result);
-  const notes = [];
+const ReviewSchema = z.object({
+  notes: z.array(z.string().min(1)).min(1)
+});
 
-  if (!parsed.readme.trim()) {
-    notes.push("README missing: plan follow-up to locate documentation.");
-  } else {
-    notes.push("README found: summary ready for further analysis.");
-  }
+export function createReviewer({ llmClient, maxRetries }) {
+  return async function reviewAnalysis({ goal, readme, tree }) {
+    const parsed = ToolResultSchema.parse({ readme, tree });
 
-  const treeLines = parsed.tree.split("\n").filter(Boolean).length;
-  notes.push(`Repository tree captured (${treeLines} paths).`);
+    const prompt = buildReviewPrompt({
+      goal,
+      readme: parsed.readme,
+      tree: parsed.tree
+    });
 
-  return notes;
+    const output = await generateStructuredOutput({
+      llmClient,
+      schema: ReviewSchema,
+      prompt,
+      maxRetries
+    });
+
+    return output.notes;
+  };
 }

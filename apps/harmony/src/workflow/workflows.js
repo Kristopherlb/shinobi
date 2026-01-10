@@ -1,15 +1,21 @@
 import { proxyActivities } from "@temporalio/workflow";
 import { createInitialState } from "../agent/state.js";
 
-const { planActivity, executeActivity, reviewActivity } = proxyActivities({
+const {
+  discoverToolsActivity,
+  generatePlanActivity,
+  executeToolActivity,
+  reviewActivity
+} = proxyActivities({
   startToCloseTimeout: "5 minutes"
 });
 
 export async function runDurableAnalyzer({ goal, repositoryUrl }) {
   let state = createInitialState({ goal, repositoryUrl });
 
-  state = await planActivity(state);
-  state = await executeActivity(state);
+  const tools = await discoverToolsActivity();
+  state = await generatePlanActivity(state, tools);
+  state = await executeToolActivity(state);
   state = await reviewActivity(state);
 
   return state;

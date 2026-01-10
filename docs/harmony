@@ -31,9 +31,9 @@ All agents must be capable of running in an "Offline Mode."
  * The Standard: Every Temporal Workflow and LangGraph Agent must have a corresponding test suite that runs successfully with no network access.
  * Mechanism: This requires the rigorous application of the DI principle described above. Developers must write tests that mock the MCP tool responses. For example, a test case for a "Disk Cleanup Agent" should inject a mock response simulating a "Disk Full" event and verify that the agent generates the correct "Delete Logs" plan, without actually touching a real server.
 1.2.2 Temporal Time-Skipping
-Testing long-running workflows (e.g., "Wait 3 days for approval") is challenging in traditional frameworks.
+Testing long-running workflows (e.g., "Wait for approval") is challenging in traditional frameworks.
  * The Standard: All workflow tests must utilize the Temporal Test Framework.
- * Mechanism: This framework allows the test runner to manipulate the workflow's internal clock. A test can simulate the passage of 3 days in a fraction of a millisecond, verifying that the timeout logic or reminder signals fire correctly. This capability is essential for validating the "Nervous System" of the platform.
+ * Mechanism: This framework allows the test runner to manipulate the workflow's internal clock. A test can simulate the passage of an approval window in a fraction of a millisecond, verifying that the timeout logic or reminder signals fire correctly. This capability is essential for validating the "Nervous System" of the platform.
 1.3 Strictly Typed Interfaces (JSON Schema/Pydantic)
 The probabilistic nature of LLMs introduces the risk of "hallucination," where an agent generates invalid or dangerous commands.
  * The Standard: All inputs to Dagger Functions and all outputs from LangGraph nodes must be validated against a strict JSON Schema or Pydantic model. Free text is prohibited for inter-process communication.
@@ -111,7 +111,7 @@ While Temporal Cloud is an option, for a self-hosted reference implementation on
  * Services: We deploy the four core Temporal services: Frontend, History, Matching, and Worker.
  * Persistence Layer: We utilize Amazon RDS for PostgreSQL as the durable store for workflow history. This provides strong consistency guarantees.
  * Visibility Layer: We deploy Elasticsearch (or Amazon OpenSearch) to power the advanced filtering capabilities required by the Backstage plugin (e.g., "Show me all workflows waiting for approval initiated by User X").
- * Archival: We configure Temporal Archival to S3. This moves workflow histories from hot storage (RDS) to cold storage (S3) after a retention period (e.g., 7 days). This is critical for maintaining an immutable audit trail for compliance purposes.
+ * Archival: We configure Temporal Archival to S3. This moves workflow histories from hot storage (RDS) to cold storage (S3) after a configured retention window. This is critical for maintaining an immutable audit trail for compliance purposes.
 3.4 The Centralized MCP Host & Gateway
 To solve the "N×M" connectivity problem, we deploy a centralized MCP Host service.
  * Architecture: The MCP Host runs as a stateless Deployment in the Control Plane.

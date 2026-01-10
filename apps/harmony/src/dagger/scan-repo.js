@@ -1,7 +1,7 @@
 import { connect } from "@dagger.io/dagger";
 import { ToolResultSchema } from "../agent/state.js";
 
-async function scanRepository(client, repoUrl) {
+export async function scanRepositoryWithClient(client, repoUrl) {
   const repo = client
     .container()
     .from("alpine/git:2.45.2")
@@ -20,6 +20,16 @@ async function scanRepository(client, repoUrl) {
   });
 }
 
-export async function runScan(repoUrl) {
-  return connect(async (client) => scanRepository(client, repoUrl));
+export function createDaggerClientFactory() {
+  return {
+    withClient: (callback) => connect((client) => callback(client))
+  };
+}
+
+export function createRepositoryScanner({ daggerClientFactory }) {
+  return async function runScan(repoUrl) {
+    return daggerClientFactory.withClient((client) =>
+      scanRepositoryWithClient(client, repoUrl)
+    );
+  };
 }

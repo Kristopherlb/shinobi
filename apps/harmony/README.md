@@ -7,6 +7,7 @@ This package implements Phase 1 from `docs/harmony`: a local Golden Path that ru
 - Docker (privileged containers enabled for the Dagger engine)
 - Node.js 20+
 - pnpm 10+
+- LLM API key (set `HARMONY_LLM_API_KEY`)
 
 ## Start the local stack
 
@@ -47,10 +48,29 @@ pnpm start:worker
 
 ```bash
 cd apps/harmony
-HARMONY_REPO="https://github.com/modelcontextprotocol/servers" pnpm start:client
+HARMONY_LLM_API_KEY="..." \
+HARMONY_REPO="https://github.com/modelcontextprotocol/servers" \
+pnpm start:client
 ```
 
 The workflow runs the Plan → Execute → Review steps and outputs the resulting state, including the README contents, file tree, and review notes.
+
+## Configuration
+
+Runtime defaults live in `config/runtime.json`, and every value can be overridden via environment variables.
+
+Key overrides:
+- `HARMONY_MCP_SERVER_COMMAND`, `HARMONY_MCP_SERVER_ENTRY`
+- `HARMONY_TEMPORAL_TASK_QUEUE`, `HARMONY_TEMPORAL_WORKFLOW_PREFIX`
+- `HARMONY_DEFAULT_GOAL`, `HARMONY_DEFAULT_REPO`
+- `HARMONY_LLM_PROVIDER`, `HARMONY_LLM_MODEL`, `HARMONY_LLM_API_KEY`
+
+## Testing
+
+```bash
+cd apps/harmony
+pnpm test
+```
 
 ## Troubleshooting
 
