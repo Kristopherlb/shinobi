@@ -1,0 +1,22 @@
+{
+  "name": "harmony",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "description": "Shinobi Phase 1 Golden Path: durable agent prototype",
+  "scripts": {
+    "start:mcp": "node src/mcp/server.js",
+    "start:worker": "node src/workflow/worker.js",
+    "start:client": "node src/workflow/run-local.js",
+    "test": "node --test"
+  },
+  "dependencies": {
+    "@dagger.io/dagger": "^0.11.1",
+    "@langchain/langgraph": "^0.0.42",
+    "@modelcontextprotocol/sdk": "^0.4.0",
+    "@temporalio/client": "^1.10.4",
+    "@temporalio/worker": "^1.10.4",
+    "@temporalio/workflow": "^1.10.4",
+    "zod": "^4.1.5"
+  }
+}
