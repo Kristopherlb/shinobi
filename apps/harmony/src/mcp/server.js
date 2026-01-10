@@ -50,16 +50,44 @@ server.setRequestHandler(CallToolRequestSchema, async (request) => {
     throw new Error("repo_url must be a string");
   }
 
-  const result = await runScan(repoUrl);
+  try {
+    console.error(`[MCP Server] Calling runScan for ${repoUrl}...`);
+    const result = await runScan(repoUrl);
 
-  return {
-    content: [
-      {
-        type: "text",
-        text: JSON.stringify(result)
-      }
-    ]
-  };
+    if (!result) {
+      console.error(`[MCP Server] runScan returned no result.`);
+      return {
+        isError: true,
+        content: [
+          {
+            type: "text",
+            text: "Dagger scan returned no result"
+          }
+        ]
+      };
+    }
+
+    console.error(`[MCP Server] runScan success.`);
+    return {
+      content: [
+        {
+          type: "text",
+          text: JSON.stringify(result)
+        }
+      ]
+    };
+  } catch (error) {
+    console.error(`[MCP Server] Error in tool handler: ${error.stack}`);
+    return {
+      isError: true,
+      content: [
+        {
+          type: "text",
+          text: `Error analyzing repository: ${error.message}`
+        }
+      ]
+    };
+  }
 });
 
 const transport = new StdioServerTransport();
