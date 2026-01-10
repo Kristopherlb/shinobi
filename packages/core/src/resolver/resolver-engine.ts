@@ -576,6 +576,10 @@ export class ResolverEngine {
     this.dependencies.logger.debug('Phase 3: Component Binding');
 
     const bindings: Array<{ source: string; target: string; capability: string; result: EnhancedBindingResult }> = [];
+    const envVarRegistry = new Map<string, { value: string; source: string; target: string }>();
+    const iamPolicyRegistry = new Map<string, { actions: Set<string>; effects: Set<string> }>();
+
+    this.validateBindingGraph(components, outputsMap);
 
     // Skip auto-generating bindings from event sources if they were already processed in Phase 1.5
     // Event source bindings are processed earlier to ensure IAM policies exist before EventSourceMapping is created
@@ -682,6 +686,26 @@ export class ResolverEngine {
             result: result
           });
 
+          this.trackEnvironmentVariables(
+            result.environmentVariables,
+            {
+              source: component.spec.name,
+              target: target.component.spec.name,
+              capability: validatedDirective.capability
+            },
+            envVarRegistry
+          );
+
+          this.trackIamPolicies(
+            result.iamPolicies,
+            {
+              source: component.spec.name,
+              target: target.component.spec.name,
+              capability: validatedDirective.capability
+            },
+            iamPolicyRegistry
+          );
+
           this.dependencies.logger.debug(
             `Bound ${component.spec.name} -> ${target.component.spec.name} (${validatedDirective.capability}) ` +
             `[Compliance: ${result.compliance.status}]`
@@ -699,6 +723,131 @@ export class ResolverEngine {
 
     this.dependencies.logger.info(`Applied ${bindings.length} component bindings`);
     return bindings;
+  }
+
+  private validateBindingGraph(components: IComponent[], outputsMap: Map<string, any>): void {
+    const adjacency = new Map<string, string[]>();
+
+    for (const component of components) {
+      const edges: string[] = [];
+      const binds = component.spec.binds;
+      if (binds && Array.isArray(binds)) {
+        for (const bind of binds) {
+          const target = this.resolveTarget(bind, outputsMap);
+          if (!target) {
+            throw new Error(`Cannot resolve binding target for directive: ${JSON.stringify(bind)}`);
+          }
+          edges.push(target.component.spec.name);
+        }
+      }
+      adjacency.set(component.spec.name, edges);
+    }
+
+    const visited = new Set<string>();
+    const inStack = new Set<string>();
+    const path: string[] = [];
+
+    const visit = (node: string) => {
+      visited.add(node);
+      inStack.add(node);
+      path.push(node);
+
+      for (const neighbor of adjacency.get(node) ?? []) {
+        if (!visited.has(neighbor)) {
+          visit(neighbor);
+        } else if (inStack.has(neighbor)) {
+          const cycleStartIndex = path.indexOf(neighbor);
+          const cyclePath = path.slice(cycleStartIndex).concat(neighbor);
+          throw new Error(`Circular binding dependency detected: ${cyclePath.join(' -> ')}`);
+        }
+      }
+
+      path.pop();
+      inStack.delete(node);
+    };
+
+    for (const node of adjacency.keys()) {
+      if (!visited.has(node)) {
+        visit(node);
+      }
+    }
+  }
+
+  private trackEnvironmentVariables(
+    environmentVariables: Record<string, string>,
+    binding: { source: string; target: string; capability: string },
+    registry: Map<string, { value: string; source: string; target: string }>
+  ): void {
+    for (const [key, value] of Object.entries(environmentVariables ?? {})) {
+      if (registry.has(key)) {
+        const existing = registry.get(key)!;
+        if (existing.value !== value) {
+          this.dependencies.logger.warn(
+            `Environment variable conflict for ${key}: ` +
+            `${existing.source} -> ${existing.target} (${existing.value}) ` +
+            `overwritten by ${binding.source} -> ${binding.target} (${value}).`
+          );
+        }
+      }
+
+      registry.set(key, { value, source: binding.source, target: binding.target });
+    }
+  }
+
+  private trackIamPolicies(
+    iamPolicies: Array<{ statement: any }>,
+    binding: { source: string; target: string; capability: string },
+    registry: Map<string, { actions: Set<string>; effects: Set<string> }>
+  ): void {
+    for (const policy of iamPolicies ?? []) {
+      const statementJson = policy.statement.toStatementJson();
+      const actions = this.normalizePolicyField(statementJson.Action ?? []);
+      const resources = this.normalizePolicyField(statementJson.Resource ?? []);
+      const effect = statementJson.Effect ?? 'Allow';
+
+      for (const resource of resources) {
+        if (!registry.has(resource)) {
+          registry.set(resource, { actions: new Set(), effects: new Set() });
+        }
+
+        const entry = registry.get(resource)!;
+        if (entry.effects.size > 0 && !entry.effects.has(effect)) {
+          throw new Error(
+            `Conflicting IAM policy effects for ${resource}: ` +
+            `${Array.from(entry.effects).join(', ')} vs ${effect} ` +
+            `(${binding.source} -> ${binding.target})`
+          );
+        }
+
+        entry.effects.add(effect);
+
+        for (const action of actions) {
+          if (!entry.actions.has(action)) {
+            if (entry.actions.size > 0) {
+              this.dependencies.logger.info(
+                `Merged IAM actions for ${resource}: added ${action} ` +
+                `from ${binding.source} -> ${binding.target}.`
+              );
+            }
+            entry.actions.add(action);
+          }
+
+          if (action === '*' || action.endsWith(':*')) {
+            this.dependencies.logger.warn(
+              `Over-privileging detected for ${resource}: action ${action} ` +
+              `from ${binding.source} -> ${binding.target}.`
+            );
+          }
+        }
+      }
+    }
+  }
+
+  private normalizePolicyField(value: string | string[]): string[] {
+    if (Array.isArray(value)) {
+      return value;
+    }
+    return value ? [value] : [];
   }
 
   /**
