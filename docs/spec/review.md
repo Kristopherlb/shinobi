@@ -115,7 +115,7 @@ Manifest → **Schema validation** → **Context hydration** (env/defaults/secre
 **Actions (tickets):**
 
 * **Define canonical JSON Schema** for `service.yml` (generate from TS types; ship with the CLI for IDE validation).
-* **Introduce semantic validators** (e.g., “FedRAMP High ⇒ Multi‑AZ true, encryption KMS CMK, backup ≥ 35 days”) tied to compliance profiles. (README already hints at these rules. ([GitHub][1]))
+* **Introduce semantic validators** (e.g., “FedRAMP High ⇒ Multi‑AZ true, encryption KMS CMK, backup ≥ retention window”) tied to compliance profiles. (README already hints at these rules. ([GitHub][1]))
 * **Version the schema** (`manifestVersion`) and provide a **migration tool** (`svc migrate`) with codemods & release notes.
 * Add **field‑level deprecation tags** and a **deprecation linter** (fail CI on deprecated fields w/o suppression).
 * **Context hydrators**: env vars, secrets, feature flags (OpenFeature), and org defaults—deterministic order (document a **configuration precedence chain**).
@@ -291,9 +291,9 @@ A file named `service-backstage-portal.yml` in the repo root hints at this direc
 
 ---
 
-## 16) 30/60/90 Roadmap (ticket‑ready)
+## 16) Kanban Flow Status (ticket‑ready)
 
-**Next 30 days**
+**Now**
 
 * [ ] Establish **pnpm** + **Nx/Turbo**; split into `packages/core`, `packages/cli`, `packages/components/*`.
 * [ ] Author **JSON Schema** + TS types for `service.yml`; wire into CLI validation.
@@ -302,7 +302,7 @@ A file named `service-backstage-portal.yml` in the repo root hints at this direc
 * [ ] Add **snapshot tests** for synth of each example manifest.
 * [ ] Backstage Scaffolder v1 using the schema; render `svc plan` artifact in PR.
 
-**Next 60 days**
+**Next**
 
 * [ ] Introduce **Changesets**; publish versioned packages; generate SBOMs.
 * [ ] Build **evidence export** (OSCAL JSON) with links to resources; store in S3.
@@ -310,7 +310,7 @@ A file named `service-backstage-portal.yml` in the repo root hints at this direc
 * [ ] `svc explain` & `svc graph` commands.
 * [ ] OpenTelemetry defaults for `lambda-api` and standard structured logging.
 
-**Next 90 days**
+**Later**
 
 * [ ] FedRAMP High policy pack & **cross‑account org guardrails**.
 * [ ] MCP server hardened; Backstage plugin for explain/scorecards.

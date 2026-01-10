@@ -1,39 +1,49 @@
 import { AgentStateSchema, ToolResultSchema } from "../agent/state.js";
-import { buildPlan } from "../agent/plan.js";
-import { reviewAnalysis } from "../agent/review.js";
-import { analyzeRepository, createMcpClient, listTools } from "../mcp/client.js";
+import { analyzeRepository, listTools } from "../mcp/client.js";
 
-export async function planActivity(state) {
-  const parsed = AgentStateSchema.parse(state);
-  const client = await createMcpClient();
-  const tools = await listTools(client);
-  await client.close();
+export function createActivities({ mcpClientFactory, planner, reviewer }) {
+  async function discoverToolsActivity() {
+    return mcpClientFactory.withClient((client) => listTools(client));
+  }
+
+  async function generatePlanActivity(state, tools) {
+    const parsed = AgentStateSchema.parse(state);
+    return {
+      ...parsed,
+      plan: await planner(parsed, tools)
+    };
+  }
+
+  async function executeToolActivity(state) {
+    const parsed = AgentStateSchema.parse(state);
+    const result = await mcpClientFactory.withClient((client) =>
+      analyzeRepository(client, parsed.repositoryUrl)
+    );
+    const toolResult = ToolResultSchema.parse(result);
+
+    return {
+      ...parsed,
+      readme: toolResult.readme,
+      tree: toolResult.tree
+    };
+  }
+
+  async function reviewActivity(state) {
+    const parsed = AgentStateSchema.parse(state);
+    return {
+      ...parsed,
+      notes: await reviewer({
+        goal: parsed.goal,
+        readme: parsed.readme,
+        tree: parsed.tree
+      })
+    };
+  }
 
   return {
-    ...parsed,
-    plan: buildPlan(parsed, tools)
-  };
-}
-
-export async function executeActivity(state) {
-  const parsed = AgentStateSchema.parse(state);
-  const client = await createMcpClient();
-  const result = await analyzeRepository(client, parsed.repositoryUrl);
-  await client.close();
-
-  const toolResult = ToolResultSchema.parse(result);
-
-  return {
-    ...parsed,
-    readme: toolResult.readme,
-    tree: toolResult.tree
-  };
-}
-
-export async function reviewActivity(state) {
-  const parsed = AgentStateSchema.parse(state);
-  return {
-    ...parsed,
-    notes: reviewAnalysis({ readme: parsed.readme, tree: parsed.tree })
+    discoverToolsActivity,
+    generatePlanActivity,
+    executeToolActivity,
+    reviewActivity
   };
 }

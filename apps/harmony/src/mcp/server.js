@@ -4,91 +4,112 @@ import {
   CallToolRequestSchema,
   ListToolsRequestSchema
 } from "@modelcontextprotocol/sdk/types.js";
-import { runScan } from "../dagger/scan-repo.js";
+import { createDaggerClientFactory, createRepositoryScanner } from "../dagger/scan-repo.js";
+import { loadRuntimeConfig } from "../config/runtime.js";
 
-const server = new Server(
-  {
-    name: "shinobi-harmony",
-    version: "0.1.0"
-  },
-  {
-    capabilities: {
-      tools: {}
-    }
-  }
-);
-
-server.setRequestHandler(ListToolsRequestSchema, async () => {
+function createToolHandlers({ scanRepository }) {
   return {
-    tools: [
-      {
-        name: "analyze_repo",
-        description: "Clone a repository with Dagger and return README + file tree.",
-        inputSchema: {
-          type: "object",
-          properties: {
-            repo_url: {
-              type: "string",
-              format: "uri",
-              description: "Git repository URL to analyze."
-            }
-          },
-          required: ["repo_url"]
-        }
+    analyze_repo: async (request) => {
+      const repoUrl = request.params.arguments?.repo_url;
+      if (typeof repoUrl !== "string") {
+        throw new Error("repo_url must be a string");
       }
-    ]
+
+      try {
+        console.error(`[MCP Server] Calling scanRepository for ${repoUrl}...`);
+        const result = await scanRepository(repoUrl);
+
+        if (!result) {
+          console.error(`[MCP Server] scanRepository returned no result.`);
+          return {
+            isError: true,
+            content: [
+              {
+                type: "text",
+                text: "Dagger scan returned no result"
+              }
+            ]
+          };
+        }
+
+        console.error(`[MCP Server] scanRepository success.`);
+        return {
+          content: [
+            {
+              type: "text",
+              text: JSON.stringify(result)
+            }
+          ]
+        };
+      } catch (error) {
+        console.error(`[MCP Server] Error in tool handler: ${error.stack}`);
+        return {
+          isError: true,
+          content: [
+            {
+              type: "text",
+              text: `Error analyzing repository: ${error.message}`
+            }
+          ]
+        };
+      }
+    }
   };
-});
+}
 
-server.setRequestHandler(CallToolRequestSchema, async (request) => {
-  if (request.params.name !== "analyze_repo") {
-    throw new Error(`Unknown tool: ${request.params.name}`);
-  }
+export function createMcpServer({ config, scanRepository }) {
+  const server = new Server(
+    {
+      name: config.mcp.serverName,
+      version: config.mcp.serverVersion
+    },
+    {
+      capabilities: {
+        tools: {}
+      }
+    }
+  );
 
-  const repoUrl = request.params.arguments?.repo_url;
-  if (typeof repoUrl !== "string") {
-    throw new Error("repo_url must be a string");
-  }
+  const handlers = createToolHandlers({ scanRepository });
 
-  try {
-    console.error(`[MCP Server] Calling runScan for ${repoUrl}...`);
-    const result = await runScan(repoUrl);
-
-    if (!result) {
-      console.error(`[MCP Server] runScan returned no result.`);
-      return {
-        isError: true,
-        content: [
-          {
-            type: "text",
-            text: "Dagger scan returned no result"
+  server.setRequestHandler(ListToolsRequestSchema, async () => {
+    return {
+      tools: [
+        {
+          name: "analyze_repo",
+          description: "Clone a repository with Dagger and return README + file tree.",
+          inputSchema: {
+            type: "object",
+            properties: {
+              repo_url: {
+                type: "string",
+                format: "uri",
+                description: "Git repository URL to analyze."
+              }
+            },
+            required: ["repo_url"]
           }
-        ]
-      };
+        }
+      ]
+    };
+  });
+
+  server.setRequestHandler(CallToolRequestSchema, async (request) => {
+    const handler = handlers[request.params.name];
+    if (!handler) {
+      throw new Error(`Unknown tool: ${request.params.name}`);
     }
 
-    console.error(`[MCP Server] runScan success.`);
-    return {
-      content: [
-        {
-          type: "text",
-          text: JSON.stringify(result)
-        }
-      ]
-    };
-  } catch (error) {
-    console.error(`[MCP Server] Error in tool handler: ${error.stack}`);
-    return {
-      isError: true,
-      content: [
-        {
-          type: "text",
-          text: `Error analyzing repository: ${error.message}`
-        }
-      ]
-    };
-  }
-});
+    return handler(request);
+  });
+
+  return server;
+}
+
+const config = loadRuntimeConfig();
+const daggerClientFactory = createDaggerClientFactory();
+const scanRepository = createRepositoryScanner({ daggerClientFactory });
+const server = createMcpServer({ config, scanRepository });
 
 const transport = new StdioServerTransport();
 await server.connect(transport);

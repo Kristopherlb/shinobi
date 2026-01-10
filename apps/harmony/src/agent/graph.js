@@ -1,46 +1,48 @@
 import { END, START, StateGraph } from "@langchain/langgraph";
 import { AgentStateSchema, createInitialState } from "./state.js";
-import { buildPlan } from "./plan.js";
-import { reviewAnalysis } from "./review.js";
-import { analyzeRepository, createMcpClient, listTools } from "../mcp/client.js";
+import { listTools, analyzeRepository } from "../mcp/client.js";
 
 const GraphState = AgentStateSchema;
 
-async function planNode(state) {
-  const client = await createMcpClient();
-  const tools = await listTools(client);
-  await client.close();
+function createPlanNode({ mcpClientFactory, planner }) {
+  return async function planNode(state) {
+    const tools = await mcpClientFactory.withClient((client) => listTools(client));
 
-  return {
-    ...state,
-    plan: buildPlan(state, tools)
+    return {
+      ...state,
+      plan: await planner(state, tools)
+    };
   };
 }
 
-async function executeNode(state) {
-  const client = await createMcpClient();
-  const result = await analyzeRepository(client, state.repositoryUrl);
-  await client.close();
+function createExecuteNode({ mcpClientFactory }) {
+  return async function executeNode(state) {
+    const result = await mcpClientFactory.withClient((client) =>
+      analyzeRepository(client, state.repositoryUrl)
+    );
 
-  return {
-    ...state,
-    readme: result.readme,
-    tree: result.tree
+    return {
+      ...state,
+      readme: result.readme,
+      tree: result.tree
+    };
   };
 }
 
-async function reviewNode(state) {
-  return {
-    ...state,
-    notes: reviewAnalysis({ readme: state.readme, tree: state.tree })
+function createReviewNode({ reviewer }) {
+  return async function reviewNode(state) {
+    return {
+      ...state,
+      notes: await reviewer({ goal: state.goal, readme: state.readme, tree: state.tree })
+    };
   };
 }
 
-export function createAgentGraph() {
+export function createAgentGraph({ mcpClientFactory, planner, reviewer }) {
   const graph = new StateGraph(GraphState)
-    .addNode("plan", planNode)
-    .addNode("execute", executeNode)
-    .addNode("review", reviewNode)
+    .addNode("plan", createPlanNode({ mcpClientFactory, planner }))
+    .addNode("execute", createExecuteNode({ mcpClientFactory }))
+    .addNode("review", createReviewNode({ reviewer }))
     .addEdge(START, "plan")
     .addEdge("plan", "execute")
     .addEdge("execute", "review")
@@ -49,8 +51,8 @@ export function createAgentGraph() {
   return graph.compile();
 }
 
-export async function runAgent({ goal, repositoryUrl }) {
-  const app = createAgentGraph();
+export async function runAgent({ goal, repositoryUrl, mcpClientFactory, planner, reviewer }) {
+  const app = createAgentGraph({ mcpClientFactory, planner, reviewer });
   const initialState = createInitialState({ goal, repositoryUrl });
   return app.invoke(initialState);
 }

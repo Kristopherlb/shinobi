@@ -5,25 +5,32 @@ import {
   ListToolsResultSchema
 } from "@modelcontextprotocol/sdk/types.js";
 import { ToolResultSchema } from "../agent/state.js";
-import { fileURLToPath } from "node:url";
-import { dirname, resolve } from "node:path";
 
-const currentDir = dirname(fileURLToPath(import.meta.url));
-const serverPath = resolve(currentDir, "./server.js");
+export function createMcpClientFactory({ name, version, command, serverEntry }) {
+  async function createClient() {
+    const client = new Client({ name, version });
+    const transport = new StdioClientTransport({
+      command,
+      args: [serverEntry]
+    });
 
-export async function createMcpClient() {
-  const client = new Client({
-    name: "shinobi-harmony-client",
-    version: "0.1.0"
-  });
+    await client.connect(transport);
+    return client;
+  }
 
-  const transport = new StdioClientTransport({
-    command: "node",
-    args: [serverPath]
-  });
+  async function withClient(callback) {
+    const client = await createClient();
+    try {
+      return await callback(client);
+    } finally {
+      await client.close();
+    }
+  }
 
-  await client.connect(transport);
-  return client;
+  return {
+    createClient,
+    withClient
+  };
 }
 
 export async function listTools(client) {
