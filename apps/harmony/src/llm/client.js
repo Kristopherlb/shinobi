@@ -43,9 +43,33 @@ function buildOpenAiClient({ apiKey, apiBaseUrl, model, temperature }) {
 }
 
 function buildMockClient({ responder }) {
+  const defaultResponder = (prompt) => {
+    if (prompt.includes("planning")) {
+      return JSON.stringify({
+        steps: [
+          "Use analyze_repo to fetch README and tree.",
+          "Review documentation coverage.",
+          "Plan follow-up steps if documentation is missing."
+        ]
+      });
+    }
+    if (prompt.includes("reviewing")) {
+      return JSON.stringify({
+        notes: [
+          "Repository structure captured.",
+          "README analysis complete.",
+          "Workflow successful."
+        ]
+      });
+    }
+    return JSON.stringify({});
+  };
+
+  const activeResponder = responder ?? defaultResponder;
+
   return {
     async generateText(prompt) {
-      return responder(prompt);
+      return activeResponder(prompt);
     }
   };
 }

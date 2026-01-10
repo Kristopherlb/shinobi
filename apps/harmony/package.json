@@ -7,7 +7,9 @@
   "scripts": {
     "start:mcp": "node src/mcp/server.js",
     "start:worker": "node src/workflow/worker.js",
+    "start:worker:local": "HARMONY_LLM_PROVIDER=mock node src/workflow/worker.js",
     "start:client": "node src/workflow/run-local.js",
+    "start:client:local": "HARMONY_LLM_PROVIDER=mock node src/workflow/run-local.js",
     "test": "node --test"
   },
   "dependencies": {
