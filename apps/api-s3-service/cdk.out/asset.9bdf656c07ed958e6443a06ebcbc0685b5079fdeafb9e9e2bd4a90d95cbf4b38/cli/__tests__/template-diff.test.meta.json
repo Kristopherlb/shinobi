@@ -1,0 +1,23 @@
+{
+  "id": "TP-cli-template-diff-001",
+  "level": "unit",
+  "capability": "CloudFormation template diffing (added resources, property changes)",
+  "oracle": "exact",
+  "invariants": [
+    "Added resources detected",
+    "Property modifications captured",
+    "Change paths identified correctly"
+  ],
+  "fixtures": [],
+  "inputs": {
+    "shape": "Current and desired CloudFormation templates",
+    "notes": "Pure function tests with no I/O, no mocks, no external dependencies. Deterministic."
+  },
+  "risks": [],
+  "dependencies": ["vitest"],
+  "evidence": [],
+  "compliance_refs": [],
+  "ai_generated": true,
+  "human_reviewed_by": "platform-team"
+}
+

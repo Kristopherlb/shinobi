@@ -1,0 +1,128 @@
+service: api-db-service
+owner: platform-team
+complianceFramework: commercial
+region: us-west-2
+accountId: "911871352725"
+
+environments:
+  dev:
+    defaults:
+      instanceSize: small
+      enableDebug: true
+      highRiskEnvironment: false
+
+components:
+  - name: orders-api
+    type: lambda-api
+    config:
+      functionName: orders-api
+      handler: src/handler.handler
+      runtime: nodejs20.x
+      architecture: arm64
+      memorySize: 512
+      timeoutSeconds: 30
+      deployment:
+        codePath: ./src
+      logging:
+        logRetentionDays: 30
+        logFormat: JSON
+        systemLogLevel: INFO
+        applicationLogLevel: INFO
+      monitoring:
+        enabled: true
+        alarms:
+          lambdaErrors:
+            enabled: true
+            threshold: 1
+            evaluationPeriods: 1
+            periodMinutes: 1
+            comparisonOperator: gt
+            treatMissingData: breaching
+            statistic: Sum
+            tags: {}
+          lambdaThrottles:
+            enabled: true
+            threshold: 5
+            evaluationPeriods: 2
+            periodMinutes: 1
+            comparisonOperator: gt
+            treatMissingData: breaching
+            statistic: Sum
+            tags: {}
+          lambdaDuration:
+            enabled: true
+            threshold: 5000
+            evaluationPeriods: 2
+            periodMinutes: 1
+            comparisonOperator: gt
+            treatMissingData: breaching
+            statistic: Average
+            tags: {}
+          api4xxErrors:
+            enabled: true
+            threshold: 10
+            evaluationPeriods: 1
+            periodMinutes: 5
+            comparisonOperator: gt
+            treatMissingData: breaching
+            statistic: Sum
+            tags: {}
+          api5xxErrors:
+            enabled: true
+            threshold: 1
+            evaluationPeriods: 1
+            periodMinutes: 5
+            comparisonOperator: gt
+            treatMissingData: breaching
+            statistic: Sum
+            tags: {}
+      observability:
+        otelEnabled: true
+        otelResourceAttributes: {}
+      api:
+        type: rest
+        stageName: dev
+        metricsEnabled: true
+        tracingEnabled: true
+        apiKeyRequired: false
+        throttling:
+          burstLimit: 100
+          rateLimit: 50
+        usagePlan:
+          enabled: false
+        logging:
+          enabled: true
+          retentionDays: 90
+          logFormat: json
+          prefix: access/
+        cors:
+          enabled: true
+          allowOrigins: ["*"]
+          allowHeaders: ["Content-Type", "Authorization"]
+          allowMethods: ["GET", "POST", "PUT", "DELETE", "OPTIONS"]
+          allowCredentials: false
+    binds:
+      - to: orders-db
+        capability: db:postgres
+        access: readwrite
+
+  - name: orders-db
+    type: rds-postgres
+    config:
+      serviceName: api-db-service
+      environment: dev
+      dbName: ordersdb
+      username: postgres
+      instance:
+        instanceType: db.t3.micro
+        allocatedStorage: 20
+        multiAz: false
+      backup:
+        retentionDays: 7
+      encryption:
+        enabled: true
+      logging:
+        database:
+          enabled: true
+          retentionInDays: 7
+
