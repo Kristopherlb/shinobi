@@ -5,7 +5,7 @@
 
 import * as cdk from 'aws-cdk-lib';
 import * as ec2 from 'aws-cdk-lib/aws-ec2';
-import { ComponentContext, ComponentSpec } from '@shinobi/core/component-interfaces';
+import { ComponentContext, ComponentSpec } from '@shinobi/core';
 
 /**
  * Deterministic test clock - frozen at specific time for reproducible tests
@@ -209,8 +209,8 @@ export class TestFixtureFactory {
 
     const defaultVpcId = `TestFixtureVpc-${++TestFixtureFactory.vpcCounter}`;
     const defaultVpc = TestFixtureFactory.createMockVpc(stack, defaultVpcId);
-    Object.values(contexts).forEach((context) => {
-      context.vpc = defaultVpc;
+    Object.values(contexts).forEach((context: ComponentContext) => {
+      (context as any).vpc = defaultVpc;
     });
 
     // Track for cleanup

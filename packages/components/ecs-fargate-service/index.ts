@@ -7,8 +7,8 @@
 export { EcsFargateServiceComponent } from './src/ecs-fargate-service.component.js';
 
 // Configuration exports
+export type { EcsFargateServiceConfig } from './src/ecs-fargate-service.builder.js';
 export {
-  EcsFargateServiceConfig,
   EcsFargateServiceComponentConfigBuilder,
   ECS_FARGATE_SERVICE_CONFIG_SCHEMA
 } from './src/ecs-fargate-service.builder.js';

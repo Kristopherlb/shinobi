@@ -7,12 +7,14 @@
 export { StaticWebsiteComponent } from './static-website.component.js';
 
 // Configuration exports
-export { 
+export type { 
   StaticWebsiteConfig,
-  StaticWebsiteConfigBuilder,
-  STATIC_WEBSITE_CONFIG_SCHEMA,
   RemovalPolicyOption,
   PriceClassOption
+} from './static-website.builder.js';
+export { 
+  StaticWebsiteConfigBuilder,
+  STATIC_WEBSITE_CONFIG_SCHEMA
 } from './static-website.builder.js';
 
 // Creator exports

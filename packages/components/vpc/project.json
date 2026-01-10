@@ -5,7 +5,8 @@
     "build": {
       "executor": "nx:run-commands",
       "options": {
-        "command": "pnpm exec tsc -b packages/components/vpc/tsconfig.build.json"
+        "command": "node_modules/.bin/tsc -b packages/components/vpc/tsconfig.build.json",
+        "cwd": "{workspaceRoot}"
       },
       "outputs": [
         "{workspaceRoot}/dist/packages/components/vpc"
@@ -14,13 +15,15 @@
     "typecheck": {
       "executor": "nx:run-commands",
       "options": {
-        "command": "tsc -p packages/components/vpc/tsconfig.json --noEmit"
+        "command": "tsc -p packages/components/vpc/tsconfig.json --noEmit",
+        "cwd": "{workspaceRoot}"
       }
     },
     "clean": {
       "executor": "nx:run-commands",
       "options": {
-        "command": "rimraf dist/packages/components/vpc"
+        "command": "rimraf dist/packages/components/vpc",
+        "cwd": "{workspaceRoot}"
       }
     },
     "test": {
@@ -36,7 +39,8 @@
     "lint": {
       "executor": "nx:run-commands",
       "options": {
-        "command": "eslint . --ext .ts,.tsx"
+        "command": "eslint . --ext .ts,.tsx",
+        "cwd": "{projectRoot}"
       }
     }
   },

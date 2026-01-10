@@ -2,12 +2,13 @@ import * as opensearch from 'aws-cdk-lib/aws-opensearchservice';
 import * as ec2 from 'aws-cdk-lib/aws-ec2';
 import * as iam from 'aws-cdk-lib/aws-iam';
 import * as kms from 'aws-cdk-lib/aws-kms';
+import * as secretsmanager from 'aws-cdk-lib/aws-secretsmanager';
 import * as logs from 'aws-cdk-lib/aws-logs';
 import * as cloudwatch from 'aws-cdk-lib/aws-cloudwatch';
 import * as cdk from 'aws-cdk-lib';
 import { Construct } from 'constructs';
 import {
-  Component,
+  BaseComponent,
   ComponentSpec,
   ComponentContext,
   ComponentCapabilities,
@@ -27,7 +28,7 @@ interface LoggingResources {
   audit?: logs.ILogGroup;
 }
 
-export class OpenSearchDomainComponent extends Component {
+export class OpenSearchDomainComponent extends BaseComponent {
   private domain?: opensearch.Domain;
   private vpc?: ec2.IVpc;
   private managedSecurityGroup?: ec2.SecurityGroup;
@@ -233,6 +234,8 @@ export class OpenSearchDomainComponent extends Component {
       removalPolicy: this.mapRemovalPolicy(this.config.removalPolicy),
       offPeakWindowEnabled: this.config.maintenance.offPeakWindowEnabled,
       automatedSnapshotStartHour: this.config.snapshot.automatedSnapshotStartHour
+      // Note: AutoTune configuration is not available in current CDK version.
+      // When available, configure with rollback on disable for safety.
     };
 
     this.domain = new opensearch.Domain(this, 'OpenSearchDomain', domainProps);
@@ -275,7 +278,12 @@ export class OpenSearchDomainComponent extends Component {
     }
 
     if (this.vpc) {
-      return [{ subnets: this.vpc.privateSubnets }];
+      // Prefer isolated subnets for high compliance (configurable via config layers)
+      // Fall back to private subnets if isolated are not available
+      const isolatedSubnets = this.vpc.isolatedSubnets;
+      const preferredSubnets = isolatedSubnets.length > 0 ? isolatedSubnets : this.vpc.privateSubnets;
+      
+      return [{ subnets: preferredSubnets }];
     }
 
     return undefined;
@@ -302,16 +310,38 @@ export class OpenSearchDomainComponent extends Component {
       return undefined;
     }
 
+    // Warn if plain password is provided (even though it's blocked) - for audit trail
+    if (this.config.advancedSecurity.masterUserPassword) {
+      this.logComponentEvent('security_warning', 'Plain master user password provided but blocked', {
+        component: this.spec.name,
+        zoneName: this.config.domainName,
+        recommendation: 'Use masterUserPasswordSecretArn to reference a secret in Secrets Manager',
+        environment: this.context.environment,
+        complianceFramework: this.context.complianceFramework
+      });
+    }
+
+    // Require secretArn - no plain password support for security
     const masterUserPassword = this.config.advancedSecurity.masterUserPasswordSecretArn
-      ? cdk.SecretValue.secretsManager(this.config.advancedSecurity.masterUserPasswordSecretArn)
-      : this.config.advancedSecurity.masterUserPassword
-        ? cdk.SecretValue.unsafePlainText(this.config.advancedSecurity.masterUserPassword)
+      ? secretsmanager.Secret.fromSecretCompleteArn(
+          this,
+          'MasterUserPassword',
+          this.config.advancedSecurity.masterUserPasswordSecretArn
+        ).secretValue
         : undefined;
+
+    if (this.config.advancedSecurity.internalUserDatabaseEnabled && !masterUserPassword) {
+      throw new Error(
+        'masterUserPasswordSecretArn is required when advancedSecurity.enabled is true and ' +
+        'internalUserDatabaseEnabled is true. Plain passwords are not allowed for security.'
+      );
+    }
 
     return {
       masterUserName: this.config.advancedSecurity.masterUserName,
-      masterUserPassword,
-      internalUserDatabaseEnabled: this.config.advancedSecurity.internalUserDatabaseEnabled
+      masterUserPassword
+      // Note: internalUserDatabaseEnabled is not a property of AdvancedSecurityOptions.
+      // The internal user database is automatically enabled when masterUserName and masterUserPassword are provided.
     };
   }
 
@@ -436,10 +466,17 @@ export class OpenSearchDomainComponent extends Component {
   }
 
   private buildDomainCapability(): Record<string, any> {
+    // Build dashboard URL (OpenSearch Dashboards endpoint)
+    const dashboardUrl = this.domain!.domainEndpoint
+      ? `https://${this.domain!.domainEndpoint.replace('search-', 'dashboards-')}`
+      : undefined;
+
     return {
       domainArn: this.domain!.domainArn,
       domainName: this.config!.domainName,
-      endpoint: this.domain!.domainEndpoint,
+      domainEndpoint: this.domain!.domainEndpoint,
+      endpoint: this.domain!.domainEndpoint, // Keep for backward compatibility
+      dashboardUrl,
       version: this.config!.version,
       hardeningProfile: this.config!.hardeningProfile,
       dataNodes: this.config!.cluster.instanceCount,

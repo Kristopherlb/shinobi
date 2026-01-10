@@ -20,6 +20,9 @@
     "dist",
     "node_modules",
     "**/*.test.ts",
+    "**/*.spec.ts",
+    "**/vitest.config.ts",
+    "**/jest.config.ts",
     "tests/**"
   ],
   "references": [

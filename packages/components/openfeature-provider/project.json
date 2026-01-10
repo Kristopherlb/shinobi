@@ -1,0 +1,46 @@
+{
+  "name": "@shinobi/components-openfeature-provider",
+  "sourceRoot": "packages/components/openfeature-provider/src",
+  "targets": {
+    "build": {
+      "executor": "nx:run-commands",
+      "outputs": [
+        "{workspaceRoot}/dist/packages/components/openfeature-provider"
+      ],
+      "options": {
+        "command": "node_modules/.bin/tsc -b packages/components/openfeature-provider/tsconfig.build.json",
+        "cwd": "{workspaceRoot}"
+      }
+    },
+    "test": {
+      "executor": "@nx/vitest:test",
+      "options": {
+        "config": "packages/components/openfeature-provider/vitest.config.ts",
+        "passWithNoTests": true
+      },
+      "outputs": [
+        "{projectRoot}/coverage"
+      ]
+    },
+    "clean": {
+      "executor": "nx:run-commands",
+      "options": {
+        "command": "rimraf dist/packages/components/openfeature-provider",
+        "cwd": "{workspaceRoot}"
+      }
+    },
+    "typecheck": {
+      "executor": "nx:run-commands",
+      "options": {
+        "command": "tsc -p packages/components/openfeature-provider/tsconfig.lib.json --noEmit",
+        "cwd": "{workspaceRoot}"
+      }
+    }
+  },
+  "tags": [
+    "scope:shinobi",
+    "type:component",
+    "infra:aws"
+  ]
+}
+

@@ -1,0 +1,122 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "$id": "https://platform.shinobi.internal/schemas/step-functions-statemachine/v1.0.0",
+  "title": "Step Functions State Machine Component Configuration",
+  "description": "Configuration for creating a Step Functions State Machine",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["definition"],
+  "properties": {
+    "stateMachineName": {
+      "type": "string",
+      "description": "Name of the state machine (will be auto-generated if not provided)",
+      "pattern": "^[a-zA-Z0-9_-]+$",
+      "maxLength": 80
+    },
+    "stateMachineType": {
+      "type": "string",
+      "description": "Type of state machine",
+      "enum": ["STANDARD", "EXPRESS"],
+      "default": "STANDARD"
+    },
+    "definition": {
+      "type": "object",
+      "description": "State machine definition",
+      "properties": {
+        "definition": {
+          "type": "object",
+          "description": "State machine definition as JSON object"
+        },
+        "definitionString": {
+          "type": "string",
+          "description": "State machine definition as JSON string"
+        },
+        "definitionSubstitutions": {
+          "type": "object",
+          "description": "Definition substitutions",
+          "additionalProperties": {
+            "type": "string"
+          },
+          "default": {}
+        }
+      },
+      "additionalProperties": false,
+      "anyOf": [
+        { "required": ["definition"] },
+        { "required": ["definitionString"] }
+      ]
+    },
+    "roleArn": {
+      "type": "string",
+      "description": "IAM role ARN for state machine execution"
+    },
+    "loggingConfiguration": {
+      "type": "object",
+      "description": "Logging configuration",
+      "properties": {
+        "enabled": {
+          "type": "boolean",
+          "description": "Enable logging",
+          "default": false
+        },
+        "level": {
+          "type": "string",
+          "description": "Log level",
+          "enum": ["ALL", "ERROR", "FATAL", "OFF"],
+          "default": "ERROR"
+        },
+        "includeExecutionData": {
+          "type": "boolean",
+          "description": "Include execution data in logs",
+          "default": false
+        }
+      },
+      "additionalProperties": false,
+      "default": {
+        "enabled": false,
+        "level": "ERROR",
+        "includeExecutionData": false
+      }
+    },
+    "tracingConfiguration": {
+      "type": "object",
+      "description": "X-Ray tracing configuration",
+      "properties": {
+        "enabled": {
+          "type": "boolean",
+          "description": "Enable X-Ray tracing",
+          "default": false
+        }
+      },
+      "additionalProperties": false,
+      "default": {
+        "enabled": false
+      }
+    },
+    "timeout": {
+      "type": "object",
+      "description": "Execution timeout configuration",
+      "properties": {
+        "seconds": {
+          "type": "number",
+          "description": "Timeout in seconds",
+          "minimum": 1,
+          "maximum": 31536000,
+          "default": 3600
+        }
+      },
+      "additionalProperties": false
+    },
+    "tags": {
+      "type": "object",
+      "description": "Tags for the state machine",
+      "additionalProperties": {
+        "type": "string"
+      },
+      "default": {}
+    }
+  }
+}
+
+
+

@@ -115,6 +115,9 @@ export interface DynamoDbTableConfig {
   monitoring: DynamoDbMonitoringConfig;
   hardeningProfile: HardeningProfile;
   tags: Record<string, string>;
+  
+  /** High-risk environment flag (set via platform config or service.yml) */
+  highRiskEnvironment?: boolean;
 }
 
 const ATTRIBUTE_DEFINITION = {
@@ -212,6 +215,50 @@ export class DynamoDbTableComponentConfigBuilder extends ConfigBuilder<DynamoDbT
       hardeningProfile: 'baseline',
       tags: {}
     };
+  }
+
+  /**
+   * Layer 2: Compliance Framework Defaults
+   * 
+   * Provides sensible defaults based on risk assessment flags rather than framework checks.
+   * High-risk environment defaults can be set via:
+   * - Platform config files (`/config/{framework}.yml`) setting `highRiskEnvironment: true`
+   * - Service-level configuration in `service.yml`
+   * - Environment defaults
+   * 
+   * This ensures configuration is data-driven and risk-based, not framework-dependent.
+   */
+  protected getComplianceFrameworkDefaults(): Partial<DynamoDbTableConfig> {
+    // Check if highRiskEnvironment flag is set in component config or platform config
+    const componentConfig = this.builderContext.spec.config as Partial<DynamoDbTableConfig> | undefined;
+    let isHighRisk = componentConfig?.highRiskEnvironment ?? false;
+    
+    // Also check platform config if available (loaded by base class)
+    try {
+      const platformConfig = (this as any)._loadPlatformConfiguration();
+      if (platformConfig?.highRiskEnvironment) {
+        isHighRisk = true;
+      }
+    } catch {
+      // Platform config might not be available in tests, ignore
+    }
+    
+    if (isHighRisk) {
+      // Apply enhanced security defaults for high-risk environments
+      // These defaults align with FedRAMP Moderate/High requirements when highRiskEnvironment is set
+      return {
+        encryption: {
+          type: 'customer-managed'
+        },
+        backup: {
+          enabled: true,
+          retentionDays: 30 // Can be overridden to 90 for higher risk
+        },
+        pointInTimeRecovery: true
+      };
+    }
+    
+    return {}; // Standard/default environment - use hardcoded fallbacks
   }
 
   public buildSync(): DynamoDbTableConfig {

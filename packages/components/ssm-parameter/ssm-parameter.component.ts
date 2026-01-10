@@ -29,14 +29,26 @@ export class SsmParameterComponent extends BaseComponent {
   }
 
   public synth(): void {
-    const builder = new SsmParameterComponentConfigBuilder({
-      context: this.context,
-      spec: this.spec
+    this.logComponentEvent('synthesis_start', 'Starting SSM parameter component synthesis', {
+      component: {
+        name: this.spec.name,
+        type: this.getType()
+      },
+      context: {
+        environment: this.context.environment,
+        complianceFramework: this.context.complianceFramework
+      }
     });
 
-    this.config = builder.buildSync();
+    try {
+      const builder = new SsmParameterComponentConfigBuilder({
+        context: this.context,
+        spec: this.spec
+      });
 
-    this.logComponentEvent('config_resolved', 'Resolved SSM parameter configuration', {
+      this.config = builder.buildSync();
+
+      this.logComponentEvent('config_resolved', 'Resolved SSM parameter configuration', {
       name: this.config.name,
       kind: this.config.kind,
       tier: this.config.tier
@@ -47,11 +59,18 @@ export class SsmParameterComponent extends BaseComponent {
     this.registerResources();
     this.registerCapabilities();
 
-    this.logComponentEvent('synthesis_complete', 'SSM parameter synthesis completed', {
-      name: this.config.name,
-      kind: this.config.kind,
-      kmsKeyCreated: Boolean(this.kmsKey)
-    });
+      this.logComponentEvent('synthesis_complete', 'SSM parameter synthesis completed successfully', {
+        name: this.config.name,
+        kind: this.config.kind,
+        kmsKeyCreated: Boolean(this.kmsKey)
+      });
+    } catch (error) {
+      this.logError(error as Error, 'component synthesis', {
+        componentType: 'ssm-parameter',
+        stage: 'synthesis'
+      });
+      throw error;
+    }
   }
 
   public getCapabilities(): ComponentCapabilities {

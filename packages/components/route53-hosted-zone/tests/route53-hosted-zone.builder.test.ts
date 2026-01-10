@@ -1,22 +1,37 @@
+import { App, Stack } from 'aws-cdk-lib';
 import {
   Route53HostedZoneComponentConfigBuilder,
   Route53HostedZoneConfig
 } from '../route53-hosted-zone.builder.js';
-import { ComponentContext, ComponentSpec } from '../../../platform/contracts/component-interfaces.js';
+import { ComponentContext, ComponentSpec } from '@shinobi/core';
 
-const createContext = (framework: string = 'commercial'): ComponentContext => ({
-  serviceName: 'dns-service',
-  owner: 'platform-team',
-  environment: 'dev',
-  complianceFramework: framework,
-  region: 'us-east-1',
-  account: '123456789012',
-  tags: {
-    'service-name': 'dns-service',
+const createContext = (framework: string = 'commercial'): ComponentContext => {
+  const app = new App();
+  const stack = new Stack(app, 'TestStack', {
+    env: { account: '123456789012', region: 'us-east-1' }
+  });
+
+  return {
+    serviceName: 'dns-service',
+    owner: 'platform-team',
     environment: 'dev',
-    'compliance-framework': framework
-  }
-});
+    complianceFramework: framework as 'commercial' | 'fedramp-moderate' | 'fedramp-high',
+    region: 'us-east-1',
+    accountId: '123456789012',
+    scope: stack,
+    serviceLabels: {
+      'service-name': 'dns-service',
+      owner: 'platform-team',
+      environment: 'dev',
+      'compliance-framework': framework
+    },
+    tags: {
+      'service-name': 'dns-service',
+      environment: 'dev',
+      'compliance-framework': framework
+    }
+  };
+};
 
 const createSpec = (config: Partial<Route53HostedZoneConfig>): ComponentSpec => ({
   name: 'public-zone',
@@ -75,6 +90,10 @@ describe('Route53HostedZoneComponentConfigBuilder', () => {
             queryVolume: {
               enabled: true,
               threshold: 5000
+            },
+            healthCheckFailures: {
+              enabled: true,
+              threshold: 10
             }
           }
         },

@@ -112,9 +112,7 @@ const DEFAULT_CONFIG: ContainerApplicationConfig = {
   application: {
     name: 'container-app',
     port: 3000,
-    environment: {
-      NODE_ENV: 'production'
-    },
+    environment: {}, // NODE_ENV removed - should be configured via config layers, not hardcoded
     secrets: {}
   },
   service: {
@@ -166,6 +164,40 @@ export class ContainerApplicationComponentConfigBuilder extends ConfigBuilder<Co
 
   protected getHardcodedFallbacks(): Partial<ContainerApplicationConfig> {
     return DEFAULT_CONFIG;
+  }
+
+  protected getComplianceFrameworkDefaults(): Partial<ContainerApplicationConfig> {
+    const framework = this.builderContext.context.complianceFramework;
+    
+    // Base compliance defaults
+    const baseCompliance: Partial<ContainerApplicationConfig> = {
+      security: {
+        enableEncryption: true,
+        enableVpcFlowLogs: true,
+        enableWaf: false
+      }
+    };
+
+    if (framework === 'fedramp-moderate' || framework === 'fedramp-high') {
+      return {
+        ...baseCompliance,
+        security: {
+          enableEncryption: true,
+          enableVpcFlowLogs: true,
+          enableWaf: true // WAF required for FedRAMP
+        },
+        observability: {
+          enabled: true,
+          logRetentionDays: framework === 'fedramp-high' ? 2555 : 1095, // 7 years for high, 3 years for moderate
+          cpuThreshold: 80,
+          memoryThreshold: 85,
+          enableTracing: true,
+          enableMetrics: true
+        }
+      };
+    }
+
+    return baseCompliance;
   }
 
   public buildSync(): ContainerApplicationConfig {

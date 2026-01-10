@@ -7,8 +7,8 @@
 export { EfsFilesystemComponent } from './src/efs-filesystem.component.js';
 
 // Configuration exports
+export type { EfsFilesystemConfig } from './src/efs-filesystem.builder.js';
 export {
-  EfsFilesystemConfig,
   EfsFilesystemComponentConfigBuilder,
   EFS_FILESYSTEM_CONFIG_SCHEMA
 } from './src/efs-filesystem.builder.js';

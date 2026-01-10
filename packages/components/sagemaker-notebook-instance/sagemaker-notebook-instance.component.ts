@@ -13,8 +13,7 @@ import * as cloudwatch from 'aws-cdk-lib/aws-cloudwatch';
 import * as kms from 'aws-cdk-lib/aws-kms';
 import * as cdk from 'aws-cdk-lib';
 import { Construct } from 'constructs';
-import { BaseComponent, applySecurityGroupTags } from '../@shinobi/core.js';
-import { ComponentSpec, ComponentContext, ComponentCapabilities } from '../@shinobi/core/component-interfaces.js';
+import { BaseComponent, applySecurityGroupTags, ComponentSpec, ComponentContext, ComponentCapabilities } from '@shinobi/core';
 import { SageMakerNotebookInstanceConfig, SageMakerNotebookInstanceComponentConfigBuilder } from './sagemaker-notebook-instance.builder.js';
 
 /**
@@ -51,9 +50,9 @@ export class SageMakerNotebookInstanceComponent extends BaseComponent {
       this.config = configBuilder.buildSync();
       
       this.logComponentEvent('config_built', 'SageMaker Notebook Instance configuration built successfully', {
-        notebookInstanceName: this.config.notebookInstanceName,
-        instanceType: this.config.instanceType,
-        rootAccess: this.config.rootAccess
+        notebookInstanceName: this.config?.notebookInstanceName,
+        instanceType: this.config?.instanceType,
+        rootAccess: this.config?.rootAccess
       });
       
       this.createKmsKeyIfNeeded();
@@ -82,8 +81,8 @@ export class SageMakerNotebookInstanceComponent extends BaseComponent {
     
       this.logComponentEvent('synthesis_complete', 'SageMaker Notebook Instance component synthesis completed successfully', {
         notebookCreated: 1,
-        encryptionEnabled: !!this.config.kmsKeyId || !!this.kmsKey,
-        rootAccessDisabled: this.config.rootAccess === 'Disabled'
+        encryptionEnabled: !!this.config?.kmsKeyId || !!this.kmsKey,
+        rootAccessDisabled: this.config?.rootAccess === 'Disabled'
       });
       
     } catch (error) {
@@ -138,7 +137,11 @@ export class SageMakerNotebookInstanceComponent extends BaseComponent {
       // For now, skip security group creation if VPC ID is not provided
       // This is a limitation that should be addressed in a future enhancement
       if (!this.config!.vpcId) {
-        console.warn('VPC ID not provided, skipping security group creation');
+        this.logComponentEvent('security_group_skipped', 'VPC ID not provided, skipping security group creation', {
+          notebookInstanceName: this.buildNotebookInstanceName(),
+          recommendation: 'Provide vpcId in configuration to enable security group creation',
+          limitation: 'Security group creation requires VPC ID to be specified'
+        });
         return;
       }
       

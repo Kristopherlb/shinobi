@@ -377,12 +377,12 @@ pnpm test
 
 ### Validate
 ```bash
-svc validate --env dev
+shinobi validate --env dev
 ```
 
 ### Plan
 ```bash
-svc plan --env prod
+shinobi plan --env prod
 ```
 
 ## Notes

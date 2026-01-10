@@ -10,7 +10,7 @@ import {
   ComponentSpec, 
   ComponentContext, 
   IComponentCreator 
-} from '../@shinobi/core/component-interfaces.js';
+} from '@shinobi/core';
 import { StaticWebsiteComponent } from './static-website.component.js';
 import { StaticWebsiteConfig, STATIC_WEBSITE_CONFIG_SCHEMA } from './static-website.builder.js';
 
@@ -70,11 +70,20 @@ export class StaticWebsiteCreator implements IComponentCreator {
    * Factory method to create component instances
    */
   public createComponent(
-    scope: Construct, 
     spec: ComponentSpec, 
     context: ComponentContext
   ): StaticWebsiteComponent {
-    return new StaticWebsiteComponent(scope, spec.name, context, spec);
+    if (!context.scope) {
+      throw new Error('ComponentContext.scope is required to create static-website components');
+    }
+    return new StaticWebsiteComponent(context.scope as Construct, spec.name, context, spec);
+  }
+  
+  public processComponent(
+    spec: ComponentSpec,
+    context: ComponentContext
+  ): StaticWebsiteComponent {
+    return this.createComponent(spec, context);
   }
   
   /**

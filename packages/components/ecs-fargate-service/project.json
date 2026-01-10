@@ -10,7 +10,8 @@
     "build": {
       "executor": "nx:run-commands",
       "options": {
-        "command": "tsc --noEmit -p packages/components/ecs-fargate-service/tsconfig.json"
+        "command": "tsc --noEmit -p packages/components/ecs-fargate-service/tsconfig.json",
+        "cwd": "{workspaceRoot}"
       },
       "outputs": [
         "{workspaceRoot}/dist/packages/components/ecs-fargate-service"
@@ -29,13 +30,15 @@
     "lint": {
       "executor": "nx:run-commands",
       "options": {
-        "command": "eslint packages/components/ecs-fargate-service --ext .ts"
+        "command": "eslint packages/components/ecs-fargate-service --ext .ts",
+        "cwd": "{projectRoot}"
       }
     },
     "typecheck": {
       "executor": "nx:run-commands",
       "options": {
-        "command": "tsc --noEmit -p packages/components/ecs-fargate-service/tsconfig.json"
+        "command": "tsc --noEmit -p packages/components/ecs-fargate-service/tsconfig.json",
+        "cwd": "{workspaceRoot}"
       }
     }
   }

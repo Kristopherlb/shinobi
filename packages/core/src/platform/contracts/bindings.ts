@@ -48,7 +48,20 @@ export type {
 // COMPLIANCE FRAMEWORK TYPES
 // =============================================================================
 
-export type ComplianceFramework = 'commercial' | 'fedramp-moderate' | 'fedramp-high' | 'hipaa';
+/**
+ * Compliance framework identifier
+ * 
+ * Supports any string value to allow consumers to define custom frameworks
+ * (e.g., 'hipaa', 'sox', 'pci-dss', 'iso27001') without platform code changes.
+ * 
+ * Standard frameworks:
+ * - 'commercial' - Standard commercial deployment
+ * - 'fedramp-moderate' - FedRAMP Moderate baseline
+ * - 'fedramp-high' - FedRAMP High baseline
+ * 
+ * Custom frameworks are supported via configuration files in /config/{framework}.yml
+ */
+export type ComplianceFramework = string;
 
 export type ComponentType = 's3-bucket' | 'lambda-api' | 'rds-postgres' | 'ec2-instance' | 'dynamodb-table' | 'sqs-queue' | 'sns-topic';
 

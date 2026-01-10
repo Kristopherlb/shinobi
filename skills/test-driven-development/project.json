@@ -1,0 +1,29 @@
+{
+  "name": "@shinobi/skill-test-driven-development",
+  "sourceRoot": "skills/test-driven-development",
+  "targets": {
+    "test": {
+      "executor": "@nx/vitest:test",
+      "options": {
+        "passWithNoTests": true,
+        "config": "skills/test-driven-development/vitest.config.ts"
+      },
+      "outputs": [
+        "{projectRoot}/coverage"
+      ]
+    },
+    "validate": {
+      "executor": "nx:run-commands",
+      "options": {
+        "command": "pnpm nx test @shinobi/skill-test-driven-development",
+        "cwd": "{workspaceRoot}"
+      }
+    }
+  },
+  "tags": [
+    "scope:shinobi",
+    "type:skill"
+  ]
+}
+
+

@@ -1,0 +1,166 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "$id": "https://platform.shinobi.internal/schemas/static-website/v1.0.0",
+  "title": "Static Website Component Configuration",
+  "description": "Configuration schema for hosting a static website with S3 and CloudFront",
+  "type": "object",
+  "additionalProperties": false,
+  "properties": {
+    "websiteName": {
+      "type": "string",
+      "description": "Website name"
+    },
+    "domain": {
+      "type": "object",
+      "description": "Custom domain configuration",
+      "additionalProperties": false,
+      "required": ["domainName"],
+      "properties": {
+        "domainName": {
+          "type": "string",
+          "description": "Primary domain name"
+        },
+        "alternativeDomainNames": {
+          "type": "array",
+          "description": "Alternative domain names",
+          "items": {
+            "type": "string"
+          }
+        },
+        "certificateArn": {
+          "type": "string",
+          "description": "ACM certificate ARN"
+        },
+        "hostedZoneId": {
+          "type": "string",
+          "description": "Route53 hosted zone ID"
+        }
+      }
+    },
+    "bucket": {
+      "type": "object",
+      "description": "S3 bucket configuration",
+      "additionalProperties": false,
+      "properties": {
+        "indexDocument": {
+          "type": "string",
+          "description": "Index document (e.g., index.html)",
+          "default": "index.html"
+        },
+        "errorDocument": {
+          "type": "string",
+          "description": "Error document (e.g., error.html)",
+          "default": "error.html"
+        },
+        "versioning": {
+          "type": "boolean",
+          "description": "Enable S3 versioning",
+          "default": false
+        },
+        "accessLogging": {
+          "type": "boolean",
+          "description": "Enable access logging",
+          "default": false
+        },
+        "removalPolicy": {
+          "type": "string",
+          "description": "Removal policy",
+          "enum": ["retain", "destroy"],
+          "default": "destroy"
+        }
+      }
+    },
+    "distribution": {
+      "type": "object",
+      "description": "CloudFront distribution configuration",
+      "additionalProperties": false,
+      "properties": {
+        "enabled": {
+          "type": "boolean",
+          "description": "Enable CloudFront distribution",
+          "default": true
+        },
+        "enableLogging": {
+          "type": "boolean",
+          "description": "Enable CloudFront access logging",
+          "default": false
+        },
+        "logFilePrefix": {
+          "type": "string",
+          "description": "CloudFront log file prefix",
+          "default": "cloudfront/"
+        },
+        "priceClass": {
+          "type": "string",
+          "description": "CloudFront price class",
+          "enum": ["price-class-100", "price-class-200", "price-class-all"],
+          "default": "price-class-100"
+        }
+      }
+    },
+    "deployment": {
+      "type": "object",
+      "description": "Deployment configuration",
+      "additionalProperties": false,
+      "properties": {
+        "sourcePath": {
+          "type": "string",
+          "description": "Local source path for deployment"
+        },
+        "enabled": {
+          "type": "boolean",
+          "description": "Enable automatic deployment",
+          "default": false
+        },
+        "retainOnDelete": {
+          "type": "boolean",
+          "description": "Retain files on delete",
+          "default": false
+        }
+      }
+    },
+    "security": {
+      "type": "object",
+      "description": "Security configuration",
+      "additionalProperties": false,
+      "properties": {
+        "blockPublicAccess": {
+          "type": "boolean",
+          "description": "Block public access to S3 bucket",
+          "default": true
+        },
+        "encryption": {
+          "type": "boolean",
+          "description": "Enable S3 bucket encryption",
+          "default": true
+        },
+        "enforceHTTPS": {
+          "type": "boolean",
+          "description": "Enforce HTTPS for CloudFront",
+          "default": true
+        }
+      }
+    },
+    "logging": {
+      "type": "object",
+      "description": "Logging configuration",
+      "additionalProperties": false,
+      "properties": {
+        "retentionDays": {
+          "type": "number",
+          "description": "CloudWatch log retention in days",
+          "minimum": 1,
+          "default": 90
+        }
+      }
+    },
+    "tags": {
+      "type": "object",
+      "description": "Additional tags",
+      "additionalProperties": {
+        "type": "string"
+      }
+    }
+  }
+}
+

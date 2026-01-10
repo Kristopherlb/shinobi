@@ -54,8 +54,15 @@ export abstract class ConfigBuilder<T = Record<string, any>> {
    * This is the centralized configuration engine used by all components.
    */
   public buildSync(): T {
+    const componentType = this.builderContext.spec.type;
+    const componentName = this.builderContext.spec.name;
+    
     // Layer 1: Hardcoded Fallbacks (Lowest Priority - Priority 5)
     const hardcodedFallbacks = this.getHardcodedFallbacks();
+    
+    // #region agent log
+    fetch('http://127.0.0.1:7242/ingest/31cd8a5c-c5a9-4c85-9dba-5f04dc91dc42',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'config-builder.ts:58',message:'Layer 1: Hardcoded Fallbacks',data:{componentType,componentName,layer:'hardcoded-fallbacks',priority:5,source:'getHardcodedFallbacks()',vpc:{vpcId:hardcodedFallbacks.vpc?.vpcId,subnetIds:hardcodedFallbacks.vpc?.subnetIds,subnetGroupName:hardcodedFallbacks.vpc?.subnetGroupName},backup:hardcodedFallbacks.backup,maintenance:hardcodedFallbacks.maintenance},timestamp:Date.now(),sessionId:'debug-session',runId:'run10',hypothesisId:'J'})}).catch(()=>{});
+    // #endregion
     
     // Layer 2: Segregated Platform Configuration (Priority 4)
     const platformConfig = this._loadPlatformConfiguration();
@@ -64,8 +71,16 @@ export abstract class ConfigBuilder<T = Record<string, any>> {
     // TODO: This will be implemented when we have environment configuration support
     const environmentConfig = this._getEnvironmentConfiguration();
     
+    // #region agent log
+    fetch('http://127.0.0.1:7242/ingest/31cd8a5c-c5a9-4c85-9dba-5f04dc91dc42',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'config-builder.ts:65',message:'Layer 3: Environment Configuration',data:{componentType,componentName,layer:'environment-config',priority:3,source:'service.yml environments block',vpc:environmentConfig.vpc,backup:environmentConfig.backup,maintenance:environmentConfig.maintenance},timestamp:Date.now(),sessionId:'debug-session',runId:'run10',hypothesisId:'J'})}).catch(()=>{});
+    // #endregion
+    
     // Layer 4: Component-Level Overrides (Priority 2)
     const componentOverrides = this.builderContext.spec.config || {};
+    
+    // #region agent log
+    fetch('http://127.0.0.1:7242/ingest/31cd8a5c-c5a9-4c85-9dba-5f04dc91dc42',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'config-builder.ts:68',message:'Layer 4: Component Overrides',data:{componentType,componentName,layer:'component-overrides',priority:2,source:'service.yml component config',vpc:componentOverrides.vpc,backup:componentOverrides.backup,maintenance:componentOverrides.maintenance},timestamp:Date.now(),sessionId:'debug-session',runId:'run10',hypothesisId:'J'})}).catch(()=>{});
+    // #endregion
     
     // Layer 5: Governance Policy Overrides (Priority 1) 
     // TODO: This will be implemented when we have policy override support
@@ -80,8 +95,16 @@ export abstract class ConfigBuilder<T = Record<string, any>> {
       policyOverrides
     );
     
+    // #region agent log
+    fetch('http://127.0.0.1:7242/ingest/31cd8a5c-c5a9-4c85-9dba-5f04dc91dc42',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'config-builder.ts:75',message:'Merged config layers',data:{componentType,componentName,layer:'merged-config',source:'_deepMergeConfigs()',vpc:mergedConfig.vpc,backup:mergedConfig.backup,maintenance:mergedConfig.maintenance,hardcodedVpc:hardcodedFallbacks.vpc,platformVpc:platformConfig.vpc,environmentVpc:environmentConfig.vpc,componentVpc:componentOverrides.vpc},timestamp:Date.now(),sessionId:'debug-session',runId:'run10',hypothesisId:'J'})}).catch(()=>{});
+    // #endregion
+    
     // Resolve environment interpolations (${env:key} patterns)
     const resolvedConfig = this._resolveEnvironmentInterpolationsSync(mergedConfig);
+    
+    // #region agent log
+    fetch('http://127.0.0.1:7242/ingest/31cd8a5c-c5a9-4c85-9dba-5f04dc91dc42',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'config-builder.ts:91',message:'Final resolved config',data:{componentType,componentName,layer:'resolved-config',source:'_resolveEnvironmentInterpolationsSync()',vpc:resolvedConfig.vpc,backup:resolvedConfig.backup,maintenance:resolvedConfig.maintenance},timestamp:Date.now(),sessionId:'debug-session',runId:'run10',hypothesisId:'J'})}).catch(()=>{});
+    // #endregion
     
     return resolvedConfig as T;
   }
@@ -98,7 +121,14 @@ export abstract class ConfigBuilder<T = Record<string, any>> {
    */
   private _loadPlatformConfiguration(): Record<string, any> {
     const framework = this.builderContext.context.complianceFramework;
+    const componentType = this.builderContext.spec.type;
+    const componentName = this.builderContext.spec.name;
     const configPath = this._getPlatformConfigPath(framework);
+    
+    // #region agent log
+    const configPathAbsolute = path.resolve(configPath);
+    fetch('http://127.0.0.1:7242/ingest/31cd8a5c-c5a9-4c85-9dba-5f04dc91dc42',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'config-builder.ts:107',message:'Loading platform config file',data:{componentType,componentName,framework,configPath,configPathAbsolute,fileExists:fs.existsSync(configPath),cwd:process.cwd(),cwdAbsolute:path.resolve(process.cwd())},timestamp:Date.now(),sessionId:'debug-session',runId:'run10',hypothesisId:'J'})}).catch(()=>{});
+    // #endregion
     
     try {
       if (!fs.existsSync(configPath)) {
@@ -109,13 +139,23 @@ export abstract class ConfigBuilder<T = Record<string, any>> {
       const platformConfig = yaml.load(fileContents) as any;
       
       // Extract configuration for this component type
-      const componentType = this.builderContext.spec.type;
       if (!platformConfig?.defaults?.[componentType]) {
         throw new Error(`No ${componentType} configuration found in ${configPath}`);
       }
       
-      return platformConfig.defaults[componentType];
+      const componentConfig = platformConfig.defaults[componentType];
+      
+      // #region agent log
+      const configPathAbsolute = path.resolve(configPath);
+      fetch('http://127.0.0.1:7242/ingest/31cd8a5c-c5a9-4c85-9dba-5f04dc91dc42',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'config-builder.ts:124',message:'Layer 2: Platform Configuration loaded',data:{componentType,componentName,layer:'platform-config',priority:4,source:configPath,sourceAbsolute:configPathAbsolute,filePath:configPath,filePathAbsolute:configPathAbsolute,vpc:componentConfig.vpc,backup:componentConfig.backup,maintenance:componentConfig.maintenance,rawConfig:componentConfig},timestamp:Date.now(),sessionId:'debug-session',runId:'run10',hypothesisId:'J'})}).catch(()=>{});
+      // #endregion
+      
+      return componentConfig;
     } catch (error) {
+      // #region agent log
+      fetch('http://127.0.0.1:7242/ingest/31cd8a5c-c5a9-4c85-9dba-5f04dc91dc42',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'config-builder.ts:134',message:'Platform config load error',data:{componentType,componentName,framework,configPath,error:error instanceof Error ? error.message : String(error)},timestamp:Date.now(),sessionId:'debug-session',runId:'run10',hypothesisId:'J'})}).catch(()=>{});
+      // #endregion
+      
       if (error instanceof Error) {
         throw new Error(`Failed to load platform configuration for framework '${framework}': ${error.message}`);
       }
@@ -131,27 +171,37 @@ export abstract class ConfigBuilder<T = Record<string, any>> {
     // Look for the config directory by traversing up from current directory
     let currentDir = process.cwd();
     let configDir = path.join(currentDir, 'config');
+    const searchPath: string[] = [configDir];
     
     // Traverse up the directory tree to find the workspace root (where config/ exists)
     while (!fs.existsSync(configDir) && currentDir !== path.dirname(currentDir)) {
       currentDir = path.dirname(currentDir);
       configDir = path.join(currentDir, 'config');
+      searchPath.push(configDir);
     }
+    
+    // #region agent log
+    fetch('http://127.0.0.1:7242/ingest/31cd8a5c-c5a9-4c85-9dba-5f04dc91dc42',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'config-builder.ts:145',message:'Resolving platform config path',data:{framework,startingDir:process.cwd(),configDir,configDirExists:fs.existsSync(configDir),searchPath},timestamp:Date.now(),sessionId:'debug-session',runId:'run10',hypothesisId:'J'})}).catch(()=>{});
+    // #endregion
     
     if (!fs.existsSync(configDir)) {
       throw new Error(`Config directory not found. Searched from ${process.cwd()} up to ${currentDir}`);
     }
     
-    switch (framework) {
-      case 'commercial':
-        return path.join(configDir, 'commercial.yml');
-      case 'fedramp-moderate':
-        return path.join(configDir, 'fedramp-moderate.yml');
-      case 'fedramp-high':
-        return path.join(configDir, 'fedramp-high.yml');
-      default:
-        throw new Error(`Unknown compliance framework: ${framework}. Supported frameworks: commercial, fedramp-moderate, fedramp-high`);
-    }
+    const configFile = (() => {
+      switch (framework) {
+        case 'commercial':
+          return path.join(configDir, 'commercial.yml');
+        case 'fedramp-moderate':
+          return path.join(configDir, 'fedramp-moderate.yml');
+        case 'fedramp-high':
+          return path.join(configDir, 'fedramp-high.yml');
+        default:
+          throw new Error(`Unknown compliance framework: ${framework}. Supported frameworks: commercial, fedramp-moderate, fedramp-high`);
+      }
+    })();
+    
+    return configFile;
   }
 
   /**

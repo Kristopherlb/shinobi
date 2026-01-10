@@ -21,13 +21,17 @@
   "include": [
     "index.ts",
     "Config.schema.json",
-    "*.ts",
-    "!**/*.test.ts"
+    "*.component.ts",
+    "*.builder.ts",
+    "*.creator.ts"
   ],
   "exclude": [
     "dist",
     "node_modules",
     "**/*.test.ts",
+    "**/*.spec.ts",
+    "vitest.config.ts",
+    "jest.config.ts",
     "tests",
     "coverage"
   ],

@@ -152,6 +152,28 @@
           "default": false
         }
       }
+    },
+    "buildMetadata": {
+      "type": "object",
+      "description": "Build metadata (optional - should be provided via environment/platform defaults from CI/CD. Falls back to 'unknown' if not provided)",
+      "additionalProperties": false,
+      "properties": {
+        "gitCommit": {
+          "type": "string",
+          "description": "Git commit SHA",
+          "minLength": 1
+        },
+        "gitBranch": {
+          "type": "string",
+          "description": "Git branch name",
+          "minLength": 1
+        },
+        "buildId": {
+          "type": "string",
+          "description": "Build invocation ID",
+          "minLength": 1
+        }
+      }
     }
   },
   "required": [

@@ -15,7 +15,7 @@ import * as cloudwatch from 'aws-cdk-lib/aws-cloudwatch';
 import * as cdk from 'aws-cdk-lib';
 import { Construct } from 'constructs';
 import {
-  Component,
+  BaseComponent,
   ComponentSpec,
   ComponentContext,
   ComponentCapabilities
@@ -25,7 +25,7 @@ import {
   SecretsManagerComponentConfigBuilder
 } from './secrets-manager.builder.js';
 
-export class SecretsManagerComponentComponent extends Component {
+export class SecretsManagerComponentComponent extends BaseComponent {
   private secret?: secretsmanager.Secret;
   private kmsKey?: kms.IKey;
   private rotationLambda?: lambda.Function;
@@ -151,6 +151,9 @@ export class SecretsManagerComponentComponent extends Component {
 
     const tracingEnabled = lambdaConfig.enableTracing ?? false;
 
+    // TODO: When ready, replace fromInline with fromAsset to use real rotation code template
+    // Example: code: lambda.Code.fromAsset(lambdaConfig.codePath || 'lambda/rotation'),
+    // This allows for proper rotation logic per service type (RDS, Redshift, etc.)
     this.rotationLambda = new lambda.Function(this, 'RotationFunction', {
       runtime: lambda.Runtime.PYTHON_3_11,
       handler: 'lambda_function.lambda_handler',
@@ -166,6 +169,7 @@ def lambda_handler(event, context):
     """
     Basic placeholder for secret rotation.
     Extend this function to rotate credentials for your target service.
+    TODO: Replace with fromAsset when rotation code template is ready.
     """
     logger.info(f"Rotation event: {json.dumps(event)}")
 
@@ -212,37 +216,101 @@ def lambda_handler(event, context):
   }
 
   private createSecret(): void {
+    // Validation: Check for conflicting secretValue options
+    const secretValue = this.config?.secretValue;
+    if (secretValue) {
+      const optionsCount = [
+        secretValue.secretArn,
+        secretValue.generateSecret,
+        secretValue.secretStringValue
+      ].filter(Boolean).length;
+
+      if (optionsCount > 1) {
+        throw new Error(
+          `Conflicting secretValue options detected for secret ${this.spec.name}. ` +
+          'Only one of secretArn, generateSecret, or secretStringValue (with allowUnsafePlainText) can be specified. ' +
+          'Current config: ' + JSON.stringify({
+            secretArn: !!secretValue.secretArn,
+            generateSecret: !!secretValue.generateSecret,
+            secretStringValue: !!secretValue.secretStringValue,
+            allowUnsafePlainText: !!secretValue.allowUnsafePlainText
+          })
+        );
+      }
+    }
+
+    // Validation: Check for conflict between generateSecret and secretValue.generateSecret
+    if (this.config?.generateSecret?.enabled && secretValue?.generateSecret) {
+      throw new Error(
+        `Conflicting generateSecret options detected for secret ${this.spec.name}. ` +
+        'Cannot specify both generateSecret.enabled and secretValue.generateSecret. ' +
+        'Use only one method for secret generation.'
+      );
+    }
+
+    // Build props object directly - cannot assign to readonly properties
     const secretProps: secretsmanager.SecretProps = {
       secretName: this.buildSecretName(),
       description: this.config?.description,
       encryptionKey: this.kmsKey,
-      removalPolicy: cdk.RemovalPolicy.RETAIN
+      removalPolicy: cdk.RemovalPolicy.RETAIN,
+      generateSecretString: this.config?.generateSecret?.enabled
+        ? {
+            excludeCharacters: this.config.generateSecret.excludeCharacters,
+            includeSpace: this.config.generateSecret.includeSpace,
+            passwordLength: this.config.generateSecret.passwordLength,
+            requireEachIncludedType: this.config.generateSecret.requireEachIncludedType,
+            secretStringTemplate: this.config.generateSecret.secretStringTemplate,
+            generateStringKey: this.config.generateSecret.generateStringKey
+          }
+        : this.config?.secretValue?.generateSecret
+        ? {
+            secretStringTemplate: this.config.secretValue.secretStringValue || '{}',
+            generateStringKey: 'password',
+            excludeCharacters: '"@/\\\'',
+            includeSpace: false,
+            passwordLength: 32
+          }
+        : undefined,
+      secretStringValue: this.config?.secretValue?.secretArn
+        ? cdk.SecretValue.secretsManager(this.config.secretValue.secretArn)
+        : this.config?.secretValue?.allowUnsafePlainText && this.config?.secretValue?.secretStringValue
+        ? (() => {
+            /**
+             * SECURITY WARNING: Using unsafePlainText() exposes values in CloudFormation templates.
+             * Only use for non-sensitive configuration values. For secrets, use Secrets Manager references.
+             */
+            this.logComponentEvent('security_warning', 'Using unsafePlainText for secret value - audit trail', {
+              component: this.spec.name,
+              secretName: this.buildSecretName(),
+              warning: 'unsafePlainText exposes values in CloudFormation templates',
+              recommendation: 'Use secretArn to reference existing secrets or enable generateSecret for sensitive values',
+              context: {
+                environment: this.context.environment,
+                complianceFramework: this.context.complianceFramework
+              }
+            });
+            return cdk.SecretValue.unsafePlainText(this.config.secretValue.secretStringValue);
+          })()
+        : this.config?.secretValue?.secretStringValue
+        ? (() => {
+            // Default: treat as sensitive and require explicit allowUnsafePlainText
+            throw new Error(
+              'Direct secret string values are not allowed for security. ' +
+              'Use secretArn to reference an existing secret, enable generateSecret, ' +
+              'or set allowUnsafePlainText: true only for non-sensitive configuration values.'
+            );
+          })()
+        : undefined,
+      replicaRegions: this.config?.replicas && this.config.replicas.length > 0
+        ? this.config.replicas.map(replica => ({
+            region: replica.region,
+            encryptionKey: replica.kmsKeyArn
+              ? kms.Key.fromKeyArn(this, `ReplicaKey-${replica.region}`, replica.kmsKeyArn)
+              : undefined
+          }))
+        : undefined
     };
-
-    if (this.config?.generateSecret?.enabled) {
-      const generator = this.config.generateSecret;
-      secretProps.generateSecretString = {
-        excludeCharacters: generator.excludeCharacters,
-        includeSpace: generator.includeSpace,
-        passwordLength: generator.passwordLength,
-        requireEachIncludedType: generator.requireEachIncludedType,
-        secretStringTemplate: generator.secretStringTemplate,
-        generateStringKey: generator.generateStringKey
-      };
-    } else if (this.config?.secretValue?.secretStringValue) {
-      secretProps.secretStringValue = secretsmanager.SecretValue.unsafePlainText(
-        this.config.secretValue.secretStringValue
-      );
-    }
-
-    if (this.config?.replicas && this.config.replicas.length > 0) {
-      secretProps.replicaRegions = this.config.replicas.map(replica => ({
-        region: replica.region,
-        encryptionKey: replica.kmsKeyArn
-          ? kms.Key.fromKeyArn(this, `ReplicaKey-${replica.region}`, replica.kmsKeyArn)
-          : undefined
-      }));
-    }
 
     this.secret = new secretsmanager.Secret(this, 'Secret', secretProps);
 
@@ -279,7 +347,7 @@ def lambda_handler(event, context):
     this.logResourceCreation('secrets-manager-secret', this.secret.secretName ?? this.spec.name, {
       rotationEnabled: !!rotation?.enabled,
       replicaCount: this.config?.replicas?.length ?? 0,
-      customerManagedKey: kms.Key.isKey(this.kmsKey)
+      customerManagedKey: this.kmsKey instanceof kms.Key
     });
   }
 
@@ -396,19 +464,76 @@ def lambda_handler(event, context):
       threshold: latencyThreshold.toString()
     });
 
+    // SecretNotFound alarm - for operational resilience
+    const secretNotFoundAlarm = new cloudwatch.Alarm(this, 'SecretNotFoundAlarm', {
+      alarmName: `${this.context.serviceName}-${this.spec.name}-secret-not-found`,
+      alarmDescription: 'Secrets Manager secret not found or deleted',
+      metric: new cloudwatch.Metric({
+        namespace: 'AWS/SecretsManager',
+        metricName: 'SecretNotFound',
+        dimensionsMap: { SecretName: secretName },
+        statistic: 'Sum',
+        period: cdk.Duration.minutes(5)
+      }),
+      threshold: 1,
+      evaluationPeriods: 1,
+      comparisonOperator: cloudwatch.ComparisonOperator.GREATER_THAN_OR_EQUAL_TO_THRESHOLD,
+      treatMissingData: cloudwatch.TreatMissingData.NOT_BREACHING
+    });
+
+    this.applyStandardTags(secretNotFoundAlarm, {
+      'alarm-type': 'secret-not-found',
+      'metric-type': 'error-rate',
+      'severity': 'critical'
+    });
+
+    // AccessDenied alarm - for operational resilience
+    const accessDeniedAlarm = new cloudwatch.Alarm(this, 'SecretAccessDeniedAlarm', {
+      alarmName: `${this.context.serviceName}-${this.spec.name}-access-denied`,
+      alarmDescription: 'Secrets Manager access denied errors',
+      metric: new cloudwatch.Metric({
+        namespace: 'AWS/SecretsManager',
+        metricName: 'AccessDenied',
+        dimensionsMap: { SecretName: secretName },
+        statistic: 'Sum',
+        period: cdk.Duration.minutes(5)
+      }),
+      threshold: 1,
+      evaluationPeriods: 1,
+      comparisonOperator: cloudwatch.ComparisonOperator.GREATER_THAN_OR_EQUAL_TO_THRESHOLD,
+      treatMissingData: cloudwatch.TreatMissingData.NOT_BREACHING
+    });
+
+    this.applyStandardTags(accessDeniedAlarm, {
+      'alarm-type': 'access-denied',
+      'metric-type': 'error-rate',
+      'severity': 'high'
+    });
+
     this.logComponentEvent('observability_configured', 'Monitoring configured for Secrets Manager', {
       secretName,
       monitoringEnabled: true,
       rotationAlarmCreated: !!this.config?.automaticRotation?.enabled,
-      unusualAccessThresholdMs: latencyThreshold
+      unusualAccessThresholdMs: latencyThreshold,
+      secretNotFoundAlarmCreated: true,
+      accessDeniedAlarmCreated: true
     });
   }
 
   private buildSecretCapability(): Record<string, any> {
-    return {
+    const capability: Record<string, any> = {
       secretArn: this.secret!.secretArn,
-      secretName: this.secret!.secretName
+      secretName: this.secret!.secretName,
+      secretFullArn: this.secret!.secretArn // secretArn is already the full ARN in Secrets Manager
     };
+
+    // Add versionId if available (for advanced bindings that need specific versions)
+    // Note: versionId is typically available after secret creation, but we can't access it at synthesis time
+    // This would need to be resolved at runtime or via a custom resource
+    // For now, we document the capability structure for future enhancement
+    // capability.versionId = 'AWSCURRENT'; // Default to current version
+
+    return capability;
   }
 
   private buildSecretName(): string | undefined {

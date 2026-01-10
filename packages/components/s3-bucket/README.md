@@ -8,7 +8,7 @@ CDK construct for deploying AWS S3 buckets with comprehensive security, monitori
 - **Enhanced Lifecycle Management** – Flexible lifecycle rules with prefix/tag filtering and all storage class transitions
 - **Security & Compliance** – KMS encryption, audit logging, Object Lock, and comprehensive security controls
 - **Advanced Monitoring** – CloudWatch alarms, custom metrics, and performance dashboards
-- **Virus Scanning** – ClamAV integration for secure file uploads with quarantine capabilities
+- **Virus Scanning** – ClamAV integration placeholder (requires dedicated `clamav-scanner` component)
 - **Compliance Frameworks** – Built-in support for Commercial, FedRAMP Moderate, and FedRAMP High
 - **CDK Nag Integration** – Automated security validation with comprehensive suppressions
 - **Input Validation** – Comprehensive configuration validation with detailed error reporting
@@ -146,7 +146,7 @@ components:
 | `security.requireSecureTransport` | boolean | No | Deny requests made without HTTPS (default: `true`) |
 | `security.requireMfaDelete` | boolean | No | Require MFA for delete operations via bucket policy (default: `false`) |
 | `security.denyDeleteActions` | boolean | No | Deny delete-style actions to enforce immutability (default: `false`) |
-| `security.tools.clamavScan` | boolean | No | Enable ClamAV virus scanning Lambda integration (default: `false`) |
+| `security.tools.clamavScan` | boolean | No | Placeholder for ClamAV virus scanning. Requires dedicated `clamav-scanner` component (default: `false`) |
 
 ### Compliance
 

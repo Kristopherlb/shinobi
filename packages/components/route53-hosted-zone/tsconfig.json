@@ -6,16 +6,25 @@
     "composite": true,
     "declaration": true,
     "declarationMap": true,
+    "moduleResolution": "NodeNext",
+    "resolveJsonModule": true,
+    "esModuleInterop": true,
     "tsBuildInfoFile": "../../../dist/packages/components/route53-hosted-zone/tsconfig.tsbuildinfo"
   },
   "include": [
-    "*.ts",
-    "index.ts"
+    "*.component.ts",
+    "*.builder.ts",
+    "*.creator.ts",
+    "index.ts",
+    "Config.schema.json"
   ],
   "exclude": [
     "dist",
     "node_modules",
     "**/*.test.ts",
+    "**/*.spec.ts",
+    "vitest.config.ts",
+    "jest.config.ts",
     "tests"
   ],
   "references": [

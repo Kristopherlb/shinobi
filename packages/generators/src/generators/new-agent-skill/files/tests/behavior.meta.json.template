@@ -1,0 +1,30 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "description": "Behavioral test cases (Evals) for <%= skillName %> skill. These are LLM-as-a-judge evaluations that validate instruction adherence and edge-case handling.",
+  "test_cases": [
+    {
+      "id": "TP-<%= skillName %>-behavior-001",
+      "name": "BasicFunctionality",
+      "input": "Use the <%= skillName %> skill to [describe basic use case]",
+      "expected_outcome_contains": [
+        "expected pattern 1",
+        "expected pattern 2"
+      ],
+      "forbidden_patterns": [
+        "anti-pattern 1",
+        "anti-pattern 2"
+      ],
+      "context": {
+        "skill_name": "<%= skillName %>",
+        "description": "<%= description %>"
+      }
+    }
+  ],
+  "evaluation_criteria": {
+    "instruction_adherence": "Agent follows SKILL.md instructions correctly",
+    "edge_case_handling": "Agent handles edge cases as documented",
+    "output_quality": "Agent produces expected output format and content"
+  },
+  "llm_judge_prompt": "Evaluate whether the agent's response to the input follows the <%= skillName %> skill instructions, handles edge cases appropriately, and produces the expected outcome. Check for forbidden patterns."
+}
+

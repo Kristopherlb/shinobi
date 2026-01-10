@@ -1,46 +1,86 @@
 /**
- * SqsQueueNew ConfigBuilder Test Suite
+ * SqsQueue ConfigBuilder Test Suite
  * Implements Platform Testing Standard v1.0 - ConfigBuilder Testing
  * 
  * @author Platform Team
  */
 
-import { SqsQueueNewConfigBuilder, SqsQueueNewConfig } from '../sqs-queue-new.builder.js';
-import { ComponentContext, ComponentSpec } from '../../../platform/contracts/component-interfaces.js';
+import { SqsQueueConfigBuilder, SqsQueueConfig } from '../sqs-queue.builder.js';
+import { ComponentContext, ComponentSpec } from '@shinobi/core';
+import { App, Stack } from 'aws-cdk-lib';
 
-const createMockContext = (
-  complianceFramework: string = 'commercial',
-  environment: string = 'dev'
-): ComponentContext => ({
-  serviceName: 'test-service',
-  owner: 'test-team',
-  environment,
-  complianceFramework,
-  region: 'us-east-1',
-  account: '123456789012',
-  tags: {
-    'service-name': 'test-service',
-    'owner': 'test-team',
-    'environment': environment,
-    'compliance-framework': complianceFramework
-  }
+// Mock platform configuration loading to avoid requiring config files in tests
+import { vi, beforeEach, afterEach } from 'vitest';
+
+let platformConfigSpy: any;
+
+// Determinism controls (PTS-301, PTS-303)
+let rngSeed: number;
+let randomSpy: ReturnType<typeof vi.spyOn>;
+
+beforeEach(() => {
+  // Freeze clock for deterministic tests (PTS-301)
+  vi.useFakeTimers();
+  
+  // Seed RNG for reproducibility (PTS-303)
+  rngSeed = 12345;
+  randomSpy = vi.spyOn(Math, 'random').mockImplementation(() => {
+    // Simple LCG for deterministic randomness
+    const a = 1664525;
+    const c = 1013904223;
+    const m = 2 ** 32;
+    rngSeed = (a * rngSeed + c) % m;
+    return rngSeed / m;
+  });
+  
+  platformConfigSpy = vi
+    .spyOn(SqsQueueConfigBuilder.prototype as any, '_loadPlatformConfiguration')
+    .mockImplementation(() => ({}));
 });
 
-const createMockSpec = (config: Partial<SqsQueueNewConfig> = {}): ComponentSpec => ({
-  name: 'test-sqs-queue-new',
-  type: 'sqs-queue-new',
+afterEach(() => {
+  vi.useRealTimers();
+  randomSpy?.mockRestore();
+  platformConfigSpy?.mockRestore();
+});
+
+const createMockContext = (
+  complianceFramework: 'commercial' | 'fedramp-moderate' | 'fedramp-high' = 'commercial',
+  environment: string = 'dev'
+): ComponentContext => {
+  const stack = new Stack(new App(), 'TestStack');
+  return {
+    serviceName: 'test-service',
+    owner: 'test-team',
+    environment,
+    complianceFramework,
+    region: 'us-east-1',
+    accountId: '123456789012',
+    scope: stack,
+    tags: {
+      'service-name': 'test-service',
+      'owner': 'test-team',
+      'environment': environment,
+      'compliance-framework': complianceFramework
+    }
+  };
+};
+
+const createMockSpec = (config: Partial<SqsQueueConfig> = {}): ComponentSpec => ({
+  name: 'test-sqs-queue',
+  type: 'sqs-queue',
   config
 });
 
-describe('SqsQueueNewConfigBuilder', () => {
+describe('SqsQueueConfigBuilder', () => {
   
   describe('Hardcoded Fallbacks (Layer 1)', () => {
     
-    it('should provide ultra-safe baseline configuration', () => {
+    it('HardcodedFallbacks__EmptyConfig__ProvidesUltraSafeBaseline', () => {
       const context = createMockContext();
       const spec = createMockSpec();
       
-      const builder = new SqsQueueNewConfigBuilder(context, spec);
+      const builder = new SqsQueueConfigBuilder(context, spec);
       const config = builder.buildSync();
       
       // Verify hardcoded fallbacks are applied
@@ -51,46 +91,84 @@ describe('SqsQueueNewConfigBuilder', () => {
     
   });
   
-  describe('Compliance Framework Defaults (Layer 2)', () => {
+  describe('High Risk Environment Defaults (Layer 2)', () => {
     
-    it('should apply commercial compliance defaults', () => {
+    it('HighRiskDefaults__FlagFalse__AppliesStandardDefaults', () => {
       const context = createMockContext('commercial');
-      const spec = createMockSpec();
+      const spec = createMockSpec({
+        highRiskEnvironment: false
+      });
       
-      const builder = new SqsQueueNewConfigBuilder(context, spec);
+      const builder = new SqsQueueConfigBuilder(context, spec);
       const config = builder.buildSync();
       
+      // Should use hardcoded fallbacks (encryption disabled, DLQ disabled)
+      expect(config.encryption?.enabled).toBe(false);
+      expect(config.deadLetterQueue?.enabled).toBe(false);
+      expect(config.monitoring?.enabled).toBe(true);
+      expect(config.monitoring?.detailedMetrics).toBe(false);
+    });
+    
+    it('HighRiskDefaults__FlagTrue__AppliesEnhancedSecurityDefaults', () => {
+      const context = createMockContext('commercial');
+      const spec = createMockSpec({
+        highRiskEnvironment: true
+      });
+      
+      const builder = new SqsQueueConfigBuilder(context, spec);
+      const config = builder.buildSync();
+      
+      // High-risk environment should enable all security features
+      expect(config.encryption?.enabled).toBe(true);
+      expect(config.deadLetterQueue?.enabled).toBe(true);
       expect(config.monitoring?.enabled).toBe(true);
       expect(config.monitoring?.detailedMetrics).toBe(true);
     });
     
-    it('should apply FedRAMP moderate compliance defaults', () => {
-      const context = createMockContext('fedramp-moderate');
-      const spec = createMockSpec();
+    it('HighRiskDefaults__AnyComplianceFramework__AppliesSameDefaults', () => {
+      // Test that highRiskEnvironment works regardless of framework
+      const frameworks: Array<'commercial' | 'fedramp-moderate' | 'fedramp-high'> = ['commercial', 'fedramp-moderate', 'fedramp-high'];
       
-      const builder = new SqsQueueNewConfigBuilder(context, spec);
-      const config = builder.buildSync();
-      
-      expect(config.monitoring?.enabled).toBe(true);
-      expect(config.monitoring?.detailedMetrics).toBe(true); // Mandatory for FedRAMP
+      frameworks.forEach(framework => {
+        const context = createMockContext(framework);
+        const spec = createMockSpec({
+          highRiskEnvironment: true
+        });
+        
+        const builder = new SqsQueueConfigBuilder(context, spec);
+        const config = builder.buildSync();
+        
+        // All frameworks should get same high-risk defaults
+        expect(config.encryption?.enabled).toBe(true);
+        expect(config.deadLetterQueue?.enabled).toBe(true);
+        expect(config.monitoring?.detailedMetrics).toBe(true);
+      });
     });
     
-    it('should apply FedRAMP high compliance defaults', () => {
-      const context = createMockContext('fedramp-high');
-      const spec = createMockSpec();
+    it('PrecedenceChain__ComponentOverride__DisablesHighRiskDefaults', () => {
+      const context = createMockContext('commercial');
+      const spec = createMockSpec({
+        highRiskEnvironment: true,
+        encryption: {
+          enabled: false // Explicit override
+        }
+      });
       
-      const builder = new SqsQueueNewConfigBuilder(context, spec);
+      const builder = new SqsQueueConfigBuilder(context, spec);
       const config = builder.buildSync();
       
-      expect(config.monitoring?.enabled).toBe(true);
-      expect(config.monitoring?.detailedMetrics).toBe(true); // Mandatory for FedRAMP
+      // Component override should win
+      expect(config.encryption?.enabled).toBe(false);
+      // But DLQ and monitoring should still be enabled from high-risk defaults
+      expect(config.deadLetterQueue?.enabled).toBe(true);
+      expect(config.monitoring?.detailedMetrics).toBe(true);
     });
     
   });
   
   describe('5-Layer Precedence Chain', () => {
     
-    it('should apply component overrides over platform defaults', () => {
+    it('PrecedenceChain__ComponentOverride__TakesPrecedenceOverPlatformDefaults', () => {
       const context = createMockContext('commercial');
       const spec = createMockSpec({
         monitoring: {
@@ -99,7 +177,7 @@ describe('SqsQueueNewConfigBuilder', () => {
         }
       });
       
-      const builder = new SqsQueueNewConfigBuilder(context, spec);
+      const builder = new SqsQueueConfigBuilder(context, spec);
       const config = builder.buildSync();
       
       // Verify component config overrides platform defaults
@@ -107,21 +185,40 @@ describe('SqsQueueNewConfigBuilder', () => {
       expect(config.monitoring?.detailedMetrics).toBe(false);
     });
     
-    it('should merge nested configuration objects correctly', () => {
+    it('PrecedenceChain__NestedConfig__MergesCorrectly', () => {
       const context = createMockContext('commercial');
       const spec = createMockSpec({
         monitoring: {
           enabled: false
-          // detailedMetrics not specified - should come from defaults
+          // detailedMetrics not specified - should come from hardcoded fallbacks
         }
       });
       
-      const builder = new SqsQueueNewConfigBuilder(context, spec);
+      const builder = new SqsQueueConfigBuilder(context, spec);
       const config = builder.buildSync();
       
       // Component override should win for enabled
       expect(config.monitoring?.enabled).toBe(false);
-      // Default should win for detailedMetrics
+      // Hardcoded fallback should win for detailedMetrics (false by default)
+      expect(config.monitoring?.detailedMetrics).toBe(false);
+    });
+    
+    it('PrecedenceChain__HighRiskFlag__RespectsInPrecedenceChain', () => {
+      const context = createMockContext('commercial');
+      const spec = createMockSpec({
+        highRiskEnvironment: true,
+        monitoring: {
+          enabled: true,
+          // detailedMetrics not specified - should come from high-risk defaults (true)
+        }
+      });
+      
+      const builder = new SqsQueueConfigBuilder(context, spec);
+      const config = builder.buildSync();
+      
+      // Component config enabled should win
+      expect(config.monitoring?.enabled).toBe(true);
+      // High-risk default should win for detailedMetrics
       expect(config.monitoring?.detailedMetrics).toBe(true);
     });
     
@@ -129,11 +226,11 @@ describe('SqsQueueNewConfigBuilder', () => {
   
   describe('Schema Validation', () => {
     
-    it('should return the component schema', () => {
+    it('SchemaValidation__GetSchema__ReturnsValidSchema', () => {
       const context = createMockContext();
       const spec = createMockSpec();
       
-      const builder = new SqsQueueNewConfigBuilder(context, spec);
+      const builder = new SqsQueueConfigBuilder(context, spec);
       const schema = builder.getSchema();
       
       expect(schema).toBeDefined();

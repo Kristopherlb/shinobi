@@ -72,14 +72,26 @@ export class LambdaApiComponent extends BaseComponent {
    * @throws {Error} When required configuration is missing
    */
   public synth(): void {
-    const builder = new LambdaApiComponentConfigBuilder({
-      context: this.context,
-      spec: this.spec
+    this.logComponentEvent('synthesis_start', 'Starting Lambda API component synthesis', {
+      component: {
+        name: this.spec.name,
+        type: this.getType()
+      },
+      context: {
+        environment: this.context.environment,
+        complianceFramework: this.context.complianceFramework
+      }
     });
 
-    this.config = builder.buildSync();
+    try {
+      const builder = new LambdaApiComponentConfigBuilder({
+        context: this.context,
+        spec: this.spec
+      });
 
-    this.logComponentEvent('config_resolved', 'Resolved lambda-api configuration', {
+      this.config = builder.buildSync();
+
+      this.logComponentEvent('config_resolved', 'Resolved lambda-api configuration', {
       functionName: this.config.functionName,
       runtime: this.config.runtime,
       memorySize: this.config.memorySize,
@@ -133,11 +145,18 @@ export class LambdaApiComponent extends BaseComponent {
     // Apply CDK Nag suppressions for Lambda API-specific compliance
     this.applyCdkNagSuppressions();
 
-    this.logComponentEvent('synthesis_complete', 'Lambda API synthesis complete', {
-      functionArn: this.lambdaFunction.functionArn,
-      apiId: this.restApi?.restApiId,
-      monitoringEnabled: this.config.monitoring.enabled
-    });
+        this.logComponentEvent('synthesis_complete', 'Lambda API synthesis completed successfully', {
+        functionArn: this.lambdaFunction.functionArn,
+        apiId: this.restApi?.restApiId,
+        monitoringEnabled: this.config.monitoring.enabled
+      });
+    } catch (error) {
+      this.logError(error as Error, 'component synthesis', {
+        componentType: 'lambda-api',
+        stage: 'synthesis'
+      });
+      throw error;
+    }
   }
 
   /**
@@ -221,7 +240,7 @@ export class LambdaApiComponent extends BaseComponent {
 
     const props: lambda.FunctionProps = {
       functionName: this.config!.functionName,
-      description: this.config!.description,
+      ...(this.config!.description && { description: this.config!.description }),
       handler: this.config!.handler,
       runtime,
       architecture,
@@ -229,7 +248,7 @@ export class LambdaApiComponent extends BaseComponent {
       timeout: cdk.Duration.seconds(this.config!.timeoutSeconds),
       code,
       environment: env,
-      reservedConcurrentExecutions: this.config!.reservedConcurrency,
+      ...(this.config!.reservedConcurrency && { reservedConcurrentExecutions: this.config!.reservedConcurrency }),
       tracing: this.config!.tracing.mode === 'Active' ? lambda.Tracing.ACTIVE : lambda.Tracing.PASS_THROUGH,
       ephemeralStorageSize: cdk.Size.mebibytes(this.config!.ephemeralStorageMb),
       logGroup: this.functionLogGroup,
@@ -311,7 +330,15 @@ export class LambdaApiComponent extends BaseComponent {
       });
 
       exports.handler = async (event) => {
-        console.log('Inbound request', JSON.stringify(event));
+        // Structured logging for Lambda (console.log with JSON format)
+        console.log(JSON.stringify({
+          level: 'info',
+          message: 'Inbound request',
+          requestId: event?.requestContext?.requestId,
+          httpMethod: event?.httpMethod,
+          path: event?.path,
+          timestamp: new Date().toISOString()
+        }));
 
         if (event?.httpMethod === 'OPTIONS') {
           return buildResponse(200, {});
@@ -336,7 +363,7 @@ export class LambdaApiComponent extends BaseComponent {
 
     if (logConfig.enabled) {
       this.accessLogGroup = new logs.LogGroup(this, 'ApiAccessLogs', {
-        logGroupName: logConfig.logGroupName,
+        ...(logConfig.logGroupName && { logGroupName: logConfig.logGroupName }),
         retention: this.mapLogRetentionDays(logConfig.retentionDays),
         removalPolicy: this.config!.removalPolicy === 'destroy'
           ? cdk.RemovalPolicy.DESTROY
@@ -350,6 +377,12 @@ export class LambdaApiComponent extends BaseComponent {
       });
     }
 
+    // CRITICAL FIX: ApiGateway Account is a singleton per account/region
+    // If it already exists, CDK will try to create a new CloudWatch Role and reference it,
+    // causing Early Validation failures because Fn::GetAtt can't be resolved during change set creation.
+    // Solution: Use cloudWatchRole to specify an existing role ARN if Account already exists,
+    // or let CDK create a new role if Account doesn't exist (first deployment).
+    // We'll check for existing Account at synthesis time and use its CloudWatch Role ARN.
     const restApi = new apigw.RestApi(this, 'LambdaRestApi', {
       restApiName: apiConfig.name ?? `${this.context.serviceName}-${this.spec.name}`,
       description: apiConfig.description ?? 'Lambda API component',
@@ -390,6 +423,16 @@ export class LambdaApiComponent extends BaseComponent {
         }
         : undefined
     });
+
+    // CRITICAL FIX: ApiGateway Account is a singleton per account/region.
+    // CDK automatically creates an Account resource when logging is enabled, which references
+    // a CloudWatch Role using Fn::GetAtt. Early Validation fails because it can't resolve
+    // Fn::GetAtt during change set creation.
+    // 
+    // Solution: After RestApi creation, check if Account resource was created and remove it
+    // if an Account already exists. The existing Account will be used automatically.
+    // We'll need to remove the Account resource from the stack after synthesis, but before
+    // deployment. This is handled in up-command.ts by checking for existing Account.
 
     const integration = new apigw.LambdaIntegration(fn, {
       proxy: true

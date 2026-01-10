@@ -1,0 +1,273 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "$id": "https://platform.shinobi.internal/schemas/sns-topic/v1.0.0",
+  "title": "SNS Topic Component Configuration",
+  "description": "Configuration schema for Amazon SNS topic with configuration-driven encryption, policies, and alarms",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["monitoring", "fifo", "encryption"],
+  "properties": {
+    "topicName": {
+      "type": "string",
+      "description": "SNS topic name (optional, will be auto-generated)"
+    },
+    "displayName": {
+      "type": "string",
+      "description": "Display name for the topic"
+    },
+    "fifo": {
+      "type": "object",
+      "description": "FIFO topic configuration",
+      "additionalProperties": false,
+      "properties": {
+        "enabled": {
+          "type": "boolean",
+          "description": "Enable FIFO topic"
+        },
+        "contentBasedDeduplication": {
+          "type": "boolean",
+          "description": "Enable content-based deduplication"
+        }
+      }
+    },
+    "encryption": {
+      "type": "object",
+      "description": "Encryption configuration",
+      "additionalProperties": false,
+      "properties": {
+        "enabled": {
+          "type": "boolean",
+          "description": "Enable encryption"
+        },
+        "kmsKeyArn": {
+          "type": "string",
+          "description": "KMS key ARN (optional if customerManagedKey.create is true)"
+        },
+        "customerManagedKey": {
+          "type": "object",
+          "description": "Customer-managed KMS key configuration",
+          "additionalProperties": false,
+          "properties": {
+            "create": {
+              "type": "boolean",
+              "description": "Create a new customer-managed KMS key"
+            },
+            "alias": {
+              "type": "string",
+              "description": "KMS key alias"
+            },
+            "enableRotation": {
+              "type": "boolean",
+              "description": "Enable key rotation"
+            }
+          }
+        }
+      }
+    },
+    "deliveryPolicy": {
+      "type": "object",
+      "description": "Delivery policy JSON document"
+    },
+    "messageFilterPolicy": {
+      "type": "object",
+      "description": "Message filter policy JSON document"
+    },
+    "tracing": {
+      "type": "string",
+      "description": "X-Ray tracing configuration",
+      "enum": ["Active", "PassThrough"],
+      "default": "PassThrough"
+    },
+    "policies": {
+      "type": "array",
+      "description": "Topic policy statements",
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "properties": {
+          "sid": {
+            "type": "string",
+            "description": "Statement ID"
+          },
+          "effect": {
+            "type": "string",
+            "description": "Policy effect",
+            "enum": ["allow", "deny"]
+          },
+          "principals": {
+            "type": "array",
+            "description": "Policy principals",
+            "items": {
+              "type": "object",
+              "additionalProperties": false,
+              "properties": {
+                "type": {
+                  "type": "string",
+                  "enum": ["service", "account", "any"]
+                },
+                "identifiers": {
+                  "type": "array",
+                  "items": {
+                    "type": "string"
+                  }
+                }
+              }
+            }
+          },
+          "actions": {
+            "type": "array",
+            "description": "Policy actions",
+            "items": {
+              "type": "string"
+            }
+          },
+          "resources": {
+            "type": "array",
+            "description": "Policy resources",
+            "items": {
+              "type": "string"
+            }
+          },
+          "conditions": {
+            "type": "object",
+            "description": "Policy conditions"
+          }
+        },
+        "required": ["actions"]
+      }
+    },
+    "monitoring": {
+      "type": "object",
+      "description": "Monitoring configuration",
+      "additionalProperties": false,
+      "properties": {
+        "enabled": {
+          "type": "boolean",
+          "description": "Enable monitoring"
+        },
+        "alarms": {
+          "type": "object",
+          "description": "CloudWatch alarms configuration",
+          "additionalProperties": false,
+          "properties": {
+            "failedNotifications": {
+              "type": "object",
+              "description": "Failed notifications alarm",
+              "additionalProperties": false,
+              "properties": {
+                "enabled": {
+                  "type": "boolean"
+                },
+                "threshold": {
+                  "type": "number"
+                },
+                "evaluationPeriods": {
+                  "type": "number",
+                  "minimum": 1
+                },
+                "periodMinutes": {
+                  "type": "number",
+                  "minimum": 1
+                },
+                "comparisonOperator": {
+                  "type": "string",
+                  "enum": ["gt", "gte", "lt", "lte"]
+                },
+                "treatMissingData": {
+                  "type": "string",
+                  "enum": ["breaching", "not-breaching", "ignore", "missing"]
+                },
+                "statistic": {
+                  "type": "string",
+                  "enum": ["Sum", "Average", "Minimum", "Maximum"]
+                }
+              }
+            },
+            "messageRate": {
+              "type": "object",
+              "description": "Message rate alarm",
+              "additionalProperties": false,
+              "properties": {
+                "enabled": {
+                  "type": "boolean"
+                },
+                "threshold": {
+                  "type": "number"
+                },
+                "evaluationPeriods": {
+                  "type": "number",
+                  "minimum": 1
+                },
+                "periodMinutes": {
+                  "type": "number",
+                  "minimum": 1
+                },
+                "comparisonOperator": {
+                  "type": "string",
+                  "enum": ["gt", "gte", "lt", "lte"]
+                },
+                "treatMissingData": {
+                  "type": "string",
+                  "enum": ["breaching", "not-breaching", "ignore", "missing"]
+                },
+                "statistic": {
+                  "type": "string",
+                  "enum": ["Sum", "Average", "Minimum", "Maximum"]
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "tags": {
+      "type": "object",
+      "description": "Additional tags",
+      "additionalProperties": {
+        "type": "string"
+      }
+    }
+  },
+  "allOf": [
+    {
+      "if": {
+        "properties": {
+          "encryption": {
+            "properties": {
+              "enabled": {
+                "const": true
+              }
+            }
+          }
+        }
+      },
+      "then": {
+        "properties": {
+          "encryption": {
+            "anyOf": [
+              {
+                "properties": {
+                  "kmsKeyArn": {
+                    "type": "string"
+                  }
+                }
+              },
+              {
+                "properties": {
+                  "customerManagedKey": {
+                    "properties": {
+                      "create": {
+                        "const": true
+                      }
+                    }
+                  }
+                }
+              }
+            ]
+          }
+        }
+      }
+    }
+  ]
+}
+

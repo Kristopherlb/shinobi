@@ -50,6 +50,8 @@ export interface CloudFrontLoggingConfig {
   includeCookies?: boolean;
 }
 
+export type OACSigningOption = 'SIGV4_ALWAYS' | 'SIGV4_NO_OVERRIDE' | 'NEVER';
+
 export interface CloudFrontOriginConfig {
   type: OriginType;
   s3BucketName?: string;
@@ -57,6 +59,7 @@ export interface CloudFrontOriginConfig {
   customDomainName?: string;
   originPath?: string;
   customHeaders?: Record<string, string>;
+  oacSigning?: OACSigningOption; // Configurable OAC signing behavior (only applies to S3 origins)
 }
 
 export interface CloudFrontBehaviorConfig {
@@ -152,6 +155,12 @@ export const CLOUDFRONT_DISTRIBUTION_CONFIG_SCHEMA: ComponentConfigSchema = {
         customHeaders: {
           type: 'object',
           additionalProperties: { type: 'string' }
+        },
+        oacSigning: {
+          type: 'string',
+          enum: ['SIGV4_ALWAYS', 'SIGV4_NO_OVERRIDE', 'NEVER'],
+          default: 'SIGV4_ALWAYS',
+          description: 'Origin Access Control signing behavior (only applies to S3 origins). SIGV4_ALWAYS signs all requests, SIGV4_NO_OVERRIDE signs only if viewer request lacks Authorization header, NEVER disables signing.'
         }
       }
     },
@@ -162,7 +171,7 @@ export const CLOUDFRONT_DISTRIBUTION_CONFIG_SCHEMA: ComponentConfigSchema = {
         viewerProtocolPolicy: {
           type: 'string',
           enum: ['allow-all', 'redirect-to-https', 'https-only'],
-          default: 'allow-all'
+          default: 'redirect-to-https'
         },
         allowedMethods: {
           type: 'array',
@@ -315,10 +324,11 @@ export class CloudFrontDistributionComponentConfigBuilder extends ConfigBuilder<
     return {
       comment: 'Managed by Shinobi platform',
       origin: {
-        type: 's3'
+        type: 's3',
+        oacSigning: 'SIGV4_ALWAYS' // Safe default - sign all requests
       },
       defaultBehavior: {
-        viewerProtocolPolicy: 'redirect-to-https', // SECURE DEFAULT
+        viewerProtocolPolicy: 'redirect-to-https', // Changed from 'allow-all' - SECURE DEFAULT
         allowedMethods: ['GET', 'HEAD'],
         cachedMethods: ['GET', 'HEAD'],
         compress: true
@@ -330,11 +340,11 @@ export class CloudFrontDistributionComponentConfigBuilder extends ConfigBuilder<
         countries: []
       },
       logging: {
-        enabled: true, // SECURE DEFAULT - Enable logging for audit trails
+        enabled: true, // Changed from false - SECURE DEFAULT - Enable logging for audit trails
         includeCookies: false
       },
       monitoring: {
-        enabled: true, // SECURE DEFAULT - Enable monitoring for security
+        enabled: true, // Changed from false - SECURE DEFAULT - Enable monitoring for security
         alarms: {
           error4xx: {
             enabled: true,
@@ -381,6 +391,44 @@ export class CloudFrontDistributionComponentConfigBuilder extends ConfigBuilder<
     };
   }
 
+  /**
+   * Layer 2: Compliance Framework Defaults
+   * Security and compliance-specific configurations
+   */
+  protected getComplianceFrameworkDefaults(): Partial<CloudFrontDistributionConfig> {
+    const framework = this.builderContext.context.complianceFramework;
+    
+    const baseCompliance: Partial<CloudFrontDistributionConfig> = {
+      defaultBehavior: {
+        viewerProtocolPolicy: 'redirect-to-https',
+      },
+      logging: {
+        enabled: true,
+      },
+      monitoring: {
+        enabled: true,
+      },
+    };
+    
+    if (framework === 'fedramp-moderate' || framework === 'fedramp-high') {
+      return {
+        ...baseCompliance,
+        defaultBehavior: {
+          viewerProtocolPolicy: 'redirect-to-https',
+        },
+        logging: {
+          enabled: true,
+        },
+        monitoring: {
+          enabled: true,
+        },
+        webAclId: undefined, // WAF should be configured separately, but enable WAF requirement
+      };
+    }
+    
+    return baseCompliance;
+  }
+
   public buildSync(): CloudFrontDistributionConfig {
     const resolved = super.buildSync() as CloudFrontDistributionConfig;
     return this.normaliseConfig(resolved);
@@ -414,7 +462,8 @@ export class CloudFrontDistributionComponentConfigBuilder extends ConfigBuilder<
         albDnsName: config.origin.albDnsName,
         customDomainName: config.origin.customDomainName,
         originPath: config.origin.originPath,
-        customHeaders: config.origin.customHeaders ?? {}
+        customHeaders: config.origin.customHeaders ?? {},
+        oacSigning: config.origin.oacSigning ?? 'SIGV4_ALWAYS'
       },
       defaultBehavior: {
         viewerProtocolPolicy: config.defaultBehavior?.viewerProtocolPolicy ?? 'redirect-to-https',
@@ -446,13 +495,13 @@ export class CloudFrontDistributionComponentConfigBuilder extends ConfigBuilder<
         certificateArn: config.domain?.certificateArn
       },
       logging: {
-        enabled: config.logging?.enabled ?? false,
+        enabled: config.logging?.enabled ?? true, // Default to true (from fallbacks)
         bucket: config.logging?.bucket,
         prefix: config.logging?.prefix,
         includeCookies: config.logging?.includeCookies ?? false
       },
       monitoring: {
-        enabled: config.monitoring?.enabled ?? false,
+        enabled: config.monitoring?.enabled ?? true, // Default to true (from fallbacks)
         alarms: {
           error4xx: this.normaliseAlarmConfig(config.monitoring?.alarms?.error4xx, {
             enabled: config.monitoring?.enabled ?? false,

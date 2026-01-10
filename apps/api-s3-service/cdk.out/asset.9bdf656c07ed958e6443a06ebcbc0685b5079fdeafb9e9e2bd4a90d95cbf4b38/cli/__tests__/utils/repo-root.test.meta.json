@@ -1,0 +1,26 @@
+{
+  "id": "TP-cli-repo-root-001",
+  "level": "unit",
+  "capability": "Repository root detection by monorepo marker files",
+  "oracle": "exact",
+  "invariants": [
+    "Detects pnpm-workspace.yaml/yml",
+    "Detects nx.json, turbo.json, rush.json",
+    "Detects package.json with workspaces field",
+    "Returns absolute path",
+    "Caching works correctly",
+    "Priority order respected"
+  ],
+  "fixtures": ["TempDir", "MockFileSystem"],
+  "inputs": {
+    "shape": "Starting directory path",
+    "notes": "Uses temp directories for file I/O. Mocks file system operations. No network I/O."
+  },
+  "risks": [],
+  "dependencies": ["vitest", "fs/promises"],
+  "evidence": [],
+  "compliance_refs": [],
+  "ai_generated": true,
+  "human_reviewed_by": "platform-team"
+}
+

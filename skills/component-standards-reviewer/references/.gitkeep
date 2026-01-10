@@ -1,0 +1,14 @@
+# References Directory
+
+This directory contains additional documentation that agents can read when needed.
+
+**Progressive Disclosure**: Reference files are loaded only when deep domain knowledge is required, keeping the main SKILL.md focused and under 500 lines.
+
+Common reference files:
+- `REFERENCE.md` - Detailed technical reference
+- `FORMS.md` - Form templates or structured data formats
+- Domain-specific files (e.g., `finance.md`, `legal.md`)
+
+Keep individual reference files focused and small.
+
+

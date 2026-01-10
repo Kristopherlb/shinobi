@@ -38,14 +38,26 @@ export class WafWebAclComponent extends BaseComponent {
   }
 
   public synth(): void {
-    const builder = new WafWebAclComponentConfigBuilder({
-      context: this.context,
-      spec: this.spec
+    this.logComponentEvent('synthesis_start', 'Starting WAF Web ACL component synthesis', {
+      component: {
+        name: this.spec.name,
+        type: this.getType()
+      },
+      context: {
+        environment: this.context.environment,
+        complianceFramework: this.context.complianceFramework
+      }
     });
 
-    this.config = builder.buildSync();
+    try {
+      const builder = new WafWebAclComponentConfigBuilder({
+        context: this.context,
+        spec: this.spec
+      });
 
-    this.logComponentEvent('config_resolved', 'Resolved WAF Web ACL configuration', {
+      this.config = builder.buildSync();
+
+      this.logComponentEvent('config_resolved', 'Resolved WAF Web ACL configuration', {
       scope: this.config.scope,
       defaultAction: this.config.defaultAction,
       managedRuleGroups: this.config.managedRuleGroups.length,
@@ -59,10 +71,17 @@ export class WafWebAclComponent extends BaseComponent {
     this.registerResources();
     this.registerCapabilities();
 
-    this.logComponentEvent('synthesis_complete', 'WAF Web ACL synthesis complete', {
-      webAclArn: this.webAcl?.attrArn,
-      loggingConfigured: !!this.loggingConfiguration
-    });
+      this.logComponentEvent('synthesis_complete', 'WAF Web ACL component synthesis completed successfully', {
+        webAclArn: this.webAcl?.attrArn,
+        loggingConfigured: !!this.loggingConfiguration
+      });
+    } catch (error) {
+      this.logError(error as Error, 'component synthesis', {
+        componentType: 'waf-web-acl',
+        stage: 'synthesis'
+      });
+      throw error;
+    }
   }
 
   public getCapabilities(): ComponentCapabilities {
@@ -301,15 +320,14 @@ export class WafWebAclComponent extends BaseComponent {
       case 'rate-based': {
         const result: wafv2.CfnWebACL.RateBasedStatementProperty = {
           limit: statement.limit,
-          aggregateKeyType: statement.aggregateKeyType ?? 'IP'
+          aggregateKeyType: statement.aggregateKeyType ?? 'IP',
+          ...(statement.aggregateKeyType === 'FORWARDED_IP' && {
+            forwardedIpConfig: {
+              fallbackBehavior: statement.forwardedIpFallbackBehavior ?? 'MATCH',
+              headerName: statement.forwardedIpHeaderName ?? 'X-Forwarded-For'
+            }
+          })
         };
-
-        if (statement.aggregateKeyType === 'FORWARDED_IP') {
-          result.forwardedIPConfig = {
-            fallbackBehavior: statement.forwardedIpFallbackBehavior ?? 'MATCH',
-            headerName: statement.forwardedIpHeaderName ?? 'X-Forwarded-For'
-          };
-        }
 
         return { rateBasedStatement: result };
       }
@@ -345,7 +363,14 @@ export class WafWebAclComponent extends BaseComponent {
       case 'method':
         return { method: {} };
       case 'body':
-        return { body: {} };
+        // Body field is not supported in logging configuration FieldToMatch
+        // Fall through to default header handling
+        this.getLogger().warn('Body field type is not supported in WAF logging configuration redacted fields. Using header instead.');
+        return {
+          singleHeader: {
+            name: (field.name ?? '').toLowerCase()
+          }
+        };
       case 'header':
       default:
         return {

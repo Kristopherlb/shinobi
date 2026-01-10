@@ -1,0 +1,28 @@
+{
+  "name": "@shinobi/skill-<%= skillName %>",
+  "sourceRoot": "skills/<%= skillName %>",
+  "targets": {
+    "test": {
+      "executor": "@nx/vitest:test",
+      "options": {
+        "passWithNoTests": true,
+        "config": "skills/<%= skillName %>/vitest.config.ts"
+      },
+      "outputs": [
+        "{projectRoot}/coverage"
+      ]
+    },
+    "validate": {
+      "executor": "nx:run-commands",
+      "options": {
+        "command": "pnpm nx test @shinobi/skill-<%= skillName %>",
+        "cwd": "{workspaceRoot}"
+      }
+    }
+  },
+  "tags": [
+    "scope:shinobi",
+    "type:skill"
+  ]
+}
+

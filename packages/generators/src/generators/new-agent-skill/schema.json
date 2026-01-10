@@ -1,0 +1,77 @@
+{
+  "$schema": "http://json-schema.org/schema",
+  "cli": "nx",
+  "id": "new-agent-skill",
+  "title": "Generate a new Agent Skill",
+  "type": "object",
+  "properties": {
+    "skillName": {
+      "type": "string",
+      "description": "Name of the skill (must follow Agent Skills naming rules: lowercase, alphanumeric, hyphens, max 64 chars)",
+      "$default": {
+        "$source": "argv",
+        "index": 0
+      },
+      "x-prompt": "What is the name of the skill? (e.g., 'pdf-processing')"
+    },
+    "description": {
+      "type": "string",
+      "description": "Skill description (max 1024 chars). Should describe what the skill does and when to use it.",
+      "maxLength": 1024,
+      "x-prompt": "What is the description of the skill?"
+    },
+    "license": {
+      "oneOf": [
+        { "type": "string" },
+        { "type": "null" },
+        { "type": "boolean" }
+      ],
+      "description": "License identifier (optional)",
+      "x-prompt": "What license applies to this skill? (optional, e.g., 'Apache-2.0')"
+    },
+    "compatibility": {
+      "oneOf": [
+        { "type": "string", "maxLength": 500 },
+        { "type": "null" },
+        { "type": "boolean" }
+      ],
+      "description": "Compatibility requirements (optional, max 500 chars)",
+      "x-prompt": "What are the compatibility requirements? (optional, e.g., 'Requires git, docker, jq')"
+    },
+    "author": {
+      "oneOf": [
+        { "type": "string" },
+        { "type": "null" },
+        { "type": "boolean" }
+      ],
+      "description": "Author name for metadata (optional)",
+      "x-prompt": "Who is the author? (optional)"
+    },
+    "version": {
+      "oneOf": [
+        { "type": "string" },
+        { "type": "null" },
+        { "type": "boolean" }
+      ],
+      "description": "Version for metadata (optional)",
+      "x-prompt": "What is the version? (optional, e.g., '1.0')"
+    },
+    "degreesOfFreedom": {
+      "type": "string",
+      "enum": ["Low", "Medium", "High"],
+      "description": "Guides the template's instruction style (default: 'Medium')",
+      "default": "Medium",
+      "x-prompt": {
+        "message": "What degrees of freedom? (Low = prescriptive, Medium = structured flexibility, High = principles/guardrails)",
+        "type": "list",
+        "items": [
+          { "value": "Low", "label": "Low - Step-by-step prescriptive instructions" },
+          { "value": "Medium", "label": "Medium - Structured with flexibility" },
+          { "value": "High", "label": "High - Principles and guardrails" }
+        ]
+      }
+    }
+  },
+  "required": ["skillName", "description"]
+}
+

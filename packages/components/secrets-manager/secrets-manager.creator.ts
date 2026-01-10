@@ -68,12 +68,15 @@ export class SecretsManagerComponentCreator implements IComponentCreator {
   /**
    * Factory method to create component instances
    */
-  public createComponent(
-    scope: Construct, 
-    spec: ComponentSpec, 
-    context: ComponentContext
-  ): SecretsManagerComponentComponent {
-    return new SecretsManagerComponentComponent(scope, spec.name, context, spec);
+  public createComponent(spec: ComponentSpec, context: ComponentContext): SecretsManagerComponentComponent {
+    if (!context.scope) {
+      throw new Error('ComponentContext.scope is required to create secrets-manager components');
+    }
+    return new SecretsManagerComponentComponent(context.scope as Construct, spec.name, context, spec);
+  }
+  
+  public processComponent(spec: ComponentSpec, context: ComponentContext): SecretsManagerComponentComponent {
+    return this.createComponent(spec, context);
   }
   
   /**
@@ -93,7 +96,39 @@ export class SecretsManagerComponentCreator implements IComponentCreator {
       errors.push('Component name must start with a letter and contain only alphanumeric characters, hyphens, and underscores');
     }
     
-    // TODO: Add component-specific validations here
+    // Validation: Check for conflicting secretValue options
+    if (config?.secretValue) {
+      const secretValue = config.secretValue;
+      const optionsCount = [
+        secretValue.secretArn,
+        secretValue.generateSecret,
+        secretValue.secretStringValue
+      ].filter(Boolean).length;
+
+      if (optionsCount > 1) {
+        errors.push(
+          'Conflicting secretValue options detected. ' +
+          'Only one of secretArn, generateSecret, or secretStringValue (with allowUnsafePlainText) can be specified.'
+        );
+      }
+
+      // Validate allowUnsafePlainText usage
+      if (secretValue.secretStringValue && !secretValue.allowUnsafePlainText && !secretValue.secretArn && !secretValue.generateSecret) {
+        errors.push(
+          'Direct secret string values require allowUnsafePlainText: true for non-sensitive configuration values. ' +
+          'For secrets, use secretArn to reference existing secrets or enable generateSecret.'
+        );
+      }
+    }
+
+    // Validation: Check for conflict between generateSecret and secretValue.generateSecret
+    if (config?.generateSecret?.enabled && config?.secretValue?.generateSecret) {
+      errors.push(
+        'Conflicting generateSecret options detected. ' +
+        'Cannot specify both generateSecret.enabled and secretValue.generateSecret. ' +
+        'Use only one method for secret generation.'
+      );
+    }
     
     // Environment-specific validations
     if (context.environment === 'prod') {

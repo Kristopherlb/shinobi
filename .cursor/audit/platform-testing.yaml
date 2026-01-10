@@ -57,6 +57,17 @@ rules:
       - pattern: '"human_reviewed_by"\\s*:\\s*".*"'
     message: "Metadata is missing required fields per §11."
 
+  - id: PTS-106
+    title: Negative test cases require negative_case_id
+    severity: warn
+    scope_glob: "**/*.meta.{json,yaml,yml}"
+    description: "Tests that verify expected failures (e.g., invalid input rejection) should include negative_case_id to link to the corresponding negative test case. This enables mutation testing validation."
+    must_match_conditional:
+      - condition: '"capability".*"fail"|"error"|"reject"|"invalid"|"negative"'
+        implies:
+          - pattern: '"negative_case_id"\\s*:\\s*"TP-[a-z0-9-]+-[a-z0-9-]+-\\d{3}"'
+    message: "Negative test cases should include negative_case_id for mutation testing validation."
+
   - id: PTS-103
     title: AI-authored tests require human reviewer
     severity: error

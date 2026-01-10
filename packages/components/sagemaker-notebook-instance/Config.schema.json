@@ -1,0 +1,179 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "$id": "https://platform.shinobi.internal/schemas/sagemaker-notebook-instance/v1.0.0",
+  "title": "SageMaker Notebook Instance Configuration",
+  "description": "Configuration for creating a SageMaker Notebook Instance",
+  "type": "object",
+  "additionalProperties": false,
+  "properties": {
+    "name": {
+      "type": "string",
+      "description": "Component name (optional, will be auto-generated from component name)",
+      "pattern": "^[a-zA-Z][a-zA-Z0-9-_]*$",
+      "maxLength": 128
+    },
+    "description": {
+      "type": "string",
+      "description": "Component description for documentation",
+      "maxLength": 1024
+    },
+    "notebookInstanceName": {
+      "type": "string",
+      "description": "Name of the notebook instance (will be auto-generated if not provided)",
+      "pattern": "^[a-zA-Z0-9\\-]{1,63}$",
+      "maxLength": 63
+    },
+    "instanceType": {
+      "type": "string",
+      "description": "Instance type for the notebook",
+      "enum": [
+        "ml.t2.medium", "ml.t2.large", "ml.t2.xlarge", "ml.t2.2xlarge",
+        "ml.t3.medium", "ml.t3.large", "ml.t3.xlarge", "ml.t3.2xlarge",
+        "ml.m4.xlarge", "ml.m4.2xlarge", "ml.m4.4xlarge", "ml.m4.10xlarge", "ml.m4.16xlarge",
+        "ml.m5.large", "ml.m5.xlarge", "ml.m5.2xlarge", "ml.m5.4xlarge", "ml.m5.12xlarge", "ml.m5.24xlarge",
+        "ml.c4.large", "ml.c4.xlarge", "ml.c4.2xlarge", "ml.c4.4xlarge", "ml.c4.8xlarge",
+        "ml.c5.large", "ml.c5.xlarge", "ml.c5.2xlarge", "ml.c5.4xlarge", "ml.c5.9xlarge", "ml.c5.18xlarge",
+        "ml.p2.xlarge", "ml.p2.8xlarge", "ml.p2.16xlarge",
+        "ml.p3.2xlarge", "ml.p3.8xlarge", "ml.p3.16xlarge",
+        "ml.g4dn.xlarge", "ml.g4dn.2xlarge", "ml.g4dn.4xlarge", "ml.g4dn.8xlarge", "ml.g4dn.12xlarge", "ml.g4dn.16xlarge"
+      ]
+    },
+    "roleArn": {
+      "type": "string",
+      "description": "IAM role ARN for the notebook instance"
+    },
+    "subnetId": {
+      "type": "string",
+      "description": "Subnet ID for VPC placement"
+    },
+    "vpcId": {
+      "type": "string",
+      "description": "VPC ID for security group creation"
+    },
+    "securityGroupIds": {
+      "type": "array",
+      "description": "Security group IDs",
+      "items": {
+        "type": "string"
+      },
+      "maxItems": 5
+    },
+    "kmsKeyId": {
+      "type": "string",
+      "description": "KMS key ID for encryption"
+    },
+    "rootAccess": {
+      "type": "string",
+      "description": "Root access configuration",
+      "enum": ["Enabled", "Disabled"]
+    },
+    "directInternetAccess": {
+      "type": "string",
+      "description": "Direct internet access",
+      "enum": ["Enabled", "Disabled"]
+    },
+    "volumeSizeInGB": {
+      "type": "number",
+      "description": "Volume size in GB",
+      "minimum": 5,
+      "maximum": 16384
+    },
+    "defaultCodeRepository": {
+      "type": "string",
+      "description": "Default code repository URL"
+    },
+    "additionalCodeRepositories": {
+      "type": "array",
+      "description": "Additional code repositories",
+      "items": {
+        "type": "string"
+      },
+      "maxItems": 3
+    },
+    "lifecycleConfigName": {
+      "type": "string",
+      "description": "Lifecycle configuration name"
+    },
+    "platformIdentifier": {
+      "type": "string",
+      "description": "Platform identifier",
+      "enum": ["notebook-al1-v1", "notebook-al2-v1", "notebook-al2-v2"]
+    },
+    "acceleratorTypes": {
+      "type": "array",
+      "description": "Accelerator types",
+      "items": {
+        "type": "string",
+        "enum": ["ml.eia1.medium", "ml.eia1.large", "ml.eia1.xlarge", "ml.eia2.medium", "ml.eia2.large", "ml.eia2.xlarge"]
+      },
+      "maxItems": 1
+    },
+    "instanceMetadataServiceConfiguration": {
+      "type": "object",
+      "description": "Instance metadata service configuration",
+      "properties": {
+        "minimumInstanceMetadataServiceVersion": {
+          "type": "string",
+          "description": "Minimum IMDS version",
+          "enum": ["1", "2"]
+        }
+      },
+      "additionalProperties": false
+    },
+    "monitoring": {
+      "type": "object",
+      "description": "Monitoring and observability configuration",
+      "properties": {
+        "enabled": {
+          "type": "boolean",
+          "description": "Enable monitoring"
+        },
+        "detailedMetrics": {
+          "type": "boolean",
+          "description": "Enable detailed CloudWatch metrics"
+        }
+      },
+      "additionalProperties": false
+    },
+    "security": {
+      "type": "object",
+      "description": "Security configuration",
+      "properties": {
+        "kmsEncryption": {
+          "type": "boolean",
+          "description": "Enable KMS encryption"
+        },
+        "vpcOnly": {
+          "type": "boolean",
+          "description": "Restrict to VPC only"
+        }
+      },
+      "additionalProperties": false
+    },
+    "compliance": {
+      "type": "object",
+      "description": "Compliance configuration",
+      "properties": {
+        "auditLogging": {
+          "type": "boolean",
+          "description": "Enable audit logging"
+        },
+        "retentionDays": {
+          "type": "number",
+          "description": "Log retention period in days"
+        }
+      },
+      "additionalProperties": false
+    },
+    "tags": {
+      "type": "object",
+      "description": "Additional resource tags",
+      "additionalProperties": {
+        "type": "string"
+      }
+    }
+  }
+}
+
+
+
