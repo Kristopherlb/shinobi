@@ -1,0 +1,27 @@
+{
+  "tests": [
+    {
+      "id": "TP-ai-provider-config-001",
+      "level": "unit",
+      "capability": "AI provider config builder applies deterministic defaults",
+      "oracle": "exact",
+      "invariants": [
+        "Default provider values are stable",
+        "Bedrock defaults include region and derived endpoint"
+      ],
+      "fixtures": ["createContext", "createSpec"],
+      "inputs": {
+        "shape": "ComponentContext + ComponentSpec with provider overrides",
+        "notes": "Validates OpenAI defaults, Ollama local defaults, and Bedrock region behavior."
+      },
+      "risks": ["Incorrect defaults lead to invalid provider connectivity"],
+      "dependencies": [],
+      "evidence": [
+        "packages/components/ai-provider/__tests__/ai-provider.builder.test.ts#L37"
+      ],
+      "compliance_refs": ["std://platform-configuration"],
+      "ai_generated": true,
+      "human_reviewed_by": "Platform Engineering Team"
+    }
+  ]
+}

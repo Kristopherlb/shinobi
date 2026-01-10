@@ -20,7 +20,11 @@
     "isolatedModules": true,
     "resolveJsonModule": true,
     "preserveSymlinks": false,
-    "baseUrl": "."
+    "baseUrl": ".",
+    "paths": {
+      "@shinobi/core": ["packages/core/src/index.ts"],
+      "@shinobi/binders": ["packages/binders/src/index.ts"]
+    }
   },
   "exclude": [
     "dist",

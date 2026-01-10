@@ -747,6 +747,14 @@ defaults:
       retrieverServicePrincipal: lambda.amazonaws.com
     tags: {}
 
+  ai-provider:
+    provider: openai
+    model: gpt-4o-mini
+    endpoint: https://api.openai.com/v1
+    auth:
+      type: apiKey
+    tags: {}
+
   feature-flag:
     enabled: true
     flagType: boolean
