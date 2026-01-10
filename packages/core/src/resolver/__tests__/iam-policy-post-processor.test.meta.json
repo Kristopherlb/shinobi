@@ -1,0 +1,28 @@
+{
+  "id": "TP-iam-policy-postprocessor-001",
+  "level": "unit",
+  "capability": "IAM policy post-processing",
+  "oracle": "exact",
+  "invariants": [
+    "IAM policies from binding results are applied to Lambda roles",
+    "Only Lambda components receive policies",
+    "Multiple policies are all applied",
+    "Non-Lambda components are skipped gracefully"
+  ],
+  "fixtures": ["IamPolicyPostProcessor", "MockLambdaFunction", "MockComponents"],
+  "inputs": {
+    "shape": "Array of binding results with iamPolicies",
+    "notes": "Tests IAM policy application to Lambda execution roles"
+  },
+  "risks": [
+    "Policies applied to wrong resources",
+    "Missing policies",
+    "Non-Lambda components incorrectly receiving policies"
+  ],
+  "dependencies": ["aws-cdk-lib", "@shinobi/core", "vitest"],
+  "evidence": ["Policy application count assertions", "Lambda function count assertions"],
+  "compliance_refs": ["docs/spec/platform-bindings-spec.md"],
+  "ai_generated": true,
+  "human_reviewed_by": "platform-team"
+}
+

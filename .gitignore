@@ -52,3 +52,24 @@ packages/binders/BINDER_UPDATE_STATUS.md
 baselines/
 baseline-*/
 .baseline-ref
+
+# CDK generated files
+cdk.context.json
+**/cdk.context.json
+
+# Generated CloudFormation templates
+**/*-template.json
+**/*-dev-template.json
+**/*-prod-template.json
+
+# Build artifacts
+pnpm
+workspace@*
+
+# Test services (temporary/test fixtures)
+apps/test-service/
+apps/test-ec2/
+
+# Diff reports (temporary documentation)
+BRANCH-DIFF-REPORT*.md
+UNTRACKED-FILES-REPORT.md

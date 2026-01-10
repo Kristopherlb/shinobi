@@ -713,8 +713,21 @@ export class SqsQueueComponent extends BaseComponent {
    * Current implementation uses standard capability vocabulary per platform standards.
    */
   private registerCapabilities(): void {
+    // Register capability in the nested structure expected by QueueBinderStrategy
+    // Also include top-level properties for backwards compatibility with lambda-worker
     const capability = {
-      queueUrl: this.queue.queueUrl, // Required for bindings - used by Lambda, ECS, etc.
+      // Nested structure for QueueBinderStrategy
+      resources: {
+        arn: this.queue.queueArn,
+        queueUrl: this.queue.queueUrl,
+        queueName: this.queue.queueName
+      },
+      encryption: {
+        enabled: this.config.encryption?.enabled || false,
+        kmsKeyId: this.kmsKey?.keyId
+      },
+      // Top-level properties for backwards compatibility (lambda-worker accesses these directly)
+      queueUrl: this.queue.queueUrl,
       queueArn: this.queue.queueArn,
       queueName: this.queue.queueName,
       visibilityTimeoutSeconds: this.config.visibilityTimeoutSeconds || 30, // Required for Lambda timeout validation
@@ -724,6 +737,13 @@ export class SqsQueueComponent extends BaseComponent {
     
     if (this.deadLetterQueue) {
       this.registerCapability('messaging:sqs:dlq', {
+        // Nested structure for QueueBinderStrategy
+        resources: {
+          arn: this.deadLetterQueue.queueArn,
+          queueUrl: this.deadLetterQueue.queueUrl,
+          queueName: this.deadLetterQueue.queueName
+        },
+        // Top-level properties for backwards compatibility
         queueUrl: this.deadLetterQueue.queueUrl,
         queueArn: this.deadLetterQueue.queueArn,
         queueName: this.deadLetterQueue.queueName,

@@ -88,8 +88,11 @@
       }
     },
     "eventSources": {
+      "description": "Event source configurations. Can be an array of event sources (auto-binding enabled by default), or an object with autoBind flag and sources array.",
+      "oneOf": [
+        {
       "type": "array",
-      "description": "Event source configurations",
+          "description": "Array of event source configurations (auto-binding enabled by default)",
       "items": {
         "anyOf": [
           {
@@ -127,6 +130,10 @@
                     "maximum": 1000
                   }
                 }
+              },
+              "allowDirectGrant": {
+                "type": "boolean",
+                "description": "Required for external queue ARNs (non-@component: references). When true, uses direct grant instead of binder-managed permissions."
               }
             },
             "required": ["type", "queueArn"]
@@ -177,7 +184,118 @@
             "required": ["type", "pattern"]
           }
         ]
-      },
+          }
+        },
+        {
+          "type": "object",
+          "description": "Object format with autoBind flag and sources array",
+          "additionalProperties": false,
+          "properties": {
+            "autoBind": {
+              "type": "boolean",
+              "description": "Enable automatic binding generation from event sources. Default: true. Set to false to opt-out of auto-binding.",
+              "default": true
+            },
+            "sources": {
+              "type": "array",
+              "description": "Array of event source configurations",
+              "items": {
+                "anyOf": [
+                  {
+                    "type": "object",
+                    "additionalProperties": false,
+                    "properties": {
+                      "type": {
+                        "const": "sqs"
+                      },
+                      "queueArn": {
+                        "type": "string",
+                        "description": "SQS queue ARN or component reference (@component:component-name). IMPORTANT: The referenced queue's visibility timeout MUST be >= Lambda function timeout. AWS requirement: queue visibility timeout >= function timeout. Best practice: queue visibility timeout >= 6x function timeout for retry safety."
+                      },
+                      "batchSize": {
+                        "type": "number",
+                        "minimum": 1,
+                        "maximum": 1000
+                      },
+                      "enabled": {
+                        "type": "boolean",
+                        "default": true
+                      },
+                      "maximumBatchingWindowSeconds": {
+                        "type": "number",
+                        "minimum": 0,
+                        "maximum": 300
+                      },
+                      "scalingConfig": {
+                        "type": "object",
+                        "additionalProperties": false,
+                        "properties": {
+                          "maximumConcurrency": {
+                            "type": "number",
+                            "minimum": 1,
+                            "maximum": 1000
+                          }
+                        }
+                      },
+                      "allowDirectGrant": {
+                        "type": "boolean",
+                        "description": "Required for external queue ARNs (non-@component: references). When true, uses direct grant instead of binder-managed permissions."
+                      }
+                    },
+                    "required": ["type", "queueArn"]
+                  },
+                  {
+                    "type": "object",
+                    "additionalProperties": false,
+                    "properties": {
+                      "type": {
+                        "const": "eventBridge"
+                      },
+                      "scheduleExpression": {
+                        "type": "string"
+                      },
+                      "input": {
+                        "type": "object",
+                        "default": {}
+                      },
+                      "enabled": {
+                        "type": "boolean",
+                        "default": true
+                      }
+                    },
+                    "required": ["type", "scheduleExpression"]
+                  },
+                  {
+                    "type": "object",
+                    "additionalProperties": false,
+                    "properties": {
+                      "type": {
+                        "const": "eventBridgePattern"
+                      },
+                      "eventBusArn": {
+                        "type": "string"
+                      },
+                      "pattern": {
+                        "type": "object"
+                      },
+                      "input": {
+                        "type": "object",
+                        "default": {}
+                      },
+                      "enabled": {
+                        "type": "boolean",
+                        "default": true
+                      }
+                    },
+                    "required": ["type", "pattern"]
+                  }
+                ]
+              }
+            }
+          },
+          "required": ["sources"]
+        }
+      ],
       "default": []
     },
     "vpc": {

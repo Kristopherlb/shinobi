@@ -1,0 +1,112 @@
+service: queue-processor-service
+owner: platform-team
+complianceFramework: commercial
+region: us-west-2
+accountId: "911871352725"
+
+environments:
+  dev:
+    defaults:
+      instanceSize: small
+      enableDebug: true
+      highRiskEnvironment: false
+
+components:
+  - name: processing-queue
+    type: sqs-queue
+    config:
+      queueName: queue-processor-queue
+      description: "Queue for processing messages from API"
+      visibilityTimeoutSeconds: 360
+      messageRetentionDays: 4
+      receiveMessageWaitTimeSeconds: 20
+      monitoring:
+        enabled: true
+        detailedMetrics: true
+
+  - name: data-bucket
+    type: s3-bucket
+    config:
+      bucketName: queue-processor-service-bucket
+      versioning: true
+      encryption:
+        type: AES256
+      eventBridgeEnabled: false
+
+  - name: api
+    type: lambda-api
+    config:
+      functionName: queue-processor-api
+      handler: api-handler.handler
+      runtime: nodejs20.x
+      architecture: arm64
+      memorySize: 512
+      timeoutSeconds: 30
+      deployment:
+        codePath: ./dist
+      environment:
+        SQS_QUEUE_URL: "https://sqs.us-west-2.amazonaws.com/911871352725/queue-processor-queue"
+      logging:
+        logRetentionDays: 30
+        logFormat: JSON
+        systemLogLevel: INFO
+        applicationLogLevel: INFO
+      monitoring:
+        enabled: false
+      observability:
+        otelEnabled: false
+      api:
+        type: rest
+        stageName: dev
+        metricsEnabled: false
+        tracingEnabled: false
+        apiKeyRequired: false
+        throttling:
+          burstLimit: 10
+          rateLimit: 5
+        usagePlan:
+          enabled: false
+        logging:
+          enabled: true
+          retentionDays: 7
+        cors:
+          enabled: true
+          allowOrigins: ["*"]
+          allowHeaders: ["Content-Type"]
+          allowMethods: ["GET", "POST", "PUT", "PATCH", "DELETE", "OPTIONS"]
+          allowCredentials: false
+    binds:
+      - to: processing-queue
+        capability: messaging:sqs
+        access: write
+
+  - name: worker
+    type: lambda-worker
+    config:
+      functionName: queue-processor-worker
+      handler: worker-handler.handler
+      runtime: nodejs20.x
+      architecture: arm64
+      memorySize: 1024
+      timeoutSeconds: 60
+      deployment:
+        codePath: ./dist
+      logging:
+        logRetentionDays: 30
+        logFormat: JSON
+        systemLogLevel: INFO
+        applicationLogLevel: INFO
+      monitoring:
+        enabled: false
+      observability:
+        otelEnabled: false
+      eventSources:
+        - type: sqs
+          queueArn: "@component:processing-queue"
+          batchSize: 10
+          enabled: true
+    binds:
+      - to: data-bucket
+        capability: storage:s3
+        access: write
+

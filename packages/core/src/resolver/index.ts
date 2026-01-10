@@ -12,5 +12,9 @@ export { UnifiedBinderRegistry } from '../platform/binders/registry/unified-bind
 // Import directly from @shinobi/binders instead:
 // import { createUnifiedBinderRegistry } from '@shinobi/binders';
 
-// Export concrete binders
-export * from './binders/concrete-binders.js';
+// Export event source scanner and IAM policy post-processor
+export { EventSourceScanner } from './event-source-scanner.js';
+export { IamPolicyPostProcessor } from './iam-policy-post-processor.js';
+export type { IamPolicyPostProcessorResult } from './iam-policy-post-processor.js';
+
+// Concrete binders removed - all binders now use unified binder system in @shinobi/binders

@@ -1,0 +1,28 @@
+{
+  "id": "TP-event-source-scanner-improvements-001",
+  "level": "unit",
+  "capability": "Event source scanner improvements: logging, schema validation, extensibility",
+  "oracle": "exact",
+  "invariants": [
+    "External queues with allowDirectGrant log warnings for audit trail",
+    "Object format with autoBind: false respects opt-out",
+    "Unsupported event types are skipped gracefully",
+    "Supported types are extensible via array"
+  ],
+  "fixtures": ["EventSourceScanner", "MockComponents", "MockLogger"],
+  "inputs": {
+    "shape": "IComponent[] with various event source configurations",
+    "notes": "Tests improvements: logging, schema validation, supported types"
+  },
+  "risks": [
+    "Missing audit trail for external queues",
+    "Opt-out not respected",
+    "Future event types not extensible"
+  ],
+  "dependencies": ["@shinobi/core", "vitest"],
+  "evidence": ["Binding assertions", "Logger call assertions"],
+  "compliance_refs": ["docs/spec/platform-bindings-spec.md"],
+  "ai_generated": true,
+  "human_reviewed_by": "platform-team"
+}
+

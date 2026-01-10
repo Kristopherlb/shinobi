@@ -1,0 +1,28 @@
+{
+  "id": "TP-event-source-scanner-001",
+  "level": "unit",
+  "capability": "Event source auto-binding scanner",
+  "oracle": "exact",
+  "invariants": [
+    "SQS event sources generate messaging:sqs bindings",
+    "Component references are correctly extracted",
+    "External ARNs are handled with guardrails",
+    "Opt-out flag prevents auto-binding"
+  ],
+  "fixtures": ["EventSourceScanner", "MockComponents"],
+  "inputs": {
+    "shape": "IComponent[] with eventSources configuration",
+    "notes": "Tests various event source configurations"
+  },
+  "risks": [
+    "Incorrect capability mapping",
+    "Missing guardrails for external ARNs",
+    "Opt-out flag not respected"
+  ],
+  "dependencies": ["@shinobi/core", "vitest"],
+  "evidence": ["Generated binding directive assertions"],
+  "compliance_refs": ["docs/spec/platform-bindings-spec.md"],
+  "ai_generated": true,
+  "human_reviewed_by": "platform-team"
+}
+

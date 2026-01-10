@@ -13,7 +13,8 @@ import {
   SchemaManager,
   SchemaValidator,
   ValidationOrchestrator,
-  SingletonResourceHandlerService
+  SingletonResourceHandlerService,
+  RollbackCleanupService
 } from '@shinobi/core';
 import { createUnifiedBinderRegistry } from '@shinobi/binders';
 import { ValidateCommand } from './validate-command.js';
@@ -36,6 +37,7 @@ export interface ApplicationDependencies {
   referenceValidator: ReferenceValidator;
   executionContext: ExecutionContextManager;
   singletonResourceHandler: SingletonResourceHandlerService;
+  rollbackCleanup: RollbackCleanupService;
 }
 
 export class CompositionRoot {
@@ -105,6 +107,10 @@ export class CompositionRoot {
       logger: logger.platformLogger
     });
 
+    const rollbackCleanup = new RollbackCleanupService({
+      logger: logger.platformLogger
+    });
+
     this._dependencies = {
       logger,
       validationOrchestrator,
@@ -115,7 +121,8 @@ export class CompositionRoot {
       contextHydrator,
       referenceValidator,
       executionContext,
-      singletonResourceHandler
+      singletonResourceHandler,
+      rollbackCleanup
     };
 
     return this._dependencies;
@@ -157,7 +164,8 @@ export class CompositionRoot {
   createDestroyCommand(dependencies: ApplicationDependencies): DestroyCommand {
     return new DestroyCommand({
       fileDiscovery: dependencies.fileDiscovery,
-      logger: dependencies.logger
+      logger: dependencies.logger,
+      rollbackCleanup: dependencies.rollbackCleanup
     });
   }
 
@@ -165,7 +173,8 @@ export class CompositionRoot {
     return new UpCommand({
       fileDiscovery: dependencies.fileDiscovery,
       logger: dependencies.logger,
-      singletonResourceHandler: dependencies.singletonResourceHandler
+      singletonResourceHandler: dependencies.singletonResourceHandler,
+      rollbackCleanup: dependencies.rollbackCleanup
     });
   }
 

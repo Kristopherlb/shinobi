@@ -1,0 +1,23 @@
+{
+  "id": "TP-resolver-engine-event-source-iam-001",
+  "level": "integration",
+  "capability": "IAM policies for event source bindings are applied BEFORE EventSourceMapping is created",
+  "oracle": "exact",
+  "invariants": [
+    "IAM policies exist in template",
+    "EventSourceMapping has permissions",
+    "No early validation errors"
+  ],
+  "fixtures": ["MockComponentFactory", "MockBinderRegistry"],
+  "inputs": {
+    "shape": "Service config with lambda-worker component referencing SQS queue via @component:",
+    "notes": "Event source auto-binding generates binding"
+  },
+  "risks": [],
+  "dependencies": ["@shinobi/core", "aws-cdk-lib"],
+  "evidence": ["Template assertions for IAM policies", "EventSourceMapping resource exists"],
+  "compliance_refs": ["std://platform-binding-trigger-spec", "std://platform-testing-standard"],
+  "ai_generated": true,
+  "human_reviewed_by": ""
+}
+

@@ -181,6 +181,17 @@ export class SynthCommand {
       await ensureOutputDir(outputDir);
 
       logger.info(`Synthesizing ${manifest.service} (${environment})`);
+      logger.debug('Starting synthesis', {
+        data: {
+          manifestPath,
+          environment,
+          region,
+          accountId: String(accountId),
+          stackName,
+          outputDir,
+          includeExperimental: options.includeExperimental
+        }
+      });
 
       const synthResult = await synthesizeService({
         manifestPath,

@@ -377,15 +377,22 @@ export class LambdaApiComponent extends BaseComponent {
       });
     }
 
-    // CRITICAL FIX: ApiGateway Account is a singleton per account/region
-    // If it already exists, CDK will try to create a new CloudWatch Role and reference it,
-    // causing Early Validation failures because Fn::GetAtt can't be resolved during change set creation.
-    // Solution: Use cloudWatchRole to specify an existing role ARN if Account already exists,
-    // or let CDK create a new role if Account doesn't exist (first deployment).
-    // We'll check for existing Account at synthesis time and use its CloudWatch Role ARN.
-    const restApi = new apigw.RestApi(this, 'LambdaRestApi', {
+    // CRITICAL FIX: ApiGateway Account is a singleton per account/region.
+    // If it already exists, CDK will try to create a new CloudWatch Role and Account resource
+    // that references it using Fn::GetAtt, causing Early Validation failures because
+    // Early Validation can't resolve Fn::GetAtt during change set creation.
+    // 
+    // Solution: Set cloudWatchRole: false to prevent CDK from creating the Account resource.
+    // If an Account already exists (which it does in most AWS accounts), AWS will automatically
+    // use its existing CloudWatch Role for logging. We don't need to pass the ARN - AWS handles it.
+    // 
+    // Reference: CDK's RestApiProps.cloudWatchRole (boolean) - when false, CDK won't create Account
+    const restApiConstructId = `LambdaRestApi-${this.spec.name}`;
+    const restApi = new apigw.RestApi(this, restApiConstructId, {
       restApiName: apiConfig.name ?? `${this.context.serviceName}-${this.spec.name}`,
       description: apiConfig.description ?? 'Lambda API component',
+      // Prevent CDK from creating Account resource - AWS will use existing Account's CloudWatch Role
+      cloudWatchRole: false,
       deployOptions: {
         stageName: apiConfig.stageName,
         metricsEnabled: apiConfig.metricsEnabled,
@@ -423,16 +430,6 @@ export class LambdaApiComponent extends BaseComponent {
         }
         : undefined
     });
-
-    // CRITICAL FIX: ApiGateway Account is a singleton per account/region.
-    // CDK automatically creates an Account resource when logging is enabled, which references
-    // a CloudWatch Role using Fn::GetAtt. Early Validation fails because it can't resolve
-    // Fn::GetAtt during change set creation.
-    // 
-    // Solution: After RestApi creation, check if Account resource was created and remove it
-    // if an Account already exists. The existing Account will be used automatically.
-    // We'll need to remove the Account resource from the stack after synthesis, but before
-    // deployment. This is handled in up-command.ts by checking for existing Account.
 
     const integration = new apigw.LambdaIntegration(fn, {
       proxy: true

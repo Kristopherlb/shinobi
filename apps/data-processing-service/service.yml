@@ -1,0 +1,112 @@
+service: data-processing-service
+owner: platform-team
+complianceFramework: commercial
+region: us-west-2
+accountId: "911871352725"
+
+environments:
+  dev:
+    defaults:
+      instanceSize: small
+      enableDebug: true
+      highRiskEnvironment: false
+
+components:
+  - name: processing-queue
+    type: sqs-queue
+    config:
+      queueName: data-processing-queue
+      description: "Queue for processing data from API"
+      visibilityTimeoutSeconds: 360
+      messageRetentionDays: 4
+      receiveMessageWaitTimeSeconds: 20
+      monitoring:
+        enabled: true
+        detailedMetrics: true
+
+  - name: data-bucket
+    type: s3-bucket
+    config:
+      bucketName: data-processing-service-bucket
+      versioning: true
+      encryption:
+        type: AES256
+      eventBridgeEnabled: false
+
+  - name: api
+    type: lambda-api
+    config:
+      functionName: data-processing-api
+      handler: api-handler.handler
+      runtime: nodejs20.x
+      architecture: arm64
+      memorySize: 512
+      timeoutSeconds: 30
+      deployment:
+        codePath: ./src
+      logging:
+        logRetentionDays: 30
+        logFormat: JSON
+        systemLogLevel: INFO
+        applicationLogLevel: INFO
+      monitoring:
+        enabled: false
+      observability:
+        otelEnabled: false
+      api:
+        type: rest
+        stageName: dev
+        metricsEnabled: false
+        tracingEnabled: false
+        apiKeyRequired: false
+        throttling:
+          burstLimit: 10
+          rateLimit: 5
+        usagePlan:
+          enabled: false
+        logging:
+          enabled: false
+        cors:
+          enabled: true
+          allowOrigins: ["*"]
+          allowHeaders: ["Content-Type"]
+          allowMethods: ["GET", "POST", "PUT", "PATCH", "DELETE", "OPTIONS"]
+          allowCredentials: false
+    binds:
+      - to: data-bucket
+        capability: storage:s3
+        access: readwrite
+      - to: processing-queue
+        capability: messaging:sqs
+        access: write
+
+  - name: worker
+    type: lambda-worker
+    config:
+      functionName: data-processing-worker
+      handler: worker-handler.handler
+      runtime: nodejs20.x
+      architecture: arm64
+      memorySize: 1024
+      timeoutSeconds: 60
+      deployment:
+        codePath: ./src
+      logging:
+        logRetentionDays: 30
+        logFormat: JSON
+        systemLogLevel: INFO
+        applicationLogLevel: INFO
+      monitoring:
+        enabled: false
+      observability:
+        otelEnabled: false
+      eventSources:
+        - type: sqs
+          queueArn: "@component:processing-queue"
+          batchSize: 10
+          enabled: true
+    binds:
+      - to: data-bucket
+        capability: storage:s3
+        access: readwrite
+

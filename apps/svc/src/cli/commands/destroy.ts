@@ -31,6 +31,7 @@ export function createDestroyCommand(): Command {
     .option('-s, --stack <stackName>', 'Override CloudFormation stack name')
     .option('-y, --yes', 'Skip interactive confirmation prompt')
     .option('--json', 'Emit results as JSON (requires --yes for destructive actions)')
+    .option('--cleanup-retained', 'Automatically delete resources with DeletionPolicy: Retain after stack deletion')
     .action(async (options, cmd) => {
       const parent: any = cmd.parent || {};
       const rootOpts = parent.opts ? parent.opts() : {};
@@ -48,7 +49,8 @@ export function createDestroyCommand(): Command {
         profile: options.profile,
         stack: options.stack,
         yes: options.yes,
-        json: options.json
+        json: options.json,
+        cleanupRetained: options.cleanupRetained
       });
 
       if (result.success) {

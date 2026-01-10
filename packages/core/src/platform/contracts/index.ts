@@ -31,6 +31,9 @@ export { UnifiedBinderStrategyBase } from './unified-binder-strategy-base.js';
 export { resolveActions } from '../binders/action-resolver.js';
 export { loadActionProfiles, resolveActionProfile, type ActionProfilesConfig } from '../binders/action-profiles.js';
 
+// Export directive schema validator
+export { DirectiveSchemaValidator, DirectiveValidationError } from './directive-schema-validator.js';
+
 // Export trigger system interfaces
 export * from './trigger-interfaces.js';
 

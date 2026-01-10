@@ -18,14 +18,13 @@
  * - 2: Precondition failed (user cancelled, missing manifest, invalid configuration)
  */
 
-import * as path from 'path';
 import inquirer from 'inquirer';
 import {
   CloudFormationClient,
   DeleteStackCommand
 } from '@aws-sdk/client-cloudformation';
 import { waitUntilStackDeleteComplete } from '@aws-sdk/client-cloudformation';
-import { FileDiscovery } from '@shinobi/core';
+import { FileDiscovery, RollbackCleanupService } from '@shinobi/core';
 import { Logger } from './console-logger.js';
 import { readManifest, SimpleManifest } from './utils/service-synthesizer.js';
 
@@ -38,6 +37,7 @@ export interface DestroyOptions {
   stack?: string;
   yes?: boolean;
   json?: boolean;
+  cleanupRetained?: boolean; // Clean up resources with DeletionPolicy: Retain after stack deletion
 }
 
 export interface DestroyResult {
@@ -55,6 +55,7 @@ export interface DestroyResult {
 interface DestroyDependencies {
   fileDiscovery: FileDiscovery;
   logger: Logger;
+  rollbackCleanup: RollbackCleanupService;
 }
 
 const isStackMissing = (error: unknown): boolean => {
@@ -72,8 +73,9 @@ export class DestroyCommand {
     const logger = this.dependencies.logger;
 
     try {
+      // Resolve manifest path - FileDiscovery handles both file paths and directory searches
       const manifestPath = options.file
-        ? path.resolve(options.file)
+        ? await this.dependencies.fileDiscovery.findManifest(options.file)
         : await this.dependencies.fileDiscovery.findManifest('.');
 
       if (!manifestPath) {
@@ -137,10 +139,19 @@ export class DestroyCommand {
 
       const client = new CloudFormationClient({ region });
 
+      // Get retained resources BEFORE deletion (while stack still exists)
+      const retainedResources = await this.dependencies.rollbackCleanup.getRetainedResourcesBeforeDeletion(
+        stackName,
+        region
+      );
+
+      // Check if stack exists before deletion
+      let stackExists = true;
       try {
         await client.send(new DeleteStackCommand({ StackName: stackName }));
       } catch (error) {
         if (isStackMissing(error)) {
+          stackExists = false;
           logger.info(`Stack ${stackName} does not exist. Nothing to delete.`);
           return {
             success: true,
@@ -168,6 +179,47 @@ export class DestroyCommand {
       );
 
       logger.success(`Stack ${stackName} deleted.`);
+
+      // Clean up retained resources if requested
+      if (options.cleanupRetained && stackExists && retainedResources.length > 0) {
+        if (!options.json) {
+          logger.info('Cleaning up retained resources (DeletionPolicy: Retain)...');
+        }
+        const cleanupResult = await this.dependencies.rollbackCleanup.cleanupRetainedResourcesAfterDeletion(
+          retainedResources,
+          region,
+          true // deleteRetained = true
+        );
+
+        if (cleanupResult.cleanedUp > 0) {
+          if (!options.json) {
+            logger.success(
+              `Cleaned up ${cleanupResult.cleanedUp} retained resource(s) after stack deletion.`
+            );
+          }
+        } else if (cleanupResult.orphanedResources.length > 0) {
+          const existingResources = cleanupResult.orphanedResources.filter((r: { exists: boolean; deleted: boolean }) => r.exists && !r.deleted);
+          if (existingResources.length > 0 && !options.json) {
+            logger.warn(
+              `Found ${existingResources.length} retained resource(s) that could not be automatically deleted. ` +
+              `These may cause Early Validation errors on subsequent deployments. Resources: ` +
+              existingResources.map((r: { logicalId: string; resourceType: string }) => `${r.logicalId} (${r.resourceType})`).join(', ')
+            );
+          }
+        }
+
+        if (cleanupResult.errors.length > 0 && !options.json) {
+          logger.warn(`Encountered ${cleanupResult.errors.length} error(s) during retained resource cleanup: ${cleanupResult.errors.join('; ')}`);
+        }
+      } else if (stackExists && retainedResources.length > 0) {
+        // Warn about retained resources even if cleanup is not requested
+        await this.dependencies.rollbackCleanup.cleanupRetainedResourcesAfterDeletion(
+          retainedResources,
+          region,
+          false // deleteRetained = false (just warn)
+        );
+        // The method already logs warnings, so we don't need to do anything else
+      }
 
       return {
         success: true,

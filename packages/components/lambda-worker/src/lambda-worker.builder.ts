@@ -32,6 +32,8 @@ export interface LambdaSqsEventSourceConfig {
   scalingConfig?: {
     maximumConcurrency?: number;
   };
+  /** Required for external queue ARNs (non-@component: references). When true, uses direct grant instead of binder-managed permissions. */
+  allowDirectGrant?: boolean;
 }
 
 export interface LambdaEventBridgeRuleConfig {
@@ -159,6 +161,10 @@ const SQS_EVENT_SOURCE_SCHEMA = {
           properties: {
             maximumConcurrency: { type: 'number', minimum: 1, maximum: 1000 }
           }
+        },
+        allowDirectGrant: {
+          type: 'boolean',
+          description: 'Required for external queue ARNs (non-@component: references). When true, uses direct grant instead of binder-managed permissions.'
         }
       },
       required: ['queueArn']
@@ -486,7 +492,8 @@ export class LambdaWorkerComponentConfigBuilder extends ConfigBuilder<LambdaWork
             maximumBatchingWindowSeconds: source.maximumBatchingWindowSeconds ?? 0,
             scalingConfig: source.scalingConfig?.maximumConcurrency
               ? { maximumConcurrency: source.scalingConfig.maximumConcurrency }
-              : undefined
+              : undefined,
+            allowDirectGrant: source.allowDirectGrant
           };
         case 'eventBridge':
           return {
