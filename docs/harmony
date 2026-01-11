@@ -1,77 +1,95 @@
-Shinobi Platform Execution Plan: Architecting Autonomous Infrastructure Operations
-Executive Summary: The Imperative for Durable Agency
+# Harmony Platform Execution Plan: Architecting Autonomous Infrastructure Operations
+
+## Project Status Update (Kanban)
+### Current Status Summary
+- **Done:** Phase 1 Golden Path local stack wiring (Temporal dev server, Dagger engine, MCP Inspector), MCP tool server over STDIO, Dagger repo scanner, LangGraph-style Plan → Execute → Review flow with LLM structured output + repair loop, runtime configuration + dependency injection, and offline test scaffolding.
+- **In Progress:** Phase 1 validation (offline tests still need to be executed in an environment with registry access).
+- **Not Started:** Phase 2 Control Plane deployment on EKS (Temporal cluster, MCP Host gateway, Dagger execution plane), Phase 3 production MCP tool ecosystem (AWS/Jira/GitLab/PagerDuty/Confluence servers) and workflow catalog.
+
+### Roadmap Milestones (Kanban Status)
+| Milestone | Status | Evidence / Notes |
+| --- | --- | --- |
+| Phase 1: Local Golden Path (Docker Compose stack + durable agent prototype) | In Progress | Local stack + Harmony package are implemented; remaining work is running tests offline and validating dependency versions. |
+| Phase 2: Core Infrastructure Deployment (EKS Control Plane + Dagger execution plane) | Not Started | Architecture defined below; no EKS IaC or Shinobi-driven deployment manifest exists yet. |
+| Phase 3: Cognitive Layer & MCP Tooling (AWS/Jira/GitLab/PagerDuty/Confluence) | Not Started | No production MCP tool servers or workflow catalog shipped yet beyond the `analyze_repo` prototype. |
+
+### Progress Assessment
+- The **Phase 1 architecture** is implemented in code and documented in `apps/harmony`, but the **verification step** (offline tests and dependency checks) is pending.
+- **Phase 2+** is still at the **design-only** stage inside this document and has not been converted into Shinobi-managed infrastructure or deployable services.
+
+## Executive Summary: The Imperative for Durable Agency
 The modern enterprise technology landscape is characterized by an explosion of disparate tools—Jira for tracking, GitLab for code, AWS for infrastructure, Slack for communication, and PagerDuty for incident response. While "Infrastructure as Code" (IaC) has successfully addressed the problem of converging infrastructure to a desired state, a significant gap remains in the domain of imperative automation. This is the realm of the "Shinobi Platform": a system designed not merely to maintain static configurations, but to execute dynamic, intent-driven workflows—querying status, patching vulnerabilities, generating compliance reports, and orchestrating complex remediation sequences across heterogeneous systems.
 The Shinobi Platform architecture represents a fundamental shift from fragile, scripted automation to "Durable, Composable Intelligence". Our analysis indicates that the primary failure mode of current "Agentic AI" implementations is infrastructural fragility—agents crash due to transient network issues, lose state during restarts, or hallucinate invalid commands. This execution plan outlines a target end-state architecture that converges three best-in-class technologies into a unified operational fabric: Temporal provides the "Nervous System" of durable execution and orchestration; Dagger acts as the "Muscle," providing a portable, containerized execution substrate; and LangGraph serves as the "Brain," enabling cognitive planning, reasoning, and self-correction.
 This report delivers an exhaustive, comprehensive execution plan to implement the Shinobi architecture. It is structured into six distinct phases, moving from foundational research to production monitoring. It strictly adheres to the engineering principles of SOLID design, Dependency Injection (DI), and Test-Driven Development (TDD), prioritizing a "Golden Path" Minimum Viable Product (MVP) that enables developers to build and verify agents locally before deployment. By standardizing on the Model Context Protocol (MCP) , the platform decouples the cognitive layer from the tool execution layer, solving the "N×M" integration problem that plagues traditional automation platforms.
-1. The Shinobi Engineering Standards: A Constitution for Quality
+## 1. The Shinobi Engineering Standards: A Constitution for Quality
 Before articulating the implementation phases, it is imperative to define the engineering standards that will govern the Shinobi Platform. The transition from script-based automation to software-defined agency requires a rigorous application of software engineering principles. We define these as the "Shinobi Standards," which serve as the immutable constitution for all platform development.
-1.1 The Enforcement of SOLID Principles in Agentic Systems
+### 1.1 The Enforcement of SOLID Principles in Agentic Systems
 The complexity of autonomous agents, which blend probabilistic reasoning (LLMs) with deterministic execution (code), necessitates a strict adherence to SOLID principles to prevent the system from degrading into an unmaintainable "Big Ball of Mud."
-1.1.1 Single Responsibility Principle (SRP)
+#### 1.1.1 Single Responsibility Principle (SRP)
 In the context of Shinobi, SRP dictates that every component—whether a Temporal Activity, a LangGraph Node, or a Dagger Function—must possess one, and only one, reason to change.
  * The Constraint: A Temporal Activity must never mix "Decision Making" with "Tool Execution." An Activity named AnalyzeAndFixDatabase is strictly prohibited. It effectively couples the diagnostic logic with the remediation logic, making it impossible to retry one without the other.
  * The Shinobi Standard: Capabilities must be decomposed into atomic units. We require AnalyzeDatabaseMetrics, GenerateRemediationPlan, and ExecuteSQLCommand as distinct activities. This granularity allows Temporal to retry a failed SQL command without re-running the potentially expensive analysis step.
  * Architectural Implication: This enforces composability. The ExecuteSQLCommand activity becomes a reusable building block that can be employed by multiple different agents (e.g., a "Migration Agent" and a "Repair Agent"), reducing code duplication across the platform.
-1.1.2 Open/Closed Principle (OCP)
+#### 1.1.2 Open/Closed Principle (OCP)
 The platform must be open for extension but closed for modification. As the enterprise integrates new tools (e.g., switching from Jira to Linear, or adding Azure support), the core reasoning loops of the agents must not require refactoring.
  * The Constraint: Agent logic must never hardcode tool sets. A LangGraph agent that explicitly imports boto3 libraries violates this principle.
  * The Shinobi Standard: Agents must interact with the world exclusively through the Model Context Protocol (MCP) abstraction. The agent queries an MCP Host for available tools (tools/list). To add a new capability, platform engineers deploy a new MCP Server. The agent "discovers" this new capability at runtime without a single line of code changing in the agent's reasoning engine.
  * Architectural Implication: This creates a plugin architecture where the "Brain" (LangGraph) is decoupled from the "Hands" (Tools), allowing them to evolve independently.
-1.1.3 Liskov Substitution Principle (LSP) & Dependency Inversion (DIP)
+#### 1.1.3 Liskov Substitution Principle (LSP) & Dependency Inversion (DIP)
 To ensure testability and interchangeability, high-level policy (the Agent) must not depend on low-level details (the AWS SDK). Both must depend on abstractions.
  * The Constraint: No Temporal Activity may instantiate an external client (e.g., boto3.client('s3')) within its execution logic.
  * The Shinobi Standard: All external dependencies must be injected via Constructor Injection. We mandate the use of Interface Definition Languages (IDLs) or abstract base classes for all I/O operations.
    * Implementation: In Go, this means defining a CloudProvider interface. In Python, an AbstractCloudClient.
    * Mechanism: A Dependency Injection (DI) container (e.g., uber-go/dig for Go workers or dependency-injector for Python) must be used to wire these dependencies at worker startup.
  * Architectural Implication: This is the cornerstone of our testing strategy. By injecting dependencies, we can substitute the real AWS client with a MockCloudProvider during unit tests, enabling the validation of agent logic without incurring cloud costs or requiring network connectivity.
-1.2 The Test-Driven Development (TDD) Mandate
+### 1.2 The Test-Driven Development (TDD) Mandate
 The "Golden Path" for Shinobi development relies on the assertion that local verification must precede cloud deployment. The feedback loop of deploying to EKS to test a line of code is prohibitively slow and expensive.
-1.2.1 The "Offline First" Requirement
+#### 1.2.1 The "Offline First" Requirement
 All agents must be capable of running in an "Offline Mode."
  * The Standard: Every Temporal Workflow and LangGraph Agent must have a corresponding test suite that runs successfully with no network access.
  * Mechanism: This requires the rigorous application of the DI principle described above. Developers must write tests that mock the MCP tool responses. For example, a test case for a "Disk Cleanup Agent" should inject a mock response simulating a "Disk Full" event and verify that the agent generates the correct "Delete Logs" plan, without actually touching a real server.
-1.2.2 Temporal Time-Skipping
-Testing long-running workflows (e.g., "Wait 3 days for approval") is challenging in traditional frameworks.
+#### 1.2.2 Temporal Time-Skipping
+Testing long-running workflows (e.g., "Wait for approval") is challenging in traditional frameworks.
  * The Standard: All workflow tests must utilize the Temporal Test Framework.
- * Mechanism: This framework allows the test runner to manipulate the workflow's internal clock. A test can simulate the passage of 3 days in a fraction of a millisecond, verifying that the timeout logic or reminder signals fire correctly. This capability is essential for validating the "Nervous System" of the platform.
-1.3 Strictly Typed Interfaces (JSON Schema/Pydantic)
+ * Mechanism: This framework allows the test runner to manipulate the workflow's internal clock. A test can simulate the passage of an approval window in a fraction of a millisecond, verifying that the timeout logic or reminder signals fire correctly. This capability is essential for validating the "Nervous System" of the platform.
+### 1.3 Strictly Typed Interfaces (JSON Schema/Pydantic)
 The probabilistic nature of LLMs introduces the risk of "hallucination," where an agent generates invalid or dangerous commands.
  * The Standard: All inputs to Dagger Functions and all outputs from LangGraph nodes must be validated against a strict JSON Schema or Pydantic model. Free text is prohibited for inter-process communication.
  * Mechanism: We utilize the "Structured Outputs" or "Function Calling" modes of modern LLMs to constrain generation.
  * The "Repair Loop": If Pydantic validation fails (e.g., the LLM outputs a string where an integer is required), the exception is caught, formatted as a prompt ("Error: Field 'retries' must be an integer"), and fed back to the LLM. This "self-healing" mechanism ensures that invalid data never propagates to the execution layer.
-2. Phase 1: Research & Prototyping – The Local "Golden Path"
+## 2. Phase 1: Research & Prototyping – The Local "Golden Path"
 Objective: The primary objective of Phase 1 is to construct the "Golden Path"—a local development environment that mirrors the production architecture but runs entirely on a developer's laptop. This mitigates the "Works on My Machine" syndrome and accelerates iteration velocity.
-2.1 The "Golden Path" Architecture
+### 2.1 The "Golden Path" Architecture
 To achieve a production-parity local environment, we must containerize the entire platform stack. The "Golden Path" is defined as a Docker Compose or DevContainer configuration that spins up the complete Triad: Brain, Nervous System, and Muscle.
-2.1.1 The Local Stack Definition
+#### 2.1.1 The Local Stack Definition
  * Orchestrator (Temporal): We will utilize the temporal server start-dev executable. This provides a lightweight, single-binary version of the Temporal server with an ephemeral SQLite backend and a web UI.
  * Executor (Dagger): The Dagger Engine runs as a privileged Docker container. The developer's host Docker socket is mounted into this container, or it runs as a sibling container, allowing Dagger to spawn its own build containers.
  * Interface (MCP Inspector): Instead of the full Backstage UI (which is heavy), local development uses the MCP Inspector. This web-based tool allows developers to manually inspect connected MCP servers, list tools, and simulate tool calls, effectively acting as a debugger for the "Senses" of the agent.
  * Transport (STDIO): For local development, we enforce the STDIO transport for MCP. The Agent spawns the tool server as a subprocess and communicates via standard input/output. This eliminates the complexity of managing local ports and simulates the isolation of production services.
-2.2 Prototype Implementation: The "Hello World" Durable Agent
+### 2.2 Prototype Implementation: The "Hello World" Durable Agent
 To validate this architecture, Phase 1 includes the construction of a reference agent: the "GitHub Repository Analyzer." This agent demonstrates the end-to-end flow from intent to execution.
-2.2.1 Component 1: The Muscle (Dagger Module)
+#### 2.2.1 Component 1: The Muscle (Dagger Module)
 We define a Dagger Module in Python that encapsulates the physical operation.
  * Function: scan_repository(repo_url: str) -> str.
  * Logic: The function uses the Dagger SDK to spin up a git container, clone the specified URL, and extract the README.md and file structure.
  * DI Application: The dagger.Client is injected. This allows the unit test to verify that the container definition is constructed correctly without actually performing the clone.
-2.2.2 Component 2: The Senses (MCP Server)
+#### 2.2.2 Component 2: The Senses (MCP Server)
 We wrap the Dagger Module in an MCP Server.
  * Primitive: We expose a Tool named analyze_repo.
  * Schema: The server publishes a JSON schema defining the input (repo_url: format URI) and the output structure.
  * Transport: The server is configured to listen on STDIO.
-2.2.3 Component 3: The Brain (LangGraph Agent)
+#### 2.2.3 Component 3: The Brain (LangGraph Agent)
 We implement the reasoning loop using LangGraph.
  * Nodes:
    * Plan: Accepts the user goal ("Analyze the Shinobi repo") and consults the MCP tool list to generate a step-by-step plan.
    * Execute: Calls the analyze_repo tool via the MCP client.
    * Review: Analyzes the output. If the README is missing, it plans a secondary step ("List files to find documentation").
  * State: The state object is defined as a Pydantic model AgentState, containing the messages history and the current_plan.
-2.2.4 Component 4: The Nervous System (Temporal Workflow)
+#### 2.2.4 Component 4: The Nervous System (Temporal Workflow)
 We wrap the LangGraph agent in a Temporal Workflow, creating the Durable Agent.
  * Workflow Logic: The workflow serves as the persistent host. It instantiates the LangGraph graph. It executes the Plan node as a Temporal Activity. It saves the resulting state to the Temporal History. It then executes the Execute node.
  * Durability Test: We simulate a crash during the Execute phase. Upon restart, the Temporal Worker replays the history, restores the AgentState, and resumes execution without re-querying the LLM for the plan, ensuring determinism.
-2.3 Phase 1 Dependencies and Risk Analysis
+### 2.3 Phase 1 Dependencies and Risk Analysis
 The following tables detail the specific dependencies and risks identified for this initial phase.
 Table 1: Phase 1 Dependencies
 | Dependency | Version/Spec | Criticality | Purpose |
@@ -87,50 +105,50 @@ Table 2: Phase 1 Risks
 | Integration | MCP Transport Latency: STDIO performance may differ from production SSE. | Low | Low | Accept difference for local dev; validate SSE in Phase 2. |
 | Execution | Dagger Privileged Mode: Developers may lack permissions to run privileged containers on corporate laptops. | Medium | High | Provide cloud-based "Remote Dev Environments" (e.g., GitHub Codespaces) pre-configured with privileges. |
 | Cognitive | Local LLM Performance: Running local LLMs (Ollama) for dev may be too slow/dumb. | High | Medium | Configure the local agent to proxy calls to an external model (GPT-4o/Claude) via API key. |
-3. Phase 2: Core Infrastructure Deployment – The Control Plane
+## 3. Phase 2: Core Infrastructure Deployment – The Control Plane
 Objective: Phase 2 transitions from the local laptop to the cloud. The objective is to deploy the production-grade Control Plane on AWS. This phase addresses the critical architectural bifurcation between the Control Plane (management) and Data Plane (execution), and the specific decision to utilize Amazon EKS over ECS due to the privileged execution requirements of Dagger.
-3.1 The EKS-First Decision: Architecture and Justification
+### 3.1 The EKS-First Decision: Architecture and Justification
 The decision to standardize on Amazon EKS is driven by the specific constraints of the "Muscular" layer (Dagger). Dagger functions by spinning up ephemeral containers to execute build steps. This "Docker-in-Docker" (DinD) pattern requires the host container to possess privileged capabilities to access the kernel features needed for overlay filesystems and nested containerization.
  * The Fargate Limitation: AWS Fargate enforces a strict security boundary that prohibits privileged: true containers. It effectively blocks the Dagger Engine from functioning.
  * The Solution: We must maintain a hybrid EKS cluster. The Control Plane services can run on managed Fargate nodes for ease of operations, but the Data Plane workers (specifically the Dagger Executors) must run on EC2 Managed Node Groups.
-3.2 Cluster Topology and Node Group Strategy
+### 3.2 Cluster Topology and Node Group Strategy
 To ensure security and performance, we implement a strict node isolation strategy using Kubernetes Taints and Tolerations.
-3.2.1 Control Plane Node Group
+#### 3.2.1 Control Plane Node Group
  * Target: System components (CoreDNS, Temporal Frontend, MCP Host, Ingress Controllers).
  * Configuration: AWS Fargate Profiles or general-purpose EC2 (e.g., m5.large).
  * Rationale: These services are long-lived, stateless, and do not require privileged access. Fargate reduces the patching overhead.
-3.2.2 The "Heavy" Worker Node Group (The Builder Fleet)
+#### 3.2.2 The "Heavy" Worker Node Group (The Builder Fleet)
  * Target: Temporal Workers executing Dagger Activities.
  * Instance Type: c5d.2xlarge or i3en.xlarge.
  * Constraint: Local NVMe: Dagger performance is heavily dependent on caching. We select instances with local NVMe SSDs to serve as the build cache layer. This avoids the latency of network-attached storage (EBS) for high-churn build artifacts.
  * Taint Configuration: We apply a Taint: key=shinobi.io/workload, value=privileged, effect=NoSchedule.
    * Effect: This ensures that only pods that explicitly "tolerate" this taint can be scheduled here. This physically isolates the privileged Dagger workloads from the rest of the cluster, mitigating the risk of a container escape affecting the Control Plane.
  * Security Context: The DaemonSet for the Dagger Engine is configured with securityContext: privileged: true. We create a specific namespace (shinobi-executors) and exempt it from the restrictive Pod Security Standards (PSS) using OPA Gatekeeper policies, while strictly enforcing PSS on all other namespaces.
-3.3 Temporal Cluster Architecture
+### 3.3 Temporal Cluster Architecture
 While Temporal Cloud is an option, for a self-hosted reference implementation on EKS, we deploy the full Temporal cluster topology.
  * Services: We deploy the four core Temporal services: Frontend, History, Matching, and Worker.
  * Persistence Layer: We utilize Amazon RDS for PostgreSQL as the durable store for workflow history. This provides strong consistency guarantees.
  * Visibility Layer: We deploy Elasticsearch (or Amazon OpenSearch) to power the advanced filtering capabilities required by the Backstage plugin (e.g., "Show me all workflows waiting for approval initiated by User X").
- * Archival: We configure Temporal Archival to S3. This moves workflow histories from hot storage (RDS) to cold storage (S3) after a retention period (e.g., 7 days). This is critical for maintaining an immutable audit trail for compliance purposes.
-3.4 The Centralized MCP Host & Gateway
+ * Archival: We configure Temporal Archival to S3. This moves workflow histories from hot storage (RDS) to cold storage (S3) after a configured retention window. This is critical for maintaining an immutable audit trail for compliance purposes.
+### 3.4 The Centralized MCP Host & Gateway
 To solve the "N×M" connectivity problem, we deploy a centralized MCP Host service.
  * Architecture: The MCP Host runs as a stateless Deployment in the Control Plane.
  * Transport: Server-Sent Events (SSE): Unlike the local STDIO transport, the production environment utilizes SSE over HTTP.
    * Mechanism: The MCP Host exposes an HTTP endpoint (/sse). Temporal Workers connect to this endpoint to receive tool calls and stream results.
    * Benefit: SSE allows for a decoupled, distributed architecture where the Agent and the Tool do not need to reside on the same physical machine. It also supports load balancing and standard network security policies (TLS, WAF).
  * Discovery: The MCP Host implements a dynamic discovery endpoint. When a new Tool Server is deployed (e.g., a new "Jira Integration"), it registers itself with the Host. The Agents periodically poll the Host to update their internal tool definitions, ensuring they always have access to the latest capabilities without redeployment.
-4. Phase 3: The Cognitive Layer – LangGraph & Tooling
+## 4. Phase 3: The Cognitive Layer – LangGraph & Tooling
 Objective: With the infrastructure in place, Phase 3 focuses on implementing the "Brain" (LangGraph) and the "Senses" (MCP Tools). This phase realizes the core value proposition of the platform: the ability to reason about infrastructure and execute complex, multi-step workflows.
-4.1 The Tool Ecosystem: MCP Server Implementation
+### 4.1 The Tool Ecosystem: MCP Server Implementation
 We implement a suite of MCP Servers that act as the interface between the agents and the external world. Each server runs as a microservice within the EKS cluster.
-4.1.1 The AWS IaC MCP Server
+#### 4.1.1 The AWS IaC MCP Server
 This server provides the agent with "grounded" access to AWS.
  * Capabilities:
    * ListResources(region, service): Discover existing infrastructure.
    * GetStackStatus(stack_name): Check CloudFormation/Terraform state.
    * ValidateTemplate(template_body): Run static analysis (cfn-lint) on code generated by the agent before deployment.
  * Security: This server runs with a strictly scoped IAM Role for Service Accounts (IRSA). It provides Read-Only access by default, preventing the agent from bypassing the approval workflow.
-4.1.2 The Dagger Execution MCP Server
+#### 4.1.2 The Dagger Execution MCP Server
 This server exposes the raw execution power of Dagger as a structured tool.
  * Primitive: RunPipeline(module_url, function_name, arguments).
  * Mechanism: When called, this server connects to the Dagger Engine (running on the "Heavy" nodes) via the 
