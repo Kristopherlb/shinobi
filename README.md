@@ -90,6 +90,13 @@ npm run test:e2e
 npm run test:coverage
 ```
 
+### Deployment
+
+Use `shinobi up` to deploy a service manifest. The command checks CloudFormation
+stack status before deployment and will stop if the stack is in a terminal
+rollback state (for example, `ROLLBACK_COMPLETE`) so you can delete and recreate
+the stack safely before retrying.
+
 ### MCP Server
 
 ```bash

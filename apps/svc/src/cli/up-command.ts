@@ -24,6 +24,10 @@ import * as path from 'path';
 import * as fsp from 'fs/promises';
 import inquirer from 'inquirer';
 import { AwsCdkCli, RequireApproval } from '@aws-cdk/cli-lib-alpha';
+import {
+  CloudFormationClient,
+  DescribeStacksCommand
+} from '@aws-sdk/client-cloudformation';
 import { FileDiscovery } from '@shinobi/core';
 import { Logger } from './console-logger.js';
 import {
@@ -67,6 +71,28 @@ interface UpDependencies {
   logger: Logger;
 }
 
+const isStackNotFound = (error: unknown): boolean => {
+  if (!error || typeof error !== 'object') {
+    return false;
+  }
+
+  const err = error as { name?: string; message?: string };
+  return err.name === 'ValidationError' && err.message?.includes('does not exist') === true;
+};
+
+const isTerminalRollbackStatus = (status?: string): boolean => {
+  if (!status) {
+    return false;
+  }
+
+  return new Set([
+    'ROLLBACK_COMPLETE',
+    'ROLLBACK_FAILED',
+    'UPDATE_ROLLBACK_COMPLETE',
+    'UPDATE_ROLLBACK_FAILED'
+  ]).has(status);
+};
+
 export class UpCommand {
   constructor(private readonly dependencies: UpDependencies) {}
 
@@ -106,6 +132,25 @@ export class UpCommand {
       if (options.profile) {
         process.env.AWS_PROFILE = options.profile;
         logger.info(`Using AWS profile: ${options.profile}`);
+      }
+
+      const cfnClient = new CloudFormationClient({ region });
+      try {
+        const stackResponse = await cfnClient.send(
+          new DescribeStacksCommand({ StackName: stackName })
+        );
+        const stackStatus = stackResponse.Stacks?.[0]?.StackStatus;
+        if (isTerminalRollbackStatus(stackStatus)) {
+          return {
+            success: false,
+            exitCode: 2,
+            error: `Stack ${stackName} is in ${stackStatus}. Delete the stack before deploying again.`
+          };
+        }
+      } catch (error) {
+        if (!isStackNotFound(error)) {
+          throw error;
+        }
       }
 
       let latestSynth: SynthesizeServiceResult | undefined;

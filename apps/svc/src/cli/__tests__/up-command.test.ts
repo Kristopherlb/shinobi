@@ -4,6 +4,7 @@ import { UpCommand } from '../up-command.js';
 import type { UpOptions } from '../up-command.js';
 import type { Logger } from '../console-logger.js';
 import type { FileDiscovery } from '@shinobi/core';
+import { createMockStackNotFoundError } from './helpers/mock-aws.js';
 jest.mock('../utils/service-synthesizer.js', () => ({
   readManifest: jest.fn(),
   synthesizeService: jest.fn()
@@ -11,6 +12,12 @@ jest.mock('../utils/service-synthesizer.js', () => ({
 
 const deployMock = jest.fn();
 let capturedProducer: any;
+const cfnSendMock = jest.fn();
+
+jest.mock('@aws-sdk/client-cloudformation', () => ({
+  CloudFormationClient: jest.fn().mockImplementation(() => ({ send: cfnSendMock })),
+  DescribeStacksCommand: jest.fn().mockImplementation((input: any) => input)
+}));
 
 jest.mock('@aws-cdk/cli-lib-alpha', () => ({
   AwsCdkCli: class {
@@ -59,6 +66,7 @@ describe('UpCommand', () => {
   beforeEach(() => {
     jest.clearAllMocks();
     deployMock.mockReset();
+    cfnSendMock.mockReset();
     capturedProducer = undefined;
     (fileDiscovery.findManifest as jest.Mock).mockResolvedValue(manifestPath);
     readManifestMock.mockResolvedValue({
@@ -84,6 +92,9 @@ describe('UpCommand', () => {
       outputDir: path.join(os.tmpdir(), 'synth-output'),
       components: []
     });
+    cfnSendMock.mockResolvedValue({
+      Stacks: [{ StackStatus: 'CREATE_COMPLETE' }]
+    });
     deployMock.mockImplementation(async () => {
       if (capturedProducer) {
         await capturedProducer.produce({});
@@ -108,5 +119,27 @@ describe('UpCommand', () => {
     expect(result.exitCode).toBe(1);
     expect(logger.warn).toHaveBeenCalledWith('Deployment cancelled by user.');
     expect(deployMock).not.toHaveBeenCalled();
+  });
+
+  it('fails early when stack is in terminal rollback status', async () => {
+    cfnSendMock.mockResolvedValueOnce({
+      Stacks: [{ StackStatus: 'ROLLBACK_COMPLETE' }]
+    });
+
+    const result = await upCommand.execute(baseOptions);
+
+    expect(result.success).toBe(false);
+    expect(result.exitCode).toBe(2);
+    expect(result.error).toContain('ROLLBACK_COMPLETE');
+    expect(deployMock).not.toHaveBeenCalled();
+  });
+
+  it('continues deploy when stack does not exist', async () => {
+    cfnSendMock.mockRejectedValueOnce(createMockStackNotFoundError());
+
+    const result = await upCommand.execute(baseOptions);
+
+    expect(result.success).toBe(true);
+    expect(deployMock).toHaveBeenCalled();
   });
 });
