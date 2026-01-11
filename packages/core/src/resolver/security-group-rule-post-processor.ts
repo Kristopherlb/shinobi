@@ -244,8 +244,6 @@ export class SecurityGroupRulePostProcessor {
     rules: TrackedSecurityGroupRule[]
   ): SecurityGroupRuleGroup[] {
     const groupsMap = new Map<string, SecurityGroupRuleGroup>();
-    const ruleDedupKeys = new Map<string, Set<string>>();
-    const ruleConflictKeys = new Map<string, Map<string, string>>();
     
     for (const rule of rules) {
       const targetId = rule.targetSecurityGroupId;
@@ -255,54 +253,13 @@ export class SecurityGroupRulePostProcessor {
           targetSecurityGroupId: targetId,
           rules: []
         });
-        ruleDedupKeys.set(targetId, new Set());
-        ruleConflictKeys.set(targetId, new Map());
       }
       
       const group = groupsMap.get(targetId)!;
-      const dedupeKey = this.buildRuleKey(rule);
-      const conflictKey = this.buildRuleConflictKey(rule);
-      const conflictMap = ruleConflictKeys.get(targetId)!;
-      const existingType = conflictMap.get(conflictKey);
-
-      if (existingType && existingType !== rule.type) {
-        throw new Error(
-          `[SG-PostProcessor] Conflicting security group rules for ${targetId}: ` +
-          `${existingType} vs ${rule.type} (${rule.description})`
-        );
-      }
-      conflictMap.set(conflictKey, rule.type);
-
-      const dedupeSet = ruleDedupKeys.get(targetId)!;
-      if (dedupeSet.has(dedupeKey)) {
-        continue;
-      }
-      dedupeSet.add(dedupeKey);
       group.rules.push(rule);
     }
     
     return Array.from(groupsMap.values());
-  }
-
-  private static buildRuleKey(rule: TrackedSecurityGroupRule): string {
-    return [
-      rule.type,
-      rule.peer.kind,
-      rule.peer.id,
-      rule.port.from,
-      rule.port.to,
-      rule.port.protocol
-    ].join('|');
-  }
-
-  private static buildRuleConflictKey(rule: TrackedSecurityGroupRule): string {
-    return [
-      rule.peer.kind,
-      rule.peer.id,
-      rule.port.from,
-      rule.port.to,
-      rule.port.protocol
-    ].join('|');
   }
   
   /**
@@ -443,3 +400,4 @@ export class SecurityGroupRulePostProcessor {
     return `${rule.sourceComponent}-${rule.targetComponent}-${hash.substring(0, 8)}`;
   }
 }
+
