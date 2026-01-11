@@ -309,13 +309,6 @@ jest.mock('@shinobi/core', () => ({
       };
     }
 
-    getPlatformDefaults() {
-      return {
-        artifactoryHost: process.env.ARTIFACTORY_HOST || 'artifactory.company.com',
-        ociRepoBundles: process.env.OCI_REPO_BUNDLES || 'artifactory.company.com/bundles',
-        ociRepoImages: process.env.OCI_REPO_IMAGES || 'artifactory.company.com/images'
-      };
-    }
 
     getEnvironmentDefaults() {
       const env = this.builderContext.context.environment || 'dev';

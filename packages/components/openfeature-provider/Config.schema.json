@@ -1,0 +1,143 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "$id": "https://platform.shinobi.internal/schemas/openfeature-provider/v1.0.0",
+  "title": "OpenFeature Provider Component Configuration",
+  "description": "Configuration schema for OpenFeature provider component (AWS AppConfig, LaunchDarkly, or Flagsmith)",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["provider"],
+  "properties": {
+    "provider": {
+      "type": "string",
+      "description": "OpenFeature provider type",
+      "enum": ["aws-appconfig", "launchdarkly", "flagsmith"]
+    },
+    "awsAppConfig": {
+      "type": "object",
+      "description": "AWS AppConfig provider configuration",
+      "additionalProperties": false,
+      "properties": {
+        "applicationName": {
+          "type": "string",
+          "description": "AppConfig application name"
+        },
+        "environmentName": {
+          "type": "string",
+          "description": "AppConfig environment name"
+        },
+        "configurationProfileName": {
+          "type": "string",
+          "description": "AppConfig configuration profile name",
+          "default": "feature-flags"
+        },
+        "deploymentStrategy": {
+          "type": "object",
+          "description": "Deployment strategy configuration",
+          "additionalProperties": false,
+          "properties": {
+            "name": {
+              "type": "string",
+              "description": "Deployment strategy name"
+            },
+            "deploymentDurationMinutes": {
+              "type": "number",
+              "description": "Deployment duration in minutes",
+              "minimum": 0
+            },
+            "growthFactor": {
+              "type": "number",
+              "description": "Growth factor percentage",
+              "minimum": 1,
+              "maximum": 100
+            },
+            "growthType": {
+              "type": "string",
+              "description": "Growth type",
+              "enum": ["LINEAR", "EXPONENTIAL"]
+            },
+            "finalBakeTimeInMinutes": {
+              "type": "number",
+              "description": "Final bake time in minutes",
+              "minimum": 0
+            },
+            "replicateTo": {
+              "type": "string",
+              "description": "Replication target",
+              "enum": ["SSM_DOCUMENT"]
+            }
+          }
+        },
+        "monitors": {
+          "type": "array",
+          "description": "CloudWatch alarm monitors",
+          "items": {
+            "type": "object",
+            "additionalProperties": false,
+            "properties": {
+              "alarmArn": {
+                "type": "string",
+                "description": "CloudWatch alarm ARN"
+              },
+              "alarmRoleArn": {
+                "type": "string",
+                "description": "IAM role ARN for alarm access"
+              }
+            },
+            "required": ["alarmArn"]
+          },
+          "default": []
+        },
+        "retrieverServicePrincipal": {
+          "type": "string",
+          "description": "Service principal for retrieving configuration",
+          "default": "lambda.amazonaws.com"
+        }
+      }
+    },
+    "launchDarkly": {
+      "type": "object",
+      "description": "LaunchDarkly provider configuration",
+      "additionalProperties": false,
+      "properties": {
+        "projectKey": {
+          "type": "string",
+          "description": "LaunchDarkly project key"
+        },
+        "environmentKey": {
+          "type": "string",
+          "description": "LaunchDarkly environment key"
+        },
+        "clientSideId": {
+          "type": "string",
+          "description": "LaunchDarkly client-side ID (optional)"
+        }
+      }
+    },
+    "flagsmith": {
+      "type": "object",
+      "description": "Flagsmith provider configuration",
+      "additionalProperties": false,
+      "properties": {
+        "environmentKey": {
+          "type": "string",
+          "description": "Flagsmith environment key"
+        },
+        "apiUrl": {
+          "type": "string",
+          "description": "Flagsmith API URL",
+          "default": "https://api.flagsmith.com/api/v1/"
+        }
+      }
+    },
+    "tags": {
+      "type": "object",
+      "description": "Additional tags",
+      "additionalProperties": {
+        "type": "string"
+      }
+    }
+  }
+}
+
+
+

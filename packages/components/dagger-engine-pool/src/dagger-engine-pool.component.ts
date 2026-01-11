@@ -45,8 +45,20 @@ export class DaggerEnginePool extends BaseComponent {
   }
 
   public synth(): void {
-    // 1) Guardrails (compile-time)
-    this.assert(() => this.config.endpoint?.nlbInternal !== false, 'Public exposure forbidden');
+    this.logComponentEvent('synthesis_start', 'Starting Dagger Engine Pool component synthesis', {
+      component: {
+        name: this.spec.name,
+        type: this.getType()
+      },
+      context: {
+        environment: this.context.environment,
+        complianceFramework: this.context.complianceFramework
+      }
+    });
+
+    try {
+      // 1) Guardrails (compile-time)
+      this.assert(() => this.config.endpoint?.nlbInternal !== false, 'Public exposure forbidden');
     this.assert(() => !this.config.fipsMode || (this.config.compliance?.forbidNonFipsAmi !== false), 'FIPS mode requires approved AMI');
     this.assert(() => this.config.compliance?.forbidNoKms !== false, 'KMS required for all storage');
 
@@ -157,6 +169,18 @@ export class DaggerEnginePool extends BaseComponent {
       logGroupName: logGroup.logGroupName,
       otlpEndpoint: this.config.observability?.otlpEndpoint
     });
+
+      this.logComponentEvent('synthesis_complete', 'Dagger Engine Pool component synthesis completed successfully', {
+        endpointUrl: `grpcs://${nlb.loadBalancerDnsName}:8443`,
+        artifactsBucket: artifactsBucket.bucketName
+      });
+    } catch (error) {
+      this.logError(error as Error, 'component synthesis', {
+        componentType: 'dagger-engine-pool',
+        stage: 'synthesis'
+      });
+      throw error;
+    }
   }
 
   public getCapabilities() {

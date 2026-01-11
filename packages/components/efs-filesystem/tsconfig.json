@@ -16,7 +16,11 @@
   "exclude": [
     "tests/**/*",
     "dist",
-    "node_modules"
+    "node_modules",
+    "**/*.test.ts",
+    "**/*.spec.ts",
+    "**/vitest.config.ts",
+    "**/jest.config.ts"
   ],
   "references": [
     {

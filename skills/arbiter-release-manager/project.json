@@ -1,0 +1,45 @@
+{
+  "name": "@shinobi/skill-arbiter-release-manager",
+  "sourceRoot": "skills/arbiter-release-manager",
+  "targets": {
+    "test": {
+      "executor": "@nx/vitest:test",
+      "options": {
+        "passWithNoTests": true,
+        "config": "skills/arbiter-release-manager/vitest.config.ts"
+      },
+      "outputs": [
+        "{projectRoot}/coverage"
+      ]
+    },
+    "validate": {
+      "executor": "nx:run-commands",
+      "options": {
+        "command": "pnpm nx test @shinobi/skill-arbiter-release-manager",
+        "cwd": "{workspaceRoot}"
+      }
+    },
+    "validate-release": {
+      "executor": "nx:run-commands",
+      "options": {
+        "command": "./skills/arbiter-release-manager/scripts/validate-release.sh",
+        "cwd": "{workspaceRoot}"
+      },
+      "description": "Validates all release prerequisites (components, tests, evidence)"
+    },
+    "generate-evidence": {
+      "executor": "nx:run-commands",
+      "options": {
+        "command": "./skills/arbiter-release-manager/scripts/generate-evidence-bundle.sh",
+        "cwd": "{workspaceRoot}"
+      },
+      "description": "Generates FedRAMP Evidence Bundle for compliance audit"
+    }
+  },
+  "tags": [
+    "scope:shinobi",
+    "type:skill"
+  ]
+}
+
+

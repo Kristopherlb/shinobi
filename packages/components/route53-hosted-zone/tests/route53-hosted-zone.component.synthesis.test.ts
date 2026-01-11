@@ -2,24 +2,38 @@ import { Template, Match } from 'aws-cdk-lib/assertions';
 import { App, Stack } from 'aws-cdk-lib';
 import { Route53HostedZoneComponent } from '../route53-hosted-zone.component.js';
 import { Route53HostedZoneConfig } from '../route53-hosted-zone.builder.js';
-import { ComponentContext, ComponentSpec } from '../../../platform/contracts/component-interfaces.js';
+import { ComponentContext, ComponentSpec } from '@shinobi/core';
 
 const VPC_ID = 'vpc-0abc123def4567890';
 const CONTEXT_KEY = `vpcProvider:account=123456789012:filter.vpcId=${VPC_ID}:region=us-east-1`;
 
-const createContext = (framework: string = 'commercial'): ComponentContext => ({
-  serviceName: 'dns-service',
-  owner: 'platform-team',
-  environment: 'dev',
-  complianceFramework: framework,
-  region: 'us-east-1',
-  account: '123456789012',
-  tags: {
-    'service-name': 'dns-service',
+const createContext = (framework: string = 'commercial', stack?: Stack): ComponentContext => {
+  const app = stack?.node.root as App || new App();
+  const testStack = stack || new Stack(app, 'TestStack', {
+    env: { account: '123456789012', region: 'us-east-1' }
+  });
+
+  return {
+    serviceName: 'dns-service',
+    owner: 'platform-team',
     environment: 'dev',
-    'compliance-framework': framework
-  }
-});
+    complianceFramework: framework as 'commercial' | 'fedramp-moderate' | 'fedramp-high',
+    region: 'us-east-1',
+    accountId: '123456789012',
+    scope: testStack,
+    serviceLabels: {
+      'service-name': 'dns-service',
+      owner: 'platform-team',
+      environment: 'dev',
+      'compliance-framework': framework
+    },
+    tags: {
+      'service-name': 'dns-service',
+      environment: 'dev',
+      'compliance-framework': framework
+    }
+  };
+};
 
 const createSpec = (config: Partial<Route53HostedZoneConfig>): ComponentSpec => ({
   name: 'public-zone',
@@ -28,17 +42,12 @@ const createSpec = (config: Partial<Route53HostedZoneConfig>): ComponentSpec => 
 });
 
 const synthesizeComponent = (context: ComponentContext, spec: ComponentSpec) => {
-  const app = new App();
-  const stack = new Stack(app, 'TestStack', {
-    env: { account: context.account, region: context.region }
-  });
-
-  const component = new Route53HostedZoneComponent(stack, spec.name, context, spec);
+  const component = new Route53HostedZoneComponent(context.scope, spec.name, context, spec);
   component.synth();
 
   return {
     component,
-    template: Template.fromStack(stack)
+    template: Template.fromStack(context.scope as Stack)
   };
 };
 
@@ -83,7 +92,37 @@ describe('Route53HostedZoneComponent synthesis', () => {
       Name: 'example.com.'
     }));
 
-    expect(component.getCapabilities()['dns:hosted-zone']).toBeDefined();
+    const capability = component.getCapabilities()['dns:hosted-zone'];
+    expect(capability).toBeDefined();
+    expect(capability.queryLoggingEnabled).toBe(false);
+    expect(capability.queryLogGroupArn).toBeUndefined();
+  });
+
+  it('creates a public hosted zone with query logging enabled', () => {
+    const spec = createSpec({
+      zoneName: 'example.com',
+      zoneType: 'public',
+      queryLogging: {
+        enabled: true,
+        retentionDays: 90,
+        removalPolicy: 'destroy'
+      }
+    });
+
+    const { component, template } = synthesizeComponent(createContext('commercial'), spec);
+
+    template.hasResourceProperties('AWS::Route53::HostedZone', Match.objectLike({
+      Name: 'example.com.'
+    }));
+
+    // Verify query logging resource is created
+    template.hasResource('AWS::Route53::QueryLoggingConfig', Match.anyValue());
+
+    // Verify capability includes query logging info
+    const capability = component.getCapabilities()['dns:hosted-zone'];
+    expect(capability).toBeDefined();
+    expect(capability.queryLoggingEnabled).toBe(true);
+    expect(capability.queryLogGroupArn).toBeDefined();
   });
 
   it('creates a private hosted zone with VPC association and DNSSEC', () => {
@@ -98,7 +137,7 @@ describe('Route53HostedZoneComponent synthesis', () => {
       }
     });
 
-    const { template } = synthesizeComponent(createContext('commercial'), spec);
+    const { component, template } = synthesizeComponent(createContext('commercial'), spec);
 
     template.hasResourceProperties('AWS::Route53::HostedZone', Match.objectLike({
       VPCs: Match.arrayWith([
@@ -109,6 +148,10 @@ describe('Route53HostedZoneComponent synthesis', () => {
     template.hasResourceProperties('AWS::Route53::DNSSEC', Match.objectLike({
       HostedZoneId: Match.anyValue()
     }));
+
+    // Verify capability includes DNSSEC status
+    const capability = component.getCapabilities()['dns:hosted-zone'];
+    expect(capability.dnssecEnabled).toBe(true);
   });
 
   it('enables monitoring alarms when requested', () => {
@@ -131,9 +174,17 @@ describe('Route53HostedZoneComponent synthesis', () => {
 
     const { template } = synthesizeComponent(createContext('commercial'), spec);
 
+    // Verify alarm is created with consistent naming pattern
     template.hasResource('AWS::CloudWatch::Alarm', Match.objectLike({
       Properties: Match.objectLike({
-        AlarmName: Match.stringLikeRegexp('query-volume-alarm')
+        AlarmName: Match.stringLikeRegexp('dns-service-public-zone-query-volume-alarm')
+      })
+    }));
+
+    // Verify health check failures alarm
+    template.hasResource('AWS::CloudWatch::Alarm', Match.objectLike({
+      Properties: Match.objectLike({
+        AlarmName: Match.stringLikeRegexp('dns-service-public-zone-health-check-failures-alarm')
       })
     }));
   });

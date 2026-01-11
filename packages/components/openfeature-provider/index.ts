@@ -3,15 +3,12 @@
  * OpenFeature Provider Component
  */
 
-// Component exports
-export { OpenFeatureProviderComponentComponent } from './openfeature-provider.component.js';
-
-// Configuration exports
-export { 
-  OpenFeatureProviderConfig,
+export * from './src/openfeature-provider.component.js';
+export {
   OpenFeatureProviderComponentConfigBuilder,
   OPENFEATURE_PROVIDER_CONFIG_SCHEMA
-} from './openfeature-provider.builder.js';
-
-// Creator exports
-export { OpenFeatureProviderComponentCreator } from './openfeature-provider.creator.js';
+} from './src/openfeature-provider.builder.js';
+export type {
+  OpenFeatureProviderComponentConfig
+} from './src/openfeature-provider.builder.js';
+export { OpenFeatureProviderComponentCreator } from './src/openfeature-provider.creator.js';

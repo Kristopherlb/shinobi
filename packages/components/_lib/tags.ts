@@ -1,5 +1,6 @@
 // packages/components/_lib/tags.ts
-import { Tags, IConstruct } from 'aws-cdk-lib';
+import { Tags } from 'aws-cdk-lib';
+import { IConstruct } from 'constructs';
 
 export function applyComplianceTags(scope: IConstruct, params: {
   component: string; serviceType: string; framework: string; controls: string[];

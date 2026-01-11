@@ -20,12 +20,18 @@
     "isolatedModules": true,
     "resolveJsonModule": true,
     "preserveSymlinks": false,
-    "baseUrl": "."
+    "baseUrl": ".",
+    "paths": {
+      "@shinobi/core": ["packages/core/src/index.ts"],
+      "@shinobi/binders": ["packages/binders/src/index.ts"]
+    }
   },
   "exclude": [
     "dist",
     "node_modules",
     "packages/core/_temp-problematic-files/**",
-    "packages/core/_temp-problematic-platform/**"
+    "packages/core/_temp-problematic-platform/**",
+    "**/vitest.config.ts",
+    "**/jest.config.ts"
   ]
 }

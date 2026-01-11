@@ -39,6 +39,9 @@ export class DeploymentBundlePipelineBuilder extends ConfigBuilder<DeploymentBun
     return {
       environment: 'dev',
       complianceFramework: 'commercial',
+      artifactoryHost: 'artifactory.company.com',
+      ociRepoBundles: 'artifactory.company.com/bundles',
+      ociRepoImages: 'artifactory.company.com/images',
       signing: {
         keyless: true,
         fulcioUrl: 'https://fulcio.sigstore.dev',
@@ -60,6 +63,8 @@ export class DeploymentBundlePipelineBuilder extends ConfigBuilder<DeploymentBun
         nodeVersion: '20.12.2',
         fipsMode: false
       }
+      // buildMetadata is optional - should be provided via environment/platform defaults (CI/CD)
+      // Component handles undefined with 'unknown' fallback
     };
   }
 
@@ -125,24 +130,6 @@ export class DeploymentBundlePipelineBuilder extends ConfigBuilder<DeploymentBun
     };
   }
 
-  getPlatformDefaults(): Partial<DeploymentBundleConfig> {
-    return {
-      artifactoryHost: process.env.ARTIFACTORY_HOST || 'artifactory.company.com',
-      ociRepoBundles: process.env.OCI_REPO_BUNDLES || 'artifactory.company.com/bundles',
-      ociRepoImages: process.env.OCI_REPO_IMAGES || 'artifactory.company.com/images',
-      signing: {
-        keyless: process.env.COSIGN_KEYLESS === 'true',
-        kmsKeyId: process.env.COSIGN_KMS_KEY_ID,
-        fulcioUrl: process.env.FULCIO_URL || 'https://fulcio.sigstore.dev',
-        rekorUrl: process.env.REKOR_URL || 'https://rekor.sigstore.dev'
-      },
-      security: {
-        failOnCritical: process.env.SECURITY_FAIL_ON_CRITICAL !== 'false',
-        onlyFixed: process.env.SECURITY_ONLY_FIXED === 'true',
-        addCpesIfNone: process.env.SECURITY_ADD_CPES !== 'false'
-      }
-    };
-  }
 
   getEnvironmentDefaults(): Record<string, Partial<DeploymentBundleConfig>> {
     return {

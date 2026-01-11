@@ -1,4 +1,5 @@
-import { Construct } from 'constructs';
+import { describe, it, expect } from 'vitest';
+import { App, Stack, Environment } from 'aws-cdk-lib';
 import {
   ElastiCacheRedisComponentConfigBuilder,
   ElastiCacheRedisConfig
@@ -7,14 +8,34 @@ import { ComponentContext, ComponentSpec } from '@shinobi/core';
 
 type Framework = 'commercial' | 'fedramp-moderate' | 'fedramp-high';
 
-const createContext = (framework: Framework = 'commercial'): ComponentContext => ({
-  serviceName: 'test-service',
-  environment: 'dev',
-  complianceFramework: framework,
-  scope: {} as Construct,
-  region: 'us-east-1',
-  accountId: '123456789012'
-} as ComponentContext);
+const createContext = (framework: Framework = 'commercial'): ComponentContext => {
+  const app = new App();
+  const stack = new Stack(app, 'TestStack', {
+    env: {
+      account: '123456789012',
+      region: 'us-east-1'
+    } as Environment
+  });
+
+  return {
+    serviceName: 'test-service',
+    environment: 'dev',
+    complianceFramework: framework,
+    scope: stack,
+    region: 'us-east-1',
+    accountId: '123456789012',
+    serviceLabels: {
+      'service-name': 'test-service',
+      environment: 'dev',
+      'compliance-framework': framework
+    },
+    tags: {
+      'service-name': 'test-service',
+      environment: 'dev',
+      'compliance-framework': framework
+    }
+  } as ComponentContext;
+};
 
 const createSpec = (config: Partial<ElastiCacheRedisConfig> = {}): ComponentSpec => ({
   name: 'test-redis',
@@ -70,7 +91,8 @@ describe('ElastiCacheRedisComponentConfigBuilder', () => {
             enabled: true,
             logType: 'engine-log',
             destinationType: 'cloudwatch-logs',
-            destinationName: '/aws/elasticache/redis/engine/test-service-test-redis'
+            destinationName: '/aws/elasticache/redis/engine/test-service-test-redis',
+            logFormat: 'json'
           }
         ],
         alarms: {
@@ -113,5 +135,43 @@ describe('ElastiCacheRedisComponentConfigBuilder', () => {
     expect(config.security.securityGroupIds).toContain('sg-12345678');
     expect(config.multiAz.enabled).toBe(true);
     expect(config.multiAz.automaticFailover).toBe(true);
+  });
+
+  it('validates conflicting log destination types are not allowed', () => {
+    const builder = new ElastiCacheRedisComponentConfigBuilder(createContext('commercial'), createSpec({
+      monitoring: {
+        enabled: true,
+        logDelivery: [
+          {
+            enabled: true,
+            logType: 'slow-log',
+            destinationType: 'cloudwatch-logs',
+            destinationName: '/aws/elasticache/redis/slow/test-service-test-redis',
+            logFormat: 'json'
+          },
+          {
+            enabled: true,
+            logType: 'slow-log',
+            destinationType: 'kinesis-firehose',
+            destinationName: 'my-delivery-stream',
+            logFormat: 'json'
+          }
+        ],
+        alarms: {
+          cpuUtilization: { enabled: false, threshold: 0, evaluationPeriods: 1, periodMinutes: 5 },
+          cacheMisses: { enabled: false, threshold: 0, evaluationPeriods: 1, periodMinutes: 5 },
+          evictions: { enabled: false, threshold: 0, evaluationPeriods: 1, periodMinutes: 5 },
+          connections: { enabled: false, threshold: 0, evaluationPeriods: 1, periodMinutes: 5 }
+        }
+      }
+    }));
+
+    // Builder should allow the config (validation happens in component synthesis)
+    const config = builder.buildSync();
+    expect(config.monitoring.logDelivery).toHaveLength(2);
+    expect(config.monitoring.logDelivery[0].logType).toBe('slow-log');
+    expect(config.monitoring.logDelivery[1].logType).toBe('slow-log');
+    expect(config.monitoring.logDelivery[0].destinationType).toBe('cloudwatch-logs');
+    expect(config.monitoring.logDelivery[1].destinationType).toBe('kinesis-firehose');
   });
 });

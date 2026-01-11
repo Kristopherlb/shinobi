@@ -7,8 +7,8 @@
 export { StepFunctionsStateMachineComponent } from './step-functions-statemachine.component.js';
 
 // Configuration exports
+export type { StepFunctionsStateMachineConfig } from './step-functions-statemachine.builder.js';
 export { 
-  StepFunctionsStateMachineConfig,
   StepFunctionsStateMachineConfigBuilder,
   STEP_FUNCTIONS_STATEMACHINE_CONFIG_SCHEMA
 } from './step-functions-statemachine.builder.js';

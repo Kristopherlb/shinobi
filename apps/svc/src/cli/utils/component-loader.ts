@@ -121,24 +121,41 @@ export const loadComponentCreators = async (
 
     if (!moduleExports) {
       // Debug: log which paths were tried (only in debug mode or for specific packages)
-      if (packageDir === 'iam-role' && options?.logger) {
+      if ((packageDir === 'iam-role' || packageDir === 'lambda-worker') && options?.logger) {
         options.logger.debug(`Failed to load module for ${packageName}. Tried source: ${sourceCandidates.slice(0, 3).join(', ')}...`);
       }
       continue;
     }
 
-    const creator = findCreatorExport(moduleExports ?? {});
+    const creator = findCreatorExport(moduleExports ?? {}, packageName);
     if (!creator) {
       // Debug: log what exports were found (only in debug mode or for specific packages)
-      if (packageDir === 'iam-role' && options?.logger) {
-        options.logger.debug(`Creator not found in exports for ${packageName}. Exports: ${Object.keys(moduleExports).join(', ')}`);
+      if (packageDir === 'iam-role') {
+        const message = `Creator not found in exports for ${packageName}. Exports: ${Object.keys(moduleExports ?? {}).join(', ')}`;
+        if (options?.logger) {
+          options.logger.debug(message);
+        } else {
+          console.error(`[DEBUG] ${message}`);
+        }
       }
       continue;
     }
 
+    if (packageName?.includes('iam-role')) {
+      console.error(`[DEBUG] Creator found: ${creator.componentType}, checking catalog...`);
+    }
+
     const catalogEntry = catalogByType.get(creator.componentType);
     const lifecycle = catalogEntry?.lifecycle ?? 'production';
+    
+    if (packageName?.includes('iam-role')) {
+      console.error(`[DEBUG] Catalog entry: ${catalogEntry ? 'found' : 'NOT FOUND'}, lifecycle: ${lifecycle}, includeNonProduction: ${options?.includeNonProduction}`);
+    }
+    
     if (!options?.includeNonProduction && lifecycle !== 'production') {
+      if (packageName?.includes('iam-role')) {
+        console.error(`[DEBUG] Skipping due to lifecycle check: lifecycle=${lifecycle}, includeNonProduction=${options?.includeNonProduction}`);
+      }
       continue;
     }
 
@@ -177,24 +194,48 @@ export const loadComponentCreators = async (
       packageName
     };
 
+    if (packageName?.includes('iam-role') || packageName?.includes('lambda-worker')) {
+      console.error(`[DEBUG] Registering creator: ${creator.componentType}`);
+    }
     creators.set(creator.componentType, { entry, creator });
   }
 
   return creators;
 };
 
-const findCreatorExport = (moduleExports: Record<string, any>): PlatformComponentCreator | undefined => {
+const findCreatorExport = (moduleExports: Record<string, any>, packageName?: string): PlatformComponentCreator | undefined => {
+  // Debug: log exports for iam-role and lambda-worker
+  if (packageName?.includes('iam-role') || packageName?.includes('lambda-worker')) {
+    console.error(`[DEBUG] findCreatorExport for ${packageName}:`);
+    console.error(`[DEBUG]   Exports keys: ${Object.keys(moduleExports).join(', ')}`);
+    for (const [key, value] of Object.entries(moduleExports)) {
+      console.error(`[DEBUG]   ${key}: type=${typeof value}, isFunction=${typeof value === 'function'}, isClass=${typeof value === 'function' && value.prototype?.constructor === value}`);
+    }
+  }
+  
   for (const exported of Object.values(moduleExports)) {
     if (typeof exported === 'function') {
       try {
         const instance = new exported();
         if (instance && typeof instance.createComponent === 'function' && typeof instance.componentType === 'string') {
-          return instance as PlatformComponentCreator;
+        if (packageName?.includes('iam-role') || packageName?.includes('lambda-worker')) {
+          console.error(`[DEBUG] Found creator: ${instance.componentType}`);
         }
-      } catch {
+        return instance as PlatformComponentCreator;
+      } else if (packageName?.includes('iam-role') || packageName?.includes('lambda-worker')) {
+        console.error(`[DEBUG] Instance check failed: hasCreateComponent=${typeof instance?.createComponent === 'function'}, componentType=${instance?.componentType}`);
+      }
+    } catch (error) {
+      if (packageName?.includes('iam-role') || packageName?.includes('lambda-worker')) {
+        console.error(`[DEBUG] Failed to instantiate: ${error}`);
+      }
         continue;
       }
     }
+  }
+  
+  if (packageName?.includes('iam-role') || packageName?.includes('lambda-worker')) {
+    console.error(`[DEBUG] No creator found in exports`);
   }
   return undefined;
 };

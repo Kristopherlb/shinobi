@@ -5,7 +5,8 @@
     "build": {
       "executor": "nx:run-commands",
       "options": {
-        "command": "tsc -p packages/components/api-gateway-rest/tsconfig.json"
+        "command": "tsc -p packages/components/api-gateway-rest/tsconfig.json",
+        "cwd": "{workspaceRoot}"
       },
       "inputs": [
         "default",
@@ -21,7 +22,8 @@
     "typecheck": {
       "executor": "nx:run-commands",
       "options": {
-        "command": "tsc --noEmit -p packages/components/api-gateway-rest/tsconfig.json"
+        "command": "tsc --noEmit -p packages/components/api-gateway-rest/tsconfig.json",
+        "cwd": "{workspaceRoot}"
       }
     },
     "test": {
@@ -37,7 +39,8 @@
     "lint": {
       "executor": "nx:run-commands",
       "options": {
-        "command": "eslint packages/components/api-gateway-rest --ext .ts --no-ignore"
+        "command": "eslint packages/components/api-gateway-rest --ext .ts --no-ignore",
+        "cwd": "{projectRoot}"
       }
     }
   },

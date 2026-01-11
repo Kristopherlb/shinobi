@@ -12,6 +12,7 @@ import {
   ConfigBuilderContext,
   ComponentConfigSchema
 } from '@shinobi/core';
+import configSchema from './Config.schema.json' with { type: 'json' };
 
 export interface SecretsManagerGenerateSecretConfig {
   enabled?: boolean;
@@ -70,9 +71,13 @@ export interface SecretsManagerAccessPoliciesConfig {
 export interface SecretsManagerConfig {
   secretName?: string;
   description?: string;
+  highRiskEnvironment?: boolean; // Enable enhanced security defaults for high-risk environments
   secretValue?: {
     secretStringValue?: string;
     secretBinaryValue?: Buffer;
+    secretArn?: string; // Reference to existing secret in Secrets Manager
+    generateSecret?: boolean; // Generate new secret
+    allowUnsafePlainText?: boolean; // Only for non-sensitive configuration values
   };
   generateSecret?: SecretsManagerGenerateSecretConfig;
   automaticRotation?: SecretsManagerRotationConfig;
@@ -83,255 +88,12 @@ export interface SecretsManagerConfig {
   accessPolicies?: SecretsManagerAccessPoliciesConfig;
 }
 
-export const SECRETS_MANAGER_CONFIG_SCHEMA: ComponentConfigSchema = {
-  type: 'object',
-  additionalProperties: false,
-  properties: {
-    secretName: {
-      type: 'string',
-      description: 'Name of the secret (auto-generated when omitted)',
-      pattern: '^[a-zA-Z0-9_./\\-]+$',
-      maxLength: 512
-    },
-    description: {
-      type: 'string',
-      description: 'Description of the secret',
-      maxLength: 2048
-    },
-    secretValue: {
-      type: 'object',
-      description: 'Initial secret value',
-      properties: {
-        secretStringValue: {
-          type: 'string',
-          description: 'Secret represented as plain text'
-        }
-      },
-      additionalProperties: false
-    },
-    generateSecret: {
-      type: 'object',
-      description: 'Automatic secret generation configuration',
-      properties: {
-        enabled: {
-          type: 'boolean',
-          default: false
-        },
-        excludeCharacters: {
-          type: 'string',
-          default: '"@/\\\''
-        },
-        includeSpace: {
-          type: 'boolean',
-          default: false
-        },
-        passwordLength: {
-          type: 'number',
-          minimum: 4,
-          maximum: 1024,
-          default: 32
-        },
-        requireEachIncludedType: {
-          type: 'boolean',
-          default: true
-        },
-        secretStringTemplate: {
-          type: 'string'
-        },
-        generateStringKey: {
-          type: 'string'
-        }
-      },
-      additionalProperties: false,
-      default: {
-        enabled: false,
-        excludeCharacters: '"@/\\\'',
-        includeSpace: false,
-        passwordLength: 32,
-        requireEachIncludedType: true
-      }
-    },
-    automaticRotation: {
-      type: 'object',
-      description: 'Automatic rotation configuration',
-      properties: {
-        enabled: {
-          type: 'boolean',
-          default: false
-        },
-        rotationLambda: {
-          type: 'object',
-          additionalProperties: false,
-          properties: {
-            functionArn: {
-              type: 'string'
-            },
-            createFunction: {
-              type: 'boolean',
-              default: false
-            },
-            runtime: {
-              type: 'string'
-            },
-            enableTracing: {
-              type: 'boolean',
-              default: false
-            }
-          },
-          default: {
-            createFunction: false,
-            enableTracing: false
-          }
-        },
-        schedule: {
-          type: 'object',
-          additionalProperties: false,
-          properties: {
-            automaticallyAfterDays: {
-              type: 'number',
-              minimum: 1,
-              maximum: 365,
-              default: 365
-            }
-          },
-          default: {
-            automaticallyAfterDays: 365
-          }
-        }
-      },
-      additionalProperties: false,
-      default: {
-        enabled: false,
-        rotationLambda: {
-          createFunction: false,
-          enableTracing: false
-        },
-        schedule: {
-          automaticallyAfterDays: 365
-        }
-      }
-    },
-    replicas: {
-      type: 'array',
-      description: 'Multi-region replica configuration',
-      items: {
-        type: 'object',
-        properties: {
-          region: {
-            type: 'string'
-          },
-          kmsKeyArn: {
-            type: 'string'
-          }
-        },
-        required: ['region'],
-        additionalProperties: false
-      },
-      default: []
-    },
-    encryption: {
-      type: 'object',
-      description: 'Encryption configuration',
-      properties: {
-        kmsKeyArn: {
-          type: 'string'
-        },
-        createCustomerManagedKey: {
-          type: 'boolean',
-          default: false
-        },
-        enableKeyRotation: {
-          type: 'boolean',
-          default: false
-        }
-      },
-      additionalProperties: false,
-      default: {
-        createCustomerManagedKey: false,
-        enableKeyRotation: false
-      }
-    },
-    recovery: {
-      type: 'object',
-      description: 'Deletion protection and recovery window settings',
-      properties: {
-        deletionProtection: {
-          type: 'boolean',
-          default: false
-        },
-        recoveryWindowInDays: {
-          type: 'number',
-          minimum: 7,
-          maximum: 30,
-          default: 30
-        }
-      },
-      additionalProperties: false,
-      default: {
-        deletionProtection: false,
-        recoveryWindowInDays: 30
-      }
-    },
-    monitoring: {
-      type: 'object',
-      description: 'Monitoring and alarm configuration',
-      properties: {
-        enabled: {
-          type: 'boolean',
-          default: false
-        },
-        rotationFailureThreshold: {
-          type: 'number',
-          minimum: 1,
-          default: 1
-        },
-        unusualAccessThresholdMs: {
-          type: 'number',
-          minimum: 100,
-          default: 5000
-        }
-      },
-      additionalProperties: false,
-      default: {
-        enabled: false,
-        rotationFailureThreshold: 1,
-        unusualAccessThresholdMs: 5000
-      }
-    },
-    accessPolicies: {
-      type: 'object',
-      description: 'Secret access policy controls',
-      properties: {
-        denyInsecureTransport: {
-          type: 'boolean',
-          default: true
-        },
-        restrictToVpce: {
-          type: 'boolean',
-          default: false
-        },
-        allowedVpceIds: {
-          type: 'array',
-          items: {
-            type: 'string'
-          },
-          default: []
-        },
-        requireTemporaryCredentials: {
-          type: 'boolean',
-          default: false
-        }
-      },
-      additionalProperties: false,
-      default: {
-        denyInsecureTransport: true,
-        restrictToVpce: false,
-        allowedVpceIds: [],
-        requireTemporaryCredentials: false
-      }
-    }
-  }
-};
+/**
+ * JSON Schema for Secrets Manager configuration validation
+ * 
+ * Schema is imported from Config.schema.json file per component standards.
+ */
+export const SECRETS_MANAGER_CONFIG_SCHEMA = configSchema as ComponentConfigSchema;
 
 export class SecretsManagerComponentConfigBuilder extends ConfigBuilder<SecretsManagerConfig> {
   constructor(options: ConfigBuilderContext) {
@@ -378,6 +140,58 @@ export class SecretsManagerComponentConfigBuilder extends ConfigBuilder<SecretsM
         requireTemporaryCredentials: false
       }
     };
+  }
+
+  /**
+   * Layer 2: Compliance Framework Defaults
+   * 
+   * Provides enhanced security defaults based on risk assessment flags rather than framework checks.
+   * High-risk environment defaults can be set via:
+   * - Platform config files (`/config/{framework}.yml`) setting `highRiskEnvironment: true`
+   * - Service-level configuration in `service.yml`
+   * - Environment defaults
+   * 
+   * This ensures configuration is data-driven and risk-based, not framework-dependent.
+   */
+  protected getComplianceFrameworkDefaults(): Partial<SecretsManagerConfig> {
+    // Check if highRiskEnvironment flag is set in component config or platform config
+    const componentConfig = this.builderContext.spec.config as Partial<SecretsManagerConfig> | undefined;
+    let isHighRisk = componentConfig?.highRiskEnvironment ?? false;
+    
+    // Also check platform config if available (loaded by base class)
+    try {
+      const platformConfig = (this as any)._loadPlatformConfiguration();
+      if (platformConfig?.highRiskEnvironment) {
+        isHighRisk = true;
+      }
+    } catch {
+      // Platform config might not be available in tests, ignore
+    }
+    
+    if (isHighRisk) {
+      // Apply enhanced security defaults for high-risk environments
+      // These defaults align with FedRAMP Moderate/High requirements when highRiskEnvironment is set
+      return {
+        automaticRotation: {
+          enabled: true,
+          schedule: {
+            automaticallyAfterDays: 90 // Moderate default; can be overridden to 30 for higher risk
+          }
+        },
+        encryption: {
+          createCustomerManagedKey: true,
+          enableKeyRotation: false // Can be enabled explicitly for higher risk scenarios
+        },
+        accessPolicies: {
+          restrictToVpce: true
+        },
+        monitoring: {
+          enabled: true
+        }
+      };
+    }
+    
+    return {}; // Standard/default environment - use hardcoded fallbacks
   }
 
   public buildSync(): SecretsManagerConfig {

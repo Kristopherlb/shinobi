@@ -1,0 +1,137 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "$id": "https://platform.shinobi.internal/schemas/sqs-queue/v1.0.0",
+  "title": "SQS Queue Component Configuration",
+  "description": "Configuration schema for AWS SQS Queue component with compliance hardening and DLQ support",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [],
+  "properties": {
+    "queueName": {
+      "type": "string",
+      "description": "Queue name (optional, will be auto-generated from component name). Required for production environments.",
+      "pattern": "^[a-zA-Z0-9-_]+$",
+      "maxLength": 80
+    },
+    "description": {
+      "type": "string",
+      "description": "Component description for documentation",
+      "maxLength": 1024
+    },
+    "visibilityTimeoutSeconds": {
+      "type": "integer",
+      "description": "Visibility timeout in seconds. IMPORTANT: When used as a Lambda event source, this MUST be >= the Lambda function timeout. AWS requirement: queue visibility timeout >= function timeout. Best practice: set to at least 6x the Lambda timeout for retry safety.",
+      "minimum": 0,
+      "maximum": 43200,
+      "default": 30
+    },
+    "messageRetentionDays": {
+      "type": "integer",
+      "description": "Message retention period in days",
+      "minimum": 1,
+      "maximum": 14,
+      "default": 4
+    },
+    "receiveMessageWaitTimeSeconds": {
+      "type": "integer",
+      "description": "Receive message wait time in seconds (for long polling)",
+      "minimum": 0,
+      "maximum": 20,
+      "default": 0
+    },
+    "encryption": {
+      "type": "object",
+      "description": "Encryption configuration",
+      "additionalProperties": false,
+      "properties": {
+        "enabled": {
+          "type": "boolean",
+          "description": "Enable encryption for the queue",
+          "default": false
+        },
+        "kmsKeyId": {
+          "type": "string",
+          "description": "KMS key ID or ARN for encryption (optional, will be created if needed for high-risk environments)"
+        },
+        "enableKeyRotation": {
+          "type": "boolean",
+          "description": "Enable automatic KMS key rotation (recommended for high-risk environments)",
+          "default": false
+        }
+      }
+    },
+    "deadLetterQueue": {
+      "type": "object",
+      "description": "Dead letter queue configuration",
+      "additionalProperties": false,
+      "properties": {
+        "enabled": {
+          "type": "boolean",
+          "description": "Enable dead letter queue",
+          "default": false
+        },
+        "maxReceiveCount": {
+          "type": "integer",
+          "description": "Maximum number of times a message can be received before moving to DLQ",
+          "minimum": 1,
+          "maximum": 1000,
+          "default": 3
+        },
+        "retentionDays": {
+          "type": "integer",
+          "description": "Message retention period for DLQ in days",
+          "minimum": 1,
+          "maximum": 14,
+          "default": 14
+        }
+      }
+    },
+    "monitoring": {
+      "type": "object",
+      "description": "Monitoring and observability configuration",
+      "additionalProperties": false,
+      "properties": {
+        "enabled": {
+          "type": "boolean",
+          "description": "Enable monitoring",
+          "default": true
+        },
+        "detailedMetrics": {
+          "type": "boolean",
+          "description": "Enable detailed CloudWatch metrics",
+          "default": false
+        },
+        "dashboard": {
+          "type": "object",
+          "description": "CloudWatch dashboard configuration",
+          "additionalProperties": false,
+          "properties": {
+            "enabled": {
+              "type": "boolean",
+              "description": "Enable CloudWatch dashboard creation",
+              "default": true
+            },
+            "name": {
+              "type": "string",
+              "description": "Custom dashboard name (optional, auto-generated if not provided)",
+              "maxLength": 255
+            }
+          }
+        }
+      }
+    },
+    "highRiskEnvironment": {
+      "type": "boolean",
+      "description": "Enable enhanced security defaults for high-risk environments. When true, automatically enables encryption, dead letter queue, and detailed metrics. Can be set in platform config files or service.yml.",
+      "default": false
+    },
+    "tags": {
+      "type": "object",
+      "description": "Additional resource tags merged with platform standard tags",
+      "additionalProperties": {
+        "type": "string"
+      }
+    }
+  }
+}
+

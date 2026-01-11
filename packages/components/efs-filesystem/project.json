@@ -10,7 +10,8 @@
     "build": {
       "executor": "nx:run-commands",
       "options": {
-        "command": "tsc -p packages/components/efs-filesystem/tsconfig.json"
+        "command": "tsc -p packages/components/efs-filesystem/tsconfig.json",
+        "cwd": "{workspaceRoot}"
       },
       "outputs": [
         "{workspaceRoot}/dist/packages/components/efs-filesystem"
@@ -29,13 +30,15 @@
     "lint": {
       "executor": "nx:run-commands",
       "options": {
-        "command": "eslint packages/components/efs-filesystem --ext .ts"
+        "command": "eslint packages/components/efs-filesystem --ext .ts",
+        "cwd": "{projectRoot}"
       }
     },
     "typecheck": {
       "executor": "nx:run-commands",
       "options": {
-        "command": "tsc --noEmit -p packages/components/efs-filesystem/tsconfig.json"
+        "command": "tsc --noEmit -p packages/components/efs-filesystem/tsconfig.json",
+        "cwd": "{workspaceRoot}"
       }
     }
   }

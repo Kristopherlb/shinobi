@@ -28,6 +28,7 @@
     "dist",
     "node_modules",
     "**/*.test.ts",
+    "**/*.config.ts",
     "tests",
     "coverage"
   ],

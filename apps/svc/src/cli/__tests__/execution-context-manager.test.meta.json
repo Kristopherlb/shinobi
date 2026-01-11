@@ -1,0 +1,25 @@
+{
+  "id": "TP-cli-execution-context-manager-001",
+  "level": "unit",
+  "capability": "Execution context caching, logger context updates, and manifest path resolution",
+  "oracle": "exact",
+  "invariants": [
+    "Context cached by manifestPath::environment key",
+    "Pipeline called only on cache miss",
+    "Logger context updated on every resolve",
+    "Manifest paths normalized to absolute",
+    "Cache cleared on reset"
+  ],
+  "fixtures": ["TempDir", "MockFileDiscovery", "MockPipeline"],
+  "inputs": {
+    "shape": "Manifest path and environment options",
+    "notes": "Uses temp directories for file I/O. Mocks file discovery and validation pipeline. No network I/O."
+  },
+  "risks": [],
+  "dependencies": ["vitest", "@shinobi/core"],
+  "evidence": [],
+  "compliance_refs": ["std://platform-logging-standard"],
+  "ai_generated": true,
+  "human_reviewed_by": "platform-team"
+}
+

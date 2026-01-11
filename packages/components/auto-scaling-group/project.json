@@ -10,7 +10,8 @@
     "build": {
       "executor": "nx:run-commands",
       "options": {
-        "command": "tsc -p packages/components/auto-scaling-group/tsconfig.json"
+        "command": "tsc -p packages/components/auto-scaling-group/tsconfig.json",
+        "cwd": "{workspaceRoot}"
       },
       "outputs": [
         "{workspaceRoot}/dist/packages/components/auto-scaling-group"
@@ -29,13 +30,15 @@
     "lint": {
       "executor": "nx:run-commands",
       "options": {
-        "command": "eslint packages/components/auto-scaling-group --ext .ts"
+        "command": "eslint packages/components/auto-scaling-group --ext .ts",
+        "cwd": "{projectRoot}"
       }
     },
     "typecheck": {
       "executor": "nx:run-commands",
       "options": {
-        "command": "tsc --noEmit -p packages/components/auto-scaling-group/tsconfig.json"
+        "command": "tsc --noEmit -p packages/components/auto-scaling-group/tsconfig.json",
+        "cwd": "{workspaceRoot}"
       }
     }
   }

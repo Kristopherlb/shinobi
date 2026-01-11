@@ -43,17 +43,23 @@ export class ApiGatewayHttpComponent extends BaseComponent {
   }
 
   public synth(): void {
-    this.logger.info('Starting synthesis for API Gateway HTTP component', {
-      component: this.spec.name,
-      service: this.context.serviceName,
-      compliance: this.context.complianceFramework
+    this.logComponentEvent('synthesis_start', 'Starting API Gateway HTTP component synthesis', {
+      component: {
+        name: this.spec.name,
+        type: this.getType()
+      },
+      context: {
+        environment: this.context.environment,
+        complianceFramework: this.context.complianceFramework
+      }
     });
 
-    const configBuilder = new ApiGatewayHttpConfigBuilder({
-      context: this.context,
-      spec: this.spec
-    });
-    this.config = configBuilder.buildSync();
+    try {
+      const configBuilder = new ApiGatewayHttpConfigBuilder({
+        context: this.context,
+        spec: this.spec
+      });
+      this.config = configBuilder.buildSync();
 
     this.createAccessLogGroup();
     this.createHttpApi();
@@ -69,11 +75,18 @@ export class ApiGatewayHttpComponent extends BaseComponent {
     this.registerConstructs();
     this.registerCapabilities();
 
-    this.logger.info('Completed synthesis for API Gateway HTTP component', {
-      component: this.spec.name,
-      apiId: this.httpApi?.httpApiId,
-      stage: this.stage?.stageName ?? '$default'
-    });
+      this.logComponentEvent('synthesis_complete', 'API Gateway HTTP component synthesis completed successfully', {
+        apiId: this.httpApi?.httpApiId,
+        stage: this.stage?.stageName ?? '$default',
+        customDomainConfigured: !!this.domainName
+      });
+    } catch (error) {
+      this.logError(error as Error, 'component synthesis', {
+        componentType: 'api-gateway-http',
+        stage: 'synthesis'
+      });
+      throw error;
+    }
   }
 
   public getCapabilities(): ComponentCapabilities {
@@ -653,14 +666,13 @@ export class ApiGatewayHttpComponent extends BaseComponent {
   }
 
   private configureApiKeyUsage(): void {
-    if (!this.config.security?.enableApiKey) {
-      return;
+    if (this.config.security?.enableApiKey) {
+      this.logComponentEvent('api_key_not_supported', 'API keys with usage plans are not supported by API Gateway HTTP APIs (v2). Use API Gateway REST API component for API key support, or use JWT/Lambda authorizers for HTTP APIs.', {
+        component: this.spec.name,
+        service: this.context.serviceName,
+        recommendation: 'Use api-gateway-rest component for API key support, or configure JWT/Lambda authorizers for HTTP APIs'
+      });
     }
-
-    this.logComponentEvent('api_key_enforcement_pending', 'API key enforcement requested but usage plan provisioning is not yet implemented', {
-      component: this.spec.name,
-      service: this.context.serviceName
-    });
   }
 
   private configureObservabilityTelemetry(): void {

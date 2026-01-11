@@ -4,6 +4,7 @@
  * Provides utilities for creating mock AWS SDK clients for testing.
  */
 
+import { vi } from 'vitest';
 import type { CloudFormationClient, GetTemplateCommand } from '@aws-sdk/client-cloudformation';
 
 /**
@@ -11,7 +12,7 @@ import type { CloudFormationClient, GetTemplateCommand } from '@aws-sdk/client-c
  */
 export function createMockCloudFormationClient(): CloudFormationClient {
   return {
-    send: jest.fn()
+    send: vi.fn()
   } as unknown as CloudFormationClient;
 }
 

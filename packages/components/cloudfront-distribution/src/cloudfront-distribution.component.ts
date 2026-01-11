@@ -17,7 +17,8 @@ import {
   CloudFrontAlarmConfig,
   CloudFrontMonitoringConfig,
   CloudFrontXRayTracingConfig,
-  CloudFrontObservabilityConfig
+  CloudFrontObservabilityConfig,
+  CloudFrontOriginConfig
 } from './cloudfront-distribution.builder.js';
 
 /**
@@ -35,6 +36,8 @@ export class CloudFrontDistributionComponent extends BaseComponent {
   private origin?: cloudfront.IOrigin;
   private config?: CloudFrontDistributionConfig;
   private observabilityTelemetry?: Record<string, any>;
+  private originAccessControl?: cloudfront.S3OriginAccessControl;
+  private loggingBucket?: s3.IBucket;
 
   constructor(scope: Construct, id: string, context: ComponentContext, spec: ComponentSpec) {
     super(scope, id, context, spec);
@@ -98,9 +101,15 @@ export class CloudFrontDistributionComponent extends BaseComponent {
    * Resolves the origin construct based on the manifest configuration. Each origin type has
    * a bespoke validation block because the inputs differ (S3 bucket name vs ALB DNS vs custom host).
    * Whenever a required field is missing we fail fast with an explanatory error.
+   * 
+   * Validates that conflicting origin fields are not set (e.g., s3BucketName should not be set
+   * when origin type is 'alb' or 'custom').
    */
   private createOrigin(): void {
     const originConfig = this.config!.origin;
+
+    // Validate no conflicting origin fields are set
+    this.validateOriginConfig(originConfig);
 
     switch (originConfig.type) {
       case 's3': {
@@ -109,9 +118,37 @@ export class CloudFrontDistributionComponent extends BaseComponent {
         }
 
         const bucket = s3.Bucket.fromBucketName(this, 'OriginBucket', originConfig.s3BucketName);
+        
+        // Determine signing behavior (default to SIGV4_ALWAYS if not specified)
+        const signingOption = originConfig.oacSigning ?? 'SIGV4_ALWAYS';
+        const signing = this.resolveSigningOption(signingOption);
+        
+        // Create Origin Access Control (OAC) for S3 - modern best practice (replaces OAI)
+        this.originAccessControl = new cloudfront.S3OriginAccessControl(this, 'OriginAccessControl', {
+          originAccessControlName: `${this.context.serviceName}-${this.spec.name}-oac`,
+          description: `Origin Access Control for ${this.context.serviceName} CloudFront distribution`,
+          signing
+        });
+
+        this.applyStandardTags(this.originAccessControl, {
+          'resource-type': 'origin-access-control',
+          'purpose': 's3-origin-access'
+        });
+
+        this.registerConstruct('originAccessControl', this.originAccessControl);
+
+        // Use S3BucketOrigin with Origin Access Control ID
         this.origin = origins.S3BucketOrigin.withBucketDefaults(bucket, {
           originPath: originConfig.originPath,
-          customHeaders: originConfig.customHeaders
+          customHeaders: originConfig.customHeaders,
+          originAccessControlId: this.originAccessControl.originAccessControlId
+        });
+
+        this.logComponentEvent('oac_created', 'Created Origin Access Control for S3 origin', {
+          oacId: this.originAccessControl.originAccessControlId,
+          bucketName: originConfig.s3BucketName,
+          signingBehavior: signingOption,
+          note: 'OAC is the modern replacement for OAI (Origin Access Identity)'
         });
         break;
       }
@@ -147,6 +184,60 @@ export class CloudFrontDistributionComponent extends BaseComponent {
       originType: originConfig.type,
       originPath: originConfig.originPath ?? '/'
     });
+  }
+
+  /**
+   * Validates that conflicting origin fields are not set. Each origin type should only have
+   * the appropriate fields set (e.g., s3BucketName for 's3', albDnsName for 'alb', etc.).
+   */
+  private validateOriginConfig(originConfig: CloudFrontOriginConfig): void {
+    const type = originConfig.type;
+    const conflicts: string[] = [];
+
+    if (type === 's3') {
+      if (originConfig.albDnsName) {
+        conflicts.push('albDnsName should not be set when origin type is "s3"');
+      }
+      if (originConfig.customDomainName) {
+        conflicts.push('customDomainName should not be set when origin type is "s3"');
+      }
+    } else if (type === 'alb') {
+      if (originConfig.s3BucketName) {
+        conflicts.push('s3BucketName should not be set when origin type is "alb"');
+      }
+      if (originConfig.customDomainName) {
+        conflicts.push('customDomainName should not be set when origin type is "alb"');
+      }
+    } else if (type === 'custom') {
+      if (originConfig.s3BucketName) {
+        conflicts.push('s3BucketName should not be set when origin type is "custom"');
+      }
+      if (originConfig.albDnsName) {
+        conflicts.push('albDnsName should not be set when origin type is "custom"');
+      }
+    }
+
+    if (conflicts.length > 0) {
+      throw new Error(
+        `Conflicting origin configuration for type "${type}": ${conflicts.join('; ')}. ` +
+        `Each origin type should only have the appropriate fields set.`
+      );
+    }
+  }
+
+  /**
+   * Resolves the OAC signing option to CDK Signing enum.
+   */
+  private resolveSigningOption(signingOption: string): cloudfront.Signing {
+    switch (signingOption) {
+      case 'SIGV4_NO_OVERRIDE':
+        return cloudfront.Signing.SIGV4_NO_OVERRIDE;
+      case 'NEVER':
+        return cloudfront.Signing.NEVER;
+      case 'SIGV4_ALWAYS':
+      default:
+        return cloudfront.Signing.SIGV4_ALWAYS;
+    }
   }
 
   /**
@@ -294,16 +385,17 @@ export class CloudFrontDistributionComponent extends BaseComponent {
 
   /**
    * Enforces HTTPS everywhere unless the manifest explicitly loosens the policy. This is the last
-   * line of defence after the builder's secure defaults.
+   * line of defence after the builder's secure defaults. Defaults to redirect-to-https for security.
    */
   private resolveViewerProtocolPolicy(policy?: string): cloudfront.ViewerProtocolPolicy {
     switch (policy) {
       case 'https-only':
         return cloudfront.ViewerProtocolPolicy.HTTPS_ONLY;
-      case 'redirect-to-https':
-        return cloudfront.ViewerProtocolPolicy.REDIRECT_TO_HTTPS;
-      default:
+      case 'allow-all':
         return cloudfront.ViewerProtocolPolicy.ALLOW_ALL;
+      case 'redirect-to-https':
+      default:
+        return cloudfront.ViewerProtocolPolicy.REDIRECT_TO_HTTPS;
     }
   }
 
@@ -342,9 +434,7 @@ export class CloudFrontDistributionComponent extends BaseComponent {
   }
 
   /**
-   * Logging becomes a no-op when the manifest requests it but omits a bucket. Instead of failing the
-   * entire synthesis, we log a structured event and disable logging to avoid deploying an invalid
-   * distribution. Platform policy can escalate this scenario via CDK Nag or higher-level checks.
+   * Resolves the logging bucket. Creates a default bucket if logging is enabled but no bucket is provided.
    */
   private resolveLogBucket(): s3.IBucket | undefined {
     if (!this.config!.logging?.enabled) {
@@ -352,12 +442,34 @@ export class CloudFrontDistributionComponent extends BaseComponent {
     }
 
     const bucketName = this.config!.logging?.bucket;
-    if (!bucketName) {
-      this.logComponentEvent('logging_disabled', 'Logging requested without bucket; disabling logging to avoid synthesis failure');
-      return undefined;
+    if (bucketName) {
+      // Use existing bucket
+      this.loggingBucket = s3.Bucket.fromBucketName(this, 'LogBucket', bucketName);
+      return this.loggingBucket;
     }
 
-    return s3.Bucket.fromBucketName(this, 'LogBucket', bucketName);
+    // Create default logging bucket if not provided
+    const defaultBucketName = `${this.context.serviceName}-cloudfront-logs-${this.context.region}`;
+    this.loggingBucket = new s3.Bucket(this, 'LoggingBucket', {
+      bucketName: defaultBucketName,
+      blockPublicAccess: s3.BlockPublicAccess.BLOCK_ALL,
+      encryption: s3.BucketEncryption.S3_MANAGED,
+      versioned: false,
+      removalPolicy: cdk.RemovalPolicy.RETAIN
+    });
+
+    this.applyStandardTags(this.loggingBucket, {
+      'resource-type': 's3-bucket',
+      'purpose': 'cloudfront-logs'
+    });
+
+    this.registerConstruct('loggingBucket', this.loggingBucket);
+
+    this.logComponentEvent('logging_bucket_created', 'Created default CloudFront logging bucket', {
+      bucketName: defaultBucketName
+    });
+
+    return this.loggingBucket;
   }
 
   /**
@@ -383,6 +495,8 @@ export class CloudFrontDistributionComponent extends BaseComponent {
       hardeningProfile: this.config!.hardeningProfile ?? 'baseline',
       enabled: true,
       status: 'Deployed',
+      loggingBucketArn: this.loggingBucket?.bucketArn,
+      originAccessControlId: this.originAccessControl?.originAccessControlId,
       telemetry
     };
   }
@@ -434,6 +548,26 @@ export class CloudFrontDistributionComponent extends BaseComponent {
         periodSeconds: 300,
         unit: 'Seconds',
         description: 'Average time in seconds for CloudFront to receive the first byte from origin'
+      },
+      {
+        id: `${distributionId}-bytes-downloaded`,
+        namespace: 'AWS/CloudFront',
+        metricName: 'BytesDownloaded',
+        dimensions: baseDimensions,
+        statistic: 'Sum',
+        periodSeconds: 300,
+        unit: 'Bytes',
+        description: 'Total bytes downloaded by viewers from CloudFront (for cost monitoring)'
+      },
+      {
+        id: `${distributionId}-bytes-uploaded`,
+        namespace: 'AWS/CloudFront',
+        metricName: 'BytesUploaded',
+        dimensions: baseDimensions,
+        statistic: 'Sum',
+        periodSeconds: 300,
+        unit: 'Bytes',
+        description: 'Total bytes uploaded to CloudFront by viewers (for cost monitoring)'
       }
     ];
 

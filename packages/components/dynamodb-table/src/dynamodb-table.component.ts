@@ -8,7 +8,7 @@ import * as cdk from 'aws-cdk-lib';
 import { Construct } from 'constructs';
 import { NagSuppressions } from 'cdk-nag';
 import {
-  Component,
+  BaseComponent,
   ComponentSpec,
   ComponentContext,
   ComponentCapabilities
@@ -21,7 +21,7 @@ import {
   DynamoDbGsiConfig
 } from './dynamodb-table.builder.js';
 
-export class DynamoDbTableComponent extends Component {
+export class DynamoDbTableComponent extends BaseComponent {
   private table?: dynamodb.Table;
   private kmsKey?: kms.IKey;
   private managedKmsKey?: kms.Key;
@@ -36,11 +36,12 @@ export class DynamoDbTableComponent extends Component {
   }
 
   public synth(): void {
-    this.logger.info('Starting DynamoDB table synthesis', {
-      context: { action: 'synthesis_start', resource: 'dynamodb_table' },
-      data: {
-        componentName: this.spec.name,
-        componentType: this.getType(),
+    this.logComponentEvent('synthesis_start', 'Starting DynamoDB table component synthesis', {
+      component: {
+        name: this.spec.name,
+        type: this.getType()
+      },
+      context: {
         environment: this.context.environment,
         complianceFramework: this.context.complianceFramework
       }
@@ -50,17 +51,14 @@ export class DynamoDbTableComponent extends Component {
       const builder = new DynamoDbTableComponentConfigBuilder(this.context, this.spec);
       this.config = builder.buildSync();
 
-      this.logger.info('Resolved DynamoDB table configuration', {
-        context: { action: 'config_resolved', resource: 'dynamodb_table' },
-        data: {
-          tableName: this.config.tableName,
-          billingMode: this.config.billingMode,
-          pointInTimeRecovery: this.config.pointInTimeRecovery,
-          tableClass: this.config.tableClass,
-          encryption: this.config.encryption.type,
-          monitoringEnabled: this.config.monitoring.enabled,
-          hardeningProfile: this.config.hardeningProfile
-        }
+      this.logComponentEvent('config_resolved', 'Resolved DynamoDB table configuration', {
+        tableName: this.config.tableName,
+        billingMode: this.config.billingMode,
+        pointInTimeRecovery: this.config.pointInTimeRecovery,
+        tableClass: this.config.tableClass,
+        encryption: this.config.encryption.type,
+        monitoringEnabled: this.config.monitoring.enabled,
+        hardeningProfile: this.config.hardeningProfile
       });
 
       this.resolveEncryptionKey();
@@ -97,23 +95,17 @@ export class DynamoDbTableComponent extends Component {
         });
       }
 
-      this.logger.info('DynamoDB table synthesis completed', {
-        context: { action: 'synthesis_complete', resource: 'dynamodb_table' },
-        data: {
-          tableName: this.table!.tableName,
-          tableArn: this.table!.tableArn,
-          streamArn: this.table!.tableStreamArn,
-          encryptionType: this.config.encryption.type,
-          kmsKeyArn: this.kmsKey?.keyArn
-        }
+      this.logComponentEvent('synthesis_complete', 'DynamoDB table component synthesis completed successfully', {
+        tableName: this.table!.tableName,
+        tableArn: this.table!.tableArn,
+        streamArn: this.table!.tableStreamArn,
+        encryptionType: this.config.encryption.type,
+        kmsKeyArn: this.kmsKey?.keyArn
       });
     } catch (error) {
-      this.logger.error('DynamoDB table synthesis failed', error as Error, {
-        context: { action: 'synthesis_error', resource: 'dynamodb_table' },
-        data: {
-          componentName: this.spec.name,
-          error: (error as Error).message
-        }
+      this.logError(error as Error, 'component synthesis', {
+        componentType: 'dynamodb-table',
+        stage: 'synthesis'
       });
       throw error;
     }

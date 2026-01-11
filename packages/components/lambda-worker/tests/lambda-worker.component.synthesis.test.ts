@@ -4,6 +4,7 @@ import { App, Stack } from 'aws-cdk-lib';
 import { LambdaWorkerComponent } from '../lambda-worker.component.js';
 import { LambdaWorkerConfig } from '../lambda-worker.builder.js';
 import { ComponentContext, ComponentSpec } from '../../../platform/contracts/component-interfaces.js';
+import { SqsQueueComponent } from '../../sqs-queue/sqs-queue.component.js';
 
 const FIXTURE_PATH = path.join(__dirname, 'fixtures/basic-lambda');
 const VPC_ID = 'vpc-0abc123def4567890';
@@ -160,5 +161,124 @@ describe('LambdaWorkerComponent synthesis', () => {
       }),
       TracingConfig: Match.objectLike({ Mode: 'Active' })
     }));
+  });
+
+  describe('SQS Event Source Constraint Validation', () => {
+    it('SqsEventSource__VisibilityTimeoutLessThanLambdaTimeout__ThrowsError', () => {
+      const context = createContext('commercial');
+      const app = new App();
+      const stack = new Stack(app, 'TestStack', {
+        env: { account: context.account, region: context.region }
+      });
+
+      // Create SQS queue with low visibility timeout (30s)
+      const queueSpec: ComponentSpec = {
+        name: 'test-queue',
+        type: 'sqs-queue',
+        config: {
+          visibilityTimeoutSeconds: 30,
+          description: 'Test queue with low visibility timeout'
+        }
+      };
+      const queueComponent = new SqsQueueComponent(stack, 'test-queue', context, queueSpec);
+      queueComponent.synth();
+
+      // Create Lambda worker with higher timeout (60s) that references the queue
+      const lambdaSpec = createSpec({
+        timeoutSeconds: 60,
+        eventSources: [
+          {
+            type: 'sqs',
+            queueArn: '@component:test-queue',
+            batchSize: 10
+          }
+        ]
+      });
+
+      const lambdaComponent = new LambdaWorkerComponent(stack, 'test-lambda', context, lambdaSpec);
+
+      // Synthesis should throw error because visibility timeout (30s) < Lambda timeout (60s)
+      expect(() => {
+        lambdaComponent.synth();
+      }).toThrow(/SQS queue visibility timeout.*must be >= Lambda timeout/);
+    });
+
+    it('SqsEventSource__VisibilityTimeoutEqualToLambdaTimeout__Succeeds', () => {
+      const context = createContext('commercial');
+      const app = new App();
+      const stack = new Stack(app, 'TestStack', {
+        env: { account: context.account, region: context.region }
+      });
+
+      // Create SQS queue with visibility timeout equal to Lambda timeout (60s)
+      const queueSpec: ComponentSpec = {
+        name: 'test-queue',
+        type: 'sqs-queue',
+        config: {
+          visibilityTimeoutSeconds: 60,
+          description: 'Test queue with visibility timeout equal to Lambda timeout'
+        }
+      };
+      const queueComponent = new SqsQueueComponent(stack, 'test-queue', context, queueSpec);
+      queueComponent.synth();
+
+      // Create Lambda worker with timeout (60s) that references the queue
+      const lambdaSpec = createSpec({
+        timeoutSeconds: 60,
+        eventSources: [
+          {
+            type: 'sqs',
+            queueArn: '@component:test-queue',
+            batchSize: 10
+          }
+        ]
+      });
+
+      const lambdaComponent = new LambdaWorkerComponent(stack, 'test-lambda', context, lambdaSpec);
+
+      // Synthesis should succeed (visibility timeout >= Lambda timeout)
+      expect(() => {
+        lambdaComponent.synth();
+      }).not.toThrow();
+    });
+
+    it('SqsEventSource__VisibilityTimeout6xLambdaTimeout__SucceedsWithWarning', () => {
+      const context = createContext('commercial');
+      const app = new App();
+      const stack = new Stack(app, 'TestStack', {
+        env: { account: context.account, region: context.region }
+      });
+
+      // Create SQS queue with visibility timeout = 6x Lambda timeout (360s)
+      const queueSpec: ComponentSpec = {
+        name: 'test-queue',
+        type: 'sqs-queue',
+        config: {
+          visibilityTimeoutSeconds: 360, // 6x 60s
+          description: 'Test queue with recommended visibility timeout'
+        }
+      };
+      const queueComponent = new SqsQueueComponent(stack, 'test-queue', context, queueSpec);
+      queueComponent.synth();
+
+      // Create Lambda worker with timeout (60s) that references the queue
+      const lambdaSpec = createSpec({
+        timeoutSeconds: 60,
+        eventSources: [
+          {
+            type: 'sqs',
+            queueArn: '@component:test-queue',
+            batchSize: 10
+          }
+        ]
+      });
+
+      const lambdaComponent = new LambdaWorkerComponent(stack, 'test-lambda', context, lambdaSpec);
+
+      // Synthesis should succeed without warnings (visibility timeout >= 6x Lambda timeout)
+      expect(() => {
+        lambdaComponent.synth();
+      }).not.toThrow();
+    });
   });
 });

@@ -10,7 +10,7 @@ import {
   ComponentSpec, 
   ComponentContext, 
   IComponentCreator 
-} from '../@shinobi/core/component-interfaces.js';
+} from '@shinobi/core';
 import { StepFunctionsStateMachineComponent } from './step-functions-statemachine.component.js';
 import { StepFunctionsStateMachineConfig, STEP_FUNCTIONS_STATEMACHINE_CONFIG_SCHEMA } from './step-functions-statemachine.builder.js';
 
@@ -69,11 +69,23 @@ export class StepFunctionsStateMachineCreator implements IComponentCreator {
    * Factory method to create component instances
    */
   public createComponent(
-    scope: Construct, 
     spec: ComponentSpec, 
     context: ComponentContext
   ): StepFunctionsStateMachineComponent {
-    return new StepFunctionsStateMachineComponent(scope, spec.name, context, spec);
+    if (!context.scope) {
+      throw new Error('ComponentContext.scope is required to create step-functions-statemachine components');
+    }
+    return new StepFunctionsStateMachineComponent(context.scope as Construct, spec.name, context, spec);
+  }
+
+  /**
+   * Process component (alias for createComponent)
+   */
+  public processComponent(
+    spec: ComponentSpec,
+    context: ComponentContext
+  ): StepFunctionsStateMachineComponent {
+    return this.createComponent(spec, context);
   }
   
   /**

@@ -158,8 +158,41 @@ export class SecurityGroupImportComponent extends BaseComponent {
    * Synthesize the component (required by BaseComponent)
    */
   public synth(): void {
-    // Component is already synthesized in constructor
-    // This method is required by the abstract base class
+    this.logComponentEvent('synthesis_start', 'Starting Security Group Import component synthesis', {
+      component: {
+        name: this.spec.name,
+        type: this.getType()
+      },
+      context: {
+        environment: this.context.environment,
+        complianceFramework: this.context.complianceFramework
+      }
+    });
+
+    try {
+      // Component resources are already created in constructor
+      // Register constructs and capabilities here for consistency
+
+      this.registerConstruct('main', this.securityGroup);
+      this.registerConstruct('securityGroup', this.securityGroup);
+      this.registerConstruct('ssmParameter', this.ssmParameter);
+
+      this.registerCapability('security-group:import', {
+        securityGroupId: this.securityGroup.securityGroupId,
+        ssmParameterName: this.config.securityGroup.ssmParameterName
+      });
+
+      this.logComponentEvent('synthesis_complete', 'Security Group Import component synthesis completed successfully', {
+        securityGroupId: this.securityGroup.securityGroupId,
+        ssmParameterName: this.config.securityGroup.ssmParameterName
+      });
+    } catch (error) {
+      this.logError(error as Error, 'component synthesis', {
+        componentType: 'security-group-import',
+        stage: 'synthesis'
+      });
+      throw error;
+    }
   }
 
   /**

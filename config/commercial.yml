@@ -284,6 +284,24 @@ defaults:
           treatMissingData: breaching
     tags: {}
 
+  ec2-instance:
+    instanceType: t3.micro
+    storage:
+      rootVolumeSize: 20
+      rootVolumeType: gp3
+      encrypted: true
+      deleteOnTermination: true
+    monitoring:
+      detailed: false
+      cloudWatchAgent: false
+      logRetentionInDays: 90
+    security:
+      requireImdsv2: false
+      httpTokens: optional
+      nitroEnclaves: false
+      allowedSshCidrs: []
+    tags: {}
+
   glue-job:
     glueVersion: "4.0"
     jobType: glueetl
@@ -346,9 +364,9 @@ defaults:
     backup:
       enabled: true
       retentionDays: 7
-      window: "03:00-05:00"
+      window: "00:00-02:00" # Changed from 03:00-05:00 to avoid overlap with maintenance window (sun:03:00-sun:04:00). Backup runs daily midnight-2am, maintenance runs Sunday 3-4am.
     maintenance:
-      window: "sun:03:00-sun:04:00"
+      window: "sun:03:00-sun:04:00" # Maintenance window: Sunday 3:00-4:00 UTC (backup runs daily 00:00-02:00, no overlap)
     multiAz:
       enabled: false
       automaticFailover: false
@@ -727,6 +745,14 @@ defaults:
         replicateTo: SSM_DOCUMENT
       monitors: []
       retrieverServicePrincipal: lambda.amazonaws.com
+    tags: {}
+
+  ai-provider:
+    provider: openai
+    model: gpt-4o-mini
+    endpoint: https://api.openai.com/v1
+    auth:
+      type: apiKey
     tags: {}
 
   feature-flag:
@@ -1353,7 +1379,7 @@ defaults:
 
   rds-postgres:
     instance:
-      engineVersion: "15.4"
+      engineVersion: "18.1"
       instanceType: t3.micro
       allocatedStorage: 20
       multiAz: false
@@ -1408,3 +1434,17 @@ defaults:
       logExports:
         - postgresql
     hardeningProfile: baseline
+
+  sqs-queue:
+    visibilityTimeoutSeconds: 30
+    messageRetentionDays: 4
+    receiveMessageWaitTimeSeconds: 0
+    encryption:
+      enabled: false
+    deadLetterQueue:
+      enabled: false
+      maxReceiveCount: 3
+      retentionDays: 14
+    monitoring:
+      enabled: true
+      detailedMetrics: false

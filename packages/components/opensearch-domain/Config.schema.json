@@ -1,0 +1,276 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "$id": "https://platform.shinobi.internal/schemas/opensearch-domain/v1.0.0",
+  "title": "OpenSearch Domain Component Configuration",
+  "description": "Configuration schema for AWS OpenSearch Domain component",
+  "type": "object",
+  "additionalProperties": false,
+  "definitions": {
+    "alarmConfig": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "enabled": { "type": "boolean", "default": false },
+        "threshold": { "type": "number" },
+        "evaluationPeriods": { "type": "number", "minimum": 1, "default": 1 },
+        "periodMinutes": { "type": "number", "minimum": 1, "default": 5 },
+        "comparisonOperator": {
+          "type": "string",
+          "enum": ["gt", "gte", "lt", "lte"],
+          "default": "gt"
+        },
+        "treatMissingData": {
+          "type": "string",
+          "enum": ["breaching", "not-breaching", "ignore", "missing"],
+          "default": "not-breaching"
+        },
+        "statistic": { "type": "string", "default": "Maximum" },
+        "tags": {
+          "type": "object",
+          "additionalProperties": { "type": "string" },
+          "default": {}
+        }
+      }
+    },
+    "logConfig": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "enabled": { "type": "boolean", "default": false },
+        "createLogGroup": { "type": "boolean", "default": true },
+        "logGroupName": { "type": "string" },
+        "retentionInDays": { "type": "number", "minimum": 1, "default": 90 },
+        "removalPolicy": {
+          "type": "string",
+          "enum": ["retain", "destroy"],
+          "default": "destroy"
+        },
+        "tags": {
+          "type": "object",
+          "additionalProperties": { "type": "string" },
+          "default": {}
+        }
+      }
+    },
+    "accessPolicyStatement": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["effect", "actions"],
+      "properties": {
+        "effect": {
+          "type": "string",
+          "enum": ["Allow", "Deny"]
+        },
+        "principals": {
+          "type": "array",
+          "items": { "type": "string" },
+          "default": []
+        },
+        "actions": {
+          "type": "array",
+          "items": { "type": "string" }
+        },
+        "resources": {
+          "type": "array",
+          "items": { "type": "string" },
+          "default": []
+        },
+        "conditions": {
+          "type": "object",
+          "default": {}
+        }
+      }
+    }
+  },
+  "properties": {
+    "domainName": { "type": "string" },
+    "version": {
+      "type": "string",
+      "enum": ["OpenSearch_1.3", "OpenSearch_2.3", "OpenSearch_2.5", "OpenSearch_2.7"],
+      "default": "OpenSearch_2.7"
+    },
+    "cluster": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "instanceType": { "type": "string" },
+        "instanceCount": { "type": "number", "minimum": 1, "maximum": 80 },
+        "zoneAwarenessEnabled": { "type": "boolean" },
+        "availabilityZoneCount": { "type": "number", "minimum": 1, "maximum": 3 },
+        "dedicatedMasterEnabled": { "type": "boolean" },
+        "masterInstanceType": { "type": "string" },
+        "masterInstanceCount": { "type": "number", "enum": [3, 5] },
+        "warmEnabled": { "type": "boolean" },
+        "warmInstanceType": { "type": "string" },
+        "warmInstanceCount": { "type": "number", "minimum": 2, "maximum": 150 }
+      }
+    },
+    "ebs": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "enabled": { "type": "boolean" },
+        "volumeType": { "type": "string", "enum": ["gp2", "gp3", "io1", "io2"] },
+        "volumeSize": { "type": "number", "minimum": 10, "maximum": 3584 },
+        "iops": { "type": "number", "minimum": 100, "maximum": 16000 },
+        "throughput": { "type": "number", "minimum": 125, "maximum": 1000 }
+      }
+    },
+    "vpc": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "enabled": { "type": "boolean" },
+        "vpcId": { "type": "string" },
+        "subnetIds": {
+          "type": "array",
+          "items": { "type": "string" },
+          "default": []
+        },
+        "securityGroupIds": {
+          "type": "array",
+          "items": { "type": "string" },
+          "default": []
+        },
+        "createSecurityGroup": { "type": "boolean" },
+        "ingressRules": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "additionalProperties": false,
+            "required": ["port", "cidr"],
+            "properties": {
+              "port": { "type": "number", "minimum": 1, "maximum": 65535 },
+              "protocol": { "type": "string", "enum": ["tcp", "udp"], "default": "tcp" },
+              "cidr": { "type": "string" },
+              "description": { "type": "string" }
+            }
+          },
+          "default": []
+        }
+      }
+    },
+    "encryption": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "atRest": {
+          "type": "object",
+          "additionalProperties": false,
+          "properties": {
+            "enabled": { "type": "boolean" },
+            "kmsKeyArn": { "type": "string" }
+          }
+        },
+        "nodeToNode": { "type": "boolean" }
+      }
+    },
+    "domainEndpoint": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "enforceHttps": { "type": "boolean" },
+        "tlsSecurityPolicy": {
+          "type": "string",
+          "enum": ["Policy-Min-TLS-1-0-2019-07", "Policy-Min-TLS-1-2-2019-07"]
+        }
+      }
+    },
+    "advancedSecurity": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "enabled": { "type": "boolean" },
+        "internalUserDatabaseEnabled": { "type": "boolean" },
+        "masterUserName": { "type": "string" },
+        "masterUserPassword": {
+          "type": "string",
+          "description": "DEPRECATED: Use masterUserPasswordSecretArn instead. Plain passwords are not allowed for security."
+        },
+        "masterUserPasswordSecretArn": {
+          "type": "string",
+          "description": "ARN of secret in Secrets Manager containing the master user password. Required when advancedSecurity.enabled is true and internalUserDatabaseEnabled is true."
+        }
+      }
+    },
+    "logging": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "slowSearch": { "$ref": "#/definitions/logConfig" },
+        "slowIndex": { "$ref": "#/definitions/logConfig" },
+        "application": { "$ref": "#/definitions/logConfig" },
+        "audit": { "$ref": "#/definitions/logConfig" }
+      }
+    },
+    "monitoring": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "enabled": { "type": "boolean" },
+        "alarms": {
+          "type": "object",
+          "additionalProperties": false,
+          "properties": {
+            "clusterStatusRed": { "$ref": "#/definitions/alarmConfig" },
+            "clusterStatusYellow": { "$ref": "#/definitions/alarmConfig" },
+            "jvmMemoryPressure": { "$ref": "#/definitions/alarmConfig" },
+            "freeStorageSpace": { "$ref": "#/definitions/alarmConfig" }
+          }
+        }
+      }
+    },
+    "snapshot": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "automatedSnapshotStartHour": { "type": "number", "minimum": 0, "maximum": 23 }
+      }
+    },
+    "maintenance": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "autoTune": {
+          "type": "object",
+          "additionalProperties": false,
+          "properties": {
+            "enabled": { "type": "boolean" },
+            "desiredState": {
+              "type": "string",
+              "enum": ["ENABLED", "DISABLED"]
+            }
+          }
+        },
+        "offPeakWindowEnabled": { "type": "boolean" }
+      }
+    },
+    "accessPolicies": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "statements": {
+          "type": "array",
+          "items": { "$ref": "#/definitions/accessPolicyStatement" },
+          "default": []
+        }
+      }
+    },
+    "advancedOptions": {
+      "type": "object",
+      "additionalProperties": { "type": "string" },
+      "default": {}
+    },
+    "hardeningProfile": { "type": "string" },
+    "removalPolicy": {
+      "type": "string",
+      "enum": ["retain", "destroy"]
+    },
+    "tags": {
+      "type": "object",
+      "additionalProperties": { "type": "string" },
+      "default": {}
+    }
+  }
+}
+

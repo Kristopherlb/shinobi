@@ -5,7 +5,6 @@
  * Makes the component discoverable by the platform and provides factory methods.
  */
 
-import { Construct } from 'constructs';
 import { 
   ComponentSpec, 
   ComponentContext, 
@@ -69,11 +68,20 @@ export class OpenSearchDomainComponentCreator implements IComponentCreator {
    * Factory method to create component instances
    */
   public createComponent(
-    scope: Construct,
     spec: ComponentSpec,
     context: ComponentContext
   ): OpenSearchDomainComponent {
-    return new OpenSearchDomainComponent(scope, spec.name, context, spec);
+    return new OpenSearchDomainComponent(context.scope, spec.name, context, spec);
+  }
+
+  /**
+   * Process component (alias for createComponent for compatibility)
+   */
+  public processComponent(
+    spec: ComponentSpec,
+    context: ComponentContext
+  ): OpenSearchDomainComponent {
+    return this.createComponent(spec, context);
   }
   
   /**

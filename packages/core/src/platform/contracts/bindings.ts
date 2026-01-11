@@ -48,7 +48,20 @@ export type {
 // COMPLIANCE FRAMEWORK TYPES
 // =============================================================================
 
-export type ComplianceFramework = 'commercial' | 'fedramp-moderate' | 'fedramp-high' | 'hipaa';
+/**
+ * Compliance framework identifier
+ * 
+ * Supports any string value to allow consumers to define custom frameworks
+ * (e.g., 'hipaa', 'sox', 'pci-dss', 'iso27001') without platform code changes.
+ * 
+ * Standard frameworks:
+ * - 'commercial' - Standard commercial deployment
+ * - 'fedramp-moderate' - FedRAMP Moderate baseline
+ * - 'fedramp-high' - FedRAMP High baseline
+ * 
+ * Custom frameworks are supported via configuration files in /config/{framework}.yml
+ */
+export type ComplianceFramework = string;
 
 export type ComponentType = 's3-bucket' | 'lambda-api' | 'rds-postgres' | 'ec2-instance' | 'dynamodb-table' | 'sqs-queue' | 'sns-topic';
 
@@ -63,6 +76,7 @@ export type CacheCapability = 'cache:redis' | 'cache:memcached' | 'cache:elastic
 export type LambdaCapability = 'lambda:function' | 'function:lambda' | 'compute:lambda';
 export type ApiCapability = 'api:rest' | 'api:http' | 'api:websocket';
 export type MonitoringCapability = 'monitoring:cloudwatch' | 'monitoring:logs' | 'monitoring:metrics';
+export type AIProviderCapabilityType = 'ai:provider';
 
 export type Capability =
   | DbCapability
@@ -71,7 +85,8 @@ export type Capability =
   | CacheCapability
   | LambdaCapability
   | ApiCapability
-  | MonitoringCapability;
+  | MonitoringCapability
+  | AIProviderCapabilityType;
 
 /**
  * Note: External users can use custom capability strings (e.g., 'db:snowflake', 'storage:gcs')
@@ -218,6 +233,20 @@ export interface ApiGatewayCapabilityData {
   };
 }
 
+export interface AIProviderCapabilityData {
+  type: 'ai:provider';
+  providerType: 'openai' | 'anthropic' | 'bedrock' | 'gemini' | 'ollama';
+  model: string;
+  endpoint?: string;
+  region?: string;
+  auth: {
+    type: 'apiKey' | 'aws' | 'none';
+    secretRef?: string;
+  };
+  connectionConfig: Record<string, string>;
+  environmentVariables: Record<string, string>;
+}
+
 /**
  * Custom capability data escape hatch for external users
  * Allows any capability type not defined in the core platform
@@ -236,6 +265,7 @@ export type CapabilityData =
   | RedisCapabilityData
   | LambdaCapabilityData
   | ApiGatewayCapabilityData
+  | AIProviderCapabilityData
   | CustomCapabilityData; // Escape hatch for external extensibility
 
 // =============================================================================

@@ -1,0 +1,53 @@
+{
+  "name": "@shinobi/components-secrets-manager",
+  "sourceRoot": "packages/components/secrets-manager",
+  "targets": {
+    "build": {
+      "executor": "nx:run-commands",
+      "options": {
+        "command": "node_modules/.bin/tsc -b packages/components/secrets-manager/tsconfig.json",
+        "cwd": "{workspaceRoot}"
+      },
+      "outputs": [
+        "{workspaceRoot}/dist/packages/components/secrets-manager"
+      ]
+    },
+    "typecheck": {
+      "executor": "nx:run-commands",
+      "options": {
+        "command": "tsc -p packages/components/secrets-manager/tsconfig.json --noEmit",
+        "cwd": "{workspaceRoot}"
+      }
+    },
+    "clean": {
+      "executor": "nx:run-commands",
+      "options": {
+        "command": "rimraf dist/packages/components/secrets-manager",
+        "cwd": "{workspaceRoot}"
+      }
+    },
+    "test": {
+      "executor": "@nx/vitest:test",
+      "outputs": [
+        "{projectRoot}/coverage"
+      ],
+      "options": {
+        "config": "packages/components/secrets-manager/vitest.config.ts",
+        "passWithNoTests": true
+      }
+    },
+    "lint": {
+      "executor": "nx:run-commands",
+      "options": {
+        "command": "eslint . --ext .ts,.tsx",
+        "cwd": "{projectRoot}"
+      }
+    }
+  },
+  "tags": [
+    "scope:shinobi",
+    "type:component",
+    "infra:aws"
+  ]
+}
+

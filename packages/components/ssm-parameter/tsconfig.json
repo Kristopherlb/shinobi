@@ -20,13 +20,17 @@
   },
   "include": [
     "index.ts",
-    "*.ts",
-    "!**/*.test.ts"
+    "*.component.ts",
+    "*.builder.ts",
+    "*.creator.ts"
   ],
   "exclude": [
     "dist",
     "node_modules",
     "**/*.test.ts",
+    "**/*.spec.ts",
+    "vitest.config.ts",
+    "jest.config.ts",
     "tests"
   ],
   "references": [

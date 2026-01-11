@@ -1,0 +1,36 @@
+apiVersion: backstage.io/v1alpha1
+kind: Component
+metadata:
+  name: ai-provider
+  title: AI Provider
+  description: AI provider component registering connection metadata for OpenAI, Gemini, Anthropic, Bedrock, and Ollama.
+  tags:
+    - component
+    - ai
+    - llm
+    - provider
+    - platform
+  annotations:
+    platform.shinobi.dev/component-type: ai-provider
+    github.com/project-slug: project42/shinobi
+    backstage.io/techdocs-ref: dir:.
+spec:
+  type: platform
+  lifecycle: production
+  owner: group:default/platform-engineering
+  system: system:default/shinobi
+  metadata:
+    platform:
+      componentType: ai-provider
+      category: platform
+      description: AI provider component exposing connection metadata for external and local LLMs.
+      capabilities:
+        - ai:provider
+      awsServices:
+        - bedrock
+      tags:
+        required:
+          - ai
+          - integration
+      documentation:
+        readme: packages/components/ai-provider/README.md

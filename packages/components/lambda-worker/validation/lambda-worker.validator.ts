@@ -6,7 +6,7 @@
  */
 
 import { ComponentContext, ComponentSpec } from '@shinobi/core';
-import { LambdaWorkerConfig } from '../lambda-worker.builder.js';
+import { LambdaWorkerConfig } from '../src/lambda-worker.builder.js';
 
 /**
  * Validation error interface
@@ -211,10 +211,11 @@ export class LambdaWorkerValidator {
 
     // Security tools validation
     if (this.context.complianceFramework === 'fedramp-high') {
-      if (!this.config.securityTools?.runtimeSecurity) {
+      // Note: lambda-worker only supports falco, not runtimeSecurity
+      if (!this.config.securityTools?.falco) {
         warnings.push({
-          field: 'securityTools.runtimeSecurity',
-          message: 'Runtime security monitoring is recommended for high-compliance environments',
+          field: 'securityTools.falco',
+          message: 'Runtime security monitoring (Falco) is recommended for high-compliance environments',
           severity: 'warning',
           complianceFramework: this.context.complianceFramework
         });
@@ -342,10 +343,10 @@ export class LambdaWorkerValidator {
     if (this.config.eventSources && this.config.eventSources.length > 0) {
       for (let i = 0; i < this.config.eventSources.length; i++) {
         const eventSource = this.config.eventSources[i];
-        if (!eventSource.type || !eventSource.arn) {
+        if (!eventSource.type) {
           errors.push({
             field: `eventSources[${i}]`,
-            message: 'Event source must have both type and arn specified',
+            message: 'Event source must have type specified',
             severity: 'error'
           });
         }

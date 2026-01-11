@@ -1,0 +1,223 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "$id": "https://platform.shinobi.internal/schemas/secrets-manager/v1.0.0",
+  "title": "Secrets Manager Component Configuration",
+  "description": "Configuration schema for AWS Secrets Manager component with compliance hardening, rotation, and multi-region replica support",
+  "type": "object",
+  "additionalProperties": false,
+  "properties": {
+    "secretName": {
+      "type": "string",
+      "description": "Name of the secret (auto-generated when omitted)",
+      "pattern": "^[a-zA-Z0-9_./\\\\-]+$",
+      "maxLength": 512
+    },
+    "description": {
+      "type": "string",
+      "description": "Description of the secret",
+      "maxLength": 2048
+    },
+    "secretValue": {
+      "type": "object",
+      "description": "Initial secret value",
+      "properties": {
+        "secretStringValue": {
+          "type": "string",
+          "description": "Secret represented as plain text (only for non-sensitive values with allowUnsafePlainText: true)"
+        },
+        "secretArn": {
+          "type": "string",
+          "description": "ARN of existing secret in Secrets Manager to reference"
+        },
+        "generateSecret": {
+          "type": "boolean",
+          "description": "Generate a new secret automatically",
+          "default": false
+        },
+        "allowUnsafePlainText": {
+          "type": "boolean",
+          "description": "Allow unsafe plain text (only for non-sensitive configuration values)",
+          "default": false
+        }
+      },
+      "additionalProperties": false
+    },
+    "generateSecret": {
+      "type": "object",
+      "description": "Automatic secret generation configuration",
+      "properties": {
+        "enabled": {
+          "type": "boolean",
+          "default": false
+        },
+        "excludeCharacters": {
+          "type": "string",
+          "default": "\"@/\\\\'"
+        },
+        "includeSpace": {
+          "type": "boolean",
+          "default": false
+        },
+        "passwordLength": {
+          "type": "number",
+          "minimum": 4,
+          "maximum": 1024,
+          "default": 32
+        },
+        "requireEachIncludedType": {
+          "type": "boolean",
+          "default": true
+        },
+        "secretStringTemplate": {
+          "type": "string"
+        },
+        "generateStringKey": {
+          "type": "string"
+        }
+      },
+      "additionalProperties": false
+    },
+    "automaticRotation": {
+      "type": "object",
+      "description": "Automatic rotation configuration",
+      "properties": {
+        "enabled": {
+          "type": "boolean",
+          "default": false
+        },
+        "rotationLambda": {
+          "type": "object",
+          "additionalProperties": false,
+          "properties": {
+            "functionArn": {
+              "type": "string"
+            },
+            "createFunction": {
+              "type": "boolean",
+              "default": false
+            },
+            "runtime": {
+              "type": "string"
+            },
+            "enableTracing": {
+              "type": "boolean",
+              "default": false
+            }
+          }
+        },
+        "schedule": {
+          "type": "object",
+          "additionalProperties": false,
+          "properties": {
+            "automaticallyAfterDays": {
+              "type": "number",
+              "minimum": 1,
+              "maximum": 365,
+              "default": 365
+            }
+          }
+        }
+      },
+      "additionalProperties": false
+    },
+    "replicas": {
+      "type": "array",
+      "description": "Multi-region replica configuration",
+      "items": {
+        "type": "object",
+        "properties": {
+          "region": {
+            "type": "string"
+          },
+          "kmsKeyArn": {
+            "type": "string"
+          }
+        },
+        "required": ["region"],
+        "additionalProperties": false
+      }
+    },
+    "encryption": {
+      "type": "object",
+      "description": "Encryption configuration",
+      "properties": {
+        "kmsKeyArn": {
+          "type": "string"
+        },
+        "createCustomerManagedKey": {
+          "type": "boolean",
+          "default": false
+        },
+        "enableKeyRotation": {
+          "type": "boolean",
+          "default": false
+        }
+      },
+      "additionalProperties": false
+    },
+    "recovery": {
+      "type": "object",
+      "description": "Deletion protection and recovery window settings",
+      "properties": {
+        "deletionProtection": {
+          "type": "boolean",
+          "default": false
+        },
+        "recoveryWindowInDays": {
+          "type": "number",
+          "minimum": 7,
+          "maximum": 30,
+          "default": 30
+        }
+      },
+      "additionalProperties": false
+    },
+    "monitoring": {
+      "type": "object",
+      "description": "Monitoring and alarm configuration",
+      "properties": {
+        "enabled": {
+          "type": "boolean",
+          "default": false
+        },
+        "rotationFailureThreshold": {
+          "type": "number",
+          "minimum": 1,
+          "default": 1
+        },
+        "unusualAccessThresholdMs": {
+          "type": "number",
+          "minimum": 100,
+          "default": 5000
+        }
+      },
+      "additionalProperties": false
+    },
+    "accessPolicies": {
+      "type": "object",
+      "description": "Secret access policy controls",
+      "properties": {
+        "denyInsecureTransport": {
+          "type": "boolean",
+          "default": true
+        },
+        "restrictToVpce": {
+          "type": "boolean",
+          "default": false
+        },
+        "allowedVpceIds": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          }
+        },
+        "requireTemporaryCredentials": {
+          "type": "boolean",
+          "default": false
+        }
+      },
+      "additionalProperties": false
+    }
+  }
+}
+

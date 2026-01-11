@@ -11,7 +11,7 @@ import {
   ComponentContext, 
   IComponentCreator 
 } from '@shinobi/core';
-import { KinesisStreamComponentComponent } from './kinesis-stream.component.js';
+import { KinesisStreamComponent } from './kinesis-stream.component.js';
 import { KinesisStreamConfig, KINESIS_STREAM_CONFIG_SCHEMA } from './kinesis-stream.builder.js';
 
 /**
@@ -68,12 +68,15 @@ export class KinesisStreamComponentCreator implements IComponentCreator {
   /**
    * Factory method to create component instances
    */
-  public createComponent(
-    scope: Construct, 
-    spec: ComponentSpec, 
-    context: ComponentContext
-  ): KinesisStreamComponentComponent {
-    return new KinesisStreamComponentComponent(scope, spec, context);
+  public createComponent(spec: ComponentSpec, context: ComponentContext): KinesisStreamComponent {
+    if (!context.scope) {
+      throw new Error('ComponentContext.scope is required to create kinesis-stream components');
+    }
+    return new KinesisStreamComponent(context.scope as Construct, spec.name, context, spec);
+  }
+  
+  public processComponent(spec: ComponentSpec, context: ComponentContext): KinesisStreamComponent {
+    return this.createComponent(spec, context);
   }
   
   /**
