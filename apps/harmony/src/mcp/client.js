@@ -53,15 +53,10 @@ export async function analyzeRepository(client, repoUrl) {
   );
 
   const textBlock = result.content.find((item) => item.type === "text");
-
-  if (result.isError || !textBlock || typeof textBlock.text !== "string") {
-    throw new Error(`MCP Tool Error: ${textBlock?.text || "Unknown tool error or missing payload"}`);
+  if (!textBlock || typeof textBlock.text !== "string") {
+    throw new Error("Tool response missing text payload");
   }
 
-  try {
-    const parsed = JSON.parse(textBlock.text);
-    return ToolResultSchema.parse(parsed);
-  } catch (err) {
-    throw new Error(`Failed to parse tool response: ${textBlock.text}`);
-  }
+  const parsed = JSON.parse(textBlock.text);
+  return ToolResultSchema.parse(parsed);
 }

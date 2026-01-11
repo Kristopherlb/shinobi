@@ -17,10 +17,6 @@ function buildFakeRepo() {
       calls.push(["from", image]);
       return repo;
     },
-    withEntrypoint(args) {
-      calls.push(["withEntrypoint", args]);
-      return repo;
-    },
     withExec(args) {
       calls.push(["withExec", args]);
       return repo;

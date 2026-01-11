@@ -14,7 +14,7 @@
   },
   "dependencies": {
     "@dagger.io/dagger": "^0.11.1",
-    "@langchain/langgraph": "^1.0.14",
+    "@langchain/langgraph": "^0.0.42",
     "@modelcontextprotocol/sdk": "^1.0.0",
     "@temporalio/client": "^1.10.4",
     "@temporalio/testing": "^1.10.4",

@@ -15,44 +15,16 @@ function createToolHandlers({ scanRepository }) {
         throw new Error("repo_url must be a string");
       }
 
-      try {
-        console.error(`[MCP Server] Calling scanRepository for ${repoUrl}...`);
-        const result = await scanRepository(repoUrl);
+      const result = await scanRepository(repoUrl);
 
-        if (!result) {
-          console.error(`[MCP Server] scanRepository returned no result.`);
-          return {
-            isError: true,
-            content: [
-              {
-                type: "text",
-                text: "Dagger scan returned no result"
-              }
-            ]
-          };
-        }
-
-        console.error(`[MCP Server] scanRepository success.`);
-        return {
-          content: [
-            {
-              type: "text",
-              text: JSON.stringify(result)
-            }
-          ]
-        };
-      } catch (error) {
-        console.error(`[MCP Server] Error in tool handler: ${error.stack}`);
-        return {
-          isError: true,
-          content: [
-            {
-              type: "text",
-              text: `Error analyzing repository: ${error.message}`
-            }
-          ]
-        };
-      }
+      return {
+        content: [
+          {
+            type: "text",
+            text: JSON.stringify(result)
+          }
+        ]
+      };
     }
   };
 }
