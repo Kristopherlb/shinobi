@@ -2,14 +2,13 @@ import { END, START, StateGraph } from "@langchain/langgraph";
 import { AgentStateSchema, createInitialState } from "./state.js";
 import { buildPlan } from "./plan.js";
 import { reviewAnalysis } from "./review.js";
-import { analyzeRepository, createMcpClient, listTools } from "../mcp/client.js";
+import { analyzeRepository, createMcpClient } from "../mcp/client.js";
+import { retrieveRelevantTools } from "../tool-index/retrieval.js";
 
 const GraphState = AgentStateSchema;
 
 async function planNode(state) {
-  const client = await createMcpClient();
-  const tools = await listTools(client);
-  await client.close();
+  const tools = await retrieveRelevantTools(state.goal);
 
   return {
     ...state,

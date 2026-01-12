@@ -1,13 +1,12 @@
 import { AgentStateSchema, ToolResultSchema } from "../agent/state.js";
 import { buildPlan } from "../agent/plan.js";
 import { reviewAnalysis } from "../agent/review.js";
-import { analyzeRepository, createMcpClient, listTools } from "../mcp/client.js";
+import { analyzeRepository, createMcpClient } from "../mcp/client.js";
+import { retrieveRelevantTools } from "../tool-index/retrieval.js";
 
 export async function planActivity(state) {
   const parsed = AgentStateSchema.parse(state);
-  const client = await createMcpClient();
-  const tools = await listTools(client);
-  await client.close();
+  const tools = await retrieveRelevantTools(parsed.goal);
 
   return {
     ...parsed,
