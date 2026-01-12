@@ -2,10 +2,15 @@ import { END, START, StateGraph } from "@langchain/langgraph";
 import { AgentStateSchema, createInitialState } from "./state.js";
 import { listTools, analyzeRepository } from "../mcp/client.js";
 import { retrieveRelevantTools } from "../tool-index/retrieval.js";
+import { isToolIndexEnabled } from "../tool-index/config.js";
 
 const GraphState = AgentStateSchema;
 
 async function selectTools(goal, { mcpClientFactory }) {
+  if (!isToolIndexEnabled()) {
+    return mcpClientFactory.withClient((client) => listTools(client));
+  }
+
   try {
     return await retrieveRelevantTools(goal);
   } catch {
@@ -49,13 +54,13 @@ function createReviewNode({ reviewer }) {
 
 export function createAgentGraph({ mcpClientFactory, planner, reviewer }) {
   const graph = new StateGraph(GraphState)
-    .addNode("plan", createPlanNode({ mcpClientFactory, planner }))
-    .addNode("execute", createExecuteNode({ mcpClientFactory }))
-    .addNode("review", createReviewNode({ reviewer }))
-    .addEdge(START, "plan")
-    .addEdge("plan", "execute")
-    .addEdge("execute", "review")
-    .addEdge("review", END);
+    .addNode("plan_step", createPlanNode({ mcpClientFactory, planner }))
+    .addNode("execute_step", createExecuteNode({ mcpClientFactory }))
+    .addNode("review_step", createReviewNode({ reviewer }))
+    .addEdge(START, "plan_step")
+    .addEdge("plan_step", "execute_step")
+    .addEdge("execute_step", "review_step")
+    .addEdge("review_step", END);
 
   return graph.compile();
 }

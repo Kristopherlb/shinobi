@@ -1,8 +1,13 @@
 import { AgentStateSchema, ToolResultSchema } from "../agent/state.js";
 import { analyzeRepository, listTools } from "../mcp/client.js";
 import { retrieveRelevantTools } from "../tool-index/retrieval.js";
+import { isToolIndexEnabled } from "../tool-index/config.js";
 
 async function selectTools(goal, { mcpClientFactory }) {
+  if (!isToolIndexEnabled()) {
+    return mcpClientFactory.withClient((client) => listTools(client));
+  }
+
   try {
     return await retrieveRelevantTools(goal);
   } catch {

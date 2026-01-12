@@ -2,6 +2,15 @@ export const DEFAULT_EMBEDDING_MODEL = "text-embedding-3-small";
 export const DEFAULT_TOOL_LIMIT = 5;
 export const DEFAULT_EMBEDDING_BASE_URL = "https://api.openai.com/v1";
 export const EMBEDDING_DIMENSIONS = 1536;
+export const DEFAULT_TOOL_INDEX_ENABLED = false;
+
+export function isToolIndexEnabled() {
+  const enabled = process.env.TOOL_INDEX_ENABLED;
+  if (enabled === undefined) {
+    return DEFAULT_TOOL_INDEX_ENABLED;
+  }
+  return enabled === "true";
+}
 
 export function getDatabaseUrl() {
   const url = process.env.TOOL_INDEX_DATABASE_URL;
