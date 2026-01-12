@@ -7,18 +7,27 @@ import {
   getEmbeddingApiKey
 } from "./config.js";
 import { retrieveRelevantTools as retrieveFromServices } from "./services.js";
-import { HttpEmbeddingProvider } from "./infra/http-embedding-provider.js";
-import { PostgresToolStore } from "./infra/postgres-tool-store.js";
 
 export async function retrieveRelevantTools(query, { limit = DEFAULT_TOOL_LIMIT } = {}) {
+  // Resolve config first so missing env vars fail fast without requiring DB/pg deps
+  const connectionString = getDatabaseUrl();
+  const apiKey = getEmbeddingApiKey();
+  const baseUrl = getEmbeddingBaseUrl();
+  const model = getEmbeddingModel();
+
+  const [{ PostgresToolStore }, { HttpEmbeddingProvider }] = await Promise.all([
+    import("./infra/postgres-tool-store.js"),
+    import("./infra/http-embedding-provider.js")
+  ]);
+
   const toolStore = new PostgresToolStore({
-    connectionString: getDatabaseUrl(),
+    connectionString,
     dimensions: EMBEDDING_DIMENSIONS
   });
   const embeddingProvider = new HttpEmbeddingProvider({
-    apiKey: getEmbeddingApiKey(),
-    baseUrl: getEmbeddingBaseUrl(),
-    model: getEmbeddingModel()
+    apiKey,
+    baseUrl,
+    model
   });
 
   try {
