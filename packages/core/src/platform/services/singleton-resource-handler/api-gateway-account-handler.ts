@@ -16,8 +16,6 @@ import * as fsp from 'fs/promises';
 import * as fs from 'fs';
 import type { Logger } from '../../logger/src/index.js';
 
-const DEBUG_SERVER = 'http://127.0.0.1:7242/ingest/31cd8a5c-c5a9-4c85-9dba-5f04dc91dc42';
-
 // Find workspace root by walking up from current directory
 async function findWorkspaceRoot(startDir: string): Promise<string | null> {
   let current = path.resolve(startDir);
@@ -54,50 +52,8 @@ async function findWorkspaceRoot(startDir: string): Promise<string | null> {
   return null;
 }
 
-// Get debug log path dynamically
-async function getDebugLogPath(): Promise<string | null> {
-  try {
-    const workspaceRoot = await findWorkspaceRoot(process.cwd());
-    if (workspaceRoot) {
-      return path.join(workspaceRoot, '.cursor', 'debug.log');
-    }
-    return null;
-  } catch {
-    return null;
-  }
-}
-
-// Safe logging function that tries both fetch and file write
-async function debugLog(location: string, message: string, data: any, hypothesisId: string): Promise<void> {
-  const payload = {
-    location,
-    message,
-    data,
-    timestamp: Date.now(),
-    sessionId: 'debug-session',
-    runId: 'run1',
-    hypothesisId
-  };
-  
-  // Try fetch first (non-blocking)
-  if (typeof fetch !== 'undefined') {
-    fetch(DEBUG_SERVER, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify(payload)
-    }).catch(() => {});
-  }
-  
-  // Also write directly to file (fallback)
-  try {
-    const debugLogPath = await getDebugLogPath();
-    if (debugLogPath) {
-      await fsp.appendFile(debugLogPath, JSON.stringify(payload) + '\n', 'utf8');
-    }
-  } catch {
-    // Ignore file write errors
-  }
-}
+// NOTE: Previously this module included ad-hoc debug telemetry (HTTP + file writes).
+// That has been removed to keep @shinobi/core deterministic and side-effect free.
 
 export interface ApiGatewayAccountHandlerDependencies {
   logger: Logger;
@@ -128,8 +84,7 @@ async function writeCdkContext(workspaceRoot: string, context: Record<string, an
   try {
     await fsp.writeFile(contextPath, JSON.stringify(context, null, 2) + '\n', 'utf-8');
   } catch (error) {
-    // Log but don't fail - context file is optional
-    console.warn(`Failed to write cdk.context.json: ${error}`);
+    // Context file is optional; ignore write errors.
   }
 }
 
@@ -160,9 +115,6 @@ export class ApiGatewayAccountHandler {
     region: string
   ): Promise<PostProcessResult> {
     const templatePath = path.join(assemblyDir, templateFileName);
-    // #region agent log
-    await debugLog('api-gateway-account-handler.ts:39', 'postProcess entry', { assemblyDir, stackId, templateFileName, region, templatePath }, 'E');
-    // #endregion
     
     try {
       // Check if ApiGateway Account exists in AWS
@@ -191,9 +143,6 @@ export class ApiGatewayAccountHandler {
           this.dependencies.logger.debug(
             `ApiGateway Account existence (from cdk.context.json): ${accountExists ? 'exists' : 'does not exist'} (region: ${region})`
           );
-          // #region agent log
-          await debugLog('api-gateway-account-handler.ts:check-aws-cached', 'ApiGateway Account existence (from cdk.context.json)', { region, accountExists, source: 'cdk.context.json' }, 'E');
-          // #endregion
         }
       }
       
@@ -217,9 +166,6 @@ export class ApiGatewayAccountHandler {
           this.dependencies.logger.debug(
             `ApiGateway Account exists in AWS (region: ${region}). Cached to cdk.context.json. Checking template for Account resources...`
           );
-          // #region agent log
-          await debugLog('api-gateway-account-handler.ts:check-aws', 'ApiGateway Account exists in AWS', { region, accountExists: true, cached: false, wroteToCache: true }, 'E');
-          // #endregion
         } catch (error: any) {
           // Account doesn't exist or error checking - this is fine, CDK can create it
           if (error.name === 'NotFoundException' || error.name === 'AccessDeniedException') {
@@ -234,17 +180,11 @@ export class ApiGatewayAccountHandler {
             this.dependencies.logger.debug(
               `ApiGateway Account does not exist in AWS (region: ${region}). Cached to cdk.context.json. CDK can create it.`
             );
-            // #region agent log
-            await debugLog('api-gateway-account-handler.ts:check-aws', 'ApiGateway Account does not exist in AWS', { region, accountExists: false, error: error.name, cached: false, wroteToCache: true }, 'E');
-            // #endregion
           } else {
             // Other error - don't cache (might be transient), but continue (non-fatal)
             this.dependencies.logger.debug(
               `Error checking ApiGateway Account (non-fatal): ${error.message || String(error)}`
             );
-            // #region agent log
-            await debugLog('api-gateway-account-handler.ts:check-aws-error', 'Error checking ApiGateway Account (non-fatal)', { region, error: error.message || String(error), errorType: error.name }, 'E');
-            // #endregion
             // On error, assume Account doesn't exist (safer - we'll remove Account resources if they exist in template)
             accountExists = false;
           }
@@ -260,9 +200,6 @@ export class ApiGatewayAccountHandler {
       const accountResources = Object.keys(template.Resources || {}).filter(
         (key) => template.Resources[key].Type === 'AWS::ApiGateway::Account'
       );
-      // #region agent log
-      await debugLog('api-gateway-account-handler.ts:68', 'Found ApiGateway Account resources', { accountResourcesCount: accountResources.length, accountResources }, 'E');
-      // #endregion
       
       for (const resourceKey of accountResources) {
         // CRITICAL: Remove all references BEFORE deleting the resource
@@ -270,18 +207,11 @@ export class ApiGatewayAccountHandler {
         const dependsOnRemovedCount = this.removeDependsOnReferences(template, resourceKey);
         this.removeResourceReferences(template, resourceKey);
         
-        // #region agent log
-        await debugLog('api-gateway-account-handler.ts:before-delete', 'Before deleting Account resource', { resourceKey, dependsOnRemovedCount, resourceExists: !!template.Resources[resourceKey] }, 'E');
-        // #endregion
-        
         delete template.Resources[resourceKey];
         apiGatewayResourcesRemoved = true;
         
         // Verify resource is deleted and no DependsOn references remain
-        const remainingDependsOnCount = this.countDependsOnReferences(template, resourceKey);
-        // #region agent log
-        await debugLog('api-gateway-account-handler.ts:73', 'Deleted ApiGateway Account resource', { resourceKey, dependsOnRemovedCount, remainingDependsOnCount, resourceExists: !!template.Resources[resourceKey] }, 'E');
-        // #endregion
+        this.countDependsOnReferences(template, resourceKey);
       }
 
       // Find and remove CloudWatch Role resources that are referenced by ApiGateway Account
@@ -295,10 +225,6 @@ export class ApiGatewayAccountHandler {
         }
         return false;
       });
-
-      // #region agent log
-      await debugLog('api-gateway-account-handler.ts:83', 'Found CloudWatch Role resources', { cloudWatchRoleResourcesCount: cloudWatchRoleResources.length, cloudWatchRoleResources }, 'E');
-      // #endregion
       
       for (const resourceKey of cloudWatchRoleResources) {
         // CRITICAL: Remove all references BEFORE deleting the resource
@@ -306,31 +232,18 @@ export class ApiGatewayAccountHandler {
         const dependsOnRemovedCount = this.removeDependsOnReferences(template, resourceKey);
         this.removeResourceReferences(template, resourceKey);
         
-        // #region agent log
-        await debugLog('api-gateway-account-handler.ts:before-delete-role', 'Before deleting CloudWatch Role resource', { resourceKey, dependsOnRemovedCount, resourceExists: !!template.Resources[resourceKey] }, 'E');
-        // #endregion
-        
         delete template.Resources[resourceKey];
         apiGatewayResourcesRemoved = true;
         
         // Verify resource is deleted and no DependsOn references remain
-        const remainingDependsOnCount = this.countDependsOnReferences(template, resourceKey);
-        // #region agent log
-        await debugLog('api-gateway-account-handler.ts:94', 'Deleted CloudWatch Role resource', { resourceKey, dependsOnRemovedCount, remainingDependsOnCount, resourceExists: !!template.Resources[resourceKey] }, 'E');
-        // #endregion
+        this.countDependsOnReferences(template, resourceKey);
       }
 
       if (!apiGatewayResourcesRemoved) {
-        // #region agent log
-        await debugLog('api-gateway-account-handler.ts:101', 'No ApiGateway resources removed', { accountResourcesCount: accountResources.length, cloudWatchRoleResourcesCount: cloudWatchRoleResources.length }, 'E');
-        // #endregion
         return { templateModified: false, manifestModified: false };
       }
 
       // Write modified template
-      // #region agent log
-      await debugLog('api-gateway-account-handler.ts:106', 'Writing modified template', { templatePath, resourcesRemoved: apiGatewayResourcesRemoved }, 'E');
-      // #endregion
       await fsp.writeFile(templatePath, JSON.stringify(template, null, 2), 'utf-8');
 
       // CRITICAL: Also remove references from manifest.json
@@ -338,9 +251,6 @@ export class ApiGatewayAccountHandler {
       // If manifest references removed resources, Early Validation may still fail
       const manifestModified = await this.removeManifestReferences(assemblyDir, stackId);
 
-      // #region agent log
-      await debugLog('api-gateway-account-handler.ts:116', 'postProcess complete', { templateModified: true, manifestModified }, 'E');
-      // #endregion
       return {
         templateModified: true,
         manifestModified
@@ -352,9 +262,6 @@ export class ApiGatewayAccountHandler {
       this.dependencies.logger.debug(
         `ApiGateway Account check failed (non-fatal): ${errorMessage}`
       );
-      // #region agent log
-      await debugLog('api-gateway-account-handler.ts:123', 'postProcess error (non-fatal)', { error: errorMessage, errorType: error instanceof Error ? error.constructor.name : 'unknown' }, 'E');
-      // #endregion
       return { templateModified: false, manifestModified: false };
     }
   }

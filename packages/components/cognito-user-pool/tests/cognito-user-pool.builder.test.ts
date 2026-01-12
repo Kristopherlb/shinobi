@@ -3,6 +3,7 @@
  * Implements Platform Testing Standard v1.0 - ConfigBuilder Testing
  */
 
+import { describe, it, expect, beforeEach, afterEach } from 'vitest';
 import {
   CognitoUserPoolComponentConfigBuilder,
   CognitoUserPoolConfig,

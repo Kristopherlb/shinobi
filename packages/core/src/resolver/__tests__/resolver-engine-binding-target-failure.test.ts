@@ -1,4 +1,5 @@
 import { createMockBinderRegistry, createMockBinderStrategy, createOutputsMap, createTestResolverEngine, createTestStack, MockComponent } from './test-helpers.js';
+import { vi } from 'vitest';
 
 describe('ResolverEngine__BindingTargetFailure', () => {
   it('BindingTarget__TargetSynthesisFails__ClearError', async () => {
@@ -52,7 +53,7 @@ describe('ResolverEngine__BindingTargetFailure', () => {
     });
     source.spec.binds = [{ to: 'missing-api', capability: 'api:rest', access: 'read' }];
 
-    const bindSpy = jest.fn(async () => ({
+    const bindSpy = vi.fn(async () => ({
       environmentVariables: {},
       iamPolicies: [],
       securityGroupRules: [],

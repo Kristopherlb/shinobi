@@ -4,7 +4,7 @@
  */
 
 import { Logger as PlatformLogger } from '../platform/logger/src/index.js';
-import { ComponentFactoryBuilder } from '../platform/contracts/components/component-factory.js';
+import { ComponentFactoryBuilder, type IComponentFactory } from '../platform/contracts/components/component-factory.js';
 import { IComponent } from '../platform/contracts/index.js';
 import { ComponentContext as FactoryComponentContext } from '../platform/contracts/components/component-context.js';
 import { Component } from '../platform/contracts/component.js';
@@ -15,13 +15,19 @@ import { SecurityGroupRulePostProcessor } from './security-group-rule-post-proce
 import { EventSourceScanner } from './event-source-scanner.js';
 import { IamPolicyPostProcessor } from './iam-policy-post-processor.js';
 import * as cdk from 'aws-cdk-lib';
-import * as path from 'path';
-import * as fs from 'fs';
-import { appendFileSync } from 'fs';
+import * as fs from 'node:fs';
+import * as path from 'node:path';
 
 export interface ResolverEngineDependencies {
   logger: PlatformLogger;
   binderRegistry: UnifiedBinderRegistry;
+  /**
+   * Optional component factory override.
+   *
+   * This is primarily used by tests to avoid the default "empty registry" factory builder,
+   * and by future platform wiring to provide a fully-registered factory.
+   */
+  componentFactory?: IComponentFactory;
 }
 
 export interface SynthesisResult {
@@ -44,6 +50,32 @@ export interface SynthesisResult {
  */
 export class ResolverEngine {
   constructor(private dependencies: ResolverEngineDependencies) {
+  }
+
+  /**
+   * Safe binder registry lookup.
+   *
+   * Some callers may inject partial or older registry implementations.
+   * We prefer findStrategyForBinding(sourceType, capability) but fall back to findStrategy(capability).
+   */
+  private findStrategyForBindingSafe(
+    sourceType: string,
+    capability: string
+  ): IUnifiedBinderStrategy | null {
+    const registry = this.dependencies.binderRegistry as unknown as {
+      findStrategyForBinding?: (s: string, c: string) => IUnifiedBinderStrategy | null;
+      findStrategy?: (c: string) => IUnifiedBinderStrategy | null;
+    };
+
+    if (typeof registry.findStrategyForBinding === 'function') {
+      return registry.findStrategyForBinding(sourceType, capability);
+    }
+
+    if (typeof registry.findStrategy === 'function') {
+      return registry.findStrategy(capability);
+    }
+
+    return null;
   }
 
   /**
@@ -152,9 +184,13 @@ export class ResolverEngine {
   private async instantiateComponents(validatedConfig: any, stack: cdk.Stack): Promise<IComponent[]> {
     this.dependencies.logger.debug('Phase 1: Component Instantiation');
 
-    // AC-RS1.2: Use canonical ComponentFactoryBuilder
-    const factory = new ComponentFactoryBuilder().build();
-    this.dependencies.logger.info('Using canonical component factory');
+    // AC-RS1.2: Use canonical ComponentFactoryBuilder unless a factory is injected
+    const factory = this.dependencies.componentFactory ?? new ComponentFactoryBuilder().build();
+    this.dependencies.logger.info(
+      this.dependencies.componentFactory
+        ? 'Using injected component factory'
+        : 'Using canonical component factory'
+    );
 
     const components: IComponent[] = [];
 
@@ -198,15 +234,9 @@ export class ResolverEngine {
     const hasEventSources = new Set<string>();
     const targets = new Set<string>();
     const dependencies = new Map<string, string[]>();
-    // #region agent log
-    fetch('http://127.0.0.1:7242/ingest/31cd8a5c-c5a9-4c85-9dba-5f04dc91dc42',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'resolver-engine.ts:201',message:'analyzeEventSourceDependencies entry',data:{componentCount:components.length,componentNames:components.map(c=>c.spec.name)},timestamp:Date.now(),sessionId:'debug-session',runId:'run1',hypothesisId:'J'})}).catch(()=>{});
-    // #endregion
 
     for (const component of components) {
       const eventSources = component.spec.config?.eventSources;
-      // #region agent log
-      fetch('http://127.0.0.1:7242/ingest/31cd8a5c-c5a9-4c85-9dba-5f04dc91dc42',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'resolver-engine.ts:207',message:'Checking component for eventSources',data:{componentName:component.spec.name,hasEventSources:!!eventSources,eventSourcesType:eventSources?typeof eventSources:'none',isArray:Array.isArray(eventSources)},timestamp:Date.now(),sessionId:'debug-session',runId:'run1',hypothesisId:'J'})}).catch(()=>{});
-      // #endregion
       if (eventSources) {
         let autoBind = true;
         let eventSourcesArray: any[] = [];
@@ -217,10 +247,6 @@ export class ResolverEngine {
           autoBind = eventSources.autoBind !== false;
           eventSourcesArray = eventSources.sources || [];
         }
-
-        // #region agent log
-        fetch('http://127.0.0.1:7242/ingest/31cd8a5c-c5a9-4c85-9dba-5f04dc91dc42',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'resolver-engine.ts:221',message:'Event sources parsed',data:{componentName:component.spec.name,autoBind,eventSourcesArrayLength:eventSourcesArray.length,willAddToHasEventSources:autoBind&&eventSourcesArray.length>0},timestamp:Date.now(),sessionId:'debug-session',runId:'run1',hypothesisId:'J'})}).catch(()=>{});
-        // #endregion
 
         if (autoBind && eventSourcesArray.length > 0) {
           hasEventSources.add(component.spec.name);
@@ -233,9 +259,6 @@ export class ResolverEngine {
               deps.push(targetName);
             }
           }
-          // #region agent log
-          fetch('http://127.0.0.1:7242/ingest/31cd8a5c-c5a9-4c85-9dba-5f04dc91dc42',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'resolver-engine.ts:236',message:'Component added to hasEventSources',data:{componentName:component.spec.name,depsCount:deps.length,deps},timestamp:Date.now(),sessionId:'debug-session',runId:'run1',hypothesisId:'J'})}).catch(()=>{});
-          // #endregion
 
           if (deps.length > 0) {
             dependencies.set(component.spec.name, deps);
@@ -243,9 +266,6 @@ export class ResolverEngine {
         }
       }
     }
-    // #region agent log
-    fetch('http://127.0.0.1:7242/ingest/31cd8a5c-c5a9-4c85-9dba-5f04dc91dc42',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'resolver-engine.ts:246',message:'analyzeEventSourceDependencies result',data:{hasEventSources:Array.from(hasEventSources),targets:Array.from(targets),dependencies:Object.fromEntries(dependencies)},timestamp:Date.now(),sessionId:'debug-session',runId:'run1',hypothesisId:'J'})}).catch(()=>{});
-    // #endregion
 
     return { hasEventSources, targets, dependencies };
   }
@@ -266,9 +286,6 @@ export class ResolverEngine {
     stack: cdk.Stack
   ): Promise<Map<string, any>> {
     this.dependencies.logger.debug('Phase 2: Component Synthesis (with event source handling)');
-    // #region agent log
-    fetch('http://127.0.0.1:7242/ingest/31cd8a5c-c5a9-4c85-9dba-5f04dc91dc42',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'resolver-engine.ts:269',message:'synthesizeComponentsWithEventSources entry',data:{totalComponents:components.length,hasEventSources:Array.from(eventSourceInfo.hasEventSources),targets:Array.from(eventSourceInfo.targets)},timestamp:Date.now(),sessionId:'debug-session',runId:'run1',hypothesisId:'I'})}).catch(()=>{});
-    // #endregion
 
     const outputsMap = new Map<string, any>();
 
@@ -280,66 +297,6 @@ export class ResolverEngine {
     const otherComponents = components.filter(c => 
       !eventSourceInfo.targets.has(c.spec.name) && !eventSourceInfo.hasEventSources.has(c.spec.name)
     );
-    // #region agent log
-    const debugEndpoint = 'http://127.0.0.1:7242/ingest/31cd8a5c-c5a9-4c85-9dba-5f04dc91dc42';
-    const debugPayload = {
-      location: 'resolver-engine.ts:283',
-      message: 'Component categorization',
-      data: {
-        targetComponentCount: targetComponents.length,
-        targetComponentNames: targetComponents.map(c => c.spec.name),
-        sourceComponentCount: sourceComponents.length,
-        sourceComponentNames: sourceComponents.map(c => c.spec.name),
-        otherComponentCount: otherComponents.length
-      },
-      timestamp: Date.now(),
-      sessionId: 'debug-session',
-      runId: 'run1',
-      hypothesisId: 'B'
-    };
-    
-    if (typeof fetch !== 'undefined') {
-      fetch(debugEndpoint, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(debugPayload)
-      })
-      .then(response => {
-        fetch(debugEndpoint, {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({
-            location: 'resolver-engine.ts:305',
-            message: 'Debug server fetch SUCCESS',
-            data: { status: response.status, statusText: response.statusText, ok: response.ok },
-            timestamp: Date.now(),
-            sessionId: 'debug-session',
-            runId: 'run1',
-            hypothesisId: 'B'
-          })
-        }).catch(() => {});
-      })
-      .catch(error => {
-        fetch(debugEndpoint, {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({
-            location: 'resolver-engine.ts:318',
-            message: 'Debug server fetch FAILED',
-            data: {
-              errorMessage: error.message,
-              errorName: error.name,
-              errorCode: (error as any).code
-            },
-            timestamp: Date.now(),
-            sessionId: 'debug-session',
-            runId: 'run1',
-            hypothesisId: 'B'
-          })
-        }).catch(() => {});
-      });
-    }
-    // #endregion
 
     // Synthesize target components
     for (const component of targetComponents) {
@@ -352,9 +309,6 @@ export class ResolverEngine {
     }
 
     // Step 2: Process event source bindings and apply IAM policies BEFORE synthesizing source components
-    // #region agent log
-    fetch('http://127.0.0.1:7242/ingest/31cd8a5c-c5a9-4c85-9dba-5f04dc91dc42',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'resolver-engine.ts:298',message:'Before processEventSourceBindingsAndApplyPolicies check',data:{sourceComponentsLength:sourceComponents.length,willCall:sourceComponents.length>0},timestamp:Date.now(),sessionId:'debug-session',runId:'run1',hypothesisId:'I'})}).catch(()=>{});
-    // #endregion
     if (sourceComponents.length > 0) {
       await this.processEventSourceBindingsAndApplyPolicies(
         sourceComponents,
@@ -363,10 +317,6 @@ export class ResolverEngine {
         validatedConfig,
         stack
       );
-    } else {
-      // #region agent log
-      fetch('http://127.0.0.1:7242/ingest/31cd8a5c-c5a9-4c85-9dba-5f04dc91dc42',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'resolver-engine.ts:310',message:'Skipping processEventSourceBindingsAndApplyPolicies - no source components',data:{sourceComponentsLength:sourceComponents.length},timestamp:Date.now(),sessionId:'debug-session',runId:'run1',hypothesisId:'I'})}).catch(()=>{});
-      // #endregion
     }
 
     // Step 3: Synthesize source components (components with event sources) - permissions now exist
@@ -407,6 +357,22 @@ export class ResolverEngine {
   }
 
   /**
+   * Legacy helper used by unit tests:
+   * Synthesize a list of components in-order and return an outputs map.
+   *
+   * NOTE: The full engine path uses `synthesizeComponentsWithEventSources()` to handle
+   * event-source ordering. This helper is intentionally simple for deterministic tests.
+   */
+  // eslint-disable-next-line @typescript-eslint/explicit-module-boundary-types
+  private async synthesizeComponents(components: IComponent[]): Promise<Map<string, any>> {
+    const outputsMap = new Map<string, any>();
+    for (const component of components) {
+      await this.synthesizeComponent(component, outputsMap);
+    }
+    return outputsMap;
+  }
+
+  /**
    * Process event source bindings and apply IAM policies to Lambda functions
    * This MUST happen AFTER target components are synthesized (so we have capabilities)
    * but BEFORE source components are synthesized (so permissions exist when EventSourceMapping is created)
@@ -419,21 +385,12 @@ export class ResolverEngine {
     stack: cdk.Stack
   ): Promise<void> {
     this.dependencies.logger.debug('Processing event source bindings and applying IAM policies');
-    // #region agent log
-    fetch('http://127.0.0.1:7242/ingest/31cd8a5c-c5a9-4c85-9dba-5f04dc91dc42',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'resolver-engine.ts:355',message:'processEventSourceBindingsAndApplyPolicies entry',data:{sourceComponentCount:sourceComponents.length,outputsMapSize:outputsMap.size,outputsMapKeys:Array.from(outputsMap.keys())},timestamp:Date.now(),sessionId:'debug-session',runId:'run1',hypothesisId:'A'})}).catch(()=>{});
-    // #endregion
 
     // Step 1: Scan event sources and generate implicit bindings
     const implicitBindings = EventSourceScanner.scanEventSourcesForBindings(sourceComponents, this.dependencies.logger);
     this.dependencies.logger.debug(`Auto-generated ${implicitBindings.length} event source bindings`);
-    // #region agent log
-    fetch('http://127.0.0.1:7242/ingest/31cd8a5c-c5a9-4c85-9dba-5f04dc91dc42',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'resolver-engine.ts:365',message:'After EventSourceScanner.scanEventSourcesForBindings',data:{implicitBindingsCount:implicitBindings.length,bindings:implicitBindings.map(b=>({to:b.to,capability:b.capability,access:b.access}))},timestamp:Date.now(),sessionId:'debug-session',runId:'run1',hypothesisId:'A'})}).catch(()=>{});
-    // #endregion
 
     if (implicitBindings.length === 0) {
-      // #region agent log
-      fetch('http://127.0.0.1:7242/ingest/31cd8a5c-c5a9-4c85-9dba-5f04dc91dc42',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'resolver-engine.ts:370',message:'Early return - no implicit bindings',data:{sourceComponentNames:sourceComponents.map(c=>c.spec.name)},timestamp:Date.now(),sessionId:'debug-session',runId:'run1',hypothesisId:'A'})}).catch(()=>{});
-      // #endregion
       return;
     }
 
@@ -466,14 +423,8 @@ export class ResolverEngine {
         try {
           // Resolve target component (should be in outputsMap since we synthesized targets first)
           const target = this.resolveTarget(bindDirective, outputsMap);
-          // #region agent log
-          fetch('http://127.0.0.1:7242/ingest/31cd8a5c-c5a9-4c85-9dba-5f04dc91dc42',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'resolver-engine.ts:400',message:'After resolveTarget',data:{bindDirective:{to:bindDirective.to,capability:bindDirective.capability},targetFound:!!target,targetName:target?.component?.spec?.name},timestamp:Date.now(),sessionId:'debug-session',runId:'run1',hypothesisId:'B'})}).catch(()=>{});
-          // #endregion
           if (!target) {
             this.dependencies.logger.warn(`Cannot resolve binding target for event source: ${JSON.stringify(bindDirective)}`);
-            // #region agent log
-            fetch('http://127.0.0.1:7242/ingest/31cd8a5c-c5a9-4c85-9dba-5f04dc91dc42',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'resolver-engine.ts:403',message:'Target not found - continuing',data:{bindDirective,outputsMapKeys:Array.from(outputsMap.keys())},timestamp:Date.now(),sessionId:'debug-session',runId:'run1',hypothesisId:'B'})}).catch(()=>{});
-            // #endregion
             continue;
           }
 
@@ -487,21 +438,15 @@ export class ResolverEngine {
           }
 
           // Find strategy
-          const strategy = this.dependencies.binderRegistry.findStrategyForBinding(
+          const strategy = this.findStrategyForBindingSafe(
             component.getType(),
             validatedDirective.capability
           );
-          // #region agent log
-          fetch('http://127.0.0.1:7242/ingest/31cd8a5c-c5a9-4c85-9dba-5f04dc91dc42',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'resolver-engine.ts:416',message:'After findStrategyForBinding',data:{componentType:component.getType(),capability:validatedDirective.capability,strategyFound:!!strategy,strategyType:strategy?.constructor?.name},timestamp:Date.now(),sessionId:'debug-session',runId:'run1',hypothesisId:'C'})}).catch(()=>{});
-          // #endregion
 
           if (!strategy) {
             this.dependencies.logger.warn(
               `No strategy found for event source binding: ${validatedDirective.capability} from ${component.getType()}`
             );
-            // #region agent log
-            fetch('http://127.0.0.1:7242/ingest/31cd8a5c-c5a9-4c85-9dba-5f04dc91dc42',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'resolver-engine.ts:423',message:'Strategy not found - continuing',data:{componentType:component.getType(),capability:validatedDirective.capability},timestamp:Date.now(),sessionId:'debug-session',runId:'run1',hypothesisId:'C'})}).catch(()=>{});
-            // #endregion
             continue;
           }
 
@@ -516,9 +461,6 @@ export class ResolverEngine {
 
           // Execute binding
           const result = await strategy.bind(bindingContext);
-          // #region agent log
-          fetch('http://127.0.0.1:7242/ingest/31cd8a5c-c5a9-4c85-9dba-5f04dc91dc42',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'resolver-engine.ts:438',message:'After strategy.bind',data:{sourceComponent:component.spec.name,targetComponent:target.component.spec.name,capability:validatedDirective.capability,hasIamPolicies:!!result.iamPolicies,iamPolicyCount:result.iamPolicies?.length||0},timestamp:Date.now(),sessionId:'debug-session',runId:'run1',hypothesisId:'D'})}).catch(()=>{});
-          // #endregion
 
           bindings.push({
             source: component.spec.name,
@@ -548,13 +490,6 @@ export class ResolverEngine {
     // Store policies on stack for components to access during synthesis
     // This is a temporary mechanism - in the future, we should pass policies through a cleaner interface
     (stack as any)._eventSourceIamPolicies = eventSourceIamPolicies;
-    // #region agent log
-    const policiesByComponent: Record<string, number> = {};
-    for (const [k, v] of eventSourceIamPolicies.entries()) {
-      policiesByComponent[k] = v.length;
-    }
-    fetch('http://127.0.0.1:7242/ingest/31cd8a5c-c5a9-4c85-9dba-5f04dc91dc42',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'resolver-engine.ts:467',message:'Storing IAM policies on stack',data:{bindingsProcessed:bindings.length,componentsWithPolicies:eventSourceIamPolicies.size,policyMapKeys:Array.from(eventSourceIamPolicies.keys()),policiesByComponent},timestamp:Date.now(),sessionId:'debug-session',runId:'run1',hypothesisId:'E'})}).catch(()=>{});
-    // #endregion
 
     this.dependencies.logger.info(
       `Processed ${bindings.length} event source bindings, generated IAM policies for ${eventSourceIamPolicies.size} components`
@@ -647,15 +582,18 @@ export class ResolverEngine {
             validatedDirective = DirectiveSchemaValidator.validate(bindDirective, bindDirective.capability);
           } catch (error) {
             if (error instanceof Error && error.name === 'DirectiveValidationError') {
+              const targetLabel = bindDirective.to
+                ? bindDirective.to
+                : (bindDirective.select ? 'selector' : 'unknown');
               throw new Error(
-                `Directive validation failed for binding ${component.spec.name} -> ${bindDirective.to || bindDirective.select ? 'selector' : 'unknown'}: ${error.message}`
+                `Directive validation failed for binding ${component.spec.name} -> ${targetLabel}: ${error.message}`
               );
             }
             throw error;
           }
 
           // Find strategy that can handle this binding
-          const strategy = this.dependencies.binderRegistry.findStrategyForBinding(
+          const strategy = this.findStrategyForBindingSafe(
             component.getType(),
             validatedDirective.capability
           );

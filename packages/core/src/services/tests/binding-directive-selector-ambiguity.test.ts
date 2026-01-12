@@ -2,6 +2,7 @@ import { ResolverEngine } from '../../resolver/resolver-engine.js';
 import { UnifiedBinderRegistry } from '../../platform/binders/registry/unified-binder-registry.js';
 import type { IUnifiedBinderStrategy } from '../../platform/contracts/platform-binding-trigger-spec.js';
 import { createOutputsMap, createTestLogger, createTestStack, MockComponent } from '../../resolver/__tests__/test-helpers.js';
+import { vi } from 'vitest';
 
 const createStrategy = (): IUnifiedBinderStrategy => ({
   supportedCapabilities: ['api:rest'],
@@ -57,7 +58,7 @@ describe('BindingDirectiveSelector__Ambiguity', () => {
     const apiB = new MockComponent(stack, 'ApiB', { name: 'api-b', type: 'api-gateway-rest' });
     source.spec.binds = [{ select: { type: 'api-gateway-rest' }, capability: 'api:rest', access: 'read' }];
 
-    const bindSpy = jest.fn(async () => ({
+    const bindSpy = vi.fn(async () => ({
       environmentVariables: {},
       iamPolicies: [],
       securityGroupRules: [],

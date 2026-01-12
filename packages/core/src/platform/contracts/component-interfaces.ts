@@ -125,6 +125,9 @@ export interface IComponent extends IConstruct {
   /** The core synthesis method - creates AWS resources */
   synth(): void;
 
+  /** Validate component configuration invariants (throws on violation). */
+  validateConfig(): void;
+
   /** Returns the machine-readable capabilities of the component */
   getCapabilities(): ComponentCapabilities;
 

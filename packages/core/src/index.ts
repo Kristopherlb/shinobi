@@ -32,4 +32,8 @@ export { resolveComponentConstruct } from './platform/utils/component-resolver.j
 export type { ComponentResolutionOptions } from './platform/utils/component-resolver.js';
 export type { VpcResolutionOptions } from './platform/utils/vpc-resolver.js';
 
+// Domain boundary facades (interfaces/)
+export * from './interfaces/component.interface.js';
+export * from './interfaces/binder-strategy.interface.js';
+
 // add other re-exports as needed

@@ -1,0 +1,42 @@
+{
+  "name": "@shinobi/orchestration",
+  "root": "packages/orchestration",
+  "sourceRoot": "packages/orchestration/src",
+  "projectType": "library",
+  "implicitDependencies": ["@shinobi/api"],
+  "targets": {
+    "build": {
+      "executor": "@nx/js:tsc",
+      "options": {
+        "main": "src/index.ts",
+        "outputPath": "dist/packages/orchestration",
+        "tsConfig": "packages/orchestration/tsconfig.lib.json",
+        "generatePackageJson": true
+      },
+      "dependsOn": [
+        {
+          "target": "build",
+          "projects": ["@shinobi/api"]
+        }
+      ],
+      "outputs": ["{options.outputPath}"]
+    },
+    "typecheck": {
+      "executor": "nx:run-commands",
+      "options": {
+        "command": "tsc --noEmit -p packages/orchestration/tsconfig.json"
+      }
+    },
+    "test": {
+      "executor": "@nx/vitest:test",
+      "outputs": ["{projectRoot}/coverage"],
+      "options": {
+        "config": "packages/orchestration/vitest.config.ts",
+        "passWithNoTests": true
+      }
+    }
+  },
+  "tags": ["scope:shinobi", "type:orchestration"]
+}
+
+

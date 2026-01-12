@@ -4,7 +4,11 @@ import os from 'os';
 import { UpCommand } from '../up-command.js';
 import type { UpOptions } from '../up-command.js';
 import type { Logger } from '../console-logger.js';
-import type { FileDiscovery, SingletonResourceHandlerService } from '@shinobi/core';
+import type {
+  FileDiscovery,
+  RollbackCleanupService,
+  SingletonResourceHandlerService
+} from '@shinobi/core';
 vi.mock('../utils/service-synthesizer.js', () => ({
   readManifest: vi.fn(),
   synthesizeService: vi.fn()
@@ -46,7 +50,21 @@ describe('UpCommand', () => {
     postProcessTemplate: vi.fn().mockResolvedValue(undefined)
   } as unknown as SingletonResourceHandlerService;
 
-  const upCommand = new UpCommand({ fileDiscovery, logger, singletonResourceHandler });
+  const rollbackCleanup: RollbackCleanupService = {
+    checkOrphanedResources: vi.fn().mockResolvedValue({
+      stackInFailedState: false,
+      orphanedResources: [],
+      cleanedUp: 0,
+      errors: []
+    })
+  } as unknown as RollbackCleanupService;
+
+  const upCommand = new UpCommand({
+    fileDiscovery,
+    logger,
+    singletonResourceHandler,
+    rollbackCleanup
+  });
   const manifestPath = path.join(os.tmpdir(), 'service.yml');
 
   const readManifestMock = readManifest as unknown as vi.Mock;

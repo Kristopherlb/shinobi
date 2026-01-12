@@ -218,6 +218,37 @@ const capabilitySchemas: Record<string, any> = {
     },
     additionalProperties: false
   }
+  ,
+  // REST API capability (binding-time options)
+  // Used by resolver tests for capability version pinning.
+  'api:rest': {
+    type: 'object',
+    properties: {
+      expectedVersion: { type: 'number' }
+    },
+    additionalProperties: false
+  },
+
+  // S3 storage capability (binding-time options)
+  // Used by resolver tests for IAM policy effect/action/resource conflict detection.
+  'storage:s3': {
+    type: 'object',
+    properties: {
+      actions: {
+        type: 'array',
+        items: { type: 'string' }
+      },
+      resources: {
+        type: 'array',
+        items: { type: 'string' }
+      },
+      effect: {
+        type: 'string',
+        enum: ['Allow', 'Deny']
+      }
+    },
+    additionalProperties: false
+  }
 };
 
 /**

@@ -1,3 +1,4 @@
+import { describe, it, expect } from 'vitest';
 import { Stack } from 'aws-cdk-lib';
 import { ConfigBuilderContext } from '@shinobi/core';
 import { ComponentContext, ComponentSpec } from '../../@shinobi/core/component-interfaces.js';

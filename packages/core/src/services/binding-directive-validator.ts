@@ -109,19 +109,14 @@ export class BindingDirectiveValidator {
         }
 
         // Validate compatibility (source type → capability)
-        const strategy = this.dependencies.binderRegistry.findStrategyForBinding(
-          sourceType,
-          bind.capability
-        );
+        const strategy = this.findStrategyForBindingSafe(sourceType, bind.capability);
 
         if (!strategy) {
           // Try to find what capabilities are available for this source type
-          const availableCapabilities = this.dependencies.binderRegistry
-            .getRegisteredCapabilities()
-            .filter(cap => {
-              const s = this.dependencies.binderRegistry.findStrategyForBinding(sourceType, cap);
-              return s !== null;
-            });
+          const availableCapabilities = this.getRegisteredCapabilitiesSafe().filter(cap => {
+            const s = this.findStrategyForBindingSafe(sourceType, cap);
+            return s !== null;
+          });
 
           const suggestion = availableCapabilities.length > 0
             ? ` Available capabilities for ${sourceType}: ${availableCapabilities.join(', ')}`
@@ -178,6 +173,48 @@ export class BindingDirectiveValidator {
     }
 
     return errors;
+  }
+
+  /**
+   * Safe binder registry lookup.
+   *
+   * Some tests or callers may inject a partial/mocked registry. We tolerate either:
+   * - findStrategyForBinding(sourceType, capability)
+   * - findStrategy(capability) as a fallback
+   */
+  private findStrategyForBindingSafe(
+    sourceType: string,
+    capability: string
+  ): IUnifiedBinderStrategy | null {
+    const registry = this.dependencies.binderRegistry as unknown as {
+      findStrategyForBinding?: (s: string, c: string) => IUnifiedBinderStrategy | null;
+      findStrategy?: (c: string) => IUnifiedBinderStrategy | null;
+    };
+
+    if (typeof registry.findStrategyForBinding === 'function') {
+      return registry.findStrategyForBinding(sourceType, capability);
+    }
+
+    if (typeof registry.findStrategy === 'function') {
+      return registry.findStrategy(capability);
+    }
+
+    return null;
+  }
+
+  /**
+   * Safe registry capability listing for callers that inject partial mocks.
+   */
+  private getRegisteredCapabilitiesSafe(): string[] {
+    const registry = this.dependencies.binderRegistry as unknown as {
+      getRegisteredCapabilities?: () => string[];
+    };
+
+    if (typeof registry.getRegisteredCapabilities === 'function') {
+      return registry.getRegisteredCapabilities();
+    }
+
+    return [];
   }
 
   /**

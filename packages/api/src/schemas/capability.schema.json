@@ -1,0 +1,68 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "title": "Universal Capability Manifest (UCM)",
+  "description": "Universal capability contract that decouples tool/agent callers from infrastructure providers.",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["id", "version", "kind", "metadata", "spec"],
+  "properties": {
+    "id": {
+      "type": "string",
+      "description": "Capability identifier in URN-like format: com.shinobi.{domain}.{capability}",
+      "pattern": "^com\\.shinobi\\.[a-z0-9-]+\\.[a-z0-9-]+$"
+    },
+    "version": {
+      "type": "string",
+      "description": "Semantic version string (MAJOR.MINOR.PATCH with optional prerelease/build)",
+      "pattern": "^(0|[1-9]\\d*)\\.(0|[1-9]\\d*)\\.(0|[1-9]\\d*)(?:-[0-9A-Za-z.-]+)?(?:\\+[0-9A-Za-z.-]+)?$"
+    },
+    "kind": {
+      "type": "string",
+      "description": "Capability kind",
+      "enum": ["resource", "action", "query"]
+    },
+    "metadata": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["display_name", "description", "risk_tier", "owner"],
+      "properties": {
+        "display_name": {
+          "type": "string",
+          "description": "Human-friendly display name"
+        },
+        "description": {
+          "type": "string",
+          "description": "Human-friendly description"
+        },
+        "risk_tier": {
+          "type": "string",
+          "description": "Risk tier (governance domain)",
+          "enum": ["R0", "R1", "R2", "R3"]
+        },
+        "owner": {
+          "type": "string",
+          "description": "Owning team or email (e.g., team:platform or alice@example.com)"
+        }
+      }
+    },
+    "spec": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["input", "output"],
+      "properties": {
+        "input": {
+          "type": "object",
+          "description": "JSON Schema object describing the input/arguments shape",
+          "additionalProperties": true
+        },
+        "output": {
+          "type": "object",
+          "description": "JSON Schema object describing the output/return shape",
+          "additionalProperties": true
+        }
+      }
+    }
+  }
+}
+
+

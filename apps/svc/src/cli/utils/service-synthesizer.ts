@@ -122,10 +122,6 @@ export const synthesizeService = async (
     ? path.resolve(options.outputDir)
     : await fsp.mkdtemp(path.join(os.tmpdir(), 'shinobi-synth-'));
 
-  // #region agent log
-  fetch('http://127.0.0.1:7242/ingest/31cd8a5c-c5a9-4c85-9dba-5f04dc91dc42',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'service-synthesizer.ts:124',message:'Determining output directory',data:{targetOutDir,providedOutputDir:options.outputDir,isTemp:!options.outputDir,absolutePath:path.resolve(targetOutDir),manifestPath:options.manifestPath,manifestPathAbsolute:path.resolve(options.manifestPath)},timestamp:Date.now(),sessionId:'debug-session',runId:'run15',hypothesisId:'H'})}).catch(()=>{});
-  // #endregion
-
   const previousOutdir = process.env.CDK_OUTDIR;
   process.env.CDK_OUTDIR = targetOutDir;
 

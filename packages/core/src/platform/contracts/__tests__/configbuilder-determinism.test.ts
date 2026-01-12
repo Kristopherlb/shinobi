@@ -1,6 +1,10 @@
-import * as childProcess from 'child_process';
+import { vi } from 'vitest';
+import { createRequire } from 'module';
 import { ConfigBuilder } from '../config-builder.js';
 import type { ComponentContext, ComponentSpec } from '../component-interfaces.js';
+
+const require = createRequire(import.meta.url);
+const childProcess = require('child_process') as typeof import('child_process');
 
 class DeterministicConfigBuilder extends ConfigBuilder<Record<string, any>> {
   protected getHardcodedFallbacks(): Record<string, any> {
@@ -18,7 +22,7 @@ const createContext = (): ComponentContext => ({
 describe('ConfigBuilder__Determinism', () => {
   it('ConfigBuilderDeterminism__NetworkCall__Detected', () => {
     const originalFetch = global.fetch;
-    const fetchSpy = jest.fn(() => Promise.resolve({}));
+    const fetchSpy = vi.fn(() => Promise.resolve({}));
     // @ts-expect-error allow override for test
     global.fetch = fetchSpy;
 
@@ -34,7 +38,7 @@ describe('ConfigBuilder__Determinism', () => {
   });
 
   it('ConfigBuilderDeterminism__CliExecution__Detected', () => {
-    const execSpy = jest.spyOn(childProcess, 'execSync');
+    const execSpy = vi.spyOn(childProcess, 'execSync');
 
     const spec: ComponentSpec = { name: 'component', type: 'vpc', config: {} };
     const builder = new DeterministicConfigBuilder({ context: createContext(), spec }, {

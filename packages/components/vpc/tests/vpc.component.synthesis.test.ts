@@ -1,3 +1,4 @@
+import { describe, it, expect } from 'vitest';
 import * as cdk from 'aws-cdk-lib';
 import { Match, Template } from 'aws-cdk-lib/assertions';
 import { VpcComponent } from '../vpc.component.js';

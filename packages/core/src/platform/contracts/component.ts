@@ -181,6 +181,16 @@ export abstract class BaseComponent extends Construct implements IComponent {
   public abstract synth(): void;
 
   /**
+   * Validate component configuration invariants.
+   *
+   * Default behavior is a no-op for backwards compatibility; components may override
+   * to enforce invariants beyond JSON Schema validation.
+   */
+  public validateConfig(): void {
+    // Intentionally empty (override in components that need invariants).
+  }
+
+  /**
    * Returns the machine-readable capabilities of the component.
    * 
    * Capabilities define what this component provides to other components

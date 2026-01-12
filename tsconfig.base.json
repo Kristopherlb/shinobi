@@ -23,7 +23,10 @@
     "baseUrl": ".",
     "paths": {
       "@shinobi/core": ["packages/core/src/index.ts"],
-      "@shinobi/binders": ["packages/binders/src/index.ts"]
+      "@shinobi/binders": ["packages/binders/src/index.ts"],
+      "@shinobi/api": ["packages/api/src/index.ts"],
+      "@shinobi/orchestration": ["packages/orchestration/src/index.ts"],
+      "@shinobi/governance": ["packages/governance/src/index.ts"]
     }
   },
   "exclude": [

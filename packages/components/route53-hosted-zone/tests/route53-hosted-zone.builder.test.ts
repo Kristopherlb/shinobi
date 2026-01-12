@@ -1,3 +1,4 @@
+import { describe, it, expect, beforeEach, afterEach } from 'vitest';
 import { App, Stack } from 'aws-cdk-lib';
 import {
   Route53HostedZoneComponentConfigBuilder,

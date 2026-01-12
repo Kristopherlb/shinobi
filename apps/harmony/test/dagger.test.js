@@ -1,5 +1,4 @@
-import test from "node:test";
-import assert from "node:assert/strict";
+import { describe, it, expect } from 'vitest';
 import {
   scanRepositoryWithClient,
   createRepositoryScanner
@@ -36,27 +35,29 @@ function buildFakeRepo() {
   return repo;
 }
 
-test("scanRepositoryWithClient builds container definition", async () => {
-  const fakeRepo = buildFakeRepo();
-  const output = await scanRepositoryWithClient(fakeRepo, "https://example.com/repo.git");
+describe("dagger", () => {
+  it("scanRepositoryWithClient builds container definition", async () => {
+    const fakeRepo = buildFakeRepo();
+    const output = await scanRepositoryWithClient(fakeRepo, "https://example.com/repo.git");
 
-  assert.equal(output.readme, "README content");
-  assert.ok(output.tree.includes("README.md"));
-  assert.ok(fakeRepo.calls.find(([name]) => name === "from"));
-});
+    expect(output.readme).toBe("README content");
+    expect(output.tree.includes("README.md")).toBe(true);
+    expect(fakeRepo.calls.find(([name]) => name === "from")).toBeDefined();
+  });
 
-test("repository scanner uses injected dagger client factory", async () => {
-  let called = false;
-  const fakeRepo = buildFakeRepo();
-  const daggerClientFactory = {
-    withClient: async (callback) => {
-      called = true;
-      return callback(fakeRepo);
-    }
-  };
-  const scan = createRepositoryScanner({ daggerClientFactory });
-  const output = await scan("https://example.com/repo.git");
+  it("repository scanner uses injected dagger client factory", async () => {
+    let called = false;
+    const fakeRepo = buildFakeRepo();
+    const daggerClientFactory = {
+      withClient: async (callback) => {
+        called = true;
+        return callback(fakeRepo);
+      }
+    };
+    const scan = createRepositoryScanner({ daggerClientFactory });
+    const output = await scan("https://example.com/repo.git");
 
-  assert.ok(called);
-  assert.equal(output.readme, "README content");
+    expect(called).toBe(true);
+    expect(output.readme).toBe("README content");
+  });
 });

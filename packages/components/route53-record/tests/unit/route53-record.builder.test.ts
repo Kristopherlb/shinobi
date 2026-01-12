@@ -4,6 +4,7 @@
  * Tests the 5-layer configuration precedence chain and validation.
  */
 
+import { describe, it, expect, beforeEach, afterEach } from 'vitest';
 import { Route53RecordConfigBuilder, Route53RecordConfig } from '../../src/route53-record.builder.js';
 import { ComponentContext, ComponentSpec } from '../../../@shinobi/core/component-interfaces.js';
 

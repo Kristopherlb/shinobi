@@ -1,5 +1,6 @@
 import * as cdk from 'aws-cdk-lib';
 import { Construct } from 'constructs';
+import { vi } from 'vitest';
 import { ResolverEngine } from '../resolver-engine.js';
 import { UnifiedBinderRegistry } from '../../platform/binders/registry/unified-binder-registry.js';
 import type {
@@ -53,6 +54,10 @@ export class MockComponent extends Construct implements IComponent {
 
   synth(): void {
     this.onSynth?.();
+  }
+
+  validateConfig(): void {
+    // No-op for tests; real components may enforce invariants.
   }
 
   getCapabilities(): ComponentCapabilities {
@@ -116,10 +121,10 @@ export const createMockBindingResult = (
 });
 
 export const createTestLogger = () => ({
-  debug: jest.fn(),
-  info: jest.fn(),
-  warn: jest.fn(),
-  error: jest.fn()
+  debug: vi.fn(),
+  info: vi.fn(),
+  warn: vi.fn(),
+  error: vi.fn()
 });
 
 export const createTestResolverEngine = (options: { binderRegistry: UnifiedBinderRegistry; logger?: any }) => {

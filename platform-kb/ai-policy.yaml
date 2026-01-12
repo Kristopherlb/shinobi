@@ -1,0 +1,10 @@
+ai:
+  write:
+    enabled: true
+    requiredLabel: ai-change-approved
+    allowedPaths:
+      - apps/svc/**
+      - packages/core/**
+      - packages/orchestration/**
+      - packages/api/**
+

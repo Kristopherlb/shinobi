@@ -3,6 +3,7 @@
  * Implements Platform Testing Standard v1.0 - Component Synthesis Testing
  */
 
+import { describe, it, expect, beforeEach, afterEach } from 'vitest';
 import { App, Stack } from 'aws-cdk-lib';
 import { Match, Template } from 'aws-cdk-lib/assertions';
 import { CognitoUserPoolComponent } from '../src/cognito-user-pool.component.js';

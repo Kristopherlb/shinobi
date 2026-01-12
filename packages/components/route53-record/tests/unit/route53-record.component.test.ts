@@ -4,6 +4,7 @@
  * Tests component synthesis, construct creation, and capability exposure.
  */
 
+import { describe, it, expect, beforeEach, afterEach } from 'vitest';
 import { Stack } from 'aws-cdk-lib';
 import { Template } from 'aws-cdk-lib/assertions';
 import { Route53RecordComponent } from '../../src/route53-record.component.js';

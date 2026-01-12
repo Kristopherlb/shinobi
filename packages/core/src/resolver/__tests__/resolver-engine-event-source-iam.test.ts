@@ -19,7 +19,7 @@
 
 import { describe, it, expect, beforeEach, vi } from 'vitest';
 import { App, Stack } from 'aws-cdk-lib';
-import { Template } from 'aws-cdk-lib/assertions';
+import { Match, Template } from 'aws-cdk-lib/assertions';
 import * as cdk from 'aws-cdk-lib';
 import { ResolverEngine, ResolverEngineDependencies } from '../resolver-engine.js';
 import { UnifiedBinderRegistry } from '../../platform/binders/registry/unified-binder-registry.js';
@@ -29,6 +29,7 @@ import * as lambda from 'aws-cdk-lib/aws-lambda';
 import * as sqs from 'aws-cdk-lib/aws-sqs';
 import { Construct } from 'constructs';
 import * as iam from 'aws-cdk-lib/aws-iam';
+import type { IUnifiedBinderStrategy } from '../../platform/contracts/platform-binding-trigger-spec.js';
 
 // Mock components for testing
 class MockLambdaWorkerComponent extends Construct implements IComponent {
@@ -51,6 +52,10 @@ class MockLambdaWorkerComponent extends Construct implements IComponent {
 
   getType(): string {
     return 'lambda-worker';
+  }
+
+  validateConfig(): void {
+    // No-op for tests; real components may enforce invariants.
   }
 
   synth(): any {
@@ -184,6 +189,10 @@ class MockSqsQueueComponent extends Construct implements IComponent {
     return 'sqs-queue';
   }
 
+  validateConfig(): void {
+    // No-op for tests; real components may enforce invariants.
+  }
+
   synth(): any {
     this.queue = new sqs.Queue(this, 'Queue', {
       queueName: this.spec.name,
@@ -252,10 +261,36 @@ describe('ResolverEngine - Event Source IAM Permissions', () => {
       env: { account: '123456789012', region: 'us-east-1' }
     });
 
-    // Note: QueueBinderStrategy import is complex due to cross-package dependencies
-    // For this test, we'll skip the QueueBinderStrategy import and test the resolver engine structure
-    // In a real scenario, strategies would be registered via the registry constructor
-    binderRegistry = new UnifiedBinderRegistry([]);
+    // Provide a minimal strategy so the resolver can generate IAM policies for event-source bindings
+    // without pulling in the full @shinobi/binders strategy graph.
+    const sqsEventSourceStrategy: IUnifiedBinderStrategy = {
+      supportedCapabilities: ['messaging:sqs'],
+      canHandle: (sourceType: string, capability: string) =>
+        sourceType === 'lambda-worker' && capability === 'messaging:sqs',
+      bind: async () => ({
+        environmentVariables: {},
+        iamPolicies: [
+          {
+            statement: new iam.PolicyStatement({
+              effect: iam.Effect.ALLOW,
+              actions: [
+                'sqs:ReceiveMessage',
+                'sqs:DeleteMessage',
+                'sqs:GetQueueAttributes'
+              ],
+              resources: ['*']
+            }),
+            description: 'Allow Lambda worker to consume from SQS queue',
+            complianceRequirement: 'Least privilege SQS consumer permissions'
+          }
+        ],
+        securityGroupRules: [],
+        compliance: { status: 'compliant', framework: 'commercial', actionsTaken: [] }
+      }),
+      getCompatibilityMatrix: () => []
+    };
+
+    binderRegistry = new UnifiedBinderRegistry([sqsEventSourceStrategy]);
 
     mockLogger = {
       debug: vi.fn(),
@@ -348,26 +383,26 @@ describe('ResolverEngine - Event Source IAM Permissions', () => {
     // The policies should be in the Lambda execution role's inline policies
     template.hasResourceProperties('AWS::IAM::Policy', {
       PolicyDocument: {
-        Statement: [
-          {
+        Statement: Match.arrayWith([
+          Match.objectLike({
             Effect: 'Allow',
-            Action: expect.arrayContaining([
+            Action: Match.arrayWith([
               'sqs:ReceiveMessage',
               'sqs:DeleteMessage',
               'sqs:GetQueueAttributes'
             ])
-          }
-        ]
+          })
+        ])
       }
     });
 
     // Verify EventSourceMapping exists
     template.hasResourceProperties('AWS::Lambda::EventSourceMapping', {
-      EventSourceArn: expect.objectContaining({
-        'Fn::GetAtt': expect.any(Array)
+      EventSourceArn: Match.objectLike({
+        'Fn::GetAtt': Match.arrayWith(['Arn'])
       }),
-      FunctionName: expect.objectContaining({
-        Ref: expect.any(String)
+      FunctionName: Match.objectLike({
+        Ref: Match.anyValue()
       })
     });
 

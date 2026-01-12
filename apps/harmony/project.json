@@ -1,0 +1,23 @@
+{
+  "name": "harmony",
+  "sourceRoot": "apps/harmony/src",
+  "projectType": "application",
+  "tags": [
+    "scope:shinobi",
+    "type:app"
+  ],
+  "targets": {
+    "test": {
+      "executor": "@nx/vitest:test",
+      "outputs": [
+        "{options.outputPath}"
+      ],
+      "options": {
+        "config": "apps/harmony/vitest.config.ts",
+        "passWithNoTests": true,
+        "outputPath": "coverage/apps/harmony"
+      }
+    }
+  }
+}
+

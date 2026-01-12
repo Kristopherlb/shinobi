@@ -1,3 +1,4 @@
+import { describe, it, expect, beforeEach, afterEach, vi } from 'vitest';
 import { App, Stack } from 'aws-cdk-lib';
 import { Match, Template } from 'aws-cdk-lib/assertions';
 import { Ec2InstanceComponent } from '../ec2-instance.component.js';
@@ -29,7 +30,7 @@ describe('Ec2InstanceCompliance__Controls__Validation', () => {
       env: { account: '123456789012', region: 'us-east-1' }
     });
     context = createContext('commercial', stack);
-    loadPlatformConfigSpy = jest
+    loadPlatformConfigSpy = vi
       .spyOn(Ec2InstanceComponentConfigBuilder.prototype, '_loadPlatformConfiguration')
       .mockImplementation(function () {
         const framework = this.builderContext.context.complianceFramework;

@@ -114,10 +114,6 @@ export function resolveVpcForSubnetGroups(
         vpcAttributes.vpcCidrBlock = options.vpcCidrBlock;
       }
       
-      // #region agent log
-      fetch('http://127.0.0.1:7242/ingest/31cd8a5c-c5a9-4c85-9dba-5f04dc91dc42',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'vpc-resolver.ts:107',message:'Creating VPC via fromVpcAttributes',data:{vpcId:options.vpcId,hasVpcCidrBlock:!!options.vpcCidrBlock,vpcCidrBlock:options.vpcCidrBlock,availabilityZonesCount:availabilityZones.length,subnetIdsCount:options.subnetIds?.length || 0},timestamp:Date.now(),sessionId:'debug-session',runId:'run23',hypothesisId:'U'})}).catch(()=>{});
-      // #endregion
-      
       return ec2.Vpc.fromVpcAttributes(scope, id, vpcAttributes);
     }
     
@@ -135,10 +131,6 @@ export function resolveVpcForSubnetGroups(
     if (options.vpcCidrBlock) {
       vpcAttributes.vpcCidrBlock = options.vpcCidrBlock;
     }
-    
-    // #region agent log
-    fetch('http://127.0.0.1:7242/ingest/31cd8a5c-c5a9-4c85-9dba-5f04dc91dc42',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'vpc-resolver.ts:119',message:'Creating VPC via fromVpcAttributes (no subnet IDs)',data:{vpcId:options.vpcId,hasVpcCidrBlock:!!options.vpcCidrBlock,vpcCidrBlock:options.vpcCidrBlock,availabilityZonesCount:availabilityZones.length},timestamp:Date.now(),sessionId:'debug-session',runId:'run23',hypothesisId:'U'})}).catch(()=>{});
-    // #endregion
     
     return ec2.Vpc.fromVpcAttributes(scope, id, vpcAttributes);
   }

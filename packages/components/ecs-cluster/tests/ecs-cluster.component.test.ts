@@ -5,6 +5,7 @@
  * Tests the foundational ECS Service Connect component with full compliance validation
  */
 
+import { describe, it, expect, beforeEach, afterEach, vi } from 'vitest';
 import * as cdk from 'aws-cdk-lib';
 import * as ecs from 'aws-cdk-lib/aws-ecs';
 import * as ec2 from 'aws-cdk-lib/aws-ec2';
@@ -21,10 +22,10 @@ import {
   TEST_SPECS 
 } from '../test-fixtures.js';
 
-let platformConfigSpy: jest.SpyInstance;
+let platformConfigSpy: ReturnType<typeof vi.spyOn>;
 
 beforeEach(() => {
-  platformConfigSpy = jest
+  platformConfigSpy = vi
     .spyOn(EcsClusterComponentConfigBuilder.prototype, '_loadPlatformConfiguration')
     .mockImplementation(() => ({}));
 });
@@ -882,11 +883,11 @@ describe('EcsClusterComponent__ErrorHandling__ValidationFailures', () => {
  */
 describe('EcsClusterComponent__LoggingCompliance__StructuredEvents', () => {
   let testEnv: ReturnType<typeof TestFixtureFactory.createTestEnvironment>;
-  let consoleLogSpy: jest.SpyInstance;
+  let consoleLogSpy: ReturnType<typeof vi.spyOn>;
 
   beforeEach(() => {
     testEnv = TestFixtureFactory.createTestEnvironment();
-    consoleLogSpy = jest.spyOn(console, 'log').mockImplementation();
+    consoleLogSpy = vi.spyOn(console, 'log').mockImplementation(() => {});
   });
 
   afterEach(() => {

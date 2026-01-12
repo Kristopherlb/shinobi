@@ -1,3 +1,4 @@
+import { describe, it, expect, beforeEach, afterEach, vi } from 'vitest';
 import { Ec2InstanceComponentConfigBuilder } from '../ec2-instance.builder.js';
 
 const createContext = (framework = 'commercial') => ({
@@ -24,7 +25,7 @@ describe('Ec2InstanceConfigBuilder__Precedence__AppliesFrameworkDefaults', () =>
   let loadPlatformConfigSpy;
 
   beforeEach(() => {
-    loadPlatformConfigSpy = jest
+    loadPlatformConfigSpy = vi
       .spyOn(Ec2InstanceComponentConfigBuilder.prototype, '_loadPlatformConfiguration')
       .mockImplementation(function () {
         const framework = this.builderContext.context.complianceFramework;

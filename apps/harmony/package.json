@@ -9,12 +9,11 @@
     "start:worker": "node src/workflow/worker.js",
     "start:worker:local": "HARMONY_LLM_PROVIDER=mock node src/workflow/worker.js",
     "start:client": "node src/workflow/run-local.js",
-    "start:client:local": "HARMONY_LLM_PROVIDER=mock node src/workflow/run-local.js",
-    "test": "node --test"
+    "start:client:local": "HARMONY_LLM_PROVIDER=mock node src/workflow/run-local.js"
   },
   "dependencies": {
     "@dagger.io/dagger": "^0.11.1",
-    "@langchain/langgraph": "^0.0.42",
+    "@langchain/langgraph": "^1.0.15",
     "@modelcontextprotocol/sdk": "^1.0.0",
     "@temporalio/client": "^1.10.4",
     "@temporalio/testing": "^1.10.4",

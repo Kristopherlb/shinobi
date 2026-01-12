@@ -50,7 +50,9 @@ describe('ResolverEngine__EnvVarConflicts', () => {
 
     await (resolver as any).bindComponents([source, targetA, targetB], createOutputsMap([source, targetA, targetB]), {});
 
-    const warningCalls = (logger.warn as jest.Mock).mock.calls.flat().join(' ');
+    const warningCalls = (
+      logger.warn as unknown as { mock: { calls: Array<Array<unknown>> } }
+    ).mock.calls.flat().join(' ');
     expect(warningCalls).toContain('overwritten');
     expect(warningCalls).toContain('vpc-a');
     expect(warningCalls).toContain('vpc-b');

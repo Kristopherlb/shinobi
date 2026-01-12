@@ -76,7 +76,9 @@ describe('BindingDirective__EnvVarCollisions', () => {
 
     await (resolver as any).bindComponents([source, vpcA, vpcB], createOutputsMap([source, vpcA, vpcB]), {});
 
-    const warningCalls = (logger.warn as jest.Mock).mock.calls.flat().join(' ');
+    const warningCalls = (
+      logger.warn as unknown as { mock: { calls: Array<Array<unknown>> } }
+    ).mock.calls.flat().join(' ');
     expect(warningCalls).toContain('Environment variable conflict');
   });
 });

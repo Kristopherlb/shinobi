@@ -1,0 +1,65 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "title": "Audit Record",
+  "description": "Immutable audit record for tool calls and governance enforcement.",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["id", "timestamp", "actor", "action", "resource", "outcome", "context"],
+  "properties": {
+    "id": { "type": "string", "description": "UUID for the audit record" },
+    "timestamp": { "type": "string", "description": "ISO8601 timestamp" },
+    "actor": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["principal_id", "role"],
+      "properties": {
+        "principal_id": { "type": "string" },
+        "role": { "type": "string" }
+      }
+    },
+    "action": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["tool_name", "risk_tier"],
+      "properties": {
+        "tool_name": { "type": "string" },
+        "risk_tier": { "$ref": "#/$defs/riskTier" }
+      }
+    },
+    "resource": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["arn", "region"],
+      "properties": {
+        "arn": { "type": "string" },
+        "region": { "type": "string" }
+      }
+    },
+    "outcome": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["status"],
+      "properties": {
+        "status": { "type": "string", "enum": ["success", "failure", "denied"] },
+        "error_code": { "type": "string" }
+      }
+    },
+    "context": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["trace_id", "plan_id"],
+      "properties": {
+        "trace_id": { "type": "string" },
+        "plan_id": { "type": "string" }
+      }
+    }
+  },
+  "$defs": {
+    "riskTier": {
+      "type": "string",
+      "enum": ["R0", "R1", "R2", "R3"]
+    }
+  }
+}
+
+

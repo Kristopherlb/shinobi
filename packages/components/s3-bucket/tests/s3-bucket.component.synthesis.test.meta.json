@@ -1,0 +1,225 @@
+{
+  "tests": [
+    {
+      "id": "TP-S3-BUCKET-COMPONENT-001",
+      "testName": "CommercialDefaults__BaselineConfiguration__SynthesizesAES256Bucket",
+      "level": "unit",
+      "capability": "Commercial synthesis uses platform defaults",
+      "oracle": "contract",
+      "invariants": [
+        "AES256 encryption",
+        "Versioning enabled"
+      ],
+      "fixtures": [
+        "cdk.Stack",
+        "S3BucketComponent"
+      ],
+      "inputs": {
+        "shape": "Commercial context without overrides",
+        "notes": "Validates default behavior"
+      },
+      "risks": [],
+      "dependencies": [
+        "config/commercial.yml"
+      ],
+      "evidence": [
+        "CloudFormation template"
+      ],
+      "compliance_refs": [
+        "std://configuration"
+      ],
+      "ai_generated": false,
+      "human_reviewed_by": "",
+      "negative_case_id": ""
+    },
+    {
+      "id": "TP-S3-BUCKET-COMPONENT-002",
+      "testName": "FedRAMPModerateDefaults__ComplianceHardening__CreatesKmsAndLogging",
+      "level": "unit",
+      "capability": "FedRAMP Moderate defaults enforce KMS and logging",
+      "oracle": "contract",
+      "invariants": [
+        "KMS CMK created",
+        "Access logging enabled",
+        "Metrics configuration present"
+      ],
+      "fixtures": [
+        "cdk.Stack",
+        "S3BucketComponent"
+      ],
+      "inputs": {
+        "shape": "FedRAMP moderate context without overrides",
+        "notes": "Validates compliance hardening"
+      },
+      "risks": [],
+      "dependencies": [
+        "config/fedramp-moderate.yml"
+      ],
+      "evidence": [
+        "CloudFormation template"
+      ],
+      "compliance_refs": [
+        "std://configuration",
+        "std://observability"
+      ],
+      "ai_generated": false,
+      "human_reviewed_by": "",
+      "negative_case_id": ""
+    },
+    {
+      "id": "TP-S3-BUCKET-COMPONENT-003",
+      "testName": "FedRAMPHighDefaults__ObjectLockCompliance__EnablesRetentionPolicies",
+      "level": "unit",
+      "capability": "FedRAMP High object lock enforcement",
+      "oracle": "contract",
+      "invariants": [
+        "Object lock enabled",
+        "Compliance retention"
+      ],
+      "fixtures": [
+        "cdk.Stack",
+        "S3BucketComponent"
+      ],
+      "inputs": {
+        "shape": "FedRAMP high context without overrides",
+        "notes": "Validates object lock"
+      },
+      "risks": [],
+      "dependencies": [
+        "config/fedramp-high.yml"
+      ],
+      "evidence": [
+        "CloudFormation template"
+      ],
+      "compliance_refs": [
+        "std://configuration"
+      ],
+      "ai_generated": false,
+      "human_reviewed_by": "",
+      "negative_case_id": ""
+    },
+    {
+      "id": "TP-S3-BUCKET-COMPONENT-004",
+      "testName": "ManifestOverrides__FedRAMPAuditLoggingDisabled__RejectsNonCompliantConfig",
+      "level": "unit",
+      "capability": "FedRAMP Moderate rejects disabling audit logging",
+      "oracle": "trace",
+      "invariants": [
+        "Validation error thrown when audit logging disabled in FedRAMP context"
+      ],
+      "fixtures": [
+        "cdk.Stack",
+        "S3BucketComponent"
+      ],
+      "inputs": {
+        "shape": "FedRAMP moderate with audit logging disabled",
+        "notes": "Expects validation error rejecting non-compliant configuration"
+      },
+      "risks": [
+        "Operator assumes compliance responsibility if override allowed"
+      ],
+      "dependencies": [],
+      "evidence": [
+        "CloudFormation template",
+        "Thrown validation error"
+      ],
+      "compliance_refs": [
+        "std://configuration"
+      ],
+      "ai_generated": false,
+      "human_reviewed_by": "",
+      "negative_case_id": ""
+    },
+    {
+      "id": "TP-S3-BUCKET-COMPONENT-005",
+      "testName": "ManifestOverrides__CommercialAuditLoggingDisabled__OmitsAuditBucket",
+      "level": "unit",
+      "capability": "Commercial overrides can disable audit logging",
+      "oracle": "contract",
+      "invariants": [
+        "No audit bucket created"
+      ],
+      "fixtures": [
+        "cdk.Stack",
+        "S3BucketComponent"
+      ],
+      "inputs": {
+        "shape": "Commercial context with audit logging disabled",
+        "notes": "Allowed relaxation for commercial framework"
+      },
+      "risks": [
+        "Reduced visibility"
+      ],
+      "dependencies": [],
+      "evidence": [
+        "CloudFormation template"
+      ],
+      "compliance_refs": [
+        "std://configuration"
+      ],
+      "ai_generated": false,
+      "human_reviewed_by": "",
+      "negative_case_id": ""
+    },
+    {
+      "id": "TP-S3-BUCKET-COMPONENT-006",
+      "testName": "AuditBucketNaming__DefaultConfiguration__UsesDeterministicUniqueName",
+      "level": "unit",
+      "capability": "Audit bucket naming uniqueness",
+      "oracle": "exact",
+      "invariants": [
+        "Generated name incorporates service, component, environment, and account"
+      ],
+      "fixtures": [
+        "cdk.Stack",
+        "S3BucketComponent"
+      ],
+      "inputs": {
+        "shape": "FedRAMP moderate context with audit logging enabled",
+        "notes": "Verifies deterministic bucket naming"
+      },
+      "risks": [
+        "Bucket name collisions"
+      ],
+      "dependencies": [],
+      "evidence": [
+        "Audit bucket CloudFormation resource"
+      ],
+      "compliance_refs": [
+        "std://configuration"
+      ],
+      "ai_generated": false,
+      "human_reviewed_by": "",
+      "negative_case_id": ""
+    },
+    {
+      "id": "TP-S3-BUCKET-COMPONENT-007",
+      "testName": "ObjectLock__VersioningDisabled__ThrowsInformativeError",
+      "level": "unit",
+      "capability": "Object lock requires versioning",
+      "oracle": "trace",
+      "invariants": [
+        "Validation error thrown"
+      ],
+      "fixtures": [
+        "cdk.Stack",
+        "S3BucketComponent"
+      ],
+      "inputs": {
+        "shape": "Object lock enabled with versioning disabled",
+        "notes": "Expect synth failure"
+      },
+      "risks": [],
+      "dependencies": [],
+      "evidence": [
+        "Thrown error"
+      ],
+      "compliance_refs": [
+        "std://configuration"
+      ],
+      "ai_generated": false,
+      "human_reviewed_by": "",
+      "negative_case_id": ""
+    }
+  ]
+}
