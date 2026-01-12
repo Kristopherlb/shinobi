@@ -1,5 +1,6 @@
 import { proxyActivities } from "@temporalio/workflow";
 import { createInitialState } from "../agent/state.js";
+import { runOpsNarrativeWorkflow } from "../ops-narrative/workflow.js";
 
 const { planActivity, executeActivity, reviewActivity } = proxyActivities({
   startToCloseTimeout: "5 minutes"
@@ -14,3 +15,5 @@ export async function runDurableAnalyzer({ goal, repositoryUrl }) {
 
   return state;
 }
+
+export { runOpsNarrativeWorkflow };
