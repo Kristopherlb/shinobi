@@ -9,7 +9,9 @@
     "start:worker": "node src/workflow/worker.js",
     "start:worker:local": "HARMONY_LLM_PROVIDER=mock node src/workflow/worker.js",
     "start:client": "node src/workflow/run-local.js",
-    "start:client:local": "HARMONY_LLM_PROVIDER=mock node src/workflow/run-local.js"
+    "start:client:local": "HARMONY_LLM_PROVIDER=mock node src/workflow/run-local.js",
+    "start:ingest-tools": "node src/tool-index/ingest.js",
+    "test": "vitest run --config vitest.config.ts"
   },
   "dependencies": {
     "@dagger.io/dagger": "^0.11.1",
@@ -19,6 +21,7 @@
     "@temporalio/testing": "^1.10.4",
     "@temporalio/worker": "^1.10.4",
     "@temporalio/workflow": "^1.10.4",
+    "pg": "^8.13.0",
     "zod": "^4.1.5"
   }
 }

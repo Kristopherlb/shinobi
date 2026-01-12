@@ -1,9 +1,18 @@
 import { AgentStateSchema, ToolResultSchema } from "../agent/state.js";
 import { analyzeRepository, listTools } from "../mcp/client.js";
+import { retrieveRelevantTools } from "../tool-index/retrieval.js";
+
+async function selectTools(goal, { mcpClientFactory }) {
+  try {
+    return await retrieveRelevantTools(goal);
+  } catch {
+    return mcpClientFactory.withClient((client) => listTools(client));
+  }
+}
 
 export function createActivities({ mcpClientFactory, planner, reviewer }) {
-  async function discoverToolsActivity() {
-    return mcpClientFactory.withClient((client) => listTools(client));
+  async function discoverToolsActivity(goal) {
+    return selectTools(goal, { mcpClientFactory });
   }
 
   async function generatePlanActivity(state, tools) {

@@ -1,12 +1,21 @@
 import { END, START, StateGraph } from "@langchain/langgraph";
 import { AgentStateSchema, createInitialState } from "./state.js";
 import { listTools, analyzeRepository } from "../mcp/client.js";
+import { retrieveRelevantTools } from "../tool-index/retrieval.js";
 
 const GraphState = AgentStateSchema;
 
+async function selectTools(goal, { mcpClientFactory }) {
+  try {
+    return await retrieveRelevantTools(goal);
+  } catch {
+    return mcpClientFactory.withClient((client) => listTools(client));
+  }
+}
+
 function createPlanNode({ mcpClientFactory, planner }) {
   return async function planNode(state) {
-    const tools = await mcpClientFactory.withClient((client) => listTools(client));
+    const tools = await selectTools(state.goal, { mcpClientFactory });
 
     return {
       ...state,

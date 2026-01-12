@@ -13,7 +13,7 @@ const {
 export async function runDurableAnalyzer({ goal, repositoryUrl }) {
   let state = createInitialState({ goal, repositoryUrl });
 
-  const tools = await discoverToolsActivity();
+  const tools = await discoverToolsActivity(goal);
   state = await generatePlanActivity(state, tools);
   state = await executeToolActivity(state);
   state = await reviewActivity(state);

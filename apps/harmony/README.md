@@ -65,13 +65,33 @@ Key overrides:
 - `HARMONY_DEFAULT_GOAL`, `HARMONY_DEFAULT_REPO`
 - `HARMONY_LLM_PROVIDER`, `HARMONY_LLM_MODEL`, `HARMONY_LLM_API_KEY`
 
+### Tool selection
+
+Tool selection is backed by a vector index stored in Postgres/pgvector. A dedicated ingestion step embeds MCP tool definitions with `text-embedding-3-small` and stores them in the `mcp_tool_index` table. At runtime, the plan step embeds the user goal and retrieves the top matches from the vector index.
+
+#### Ingest tools
+
+Provide a Postgres connection string and embedding provider configuration, then run:
+
+```bash
+cd apps/harmony
+TOOL_INDEX_DATABASE_URL="postgres://user:pass@localhost:5432/harmony" \
+EMBEDDING_API_KEY="..." \
+pnpm start:ingest-tools
+```
+
+Optional environment variables:
+
+- `EMBEDDING_MODEL` (defaults to `text-embedding-3-small`)
+- `EMBEDDING_BASE_URL` (defaults to `https://api.openai.com/v1`)
+- `MCP_SERVER_ID` (defaults to `local-stdio`)
+
 ## Testing
 
 ```bash
 cd apps/harmony
 pnpm test
 ```
-
 ## Troubleshooting
 
 - **Dagger connection errors**: ensure the Dagger engine container is running and the Docker socket is accessible.
