@@ -1,7 +1,6 @@
 import { afterEach, describe, expect, it, vi } from "vitest";
 import {
   fetchLinearData,
-  getWorkflowFlags,
   synthesizeReport
 } from "../activities.js";
 
@@ -42,13 +41,4 @@ describe("OpsNarrative activities", () => {
     expect(result.provider).toBe("OLLAMA");
   });
 
-  it("resolves OpenFeature flags from overrides", async () => {
-    process.env.ONW_FLAG_OVERRIDES = JSON.stringify({
-      "enable-linear-source": false
-    });
-
-    const flags = await getWorkflowFlags();
-    expect(flags.enableLinearSource).toBe(false);
-    expect(flags.enableGitSource).toBe(true);
-  });
 });

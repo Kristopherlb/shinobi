@@ -103,7 +103,6 @@ dagger call run-local --source . --ai-provider OLLAMA --model llama3
 Optional inputs:
 
 - `ONW_PROVIDER_CONFIG` (JSON) overrides the provider config injected by Dagger.
-- `ONW_FLAG_OVERRIDES` (JSON) controls OpenFeature flags such as `enable-linear-source`.
 - `OTEL_EXPORTER_OTLP_ENDPOINT` sets the OTLP exporter endpoint (defaults to `http://localhost:4318/v1/traces`).
 
 If you use the Ollama sidecar, ensure the model is pulled before running:

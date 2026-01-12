@@ -17,7 +17,6 @@ import {
 } from "./schemas.js";
 import { fetchJson } from "./http-client.js";
 import { generateWithProvider } from "./ai-providers.js";
-import { resolveWorkflowFlags } from "./flags.js";
 
 const tracer = trace.getTracer("ops-narrative");
 
@@ -252,15 +251,3 @@ export async function writeLocalReport(input) {
   });
 }
 
-export async function getWorkflowFlags() {
-  return await tracer.startActiveSpan("workflow.flags", async (span) => {
-    try {
-      return await resolveWorkflowFlags();
-    } catch (error) {
-      span.recordException(error);
-      throw error;
-    } finally {
-      span.end();
-    }
-  });
-}

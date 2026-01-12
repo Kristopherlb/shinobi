@@ -232,13 +232,10 @@ importers:
         version: 0.11.9
       '@langchain/langgraph':
         specifier: ^1.0.15
-        version: 1.0.15(@langchain/core@1.1.12(@opentelemetry/api@1.9.0)(@opentelemetry/exporter-trace-otlp-proto@0.51.1(@opentelemetry/api@1.9.0))(@opentelemetry/sdk-trace-base@1.25.1(@opentelemetry/api@1.9.0)))(zod-to-json-schema@3.25.1(zod@4.3.5))(zod@4.3.5)
+        version: 1.0.15(@langchain/core@1.1.12(@opentelemetry/api@1.9.0)(@opentelemetry/exporter-trace-otlp-proto@0.51.1(@opentelemetry/api@1.9.0))(@opentelemetry/sdk-trace-base@1.25.1(@opentelemetry/api@1.9.0)))(zod-to-json-schema@3.25.1(zod@3.25.76))(zod@3.25.76)
       '@modelcontextprotocol/sdk':
         specifier: ^1.0.0
-        version: 1.25.2(@cfworker/json-schema@4.1.1)(hono@4.11.3)(zod@4.3.5)
-      '@openfeature/server-sdk':
-        specifier: ^1.9.0
-        version: 1.20.1(@openfeature/core@1.9.1)
+        version: 1.25.2(@cfworker/json-schema@4.1.1)(hono@4.11.3)(zod@3.25.76)
       '@opentelemetry/api':
         specifier: ^1.9.0
         version: 1.9.0
@@ -270,8 +267,8 @@ importers:
         specifier: ^8.13.0
         version: 8.16.3
       zod:
-        specifier: ^4.1.5
-        version: 4.3.5
+        specifier: ^3.22.4
+        version: 3.25.76
     devDependencies:
       vitest:
         specifier: ^1.6.0
@@ -3683,19 +3680,10 @@ packages:
   '@nx/workspace@22.3.3':
     resolution: {integrity: sha512-A7Qd1Yi/hp/VPvig6tV+JmlYVSA4WhckNkP1giYZoESpGLxRlpwINpd5ii3oafOlglUdEZ8AiS3X+RUg9QmCAQ==}
 
-  '@openfeature/core@1.9.1':
-    resolution: {integrity: sha512-YySPtH4s/rKKnHRU0xyFGrqMU8XA+OIPNWDrlEFxE6DCVWCIrxE5YpiB94YD2jMFn6SSdA0cwQ8vLkCkl8lm8A==}
-
   '@openfeature/js-sdk@1.6.1':
     resolution: {integrity: sha512-IMxkVxpAiiMfmqQXLsMlePb0/NtmmuisOcA27LGjJy7dXRqafNpJlzJXxSsGou1+/DtrFOVkJ/Udc1adNfXaFg==}
     engines: {node: '>=16'}
     deprecated: This package has been moved to @openfeature/server-sdk
-
-  '@openfeature/server-sdk@1.20.1':
-    resolution: {integrity: sha512-jzz++kblADniuc7hONZ4DlRsoektCMDX5PPHoltn0hYWWw/Zm6sh3f7z5mGUX2XOikWKNVCtUQ3gWsdmIdHHXg==}
-    engines: {node: '>=20'}
-    peerDependencies:
-      '@openfeature/core': ^1.9.0
 
   '@opentelemetry/api-logs@0.51.1':
     resolution: {integrity: sha512-E3skn949Pk1z2XtXu/lxf6QAZpawuTM/IUEXcAzpiUkTd73Hmvw26FiN3cJuTmkpM5hZzHwkomVdtrh/n/zzwA==}
@@ -7956,9 +7944,6 @@ packages:
   zod@3.25.76:
     resolution: {integrity: sha512-gzUt/qt81nXsFGKIFcC3YnfEAx5NkunCfnDlvuBSSFS02bcXu4Lmea0AFIUwbLWxWPx3d9p8S5QoaujKcNQxcQ==}
 
-  zod@4.3.5:
-    resolution: {integrity: sha512-k7Nwx6vuWx1IJ9Bjuf4Zt1PEllcwe7cls3VNzm4CQ1/hgtFUK2bRNG3rvnpPUhFjmqJKAKtjV576KnUkHocg/g==}
-
 snapshots:
 
   '@ampproject/remapping@2.3.0':
@@ -10944,7 +10929,7 @@ snapshots:
       mustache: 4.2.0
       p-queue: 6.6.2
       uuid: 10.0.0
-      zod: 4.3.5
+      zod: 3.25.76
     transitivePeerDependencies:
       - '@opentelemetry/api'
       - '@opentelemetry/exporter-trace-otlp-proto'
@@ -10964,15 +10949,15 @@ snapshots:
     optionalDependencies:
       '@langchain/core': 1.1.12(@opentelemetry/api@1.9.0)(@opentelemetry/exporter-trace-otlp-proto@0.51.1(@opentelemetry/api@1.9.0))(@opentelemetry/sdk-trace-base@1.25.1(@opentelemetry/api@1.9.0))
 
-  '@langchain/langgraph@1.0.15(@langchain/core@1.1.12(@opentelemetry/api@1.9.0)(@opentelemetry/exporter-trace-otlp-proto@0.51.1(@opentelemetry/api@1.9.0))(@opentelemetry/sdk-trace-base@1.25.1(@opentelemetry/api@1.9.0)))(zod-to-json-schema@3.25.1(zod@4.3.5))(zod@4.3.5)':
+  '@langchain/langgraph@1.0.15(@langchain/core@1.1.12(@opentelemetry/api@1.9.0)(@opentelemetry/exporter-trace-otlp-proto@0.51.1(@opentelemetry/api@1.9.0))(@opentelemetry/sdk-trace-base@1.25.1(@opentelemetry/api@1.9.0)))(zod-to-json-schema@3.25.1(zod@3.25.76))(zod@3.25.76)':
     dependencies:
       '@langchain/core': 1.1.12(@opentelemetry/api@1.9.0)(@opentelemetry/exporter-trace-otlp-proto@0.51.1(@opentelemetry/api@1.9.0))(@opentelemetry/sdk-trace-base@1.25.1(@opentelemetry/api@1.9.0))
       '@langchain/langgraph-checkpoint': 1.0.0(@langchain/core@1.1.12(@opentelemetry/api@1.9.0)(@opentelemetry/exporter-trace-otlp-proto@0.51.1(@opentelemetry/api@1.9.0))(@opentelemetry/sdk-trace-base@1.25.1(@opentelemetry/api@1.9.0)))
       '@langchain/langgraph-sdk': 1.5.0(@langchain/core@1.1.12(@opentelemetry/api@1.9.0)(@opentelemetry/exporter-trace-otlp-proto@0.51.1(@opentelemetry/api@1.9.0))(@opentelemetry/sdk-trace-base@1.25.1(@opentelemetry/api@1.9.0)))
       uuid: 10.0.0
-      zod: 4.3.5
+      zod: 3.25.76
     optionalDependencies:
-      zod-to-json-schema: 3.25.1(zod@4.3.5)
+      zod-to-json-schema: 3.25.1(zod@3.25.76)
     transitivePeerDependencies:
       - react
       - react-dom
@@ -10987,7 +10972,7 @@ snapshots:
       raw-body: 3.0.2
       zod: 3.25.76
 
-  '@modelcontextprotocol/sdk@1.25.2(@cfworker/json-schema@4.1.1)(hono@4.11.3)(zod@4.3.5)':
+  '@modelcontextprotocol/sdk@1.25.2(@cfworker/json-schema@4.1.1)(hono@4.11.3)(zod@3.25.76)':
     dependencies:
       '@hono/node-server': 1.19.8(hono@4.11.3)
       ajv: 8.17.1
@@ -11003,8 +10988,8 @@ snapshots:
       json-schema-typed: 8.0.2
       pkce-challenge: 5.0.1
       raw-body: 3.0.2
-      zod: 4.3.5
-      zod-to-json-schema: 3.25.1(zod@4.3.5)
+      zod: 3.25.76
+      zod-to-json-schema: 3.25.1(zod@3.25.76)
     optionalDependencies:
       '@cfworker/json-schema': 4.1.1
     transitivePeerDependencies:
@@ -11414,13 +11399,7 @@ snapshots:
       - '@swc/core'
       - debug
 
-  '@openfeature/core@1.9.1': {}
-
   '@openfeature/js-sdk@1.6.1': {}
-
-  '@openfeature/server-sdk@1.20.1(@openfeature/core@1.9.1)':
-    dependencies:
-      '@openfeature/core': 1.9.1
 
   '@opentelemetry/api-logs@0.51.1':
     dependencies:
@@ -16664,10 +16643,8 @@ snapshots:
 
   yoctocolors-cjs@2.1.3: {}
 
-  zod-to-json-schema@3.25.1(zod@4.3.5):
+  zod-to-json-schema@3.25.1(zod@3.25.76):
     dependencies:
-      zod: 4.3.5
+      zod: 3.25.76
 
   zod@3.25.76: {}
-
-  zod@4.3.5: {}

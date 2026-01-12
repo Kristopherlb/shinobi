@@ -98,13 +98,6 @@ export const LocalDeliveryOutputSchema = z.object({
   filePath: z.string().min(1)
 });
 
-export const WorkflowFlagsSchema = z.object({
-  enableLinearSource: z.boolean(),
-  enableGitSource: z.boolean(),
-  enablePagerDutySource: z.boolean(),
-  enableSlackDelivery: z.boolean()
-});
-
 export const OpsNarrativeRequestSchema = z.object({
   linear: LinearInputSchema.optional(),
   git: GitOpsInputSchema.optional(),

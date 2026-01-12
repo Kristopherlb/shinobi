@@ -7,28 +7,26 @@ const {
   fetchPagerDutyData,
   synthesizeReport,
   sendSlackReport,
-  writeLocalReport,
-  getWorkflowFlags
+  writeLocalReport
 } = proxyActivities({
   startToCloseTimeout: "5 minutes"
 });
 
 export async function runOpsNarrativeWorkflow(request) {
   const payload = OpsNarrativeRequestSchema.parse(request);
-  const flags = await getWorkflowFlags();
 
   const tasks = [];
   const context = {};
 
-  if (flags.enableLinearSource && payload.linear) {
+  if (payload.linear) {
     tasks.push({ key: "linear", promise: fetchLinearData(payload.linear) });
   }
 
-  if (flags.enableGitSource && payload.git) {
+  if (payload.git) {
     tasks.push({ key: "git", promise: fetchGitOpsData(payload.git) });
   }
 
-  if (flags.enablePagerDutySource && payload.pagerDuty) {
+  if (payload.pagerDuty) {
     tasks.push({ key: "pagerDuty", promise: fetchPagerDutyData(payload.pagerDuty) });
   }
 
@@ -57,7 +55,7 @@ export async function runOpsNarrativeWorkflow(request) {
   let delivery = payload.output;
   const artifacts = {};
 
-  if (payload.output === "SLACK" && flags.enableSlackDelivery) {
+  if (payload.output === "SLACK") {
     try {
       const slackResult = await sendSlackReport({ content: report.content });
       artifacts.slack = slackResult;
