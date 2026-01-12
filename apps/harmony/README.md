@@ -85,6 +85,52 @@ Optional environment variables:
 - `EMBEDDING_MODEL` (defaults to `text-embedding-3-small`)
 - `EMBEDDING_BASE_URL` (defaults to `https://api.openai.com/v1`)
 - `MCP_SERVER_ID` (defaults to `local-stdio`)
+- `TOOL_INDEX_ENABLED` (defaults to `false` - set to `true` to enable vector-based tool selection)
+
+## Run the OpsNarrative workflow
+
+The OpsNarrative workflow aggregates Linear, Git, and PagerDuty data, synthesizes a report using a configurable AI provider, and delivers it to Slack with a local-file fallback.
+
+### Run locally with Dagger
+
+From the repo root:
+
+```bash
+cd apps/harmony
+dagger call run-local --source . --ai-provider OLLAMA --model llama3
+```
+
+Optional inputs:
+
+- `ONW_PROVIDER_CONFIG` (JSON) overrides the provider config injected by Dagger.
+- `ONW_FLAG_OVERRIDES` (JSON) controls OpenFeature flags such as `enable-linear-source`.
+- `OTEL_EXPORTER_OTLP_ENDPOINT` sets the OTLP exporter endpoint (defaults to `http://localhost:4318/v1/traces`).
+
+If you use the Ollama sidecar, ensure the model is pulled before running:
+
+```bash
+docker exec -it <ollama-container> ollama pull llama3
+```
+
+### Run locally with Temporal
+
+```bash
+cd apps/harmony
+HARMONY_WORKFLOW=ops-narrative \\
+ONW_PROVIDER_CONFIG='{\"type\":\"OLLAMA\",\"host\":\"http://localhost:11434\",\"model\":\"llama3\"}' \\
+ONW_LINEAR_TEAM=PLAT \\
+ONW_GIT_PROVIDER=GITLAB \\
+ONW_GIT_REPO=platform%2Fops-narrative \\
+ONW_PD_SERVICE=P123456 \\
+pnpm start:client
+```
+
+Required credentials by source:
+
+- `LINEAR_API_TOKEN`
+- `GITLAB_TOKEN` or `BITBUCKET_TOKEN` (depending on `ONW_GIT_PROVIDER`)
+- `PAGERDUTY_API_TOKEN`
+- `SLACK_WEBHOOK_URL` (only if delivering to Slack)
 
 ## Testing
 

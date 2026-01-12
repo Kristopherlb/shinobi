@@ -1,5 +1,6 @@
 import { proxyActivities } from "@temporalio/workflow";
 import { createInitialState } from "../agent/state.js";
+import { runOpsNarrativeWorkflow } from "../ops-narrative/workflow.js";
 
 const {
   discoverToolsActivity,
@@ -20,3 +21,5 @@ export async function runDurableAnalyzer({ goal, repositoryUrl }) {
 
   return state;
 }
+
+export { runOpsNarrativeWorkflow };
