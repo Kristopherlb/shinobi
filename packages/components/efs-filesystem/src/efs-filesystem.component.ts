@@ -284,7 +284,7 @@ export class EfsFilesystemComponent extends BaseComponent {
       this.applyStandardTags(key, {
         'resource-type': 'kms-key',
         'purpose': 'log-encryption',
-        'compliance-framework': framework
+        'compliance-framework': this.context.complianceFramework
       });
 
       this.logEncryptionKey = key;

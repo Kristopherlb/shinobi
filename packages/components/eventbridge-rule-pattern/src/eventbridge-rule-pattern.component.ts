@@ -140,11 +140,11 @@ export class EventBridgeRulePatternComponent extends BaseComponent {
 
     this.applyStandardTags(this.logEncryptionKey, {
       'key-usage': 'log-encryption',
-      'compliance-framework': framework
+      'compliance-framework': this.context.complianceFramework
     });
 
     this.logResourceCreation('kms-log-key', this.logEncryptionKey.keyId, {
-      framework,
+      framework: this.context.complianceFramework,
       rotation: true
     });
 
@@ -156,11 +156,11 @@ export class EventBridgeRulePatternComponent extends BaseComponent {
 
     this.applyStandardTags(this.dlqEncryptionKey, {
       'key-usage': 'dlq-encryption',
-      'compliance-framework': framework
+      'compliance-framework': this.context.complianceFramework
     });
 
     this.logResourceCreation('kms-dlq-key', this.dlqEncryptionKey.keyId, {
-      framework,
+      framework: this.context.complianceFramework,
       rotation: true
     });
   }

@@ -6,14 +6,12 @@
   "implicitDependencies": [],
   "targets": {
     "build": {
-      "executor": "@nx/js:tsc",
+      "executor": "nx:run-commands",
       "options": {
-        "main": "src/index.ts",
-        "outputPath": "dist/packages/api",
-        "tsConfig": "packages/api/tsconfig.lib.json",
-        "generatePackageJson": true
+        "command": "tsc -b packages/api/tsconfig.lib.json && mkdir -p packages/api/dist/schemas && cp packages/api/src/schemas/capability.schema.json packages/api/dist/schemas/capability.schema.json",
+        "cwd": "{workspaceRoot}"
       },
-      "outputs": ["{options.outputPath}"]
+      "outputs": ["{projectRoot}/dist"]
     },
     "typecheck": {
       "executor": "nx:run-commands",

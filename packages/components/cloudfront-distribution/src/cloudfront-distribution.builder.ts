@@ -441,17 +441,6 @@ export class CloudFrontDistributionComponentConfigBuilder extends ConfigBuilder<
     
     return {}; // Standard/default environment - use hardcoded fallbacks
   }
-          enabled: true,
-        },
-        monitoring: {
-          enabled: true,
-        },
-        webAclId: undefined, // WAF should be configured separately, but enable WAF requirement
-      };
-    }
-    
-    return baseCompliance;
-  }
 
   public buildSync(): CloudFrontDistributionConfig {
     const resolved = super.buildSync() as CloudFrontDistributionConfig;

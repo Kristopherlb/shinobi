@@ -212,7 +212,7 @@ export class LambdaWorkerValidator {
     }
 
     // Security tools validation for high-risk environments
-    if (this.config?.highRiskEnvironment && this.config?.requireRuntimeSecurity) {
+    if (this.config?.highRiskEnvironment) {
       // Check for runtimeSecurity (as expected by tests)
       if (!this.config.securityTools?.runtimeSecurity) {
         warnings.push({

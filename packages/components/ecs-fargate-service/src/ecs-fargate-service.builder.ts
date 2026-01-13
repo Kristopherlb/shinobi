@@ -397,6 +397,8 @@ export class EcsFargateServiceComponentConfigBuilder extends ConfigBuilder<EcsFa
         ephemeralStorageGiB: 50,
         // Enhanced logging with longer retention
         logging: {
+          createLogGroup: true,
+          streamPrefix: this.builderContext.spec.name,
           retentionInDays: 1095, // 3 years (can be overridden to 2555 for higher risk)
           removalPolicy: 'retain'
         },

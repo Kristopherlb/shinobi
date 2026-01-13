@@ -14,7 +14,7 @@
     "./package.json": "./package.json"
   },
   "scripts": {
-    "build": "tsc -p tsconfig.lib.json",
+    "build": "tsc -b tsconfig.lib.json",
     "postbuild": "mkdir -p dist/schemas && cp src/schemas/capability.schema.json dist/schemas/capability.schema.json",
     "generate:types": "node ./scripts/generate-capability-types.mjs"
   },
