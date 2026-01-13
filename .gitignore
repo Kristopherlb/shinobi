@@ -12,6 +12,16 @@ dist/
 tmp/
 **/tmp/
 
+# TypeScript compiled outputs (should not be in src/, but ignore if present)
+# Compiled JavaScript files in source directories
+**/src/**/*.js
+**/src/**/*.js.map
+**/src/**/*.d.ts
+**/src/**/*.d.ts.map
+# Also catch any stray compiled files at root level
+*.js.map
+*.d.ts.map
+
 # Package manager lock files (we use PNPM)
 package-lock.json
 .package-lock.json
