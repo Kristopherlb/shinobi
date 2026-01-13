@@ -1,61 +1,62 @@
 /**
- * Jest setup file for Route 53 Record component tests
+ * Vitest setup file for Route 53 Record component tests
  */
+import { vi } from 'vitest';
 
 // Mock only specific CDK modules that cause issues in tests
-jest.mock('aws-cdk-lib/aws-route53', () => ({
+vi.mock('aws-cdk-lib/aws-route53', () => ({
   HostedZone: {
-    fromLookup: jest.fn().mockImplementation(() => ({
+    fromLookup: vi.fn().mockImplementation(() => ({
       hostedZoneId: 'Z1234567890',
       zoneName: 'example.com.'
     }))
   },
-  ARecord: jest.fn().mockImplementation(() => ({
+  ARecord: vi.fn().mockImplementation(() => ({
     recordName: 'test.example.com',
     recordType: 'A'
   })),
-  AaaaRecord: jest.fn().mockImplementation(() => ({
+  AaaaRecord: vi.fn().mockImplementation(() => ({
     recordName: 'test.example.com',
     recordType: 'AAAA'
   })),
-  CnameRecord: jest.fn().mockImplementation(() => ({
+  CnameRecord: vi.fn().mockImplementation(() => ({
     recordName: 'test.example.com',
     recordType: 'CNAME'
   })),
-  MxRecord: jest.fn().mockImplementation(() => ({
+  MxRecord: vi.fn().mockImplementation(() => ({
     recordName: 'test.example.com',
     recordType: 'MX'
   })),
-  TxtRecord: jest.fn().mockImplementation(() => ({
+  TxtRecord: vi.fn().mockImplementation(() => ({
     recordName: 'test.example.com',
     recordType: 'TXT'
   })),
-  NsRecord: jest.fn().mockImplementation(() => ({
+  NsRecord: vi.fn().mockImplementation(() => ({
     recordName: 'test.example.com',
     recordType: 'NS'
   })),
-  SrvRecord: jest.fn().mockImplementation(() => ({
+  SrvRecord: vi.fn().mockImplementation(() => ({
     recordName: 'test.example.com',
     recordType: 'SRV'
   })),
-  RecordSet: jest.fn().mockImplementation(() => ({
+  RecordSet: vi.fn().mockImplementation(() => ({
     recordName: 'test.example.com',
     recordType: 'A'
   })),
   RecordTarget: {
-    fromValues: jest.fn().mockImplementation((...values) => values)
+    fromValues: vi.fn().mockImplementation((...values) => values)
   }
 }));
 
 // Mock CDK Duration and Stack
-jest.mock('aws-cdk-lib', () => ({
+vi.mock('aws-cdk-lib', () => ({
   Duration: {
-    seconds: jest.fn((seconds) => seconds)
+    seconds: vi.fn((seconds) => seconds)
   },
-  Stack: jest.fn().mockImplementation(() => ({
+  Stack: vi.fn().mockImplementation(() => ({
     node: { 
       id: 'test-stack',
-      addChild: jest.fn()
+      addChild: vi.fn()
     }
   }))
 }));

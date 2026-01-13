@@ -5,8 +5,8 @@
 
 import { describe, it, expect } from 'vitest';
 import { App, Stack, Environment } from 'aws-cdk-lib';
-import { SecretsManagerComponentCreator } from '../secrets-manager.creator.js';
-import { SecretsManagerConfig } from '../secrets-manager.builder.js';
+import { SecretsManagerComponentCreator } from '../secrets-manager.creator';
+import { SecretsManagerConfig } from '../secrets-manager.builder';
 import { ComponentContext, ComponentSpec } from '@shinobi/core';
 
 const createMockContext = (

@@ -7,7 +7,7 @@
 
 import { ComponentContext } from '@shinobi/core';
 import { LambdaWorkerValidator } from '../../validation/lambda-worker.validator.js';
-import { LambdaWorkerConfig } from '../../lambda-worker.builder.js';
+import { LambdaWorkerConfig } from '../../src/lambda-worker.builder';
 
 describe('Lambda Worker Validator Tests', () => {
   let context: ComponentContext;
@@ -159,6 +159,9 @@ describe('Lambda Worker Validator Tests', () => {
   describe('Security Configuration Validation', () => {
     test('should require VPC for FedRAMP compliance', () => {
       context.complianceFramework = 'fedramp-moderate';
+      // Set up log retention and tracing to avoid extra errors (this test is only testing VPC)
+      config.logging.logRetentionDays = 90; // Minimum for fedramp-moderate
+      config.tracing.mode = 'Active'; // Required for FedRAMP
       const validator = new LambdaWorkerValidator(context, config);
       const result = validator.validate();
 
@@ -171,6 +174,10 @@ describe('Lambda Worker Validator Tests', () => {
 
     test('should require KMS encryption for high-compliance frameworks', () => {
       context.complianceFramework = 'fedramp-high';
+      // Set up VPC, log retention, and tracing to avoid extra errors (this test is only testing KMS)
+      config.vpc = { enabled: true, vpcId: 'vpc-12345678', securityGroupIds: ['sg-12345678'] };
+      config.logging.logRetentionDays = 180; // Minimum for fedramp-high
+      config.tracing.mode = 'Active'; // Required for FedRAMP
       const validator = new LambdaWorkerValidator(context, config);
       const result = validator.validate();
 
@@ -186,6 +193,8 @@ describe('Lambda Worker Validator Tests', () => {
         'PASSWORD': 'secret-password',
         'API_KEY': 'secret-key'
       };
+      // Use standard environment to avoid environment warning
+      context.environment = 'development';
       const validator = new LambdaWorkerValidator(context, config);
       const result = validator.validate();
 
@@ -202,6 +211,8 @@ describe('Lambda Worker Validator Tests', () => {
         'API_KEY': 'secret-key'
       };
       config.kmsKeyArn = 'arn:aws:kms:us-east-1:123456789012:key/12345678';
+      // Use standard environment to avoid environment warning
+      context.environment = 'development';
       const validator = new LambdaWorkerValidator(context, config);
       const result = validator.validate();
 
@@ -210,6 +221,12 @@ describe('Lambda Worker Validator Tests', () => {
 
     test('should recommend runtime security for FedRAMP High', () => {
       context.complianceFramework = 'fedramp-high';
+      // Set up KMS, VPC, log retention, tracing, and hardening to avoid extra warnings/errors (this test is only testing runtime security)
+      config.kmsKeyArn = 'arn:aws:kms:us-east-1:123456789012:key/12345678';
+      config.vpc = { enabled: true, vpcId: 'vpc-12345678', securityGroupIds: ['sg-12345678'] };
+      config.logging.logRetentionDays = 180; // Minimum for fedramp-high
+      config.tracing.mode = 'Active'; // Required for FedRAMP
+      config.hardeningProfile = 'high'; // Avoid hardening warning
       const validator = new LambdaWorkerValidator(context, config);
       const result = validator.validate();
 
@@ -235,6 +252,8 @@ describe('Lambda Worker Validator Tests', () => {
     test('should require minimum log retention for FedRAMP', () => {
       context.complianceFramework = 'fedramp-moderate';
       config.logging.logRetentionDays = 60; // Less than minimum 90 days
+      // Set up VPC to avoid VPC error (this test is only testing log retention)
+      config.vpc = { enabled: true, vpcId: 'vpc-12345678', securityGroupIds: ['sg-12345678'] };
       const validator = new LambdaWorkerValidator(context, config);
       const result = validator.validate();
 
@@ -247,6 +266,9 @@ describe('Lambda Worker Validator Tests', () => {
     test('should require active tracing for FedRAMP', () => {
       context.complianceFramework = 'fedramp-moderate';
       config.tracing.mode = 'PassThrough';
+      // Set up VPC and log retention to avoid extra errors (this test is only testing tracing)
+      config.vpc = { enabled: true, vpcId: 'vpc-12345678', securityGroupIds: ['sg-12345678'] };
+      config.logging.logRetentionDays = 90; // Minimum for fedramp-moderate
       const validator = new LambdaWorkerValidator(context, config);
       const result = validator.validate();
 
@@ -259,6 +281,12 @@ describe('Lambda Worker Validator Tests', () => {
     test('should recommend high hardening for FedRAMP High', () => {
       context.complianceFramework = 'fedramp-high';
       config.hardeningProfile = 'standard';
+      // Set up KMS, VPC, log retention, tracing, and runtime security to avoid extra warnings/errors (this test is only testing hardening)
+      config.kmsKeyArn = 'arn:aws:kms:us-east-1:123456789012:key/12345678';
+      config.vpc = { enabled: true, vpcId: 'vpc-12345678', securityGroupIds: ['sg-12345678'] };
+      config.logging.logRetentionDays = 180; // Minimum for fedramp-high
+      config.tracing.mode = 'Active'; // Required for FedRAMP
+      config.securityTools.runtimeSecurity = true; // Avoid runtime security warning
       const validator = new LambdaWorkerValidator(context, config);
       const result = validator.validate();
 
@@ -328,6 +356,8 @@ describe('Lambda Worker Validator Tests', () => {
       config.memorySize = 10240; // 10 GB
       config.timeoutSeconds = 60; // 1 minute
       // Ratio: 10240/60 = 170.67 > 100
+      // Use standard environment to avoid environment warning
+      context.environment = 'development';
       const validator = new LambdaWorkerValidator(context, config);
       const result = validator.validate();
 
@@ -394,6 +424,8 @@ describe('Lambda Worker Validator Tests', () => {
 
     test('should warn about disabled observability', () => {
       config.observability.otelEnabled = false;
+      // Use standard environment to avoid environment warning
+      context.environment = 'development';
       const validator = new LambdaWorkerValidator(context, config);
       const result = validator.validate();
 
@@ -427,6 +459,8 @@ describe('Lambda Worker Validator Tests', () => {
 
   describe('Compliance Score Calculation', () => {
     test('should calculate perfect compliance score', () => {
+      // Use standard environment to avoid environment warning
+      context.environment = 'development';
       const validator = new LambdaWorkerValidator(context, config);
       const result = validator.validate();
 
@@ -435,6 +469,8 @@ describe('Lambda Worker Validator Tests', () => {
 
     test('should reduce score for errors', () => {
       config.functionName = ''; // Error
+      // Use standard environment to avoid environment warning
+      context.environment = 'development';
       const validator = new LambdaWorkerValidator(context, config);
       const result = validator.validate();
 
@@ -444,6 +480,8 @@ describe('Lambda Worker Validator Tests', () => {
 
     test('should reduce score for warnings', () => {
       config.observability.otelEnabled = false; // Warning
+      // Use standard environment to avoid environment warning
+      context.environment = 'development';
       const validator = new LambdaWorkerValidator(context, config);
       const result = validator.validate();
 
@@ -454,6 +492,8 @@ describe('Lambda Worker Validator Tests', () => {
     test('should calculate combined score for errors and warnings', () => {
       config.functionName = ''; // Error
       config.observability.otelEnabled = false; // Warning
+      // Use standard environment to avoid environment warning
+      context.environment = 'development';
       const validator = new LambdaWorkerValidator(context, config);
       const result = validator.validate();
 
@@ -511,6 +551,8 @@ describe('Lambda Worker Validator Tests', () => {
 
   describe('Validation Summary', () => {
     test('should provide validation summary', () => {
+      // Use standard environment to avoid environment warning
+      context.environment = 'development';
       const validator = new LambdaWorkerValidator(context, config);
       const summary = validator.getValidationSummary();
 
@@ -523,6 +565,8 @@ describe('Lambda Worker Validator Tests', () => {
     test('should provide validation summary with issues', () => {
       config.functionName = ''; // Error
       config.observability.otelEnabled = false; // Warning
+      // Use standard environment to avoid environment warning
+      context.environment = 'development';
       
       const validator = new LambdaWorkerValidator(context, config);
       const summary = validator.getValidationSummary();

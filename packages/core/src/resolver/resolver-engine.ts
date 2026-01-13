@@ -9,7 +9,7 @@ import { IComponent } from '../platform/contracts/index.js';
 import { ComponentContext as FactoryComponentContext } from '../platform/contracts/components/component-context.js';
 import { Component } from '../platform/contracts/component.js';
 import { UnifiedBinderRegistry } from '../platform/binders/registry/unified-binder-registry.js';
-import type { BindingContext, EnhancedBindingResult, BindingDirective } from '../platform/contracts/platform-binding-trigger-spec.js';
+import type { BindingContext, EnhancedBindingResult, BindingDirective, IUnifiedBinderStrategy } from '../platform/contracts/platform-binding-trigger-spec.js';
 import { DirectiveSchemaValidator } from '../platform/contracts/directive-schema-validator.js';
 import { SecurityGroupRulePostProcessor } from './security-group-rule-post-processor.js';
 import { EventSourceScanner } from './event-source-scanner.js';

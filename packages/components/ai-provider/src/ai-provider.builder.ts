@@ -103,7 +103,16 @@ export class AIProviderComponentConfigBuilder extends ConfigBuilder<AIProviderCo
 
   private normalise(config: Partial<AIProviderComponentConfig>): AIProviderComponentConfig {
     const provider = (config.provider ?? DEFAULT_CONFIG.provider) as AIProviderKind;
-    const model = config.model ?? DEFAULT_MODELS[provider];
+    
+    // Check if model was explicitly provided, otherwise use provider-specific default
+    const modelWasExplicit = Object.prototype.hasOwnProperty.call(
+      this.builderContext.spec.config ?? {},
+      'model'
+    );
+    const model = modelWasExplicit && config.model
+      ? config.model
+      : DEFAULT_MODELS[provider];
+    
     const endpoint = this.resolveEndpoint(config.endpoint, provider);
     const auth = this.normaliseAuth(config.auth, provider);
     const region = this.normaliseRegion(config.region, provider);
@@ -152,8 +161,14 @@ export class AIProviderComponentConfigBuilder extends ConfigBuilder<AIProviderCo
     const defaultType =
       provider === 'bedrock' ? 'aws' : provider === 'ollama' ? 'none' : 'apiKey';
 
+    // Check if auth.type was explicitly provided, otherwise use provider-specific default
+    const authWasExplicit = Object.prototype.hasOwnProperty.call(
+      this.builderContext.spec.config ?? {},
+      'auth'
+    );
+
     return {
-      type: auth?.type ?? defaultType,
+      type: authWasExplicit && auth?.type ? auth.type : defaultType,
       secretRef: auth?.secretRef
     };
   }

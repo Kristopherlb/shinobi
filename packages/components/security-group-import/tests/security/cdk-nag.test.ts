@@ -5,22 +5,27 @@
  * using CDK Nag rule packs (AwsSolutions)
  */
 
-import { describe, it, expect, beforeEach } from 'vitest';
+import { describe, it, expect, beforeEach, afterEach } from 'vitest';
 import * as cdk from 'aws-cdk-lib';
 import { Annotations, Match } from 'aws-cdk-lib/assertions';
 import { AwsSolutionsChecks } from 'cdk-nag';
 import { Aspects } from 'aws-cdk-lib';
 import { ComponentContext, ComponentSpec } from '@shinobi/core';
-import { SecurityGroupImportComponent } from '../src/security-group-import.component.js';
-import { SecurityGroupImportConfigBuilder } from '../src/security-group-import.builder.js';
+import { SecurityGroupImportComponent } from '../../src/security-group-import.component';
+import { SecurityGroupImportConfigBuilder } from '../../src/security-group-import.builder';
 import { vi } from 'vitest';
 
+// Mock platform configuration loading to avoid requiring config files in tests
 let platformConfigSpy: any;
 
 beforeEach(() => {
   platformConfigSpy = vi
     .spyOn(SecurityGroupImportConfigBuilder.prototype as any, '_loadPlatformConfiguration')
     .mockImplementation(() => ({}));
+});
+
+afterEach(() => {
+  platformConfigSpy?.mockRestore();
 });
 
 describe.skip('SecurityGroupImportComponent - CDK Nag Security Validation', () => {

@@ -46,10 +46,23 @@ export class Route53RecordComponent extends BaseComponent {
 
   /**
    * Lookup existing hosted zone - does not create new zones
+   * 
+   * Uses fromHostedZoneAttributes if hostedZoneId is provided (for tests),
+   * otherwise uses fromLookup (for production deployments).
    */
   private _lookupHostedZone(): route53.IHostedZone {
     const zoneName = this.config.record.zoneName;
+    const hostedZoneId = this.config.record.hostedZoneId;
     
+    // If hostedZoneId is provided, use fromHostedZoneAttributes (test-friendly)
+    if (hostedZoneId) {
+      return route53.HostedZone.fromHostedZoneAttributes(this, 'HostedZone', {
+        hostedZoneId,
+        zoneName
+      });
+    }
+    
+    // Otherwise, use fromLookup (production - requires AWS credentials and existing hosted zone)
     try {
       const hostedZone = route53.HostedZone.fromLookup(this, 'HostedZone', {
         domainName: zoneName

@@ -6,7 +6,7 @@
 import {
   RdsPostgresComponentConfigBuilder,
   RdsPostgresConfig
-} from '../src/rds-postgres.builder.js';
+} from '../src/rds-postgres.builder';
 import { ComponentContext, ComponentSpec } from '../../../core/src/platform/contracts/component-interfaces.js';
 
 const createMockContext = (

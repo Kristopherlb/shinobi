@@ -1,7 +1,7 @@
 import {
   OpenSearchDomainComponentConfigBuilder,
   OpenSearchDomainConfig
-} from '../opensearch-domain.builder.js';
+} from '../opensearch-domain.builder';
 import { ComponentContext, ComponentSpec } from '../../../platform/contracts/component-interfaces.js';
 
 const createContext = (framework: string = 'commercial'): ComponentContext => ({

@@ -3,7 +3,7 @@
  * Implements Platform Testing Standard v1.0 - ConfigBuilder Testing
  */
 
-import { SecretsManagerComponentConfigBuilder, SecretsManagerConfig } from '../secrets-manager.builder.js';
+import { SecretsManagerComponentConfigBuilder, SecretsManagerConfig } from '../secrets-manager.builder';
 import { ComponentContext, ComponentSpec } from '@shinobi/core';
 import { describe, it, expect, beforeEach, afterEach, vi } from 'vitest';
 

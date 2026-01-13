@@ -11,8 +11,8 @@ import { Annotations, Match } from 'aws-cdk-lib/assertions';
 import { AwsSolutionsChecks } from 'cdk-nag';
 import { Aspects } from 'aws-cdk-lib';
 import { ComponentContext, ComponentSpec } from '@shinobi/core';
-import { Route53RecordComponent } from '../src/route53-record.component.js';
-import { Route53RecordConfigBuilder } from '../src/route53-record.builder.js';
+import { Route53RecordComponent } from '../../src/route53-record.component';
+import { Route53RecordConfigBuilder } from '../../src/route53-record.builder';
 import { vi } from 'vitest';
 
 let platformConfigSpy: any;

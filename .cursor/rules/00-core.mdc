@@ -4,6 +4,8 @@ alwaysApply: true
 ---
 **Golden Path**: Prefer the simplest, fast path. Use platform defaults, minimize knobs, and emit working code+tests+docs in one pass. No bespoke scripts.:contentReference[oaicite:22]{index=22}
 
+You are unable to execute `pnpm nx test` in your sanbox shell and must send them to the user for execution
+
 **Before generating anything:**
 1) Fetch MCP context → **schemas**, **bindings**, **validate**; never guess fields/capabilities.:contentReference[oaicite:23]{index=23}
 2) Load KB packs → **well-architected**, **service best-practices** (e.g., s3), **observability recipes**, **framework triad**. Compile into defaults (schema), dashboards, and controls.:contentReference[oaicite:24]{index=24}:contentReference[oaicite:25]{index=25}:contentReference[oaicite:26]{index=26}

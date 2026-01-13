@@ -1,10 +1,12 @@
 // Mock implementation of @shinobi/core-logger for testing
+import { vi } from 'vitest';
+
 export const Logger = {
   getLogger: () => ({
-    info: jest.fn(),
-    warn: jest.fn(),
-    error: jest.fn(),
-    debug: jest.fn(),
+    info: vi.fn(),
+    warn: vi.fn(),
+    error: vi.fn(),
+    debug: vi.fn(),
   }),
-  setGlobalContext: jest.fn(),
+  setGlobalContext: vi.fn(),
 };

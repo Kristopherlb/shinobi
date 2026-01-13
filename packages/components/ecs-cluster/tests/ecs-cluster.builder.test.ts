@@ -1,6 +1,7 @@
+import { describe, it, expect, beforeEach, afterEach, vi } from 'vitest';
 import { Stack } from 'aws-cdk-lib';
 import { ComponentContext, ComponentSpec } from '@shinobi/core';
-import { EcsClusterComponentConfigBuilder, EcsClusterConfig } from '../src/ecs-cluster.builder.js';
+import { EcsClusterComponentConfigBuilder, EcsClusterConfig } from '../src/ecs-cluster.builder';
 
 const createContext = (
   overrides: Partial<ComponentContext> = {}
@@ -30,10 +31,10 @@ const createSpec = (config: Partial<EcsClusterConfig> = {}): ComponentSpec => ({
 });
 
 describe('EcsClusterComponentConfigBuilder__Validation', () => {
-  let platformConfigSpy: jest.SpyInstance;
+  let platformConfigSpy: ReturnType<typeof vi.spyOn>;
 
   beforeEach(() => {
-    platformConfigSpy = jest
+    platformConfigSpy = vi
       .spyOn(EcsClusterComponentConfigBuilder.prototype as any, '_loadPlatformConfiguration')
       .mockImplementation(() => ({}));
   });
@@ -162,7 +163,10 @@ describe('EcsClusterComponentConfigBuilder__Validation', () => {
 
   it('ComplianceDefaults__FedrampHigh__SetsObservabilityRetention', () => {
     const context = createContext({ complianceFramework: 'fedramp-high' });
-    const spec = createSpec();
+    // Set highRiskEnvironment flag for high-risk environments (data-driven, not framework-dependent)
+    const spec = createSpec({
+      highRiskEnvironment: true
+    });
 
     const builder = new EcsClusterComponentConfigBuilder({ context, spec });
     const config = builder.buildSync();

@@ -8,7 +8,7 @@ import { ComponentContext, ComponentSpec } from '@shinobi/core';
 import {
   FeatureFlagConfig,
   FeatureFlagConfigBuilder
-} from '../../src/feature-flag.builder.js';
+} from '../../src/feature-flag.builder';
 
 const createScope = () => {
   const app = new App();

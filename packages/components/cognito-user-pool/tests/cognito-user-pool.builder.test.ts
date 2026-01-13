@@ -3,12 +3,12 @@
  * Implements Platform Testing Standard v1.0 - ConfigBuilder Testing
  */
 
-import { describe, it, expect, beforeEach, afterEach } from 'vitest';
+import { describe, it, expect, beforeAll, afterAll, vi } from 'vitest';
 import {
   CognitoUserPoolComponentConfigBuilder,
   CognitoUserPoolConfig,
   COGNITO_USER_POOL_CONFIG_SCHEMA
-} from '../src/cognito-user-pool.builder.js';
+} from '../src/cognito-user-pool.builder';
 import { ComponentContext, ComponentSpec } from '../../../platform/contracts/component-interfaces.js';
 import COGNITO_USER_POOL_CONFIG_SCHEMA_JSON from '../Config.schema.json' with { type: 'json' };
 
@@ -42,12 +42,12 @@ const createSpec = (config: Partial<CognitoUserPoolConfig> = {}): ComponentSpec 
 describe('CognitoUserPoolComponentConfigBuilder', () => {
   // Freeze time for deterministic tests
   beforeAll(() => {
-    jest.useFakeTimers();
-    jest.setSystemTime(DETERMINISTIC_TIMESTAMP);
+    vi.useFakeTimers();
+    vi.setSystemTime(DETERMINISTIC_TIMESTAMP);
   });
 
   afterAll(() => {
-    jest.useRealTimers();
+    vi.useRealTimers();
   });
 
   describe('ConfigurationBuilder__CommercialFramework__AppliesPlatformDefaults', () => {

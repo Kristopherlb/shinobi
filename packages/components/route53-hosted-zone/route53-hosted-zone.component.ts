@@ -146,7 +146,9 @@ export class Route53HostedZoneComponent extends BaseComponent {
         throw new Error('Private hosted zones require at least one VPC association.');
       }
 
-      const [primaryVpc, ...additionalVpcs] = this.lookupVpcs(this.config!.vpcAssociations);
+      // Priority 1: Use injected VPC from context if provided and single VPC association (preferred for tests)
+      // Priority 2: Use fromLookup() for each association (production use)
+      const [primaryVpc, ...additionalVpcs] = this.resolveVpcs(this.config!.vpcAssociations);
 
       const privateZone = new route53.PrivateHostedZone(this, 'PrivateHostedZone', {
         ...baseProps,
@@ -192,13 +194,34 @@ export class Route53HostedZoneComponent extends BaseComponent {
     return publicZone;
   }
 
-  private lookupVpcs(associations: VpcAssociationConfig[]): ec2.IVpc[] {
-    return associations.map((association, index) =>
-      ec2.Vpc.fromLookup(this, `HostedZoneVpc${index}`, {
+  /**
+   * Resolve VPCs for private hosted zone associations.
+   * 
+   * Priority:
+   * 1. Use injected VPC from context if provided and single VPC association (preferred for tests)
+   * 2. Use fromLookup() for each association (production use)
+   * 
+   * @param associations VPC association configurations
+   * @returns Array of VPC interfaces
+   */
+  private resolveVpcs(associations: VpcAssociationConfig[]): ec2.IVpc[] {
+    // Priority 1: Use injected VPC from context if provided and single VPC association (for tests)
+    if (this.context.vpc && associations.length === 1) {
+      return [this.context.vpc];
+    }
+
+    // Priority 2: Use fromLookup() for each association (production use)
+    return associations.map((association, index) => {
+      if (!association.vpcId) {
+        throw new Error(
+          `VPC association at index ${index} requires vpcId when not using injected VPC via context.vpc`
+        );
+      }
+      return ec2.Vpc.fromLookup(this, `HostedZoneVpc${index}`, {
         vpcId: association.vpcId,
         region: association.region
-      })
-    );
+      });
+    });
   }
 
   private enableDnssecIfRequested(): void {

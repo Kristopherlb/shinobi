@@ -306,17 +306,16 @@ export class EcsClusterComponent extends BaseComponent {
   private configureClusterSettings(): void {
     if (!this.cluster) return;
 
-    // Apply compliance-specific settings
-    const complianceFramework = this.context.complianceFramework;
+    // Apply compliance-specific settings based on config values (not framework checks)
+    const isHighRisk = this.config.highRiskEnvironment ?? false;
     const strategy: ecs.CapacityProviderStrategy[] = [];
-
-    const isFedramp = complianceFramework === 'fedramp-high' || complianceFramework === 'fedramp-moderate';
 
     if (this.capacityProvider) {
       strategy.push({ capacityProvider: this.capacityProvider.capacityProviderName, weight: 1 });
     } else {
       strategy.push({ capacityProvider: 'FARGATE', weight: 1 });
-      if (!isFedramp) {
+      // Omit FARGATE_SPOT for high-risk environments (aligns with FedRAMP requirements)
+      if (!isHighRisk) {
         strategy.push({ capacityProvider: 'FARGATE_SPOT', weight: 2 });
       }
     }
@@ -325,8 +324,8 @@ export class EcsClusterComponent extends BaseComponent {
       this.cluster.addDefaultCapacityProviderStrategy(strategy);
     }
 
-    if (isFedramp) {
-      this.logComponentEvent('compliance_configured', `Applied ${complianceFramework} compliance settings`);
+    if (isHighRisk) {
+      this.logComponentEvent('compliance_configured', 'Applied high-risk environment compliance settings');
     }
   }
 
@@ -396,7 +395,8 @@ export class EcsClusterComponent extends BaseComponent {
       metrics: ['AWS/ECS:CPUUtilization', 'AWS/ECS:MemoryUtilization'],
       logging: {
         containerInsights: this.config.containerInsights ?? true,
-        retentionInDays: this.appliedLogRetentionInDays ?? this.config.observability?.logging?.retentionInDays
+        retentionInDays: this.appliedLogRetentionInDays ?? this.config.observability?.logging?.retentionInDays,
+        appliedRetentionInDays: this.appliedLogRetentionInDays
       },
       tracing: {
         adotSidecar,
@@ -422,16 +422,24 @@ export class EcsClusterComponent extends BaseComponent {
 
     const retentionInDays = this.config.observability?.logging?.retentionInDays;
     if (!retentionInDays) {
+      // If no retention configured, set appliedRetentionInDays to undefined
+      // (will use config value in capability)
+      this.appliedLogRetentionInDays = undefined;
       return;
     }
+
+    // Always set appliedRetentionInDays to the configured value (may be overridden by mapping)
+    this.appliedLogRetentionInDays = retentionInDays;
 
     const retentionMapping = this.mapRetentionInDays(retentionInDays);
     const retention = retentionMapping?.retention;
     if (!retention) {
       this.logComponentEvent('log_retention_skipped', `Unsupported retention value: ${retentionInDays} days`);
+      // Keep appliedRetentionInDays as the configured value (already set above)
       return;
     }
 
+    // Override with the mapped value if mapping succeeded
     this.appliedLogRetentionInDays = retentionMapping.applied;
 
     ['performance', 'event'].forEach((suffix) => {
@@ -788,12 +796,15 @@ export class EcsClusterComponent extends BaseComponent {
    */
   private buildEcsClusterCapability() {
     const vpc = this.getVpcFromContext();
-    const isFedramp = this.context.complianceFramework === 'fedramp-high' || this.context.complianceFramework === 'fedramp-moderate';
+    // Use config value instead of framework check
+    const isHighRisk = this.config.highRiskEnvironment ?? false;
     const capacityProviders: string[] = ['FARGATE'];
-    if (!isFedramp) {
+    // Omit FARGATE_SPOT for high-risk environments (aligns with FedRAMP requirements)
+    if (!isHighRisk) {
       capacityProviders.push('FARGATE_SPOT');
     }
-    if (this.autoScalingGroup) {
+    // Only add EC2 if capacity is actually configured (not just defaults)
+    if (this.config.capacity && this.autoScalingGroup) {
       capacityProviders.push('EC2');
     }
 
@@ -842,7 +853,9 @@ export class EcsClusterComponent extends BaseComponent {
   }
 
   private shouldProvisionKmsKeyForCapacity(): boolean {
-    return ['fedramp-high', 'fedramp-moderate'].includes(this.context.complianceFramework ?? '');
+    // Use config value instead of framework check
+    // KMS key required for high-risk environments (aligns with FedRAMP requirements)
+    return this.config.highRiskEnvironment ?? false;
   }
 
   private createCapacityKmsKey(): kms.IKey {

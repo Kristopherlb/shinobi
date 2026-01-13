@@ -2,7 +2,7 @@ import { App, Stack } from 'aws-cdk-lib';
 import * as lambda from 'aws-cdk-lib/aws-lambda';
 import { Match, Template } from 'aws-cdk-lib/assertions';
 // import { LambdaApiAdvancedFeatures } from '../../advanced/lambda-api-advanced-features.js'; // TODO: File doesn't exist - needs to be updated to use LambdaAdvancedFeaturesService from @shinobi/core
-import { LambdaApiConfig } from '../../src/lambda-api.builder.js';
+import { LambdaApiConfig } from '../../src/lambda-api.builder';
 
 describe.skip('LambdaApiAdvancedFeatures', () => {
   let app: App;

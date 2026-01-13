@@ -5,8 +5,8 @@
 
 import { Template, Match } from 'aws-cdk-lib/assertions';
 import { App, Stack, Environment } from 'aws-cdk-lib';
-import { SecretsManagerComponentComponent } from '../secrets-manager.component.js';
-import { SecretsManagerComponentConfigBuilder, SecretsManagerConfig } from '../secrets-manager.builder.js';
+import { SecretsManagerComponentComponent } from '../secrets-manager.component';
+import { SecretsManagerComponentConfigBuilder, SecretsManagerConfig } from '../secrets-manager.builder';
 import { ComponentContext, ComponentSpec } from '@shinobi/core';
 import { describe, it, expect, beforeEach, afterEach, vi } from 'vitest';
 

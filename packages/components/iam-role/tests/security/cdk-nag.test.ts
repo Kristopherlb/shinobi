@@ -11,8 +11,7 @@ import { Annotations, Match } from 'aws-cdk-lib/assertions';
 import { AwsSolutionsChecks } from 'cdk-nag';
 import { Aspects } from 'aws-cdk-lib';
 import { ComponentContext, ComponentSpec } from '@shinobi/core';
-import { IamRoleComponent } from '../src/iam-role.component.js';
-import { IamRoleComponentConfigBuilder } from '../src/iam-role.builder.js';
+import { IamRoleComponent, IamRoleComponentConfigBuilder } from '../../src/index.js';
 import { vi } from 'vitest';
 
 let platformConfigSpy: any;
@@ -23,7 +22,7 @@ beforeEach(() => {
     .mockImplementation(() => ({}));
 });
 
-describe.skip('IamRoleComponent - CDK Nag Security Validation', () => {
+describe('IamRoleComponent - CDK Nag Security Validation', () => {
   let app: cdk.App;
   let stack: cdk.Stack;
   let context: ComponentContext;

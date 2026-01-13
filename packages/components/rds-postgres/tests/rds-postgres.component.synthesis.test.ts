@@ -4,26 +4,11 @@
  * embedding compliance-aware logic in the implementation.
  */
 
-jest.mock(
-  '@shinobi/core-logger',
-  () => ({
-    Logger: {
-      getLogger: () => ({
-        info: jest.fn(),
-        warn: jest.fn(),
-        error: jest.fn(),
-        debug: jest.fn()
-      }),
-      setGlobalContext: jest.fn()
-    }
-  }),
-  { virtual: true }
-);
-
+import { describe, it, expect } from 'vitest';
 import { App, Stack } from 'aws-cdk-lib';
 import { Match, Template } from 'aws-cdk-lib/assertions';
-import { RdsPostgresComponent } from '../src/rds-postgres.component.js';
-import { RdsPostgresConfig } from '../src/rds-postgres.builder.js';
+import { RdsPostgresComponent } from '../src/rds-postgres.component';
+import { RdsPostgresConfig } from '../src/rds-postgres.builder';
 import { ComponentContext, ComponentSpec } from '../../../core/src/platform/contracts/component-interfaces.js';
 
 const createMockContext = (framework: 'commercial' | 'fedramp-moderate' | 'fedramp-high'): ComponentContext => ({
@@ -69,9 +54,9 @@ describe('RdsPostgresComponent synthesis', () => {
       DBInstanceClass: 'db.t3.micro',
       MultiAZ: false,
       StorageEncrypted: false,
-      EnablePerformanceInsights: Match.absent(),
-      EnableIAMDatabaseAuthentication: Match.absent(),
-      MonitoringInterval: Match.absent()
+      EnablePerformanceInsights: false,
+      EnableIAMDatabaseAuthentication: false,
+      MonitoringInterval: 0
     });
 
     template.resourceCountIs('AWS::KMS::Key', 0);

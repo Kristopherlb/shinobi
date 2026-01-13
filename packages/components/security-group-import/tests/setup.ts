@@ -1,20 +1,21 @@
 /**
- * Jest setup file for Security Group Import component tests
+ * Vitest setup file for Security Group Import component tests
  */
+import { vi } from 'vitest';
 
 // Mock AWS CDK constructs for testing
-jest.mock('aws-cdk-lib', () => ({
-  Stack: jest.fn().mockImplementation(() => ({
+vi.mock('aws-cdk-lib', () => ({
+  Stack: vi.fn().mockImplementation(() => ({
     node: { id: 'test-stack' }
   })),
   Duration: {
-    seconds: jest.fn((seconds) => seconds)
+    seconds: vi.fn((seconds) => seconds)
   }
 }));
 
 // Mock constructs library
-jest.mock('constructs', () => ({
-  Construct: jest.fn().mockImplementation(() => ({
+vi.mock('constructs', () => ({
+  Construct: vi.fn().mockImplementation(() => ({
     node: { id: 'test-construct' }
   }))
 }));

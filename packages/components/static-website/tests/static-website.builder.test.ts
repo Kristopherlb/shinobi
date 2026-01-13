@@ -4,7 +4,7 @@
  * Tests the 5-layer configuration precedence chain and compliance framework defaults
  */
 
-import { StaticWebsiteConfigBuilder, StaticWebsiteConfig } from '../static-website.builder.js';
+import { StaticWebsiteConfigBuilder, StaticWebsiteConfig } from '../static-website.builder';
 import { ComponentContext, ComponentSpec } from '../../@shinobi/core/component-interfaces.js';
 
 // Mock context helper

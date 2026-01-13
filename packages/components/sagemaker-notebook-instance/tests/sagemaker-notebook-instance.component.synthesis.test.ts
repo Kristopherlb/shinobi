@@ -6,8 +6,8 @@
 import './setup.js';
 import { Template, Match } from 'aws-cdk-lib/assertions';
 import { App, Stack } from 'aws-cdk-lib';
-import { SageMakerNotebookInstanceComponent } from '../sagemaker-notebook-instance.component.js';
-import { SageMakerNotebookInstanceConfig } from '../sagemaker-notebook-instance.builder.js';
+import { SageMakerNotebookInstanceComponent } from '../sagemaker-notebook-instance.component';
+import { SageMakerNotebookInstanceConfig } from '../sagemaker-notebook-instance.builder';
 import { ComponentContext, ComponentSpec } from '@shinobi/core';
 
 // Test metadata for Platform Testing Standard compliance
@@ -68,17 +68,17 @@ describe('SageMakerNotebookInstanceComponent Synthesis', () => {
   // Determinism controls for Platform Testing Standard compliance
   beforeEach(() => {
     // Freeze time for deterministic tests
-    jest.useFakeTimers();
-    jest.setSystemTime(new Date('2025-01-01T00:00:00.000Z'));
+    vi.useFakeTimers();
+    vi.setSystemTime(new Date('2025-01-01T00:00:00.000Z'));
     
     // Seed random number generator for deterministic behavior
-    Math.random = jest.fn(() => 0.5);
+    Math.random = vi.fn(() => 0.5);
   });
 
   afterEach(() => {
     // Restore real timers and random
-    jest.useRealTimers();
-    jest.restoreAllMocks();
+    vi.useRealTimers();
+    vi.restoreAllMocks();
   });
   
   describe('Basic Synthesis', () => {

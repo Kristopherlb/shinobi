@@ -285,10 +285,11 @@ export class SecurityGroupRulePostProcessor {
   }
 
   private static buildRuleKey(rule: TrackedSecurityGroupRule): string {
+    const peerId = rule.peer.kind === 'sg' ? rule.peer.id : rule.peer.cidr;
     return [
       rule.type,
       rule.peer.kind,
-      rule.peer.id,
+      peerId,
       rule.port.from,
       rule.port.to,
       rule.port.protocol
@@ -296,9 +297,10 @@ export class SecurityGroupRulePostProcessor {
   }
 
   private static buildRuleConflictKey(rule: TrackedSecurityGroupRule): string {
+    const peerId = rule.peer.kind === 'sg' ? rule.peer.id : rule.peer.cidr;
     return [
       rule.peer.kind,
-      rule.peer.id,
+      peerId,
       rule.port.from,
       rule.port.to,
       rule.port.protocol

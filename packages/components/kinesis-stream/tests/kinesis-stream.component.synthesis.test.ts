@@ -1,8 +1,8 @@
 import { describe, it, expect } from 'vitest';
 import { App, Stack, Environment } from 'aws-cdk-lib';
 import { Match, Template } from 'aws-cdk-lib/assertions';
-import { KinesisStreamComponent } from '../kinesis-stream.component.js';
-import { KinesisStreamConfig } from '../kinesis-stream.builder.js';
+import { KinesisStreamComponent } from '../kinesis-stream.component';
+import { KinesisStreamConfig } from '../kinesis-stream.builder';
 import { ComponentContext, ComponentSpec } from '@shinobi/core';
 
 const createMockContext = (framework: string = 'commercial'): ComponentContext => {

@@ -7,7 +7,12 @@
     "test": {
       "executor": "nx:run-commands",
       "options": {
-        "command": "vitest run",
+        "commands": [
+          {
+            "command": "vitest run",
+            "forwardAllArgs": false
+          }
+        ],
         "cwd": "{projectRoot}"
       }
     },

@@ -1,3 +1,4 @@
+import { describe, it, expect, beforeEach, afterEach, vi } from 'vitest';
 import { App, Stack, Aspects } from 'aws-cdk-lib';
 import * as ec2 from 'aws-cdk-lib/aws-ec2';
 import * as kms from 'aws-cdk-lib/aws-kms';
@@ -5,7 +6,7 @@ import * as s3 from 'aws-cdk-lib/aws-s3';
 import * as logs from 'aws-cdk-lib/aws-logs';
 import { AwsSolutionsChecks } from 'cdk-nag';
 import { NagSuppressionHelper } from 'cdk-nag/lib/utils/nag-suppression-helper.js';
-import { DaggerEnginePool } from '../../dagger-engine-pool.component.js';
+import { DaggerEnginePool } from '../../dagger-engine-pool.component';
 import { ComponentContext, ComponentSpec } from '@shinobi/core';
 import { DaggerConfig } from '../../types.js';
 
@@ -14,7 +15,7 @@ describe.skip('CDK Nag Security Tests', () => {
   let stack: Stack;
   let component: DaggerEnginePool;
   let suppressions: ReturnType<typeof collectSuppressions>;
-  let spies: jest.SpiedFunction<any>[];
+  let spies: ReturnType<typeof vi.spyOn>[];
 
   beforeEach(() => {
     app = new App();
@@ -28,10 +29,10 @@ describe.skip('CDK Nag Security Tests', () => {
     const mockBucket = new s3.Bucket(stack, 'MockArtifacts');
     const mockLogGroup = new logs.LogGroup(stack, 'MockLogGroup');
 
-    spies.push(jest.spyOn(DaggerEnginePool.prototype as any, 'getVpc').mockReturnValue(mockVpc));
-    spies.push(jest.spyOn(DaggerEnginePool.prototype as any, 'createKmsKeyIfNeeded').mockReturnValue(mockKey));
-    spies.push(jest.spyOn(DaggerEnginePool.prototype as any, 'createArtifactsBucket').mockReturnValue(mockBucket));
-    spies.push(jest.spyOn(DaggerEnginePool.prototype as any, 'createLogGroup').mockReturnValue(mockLogGroup));
+    spies.push(vi.spyOn(DaggerEnginePool.prototype as any, 'getVpc').mockReturnValue(mockVpc));
+    spies.push(vi.spyOn(DaggerEnginePool.prototype as any, 'createKmsKeyIfNeeded').mockReturnValue(mockKey));
+    spies.push(vi.spyOn(DaggerEnginePool.prototype as any, 'createArtifactsBucket').mockReturnValue(mockBucket));
+    spies.push(vi.spyOn(DaggerEnginePool.prototype as any, 'createLogGroup').mockReturnValue(mockLogGroup));
 
     const context: ComponentContext = {
       environment: 'test',

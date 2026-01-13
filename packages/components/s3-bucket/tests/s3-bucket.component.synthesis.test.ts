@@ -9,8 +9,8 @@ import {
   ComponentContext,
   ComponentSpec
 } from '@shinobi/core';
-import { S3BucketComponent } from '../s3-bucket.component.js';
-import { S3BucketConfig } from '../s3-bucket.builder.js';
+import { S3BucketComponent } from '../s3-bucket.component';
+import { S3BucketConfig } from '../s3-bucket.builder';
 
 const createContext = (
   complianceFramework: ComponentContext['complianceFramework']
@@ -208,31 +208,26 @@ describe('S3BucketComponent__Synthesis__ComplianceBehaviors', () => {
    * {
    *   "id": "TP-S3-BUCKET-COMPONENT-004",
    *   "level": "unit",
-   *   "capability": "FedRAMP overrides can disable audit logging when explicitly configured",
+   *   "capability": "FedRAMP Moderate requires audit logging and rejects invalid configurations",
    *   "oracle": "contract",
-   *   "invariants": ["Manifest overrides remain authoritative"],
+   *   "invariants": ["Validation enforces compliance requirements"],
    *   "fixtures": ["cdk.Stack", "S3BucketComponent"],
-   *   "inputs": { "shape": "FedRAMP moderate with audit logging disabled", "notes": "Ensures no audit bucket is created" },
-   *   "risks": ["Operator assumes compliance responsibility"],
+   *   "inputs": { "shape": "FedRAMP moderate with audit logging disabled", "notes": "Should reject invalid configuration" },
+   *   "risks": [],
    *   "dependencies": [],
-   *   "evidence": ["CloudFormation template"],
+   *   "evidence": ["Validation error"],
    *   "compliance_refs": ["std://configuration"],
    *   "ai_generated": false,
    *   "human_reviewed_by": ""
    * }
    */
-  it('ManifestOverrides__FedRAMPAuditLoggingDisabled__OmitsAuditBucket', () => {
+  it('ManifestOverrides__FedRAMPAuditLoggingDisabled__ThrowsValidationError', () => {
     const context = createContext('fedramp-moderate');
-    const template = synthesize(
+    
+    expect(() => synthesize(
       context,
       createSpec({ compliance: { auditLogging: false } })
-    );
-
-    const buckets = template.findResources('AWS::S3::Bucket');
-    Object.values(buckets).forEach(resource => {
-      const logging = resource.Properties?.LoggingConfiguration;
-      expect(logging).toBeUndefined();
-    });
+    )).toThrow(/FedRAMP Moderate requires audit logging/);
   });
 
   /*
@@ -331,7 +326,7 @@ describe('S3BucketComponent__Synthesis__ComplianceBehaviors', () => {
     });
 
     expect(() => synthesize(context, spec)).toThrow(
-      /objectLock\.enabled requires versioning to be true/
+      /Object Lock requires bucket versioning to be enabled/
     );
   });
 });

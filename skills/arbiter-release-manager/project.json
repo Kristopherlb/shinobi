@@ -3,14 +3,19 @@
   "sourceRoot": "skills/arbiter-release-manager",
   "targets": {
     "test": {
-      "executor": "@nx/vitest:test",
-      "options": {
-        "passWithNoTests": true,
-        "config": "skills/arbiter-release-manager/vitest.config.ts"
-      },
+      "executor": "nx:run-commands",
       "outputs": [
         "{projectRoot}/coverage"
-      ]
+      ],
+      "options": {
+        "commands": [
+          {
+            "command": "vitest run --config vitest.config.ts",
+            "forwardAllArgs": false
+          }
+        ],
+        "cwd": "{projectRoot}"
+      }
     },
     "validate": {
       "executor": "nx:run-commands",

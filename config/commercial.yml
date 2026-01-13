@@ -1255,6 +1255,9 @@ defaults:
     removalPolicy: retain
     tags: {}
 
+  route53-record:
+    tags: {}
+
   iam-policy:
     controls:
       denyInsecureTransport: false
@@ -1448,3 +1451,8 @@ defaults:
     monitoring:
       enabled: true
       detailedMetrics: false
+
+  network-rules-stack:
+    ssmPathPrefix: /shinobi/network-rules
+    description: Cross-stack security group rules from all services
+    tags: {}

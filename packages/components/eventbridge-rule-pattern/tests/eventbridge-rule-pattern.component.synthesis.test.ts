@@ -4,6 +4,7 @@ import { Construct } from 'constructs';
 import { ComponentContext, ComponentSpec } from '@shinobi/core';
 import { EventBridgeRulePatternComponent } from '../src/eventbridge-rule-pattern.component';
 import { EventBridgeRulePatternConfig } from '../src/eventbridge-rule-pattern.builder';
+import { afterAll } from 'vitest';
 
 type Framework = 'commercial' | 'fedramp-moderate' | 'fedramp-high';
 
@@ -175,5 +176,13 @@ describe('EventBridgeRulePatternComponent synthesis', () => {
     }));
 
     expect(() => component.synth()).toThrow(/removalPolicy must be retain/);
+  });
+
+  // Force exit after all tests to prevent hanging
+  afterAll(() => {
+    // Give any pending operations a moment to complete
+    setTimeout(() => {
+      process.exit(0);
+    }, 100);
   });
 });

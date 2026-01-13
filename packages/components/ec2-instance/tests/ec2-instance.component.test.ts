@@ -1,8 +1,8 @@
 import { describe, it, expect, beforeEach, afterEach, vi } from 'vitest';
 import { App, Stack } from 'aws-cdk-lib';
 import { Match, Template } from 'aws-cdk-lib/assertions';
-import { Ec2InstanceComponent } from '../ec2-instance.component.js';
-import { Ec2InstanceComponentConfigBuilder } from '../ec2-instance.builder.js';
+import { Ec2InstanceComponent } from '../ec2-instance.component';
+import { Ec2InstanceComponentConfigBuilder } from '../ec2-instance.builder';
 const createContext = (framework, scope) => ({
   serviceName: 'test-service',
   environment: 'test',

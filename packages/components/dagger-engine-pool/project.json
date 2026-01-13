@@ -27,13 +27,18 @@
       }
     },
     "test": {
-      "executor": "@nx/vitest:test",
+      "executor": "nx:run-commands",
       "outputs": [
         "{projectRoot}/coverage"
       ],
       "options": {
-        "config": "packages/components/dagger-engine-pool/vitest.config.ts",
-        "passWithNoTests": true
+        "commands": [
+          {
+            "command": "vitest run --config vitest.config.ts",
+            "forwardAllArgs": false
+          }
+        ],
+        "cwd": "{projectRoot}"
       }
     },
     "lint": {

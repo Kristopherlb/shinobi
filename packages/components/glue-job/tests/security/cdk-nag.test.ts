@@ -11,8 +11,8 @@ import { Annotations, Match } from 'aws-cdk-lib/assertions';
 import { AwsSolutionsChecks } from 'cdk-nag';
 import { Aspects } from 'aws-cdk-lib';
 import { ComponentContext, ComponentSpec } from '@shinobi/core';
-import { GlueJobComponent } from '../src/glue-job.component.js';
-import { GlueJobComponentConfigBuilder } from '../src/glue-job.builder.js';
+import { GlueJobComponent } from '../../src/glue-job.component';
+import { GlueJobComponentConfigBuilder } from '../../src/glue-job.builder';
 import { vi } from 'vitest';
 
 let platformConfigSpy: any;

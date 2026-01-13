@@ -128,9 +128,11 @@ export class SqsQueueConfigBuilder extends ConfigBuilder<SqsQueueConfig> {
     
     // Merge compliance defaults on top of base merged config
     // This ensures compliance defaults apply when highRiskEnvironment is set, but don't override explicit user settings
-    const mergedConfig = (this as any)._deepMergeConfigs(
+    // We need to respect component overrides, so merge compliance defaults carefully
+    const mergedConfig = this._mergeRespectingOverrides(
       baseMerged,
-      complianceDefaults
+      complianceDefaults,
+      componentOverrides
     );
     
     // #region agent log
@@ -241,6 +243,78 @@ export class SqsQueueConfigBuilder extends ConfigBuilder<SqsQueueConfig> {
     fetch('http://127.0.0.1:7242/ingest/31cd8a5c-c5a9-4c85-9dba-5f04dc91dc42',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'sqs-queue.builder.ts:195',message:'returning empty defaults',data:{},timestamp:Date.now(),sessionId:'debug-session',runId:'run2',hypothesisId:'A'})}).catch(()=>{});
     // #endregion
     return {};
+  }
+  
+  /**
+   * Merge compliance defaults while respecting explicit component overrides
+   * 
+   * For nested objects (like encryption, deadLetterQueue), if a property is explicitly
+   * set in component overrides, we should not override it with compliance defaults.
+   */
+  private _mergeRespectingOverrides(
+    baseConfig: Partial<SqsQueueConfig>,
+    complianceDefaults: Partial<SqsQueueConfig>,
+    componentOverrides: Partial<SqsQueueConfig>
+  ): SqsQueueConfig {
+    const merged = { ...baseConfig };
+    
+    // For nested objects, check if they're explicitly set in component overrides
+    // If encryption is explicitly set in component overrides, respect it
+    // Merge order: baseConfig -> complianceDefaults -> componentOverrides (component wins)
+    if (componentOverrides.encryption !== undefined) {
+      // Component explicitly set encryption config, merge compliance defaults only for unspecified properties
+      merged.encryption = {
+        ...baseConfig.encryption,              // Start with base (has all defaults)
+        ...(complianceDefaults.encryption || {}), // Apply compliance defaults (fills in high-risk values)
+        ...componentOverrides.encryption       // Component overrides win
+      };
+    } else if (complianceDefaults.encryption) {
+      // No explicit encryption in component overrides, apply compliance defaults
+      merged.encryption = {
+        ...baseConfig.encryption,
+        ...complianceDefaults.encryption
+      };
+    }
+    
+    // Same for deadLetterQueue
+    if (componentOverrides.deadLetterQueue !== undefined) {
+      merged.deadLetterQueue = {
+        ...baseConfig.deadLetterQueue,              // Start with base (has all defaults)
+        ...(complianceDefaults.deadLetterQueue || {}), // Apply compliance defaults (fills in high-risk values)
+        ...componentOverrides.deadLetterQueue       // Component overrides win
+      };
+    } else if (complianceDefaults.deadLetterQueue) {
+      merged.deadLetterQueue = {
+        ...baseConfig.deadLetterQueue,
+        ...complianceDefaults.deadLetterQueue
+      };
+    }
+    
+    // Same for monitoring
+    if (componentOverrides.monitoring !== undefined) {
+      // Start with baseConfig, apply compliance defaults, then component overrides win
+      merged.monitoring = {
+        ...baseConfig.monitoring,              // Start with base (has all defaults)
+        ...(complianceDefaults.monitoring || {}), // Apply compliance defaults (fills in high-risk values)
+        ...componentOverrides.monitoring        // Component overrides win
+      };
+    } else if (complianceDefaults.monitoring) {
+      merged.monitoring = {
+        ...baseConfig.monitoring,
+        ...complianceDefaults.monitoring
+      };
+    }
+    
+    // Merge other top-level properties (non-nested)
+    Object.keys(complianceDefaults).forEach(key => {
+      if (!['encryption', 'deadLetterQueue', 'monitoring'].includes(key)) {
+        if (componentOverrides[key as keyof SqsQueueConfig] === undefined) {
+          merged[key as keyof SqsQueueConfig] = complianceDefaults[key as keyof SqsQueueConfig] as any;
+        }
+      }
+    });
+    
+    return merged as SqsQueueConfig;
   }
   
   /**

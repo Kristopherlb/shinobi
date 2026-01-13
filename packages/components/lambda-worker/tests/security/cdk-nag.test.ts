@@ -6,8 +6,9 @@
  */
 
 import { App, Stack } from 'aws-cdk-lib';
+import * as ec2 from 'aws-cdk-lib/aws-ec2';
 import { AwsSolutionsChecks, NagSuppressions } from 'cdk-nag';
-import { LambdaWorkerComponent } from '../../lambda-worker.component.js';
+import { LambdaWorkerComponent } from '../../src/lambda-worker.component';
 import { ComponentContext, ComponentSpec } from '@shinobi/core';
 
 describe.skip('CDK Nag Security Tests - Lambda Worker Component', () => {
@@ -160,12 +161,20 @@ describe.skip('CDK Nag Security Tests - Lambda Worker Component', () => {
 
     beforeEach(() => {
       fedrampStack = new Stack(app, 'FedRAMPTestStack');
+      
+      // Create VPC construct and inject via context (avoids Vpc.fromLookup() in unit tests)
+      const vpc = new ec2.Vpc(fedrampStack, 'TestVpc', { maxAzs: 2 });
+      const securityGroup = new ec2.SecurityGroup(fedrampStack, 'TestSecurityGroup', {
+        vpc,
+        description: 'Test security group for FedRAMP Lambda'
+      });
 
       const fedrampContext: ComponentContext = {
         environment: 'production',
         complianceFramework: 'fedramp-moderate',
         owner: 'fedramp-owner',
-        service: 'fedramp-service'
+        service: 'fedramp-service',
+        vpc // Inject VPC via context (avoids Vpc.fromLookup() in unit tests)
       };
 
       const fedrampSpec: ComponentSpec = {
@@ -203,9 +212,10 @@ describe.skip('CDK Nag Security Tests - Lambda Worker Component', () => {
           },
           vpc: {
             enabled: true,
-            vpcId: 'vpc-12345678',
-            subnetIds: ['subnet-12345678'],
-            securityGroupIds: ['sg-12345678']
+            // Use injected VPC via context.vpc instead of vpcId (avoids Vpc.fromLookup() in unit tests)
+            // Omit subnetIds to use VPC's privateSubnets
+            subnetIds: [],
+            securityGroupIds: [securityGroup.securityGroupId]
           },
           kmsKeyArn: 'arn:aws:kms:us-east-1:123456789012:key/12345678-1234-1234-1234-123456789012',
           eventSources: [],

@@ -20,7 +20,8 @@ export type AlarmComparisonOperator = 'gt' | 'gte' | 'lt' | 'lte';
 export type AlarmTreatMissingData = 'breaching' | 'not-breaching' | 'ignore' | 'missing';
 
 export interface VpcAssociationConfig {
-  vpcId: string;
+  /** VPC ID for fromLookup(). Optional when using injected VPC via context.vpc */
+  vpcId?: string;
   region?: string;
 }
 

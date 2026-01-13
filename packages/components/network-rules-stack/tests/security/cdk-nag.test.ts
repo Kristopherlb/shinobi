@@ -11,8 +11,8 @@ import { Annotations, Match } from 'aws-cdk-lib/assertions';
 import { AwsSolutionsChecks } from 'cdk-nag';
 import { Aspects } from 'aws-cdk-lib';
 import { ComponentContext, ComponentSpec } from '@shinobi/core';
-import { NetworkRulesStackComponent } from '../src/network-rules-stack.component.js';
-import { NetworkRulesStackConfigBuilder } from '../src/network-rules-stack.builder.js';
+import { NetworkRulesStackComponent } from '../../src/network-rules-stack.component';
+import { NetworkRulesStackConfigBuilder } from '../../src/network-rules-stack.builder';
 import { vi } from 'vitest';
 
 let platformConfigSpy: any;

@@ -1,9 +1,5 @@
-import { fileURLToPath } from 'node:url';
-import { dirname, resolve } from 'node:path';
 import { defineConfig } from 'vitest/config';
 import { nxViteTsPaths } from '@nx/vite/plugins/nx-tsconfig-paths.plugin';
-
-const currentDir = dirname(fileURLToPath(import.meta.url));
 
 export default defineConfig({
   plugins: [nxViteTsPaths()],
@@ -16,12 +12,17 @@ export default defineConfig({
       reporter: ['text', 'json', 'html'],
       include: ['src/**/*.{ts,tsx}'],
       exclude: ['src/**/*.d.ts']
+    },
+    server: {
+      deps: {
+        inline: [
+          '@aws/lambda-invoke-store'
+        ]
+      }
     }
   },
   resolve: {
-    alias: {
-      '@shinobi/core': resolve(currentDir, '../../core/src/index.ts')
-    },
-    conditions: ['development', 'module', 'import', 'default']
+    // Vitest natively respects package.json exports including 'development' condition
+    // No moduleNameMapper needed!
   }
 });

@@ -1,7 +1,7 @@
 import * as ec2 from 'aws-cdk-lib/aws-ec2';
 import { App, Stack } from 'aws-cdk-lib';
 import { Template, Match } from 'aws-cdk-lib/assertions';
-import { AutoScalingGroupComponent } from '../src/auto-scaling-group.component.js';
+import { AutoScalingGroupComponent } from '../src/auto-scaling-group.component';
 
 const createSpec = (config = {}) => ({
   name: 'asg-test',

@@ -3,21 +3,11 @@
  * Implements Platform Testing Standard v1.0 - Component Synthesis Testing
  */
 
-jest.mock(
-  '@shinobi/core-logger',
-  () => ({
-    Logger: {
-      getLogger: () => ({ info: jest.fn(), warn: jest.fn(), error: jest.fn(), debug: jest.fn() }),
-      setGlobalContext: jest.fn()
-    }
-  }),
-  { virtual: true }
-);
-
+import { describe, it, expect, beforeAll, afterAll, vi } from 'vitest';
 import { App, Stack } from 'aws-cdk-lib';
 import { Match, Template } from 'aws-cdk-lib/assertions';
-import { CloudFrontDistributionComponent } from '../src/cloudfront-distribution.component.js';
-import { CloudFrontDistributionConfig } from '../src/cloudfront-distribution.builder.js';
+import { CloudFrontDistributionComponent } from '../src/cloudfront-distribution.component';
+import { CloudFrontDistributionConfig } from '../src/cloudfront-distribution.builder';
 import { ComponentContext, ComponentSpec } from '../../../core/src/platform/contracts/component-interfaces.js';
 
 // Deterministic test fixtures
@@ -56,12 +46,12 @@ const synthesize = (context: ComponentContext, spec: ComponentSpec) => {
 describe('CloudFrontDistributionComponent', () => {
   // Freeze time for deterministic tests
   beforeAll(() => {
-    jest.useFakeTimers();
-    jest.setSystemTime(DETERMINISTIC_TIMESTAMP);
+    vi.useFakeTimers();
+    vi.setSystemTime(DETERMINISTIC_TIMESTAMP);
   });
 
   afterAll(() => {
-    jest.useRealTimers();
+    vi.useRealTimers();
   });
 
   describe('ComponentSynthesis__CommercialMode__CreatesBasicDistribution', () => {

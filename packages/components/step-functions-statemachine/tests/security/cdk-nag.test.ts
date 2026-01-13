@@ -11,8 +11,8 @@ import { Annotations, Match } from 'aws-cdk-lib/assertions';
 import { AwsSolutionsChecks } from 'cdk-nag';
 import { Aspects } from 'aws-cdk-lib';
 import { ComponentContext, ComponentSpec } from '@shinobi/core';
-import { StepFunctionsStateMachineComponent } from '../step-functions-statemachine.component.js';
-import { StepFunctionsStateMachineConfigBuilder } from '../step-functions-statemachine.builder.js';
+import { StepFunctionsStateMachineComponent } from '../../step-functions-statemachine.component';
+import { StepFunctionsStateMachineConfigBuilder } from '../../step-functions-statemachine.builder';
 import { vi } from 'vitest';
 
 let platformConfigSpy: any;

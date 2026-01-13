@@ -196,6 +196,8 @@ export interface ApplicationLoadBalancerConfig {
   observability?: AlbObservabilityConfig;
   hardeningProfile: string;
   tags: Record<string, string>;
+  /** High-risk environment flag (set via platform config or service.yml). When true, applies enhanced security defaults aligned with FedRAMP requirements. */
+  highRiskEnvironment?: boolean;
 }
 
 export const APPLICATION_LOAD_BALANCER_CONFIG_SCHEMA = schemaJson as ComponentConfigSchema;
@@ -279,22 +281,113 @@ export class ApplicationLoadBalancerComponentConfigBuilder extends ConfigBuilder
     } as Partial<ApplicationLoadBalancerConfig>;
   }
 
+  /**
+   * Layer 2: Compliance Framework Defaults
+   * 
+   * Provides sensible defaults based on risk assessment flags rather than framework checks.
+   * High-risk environment defaults can be set via:
+   * - Platform config files (`/config/{framework}.yml`) setting `highRiskEnvironment: true`
+   * - Service-level configuration in `service.yml`
+   * - Environment defaults
+   * 
+   * This ensures configuration is data-driven and risk-based, not framework-dependent.
+   */
+  protected getComplianceFrameworkDefaults(): Partial<ApplicationLoadBalancerConfig> {
+    // Check if highRiskEnvironment flag is set in component config or platform config
+    const componentConfig = this.builderContext.spec.config as Partial<ApplicationLoadBalancerConfig> | undefined;
+    let isHighRisk = componentConfig?.highRiskEnvironment ?? false;
+    
+    // Also check platform config if available (loaded by base class)
+    try {
+      const platformConfig = (this as any)._loadPlatformConfiguration();
+      if (platformConfig?.highRiskEnvironment) {
+        isHighRisk = true;
+      }
+    } catch {
+      // Platform config might not be available in tests, ignore
+    }
+    
+    if (isHighRisk) {
+      // Apply enhanced security defaults for high-risk environments
+      // These defaults align with FedRAMP Moderate/High requirements when highRiskEnvironment is set
+      return {
+        scheme: 'internal', // Internal scheme for high-risk environments
+        deletionProtection: true, // Mandatory deletion protection
+        accessLogs: {
+          enabled: true,
+          retentionDays: 365, // Can be overridden to 2555 for higher risk scenarios
+          removalPolicy: 'retain' // Retain logs for compliance
+        },
+        listeners: [
+          {
+            port: 443,
+            protocol: 'HTTPS', // HTTPS only for high-risk environments
+            redirectToHttps: false
+          }
+        ],
+        securityGroups: {
+          create: true,
+          securityGroupIds: [],
+          ingress: [] // Restrictive ingress for high-risk environments
+        }
+      };
+    }
+    
+    return {}; // Standard/default environment - use hardcoded fallbacks
+  }
+
   public buildSync(): ApplicationLoadBalancerConfig {
-    const resolved = super.buildSync() as Partial<ApplicationLoadBalancerConfig>;
-    return this.normaliseConfig(resolved);
+    // Get all layers
+    const hardcodedFallbacks = this.getHardcodedFallbacks();
+    const platformConfig = (this as any)._loadPlatformConfiguration();
+    const environmentConfig = (this as any)._getEnvironmentConfiguration();
+    const componentOverrides = this.builderContext.spec.config || {};
+    const policyOverrides = (this as any)._getPolicyOverrides();
+    const complianceDefaults = this.getComplianceFrameworkDefaults();
+    
+    // Merge in precedence order: hardcoded < platform < compliance < environment < component < policy
+    const mergedConfig = (this as any)._deepMergeConfigs(
+      hardcodedFallbacks,
+      platformConfig,
+      complianceDefaults,
+      environmentConfig,
+      componentOverrides,
+      policyOverrides
+    );
+    
+    // Resolve environment interpolations (${env:key} patterns)
+    const resolvedConfig = (this as any)._resolveEnvironmentInterpolationsSync(mergedConfig);
+    
+    // Normalize the final config
+    return this.normaliseConfig(resolvedConfig);
   }
 
   private normaliseConfig(config: Partial<ApplicationLoadBalancerConfig>): ApplicationLoadBalancerConfig {
     const specName = this.builderContext.spec.name;
 
     const loadBalancerName = this.sanitiseName(config.loadBalancerName ?? specName);
-    const scheme: AlbScheme = config.scheme ?? 'internet-facing';
-    const ipAddressType: AlbIpAddressType = config.ipAddressType ?? 'ipv4';
+    
+    // Required fields should be present after merge - throw if missing
+    if (config.scheme === undefined) {
+      throw new Error('scheme must be set by merge (from hardcoded fallbacks or user config)');
+    }
+    if (config.ipAddressType === undefined) {
+      throw new Error('ipAddressType must be set by merge (from hardcoded fallbacks or user config)');
+    }
+    if (config.vpc === undefined) {
+      throw new Error('vpc must be set by merge (from hardcoded fallbacks or user config)');
+    }
+    if (config.vpc.subnetType === undefined) {
+      throw new Error('vpc.subnetType must be set by merge (from hardcoded fallbacks or user config)');
+    }
+    
+    const scheme: AlbScheme = config.scheme;
+    const ipAddressType: AlbIpAddressType = config.ipAddressType;
 
     const vpc: ApplicationLoadBalancerConfig['vpc'] = {
-      vpcId: config.vpc?.vpcId,
-      subnetIds: [...(config.vpc?.subnetIds ?? [])],
-      subnetType: config.vpc?.subnetType ?? 'public'
+      vpcId: config.vpc.vpcId,
+      subnetIds: [...(config.vpc.subnetIds ?? [])],
+      subnetType: config.vpc.subnetType
     };
 
     const securityGroups = this.normaliseSecurityGroups(config.securityGroups);
@@ -321,8 +414,17 @@ export class ApplicationLoadBalancerComponentConfigBuilder extends ConfigBuilder
     };
 
     const idleTimeoutSeconds = this.resolveIdleTimeout(config);
-    const deletionProtection = config.deletionProtection ?? true;
-    const hardeningProfile = config.hardeningProfile ?? 'baseline';
+    
+    // Required fields should be present after merge - throw if missing
+    if (config.deletionProtection === undefined) {
+      throw new Error('deletionProtection must be set by merge (from hardcoded fallbacks or user config)');
+    }
+    if (config.hardeningProfile === undefined) {
+      throw new Error('hardeningProfile must be set by merge (from hardcoded fallbacks or user config)');
+    }
+    
+    const deletionProtection = config.deletionProtection;
+    const hardeningProfile = config.hardeningProfile;
     const tags = { ...(config.tags ?? {}) };
 
     return {
@@ -376,18 +478,32 @@ export class ApplicationLoadBalancerComponentConfigBuilder extends ConfigBuilder
   }
 
   private normaliseAccessLogs(accessLogs: AlbAccessLogsConfig | undefined, loadBalancerName: string): ApplicationLoadBalancerConfig['accessLogs'] {
-    const enabled = accessLogs?.enabled ?? false;
-    const bucketName = accessLogs?.bucketName ?? accessLogs?.bucket;
-    const prefix = accessLogs?.prefix ?? `${loadBalancerName}/`;
-    const retentionDays = Math.max(1, accessLogs?.retentionDays ?? 30);
-    const removalPolicy: AlbRemovalPolicy = accessLogs?.removalPolicy ?? 'destroy';
+    // Access logs config should always be present after merge (from hardcoded fallbacks)
+    // Only normalize structure, preserve the merged values - don't override with defaults
+    if (!accessLogs) {
+      throw new Error('accessLogs configuration is required after merge');
+    }
+    
+    // Preserve merged values - if these are undefined after merge, that's a bug
+    if (accessLogs.enabled === undefined) {
+      throw new Error('accessLogs.enabled must be set by merge (from hardcoded fallbacks or user config)');
+    }
+    if (accessLogs.retentionDays === undefined) {
+      throw new Error('accessLogs.retentionDays must be set by merge (from hardcoded fallbacks or user config)');
+    }
+    if (accessLogs.removalPolicy === undefined) {
+      throw new Error('accessLogs.removalPolicy must be set by merge (from hardcoded fallbacks or user config)');
+    }
+    
+    const bucketName = accessLogs.bucketName ?? accessLogs.bucket;
+    const prefix = accessLogs.prefix ?? `${loadBalancerName}/`;
 
     return {
-      enabled,
+      enabled: accessLogs.enabled,
       bucketName,
       prefix,
-      retentionDays,
-      removalPolicy
+      retentionDays: accessLogs.retentionDays,
+      removalPolicy: accessLogs.removalPolicy
     };
   }
 

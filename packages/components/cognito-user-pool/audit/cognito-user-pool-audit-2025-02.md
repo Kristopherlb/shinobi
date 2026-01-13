@@ -30,7 +30,7 @@
 - Production validation now enforces monitoring for `prod*` environments in the creator (`packages/components/cognito-user-pool/src/cognito-user-pool.creator.ts:90`).
 
 ## Prompt 05 — CDK Best Practices Audit **(✅ Pass)**
-- Sources follow the `src/` layout, Jest collects coverage from the module tree, and lint scripts target the new structure (`packages/components/cognito-user-pool/package.json:33`).
+- Sources follow the `src/` layout, Vitest collects coverage from the module tree, and lint scripts target the new structure (`packages/components/cognito-user-pool/package.json:33`).
 - A CDK-Nag regression test ensures the synthesized stack stays free of AwsSolutions findings (`packages/components/cognito-user-pool/tests/security/cdk-nag.test.ts`).
 
 ## Prompt 06 — Component Versioning & Metadata Audit **(✅ Pass)**

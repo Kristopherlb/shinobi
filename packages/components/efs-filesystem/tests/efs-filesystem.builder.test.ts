@@ -2,7 +2,7 @@ import { describe, it, expect, beforeEach, afterEach } from 'vitest';
 import {
   EfsFilesystemComponentConfigBuilder,
   EfsFilesystemConfig
-} from '../src/efs-filesystem.builder.js';
+} from '../src/efs-filesystem.builder';
 import { ComponentContext, ComponentSpec } from '@shinobi/core';
 
 const createContext = (framework?: string): ComponentContext => {

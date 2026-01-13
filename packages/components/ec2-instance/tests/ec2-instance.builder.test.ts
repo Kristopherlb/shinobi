@@ -1,5 +1,5 @@
 import { describe, it, expect, beforeEach, afterEach, vi } from 'vitest';
-import { Ec2InstanceComponentConfigBuilder } from '../ec2-instance.builder.js';
+import { Ec2InstanceComponentConfigBuilder } from '../ec2-instance.builder';
 
 const createContext = (framework = 'commercial') => ({
   serviceName: 'test-service',

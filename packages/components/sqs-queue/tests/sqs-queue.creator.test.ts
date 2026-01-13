@@ -5,8 +5,8 @@
 
 import { describe, it, expect, beforeEach, afterEach } from 'vitest';
 import { App, Stack, Environment } from 'aws-cdk-lib';
-import { SqsQueueCreator } from '../sqs-queue.creator.js';
-import { SqsQueueConfig } from '../sqs-queue.builder.js';
+import { SqsQueueCreator } from '../sqs-queue.creator';
+import { SqsQueueConfig } from '../sqs-queue.builder';
 import { ComponentContext, ComponentSpec } from '@shinobi/core';
 import { vi } from 'vitest';
 

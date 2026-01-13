@@ -11,8 +11,8 @@ import { Annotations, Match } from 'aws-cdk-lib/assertions';
 import { AwsSolutionsChecks } from 'cdk-nag';
 import { Aspects } from 'aws-cdk-lib';
 import { ComponentContext, ComponentSpec } from '@shinobi/core';
-import { StaticWebsiteComponent } from '../static-website.component.js';
-import { StaticWebsiteConfigBuilder } from '../static-website.builder.js';
+import { StaticWebsiteComponent } from '../../static-website.component';
+import { StaticWebsiteConfigBuilder } from '../../static-website.builder';
 import { vi } from 'vitest';
 
 let platformConfigSpy: any;

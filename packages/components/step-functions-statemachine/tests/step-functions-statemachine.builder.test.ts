@@ -3,7 +3,7 @@
  * Implements Platform Testing Standard v1.0 - ConfigBuilder Testing
  */
 
-import { StepFunctionsStateMachineConfigBuilder, StepFunctionsStateMachineConfig } from '../step-functions-statemachine.builder.js';
+import { StepFunctionsStateMachineConfigBuilder, StepFunctionsStateMachineConfig } from '../step-functions-statemachine.builder';
 import { ComponentContext, ComponentSpec } from '../../@shinobi/core/component-interfaces.js';
 import { Construct } from 'constructs';
 import { Stack } from 'aws-cdk-lib';

@@ -105,16 +105,23 @@ export class EfsFilesystemComponent extends BaseComponent {
 
   private resolveVpc(): void {
     if (!this.config?.vpc.enabled) {
-      throw new Error('EFS filesystem requires vpc configuration. Provide `config.vpc.vpcId` and subnet IDs.');
+      throw new Error('EFS filesystem requires vpc configuration. Provide `config.vpc.vpcId` and subnet IDs, or a VPC provided via context.vpc.');
     }
 
-    if (!this.config.vpc.vpcId) {
-      throw new Error('EFS filesystem requires `config.vpc.vpcId` to be set.');
+    // Priority 1: Use injected VPC from context (preferred for tests)
+    if (this.context.vpc) {
+      this.vpc = this.context.vpc;
+      return;
     }
-
-    this.vpc = ec2.Vpc.fromLookup(this, 'Vpc', {
-      vpcId: this.config.vpc.vpcId
-    });
+    // Priority 2: Use fromLookup() if vpcId provided in config
+    if (this.config.vpc.vpcId) {
+      this.vpc = ec2.Vpc.fromLookup(this, 'Vpc', {
+        vpcId: this.config.vpc.vpcId
+      });
+      return;
+    }
+    // Priority 3: Error if neither provided
+    throw new Error('EFS filesystem requires `config.vpc.vpcId` to be set, or a VPC provided via context.vpc.');
   }
 
   private resolveSecurityGroup(): void {

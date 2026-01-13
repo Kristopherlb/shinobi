@@ -111,7 +111,7 @@ The platform is built with:
 - **pnpm workspaces** + **Turborepo** for fast builds
 - **commander** for CLI with rich --help and JSON output
 - **zod** for schema validation and JSON Schema generation
-- **jest + ts-jest** for comprehensive testing
+- **vitest** for comprehensive testing (migrating from Jest)
 - **eslint + @typescript-eslint + prettier** for code quality
 
 ## License

@@ -3,9 +3,10 @@
  * Implements Platform Testing Standard v1.0 - Security Compliance Testing
  */
 
+import { describe, it, expect, beforeAll, afterAll, vi } from 'vitest';
 import { App, Stack, Aspects } from 'aws-cdk-lib';
 import { AwsSolutionsChecks } from 'cdk-nag';
-import { CognitoUserPoolComponent } from '../../src/cognito-user-pool.component.js';
+import { CognitoUserPoolComponent } from '../../src/cognito-user-pool.component';
 import { ComponentContext, ComponentSpec } from '../../../platform/contracts/component-interfaces.js';
 import { Match, Annotations } from 'aws-cdk-lib/assertions';
 
@@ -15,12 +16,12 @@ const DETERMINISTIC_TIMESTAMP = new Date('2025-01-08T12:00:00.000Z');
 describe.skip('CognitoUserPoolComponent__SecurityCompliance__CDKNAGValidation', () => {
   // Freeze time for deterministic tests
   beforeAll(() => {
-    jest.useFakeTimers();
-    jest.setSystemTime(DETERMINISTIC_TIMESTAMP);
+    vi.useFakeTimers();
+    vi.setSystemTime(DETERMINISTIC_TIMESTAMP);
   });
 
   afterAll(() => {
-    jest.useRealTimers();
+    vi.useRealTimers();
   });
 
   // Helper factories

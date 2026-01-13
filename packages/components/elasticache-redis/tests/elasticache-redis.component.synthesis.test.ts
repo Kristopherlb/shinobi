@@ -3,8 +3,8 @@ import { App, Stack, Environment } from 'aws-cdk-lib';
 import { Template, Match } from 'aws-cdk-lib/assertions';
 import * as ec2 from 'aws-cdk-lib/aws-ec2';
 import { ComponentContext, ComponentSpec } from '@shinobi/core';
-import { ElastiCacheRedisComponent } from '../src/elasticache-redis.component.js';
-import { ElastiCacheRedisConfig } from '../src/elasticache-redis.builder.js';
+import { ElastiCacheRedisComponent } from '../src/elasticache-redis.component';
+import { ElastiCacheRedisConfig } from '../src/elasticache-redis.builder';
 
 type Framework = 'commercial' | 'fedramp-moderate' | 'fedramp-high';
 
@@ -47,7 +47,18 @@ const synthesize = (framework: Framework, config?: Partial<ElastiCacheRedisConfi
   const vpc = new ec2.Vpc(stack, `TestVpc-${framework}`, { maxAzs: 2 });
   const context = baseContext(framework, stack);
   context.vpc = vpc;
-  const component = new ElastiCacheRedisComponent(stack, `Redis-${framework}`, context, spec(config));
+  
+  // Merge VPC config to include subnet IDs (required when using explicit VPC)
+  // Use literal string subnet IDs (not CloudFormation tokens) to satisfy component validation
+  const mergedConfig = {
+    ...config,
+    vpc: {
+      ...config?.vpc,
+      subnetIds: config?.vpc?.subnetIds ?? ['subnet-12345678', 'subnet-87654321']
+    }
+  };
+  
+  const component = new ElastiCacheRedisComponent(stack, `Redis-${framework}`, context, spec(mergedConfig));
   component.synth();
   return {
     component,
@@ -166,7 +177,7 @@ describe('ElastiCacheRedisComponent synthesis', () => {
     const context = baseContext('commercial', stack);
     const component = new ElastiCacheRedisComponent(stack, 'Redis-NoVpc', context, spec());
 
-    expect(() => component.synth()).toThrow(/requires an explicit VPC/);
+    expect(() => component.synth()).toThrow(/requires a VPC/);
   });
 
   it('throws error when conflicting log destination types are configured', () => {
@@ -186,6 +197,10 @@ describe('ElastiCacheRedisComponent synthesis', () => {
       'Redis-ConflictingLogs',
       context,
       spec({
+        vpc: {
+          // Use literal string subnet IDs (not CloudFormation tokens) to satisfy component validation
+          subnetIds: ['subnet-12345678', 'subnet-87654321']
+        },
         monitoring: {
           enabled: true,
           logDelivery: [

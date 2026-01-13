@@ -10,4 +10,4 @@ All notable changes to `@platform/components-cognito-user-pool` are documented i
 
 ### Changed
 - Updated the KMS/SMS role handling to document suppressions for AWS-managed policies and surfaced suppressions through tests.
-- Aligned test harnesses with the ESM workspace configuration so Jest transforms Cognito tests without custom loaders.
+- Migrated test harnesses from Jest to Vitest for better ESM support and performance.

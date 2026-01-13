@@ -2,7 +2,8 @@
  * Unit tests for Deployment Bundle Pipeline Builder with the new ConfigBuilder integration.
  */
 
-import { DeploymentBundlePipelineBuilder } from '../../src/deployment-bundle-pipeline.builder.js';
+import { describe, it, expect, beforeEach, afterEach, vi } from 'vitest';
+import { DeploymentBundlePipelineBuilder } from '../../src/deployment-bundle-pipeline.builder';
 import { DeploymentBundleConfig } from '../../src/types.js';
 
 const baseContext = {
@@ -29,10 +30,10 @@ const createBuilder = (ctx = baseContext, spec = baseSpec) => {
 
 describe('DeploymentBundlePipelineBuilder', () => {
   let builder: DeploymentBundlePipelineBuilder;
-  let platformConfigSpy: jest.SpyInstance;
+  let platformConfigSpy: ReturnType<typeof vi.spyOn>;
 
   beforeEach(() => {
-    platformConfigSpy = jest
+    platformConfigSpy = vi
       .spyOn(DeploymentBundlePipelineBuilder.prototype as any, '_loadPlatformConfiguration')
       .mockReturnValue({ defaults: { 'deployment-bundle-pipeline': {} } });
 
@@ -40,7 +41,7 @@ describe('DeploymentBundlePipelineBuilder', () => {
   });
 
   afterEach(() => {
-    jest.restoreAllMocks();
+    vi.restoreAllMocks();
   });
 
   describe('Configuration precedence', () => {

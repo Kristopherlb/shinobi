@@ -3,11 +3,11 @@
  * Implements Platform Testing Standard v1.0 - Component Synthesis Testing
  */
 
-import { describe, it, expect, beforeEach, afterEach } from 'vitest';
+import { describe, it, expect, beforeAll, afterAll, vi } from 'vitest';
 import { App, Stack } from 'aws-cdk-lib';
 import { Match, Template } from 'aws-cdk-lib/assertions';
-import { CognitoUserPoolComponent } from '../src/cognito-user-pool.component.js';
-import { CognitoUserPoolConfig } from '../src/cognito-user-pool.builder.js';
+import { CognitoUserPoolComponent } from '../src/cognito-user-pool.component';
+import { CognitoUserPoolConfig } from '../src/cognito-user-pool.builder';
 import { ComponentContext, ComponentSpec } from '../../../platform/contracts/component-interfaces.js';
 
 // Deterministic test fixtures
@@ -51,12 +51,12 @@ const synthesise = (
 describe('CognitoUserPoolComponent', () => {
   // Freeze time for deterministic tests
   beforeAll(() => {
-    jest.useFakeTimers();
-    jest.setSystemTime(DETERMINISTIC_TIMESTAMP);
+    vi.useFakeTimers();
+    vi.setSystemTime(DETERMINISTIC_TIMESTAMP);
   });
 
   afterAll(() => {
-    jest.useRealTimers();
+    vi.useRealTimers();
   });
 
   describe('ComponentSynthesis__FedRampHighMode__CreatesSecureUserPool', () => {

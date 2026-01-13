@@ -1328,6 +1328,11 @@ defaults:
         compliance-framework: fedramp-high
         security-level: high
   
+    route53-record:
+      tags:
+        compliance-framework: fedramp-high
+        security-level: high
+  
     iam-policy:
       controls:
         denyInsecureTransport: true

@@ -8,8 +8,9 @@
 import * as cdk from 'aws-cdk-lib';
 import { Template, Match } from 'aws-cdk-lib/assertions';
 import { ComponentSpec, ComponentContext } from '@shinobi/core';
-import { NetworkRulesStackComponent } from '../src/network-rules-stack.component.js';
-import { NetworkRulesStackConfigBuilder } from '../src/network-rules-stack.builder.js';
+import { NetworkRulesStackComponent } from '../src/network-rules-stack.component';
+import { NetworkRulesStackConfigBuilder } from '../src/network-rules-stack.builder';
+import { NetworkRulesStackComponentCreator } from '../src/network-rules-stack.creator';
 
 describe('NetworkRulesStackComponent', () => {
   let app: cdk.App;
@@ -69,7 +70,11 @@ describe('NetworkRulesStackComponent', () => {
       const template = Template.fromStack(stack);
 
       // Verify Lambda functions are created
-      template.resourceCountIs('AWS::Lambda::Function', 2); // SSM query + rule application
+      // Note: AwsCustomResource creates its own Lambda internally, so we have 3 total:
+      // 1. SSM query Lambda (our custom function)
+      // 2. Rule application Lambda (our custom function)
+      // 3. AwsCustomResource handler Lambda (created by CDK)
+      template.resourceCountIs('AWS::Lambda::Function', 3);
 
       // Verify Custom Resources are created
       template.resourceCountIs('AWS::CloudFormation::CustomResource', 1); // Rule application
@@ -168,7 +173,7 @@ describe('NetworkRulesStackComponent', () => {
         PolicyDocument: {
           Statement: Match.arrayWith([
             Match.objectLike({
-              Action: 'ssm:GetParametersByPath',
+              Action: Match.arrayWith(['ssm:GetParametersByPath']),
               Resource: Match.stringLikeRegexp('/custom/path/network-rules')
             })
           ])
@@ -213,7 +218,8 @@ describe('NetworkRulesStackComponent', () => {
       const template = Template.fromStack(stack);
 
       // Verify resource counts are consistent (no duplicates)
-      template.resourceCountIs('AWS::Lambda::Function', 2);
+      // Note: AwsCustomResource creates its own Lambda internally, so we have 3 total
+      template.resourceCountIs('AWS::Lambda::Function', 3);
       template.resourceCountIs('AWS::CloudFormation::CustomResource', 1);
       template.resourceCountIs('Custom::AWS', 1);
     });
@@ -302,7 +308,6 @@ describe('NetworkRulesStackComponent', () => {
    */
   describe('NetworkRulesStackComponentCreator__Validation__RejectsInvalidConfig', () => {
     it('NetworkRulesStackComponentCreator__InvalidSSMPath__ReturnsErrors', () => {
-      const { NetworkRulesStackComponentCreator } = require('../src/network-rules-stack.creator.js');
       const creator = new NetworkRulesStackComponentCreator();
 
       const result = creator.validateSpec(

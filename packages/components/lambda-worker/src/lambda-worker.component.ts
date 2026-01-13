@@ -160,13 +160,20 @@ export class LambdaWorkerComponent extends BaseComponent {
     let securityGroups: ec2.ISecurityGroup[] | undefined;
 
     if (this.config?.vpc?.enabled) {
-      if (!this.config.vpc.vpcId) {
-        throw new Error('Lambda worker VPC configuration must include vpcId when enabled.');
+      // Priority 1: Use injected VPC from context (preferred for tests)
+      if (this.context.vpc) {
+        vpc = this.context.vpc;
       }
-
-      vpc = ec2.Vpc.fromLookup(this, 'LambdaVpc', {
-        vpcId: this.config.vpc.vpcId
-      });
+      // Priority 2: Use fromLookup() if vpcId provided in config
+      else if (this.config.vpc.vpcId) {
+        vpc = ec2.Vpc.fromLookup(this, 'LambdaVpc', {
+          vpcId: this.config.vpc.vpcId
+        });
+      }
+      // Priority 3: Error if neither provided
+      else {
+        throw new Error('Lambda worker VPC configuration must include vpcId when enabled, or a VPC provided via context.vpc.');
+      }
 
       subnets = this.config.vpc.subnetIds.length > 0
         ? this.config.vpc.subnetIds.map((subnetId, index) => ec2.Subnet.fromSubnetId(this, `LambdaSubnet${index}`, subnetId))

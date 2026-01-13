@@ -1,12 +1,10 @@
 import { describe, it, expect, beforeEach, afterEach } from 'vitest';
 import { Template, Match } from 'aws-cdk-lib/assertions';
 import { App, Stack } from 'aws-cdk-lib';
-import { Route53HostedZoneComponent } from '../route53-hosted-zone.component.js';
-import { Route53HostedZoneConfig } from '../route53-hosted-zone.builder.js';
+import * as ec2 from 'aws-cdk-lib/aws-ec2';
+import { Route53HostedZoneComponent } from '../route53-hosted-zone.component';
+import { Route53HostedZoneConfig } from '../route53-hosted-zone.builder';
 import { ComponentContext, ComponentSpec } from '@shinobi/core';
-
-const VPC_ID = 'vpc-0abc123def4567890';
-const CONTEXT_KEY = `vpcProvider:account=123456789012:filter.vpcId=${VPC_ID}:region=us-east-1`;
 
 const createContext = (framework: string = 'commercial', stack?: Stack): ComponentContext => {
   const app = stack?.node.root as App || new App();
@@ -53,28 +51,6 @@ const synthesizeComponent = (context: ComponentContext, spec: ComponentSpec) => 
 };
 
 describe('Route53HostedZoneComponent synthesis', () => {
-  const originalContext = process.env.CDK_CONTEXT_JSON;
-
-  beforeAll(() => {
-    process.env.CDK_CONTEXT_JSON = JSON.stringify({
-      [CONTEXT_KEY]: {
-        vpcId: VPC_ID,
-        availabilityZones: ['us-east-1a', 'us-east-1b'],
-        publicSubnetIds: ['subnet-public-a', 'subnet-public-b'],
-        privateSubnetIds: ['subnet-private-a', 'subnet-private-b'],
-        isolatedSubnetIds: [],
-        ownerAccountId: '123456789012'
-      }
-    });
-  });
-
-  afterAll(() => {
-    if (originalContext === undefined) {
-      delete process.env.CDK_CONTEXT_JSON;
-    } else {
-      process.env.CDK_CONTEXT_JSON = originalContext;
-    }
-  });
 
   it('creates a public hosted zone with query logging disabled', () => {
     const spec = createSpec({
@@ -127,22 +103,38 @@ describe('Route53HostedZoneComponent synthesis', () => {
   });
 
   it('creates a private hosted zone with VPC association and DNSSEC', () => {
+    // Create VPC construct and inject via context (avoids Vpc.fromLookup() in unit tests)
+    const app = new App();
+    const stack = new Stack(app, 'TestStack', {
+      env: { account: '123456789012', region: 'us-east-1' }
+    });
+    const vpc = new ec2.Vpc(stack, 'TestVpc', { maxAzs: 2 });
+    const context = createContext('commercial', stack);
+    context.vpc = vpc; // Inject VPC via context (avoids Vpc.fromLookup() in unit tests)
+
     const spec = createSpec({
       zoneName: 'internal.example.com',
       zoneType: 'private',
+      // Use injected VPC via context.vpc instead of vpcId (avoids Vpc.fromLookup() in unit tests)
+      // vpcId is optional when context.vpc is provided - component will use context.vpc for single VPC association
       vpcAssociations: [
-        { vpcId: VPC_ID }
+        {} // vpcId not required when using injected VPC via context.vpc
       ],
       dnssec: {
         enabled: true
       }
     });
 
-    const { component, template } = synthesizeComponent(createContext('commercial'), spec);
+    const { component, template } = synthesizeComponent(context, spec);
 
+    // Verify private hosted zone is created with VPC association
+    // When using injected VPC, VPCId will be a CDK token, so we just verify the structure exists
     template.hasResourceProperties('AWS::Route53::HostedZone', Match.objectLike({
       VPCs: Match.arrayWith([
-        Match.objectLike({ VPCId: VPC_ID })
+        Match.objectLike({ 
+          VPCId: Match.anyValue(), // VPC ID will be a token when using injected VPC
+          VPCRegion: 'us-east-1'
+        })
       ])
     }));
 

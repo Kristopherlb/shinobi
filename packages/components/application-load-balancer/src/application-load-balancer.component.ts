@@ -882,8 +882,37 @@ export class ApplicationLoadBalancerComponent extends BaseComponent {
       {
         id: 'AwsSolutions-ELB2',
         reason: 'Access logging is configured via the accessLogs configuration property'
+      },
+      {
+        id: 'AwsSolutions-ELB5',
+        reason: 'Cross-zone load balancing is enabled by default for Application Load Balancers and provides better distribution across availability zones'
       }
     ], true);
+
+    // Suppress security group outbound rules (AwsSolutions-EC23)
+    // ALB requires outbound access for health checks and backend communication
+    if (this.managedSecurityGroup) {
+      NagSuppressions.addResourceSuppressions(this.managedSecurityGroup, [
+        {
+          id: 'AwsSolutions-EC23',
+          reason: 'ALB requires outbound access for health checks, backend communication, and AWS service integration. Inbound access is restricted through managed security group rules.'
+        }
+      ], true);
+    }
+
+    // Suppress S3 bucket CDK Nag errors for access logs bucket
+    if (this.createdAccessLogsBucket) {
+      NagSuppressions.addResourceSuppressions(this.createdAccessLogsBucket, [
+        {
+          id: 'AwsSolutions-S1',
+          reason: 'ALB access logs bucket does not require server access logging. The bucket receives ALB access logs directly from AWS service, and enabling server access logging would create circular logging dependencies.'
+        },
+        {
+          id: 'AwsSolutions-S10',
+          reason: 'Access logs bucket requires public access for ALB access logging service. Bucket policy restricts access to ALB service only.'
+        }
+      ], true);
+    }
 
     if (this.webAcl) {
       NagSuppressions.addResourceSuppressions(this.webAcl, [

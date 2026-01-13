@@ -107,16 +107,18 @@ export class SqsQueueCreator implements IComponentCreator {
     }
     
     // Validate queue name pattern if explicitly provided
-    if (config?.queueName) {
-      // SQS queue name validation: alphanumeric, hyphens, underscores, 1-80 chars
-      if (!/^[a-zA-Z0-9-_]+$/.test(config.queueName)) {
-        errors.push('queueName must contain only alphanumeric characters, hyphens, and underscores');
-      }
-      if (config.queueName.length > 80) {
-        errors.push('queueName must be 80 characters or less');
-      }
+    if (config?.queueName !== undefined) {
+      // Check for empty string explicitly (empty string is falsy but we want to catch it)
       if (config.queueName.length === 0) {
-        errors.push('queueName cannot be empty if provided');
+        errors.push('queueName cannot be empty');
+      } else {
+        // SQS queue name validation: alphanumeric, hyphens, underscores, 1-80 chars
+        if (!/^[a-zA-Z0-9-_]+$/.test(config.queueName)) {
+          errors.push('queueName must contain only alphanumeric characters, hyphens, and underscores');
+        }
+        if (config.queueName.length > 80) {
+          errors.push('queueName must be 80 characters or less');
+        }
       }
     }
     
@@ -137,8 +139,12 @@ export class SqsQueueCreator implements IComponentCreator {
       
     // Validate DLQ configuration
     if (config?.deadLetterQueue?.enabled) {
-      if (!config.deadLetterQueue.maxReceiveCount || config.deadLetterQueue.maxReceiveCount < 1) {
-        errors.push('maxReceiveCount must be at least 1 when deadLetterQueue is enabled');
+      // maxReceiveCount is optional - will use default from builder if not provided
+      // Only validate if explicitly provided and invalid
+      if (config.deadLetterQueue.maxReceiveCount !== undefined) {
+        if (config.deadLetterQueue.maxReceiveCount < 1) {
+          errors.push('maxReceiveCount must be at least 1 when deadLetterQueue is enabled');
+        }
       }
     }
     

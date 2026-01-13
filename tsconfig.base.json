@@ -34,7 +34,6 @@
     "node_modules",
     "packages/core/_temp-problematic-files/**",
     "packages/core/_temp-problematic-platform/**",
-    "**/vitest.config.ts",
-    "**/jest.config.ts"
+    "**/vitest.config.ts"
   ]
 }

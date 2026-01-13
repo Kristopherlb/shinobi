@@ -1,10 +1,11 @@
+import { describe, it, expect, beforeEach, afterEach, vi } from 'vitest';
 import { App, Stack } from 'aws-cdk-lib';
 import { Match, Template } from 'aws-cdk-lib/assertions';
-import { EcrRepositoryComponent } from '../ecr-repository.component.js';
+import { EcrRepositoryComponent } from '../ecr-repository.component';
 import {
   EcrRepositoryComponentConfigBuilder,
   EcrRepositoryConfig
-} from '../ecr-repository.builder.js';
+} from '../ecr-repository.builder';
 import {
   ComponentContext,
   ComponentSpec
@@ -57,10 +58,10 @@ const synthesizeComponent = (
 };
 
 describe('EcrRepositoryComponent__Synthesis__ResourceValidation', () => {
-  let platformConfigSpy: jest.SpyInstance;
+  let platformConfigSpy: ReturnType<typeof vi.spyOn>;
 
   beforeEach(() => {
-    platformConfigSpy = jest
+    platformConfigSpy = vi
       .spyOn(EcrRepositoryComponentConfigBuilder.prototype, '_loadPlatformConfiguration')
       .mockImplementation(function (this: EcrRepositoryComponentConfigBuilder) {
         const framework = this.builderContext.context.complianceFramework;

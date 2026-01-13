@@ -10,9 +10,11 @@
     "vpcAssociation": {
       "type": "object",
       "additionalProperties": false,
-      "required": ["vpcId"],
       "properties": {
-        "vpcId": { "type": "string" },
+        "vpcId": {
+          "type": "string",
+          "description": "VPC ID for fromLookup(). Optional when using injected VPC via context.vpc"
+        },
         "region": { "type": "string" }
       }
     },

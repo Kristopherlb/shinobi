@@ -1269,6 +1269,10 @@ defaults:
       tags:
         compliance-framework: fedramp-moderate
   
+    route53-record:
+      tags:
+        compliance-framework: fedramp-moderate
+  
     iam-policy:
       controls:
         denyInsecureTransport: true
@@ -1499,4 +1503,10 @@ defaults:
           enforceMfa: true
           allowExternalId: false
           allowedServicePrincipals: []
+
+    network-rules-stack:
+      ssmPathPrefix: /shinobi/network-rules
+      description: Cross-stack security group rules from all services
+      tags:
+        compliance-framework: fedramp-moderate
   

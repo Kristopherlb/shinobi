@@ -25,14 +25,14 @@
         "ssmParameterName": {
           "type": "string",
           "description": "SSM parameter name containing the security group ID",
-          "pattern": "^/[a-zA-Z0-9._-]+$",
+          "pattern": "^/[a-zA-Z0-9._/-]+$",
           "minLength": 1,
           "maxLength": 2048
         },
         "region": {
           "type": "string",
           "description": "AWS region where the security group exists",
-          "pattern": "^[a-z0-9-]+$",
+          "pattern": "^[a-z]{2}-[a-z]+-[0-9]+$",
           "maxLength": 20
         },
         "accountId": {

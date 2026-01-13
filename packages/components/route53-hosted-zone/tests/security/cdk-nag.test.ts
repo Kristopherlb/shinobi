@@ -87,10 +87,10 @@ describe.skip('Route53HostedZoneComponent - CDK Nag Security Validation', () => 
         config: {
           zoneName: 'internal.local',
           zoneType: 'private',
+          // Use injected VPC via context.vpc (avoids Vpc.fromLookup() in unit tests)
+          // vpcId is optional when context.vpc is provided
           vpcAssociations: [
-            {
-              vpcId: vpc.vpcId
-            }
+            {} // vpcId not required when using injected VPC via context.vpc
           ]
         }
       };

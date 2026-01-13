@@ -11,8 +11,8 @@ import { Annotations, Match } from 'aws-cdk-lib/assertions';
 import { AwsSolutionsChecks } from 'cdk-nag';
 import { Aspects } from 'aws-cdk-lib';
 import { ComponentContext, ComponentSpec } from '@shinobi/core';
-import { FeatureFlagComponent } from '../src/feature-flag.component.js';
-import { FeatureFlagConfigBuilder } from '../src/feature-flag.builder.js';
+import { FeatureFlagComponent } from '../../src/feature-flag.component';
+import { FeatureFlagConfigBuilder } from '../../src/feature-flag.builder';
 import { vi } from 'vitest';
 
 let platformConfigSpy: any;

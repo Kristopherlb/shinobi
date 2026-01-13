@@ -3,7 +3,7 @@
  * Implements Platform Testing Standard v1.0 - ConfigBuilder Testing
  */
 
-import { IamRoleComponentConfigBuilder, IamRoleConfig } from '../src/iam-role.builder.js';
+import { IamRoleComponentConfigBuilder, IamRoleConfig } from '../src/iam-role.builder';
 import { ComponentContext, ComponentSpec } from '@shinobi/core';
 import { Stack } from 'aws-cdk-lib';
 

@@ -2,7 +2,7 @@ import { App, Stack, Aspects } from 'aws-cdk-lib';
 import { Match, Annotations } from 'aws-cdk-lib/assertions';
 import { AwsSolutionsChecks } from 'cdk-nag';
 import type { ComponentContext, ComponentSpec } from '@shinobi/core';
-import { CertificateManagerComponent } from '../../src/certificate-manager.component.js';
+import { CertificateManagerComponent } from '../../src/certificate-manager.component';
 
 const createContext = (stack: Stack): ComponentContext => ({
   serviceName: 'test-service',

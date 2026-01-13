@@ -1,10 +1,11 @@
+import { describe, it, expect, beforeEach, afterEach, vi } from 'vitest';
 import { App, Stack, Aspects } from 'aws-cdk-lib';
 import { Annotations, Match } from 'aws-cdk-lib/assertions';
 import { AwsSolutionsChecks } from 'cdk-nag';
 import * as ec2 from 'aws-cdk-lib/aws-ec2';
 import * as logs from 'aws-cdk-lib/aws-logs';
-import { EcsClusterComponent } from '../../src/ecs-cluster.component.js';
-import { EcsClusterComponentConfigBuilder } from '../../src/ecs-cluster.builder.js';
+import { EcsClusterComponent } from '../../src/ecs-cluster.component';
+import { EcsClusterComponentConfigBuilder } from '../../src/ecs-cluster.builder';
 import { ComponentContext, ComponentSpec } from '@shinobi/core/component-interfaces';
 
 const createContext = (stack: Stack, vpc: ec2.IVpc): ComponentContext => ({
@@ -22,11 +23,11 @@ const createContext = (stack: Stack, vpc: ec2.IVpc): ComponentContext => ({
 });
 
 describe.skip('AwsSolutionsChecks__EcsCluster', () => {
-  let platformConfigSpy: jest.SpyInstance;
+  let platformConfigSpy: ReturnType<typeof vi.spyOn>;
 
   beforeEach(() => {
-    platformConfigSpy = jest
-      .spyOn(EcsClusterComponentConfigBuilder.prototype, '_loadPlatformConfiguration')
+    platformConfigSpy = vi
+      .spyOn(EcsClusterComponentConfigBuilder.prototype as any, '_loadPlatformConfiguration')
       .mockImplementation(() => ({
         monitoring: { enabled: true, detailedMetrics: false }
       }));

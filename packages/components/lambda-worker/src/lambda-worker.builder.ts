@@ -116,6 +116,7 @@ export interface LambdaWorkerConfig {
   };
   securityTools: {
     falco: boolean;
+    runtimeSecurity?: boolean;
   };
   monitoring: {
     enabled: boolean;
