@@ -6,12 +6,10 @@
   "implicitDependencies": ["@shinobi/api"],
   "targets": {
     "build": {
-      "executor": "@nx/js:tsc",
+      "executor": "nx:run-commands",
       "options": {
-        "main": "src/index.ts",
-        "outputPath": "dist/packages/orchestration",
-        "tsConfig": "packages/orchestration/tsconfig.lib.json",
-        "generatePackageJson": true
+        "command": "tsc -p packages/orchestration/tsconfig.lib.json",
+        "cwd": "{workspaceRoot}"
       },
       "dependsOn": [
         {
@@ -19,7 +17,7 @@
           "projects": ["@shinobi/api"]
         }
       ],
-      "outputs": ["{options.outputPath}"]
+      "outputs": ["{workspaceRoot}/dist/packages/orchestration"]
     },
     "typecheck": {
       "executor": "nx:run-commands",

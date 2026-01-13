@@ -1,12 +1,12 @@
 {
   "name": "@shinobi/skill-<%= skillName %>",
-  "sourceRoot": "skills/<%= skillName %>",
+  "sourceRoot": ".cursor/skills/<%= skillName %>",
   "targets": {
     "test": {
       "executor": "@nx/vitest:test",
       "options": {
         "passWithNoTests": true,
-        "config": "skills/<%= skillName %>/vitest.config.ts"
+        "config": ".cursor/skills/<%= skillName %>/vitest.config.ts"
       },
       "outputs": [
         "{projectRoot}/coverage"
