@@ -63,6 +63,8 @@ export interface FeatureFlagConfig {
   providerConfig?: FeatureFlagProviderConfig;
   monitoring?: FeatureFlagMonitoringConfig;
   tags?: Record<string, string>;
+  /** High-risk environment flag (set via platform config or service.yml) */
+  highRiskEnvironment?: boolean;
 }
 
 export interface FeatureFlagCapability {
@@ -92,26 +94,49 @@ export class FeatureFlagConfigBuilder extends ConfigBuilder<FeatureFlagConfig> {
     super(builderContext, FEATURE_FLAG_CONFIG_SCHEMA);
   }
 
-  protected get complianceFramework(): ComponentContext['complianceFramework'] {
-    return this.builderContext.context.complianceFramework;
+  /**
+   * Layer 2: Compliance Framework Defaults
+   * 
+   * Provides sensible defaults based on risk assessment flags rather than framework checks.
+   * High-risk environment defaults can be set via:
+   * - Platform config files (`/config/{framework}.yml`) setting `highRiskEnvironment: true`
+   * - Service-level configuration in `service.yml`
+   * - Environment defaults
+   * 
+   * This ensures configuration is data-driven and risk-based, not framework-dependent.
+   */
+  protected getComplianceFrameworkDefaults(): Partial<FeatureFlagConfig> {
+    // Check if highRiskEnvironment flag is set in component config or platform config
+    const componentConfig = this.builderContext.spec.config as Partial<FeatureFlagConfig> | undefined;
+    let isHighRisk = componentConfig?.highRiskEnvironment ?? false;
+    
+    // Also check platform config if available (loaded by base class)
+    try {
+      const platformConfig = (this as any)._loadPlatformConfiguration();
+      if (platformConfig?.highRiskEnvironment) {
+        isHighRisk = true;
+      }
+    } catch {
+      // Platform config might not be available in tests, ignore
+    }
+    
+    if (isHighRisk) {
+      // Apply enhanced security defaults for high-risk environments
+      // These defaults align with FedRAMP Moderate/High requirements when highRiskEnvironment is set
+      return {
+        monitoring: {
+          enabled: true,
+          detailedMetrics: true
+        }
+      };
+    }
+    
+    return {}; // Standard/default environment - use hardcoded fallbacks
   }
 
   public buildSync(): FeatureFlagConfig {
     const config = super.buildSync();
     this.validateConfig(config);
-    return this.applyComplianceAdjustments(config);
-  }
-
-  private applyComplianceAdjustments(config: FeatureFlagConfig): FeatureFlagConfig {
-    if (this.complianceFramework === 'fedramp-moderate' || this.complianceFramework === 'fedramp-high') {
-      const monitoring = config.monitoring ?? {};
-      config.monitoring = {
-        ...monitoring,
-        enabled: true,
-        detailedMetrics: true
-      };
-    }
-
     return {
       ...config,
       tags: config.tags ?? {}

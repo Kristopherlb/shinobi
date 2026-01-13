@@ -56,14 +56,6 @@ export class EcsFargateServiceComponentCreator implements IComponentCreator {
    */
   public readonly awsService = 'ECS';
 
-  /**
-   * Supported compliance frameworks
-   */
-  public readonly complianceFrameworks = [
-    'commercial',
-    'fedramp-moderate',
-    'fedramp-high'
-  ];
 
   /**
    * Component tags for discovery
@@ -126,8 +118,9 @@ export class EcsFargateServiceComponentCreator implements IComponentCreator {
       }
     }
 
-    if (context.complianceFramework?.startsWith('fedramp') && config?.network?.allowAllOutbound) {
-      errors.push('FedRAMP deployments must keep network.allowAllOutbound set to false to preserve least-privilege egress.');
+    // Network validation - least-privilege egress should be enforced via config
+    if (config?.network?.allowAllOutbound && config?.highRiskEnvironment) {
+      errors.push('High-risk environments must keep network.allowAllOutbound set to false to preserve least-privilege egress.');
     }
 
     return {

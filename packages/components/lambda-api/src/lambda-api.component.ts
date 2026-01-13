@@ -79,7 +79,7 @@ export class LambdaApiComponent extends BaseComponent {
       },
       context: {
         environment: this.context.environment,
-        complianceFramework: this.context.complianceFramework
+        highRiskEnvironment: this.config?.highRiskEnvironment ?? false
       }
     });
 
@@ -870,7 +870,7 @@ export class LambdaApiComponent extends BaseComponent {
       errorCount: result.errors.length,
       warningCount: result.warnings.length,
       frameworkCompliance: result.frameworkCompliance,
-      complianceFramework: this.context.complianceFramework
+      highRiskEnvironment: this.config?.highRiskEnvironment ?? false
     });
 
     // Log warnings if any
@@ -965,29 +965,29 @@ export class LambdaApiComponent extends BaseComponent {
       ]);
     }
 
-    // Add compliance framework specific suppressions
-    if (this.context.complianceFramework === 'fedramp-moderate' || this.context.complianceFramework === 'fedramp-high') {
-      // VPC configuration suppressions for FedRAMP
+    // Add high-risk environment specific suppressions (set by builder based on risk level)
+    if (this.config?.highRiskEnvironment) {
+      // VPC configuration suppressions for high-risk environments
       NagSuppressions.addResourceSuppressions(this.lambdaFunction, [
         {
           id: 'AwsSolutions-L7',
-          reason: 'VPC configuration is mandatory for FedRAMP compliance to ensure network isolation and security.'
+          reason: 'VPC configuration is mandatory for high-risk environments to ensure network isolation and security.'
         }
       ]);
 
-      // Encryption suppressions for FedRAMP
+      // Encryption suppressions for high-risk environments
       NagSuppressions.addResourceSuppressions(this.lambdaFunction, [
         {
           id: 'AwsSolutions-L8',
-          reason: 'Environment variable encryption is mandatory for FedRAMP compliance using KMS encryption.'
+          reason: 'Environment variable encryption is mandatory for high-risk environments using KMS encryption.'
         }
       ]);
 
-      // API Gateway encryption for FedRAMP
+      // API Gateway encryption for high-risk environments
       NagSuppressions.addResourceSuppressions(this.restApi, [
         {
           id: 'AwsSolutions-APIG5',
-          reason: 'API Gateway encryption is mandatory for FedRAMP compliance to ensure data protection in transit.'
+          reason: 'API Gateway encryption is mandatory for high-risk environments to ensure data protection in transit.'
         }
       ]);
     }

@@ -130,6 +130,10 @@ export interface EfsFilesystemConfig {
   removalPolicy: EfsRemovalPolicy;
   hardeningProfile: string;
   tags: Record<string, string>;
+  /** High-risk environment flag (set via platform config or service.yml) */
+  highRiskEnvironment?: boolean;
+  /** Use customer-managed KMS key for log encryption (set by builder based on risk level) */
+  useCustomerManagedKeyForLogs?: boolean;
 }
 
 const SECURITY_GROUP_RULE_SCHEMA = {

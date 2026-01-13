@@ -250,18 +250,16 @@ export class EfsFilesystemComponent extends BaseComponent {
   }
 
   /**
-   * Get KMS key for log encryption (required for FedRAMP)
+   * Get KMS key for log encryption (required for high-risk environments)
    */
   private getLogEncryptionKey(): kms.IKey | undefined {
-    const framework = this.context.complianceFramework;
-
-    // Commercial environments use AWS-managed encryption (default)
-    if (!framework || framework === 'commercial') {
+    // Use config value - set by builder based on risk level
+    if (!this.config?.useCustomerManagedKeyForLogs) {
       return undefined;
     }
 
-    // FedRAMP requires customer-managed CMK
-    if (framework.startsWith('fedramp')) {
+    // High-risk environments require customer-managed CMK
+    if (this.config?.useCustomerManagedKeyForLogs) {
       if (this.logEncryptionKey) {
         return this.logEncryptionKey;
       }

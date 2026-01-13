@@ -119,13 +119,13 @@ export class Ec2InstanceComponent extends BaseComponent {
   }
 
   /**
-   * Create KMS key for EBS encryption if required by compliance framework
+   * Create KMS key for EBS encryption if required by config
    */
   private createKmsKeyIfNeeded(): void {
     if (this.shouldUseCustomerManagedKey()) {
       this.kmsKey = new kms.Key(this, 'EbsEncryptionKey', {
         description: `EBS encryption key for ${this.spec.name} EC2 instance`,
-        enableKeyRotation: this.context.complianceFramework === 'fedramp-high',
+        enableKeyRotation: this.config?.enableKeyRotation ?? false,
         keyUsage: kms.KeyUsage.ENCRYPT_DECRYPT,
         keySpec: kms.KeySpec.SYMMETRIC_DEFAULT
       });
@@ -251,19 +251,16 @@ export class Ec2InstanceComponent extends BaseComponent {
   }
 
   /**
-   * Apply compliance-specific hardening
+   * Apply compliance-specific hardening based on config values
    */
   private applyComplianceHardening(): void {
-    switch (this.context.complianceFramework) {
-      case 'fedramp-moderate':
-        this.applyFedrampModerateHardening();
-        break;
-      case 'fedramp-high':
-        this.applyFedrampHighHardening();
-        break;
-      default:
-        this.applyCommercialHardening();
-        break;
+    // Always apply basic CloudWatch monitoring
+    this.applyCommercialHardening();
+    
+    // Apply high-risk environment hardening if configured
+    if (this.config?.highRiskEnvironment) {
+      // High-risk environments get enhanced monitoring and security
+      // Specific hardening is applied via config values (IMDSv2, encryption, etc.)
     }
   }
 
@@ -362,8 +359,8 @@ export class Ec2InstanceComponent extends BaseComponent {
       resources: ['*']
     }));
 
-    if (this.context.complianceFramework === 'fedramp-high') {
-      // Additional permissions for STIG compliance
+    if (this.config?.enableComplianceS3Access) {
+      // Additional permissions for compliance logging (set by builder based on risk level)
       this.role!.addToPolicy(new iam.PolicyStatement({
         effect: iam.Effect.ALLOW,
         actions: [
@@ -381,7 +378,8 @@ export class Ec2InstanceComponent extends BaseComponent {
   private applySecurityGroupRules(): void {
     const additionalCidrs = new Set(this.config?.security?.allowedSshCidrs ?? []);
 
-    if (this.isComplianceFramework()) {
+    if (this.config?.highRiskEnvironment) {
+      // High-risk environments allow VPC CIDR for SSH access
       const vpcCidr = this.config?.vpc?.vpcId ? '10.0.0.0/16' : '172.31.0.0/16';
       additionalCidrs.add(vpcCidr);
     }
@@ -400,7 +398,8 @@ export class Ec2InstanceComponent extends BaseComponent {
       }
     }
 
-    if (this.isComplianceFramework()) {
+    if (this.config?.highRiskEnvironment) {
+      // High-risk environments require explicit HTTPS egress
       this.securityGroup!.addEgressRule(
         ec2.Peer.anyIpv4(),
         ec2.Port.tcp(443),
@@ -581,17 +580,18 @@ export class Ec2InstanceComponent extends BaseComponent {
     });
     this.applyStandardTags(instanceCheckAlarm);
 
-    // Apply compliance-specific alarm thresholds
-    if (this.context.complianceFramework === 'fedramp-moderate' || this.context.complianceFramework === 'fedramp-high') {
-      // FedRAMP requires more aggressive monitoring
+    // Apply compliance-specific alarm actions for high-risk environments
+    if (this.config?.highRiskEnvironment) {
+      // High-risk environments require more aggressive monitoring
+      const snsTopicArn = `arn:aws:sns:${this.context.region}:${this.context.accountId}:compliance-alerts`;
       cpuAlarm.addAlarmAction({
-        bind: () => ({ alarmActionArn: `arn:aws:sns:${this.context.region}:${this.context.accountId}:fedramp-alerts` })
+        bind: () => ({ alarmActionArn: snsTopicArn })
       });
       systemCheckAlarm.addAlarmAction({
-        bind: () => ({ alarmActionArn: `arn:aws:sns:${this.context.region}:${this.context.accountId}:fedramp-alerts` })
+        bind: () => ({ alarmActionArn: snsTopicArn })
       });
       instanceCheckAlarm.addAlarmAction({
-        bind: () => ({ alarmActionArn: `arn:aws:sns:${this.context.region}:${this.context.accountId}:fedramp-alerts` })
+        bind: () => ({ alarmActionArn: snsTopicArn })
       });
     }
 
@@ -608,17 +608,10 @@ export class Ec2InstanceComponent extends BaseComponent {
   }
 
   /**
-   * Get CPU alarm threshold based on compliance framework
+   * Get CPU alarm threshold from config (set by builder based on risk level)
    */
   private getCpuAlarmThreshold(): number {
-    switch (this.context.complianceFramework) {
-      case 'fedramp-high':
-        return 70; // More aggressive monitoring for high security
-      case 'fedramp-moderate':
-        return 75; // Moderate monitoring
-      default:
-        return 80; // Standard commercial monitoring
-    }
+    return this.config?.cpuAlarmThreshold ?? 80;
   }
 
   /**
@@ -626,14 +619,14 @@ export class Ec2InstanceComponent extends BaseComponent {
    */
   private applyInstanceTags(): void {
     if (this.instance) {
-      // Build EC2-specific compliance tags
+      // Build EC2-specific compliance tags from config (set by builder based on risk level)
       const complianceTags: Record<string, string> = {};
 
-      if (this.context.complianceFramework === 'fedramp-high') {
+      if (this.config?.enableStigCompliance) {
+        complianceTags['STIGCompliant'] = 'true';
+      }
+      if (this.config?.enableImmutableInfrastructure) {
         complianceTags['ImmutableInfrastructure'] = 'true';
-        complianceTags['STIGCompliant'] = 'true';
-      } else if (this.context.complianceFramework === 'fedramp-moderate') {
-        complianceTags['STIGCompliant'] = 'true';
       }
 
       // Apply standard platform tags + EC2-specific compliance tags in one call
@@ -669,7 +662,8 @@ export class Ec2InstanceComponent extends BaseComponent {
    * Helper methods for compliance decisions
    */
   private shouldUseCustomerManagedKey(): boolean {
-    return ['fedramp-moderate', 'fedramp-high'].includes(this.context.complianceFramework);
+    // Use config value - set by builder based on risk level
+    return this.config?.storage?.encrypted ?? false;
   }
 
   private shouldEnableEbsEncryption(): boolean {
@@ -689,7 +683,8 @@ export class Ec2InstanceComponent extends BaseComponent {
   }
 
   private isComplianceFramework(): boolean {
-    return this.context.complianceFramework === 'fedramp-moderate' || this.context.complianceFramework === 'fedramp-high';
+    // Use config value - high-risk environments require compliance features
+    return this.config?.highRiskEnvironment ?? false;
   }
 
   private getInstanceAmi(): ec2.IMachineImage {

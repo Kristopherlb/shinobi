@@ -9,4 +9,5 @@ cdk.out
 *.log
 .env
 .env.local
+.cursor/skills
 

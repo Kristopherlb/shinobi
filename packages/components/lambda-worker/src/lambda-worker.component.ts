@@ -73,7 +73,7 @@ export class LambdaWorkerComponent extends BaseComponent {
       },
       context: {
         environment: this.context.environment,
-        complianceFramework: this.context.complianceFramework
+        highRiskEnvironment: this.config?.highRiskEnvironment ?? false
       }
     });
 
@@ -1080,21 +1080,21 @@ export class LambdaWorkerComponent extends BaseComponent {
       }
     ]);
 
-    // Add compliance framework specific suppressions
-    if (this.context.complianceFramework === 'fedramp-moderate' || this.context.complianceFramework === 'fedramp-high') {
-      // AwsSolutions-L7: Lambda function VPC configuration - Required for FedRAMP
+    // Add high-risk environment specific suppressions (set by builder based on risk level)
+    if (this.config?.highRiskEnvironment) {
+      // AwsSolutions-L7: Lambda function VPC configuration - Required for high-risk environments
       NagSuppressions.addResourceSuppressions(lambdaFunction, [
         {
           id: 'AwsSolutions-L7',
-          reason: 'VPC configuration is mandatory for FedRAMP compliance to ensure network isolation and security.'
+          reason: 'VPC configuration is mandatory for high-risk environments to ensure network isolation and security.'
         }
       ]);
 
-      // AwsSolutions-L8: Lambda function encryption - Required for FedRAMP
+      // AwsSolutions-L8: Lambda function encryption - Required for high-risk environments
       NagSuppressions.addResourceSuppressions(lambdaFunction, [
         {
           id: 'AwsSolutions-L8',
-          reason: 'Environment variable encryption is mandatory for FedRAMP compliance using KMS encryption.'
+          reason: 'Environment variable encryption is mandatory for high-risk environments using KMS encryption.'
         }
       ]);
     }

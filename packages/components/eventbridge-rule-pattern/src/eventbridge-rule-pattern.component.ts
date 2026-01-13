@@ -58,7 +58,7 @@ export class EventBridgeRulePatternComponent extends BaseComponent {
         eventBus: this.config.eventBus?.name ?? this.config.eventBus?.arn ?? 'default',
         monitoringEnabled: this.config.monitoring.enabled,
         dlqEnabled: this.config.deadLetterQueue.enabled,
-        complianceFramework: this.context.complianceFramework
+        highRiskEnvironment: this.config.highRiskEnvironment ?? false
       });
 
       // Monitoring and DLQ are now mandatory - verify config
@@ -121,8 +121,8 @@ export class EventBridgeRulePatternComponent extends BaseComponent {
   }
 
   private prepareEncryptionKeys(): void {
-    const framework = (this.context.complianceFramework ?? 'commercial').toLowerCase();
-    const requiresCustomerManagedKey = framework === 'fedramp-moderate' || framework === 'fedramp-high';
+    // Use config value - set by builder based on risk level
+    const requiresCustomerManagedKey = this.config?.highRiskEnvironment ?? false;
 
     if (!requiresCustomerManagedKey) {
       this.logEncryptionKey = undefined;
@@ -369,8 +369,8 @@ export class EventBridgeRulePatternComponent extends BaseComponent {
   }
 
   private isFedramp(): boolean {
-    const framework = (this.context.complianceFramework ?? '').toLowerCase();
-    return framework === 'fedramp-moderate' || framework === 'fedramp-high';
+    // Use config value - high-risk environments require compliance features
+    return this.config?.highRiskEnvironment ?? false;
   }
 
   private toPascal(value: string): string {

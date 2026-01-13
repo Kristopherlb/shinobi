@@ -92,6 +92,19 @@ export interface Ec2InstanceConfig {
     /** CIDR blocks allowed for SSH access */
     allowedSshCidrs?: string[];
   };
+
+  /** High-risk environment flag (set via platform config or service.yml) */
+  highRiskEnvironment?: boolean;
+  /** Enable KMS key rotation (set by builder based on risk level) */
+  enableKeyRotation?: boolean;
+  /** CPU alarm threshold (set by builder based on risk level) */
+  cpuAlarmThreshold?: number;
+  /** Enable STIG compliance tags (set by builder based on risk level) */
+  enableStigCompliance?: boolean;
+  /** Enable immutable infrastructure tags (set by builder based on risk level) */
+  enableImmutableInfrastructure?: boolean;
+  /** Enable compliance-specific S3 access (set by builder based on risk level) */
+  enableComplianceS3Access?: boolean;
 }
 
 /**
@@ -149,35 +162,38 @@ export class Ec2InstanceComponentConfigBuilder extends ConfigBuilder<Ec2Instance
 
   /**
    * Layer 2: Compliance Framework Defaults
-   * Security and compliance-specific configurations
+   * 
+   * Provides sensible defaults based on risk assessment flags rather than framework checks.
+   * High-risk environment defaults can be set via:
+   * - Platform config files (`/config/{framework}.yml`) setting `highRiskEnvironment: true`
+   * - Service-level configuration in `service.yml`
+   * - Environment defaults
+   * 
+   * This ensures configuration is data-driven and risk-based, not framework-dependent.
    */
   protected getComplianceFrameworkDefaults(): Partial<Ec2InstanceConfig> {
-    const framework = this.builderContext.context.complianceFramework;
-
-    const baseCompliance: Partial<Ec2InstanceConfig> = {
-      monitoring: {
-        detailed: true,
-        cloudWatchAgent: true
+    // Check if highRiskEnvironment flag is set in component config or platform config
+    const componentConfig = this.builderContext.spec.config as Partial<Ec2InstanceConfig> | undefined;
+    let isHighRisk = componentConfig?.highRiskEnvironment ?? false;
+    
+    // Also check platform config if available (loaded by base class)
+    try {
+      const platformConfig = (this as any)._loadPlatformConfiguration();
+      if (platformConfig?.highRiskEnvironment) {
+        isHighRisk = true;
       }
-    };
-
-    if (framework === 'fedramp-moderate') {
-      return {
-        ...baseCompliance,
-        storage: {
-          encrypted: true  // Customer-managed encryption required
-        },
-        security: {
-          requireImdsv2: true,
-          httpTokens: 'required',
-          nitroEnclaves: false
-        }
-      };
+    } catch {
+      // Platform config might not be available in tests, ignore
     }
-
-    if (framework === 'fedramp-high') {
+    
+    if (isHighRisk) {
+      // Apply enhanced security defaults for high-risk environments
+      // These defaults align with FedRAMP Moderate/High requirements when highRiskEnvironment is set
       return {
-        ...baseCompliance,
+        monitoring: {
+          detailed: true,
+          cloudWatchAgent: true
+        },
         storage: {
           encrypted: true,  // Customer-managed encryption required
           rootVolumeType: 'gp3'  // Enhanced performance
@@ -185,12 +201,18 @@ export class Ec2InstanceComponentConfigBuilder extends ConfigBuilder<Ec2Instance
         security: {
           requireImdsv2: true,
           httpTokens: 'required',
-          nitroEnclaves: true  // Enhanced security for FedRAMP High
-        }
+          nitroEnclaves: false  // Can be enabled explicitly for higher risk scenarios
+        },
+        // Enhanced monitoring and compliance features
+        enableKeyRotation: true,
+        cpuAlarmThreshold: 75,  // Stricter monitoring (can be overridden to 70 for higher risk)
+        enableStigCompliance: true,
+        enableImmutableInfrastructure: false,  // Can be enabled explicitly for higher risk
+        enableComplianceS3Access: false  // Can be enabled explicitly for higher risk
       };
     }
-
-    return baseCompliance;
+    
+    return {}; // Standard/default environment - use hardcoded fallbacks
   }
 
   /**

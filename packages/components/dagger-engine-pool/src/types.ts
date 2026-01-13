@@ -56,6 +56,8 @@ export interface DaggerConfig {
   observability?: ObservabilityConfig;
   featureFlags?: FeatureFlags;
   compliance?: ComplianceConfig;
+  /** High-risk environment flag (set via platform config or service.yml) */
+  highRiskEnvironment?: boolean;
 }
 
 export interface DaggerOutputs {

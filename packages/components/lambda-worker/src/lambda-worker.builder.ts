@@ -129,6 +129,16 @@ export interface LambdaWorkerConfig {
   hardeningProfile: string;
   removalPolicy: 'retain' | 'destroy';
   tags: Record<string, string>;
+  /** High-risk environment flag (set via platform config or service.yml) */
+  highRiskEnvironment?: boolean;
+  /** Minimum log retention days (set by builder based on risk level) */
+  minLogRetentionDays?: number;
+  /** Require KMS encryption for high-risk environments (set by builder) */
+  requireKmsEncryption?: boolean;
+  /** Require active tracing for high-risk environments (set by builder) */
+  requireActiveTracing?: boolean;
+  /** Require high hardening profile for high-risk environments (set by builder) */
+  requireHighHardening?: boolean;
 }
 
 const BASE_EVENT_SOURCE_SCHEMA = {

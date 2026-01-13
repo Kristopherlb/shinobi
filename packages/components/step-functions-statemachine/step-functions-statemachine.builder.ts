@@ -55,6 +55,8 @@ export interface StepFunctionsStateMachineConfig {
   
   /** Additional resource tags */
   tags?: Record<string, string>;
+  /** High-risk environment flag (set via platform config or service.yml) */
+  highRiskEnvironment?: boolean;
 }
 
 /**
@@ -103,61 +105,53 @@ export class StepFunctionsStateMachineConfigBuilder extends ConfigBuilder<StepFu
   
   /**
    * Layer 2: Compliance Framework Defaults
-   * Security and compliance-specific configurations
+   * 
+   * Provides sensible defaults based on risk assessment flags rather than framework checks.
+   * High-risk environment defaults can be set via:
+   * - Platform config files (`/config/{framework}.yml`) setting `highRiskEnvironment: true`
+   * - Service-level configuration in `service.yml`
+   * - Environment defaults
+   * 
+   * This ensures configuration is data-driven and risk-based, not framework-dependent.
    */
   protected getComplianceFrameworkDefaults(): Partial<StepFunctionsStateMachineConfig> {
-    const framework = this.builderContext.context.complianceFramework;
+    // Check if highRiskEnvironment flag is set in component config or platform config
+    const componentConfig = this.builderContext.spec.config as Partial<StepFunctionsStateMachineConfig> | undefined;
+    let isHighRisk = componentConfig?.highRiskEnvironment ?? false;
     
-    switch (framework) {
-      case 'fedramp-moderate':
-        return {
-          loggingConfiguration: {
-            enabled: true, // Mandatory logging for compliance
-            level: 'ALL',
-            includeExecutionData: true // Required for audit trail
-          },
-          tracingConfiguration: {
-            enabled: true // Required for compliance monitoring
-          },
-          tags: {
-            'compliance-framework': 'fedramp-moderate',
-            'logging-level': 'comprehensive',
-            'audit-trail': 'enabled'
-          }
-        };
-        
-      case 'fedramp-high':
-        return {
-          loggingConfiguration: {
-            enabled: true, // Mandatory
-            level: 'ALL',
-            includeExecutionData: true // Required for detailed audit
-          },
-          tracingConfiguration: {
-            enabled: true // Mandatory for high security
-          },
-          timeout: {
-            seconds: 1800 // Shorter timeout for security
-          },
-          tags: {
-            'compliance-framework': 'fedramp-high',
-            'logging-level': 'comprehensive',
-            'audit-trail': 'enabled',
-            'security-level': 'high'
-          }
-        };
-        
-      default: // commercial
-        return {
-          loggingConfiguration: {
-            enabled: false,
-            level: 'ERROR'
-          },
-          tracingConfiguration: {
-            enabled: false
-          }
-        };
+    // Also check platform config if available (loaded by base class)
+    try {
+      const platformConfig = (this as any)._loadPlatformConfiguration();
+      if (platformConfig?.highRiskEnvironment) {
+        isHighRisk = true;
+      }
+    } catch {
+      // Platform config might not be available in tests, ignore
     }
+    
+    if (isHighRisk) {
+      // Apply enhanced security defaults for high-risk environments
+      // These defaults align with FedRAMP Moderate/High requirements when highRiskEnvironment is set
+      return {
+        loggingConfiguration: {
+          enabled: true, // Mandatory logging for compliance
+          level: 'ALL',
+          includeExecutionData: true // Required for audit trail
+        },
+        tracingConfiguration: {
+          enabled: true // Required for compliance monitoring
+        },
+        timeout: {
+          seconds: 1800 // Shorter timeout for security (can be overridden)
+        },
+        tags: {
+          'logging-level': 'comprehensive',
+          'audit-trail': 'enabled'
+        }
+      };
+    }
+    
+    return {}; // Standard/default environment - use hardcoded fallbacks
   }
   
   /**

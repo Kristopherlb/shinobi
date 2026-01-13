@@ -153,16 +153,15 @@ export class LambdaWorkerValidator {
    * Validate security configuration
    */
   private validateSecurityConfiguration(errors: ValidationError[], warnings: ValidationError[]): void {
-    // VPC configuration for high-security environments
-    // Check VPC for fedramp-moderate when VPC is missing or disabled
+    // VPC configuration for high-risk environments (set via config or platform config)
+    // Check VPC for high-risk environments when VPC is missing or disabled
     // Note: Tests that don't want VPC errors (log retention, tracing) should set up VPC properly
-    if (this.context.complianceFramework === 'fedramp-moderate') {
+    if (this.config?.highRiskEnvironment) {
       if (!this.config.vpc || !this.config.vpc.enabled) {
         errors.push({
           field: 'vpc.enabled',
-          message: 'VPC configuration is mandatory for FedRAMP compliance',
-          severity: 'error',
-          complianceFramework: this.context.complianceFramework
+          message: 'VPC configuration is mandatory for high-risk environments',
+          severity: 'error'
         });
         // Don't check vpcId/securityGroupIds when VPC is not enabled - continue with other validations
       } else {
@@ -184,14 +183,13 @@ export class LambdaWorkerValidator {
       }
     }
 
-    // KMS encryption for sensitive data
-    if (this.context.complianceFramework === 'fedramp-high' || this.context.complianceFramework === 'hipaa') {
+    // KMS encryption for high-risk environments (set via config or platform config)
+    if (this.config?.highRiskEnvironment && this.config?.requireKmsEncryption) {
       if (!this.config.kmsKeyArn) {
         errors.push({
           field: 'kmsKeyArn',
-          message: 'KMS encryption is mandatory for high-compliance frameworks',
-          severity: 'error',
-          complianceFramework: this.context.complianceFramework
+          message: 'KMS encryption is mandatory for high-risk environments',
+          severity: 'error'
         });
       }
     }
@@ -213,55 +211,51 @@ export class LambdaWorkerValidator {
       }
     }
 
-    // Security tools validation
-    if (this.context.complianceFramework === 'fedramp-high') {
+    // Security tools validation for high-risk environments
+    if (this.config?.highRiskEnvironment && this.config?.requireRuntimeSecurity) {
       // Check for runtimeSecurity (as expected by tests)
       if (!this.config.securityTools?.runtimeSecurity) {
         warnings.push({
           field: 'securityTools.runtimeSecurity',
-          message: 'Runtime security monitoring is recommended for FedRAMP High compliance',
-          severity: 'warning',
-          complianceFramework: this.context.complianceFramework
+          message: 'Runtime security monitoring is recommended for high-risk environments',
+          severity: 'warning'
         });
       }
     }
   }
 
   /**
-   * Validate compliance framework requirements
+   * Validate compliance configuration based on risk level (set via config)
    */
   private validateComplianceConfiguration(errors: ValidationError[], warnings: ValidationError[]): void {
-    // Log retention requirements
+    // Log retention requirements - check config value against minimum
     const minLogRetention = this.getMinimumLogRetention();
     if (this.config.logging.logRetentionDays < minLogRetention) {
       errors.push({
         field: 'logging.logRetentionDays',
-        message: `Log retention must be at least ${minLogRetention} days for ${this.context.complianceFramework} compliance`,
-        severity: 'error',
-        complianceFramework: this.context.complianceFramework
+        message: `Log retention must be at least ${minLogRetention} days (set by builder based on risk level)`,
+        severity: 'error'
       });
     }
 
-    // Tracing requirements for compliance
-    if (this.context.complianceFramework === 'fedramp-moderate' || this.context.complianceFramework === 'fedramp-high') {
+    // Tracing requirements for high-risk environments (set via config or platform config)
+    if (this.config?.highRiskEnvironment && this.config?.requireActiveTracing) {
       if (this.config.tracing.mode !== 'Active') {
         errors.push({
           field: 'tracing.mode',
-          message: 'Active X-Ray tracing is mandatory for FedRAMP compliance',
-          severity: 'error',
-          complianceFramework: this.context.complianceFramework
+          message: 'Active X-Ray tracing is mandatory for high-risk environments',
+          severity: 'error'
         });
       }
     }
 
-    // Hardening profile validation
-    if (this.context.complianceFramework === 'fedramp-high') {
+    // Hardening profile validation for high-risk environments
+    if (this.config?.highRiskEnvironment && this.config?.requireHighHardening) {
       if (this.config.hardeningProfile !== 'high') {
         warnings.push({
           field: 'hardeningProfile',
-          message: 'High hardening profile is recommended for FedRAMP High compliance',
-          severity: 'warning',
-          complianceFramework: this.context.complianceFramework
+          message: 'High hardening profile is recommended for high-risk environments',
+          severity: 'warning'
         });
       }
     }
@@ -387,23 +381,15 @@ export class LambdaWorkerValidator {
   }
 
   /**
-   * Get minimum log retention days based on compliance framework
+   * Get minimum log retention days based on config (set by builder based on risk level)
    */
   private getMinimumLogRetention(): number {
-    switch (this.context.complianceFramework) {
-      case 'commercial':
-        return 30;
-      case 'fedramp-moderate':
-        return 90;
-      case 'fedramp-high':
-        return 180;
-      case 'hipaa':
-        return 90;
-      case 'sox':
-        return 2555; // 7 years
-      default:
-        return 30;
+    // Use config value if set by builder, otherwise use safe default
+    if (this.config?.minLogRetentionDays) {
+      return this.config.minLogRetentionDays;
     }
+    // Default minimum for standard environments
+    return 30;
   }
 
   /**

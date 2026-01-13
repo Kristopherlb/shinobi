@@ -89,6 +89,10 @@ export interface SageMakerNotebookInstanceConfig {
   
   /** Tagging configuration */
   tags?: Record<string, string>;
+  /** High-risk environment flag (set via platform config or service.yml) */
+  highRiskEnvironment?: boolean;
+  /** Retain KMS key on deletion (set by builder based on risk level) */
+  retainKmsKey?: boolean;
 }
 
 /**

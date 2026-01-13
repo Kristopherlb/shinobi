@@ -269,10 +269,8 @@ export class LambdaApiValidator {
    * Validate compliance configuration
    */
   private validateComplianceConfiguration(config: LambdaApiConfig, errors: ValidationError[], warnings: ValidationWarning[]): void {
-    const framework = this.context.complianceFramework;
-
-    // FedRAMP compliance requirements
-    if (framework === 'fedramp-moderate' || framework === 'fedramp-high') {
+    // High-risk environment requirements (set via config or platform config)
+    if (config?.highRiskEnvironment) {
       if (!config.vpc.enabled) {
         errors.push({
           code: 'LAMBDA_API_COMP_001',

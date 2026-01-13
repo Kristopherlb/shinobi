@@ -157,6 +157,10 @@ export interface LambdaApiConfig {
   removalPolicy: 'retain' | 'destroy';
   tags: Record<string, string>;
   api: LambdaApiGatewayConfig;
+  /** High-risk environment flag (set via platform config or service.yml) */
+  highRiskEnvironment?: boolean;
+  /** Minimum log retention days (set by builder based on risk level) */
+  minLogRetentionDays?: number;
 }
 
 

@@ -77,6 +77,8 @@ export interface DeploymentBundleConfig {
     /** Build invocation ID */
     buildId?: string;
   };
+  /** High-risk environment flag (set via platform config or service.yml) */
+  highRiskEnvironment?: boolean;
 }
 
 export interface BundleArtifacts {

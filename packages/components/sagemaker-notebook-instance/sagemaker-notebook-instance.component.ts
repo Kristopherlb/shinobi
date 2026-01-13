@@ -214,10 +214,7 @@ export class SageMakerNotebookInstanceComponent extends BaseComponent {
       { key: 'environment', value: this.context.environment }
     ];
 
-    // Add compliance framework tags
-    if (this.context.complianceFramework) {
-      tags.push({ key: 'compliance-framework', value: this.context.complianceFramework });
-    }
+    // Compliance framework tags are applied via applyStandardTags - no need to add here
 
     // Add component-specific tags
     if (this.config!.tags) {
@@ -234,7 +231,8 @@ export class SageMakerNotebookInstanceComponent extends BaseComponent {
   }
 
   private getKeyRemovalPolicy(): cdk.RemovalPolicy {
-    return this.context.complianceFramework === 'fedramp-high' ? 
+    // Use config value - set by builder based on risk level
+    return this.config?.retainKmsKey ?? false ? 
       cdk.RemovalPolicy.RETAIN : cdk.RemovalPolicy.DESTROY;
   }
 

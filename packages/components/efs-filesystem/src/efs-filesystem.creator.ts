@@ -60,14 +60,7 @@ export class EfsFilesystemComponentCreator implements IComponentCreator {
    */
   public readonly awsService = 'EFS';
 
-  /**
-   * Supported compliance frameworks
-   */
-  public readonly complianceFrameworks = [
-    'commercial',
-    'fedramp-moderate',
-    'fedramp-high'
-  ];
+  // Removed complianceFrameworks array - components are framework-agnostic and use risk-based configuration
 
   /**
    * Component tags for discovery

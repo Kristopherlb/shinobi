@@ -109,6 +109,12 @@ export interface EcsFargateServiceConfig {
   network?: EcsFargateNetworkConfig;
   hardeningProfile: string;
   tags: Record<string, string>;
+  /** High-risk environment flag (set via platform config or service.yml) */
+  highRiskEnvironment?: boolean;
+  /** Ephemeral storage size in GiB (set by builder based on risk level) */
+  ephemeralStorageGiB?: number;
+  /** Use customer-managed KMS key for log encryption (set by builder based on risk level) */
+  useCustomerManagedKeyForLogs?: boolean;
 }
 
 const HEALTH_CHECK_SCHEMA = {
@@ -294,22 +300,12 @@ export class EcsFargateServiceComponentConfigBuilder extends ConfigBuilder<EcsFa
   }
 
   protected getHardcodedFallbacks(): Partial<EcsFargateServiceConfig> {
-    const framework = this.builderContext.context.complianceFramework;
-
-    // Framework-aware defaults per Platform Configuration Standard 3.1
-    const isFedrampModerate = framework === 'fedramp-moderate';
-    const isFedrampHigh = framework === 'fedramp-high';
-    const isFedRamp = isFedrampModerate || isFedrampHigh;
-
     return {
-      // Compute resources - scaled by framework
-      cpu: isFedrampHigh ? 1024 : isFedrampModerate ? 512 : 256,
-      memory: isFedrampHigh ? 2048 : isFedrampModerate ? 1024 : 512,
-
-      // High availability for FedRAMP
-      desiredCount: isFedRamp ? 2 : 1,
-
-      // Safe defaults
+      // Safe defaults only - no framework conditionals
+      cpu: 256,
+      memory: 512,
+      desiredCount: 1,
+      ephemeralStorageGiB: 30,
       port: 8080,
       image: {
         repository: 'public.ecr.aws/amazonlinux/amazonlinux',
@@ -323,65 +319,119 @@ export class EcsFargateServiceComponentConfigBuilder extends ConfigBuilder<EcsFa
       deploymentStrategy: {
         type: 'rolling'
       },
-
-      // Logging with framework-aware retention
       logging: {
         createLogGroup: true,
         streamPrefix: 'service',
-        retentionInDays: this.getMinRetentionForFramework(framework),
-        removalPolicy: isFedRamp ? 'retain' : 'destroy'
+        retentionInDays: 30,
+        removalPolicy: 'destroy'
       },
-
-      // Monitoring with framework-aware thresholds
+      useCustomerManagedKeyForLogs: false,
       monitoring: {
         enabled: true,
         alarms: {
           cpuUtilization: {
             ...DEFAULT_ALARM_BASELINE,
             enabled: true,
-            threshold: isFedrampHigh ? 75 : isFedrampModerate ? 80 : 85
+            threshold: 85
           },
           memoryUtilization: {
             ...DEFAULT_ALARM_BASELINE,
             enabled: true,
-            threshold: isFedrampHigh ? 80 : isFedrampModerate ? 85 : 90
+            threshold: 90
           },
           runningTaskCount: {
             ...DEFAULT_ALARM_BASELINE,
             enabled: true,
-            threshold: isFedRamp ? 2 : 1,
+            threshold: 1,
             comparisonOperator: 'lt'
           }
         }
       },
-
-      // Diagnostics - ECS Exec required for FedRAMP audit
       diagnostics: {
-        enableExecuteCommand: isFedRamp
+        enableExecuteCommand: false
       },
-
       network: {
         allowAllOutbound: false
       },
-
       hardeningProfile: 'baseline',
       tags: {}
     } as Partial<EcsFargateServiceConfig>;
   }
 
   /**
-   * Get minimum log retention based on compliance framework
-   * Per Platform Logging Standard section on compliance requirements
+   * Layer 2: Compliance Framework Defaults
+   * 
+   * Provides sensible defaults based on risk assessment flags rather than framework checks.
+   * High-risk environment defaults can be set via:
+   * - Platform config files (`/config/{framework}.yml`) setting `highRiskEnvironment: true`
+   * - Service-level configuration in `service.yml`
+   * - Environment defaults
+   * 
+   * This ensures configuration is data-driven and risk-based, not framework-dependent.
    */
-  private getMinRetentionForFramework(framework: string): number {
-    switch (framework) {
-      case 'fedramp-high':
-        return 2557; // 7 years
-      case 'fedramp-moderate':
-        return 1096; // 3 years
-      default:
-        return 30; // 30 days for commercial
+  protected getComplianceFrameworkDefaults(): Partial<EcsFargateServiceConfig> {
+    // Check if highRiskEnvironment flag is set in component config or platform config
+    const componentConfig = this.builderContext.spec.config as Partial<EcsFargateServiceConfig> | undefined;
+    let isHighRisk = componentConfig?.highRiskEnvironment ?? false;
+    
+    // Also check platform config if available (loaded by base class)
+    try {
+      const platformConfig = (this as any)._loadPlatformConfiguration();
+      if (platformConfig?.highRiskEnvironment) {
+        isHighRisk = true;
+      }
+    } catch {
+      // Platform config might not be available in tests, ignore
     }
+    
+    if (isHighRisk) {
+      // Apply enhanced security defaults for high-risk environments
+      // These defaults align with FedRAMP Moderate/High requirements when highRiskEnvironment is set
+      return {
+        // Enhanced compute resources for high-risk environments
+        cpu: 1024,
+        memory: 2048,
+        // High availability required
+        desiredCount: 2,
+        // Enhanced ephemeral storage for high-risk environments
+        ephemeralStorageGiB: 50,
+        // Enhanced logging with longer retention
+        logging: {
+          retentionInDays: 1095, // 3 years (can be overridden to 2555 for higher risk)
+          removalPolicy: 'retain'
+        },
+        // Use customer-managed KMS key for log encryption
+        useCustomerManagedKeyForLogs: true,
+        // Stricter monitoring thresholds
+        monitoring: {
+          enabled: true,
+          alarms: {
+            cpuUtilization: {
+              ...DEFAULT_ALARM_BASELINE,
+              enabled: true,
+              threshold: 75
+            },
+            memoryUtilization: {
+              ...DEFAULT_ALARM_BASELINE,
+              enabled: true,
+              threshold: 80
+            },
+            runningTaskCount: {
+              ...DEFAULT_ALARM_BASELINE,
+              enabled: true,
+              threshold: 2,
+              comparisonOperator: 'lt'
+            }
+          }
+        },
+        // ECS Exec required for audit
+        diagnostics: {
+          enableExecuteCommand: true
+        }
+      };
+    }
+    
+    return {}; // Standard/default environment - use hardcoded fallbacks
   }
 
   public buildSync(): EcsFargateServiceConfig {
@@ -398,23 +448,14 @@ export class EcsFargateServiceComponentConfigBuilder extends ConfigBuilder<EcsFa
       throw new Error('ECS Fargate service requires `image.repository` to be set.');
     }
 
-    const framework = this.resolveFramework();
     const image = {
       repository: config.image.repository,
       tag: config.image.tag ?? 'latest'
     };
 
-    const desiredCount = this.normaliseDesiredCount(config.desiredCount, framework);
+    const desiredCount = this.normaliseDesiredCount(config.desiredCount);
     const autoScaling = this.normaliseAutoScaling(config.autoScaling, desiredCount);
     const logging = this.normaliseLogging(config.logging);
-
-    if (framework === 'fedramp-high') {
-      logging.retentionInDays = Math.max(logging.retentionInDays ?? 0, 2557);
-      logging.removalPolicy = 'retain';
-    } else if (framework === 'fedramp-moderate') {
-      logging.retentionInDays = Math.max(logging.retentionInDays ?? 0, 1096);
-      logging.removalPolicy = 'retain';
-    }
 
     return {
       cluster: config.cluster,
@@ -431,27 +472,17 @@ export class EcsFargateServiceComponentConfigBuilder extends ConfigBuilder<EcsFa
       autoScaling,
       deploymentStrategy: this.normaliseDeploymentStrategy(config.deploymentStrategy),
       logging,
-      monitoring: this.normaliseMonitoring(config.monitoring, desiredCount, autoScaling, framework),
+      monitoring: this.normaliseMonitoring(config.monitoring, desiredCount, autoScaling),
       diagnostics: this.normaliseDiagnostics(config.diagnostics),
       network: this.normaliseNetwork(config.network),
       hardeningProfile: config.hardeningProfile ?? 'baseline',
-      tags: config.tags ?? {}
+      tags: config.tags ?? {},
+      highRiskEnvironment: config.highRiskEnvironment
     };
   }
 
-  private normaliseDesiredCount(inputDesiredCount: number | undefined, framework?: string): number {
-    const baseline = inputDesiredCount ?? 1;
-
-    if (framework && framework.startsWith('fedramp')) {
-      return Math.max(baseline, 2);
-    }
-
-    return baseline;
-  }
-
-  private resolveFramework(): string | undefined {
-    const context = this.builderContext.context as any;
-    return context?.complianceFramework ?? context?.compliance;
+  private normaliseDesiredCount(inputDesiredCount: number | undefined): number {
+    return inputDesiredCount ?? 1;
   }
 
   private normaliseEnvironment(environment?: Record<string, string>): Record<string, string> {
@@ -559,17 +590,17 @@ export class EcsFargateServiceComponentConfigBuilder extends ConfigBuilder<EcsFa
   private normaliseMonitoring(
     monitoring: Partial<EcsFargateMonitoringConfig> | undefined,
     desiredCount: number,
-    autoScaling: EcsFargateAutoScalingConfig | undefined,
-    framework: string | undefined
+    autoScaling: EcsFargateAutoScalingConfig | undefined
   ): EcsFargateMonitoringConfig {
     const enabled = monitoring?.enabled ?? true;
     const runningTaskThreshold = monitoring?.alarms?.runningTaskCount?.threshold
       ?? autoScaling?.minCapacity
       ?? desiredCount;
 
-    const cpuThreshold = monitoring?.alarms?.cpuUtilization?.threshold ?? this.getCpuThresholdForFramework(framework);
-    const memoryThreshold = monitoring?.alarms?.memoryUtilization?.threshold ?? this.getMemoryThresholdForFramework(framework);
-    const runningTaskCountThreshold = Math.max(runningTaskThreshold, framework && framework.startsWith('fedramp') ? 2 : 1);
+    // Use config values - thresholds are set by getComplianceFrameworkDefaults() for high-risk environments
+    const cpuThreshold = monitoring?.alarms?.cpuUtilization?.threshold ?? 85;
+    const memoryThreshold = monitoring?.alarms?.memoryUtilization?.threshold ?? 90;
+    const runningTaskCountThreshold = runningTaskThreshold;
     const cpuAlarmInput = {
       ...monitoring?.alarms?.cpuUtilization,
       threshold: cpuThreshold
@@ -609,28 +640,6 @@ export class EcsFargateServiceComponentConfigBuilder extends ConfigBuilder<EcsFa
         })
       }
     };
-  }
-
-  private getCpuThresholdForFramework(framework: string | undefined): number {
-    switch (framework) {
-      case 'fedramp-high':
-        return 75;
-      case 'fedramp-moderate':
-        return 80;
-      default:
-        return 85;
-    }
-  }
-
-  private getMemoryThresholdForFramework(framework: string | undefined): number {
-    switch (framework) {
-      case 'fedramp-high':
-        return 80;
-      case 'fedramp-moderate':
-        return 85;
-      default:
-        return 90;
-    }
   }
 
   private normaliseAlarmConfig(

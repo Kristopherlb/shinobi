@@ -23,8 +23,12 @@ export class DaggerConfigBuilder extends ConfigBuilder<DaggerConfig> {
   }
 
   withComplianceDefaults(framework: 'commercial' | 'fedramp-moderate' | 'fedramp-high'): this {
-    if (framework !== 'commercial') {
+    // Deprecated: Use highRiskEnvironment flag instead
+    // This method is kept for backward compatibility but should use risk flags
+    const isHighRisk = framework !== 'commercial';
+    if (isHighRisk) {
       this.merge({
+        highRiskEnvironment: true,
         fipsMode: true,
         compliance: { forbidPublicExposure: true, forbidNoKms: true, forbidNonFipsAmi: true }
       });
@@ -68,19 +72,44 @@ export class DaggerConfigBuilder extends ConfigBuilder<DaggerConfig> {
     };
   }
 
-  getComplianceFrameworkDefaults(framework: string): Partial<DaggerConfig> {
-    if (framework === 'commercial') {
-      return {
-        compliance: { forbidPublicExposure: true, forbidNoKms: true }
-      };
+  /**
+   * Layer 2: Compliance Framework Defaults
+   * 
+   * Provides sensible defaults based on risk assessment flags rather than framework checks.
+   * High-risk environment defaults can be set via:
+   * - Platform config files (`/config/{framework}.yml`) setting `highRiskEnvironment: true`
+   * - Service-level configuration in `service.yml`
+   * - Environment defaults
+   * 
+   * This ensures configuration is data-driven and risk-based, not framework-dependent.
+   */
+  protected getComplianceFrameworkDefaults(): Partial<DaggerConfig> {
+    // Check if highRiskEnvironment flag is set in component config or platform config
+    const componentConfig = this.builderContext.spec.config as Partial<DaggerConfig> | undefined;
+    let isHighRisk = componentConfig?.highRiskEnvironment ?? false;
+    
+    // Also check platform config if available (loaded by base class)
+    try {
+      const platformConfig = (this as any)._loadPlatformConfiguration();
+      if (platformConfig?.highRiskEnvironment) {
+        isHighRisk = true;
+      }
+    } catch {
+      // Platform config might not be available in tests, ignore
     }
-    if (framework === 'fedramp-moderate' || framework === 'fedramp-high') {
+    
+    if (isHighRisk) {
+      // Apply enhanced security defaults for high-risk environments
+      // These defaults align with FedRAMP Moderate/High requirements when highRiskEnvironment is set
       return {
         fipsMode: true,
         compliance: { forbidPublicExposure: true, forbidNoKms: true, forbidNonFipsAmi: true }
       };
     }
-    return {};
+    
+    return {
+      compliance: { forbidPublicExposure: true, forbidNoKms: true }
+    };
   }
 
   private merge(partial: Partial<DaggerConfig>) {
