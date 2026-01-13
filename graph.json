@@ -4235,9 +4235,9 @@
         "name": "@shinobi/skill-arbiter-release-manager",
         "type": "lib",
         "data": {
-          "root": "skills/arbiter-release-manager",
+          "root": ".cursor/skills/arbiter-release-manager",
           "name": "@shinobi/skill-arbiter-release-manager",
-          "sourceRoot": "skills/arbiter-release-manager",
+          "sourceRoot": ".cursor/skills/arbiter-release-manager",
           "tags": [
             "scope:shinobi",
             "type:skill"
@@ -4247,7 +4247,7 @@
               "executor": "@nx/vitest:test",
               "options": {
                 "passWithNoTests": true,
-                "config": "skills/arbiter-release-manager/vitest.config.ts"
+                "config": ".cursor/skills/arbiter-release-manager/vitest.config.ts"
               },
               "outputs": [
                 "{projectRoot}/coverage"
@@ -4271,7 +4271,7 @@
             "validate-release": {
               "executor": "nx:run-commands",
               "options": {
-                "command": "./skills/arbiter-release-manager/scripts/validate-release.sh",
+                "command": "./.cursor/skills/arbiter-release-manager/scripts/validate-release.sh",
                 "cwd": ""
               },
               "description": "Validates all release prerequisites (components, tests, evidence)",
@@ -4281,7 +4281,7 @@
             "generate-evidence": {
               "executor": "nx:run-commands",
               "options": {
-                "command": "./skills/arbiter-release-manager/scripts/generate-evidence-bundle.sh",
+                "command": "./.cursor/skills/arbiter-release-manager/scripts/generate-evidence-bundle.sh",
                 "cwd": ""
               },
               "description": "Generates FedRAMP Evidence Bundle for compliance audit",
@@ -4296,9 +4296,9 @@
         "name": "@shinobi/skill-test-driven-development",
         "type": "lib",
         "data": {
-          "root": "skills/test-driven-development",
+          "root": ".cursor/skills/test-driven-development",
           "name": "@shinobi/skill-test-driven-development",
-          "sourceRoot": "skills/test-driven-development",
+          "sourceRoot": ".cursor/skills/test-driven-development",
           "tags": [
             "scope:shinobi",
             "type:skill"
@@ -4308,7 +4308,7 @@
               "executor": "@nx/vitest:test",
               "options": {
                 "passWithNoTests": true,
-                "config": "skills/test-driven-development/vitest.config.ts"
+                "config": ".cursor/skills/test-driven-development/vitest.config.ts"
               },
               "outputs": [
                 "{projectRoot}/coverage"
@@ -4822,9 +4822,9 @@
         "name": "@shinobi/skill-devops-knowledge-base",
         "type": "lib",
         "data": {
-          "root": "skills/devops-knowledge-base",
+          "root": ".cursor/skills/devops-knowledge-base",
           "name": "@shinobi/skill-devops-knowledge-base",
-          "sourceRoot": "skills/devops-knowledge-base",
+          "sourceRoot": ".cursor/skills/devops-knowledge-base",
           "tags": [
             "scope:shinobi",
             "type:skill"
@@ -4834,7 +4834,7 @@
               "executor": "@nx/vitest:test",
               "options": {
                 "passWithNoTests": true,
-                "config": "skills/devops-knowledge-base/vitest.config.ts"
+                "config": ".cursor/skills/devops-knowledge-base/vitest.config.ts"
               },
               "outputs": [
                 "{projectRoot}/coverage"
@@ -4858,7 +4858,7 @@
             "update": {
               "executor": "nx:run-commands",
               "options": {
-                "command": "./skills/devops-knowledge-base/scripts/fetch-conformance-packs.sh && ./skills/devops-knowledge-base/scripts/parse-conformance-packs.sh",
+                "command": "./.cursor/skills/devops-knowledge-base/scripts/fetch-conformance-packs.sh && ./.cursor/skills/devops-knowledge-base/scripts/parse-conformance-packs.sh",
                 "cwd": ""
               },
               "description": "Fetches latest AWS Config conformance packs and parses them into reference documentation",
@@ -4873,17 +4873,17 @@
         "name": "application-generator",
         "type": "lib",
         "data": {
-          "root": "skills/application-generator",
+          "root": ".cursor/skills/application-generator",
           "name": "application-generator",
           "$schema": "../../node_modules/nx/schemas/project-schema.json",
-          "sourceRoot": "skills/application-generator",
+          "sourceRoot": ".cursor/skills/application-generator",
           "projectType": "library",
           "targets": {
             "test": {
               "executor": "nx:run-commands",
               "options": {
                 "command": "vitest run",
-                "cwd": "skills/application-generator"
+                "cwd": ".cursor/skills/application-generator"
               },
               "configurations": {},
               "parallelism": true,
@@ -4896,7 +4896,7 @@
               "executor": "nx:run-commands",
               "options": {
                 "command": "./scripts/generate-application.sh",
-                "cwd": "skills/application-generator"
+                "cwd": ".cursor/skills/application-generator"
               },
               "configurations": {},
               "parallelism": true

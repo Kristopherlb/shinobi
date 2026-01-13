@@ -19,6 +19,11 @@
     "**/__tests__/**",
     "**/vitest.config.ts",
     "**/jest.config.ts"
+  ],
+  "references": [
+    {
+      "path": "../api/tsconfig.json"
+    }
   ]
 }
 

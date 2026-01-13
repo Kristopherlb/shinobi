@@ -138,7 +138,7 @@ node scripts/fix-nx-run-commands-cwd.mjs --validate
 
 ## Next Steps
 
-1. Create `skills/baseline-regression-detector/` skill
+1. Create `.cursor/skills/baseline-regression-detector/` skill
 2. Add `--validate` mode to `fix-nx-run-commands-cwd.mjs`
 3. Document script purposes and usage patterns
 4. Keep scripts as executable tools while skills provide guidance

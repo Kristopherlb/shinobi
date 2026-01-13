@@ -494,7 +494,7 @@ Based on `Operational-Best-Practices-for-SQS.yaml` conformance pack:
 
 - **Platform Observability Standard**: `docs/platform-standards/platform-observability-standard.md`
 - **Platform Observability Audit Rules**: `.cursor/audit/platform-observability.yaml`
-- **DevOps Knowledge Base**: `skills/devops-knowledge-base/references/OBSERVABILITY_RULES.md`
-- **AWS SQS Best Practices**: `skills/devops-knowledge-base/references/CONFORMANCE_PACK_MAPPING.md`
+- **DevOps Knowledge Base**: `.cursor/skills/devops-knowledge-base/references/OBSERVABILITY_RULES.md`
+- **AWS SQS Best Practices**: `.cursor/skills/devops-knowledge-base/references/CONFORMANCE_PACK_MAPPING.md`
 - **OpenTelemetry Documentation**: https://opentelemetry.io/docs/
 - **ADOT Documentation**: https://aws-otel.github.io/docs/

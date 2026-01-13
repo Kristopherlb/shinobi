@@ -6,10 +6,11 @@
     "declarationMap": true,
     "sourceMap": true,
     "composite": true,
-    "rootDir": "./src"
+    "skipLibCheck": true
   },
   "include": [
-    "src/**/*.ts"
+    "src/**/*.ts",
+    "Config.schema.json"
   ],
   "exclude": [
     "node_modules",
@@ -17,5 +18,10 @@
     "tests",
     "**/*.test.ts",
     "**/*.spec.ts"
+  ],
+  "references": [
+    {
+      "path": "../../core/tsconfig.json"
+    }
   ]
 }
